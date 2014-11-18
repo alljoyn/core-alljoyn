@@ -574,9 +574,6 @@ class CertificateX509 : public Certificate {
         GUILD_CERTIFICATE
     } CertificateType;
 
-    /**
-     * constructor.
-     */
     CertificateX509(CertificateType type) : Certificate(3, X509_CERTIFICATE), type(type), encodedLen(0), encoded(NULL), digestPresent(false)
     {
     }
@@ -669,6 +666,7 @@ class CertificateX509 : public Certificate {
     }
     void SetGuild(const qcc::GUID128& guid)
     {
+        type = GUILD_CERTIFICATE;
         this->guild = guid;
     }
     const qcc::GUID128& GetGuild() const

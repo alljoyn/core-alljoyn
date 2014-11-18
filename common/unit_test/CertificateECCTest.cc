@@ -19,6 +19,7 @@
 #include <qcc/time.h>
 #include <qcc/CertificateECC.h>
 #include <qcc/GUID.h>
+#include <qcc/StringUtil.h>
 
 using namespace qcc;
 using namespace std;

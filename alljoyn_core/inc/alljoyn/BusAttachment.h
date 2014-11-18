@@ -39,6 +39,7 @@
 #include <alljoyn/SessionPortListener.h>
 #include <alljoyn/Status.h>
 #include <alljoyn/Translator.h>
+#include <alljoyn/PermissionPolicy.h>
 
 namespace ajn {
 
@@ -1256,6 +1257,14 @@ class BusAttachment : public MessageReceiver {
      * @return This BusAttachment's Translator
      */
     Translator* GetDescriptionTranslator();
+
+    /**
+     * Set the permission manifest for the application.
+     * @params rules the permission rules.
+     * @params count the number of permission rules
+     */
+
+    QStatus SetPermissionManifest(PermissionPolicy::Rule* rules, size_t count);
 
     /// @cond ALLJOYN_DEV
     /**

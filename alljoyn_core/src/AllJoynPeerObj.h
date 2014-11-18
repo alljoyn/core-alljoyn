@@ -215,7 +215,15 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
     KeyExchanger* GetKeyExchangerInstance(uint16_t peerAuthVersion, bool initiator, const uint32_t* requestingAuthList, size_t requestingAuthCount);
 
     /**
-     * All a KeyExchanger to send a reply message.
+     * Allow a KeyExchanger to send a reply message.
+     * @param msg the reference message
+     * @param status the status code
+     * @return status ER_OK for success; error otherwise.
+     */
+    QStatus HandleMethodReply(Message& msg, QStatus status);
+
+    /**
+     * Allow a KeyExchanger to send a reply message.
      * @param msg the reference message
      * @param args the message arguments
      * @param len the number of message arguments
@@ -444,27 +452,19 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
     QStatus AuthenticatePeerUsingKeyExchange(const uint32_t* requestingAuthList, size_t requestingAuthCount, const qcc::String& busName, PeerState peerState, qcc::String& localGuidStr, ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc, qcc::GUID128& remotePeerGuid, qcc::String& mech);
 
     /**
-     * ExchangeMembershipGuilds method call handler
+     * Send an SendMembership to the peer
+     * @param remotePeerObj  The remote peer
+     * @param ifc     The interface object
+     */
+    QStatus SendMembershipData(ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc);
+
+    /**
+     * SendMembership method call handler
      *
      * @param member  The member that was called
      * @param msg     The method call message
      */
-    void ExchangeMembershipGuilds(const InterfaceDescription::Member* member, Message& msg);
-
-    /**
-     * Track the peer's membership guilds.
-     * @param member  The member that was called
-     * @param msg     The method call message
-     */
-    QStatus TrackPeerGuilds(const InterfaceDescription::Member* member, Message& msg);
-
-    /**
-     * Send an exchange for membership guild request.
-     * @param remotePeerObj  The remote peer
-     * @param ifc     The interface object
-     */
-    QStatus AskForMembershipGuilds(ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc);
-
+    void SendMemberships(const InterfaceDescription::Member* member, Message& msg);
     /**
      * The peer-to-peer authentication mechanisms available to this object
      */

@@ -40,8 +40,10 @@
 #include <qcc/Mutex.h>
 #include <qcc/Event.h>
 #include <qcc/time.h>
+#include <qcc/CertificateECC.h>
 
 #include <alljoyn/Status.h>
+#include <alljoyn/PermissionPolicy.h>
 
 namespace ajn {
 
@@ -72,6 +74,27 @@ class _PeerState {
 
   public:
 
+    struct GuildMetadata {
+        qcc::MembershipCertificate cert;
+        std::vector<qcc::CertificateX509*> certChain;
+        ajn::PermissionPolicy authData;
+
+        GuildMetadata()
+        {
+        }
+
+        ~GuildMetadata()
+        {
+            for (std::vector<qcc::CertificateX509*>::iterator it = certChain.begin(); it != certChain.end(); it++) {
+                delete *it;
+            }
+            certChain.clear();
+        }
+
+    };
+
+    typedef std::map<const qcc::String, GuildMetadata*> GuildMap;
+
     /**
      * Default constructor
      */
@@ -82,9 +105,7 @@ class _PeerState {
         lastDriftAdjustTime(0),
         expectedSerial(0),
         isSecure(false),
-        authEvent(NULL),
-        guilds(NULL),
-        numOfGuilds(0)
+        authEvent(NULL)
     {
         ::memset(window, 0, sizeof(window));
         ::memset(authorizations, 0, sizeof(authorizations));
@@ -92,8 +113,12 @@ class _PeerState {
 
     ~_PeerState()
     {
-        delete [] guilds;
+        for (GuildMap::iterator it = guildMap.begin(); it != guildMap.end(); it++) {
+            delete it->second;
+        }
+        guildMap.clear();
     }
+
     /**
      * Get the (estimated) timestamp for this remote peer converted to local host time. The estimate
      * is updated based on the timestamp recently received.
@@ -259,21 +284,26 @@ class _PeerState {
     }
 
 
-    void SetGuilds(size_t count, qcc::GUID128* guilds)
-    {
-        delete [] this->guilds;
-        numOfGuilds = count;
-        this->guilds = guilds;
-    }
+    /**
+     * Set the guild metadata indexed by the serial number and the issuer.
+     * @param serial the membership certificate serial number
+     * @param issuer the membership certificate issuer GUID
+     * @param guild the guild metadata
+     */
+    void SetGuildMetadata(const qcc::String& serial, const qcc::GUID128& issuer,        GuildMetadata* guild);
 
-    size_t GetNumOfGuilds() {
-        return numOfGuilds;
-    }
+    /**
+     * Retrieve the guild metadata indexed by the serial number and the issuer.
+     * @param serial the membership certificate serial number
+     * @param issuer the membership certificate issuer GUID
+     * @return the guild metadata
+     */
+    GuildMetadata* GetGuildMetadata(const qcc::String& serial, const qcc::GUID128& issuer);
 
-    qcc::GUID128* GetGuilds()
-    {
-        return guilds;
-    }
+    /**
+     * Mapping table for guild memberships
+     */
+    GuildMap guildMap;
 
   private:
 
@@ -344,8 +374,6 @@ class _PeerState {
      */
     uint32_t window[128];
 
-    qcc::GUID128* guilds;
-    size_t numOfGuilds;
 };
 
 

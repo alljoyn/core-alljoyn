@@ -278,4 +278,7 @@ Copyright (c) 2010 - 2012, 2014, AllSeen Alliance. All rights reserved.
   <status name="ER_UNKNOWN_CERTIFICATE" value="0x912a" comment="Unknown Certificate"/>
   <status name="ER_MISSING_DIGEST_IN_CERTIFICATE" value="0x912b" comment="Missing digest in certificate"/>
   <status name="ER_DIGEST_MISMATCH" value="0x912c" comment="Digest mismatch"/>
+  <status name="ER_DUPLICATE_KEY" value="0x912d" comment="Duplicate key found"/>
+  <status name="ER_NO_COMMON_TRUST" value="0x912e" comment="No common trust anchor found"/>
+  <status name="ER_MANIFEST_NOT_FOUND" value="0x912f" comment="Permission manifest not found"/>
 </status_block>

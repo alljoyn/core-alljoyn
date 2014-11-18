@@ -29,6 +29,7 @@
 #include <qcc/CertificateECC.h>
 #include <qcc/Log.h>
 #include <qcc/KeyInfoECC.h>
+#include <qcc/StringUtil.h>
 #include <alljoyn/PermissionPolicy.h>
 #include "CredentialAccessor.h"
 
@@ -39,31 +40,26 @@ static const char* INTERFACE_NAME = "org.allseen.Security.PermissionMgmt";
 static const char* NOTIFY_INTERFACE_NAME = "org.allseen.Security.PermissionMgmt.Notification";
 static const char* PERMISSION_MGMT_PATH = "/org/allseen/Security/PermissionMgmt";
 static const char* APP_PATH = "/app";
+static const char* ONOFF_IFC_NAME = "org.allseenalliance.control.OnOff";
+static const char* TV_IFC_NAME = "org.allseenalliance.control.TV";
 
 static const char* KEYX_ECDHE_NULL = "ALLJOYN_ECDHE_NULL";
 static const char* KEYX_ECDHE_PSK = "ALLJOYN_ECDHE_PSK";
 static const char* KEYX_ECDHE_ECDSA = "ALLJOYN_ECDHE_ECDSA";
 
-static const GUID128 claimedGUID;
 static GUID128 membershipGUID1;
+static const char* membershipSerial1 = "10001";
 static GUID128 membershipGUID2;
 static GUID128 membershipGUID3;
+static const char* membershipSerial3 = "30003";
 
-static const char root_prvkey[] = {
-    "-----BEGIN EC PRIVATE KEY-----\n"
-    "MHcCAQEEIGZCS4YnnUWPEMDtfR0XFTMK4vQnvAmJ0Aw6hVA3a8GHoAoGCCqGSM49\n"
-    "AwEHoUQDQgAE1nsW4M+U4l5hvnYhm+EHxtshbwS91zUCNYt7zFSbVk7FmAa4DYyr\n"
-    "oyOgKk20i+taKe0m7nqMtmrcEZC58UJWwQ==\n"
-    "-----END EC PRIVATE KEY-----"
-};
-
-static const char clientPrivateKeyPEM[] = {
+static const char adminPrivateKeyPEM[] = {
     "-----BEGIN PRIVATE KEY-----\n"
     "WvfKW/zzFtv9E+8S752Y9JBbvMjVE3+bd7VQxy/r6kU="
     "-----END PRIVATE KEY-----"
 };
 
-static const char clientPublicKeyPEM[] = {
+static const char adminPublicKeyPEM[] = {
     "-----BEGIN PUBLIC KEY-----\n"
     "k/5HsY/cJYTrDutk/06LlyuEldPyqx53B84QlP8thIzl5Fut/+CwW2DDUWD/infS\n"
     "SCVStzLPL8IJDCJIy9u7Lw==\n"
@@ -104,6 +100,19 @@ static const char serviceCertChainType1PEM[] = {
     "-----END CERTIFICATE-----"
 };
 
+static const char consumerPrivateKeyPEM[] = {
+    "-----BEGIN PRIVATE KEY-----\n"
+    "IxdMNqXrmT4eCGC2d1Mh35K9+dfyLNcZn+14C5xExqI="
+    "-----END PRIVATE KEY-----"
+};
+
+static const char consumerPublicKeyPEM[] = {
+    "-----BEGIN PUBLIC KEY-----\n"
+    "odJyzleew1K20kzhP31ZfM0GkHlO4sGZ06qfAIZrh7wrCE5Y2WiGpsoY1DLpdUTR\n"
+    "Yxa1CGYH++K6ViVn1L9znQ==\n"
+    "-----END PUBLIC KEY-----"
+};
+
 static QStatus CreateCert(const qcc::String& serial, const qcc::GUID128& issuer, const ECCPrivateKey* issuerPrivateKey, const ECCPublicKey* issuerPubKey, const qcc::GUID128& subject, const ECCPublicKey* subjectPubKey, qcc::String& der)
 {
     QStatus status = ER_CRYPTO_ERROR;
@@ -117,7 +126,6 @@ static QStatus CreateCert(const qcc::String& serial, const qcc::GUID128& issuer,
     if (ER_OK != status) {
         return status;
     }
-    printf("Certificate: %s\n", x509.ToString().c_str());
     return x509.EncodeCertificateDER(der);
 }
 
@@ -190,7 +198,14 @@ static void MakePEM(qcc::String& der, qcc::String& pem)
  */
 class ECDHEKeyXListener : public AuthListener {
   public:
-    ECDHEKeyXListener(bool isService, BusAttachment& bus) : isService(isService), bus(bus)
+    /* the type of agent */
+    typedef enum {
+        RUN_AS_ADMIN = 0,
+        RUN_AS_SERVICE = 1,
+        RUN_AS_CONSUMER = 2
+    } AgentType;
+
+    ECDHEKeyXListener(AgentType agentType, BusAttachment& bus) : agentType(agentType), bus(bus)
     {
     }
 
@@ -216,12 +231,15 @@ class ECDHEKeyXListener : public AuthListener {
             const char* privateKeyPEM;
             const char* publicKeyPEM;
 
-            if (isService) {
+            if (agentType == RUN_AS_ADMIN) {
+                privateKeyPEM = adminPrivateKeyPEM;
+                publicKeyPEM = adminPublicKeyPEM;
+            } else if (agentType == RUN_AS_SERVICE) {
                 privateKeyPEM = servicePrivateKeyPEM;
                 publicKeyPEM = servicePublicKeyPEM;
             } else {
-                privateKeyPEM = clientPrivateKeyPEM;
-                publicKeyPEM = clientPublicKeyPEM;
+                privateKeyPEM = consumerPrivateKeyPEM;
+                publicKeyPEM = consumerPublicKeyPEM;
             }
 
             /*
@@ -270,11 +288,22 @@ class ECDHEKeyXListener : public AuthListener {
     }
 
     void AuthenticationComplete(const char* authMechanism, const char* authPeer, bool success) {
-        printf("AuthenticationComplete auth mechanism %s success %d\n", authMechanism, success);
+        qcc::String msg;
+        if (agentType == RUN_AS_ADMIN) {
+            msg += "Admin: ";
+        } else if (agentType == RUN_AS_SERVICE) {
+            msg += "Service: ";
+        } else {
+            msg += "Consumer: ";
+        }
+        msg += "AuthenticationComplete auth mechanism ";
+        msg += authMechanism;
+        msg += " failed";
+        ASSERT_TRUE(success) << msg;
     }
 
   private:
-    bool isService;
+    AgentType agentType;
     BusAttachment& bus;
 };
 
@@ -282,101 +311,144 @@ class PermissionMgmtTest : public testing::Test, public BusObject {
   public:
 
     PermissionMgmtTest() : BusObject(APP_PATH),
-        clientBus("PermissionMgmtTestClient", false),
+        adminBus("PermissionMgmtTestAdmin", false),
+        adminProxyBus("PermissionMgmtTestAdmin", false),
         serviceBus("PermissionMgmtTestService", false),
+        consumerBus("PermissionMgmtTestConsumer", false),
         status(ER_OK),
         authComplete(false),
-        certChain(NULL),
         serviceKeyListener(NULL),
-        clientKeyListener(NULL),
-        certChainLen(0), signalReceived(false)
+        adminKeyListener(NULL),
+        consumerKeyListener(NULL),
+        signalNotifyConfigReceived(false)
     {
     }
 
     virtual void SetUp()
     {
-        status = clientBus.Start();
+        status = SetupBus(adminBus);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-        status = clientBus.Connect(ajn::getConnectArg().c_str());
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-        status = serviceBus.Start();
+        status = SetupBus(adminProxyBus);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-        status = serviceBus.Connect(ajn::getConnectArg().c_str());
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-        const InterfaceDescription* itf = clientBus.GetInterface(NOTIFY_INTERFACE_NAME);
-        status = clientBus.RegisterSignalHandler(this,
-                                                 static_cast<MessageReceiver::SignalHandler>(&PermissionMgmtTest::SignalHandler), itf->GetMember("NotifyConfig"), NULL);
+        status = SetupBus(serviceBus);
+        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        status = SetupBus(consumerBus);
+        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        const InterfaceDescription* itf = adminBus.GetInterface(NOTIFY_INTERFACE_NAME);
+        status = adminBus.RegisterSignalHandler(this,
+                                                static_cast<MessageReceiver::SignalHandler>(&PermissionMgmtTest::SignalHandler), itf->GetMember("NotifyConfig"), NULL);
         EXPECT_EQ(ER_OK, status) << "  Failed to register signal handler.  Actual Status: " << QCC_StatusText(status);
-        status = InterestInSignal(&clientBus);
+        status = InterestInSignal(&adminBus);
         EXPECT_EQ(ER_OK, status) << "  Failed to show interest in session-less signal.  Actual Status: " << QCC_StatusText(status);
     }
 
     virtual void TearDown()
     {
-        status = clientBus.Disconnect(ajn::getConnectArg().c_str());
+        status = TeardownBus(adminBus);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-        status = serviceBus.Disconnect(ajn::getConnectArg().c_str());
+        status = TeardownBus(adminProxyBus);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-        status = clientBus.Stop();
+        status = TeardownBus(serviceBus);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-        status = serviceBus.Stop();
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-        status = clientBus.Join();
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-        status = serviceBus.Join();
+        status = TeardownBus(consumerBus);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         delete serviceKeyListener;
-        delete clientKeyListener;
-        if ((certChainLen > 0) && certChain) {
-            for (size_t cnt = 0; cnt < certChainLen; cnt++) {
-                delete certChain[cnt];
-            }
-            delete [] certChain;
-        }
+        delete adminKeyListener;
+        delete consumerKeyListener;
     }
 
     void EnableSecurity(const char* keyExchange, bool clearPrevious)
     {
         if (clearPrevious) {
-            clientBus.EnablePeerSecurity(NULL, NULL, NULL, false);
+            adminBus.EnablePeerSecurity(NULL, NULL, NULL, false);
+            adminProxyBus.EnablePeerSecurity(NULL, NULL, NULL, false);
             serviceBus.EnablePeerSecurity(NULL, NULL, NULL, false);
+            consumerBus.EnablePeerSecurity(NULL, NULL, NULL, false);
         }
-        delete clientKeyListener;
-        clientKeyListener = new ECDHEKeyXListener(false, clientBus);
-        clientBus.EnablePeerSecurity(keyExchange, clientKeyListener, NULL, false);
+        delete adminKeyListener;
+        adminKeyListener = new ECDHEKeyXListener(ECDHEKeyXListener::RUN_AS_ADMIN, adminBus);
+        adminBus.EnablePeerSecurity(keyExchange, adminKeyListener, NULL, true);
+        adminProxyBus.EnablePeerSecurity(keyExchange, adminKeyListener, NULL, true);
         delete serviceKeyListener;
-        serviceKeyListener = new ECDHEKeyXListener(true, serviceBus);
+        serviceKeyListener = new ECDHEKeyXListener(ECDHEKeyXListener::RUN_AS_SERVICE, serviceBus);
         serviceBus.EnablePeerSecurity(keyExchange, serviceKeyListener, NULL, false);
+        delete consumerKeyListener;
+        consumerKeyListener = new ECDHEKeyXListener(ECDHEKeyXListener::RUN_AS_CONSUMER, consumerBus);
+        consumerBus.EnablePeerSecurity(keyExchange, consumerKeyListener, NULL, false);
     }
 
+    void CreateOnOffAppInterface(BusAttachment& bus, bool addService)
+    {
+        /* create/activate alljoyn_interface */
+        InterfaceDescription* ifc = NULL;
+        QStatus status = bus.CreateInterface(ONOFF_IFC_NAME, ifc, AJ_IFC_SECURITY_REQUIRED);
+        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_TRUE(ifc != NULL);
+        if (ifc != NULL) {
+            status = ifc->AddMember(MESSAGE_METHOD_CALL, "On", NULL, NULL, NULL);
+            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+            status = ifc->AddMember(MESSAGE_METHOD_CALL, "Off", NULL, NULL, NULL);
+            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+            ifc->Activate();
+        }
+        if (!addService) {
+            return;  /* done */
+        }
+        status = AddInterface(*ifc);
+        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        AddMethodHandler(ifc->GetMember("On"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtTest::OnOffOn));
+        AddMethodHandler(ifc->GetMember("Off"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtTest::OnOffOff));
+    }
 
-    BusAttachment clientBus;
+    void CreateTVAppInterface(BusAttachment& bus, bool addService)
+    {
+        /* create/activate alljoyn_interface */
+        InterfaceDescription* ifc = NULL;
+        QStatus status = bus.CreateInterface(TV_IFC_NAME, ifc, AJ_IFC_SECURITY_REQUIRED);
+        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_TRUE(ifc != NULL);
+        if (ifc != NULL) {
+            status = ifc->AddMember(MESSAGE_METHOD_CALL, "Up", NULL, NULL, NULL);
+            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+            status = ifc->AddMember(MESSAGE_METHOD_CALL, "Down", NULL, NULL, NULL);
+            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+            status = ifc->AddMember(MESSAGE_METHOD_CALL, "Channel", NULL, NULL, NULL);
+            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+            ifc->Activate();
+        }
+        if (!addService) {
+            return;  /* done */
+        }
+        status = AddInterface(*ifc);
+        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        AddMethodHandler(ifc->GetMember("Up"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtTest::TVUp));
+        AddMethodHandler(ifc->GetMember("Down"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtTest::TVDown));
+        AddMethodHandler(ifc->GetMember("Channel"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtTest::TVChannel));
+    }
+
+    void CreateAppInterfaces(BusAttachment& bus, bool addService)
+    {
+        CreateOnOffAppInterface(bus, addService);
+        CreateTVAppInterface(bus, addService);
+        if (addService) {
+            QStatus status = bus.RegisterBusObject(*this);
+            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        }
+    }
+
+    BusAttachment adminBus;
+    BusAttachment adminProxyBus;
     BusAttachment serviceBus;
+    BusAttachment consumerBus;
+    GUID128 serviceGUID;
+    GUID128 consumerGUID;
     QStatus status;
     bool authComplete;
-
-    QStatus ParseCertChainPEM(String& encodedCertChain)
-    {
-        size_t count = 0;
-        QStatus status = CertECCUtil_GetCertCount(encodedCertChain, &count);
-        if (status != ER_OK) {
-            return status;
-        }
-        certChainLen = count;
-        certChain = new CertificateECC *[count];
-        status = CertECCUtil_GetCertChain(encodedCertChain, certChain, certChainLen);
-        if (status != ER_OK) {
-            delete [] certChain;
-            certChain = NULL;
-            certChainLen = 0;
-        }
-        return status;
-    }
 
     void SignalHandler(const InterfaceDescription::Member* member,
                        const char* sourcePath, Message& msg)
     {
-        signalReceived = true;
+        signalNotifyConfigReceived = true;
         printf("A signal name [%s] is received with msg %s\n", member->name.c_str(), msg->ToString().c_str());
         uint8_t*guid;
         size_t guidLen;
@@ -406,28 +478,71 @@ class PermissionMgmtTest : public testing::Test, public BusObject {
         if (ER_OK == status) {
             printf("serial number: %d\n", serialNum);
         }
-        CredentialAccessor ca(clientBus);
-        qcc::GUID128 localGUID;
-        status = ca.GetGuid(localGUID);
-        printf("local guid: %s\n", localGUID.ToString().c_str());
     }
 
-    void SetSignalReceived(bool flag)
+    void SetNotifyConfigSignalReceived(bool flag)
     {
-        signalReceived = flag;
+        signalNotifyConfigReceived = flag;
     }
 
-    const bool GetSignalReceived()
+    const bool GetNotifyConfigSignalReceived()
     {
-        return signalReceived;
+        return signalNotifyConfigReceived;
     }
 
-    CertificateECC** certChain;
+    void OnOffOn(const InterfaceDescription::Member* member, Message& msg)
+    {
+        MethodReply(msg, ER_OK);
+    }
+
+    void OnOffOff(const InterfaceDescription::Member* member, Message& msg)
+    {
+        MethodReply(msg, ER_OK);
+    }
+
+    void TVUp(const InterfaceDescription::Member* member, Message& msg)
+    {
+        MethodReply(msg, ER_OK);
+    }
+
+    void TVDown(const InterfaceDescription::Member* member, Message& msg)
+    {
+        MethodReply(msg, ER_OK);
+    }
+
+    void TVChannel(const InterfaceDescription::Member* member, Message& msg)
+    {
+        MethodReply(msg, ER_OK);
+    }
+
   private:
+    QStatus SetupBus(BusAttachment& bus)
+    {
+        QStatus status = bus.Start();
+        if (ER_OK != status) {
+            return status;
+        }
+        return bus.Connect(ajn::getConnectArg().c_str());
+    }
+
+    QStatus TeardownBus(BusAttachment& bus)
+    {
+        bus.UnregisterBusObject(*this);
+        status = bus.Disconnect(ajn::getConnectArg().c_str());
+        if (ER_OK != status) {
+            return status;
+        }
+        status = bus.Stop();
+        if (ER_OK != status) {
+            return status;
+        }
+        return bus.Join();
+    }
+
     ECDHEKeyXListener* serviceKeyListener;
-    ECDHEKeyXListener* clientKeyListener;
-    size_t certChainLen;
-    bool signalReceived;
+    ECDHEKeyXListener* adminKeyListener;
+    ECDHEKeyXListener* consumerKeyListener;
+    bool signalNotifyConfigReceived;
 };
 
 static bool IsPermissionDeniedError(QStatus status, Message& msg)
@@ -502,7 +617,7 @@ QStatus ReadClaimResponse(Message& msg, ECCPublicKey* pubKey)
     return ER_OK;
 }
 
-QStatus Claim(BusAttachment& bus, ProxyBusObject& remoteObj, const ECCPublicKey* pubKey, ECCPublicKey* claimedPubKey)
+QStatus Claim(BusAttachment& bus, ProxyBusObject& remoteObj, const ECCPublicKey* pubKey, ECCPublicKey* claimedPubKey, GUID128* claimedGUID)
 {
     QStatus status;
     const InterfaceDescription* itf = bus.GetInterface(INTERFACE_NAME);
@@ -515,14 +630,19 @@ QStatus Claim(BusAttachment& bus, ProxyBusObject& remoteObj, const ECCPublicKey*
     CredentialAccessor ca(bus);
     qcc::GUID128 localGUID;
     status = ca.GetGuid(localGUID);
+    if (!claimedGUID) {
+        claimedGUID = &localGUID;
+    }
     inputs[0].Set("(yv)", KeyInfo::FORMAT_ALLJOYN,
                   new MsgArg("(ayyyv)", GUID128::SIZE, localGUID.GetBytes(), KeyInfo::USAGE_SIGNING, KeyInfoECC::KEY_TYPE,
                              new MsgArg("(yyv)", keyInfo.GetAlgorithm(), keyInfo.GetCurve(),
                                         new MsgArg("(ayay)", ECC_COORDINATE_SZ, keyInfo.GetXCoord(), ECC_COORDINATE_SZ, keyInfo.GetYCoord()))));
     inputs[0].SetOwnershipFlags(MsgArg::OwnsArgs, true);
 
-    inputs[1].Set("ay", GUID128::SIZE, claimedGUID.GetBytes());
+    inputs[1].Set("ay", GUID128::SIZE, claimedGUID->GetBytes());
     uint32_t timeout = 10000; /* Claim is a bit show */
+
+    printf("Claim send keyInfo with GUID %s\n", localGUID.ToString().c_str());
     status = remoteObj.MethodCall(INTERFACE_NAME, "Claim", inputs, 2, reply, timeout);
 
     if (ER_OK == status) {
@@ -552,54 +672,51 @@ PermissionPolicy* GeneratePolicy(qcc::GUID128& guid)
 
     PermissionPolicy::Term* terms = new PermissionPolicy::Term[3];
 
-    /* terms record 0 */
+    /* terms record 0  ANY-USER */
     PermissionPolicy::Peer* peers = new PermissionPolicy::Peer[1];
     peers[0].SetType(PermissionPolicy::Peer::PEER_ANY);
     terms[0].SetPeers(1, peers);
     PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[1];
-    rules[0].SetInterfaceName("org.allseenalliance.control.OnOff");
-    PermissionPolicy::Rule::Member* prms = new PermissionPolicy::Rule::Member[1];
-    prms[0].SetMemberName("*");
-    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
-    rules[0].SetMembers(1, prms);
+    rules[0].SetInterfaceName(ONOFF_IFC_NAME);
+    PermissionPolicy::Rule::Member* prms = new PermissionPolicy::Rule::Member[2];
+    prms[0].SetMemberName("Off");
+    prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_DENIED);
+    prms[1].SetMemberName("*");
+    prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+    rules[0].SetMembers(2, prms);
     terms[0].SetRules(1, rules);
 
-    /* terms record 1 */
+    /* terms record 1 GUILD membershipGUID1 */
     peers = new PermissionPolicy::Peer[1];
     peers[0].SetType(PermissionPolicy::Peer::PEER_GUILD);
-    qcc::GUID128 guildGUID("5668dd0e9bf2d7f8b73998a430834f5a");
-    peers[0].SetID(guildGUID.GetBytes(), guildGUID.SIZE);
-    const char* guildAuthority = "guildPubKey";
-    peers[0].SetGuildAuthority((const uint8_t*) guildAuthority, strlen(guildAuthority));
+    peers[0].SetID(membershipGUID1.GetBytes(), qcc::GUID128::SIZE);
     terms[1].SetPeers(1, peers);
     rules = new PermissionPolicy::Rule[2];
-    rules[0].SetInterfaceName("org.allseenalliance.control.TV");
+    rules[0].SetInterfaceName(TV_IFC_NAME);
     prms = new PermissionPolicy::Rule::Member[3];
     prms[0].SetMemberName("Up");
     prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
-    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
     prms[1].SetMemberName("Down");
     prms[1].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
-    prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+    prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
     prms[2].SetMemberName("Channel");
     prms[2].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
-    prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+    prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
     rules[0].SetMembers(3, prms);
 
     rules[1].SetInterfaceName("org.allseenalliance.control.Mouse*");
     prms = new PermissionPolicy::Rule::Member[1];
     prms[0].SetMemberName("*");
-    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
     rules[1].SetMembers(1, prms);
     terms[1].SetRules(2, rules);
 
-    /* terms record 2 */
+    /* terms record 2 GUILD membershipGUID2 */
     peers = new PermissionPolicy::Peer[1];
     peers[0].SetType(PermissionPolicy::Peer::PEER_GUILD);
-    qcc::GUID128 guildGUID2("317dc2429a69499df9d3eba302fbb3b2");
-    peers[0].SetID(guildGUID2.GetBytes(), guildGUID.SIZE);
-    const char* guild2Authority = "guild2PubKey";
-    peers[0].SetGuildAuthority((const uint8_t*) guild2Authority, strlen(guild2Authority));
+    peers[0].SetID(membershipGUID2.GetBytes(), qcc::GUID128::SIZE);
     terms[2].SetPeers(1, peers);
     rules = new PermissionPolicy::Rule[2];
     rules[0].SetObjPath("/control/settings");
@@ -610,7 +727,7 @@ PermissionPolicy* GeneratePolicy(qcc::GUID128& guid)
     rules[1].SetObjPath("*");
     prms = new PermissionPolicy::Rule::Member[1];
     prms[0].SetMemberName("*");
-    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
     rules[1].SetMembers(1, prms);
 
     terms[2].SetRules(2, rules);
@@ -632,16 +749,68 @@ PermissionPolicy* GenerateMembeshipAuthData()
 
     /* terms record 0 */
     PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[1];
-    rules[0].SetInterfaceName("org.allseenalliance.control.TV");
-    PermissionPolicy::Rule::Member* prms = new PermissionPolicy::Rule::Member[1];
-    prms[0].SetMemberName("*");
+    rules[0].SetInterfaceName(TV_IFC_NAME);
+    PermissionPolicy::Rule::Member* prms = new PermissionPolicy::Rule::Member[2];
+    prms[0].SetMemberName("Up");
+    prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
     prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+    prms[1].SetMemberName("Down");
+    prms[1].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+    prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+    rules[0].SetMembers(2, prms);
 
-    rules[0].SetMembers(1, prms);
     terms[0].SetRules(1, rules);
     policy->SetTerms(1, terms);
 
     return policy;
+}
+
+QStatus GenerateManifest(PermissionPolicy::Rule** retRules, size_t* count)
+{
+    *count = 2;
+    PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[*count];
+    rules[0].SetInterfaceName(TV_IFC_NAME);
+    PermissionPolicy::Rule::Member* prms = new PermissionPolicy::Rule::Member[2];
+    prms[0].SetMemberName("Up");
+    prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+    prms[1].SetMemberName("Down");
+    prms[1].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+    prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+    rules[0].SetMembers(2, prms);
+
+    rules[1].SetInterfaceName("org.allseenalliance.control.Mouse*");
+    prms = new PermissionPolicy::Rule::Member[1];
+    prms[0].SetMemberName("*");
+    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+    rules[1].SetMembers(1, prms);
+
+    *retRules = rules;
+    return ER_OK;
+}
+
+QStatus GetManifest(BusAttachment& bus, ProxyBusObject& remoteObj, PermissionPolicy::Rule** retRules, size_t* count)
+{
+    QStatus status;
+    const InterfaceDescription* itf = bus.GetInterface(INTERFACE_NAME);
+    remoteObj.AddInterface(*itf);
+    Message reply(bus);
+
+    status = remoteObj.MethodCall(INTERFACE_NAME, "GetManifest", NULL, 0, reply, 5000);
+
+    if (ER_OK != status) {
+        if (IsPermissionDeniedError(status, reply)) {
+            status = ER_PERMISSION_DENIED;
+        }
+        return status;
+    }
+    uint8_t type;
+    MsgArg* variant;
+    status = reply->GetArg(0)->Get("(yv)", &type, &variant);
+    if (ER_OK != status) {
+        return status;
+    }
+    return PermissionPolicy::ParseRules(*variant, retRules, count);
 }
 
 QStatus InstallPolicy(BusAttachment& bus, ProxyBusObject& remoteObj, PermissionPolicy& policy)
@@ -708,7 +877,7 @@ QStatus RemovePolicy(BusAttachment& bus, ProxyBusObject& remoteObj)
 QStatus CreateMembershipCert(const String& serial, const uint8_t* authDataHash, const qcc::GUID128& issuer, const qcc::GUID128& subject, const ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, qcc::String& der)
 {
     ECCPrivateKey trustAnchorPrivateKey;
-    CertECCUtil_DecodePrivateKey(clientPrivateKeyPEM, (uint32_t*) &trustAnchorPrivateKey, sizeof(ECCPrivateKey));
+    CertECCUtil_DecodePrivateKey(adminPrivateKeyPEM, (uint32_t*) &trustAnchorPrivateKey, sizeof(ECCPrivateKey));
     return CreateGuildCert(serial, authDataHash, issuer, &trustAnchorPrivateKey, subject, subjectPubKey, guild, der);
 }
 
@@ -758,9 +927,10 @@ QStatus InstallMembership(const String& serial, BusAttachment& bus, ProxyBusObje
         return status;
     }
     PermissionPolicy* membershipAuthData = GenerateMembeshipAuthData();
-    Crypto_SHA256 hashUtil;
     uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    membershipAuthData->Digest(bus, hashUtil, digest);
+    Message tmpMsg(bus);
+    DefaultPolicyMarshaller marshaller(tmpMsg);
+    membershipAuthData->Digest(marshaller, digest, Crypto_SHA256::DIGEST_SIZE);
 
     qcc::String der;
     status = CreateMembershipCert(serial, digest, localGUID, subjectGUID, subjectPubKey, guild, der);
@@ -768,7 +938,9 @@ QStatus InstallMembership(const String& serial, BusAttachment& bus, ProxyBusObje
         return status;
     }
     printf("Sending membership cert length %d\n", (int) der.length());
-    MsgArg arg("(yay)", Certificate::ENCODING_X509_DER, der.length(), der.c_str());
+    MsgArg certArgs[1];
+    certArgs[0].Set("(yay)", Certificate::ENCODING_X509_DER, der.length(), der.c_str());
+    MsgArg arg("a(yay)", 1, certArgs);
 
     status = remoteObj.MethodCall(INTERFACE_NAME, "InstallMembership", &arg, 1, reply, 5000);
 
@@ -782,7 +954,7 @@ QStatus InstallMembership(const String& serial, BusAttachment& bus, ProxyBusObje
         /* installing the auth data */
         MsgArg args[3];
         args[0].Set("s", serial.c_str());
-        args[1].Set("s", localGUID.ToString().c_str());
+        args[1].Set("ay", GUID128::SIZE, localGUID.GetBytes());
         membershipAuthData->Export(args[2]);
         printf("InstallMembership calls InstallMembershipAuthData with auth data %s\n", membershipAuthData->ToString().c_str());
         status = remoteObj.MethodCall(INTERFACE_NAME, "InstallMembershipAuthData", args, ArraySize(args), reply, 5000);
@@ -806,7 +978,7 @@ QStatus RemoveMembership(BusAttachment& bus, ProxyBusObject& remoteObj, const qc
 
     MsgArg inputs[2];
     inputs[0].Set("s", serialNum.c_str());
-    inputs[1].Set("s", issuer.ToString().c_str());
+    inputs[1].Set("ay", GUID128::SIZE, issuer.GetBytes());
 
     status = remoteObj.MethodCall(INTERFACE_NAME, "RemoveMembership", inputs, 2, reply, 5000);
 
@@ -881,37 +1053,250 @@ QStatus RemoveIdentity(BusAttachment& bus, ProxyBusObject& remoteObj)
     return status;
 }
 
+QStatus InstallGuildEquivalence(BusAttachment& bus, ProxyBusObject& remoteObj, const char* pem)
+{
+    QStatus status;
+    const InterfaceDescription* itf = bus.GetInterface(INTERFACE_NAME);
+    remoteObj.AddInterface(*itf);
+    Message reply(bus);
+    MsgArg arg("(yay)", Certificate::ENCODING_X509_DER_PEM, strlen(pem), pem);
+
+    status = remoteObj.MethodCall(INTERFACE_NAME, "InstallGuildEquivalence", &arg, 1, reply, 5000);
+
+    if (ER_OK != status) {
+        if (IsPermissionDeniedError(status, reply)) {
+            status = ER_PERMISSION_DENIED;
+        }
+    }
+    return status;
+}
+
+QStatus ExcerciseOn(BusAttachment& bus, ProxyBusObject& remoteObj)
+{
+    QStatus status;
+    const InterfaceDescription* itf = bus.GetInterface(ONOFF_IFC_NAME);
+    remoteObj.AddInterface(*itf);
+    Message reply(bus);
+
+    printf("ExcerciseOn calling On\n");
+    status = remoteObj.MethodCall(ONOFF_IFC_NAME, "On", NULL, 0, reply, 5000);
+
+    printf("ExcerciseOn calling On return status 0x%x\n", status);
+    if (ER_OK != status) {
+        if (IsPermissionDeniedError(status, reply)) {
+            status = ER_PERMISSION_DENIED;
+        }
+    }
+    return status;
+}
+
+QStatus ExcerciseOff(BusAttachment& bus, ProxyBusObject& remoteObj)
+{
+    QStatus status;
+    const InterfaceDescription* itf = bus.GetInterface(ONOFF_IFC_NAME);
+    remoteObj.AddInterface(*itf);
+    Message reply(bus);
+
+    printf("ExcerciseOff calling Off\n");
+    status = remoteObj.MethodCall(ONOFF_IFC_NAME, "Off", NULL, 0, reply, 5000);
+
+    printf("ExcerciseOff calling Off return status 0x%x\n", status);
+    if (ER_OK != status) {
+        if (IsPermissionDeniedError(status, reply)) {
+            status = ER_PERMISSION_DENIED;
+        }
+    }
+    return status;
+}
+
+QStatus ExcerciseTVUp(BusAttachment& bus, ProxyBusObject& remoteObj)
+{
+    QStatus status;
+    const InterfaceDescription* itf = bus.GetInterface(TV_IFC_NAME);
+    remoteObj.AddInterface(*itf);
+    Message reply(bus);
+
+    printf("ExcerciseTVUp calling Up\n");
+    status = remoteObj.MethodCall(TV_IFC_NAME, "Up", NULL, 0, reply, 5000);
+
+    printf("ExcerciseTVUp calling Up return status 0x%x\n", status);
+    if (ER_OK != status) {
+        if (IsPermissionDeniedError(status, reply)) {
+            status = ER_PERMISSION_DENIED;
+        }
+    }
+    return status;
+}
+
+QStatus ExcerciseTVDown(BusAttachment& bus, ProxyBusObject& remoteObj)
+{
+    QStatus status;
+    const InterfaceDescription* itf = bus.GetInterface(TV_IFC_NAME);
+    remoteObj.AddInterface(*itf);
+    Message reply(bus);
+
+    printf("ExcerciseTVDown calling Down\n");
+    status = remoteObj.MethodCall(TV_IFC_NAME, "Down", NULL, 0, reply, 5000);
+
+    printf("ExcerciseTVDown calling Down return status 0x%x\n", status);
+    if (ER_OK != status) {
+        if (IsPermissionDeniedError(status, reply)) {
+            status = ER_PERMISSION_DENIED;
+        }
+    }
+    return status;
+}
+
+QStatus ExcerciseTVChannel(BusAttachment& bus, ProxyBusObject& remoteObj)
+{
+    QStatus status;
+    const InterfaceDescription* itf = bus.GetInterface(TV_IFC_NAME);
+    remoteObj.AddInterface(*itf);
+    Message reply(bus);
+
+    printf("ExcerciseTVChannel calling Channel\n");
+    status = remoteObj.MethodCall(TV_IFC_NAME, "Channel", NULL, 0, reply, 5000);
+
+    printf("ExcerciseTVChannel calling Channel return status 0x%x\n", status);
+    if (ER_OK != status) {
+        if (IsPermissionDeniedError(status, reply)) {
+            status = ER_PERMISSION_DENIED;
+        }
+    }
+    return status;
+}
+
+QStatus JoinPeerSession(BusAttachment& initiator, BusAttachment& responder, SessionId& sessionId)
+{
+    SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
+    QStatus status = ER_FAIL;
+    for (int cnt = 0; cnt < 30; cnt++) {
+        status = initiator.JoinSession(responder.GetUniqueName().c_str(),
+                                       ALLJOYN_SESSIONPORT_PERMISSION_MGMT, NULL, sessionId, opts);
+        if (ER_OK == status) {
+            return status;
+        }
+        /* sleep a few seconds since the responder may not yet setup the listener port */
+        qcc::Sleep(100);
+    }
+    return status;
+}
+
 /*
- *  Test PermissionMgmt Claim method
+ *  Preparation work to clear out the existing key stores.
  */
-TEST_F(PermissionMgmtTest, Claim)
+TEST_F(PermissionMgmtTest, Prep)
+{
+    EnableSecurity("ALLJOYN_ECDHE_NULL", false);
+
+    SessionId sessionId;
+    QStatus status = JoinPeerSession(adminBus, serviceBus, sessionId);
+    EXPECT_EQ(ER_OK, status) << "  JoinSession to service failed.  Actual Status: " << QCC_StatusText(status);
+    /* retrieve the identity cert just to enable the secured session */
+    qcc::String retIdentity;
+    ProxyBusObject serviceProxyObject(adminBus, serviceBus.GetUniqueName().c_str(), PERMISSION_MGMT_PATH, sessionId, false);
+    status = GetIdentity(adminBus, serviceProxyObject, retIdentity);
+    EXPECT_NE(ER_OK, status) << "  GetIdentity did not fail.  Actual Status: " << QCC_StatusText(status);
+
+    status = JoinPeerSession(adminBus, consumerBus, sessionId);
+    EXPECT_EQ(ER_OK, status) << "  JoinSession consumer failed.  Actual Status: " << QCC_StatusText(status);
+    /* retrieve the identity cert just to enable the secured session */
+    ProxyBusObject consumerProxyObject(adminBus, consumerBus.GetUniqueName().c_str(), PERMISSION_MGMT_PATH, sessionId, false);
+    status = GetIdentity(adminBus, consumerProxyObject, retIdentity);
+    EXPECT_NE(ER_OK, status) << "  GetIdentity did not fail.  Actual Status: " << QCC_StatusText(status);
+
+    /* clear all the key store for the remaining tests */
+    adminBus.ClearKeyStore();
+    serviceBus.ClearKeyStore();
+    consumerBus.ClearKeyStore();
+}
+
+/*
+ *  Test PermissionMgmt Claim method to the admin
+ */
+TEST_F(PermissionMgmtTest, ClaimAdmin)
 {
     QStatus status = ER_OK;
     EnableSecurity("ALLJOYN_ECDHE_NULL", false);
-    clientBus.ClearKeyStore();
-    serviceBus.ClearKeyStore();
     SessionId sessionId;
     SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
-    status = clientBus.JoinSession(serviceBus.GetUniqueName().c_str(),
-                                   ALLJOYN_SESSIONPORT_PERMISSION_MGMT, NULL, sessionId, opts);
+    status = JoinPeerSession(adminBus, adminProxyBus, sessionId);
     EXPECT_EQ(ER_OK, status) << "  JoinSession failed.  Actual Status: " << QCC_StatusText(status);
-    String certChainPEM(clientCertChainType1PEM);
-    status = ParseCertChainPEM(certChainPEM);
-    EXPECT_EQ(ER_OK, status) << "  Claim failed.  Parsing cert chain PEM failed.  Actual Status: " << QCC_StatusText(status);
-    ProxyBusObject clientProxyObject(clientBus, serviceBus.GetUniqueName().c_str(), PERMISSION_MGMT_PATH, sessionId, false);
+    ProxyBusObject clientProxyObject(adminBus, adminProxyBus.GetUniqueName().c_str(), PERMISSION_MGMT_PATH, sessionId, false);
     ECCPublicKey claimedPubKey;
-    const ECCPublicKey* issuerPubKey = certChain[0]->GetIssuer();
+    ECCPublicKey issuerPubKey;
+    CertECCUtil_DecodePublicKey(adminPublicKeyPEM, (uint32_t*) &issuerPubKey, sizeof(ECCPublicKey));
 
-    status = Claim(clientBus, clientProxyObject, issuerPubKey, &claimedPubKey);
+    status = Claim(adminBus, clientProxyObject, &issuerPubKey, &claimedPubKey, NULL);
+    EXPECT_EQ(ER_OK, status) << "  Claim failed.  Actual Status: " << QCC_StatusText(status);
+}
+
+/*
+ *  Test PermissionMgmt Claim method to the service
+ */
+TEST_F(PermissionMgmtTest, ClaimService)
+{
+    QStatus status = ER_OK;
+    EnableSecurity("ALLJOYN_ECDHE_NULL", false);
+    SessionId sessionId;
+    SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
+    status = JoinPeerSession(adminBus, serviceBus, sessionId);
+    EXPECT_EQ(ER_OK, status) << "  JoinSession failed.  Actual Status: " << QCC_StatusText(status);
+    ProxyBusObject clientProxyObject(adminBus, serviceBus.GetUniqueName().c_str(), PERMISSION_MGMT_PATH, sessionId, false);
+    ECCPublicKey claimedPubKey;
+    ECCPublicKey issuerPubKey;
+    CertECCUtil_DecodePublicKey(adminPublicKeyPEM, (uint32_t*) &issuerPubKey, sizeof(ECCPublicKey));
+
+    SetNotifyConfigSignalReceived(false);
+    status = Claim(adminBus, clientProxyObject, &issuerPubKey, &claimedPubKey, &serviceGUID);
     EXPECT_EQ(ER_OK, status) << "  Claim failed.  Actual Status: " << QCC_StatusText(status);
 
     /* try to claim a second time */
-    status = Claim(clientBus, clientProxyObject, issuerPubKey, &claimedPubKey);
+    status = Claim(adminBus, clientProxyObject, &issuerPubKey, &claimedPubKey, &serviceGUID);
     EXPECT_EQ(ER_PERMISSION_DENIED, status) << "  Claim is not supposed to succeed.  Actual Status: " << QCC_StatusText(status);
 
-    /* sleep a few seconds to see whether the signal is received */
-    qcc::Sleep(1000);
-    EXPECT_TRUE(GetSignalReceived()) << " Fail to receive expected NotifyConfig signal.";
+    /* sleep a second to see whether the NotifyConfig signal is received */
+    for (int cnt = 0; cnt < 100; cnt++) {
+        if (GetNotifyConfigSignalReceived()) {
+            break;
+        }
+        qcc::Sleep(10);
+    }
+    EXPECT_TRUE(GetNotifyConfigSignalReceived()) << " Fail to receive expected NotifyConfig signal.";
+}
+
+/*
+ *  Test PermissionMgmt Claim method to the consumer
+ */
+TEST_F(PermissionMgmtTest, ClaimConsumer)
+{
+    QStatus status = ER_OK;
+    EnableSecurity("ALLJOYN_ECDHE_NULL", false);
+    SessionId sessionId;
+    SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
+    status = JoinPeerSession(adminBus, consumerBus, sessionId);
+    EXPECT_EQ(ER_OK, status) << "  JoinSession failed.  Actual Status: " << QCC_StatusText(status);
+    ProxyBusObject clientProxyObject(adminBus, consumerBus.GetUniqueName().c_str(), PERMISSION_MGMT_PATH, sessionId, false);
+    ECCPublicKey claimedPubKey;
+    ECCPublicKey issuerPubKey;
+    CertECCUtil_DecodePublicKey(adminPublicKeyPEM, (uint32_t*) &issuerPubKey, sizeof(ECCPublicKey));
+
+    SetNotifyConfigSignalReceived(false);
+    status = Claim(adminBus, clientProxyObject, &issuerPubKey, &claimedPubKey, &consumerGUID);
+    EXPECT_EQ(ER_OK, status) << "  Claim failed.  Actual Status: " << QCC_StatusText(status);
+
+    /* try to claim a second time */
+    status = Claim(adminBus, clientProxyObject, &issuerPubKey, &claimedPubKey, &consumerGUID);
+    EXPECT_EQ(ER_PERMISSION_DENIED, status) << "  Claim is not supposed to succeed.  Actual Status: " << QCC_StatusText(status);
+
+    /* sleep a second to see whether the NotifyConfig signal is received */
+    for (int cnt = 0; cnt < 100; cnt++) {
+        if (GetNotifyConfigSignalReceived()) {
+            break;
+        }
+        qcc::Sleep(10);
+    }
+    EXPECT_TRUE(GetNotifyConfigSignalReceived()) << " Fail to receive expected NotifyConfig signal.";
 }
 
 /*
@@ -919,23 +1304,23 @@ TEST_F(PermissionMgmtTest, Claim)
  */
 TEST_F(PermissionMgmtTest, InstallPolicy)
 {
-    ProxyBusObject clientProxyObject(clientBus, serviceBus.GetUniqueName().c_str(), PERMISSION_MGMT_PATH, 0, false);
+    ProxyBusObject clientProxyObject(adminBus, serviceBus.GetUniqueName().c_str(), PERMISSION_MGMT_PATH, 0, false);
     EnableSecurity("ALLJOYN_ECDHE_ECDSA", false);
 
-    CredentialAccessor ca(clientBus);
+    CredentialAccessor ca(adminBus);
     qcc::GUID128 localGUID;
     status = ca.GetGuid(localGUID);
     EXPECT_EQ(ER_OK, status) << "  ca.GetGuid failed.  Actual Status: " << QCC_StatusText(status);
 
-    SetSignalReceived(false);
+    SetNotifyConfigSignalReceived(false);
     PermissionPolicy* policy = GeneratePolicy(localGUID);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
-    status = InstallPolicy(clientBus, clientProxyObject, *policy);
+    status = InstallPolicy(adminBus, clientProxyObject, *policy);
     EXPECT_EQ(ER_OK, status) << "  InstallPolicy failed.  Actual Status: " << QCC_StatusText(status);
 
     /* retrieve back the policy to compare */
     PermissionPolicy retPolicy;
-    status = GetPolicy(clientBus, clientProxyObject, retPolicy);
+    status = GetPolicy(adminBus, clientProxyObject, retPolicy);
     EXPECT_EQ(ER_OK, status) << "  GetPolicy failed.  Actual Status: " << QCC_StatusText(status);
 
     EXPECT_EQ(policy->GetSerialNum(), retPolicy.GetSerialNum()) << " GetPolicy failed. Different serial number.";
@@ -943,9 +1328,178 @@ TEST_F(PermissionMgmtTest, InstallPolicy)
     EXPECT_EQ(policy->GetTermsSize(), retPolicy.GetTermsSize()) << " GetPolicy failed. Different provider size.";
     printf("InstallPolicy gets back policy %s\n", retPolicy.ToString().c_str());
     delete policy;
-    /* sleep a few seconds to see whether the signal is received */
-    qcc::Sleep(1000);
-    EXPECT_TRUE(GetSignalReceived()) << " Fail to receive expected NotifyConfig signal.";
+    /* sleep a second to see whether the NotifyConfig signal is received */
+    for (int cnt = 0; cnt < 100; cnt++) {
+        if (GetNotifyConfigSignalReceived()) {
+            break;
+        }
+        qcc::Sleep(10);
+    }
+    EXPECT_TRUE(GetNotifyConfigSignalReceived()) << " Fail to receive expected NotifyConfig signal.";
+}
+
+/*
+ *  Test PermissionMgmt InstallIdentity method
+ */
+TEST_F(PermissionMgmtTest, InstallIdentity)
+{
+    ProxyBusObject clientProxyObject(adminBus, serviceBus.GetUniqueName().c_str(), PERMISSION_MGMT_PATH, 0, false);
+    EnableSecurity("ALLJOYN_ECDHE_ECDSA", false);
+
+    CredentialAccessor ca(adminBus);
+    qcc::String der;
+    status = CreateIdentityCert(ca, "1010101", adminPrivateKeyPEM, adminPublicKeyPEM, false, der);
+    EXPECT_EQ(ER_OK, status) << "  CreateIdentityCert failed.  Actual Status: " << QCC_StatusText(status);
+
+    status = InstallIdentity(adminBus, clientProxyObject, der);
+    EXPECT_EQ(ER_OK, status) << "  InstallIdentity failed.  Actual Status: " << QCC_StatusText(status);
+
+    /* retrieve back the identity cert PEM to compare */
+    qcc::String retIdentity;
+    status = GetIdentity(adminBus, clientProxyObject, retIdentity);
+    EXPECT_FALSE(retIdentity.empty()) << "  GetIdentity failed.  Return value is empty";
+    EXPECT_STREQ(der.c_str(), retIdentity.c_str()) << "  GetIdentity failed.  Return value does not equal original";
+
+    /* delete the identity */
+    status = RemoveIdentity(adminBus, clientProxyObject);
+    EXPECT_EQ(ER_OK, status) << "  DeleteIdentity failed.  Actual Status: " << QCC_StatusText(status);
+
+    /* retrieve back the identity cert.  Expect failure */
+    status = GetIdentity(adminBus, clientProxyObject, retIdentity);
+    EXPECT_NE(ER_OK, status) << "  GetIdentity did not fail.  Actual Status: " << QCC_StatusText(status);
+
+}
+
+/*
+ *  Test PermissionMgmt InstallMembership method to a provider
+ */
+TEST_F(PermissionMgmtTest, InstallMembershipToServiceProvider)
+{
+    ProxyBusObject clientProxyObject(adminBus, serviceBus.GetUniqueName().c_str(), PERMISSION_MGMT_PATH, 0, false);
+    EnableSecurity("ALLJOYN_ECDHE_ECDSA", false);
+
+    ECCPublicKey claimedPubKey;
+    status = RetrieveDSAPublicKeyFromKeyStore(serviceBus, &claimedPubKey);
+    EXPECT_EQ(ER_OK, status) << "  InstallMembership RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
+    status = InstallMembership(membershipSerial3, adminBus, clientProxyObject, serviceGUID, &claimedPubKey, membershipGUID3);
+    EXPECT_EQ(ER_OK, status) << "  InstallMembership cert1 failed.  Actual Status: " << QCC_StatusText(status);
+    status = InstallMembership(membershipSerial3, adminBus, clientProxyObject, serviceGUID, &claimedPubKey, membershipGUID3);
+    EXPECT_NE(ER_OK, status) << "  InstallMembership cert1 again is supposed to fail.  Actual Status: " << QCC_StatusText(status);
+
+}
+
+/*
+ *  Test PermissionMgmt RemoveMembership method from service provider
+ */
+TEST_F(PermissionMgmtTest, RemoveMembershipFromServiceProvider)
+{
+    ProxyBusObject clientProxyObject(adminBus, serviceBus.GetUniqueName().c_str(), PERMISSION_MGMT_PATH, 0, false);
+    EnableSecurity("ALLJOYN_ECDHE_ECDSA", false);
+    CredentialAccessor ca(adminBus);
+    qcc::GUID128 localGUID;
+    status = ca.GetGuid(localGUID);
+    EXPECT_EQ(ER_OK, status) << "  ca.GetGuid failed.  Actual Status: " << QCC_StatusText(status);
+
+    status = RemoveMembership(adminBus, clientProxyObject, membershipSerial3, localGUID);
+    EXPECT_EQ(ER_OK, status) << "  RemoveMembershipFromServiceProvider failed.  Actual Status: " << QCC_StatusText(status);
+
+    /* removing it again */
+    status = RemoveMembership(adminBus, clientProxyObject, membershipSerial3, localGUID);
+    EXPECT_NE(ER_OK, status) << "  RemoveMembershipFromServiceProvider succeeded.  Expect it to fail.  Actual Status: " << QCC_StatusText(status);
+
+}
+
+/*
+ *  Test PermissionMgmt InstallMembership method to a consumer
+ */
+TEST_F(PermissionMgmtTest, InstallMembershipToConsumer)
+{
+    ProxyBusObject clientProxyObject(adminBus, consumerBus.GetUniqueName().c_str(), PERMISSION_MGMT_PATH, 0, false);
+    EnableSecurity("ALLJOYN_ECDHE_ECDSA", false);
+
+    ECCPublicKey claimedPubKey;
+    status = RetrieveDSAPublicKeyFromKeyStore(consumerBus, &claimedPubKey);
+    EXPECT_EQ(ER_OK, status) << "  InstallMembershipToConsumer RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
+    status = InstallMembership(membershipSerial1, adminBus, clientProxyObject, consumerGUID, &claimedPubKey, membershipGUID1);
+    EXPECT_EQ(ER_OK, status) << "  InstallMembershipToConsumer cert1 failed.  Actual Status: " << QCC_StatusText(status);
+
+}
+
+/*
+ *  Test PermissionMgmt InstallGuildEquivalence method
+ */
+TEST_F(PermissionMgmtTest, InstallGuildEquivalence)
+{
+    ProxyBusObject clientProxyObject(adminBus, serviceBus.GetUniqueName().c_str(), PERMISSION_MGMT_PATH, 0, false);
+    EnableSecurity("ALLJOYN_ECDHE_ECDSA", false);
+
+    const char* pem = clientCertChainType1PEM;
+    status = InstallGuildEquivalence(adminBus, clientProxyObject, pem);
+    EXPECT_EQ(ER_OK, status) << "  InstallGuildEquivalence failed.  Actual Status: " << QCC_StatusText(status);
+
+}
+
+/*
+ *  Test access by any user
+ */
+TEST_F(PermissionMgmtTest, AnyUserCanCallOnAndNotOff)
+{
+
+    CreateAppInterfaces(serviceBus, true);
+    CreateAppInterfaces(consumerBus, false);
+    ProxyBusObject clientProxyObject(consumerBus, serviceBus.GetUniqueName().c_str(), APP_PATH, 0, false);
+    EnableSecurity("ALLJOYN_ECDHE_ECDSA", false);
+    QStatus status = ExcerciseOn(consumerBus, clientProxyObject);
+    EXPECT_EQ(ER_OK, status) << "  AccessOnOffByAnyUser ExcerciseOn failed.  Actual Status: " << QCC_StatusText(status);
+    status = ExcerciseOff(consumerBus, clientProxyObject);
+    EXPECT_NE(ER_OK, status) << "  AccessOffByAnyUser ExcersizeOff did not fail.  Actual Status: " << QCC_StatusText(status);
+    printf("AccessOnOffByAnyUser done.");
+}
+
+/*
+ *  Test access by guild user
+ */
+TEST_F(PermissionMgmtTest, GuildMemberCanTVUpAndDownAndNotChannel)
+{
+
+    CreateAppInterfaces(serviceBus, true);
+    CreateAppInterfaces(consumerBus, false);
+    ProxyBusObject clientProxyObject(consumerBus, serviceBus.GetUniqueName().c_str(), APP_PATH, 0, false);
+    EnableSecurity("ALLJOYN_ECDHE_ECDSA", false);
+    QStatus status = ExcerciseTVUp(consumerBus, clientProxyObject);
+    EXPECT_EQ(ER_OK, status) << "  AccessTVByUserWithGuildMembership ExcerciseTVUp failed.  Actual Status: " << QCC_StatusText(status);
+    status = ExcerciseTVDown(consumerBus, clientProxyObject);
+    EXPECT_EQ(ER_OK, status) << "  AccessTVByUserWithGuildMembership ExcerciseTVDown failed.  Actual Status: " << QCC_StatusText(status);
+    status = ExcerciseTVChannel(consumerBus, clientProxyObject);
+    EXPECT_NE(ER_OK, status) << "  AccessTVByUserWithGuildMembership ExcerciseTVChannel did not fail.  Actual Status: " << QCC_StatusText(status);
+    printf("AccessTVByUserWithGuildMembership done.");
+}
+
+/*
+ *  Test manifest
+ */
+TEST_F(PermissionMgmtTest, SetPermissionManifest)
+{
+    EnableSecurity("ALLJOYN_ECDHE_ECDSA", false);
+
+    PermissionPolicy::Rule* rules = NULL;
+    size_t count = 0;
+    QStatus status = GenerateManifest(&rules, &count);
+    EXPECT_EQ(ER_OK, status) << "  SetPermissionManifest GenerateManifest failed.  Actual Status: " << QCC_StatusText(status);
+    status = serviceBus.SetPermissionManifest(rules, count);
+    EXPECT_EQ(ER_OK, status) << "  SetPermissionManifest SetPermissionManifest failed.  Actual Status: " << QCC_StatusText(status);
+
+    ProxyBusObject clientProxyObject(adminBus, serviceBus.GetUniqueName().c_str(), PERMISSION_MGMT_PATH, 0, false);
+    PermissionPolicy::Rule* retrievedRules = NULL;
+    size_t retrievedCount = 0;
+    status = GetManifest(consumerBus, clientProxyObject, &retrievedRules, &retrievedCount);
+    EXPECT_EQ(ER_OK, status) << "  SetPermissionManifest GetManifest failed.  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(count, retrievedCount) << "  SetPermissionManifest GetManifest failed to retrieve the same count.";
+    for (size_t cnt = 0; cnt < retrievedCount; cnt++) {
+        printf("rules[%d]: %s\n", (int) cnt, retrievedRules[cnt].ToString().c_str());
+    }
+    delete [] rules;
+    delete [] retrievedRules;
 }
 
 /*
@@ -953,10 +1507,10 @@ TEST_F(PermissionMgmtTest, InstallPolicy)
  */
 TEST_F(PermissionMgmtTest, RemovePolicy)
 {
-    ProxyBusObject clientProxyObject(clientBus, serviceBus.GetUniqueName().c_str(), PERMISSION_MGMT_PATH, 0, false);
+    ProxyBusObject clientProxyObject(adminBus, serviceBus.GetUniqueName().c_str(), PERMISSION_MGMT_PATH, 0, false);
     EnableSecurity("ALLJOYN_ECDHE_ECDSA", false);
 
-    CredentialAccessor ca(clientBus);
+    CredentialAccessor ca(adminBus);
     qcc::GUID128 localGUID;
     status = ca.GetGuid(localGUID);
     EXPECT_EQ(ER_OK, status) << "  ca.GetGuid failed.  Actual Status: " << QCC_StatusText(status);
@@ -965,96 +1519,50 @@ TEST_F(PermissionMgmtTest, RemovePolicy)
 
     PermissionPolicy* policy = GeneratePolicy(localGUID);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
-    status = InstallPolicy(clientBus, clientProxyObject, *policy);
+    status = InstallPolicy(adminBus, clientProxyObject, *policy);
     EXPECT_EQ(ER_OK, status) << "  InstallPolicy failed.  Actual Status: " << QCC_StatusText(status);
 
     /* retrieve back the policy to compare */
     PermissionPolicy retPolicy;
-    status = GetPolicy(clientBus, clientProxyObject, retPolicy);
+    status = GetPolicy(adminBus, clientProxyObject, retPolicy);
     EXPECT_EQ(ER_OK, status) << "  GetPolicy failed.  Actual Status: " << QCC_StatusText(status);
 
     /* remove the policy */
-    status = RemovePolicy(clientBus, clientProxyObject);
+    SetNotifyConfigSignalReceived(false);
+    status = RemovePolicy(adminBus, clientProxyObject);
     EXPECT_EQ(ER_OK, status) << "  RemovePolicy failed.  Actual Status: " << QCC_StatusText(status);
 
     /* get policy again.  Expect it to fail */
-    status = GetPolicy(clientBus, clientProxyObject, retPolicy);
+    status = GetPolicy(adminBus, clientProxyObject, retPolicy);
     EXPECT_NE(ER_OK, status) << "  GetPolicy did not fail.  Actual Status: " << QCC_StatusText(status);
     delete policy;
-    /* sleep a few seconds to see whether the signal is received */
-    qcc::Sleep(1000);
-    EXPECT_TRUE(GetSignalReceived()) << " Fail to receive expected NotifyConfig signal.";
+    /* sleep a second to see whether the NotifyConfig signal is received */
+    for (int cnt = 0; cnt < 100; cnt++) {
+        if (GetNotifyConfigSignalReceived()) {
+            break;
+        }
+        qcc::Sleep(10);
+    }
+    EXPECT_TRUE(GetNotifyConfigSignalReceived()) << " Fail to receive expected NotifyConfig signal.";
 }
 
 /*
- *  Test PermissionMgmt InstallIdentity method
+ * Test PermissionMgmt RemoveMembership method from consumer.
  */
-TEST_F(PermissionMgmtTest, InstallIdentity)
+TEST_F(PermissionMgmtTest, RemoveMembershipFromConsumer)
 {
-    ProxyBusObject clientProxyObject(clientBus, serviceBus.GetUniqueName().c_str(), PERMISSION_MGMT_PATH, 0, false);
+    ProxyBusObject clientProxyObject(adminBus, consumerBus.GetUniqueName().c_str(), PERMISSION_MGMT_PATH, 0, false);
     EnableSecurity("ALLJOYN_ECDHE_ECDSA", false);
-
-    CredentialAccessor ca(clientBus);
-    qcc::String der;
-    status = CreateIdentityCert(ca, "1010101", clientPrivateKeyPEM, clientPublicKeyPEM, false, der);
-    EXPECT_EQ(ER_OK, status) << "  CreateIdentityCert failed.  Actual Status: " << QCC_StatusText(status);
-
-    status = InstallIdentity(clientBus, clientProxyObject, der);
-    EXPECT_EQ(ER_OK, status) << "  InstallIdentity failed.  Actual Status: " << QCC_StatusText(status);
-
-    /* retrieve back the identity cert PEM to compare */
-    qcc::String retIdentity;
-    status = GetIdentity(clientBus, clientProxyObject, retIdentity);
-    EXPECT_FALSE(retIdentity.empty()) << "  GetIdentity failed.  Return value is empty";
-    EXPECT_STREQ(der.c_str(), retIdentity.c_str()) << "  GetIdentity failed.  Return value does not equal original";
-
-    /* delete the identity */
-    status = RemoveIdentity(clientBus, clientProxyObject);
-    EXPECT_EQ(ER_OK, status) << "  DeleteIdentity failed.  Actual Status: " << QCC_StatusText(status);
-
-    /* retrieve back the identity cert.  Expect failure */
-    status = GetIdentity(clientBus, clientProxyObject, retIdentity);
-    EXPECT_NE(ER_OK, status) << "  GetIdentity did not fail.  Actual Status: " << QCC_StatusText(status);
-
-}
-
-/*
- *  Test PermissionMgmt InstallMembership method
- */
-TEST_F(PermissionMgmtTest, InstallMembership)
-{
-    ProxyBusObject clientProxyObject(clientBus, serviceBus.GetUniqueName().c_str(), PERMISSION_MGMT_PATH, 0, false);
-    EnableSecurity("ALLJOYN_ECDHE_ECDSA", false);
-
-    ECCPublicKey claimedPubKey;
-    status = RetrieveDSAPublicKeyFromKeyStore(serviceBus, &claimedPubKey);
-    EXPECT_EQ(ER_OK, status) << "  InstallMembership RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
-    qcc::GUID128 guildGUID;
-    status = InstallMembership("10001", clientBus, clientProxyObject, claimedGUID, &claimedPubKey, guildGUID);
-    EXPECT_EQ(ER_OK, status) << "  InstallMembership cert1 failed.  Actual Status: " << QCC_StatusText(status);
-    status = InstallMembership("10001", clientBus, clientProxyObject, claimedGUID, &claimedPubKey, guildGUID);
-    EXPECT_NE(ER_OK, status) << "  InstallMembership cert1 again is supposed to fail.  Actual Status: " << QCC_StatusText(status);
-
-}
-
-/*
- *  Test PermissionMgmt InstallMembership method
- */
-TEST_F(PermissionMgmtTest, RemoveMembership)
-{
-    ProxyBusObject clientProxyObject(clientBus, serviceBus.GetUniqueName().c_str(), PERMISSION_MGMT_PATH, 0, false);
-    EnableSecurity("ALLJOYN_ECDHE_ECDSA", false);
-    CredentialAccessor ca(clientBus);
+    CredentialAccessor ca(adminBus);
     qcc::GUID128 localGUID;
     status = ca.GetGuid(localGUID);
     EXPECT_EQ(ER_OK, status) << "  ca.GetGuid failed.  Actual Status: " << QCC_StatusText(status);
 
-    status = RemoveMembership(clientBus, clientProxyObject, "10001", localGUID);
-    EXPECT_EQ(ER_OK, status) << "  RemoveMembership failed.  Actual Status: " << QCC_StatusText(status);
+    status = RemoveMembership(adminBus, clientProxyObject, membershipSerial1, localGUID);
+    EXPECT_EQ(ER_OK, status) << "  RemoveMembershipFromConsumer failed.  Actual Status: " << QCC_StatusText(status);
 
     /* removing it again */
-    status = RemoveMembership(clientBus, clientProxyObject, "10001", localGUID);
-    EXPECT_NE(ER_OK, status) << "  RemoveMembership succeeded.  Expect it to fail.  Actual Status: " << QCC_StatusText(status);
+    status = RemoveMembership(adminBus, clientProxyObject, membershipSerial1, localGUID);
+    EXPECT_NE(ER_OK, status) << "  RemoveMembershipFromConsumer succeeded.  Expect it to fail.  Actual Status: " << QCC_StatusText(status);
 
 }
-

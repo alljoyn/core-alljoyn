@@ -31,7 +31,6 @@
 #include <qcc/KeyBlob.h>
 #include <qcc/Stream.h>
 #include <qcc/String.h>
-#include <qcc/StringUtil.h>
 
 
 namespace qcc {

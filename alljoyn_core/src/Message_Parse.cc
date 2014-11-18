@@ -617,8 +617,8 @@ QStatus _Message::UnmarshalArgs(const qcc::String& expectedSignature, const char
             permissionCheckMet = true;
             Message msg(*this);
             /* decrypting a message means receiving */
-            status = bus->GetInternal().GetPermissionManager().AuthorizeMessage(false, peerState->GetGuid(), msg, peerState->GetNumOfGuilds(), peerState->GetGuilds());
-            QCC_DbgHLPrintf(("_Message::UnmarshalArgs decrypt permission authorization returns status 0x%x numOfGuilds %d\n", status, peerState->GetNumOfGuilds()));
+            status = bus->GetInternal().GetPermissionManager().AuthorizeMessage(false, msg, peerState);
+            QCC_DbgHLPrintf(("_Message::UnmarshalArgs decrypt permission authorization returns status 0x%x\n", status));
             if (status != ER_OK) {
                 goto ExitUnmarshalArgs;
             }
@@ -690,8 +690,8 @@ ExitUnmarshalArgs:
             Message msg(*this);
             /* decrypting a message means receiving */
             PeerState peerState = bus->GetInternal().GetPeerStateTable()->GetPeerState(GetSender());
-            status = bus->GetInternal().GetPermissionManager().AuthorizeMessage(false, peerState->GetGuid(), msg, peerState->GetNumOfGuilds(), peerState->GetGuilds());
-            QCC_DbgHLPrintf(("_Message::UnmarshalArgs decrypt permission authorization returns status 0x%x numOfGuilds %d\n", status, peerState->GetNumOfGuilds()));
+            status = bus->GetInternal().GetPermissionManager().AuthorizeMessage(false, msg, peerState);
+            QCC_DbgHLPrintf(("_Message::UnmarshalArgs decrypt permission authorization returns status 0x%x\n", status));
         }
     } else {
         if (_msgArgs) {

@@ -191,7 +191,7 @@ class _Message {
     friend class AllJoynObj;
     friend class DeferredMsg;
     friend class AllJoynPeerObj;
-    friend class PermissionPolicy;
+    friend class DefaultPolicyMarshaller;
     friend struct Rule;
 
   public:

@@ -26,7 +26,6 @@
 
 #include <qcc/KeyBlob.h>
 #include <qcc/String.h>
-#include <qcc/StringUtil.h>
 
 
 namespace qcc {
@@ -108,15 +107,7 @@ struct ECCPublicKey {
         }
     }
 
-    const qcc::String ToString() const
-    {
-        qcc::String s = "x=[";
-        s.append(BytesToHexString(x, ECC_COORDINATE_SZ));
-        s.append("], y=[");
-        s.append(BytesToHexString(y, ECC_COORDINATE_SZ));
-        s.append("]");
-        return s;
-    }
+    const qcc::String ToString() const;
 
 };
 

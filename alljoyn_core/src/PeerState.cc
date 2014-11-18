@@ -197,4 +197,31 @@ PeerStateTable::~PeerStateTable()
     lock.Unlock(MUTEX_CONTEXT);
 }
 
+static String GenGuildMetadataKey(const qcc::String& serial, const qcc::GUID128& issuer)
+{
+    return serial + "::" + issuer.ToString();
+}
+
+void _PeerState::SetGuildMetadata(const qcc::String& serial, const qcc::GUID128& issuer, GuildMetadata* guild)
+{
+    String key = GenGuildMetadataKey(serial, issuer);
+    GuildMap::iterator iter = guildMap.find(key);
+    if (iter != guildMap.end()) {
+        /* found existing one */
+        delete iter->second;
+        guildMap.erase(key);
+    }
+    guildMap[key] = guild;
+}
+
+_PeerState::GuildMetadata* _PeerState::GetGuildMetadata(const qcc::String& serial, const qcc::GUID128& issuer)
+{
+    String key = GenGuildMetadataKey(serial, issuer);
+    GuildMap::iterator iter = guildMap.find(key);
+    if (iter == guildMap.end()) {
+        return NULL;
+    }
+    return iter->second;
+}
+
 }

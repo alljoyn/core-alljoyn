@@ -170,7 +170,7 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         ifc->AddMethod("ExchangeSuites",     "au",   "au",  "localAuthList,remoteAuthList");
         ifc->AddMethod("KeyExchange",     "uv",   "uv",  "localAuthMask,localPublicKey, remoteAuthMask, remotePublicKey");
         ifc->AddMethod("KeyAuthentication",     "v",   "v",  "localVerifier,remoteVerifier");
-        ifc->AddMethod("ExchangeMembershipGuilds",     "aay",   "aay",  "guilds,guilds");
+        ifc->AddMethod("SendMemberships",     "a(yv)",   NULL, "memberships");
         ifc->AddProperty("Mechanisms",  "s", PROP_ACCESS_READ);
         ifc->AddProperty("Version",     "u", PROP_ACCESS_READ);
         ifc->Activate();
@@ -212,15 +212,15 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         ifc->AddMethod("InstallEncryptedPolicy",     "ay",  NULL, "encryptedAuthorization");
         ifc->AddMethod("GetPolicy",     NULL, "(yv)",  "authorization");
         ifc->AddMethod("RemovePolicy",     NULL, NULL, NULL);
-        ifc->AddMethod("InstallMembership",     "(yay)",  NULL, "cert");
-        ifc->AddMethod("InstallMembershipAuthData",     "ss(yv)",  NULL, "serialNum,issuer,authorization");
-        ifc->AddMethod("RemoveMembership",     "ss", NULL, "serialNum,issuer");
+        ifc->AddMethod("InstallMembership",     "a(yay)",  NULL, "certchain");
+        ifc->AddMethod("InstallMembershipAuthData",     "say(yv)",  NULL, "serialNum,issuer,authorization");
+        ifc->AddMethod("RemoveMembership",     "say", NULL, "serialNum,issuer");
         ifc->AddMethod("InstallIdentity",     "(yay)", NULL, "cert");
         ifc->AddMethod("RemoveIdentity",     NULL, NULL, NULL);
         ifc->AddMethod("GetIdentity",     NULL, "(yay)", "cert");
         ifc->AddMethod("InstallGuildEquivalence",     "(yay)", NULL, "cert");
         ifc->AddMethod("RemoveGuildEquivalence",     "ayay", NULL, "serialNum,issuer");
-        ifc->AddMethod("GetManifest",     NULL, "yv",  "manifest");
+        ifc->AddMethod("GetManifest",     NULL, "(yv)",  "manifest");
         ifc->Activate();
     }
     {

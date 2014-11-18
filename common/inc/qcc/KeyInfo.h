@@ -130,6 +130,15 @@ class KeyInfo {
 
     QStatus Import(const uint8_t* buf, size_t count);
 
+    /**
+     * Get the format
+     * @return the format
+     */
+    FormatType GetFormat()
+    {
+        return format;
+    }
+
   private:
     FormatType format;
     size_t keyIdLen;

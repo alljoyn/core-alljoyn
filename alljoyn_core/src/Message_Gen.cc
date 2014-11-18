@@ -750,7 +750,7 @@ QStatus _Message::EncryptMessage()
         } else {
             Message msg(*this);
             bool send = true;   // encrypting a message means sending
-            status = bus->GetInternal().GetPermissionManager().AuthorizeMessage(send, peerState->GetGuid(), msg, peerState->GetNumOfGuilds(), peerState->GetGuilds());
+            status = bus->GetInternal().GetPermissionManager().AuthorizeMessage(send, msg, peerState);
             QCC_DbgHLPrintf(("_Message::EncryptMessage permission authorization returns status 0x%x\n", status));
         }
     }

@@ -32,6 +32,7 @@
 #include <alljoyn/BusAttachment.h>
 
 #include "ProtectedAuthListener.h"
+#include "PermissionMgmtObj.h"
 
 using namespace qcc;
 
@@ -204,6 +205,10 @@ class KeyExchangerECDHE : public KeyExchanger {
 
 
   protected:
+
+    void KeyExchangeGenKeyInfo(MsgArg& variant);
+    QStatus KeyExchangeReadKeyInfo(MsgArg& variant);
+
     ECCPublicKey peerPubKey;
     ECCSecret pms;
     Crypto_ECC ecc;
@@ -263,7 +268,7 @@ class KeyExchangerECDHE_PSK : public KeyExchangerECDHE {
 
 class KeyExchangerECDHE_ECDSA : public KeyExchangerECDHE {
   public:
-    KeyExchangerECDHE_ECDSA(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, uint16_t peerAuthVersion) : KeyExchangerECDHE(initiator, peerObj, bus, listener, peerAuthVersion), certChainLen(0), certChain(NULL), hasDSAKeys(false) {
+    KeyExchangerECDHE_ECDSA(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, uint16_t peerAuthVersion, PermissionMgmtObj::TrustAnchorList* trustAnchorList) : KeyExchangerECDHE(initiator, peerObj, bus, listener, peerAuthVersion), certChainLen(0), certChain(NULL), hasDSAKeys(false), trustAnchorList(trustAnchorList), hasCommonTrustAnchors(false) {
     }
 
     virtual ~KeyExchangerECDHE_ECDSA();
@@ -281,6 +286,8 @@ class KeyExchangerECDHE_ECDSA : public KeyExchangerECDHE {
 
     QStatus RequestCredentialsCB(const char* peerName);
     QStatus ValidateRemoteVerifierVariant(const char* peerName, MsgArg* variant, uint8_t* authorized);
+    void KeyExchangeGenKey(MsgArg& variant);
+    QStatus KeyExchangeReadKey(MsgArg& variant);
 
   private:
     QStatus GenerateLocalVerifierCert(CertificateType0& cert);
@@ -290,12 +297,20 @@ class KeyExchangerECDHE_ECDSA : public KeyExchangerECDHE {
     QStatus ParseCertChainPEM(String& encodedCertChain);
     QStatus PrepareKeyAuthenticationLegacy(MsgArg& msgArg);
     QStatus ValidateLegacyRemoteVerifierVariant(MsgArg* variant, uint8_t* authorized);
+    QStatus GenerateLocalVerifierSigInfo(SigInfoECC& sigInfo);
+    QStatus GenVerifierCertArg(MsgArg& msgArg, bool updateHash);
+    QStatus GenVerifierSigInfoArg(MsgArg& msgArg, bool updateHash);
+    void KeyExchangeGenTrustAnchorKeyInfos(MsgArg& variant);
+    QStatus KeyExchangeReadTrustAnchorKeyInfo(MsgArg& variant);
 
     ECCPrivateKey issuerPrivateKey;
     ECCPublicKey issuerPublicKey;
     size_t certChainLen;
     CertificateX509* certChain;
     bool hasDSAKeys;
+    PermissionMgmtObj::TrustAnchorList* trustAnchorList;
+    PermissionMgmtObj::TrustAnchorList peerTrustAnchorList;
+    bool hasCommonTrustAnchors;
 };
 
 } /* namespace ajn */

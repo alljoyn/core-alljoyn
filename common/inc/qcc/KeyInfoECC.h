@@ -28,6 +28,147 @@
 
 namespace qcc {
 
+class SigInfo {
+
+  public:
+
+    static const size_t ALGORITHM_ECDSA_SHA_256 = 0;
+
+    /**
+     * Default constructor.
+     */
+    SigInfo(KeyInfo::FormatType format) : format(format), algorithm(0xFF)
+    {
+    }
+
+    /**
+     * desstructor.
+     */
+    virtual ~SigInfo()
+    {
+    }
+
+    /**
+     * Get the format
+     * @return the format
+     */
+    KeyInfo::FormatType GetFormat()
+    {
+        return format;
+    }
+
+    /**
+     * Retrieve the signature algorithm
+     * @return the signature ECC algorithm
+     */
+    const uint8_t GetAlgorithm()
+    {
+        return algorithm;
+    }
+
+    /**
+     * Virtual initializer to be implemented by derived classes.  The derired
+     * class should call the protected SigInfo::SetAlgorithm() method to set
+     * the signature algorithm.
+     */
+
+    virtual void Init() = 0;
+
+  protected:
+
+    /**
+     * Set the signature algorithm
+     */
+    void SetAlgorithm(uint8_t algorithm)
+    {
+        this->algorithm = algorithm;
+    }
+
+
+  private:
+    KeyInfo::FormatType format;
+    uint8_t algorithm;
+};
+
+class SigInfoECC : public SigInfo {
+
+  public:
+
+    /**
+     * Default constructor.
+     */
+    SigInfoECC() : SigInfo(KeyInfo::FORMAT_ALLJOYN)
+    {
+        Init();
+    }
+
+    virtual void Init() {
+        SetAlgorithm(ALGORITHM_ECDSA_SHA_256);
+        memset(&sig, 0, sizeof(ECCSignature));
+    }
+
+    /**
+     * desstructor.
+     */
+    virtual ~SigInfoECC()
+    {
+    }
+
+    /**
+     * Assign the R coordinate
+     * @param rCoord the R coordinate value to copy
+     */
+    void SetRCoord(const uint8_t* rCoord)
+    {
+        memcpy(sig.r, rCoord, ECC_COORDINATE_SZ);
+    }
+    /**
+     * Retrieve the R coordinate value
+     * @return the R coordinate value.  It's a pointer to an internal buffer. Its lifetime is the same as the object's lifetime.
+     */
+    const uint8_t* GetRCoord()
+    {
+        return sig.r;
+    }
+
+    /**
+     * Assign the S coordinate
+     * @param sCoord the S coordinate value to copy
+     */
+    void SetSCoord(const uint8_t* sCoord)
+    {
+        memcpy(sig.s, sCoord, ECC_COORDINATE_SZ);
+    }
+
+    /**
+     * Retrieve the S coordinate value
+     * @return the S coordinate value.  It's a pointer to an internal buffer. Its lifetime is the same as the object's lifetime.
+     */
+    const uint8_t* GetSCoord()
+    {
+        return sig.s;
+    }
+
+    /**
+     * Set the signature.  The signature is copied into the internal buffer.
+     */
+    void SetSignature(const ECCSignature* sig)
+    {
+        memcpy(&this->sig, sig, sizeof(ECCSignature));
+    }
+    /**
+     * Get the signature.
+     * @return the signature.
+     */
+    const ECCSignature* GetSignature()
+    {
+        return &sig;
+    }
+
+  private:
+    ECCSignature sig;
+};
+
 /**
  * ECC KeyInfo
  */
@@ -43,7 +184,6 @@ class KeyInfoECC : public KeyInfo {
     /**
      * The ECC algorithm
      */
-    static const size_t ALGORITHM_ECDSA_SHA_256 = 0;
 
     /**
      * Default constructor.
@@ -72,7 +212,7 @@ class KeyInfoECC : public KeyInfo {
      */
     const uint8_t GetAlgorithm()
     {
-        return ALGORITHM_ECDSA_SHA_256;
+        return SigInfo::ALGORITHM_ECDSA_SHA_256;
     }
 
     /**
@@ -128,6 +268,13 @@ class KeyInfoNISTP256 : public KeyInfoECC {
         pubkey.form = 0x4;
     }
 
+    /**
+     * Copy constructor.
+     */
+    KeyInfoNISTP256(const KeyInfoNISTP256& other) : KeyInfoECC(Crypto_ECC::ECC_NIST_P256)
+    {
+        SetPublicCtx(other.GetPublicCtx());
+    }
 
     /**
      * Default destructor.

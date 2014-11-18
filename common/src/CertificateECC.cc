@@ -780,6 +780,8 @@ QStatus CertificateX509::EncodeCertificateName(qcc::String& dn, qcc::GUID128& cn
 QStatus CertificateX509::DecodeCertificateName(const qcc::String& dn, qcc::GUID128& ou, qcc::GUID128& cn)
 {
     QStatus status = ER_OK;
+    qcc::String set1;
+    qcc::String set2;
     qcc::String oid1;
     qcc::String oid2;
     qcc::String tmp1;
@@ -789,20 +791,31 @@ QStatus CertificateX509::DecodeCertificateName(const qcc::String& dn, qcc::GUID1
     if (ER_OK != status) {
         return status;
     }
-    if (OID_DN_OU != oid1) {
-        return ER_FAIL;
+    if (oid2.size()) {
+        type = GUILD_CERTIFICATE;
+        if (OID_DN_OU != oid1) {
+            return ER_FAIL;
+        }
+        if (OID_DN_CN != oid2) {
+            return ER_FAIL;
+        }
+        if (!qcc::GUID128::IsGUID(tmp1)) {
+            return ER_FAIL;
+        }
+        if (!qcc::GUID128::IsGUID(tmp2)) {
+            return ER_FAIL;
+        }
+        ou = qcc::GUID128(tmp1);
+        cn = qcc::GUID128(tmp2);
+    } else {
+        if (OID_DN_CN != oid1) {
+            return ER_FAIL;
+        }
+        if (!qcc::GUID128::IsGUID(tmp1)) {
+            return ER_FAIL;
+        }
+        cn = qcc::GUID128(tmp1);
     }
-    if (OID_DN_CN != oid2) {
-        return ER_FAIL;
-    }
-    if (!qcc::GUID128::IsGUID(tmp1)) {
-        return ER_FAIL;
-    }
-    if (!qcc::GUID128::IsGUID(tmp2)) {
-        return ER_FAIL;
-    }
-    ou = qcc::GUID128(tmp1);
-    cn = qcc::GUID128(tmp2);
 
     return status;
 }
@@ -961,12 +974,7 @@ QStatus CertificateX509::DecodeCertificateTBS()
         return status;
     }
     //TODO read out the time values
-    status = ER_FAIL;
-    if (GUID_CERTIFICATE == type) {
-        status = DecodeCertificateName(sub, subject);
-    } else if (GUILD_CERTIFICATE == type) {
-        status = DecodeCertificateName(sub, guild, subject);
-    }
+    status = DecodeCertificateName(sub, guild, subject);
     if (ER_OK != status) {
         return status;
     }

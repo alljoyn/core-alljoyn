@@ -50,12 +50,21 @@ class PermissionManager {
         delete policy;
     }
 
+    /**
+     * Set the permission policy.
+     * @param   policy   the permission policy.  It must be new'd by the caller and and will be deleted by this object.
+     */
+
     void SetPolicy(PermissionPolicy* policy)
     {
         delete this->policy;
         this->policy = policy;
     }
 
+    /**
+     * Retrieve the permission policy.
+     * @return the permission policy.
+     */
     const PermissionPolicy* GetPolicy()
     {
         return policy;
@@ -66,19 +75,24 @@ class PermissionManager {
      * @param send indicating whether is a send or receive
      * @param peerGuid the peer's GUID
      * @param msg the target message
-     * @param peerGuildCount the number of guilds the peer belongs to
-     * @param peerGuilds the array of guild IDs that the peer belongs to
+     * @param peerState the peer's PeerState object
      * @return
      *  - ER_OK: authorized
      *  - ER_PERM_DENIED: permission denied
      */
-    QStatus AuthorizeMessage(bool send, const qcc::GUID128& peerGuid, Message& msg,
-                             size_t peerGuildCount, qcc::GUID128* peerGuilds);
+    QStatus AuthorizeMessage(bool send, Message& msg, PeerState& peerState);
 
     void SetPermissionMgmtObj(PermissionMgmtObj* permissionMgmtObj)
     {
         this->permissionMgmtObj = permissionMgmtObj;
     }
+
+    /**
+     * Set the permission manifest for the application.
+     * @params rules the permission rules.
+     * @params count the number of permission rules
+     */
+    QStatus SetManifest(PermissionPolicy::Rule* rules, size_t count);
 
   private:
 

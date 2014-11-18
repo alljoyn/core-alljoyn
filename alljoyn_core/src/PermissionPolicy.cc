@@ -23,7 +23,10 @@
 #include <alljoyn/AllJoynStd.h>
 #include <alljoyn/Message.h>
 #include <qcc/Debug.h>
+#include <qcc/StringUtil.h>
+#include <qcc/Crypto.h>
 #include <alljoyn/PermissionPolicy.h>
+#include <alljoyn/BusAttachment.h>
 
 #define QCC_MODULE "PERMISSION_MGMT"
 
@@ -83,25 +86,24 @@ qcc::String PermissionPolicy::Peer::ToString()
 {
     qcc::String str;
     str += "Peer:\n";
+    if (level == PEER_LEVEL_NONE) {
+        str += "  level: none\n";
+    } else if (level == PEER_LEVEL_ENCRYPTED) {
+        str += "  level: encrypted\n";
+    } else if (level == PEER_LEVEL_AUTHENTICATED) {
+        str += "  level: authenticated\n";
+    } else if (level == PEER_LEVEL_AUTHORIZED) {
+        str += "  level: authorized\n";
+    }
     if (type == PEER_ANY) {
-        str += "  type: ANY\n";
-    } else if (type == PEER_PSK) {
-        str += "  type: PSK\n";
+        str += "  type: any\n";
     } else if (type == PEER_GUID) {
         str += "  type: GUID\n";
-    } else if (type == PEER_DSA) {
-        str += "  type: DSA\n";
     } else if (type == PEER_GUILD) {
-        str += "  type: GUILD\n";
+        str += "  type: guild\n";
     }
     if (IDLen > 0) {
         str += "  ID: " + BytesToHexString(ID, IDLen) + "\n";
-    }
-    if (guildAuthorityLen > 0) {
-        str += "  GuildAuthority: " + BytesToHexString(guildAuthority, guildAuthorityLen) + "\n";
-    }
-    if (pskLen > 0) {
-        str += "  PSK: " + BytesToHexString(psk, pskLen) + "\n";
     }
     return str;
 }
@@ -147,35 +149,11 @@ static QStatus GeneratePeerArgs(MsgArg** retArgs, PermissionPolicy::Peer* peers,
 {
     MsgArg* variants = new MsgArg[count];
     for (size_t cnt = 0; cnt < count; cnt++) {
-        int fieldCnt = 0;
-        if (peers[cnt].GetID()) {
-            fieldCnt++;
+        if (peers[cnt].GetType() == PermissionPolicy::Peer::PEER_ANY) {
+            variants[cnt].Set("(yyv)", peers[cnt].GetLevel(), peers[cnt].GetType(), new MsgArg("ay", 0, NULL));
+        } else {
+            variants[cnt].Set("(yyv)", peers[cnt].GetLevel(), peers[cnt].GetType(), new MsgArg("ay", peers[cnt].GetIDLen(), peers[cnt].GetID()));
         }
-        if (peers[cnt].GetGuildAuthority()) {
-            fieldCnt++;
-        }
-        if (peers[cnt].GetPsk()) {
-            fieldCnt++;
-        }
-        MsgArg* peerArgs = NULL;
-        if (fieldCnt > 0) {
-            peerArgs = new MsgArg[fieldCnt];
-            int idx = 0;
-            if (peers[cnt].GetID()) {
-                peerArgs[idx].Set("(yv)", PermissionPolicy::Peer::TAG_ID, new MsgArg("ay", peers[cnt].GetIDLen(), peers[cnt].GetID()));
-                idx++;
-            }
-            if (peers[cnt].GetGuildAuthority()) {
-                peerArgs[idx].Set("(yv)", PermissionPolicy::Peer::TAG_GUILD_AUTHORITY, new MsgArg("ay", peers[cnt].GetGuildAuthorityLen(), peers[cnt].GetGuildAuthority()));
-                idx++;
-            }
-            if (peers[cnt].GetPsk()) {
-                peerArgs[idx].Set("(yv)", PermissionPolicy::Peer::TAG_PSK,
-                                  new MsgArg("ay", peers[cnt].GetPskLen(), peers[cnt].GetPsk()));
-                idx++;
-            }
-        }
-        variants[cnt].Set("(ya(yv))", peers[cnt].GetType(), fieldCnt, peerArgs);
         variants[cnt].SetOwnershipFlags(MsgArg::OwnsArgs, true);
     }
     *retArgs = variants;
@@ -186,9 +164,8 @@ static QStatus BuildPeersFromArg(MsgArg& arg, PermissionPolicy::Peer** peers, si
 {
     MsgArg* peerListArgs = NULL;
     size_t peerCount;
-    QStatus status = arg.Get("a(ya(yv))", &peerCount, &peerListArgs);
+    QStatus status = arg.Get("a(yyv)", &peerCount, &peerListArgs);
     if (ER_OK != status) {
-        QCC_DbgPrintf(("BuildPeersFromArg #1 got status 0x%x\n", status));
         return status;
     }
     if (peerCount == 0) {
@@ -197,65 +174,38 @@ static QStatus BuildPeersFromArg(MsgArg& arg, PermissionPolicy::Peer** peers, si
     }
     PermissionPolicy::Peer* peerArray = new PermissionPolicy::Peer[peerCount];
     for (size_t cnt = 0; cnt < peerCount; cnt++) {
+        uint8_t peerLevel;
         uint8_t peerType;
-        MsgArg* peerFieldArgs;
-        size_t fieldCnt;
-        status = peerListArgs[cnt].Get("(ya(yv))", &peerType, &fieldCnt, &peerFieldArgs);
+        MsgArg* variant;
+        status = peerListArgs[cnt].Get("(yyv)", &peerLevel, &peerType, &variant);
         if (ER_OK != status) {
-            QCC_DbgPrintf(("BuildPeersFromArg #3 [%d] got status 0x%x\n", cnt, status));
             delete [] peerArray;
             return status;
         }
         PermissionPolicy::Peer* pp = &peerArray[cnt];
+        if ((peerLevel >= PermissionPolicy::Peer::PEER_LEVEL_NONE) && (peerLevel <= PermissionPolicy::Peer::PEER_LEVEL_AUTHORIZED)) {
+            pp->SetLevel((PermissionPolicy::Peer::PeerAuthLevel) peerLevel);
+        } else {
+            delete [] peerArray;
+            return ER_INVALID_DATA;
+        }
         if ((peerType >= PermissionPolicy::Peer::PEER_ANY) && (peerType <= PermissionPolicy::Peer::PEER_GUILD)) {
             pp->SetType((PermissionPolicy::Peer::PeerType) peerType);
         } else {
             delete [] peerArray;
             return ER_INVALID_DATA;
         }
-        for (size_t fld = 0; fld < fieldCnt; fld++) {
-            uint8_t fieldType;
-            MsgArg* field;
-            status = peerFieldArgs[fld].Get("(yv)", &fieldType, &field);
-            if (ER_OK != status) {
-                QCC_DbgPrintf(("BuildPeersFromArg #4 [%d][%d] got status 0x%x\n", cnt, fld, status));
-                delete [] peerArray;
-                return status;
-            }
-            uint8_t* data;
-            size_t len;
-            switch (fieldType) {
-            case PermissionPolicy::Peer::TAG_ID:
-                status = field->Get("ay", &len, &data);
-                if (ER_OK != status) {
-                    QCC_DbgPrintf(("BuildPeersFromArg #5 [%d][%d] got status 0x%x\n", cnt, fld, status));
-                    delete [] peerArray;
-                    return status;
-                }
-                pp->SetID(data, len);
-                break;
-
-            case PermissionPolicy::Peer::TAG_GUILD_AUTHORITY:
-                status = field->Get("ay", &len, &data);
-                if (ER_OK != status) {
-                    QCC_DbgPrintf(("BuildPeersFromArg #6 [%d][%d] got status 0x%x\n", cnt, fld, status));
-                    delete [] peerArray;
-                    return status;
-                }
-                pp->SetGuildAuthority(data, len);
-                break;
-
-            case PermissionPolicy::Peer::TAG_PSK:
-                status = field->Get("ay", &len, &data);
-                if (ER_OK != status) {
-                    QCC_DbgPrintf(("BuildPeersFromArg #7 [%d][%d] got status 0x%x\n", cnt, fld, status));
-                    delete [] peerArray;
-                    return status;
-                }
-                pp->SetPsk(data, len);
-                break;
-            }
+        if (peerType == PermissionPolicy::Peer::PEER_ANY) {
+            continue;
         }
+        size_t len;
+        uint8_t* data;
+        status = variant->Get("ay", &len, &data);
+        if (ER_OK != status) {
+            delete [] peerArray;
+            return status;
+        }
+        pp->SetID(data, len);
     }
 
     *count = peerCount;
@@ -613,7 +563,7 @@ QStatus PermissionPolicy::Export(MsgArg& msgArg)
         MsgArg* adminVariants;
         GeneratePeerArgs(&adminVariants, (PermissionPolicy::Peer*) GetAdmins(), GetAdminsSize());
         sectionVariants[sectionIndex++].Set("(yv)", PermissionPolicy::TAG_ADMINS,
-                                            new MsgArg("a(ya(yv))", GetAdminsSize(), adminVariants));
+                                            new MsgArg("a(yyv)", GetAdminsSize(), adminVariants));
     }
     if (GetTerms()) {
         MsgArg* termsVariants = new MsgArg[GetTermsSize()];
@@ -635,7 +585,7 @@ QStatus PermissionPolicy::Export(MsgArg& msgArg)
                 MsgArg* peerVariants;
                 GeneratePeerArgs(&peerVariants, (PermissionPolicy::Peer*) aTerm->GetPeers(), aTerm->GetPeersSize());
                 termItems[idx++].Set("(yv)", PermissionPolicy::Term::TAG_PEERS,
-                                     new MsgArg("a(ya(yv))", aTerm->GetPeersSize(), peerVariants));
+                                     new MsgArg("a(yyv)", aTerm->GetPeersSize(), peerVariants));
             }
             if (aTerm->GetRules()) {
                 MsgArg* rulesVariants = NULL;
@@ -715,10 +665,10 @@ QStatus PermissionPolicy::Import(uint8_t version, const MsgArg& msgArg)
     return ER_OK;
 }
 
-QStatus PermissionPolicy::Export(Message& msg)
+QStatus DefaultPolicyMarshaller::MarshalPrep(PermissionPolicy& policy)
 {
     MsgArg args;
-    QStatus status = Export(args);
+    QStatus status = policy.Export(args);
     if (ER_OK != status) {
         return status;
     }
@@ -727,10 +677,57 @@ QStatus PermissionPolicy::Export(Message& msg)
     return msg->MarshalMessage("(yv)", "", MESSAGE_ERROR, &args, 1, 0, 0);
 }
 
-QStatus PermissionPolicy::Digest(BusAttachment& bus, Crypto_Hash& hashUtil, uint8_t* digest)
+QStatus DefaultPolicyMarshaller::Marshal(PermissionPolicy& policy, uint8_t** buf, size_t* size)
 {
-    Message msg(bus);
-    QStatus status = Export(msg);
+    *buf = NULL;
+    *size = 0;
+    QStatus status = MarshalPrep(policy);
+    if (ER_OK != status) {
+        return status;
+    }
+    *size = msg->GetBufferSize();
+    *buf = new uint8_t[*size];
+    if (!*buf) {
+        *size = 0;
+        return ER_OUT_OF_MEMORY;
+    }
+    memcpy(*buf, msg->GetBuffer(), *size);
+    return ER_OK;
+}
+
+QStatus DefaultPolicyMarshaller::Unmarshal(PermissionPolicy& policy, const uint8_t* buf, size_t size)
+{
+    QStatus status = msg->LoadBytes((uint8_t*) buf, size);
+    if (ER_OK != status) {
+        QCC_DbgPrintf(("PermissionPolicy::Import (%d bytes) failed to load status 0x%x\n", size, status));
+        return status;
+    }
+    qcc::String endpointName("local");
+    status = msg->Unmarshal(endpointName, false, false, false, 0);
+    if (ER_OK != status) {
+        return status;
+    }
+    status = msg->UnmarshalArgs("*");
+    if (ER_OK != status) {
+        return status;
+    }
+    const MsgArg* arg = msg->GetArg(0);
+    if (arg) {
+        uint8_t versionNum;
+        MsgArg* variant;
+        arg->Get("(yv)", &versionNum, &variant);
+        return policy.Import(versionNum, *variant);
+    }
+    return ER_INVALID_DATA;
+}
+
+QStatus DefaultPolicyMarshaller::Digest(PermissionPolicy& policy, uint8_t* digest, size_t len)
+{
+    if (len != Crypto_SHA256::DIGEST_SIZE) {
+        return ER_INVALID_DATA;
+    }
+    Crypto_SHA256 hashUtil;
+    QStatus status = MarshalPrep(policy);
     if (ER_OK != status) {
         return status;
     }
@@ -745,51 +742,36 @@ QStatus PermissionPolicy::Digest(BusAttachment& bus, Crypto_Hash& hashUtil, uint
     return hashUtil.GetDigest(digest);
 }
 
-QStatus PermissionPolicy::Export(BusAttachment& bus, uint8_t** buf, size_t* size)
+QStatus PermissionPolicy::Digest(Marshaller& marshaller, uint8_t* digest, size_t len)
 {
-    *buf = NULL;
-    *size = 0;
-    Message msg(bus);
-    QStatus status = Export(msg);
-    if (ER_OK != status) {
-        return status;
-    }
-    *size = msg->GetBufferSize();
-    *buf = new uint8_t[*size];
-    if (!*buf) {
-        *size = 0;
-        return ER_OUT_OF_MEMORY;
-    }
-    memcpy(*buf, msg->GetBuffer(), *size);
-    return ER_OK;
+    return marshaller.Digest(*this, digest, len);
 }
 
-QStatus PermissionPolicy::Import(BusAttachment& bus, const uint8_t* buf, size_t size)
+QStatus PermissionPolicy::Export(Marshaller& marshaller, uint8_t** buf, size_t* size)
 {
-    Message msg(bus);
-    QStatus status = msg->LoadBytes((uint8_t*) buf, size);
-    QCC_DbgPrintf(("PermissionPolicy::Import (%d bytes) to msg return status 0x%x\n", size, status));
+    return marshaller.Marshal(*this, buf, size);
+}
+
+QStatus PermissionPolicy::Import(Marshaller& marshaller, const uint8_t* buf, size_t size)
+{
+    return marshaller.Unmarshal(*this, buf, size);
+}
+
+QStatus PermissionPolicy::GenerateRules(const Rule* rules, size_t count, MsgArg& msgArg)
+{
+    MsgArg* rulesVariants = NULL;
+    QStatus status = GenerateRuleArgs(&rulesVariants, (Rule*) rules, count);
     if (ER_OK != status) {
-        QCC_DbgPrintf(("PermissionPolicy::Import (%d bytes) failed to load status 0x%x\n", size, status));
         return status;
     }
-    qcc::String endpointName(bus.GetUniqueName());
-    status = msg->Unmarshal(endpointName, false, false, false, 0);
-    if (ER_OK != status) {
-        return status;
-    }
-    status = msg->UnmarshalArgs("*");
-    if (ER_OK != status) {
-        return status;
-    }
-    const MsgArg* arg = msg->GetArg(0);
-    if (arg) {
-        uint8_t versionNum;
-        MsgArg* variant;
-        arg->Get("(yv)", &versionNum, &variant);
-        return Import(versionNum, *variant);
-    }
-    return ER_INVALID_DATA;
+    msgArg.Set("aa(yv)", count, rulesVariants);
+    msgArg.SetOwnershipFlags(MsgArg::OwnsArgs, true);
+    return status;
+}
+
+QStatus PermissionPolicy::ParseRules(MsgArg& msgArg, Rule** rules, size_t* count)
+{
+    return BuildRulesFromArg(msgArg, rules, count);
 }
 
 } /* namespace ajn */

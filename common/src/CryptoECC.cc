@@ -22,6 +22,8 @@
 
 #include <qcc/platform.h>
 #include <qcc/Util.h>
+#include <qcc/String.h>
+#include <qcc/StringUtil.h>
 
 #include <qcc/Debug.h>
 #include <qcc/CryptoECC.h>
@@ -2015,6 +2017,16 @@ QStatus Crypto_ECC::ReEncode(const ECCSignatureOldEncoding* oldenc, ECCSignature
     bigval_to_binary(&st.r, newenc->r, sizeof(newenc->r));
     bigval_to_binary(&st.s, newenc->s, sizeof(newenc->s));
     return ER_OK;
+}
+
+const qcc::String ECCPublicKey::ToString() const
+{
+    qcc::String s = "x=[";
+    s.append(BytesToHexString(x, ECC_COORDINATE_SZ));
+    s.append("], y=[");
+    s.append(BytesToHexString(y, ECC_COORDINATE_SZ));
+    s.append("]");
+    return s;
 }
 
 } /* namespace qcc */

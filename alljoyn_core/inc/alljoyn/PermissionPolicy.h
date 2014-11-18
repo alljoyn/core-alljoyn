@@ -28,11 +28,7 @@
 
 #include <qcc/platform.h>
 #include <qcc/String.h>
-#include <qcc/Crypto.h>
-#include <qcc/CryptoECC.h>
 #include <alljoyn/Status.h>
-#include <alljoyn/BusAttachment.h>
-
 
 namespace ajn {
 
@@ -103,7 +99,7 @@ class PermissionPolicy {
                 this->memberName = memberName;
             }
 
-            const qcc::String GetMemberName()
+            const qcc::String GetMemberName() const
             {
                 return memberName;
             }
@@ -113,7 +109,7 @@ class PermissionPolicy {
                 this->memberType = memberType;
             }
 
-            const MemberType GetMemberType()
+            const MemberType GetMemberType() const
             {
                 return memberType;
             }
@@ -123,7 +119,7 @@ class PermissionPolicy {
                 this->actionMask = actionMask;
             }
 
-            const uint8_t GetActionMask()
+            const uint8_t GetActionMask() const
             {
                 return actionMask;
             }
@@ -133,7 +129,7 @@ class PermissionPolicy {
                 mutualAuth = flag;
             }
 
-            const bool GetMutualAuth()
+            const bool GetMutualAuth() const
             {
                 return mutualAuth;
             }
@@ -177,7 +173,7 @@ class PermissionPolicy {
             this->objPath = objPath;
         }
 
-        const qcc::String GetObjPath()
+        const qcc::String GetObjPath() const
         {
             return objPath;
         }
@@ -187,7 +183,7 @@ class PermissionPolicy {
             this->interfaceName = interfaceName;
         }
 
-        const qcc::String GetInterfaceName()
+        const qcc::String GetInterfaceName() const
         {
             return interfaceName;
         }
@@ -208,12 +204,12 @@ class PermissionPolicy {
          * Get the array of inferface members.
          * @return the array of interface members.
          */
-        const Member* GetMembers()
+        const Member* GetMembers() const
         {
             return members;
         }
 
-        const size_t GetMembersSize()
+        const size_t GetMembersSize() const
         {
             return membersSize;
         }
@@ -238,27 +234,26 @@ class PermissionPolicy {
          * Enumeration for the different types of peer
          */
         typedef enum {
-            PEER_ANY = 0,   ///< any peer
-            PEER_GUID = 1,  ///< peer GUID
-            PEER_PSK = 2,   ///< peer using PSK
-            PEER_DSA = 3,   ///< peer using DSA
-            PEER_GUILD = 4  ///< peer is a guild
-        } PeerType;
+            PEER_LEVEL_NONE = 0,            ///< No encryption
+            PEER_LEVEL_ENCRYPTED = 1,       ///< message are encrypted
+            PEER_LEVEL_AUTHENTICATED = 2,   ///< peer is authenticated
+            PEER_LEVEL_AUTHORIZED = 3       ///< peer is fully authorized
+        } PeerAuthLevel;
 
         /**
-         * Enumeration for the different types of field id
+         * Enumeration for the different types of peer
          */
         typedef enum {
-            TAG_ID = 1,               ///< tag for ID field
-            TAG_GUILD_AUTHORITY = 2,  ///< tag for guild authority field
-            TAG_PSK = 3               ///< tag for PSK field
-        } TagType;
+            PEER_ANY = 0,   ///< any peer
+            PEER_GUID = 1,  ///< peer GUID
+            PEER_GUILD = 2  ///< peer is a guild
+        } PeerType;
 
         /**
          * Constructor
          *
          */
-        Peer() : type(PEER_ANY), ID(NULL), IDLen(0), guildAuthority(NULL), guildAuthorityLen(0), psk(NULL), pskLen(0)
+        Peer() : level(PEER_LEVEL_ENCRYPTED), type(PEER_ANY), ID(NULL), IDLen(0)
         {
         }
 
@@ -268,15 +263,36 @@ class PermissionPolicy {
         virtual ~Peer()
         {
             delete [] ID;
-            delete [] guildAuthority;
-            delete [] psk;
         }
 
+        /**
+         * Set the peer authentication level
+         */
+        void SetLevel(PeerAuthLevel peerLevel)
+        {
+            level = peerLevel;
+        }
+
+        /**
+         * Get the peer authentication level
+         */
+        const PeerAuthLevel GetLevel() const
+        {
+            return level;
+        }
+
+        /**
+         * Set the peer type
+         */
         void SetType(PeerType peerType)
         {
             type = peerType;
         }
-        const PeerType GetType()
+
+        /**
+         * Get the peer type
+         */
+        const PeerType GetType() const
         {
             return type;
         }
@@ -298,80 +314,23 @@ class PermissionPolicy {
             memcpy(ID, id, len);
         }
 
-        const size_t GetIDLen()
+        const size_t GetIDLen() const
         {
             return IDLen;
         }
 
-        const uint8_t* GetID()
+        const uint8_t* GetID() const
         {
             return ID;
-        }
-
-        /**
-         * Set the Guild authority field.
-         * @param guildAuthority the guild authority to be copied
-         * @param len the number of bytes in the guild authority field
-         */
-        void SetGuildAuthority(const uint8_t* guildAuthority, size_t len)
-        {
-            delete [] this->guildAuthority;
-            this->guildAuthority = NULL;
-            guildAuthorityLen = len;
-            if (len == 0) {
-                return;
-            }
-            this->guildAuthority = new uint8_t[len];
-            memcpy(this->guildAuthority, guildAuthority, len);
-        }
-
-        const size_t GetGuildAuthorityLen()
-        {
-            return guildAuthorityLen;
-        }
-
-        const uint8_t* GetGuildAuthority()
-        {
-            return guildAuthority;
-        }
-
-        /**
-         * Set the PSK field.
-         * @param psk the PSK to be copied
-         * @param len the number of bytes in the PSK field
-         */
-        void SetPsk(const uint8_t* psk, size_t len)
-        {
-            delete [] this->psk;
-            this->psk = NULL;
-            pskLen = len;
-            if (len == 0) {
-                return;
-            }
-            this->psk = new uint8_t[len];
-            memcpy(this->psk, psk, len);
-        }
-
-        const size_t GetPskLen()
-        {
-            return pskLen;
-        }
-
-        const uint8_t* GetPsk()
-        {
-            return psk;
         }
 
         qcc::String ToString();
 
       private:
+        PeerAuthLevel level;
         PeerType type;
         uint8_t* ID;
         size_t IDLen;
-        uint8_t* guildAuthority;
-        size_t guildAuthorityLen;
-        uint8_t* psk;
-        size_t pskLen;
     };
 
     /**
@@ -418,11 +377,12 @@ class PermissionPolicy {
             peersSize = count;
         }
 
-        const size_t GetPeersSize() {
+        const size_t GetPeersSize() const
+        {
             return peersSize;
         }
 
-        const Peer* GetPeers()
+        const Peer* GetPeers() const
         {
             return peers;
         }
@@ -438,11 +398,12 @@ class PermissionPolicy {
             this->rules = rules;
         }
 
-        const size_t GetRulesSize() {
+        const size_t GetRulesSize() const
+        {
             return rulesSize;
         }
 
-        const Rule* GetRules()
+        const Rule* GetRules() const
         {
             return rules;
         }
@@ -454,6 +415,59 @@ class PermissionPolicy {
         Peer* peers;
         size_t rulesSize;
         Rule* rules;
+    };
+
+    /**
+     * Class to specify the marshal/unmarshal utility for the policy data
+     */
+    class Marshaller {
+      public:
+        Marshaller()
+        {
+        }
+
+        virtual ~Marshaller()
+        {
+        }
+
+        /**
+         * Marshal the permission policy to a byte array.
+         * @param[out] buf the buffer containing the marshalled data. The buffer is new[]'d by this object and will be delete[]'d by the caller of this method.
+         * @param[out] size the variable holding the size of the allocated byte array
+         * @return
+         *      - #ER_OK if export was successful.
+         *      - error code if fail
+         */
+        virtual QStatus Marshal(PermissionPolicy& policy, uint8_t** buf, size_t* size)
+        {
+            return ER_NOT_IMPLEMENTED;
+        }
+
+        /**
+         * Unmarshal the permission policy from a byte array.
+         * @param buf the byte array holding the serialized data. The serialized data must be generated by the Export call.
+         * @param size the size of the byte array
+         * @return
+         *      - #ER_OK if import was successful.
+         *      - error code if fail
+         */
+        virtual QStatus Unmarshal(PermissionPolicy& policy, const uint8_t* buf, size_t size)
+        {
+            return ER_NOT_IMPLEMENTED;
+        }
+
+        /**
+         * Generate a hash digest for the policy data.  Each marshaller can use its own digest algorithm.
+         * @param[out] digest the buffer to hold the output digest.  It must be new[] by the caller and must have enough space to hold the digest
+         * @param len the length of the digest buffer.
+         * @return
+         *      - #ER_OK if digest was successful.
+         *      - error code if fail
+         */
+        virtual QStatus Digest(PermissionPolicy& policy, uint8_t* digest, size_t len)
+        {
+            return ER_NOT_IMPLEMENTED;
+        }
     };
 
     /**
@@ -487,7 +501,7 @@ class PermissionPolicy {
     {
         this->version = version;
     }
-    const uint8_t GetVersion()
+    const uint8_t GetVersion() const
     {
         return version;
     }
@@ -496,7 +510,7 @@ class PermissionPolicy {
     {
         this->serialNum = serialNum;
     }
-    const uint32_t GetSerialNum()
+    const uint32_t GetSerialNum() const
     {
         return serialNum;
     }
@@ -512,11 +526,12 @@ class PermissionPolicy {
         adminsSize = count;
     }
 
-    const size_t GetAdminsSize() {
+    const size_t GetAdminsSize() const
+    {
         return adminsSize;
     }
 
-    const Peer* GetAdmins()
+    const Peer* GetAdmins() const
     {
         return admins;
     }
@@ -532,11 +547,12 @@ class PermissionPolicy {
         this->terms = terms;
     }
 
-    const size_t GetTermsSize() {
+    const size_t GetTermsSize() const
+    {
         return termsSize;
     }
 
-    const Term* GetTerms()
+    const Term* GetTerms() const
     {
         return terms;
     }
@@ -545,25 +561,25 @@ class PermissionPolicy {
 
     /**
      * Serialize the permission policy to a byte array.
-     * @param bus the bus attachment
+     * @param marshaller the marshaller
      * @param[out] buf the newly allocated byte array holding the serialized data. The caller must delete[] this buffer after use.
      * @param[out] size the variable holding the size of the allocated byte array
      * @return
      *      - #ER_OK if export was successful.
      *      - error code if fail
      */
-    QStatus Export(BusAttachment& bus, uint8_t** buf, size_t* size);
+    QStatus Export(Marshaller& marshaller, uint8_t** buf, size_t* size);
 
     /**
      * Deserialize the permission policy from a byte array.
-     * @param bus the bus attachment
+     * @param marshaller the marshaller
      * @param buf the byte array holding the serialized data. The serialized data must be generated by the Export call.
      * @param size the size of the byte array
      * @return
      *      - #ER_OK if import was successful.
      *      - error code if fail
      */
-    QStatus Import(BusAttachment& bus, const uint8_t* buf, size_t size);
+    QStatus Import(Marshaller& marshaller, const uint8_t* buf, size_t size);
 
     /**
      * Export the Policy to a MsgArg object.
@@ -573,6 +589,28 @@ class PermissionPolicy {
      *      - error code if fail
      */
     QStatus Export(MsgArg& msgArg);
+
+    /**
+     * Build a MsgArg object to represent the array of rules.
+     * @param rules the array of rules
+     * @param count the number of rules
+     * @param[out] msgArg the resulting message arg
+     * @return
+     *      - #ER_OK if creation was successful.
+     *      - error code if fail
+     */
+    static QStatus GenerateRules(const Rule* rules, size_t count, MsgArg& msgArg);
+
+    /**
+     * Parse the MsgArg object to retrieve the rules.
+     * @param msgArg the message arg
+     * @param[out] rules the buffer to hold the array of rules
+     * @param[out] count the output number of rules
+     * @return
+     *      - #ER_OK if creation was successful.
+     *      - error code if fail
+     */
+    static QStatus ParseRules(MsgArg& msgArg, Rule** rules, size_t* count);
 
     /**
      * Build the policy object from the message arg object
@@ -586,17 +624,16 @@ class PermissionPolicy {
 
     /**
      * Generate a hash digest for the policy data
-     * @param bus the bus attachment
-     * @param hashUtil the hash utility to use
-     * @param[out] digest the buffer to hold the output digest.  It must be new[] by the caller and must have enough space to hold the digest based on the hash utility.
+     * @param marshaller the marshaller utility
+     * @param[out] digest the buffer to hold the output digest.  It must be new[] by the caller and must have enough space to hold the digest
+     * @param len the length of the digest buffer.
      * @return
      *      - #ER_OK if digest was successful.
      *      - error code if fail
      */
-    QStatus Digest(BusAttachment& bus, qcc::Crypto_Hash& hashUtil, uint8_t* digest);
+    QStatus Digest(Marshaller& marshaller, uint8_t* digest, size_t len);
 
   private:
-    QStatus Export(Message& msg);
 
     uint8_t version;
     uint32_t serialNum;
@@ -604,7 +641,53 @@ class PermissionPolicy {
     Peer* admins;
     size_t termsSize;
     Term* terms;
+};
 
+class DefaultPolicyMarshaller : public PermissionPolicy::Marshaller {
+
+  public:
+
+    DefaultPolicyMarshaller(Message& msg) : Marshaller(), msg(msg)
+    {
+    }
+
+    ~DefaultPolicyMarshaller()
+    {
+    }
+
+    /**
+     * Marshal the permission policy to a byte array.
+     * @param[out] buf the newly allocated byte array holding the serialized data. The caller must delete[] this buffer after use.
+     * @param[out] size the variable holding the size of the allocated byte array
+     * @return
+     *      - #ER_OK if export was successful.
+     *      - error code if fail
+     */
+    QStatus Marshal(PermissionPolicy& policy, uint8_t** buf, size_t* size);
+
+    /**
+     * Unmarshal the permission policy from a byte array.
+     * @param buf the byte array holding the serialized data. The serialized data must be generated by the Export call.
+     * @param size the size of the byte array
+     * @return
+     *      - #ER_OK if import was successful.
+     *      - error code if fail
+     */
+    QStatus Unmarshal(PermissionPolicy& policy, const uint8_t* buf, size_t size);
+
+    /**
+     * Generate a hash digest for the policy data
+     * @param[out] digest the buffer to hold the output digest.  It must be new[] by the caller and must have enough space to hold the digest
+     * @param len the length of the digest buffer.
+     * @return
+     *      - #ER_OK if digest was successful.
+     *      - error code if fail
+     */
+    QStatus Digest(PermissionPolicy& policy, uint8_t* digest, size_t len);
+
+  private:
+    QStatus MarshalPrep(PermissionPolicy& policy);
+    Message& msg;
 };
 
 }

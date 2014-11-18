@@ -31,6 +31,7 @@
 #include <alljoyn/BusAttachment.h>
 #include <qcc/KeyBlob.h>
 #include <qcc/CryptoECC.h>
+#include <qcc/CertificateECC.h>
 #include <alljoyn/PermissionPolicy.h>
 #include "CredentialAccessor.h"
 #include "ProtectedAuthListener.h"
@@ -75,6 +76,11 @@ class PermissionMgmtObj : public BusObject {
     } ClaimableState;
 
     /**
+     * The list of trust anchors
+     */
+    typedef std::vector<qcc::KeyInfoNISTP256*> TrustAnchorList;
+
+    /**
      * Constructor
      *
      */
@@ -86,24 +92,18 @@ class PermissionMgmtObj : public BusObject {
     virtual ~PermissionMgmtObj();
 
     /**
-     * Set the array of guilds.
-     * @param guilds the array of guilds must be new'd by the caller.  It will be deleted by this object.
+     * check whether the peer GUID is a trust anchor.
+     * @param peerGuid the peer's GUID
+     * return true if the peer GUID is a trust anchor; false, otherwise.
      */
-    void SetGuilds(size_t count, qcc::GUID128* guilds)
-    {
-        delete [] this->guilds;
-        guildsSize = count;
-        this->guilds = guilds;
-    }
+    bool IsTrustAnchor(const qcc::GUID128& peerGuid);
 
-    size_t GetGuildsSize() {
-        return guildsSize;
-    }
-
-    const qcc::GUID128* GetGuilds()
-    {
-        return guilds;
-    }
+    /**
+     * check whether the peer public key is a trust anchor.
+     * @param publicKey the peer's public key
+     * return true if the peer public key is a trust anchor; false, otherwise.
+     */
+    bool IsTrustAnchor(const qcc::ECCPublicKey* publicKey);
 
     /**
      * Called by the message bus when the object has been successfully registered. The object can
@@ -112,6 +112,73 @@ class PermissionMgmtObj : public BusObject {
 
     virtual void ObjectRegistered(void);
 
+    /**
+     * Generates the message args to send the membership data to the peer.
+     * @param args[out] the output array of message args.  The caller must delete the array of message args after use.
+     * @param count[out] the size of the output array array of message args.
+     * @return
+     *         - ER_OK if successful.
+     *         - an error status otherwise.
+     */
+
+    QStatus GenerateSendMemberships(MsgArg** args, size_t* count);
+
+    /**
+     * Parse the message received from the PermissionMgmt's SendMembership method.
+     * @param args the message
+     * @return
+     *         - ER_OK if successful.
+     *         - an error status otherwise.
+     */
+    QStatus ParseSendMemberships(Message& msg);
+
+    /**
+     * Is there any trust anchor installed?
+     * @return true if there is at least one trust anchors installed; false, otherwise.
+     */
+    bool HasTrustAnchors()
+    {
+        return !trustAnchors.empty();
+    }
+
+    /**
+     * Retrieve the list of trust anchors.
+     * @return the list of trust anchors
+     */
+
+    const TrustAnchorList& GetTrustAnchors()
+    {
+        return trustAnchors;
+    }
+
+    /**
+     * Helper function to generate a MsgArg for KeyInfoNISTP256 object.
+     * @param keyInfo the KeyInfoNISTP256 object
+     * @param variant[out] the output message arg.
+     */
+
+    static void KeyInfoNISTP256ToMsgArg(qcc::KeyInfoNISTP256& keyInfo, MsgArg& variant);
+
+    /**
+     * Helper function to load a KeyInfoNISTP256 object using data from the message arg.
+     * @param variant the input message arg.
+     * @param keyInfo[out] the output KeyInfoNISTP256 object
+     */
+    static QStatus MsgArgToKeyInfoNISTP256(MsgArg& variant, qcc::KeyInfoNISTP256& keyInfo);
+
+    /**
+     * Helper function to release the allocated memory for the trust anchor list.
+     * @param list the list to be clear of allocated memory.
+     */
+    static void ClearTrustAnchorList(TrustAnchorList& list);
+
+    /**
+     * Set the permission manifest for the application.
+     * @params rules the permission rules.
+     * @params count the number of permission rules
+     */
+    QStatus SetManifest(PermissionPolicy::Rule* rules, size_t count);
+
   private:
 
     typedef enum {
@@ -119,7 +186,8 @@ class PermissionMgmtObj : public BusObject {
         ENTRY_POLICY,         ///< Local policy data
         ENTRY_MEMBERSHIPS,  ///< the list of membership certificates and associated policies
         ENTRY_IDENTITY,      ///< the identity cert
-        ENTRY_EQUIVALENCES  ///< The equivalence certs
+        ENTRY_EQUIVALENCES,  ///< The equivalence certs
+        ENTRY_MANIFEST      ///< The manifest data
     } ACLEntryType;
 
     struct TrustAnchor {
@@ -135,6 +203,8 @@ class PermissionMgmtObj : public BusObject {
         {
         }
     };
+
+    typedef std::map<qcc::GUID128, qcc::MembershipCertificate*> MembershipCertMap;
 
     class PortListener : public SessionPortListener {
 
@@ -154,11 +224,12 @@ class PermissionMgmtObj : public BusObject {
     void InstallPolicy(const InterfaceDescription::Member* member, Message& msg);
     QStatus GetACLGUID(ACLEntryType aclEntryType, qcc::GUID128& guid);
 
-    QStatus InstallTrustAnchor(const qcc::GUID128& guid, const uint8_t* pubKey, size_t pubKeyLen);
+    QStatus InstallTrustAnchor(qcc::KeyInfoNISTP256* keyInfo);
+    QStatus StoreTrustAnchors();
+    QStatus LoadTrustAnchors();
 
     QStatus GetPeerGUID(Message& msg, qcc::GUID128& guid);
 
-    QStatus GetTrustAnchor(TrustAnchor& trustAnchor);
     QStatus StoreDSAKeys(const qcc::ECCPrivateKey* privateKey, const qcc::ECCPublicKey* publicKey);
     QStatus RetrieveDSAPublicKey(qcc::ECCPublicKey* publicKey);
     QStatus RetrieveDSAPrivateKey(qcc::ECCPrivateKey* privateKey);
@@ -176,10 +247,16 @@ class PermissionMgmtObj : public BusObject {
     void InstallMembership(const InterfaceDescription::Member* member, Message& msg);
     void InstallMembershipAuthData(const InterfaceDescription::Member* member, Message& msg);
     void RemoveMembership(const InterfaceDescription::Member* member, Message& msg);
+    void InstallGuildEquivalence(const InterfaceDescription::Member* member, Message& msg);
+    void GetManifest(const InterfaceDescription::Member* member, Message& msg);
     bool ValidateCertChain(const qcc::String& certChainPEM, bool& authorized);
-    void BuildListOfGuilds();
-    QStatus LocateMembershipEntry(const qcc::String& serialNum, const qcc::String& issuer, qcc::GUID128& membershipGuid);
-    QStatus LoadAndValidateAuthData(const qcc::String& serial, const qcc::String& issuer, MsgArg& authDataArg, PermissionPolicy& authorization, qcc::GUID128& membershipGuid);
+    QStatus LocateMembershipEntry(const qcc::String& serialNum, const qcc::GUID128& issuer, qcc::GUID128& membershipGuid);
+    QStatus LoadAndValidateAuthData(const qcc::String& serial, const qcc::GUID128& issuer, MsgArg& authDataArg, PermissionPolicy& authorization, qcc::GUID128& membershipGuid);
+    void ClearMembershipCertMap(MembershipCertMap& certMap);
+    QStatus GetAllMembershipCerts(MembershipCertMap& certMap);
+    void ClearTrustAnchors();
+    void PolicyChanged(PermissionPolicy* policy);
+
     /**
      * Bind to an exclusive port for PermissionMgmt object.
      */
@@ -190,8 +267,7 @@ class PermissionMgmtObj : public BusObject {
     const InterfaceDescription::Member* notifySignalName;
     ClaimableState claimableState;
     uint32_t serialNum;
-    qcc::GUID128* guilds;
-    size_t guildsSize;
+    TrustAnchorList trustAnchors;
     PortListener* portListener;
 };
 

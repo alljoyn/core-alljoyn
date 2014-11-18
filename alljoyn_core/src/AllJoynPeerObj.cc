@@ -28,6 +28,7 @@
 #include <qcc/String.h>
 #include <qcc/Crypto.h>
 #include <qcc/Util.h>
+#include <qcc/StringUtil.h>
 #include <qcc/StringSink.h>
 #include <qcc/StringSource.h>
 
@@ -66,6 +67,11 @@ static const uint32_t MAX_KEYGEN_VERSION = 0x01;
 static const uint32_t MIN_AUTH_VERSION = 0x0001;
 static const uint32_t MAX_AUTH_VERSION = 0x0003;
 
+/**
+ * starting version with capability of supporting membership certificates.
+ */
+static const uint32_t CAPABLE_MEMBESHIP_CERT_VERSION = 0x0003;
+
 static const uint32_t PREFERRED_AUTH_VERSION = (MAX_AUTH_VERSION << 16) | MIN_KEYGEN_VERSION;
 
 static bool IsCompatibleVersion(uint32_t version)
@@ -92,6 +98,12 @@ static bool IsCompatibleVersion(uint32_t version)
 #pragma clang diagnostic pop
 #endif
     return (version & 0xFF00) == 0;
+}
+
+static bool IsMembershipCertCapable(uint32_t version)
+{
+    uint16_t authV = version >> 16;
+    return (authV >= CAPABLE_MEMBESHIP_CERT_VERSION);
 }
 
 static uint32_t GetLowerVersion(uint32_t v1, uint32_t v2)
@@ -187,7 +199,7 @@ AllJoynPeerObj::AllJoynPeerObj(BusAttachment& bus) :
             AddMethodHandler(ifc->GetMember("KeyAuthentication"), static_cast<MessageReceiver::MethodHandler>(&AllJoynPeerObj::KeyAuthentication));
             AddMethodHandler(ifc->GetMember("GenSessionKey"), static_cast<MessageReceiver::MethodHandler>(&AllJoynPeerObj::GenSessionKey));
             AddMethodHandler(ifc->GetMember("ExchangeGroupKeys"), static_cast<MessageReceiver::MethodHandler>(&AllJoynPeerObj::ExchangeGroupKeys));
-            AddMethodHandler(ifc->GetMember("ExchangeMembershipGuilds"), static_cast<MessageReceiver::MethodHandler>(&AllJoynPeerObj::ExchangeMembershipGuilds));
+            AddMethodHandler(ifc->GetMember("SendMemberships"), static_cast<MessageReceiver::MethodHandler>(&AllJoynPeerObj::SendMemberships));
         }
     }
     /* Add org.alljoyn.Bus.Peer.Session interface */
@@ -486,48 +498,6 @@ void AllJoynPeerObj::ExchangeGroupKeys(const InterfaceDescription::Member* membe
     if (status != ER_OK) {
         MethodReply(msg, status);
     }
-}
-
-static void GenerateArgsForMembershipGuilds(MsgArg& arg, size_t count, const GUID128* guilds)
-{
-    MsgArg* guildArgs = NULL;
-    if (count > 0) {
-        guildArgs = new MsgArg[count];
-        for (size_t cnt = 0; cnt < count; cnt++) {
-            guildArgs[cnt].Set("ay", GUID128::SIZE, guilds[cnt].GetBytes());
-        }
-    }
-    arg.Set("aay", count, guildArgs);
-    arg.SetOwnershipFlags(MsgArg::OwnsArgs, true);
-}
-
-QStatus AllJoynPeerObj::TrackPeerGuilds(const InterfaceDescription::Member* member, Message& msg)
-{
-    size_t numOfGuilds = msg->GetArg(0)->v_array.GetNumElements();
-    if (numOfGuilds == 0) {
-        return ER_OK;
-    }
-    GUID128* guilds = new GUID128[numOfGuilds];
-    const MsgArg* guildArgs = msg->GetArg(0)->v_array.GetElements();
-    for (size_t cnt = 0; cnt < numOfGuilds; cnt++) {
-        uint8_t* bytes;
-        size_t bytesSize;
-        guildArgs[cnt].Get("ay", &bytesSize, &bytes);
-        guilds[cnt].SetBytes(bytes);
-        QCC_DbgPrintf(("AllJoynPeerObj::TrackPeerGuilds guild[%d]: size %d rawbytes [%s] guid[%s]\n", cnt, bytesSize, BytesToHexString(bytes, bytesSize).c_str(), guilds[cnt].ToString().c_str()));
-    }
-    qcc::String localGuidStr = bus->GetInternal().GetKeyStore().GetGuid();
-    if (localGuidStr.empty()) {
-        delete [] guilds;
-        return ER_BUS_NO_PEER_GUID;
-    }
-    PeerState peerState = bus->GetInternal().GetPeerStateTable()->GetPeerState(msg->GetSender());
-
-    QCC_DbgPrintf(("AllJoynPeerObj::TrackPeerGuilds setGuilds numOfGuilds %d for peer %s\n",
-                   numOfGuilds, msg->GetSender()));
-    /* record the peer's memberships guild IDs in its peer state */
-    peerState->SetGuilds(numOfGuilds, guilds);
-    return ER_OK;
 }
 
 void AllJoynPeerObj::ExchangeGuids(const InterfaceDescription::Member* member, Message& msg)
@@ -1281,7 +1251,9 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
             }
             if (status == ER_OK) {
                 /* exchange membership guilds */
-                status = AskForMembershipGuilds(remotePeerObj, ifc);
+                if (IsMembershipCertCapable(peerState->GetAuthVersion())) {
+                    SendMembershipData(remotePeerObj, ifc);
+                }
             }
         }
     }
@@ -1706,7 +1678,7 @@ KeyExchanger* AllJoynPeerObj::GetKeyExchangerInstance(uint16_t peerAuthVersion, 
     for (size_t cnt = 0; cnt < requestingAuthCount; cnt++) {
         uint32_t suite = requestingAuthList[cnt];
         if ((suite & AUTH_SUITE_ECDHE_ECDSA) == AUTH_SUITE_ECDHE_ECDSA) {
-            return new KeyExchangerECDHE_ECDSA(initiator, this, *bus, peerAuthListener, peerAuthVersion);
+            return new KeyExchangerECDHE_ECDSA(initiator, this, *bus, peerAuthListener, peerAuthVersion, (PermissionMgmtObj::TrustAnchorList*) &permissionMgmtObj->GetTrustAnchors());
         }
         if ((suite & AUTH_SUITE_ECDHE_PSK) == AUTH_SUITE_ECDHE_PSK) {
             return new KeyExchangerECDHE_PSK(initiator, this, *bus, peerAuthListener, peerAuthVersion);
@@ -1716,6 +1688,11 @@ KeyExchanger* AllJoynPeerObj::GetKeyExchangerInstance(uint16_t peerAuthVersion, 
         }
     }
     return NULL;
+}
+
+QStatus AllJoynPeerObj::HandleMethodReply(Message& msg, QStatus status)
+{
+    return MethodReply(msg, status);
 }
 
 QStatus AllJoynPeerObj::HandleMethodReply(Message& msg, const MsgArg* args, size_t numArgs)
@@ -1837,35 +1814,36 @@ void AllJoynPeerObj::SetupPeerAuthentication(const qcc::String& authMechanisms, 
     peerAuthListener.SetPermissionMgmtObj(permissionMgmtObj);
 }
 
-QStatus AllJoynPeerObj::AskForMembershipGuilds(ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc)
+QStatus AllJoynPeerObj::SendMembershipData(ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc)
 {
-    MsgArg arg;
-    GenerateArgsForMembershipGuilds(arg, permissionMgmtObj->GetGuildsSize(), permissionMgmtObj->GetGuilds());
-    Message replyMsg(*bus);
-    const InterfaceDescription::Member* exchangeMembershipGuilds = ifc->GetMember("ExchangeMembershipGuilds");
-    QStatus status = remotePeerObj.MethodCall(*exchangeMembershipGuilds, &arg, 1, replyMsg, DEFAULT_TIMEOUT);
-    if (status != ER_OK) {
-        return status;
-    }
-    status = TrackPeerGuilds(exchangeMembershipGuilds, replyMsg);
+    MsgArg* args = NULL;
+    size_t argCount = 0;
+    QStatus status = permissionMgmtObj->GenerateSendMemberships(&args, &argCount);
     if (ER_OK != status) {
+        delete [] args;
         return status;
     }
+    Message replyMsg(*bus);
+    const InterfaceDescription::Member* sendMembershipData = ifc->GetMember("SendMemberships");
+    /* sending one item at time since some peer may not be able to handle large
+        amount of data */
+    for (size_t cnt = 0; cnt < argCount; cnt++) {
+        MsgArg variant("a(yv)", 1, &args[cnt]);
+        Message replyMsg(*bus);
+        status = remotePeerObj.MethodCall(*sendMembershipData, &variant, 1, replyMsg, DEFAULT_TIMEOUT);
+        if (status != ER_OK) {
+            delete [] args;
+            return status;
+        }
+    }
+    delete [] args;
     return ER_OK;
 }
 
-void AllJoynPeerObj::ExchangeMembershipGuilds(const InterfaceDescription::Member* member, Message& msg)
+void AllJoynPeerObj::SendMemberships(const InterfaceDescription::Member* member, Message& msg)
 {
-    QStatus status = TrackPeerGuilds(member, msg);
-    if (ER_OK != status) {
-        MethodReply(msg, status);
-        return;
-    }
-    /* respond back to peer with my list of membership guilds */
-    MsgArg replyArgs[1];
-    GenerateArgsForMembershipGuilds(replyArgs[0], permissionMgmtObj->GetGuildsSize(),
-                                    permissionMgmtObj->GetGuilds());
-    MethodReply(msg, replyArgs, ArraySize(replyArgs));
+    QStatus status = permissionMgmtObj->ParseSendMemberships(msg);
+    MethodReply(msg, status);
 }
 
 }
