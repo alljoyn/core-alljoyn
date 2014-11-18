@@ -64,7 +64,7 @@ class SessionTest : public testing::Test {
         InterfaceDescription* clienttestIntf = NULL;
         QStatus status = busClient.CreateInterface("org.test", clienttestIntf);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-        //ASSERT_NE(nullptr, clienttestIntf);
+        assert(NULL != clienttestIntf);
         status = clienttestIntf->AddSignal("my_signal", "s", NULL, 0);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         clienttestIntf->Activate();
@@ -102,7 +102,7 @@ class SessionTest : public testing::Test {
 
         for (size_t i = 0; i < sizeof(busses) / sizeof(busses[0]); ++i) {
             InterfaceDescription*intf = CreateTestInterface(*busses[i]);
-            ASSERT_NE((InterfaceDescription*)0, intf);
+            ASSERT_TRUE(NULL != intf);
             testobjects[busses[i]] = new BusObjectTestBusObject(*busses[i], OBJECT_PATH);
             status = busses[i]->RegisterBusObject(*testobjects[busses[i]]);
             ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
