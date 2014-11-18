@@ -238,7 +238,9 @@ QStatus _Message::MarshalArgs(const MsgArg* arg, size_t numArgs)
                 }
             } else {
                 Marshal4(len);
-                MarshalBytes(arg->v_scalarArray.v_uint32, len);
+                if (arg->v_scalarArray.v_uint32) {
+                    MarshalBytes(arg->v_scalarArray.v_uint32, len);
+                }
             }
             break;
 
@@ -263,7 +265,9 @@ QStatus _Message::MarshalArgs(const MsgArg* arg, size_t numArgs)
                 } else {
                     Marshal4(len);
                     MarshalPad(8);
-                    MarshalBytes(arg->v_scalarArray.v_uint64, len);
+                    if (arg->v_scalarArray.v_uint64) {
+                        MarshalBytes(arg->v_scalarArray.v_uint64, len);
+                    }
                 }
             } else {
                 /* Even empty arrays are padded to the element type alignment boundary */
@@ -289,7 +293,9 @@ QStatus _Message::MarshalArgs(const MsgArg* arg, size_t numArgs)
                 }
             } else {
                 Marshal4(len);
-                MarshalBytes(arg->v_scalarArray.v_uint16, len);
+                if (arg->v_scalarArray.v_uint16) {
+                    MarshalBytes(arg->v_scalarArray.v_uint16, len);
+                }
             }
             break;
 
@@ -307,7 +313,9 @@ QStatus _Message::MarshalArgs(const MsgArg* arg, size_t numArgs)
             } else {
                 Marshal4(len);
             }
-            MarshalBytes(arg->v_scalarArray.v_byte, arg->v_scalarArray.numElements);
+            if (arg->v_scalarArray.v_byte) {
+                MarshalBytes(arg->v_scalarArray.v_byte, arg->v_scalarArray.numElements);
+            }
             break;
 
         case ALLJOYN_BOOLEAN:
@@ -657,7 +665,9 @@ void _Message::MarshalHeaderFields()
                 Marshal1(field->v_signature.len);
                 tPos = (char*)bufPos;
                 tLen = field->v_signature.len;
-                MarshalBytes((void*)field->v_signature.sig, field->v_signature.len + 1);
+                if ((void*)field->v_signature.sig) {
+                    MarshalBytes((void*)field->v_signature.sig, field->v_signature.len + 1);
+                }
                 field->Clear();
                 field->typeId = ALLJOYN_SIGNATURE;
                 field->v_signature.sig = tPos;
@@ -687,7 +697,9 @@ void _Message::MarshalHeaderFields()
                 }
                 tPos = (char*)bufPos;
                 tLen = field->v_string.len;
-                MarshalBytes((void*)field->v_string.str, field->v_string.len + 1);
+                if ((void*)field->v_string.str) {
+                    MarshalBytes((void*)field->v_string.str, field->v_string.len + 1);
+                }
                 field->Clear();
                 field->typeId = id;
                 field->v_string.str = tPos;
