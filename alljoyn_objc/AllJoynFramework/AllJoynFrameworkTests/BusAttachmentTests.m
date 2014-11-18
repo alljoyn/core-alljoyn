@@ -1351,7 +1351,7 @@ static const uint8_t ICON_BYTE = 0x11;
     
     AJNAboutObject *aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
     status = [aboutObj announceForSessionPort:kBusAttachmentTestsServicePort withAboutDataListener:self];
-    STAssertTrue(status == ER_ABOUT_INVALID_ABOUT_DATA_LISTENER, @"Missing about data field should be reported as error");
+    STAssertTrue(status == ER_ABOUT_INVALID_ABOUTDATA_LISTENER, @"Missing about data field should be reported as error");
     
     [self.bus disconnectWithArguments:@"null:"];
     [self.bus stop];
@@ -1377,7 +1377,7 @@ static const uint8_t ICON_BYTE = 0x11;
     
     AJNAboutObject *aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
     status = [aboutObj announceForSessionPort:kBusAttachmentTestsServicePort withAboutDataListener:self];
-    STAssertTrue(status == ER_ABOUT_INVALID_ABOUT_DATA_LISTENER, @"Missing about data field should be reported as error");
+    STAssertTrue(status == ER_ABOUT_INVALID_ABOUTDATA_LISTENER, @"Missing about data field should be reported as error");
     
     [self.bus disconnectWithArguments:@"null:"];
     [self.bus stop];
