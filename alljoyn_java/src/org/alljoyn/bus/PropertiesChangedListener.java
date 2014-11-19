@@ -17,7 +17,6 @@
 package org.alljoyn.bus;
 
 import java.lang.reflect.Method;
-import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.Map;
 
@@ -62,7 +61,7 @@ public abstract class PropertiesChangedListener {
 
     protected PropertiesChangedListener() {
         try {
-            Method m = getClass().getMethod("propertiesChanged", new Class[] {ProxyBusObject.class, String.class, Map.class, String[].class});
+            Method m = getClass().getMethod("propertiesChanged", new Class<?>[] {ProxyBusObject.class, String.class, Map.class, String[].class});
             Type p[] = m.getGenericParameterTypes();
             Type changedType = p[2];
             Type invalidatedType = p[3];
