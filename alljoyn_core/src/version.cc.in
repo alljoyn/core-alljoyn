@@ -21,8 +21,8 @@
 
 #include "alljoyn/version.h"
 
-static const unsigned int year = 0;
-static const unsigned int month = 0;
+static const unsigned int year = 14;
+static const unsigned int month = 12;
 static const unsigned int feature = 0; /* feature is always 0 for core. */
 static const unsigned int bugfix = ' ';
 
