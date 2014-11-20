@@ -142,7 +142,7 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& origSender)
      */
     if (origSender == localEndpoint) {
         QCC_DbgPrintf(("DaemonRouter::PushMessage(): UpdateSerialNumber()"));
-        localEndpoint->UpdateSerialNumber(msg);
+        LocalEndpoint::cast(origSender)->UpdateSerialNumber(msg);
     }
 
     if (!destinationEmpty) {
