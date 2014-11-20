@@ -32,6 +32,7 @@
 #include <qcc/Util.h>
 #include <qcc/Thread.h>
 
+#include <alljoyn/AboutObj.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/DBusStd.h>
 #include <alljoyn/BusObject.h>
@@ -55,6 +56,7 @@ enum OperationMode {
 };
 
 class ClientBusListener;
+class ClientAboutListener;
 class ServiceBusListener;
 class ThreadClass;
 
@@ -77,6 +79,9 @@ static const SessionPort SERVICE_PORT = 25;
 
 static String s_wellKnownName = DEFAULT_SERVICE_NAME;
 
+static String g_testAboutApplicationName = "bastress2";
+static bool g_useAboutFeatureDiscovery = false;
+
 class BasicSampleObject : public BusObject {
   public:
     BasicSampleObject(BusAttachment& bus, const char* path) :
@@ -85,7 +90,11 @@ class BasicSampleObject : public BusObject {
         /** Add the test interface to this object */
         const InterfaceDescription* exampleIntf = bus.GetInterface(INTERFACE_NAME);
         assert(exampleIntf);
-        AddInterface(*exampleIntf);
+        if (g_useAboutFeatureDiscovery) {
+            AddInterface(*exampleIntf, ANNOUNCED);
+        } else {
+            AddInterface(*exampleIntf);
+        }
 
         /** Register the method handlers with the object */
         const MethodEntry methodEntries[] = {
@@ -125,12 +134,14 @@ class ThreadClass : public Thread {
     ThreadClass(char* name);
 
     friend class ClientBusListener;
+    friend class ClientAboutListener;
 
 
   protected:
     bool joinComplete;
     ClientBusListener* clientBusListener;
     ServiceBusListener* serviceBusListener;
+    ClientAboutListener* clientAboutListener;
     BusAttachment* bus;
     BusObject* busObject;
     SessionId sessionId;
@@ -180,7 +191,7 @@ class ClientBusListener : public BusListener, public SessionListener {
             owner->bus->EnableConcurrentCallbacks();
 
             SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, s_useMultipointSessions, SessionOpts::PROXIMITY_ANY, s_transports);
-            QStatus status = owner->bus->JoinSession(name, SERVICE_PORT, this, owner->sessionId, opts);
+            QStatus status = owner->bus->JoinSession(name, SERVICE_PORT, owner->clientBusListener, owner->sessionId, opts);
             if (ER_OK != status) {
                 QCC_SyncPrintf("JoinSession to %s failed (status=%s)\n", name, QCC_StatusText(status));
 
@@ -207,6 +218,108 @@ class ClientBusListener : public BusListener, public SessionListener {
     }
 
   protected:
+    ThreadClass* owner;
+    Mutex mutex;
+    bool wasNameFoundAlready;
+};
+
+class MyAboutData : public AboutData {
+  public:
+    static const char* TRANSPORT_OPTS;
+
+    MyAboutData() : AboutData() {
+        // TRANSPORT_OPTS field is required, is announced, not localized
+        SetNewFieldDetails(TRANSPORT_OPTS, REQUIRED | ANNOUNCED, "q");
+    }
+
+    MyAboutData(const char* defaultLanguage) : AboutData(defaultLanguage) {
+        SetNewFieldDetails(TRANSPORT_OPTS, REQUIRED | ANNOUNCED, "q");
+    }
+
+    QStatus SetTransportOpts(TransportMask transportOpts)
+    {
+        QStatus status = ER_OK;
+        MsgArg arg;
+        status = arg.Set(GetFieldSignature(TRANSPORT_OPTS), transportOpts);
+        if (status != ER_OK) {
+            return status;
+        }
+        status = SetField(TRANSPORT_OPTS, arg);
+        return status;
+    }
+
+    QStatus GetTransportOpts(TransportMask* transportOpts)
+    {
+        QStatus status;
+        MsgArg* arg;
+        status = GetField(TRANSPORT_OPTS, arg);
+        if (status != ER_OK) {
+            return status;
+        }
+        status = arg->Get(GetFieldSignature(TRANSPORT_OPTS), transportOpts);
+        return status;
+    }
+};
+
+const char* MyAboutData::TRANSPORT_OPTS = "TransportOpts";
+
+static MyAboutData g_aboutData("en");
+
+class ClientAboutListener : public AboutListener {
+  public:
+    ClientAboutListener(ThreadClass* owner) : owner(owner), wasNameFoundAlready(false) { }
+
+    void Announced(const char* busName, uint16_t version, SessionPort port,
+                   const MsgArg& objectDescriptionArg, const MsgArg& aboutDataArg) {
+        QCC_SyncPrintf("Announce Signal Received busName=%s\n", busName);
+
+        MyAboutData ad;
+        ad.CreatefromMsgArg(aboutDataArg);
+
+        char* appName;
+        ad.GetAppName(&appName);
+
+        if (appName != NULL && strcmp(g_testAboutApplicationName.c_str(), appName) == 0) {
+            TransportMask transport;
+            ad.GetTransportOpts(&transport);
+
+            mutex.Lock();
+            bool shouldReturn = wasNameFoundAlready;
+            if ((s_transports & transport) == transport) { wasNameFoundAlready = true; }
+            mutex.Unlock();
+
+            if (shouldReturn) {
+                QCC_SyncPrintf("Will not form a session with(name=%s) because we already joined a session.\n", busName);
+                return;
+            }
+
+            /* Only proceed further if we want to connect over the transport over which the FoundAdvertisedName
+             * was received */
+            if ((s_transports & transport) == 0) {
+                QCC_SyncPrintf("We are not interested in connecting over a transport with mask 0x%x.\n", transport);
+                return;
+            }
+
+            /* Since we are in a callback we must enable concurrent callbacks before calling a synchronous method. */
+            owner->bus->EnableConcurrentCallbacks();
+
+            SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, s_useMultipointSessions, SessionOpts::PROXIMITY_ANY, s_transports);
+            QStatus status = owner->bus->JoinSession(busName, port, owner->clientBusListener, owner->sessionId, opts);
+            if (ER_OK != status) {
+                QCC_SyncPrintf("JoinSession to %s failed (status=%s)\n", busName, QCC_StatusText(status));
+
+            } else {
+                QCC_SyncPrintf("JoinSession to %s SUCCEEDED (Session id=%d)\n", busName, owner->sessionId);
+
+                if (!owner->joinComplete) {
+                    owner->joinComplete = true;
+                    owner->discoveredServiceName = busName;
+                }
+
+            }
+        }
+    }
+  private:
     ThreadClass* owner;
     Mutex mutex;
     bool wasNameFoundAlready;
@@ -239,6 +352,7 @@ inline ThreadClass::ThreadClass(char* name) : Thread(name),
     joinComplete(false),
     clientBusListener(NULL),
     serviceBusListener(NULL),
+    clientAboutListener(NULL),
     bus(NULL),
     busObject(NULL),
     sessionId(0),
@@ -286,10 +400,20 @@ inline void ThreadClass::ClientRun() {
     bus->RegisterBusListener(*clientBusListener);
     QCC_SyncPrintf("ClientBusListener Registered.\n");
 
-    /* Begin discovery on the well-known name of the service to be called */
-    status = bus->FindAdvertisedName(s_wellKnownName.c_str());
-    if (status != ER_OK) {
-        QCC_SyncPrintf("org.alljoyn.Bus.FindAdvertisedName failed (%s))\n", QCC_StatusText(status));
+
+
+    if (g_useAboutFeatureDiscovery) {
+        clientAboutListener = new ClientAboutListener(this);
+        bus->RegisterAboutListener(*clientAboutListener);
+        QCC_SyncPrintf("ClientAboutListener Registered.\n");
+        const char* interfaces[] = { INTERFACE_NAME };
+        status = bus->WhoImplements(interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
+    } else {
+        /* Begin discovery on the well-known name of the service to be called */
+        status = bus->FindAdvertisedName(s_wellKnownName.c_str());
+        if (status != ER_OK) {
+            QCC_SyncPrintf("org.alljoyn.Bus.FindAdvertisedName failed (%s))\n", QCC_StatusText(status));
+        }
     }
 
     /* Wait for join session to complete */
@@ -337,14 +461,26 @@ inline void ThreadClass::ClientRun() {
 
     bus->LeaveSession(sessionId);
 
-    /* Cancel discovery on the well-known name of the service */
-    status = bus->CancelFindAdvertisedName(s_wellKnownName.c_str());
-    if (status != ER_OK) {
-        QCC_SyncPrintf("org.alljoyn.Bus.CancelFindAdvertisedName failed (%s))\n", QCC_StatusText(status));
+    if (g_useAboutFeatureDiscovery) {
+        clientAboutListener = new ClientAboutListener(this);
+        bus->RegisterAboutListener(*clientAboutListener);
+        QCC_SyncPrintf("ClientAboutListener Registered.\n");
+        const char* interfaces[] = { INTERFACE_NAME };
+        status = bus->CancelWhoImplements(interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
+    } else {
+        /* Cancel discovery on the well-known name of the service */
+        status = bus->CancelFindAdvertisedName(s_wellKnownName.c_str());
+        if (status != ER_OK) {
+            QCC_SyncPrintf("org.alljoyn.Bus.CancelFindAdvertisedName failed (%s))\n", QCC_StatusText(status));
+        }
     }
 
     if (clientBusListener) {
         bus->UnregisterBusListener(*clientBusListener);
+    }
+
+    if (clientAboutListener) {
+        bus->UnregisterAboutListener(*clientAboutListener);
     }
 
     if (!s_noDestruct) {
@@ -356,6 +492,11 @@ inline void ThreadClass::ClientRun() {
     if (clientBusListener) {
         delete clientBusListener;
         clientBusListener = NULL;
+    }
+
+    if (clientAboutListener) {
+        delete clientAboutListener;
+        clientAboutListener = NULL;
     }
 
     QCC_SyncPrintf("client exiting with status %d (%s)\n", status, QCC_StatusText(status));
@@ -387,6 +528,16 @@ inline void ThreadClass::ServiceRun() {
         QCC_SyncPrintf("Failed to register the service bus object.");
     }
 
+    /* Create session */
+    SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, s_useMultipointSessions, SessionOpts::PROXIMITY_ANY, s_transports);
+    if (ER_OK == status) {
+        SessionPort sp = SERVICE_PORT;
+        status = bus->BindSessionPort(sp, opts, *serviceBusListener);
+        if (ER_OK != status) {
+            QCC_SyncPrintf("BindSessionPort failed (%s)\n", QCC_StatusText(status));
+        }
+    }
+
     /*
      * Advertise this service on the bus
      * There are three steps to advertising this service on the bus
@@ -399,37 +550,52 @@ inline void ThreadClass::ServiceRun() {
     // Don't use qcc::Rand16() because it can result in the same exact sequence
     // for multiple threads.
     sprintf(buf, "%s.i%05d", s_wellKnownName.c_str(), qcc::Rand32() & 0xffff);
-
     qcc::String serviceName(buf);
 
-    QCC_SyncPrintf("------------------------------------------------------------\n");
-    QCC_SyncPrintf("Service named %s is starting...\n", buf);
-    QCC_SyncPrintf("------------------------------------------------------------\n");
+    AboutObj aboutObj(*bus);
 
-    /* Request name */
-    if (ER_OK == status) {
-        uint32_t flags = DBUS_NAME_FLAG_REPLACE_EXISTING | DBUS_NAME_FLAG_DO_NOT_QUEUE;
-        QStatus status = bus->RequestName(serviceName.c_str(), flags);
-        if (ER_OK != status) {
-            QCC_SyncPrintf("RequestName(%s) failed (status=%s)\n", s_wellKnownName.c_str(), QCC_StatusText(status));
+    if (g_useAboutFeatureDiscovery) {
+        QCC_SyncPrintf("------------------------------------------------------------\n");
+        QCC_SyncPrintf("Service named %s is starting...\n", bus->GetUniqueName().c_str());
+        QCC_SyncPrintf("------------------------------------------------------------\n");
+        //AppId is a 128bit uuid
+        uint8_t appId[] = { 0x01, 0xB3, 0xBA, 0x14,
+                            0x1E, 0x82, 0x11, 0xE4,
+                            0x86, 0x51, 0xD1, 0x56,
+                            0x1D, 0x5D, 0x46, 0xB0 };
+        g_aboutData.SetAppId(appId, 16);
+        g_aboutData.SetDeviceName("DeviceName");
+        //DeviceId is a string encoded 128bit UUID
+        g_aboutData.SetDeviceId("1273b650-49bc-11e4-916c-0800200c9a66");
+        g_aboutData.SetAppName(g_testAboutApplicationName.c_str());
+        g_aboutData.SetManufacturer("AllSeen Alliance");
+        g_aboutData.SetModelNumber("");
+        g_aboutData.SetDescription("bastress2 is a test application used to verify AllJoyn functionality");
+        // software version of bbservice is the same as the AllJoyn version
+        g_aboutData.SetSoftwareVersion(ajn::GetVersion());
+        g_aboutData.SetTransportOpts(s_transports);
+
+        aboutObj.Announce(SERVICE_PORT, g_aboutData);
+    } else {
+        QCC_SyncPrintf("------------------------------------------------------------\n");
+        QCC_SyncPrintf("Service named %s is starting...\n", buf);
+        QCC_SyncPrintf("------------------------------------------------------------\n");
+
+        /* Request name */
+        if (ER_OK == status) {
+            uint32_t flags = DBUS_NAME_FLAG_REPLACE_EXISTING | DBUS_NAME_FLAG_DO_NOT_QUEUE;
+            QStatus status = bus->RequestName(serviceName.c_str(), flags);
+            if (ER_OK != status) {
+                QCC_SyncPrintf("RequestName(%s) failed (status=%s)\n", s_wellKnownName.c_str(), QCC_StatusText(status));
+            }
         }
-    }
 
-    /* Create session */
-    SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, s_useMultipointSessions, SessionOpts::PROXIMITY_ANY, s_transports);
-    if (ER_OK == status) {
-        SessionPort sp = SERVICE_PORT;
-        status = bus->BindSessionPort(sp, opts, *serviceBusListener);
-        if (ER_OK != status) {
-            QCC_SyncPrintf("BindSessionPort failed (%s)\n", QCC_StatusText(status));
-        }
-    }
-
-    /* Advertise name */
-    if (ER_OK == status) {
-        status = bus->AdvertiseName(serviceName.c_str(), opts.transports);
-        if (status != ER_OK) {
-            QCC_SyncPrintf("Failed to advertise name %s (%s)\n", serviceName.c_str(), QCC_StatusText(status));
+        /* Advertise name */
+        if (ER_OK == status) {
+            status = bus->AdvertiseName(serviceName.c_str(), opts.transports);
+            if (status != ER_OK) {
+                QCC_SyncPrintf("Failed to advertise name %s (%s)\n", serviceName.c_str(), QCC_StatusText(status));
+            }
         }
     }
 
@@ -451,14 +617,21 @@ inline void ThreadClass::ServiceRun() {
         }
     }
 
-    QCC_SyncPrintf("------------------------------------------------------------\n");
-    QCC_SyncPrintf("Service named %s is stopping...\n", buf);
-    QCC_SyncPrintf("------------------------------------------------------------\n");
+    if (g_useAboutFeatureDiscovery) {
+        QCC_SyncPrintf("------------------------------------------------------------\n");
+        QCC_SyncPrintf("Service named %s is stopping...\n", bus->GetUniqueName().c_str());
+        QCC_SyncPrintf("------------------------------------------------------------\n");
+        aboutObj.Unannounce();
+    } else {
+        QCC_SyncPrintf("------------------------------------------------------------\n");
+        QCC_SyncPrintf("Service named %s is stopping...\n", buf);
+        QCC_SyncPrintf("------------------------------------------------------------\n");
 
-    /* Cancel Advertise name */
-    status = bus->CancelAdvertiseName(serviceName.c_str(), opts.transports);
-    if (status != ER_OK) {
-        QCC_SyncPrintf("Failed to cancel advertise name %s (%s)\n", serviceName.c_str(), QCC_StatusText(status));
+        /* Cancel Advertise name */
+        status = bus->CancelAdvertiseName(serviceName.c_str(), opts.transports);
+        if (status != ER_OK) {
+            QCC_SyncPrintf("Failed to cancel advertise name %s (%s)\n", serviceName.c_str(), QCC_StatusText(status));
+        }
     }
 
     if (busObject) {
@@ -528,6 +701,9 @@ static void usage(void)
     QCC_SyncPrintf("   -m <mask>             = Transport mask to use for client\n");
     QCC_SyncPrintf("   -u                    = Use UDP Transport for client\n");
     QCC_SyncPrintf("   -n <well-known-name>  = Well-known name to advertise\n");
+    QCC_SyncPrintf("   -about [iface name]   = use the about feature for discovery.\n");
+    QCC_SyncPrintf("\n");
+
 }
 
 /** Main entry point */
@@ -588,6 +764,14 @@ int main(int argc, char**argv)
                 exit(1);
             } else {
                 s_wellKnownName = argv[i];
+            }
+        } else if (0 == strcmp("-about", argv[i])) {
+            g_useAboutFeatureDiscovery = true;
+            if ((i + 1) < argc && argv[i + 1][0] != '-') {
+                ++i;
+                g_testAboutApplicationName = argv[i];
+            } else {
+                g_testAboutApplicationName = "bastress2";
             }
         } else {
             usage();

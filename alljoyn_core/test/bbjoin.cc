@@ -30,12 +30,14 @@
 #include <qcc/time.h>
 #include <qcc/Util.h>
 
+#include <alljoyn/AboutObj.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/BusObject.h>
 #include <alljoyn/DBusStd.h>
 #include <alljoyn/AllJoynStd.h>
 #include <alljoyn/MsgArg.h>
 #include <alljoyn/version.h>
+
 
 #include <alljoyn/Status.h>
 
@@ -71,6 +73,10 @@ static uint32_t g_concurrent_threads = 4;
 SessionPort SESSION_PORT = 26;
 
 static volatile sig_atomic_t g_interrupt = false;
+
+static String g_testAboutInterfaceName = "";
+static bool g_useAboutFeatureDiscovery = false;
+
 
 static void SigIntHandler(int sig)
 {
@@ -181,6 +187,101 @@ class MyBusListener : public BusListener, public SessionPortListener, public Ses
     }
 };
 
+class MyAboutData : public AboutData {
+  public:
+    static const char* TRANSPORT_OPTS;
+
+    MyAboutData() : AboutData() {
+        // test field abc is required, is announced, not localized
+        SetNewFieldDetails(TRANSPORT_OPTS, REQUIRED | ANNOUNCED, "q");
+    }
+    MyAboutData(const char* defaultLanguage) : AboutData(defaultLanguage) {
+        SetNewFieldDetails(TRANSPORT_OPTS, REQUIRED | ANNOUNCED, "q");
+    }
+
+    QStatus SetTransportOpts(TransportMask transportOpts)
+    {
+        QStatus status = ER_OK;
+        MsgArg arg;
+        status = arg.Set(GetFieldSignature(TRANSPORT_OPTS), transportOpts);
+        if (status != ER_OK) {
+            return status;
+        }
+        status = SetField(TRANSPORT_OPTS, arg);
+        return status;
+    }
+
+    QStatus GetTransportOpts(TransportMask* transportOpts)
+    {
+        QStatus status;
+        MsgArg* arg;
+        status = GetField(TRANSPORT_OPTS, arg);
+        if (status != ER_OK) {
+            return status;
+        }
+        status = arg->Get(GetFieldSignature(TRANSPORT_OPTS), transportOpts);
+        return status;
+    }
+};
+
+const char* MyAboutData::TRANSPORT_OPTS = "TransportOpts";
+
+static MyAboutData g_aboutData("en");
+
+class MyAboutListener : public AboutListener {
+  public:
+    MyAboutListener(MyBusListener& myBusListener) : busListener(&myBusListener), sessionId(0) { }
+    void Announced(const char* busName, uint16_t version, SessionPort port,
+                   const MsgArg& objectDescriptionArg, const MsgArg& aboutDataArg) {
+        printf("Received Announce signal: BusName=%s\n", busName);
+        MyAboutData ad;
+        ad.CreatefromMsgArg(aboutDataArg);
+        TransportMask transport;
+        ad.GetTransportOpts(&transport);
+        SessionOpts::TrafficType traffic = SessionOpts::TRAFFIC_MESSAGES;
+        SessionOpts opts(traffic, g_useMultipoint, SessionOpts::PROXIMITY_ANY, transport);
+
+        /* don't attempt to join self */
+        if (strcmp(busName, g_msgBus->GetUniqueName().c_str()) != 0) {
+            QStatus status = g_msgBus->JoinSessionAsync(busName, SESSION_PORT, busListener, opts, busListener, ::strdup(busName));
+            if (ER_OK != status) {
+                QCC_LogError(status, ("JoinSessionAsync(%s) failed \n", busName));
+                g_interrupt = true;
+            }
+        }
+    }
+  private:
+    MyBusListener* busListener;
+    SessionId sessionId;
+};
+
+class LocalTestObject : public BusObject {
+  public:
+
+    LocalTestObject(BusAttachment& bus) :
+        BusObject("/org/alljoyn/alljoyn_test")
+    {
+        QStatus status = ER_FAIL;
+
+        InterfaceDescription* aboutIntf = NULL;
+        if (g_useAboutFeatureDiscovery && g_testAboutInterfaceName != "") {
+            status = bus.CreateInterface(g_testAboutInterfaceName.c_str(), aboutIntf);
+            if ((ER_OK == status) && aboutIntf) {
+                aboutIntf->Activate();
+            } else {
+                QCC_LogError(status, ("Failed to create interface %s", g_testAboutInterfaceName.c_str()));
+                return;
+            }
+        }
+
+        if (ER_OK == status) {
+            if (g_useAboutFeatureDiscovery && g_testAboutInterfaceName != "") {
+                AddInterface(*aboutIntf, ANNOUNCED);
+            }
+        }
+    }
+};
+
 static void usage(void)
 {
     printf("Usage: bbjoin \n\n");
@@ -191,7 +292,6 @@ static void usage(void)
     printf("   -r           = Reject incoming joinSession attempts\n");
     printf("   -s           = Stress test. Continous leave/join\n");
     printf("   -f <prefix>  = FindAdvertisedName prefix\n");
-    printf("   -b           = Advertise/Discover over Bluetooth\n");
     printf("   -t           = Advertise/Discover over TCP\n");
     printf("   -u           = Advertise/Discover over UDP\n");
     printf("   -w           = Advertise/Discover over Wi-Fi Direct\n");
@@ -203,6 +303,7 @@ static void usage(void)
     printf("   -fa          = Retryjoin session even during failure\n");
     printf("   -ct  #       = Set concurrency level\n");
     printf("   -sp  #       = Session port\n");
+    printf("   -a <iface name>   = use the about feature for discovery. The name of the interface to announce.\n");
     printf("\n");
 }
 
@@ -211,7 +312,7 @@ int main(int argc, char** argv)
 {
     const uint64_t startTime = GetTimestamp64(); // timestamp in milliseconds
     QStatus status = ER_OK;
-    uint32_t transportOpts = TRANSPORT_TCP;
+    TransportMask transportOpts = TRANSPORT_TCP;
 
     // echo command line to provide distinguishing information within multipoint session
     for (int i = 0; i < argc; i++) {
@@ -244,8 +345,6 @@ int main(int argc, char** argv)
             g_stressTest = true;
         } else if (0 == strcmp("-f", argv[i])) {
             g_findPrefix = argv[++i];
-        } else if (0 == strcmp("-b", argv[i])) {
-            transportOpts |= TRANSPORT_BLUETOOTH;
         } else if (0 == strcmp("-t", argv[i])) {
             transportOpts = TRANSPORT_TCP;
         } else if (0 == strcmp("-u", argv[i])) {
@@ -282,6 +381,16 @@ int main(int argc, char** argv)
             } else {
                 SESSION_PORT = (SessionPort) qcc::StringToU32(argv[i], 0);;
             }
+        } else if (0 == strcmp("-about", argv[i])) {
+            g_useAboutFeatureDiscovery = true;
+            ++i;
+            if (i == argc) {
+                printf("option %s requires a parameter\n", argv[i - 1]);
+                usage();
+                exit(1);
+            } else {
+                g_testAboutInterfaceName = argv[i];
+            }
         }  else {
             status = ER_FAIL;
             printf("Unknown option %s\n", argv[i]);
@@ -297,6 +406,7 @@ int main(int argc, char** argv)
 
     /* Create message bus */
     g_msgBus = new BusAttachment("bbjoin", true, g_concurrent_threads);
+    LocalTestObject* testObj = NULL;
     if (g_msgBus != NULL) {
         status = g_msgBus->Start();
         if (ER_OK != status) {
@@ -318,6 +428,9 @@ int main(int argc, char** argv)
         MyBusListener myBusListener;
         g_msgBus->RegisterBusListener(myBusListener);
 
+        MyAboutListener myAboutListener(myBusListener);
+        g_msgBus->RegisterAboutListener(myAboutListener);
+
         /* Register local objects and connect to the daemon */
         if (ER_OK == status) {
 
@@ -331,24 +444,57 @@ int main(int argc, char** argv)
                 exit(-1);
             }
 
-            /* Request a well-known name */
-            QStatus status = g_msgBus->RequestName(g_wellKnownName.c_str(), DBUS_NAME_FLAG_REPLACE_EXISTING | DBUS_NAME_FLAG_DO_NOT_QUEUE);
-            if (status != ER_OK) {
-                QCC_LogError(status, ("RequestName(%s) failed. ", g_wellKnownName.c_str()));
-                exit(-1);
-            }
+            if (g_useAboutFeatureDiscovery) {
+                printf("Calling WhoImplements %s\n", g_testAboutInterfaceName.c_str());
+                status = g_msgBus->WhoImplements(g_testAboutInterfaceName.c_str());
+                if (status != ER_OK) {
+                    QCC_LogError(status, ("WhoImplements(%s) failed. ", g_testAboutInterfaceName.c_str()));
+                    exit(-1);
+                }
 
-            /* Begin Advertising the well-known name */
-            status = g_msgBus->AdvertiseName(g_wellKnownName.c_str(), transportOpts);
-            if (ER_OK != status) {
-                QCC_LogError(status, ("Advertise name(%s) failed ", g_wellKnownName.c_str()));
-                exit(-1);
-            }
+                /* Register object and start the bus */
+                testObj = new LocalTestObject(*g_msgBus);
+                g_msgBus->RegisterBusObject(*testObj);
 
-            status = g_msgBus->FindAdvertisedNameByTransport(g_findPrefix ? g_findPrefix : "com", transportOpts);
-            if (status != ER_OK) {
-                QCC_LogError(status, ("FindAdvertisedName failed "));
-                exit(-1);
+                //AppId is a 128bit uuid
+                uint8_t appId[] = { 0x01, 0xB3, 0xBA, 0x14,
+                                    0x1E, 0x82, 0x11, 0xE4,
+                                    0x86, 0x51, 0xD1, 0x56,
+                                    0x1D, 0x5D, 0x46, 0xB0 };
+                g_aboutData.SetAppId(appId, 16);
+                g_aboutData.SetDeviceName("DeviceName");
+                //DeviceId is a string encoded 128bit UUID
+                g_aboutData.SetDeviceId("1273b650-49bc-11e4-916c-0800200c9a66");
+                g_aboutData.SetAppName("bbservice");
+                g_aboutData.SetManufacturer("AllSeen Alliance");
+                g_aboutData.SetModelNumber("");
+                g_aboutData.SetDescription("bbservice is a test application used to verify AllJoyn functionality");
+                // software version of bbservice is the same as the AllJoyn version
+                g_aboutData.SetSoftwareVersion(ajn::GetVersion());
+                g_aboutData.SetTransportOpts(transportOpts);
+
+                AboutObj aboutObj(*g_msgBus);
+                aboutObj.Announce(SESSION_PORT, g_aboutData);
+            } else {
+                /* Request a well-known name */
+                QStatus status = g_msgBus->RequestName(g_wellKnownName.c_str(), DBUS_NAME_FLAG_REPLACE_EXISTING | DBUS_NAME_FLAG_DO_NOT_QUEUE);
+                if (status != ER_OK) {
+                    QCC_LogError(status, ("RequestName(%s) failed. ", g_wellKnownName.c_str()));
+                    exit(-1);
+                }
+
+                /* Begin Advertising the well-known name */
+                status = g_msgBus->AdvertiseName(g_wellKnownName.c_str(), transportOpts);
+                if (ER_OK != status) {
+                    QCC_LogError(status, ("Advertise name(%s) failed ", g_wellKnownName.c_str()));
+                    exit(-1);
+                }
+
+                status = g_msgBus->FindAdvertisedNameByTransport(g_findPrefix ? g_findPrefix : "com", transportOpts);
+                if (status != ER_OK) {
+                    QCC_LogError(status, ("FindAdvertisedName failed "));
+                    exit(-1);
+                }
             }
         }
 
@@ -359,6 +505,7 @@ int main(int argc, char** argv)
         /* Clean up msg bus */
         g_msgBus->Stop();
         g_msgBus->Join();
+        delete testObj;
         delete g_msgBus;
     }
 

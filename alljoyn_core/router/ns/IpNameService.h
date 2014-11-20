@@ -97,11 +97,12 @@ class IpNameService {
     /**
      * @brief Return a reference to the IpNameService singleton.
      */
-    static IpNameService& Instance()
-    {
-        static IpNameService ipNameService;
-        return ipNameService;
-    }
+    static IpNameService& Instance();
+
+    /**
+     * @brief Clean up the IpNameService singleton. Must be the last call to IpNameService.
+     */
+    static void Cleanup();
 
     /**
      * @brief Notify the singleton that there is a transport coming up that will

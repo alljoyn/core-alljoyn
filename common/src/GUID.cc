@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2011, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -34,12 +34,12 @@ using namespace qcc;
 
 namespace qcc {
 
-GUID128::GUID128() : value(), shortValue()
+GUID128::GUID128() : guid(), value(), shortValue()
 {
     Crypto_GetRandomBytes(guid, SIZE);
 }
 
-GUID128::GUID128(uint8_t init) : value(), shortValue()
+GUID128::GUID128(uint8_t init) : guid(), value(), shortValue()
 {
     memset(guid, init, SIZE);
 }

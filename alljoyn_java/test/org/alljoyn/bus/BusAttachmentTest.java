@@ -29,6 +29,11 @@ public class BusAttachmentTest extends TestCase {
         System.loadLibrary("alljoyn_java");
     }
 
+    private int uniquifier = 0;
+    private String genUniqueName(BusAttachment bus) {
+        return "test.x" + bus.getGlobalGUIDString() + ".x" + uniquifier++;
+    }
+
     public class Emitter implements EmitterInterface, BusObject {
         private SignalEmitter emitter;
 
@@ -94,17 +99,53 @@ public class BusAttachmentTest extends TestCase {
     private WeakReference<BusAttachment> otherBusRef = new WeakReference<BusAttachment>(otherBus);
     private int handledSignals1;
     private int handledSignals2;
+    private int handledSignals3;
     private int handledSignals4;
     private boolean pinRequested;
-    private String name;
     private String address;
 
     @Override
     public void setUp() throws Exception {
         bus = null;
         otherBus = null;
-        name = "org.alljoyn.bus.BusAttachmentTest.advertise";
         address = System.getProperty("org.alljoyn.bus.address", "unix:abstract=alljoyn");
+
+        handledSignals1 = 0;
+        handledSignals2 = 0;
+        handledSignals3 = 0;
+        handledSignals4 = 0;
+        pinRequested = false;
+
+        found = false;
+        lost = false;
+
+        foundNameA = false;
+        foundNameB = false;
+
+        foundName1 = false;
+        foundName2 = false;
+        foundName3 = false;
+        transport2 = 0;
+
+        sessionAccepted = false;
+        sessionJoined = false;
+        onJoined = false;
+        joinSessionStatus = Status.NONE;
+        busSessionId = -1;
+        otherBusSessionId = -1;
+
+        sessionLost = false;
+        sessionLostReason = -1;
+
+        sessionJoinedFlag = false;
+        sessionLostFlagA = false;
+        sessionMemberAddedFlagA = false;
+        sessionMemberRemovedFlagA = false;
+        sessionLostFlagB = false;
+        sessionMemberAddedFlagB = false;
+        sessionMemberRemovedFlagB = false;
+
+        onPinged = false;
     }
 
     @Override
@@ -177,6 +218,19 @@ public class BusAttachmentTest extends TestCase {
         ++handledSignals2;
     }
 
+    public void signalHandler3(String string)
+        throws BusException
+    {
+        ++handledSignals3;
+    }
+
+    /* As opposed to signalHandler4 this one only increments the value */
+    public void signalHandler4Basic(String string)
+        throws BusException
+    {
+        ++handledSignals4;
+    }
+
     public synchronized void testRegisterMultipleSignalHandlersForOneSignal() throws Exception {
         bus = new BusAttachment(getClass().getName());
         Status status = bus.connect();
@@ -195,6 +249,14 @@ public class BusAttachmentTest extends TestCase {
         status = bus.registerSignalHandler("org.alljoyn.bus.EmitterInterface", "Emit",
                 this, getClass().getMethod("signalHandler2", String.class));
         assertEquals(Status.OK, status);
+        status =
+            bus.registerSignalHandlerWithRule("org.alljoyn.bus.EmitterInterface", "Emit", this,
+                getClass().getMethod("signalHandler3", String.class), "path='/emitter'");
+        assertEquals(Status.OK, status);
+        status =
+            bus.registerSignalHandlerWithRule("org.alljoyn.bus.EmitterInterface", "Emit", this,
+                getClass().getMethod("signalHandler4Basic", String.class), "path='/wrongpath'");
+        assertEquals(Status.OK, status); // This signalhandler must never be hit
 
         //
         // Emit a signal and make sure that both of the handlers we registered
@@ -214,15 +276,17 @@ public class BusAttachmentTest extends TestCase {
             //
             // Break out as soon as we see the result we need.
             //
-            if(handledSignals1 == 1 && handledSignals2 == 1 ) {
+            if (handledSignals1 == 1 && handledSignals2 == 1 && handledSignals3 == 1) {
                 break;
             }
         }
 
         assertEquals(1, handledSignals1);
         assertEquals(1, handledSignals2);
+        assertEquals(1, handledSignals3);
+        assertEquals(0, handledSignals4);
 
-        handledSignals1 = handledSignals2 = 0;
+        handledSignals1 = handledSignals2 = handledSignals3 = 0;
 
         //
         // Unregister one of the handlers and make sure that the unregistered
@@ -245,6 +309,8 @@ public class BusAttachmentTest extends TestCase {
         this.wait(10000);
         assertEquals(0, handledSignals1);
         assertEquals(1, handledSignals2);
+        assertEquals(1, handledSignals3);
+        assertEquals(0, handledSignals4); // This must always be zero
         bus.unregisterSignalHandler(this, getClass().getMethod("signalHandler2", String.class));
         status = bus.removeMatch("type='signal',interface='org.alljoyn.bus.EmitterInterface',member='Emit'");
         assertEquals(Status.OK, status);
@@ -348,8 +414,8 @@ public class BusAttachmentTest extends TestCase {
     // suppressing the unused signalHandler3 warning this is used in the test
     // but the compiler does not know.
     @SuppressWarnings("unused")
-    private void signalHandler3(String string) throws BusException {
-    }
+     private void unusablePrivateFunction(String string) throws BusException {
+     }
 
     public void testRegisterPrivateSignalHandler() throws Exception {
         boolean thrown = false;
@@ -359,7 +425,7 @@ public class BusAttachmentTest extends TestCase {
             assertEquals(Status.OK, status);
 
             status = bus.registerSignalHandler("org.alljoyn.bus.EmitterInterface", "Emit",
-                    this, getClass().getMethod("signalHandler3", String.class));
+                    this, getClass().getMethod("unusablePrivateFunction", String.class));
             assertEquals(Status.OK, status);
         } catch (NoSuchMethodException ex) {
             thrown = true;
@@ -588,27 +654,6 @@ public class BusAttachmentTest extends TestCase {
                         "    </method>\n" +
                         "    <annotation name=\"org.alljoyn.Bus.Secure\" value=\"off\"/>\n" +
                         "  </interface>\n" +
-                        "  <interface name=\"org.freedesktop.DBus.Properties\">\n" +
-                        "    <method name=\"Get\">\n" +
-                        "      <arg name=\"interface\" type=\"s\" direction=\"in\"/>\n" +
-                        "      <arg name=\"propname\" type=\"s\" direction=\"in\"/>\n" +
-                        "      <arg name=\"value\" type=\"v\" direction=\"out\"/>\n" +
-                        "    </method>\n" +
-                        "    <method name=\"GetAll\">\n" +
-                        "      <arg name=\"interface\" type=\"s\" direction=\"in\"/>\n" +
-                        "      <arg name=\"props\" type=\"a{sv}\" direction=\"out\"/>\n" +
-                        "    </method>\n" +
-                        "    <signal name=\"PropertiesChanged\">\n" +
-                        "      <arg name=\"interface\" type=\"s\" direction=\"out\"/>\n" +
-                        "      <arg name=\"changed_props\" type=\"a{sv}\" direction=\"out\"/>\n" +
-                        "      <arg name=\"invalidated_props\" type=\"as\" direction=\"out\"/>\n" +
-                        "    </signal>\n" +
-                        "    <method name=\"Set\">\n" +
-                        "      <arg name=\"interface\" type=\"s\" direction=\"in\"/>\n" +
-                        "      <arg name=\"propname\" type=\"s\" direction=\"in\"/>\n" +
-                        "      <arg name=\"value\" type=\"v\" direction=\"in\"/>\n" +
-                        "    </method>\n" +
-                        "  </interface>\n" +
                         "</node>\n";
         assertEquals(expected, actual);
     }
@@ -716,9 +761,9 @@ public class BusAttachmentTest extends TestCase {
     }
 
     public synchronized void testFindNewName() throws Exception {
-
-
         bus = new BusAttachment(getClass().getName());
+        String name = genUniqueName(bus);
+
         BusListener testBusListener = new FindNewNameBusListener(bus);
         bus.registerBusListener(testBusListener);
 
@@ -767,6 +812,8 @@ public class BusAttachmentTest extends TestCase {
     public synchronized void testLostExistingName() throws Exception {
         // The client part
         bus = new BusAttachment(getClass().getName());
+        String name = genUniqueName(bus);
+
         assertEquals(Status.OK, bus.connect());
 
         BusListener testBusListener = new LostExistingNameBusListener(bus);
@@ -786,10 +833,11 @@ public class BusAttachmentTest extends TestCase {
 
         // Advertise a name and then cancel it.
         this.wait(4 * 1000);
-        assertEquals(Status.OK, otherBus.advertiseName("org.alljoyn.bus.BusAttachmentTest.advertise.happy", SessionOpts.TRANSPORT_ANY));
+        String happy = name + ".happy";
+        assertEquals(Status.OK, otherBus.advertiseName(happy, SessionOpts.TRANSPORT_ANY));
         this.wait(4 * 1000);
         assertEquals(true , found);
-        assertEquals(Status.OK, otherBus.cancelAdvertiseName("org.alljoyn.bus.BusAttachmentTest.advertise.happy", SessionOpts.TRANSPORT_ANY));
+        assertEquals(Status.OK, otherBus.cancelAdvertiseName(happy, SessionOpts.TRANSPORT_ANY));
         this.wait(20 * 1000);
         assertEquals(true, lost);
     }
@@ -819,6 +867,7 @@ public class BusAttachmentTest extends TestCase {
 
     public synchronized void testFindExistingName() throws Exception {
         bus = new BusAttachment(getClass().getName());
+        String name = genUniqueName(bus);
 
         BusListener testBusListener = new FindExistingNameBusListener(bus);
         bus.registerBusListener(testBusListener);
@@ -855,10 +904,10 @@ public class BusAttachmentTest extends TestCase {
 
         @Override
         public void foundAdvertisedName(String name, short transport, String namePrefix) {
-            if (name.equals("name.A")) {
+            if (name.equals(nameA)) {
                 foundNameA = true;
             }
-            if ( name.equals("name.B")) {
+            if ( name.equals(nameB)) {
                 foundNameB = true;
             }
             // stopWait seems to block sometimes, so enable concurrency.
@@ -869,12 +918,15 @@ public class BusAttachmentTest extends TestCase {
         private BusAttachment bus;
     }
 
-
+    private String nameA;
+    private String nameB;
     private boolean foundNameA;
     private boolean foundNameB;
 
     public synchronized void testFindMultipleNames() throws Exception {
         bus = new BusAttachment(getClass().getName());
+        nameA = genUniqueName(bus);
+        nameB = genUniqueName(bus);
 
         BusListener testBusListener = new FindMultipleNamesBusListener(bus);
         bus.registerBusListener(testBusListener);
@@ -882,14 +934,14 @@ public class BusAttachmentTest extends TestCase {
         assertEquals(Status.OK, bus.connect());
         foundNameA = foundNameB = false;
 
-        assertEquals(Status.OK, bus.findAdvertisedName("name.A"));
-        assertEquals(Status.OK, bus.findAdvertisedName("name.B"));
+        assertEquals(Status.OK, bus.findAdvertisedName(nameA));
+        assertEquals(Status.OK, bus.findAdvertisedName(nameB));
 
         otherBus = new BusAttachment(getClass().getName(), BusAttachment.RemoteMessage.Receive);
         assertEquals(Status.OK, otherBus.connect());
 
-        assertEquals(Status.OK, otherBus.advertiseName("name.A", SessionOpts.TRANSPORT_ANY));
-        assertEquals(Status.OK, otherBus.advertiseName("name.B", SessionOpts.TRANSPORT_ANY));
+        assertEquals(Status.OK, otherBus.advertiseName(nameA, SessionOpts.TRANSPORT_ANY));
+        assertEquals(Status.OK, otherBus.advertiseName(nameB, SessionOpts.TRANSPORT_ANY));
         this.wait(4 * 1000);
         // check to see if we have found both names if not wait a little longer
         // not thread safe, but worst case situation is it will wait the full 2
@@ -902,19 +954,19 @@ public class BusAttachmentTest extends TestCase {
         assertEquals(true, foundNameA);
         assertEquals(true, foundNameB);
 
-        assertEquals(Status.OK, otherBus.cancelAdvertiseName("name.A", SessionOpts.TRANSPORT_ANY));
-        assertEquals(Status.OK, otherBus.cancelAdvertiseName("name.B", SessionOpts.TRANSPORT_ANY));
+        assertEquals(Status.OK, otherBus.cancelAdvertiseName(nameA, SessionOpts.TRANSPORT_ANY));
+        assertEquals(Status.OK, otherBus.cancelAdvertiseName(nameB, SessionOpts.TRANSPORT_ANY));
 
-        assertEquals(Status.OK, bus.cancelFindAdvertisedName("name.B"));
+        assertEquals(Status.OK, bus.cancelFindAdvertisedName(nameB));
         foundNameA = foundNameB = false;
-        assertEquals(Status.OK, otherBus.advertiseName("name.A", SessionOpts.TRANSPORT_ANY));
-        assertEquals(Status.OK, otherBus.advertiseName("name.B", SessionOpts.TRANSPORT_ANY));
+        assertEquals(Status.OK, otherBus.advertiseName(nameA, SessionOpts.TRANSPORT_ANY));
+        assertEquals(Status.OK, otherBus.advertiseName(nameB, SessionOpts.TRANSPORT_ANY));
         //this will unlock when name.A is found
         this.wait(2 * 1000);
 
-        assertEquals(Status.OK, bus.cancelFindAdvertisedName("name.A"));
-        assertEquals(Status.OK, otherBus.cancelAdvertiseName("name.A", SessionOpts.TRANSPORT_ANY));
-        assertEquals(Status.OK, otherBus.cancelAdvertiseName("name.B", SessionOpts.TRANSPORT_ANY));
+        assertEquals(Status.OK, bus.cancelFindAdvertisedName(nameA));
+        assertEquals(Status.OK, otherBus.cancelAdvertiseName(nameA, SessionOpts.TRANSPORT_ANY));
+        assertEquals(Status.OK, otherBus.cancelAdvertiseName(nameB, SessionOpts.TRANSPORT_ANY));
         assertEquals(true, foundNameA);
         assertEquals(false, foundNameB);
     }
@@ -926,14 +978,14 @@ public class BusAttachmentTest extends TestCase {
 
         @Override
         public void foundAdvertisedName(String name, short transport, String namePrefix) {
-            if (name.equals("name.x")) {
+            if (name.equals(name1)) {
                 foundName1 = true;
             }
-            if ( name.equals("name.y")) {
+            if (name.equals(name2)) {
                 foundName2 = true;
                 transport2 |= transport;
             }
-            if ( name.equals("name.z")) {
+            if (name.equals(name3)) {
                 foundName3 = true;
             }
             // stopWait seems to block sometimes, so enable concurrency.
@@ -944,7 +996,9 @@ public class BusAttachmentTest extends TestCase {
         private BusAttachment bus;
     }
 
-
+    private String name1;
+    private String name2;
+    private String name3;
     private boolean foundName1;
     private boolean foundName2;
     private boolean foundName3;
@@ -957,23 +1011,26 @@ public class BusAttachmentTest extends TestCase {
         foundName3 = false;
         transport2 = 0;
         bus = new BusAttachment(getClass().getName(), BusAttachment.RemoteMessage.Receive);
+        name1 = genUniqueName(bus);
+        name2 = genUniqueName(bus);
+        name3 = genUniqueName(bus);
 
         BusListener testBusListener = new FindNamesByTransportListener(bus);
         bus.registerBusListener(testBusListener);
 
         assertEquals(Status.OK, bus.connect());
         found = false;
-        assertEquals(Status.OK, bus.findAdvertisedNameByTransport("name.x",TCP));
-        assertEquals(Status.OK, bus.findAdvertisedNameByTransport("name.y",LOCAL));
-        assertEquals(Status.OK, bus.findAdvertisedNameByTransport("name.z",LOCAL));
-        assertEquals(Status.OK, bus.cancelFindAdvertisedNameByTransport("name.z",LOCAL));
+        assertEquals(Status.OK, bus.findAdvertisedNameByTransport(name1,TCP));
+        assertEquals(Status.OK, bus.findAdvertisedNameByTransport(name2,LOCAL));
+        assertEquals(Status.OK, bus.findAdvertisedNameByTransport(name3,LOCAL));
+        assertEquals(Status.OK, bus.cancelFindAdvertisedNameByTransport(name3,LOCAL));
 
         otherBus = new BusAttachment(getClass().getName(), BusAttachment.RemoteMessage.Receive);
         assertEquals(Status.OK, otherBus.connect());
 
-        assertEquals(Status.OK, otherBus.advertiseName("name.x", SessionOpts.TRANSPORT_ANY));
-        assertEquals(Status.OK, otherBus.advertiseName("name.y", SessionOpts.TRANSPORT_ANY));
-        assertEquals(Status.OK, otherBus.advertiseName("name.z", SessionOpts.TRANSPORT_ANY));
+        assertEquals(Status.OK, otherBus.advertiseName(name1, SessionOpts.TRANSPORT_ANY));
+        assertEquals(Status.OK, otherBus.advertiseName(name2, SessionOpts.TRANSPORT_ANY));
+        assertEquals(Status.OK, otherBus.advertiseName(name3, SessionOpts.TRANSPORT_ANY));
 
         this.wait(2 * 1000);
         assertEquals(false, foundName1);
@@ -1005,6 +1062,7 @@ public class BusAttachmentTest extends TestCase {
 
     public synchronized void testCancelFindNameInsideListener() throws Exception {
         bus = new BusAttachment(getClass().getName(), BusAttachment.RemoteMessage.Receive);
+        String name = genUniqueName(bus);
 
         BusListener testBusListener = new CancelFindNameInsideListenerBusListener(bus);
         bus.registerBusListener(testBusListener);
@@ -1024,6 +1082,8 @@ public class BusAttachmentTest extends TestCase {
 
     public void testFindSameName() throws Exception {
         bus = new BusAttachment(getClass().getName());
+        String name = genUniqueName(bus);
+
         assertEquals(Status.OK, bus.connect());
 
         assertEquals(Status.OK, bus.findAdvertisedName(name));
@@ -1098,6 +1158,8 @@ public class BusAttachmentTest extends TestCase {
 
         // create new BusAttachment
         bus = new BusAttachment(getClass().getName(), BusAttachment.RemoteMessage.Receive);
+        String name = genUniqueName(bus);
+
         assertEquals(Status.OK, bus.connect());
 
         // Set up SessionOpts
@@ -1177,7 +1239,7 @@ public class BusAttachmentTest extends TestCase {
         assertEquals(true, found);
 
         this.wait(5 * 1000);
-        if(!sessionAccepted || !sessionJoined) {
+        if(!sessionAccepted || !sessionJoined || (Status.NONE == joinSessionStatus)) {
             this.wait(5 * 1000);
         }
 
@@ -1187,12 +1249,31 @@ public class BusAttachmentTest extends TestCase {
         assertEquals(busSessionId, otherBusSessionId);
     }
 
+    class JoinSessionAsyncBusListener extends BusListener {
+        public String name;
+
+        public JoinSessionAsyncBusListener(String name) {
+            this.name = name;
+        }
+
+        @Override
+        public void foundAdvertisedName(String advertisedName, short transport, String namePrefix) {
+            assertEquals(name, advertisedName);
+            found = true;
+            // stopWait seems to block sometimes, so enable concurrency.
+            otherBus.enableConcurrentCallbacks();
+            stopWait();
+        }
+    };
+
     public synchronized void testJoinSessionAsync() throws Exception {
         /*
          * Setup to create a session, advertise a name on one bus attachment and find the name
          * on another bus attachment.
          */
         bus = new BusAttachment(getClass().getName(), BusAttachment.RemoteMessage.Receive);
+        String name = genUniqueName(bus);
+
         assertEquals(Status.OK, bus.connect());
         assertEquals(Status.OK, bus.bindSessionPort(new Mutable.ShortValue((short) 42), new SessionOpts(),
                 new SessionPortListener(){
@@ -1214,16 +1295,8 @@ public class BusAttachmentTest extends TestCase {
 
         otherBus = new BusAttachment(getClass().getName(), BusAttachment.RemoteMessage.Receive);
         assertEquals(Status.OK, otherBus.connect());
-        otherBus.registerBusListener(new BusListener() {
-            @Override
-            public void foundAdvertisedName(String advertisedName, short transport, String namePrefix) {
-                assertEquals(name, advertisedName);
-                found = true;
-                // stopWait seems to block sometimes, so enable concurrency.
-                otherBus.enableConcurrentCallbacks();
-                stopWait();
-            }
-        });
+        JoinSessionAsyncBusListener busListener = new JoinSessionAsyncBusListener(name);
+        otherBus.registerBusListener(busListener);
 
         found = false;
         assertEquals(Status.OK, otherBus.findAdvertisedName(name));
@@ -1266,7 +1339,6 @@ public class BusAttachmentTest extends TestCase {
         }
     }
 
-    //TODO figure out how to produce the sessionLost signal
     public synchronized void testLeaveSession() throws Exception {
         found = false;
         sessionAccepted = false;
@@ -1275,6 +1347,7 @@ public class BusAttachmentTest extends TestCase {
         sessionLostReason = SessionListener.ALLJOYN_SESSIONLOST_INVALID;
         // create new BusAttachment
         bus = new BusAttachment(getClass().getName(), BusAttachment.RemoteMessage.Receive);
+        String name = genUniqueName(bus);
         /*
          * The number '1337' is just a dummy number, the BUS_NOT_CONNECTED
          * status is expected regardless of the number.
@@ -1293,8 +1366,7 @@ public class BusAttachmentTest extends TestCase {
         Mutable.ShortValue sessionPort = new Mutable.ShortValue((short) 42);
 
         //bindSessionPort new SessionPortListener
-        assertEquals(Status.OK, bus.bindSessionPort(sessionPort, sessionOpts,
-                new SessionPortListener(){
+        assertEquals(Status.OK, bus.bindSessionPort(sessionPort, sessionOpts, new SessionPortListener() {
             @Override
             public boolean acceptSessionJoiner(short sessionPort, String joiner, SessionOpts sessionOpts) {
                 if (sessionPort == 42) {
@@ -1373,11 +1445,10 @@ public class BusAttachmentTest extends TestCase {
 
         assertEquals(busSessionId, otherBusSessionId);
         assertEquals(Status.OK, otherBus.leaveSession(otherBusSessionId));
-        Status status = bus.leaveSession(busSessionId);
-        assertTrue((status == Status.OK) || (status == Status.ALLJOYN_LEAVESESSION_REPLY_NO_SESSION));
 
         found = false;
         sessionAccepted = sessionJoined = false;
+        joinSessionStatus = Status.NONE;
         busSessionId = otherBusSessionId = 0;
 
         otherBus.cancelFindAdvertisedName(name);
@@ -1386,7 +1457,7 @@ public class BusAttachmentTest extends TestCase {
         // Wait for found name and session joined
         assertEquals(true, waitForLambda(4 * 1000, new Lambda() {
                 @Override
-                public boolean func() { return found && sessionAccepted && sessionJoined; }
+                public boolean func() { return found && sessionAccepted && sessionJoined && (joinSessionStatus == Status.OK); }
             }));
 
         assertEquals(Status.OK, joinSessionStatus);
@@ -1395,14 +1466,187 @@ public class BusAttachmentTest extends TestCase {
         assertEquals(busSessionId, otherBusSessionId);
 
         assertEquals(Status.OK, bus.leaveSession(busSessionId));
-        status = otherBus.leaveSession(otherBusSessionId);
-        assertTrue((status == Status.OK) || (status == Status.ALLJOYN_LEAVESESSION_REPLY_NO_SESSION));
 
         // Wait for session lost
         assertEquals(true, waitForLambda(4 * 1000, new Lambda() {
                 public boolean func() { return sessionLost; }
             }));
         assertEquals(SessionListener.ALLJOYN_SESSIONLOST_REMOTE_END_LEFT_SESSION, sessionLostReason);
+    }
+
+    private synchronized void testSelfJoin(boolean joinerLeaves)
+        throws Exception
+    {
+        String name = genUniqueName(bus);
+
+        found = false;
+        sessionAccepted = false;
+        sessionJoined = false;
+        sessionLost = false;
+        sessionLostReason = SessionListener.ALLJOYN_SESSIONLOST_INVALID;
+
+        /*
+         * The number '1337' is just a dummy number, the BUS_NOT_CONNECTED status is expected regardless of the number.
+         */
+        assertEquals(Status.BUS_NOT_CONNECTED, bus.leaveSession(1337));
+        assertEquals(Status.OK, bus.connect());
+
+        // Set up SessionOpts
+        SessionOpts sessionOpts = new SessionOpts();
+        sessionOpts.traffic = SessionOpts.TRAFFIC_MESSAGES;
+        sessionOpts.isMultipoint = false;
+        sessionOpts.proximity = SessionOpts.PROXIMITY_ANY;
+        sessionOpts.transports = SessionOpts.TRANSPORT_ANY;
+
+        // User defined sessionPort Number
+        Mutable.ShortValue sessionPort = new Mutable.ShortValue((short) 42);
+
+        // bindSessionPort new SessionPortListener
+        assertEquals(Status.OK, bus.bindSessionPort(sessionPort, sessionOpts, new SessionPortListener() {
+            @Override
+            public boolean acceptSessionJoiner(short sessionPort, String joiner, SessionOpts sessionOpts)
+            {
+                if (sessionPort == 42) {
+                    sessionAccepted = true;
+                    return true;
+                }
+                else {
+                    sessionAccepted = false;
+                    return false;
+                }
+            }
+
+            @Override
+            public void sessionJoined(short sessionPort, int id, String joiner)
+            {
+                if (sessionPort == 42) {
+                    busSessionId = id;
+                    sessionJoined = true;
+                    assertEquals(Status.OK,
+                        bus.setHostedSessionListener(busSessionId, new LeaveSessionSessionListener(bus)));
+                    assertEquals(Status.OK,
+                        otherBus.setJoinedSessionListener(busSessionId, new LeaveSessionSessionListener(otherBus)));
+                    // Pass null to test if the session listener is cleared
+                    assertEquals(Status.OK, otherBus.setJoinedSessionListener(busSessionId, null));
+                    // Set a new LeaveSessionSessionListener after clearing the previous one
+                    assertEquals(Status.OK,
+                        otherBus.setJoinedSessionListener(busSessionId, new LeaveSessionSessionListener(otherBus)));
+                }
+                else {
+                    sessionJoined = false;
+                }
+            }
+        }));
+        // Request name from bus
+        int flag =
+            BusAttachment.ALLJOYN_REQUESTNAME_FLAG_REPLACE_EXISTING
+                | BusAttachment.ALLJOYN_REQUESTNAME_FLAG_DO_NOT_QUEUE;
+        assertEquals(Status.OK, bus.requestName(name, flag));
+        // Advertise same bus name
+        assertEquals(Status.OK, bus.advertiseName(name, SessionOpts.TRANSPORT_ANY));
+
+        if (bus != otherBus) {
+            assertEquals(Status.OK, otherBus.connect());
+        }
+
+        // Register BusListener for the foundAdvertisedName Listener
+        otherBus.registerBusListener(new BusListener() {
+            @Override
+            public void foundAdvertisedName(String name, short transport, String namePrefix)
+            {
+                SessionOpts sessionOpts = new SessionOpts();
+                sessionOpts.traffic = SessionOpts.TRAFFIC_MESSAGES;
+                sessionOpts.isMultipoint = false;
+                sessionOpts.proximity = SessionOpts.PROXIMITY_ANY;
+                sessionOpts.transports = SessionOpts.TRANSPORT_ANY;
+
+                Mutable.IntegerValue sessionId = new Mutable.IntegerValue(0);
+
+                // Since we are using blocking form of joinSession and setLinKTimeout, we need to enable concurrency
+                otherBus.enableConcurrentCallbacks();
+
+                // Join session once the AdvertisedName has been found
+                joinSessionStatus =
+                    otherBus.joinSession(name, (short) 42, sessionId, sessionOpts, new LeaveSessionSessionListener(
+                        otherBus));
+                otherBusSessionId = sessionId.value;
+
+                // Set a link timeout
+                if (joinSessionStatus == Status.OK) {
+                    Mutable.IntegerValue timeout = new Mutable.IntegerValue(60);
+                    joinSessionStatus = otherBus.setLinkTimeout(sessionId.value, timeout);
+                    if (joinSessionStatus == Status.OK) {
+                        if ((timeout.value < 60) && (timeout.value != 0)) {
+                            joinSessionStatus = Status.FAIL;
+                        }
+                    }
+                }
+                // must be last
+                found = true;
+            }
+        });
+
+        // find the AdvertisedName
+        assertEquals(Status.OK, otherBus.findAdvertisedName(name));
+
+        // Make sure name was found and session was joined
+        assertEquals(true, waitForLambda(4 * 1000, new Lambda() {
+            @Override
+            public boolean func()
+            {
+                return found && sessionAccepted && sessionJoined && (joinSessionStatus == Status.OK);
+            }
+        }));
+
+        if (joinerLeaves) {
+            assertEquals(Status.OK, otherBus.leaveJoinedSession(busSessionId));
+            if (bus != otherBus) {
+                assertEquals(Status.ALLJOYN_LEAVESESSION_REPLY_NO_SESSION, otherBus.leaveHostedSession(busSessionId));
+            }
+        }
+        else {
+            assertEquals(Status.OK, bus.leaveHostedSession(busSessionId));
+            if (bus != otherBus) {
+                assertEquals(Status.ALLJOYN_LEAVESESSION_REPLY_NO_SESSION, bus.leaveJoinedSession(busSessionId));
+            }
+            else {
+                assertEquals(Status.ALLJOYN_LEAVESESSION_REPLY_NO_SESSION, bus.leaveSession(busSessionId));
+            }
+        }
+    }
+
+    public synchronized void testOtherJoinJoinerLeaves()
+        throws Exception
+    {
+        bus = new BusAttachment(getClass().getName(), BusAttachment.RemoteMessage.Receive);
+        otherBus = new BusAttachment(getClass().getName(), BusAttachment.RemoteMessage.Receive);
+
+        this.testSelfJoin(true);
+    }
+
+    public synchronized void testOtherJoinHostLeaves()
+        throws Exception
+    {
+        bus = new BusAttachment(getClass().getName(), BusAttachment.RemoteMessage.Receive);
+        otherBus = new BusAttachment(getClass().getName(), BusAttachment.RemoteMessage.Receive);
+
+        this.testSelfJoin(false);
+    }
+
+    public synchronized void testSelfJoinJoinerLeaves()
+        throws Exception
+    {
+        bus = otherBus = new BusAttachment(getClass().getName(), BusAttachment.RemoteMessage.Receive);
+
+        this.testSelfJoin(true);
+    }
+
+    public synchronized void testSelfJoinHostLeaves()
+        throws Exception
+    {
+        bus = otherBus = new BusAttachment(getClass().getName(), BusAttachment.RemoteMessage.Receive);
+
+        this.testSelfJoin(false);
     }
 
     /* ALLJOYN-958 */
@@ -1513,6 +1757,7 @@ public class BusAttachmentTest extends TestCase {
                 sessionMemberRemovedFlagB = true;
             }
     }
+
     private boolean sessionJoinedFlag = false;
     private boolean sessionLostFlagA = false;
     private boolean sessionMemberAddedFlagA = false;
@@ -1573,7 +1818,7 @@ public class BusAttachmentTest extends TestCase {
 
         assertEquals(Status.ALLJOYN_REMOVESESSIONMEMBER_NOT_BINDER, busB.removeSessionMember(sessionId.value, busA.getUniqueName()));
 
-        assertEquals(Status.ALLJOYN_REMOVESESSIONMEMBER_REPLY_FAILED, busA.removeSessionMember(sessionId.value, busA.getUniqueName()));
+        assertEquals(Status.ALLJOYN_REMOVESESSIONMEMBER_NOT_FOUND, busA.removeSessionMember(sessionId.value, busA.getUniqueName()));
 
         assertEquals(Status.ALLJOYN_REMOVESESSIONMEMBER_NOT_FOUND, busA.removeSessionMember(sessionId.value, ":Invalid"));
 

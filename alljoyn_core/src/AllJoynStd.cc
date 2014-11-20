@@ -33,6 +33,16 @@
 
 namespace ajn {
 
+/** org.alljoyn.About interface definitions */
+const char* org::alljoyn::About::ObjectPath = "/About";
+const char* org::alljoyn::About::InterfaceName = "org.alljoyn.About";
+const char* org::alljoyn::About::WellKnownName = "org.alljoyn.About";
+
+/** org.alljoyn.About.Icon interface definitions */
+const char* org::alljoyn::Icon::ObjectPath = "/About/DeviceIcon";
+const char* org::alljoyn::Icon::InterfaceName = "org.alljoyn.Icon";
+const char* org::alljoyn::Icon::WellKnownName = "org.alljoyn.Icon";
+
 /** org.alljoyn.Bus interface definitions */
 const char* org::alljoyn::Bus::ErrorName = "org.alljoyn.Bus.ErStatus";
 const char* org::alljoyn::Bus::ObjectPath = "/org/alljoyn/Bus";
@@ -68,6 +78,37 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
 {
     QStatus status;
     {
+        /* Create the org.alljoyn.About interface */
+        InterfaceDescription* ifc = NULL;
+        status = bus.CreateInterface(org::alljoyn::About::InterfaceName, ifc);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Failed to create interface \"%s\"", org::alljoyn::About::InterfaceName));
+            return status;
+        }
+        ifc->AddMethod("GetAboutData", "s", "a{sv}", "languageTag,aboutData");
+        ifc->AddMethod("GetObjectDescription", NULL, "a(oas)", "Control");
+        ifc->AddProperty("Version", "q", PROP_ACCESS_READ);
+        ifc->AddSignal("Announce", "qqa(oas)a{sv}", "version,port,objectDescription,servMetadata", 0);
+
+        ifc->Activate();
+    }
+    {
+        /* Create the org.alljoyn.Icon interface */
+        InterfaceDescription* ifc = NULL;
+        status = bus.CreateInterface(org::alljoyn::Icon::InterfaceName, ifc);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Failed to create interface \"%s\"", org::alljoyn::Icon::InterfaceName));
+            return status;
+        }
+        ifc->AddMethod("GetUrl", NULL, "s", "url");
+        ifc->AddMethod("GetContent", NULL, "ay", "content");
+        ifc->AddProperty("Version", "q", PROP_ACCESS_READ);
+        ifc->AddProperty("MimeType", "s", PROP_ACCESS_READ);
+        ifc->AddProperty("Size", "u", PROP_ACCESS_READ);
+
+        ifc->Activate();
+    }
+    {
         /* Create the org.alljoyn.Bus interface */
         InterfaceDescription* ifc = NULL;
         status = bus.CreateInterface(org::alljoyn::Bus::InterfaceName, ifc);
@@ -81,6 +122,8 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         ifc->AddMethod("UnbindSessionPort",        "q",                 "u",                 "port,disposition",                           0);
         ifc->AddMethod("JoinSession",              "sq" SESSIONOPTS_SIG, "uu" SESSIONOPTS_SIG, "sessionHost,port,opts,disp,sessionId,opts", 0);
         ifc->AddMethod("LeaveSession",             "u",                 "u",                 "sessionId,disposition",                      0);
+        ifc->AddMethod("LeaveHostedSession",       "u",                 "u",                 "sessionId,disposition",                      0);
+        ifc->AddMethod("LeaveJoinedSession",       "u",                 "u",                 "sessionId,disposition",                      0);
         ifc->AddMethod("AdvertiseName",            "sq",                "u",                 "name,transports,disposition",                0);
         ifc->AddMethod("CancelAdvertiseName",      "sq",                "u",                 "name,transports,disposition",                0);
         ifc->AddMethod("FindAdvertisedName",       "s",                 "u",                 "name,disposition",                           0);
@@ -99,12 +142,17 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         ifc->AddMethod("Ping",                     "su",                "u",                 "name,timeout,disposition",                   0);
         ifc->AddMethod("FindAdvertisementByTransport",       "sq",                "u",                 "matching,transports,disposition",     0);
         ifc->AddMethod("CancelFindAdvertisementByTransport", "sq",                "u",                 "matching,transports,disposition",     0);
+        ifc->AddMethod("SetIdleTimeouts",     "uu",                "uuu",
+                       "reqLinkTO,reqProbeTO,disposition,actLinkTO,actProbeTO", 0);
+
 
         ifc->AddSignal("FoundAdvertisedName",      "sqs",              "name,transport,prefix",                        0);
         ifc->AddSignal("LostAdvertisedName",       "sqs",              "name,transport,prefix",                        0);
         ifc->AddSignal("SessionLost",              "u",               "sessionId",                                     0);
         ifc->AddSignal("SessionLostWithReason",    "uu",               "sessionId,reason",                             0);
+        ifc->AddSignal("SessionLostWithReasonAndDisposition",    "uuu",               "sessionId,reason,disposition",                             0);
         ifc->AddSignal("MPSessionChanged",         "usb",              "sessionId,name,isAdded",                       0);
+        ifc->AddSignal("MPSessionChangedWithReason",         "usbu",              "sessionId,name,isAdded,reason",                       0);
 
         ifc->Activate();
     }

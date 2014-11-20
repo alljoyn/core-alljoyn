@@ -40,6 +40,7 @@
 using namespace std;
 using namespace qcc;
 using namespace ajn;
+
 class BusAttachmentTest : public testing::Test {
   public:
     BusAttachment bus;
@@ -87,34 +88,6 @@ TEST_F(BusAttachmentTest, Disconnect)
     }
 }
 
-TEST_F(BusAttachmentTest, FindName_Join_Self)
-{
-    SessionPortListener sp_listener;
-    SessionOpts opts;
-    SessionPort port = 52;
-
-    QStatus status = ER_OK;
-
-    const char* requestedName = "org.alljoyn.bus.BusAttachmentTest.JoinSelf";
-
-    status = bus.BindSessionPort(port, opts, sp_listener);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-
-    status = bus.RequestName(requestedName, DBUS_NAME_FLAG_DO_NOT_QUEUE);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-
-    status = bus.AdvertiseName(requestedName, TRANSPORT_ANY);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-
-    status = bus.FindAdvertisedName(requestedName);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-
-
-    SessionId id;
-    status = bus.JoinSession(requestedName, port, NULL, id, opts);
-    EXPECT_EQ(ER_ALLJOYN_JOINSESSION_REPLY_ALREADY_JOINED, status) << "  Actual Status: " << QCC_StatusText(status);
-}
-
 TEST_F(BusAttachmentTest, FindName_Same_Name)
 {
     QStatus status = ER_OK;
@@ -145,16 +118,18 @@ TEST_F(BusAttachmentTest, FindName_Null_Name)
     EXPECT_EQ(ER_BAD_ARG_1, status) << "  Actual Status: " << QCC_StatusText(status);
 }
 
+String nameA;
+String nameB;
 bool foundNameA = false;
 bool foundNameB = false;
 
 class FindMulipleNamesBusListener : public BusListener {
     void FoundAdvertisedName(const char* name, TransportMask transport, const char* namePrefix) {
         printf("FoundAdvertisedName name=%s  prefix=%s\n", name, namePrefix);
-        if (strcmp(name, "name.A") == 0) {
+        if (strcmp(name, nameA.c_str()) == 0) {
             foundNameA = true;
         }
-        if (strcmp(name, "name.B") == 0) {
+        if (strcmp(name, nameB.c_str()) == 0) {
             foundNameB = true;
         }
     }
@@ -166,12 +141,14 @@ TEST_F(BusAttachmentTest, find_multiple_names)
     FindMulipleNamesBusListener testBusListener;
     bus.RegisterBusListener(testBusListener);
 
+    nameA = genUniqueName(bus);
+    nameB = genUniqueName(bus);
     foundNameA = false;
     foundNameB = false;
 
-    status = bus.FindAdvertisedName("name.A");
+    status = bus.FindAdvertisedName(nameA.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = bus.FindAdvertisedName("name.B");
+    status = bus.FindAdvertisedName(nameB.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     BusAttachment otherBus("BusAttachmentTestOther", true);
@@ -180,9 +157,9 @@ TEST_F(BusAttachmentTest, find_multiple_names)
     status = otherBus.Connect(getConnectArg().c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    status = otherBus.AdvertiseName("name.A", TRANSPORT_ANY);
+    status = otherBus.AdvertiseName(nameA.c_str(), TRANSPORT_ANY);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = otherBus.AdvertiseName("name.B", TRANSPORT_ANY);
+    status = otherBus.AdvertiseName(nameB.c_str(), TRANSPORT_ANY);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     //Wait upto 8 seconds for the both found name signals to complete.
@@ -197,20 +174,20 @@ TEST_F(BusAttachmentTest, find_multiple_names)
     EXPECT_TRUE(foundNameA);
     EXPECT_TRUE(foundNameB);
 
-    status = otherBus.CancelAdvertiseName("name.A", TRANSPORT_ANY);
+    status = otherBus.CancelAdvertiseName(nameA.c_str(), TRANSPORT_ANY);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = otherBus.CancelAdvertiseName("name.B", TRANSPORT_ANY);
+    status = otherBus.CancelAdvertiseName(nameB.c_str(), TRANSPORT_ANY);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    status = bus.CancelFindAdvertisedName("name.B");
+    status = bus.CancelFindAdvertisedName(nameB.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     foundNameA = false;
     foundNameB = false;
 
-    status = otherBus.AdvertiseName("name.A", TRANSPORT_ANY);
+    status = otherBus.AdvertiseName(nameA.c_str(), TRANSPORT_ANY);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = otherBus.AdvertiseName("name.B", TRANSPORT_ANY);
+    status = otherBus.AdvertiseName(nameB.c_str(), TRANSPORT_ANY);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     //Wait upto 2 seconds for the found name signal to complete.
@@ -224,12 +201,12 @@ TEST_F(BusAttachmentTest, find_multiple_names)
     EXPECT_TRUE(foundNameA);
     EXPECT_FALSE(foundNameB);
 
-    status = otherBus.CancelAdvertiseName("name.A", TRANSPORT_ANY);
+    status = otherBus.CancelAdvertiseName(nameA.c_str(), TRANSPORT_ANY);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = otherBus.CancelAdvertiseName("name.B", TRANSPORT_ANY);
+    status = otherBus.CancelAdvertiseName(nameB.c_str(), TRANSPORT_ANY);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    status = bus.CancelFindAdvertisedName("name.A");
+    status = bus.CancelFindAdvertisedName(nameA.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     //Must Unregister bus listener or the test will segfault

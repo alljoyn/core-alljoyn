@@ -81,7 +81,7 @@ Crypto_AES::Crypto_AES(const KeyBlob& key, Mode mode) : mode(mode), keyState(NUL
                 return;
             }
             // Enable CCM
-            if (BCryptSetProperty(cngCache.ccmHandle, BCRYPT_CHAINING_MODE, (PUCHAR)BCRYPT_CHAIN_MODE_CCM, wcslen(BCRYPT_CHAIN_MODE_CCM) + 1, 0) < 0) {
+            if (BCryptSetProperty(cngCache.ccmHandle, BCRYPT_CHAINING_MODE, (PUCHAR)BCRYPT_CHAIN_MODE_CCM, sizeof(BCRYPT_CHAIN_MODE_CCM), 0) < 0) {
                 status = ER_CRYPTO_ERROR;
                 QCC_LogError(status, ("Failed to enable CCM mode on AES algorithm provider"));
                 return;

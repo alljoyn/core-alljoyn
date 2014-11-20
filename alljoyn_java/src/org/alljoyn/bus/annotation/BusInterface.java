@@ -41,6 +41,13 @@ public @interface BusInterface {
     String name() default "";
 
     /**
+     * specify if the interface is announced
+     * possible values are "true" or "false"
+     * defaults to "false"
+     */
+    String announced() default "false";
+
+    /**
      * This interface's description language
      */
     String descriptionLanguage() default "";

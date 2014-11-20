@@ -1711,6 +1711,8 @@ void AllJoynPeerObj::SetupPeerAuthentication(const qcc::String& authMechanisms, 
             count++;
         } else if (mech == "ALLJOYN_ECDHE_ECDSA") {
             count++;
+        } else if (mech == "GSSAPI") {
+            count++;
         }
     }
     supportedAuthSuitesCount = count;
@@ -1749,6 +1751,8 @@ void AllJoynPeerObj::SetupPeerAuthentication(const qcc::String& authMechanisms, 
             supportedAuthSuites[idx++] = AUTH_SUITE_ECDHE_PSK;
         } else if (mech == "ALLJOYN_ECDHE_ECDSA") {
             supportedAuthSuites[idx++] = AUTH_SUITE_ECDHE_ECDSA;
+        } else if (mech == "GSSAPI") {
+            supportedAuthSuites[idx++] = AUTH_SUITE_GSSAPI;
         }
     }
 }

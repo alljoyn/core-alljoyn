@@ -6,7 +6,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011,2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -39,40 +39,46 @@ namespace ajn {
 void SignalTable::Add(MessageReceiver* receiver,
                       MessageReceiver::SignalHandler handler,
                       const InterfaceDescription::Member* member,
-                      const qcc::String& sourcePath)
+                      const qcc::String& rule)
 {
-    QCC_DbgTrace(("SignalTable::Add(iface = {%s}, member = {%s}, sourcePath = \"%s\")",
+    QCC_DbgTrace(("SignalTable::Add(iface = {%s}, member = {%s}, rule = \"%s\")",
                   member->iface->GetName(),
                   member->name.c_str(),
-                  sourcePath.c_str()));
-    Entry entry(handler, receiver, member);
-    Key key(sourcePath, member->iface->GetName(), member->name);
+                  rule.c_str()));
+    Entry entry(handler, receiver, member, rule);
+    Key key(member->iface->GetName(), member->name);
     lock.Lock(MUTEX_CONTEXT);
     hashTable.insert(pair<const Key, Entry>(key, entry));
     lock.Unlock(MUTEX_CONTEXT);
 }
 
-void SignalTable::Remove(MessageReceiver* receiver,
-                         MessageReceiver::SignalHandler handler,
-                         const InterfaceDescription::Member* member,
-                         const char* sourcePath)
+QStatus SignalTable::Remove(MessageReceiver* receiver,
+                            MessageReceiver::SignalHandler handler,
+                            const InterfaceDescription::Member* member,
+                            const char* rule)
 {
-    Key key(sourcePath, member->iface->GetName(), member->name.c_str());
+    QStatus status = ER_FAIL;
+    Key key(member->iface->GetName(), member->name.c_str());
     iterator iter;
     pair<iterator, iterator> range;
+    Rule matchRule(rule);
 
     lock.Lock(MUTEX_CONTEXT);
     range = hashTable.equal_range(key);
     iter = range.first;
     while (iter != range.second) {
-        if ((iter->second.object == receiver) && (iter->second.handler == handler)) {
+        if ((iter->second.object == receiver) &&
+            (iter->second.handler == handler) &&
+            (iter->second.rule == matchRule)) {
             hashTable.erase(iter);
+            status = ER_OK;
             break;
         } else {
             ++iter;
         }
     }
     lock.Unlock(MUTEX_CONTEXT);
+    return status;
 }
 
 void SignalTable::RemoveAll(MessageReceiver* receiver)
@@ -92,11 +98,10 @@ void SignalTable::RemoveAll(MessageReceiver* receiver)
     lock.Unlock(MUTEX_CONTEXT);
 }
 
-pair<SignalTable::const_iterator, SignalTable::const_iterator> SignalTable::Find(const char* sourcePath,
-                                                                                 const char* iface,
+pair<SignalTable::const_iterator, SignalTable::const_iterator> SignalTable::Find(const char* iface,
                                                                                  const char* signalName)
 {
-    Key key(sourcePath, iface, signalName);
+    Key key(iface, signalName);
     return hashTable.equal_range(key);
 }
 

@@ -1263,6 +1263,8 @@ class IpNameServiceImpl : public qcc::Thread {
      */
     std::map<qcc::String, uint16_t> m_reliableIPv4PortMap[N_TRANSPORTS];
 
+    std::map<qcc::String, uint16_t> m_priorReliableIPv4PortMap[N_TRANSPORTS];
+
     /**
      * @internal
      * @brief The IPv4 address of the transports on this daemon that are listening for
@@ -1284,6 +1286,8 @@ class IpNameServiceImpl : public qcc::Thread {
      * for unreliable (UDP) inbound connections over IPv4.
      */
     std::map<qcc::String, uint16_t> m_unreliableIPv4PortMap[N_TRANSPORTS];
+
+    std::map<qcc::String, uint16_t> m_priorUnreliableIPv4PortMap[N_TRANSPORTS];
 
     /**
      * @internal
@@ -1338,6 +1342,12 @@ class IpNameServiceImpl : public qcc::Thread {
 
     /**
      * @internal
+     * @brief Check to see if the periodic timer needs to be scheduled.
+     */
+    bool IsPeriodicMaintenanceTimerNeeded(void) const;
+
+    /**
+     * @internal
      * @brief Perform periodic protocol maintenance.  Called once per second
      * from the main listener loop.
      */
@@ -1347,7 +1357,7 @@ class IpNameServiceImpl : public qcc::Thread {
      * @internal
      * @brief Retransmit exported advertisements.
      */
-    void Retransmit(uint32_t index, bool exiting, bool quietly, const qcc::IPEndpoint& destination, uint8_t type, TransportMask transportMask, const int32_t interfaceIndex = -1, const qcc::AddressFamily family = qcc::QCC_AF_UNSPEC, const qcc::IPAddress& localAddress =  qcc::IPAddress("0.0.0.0"));
+    void Retransmit(uint32_t index, bool exiting, bool quietly, const qcc::IPEndpoint& destination, uint8_t type, TransportMask transportMask, std::vector<qcc::String>& wkns, const int32_t interfaceIndex = -1, const qcc::AddressFamily family = qcc::QCC_AF_UNSPEC, const qcc::IPAddress& localAddress =  qcc::IPAddress("0.0.0.0"));
 
     void GetResponsePackets(std::list<Packet>& packets, bool quietly = false, const qcc::IPEndpoint destination = qcc::IPEndpoint("0.0.0.0", 0), uint8_t type = TRANSMIT_V2, TransportMask transportMask = (TRANSPORT_TCP | TRANSPORT_UDP), const int32_t interfaceIndex = -1, const qcc::AddressFamily family = qcc::QCC_AF_UNSPEC);
 
@@ -1612,6 +1622,7 @@ class IpNameServiceImpl : public qcc::Thread {
     PacketScheduler m_packetScheduler;
 
     uint32_t m_networkChangeScheduleCount;
+    bool m_doNetworkCallback;
     qcc::NetworkEventSet m_networkEvents;
     qcc::Timespec m_networkChangeTimeStamp;
     bool PurgeAndUpdatePacket(MDNSPacket mdnspacket, bool updateSid);

@@ -434,12 +434,11 @@ public class ProxyBusObject {
         return map;
     }
 
-    public native Status registerPropertiesChangedHandler(String iface, String[] properties,
-        PropertiesChangedListener listener) throws BusException;
+    public native Status registerPropertiesChangedListener(String iface, String[] properties,
+                                                           PropertiesChangedListener listener) throws BusException;
 
-    // TODO: align with cpp api
     public native void
-        unregisterPropertyChangedHandler(String iface, String property, PropertiesChangedListener listener)
+        unregisterPropertiesChangedHandler(String iface, PropertiesChangedListener listener)
             throws BusException;
 
 }

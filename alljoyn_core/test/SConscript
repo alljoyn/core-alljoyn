@@ -24,6 +24,8 @@ if test_env['BR'] == 'on':
 
 # Test Programs
 progs = [
+    test_env.Program('aclient',       ['aclient.cc']),
+    test_env.Program('aservice',      ['aservice.cc']),
     test_env.Program('bastress',      ['bastress.cc']),
     test_env.Program('bastress2',     ['bastress2.cc']),
     test_env.Program('bignum',        ['bignum.cc']),

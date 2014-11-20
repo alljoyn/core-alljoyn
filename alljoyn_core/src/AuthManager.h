@@ -116,6 +116,7 @@ class AuthManager {
             if (name == "ALLJOYN_ECDHE_NULL") {
             } else if (name == "ALLJOYN_ECDHE_PSK") {
             } else if (name == "ALLJOYN_ECDHE_ECDSA") {
+            } else if (name == "GSSAPI") {
             } else if (!authMechanisms.count(name)) {
                 status = ER_BUS_INVALID_AUTH_MECHANISM;
                 QCC_LogError(status, ("Unknown authentication mechanism %s", name.c_str()));

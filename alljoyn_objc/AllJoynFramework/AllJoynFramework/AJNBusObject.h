@@ -53,6 +53,17 @@
 @property (nonatomic, readonly) BOOL isSecure;
 
 /**
+ * Flag used to specify if an interface is announced or not here
+ * or Alternatively if one uses SetAnnounceFlag function
+ * @see AddInterface
+ * @see SetAnnounceFlag
+ */
+typedef enum AJNAnnounceFlag{
+    UNANNOUNCED=0,
+    ANNOUNCED=1
+}AJNAnnounceFlag;
+
+/**
  * AJNBusObject initialization.
  *
  * @param busAttachment  Bus that this object exists on.
@@ -111,6 +122,7 @@
 @property (nonatomic, readonly) BOOL isSecure;
 
 @property (nonatomic) void *translator;
+
 
 - (id)initWithPath:(NSString *)path;
 

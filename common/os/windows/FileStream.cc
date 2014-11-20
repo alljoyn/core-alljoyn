@@ -132,12 +132,12 @@ QStatus FileSource::PullBytes(void* buf, size_t reqBytes, size_t& actualBytes, u
 
     if (ret) {
         actualBytes = readBytes;
-        return ((0 < reqBytes) && (0 == readBytes)) ? ER_NONE : ER_OK;
+        return ((0 < reqBytes) && (0 == readBytes)) ? ER_EOF : ER_OK;
     } else {
         DWORD error = ::GetLastError();
         if (ERROR_HANDLE_EOF == error) {
             actualBytes = 0;
-            return ER_NONE;
+            return ER_EOF;
         } else {
             QCC_LogError(ER_FAIL, ("ReadFile returned error (%d)", error));
             return ER_FAIL;

@@ -70,7 +70,6 @@ Copyright (c) 2010 - 2012, 2014, AllSeen Alliance. All rights reserved.
   <status name="ER_BUS_REPLY_IS_ERROR_MESSAGE" value="0x9032" comment="Response from a method call was an ERROR message"/>
   <status name="ER_BUS_NOT_AUTHENTICATING" value="0x9033" comment="Not in an authentication conversation"/>
   <status name="ER_BUS_NO_LISTENER" value="0x9034" comment="A listener is required to implement the requested function"/>
-  <status name="ER_BUS_BT_TRANSPORT_ERROR" value="0x9035" comment="The Bluetooth transport reported an error"/>
   <status name="ER_BUS_NOT_ALLOWED" value="0x9036" comment="The operation attempted is not allowed"/>
   <status name="ER_BUS_WRITE_QUEUE_FULL" value="0x9037" comment="Write failed because write queue is full"/>
   <status name="ER_BUS_ENDPOINT_CLOSING" value="0x9038" comment="Operation not permitted on endpoint in process of closing"/>
@@ -123,7 +122,6 @@ Copyright (c) 2010 - 2012, 2014, AllSeen Alliance. All rights reserved.
   <status name="ER_BUS_NO_SUCH_HANDLE" value="0x906b" comment="Handle is not in the handle table"/>
   <status name="ER_BUS_HANDLES_NOT_ENABLED" value="0x906c" comment="Passing of handles is not enabled for this connection"/>
   <status name="ER_BUS_HANDLES_MISMATCH" value="0x906d" comment="Message had more handles than expected"/>
-  <status name="ER_BT_MAX_CONNECTIONS_USED" value="0x906e" comment="Maximum Bluetooth connections already in use"/>
   <status name="ER_BUS_NO_SESSION" value="0x906f" comment="Session id is not valid"/>
   <status name="ER_BUS_ELEMENT_NOT_FOUND" value="0x9070" comment="Dictionary element was not found"/>
   <status name="ER_BUS_NOT_A_DICTIONARY" value="0x9071" comment="MsgArg was not an array of dictionary elements"/>
@@ -169,7 +167,7 @@ Copyright (c) 2010 - 2012, 2014, AllSeen Alliance. All rights reserved.
   <status name="ER_ALLJOYN_SETLINKTIMEOUT_REPLY_NOT_SUPPORTED" value="0x90a0" comment="Local router does not support SetLinkTimeout"/>
   <status name="ER_ALLJOYN_SETLINKTIMEOUT_REPLY_NO_DEST_SUPPORT" value="0x90a1" comment="SetLinkTimeout not supported by destination"/>
   <status name="ER_ALLJOYN_SETLINKTIMEOUT_REPLY_FAILED" value="0x90a2" comment="SetLinkTimeout failed"/>
-  <status name="ER_ALLJOYN_ACCESS_PERMISSION_WARNING" value="0x90a3" comment="No permission to use Wifi/Bluetooth"/>
+  <status name="ER_ALLJOYN_ACCESS_PERMISSION_WARNING" value="0x90a3" comment="No permission to use Wifi"/>
   <status name="ER_ALLJOYN_ACCESS_PERMISSION_ERROR" value="0x90a4" comment="No permission to access peer service"/>
   <status name="ER_BUS_DESTINATION_NOT_AUTHENTICATED" value="0x90a5" comment="Cannot send a signal to a destination that is not authenticated"/>
   <status name="ER_BUS_ENDPOINT_REDIRECTED" value="0x90a6" comment="Endpoint was redirected to another address"/>
@@ -233,7 +231,7 @@ Copyright (c) 2010 - 2012, 2014, AllSeen Alliance. All rights reserved.
   <status name="ER_UDP_NO_NETWORK" value="0x90fb" comment="Not listening on network implied by IP address"/>
   <status name="ER_UDP_UNEXPECTED_LENGTH" value="0x90fc" comment="Request for more bytes than are in the underlying datagram"/>
   <status name="ER_UDP_UNEXPECTED_FLOW" value="0x90fd" comment="The data flow type of the endpoint has an unexpected value"/>
-  <status name="ER_UDP_DISCONNECT" value="0x90fe" comment="Authentication aborted due to unexpected disconnect"/>
+  <status name="ER_UDP_DISCONNECT" value="0x90fe" comment="Unexpected disconnect occurred"/>
   <status name="ER_UDP_NOT_IMPLEMENTED" value="0x90ff" comment="Feature not implemented for the UDP transport"/>
   <status name="ER_UDP_NO_LISTENER" value="0x9100" comment="Discovery started with no listener to receive callbacks"/>
   <status name="ER_UDP_STOPPING" value="0x9101" comment="Attempt to use UDP when transport stopping"/>
@@ -271,4 +269,11 @@ Copyright (c) 2010 - 2012, 2014, AllSeen Alliance. All rights reserved.
   <status name="ER_ARDP_WRITE_BLOCKED" value="0x9121" comment="ARDP cannot write to UDP socket (queue is full)"/>
   <status name="ER_PERMISSION_DENIED" value="0x9122" comment="Permission denied"/>
   <status name="ER_ABOUT_DEFAULT_LANGUAGE_NOT_SPECIFIED" value="0x9123" comment="Default language must be specified before setting a localized field"/>
+  <status name="ER_ABOUT_SESSIONPORT_NOT_BOUND" value="0x9124" comment="Unable to announce session port that is not bound to the BusAttachment"/>
+  <status name="ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD" value="0x9125" comment="The AboutData is missing a required field."/>
+  <status name="ER_ABOUT_INVALID_ABOUTDATA_LISTENER" value="0x9126" comment="The AboutDataListener returns invalid data. Most likely cause: the announced data does not match with non-announced data."/>
+  <status name="ER_BUS_PING_GROUP_NOT_FOUND" value="0x9127" comment="Ping group did not exist"/>
+  <status name="ER_BUS_REMOVED_BY_BINDER_SELF" value="0x9128" comment="The self-joined session member was removed by the binder"/>
+  <status name="ER_INVALID_CONFIG" value="0x9129" comment="Invalid configuration item or combination of items detected"/>
+  <status name="ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE" value="0x912a" comment="General error indicating the value given for an About Data field is invalid."/> 
 </status_block>

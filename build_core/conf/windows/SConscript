@@ -74,7 +74,15 @@ elif env['OS'] == 'winxp':
 #       reason we are choosing to suppress this particular warning.
 # C4996 'strdup': The POSIX name for this item is deprecated. Instead, use the ISO
 #       C++ conformant name: _strdup. See online help for details.
-env.Append(CXXFLAGS=['/wd4244', '/wd4267','/wd4345', '/wd4355', '/wd4800', '/wd4996'])
+# C4351 "new behavior: elements of array 'array' will be default initialized"
+#       This warning is triggered when we initialize the guid array in the GUID128()
+#       constructor. We intentionally want to initialize this array, so this behavior
+#       change warning can safely be disabled.
+# C4146 "unary minus operator applied to unsigned type, result still unsigned"
+#       The warning is triggered by the monty_rho() function in BigNum.cc when it
+#       negates an unsigned value before truncating it to uint32_t. This is an
+#       intentional part of the algorithm so the warning can be suppressed.
+env.Append(CXXFLAGS=['/wd4244', '/wd4267','/wd4345', '/wd4355', '/wd4800', '/wd4996', '/wd4351', '/wd4146'])
 
 env.Append(CFLAGS=['/nologo', '/vmm', '/vmg'])
 env.Append(CXXFLAGS=['/nologo', '/vmm', '/vmg'])
@@ -104,7 +112,7 @@ if env['VARIANT'] == 'debug':
    # (/MDd') to prevent build errors. 
    env.Append(CPPDEFINES=['_DEBUG', ('_ITERATOR_DEBUG_LEVEL', 2)])
    env.Append(CFLAGS=['/MDd', '/Od'])
-   env.Append(CXXFLAGS=['/MDd', '/Od', '/Gd', '/Ob1', '/W3'])
+   env.Append(CXXFLAGS=['/MDd', '/Od', '/Gd', '/Ob1', '/W2', '/WX'])
    env.Append(LINKFLAGS=['/debug'])
    env.Append(JAVACFLAGS='-g -Xlint -Xlint:-serial')
 else:
@@ -112,7 +120,7 @@ else:
    if env['MSVC_VERSION'] >= '10.0':
        env.Append(CPPDEFINES=[('_ITERATOR_DEBUG_LEVEL', 0)])
    env.Append(CFLAGS=['/MD', '/Gy', '/O1', '/Ob2', '/Gd'])
-   env.Append(CXXFLAGS=['/MD', '/Gy', '/O1', '/Ob2', '/W3'])
+   env.Append(CXXFLAGS=['/MD', '/Gy', '/O1', '/Ob2', '/W2', '/WX'])
    env.Append(LINKFLAGS=['/opt:ref'])
    env.Append(JAVACFLAGS='-Xlint -Xlint:-serial')
 

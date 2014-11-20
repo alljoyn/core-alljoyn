@@ -463,11 +463,11 @@ void ProxyBusObject::SetPropMethodCB(Message& message, void* context)
 }
 
 
-QStatus ProxyBusObject::RegisterPropertiesChangedHandler(const char* iface,
-                                                         const char** properties,
-                                                         size_t propertiesSize,
-                                                         ProxyBusObject::PropertiesChangedListener& listener,
-                                                         void* context)
+QStatus ProxyBusObject::RegisterPropertiesChangedListener(const char* iface,
+                                                          const char** properties,
+                                                          size_t propertiesSize,
+                                                          ProxyBusObject::PropertiesChangedListener& listener,
+                                                          void* context)
 {
     const InterfaceDescription* ifc = bus->GetInterface(iface);
     if (!ifc) {
@@ -507,7 +507,7 @@ QStatus ProxyBusObject::RegisterPropertiesChangedHandler(const char* iface,
     return status;
 }
 
-QStatus ProxyBusObject::UnregisterPropertiesChangedHandler(const char* iface, ProxyBusObject::PropertiesChangedListener& listener)
+QStatus ProxyBusObject::UnregisterPropertiesChangedListener(const char* iface, ProxyBusObject::PropertiesChangedListener& listener)
 {
     if (!bus->GetInterface(iface)) {
         return ER_BUS_OBJECT_NO_SUCH_INTERFACE;
@@ -1052,7 +1052,8 @@ QStatus ProxyBusObject::MethodCall(const InterfaceDescription::Member& method,
      * if we're being called from the LocalEndpoint (callback) thread, do not allow
      * blocking calls unless BusAttachment::EnableConcurrentCallbacks has been called first
      */
-    if (localEndpoint->IsReentrantCall()) {
+    bool isDaemon = bus->GetInternal().GetRouter().IsDaemon();
+    if (localEndpoint->IsReentrantCall() && !isDaemon) {
         status = ER_BUS_BLOCKING_CALL_NOT_ALLOWED;
         goto MethodCallExit;
     }

@@ -845,7 +845,7 @@ namespace AllJoynUnity
              * @param authMechanisms   The authentication mechanism(s) to use for peer-to-peer authentication.
              *                         If this parameter is NULL peer-to-peer authentication is disabled.
              *                         This is a space separated list of any of the following values:
-             *                          ALLJOYN_PIN_KEYX, ALLJOYN_SRP_LOGON, ALLJOYN_RSA_KEYX, ALLJOYN_SRP_KEYX, ALLJOYN_ECDHE_NULL, ALLJOYN_ECDHE_PSK, ALLJOYN_ECDHE_ECDSA.
+             *                          ALLJOYN_PIN_KEYX, ALLJOYN_SRP_LOGON, ALLJOYN_RSA_KEYX, ALLJOYN_SRP_KEYX, ALLJOYN_ECDHE_NULL, ALLJOYN_ECDHE_PSK, ALLJOYN_ECDHE_ECDSA, GSSAPI.
 			 *
 			 * @param listener         Passes password and other authentication related requests to the application.
 			 *
@@ -1282,14 +1282,13 @@ namespace AllJoynUnity
 			 *
 			 * The debug level can be set for individual subsystems or for "ALL"
 			 * subsystems.  Common subsystems are "ALLJOYN" for core AllJoyn code,
-			 * "ALLJOYN_OBJ" for the sessions management code, "ALLJOYN_BT" for the
-			 * Bluetooth subsystem, "ALLJOYN_BTC" for the Bluetooth topology manager,
-			 * and "ALLJOYN_NS" for the TCP name services.  Debug levels for specific
-			 * subsystems override the setting for "ALL" subsystems.  For example if
-			 * "ALL" is set to 7, but "ALLJOYN_OBJ" is set to 1, then detailed debug
-			 * output will be generated for all subsystems except for "ALLJOYN_OBJ"
-			 * which will only generate high level debug output.  "ALL" defaults to 0
-			 * which is off, or no debug output.
+			 * "ALLJOYN_OBJ" for the sessions management code and "ALLJOYN_NS" for
+			 * the TCP name services.  Debug levels for specific subsystems override
+			 * the setting for "ALL" subsystems.  For example if "ALL" is set to 7,
+			 * but "ALLJOYN_OBJ" is set to 1, then detailed debug output will be
+			 * generated for all subsystems except for "ALLJOYN_OBJ" which will only
+			 * generate high level debug output.  "ALL" defaults to 0 which is off,
+			 * or no debug output.
 			 *
 			 * The debug output levels are actually a bit field that controls what
 			 * output is generated.  Those bit fields are described below:

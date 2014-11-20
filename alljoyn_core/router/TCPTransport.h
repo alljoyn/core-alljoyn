@@ -265,6 +265,17 @@ class TCPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     QStatus GetListenAddresses(const SessionOpts& opts, std::vector<qcc::String>& busAddrs) const;
 
     /**
+     * Does this transport support connections as described by the provided
+     * Session options.
+     *
+     * @param opts  Proposed session options.
+     * @return
+     *      - true if the SessionOpts specifies a supported option set.
+     *      - false otherwise.
+     */
+    bool SupportsOptions(const SessionOpts& opts) const;
+
+    /**
      * Indicates whether this transport is used for client-to-bus or bus-to-bus connections.
      *
      * @return  Always returns true, TCP is a bus-to-bus transport.
@@ -575,6 +586,35 @@ class TCPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
      */
     static const char* const ALLJOYN_DEFAULT_ROUTER_ADVERTISEMENT_PREFIX;
 
+    /**
+     * @brief The default values for range and default idle timeout for TCPTransport in seconds.
+     *
+     * This corresponds to the configuration items "tcp_min_idle_timeout",
+     * "tcp_max_idle_timeout" and "tcp_default_idle_timeout"
+     * To override this value, change the limit, "tcp_min_idle_timeout",
+     * "tcp_max_idle_timeout" and "tcp_default_idle_timeout"
+     */
+    static const uint32_t MIN_HEARTBEAT_IDLE_TIMEOUT_DEFAULT = 3;
+    static const uint32_t MAX_HEARTBEAT_IDLE_TIMEOUT_DEFAULT = 30;
+    static const uint32_t DEFAULT_HEARTBEAT_IDLE_TIMEOUT_DEFAULT = 20;
+
+    /**
+     * @brief The default probe timeout for TCPTransport in seconds.
+     *
+     * This corresponds to the configuration item "tcp_default_probe_timeout"
+     * and "tcp_max_probe_timeout"
+     * To override this value, change the limit, "tcp_default_probe_timeout"
+     * and "tcp_max_probe_timeout"
+     */
+    static const uint32_t MAX_HEARTBEAT_PROBE_TIMEOUT_DEFAULT = 30;
+    static const uint32_t DEFAULT_HEARTBEAT_PROBE_TIMEOUT_DEFAULT = 3;
+
+    /**
+     * @brief The number of DBus pings sent from Routing node to leaf node.
+     *
+     */
+    static const uint32_t HEARTBEAT_NUM_PROBES = 1;
+
     /*
      * The Android Compatibility Test Suite (CTS) is used by Google to enforce a
      * common idea of what it means to be Android.  One of their tests is to
@@ -715,8 +755,25 @@ class TCPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
 
     int32_t m_maxUntrustedClients; /**< the maximum number of untrusted clients allowed at any point of time */
 
-    int32_t m_numUntrustedClients;      /**< Number of untrusted clients currently registered with the daemon */
+    int32_t m_numUntrustedClients; /**< Number of untrusted clients currently registered with the daemon */
 
+    uint32_t m_minHbeatIdleTimeout; /**< The minimum allowed idle timeout for the Heartbeat between Routing node
+                                         and Leaf node - configurable in router config */
+
+    uint32_t m_defaultHbeatIdleTimeout; /**< The default idle timeout for the Heartbeat between Routing node
+                                           and Leaf node - configurable in router config */
+
+    uint32_t m_maxHbeatIdleTimeout; /**< The maximum allowed idle timeout for the Heartbeat between Routing node
+                                         and Leaf node - configurable in router config */
+
+    uint32_t m_defaultHbeatProbeTimeout;   /**< The time the Routing node should wait for Heartbeat response to be
+                                                  recieved from the Leaf node - configurable in router config */
+
+    uint32_t m_maxHbeatProbeTimeout;       /**< The max time the Routing node should wait for Heartbeat response to be
+                                                  recieved from the Leaf node - configurable in router config */
+
+    uint32_t m_numHbeatProbes;             /**< Number of probes Routing node should wait for Heartbeat response to be
+                                              recieved from the Leaf node before declaring it dead - Transport specific */
 };
 
 } // namespace ajn

@@ -7,7 +7,7 @@
 /******************************************************************************
  *
  *
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -63,7 +63,7 @@ static FileSource* OpenCookieFile(const char* cookieContext, const qcc::String& 
          */
         cookieSrc = new FileSource(cookieFileName);
         if (!cookieSrc->IsValid()) {
-            QCC_LogError(ER_NONE, ("Unable to open cookie file %s", cookieFileName.c_str()));
+            QCC_LogError(ER_FAIL, ("Unable to open cookie file %s", cookieFileName.c_str()));
             delete cookieSrc;
             cookieSrc = NULL;
         }

@@ -34,6 +34,7 @@
 #include <qcc/time.h>
 #include <qcc/Util.h>
 
+#include <alljoyn/AboutObj.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/BusObject.h>
 #include <alljoyn/DBusStd.h>
@@ -78,6 +79,9 @@ static bool g_cancelAdvertise = false;
 static bool g_ping_back = false;
 static bool g_disableConcurrency = false;
 static bool g_use_delayed_ping_with_sleep = false;
+static String g_testAboutApplicationName = "bbservice";
+static bool g_useAboutFeatureDiscovery = false;
+static AboutData g_aboutData("en");
 
 static volatile sig_atomic_t g_interrupt = false;
 
@@ -496,11 +500,19 @@ class LocalTestObject : public BusObject {
         /* Add the test interface to this object */
         const InterfaceDescription* regTestIntf = bus.GetInterface(::org::alljoyn::alljoyn_test::InterfaceName);
         assert(regTestIntf);
-        AddInterface(*regTestIntf);
+        if (g_useAboutFeatureDiscovery) {
+            AddInterface(*regTestIntf, ANNOUNCED);
+        } else {
+            AddInterface(*regTestIntf);
+        }
         /* Add the values interface to this object */
         const InterfaceDescription* valuesIntf = bus.GetInterface(::org::alljoyn::alljoyn_test::values::InterfaceName);
         assert(valuesIntf);
-        AddInterface(*valuesIntf);
+        if (g_useAboutFeatureDiscovery) {
+            AddInterface(*valuesIntf, ANNOUNCED);
+        } else {
+            AddInterface(*valuesIntf);
+        }
 
         /* Register the signal handler with the bus */
         const InterfaceDescription::Member* member = regTestIntf->GetMember("my_signal");
@@ -553,17 +565,38 @@ class LocalTestObject : public BusObject {
         if (status != ER_OK) {
             QCC_LogError(status, ("Failed to register Match rule for 'org.alljoyn.alljoyn_test.my_signal'"));
         }
-        /* Request a well-known name */
-        status = g_msgBus->RequestName(g_wellKnownName.c_str(), DBUS_NAME_FLAG_REPLACE_EXISTING | DBUS_NAME_FLAG_DO_NOT_QUEUE);
-        if (status != ER_OK) {
-            QCC_LogError(status, ("RequestName(%s) failed.", g_wellKnownName.c_str()));
-            return;
-        }
-        /* Begin Advertising the well-known name */
-        status = g_msgBus->AdvertiseName(g_wellKnownName.c_str(), opts.transports);
-        if (ER_OK != status) {
-            QCC_LogError(status, ("Sending org.alljoyn.Bus.Advertise failed"));
-            return;
+        if (g_useAboutFeatureDiscovery) {
+            //AppId is a 128bit uuid
+            uint8_t appId[] = { 0x01, 0xB3, 0xBA, 0x14,
+                                0x1E, 0x82, 0x11, 0xE4,
+                                0x86, 0x51, 0xD1, 0x56,
+                                0x1D, 0x5D, 0x46, 0xB0 };
+            g_aboutData.SetAppId(appId, 16);
+            g_aboutData.SetDeviceName("DeviceName");
+            //DeviceId is a string encoded 128bit UUID
+            g_aboutData.SetDeviceId("1273b650-49bc-11e4-916c-0800200c9a66");
+            g_aboutData.SetAppName(g_testAboutApplicationName.c_str());
+            g_aboutData.SetManufacturer("AllSeen Alliance");
+            g_aboutData.SetModelNumber("");
+            g_aboutData.SetDescription("bbservice is a test application used to verify AllJoyn functionality");
+            // software version of bbservice is the same as the AllJoyn version
+            g_aboutData.SetSoftwareVersion(ajn::GetVersion());
+
+            AboutObj aboutObj(*g_msgBus);
+            aboutObj.Announce(sessionPort, g_aboutData);
+        } else {
+            /* Request a well-known name */
+            status = g_msgBus->RequestName(g_wellKnownName.c_str(), DBUS_NAME_FLAG_REPLACE_EXISTING | DBUS_NAME_FLAG_DO_NOT_QUEUE);
+            if (status != ER_OK) {
+                QCC_LogError(status, ("RequestName(%s) failed.", g_wellKnownName.c_str()));
+                return;
+            }
+            /* Begin Advertising the well-known name */
+            status = g_msgBus->AdvertiseName(g_wellKnownName.c_str(), opts.transports);
+            if (ER_OK != status) {
+                QCC_LogError(status, ("Sending org.alljoyn.Bus.Advertise failed"));
+                return;
+            }
         }
     }
 
@@ -754,7 +787,6 @@ static void usage(void)
     printf("   -x                    = Compress signals echoed back to sender\n");
     printf("   -i #                  = Signal report interval (number of signals rx per update; default = 1000)\n");
     printf("   -n <well-known name>  = Well-known name to advertise\n");
-    printf("   -b                    = Advertise over Bluetooth (enables selective advertising)\n");
     printf("   -t                    = Advertise over TCP (enables selective advertising)\n");
     printf("   -l                    = Advertise locally (enables selective advertising)\n");
     printf("   -w                    = Advertise over Wi-Fi Direct (enables selective advertising)\n");
@@ -767,6 +799,8 @@ static void usage(void)
     printf("   -con #                = Specify concurrent threads\n");
     printf("   -dcon                 = Disable concurrency\n");
     printf("   -dpws                 = Use DelayedPingWithSleep as methodhandler instead of DelayedPing\n");
+    printf("   -about [name]         = use the about feature for discovery. (optional override default application name.)\n");
+    printf("\n");
 }
 
 /** Main entry point */
@@ -845,8 +879,6 @@ int main(int argc, char** argv)
             }
         } else if (0 == strcmp("-m", argv[i])) {
             opts.isMultipoint = true;
-        } else if (0 == strcmp("-b", argv[i])) {
-            opts.transports |= TRANSPORT_BLUETOOTH;
         } else if (0 == strcmp("-t", argv[i])) {
             opts.transports |= TRANSPORT_WLAN;
         } else if (0 == strcmp("-l", argv[i])) {
@@ -876,6 +908,14 @@ int main(int argc, char** argv)
             g_disableConcurrency = true;
         } else if (0 == strcmp("-dpws", argv[i])) {
             g_use_delayed_ping_with_sleep = true;
+        } else if (0 == strcmp("-about", argv[i])) {
+            g_useAboutFeatureDiscovery = true;
+            if ((i + 1) < argc && argv[i + 1][0] != '-') {
+                ++i;
+                g_testAboutApplicationName = argv[i];
+            } else {
+                g_testAboutApplicationName = "bbservice";
+            }
         } else {
             status = ER_FAIL;
             printf("Unknown option %s\n", argv[i]);
@@ -883,7 +923,6 @@ int main(int argc, char** argv)
             exit(1);
         }
     }
-
 
     /* If no transport option was specifie, then make session options very open */
     if (opts.transports == 0) {

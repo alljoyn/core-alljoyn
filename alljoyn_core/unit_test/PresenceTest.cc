@@ -90,10 +90,10 @@ class PresenceTestFindNameListener : public BusListener {
 TEST_F(PresenceTest, DISABLED_NegativePresenceNameNotRequested) {
     QStatus status = ER_OK;
     presenceFound = false;
-    const char* wellKnowName = "org.test.presence";
+    String wellKnowName = genUniqueName(bus);
 
     // advertise name
-    status = bus.AdvertiseName(wellKnowName, TRANSPORT_ANY);
+    status = bus.AdvertiseName(wellKnowName.c_str(), TRANSPORT_ANY);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     // start other bus attachment
@@ -108,7 +108,7 @@ TEST_F(PresenceTest, DISABLED_NegativePresenceNameNotRequested) {
     otherBus.RegisterBusListener(testBusListener);
 
     // find advertised name
-    status = otherBus.FindAdvertisedName(wellKnowName);
+    status = otherBus.FindAdvertisedName(wellKnowName.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     // wait for up to 10 seconds to find name
@@ -118,10 +118,10 @@ TEST_F(PresenceTest, DISABLED_NegativePresenceNameNotRequested) {
         }
         qcc::Sleep(WAIT_TIME);
     }
-    ASSERT_TRUE(presenceFound) << "failed to find advertised name: " << wellKnowName;
+    ASSERT_TRUE(presenceFound) << "failed to find advertised name: " << wellKnowName.c_str();
 
     // ping
-    status = otherBus.Ping(wellKnowName, 3000);
+    status = otherBus.Ping(wellKnowName.c_str(), 3000);
     EXPECT_EQ(ER_ALLJOYN_PING_REPLY_UNREACHABLE, status) << "  Actual Status: " << QCC_StatusText(status);
 
     // stop second bus

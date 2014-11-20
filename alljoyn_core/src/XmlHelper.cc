@@ -88,6 +88,19 @@ QStatus XmlHelper::ParseInterface(const XmlElement* elem, ProxyBusObject* obj)
         QCC_LogError(status, ("Invalid interface name \"%s\" in XML introspection data for %s", ifName.c_str(), ident));
         return status;
     }
+
+    /*
+     * Due to a bug in AllJoyn 14.06 and previous, we need to ignore
+     * the introspected versions of the standard D-Bus interfaces.
+     * This will allow a maximal level of interoperability between
+     * this code and 14.06.  This hack should be removed when
+     * interface evolution is better supported.
+     */
+    if ((ifName == org::freedesktop::DBus::InterfaceName) ||
+        (ifName == org::freedesktop::DBus::Properties::InterfaceName)) {
+        return ER_OK;
+    }
+
     /*
      * Security on an interface can be "true", "inherit", or "off"
      * Security is implicitly off on the standard DBus interfaces.

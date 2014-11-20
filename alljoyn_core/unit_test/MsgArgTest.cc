@@ -690,3 +690,159 @@ TEST(MsgArgTest, Comparison) {
 
     b.SetOwnershipFlags(MsgArg::OwnsArgs, true);
 }
+
+// this test has been added mostly for memory verification tools to check that
+// memory is released as it should be.  We also expect the code to not crash
+TEST(MsgArgTest, SetOwnershipFlags_scalar_arrays) {
+    QStatus status = ER_OK;
+    /* Array of BYTE */
+    const uint16_t AY_SIZE = 9;
+    uint8_t* ay = new uint8_t[AY_SIZE];
+    //{ 9, 19, 29, 39, 49 }
+    for (size_t i = 0; i < AY_SIZE; ++i) {
+        ay[i] = (10 * i) + 9;
+    }
+    /* Array of INT16 */
+    int16_t* an = new int16_t[4];
+    an[0] = -9;
+    an[1] = -99;
+    an[2] = 999;
+    an[3] = 9999;
+    /* Array of INT32 */
+    int32_t* ai = new int32_t[4];
+    //ai = { -8, -88, 888, 8888 };
+    ai[0] = -8;
+    ai[1] = -88;
+    ai[2] = 888;
+    ai[3] = 8888;
+    /* Array of INT64 */
+    int64_t* ax = new int64_t[4];
+    //ax = { -8, -88, 888, 8888 };
+    ax[0] = -8;
+    ax[1] = -88;
+    ax[2] = 888;
+    ax[3] = 8888;
+    /* Array of UINT64 */
+    uint64_t* at = new uint64_t[4];
+    //at = { 98, 988, 9888, 98888 };
+    at[0] = 98;
+    at[1] = 988;
+    at[2] = 9888;
+    at[3] = 98888;
+    /* Array of DOUBLE */
+    double* ad = new double[6];
+    //ad = { 0.001, 0.01, 0.1, 1.0, 10.0, 100.0 };
+    ad[0] = 0.001;
+    ad[1] = 0.01;
+    ad[2] = 0.1;
+    ad[3] = 1.0;
+    ad[4] = 10.0;
+    ad[5] = 100.0;
+    /*
+     * Arrays of scalars
+     */
+    {
+        MsgArg arg;
+
+        status = arg.Set("ay", sizeof(ay) / sizeof(ay[0]), ay);
+        arg.SetOwnershipFlags(MsgArg::OwnsData);
+        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        uint8_t* pay;
+        size_t lay;
+        status = arg.Get("ay", &lay, &pay);
+        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(sizeof(ay) / sizeof(ay[0]), lay);
+        for (size_t i = 0; i < lay; ++i) {
+            EXPECT_EQ(ay[i], pay[i]);
+        }
+    }
+    {
+        MsgArg arg;
+        status = arg.Set("an", sizeof(an) / sizeof(an[0]), an);
+        arg.SetOwnershipFlags(MsgArg::OwnsData);
+        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        int16_t* pan;
+        size_t lan;
+        status = arg.Get("an", &lan, &pan);
+        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(sizeof(an) / sizeof(an[0]), lan);
+        for (size_t i = 0; i < lan; ++i) {
+            EXPECT_EQ(an[i], pan[i]);
+        }
+    }
+    {
+        MsgArg arg;
+        status = arg.Set("ai", sizeof(ai) / sizeof(ai[0]), ai);
+        arg.SetOwnershipFlags(MsgArg::OwnsData);
+        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        int32_t* pai;
+        size_t lai;
+        status = arg.Get("ai", &lai, &pai);
+        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(sizeof(ai) / sizeof(ai[0]), lai);
+        for (size_t i = 0; i < lai; ++i) {
+            EXPECT_EQ(ai[i], pai[i]);
+        }
+    }
+    {
+        MsgArg arg;
+        status = arg.Set("ax", sizeof(ax) / sizeof(ax[0]), ax);
+        arg.SetOwnershipFlags(MsgArg::OwnsData);
+        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        int64_t* pax;
+        size_t lax;
+        status = arg.Get("ax", &lax, &pax);
+        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(sizeof(ax) / sizeof(ax[0]), lax);
+        for (size_t i = 0; i < lax; ++i) {
+            EXPECT_EQ(ax[i], pax[i]);
+        }
+    }
+    {
+        MsgArg arg;
+        status = arg.Set("at", sizeof(at) / sizeof(at[0]), at);
+        arg.SetOwnershipFlags(MsgArg::OwnsData);
+        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        uint64_t* pat;
+        size_t lat;
+        status = arg.Get("at", &lat, &pat);
+        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(sizeof(at) / sizeof(at[0]), lat);
+        for (size_t i = 0; i < lat; ++i) {
+            EXPECT_EQ(at[i], pat[i]);
+        }
+    }
+    {
+        MsgArg arg;
+        status = arg.Set("ad", sizeof(ad) / sizeof(ad[0]), ad);
+        arg.SetOwnershipFlags(MsgArg::OwnsData);
+        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        double* pad;
+        size_t lad;
+        status = arg.Get("ad", &lad, &pad);
+        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(sizeof(ad) / sizeof(ad[0]), lad);
+        for (size_t i = 0; i < lad; ++i) {
+            EXPECT_EQ(ad[i], pad[i]);
+        }
+    }
+}
+
+// this test has been added mostly for memory verification tools to check that
+// memory is released as it should be.  We also expect the code to not crash
+TEST(MsgArgTest, SetOwnershipFlags_struct) {
+    MsgArg arg;
+    qcc::String str1 = "hello";
+    const size_t SIZE = 4;
+    qcc::String astr1[SIZE];
+    astr1[0] = "the";
+    astr1[1] = "sea";
+    astr1[2] = "is";
+    astr1[3] = "amazing";
+    const char** astr2 = new const char*[SIZE];
+    for (size_t i = 0; i < SIZE; ++i) {
+        astr2[i] = astr1[i].c_str();
+    }
+    arg.Set("(sas)", str1.c_str(), SIZE, astr2);
+    arg.SetOwnershipFlags(MsgArg::OwnsData | MsgArg::OwnsArgs);
+}

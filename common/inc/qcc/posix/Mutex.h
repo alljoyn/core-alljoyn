@@ -42,7 +42,6 @@ namespace qcc {
  * The Linux implementation of a Mutex abstraction class.
  */
 class Mutex {
-
   public:
     /**
      * The constructor initializes the underlying mutex implementation.
@@ -100,6 +99,13 @@ class Mutex {
     void Init();            ///< Initialize underlying OS mutex
     const char* file;
     uint32_t line;
+
+    /**
+     * Give the condition variable class access to the underlying mutex so it
+     * can get the private pthread_mutex_t of a qcc::Mutex and use the pthreads
+     * condition variable functions directly.
+     */
+    friend class Condition;
 };
 
 } /* namespace */

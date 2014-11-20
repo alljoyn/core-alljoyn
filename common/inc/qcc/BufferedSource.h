@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -55,15 +55,15 @@ class BufferedSource : public Source {
 
     /**
      * Pull bytes from the source.
-     * The source is exhausted when ER_NONE is returned.
+     * The source is exhausted when ER_EOF is returned.
      *
      * @param buf          Buffer to store pulled bytes
      * @param reqBytes     Number of bytes requested to be pulled from source.
      * @param actualBytes  Actual number of bytes retrieved from source.
      * @param timeout      Timeout in milliseconds.
-     * @return   OI_OK if successful.
+     * @return   ER_OK if successful.
      *           ER_WOULDBLOCK if source has no more data but is still connected.
-     *           ER_NONE if source is at end. Otherwise an error.
+     *           ER_EOF if source is at end. Otherwise an error.
      */
     QStatus PullBytes(void* buf, size_t reqBytes, size_t& actualBytes, uint32_t timeout = Event::WAIT_FOREVER);
 

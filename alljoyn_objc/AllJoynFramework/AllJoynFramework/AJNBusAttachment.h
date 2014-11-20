@@ -28,6 +28,7 @@
 #import "AJNStatus.h"
 #import "AJNInterfaceDescription.h"
 #import "AJNTranslator.h"
+#import "AJNAboutListener.h"
 
 @protocol AJNBusObject;
 
@@ -770,27 +771,84 @@ typedef void (^ AJNPingPeerBlock)(QStatus status, void *context);
 
 /**
  * Set the SessionListener for an existing sessionId.
- * Calling this method will override the listener set by a previous call to SetSessionListener or any
- * listener specified in JoinSession.
+ * This method cannot be called on a self-joined session.
+ *
+ * Calling this method will override the listener set by a previous call to SetSessionListener,
+ * SetHostedSessionListener, SetJoinedSessionListener or any listener specified in JoinSession.
  *
  * @param delegate     The SessionListener to associate with the session. May be nil to clear previous listener.
  * @param sessionId    The session id of an existing session.
- * @return  ER_OK if successful.
+ * @return  - ER_OK if successful.
+ *          - ER_BUS_NO_SESSION if session did not exist
  */
 - (QStatus)bindSessionListener:(id<AJNSessionListener>)delegate toSession:(AJNSessionId)sessionId;
+
+/**
+ * Set the SessionListener for an existing sessionId on the joiner side.
+ * Calling this method will override the listener set by a previous call to SetSessionListener or
+ * SetJoinedSessionListener or any listener specified in JoinSession.
+ *
+ * @param delegate     The SessionListener to associate with the session. May be nil to clear previous listener.
+ * @param sessionId    The session id of an existing session.
+ * @return  - ER_OK if successful.
+ *          - ER_BUS_NO_SESSION if session did not exist or if not host side of the session
+ */
+- (QStatus)bindJoinedSessionListener:(id<AJNSessionListener>)delegate toSession:(AJNSessionId)sessionId;
+
+/**
+ * Set the SessionListener for an existing sessionId on the host side.
+ * Calling this method will override the listener set by a previous call to SetSessionListener or
+ * SetHostedSessionListener.
+ *
+ * @param delegate     The SessionListener to associate with the session. May be nil to clear previous listener.
+ * @param sessionId    The session id of an existing session.
+ * @return  - ER_OK if successful.
+ *          - ER_BUS_NO_SESSION if session did not exist or if not host side of the session
+ */
+- (QStatus)bindHostedSessionListener:(id<AJNSessionListener>)delegate toSession:(AJNSessionId)sessionId;
 
 /**
  * Leave an existing session.
  * This method is a shortcut/helper that issues an org.alljoyn.Bus.LeaveSession method call to the local daemon
  * and interprets the response.
+ * This method cannot be called on self-joined session.
  *
  * @param  sessionId     Session id.
  *
- * @return  - ER_OK iff daemon response was received and the leave operation was successfully completed.
+ * @return  - ER_OK if daemon response was received and the leave operation was successfully completed.
  *          - ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
+ *          - ER_BUS_NO_SESSION if session did not exist
  *          - Other error status codes indicating a failure.
  */
 - (QStatus)leaveSession:(AJNSessionId)sessionId;
+
+/**
+ * Leave an existing session as joiner. This function will fail if you were not the joiner.
+ * This method is a shortcut/helper that issues an org.alljoyn.Bus.LeaveJoinedSession method call to the local router
+ * and interprets the response.
+ *
+ * @param  sessionId     Session id.
+ *
+ * @return - ER_OK if router response was received and the leave operation was successfully completed.
+ *         - ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
+ *         - ER_BUS_NO_SESSION if session did not exist or if not joiner of the session.
+ *         - Other error status codes indicating a failure.
+ */
+- (QStatus)leaveJoinedSession:(AJNSessionId)sessionId;
+
+/**
+ * Leave an existing session as host. This function will fail if you were not the host.
+ * This method is a shortcut/helper that issues an org.alljoyn.Bus.LeaveHostedSession method call to the local router
+ * and interprets the response.
+ *
+ * @param  sessionId     Session id.
+ *
+ * @return - ER_OK if router response was received and the leave operation was successfully completed.
+ *         - ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
+ *         - ER_BUS_NO_SESSION if session did not exist or if not host of the session.
+ *         - Other error status codes indicating a failure.
+ */
+- (QStatus)leaveHostedSession:(AJNSessionId)sessionId;
 
 /**
  * Remove a member from an existing multipoint session.
@@ -1162,14 +1220,13 @@ typedef void (^ AJNPingPeerBlock)(QStatus status, void *context);
  *
  * The debug level can be set for individual subsystems or for "ALL"
  * subsystems.  Common subsystems are "ALLJOYN" for core AllJoyn code,
- * "ALLJOYN_OBJ" for the sessions management code, "ALLJOYN_BT" for the
- * Bluetooth subsystem, "ALLJOYN_BTC" for the Bluetooth topology manager,
- * and "ALLJOYN_NS" for the TCP name services.  Debug levels for specific
- * subsystems override the setting for "ALL" subsystems.  For example if
- * "ALL" is set to 7, but "ALLJOYN_OBJ" is set to 1, then detailed debug
- * output will be generated for all subsystems except for "ALLJOYN_OBJ"
- * which will only generate high level debug output.  "ALL" defaults to 0
- * which is off, or no debug output.
+ * "ALLJOYN_OBJ" for the sessions management code and "ALLJOYN_NS" for
+ * the TCP name services.  Debug levels for specific subsystems override
+ * the setting for "ALL" subsystems.  For example if "ALL" is set to 7,
+ * but "ALLJOYN_OBJ" is set to 1, then detailed debug output will be
+ * generated for all subsystems except for "ALLJOYN_OBJ" which will only
+ * generate high level debug output.  "ALL" defaults to 0 which is off,
+ * or no debug output.
  *
  * The debug output levels are actually a bit field that controls what
  * output is generated.  Those bit fields are described below:
@@ -1265,5 +1322,139 @@ typedef void (^ AJNPingPeerBlock)(QStatus status, void *context);
  * @param translator AJNTranslator instance
  */
 - (void)setDescriptionTranslator:(id<AJNTranslator>)translator;
+
+
+/**
+ * Registers a handler to receive the org.alljoyn.about Announce signal.
+ *
+ * The handler is only called if a call to WhoImplements has been has been
+ * called.
+ *
+ * Important the AboutListener should be registered before calling WhoImplments
+ *
+ * @param[in] aboutListener reference to AboutListener
+ */
+- (void)registerAboutListener:(id<AJNAboutListener>)aboutListener;
+
+/**
+ * Unregisters the AnnounceHandler from receiving the org.alljoyn.about Announce signal.
+ *
+ * @param[in] aboutListener reference to AboutListener to unregister
+ */
+- (void)unregisterAboutListener:(id<AJNAboutListener>)aboutListener;
+
+/**
+ * Unregisters all AboutListeners from receiving any org.alljoyn.about Announce signal
+ */
+- (void)unregisterAllAboutListeners;
+
+/**
+ * List the interfaces your application is interested in.  If a remote device
+ * is announcing that interface then the all Registered AnnounceListeners will
+ * be called.
+ *
+ * For example, if you need both "com.example.Audio" <em>and</em>
+ * "com.example.Video" interfaces then do the following.
+ * RegisterAboutListener once:
+ * @code
+ * const char* interfaces[] = {"com.example.Audio", "com.example.Video"};
+ * RegisterAboutListener(aboutListener);
+ * WhoImplements(interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
+ * @endcode
+ *
+ * If the handler should be called if "com.example.Audio" <em>or</em>
+ * "com.example.Video" interfaces are implemented then call
+ * RegisterAboutListener multiple times:
+ * @code
+ *
+ * RegisterAboutListener(aboutListener);
+ * const char* audioInterface[] = {"com.example.Audio"};
+ * WhoImplements(interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
+ * WhoImplements(audioInterface, sizeof(audioInterface) / sizeof(audioInterface[0]));
+ * const char* videoInterface[] = {"com.example.Video"};
+ * WhoImplements(videoInterface, sizeof(videoInterface) / sizeof(videoInterface[0]));
+ * @endcode
+ *
+ * The interface name may be a prefix followed by a *.  Using
+ * this, the example where we are interested in "com.example.Audio" <em>or</em>
+ * "com.example.Video" interfaces could be written as:
+ * @code
+ * const char* exampleInterface[] = {"com.example.*"};
+ * RegisterAboutListener(aboutListener);
+ * WhoImplements(exampleInterface, sizeof(exampleInterface) / sizeof(exampleInterface[0]));
+ * @endcode
+ *
+ * The AboutListener will receive any announcement that implements an interface
+ * beginning with the "com.example." name.
+ *
+ * If the same AboutListener is used for for multiple interfaces then it is
+ * the listeners responsibility to parse through the reported interfaces to
+ * figure out what should be done in response to the Announce signal.
+ *
+ * Note: specifying NULL for the implementsInterfaces parameter could have
+ * significant impact on network performance and should be avoided unless
+ * its known that all announcements are needed.
+ *
+ * @param[in] implementsInterfaces a list of interfaces that the Announce
+ *               signal reports as implemented. NULL to receive all Announce
+ *               signals regardless of interfaces
+ * @param[in] numberInterfaces the number of interfaces in the
+ *               implementsInterfaces list
+ * @return status
+ */
+- (QStatus)whoImplementsInterfaces:(NSArray *)interfaces numberOfInterfaces:(size_t)numberInterfaces;
+
+/**
+ * List an interface your application is interested in.  If a remote device
+ * is announcing that interface then the all Registered AnnounceListeners will
+ * be called.
+ *
+ * This is identical to WhoImplements(const char**, size_t)
+ * except this is specialized for a single interface not several interfaces.
+ *
+ * @see WhoImplements(const char**, size_t)
+ * @param[in] interface     interface that the remove user must implement to
+ *                          receive the announce signal.
+ *
+ * @return
+ *    - #ER_OK on success
+ *    - An error status otherwise
+ */
+- (QStatus)whoImplementsInterface:(NSString*)interface;
+
+/**
+ * Stop showing interest in the listed interfaces. Stop recieving announce
+ * signals from the devices with the listed interfaces.
+ *
+ * Note if WhoImplements has been called multiple times the announce signal
+ * will still be received for any interfaces that still remain.
+ *
+ * @param[in] implementsInterfaces a list of interfaces that the Announce
+ *               signal reports as implemented. NULL to receive all Announce
+ *               signals regardless of interfaces
+ * @param[in] numberInterfaces the number of interfaces in the
+ *               implementsInterfaces list
+ * @return
+ *    - #ER_OK on success
+ *    - An error status otherwise
+ */
+- (QStatus)cancelWhoImplementsInterfaces:(NSArray *)interfaces numberOfInterfaces:(size_t)numberInterfaces;
+
+/**
+ * Stop showing interest in the listed interfaces. Stop recieving announce
+ * signals from the devices with the listed interfaces.
+ *
+ * This is identical to CancelWhoImplements(const char**, size_t)
+ * except this is specialized for a single interface not several interfaces.
+ *
+ * @see CancelWhoImplements(const char**, size_t)
+ * @param[in] interface     interface that the remove user must implement to
+ *                          receive the announce signal.
+ *
+ * @return
+ *    - #ER_OK on success
+ *    - An error status otherwise
+ */
+-(QStatus)cancelWhoImplements:(NSString *)interface;
 
 @end

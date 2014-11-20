@@ -128,3 +128,26 @@ unity/  Unity binding
     package_support/            permits re-building the Unity package
 
     samples/                    sample Unity apps
+
+
+----------------------------------------------------------------------------------
+Running and developing AllJoyn 14.06 applications on Windows 10 Technical Preview 
+(released 10/21/2014)
+----------------------------------------------------------------------------------
+
+Windows 10 includes native support for AllJoyn 14.06. In the Windows 10 Technical 
+Preview build, you can use the built-in AllJoyn router node service which means 
+that your desktop applications don't need to bundle an AllJoyn router node, and 
+you don't need to run a stand-alone router node application in order to run AllJoyn 
+desktop applications.
+ 
+In Windows 10 Technical Preview builds, the AllJoyn router node service 
+(AJRouter.dll) must be started manually as follows from an elevated command prompt:
+    net start ajrouter
+ 
+If you need to stop the router node service, you can either reboot your PC, or 
+execute the following command from an elevated command prompt:
+    net stop ajrouter
+ 
+More information about AllJoyn integration in Windows will be available in future 
+releases of the AllSeen SDK for Windows.

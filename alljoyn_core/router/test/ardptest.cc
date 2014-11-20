@@ -20,9 +20,14 @@
 #include <string.h>
 #include <time.h>
 #include <sys/types.h>
+#ifdef _WIN32
+#include <winsock2.h>
+#define random() rand()
+#else
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#endif
 
 #include <vector>
 #include <queue>
@@ -44,16 +49,20 @@ using namespace std;
 using namespace qcc;
 using namespace ajn;
 
-const uint32_t UDP_CONNECT_TIMEOUT = 3000;  /**< How long before we expect a connection to complete */
-const uint32_t UDP_CONNECT_RETRIES = 3;     /**< How many times do we retry a connection before giving up */
-const uint32_t UDP_DATA_TIMEOUT = 3000;     /**< How long do we wait before retrying sending data */
-const uint32_t UDP_DATA_RETRIES = 5;        /**< How many times to we try do send data before giving up and terminating a connection */
-const uint32_t UDP_PERSIST_TIMEOUT = 5000;  /**< How long do we wait before pinging the other side due to a zero window */
-const uint32_t UDP_PERSIST_RETRIES = 5;     /**< How many times do we do a zero window ping before giving up and terminating a connection */
-const uint32_t UDP_PROBE_TIMEOUT = 3000;    /**< How long to we wait on an idle link before generating link activity */
-const uint32_t UDP_PROBE_RETRIES = 5;       /**< How many times do we try to probe on an idle link before terminating the connection */
-const uint32_t UDP_DUPACK_COUNTER = 1;      /**< How many duplicate acknowledgements to we need to trigger a data retransmission */
+const uint32_t UDP_CONNECT_TIMEOUT = 1000;  /**< How long before we expect a connection to complete */
+const uint32_t UDP_CONNECT_RETRIES = 10;  /**< How many times do we retry a connection before giving up */
+const uint32_t UDP_INITIAL_DATA_TIMEOUT = 1000;  /**< Initial value for how long do we wait before retrying sending data */
+const uint32_t UDP_TOTAL_DATA_RETRY_TIMEOUT = 5000;  /**< Total amount of time to try and send data before giving up */
+const uint32_t UDP_MIN_DATA_RETRIES = 5;  /**< Minimum number of times to try and send data before giving up */
+const uint32_t UDP_PERSIST_INTERVAL = 1000;  /**< How long do we wait before pinging the other side due to a zero window */
+const uint32_t UDP_TOTAL_APP_TIMEOUT = 30000;  /**< How long to we try to ping for window opening before deciding app is not pulling data */
+const uint32_t UDP_LINK_TIMEOUT = 30000;  /**< How long before we decide a link is down (with no reponses to keepalive probes */
+const uint32_t UDP_KEEPALIVE_RETRIES = 5;  /**< How many times do we try to probe on an idle link before terminating the connection */
+const uint32_t UDP_FAST_RETRANSMIT_ACK_COUNTER = 1; /**< How many duplicate acknowledgements to we need to trigger a data retransmission */
+const uint32_t UDP_DELAYED_ACK_TIMEOUT = 100; /**< How long do we wait until acknowledging received segments */
 const uint32_t UDP_TIMEWAIT = 1000;         /**< How long do we stay in TIMWAIT state before releasing the per-connection resources */
+const uint32_t UDP_SEGBMAX = 65507;  /**< Maximum size of an ARDP message (for receive buffer sizing) */
+const uint32_t UDP_SEGMAX = 50;      /**< Maximum number of ARDP messages in-flight (bandwidth-delay product sizing) */
 
 char const* g_local_port = "9954";
 char const* g_foreign_port = "9955";
@@ -203,7 +212,7 @@ class ThreadClass : public Thread {
 
         while ((!g_interrupt) && (IsRunning())) {
             uint32_t ms;
-            ARDP_Run(m_handle, m_sock, true, &ms);
+            ARDP_Run(m_handle, m_sock, true, false, &ms);
             //qcc::Sleep(1000);
         }
 
@@ -294,14 +303,18 @@ int main(int argc, char** argv)
     ArdpGlobalConfig config;
     config.connectTimeout = UDP_CONNECT_TIMEOUT;
     config.connectRetries = UDP_CONNECT_RETRIES;
-    config.dataTimeout = UDP_DATA_TIMEOUT;
-    config.dataRetries = UDP_DATA_RETRIES;
-    config.persistTimeout = UDP_PERSIST_TIMEOUT;
-    config.persistRetries = UDP_PERSIST_RETRIES;
-    config.probeTimeout = UDP_PROBE_TIMEOUT;
-    config.probeRetries = UDP_PROBE_RETRIES;
-    config.dupackCounter = UDP_DUPACK_COUNTER;
+    config.initialDataTimeout = UDP_INITIAL_DATA_TIMEOUT;
+    config.totalDataRetryTimeout = UDP_TOTAL_DATA_RETRY_TIMEOUT;
+    config.minDataRetries = UDP_MIN_DATA_RETRIES;
+    config.persistInterval = UDP_PERSIST_INTERVAL;
+    config.totalAppTimeout = UDP_TOTAL_APP_TIMEOUT;
+    config.linkTimeout = UDP_LINK_TIMEOUT;
+    config.keepaliveRetries = UDP_KEEPALIVE_RETRIES;
+    config.fastRetransmitAckCounter = UDP_FAST_RETRANSMIT_ACK_COUNTER;
+    config.delayedAckTimeout = UDP_DELAYED_ACK_TIMEOUT;
     config.timewait = UDP_TIMEWAIT;
+    config.segbmax = UDP_SEGBMAX;
+    config.segmax = UDP_SEGMAX;
 
     //Allocate a handle (ARDP protocol instance).
     ArdpHandle* handle = ARDP_AllocHandle(&config);
@@ -342,7 +355,7 @@ int main(int argc, char** argv)
                 if (scanf("%s", foreign_address) != 1) {
                     printf("Error reading foreign address\n");
                 } else {
-                    status = ARDP_Connect(handle, sock, qcc::IPAddress(foreign_address), atoi(foreign_port), ARDP_SEGMAX, ARDP_SEGBMAX, &conn, (uint8_t*)g_ajnConnString, strlen(g_ajnConnString) + 1, NULL);
+                    status = ARDP_Connect(handle, sock, qcc::IPAddress(foreign_address), atoi(foreign_port), UDP_SEGMAX, UDP_SEGBMAX, &conn, (uint8_t*)g_ajnConnString, strlen(g_ajnConnString) + 1, NULL);
                     if (status != ER_OK) {
                         printf("Error while calling ARDP_Connect..  %s \n", QCC_StatusText(status));
                     }
@@ -402,7 +415,7 @@ int main(int argc, char** argv)
         }
 
         if (strcmp(cmd.c_str(), "accept") == 0) {
-            status = ARDP_Accept(handle, connList[g_conn - 1], ARDP_SEGMAX, ARDP_SEGBMAX, (uint8_t* )g_ajnAcceptString, strlen(g_ajnAcceptString) + 1);
+            status = ARDP_Accept(handle, connList[g_conn - 1], UDP_SEGMAX, UDP_SEGBMAX, (uint8_t* )g_ajnAcceptString, strlen(g_ajnAcceptString) + 1);
             if (status != ER_OK) {
                 printf("Error while ARDP_Accept.. %s \n", QCC_StatusText(status));
             }

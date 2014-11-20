@@ -4,7 +4,7 @@
  * automation framework.
  */
 /******************************************************************************
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011,2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -20,7 +20,6 @@
  ******************************************************************************/
 
 #include "ServiceSetup.h"
-#include "ClientSetup.h"
 #include "ServiceTestObject.h"
 #include "ajTestCommon.h"
 
@@ -30,11 +29,11 @@
 
 TEST(PerfTestRegression, Security_ALLJOYN_294_AddLogonEntry_Without_EnablePeerSecurity)
 {
-    ClientSetup testclient(ajn::getConnectArg().c_str());
-    qcc::String clientArgs = testclient.getClientArgs();
+    Environ*env = qcc::Environ::GetAppEnviron();
+    qcc::String clientArgs = env->Find("BUS_ADDRESS", ajn::getConnectArg().c_str());
 
     /* Create a Bus Attachment Object */
-    BusAttachment*serviceBus = new BusAttachment("ALLJOYN-294", true);
+    BusAttachment* serviceBus = new BusAttachment("ALLJOYN-294", true);
     ASSERT_TRUE(serviceBus != NULL);
     serviceBus->Start();
 

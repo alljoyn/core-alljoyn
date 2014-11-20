@@ -6,7 +6,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011,2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -39,12 +39,14 @@
 
 #include <alljoyn/Status.h>
 
+#include "Rule.h"
+
 #include <qcc/STLContainer.h>
 
 namespace ajn {
 
 /**
- * %SignalTable is a multimap that maps interface/signalname and/or source path to SignalHandler instances.
+ * %SignalTable is a multimap that maps interface/signalname to SignalHandler instances.
  */
 class SignalTable {
 
@@ -54,21 +56,20 @@ class SignalTable {
      * Type definition for signal hash table key
      */
     struct Key {
-        qcc::StringMapKey sourcePath;           /**< The object path of the signal sender */
         qcc::StringMapKey iface;                /**< The Interface name */
         qcc::StringMapKey signalName;           /**< The signal name */
 
         /**
          * Constructor used for lookups only (no storage)
          */
-        Key(const char* src, const char* ifc, const char* sig)
-            : sourcePath(src), iface(ifc), signalName(sig) { }
+        Key(const char* ifc, const char* sig)
+            : iface(ifc), signalName(sig) { }
 
         /**
          * Constructor used for storage into hash table (no dangling char*)
          */
-        Key(const qcc::String& src, const qcc::String& ifc, const qcc::String& sig)
-            : sourcePath(src), iface(ifc), signalName(sig) { }
+        Key(const qcc::String& ifc, const qcc::String& sig)
+            : iface(ifc), signalName(sig) { }
     };
 
     /**
@@ -78,26 +79,27 @@ class SignalTable {
         MessageReceiver::SignalHandler handler;      /**< SignalHandler instance */
         MessageReceiver* object;                     /**< Object that received the signal */
         const InterfaceDescription::Member* member;  /**< Signal member */
+        Rule rule;                                   /**< Match rule */
 
         /**
          * Construct an Entry
          */
-        Entry(const MessageReceiver::SignalHandler& handler, MessageReceiver* object, const InterfaceDescription::Member* member)
+        Entry(const MessageReceiver::SignalHandler& handler, MessageReceiver* object, const InterfaceDescription::Member* member, const qcc::String& matchRule)
             : handler(handler),
             object(object),
-            member(member) { }
+            member(member),
+            rule(matchRule.c_str()) { }
 
         /**
          * Construct an empty Entry.
          */
-        Entry(void) : handler(), object(NULL), member(NULL) { }
+        Entry(void) : handler(), object(NULL), member(NULL), rule() { }
     };
 
     /** %Hash functor */
     struct Hash {
         /** Calculate hash for Key k */
         size_t operator()(const Key& k) const {
-            /* source path cannot factor into hash because a key with no sourcepath is considered equal to one that does */
             size_t hash = 0;
             for (const char* p = k.signalName.c_str(); *p; ++p) {
                 hash = *p + hash * 11;
@@ -113,14 +115,8 @@ class SignalTable {
     struct Equal {
         /** Return true two keys are equal */
         bool operator()(const Key& k1, const Key& k2) const {
-            /* If either source path is null, then this field should be treated as don't care */
-            if ((k1.sourcePath.empty()) || (k2.sourcePath.empty())) {
-                return (0 == strcmp(k1.iface.c_str(), k2.iface.c_str())) && (0 == strcmp(k1.signalName.c_str(), k2.signalName.c_str()));
-            } else {
-                return (0 == strcmp(k1.iface.c_str(), k2.iface.c_str())) && \
-                       (0 == strcmp(k1.signalName.c_str(), k2.signalName.c_str())) && \
-                       (0 == strcmp(k1.sourcePath.c_str(), k2.sourcePath.c_str()));
-            }
+            return (0 == strcmp(k1.iface.c_str(), k2.iface.c_str())) && \
+                   (0 == strcmp(k1.signalName.c_str(), k2.signalName.c_str()));
         }
     };
 
@@ -140,12 +136,12 @@ class SignalTable {
      * @param receiver    Object receiving the message.
      * @param func        Handler for signal.
      * @param member      Signal member.
-     * @param sourcePath  Signal originator or empty for all signal originators.
+     * @param rule        Match rule
      */
     void Add(MessageReceiver* receiver,
              MessageReceiver::SignalHandler func,
              const InterfaceDescription::Member* member,
-             const qcc::String& sourcePath);
+             const qcc::String& rule);
 
     /**
      * Remove an entry from the signal hash table.
@@ -153,12 +149,14 @@ class SignalTable {
      * @param receiver    Object receiving the message.
      * @param func        Signal handler to remove
      * @param member      Signal member.
-     * @param sourcePath  Signal originator or empty for all signal originators.
+     * @param rule        Match rule
+     *
+     * @return ER_FAIL if the entry to remove did not exist, ER_OK otherwise
      */
-    void Remove(MessageReceiver* receiver,
-                MessageReceiver::SignalHandler func,
-                const InterfaceDescription::Member* member,
-                const char* sourcePath);
+    QStatus Remove(MessageReceiver* receiver,
+                   MessageReceiver::SignalHandler func,
+                   const InterfaceDescription::Member* member,
+                   const char* rule);
 
     /**
      * Remove all entries from the signal hash table for the specified receiver.
@@ -168,16 +166,15 @@ class SignalTable {
     void RemoveAll(MessageReceiver* receiver);
 
     /**
-     * Find Entries based on set of criteria.
+     * Find Entries for a certain signal
      * Signal table lock should be held until iterators are no longer in use.
      *
-     * @param sourcePath   The object path of the signal sender.
      * @param iface    The interface.
      * @param signalName   The signal name.
      *
      * @return   Iterator range of entries with matching criteria.
      */
-    std::pair<const_iterator, const_iterator> Find(const char* sourcePath, const char* iface, const char* signalName);
+    std::pair<const_iterator, const_iterator> Find(const char* iface, const char* signalName);
 
     /**
      * Get the lock that protects the signal table.

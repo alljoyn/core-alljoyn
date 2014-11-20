@@ -109,6 +109,7 @@ class LocalTestObject : public BusObject {
 
         /* Add the test interface to this object */
         const InterfaceDescription* regTestIntf = bus.GetInterface(::org::alljoyn::alljoyn_test::InterfaceName);
+        assert(regTestIntf);
         AddInterface(*regTestIntf);
         /* Add the values interface to this object */
         const InterfaceDescription* valuesIntf = bus.GetInterface(::org::alljoyn::alljoyn_test::values::InterfaceName);
@@ -343,7 +344,6 @@ static void usage(void)
     printf("Usage: bbdaemon [-h] [-m] [-b]\n\n");
     printf("Options:\n");
     printf("   -h   = Print this help message\n");
-    printf("   -b   = Disable Bluetooth transport\n");
     printf("   -m   = Mimic behavior of bbservice within daemon\n");
     printf("   -be  = Send messages as big endian\n");
     printf("   -le  = Send messages as little endian\n");
@@ -413,11 +413,10 @@ int main(int argc, char** argv)
 
     /*
      * Windows uses the localhost transport as the local transport, uses the TCP
-     * transport with defaults, does not support the WFD transport and supports
-     * bluetooth.
+     * transport with defaults, does not support the WFD transport.
      */
     serverArgs = env->Find("BUS_SERVER_ADDRESSES",
-                           "localhost:port=9956;tcp:;udp:u4addr=0.0.0.0,u4port=9955;bluetooth:");
+                           "localhost:port=9956;tcp:;udp:u4addr=0.0.0.0,u4port=9955;");
 
 #endif
 
@@ -427,14 +426,7 @@ int main(int argc, char** argv)
     /*
      * If the daemon is being built as a daemon library, it implies that the
      * library is going to be used by an Android APK that is responsible for
-     * implementing a daemon.  It turns out that Android Applications don't have
-     * enough privilege to start a bluetooth transport.  This is because the
-     * daemon needs to access /dev/socket/dbus to do so.  The socket is owned by
-     * (user, group) bluetooth:bluetooth but privilege BLUETOOTH or
-     * BLUETOOTH_ADMIN don't help since the socket is apparently considered part
-     * of DBus.  Permissions on the dbus need to be relaxed to 666 to make this
-     * work for everyday apps.  So if we are building for ROUTER_LIB we cannot
-     * add bluetooth: to the transports list.
+     * implementing a daemon.
      *
      * The daemon lib version of the Android-based daemon supports the unix
      * transport as the local transport, uses the TCP transport with defaults as
@@ -450,8 +442,7 @@ int main(int argc, char** argv)
      * The native or bundled version of the Android-based daemon supports the
      * unix transport as the local transport, uses the TCP transport with
      * defaults as the remote transport, UDP and since it is on Android,
-     * supports the WFD transport and may support the bluetooth transport if
-     * desired.
+     * supports the WFD transport.
      */
     serverArgs = env->Find("BUS_SERVER_ADDRESSES",
                            "unix:abstract=alljoyn;tcp:;udp:u4addr=0.0.0.0,u4port=9955;wfd:");
@@ -463,8 +454,7 @@ int main(int argc, char** argv)
 
     /*
      * Darwin uses the unix transport as the local transport, uses the TCP
-     * transport for the remote transport, UDP, and supports neither bluetooth
-     * nor WFD.
+     * transport for the remote transport, UDP, and does not support WFD.
      */
     serverArgs = env->Find("BUS_SERVER_ADDRESSES",
                            "unix:abstract=alljoyn;tcp:;udp:u4addr=0.0.0.0,u4port=9955");
@@ -475,8 +465,7 @@ int main(int argc, char** argv)
 
     /*
      * Assume that any other platform uses the unix transport as the local
-     * transport, uses the TCP transport for the remote transport, UDP and may
-     * or may not support bluetooth if desired.
+     * transport and uses the TCP or UDP transports for the remote transport.
      */
     serverArgs = env->Find("BUS_SERVER_ADDRESSES",
                            "unix:abstract=alljoyn;tcp:;ble:;udp:u4addr=0.0.0.0,u4port=9955");

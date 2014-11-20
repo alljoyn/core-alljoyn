@@ -407,12 +407,12 @@ _PropTesterProxyObject::_PropTesterProxyObject(BusAttachment& bus, const String&
         "string"
     };
 
-    RegisterPropertiesChangedHandler("org.alljoyn.Testing.PropertyTester", watchProps, ArraySize(watchProps), *this, NULL);
+    RegisterPropertiesChangedListener("org.alljoyn.Testing.PropertyTester", watchProps, ArraySize(watchProps), *this, NULL);
 }
 
 _PropTesterProxyObject::~_PropTesterProxyObject()
 {
-    UnregisterPropertiesChangedHandler("org.alljoyn.Testing.PropertyTester", *this);
+    UnregisterPropertiesChangedListener("org.alljoyn.Testing.PropertyTester", *this);
 }
 
 
@@ -538,17 +538,16 @@ _PropTesterProxyObject2::_PropTesterProxyObject2(BusAttachment& bus, const Strin
 
     AddInterface(*ifc);
 
-    assert(ER_OK == RegisterPropertiesChangedHandler("org.alljoyn.Testing.PropertyTester2",
-                                                     NULL,
-                                                     0,
-                                                     *this,
-                                                     NULL));
+    QStatus status = RegisterPropertiesChangedListener("org.alljoyn.Testing.PropertyTester2",
+                                                       NULL, 0, *this, NULL);
+    assert(status == ER_OK);
+    (void)status;
 }
 
 _PropTesterProxyObject2::~_PropTesterProxyObject2()
 {
     for (int i = 0; i < propTester2Count; ++i) {
-        UnregisterPropertiesChangedHandler("org.alljoyn.Testing.PropertyTester2", *this);
+        UnregisterPropertiesChangedListener("org.alljoyn.Testing.PropertyTester2", *this);
     }
 }
 

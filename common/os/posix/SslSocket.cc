@@ -248,7 +248,7 @@ QStatus SslSocket::PullBytes(void*buf, size_t reqBytes, size_t& actualBytes, uin
 
     if (0 == r) {
         actualBytes = r;
-        status = ER_NONE;
+        status = ER_EOF;
     } else if (0 > r) {
         status = ER_FAIL;
         QCC_LogError(status, ("SslSocket::PullBytes(): BIO_read failed with error=%d", ERR_get_error()));

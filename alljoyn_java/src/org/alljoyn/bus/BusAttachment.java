@@ -27,6 +27,8 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -184,6 +186,7 @@ public class BusAttachment {
      * <ul>
      * <li>OK if the name advertisements were stopped.</li>
      * <li>BUS_NOT_CONNECTED if a connection has not been made with a local bus</li>
+     * <li>BUS_MATCH_RULE_NOT_FOUND if interfaces added using the WhoImplements method were not found.</li>
      * <li>other error status codes indicating a failure.</li>
      * </ul>
      */
@@ -324,6 +327,12 @@ public class BusAttachment {
     public static final int SESSION_ID_ANY = 0;
 
     /**
+     * When specified during SignalEmitter creation, emits on all session hosted
+     * by this BusAttachment.
+     */
+    public static final int SESSION_ID_ALL_HOSTED = -1;
+
+    /**
      * Cancel an existing port binding.
      *
      * @param   sessionPort    Existing session port to be un-bound.
@@ -390,7 +399,7 @@ public class BusAttachment {
      *
      * @return
      * <ul>
-     * <li>OK iff method call to local router response was was successful.</li>
+     * <li>OK if method call to local router response was was successful.</li>
      * <li>BUS_NOT_CONNECTED if a connection has not been made with a local bus.</li>
      * <li>Other error status codes indicating a failure.</li>
      * </ul>
@@ -406,10 +415,9 @@ public class BusAttachment {
 
     /**
      * Leave an existing session.
-     *
-     * This method is a shortcut/helper that issues an
-     * org.alljoyn.Bus.LeaveSession method call to the local router
+     * This method is a shortcut/helper that issues an org.alljoyn.Bus.LeaveSession method call to the local router
      * and interprets the response.
+     * This method cannot be called on self-joined session.
      *
      * @param sessionId     Session id.
      *
@@ -417,10 +425,45 @@ public class BusAttachment {
      * <ul>
      * <li>OK if router response was left.</li>
      * <li>BUS_NOT_CONNECTED if a connection has not been made with a local bus</li>
+     * <li>ER_BUS_NO_SESSION if session did not exist.</li>
      * <li>other error status codes indicating failures.</li>
      * </ul>
      */
     public native Status leaveSession(int sessionId);
+
+    /**
+     * Leave an existing session as host. This function will fail if you were not the host. This method is a
+     * shortcut/helper that issues an org.alljoyn.Bus.LeaveHostedSession method call to the local router and interprets
+     * the response.
+     *
+     * @param  sessionId     Session id.
+     *
+     * @return
+     * <ul>
+     * <li>ER_OK if router response was received and the leave operation was successfully completed.</li>
+     * <li>ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.</li>
+     * <li>ER_BUS_NO_SESSION if session did not exist or if not host of the session.</li>
+     * <li>Other error status codes indicating a failure.</li>
+     * </ul>
+     */
+    public native Status leaveHostedSession(int sessionId);
+
+    /**
+     * Leave an existing session as joiner. This function will fail if you were not the joiner.
+     * This method is a shortcut/helper that issues an org.alljoyn.Bus.LeaveJoinedSession method call to the local router
+     * and interprets the response.
+     *
+     * @param sessionId Session id.
+     *
+     * @return
+     * <ul>
+     * <li>ER_OK if router response was received and the leave operation was successfully completed.</li>
+     * <li>ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.</li>
+     * <li>ER_BUS_NO_SESSION if session did not exist or if not joiner of the session.</li>
+     * <li>Other error status codes indicating a failure.</li>
+     * </ul>
+     */
+    public native Status leaveJoinedSession(int sessionId);
 
     /**
      * Remove a session member from an existing multipoint session.
@@ -442,16 +485,42 @@ public class BusAttachment {
     public native Status removeSessionMember(int sessionId, String sessionMemberName);
 
     /**
-     * Set the SessionListener for an existing session.
+     * Set the SessionListener for an existing session on both host and joiner side.
      *
      * Calling this method will override (replace) the listener set by a previoius call to
-     * setSessionListener or a listener specified in joinSession.
+     * setSessionListener, SetHostedSessionListener, SetJoinedSessionListener or a listener specified in joinSession.
      *
      * @param sessionId    The session id of an existing session.
      * @param listener     The SessionListener to associate with the session. May be null to clear previous listener.
      * @return  ER_OK if successful.
+     * @return  ER_BUS_NO_SESSION if session did not exist
      */
     public native Status setSessionListener(int sessionId, SessionListener listener);
+
+    /**
+     * Set the SessionListener for an existing sessionId on the joiner side.
+     *
+     * Calling this method will override the listener set by a previous call to SetSessionListener, SetJoinedSessionListener
+     * or any listener specified in JoinSession.
+     *
+     * @param sessionId    The session id of an existing session.
+     * @param listener     The SessionListener to associate with the session. May be NULL to clear previous listener.
+     * @return  ER_OK if successful.
+     * @return  ER_BUS_NO_SESSION if session did not exist or if not joiner side of the session
+     */
+    public native Status setJoinedSessionListener(int sessionId, SessionListener listener);
+
+    /**
+     * Set the SessionListener for an existing sessionId on the host side.
+     *
+     * Calling this method will override the listener set by a previous call to SetSessionListener or SetHostedSessionListener.
+     *
+     * @param sessionId    The session id of an existing session.
+     * @param listener     The SessionListener to associate with the session. May be NULL to clear previous listener.
+     * @return  ER_OK if successful.
+     * @return  ER_BUS_NO_SESSION if session did not exist or if not host side of the session
+     */
+    public native Status setHostedSessionListener(int sessionId, SessionListener listener);
 
     /**
      * Get the file descriptor for a raw (non-message based) session.
@@ -526,7 +595,7 @@ public class BusAttachment {
      * <li>OK the name is present and responding</li>
      * <li>ALLJOYN_PING_REPLY_UNREACHABLE the name is no longer present</li>
      * </ul>
-     * The following return values indicate that the router cannot determine if the 
+     * The following return values indicate that the router cannot determine if the
      * remote name is present and responding:
      * <ul>
      * <li>ALLJOYN_PING_REPLY_TIMEOUT Ping call timed out</li>
@@ -583,14 +652,13 @@ public class BusAttachment {
      *
      * The debug level can be set for individual subsystems or for "ALL"
      * subsystems.  Common subsystems are "ALLJOYN" for core AllJoyn code,
-     * "ALLJOYN_OBJ" for the sessions management code, "ALLJOYN_BT" for the
-     * Bluetooth subsystem, "ALLJOYN_BTC" for the Bluetooth topology manager,
-     * and "ALLJOYN_NS" for the TCP name services.  Debug levels for specific
-     * subsystems override the setting for "ALL" subsystems.  For example if
-     * "ALL" is set to 7, but "ALLJOYN_OBJ" is set to 1, then detailed debug
-     * output will be generated for all subsystems expcept for "ALLJOYN_OBJ"
-     * which will only generate high level debug output.  "ALL" defaults to 0
-     * which is off, or no debug output.
+     * "ALLJOYN_OBJ" for the sessions management code and "ALLJOYN_NS" for the
+     * TCP name services.  Debug levels for specific subsystems override the
+     * setting for "ALL" subsystems.  For example if "ALL" is set to 7, but
+     * "ALLJOYN_OBJ" is set to 1, then detailed debug output will be generated
+     * for all subsystems expcept for "ALLJOYN_OBJ" which will only generate
+     * high level debug output.  "ALL" defaults to 0 which is off, or no debug
+     * output.
      *
      * The debug output levels are actually a bit field that controls what
      * output is generated.  Those bit fields are described below:
@@ -643,6 +711,123 @@ public class BusAttachment {
      */
     public native void useOSLogging(boolean useOSLog);
 
+    private Set<AboutListener> registeredAboutListeners;
+
+    /**
+     * Register an object that will receive About Interface event notifications.
+     *
+     * @param listener  Object instance that will receive bus event notifications.
+     */
+    public void registerAboutListener(AboutListener listener)
+    {
+        if (registeredAboutListeners.isEmpty()) {
+            registerSignalHandlers(this);
+        }
+        registeredAboutListeners.add(listener);
+    }
+
+    /**
+     * unregister an object that was previously registered with registerAboutListener.
+     *
+     * @param listener  Object instance to un-register as a listener.
+     */
+    public void unregisterAboutListener(AboutListener listener)
+    {
+        registeredAboutListeners.remove(listener);
+        if (registeredAboutListeners.isEmpty()) {
+            unregisterSignalHandlers(this);
+        }
+    }
+
+    /**
+     * Signal handler used to process announce signals from the bus. It will
+     * forward the signal to the registered AboutListener
+     *
+     * @param version - version of the announce signal received
+     * @param port - Session Port used by the remote device
+     * @param objectDescriptions - list of object paths any interfaces found at
+     *                             that object path
+     * @param aboutData - A dictionary containing information about the remote
+     *                    device.
+     */
+    @BusSignalHandler(iface = "org.alljoyn.About", signal = "Announce")
+    public void announce(short version, short port, AboutObjectDescription[] objectDescriptions, Map<String, Variant> aboutData)
+    {
+        for (AboutListener al : BusAttachment.this.registeredAboutListeners) {
+            al.announced(BusAttachment.this.getMessageContext().sender, version, port, objectDescriptions, aboutData);
+        }
+    }
+
+    /**
+     * TODO cleanup the documentation make sure it is accurate remove doxygen
+     * style code blocks.
+     *
+     * List the interfaces your application is interested in.  If a remote device
+     * is announcing that interface then the all Registered AboutListeners will
+     * be called.
+     *
+     * For example, if you need both "com.example.Audio" <em>and</em>
+     * "com.example.Video" interfaces then do the following.
+     * registerAboutListener once:
+     * <pre>{@code
+     * String interfaces[] = {"com.example.Audio", "com.example.Video"};
+     * registerAboutListener(aboutListener);
+     * whoImplements(interfaces);
+     * }</pre>
+     *
+     * If the handler should be called if "com.example.Audio" <em>or</em>
+     * "com.example.Video" interfaces are implemented then call
+     * RegisterAboutListener multiple times:
+     * <pre>{@code
+     * registerAboutListener(aboutListener);
+     * String audioInterface[] = {"com.example.Audio"};
+     * whoImplements(interfaces);
+     * whoImplements(audioInterface);
+     * String videoInterface[] = {"com.example.Video"};
+     * whoImplements(videoInterface);
+     * }</pre>
+     *
+     * The interface name may be a prefix followed by a *.  Using
+     * this, the example where we are interested in "com.example.Audio" <em>or</em>
+     * "com.example.Video" interfaces could be written as:
+     * <pre>{@code
+     * String exampleInterface[] = {"com.example.*"};
+     * registerAboutListener(aboutListener);
+     * whoImplements(exampleInterface);
+     * }</pre>
+     *
+     * The AboutListener will receive any announcement that implements an interface
+     * beginning with the "com.example." name.
+     *
+     * If the same AboutListener is used for for multiple interfaces then it is
+     * the listeners responsibility to parse through the reported interfaces to
+     * figure out what should be done in response to the Announce signal.
+     *
+     * Note: specifying null for the implementsInterfaces parameter could have
+     * significant impact on network performance and should be avoided unless
+     * its known that all announcements are needed.
+     *
+     * @param interfaces a list of interfaces that the Announce
+     *               signal reports as implemented. NULL to receive all Announce
+     *               signals regardless of interfaces
+     * @return Status.OK on success. An error status otherwise.
+     */
+    public native Status whoImplements(String[] interfaces);
+
+    /**
+     * Stop showing interest in the listed interfaces. Stop receiving announce
+     * signals from the devices with the listed interfaces.
+     *
+     * Note if WhoImplements has been called multiple times the announce signal
+     * will still be received for any interfaces that still remain.
+     *
+     * @param interfaces a list of interfaces list must match a list previously
+     *                   passed to the whoImplements method.
+     *
+     * @return Status.OK on success. An error status otherwise.
+     */
+    public native Status cancelWhoImplements(String[] interfaces);
+
     /**
      * Register an object that will receive bus event notifications.
      *
@@ -651,7 +836,7 @@ public class BusAttachment {
     public native void registerBusListener(BusListener listener);
 
     /**
-     * unregister an object that was previously registered with RegisterBusListener.
+     * unregister an object that was previously registered with registerBusListener.
      *
      * @param listener  Object instance to un-register as a listener.
      */
@@ -833,6 +1018,7 @@ public class BusAttachment {
                                     new Class<?>[] { DBusProxyObj.class });
         dbus = dbusbo.getInterface(DBusProxyObj.class);
         executor = Executors.newSingleThreadExecutor();
+        registeredAboutListeners = new HashSet<AboutListener>();
     }
 
     /**
@@ -901,8 +1087,11 @@ public class BusAttachment {
 
     private native boolean isSecureBusObject(BusObject busObj);
 
-    private native Status registerNativeSignalHandler(String ifaceName, String signalName,
+    private native Status registerNativeSignalHandlerWithSrcPath(String ifaceName, String signalName,
             Object obj, Method handlerMethod, String source);
+
+    private native Status registerNativeSignalHandlerWithRule(String ifaceName, String signalName, Object obj,
+        Method handlerMethod, String rule);
 
     /**
      * Release resources immediately.
@@ -1267,24 +1456,22 @@ public class BusAttachment {
     }
 
     /**
-     * Registers a public method to receive a signal from specific objects
-     * emitting it.
-     * Once registered, the method of the object will receive the signal
-     * specified from objects implementing the interface.
+     * Registers a public method to receive a signal from specific objects emitting it. Once registered, the method of
+     * the object will receive the signal specified from objects implementing the interface.
      *
      * @param ifaceName the interface name of the signal
      * @param signalName the member name of the signal
      * @param obj the object receiving the signal
      * @param handlerMethod the signal handler method
      * @param source the object path of the emitter of the signal
-     * @return OK if the register is succesful
+     * @return OK if the register is successful
      */
     public Status registerSignalHandler(String ifaceName,
             String signalName,
             Object obj,
             Method handlerMethod,
             String source) {
-        Status status = registerNativeSignalHandler(ifaceName, signalName, obj, handlerMethod,
+        Status status = registerNativeSignalHandlerWithSrcPath(ifaceName, signalName, obj, handlerMethod,
                                                     source);
         if (status == Status.BUS_NO_SUCH_INTERFACE) {
             try {
@@ -1299,13 +1486,60 @@ public class BusAttachment {
                     } catch (NoSuchMethodException ex) {
                         // Ignore, use signalName parameter provided
                     }
-                    status = registerNativeSignalHandler(ifaceName, signalName, obj, handlerMethod,
+                    status = registerNativeSignalHandlerWithSrcPath(ifaceName, signalName, obj, handlerMethod,
                                                          source);
                 }
             } catch (ClassNotFoundException ex) {
                 BusException.log(ex);
                 status = Status.BUS_NO_SUCH_INTERFACE;
             } catch (AnnotationBusException ex) {
+                BusException.log(ex);
+                status = Status.BAD_ANNOTATION;
+            }
+        }
+        return status;
+    }
+
+    /**
+     * Register a signal handler.
+     *
+     * Signals are forwarded to the signalHandler if sender, interface, member and rule qualifiers are ALL met.
+     *
+     * @param ifaceName the interface name of the signal
+     * @param signalName the member name of the signal
+     * @param obj the object receiving the signal
+     * @param handlerMethod the signal handler method
+     * @param matchRule a filter rule.
+     * @return OK if the register is successful
+     */
+
+    public Status registerSignalHandlerWithRule(String ifaceName, String signalName, Object obj, Method handlerMethod,
+        String matchRule)
+    {
+
+        Status status = registerNativeSignalHandlerWithRule(ifaceName, signalName, obj, handlerMethod, matchRule);
+        if (status == Status.BUS_NO_SUCH_INTERFACE) {
+            try {
+                Class<?> iface = Class.forName(ifaceName);
+                InterfaceDescription desc = new InterfaceDescription();
+                status = desc.create(this, iface);
+                if (status == Status.OK) {
+                    ifaceName = InterfaceDescription.getName(iface);
+                    try {
+                        Method signal = iface.getMethod(signalName, handlerMethod.getParameterTypes());
+                        signalName = InterfaceDescription.getName(signal);
+                    }
+                    catch (NoSuchMethodException ex) {
+                        // Ignore, use signalName parameter provided
+                    }
+                    status = registerNativeSignalHandlerWithRule(ifaceName, signalName, obj, handlerMethod, matchRule);
+                }
+            }
+            catch (ClassNotFoundException ex) {
+                BusException.log(ex);
+                status = Status.BUS_NO_SUCH_INTERFACE;
+            }
+            catch (AnnotationBusException ex) {
                 BusException.log(ex);
                 status = Status.BAD_ANNOTATION;
             }
@@ -1331,7 +1565,12 @@ public class BusAttachment {
         for (Method m : obj.getClass().getMethods()) {
             BusSignalHandler a = m.getAnnotation(BusSignalHandler.class);
             if (a != null) {
-                status = registerSignalHandler(a.iface(), a.signal(), obj, m, a.source());
+                if (a.rule().equals("") == false) {
+                    status = registerSignalHandlerWithRule(a.iface(), a.signal(), obj, m, a.rule());
+                }
+                else {
+                    status = registerSignalHandler(a.iface(), a.signal(), obj, m, a.source());
+                }
                 if (status != Status.OK) {
                     break;
                 }
@@ -1445,7 +1684,7 @@ public class BusAttachment {
     /**
      * Registers a user-defined authentication listener class with a specific default key store.
      *
-     * @param authMechanisms the authentication mechanism(s) to use for peer-to-peer authentication. This is a space separated list of any of the following values: ALLJOYN_PIN_KEYX, ALLJOYN_SRP_LOGON, ALLJOYN_RSA_KEYX, ALLJOYN_SRP_KEYX, ALLJOYN_ECDHE_NULL, ALLJOYN_ECDHE_PSK, ALLJOYN_ECDHE_ECDSA.
+     * @param authMechanisms the authentication mechanism(s) to use for peer-to-peer authentication. This is a space separated list of any of the following values: ALLJOYN_PIN_KEYX, ALLJOYN_SRP_LOGON, ALLJOYN_RSA_KEYX, ALLJOYN_SRP_KEYX, ALLJOYN_ECDHE_NULL, ALLJOYN_ECDHE_PSK, ALLJOYN_ECDHE_ECDSA, GSSAPI.
      * @param listener the authentication listener
      * @param keyStoreFileName the name of the default key store.  Under Android, the recommended
      *                         value of this parameter is {@code
@@ -1483,7 +1722,7 @@ public class BusAttachment {
     /**
      * Registers a user-defined authentication listener class with a specific default key store.
      *
-     * @param authMechanisms the authentication mechanism(s) to use for peer-to-peer authentication.  This is a space separated list of any of the following values: ALLJOYN_PIN_KEYX, ALLJOYN_SRP_LOGON, ALLJOYN_RSA_KEYX, ALLJOYN_SRP_KEYX, ALLJOYN_ECDHE_NULL, ALLJOYN_ECDHE_PSK, ALLJOYN_ECDHE_ECDSA.
+     * @param authMechanisms the authentication mechanism(s) to use for peer-to-peer authentication.  This is a space separated list of any of the following values: ALLJOYN_PIN_KEYX, ALLJOYN_SRP_LOGON, ALLJOYN_RSA_KEYX, ALLJOYN_SRP_KEYX, ALLJOYN_ECDHE_NULL, ALLJOYN_ECDHE_PSK, ALLJOYN_ECDHE_ECDSA, GSSAPI.
      * @param listener the authentication listener
      * @param keyStoreFileName the name of the default key store.  Under Android, the recommended
      *                         value of this parameter is {@code
@@ -1502,7 +1741,7 @@ public class BusAttachment {
      * use {@link #registerAuthListener(String, AuthListener, String)} instead to specify the path
      * of the default key store.
      *
-     * @param authMechanisms the authentication mechanism(s) to use for peer-to-peer authentication.  This is a space separated list of any of the following values: ALLJOYN_PIN_KEYX, ALLJOYN_SRP_LOGON, ALLJOYN_RSA_KEYX, ALLJOYN_SRP_KEYX, ALLJOYN_ECDHE_NULL, ALLJOYN_ECDHE_PSK, ALLJOYN_ECDHE_ECDSA.
+     * @param authMechanisms the authentication mechanism(s) to use for peer-to-peer authentication.  This is a space separated list of any of the following values: ALLJOYN_PIN_KEYX, ALLJOYN_SRP_LOGON, ALLJOYN_RSA_KEYX, ALLJOYN_SRP_KEYX, ALLJOYN_ECDHE_NULL, ALLJOYN_ECDHE_PSK, ALLJOYN_ECDHE_ECDSA, GSSAPI.
      * @param listener the authentication listener
      * @return OK if successful
      */
