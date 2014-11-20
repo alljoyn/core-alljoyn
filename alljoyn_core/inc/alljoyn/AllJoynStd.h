@@ -32,7 +32,6 @@
 #define QCC_MODULE  "ALLJOYN"
 
 /** Router-to-router protocol version number */
-//Protocol version 11 introduces self-join feature
 #define ALLJOYN_PROTOCOL_VERSION  11
 
 namespace ajn {
