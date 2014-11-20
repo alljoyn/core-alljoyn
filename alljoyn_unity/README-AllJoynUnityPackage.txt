@@ -14,12 +14,12 @@ The following describes how to do this.
 3. Unzip the AllJoyn SDK on the Windows workstation.
 
 4. Identify the folders containing the Unity binding.
-    a. In the AllJoyn 14.06 SDK's for Android, these folders are
-        alljoyn-android\core\alljoyn-14.06.00-dbg\unity ("debug" variant)
-        alljoyn-android\core\alljoyn-14.06.00-rel\unity ("release" variant)
-    b. In the AllJoyn 14.06 SDK's for Windows, they are
-        alljoyn-14.06.00-win7x64vs2012-sdk\alljoyn-14.06.00-win7x64vs2012-sdk-dbg\unity ("debug" variant)
-        alljoyn-14.06.00-win7x64vs2012-sdk\alljoyn-14.06.00-win7x64vs2012-sdk-rel\unity ("release" variant)
+    a. In the AllJoyn 14.12 SDK's for Android, these folders are
+        alljoyn-android\core\alljoyn-14.12.00-dbg\unity ("debug" variant)
+        alljoyn-android\core\alljoyn-14.12.00-rel\unity ("release" variant)
+    b. In the AllJoyn 14.12 SDK's for Windows, they are
+        alljoyn-14.12.00-win7x64vs2013-sdk\alljoyn-14.12.00-win7x64vs2013-sdk-dbg\unity ("debug" variant)
+        alljoyn-14.12.00-win7x64vs2013-sdk\alljoyn-14.12.00-win7x64vs2013-sdk-rel\unity ("release" variant)
 
 5. Open a CMD window.
     Add the path to Unity.exe (the Unity IDE) to your PATH, if it is not there already.
