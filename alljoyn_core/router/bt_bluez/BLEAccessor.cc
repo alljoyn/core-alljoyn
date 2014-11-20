@@ -652,7 +652,7 @@ QStatus DaemonBLETransport::BLEAccessor::EnumerateAdapters()
                     (*dev)->AddInterface(*org.bluez.AllJoyn.interface);
                     (*dev)->SetAllJoyn();
                     deviceProxyMap[object] = dev;
-                    (*dev)->RegisterPropertiesChangedHandler(bzDevice1Ifc, watchProps, ArraySize(watchProps), *this, NULL);
+                    (*dev)->RegisterPropertiesChangedListener(bzDevice1Ifc, watchProps, ArraySize(watchProps), *this, NULL);
                     QCC_DbgTrace(("Register RxDataRecv for %s (%p)", object, dev));
                     bzBus.RegisterSignalHandler(this,
                                                 SignalHandler(&DaemonBLETransport::BLEAccessor::RxDataRecvSignalHandler),
@@ -701,10 +701,10 @@ QStatus DaemonBLETransport::BLEAccessor::EnumerateAdapters()
                 "Discovering"
             };
 
-            status = defaultAdapterObj->RegisterPropertiesChangedHandler("org.bluez.Adapter1",
-                                                                         watchProps, ArraySize(watchProps), *this, NULL);
+            status = defaultAdapterObj->RegisterPropertiesChangedListener("org.bluez.Adapter1",
+                                                                          watchProps, ArraySize(watchProps), *this, NULL);
             if (status != ER_OK) {
-                QCC_LogError(status, ("RegisterPropertiesChangedHandler"));
+                QCC_LogError(status, ("RegisterPropertiesChangedListener"));
             }
 
             if (!defaultAdapterObj->IsPowered()) {
@@ -873,7 +873,7 @@ void DaemonBLETransport::BLEAccessor::InterfacesAddedSignalHandler(const Interfa
             (*dev)->AddInterface(*org.bluez.Device1.interface);
             (*dev)->AddInterface(*org.bluez.AllJoyn.interface);
             deviceProxyMap[objStr] = dev;
-            (*dev)->RegisterPropertiesChangedHandler(bzDevice1Ifc, watchProps, ArraySize(watchProps), *this, NULL);
+            (*dev)->RegisterPropertiesChangedListener(bzDevice1Ifc, watchProps, ArraySize(watchProps), *this, NULL);
         }
 
         /* As an Else here, we might want to put handling for New Adapter, keyed
@@ -959,7 +959,7 @@ void DaemonBLETransport::BLEAccessor::InterfacesAddedSignalHandler(const Interfa
             (*dev)->AddInterface(*org.bluez.Device1.interface);
             (*dev)->AddInterface(*org.bluez.AllJoyn.interface);
             deviceProxyMap[objStr] = dev;
-            (*dev)->RegisterPropertiesChangedHandler(bzDevice1Ifc, watchProps, ArraySize(watchProps), *this, NULL);
+            (*dev)->RegisterPropertiesChangedListener(bzDevice1Ifc, watchProps, ArraySize(watchProps), *this, NULL);
         }
         (*dev)->SetAllJoyn();
         QCC_DbgTrace(("Register RxDataRecv for %s (%p)", objStr, dev));
