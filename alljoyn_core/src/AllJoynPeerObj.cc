@@ -1441,9 +1441,9 @@ void AllJoynPeerObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
                         /*
                          * If the failed message was a method call push an error response.
                          */
-                        if (req->msg->GetType() == MESSAGE_METHOD_CALL) {
+                        if (msg->GetType() == MESSAGE_METHOD_CALL) {
                             Message reply(*bus);
-                            reply->ErrorMsg(status, req->msg->GetCallSerial());
+                            reply->ErrorMsg(status, msg->GetCallSerial());
                             bus->GetInternal().GetLocalEndpoint()->PushMessage(reply);
                         }
                     } else {
