@@ -24,6 +24,7 @@
 #include <qcc/KeyInfoECC.h>
 #include <qcc/Crypto.h>
 #include <qcc/CertificateECC.h>
+#include <qcc/StringUtil.h>
 #include "PermissionMgmtObj.h"
 #include "PeerState.h"
 #include "BusInternal.h"
@@ -577,6 +578,49 @@ QStatus PermissionMgmtObj::NotifyConfig()
     return Signal(NULL, 0, *notifySignalName, args, 4, 0, flags);
 }
 
+static QStatus ValidateCertificate(CertificateX509& cert, PermissionMgmtObj::TrustAnchorList* taList)
+{
+    for (PermissionMgmtObj::TrustAnchorList::iterator it = taList->begin(); it != taList->end(); it++) {
+        KeyInfoNISTP256* keyInfo = *it;
+        if (cert.Verify(*keyInfo) == ER_OK) {
+            return ER_OK;  /* cert is verified */
+        }
+    }
+    return ER_UNKNOWN_CERTIFICATE;
+}
+
+static QStatus ValidateCertificateChain(std::vector<CertificateX509*>& certs, PermissionMgmtObj::TrustAnchorList* taList)
+{
+    size_t idx = 0;
+    bool validated = false;
+    for (std::vector<CertificateX509*>::iterator it = certs.begin(); it != certs.end(); it++) {
+        idx++;
+        QStatus status = ValidateCertificate(*(*it), taList);
+        if (ER_OK == status) {
+            validated = true;
+            break;
+        }
+    }
+    if (!validated) {
+        return ER_UNKNOWN_CERTIFICATE;
+    }
+
+    if (idx == 1) {
+        return ER_OK;  /* the leaf cert is trusted.  No need to validate the whole chain */
+    }
+    /* There are at least two nodes in the cert chain.
+     * Now make sure the chain is a valid chain.
+     */
+    for (int cnt = (idx - 2); cnt >= 0; cnt--) {
+        KeyInfoNISTP256 keyInfo;
+        keyInfo.SetPublicKey(certs[cnt + 1]->GetSubjectPublicKey());
+        if (certs[cnt]->Verify(keyInfo) != ER_OK) {
+            return ER_INVALID_CERT_CHAIN;
+        }
+    }
+    return ER_OK;
+}
+
 static QStatus LoadCertificate(Certificate::EncodingType encoding, const uint8_t* encoded, size_t encodedLen, CertificateX509& cert, PermissionMgmtObj::TrustAnchorList* taList)
 {
     QStatus status;
@@ -594,20 +638,7 @@ static QStatus LoadCertificate(Certificate::EncodingType encoding, const uint8_t
     if (!taList) {
         return ER_OK;
     }
-    for (PermissionMgmtObj::TrustAnchorList::iterator it = taList->begin(); it != taList->end(); it++) {
-        KeyInfoNISTP256* keyInfo = *it;
-        GUID128 taGuid(0);
-        taGuid.SetBytes(keyInfo->GetKeyId());
-
-        if (taGuid == cert.GetIssuer()) {
-            if (cert.Verify(*keyInfo) == ER_OK) {
-                return ER_OK;  /* cert is verified */
-            } else {
-                return ER_INVALID_CERTIFICATE;
-            }
-        }
-    }
-    return ER_UNKNOWN_CERTIFICATE;
+    return ValidateCertificate(cert, taList);
 }
 
 void PermissionMgmtObj::InstallIdentity(const InterfaceDescription::Member* member, Message& msg)
@@ -1108,10 +1139,10 @@ QStatus PermissionMgmtObj::GenerateSendMemberships(MsgArg** args, size_t* count)
     MsgArg* retArgs = new MsgArg[*count];
     size_t idx = 0;
     for (std::vector<MsgArg*>::iterator it = argList.begin(); it != argList.end(); idx++, it++) {
-        retArgs[idx] = *(*it);
+        retArgs[idx].Set("(yyv)", (idx + 1), *count, *it);
         retArgs[idx].SetOwnershipFlags(MsgArg::OwnsArgs, true);
     }
-    ClearArgVector(argList);
+    argList.clear();  /* the members of the vector are assigned to the retArgs array already */
     ClearMembershipCertMap(certMap);
     *args = retArgs;
     return ER_OK;
@@ -1121,7 +1152,7 @@ QStatus PermissionMgmtObj::ParseSendMemberships(Message& msg)
 {
     MsgArg* varArray;
     size_t count;
-    QStatus status = msg->GetArg(0)->Get("a(yv)", &count, &varArray);
+    QStatus status = msg->GetArg(0)->Get("a(yyv)", &count, &varArray);
     if (ER_OK != status) {
         return status;
     }
@@ -1130,10 +1161,18 @@ QStatus PermissionMgmtObj::ParseSendMemberships(Message& msg)
     }
 
     PeerState peerState =  bus.GetInternal().GetPeerStateTable()->GetPeerState(msg->GetSender());
+    bool needValidation = false;
     for (size_t idx = 0; idx < count; idx++) {
+        uint8_t entry;
+        uint8_t numOfEntries;
+        MsgArg* entryArg;
+        status = varArray[idx].Get("(yyv)", &entry, &numOfEntries, &entryArg);
+        if (ER_OK != status) {
+            return status;
+        }
         uint8_t type;
         MsgArg* arg;
-        status = varArray->Get("(yv)", &type, &arg);
+        status = entryArg->Get("(yv)", &type, &arg);
         if (ER_OK != status) {
             return status;
         }
@@ -1190,6 +1229,33 @@ QStatus PermissionMgmtObj::ParseSendMemberships(Message& msg)
                 }
             }
             break;
+        }
+        if (entry == numOfEntries) {
+            needValidation = true;
+        }
+    }
+    if (needValidation) {
+        /* do the membership cert validation for the peer */
+        while (!peerState->guildMap.empty()) {
+            bool verified = true;
+            for (_PeerState::GuildMap::iterator it = peerState->guildMap.begin(); it != peerState->guildMap.end(); it++) {
+                _PeerState::GuildMetadata* metadata = it->second;
+                /* build the vector of certs to verify.  The membership cert is the leaf node -- first item on the vector */
+                std::vector<CertificateX509*> certsToVerify;
+                certsToVerify.reserve(metadata->certChain.size() + 1);
+                certsToVerify.assign(1, &metadata->cert);
+                certsToVerify.insert(certsToVerify.begin() + 1, metadata->certChain.begin(), metadata->certChain.end());
+                status = ValidateCertificateChain(certsToVerify, &trustAnchors);
+                if (ER_OK != status) {
+                    /* remove this membership cert since it is not valid */
+                    peerState->guildMap.erase(it);
+                    verified = false;
+                    break;
+                }
+            }
+            if (verified) {
+                break;  /* done */
+            }
         }
     }
     return ER_OK;

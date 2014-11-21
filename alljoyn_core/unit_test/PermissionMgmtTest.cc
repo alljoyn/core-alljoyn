@@ -163,15 +163,12 @@ static QStatus CreateGuildCert(const String& serial, const uint8_t* authDataHash
     x509.SetSubjectPublicKey(subjectPubKey);
     x509.SetGuild(guild);
     x509.SetDigest(authDataHash, Crypto_SHA256::DIGEST_SIZE);
-    printf("Signing certificate\n");
     status = x509.Sign(issuerPrivateKey);
-    printf("Sign certificate return status 0x%x\n", status);
     if (ER_OK != status) {
         return status;
     }
     printf("Certificate: %s\n", x509.ToString().c_str());
     status = x509.EncodeCertificateDER(der);
-    printf("x509.ExportDER return status 0x%x\n", status);
     return status;
 }
 
@@ -312,7 +309,7 @@ class PermissionMgmtTest : public testing::Test, public BusObject {
 
     PermissionMgmtTest() : BusObject(APP_PATH),
         adminBus("PermissionMgmtTestAdmin", false),
-        adminProxyBus("PermissionMgmtTestAdmin", false),
+        adminProxyBus("PermissionMgmtTestAdminProxy", false),
         serviceBus("PermissionMgmtTestService", false),
         consumerBus("PermissionMgmtTestConsumer", false),
         status(ER_OK),
@@ -367,8 +364,8 @@ class PermissionMgmtTest : public testing::Test, public BusObject {
         }
         delete adminKeyListener;
         adminKeyListener = new ECDHEKeyXListener(ECDHEKeyXListener::RUN_AS_ADMIN, adminBus);
-        adminBus.EnablePeerSecurity(keyExchange, adminKeyListener, NULL, true);
-        adminProxyBus.EnablePeerSecurity(keyExchange, adminKeyListener, NULL, true);
+        adminBus.EnablePeerSecurity(keyExchange, adminKeyListener, NULL, false);
+        adminProxyBus.EnablePeerSecurity(keyExchange, adminKeyListener, NULL, false);
         delete serviceKeyListener;
         serviceKeyListener = new ECDHEKeyXListener(ECDHEKeyXListener::RUN_AS_SERVICE, serviceBus);
         serviceBus.EnablePeerSecurity(keyExchange, serviceKeyListener, NULL, false);
@@ -449,7 +446,6 @@ class PermissionMgmtTest : public testing::Test, public BusObject {
                        const char* sourcePath, Message& msg)
     {
         signalNotifyConfigReceived = true;
-        printf("A signal name [%s] is received with msg %s\n", member->name.c_str(), msg->ToString().c_str());
         uint8_t*guid;
         size_t guidLen;
         uint32_t serialNum;
@@ -642,7 +638,6 @@ QStatus Claim(BusAttachment& bus, ProxyBusObject& remoteObj, const ECCPublicKey*
     inputs[1].Set("ay", GUID128::SIZE, claimedGUID->GetBytes());
     uint32_t timeout = 10000; /* Claim is a bit show */
 
-    printf("Claim send keyInfo with GUID %s\n", localGUID.ToString().c_str());
     status = remoteObj.MethodCall(INTERFACE_NAME, "Claim", inputs, 2, reply, timeout);
 
     if (ER_OK == status) {
@@ -937,7 +932,6 @@ QStatus InstallMembership(const String& serial, BusAttachment& bus, ProxyBusObje
     if (status != ER_OK) {
         return status;
     }
-    printf("Sending membership cert length %d\n", (int) der.length());
     MsgArg certArgs[1];
     certArgs[0].Set("(yay)", Certificate::ENCODING_X509_DER, der.length(), der.c_str());
     MsgArg arg("a(yay)", 1, certArgs);
@@ -997,7 +991,6 @@ QStatus InstallIdentity(BusAttachment& bus, ProxyBusObject& remoteObj, qcc::Stri
     remoteObj.AddInterface(*itf);
     Message reply(bus);
     MsgArg arg("(yay)", Certificate::ENCODING_X509_DER, der.size(), der.data());
-    printf("InstallIdentity with der length %d\n", (int) der.size());
 
     status = remoteObj.MethodCall(INTERFACE_NAME, "InstallIdentity", &arg, 1, reply, 5000);
 
@@ -1027,13 +1020,9 @@ QStatus GetIdentity(BusAttachment& bus, ProxyBusObject& remoteObj, qcc::String& 
     IdentityCertificate cert;
     status = LoadCertificateBytes(reply, cert);
     if (ER_OK != status) {
-        printf("GetIdentity LoadCertificateBytes return status 0x%x\n", status);
         return status;
     }
-    status = cert.EncodeCertificateDER(der);
-    //return cert.EncodeCertificateDER(der);
-    printf("GetIdentity return status 0x%x\n", status);
-    return status;
+    return cert.EncodeCertificateDER(der);
 }
 
 QStatus RemoveIdentity(BusAttachment& bus, ProxyBusObject& remoteObj)
@@ -1078,10 +1067,7 @@ QStatus ExcerciseOn(BusAttachment& bus, ProxyBusObject& remoteObj)
     remoteObj.AddInterface(*itf);
     Message reply(bus);
 
-    printf("ExcerciseOn calling On\n");
     status = remoteObj.MethodCall(ONOFF_IFC_NAME, "On", NULL, 0, reply, 5000);
-
-    printf("ExcerciseOn calling On return status 0x%x\n", status);
     if (ER_OK != status) {
         if (IsPermissionDeniedError(status, reply)) {
             status = ER_PERMISSION_DENIED;
@@ -1097,10 +1083,7 @@ QStatus ExcerciseOff(BusAttachment& bus, ProxyBusObject& remoteObj)
     remoteObj.AddInterface(*itf);
     Message reply(bus);
 
-    printf("ExcerciseOff calling Off\n");
     status = remoteObj.MethodCall(ONOFF_IFC_NAME, "Off", NULL, 0, reply, 5000);
-
-    printf("ExcerciseOff calling Off return status 0x%x\n", status);
     if (ER_OK != status) {
         if (IsPermissionDeniedError(status, reply)) {
             status = ER_PERMISSION_DENIED;
@@ -1116,10 +1099,7 @@ QStatus ExcerciseTVUp(BusAttachment& bus, ProxyBusObject& remoteObj)
     remoteObj.AddInterface(*itf);
     Message reply(bus);
 
-    printf("ExcerciseTVUp calling Up\n");
     status = remoteObj.MethodCall(TV_IFC_NAME, "Up", NULL, 0, reply, 5000);
-
-    printf("ExcerciseTVUp calling Up return status 0x%x\n", status);
     if (ER_OK != status) {
         if (IsPermissionDeniedError(status, reply)) {
             status = ER_PERMISSION_DENIED;
@@ -1135,10 +1115,7 @@ QStatus ExcerciseTVDown(BusAttachment& bus, ProxyBusObject& remoteObj)
     remoteObj.AddInterface(*itf);
     Message reply(bus);
 
-    printf("ExcerciseTVDown calling Down\n");
     status = remoteObj.MethodCall(TV_IFC_NAME, "Down", NULL, 0, reply, 5000);
-
-    printf("ExcerciseTVDown calling Down return status 0x%x\n", status);
     if (ER_OK != status) {
         if (IsPermissionDeniedError(status, reply)) {
             status = ER_PERMISSION_DENIED;
@@ -1154,10 +1131,7 @@ QStatus ExcerciseTVChannel(BusAttachment& bus, ProxyBusObject& remoteObj)
     remoteObj.AddInterface(*itf);
     Message reply(bus);
 
-    printf("ExcerciseTVChannel calling Channel\n");
     status = remoteObj.MethodCall(TV_IFC_NAME, "Channel", NULL, 0, reply, 5000);
-
-    printf("ExcerciseTVChannel calling Channel return status 0x%x\n", status);
     if (ER_OK != status) {
         if (IsPermissionDeniedError(status, reply)) {
             status = ER_PERMISSION_DENIED;
@@ -1188,25 +1162,9 @@ QStatus JoinPeerSession(BusAttachment& initiator, BusAttachment& responder, Sess
 TEST_F(PermissionMgmtTest, Prep)
 {
     EnableSecurity("ALLJOYN_ECDHE_NULL", false);
-
-    SessionId sessionId;
-    QStatus status = JoinPeerSession(adminBus, serviceBus, sessionId);
-    EXPECT_EQ(ER_OK, status) << "  JoinSession to service failed.  Actual Status: " << QCC_StatusText(status);
-    /* retrieve the identity cert just to enable the secured session */
-    qcc::String retIdentity;
-    ProxyBusObject serviceProxyObject(adminBus, serviceBus.GetUniqueName().c_str(), PERMISSION_MGMT_PATH, sessionId, false);
-    status = GetIdentity(adminBus, serviceProxyObject, retIdentity);
-    EXPECT_NE(ER_OK, status) << "  GetIdentity did not fail.  Actual Status: " << QCC_StatusText(status);
-
-    status = JoinPeerSession(adminBus, consumerBus, sessionId);
-    EXPECT_EQ(ER_OK, status) << "  JoinSession consumer failed.  Actual Status: " << QCC_StatusText(status);
-    /* retrieve the identity cert just to enable the secured session */
-    ProxyBusObject consumerProxyObject(adminBus, consumerBus.GetUniqueName().c_str(), PERMISSION_MGMT_PATH, sessionId, false);
-    status = GetIdentity(adminBus, consumerProxyObject, retIdentity);
-    EXPECT_NE(ER_OK, status) << "  GetIdentity did not fail.  Actual Status: " << QCC_StatusText(status);
-
     /* clear all the key store for the remaining tests */
     adminBus.ClearKeyStore();
+    adminProxyBus.ClearKeyStore();
     serviceBus.ClearKeyStore();
     consumerBus.ClearKeyStore();
 }
@@ -1218,16 +1176,17 @@ TEST_F(PermissionMgmtTest, ClaimAdmin)
 {
     QStatus status = ER_OK;
     EnableSecurity("ALLJOYN_ECDHE_NULL", false);
+
     SessionId sessionId;
     SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
-    status = JoinPeerSession(adminBus, adminProxyBus, sessionId);
+    status = JoinPeerSession(adminProxyBus, adminBus, sessionId);
     EXPECT_EQ(ER_OK, status) << "  JoinSession failed.  Actual Status: " << QCC_StatusText(status);
-    ProxyBusObject clientProxyObject(adminBus, adminProxyBus.GetUniqueName().c_str(), PERMISSION_MGMT_PATH, sessionId, false);
+    ProxyBusObject clientProxyObject(adminProxyBus, adminBus.GetUniqueName().c_str(), PERMISSION_MGMT_PATH, sessionId, false);
     ECCPublicKey claimedPubKey;
     ECCPublicKey issuerPubKey;
     CertECCUtil_DecodePublicKey(adminPublicKeyPEM, (uint32_t*) &issuerPubKey, sizeof(ECCPublicKey));
 
-    status = Claim(adminBus, clientProxyObject, &issuerPubKey, &claimedPubKey, NULL);
+    status = Claim(adminProxyBus, clientProxyObject, &issuerPubKey, &claimedPubKey, NULL);
     EXPECT_EQ(ER_OK, status) << "  Claim failed.  Actual Status: " << QCC_StatusText(status);
 }
 
@@ -1453,7 +1412,6 @@ TEST_F(PermissionMgmtTest, AnyUserCanCallOnAndNotOff)
     EXPECT_EQ(ER_OK, status) << "  AccessOnOffByAnyUser ExcerciseOn failed.  Actual Status: " << QCC_StatusText(status);
     status = ExcerciseOff(consumerBus, clientProxyObject);
     EXPECT_NE(ER_OK, status) << "  AccessOffByAnyUser ExcersizeOff did not fail.  Actual Status: " << QCC_StatusText(status);
-    printf("AccessOnOffByAnyUser done.");
 }
 
 /*
@@ -1472,7 +1430,6 @@ TEST_F(PermissionMgmtTest, GuildMemberCanTVUpAndDownAndNotChannel)
     EXPECT_EQ(ER_OK, status) << "  AccessTVByUserWithGuildMembership ExcerciseTVDown failed.  Actual Status: " << QCC_StatusText(status);
     status = ExcerciseTVChannel(consumerBus, clientProxyObject);
     EXPECT_NE(ER_OK, status) << "  AccessTVByUserWithGuildMembership ExcerciseTVChannel did not fail.  Actual Status: " << QCC_StatusText(status);
-    printf("AccessTVByUserWithGuildMembership done.");
 }
 
 /*
@@ -1495,9 +1452,6 @@ TEST_F(PermissionMgmtTest, SetPermissionManifest)
     status = GetManifest(consumerBus, clientProxyObject, &retrievedRules, &retrievedCount);
     EXPECT_EQ(ER_OK, status) << "  SetPermissionManifest GetManifest failed.  Actual Status: " << QCC_StatusText(status);
     EXPECT_EQ(count, retrievedCount) << "  SetPermissionManifest GetManifest failed to retrieve the same count.";
-    for (size_t cnt = 0; cnt < retrievedCount; cnt++) {
-        printf("rules[%d]: %s\n", (int) cnt, retrievedRules[cnt].ToString().c_str());
-    }
     delete [] rules;
     delete [] retrievedRules;
 }
@@ -1514,8 +1468,6 @@ TEST_F(PermissionMgmtTest, RemovePolicy)
     qcc::GUID128 localGUID;
     status = ca.GetGuid(localGUID);
     EXPECT_EQ(ER_OK, status) << "  ca.GetGuid failed.  Actual Status: " << QCC_StatusText(status);
-
-    printf("ca.GetGuid return guid %s\n", localGUID.ToString().c_str());
 
     PermissionPolicy* policy = GeneratePolicy(localGUID);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";

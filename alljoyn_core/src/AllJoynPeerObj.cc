@@ -1828,7 +1828,7 @@ QStatus AllJoynPeerObj::SendMembershipData(ProxyBusObject& remotePeerObj, const 
     /* sending one item at time since some peer may not be able to handle large
         amount of data */
     for (size_t cnt = 0; cnt < argCount; cnt++) {
-        MsgArg variant("a(yv)", 1, &args[cnt]);
+        MsgArg variant("a(yyv)", 1, &args[cnt]);
         Message replyMsg(*bus);
         status = remotePeerObj.MethodCall(*sendMembershipData, &variant, 1, replyMsg, DEFAULT_TIMEOUT);
         if (status != ER_OK) {

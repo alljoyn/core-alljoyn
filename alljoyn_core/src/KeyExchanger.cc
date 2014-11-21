@@ -97,10 +97,20 @@ QStatus KeyExchangerECDHE::GenerateMasterSecret()
 {
     QStatus status;
     uint8_t keymatter[48];      /* RFC5246 */
-    ECCSecretOldEncoding oldenc;
-    ecc.ReEncode(&pms, &oldenc);
-    KeyBlob pmsBlob((const uint8_t*) &oldenc, sizeof (ECCSecretOldEncoding), KeyBlob::GENERIC);
-    status = Crypto_PseudorandomFunction(pmsBlob, "master secret", "", keymatter, sizeof (keymatter));
+    if (IsLegacyPeer()) {
+        ECCSecretOldEncoding oldenc;
+        ecc.ReEncode(&pms, &oldenc);
+        KeyBlob pmsBlob((const uint8_t*) &oldenc, sizeof (ECCSecretOldEncoding), KeyBlob::GENERIC);
+        status = Crypto_PseudorandomFunction(pmsBlob, "master secret", "", keymatter, sizeof (keymatter));
+    } else {
+        Crypto_SHA256 sha;
+        uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+        sha.Init();
+        sha.Update((const uint8_t*) &pms, sizeof (ECCSecret));
+        sha.GetDigest(digest);
+        KeyBlob pmsBlob(digest, sizeof (digest), KeyBlob::GENERIC);
+        status = Crypto_PseudorandomFunction(pmsBlob, "master secret", "", keymatter, sizeof (keymatter));
+    }
     masterSecret.Set(keymatter, sizeof(keymatter), KeyBlob::GENERIC);
     return status;
 }

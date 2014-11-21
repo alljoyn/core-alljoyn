@@ -780,8 +780,6 @@ QStatus CertificateX509::EncodeCertificateName(qcc::String& dn, qcc::GUID128& cn
 QStatus CertificateX509::DecodeCertificateName(const qcc::String& dn, qcc::GUID128& ou, qcc::GUID128& cn)
 {
     QStatus status = ER_OK;
-    qcc::String set1;
-    qcc::String set2;
     qcc::String oid1;
     qcc::String oid2;
     qcc::String tmp1;
@@ -1043,8 +1041,15 @@ QStatus CertificateX509::DecodeCertificateSig(const qcc::String& sig)
     if (sizeof (signature.s) < s.size()) {
         return ER_FAIL;
     }
-    memcpy(signature.r, r.data(), r.size());
-    memcpy(signature.s, s.data(), s.size());
+    /* need to prepend leading zero bytes if r size smaller than signagure.r size because the ASN.1 encoder strips the leading zero bytes for type l */
+    uint8_t* p = signature.r;
+    p += (sizeof (signature.r) - r.size());
+    memcpy(p, r.data(), r.size());
+
+    /* need to prepend leading zero bytes if s size smaller than signagure.s size because the ASN.1 encoder strips the leading zero bytes for type l */
+    p = signature.s;
+    p += (sizeof (signature.s) - s.size());
+    memcpy(p, s.data(), s.size());
 
     return status;
 }
