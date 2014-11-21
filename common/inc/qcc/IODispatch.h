@@ -322,6 +322,20 @@ class IODispatch : public Thread, public AlarmListener {
      */
     virtual ThreadReturn STDCALL Run(void* arg);
 
+    /**
+     * Retrieve the number of started streams.
+     *
+     * @return A static value increasing monotonically when a stream is started.
+     */
+    static int32_t GetStartedStreamsCounter() { return startedStreamsCnt; }
+
+    /**
+     * Retrieve the number of stopped streams.
+     *
+     * @return A static value increasing monotonically when a stream is stopped.
+     */
+    static int32_t GetStoppedStreamsCounter() { return stoppedStreamsCnt; }
+
   private:
     Timer timer;                                /* The timer used to add and process callbacks */
     Mutex lock;                                 /* Lock for mutual exclusion of dispatchEntries */
@@ -335,6 +349,13 @@ class IODispatch : public Thread, public AlarmListener {
      */
     bool crit;
     static int32_t iodispatchCnt;
+
+    /* Counters of started and stopped streams. A router app can use these counters
+     * to check if there is any router activity. The app could automatically shut
+     * down the router node if the router was idle for a while.
+     */
+    static int32_t startedStreamsCnt;
+    static int32_t stoppedStreamsCnt;
 };
 
 

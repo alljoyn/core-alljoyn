@@ -28,6 +28,9 @@ using namespace std;
 
 int32_t IODispatch::iodispatchCnt = 0;
 
+int32_t IODispatch::startedStreamsCnt = 0;
+int32_t IODispatch::stoppedStreamsCnt = 0;
+
 IODispatch::IODispatch(const char* name, uint32_t concurrency) :
     timer((String(name) + U32ToString(IncrementAndFetch(&iodispatchCnt)).c_str()), true, concurrency, false, 96),
     reload(false),
@@ -132,6 +135,10 @@ QStatus IODispatch::StartStream(Stream* stream, IOReadListener* readListener, IO
     lock.Unlock();
 
     Thread::Alert();
+
+    /* A router node app can detect that the router is idle by tracking the value of this counter */
+    IncrementAndFetch(&startedStreamsCnt);
+
     /* Dont need to wait for the IODispatch::Run thread to reload
      * the set of file descriptors since we are adding a new stream.
      */
@@ -197,6 +204,9 @@ QStatus IODispatch::StopStream(Stream* stream) {
             lock.Unlock();
         }
     }
+
+    /* A router node app can detect that the router is idle by tracking the value of this counter */
+    IncrementAndFetch(&stoppedStreamsCnt);
 
     return ER_OK;
 }
