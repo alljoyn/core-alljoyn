@@ -322,7 +322,23 @@ class IODispatch : public Thread, public AlarmListener {
      */
     virtual ThreadReturn STDCALL Run(void* arg);
 
+    /**
+     * Indicate whether the router node (current process) did not have any
+     * connected leaf nodes for a specified time.
+     * @param minTime          Minimum idle time in milliseconds.
+     * @return true if the router has been idle for at least that time, otherwise false.
+     */
+    static bool IsRouterIdle(uint64_t minTime);
+
   private:
+
+    /**
+     * Update the router idle information when a stream is starting or stopping.
+     * @param isStarting       false - if a stream is being stopped
+     *                         true - if a stream is being started
+     */
+    static void UpdateIdleInformation(bool isStarting);
+
     Timer timer;                                /* The timer used to add and process callbacks */
     Mutex lock;                                 /* Lock for mutual exclusion of dispatchEntries */
     std::map<Stream*, IODispatchEntry> dispatchEntries; /* map holding details of various streams registered with this IODispatch */
@@ -335,6 +351,8 @@ class IODispatch : public Thread, public AlarmListener {
      */
     bool crit;
     static int32_t iodispatchCnt;
+    static int32_t activeStreamsCnt;              /* Number of streams that have been started and not stopped yet */
+    static volatile uint64_t stopStreamTimestamp; /* Timestamp of the last stream stop, in milliseconds */
 };
 
 
