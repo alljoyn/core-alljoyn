@@ -552,7 +552,7 @@ inline void ThreadClass::ServiceRun() {
     sprintf(buf, "%s.i%05d", s_wellKnownName.c_str(), qcc::Rand32() & 0xffff);
     qcc::String serviceName(buf);
 
-    AboutObj aboutObj(*bus);
+    AboutObj* aboutObj = new AboutObj(*bus);
 
     if (g_useAboutFeatureDiscovery) {
         QCC_SyncPrintf("------------------------------------------------------------\n");
@@ -575,7 +575,7 @@ inline void ThreadClass::ServiceRun() {
         g_aboutData.SetSoftwareVersion(ajn::GetVersion());
         g_aboutData.SetTransportOpts(s_transports);
 
-        aboutObj.Announce(SERVICE_PORT, g_aboutData);
+        aboutObj->Announce(SERVICE_PORT, g_aboutData);
     } else {
         QCC_SyncPrintf("------------------------------------------------------------\n");
         QCC_SyncPrintf("Service named %s is starting...\n", buf);
@@ -621,7 +621,7 @@ inline void ThreadClass::ServiceRun() {
         QCC_SyncPrintf("------------------------------------------------------------\n");
         QCC_SyncPrintf("Service named %s is stopping...\n", bus->GetUniqueName().c_str());
         QCC_SyncPrintf("------------------------------------------------------------\n");
-        aboutObj.Unannounce();
+        aboutObj->Unannounce();
     } else {
         QCC_SyncPrintf("------------------------------------------------------------\n");
         QCC_SyncPrintf("Service named %s is stopping...\n", buf);
@@ -633,6 +633,9 @@ inline void ThreadClass::ServiceRun() {
             QCC_SyncPrintf("Failed to cancel advertise name %s (%s)\n", serviceName.c_str(), QCC_StatusText(status));
         }
     }
+
+    delete aboutObj;
+    aboutObj = NULL;
 
     if (busObject) {
         bus->UnregisterBusObject(*busObject);

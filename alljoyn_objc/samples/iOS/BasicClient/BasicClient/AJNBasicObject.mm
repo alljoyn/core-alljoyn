@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright (c) 2012, AllSeen Alliance. All rights reserved.
+// Copyright (c) 2012, 2014, AllSeen Alliance. All rights reserved.
 //
 //    Permission to use, copy, modify, and/or distribute this software for any
 //    purpose with or without fee is hereby granted, provided that the above
@@ -83,7 +83,7 @@ BasicObjectImpl::BasicObjectImpl(BusAttachment &bus, const char *path, id<BasicS
     //
     interfaceDescription = bus.GetInterface([@"org.alljoyn.bus.sample" UTF8String]);
     assert(interfaceDescription);
-    AddInterface(*interfaceDescription);
+    AddInterface(*interfaceDescription, ANNOUNCED);
 
     
     // Register the method handlers for interface BasicStringsDelegate with the object
