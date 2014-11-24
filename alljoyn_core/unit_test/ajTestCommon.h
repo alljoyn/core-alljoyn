@@ -47,5 +47,13 @@ qcc::String getConnectArg(const char* envvar = "BUS_ADDRESS");
  */
 qcc::String genUniqueName(const BusAttachment& bus);
 
+/**
+ * Get the prefix of the uniqueNames used in advertising
+ *
+ * Advertised names should be unique to avoid multiple running instances
+ * of the test suite from interferring with each other.
+ */
+qcc::String getUniqueNamePrefix(const BusAttachment& bus);
+
 }
 #endif //AJTESTCOMMON_H

@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011,2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -112,6 +112,17 @@ TEST_F(DBusObjTest, RequestName_DuplicateName_Fail)
     bus.ReleaseName(requestedName1);
 }
 
+TEST_F(DBusObjTest, RequestName_BogusUniqueName_Fail)
+{
+    QStatus status = ER_OK;
+
+    const char* requestedName = ":xyz.1";
+
+    /* flag indicates that Fail if name cannot be immediatly obtained */
+    status = bus.RequestName(requestedName, DBUS_NAME_FLAG_DO_NOT_QUEUE);
+    ASSERT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, status) << "  Actual Status: " << QCC_StatusText(status);
+
+}
 TEST_F(DBusObjTest, ListQueuedOwners) {
     QStatus status = ER_OK;
 
