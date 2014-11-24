@@ -46,8 +46,6 @@ using namespace std;
 using namespace qcc;
 using namespace ajn;
 
-static bool g_print = false;
-
 static std::map<BusAttachment*, String> wkns;
 static std::map<BusAttachment*, BusObjectTestBusObject*> testobjects;
 static std::map<BusAttachment*, BusObjectTestSignalReceiver*> signalobjects;
@@ -836,14 +834,11 @@ typedef enum {
 
 #define CHECK(x)    do { \
         if (!(x)) { \
-            if (g_print) { \
-                fprintf(stderr, "Check '%s' on line %d failed.\n", # x, __LINE__); \
-            } \
-            return false; \
+            return ::testing::AssertionFailure() << "Check '" << # x << "' on line " << __LINE__ << " failed."; \
         } \
 } while (0)
 
-static bool MPJoinAllNotificationsDone(SessionJoinTestSessionListener* host, set<SessionJoinTestSessionListener*>& existingJoiners, SessionJoinTestSessionListener* joiner)
+static::testing::AssertionResult MPJoinAllNotificationsDone(SessionJoinTestSessionListener* host, set<SessionJoinTestSessionListener*>& existingJoiners, SessionJoinTestSessionListener* joiner)
 {
     set<SessionJoinTestSessionListener*>::iterator it;
     bool isPreSelfJoined = false;
@@ -873,10 +868,10 @@ static bool MPJoinAllNotificationsDone(SessionJoinTestSessionListener* host, set
         }
     }
 
-    return true;
+    return ::testing::AssertionSuccess();
 }
 
-static bool MPHostLeavesAllNotificationsDone(SessionJoinTestSessionListener*host, set<SessionJoinTestSessionListener*>& joiners) {
+static::testing::AssertionResult MPHostLeavesAllNotificationsDone(SessionJoinTestSessionListener*host, set<SessionJoinTestSessionListener*>& joiners) {
     /* deal with self-join and other-join in the appropriate manner */
     set<SessionJoinTestSessionListener*> otherJoiners;
     SessionJoinTestSessionListener* selfJoiner = NULL;
@@ -922,10 +917,10 @@ static bool MPHostLeavesAllNotificationsDone(SessionJoinTestSessionListener*host
         }
     }
 
-    return true;
+    return ::testing::AssertionSuccess();
 }
 
-static bool MPJoinerLeavesAllNotificationsDone(SessionJoinTestSessionListener* host, set<SessionJoinTestSessionListener*>& remainingJoiners, SessionJoinTestSessionListener* leaver, bool forced)
+static::testing::AssertionResult MPJoinerLeavesAllNotificationsDone(SessionJoinTestSessionListener* host, set<SessionJoinTestSessionListener*>& remainingJoiners, SessionJoinTestSessionListener* leaver, bool forced)
 {
     /* make a proper distinction between self-join leaving and other-join leaving */
     bool isSelfLeave = (host != NULL) && (leaver->uniqueName == host->uniqueName);
@@ -987,7 +982,7 @@ static bool MPJoinerLeavesAllNotificationsDone(SessionJoinTestSessionListener* h
         CHECK((leaver->sessionMemberRemovedCalled == 0));
     }
 
-    return true;
+    return ::testing::AssertionSuccess();
 }
 #undef CHECK
 
@@ -1036,9 +1031,7 @@ static void MultipointMultipeerTest(BusAttachment& busHost, BusAttachment& busJo
 
     sessionJoinerAcceptedFlag = false;
     sessionJoinedFlag = false;
-    g_print = true;
     EXPECT_TRUE(MPJoinAllNotificationsDone(&sessionListenerHost, joiners, &sessionListenerJoiner));
-    g_print = false;
 
     joiners.insert(&sessionListenerJoiner);
 
@@ -1063,9 +1056,7 @@ static void MultipointMultipeerTest(BusAttachment& busHost, BusAttachment& busJo
     qcc::Sleep(100);
     EXPECT_TRUE(sessionJoinedFlag);
     EXPECT_EQ(sessionId, bindMemberSessionId);
-    g_print = true;
     EXPECT_TRUE(MPJoinAllNotificationsDone(&sessionListenerHost, joiners, &sessionListenerJoiner2));
-    g_print = false;
     joiners.insert(&sessionListenerJoiner2);
 
     sessionListenerHost.ResetMemberAddedRemoved();
@@ -1118,9 +1109,7 @@ static void MultipointMultipeerTest(BusAttachment& busHost, BusAttachment& busJo
                     }
                     qcc::Sleep(10);
                 }
-                g_print = true;
                 EXPECT_TRUE(MPHostLeavesAllNotificationsDone(&sessionListenerHost, joiners));
-                g_print = false;
             }
             break;
 
@@ -1139,9 +1128,7 @@ static void MultipointMultipeerTest(BusAttachment& busHost, BusAttachment& busJo
                     }
                     qcc::Sleep(10);
                 }
-                g_print = true;
                 EXPECT_TRUE(MPJoinerLeavesAllNotificationsDone(&sessionListenerHost, joiners, &sessionListenerJoiner, true));
-                g_print = false;
             }
             break;
 
@@ -1160,9 +1147,7 @@ static void MultipointMultipeerTest(BusAttachment& busHost, BusAttachment& busJo
                     }
                     qcc::Sleep(10);
                 }
-                g_print = true;
                 EXPECT_TRUE(MPJoinerLeavesAllNotificationsDone(&sessionListenerHost, joiners, &sessionListenerJoiner2, true));
-                g_print = false;
             }
             break;
 
@@ -1181,9 +1166,7 @@ static void MultipointMultipeerTest(BusAttachment& busHost, BusAttachment& busJo
                     }
                     qcc::Sleep(10);
                 }
-                g_print = true;
                 EXPECT_TRUE(MPJoinerLeavesAllNotificationsDone(hostListener, joiners, &sessionListenerJoiner, false));
-                g_print = false;
             }
             break;
 
@@ -1202,9 +1185,7 @@ static void MultipointMultipeerTest(BusAttachment& busHost, BusAttachment& busJo
                     }
                     qcc::Sleep(10);
                 }
-                g_print = true;
                 EXPECT_TRUE(MPJoinerLeavesAllNotificationsDone(hostListener, joiners, &sessionListenerJoiner2, false));
-                g_print = false;
             }
             break;
 
