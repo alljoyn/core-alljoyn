@@ -4654,7 +4654,6 @@ void IpNameServiceImpl::SendOutboundMessageActively(Packet packet, const qcc::IP
                                 if (mdnsPacket->GetAnswer(name, MDNSResourceRecord::TXT, &record)) {
                                     removedTcpAnswers.push_back(*record);
                                 }
-                                removedTcpAnswers.push_back(*ptrRecordTcp);
                             }
                             removedTcpAnswers.push_back(*ptrRecordTcp);
                             mdnsPacket->RemoveAnswer(name, MDNSResourceRecord::SRV);
