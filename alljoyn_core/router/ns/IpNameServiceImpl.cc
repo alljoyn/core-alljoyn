@@ -1578,10 +1578,8 @@ QStatus IpNameServiceImpl::Enable(TransportMask transportMask,
     // advertise packets are scheduled for transmission and
     // the packets are rewritten, the relevant transport may
     // no longer be enabled.
-    for (uint32_t j = 0; j < N_TRANSPORTS; ++j) {
-        m_priorReliableIPv4PortMap[j] = m_reliableIPv4PortMap[j];
-        m_priorUnreliableIPv4PortMap[j] = m_unreliableIPv4PortMap[j];
-    }
+    m_priorReliableIPv4PortMap[i] = m_reliableIPv4PortMap[i];
+    m_priorUnreliableIPv4PortMap[i] = m_unreliableIPv4PortMap[i];
 
     std::map<qcc::String, uint16_t>::const_iterator it = reliableIPv4PortMap.find("*");
     if (it != reliableIPv4PortMap.end()) {
