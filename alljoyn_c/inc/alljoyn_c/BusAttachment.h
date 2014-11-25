@@ -33,6 +33,7 @@
 #include <alljoyn_c/Session.h>
 #include <alljoyn_c/SessionListener.h>
 #include <alljoyn_c/SessionPortListener.h>
+#include <alljoyn_c/AboutListener.h>
 #include <alljoyn_c/Status.h>
 
 #ifdef __cplusplus
@@ -68,7 +69,7 @@ typedef void (AJ_CALL * alljoyn_busattachment_setlinktimeoutcb_ptr)(QStatus stat
  * Allocate an alljoyn_busattachment.
  *
  * By default this will create an alljoyn_busattachment capable of handling 4 concurrent method and signal handlers.
- * This is the recommended default value.  If for some reason your application must be able to handle a different
+ * This is the recommended default value.  If for some reason the application must be able to handle a different
  * number of concurrent methods use alljoyn_busattachment_create_concurrency.
  *
  * @note Any alljoyn_busattachment allocated using this function must be freed using alljoyn_busattachment_destroy
@@ -886,6 +887,21 @@ extern AJ_API QStatus AJ_CALL alljoyn_busattachment_unregistersignalhandler(allj
                                                                             alljoyn_messagereceiver_signalhandler_ptr signal_handler,
                                                                             const alljoyn_interfacedescription_member member,
                                                                             const char* srcPath);
+/**
+ * Unregister a signal handler with a filter rule.
+ *
+ * Remove the signal handler that was registered with the given parameters.
+ *
+ * @param bus             The alljoyn_busattachment to unregister the signal handler with
+ * @param signal_handler  The signal handler method.
+ * @param member          The interface/member of the signal.
+ * @param matchRule       The filter rule.
+ * @return #ER_OK
+ */
+extern AJ_API QStatus AJ_CALL alljoyn_busattachment_unregistersignalhandlerwithrule(alljoyn_busattachment bus,
+                                                                                    alljoyn_messagereceiver_signalhandler_ptr signal_handler,
+                                                                                    const alljoyn_interfacedescription_member member,
+                                                                                    const char* matchRule);
 
 /**
  * Unregister a signal handler with a filter rule.
@@ -1254,6 +1270,133 @@ extern AJ_API uint32_t AJ_CALL alljoyn_busattachment_gettimestamp();
  *   - An error status otherwise
  */
 extern AJ_API QStatus AJ_CALL alljoyn_busattachment_ping(alljoyn_busattachment bus, const char* name, uint32_t timeout);
+
+/**
+ * Registers a handler to receive the org.alljoyn.about Announce signal.
+ *
+ * The handler is only called if a call to alljoyn_busattachment_whoimplements_*
+ * has been has been called.
+ *
+ * Important: the alljoyn_about_listener should be registered before calling
+ * alljoyn_busattachment_whoimplments_*
+ *
+ * @param[in] bus           alljoyn_busattachment this call is made for
+ * @param[in] aboutListener alljoyn_about_listener to be registered
+ */
+extern AJ_API void AJ_CALL alljoyn_busattachment_registeraboutlistener(alljoyn_busattachment bus,
+                                                                       alljoyn_about_listener aboutListener);
+
+/**
+ * Unregisters the AnnounceHandler from receiving the org.alljoyn.about Announce signal.
+ *
+ * @param[in] bus           alljoyn_busattachment this call is made for
+ * @param[in] aboutListener alljoyn_about_listener to be unregistered
+ */
+extern AJ_API void AJ_CALL alljoyn_busattachment_unregisteraboutlistener(alljoyn_busattachment bus,
+                                                                         alljoyn_about_listener aboutListener);
+
+/**
+ * Unregisters all AboutListeners from receiving any org.alljoyn.about Announce signal
+ * @param[in] bus alljoyn_busattachment this call is made for
+ */
+extern AJ_API void AJ_CALL alljoyn_busattachment_unregisterallaboutlisteners(alljoyn_busattachment bus);
+
+/**
+ * List the interfaces the application is interested in.  If a remote device
+ * is announcing that interface then all registered listeners for About
+ * will be called.
+ *
+ * It's the About listener's responsibility to parse through the reported
+ * interfaces to figure out what should be done in response to the Announce
+ * signal.
+ *
+ * This call is ref counted. If this function is called with the same
+ * list of interfaces multiple times then alljoyn_busattachment_cancelwhoimplements_interfaces
+ * must also be called multiple times with the same list of interfaces.
+ *
+ * Note: specifying NULL for the implementsInterfaces parameter could have
+ * significant impact on network performance and should be avoided unless
+ * all announcements are needed.
+ *
+ * @param[in] bus                  alljoyn_busattachment this call is made for
+ * @param[in] implementsInterfaces a list of interfaces that the Announce signal
+ *                                 reports as implemented. NULL to receive all
+ *                                 Announce signals regardless of interfaces
+ * @param[in] numberInterfaces     the number of interfaces in the
+ *                                 implementsInterfaces list
+ * @return status
+ */
+extern AJ_API QStatus AJ_CALL alljoyn_busattachment_whoimplements_interfaces(alljoyn_busattachment bus,
+                                                                             const char** implementsInterfaces,
+                                                                             size_t numberInterfaces);
+
+/**
+ * List an interface the application is interested in.  If a remote device
+ * is announcing that interface then all registered listeners for the
+ * Announce signal will be called.
+ *
+ * This is identical to alljoyn_busattachment_whoimplements_interfaces
+ * except this is specialized for a single interface not several interfaces.
+ *
+ * Note: specifying NULL for the interface parameter could have significant
+ * impact on network performance and should be avoided unless all
+ * announcements are needed.
+ *
+ * @see alljoyn_busattachment_whoimplements_interfaces(const char**, size_t)
+ * @param[in] bus                 alljoyn_busattachment this call is made for
+ * @param[in] implementsInterface interface that must be implemented in order
+ *                                to receive the announce signal.
+ *
+ * @return
+ *    - #ER_OK on success
+ *    - An error status otherwise
+ */
+extern AJ_API QStatus AJ_CALL alljoyn_busattachment_whoimplements_interface(alljoyn_busattachment bus,
+                                                                            const char* implementsInterface);
+
+/**
+ * Stop showing interest in the listed interfaces. Stop receiving announce
+ * signals from the devices with the listed interfaces.
+ *
+ * Note if alljoyn_busattachment_whoimplements_interfaces has been called multiple
+ * times the announce signal will still be received for any interfaces that still remain.
+ *
+ * @param[in] bus                  alljoyn_busattachment this call is made for
+ * @param[in] implementsInterfaces a list of interfaces. The list must match the
+ *                                 list previously passed to the WhoImplements
+ *                                 member function
+ * @param[in] numberInterfaces     the number of interfaces in the
+ *                                 implementsInterfaces list
+ * @return
+ *    - #ER_OK on success
+ *    - #ER_BUS_MATCH_RULE_NOT_FOUND if interfaces added using the WhoImplements
+ *                                   member function were not found.
+ *    - An error status otherwise
+ */
+extern AJ_API QStatus AJ_CALL alljoyn_busattachment_cancelwhoimplements_interfaces(alljoyn_busattachment bus,
+                                                                                   const char** implementsInterfaces,
+                                                                                   size_t numberInterfaces);
+
+/**
+ * Stop showing interest in the listed interfaces. Stop receiving announce
+ * signals from the devices with the listed interfaces.
+ *
+ * This is identical to alljoyn_busattachment_cancelwhoimplements_interfaces
+ * except this is specialized for a single interface not several interfaces.
+ *
+ * @see alljoyn_busattachment_cancelwhoimplements(const char**, size_t)
+ * @param[in] bus                 alljoyn_busattachment this call is made for
+ * @param[in] implementsInterface interface that must be implement in order to
+ *                                receive the announce signal.
+ *
+ * @return
+ *    - #ER_OK on success
+ *    - #ER_BUS_MATCH_RULE_NOT_FOUND if interface added using the WhoImplements
+ *                                   member function were not found.
+ *    - An error status otherwise
+ */
+extern AJ_API QStatus AJ_CALL alljoyn_busattachment_cancelwhoimplements_interface(alljoyn_busattachment bus,
+                                                                                  const char* implementsInterface);
 
 #ifdef __cplusplus
 } /* extern "C" */
