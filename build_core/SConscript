@@ -38,7 +38,7 @@ elif platform.system() == 'Windows':
         default_target_cpu = 'x86'
     allowed_target_cpus = ('x86', 'x86_64', 'arm')
 
-    default_msvc_version = '11.0'
+    default_msvc_version = '12.0'
 
 elif platform.system() == 'Darwin':
     default_target_os = 'darwin'
