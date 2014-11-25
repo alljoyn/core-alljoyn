@@ -303,7 +303,7 @@ static QStatus GenerateRuleArgs(MsgArg** retArgs, PermissionPolicy::Rule* rules,
 static QStatus BuildMembersFromArg(MsgArg& arg, PermissionPolicy::Rule::Member** rules, size_t* count)
 {
     MsgArg* ruleListArgs = NULL;
-    size_t ruleCount;
+    size_t ruleCount = 0;
     QStatus status = arg.Get("aa(yv)", &ruleCount, &ruleListArgs);
     if (ER_OK != status) {
         QCC_DbgPrintf(("BuildMembersFromArg #1 got status 0x%x\n", status));
@@ -393,7 +393,7 @@ static QStatus BuildMembersFromArg(MsgArg& arg, PermissionPolicy::Rule::Member**
 static QStatus BuildRulesFromArg(MsgArg& arg, PermissionPolicy::Rule** rules, size_t* count)
 {
     MsgArg* ruleListArgs = NULL;
-    size_t ruleCount;
+    size_t ruleCount = 0;
     QStatus status = arg.Get("aa(yv)", &ruleCount, &ruleListArgs);
     if (ER_OK != status) {
         QCC_DbgPrintf(("BuildRulesFromArg #1 got status 0x%x\n", status));
@@ -406,7 +406,7 @@ static QStatus BuildRulesFromArg(MsgArg& arg, PermissionPolicy::Rule** rules, si
     PermissionPolicy::Rule* ruleArray = new PermissionPolicy::Rule[ruleCount];
     for (size_t cnt = 0; cnt < ruleCount; cnt++) {
         MsgArg* fieldArgs;
-        size_t fieldCnt;
+        size_t fieldCnt = 0;
         status = ruleListArgs[cnt].Get("a(yv)", &fieldCnt, &fieldArgs);
         if (ER_OK != status) {
             QCC_DbgPrintf(("BuildRulesFromArg #3 [%d] got status 0x%x\n", cnt, status));
@@ -446,8 +446,8 @@ static QStatus BuildRulesFromArg(MsgArg& arg, PermissionPolicy::Rule** rules, si
                 break;
 
             case PermissionPolicy::Rule::TAG_INTERFACE_MEMBERS:
-                PermissionPolicy::Rule::Member * memberRules;
-                size_t ruleCount;
+                PermissionPolicy::Rule::Member * memberRules = NULL;
+                size_t ruleCount = 0;
                 status = BuildMembersFromArg(*field, &memberRules, &ruleCount);
                 if (ER_OK != status) {
                     QCC_DbgPrintf(("BuildRulesFromArg #6 [%d][%d] got status 0x%x\n", cnt, fld, status));
@@ -610,7 +610,7 @@ QStatus PermissionPolicy::Import(uint8_t version, const MsgArg& msgArg)
 {
     QStatus status;
     MsgArg* sectionVariants;
-    size_t sectionCount;
+    size_t sectionCount = 0;
     uint32_t serialNum;
     status = msgArg.Get("(ua(yv))", &serialNum, &sectionCount, &sectionVariants);
     if (ER_OK != status) {
@@ -631,8 +631,8 @@ QStatus PermissionPolicy::Import(uint8_t version, const MsgArg& msgArg)
         switch (sectionType) {
         case PermissionPolicy::TAG_ADMINS:
             {
-                PermissionPolicy::Peer* peers;
-                size_t count;
+                PermissionPolicy::Peer* peers = NULL;
+                size_t count = 0;
                 status = BuildPeersFromArg(*section, &peers, &count);
                 if (ER_OK != status) {
                     QCC_DbgPrintf(("BuildPolicyFromArgs #3 got status 0x%x\n", status));
@@ -646,8 +646,8 @@ QStatus PermissionPolicy::Import(uint8_t version, const MsgArg& msgArg)
 
         case PermissionPolicy::TAG_TERMS:
             {
-                PermissionPolicy::Term* terms;
-                size_t count;
+                PermissionPolicy::Term* terms = NULL;
+                size_t count = 0;
                 status = BuildTermsFromArg(*section, &terms, &count);
                 if (ER_OK != status) {
                     QCC_DbgPrintf(("BuildPolicyFromArgs #4 got status 0x%x\n", status));
