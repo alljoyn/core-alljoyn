@@ -22,12 +22,12 @@ progs = [
     ]
 
 if env['OS'] in ['linux', 'darwin']:
-    env.Install('$CPP_DISTDIR/bin/samples/about', progs )
+    env.Install('$CPP_DISTDIR/bin/samples', progs )
     env.Install(clientDistDir, env.Glob('*.cc'))
     #env.Install(clientDistDir, 'README.txt')
 
 elif env['OS_GROUP'] == 'windows':
-    env.Install('$CPP_DISTDIR/bin/samples/about', progs )
+    env.Install('$CPP_DISTDIR/bin/samples', progs )
     env.Install(clientDistDir, env.Glob('*.cc'))
     #env.InstallAs(clientDistDir + '/README.txt', 'README.windows.txt')
 
