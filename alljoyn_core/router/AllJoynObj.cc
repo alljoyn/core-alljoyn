@@ -5263,7 +5263,14 @@ bool AllJoynObj::ResponseHandler(TransportMask transport, MDNSPacket response, u
 
     QCC_DbgPrintf(("Recieved a ping response for name %s", pingRData->GetWellKnownName().c_str()));
     const String& name = pingRData->GetWellKnownName();
-    uint32_t replyCode = pingRData->GetReplyCode() == "ALLJOYN_PING_REPLY_SUCCESS" ? ALLJOYN_PING_REPLY_SUCCESS : ALLJOYN_PING_REPLY_UNREACHABLE;
+    uint32_t replyCode;
+    if (pingRData->GetReplyCode() == "ALLJOYN_PING_REPLY_SUCCESS") {
+        replyCode = ALLJOYN_PING_REPLY_SUCCESS;
+    } else if (pingRData->GetReplyCode() == "ALLJOYN_PING_REPLY_UNREACHABLE") {
+        replyCode = ALLJOYN_PING_REPLY_UNREACHABLE;
+    } else {
+        replyCode = ALLJOYN_PING_REPLY_UNKNOWN_NAME;
+    }
 
     AcquireLocks();
 
@@ -5367,7 +5374,16 @@ void AllJoynObj::PingResponse(TransportMask transport, const qcc::IPEndpoint& ns
     // Similar to advertise record with only one name
     MDNSPingReplyRData* pingReplyRData = new MDNSPingReplyRData();
     pingReplyRData->SetWellKnownName(name);
-    pingReplyRData->SetReplyCode(replyCode == 1 ? "ALLJOYN_PING_REPLY_SUCCESS" : "ALLJOYN_PING_REPLY_UNREACHABLE");
+    String replyCodeText;
+    if (replyCode == ALLJOYN_PING_REPLY_SUCCESS) {
+        replyCodeText = "ALLJOYN_PING_REPLY_SUCCESS";
+    } else if (replyCode == ALLJOYN_PING_REPLY_UNREACHABLE) {
+        replyCodeText = "ALLJOYN_PING_REPLY_UNREACHABLE";
+    } else {
+        replyCodeText = "ALLJOYN_PING_REPLY_UNKNOWN_NAME";
+    }
+
+    pingReplyRData->SetReplyCode(replyCodeText);
 
     MDNSResourceRecord pingReplyRecord("ping-reply." + guid.ToString() + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, pingReplyRData);
     response->AddAdditionalRecord(pingReplyRecord);
