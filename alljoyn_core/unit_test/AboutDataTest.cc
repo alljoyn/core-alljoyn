@@ -1443,6 +1443,52 @@ TEST(AboutDataTest, GetFields) {
     delete [] fields;
 }
 
+TEST(AboutDataTest, caseInsensitiveLanguageTag) {
+    QStatus status = ER_FAIL;
+    AboutData aboutData("en");
+    char* language;
+    status = aboutData.GetDefaultLanguage(&language);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_STREQ("en", language);
+    /* set the device name in english the default name tag all lowercase "en" */
+    status = aboutData.SetDeviceName(qcc::String("Device").c_str());
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    /* set the device name in spanish the default name tag all lowercase "es" */
+    status = aboutData.SetDeviceName("dispositivo", "es");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    char* deviceName;
+    status = aboutData.GetDeviceName(&deviceName, "EN");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_STREQ("Device", deviceName);
+
+    deviceName = NULL;
+    status = aboutData.GetDeviceName(&deviceName, "En");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_STREQ("Device", deviceName);
+
+    deviceName = NULL;
+    status = aboutData.GetDeviceName(&deviceName, "eN");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_STREQ("Device", deviceName);
+
+    deviceName = NULL;
+    status = aboutData.GetDeviceName(&deviceName, "ES");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_STREQ("dispositivo", deviceName);
+
+    deviceName = NULL;
+    status = aboutData.GetDeviceName(&deviceName, "Es");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_STREQ("dispositivo", deviceName);
+
+    deviceName = NULL;
+    status = aboutData.GetDeviceName(&deviceName, "eS");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_STREQ("dispositivo", deviceName);
+}
+
 //TEST(AboutDataTest, SetSupportUrlEmpty) {
 //    QStatus status = ER_FAIL;
 //    AboutData aboutData("en");
