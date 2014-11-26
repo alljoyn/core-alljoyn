@@ -20,6 +20,8 @@
 
 #include <alljoyn/AboutData.h>
 #include <qcc/Mutex.h>
+#include <algorithm>
+#include <cctype>
 
 namespace ajn {
 
@@ -41,11 +43,30 @@ class AboutData::Internal {
      */
     std::map<qcc::String, MsgArg> propertyStore;
 
+    struct CaseInsensitiveCompare {
+        struct CaseInsensitiveCharCompare {
+            bool operator()(const char& lhs, const char& rhs) {
+                return std::tolower(lhs) < std::tolower(rhs);
+            }
+        };
+
+        bool operator()(const qcc::String& lhs, const qcc::String& rhs) {
+            return std::lexicographical_compare(lhs.begin(), lhs.end(),
+                                                rhs.begin(), rhs.end(),
+                                                CaseInsensitiveCharCompare());
+        }
+    };
+
     /**
      * key: Field Name
      * value: map of language / Data
      */
-    std::map<qcc::String, std::map<qcc::String, MsgArg> > localizedPropertyStore;
+    std::map<qcc::String, std::map<qcc::String, MsgArg, CaseInsensitiveCompare> > localizedPropertyStore;
+
+    /**
+     * typedef const iterator
+     */
+    typedef std::map<qcc::String, std::map<qcc::String, MsgArg, CaseInsensitiveCompare> >::const_iterator localizedPropertyStoreConstIterator;
 
     /**
      * local member variable for supported languages

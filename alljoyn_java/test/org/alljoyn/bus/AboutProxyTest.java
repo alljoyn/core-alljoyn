@@ -88,7 +88,7 @@ public class AboutProxyTest extends TestCase{
             //localized values
             // If the language String is null or an empty string we return the
             // default language
-            if ((language == null) || (language.length() == 0) || language.equals("en")) {
+            if ((language == null) || (language.length() == 0) || language.equalsIgnoreCase("en")) {
                 aboutData.put("DeviceName", new Variant(new String("A device name")));
                 aboutData.put("AppName", new Variant(new String("An application name")));
                 aboutData.put("Manufacturer", new Variant(new String("A mighty manufacturing company")));
