@@ -395,7 +395,7 @@ class AboutData : public AboutDataListener {
      * @return The number of languageTags returned or the total number of
      *         language tags if languageTags is NULL.
      */
-    size_t GetSupportedLanguages(qcc::String* languageTags = NULL, size_t num = 0);
+    size_t GetSupportedLanguages(const char** languageTags = NULL, size_t num = 0);
 
     /**
      * Set the Description to the AboutData

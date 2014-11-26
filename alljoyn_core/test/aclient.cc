@@ -156,19 +156,19 @@ class AboutThread : public Thread, public ThreadListener {
                     lang_num = aboutData.GetSupportedLanguages();
                     // If the lang_num == 1 we only have a default language
                     if (lang_num > 1) {
-                        qcc::String* langs = new qcc::String[lang_num];
+                        const char** langs = new const char*[lang_num];
                         aboutData.GetSupportedLanguages(langs, lang_num);
                         char* defaultLanguage;
                         aboutData.GetDefaultLanguage(&defaultLanguage);
                         // print out the AboutData for every language but the
                         // default it has already been printed.
                         for (size_t i = 0; i < lang_num; ++i) {
-                            if (strcmp(defaultLanguage, langs[i].c_str()) != 0) {
-                                status = aboutProxy.GetAboutData(langs[i].c_str(), aArg);
+                            if (strcmp(defaultLanguage, langs[i]) != 0) {
+                                status = aboutProxy.GetAboutData(langs[i], aArg);
                                 if (ER_OK == status) {
-                                    aboutData.CreatefromMsgArg(aArg, langs[i].c_str());
-                                    printf("AboutProxy.GetAboutData: (%s)\n", langs[i].c_str());
-                                    printAboutData(aboutData, langs[i].c_str(), 1);
+                                    aboutData.CreatefromMsgArg(aArg, langs[i]);
+                                    printf("AboutProxy.GetAboutData: (%s)\n", langs[i]);
+                                    printAboutData(aboutData, langs[i], 1);
                                 }
                             }
                         }
