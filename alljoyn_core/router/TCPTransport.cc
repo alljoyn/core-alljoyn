@@ -1042,6 +1042,23 @@ QStatus TCPTransport::Stop(void)
     m_stopping = true;
 
     /*
+     * Tell the name service to disregard all our prior advertisements and
+     * discoveries. The internal state will shortly be discarded as well.
+     */
+    m_listenRequestsLock.Lock(MUTEX_CONTEXT);
+    QCC_DbgTrace(("TCPTransport::Stop(): Gratuitously clean out advertisements."));
+    for (list<qcc::String>::iterator i = m_advertising.begin(); i != m_advertising.end(); ++i) {
+        IpNameService::Instance().CancelAdvertiseName(TRANSPORT_TCP, *i, TRANSPORT_TCP);
+    }
+    m_advertising.clear();
+    QCC_DbgTrace(("TCPTransport::Stop(): Gratuitously clean out discoveries."));
+    for (list<qcc::String>::iterator i = m_discovering.begin(); i != m_discovering.end(); ++i) {
+        IpNameService::Instance().CancelFindAdvertisement(TRANSPORT_TCP, *i, TRANSPORT_TCP);
+    }
+    m_discovering.clear();
+    m_listenRequestsLock.Unlock(MUTEX_CONTEXT);
+
+    /*
      * Tell the name service to stop calling us back if it's there (we may get
      * called more than once in the chain of destruction) so the pointer is not
      * required to be non-NULL.
