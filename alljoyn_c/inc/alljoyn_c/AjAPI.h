@@ -31,7 +31,7 @@
 #    if defined(QCC_BUILD_WINDOWS_API_DLL)
 #      define AJ_API __declspec(dllexport)
 #    else
-#      define AJ_API
+#    define AJ_API
 #    endif
 #  elif defined(QCC_OS_GROUP_POSIX)
 #    define AJ_API __attribute__((visibility("default")))
@@ -52,6 +52,11 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+typedef enum {
+    UNANNOUNCED, ///< The interface is not announced
+    ANNOUNCED    ///< The interface is announced
+} alljoyn_about_announceflag;
 
 /**
  * Unity-specific function to process alternate-thread callbacks on the main thread.
