@@ -18,7 +18,7 @@
 #include <alljoyn/AboutIconProxy.h>
 #include <qcc/Debug.h>
 
-#define QCC_MODULE "ALLJOYN_ABOUT_ICON_PROXY"
+#define QCC_MODULE "ALLJOYN_ABOUT"
 
 using namespace ajn;
 

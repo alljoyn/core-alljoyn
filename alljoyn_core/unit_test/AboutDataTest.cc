@@ -1443,6 +1443,99 @@ TEST(AboutDataTest, GetFields) {
     delete [] fields;
 }
 
+TEST(AboutDataTest, caseInsensitiveLanguageTag) {
+    QStatus status = ER_FAIL;
+    AboutData aboutData("en");
+    char* language;
+    status = aboutData.GetDefaultLanguage(&language);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_STREQ("en", language);
+    /* set the device name in english the default name tag all lowercase "en" */
+    status = aboutData.SetDeviceName(qcc::String("Device").c_str());
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    /* set the device name in spanish the default name tag all lowercase "es" */
+    status = aboutData.SetDeviceName("dispositivo", "es");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    size_t num_langs;
+    num_langs = aboutData.GetSupportedLanguages();
+    EXPECT_EQ(2u, num_langs);
+
+    /*
+     * Case insensitive Setting
+     * the number of langauges should remain 2
+     */
+    status = aboutData.SetDeviceName("Device", "EN");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    num_langs = aboutData.GetSupportedLanguages();
+    EXPECT_EQ(2u, num_langs);
+
+    status = aboutData.SetDeviceName("Device", "En");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    num_langs = aboutData.GetSupportedLanguages();
+    EXPECT_EQ(2u, num_langs);
+
+    status = aboutData.SetDeviceName("Device", "eN");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    num_langs = aboutData.GetSupportedLanguages();
+    EXPECT_EQ(2u, num_langs);
+
+    status = aboutData.SetDeviceName("dispositivo", "ES");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    num_langs = aboutData.GetSupportedLanguages();
+    EXPECT_EQ(2u, num_langs);
+
+    status = aboutData.SetDeviceName("dispositivo", "Es");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    num_langs = aboutData.GetSupportedLanguages();
+    EXPECT_EQ(2u, num_langs);
+
+    status = aboutData.SetDeviceName("dispositivo", "eS");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    num_langs = aboutData.GetSupportedLanguages();
+    EXPECT_EQ(2u, num_langs);
+
+    /*
+     * Case insensitive Getting of the language-tag
+     */
+    char* deviceName;
+    status = aboutData.GetDeviceName(&deviceName, "EN");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_STREQ("Device", deviceName);
+
+    deviceName = NULL;
+    status = aboutData.GetDeviceName(&deviceName, "En");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_STREQ("Device", deviceName);
+
+    deviceName = NULL;
+    status = aboutData.GetDeviceName(&deviceName, "eN");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_STREQ("Device", deviceName);
+
+    deviceName = NULL;
+    status = aboutData.GetDeviceName(&deviceName, "ES");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_STREQ("dispositivo", deviceName);
+
+    deviceName = NULL;
+    status = aboutData.GetDeviceName(&deviceName, "Es");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_STREQ("dispositivo", deviceName);
+
+    deviceName = NULL;
+    status = aboutData.GetDeviceName(&deviceName, "eS");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_STREQ("dispositivo", deviceName);
+}
+
 //TEST(AboutDataTest, SetSupportUrlEmpty) {
 //    QStatus status = ER_FAIL;
 //    AboutData aboutData("en");

@@ -87,12 +87,12 @@ public class AboutListenerTest  extends TestCase {
             arg.put("HardwareVersion", new Variant(new String("0.1alpha")));
             arg.put("SupportUrl", new Variant(new String("http://www.example.com/support")));
             //localized values
-            if((language == null) || (language.length() == 0) || language.equals("en")) {
+            if ((language == null) || (language.length() == 0) || language.equalsIgnoreCase("en")) {
                 arg.put("DeviceName", new Variant(new String("A device name")));
                 arg.put("AppName", new Variant(new String("An application name")));
                 arg.put("Manufacturer", new Variant(new String("A mighty manufacturing company")));
                 arg.put("Description", new Variant(new String("Sample showing the about feature in a service application")));
-            } else if(language.equals("es")) { //Spanish
+            } else if (language.equalsIgnoreCase("es")) { //Spanish
                 arg.put("DeviceName", new Variant(new String("Un nombre de dispositivo")));
                 arg.put("AppName", new Variant(new String("Un nombre de aplicación")));
                 arg.put("Manufacturer", new Variant(new String("Una empresa de fabricación de poderosos")));
