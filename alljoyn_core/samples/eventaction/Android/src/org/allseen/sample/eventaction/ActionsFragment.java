@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -27,6 +27,7 @@ import android.app.Fragment;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -63,8 +64,13 @@ public class ActionsFragment extends Fragment {
 		notifyChanged();
 	}
 	
-	public void removeDevice(int sessionId) {
-		actionAdapter.remove(sessionId);
+	public void removeDevice(String busName) {
+		actionAdapter.remove(busName);
+		notifyChanged();
+	}
+	
+	public void reAddDevice(String busName) {
+		actionAdapter.reAdd(busName);
 		notifyChanged();
 	}
 	
@@ -89,6 +95,7 @@ public class ActionsFragment extends Fragment {
 
 		private Vector<Vector<Boolean>> checkboxDirtyFlags = new Vector<Vector<Boolean>>();
 		private Vector<Device> data = new Vector<Device>();
+		private Vector<Device> lostData = new Vector<Device>();
 		private LayoutInflater inflater;
 
 		ExpandableAdapter(Context context) {
@@ -117,12 +124,28 @@ public class ActionsFragment extends Fragment {
 			checkboxDirtyFlags.add(loc,dirtyFlags);
 		}
 		
-		public void remove(int sessionId) {
+		public void remove(String busName) {
 			for(int i = 0; i < data.size(); i++) {
 				Device d = data.get(i);
-				if(d.getSessionId() == sessionId) {
-					data.remove(i);
+				if(d.getSessionName().compareTo(busName) == 0) {
+					d = data.remove(i);
+					lostData.add(d);
 					checkboxDirtyFlags.remove(i);
+				}
+			}
+		}
+		
+		public void reAdd(String busName) {
+			for(int i = 0; i < lostData.size(); i++) {
+				Device d = lostData.get(i);
+				if(d.getSessionName().compareTo(busName) == 0) {
+					lostData.remove(d);
+					data.add(0,d);
+					Vector<Boolean> dirtyFlags = new Vector<Boolean>();
+					for(int j = 0; j < d.getActions().size(); j++) {
+						dirtyFlags.add(true);
+					}
+					checkboxDirtyFlags.add(0,dirtyFlags);
 				}
 			}
 		}

@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -24,13 +24,17 @@
 #include <alljoyn/Session.h>
 #include <qcc/String.h>
 #include <stdio.h>
+#include <map>
 #include <qcc/platform.h>
 #include "../Constants.h"
 #include "EventInfo.h"
 #include "ActionInfo.h"
+#include "PresenceDetection.h"
 
-#include <alljoyn/about/AboutClient.h>
-#include <alljoyn/about/AnnouncementRegistrar.h>
+#include <alljoyn/AboutData.h>
+#include <alljoyn/AboutListener.h>
+#include <alljoyn/AboutObjectDescription.h>
+#include <alljoyn/AboutProxy.h>
 
 #ifndef _MY_EVENT_CODE_
 #define _MY_EVENT_CODE_
@@ -38,8 +42,9 @@
 class MyEventCode;
 
 class MyEventCode :
-    public ajn::services::AnnounceHandler,
+    public ajn::AboutListener,
     public ajn::BusAttachment::JoinSessionAsyncCB,
+    public ajn::MessageReceiver,
     public ajn::SessionListener {
   public:
     /**
@@ -47,13 +52,13 @@ class MyEventCode :
      *
      */
     MyEventCode(JavaVM* vm, jobject jobj)
-        : vm(vm), jobj(jobj), mBusAttachment(NULL), AnnounceHandler()
+        : vm(vm), jobj(jobj), mPresenceDetection(NULL), mBusAttachment(NULL)
     { };
 
     /**
      * Destructor
      */
-    ~MyEventCode() {
+    virtual ~MyEventCode() {
         shutdown();
     };
 
@@ -105,9 +110,8 @@ class MyEventCode :
     void shutdown();
 
     /* From About */
-    void Announce(unsigned short version, unsigned short port, const char* busName,
-                  const ajn::services::AboutClient::ObjectDescriptions& objectDescs,
-                  const ajn::services::AboutClient::AboutData& aboutData);
+    void Announced(const char* busName, uint16_t version, ajn::SessionPort port,
+                   const ajn::MsgArg& objectDescriptionArg, const ajn::MsgArg& aboutDataArg);
 
     void EventHandler(const ajn::InterfaceDescription::Member* member, const char* srcPath, ajn::Message& msg);
 
@@ -128,6 +132,7 @@ class MyEventCode :
     std::map<qcc::String, int> mBusSessionMap;
     std::map<qcc::String, short> mBusPortMap;
 
+    PresenceDetection* mPresenceDetection;
     ajn::BusAttachment* mBusAttachment;
 };
 

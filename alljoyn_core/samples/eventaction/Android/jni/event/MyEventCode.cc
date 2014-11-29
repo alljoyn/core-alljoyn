@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -19,7 +19,6 @@
 using namespace std;
 using namespace ajn;
 using namespace qcc;
-using namespace services;
 
 void MyEventCode::initialize(const char* packageName) {
     QStatus status = ER_OK;
@@ -58,8 +57,9 @@ void MyEventCode::initialize(const char* packageName) {
         }
         LOGTHIS("Created BusAttachment and connected");
 
+        mPresenceDetection = new PresenceDetection(mBusAttachment, vm, jobj);
 
-        AnnouncementRegistrar::RegisterAnnounceHandler(*mBusAttachment, *this, NULL, 0);
+        mBusAttachment->RegisterAboutListener(*this);
 
         /* Add the match so we receive sessionless signals */
         status = mBusAttachment->AddMatch("sessionless='t'");
@@ -70,29 +70,34 @@ void MyEventCode::initialize(const char* packageName) {
     }
 }
 
-void MyEventCode::Announce(unsigned short version, unsigned short port, const char* busName,
-                           const ObjectDescriptions& objectDescs,
-                           const AboutData& aboutData)
+void MyEventCode::Announced(const char* busName, uint16_t version, SessionPort port,
+                            const MsgArg& objectDescriptionArg, const MsgArg& aboutDataArg)
 {
-    LOGTHIS("Found about application with busName, port %s, %d", busName, port);
-    /* For now lets just assume everything has events and actions and join */
-    char* friendlyName = NULL;
-    for (AboutClient::AboutData::const_iterator it = aboutData.begin(); it != aboutData.end(); ++it) {
-        qcc::String key = it->first;
-        ajn::MsgArg value = it->second;
-        if (value.typeId == ALLJOYN_STRING) {
-            if (key.compare("DeviceName") == 0) {
-                friendlyName = ::strdup(value.v_string.str);
-                mBusFriendlyMap.insert(std::pair<qcc::String, qcc::String>(busName, friendlyName));
+    LOGTHIS("-----Found about application with busName, port %s, %d", busName, port);
+    AboutData aboutData(aboutDataArg);
+    size_t count = aboutData.GetFields();
+    const char** fields = new const char*[count];
+    aboutData.GetFields(fields, count);
+
+    for (size_t i = 0; i < count; ++i) {
+        MsgArg* tmp;
+        aboutData.GetField(fields[i], tmp, "en");
+        if (tmp->Signature() == "s") {
+            const char* tmp_s;
+            tmp->Get("s", &tmp_s);
+            if (strcmp(fields[i], "DeviceName") == 0) {
+                mBusFriendlyMap.insert(std::pair<qcc::String, qcc::String>(busName, tmp_s));
                 mBusPortMap.insert(std::pair<qcc::String, short>(busName, port));
-                LOGTHIS("Friendly Name: %s (%s)", friendlyName, busName);
-                free(friendlyName);
+                LOGTHIS("Friendly Name: %s (%s)", tmp_s, busName);
             }
-            LOGTHIS("(Announce handler) aboutData (key, val) (%s, %s)", key.c_str(), value.v_string.str);
         }
     }
+    delete [] fields;
 
+    /* For now lets just assume everything has events and actions and join */
     joinSession(busName, port);
+
+    mPresenceDetection->StartPing(busName, port);
 }
 
 void MyEventCode::joinSession(const char* sessionName, short port)
@@ -322,8 +327,6 @@ void MyEventCode::EventHandler(const ajn::InterfaceDescription::Member* member, 
         vm->DetachCurrentThread();
     }
 }
-//onEventReceived(String from, String path,
-//String iface, String member, String sig)
 
 void MyEventCode::leaveSession(int sessionId)
 {
@@ -362,22 +365,7 @@ void MyEventCode::AsyncCallReplyHandler(Message& msg, void* context) {
 /* From SessionListener */
 void MyEventCode::SessionLost(ajn::SessionId sessionId)
 {
-    JNIEnv* env;
-    jint jret = vm->GetEnv((void**)&env, JNI_VERSION_1_2);
-    if (JNI_EDETACHED == jret) {
-        vm->AttachCurrentThread(&env, NULL);
-    }
 
-    jclass jcls = env->GetObjectClass(jobj);
-    jmethodID mid = env->GetMethodID(jcls, "lostEventActionApplication", "(I)V");
-    if (mid == 0) {
-        LOGTHIS("Failed to get Java lostEventActionApplication");
-    } else {
-        env->CallVoidMethod(jobj, mid, sessionId);
-    }
-    if (JNI_EDETACHED == jret) {
-        vm->DetachCurrentThread();
-    }
 }
 
 

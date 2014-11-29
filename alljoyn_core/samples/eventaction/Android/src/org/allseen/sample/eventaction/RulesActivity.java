@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -201,13 +201,14 @@ public class RulesActivity extends Activity implements EventActionListener {
 	}
 
 	@Override
-	public void onEventLost(int sessionId) {
-		
+	public void onAppLost(String busName) {
+		eventsFragment.removeDevice(busName);
+		actionsFragment.removeDevice(busName);
 	}
-
+	
 	@Override
-	public void onActionLost(int sessionId) {
-		
+	public void onAppReturned(String busName) {
+		eventsFragment.reAddDevice(busName);
+		actionsFragment.reAddDevice(busName);
 	}
-
 }

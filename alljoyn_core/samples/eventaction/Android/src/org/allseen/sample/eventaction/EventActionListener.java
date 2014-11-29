@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -18,12 +18,12 @@ package org.allseen.sample.eventaction;
 
 public interface EventActionListener {
 	public void onEventFound(Device info);
-	
-	public void onEventLost(int sessionId);
-	
+		
 	public void onActionsFound(Device info);
 	
-	public void onActionLost(int sessionId);
+	public void onAppLost(String busName);
+	
+	public void onAppReturned(String busName);
 	
 	public void onRuleEngineFound(String sessionName, String friendlyName);
 }
