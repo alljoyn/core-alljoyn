@@ -851,7 +851,7 @@ class ArdpStream : public qcc::Stream {
         m_transport->m_ardpLock.Unlock();
 
         GetTimeNow(&tStart);
-        QCC_DbgPrintf(("ArdpStream::PushBytes(): Start time is %d.", tStart));
+        QCC_DbgPrintf(("ArdpStream::PushBytes(): Start time is %" PRIu64 ".%03d.", tStart.seconds, tStart.mseconds));
 
         /*
          * This is the point at which a classic condition vairable wait idiom
@@ -3535,7 +3535,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
      */
     qcc::Timespec GetStartTime(void)
     {
-        QCC_DbgTrace(("_UDPEndpoint::GetStartTime(): => %d.", m_tStart));
+        QCC_DbgTrace(("_UDPEndpoint::GetStartTime(): => %" PRIu64 ".%03d.", m_tStart.seconds, m_tStart.mseconds));
         return m_tStart;
     }
 
@@ -3553,7 +3553,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
      */
     qcc::Timespec GetStopTime(void)
     {
-        QCC_DbgTrace(("_UDPEndpoint::GetStopTime(): => %d.", m_tStop));
+        QCC_DbgTrace(("_UDPEndpoint::GetStopTime(): => %" PRIu64 ".%03d.", m_tStop.seconds, m_tStop.mseconds));
         return m_tStop;
     }
 
