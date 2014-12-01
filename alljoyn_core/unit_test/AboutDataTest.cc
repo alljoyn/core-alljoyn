@@ -176,6 +176,31 @@ TEST(AboutDataTest, SetAppId) {
     for (size_t i = 0; i < num; i++) {
         EXPECT_EQ(originalAppId[i], appId[i]);
     }
+
+    //smaller than 128-bit
+    uint8_t appId_64[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
+    status = aboutData.SetAppId(originalAppId, 8u);
+    EXPECT_EQ(ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = aboutData.GetAppId(&appId, &num);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(8u, num);
+    for (size_t i = 0; i < num; i++) {
+        EXPECT_EQ(appId_64[i], appId[i]);
+    }
+
+    //larger than 128-bit
+    uint8_t appId_256[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+                            16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31 };
+    status = aboutData.SetAppId(appId_256, 32u);
+    EXPECT_EQ(ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = aboutData.GetAppId(&appId, &num);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(32u, num);
+    for (size_t i = 0; i < num; i++) {
+        EXPECT_EQ(appId_256[i], appId[i]);
+    }
 }
 
 TEST(AboutDataTest, SetAppId_using_uuid_string) {
@@ -186,15 +211,23 @@ TEST(AboutDataTest, SetAppId_using_uuid_string) {
     status = aboutData.SetAppId("g00102030405060708090a0b0c0d0e0f");
     EXPECT_EQ(ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    // not enough characters
+    // odd number of characters parsing error
     status = aboutData.SetAppId("00102030405060708090a0b0c0d0e0f");
     EXPECT_EQ(ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    // not valid uuid
+    // too few characters
+    status = aboutData.SetAppId("0102030405060708090a0b0c0d0e0f");
+    EXPECT_EQ(ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    // too many characters
+    status = aboutData.SetAppId("000102030405060708090a0b0c0d0e0f10");
+    EXPECT_EQ(ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    // not valid uuid parsing error
     status = aboutData.SetAppId("000102030405-060708090A0B-0C0D0E0F10");
     EXPECT_EQ(ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    // not valid uuid
+    // not valid uuid parsing error
     status = aboutData.SetAppId("00010203-04050607-0809-0A0B-0C0D0E0F");
     EXPECT_EQ(ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE, status) << "  Actual Status: " << QCC_StatusText(status);
 

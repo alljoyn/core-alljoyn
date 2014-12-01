@@ -667,6 +667,6 @@ public class AboutDataTest extends TestCase{
             fail("About data check succeed unexpectly!");
         }
 
-        assertEquals(Status.ABOUT_INVALID_ABOUTDATA_FIELD_VALUE, aboutObj.announce(PORT_NUMBER, aboutBadData));
+        assertEquals(Status.ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE, aboutObj.announce(PORT_NUMBER, aboutBadData));
     }
 }

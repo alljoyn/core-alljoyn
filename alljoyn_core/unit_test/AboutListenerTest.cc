@@ -1685,3 +1685,120 @@ TEST_F(AboutListenerTest, CancelWhoImplementsMisMatch) {
     status = clientBus.Join();
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 }
+
+class AnnounceAppIdWithNon128BitLengthAboutListener : public AboutListener {
+  public:
+    void Announced(const char* busName, uint16_t version, SessionPort port,
+                   const MsgArg& objectDescriptionArg, const MsgArg& aboutDataArg) {
+        aboutData = aboutDataArg;
+        aboutData.Stabilize();
+        announceListenerFlag = true;
+    }
+    MsgArg aboutData;
+};
+
+TEST_F(AboutListenerTest, AnnounceAppIdWithNon128BitLength) {
+    QStatus status;
+    announceListenerFlag = false;
+
+    qcc::GUID128 guid;
+    qcc::String ifaceName = "org.test.a" + guid.ToString() + ".AnnounceHandlerTest";
+    AboutObj aboutObj(*serviceBus);
+
+    const qcc::String interface = "<node>"
+                                  "<interface name='" + ifaceName + "'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "</node>";
+    status = serviceBus->CreateInterfacesFromXml(interface.c_str());
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    AboutListenerTestObject altObj(*serviceBus, "/org/test/about", ifaceName.c_str());
+    serviceBus->RegisterBusObject(altObj);
+
+    // receive
+    BusAttachment clientBus("Receive Announcement client Test", true);
+    status = clientBus.Start();
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = clientBus.Connect();
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    AnnounceAppIdWithNon128BitLengthAboutListener aboutListener;
+
+    clientBus.RegisterAboutListener(aboutListener);
+
+    status = clientBus.WhoImplements(ifaceName.c_str());
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    // 64-bit AppId
+    uint8_t appid_64[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
+    status = aboutData.SetAppId(appid_64, 8);
+    EXPECT_EQ(ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = aboutObj.Announce(port, aboutData);
+    EXPECT_EQ(ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    //Wait for a maximum of 10 sec for the Announce Signal. Even if we get an
+    // ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE error we expect to get the
+    // Announce signal
+    for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
+        if (announceListenerFlag) {
+            break;
+        }
+        qcc::Sleep(WAIT_TIME);
+    }
+
+    ASSERT_TRUE(announceListenerFlag);
+
+    AboutData listenerAboutData(aboutListener.aboutData);
+    uint8_t* appId;
+    size_t num;
+    status = listenerAboutData.GetAppId(&appId, &num);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(8u, num);
+    for (size_t i = 0; i < num; i++) {
+        EXPECT_EQ(appid_64[i], appId[i]);
+    }
+
+    announceListenerFlag = false;
+    // 192-bit AppId
+    uint8_t appid_192[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23 };
+    status = aboutData.SetAppId(appid_192, 24);
+    EXPECT_EQ(ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE, status) << "  Actual Status: " << QCC_StatusText(status);
+
+
+    status = aboutObj.Announce(port, aboutData);
+    EXPECT_EQ(ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    //Wait for a maximum of 10 sec for the Announce Signal. Even if we get an
+    // ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE error we expect to get the
+    // Announce signal.
+    for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
+        if (announceListenerFlag) {
+            break;
+        }
+        qcc::Sleep(WAIT_TIME);
+    }
+
+    ASSERT_TRUE(announceListenerFlag);
+
+    listenerAboutData.CreatefromMsgArg(aboutListener.aboutData);
+    status = aboutData.GetAppId(&appId, &num);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(24u, num);
+    for (size_t i = 0; i < num; i++) {
+        EXPECT_EQ(appid_192[i], appId[i]);
+    }
+
+    status = clientBus.CancelWhoImplements(ifaceName.c_str());
+
+    clientBus.UnregisterAboutListener(aboutListener);
+
+    status = clientBus.Stop();
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = clientBus.Join();
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+}
