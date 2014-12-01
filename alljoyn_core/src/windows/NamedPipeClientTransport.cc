@@ -28,6 +28,7 @@
 #include <qcc/StringUtil.h>
 #include <qcc/Windows/NamedPipeStream.h>
 #include <alljoyn/BusAttachment.h>
+#include <alljoyn/AllJoynStd.h>
 
 #include "BusInternal.h"
 #include "RemoteEndpoint.h"
@@ -198,6 +199,12 @@ QStatus NamedPipeClientTransport::Connect(const char* connectSpec, const Session
     qcc::String redirection;
     status = ep->Establish("EXTERNAL", authName, redirection);
     if (status == ER_OK) {
+        /*
+         * Since named pipe clients/daemons do not go through version negotiations
+         * and older clients/daemons won't connect over named pipe at all,
+         * we are giving this end point the latest AllJoyn protocol version here.
+         */
+        ep->GetFeatures().protocolVersion = ALLJOYN_PROTOCOL_VERSION;
         ep->SetListener(this);
         status = ep->Start();
         if (status != ER_OK) {

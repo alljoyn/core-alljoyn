@@ -309,7 +309,9 @@ extern AJ_API const alljoyn_busattachment AJ_CALL alljoyn_busobject_getbusattach
  *
  * @param bus              The bus used to send the signal
  * @param destination      The unique or well-known bus name or the signal recipient (NULL for broadcast signals)
- * @param sessionId        A unique SessionId for this AllJoyn session instance
+ * @param sessionId        A unique SessionId for this AllJoyn session instance. Use ALLJOYN_SESSION_ID_ALL_HOSTED
+ *                         to emit the signal on all sessions hosted by this bus object's bus attachment.
+ *                         Use 0 for broadcast and sessionless signals.
  * @param signal           Interface member of signal being emitted.
  * @param args             The arguments for the signal (can be NULL)
  * @param numArgs          The number of arguments

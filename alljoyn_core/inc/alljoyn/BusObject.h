@@ -143,8 +143,9 @@ class BusObject : public MessageReceiver {
      * Send a signal.
      *
      * @param destination      The unique or well-known bus name or the signal recipient (NULL for broadcast signals)
-     * @param sessionId        A unique SessionId for this AllJoyn session instance. The session this message is for. For the signal to transmit outside of the
-     *                         current process this must be 0.
+     * @param sessionId        A unique SessionId for this AllJoyn session instance. The session this message is for.
+     *                         Use SESSION_ID_ALL_HOSTED to emit on all sessions hosted by this BusObject's BusAttachment.
+     *                         For broadcast or sessionless signals, the sessionId must be 0.
      * @param signal           Interface member of signal being emitted.
      * @param args             The arguments for the signal (can be NULL)
      * @param numArgs          The number of arguments

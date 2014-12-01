@@ -256,6 +256,7 @@ struct ARDP_CONN_RECORD {
     ArdpTimer probeTimer;   /* Probe (link timeout) timer */
     ArdpTimer ackTimer;     /* Delayed ACK timer */
     ArdpTimer persistTimer; /* Persist (frozen window) timer */
+    uint32_t ackPending;
     void* context;          /* A client-defined context pointer */
 };
 
@@ -757,6 +758,7 @@ static QStatus SendMsgHeader(ArdpHandle* handle, ArdpConnRecord* conn, ArdpHeade
     } else {
         /* Cancel ACK timer */
         conn->ackTimer.retry = 0;
+        conn->ackPending = 0;
     }
     return status;
 }
@@ -984,6 +986,7 @@ static QStatus SendMsgData(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf*
     if (status == ER_OK) {
         /* Piggyback ACKs with data. Cancel ACK timer. */
         conn->ackTimer.retry = 0;
+        conn->ackPending = 0;
         handle->trafficJam = false;
     } else if (status == ER_WOULDBLOCK) {
         handle->trafficJam = true;
@@ -2755,11 +2758,11 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                 if (seg->DLEN != 0) {
 
                     /* Check if data segment is a duplicate. Did the remote side miss our ACK? */
-                    if ((IN_RANGE(uint32_t, conn->rcv.LCS + 1 - conn->rcv.SEGMAX, conn->rcv.SEGMAX, seg->SEQ) == true)) {
+                    if ((IN_RANGE(uint32_t, conn->rcv.CUR + 1 - conn->rcv.SEGMAX, conn->rcv.SEGMAX, seg->SEQ) == true)) {
                         /* This is a duplicate data segment */
                         isDuplicate = true;
-                        QCC_DbgPrintf(("ArdpMachine(): OPEN: duplicate data segment %u, conn->rcv.CUR + 1 = %u, conn->rcv.LCS + 1 = %u",
-                                       seg->SEQ, conn->rcv.CUR + 1, conn->rcv.LCS + 1));
+                        QCC_DbgHLPrintf(("ArdpMachine(): OPEN: duplicate data segment %u, conn->rcv.CUR + 1 = %u, conn->rcv.LCS + 1 = %u",
+                                         seg->SEQ, conn->rcv.CUR + 1, conn->rcv.LCS + 1));
                     }
                 }
                 /* Bad bad bad remote! Disconnect. */
@@ -2786,7 +2789,7 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
             }
 
             if (seg->FLG & ARDP_FLAG_ACK) {
-                QCC_DbgPrintf(("ArdpMachine(): OPEN: Got ACK %u LCS %u Window %u", seg->ACK, seg->LCS, seg->WINDOW));
+                QCC_DbgHLPrintf(("ArdpMachine(): OPEN: Got ACK %u LCS %u Window %u", seg->ACK, seg->LCS, seg->WINDOW));
                 bool needUpdate = false;
 
                 if ((IN_RANGE(uint32_t, conn->snd.UNA, ((conn->snd.NXT - conn->snd.UNA) + 1), seg->ACK) == true) ||
@@ -2827,6 +2830,7 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                 }
 
             } else if (seg->DLEN) {
+                isDuplicate = (SEQ32_LT(seg->SEQ, conn->rcv.CUR + 1)) ? true : isDuplicate;
                 QCC_DbgHLPrintf(("ArdpMachine(): OPEN: Got %d bytes of Data with SEQ %u, rcv.CUR = %u (%s)).", seg->DLEN, seg->SEQ, conn->rcv.CUR, isDuplicate ? "duplicate" : "new"));
 
                 status = ER_OK;
@@ -2843,9 +2847,14 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                     }
                 }
 
+                conn->ackPending++;
                 /* Schedule ACK timer if it's not running already */
                 if (conn->ackTimer.retry == 0) {
                     UpdateTimer(handle, conn, &conn->ackTimer, handle->config.delayedAckTimeout, 1);
+                    QCC_DbgHLPrintf(("ArdpMachine():schedule ackTimer @ %u", conn->ackTimer.when));
+                } else if (conn->ackPending >= (conn->rcv.SEGMAX >> 2)) {
+                    QCC_DbgHLPrintf(("ArdpMachine():accumulated %d segments, send urgent ACK", conn->ackPending));
+                    AckTimerHandler(handle, conn, NULL);
                 }
             }
 
@@ -3136,8 +3145,6 @@ QStatus ARDP_Run(ArdpHandle* handle, qcc::SocketFd sock, bool sockRead, bool soc
         handle->trafficJam = false;
     }
 
-    handle->msnext = CheckTimers(handle);
-
     if (sockRead) {
         while ((status = qcc::RecvFrom(sock, address, port, buf, bufferSize, nbytes)) == ER_OK) {
 #if ARDP_TESTHOOKS
@@ -3197,10 +3204,12 @@ QStatus ARDP_Run(ArdpHandle* handle, qcc::SocketFd sock, bool sockRead, bool soc
         }
     }
 
+    handle->msnext = CheckTimers(handle);
+
     /*  Tell the higher levels when to call back next (timer expiration) */
     *ms = handle->msnext;
 
-    //QCC_DbgPrintf(("ARDP_Run(): Call back in %u ms", *ms));
+    //QCC_DbgHLPrintf(("ARDP_Run(): Call back in %u ms", *ms));
 
     if (handle->trafficJam) {
         status = (QStatus) ER_ARDP_WRITE_BLOCKED;

@@ -37,6 +37,7 @@
 
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/Session.h>
+#include <alljoyn/AllJoynStd.h>
 
 #include "BusInternal.h"
 #include "RemoteEndpoint.h"
@@ -335,6 +336,12 @@ void* NamedPipeDaemonTransport::Run(void* arg)
             }
         }
         if (status == ER_OK) {
+            /*
+             * Since named pipe clients/daemons do not go through version negotiations
+             * and older clients/daemons won't connect over named pipe at all,
+             * we are giving this end point the latest AllJoyn protocol version here.
+             */
+            conn->GetFeatures().protocolVersion = ALLJOYN_PROTOCOL_VERSION;
             status = conn->Start();
         }
         if (status != ER_OK) {
