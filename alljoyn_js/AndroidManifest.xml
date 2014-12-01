@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
           package="org.alljoyn.bus.plugin"
-          android:versionCode="141200"
-          android:versionName="14.12.00">
+          android:versionCode="000001"
+          android:versionName="00.00.01">
     
     <uses-permission android:name="android.webkit.permission.PLUGIN" />
     <uses-permission android:name="android.permission.INTERNET" />
