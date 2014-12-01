@@ -60,14 +60,10 @@
 #define QCC_DEPRECATED(func) func /**< not all gcc versions support the deprecated attribute. */
 #endif
 
-#define QCC_DLLEXPORT
-
 
 #elif defined(_MSC_VER)
 
 #define QCC_DEPRECATED(func) __declspec(deprecated) func /**< mark a function as deprecated in msvc. */
-
-#define QCC_DLLEXPORT __declspec(dllexport)
 
 
 #else /* Some unknown compiler */
