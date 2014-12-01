@@ -350,13 +350,13 @@ TEST(AboutDataTest, SetSupportedLanguage)
     AboutData aboutData("en");
 
     size_t numLanguages = aboutData.GetSupportedLanguages();
-    qcc::String* languages = new qcc::String[numLanguages];
+    const char** languages = new const char*[numLanguages];
 
 
     size_t numRetLang = aboutData.GetSupportedLanguages(languages, numLanguages);
     EXPECT_EQ(numLanguages, numRetLang);
     EXPECT_EQ(1u, numLanguages);
-    EXPECT_STREQ("en", languages[0].c_str());
+    EXPECT_STREQ("en", languages[0]);
     delete [] languages;
     languages = NULL;
 
@@ -364,13 +364,13 @@ TEST(AboutDataTest, SetSupportedLanguage)
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     numLanguages = aboutData.GetSupportedLanguages();
-    languages = new qcc::String[numLanguages];
+    languages = new const char*[numLanguages];
 
     numRetLang = aboutData.GetSupportedLanguages(languages, numLanguages);
     EXPECT_EQ(numLanguages, numRetLang);
     EXPECT_EQ(2u, numLanguages);
-    EXPECT_STREQ("en", languages[0].c_str());
-    EXPECT_STREQ("es", languages[1].c_str());
+    EXPECT_STREQ("en", languages[0]);
+    EXPECT_STREQ("es", languages[1]);
     delete [] languages;
     languages = NULL;
 }
@@ -1210,13 +1210,13 @@ TEST(AboutDataTest, CreateFromXml) {
     EXPECT_STREQ("Empresa", manufacturer);
 
     size_t numLanguages = aboutData.GetSupportedLanguages();
-    qcc::String* languages = new qcc::String[numLanguages];
+    const char** languages = new const char*[numLanguages];
 
     size_t numRetLang = aboutData.GetSupportedLanguages(languages, numLanguages);
     EXPECT_EQ(numLanguages, numRetLang);
     EXPECT_EQ(2u, numLanguages);
-    EXPECT_STREQ("en", languages[0].c_str());
-    EXPECT_STREQ("es", languages[1].c_str());
+    EXPECT_STREQ("en", languages[0]);
+    EXPECT_STREQ("es", languages[1]);
     delete [] languages;
     languages = NULL;
 
