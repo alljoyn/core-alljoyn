@@ -521,8 +521,8 @@ QStatus _Message::ParseValue(MsgArg* arg, const char*& sigPtr, bool arrayElem)
             if (endianSwap) {
                 index = EndianSwap32(index);
             }
-            uint32_t numHandles = (hdrFields.field[ALLJOYN_HDR_FIELD_HANDLES].typeId == ALLJOYN_INVALID) ? 0 : hdrFields.field[ALLJOYN_HDR_FIELD_HANDLES].v_uint32;
-            if (index >=  numHandles) {
+            uint32_t num = (hdrFields.field[ALLJOYN_HDR_FIELD_HANDLES].typeId == ALLJOYN_INVALID) ? 0 : hdrFields.field[ALLJOYN_HDR_FIELD_HANDLES].v_uint32;
+            if (index >= num) {
                 status = ER_BUS_NO_SUCH_HANDLE;
             } else {
                 arg->typeId = typeId;
