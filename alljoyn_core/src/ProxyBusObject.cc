@@ -572,6 +572,7 @@ void ProxyBusObject::PropertiesChangedHandler(const InterfaceDescription::Member
         if (ctx->properties.empty()) {
             // handler wants all changed/invalid properties in signal
             changedOut.Set("a{sv}", numChangedProps, changedProps);
+            changedOutDictSize = numChangedProps;
             for (i = 0; i < numInvalidProps; ++i) {
                 const char* propName;
                 invalidProps[i].Get("s", &propName);
@@ -608,7 +609,10 @@ void ProxyBusObject::PropertiesChangedHandler(const InterfaceDescription::Member
             }
         }
 
-        ctx->listener.PropertiesChanged(ctx->obj, ifaceName, changedOut, invalidOut, ctx->context);
+        // only call listener if anything to report
+        if ((changedOutDictSize > 0) || (invalidOutArraySize > 0)) {
+            ctx->listener.PropertiesChanged(ctx->obj, ifaceName, changedOut, invalidOut, ctx->context);
+        }
         handlers.pop_front();
     }
 
