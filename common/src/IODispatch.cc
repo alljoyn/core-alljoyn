@@ -27,6 +27,8 @@ using namespace qcc;
 using namespace std;
 
 int32_t IODispatch::iodispatchCnt = 0;
+int32_t IODispatch::activeStreamsCnt = 0;
+volatile uint64_t IODispatch::stopStreamTimestamp = 0;
 
 IODispatch::IODispatch(const char* name, uint32_t concurrency) :
     timer((String(name) + U32ToString(IncrementAndFetch(&iodispatchCnt)).c_str()), true, concurrency, false, 96),
@@ -131,7 +133,9 @@ QStatus IODispatch::StartStream(Stream* stream, IOReadListener* readListener, IO
     reload = false;
     lock.Unlock();
 
+    UpdateIdleInformation(true);
     Thread::Alert();
+
     /* Dont need to wait for the IODispatch::Run thread to reload
      * the set of file descriptors since we are adding a new stream.
      */
@@ -197,6 +201,8 @@ QStatus IODispatch::StopStream(Stream* stream) {
             lock.Unlock();
         }
     }
+
+    UpdateIdleInformation(false);
 
     return ER_OK;
 }
@@ -853,4 +859,36 @@ QStatus IODispatch::DisableWriteCallback(const Sink* sink)
     return ER_OK;
 }
 
+void IODispatch::UpdateIdleInformation(bool isStarting)
+{
+    if (isStarting) {
+        IncrementAndFetch(&activeStreamsCnt);
+    } else {
+        stopStreamTimestamp = GetTimestamp64();
+        DecrementAndFetch(&activeStreamsCnt);
+    }
+}
 
+bool IODispatch::IsIdle(uint64_t minTime)
+{
+    /* The dispatcher is considered idle if there are no connected leaf nodes
+     * and no leaf node has disconnected during the minTime period.
+     * Note that the dispatcher idle state can transition while this method is
+     * running, so the caller of this method has to be mindful about that race
+     * condition.
+     */
+    if (activeStreamsCnt == 0) {
+        uint64_t currentTimestamp = GetTimestamp64();
+        uint64_t previousTimestamp = stopStreamTimestamp;
+
+        if (currentTimestamp >= previousTimestamp) {
+            currentTimestamp -= previousTimestamp;
+
+            if (currentTimestamp >= minTime) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
