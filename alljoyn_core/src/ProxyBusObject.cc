@@ -103,7 +103,10 @@ class MatchRuleTracker : public MessageReceiver, public BusAttachment::GetNameOw
     {
         QStatus status = ER_OK;
         propChangeAddMatchRulesLock.Lock();
-        propChangeAddMatchRules.erase(propChangeAddMatchRules.find(iface));
+        multiset<StringMapKey>::iterator it = propChangeAddMatchRules.find(iface);
+        if (it != propChangeAddMatchRules.end()) {
+            propChangeAddMatchRules.erase(it);
+        }
         if (propChangeAddMatchRules.find(iface) == propChangeAddMatchRules.end()) {
             /* no more property change listeners for this interface */
             String rule("type='signal',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged',arg0='" + iface + "'");
@@ -127,7 +130,10 @@ class MatchRuleTracker : public MessageReceiver, public BusAttachment::GetNameOw
             propChangeAddMatchRulesLock.Lock();
             if (add) {
                 // AddMatch failed - remove entry from set
-                propChangeAddMatchRules.erase(propChangeAddMatchRules.find(iface));
+                multiset<StringMapKey>::iterator it = propChangeAddMatchRules.find(iface);
+                if (it != propChangeAddMatchRules.end()) {
+                    propChangeAddMatchRules.erase(it);
+                }
             } else {
                 // RemoveMatch failed - replace entry in set
                 propChangeAddMatchRules.insert(iface);
