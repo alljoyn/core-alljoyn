@@ -1401,17 +1401,32 @@ bool PermissionMgmtObj::ValidateCertChain(const qcc::String& certChainPEM, bool&
     return handled;
 }
 
+static void MakePEM(qcc::String& der, qcc::String& pem)
+{
+    qcc::String tag1 = "-----BEGIN CERTIFICATE-----\n";
+    qcc::String tag2 = "-----END CERTIFICATE-----";
+    Crypto_ASN1::EncodeBase64(der, pem);
+    pem = tag1 + pem + tag2;
+}
+
 bool PermissionMgmtObj::KeyExchangeListener::RequestCredentials(const char* authMechanism, const char* peerName, uint16_t authCount, const char* userName, uint16_t credMask, Credentials& credentials)
 {
-    bool retVal = ProtectedAuthListener::RequestCredentials(authMechanism, peerName, authCount, userName, credMask, credentials);
     if (strcmp("ALLJOYN_ECDHE_ECDSA", authMechanism) == 0) {
+        /* Use the installed identity certificate instead of asking the application */
         KeyBlob kb;
         QStatus status = pmo->GetIdentityBlob(kb);
-        if (ER_OK == status) {
-            return true;
+        if ((ER_OK == status) && (kb.GetSize() > 0)) {
+            /* build the cert chain based on the identity cert */
+            if ((credMask & AuthListener::CRED_CERT_CHAIN) == AuthListener::CRED_CERT_CHAIN) {
+                String der((const char*) kb.GetData(), kb.GetSize());
+                String pem;
+                MakePEM(der, pem);
+                credentials.SetCertChain(pem);
+                return true;
+            }
         }
     }
-    return retVal;
+    return ProtectedAuthListener::RequestCredentials(authMechanism, peerName, authCount, userName, credMask, credentials);
 }
 
 bool PermissionMgmtObj::KeyExchangeListener::VerifyCredentials(const char* authMechanism, const char* peerName, const Credentials& credentials)

@@ -904,10 +904,6 @@ QStatus KeyExchangerECDHE_ECDSA::RetrieveDSAKeys(bool generateIfNotFound)
 
 QStatus KeyExchangerECDHE_ECDSA::RequestCredentialsCB(const char* peerName)
 {
-    RetrieveDSAKeys(false);      /* try to retrieve saved DSA keys */
-    if (hasDSAKeys) {
-        return ER_OK;      /* don't need to call the app */
-    }
     /* check the Auth listener */
     AuthListener::Credentials creds;
     uint16_t credsMask = AuthListener::CRED_PRIVATE_KEY | AuthListener::CRED_CERT_CHAIN | AuthListener::CRED_EXPIRATION;
@@ -921,9 +917,27 @@ QStatus KeyExchangerECDHE_ECDSA::RequestCredentialsCB(const char* peerName)
     } else {
         SetSecretExpiration(0xFFFFFFFF);      /* never expired */
     }
-    if (creds.IsSet(AuthListener::CRED_PRIVATE_KEY) && creds.IsSet(AuthListener::CRED_CERT_CHAIN)) {
-        qcc::String pemPrivateKey = creds.GetPrivateKey();
-        qcc::String pemCertChain = creds.GetCertChain();
+    qcc::String pemPrivateKey;
+    qcc::String pemCertChain;
+    bool hasNewKeys = false;
+    if (creds.IsSet(AuthListener::CRED_CERT_CHAIN)) {
+        pemCertChain = creds.GetCertChain();
+        hasNewKeys = true;
+    }
+    if (creds.IsSet(AuthListener::CRED_PRIVATE_KEY)) {
+        pemPrivateKey = creds.GetPrivateKey();
+        hasNewKeys = true;
+    } else {
+        /* Retrieve saved DSA keys. If there is a new cert chain but there is
+         * private key provided, a local generation of DSA keys is warranted
+         */
+        RetrieveDSAKeys(hasNewKeys);
+        if (hasDSAKeys) {
+            CertECCUtil_EncodePrivateKey((const uint32_t*) &issuerPrivateKey, sizeof(ECCPrivateKey), pemPrivateKey);
+            hasNewKeys = true;
+        }
+    }
+    if (hasNewKeys) {
         QStatus status = StoreDSAKeys(pemPrivateKey, pemCertChain);
         if (status != ER_OK) {
             return status;
@@ -1101,23 +1115,13 @@ QStatus KeyExchangerECDHE_ECDSA::ValidateRemoteVerifierVariant(const char* peerN
     if (sCoordLen != ECC_COORDINATE_SZ) {
         return ER_INVALID_DATA;
     }
-    /* verify */
+    /* compute the remote verifier */
     uint8_t computedRemoteVerifier[AUTH_VERIFIER_LEN];
     status = GenerateRemoteVerifier(computedRemoteVerifier, AUTH_VERIFIER_LEN);
     if (status != ER_OK) {
         return status;
     }
-    Crypto_ECC ecc;
-    ecc.SetDSAPublicKey(&peerPubKey);
-    SigInfoECC sigInfo;
-    sigInfo.SetRCoord(rCoord);
-    sigInfo.SetSCoord(sCoord);
-    status = ecc.DSAVerify(computedRemoteVerifier, AUTH_VERIFIER_LEN, sigInfo.GetSignature());
-    *authorized = (ER_OK == status);
 
-    if (!*authorized) {
-        return ER_OK;  /* not authorized */
-    }
     hashUtil.Update(rCoord, rCoordLen);
     hashUtil.Update(sCoord, sCoordLen);
 
@@ -1130,7 +1134,7 @@ QStatus KeyExchangerECDHE_ECDSA::ValidateRemoteVerifierVariant(const char* peerN
     }
     hashUtil.Update(&certChainEncoding, 1);
     if (numCerts == 0) {
-        /* no cert chain to validate */
+        /* no cert chain to validate.  So it's not authorized */
         return ER_OK;
     }
 
@@ -1148,6 +1152,7 @@ QStatus KeyExchangerECDHE_ECDSA::ValidateRemoteVerifierVariant(const char* peerN
         } else if (certChainEncoding == Certificate::ENCODING_X509_DER_PEM) {
             status = certs[cnt].LoadPEM(String((const char*) encoded, encodedLen));
         } else {
+            delete [] certs;
             return ER_INVALID_DATA;
         }
         if (status != ER_OK) {
@@ -1156,6 +1161,19 @@ QStatus KeyExchangerECDHE_ECDSA::ValidateRemoteVerifierVariant(const char* peerN
             return status;
         }
         hashUtil.Update(encoded, encodedLen);
+    }
+    /* verify signature */
+    Crypto_ECC ecc;
+    ecc.SetDSAPublicKey(certs[0].GetSubjectPublicKey());
+    SigInfoECC sigInfo;
+    sigInfo.SetRCoord(rCoord);
+    sigInfo.SetSCoord(sCoord);
+    status = ecc.DSAVerifyDigest(computedRemoteVerifier, AUTH_VERIFIER_LEN, sigInfo.GetSignature());
+    *authorized = (ER_OK == status);
+
+    if (!*authorized) {
+        delete [] certs;
+        return ER_OK;  /* not authorized */
     }
     status = VerifyCredentialsCB(peerName, certs, numCerts);
     if (status != ER_OK) {
@@ -1201,9 +1219,10 @@ QStatus KeyExchangerECDHE_ECDSA::GenerateLocalVerifierSigInfo(SigInfoECC& sigInf
     GenerateLocalVerifier(verifier, sizeof(verifier));
 
     Crypto_ECC ecc;
-    ecc.SetDSAPrivateKey(GetECDHEPrivateKey());
+    ecc.SetDSAPrivateKey(&issuerPrivateKey);
     ECCSignature sig;
-    QStatus status = ecc.DSASign(verifier, AUTH_VERIFIER_LEN, &sig);
+    QCC_DbgHLPrintf(("Verifier: %s\n", BytesToHexString(verifier, sizeof(verifier)).c_str()));
+    QStatus status = ecc.DSASignDigest(verifier, AUTH_VERIFIER_LEN, &sig);
     if (status != ER_OK) {
         return status;
     }

@@ -446,32 +446,34 @@ public class AuthListenerECDHETest extends TestCase {
     public void testECDHESuccessECDSA_DoNotSendKeys() throws Exception {
         ECDHEKeyXListener serviceAuthListener = new ServerECDHEKeyXListener(false, "ALLJOYN_ECDHE_ECDSA");
         ECDHEKeyXListener clientAuthListener = new ClientECDHEKeyXListener(false, "ALLJOYN_ECDHE_ECDSA");
-        doPing(serviceAuthListener, clientAuthListener);
-        assertTrue(serviceAuthListener.isAuthenticated());
-        assertTrue(clientAuthListener.isAuthenticated());
-        assertFalse(serviceAuthListener.isPeerVerificationCalled());
-        assertFalse(clientAuthListener.isPeerVerificationCalled());
-        assertFalse(serviceAuthListener.isPeerCertVerified());
-        assertFalse(clientAuthListener.isPeerCertVerified());
+        try {
+            doPing(serviceAuthListener, clientAuthListener);
+        }
+        catch (Exception e) {}
+        assertFalse(serviceAuthListener.isAuthenticated());
+        assertFalse(clientAuthListener.isAuthenticated());
     }
 
     public void testECDHESuccessECDSA_ClientNotSendKeys() throws Exception {
         ECDHEKeyXListener serviceAuthListener = new ServerECDHEKeyXListener(true, "ALLJOYN_ECDHE_ECDSA");
         ECDHEKeyXListener clientAuthListener = new ClientECDHEKeyXListener(false, "ALLJOYN_ECDHE_ECDSA");
-        doPing(serviceAuthListener, clientAuthListener);
-        assertTrue(serviceAuthListener.isAuthenticated());
-        assertTrue(clientAuthListener.isAuthenticated());
-        assertFalse(serviceAuthListener.isPeerVerificationCalled());
-        assertTrue(clientAuthListener.isPeerVerificationCalled());
-        assertFalse(serviceAuthListener.isPeerCertVerified());
-        assertTrue(clientAuthListener.isPeerCertVerified());
+        try {
+            doPing(serviceAuthListener, clientAuthListener);
+        }
+        catch (Exception e) {}
+        assertFalse(serviceAuthListener.isAuthenticated());
+        assertFalse(clientAuthListener.isAuthenticated());
     }
+
     public void testECDHESuccessECDSA_ServerNotSendKeys() throws Exception {
         ECDHEKeyXListener serviceAuthListener = new ServerECDHEKeyXListener(false, "ALLJOYN_ECDHE_ECDSA");
         ECDHEKeyXListener clientAuthListener = new ClientECDHEKeyXListener(true, "ALLJOYN_ECDHE_ECDSA");
-        doPing(serviceAuthListener, clientAuthListener);
+        try {
+            doPing(serviceAuthListener, clientAuthListener);
+        }
+        catch (Exception e) {}
         assertTrue(serviceAuthListener.isAuthenticated());
-        assertTrue(clientAuthListener.isAuthenticated());
+        assertFalse(clientAuthListener.isAuthenticated());
         assertTrue(serviceAuthListener.isPeerVerificationCalled());
         assertFalse(clientAuthListener.isPeerVerificationCalled());
         assertTrue(serviceAuthListener.isPeerCertVerified());
