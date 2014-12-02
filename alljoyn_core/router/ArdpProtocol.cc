@@ -3004,7 +3004,26 @@ QStatus ARDP_RecvReady(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf* rcv
     if (!IsConnValid(handle, conn)) {
         return ER_ARDP_INVALID_CONNECTION;
     }
-    return ReleaseRcvBuffers(handle, conn, rcv->seq, rcv->fcnt, ER_OK);
+
+    if (conn->state == OPEN) {
+        return ReleaseRcvBuffers(handle, conn, rcv->seq, rcv->fcnt, ER_OK);
+    } else if ((conn->state == CLOSED) || (conn->state == CLOSE_WAIT)) {
+        uint32_t i;
+        for (i = 0; i < rcv->fcnt; i++) {
+            if (rcv->data != NULL) {
+                free(rcv->data);
+            }
+            rcv->flags = 0;
+            rcv->data = NULL;
+            if (!(rcv->next->flags & ARDP_BUFFER_IN_USE) || (rcv->next->som != rcv->som)) {
+                break;
+            }
+            rcv = rcv->next;
+        }
+        return ER_OK;
+    } else {
+        return ER_ARDP_INVALID_STATE;
+    }
 }
 
 QStatus ARDP_Send(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint32_t len, uint32_t ttl)
