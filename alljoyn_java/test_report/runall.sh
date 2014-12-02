@@ -58,11 +58,12 @@ else
 	ALLJOYN_DIST=$t
 fi
 
-# fix MBUS-488: sometimes Windows "home" does not work for JUnit tests ClearKeyStore, DefaultKeyStoreListener
+# sometimes Windows "home" does not work for JUnit tests ClearKeyStore, DefaultKeyStoreListener
 if cygpath -wa . > /dev/null 2>&1
 then
 	: Cygwin
 	export USERPROFILE="$( cygpath -wa . )"
+	export LOCALAPPDATA="$USERPROFILE"
 fi
 
 : start two copies of alljoyn-daemon
