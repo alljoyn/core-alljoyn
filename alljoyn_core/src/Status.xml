@@ -286,4 +286,7 @@ Copyright (c) 2010 - 2012, 2014, AllSeen Alliance. All rights reserved.
   <status name="ER_NO_COMMON_TRUST" value="0x9132" comment="No common trust anchor found"/>
   <status name="ER_MANIFEST_NOT_FOUND" value="0x9133" comment="Permission manifest not found"/>
   <status name="ER_INVALID_CERT_CHAIN" value="0x9134" comment="Invalid certificate chain"/>
+  <status name="ER_NO_TRUST_ANCHOR" value="0x9135" comment="No trust anchor"/>
+  <status name="ER_INVALID_CLAIMABLE_STATE" value="0x9136" comment="Invalid claimable state"/>
+  <status name="ER_FEATURE_NOT_AVAILABLE" value="0x9137" comment="Feature is not available"/>
 </status_block>

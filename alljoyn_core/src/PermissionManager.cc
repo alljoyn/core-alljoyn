@@ -466,7 +466,8 @@ bool PermissionManager::AuthorizePermissionMgmt(bool send, const GUID128& peerGu
         (strncmp(mbrName, "InstallIdentity", 15) == 0) ||
         (strncmp(mbrName, "RemoveIdentity", 14) == 0) ||
         (strncmp(mbrName, "InstallGuildEquivalence", 23) == 0) ||
-        (strncmp(mbrName, "RemoveGuildEquivalence", 22) == 0)
+        (strncmp(mbrName, "RemoveGuildEquivalence", 22) == 0) ||
+        (strncmp(mbrName, "Reset", 5) == 0)
         ) {
         /* these actions require admin privilege */
         return PeerHasAdminPriv(peerGuid);
@@ -501,15 +502,22 @@ QStatus PermissionManager::AuthorizeMessage(bool send, Message& msg, PeerState& 
     if (IsStdInterface(msg->GetInterface())) {
         return ER_OK;
     }
-    if (!permissionMgmtObj) {
-        QCC_DbgPrintf(("PermissionManager::AuthorizeMessage does not have PermissionMgmtObj initialized"));
-        return ER_PERMISSION_DENIED;
-    }
     if (IsPermissionMgmtInterface(msg->GetInterface())) {
+        if (!permissionMgmtObj) {
+            QCC_DbgPrintf(("PermissionManager::AuthorizeMessage does not have PermissionMgmtObj initialized"));
+            return ER_PERMISSION_DENIED;
+        }
         if (AuthorizePermissionMgmt(send, peerState->GetGuid(), msg)) {
             return ER_OK;
         }
         return status;
+    }
+    if (!GetPolicy()) {
+        return ER_OK;  /* there is no policy to enforce */
+    }
+    if (!permissionMgmtObj) {
+        QCC_DbgPrintf(("PermissionManager::AuthorizeMessage does not have PermissionMgmtObj initialized"));
+        return ER_PERMISSION_DENIED;
     }
     MessageHolder holder(msg, send);
     if (IsPropertyInterface(msg->GetInterface())) {

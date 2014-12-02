@@ -34,6 +34,7 @@
 #include <qcc/StringUtil.h>
 #include <qcc/Util.h>
 #include <qcc/time.h>
+#include <qcc/Crypto.h>
 #include <qcc/CertificateECC.h>
 
 #include <alljoyn/BusAttachment.h>

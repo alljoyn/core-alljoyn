@@ -33,15 +33,15 @@ namespace qcc {
 
 const size_t KeyInfo::GetExportSize()
 {
-    return sizeof(FormatType) + sizeof(size_t) + keyIdLen * sizeof(uint8_t);
+    return sizeof(FormatType) + sizeof(uint32_t) + keyIdLen * sizeof(uint8_t);
 }
 
 QStatus KeyInfo::Export(uint8_t* buf)
 {
     memcpy(buf, &format, sizeof(FormatType));
     buf += sizeof(FormatType);
-    memcpy(buf, &keyIdLen, sizeof(keyIdLen));
-    buf += sizeof(keyIdLen);
+    memcpy(buf, &keyIdLen, sizeof(uint32_t));
+    buf += sizeof(uint32_t);
     if (keyIdLen > 0) {
         memcpy(buf, keyId, keyIdLen);
     }
@@ -60,9 +60,9 @@ QStatus KeyInfo::Import(const uint8_t* buf, size_t count)
         return ER_INVALID_DATA;
     }
     p += sizeof(FormatType);
-    size_t len;
-    memcpy(&len, p, sizeof(size_t));
-    p += sizeof(size_t);
+    uint32_t len;
+    memcpy(&len, p, sizeof(uint32_t));
+    p += sizeof(uint32_t);
     SetKeyId(p, len);
     return ER_OK;
 }

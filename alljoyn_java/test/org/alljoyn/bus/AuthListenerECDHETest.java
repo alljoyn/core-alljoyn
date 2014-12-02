@@ -141,7 +141,6 @@ public class AuthListenerECDHETest extends TestCase {
             proxy.ping("hello");
         } catch (BusException e) {
             ex = e;
-            // e.printStackTrace();
         }
         /*
          * Make insecure second call to ensure that all the authentication transactions have run

@@ -75,6 +75,7 @@ PermissionMgmtObj::PermissionMgmtObj(BusAttachment& bus) :
         AddMethodHandler(ifc->GetMember("RemoveMembership"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::RemoveMembership));
         AddMethodHandler(ifc->GetMember("InstallGuildEquivalence"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::InstallGuildEquivalence));
         AddMethodHandler(ifc->GetMember("GetManifest"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::GetManifest));
+        AddMethodHandler(ifc->GetMember("Reset"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::Reset));
     }
     /* Add org.allseen.Security.PermissionMgmt.Notification interface */
     const InterfaceDescription* notificationIfc = bus.GetInterface(org::allseen::Security::PermissionMgmt::Notification::InterfaceName);
@@ -88,9 +89,16 @@ PermissionMgmtObj::PermissionMgmtObj(BusAttachment& bus) :
 
     QStatus status = LoadTrustAnchors();
     if (ER_OK == status) {
-        claimableState = STATE_CLAIMED;
+        claimableState = PermissionConfigurator::STATE_CLAIMED;
     } else {
-        claimableState = STATE_CLAIMABLE;
+        claimableState = PermissionConfigurator::STATE_CLAIMABLE;
+        Configuration config;
+        status = GetConfiguration(config);
+        if (ER_OK == status) {
+            if (config.claimableState == PermissionConfigurator::STATE_UNCLAIMABLE) {
+                claimableState = PermissionConfigurator::STATE_UNCLAIMABLE;
+            }
+        }
     }
 
     bus.RegisterBusObject(*this, true);
@@ -139,6 +147,10 @@ QStatus PermissionMgmtObj::GetACLGUID(ACLEntryType aclEntryType, qcc::GUID128& g
     }
     if (aclEntryType == ENTRY_MANIFEST) {
         guid = GUID128(qcc::String("2962ADEAE004074C8C0D598C5387FEB3"));
+        return ER_OK;
+    }
+    if (aclEntryType == ENTRY_CONFIGURATION) {
+        guid = GUID128(qcc::String("4EDDBBCE46E0542C24BEC5BF9717C971"));
         return ER_OK;
     }
     return ER_CRYPTO_KEY_UNAVAILABLE;      /* not available */
@@ -192,7 +204,7 @@ QStatus PermissionMgmtObj::InstallTrustAnchor(KeyInfoNISTP256* keyInfo)
         if ((*it)->GetKeyIdLen() == 0) {
             continue;
         }
-        if (memcmp((*it)->GetKeyId(), keyInfo->GetKeyId(), (*it)->GetKeyIdLen()) != 0) {
+        if (memcmp((*it)->GetKeyId(), keyInfo->GetKeyId(), (*it)->GetKeyIdLen()) == 0) {
             return ER_DUPLICATE_KEY;  /* duplicate */
         }
     }
@@ -213,7 +225,7 @@ QStatus PermissionMgmtObj::StoreTrustAnchors()
     /* calculate the buffer size */
     size_t bufferSize = sizeof(uint8_t);  /* the number of trust anchors */
     for (TrustAnchorList::iterator it = trustAnchors.begin(); it != trustAnchors.end(); it++) {
-        bufferSize += sizeof(size_t);  /* account for the item size */
+        bufferSize += sizeof(uint32_t);  /* account for the item size */
         bufferSize += (*it)->GetExportSize();
     }
     uint8_t* buffer = new uint8_t[bufferSize];
@@ -222,9 +234,9 @@ QStatus PermissionMgmtObj::StoreTrustAnchors()
     *pBuf = (uint8_t) trustAnchors.size();
     pBuf += sizeof(uint8_t);
     for (TrustAnchorList::iterator it = trustAnchors.begin(); it != trustAnchors.end(); it++) {
-        size_t* itemSize = (size_t*) pBuf;
-        *itemSize = (*it)->GetExportSize();
-        pBuf += sizeof(size_t);
+        uint32_t* itemSize = (uint32_t*) pBuf;
+        *itemSize = (uint32_t) (*it)->GetExportSize();
+        pBuf += sizeof(uint32_t);
         (*it)->Export(pBuf);
         pBuf += *itemSize;
     }
@@ -247,6 +259,9 @@ QStatus PermissionMgmtObj::LoadTrustAnchors()
     KeyBlob kb;
     QStatus status = ca->GetKey(trustAnchorGuid, kb);
     if (ER_OK != status) {
+        if (ER_BUS_KEY_UNAVAILABLE == status) {
+            return ER_NO_TRUST_ANCHOR;
+        }
         return status;
     }
     /* the format of the persistent buffer:
@@ -258,12 +273,30 @@ QStatus PermissionMgmtObj::LoadTrustAnchors()
 
     ClearTrustAnchors();
 
+    if (kb.GetSize() == 0) {
+        return ER_NO_TRUST_ANCHOR; /* no trust anchor */
+    }
     uint8_t* pBuf = (uint8_t*) kb.GetData();
     uint8_t count = *pBuf;
+    size_t bytesRead = sizeof(uint8_t);
+    if (bytesRead > kb.GetSize()) {
+        ClearTrustAnchors();
+        return ER_NO_TRUST_ANCHOR; /* no trust anchor */
+    }
     pBuf += sizeof(uint8_t);
     for (size_t cnt = 0; cnt < count; cnt++) {
-        size_t* itemSize = (size_t*) pBuf;
-        pBuf += sizeof(size_t);
+        uint32_t* itemSize = (uint32_t*) pBuf;
+        bytesRead += sizeof(uint32_t);
+        if (bytesRead > kb.GetSize()) {
+            ClearTrustAnchors();
+            return ER_NO_TRUST_ANCHOR; /* no trust anchor */
+        }
+        pBuf += sizeof(uint32_t);
+        bytesRead += *itemSize;
+        if (bytesRead > kb.GetSize()) {
+            ClearTrustAnchors();
+            return ER_NO_TRUST_ANCHOR; /* no trust anchor */
+        }
         KeyInfoNISTP256* ta = new KeyInfoNISTP256();
         ta->Import(pBuf, *itemSize);
         trustAnchors.push_back(ta);
@@ -284,7 +317,7 @@ QStatus PermissionMgmtObj::GetPeerGUID(Message& msg, qcc::GUID128& guid)
     }
 }
 
-QStatus PermissionMgmtObj::StoreDSAKeys(const ECCPrivateKey* privateKey, const ECCPublicKey* publicKey)
+QStatus PermissionMgmtObj::StoreDSAKeys(CredentialAccessor* ca, const ECCPrivateKey* privateKey, const ECCPublicKey* publicKey)
 {
 
     KeyBlob dsaPrivKb((const uint8_t*) privateKey, sizeof(ECCPrivateKey), KeyBlob::DSA_PRIVATE);
@@ -300,7 +333,7 @@ QStatus PermissionMgmtObj::StoreDSAKeys(const ECCPrivateKey* privateKey, const E
     return ca->StoreKey(guid, dsaPubKb);
 }
 
-QStatus PermissionMgmtObj::RetrieveDSAPublicKey(ECCPublicKey* publicKey)
+QStatus PermissionMgmtObj::RetrieveDSAPublicKey(CredentialAccessor* ca, ECCPublicKey* publicKey)
 {
     GUID128 guid;
     KeyBlob kb;
@@ -313,7 +346,7 @@ QStatus PermissionMgmtObj::RetrieveDSAPublicKey(ECCPublicKey* publicKey)
     return ER_OK;
 }
 
-QStatus PermissionMgmtObj::RetrieveDSAPrivateKey(ECCPrivateKey* privateKey)
+QStatus PermissionMgmtObj::RetrieveDSAPrivateKey(CredentialAccessor* ca, ECCPrivateKey* privateKey)
 {
     GUID128 guid;
     KeyBlob kb;
@@ -393,6 +426,10 @@ QStatus PermissionMgmtObj::MsgArgToKeyInfoNISTP256(MsgArg& variant, KeyInfoNISTP
 
 void PermissionMgmtObj::Claim(const InterfaceDescription::Member* member, Message& msg)
 {
+    if (claimableState == PermissionConfigurator::STATE_UNCLAIMABLE) {
+        MethodReply(msg, ER_PERMISSION_DENIED);
+        return;
+    }
     KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
     QStatus status = MsgArgToKeyInfoNISTP256((MsgArg &) * msg->GetArg(0), *keyInfo);
     if (ER_OK != status) {
@@ -418,9 +455,18 @@ void PermissionMgmtObj::Claim(const InterfaceDescription::Member* member, Messag
     KeyStore& keyStore = bus.GetInternal().GetKeyStore();
 
     GUID128 newGUID;
-
     newGUID.SetBytes(guid);
-    keyStore.ResetMasterGUID(newGUID);
+    bool resetMasterGuid = false;
+    qcc::GUID128 localGUID;
+    status = ca->GetGuid(localGUID);
+    if (ER_OK != status) {
+        resetMasterGuid = true;
+    } else if (newGUID != localGUID) {
+        resetMasterGuid = true;
+    }
+    if (resetMasterGuid) {
+        keyStore.ResetMasterGUID(newGUID);
+    }
     /* install trust anchor */
     qcc::GUID128 peerGuid;
     status = GetPeerGUID(msg, peerGuid);
@@ -438,25 +484,38 @@ void PermissionMgmtObj::Claim(const InterfaceDescription::Member* member, Messag
         return;
     }
 
-    Crypto_ECC ecc;
-    status = ecc.GenerateDSAKeyPair();
+    bool genKeys = false;
+    ECCPublicKey pubKey;
+    status = RetrieveDSAPublicKey(ca, &pubKey);
     if (status != ER_OK) {
-        MethodReply(msg, ER_CRYPTO_KEY_UNAVAILABLE);
-        return;
+        if (ER_BUS_KEY_UNAVAILABLE == status) {
+            genKeys = true;
+        } else {
+            MethodReply(msg, status);
+            return;
+        }
     }
-    status = StoreDSAKeys(ecc.GetDSAPrivateKey(), ecc.GetDSAPublicKey());
-    if (status != ER_OK) {
-        MethodReply(msg, ER_CRYPTO_KEY_UNAVAILABLE);
-        return;
+    if (genKeys) {
+        Crypto_ECC ecc;
+        status = ecc.GenerateDSAKeyPair();
+        if (status != ER_OK) {
+            MethodReply(msg, ER_CRYPTO_KEY_UNAVAILABLE);
+            return;
+        }
+        status = StoreDSAKeys(ca, ecc.GetDSAPrivateKey(), ecc.GetDSAPublicKey());
+        if (status != ER_OK) {
+            MethodReply(msg, ER_CRYPTO_KEY_UNAVAILABLE);
+            return;
+        }
+        /* retrieve the public key */
+        status = RetrieveDSAPublicKey(ca, &pubKey);
+        if (status != ER_OK) {
+            MethodReply(msg, status);
+            return;
+        }
     }
 
-    ECCPublicKey pubKey;
-    status = RetrieveDSAPublicKey(&pubKey);
-    if (status != ER_OK) {
-        MethodReply(msg, status);
-        return;
-    }
-    claimableState = STATE_CLAIMED;
+    claimableState = PermissionConfigurator::STATE_CLAIMED;
 
     KeyInfoNISTP256 replyKeyInfo;
     replyKeyInfo.SetKeyId(newGUID.GetBytes(), GUID128::SIZE);
@@ -564,14 +623,21 @@ QStatus PermissionMgmtObj::NotifyConfig()
 {
     uint8_t flags = ALLJOYN_FLAG_SESSIONLESS;
 
-    qcc::GUID128 localGUID;
-    QStatus status = ca->GetGuid(localGUID);
-    if (ER_OK != status) {
-        return status;
-    }
-
     MsgArg args[4];
-    args[0].Set("ay", localGUID.SIZE, localGUID.GetBytes());
+    MsgArg keyInfoArgs[1];
+    ECCPublicKey pubKey;
+    QStatus status = PermissionMgmtObj::RetrieveDSAPublicKey(ca, &pubKey);
+    if (status == ER_OK) {
+        KeyInfoNISTP256 keyInfo;
+        qcc::GUID128 localGUID;
+        ca->GetGuid(localGUID);
+        keyInfo.SetKeyId(localGUID.GetBytes(), GUID128::SIZE);
+        keyInfo.SetPublicKey(&pubKey);
+        KeyInfoNISTP256ToMsgArg(keyInfo, keyInfoArgs[0]);
+        args[0].Set("a(yv)", 1, keyInfoArgs);
+    } else {
+        args[0].Set("a(yv)", 0, NULL);
+    }
     args[1].Set("y", claimableState);
     args[2].Set("u", serialNum);
     args[3].Set("a(ayay)", 0, NULL);
@@ -1293,6 +1359,131 @@ void PermissionMgmtObj::InstallGuildEquivalence(const InterfaceDescription::Memb
         status = ca->AddAssociatedKey(headerGuid, associateGuid, kb);
     }
     MethodReply(msg, status);
+}
+
+QStatus PermissionMgmtObj::StoreConfiguration(const Configuration& config)
+{
+    /* store the message into the key store */
+    GUID128 configGuid(0);
+    GetACLGUID(ENTRY_CONFIGURATION, configGuid);
+    KeyBlob kb((uint8_t*) &config, sizeof(Configuration), KeyBlob::GENERIC);
+    return ca->StoreKey(configGuid, kb);
+}
+
+QStatus PermissionMgmtObj::GetConfiguration(Configuration& config)
+{
+    KeyBlob kb;
+    GUID128 guid(0);
+    GetACLGUID(ENTRY_CONFIGURATION, guid);
+    QStatus status = ca->GetKey(guid, kb);
+    if (ER_OK != status) {
+        return status;
+    }
+    if (kb.GetSize() != sizeof(Configuration)) {
+        return ER_INVALID_DATA;
+    }
+    memcpy(&config, kb.GetData(), kb.GetSize());
+    return ER_OK;
+}
+
+PermissionConfigurator::ClaimableState PermissionMgmtObj::GetClaimableState()
+{
+    return claimableState;
+}
+
+QStatus PermissionMgmtObj::SetClaimable(bool claimable)
+{
+    if (claimableState == PermissionConfigurator::STATE_CLAIMED) {
+        return ER_INVALID_CLAIMABLE_STATE;
+    }
+
+    PermissionConfigurator::ClaimableState newState;
+    if (claimable) {
+        newState = PermissionConfigurator::STATE_CLAIMABLE;
+    } else {
+        newState = PermissionConfigurator::STATE_UNCLAIMABLE;
+    }
+    /* save the configuration */
+    Configuration config;
+    config.claimableState = (uint8_t) newState;
+    QStatus status = StoreConfiguration(config);
+    if (ER_OK == status) {
+        claimableState = newState;
+        NotifyConfig();
+    }
+    return status;
+}
+
+QStatus PermissionMgmtObj::Reset()
+{
+    bus.GetInternal().GetKeyStore().Reload();
+    GUID128 guid;
+    GetACLGUID(ENTRY_TRUST_ANCHOR, guid);
+    QStatus status = ca->DeleteKey(guid);
+    if (ER_OK != status) {
+        return status;
+    }
+    ClearTrustAnchors();
+    ca->GetLocalGUID(KeyBlob::DSA_PRIVATE, guid);
+    status = ca->DeleteKey(guid);
+    if (status != ER_OK) {
+        return status;
+    }
+    ca->GetLocalGUID(KeyBlob::DSA_PUBLIC, guid);
+    status = ca->DeleteKey(guid);
+    if (status != ER_OK) {
+        return status;
+    }
+    ca->GetLocalGUID(KeyBlob::PEM, guid);
+    status = ca->DeleteKey(guid);
+    if (status != ER_OK) {
+        return status;
+    }
+
+    GetACLGUID(ENTRY_IDENTITY, guid);
+    status = ca->DeleteKey(guid);
+    if (ER_OK != status) {
+        return status;
+    }
+    GetACLGUID(ENTRY_POLICY, guid);
+    status = ca->DeleteKey(guid);
+    if (ER_OK != status) {
+        return status;
+    }
+
+    GetACLGUID(ENTRY_MEMBERSHIPS, guid);
+    status = ca->DeleteKey(guid);
+    if (ER_OK != status) {
+        return status;
+    }
+    GetACLGUID(ENTRY_MANIFEST, guid);
+    status = ca->DeleteKey(guid);
+    if (ER_OK != status) {
+        return status;
+    }
+    if (ER_OK == status) {
+        serialNum = 0;
+        PolicyChanged(NULL);
+    }
+    GetACLGUID(ENTRY_EQUIVALENCES, guid);
+    status = ca->DeleteKey(guid);
+    if (ER_OK != status) {
+        return status;
+    }
+    GetACLGUID(ENTRY_CONFIGURATION, guid);
+    status = ca->DeleteKey(guid);
+    if (ER_OK != status) {
+        return status;
+    }
+    claimableState = PermissionConfigurator::STATE_CLAIMABLE;
+    serialNum = 0;
+    PolicyChanged(NULL);
+    return status;
+}
+
+void PermissionMgmtObj::Reset(const InterfaceDescription::Member* member, Message& msg)
+{
+    MethodReply(msg, Reset());
 }
 
 QStatus PermissionMgmtObj::SetManifest(PermissionPolicy::Rule* rules, size_t count)

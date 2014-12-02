@@ -34,6 +34,7 @@
 #include <alljoyn/AllJoynStd.h>
 #include <alljoyn/Status.h>
 #include <qcc/Log.h>
+#include <qcc/Crypto.h>
 #include <qcc/CertificateECC.h>
 
 using namespace std;

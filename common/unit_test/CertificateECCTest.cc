@@ -17,6 +17,7 @@
 
 #include <iostream>
 #include <qcc/time.h>
+#include <qcc/Crypto.h>
 #include <qcc/CertificateECC.h>
 #include <qcc/GUID.h>
 #include <qcc/StringUtil.h>

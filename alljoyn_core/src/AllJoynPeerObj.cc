@@ -1140,6 +1140,7 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
     KeyStore& keyStore = bus->GetInternal().GetKeyStore();
     bool authTried = false;
     bool firstPass = true;
+    bool useKeyExchanger = UseKeyExchanger(authVersion, supportedAuthSuites, supportedAuthSuitesCount);
     do {
         /*
          * Try to load the master secret for the remote peer. It is possible that the master secret
@@ -1191,7 +1192,7 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
         if ((status == ER_OK) || !firstPass) {
             break;
         }
-        if (UseKeyExchanger(authVersion, supportedAuthSuites, supportedAuthSuitesCount)) {
+        if (useKeyExchanger) {
             uint32_t*remoteAuthSuites = NULL;
             size_t remoteAuthSuitesCount = 0;
             status = AskForAuthSuites(remotePeerObj, ifc, &remoteAuthSuites, &remoteAuthSuitesCount);
@@ -1251,7 +1252,7 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
             }
             if (status == ER_OK) {
                 /* exchange membership guilds */
-                if (IsMembershipCertCapable(peerState->GetAuthVersion())) {
+                if (useKeyExchanger && IsMembershipCertCapable(peerState->GetAuthVersion())) {
                     SendMembershipData(remotePeerObj, ifc);
                 }
             }
@@ -1781,6 +1782,7 @@ void AllJoynPeerObj::SetupPeerAuthentication(const qcc::String& authMechanisms, 
     done = false;
     int idx = 0;
     remainder = authMechanisms;
+    bool hasECDHE = false;
     while (!done) {
         pos = remainder.find_first_of(" ");
         if (pos == qcc::String::npos) {
@@ -1804,14 +1806,19 @@ void AllJoynPeerObj::SetupPeerAuthentication(const qcc::String& authMechanisms, 
             supportedAuthSuites[idx++] = AUTH_SUITE_RSA_KEYX;
         } else if (mech == "ALLJOYN_ECDHE_NULL") {
             supportedAuthSuites[idx++] = AUTH_SUITE_ECDHE_NULL;
+            hasECDHE = true;
         } else if (mech == "ALLJOYN_ECDHE_PSK") {
             supportedAuthSuites[idx++] = AUTH_SUITE_ECDHE_PSK;
+            hasECDHE = true;
         } else if (mech == "ALLJOYN_ECDHE_ECDSA") {
             supportedAuthSuites[idx++] = AUTH_SUITE_ECDHE_ECDSA;
+            hasECDHE = true;
         }
     }
-    permissionMgmtObj = new PermissionMgmtObj(bus);
-    peerAuthListener.SetPermissionMgmtObj(permissionMgmtObj);
+    if (hasECDHE) {
+        permissionMgmtObj = new PermissionMgmtObj(bus);
+        peerAuthListener.SetPermissionMgmtObj(permissionMgmtObj);
+    }
 }
 
 QStatus AllJoynPeerObj::SendMembershipData(ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc)

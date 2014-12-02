@@ -132,7 +132,8 @@ BusAttachment::Internal::Internal(const char* appName,
     listenAddresses(listenAddresses ? listenAddresses : ""),
     stopLock(),
     stopCount(0),
-    permissionManager()
+    permissionManager(),
+    permissionConfigurator(bus)
 {
     /*
      * Bus needs a pointer to this internal object.
@@ -2470,11 +2471,6 @@ bool KeyStoreKeyEventListener::NotifyAutoDelete(KeyStore* holder, const qcc::GUI
     return true;
 }
 
-QStatus BusAttachment::SetPermissionManifest(PermissionPolicy::Rule* rules, size_t count)
-{
-    return GetInternal().GetPermissionManager().SetManifest(rules, count);
-}
-
 void BusAttachment::SetDescriptionTranslator(Translator* translator)
 {
     this->translator = translator;
@@ -2483,6 +2479,11 @@ void BusAttachment::SetDescriptionTranslator(Translator* translator)
 Translator* BusAttachment::GetDescriptionTranslator()
 {
     return translator;
+}
+
+PermissionConfigurator& BusAttachment::GetPermissionConfigurator()
+{
+    return busInternal->permissionConfigurator;
 }
 
 }
