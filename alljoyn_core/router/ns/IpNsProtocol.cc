@@ -868,7 +868,7 @@ size_t IsAt::Deserialize(uint8_t const* buffer, uint32_t bufsize)
         // If there's not enough room in the buffer to get the fixed part out then
         // bail (one byte of type and flags, one byte of name count)
         //
-        if (bufsize < 2) {
+        if (bufsize < 4) {
             QCC_DbgPrintf(("IsAt::Deserialize(): Insufficient bufsize %d", bufsize));
             return 0;
         }

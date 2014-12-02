@@ -15,15 +15,16 @@
 
 Import('env')
 
-# Set the QCC_BUILD_WINDOWS_API_DLL variable which controls the dllexport declaration needed on Windows:
-if env['OS_GROUP'] == 'windows':
-    env.Append(CPPDEFINES = ['QCC_BUILD_WINDOWS_API_DLL'])    
-
 # AllJoyn Sources
 srcs = env.Glob('*.cc')
 
 objs = env.Object(srcs)
 objs_shared = env.SharedObject(srcs)
+
+# Add the export DEF file for Windows. Path has to be absolute because 
+# the alljoyn_unity_native lib is using it too.
+if env['OS_GROUP'] == 'windows':
+    objs_shared.append(env.Dir('.').abspath + '/${OS_GROUP}/alljoyn_c.def')
 
 # Windows produces two types of .lib files.  
 #    - static library used for statically linking 

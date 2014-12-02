@@ -1,6 +1,6 @@
 /**
  * @file
- * This file redefines __dllexport or __dllimport on relevant platforms
+ * This file defines the attributes of exported functions.
  *
  * This file also defines the deferred callback mechanism used to make sure the
  * callbacks occur on the same thread that registered for the callback.
@@ -25,15 +25,8 @@
 
 #include <qcc/platform.h>
 
-/** This @#define allows for redefinition to __dllexport or __dllimport on relevant platforms */
 #ifndef AJ_API
-#  if defined(QCC_OS_GROUP_WINDOWS)
-#    if defined(QCC_BUILD_WINDOWS_API_DLL)
-#      define AJ_API __declspec(dllexport)
-#    else
-#      define AJ_API
-#    endif
-#  elif defined(QCC_OS_GROUP_POSIX)
+#  if defined(QCC_OS_GROUP_POSIX)
 #    define AJ_API __attribute__((visibility("default")))
 #  else
 #    define AJ_API

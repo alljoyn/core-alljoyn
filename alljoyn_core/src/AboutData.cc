@@ -575,14 +575,14 @@ QStatus AboutData::SetSupportedLanguage(const char* language)
     return status;
 }
 
-size_t AboutData::GetSupportedLanguages(qcc::String* supportedLanguages, size_t num)
+size_t AboutData::GetSupportedLanguages(const char** languageTags, size_t num)
 {
-    if (supportedLanguages == NULL) {
+    if (languageTags == NULL) {
         return aboutDataInternal->supportedLanguages.size();
     }
     size_t count = 0;
     for (std::set<qcc::String>::iterator it = aboutDataInternal->supportedLanguages.begin(); it != aboutDataInternal->supportedLanguages.end() && count < num; ++it) {
-        supportedLanguages[count] = *it;
+        languageTags[count] = it->c_str();
         ++count;
     }
     return count;

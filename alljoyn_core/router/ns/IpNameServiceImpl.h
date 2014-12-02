@@ -1514,7 +1514,7 @@ class IpNameServiceImpl : public qcc::Thread {
      * @internal
      * @brief If true, invoke the transport network event callbacks.
      */
-    bool m_processTransport;
+    bool m_processTransport[N_TRANSPORTS];
 
     /**
      * @internal
@@ -1622,7 +1622,7 @@ class IpNameServiceImpl : public qcc::Thread {
     PacketScheduler m_packetScheduler;
 
     uint32_t m_networkChangeScheduleCount;
-    bool m_doNetworkCallback;
+    bool m_doNetworkCallback[N_TRANSPORTS];
     qcc::NetworkEventSet m_networkEvents;
     qcc::Timespec m_networkChangeTimeStamp;
     bool PurgeAndUpdatePacket(MDNSPacket mdnspacket, bool updateSid);

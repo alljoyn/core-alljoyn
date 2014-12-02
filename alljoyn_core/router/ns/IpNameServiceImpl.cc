@@ -364,11 +364,11 @@ IpNameServiceImpl::IpNameServiceImpl()
     m_modulus(QUESTION_MODULUS), m_retries(sizeof(RETRY_INTERVALS) / sizeof(RETRY_INTERVALS[0])),
     m_loopback(false), m_enableIPv4(false), m_enableIPv6(false), m_enableV1(false),
     m_wakeEvent(), m_forceLazyUpdate(false), m_refreshAdvertisements(false),
-    m_enabled(false), m_processTransport(false), m_doEnable(false), m_doDisable(false),
+    m_enabled(false), m_doEnable(false), m_doDisable(false),
     m_ipv4QuietSockFd(qcc::INVALID_SOCKET_FD), m_ipv6QuietSockFd(qcc::INVALID_SOCKET_FD),
     m_ipv4UnicastSockFd(qcc::INVALID_SOCKET_FD), m_unicastEvent(NULL),
     m_protectListeners(false), m_packetScheduler(*this),
-    m_networkChangeScheduleCount(m_retries + 1), m_doNetworkCallback(false)
+    m_networkChangeScheduleCount(m_retries + 1)
 {
     QCC_DbgHLPrintf(("IpNameServiceImpl::IpNameServiceImpl()"));
     TRANSPORT_INDEX_TCP = IndexFromBit(TRANSPORT_TCP);
@@ -386,6 +386,8 @@ IpNameServiceImpl::IpNameServiceImpl()
     memset(&m_reliableIPv6Port[0], 0, sizeof(m_reliableIPv6Port));
     memset(&m_unreliableIPv6Port[0], 0, sizeof(m_unreliableIPv6Port));
 
+    memset(&m_processTransport[0], 0, sizeof(m_processTransport));
+    memset(&m_doNetworkCallback[0], 0, sizeof(m_doNetworkCallback));
 }
 
 QStatus IpNameServiceImpl::Init(const qcc::String& guid, bool loopback)
@@ -617,8 +619,9 @@ QStatus IpNameServiceImpl::OpenInterface(TransportMask transportMask, const qcc:
             // are still up. We want to allow the transport that was shut
             // down the possibility of being revived and refreshing its
             // network state.
-            m_processTransport = true;
+            m_processTransport[transportIndex] = true;
             m_forceLazyUpdate = true;
+            m_wakeEvent.SetEvent();
             m_mutex.Unlock();
             return ER_OK;
         }
@@ -629,7 +632,7 @@ QStatus IpNameServiceImpl::OpenInterface(TransportMask transportMask, const qcc:
     specifier.m_interfaceAddr = qcc::IPAddress("0.0.0.0");
     specifier.m_transportMask = transportMask;
 
-    m_processTransport = true;
+    m_processTransport[transportIndex] = true;
     m_requestedInterfaces[transportIndex].push_back(specifier);
     m_forceLazyUpdate = true;
     m_wakeEvent.SetEvent();
@@ -687,7 +690,7 @@ QStatus IpNameServiceImpl::OpenInterface(TransportMask transportMask, const qcc:
         addr == qcc::IPAddress("::")) {
         QCC_DbgPrintf(("IpNameServiceImpl::OpenInterface(): Wildcard address"));
         m_any[transportIndex] = true;
-        m_processTransport = true;
+        m_processTransport[transportIndex] = true;
         m_forceLazyUpdate = true;
         m_wakeEvent.SetEvent();
         m_mutex.Unlock();
@@ -702,8 +705,9 @@ QStatus IpNameServiceImpl::OpenInterface(TransportMask transportMask, const qcc:
             // are still up. We want to allow the transport that was shut
             // down the possibility of being revived and refreshing its
             // network state.
-            m_processTransport = true;
+            m_processTransport[transportIndex] = true;
             m_forceLazyUpdate = true;
+            m_wakeEvent.SetEvent();
             m_mutex.Unlock();
             return ER_OK;
         }
@@ -714,7 +718,7 @@ QStatus IpNameServiceImpl::OpenInterface(TransportMask transportMask, const qcc:
     specifier.m_interfaceAddr = addr;
     specifier.m_transportMask = transportMask;
 
-    m_processTransport = true;
+    m_processTransport[transportIndex] = true;
     m_requestedInterfaces[transportIndex].push_back(specifier);
     m_forceLazyUpdate = true;
     m_wakeEvent.SetEvent();
@@ -1158,7 +1162,15 @@ void IpNameServiceImpl::LazyUpdateInterfaces(const qcc::NetworkEventSet& network
     // to the outside world is via one of the live interfaces, so if we don't
     // make any new ones, this will accomplish the requirement.
     //
-    if (m_enabled == false && m_processTransport == false) {
+    bool processAnyTransport = false;
+    for (uint32_t i = 0; i < N_TRANSPORTS; ++i) {
+        if (m_processTransport[i]) {
+            processAnyTransport = true;
+            break;
+        }
+    }
+
+    if (m_enabled == false && processAnyTransport == false) {
         QCC_DbgPrintf(("IpNameServiceImpl::LazyUpdateInterfaces(): Communication with the outside world is forbidden"));
         if (m_unicastEvent) {
             delete m_unicastEvent;
@@ -1482,10 +1494,16 @@ void IpNameServiceImpl::LazyUpdateInterfaces(const qcc::NetworkEventSet& network
     // Schedule the processing of the transports'
     // network event callbacks on the network event
     // packet scheduler thread.
-    if (m_processTransport) {
-        m_doNetworkCallback = true;
+    processAnyTransport = false;
+    for (uint32_t i = 0; i < N_TRANSPORTS; ++i) {
+        if (m_processTransport[i]) {
+            m_doNetworkCallback[i] = true;
+            m_processTransport[i] = false;
+            processAnyTransport = true;
+        }
+    }
+    if (processAnyTransport) {
         m_packetScheduler.Alert();
-        m_processTransport = false;
     }
 
     if (m_refreshAdvertisements) {
@@ -1578,10 +1596,8 @@ QStatus IpNameServiceImpl::Enable(TransportMask transportMask,
     // advertise packets are scheduled for transmission and
     // the packets are rewritten, the relevant transport may
     // no longer be enabled.
-    for (uint32_t j = 0; j < N_TRANSPORTS; ++j) {
-        m_priorReliableIPv4PortMap[j] = m_reliableIPv4PortMap[j];
-        m_priorUnreliableIPv4PortMap[j] = m_unreliableIPv4PortMap[j];
-    }
+    m_priorReliableIPv4PortMap[i] = m_reliableIPv4PortMap[i];
+    m_priorUnreliableIPv4PortMap[i] = m_unreliableIPv4PortMap[i];
 
     std::map<qcc::String, uint16_t>::const_iterator it = reliableIPv4PortMap.find("*");
     if (it != reliableIPv4PortMap.end()) {
@@ -3004,7 +3020,7 @@ QStatus IpNameServiceImpl::Response(TransportMask completeTransportMask, uint32_
                                 MDNSResourceRecord* tmpAdvRecord;
                                 if (temp->GetAdditionalRecord("advertise.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &tmpAdvRecord)) {
                                     MDNSAdvertiseRData* tmpAdvRData = static_cast<MDNSAdvertiseRData*>(tmpAdvRecord->GetRData());
-                                    if ((advRecord->GetRRttl() == tmpAdvRecord->GetRRttl()) && (tmpAdvRData->GetNumTransports() == 1) && (advRData->GetNumNames(completeTransportMask) == tmpAdvRData->GetNumNames(completeTransportMask))) {
+                                    if ((tmpAdvRData->GetNumTransports() == 1) && (advRData->GetNumNames(completeTransportMask) == tmpAdvRData->GetNumNames(completeTransportMask))) {
                                         bool matching = true;
                                         for (uint32_t k = 0; k < advRData->GetNumNames(completeTransportMask); k++) {
                                             if (advRData->GetNameAt(completeTransportMask, k) != tmpAdvRData->GetNameAt(completeTransportMask, k)) {
@@ -8228,12 +8244,20 @@ ThreadReturn STDCALL IpNameServiceImpl::PacketScheduler::Run(void* arg) {
         subsequentBurstpackets.clear();
         initialBurstPackets.clear();
 
-        // If m_doNetworkCallback is true, then one of the transports
+        // If doAnyNetworkCallback is true, then one of the transports
         // is waiting for us to supply the list of live interfaces so
         // it can get things started. We only want to provide the
         // sub-set of live interfaces that have been requested by
         // each transport (by name or addr) when the callback is invoked.
-        if (m_impl.m_doNetworkCallback) {
+        bool doAnyNetworkCallback = false;
+        for (uint32_t transportIndex = 0; transportIndex < N_TRANSPORTS; transportIndex++) {
+            if (m_impl.m_doNetworkCallback[transportIndex]) {
+                doAnyNetworkCallback = true;
+                break;
+            }
+        }
+
+        if (doAnyNetworkCallback) {
             std::map<qcc::String, qcc::IPAddress> ifMap;
             for (uint32_t i = 0; (m_impl.m_state == IMPL_RUNNING) && (i < m_impl.m_liveInterfaces.size()); ++i) {
                 if (m_impl.m_liveInterfaces[i].m_address.IsIPv4()) {
@@ -8242,7 +8266,7 @@ ThreadReturn STDCALL IpNameServiceImpl::PacketScheduler::Run(void* arg) {
             }
             if (!ifMap.empty()) {
                 for (uint32_t transportIndex = 0; transportIndex < N_TRANSPORTS; transportIndex++) {
-                    if (m_impl.m_networkEventCallback[transportIndex]) {
+                    if (m_impl.m_networkEventCallback[transportIndex] && m_impl.m_doNetworkCallback[transportIndex]) {
                         std::map<qcc::String, qcc::IPAddress> transportIfMap;
                         for (uint32_t j = 0; j < m_impl.m_requestedInterfaces[transportIndex].size(); j++) {
                             for (std::map<qcc::String, qcc::IPAddress>::iterator it = ifMap.begin(); it != ifMap.end(); it++) {
@@ -8264,8 +8288,8 @@ ThreadReturn STDCALL IpNameServiceImpl::PacketScheduler::Run(void* arg) {
                             m_impl.m_protect_net_callback = false;
                         }
                     }
+                    m_impl.m_doNetworkCallback[transportIndex] = false;
                 }
-                m_impl.m_doNetworkCallback = false;
             }
         }
         //Collect network change burst packets

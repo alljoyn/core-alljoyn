@@ -851,7 +851,7 @@ class ArdpStream : public qcc::Stream {
         m_transport->m_ardpLock.Unlock();
 
         GetTimeNow(&tStart);
-        QCC_DbgPrintf(("ArdpStream::PushBytes(): Start time is %d.", tStart));
+        QCC_DbgPrintf(("ArdpStream::PushBytes(): Start time is %" PRIu64 ".%03d.", tStart.seconds, tStart.mseconds));
 
         /*
          * This is the point at which a classic condition vairable wait idiom
@@ -3535,7 +3535,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
      */
     qcc::Timespec GetStartTime(void)
     {
-        QCC_DbgTrace(("_UDPEndpoint::GetStartTime(): => %d.", m_tStart));
+        QCC_DbgTrace(("_UDPEndpoint::GetStartTime(): => %" PRIu64 ".%03d.", m_tStart.seconds, m_tStart.mseconds));
         return m_tStart;
     }
 
@@ -3553,7 +3553,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
      */
     qcc::Timespec GetStopTime(void)
     {
-        QCC_DbgTrace(("_UDPEndpoint::GetStopTime(): => %d.", m_tStop));
+        QCC_DbgTrace(("_UDPEndpoint::GetStopTime(): => %" PRIu64 ".%03d.", m_tStop.seconds, m_tStop.mseconds));
         return m_tStop;
     }
 
@@ -4545,6 +4545,23 @@ QStatus UDPTransport::Stop(void)
      * call Stop() on a stopped transport.
      */
     m_stopping = true;
+
+    /*
+     * Tell the name service to disregard all our prior advertisements and
+     * discoveries. The internal state will shortly be discarded as well.
+     */
+    m_listenRequestsLock.Lock(MUTEX_CONTEXT);
+    QCC_DbgPrintf(("UDPTransport::Stop(): Gratuitously clean out advertisements."));
+    for (list<qcc::String>::iterator i = m_advertising.begin(); i != m_advertising.end(); ++i) {
+        IpNameService::Instance().CancelAdvertiseName(TRANSPORT_UDP, *i, TRANSPORT_UDP);
+    }
+    m_advertising.clear();
+    QCC_DbgPrintf(("UDPTransport::Stop(): Gratuitously clean out discoveries."));
+    for (list<qcc::String>::iterator i = m_discovering.begin(); i != m_discovering.end(); ++i) {
+        IpNameService::Instance().CancelFindAdvertisement(TRANSPORT_UDP, *i, TRANSPORT_UDP);
+    }
+    m_discovering.clear();
+    m_listenRequestsLock.Unlock(MUTEX_CONTEXT);
 
     /*
      * Tell the name service to stop calling us back if it's there (we may get
