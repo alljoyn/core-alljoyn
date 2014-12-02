@@ -145,6 +145,21 @@ class MatchRuleTracker : public MessageReceiver, public BusAttachment::GetNameOw
 
     void GetNameOwnerCB(QStatus status, const char* uniqueName, void* context)
     {
+        /*
+         * This little loop of spaghetti code populates the uniqueName
+         * member of the ProxyBusObject instance that called
+         * BusAttachment::GetNameOwnerAsync().  This is done because
+         * the ProxyBusObject needs to know the uniqueName of the
+         * sender of the PropertiesChanged signal so that it can
+         * properly filter properties changed events.
+         *
+         * Ideally, the ProxyBusObject would know the unique name and
+         * all alias pertaining to the BusObject it is proxying from
+         * the get-go.  Alas, this is not the case and thus the
+         * existence of this little function to ensure we at least get
+         * the unique name.
+         */
+
         GetNameOwnerCBContext* ctx = static_cast<GetNameOwnerCBContext*>(context);
         if (status == ER_OK) {
             ctx->nameRef = uniqueName;
@@ -485,6 +500,7 @@ QStatus ProxyBusObject::RegisterPropertiesChangedListener(const char* iface,
         }
     }
 
+    bool replace = false;
     String ifaceStr = iface;
     PropertiesChangedCB ctx(*this, listener, properties, propertiesSize, context);
     pair<StringMapKey, PropertiesChangedCB> cbItem(ifaceStr, ctx);
@@ -496,6 +512,7 @@ QStatus ProxyBusObject::RegisterPropertiesChangedListener(const char* iface,
         PropertiesChangedCB ctx = it->second;
         if (&ctx->listener == &listener) {
             components->propertiesChangedCBs.erase(it);
+            replace = true;
             break;
         }
         ++it;
@@ -504,10 +521,12 @@ QStatus ProxyBusObject::RegisterPropertiesChangedListener(const char* iface,
     lock->Unlock(MUTEX_CONTEXT);
 
     QStatus status = ER_OK;
-    if (uniqueName.empty()) {
-        status = bus->GetNameOwnerAsync(serviceName.c_str(), &matchRuleTracker, new MatchRuleTracker::GetNameOwnerCBContext(*bus, uniqueName, iface));
-    } else {
-        status = matchRuleTracker.AddMatch(*bus, ifaceStr);
+    if (!replace) {
+        if (uniqueName.empty()) {
+            status = bus->GetNameOwnerAsync(serviceName.c_str(), &matchRuleTracker, new MatchRuleTracker::GetNameOwnerCBContext(*bus, uniqueName, iface));
+        } else {
+            status = matchRuleTracker.AddMatch(*bus, ifaceStr);
+        }
     }
 
     return status;
@@ -519,9 +538,8 @@ QStatus ProxyBusObject::UnregisterPropertiesChangedListener(const char* iface, P
         return ER_BUS_OBJECT_NO_SUCH_INTERFACE;
     }
 
-    QStatus status = ER_OK;
     String ifaceStr = iface;
-    status = matchRuleTracker.RemoveMatch(*bus, ifaceStr);
+    bool removed = false;
 
     lock->Lock(MUTEX_CONTEXT);
     multimap<StringMapKey, PropertiesChangedCB>::iterator it = components->propertiesChangedCBs.lower_bound(iface);
@@ -530,11 +548,18 @@ QStatus ProxyBusObject::UnregisterPropertiesChangedListener(const char* iface, P
         PropertiesChangedCB ctx = it->second;
         if (&ctx->listener == &listener) {
             components->propertiesChangedCBs.erase(it);
+            removed = true;
             break;
         }
         ++it;
     }
     lock->Unlock(MUTEX_CONTEXT);
+
+    QStatus status = ER_OK;
+    if (removed) {
+        status = matchRuleTracker.RemoveMatch(*bus, ifaceStr);
+    }
+
     return status;
 }
 
