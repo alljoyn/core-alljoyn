@@ -102,10 +102,10 @@ class BusObjectC : public BusObject {
         this->EmitPropChanged(ifcName, propNames, numProps, id);
     }
 
-    QStatus AddInterfaceC(const alljoyn_interfacedescription iface)
+    QStatus AddInterfaceC(const alljoyn_interfacedescription iface, alljoyn_about_announceflag isAnnounced = (alljoyn_about_announceflag)ANNOUNCED)
     {
         QCC_DbgTrace(("%s", __FUNCTION__));
-        return AddInterface(*(const InterfaceDescription*)iface);
+        return AddInterface(*(const InterfaceDescription*)iface, (BusObject::AnnounceFlag)isAnnounced);
     }
 
     QStatus AddMethodHandlerC(const alljoyn_interfacedescription_member member, alljoyn_messagereceiver_methodhandler_ptr handler, void* context)
@@ -297,7 +297,7 @@ size_t AJ_CALL alljoyn_busobject_getname(alljoyn_busobject bus, char* buffer, si
 QStatus AJ_CALL alljoyn_busobject_addinterface(alljoyn_busobject bus, const alljoyn_interfacedescription iface)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
-    return ((ajn::BusObjectC*)bus)->AddInterfaceC(iface);
+    return ((ajn::BusObjectC*)bus)->AddInterfaceC(iface, UNANNOUNCED);
 }
 
 QStatus AJ_CALL alljoyn_busobject_addmethodhandler(alljoyn_busobject bus, const alljoyn_interfacedescription_member member, alljoyn_messagereceiver_methodhandler_ptr handler, void* context)
@@ -383,3 +383,40 @@ QCC_BOOL AJ_CALL alljoyn_busobject_issecure(alljoyn_busobject bus)
     QCC_DbgTrace(("%s", __FUNCTION__));
     return (((ajn::BusObjectC*)bus)->IsSecure() == true ? QCC_TRUE : QCC_FALSE);
 }
+
+/**
+ * This function is experimental, and as such has not been fully tested.
+ * Please help make it more robust by contributing fixes if you find problems.
+ */
+size_t AJ_CALL alljoyn_busobject_getannouncedinterfacenames(alljoyn_busobject bus,
+                                                            const char** interfaces,
+                                                            size_t numInterfaces)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    return ((ajn::BusObjectC*)bus)->GetAnnouncedInterfaceNames(interfaces, numInterfaces);
+}
+
+/**
+ * This function is experimental, and as such has not been fully tested.
+ * Please help make it more robust by contributing fixes if you find problems.
+ */
+QStatus AJ_CALL alljoyn_busobject_setannounceflag(alljoyn_busobject bus,
+                                                  const alljoyn_interfacedescription iface,
+                                                  alljoyn_about_announceflag isAnnounced)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    return ((ajn::BusObjectC*)bus)->SetAnnounceFlag((ajn::InterfaceDescription*)iface, (ajn::BusObject::AnnounceFlag)isAnnounced);
+}
+
+/**
+ * This function is experimental, and as such has not been fully tested.
+ * Please help make it more robust by contributing fixes if you find problems.
+ */
+QStatus AJ_CALL alljoyn_busobject_addinterface_announced(alljoyn_busobject bus,
+                                                         const alljoyn_interfacedescription iface)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    return ((ajn::BusObjectC*)bus)->AddInterfaceC(iface, ANNOUNCED);
+}
+
+
