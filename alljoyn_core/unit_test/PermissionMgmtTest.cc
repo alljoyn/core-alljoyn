@@ -47,6 +47,7 @@ static const char* KEYX_ECDHE_NULL = "ALLJOYN_ECDHE_NULL";
 static const char* KEYX_ECDHE_PSK = "ALLJOYN_ECDHE_PSK";
 static const char* KEYX_ECDHE_ECDSA = "ALLJOYN_ECDHE_ECDSA";
 
+static GUID128 adminGUID;
 static GUID128 membershipGUID1;
 static const char* membershipSerial1 = "10001";
 static GUID128 membershipGUID2;
@@ -129,26 +130,21 @@ static QStatus CreateCert(const qcc::String& serial, const qcc::GUID128& issuer,
     return x509.EncodeCertificateDER(der);
 }
 
-static QStatus CreateIdentityCert(CredentialAccessor& ca, const qcc::String& serial, const char* issuerPrivateKeyPEM, const char* issuerPublicKeyPEM, bool selfSign, qcc::String& der)
+static QStatus CreateIdentityCert(const qcc::String& serial, const qcc::GUID128& issuer, const char* issuerPrivateKeyPEM, const char* issuerPublicKeyPEM, bool selfSign, const ECCPublicKey* subjectPublicKey, qcc::String& der)
 {
-    qcc::GUID128 localGUID;
-    ca.GetGuid(localGUID);
     qcc::GUID128 userGuid;
-    Crypto_ECC userECC;
-
     ECCPrivateKey issuerPrivateKey;
     CertECCUtil_DecodePrivateKey(issuerPrivateKeyPEM, (uint32_t*) &issuerPrivateKey, sizeof(ECCPrivateKey));
     ECCPublicKey issuerPublicKey;
     CertECCUtil_DecodePublicKey(issuerPublicKeyPEM, (uint32_t*) &issuerPublicKey, sizeof(ECCPublicKey));
 
-    const ECCPublicKey* subjectPublicKey;
+    const ECCPublicKey* targetPublicKey;
     if (selfSign) {
-        subjectPublicKey = &issuerPublicKey;
+        targetPublicKey = &issuerPublicKey;
     } else {
-        userECC.GenerateDSAKeyPair();
-        subjectPublicKey = userECC.GetDSAPublicKey();
+        targetPublicKey = subjectPublicKey;
     }
-    return CreateCert(serial, localGUID, &issuerPrivateKey, &issuerPublicKey, userGuid, subjectPublicKey, der);
+    return CreateCert(serial, issuer, &issuerPrivateKey, &issuerPublicKey, userGuid, targetPublicKey, der);
 }
 
 static QStatus CreateGuildCert(const String& serial, const uint8_t* authDataHash, const qcc::GUID128& issuer, const ECCPrivateKey* issuerPrivateKey, const qcc::GUID128& subject, const ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, qcc::String& der)
@@ -184,6 +180,20 @@ static void MakePEM(qcc::String& der, qcc::String& pem)
     qcc::String tag2 = "-----END CERTIFICATE-----";
     Crypto_ASN1::EncodeBase64(der, pem);
     pem = tag1 + pem + tag2;
+}
+
+QStatus RetrieveDSAPublicKeyFromKeyStore(BusAttachment& bus, ECCPublicKey* publicKey)
+{
+    GUID128 guid;
+    KeyBlob kb;
+    CredentialAccessor ca(bus);
+    ca.GetLocalGUID(KeyBlob::DSA_PUBLIC, guid);
+    QStatus status = ca.GetKey(guid, kb);
+    if (status != ER_OK) {
+        return status;
+    }
+    memcpy(publicKey, kb.GetData(), kb.GetSize());
+    return ER_OK;
 }
 
 /*
@@ -247,15 +257,18 @@ class ECDHEKeyXListener : public AuthListener {
              */
             bool providePrivateKey = true;      /* use to toggle the test */
             if (providePrivateKey) {
-                if ((credMask & AuthListener::CRED_PRIVATE_KEY) == AuthListener::CRED_PRIVATE_KEY) {
-                    String pk(privateKeyPEM, strlen(privateKeyPEM));
-                    creds.SetPrivateKey(pk);
-                }
                 if ((credMask & AuthListener::CRED_CERT_CHAIN) == AuthListener::CRED_CERT_CHAIN) {
-                    CredentialAccessor ca(bus);
                     qcc::String der;
                     /* make a self sign cert */
-                    CreateIdentityCert(ca, "1001", privateKeyPEM, publicKeyPEM, true, der);
+                    ECCPublicKey subjectPublicKey;
+                    QStatus status = RetrieveDSAPublicKeyFromKeyStore(bus, &subjectPublicKey);
+                    if (ER_OK == status) {
+                        /* make a cert with the specific subject public key */
+                        CreateIdentityCert("1001", adminGUID, privateKeyPEM, publicKeyPEM, false, &subjectPublicKey, der);
+                    } else {
+                        /* make a self sign cert */
+                        CreateIdentityCert("1001", adminGUID, privateKeyPEM, publicKeyPEM, true, NULL, der);
+                    }
                     qcc::String pem;
                     MakePEM(der, pem);
                     creds.SetCertChain(pem);
@@ -623,14 +636,11 @@ QStatus Claim(BusAttachment& bus, ProxyBusObject& remoteObj, const ECCPublicKey*
 
     KeyInfoNISTP256 keyInfo;
     keyInfo.SetPublicKey(pubKey);
-    CredentialAccessor ca(bus);
-    qcc::GUID128 localGUID;
-    status = ca.GetGuid(localGUID);
     if (!claimedGUID) {
-        claimedGUID = &localGUID;
+        claimedGUID = &adminGUID;
     }
     inputs[0].Set("(yv)", KeyInfo::FORMAT_ALLJOYN,
-                  new MsgArg("(ayyyv)", GUID128::SIZE, localGUID.GetBytes(), KeyInfo::USAGE_SIGNING, KeyInfoECC::KEY_TYPE,
+                  new MsgArg("(ayyyv)", GUID128::SIZE, adminGUID.GetBytes(), KeyInfo::USAGE_SIGNING, KeyInfoECC::KEY_TYPE,
                              new MsgArg("(yyv)", keyInfo.GetAlgorithm(), keyInfo.GetCurve(),
                                         new MsgArg("(ayay)", ECC_COORDINATE_SZ, keyInfo.GetXCoord(), ECC_COORDINATE_SZ, keyInfo.GetYCoord()))));
     inputs[0].SetOwnershipFlags(MsgArg::OwnsArgs, true);
@@ -874,20 +884,6 @@ QStatus CreateMembershipCert(const String& serial, const uint8_t* authDataHash, 
     ECCPrivateKey trustAnchorPrivateKey;
     CertECCUtil_DecodePrivateKey(adminPrivateKeyPEM, (uint32_t*) &trustAnchorPrivateKey, sizeof(ECCPrivateKey));
     return CreateGuildCert(serial, authDataHash, issuer, &trustAnchorPrivateKey, subject, subjectPubKey, guild, der);
-}
-
-QStatus RetrieveDSAPublicKeyFromKeyStore(BusAttachment& bus, ECCPublicKey* publicKey)
-{
-    GUID128 guid;
-    KeyBlob kb;
-    CredentialAccessor ca(bus);
-    ca.GetLocalGUID(KeyBlob::DSA_PUBLIC, guid);
-    QStatus status = ca.GetKey(guid, kb);
-    if (status != ER_OK) {
-        return status;
-    }
-    memcpy(publicKey, kb.GetData(), kb.GetSize());
-    return ER_OK;
 }
 
 QStatus LoadCertificateBytes(Message& msg, CertificateX509& cert)
@@ -1186,8 +1182,9 @@ TEST_F(PermissionMgmtTest, ClaimAdmin)
     ECCPublicKey issuerPubKey;
     CertECCUtil_DecodePublicKey(adminPublicKeyPEM, (uint32_t*) &issuerPubKey, sizeof(ECCPublicKey));
 
-    status = Claim(adminProxyBus, clientProxyObject, &issuerPubKey, &claimedPubKey, NULL);
+    status = Claim(adminProxyBus, clientProxyObject, &issuerPubKey, &claimedPubKey, &adminGUID);
     EXPECT_EQ(ER_OK, status) << "  Claim failed.  Actual Status: " << QCC_StatusText(status);
+
 }
 
 /*
@@ -1305,9 +1302,11 @@ TEST_F(PermissionMgmtTest, InstallIdentity)
     ProxyBusObject clientProxyObject(adminBus, serviceBus.GetUniqueName().c_str(), PERMISSION_MGMT_PATH, 0, false);
     EnableSecurity("ALLJOYN_ECDHE_ECDSA", false);
 
-    CredentialAccessor ca(adminBus);
+    ECCPublicKey publicKey;
+    QStatus status = RetrieveDSAPublicKeyFromKeyStore(serviceBus, &publicKey);
+    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
     qcc::String der;
-    status = CreateIdentityCert(ca, "1010101", adminPrivateKeyPEM, adminPublicKeyPEM, false, der);
+    status = CreateIdentityCert("1010101", adminGUID, adminPrivateKeyPEM, adminPublicKeyPEM, false, &publicKey, der);
     EXPECT_EQ(ER_OK, status) << "  CreateIdentityCert failed.  Actual Status: " << QCC_StatusText(status);
 
     status = InstallIdentity(adminBus, clientProxyObject, der);
