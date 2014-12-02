@@ -20,6 +20,7 @@
  ******************************************************************************/
 
 #include <qcc/platform.h>
+#include <qcc/Crypto.h>
 #include <qcc/CertificateECC.h>
 #include <qcc/String.h>
 #include <qcc/StringUtil.h>

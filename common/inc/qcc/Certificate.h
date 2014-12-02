@@ -36,6 +36,8 @@ class Certificate {
 
   public:
 
+    static const size_t SHA256_DIGEST_SIZE = 32; ///< SHA256 digest size - 32 bytes == 256 bits
+
     /**
      * Certificate format
      */

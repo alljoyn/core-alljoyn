@@ -69,12 +69,6 @@ class PermissionMgmtObj : public BusObject {
         PermissionMgmtObj* pmo;
     };
 
-    typedef enum {
-        STATE_UNCLAIMABLE = 0,   ///< not claimable
-        STATE_CLAIMABLE = 1,         ///< claimable
-        STATE_CLAIMED = 2 ///< the app/device is already claimed
-    } ClaimableState;
-
     /**
      * The list of trust anchors
      */
@@ -173,11 +167,64 @@ class PermissionMgmtObj : public BusObject {
     static void ClearTrustAnchorList(TrustAnchorList& list);
 
     /**
+     * Help function to store DSA keys in the key store.
+     * @param ca the credential accesor object
+     * @param privateKey the DSA private key
+     * @param publicKey the DSA public key
+     * @return ER_OK if successful; otherwise, error code.
+     */
+
+    static QStatus StoreDSAKeys(CredentialAccessor* ca, const qcc::ECCPrivateKey* privateKey, const qcc::ECCPublicKey* publicKey);
+
+    /**
+     * Help function to retrieve DSA public key from the key store.
+     * @param ca the credential accesor object
+     * @param publicKey the buffer to hold DSA public key.
+     * @return ER_OK if successful; otherwise, error code.
+     */
+    static QStatus RetrieveDSAPublicKey(CredentialAccessor* ca, qcc::ECCPublicKey* publicKey);
+
+    /**
+     * Help function to retrieve DSA public key from the key store.
+     * @param ca the credential accesor object
+     * @param privateKey the buffer to hold DSA private key.
+     * @return ER_OK if successful; otherwise, error code.
+     */
+
+    static QStatus RetrieveDSAPrivateKey(CredentialAccessor* ca, qcc::ECCPrivateKey* privateKey);
+
+    /**
      * Set the permission manifest for the application.
      * @params rules the permission rules.
      * @params count the number of permission rules
      */
     QStatus SetManifest(PermissionPolicy::Rule* rules, size_t count);
+
+    /**
+     * Retrieve the claimable state of the application.
+     * @return the claimable state
+     */
+    PermissionConfigurator::ClaimableState GetClaimableState();
+
+    /**
+     * Set the claimable state to be claimable or not.  The resulting claimable
+     * state would be either STATE_UNCLAIMABLE or STATE_CLAIMABLE depending on
+     * the value of the input flag.  This action is not allowed when the current
+     * state is STATE_CLAIMED.
+     * @param claimable flag
+     * @return
+     *      - #ER_OK if action is allowed.
+     *      - #ER_INVALID_CLAIMABLE_STATE if current state is STATE_CLAIMED
+     *      - #ER_NOT_IMPLEMENTED if the method is not implemented
+     */
+    QStatus SetClaimable(bool claimable);
+
+    /**
+     * Reset the Permission module by removing all the trust anchors, DSA keys,
+     * installed policy and certificates.
+     * @return ER_OK if successful; otherwise, an error code.
+     */
+    QStatus Reset();
 
   private:
 
@@ -187,19 +234,15 @@ class PermissionMgmtObj : public BusObject {
         ENTRY_MEMBERSHIPS,  ///< the list of membership certificates and associated policies
         ENTRY_IDENTITY,      ///< the identity cert
         ENTRY_EQUIVALENCES,  ///< The equivalence certs
-        ENTRY_MANIFEST      ///< The manifest data
+        ENTRY_MANIFEST,      ///< The manifest data
+        ENTRY_CONFIGURATION  ///< The configuration data
     } ACLEntryType;
 
-    struct TrustAnchor {
-        uint8_t guid[qcc::GUID128::SIZE];
-        qcc::ECCPublicKey publicKey;
+    struct Configuration {
+        uint8_t version;
+        uint8_t claimableState;
 
-        TrustAnchor(const uint8_t* pGuid, qcc::ECCPublicKey* pPublicKey)
-        {
-            memcpy(guid, pGuid, qcc::GUID128::SIZE);
-            memcpy(&publicKey, pPublicKey, sizeof(qcc::ECCPublicKey));
-        }
-        TrustAnchor()
+        Configuration() : version(1)
         {
         }
     };
@@ -230,10 +273,6 @@ class PermissionMgmtObj : public BusObject {
 
     QStatus GetPeerGUID(Message& msg, qcc::GUID128& guid);
 
-    QStatus StoreDSAKeys(const qcc::ECCPrivateKey* privateKey, const qcc::ECCPublicKey* publicKey);
-    QStatus RetrieveDSAPublicKey(qcc::ECCPublicKey* publicKey);
-    QStatus RetrieveDSAPrivateKey(qcc::ECCPrivateKey* privateKey);
-
     QStatus StorePolicy(PermissionPolicy& policy);
     QStatus RetrievePolicy(PermissionPolicy& policy);
     void RemovePolicy(const InterfaceDescription::Member* member, Message& msg);
@@ -256,6 +295,9 @@ class PermissionMgmtObj : public BusObject {
     QStatus GetAllMembershipCerts(MembershipCertMap& certMap);
     void ClearTrustAnchors();
     void PolicyChanged(PermissionPolicy* policy);
+    QStatus StoreConfiguration(const Configuration& config);
+    QStatus GetConfiguration(Configuration& config);
+    void Reset(const InterfaceDescription::Member* member, Message& msg);
 
     /**
      * Bind to an exclusive port for PermissionMgmt object.
@@ -265,7 +307,7 @@ class PermissionMgmtObj : public BusObject {
     BusAttachment& bus;
     CredentialAccessor* ca;
     const InterfaceDescription::Member* notifySignalName;
-    ClaimableState claimableState;
+    PermissionConfigurator::ClaimableState claimableState;
     uint32_t serialNum;
     TrustAnchorList trustAnchors;
     PortListener* portListener;

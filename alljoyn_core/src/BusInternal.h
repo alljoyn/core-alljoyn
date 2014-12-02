@@ -44,6 +44,7 @@
 #include "TransportList.h"
 #include "CompressionRules.h"
 #include "PermissionManager.h"
+#include "PermissionConfiguratorImpl.h"
 
 #include <alljoyn/Status.h>
 
@@ -247,6 +248,13 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
     PermissionManager& GetPermissionManager() { return permissionManager; }
 
     /**
+     * Get a reference to the permission configurator
+     *
+     * @return A reference to the bus's permmision configurator
+     */
+    PermissionConfigurator& GetPermissionConfigurator() { return permissionConfigurator; }
+
+    /**
      * Push a message into the local endpoint
      *
      * @param msg  The message to push
@@ -326,6 +334,7 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
     qcc::Mutex joinLock;                              /* Mutex that protects joinThreads */
     KeyStoreKeyEventListener ksKeyEventListener;
     PermissionManager permissionManager;
+    PermissionConfiguratorImpl permissionConfigurator;
 };
 }
 

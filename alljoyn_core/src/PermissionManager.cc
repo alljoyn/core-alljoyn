@@ -466,7 +466,8 @@ bool PermissionManager::AuthorizePermissionMgmt(bool send, const GUID128& peerGu
         (strncmp(mbrName, "InstallIdentity", 15) == 0) ||
         (strncmp(mbrName, "RemoveIdentity", 14) == 0) ||
         (strncmp(mbrName, "InstallGuildEquivalence", 23) == 0) ||
-        (strncmp(mbrName, "RemoveGuildEquivalence", 22) == 0)
+        (strncmp(mbrName, "RemoveGuildEquivalence", 22) == 0) ||
+        (strncmp(mbrName, "Reset", 5) == 0)
         ) {
         /* these actions require admin privilege */
         return PeerHasAdminPriv(peerGuid);

@@ -87,6 +87,11 @@ class PermissionManager {
         this->permissionMgmtObj = permissionMgmtObj;
     }
 
+    PermissionMgmtObj* GetPermissionMgmtObj()
+    {
+        return permissionMgmtObj;
+    }
+
     /**
      * Set the permission manifest for the application.
      * @params rules the permission rules.

@@ -27,6 +27,7 @@
 
 #include <qcc/String.h>
 #include <qcc/Log.h>
+#include <qcc/Crypto.h>
 #include <qcc/CertificateECC.h>
 
 #include <alljoyn/BusAttachment.h>

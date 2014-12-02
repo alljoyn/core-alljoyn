@@ -22,9 +22,10 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
+#include <assert.h>
 #include <qcc/platform.h>
+#include <qcc/GUID.h>
 #include <qcc/Certificate.h>
-#include <qcc/Crypto.h>
 #include <qcc/CryptoECC.h>
 #include <qcc/KeyInfoECC.h>
 
@@ -188,7 +189,7 @@ class CertificateType0 : public CertificateECC {
     static const size_t OFFSET_VERSION = 0;
     static const size_t OFFSET_ISSUER = OFFSET_VERSION + 4;
     static const size_t OFFSET_DIGEST = OFFSET_ISSUER + ECC_PUBLIC_KEY_SZ;
-    static const size_t OFFSET_SIG = OFFSET_DIGEST + Crypto_SHA256::DIGEST_SIZE;
+    static const size_t OFFSET_SIG = OFFSET_DIGEST + SHA256_DIGEST_SIZE;
     static const size_t ENCODED_LEN = OFFSET_SIG + ECC_SIGNATURE_SZ;
 
     uint8_t encoded[ENCODED_LEN];
@@ -320,7 +321,7 @@ class CertificateType1 : public CertificateECC {
     static const size_t OFFSET_VALIDTO = OFFSET_VALIDFROM + 8;
     static const size_t OFFSET_DELEGATE = OFFSET_VALIDTO + 8;
     static const size_t OFFSET_DIGEST = OFFSET_DELEGATE + 1;
-    static const size_t OFFSET_SIG = OFFSET_DIGEST + Crypto_SHA256::DIGEST_SIZE;
+    static const size_t OFFSET_SIG = OFFSET_DIGEST + SHA256_DIGEST_SIZE;
     static const size_t ENCODED_LEN = OFFSET_SIG + ECC_SIGNATURE_SZ;
 
     uint8_t encoded[ENCODED_LEN];
@@ -463,7 +464,7 @@ class CertificateType2 : public CertificateECC {
     static const size_t OFFSET_DELEGATE = OFFSET_VALIDTO + 8;
     static const size_t OFFSET_GUILD = OFFSET_DELEGATE + 1;
     static const size_t OFFSET_DIGEST = OFFSET_GUILD + GUILD_ID_LEN;
-    static const size_t OFFSET_SIG = OFFSET_DIGEST + Crypto_SHA256::DIGEST_SIZE;
+    static const size_t OFFSET_SIG = OFFSET_DIGEST + SHA256_DIGEST_SIZE;
     static const size_t ENCODED_LEN = OFFSET_SIG + ECC_SIGNATURE_SZ;
 
     uint8_t encoded[ENCODED_LEN];
@@ -824,7 +825,7 @@ class CertificateX509 : public Certificate {
     size_t encodedLen;
     uint8_t* encoded;
     bool digestPresent;
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+    uint8_t digest[SHA256_DIGEST_SIZE];
 };
 
 class MembershipCertificate : public CertificateX509 {

@@ -221,6 +221,7 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         ifc->AddMethod("InstallGuildEquivalence",     "(yay)", NULL, "cert");
         ifc->AddMethod("RemoveGuildEquivalence",     "ayay", NULL, "serialNum,issuer");
         ifc->AddMethod("GetManifest",     NULL, "(yv)",  "manifest");
+        ifc->AddMethod("Reset",     NULL, NULL, NULL);
         ifc->Activate();
     }
     {
@@ -231,7 +232,7 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
             QCC_LogError(status, ("Failed to create %s interface", org::allseen::Security::PermissionMgmt::Notification::InterfaceName));
             return status;
         }
-        ifc->AddSignal("NotifyConfig", "ayyua(ayay)", "GUID,claimableState,serialNumber,memberships", 0);
+        ifc->AddSignal("NotifyConfig", "a(yv)yua(ayay)", "publicKeyInfo,claimableState,serialNumber,memberships", 0);
         ifc->Activate();
     }
     return status;
