@@ -321,12 +321,13 @@ TEST_F(AboutProxyTest, GetObjectDescription) {
 
     size_t numInterfaces = aod.GetInterfaces(paths[0], NULL, 0);
 
-    ASSERT_EQ(1u, numInterfaces);
-    const char** supportedInterfaces = new const char*[numInterfaces];
-    aod.GetInterfaces(paths[0], supportedInterfaces, numInterfaces);
-    EXPECT_STREQ(ifaceName.c_str(), supportedInterfaces[0]) << "Interface mismatch!";
-
-    delete [] supportedInterfaces;
+    EXPECT_EQ(1u, numInterfaces);
+    if (numInterfaces == 1u) {
+        const char** supportedInterfaces = new const char*[numInterfaces];
+        aod.GetInterfaces(paths[0], supportedInterfaces, numInterfaces);
+        EXPECT_STREQ(ifaceName.c_str(), supportedInterfaces[0]) << "Interface mismatch!";
+        delete [] supportedInterfaces;
+    }
     delete [] paths;
 
     status = clientBus.CancelWhoImplements(ifaceName.c_str());

@@ -6684,15 +6684,16 @@ static jobject leaveGenericSession(JNIEnv* env, jobject thiz,
          */
         QCC_DbgPrintf(("Taking Bus Attachment common lock"));
         busPtr->baCommonLock.Lock();
+        if (jsessionListener) {
+            jobject jglobalref = *jsessionListener;
+            *jsessionListener = 0;
 
-        jobject jglobalref = *jsessionListener;
-        *jsessionListener = 0;
+            QCC_DbgPrintf(("Releasing Bus Attachment common lock"));
+            busPtr->baCommonLock.Unlock();
 
-        QCC_DbgPrintf(("Releasing Bus Attachment common lock"));
-        busPtr->baCommonLock.Unlock();
-
-        QCC_DbgPrintf(("Releasing strong global reference to SessionListener %p", jglobalref));
-        env->DeleteGlobalRef(jglobalref);
+            QCC_DbgPrintf(("Releasing strong global reference to SessionListener %p", jglobalref));
+            env->DeleteGlobalRef(jglobalref);
+        }
     } else {
         QCC_LogError(status, ("Error"));
     }
@@ -11040,7 +11041,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_registerProperties
     QCC_DbgPrintf(("ProxyBusObject_registerPropertiesChangedListener()"));
 
     JProxyBusObject* proxyBusObj = GetHandle<JProxyBusObject*>(thiz);
-    if (env->ExceptionCheck()) {
+    if (env->ExceptionCheck() || !proxyBusObj) {
         return NULL;
     }
 
@@ -11106,7 +11107,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_unregisterProperti
     QCC_DbgPrintf(("ProxyBusObject_unregisterPropertiesChangedListener()"));
 
     JProxyBusObject* proxyBusObj = GetHandle<JProxyBusObject*>(thiz);
-    if (env->ExceptionCheck()) {
+    if (env->ExceptionCheck() || !proxyBusObj) {
         return NULL;
     }
 
@@ -12720,7 +12721,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_AboutObj_announce(JNIEnv* env, jo
 
     QStatus status = ER_FAIL;
     JAboutObject* aboutObj = GetHandle<JAboutObject*>(thiz);
-    if (env->ExceptionCheck()) {
+    if (env->ExceptionCheck() || !aboutObj) {
         QCC_LogError(ER_FAIL, ("AboutObj_announce(): Exception"));
         return JStatus(status);
     }
