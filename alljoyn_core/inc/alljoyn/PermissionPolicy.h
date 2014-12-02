@@ -29,6 +29,8 @@
 #include <qcc/platform.h>
 #include <qcc/String.h>
 #include <alljoyn/Status.h>
+#include <alljoyn/MsgArg.h>
+#include <alljoyn/Message.h>
 
 namespace ajn {
 

@@ -296,7 +296,7 @@ class ECDHEKeyXListener : public AuthListener {
         msg += "AuthenticationComplete auth mechanism ";
         msg += authMechanism;
         msg += " failed";
-        ASSERT_TRUE(success) << msg;
+        ASSERT_TRUE(success) << msg.c_str();
     }
 
   private:

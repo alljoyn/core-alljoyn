@@ -388,7 +388,7 @@ static QStatus ParsePropertiesMessage(MessageHolder& holder)
     QStatus status;
     const char* mbrName = holder.msg->GetMemberName();
     const char* propIName;
-    const char* propName;
+    const char* propName = "";
 
     if ((strncmp(mbrName, "Get", 3) == 0) || (strncmp(mbrName, "Set", 3) == 0)) {
         const MsgArg* args;
