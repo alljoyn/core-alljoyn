@@ -38,3 +38,7 @@ qcc::String ajn::genUniqueName(const BusAttachment& bus) {
     static uint32_t uniquifier = 0;
     return "test.x" + bus.GetGlobalGUIDString() + ".x" + qcc::U32ToString(uniquifier++);
 }
+
+qcc::String ajn::getUniqueNamePrefix(const BusAttachment& bus) {
+    return "test.x" + bus.GetGlobalGUIDString() + ".x";
+}

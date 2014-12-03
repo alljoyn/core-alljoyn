@@ -305,6 +305,28 @@ void NameTable::RemoveAlias(const qcc::String& aliasName,
                       newOwner.empty() ? NULL : &newOwner, newOwnerNameTransfer);
     }
 }
+bool NameTable::IsValidLocalUniqueName(const qcc::String& uniqueName) const
+{
+    bool ret = false;
+    size_t period_pos = uniqueName.find(".");
+    if (period_pos != String::npos) {
+        size_t period_pos1 = uniqueName.find(".", period_pos + 1);
+        if (period_pos1 == String::npos) {
+            // Contains exactly one "."
+            String guid = uniqueName.substr(0, GUID128::SHORT_SIZE + 2);
+            if (guid == uniquePrefix) {
+                //guid matches uniquePrefix
+                String idStr = uniqueName.substr(GUID128::SHORT_SIZE + 2);
+                uint32_t id = StringToU32(idStr);
+                if ((id != 0) && (id <= uniqueId)) {
+                    //valid id
+                    ret = true;
+                }
+            }
+        }
+    }
+    return ret;
+}
 
 BusEndpoint NameTable::FindEndpoint(const qcc::String& busName) const
 {
