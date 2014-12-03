@@ -253,7 +253,7 @@ int main(int argc, char** argv)
 
     QStatus status;
 
-    BusAttachment bus("AboutServiceTest");
+    BusAttachment bus("AboutServiceTest", true);
 
     g_bus = &bus;
 
@@ -267,7 +267,7 @@ int main(int argc, char** argv)
 
     status = bus.Connect();
     if (ER_OK == status) {
-        printf("BusAttachment connect succeeded.\n");
+        printf("BusAttachment connect succeeded. BusAttachment Unique name is %s\n", bus.GetUniqueName().c_str());
     } else {
         printf("FAILED to connect to router node (%s)\n", QCC_StatusText(status));
         exit(1);
