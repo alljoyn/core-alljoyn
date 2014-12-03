@@ -189,7 +189,7 @@ TEST_F(PresenceTest, PresenceWellKnownNames) {
     status = otherBus.Ping(wellKnownNameAdvReq.c_str(), 3000);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    // ping: ASACORE-682
+    // ping
     status = otherBus.Ping(wellKnownNameAdvNotReq.c_str(), 3000);
     EXPECT_EQ(ER_ALLJOYN_PING_REPLY_UNREACHABLE, status) << "  Actual Status: " << QCC_StatusText(status);
 
@@ -273,7 +273,7 @@ TEST_F(PresenceTest, PingBogusUniqueNames) {
 
     // ping bogusUqn with invalid guid
     status = bus.Ping(":xyz.40", 3000);
-    //EXPECT_EQ(ER_ALLJOYN_PING_REPLY_UNKNOWN_NAME, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_ALLJOYN_PING_REPLY_UNKNOWN_NAME, status) << "  Actual Status: " << QCC_StatusText(status);
 
 
     //
@@ -299,7 +299,7 @@ TEST_F(PresenceTest, PingBogusUniqueNames) {
     PresenceTestFindNameListener testBusListener;
     otherBus.RegisterBusListener(testBusListener);
 
-    // ping bogusUniqueName with local guid test case 4
+    // ping bogusUniqueName with local guid
     status = otherBus.Ping(bogusUniqueName.c_str(), 3000);
     EXPECT_EQ(ER_ALLJOYN_PING_REPLY_UNKNOWN_NAME, status) << "  Actual Status: " << QCC_StatusText(status);
 
@@ -326,7 +326,7 @@ TEST_F(PresenceTest, PingExitedApp) {
     otherBus.Stop();
     otherBus.Join();
 
-    // ping bogusUniqueName with local guid test 47
+    // ping bogusUniqueName with local guid
     status = bus.Ping(otherUqn.c_str(), 3000);
     EXPECT_EQ(ER_ALLJOYN_PING_REPLY_UNREACHABLE, status) << "  Actual Status: " << QCC_StatusText(status);
 
