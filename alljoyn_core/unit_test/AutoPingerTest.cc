@@ -16,6 +16,7 @@
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/AutoPinger.h>
 #include <gtest/gtest.h>
+#include <qcc/Thread.h>
 
 using namespace ajn;
 
