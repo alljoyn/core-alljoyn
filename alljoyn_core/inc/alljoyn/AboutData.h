@@ -74,6 +74,22 @@ class AboutData : public AboutDataListener {
     AboutData(const MsgArg arg, const char* language = NULL);
 
     /**
+     * Copy constructor
+     *
+     * @param src The AboutData instance to be copied
+     */
+    AboutData(const AboutData& src);
+
+    /**
+     * Assignment operator
+     *
+     * @param src The AboutDate instance to be assigned
+     *
+     * @return copy of the AboutData src
+     */
+    AboutData& operator=(const AboutData& src);
+
+    /**
      * Destructor
      */
     ~AboutData();

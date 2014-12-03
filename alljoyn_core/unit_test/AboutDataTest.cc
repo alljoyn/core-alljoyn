@@ -160,6 +160,75 @@ TEST(AboutDataTest, Constructor) {
     EXPECT_STREQ(ajn::GetVersion(), ajSoftwareVersion);
 }
 
+TEST(AboutDataTest, CopyConstructor) {
+    AboutData aboutData("en");
+    char* language;
+    aboutData.GetDefaultLanguage(&language);
+    EXPECT_STREQ("en", language);
+    char* ajSoftwareVersion;
+    aboutData.GetAJSoftwareVersion(&ajSoftwareVersion);
+    EXPECT_STREQ(ajn::GetVersion(), ajSoftwareVersion);
+
+    AboutData aboutDataCopy(aboutData);
+    aboutDataCopy.GetDefaultLanguage(&language);
+    EXPECT_STREQ("en", language);
+
+    aboutDataCopy.GetAJSoftwareVersion(&ajSoftwareVersion);
+    EXPECT_STREQ(ajn::GetVersion(), ajSoftwareVersion);
+
+    //should be able to change each copy independent of one another
+    QStatus status = aboutData.SetDeviceName(qcc::String("Device").c_str());
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = aboutDataCopy.SetDeviceName(qcc::String("Copy Device").c_str());
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    char* deviceName;
+    status = aboutData.GetDeviceName(&deviceName);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_STREQ("Device", deviceName);
+
+    status = aboutDataCopy.GetDeviceName(&deviceName);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_STREQ("Copy Device", deviceName);
+}
+
+TEST(AboutDataTest, AssignmentOperator) {
+    AboutData aboutData("en");
+    char* language;
+    aboutData.GetDefaultLanguage(&language);
+    EXPECT_STREQ("en", language);
+    char* ajSoftwareVersion;
+    aboutData.GetAJSoftwareVersion(&ajSoftwareVersion);
+    EXPECT_STREQ(ajn::GetVersion(), ajSoftwareVersion);
+
+    // Self assignment
+    aboutData = aboutData;
+    AboutData aboutDataCopy;
+    aboutDataCopy = aboutData;
+    aboutDataCopy.GetDefaultLanguage(&language);
+    EXPECT_STREQ("en", language);
+
+    aboutDataCopy.GetAJSoftwareVersion(&ajSoftwareVersion);
+    EXPECT_STREQ(ajn::GetVersion(), ajSoftwareVersion);
+
+    //should be able to change each copy independent of one another
+    QStatus status = aboutData.SetDeviceName(qcc::String("Device").c_str());
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = aboutDataCopy.SetDeviceName(qcc::String("Copy Device").c_str());
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    char* deviceName;
+    status = aboutData.GetDeviceName(&deviceName);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_STREQ("Device", deviceName);
+
+    status = aboutDataCopy.GetDeviceName(&deviceName);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_STREQ("Copy Device", deviceName);
+}
+
 TEST(AboutDataTest, SetAppId) {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
