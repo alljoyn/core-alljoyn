@@ -95,34 +95,6 @@ class _VirtualEndpoint : public _BusEndpoint {
     const qcc::String& GetUniqueName() const { return m_uniqueName; }
 
     /**
-     * Return the user id of the endpoint.
-     *
-     * @return  User ID number.
-     */
-    uint32_t GetUserId() const { return 0; };
-
-    /**
-     * Return the group id of the endpoint.
-     *
-     * @return  Group ID number.
-     */
-    uint32_t GetGroupId() const { return 0; }
-
-    /**
-     * Return the process id of the endpoint.
-     *
-     * @return  Process ID number.
-     */
-    uint32_t GetProcessId() const { return 0; }
-
-    /**
-     * Indicates if the endpoint supports reporting UNIX style user, group, and process IDs.
-     *
-     * @return  'true' if UNIX IDs supported, 'false' if not supported.
-     */
-    bool SupportsUnixIDs() const { return false; }
-
-    /**
      * Get the BusToBus endpoint associated with this virtual endpoint.
      *
      * @param sessionId   Id of session between src and dest.
