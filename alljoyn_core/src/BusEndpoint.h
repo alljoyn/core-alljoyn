@@ -61,14 +61,14 @@ class _BusEndpoint : public MessageSink {
     /**
      * Default constructor initializes an invalid endpoint
      */
-    _BusEndpoint() : endpointType(ENDPOINT_TYPE_INVALID), isValid(false), disconnectStatus(ER_OK) { }
+    _BusEndpoint() : endpointType(ENDPOINT_TYPE_INVALID), isValid(false), disconnectStatus(ER_OK), userId(-1), groupId(-1) { }
 
     /**
      * Constructor.
      *
      * @param type    BusEndpoint type.
      */
-    _BusEndpoint(EndpointType type) : endpointType(type), isValid(type != ENDPOINT_TYPE_INVALID), disconnectStatus(ER_OK)  { }
+    _BusEndpoint(EndpointType type) : endpointType(type), isValid(type != ENDPOINT_TYPE_INVALID), userId(-1), groupId(-1) { }
 
     /**
      * Virtual destructor for derivable class.
@@ -113,14 +113,36 @@ class _BusEndpoint : public MessageSink {
      *
      * @return  User ID number.
      */
-    virtual uint32_t GetUserId() const { return -1; }
+    virtual uint32_t GetUserId() const {
+        return userId;
+    }
+
+    /*
+     * Set the user id of the endpoint.
+     *
+     * @param   userId     User ID number.
+     */
+    virtual void SetUserId(uint32_t userId) {
+        this->userId = userId;
+    }
 
     /**
      * Return the group id of the endpoint.
      *
      * @return  Group ID number.
      */
-    virtual uint32_t GetGroupId() const { return -1; }
+    virtual uint32_t GetGroupId() const {
+        return groupId;
+    }
+
+    /*
+     * Set the group id of the endpoint.
+     *
+     * @param   groupId     Group ID number.
+     */
+    virtual void SetGroupId(uint32_t groupId) {
+        this->groupId = groupId;
+    }
 
     /**
      * Return the process id of the endpoint.
@@ -212,6 +234,8 @@ class _BusEndpoint : public MessageSink {
     EndpointFlowType endpointFlowType;  /**< Type of flow over the endpoint */
     bool isValid;                       /**< Is endpoint currently valid */
     QStatus disconnectStatus;           /**< Reason for the disconnect */
+    uint32_t userId;                    /**< Unix-style user ID */
+    uint32_t groupId;                   /**< Unix-style group ID */
 };
 
 

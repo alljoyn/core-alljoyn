@@ -63,8 +63,6 @@ class _DaemonEndpoint : public _RemoteEndpoint {
     _DaemonEndpoint(DaemonTransport* transport, BusAttachment& bus, bool incoming, const qcc::String connectSpec, SocketFd sock) :
         _RemoteEndpoint(bus, incoming, connectSpec, &stream, DaemonTransport::TransportName),
         m_transport(transport),
-        userId(-1),
-        groupId(-1),
         processId(-1),
         stream(sock)
     {
@@ -73,39 +71,11 @@ class _DaemonEndpoint : public _RemoteEndpoint {
     ~_DaemonEndpoint() { }
 
     /**
-     * Set the user id of the endpoint.
-     *
-     * @param   userId      User ID number.
-     */
-    void SetUserId(uint32_t userId) { this->userId = userId; }
-
-    /**
-     * Set the group id of the endpoint.
-     *
-     * @param   groupId     Group ID number.
-     */
-    void SetGroupId(uint32_t groupId) { this->groupId = groupId; }
-
-    /**
      * Set the process id of the endpoint.
      *
      * @param   processId   Process ID number.
      */
     void SetProcessId(uint32_t processId) { this->processId = processId; }
-
-    /**
-     * Return the user id of the endpoint.
-     *
-     * @return  User ID number.
-     */
-    uint32_t GetUserId() const { return userId; }
-
-    /**
-     * Return the group id of the endpoint.
-     *
-     * @return  Group ID number.
-     */
-    uint32_t GetGroupId() const { return groupId; }
 
     /**
      * Return the process id of the endpoint.
@@ -152,8 +122,6 @@ class _DaemonEndpoint : public _RemoteEndpoint {
 
   private:
     DaemonTransport* m_transport;        /**< The DaemonTransport holding the connection */
-    uint32_t userId;
-    uint32_t groupId;
     uint32_t processId;
     SocketStream stream;
 };
