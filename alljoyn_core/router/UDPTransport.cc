@@ -7899,7 +7899,7 @@ void UDPTransport::RunListenMachine(ListenRequest& listenRequest)
      * the different interfaces to the ports on which we are listening
      * on those interfaces) must be non-empty.
      */
-    if (m_isNsEnabled) {
+    if (m_isNsEnabled && !m_stopping) {
         assert(m_isListening);
         assert(!m_listenPortMap.empty());
     }
@@ -7911,7 +7911,7 @@ void UDPTransport::RunListenMachine(ListenRequest& listenRequest)
      * advertisements.  If we are advertising the name service had
      * better be enabled.
      */
-    if (m_isAdvertising) {
+    if (m_isAdvertising && !m_stopping) {
         assert(!m_advertising.empty());
         assert(m_isListening);
         assert(!m_listenPortMap.empty());
@@ -7925,7 +7925,7 @@ void UDPTransport::RunListenMachine(ListenRequest& listenRequest)
      * discoveries.  If we are discovering the name service had better be
      * enabled.
      */
-    if (m_isDiscovering) {
+    if (m_isDiscovering && !m_stopping) {
         assert(!m_discovering.empty());
         assert(m_isListening);
         assert(!m_listenPortMap.empty());
