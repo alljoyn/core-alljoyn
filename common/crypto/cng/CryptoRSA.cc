@@ -403,6 +403,25 @@ class PBKD {
     DWORD keyLen;
     uint8_t* keyObj;
     BCRYPT_ALG_HANDLE algHandle;
+
+    /**
+     * Copy constructor
+     *
+     * @param src PBKD to be copied.
+     */
+    PBKD(const PBKD& src) {
+        /* private copy constructor to prevent copying */
+    }
+    /**
+     * Assignment operator
+     *
+     * @param src source PBKD
+     *
+     * @return copy of PBKD
+     */
+    PBKD& operator=(const PBKD& src) {
+        return *this;
+    }
 };
 
 static QStatus DecryptPriv(BCRYPT_KEY_HANDLE kdKey, qcc::String& ivec, const uint8_t* blob, size_t blobLen, BCRYPT_KEY_HANDLE& privKey, bool legacy)
