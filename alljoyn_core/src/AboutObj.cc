@@ -60,6 +60,7 @@ AboutObj::AboutObj(ajn::BusAttachment& bus, AnnounceFlag isAboutIntfAnnounced) :
 
 AboutObj::~AboutObj()
 {
+    Unannounce();
     m_busAttachment->UnregisterBusObject(*this);
 }
 
