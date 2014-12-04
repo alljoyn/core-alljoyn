@@ -23,6 +23,7 @@
 #include <qcc/platform.h>
 #include <qcc/String.h>
 #include <qcc/StringMapKey.h>
+#include <qcc/XmlElement.h>
 #include <map>
 #include <alljoyn/AllJoynStd.h>
 #include <alljoyn/Status.h>
@@ -113,7 +114,7 @@ void InterfaceDescription::AppendDescriptionXml(qcc::String& xml, const char* la
     if (!d || d[0] == '\0') {
         return;
     }
-    xml += indent + "  <description>" + d + "</description>\n";
+    xml += indent + "  <description>" + XmlElement::EscapeXml(d) + "</description>\n";
 }
 
 InterfaceDescription::Member::Member(const InterfaceDescription* iface,
