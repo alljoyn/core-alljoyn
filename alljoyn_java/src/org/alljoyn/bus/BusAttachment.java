@@ -759,6 +759,44 @@ public class BusAttachment {
     }
 
     /**
+     * Change the announce flag for an already added interface. Changes in the
+     * announce flag are not visible to other devices till Announce is called.
+     *
+     * @param busObject   The BusObject that the interface is registered with
+     * @param intf        The interface to change the announce flag on.
+     * @param isAnnounced If "true" the interface will be part of the next
+     *                    Announce signal if "false" the interface will not be
+     *                    part of the next Announce signal.
+     *
+     * @return
+     *  <ul>
+     *  <li>OK if successful</li>
+     *  <li>BUS_OBJECT_NO_SUCH_INTERFACE if the interface is not part of the BusObject.</li>
+     *  </ul>
+     */
+    public Status setAnnounceFlag(BusObject busObject, Class<?> intf, boolean isAnnounced) {
+        return setAnnounceFlag(busObject, InterfaceDescription.getName(intf), isAnnounced);
+    }
+
+    /**
+     * Change the announce flag for an already added interface. Changes in the
+     * announce flag are not visible to other devices till Announce is called.
+     *
+     * @param busObject   The BusObject that the interface is registered with
+     * @param ifcName     The name of the interface
+     * @param isAnnounced if "true" the interface will be part of the next
+     *                    Announce signal if "false" the interface will not be
+     *                    part of the next Announce signal.
+     *
+     * @return
+     *  <ul>
+     *  <li>OK if successful</li>
+     *  <li>BUS_OBJECT_NO_SUCH_INTERFACE if the interface is not part of the BusObject.</li>
+     *  </ul>
+     */
+    public native Status setAnnounceFlag(BusObject busObject, String ifcName, boolean isAnnounced);
+
+    /**
      * TODO cleanup the documentation make sure it is accurate remove doxygen
      * style code blocks.
      *

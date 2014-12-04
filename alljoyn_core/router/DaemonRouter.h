@@ -103,6 +103,13 @@ class DaemonRouter : public Router {
     qcc::String GenerateUniqueName(void) { return nameTable.GenerateUniqueName(); }
 
     /**
+     * Return whether this is a unique name of a locally connected endpoint.
+     *
+     * @param uniqueName   Unique name to check.
+     * @return  true if a locally connected endpoint has this unique name.
+     */
+    bool IsValidLocalUniqueName(qcc::String uniqueName) { return nameTable.IsValidLocalUniqueName(uniqueName); }
+    /**
      * Add a well-known (alias) bus name.
      *
      * @param aliasName    Alias (well-known) name of bus.

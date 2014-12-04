@@ -60,6 +60,7 @@ AboutObj::AboutObj(ajn::BusAttachment& bus, AnnounceFlag isAboutIntfAnnounced) :
 
 AboutObj::~AboutObj()
 {
+    Unannounce();
     m_busAttachment->UnregisterBusObject(*this);
 }
 
@@ -98,9 +99,13 @@ QStatus AboutObj::Announce(SessionPort sessionPort, ajn::AboutDataListener& abou
         return ER_ABOUT_INVALID_ABOUTDATA_LISTENER;
     }
 
-    status = ValidateAboutDataFields(aboutDataArg);
-    if (ER_OK != status) {
-        return status;
+    // ASACORE-1229
+    // We want to return an error if the AppId is is not 128-bits since the
+    // announced signal will not pass compliance and certification but we still
+    // send out the signal.
+    QStatus validate_status = ValidateAboutDataFields(aboutDataArg);
+    if (ER_OK != validate_status && ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE != validate_status) {
+        return validate_status;
     }
     m_busAttachment->GetInternal().GetAnnouncedObjectDescription(m_objectDescription);
 
@@ -140,7 +145,10 @@ QStatus AboutObj::Announce(SessionPort sessionPort, ajn::AboutDataListener& abou
     status = Signal(NULL, 0, *announceSignalMember, announceArgs, 4, (unsigned char) 0, flags, &msg);
     m_announceSerialNumber = msg->GetCallSerial();
     QCC_DbgPrintf(("Sent AnnounceSignal from %s  = %s", m_busAttachment->GetUniqueName().c_str(), QCC_StatusText(status)));
-    return status;
+    if (status != ER_OK) {
+        return status;
+    }
+    return validate_status;
 }
 
 QStatus AboutObj::Unannounce() {
@@ -399,8 +407,8 @@ QStatus AboutObj::ValidateAboutDataFields(MsgArg& aboutDataArg) {
         return status;
     }
     if (field->v_scalarArray.numElements != 16) {
-        QCC_LogError(ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE, ("AboutData AppId must be must be a 128-bit (16-byte) UUID"));
-        return ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE;
+        QCC_DbgPrintf(("ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE - AboutData AppId should be a 128-bit (16-byte) UUID"));
+        return ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE;
     }
     return ER_OK;
 }

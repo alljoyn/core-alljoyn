@@ -90,7 +90,7 @@ int main(int argc, char** argv)
 
     QStatus status;
 
-    BusAttachment bus("About Service Example");
+    BusAttachment bus("About Service Example", true);
     status = bus.Start();
     if (ER_OK == status) {
         printf("BusAttachment started.\n");

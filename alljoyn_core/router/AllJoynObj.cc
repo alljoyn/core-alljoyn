@@ -4817,7 +4817,11 @@ void AllJoynObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
 
         PingAlarmContext* ctx = static_cast<PingAlarmContext*>(alarm->GetContext());
         if (ctx->type == PingAlarmContext::TRANSPORT_CONTEXT) {
-
+            if (ctx->name[0] == ':' && !router.IsValidLocalUniqueName(ctx->name)) {
+                SendIPNSResponse(ctx->name, ALLJOYN_PING_REPLY_UNKNOWN_NAME);
+                delete ctx;
+                return;
+            }
             ProxyBusObject peerObj(bus, ctx->name.c_str(), "/", 0);
             const InterfaceDescription* intf = bus.GetInterface(org::freedesktop::DBus::Peer::InterfaceName);
             assert(intf);
@@ -5126,63 +5130,53 @@ void AllJoynObj::Ping(const InterfaceDescription::Member* member, Message& msg)
              */
 
             // Check if the name is advertised
-            TransportMask transport = TRANSPORT_TCP | TRANSPORT_UDP;                         // TODO transport hard-coded
+            TransportMask transport = TRANSPORT_TCP | TRANSPORT_UDP | TRANSPORT_LOCAL;                         // TODO transport hard-coded
             String guid;
-            bool foundEntry = false;
             AcquireLocks();
             for (multimap<String, NameMapEntry>::iterator nmit = nameMap.lower_bound(name);
                  nmit != nameMap.end() && (nmit->first == name); ++nmit) {
                 if (nmit->second.transport & transport) {
                     guid = qcc::GUID128(nmit->second.guid).ToShortString();
-                    foundEntry = true;
                     break;
                 }
             }
 
-            //
-            // If the endpoint is not valid it means that this could be a name on a remote routing node or a name that is
-            // locally advertised but not requested.
-            // 1. Check if the name is name is unique or well known name.
-            //    a. If unique then we check if it is on this routing node by comparing with guid
-            //    b. If unique name is not present on this routing node it could be a unique name advertised
-            //
             if (!ep->IsValid()) {
-                // Could be a remote well known name or a unique name whose guid needs to be checked
-                // Check if it is a unique name
-                if (guid.empty() && (name[0] == ':')) {
-                    String guidStr = String(name).substr(1, GUID128::SHORT_SIZE);
-                    // Check if the guid in the unique name is same as ours
-                    if (strcmp(guidStr.c_str(), bus.GetInternal().GetGlobalGUID().ToString().c_str()) == 0) {
-                        QCC_LogError(ER_OK, ("Unique name has local guid"));
+
+                if (name[0] != ':') {
+                    // Well known name
+                    if (guid.empty()) {
+                        // No guid found for well known name
+                        replyCode = ALLJOYN_PING_REPLY_UNKNOWN_NAME;
+                    } else if (guid == bus.GetInternal().GetGlobalGUID().ToShortString()) {
+                        // Locally advertised not requested
+                        replyCode = ALLJOYN_PING_REPLY_UNREACHABLE;
+                    }
+                } else {
+                    // Unique name
+                    String nameStr(name);
+                    String guidStr = nameStr.substr(1, GUID128::SHORT_SIZE);
+                    if (guidStr == bus.GetInternal().GetGlobalGUID().ToShortString()) {
+                        // Guid matches our guid but endpoint is invalid.
+                        // Check NameTable to find out if this is a name that has been assigned.
+                        if (!router.IsValidLocalUniqueName(nameStr)) {
+                            replyCode = ALLJOYN_PING_REPLY_UNKNOWN_NAME;
+                        } else {
+                            replyCode = ALLJOYN_PING_REPLY_UNREACHABLE;
+                        }
+                    } else if (IsGuidShortStringKnown(guidStr)) {
+                        guid = guidStr;
+                    } else {
                         replyCode = ALLJOYN_PING_REPLY_UNKNOWN_NAME;
                     }
-                } else if (!foundEntry) {
-                    replyCode = ALLJOYN_PING_REPLY_UNKNOWN_NAME;
                 }
+            } else if (ep->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL) {
+                VirtualEndpoint vep = VirtualEndpoint::cast(ep);
+                guid = String(vep->GetUniqueName()).substr(1, GUID128::SHORT_SIZE);
+                QCC_DbgPrintf(("Session found %s", name));
             }
 
-            //
-            // Check for unique name. Get the long GUID since the name passed will be short
-            // The unique name passed in should either be discovered or part of a session
-            //
-            if (guid.empty() && (name[0] == ':') && (replyCode != ALLJOYN_PING_REPLY_UNKNOWN_NAME)) {
-                String guidStr = String(name).substr(1, GUID128::SHORT_SIZE);
-                if (IsGuidShortStringKnown(guidStr)) {
-                    guid = guidStr;
-                    foundEntry = true;
-                }
-            }
-            // Check if the well known name is in a session. If yes get the short GUID of remote routing node
-            if (guid.empty() && (name[0] != ':')) {
-                BusEndpoint bep = router.FindEndpoint(name);
-                if (bep->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL) {
-                    VirtualEndpoint vep = VirtualEndpoint::cast(bep);
-                    guid = String(vep->GetUniqueName()).substr(1, GUID128::SHORT_SIZE);
-                    foundEntry = true;
-                    QCC_DbgPrintf(("Session found %s", name));
-                }
-            }
-            if (foundEntry) {
+            if (!guid.empty() && replyCode == ALLJOYN_PING_REPLY_SUCCESS) {
                 QCC_DbgPrintf(("Pinging GUID %s", guid.c_str()));
                 if (outgoingPingMap.find(pair<String, String>(name, msg->GetSender())) != outgoingPingMap.end()) {
                     replyCode = ALLJOYN_PING_REPLY_IN_PROGRESS;
@@ -5199,7 +5193,7 @@ void AllJoynObj::Ping(const InterfaceDescription::Member* member, Message& msg)
                     ReleaseLocks();
                     status = IpNameService::Instance().Ping(transport, guid, name);
                     if (status != ER_OK) {
-                        QCC_LogError(status, ("Query failed"));
+                        QCC_DbgPrintf(("Query failed status %s", QCC_StatusText(status)));
                         AcquireLocks();
                         multimap<pair<String, String>, OutgoingPingInfo>::iterator it = outgoingPingMap.find(key);
                         if (it != outgoingPingMap.end()) {
@@ -5216,8 +5210,9 @@ void AllJoynObj::Ping(const InterfaceDescription::Member* member, Message& msg)
             } else {
                 if (replyCode != ALLJOYN_PING_REPLY_UNREACHABLE) {
                     replyCode = ALLJOYN_PING_REPLY_UNKNOWN_NAME;
-                    ReleaseLocks();
+
                 }
+                ReleaseLocks();
             }
         }
     }
@@ -5268,7 +5263,14 @@ bool AllJoynObj::ResponseHandler(TransportMask transport, MDNSPacket response, u
 
     QCC_DbgPrintf(("Recieved a ping response for name %s", pingRData->GetWellKnownName().c_str()));
     const String& name = pingRData->GetWellKnownName();
-    uint32_t replyCode = pingRData->GetReplyCode() == "ALLJOYN_PING_REPLY_SUCCESS" ? ALLJOYN_PING_REPLY_SUCCESS : ALLJOYN_PING_REPLY_UNREACHABLE;
+    uint32_t replyCode;
+    if (pingRData->GetReplyCode() == "ALLJOYN_PING_REPLY_SUCCESS") {
+        replyCode = ALLJOYN_PING_REPLY_SUCCESS;
+    } else if (pingRData->GetReplyCode() == "ALLJOYN_PING_REPLY_UNREACHABLE") {
+        replyCode = ALLJOYN_PING_REPLY_UNREACHABLE;
+    } else {
+        replyCode = ALLJOYN_PING_REPLY_UNKNOWN_NAME;
+    }
 
     AcquireLocks();
 
@@ -5372,12 +5374,20 @@ void AllJoynObj::PingResponse(TransportMask transport, const qcc::IPEndpoint& ns
     // Similar to advertise record with only one name
     MDNSPingReplyRData* pingReplyRData = new MDNSPingReplyRData();
     pingReplyRData->SetWellKnownName(name);
-    pingReplyRData->SetReplyCode(replyCode == 1 ? "ALLJOYN_PING_REPLY_SUCCESS" : "ALLJOYN_PING_REPLY_UNREACHABLE");
+    String replyCodeText;
+    if (replyCode == ALLJOYN_PING_REPLY_SUCCESS) {
+        replyCodeText = "ALLJOYN_PING_REPLY_SUCCESS";
+    } else if (replyCode == ALLJOYN_PING_REPLY_UNREACHABLE) {
+        replyCodeText = "ALLJOYN_PING_REPLY_UNREACHABLE";
+    } else {
+        replyCodeText = "ALLJOYN_PING_REPLY_UNKNOWN_NAME";
+    }
+
+    pingReplyRData->SetReplyCode(replyCodeText);
 
     MDNSResourceRecord pingReplyRecord("ping-reply." + guid.ToString() + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, pingReplyRData);
     response->AddAdditionalRecord(pingReplyRecord);
     delete pingReplyRData;
-    QCC_DbgPrintf(("PingResponse %s %x %s", name.c_str(), transport, ns4.ToString().c_str()));
 
     QStatus status = IpNameService::Instance().Response(transport, 120, response);
     if (ER_OK != status) {
