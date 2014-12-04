@@ -144,7 +144,12 @@ class AboutData : public AboutDataListener {
     /**
      * Set the AppId for the AboutData
      *
-     * AppId Must be a 128-bit UUID as specified in by RFC 4122
+     * AppId Should be a 128-bit UUID as specified in by RFC 4122.
+     *
+     * Passing in non-128-bit byte arrays will still Set the AppId but the
+     * SetAppId member function will always return
+     * ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE and the application will fail
+     * certification and compliance testing.
      *
      * AppId IS required
      * AppId IS part of the Announce signal
@@ -155,7 +160,7 @@ class AboutData : public AboutDataListener {
      *
      * @return
      *  - #ER_OK on success
-     *  - #ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE if the AppId is not a 128-bits (16 bytes)
+     *  - #ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE if the AppId is not a 128-bits (16 bytes)
      */
     QStatus SetAppId(const uint8_t* appId, const size_t num = 16);
 
@@ -180,18 +185,26 @@ class AboutData : public AboutDataListener {
      * (i.e. 4a354637564945188a48323c158bc02d).
      * or a UUID string as specified in RFC 4122
      * (i.e. 4a354637-5649-4518-8a48-323c158bc02d)
-     * AppId Must be a 128-bit UUID as specified in by RFC 4122
+     * AppId should be a 128-bit UUID as specified in by RFC 4122
+     *
+     * Unlike #SetAppId(uint8_t, size_t) this member function will only set the
+     * AppId if the string is 32-character hex digit string or a UUID as
+     * specified by RFC 4122.
      *
      * AppId IS required
      * AppId IS part of the Announce signal
      * AppId CAN NOT be localized for other languages
      *
-     * @param[in] appId the a globally unique array of bytes used as an ID for the application
-     * @param[in] num   the number of bites in the appId array
+     *
+     * @see SetAppId(uint8_t, size_t)
+     *
+     * @param[in] appId String representing a globally unique array of bytes
+     *                  used as an ID for the application.
      *
      * @return
      *  - #ER_OK on success
-     *  - #ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE if the AppId is not a 128-bits (16 bytes)
+     *  - #ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE if the AppId is not a 128-bits (16 bytes)
+     *  - #ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE if unable to parse the appId string.
      */
     QStatus SetAppId(const char* appId);
 

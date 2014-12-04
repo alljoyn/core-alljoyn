@@ -318,9 +318,6 @@ QStatus AboutData::CreatefromMsgArg(const MsgArg& arg, const char* language)
 
 QStatus AboutData::SetAppId(const uint8_t* appId, const size_t num)
 {
-    if (num != 16) {
-        return ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE;
-    }
     QStatus status = ER_OK;
     MsgArg arg;
     status = arg.Set(aboutDataInternal->aboutFields[APP_ID].signature.c_str(), num, appId);
@@ -328,6 +325,12 @@ QStatus AboutData::SetAppId(const uint8_t* appId, const size_t num)
         return status;
     }
     status = SetField(APP_ID, arg);
+    if (status != ER_OK) {
+        return status;
+    }
+    if (num != 16) {
+        status = ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE;
+    }
     return status;
 }
 QStatus AboutData::GetAppId(uint8_t** appId, size_t* num)
@@ -396,7 +399,7 @@ QStatus AboutData::SetAppId(const char* appId) {
             hexAppId[location] = '\0';
             return SetAppId(hexAppId);
         } else {
-            return ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE;
+            return ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE;
         }
     } else {
         return ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE;
