@@ -1120,6 +1120,7 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
 
     std::multimap<std::pair<qcc::String, qcc::String>, OutgoingPingInfo> outgoingPingMap;
     std::multimap<qcc::String, IncomingPingInfo> incomingPingMap;
+    std::set<std::pair<qcc::String, qcc::String> > dbusPingsInProgress; //contains the caller of ping and destination of ping
     TransportMask GetCompleteTransportMaskFilter();
     void SendIPNSResponse(qcc::String name, uint32_t replyCode);
     bool IsSelfJoinSupported(BusEndpoint& joinerEp) const;
