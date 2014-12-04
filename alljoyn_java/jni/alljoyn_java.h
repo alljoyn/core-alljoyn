@@ -413,6 +413,14 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusAttachment_useOSLogging
 
 /*
  * Class:     org_alljoyn_bus_BusAttachment
+ * Method:    setAnnounceFlag
+ * Signature: (Lorg/alljoyn/bus/BusObject;Ljava/lang/String;Z)Lorg/alljoyn/bus/Status;
+ */
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_setAnnounceFlag
+  (JNIEnv *, jobject, jobject, jstring, jboolean);
+
+/*
+ * Class:     org_alljoyn_bus_BusAttachment
  * Method:    whoImplements
  * Signature: ([Ljava/lang/String;)Lorg/alljoyn/bus/Status;
  */

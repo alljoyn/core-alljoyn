@@ -1151,4 +1151,369 @@ public class AboutListenerTest  extends TestCase {
         clientBus.disconnect();
         clientBus.release();
     }
+
+    // This interface is not annotated as an announced interface
+    class MySimpleInterface implements SimpleInterface, BusObject {
+        @Override
+        public String ping(String inStr) throws BusException {
+            return inStr;
+        }
+    }
+
+    public void testSetAnnounceFlagInterfaceName() {
+        Intfa intfa = new Intfa();
+        assertEquals(Status.OK, serviceBus.registerBusObject(intfa, "/about/test/a"));
+        Intfb intfb = new Intfb();
+        assertEquals(Status.OK, serviceBus.registerBusObject(intfb, "/about/test/b"));
+
+        // simpleIface is not annotated as an announced interface
+        MySimpleInterface simpleIface = new MySimpleInterface();
+        assertEquals(Status.OK, serviceBus.registerBusObject(simpleIface, "/about/test/simple"));
+
+        BusAttachment clientBus = new BusAttachment("AboutListenerTestClient", RemoteMessage.Receive);
+        assertEquals(Status.OK, clientBus.connect());
+
+        AboutListenerTestAboutListener aListener = new AboutListenerTestAboutListener();
+        aListener.announcedFlag = false;
+        clientBus.registerAboutListener(aListener);
+        assertEquals(Status.OK, clientBus.whoImplements(new String[] {"com.example.test.AboutListenerTest.a"}));
+
+        AboutObj aboutObj = new AboutObj(serviceBus);
+        AboutListenerTestAboutData aboutData = new AboutListenerTestAboutData();
+        assertEquals(Status.OK, aboutObj.announce(PORT_NUMBER, aboutData));
+
+        for (int msec = 0; msec < 10000; msec += 5) {
+            if (aListener.announcedFlag) {
+                break;
+            }
+            try {
+                Thread.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                fail("unexpected InterruptedException");
+            }
+        }
+
+        assertTrue(aListener.announcedFlag);
+        boolean aboutPathAFound = false;
+        boolean aboutInterfaceAFound = false;
+        boolean aboutPathBFound = false;
+        boolean aboutInterfaceBFound = false;
+        boolean simplePathfound = false;
+        boolean simpleInterfaceFound = false;
+        assertEquals(PORT_NUMBER, aListener.port);
+        for (AboutObjectDescription aod : aListener.aod) {
+            if (aod.path.equals("/about/test/a")) {
+                aboutPathAFound = true;
+                for (String s : aod.interfaces) {
+                    if (s.equals("com.example.test.AboutListenerTest.a")) {
+                        aboutInterfaceAFound = true;
+                    }
+                }
+            }
+            if (aod.path.equals("/about/test/b")) {
+                aboutPathBFound = true;
+                for (String s : aod.interfaces) {
+                    if (s.equals("com.example.test.AboutListenerTest.b")) {
+                        aboutInterfaceBFound = true;
+                    }
+                }
+            }
+            if (aod.path.equals("/about/test/simple")) {
+                simplePathfound = true;
+                for (String s : aod.interfaces) {
+                    if (s.equals("org.alljoyn.bus.SimpleInterface")) {
+                        simpleInterfaceFound = true;
+                    }
+                }
+            }
+        }
+        assertTrue(aboutPathAFound);
+        assertTrue(aboutInterfaceAFound);
+        assertTrue(aboutPathBFound);
+        assertTrue(aboutInterfaceBFound);
+        assertFalse(simplePathfound);
+        assertFalse(simpleInterfaceFound);
+
+        aListener.announcedFlag = false;
+
+        // make an announced interface no longer announced
+        assertEquals(Status.OK, serviceBus.setAnnounceFlag(intfb, "com.example.test.AboutListenerTest.b", false));
+        assertEquals(Status.BUS_OBJECT_NO_SUCH_INTERFACE, serviceBus.setAnnounceFlag(intfb, "com.example.test.AboutListenerTest.fake", false));
+
+        // make an unannounced interface so it is now announced
+        assertEquals(Status.OK, serviceBus.setAnnounceFlag(simpleIface, "org.alljoyn.bus.SimpleInterface", true));
+
+        assertEquals(Status.OK, aboutObj.announce(PORT_NUMBER, aboutData));
+
+        for (int msec = 0; msec < 10000; msec += 5) {
+            if (aListener.announcedFlag) {
+                break;
+            }
+            try {
+                Thread.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                fail("unexpected InterruptedException");
+            }
+        }
+
+        assertTrue(aListener.announcedFlag);
+        aboutPathAFound = false;
+        aboutInterfaceAFound = false;
+        aboutPathBFound = false;
+        aboutInterfaceBFound = false;
+        simplePathfound = false;
+        simpleInterfaceFound = false;
+        assertEquals(PORT_NUMBER, aListener.port);
+        for (AboutObjectDescription aod : aListener.aod) {
+            if (aod.path.equals("/about/test/a")) {
+                aboutPathAFound = true;
+                for (String s : aod.interfaces) {
+                    if (s.equals("com.example.test.AboutListenerTest.a")) {
+                        aboutInterfaceAFound = true;
+                    }
+                }
+            }
+            if (aod.path.equals("/about/test/b")) {
+                aboutPathBFound = true;
+                for (String s : aod.interfaces) {
+                    if (s.equals("com.example.test.AboutListenerTest.b")) {
+                        aboutInterfaceBFound = true;
+                    }
+                }
+            }
+            if (aod.path.equals("/about/test/simple")) {
+                simplePathfound = true;
+                for (String s : aod.interfaces) {
+                    if (s.equals("org.alljoyn.bus.SimpleInterface")) {
+                        simpleInterfaceFound = true;
+                    }
+                }
+            }
+        }
+        assertTrue(aboutPathAFound);
+        assertTrue(aboutInterfaceAFound);
+        assertTrue(simplePathfound);
+        assertTrue(simpleInterfaceFound);
+        assertFalse(aboutPathBFound);
+        assertFalse(aboutInterfaceBFound);
+
+
+        assertEquals(Status.OK, clientBus.cancelWhoImplements(new String[] {"com.example.test.AboutListenerTest.a"}));
+        clientBus.disconnect();
+        clientBus.release();
+    }
+
+    public void testSetAnnounceFlagInterfaceClass() {
+        Intfa intfa = new Intfa();
+        assertEquals(Status.OK, serviceBus.registerBusObject(intfa, "/about/test/a"));
+        Intfb intfb = new Intfb();
+        assertEquals(Status.OK, serviceBus.registerBusObject(intfb, "/about/test/b"));
+
+        // simpleIface is not annotated as an announced interface
+        MySimpleInterface simpleIface = new MySimpleInterface();
+        assertEquals(Status.OK, serviceBus.registerBusObject(simpleIface, "/about/test/simple"));
+
+        BusAttachment clientBus = new BusAttachment("AboutListenerTestClient", RemoteMessage.Receive);
+        assertEquals(Status.OK, clientBus.connect());
+
+        AboutListenerTestAboutListener aListener = new AboutListenerTestAboutListener();
+        aListener.announcedFlag = false;
+        clientBus.registerAboutListener(aListener);
+        assertEquals(Status.OK, clientBus.whoImplements(new String[] {"com.example.test.AboutListenerTest.a"}));
+
+        AboutObj aboutObj = new AboutObj(serviceBus);
+        AboutListenerTestAboutData aboutData = new AboutListenerTestAboutData();
+        assertEquals(Status.OK, aboutObj.announce(PORT_NUMBER, aboutData));
+
+        for (int msec = 0; msec < 10000; msec += 5) {
+            if (aListener.announcedFlag) {
+                break;
+            }
+            try {
+                Thread.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                fail("unexpected InterruptedException");
+            }
+        }
+
+        assertTrue(aListener.announcedFlag);
+        boolean aboutPathAFound = false;
+        boolean aboutInterfaceAFound = false;
+        boolean aboutPathBFound = false;
+        boolean aboutInterfaceBFound = false;
+        boolean simplePathfound = false;
+        boolean simpleInterfaceFound = false;
+        assertEquals(PORT_NUMBER, aListener.port);
+        for (AboutObjectDescription aod : aListener.aod) {
+            if (aod.path.equals("/about/test/a")) {
+                aboutPathAFound = true;
+                for (String s : aod.interfaces) {
+                    if (s.equals("com.example.test.AboutListenerTest.a")) {
+                        aboutInterfaceAFound = true;
+                    }
+                }
+            }
+            if (aod.path.equals("/about/test/b")) {
+                aboutPathBFound = true;
+                for (String s : aod.interfaces) {
+                    if (s.equals("com.example.test.AboutListenerTest.b")) {
+                        aboutInterfaceBFound = true;
+                    }
+                }
+            }
+            if (aod.path.equals("/about/test/simple")) {
+                simplePathfound = true;
+                for (String s : aod.interfaces) {
+                    if (s.equals("org.alljoyn.bus.SimpleInterface")) {
+                        simpleInterfaceFound = true;
+                    }
+                }
+            }
+        }
+        assertTrue(aboutPathAFound);
+        assertTrue(aboutInterfaceAFound);
+        assertTrue(aboutPathBFound);
+        assertTrue(aboutInterfaceBFound);
+        assertFalse(simplePathfound);
+        assertFalse(simpleInterfaceFound);
+
+        aListener.announcedFlag = false;
+
+        // make an announced interface no longer announced
+        assertEquals(Status.OK, serviceBus.setAnnounceFlag(intfb, AboutListenerTestInterfaceB.class, false));
+        assertEquals(Status.BUS_OBJECT_NO_SUCH_INTERFACE, serviceBus.setAnnounceFlag(intfb, SimpleInterface.class, false));
+
+        // make an unannounced interface so it is now announced
+        assertEquals(Status.OK, serviceBus.setAnnounceFlag(simpleIface, SimpleInterface.class, true));
+
+        assertEquals(Status.OK, aboutObj.announce(PORT_NUMBER, aboutData));
+
+        for (int msec = 0; msec < 10000; msec += 5) {
+            if (aListener.announcedFlag) {
+                break;
+            }
+            try {
+                Thread.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                fail("unexpected InterruptedException");
+            }
+        }
+
+        assertTrue(aListener.announcedFlag);
+        aboutPathAFound = false;
+        aboutInterfaceAFound = false;
+        aboutPathBFound = false;
+        aboutInterfaceBFound = false;
+        simplePathfound = false;
+        simpleInterfaceFound = false;
+        assertEquals(PORT_NUMBER, aListener.port);
+        for (AboutObjectDescription aod : aListener.aod) {
+            if (aod.path.equals("/about/test/a")) {
+                aboutPathAFound = true;
+                for (String s : aod.interfaces) {
+                    if (s.equals("com.example.test.AboutListenerTest.a")) {
+                        aboutInterfaceAFound = true;
+                    }
+                }
+            }
+            if (aod.path.equals("/about/test/b")) {
+                aboutPathBFound = true;
+                for (String s : aod.interfaces) {
+                    if (s.equals("com.example.test.AboutListenerTest.b")) {
+                        aboutInterfaceBFound = true;
+                    }
+                }
+            }
+            if (aod.path.equals("/about/test/simple")) {
+                simplePathfound = true;
+                for (String s : aod.interfaces) {
+                    if (s.equals("org.alljoyn.bus.SimpleInterface")) {
+                        simpleInterfaceFound = true;
+                    }
+                }
+            }
+        }
+        assertTrue(aboutPathAFound);
+        assertTrue(aboutInterfaceAFound);
+        assertTrue(simplePathfound);
+        assertTrue(simpleInterfaceFound);
+        assertFalse(aboutPathBFound);
+        assertFalse(aboutInterfaceBFound);
+
+
+        assertEquals(Status.OK, clientBus.cancelWhoImplements(new String[] {"com.example.test.AboutListenerTest.a"}));
+        clientBus.disconnect();
+        clientBus.release();
+    }
+
+    public void testSetAnnounceFlagSameInterfaceTwoBusObjectOneAnnouncedOneNotAnnounced() {
+        Intfa intfa1 = new Intfa();
+        assertEquals(Status.OK, serviceBus.registerBusObject(intfa1, "/about/test/aone"));
+        Intfa intfa2 = new Intfa();
+        assertEquals(Status.OK, serviceBus.registerBusObject(intfa2, "/about/test/atwo"));
+
+        // Don't announce intfa1 on the path "/about/test/aone"
+        assertEquals(Status.OK, serviceBus.setAnnounceFlag(intfa1, "com.example.test.AboutListenerTest.a", false));
+
+        BusAttachment clientBus = new BusAttachment("AboutListenerTestClient", RemoteMessage.Receive);
+        assertEquals(Status.OK, clientBus.connect());
+
+        AboutListenerTestAboutListener aListener = new AboutListenerTestAboutListener();
+        aListener.announcedFlag = false;
+        clientBus.registerAboutListener(aListener);
+        assertEquals(Status.OK, clientBus.whoImplements(new String[] {"com.example.test.AboutListenerTest.a"}));
+
+        AboutObj aboutObj = new AboutObj(serviceBus);
+        AboutListenerTestAboutData aboutData = new AboutListenerTestAboutData();
+        assertEquals(Status.OK, aboutObj.announce(PORT_NUMBER, aboutData));
+
+        for (int msec = 0; msec < 10000; msec += 5) {
+            if (aListener.announcedFlag) {
+                break;
+            }
+            try {
+                Thread.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                fail("unexpected InterruptedException");
+            }
+        }
+
+        assertTrue(aListener.announcedFlag);
+        boolean aboutPathAOneFound = false;
+        boolean aboutInterfaceAOneFound = false;
+        boolean aboutPathATwoFound = false;
+        boolean aboutInterfaceATwoFound = false;
+        assertEquals(PORT_NUMBER, aListener.port);
+        for (AboutObjectDescription aod : aListener.aod) {
+            if (aod.path.equals("/about/test/aone")) {
+                aboutPathAOneFound = true;
+                for (String s : aod.interfaces) {
+                    if (s.equals("com.example.test.AboutListenerTest.a")) {
+                        aboutInterfaceAOneFound = true;
+                    }
+                }
+            }
+            if (aod.path.equals("/about/test/atwo")) {
+                aboutPathATwoFound = true;
+                for (String s : aod.interfaces) {
+                    if (s.equals("com.example.test.AboutListenerTest.a")) {
+                        aboutInterfaceATwoFound = true;
+                    }
+                }
+            }
+        }
+        assertFalse(aboutPathAOneFound);
+        assertFalse(aboutInterfaceAOneFound);
+        assertTrue(aboutPathATwoFound);
+        assertTrue(aboutInterfaceATwoFound);
+
+        assertEquals(Status.OK, clientBus.cancelWhoImplements(new String[] {"com.example.test.AboutListenerTest.a"}));
+        clientBus.disconnect();
+        clientBus.release();
+    }
 }
