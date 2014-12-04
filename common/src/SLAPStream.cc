@@ -8,7 +8,7 @@
 /******************************************************************************
  *
  *
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -98,28 +98,33 @@ SLAPStream::~SLAPStream()
     Close();
     std::list<SLAPWritePacket*>::iterator it = m_txFreeList.begin();
     while (it != m_txFreeList.end()) {
-        delete *it++;
+        delete *it;
+        ++it;
     }
     m_txFreeList.clear();
 
     it = m_txQueue.begin();
     while (it != m_txQueue.end() && *it != m_txCtrl) {
-        delete *it++;
+        delete *it;
+        ++it;
     }
     m_txQueue.clear();
     it = m_txSent.begin();
     while (it != m_txSent.end()) {
-        delete *it++;
+        delete *it;
+        ++it;
     }
     m_txSent.clear();
     std::list<SLAPReadPacket*>::iterator it1 = m_rxQueue.begin();
     while (it1 != m_rxQueue.end()) {
-        delete *it1++;
+        delete *it1;
+        ++it1;
     }
     m_rxQueue.clear();
     it1 = m_rxFreeList.begin();
     while (it1 != m_rxFreeList.end()) {
-        delete *it1++;
+        delete *it1;
+        ++it1;
     }
     m_rxFreeList.clear();
 

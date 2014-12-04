@@ -4484,6 +4484,7 @@ void JBusAttachment::Disconnect(const char* connectArgs)
         JBusListener* listener = GetNativeListener<JBusListener*>(env, *i);
         if (env->ExceptionCheck()) {
             QCC_LogError(ER_FAIL, ("JBusAttachment::Disconnect(): Exception"));
+            baCommonLock.Unlock();
             return;
         }
         QCC_DbgPrintf(("JBusAttachment::Disconnect(): Call UnregisterBusListener()"));
@@ -5040,6 +5041,7 @@ QStatus JBusAttachment::RegisterSignalHandler(const char* ifaceName, const char*
     JSignalHandler* signalHandler = new T(jsignalHandler, jmethod);
     if (signalHandler == NULL) {
         Throw("java/lang/OutOfMemoryError", NULL);
+        baCommonLock.Unlock();
         return ER_FAIL;
     }
 

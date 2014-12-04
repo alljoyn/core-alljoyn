@@ -243,6 +243,13 @@ void IODispatch::AlarmTriggered(const Alarm& alarm, QStatus reason)
          * read and write alarms are removed before deleting the entry from the map)
          */
         assert(false);
+        /*
+         * asserts are compiled out so me must return to prevent segfaults in
+         * release code.
+         */
+        QCC_LogError(ER_FAIL, ("Unexpected error, stream is not found. The dispatchEntries map should always have a stream."));
+        lock.Unlock();
+        return;
     }
     if (((it->second.stopping_state != IO_RUNNING) && ctxt->type != IO_EXIT)) {
         /* If stream is being stopped and this is not an exit alarm, return.
