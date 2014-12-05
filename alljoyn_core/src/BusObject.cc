@@ -32,6 +32,7 @@
 #include <qcc/Util.h>
 #include <qcc/String.h>
 #include <qcc/Mutex.h>
+#include <qcc/XmlElement.h>
 #include <alljoyn/DBusStd.h>
 #include <alljoyn/AllJoynStd.h>
 #include <alljoyn/BusObject.h>
@@ -149,7 +150,7 @@ qcc::String BusObject::GenerateIntrospection(const char* languageTag, bool deep,
         if (deep || nodeDesc) {
             xml += ">\n";
             if (nodeDesc) {
-                xml += in + "  <description>" + nodeDesc + "</description>";
+                xml += in + "  <description>" + XmlElement::EscapeXml(nodeDesc) + "</description>";
             }
             if (deep) {
                 xml += child->GenerateIntrospection(languageTag, deep, indent + 2);
@@ -911,7 +912,7 @@ void BusObject::IntrospectWithDescription(const InterfaceDescription::Member* me
     xml += "<node>\n";
     const char* desc = GetDescription(langTag, buffer);
     if (desc) {
-        xml += qcc::String("  <description>") + desc + "</description>\n";
+        xml += qcc::String("  <description>") + XmlElement::EscapeXml(desc) + "</description>\n";
     }
     if (isSecure) {
         xml += "  <annotation name=\"org.alljoyn.Bus.Secure\" value=\"true\"/>\n";

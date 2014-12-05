@@ -10295,7 +10295,7 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
          * buffer capacity than we might like.
          */
         size_t sndSize = m_ardpConfig.segmax * m_ardpConfig.segbmax;
-        QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): SetSndBuf(listenFd=%d, %zu.)", listenFd, sndSize));
+        QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): SetSndBuf(listenFd=%d, %u.)", listenFd, sndSize));
         status = qcc::SetSndBuf(listenFd, sndSize);
         if (status != ER_OK) {
             QCC_LogError(status, ("UDPTransport::HandleNetworkEventInstance(): SetSndbuf() failed"));
@@ -10304,7 +10304,7 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
 #ifndef NDEBUG
         sndSize = 0;
         qcc::GetSndBuf(listenFd, sndSize);
-        QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): GetSndBuf(listenFd=%d) <= %zu. bytes)", listenFd, sndSize));
+        QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): GetSndBuf(listenFd=%d) <= %u. bytes)", listenFd, sndSize));
 #endif
 
         /*
@@ -10326,7 +10326,7 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
          * buffer capacity than we might like.
          */
         size_t rcvSize = m_ardpConfig.segmax * m_ardpConfig.segbmax;
-        QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): SetSndBuf(listenFd=%d, %zu.)", listenFd, rcvSize));
+        QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): SetSndBuf(listenFd=%d, %u.)", listenFd, rcvSize));
         status = qcc::SetRcvBuf(listenFd, rcvSize);
         if (status != ER_OK) {
             QCC_LogError(status, ("UDPTransport::HandleNetworkEventInstance(): SetRcvBuf() failed"));
@@ -10335,7 +10335,7 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
 #ifndef NDEBUG
         rcvSize = 0;
         qcc::GetRcvBuf(listenFd, rcvSize);
-        QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): GetRcvBuf(listenFd=%d) <= %zu. bytes)", listenFd, rcvSize));
+        QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): GetRcvBuf(listenFd=%d) <= %u. bytes)", listenFd, rcvSize));
 #endif
 
         /*

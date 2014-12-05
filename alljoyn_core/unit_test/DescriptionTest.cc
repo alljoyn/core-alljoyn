@@ -50,7 +50,7 @@ static const char* tags[] = { "en", "de" };
 static const char* objId = "obj";
 static const char* objDescription[] = { "This is the object", "DE: This is the object" };
 static const char* ifcId = "ifc";
-static const char* ifcDescription[] = { "This is the interface", "DE: This is the interface" };
+static const char* ifcDescription[] = { "This is the interface", "<bold>DE:</bold> This is the interface" };
 static const char* propId = "prop";
 static const char* namePropDescription[] = { "This is the actual name", "DE: This is the actual name" };
 
@@ -90,7 +90,7 @@ static const char* IntrospectWithDescriptionString1[] = {
     "  <description>DE: This is the object</description>\n"
     "  <node name=\"org\"/>\n"
     "  <interface name=\"org.alljoyn.Bus.DescriptionInterface\">\n"
-    "    <description>DE: This is the interface</description>\n"
+    "    <description>&lt;bold&gt;DE:&lt;/bold&gt; This is the interface</description>\n"
     "    <property name=\"name\" type=\"s\" access=\"readwrite\">\n"
     "      <description>DE: This is the actual name</description>\n"
     "    </property>\n"
@@ -147,7 +147,7 @@ static const char* IntrospectWithDescriptionString2[] = {
     "<node>\n"
     "  <node name=\"org\"/>\n"
     "  <interface name=\"org.alljoyn.Bus.DescriptionInterface\">\n"
-    "    <description>DE: This is the interface</description>\n"
+    "    <description>&lt;bold&gt;DE:&lt;/bold&gt; This is the interface</description>\n"
     "    <property name=\"name\" type=\"s\" access=\"readwrite\">\n"
     "      <description>DE: This is the actual name</description>\n"
     "    </property>\n"
