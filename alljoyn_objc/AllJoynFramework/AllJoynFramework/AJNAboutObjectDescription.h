@@ -62,12 +62,12 @@
  *
  * usage example
  * @code
- * size_t numPaths = aboutObjectDescription.GetPaths(NULL, 0);
- * const char** paths = new const char*[numPaths];
- * aboutObjectDescription.GetPaths(paths, numPaths);
+ * size_t numPaths = [aboutObjectDescription getPaths:nil withSize:0];
+ * NSMutableArray *paths = [[NSMutableArray alloc] initWithCapacity:numPaths];
+ * [aboutObjectDescription getPaths:&paths withSize:numPaths]
  * @endcode
  *
- * @param[out] paths an char* array pointer
+ * @param[out] paths a pointer to NSMutableArray containing the paths
  * @param[in]  numPaths the size of the char* array
  *
  * @return
@@ -76,7 +76,7 @@
  *    returned in the `paths` array.
  *
  */
-- (size_t)getPaths:(const char **)path withSize:(size_t)numOfPaths;
+- (size_t)getPaths:(NSMutableArray **)path withSize:(size_t)numOfPaths;
 
 /**
  * Get a list of interfaces advertised at the given path that are part of
@@ -84,13 +84,13 @@
  *
  * usage example
  * @code
- * size_t numInterfaces = aboutObjectDescription.GetInterfaces(NULL, 0);
- * const char** interfaces = new const char*[numInterfaces];
- * aboutObjectDescription.GetInterfaces("/example", interfaces, numInterfaces);
+ * size_t numInterfaces = [aboutObjectDescription getInterfacesForPath:@"/basic_object" interfaces:nil numOfInterfaces:0];
+ * NSMutableArray *interfacePaths = [[NSMutableArray alloc] initWithCapacity:numPaths];
+ * [aboutObjectDescription getInterfacePathsForInterface:@"com.alljoyn.example" paths:&interfacePaths numOfPaths:numInterfaces]
  * @endcode
  *
  * @param[in]  path the path we want to get a list of interfaces for
- * @param[out] interfaces a char* array pointer
+ * @param[out] interfaces a pointer to NSMututableArray containing the list of interfaces
  * @param[in]  numInterfaces the size of the char* array
  *
  * @return
@@ -99,7 +99,7 @@
  *    then only `numInterfaces` of interfaces will be returned in the
  *    `interfaces` array.
  */
-- (size_t)getInterfacesForPath:(const char *)path interfaces:(const char **)interfaces numOfInterfaces:(size_t)numOfInterfaces;
+- (size_t)getInterfacesForPath:(NSString *)path interfaces:(NSMutableArray **)interfaces numOfInterfaces:(size_t)numOfInterfaces;
 
 /**
  * Get a list of the paths for a given interface. Its possible to have the
@@ -107,13 +107,13 @@
  *
  * Usage example
  * @code
- * size_t numPaths = GetInterfacePaths("com.example.interface", NULL, 0);
- * const char** paths = new const char*[numPaths];
- * GetInterfacePaths("com.example.interface", paths, numPaths);
+ * size_t numPaths = [aboutObjectDescription getInterfacePathsForInterface:@"com.alljoyn.example" paths:nil numOfPaths:0];
+ * NSMutableArray *interfacePaths = [[NSMutableArray alloc] initWithCapacity:numPaths];
+ * [aboutObjectDescription getInterfacePathsForInterface:@"org.alljoyn.example" paths:&interfacePaths numOfPaths:numPaths]
  * @endcode
  *
  * @param[in]  interface the interface we want to get a list of paths for
- * @param[out] paths a char* array pointer
+ * @param[out] paths a pointer to NSMutableArray containing the interfaces
  * @param[in]  numPaths the size of the char* array
  *
  * @return
@@ -123,7 +123,7 @@
  *    array
  *
  */
-- (size_t)getInterfacePathsForInterface:(const char *)interface paths:(const char**)paths numOfPaths:(size_t)numOfPaths;
+- (size_t)getInterfacePathsForInterface:(NSString *)interface paths:(NSMutableArray **)paths numOfPaths:(size_t)numOfPaths;
 
 /**
  * Clear all the contents of this AboutObjectDescription

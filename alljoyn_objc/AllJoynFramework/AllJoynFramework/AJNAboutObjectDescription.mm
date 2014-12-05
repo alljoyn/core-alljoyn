@@ -31,15 +31,49 @@ using namespace ajn;
 
 @end
 
+@interface AJNObject(Private)
+
+@property (nonatomic) BOOL shouldDeleteHandleOnDealloc;
+
+@end
+
 @implementation AJNAboutObjectDescription
+
+/**
+ * Helper to return the C++ API object that is encapsulated by this objective-c class
+ */
+- (AboutObjectDescription*)aboutObjectDescription
+{
+    return static_cast<AboutObjectDescription*>(self.handle);
+}
+
+- (id)init
+{
+    self = [super init];
+    if (self) {
+        self.handle = new AboutObjectDescription();
+        self.shouldDeleteHandleOnDealloc = YES;
+    }
+    return self;
+}
 
 - (id)initWithMsgArg:(AJNMessageArgument *)msgArg
 {
     self = [super init];
     if (self) {
         self.handle = new AboutObjectDescription(*msgArg.msgArg);
+        self.shouldDeleteHandleOnDealloc = YES;
     }
     return self;
+}
+
+- (void)dealloc
+{
+    if (self.shouldDeleteHandleOnDealloc) {
+        AboutObjectDescription *ptr = (AboutObjectDescription*)self.handle;
+        delete ptr;
+        self.handle = nil;
+    }
 }
 
 - (QStatus)createFromMsgArg:(AJNMessageArgument *)msgArg
@@ -47,19 +81,55 @@ using namespace ajn;
     return self.aboutObjectDescription->CreateFromMsgArg(*msgArg.msgArg);
 }
 
-- (size_t)getPaths:(const char **)path withSize:(size_t)numOfPaths
+- (size_t)getPaths:(NSMutableArray **)path withSize:(size_t)numOfPaths
 {
-    return self.aboutObjectDescription->GetPaths(path, numOfPaths);
+    size_t pathCount = self.aboutObjectDescription->GetPaths(NULL, 0);
+    if (path == nil && numOfPaths == 0) {
+        return pathCount;
+    }
+    numOfPaths = (pathCount < numOfPaths) ? pathCount : numOfPaths;
+    const char** paths = new const char*[numOfPaths];
+    pathCount = self.aboutObjectDescription->GetPaths(paths, numOfPaths);
+    for (int i=0 ; i < numOfPaths ; i++) {
+        NSString *objPath = [[NSString alloc] initWithUTF8String:paths[i]];
+        [*path addObject:objPath];
+    }
+    delete []paths;
+    return pathCount;
 }
 
-- (size_t)getInterfacesForPath:(const char *)path interfaces:(const char **)interfaces numOfInterfaces:(size_t)numOfInterfaces
+- (size_t)getInterfacesForPath:(NSString *)path interfaces:(NSMutableArray **)interfaces numOfInterfaces:(size_t)numOfInterfaces
 {
-    return self.aboutObjectDescription->GetInterfaces(path, interfaces, numOfInterfaces);
+    size_t interfaceCount = self.aboutObjectDescription->GetInterfaces([path UTF8String], NULL, 0);
+    if (interfaces == nil && numOfInterfaces == 0) {
+        return interfaceCount;
+    }
+    numOfInterfaces = (interfaceCount < numOfInterfaces) ? interfaceCount : numOfInterfaces;
+    const char** ifaces = new const char*[numOfInterfaces];
+    interfaceCount = self.aboutObjectDescription->GetInterfaces([path UTF8String], ifaces, numOfInterfaces);
+    for (int i=0 ; i < numOfInterfaces ; i++) {
+        NSString *ifacePath = [[NSString alloc] initWithUTF8String:ifaces[i]];
+        [*interfaces addObject:ifacePath];
+    }
+    delete []ifaces;
+    return interfaceCount;
 }
 
-- (size_t)getInterfacePathsForInterface:(const char *)interface paths:(const char**)paths numOfPaths:(size_t)numOfPaths
+- (size_t)getInterfacePathsForInterface:(NSString *)interface paths:(NSMutableArray **)paths numOfPaths:(size_t)numOfPaths
 {
-    return self.aboutObjectDescription->GetInterfacePaths(interface, paths, numOfPaths);
+    size_t pathCount = self.aboutObjectDescription->GetInterfacePaths([interface UTF8String], NULL, 0);
+    if (paths == nil && numOfPaths == 0) {
+        return pathCount;
+    }
+    numOfPaths = (pathCount < numOfPaths) ? pathCount : numOfPaths;
+    const char** interfacePaths = new const char*[numOfPaths];
+    pathCount = self.aboutObjectDescription->GetInterfacePaths([interface UTF8String], interfacePaths, numOfPaths);
+    for (int i=0 ; i < numOfPaths ; i++) {
+        NSString *objPath = [[NSString alloc] initWithUTF8String:interfacePaths[i]];
+        [*paths addObject:objPath];
+    }
+    delete []interfacePaths;
+    return pathCount;
 }
 
 - (void)clear

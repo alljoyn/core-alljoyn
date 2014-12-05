@@ -20,6 +20,13 @@
 
 using namespace ajn;
 
+@interface AJNMessageArgument(Private)
+
+@property (nonatomic, readonly) MsgArg *msgArg;
+
+@end
+
+
 const char * AJNAboutListenerImpl::AJN_ABOUT_LISTENER_DISPATCH_QUEUE_NAME = "org.alljoyn.about-listener.queue";
 
 /**
@@ -79,10 +86,16 @@ void AJNAboutListenerImpl::Announced(const char* busName, uint16_t version, ajn:
         if ([m_delegate respondsToSelector:@selector(didReceiveAnnounceOnBus:withVersion:withSessionPort:withObjectDescription:withAboutDataArg:
 )]) {
             NSString *nsBusName = [NSString stringWithCString:busName encoding:NSUTF8StringEncoding];
+            uint16_t announceVersion = version;
+            AJNSessionPort sessionPort = port;
             __block id<AJNAboutListener> theDelegate = m_delegate;
+            AJNMessageArgument *objdesc = [[AJNMessageArgument alloc] init];
+            *objdesc.msgArg = objectDescriptionArg;
+            AJNMessageArgument *aboutData = [[AJNMessageArgument alloc] init];
+            *aboutData.msgArg = aboutDataArg;
             dispatch_queue_t queue = dispatch_get_main_queue();
             dispatch_async(queue, ^{
-                [theDelegate didReceiveAnnounceOnBus:nsBusName withVersion:version withSessionPort:port withObjectDescription:[[AJNMessageArgument alloc] initWithHandle:(AJNHandle)&objectDescriptionArg] withAboutDataArg:[[AJNMessageArgument alloc] initWithHandle:(AJNHandle)&aboutDataArg]];
+                [theDelegate didReceiveAnnounceOnBus:nsBusName withVersion:announceVersion withSessionPort:sessionPort withObjectDescription:objdesc withAboutDataArg:aboutData];
             });
         }
     }
