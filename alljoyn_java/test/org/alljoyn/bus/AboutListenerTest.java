@@ -115,7 +115,6 @@ public class AboutListenerTest  extends TestCase {
             announceArg.put("ModelNumber", new Variant(new String("A1B2C3")));
             return announceArg;
         }
-
     }
 
     class Intfa implements AboutListenerTestInterfaceA, BusObject {
@@ -191,6 +190,7 @@ public class AboutListenerTest  extends TestCase {
         assertTrue(al.announcedFlag);
         boolean aboutPathFound = false;
         boolean aboutInterfaceFound = false;
+        assertTrue(al.aod != null);
         for (AboutObjectDescription aod : al.aod) {
             if (aod.path.equals("/About")) {
                 aboutPathFound = true;
@@ -238,6 +238,7 @@ public class AboutListenerTest  extends TestCase {
         assertTrue(al.announcedFlag);
         boolean aboutPathFound = false;
         boolean aboutInterfaceFound = false;
+        assertTrue(al.aod != null);
         for (AboutObjectDescription aod : al.aod) {
             if (aod.path.equals("/About")) {
                 aboutPathFound = true;
@@ -289,6 +290,7 @@ public class AboutListenerTest  extends TestCase {
         boolean aboutPathFound = false;
         boolean aboutInterfaceFound = false;
         assertEquals(PORT_NUMBER, aListener.port);
+        assertTrue(aListener.aod != null);
         for (AboutObjectDescription aod : aListener.aod) {
             if (aod.path.equals("/about/test")) {
                 aboutPathFound = true;
@@ -340,6 +342,7 @@ public class AboutListenerTest  extends TestCase {
         boolean aboutPathFound = false;
         boolean aboutInterfaceFound = false;
         assertEquals(PORT_NUMBER, aListener.port);
+        assertTrue(aListener.aod != null);
         for (AboutObjectDescription aod : aListener.aod) {
             if (aod.path.equals("/about/test")) {
                 aboutPathFound = true;
@@ -390,6 +393,7 @@ public class AboutListenerTest  extends TestCase {
         boolean aboutPathFound = false;
         boolean aboutInterfaceFound = false;
         assertEquals(PORT_NUMBER, aListener.port);
+        assertTrue(aListener.aod != null);
         for (AboutObjectDescription aod : aListener.aod) {
             if (aod.path.equals("/about/test")) {
                 aboutPathFound = true;
@@ -465,6 +469,7 @@ public class AboutListenerTest  extends TestCase {
         boolean aboutPathCFound = false;
         boolean aboutInterfaceCFound = false;
         assertEquals(PORT_NUMBER, aListener.port);
+        assertTrue(aListener.aod != null);
         for (AboutObjectDescription aod : aListener.aod) {
             if (aod.path.equals("/about/test/a")) {
                 aboutPathAFound = true;
@@ -535,6 +540,7 @@ public class AboutListenerTest  extends TestCase {
         boolean aboutPathFound = false;
         boolean aboutInterfaceFound = false;
         assertEquals(PORT_NUMBER, aListener.port);
+        assertTrue(aListener.aod != null);
         for (AboutObjectDescription aod : aListener.aod) {
             if (aod.path.equals("/about/test")) {
                 aboutPathFound = true;
@@ -568,6 +574,7 @@ public class AboutListenerTest  extends TestCase {
         aboutPathFound = false;
         aboutInterfaceFound = false;
         assertEquals(PORT_NUMBER, aListener.port);
+        assertTrue(aListener.aod != null);
         for (AboutObjectDescription aod : aListener.aod) {
             if (aod.path.equals("/about/test")) {
                 aboutPathFound = true;
@@ -626,6 +633,7 @@ public class AboutListenerTest  extends TestCase {
         boolean aboutPathCFound = false;
         boolean aboutInterfaceCFound = false;
         assertEquals(PORT_NUMBER, aListener.port);
+        assertTrue(aListener.aod != null);
         for (AboutObjectDescription aod : aListener.aod) {
             if (aod.path.equals("/about/test/a")) {
                 aboutPathAFound = true;
@@ -690,6 +698,7 @@ public class AboutListenerTest  extends TestCase {
         aboutInterfaceCFound = false;
 
         assertEquals(PORT_NUMBER, aListener.port);
+        assertTrue(aListener.aod != null);
         for (AboutObjectDescription aod : aListener.aod) {
             if (aod.path.equals("/about/test/a")) {
                 aboutPathAFound = true;
@@ -770,6 +779,7 @@ public class AboutListenerTest  extends TestCase {
         boolean aboutPathFound = false;
         boolean aboutInterfaceFound = false;
         assertEquals(PORT_NUMBER, aListener1.port);
+        assertTrue(aListener1.aod != null);
         for (AboutObjectDescription aod : aListener1.aod) {
             if (aod.path.equals("/about/test")) {
                 aboutPathFound = true;
@@ -787,6 +797,7 @@ public class AboutListenerTest  extends TestCase {
         aboutPathFound = false;
         aboutInterfaceFound = false;
         assertEquals(PORT_NUMBER, aListener2.port);
+        assertTrue(aListener2.aod != null);
         for (AboutObjectDescription aod : aListener2.aod) {
             if (aod.path.equals("/about/test")) {
                 aboutPathFound = true;
@@ -804,6 +815,7 @@ public class AboutListenerTest  extends TestCase {
         aboutPathFound = false;
         aboutInterfaceFound = false;
         assertEquals(PORT_NUMBER, aListener3.port);
+        assertTrue(aListener3.aod != null);
         for (AboutObjectDescription aod : aListener3.aod) {
             if (aod.path.equals("/about/test")) {
                 aboutPathFound = true;
@@ -865,6 +877,7 @@ public class AboutListenerTest  extends TestCase {
         boolean aboutPathFound = false;
         boolean aboutInterfaceFound = false;
         assertEquals(PORT_NUMBER, aListener1.port);
+        assertTrue(aListener1.aod != null);
         for (AboutObjectDescription aod : aListener1.aod) {
             if (aod.path.equals("/about/test")) {
                 aboutPathFound = true;
@@ -882,6 +895,7 @@ public class AboutListenerTest  extends TestCase {
         aboutPathFound = false;
         aboutInterfaceFound = false;
         assertEquals(PORT_NUMBER, aListener2.port);
+        assertTrue(aListener2.aod != null);
         for (AboutObjectDescription aod : aListener2.aod) {
             if (aod.path.equals("/about/test")) {
                 aboutPathFound = true;
@@ -899,6 +913,7 @@ public class AboutListenerTest  extends TestCase {
         aboutPathFound = false;
         aboutInterfaceFound = false;
         assertEquals(PORT_NUMBER, aListener3.port);
+        assertTrue(aListener3.aod != null);
         for (AboutObjectDescription aod : aListener3.aod) {
             if (aod.path.equals("/about/test")) {
                 aboutPathFound = true;
@@ -990,6 +1005,7 @@ public class AboutListenerTest  extends TestCase {
         boolean aboutInterfaceBFound = false;
         boolean aboutInterfaceCFound = false;
         assertEquals(PORT_NUMBER, aListener.port);
+        assertTrue(aListener.aod != null);
         for (AboutObjectDescription aod : aListener.aod) {
             if (aod.path.equals("/about/test")) {
                 aboutPathFound = true;
@@ -1065,6 +1081,7 @@ public class AboutListenerTest  extends TestCase {
         boolean aboutInterfaceBFound = false;
         boolean aboutInterfaceEFound = false;
         assertEquals(PORT_NUMBER, aListener.port);
+        assertTrue(aListener.aod != null);
         for (AboutObjectDescription aod : aListener.aod) {
             if (aod.path.equals("/about/test")) {
                 aboutPathFound = true;
@@ -1120,6 +1137,7 @@ public class AboutListenerTest  extends TestCase {
         boolean aboutPathFound = false;
         boolean aboutInterfaceFound = false;
         assertEquals(PORT_NUMBER, aListener.port);
+        assertTrue(aListener.aod != null);
         for (AboutObjectDescription aod : aListener.aod) {
             if (aod.path.equals("/about/test")) {
                 aboutPathFound = true;
@@ -1202,6 +1220,7 @@ public class AboutListenerTest  extends TestCase {
         boolean simplePathfound = false;
         boolean simpleInterfaceFound = false;
         assertEquals(PORT_NUMBER, aListener.port);
+        assertTrue(aListener.aod != null);
         for (AboutObjectDescription aod : aListener.aod) {
             if (aod.path.equals("/about/test/a")) {
                 aboutPathAFound = true;
@@ -1266,6 +1285,7 @@ public class AboutListenerTest  extends TestCase {
         simplePathfound = false;
         simpleInterfaceFound = false;
         assertEquals(PORT_NUMBER, aListener.port);
+        assertTrue(aListener.aod != null);
         for (AboutObjectDescription aod : aListener.aod) {
             if (aod.path.equals("/about/test/a")) {
                 aboutPathAFound = true;
@@ -1347,6 +1367,7 @@ public class AboutListenerTest  extends TestCase {
         boolean simplePathfound = false;
         boolean simpleInterfaceFound = false;
         assertEquals(PORT_NUMBER, aListener.port);
+        assertTrue(aListener.aod != null);
         for (AboutObjectDescription aod : aListener.aod) {
             if (aod.path.equals("/about/test/a")) {
                 aboutPathAFound = true;
@@ -1411,6 +1432,7 @@ public class AboutListenerTest  extends TestCase {
         simplePathfound = false;
         simpleInterfaceFound = false;
         assertEquals(PORT_NUMBER, aListener.port);
+        assertTrue(aListener.aod != null);
         for (AboutObjectDescription aod : aListener.aod) {
             if (aod.path.equals("/about/test/a")) {
                 aboutPathAFound = true;
@@ -1489,6 +1511,7 @@ public class AboutListenerTest  extends TestCase {
         boolean aboutPathATwoFound = false;
         boolean aboutInterfaceATwoFound = false;
         assertEquals(PORT_NUMBER, aListener.port);
+        assertTrue(aListener.aod != null);
         for (AboutObjectDescription aod : aListener.aod) {
             if (aod.path.equals("/about/test/aone")) {
                 aboutPathAOneFound = true;
