@@ -19,7 +19,7 @@
 #include <alljoyn/AllJoynStd.h>
 #include <alljoyn/BusAttachment.h>
 
-#define QCC_MODULE "ALLJOYN_ABOUT_ICON_OBJ"
+#define QCC_MODULE "ALLJOYN_ABOUT"
 
 using namespace ajn;
 

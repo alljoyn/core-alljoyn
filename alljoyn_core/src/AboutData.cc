@@ -791,7 +791,8 @@ size_t AboutData::GetFields(const char** fields, size_t num_fields) const
         fields[field_count] = pstore_it->first.c_str();
         ++field_count;
     }
-    std::map<qcc::String, std::map<qcc::String, MsgArg> >::const_iterator lpstore_it;
+
+    AboutData::Internal::localizedPropertyStoreConstIterator lpstore_it;
     for (lpstore_it = aboutDataInternal->localizedPropertyStore.begin();
          (lpstore_it != aboutDataInternal->localizedPropertyStore.end()) && (field_count < num_fields);
          ++lpstore_it) {

@@ -88,12 +88,12 @@ public class AboutProxyTest extends TestCase{
             //localized values
             // If the language String is null or an empty string we return the
             // default language
-            if ((language == null) || (language.length() == 0) || language.equals("en")) {
+            if ((language == null) || (language.length() == 0) || language.equalsIgnoreCase("en")) {
                 aboutData.put("DeviceName", new Variant(new String("A device name")));
                 aboutData.put("AppName", new Variant(new String("An application name")));
                 aboutData.put("Manufacturer", new Variant(new String("A mighty manufacturing company")));
                 aboutData.put("Description", new Variant(new String("Sample showing the about feature in a service application")));
-            } else if(language.equals("es")) { //Spanish
+            } else if (language.equalsIgnoreCase("es")) { //Spanish
                 aboutData.put("DeviceName", new Variant(new String("Un nombre de dispositivo")));
                 aboutData.put("AppName", new Variant(new String("Un nombre de aplicación")));
                 aboutData.put("Manufacturer", new Variant(new String("Una empresa de fabricación de poderosos")));
