@@ -35,9 +35,27 @@ AboutObjectDescription::AboutObjectDescription(const MsgArg& arg) : aodInternal(
     CreateFromMsgArg(arg);
 }
 
+AboutObjectDescription::AboutObjectDescription(const AboutObjectDescription& src)
+{
+    aodInternal = new AboutObjectDescription::Internal();
+    *aodInternal = *(src.aodInternal);
+}
+
+AboutObjectDescription& AboutObjectDescription::operator=(const AboutObjectDescription& src) {
+    if (&src == this) {
+        return *this;
+    }
+    delete aodInternal;
+    aodInternal = NULL;
+    aodInternal = new AboutObjectDescription::Internal();
+    *aodInternal = *(src.aodInternal);
+    return *this;
+}
+
 AboutObjectDescription::~AboutObjectDescription()
 {
     delete aodInternal;
+    aodInternal = NULL;
 }
 
 QStatus AboutObjectDescription::CreateFromMsgArg(const MsgArg& arg)
