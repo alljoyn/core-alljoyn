@@ -438,7 +438,7 @@ public class ProxyBusObject {
                                                            PropertiesChangedListener listener) throws BusException;
 
     public native void
-        unregisterPropertiesChangedHandler(String iface, PropertiesChangedListener listener)
+        unregisterPropertiesChangedListener(String iface, PropertiesChangedListener listener)
             throws BusException;
 
 }
