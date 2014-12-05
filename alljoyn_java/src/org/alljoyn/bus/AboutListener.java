@@ -18,6 +18,10 @@ package org.alljoyn.bus;
 
 import java.util.Map;
 
+/**
+ * Interface implemented by AllJoyn users to receive About interface related
+ * events
+ */
 public interface AboutListener {
     /**
      * Called by the bus when an announcement containing information about the

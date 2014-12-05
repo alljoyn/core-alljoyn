@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -55,7 +55,7 @@ package org.alljoyn.bus;
 public interface KeyStoreListener {
 
     /**
-     * Asks to read encrytped key data, presumably from a local KeyStore.
+     * Asks to read encrypted key data, presumably from a local KeyStore.
      *
      * The return value here is a reference to a byte array Object.  Upon
      * return, this reference will be held by AllJoyn code which is certainly
@@ -90,6 +90,8 @@ public interface KeyStoreListener {
      *   the client must return a current copy of the keys to AllJoyn which
      *   will not change (and should be consistent with values returned for
      *   getPassword).
+     *
+     * @throws BusException indicating failure getting the encrypted key data
      *
      * @return a reference to a copy of the key data if it is mutable, or a
      *         reference to the key data if not.
@@ -136,6 +138,7 @@ public interface KeyStoreListener {
      *   which it prmises not to change.  AllJoyn will clear the bytes stored in
      *   the retruned password array object after it is done with them.
      *
+     * @throws BusException indicating failure getting the password
      * @return a reference to a copy of the password if it is mutable, or a
      *         reference to the key data if not.
      */
@@ -153,6 +156,7 @@ public interface KeyStoreListener {
      * multi-thread safe version.  The AllJoyn Java bindings will simply use
      * that implementation, trusting that it produces consistent results.
      *
+     * @throws BusException indication failure to write the encrypted keys
      * @param keys the key data
      */
     void putKeys(byte[] keys) throws BusException;

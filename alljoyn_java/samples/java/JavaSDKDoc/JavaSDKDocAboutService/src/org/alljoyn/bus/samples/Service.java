@@ -91,6 +91,7 @@ public class Service {
         if (status != Status.OK) {
             return;
         }
+
         AboutObj aboutObj = new AboutObj(mBus);
         status = aboutObj.announce(contactPort.value, new MyAboutData());
         if (status != Status.OK) {

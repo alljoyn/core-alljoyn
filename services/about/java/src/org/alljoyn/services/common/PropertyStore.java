@@ -48,7 +48,7 @@ public interface PropertyStore {
 
     /**
      * Get all the properties that are stored for the given language
-     * @param languageTag
+     * @param languageTag IETF language tag
      * @param filter classifies the properties to get: for announcement,
      *               for get-about, for get-config
      * @param dataMap the map to fill
@@ -75,7 +75,7 @@ public interface PropertyStore {
 
     /**
      * Reset all the properties in the store
-     * @throws PropertyStoreException
+     * @throws PropertyStoreException indicating failure to reset all the properties in the store
      */
     void resetAll() throws PropertyStoreException;
 

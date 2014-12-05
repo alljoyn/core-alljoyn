@@ -70,6 +70,7 @@ public interface Properties {
      * @param iface the interface
      * @param changedProps a map of property names an their new values
      * @param invalidatedProps a list of property names whose values are invalidated
+     * @throws BusException indicating failure sending PropertiesChanged signal
      */
     @BusSignal(signature = "sa{sv}as")
     void PropertiesChanged(String iface, Map<String, Variant> changedProps, String [] invalidatedProps) throws BusException;

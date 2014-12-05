@@ -41,7 +41,7 @@ public interface AnnouncementHandler
 
     /**
      * Handle a loss of connectivity with this bus name
-     * @param serviceName
+     * @param serviceName the AllJoyn bus name of the lost peer
      */
     public void onDeviceLost(String serviceName);
 }

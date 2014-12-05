@@ -21,6 +21,8 @@ public class AboutObj {
 
     /**
      * Create native resources held by objects of this class.
+     *
+     * @param bus the BusAttachment this About BusObject will be registered with
      */
     public AboutObj(BusAttachment bus) {
         create(bus, false);
@@ -28,6 +30,10 @@ public class AboutObj {
 
     /**
      * Create native resources held by objects of this class.
+     *
+     * @param bus the BusAttachment this About BusObject will be registered with
+     * @param isAboutObjectAnnounced if 'true' the org.alljoyn.About interface
+     *        will be announced as part of the Announce signal
      */
     public AboutObj(BusAttachment bus, boolean isAboutObjectAnnounced) {
         create(bus, isAboutObjectAnnounced);

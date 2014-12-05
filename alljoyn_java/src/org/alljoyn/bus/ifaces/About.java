@@ -40,7 +40,7 @@ public interface About
     public static final short VERSION = 1;
     /**
      * @return the version of the protocol
-     * @throws BusException
+     * @throws BusException indicating failure to read Version property
      */
     @BusProperty(signature="q")
     public short getVersion() throws BusException;
@@ -52,7 +52,7 @@ public interface About
      * @return all the configuration fields based on the language tag.
      *         See The list of known configuration fields in About interface for
      *         more details.
-     * @throws BusException
+     * @throws BusException indicating failure to calling the remote GetAboutData method
      */
     @BusMethod(name = "GetAboutData", signature = "s", replySignature="a{sv}")
     public Map<String, Variant> getAboutData(String languageTag) throws BusException;
@@ -62,7 +62,7 @@ public interface About
      * at the given object path.
      * @return the array of object paths and the list of all interfaces available
      *         at the given object path.
-     * @throws BusException
+     * @throws BusException indicating failure when calling the remote GetObjectDescription method
      */
     @BusMethod(name = "GetObjectDescription", replySignature="a(oas)")
     public AboutObjectDescription[] getObjectDescription() throws BusException;

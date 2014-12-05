@@ -36,7 +36,7 @@ public interface ServiceCommon
 
     /**
      * Set the platform specific logger
-     * @param logger
+     * @param logger a Java logger utility
      */
     void setLogger(GenericLogger logger);
 

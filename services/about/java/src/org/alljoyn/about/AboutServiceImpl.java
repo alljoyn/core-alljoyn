@@ -127,6 +127,8 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
      * Using this member function could have significant impact on network
      * performance.
      *
+     * @param handler the AnnouncementHandler that will receive the announce signal
+     *
      * @see org.alljoyn.about.AboutService#addAnnouncementHandler(org.alljoyn.services.common.AnnouncementHandler, String[] interfaces)
      */
     @Deprecated
@@ -172,6 +174,7 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
     /**
      * @deprecated use {@link org.alljoyn.about.AboutService#removeAnnouncementHandler(AnnouncementHandler handler, String[] interfaces)} instead.
      *
+     * @param handler the AnnouncementHandler that will receive the Announce signal
      * @see org.alljoyn.about.AboutService#addAnnouncementHandler(org.alljoyn.services.common.AnnouncementHandler, String[] interfaces)
      */
     @Deprecated
