@@ -1447,7 +1447,9 @@ class MessagePump {
         while (m_queue.empty() == false) {
             QueueEntry entry = m_queue.front();
             m_queue.pop();
+            m_transport->m_ardpLock.Lock();
             ARDP_RecvReady(entry.m_handle, entry.m_conn, entry.m_rcv);
+            m_transport->m_ardpLock.Unlock();
         }
 
         assert(m_queue.empty() && "MessagePump::~MessagePump(): Message queue must be empty here");
@@ -3952,7 +3954,9 @@ ThreadReturn STDCALL MessagePump::PumpThread::Run(void* arg)
              */
             if (handled == false) {
                 QCC_DbgPrintf(("MessagePump::PumpThread::Run(): Unable to find endpoint with conn ID == %d. on m_endpointList", entry.m_connId));
+                m_pump->m_transport->m_ardpLock.Lock();
                 ARDP_RecvReady(entry.m_handle, entry.m_conn, entry.m_rcv);
+                m_pump->m_transport->m_ardpLock.Unlock();
             }
         }
     }
