@@ -59,22 +59,17 @@ using namespace ajn;
 static const char bundledConfig[] =
     "<busconfig>"
     "  <type>alljoyn_bundled</type>"
-    "  <limit name=\"auth_timeout\">5000</limit>"
-    "  <limit name=\"max_incomplete_connections\">4</limit>"
-    "  <limit name=\"max_completed_connections\">16</limit>"
-    "  <limit name=\"max_untrusted_clients\">8</limit>"
-    "  <flag name=\"restrict_untrusted_clients\">false</flag>"
-    "</busconfig>";
-
-static const char internalConfig[] =
-    "<busconfig>"
-    "  <type>alljoyn</type>"
     "  <listen>unix:abstract=alljoyn</listen>"
 #if defined(QCC_OS_DARWIN)
     "  <listen>launchd:env=DBUS_LAUNCHD_SESSION_BUS_SOCKET</listen>"
 #endif
     "  <listen>tcp:iface=*,port=0</listen>"
     "  <listen>udp:iface=*,port=0</listen>"
+    "  <limit name=\"auth_timeout\">5000</limit>"
+    "  <limit name=\"max_incomplete_connections\">4</limit>"
+    "  <limit name=\"max_completed_connections\">16</limit>"
+    "  <limit name=\"max_untrusted_clients\">8</limit>"
+    "  <flag name=\"restrict_untrusted_clients\">false</flag>"
     "</busconfig>";
 
 class ClientAuthListener : public AuthListener {
@@ -141,6 +136,9 @@ class BundledRouter : public RouterLauncher, public TransportFactoryContainer {
     Mutex lock;
     std::set<NullTransport*> transports;
     ConfigDB* config;
+#ifndef NDEBUG
+    qcc::String configFile;
+#endif
 };
 
 bool ExistFile(const char* fileName) {
@@ -214,21 +212,21 @@ BundledRouter::BundledRouter() : transportsInitialized(false), stopping(false), 
     /*
      * Setup the config
      */
-    String configStr = internalConfig;
 #ifndef NDEBUG
 #if defined(QCC_OS_ANDROID)
-    qcc::String configFile = "/mnt/sdcard/.alljoyn/config.xml";
+    configFile = "/mnt/sdcard/.alljoyn/config.xml";
 #else
-    qcc::String configFile = "./config.xml";
+    configFile = "./config.xml";
 #endif
-    if (!ExistFile(configFile.c_str())) {
+    qcc::String configStr = bundledConfig;
+    if (ExistFile(configFile.c_str())) {
+        configStr = "";
+    } else {
         configFile = "";
-        configStr += bundledConfig;
     }
     config = new ConfigDB(configStr, configFile);
 #else
-    configStr += bundledConfig;
-    config = new ConfigDB(configStr);
+    config = new ConfigDB(bundledConfig);
 #endif
 }
 
@@ -254,6 +252,12 @@ QStatus BundledRouter::Start(NullTransport* nullTransport)
     QStatus status = ER_OK;
 
     QCC_DbgHLPrintf(("Using BundledRouter"));
+
+#ifndef NDEBUG
+    if (configFile.size() > 0) {
+        QCC_DbgHLPrintf(("Using external config file: %s", configFile.c_str()));
+    }
+#endif
 
     /*
      * If the bundled router is in the process of stopping we need to wait until the operation is
