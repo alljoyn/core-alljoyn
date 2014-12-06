@@ -60,6 +60,21 @@ class AboutObjectDescription {
     AboutObjectDescription(const MsgArg& arg);
 
     /**
+     * Copy constructor
+     *
+     * @param src The AboutObjectDescription instance to be copied
+     */
+    AboutObjectDescription(const AboutObjectDescription& src);
+
+    /**
+     * Assignment operator
+     *
+     * @param src The AboutObjectDescription instance to be assigned
+     *
+     * @return copy of the AboutObjectDescription src
+     */
+    AboutObjectDescription& operator=(const AboutObjectDescription& src);
+    /**
      * Destructor
      */
     ~AboutObjectDescription();

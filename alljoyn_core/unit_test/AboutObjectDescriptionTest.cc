@@ -687,3 +687,79 @@ TEST(AboutObjectDescriptionTest, NoAboutInterface)
 
     EXPECT_FALSE(aod.HasInterface("org.alljoyn.About"));
 }
+
+TEST(AboutObjectDescriptionTest, CopyConstructor)
+{
+    QStatus status = ER_FAIL;
+    BusAttachment bus("AboutObjectDescritpion test");
+
+    //add the org.alljoyn.About interface
+    AboutObj aboutObj(bus, BusObject::ANNOUNCED);
+
+    MsgArg arg;
+    status = bus.GetInternal().GetAnnouncedObjectDescription(arg);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    AboutObjectDescription aod(arg);
+
+    EXPECT_TRUE(aod.HasInterface("/About", "org.alljoyn.About"));
+
+    EXPECT_TRUE(aod.HasInterface("org.alljoyn.About"));
+
+    AboutObjectDescription aodCopy(aod);
+
+    EXPECT_TRUE(aodCopy.HasInterface("/About", "org.alljoyn.About"));
+
+    EXPECT_TRUE(aodCopy.HasInterface("org.alljoyn.About"));
+
+    //Should be able to change one without changing the other
+    aod.Clear();
+
+    EXPECT_FALSE(aod.HasInterface("/About", "org.alljoyn.About"));
+
+    EXPECT_FALSE(aod.HasInterface("org.alljoyn.About"));
+
+    EXPECT_TRUE(aodCopy.HasInterface("/About", "org.alljoyn.About"));
+
+    EXPECT_TRUE(aodCopy.HasInterface("org.alljoyn.About"));
+}
+
+TEST(AboutObjectDescriptionTest, AssignmentOperator)
+{
+    QStatus status = ER_FAIL;
+    BusAttachment bus("AboutObjectDescritpion test");
+
+    //add the org.alljoyn.About interface
+    AboutObj aboutObj(bus, BusObject::ANNOUNCED);
+
+    MsgArg arg;
+    status = bus.GetInternal().GetAnnouncedObjectDescription(arg);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    AboutObjectDescription aod(arg);
+
+    EXPECT_TRUE(aod.HasInterface("/About", "org.alljoyn.About"));
+
+    EXPECT_TRUE(aod.HasInterface("org.alljoyn.About"));
+
+    // self assigment
+    aod = aod;
+
+    AboutObjectDescription aodCopy;
+    aodCopy = aod;
+
+    EXPECT_TRUE(aodCopy.HasInterface("/About", "org.alljoyn.About"));
+
+    EXPECT_TRUE(aodCopy.HasInterface("org.alljoyn.About"));
+
+    //Should be able to change one without changing the other
+    aod.Clear();
+
+    EXPECT_FALSE(aod.HasInterface("/About", "org.alljoyn.About"));
+
+    EXPECT_FALSE(aod.HasInterface("org.alljoyn.About"));
+
+    EXPECT_TRUE(aodCopy.HasInterface("/About", "org.alljoyn.About"));
+
+    EXPECT_TRUE(aodCopy.HasInterface("org.alljoyn.About"));
+}

@@ -82,6 +82,22 @@ AboutData::AboutData(const MsgArg arg, const char* language) {
     }
 }
 
+AboutData::AboutData(const AboutData& src) {
+    InitializeFieldDetails();
+    *aboutDataInternal = *(src.aboutDataInternal);
+}
+
+AboutData& AboutData::operator=(const AboutData& src) {
+    if (&src == this) {
+        return *this;
+    }
+    delete aboutDataInternal;
+    aboutDataInternal = NULL;
+    InitializeFieldDetails();
+    *aboutDataInternal = *(src.aboutDataInternal);
+    return *this;
+}
+
 void AboutData::InitializeFieldDetails() {
     aboutDataInternal = new AboutData::Internal();
     // FieldDetails: Required, Announced, Localized, signature
@@ -104,6 +120,7 @@ void AboutData::InitializeFieldDetails() {
 AboutData::~AboutData()
 {
     delete aboutDataInternal;
+    aboutDataInternal = NULL;
 }
 
 bool isHexChar(char c) {
@@ -791,7 +808,8 @@ size_t AboutData::GetFields(const char** fields, size_t num_fields) const
         fields[field_count] = pstore_it->first.c_str();
         ++field_count;
     }
-    std::map<qcc::String, std::map<qcc::String, MsgArg> >::const_iterator lpstore_it;
+
+    AboutData::Internal::localizedPropertyStoreConstIterator lpstore_it;
     for (lpstore_it = aboutDataInternal->localizedPropertyStore.begin();
          (lpstore_it != aboutDataInternal->localizedPropertyStore.end()) && (field_count < num_fields);
          ++lpstore_it) {

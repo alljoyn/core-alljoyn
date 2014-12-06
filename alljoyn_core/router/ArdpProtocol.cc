@@ -1370,10 +1370,15 @@ void* ARDP_GetHandleContext(ArdpHandle* handle)
     return handle->context;
 }
 
-bool ARDP_IsConnValid(ArdpHandle* handle, ArdpConnRecord* conn)
+bool ARDP_IsConnValid(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t connId)
 {
     QCC_DbgTrace(("ARDP_IsConnValid(handle=%p, conn=%p)", handle, conn));
-    return IsConnValid(handle, conn);
+    if (IsConnValid(handle, conn)) {
+        if (conn->id == connId) {
+            return true;
+        }
+    }
+    return false;
 }
 
 QStatus ARDP_SetConnContext(ArdpHandle* handle, ArdpConnRecord* conn, void* context)
@@ -2774,11 +2779,17 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
             }
 
             if (seg->FLG & ARDP_FLAG_SYN) {
-                QCC_DbgPrintf(("ArdpMachine(): OPEN: Got SYN, disconnect"));
 #if ARDP_STATS
                 ++handle->stats.synRecvs;
 #endif
-                Disconnect(handle, conn, ER_ARDP_INVALID_RESPONSE);
+                /* Did the remote side miss our ACK of SYN-ACK? */
+                if (isDuplicate && !conn->passive && ((seg->FLG & ARDP_FLAG_ACK) && (seg->ACK == conn->snd.ISS))) {
+                    QCC_DbgPrintf(("ArdpMachine(): OPEN: Got duplicate SYN-ACK, acknowledge"));
+                    Send(handle, conn, ARDP_FLAG_ACK | ARDP_FLAG_VER, conn->snd.NXT, conn->rcv.CUR);
+                } else {
+                    QCC_DbgPrintf(("ArdpMachine(): OPEN: Got unexpected SYN, disconnect"));
+                    Disconnect(handle, conn, ER_ARDP_INVALID_RESPONSE);
+                }
                 break;
             }
 
@@ -3004,7 +3015,26 @@ QStatus ARDP_RecvReady(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf* rcv
     if (!IsConnValid(handle, conn)) {
         return ER_ARDP_INVALID_CONNECTION;
     }
-    return ReleaseRcvBuffers(handle, conn, rcv->seq, rcv->fcnt, ER_OK);
+
+    if (conn->state == OPEN) {
+        return ReleaseRcvBuffers(handle, conn, rcv->seq, rcv->fcnt, ER_OK);
+    } else if ((conn->state == CLOSED) || (conn->state == CLOSE_WAIT)) {
+        uint32_t i;
+        for (i = 0; i < rcv->fcnt; i++) {
+            if (rcv->data != NULL) {
+                free(rcv->data);
+            }
+            rcv->flags = 0;
+            rcv->data = NULL;
+            if (!(rcv->next->flags & ARDP_BUFFER_IN_USE) || (rcv->next->som != rcv->som)) {
+                break;
+            }
+            rcv = rcv->next;
+        }
+        return ER_OK;
+    } else {
+        return ER_ARDP_INVALID_STATE;
+    }
 }
 
 QStatus ARDP_Send(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint32_t len, uint32_t ttl)

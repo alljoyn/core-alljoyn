@@ -432,6 +432,7 @@
 
 #define SENT_SANITY 0   /**< If non-zero make sure ARDP is returning buffers correctly (expensive) */
 #define BYTEDUMPS 0     /**< If non-zero do byte-by-byte debug dumps of sent and received buffers (super-expensive) */
+#define RETURN_ORPHAN_BUFS 0 /**< If non-zero, call ARDP_RecvReady on any buffers we can't forward (processed after endpoint is torn down) */
 
 using namespace std;
 using namespace qcc;
@@ -1447,7 +1448,9 @@ class MessagePump {
         while (m_queue.empty() == false) {
             QueueEntry entry = m_queue.front();
             m_queue.pop();
+            m_transport->m_ardpLock.Lock();
             ARDP_RecvReady(entry.m_handle, entry.m_conn, entry.m_rcv);
+            m_transport->m_ardpLock.Unlock();
         }
 
         assert(m_queue.empty() && "MessagePump::~MessagePump(): Message queue must be empty here");
@@ -3015,6 +3018,8 @@ class _UDPEndpoint : public _RemoteEndpoint {
         if (IsEpStarted() == false) {
             QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): Not accepting inbound messages"));
 
+#if RETURN_ORPHAN_BUFS
+
             QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): ARDP_RecvReady()"));
             m_transport->m_ardpLock.Lock();
 
@@ -3050,6 +3055,20 @@ class _UDPEndpoint : public _RemoteEndpoint {
             }
 #endif
             m_transport->m_ardpLock.Unlock();
+
+#else // not RETURN_ORPHAN_BUFS
+
+            /*
+             * Since we are getting an indication that the endpoint is going
+             * down, we assume that the endpoint will continue the process and
+             * be destroyed.  In this case, we assume that ARDP is going to
+             * particpate in closing down the connection and released any
+             * pending buffers.  This means that we can just ignore the buffer
+             * here.  We'll just print a message saying that's what we did.
+             */
+            QCC_DbgPrintf(("UDPEndpoint::RecvCb(): Orphaned RECV_CB for conn ID == %d. ignored", connId));
+
+#endif // not RETURN_ORPHAN_BUFS
 
             m_transport->m_endpointListLock.Unlock(MUTEX_CONTEXT);
             DecrementAndFetch(&m_refCount);
@@ -3951,11 +3970,22 @@ ThreadReturn STDCALL MessagePump::PumpThread::Run(void* arg)
              * This means returning the bytes back to ARDP.
              */
             if (handled == false) {
+#if RETURN_ORPHAN_BUFS
+
                 QCC_DbgPrintf(("MessagePump::PumpThread::Run(): Unable to find endpoint with conn ID == %d. on m_endpointList", entry.m_connId));
+                m_pump->m_transport->m_ardpLock.Lock();
                 ARDP_RecvReady(entry.m_handle, entry.m_conn, entry.m_rcv);
+                m_pump->m_transport->m_ardpLock.Unlock();
+
+#else // not RETURN_ORPHAN_BUFS
+
+                QCC_DbgPrintf(("MessagePump::PumpThread::Run(): Unable to find endpoint with conn ID == %d. on m_endpointList. Ignore message", entry.m_connId));
+
+#endif // not RETURN_ORPHAN_BUFS
             }
         }
     }
+
 
     /*
      * If we are exiting, we need to make sure that there are no race conditions
@@ -4404,6 +4434,7 @@ ThreadReturn STDCALL UDPTransport::DispatcherThread::Run(void* arg)
                         switch (entry.m_command) {
                         case WorkerCommandQueueEntry::RECV_CB:
                             {
+#if RETURN_ORPHAN_BUFS
                                 /*
                                  * If we get here, we have a receive callback
                                  * from ARDP but we don't have an endpoint to
@@ -4434,6 +4465,23 @@ ThreadReturn STDCALL UDPTransport::DispatcherThread::Run(void* arg)
                                 }
 #endif
                                 m_transport->m_ardpLock.Unlock();
+#else // not RETURN_ORPHAN_BUFS
+                                /*
+                                 * If we get here, we have a receive callback
+                                 * from ARDP but we don't have an endpoint to
+                                 * route the message to.  This is expected if
+                                 * the endpoint has gone down but there are
+                                 * messages queued up to be delivered to it.
+                                 * Since there's nowhere to send such messages,
+                                 * we just have to drop them.  Since the
+                                 * endpoint has been destroyed, we assume that
+                                 * ARDP has closed down the connection and
+                                 * released any pending buffers.  This means
+                                 * that we can just ignore the buffer.
+                                 */
+                                QCC_DbgPrintf(("UDPTransport::DispatcherThread::Run(): Orphaned RECV_CB for conn ID == %d. ignored",
+                                               entry.m_connId));
+#endif // not RETURN_ORPHAN_BUFS
                                 break;
                             }
 
@@ -6685,7 +6733,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
          */
         QCC_DbgPrintf(("UDPTransport::DoConnectCb(): active connection callback with conn ID == %d.", connId));
         m_ardpLock.Lock();
-        bool connValid = ARDP_IsConnValid(m_handle, conn);
+        bool connValid = ARDP_IsConnValid(m_handle, conn, connId);
         qcc::Event* event = static_cast<qcc::Event*>(ARDP_GetConnContext(m_handle, conn));
         m_ardpLock.Unlock();
 
@@ -7307,10 +7355,29 @@ void UDPTransport::RecvCb(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf* 
     if (m_dispatcher == NULL) {
         QCC_DbgPrintf(("UDPTransport::RecvCb(): m_dispatcher is NULL"));
 
+#if RETURN_ORPHAN_BUFS
+
         QCC_DbgPrintf(("UDPTransport::RecvCb(): ARDP_RecvReady()"));
         m_ardpLock.Lock();
         ARDP_RecvReady(handle, conn, rcv);
         m_ardpLock.Unlock();
+
+#else // not RETURN_ORPHAN_BUFS
+
+        /*
+         * If we get here, we have a receive callback from ARDP but we don't
+         * have a message dispatcher to route the message to.  This is expected
+         * (rarely) if the transport is going down (think control-c) but ARDP
+         * still has messages queued up to be delivered.  Since there's nowhere
+         * to send such messages, we just have to drop them.  Since the endpoint
+         * has been or is being destroyed, we assume that ARDP will close down
+         * the connection and release any pending buffers as part of the
+         * endpoint teardown. This means that we can just ignore the buffer
+         * here.
+         */
+        QCC_DbgPrintf(("UDPTransport::DispatcherThread::Run(): Orphaned Recv_Cb for conn == %p ignored", conn));
+
+#endif // not RETURN_ORPHAN_BUFS
 
         DecrementAndFetch(&m_refCount);
         return;
