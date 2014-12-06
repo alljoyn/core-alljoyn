@@ -6733,7 +6733,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
          */
         QCC_DbgPrintf(("UDPTransport::DoConnectCb(): active connection callback with conn ID == %d.", connId));
         m_ardpLock.Lock();
-        bool connValid = ARDP_IsConnValid(m_handle, conn);
+        bool connValid = ARDP_IsConnValid(m_handle, conn, connId);
         qcc::Event* event = static_cast<qcc::Event*>(ARDP_GetConnContext(m_handle, conn));
         m_ardpLock.Unlock();
 
