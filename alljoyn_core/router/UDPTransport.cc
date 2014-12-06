@@ -437,6 +437,8 @@
 using namespace std;
 using namespace qcc;
 
+const uint32_t UDP_STALL_REPORT_INTERVAL = 10000; /** Minimum time between stall warning log messages */
+
 const uint32_t UDP_ENDPOINT_MANAGEMENT_TIMER = 1000;  /** Minimum time between calls to ManageEndpoints -- a watchdog */
 const uint32_t UDP_WATCHDOG_TIMEOUT = 30000;  /**< How long to wait before printing an error if an endpoint is not going away */
 const uint32_t UDP_MESSAGE_PUMP_TIMEOUT = 10000;  /**< How long to keep a message pump thread running with nothing to do */
@@ -3577,6 +3579,24 @@ class _UDPEndpoint : public _RemoteEndpoint {
     }
 
     /**
+     * Set the time at which the last stall warning was emitted.
+     */
+    void SetStallTime(qcc::Timespec tStall)
+    {
+        QCC_DbgTrace(("_UDPEndpoint::SetStallTime()"));
+        m_tStall = tStall;
+    }
+
+    /**
+     * Get the time at which the lst stall warning was emitted.
+     */
+    qcc::Timespec GetStallTime(void)
+    {
+        QCC_DbgTrace(("_UDPEndpoint::GetStallTime(): => %" PRIu64 ".%03d.", m_tStall.seconds, m_tStall.mseconds));
+        return m_tStall;
+    }
+
+    /**
      * Which side of a connection are we -- active or passive
      */
     SideState GetSideState(void)
@@ -3720,6 +3740,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
         Timespec tNow;
         GetTimeNow(&tNow);
         SetStopTime(tNow);
+        SetStallTime(tNow);
 
         m_epState = EP_STOPPING;
     }
@@ -3845,6 +3866,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
     volatile EndpointState m_epState; /**< The state of the endpoint itself */
     qcc::Timespec m_tStart;           /**< Timestamp indicating when the authentication process started */
     qcc::Timespec m_tStop;            /**< Timestamp indicating when the stop process for the endpoint was begun */
+    qcc::Timespec m_tStall;           /**< Timestamp indicating when the last stall warning was logged */
     bool m_remoteExited;              /**< Indicates if the remote endpoint exit function has been run.  Cannot delete until true. */
     bool m_exitScheduled;             /**< Indicates if the remote endpoint exit function has been scheduled. */
     volatile bool m_disconnected;     /**< Indicates an interlocked handling of the ARDP_Disconnect has happened */
@@ -5290,7 +5312,26 @@ void UDPTransport::EmitStallWarnings(UDPEndpoint& ep)
     GetTimeNow(&tNow);
     Timespec tStop = ep->GetStopTime();
     int32_t tRemaining = tStop + UDP_WATCHDOG_TIMEOUT - tNow;
+
+    /*
+     * If tRemaining is less than zero, the endpoint is stalled.
+     */
     if (tRemaining < 0) {
+
+        /*
+         * Once stalled we don't want to print an error every time thought the
+         * management loop, so we limit ourselves to logging errors every few
+         * seconds
+         */
+        Timespec tStalled = ep->GetStallTime();
+        int32_t tDelay = tStalled + UDP_STALL_REPORT_INTERVAL - tNow;
+
+        if (tDelay > 0) {
+            return;
+        }
+
+        ep->SetStallTime(tNow);
+
         QCC_LogError(ER_UDP_ENDPOINT_STALLED, ("UDPTransport::EmitStallWarnings(): Endpoint with conn ID == %d stalled", ep->GetConnId()));
 
         if (threadSetEmpty == false) {
