@@ -139,6 +139,12 @@ void* DaemonTransport::Run(void* arg)
             conn->GetFeatures().allowRemote = false;
             conn->GetFeatures().handlePassing = true;
 
+            /*
+             * The DaemonTransport only binds to the loopback address, so any application connecting
+             * through this transport has to be a desktop application running on the same machine.
+             */
+            conn->SetGroupId(GetUsersGid(DESKTOP_APPLICATION));
+
             endpointListLock.Lock(MUTEX_CONTEXT);
             endpointList.push_back(RemoteEndpoint::cast(conn));
             endpointListLock.Unlock(MUTEX_CONTEXT);
