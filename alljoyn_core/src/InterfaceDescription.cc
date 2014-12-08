@@ -50,7 +50,7 @@ static size_t GetAnnotationsWithValues(
         typedef std::map<qcc::String, qcc::String> AnnotationsMap;
         count = std::min(count, size);
         AnnotationsMap::const_iterator mit = annotations.begin();
-        for (size_t i = 0; i < count; i++, mit++) {
+        for (size_t i = 0; i < count && mit != annotations.end(); ++i, ++mit) {
             names[i] = mit->first;
             values[i] = mit->second;
         }
@@ -602,7 +602,7 @@ size_t InterfaceDescription::GetProperties(const Property** props, size_t numPro
     if (props) {
         count = min(count, numProps);
         Definitions::PropertyMap::const_iterator pit = defs->properties.begin();
-        for (size_t i = 0; i < count; i++, pit++) {
+        for (size_t i = 0; i < count && pit != defs->properties.end(); ++i, ++pit) {
             props[i] = &(pit->second);
         }
     }
@@ -621,7 +621,7 @@ size_t InterfaceDescription::GetMembers(const Member** members, size_t numMember
     if (members) {
         count = min(count, numMembers);
         Definitions::MemberMap::const_iterator mit = defs->members.begin();
-        for (size_t i = 0; i < count; i++, mit++) {
+        for (size_t i = 0; i < count && mit != defs->members.end(); ++i, ++mit) {
             members[i] = &(mit->second);
         }
     }
