@@ -46,6 +46,11 @@
 extern "C" {
 #endif
 
+typedef enum {
+    UNANNOUNCED, ///< The interface is not announced
+    ANNOUNCED    ///< The interface is announced
+} alljoyn_about_announceflag;
+
 /**
  * Unity-specific function to process alternate-thread callbacks on the main thread.
  *
