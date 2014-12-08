@@ -6258,6 +6258,12 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
     udpEp->SetConn(conn);
 
     /*
+     * Check any application connecting over UDP to see if it is running on the same machine and
+     * set the group ID appropriately if so.
+     */
+    CheckEndpointLocalMachine(udpEp);
+
+    /*
      * The unique name of the endpoint on the passive side of the connection is
      * a unique name generated on the passive side.  We are calling out to the
      * daemon but only to construct a GUID, so this is okay.
@@ -7036,6 +7042,12 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
         udpEp->CreateStream(handle, conn, m_ardpConfig.initialDataTimeout, m_ardpConfig.totalDataRetryTimeout / m_ardpConfig.initialDataTimeout);
         udpEp->SetHandle(handle);
         udpEp->SetConn(conn);
+
+        /*
+         * Check any application connecting over UDP to see if it is running on the same machine and
+         * set the group ID appropriately if so.
+         */
+        CheckEndpointLocalMachine(udpEp);
 
         /*
          * The unique name of the endpoint on the active side of the connection is
@@ -10623,6 +10635,24 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
         EnableDiscoveryInstance(*it);
     }
     m_pendingDiscoveries.clear();
+}
+
+void UDPTransport::CheckEndpointLocalMachine(UDPEndpoint endpoint)
+{
+#ifdef QCC_OS_GROUP_WINDOWS
+    String ipAddrStr;
+    endpoint->GetRemoteIp(ipAddrStr);
+
+    std::vector<IfConfigEntry> entries;
+    IfConfig(entries);
+
+    for (uint32_t i = 0; i < entries.size(); i++) {
+        if (ipAddrStr == entries[i].m_addr) {
+            endpoint->SetGroupId(GetUsersGid(DESKTOP_APPLICATION));
+            break;
+        }
+    }
+#endif
 }
 
 } // namespace ajn

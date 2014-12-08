@@ -846,8 +846,9 @@ bool _PolicyDB::OKToSend(const NormalizedMsgHdr& nmh, BusEndpoint& dest, const I
         destIDSet = &nmh.destIDSet;
     }
 
-    QCC_DbgPrintf(("Check if OK for endpoint %s to send %s (%s{%s} --> %s{%s})",
+    QCC_DbgPrintf(("Check if OK for endpoint %s to send %s to destination %s (%s{%s} --> %s{%s})",
                    nmh.sender->GetUniqueName().c_str(), nmh.msg->Description().c_str(),
+                   (dest->IsValid() ? dest->GetUniqueName().c_str() : ""),
                    nmh.msg->GetSender(), IDSet2String(nmh.senderIDSet).c_str(),
                    nmh.msg->GetDestination(), IDSet2String(*destIDSet).c_str()));
 

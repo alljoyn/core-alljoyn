@@ -84,4 +84,12 @@
 #endif
 #endif
 
+/**
+ * The GroupID names for Universal, Desktop, and Whitelisted Windows Applications. These GroupIDs
+ * are used to enforce the Windows app isolation policies.
+ */
+#define DESKTOP_APPLICATION           "DesktopApplication"
+#define UNIVERSAL_WINDOWS_APPLICATION "UniversalWindowsApplication"
+#define WHITELISTED_APPLICATION       "WhitelistedApplication"
+
 #endif
