@@ -205,7 +205,7 @@ static const AJNSessionPort kAboutClientServicePort = 25;
     uint16_t aboutVersion;
     NSMutableDictionary *aboutData;
     [aboutProxy getVersion:&aboutVersion];
-    [aboutProxy getAboutDataForLanguage:@"en" usingDictionary:aboutData];
+    [aboutProxy getAboutDataForLanguage:@"en" usingDictionary:&aboutData];
     NSLog(@"Version %d", version);
     [self.receivedAnnounce signal];
     

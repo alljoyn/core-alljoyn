@@ -80,6 +80,9 @@ static const uint8_t ICON_BYTE = 0x11;
 @property (nonatomic) BOOL testMissingAnnounceDataField;
 @property (nonatomic) BOOL testUnsupportedLanguage;
 @property (nonatomic) BOOL testNonDefaultUTFLanguage;
+@property (nonatomic) AJNMessageArgument *testAboutObjectDescriptionArg;
+@property (nonatomic) AJNMessageArgument *testAboutDataArg;
+@property (nonatomic) BOOL testAboutObjectDescription;
 
 
 - (BOOL)waitForBusToStop:(NSTimeInterval)timeoutSeconds;
@@ -118,6 +121,10 @@ static const uint8_t ICON_BYTE = 0x11;
 @synthesize testMissingAnnounceDataField = _testMissingAnnounceDataField;
 @synthesize testUnsupportedLanguage = _testUnsupportedLanguage;
 @synthesize testNonDefaultUTFLanguage = _testNonDefaultUTFLanguage;
+@synthesize testAboutObjectDescriptionArg = _testAboutObjectDescriptionArg;
+@synthesize testAboutDataArg = _testAboutDataArg;
+@synthesize testAboutObjectDescription = _testAboutObjectDescription;
+
 - (void)setUp
 {
     [super setUp];
@@ -158,6 +165,7 @@ static const uint8_t ICON_BYTE = 0x11;
     self.testMissingAnnounceDataField = NO;
     self.testUnsupportedLanguage = NO;
     self.testNonDefaultUTFLanguage = NO;
+    self.testAboutObjectDescription = NO;
 }
 
 - (void)tearDown
@@ -193,6 +201,7 @@ static const uint8_t ICON_BYTE = 0x11;
     self.testMissingAnnounceDataField = NO;
     self.testUnsupportedLanguage = NO;
     self.testNonDefaultUTFLanguage = NO;
+    self.testAboutObjectDescription = NO;
     
     self.bus = nil;    
     
@@ -1472,7 +1481,7 @@ static const uint8_t ICON_BYTE = 0x11;
     AJNAboutProxy *aboutProxy = [[AJNAboutProxy alloc] initWithBusAttachment:client.bus busName:client.busNameToConnect sessionId:client.testSessionId];
     
     NSMutableDictionary *aboutData;
-    status = [aboutProxy getAboutDataForLanguage:@"foo" usingDictionary:aboutData];
+    status = [aboutProxy getAboutDataForLanguage:@"foo" usingDictionary:&aboutData];
     STAssertTrue(status == ER_OK, @"Non default language should not throw error");
 
     [self.bus disconnectWithArguments:@"null:"];
@@ -1527,7 +1536,7 @@ static const uint8_t ICON_BYTE = 0x11;
     AJNAboutProxy *aboutProxy = [[AJNAboutProxy alloc] initWithBusAttachment:client.bus busName:client.busNameToConnect sessionId:client.testSessionId];
     
     NSMutableDictionary *aboutData;
-    status = [aboutProxy getAboutDataForLanguage:@"foo" usingDictionary:aboutData];
+    status = [aboutProxy getAboutDataForLanguage:@"foo" usingDictionary:&aboutData];
     STAssertTrue(status == ER_OK, @"Non default language should not throw error");
     
     [self.bus disconnectWithArguments:@"null:"];
@@ -1545,6 +1554,8 @@ static const uint8_t ICON_BYTE = 0x11;
 {
     BusAttachmentTests *client = [[BusAttachmentTests alloc] init];
     [client setUp];
+    client.isTestClient = YES;
+    client.testAboutObjectDescription = YES;
     
     // Service
     BasicObject *basicObject = [[BasicObject alloc] initWithBusAttachment:self.bus onPath:kBusObjectTestsObjectPath];
@@ -1573,14 +1584,7 @@ static const uint8_t ICON_BYTE = 0x11;
     STAssertTrue(status == ER_OK, @"Client call to WhoImplements Failed");
     
     STAssertTrue([client waitForCompletion:20 onFlag:&receiveAnnounce], @"The about listener should have been notified that the announce signal is received.");
-    
-    // Create AboutProxy
-    AJNAboutProxy *aboutProxy = [[AJNAboutProxy alloc] initWithBusAttachment:client.bus busName:client.busNameToConnect sessionId:client.testSessionId];
-    
-    AJNMessageArgument *aboutObjectDescription;
-    //status = [aboutProxy getObjectDescriptionUsingMsgArg:aboutObjectDescription];
-    STAssertTrue(status == ER_OK, @"getObjectDescriptionUsingMsgArg returned error");
-    
+
     [self.bus disconnectWithArguments:@"null:"];
     [self.bus stop];
     
@@ -1590,52 +1594,6 @@ static const uint8_t ICON_BYTE = 0x11;
     [client.bus unregisterBusListener:self];
     [client.bus unregisterAllAboutListeners];
     [client tearDown];
-}
-
-- (void)testForAboutObjectDescription
-{
-    QStatus status;
-    self.testMissingAnnounceDataField = YES;
-    
-    // Service
-    BasicObject *basicObject = [[BasicObject alloc] initWithBusAttachment:self.bus onPath:kBusObjectTestsObjectPath];
-    [self.bus registerBusObject:basicObject];
-    
-    // Populate a MsgArg with a(oas)
-    AJNMessageArgument *testAboutDescriptionArgs = [[AJNMessageArgument alloc] init];
-    AJNMessageArgument *entryOne = [[AJNMessageArgument alloc] init];
-    AJNMessageArgument *entryTwo = [[AJNMessageArgument alloc] init];
-    
-    
-    AJNMessageArgument *arrayOfInterfaces = [[AJNMessageArgument alloc] init];
-    char *interfaces[] = { "com.test.about", "com.foo.bar" };
-    char *objPath1 = "/test/about";
-    
-    
-    status = [arrayOfInterfaces setValue:@"(oas)", objPath1, 2, interfaces];
-    STAssertTrue(status == ER_OK, @"createFromMsgArg returned an error");
-    [arrayOfInterfaces stabilize];
-    
-    AJNMessageArgument *arrayOfInterfacesTwo = [[AJNMessageArgument alloc] init];
-    char *interfacesTwo[] = { "org.test.about", "org.foo.bar" };
-    char *objPath2 = "/test/about";
-
-    [arrayOfInterfacesTwo setValue:@"(oas)", objPath2, 2, interfacesTwo];
-    [arrayOfInterfacesTwo stabilize];
-    
-     //status = [testAboutDescriptionArgs setValue:@"a(oas)", 2, arrayOfInterfaces, arrayOfInterfacesTwo];
-    status = [testAboutDescriptionArgs setValue:@"a(oas)", 1, arrayOfInterfaces];
-//    status = [testAboutDescriptionArgs setValue:@"a(oas)", 1, entryOne];
-    STAssertTrue(status == ER_OK, @"Error creating msg arg");
-    [testAboutDescriptionArgs stabilize];
-    
-    // Call create from MsgArg
-    AJNAboutObjectDescription *aboutObjectDescription = [[AJNAboutObjectDescription alloc] initWithMsgArg:testAboutDescriptionArgs];
-    status = [aboutObjectDescription createFromMsgArg:testAboutDescriptionArgs];
-    STAssertTrue(status == ER_OK, @"createFromMsgArg returned an error");
-    
-    // Call other AJNAboutObjectDescription functions
-    
 }
 
 - (void)testWhoImplementsCallForWildCardPositive
@@ -1760,8 +1718,9 @@ static const uint8_t ICON_BYTE = 0x11;
 
 - (void)didReceiveAnnounceOnBus:(NSString *)busName withVersion:(uint16_t)version withSessionPort:(AJNSessionPort)port withObjectDescription:(AJNMessageArgument *)objectDescriptionArg withAboutDataArg:(AJNMessageArgument *)aboutDataArg
 {
+
     NSLog(@"Received Announce signal from %s Version : %d SessionPort: %d", [busName UTF8String], version, port);
-    receiveAnnounce = YES;
+
     self.didReceiveAnnounce = YES;
     
     if (self.isTestClient) {
@@ -1782,15 +1741,51 @@ static const uint8_t ICON_BYTE = 0x11;
         [aboutProxy getVersion:&version];
         STAssertTrue(version == 1, @"Version value is incorrect");
         if (self.testUnsupportedLanguage == YES) {
-            status = [aboutProxy getAboutDataForLanguage:@"bar" usingDictionary:aboutData];
+            status = [aboutProxy getAboutDataForLanguage:@"bar" usingDictionary:&aboutData];
             STAssertTrue(status != ER_OK, @"Unsupported language not should throw error");
         } else {
-            [aboutProxy getAboutDataForLanguage:@"en" usingDictionary:aboutData];
+            status = [aboutProxy getAboutDataForLanguage:@"en" usingDictionary:&aboutData];
+            STAssertTrue(status == ER_OK, @"Default language not should throw error");
         }
-        NSLog(@"Version %d", version);
-       
+        NSLog(@"Version %d Size %lu", version, [aboutData count]);
         // Verify data by comparing the data that you set with the data that you received
         STAssertTrue([gDefaultAboutData isEqualToDictionary:aboutData], @"The announce data is correct");
+
+        if (self.testAboutObjectDescription == YES) {
+
+            AJNAboutObjectDescription *testInitWithMsgArg = [[AJNAboutObjectDescription alloc] initWithMsgArg:objectDescriptionArg];
+            STAssertNotNil(testInitWithMsgArg, @"Fail");
+
+            AJNAboutObjectDescription *aboutObjectDescription = [[AJNAboutObjectDescription alloc] init];
+            [aboutObjectDescription createFromMsgArg:objectDescriptionArg];
+            STAssertNotNil(aboutObjectDescription, @"Fail");
+
+            BOOL test = [aboutObjectDescription hasPath:"/basic_object"];
+            STAssertTrue(test == YES, @"hasPath test failed");
+
+            test = [aboutObjectDescription hasPath:"/basic_"];
+            STAssertFalse(test, @"Negative hasPath test failed");
+
+            test = [aboutObjectDescription hasInterface:"org.alljoyn.bus.sample.strings" withPath:"/basic_object"];
+            STAssertTrue(test == YES, @"hasInterface:withPath test failed");
+
+            test = [aboutObjectDescription hasInterface:"org.alljoyn.bus.sample.strings" withPath:"/basic_"];
+            STAssertFalse(test, @"hasInterface:withPath test failed");
+
+            size_t numPaths = [aboutObjectDescription getPaths:nil withSize:0];
+            NSMutableArray *paths = [[NSMutableArray alloc] initWithCapacity:numPaths];
+            STAssertTrue([aboutObjectDescription getPaths:&paths withSize:numPaths] == 2, @"getPaths:withSize test failed");
+
+            numPaths = [aboutObjectDescription getInterfacePathsForInterface:@"org.alljoyn.bus.sample.strings" paths:nil numOfPaths:0];
+            NSMutableArray *interfacePaths = [[NSMutableArray alloc] initWithCapacity:numPaths];
+            STAssertTrue([aboutObjectDescription getInterfacePathsForInterface:@"org.alljoyn.bus.sample.strings" paths:&interfacePaths numOfPaths:1] == 1, @"getPaths:withSize test failed");
+
+            size_t numInterfaces = [aboutObjectDescription getInterfacesForPath:@"/basic_object" interfaces:nil numOfInterfaces:0];
+            NSMutableArray *interfaces = [[NSMutableArray alloc] initWithCapacity:numInterfaces];
+            STAssertTrue([aboutObjectDescription getInterfacesForPath:@"/basic_object" interfaces:&interfaces numOfInterfaces:2] == 2, @"getInterfacesForPath failed");
+
+        }
+        receiveAnnounce = YES;
     }
     
 }

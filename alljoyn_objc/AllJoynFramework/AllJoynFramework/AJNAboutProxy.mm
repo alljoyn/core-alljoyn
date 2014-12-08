@@ -103,7 +103,7 @@ using namespace ajn;
  *    - ER_BUS_REPLY_IS_ERROR_MESSAGE on unknown failure
  */
 
-- (QStatus)getAboutDataForLanguage:(NSString *)language usingDictionary:(NSMutableDictionary *)aboutData
+- (QStatus)getAboutDataForLanguage:(NSString *)language usingDictionary:(NSMutableDictionary **)aboutData
 {
     
     MsgArg msgArg;
@@ -114,16 +114,16 @@ using namespace ajn;
     QStatus status = self.aboutProxy->GetAboutData([language UTF8String], msgArg);
     if (ER_OK == status) {
         msgArg.Get("a{sv}", &numEntries, &dictEntries);
-        aboutData = [[NSMutableDictionary alloc] initWithCapacity:numEntries];
+        *aboutData = [[NSMutableDictionary alloc] initWithCapacity:numEntries];
         for (int i = 0 ; i < numEntries ;i++) {
             dictEntries[i].Get("{sv}", &key, &value);
-            AJNMessageArgument *arg = [[AJNMessageArgument alloc] initWithHandle:(AJNHandle)&value];
+            AJNMessageArgument *arg = [[AJNMessageArgument alloc] init];
+            *arg.msgArg = *value;
             [arg stabilize];
-            [aboutData setValue:arg forKey:[NSString stringWithCString:key encoding:NSUTF8StringEncoding ]];
+            [*aboutData setValue:arg forKey:[NSString stringWithCString:key encoding:NSUTF8StringEncoding ]];
         }
     }
     return status;
-    
 }
 
 /**
