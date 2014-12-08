@@ -11113,10 +11113,12 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_registerProperties
     QStatus status;
     jobject jstatus = NULL;
 
-    AddInterface(thiz, proxyBusObj->busPtr, jifaceName);
-    if (env->ExceptionCheck()) {
-        QCC_LogError(ER_FAIL, ("ProxyBusObject_registerPropertiesChangedListener(): Exception"));
-        return NULL;
+    if (!proxyBusObj->ImplementsInterface(ifaceName.c_str())) {
+        AddInterface(thiz, proxyBusObj->busPtr, jifaceName);
+        if (env->ExceptionCheck()) {
+            QCC_LogError(ER_FAIL, ("ProxyBusObject_registerPropertiesChangedListener(): Exception"));
+            return NULL;
+        }
     }
 
     const char** props = new const char*[numProps];
