@@ -32,7 +32,7 @@ public interface AllSeenIntrospectable {
      * Gets the description languages that are supported for the object.
      *
      * @return array of supported language names.
-     * @throws BusException
+     * @throws BusException indicating failure when calling GetDescriptionLanguages method
      */
     @BusMethod
     String[] GetDescriptionLanguages() throws BusException;
@@ -41,7 +41,7 @@ public interface AllSeenIntrospectable {
      * Gets the introspect with description for the object.
      * @param language to return in the description.
      * @return introspect with description.
-     * @throws BusException
+     * @throws BusException indicating failure when calling IntrospectWithDescription method
      */
     @BusMethod
     String IntrospectWithDescription(String language) throws BusException;

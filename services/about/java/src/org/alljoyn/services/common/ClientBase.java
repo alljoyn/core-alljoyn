@@ -45,7 +45,7 @@ public interface ClientBase
     /**
      * Interface version
      * @return Interface version
-     * @throws BusException
+     * @throws BusException indicating failure obtain Version property
      */
     public short getVersion() throws BusException;
 
@@ -63,8 +63,8 @@ public interface ClientBase
 
     /**
      * Initialize client by passing the BusAttachment
-     * @param busAttachment
-     * @throws Exception
+     * @param busAttachment BusAttachment associated with this ClientBase instance
+     * @throws Exception error indicating failure to initialize the client
      */
     void initBus(BusAttachment busAttachment) throws Exception;
 

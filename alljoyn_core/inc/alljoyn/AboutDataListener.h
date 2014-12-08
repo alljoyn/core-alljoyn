@@ -183,19 +183,21 @@ class AboutDataListener {
      * </table>
      *
      * Custom fields are allowed. Since the proxy object only receives the field
-     * name and the MsgArg containing the contents of that for that field the
-     * default assumption is that user defined fields are:
+     * name and the MsgArg containing the contents for that field the default
+     * assumption is that user defined fields are:
      * - are not required
      * - are not announced
      * - are localized if the MsgArg contains a String (not localized otherwise)
      *
      * Important: All implementations of GetAboutData should handle language
      * specified as an empty string or NULL. In the case that the language is
-     * not specified the GetAboutData is expected to return the default language.
+     * an empty string or NULL the GetAboutData is expected to return the
+     * default language.
      *
      * If the language tag given is not supported return the QStatus
      * #ER_LANGUAGE_NOT_SUPPORTED. If the user has not provided ALL of the
-     * required fields return the QStatus #ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD
+     * required fields return the QStatus
+     * #ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD
      *
      * @param[out] msgArg a the dictionary containing all of the AboutData fields for
      *                    the specified language.  If language is not specified the default

@@ -19,14 +19,20 @@ package org.alljoyn.bus;
 public class Version {
     /**
      * Gives the version of AllJoyn Library
+     *
+     * @return the version of the AllJoyn Library
      */
     public static native String get();
     /**
      * Gives build information of AllJoyn Library
+     *
+     * @return build information of the AllJoyn Library
      */
     public static native String getBuildInfo();
     /**
      * Gives the version of AllJoyn Library as a single number
+     *
+     * @return the version of the AllJoyn Library as a single number
      */
     public static native int getNumeric();
 }

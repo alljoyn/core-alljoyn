@@ -41,7 +41,7 @@ public interface AboutTransport extends BusObject
 
     /**
      * @return the version of the protocol
-     * @throws BusException
+     * @throws BusException indicating failure obtaining Version property
      */
     @BusProperty(signature="q")
     public short getVersion() throws BusException;
@@ -53,7 +53,7 @@ public interface AboutTransport extends BusObject
      * @return all the configuration fields based on the language tag.
      *         See The list of known configuration fields in About interface for
      *         more details.
-     * @throws BusException
+     * @throws BusException indicating failure making GetAboutData method call 
      */
     @BusMethod(signature = "s", replySignature="a{sv}")
     public Map<String, Variant> GetAboutData(String languageTag) throws BusException;
@@ -63,7 +63,7 @@ public interface AboutTransport extends BusObject
      * at the given object path.
      * @return the array of object paths and the list of all interfaces available
      *         at the given object path.
-     * @throws BusException
+     * @throws BusException indicating failure making GetObjectDescription method call
      */
     @BusMethod(replySignature="a(oas)")
     public BusObjectDescription[] GetObjectDescription() throws BusException;

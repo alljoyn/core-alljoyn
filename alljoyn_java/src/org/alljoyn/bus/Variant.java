@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -48,6 +48,7 @@ public class Variant {
      * signal emitters) when a specific Variant type and value are known at the
      * time the Variant is created.
      *
+     * @param <T> the Java type the Variant contains
      * @param value object wrapped inside this Variant
      */
     public <T> Variant(T value) {
@@ -61,6 +62,7 @@ public class Variant {
      * signal emitters) when a specific Variant type and value are known at the
      * time the Variant is created.
      *
+     * @param <T> the Java type the Variant contains
      * @param value object wrapped inside the Variant
      * @param signature the DBus signature of value
      */
@@ -93,7 +95,13 @@ public class Variant {
     /**
      * Gets the DBus type signature of the wrapped object.
      *
-     *  @return the signature of the wrapped object.
+     * @throws AnnotationBusException This exception will occur if
+     * <ul>
+     * <li>a field of a user-defined type is not annotated with its position,
+     * <li>a Java data type that is not supported is used,
+     * <li>an Enum data type is not annotated with a valid AllJoyn type
+     * </ul>
+     * @return the signature of the wrapped object.
      */
     public String getSignature() throws AnnotationBusException {
         if (value != null) {
@@ -108,6 +116,7 @@ public class Variant {
     /**
      * Gets the object wrapped by this Variant when object is specified by Type.
      *
+     * @param <T> type returned from the getObject call.
      * @param type the type of the return value.
      * @return the value of the Variant.
      * @throws BusException if Variant data cannot be unmarshalled
@@ -125,6 +134,7 @@ public class Variant {
     /**
      * Gets the object wrapped by this Variant when object is specified by Class.
      *
+     * @param <T> type returned from the getObject call.
      * @param type the type of the return value.
      * @return the value of the Variant.
      * @throws BusException if Variant data cannot be unmarshalled
@@ -143,6 +153,7 @@ public class Variant {
      * Gets the object wrapped by this Variant when the wrapped object is a
      * generic type.
      *
+     * @param <T> type returned from the getObject call.
      * @param type the VariantTypeReference of the return value
      * @return the value of the Variant
      * @throws BusException if Variant data cannot be unmarshalled

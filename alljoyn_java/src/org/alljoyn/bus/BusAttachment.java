@@ -841,9 +841,9 @@ public class BusAttachment {
      * the listeners responsibility to parse through the reported interfaces to
      * figure out what should be done in response to the Announce signal.
      *
-     * Note: specifying null for the implementsInterfaces parameter could have
-     * significant impact on network performance and should be avoided unless
-     * its known that all announcements are needed.
+     * Note: specifying null for the interfaces parameter could have significant
+     * impact on network performance and should be avoided unless its known that
+     * all announcements are needed.
      *
      * @param interfaces a list of interfaces that the Announce
      *               signal reports as implemented. NULL to receive all Announce
@@ -1371,6 +1371,7 @@ public class BusAttachment {
     /**
      * Indicates if the BusObject is secure.
      *
+     * @param busObj BusObject to check if it is secure
      * @return Return true if authentication is required to emit signals or call
      *         methods on this object.
      */

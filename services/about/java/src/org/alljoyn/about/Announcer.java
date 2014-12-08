@@ -45,16 +45,16 @@ public interface Announcer
     public void setAnnouncing(boolean enable);
 
     /**
-     * Any service who registered a BusObject in the common BusAttachment, 
+     * Any service who registered a BusObject in the common BusAttachment,
      * should save it here so that we can announce it
      * and include it in the About contents.
-     * @param descriptions
+     * @param descriptions list of BusObjectDescriptions to be announced
      */
     public void addBusObjectAnnouncements(List<BusObjectDescription> descriptions);
 
     /**
      * Remove the passed BusObjectDescriptions from the Announcement
-     * @param descriptions
+     * @param descriptions list of BusOBjectDescriptions to remove from the announcement
      */
     public void removeBusObjectAnnouncements(List<BusObjectDescription> descriptions);
 

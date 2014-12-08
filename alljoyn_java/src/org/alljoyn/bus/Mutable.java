@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -39,6 +39,8 @@ public class Mutable {
 
         /**
          * Construct a StringValue with the given value.
+         *
+         * @param string String used to construct a StringValue
          */
         public StringValue(String string) {
             value = string;
@@ -63,6 +65,8 @@ public class Mutable {
 
         /**
          * Construct an IntegerValue with the given value.
+         *
+         * @param v int used to construct an IntegerValue
          */
         public IntegerValue(int v) {
             value = v;
@@ -86,7 +90,9 @@ public class Mutable {
         }
 
         /**
-         * Construct an ShortValue with the given value.
+         * Construct a ShortValue with the given value.
+         *
+         * @param v short used to construct a ShortValue
          */
         public ShortValue(short v) {
             value = v;
