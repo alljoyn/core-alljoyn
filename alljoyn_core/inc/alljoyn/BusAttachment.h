@@ -570,7 +570,11 @@ class BusAttachment : public MessageReceiver {
     /**
      * Get the unique name of specified alias asyncronously
      *
-     * @param alias Alias name to lookup.
+     * @param[in] alias    Alias name to lookup.
+     * @param[in] callback pointer to function that is called with the results
+     *                     of the `GetNameOwner` method call.
+     * @param[in] context  User defined context which will be passed as-is to
+     *                     the callback.
      *
      * @return status code from sending the message to the local routing node.
      */
@@ -579,7 +583,11 @@ class BusAttachment : public MessageReceiver {
     /**
      * Get the unique name of specified alias asyncronously
      *
-     * @param alias Alias name to lookup.
+     * @param[in] alias Alias name to lookup.
+     * @param[in] callback pointer to function that is called with the results
+     *                     of the `GetNameOwner` method call.
+     * @param[in] context  User defined context which will be passed as-is to the
+     *                     callback.
      *
      * @return status code from sending the message to the local routing node.
      */

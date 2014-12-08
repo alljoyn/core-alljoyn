@@ -52,6 +52,9 @@ class AutoPinger : public qcc::AlarmListener {
     /**
      * Create instance of autopinger
      *
+     * @param busAttachment reference to the BusAttachment associated with this
+     *                      autopinger.
+     *
      */
     AutoPinger(BusAttachment& busAttachment);
 

@@ -388,6 +388,8 @@ extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_setproperty(alljoyn_proxybu
 /**
  * Function to register a handler for property change events.
  *
+ * @param proxyObj  The proxy bus object that will register the property changed
+ *                  listener
  * @param iface     Remote object's interface on which the property is defined.
  * @param properties    List of names of properties to monitor.
  * @param numProperties Number of properties to monitor.
@@ -396,7 +398,8 @@ extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_setproperty(alljoyn_proxybu
  *
  * @return
  *      - #ER_OK if the handler was registered successfully
- *      - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
+ *      - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not
+ *                                         exist on the remote object.
  *      - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
  */
 extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_registerpropertieschangedlistener(alljoyn_proxybusobject proxyObj,

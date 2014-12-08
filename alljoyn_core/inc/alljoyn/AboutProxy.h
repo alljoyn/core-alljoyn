@@ -56,7 +56,7 @@ class AboutProxy : public ProxyBusObject {
     /**
      * Get the ObjectDescription array for specified bus name.
      *
-     * @param[out] objectDescs  objectDescs  Description of busName's remote objects.
+     * @param[out] objectDesc Description of busName's remote objects.
      *
      * @return
      *   - ER_OK if successful.
