@@ -164,7 +164,6 @@ int main(int argc, char** argv, char** envArg)
 {
     QStatus status = ER_OK;
     alljoyn_interfacedescription testIntf = NULL;
-    char* connectArgs = "unix:abstract=alljoyn";
     alljoyn_buslistener_callbacks callbacks = {
         NULL,
         NULL,
@@ -242,9 +241,9 @@ int main(int argc, char** argv, char** envArg)
 
     /* Connect to the bus */
     if (ER_OK == status) {
-        status = alljoyn_busattachment_connect(g_msgBus, connectArgs);
+        status = alljoyn_busattachment_connect(g_msgBus, NULL);
         if (ER_OK != status) {
-            printf("alljoyn_busattachment_connect(\"%s\") failed\n", connectArgs);
+            printf("alljoyn_busattachment_connect() failed with status: 0x%04x\n", status);
         } else {
             printf("alljoyn_busattachment connected to \"%s\"\n", alljoyn_busattachment_getconnectspec(g_msgBus));
         }
