@@ -5103,24 +5103,35 @@ void AllJoynObj::Ping(const InterfaceDescription::Member* member, Message& msg)
 
         /* Decide how to proceed based on the endpoint existence/type */
         BusEndpoint ep = router.FindEndpoint(name);
-        if ((ep->GetEndpointType() == ENDPOINT_TYPE_REMOTE) || (ep->GetEndpointType() == ENDPOINT_TYPE_NULL) || (ep->GetEndpointType() == ENDPOINT_TYPE_LOCAL)) {
-            /* Ping is to a locally connected attachment */
-            ProxyBusObject peerObj(bus, name, "/", 0);
-            const InterfaceDescription* intf = bus.GetInterface(org::freedesktop::DBus::Peer::InterfaceName);
-            assert(intf);
-            peerObj.AddInterface(*intf);
-            Message* ctx = new Message(msg);
-            status = peerObj.MethodCallAsync(org::freedesktop::DBus::Peer::InterfaceName,
-                                             "Ping",
-                                             this, static_cast<MessageReceiver::ReplyHandler>(&AllJoynObj::PingReplyMethodHandler),
-                                             NULL, 0,
-                                             ctx);
-            if (status != ER_OK) {
-                QCC_LogError(status, ("Send Ping failed"));
-                delete ctx;
-                replyCode = ALLJOYN_PING_REPLY_UNREACHABLE;
-            }
+        if ((ep->GetEndpointType() == ENDPOINT_TYPE_REMOTE) || (ep->GetEndpointType() == ENDPOINT_TYPE_NULL) || (ep->GetEndpointType() == ENDPOINT_TYPE_LOCAL) || (ep->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL)) {
+            AcquireLocks();
+            if (dbusPingsInProgress.find(pair<String, String>(msg->GetSender(), name)) != dbusPingsInProgress.end()) {
+                replyCode = ALLJOYN_PING_REPLY_IN_PROGRESS;
+                ReleaseLocks();
+            } else {
 
+                dbusPingsInProgress.insert(pair<String, String>(msg->GetSender(), name));
+                ReleaseLocks();
+                /* Ping is to a locally connected or remote in session attachment */
+                ProxyBusObject peerObj(bus, name, "/", 0);
+                const InterfaceDescription* intf = bus.GetInterface(org::freedesktop::DBus::Peer::InterfaceName);
+                assert(intf);
+                peerObj.AddInterface(*intf);
+                Message* ctx = new Message(msg);
+                status = peerObj.MethodCallAsync(org::freedesktop::DBus::Peer::InterfaceName,
+                                                 "Ping",
+                                                 this, static_cast<MessageReceiver::ReplyHandler>(&AllJoynObj::PingReplyMethodHandler),
+                                                 NULL, 0,
+                                                 ctx);
+                if (status != ER_OK) {
+                    QCC_LogError(status, ("Send Ping failed"));
+                    delete ctx;
+                    replyCode = ALLJOYN_PING_REPLY_UNREACHABLE;
+                    AcquireLocks();
+                    dbusPingsInProgress.erase(pair<String, String>(msg->GetSender(), name));
+                    ReleaseLocks();
+                }
+            }
         } else {
             /* Ping is to a connected or unconnected remote device */
 
@@ -5237,6 +5248,20 @@ void AllJoynObj::PingReplyMethodHandler(Message& reply, void* context)
     QCC_DbgTrace(("AllJoynObj::PingReplyMethodHandler()"));
     Message* msg = static_cast<Message*>(context);
     uint32_t replyCode = (ajn::MESSAGE_ERROR == reply->GetType()) ? ALLJOYN_PING_REPLY_UNREACHABLE : ALLJOYN_PING_REPLY_SUCCESS;
+
+    /* Parse the message args */
+    size_t numArgs;
+    const MsgArg* args;
+
+    (*msg)->GetArgs(numArgs, args);
+    const char* name = NULL;
+    uint32_t timeout;
+    MsgArg::Get(args, numArgs, "su", &name, &timeout);
+
+    AcquireLocks();
+    dbusPingsInProgress.erase(pair<String, String>((*msg)->GetSender(), name));
+    ReleaseLocks();
+
     PingReplyMethodHandlerUsingCode(*msg, replyCode);
     delete msg;
 }
