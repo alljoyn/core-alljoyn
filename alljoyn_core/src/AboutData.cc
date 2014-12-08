@@ -777,9 +777,6 @@ QStatus AboutData::GetField(const char* name, ajn::MsgArg*& value, const char* l
     QStatus status = ER_OK;
     if (!IsFieldLocalized(name)) {
         value = &(aboutDataInternal->propertyStore[name]);
-        size_t num;
-        uint8_t* appId;
-        value->Get(aboutDataInternal->aboutFields[APP_ID].signature.c_str(), &num, &appId);
     } else {
         if (language == NULL) {
             char* defaultLanguage;
