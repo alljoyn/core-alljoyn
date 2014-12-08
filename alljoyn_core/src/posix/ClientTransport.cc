@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -60,8 +60,6 @@ class _ClientEndpoint : public _RemoteEndpoint {
     /* Unix endpoint constructor */
     _ClientEndpoint(BusAttachment& bus, bool incoming, const qcc::String connectSpec, SocketFd sock) :
         _RemoteEndpoint(bus, incoming, connectSpec, &stream, ClientTransport::TransportName),
-        userId(-1),
-        groupId(-1),
         processId(-1),
         stream(sock)
     {
@@ -71,39 +69,11 @@ class _ClientEndpoint : public _RemoteEndpoint {
     virtual ~_ClientEndpoint() { }
 
     /**
-     * Set the user id of the endpoint.
-     *
-     * @param   userId      User ID number.
-     */
-    void SetUserId(uint32_t userId) { this->userId = userId; }
-
-    /**
-     * Set the group id of the endpoint.
-     *
-     * @param   groupId     Group ID number.
-     */
-    void SetGroupId(uint32_t groupId) { this->groupId = groupId; }
-
-    /**
      * Set the process id of the endpoint.
      *
      * @param   processId   Process ID number.
      */
     void SetProcessId(uint32_t processId) { this->processId = processId; }
-
-    /**
-     * Return the user id of the endpoint.
-     *
-     * @return  User ID number.
-     */
-    uint32_t GetUserId() const { return userId; }
-
-    /**
-     * Return the group id of the endpoint.
-     *
-     * @return  Group ID number.
-     */
-    uint32_t GetGroupId() const { return groupId; }
 
     /**
      * Return the process id of the endpoint.
@@ -121,8 +91,6 @@ class _ClientEndpoint : public _RemoteEndpoint {
 
 
   private:
-    uint32_t userId;
-    uint32_t groupId;
     uint32_t processId;
     SocketStream stream;
 };

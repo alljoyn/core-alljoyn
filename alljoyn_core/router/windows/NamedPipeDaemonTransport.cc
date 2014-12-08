@@ -68,7 +68,7 @@ class _NamedPipeDaemonEndpoint : public _RemoteEndpoint {
 
     _NamedPipeDaemonEndpoint(BusAttachment& bus, HANDLE serverHandle) :
         _RemoteEndpoint(bus, true, NamedPipeDaemonTransport::NamedPipeTransportName, &pipeStream, NamedPipeDaemonTransport::NamedPipeTransportName, false),
-        pipeStream(serverHandle), groupId(0), userId(0)
+        pipeStream(serverHandle)
     {
     }
 
@@ -76,30 +76,7 @@ class _NamedPipeDaemonEndpoint : public _RemoteEndpoint {
     {
     }
 
-    /*
-     * The user and group IDs are used to classify applications on Windows
-     */
-    bool SupportsUnixIDs() const { return true; }
-
-    /*
-     * Set the group id of the endpoint.
-     *
-     * @param   groupId     Group ID number.
-     */
-    void SetGroupId(uint32_t groupId) { this->groupId = groupId; }
-
-    /*
-     * Return the group id of the endpoint.
-     *
-     * @return  Group ID number.
-     */
-    uint32_t GetGroupId() const { return groupId; }
-
     NamedPipeStream pipeStream;
-
-  private:
-    uint32_t userId;
-    uint32_t groupId;
 };
 
 static const uint32_t NUL_BYTE_TIMEOUT = 5000;  // in msec

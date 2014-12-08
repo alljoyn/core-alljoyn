@@ -792,10 +792,17 @@ void* _TCPEndpoint::AuthThread::Run(void* arg)
         return (void*)ER_FAIL;
     }
 
-    /* Initialized the features for this endpoint */
+    /* Initialize the features for this endpoint */
     m_endpoint->GetFeatures().isBusToBus = false;
     m_endpoint->GetFeatures().isBusToBus = false;
     m_endpoint->GetFeatures().handlePassing = false;
+
+    /*
+     * Check any application connecting over TCP to see if it is running on the same machine and
+     * set the group ID appropriately if so.
+     */
+    TCPEndpoint tcpEp = TCPEndpoint::wrap(m_endpoint);
+    TCPTransport::CheckEndpointLocalMachine(tcpEp);
 
     /* Run the actual connection authentication code. */
     qcc::String authName;
@@ -841,7 +848,6 @@ void* _TCPEndpoint::AuthThread::Run(void* arg)
      * Tell the transport that the authentication has succeeded and that it can
      * now bring the connection up.
      */
-    TCPEndpoint tcpEp = TCPEndpoint::wrap(m_endpoint);
     m_endpoint->m_transport->Authenticated(tcpEp);
 
     QCC_DbgTrace(("TCPEndpoint::AuthThread::Run(): Returning"));
@@ -2061,7 +2067,7 @@ void TCPTransport::RunListenMachine(ListenRequest& listenRequest)
      * the different interfaces to the ports on which we are listening
      * on those interfaces) must be non-empty.
      */
-    if (m_isNsEnabled) {
+    if (m_isNsEnabled && !m_stopping) {
         assert(m_isListening);
         assert(!m_listenPortMap.empty());
     }
@@ -2073,7 +2079,7 @@ void TCPTransport::RunListenMachine(ListenRequest& listenRequest)
      * advertisements.  If we are advertising the name service had
      * better be enabled.
      */
-    if (m_isAdvertising) {
+    if (m_isAdvertising && !m_stopping) {
         assert(!m_advertising.empty());
         assert(m_isListening);
         assert(!m_listenPortMap.empty());
@@ -2087,7 +2093,7 @@ void TCPTransport::RunListenMachine(ListenRequest& listenRequest)
      * discoveries.  If we are discovering the name service had better be
      * enabled.
      */
-    if (m_isDiscovering) {
+    if (m_isDiscovering && !m_stopping) {
         assert(!m_discovering.empty());
         assert(m_isListening);
         assert(!m_listenPortMap.empty());
@@ -3058,6 +3064,12 @@ QStatus TCPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
     tcpEp->GetFeatures().allowRemote = m_bus.GetInternal().AllowRemoteMessages();
     tcpEp->GetFeatures().handlePassing = false;
     tcpEp->GetFeatures().nameTransfer = opts.nameTransfer;
+
+    /*
+     * Check any application connecting over TCP to see if it is running on the same machine and
+     * set the group ID appropriately if so.
+     */
+    CheckEndpointLocalMachine(tcpEp);
 
     qcc::String authName;
     qcc::String redirection;
@@ -4455,6 +4467,24 @@ void TCPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
         EnableDiscoveryInstance(*it);
     }
     m_pendingDiscoveries.clear();
+}
+
+void TCPTransport::CheckEndpointLocalMachine(TCPEndpoint endpoint)
+{
+#ifdef QCC_OS_GROUP_WINDOWS
+    String ipAddrStr;
+    endpoint->GetRemoteIp(ipAddrStr);
+
+    std::vector<IfConfigEntry> entries;
+    IfConfig(entries);
+
+    for (uint32_t i = 0; i < entries.size(); i++) {
+        if (ipAddrStr == entries[i].m_addr) {
+            endpoint->SetGroupId(GetUsersGid(DESKTOP_APPLICATION));
+            break;
+        }
+    }
+#endif
 }
 
 } // namespace ajn

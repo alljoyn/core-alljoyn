@@ -322,6 +322,18 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     UDPTransport(const UDPTransport& other);
     UDPTransport& operator =(const UDPTransport& other);
 
+    /**
+     * This function will check the given endpoint to see if it is running on the same machine or not
+     * by comparing the connecting IP address with the local machine's addresses. If there is a match
+     * then this app is running on the local machine. Windows Universal Applications aren't allowed
+     * to use the loopback interface so this must be a Desktop Application, set the group ID
+     * accordingly. Since this code is only needed on Windows it is inside #ifdef
+     * QCC_OS_GROUP_WINDOWS.
+     *
+     * @param endpoint The endpoint to check and set the group ID on
+     */
+    static void CheckEndpointLocalMachine(UDPEndpoint endpoint);
+
     BusAttachment& m_bus;                                          /**< The message bus for this transport */
     mutable volatile int32_t m_refCount;                           /**< Incremented if a thread is doing something somewhere */
     bool m_stopping;                                               /**< True if Stop() has been called but endpoints still exist */

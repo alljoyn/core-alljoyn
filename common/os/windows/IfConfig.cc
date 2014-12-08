@@ -116,7 +116,7 @@ void IfConfigByFamily(uint32_t family, std::vector<IfConfigEntry>& entries)
     // more than we provide.
     //
     GetAdaptersAddresses(family,
-                         GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_DNS_SERVER,
+                         GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_DNS_SERVER | GAA_FLAG_SKIP_FRIENDLY_NAME,
                          0, &info, &infoLen);
 
     //
@@ -128,7 +128,7 @@ void IfConfigByFamily(uint32_t family, std::vector<IfConfigEntry>& entries)
     // Now, get the interesting information about the net devices with IPv4 addresses
     //
     if (GetAdaptersAddresses(family,
-                             GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_DNS_SERVER,
+                             GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_DNS_SERVER | GAA_FLAG_SKIP_FRIENDLY_NAME,
                              0, pinfo, &infoLen) == NO_ERROR) {
 
         //

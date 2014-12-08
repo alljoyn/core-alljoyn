@@ -41,15 +41,6 @@
 
 namespace ajn {
 
-
-/**
- * The GroupID names for universal, desktop, and whitelisted applications. These GroupIDs
- * are used to enforce the Windows app isolation policies.
- */
-#define DESKTOP_APPLICATION           "DesktopApplication"
-#define UNIVERSAL_WINDOWS_APPLICATION "UniversalWindowsApplication"
-#define WHITELISTED_APPLICATION       "WhitelistedApplication"
-
 /**
  * @brief A class for the daemon end of the client transport
  *

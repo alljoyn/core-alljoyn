@@ -721,7 +721,7 @@ void* DaemonSLAPTransport::Run(void* arg)
         checkEvents.clear();
         checkEvents.push_back(&stopEvent);
 
-        for (list<ListenEntry>::iterator i = m_listenList.begin(); i != m_listenList.end(); i++) {
+        for (list<ListenEntry>::iterator i = m_listenList.begin(); i != m_listenList.end(); ++i) {
 
             if (i->listenFd == -1) {
                 /* open the port and set listen fd */

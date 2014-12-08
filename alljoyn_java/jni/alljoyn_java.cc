@@ -4484,6 +4484,7 @@ void JBusAttachment::Disconnect(const char* connectArgs)
         JBusListener* listener = GetNativeListener<JBusListener*>(env, *i);
         if (env->ExceptionCheck()) {
             QCC_LogError(ER_FAIL, ("JBusAttachment::Disconnect(): Exception"));
+            baCommonLock.Unlock();
             return;
         }
         QCC_DbgPrintf(("JBusAttachment::Disconnect(): Call UnregisterBusListener()"));
@@ -5040,6 +5041,7 @@ QStatus JBusAttachment::RegisterSignalHandler(const char* ifaceName, const char*
     JSignalHandler* signalHandler = new T(jsignalHandler, jmethod);
     if (signalHandler == NULL) {
         Throw("java/lang/OutOfMemoryError", NULL);
+        baCommonLock.Unlock();
         return ER_FAIL;
     }
 
@@ -6692,6 +6694,8 @@ static jobject leaveGenericSession(JNIEnv* env, jobject thiz,
 
             QCC_DbgPrintf(("Releasing strong global reference to SessionListener %p", jglobalref));
             env->DeleteGlobalRef(jglobalref);
+        } else {
+            busPtr->baCommonLock.Unlock();
         }
     } else {
         QCC_LogError(status, ("Error"));
@@ -6931,20 +6935,20 @@ static jobject setGenericSessionListener(JNIEnv* env, jobject thiz,
          */
         QCC_DbgPrintf(("Taking Bus Attachment common lock"));
         busPtr->baCommonLock.Lock();
+        if (jsessionListener) {
+            jobject joldglobalref = *jsessionListener;
+            *jsessionListener = 0;
 
-        jobject joldglobalref = *jsessionListener;
-        *jsessionListener = 0;
-
-        QCC_DbgPrintf(("Releasing strong global reference to SessionListener %p", joldglobalref));
-        env->DeleteGlobalRef(joldglobalref);
-
-        /*
-         * We also know that AllJoyn has a hold on the C++ listener object that
-         * we just used.  We have got to keep a hold on the corresponding Java
-         * object.
-         */
-        if (jglobalref) {
-            *jsessionListener = jglobalref;
+            QCC_DbgPrintf(("Releasing strong global reference to SessionListener %p", joldglobalref));
+            env->DeleteGlobalRef(joldglobalref);
+            /*
+             * We also know that AllJoyn has a hold on the C++ listener object that
+             * we just used.  We have got to keep a hold on the corresponding Java
+             * object.
+             */
+            if (jglobalref) {
+                *jsessionListener = jglobalref;
+            }
         }
 
         QCC_DbgPrintf(("Releasing Bus Attachment common lock"));
@@ -11109,10 +11113,12 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_registerProperties
     QStatus status;
     jobject jstatus = NULL;
 
-    AddInterface(thiz, proxyBusObj->busPtr, jifaceName);
-    if (env->ExceptionCheck()) {
-        QCC_LogError(ER_FAIL, ("ProxyBusObject_registerPropertiesChangedListener(): Exception"));
-        return NULL;
+    if (!proxyBusObj->ImplementsInterface(ifaceName.c_str())) {
+        AddInterface(thiz, proxyBusObj->busPtr, jifaceName);
+        if (env->ExceptionCheck()) {
+            QCC_LogError(ER_FAIL, ("ProxyBusObject_registerPropertiesChangedListener(): Exception"));
+            return NULL;
+        }
     }
 
     const char** props = new const char*[numProps];

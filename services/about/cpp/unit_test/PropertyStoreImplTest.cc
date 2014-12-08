@@ -98,9 +98,9 @@ TEST(PropertyStoreImplTest, setDeviceId)
 
 // ASACORE-1119
 TEST(ProperteyStoreImplTest, setDeviceIdUsingGUIDWithZeroByteInString) {
-    const char*GUID = "00112233445566778899AABBCCDDEEFF";
+    const char* GUID = "00112233445566778899AABBCCDDEEFF";
     AboutPropertyStoreImpl propertyStore;
-    qcc::GUID128*deviceId = new qcc::GUID128(qcc::String(GUID, 32));
+    qcc::GUID128* deviceId = new qcc::GUID128(qcc::String(GUID, 32));
     QStatus status = propertyStore.setDeviceId(deviceId->ToString());
     if (status == ER_INVALID_VALUE) {
         ajn::MsgArg ma = propertyStore.getProperty(ajn::services::DEVICE_ID)->getPropertyValue();
@@ -116,6 +116,7 @@ TEST(ProperteyStoreImplTest, setDeviceIdUsingGUIDWithZeroByteInString) {
     const char* out;
     arg.Get("s", &out);
     EXPECT_STRCASEEQ(GUID, out);
+    delete deviceId;
 }
 
 // TODO HLD says device name should be localizable

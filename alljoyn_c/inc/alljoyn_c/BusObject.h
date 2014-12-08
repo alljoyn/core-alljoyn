@@ -201,7 +201,7 @@ extern AJ_API void AJ_CALL alljoyn_busobject_emitpropertieschanged(alljoyn_busob
 extern AJ_API size_t AJ_CALL alljoyn_busobject_getname(alljoyn_busobject bus, char* buffer, size_t bufferSz);
 
 /**
- * Add an interface to this object. If the interface has properties this will also add the
+ * Add an unnanounced interface to this object. If the interface has properties this will also add the
  * standard property access interface. An interface must be added before its method handlers can be
  * added. Note that the Peer interface (org.freedesktop.DBus.peer) is implicit on all objects and
  * cannot be explicitly added, and the Properties interface (org.freedesktop,DBus.Properties) is
@@ -218,7 +218,8 @@ extern AJ_API size_t AJ_CALL alljoyn_busobject_getname(alljoyn_busobject bus, ch
  *      - #ER_BUS_IFACE_ALREADY_EXISTS if the interface already exists.
  *      - An error status otherwise
  */
-extern AJ_API QStatus AJ_CALL alljoyn_busobject_addinterface(alljoyn_busobject bus, const alljoyn_interfacedescription iface);
+extern AJ_API QStatus AJ_CALL alljoyn_busobject_addinterface(alljoyn_busobject bus,
+                                                             const alljoyn_interfacedescription iface);
 
 /**
  * Add a method handler to this object. The interface for the method handler must have already
@@ -234,7 +235,10 @@ extern AJ_API QStatus AJ_CALL alljoyn_busobject_addinterface(alljoyn_busobject b
  *      - #ER_OK if the method handler was added.
  *      - An error status otherwise
  */
-extern AJ_API QStatus AJ_CALL alljoyn_busobject_addmethodhandler(alljoyn_busobject bus, const alljoyn_interfacedescription_member member, alljoyn_messagereceiver_methodhandler_ptr handler, void* context);
+extern AJ_API QStatus AJ_CALL alljoyn_busobject_addmethodhandler(alljoyn_busobject bus,
+                                                                 const alljoyn_interfacedescription_member member,
+                                                                 alljoyn_messagereceiver_methodhandler_ptr handler,
+                                                                 void* context);
 
 /**
  * Add a set of method handers at once.
@@ -369,6 +373,71 @@ extern AJ_API QStatus AJ_CALL alljoyn_busobject_cancelsessionlessmessage(alljoyn
  *                call methods on this object.
  */
 extern AJ_API QCC_BOOL AJ_CALL alljoyn_busobject_issecure(alljoyn_busobject bus);
+
+/**
+ * Get a list of the interfaces that are added to this alljoyn_busobject that will be announced.
+ *
+ * This function is experimental, and as such has not been fully tested.
+ * Please help make it more robust by contributing fixes if you find problems.
+ *
+ * @param[in] interfaces    the array of interface names
+ * @param[in] numInterfaces the number of interface names
+ *
+ * @return
+ *    The total number of interfaces found that are announced.  If this number
+ *    is larger than `numInterfaces` then only `numInterfaces` will be returned.
+ *
+ */
+extern AJ_API size_t AJ_CALL alljoyn_busobject_getannouncedinterfacenames(alljoyn_busobject bus,
+                                                                          const char** interfaces,
+                                                                          size_t numInterfaces);
+
+/**
+ * Change the announce flag for an already added interface. Changes in the
+ * announce flag are not visible to other devices till Announce is called.
+ *
+ * This function is experimental, and as such has not been fully tested.
+ * Please help make it more robust by contributing fixes if you find problems.
+ *
+ * @see alljoyn_aboutobj_announce()
+ *
+ * @param[in] iface       alljoyn_interfacedescription for the interface to set
+ *                        the announce flag for
+ * @param[in] isAnnounced This interface should be part of the Announce signal
+ *                        UNANNOUNCED - this interface will not be part of the Announce signal
+ *                        ANNOUNCED   - this interface will be part of the Announce signal
+ * @return
+ *  - #ER_OK if successful
+ *  - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the interface is not part of the bus object.
+ */
+extern AJ_API QStatus AJ_CALL alljoyn_busobject_setannounceflag(alljoyn_busobject bus,
+                                                                const alljoyn_interfacedescription iface,
+                                                                alljoyn_about_announceflag isAnnounced);
+
+
+/**
+ * Add an announced interface to this object. If the interface has properties this will also add the
+ * standard property access interface. An interface must be added before its method handlers can be
+ * added. Note that the Peer interface (org.freedesktop.DBus.peer) is implicit on all objects and
+ * cannot be explicitly added, and the Properties interface (org.freedesktop,DBus.Properties) is
+ * automatically added when needed and cannot be explicitly added.
+ *
+ * Once an object is registered, it should not add any additional interfaces. Doing so would
+ * confuse remote objects that may have already introspected this object.
+ *
+ * This function is experimental, and as such has not been fully tested.
+ * Please help make it more robust by contributing fixes if you find problems.
+ *
+ * @param bus         The bus on which to add the interface
+ * @param iface       The interface to add
+ *
+ * @return
+ *      - #ER_OK if the interface was successfully added.
+ *      - #ER_BUS_IFACE_ALREADY_EXISTS if the interface already exists.
+ *      - An error status otherwise
+ */
+extern AJ_API QStatus AJ_CALL alljoyn_busobject_addinterface_announced(alljoyn_busobject bus,
+                                                                       const alljoyn_interfacedescription iface);
 
 #ifdef __cplusplus
 } /* extern "C" */

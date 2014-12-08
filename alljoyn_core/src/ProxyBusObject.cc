@@ -701,7 +701,7 @@ size_t ProxyBusObject::GetInterfaces(const InterfaceDescription** ifaces, size_t
     if (ifaces) {
         count = min(count, numIfaces);
         map<qcc::StringMapKey, const InterfaceDescription*>::const_iterator it = components->ifaces.begin();
-        for (size_t i = 0; i < count; i++, it++) {
+        for (size_t i = 0; i < count && it != components->ifaces.end(); ++i, ++it) {
             ifaces[i] = it->second;
         }
     }
