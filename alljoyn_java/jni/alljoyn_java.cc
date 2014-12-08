@@ -6692,6 +6692,8 @@ static jobject leaveGenericSession(JNIEnv* env, jobject thiz,
 
             QCC_DbgPrintf(("Releasing strong global reference to SessionListener %p", jglobalref));
             env->DeleteGlobalRef(jglobalref);
+        } else {
+            busPtr->baCommonLock.Unlock();
         }
     } else {
         QCC_LogError(status, ("Error"));
@@ -6931,20 +6933,20 @@ static jobject setGenericSessionListener(JNIEnv* env, jobject thiz,
          */
         QCC_DbgPrintf(("Taking Bus Attachment common lock"));
         busPtr->baCommonLock.Lock();
+        if (jsessionListener) {
+            jobject joldglobalref = *jsessionListener;
+            *jsessionListener = 0;
 
-        jobject joldglobalref = *jsessionListener;
-        *jsessionListener = 0;
-
-        QCC_DbgPrintf(("Releasing strong global reference to SessionListener %p", joldglobalref));
-        env->DeleteGlobalRef(joldglobalref);
-
-        /*
-         * We also know that AllJoyn has a hold on the C++ listener object that
-         * we just used.  We have got to keep a hold on the corresponding Java
-         * object.
-         */
-        if (jglobalref) {
-            *jsessionListener = jglobalref;
+            QCC_DbgPrintf(("Releasing strong global reference to SessionListener %p", joldglobalref));
+            env->DeleteGlobalRef(joldglobalref);
+            /*
+             * We also know that AllJoyn has a hold on the C++ listener object that
+             * we just used.  We have got to keep a hold on the corresponding Java
+             * object.
+             */
+            if (jglobalref) {
+                *jsessionListener = jglobalref;
+            }
         }
 
         QCC_DbgPrintf(("Releasing Bus Attachment common lock"));
