@@ -31,7 +31,7 @@
 
 #include <Status.h>
 
-#include "CngCache.h"
+#include <qcc/CngCache.h>
 
 using namespace std;
 using namespace qcc;

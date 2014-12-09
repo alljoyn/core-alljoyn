@@ -1,13 +1,13 @@
+#ifndef _CNG_CACHE_H
+#define _CNG_CACHE_H
 /**
  * @file
  *
- * Define utility functions for Windows.
+ * This file defines the CngCache object used to manage the lifetime of global CNG handles.
  */
 
 /******************************************************************************
- *
- *
- * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -21,35 +21,53 @@
  *    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
-#ifndef _OS_QCC_UTILITY_H
-#define _OS_QCC_UTILITY_H
+
+#include <assert.h>
+#include <windows.h>
+#include <bcrypt.h>
 
 #include <qcc/platform.h>
-#include <windows.h>
 
-void strerror_r(uint32_t errCode, char* ansiBuf, uint16_t ansiBufSize);
-
-wchar_t* MultibyteToWideString(const char* str);
+namespace qcc {
 
 /**
- * Ensure that Winsock API is loaded.
- * Called before any operation that might be called before winsock has been started.
+ * This struct manages the lifetime of algorithm handles.
  */
-void WinsockCheck();
+struct CngCache {
+    friend class CngCacheInit;
+    CngCache();
+    ~CngCache();
 
-/**
- * Clean up Winsock API. Caller must ensure that this is the last call to Winsock.
- */
-void WinsockCleanup();
+    /**
+     * Delete the opened algorithm handles.
+     */
+    void Cleanup();
 
-static struct WinsockInit {
-    WinsockInit();
-    ~WinsockInit();
+    /**
+     * Number of supported algorithms as defined by Crypto_Hash::Algorithm enum
+     */
+    static const int ALGORITHM_COUNT = 3;
+
+    BCRYPT_ALG_HANDLE algHandles[ALGORITHM_COUNT][2];
+    BCRYPT_ALG_HANDLE ccmHandle;
+    BCRYPT_ALG_HANDLE ecbHandle;
+    BCRYPT_ALG_HANDLE rsaHandle;
+};
+
+extern CngCache& cngCache;
+static class CngCacheInit {
+  public:
+    CngCacheInit();
+    ~CngCacheInit();
+
     static void Cleanup();
 
   private:
     static bool cleanedup;
 
-} winsockInit;
+} cngCacheInit;
+
+} // qcc
 
 #endif
+

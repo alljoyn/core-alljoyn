@@ -206,7 +206,6 @@ static BundledRouter bundledRouter;
 BundledRouter::BundledRouter() : transportsInitialized(false), stopping(false), ajBus(NULL), ajBusController(NULL)
 {
     NullTransport::RegisterRouterLauncher(this);
-
     LoggerSetting::GetLoggerSetting("bundled-router");
 
     /*
