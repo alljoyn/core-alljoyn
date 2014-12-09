@@ -1,4 +1,4 @@
-# Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2013-2014 AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -159,10 +159,10 @@ if not GetOption('help') and env.has_key('ANDROID_NDK'):
    env.Append(LIBPATH = '$ANDROID_SRC/out/target/product/$ANDROID_TARGET/system/lib')
 
    env.Append(CPPDEFINES = 'QCC_OS_ANDROID')
-   env.Append(CFLAGS = '-Wno-deprecated')
-   env.Append(CXXFLAGS = '-Wno-deprecated')
+   env.Append(CFLAGS = ['-Wno-deprecated', '-pie', '-fPIE'])
+   env.Append(CXXFLAGS = ['-Wno-deprecated', '-pie', '-fPIE'])
 
-   env.Append(LINKFLAGS = ['-Wl,--gc-sections', '-Wl,-z,nocopyreloc'])
+   env.Append(LINKFLAGS = ['-Wl,--gc-sections', '-Wl,-z,nocopyreloc', '-pie', '-fPIE'])
 
    # Java 6 compile options
    java6Flags = '-source 1.6 -target 1.6 '

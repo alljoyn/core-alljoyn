@@ -51,11 +51,6 @@
                BlueprintName = "AllJoynFrameworkTests"
                ReferencedContainer = "container:AllJoynFramework.xcodeproj">
             </BuildableReference>
-            <SkippedTests>
-               <Test
-                  Identifier = "BusAttachmentTests/testForAboutObjectDescription">
-               </Test>
-            </SkippedTests>
          </TestableReference>
       </Testables>
       <EnvironmentVariables>

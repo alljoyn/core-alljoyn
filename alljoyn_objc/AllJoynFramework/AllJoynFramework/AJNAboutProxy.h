@@ -59,7 +59,7 @@
  *    - ER_LANGUAGE_NOT_SUPPORTED if the language specified is not supported
  *    - ER_BUS_REPLY_IS_ERROR_MESSAGE on unknown failure
  */
-- (QStatus)getAboutDataForLanguage:(NSString *)language usingDictionary:(NSMutableDictionary *)data;
+- (QStatus)getAboutDataForLanguage:(NSString *)language usingDictionary:(NSMutableDictionary **)data;
 
 /**
  * GetVersion get the About version

@@ -26,22 +26,22 @@ public class AboutServiceException extends RuntimeException {
     }
 
     /**
-     * @param message
+     * @param message user-defined message
      */
     public AboutServiceException(String message) {
         super(message);
     }
 
     /**
-     * @param cause
+     * @param cause the cause of this exception
      */
     public AboutServiceException(Throwable cause) {
         super(cause);
     }
 
     /**
-     * @param message
-     * @param cause
+     * @param message user-defined message
+     * @param cause the cause of this exception
      */
     public AboutServiceException(String message, Throwable cause) {
         super(message, cause);

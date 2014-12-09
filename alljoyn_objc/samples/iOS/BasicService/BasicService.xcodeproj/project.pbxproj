@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		7D0332AB1A328C9F00719774 /* AJNPasswordManager.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7D0332AA1A328C9F00719774 /* AJNPasswordManager.mm */; };
 		7DCBED971A2540BB00A53A83 /* AJNAboutObjectDescription.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCBED851A2540BB00A53A83 /* AJNAboutObjectDescription.mm */; };
 		7DCBED981A2540BB00A53A83 /* AJNAboutObject.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCBED871A2540BB00A53A83 /* AJNAboutObject.mm */; };
 		7DCBED991A2540BB00A53A83 /* AJNAboutDataListenerImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCBED8A1A2540BB00A53A83 /* AJNAboutDataListenerImpl.mm */; };
@@ -59,6 +60,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		7D0332A91A328C9F00719774 /* AJNPasswordManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNPasswordManager.h; path = ../../../AllJoynFramework/AllJoynFramework/AJNPasswordManager.h; sourceTree = "<group>"; };
+		7D0332AA1A328C9F00719774 /* AJNPasswordManager.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNPasswordManager.mm; path = ../../../AllJoynFramework/AllJoynFramework/AJNPasswordManager.mm; sourceTree = "<group>"; };
 		7DCBED851A2540BB00A53A83 /* AJNAboutObjectDescription.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNAboutObjectDescription.mm; path = ../../../AllJoynFramework/AllJoynFramework/AJNAboutObjectDescription.mm; sourceTree = "<group>"; };
 		7DCBED861A2540BB00A53A83 /* AJNAboutObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNAboutObject.h; path = ../../../AllJoynFramework/AllJoynFramework/AJNAboutObject.h; sourceTree = "<group>"; };
 		7DCBED871A2540BB00A53A83 /* AJNAboutObject.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNAboutObject.mm; path = ../../../AllJoynFramework/AllJoynFramework/AJNAboutObject.mm; sourceTree = "<group>"; };
@@ -181,6 +184,8 @@
 		AC4765BA160B9B130073AC47 /* AllJoynFramework */ = {
 			isa = PBXGroup;
 			children = (
+				7D0332A91A328C9F00719774 /* AJNPasswordManager.h */,
+				7D0332AA1A328C9F00719774 /* AJNPasswordManager.mm */,
 				7DCBED851A2540BB00A53A83 /* AJNAboutObjectDescription.mm */,
 				7DCBED861A2540BB00A53A83 /* AJNAboutObject.h */,
 				7DCBED871A2540BB00A53A83 /* AJNAboutObject.mm */,
@@ -422,6 +427,7 @@
 				7DCBED9A1A2540BB00A53A83 /* AJNAboutIcon.mm in Sources */,
 				AC476602160B9B240073AC47 /* AJNSessionListenerImpl.mm in Sources */,
 				7DCBED991A2540BB00A53A83 /* AJNAboutDataListenerImpl.mm in Sources */,
+				7D0332AB1A328C9F00719774 /* AJNPasswordManager.mm in Sources */,
 				AC476603160B9B240073AC47 /* AJNSessionOptions.mm in Sources */,
 				AC476604160B9B240073AC47 /* AJNSessionPortListenerImpl.mm in Sources */,
 				AC476605160B9B240073AC47 /* AJNSignalHandlerImpl.mm in Sources */,

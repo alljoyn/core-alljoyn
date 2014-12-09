@@ -16,17 +16,17 @@
 
 package org.alljoyn.bus;
 
-import org.alljoyn.bus.annotation.BusAnnotation;
-import org.alljoyn.bus.annotation.BusAnnotations;
-import org.alljoyn.bus.annotation.BusProperty;
-import org.alljoyn.bus.ifaces.Properties;
-
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import org.alljoyn.bus.annotation.BusAnnotation;
+import org.alljoyn.bus.annotation.BusAnnotations;
+import org.alljoyn.bus.annotation.BusProperty;
+import org.alljoyn.bus.ifaces.Properties;
 
 /**
  * A helper proxy used by BusObjects to send property change notifications.  A PropertyChangedlEmitter
@@ -77,7 +77,14 @@ public class PropertyChangedEmitter extends SignalEmitter {
         this(source, BusAttachment.SESSION_ID_ANY);
     }
 
-    /** Sends the signal. */
+    /**
+     * Sends the PropertyChanged signal.
+     *
+     * @param ifaceName name of the interface the property belongs to
+     * @param propertyName name of the property that is changed
+     * @param newValue Variant containing the new property value
+     * @throws BusException indicating failure to send the PropertyChanged signal
+     */
     public void PropertyChanged(String ifaceName, final String propertyName, final Variant newValue)
         throws BusException {
         Map<String, Variant> propsChanged = new HashMap<String, Variant>();
@@ -91,6 +98,13 @@ public class PropertyChangedEmitter extends SignalEmitter {
         props.PropertiesChanged(ifaceName, propsChanged, invalidatedProps);
     }
 
+    /**
+     * Sends the PropertiesChanged signal
+     *
+     * @param iface the BusInterface the property belongs to
+     * @param properties list of properties that were changed
+     * @throws BusException indicating failure to send the PropertiesChanged signal
+     */
     public void PropertiesChanged(Class<?> iface, Set<String> properties)
         throws BusException {
         String ifaceName = InterfaceDescription.getName(iface);

@@ -16,8 +16,6 @@
 
 package org.alljoyn.bus;
 
-import org.alljoyn.bus.annotation.BusProperty;
-
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
@@ -26,6 +24,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.alljoyn.bus.annotation.BusProperty;
 
 /**
  * A bus object that exists and is managed by some other connection to
@@ -347,6 +347,7 @@ public class ProxyBusObject {
     /**
      * Gets a proxy to an interface of this remote bus object.
      *
+     * @param <T> any class implementation of a interface annotated with AllJoyn interface annotations
      * @param intf one of the interfaces supplied when the proxy bus object was
      *             created
      * @return the proxy implementing the interface
@@ -394,6 +395,7 @@ public class ProxyBusObject {
     /**
      * Get a property from an interface on the remote object.
      *
+     * @param <T> any class implementation of a interface annotated with AllJoyn interface annotations
      * @param iface the interface that the property exists on
      * @param propertyName the name of the property
      * @return Variant containing the value of the property
@@ -406,6 +408,7 @@ public class ProxyBusObject {
     /**
      * Set a property on an interface on the remote object.
      *
+     * @param <T> any class implementation of a interface annotated with AllJoyn interface annotations
      * @param iface the interface that the property exists on
      * @param propertyName the name of the property
      * @param value the value for the property
@@ -418,6 +421,7 @@ public class ProxyBusObject {
     /**
      * Get all properties from an interface on the remote object.
      *
+     * @param <T> any class implementation of a interface annotated with AllJoyn interface annotations
      * @param iface the interface
      * @return a Map of name/value associations
      * @throws BusException if request cannot be honored
@@ -438,7 +442,7 @@ public class ProxyBusObject {
                                                            PropertiesChangedListener listener) throws BusException;
 
     public native void
-        unregisterPropertiesChangedHandler(String iface, PropertiesChangedListener listener)
+        unregisterPropertiesChangedListener(String iface, PropertiesChangedListener listener)
             throws BusException;
 
 }

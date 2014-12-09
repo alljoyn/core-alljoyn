@@ -30,7 +30,7 @@ public interface Peer {
      * Send a ping message to a remote connection and get a method reply in
      * response.
      *
-     * @throws BusException
+     * @throws BusException indicating failure to make Ping method call
      */
     @BusMethod
     void Ping() throws BusException;
@@ -41,7 +41,7 @@ public interface Peer {
      * implementation.
      *
      * @return guid of local AllJoyn router
-     * @throws BusException
+     * @throws BusException indicating failure to make GetMachineId method call
      */
     @BusMethod
     String GetMachineId() throws BusException;

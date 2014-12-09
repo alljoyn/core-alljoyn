@@ -33,21 +33,21 @@ public interface IconTransport extends BusObject
 
     /**
      * @return Interface version
-     * @throws BusException
+     * @throws BusException indicating failure to obtain Version property
      */
     @BusProperty(signature="q")
     public short getVersion() throws BusException;
 
     /**
      * @return Mime type for the icon
-     * @throws BusException
+     * @throws BusException indicating failure to obtain MimeType property
      */
     @BusProperty(signature="s")
     public String getMimeType() throws BusException;
 
     /**
      * @return Size of the icon
-     * @throws BusException
+     * @throws BusException indicating failure to obtain Size property
      */
     @BusProperty(signature="u")
     public int getSize() throws BusException;
@@ -55,7 +55,7 @@ public interface IconTransport extends BusObject
     /**
      * Returns the URL if the icon is hosted on the cloud
      * @return the URL if the icon is hosted on the cloud
-     * @throws BusException
+     * @throws BusException indicating failure to make GetUrl method call
      */
     @BusMethod(replySignature="s")
     public String GetUrl() throws BusException;
@@ -63,7 +63,7 @@ public interface IconTransport extends BusObject
     /**
      * Returns binary content for the icon
      * @return binary content for the icon
-     * @throws BusException
+     * @throws BusException indicating failure to make GetContent method call
      */
     @BusMethod(replySignature="ay")
     public byte[] GetContent() throws BusException;
