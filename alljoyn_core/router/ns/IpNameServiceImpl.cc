@@ -7839,6 +7839,7 @@ bool IpNameServiceImpl::HandleSearchQuery(TransportMask completeTransportMask, M
         // one.
         //
         bool respond = false;
+        bool respondQuietly = false;
         for (int i = 0; i < searchRData->GetNumNames(); ++i) {
             String wkn = searchRData->GetNameAt(i);
             if (searchRData->SendMatchOnly()) {
@@ -7886,6 +7887,7 @@ bool IpNameServiceImpl::HandleSearchQuery(TransportMask completeTransportMask, M
                     continue;
                 } else {
                     respond = true;
+                    respondQuietly = true;
                     break;
                 }
             }
@@ -7897,7 +7899,7 @@ bool IpNameServiceImpl::HandleSearchQuery(TransportMask completeTransportMask, M
         if (respond) {
             m_mutex.Unlock();
             if (ns4.GetAddress().IsIPv4()) {
-                Retransmit(index, false, true, ns4, TRANSMIT_V2, completeTransportMask, wkns);
+                Retransmit(index, false, respondQuietly, ns4, TRANSMIT_V2, completeTransportMask, wkns);
             }
             m_mutex.Lock();
         }
