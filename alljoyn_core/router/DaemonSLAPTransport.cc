@@ -721,25 +721,25 @@ void* DaemonSLAPTransport::Run(void* arg)
         checkEvents.clear();
         checkEvents.push_back(&stopEvent);
 
-        for (list<ListenEntry>::iterator i = m_listenList.begin(); i != m_listenList.end(); ++i) {
+        for (list<ListenEntry>::iterator it = m_listenList.begin(); it != m_listenList.end(); ++it) {
 
-            if (i->listenFd == -1) {
+            if (it->listenFd == -1) {
                 /* open the port and set listen fd */
                 UARTFd listenFd;
-                QStatus uartStatus = UART(i->args["dev"], StringToU32(i->args["baud"]), StringToU32(i->args["databits"]),
-                                          i->args["parity"], StringToU32(i->args["stopbits"]), listenFd);
+                QStatus uartStatus = UART(it->args["dev"], StringToU32(it->args["baud"]), StringToU32(it->args["databits"]),
+                                          it->args["parity"], StringToU32(it->args["stopbits"]), listenFd);
 
                 if (uartStatus == ER_OK && listenFd != -1) {
-                    i->listenFd = listenFd;
-                    checkEvents.push_back(new Event(i->listenFd, Event::IO_READ));
-                    QCC_DbgPrintf(("DaemonSLAPTransport::Run(): Adding checkevent for %s to list of events", i->args["dev"].c_str()));
+                    it->listenFd = listenFd;
+                    checkEvents.push_back(new Event(it->listenFd, Event::IO_READ));
+                    QCC_DbgPrintf(("DaemonSLAPTransport::Run(): Adding checkevent for %s to list of events", it->args["dev"].c_str()));
                 } else {
-                    QCC_LogError(uartStatus, ("DaemonSLAPTransport::Run(): Failed to open for %s", i->args["dev"].c_str()));
-                    m_listenList.erase(i++);
+                    QCC_LogError(uartStatus, ("DaemonSLAPTransport::Run(): Failed to open for %s", it->args["dev"].c_str()));
+                    m_listenList.erase(it++);
                 }
-            } else if (!i->endpointStarted) {
-                checkEvents.push_back(new Event(i->listenFd, Event::IO_READ));
-                QCC_DbgPrintf(("DaemonSLAPTransport::Run(): Adding checkevent for %s to list of events", i->args["dev"].c_str()));
+            } else if (!it->endpointStarted) {
+                checkEvents.push_back(new Event(it->listenFd, Event::IO_READ));
+                QCC_DbgPrintf(("DaemonSLAPTransport::Run(): Adding checkevent for %s to list of events", it->args["dev"].c_str()));
             }
         }
 
