@@ -56,7 +56,7 @@ class MyBusObject : public BusObject {
         const InterfaceDescription* iface = bus.GetInterface(INTERFACE_NAME);
         assert(iface != NULL);
 
-        // Here the boolean variable `true` tells AllJoyn that this interface
+        // Here the value ANNOUNCED tells AllJoyn that this interface
         // should be announced
         status = AddInterface(*iface, ANNOUNCED);
         if (status != ER_OK) {
@@ -101,7 +101,7 @@ int main(int argc, char** argv)
 
     status = bus.Connect();
     if (ER_OK == status) {
-        printf("BusAttachment connect succeeded.\n");
+        printf("BusAttachment connect succeeded. BusName %s\n", bus.GetUniqueName().c_str());
     } else {
         printf("FAILED to connect to router node (%s)\n", QCC_StatusText(status));
         exit(1);
@@ -110,7 +110,11 @@ int main(int argc, char** argv)
     SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
     SessionPort sessionPort = ASSIGNED_SESSION_PORT;
     MySessionPortListener sessionPortListener;
-    bus.BindSessionPort(sessionPort, opts, sessionPortListener);
+    status = bus.BindSessionPort(sessionPort, opts, sessionPortListener);
+    if (ER_OK != status) {
+        printf("Failed to BindSessionPort (%s)", QCC_StatusText(status));
+        exit(1);
+    }
 
     // Setup the about data
     // The default language is specified in the constructor. If the default language
@@ -138,6 +142,13 @@ int main(int argc, char** argv)
     // Users don't have to specify the AJSoftwareVersion its automatically added
     // to the AboutData
 
+    // Adding Spanish Localization values to the AboutData. All strings MUST be
+    // UTF-8 encoded.
+    status = aboutData.SetDeviceName("Mi dispositivo Nombre", "es");
+    status = aboutData.SetAppName("aplicación", "es");
+    status = aboutData.SetManufacturer("fabricante", "es");
+    status = aboutData.SetDescription("Una descripción poética de esta aplicación", "es");
+
     // Check to see if the aboutData is valid before sending the About Announcement
     if (!aboutData.IsValid()) {
         printf("failed to setup about data.\n");
@@ -152,20 +163,31 @@ int main(int argc, char** argv)
                             "</interface>"
                             "</node>";
 
-    bus.CreateInterfacesFromXml(interface.c_str());
+    status = bus.CreateInterfacesFromXml(interface.c_str());
+    if (ER_OK != status) {
+        printf("Failed to parse the xml interface definition (%s)", QCC_StatusText(status));
+        exit(1);
+    }
 
     MyBusObject busObject(bus, "/example/path");
 
-    bus.RegisterBusObject(busObject);
+    status = bus.RegisterBusObject(busObject);
+    if (ER_OK != status) {
+        printf("Failed to register BusObject (%s)", QCC_StatusText(status));
+        exit(1);
+    }
 
     // Announce about signal
     AboutObj aboutObj(bus);
-    // Note nothing was added to create the AboutObjectDescription
-    aboutObj.Announce(sessionPort, aboutData);
+    // Note the ObjectDescription that is part of the Announce signal is found
+    // automatically by introspecting the BusObjects registered with the bus
+    // attachment.
+    status = aboutObj.Announce(sessionPort, aboutData);
     if (ER_OK == status) {
         printf("AboutObj Announce Succeeded.\n");
     } else {
         printf("AboutObj Announce failed (%s)\n", QCC_StatusText(status));
+        exit(1);
     }
 
     /* Perform the service asynchronously until the user signals for an exit. */
