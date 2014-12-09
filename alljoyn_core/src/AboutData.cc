@@ -573,14 +573,14 @@ QStatus AboutData::SetSupportedLanguage(const char* language)
     //     tags conform to this RFC
     QStatus status = ER_OK;
 
-    std::pair<std::set<qcc::String>::iterator, bool> ret =  aboutDataInternal->supportedLanguages.insert(language);
+    std::pair<AboutData::Internal::supportedLanguagesIterator, bool> ret =  aboutDataInternal->supportedLanguages.insert(language);
     // A new language has been added rebuild the MsgArg and update the field.
     if (true == ret.second) {
         size_t supportedLangsNum = aboutDataInternal->supportedLanguages.size();
         //char* supportedLangs[supportedLangsNum];
         const char** supportedLangs = new const char*[supportedLangsNum];
         size_t count = 0;
-        for (std::set<qcc::String>::iterator it = aboutDataInternal->supportedLanguages.begin(); it != aboutDataInternal->supportedLanguages.end(); ++it) {
+        for (AboutData::Internal::supportedLanguagesIterator it = aboutDataInternal->supportedLanguages.begin(); it != aboutDataInternal->supportedLanguages.end(); ++it) {
             supportedLangs[count] = it->c_str();
             ++count;
         }
@@ -601,7 +601,7 @@ size_t AboutData::GetSupportedLanguages(const char** languageTags, size_t num)
         return aboutDataInternal->supportedLanguages.size();
     }
     size_t count = 0;
-    for (std::set<qcc::String>::iterator it = aboutDataInternal->supportedLanguages.begin(); it != aboutDataInternal->supportedLanguages.end() && count < num; ++it) {
+    for (AboutData::Internal::supportedLanguagesIterator it = aboutDataInternal->supportedLanguages.begin(); it != aboutDataInternal->supportedLanguages.end() && count < num; ++it) {
         languageTags[count] = it->c_str();
         ++count;
     }
@@ -832,7 +832,7 @@ QStatus AboutData::GetAboutData(MsgArg* msgArg, const char* language)
     // Check to see if the language is a supported language
     if (!(language == NULL || 0 == strcmp(language, ""))) {
         bool languageTagFound = false;
-        for (std::set<qcc::String>::iterator it = aboutDataInternal->supportedLanguages.begin(); it != aboutDataInternal->supportedLanguages.end(); ++it) {
+        for (AboutData::Internal::supportedLanguagesIterator it = aboutDataInternal->supportedLanguages.begin(); it != aboutDataInternal->supportedLanguages.end(); ++it) {
             if (it->compare(language) == 0) {
                 languageTagFound = true;
                 break;
