@@ -1781,7 +1781,19 @@ QStatus IpNameServiceImpl::FindAdvertisement(TransportMask transportMask, const 
     if (type & TRANSMIT_V2) {
         m_v2_queries[transportIndex].insert(matchingStr);
         uint32_t secondOfPairIndex = IndexFromBit(TRANSPORT_SECOND_OF_PAIR);
-        if (!((transportMask == TRANSPORT_FIRST_OF_PAIR) && (completeTransportMask & TRANSPORT_SECOND_OF_PAIR) == TRANSPORT_SECOND_OF_PAIR && m_enabledUnreliableIPv4[secondOfPairIndex])) {
+        bool isFirstOfPair = (transportMask == TRANSPORT_FIRST_OF_PAIR);
+        bool isSecondOfPair = (transportMask == TRANSPORT_SECOND_OF_PAIR);
+        bool isFirstOfPairRequested = ((completeTransportMask & TRANSPORT_FIRST_OF_PAIR) == TRANSPORT_FIRST_OF_PAIR);
+        bool isSecondOfPairRequested = ((completeTransportMask & TRANSPORT_SECOND_OF_PAIR) == TRANSPORT_SECOND_OF_PAIR);
+
+        // If this is the first of the pair, only send if second is not requested in the complete transport mask
+        bool sendForFirstOfPair = (isFirstOfPair && !isSecondOfPairRequested);
+
+        // If this is the second of the pair of transports, send if this transport is enabled or the first transport was requested.
+        bool sendForSecondOfPair = (isSecondOfPair && (isFirstOfPairRequested || m_enabledUnreliableIPv4[secondOfPairIndex]));
+
+        if (sendForFirstOfPair || sendForSecondOfPair) {
+
 
             MDNSPacket query;
 
@@ -2304,7 +2316,19 @@ QStatus IpNameServiceImpl::AdvertiseName(TransportMask transportMask, vector<qcc
     // Do it once for version two.
     //
     uint32_t secondOfPairIndex = IndexFromBit(TRANSPORT_SECOND_OF_PAIR);
-    if (!((transportMask == TRANSPORT_FIRST_OF_PAIR) && (completeTransportMask & TRANSPORT_SECOND_OF_PAIR) == TRANSPORT_SECOND_OF_PAIR && m_enabledUnreliableIPv4[secondOfPairIndex])) {
+
+    bool isFirstOfPair = (transportMask == TRANSPORT_FIRST_OF_PAIR);
+    bool isSecondOfPair = (transportMask == TRANSPORT_SECOND_OF_PAIR);
+    bool isFirstOfPairRequested = ((completeTransportMask & TRANSPORT_FIRST_OF_PAIR) == TRANSPORT_FIRST_OF_PAIR);
+    bool isSecondOfPairRequested = ((completeTransportMask & TRANSPORT_SECOND_OF_PAIR) == TRANSPORT_SECOND_OF_PAIR);
+
+    // If this is the first of the pair, only send if second is not requested in the complete transport mask
+    bool sendForFirstOfPair = (isFirstOfPair && !isSecondOfPairRequested);
+
+    // If this is the second of the pair of transports, send if this transport is enabled or the first transport was requested.
+    bool sendForSecondOfPair = (isSecondOfPair && (isFirstOfPairRequested || m_enabledUnreliableIPv4[secondOfPairIndex]));
+
+    if (sendForFirstOfPair || sendForSecondOfPair) {
         //version two
         MDNSAdvertiseRData* advRData = new MDNSAdvertiseRData();
         advRData->SetTransport(completeTransportMask & (TRANSPORT_TCP | TRANSPORT_UDP));
@@ -2616,7 +2640,21 @@ QStatus IpNameServiceImpl::CancelAdvertiseName(TransportMask transportMask, vect
     //
     // Do it once for version two.
     //
-    if (!((transportMask == TRANSPORT_FIRST_OF_PAIR) && ((completeTransportMask & TRANSPORT_SECOND_OF_PAIR) == TRANSPORT_SECOND_OF_PAIR))) {
+    uint32_t secondOfPairIndex = IndexFromBit(TRANSPORT_SECOND_OF_PAIR);
+
+    bool isFirstOfPair = (transportMask == TRANSPORT_FIRST_OF_PAIR);
+    bool isSecondOfPair = (transportMask == TRANSPORT_SECOND_OF_PAIR);
+    bool isFirstOfPairRequested = ((completeTransportMask & TRANSPORT_FIRST_OF_PAIR) == TRANSPORT_FIRST_OF_PAIR);
+    bool isSecondOfPairRequested = ((completeTransportMask & TRANSPORT_SECOND_OF_PAIR) == TRANSPORT_SECOND_OF_PAIR);
+
+    // If this is the first of the pair, only send if second is not requested in the complete transport mask
+    bool sendForFirstOfPair = (isFirstOfPair && !isSecondOfPairRequested);
+
+    // If this is the second of the pair of transports, send if this transport is enabled or the first transport was requested.
+    bool sendForSecondOfPair = (isSecondOfPair && (isFirstOfPairRequested || m_enabledUnreliableIPv4[secondOfPairIndex]));
+
+    if (sendForFirstOfPair || sendForSecondOfPair) {
+
         MDNSAdvertiseRData* advRData = new MDNSAdvertiseRData();
         advRData->SetTransport(completeTransportMask & (TRANSPORT_TCP | TRANSPORT_UDP));
         for (uint32_t i = 0; i < wkn.size(); ++i) {
