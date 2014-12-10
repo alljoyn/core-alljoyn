@@ -178,7 +178,7 @@ extern AJ_API void AJ_CALL alljoyn_busobject_emitpropertychanged(alljoyn_busobje
  * @param bus       alljoyn_busobject with which to emit the signal
  * @param ifcName   The name of the interface
  * @param propNames The array of properties being changed
- * @param numProp   The size of the propNames array
+ * @param numProps  The size of the propNames array
  * @param id        ID of the session we broadcast the signal to (0 for all)
  */
 extern AJ_API void AJ_CALL alljoyn_busobject_emitpropertieschanged(alljoyn_busobject bus,

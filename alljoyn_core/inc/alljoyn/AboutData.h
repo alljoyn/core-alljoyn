@@ -57,7 +57,7 @@ class AboutData : public AboutDataListener {
      */
     AboutData(const char* defaultLanguage);
 
-    /*
+    /**
      * constructor
      *
      * Fill in the fields of the AboutData class using a MsgArg.  The provided
@@ -203,16 +203,16 @@ class AboutData : public AboutDataListener {
      * (i.e. 4a354637-5649-4518-8a48-323c158bc02d)
      * AppId should be a 128-bit UUID as specified in by RFC 4122
      *
-     * Unlike #SetAppId(uint8_t, size_t) this member function will only set the
-     * AppId if the string is 32-character hex digit string or a UUID as
-     * specified by RFC 4122.
+     * Unlike SetAppId(const uint8_t*, const size_t) this member function will
+     * only set the AppId if the string is 32-character hex digit string or a
+     * UUID as specified by RFC 4122.
      *
      * AppId IS required
      * AppId IS part of the Announce signal
      * AppId CAN NOT be localized for other languages
      *
      *
-     * @see SetAppId(uint8_t, size_t)
+     * @see #SetAppId(const uint8_t*, const size_t)
      *
      * @param[in] appId String representing a globally unique array of bytes
      *                  used as an ID for the application.
@@ -433,7 +433,7 @@ class AboutData : public AboutDataListener {
      * Description IS NOT part of the announce signal
      * Description CAN BE localized for other languages
      *
-     * @param[in] descritption the Description (UTF8 encoded string)
+     * @param[in] description the Description (UTF8 encoded string)
      * @param[in] language the IETF language tag specified by RFC 5646
      *            if language is NULL the Description will be set for the default language.
      *
@@ -755,23 +755,41 @@ class AboutData : public AboutDataListener {
     static const char* SUPPORT_URL; ///< The support URL provided by the OEM or software developer
     // @}
   protected:
+    /**
+     * typedef for byte mask used to specify properties of an AboutData field
+     * entry
+     */
     typedef uint8_t AboutFieldMask;
+    /**
+     * The AboutData field is not required, announced, or localized.
+     */
     static const AboutFieldMask EMPTY_MASK = 0;
+    /**
+     * The AboutData field is required.
+     */
     static const AboutFieldMask REQUIRED = 1;
+    /**
+     * The AboutData field is announced.
+     */
     static const AboutFieldMask ANNOUNCED = 2;
+    /**
+     * The AboutData field is localized.
+     */
     static const AboutFieldMask LOCALIZED = 4;
     /**
-     * Derived classes have the ability to fully specify their own AboutData including
-     * requirements that can not be changed using the base class.  The derived class
-     * can specify if a value is required or optional, the value is part of the announce
-     * signal or must be read using the GetAboutData method. Specify if the value is
-     * a localizable value or not.
+     * Derived classes have the ability to fully specify their own AboutData
+     * including requirements that can not be changed using the base class.  The
+     * derived class can specify if a value is required or optional, the value
+     * is part of the announce signal or must be read using the GetAboutData
+     * method. Specify if the value is a localizable value or not.
      *
      * @param[in] fieldName the Field Name being set
-     * @param[in] isRequired is this field required befor the AboutData can be announced
-     * @param[in] isAnnounced is this field part of the Announce signal
-     * @param[in] isLocalized can this field be localized
-     * @param[in] signature the data type held by the field this is a MsgArg signature
+     * @param[in] fieldMask byte mask indicating if this field is required to
+     *                      send the announce signal, if this field is part of
+     *                      the `Announce` signal, and if this field contains a
+     *                      string that should be localized.
+     * @param[in] signature the data type held by the field this is a MsgArg
+     *                      signature
      * @return
      *     - #ER_OK on success
      *     - #ER_ABOUT_FIELD_ALREADY_SPECIFIED if that field has already been specified

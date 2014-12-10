@@ -64,8 +64,8 @@ class AboutObj : public BusObject {
      * isAnnounced to use its default value.
      *
      * @param[in] bus the BusAttachment that will contain the about information
-     * @param[in] isAnnounced will the org.alljoyn.About interface be part of the
-     *                        announced interfaces.
+     * @param[in] isAboutIntfAnnounced will the org.alljoyn.About interface be
+     *                                 part of the announced interfaces.
      */
     AboutObj(BusAttachment& bus, AnnounceFlag isAboutIntfAnnounced = UNANNOUNCED);
 

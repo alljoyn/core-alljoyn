@@ -608,11 +608,11 @@ size_t AboutData::GetSupportedLanguages(const char** languageTags, size_t num)
     return count;
 }
 
-QStatus AboutData::SetDescription(const char* descritption, const char* language)
+QStatus AboutData::SetDescription(const char* description, const char* language)
 {
     QStatus status = ER_OK;
     MsgArg arg;
-    status = arg.Set(aboutDataInternal->aboutFields[DESCRIPTION].signature.c_str(), descritption);
+    status = arg.Set(aboutDataInternal->aboutFields[DESCRIPTION].signature.c_str(), description);
     if (status != ER_OK) {
         return status;
     }

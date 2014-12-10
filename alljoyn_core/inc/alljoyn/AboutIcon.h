@@ -54,8 +54,8 @@ class AboutIcon {
      *                     responsible for freeing the memory. If false user is
      *                     is responsible for freeing memory pointed to by data.
      * @return
-     *  - ER_OK on success
-     *  - ER_BUS_BAD_VALUE if the data is to large to be marshaled
+     *  - #ER_OK on success
+     *  - #ER_BUS_BAD_VALUE if the data is to large to be marshaled
      *  - other status indicating failure
      */
     QStatus SetContent(const char* mimetype, uint8_t* data, size_t csize, bool ownsData = false);
@@ -70,6 +70,9 @@ class AboutIcon {
      *                     value will be `image/jpeg` or `image/png`
      * @param[in] url      A URL that contain the location of the icon hosted in
      *                     the cloud.
+     * @return
+     *  - #ER_OK on success
+     *  - other status indicating failure otherwise
      */
     QStatus SetUrl(const char* mimetype, const char* url);
 
@@ -87,7 +90,7 @@ class AboutIcon {
      * @param arg the MsgArg containing the Icon
      *
      * @return
-     *   - ER_OK on success
+     *   - #ER_OK on success
      *   - status indicating failure otherwise
      */
     QStatus SetContent(const MsgArg& arg);
