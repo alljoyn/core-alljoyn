@@ -81,6 +81,20 @@ QStatus AboutPropertyStoreImpl::ReadAll(const char* languageTag, Filter filter, 
 {
     QStatus status;
     if (filter == ANNOUNCE) {
+        /*
+         * TODO for now if ReadAll is called and the property store is empty we
+         * create an empty array to return. This should probably return an error
+         * status if the property store is empty.
+         */
+        if (m_Properties.size() == 0) {
+            // Trying to get properties from an empty property store.
+            status = all.Set("a{sv}", 0, NULL);
+            if (status != ER_OK) {
+                return status;
+            }
+            all.SetOwnershipFlags(MsgArg::OwnsArgs, true);
+            return status;
+        }
 
         PropertyMap::iterator defaultLang = m_Properties.find(DEFAULT_LANG);
 
@@ -127,7 +141,20 @@ QStatus AboutPropertyStoreImpl::ReadAll(const char* languageTag, Filter filter, 
             return status;
         }
     } else if (filter == READ) {
-
+        /*
+         * TODO for now if ReadAll is called and the property store is empty we
+         * create an empty array to return. This should probably return an error
+         * status if the property store is empty.
+         */
+        if (m_Properties.size() == 0) {
+            // Trying to get properties from an empty property store.
+            status = all.Set("a{sv}", 0, NULL);
+            if (status != ER_OK) {
+                return status;
+            }
+            all.SetOwnershipFlags(MsgArg::OwnsArgs, true);
+            return status;
+        }
         if (languageTag != NULL && languageTag[0] != 0) { // check that the language is in the supported languages;
             status = isLanguageSupported(languageTag);
             if (status != ER_OK) {
