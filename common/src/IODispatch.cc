@@ -349,6 +349,13 @@ void IODispatch::AlarmTriggered(const Alarm& alarm, QStatus reason)
              * while the exit callback was being made
              */
             assert(false);
+            /*
+             * since asserts are compiled out or release code we must add code
+             * to handle this if it occurs.
+             */
+            QCC_LogError(ER_FAIL, ("The IO stream entry was not found on IO_EXIT"));
+            lock.Unlock();
+            return;
         }
         if (it->second.readCtxt) {
             delete it->second.readCtxt;

@@ -570,7 +570,11 @@ class BusAttachment : public MessageReceiver {
     /**
      * Get the unique name of specified alias asyncronously
      *
-     * @param alias Alias name to lookup.
+     * @param[in] alias    Alias name to lookup.
+     * @param[in] callback pointer to function that is called with the results
+     *                     of the `GetNameOwner` method call.
+     * @param[in] context  User defined context which will be passed as-is to
+     *                     the callback.
      *
      * @return status code from sending the message to the local routing node.
      */
@@ -579,7 +583,11 @@ class BusAttachment : public MessageReceiver {
     /**
      * Get the unique name of specified alias asyncronously
      *
-     * @param alias Alias name to lookup.
+     * @param[in] alias Alias name to lookup.
+     * @param[in] callback pointer to function that is called with the results
+     *                     of the `GetNameOwner` method call.
+     * @param[in] context  User defined context which will be passed as-is to the
+     *                     callback.
      *
      * @return status code from sending the message to the local routing node.
      */
@@ -693,13 +701,20 @@ class BusAttachment : public MessageReceiver {
 
     /**
      * Enable peer-to-peer security. This function must be called by applications that want to use
-     * authentication and encryption . The bus must have been started by calling
+     * authentication and encryption. The bus must have been started by calling
      * BusAttachment::Start() before this function is called. If the application is providing its
      * own key store implementation it must have already called RegisterKeyStoreListener() before
      * calling this function.
      *
+     * Once peer security has been enabled it is not possible to change the authMechanism set without
+     * clearing it first (setting authMechanism to NULL). This is true regardless of whether the BusAttachment
+     * has been disconnected or not.
+     *
      * @param authMechanisms   The authentication mechanism(s) to use for peer-to-peer authentication.
-     *                         If this parameter is NULL peer-to-peer authentication is disabled.  This is a space separated list of any of the following values: ALLJOYN_PIN_KEYX, ALLJOYN_SRP_LOGON, ALLJOYN_RSA_KEYX, ALLJOYN_SRP_KEYX, ALLJOYN_ECDHE_NULL, ALLJOYN_ECDHE_PSK, ALLJOYN_ECDHE_ECDSA, GSSAPI.
+     *                         If this parameter is NULL peer-to-peer authentication is disabled.  This is a
+     *                         space separated list of any of the following values: ALLJOYN_PIN_KEYX,
+     *                         ALLJOYN_SRP_LOGON, ALLJOYN_RSA_KEYX, ALLJOYN_SRP_KEYX, ALLJOYN_ECDHE_NULL,
+     *                         ALLJOYN_ECDHE_PSK, ALLJOYN_ECDHE_ECDSA, GSSAPI.
      *
      * @param listener         Passes password and other authentication related requests to the application.
      *

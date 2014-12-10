@@ -1254,6 +1254,7 @@ void AllJoynObj::JoinSession(const InterfaceDescription::Member* member, Message
             joinSessionThreads.push_back(jst);
         } else {
             QCC_LogError(status, ("Join: Failed to start JoinSessionThread"));
+            delete jst;
         }
     }
     joinSessionThreadsLock.Unlock(MUTEX_CONTEXT);
@@ -1270,6 +1271,7 @@ void AllJoynObj::AttachSession(const InterfaceDescription::Member* member, Messa
             joinSessionThreads.push_back(jst);
         } else {
             QCC_LogError(status, ("Attach: Failed to start JoinSessionThread"));
+            delete jst;
         }
     }
     joinSessionThreadsLock.Unlock(MUTEX_CONTEXT);
@@ -3508,21 +3510,19 @@ void AllJoynObj::ProcFindAdvertisement(QStatus status, Message& msg, const qcc::
         AcquireLocks();
         String prefix = namePrefix->second.substr(0, namePrefix->second.find_last_of('*'));
         multimap<String, NameMapEntry>::iterator it = nameMap.lower_bound(prefix);
-        set<pair<String, TransportMask> > sentSet;
+        set<SentSetEntry> sentSet;
         while ((it != nameMap.end()) && !WildcardMatch(it->first, namePrefix->second)) {
             if ((it->second.transport & transports) == 0) {
                 ++it;
                 continue;
             }
-            pair<String, TransportMask> sentSetEntry(it->first, it->second.transport);
+
+            SentSetEntry sentSetEntry(it->first, it->second.transport);
             if (sentSet.find(sentSetEntry) == sentSet.end()) {
                 String foundName = it->first;
                 NameMapEntry nme = it->second;
                 it = nameMap.lower_bound(prefix);
                 sentSet.insert(sentSetEntry);
-                if (ER_OK != status) {
-                    QCC_LogError(status, ("Cannot send FoundAdvertisedName to %s for name=%s", sender.c_str(), foundName.c_str()));
-                }
             } else {
                 ++it;
             }
@@ -3539,9 +3539,12 @@ void AllJoynObj::ProcFindAdvertisement(QStatus status, Message& msg, const qcc::
             ++dit;
         }
         ReleaseLocks();
-        set<pair<String, TransportMask> >::iterator sit = sentSet.begin();
+        set<SentSetEntry>::iterator sit = sentSet.begin();
         while (sit != sentSet.end()) {
-            status = SendFoundAdvertisedName(sender, sit->first, sit->second, namePrefix->second);
+            status = SendFoundAdvertisedName(sender, (*sit).name, (*sit).transport, namePrefix->second);
+            if (ER_OK != status) {
+                QCC_LogError(status, ("Cannot send FoundAdvertisedName to %s for name=%s", sender.c_str(), (*sit).name.c_str()));
+            }
             sit++;
         }
     }

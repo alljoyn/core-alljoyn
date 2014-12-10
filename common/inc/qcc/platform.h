@@ -72,6 +72,23 @@
 
 #endif /* Compiler type */
 
+/**
+ * Macro used to avoid unused variable warning in release code.
+ * This Macro is only used when a variable is only used in the debug build
+ * variant. When building in release mode the compiler will give an unused
+ * variable warning.
+ *
+ * Example usage:
+   @code
+     String errMsg
+     const char* errName = reply->GetErrorName(&errMsg);
+     QCC_LogError(status, ("TimedPing returned ERROR_MESSAGE (error=%s, \"%s\")", errName, errMsg.c_str()));
+     QCC_UNUSED(errName); // avoid unused variable warning in release build
+   @endcode
+ *
+ * The `QCC_LogError` is an empty macro for release build variants but in debug
+ * build variants it is not empty so it uses the errName variable.
+ */
 #define QCC_UNUSED(x) (void)(x)
 
 /** Boolean type for C */
