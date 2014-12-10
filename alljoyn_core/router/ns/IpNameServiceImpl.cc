@@ -1164,7 +1164,7 @@ void IpNameServiceImpl::LazyUpdateInterfaces(const qcc::NetworkEventSet& network
     //
     bool processAnyTransport = false;
     for (uint32_t i = 0; i < N_TRANSPORTS; ++i) {
-        if (m_processTransport[i]) {
+        if (m_processTransport[i] || m_doNetworkCallback[i]) {
             processAnyTransport = true;
             break;
         }
