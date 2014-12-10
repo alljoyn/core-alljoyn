@@ -61,9 +61,21 @@ Installation
 
 9. Define an environment variable OPENSSL_ROOT=<path to the OpenSSL source top folder>
    This environment variable needs to be present whenever you build projects using the
-   AllJoyn SDK. To set the environment variable open a Terminal window and type the following:
+   AllJoyn SDK.
 
-       launchctl setenv OPENSSL_ROOT <path to top level folder containing openssl>
+    9a. For Mac OS X 10.7 to 10.9, to set the environment variable, open a Terminal window and type the
+        following:
+
+        launchctl setenv OPENSSL_ROOT <path to top level folder containing openssl>
+
+    9b. With Mac OS X 10.10, environment variable processing changed. Most importantly, OPENSSL_ROOT
+        must be defined before launching Xcode (Xcode will not pick up new or changed variables
+        after launching). Therefore, to set the environment variable, open a Terminal window and type
+        the following:
+
+        launchctl setenv OPENSSL_ROOT <path to top level folder containing openssl>
+        sudo killall Finder
+        sudo killall Dock
 
 Tour
 
