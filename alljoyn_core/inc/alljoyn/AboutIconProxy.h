@@ -59,7 +59,7 @@ class AboutIconProxy : public ProxyBusObject {
     QStatus GetIcon(AboutIcon& icon);
 
     /**
-     * @param[out] the version of the remote AboutIcon BusObject
+     * @param[out] version the version of the remote AboutIcon BusObject
      *
      * @return
      * - #ER_OK if successful

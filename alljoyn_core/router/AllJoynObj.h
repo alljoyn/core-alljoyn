@@ -781,6 +781,19 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
     };
     std::map<qcc::String, std::set<AdvAliasEntry> > advAliasMap;  /**< Map remote daemon guid/transport to advertised name alias */
 
+    struct SentSetEntry {
+        qcc::String name;
+        TransportMask transport;
+        SentSetEntry(qcc::String name, TransportMask transport) : name(name), transport(transport) { }
+        bool operator<(const SentSetEntry& other) const {
+            // Order in descending order of transport so that UDP transport is sent first.
+            return (name < other.name) || ((name == other.name) && (transport > other.transport));
+        }
+        bool operator==(const SentSetEntry& other) const {
+            return name == other.name && transport == other.transport;
+        }
+    };
+
     qcc::Timer timer;           /**< Timer object for reaping expired names */
 
     /**

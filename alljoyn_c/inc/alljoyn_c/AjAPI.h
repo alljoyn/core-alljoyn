@@ -25,6 +25,9 @@
 
 #include <qcc/platform.h>
 
+/**
+ * This @#define allows for setting of visibility support on relevant platforms
+ */
 #ifndef AJ_API
 #  if defined(QCC_OS_GROUP_POSIX)
 #    define AJ_API __attribute__((visibility("default")))
