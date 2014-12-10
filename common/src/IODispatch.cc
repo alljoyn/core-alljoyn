@@ -315,13 +315,11 @@ void IODispatch::AlarmTriggered(const Alarm& alarm, QStatus reason)
 
     case IO_EXIT:
 
-        if (isRunning) {
-            lock.Unlock();
-            /* Timer is running. Remove any pending alarms */
-            timer.ForceRemoveAlarm(dispatchEntry.readAlarm, true /* blocking */);
-            timer.ForceRemoveAlarm(dispatchEntry.writeAlarm, true /* blocking */);
-            lock.Lock();
-        }
+        lock.Unlock();
+        /* Remove any pending alarms */
+        timer.ForceRemoveAlarm(dispatchEntry.readAlarm, true /* blocking */);
+        timer.ForceRemoveAlarm(dispatchEntry.writeAlarm, true /* blocking */);
+        lock.Lock();
         /* If IODispatch has been stopped,
          * RemoveAlarms may not have successfully removed the alarm.
          * In that case, wait for any alarms that are in progress to finish.
