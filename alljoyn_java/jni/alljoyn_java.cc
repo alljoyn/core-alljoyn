@@ -10826,45 +10826,44 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_InterfaceDescription_activate(JNIEnv
     intf->Activate();
 }
 
-static void AddInterface(jobject thiz, JBusAttachment* busPtr, jstring jinterfaceName)
+static QStatus AddInterfaceStatus(jobject thiz, JBusAttachment* busPtr, jstring jinterfaceName)
 {
     JNIEnv* env = GetEnv();
 
     JProxyBusObject* proxyBusObj = GetHandle<JProxyBusObject*>(thiz);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("AddInterface(): Exception"));
-        return;
+        return ER_FAIL;
     }
 
     assert(proxyBusObj);
 
     JString interfaceName(jinterfaceName);
     if (env->ExceptionCheck()) {
-        return;
+        return ER_FAIL;
     }
 
     JLocalRef<jclass> clazz = env->GetObjectClass(thiz);
     jmethodID mid = env->GetMethodID(clazz, "addInterface", "(Ljava/lang/String;)I");
     if (!mid) {
-        return;
+        return ER_FAIL;
     }
 
     QStatus status = (QStatus)env->CallIntMethod(thiz, mid, jinterfaceName);
     if (env->ExceptionCheck()) {
         /* AnnotationBusException */
         QCC_LogError(ER_FAIL, ("AddInterface(): Exception"));
-        return;
+        return ER_FAIL;
     }
 
     if (ER_OK != status) {
         QCC_LogError(status, ("AddInterface(): Exception"));
-        env->ThrowNew(CLS_BusException, QCC_StatusText(status));
-        return;
+        return status;
     }
 
     if (busPtr == NULL) {
         QCC_LogError(ER_FAIL, ("AddInterface(): NULL bus pointer"));
-        return;
+        return ER_FAIL;
     }
 
     QCC_DbgPrintf(("AddInterface(): Refcount on busPtr is %d", busPtr->GetRef()));
@@ -10873,10 +10872,22 @@ static void AddInterface(jobject thiz, JBusAttachment* busPtr, jstring jinterfac
     assert(intf);
 
     status = proxyBusObj->AddInterface(*intf);
-    if (ER_OK != status) {
+    return status;
+}
+
+static void AddInterface(jobject thiz, JBusAttachment* busPtr, jstring jinterfaceName)
+{
+    JNIEnv* env = GetEnv();
+
+    QStatus status = AddInterfaceStatus(thiz, busPtr, jinterfaceName);
+    if (env->ExceptionCheck()) {
+        return;
+    }
+    if (status != ER_OK) {
         env->ThrowNew(CLS_BusException, QCC_StatusText(status));
     }
 }
+
 
 JProxyBusObject::JProxyBusObject(jobject pbo, JBusAttachment* jbap, const char* endpoint, const char* path, SessionId sessionId, bool secure)
     : ProxyBusObject(*jbap, endpoint, path, sessionId, secure), jpbo(NULL)
@@ -11114,10 +11125,14 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_registerProperties
     jobject jstatus = NULL;
 
     if (!proxyBusObj->ImplementsInterface(ifaceName.c_str())) {
-        AddInterface(thiz, proxyBusObj->busPtr, jifaceName);
+        status = AddInterfaceStatus(thiz, proxyBusObj->busPtr, jifaceName);
         if (env->ExceptionCheck()) {
             QCC_LogError(ER_FAIL, ("ProxyBusObject_registerPropertiesChangedListener(): Exception"));
             return NULL;
+        }
+        if (status != ER_OK) {
+            jstatus = JStatus(status);
+            return jstatus;
         }
     }
 
