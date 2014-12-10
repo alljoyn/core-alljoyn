@@ -15,13 +15,17 @@
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
+# Another copy of this whitespace.py file exists in ajtcl to support Thin Client builds.
+# That copy is located in 'ajtcl/tools'
+# Changes to this file must be done here (build_core) and in ajtcl
+
 import sys, os, fnmatch, re, filecmp, difflib, textwrap
 import hashlib, pickle, time
 from subprocess import Popen, STDOUT, PIPE
 
 def main(argv=None):
     start_time = time.clock()
-    dir_ignore = ["stlport", "build", ".git", ".repo", "alljoyn_objc", "ios"]
+    dir_ignore = ["stlport", "build", ".git", ".repo", "alljoyn_objc", "ios", "external" ]
     file_ignore_patterns = ['\.#.*', 'alljoyn_java\.h', 'Status\.h', 'Internal\.h']
     file_patterns = ['*.c', '*.h', '*.cpp', '*.cc']
     valid_commands = ["check", "detail", "fix", "off"]
@@ -235,7 +239,7 @@ def print_help( ):
 
         Apply uncrustify to C++ source files (.c, .h, .cc, .cpp),
         recursively, from the present working directory.  Skips
-        'stlport', 'build', 'alljoyn_objc', 'ios', '.git', and '.repo' directories.
+        'stlport', 'build', 'alljoyn_objc', 'ios', 'external', '.git', and '.repo' directories.
 
         Note:  present working directory is presumed to be within,
         or the parent of, one of the AllJoyn archives.
@@ -307,15 +311,15 @@ def locate(file_patterns, file_ignore_patterns, dir_ignore_patterns, root=os.cur
         '''Remove unwanted files'''
         files_dict = {}
         for filename in files:
-            files_dict[filename] = True             
+            files_dict[filename] = True
         for filename in files:
             for fip in file_ignore_patterns:
                 if re.search(fip, filename) != None:
                     del files_dict[filename]
-        '''Collect the filtered list'''       
+        '''Collect the filtered list'''
         filtered_files = []
         for filename in files_dict.keys():
-            filtered_files.append(filename)        
+            filtered_files.append(filename)
         '''Filter the remainder using our wanted file pattern list'''
         for pattern in file_patterns:
             for filename in fnmatch.filter(filtered_files, pattern):
