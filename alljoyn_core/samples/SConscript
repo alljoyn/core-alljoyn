@@ -24,6 +24,9 @@ if samples_env['BR'] == 'on':
 # About feature sample programs
 samples_env.SConscript('about/SConscript', exports = {'env': samples_env})
 
+# AboutListener sample program
+samples_env.SConscript('aboutlistener/SConscript', exports = {'env': samples_env})
+
 # Basic Sample programs
 samples_env.SConscript('basic/SConscript', exports = {'env': samples_env})
 
