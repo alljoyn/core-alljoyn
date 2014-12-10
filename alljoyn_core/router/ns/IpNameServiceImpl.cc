@@ -2630,12 +2630,9 @@ QStatus IpNameServiceImpl::CancelAdvertiseName(TransportMask transportMask, vect
     m_mutex.Unlock();
 
     //
-    // If we didn't actually make a change that needs to be sent out on the
-    // network, just return.
+    // Even though changed may be false, we may still need to send out the packet
+    // since TCP is enabled.
     //
-    if (changed == false) {
-        return ER_OK;
-    }
 
     //
     // Do it once for version two.
@@ -2667,6 +2664,14 @@ QStatus IpNameServiceImpl::CancelAdvertiseName(TransportMask transportMask, vect
         mdnsPacket->SetVersion(2, 2);
         Response(completeTransportMask, 0, mdnsPacket);
         delete advRData;
+    }
+
+    //
+    // If we didn't actually make a change that needs to be sent out on the
+    // network, just return.
+    //
+    if (changed == false) {
+        return ER_OK;
     }
 
     //
