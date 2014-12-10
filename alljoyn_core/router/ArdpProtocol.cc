@@ -3160,6 +3160,18 @@ QStatus Accept(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* rxbuf, uint16_
     return Receive(handle, conn, rxbuf, len);
 }
 
+static bool IsDuplicateConnRequest(ArdpHandle* handle, uint16_t foreign, qcc::IPAddress address)
+{
+    for (ListNode* ln = &handle->conns; (ln = ln->fwd) != &handle->conns;) {
+        ArdpConnRecord* conn = (ArdpConnRecord*)ln;
+        if ((conn->foreign == foreign) && (conn->ipAddr == address)) {
+            QCC_DbgPrintf(("isDuplicateConnRequest(): Found conn %p, foreign %u", conn, foreign));
+            return true;
+        }
+    }
+    return false;
+}
+
 QStatus ARDP_Run(ArdpHandle* handle, qcc::SocketFd sock, bool sockRead, bool sockWrite, uint32_t* ms)
 {
     const size_t bufferSize = 65536;      /* UDP packet can be up to 64K long */
@@ -3192,16 +3204,23 @@ QStatus ARDP_Run(ArdpHandle* handle, qcc::SocketFd sock, bool sockRead, bool soc
                 ProtocolDemux(buf, nbytes, &local, &foreign);
                 if (local == 0) {
                     if (handle->accepting && handle->cb.AcceptCb) {
-                        ArdpConnRecord* conn = NewConnRecord();
-                        status = InitConnRecord(handle, conn, sock, address, port, foreign);
-                        if (status == ER_OK) {
-                            EnList(handle->conns.bwd, (ListNode*)conn);
-                            status = Accept(handle, conn, buf, nbytes);
-                        }
-                        if (status != ER_OK) {
-                            SetState(conn, CLOSED);
-                            DelConnRecord(handle, conn, false);
-                        }
+                        if (!IsDuplicateConnRequest(handle, foreign, address)) {
+                            ArdpConnRecord* conn = NewConnRecord();
+                            status = InitConnRecord(handle, conn, sock, address, port, foreign);
+                            if (status == ER_OK) {
+                                EnList(handle->conns.bwd, (ListNode*)conn);
+                                status = Accept(handle, conn, buf, nbytes);
+                            }
+                            if (status != ER_OK) {
+                                SetState(conn, CLOSED);
+                                DelConnRecord(handle, conn, false);
+                            }
+                        } /*
+                           * Else the remote most likely timed out waiting for our SYN_ACK.
+                           * We should rely on local connection retry mechanism to kick in
+                           * and eventually establish the connection.
+                           */
+
                     } else {
                         status = ER_ARDP_INVALID_STATE;
                     }
@@ -3216,19 +3235,22 @@ QStatus ARDP_Run(ArdpHandle* handle, qcc::SocketFd sock, bool sockRead, bool soc
                         conn = FindConn(handle, local, 0);
                     }
 
-                    if (conn && (conn->state != CLOSED) && (conn->state != CLOSE_WAIT)) {
-                        QCC_DbgHLPrintf(("ARDP_Run conn state %s", State2Text(conn->state)));
-                        conn->lastSeen = TimeNow(handle->tbase);
-                        conn->probeTimer.retry = handle->config.keepaliveRetries;
-                        status = Receive(handle, conn, buf, nbytes);
-                        if (status == ER_ARDP_INVALID_RESPONSE) {
-                            Disconnect(handle, conn, status);
+                    if (conn) {
+                        if ((conn->state != CLOSED) && (conn->state != CLOSE_WAIT)) {
+                            QCC_DbgHLPrintf(("ARDP_Run conn state %s", State2Text(conn->state)));
+                            conn->lastSeen = TimeNow(handle->tbase);
+                            conn->probeTimer.retry = handle->config.keepaliveRetries;
+                            status = Receive(handle, conn, buf, nbytes);
+                            if (status == ER_ARDP_INVALID_RESPONSE) {
+                                Disconnect(handle, conn, status);
+                            }
+                        } else {
+                            SendRst(handle, sock, address, port, local, foreign);
                         }
                     }
-
-                    /* Ignore anything else */
                 }
             } else {
+                QCC_DbgHLPrintf(("ARDP_Run(): Socket read failed (nbytes = %d)", nbytes));
                 break;
             }
         }
