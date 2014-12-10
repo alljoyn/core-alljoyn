@@ -343,7 +343,7 @@ bool Timer::RemoveAlarm(const Alarm& alarm, bool blockIfTriggered)
                     continue;
                 }
                 const Alarm* curAlarm = timerThreads[i]->GetCurrentAlarm();
-                while (isRunning && curAlarm && (*curAlarm == alarm)) {
+                while (curAlarm && (*curAlarm == alarm)) {
                     lock.Unlock();
                     qcc::Sleep(2);
                     lock.Lock();
@@ -391,7 +391,7 @@ bool Timer::ForceRemoveAlarm(const Alarm& alarm, bool blockIfTriggered)
                     continue;
                 }
                 const Alarm* curAlarm = timerThreads[i]->GetCurrentAlarm();
-                while (isRunning && curAlarm && (*curAlarm == alarm)) {
+                while (curAlarm && (*curAlarm == alarm)) {
                     timerThreads[i]->Alert(FORCEREMOVEALARM_ALERTCODE);
                     lock.Unlock();
                     qcc::Sleep(2);
@@ -427,7 +427,7 @@ QStatus Timer::ReplaceAlarm(const Alarm& origAlarm, const Alarm& newAlarm, bool 
                     continue;
                 }
                 const Alarm* curAlarm = timerThreads[i]->GetCurrentAlarm();
-                while (isRunning && curAlarm && (*curAlarm == origAlarm)) {
+                while (curAlarm && (*curAlarm == origAlarm)) {
                     lock.Unlock();
                     qcc::Sleep(2);
                     lock.Lock();
@@ -447,7 +447,7 @@ bool Timer::RemoveAlarm(const AlarmListener& listener, Alarm& alarm)
 {
     bool removedOne = false;
     lock.Lock();
-    if (isRunning) {
+    if (isRunning || expireOnExit) {
         for (set<Alarm>::iterator it = alarms.begin(); it != alarms.end(); ++it) {
             if ((*it)->listener == &listener) {
                 alarm = *it;
@@ -467,7 +467,7 @@ bool Timer::RemoveAlarm(const AlarmListener& listener, Alarm& alarm)
                     continue;
                 }
                 const Alarm* curAlarm = timerThreads[i]->GetCurrentAlarm();
-                while (isRunning && curAlarm && ((*curAlarm)->listener == &listener)) {
+                while (curAlarm && ((*curAlarm)->listener == &listener)) {
                     lock.Unlock();
                     qcc::Sleep(5);
                     lock.Lock();
