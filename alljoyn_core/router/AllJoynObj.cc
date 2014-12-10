@@ -1254,6 +1254,7 @@ void AllJoynObj::JoinSession(const InterfaceDescription::Member* member, Message
             joinSessionThreads.push_back(jst);
         } else {
             QCC_LogError(status, ("Join: Failed to start JoinSessionThread"));
+            delete jst;
         }
     }
     joinSessionThreadsLock.Unlock(MUTEX_CONTEXT);
@@ -1270,6 +1271,7 @@ void AllJoynObj::AttachSession(const InterfaceDescription::Member* member, Messa
             joinSessionThreads.push_back(jst);
         } else {
             QCC_LogError(status, ("Attach: Failed to start JoinSessionThread"));
+            delete jst;
         }
     }
     joinSessionThreadsLock.Unlock(MUTEX_CONTEXT);
