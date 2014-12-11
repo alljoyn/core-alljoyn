@@ -852,14 +852,22 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
             if (!b2bEp->IsValid()) {
                 /* Step 1a: If there is a busAddr from advertisement use it to (possibly) create a physical connection */
                 QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Look for busaddr corresponding to sessionHost"));
+                set<JoinSessionEntry> advertisements;
                 vector<String> busAddrs;
                 multimap<String, NameMapEntry>::iterator nmit = ajObj.nameMap.lower_bound(sessionHost);
                 while (nmit != ajObj.nameMap.end() && (nmit->first == sessionHost)) {
                     if (nmit->second.transport & optsIn.transports) {
                         QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Found busaddr in name map: \"%s\"", nmit->second.busAddr.c_str()));
-                        busAddrs.push_back(nmit->second.busAddr);
+                        JoinSessionEntry joinSessionEntry(nmit->first, nmit->second.transport, nmit->second.busAddr);
+                        advertisements.insert(joinSessionEntry);
                     }
                     ++nmit;
+                }
+
+                set<JoinSessionEntry>::iterator sit = advertisements.begin();
+                while (sit != advertisements.end()) {
+                    busAddrs.push_back((*sit).busAddr);
+                    sit++;
                 }
 
                 /* Step 1b: If no busAddr, see if one exists in the adv alias map */

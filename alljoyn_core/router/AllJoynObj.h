@@ -794,6 +794,20 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
         }
     };
 
+    struct JoinSessionEntry {
+        qcc::String name;
+        TransportMask transport;
+        qcc::String busAddr;
+        JoinSessionEntry(qcc::String name, TransportMask transport, qcc::String busAddr) : name(name), transport(transport), busAddr(busAddr) { }
+        bool operator<(const JoinSessionEntry& other) const {
+            // Order in descending order of transport so that UDP transport is sent first.
+            return (name < other.name) || ((name == other.name) && (transport > other.transport))
+                   || ((name == other.name) && (transport == other.transport)  && (busAddr < other.busAddr));
+        }
+        bool operator==(const JoinSessionEntry& other) const {
+            return name == other.name && transport == other.transport && busAddr == other.busAddr;
+        }
+    };
     qcc::Timer timer;           /**< Timer object for reaping expired names */
 
     /**
