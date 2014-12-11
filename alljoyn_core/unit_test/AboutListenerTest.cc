@@ -26,6 +26,8 @@
 #include <qcc/GUID.h>
 #include <set>
 
+#include "ajTestCommon.h"
+
 /*
  * This test uses the GUID128 in multiple places to generate a random string.
  * We are using random strings in many of the interface names to prevent multiple
@@ -60,41 +62,41 @@ class AboutListenerTest : public testing::Test {
 
         serviceBus = new BusAttachment("AnnounceListenerTest", true);
         status = serviceBus->Start();
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status);
         status = serviceBus->Connect();
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status);
 
         // Setup the about data
         qcc::GUID128 appId;
         status = aboutData.SetAppId(appId.GetBytes(), qcc::GUID128::SIZE);
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status);
         status = aboutData.SetDeviceName("My Device Name");
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status);
         qcc::GUID128 deviceId;
         status = aboutData.SetDeviceId(deviceId.ToString().c_str());
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status);
         status = aboutData.SetAppName("Application");
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status);
         status = aboutData.SetManufacturer("Manufacturer");
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status);
         status = aboutData.SetModelNumber("123456");
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status);
         status = aboutData.SetDescription("A poetic description of this application");
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status);
         status = aboutData.SetDateOfManufacture("2014-03-24");
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status);
         status = aboutData.SetSoftwareVersion("0.1.2");
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status);
         status = aboutData.SetHardwareVersion("0.0.1");
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status);
         status = aboutData.SetSupportUrl("http://www.alljoyn.org");
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status);
         EXPECT_TRUE(aboutData.IsValid()) << "failed to setup about data.\n";
 
         SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
         AnnounceListenerTestSessionPortListener listener;
         status = serviceBus->BindSessionPort(port, opts, listener);
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
     }
 
     virtual void TearDown() {
@@ -133,14 +135,14 @@ class AboutListenerTestObject : public BusObject {
             return;
         }
         QStatus status = AddInterface(*iface, ANNOUNCED);
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
 
         /* Register the method handlers with the object */
         const MethodEntry methodEntries[] = {
             { iface->GetMember("Foo"), static_cast<MessageReceiver::MethodHandler>(&AboutListenerTestObject::Foo) }
         };
         status = AddMethodHandlers(methodEntries, sizeof(methodEntries) / sizeof(methodEntries[0]));
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
     }
 
     void Foo(const InterfaceDescription::Member* member, Message& msg) {
@@ -163,7 +165,7 @@ TEST_F(AboutListenerTest, ReceiverAnnouncement) {
                                   "</interface>"
                                   "</node>";
     status = serviceBus->CreateInterfacesFromXml(interface.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutListenerTestObject altObj(*serviceBus, "/org/test/about", ifaceName.c_str());
     serviceBus->RegisterBusObject(altObj);
@@ -171,17 +173,17 @@ TEST_F(AboutListenerTest, ReceiverAnnouncement) {
     // receive
     BusAttachment clientBus("Receive Announcement client Test", true);
     status = clientBus.Start();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Connect();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutTestAboutListener aboutListener;
 
     clientBus.RegisterAboutListener(aboutListener);
 
     status = clientBus.WhoImplements(ifaceName.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     aboutObj.Announce(port, aboutData);
 
@@ -200,10 +202,10 @@ TEST_F(AboutListenerTest, ReceiverAnnouncement) {
     clientBus.UnregisterAboutListener(aboutListener);
 
     status = clientBus.Stop();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Join();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 }
 
 TEST_F(AboutListenerTest, ReceiveAnnouncementNullWhoImplementsValue) {
@@ -221,7 +223,7 @@ TEST_F(AboutListenerTest, ReceiveAnnouncementNullWhoImplementsValue) {
                                   "</interface>"
                                   "</node>";
     status = serviceBus->CreateInterfacesFromXml(interface.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutListenerTestObject altObj(*serviceBus, "/org/test/about", ifaceName.c_str());
     serviceBus->RegisterBusObject(altObj);
@@ -229,17 +231,17 @@ TEST_F(AboutListenerTest, ReceiveAnnouncementNullWhoImplementsValue) {
     // receive
     BusAttachment clientBus("Receive Announcement client Test", true);
     status = clientBus.Start();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Connect();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutTestAboutListener aboutListener;
 
     clientBus.RegisterAboutListener(aboutListener);
 
     status = clientBus.WhoImplements(NULL);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     aboutObj.Announce(port, aboutData);
 
@@ -254,11 +256,11 @@ TEST_F(AboutListenerTest, ReceiveAnnouncementNullWhoImplementsValue) {
     ASSERT_TRUE(announceListenerFlag);
 
     status = clientBus.CancelWhoImplements(NULL);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     announceListenerFlag = false;
     status = clientBus.WhoImplements(NULL, 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     aboutObj.Announce(port, aboutData);
 
@@ -273,15 +275,15 @@ TEST_F(AboutListenerTest, ReceiveAnnouncementNullWhoImplementsValue) {
     ASSERT_TRUE(announceListenerFlag);
 
     status = clientBus.CancelWhoImplements(NULL, 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     clientBus.UnregisterAboutListener(aboutListener);
 
     status = clientBus.Stop();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Join();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 }
 /*
  * for most of the tests the interfaces are all added then the listener is
@@ -303,26 +305,26 @@ TEST_F(AboutListenerTest, ReceiveAnnouncementRegisterThenAddInterface)
                                   "</interface>"
                                   "</node>";
     status = serviceBus->CreateInterfacesFromXml(interface.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutListenerTestObject altObj(*serviceBus, "/org/test/about", ifaceName.c_str());
     status = serviceBus->RegisterBusObject(altObj);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     // receive
     BusAttachment clientBus("Receive Announcement client Test", true);
     status = clientBus.Start();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Connect();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutTestAboutListener aboutListener;
 
     clientBus.RegisterAboutListener(aboutListener);
 
     status = clientBus.WhoImplements(ifaceName.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutObj aboutObj(*serviceBus);
     aboutObj.Announce(port, aboutData);
@@ -338,15 +340,15 @@ TEST_F(AboutListenerTest, ReceiveAnnouncementRegisterThenAddInterface)
     ASSERT_TRUE(announceListenerFlag);
 
     status = clientBus.CancelWhoImplements(ifaceName.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     clientBus.UnregisterAboutListener(aboutListener);
 
     status = clientBus.Stop();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Join();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 }
 
 TEST_F(AboutListenerTest, ReAnnounceAnnouncement) {
@@ -363,28 +365,28 @@ TEST_F(AboutListenerTest, ReAnnounceAnnouncement) {
                                   "</interface>"
                                   "</node>";
     status = serviceBus->CreateInterfacesFromXml(interface.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutListenerTestObject altObj(*serviceBus, "/org/test/about", ifaceName.c_str());
     status = serviceBus->RegisterBusObject(altObj);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutObj aboutObj(*serviceBus);
 
     // receive
     BusAttachment clientBus("Receive Announcement client Test", true);
     status = clientBus.Start();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Connect();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutTestAboutListener aboutListener;
 
     clientBus.RegisterAboutListener(aboutListener);
 
     status = clientBus.WhoImplements(ifaceName.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     aboutObj.Announce(port, aboutData);
 
@@ -411,15 +413,15 @@ TEST_F(AboutListenerTest, ReAnnounceAnnouncement) {
     }
 
     status = clientBus.CancelWhoImplements(ifaceName.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     clientBus.UnregisterAboutListener(aboutListener);
 
     status = clientBus.Stop();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Join();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 }
 
 static bool announceListenerFlag1 = false;
@@ -462,21 +464,21 @@ TEST_F(AboutListenerTest, MultipleAnnounceListeners) {
                                   "</interface>"
                                   "</node>";
     status = serviceBus->CreateInterfacesFromXml(interface.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutListenerTestObject altObj(*serviceBus, "/org/test/about", ifaceName.c_str());
     status = serviceBus->RegisterBusObject(altObj);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutObj aboutObj(*serviceBus);
 
     // receive
     BusAttachment clientBus("Receive Announcement client Test", true);
     status = clientBus.Start();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Connect();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutTestAboutListener1 aboutListener1;
 
@@ -487,7 +489,7 @@ TEST_F(AboutListenerTest, MultipleAnnounceListeners) {
     clientBus.RegisterAboutListener(aboutListener2);
 
     status = clientBus.WhoImplements(ifaceName.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     aboutObj.Announce(port, aboutData);
 
@@ -511,16 +513,16 @@ TEST_F(AboutListenerTest, MultipleAnnounceListeners) {
     ASSERT_TRUE(announceListenerFlag2);
 
     status = clientBus.CancelWhoImplements(ifaceName.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     clientBus.UnregisterAboutListener(aboutListener1);
     clientBus.UnregisterAboutListener(aboutListener2);
 
     status = clientBus.Stop();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Join();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 }
 
 TEST_F(AboutListenerTest, MultipleAnnounceListenersUnregister) {
@@ -537,21 +539,21 @@ TEST_F(AboutListenerTest, MultipleAnnounceListenersUnregister) {
                                   "</interface>"
                                   "</node>";
     status = serviceBus->CreateInterfacesFromXml(interface.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutListenerTestObject altObj(*serviceBus, "/org/test/about", ifaceName.c_str());
     status = serviceBus->RegisterBusObject(altObj);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutObj aboutObj(*serviceBus);
 
     // receive
     BusAttachment clientBus("Receive Announcement client Test", true);
     status = clientBus.Start();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Connect();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutTestAboutListener1 aboutListener1;
     clientBus.RegisterAboutListener(aboutListener1);
@@ -560,7 +562,7 @@ TEST_F(AboutListenerTest, MultipleAnnounceListenersUnregister) {
     clientBus.RegisterAboutListener(aboutListener2);
 
     status = clientBus.WhoImplements(ifaceName.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     aboutObj.Announce(port, aboutData);
 
@@ -606,10 +608,10 @@ TEST_F(AboutListenerTest, MultipleAnnounceListenersUnregister) {
     clientBus.UnregisterAboutListener(aboutListener2);
 
     status = clientBus.Stop();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Join();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 }
 
 TEST_F(AboutListenerTest, MultipleAnnounceListenersUnregisterAll) {
@@ -628,21 +630,21 @@ TEST_F(AboutListenerTest, MultipleAnnounceListenersUnregisterAll) {
                                   "</interface>"
                                   "</node>";
     status = serviceBus->CreateInterfacesFromXml(interface.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutListenerTestObject altObj(*serviceBus, "/org/test/about", ifaceName.c_str());
     status = serviceBus->RegisterBusObject(altObj);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutObj aboutObj(*serviceBus);
 
     // receive
     BusAttachment clientBus("Receive Announcement client Test", true);
     status = clientBus.Start();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Connect();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutTestAboutListener1 aboutListener1;
     clientBus.RegisterAboutListener(aboutListener1);
@@ -654,7 +656,7 @@ TEST_F(AboutListenerTest, MultipleAnnounceListenersUnregisterAll) {
     clientBus.RegisterAboutListener(aboutListener3);
 
     status = clientBus.WhoImplements(ifaceName.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     aboutObj.Announce(port, aboutData);
 
@@ -687,7 +689,7 @@ TEST_F(AboutListenerTest, MultipleAnnounceListenersUnregisterAll) {
     ASSERT_TRUE(announceListenerFlag3);
 
     status = clientBus.CancelWhoImplements(ifaceName.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     clientBus.UnregisterAllAboutListeners();
 
@@ -698,7 +700,7 @@ TEST_F(AboutListenerTest, MultipleAnnounceListenersUnregisterAll) {
     clientBus.RegisterAboutListener(aboutListener2);
 
     status = clientBus.WhoImplements(ifaceName.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     //Wait for a maximum of 5 sec for the second Announce Signal.
     for (int msec = 0; msec < 5000; msec += WAIT_TIME) {
@@ -715,10 +717,10 @@ TEST_F(AboutListenerTest, MultipleAnnounceListenersUnregisterAll) {
     clientBus.UnregisterAllAboutListeners();
 
     status = clientBus.Stop();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Join();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 }
 
 class AboutListenerTestObject2 : public BusObject {
@@ -733,14 +735,14 @@ class AboutListenerTestObject2 : public BusObject {
                 return;
             }
             QStatus status = AddInterface(*iface, ANNOUNCED);
-            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+            EXPECT_EQ(ER_OK, status);
 
             /* Register the method handlers with the object */
             const MethodEntry methodEntries[] = {
                 { iface->GetMember("Foo"), static_cast<MessageReceiver::MethodHandler>(&AboutListenerTestObject2::Foo) }
             };
             status = AddMethodHandlers(methodEntries, sizeof(methodEntries) / sizeof(methodEntries[0]));
-            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+            EXPECT_EQ(ER_OK, status);
         }
     }
 
@@ -774,21 +776,21 @@ TEST_F(AboutListenerTest, MatchMultipleInterfaces) {
                                   "</interface>"
                                   "</node>";
     status = serviceBus->CreateInterfacesFromXml(interface.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutListenerTestObject2 altObj(*serviceBus, "/org/test/about", ifaceNames, 3);
     status = serviceBus->RegisterBusObject(altObj);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutObj aboutObj(*serviceBus);
 
     // receive
     BusAttachment clientBus("Receive Announcement client Test", true);
     status = clientBus.Start();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Connect();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutTestAboutListener aboutListener;
 
@@ -800,7 +802,7 @@ TEST_F(AboutListenerTest, MatchMultipleInterfaces) {
     clientBus.RegisterAboutListener(aboutListener);
 
     status = clientBus.WhoImplements(ifaces, 3);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     aboutObj.Announce(port, aboutData);
 
@@ -815,15 +817,15 @@ TEST_F(AboutListenerTest, MatchMultipleInterfaces) {
     ASSERT_TRUE(announceListenerFlag);
 
     status = clientBus.CancelWhoImplements(ifaces, 3);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     clientBus.UnregisterAboutListener(aboutListener);
 
     status = clientBus.Stop();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Join();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 }
 TEST_F(AboutListenerTest, MatchMultipleInterfacesSubSet) {
     QStatus status;
@@ -865,21 +867,21 @@ TEST_F(AboutListenerTest, MatchMultipleInterfacesSubSet) {
                                   "</interface>"
                                   "</node>";
     status = serviceBus->CreateInterfacesFromXml(interface.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutListenerTestObject2 altObj(*serviceBus, "/org/test/about", ifaceNames, 6);
     status = serviceBus->RegisterBusObject(altObj);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutObj aboutObj(*serviceBus);
 
     // receive
     BusAttachment clientBus("Receive Announcement client Test", true);
     status = clientBus.Start();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Connect();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutTestAboutListener aboutListener;
 
@@ -890,7 +892,7 @@ TEST_F(AboutListenerTest, MatchMultipleInterfacesSubSet) {
     clientBus.RegisterAboutListener(aboutListener);
 
     status = clientBus.WhoImplements(ifacesSubSet, 2);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     aboutObj.Announce(port, aboutData);
 
@@ -905,15 +907,15 @@ TEST_F(AboutListenerTest, MatchMultipleInterfacesSubSet) {
     ASSERT_TRUE(announceListenerFlag);
 
     status = clientBus.CancelWhoImplements(ifacesSubSet, 2);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     clientBus.UnregisterAboutListener(aboutListener);
 
     status = clientBus.Stop();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Join();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 }
 
 TEST_F(AboutListenerTest, MatchMultipleInterfacesRegisterInDifferentOrder) {
@@ -956,21 +958,21 @@ TEST_F(AboutListenerTest, MatchMultipleInterfacesRegisterInDifferentOrder) {
                                   "</interface>"
                                   "</node>";
     status = serviceBus->CreateInterfacesFromXml(interface.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutListenerTestObject2 altObj(*serviceBus, "/org/test/about", ifaceNames, 6);
     status = serviceBus->RegisterBusObject(altObj);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutObj aboutObj(*serviceBus);
 
     // receive
     BusAttachment clientBus("Receive Announcement client Test", true);
     status = clientBus.Start();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Connect();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutTestAboutListener aboutListener;
 
@@ -986,7 +988,7 @@ TEST_F(AboutListenerTest, MatchMultipleInterfacesRegisterInDifferentOrder) {
     clientBus.RegisterAboutListener(aboutListener);
 
     status = clientBus.WhoImplements(ifaceslist, 6);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     aboutObj.Announce(port, aboutData);
 
@@ -1001,15 +1003,15 @@ TEST_F(AboutListenerTest, MatchMultipleInterfacesRegisterInDifferentOrder) {
     ASSERT_TRUE(announceListenerFlag);
 
     status = clientBus.CancelWhoImplements(ifaceslist, 6);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     clientBus.UnregisterAboutListener(aboutListener);
 
     status = clientBus.Stop();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Join();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 }
 
 class AboutTestWildCardAboutListener : public AboutListener {
@@ -1046,21 +1048,21 @@ TEST_F(AboutListenerTest, WildCardInterfaceMatching) {
                                   "</interface>"
                                   "</node>";
     status = serviceBus->CreateInterfacesFromXml(interface.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutListenerTestObject2 altObj(*serviceBus, "/org/test/about", ifaceNames, 3);
     status = serviceBus->RegisterBusObject(altObj);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutObj aboutObj(*serviceBus);
 
     // receive
     BusAttachment clientBus("Receive Announcement client Test", true);
     status = clientBus.Start();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Connect();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutTestWildCardAboutListener aboutListener;
 
@@ -1068,7 +1070,7 @@ TEST_F(AboutListenerTest, WildCardInterfaceMatching) {
     clientBus.RegisterAboutListener(aboutListener);
 
     status = clientBus.WhoImplements(wildCard.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     aboutObj.Announce(port, aboutData);
 
@@ -1083,15 +1085,15 @@ TEST_F(AboutListenerTest, WildCardInterfaceMatching) {
     ASSERT_EQ(1u, aboutListener.announceListenerCount);
 
     status = clientBus.CancelWhoImplements(wildCard.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     clientBus.UnregisterAboutListener(aboutListener);
 
     status = clientBus.Stop();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Join();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 }
 
 /*
@@ -1122,28 +1124,28 @@ TEST_F(AboutListenerTest, WildCardInterfaceMatching2) {
                                   "</interface>"
                                   "</node>";
     status = serviceBus->CreateInterfacesFromXml(interface.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutListenerTestObject2 altObj(*serviceBus, "/org/test/about", ifaceNames, 3);
     status = serviceBus->RegisterBusObject(altObj);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutObj aboutObj(*serviceBus);
 
     // receive
     BusAttachment clientBus("Receive Announcement client Test", true);
     status = clientBus.Start();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Connect();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutTestWildCardAboutListener aboutListener;
     clientBus.RegisterAboutListener(aboutListener);
 
     qcc::String wildCard = "org.test.a" + guid.ToString() + ".*.AnnounceHandlerTest";
     status = clientBus.WhoImplements(wildCard.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     aboutObj.Announce(port, aboutData);
 
@@ -1158,15 +1160,15 @@ TEST_F(AboutListenerTest, WildCardInterfaceMatching2) {
     ASSERT_EQ(1u, aboutListener.announceListenerCount);
 
     status = clientBus.CancelWhoImplements(wildCard.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     clientBus.UnregisterAboutListener(aboutListener);
 
     status = clientBus.Stop();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Join();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 }
 
 TEST_F(AboutListenerTest, MultipleWildCardInterfaceMatching) {
@@ -1193,21 +1195,21 @@ TEST_F(AboutListenerTest, MultipleWildCardInterfaceMatching) {
                                   "</interface>"
                                   "</node>";
     status = serviceBus->CreateInterfacesFromXml(interface.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutListenerTestObject2 altObj(*serviceBus, "/org/test/about", ifaceNames, 3);
     status = serviceBus->RegisterBusObject(altObj);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutObj aboutObj(*serviceBus);
 
     // receive
     BusAttachment clientBus("Receive Announcement client Test", true);
     status = clientBus.Start();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Connect();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutTestWildCardAboutListener aboutListener;
     clientBus.RegisterAboutListener(aboutListener);
@@ -1218,7 +1220,7 @@ TEST_F(AboutListenerTest, MultipleWildCardInterfaceMatching) {
     interfacelist[0] = wildCard.c_str();
     interfacelist[1] = wildCard2.c_str();
     status = clientBus.WhoImplements(interfacelist, 2);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     aboutObj.Announce(port, aboutData);
 
@@ -1233,15 +1235,15 @@ TEST_F(AboutListenerTest, MultipleWildCardInterfaceMatching) {
     ASSERT_EQ(1u, aboutListener.announceListenerCount);;
 
     status = clientBus.CancelWhoImplements(interfacelist, 2);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     clientBus.UnregisterAboutListener(aboutListener);
 
     status = clientBus.Stop();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Join();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 }
 
 TEST_F(AboutListenerTest, MixedWildCardNonWildCardInterfaceMatching) {
@@ -1268,21 +1270,21 @@ TEST_F(AboutListenerTest, MixedWildCardNonWildCardInterfaceMatching) {
                                   "</interface>"
                                   "</node>";
     status = serviceBus->CreateInterfacesFromXml(interface.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutListenerTestObject2 altObj(*serviceBus, "/org/test/about", ifaceNames, 3);
     status = serviceBus->RegisterBusObject(altObj);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutObj aboutObj(*serviceBus);
 
     // receive
     BusAttachment clientBus("Receive Announcement client Test", true);
     status = clientBus.Start();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Connect();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutTestWildCardAboutListener aboutListener;
     clientBus.RegisterAboutListener(aboutListener);
@@ -1292,7 +1294,7 @@ TEST_F(AboutListenerTest, MixedWildCardNonWildCardInterfaceMatching) {
     interfacelist[0] = ifaceNames[0].c_str();
     interfacelist[1] = wildCard.c_str();
     status = clientBus.WhoImplements(interfacelist, 2);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     aboutObj.Announce(port, aboutData);
 
@@ -1307,15 +1309,15 @@ TEST_F(AboutListenerTest, MixedWildCardNonWildCardInterfaceMatching) {
     ASSERT_EQ(1u, aboutListener.announceListenerCount);;
 
     status = clientBus.CancelWhoImplements(interfacelist, 2);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     clientBus.UnregisterAboutListener(aboutListener);
 
     status = clientBus.Stop();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Join();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 }
 
 class AboutTestRemoveObjectDescriptionAboutListener : public AboutListener {
@@ -1359,35 +1361,35 @@ TEST_F(AboutListenerTest, RemoveObjectDescriptionAnnouncement) {
                                    "</interface>"
                                    "</node>";
     status = serviceBus->CreateInterfacesFromXml(interface0.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = serviceBus->CreateInterfacesFromXml(interface1.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutListenerTestObject altObj0(*serviceBus, "/org/test/about/a", ifaceNames[0].c_str());
     AboutListenerTestObject altObj1(*serviceBus, "/org/test/about/b", ifaceNames[1].c_str());
     status = serviceBus->RegisterBusObject(altObj0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = serviceBus->RegisterBusObject(altObj1);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutObj aboutObj(*serviceBus);
 
     // receive
     BusAttachment clientBus("Receive Announcement client Test", true);
     status = clientBus.Start();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Connect();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutTestRemoveObjectDescriptionAboutListener aboutListener;
     clientBus.RegisterAboutListener(aboutListener);
 
     status = clientBus.WhoImplements(ifaceNames[0].c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = aboutObj.Announce(port, aboutData);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     //Wait for a maximum of 10 sec for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
@@ -1402,7 +1404,7 @@ TEST_F(AboutListenerTest, RemoveObjectDescriptionAnnouncement) {
     serviceBus->UnregisterBusObject(altObj1);
 
     status = aboutObj.Announce(port, aboutData);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     //Wait for a maximum of 10 sec for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
@@ -1415,15 +1417,15 @@ TEST_F(AboutListenerTest, RemoveObjectDescriptionAnnouncement) {
     EXPECT_EQ(2u, aboutListener.announceListenerCount);
 
     status = clientBus.CancelWhoImplements(ifaceNames[0].c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     clientBus.UnregisterAboutListener(aboutListener);
 
     status = clientBus.Stop();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Join();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 }
 /*
  * Stress test:
@@ -1467,21 +1469,21 @@ TEST_F(AboutListenerTest, StressInterfaces) {
     interfaceXml += "</node>";
 
     status = serviceBus->CreateInterfacesFromXml(interfaceXml.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutListenerTestObject2 altObj(*serviceBus, "/org/test/stress", ifaceNames, INTERFACE_COUNT);
     status = serviceBus->RegisterBusObject(altObj);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutObj aboutObj(*serviceBus);
 
     // receive
     BusAttachment clientBus("Receive Announcement client Test", true);
     status = clientBus.Start();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Connect();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutTestAboutListener3 aboutListener;
 
@@ -1495,7 +1497,7 @@ TEST_F(AboutListenerTest, StressInterfaces) {
     clientBus.RegisterAboutListener(aboutListener);
 
     status = clientBus.WhoImplements(ifaces, INTERFACE_COUNT);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     aboutObj.Announce(port, aboutData);
 
@@ -1510,15 +1512,15 @@ TEST_F(AboutListenerTest, StressInterfaces) {
     ASSERT_TRUE(announceListenerFlag3);
 
     status = clientBus.CancelWhoImplements(ifaces, INTERFACE_COUNT);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     clientBus.UnregisterAboutListener(aboutListener);
 
     status = clientBus.Stop();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Join();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 }
 
 /* If whoImplements use * or null, we may get unwanted announcements
@@ -1611,29 +1613,29 @@ TEST_F(AboutListenerTest, WhoImplementsNull) {
                                   "</interface>"
                                   "</node>";
     status = serviceBus->CreateInterfacesFromXml(interface.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutListenerTestObject2 altObj(*serviceBus, path.c_str(), ifaceNames, 3);
 
     status = serviceBus->RegisterBusObject(altObj);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutObj aboutObj(*serviceBus);
 
     // receive
     BusAttachment clientBus("Receive Announcement client Test", true);
     status = clientBus.Start();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Connect();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     FilteredAboutListener aboutListener;
 
     clientBus.RegisterAboutListener(aboutListener);
 
     status = clientBus.WhoImplements(NULL);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     aboutListener.expectInterfaces(path, ifaceNames, 3);
 
@@ -1650,15 +1652,15 @@ TEST_F(AboutListenerTest, WhoImplementsNull) {
     ASSERT_EQ(1u, aboutListener.announceListenerCount);
 
     status = clientBus.CancelWhoImplements(NULL);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     clientBus.UnregisterAboutListener(aboutListener);
 
     status = clientBus.Stop();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Join();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 }
 
 TEST_F(AboutListenerTest, CancelWhoImplementsMisMatch) {
@@ -1671,19 +1673,19 @@ TEST_F(AboutListenerTest, CancelWhoImplementsMisMatch) {
     // receive
     BusAttachment clientBus("Receive Announcement client Test", true);
     status = clientBus.Start();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Connect();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.CancelWhoImplements(ifaceName.c_str());
-    EXPECT_EQ(ER_BUS_MATCH_RULE_NOT_FOUND, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_BUS_MATCH_RULE_NOT_FOUND, status);
 
     status = clientBus.Stop();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Join();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 }
 
 class AnnounceAppIdWithNon128BitLengthAboutListener : public AboutListener {
@@ -1712,7 +1714,7 @@ TEST_F(AboutListenerTest, AnnounceAppIdWithNon128BitLength) {
                                   "</interface>"
                                   "</node>";
     status = serviceBus->CreateInterfacesFromXml(interface.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutListenerTestObject altObj(*serviceBus, "/org/test/about", ifaceName.c_str());
     serviceBus->RegisterBusObject(altObj);
@@ -1720,25 +1722,25 @@ TEST_F(AboutListenerTest, AnnounceAppIdWithNon128BitLength) {
     // receive
     BusAttachment clientBus("Receive Announcement client Test", true);
     status = clientBus.Start();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Connect();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AnnounceAppIdWithNon128BitLengthAboutListener aboutListener;
 
     clientBus.RegisterAboutListener(aboutListener);
 
     status = clientBus.WhoImplements(ifaceName.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     // 64-bit AppId
     uint8_t appid_64[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
     status = aboutData.SetAppId(appid_64, 8);
-    EXPECT_EQ(ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE, status);
 
     status = aboutObj.Announce(port, aboutData);
-    EXPECT_EQ(ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE, status);
 
     //Wait for a maximum of 10 sec for the Announce Signal. Even if we get an
     // ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE error we expect to get the
@@ -1756,7 +1758,7 @@ TEST_F(AboutListenerTest, AnnounceAppIdWithNon128BitLength) {
     uint8_t* appId;
     size_t num;
     status = listenerAboutData.GetAppId(&appId, &num);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_EQ(8u, num);
     for (size_t i = 0; i < num; i++) {
         EXPECT_EQ(appid_64[i], appId[i]);
@@ -1766,11 +1768,11 @@ TEST_F(AboutListenerTest, AnnounceAppIdWithNon128BitLength) {
     // 192-bit AppId
     uint8_t appid_192[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23 };
     status = aboutData.SetAppId(appid_192, 24);
-    EXPECT_EQ(ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE, status);
 
 
     status = aboutObj.Announce(port, aboutData);
-    EXPECT_EQ(ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE, status);
 
     //Wait for a maximum of 10 sec for the Announce Signal. Even if we get an
     // ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE error we expect to get the
@@ -1786,7 +1788,7 @@ TEST_F(AboutListenerTest, AnnounceAppIdWithNon128BitLength) {
 
     listenerAboutData.CreatefromMsgArg(aboutListener.aboutData);
     status = aboutData.GetAppId(&appId, &num);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_EQ(24u, num);
     for (size_t i = 0; i < num; i++) {
         EXPECT_EQ(appid_192[i], appId[i]);
@@ -1797,8 +1799,8 @@ TEST_F(AboutListenerTest, AnnounceAppIdWithNon128BitLength) {
     clientBus.UnregisterAboutListener(aboutListener);
 
     status = clientBus.Stop();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Join();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 }

@@ -39,13 +39,13 @@ TEST(BusObjectTest, ObjectRegisteredUnregistered) {
     QStatus status = ER_OK;
     BusObjectTestBusObject testObj(bus, OBJECT_PATH);
     status = bus.RegisterBusObject(testObj);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = bus.Start();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = bus.Connect(ajn::getConnectArg().c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     for (int msec = 0; msec < 5000; msec += 10) {
         if (testObj.wasRegistered) {
@@ -55,7 +55,7 @@ TEST(BusObjectTest, ObjectRegisteredUnregistered) {
     }
     EXPECT_TRUE(testObj.wasRegistered);
     status = bus.Disconnect(ajn::getConnectArg().c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     for (int msec = 0; msec < 5000; msec += 10) {
         if (testObj.wasRegistered && testObj.wasUnregistered) {
@@ -67,9 +67,9 @@ TEST(BusObjectTest, ObjectRegisteredUnregistered) {
     EXPECT_TRUE(testObj.wasUnregistered);
 
     status = bus.Stop();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = bus.Join();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 }
 
 
@@ -79,13 +79,13 @@ TEST(BusObjectTest, ObjectRegisteredUnregisteredMultipleConnectDisconnect) {
     QStatus status = ER_OK;
     BusObjectTestBusObject testObj(bus, OBJECT_PATH);
     status = bus.RegisterBusObject(testObj);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = bus.Start();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = bus.Connect(ajn::getConnectArg().c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     for (int msec = 0; msec < 5000; msec += 10) {
         if (testObj.wasRegistered) {
@@ -95,7 +95,7 @@ TEST(BusObjectTest, ObjectRegisteredUnregisteredMultipleConnectDisconnect) {
     }
     EXPECT_TRUE(testObj.wasRegistered);
     status = bus.Disconnect(ajn::getConnectArg().c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     for (int msec = 0; msec < 5000; msec += 10) {
         if (testObj.wasRegistered && testObj.wasUnregistered) {
@@ -109,7 +109,7 @@ TEST(BusObjectTest, ObjectRegisteredUnregisteredMultipleConnectDisconnect) {
     testObj.wasRegistered = false;
     testObj.wasUnregistered = false;
     status = bus.Connect(ajn::getConnectArg().c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     for (int msec = 0; msec < 5000; msec += 10) {
         if (testObj.wasRegistered) {
@@ -119,7 +119,7 @@ TEST(BusObjectTest, ObjectRegisteredUnregisteredMultipleConnectDisconnect) {
     }
     EXPECT_TRUE(testObj.wasRegistered);
     status = bus.Disconnect(ajn::getConnectArg().c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     for (int msec = 0; msec < 5000; msec += 10) {
         if (testObj.wasRegistered && testObj.wasUnregistered) {
@@ -131,9 +131,9 @@ TEST(BusObjectTest, ObjectRegisteredUnregisteredMultipleConnectDisconnect) {
     EXPECT_TRUE(testObj.wasUnregistered);
 
     status = bus.Stop();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = bus.Join();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 }
 
 
@@ -143,13 +143,13 @@ TEST(BusObjectTest, ObjectRegisteredAfterConnect) {
     QStatus status = ER_OK;
     BusObjectTestBusObject testObj(bus, OBJECT_PATH);
     status = bus.Start();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = bus.Connect(ajn::getConnectArg().c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = bus.RegisterBusObject(testObj);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     for (int msec = 0; msec < 5000; msec += 10) {
         if (testObj.wasRegistered) {
             break;
@@ -158,7 +158,7 @@ TEST(BusObjectTest, ObjectRegisteredAfterConnect) {
     }
     EXPECT_TRUE(testObj.wasRegistered);
     status = bus.Disconnect(ajn::getConnectArg().c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     for (int msec = 0; msec < 5000; msec += 10) {
         if (testObj.wasRegistered && testObj.wasUnregistered) {
@@ -170,9 +170,9 @@ TEST(BusObjectTest, ObjectRegisteredAfterConnect) {
     EXPECT_TRUE(testObj.wasUnregistered);
 
     status = bus.Stop();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = bus.Join();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 }
 
 /* ASACORE-189 */
@@ -181,13 +181,13 @@ TEST(BusObjectTest, ObjectRegisteredAfterConnectUnregisteredBeforDisconnect) {
     QStatus status = ER_OK;
     BusObjectTestBusObject testObj(bus, OBJECT_PATH);
     status = bus.Start();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = bus.Connect(ajn::getConnectArg().c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = bus.RegisterBusObject(testObj);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     for (int msec = 0; msec < 5000; msec += 10) {
         if (testObj.wasRegistered) {
             break;
@@ -207,7 +207,7 @@ TEST(BusObjectTest, ObjectRegisteredAfterConnectUnregisteredBeforDisconnect) {
     EXPECT_TRUE(testObj.wasUnregistered);
 
     status = bus.Disconnect(ajn::getConnectArg().c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     testObj.wasRegistered = false;
     testObj.wasUnregistered = false;
     // We don't expect to get a second ObjectUnregistered signal wait for two
@@ -221,9 +221,9 @@ TEST(BusObjectTest, ObjectRegisteredAfterConnectUnregisteredBeforDisconnect) {
     EXPECT_FALSE(testObj.wasRegistered);
     EXPECT_FALSE(testObj.wasUnregistered);
     status = bus.Stop();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = bus.Join();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 }
 TEST(BusObjectTest, DISABLED_Send_Signal_After_BusObject_Unregister)
 {
@@ -232,26 +232,26 @@ TEST(BusObjectTest, DISABLED_Send_Signal_After_BusObject_Unregister)
     BusObjectTestBusObject testObj(bus, OBJECT_PATH);
     //Start a bus attachment
     status = bus.Start();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = bus.Connect(ajn::getConnectArg().c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     //add an interface to it
     InterfaceDescription* servicetestIntf = NULL;
     status = bus.CreateInterface("org.test", servicetestIntf);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(servicetestIntf != NULL);
     status = servicetestIntf->AddSignal("my_signal", "s", NULL, 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     servicetestIntf->Activate();
 
     //send a signal before registering the signal will result in error: ER_BUS_OBJECT_NOT_REGISTERED
     status = testObj.SendSignal();
-    EXPECT_EQ(ER_BUS_OBJECT_NOT_REGISTERED, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_BUS_OBJECT_NOT_REGISTERED, status);
 
     //register the bus object and check it was registered
     status = bus.RegisterBusObject(testObj);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     for (int i = 0; i < 500; ++i) {
         qcc::Sleep(10);
         if (testObj.wasRegistered) {
@@ -262,7 +262,7 @@ TEST(BusObjectTest, DISABLED_Send_Signal_After_BusObject_Unregister)
 
     //Unregister the bus object and check that it was indeed unregistered
     bus.UnregisterBusObject(testObj);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     for (int i = 0; i < 500; ++i) {
         qcc::Sleep(10);
         if (testObj.wasUnregistered) {
@@ -274,7 +274,7 @@ TEST(BusObjectTest, DISABLED_Send_Signal_After_BusObject_Unregister)
     //Send a signal on the unregistered bus object. This should fail with ER_BUS_OBJECT_NOT_REGISTERED
 
     status = testObj.SendSignal();
-    EXPECT_EQ(ER_BUS_OBJECT_NOT_REGISTERED, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_BUS_OBJECT_NOT_REGISTERED, status);
 
 }
 
@@ -288,40 +288,40 @@ TEST(BusObjectTest, SendSignalAfterUnregistersignalHandler)
 
     //Start a service bus attachment
     status = busService.Start();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = busService.Connect(ajn::getConnectArg().c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     //Start a client bus attachment
     status = busClient.Start();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = busClient.Connect(ajn::getConnectArg().c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
 
     //add an interface to service bus attachment
     InterfaceDescription* servicetestIntf = NULL;
     status = busService.CreateInterface("org.test", servicetestIntf);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(servicetestIntf != NULL);
     status = servicetestIntf->AddSignal("my_signal", "s", NULL, 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     servicetestIntf->Activate();
 
 
     //add interface to client bus attachment
     InterfaceDescription* clienttestIntf = NULL;
     status = busClient.CreateInterface("org.test", clienttestIntf);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(clienttestIntf != NULL);
     status = clienttestIntf->AddSignal("my_signal", "s", NULL, 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     clienttestIntf->Activate();
     const InterfaceDescription::Member*  signal_member = clienttestIntf->GetMember("my_signal");
 
     //register the service bus object and check it was registered
     status = busService.RegisterBusObject(testObj);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     for (int i = 0; i < 500; ++i) {
         qcc::Sleep(10);
         if (testObj.wasRegistered) {
@@ -336,14 +336,14 @@ TEST(BusObjectTest, SendSignalAfterUnregistersignalHandler)
                                              static_cast<MessageReceiver::SignalHandler>(&BusObjectTestSignalReceiver::SignalHandler),
                                              signal_member,
                                              NULL);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = busClient.AddMatch("type='signal',interface='org.test',member='my_signal'");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
 
     //Service side emits the signal
     status = testObj.SendSignal();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     //verify that client received the signal
     for (int i = 0; i < 500; ++i) {
@@ -360,12 +360,12 @@ TEST(BusObjectTest, SendSignalAfterUnregistersignalHandler)
                                                static_cast<MessageReceiver::SignalHandler>(&BusObjectTestSignalReceiver::SignalHandler),
                                                signal_member,
                                                NULL);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
 
     //Service side emits the signal again
     status = testObj.SendSignal();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     //verify that client HAS NOT received the signal
     for (int i = 0; i < 500; ++i) {
@@ -377,18 +377,18 @@ TEST(BusObjectTest, SendSignalAfterUnregistersignalHandler)
     EXPECT_EQ(0U, signalReceiver.signalReceived);
 
     status = busService.Disconnect(ajn::getConnectArg().c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = busService.Stop();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = busService.Join();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = busClient.Disconnect(ajn::getConnectArg().c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = busClient.Stop();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = busClient.Join();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
 
 }
@@ -407,7 +407,7 @@ class TestBusObject : public BusObject {
             { Intf1->GetMember("pasta"), static_cast<MessageReceiver::MethodHandler>(&BusObjectTestBusObject::Pasta) }
         };
         status = AddMethodHandlers(methodEntries, ArraySize(methodEntries));
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
     }
 
     virtual ~TestBusObject() { }
@@ -423,7 +423,7 @@ class TestBusObject : public BusObject {
     {
         const MsgArg* arg((msg->GetArg(0)));
         QStatus status = MethodReply(msg, arg, 1);
-        EXPECT_EQ(ER_OK, status) << "Pasta: Error sending reply,  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status) << "Pasta: Error sending reply";
     }
 
     BusAttachment& bus;
@@ -440,29 +440,29 @@ TEST(BusObjectTest, Make_methodcall_after_unregister_bus_object)
 
     //Start a service bus attachment
     status = busService.Start();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = busService.Connect(ajn::getConnectArg().c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     //Start a client bus attachment
     status = busClient.Start();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = busClient.Connect(ajn::getConnectArg().c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     //add an interface to service bus attachment
     InterfaceDescription* servicetestIntf = NULL;
     status = busService.CreateInterface("org.test", servicetestIntf);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(servicetestIntf != NULL);
     status = servicetestIntf->AddMethod("pasta", "s", "s", "inStr,outStr", 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     servicetestIntf->Activate();
 
     TestBusObject testObj(busService, OBJECT_PATH);
     //register the service bus object and check it was registered
     status = busService.RegisterBusObject(testObj);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     for (int i = 0; i < 500; ++i) {
         qcc::Sleep(10);
         if (testObj.wasRegistered) {
@@ -474,7 +474,7 @@ TEST(BusObjectTest, Make_methodcall_after_unregister_bus_object)
     //create client proxy bus object and introspect
     ProxyBusObject clientProxyObject(busClient, busService.GetUniqueName().c_str(), OBJECT_PATH, 0, false);
     status = clientProxyObject.IntrospectRemoteObject();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     //Make a method call
     Message reply(busClient);
@@ -483,15 +483,15 @@ TEST(BusObjectTest, Make_methodcall_after_unregister_bus_object)
     pastaMethod = ifc->GetMember("pasta");
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Pasta String");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.MethodCall(*pastaMethod, &pingArgs, 1, reply, 5000);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_STREQ("Pasta String", reply->GetArg(0)->v_string.str);
 
 
     //Unregister the service bus object and check it was unregistered
     busService.UnregisterBusObject(testObj);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     for (int i = 0; i < 500; ++i) {
         qcc::Sleep(10);
         if (testObj.wasUnregistered) {
@@ -502,25 +502,25 @@ TEST(BusObjectTest, Make_methodcall_after_unregister_bus_object)
 
     //Make a method call and it should fail gracefully as the service side bus object is unregistsred.
     status = clientProxyObject.MethodCall(*pastaMethod, &pingArgs, 1, reply, 5000);
-    EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, status);
     EXPECT_STREQ("ER_BUS_NO_SUCH_OBJECT", reply->GetArg(0)->v_string.str);
 
 
 
     //Clean up
     status = busService.Disconnect(ajn::getConnectArg().c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = busService.Stop();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = busService.Join();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = busClient.Disconnect(ajn::getConnectArg().c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = busClient.Stop();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = busClient.Join();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
 }
 
@@ -560,33 +560,33 @@ TEST(BusObjectTest, GetAllPropsWithStaticMsgArgProp)
     BusAttachment busClient("test7client");
     InterfaceDescription* intf = NULL;
     status = busService.CreateInterface("org.test", intf);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(intf != NULL);
     status = intf->AddProperty("arrayStruct", "a(is)", PROP_ACCESS_READ);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     intf->Activate();
 
     //Start a service bus attachment
     status = busService.Start();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = busService.Connect(ajn::getConnectArg().c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     //Start a client bus attachment
     status = busClient.Start();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = busClient.Connect(ajn::getConnectArg().c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     PropsTestBusObject bo(busService, OBJECT_PATH);
     status = busService.RegisterBusObject(bo);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     ProxyBusObject pbo(busClient, busService.GetUniqueName().c_str(), OBJECT_PATH, 0, false);
 
     status = pbo.IntrospectRemoteObject();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     MsgArg props;
     status = pbo.GetAllProperties("org.test", props);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 }

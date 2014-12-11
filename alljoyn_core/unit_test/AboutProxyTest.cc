@@ -28,6 +28,8 @@
 #include <map>
 #include <set>
 
+#include "ajTestCommon.h"
+
 /*
  * This test uses the GUID128 in multiple places to generate a random string.
  * We are using random strings in many of the interface names to prevent multiple
@@ -103,9 +105,9 @@ class AboutProxyTest : public testing::Test {
 
         serviceBus = new BusAttachment("AboutProxyTestServiceBus", true);
         status = serviceBus->Start();
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status);
         status = serviceBus->Connect();
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status);
 
 
         // Initialize english data
@@ -118,7 +120,7 @@ class AboutProxyTest : public testing::Test {
 
         SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
         status = serviceBus->BindSessionPort(port, opts, listener);
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
     }
 
     virtual void TearDown() {
@@ -144,32 +146,32 @@ class AboutProxyTest : public testing::Test {
         // Setup the about English data
         qcc::GUID128 appId;
         status = aboutEnglishData.SetAppId(appId.GetBytes(), qcc::GUID128::SIZE);
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status);
 
         qcc::GUID128 deviceId;
         status = aboutEnglishData.SetDeviceId(deviceId.ToString().c_str());
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status);
 
         status = aboutEnglishData.SetDeviceName(FixedEnglishData[AboutData::DEVICE_NAME]);
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status);
 
         status = aboutEnglishData.SetAppName(FixedEnglishData[AboutData::APP_NAME], ENGLISH_TAG);
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status);
 
         status = aboutEnglishData.SetManufacturer(FixedEnglishData[AboutData::MANUFACTURER], ENGLISH_TAG);
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status);
 
         status = aboutEnglishData.SetModelNumber(FixedEnglishData[AboutData::MODEL_NUMBER]);
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status);
 
         status = aboutEnglishData.SetDescription(FixedEnglishData[AboutData::DESCRIPTION], ENGLISH_TAG);
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status);
 
         status = aboutEnglishData.SetDateOfManufacture(FixedEnglishData[AboutData::DATE_OF_MANUFACTURE]);
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status);
 
         status = aboutEnglishData.SetSoftwareVersion(FixedEnglishData[AboutData::SOFTWARE_VERSION]);
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status);
 
         ASSERT_TRUE(aboutEnglishData.IsValid()) << " Failed to setup about English data!";
     }
@@ -179,27 +181,27 @@ class AboutProxyTest : public testing::Test {
         // Setup the about Spanish data
         uint8_t appId[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
         status = aboutSpanishData.SetAppId(appId, 16);
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
         status = aboutSpanishData.SetDeviceId("fakeID");
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
 
         EXPECT_FALSE(aboutSpanishData.IsValid());
 
         status = aboutSpanishData.SetAppName(FixedSpanishData[AboutData::APP_NAME], "es");
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
         status = aboutSpanishData.SetDeviceName(FixedSpanishData[AboutData::DEVICE_NAME], "es");
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
         status = aboutSpanishData.SetManufacturer(FixedSpanishData[AboutData::MANUFACTURER], "es");
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
         status = aboutSpanishData.SetDescription(FixedSpanishData[AboutData::DESCRIPTION], "es");
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
         EXPECT_FALSE(aboutSpanishData.IsValid());
 
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
         status = aboutSpanishData.SetModelNumber(FixedSpanishData[AboutData::MODEL_NUMBER]);
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
         status = aboutSpanishData.SetSoftwareVersion(FixedSpanishData[AboutData::SOFTWARE_VERSION]);
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
         EXPECT_TRUE(aboutSpanishData.IsValid());
     }
 };
@@ -256,24 +258,24 @@ TEST_F(AboutProxyTest, GetObjectDescription) {
                             "</node>";
 
     status = serviceBus->CreateInterfacesFromXml(interface.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     AboutProxyTestBusObject busObject(*serviceBus, "/test/alljoyn/AboutProxy", ifaceName, true);
     status = serviceBus->RegisterBusObject(busObject);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     BusAttachment clientBus("AboutProxyTestClient", true);
 
     status = clientBus.Start();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Connect();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutProxyTestAboutListener aboutListener;
     clientBus.RegisterAboutListener(aboutListener);
 
     status = clientBus.WhoImplements(ifaceName.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutObj aboutObj(*serviceBus);
     aboutObj.Announce(port, aboutEnglishData);
@@ -292,20 +294,20 @@ TEST_F(AboutProxyTest, GetObjectDescription) {
     SessionId sessionId;
     SessionOpts opts;
     status = clientBus.JoinSession(aboutListener.busName.c_str(), aboutListener.port, NULL, sessionId, opts);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutProxy proxy(clientBus, aboutListener.busName.c_str(), sessionId);
 
     uint16_t aboutVersion;
     status = proxy.GetVersion(aboutVersion);
-    EXPECT_EQ(ER_OK, status) << "  GetVersion Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status) << "  GetVersion";
 
     EXPECT_EQ(aboutListener.version, aboutVersion) << "Version mismatch!";
 
     //
     MsgArg objDescriptionArg;
     status = proxy.GetObjectDescription(objDescriptionArg);
-    EXPECT_EQ(ER_OK, status) << "  GetObjectDescription Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status) << "  GetObjectDescription";
 
     // Parse object descriptions
     AboutObjectDescription aod;
@@ -331,15 +333,15 @@ TEST_F(AboutProxyTest, GetObjectDescription) {
     delete [] paths;
 
     status = clientBus.CancelWhoImplements(ifaceName.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     clientBus.UnregisterAboutListener(aboutListener);
 
     status = clientBus.Stop();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Join();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 }
 
 TEST_F(AboutProxyTest, GetAboutdata_English) {
@@ -352,24 +354,24 @@ TEST_F(AboutProxyTest, GetAboutdata_English) {
                             "</node>";
 
     status = serviceBus->CreateInterfacesFromXml(interface.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     AboutProxyTestBusObject busObject(*serviceBus, "/test/alljoyn/English", ifaceName, true);
     status = serviceBus->RegisterBusObject(busObject);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     BusAttachment clientBus("AboutProxyTestClient", true);
 
     status = clientBus.Start();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Connect();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutProxyTestAboutListener aboutListener;
     clientBus.RegisterAboutListener(aboutListener);
 
     status = clientBus.WhoImplements(ifaceName.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutObj aboutObj(*serviceBus);
     aboutObj.Announce(port, aboutEnglishData);
@@ -388,13 +390,13 @@ TEST_F(AboutProxyTest, GetAboutdata_English) {
     SessionId sessionId;
     SessionOpts opts;
     status = clientBus.JoinSession(aboutListener.busName.c_str(), aboutListener.port, NULL, sessionId, opts);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutProxy proxy(clientBus, aboutListener.busName.c_str(), sessionId);
 
     uint16_t aboutVersion;
     status = proxy.GetVersion(aboutVersion);
-    EXPECT_EQ(ER_OK, status) << "  GetVersion Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status) << "  GetVersion";
 
     EXPECT_EQ(aboutListener.version, aboutVersion) << "Version mismatch!";
 
@@ -402,7 +404,7 @@ TEST_F(AboutProxyTest, GetAboutdata_English) {
     MsgArg dataArg;
     status = proxy.GetAboutData(ENGLISH_TAG, dataArg);
 
-    EXPECT_EQ(ER_OK, status) << "  GetAboutData Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status) << "  GetAboutData";
 
     AboutData aboutData(ENGLISH_TAG);
 
@@ -411,49 +413,49 @@ TEST_F(AboutProxyTest, GetAboutdata_English) {
 
     char* appName;
     status = aboutData.GetAppName(&appName);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_STREQ(FixedEnglishData[AboutData::APP_NAME], appName);
 
     char* deviceName;
     status = aboutData.GetDeviceName(&deviceName);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_STREQ(FixedEnglishData[AboutData::DEVICE_NAME], deviceName);
 
     char* dateOfManufacture;
     status = aboutData.GetDateOfManufacture(&dateOfManufacture);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_STREQ(FixedEnglishData[AboutData::DATE_OF_MANUFACTURE], dateOfManufacture);
 
     char* manufacture;
     status = aboutData.GetManufacturer(&manufacture);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_STREQ(FixedEnglishData[AboutData::MANUFACTURER], manufacture);
 
     char* description;
     status = aboutData.GetDescription(&description);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_STREQ(FixedEnglishData[AboutData::DESCRIPTION], description);
 
     char* modelNumber;
     status = aboutData.GetModelNumber(&modelNumber);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_STREQ(FixedEnglishData[AboutData::MODEL_NUMBER], modelNumber);
 
     char* softwareVersion;
     status = aboutData.GetSoftwareVersion(&softwareVersion);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_STREQ(FixedEnglishData[AboutData::SOFTWARE_VERSION], softwareVersion);
 
     status = clientBus.CancelWhoImplements(ifaceName.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     clientBus.UnregisterAboutListener(aboutListener);
 
     status = clientBus.Stop();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Join();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 }
 
 TEST_F(AboutProxyTest, GetAboutdata_Spanish) {
@@ -466,24 +468,24 @@ TEST_F(AboutProxyTest, GetAboutdata_Spanish) {
                             "</node>";
 
     status = serviceBus->CreateInterfacesFromXml(interface.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     AboutProxyTestBusObject busObject(*serviceBus, "/test/alljoyn/Spanish", ifaceName, true);
     status = serviceBus->RegisterBusObject(busObject);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     BusAttachment clientBus("AboutProxyTestClient", true);
 
     status = clientBus.Start();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Connect();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutProxyTestAboutListener aboutListener;
     clientBus.RegisterAboutListener(aboutListener);
 
     status = clientBus.WhoImplements(ifaceName.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutObj aboutObj(*serviceBus);
     aboutObj.Announce(port, aboutSpanishData);
@@ -502,13 +504,13 @@ TEST_F(AboutProxyTest, GetAboutdata_Spanish) {
     SessionId sessionId;
     SessionOpts opts;
     status = clientBus.JoinSession(aboutListener.busName.c_str(), aboutListener.port, NULL, sessionId, opts);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutProxy proxy(clientBus, aboutListener.busName.c_str(), sessionId);
 
     uint16_t aboutVersion;
     status = proxy.GetVersion(aboutVersion);
-    EXPECT_EQ(ER_OK, status) << "  GetVersion Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status) << "  GetVersion";
 
     EXPECT_EQ(aboutListener.version, aboutVersion) << "Version mismatch!";
 
@@ -516,7 +518,7 @@ TEST_F(AboutProxyTest, GetAboutdata_Spanish) {
     MsgArg dataArg;
     status = proxy.GetAboutData(SPANISH_TAG, dataArg);
 
-    EXPECT_EQ(ER_OK, status) << "  GetAboutData Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status) << "  GetAboutData";
 
     AboutData aboutData(SPANISH_TAG);
 
@@ -525,34 +527,34 @@ TEST_F(AboutProxyTest, GetAboutdata_Spanish) {
 
     char* appName;
     status = aboutData.GetAppName(&appName);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_STREQ(FixedSpanishData[AboutData::APP_NAME], appName);
 
     char* deviceName;
     status = aboutData.GetDeviceName(&deviceName);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_STREQ(FixedSpanishData[AboutData::DEVICE_NAME], deviceName);
 
     char* manufacture;
     status = aboutData.GetManufacturer(&manufacture);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_STREQ(FixedSpanishData[AboutData::MANUFACTURER], manufacture);
 
     char* description;
     status = aboutData.GetDescription(&description);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_STREQ(FixedSpanishData[AboutData::DESCRIPTION], description);
 
     status = clientBus.CancelWhoImplements(ifaceName.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     clientBus.UnregisterAboutListener(aboutListener);
 
     status = clientBus.Stop();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Join();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 }
 
 //ASACORE-958
@@ -566,24 +568,24 @@ TEST_F(AboutProxyTest, GetAboutdata_UnsupportedLanguage) {
                             "</node>";
 
     status = serviceBus->CreateInterfacesFromXml(interface.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     AboutProxyTestBusObject busObject(*serviceBus, "/test/alljoyn/Unsupported", ifaceName, true);
     status = serviceBus->RegisterBusObject(busObject);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     BusAttachment clientBus("AboutProxyTestClient", true);
 
     status = clientBus.Start();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Connect();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutProxyTestAboutListener aboutListener;
     clientBus.RegisterAboutListener(aboutListener);
 
     status = clientBus.WhoImplements(ifaceName.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutObj aboutObj(*serviceBus);
     aboutObj.Announce(port, aboutEnglishData);
@@ -602,29 +604,29 @@ TEST_F(AboutProxyTest, GetAboutdata_UnsupportedLanguage) {
     SessionId sessionId;
     SessionOpts opts;
     status = clientBus.JoinSession(aboutListener.busName.c_str(), aboutListener.port, NULL, sessionId, opts);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutProxy proxy(clientBus, aboutListener.busName.c_str(), sessionId);
 
     uint16_t aboutVersion;
     status = proxy.GetVersion(aboutVersion);
-    EXPECT_EQ(ER_OK, status) << "  GetVersion Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status) << "  GetVersion";
 
     EXPECT_EQ(aboutListener.version, aboutVersion) << "Version mismatch!";
 
     // AboutData for unsupported language- French
     MsgArg dataArg;
     status = proxy.GetAboutData(FRENCH_TAG, dataArg);
-    EXPECT_EQ(ER_LANGUAGE_NOT_SUPPORTED, status) << "  GetAboutData Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_LANGUAGE_NOT_SUPPORTED, status) << "  GetAboutData";
 
     status = clientBus.CancelWhoImplements(ifaceName.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     clientBus.UnregisterAboutListener(aboutListener);
 
     status = clientBus.Stop();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientBus.Join();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 }

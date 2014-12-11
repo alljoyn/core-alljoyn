@@ -41,6 +41,7 @@
 #include <alljoyn/Status.h>
 
 #include <gtest/gtest.h>
+#include "ajTestCommon.h"
 
 using namespace qcc;
 using namespace std;
@@ -73,13 +74,13 @@ TEST(KeyStoreTest, basic_encryption_decryption) {
          */
         Crypto_AES aes(key, Crypto_AES::ECB_ENCRYPT);
         status = aes.Encrypt(testData, sizeof(testData), encrypted, Crypto_AES::NumBlocks(sizeof(testData)));
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " Encrypt failed";
+        ASSERT_EQ(ER_OK, status) << " Encrypt failed";
 
         /*
          * Write the key to a stream
          */
         status = key.Store(sink);
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " Failed to store key";
+        ASSERT_EQ(ER_OK, status) << " Failed to store key";
 
         /*
          * Set expiration and write again
@@ -87,14 +88,14 @@ TEST(KeyStoreTest, basic_encryption_decryption) {
         qcc::Timespec expires(1000, qcc::TIME_RELATIVE);
         key.SetExpiration(expires);
         status = key.Store(sink);
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " Failed to store key with expiration";
+        ASSERT_EQ(ER_OK, status) << " Failed to store key with expiration";
 
         /*
          * Set tag and write again
          */
         key.SetTag("My Favorite Key");
         status = key.Store(sink);
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " Failed to store key with tag";
+        ASSERT_EQ(ER_OK, status) << " Failed to store key with tag";
 
         key.Erase();
     }
@@ -108,7 +109,7 @@ TEST(KeyStoreTest, basic_encryption_decryption) {
          */
         KeyBlob inKey;
         status = inKey.Load(source);
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " Failed to load key";
+        ASSERT_EQ(ER_OK, status) << " Failed to load key";
 
         //printf("Key %d out %s\n", inKey.GetType(), BytesToHexString(inKey.GetData(), inKey.GetSize()).c_str());
         /*
@@ -118,7 +119,7 @@ TEST(KeyStoreTest, basic_encryption_decryption) {
             out = new char[sizeof(testData)];
             Crypto_AES aes(inKey, Crypto_AES::ECB_DECRYPT);
             status = aes.Decrypt(encrypted, Crypto_AES::NumBlocks(sizeof(testData)), out, sizeof(testData));
-            ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " Encrypt failed";
+            ASSERT_EQ(ER_OK, status) << " Encrypt failed";
 
             ASSERT_STREQ(testData, out) << "Encryt/decrypt of test data failed";
             delete [] out;
@@ -128,13 +129,13 @@ TEST(KeyStoreTest, basic_encryption_decryption) {
          * Read the key with expiration
          */
         status = inKey.Load(source);
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " Failed to load key with expiration";
+        ASSERT_EQ(ER_OK, status) << " Failed to load key with expiration";
 
         /*
          * Read the key with tag
          */
         status = inKey.Load(source);
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " Failed to load key with tag";
+        ASSERT_EQ(ER_OK, status) << " Failed to load key with tag";
 
         ASSERT_STREQ("My Favorite Key", inKey.GetTag().c_str()) << "Tag was incorrect";
     }
@@ -165,7 +166,7 @@ TEST(KeyStoreTest, keystore_store_load_merge) {
         keyStore.AddKey(guid2, key);
 
         status = keyStore.Store();
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " Failed to store keystore";
+        ASSERT_EQ(ER_OK, status) << " Failed to store keystore";
     }
 
     /*
@@ -176,10 +177,10 @@ TEST(KeyStoreTest, keystore_store_load_merge) {
         keyStore.Init(NULL, true);
 
         status = keyStore.GetKey(guid1, key);
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " Failed to load guid1";
+        ASSERT_EQ(ER_OK, status) << " Failed to load guid1";
 
         status = keyStore.GetKey(guid2, key);
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " Failed to load guid2";
+        ASSERT_EQ(ER_OK, status) << " Failed to load guid2";
     }
 
     /*
@@ -208,27 +209,27 @@ TEST(KeyStoreTest, keystore_store_load_merge) {
             keyStore.DelKey(guid2);
 
             status = keyStore.Store();
-            ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " Failed to store keystore";
+            ASSERT_EQ(ER_OK, status) << " Failed to store keystore";
         }
 
         status = keyStore.Reload();
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " Failed to reload keystore";
+        ASSERT_EQ(ER_OK, status) << " Failed to reload keystore";
 
         status = keyStore.GetKey(guid1, key);
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " Failed to load guid1";
+        ASSERT_EQ(ER_OK, status) << " Failed to load guid1";
 
         status = keyStore.GetKey(guid2, key);
-        ASSERT_EQ(ER_BUS_KEY_UNAVAILABLE, status) << "  Actual Status: " << QCC_StatusText(status) << " guid2 was not deleted";
+        ASSERT_EQ(ER_BUS_KEY_UNAVAILABLE, status) << " guid2 was not deleted";
 
         status = keyStore.GetKey(guid3, key);
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " Failed to load guid3";
+        ASSERT_EQ(ER_OK, status) << " Failed to load guid3";
 
         status = keyStore.GetKey(guid4, key);
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " Failed to load guid4";
+        ASSERT_EQ(ER_OK, status) << " Failed to load guid4";
 
         /* Store merged key store */
         status = keyStore.Store();
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " Failed to store keystore";
+        ASSERT_EQ(ER_OK, status) << " Failed to store keystore";
     }
     DeleteFile("keystore_test");
 }

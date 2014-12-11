@@ -281,10 +281,10 @@ static void AddProperty(InterfaceDescription& intf,
     QStatus status;
 
     status = intf.AddProperty(name, "i", ajn::PROP_ACCESS_READ);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = intf.AddPropertyAnnotation(name,
                                         ajn::org::freedesktop::DBus::AnnotateEmitsChanged, annotation);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     //QCC_SyncPrintf("AddProperty(%s, emits=%s)\n", name, annotation);
 }
 
@@ -303,7 +303,7 @@ static const InterfaceDescription* SetupInterface(BusAttachment& bus,
         /* create/activate alljoyn_interface */
         //QCC_SyncPrintf("SetupInterface(%s)\n", ip.name.c_str());
         status = bus.CreateInterface(ip.name.c_str(), tmp, false);
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
         EXPECT_TRUE(tmp != NULL);
         if (tmp != NULL) {
             for (int i = ip.rangeProp.first; i <= ip.rangeProp.last; i++) {
@@ -342,9 +342,9 @@ class PropChangedTestBusObject :
             const InterfaceDescription* intf = SetupInterface(bus, ip[i]);
             status = AddInterface(*intf);
         }
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
         status = bus.RegisterBusObject(*this);
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
     }
 
     virtual ~PropChangedTestBusObject()
@@ -387,7 +387,7 @@ class PropChangedTestBusObject :
             //QCC_SyncPrintf("Emit for %s:%s in session %ud\n", ip.name.c_str(), s.str().c_str(), id);
             // signal
             status = EmitPropChanged(ip.name.c_str(), &propertyNames[0], propertyNames.size(), id);
-            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+            EXPECT_EQ(ER_OK, status);
             // clean up
             for (size_t i = 0; i < propertyNames.size(); i++) {
                 free((void*)propertyNames[i]);
@@ -558,18 +558,18 @@ class ClientBusAttachment :
     void Setup(const char* serviceName)
     {
         status = Start();
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status);
         status = Connect(ajn::getConnectArg().c_str());
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status);
         RegisterBusListener(*this);
         status = FindAdvertisedName(serviceName);
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status);
     }
 
     void WaitForSession()
     {
         status = sessionSema.TimedWait(TIMEOUT);
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
     }
 
     void FoundAdvertisedName(const char* name,
@@ -611,7 +611,7 @@ class PropChangedTestProxyBusObject :
     {
         //QCC_SyncPrintf("PropChangedTestProxyBusObject::constructor for %s\n", path);
         status = AddProxyInterface(bus, *this, tp);
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
         // loop listeners
         for (size_t num = 0; num < tp.rangePropListen.size(); num++) {
             // loop interfaces
@@ -655,7 +655,7 @@ class PropChangedTestProxyBusObject :
             status = RegisterPropertiesChangedListener(ifaceName.c_str(),
                                                        NULL, 0, *listener, (void*)who);
         }
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
     }
 
     /* By default we do not expect a time-out when waiting for the signals.  If
@@ -672,7 +672,7 @@ class PropChangedTestProxyBusObject :
         for (size_t i = 0; i < num; i++) {
             //QCC_SyncPrintf("WaitForSignals %dms on listener %d\n", timeout, i);
             status = TimedWait(timeout); // wait for property changed signal
-            EXPECT_EQ(expStatus, status) << "  Actual Status: " << QCC_StatusText(status);
+            EXPECT_EQ(expStatus, status);
         }
     }
 
@@ -791,15 +791,15 @@ class PropChangedTestTwoBusSetup :
     {
         // service
         status = serviceBus.Start();
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status);
         status = serviceBus.Connect(ajn::getConnectArg().c_str());
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status);
         status = serviceBus.BindSessionPort(SERVICE_PORT, SESSION_OPTS, *this);
 
         status = serviceBus.RequestName(serviceName.c_str(), DBUS_NAME_FLAG_REPLACE_EXISTING | DBUS_NAME_FLAG_DO_NOT_QUEUE);
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status);
         status = serviceBus.AdvertiseName(serviceName.c_str(), TRANSPORT_ANY);
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status);
 
         // client
         clientBus.Setup(serviceName.c_str());
@@ -1105,7 +1105,7 @@ TEST_F(PropChangedTest, MultiSession)
     bobA.EmitSignal(tp, tp.intfParams[0], clientBus.id);
     qcc::Sleep(500);
     // status = store.TimedWait(TIMEOUT); // wait for property changed signal
-    // EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    // EXPECT_EQ(ER_OK, status);
     EXPECT_EQ((size_t)1, store.proxySamples.size());
     EXPECT_EQ(dynamic_cast<ProxyBusObject*>(&pb1), store.proxySamples[0]);
 
@@ -1115,9 +1115,9 @@ TEST_F(PropChangedTest, MultiSession)
     bobA.EmitSignal(tp, tp.intfParams[0], clientBus2.id);
     qcc::Sleep(500);
     // status = store.TimedWait(TIMEOUT); // wait for property changed signal
-    // EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    // EXPECT_EQ(ER_OK, status);
     // status = store.TimedWait(TIMEOUT); // wait for property changed signal
-    // EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    // EXPECT_EQ(ER_OK, status);
     EXPECT_EQ((size_t)2, store.proxySamples.size());
     EXPECT_EQ(dynamic_cast<ProxyBusObject*>(&pb2), store.proxySamples[0]);
     EXPECT_EQ(dynamic_cast<ProxyBusObject*>(&pb2), store.proxySamples[1]);
@@ -1128,7 +1128,7 @@ TEST_F(PropChangedTest, MultiSession)
     bobB.EmitSignal(tp, tp.intfParams[0], clientBus.id);
     qcc::Sleep(500);
     // status = store.TimedWait(TIMEOUT); // wait for property changed signal
-    // EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    // EXPECT_EQ(ER_OK, status);
     EXPECT_EQ((size_t)1, store.proxySamples.size());
     EXPECT_EQ(dynamic_cast<ProxyBusObject*>(&pb3), store.proxySamples[0]);
 
@@ -1187,23 +1187,23 @@ TEST_F(PropChangedTest, NegativeRegisterPropertiesChangedListener)
      * with NULL as the interface parameter. The return code should be
      * ER_BUS_OBJECT_NO_SUCH_INTERFACE. */
     status = proxy.RegisterPropertiesChangedListener(NULL, okProps, 1, listener, NULL);
-    EXPECT_EQ(ER_BUS_OBJECT_NO_SUCH_INTERFACE, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_BUS_OBJECT_NO_SUCH_INTERFACE, status);
     /* Create a ProxyBusObject and invoke RegisterPropertiesChangedListener
      * with an invalid string as an interface parameter.  The return code
      * should be ER_BUS_OBJECT_NO_SUCH_INTERFACE. */
     status = proxy.RegisterPropertiesChangedListener("invalid.interface", okProps, 1, listener, NULL);
-    EXPECT_EQ(ER_BUS_OBJECT_NO_SUCH_INTERFACE, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_BUS_OBJECT_NO_SUCH_INTERFACE, status);
     /* Create a ProxyBusObject and invoke RegisterPropertiesChangedListener
      * with a non-existent property. The return code should be
      * ER_BUS_NO_SUCH_PROPERTY. */
     status = proxy.RegisterPropertiesChangedListener(tp.intfParams[0].name.c_str(), nokProps, 1, listener, NULL);
-    EXPECT_EQ(ER_BUS_NO_SUCH_PROPERTY, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_BUS_NO_SUCH_PROPERTY, status);
     /* Create a ProxyBusObject and invoke RegisterPropertiesChangedListener
      * with an array of properties that contains a mix of valid properties
      * and invalid / non-existent properties. The return code should be
      * ER_BUS_NO_SUCH_PROPERTY. */
     status = proxy.RegisterPropertiesChangedListener(tp.intfParams[0].name.c_str(), mixProps, 2, listener, NULL);
-    EXPECT_EQ(ER_BUS_NO_SUCH_PROPERTY, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_BUS_NO_SUCH_PROPERTY, status);
 }
 
 /*
@@ -1222,13 +1222,13 @@ TEST_F(PropChangedTest, NegativeUnregisterPropertiesChangedListener)
      * UnregisterPropertiesChangedListener with NULL as interface parameter.
      * The return code should be ER_BUS_OBJECT_NO_SUCH_INTERFACE. */
     status = proxy.UnregisterPropertiesChangedListener(NULL, *proxy.listeners[0]);
-    EXPECT_EQ(ER_BUS_OBJECT_NO_SUCH_INTERFACE, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_BUS_OBJECT_NO_SUCH_INTERFACE, status);
     /* Create a ProxyBusObject and register a listener. Invoke
      * UnregisterPropertiesChangedListener with a non-existent random string
      * as interface parameter. The return code should be
      * ER_BUS_OBJECT_NO_SUCH_INTERFACE. */
     status = proxy.UnregisterPropertiesChangedListener("invalid.interface", *proxy.listeners[0]);
-    EXPECT_EQ(ER_BUS_OBJECT_NO_SUCH_INTERFACE, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_BUS_OBJECT_NO_SUCH_INTERFACE, status);
 }
 
 /*
@@ -1246,7 +1246,7 @@ TEST_F(PropChangedTest, NegativeUnregisterInvalidPropertiesChangedListener)
     SampleStore store;
     PropChangedTestListener invalid(store);
     status = proxy.UnregisterPropertiesChangedListener(tp.intfParams[0].name.c_str(), invalid);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 }
 
 /*
@@ -1268,7 +1268,7 @@ TEST_F(PropChangedTest, ListenerNotCalled_AfterUnregister)
     TestPropChanged(tp);
     // now unregister
     status = proxy->UnregisterPropertiesChangedListener(tp.intfParams[0].name.c_str(), *proxy->listeners[0]);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     // fire signal again and expect no callback to be called
     obj->EmitSignals(tp);
     EXPECT_EQ(ER_TIMEOUT, proxy->signalSema.TimedWait(TIMEOUT_EXPECTED));
@@ -1306,7 +1306,7 @@ TEST_F(PropChangedTest, ListenerNotCalled_InterfaceNotListening)
     SetupPropChanged(tp, tp);
     // remove listener for I2
     status = proxy->UnregisterPropertiesChangedListener(INTERFACE_NAME "2", *proxy->listeners[1]);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     // fire signal for I2 and expect time-out
     obj->EmitSignal(tp, tp.intfParams[1]);
     EXPECT_EQ(ER_TIMEOUT, proxy->signalSema.TimedWait(TIMEOUT_EXPECTED));

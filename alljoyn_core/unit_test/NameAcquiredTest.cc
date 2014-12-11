@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -67,7 +67,7 @@ TEST_F(NameAcquiredTest, NameAcquiredSignal_UniqueName) {
     testObj->setOutput(0);
     testObj->RegisterForNameAcquiredSignals();
     status = g_msgBus->Connect(getConnectArg().c_str());
-    EXPECT_EQ(ER_OK, status) << "Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     // wait for signal upto 2 sec (10 * 200 ms)
     for (int i = 0; i < 200; ++i) {
         if (testObj->getOutput() == SUCCESS) {
@@ -85,7 +85,7 @@ TEST_F(NameAcquiredTest, NameAcquiredSignal_WellKnownName) {
     testObj->RegisterForNameAcquiredSignals();
     ASSERT_EQ(ER_OK, status);
     status = g_msgBus->Connect(getConnectArg().c_str());
-    EXPECT_EQ(ER_OK, status) << "Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     // wait for unique name signal upto 1 sec (10 * 100 ms)
     for (int i = 0; i < 100; ++i) {
         if (testObj->getOutput() == SUCCESS) {

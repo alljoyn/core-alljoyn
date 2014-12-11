@@ -42,3 +42,7 @@ qcc::String ajn::genUniqueName(const BusAttachment& bus) {
 qcc::String ajn::getUniqueNamePrefix(const BusAttachment& bus) {
     return "test.x" + bus.GetGlobalGUIDString() + ".x";
 }
+
+void PrintTo(const QStatus& status, ::std::ostream* os) {
+    *os << QCC_StatusText(status);
+}

@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2011, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -41,6 +41,7 @@
 #include <SASLEngine.h>
 
 #include <gtest/gtest.h>
+#include "ajTestCommon.h"
 
 #define QCC_MODULE "CRYPTO"
 
@@ -51,7 +52,7 @@ using namespace ajn;
 TEST(SRPTest, RFC_5246_test_vector) {
     Crypto_SRP srp;
     QStatus status = srp.TestVector();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " Sign failed";
+    EXPECT_EQ(ER_OK, status) << " Sign failed";
 }
 
 
@@ -74,16 +75,16 @@ TEST(SRPTest, Basic_API) {
             Crypto_SRP server;
 
             status = server.ServerInit(user, pwd, toClient);
-            ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " SRP ServerInit failed";
+            ASSERT_EQ(ER_OK, status) << " SRP ServerInit failed";
 
             status = client.ClientInit(toClient, toServer);
-            ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " SRP ClientInit failed";
+            ASSERT_EQ(ER_OK, status) << " SRP ClientInit failed";
 
             status = server.ServerFinish(toServer);
-            ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " SRP ServerFinish failed";
+            ASSERT_EQ(ER_OK, status) << " SRP ServerFinish failed";
 
             status = client.ClientFinish(user, pwd);
-            ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " SRP ClientFinish failed";
+            ASSERT_EQ(ER_OK, status) << " SRP ClientFinish failed";
 
             /*
              * Check premaster secrets match
@@ -114,16 +115,16 @@ TEST(SRPTest, Basic_API) {
         Crypto_SRP server;
 
         status = server.ServerInit(verifier, toClient);
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " SRP ServerInit failed";
+        ASSERT_EQ(ER_OK, status) << " SRP ServerInit failed";
 
         status = client.ClientInit(toClient, toServer);
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " SRP ClientInit failed";
+        ASSERT_EQ(ER_OK, status) << " SRP ClientInit failed";
 
         status = server.ServerFinish(toServer);
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " SRP ServerFinish failed";
+        ASSERT_EQ(ER_OK, status) << " SRP ServerFinish failed";
 
         status = client.ClientFinish(user, pwd);
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " SRP ClientFinish failed";
+        ASSERT_EQ(ER_OK, status) << " SRP ClientFinish failed";
 
         /*
          * Check premaster secrets match
@@ -148,7 +149,7 @@ TEST(SRPTest, Basic_API) {
 
         status = Crypto_PseudorandomFunction(serverPMS, "foobar", serverRand + clientRand, masterSecret, sizeof(masterSecret));
         ASSERT_EQ(ER_OK, status)
-        << "  Actual Status: " << QCC_StatusText(status) << " SRP ClientFinish failed\n"
+        << " SRP ClientFinish failed\n"
         << "Master secret = " << BytesToHexString(masterSecret, sizeof(masterSecret)).c_str();
     }
 }
@@ -184,10 +185,10 @@ TEST(SRPTest, authentication_mechanism) {
 
     while (status == ER_OK) {
         status = responder.Advance(cStr, rStr, rState);
-        ASSERT_EQ(ER_OK, status) << "  Responder returned: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status) << "  Responder";
 
         status = challenger.Advance(rStr, cStr, cState);
-        ASSERT_EQ(ER_OK, status) << "  Challenger returned: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status) << "  Challenger";
 
         if ((rState == SASLEngine::ALLJOYN_AUTH_SUCCESS) && (cState == SASLEngine::ALLJOYN_AUTH_SUCCESS)) {
             break;

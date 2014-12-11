@@ -21,19 +21,21 @@
 #include <alljoyn/BusAttachment.h>
 #include <BusInternal.h>
 
+#include "ajTestCommon.h"
+
 using namespace ajn;
 
 TEST(AboutIconTest, isAnnounced) {
     QStatus status = ER_FAIL;
     BusAttachment busAttachment("AboutIconTest", true);
     status = busAttachment.Start();
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     status = busAttachment.Connect();
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
 
     AboutIcon icon;
     status = icon.SetUrl("image/png", "http://www.example.com");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     AboutIconObj aboutIcon(busAttachment, icon);
 
     MsgArg aodArg;
@@ -41,7 +43,7 @@ TEST(AboutIconTest, isAnnounced) {
     AboutObjectDescription aod;
     aod.CreateFromMsgArg(aodArg);
 
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_TRUE(aod.HasPath("/About/DeviceIcon"));
     EXPECT_TRUE(aod.HasInterface("org.alljoyn.Icon"));
     EXPECT_TRUE(aod.HasInterface("/About/DeviceIcon", "org.alljoyn.Icon"));
@@ -54,20 +56,20 @@ TEST(AboutIconTest, GetUrl) {
     QStatus status = ER_FAIL;
     BusAttachment serviceBus("AboutIconTest Service");
     status = serviceBus.Start();
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     status = serviceBus.Connect();
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
 
     AboutIcon icon;
     status = icon.SetUrl("image/png", "http://www.example.com");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     AboutIconObj aboutIcon(serviceBus, icon);
 
     BusAttachment clientBus("AboutIconTest Client");
     status = clientBus.Start();
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     status = clientBus.Connect();
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
 
     AboutIconProxy aiProxy(clientBus, serviceBus.GetUniqueName().c_str());
     AboutIcon icon_url;
@@ -79,20 +81,20 @@ TEST(AboutIconTest, GetVersion) {
     QStatus status = ER_FAIL;
     BusAttachment serviceBus("AboutIconTest Service");
     status = serviceBus.Start();
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     status = serviceBus.Connect();
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
 
     AboutIcon icon;
     status = icon.SetUrl("image/png", "http://www.example.com");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     AboutIconObj aboutIcon(serviceBus, icon);
 
     BusAttachment clientBus("AboutIconTest Client");
     status = clientBus.Start();
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     status = clientBus.Connect();
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
 
     AboutIconProxy aiProxy(clientBus, serviceBus.GetUniqueName().c_str());
     uint16_t version;
@@ -104,9 +106,9 @@ TEST(AboutIconTest, GetIcon) {
     QStatus status = ER_FAIL;
     BusAttachment serviceBus("AboutIconTest Service");
     status = serviceBus.Start();
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     status = serviceBus.Connect();
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
 
     uint8_t aboutIconContent[] = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00,
                                    0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x0A,
@@ -125,20 +127,20 @@ TEST(AboutIconTest, GetIcon) {
 
     AboutIcon icon;
     status = icon.SetContent("image/png", aboutIconContent, sizeof(aboutIconContent) / sizeof(aboutIconContent[0]));
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     AboutIconObj aboutIcon(serviceBus, icon);
 
     BusAttachment clientBus("AboutIconTest Client");
     status = clientBus.Start();
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     status = clientBus.Connect();
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
 
     AboutIconProxy aiProxy(clientBus, serviceBus.GetUniqueName().c_str());
 
     AboutIcon retIcon;
     status = aiProxy.GetIcon(retIcon);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_STREQ("image/png", retIcon.mimetype.c_str());
     ASSERT_EQ(sizeof(aboutIconContent) / sizeof(aboutIconContent[0]), retIcon.contentSize);
     for (size_t i = 0; i < retIcon.contentSize; ++i) {
@@ -215,29 +217,29 @@ TEST(AboutIconTest, GetLargeIcon) {
 
     BusAttachment serviceBus("AboutLargeIconTest Service");
     status = serviceBus.Start();
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     status = serviceBus.Connect();
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
 
 
     qcc::String mimeType("image/png");
 
     AboutIcon icon;
     status = icon.SetContent(mimeType.c_str(), aboutIconContent, MAX_ICON_SIZE_IN_BYTES);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     AboutIconObj aboutIcon(serviceBus, icon);
 
     BusAttachment clientBus("AboutLargeIconTest Client");
     status = clientBus.Start();
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     status = clientBus.Connect();
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
 
     AboutIconProxy aiProxy(clientBus, serviceBus.GetUniqueName().c_str(), 0);
 
     AboutIcon iconOut;
     status = aiProxy.GetIcon(iconOut);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     EXPECT_STREQ("image/png", iconOut.mimetype.c_str());
     ASSERT_EQ(MAX_ICON_SIZE_IN_BYTES, iconOut.contentSize);
@@ -265,29 +267,29 @@ TEST(AboutIconTest, GetLargeIcon_Negative) {
 
     BusAttachment serviceBus("AboutLargeIconTest Service");
     status = serviceBus.Start();
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     status = serviceBus.Connect();
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
 
     qcc::String mimeType("image/png");
 
     AboutIcon iconIn;
     status = iconIn.SetContent(mimeType.c_str(), aboutIconContent, (MAX_ICON_SIZE_IN_BYTES + 1));
-    EXPECT_EQ(ER_BUS_BAD_VALUE, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_BUS_BAD_VALUE, status);
     AboutIconObj aboutIcon(serviceBus, iconIn);
 
     BusAttachment clientBus("AboutLargeIconTest Client");
     status = clientBus.Start();
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     status = clientBus.Connect();
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
 
     AboutIconProxy aiProxy(clientBus, serviceBus.GetUniqueName().c_str(), 0);
 
     AboutIcon iconOut;
     // Should be an empty icon since the SetContent failed.
     status = aiProxy.GetIcon(iconOut);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     EXPECT_STREQ("", iconOut.mimetype.c_str());
 

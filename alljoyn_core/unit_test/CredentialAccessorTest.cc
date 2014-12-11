@@ -46,15 +46,15 @@ class CredentialAccessorTest : public testing::Test {
     virtual void SetUp() {
         g_msgBus = new BusAttachment("testservices", true);
         QStatus status = g_msgBus->Start();
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status);
         if (!g_msgBus->IsConnected()) {
             /* Connect to the daemon and wait for the bus to exit */
             status = g_msgBus->Connect(ajn::getConnectArg().c_str());
-            ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+            ASSERT_EQ(ER_OK, status);
         }
         g_msgBus->ClearKeyStore();
         status = g_msgBus->EnablePeerSecurity("ALLJOYN_ECDHE_NULL", &myListener, "CredentialAccessorTest");
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status);
     }
 
     virtual void TearDown() {
@@ -73,7 +73,7 @@ TEST_F(CredentialAccessorTest, GetLocalGuid)
     CredentialAccessor ca(*g_msgBus);
     qcc::GUID128 localGuid;
     QStatus status = ca.GetGuid(localGuid);
-    ASSERT_EQ(ER_OK, status) << " ca.GetGuid failed with actual status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << " ca.GetGuid failed";
 
     cout << "Local GUID: " << localGuid.ToString().c_str() << endl;
 }
@@ -85,7 +85,7 @@ TEST_F(CredentialAccessorTest, StoreDSAKey)
 
     qcc::GUID128 localGuid;
     QStatus status = ca.GetGuid(localGuid);
-    ASSERT_EQ(ER_OK, status) << " ca.GetGuid failed with actual status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << " ca.GetGuid failed";
 
     cout << "Local GUID: " << localGuid.ToString().c_str() << endl;
 
@@ -95,14 +95,14 @@ TEST_F(CredentialAccessorTest, StoreDSAKey)
 
     GUID128 dsaGuid;
     status = ca.GetLocalGUID(KeyBlob::DSA_PRIVATE, dsaGuid);
-    ASSERT_EQ(ER_OK, status) << " ca.GetLocalGUID failed with actual status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << " ca.GetLocalGUID failed";
 
     status = ca.StoreKey(dsaGuid, kb);
-    ASSERT_EQ(ER_OK, status) << " ca.StoreKey failed with actual status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << " ca.StoreKey failed";
 
     KeyBlob readBackKb;
     status = ca.GetKey(dsaGuid, readBackKb);
-    ASSERT_EQ(ER_OK, status) << " ca.GetKey failed with actual status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << " ca.GetKey failed";
 
     ASSERT_TRUE(memcmp(kb.GetData(), readBackKb.GetData(), kb.GetSize()) == 0) << " the read back KB does not match original";
 }
@@ -119,7 +119,7 @@ TEST_F(CredentialAccessorTest, StoreCustomKey)
     GUID128 peerGuid;
 
     QStatus status = ca.StoreKey(peerGuid, kb);
-    ASSERT_EQ(ER_OK, status) << " ca.StoreKey failed with actual status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << " ca.StoreKey failed";
 
     const char* blobName = "This is the custom key 1";
     KeyBlob customKb1((const uint8_t*) blobName, strlen(blobName), KeyBlob::SPKI_CERT);
@@ -128,14 +128,14 @@ TEST_F(CredentialAccessorTest, StoreCustomKey)
     GUID128 customGuid1;
     status = ca.AddAssociatedKey(peerGuid, customGuid1, customKb1);
 
-    ASSERT_EQ(ER_OK, status) << " ca.AddAssociatedKey failed with actual status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << " ca.AddAssociatedKey failed";
 
     GUID128 customGuid2;
     qcc::String customName2("Blob for custom key 2");
     KeyBlob customKb2(customName2, KeyBlob::SPKI_CERT);
     status = ca.AddAssociatedKey(peerGuid, customGuid2, customKb2);
 
-    ASSERT_EQ(ER_OK, status) << " ca.AddAssociatedKey failed with actual status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << " ca.AddAssociatedKey failed";
 
     /* now retrieve the list back */
     GUID128* customGuidList = NULL;
@@ -143,7 +143,7 @@ TEST_F(CredentialAccessorTest, StoreCustomKey)
     status = ca.GetKeys(peerGuid, &customGuidList, &numGuids);
     if (status != ER_OK) {
         delete [] customGuidList;
-        FAIL() << " ca.GetKeys failed with actual status: " << QCC_StatusText(status);
+        FAIL() << " ca.GetKeys failed";
         return;
     }
 
@@ -160,7 +160,7 @@ TEST_F(CredentialAccessorTest, StoreCustomKey)
 
         KeyBlob readBackKb;
         status = ca.GetKey(twoGuids[cnt], readBackKb);
-        ASSERT_EQ(ER_OK, status) << " ca.GetKey failed with actual status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status) << " ca.GetKey failed";
 
         ASSERT_TRUE((memcmp(customKb1.GetData(), readBackKb.GetData(), readBackKb.GetSize()) == 0) || (memcmp(customKb2.GetData(), readBackKb.GetData(), readBackKb.GetSize()) == 0)) << " the read back KB does not match original";
     }
@@ -168,7 +168,7 @@ TEST_F(CredentialAccessorTest, StoreCustomKey)
     /* now delete customGuid1 */
     status = ca.DeleteKey(customGuid1);
 
-    ASSERT_EQ(ER_OK, status) << " ca.DeleteKey failed with actual status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << " ca.DeleteKey failed";
 
     /* retrieve the custom list back */
     /* now retrieve the list back */
@@ -177,7 +177,7 @@ TEST_F(CredentialAccessorTest, StoreCustomKey)
     status = ca.GetKeys(peerGuid, &customGuidList, &numGuids);
     if (status != ER_OK) {
         delete [] customGuidList;
-        FAIL() << " ca.GetKeys failed with actual status: " << QCC_StatusText(status);
+        FAIL() << " ca.GetKeys failed";
         return;
     }
 
@@ -194,20 +194,20 @@ TEST_F(CredentialAccessorTest, StoreCustomKey)
 
     KeyBlob readBackKb;
     status = ca.GetKey(oneCustomGuid, readBackKb);
-    ASSERT_EQ(ER_OK, status) << " ca.GetKey failed with actual status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << " ca.GetKey failed";
 
     ASSERT_TRUE(memcmp(customKb2.GetData(), readBackKb.GetData(), readBackKb.GetSize()) == 0) << " the read back KB does not match original";
 
     /* delete the header key */
     status = ca.DeleteKey(peerGuid);
-    ASSERT_EQ(ER_OK, status) << " ca.DeleteKey on header guid failed with actual status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << " ca.DeleteKey on header guid failed";
 
     KeyBlob tmpKb;
     status = ca.GetKey(peerGuid, tmpKb);
-    ASSERT_NE(ER_OK, status) << " ca.GetKey on peerGuid expected to fail but got actual status: " << QCC_StatusText(status);
+    ASSERT_NE(ER_OK, status) << " ca.GetKey on peerGuid expected to fail";
 
     status = ca.GetKey(customGuid2, tmpKb);
-    ASSERT_NE(ER_OK, status) << " ca.GetKey on customGuid2 expected to fail but got actual status: " << QCC_StatusText(status);
+    ASSERT_NE(ER_OK, status) << " ca.GetKey on customGuid2 expected to fail";
 }
 
 
@@ -306,14 +306,14 @@ TEST_F(CredentialAccessorTest, KeysExpired)
     GUID128 t1_customGuid1;
     GUID128 t1_customGuid2;
     QStatus status = HeaderKeyExpired_Pre(ca, t1_peerGuid, t1_customGuid1, t1_customGuid2);
-    ASSERT_EQ(ER_OK, status) << " HeaderKeyExpired_Pre failed with actual status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << " HeaderKeyExpired_Pre failed";
 
     /* member key expired test */
     GUID128 t2_peerGuid;
     GUID128 t2_customGuid1;
     GUID128 t2_customGuid2;
     status = MemberKeyExpired_Pre(ca, t2_peerGuid, t2_customGuid1, t2_customGuid2);
-    ASSERT_EQ(ER_OK, status) << " MemberKeyExpired_Pre failed with actual status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << " MemberKeyExpired_Pre failed";
 
     /* combo member key expired test */
     GUID128 t3_peerGuid;
@@ -321,7 +321,7 @@ TEST_F(CredentialAccessorTest, KeysExpired)
     GUID128 t3_customGuid2;
     GUID128 t3_customGuid3;
     status = ComboMemberKeyExpired_Pre(ca, t3_peerGuid, t3_customGuid1, t3_customGuid2, t3_customGuid3);
-    ASSERT_EQ(ER_OK, status) << " ComboMemberKeyExpired_Pre failed with actual status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << " ComboMemberKeyExpired_Pre failed";
 
     Timespec now;
     GetTimeNow(&now);
@@ -332,44 +332,44 @@ TEST_F(CredentialAccessorTest, KeysExpired)
     kb2.SetExpiration(60);
     GUID128 peerGuid2;
     status = ca.StoreKey(peerGuid2, kb2);
-    ASSERT_EQ(ER_OK, status) << " ca.StoreKey failed with actual status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << " ca.StoreKey failed";
 
     /* header key expired test */
     {
         KeyBlob tmpKb;
         status = ca.GetKey(t1_peerGuid, tmpKb);
-        ASSERT_NE(ER_OK, status) << " ca.GetKey on t1_peerGuid expected to fail but got actual status: " << QCC_StatusText(status);
+        ASSERT_NE(ER_OK, status) << " ca.GetKey on t1_peerGuid expected to fail";
 
         status = ca.GetKey(t1_customGuid1, tmpKb);
-        ASSERT_NE(ER_OK, status) << " ca.GetKey on t1_customGuid1 expected to fail but got actual status: " << QCC_StatusText(status);
+        ASSERT_NE(ER_OK, status) << " ca.GetKey on t1_customGuid1 expected to fail";
         status = ca.GetKey(t1_customGuid2, tmpKb);
-        ASSERT_NE(ER_OK, status) << " ca.GetKey on t1_customGuid2 expected to fail but got actual status: " << QCC_StatusText(status);
+        ASSERT_NE(ER_OK, status) << " ca.GetKey on t1_customGuid2 expected to fail";
     }
 
     /* member key expired test */
     {
         KeyBlob tmpKb;
         status = ca.GetKey(t2_peerGuid, tmpKb);
-        ASSERT_EQ(ER_OK, status) << " ca.GetKey on t2_peerGuid failed with actual status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status) << " ca.GetKey on t2_peerGuid failed";
 
         status = ca.GetKey(t2_customGuid1, tmpKb);
-        ASSERT_NE(ER_OK, status) << " ca.GetKey on t2_customGuid1 expected to fail but got actual status: " << QCC_StatusText(status);
+        ASSERT_NE(ER_OK, status) << " ca.GetKey on t2_customGuid1 expected to fail";
         status = ca.GetKey(t2_customGuid2, tmpKb);
-        ASSERT_EQ(ER_OK, status) << " ca.GetKey on t2_customGuid2 failed with actual status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status) << " ca.GetKey on t2_customGuid2 failed";
     }
 
     /* combo memeber key expired test */
     {
         KeyBlob tmpKb;
         status = ca.GetKey(t3_peerGuid, tmpKb);
-        ASSERT_EQ(ER_OK, status) << " ca.GetKey on t3_peerGuid failed with actual status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status) << " ca.GetKey on t3_peerGuid failed";
 
         status = ca.GetKey(t3_customGuid1, tmpKb);
-        ASSERT_EQ(ER_OK, status) << " ca.GetKey on t3_customGuid1 failed with actual status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status) << " ca.GetKey on t3_customGuid1 failed";
         status = ca.GetKey(t3_customGuid2, tmpKb);
-        ASSERT_NE(ER_OK, status) << " ca.GetKey on t3_customGuid2 expected to fail but got actual status: " << QCC_StatusText(status);
+        ASSERT_NE(ER_OK, status) << " ca.GetKey on t3_customGuid2 expected to fail";
         status = ca.GetKey(t3_customGuid3, tmpKb);
-        ASSERT_NE(ER_OK, status) << " ca.GetKey on t3_customGuid3 expected to fail but got actual status: " << QCC_StatusText(status);
+        ASSERT_NE(ER_OK, status) << " ca.GetKey on t3_customGuid3 expected to fail";
     }
 }
 
@@ -384,7 +384,7 @@ TEST_F(CredentialAccessorTest, StoreComplexKeyChain)
     GUID128 peerGuid;
 
     QStatus status = ca.StoreKey(peerGuid, kb);
-    ASSERT_EQ(ER_OK, status) << " ca.StoreKey failed with actual status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << " ca.StoreKey failed";
 
     const char* blobName = "This is the custom key 1";
     KeyBlob customKb1((const uint8_t*) blobName, strlen(blobName), KeyBlob::SPKI_CERT);
@@ -393,21 +393,21 @@ TEST_F(CredentialAccessorTest, StoreComplexKeyChain)
     GUID128 customGuid1;
     status = ca.AddAssociatedKey(peerGuid, customGuid1, customKb1);
 
-    ASSERT_EQ(ER_OK, status) << " ca.AddAssociatedKey failed with actual status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << " ca.AddAssociatedKey failed";
 
     GUID128 customGuid2;
     qcc::String customName2("Blob for custom key 2");
     KeyBlob customKb2(customName2, KeyBlob::SPKI_CERT);
     status = ca.AddAssociatedKey(peerGuid, customGuid2, customKb2);
 
-    ASSERT_EQ(ER_OK, status) << " ca.AddAssociatedKey failed with actual status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << " ca.AddAssociatedKey failed";
 
     GUID128 customGuid3;
     qcc::String customName3("Blob for custom key 3");
     KeyBlob customKb3(customName3, KeyBlob::SPKI_CERT);
     status = ca.AddAssociatedKey(customGuid2, customGuid3, customKb3);
 
-    ASSERT_EQ(ER_OK, status) << " ca.AddAssociatedKey failed with actual status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << " ca.AddAssociatedKey failed";
 
     /* now retrieve the list back */
     GUID128* customGuidList = NULL;
@@ -415,7 +415,7 @@ TEST_F(CredentialAccessorTest, StoreComplexKeyChain)
     status = ca.GetKeys(peerGuid, &customGuidList, &numGuids);
     if (status != ER_OK) {
         delete [] customGuidList;
-        FAIL() << " ca.GetKeys failed with actual status: " << QCC_StatusText(status);
+        FAIL() << " ca.GetKeys failed";
         return;
     }
 
@@ -433,7 +433,7 @@ TEST_F(CredentialAccessorTest, StoreComplexKeyChain)
 
         KeyBlob readBackKb;
         status = ca.GetKey(twoGuids[cnt], readBackKb);
-        ASSERT_EQ(ER_OK, status) << " ca.GetKey failed with actual status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status) << " ca.GetKey failed";
 
         ASSERT_TRUE((memcmp(customKb1.GetData(), readBackKb.GetData(), readBackKb.GetSize()) == 0) || (memcmp(customKb2.GetData(), readBackKb.GetData(), readBackKb.GetSize()) == 0)) << " the read back KB does not match original";
     }
@@ -444,7 +444,7 @@ TEST_F(CredentialAccessorTest, StoreComplexKeyChain)
     status = ca.GetKeys(customGuid2, &customGuidList, &numGuids);
     if (status != ER_OK) {
         delete [] customGuidList;
-        FAIL() << " ca.GetKeys for customGuid2 failed with actual status: " << QCC_StatusText(status);
+        FAIL() << " ca.GetKeys for customGuid2 failed";
         return;
     }
 
@@ -457,14 +457,14 @@ TEST_F(CredentialAccessorTest, StoreComplexKeyChain)
 
     KeyBlob readBackKb;
     status = ca.GetKey(oneCustomGuid, readBackKb);
-    ASSERT_EQ(ER_OK, status) << " ca.GetKey failed with actual status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << " ca.GetKey failed";
 
     ASSERT_TRUE(memcmp(customKb3.GetData(), readBackKb.GetData(), readBackKb.GetSize()) == 0) << " the read back KB does not match original";
 
     /* now delete customGuid1 */
     status = ca.DeleteKey(customGuid1);
 
-    ASSERT_EQ(ER_OK, status) << " ca.DeleteKey failed with actual status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << " ca.DeleteKey failed";
 
     /* retrieve the custom list back */
     /* now retrieve the list back */
@@ -473,7 +473,7 @@ TEST_F(CredentialAccessorTest, StoreComplexKeyChain)
     status = ca.GetKeys(peerGuid, &customGuidList, &numGuids);
     if (status != ER_OK) {
         delete [] customGuidList;
-        FAIL() << " ca.GetKeys for customGuid2 failed with actual status: " << QCC_StatusText(status);
+        FAIL() << " ca.GetKeys for customGuid2 failed";
         return;
     }
 
@@ -485,21 +485,21 @@ TEST_F(CredentialAccessorTest, StoreComplexKeyChain)
     ASSERT_TRUE(oneCustomGuid == customGuid2) << " custom GUID does not match any of the originals";
 
     status = ca.GetKey(oneCustomGuid, readBackKb);
-    ASSERT_EQ(ER_OK, status) << " ca.GetKey failed with actual status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << " ca.GetKey failed";
 
     ASSERT_TRUE(memcmp(customKb2.GetData(), readBackKb.GetData(), readBackKb.GetSize()) == 0) << " the read back KB does not match original";
 
     /* delete the header key */
     status = ca.DeleteKey(peerGuid);
-    ASSERT_EQ(ER_OK, status) << " ca.DeleteKey on header guid failed with actual status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << " ca.DeleteKey on header guid failed";
 
     KeyBlob tmpKb;
     status = ca.GetKey(peerGuid, tmpKb);
-    ASSERT_NE(ER_OK, status) << " ca.GetKey on peerGuid expected to fail but got actual status: " << QCC_StatusText(status);
+    ASSERT_NE(ER_OK, status) << " ca.GetKey on peerGuid expected to fail";
 
     status = ca.GetKey(customGuid3, tmpKb);
-    ASSERT_NE(ER_OK, status) << " ca.GetKey on customGuid3 expected to fail but got actual status: " << QCC_StatusText(status);
+    ASSERT_NE(ER_OK, status) << " ca.GetKey on customGuid3 expected to fail";
 
     status = ca.GetKey(customGuid2, tmpKb);
-    ASSERT_NE(ER_OK, status) << " ca.GetKey on customGuid2 expected to fail but got actual status: " << QCC_StatusText(status);
+    ASSERT_NE(ER_OK, status) << " ca.GetKey on customGuid2 expected to fail";
 }

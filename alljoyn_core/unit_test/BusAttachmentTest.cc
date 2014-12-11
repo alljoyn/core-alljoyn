@@ -50,10 +50,10 @@ class BusAttachmentTest : public testing::Test {
     virtual void SetUp() {
         QStatus status = ER_OK;
         status = bus.Start();
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status);
         ASSERT_FALSE(bus.IsConnected());
         status = bus.Connect(getConnectArg().c_str());
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status);
         ASSERT_TRUE(bus.IsConnected());
     }
 
@@ -68,7 +68,7 @@ TEST_F(BusAttachmentTest, IsConnected)
 {
     EXPECT_TRUE(bus.IsConnected());
     QStatus disconnectStatus = bus.Disconnect(getConnectArg().c_str());
-    EXPECT_EQ(ER_OK, disconnectStatus) << "  Actual Status: " << QCC_StatusText(disconnectStatus);
+    EXPECT_EQ(ER_OK, disconnectStatus);
     if (ER_OK == disconnectStatus) {
         EXPECT_FALSE(bus.IsConnected());
     }
@@ -82,7 +82,7 @@ TEST_F(BusAttachmentTest, Disconnect)
 {
     EXPECT_TRUE(bus.IsConnected());
     QStatus disconnectStatus = bus.Disconnect();
-    EXPECT_EQ(ER_OK, disconnectStatus) << "  Actual Status: " << QCC_StatusText(disconnectStatus);
+    EXPECT_EQ(ER_OK, disconnectStatus);
     if (ER_OK == disconnectStatus) {
         EXPECT_FALSE(bus.IsConnected());
     }
@@ -96,14 +96,14 @@ TEST_F(BusAttachmentTest, FindName_Same_Name)
 
     /* flag indicates that Fail if name cannot be immediatly obtained */
     status = bus.FindAdvertisedName(requestedName);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = bus.FindAdvertisedName(requestedName);
-    EXPECT_EQ(ER_ALLJOYN_FINDADVERTISEDNAME_REPLY_ALREADY_DISCOVERING, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_ALLJOYN_FINDADVERTISEDNAME_REPLY_ALREADY_DISCOVERING, status);
 
 
     status = bus.CancelFindAdvertisedName(requestedName);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 }
 
 
@@ -115,7 +115,7 @@ TEST_F(BusAttachmentTest, FindName_Null_Name)
 
     /* flag indicates that Fail if name cannot be immediatly obtained */
     status = bus.FindAdvertisedName(requestedName);
-    EXPECT_EQ(ER_BAD_ARG_1, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_BAD_ARG_1, status);
 }
 
 String nameA;
@@ -147,20 +147,20 @@ TEST_F(BusAttachmentTest, find_multiple_names)
     foundNameB = false;
 
     status = bus.FindAdvertisedName(nameA.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = bus.FindAdvertisedName(nameB.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     BusAttachment otherBus("BusAttachmentTestOther", true);
     status = otherBus.Start();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = otherBus.Connect(getConnectArg().c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = otherBus.AdvertiseName(nameA.c_str(), TRANSPORT_ANY);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = otherBus.AdvertiseName(nameB.c_str(), TRANSPORT_ANY);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     //Wait upto 8 seconds for the both found name signals to complete.
     for (int i = 0; i < 800; ++i) {
@@ -175,20 +175,20 @@ TEST_F(BusAttachmentTest, find_multiple_names)
     EXPECT_TRUE(foundNameB);
 
     status = otherBus.CancelAdvertiseName(nameA.c_str(), TRANSPORT_ANY);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = otherBus.CancelAdvertiseName(nameB.c_str(), TRANSPORT_ANY);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = bus.CancelFindAdvertisedName(nameB.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     foundNameA = false;
     foundNameB = false;
 
     status = otherBus.AdvertiseName(nameA.c_str(), TRANSPORT_ANY);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = otherBus.AdvertiseName(nameB.c_str(), TRANSPORT_ANY);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     //Wait upto 2 seconds for the found name signal to complete.
     for (int i = 0; i < 200; ++i) {
@@ -202,12 +202,12 @@ TEST_F(BusAttachmentTest, find_multiple_names)
     EXPECT_FALSE(foundNameB);
 
     status = otherBus.CancelAdvertiseName(nameA.c_str(), TRANSPORT_ANY);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = otherBus.CancelAdvertiseName(nameB.c_str(), TRANSPORT_ANY);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = bus.CancelFindAdvertisedName(nameA.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     //Must Unregister bus listener or the test will segfault
     bus.UnregisterBusListener(testBusListener);
@@ -255,26 +255,26 @@ TEST_F(BusAttachmentTest, find_names_by_transport)
     transport3 = 0;
 
     status = bus.FindAdvertisedNameByTransport("name.x", TRANSPORT_TCP);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = bus.FindAdvertisedNameByTransport("name.y", TRANSPORT_LOCAL);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = bus.FindAdvertisedNameByTransport("name.z", TRANSPORT_LOCAL);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = bus.CancelFindAdvertisedNameByTransport("name.z", TRANSPORT_LOCAL);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     BusAttachment otherBus("BusAttachmentTestOther", true);
     status = otherBus.Start();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = otherBus.Connect(getConnectArg().c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = otherBus.AdvertiseName("name.x", TRANSPORT_LOCAL);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = otherBus.AdvertiseName("name.y", TRANSPORT_ANY);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = otherBus.AdvertiseName("name.z", TRANSPORT_ANY);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     //Wait upto 2 seconds for the found name signal to complete.
     for (int i = 0; i < 200; ++i) {
@@ -322,13 +322,13 @@ TEST_F(BusAttachmentTest, quiet_advertise_name)
 
     BusAttachment otherBus("BusAttachmentTestOther", true);
     status = otherBus.Start();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = otherBus.Connect(getConnectArg().c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     QuietAdvertiseNameListener testBusListener;
     otherBus.RegisterBusListener(testBusListener);
     status = otherBus.FindAdvertisedName("org.alljoyn.BusNode.test");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     //Wait upto 2 seconds for the found name signal to complete.
     for (int i = 0; i < 200; ++i) {
@@ -456,23 +456,23 @@ TEST_F(BusAttachmentTest, JoinLeaveSession) {
     //bindSessionPort new SessionPortListener
     JoinSession_SessionPortListener sessionPortListener(&bus);
     status = bus.BindSessionPort(sessionPort, sessionOpts, sessionPortListener);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     // Request name from bus
     int flag = DBUS_NAME_FLAG_REPLACE_EXISTING | DBUS_NAME_FLAG_DO_NOT_QUEUE;
     status = bus.RequestName("org.alljoyn.bus.BusAttachmentTest.advertise", flag);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     // Advertise same bus name
     status = bus.AdvertiseName("org.alljoyn.bus.BusAttachmentTest.advertise", TRANSPORT_ANY);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     // Create Second BusAttachment
     BusAttachment otherBus("BusAttachemntTest.JoinSession", true);
     status = otherBus.Start();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = otherBus.Connect(getConnectArg().c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     // Register BusListener for the foundAdvertisedName Listener
     JoinSession_BusListener busListener(&otherBus);
@@ -480,7 +480,7 @@ TEST_F(BusAttachmentTest, JoinLeaveSession) {
 
     // find the AdvertisedName
     status = otherBus.FindAdvertisedName("org.alljoyn.bus.BusAttachmentTest.advertise");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     for (size_t i = 0; i < 1000; ++i) {
         if (found) {
@@ -528,7 +528,7 @@ TEST_F(BusAttachmentTest, GetDBusProxyObj) {
     Message replyMsg(bus);
 
     QStatus status = dBusProxyObj.MethodCall(ajn::org::freedesktop::DBus::WellKnownName, "RequestName", msgArg, 2, replyMsg);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     unsigned int requestNameResponce;
     replyMsg->GetArg(0)->Get("u", &requestNameResponce);
@@ -541,7 +541,7 @@ TEST_F(BusAttachmentTest, Ping_self) {
 
 TEST_F(BusAttachmentTest, Ping_bad_wellknownName) {
     QStatus status = bus.Ping(":1badNaME.2", 500);
-    ASSERT_EQ(ER_ALLJOYN_PING_REPLY_UNKNOWN_NAME, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_ALLJOYN_PING_REPLY_UNKNOWN_NAME, status);
 }
 
 TEST_F(BusAttachmentTest, Ping_null_ptr) {
@@ -553,9 +553,9 @@ TEST_F(BusAttachmentTest, Ping_other_on_same_bus) {
 
     QStatus status = ER_OK;
     status = otherBus.Start();
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     status = otherBus.Connect(getConnectArg().c_str());
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
 
     ASSERT_EQ(ER_OK, bus.Ping(otherBus.GetUniqueName().c_str(), 1000));
 
@@ -602,9 +602,9 @@ TEST_F(BusAttachmentTest, PingAsync_other_on_same_bus) {
 
     QStatus status = ER_OK;
     status = otherBus.Start();
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     status = otherBus.Connect(getConnectArg().c_str());
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
 
     pingAsyncFlag = false;
     TestPingAsyncCB pingCB;
