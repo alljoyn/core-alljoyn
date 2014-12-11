@@ -63,7 +63,7 @@ using namespace ajn;
 static const char daemonConfig[] =
     "<busconfig>"
     "  <type>alljoyn</type>"
-    "  <limit name=\"auth_timeout\">5000</limit>"
+    "  <limit name=\"auth_timeout\">20000</limit>"
     "  <limit name=\"max_incomplete_connections\">16</limit>"
     "  <limit name=\"max_completed_connections\">32</limit>"
     "  <limit name=\"max_untrusted_clients\">16</limit>"
