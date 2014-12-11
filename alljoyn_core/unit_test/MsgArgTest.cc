@@ -839,10 +839,6 @@ TEST(MsgArgTest, SetOwnershipFlags_struct) {
     astr1[1] = "sea";
     astr1[2] = "is";
     astr1[3] = "amazing";
-    const char** astr2 = new const char*[SIZE];
-    for (size_t i = 0; i < SIZE; ++i) {
-        astr2[i] = astr1[i].c_str();
-    }
-    arg.Set("(sas)", str1.c_str(), SIZE, astr2);
+    arg.Set("(sas)", str1.c_str(), SIZE, astr1);
     arg.SetOwnershipFlags(MsgArg::OwnsData | MsgArg::OwnsArgs);
 }
