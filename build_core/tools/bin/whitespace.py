@@ -38,6 +38,7 @@ def main(argv=None):
     whitespace_db = {}
     whitespace_db_updated = False
     run_ws_check = True
+    uncfile = None
 
     # try an load the whitespace.db file.  The file is dictionary of key:value pairs
     # where the key is the name of a file that has been checked by the WS checker
@@ -107,6 +108,7 @@ def main(argv=None):
     '''Get a list of source files and apply uncrustify to them'''
     for srcfile in locate(file_patterns, file_ignore_patterns, dir_ignore):
         f = open(srcfile, 'rb')
+        uncfile = None
         filesize = os.path.getsize(srcfile)
         sha_digest = None
         try:
@@ -135,8 +137,16 @@ def main(argv=None):
             uncfile = srcfile + unc_suffix
 
             '''Run uncrustify and generate uncrustify output file'''
-            Popen(["uncrustify", "-q", "-c",
-                uncrustify_config, srcfile], stdout=PIPE).communicate()[0]
+            p = Popen( [ "uncrustify", "-c", uncrustify_config, srcfile, ],
+                stdout=PIPE, stderr=STDOUT )
+            output = p.communicate()[0]
+            if p.returncode:
+                print "error exit, uncrustify -c %s %s" % ( uncrustify_config, srcfile )
+                print output
+                print "whitespace check is not complete"
+                del whitespace_db[srcfile]
+                xit=2
+                break
 
             '''check command'''
             if wscmd == valid_commands[0]:
@@ -182,9 +192,16 @@ def main(argv=None):
 
                 '''run uncrustify again and overwrite the non-compliant file with
                 the uncrustify output'''
-                Popen(["uncrustify", "-q", "-c",
-                        uncrustify_config, "--no-backup",
-                        srcfile], stdout=PIPE).communicate()[0]
+                p = Popen( [ "uncrustify", "-c", uncrustify_config, "--no-backup", srcfile, ],
+                    stdout=PIPE, stderr=STDOUT )
+                output = p.communicate()[0]
+                if p.returncode:
+                    print "error exit, uncrustify -c %s --no-backup %s" % ( uncrustify_config, srcfile )
+                    print output
+                    print "whitespace check is not complete"
+                    del whitespace_db[srcfile]
+                    xit=2
+                    break
 
             '''remove the uncrustify output file'''
             if os.path.exists(uncfile):
@@ -192,6 +209,14 @@ def main(argv=None):
                     os.remove(uncfile)
                 except OSError:
                     print "Unable to remove uncrustify output file: " + uncfile
+
+    # end srcfile loop
+
+    if uncfile and os.path.exists(uncfile):
+        try:
+            os.remove(uncfile)
+        except OSError:
+            print "Unable to remove uncrustify output file: " + uncfile
 
     # write the whitespace_db to a file so it is avalible next time the whitespace
     # checker is run.
