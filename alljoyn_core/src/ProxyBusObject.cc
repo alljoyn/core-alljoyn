@@ -63,83 +63,6 @@ using namespace std;
 namespace ajn {
 
 
-class MatchRuleTracker {
-  public:
-    MatchRuleTracker() { }
-    ~MatchRuleTracker() { }
-
-    QStatus AddMatch(BusAttachment& bus, ProxyBusObject& pbo, const String iface)
-    {
-        QStatus status = ER_OK;
-        propChangeAddMatchRulesLock.Lock();
-        bool doAddMatch = propChangeAddMatchRules.find(iface) == propChangeAddMatchRules.end();
-        propChangeAddMatchRules.insert(iface);
-        propChangeAddMatchRulesLock.Unlock();
-
-        if (doAddMatch) {
-            /* first listener for this interface */
-            String rule("type='signal',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged',arg0='" + iface + "'");
-            status = bus.AddMatch(rule.c_str());
-            if (status != ER_OK) {
-                propChangeAddMatchRulesLock.Lock();
-                propChangeAddMatchRules.erase(iface);
-                propChangeAddMatchRulesLock.Unlock();
-            }
-        }
-        return status;
-    }
-
-    QStatus RemoveMatch(BusAttachment& bus, ProxyBusObject& pbo, const String iface)
-    {
-        QStatus status = ER_OK;
-        propChangeAddMatchRulesLock.Lock();
-        multiset<StringMapKey>::iterator it = propChangeAddMatchRules.find(iface);
-        if (it != propChangeAddMatchRules.end()) {
-            propChangeAddMatchRules.erase(it);
-        }
-        bool doRemoveMatch = propChangeAddMatchRules.find(iface) == propChangeAddMatchRules.end();
-        propChangeAddMatchRulesLock.Unlock();
-
-        if (doRemoveMatch) {
-            /* no more property change listeners for this interface */
-            String rule("type='signal',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged',arg0='" + iface + "'");
-            status = bus.RemoveMatch(rule.c_str());
-            if (status != ER_OK) {
-                propChangeAddMatchRulesLock.Lock();
-                propChangeAddMatchRules.insert(iface);
-                propChangeAddMatchRulesLock.Unlock();
-            }
-        }
-        return status;
-    }
-
-    void ClearMatch(BusAttachment& bus, String iface)
-    {
-        // Used when ProxyBusObject is being destroyed.
-        propChangeAddMatchRulesLock.Lock();
-        multiset<StringMapKey>::iterator it = propChangeAddMatchRules.find(iface);
-        if (it != propChangeAddMatchRules.end()) {
-            propChangeAddMatchRules.erase(it);
-        }
-        bool last = propChangeAddMatchRules.find(iface) == propChangeAddMatchRules.end();
-        propChangeAddMatchRulesLock.Unlock();
-
-        if (last && bus.IsConnected()) {
-            String rule("type='signal',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged',arg0='" + iface + "'");
-            bus.RemoveMatch(rule.c_str());
-        }
-    }
-
-  private:
-    multiset<StringMapKey> propChangeAddMatchRules;
-    Mutex propChangeAddMatchRulesLock;
-};
-
-/** Static match rule tracker to keep track of how many property changed listeners there are per interface.*/
-static MatchRuleTracker matchRuleTracker;
-
-
-
 template <typename _cbType> struct CBContext {
     CBContext(ProxyBusObject* obj, ProxyBusObject::Listener* listener, _cbType callback, void* context)
         : obj(obj), listener(listener), callback(callback), context(context) { }
@@ -490,7 +413,8 @@ QStatus ProxyBusObject::RegisterPropertiesChangedListener(const char* iface,
             uniqueName = bus->GetNameOwner(serviceName.c_str());
         }
 
-        status = matchRuleTracker.AddMatch(*bus, *this, ifaceStr);
+        String rule("type='signal',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged',arg0='" + ifaceStr + "'");
+        status = bus->AddMatch(rule.c_str());
     }
 
     return status;
@@ -499,7 +423,7 @@ QStatus ProxyBusObject::RegisterPropertiesChangedListener(const char* iface,
 QStatus ProxyBusObject::UnregisterPropertiesChangedListener(const char* iface,
                                                             ProxyBusObject::PropertiesChangedListener& listener)
 {
-    QCC_DbgTrace(("ProxyBusObject::RegisterPropertiesChangedListener(iface = %s, listener = %p", iface, &listener));
+    QCC_DbgTrace(("ProxyBusObject::UnregisterPropertiesChangedListener(iface = %s, listener = %p", iface, &listener));
     if (!bus->GetInterface(iface)) {
         return ER_BUS_OBJECT_NO_SUCH_INTERFACE;
     }
@@ -523,7 +447,8 @@ QStatus ProxyBusObject::UnregisterPropertiesChangedListener(const char* iface,
 
     QStatus status = ER_OK;
     if (removed) {
-        status = matchRuleTracker.RemoveMatch(*bus, *this, ifaceStr);
+        String rule("type='signal',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged',arg0='" + ifaceStr + "'");
+        status = bus->RemoveMatch(rule.c_str());
     }
 
     return status;
@@ -1381,12 +1306,6 @@ void ProxyBusObject::DestructComponents()
         }
 
         if (bus) {
-            multimap<StringMapKey, PropertiesChangedCB>::iterator cbit;
-            for (cbit = components->propertiesChangedCBs.begin(); cbit != components->propertiesChangedCBs.end(); ++cbit) {
-                const String ifaceStr = cbit->first.c_str();
-                matchRuleTracker.ClearMatch(*bus, ifaceStr);
-            }
-
             bus->UnregisterAllHandlers(this);
         }
 
