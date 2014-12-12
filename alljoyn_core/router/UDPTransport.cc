@@ -479,6 +479,15 @@ const char* UDPTransport::TransportName = "udp";
 const char* const UDPTransport::ALLJOYN_DEFAULT_ROUTER_ADVERTISEMENT_PREFIX = "org.alljoyn.BusNode.";
 #endif
 
+/**
+ * Prefix to quietly advertise when working around ASACORE-1298.  Keeps an
+ * advertisement outstanding to prevent closing listen sockets out from under
+ * UDP Endpoints.
+ */
+#if WORKAROUND_1298
+const char* const WORKAROUND_1298_PREFIX = "org.alljoyn.wa1298.";
+#endif
+
 const char* TestConnStr = "ARDP TEST CONNECT REQUEST";
 const char* TestAcceptStr = "ARDP TEST ACCEPT";
 
@@ -1206,6 +1215,17 @@ class ArdpStream : public qcc::Stream {
     {
         QCC_DbgTrace(("ArdpStream::GetDiscSent(): -> %s", m_discSent ? "true" : "false"));
         return m_discSent;
+    }
+
+    /**
+     * In the case of a remote disconnect, disc status reflects the reason the
+     * stream was disconnected.  In the local case, will be ER_OK until the
+     * disconnect happens, then will be ER_UDP_LOCAL_DISCONNECT.
+     */
+    QStatus GetDiscStatus()
+    {
+        QCC_DbgTrace(("ArdpStream::GetDiscStatus(): -> \"%s\"", QCC_StatusText(m_discStatus)));
+        return m_discStatus;
     }
 
     /**
@@ -4232,6 +4252,9 @@ UDPTransport::UDPTransport(BusAttachment& bus) :
     m_ardpLock(), m_cbLock(), m_handle(NULL),
     m_dispatcher(NULL), m_exitDispatcher(NULL),
     m_workerCommandQueue(), m_workerCommandQueueLock(), m_exitWorkerCommandQueue(), m_exitWorkerCommandQueueLock()
+#if WORKAROUND_1298
+    , m_done1298(false)
+#endif
 {
     QCC_DbgTrace(("UDPTransport::UDPTransport()"));
 
@@ -4932,11 +4955,13 @@ QStatus UDPTransport::Stop(void)
         IpNameService::Instance().CancelAdvertiseName(TRANSPORT_UDP, *i, TRANSPORT_UDP);
     }
     m_advertising.clear();
+    m_isAdvertising = false;
     QCC_DbgPrintf(("UDPTransport::Stop(): Gratuitously clean out discoveries."));
     for (list<qcc::String>::iterator i = m_discovering.begin(); i != m_discovering.end(); ++i) {
         IpNameService::Instance().CancelFindAdvertisement(TRANSPORT_UDP, *i, TRANSPORT_UDP);
     }
     m_discovering.clear();
+    m_isDiscovering = false;
     m_listenRequestsLock.Unlock(MUTEX_CONTEXT);
 
     /*
@@ -4948,14 +4973,6 @@ QStatus UDPTransport::Stop(void)
     IpNameService::Instance().SetCallback(TRANSPORT_UDP, NULL);
 
     IpNameService::Instance().SetNetworkEventCallback(TRANSPORT_UDP, NULL);
-
-    /*
-     * Stop all of the message pumps.
-     */
-    QCC_DbgPrintf(("UDPTransport::Stop(): Stop() message pumps"));
-    for (uint32_t i = 0; i < N_PUMPS; ++i) {
-        m_messagePumps[i]->Stop();
-    }
 
     /*
      * Ask any running endpoints to shut down and stop allowing routing to
@@ -5102,9 +5119,15 @@ QStatus UDPTransport::Join(void)
     m_endpointListLock.Unlock(MUTEX_CONTEXT);
 
     /*
-     * Now that there are no more sends outstanding in ARDP, we can go ahead
-     * and take down the dispatcher thread since it has no more work.
+     * Now that there are no more sends outstanding in ARDP, we can go ahead and
+     * take down the message pumps and dispatcher threads since thre is no more
+     * work.
      */
+    QCC_DbgPrintf(("UDPTransport::Stop(): Stop() message pumps"));
+    for (uint32_t i = 0; i < N_PUMPS; ++i) {
+        m_messagePumps[i]->Stop();
+    }
+
     QCC_DbgPrintf(("UDPTransport::Join(): Stop message dispatcher thread"));
     if (m_dispatcher) {
         m_dispatcher->Stop();
@@ -6041,6 +6064,19 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
                 } else {
                     QCC_DbgHLPrintf(("UDPTransport::ManageEndpoints(): Endpoint with conn ID == %d. WakeThreadSet()", ep->GetConnId()));
                     stream->WakeThreadSet();
+                    /*
+                     * If the reason we got to EP_STOPPING is because of a local
+                     * disconnnect during transport shutdown, we need to make
+                     * sure that a local disconnect is started so ARDP gets the
+                     * word.  We do this if GetDiscSent() returns false
+                     * indicating that we've never started a local Disconnect,
+                     * and if GetDiscStatus is ER_OK indicating that a
+                     * coincident remote disconnect did not start.
+                     */
+                    if (stream->GetDiscSent() == false && stream->GetDiscStatus() == ER_OK) {
+                        QCC_DbgHLPrintf(("UDPTransport::ManageEndpoints(): Endpoint with conn ID == %d. EP_STOPPING", ep->GetConnId()));
+                        stream->Disconnect(false, ER_UDP_LOCAL_DISCONNECT);
+                    }
                 }
             }
 
@@ -6073,14 +6109,6 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
             bool threadSetEmpty = stream->ThreadSetEmpty();
             bool disconnected = stream->GetDisconnected();
 
-            /*
-             * If we are in EP_WAITING state and 1) there are no threads that
-             * may possibly be starting sends; and 2) ARDP has no queued
-             * outstanding sends; then we are finished with the shutdown
-             * behavior and we need to start the actual ARDP disconnect process
-             * and transition back to EP_STOPPED where we wait for the process
-             * to complete.
-             */
 #ifndef NDEBUG
             if (ep->IsEpWaiting()) {
                 QCC_DbgHLPrintf(("UDPTransport::ManageEndpoints(): Endpoint with conn ID == %d. is EP_WAITING", ep->GetConnId()));
@@ -6089,6 +6117,14 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
             }
 #endif
 
+            /*
+             * If we are in EP_WAITING state and 1) there are no threads that
+             * may possibly be starting sends; and 2) ARDP has no queued
+             * outstanding sends; then we are finished with the shutdown
+             * behavior and we need to start the actual ARDP disconnect process
+             * and transition back to EP_STOPPED where we wait for the process
+             * to complete.
+             */
             if (ep->IsEpWaiting() && ep->GetPushMessageCount() == 0 && stream->GetSendsOutstanding() == 0) {
                 QCC_DbgHLPrintf(("UDPTransport::ManageEndpoints(): Endpoint with conn ID == %d. exiting EP_WAITING", ep->GetConnId()));
                 ep->SetEpWaitEnable(false);
@@ -6098,7 +6134,22 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
             }
             ep->StateUnlock();
 
-            if (ep->IsEpStopping() && threadSetEmpty && disconnected) {
+            /*
+             * If we are in EP_STOPPING state then we have 1) either
+             * transitioned through EP_WAITING which means we have waited for
+             * all outstanding sends to complete and then done the
+             * stream->Disconnect(); or 2) we have bypassed EP_WAITING and gone
+             * directly to EP_STOPPING since the disconnect is a result of a
+             * control-C equivalent.  In this case we need to do the Join as
+             * soon as possible, but no sooner.  We did a stream->Disconnect()
+             * above which should have started the process but we need to wait
+             * until the disconnect is complete and all buffers have been
+             * returned from ARDP before actually destroying the endpoint.  So
+             * we wait in Stopping state until this happens.  The Join() call
+             * will make the endpoint completely unusable so we need to make
+             * sure we are done.
+             */
+            if (ep->IsEpStopping() && ep->GetPushMessageCount() == 0 && stream->GetSendsOutstanding() == 0 && threadSetEmpty && disconnected) {
                 QCC_DbgHLPrintf(("UDPTransport::ManageEndpoints(): Join()ing stopping endpoint with conn ID == %d.", ep->GetConnId()));
 
                 /*
@@ -7982,7 +8033,13 @@ void* UDPTransport::Run(void* arg)
      * corresponding to endpoints on sundry networks for becoming ready; and
      * (3) drive/whip the ARDP protocol to do our bidding.
      */
-    while (!IsStopping()) {
+    while (true) {
+        bool passive = m_preList.empty() && m_authList.empty() && m_endpointList.empty();
+
+        if (IsStopping() && passive) {
+            QCC_DbgPrintf(("UDPTransport::Run(): IsStopping() && passive: exiting"));
+            break;
+        }
 
         /*
          * Each time through the loop we need to wait on the stop event and all
@@ -10372,6 +10429,16 @@ void UDPTransport::EnableDiscovery(const char* namePrefix, TransportMask transpo
         return;
     }
 
+#if WORKAROUND_1298
+    if (!m_done1298) {
+        QCC_DbgPrintf(("UDPTransport::EnableDiscovery(): Implementing workaround for ASACORE-1298"));
+        qcc::String name = WORKAROUND_1298_PREFIX;
+        name.append(m_bus.GetInternal().GetGlobalGUID().ToShortString());
+        QueueEnableAdvertisement(name, true, TRANSPORT_UDP);
+        m_done1298 = true;
+    }
+#endif
+
     QueueEnableDiscovery(namePrefix, transports);
     DecrementAndFetch(&m_refCount);
 }
@@ -10461,6 +10528,16 @@ QStatus UDPTransport::EnableAdvertisement(const qcc::String& advertiseName, bool
         DecrementAndFetch(&m_refCount);
         return ER_BUS_TRANSPORT_NOT_STARTED;
     }
+
+#if WORKAROUND_1298
+    if (!m_done1298) {
+        QCC_DbgPrintf(("UDPTransport::EnableAdvertisement(): Implementing workaround for ASACORE-1298"));
+        qcc::String name = WORKAROUND_1298_PREFIX;
+        name.append(m_bus.GetInternal().GetGlobalGUID().ToShortString());
+        QueueEnableAdvertisement(name, true, TRANSPORT_UDP);
+        m_done1298 = true;
+    }
+#endif
 
     QueueEnableAdvertisement(advertiseName, quietly, transports);
     DecrementAndFetch(&m_refCount);
