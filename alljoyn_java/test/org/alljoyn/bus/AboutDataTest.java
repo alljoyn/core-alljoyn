@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2014-2015 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -15,9 +15,7 @@
  */
 package org.alljoyn.bus;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.UUID;
 
 import junit.framework.TestCase;
 
@@ -26,647 +24,705 @@ public class AboutDataTest extends TestCase{
         System.loadLibrary("alljoyn_java");
     }
 
-    private BusAttachment serviceBus;
-    static short PORT_NUMBER = 542;
-
-    public String ABOUT_REQUIRED_FIELDS[] = {
-            "AppId",
-            "DefaultLanguage",
-            "DeviceId",
-            "ModelNumber",
-            "SupportedLanguages",
-            "SoftwareVersion",
-            "AJSoftwareVersion",
-            "AppName",
-            "Manufacturer",
-            "Description"
-    };
-
-    public String ABOUT_ANNOUNCED_FIELDS[] = {
-            "AppId",
-            "DefaultLanguage",
-            "DeviceId",
-            "ModelNumber",
-            "DeviceName",
-            "AppName",
-            "Manufacturer"
-    };
-
-    public synchronized void stopWait() {
-        this.notifyAll();
-    }
-
     public void setUp() throws Exception {
-        serviceBus = new BusAttachment("AboutListenerTestService");
-        assertEquals(Status.OK, serviceBus.connect());
-
-        AboutDataTestSessionPortListener listener = new AboutDataTestSessionPortListener();
-        short contactPort = PORT_NUMBER;
-        Mutable.ShortValue sessionPort = new Mutable.ShortValue(contactPort);
-        assertEquals(Status.OK, serviceBus.bindSessionPort(sessionPort, new SessionOpts(), listener));
     }
 
     public void tearDown() throws Exception {
-        serviceBus.disconnect();
-        serviceBus.release();
     }
 
-    public class AboutDataTestSessionPortListener extends SessionPortListener {
-        public boolean acceptSessionJoiner(short sessionPort, String joiner, SessionOpts sessionOpts) {
-            System.out.println("SessionPortListener.acceptSessionJoiner called");
-            if (sessionPort == PORT_NUMBER) {
-                return true;
-            } else {
-                return false;
-            }
-        }
-        public void sessionJoined(short sessionPort, int id, String joiner) {
-            System.out.println(String.format("SessionPortListener.sessionJoined(%d, %d, %s)", sessionPort, id, joiner));
-            sessionId = id;
-            sessionEstablished = true;
+    public void testConstructors() {
+        try {
+            AboutData aboutData = new AboutData();
+            Variant v_ajSoftwareVersion = aboutData.getField(AboutKeys.ABOUT_AJ_SOFTWARE_VERSION);
+            assertEquals("s", v_ajSoftwareVersion.getSignature());
+            assertEquals(Version.get(), v_ajSoftwareVersion.getObject(String.class));
+        } catch (BusException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
         }
 
-        int sessionId;
-        boolean sessionEstablished;
-    }
-    // Helper class to check if about data and announced data valid
-    public class AboutDataCheck
-    {
-        private boolean isValid = false;
-        // Are required fields all set?
-        private boolean areRequiredFieldsSet(Map<String, Variant> aboutData)
-        {
-            boolean allSet = true;
+        try {
+            AboutData aboutData = new AboutData("en");
+            Variant v_ajSoftwareVersion = aboutData.getField(AboutKeys.ABOUT_AJ_SOFTWARE_VERSION);
+            assertEquals("s", v_ajSoftwareVersion.getSignature());
+            assertEquals(Version.get(), v_ajSoftwareVersion.getObject(String.class));
 
-            for (String fieldName: ABOUT_REQUIRED_FIELDS)
-            {
-                if (!aboutData.containsKey(fieldName))
-                {
-                    System.out.println("AboutData miss required field " + fieldName);
-                    allSet = false;
-                    break;
-                }
-            }
-
-            return allSet;
-        }
-
-        // Are announced fields all set?
-        private boolean areAnnouncedFieldsSet(Map<String, Variant> announceData)
-        {
-            boolean allSet = true;
-
-            for (String fieldName: ABOUT_ANNOUNCED_FIELDS)
-            {
-                if (!announceData.containsKey(fieldName))
-                {
-                    System.out.println("AboutData miss announced field " + fieldName);
-                    allSet = false;
-                    break;
-                }
-            }
-
-            return allSet;
-        }
-
-        // Is announced data and getAboutData consistent
-        private boolean isDataConsistent(Map<String, Variant> aboutData,Map<String, Variant> announceData)
-        {
-            boolean isConsistent = true;
-            Set<String> announcedFields = announceData.keySet();
-
-            for (String announcedField: announcedFields)
-            {
-                // AppId equals does not work
-                if (!announcedField.equals("AppId") && aboutData.containsKey(announcedField))
-                {
-                    // Check value match
-                    Variant announcedValue = announceData.get(announcedField);
-                    Variant aboutValue = aboutData.get(announcedField);
-
-                    if (!announcedValue.equals(aboutValue))
-                    {
-                        isConsistent = false;
-                        System.out.println(announcedField + " mismatch: " + announcedValue + " vs " + aboutValue);
-                        break;
-                    }
-                }
-            }
-
-            return isConsistent;
-        }
-
-        // Is data valid
-        public boolean isDataValid(Map<String, Variant> aboutData,
-                Map<String, Variant> announceData)
-        {
-            isValid = false;
-
-            // Check if any required field is missing
-            if (areRequiredFieldsSet(aboutData))
-            {
-                // Check if any announced field is missing
-                if (areAnnouncedFieldsSet(announceData))
-                {
-                    // Check if any mismatch between about value and announced value
-                    if (isDataConsistent(aboutData, announceData))
-                    {
-                        isValid = true;
-                    }
-                }
-            }
-
-            return isValid;
+            Variant v_defaultLanguage = aboutData.getField(AboutKeys.ABOUT_DEFAULT_LANGUAGE);
+            assertEquals("s", v_defaultLanguage.getSignature());
+            assertEquals("en", v_defaultLanguage.getObject(String.class));
+        } catch (BusException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
         }
     }
 
-    /*
-     * Correct About data
-     */
-    public class AboutData implements AboutDataListener {
-        private Map<String, Variant> aboutData = new HashMap<String, Variant>();
-        private Map<String, Variant> announceData = new HashMap<String, Variant>();
+    public void testVerifyFieldValues() {
+        AboutData aboutData = new AboutData();
 
-        private void setAboutData(String language)
-        {
-            //nonlocalized values
-            aboutData.put("AppId",  new Variant(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}));
-            aboutData.put("DefaultLanguage",  new Variant(new String("en")));
-            aboutData.put("DeviceId",  new Variant(new String("sampleDeviceId")));
-            aboutData.put("ModelNumber", new Variant(new String("A1B2C3")));
-            aboutData.put("SupportedLanguages", new Variant(new String[] {"en", "es"}));
-            aboutData.put("DateOfManufacture", new Variant(new String("2014-09-23")));
-            aboutData.put("SoftwareVersion", new Variant(new String("1.0")));
-            aboutData.put("AJSoftwareVersion", new Variant(new String("0.0.1")));
-            aboutData.put("HardwareVersion", new Variant(new String("0.1alpha")));
-            //localized values
-            // If the language String is null or an empty string we return the
-            // default language
-            if ((language == null) || (language.length() == 0) || language.equalsIgnoreCase("en")) {
-                aboutData.put("DeviceName", new Variant(new String("A device name")));
-                aboutData.put("AppName", new Variant(new String("An application name")));
-                aboutData.put("Manufacturer", new Variant(new String("A mighty manufacturing company")));
-                aboutData.put("Description", new Variant(new String("Sample showing the about feature in a service application")));
-            } else if (language.equalsIgnoreCase("es")) { //Spanish
-                aboutData.put("DeviceName", new Variant(new String("Un nombre de dispositivo")));
-                aboutData.put("AppName", new Variant(new String("Un nombre de aplicación")));
-                aboutData.put("Manufacturer", new Variant(new String("Una empresa de fabricación de poderosos")));
-                aboutData.put("Description", new Variant(new String("Muestra que muestra la característica de sobre en una aplicación de servicio")));
+        //AppId
+        assertTrue(aboutData.isFieldRequired(AboutData.ABOUT_APP_ID));
+        assertTrue(aboutData.isFieldAnnounced(AboutData.ABOUT_APP_ID));
+        assertFalse(aboutData.isFieldLocalized(AboutData.ABOUT_APP_ID));
+        assertEquals("ay", aboutData.getFieldSignature(AboutData.ABOUT_APP_ID));
+
+        //DefaultLanguage
+        assertTrue(aboutData.isFieldRequired(AboutData.ABOUT_DEFAULT_LANGUAGE));
+        assertTrue(aboutData.isFieldAnnounced(AboutData.ABOUT_DEFAULT_LANGUAGE));
+        assertFalse(aboutData.isFieldLocalized(AboutData.ABOUT_DEFAULT_LANGUAGE));
+        assertEquals("s", aboutData.getFieldSignature(AboutData.ABOUT_DEFAULT_LANGUAGE));
+
+        //DeviceName
+        assertFalse(aboutData.isFieldRequired(AboutData.ABOUT_DEVICE_NAME));
+        assertTrue(aboutData.isFieldAnnounced(AboutData.ABOUT_DEVICE_NAME));
+        assertTrue(aboutData.isFieldLocalized(AboutData.ABOUT_DEVICE_NAME));
+        assertEquals("s", aboutData.getFieldSignature(AboutData.ABOUT_DEVICE_NAME));
+
+        //DeviceId
+        assertTrue(aboutData.isFieldRequired(AboutData.ABOUT_DEVICE_ID));
+        assertTrue(aboutData.isFieldAnnounced(AboutData.ABOUT_DEVICE_ID));
+        assertFalse(aboutData.isFieldLocalized(AboutData.ABOUT_DEVICE_ID));
+        assertEquals("s", aboutData.getFieldSignature(AboutData.ABOUT_DEVICE_ID));
+
+        //AppName
+        assertTrue(aboutData.isFieldRequired(AboutData.ABOUT_APP_NAME));
+        assertTrue(aboutData.isFieldAnnounced(AboutData.ABOUT_APP_NAME));
+        assertTrue(aboutData.isFieldLocalized(AboutData.ABOUT_APP_NAME));
+        assertEquals("s", aboutData.getFieldSignature(AboutData.ABOUT_APP_NAME));
+
+        //Manufacturer
+        assertTrue(aboutData.isFieldRequired(AboutData.ABOUT_MANUFACTURER));
+        assertTrue(aboutData.isFieldAnnounced(AboutData.ABOUT_MANUFACTURER));
+        assertTrue(aboutData.isFieldLocalized(AboutData.ABOUT_MANUFACTURER));
+        assertEquals("s", aboutData.getFieldSignature(AboutData.ABOUT_MANUFACTURER));
+
+        //ModelNumber
+        assertTrue(aboutData.isFieldRequired(AboutData.ABOUT_MODEL_NUMBER));
+        assertTrue(aboutData.isFieldAnnounced(AboutData.ABOUT_MODEL_NUMBER));
+        assertFalse(aboutData.isFieldLocalized(AboutData.ABOUT_MODEL_NUMBER));
+        assertEquals("s", aboutData.getFieldSignature(AboutData.ABOUT_MODEL_NUMBER));
+
+        //SupportedLanguages
+        assertTrue(aboutData.isFieldRequired(AboutData.ABOUT_SUPPORTED_LANGUAGES));
+        assertFalse(aboutData.isFieldAnnounced(AboutData.ABOUT_SUPPORTED_LANGUAGES));
+        assertFalse(aboutData.isFieldLocalized(AboutData.ABOUT_SUPPORTED_LANGUAGES));
+        assertEquals("as", aboutData.getFieldSignature(AboutData.ABOUT_SUPPORTED_LANGUAGES));
+
+        //Description
+        assertTrue(aboutData.isFieldRequired(AboutData.ABOUT_DESCRIPTION));
+        assertFalse(aboutData.isFieldAnnounced(AboutData.ABOUT_DESCRIPTION));
+        assertTrue(aboutData.isFieldLocalized(AboutData.ABOUT_DESCRIPTION));
+        assertEquals("s", aboutData.getFieldSignature(AboutData.ABOUT_DESCRIPTION));
+
+        //DateOfManufacture
+        assertFalse(aboutData.isFieldRequired(AboutData.ABOUT_DATE_OF_MANUFACTURE));
+        assertFalse(aboutData.isFieldAnnounced(AboutData.ABOUT_DATE_OF_MANUFACTURE));
+        assertFalse(aboutData.isFieldLocalized(AboutData.ABOUT_DATE_OF_MANUFACTURE));
+        assertEquals("s", aboutData.getFieldSignature(AboutData.ABOUT_DATE_OF_MANUFACTURE));
+
+        //SoftwareVersion
+        assertTrue(aboutData.isFieldRequired(AboutData.ABOUT_SOFTWARE_VERSION));
+        assertFalse(aboutData.isFieldAnnounced(AboutData.ABOUT_SOFTWARE_VERSION));
+        assertFalse(aboutData.isFieldLocalized(AboutData.ABOUT_SOFTWARE_VERSION));
+        assertEquals("s", aboutData.getFieldSignature(AboutData.ABOUT_SOFTWARE_VERSION));
+
+        //AJSoftwareVersion
+        assertTrue(aboutData.isFieldRequired(AboutData.ABOUT_AJ_SOFTWARE_VERSION));
+        assertFalse(aboutData.isFieldAnnounced(AboutData.ABOUT_AJ_SOFTWARE_VERSION));
+        assertFalse(aboutData.isFieldLocalized(AboutData.ABOUT_AJ_SOFTWARE_VERSION));
+        assertEquals("s", aboutData.getFieldSignature(AboutData.ABOUT_AJ_SOFTWARE_VERSION));
+
+        //HardwareVersion
+        assertFalse(aboutData.isFieldRequired(AboutData.ABOUT_HARDWARE_VERSION));
+        assertFalse(aboutData.isFieldAnnounced(AboutData.ABOUT_HARDWARE_VERSION));
+        assertFalse(aboutData.isFieldLocalized(AboutData.ABOUT_HARDWARE_VERSION));
+        assertEquals("s", aboutData.getFieldSignature(AboutData.ABOUT_HARDWARE_VERSION));
+
+        //SupportUrl
+        assertFalse(aboutData.isFieldRequired(AboutData.ABOUT_SUPPORT_URL));
+        assertFalse(aboutData.isFieldAnnounced(AboutData.ABOUT_SUPPORT_URL));
+        assertFalse(aboutData.isFieldLocalized(AboutData.ABOUT_SUPPORT_URL));
+        assertEquals("s", aboutData.getFieldSignature(AboutData.ABOUT_SUPPORT_URL));
+
+        //Unknown field
+        assertFalse(aboutData.isFieldRequired("Unknown"));
+        assertFalse(aboutData.isFieldAnnounced("Unknown"));
+        assertFalse(aboutData.isFieldLocalized("Unknown"));
+        assertTrue(null == aboutData.getFieldSignature("Unknown"));
+    }
+
+    public void testDefaultLanguageNotSpecified() {
+        AboutData aboutData = new AboutData();
+
+        try {
+            aboutData.setDeviceName("Device Name");
+        } catch (BusException e) {
+            assertEquals("Specified language tag not found.", e.getMessage());
+        }
+
+        try {
+            aboutData.setAppName("Application Name");
+        } catch (BusException e) {
+            assertEquals("Specified language tag not found.", e.getMessage());
+        }
+
+        try {
+            aboutData.setManufacturer("Manufacturer Name");
+        } catch (BusException e) {
+            assertEquals("Specified language tag not found.", e.getMessage());
+        }
+
+        try {
+            aboutData.setDescription("A description of the application.");
+        } catch (BusException e) {
+            assertEquals("Specified language tag not found.", e.getMessage());
+        }
+    }
+
+    public void testGetSetAppId() {
+        try {
+            AboutData aboutData = new AboutData("en");
+            byte[] appIdIn = new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
+            aboutData.setAppId(appIdIn);
+            byte[] appIdOut = aboutData.getAppId();
+
+            assertEquals(appIdIn, appIdOut);
+        } catch (BusException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
+        }
+
+        try {
+            AboutData aboutData = new AboutData("en");
+            byte[] appIdIn = new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17};
+            try {
+                aboutData = new AboutData("en");
+                aboutData.setAppId(appIdIn);
+                fail("Expected error thrown");
+            } catch (BusException e) {
+                assertEquals("AppId is not 128-bits. AppId passed in is still used.", e.getMessage());
             }
+            assertEquals(appIdIn, aboutData.getAppId());
+        } catch (BusException e1) {
+            e1.printStackTrace();
+            fail("Unexpected error thrown");
         }
-
-        private void setAnnouncedData()
-        {
-            announceData.put("AppId",  new Variant(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}));
-            announceData.put("DefaultLanguage",  new Variant(new String("en")));
-            announceData.put("DeviceName", new Variant(new String("A device name")));
-            announceData.put("DeviceId",  new Variant(new String("sampleDeviceId")));
-            announceData.put("AppName", new Variant(new String("An application name")));
-            announceData.put("Manufacturer", new Variant(new String("A mighty manufacturing company")));
-            announceData.put("ModelNumber", new Variant(new String("A1B2C3")));
-        }
-
-        public AboutData(String language)
-        {
-            setAboutData(language);
-            setAnnouncedData();
-        }
-
-        @Override
-        public Map<String, Variant> getAboutData(String language) throws ErrorReplyBusException
-        {
-            return aboutData;
-        }
-
-        @Override
-        public Map<String, Variant> getAnnouncedAboutData() throws ErrorReplyBusException
-        {
-            return announceData;
-        }
-
     }
 
-    /*
-     * Invalid about data since required field DeviceId is missing
-     */
-    public class AboutDataMissingRequiredField implements AboutDataListener {
+    public void testGetSetAppIdUsingUUID() {
+        try {
+            AboutData aboutData = new AboutData("en");
+            UUID appIdIn = UUID.fromString("b8b12eb2-5b66-4f28-b277-cbb05ad9a5f6");
+            aboutData.setAppId(appIdIn);
+            UUID appIdOut = aboutData.getAppIdAsUUID();
 
-        private Map<String, Variant> aboutData = new HashMap<String, Variant>();
-        private Map<String, Variant> announceData = new HashMap<String, Variant>();
+            assertEquals(appIdIn, appIdOut);
+        } catch (BusException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
+        }
 
-        private void setAboutData(String language)
-        {
-            //nonlocalized values
-            aboutData.put("AppId",  new Variant(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}));
-            aboutData.put("DefaultLanguage",  new Variant(new String("en")));
-            // Device Id is missing
-            aboutData.put("ModelNumber", new Variant(new String("A1B2C3")));
-            aboutData.put("SupportedLanguages", new Variant(new String[] {"en", "es"}));
-            aboutData.put("DateOfManufacture", new Variant(new String("2014-09-23")));
-            aboutData.put("SoftwareVersion", new Variant(new String("1.0")));
-            aboutData.put("AJSoftwareVersion", new Variant(new String("0.0.1")));
-            aboutData.put("HardwareVersion", new Variant(new String("0.1alpha")));
-            //localized values
-            // If the language String is null or an empty string we return the
-            // default language
-            if ((language == null) || (language.length() == 0) || language.equalsIgnoreCase("en")) {
-                aboutData.put("DeviceName", new Variant(new String("A device name")));
-                aboutData.put("AppName", new Variant(new String("An application name")));
-                aboutData.put("Manufacturer", new Variant(new String("A mighty manufacturing company")));
-                aboutData.put("Description", new Variant(new String("Sample showing the about feature in a service application")));
-            } else if (language.equalsIgnoreCase("es")) { //Spanish
-                aboutData.put("DeviceName", new Variant(new String("Un nombre de dispositivo")));
-                aboutData.put("AppName", new Variant(new String("Un nombre de aplicación")));
-                aboutData.put("Manufacturer", new Variant(new String("Una empresa de fabricación de poderosos")));
-                aboutData.put("Description", new Variant(new String("Muestra que muestra la característica de sobre en una aplicación de servicio")));
+        try {
+            AboutData aboutData = new AboutData("en");
+            UUID appIdIn = UUID.randomUUID();
+            aboutData.setAppId(appIdIn);
+            UUID appIdOut = aboutData.getAppIdAsUUID();
+
+            assertEquals(appIdIn, appIdOut);
+        } catch (BusException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
+        }
+    }
+
+    public void testGetSetAppIdUsingHexString() {
+        try {
+            AboutData aboutData = new AboutData("en");
+            aboutData.setAppId("000102030405060708090A0B0C0D0E0C");
+            byte[] appIdOut = aboutData.getAppId();
+
+            byte[] appIdIn = new byte[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 12};
+            assertEquals(appIdIn.length, appIdOut.length);
+            for (int i = 0; i < appIdOut.length; ++i) {
+                assertEquals(appIdIn[i], appIdOut[i]);
             }
-        }
 
-        private void setAnnouncedData()
-        {
-            announceData.put("AppId",  new Variant(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}));
-            announceData.put("DefaultLanguage",  new Variant(new String("en")));
-            announceData.put("DeviceName", new Variant(new String("A device name")));
-            announceData.put("DeviceId",  new Variant(new String("sampleDeviceId")));
-            announceData.put("AppName", new Variant(new String("An application name")));
-            announceData.put("Manufacturer", new Variant(new String("A mighty manufacturing company")));
-            announceData.put("ModelNumber", new Variant(new String("A1B2C3")));
-        }
-
-        public AboutDataMissingRequiredField(String language)
-        {
-            setAboutData(language);
-            setAnnouncedData();
-        }
-
-        @Override
-        public Map<String, Variant> getAboutData(String language) throws ErrorReplyBusException
-        {
-            return aboutData;
-        }
-
-        @Override
-        public Map<String, Variant> getAnnouncedAboutData()
-        {
-            return announceData;
-        }
-
-    }
-
-    /*
-     * Invalid announce data since announced field AppName is missing
-     */
-    public class AnnounceDataMissingRequiredField implements AboutDataListener {
-
-        private Map<String, Variant> aboutData = new HashMap<String, Variant>();
-        private Map<String, Variant> announceData = new HashMap<String, Variant>();
-
-        private void setAboutData(String language)
-        {
-            //nonlocalized values
-            aboutData.put("AppId",  new Variant(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}));
-            aboutData.put("DefaultLanguage",  new Variant(new String("en")));
-            aboutData.put("DeviceId",  new Variant(new String("sampleDeviceId")));
-            aboutData.put("ModelNumber", new Variant(new String("A1B2C3")));
-            aboutData.put("SupportedLanguages", new Variant(new String[] {"en", "es"}));
-            aboutData.put("DateOfManufacture", new Variant(new String("2014-09-23")));
-            aboutData.put("SoftwareVersion", new Variant(new String("1.0")));
-            aboutData.put("AJSoftwareVersion", new Variant(new String("0.0.1")));
-            aboutData.put("HardwareVersion", new Variant(new String("0.1alpha")));
-            //localized values
-            // If the language String is null or an empty string we return the
-            // default language
-            if ((language == null) || (language.length() == 0) || language.equalsIgnoreCase("en")) {
-                aboutData.put("DeviceName", new Variant(new String("A device name")));
-                aboutData.put("AppName", new Variant(new String("An application name")));
-                aboutData.put("Manufacturer", new Variant(new String("A mighty manufacturing company")));
-                aboutData.put("Description", new Variant(new String("Sample showing the about feature in a service application")));
-            } else if (language.equalsIgnoreCase("es")) { //Spanish
-                aboutData.put("DeviceName", new Variant(new String("Un nombre de dispositivo")));
-                aboutData.put("AppName", new Variant(new String("Un nombre de aplicación")));
-                aboutData.put("Manufacturer", new Variant(new String("Una empresa de fabricación de poderosos")));
-                aboutData.put("Description", new Variant(new String("Muestra que muestra la característica de sobre en una aplicación de servicio")));
-            }
-        }
-
-        private void setAnnouncedData()
-        {
-            announceData.put("AppId",  new Variant(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}));
-            announceData.put("DefaultLanguage",  new Variant(new String("en")));
-            announceData.put("DeviceName", new Variant(new String("A device name")));
-            announceData.put("DeviceId",  new Variant(new String("sampleDeviceId")));
-            //AppName is missing
-            announceData.put("Manufacturer", new Variant(new String("A mighty manufacturing company")));
-            announceData.put("ModelNumber", new Variant(new String("A1B2C3")));
-        }
-
-        public AnnounceDataMissingRequiredField(String language)
-        {
-            setAboutData(language);
-            setAnnouncedData();
-        }
-
-        @Override
-        public Map<String, Variant> getAboutData(String language) throws ErrorReplyBusException
-        {
-            return aboutData;
-        }
-
-        @Override
-        public Map<String, Variant> getAnnouncedAboutData()
-        {
-            return announceData;
-        }
-
-    }
-    /*
-     * Inconsistent ModelNumber value
-     */
-    public class InconsistentData implements AboutDataListener {
-
-        private Map<String, Variant> aboutData = new HashMap<String, Variant>();
-        private Map<String, Variant> announceData = new HashMap<String, Variant>();
-
-        private void setAboutData(String language)
-        {
-            //nonlocalized values
-            aboutData.put("AppId",  new Variant(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}));
-            aboutData.put("DefaultLanguage",  new Variant(new String("en")));
-            aboutData.put("DeviceId",  new Variant(new String("sampleDeviceId")));
-            // Inconsistent with announcement
-            aboutData.put("ModelNumber", new Variant(new String("D4B2C3")));
-            aboutData.put("SupportedLanguages", new Variant(new String[] {"en", "es"}));
-            aboutData.put("DateOfManufacture", new Variant(new String("2014-09-23")));
-            aboutData.put("SoftwareVersion", new Variant(new String("1.0")));
-            aboutData.put("AJSoftwareVersion", new Variant(new String("0.0.1")));
-            aboutData.put("HardwareVersion", new Variant(new String("0.1alpha")));
-            //localized values
-            // If the language String is null or an empty string we return the
-            // default language
-            if ((language == null) || (language.length() == 0) || language.equalsIgnoreCase("en")) {
-                aboutData.put("DeviceName", new Variant(new String("A device name")));
-                aboutData.put("AppName", new Variant(new String("An application name")));
-                aboutData.put("Manufacturer", new Variant(new String("A mighty manufacturing company")));
-                aboutData.put("Description", new Variant(new String("Sample showing the about feature in a service application")));
-            } else if (language.equalsIgnoreCase("es")) { //Spanish
-                aboutData.put("DeviceName", new Variant(new String("Un nombre de dispositivo")));
-                aboutData.put("AppName", new Variant(new String("Un nombre de aplicación")));
-                aboutData.put("Manufacturer", new Variant(new String("Una empresa de fabricación de poderosos")));
-                aboutData.put("Description", new Variant(new String("Muestra que muestra la característica de sobre en una aplicación de servicio")));
-            }
-        }
-
-        private void setAnnouncedData()
-        {
-            announceData.put("AppId",  new Variant(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}));
-            announceData.put("DefaultLanguage",  new Variant(new String("en")));
-            announceData.put("DeviceName", new Variant(new String("A device name")));
-            announceData.put("DeviceId",  new Variant(new String("sampleDeviceId")));
-            announceData.put("AppName", new Variant(new String("An application name")));
-            announceData.put("Manufacturer", new Variant(new String("A mighty manufacturing company")));
-            // Inconsistent with About data value
-            announceData.put("ModelNumber", new Variant(new String("A1B2C3")));
-        }
-
-        public InconsistentData(String language)
-        {
-            setAboutData(language);
-            setAnnouncedData();
-        }
-
-        @Override
-        public Map<String, Variant> getAboutData(String language) throws ErrorReplyBusException
-        {
-            return aboutData;
-        }
-
-        @Override
-        public Map<String, Variant> getAnnouncedAboutData()
-        {
-            return announceData;
-        }
-
-    }
-    class Intfa implements AboutListenerTestInterfaceA, BusObject {
-
-        @Override
-        public String echo(String str) throws BusException {
-            return str;
+            assertEquals("000102030405060708090A0B0C0D0E0C", aboutData.getAppIdAsHexString());
+        } catch (BusException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
         }
     }
 
-    class TestAboutListener implements AboutListener {
-        TestAboutListener() {
-            remoteBusName = null;
-            version = 0;
-            port = 0;
-            announcedFlag = false;
-            aod = null;
+    public void testGetSetDefaultLanguage() {
+        try {
+            AboutData aboutData = new AboutData("en");
+            String defaultLanguage = aboutData.getDefaultLanguage();
+            assertEquals("en", defaultLanguage);
+
+            aboutData.setDefaultLanguage("es");
+            defaultLanguage = aboutData.getDefaultLanguage();
+            assertEquals("es", defaultLanguage);
+        } catch (BusException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
         }
-        public void announced(String busName, int version, short port, AboutObjectDescription[] objectDescriptions, Map<String, Variant> aboutData) {
-            announcedFlag = true;
-            remoteBusName = busName;
-            this.version = version;
-            this.port = port;
-            aod = objectDescriptions;
-            aod = new AboutObjectDescription[objectDescriptions.length];
-            for (int i = 0; i < objectDescriptions.length; ++i) {
-                aod[i] = objectDescriptions[i];
-            }
-            announcedAboutData = aboutData;
-            stopWait();
-        }
-        public String remoteBusName;
-        public int version;
-        public short port;
-        public boolean announcedFlag;
-        public AboutObjectDescription[] aod;
-        public Map<String,Variant> announcedAboutData;
     }
 
-    /*
-     * Positive test
-     *  About data and announced data are correct in this test
-     */
-    public synchronized void testGoodData()
-    {
-        Intfa intfa = new Intfa();
-        assertEquals(Status.OK, serviceBus.registerBusObject(intfa, "/about/test"));
-
-        AboutObj aboutObj = new AboutObj(serviceBus);
+    public void testGetSetDeviceName() {
         AboutData aboutData = new AboutData("en");
-        AboutDataCheck dataChecker = new AboutDataCheck();
-
         try {
-            assertTrue(dataChecker.isDataValid(
-                    aboutData.getAboutData("en"),
-                    aboutData.getAnnouncedAboutData()));
-        } catch (ErrorReplyBusException e) {
-            fail("About data check failed unexpectly!");
+            aboutData.setDeviceName("My Device Name");
+            aboutData.setDeviceName("Mon appareil Nom", "fr");
+            String deviceName = aboutData.getDeviceName();
+            assertEquals("My Device Name", deviceName);
+            deviceName = aboutData.getDeviceName("fr");
+            assertEquals("Mon appareil Nom", deviceName);
+        } catch (BusException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
         }
-
-        assertEquals(Status.OK, aboutObj.announce(PORT_NUMBER, aboutData));
+        try{
+            //no Chinese language should throw a BusException
+            String deviceName = aboutData.getDeviceName("zh");
+            fail("Expected error thrown and it was not thrown.");
+        } catch (BusException e) {
+            assertEquals("Specified language tag not found.", e.getMessage());
+        }
     }
 
-    /*
-     * Negative test
-     *  if any required field is missing from about data, announce should fail
-     */
-    public synchronized void testAboutDataMissingRequiredField() {
-        Intfa intfa = new Intfa();
-        assertEquals(Status.OK, serviceBus.registerBusObject(intfa, "/about/test"));
-
-        AboutObj aboutObj = new AboutObj(serviceBus);
-
-        AboutDataMissingRequiredField aboutBadData = new AboutDataMissingRequiredField("en");
-        AboutDataCheck dataChecker = new AboutDataCheck();
-
+    public void testGetSetDeviceId() {
         try {
-            assertFalse(dataChecker.isDataValid(
-                    aboutBadData.getAboutData("en"),
-                    aboutBadData.getAnnouncedAboutData()));
-        } catch (ErrorReplyBusException e) {
-            fail("About data check succeed unexpectly!");
+            AboutData aboutData = new AboutData("en");
+            aboutData.setDeviceId("MyDeviceId");
+            String deviceId = aboutData.getDeviceId();
+            assertEquals("MyDeviceId", deviceId);
+        } catch (BusException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
         }
-
-        assertEquals(Status.ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, aboutObj.announce(PORT_NUMBER, aboutBadData));
     }
 
-    /*
-     * Negative test
-     *  if any announced field is missing from announce data, announce should fail
-     */
-    public synchronized void testAnnounceDataMissingRequiredField() {
-        Intfa intfa = new Intfa();
-        assertEquals(Status.OK, serviceBus.registerBusObject(intfa, "/about/test"));
-
-        AboutObj aboutObj = new AboutObj(serviceBus);
-
-        AnnounceDataMissingRequiredField aboutBadData = new AnnounceDataMissingRequiredField("en");
-        AboutDataCheck dataChecker = new AboutDataCheck();
-
+    public void testGetSetAppName() {
+        AboutData aboutData = new AboutData("en");
         try {
-            assertFalse(dataChecker.isDataValid(
-                    aboutBadData.getAboutData("en"),
-                    aboutBadData.getAnnouncedAboutData()));
-        } catch (ErrorReplyBusException e) {
-            fail("About data check succeed unexpectly!");
+            aboutData.setAppName("My Application Name");
+            aboutData.setAppName("Mon Nom de l'application", "fr");
+            String appName = aboutData.getAppName();
+            assertEquals("My Application Name", appName);
+            appName = aboutData.getAppName("fr");
+            assertEquals("Mon Nom de l'application", appName);
+        } catch (BusException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
         }
-
-        assertEquals(Status.ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, aboutObj.announce(PORT_NUMBER, aboutBadData));
+        try{
+            //no Chinese language should throw a BusException
+            String appName = aboutData.getAppName("zh");
+            fail("Expected error thrown and it was not thrown.");
+        } catch (BusException e) {
+            assertEquals("Specified language tag not found.", e.getMessage());
+        }
     }
 
-    /*
-     * Negative test
-     *  Announced value(ModelNumber etc.) is inconsistent from about value, announce should fail
-     */
-    public synchronized void testInconsistentValue() {
-        Intfa intfa = new Intfa();
-        assertEquals(Status.OK, serviceBus.registerBusObject(intfa, "/about/test"));
-
-        AboutObj aboutObj = new AboutObj(serviceBus);
-
-        InconsistentData aboutBadData = new InconsistentData("en");
-        AboutDataCheck dataChecker = new AboutDataCheck();
-
+    public void testGetSetManufacturer() {
+        AboutData aboutData = new AboutData("en");
         try {
-            assertFalse(dataChecker.isDataValid(
-                    aboutBadData.getAboutData("en"),
-                    aboutBadData.getAnnouncedAboutData()));
-        } catch (ErrorReplyBusException e) {
-            fail("About data check succeed unexpectly!");
+            aboutData.setManufacturer("Company XYZ");
+            aboutData.setManufacturer("Société XYZ", "fr");
+            String manufacturer = aboutData.getManufacturer();
+            assertEquals("Company XYZ", manufacturer);
+            manufacturer = aboutData.getManufacturer("fr");
+            assertEquals("Société XYZ", manufacturer);
+        } catch (BusException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
         }
-
-        assertEquals(Status.ABOUT_INVALID_ABOUTDATA_LISTENER, aboutObj.announce(PORT_NUMBER, aboutBadData));
-    }
-    
-    /*
-     * Everything is correct except the AppId is not 128-bits
-     */
-    public class AboutDataBadAppId implements AboutDataListener {
-        private Map<String, Variant> aboutData = new HashMap<String, Variant>();
-        private Map<String, Variant> announceData = new HashMap<String, Variant>();
-
-        private void setAboutData(String language)
-        {
-            //nonlocalized values
-            aboutData.put("AppId",  new Variant(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}));
-            aboutData.put("DefaultLanguage",  new Variant(new String("en")));
-            aboutData.put("DeviceId",  new Variant(new String("sampleDeviceId")));
-            aboutData.put("ModelNumber", new Variant(new String("A1B2C3")));
-            aboutData.put("SupportedLanguages", new Variant(new String[] {"en", "es"}));
-            aboutData.put("DateOfManufacture", new Variant(new String("2014-09-23")));
-            aboutData.put("SoftwareVersion", new Variant(new String("1.0")));
-            aboutData.put("AJSoftwareVersion", new Variant(new String("0.0.1")));
-            aboutData.put("HardwareVersion", new Variant(new String("0.1alpha")));
-            //localized values
-            // If the language String is null or an empty string we return the
-            // default language
-            if ((language == null) || (language.length() == 0) || language.equalsIgnoreCase("en")) {
-                aboutData.put("DeviceName", new Variant(new String("A device name")));
-                aboutData.put("AppName", new Variant(new String("An application name")));
-                aboutData.put("Manufacturer", new Variant(new String("A mighty manufacturing company")));
-                aboutData.put("Description", new Variant(new String("Sample showing the about feature in a service application")));
-            } else if (language.equalsIgnoreCase("es")) { //Spanish
-                aboutData.put("DeviceName", new Variant(new String("Un nombre de dispositivo")));
-                aboutData.put("AppName", new Variant(new String("Un nombre de aplicación")));
-                aboutData.put("Manufacturer", new Variant(new String("Una empresa de fabricación de poderosos")));
-                aboutData.put("Description", new Variant(new String("Muestra que muestra la característica de sobre en una aplicación de servicio")));
-            }
+        try{
+            //no Chinese language should throw a BusException
+            String manufacturer = aboutData.getManufacturer("zh");
+            fail("Expected error thrown and it was not thrown.");
+        } catch (BusException e) {
+            assertEquals("Specified language tag not found.", e.getMessage());
         }
-
-        private void setAnnouncedData()
-        {
-            announceData.put("AppId",  new Variant(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}));
-            announceData.put("DefaultLanguage",  new Variant(new String("en")));
-            announceData.put("DeviceName", new Variant(new String("A device name")));
-            announceData.put("DeviceId",  new Variant(new String("sampleDeviceId")));
-            announceData.put("AppName", new Variant(new String("An application name")));
-            announceData.put("Manufacturer", new Variant(new String("A mighty manufacturing company")));
-            announceData.put("ModelNumber", new Variant(new String("A1B2C3")));
-        }
-
-        public AboutDataBadAppId(String language)
-        {
-            setAboutData(language);
-            setAnnouncedData();
-        }
-
-        @Override
-        public Map<String, Variant> getAboutData(String language) throws ErrorReplyBusException
-        {
-            return aboutData;
-        }
-
-        @Override
-        public Map<String, Variant> getAnnouncedAboutData() throws ErrorReplyBusException
-        {
-            return announceData;
-        }
-
     }
 
-    /*
-     * Negative test ASACORE-1130
-     *  AppId does not contain 128-bits
-     */
-    public synchronized void testValidateAboutDataFields_BadAppId() {
-        Intfa intfa = new Intfa();
-        assertEquals(Status.OK, serviceBus.registerBusObject(intfa, "/about/test"));
-
-        AboutObj aboutObj = new AboutObj(serviceBus);
-
-        AboutDataBadAppId aboutBadData = new AboutDataBadAppId("en");
-        AboutDataCheck dataChecker = new AboutDataCheck();
-
+    public void testGetSetModelNumber() {
         try {
-            assertTrue(dataChecker.isDataValid(
-                    aboutBadData.getAboutData("en"),
-                    aboutBadData.getAnnouncedAboutData()));
-        } catch (ErrorReplyBusException e) {
-            fail("About data check succeed unexpectly!");
+            AboutData aboutData = new AboutData("en");
+            aboutData.setModelNumber("123xyz.2");
+            String modelNumber = aboutData.getModelNumber();
+            assertEquals("123xyz.2", modelNumber);
+        } catch (BusException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
+        }
+    }
+
+    public void testGetSetSupportedLanguages() {
+        try {
+            AboutData aboutData = new AboutData();
+            String languagesIn[] = new String[3];
+            languagesIn[0] = "en-US";
+            languagesIn[1] = "fr-CA";
+            languagesIn[2] = "cmn"; //Madarin chinese
+            aboutData.setSupportedLanguages(languagesIn);
+
+            String languagesOut[] = aboutData.getSupportedLanguages();
+            assertEquals(3, languagesOut.length);
+
+
+            aboutData.setSupportedLanguage("fr-ca");
+            languagesOut = aboutData.getSupportedLanguages();
+            assertEquals(3, languagesOut.length);
+
+            aboutData.setSupportedLanguage("EN-us");
+            languagesOut = aboutData.getSupportedLanguages();
+            assertEquals(3, languagesOut.length);
+
+            aboutData.setSupportedLanguage("de"); //German
+
+            languagesOut = aboutData.getSupportedLanguages();
+            assertEquals(4, languagesOut.length);
+        } catch (BusException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
         }
 
-        assertEquals(Status.ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE, aboutObj.announce(PORT_NUMBER, aboutBadData));
+        try {
+            AboutData aboutData = new AboutData();
+            String languagesOut[] = aboutData.getSupportedLanguages();
+            fail("Expected to throw a BusExcpetion");
+            assertEquals(0, languagesOut.length);
+        } catch (BusException e) {
+            assertEquals("About Field Not Found.", e.getMessage());
+        }
+    }
+
+    public void testGetSetDescription() {
+        try {
+            AboutData aboutData = new AboutData("en");
+
+            aboutData.setDescription("Poetic application description.");
+            aboutData.setDescription("Description poétique d'application.", "fr");
+            String description = aboutData.getDescription();
+            assertEquals("Poetic application description.", description);
+            description = aboutData.getDescription("fr");
+            assertEquals("Description poétique d'application.", description);
+
+            //no Chinese language should throw a BusException
+            description = aboutData.getDescription("zh");
+            fail("Expected error thrown and it was not thrown.");
+        } catch (BusException e) {
+            assertEquals("Specified language tag not found.", e.getMessage());
+        }
+    }
+
+    public void testGetSetDateOfManufacture() {
+        try {
+            AboutData aboutData = new AboutData("en");
+            aboutData.setDateOfManufacture("2014-12-19");
+            String dateOfManufacture = aboutData.getDateOfManufacture();
+            assertEquals("2014-12-19", dateOfManufacture);
+        } catch (BusException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
+        }
+    }
+
+    public void testGetSetSoftwareVersion() {
+        try {
+            AboutData aboutData = new AboutData("en");
+            aboutData.setSoftwareVersion("1.0");
+            String softwareVersion = aboutData.getSoftwareVersion();
+            assertEquals("1.0", softwareVersion);
+        } catch (BusException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
+        }
+    }
+
+    public void testGetSetAJSoftwareVersion() {
+        try {
+            AboutData aboutData = new AboutData("en");
+            String ajSoftwareVersion = aboutData.getAJSoftwareVersion();
+            assertEquals(Version.get(), ajSoftwareVersion);
+        } catch (BusException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
+        }
+    }
+
+    public void testGetSetHardwareVersion() {
+        try {
+            AboutData aboutData = new AboutData("en");
+            aboutData.setHardwareVersion("yzy123v");
+            String hardwareVersion = aboutData.getHardwareVersion();
+            assertEquals("yzy123v", hardwareVersion);
+        } catch (BusException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
+        }
+    }
+
+    public void testGetSetSupportURL() {
+        try {
+            AboutData aboutData = new AboutData("en");
+            aboutData.setSupportUrl("www.example.com");
+            String supportURL = aboutData.getSupportUrl();
+            assertEquals("www.example.com", supportURL);
+        } catch (BusException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
+        }
+    }
+
+    class AboutDataTestAboutData extends AboutData {
+        static final String TEST_FIELDABC = "TestFieldABC";
+        AboutDataTestAboutData() {
+            super();
+            setNewFieldDetails(TEST_FIELDABC, FieldDetails.REQUIRED | FieldDetails.ANNOUNCED, "s");
+        }
+
+        AboutDataTestAboutData(String defaultLanguage) {
+            super(defaultLanguage);
+            setNewFieldDetails(TEST_FIELDABC, FieldDetails.REQUIRED | FieldDetails.ANNOUNCED, "s");
+        }
+
+        public void setTestFieldABC(String testFieldABC) throws BusException {
+            setField(TEST_FIELDABC, new Variant(testFieldABC));
+        }
+
+        public String getTestFieldABC() throws BusException {
+            return getField(TEST_FIELDABC).getObject(String.class);
+        }
+    }
+
+    public void testGetSetUserDefinedField() {
+        AboutDataTestAboutData aboutData = new AboutDataTestAboutData("en");
+        try {
+            aboutData.setTestFieldABC("Mary had a little lamb.");
+            String testFieldABC = aboutData.getTestFieldABC();
+            assertEquals("Mary had a little lamb.", testFieldABC);
+            assertTrue(aboutData.isFieldAnnounced(AboutDataTestAboutData.TEST_FIELDABC));
+            assertTrue(aboutData.isFieldRequired(AboutDataTestAboutData.TEST_FIELDABC));
+            assertFalse(aboutData.isFieldLocalized(AboutDataTestAboutData.TEST_FIELDABC));
+        } catch (BusException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
+        }
+
+    }
+
+    // This xml uses a UUID as per RFC-4122 as recommended in the design documents
+    public void testCreateFromXml() {
+        AboutData aboutData = new AboutData();
+        String xml = new String();
+        xml = "<AboutData>"
+            + "  <AppId>b8b12eb2-5b66-4f28-b277-cbb05ad9a5f6</AppId>"
+            + "  <DefaultLanguage>en</DefaultLanguage>"
+            + "  <DeviceName>My Device Name</DeviceName>"
+            + "  <DeviceName lang = 'es'>Nombre de mi dispositivo</DeviceName>"
+            + "  <DeviceId>baddeviceid</DeviceId>"
+            + "  <AppName>My Application Name</AppName>"
+            + "  <AppName lang = 'es'>Mi Nombre de la aplicación</AppName>"
+            + "  <Manufacturer>Company</Manufacturer>"
+            + "  <Manufacturer lang = 'es'>Empresa</Manufacturer>"
+            + "  <ModelNumber>Wxfy388i</ModelNumber>"
+            + "  <Description>A detailed description provided by the application.</Description>"
+            + "  <Description lang = 'es'>Una descripción detallada proporcionada por la aplicación.</Description>" /*TODO look into utf8*/
+            + "  <DateOfManufacture>2014-01-08</DateOfManufacture>"
+            + "  <SoftwareVersion>1.0.0</SoftwareVersion>"
+            + "  <HardwareVersion>1.0.0</HardwareVersion>"
+            + "  <SupportUrl>www.example.com</SupportUrl>"
+            + "  <UserDefinedTag>Can only accept strings anything other than strings must be done using the AboutData Class SetField method</UserDefinedTag>"
+            + "  <UserDefinedTag lang='es'>Sólo se puede aceptar cadenas distintas de cadenas nada debe hacerse utilizando el método AboutData Clase SetField</UserDefinedTag>"
+            + "</AboutData>";
+        try{
+            aboutData.createFromXml(xml);
+        } catch (BusException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
+        }
+
+        try {
+            UUID uuid;
+            uuid = aboutData.getAppIdAsUUID();
+          assertEquals(UUID.fromString("b8b12eb2-5b66-4f28-b277-cbb05ad9a5f6"), uuid);
+        } catch (BusException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
+        }
+
+        try {
+            String defaultLanguage = aboutData.getDefaultLanguage();
+            assertEquals("en", defaultLanguage);
+        } catch (BusException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
+        }
+
+        try {
+            String languagesOut[] = aboutData.getSupportedLanguages();
+            assertEquals(2, languagesOut.length);
+        } catch (BusException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
+        }
+
+        try {
+            String deviceName = aboutData.getDeviceName();
+            assertEquals("My Device Name", deviceName);
+            deviceName = aboutData.getDeviceName("en");
+            assertEquals("My Device Name", deviceName);
+            deviceName = aboutData.getDeviceName("es");
+            assertEquals("Nombre de mi dispositivo", deviceName);
+        } catch (BusException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
+        }
+
+        try {
+            String deviceId = aboutData.getDeviceId();
+            assertEquals("baddeviceid", deviceId);
+        } catch (BusException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
+        }
+
+        try {
+            String appName = aboutData.getAppName();
+            assertEquals("My Application Name", appName);
+            appName = aboutData.getAppName("en");
+            assertEquals("My Application Name", appName);
+            appName = aboutData.getAppName("es");
+            assertEquals("Mi Nombre de la aplicación", appName);
+        } catch (BusException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
+        }
+
+        try {
+            String manufacturer = aboutData.getManufacturer();
+            assertEquals("Company", manufacturer);
+            manufacturer = aboutData.getManufacturer("en");
+            assertEquals("Company", manufacturer);
+            manufacturer = aboutData.getManufacturer("es");
+            assertEquals("Empresa", manufacturer);
+        } catch (BusException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
+        }
+
+        try {
+            String modelNumber = aboutData.getModelNumber();
+            assertEquals("Wxfy388i", modelNumber);
+        } catch (BusException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
+        }
+
+        try {
+            String description = aboutData.getDescription();
+            assertEquals("A detailed description provided by the application.", description);
+            description = aboutData.getDescription("en");
+            assertEquals("A detailed description provided by the application.", description);
+            description = aboutData.getDescription("es");
+            assertEquals("Una descripción detallada proporcionada por la aplicación.", description);
+        } catch (BusException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
+        }
+
+        try {
+            String dateOfManufacture = aboutData.getDateOfManufacture();
+            assertEquals("2014-01-08", dateOfManufacture);
+        } catch (BusException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
+        }
+
+        try {
+            String softwareVersion = aboutData.getSoftwareVersion();
+            assertEquals("1.0.0", softwareVersion);
+        } catch (BusException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
+        }
+
+        try {
+            String hardwareVersion = aboutData.getHardwareVersion();
+            assertEquals("1.0.0", hardwareVersion);
+        } catch (BusException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
+        }
+
+        try {
+            String ajSoftwareVersion = aboutData.getAJSoftwareVersion();
+            assertEquals(Version.get(), ajSoftwareVersion);
+        } catch (BusException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
+        }
+
+        try {
+            String supportUrl = aboutData.getSupportUrl();
+            assertEquals("www.example.com", supportUrl);
+        } catch (BusException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
+        }
+
+        try {
+            Variant userDefiend = aboutData.getField("UserDefinedTag");
+            assertEquals("Can only accept strings anything other than strings must be done using the AboutData Class SetField method", userDefiend.getObject(String.class));
+            userDefiend = aboutData.getField("UserDefinedTag", "en");
+            assertEquals("Can only accept strings anything other than strings must be done using the AboutData Class SetField method", userDefiend.getObject(String.class));
+            userDefiend = aboutData.getField("UserDefinedTag", "es");
+            assertEquals("Sólo se puede aceptar cadenas distintas de cadenas nada debe hacerse utilizando el método AboutData Clase SetField", userDefiend.getObject(String.class));
+        } catch (BusException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
+        }
+    }
+
+    // This xml uses an hex encoded byte string to pass in the AppId.
+    public void testCreateFromXml2() {
+        AboutData aboutData = new AboutData();
+        String xml = new String();
+        xml = "<AboutData>"
+            + "  <AppId>000102030405060708090A0B0C0D0E0C</AppId>"
+            + "  <DefaultLanguage>en</DefaultLanguage>"
+            + "  <DeviceName>My Device Name</DeviceName>"
+            + "  <DeviceName lang = 'es'>Nombre de mi dispositivo</DeviceName>"
+            + "  <DeviceId>baddeviceid</DeviceId>"
+            + "  <AppName>My Application Name</AppName>"
+            + "  <AppName lang = 'es'>Mi Nombre de la aplicación</AppName>"
+            + "  <Manufacturer>Company</Manufacturer>"
+            + "  <Manufacturer lang = 'es'>Empresa</Manufacturer>"
+            + "  <ModelNumber>Wxfy388i</ModelNumber>"
+            + "  <Description>A detailed description provided by the application.</Description>"
+            + "  <Description lang = 'es'>Una descripción detallada proporcionada por la aplicación.</Description>" /*TODO look into utf8*/
+            + "  <DateOfManufacture>2014-01-08</DateOfManufacture>"
+            + "  <SoftwareVersion>1.0.0</SoftwareVersion>"
+            + "  <HardwareVersion>1.0.0</HardwareVersion>"
+            + "  <SupportUrl>www.example.com</SupportUrl>"
+            + "  <UserDefinedTag>Can only accept strings anything other than strings must be done using the AboutData Class SetField method</UserDefinedTag>"
+            + "  <UserDefinedTag lang='es'>Sólo se puede aceptar cadenas distintas de cadenas nada debe hacerse utilizando el método AboutData Clase SetField</UserDefinedTag>"
+            + "</AboutData>";
+        try{
+            aboutData.createFromXml(xml);
+        } catch (BusException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
+        }
+
+        try {
+            String uuid = aboutData.getAppIdAsHexString();
+          assertEquals("000102030405060708090A0B0C0D0E0C", uuid);
+        } catch (BusException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
+        }
     }
 }
