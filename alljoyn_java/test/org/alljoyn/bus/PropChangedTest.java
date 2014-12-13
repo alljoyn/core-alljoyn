@@ -865,7 +865,7 @@ public class PropChangedTest
      * Functional tests for the newly added EmitPropChanged function for multiple properties (independent of
      * RegisterPropertiesChangedListener). For BusObject containing interfaces created with three different annotations
      * of PropertiesChanged (true, invalidated, false).
-     * 
+     *
      * Note: Property with annotation "false" is part of all tests and validation is done that it is not sent over.
      */
 
@@ -873,7 +873,7 @@ public class PropChangedTest
      * Create a BusObject containing an interface with single property, P1. Invoke newly added EmitPropChanged function
      * for multiple properties to indicate a change to P1. Verify that the signal sent across contains the P1 and its
      * value.
-     * 
+     *
      * Note: Property with annotation "true".
      */
     public void testEmitPropChanged_1()
@@ -897,7 +897,7 @@ public class PropChangedTest
      * Create a BusObject containing an interface with multiple properties, P1, P2, P3, and P4. Invoke newly added
      * EmitPropChanged function for multiple properties to indicate a change to P1, P2, P3 and P4. Verify that the
      * signal sent across contains the P1, P2, P3 and P4.
-     * 
+     *
      * Note: Properties with annotation "true".
      */
     public void testEmitPropChanged_3()
@@ -920,7 +920,7 @@ public class PropChangedTest
     /*
      * Functional tests for the newly added RegisterPropertiesChangedListener. For ProxyBusObject created in three
      * different ways (via Introspection, via raw xml, programmatically).
-     * 
+     *
      * Note: using java Interface class only (-> programmatically)
      */
 
@@ -1089,7 +1089,7 @@ public class PropChangedTest
     /*
      * Functional test for partially created ProxyBusObject run the following test (a scenario where for example the
      * BusObject could have 20 different interfaces while the ProxyBusObject only has 1 out of 20):
-     * 
+     *
      * Create a ProxyBusObject with only one of interfaces I1 as compared the full list of interfaces in BusObject.
      * Register listeners L1 for all properties of I1. EmitPropChanged signal for properties in I1. Verify that L1 does
      * get invoked.
@@ -1111,14 +1111,14 @@ public class PropChangedTest
     /*
      * Functional test for the same Listener being registered for different ProxyBusObjects (listener is tied to an
      * interface and a set of properties).
-     * 
+     *
      * Create three different proxy bus objects PB1, PB2 and PB3. PB1 and PB2 are proxies for the same bus object BobA
      * over different session ids (S1 and S2). PB3 is a proxy for a different bus object BobB. Both the BusObjects BobA
      * and BobB implement interface I. Register the same Listener L for all three proxy bus objects for all properties
      * of I. - Emit PropChanged signal from BobA over S1. Verify that L gets invoked with PB1. - Emit PropChanged signal
      * from BobA over S2. Verify that L gets invoked with PB2. - EmitPropChanged signal from BobB. Verify that L gets
      * invoked with PB3.
-     * 
+     *
      * Negative tests also included: - Using the same listener L for all. - Emit PropChanged signal from BobA over S1.
      * Verify that L does NOT get invoked with PB2 and PB3. - Emit PropChanged signal from BobA over S2. Verify that L
      * does NOT get invoked with PB1 and PB3. - EmitPropChanged signal from BobB. Verify that L does NOT get invoked
@@ -1198,16 +1198,16 @@ public class PropChangedTest
 
     /*
      * The following are the tests that check the return codes of EmitPropChanged.
-     * 
+     *
      * 1. Invoke the newly added EmitPropChanged with NULL as the interface name. ER_OK should not be returned.
-     * 
+     *
      * 2. Invoke the newly added EmitPropChanged with an invalid interface name. ER_OK should not be returned.
-     * 
+     *
      * 3. Invoke the newly added EmitPropChanged with an invalid property name. ER_OK should not be returned.
-     * 
+     *
      * 4. Invoke the newly added EmitPropChanged with a mixture of valid and invalid properties. ER_OK should not be
      * returned.
-     * 
+     *
      * Note: Tests have been adapted to fit the Java API. The wording that is used is still the one from the
      * "Test Approach ASACORE-47" document.
      */
@@ -1261,20 +1261,20 @@ public class PropChangedTest
 
     /*
      * The following are the tests that check the return codes of RegisterPropertiesChangedListener.
-     * 
+     *
      * 5. Create a ProxyBusObject and invoke RegisterPropertiesChangedListener with NULL as the interface parameter. The
      * return code should be ER_BUS_OBJECT_NO_SUCH_INTERFACE.
-     * 
+     *
      * 6. Create a ProxyBusObject and invoke RegisterPropertiesChangedListener with an invalid string as an interface
      * parameter. The return code should be ER_BUS_OBJECT_NO_SUCH_INTERFACE.
-     * 
+     *
      * 7. Create a ProxyBusObject and invoke RegisterPropertiesChangedListener with a non-existent property. The return
      * code should be ER_BUS_NO_SUCH_PROPERTY.
-     * 
+     *
      * 8. Create a ProxyBusObject and invoke RegisterPropertiesChangedListener with an array of properties that contains
      * a mix of valid properties and invalid / non-existent properties. The return code should be
      * ER_BUS_NO_SUCH_PROPERTY.
-     * 
+     *
      * Note: Tests have been adapted to fit the Java API. The wording that is used is still the one from the
      * "Test Approach ASACORE-47" document.
      */
@@ -1318,17 +1318,19 @@ public class PropChangedTest
 
     /*
      * The following are the tests that check the return codes of RegisterPropertiesChangedListener.
-     * 
+     *
      * 9. Create a ProxyBusObject and register a listener. Invoke UnregisterPropertiesChangedListener with NULL as
      * interface parameter. The return code should be ER_BUS_OBJECT_NO_SUCH_INTERFACE.
-     * 
+     *
      * 10. Create a ProxyBusObject and register a listener. Invoke UnregisterPropertiesChangedListener with a
      * non-existent random string as interface parameter. The return code should be ER_BUS_OBJECT_NO_SUCH_INTERFACE.
-     * 
+     *
      * Note: Tests have been adapted to fit the Java API. The wording that is used is still the one from the
      * "Test Approach ASACORE-47" document.
+     *
+     * This test is DISABLED until ASACORE-1294 is resolved.
      */
-    public void testUnregisterPropertiesChangedListener_Negative()
+    public void DISABLED_testUnregisterPropertiesChangedListener_Negative()
         throws BusException
     {
         Exception ex;
@@ -1346,7 +1348,6 @@ public class PropChangedTest
             mProxy.unregisterPropertiesChangedListener(null, mProxy.mListeners.get(ip.name));
         }
         catch (NullPointerException e) {
-            e.printStackTrace();
             ex = e;
         }
         assertNotNull(ex);

@@ -438,12 +438,34 @@ public class ProxyBusObject {
         return map;
     }
 
+    /**
+     * Function to register a handler for property change events.
+     * Note that registering the same handler callback for the same
+     * interface will overwrite the previous registration.  The same
+     * handler callback may be registered for several different
+     * interfaces simultaneously.
+     *
+     * @param iface             Remote object's interface on which the property is defined.
+     * @param properties        The name of the properties to monitor (NULL for all).
+     * @param listener          Reference to the object that will receive the callback.
+     * @return
+     *      - #ER_OK if the handler was registered successfully
+     *      - #ER_BUS_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
+     *      - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
+     */
     public native Status registerPropertiesChangedListener(String iface, String[] properties,
-                                                           PropertiesChangedListener listener) throws BusException;
+                                                           PropertiesChangedListener listener);
 
-    public native void
-        unregisterPropertiesChangedListener(String iface, PropertiesChangedListener listener)
-            throws BusException;
-
+    /**
+     * Function to unregister a handler for property change events.
+     *
+     * @param iface     Remote object's interface on which the property is defined.
+     * @param listener  Reference to the object that used to receive the callback.
+     * @return
+     *      - #ER_OK if the handler was registered successfully
+     *      - #ER_BUS_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
+     */
+    public native Status unregisterPropertiesChangedListener(String iface,
+                                                             PropertiesChangedListener listener);
 }
 
