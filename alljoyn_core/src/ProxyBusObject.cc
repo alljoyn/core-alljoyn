@@ -63,121 +63,6 @@ using namespace std;
 namespace ajn {
 
 
-class MatchRuleTracker : public MessageReceiver, public BusAttachment::GetNameOwnerAsyncCB {
-  public:
-    struct GetNameOwnerCBContext {
-        GetNameOwnerCBContext(BusAttachment& bus, String& nameRef, const char* iface) :
-            bus(bus), nameRef(nameRef), iface(iface)
-        {
-        }
-        BusAttachment& bus;
-        String& nameRef;
-        const String iface;
-    };
-
-    MatchRuleTracker() { }
-    ~MatchRuleTracker() { }
-
-    QStatus AddMatch(BusAttachment& bus, const String iface)
-    {
-        QStatus status = ER_OK;
-        propChangeAddMatchRulesLock.Lock();
-        if (propChangeAddMatchRules.find(iface) == propChangeAddMatchRules.end()) {
-            /* first listener for this interface */
-            String rule("type='signal',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged',arg0='" + iface + "'");
-            MsgArg arg("s", rule.c_str());
-            const ProxyBusObject& dbusObj = bus.GetDBusProxyObj();
-            status = dbusObj.MethodCallAsync(org::freedesktop::DBus::InterfaceName, "AddMatch",
-                                             const_cast<MessageReceiver*>(static_cast<const MessageReceiver* const>(this)),
-                                             static_cast<MessageReceiver::ReplyHandler>(&MatchRuleTracker::MatchReplyHandler),
-                                             &arg, 1, new pair<String, bool>(iface, true));
-        }
-        if (status == ER_OK) {
-            propChangeAddMatchRules.insert(iface);
-        }
-        propChangeAddMatchRulesLock.Unlock();
-        return status;
-    }
-
-    QStatus RemoveMatch(BusAttachment& bus, const String iface)
-    {
-        QStatus status = ER_OK;
-        propChangeAddMatchRulesLock.Lock();
-        multiset<StringMapKey>::iterator it = propChangeAddMatchRules.find(iface);
-        if (it != propChangeAddMatchRules.end()) {
-            propChangeAddMatchRules.erase(it);
-        }
-        if (propChangeAddMatchRules.find(iface) == propChangeAddMatchRules.end()) {
-            /* no more property change listeners for this interface */
-            String rule("type='signal',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged',arg0='" + iface + "'");
-            MsgArg arg("s", rule.c_str());
-            const ProxyBusObject& dbusObj = bus.GetDBusProxyObj();
-            status = dbusObj.MethodCallAsync(org::freedesktop::DBus::InterfaceName, "RemoveMatch",
-                                             const_cast<MessageReceiver*>(static_cast<const MessageReceiver* const>(this)),
-                                             static_cast<MessageReceiver::ReplyHandler>(&MatchRuleTracker::MatchReplyHandler),
-                                             &arg, 1, new pair<String, bool>(iface, false));
-        }
-        propChangeAddMatchRulesLock.Unlock();
-        return status;
-    }
-
-    void MatchReplyHandler(Message& msg, void* context)
-    {
-        pair<String, bool>* ctx = static_cast<pair<String, bool>*>(context);
-        if (msg->GetType() == MESSAGE_ERROR) {
-            const String& iface = ctx->first;
-            bool add = ctx->second;
-            propChangeAddMatchRulesLock.Lock();
-            if (add) {
-                // AddMatch failed - remove entry from set
-                multiset<StringMapKey>::iterator it = propChangeAddMatchRules.find(iface);
-                if (it != propChangeAddMatchRules.end()) {
-                    propChangeAddMatchRules.erase(it);
-                }
-            } else {
-                // RemoveMatch failed - replace entry in set
-                propChangeAddMatchRules.insert(iface);
-            }
-            propChangeAddMatchRulesLock.Unlock();
-        }
-        delete ctx;
-    }
-
-    void GetNameOwnerCB(QStatus status, const char* uniqueName, void* context)
-    {
-        /*
-         * This little loop of spaghetti code populates the uniqueName
-         * member of the ProxyBusObject instance that called
-         * BusAttachment::GetNameOwnerAsync().  This is done because
-         * the ProxyBusObject needs to know the uniqueName of the
-         * sender of the PropertiesChanged signal so that it can
-         * properly filter properties changed events.
-         *
-         * Ideally, the ProxyBusObject would know the unique name and
-         * all alias pertaining to the BusObject it is proxying from
-         * the get-go.  Alas, this is not the case and thus the
-         * existence of this little function to ensure we at least get
-         * the unique name.
-         */
-
-        GetNameOwnerCBContext* ctx = static_cast<GetNameOwnerCBContext*>(context);
-        if (status == ER_OK) {
-            ctx->nameRef = uniqueName;
-            AddMatch(ctx->bus, ctx->iface);
-        }
-        delete ctx;
-    }
-
-  private:
-    multiset<StringMapKey> propChangeAddMatchRules;
-    Mutex propChangeAddMatchRulesLock;
-};
-
-/** Static match rule tracker to keep track of how many property changed listeners there are per interface.*/
-static MatchRuleTracker matchRuleTracker;
-
-
-
 template <typename _cbType> struct CBContext {
     CBContext(ProxyBusObject* obj, ProxyBusObject::Listener* listener, _cbType callback, void* context)
         : obj(obj), listener(listener), callback(callback), context(context) { }
@@ -490,6 +375,8 @@ QStatus ProxyBusObject::RegisterPropertiesChangedListener(const char* iface,
                                                           ProxyBusObject::PropertiesChangedListener& listener,
                                                           void* context)
 {
+    QCC_DbgTrace(("ProxyBusObject::RegisterPropertiesChangedListener(iface = %s, properties = %p, propertiesSize = %u, listener = %p, context = %p",
+                  iface, properties, propertiesSize, &listener, context));
     const InterfaceDescription* ifc = bus->GetInterface(iface);
     if (!ifc) {
         return ER_BUS_OBJECT_NO_SUCH_INTERFACE;
@@ -523,17 +410,20 @@ QStatus ProxyBusObject::RegisterPropertiesChangedListener(const char* iface,
     QStatus status = ER_OK;
     if (!replace) {
         if (uniqueName.empty()) {
-            status = bus->GetNameOwnerAsync(serviceName.c_str(), &matchRuleTracker, new MatchRuleTracker::GetNameOwnerCBContext(*bus, uniqueName, iface));
-        } else {
-            status = matchRuleTracker.AddMatch(*bus, ifaceStr);
+            uniqueName = bus->GetNameOwner(serviceName.c_str());
         }
+
+        String rule("type='signal',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged',arg0='" + ifaceStr + "'");
+        status = bus->AddMatch(rule.c_str());
     }
 
     return status;
 }
 
-QStatus ProxyBusObject::UnregisterPropertiesChangedListener(const char* iface, ProxyBusObject::PropertiesChangedListener& listener)
+QStatus ProxyBusObject::UnregisterPropertiesChangedListener(const char* iface,
+                                                            ProxyBusObject::PropertiesChangedListener& listener)
 {
+    QCC_DbgTrace(("ProxyBusObject::UnregisterPropertiesChangedListener(iface = %s, listener = %p", iface, &listener));
     if (!bus->GetInterface(iface)) {
         return ER_BUS_OBJECT_NO_SUCH_INTERFACE;
     }
@@ -557,7 +447,8 @@ QStatus ProxyBusObject::UnregisterPropertiesChangedListener(const char* iface, P
 
     QStatus status = ER_OK;
     if (removed) {
-        status = matchRuleTracker.RemoveMatch(*bus, ifaceStr);
+        String rule("type='signal',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged',arg0='" + ifaceStr + "'");
+        status = bus->RemoveMatch(rule.c_str());
     }
 
     return status;
@@ -1415,12 +1306,6 @@ void ProxyBusObject::DestructComponents()
         }
 
         if (bus) {
-            multimap<StringMapKey, PropertiesChangedCB>::iterator cbit;
-            for (cbit = components->propertiesChangedCBs.begin(); cbit != components->propertiesChangedCBs.end(); ++cbit) {
-                const String ifaceStr = cbit->first.c_str();
-                matchRuleTracker.RemoveMatch(*bus, ifaceStr);
-            }
-
             bus->UnregisterAllHandlers(this);
         }
 

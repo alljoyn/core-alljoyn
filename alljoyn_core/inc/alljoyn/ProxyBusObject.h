@@ -37,6 +37,7 @@
 namespace qcc {
 /** @internal Forward references */
 class Mutex;
+class Condition;
 }
 
 namespace ajn {
@@ -52,6 +53,7 @@ class BusAttachment;
 class ProxyBusObject : public MessageReceiver {
     friend class XmlHelper;
     friend class AllJoynObj;
+    friend class MatchRuleTracker;
 
   public:
 
@@ -449,6 +451,10 @@ class ProxyBusObject : public MessageReceiver {
      * interface will overwrite the previous registration.  The same
      * handler callback may be registered for several different
      * interfaces simultaneously.
+     *
+     * Note that this makes method calls under the hood.  If this is
+     * called from a message handler or other AllJoyn callback, you
+     * must call BusAttachment::EnableConcurrentCallbacks().
      *
      * @param iface             Remote object's interface on which the property is defined.
      * @param properties        The name of the properties to monitor (NULL for all).

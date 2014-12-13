@@ -65,7 +65,7 @@ static const char bundledConfig[] =
 #endif
     "  <listen>tcp:iface=*,port=0</listen>"
     "  <listen>udp:iface=*,port=0</listen>"
-    "  <limit name=\"auth_timeout\">5000</limit>"
+    "  <limit name=\"auth_timeout\">20000</limit>"
     "  <limit name=\"max_incomplete_connections\">4</limit>"
     "  <limit name=\"max_completed_connections\">16</limit>"
     "  <limit name=\"max_untrusted_clients\">8</limit>"

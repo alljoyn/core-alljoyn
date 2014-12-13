@@ -76,6 +76,11 @@ class AboutData::Internal {
     std::set<qcc::String, CaseInsensitiveCompare> supportedLanguages;
 
     /**
+     * typedef supported languages iterator
+     */
+    typedef std::set<qcc::String, CaseInsensitiveCompare>::iterator supportedLanguagesIterator;
+
+    /**
      * mutex lock to protect the property store.
      */
     qcc::Mutex propertyStoreLock;
