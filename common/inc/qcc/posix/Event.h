@@ -60,10 +60,10 @@ class Event {
     static const uint32_t WAIT_FOREVER = static_cast<uint32_t>(-1);
 
     /** Singleton always set Event */
-    static Event alwaysSet;
+    static Event& alwaysSet;
 
     /** Singleton never set Event */
-    static Event neverSet;
+    static Event& neverSet;
 
     /** Type of event */
     typedef enum {

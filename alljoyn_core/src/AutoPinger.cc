@@ -85,8 +85,8 @@ class PingAsyncContext  {
     PingListener& pingListener;
 };
 
-static std::set<PingAsyncContext*> ctxs;
-static qcc::Mutex ctxMutex;
+static std::set<PingAsyncContext*>* ctxs = NULL;
+static qcc::Mutex* ctxMutex = NULL;
 
 // Callback handler for async pin calls
 class AutoPingAsyncCB : public BusAttachment::PingAsyncCB {
@@ -94,10 +94,10 @@ class AutoPingAsyncCB : public BusAttachment::PingAsyncCB {
     void PingCB(QStatus status, void* context) {
         PingAsyncContext* ctx = (PingAsyncContext*)context;
 
-        ctxMutex.Lock();
-        std::set<PingAsyncContext*>::iterator it = ctxs.find(ctx);
+        ctxMutex->Lock();
+        std::set<PingAsyncContext*>::iterator it = ctxs->find(ctx);
 
-        if (it != ctxs.end()) {
+        if (it != ctxs->end()) {
             if ((ctx->pinger->IsRunning()) && (false == ctx->pinger->pausing)) {
                 if (ER_OK != status) {
                     if (ER_ALLJOYN_PING_REPLY_IN_PROGRESS != status) {
@@ -124,19 +124,55 @@ class AutoPingAsyncCB : public BusAttachment::PingAsyncCB {
             } else {
                 QCC_DbgPrintf(("AutoPinger: ignoring callback - pinger not running"));
             }
-            ctxs.erase(it);
+            ctxs->erase(it);
         } else {
             QCC_DbgPrintf(("AutoPinger: ignoring callback - ping already gone"));
         }
 
-        ctxMutex.Unlock();
+        ctxMutex->Unlock();
 
         delete ctx;
     }
 };
 
-static AutoPingAsyncCB pingCallback;
+static AutoPingAsyncCB* pingCallback = NULL;
 
+static int autoPingerCounter = 0;
+bool AutoPingerInit::cleanedup = false;
+AutoPingerInit::AutoPingerInit()
+{
+    if (autoPingerCounter++ == 0) {
+        ctxs = new std::set<PingAsyncContext*>();
+        ctxMutex = new qcc::Mutex();
+        pingCallback = new AutoPingAsyncCB();
+    }
+}
+
+AutoPingerInit::~AutoPingerInit()
+{
+    if (--autoPingerCounter == 0 && !cleanedup) {
+        delete ctxs;
+        ctxs = NULL;
+        delete ctxMutex;
+        ctxMutex = NULL;
+        delete pingCallback;
+        pingCallback = NULL;
+        cleanedup = true;
+    }
+}
+
+void AutoPingerInit::Cleanup()
+{
+    if (!cleanedup) {
+        delete ctxs;
+        ctxs = NULL;
+        delete ctxMutex;
+        ctxMutex = NULL;
+        delete pingCallback;
+        pingCallback = NULL;
+        cleanedup = true;
+    }
+}
 AutoPinger::AutoPinger(ajn::BusAttachment& _busAttachment) :
     timer("autopinger"), busAttachment(_busAttachment), pausing(false)
 {
@@ -158,15 +194,15 @@ AutoPinger::~AutoPinger()
     timer.Join();
 
     // Invalidate all ctx;
-    ctxMutex.Lock();
-    for (std::set<PingAsyncContext*>::iterator it = ctxs.begin(); it != ctxs.end();) {
+    ctxMutex->Lock();
+    for (std::set<PingAsyncContext*>::iterator it = ctxs->begin(); it != ctxs->end();) {
         if ((*it)->pinger == this) {
-            ctxs.erase(it++);
+            ctxs->erase(it++);
         } else {
             it++;
         }
     }
-    ctxMutex.Unlock();
+    ctxMutex->Unlock();
 
     // Cleanup all groups
     pingerMutex.Lock();
@@ -191,22 +227,22 @@ void AutoPinger::AlarmTriggered(const qcc::Alarm& alarm, QStatus reason)
 void AutoPinger::PingGroupDestinations(const qcc::String& group)
 {
     QCC_DbgPrintf(("AutoPinger: start pinging destination in group: '%s'", group.c_str()));
-    ctxMutex.Lock();
+    ctxMutex->Lock();
     pingerMutex.Lock();
     std::map<qcc::String, PingGroup*>::const_iterator it = pingGroups.find(group);
     if (it != pingGroups.end()) {
         std::map<Destination, unsigned int>::iterator mapIt = (*it).second->destinations.begin();
         for (; mapIt != (*it).second->destinations.end(); ++mapIt) {
             PingAsyncContext* context = new PingAsyncContext(this, group, mapIt->first.destination, mapIt->first.oldState, (*it).second->pingListener);
-            std::pair<std::set<PingAsyncContext*>::iterator, bool> pair = ctxs.insert(context);
-            if (ER_OK != busAttachment.PingAsync(mapIt->first.destination.c_str(), PING_TIMEOUT, &pingCallback, context)) {
-                ctxs.erase(pair.first);
+            std::pair<std::set<PingAsyncContext*>::iterator, bool> pair = ctxs->insert(context);
+            if (ER_OK != busAttachment.PingAsync(mapIt->first.destination.c_str(), PING_TIMEOUT, pingCallback, context)) {
+                ctxs->erase(pair.first);
                 delete context;
             }
         }
     }
     pingerMutex.Unlock();
-    ctxMutex.Unlock();
+    ctxMutex->Unlock();
 }
 
 void AutoPinger::Pause()

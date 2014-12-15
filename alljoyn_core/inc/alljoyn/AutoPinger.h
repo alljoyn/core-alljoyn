@@ -151,6 +151,14 @@ class AutoPinger : public qcc::AlarmListener {
 
     bool pausing;
 };
+static class AutoPingerInit {
+  public:
+    AutoPingerInit();
+    ~AutoPingerInit();
+    static void Cleanup();
+  private:
+    static bool cleanedup;
+} autoPingerInit;
 }
 #undef QCC_MODULE
 #endif /* AUTOPINGER_H_ */

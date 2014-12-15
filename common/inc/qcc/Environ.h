@@ -54,11 +54,6 @@ class Environ {
     static Environ* GetAppEnviron(void);
 
     /**
-     * Delete the static singleton object. Must be the last call.
-     */
-    static void Cleanup(void);
-
-    /**
      * Return a specific environment variable
      */
     qcc::String Find(const qcc::String& key, const char* defaultValue = NULL);
