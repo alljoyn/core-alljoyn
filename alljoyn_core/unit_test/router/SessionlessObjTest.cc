@@ -56,7 +56,7 @@ TEST_P(SessionlessBackoffAlgorithmTest, Backoff)
 
     /* Initial backoff (T) */
     SessionlessObj::GetNextJoinTime(backoff, doInitialBackoff, i++, first, next);
-    ASSERT_LT(first, next); ASSERT_LT(next, first + T);
+    ASSERT_LE(first, next); ASSERT_LT(next, first + T);
 
     /* Begin linear backoff (k) */
     while (i <= k) {
@@ -66,7 +66,7 @@ TEST_P(SessionlessBackoffAlgorithmTest, Backoff)
         }
         hi = lo + i * T;
         SessionlessObj::GetNextJoinTime(backoff, doInitialBackoff, i++, first, next);
-        ASSERT_LT(lo, next); ASSERT_LT(next, hi);
+        ASSERT_LE(lo, next); ASSERT_LT(next, hi);
     }
 
     /* Continue with exponential backoff (c) */
@@ -74,14 +74,14 @@ TEST_P(SessionlessBackoffAlgorithmTest, Backoff)
         lo = hi;
         hi += j * 2 * T;
         SessionlessObj::GetNextJoinTime(backoff, doInitialBackoff, i++, first, next);
-        ASSERT_LT(lo, next); ASSERT_LT(next, hi);
+        ASSERT_LE(lo, next); ASSERT_LT(next, hi);
     }
 
     /* Constant retry period until R reached */
     while (SessionlessObj::GetNextJoinTime(backoff, doInitialBackoff, i++, first, next) == ER_OK) {
         lo = hi;
         hi += c * T;
-        ASSERT_LT(lo, next); ASSERT_LT(next, hi);
+        ASSERT_LE(lo, next); ASSERT_LT(next, hi);
     }
 
     /* Done after R sec */
