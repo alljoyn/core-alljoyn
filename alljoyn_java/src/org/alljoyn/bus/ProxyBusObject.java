@@ -106,7 +106,7 @@ public class ProxyBusObject {
     private synchronized native void destroy();
 
     /** Called by native code to lazily add an interface when a proxy method is invoked. */
-    private int addInterface(String name) throws AnnotationBusException {
+    protected int addInterface(String name) throws AnnotationBusException {
         for (Class<?> intf : proxy.getClass().getInterfaces()) {
             if (name.equals(InterfaceDescription.getName(intf))) {
                 InterfaceDescription desc = new InterfaceDescription();
