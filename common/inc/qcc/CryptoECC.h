@@ -107,6 +107,14 @@ struct ECCPublicKey {
         }
     }
 
+    void operator=(const ECCPublicKey& k)
+    {
+        memcpy(x, k.x, ECC_COORDINATE_SZ);
+        memcpy(y, k.y, ECC_COORDINATE_SZ);
+    }
+
+    size_t GetStorablePubKey(uint8_t(&data)[qcc::ECC_COORDINATE_SZ + qcc::ECC_COORDINATE_SZ]) const;
+    QStatus SetPubKeyFromStorage(const uint8_t* data, size_t size);
     const qcc::String ToString() const;
 
 };

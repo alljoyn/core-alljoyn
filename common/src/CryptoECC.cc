@@ -2029,4 +2029,23 @@ const qcc::String ECCPublicKey::ToString() const
     return s;
 }
 
+size_t ECCPublicKey::GetStorablePubKey(uint8_t(&data)[qcc::ECC_COORDINATE_SZ + qcc::ECC_COORDINATE_SZ]) const
+{
+    memcpy(data, x, qcc::ECC_COORDINATE_SZ);
+    memcpy(data + qcc::ECC_COORDINATE_SZ, y, qcc::ECC_COORDINATE_SZ);
+    return qcc::ECC_COORDINATE_SZ + qcc::ECC_COORDINATE_SZ;
+}
+
+QStatus ECCPublicKey::SetPubKeyFromStorage(const uint8_t* data, size_t size)
+{
+    if ((size != (qcc::ECC_COORDINATE_SZ + qcc::ECC_COORDINATE_SZ)) || (!data)) {
+        return ER_FAIL;
+    }
+
+    memcpy(x, data, qcc::ECC_COORDINATE_SZ);
+    memcpy(y, data + qcc::ECC_COORDINATE_SZ, qcc::ECC_COORDINATE_SZ);
+
+    return ER_OK;
+}
+
 } /* namespace qcc */
