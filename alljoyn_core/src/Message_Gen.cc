@@ -75,9 +75,15 @@ namespace ajn {
         *bufPos++ = n; \
     } while (0)
 
-#define MarshalBytes(data, len) \
+#define MarshalNonNullBytes(data, len) \
     do { \
         memcpy(bufPos, data, len); \
+        bufPos += len; \
+    } while (0)
+
+#define MarshalBytes(data, len) \
+    do { \
+        if (data) { memcpy(bufPos, data, len); } \
         bufPos += len; \
     } while (0)
 
@@ -398,7 +404,7 @@ QStatus _Message::MarshalArgs(const MsgArg* arg, size_t numArgs)
                 status = SignatureUtils::MakeSignature(arg->v_variant.val, 1, sig + 1, len);
                 if (status == ER_OK) {
                     sig[0] = (char)len;
-                    MarshalBytes(sig, len + 2);
+                    MarshalNonNullBytes(sig, len + 2);
                     status = MarshalArgs(arg->v_variant.val, 1);
                 }
             }
