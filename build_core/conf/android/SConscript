@@ -18,8 +18,8 @@ import string
 import subprocess
 
 
-# Froyo is API level 8
-min_api_level = 8
+# ICS is API level 15
+min_api_level = 15
 
 Import('env')
 
@@ -53,19 +53,14 @@ if env.get('ANDROID_SRC', '') == '':
 if env.get('ANDROID_TARGET', '') == '':
    env['ANDROID_TARGET'] = 'generic'
 
-
-ndk_api_levels = set([ int(d.split('-')[-1]) for d in os.listdir(env['ANDROID_NDK'] + '/platforms') ])
-max_ndk_api_level = max(ndk_api_levels)
 if env.get('ANDROID_SDK', '') != '':
-   if max_ndk_api_level < min_api_level:
-      print 'Installed Android NDK does not support the minimum API level %d.' % min_api_level
-      if not GetOption('help'):
-         Exit(1)
-
-   min_ndk_api_level = min([ level for level in ndk_api_levels if level >= min_api_level ])
+   #Get the list of supported SDK platforms.
+   #Use the latest one as compileSdkVersion (to define which android.jar to use).
+   #It should be pretty safe always to compile with the latest one.
+   #This should not be done for minSdkVersion or targetSdkVersion!
    api_levels = [ level
                   for level in set([ int(d.split('-')[-1]) for d in os.listdir(env['ANDROID_SDK'] + '/platforms') ])
-                  if level >= min_ndk_api_level ]
+                  if level >= min_api_level ]
 
    api_levels.sort()
 
@@ -99,12 +94,14 @@ if not GetOption('help') and env.has_key('ANDROID_NDK'):
 
    # Do a "test build" using ndk-build on our special Android.mk file to get
    # the command line options used by Android when building code.
+   # Use same NDK level as the SDK level. If there's not NDK for that particular level the android
+   # buildsystem will automatically select the correct one (next lower available)
    tb = subprocess.Popen([ env.subst('$ANDROID_NDK/ndk-build'),
                            'APP_BUILD_SCRIPT=%s/Android.mk' % curdir,
                            'NDK_PROJECT_PATH=%s' % curdir,
                            'APP_ABI=%s' % abi_map[env['CPU']],
                            'APP_STL=%s' % env['ANDROID_STL'],
-                           'APP_PLATFORM=android-%s' % str(max_ndk_api_level),
+                           'APP_PLATFORM=android-%s' % str(min_api_level),
                            '-n' ],
                          stdout = subprocess.PIPE)
    stdoutdata, stderrdata = tb.communicate()
@@ -159,8 +156,22 @@ if not GetOption('help') and env.has_key('ANDROID_NDK'):
    env.Append(LIBPATH = '$ANDROID_SRC/out/target/product/$ANDROID_TARGET/system/lib')
 
    env.Append(CPPDEFINES = 'QCC_OS_ANDROID')
-   env.Append(CFLAGS = ['-Wno-deprecated', '-pie', '-fPIE'])
-   env.Append(CXXFLAGS = ['-Wno-deprecated', '-pie', '-fPIE'])
+   env.Append(CFLAGS = ['-Wall',
+                       '-pipe',
+                       '-Wno-long-long',
+                       '-Wno-deprecated',
+                       '-Wno-unknown-pragmas',
+                       '-pie',
+                       '-fPIE'])
+   env.Append(CXXFLAGS = ['-Wall',
+                       '-pipe',
+                       '-std=gnu++0x',
+                       '-Wno-long-long',
+                       '-Wno-deprecated',
+                       '-Wno-unknown-pragmas',
+                       '-pie',
+                       '-fPIE'])
+
 
    env.Append(LINKFLAGS = ['-Wl,--gc-sections', '-Wl,-z,nocopyreloc', '-pie', '-fPIE'])
 
