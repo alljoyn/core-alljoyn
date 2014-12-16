@@ -1731,7 +1731,9 @@ void AllJoynPeerObj::SetupPeerAuthentication(const qcc::String& authMechanisms, 
 {
     /* clean up first */
     delete [] supportedAuthSuites;
+    supportedAuthSuites = NULL;
     delete permissionMgmtObj;
+    permissionMgmtObj = NULL;
 
     peerAuthMechanisms = authMechanisms;
     peerAuthListener.Set(listener);

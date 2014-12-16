@@ -609,6 +609,8 @@ class BusAttachment : public MessageReceiver {
      * own key store implementation it must have already called RegisterKeyStoreListener() before
      * calling this function.
      *
+     * This method can be called multiple times with different auth mechanisms.
+     *
      * @param authMechanisms   The authentication mechanism(s) to use for peer-to-peer authentication.
      *                         If this parameter is NULL peer-to-peer authentication is disabled.  This is a space separated list of any of the following values: ALLJOYN_PIN_KEYX, ALLJOYN_SRP_LOGON, ALLJOYN_RSA_KEYX, ALLJOYN_SRP_KEYX, ALLJOYN_ECDHE_NULL, ALLJOYN_ECDHE_PSK, ALLJOYN_ECDHE_ECDSA.
      *

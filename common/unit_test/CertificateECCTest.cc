@@ -26,6 +26,8 @@ using namespace qcc;
 using namespace std;
 
 
+#define AUTH_VERIFIER_LEN  Crypto_SHA256::DIGEST_SIZE
+
 class CertificateECCTest : public testing::Test {
   public:
     Crypto_ECC ecc;
@@ -799,7 +801,7 @@ TEST_F(CertificateECCTest, GenSelfSignECCX509CertForBBservice)
     ECCPublicKey dsaPublicKey;
     ECCPrivateKey subjectPrivateKey;
     ECCPublicKey subjectPublicKey;
-    CertificateX509 x509(CertificateX509::GUID_CERTIFICATE);
+    CertificateX509 x509(CertificateX509::IDENTITY_CERTIFICATE);
 
     QStatus status = CreateIdentityCert(issuer, "1010101", &dsaPrivateKey, &dsaPublicKey, &subjectPrivateKey, &subjectPublicKey, true, x509);
     ASSERT_EQ(ER_OK, status) << " CreateIdentityCert failed with actual status: " << QCC_StatusText(status);
@@ -822,3 +824,4 @@ TEST_F(CertificateECCTest, GenSelfSignECCX509CertForBBservice)
 
     std::cout << "The ECC X.509 cert: " << endl << x509.ToString().c_str() << endl;
 }
+

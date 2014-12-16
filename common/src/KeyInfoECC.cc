@@ -22,6 +22,7 @@
 
 #include <qcc/platform.h>
 #include <qcc/KeyInfoECC.h>
+#include <qcc/StringUtil.h>
 
 #include <Status.h>
 
@@ -90,6 +91,34 @@ QStatus KeyInfoECC::Import(const uint8_t* buf, size_t count)
     p += KeyInfo::GetExportSize();
     memcpy(&curve, p, sizeof(curve));
     return ER_OK;
+}
+
+qcc::String KeyInfoECC::ToString() const
+{
+    qcc::String str;
+    str += "KeyInfo:\n";
+    str += "  format: ";
+    str += U32ToString(GetFormat());
+    str += "  algorithm: ";
+    str += U32ToString(GetAlgorithm());
+    str += "  curve: ";
+    str += U32ToString(GetCurve());
+    if (GetKeyIdLen() > 0) {
+        str += "  ID: ";
+        str += BytesToHexString(GetKeyId(), GetKeyIdLen());
+    }
+    str += "\n";
+    return str;
+}
+
+qcc::String KeyInfoNISTP256::ToString() const
+{
+    qcc::String str;
+    str += KeyInfoECC::ToString();
+    str += "  public key: ";
+    str += BytesToHexString((const uint8_t*) GetPublicKey(), sizeof(ECCPublicKey));
+    str += "\n";
+    return str;
 }
 
 const size_t KeyInfoNISTP256::GetExportSize()

@@ -207,7 +207,7 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
             QCC_LogError(status, ("Failed to create %s interface", org::allseen::Security::PermissionMgmt::InterfaceName));
             return status;
         }
-        ifc->AddMethod("Claim",     "(yv)ay",  "(yv)", "adminPublicKey,GUID,publicKey");
+        ifc->AddMethod("Claim",     "(yv)ay(yay)",  "(yv)", "adminPublicKey,GUID,identityCert,publicKey");
         ifc->AddMethod("InstallPolicy",     "(yv)",  NULL, "authorization");
         ifc->AddMethod("InstallEncryptedPolicy",     "ay",  NULL, "encryptedAuthorization");
         ifc->AddMethod("GetPolicy",     NULL, "(yv)",  "authorization");
@@ -216,12 +216,12 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         ifc->AddMethod("InstallMembershipAuthData",     "say(yv)",  NULL, "serialNum,issuer,authorization");
         ifc->AddMethod("RemoveMembership",     "say", NULL, "serialNum,issuer");
         ifc->AddMethod("InstallIdentity",     "(yay)", NULL, "cert");
-        ifc->AddMethod("RemoveIdentity",     NULL, NULL, NULL);
         ifc->AddMethod("GetIdentity",     NULL, "(yay)", "cert");
         ifc->AddMethod("InstallGuildEquivalence",     "(yay)", NULL, "cert");
         ifc->AddMethod("RemoveGuildEquivalence",     "ayay", NULL, "serialNum,issuer");
         ifc->AddMethod("GetManifest",     NULL, "(yv)",  "manifest");
         ifc->AddMethod("Reset",     NULL, NULL, NULL);
+        ifc->AddMethod("GetPublicKey", NULL, "(yv)", "publicKey");
         ifc->Activate();
     }
     {

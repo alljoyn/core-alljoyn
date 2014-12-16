@@ -843,6 +843,9 @@ QStatus BusAttachment::EnablePeerSecurity(const char* authMechanisms,
     if (authMechanisms) {
         busInternal->keyStore.SetKeyEventListener(&busInternal->ksKeyEventListener);
         status = busInternal->keyStore.Init(keyStoreFileName, isShared);
+        if (status == ER_KEY_STORE_ALREADY_INITIALIZED) {
+            status = ER_OK;
+        }
         if (status == ER_OK) {
             /* Register peer-to-peer authentication mechanisms */
             busInternal->authManager.RegisterMechanism(AuthMechSRP::Factory, AuthMechSRP::AuthName());

@@ -564,25 +564,32 @@ extern const qcc::String OID_CRV_PRIME256V1;
 extern const qcc::String OID_DN_OU;
 extern const qcc::String OID_DN_CN;
 extern const qcc::String OID_BASIC_CONSTRAINTS;
+extern const qcc::String OID_DIG_SHA256;
 extern const qcc::String OID_CUSTOM_DIGEST;
+extern const qcc::String OID_CUSTOM_CERT_TYPE;
 
 class CertificateX509 : public Certificate {
 
   public:
 
     typedef enum {
-        GUID_CERTIFICATE,
-        GUILD_CERTIFICATE
+        UNKNOWN_CERTIFICATE,
+        IDENTITY_CERTIFICATE,
+        MEMBERSHIP_CERTIFICATE
     } CertificateType;
 
-    CertificateX509(CertificateType type) : Certificate(3, X509_CERTIFICATE), type(type), encodedLen(0), encoded(NULL), digestPresent(false)
+    /**
+     * Default Constructor
+     */
+    CertificateX509() : Certificate(3, X509_CERTIFICATE), type(UNKNOWN_CERTIFICATE), encodedLen(0), encoded(NULL)
     {
     }
 
     /**
-     * Default constructor.
+     * Constructor
+     * @param type the certificate type.
      */
-    CertificateX509() : Certificate(3, X509_CERTIFICATE), type(GUID_CERTIFICATE), encodedLen(0), encoded(NULL), digestPresent(false)
+    CertificateX509(CertificateType type) : Certificate(3, X509_CERTIFICATE), type(type), encodedLen(0), encoded(NULL)
     {
     }
 
@@ -599,6 +606,14 @@ class CertificateX509 : public Certificate {
      * @return ER_OK for success; otherwise, error code.
      */
     QStatus EncodeCertificatePEM(qcc::String& pem);
+
+    /**
+     * Helper function to generate PEM encoded string using a DER encoded string.
+     * @param der the encoded certificate.
+     * @param[out] pem the encoded certificate.
+     * @return ER_OK for success; otherwise, error code.
+     */
+    static QStatus EncodeCertificatePEM(qcc::String& der, qcc::String& pem);
 
     /**
      * Decode a DER encoded certificate.
@@ -651,28 +666,38 @@ class CertificateX509 : public Certificate {
     }
     void SetIssuer(const qcc::GUID128& guid)
     {
-        this->issuer = guid;
+        issuer.cn = guid;
+        issuer.cnExists = true;
     }
     const qcc::GUID128& GetIssuer() const
     {
-        return issuer;
+        return issuer.cn;
     }
     void SetSubject(const qcc::GUID128& guid)
     {
-        this->subject = guid;
+        subject.cn = guid;
+        subject.cnExists = true;
     }
     const qcc::GUID128& GetSubject() const
     {
-        return subject;
+        return subject.cn;
     }
     void SetGuild(const qcc::GUID128& guid)
     {
-        type = GUILD_CERTIFICATE;
-        this->guild = guid;
+        subject.ou = guid;
+        subject.ouExists = true;
     }
     const qcc::GUID128& GetGuild() const
     {
-        return guild;
+        return subject.ou;
+    }
+    void SetAlias(const qcc::String& alias)
+    {
+        this->alias = alias;
+    }
+    const qcc::String& GetAlias() const
+    {
+        return alias;
     }
     void SetValidity(const ValidPeriod* validPeriod)
     {
@@ -707,9 +732,7 @@ class CertificateX509 : public Certificate {
      */
     void SetDigest(const uint8_t* digest, size_t size)
     {
-        memset(this->digest, 0, sizeof (this->digest));
-        memcpy(this->digest, digest, ((size > sizeof (this->digest)) ? sizeof (this->digest) : size));
-        digestPresent = true;
+        this->digest = qcc::String((char*) digest, size);
     }
 
     /**
@@ -718,7 +741,16 @@ class CertificateX509 : public Certificate {
      */
     const uint8_t* GetDigest()
     {
-        return digest;
+        return (const uint8_t*) digest.c_str();
+    }
+
+    /**
+     * Get the size of the digest of the external data.
+     * @return the size of the digest of the external data
+     */
+    const size_t GetDigestSize()
+    {
+        return digest.size();
     }
 
     /**
@@ -727,7 +759,7 @@ class CertificateX509 : public Certificate {
      */
     bool IsDigestPresent()
     {
-        return digestPresent;
+        return !digest.empty();
     }
 
     /**
@@ -777,6 +809,11 @@ class CertificateX509 : public Certificate {
         delete [] encoded;
     }
 
+    const CertificateType GetType() const
+    {
+        return type;
+    }
+
     /**
      * Retrieve the number of X.509 certificates in a PEM string representing a cert chain.
      * @param encoded the input string holding the PEM string
@@ -798,12 +835,21 @@ class CertificateX509 : public Certificate {
      */
     CertificateX509(const CertificateX509& other);
 
+    struct DistinguishedName {
+        bool ouExists;
+        bool cnExists;
+        qcc::GUID128 ou;
+        qcc::GUID128 cn;
+
+        DistinguishedName() : ouExists(false), cnExists(false) { }
+    };
+
     QStatus DecodeCertificateTBS();
     QStatus EncodeCertificateTBS();
     QStatus DecodeCertificateName(const qcc::String& dn, qcc::GUID128& cn);
     QStatus EncodeCertificateName(qcc::String& dn, qcc::GUID128& cn);
-    QStatus DecodeCertificateName(const qcc::String& dn, qcc::GUID128& cn, qcc::GUID128& ou);
-    QStatus EncodeCertificateName(qcc::String& dn, qcc::GUID128& cn, qcc::GUID128& ou);
+    QStatus DecodeCertificateName(const qcc::String& dn, CertificateX509::DistinguishedName& name);
+    QStatus EncodeCertificateName(qcc::String& dn, CertificateX509::DistinguishedName& name);
     QStatus DecodeCertificatePub(const qcc::String& pub);
     QStatus EncodeCertificatePub(qcc::String& pub);
     QStatus DecodeCertificateExt(const qcc::String& ext);
@@ -814,24 +860,27 @@ class CertificateX509 : public Certificate {
 
     CertificateType type;
     qcc::String tbs;
-    qcc::String serial;
-    qcc::GUID128 issuer;
-    qcc::GUID128 subject;
-    qcc::GUID128 guild;
-    ValidPeriod validity;
-    ECCPublicKey publickey;
-    uint32_t ca;
-    ECCSignature signature;
     size_t encodedLen;
     uint8_t* encoded;
-    bool digestPresent;
-    uint8_t digest[SHA256_DIGEST_SIZE];
+
+    qcc::String serial;
+    DistinguishedName issuer;
+    DistinguishedName subject;
+    ValidPeriod validity;
+    ECCPublicKey publickey;
+    ECCSignature signature;
+    /*
+     * Extensions
+     */
+    uint32_t ca;
+    qcc::String digest;
+    qcc::String alias;
 };
 
 class MembershipCertificate : public CertificateX509 {
 
   public:
-    MembershipCertificate() : CertificateX509(GUILD_CERTIFICATE)
+    MembershipCertificate() : CertificateX509(MEMBERSHIP_CERTIFICATE)
     {
     }
     /**
@@ -846,7 +895,7 @@ class MembershipCertificate : public CertificateX509 {
 class IdentityCertificate : public CertificateX509 {
 
   public:
-    IdentityCertificate() : CertificateX509(GUID_CERTIFICATE)
+    IdentityCertificate() : CertificateX509(IDENTITY_CERTIFICATE)
     {
     }
     /**

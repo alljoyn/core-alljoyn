@@ -134,12 +134,22 @@ class KeyInfo {
      * Get the format
      * @return the format
      */
-    FormatType GetFormat()
+    const FormatType GetFormat() const
     {
         return format;
     }
 
   private:
+    /**
+     * Assignment operator is private
+     */
+    KeyInfo& operator=(const KeyInfo& other);
+
+    /**
+     * Copy constructor is private
+     */
+    KeyInfo(const KeyInfo& other);
+
     FormatType format;
     size_t keyIdLen;
     uint8_t* keyId;

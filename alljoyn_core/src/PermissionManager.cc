@@ -464,7 +464,6 @@ bool PermissionManager::AuthorizePermissionMgmt(bool send, const GUID128& peerGu
         (strncmp(mbrName, "InstallMembershipAuthData", 25) == 0) ||
         (strncmp(mbrName, "RemoveMembership", 16) == 0) ||
         (strncmp(mbrName, "InstallIdentity", 15) == 0) ||
-        (strncmp(mbrName, "RemoveIdentity", 14) == 0) ||
         (strncmp(mbrName, "InstallGuildEquivalence", 23) == 0) ||
         (strncmp(mbrName, "RemoveGuildEquivalence", 22) == 0) ||
         (strncmp(mbrName, "Reset", 5) == 0)
@@ -473,6 +472,7 @@ bool PermissionManager::AuthorizePermissionMgmt(bool send, const GUID128& peerGu
         return PeerHasAdminPriv(peerGuid);
     } else if (
         (strncmp(mbrName, "NotifyConfig", 12) == 0) ||
+        (strncmp(mbrName, "GetPublicKey", 12) == 0) ||
         (strncmp(mbrName, "GetIdentity", 11) == 0) ||
         (strncmp(mbrName, "GetManifest", 11) == 0)
         ) {

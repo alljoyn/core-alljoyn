@@ -48,8 +48,11 @@ const qcc::String OID_KEY_ECC = "1.2.840.10045.2.1";
 const qcc::String OID_CRV_PRIME256V1 = "1.2.840.10045.3.1.7";
 const qcc::String OID_DN_OU = "2.5.4.11";
 const qcc::String OID_DN_CN = "2.5.4.3";
+const qcc::String OID_SUB_ALTNAME = "2.5.29.17";
 const qcc::String OID_BASIC_CONSTRAINTS = "2.5.29.19";
-const qcc::String OID_CUSTOM_DIGEST = "1.2.3.4.5.6.7.8.1";
+const qcc::String OID_DIG_SHA256 = "2.16.840.1.101.3.4.2.1";
+const qcc::String OID_CUSTOM_CERT_TYPE = "1.3.6.1.4.1.44924.1.1";
+const qcc::String OID_CUSTOM_DIGEST = "1.3.6.1.4.1.44924.1.2";
 
 #define CERT_TYPE0_SIGN_LEN Crypto_SHA256::DIGEST_SIZE
 #define CERT_TYPE0_RAW_LEN sizeof(uint32_t) + sizeof(ECCPublicKeyOldEncoding) + CERT_TYPE0_SIGN_LEN + sizeof(ECCSignatureOldEncoding)
@@ -743,93 +746,56 @@ String CertificateType2::ToString()
     return str;
 }
 
-QStatus CertificateX509::DecodeCertificateName(const qcc::String& dn, qcc::GUID128& cn)
+QStatus CertificateX509::DecodeCertificateName(const qcc::String& dn, CertificateX509::DistinguishedName& name)
+{
+    QStatus status = ER_OK;
+    qcc::String tmp = dn;
+
+    while ((ER_OK == status) && (tmp.size())) {
+        qcc::String oid;
+        qcc::String str;
+        qcc::String rem;
+        status = Crypto_ASN1::Decode(tmp, "{(ou)}.", &oid, &str, &rem);
+        if (ER_OK != status) {
+            return status;
+        }
+        if (!qcc::GUID128::IsGUID(str)) {
+            return ER_FAIL;
+        }
+        if (OID_DN_OU == oid) {
+            name.ou = GUID128(str);
+            name.ouExists = true;
+        } else if (OID_DN_CN == oid) {
+            name.cn = GUID128(str);
+            name.cnExists = true;
+        }
+        tmp = rem;
+    }
+
+    return status;
+}
+
+QStatus CertificateX509::EncodeCertificateName(qcc::String& dn, CertificateX509::DistinguishedName& name)
 {
     QStatus status;
     qcc::String oid;
     qcc::String tmp;
 
-    status = Crypto_ASN1::Decode(dn, "{(ou)}", &oid, &tmp);
-    if (ER_OK != status) {
-        return status;
-    }
-    if (OID_DN_CN != oid) {
-        return ER_FAIL;
-    }
-    if (!qcc::GUID128::IsGUID(tmp)) {
-        return ER_FAIL;
-    }
-    cn = GUID128(tmp);
-
-    return status;
-}
-
-QStatus CertificateX509::EncodeCertificateName(qcc::String& dn, qcc::GUID128& cn)
-{
-    QStatus status;
-    qcc::String oid = OID_DN_CN;
-    qcc::String tmp = cn.ToString();
-
-    status = Crypto_ASN1::Encode(dn, "{(ou)}", &oid, &tmp);
-    if (ER_OK != status) {
-        return status;
-    }
-
-    return status;
-}
-
-QStatus CertificateX509::DecodeCertificateName(const qcc::String& dn, qcc::GUID128& ou, qcc::GUID128& cn)
-{
-    QStatus status = ER_OK;
-    qcc::String oid1;
-    qcc::String oid2;
-    qcc::String tmp1;
-    qcc::String tmp2;
-
-    status = Crypto_ASN1::Decode(dn, "{(ou)}{(ou)}", &oid1, &tmp1, &oid2, &tmp2);
-    if (ER_OK != status) {
-        return status;
-    }
-    if (oid2.size()) {
-        type = GUILD_CERTIFICATE;
-        if (OID_DN_OU != oid1) {
-            return ER_FAIL;
+    if (name.ouExists) {
+        oid = OID_DN_OU;
+        tmp = name.ou.ToString();
+        status = Crypto_ASN1::Encode(dn, "{(ou)}", &oid, &tmp);
+        if (ER_OK != status) {
+            return status;
         }
-        if (OID_DN_CN != oid2) {
-            return ER_FAIL;
-        }
-        if (!qcc::GUID128::IsGUID(tmp1)) {
-            return ER_FAIL;
-        }
-        if (!qcc::GUID128::IsGUID(tmp2)) {
-            return ER_FAIL;
-        }
-        ou = qcc::GUID128(tmp1);
-        cn = qcc::GUID128(tmp2);
-    } else {
-        if (OID_DN_CN != oid1) {
-            return ER_FAIL;
-        }
-        if (!qcc::GUID128::IsGUID(tmp1)) {
-            return ER_FAIL;
-        }
-        cn = qcc::GUID128(tmp1);
     }
-
-    return status;
-}
-
-QStatus CertificateX509::EncodeCertificateName(qcc::String& dn, qcc::GUID128& ou, qcc::GUID128& cn)
-{
-    QStatus status = ER_OK;
-    qcc::String oid1 = OID_DN_OU;
-    qcc::String oid2 = OID_DN_CN;
-    qcc::String tmp1 = ou.ToString();
-    qcc::String tmp2 = cn.ToString();
-
-    status = Crypto_ASN1::Encode(dn, "{(ou)}{(ou)}", &oid1, &tmp1, &oid2, &tmp2);
-    if (ER_OK != status) {
-        return status;
+    if (name.cnExists) {
+        oid = OID_DN_CN;
+        tmp = name.cn.ToString();
+        status = Crypto_ASN1::Encode(dn, "{(ou)}", &oid, &tmp);
+        if (ER_OK != status) {
+            return status;
+        }
     }
 
     return status;
@@ -885,34 +851,45 @@ QStatus CertificateX509::EncodeCertificatePub(qcc::String& pub)
 QStatus CertificateX509::DecodeCertificateExt(const qcc::String& ext)
 {
     QStatus status = ER_OK;
-    qcc::String oid1;
-    qcc::String oid2;
-    qcc::String opt;
     qcc::String tmp;
-    qcc::String tmp1;
-    qcc::String tmp2;
 
-    status = Crypto_ASN1::Decode(ext, "c(.)", 3, &tmp);
+    status = Crypto_ASN1::Decode(ext, "c((.))", 3, &tmp);
     if (ER_OK != status) {
         return status;
     }
-    status = Crypto_ASN1::Decode(tmp, "((ox).)", &oid1, &tmp1, &opt);
-    if (OID_BASIC_CONSTRAINTS != oid1) {
-        return ER_FAIL;
-    }
-    status = Crypto_ASN1::Decode(tmp1, "(z)", &ca);
-    if (ER_OK != status) {
-        return status;
-    }
-    if (opt.size()) {
-        status = Crypto_ASN1::Decode(opt, "(ox)", &oid2, &tmp2);
-        if (OID_CUSTOM_DIGEST != oid2) {
-            return ER_FAIL;
+    while ((ER_OK == status) && (tmp.size())) {
+        qcc::String oid;
+        qcc::String str;
+        qcc::String rem;
+        status = Crypto_ASN1::Decode(tmp, "(ox).", &oid, &str, &rem);
+        if (ER_OK != status) {
+            return status;
         }
-        if (sizeof (digest) < tmp2.size()) {
-            return ER_FAIL;
+        if (OID_BASIC_CONSTRAINTS == oid) {
+            status = Crypto_ASN1::Decode(str, "(z)", &ca);
+            if (ER_OK != status) {
+                return status;
+            }
+        } else if (OID_CUSTOM_CERT_TYPE == oid) {
+            status = Crypto_ASN1::Decode(str, "(i)", (uint32_t*) &type);
+            if (ER_OK != status) {
+                return status;
+            }
+        } else if (OID_SUB_ALTNAME == oid) {
+            alias = str;
+        } else if (OID_CUSTOM_DIGEST == oid) {
+            qcc::String dig;
+            oid.clear();
+            status = Crypto_ASN1::Decode(str, "(ox)", &oid, &dig);
+            if (ER_OK != status) {
+                return status;
+            }
+            if (OID_DIG_SHA256 != oid) {
+                return ER_INVALID_DATA;
+            }
+            digest = dig;
         }
-        SetDigest((const uint8_t*) tmp2.data(), tmp2.size());
+        tmp = rem;
     }
 
     return status;
@@ -921,26 +898,52 @@ QStatus CertificateX509::DecodeCertificateExt(const qcc::String& ext)
 QStatus CertificateX509::EncodeCertificateExt(qcc::String& ext)
 {
     QStatus status = ER_OK;
-    qcc::String oid1 = OID_BASIC_CONSTRAINTS;
+    qcc::String oid;
     qcc::String opt;
     qcc::String tmp;
     qcc::String tmp1;
+    qcc::String raw;
 
-    status = Crypto_ASN1::Encode(tmp1, "(z)", ca);
+    status = Crypto_ASN1::Encode(tmp, "(z)", ca);
     if (ER_OK != status) {
         return status;
     }
-    if (digestPresent) {
-        qcc::String oid2 = OID_CUSTOM_DIGEST;
-        qcc::String tmp2((const char*) digest, sizeof (digest));
-        status = Crypto_ASN1::Encode(tmp, "((ox)(ox))", &oid1, &tmp1, &oid2, &tmp2);
-    } else {
-        status = Crypto_ASN1::Encode(tmp, "((ox))", &oid1, &tmp1);
-    }
+    oid = OID_BASIC_CONSTRAINTS;
+    status = Crypto_ASN1::Encode(raw, "(ox)", &oid, &tmp);
     if (ER_OK != status) {
         return status;
     }
-    status = Crypto_ASN1::Encode(ext, "c(R)", 3, &tmp);
+    tmp.clear();
+    status = Crypto_ASN1::Encode(tmp, "(i)", (uint32_t) type);
+    if (ER_OK != status) {
+        return status;
+    }
+    oid = OID_CUSTOM_CERT_TYPE;
+    status = Crypto_ASN1::Encode(raw, "(ox)", &oid, &tmp);
+    if (ER_OK != status) {
+        return status;
+    }
+    if (alias.size()) {
+        oid = OID_SUB_ALTNAME;
+        status = Crypto_ASN1::Encode(raw, "(ox)", &oid, &alias);
+        if (ER_OK != status) {
+            return status;
+        }
+    }
+    if (digest.size()) {
+        qcc::String dig;
+        oid = OID_DIG_SHA256;
+        status = Crypto_ASN1::Encode(dig, "(ox)", &oid, &digest);
+        if (ER_OK != status) {
+            return status;
+        }
+        oid = OID_CUSTOM_DIGEST;
+        status = Crypto_ASN1::Encode(raw, "(ox)", &oid, &dig);
+        if (ER_OK != status) {
+            return status;
+        }
+    }
+    status = Crypto_ASN1::Encode(ext, "c((R))", 3, &raw);
 
     return status;
 }
@@ -973,7 +976,7 @@ QStatus CertificateX509::DecodeCertificateTBS()
         return status;
     }
     //TODO read out the time values
-    status = DecodeCertificateName(sub, guild, subject);
+    status = DecodeCertificateName(sub, subject);
     if (ER_OK != status) {
         return status;
     }
@@ -1002,12 +1005,7 @@ QStatus CertificateX509::EncodeCertificateTBS()
     if (ER_OK != status) {
         return status;
     }
-    status = ER_FAIL;
-    if (GUID_CERTIFICATE == type) {
-        status = EncodeCertificateName(sub, subject);
-    } else if (GUILD_CERTIFICATE == type) {
-        status = EncodeCertificateName(sub, guild, subject);
-    }
+    status = EncodeCertificateName(sub, subject);
     if (ER_OK != status) {
         return status;
     }
@@ -1146,18 +1144,13 @@ QStatus CertificateX509::DecodeCertificatePEM(const qcc::String& pem)
     return status;
 }
 
-QStatus CertificateX509::EncodeCertificatePEM(qcc::String& pem)
+QStatus CertificateX509::EncodeCertificatePEM(qcc::String& der, qcc::String& pem)
 {
     QStatus status;
     qcc::String rem;
-    qcc::String der;
     qcc::String tag1 = "-----BEGIN CERTIFICATE-----\n";
     qcc::String tag2 = "-----END CERTIFICATE-----";
 
-    status = EncodeCertificateDER(der);
-    if (ER_OK != status) {
-        return status;
-    }
     status = Crypto_ASN1::EncodeBase64(der, rem);
     if (ER_OK != status) {
         return status;
@@ -1165,6 +1158,16 @@ QStatus CertificateX509::EncodeCertificatePEM(qcc::String& pem)
     pem = tag1 + rem + tag2;
 
     return status;
+}
+
+QStatus CertificateX509::EncodeCertificatePEM(qcc::String& pem)
+{
+    qcc::String der;
+    QStatus status = EncodeCertificateDER(der);
+    if (ER_OK != status) {
+        return status;
+    }
+    return EncodeCertificatePEM(der, pem);
 }
 
 QStatus CertificateX509::Verify()
@@ -1185,7 +1188,7 @@ QStatus CertificateX509::Verify(const KeyInfoNISTP256& ta)
     if (qcc::GUID128::SIZE != ta.GetKeyIdLen()) {
         return ER_FAIL;
     }
-    if (0 != memcmp(issuer.GetBytes(), ta.GetKeyId(), qcc::GUID128::SIZE)) {
+    if (0 != memcmp(issuer.cn.GetBytes(), ta.GetKeyId(), qcc::GUID128::SIZE)) {
         return ER_FAIL;
     }
     ecc.SetDSAPublicKey(ta.GetPublicKey());
@@ -1208,15 +1211,18 @@ String CertificateX509::ToString()
 {
     qcc::String str("Certificate:\n");
     str += "serial:    " + serial + "\n";
-    str += "issuer:    " + issuer.ToString() + "\n";
-    str += "subject:   " + subject.ToString() + "\n";
-    if (GUILD_CERTIFICATE == type) {
-        str += "guild:     " + guild.ToString() + "\n";
+    str += "issuer:    " + issuer.cn.ToString() + "\n";
+    str += "subject:   " + subject.cn.ToString() + "\n";
+    if (subject.ouExists) {
+        str += "guild:     " + subject.ou.ToString() + "\n";
     }
     str += "publickey: " + BytesToHexString((const uint8_t*) &publickey, sizeof(publickey)) + "\n";
     str += "ca:        " + BytesToHexString((const uint8_t*) &ca, sizeof(uint8_t)) + "\n";
-    if (digestPresent) {
-        str += "digest:    " + BytesToHexString((const uint8_t*) digest, sizeof(digest)) + "\n";
+    if (digest.size()) {
+        str += "digest:    " + BytesToHexString((const uint8_t*) digest.c_str(), digest.size()) + "\n";
+    }
+    if (alias.size()) {
+        str += "alias:     " + alias + "\n";
     }
     str += "signature: " + BytesToHexString((const uint8_t*) &signature, sizeof(signature)) + "\n";
     return str;

@@ -263,6 +263,7 @@ class PermissionMgmtObj : public BusObject {
         }
     };
 
+    void GetPublicKey(const InterfaceDescription::Member* member, Message& msg);
     void Claim(const InterfaceDescription::Member* member, Message& msg);
     void InstallPolicy(const InterfaceDescription::Member* member, Message& msg);
     QStatus GetACLGUID(ACLEntryType aclEntryType, qcc::GUID128& guid);
@@ -282,7 +283,6 @@ class PermissionMgmtObj : public BusObject {
     void InstallIdentity(const InterfaceDescription::Member* member, Message& msg);
     QStatus GetIdentityBlob(qcc::KeyBlob& kb);
     void GetIdentity(const InterfaceDescription::Member* member, Message& msg);
-    void RemoveIdentity(const InterfaceDescription::Member* member, Message& msg);
     void InstallMembership(const InterfaceDescription::Member* member, Message& msg);
     void InstallMembershipAuthData(const InterfaceDescription::Member* member, Message& msg);
     void RemoveMembership(const InterfaceDescription::Member* member, Message& msg);
@@ -298,6 +298,8 @@ class PermissionMgmtObj : public BusObject {
     QStatus StoreConfiguration(const Configuration& config);
     QStatus GetConfiguration(Configuration& config);
     void Reset(const InterfaceDescription::Member* member, Message& msg);
+    QStatus PerformReset(bool keepForClaim);
+    QStatus StoreIdentityCertificate(MsgArg& certArg);
 
     /**
      * Bind to an exclusive port for PermissionMgmt object.

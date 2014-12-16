@@ -48,7 +48,6 @@ static const char* KEYX_ECDHE_NULL = "ALLJOYN_ECDHE_NULL";
 static const char* KEYX_ECDHE_PSK = "ALLJOYN_ECDHE_PSK";
 static const char* KEYX_ECDHE_ECDSA = "ALLJOYN_ECDHE_ECDSA";
 
-static GUID128 adminGUID;
 static GUID128 membershipGUID1;
 static const char* membershipSerial1 = "10001";
 static GUID128 membershipGUID2;
@@ -66,15 +65,17 @@ static const char clientCertChainType1PEM[] = {
     "-----END CERTIFICATE-----"
 };
 
-static QStatus CreateIdentityCert(const qcc::String& serial, const qcc::GUID128& issuer, const ECCPrivateKey* issuerPrivateKey, const qcc::GUID128& subject, const ECCPublicKey* subjectPubKey, qcc::String& der)
+static QStatus CreateIdentityCert(const qcc::String& serial, const qcc::GUID128& issuer, const ECCPrivateKey* issuerPrivateKey, const qcc::GUID128& subject, const ECCPublicKey* subjectPubKey, const qcc::String& alias, qcc::String& der)
 {
     QStatus status = ER_CRYPTO_ERROR;
-    CertificateX509 x509(CertificateX509::GUID_CERTIFICATE);
+    CertificateX509 x509(CertificateX509::IDENTITY_CERTIFICATE);
 
     x509.SetSerial(serial);
     x509.SetIssuer(issuer);
     x509.SetSubject(subject);
     x509.SetSubjectPublicKey(subjectPubKey);
+    x509.SetAlias(alias);
+
     status = x509.Sign(issuerPrivateKey);
     if (ER_OK != status) {
         return status;
@@ -82,7 +83,7 @@ static QStatus CreateIdentityCert(const qcc::String& serial, const qcc::GUID128&
     return x509.EncodeCertificateDER(der);
 }
 
-static QStatus CreateMembershipCert(const String& serial, const uint8_t* authDataHash, const qcc::GUID128& issuer, const ECCPrivateKey* issuerPrivateKey, const qcc::GUID128& subject, const ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, qcc::String& der)
+static QStatus CreateMembershipCert(const String& serial, const uint8_t* authDataHash, const qcc::GUID128& issuer, BusAttachment& signingBus, const qcc::GUID128& subject, const ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, qcc::String& der)
 {
     QStatus status = ER_CRYPTO_ERROR;
     MembershipCertificate x509;
@@ -93,12 +94,13 @@ static QStatus CreateMembershipCert(const String& serial, const uint8_t* authDat
     x509.SetSubjectPublicKey(subjectPubKey);
     x509.SetGuild(guild);
     x509.SetDigest(authDataHash, Certificate::SHA256_DIGEST_SIZE);
-    status = x509.Sign(issuerPrivateKey);
+    /* use the signing bus to sign the cert */
+    PermissionConfigurator& pc = signingBus.GetPermissionConfigurator();
+    status = pc.SignCertificate(x509);
     if (ER_OK != status) {
         return status;
     }
-    status = x509.EncodeCertificateDER(der);
-    return status;
+    return x509.EncodeCertificateDER(der);
 }
 
 static QStatus InterestInSignal(BusAttachment* bus)
@@ -426,7 +428,6 @@ static bool IsPermissionDeniedError(QStatus status, Message& msg)
         if (errorName == NULL) {
             return false;
         }
-        printf("IsPermissionDeniedError error name %s error message %s\n", errorName, errorMsg.c_str());
         if (strcmp(errorName, "org.alljoyn.Bus.ER_PERMISSION_DENIED") == 0) {
             return true;
         }
@@ -440,11 +441,11 @@ static bool IsPermissionDeniedError(QStatus status, Message& msg)
     return false;
 }
 
-static QStatus ReadClaimResponse(Message& msg, ECCPublicKey* pubKey)
+static QStatus RetrievePublicKeyFromMsgArg(MsgArg& arg, ECCPublicKey* pubKey)
 {
     uint8_t keyFormat;
     MsgArg* variantArg;
-    QStatus status = msg->GetArg(0)->Get("(yv)", &keyFormat, &variantArg);
+    QStatus status = arg.Get("(yv)", &keyFormat, &variantArg);
     if (ER_OK != status) {
         return status;
     }
@@ -495,13 +496,18 @@ static QStatus ReadClaimResponse(Message& msg, ECCPublicKey* pubKey)
     return ER_OK;
 }
 
-static QStatus Claim(BusAttachment& bus, ProxyBusObject& remoteObj, qcc::GUID128& issuerGUID, const ECCPublicKey* pubKey, ECCPublicKey* claimedPubKey, const GUID128& claimedGUID)
+static QStatus ReadClaimResponse(Message& msg, ECCPublicKey* pubKey)
+{
+    return RetrievePublicKeyFromMsgArg((MsgArg &) * msg->GetArg(0), pubKey);
+}
+
+static QStatus Claim(BusAttachment& bus, ProxyBusObject& remoteObj, qcc::GUID128& issuerGUID, const ECCPublicKey* pubKey, ECCPublicKey* claimedPubKey, const GUID128& claimedGUID, qcc::String& identityCertDER)
 {
     QStatus status;
     const InterfaceDescription* itf = bus.GetInterface(INTERFACE_NAME);
     remoteObj.AddInterface(*itf);
     Message reply(bus);
-    MsgArg inputs[2];
+    MsgArg inputs[3];
 
     KeyInfoNISTP256 keyInfo;
     keyInfo.SetPublicKey(pubKey);
@@ -512,9 +518,10 @@ static QStatus Claim(BusAttachment& bus, ProxyBusObject& remoteObj, qcc::GUID128
     inputs[0].SetOwnershipFlags(MsgArg::OwnsArgs, true);
 
     inputs[1].Set("ay", GUID128::SIZE, claimedGUID.GetBytes());
-    uint32_t timeout = 10000;                 /* Claim is a bit show */
+    inputs[2].Set("(yay)", Certificate::ENCODING_X509_DER, identityCertDER.size(), identityCertDER.data());
+    uint32_t timeout = 10000; /* Claim is a bit show */
 
-    status = remoteObj.MethodCall(INTERFACE_NAME, "Claim", inputs, 2, reply, timeout);
+    status = remoteObj.MethodCall(INTERFACE_NAME, "Claim", inputs, 3, reply, timeout);
 
     if (ER_OK == status) {
         status = ReadClaimResponse(reply, claimedPubKey);
@@ -636,7 +643,7 @@ static PermissionPolicy* GenerateMembeshipAuthData()
     return policy;
 }
 
-static QStatus GenerateManifest(PermissionPolicy::Rule**retRules, size_t* count)
+static QStatus GenerateManifest(PermissionPolicy::Rule** retRules, size_t* count)
 {
     *count = 2;
     PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[*count];
@@ -660,7 +667,7 @@ static QStatus GenerateManifest(PermissionPolicy::Rule**retRules, size_t* count)
     return ER_OK;
 }
 
-static QStatus GetManifest(BusAttachment& bus, ProxyBusObject& remoteObj, PermissionPolicy::Rule**retRules, size_t* count)
+static QStatus GetManifest(BusAttachment& bus, ProxyBusObject& remoteObj, PermissionPolicy::Rule** retRules, size_t* count)
 {
     QStatus status;
     const InterfaceDescription* itf = bus.GetInterface(INTERFACE_NAME);
@@ -784,7 +791,7 @@ static QStatus LoadCertificateBytes(Message& msg, CertificateX509& cert)
     return status;
 }
 
-static QStatus InstallMembership(const String& serial, BusAttachment& bus, ProxyBusObject& remoteObj, const qcc::GUID128& subjectGUID, const ECCPublicKey* subjectPubKey, const qcc::GUID128& guild)
+static QStatus InstallMembership(const String& serial, BusAttachment& bus, ProxyBusObject& remoteObj, BusAttachment& signingBus, const qcc::GUID128& subjectGUID, const ECCPublicKey* subjectPubKey, const qcc::GUID128& guild)
 {
     QStatus status;
     const InterfaceDescription* itf = bus.GetInterface(INTERFACE_NAME);
@@ -797,12 +804,6 @@ static QStatus InstallMembership(const String& serial, BusAttachment& bus, Proxy
     if (status != ER_OK) {
         return status;
     }
-    ECCPrivateKey issuerPrivateKey;
-    ECCPublicKey issuerPubKey;
-    status = RetrieveDSAKeys(bus, issuerPrivateKey, issuerPubKey);
-    if (status != ER_OK) {
-        return status;
-    }
     PermissionPolicy* membershipAuthData = GenerateMembeshipAuthData();
     uint8_t digest[Certificate::SHA256_DIGEST_SIZE];
     Message tmpMsg(bus);
@@ -810,7 +811,7 @@ static QStatus InstallMembership(const String& serial, BusAttachment& bus, Proxy
     membershipAuthData->Digest(marshaller, digest, Certificate::SHA256_DIGEST_SIZE);
 
     qcc::String der;
-    status = CreateMembershipCert(serial, digest, localGUID, &issuerPrivateKey, subjectGUID, subjectPubKey, guild, der);
+    status = CreateMembershipCert(serial, digest, localGUID, signingBus, subjectGUID, subjectPubKey, guild, der);
     if (status != ER_OK) {
         return status;
     }
@@ -832,7 +833,6 @@ static QStatus InstallMembership(const String& serial, BusAttachment& bus, Proxy
         args[0].Set("s", serial.c_str());
         args[1].Set("ay", GUID128::SIZE, localGUID.GetBytes());
         membershipAuthData->Export(args[2]);
-        printf("InstallMembership calls InstallMembershipAuthData with auth data %s\n", membershipAuthData->ToString().c_str());
         status = remoteObj.MethodCall(INTERFACE_NAME, "InstallMembershipAuthData", args, ArraySize(args), reply, 5000);
         if (ER_OK != status) {
             if (IsPermissionDeniedError(status, reply)) {
@@ -843,7 +843,6 @@ static QStatus InstallMembership(const String& serial, BusAttachment& bus, Proxy
     delete membershipAuthData;
     return status;
 }
-
 
 static QStatus RemoveMembership(BusAttachment& bus, ProxyBusObject& remoteObj, const qcc::String serialNum, const qcc::GUID128& issuer)
 {
@@ -884,6 +883,24 @@ static QStatus InstallIdentity(BusAttachment& bus, ProxyBusObject& remoteObj, qc
     return status;
 }
 
+static QStatus GetPeerPublicKey(BusAttachment& bus, ProxyBusObject& remoteObj, ECCPublicKey* pubKey)
+{
+    QStatus status;
+    const InterfaceDescription* itf = bus.GetInterface(INTERFACE_NAME);
+    remoteObj.AddInterface(*itf);
+    Message reply(bus);
+
+    status = remoteObj.MethodCall(INTERFACE_NAME, "GetPublicKey", NULL, 0, reply, 5000);
+
+    if (ER_OK != status) {
+        if (IsPermissionDeniedError(status, reply)) {
+            status = ER_PERMISSION_DENIED;
+        }
+        return status;
+    }
+    return RetrievePublicKeyFromMsgArg((MsgArg &) * reply->GetArg(0), pubKey);
+}
+
 static QStatus GetIdentity(BusAttachment& bus, ProxyBusObject& remoteObj, IdentityCertificate& cert)
 {
     QStatus status;
@@ -900,23 +917,6 @@ static QStatus GetIdentity(BusAttachment& bus, ProxyBusObject& remoteObj, Identi
         return status;
     }
     return LoadCertificateBytes(reply, cert);
-}
-
-static QStatus RemoveIdentity(BusAttachment& bus, ProxyBusObject& remoteObj)
-{
-    QStatus status;
-    const InterfaceDescription* itf = bus.GetInterface(INTERFACE_NAME);
-    remoteObj.AddInterface(*itf);
-    Message reply(bus);
-
-    status = remoteObj.MethodCall(INTERFACE_NAME, "RemoveIdentity", NULL, 0, reply, 5000);
-
-    if (ER_OK != status) {
-        if (IsPermissionDeniedError(status, reply)) {
-            status = ER_PERMISSION_DENIED;
-        }
-    }
-    return status;
 }
 
 static QStatus Reset(BusAttachment& bus, ProxyBusObject& remoteObj)
@@ -1083,15 +1083,15 @@ TEST_F(PermissionMgmtTest, ClaimAdmin)
     ca.GetGuid(issuerGUID);
     EnableSecurityAdminProxy("ALLJOYN_ECDHE_NULL");
 
-    status = Claim(adminProxyBus, clientProxyObject, issuerGUID, &issuerPubKey, &claimedPubKey, issuerGUID);
-    EXPECT_EQ(ER_OK, status) << "  Claim failed.  Actual Status: " << QCC_StatusText(status);
     qcc::String der;
-    status = CreateIdentityCert("1010101", issuerGUID, &issuerPrivateKey, issuerGUID, &issuerPubKey, der);
+    status = CreateIdentityCert("1010101", issuerGUID, &issuerPrivateKey, issuerGUID, &issuerPubKey, "Admin user", der);
     EXPECT_EQ(ER_OK, status) << "  CreateIdentityCert failed.  Actual Status: " << QCC_StatusText(status);
-
-    status = InstallIdentity(adminProxyBus, clientProxyObject, der);
-    EXPECT_EQ(ER_OK, status) << "  InstallIdentity failed.  Actual Status: " << QCC_StatusText(status);
-
+    status = Claim(adminProxyBus, clientProxyObject, issuerGUID, &issuerPubKey, &claimedPubKey, issuerGUID, der);
+    EXPECT_EQ(ER_OK, status) << "  Claim failed.  Actual Status: " << QCC_StatusText(status);
+    /* retrieve the current identity cert */
+    IdentityCertificate cert;
+    status = GetIdentity(adminBus, clientProxyObject, cert);
+    EXPECT_EQ(ER_OK, status) << "  GetIdentity failed.  Actual Status: " << QCC_StatusText(status);
 }
 
 /*
@@ -1110,7 +1110,6 @@ TEST_F(PermissionMgmtTest, ClaimService)
     status = JoinPeerSession(adminBus, serviceBus, sessionId);
     EXPECT_EQ(ER_OK, status) << "  JoinSession failed.  Actual Status: " << QCC_StatusText(status);
     ProxyBusObject clientProxyObject(adminBus, serviceBus.GetUniqueName().c_str(), PERMISSION_MGMT_PATH, sessionId, false);
-    ECCPublicKey claimedPubKey;
 
     SetNotifyConfigSignalReceived(false);
 
@@ -1129,8 +1128,17 @@ TEST_F(PermissionMgmtTest, ClaimService)
     status = RetrieveDSAKeys(adminBus, issuerPrivateKey, issuerPubKey);
     EXPECT_EQ(ER_OK, status) << "  RetrieveDSAKeys failed.  Actual Status: " << QCC_StatusText(status);
 
+    ECCPublicKey claimedPubKey;
+    /* retrieve public key from to-be-claimed app to create identity cert */
+    status = GetPeerPublicKey(adminBus, clientProxyObject, &claimedPubKey);
+    EXPECT_EQ(ER_OK, status) << "  GetPeerPublicKey failed.  Actual Status: " << QCC_StatusText(status);
+    /* create identity cert for the claimed app */
+    qcc::String der;
+    status = CreateIdentityCert("2020202", issuerGUID, &issuerPrivateKey, serviceGUID, &claimedPubKey, "Service Provider", der);
+    EXPECT_EQ(ER_OK, status) << "  CreateIdentityCert failed.  Actual Status: " << QCC_StatusText(status);
+
     /* try claiming with state unclaimable.  Exptect to fail */
-    status = Claim(adminBus, clientProxyObject, issuerGUID, &issuerPubKey, &claimedPubKey, serviceGUID);
+    status = Claim(adminBus, clientProxyObject, issuerGUID, &issuerPubKey, &claimedPubKey, serviceGUID, der);
     EXPECT_EQ(ER_PERMISSION_DENIED, status) << "  Claim is not supposed to succeed.  Actual Status: " << QCC_StatusText(status);
 
     /* now switch it back to claimable */
@@ -1140,20 +1148,12 @@ TEST_F(PermissionMgmtTest, ClaimService)
     EXPECT_EQ(PermissionConfigurator::STATE_CLAIMABLE, claimableState) << "  ClaimableState is not CLAIMABLE";
 
     /* try claiming with state laimable.  Exptect to succeed */
-    status = Claim(adminBus, clientProxyObject, issuerGUID, &issuerPubKey, &claimedPubKey, serviceGUID);
+    status = Claim(adminBus, clientProxyObject, issuerGUID, &issuerPubKey, &claimedPubKey, serviceGUID, der);
     EXPECT_EQ(ER_OK, status) << "  Claim failed.  Actual Status: " << QCC_StatusText(status);
 
     /* try to claim one more time */
-    status = Claim(adminBus, clientProxyObject, issuerGUID, &issuerPubKey, &claimedPubKey, serviceGUID);
+    status = Claim(adminBus, clientProxyObject, issuerGUID, &issuerPubKey, &claimedPubKey, serviceGUID, der);
     EXPECT_EQ(ER_PERMISSION_DENIED, status) << "  Claim is not supposed to succeed.  Actual Status: " << QCC_StatusText(status);
-
-    /* install identity cert for the claimed app */
-    qcc::String der;
-    status = CreateIdentityCert("2020202", issuerGUID, &issuerPrivateKey, serviceGUID, &claimedPubKey, der);
-    EXPECT_EQ(ER_OK, status) << "  CreateIdentityCert failed.  Actual Status: " << QCC_StatusText(status);
-
-    status = InstallIdentity(adminBus, clientProxyObject, der);
-    EXPECT_EQ(ER_OK, status) << "  InstallIdentity failed.  Actual Status: " << QCC_StatusText(status);
 
     /* sleep a second to see whether the NotifyConfig signal is received */
     for (int cnt = 0; cnt < 100; cnt++) {
@@ -1163,6 +1163,15 @@ TEST_F(PermissionMgmtTest, ClaimService)
         qcc::Sleep(10);
     }
     EXPECT_TRUE(GetNotifyConfigSignalReceived()) << " Fail to receive expected NotifyConfig signal.";
+    /* retrieve the current identity cert */
+    IdentityCertificate cert;
+    status = GetIdentity(adminBus, clientProxyObject, cert);
+    EXPECT_EQ(ER_OK, status) << "  GetIdentity failed.  Actual Status: " << QCC_StatusText(status);
+    ECCPublicKey claimedPubKey2;
+    /* retrieve public key from claimed app to validate that it is not changed */
+    status = GetPeerPublicKey(adminBus, clientProxyObject, &claimedPubKey2);
+    EXPECT_EQ(ER_OK, status) << "  GetPeerPublicKey failed.  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(memcmp(&claimedPubKey2, &claimedPubKey, sizeof(ECCPublicKey)), 0) << "  The public key of the claimed app has changed.";
 }
 
 /*
@@ -1190,21 +1199,20 @@ TEST_F(PermissionMgmtTest, ClaimConsumer)
     ECCPublicKey issuerPubKey;
     status = RetrieveDSAKeys(adminBus, issuerPrivateKey, issuerPubKey);
     EXPECT_EQ(ER_OK, status) << "  RetrieveDSAKeys failed.  Actual Status: " << QCC_StatusText(status);
+    /* retrieve public key from to-be-claimed app to create identity cert */
+    status = GetPeerPublicKey(adminBus, clientProxyObject, &claimedPubKey);
+    EXPECT_EQ(ER_OK, status) << "  GetPeerPublicKey failed.  Actual Status: " << QCC_StatusText(status);
+    /* create identity cert for the claimed app */
+    qcc::String der;
+    status = CreateIdentityCert("3030303", issuerGUID, &issuerPrivateKey, consumerGUID, &claimedPubKey, "Consumer", der);
+    EXPECT_EQ(ER_OK, status) << "  CreateIdentityCert failed.  Actual Status: " << QCC_StatusText(status);
     SetNotifyConfigSignalReceived(false);
-    status = Claim(adminBus, clientProxyObject, issuerGUID, &issuerPubKey, &claimedPubKey, consumerGUID);
+    status = Claim(adminBus, clientProxyObject, issuerGUID, &issuerPubKey, &claimedPubKey, consumerGUID, der);
     EXPECT_EQ(ER_OK, status) << "  Claim failed.  Actual Status: " << QCC_StatusText(status);
 
     /* try to claim a second time */
-    status = Claim(adminBus, clientProxyObject, issuerGUID, &issuerPubKey, &claimedPubKey, consumerGUID);
+    status = Claim(adminBus, clientProxyObject, issuerGUID, &issuerPubKey, &claimedPubKey, consumerGUID, der);
     EXPECT_EQ(ER_PERMISSION_DENIED, status) << "  Claim is not supposed to succeed.  Actual Status: " << QCC_StatusText(status);
-
-    /* install identity cert for the claimed app */
-    qcc::String der;
-    status = CreateIdentityCert("3030303", issuerGUID, &issuerPrivateKey, consumerGUID, &claimedPubKey, der);
-    EXPECT_EQ(ER_OK, status) << "  CreateIdentityCert failed.  Actual Status: " << QCC_StatusText(status);
-
-    status = InstallIdentity(adminBus, clientProxyObject, der);
-    EXPECT_EQ(ER_OK, status) << "  InstallIdentity failed.  Actual Status: " << QCC_StatusText(status);
 
     /* sleep a second to see whether the NotifyConfig signal is received */
     for (int cnt = 0; cnt < 100; cnt++) {
@@ -1214,6 +1222,10 @@ TEST_F(PermissionMgmtTest, ClaimConsumer)
         qcc::Sleep(10);
     }
     EXPECT_TRUE(GetNotifyConfigSignalReceived()) << " Fail to receive expected NotifyConfig signal.";
+    /* retrieve the current identity cert */
+    IdentityCertificate cert;
+    status = GetIdentity(adminBus, clientProxyObject, cert);
+    EXPECT_EQ(ER_OK, status) << "  GetIdentity failed.  Actual Status: " << QCC_StatusText(status);
 }
 
 /*
@@ -1268,15 +1280,6 @@ TEST_F(PermissionMgmtTest, ReplaceIdentity)
     status = GetIdentity(adminBus, clientProxyObject, cert);
     EXPECT_EQ(ER_OK, status) << "  GetIdentity failed.  Actual Status: " << QCC_StatusText(status);
 
-    /* delete the identity */
-    status = RemoveIdentity(adminBus, clientProxyObject);
-    EXPECT_EQ(ER_OK, status) << "  DeleteIdentity failed.  Actual Status: " << QCC_StatusText(status);
-
-    /* retrieve back the identity cert.  Expect failure */
-    IdentityCertificate tmpCert;
-    status = GetIdentity(adminBus, clientProxyObject, tmpCert);
-    EXPECT_NE(ER_OK, status) << "  GetIdentity did not fail.  Actual Status: " << QCC_StatusText(status);
-
     /* create a new identity cert */
     ECCPrivateKey issuerPrivateKey;
     ECCPublicKey issuerPubKey;
@@ -1286,7 +1289,7 @@ TEST_F(PermissionMgmtTest, ReplaceIdentity)
     qcc::GUID128 localGUID;
     ca.GetGuid(localGUID);
     qcc::String der;
-    status = CreateIdentityCert("4040404", localGUID, &issuerPrivateKey, cert.GetSubject(), cert.GetSubjectPublicKey(), der);
+    status = CreateIdentityCert("4040404", localGUID, &issuerPrivateKey, cert.GetSubject(), cert.GetSubjectPublicKey(), "Service Provider", der);
     EXPECT_EQ(ER_OK, status) << "  CreateIdentityCert failed.  Actual Status: " << QCC_StatusText(status);
 
     status = InstallIdentity(adminBus, clientProxyObject, der);
@@ -1314,9 +1317,9 @@ TEST_F(PermissionMgmtTest, InstallMembershipToServiceProvider)
     ECCPublicKey claimedPubKey;
     status = RetrieveDSAPublicKeyFromKeyStore(serviceBus, &claimedPubKey);
     EXPECT_EQ(ER_OK, status) << "  InstallMembership RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
-    status = InstallMembership(membershipSerial3, adminBus, clientProxyObject, serviceGUID, &claimedPubKey, membershipGUID3);
+    status = InstallMembership(membershipSerial3, adminBus, clientProxyObject, adminBus, serviceGUID, &claimedPubKey, membershipGUID3);
     EXPECT_EQ(ER_OK, status) << "  InstallMembership cert1 failed.  Actual Status: " << QCC_StatusText(status);
-    status = InstallMembership(membershipSerial3, adminBus, clientProxyObject, serviceGUID, &claimedPubKey, membershipGUID3);
+    status = InstallMembership(membershipSerial3, adminBus, clientProxyObject, adminBus, serviceGUID, &claimedPubKey, membershipGUID3);
     EXPECT_NE(ER_OK, status) << "  InstallMembership cert1 again is supposed to fail.  Actual Status: " << QCC_StatusText(status);
 
 }
@@ -1353,7 +1356,7 @@ TEST_F(PermissionMgmtTest, InstallMembershipToConsumer)
     ECCPublicKey claimedPubKey;
     status = RetrieveDSAPublicKeyFromKeyStore(consumerBus, &claimedPubKey);
     EXPECT_EQ(ER_OK, status) << "  InstallMembershipToConsumer RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
-    status = InstallMembership(membershipSerial1, adminBus, clientProxyObject, consumerGUID, &claimedPubKey, membershipGUID1);
+    status = InstallMembership(membershipSerial1, adminBus, clientProxyObject, adminBus, consumerGUID, &claimedPubKey, membershipGUID1);
     EXPECT_EQ(ER_OK, status) << "  InstallMembershipToConsumer cert1 failed.  Actual Status: " << QCC_StatusText(status);
 
 }

@@ -50,6 +50,11 @@
 
 #define MANIFEST_TYPE_ALLJOYN 1
 
+/**
+ * The ALLJOYN ECDHE auth mechanism name prefix pattern
+ */
+#define ECDHE_NAME_PREFIX_PATTERN "ALLJOYN_ECDHE*"
+
 using namespace std;
 using namespace qcc;
 
@@ -69,13 +74,13 @@ PermissionMgmtObj::PermissionMgmtObj(BusAttachment& bus) :
         AddMethodHandler(ifc->GetMember("RemovePolicy"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::RemovePolicy));
         AddMethodHandler(ifc->GetMember("InstallIdentity"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::InstallIdentity));
         AddMethodHandler(ifc->GetMember("GetIdentity"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::GetIdentity));
-        AddMethodHandler(ifc->GetMember("RemoveIdentity"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::RemoveIdentity));
         AddMethodHandler(ifc->GetMember("InstallMembership"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::InstallMembership));
         AddMethodHandler(ifc->GetMember("InstallMembershipAuthData"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::InstallMembershipAuthData));
         AddMethodHandler(ifc->GetMember("RemoveMembership"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::RemoveMembership));
         AddMethodHandler(ifc->GetMember("InstallGuildEquivalence"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::InstallGuildEquivalence));
         AddMethodHandler(ifc->GetMember("GetManifest"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::GetManifest));
         AddMethodHandler(ifc->GetMember("Reset"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::Reset));
+        AddMethodHandler(ifc->GetMember("GetPublicKey"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::GetPublicKey));
     }
     /* Add org.allseen.Security.PermissionMgmt.Notification interface */
     const InterfaceDescription* notificationIfc = bus.GetInterface(org::allseen::Security::PermissionMgmt::Notification::InterfaceName);
@@ -120,6 +125,42 @@ void PermissionMgmtObj::PolicyChanged(PermissionPolicy* policy)
     ca->GetGuid(localGUID);
     bus.GetInternal().GetPermissionManager().SetPolicy(policy);
     NotifyConfig();
+}
+
+static QStatus RetrieveAndGenDSAPublicKey(CredentialAccessor* ca, KeyInfoNISTP256& keyInfo)
+{
+    bool genKeys = false;
+    ECCPublicKey pubKey;
+    QStatus status = PermissionMgmtObj::RetrieveDSAPublicKey(ca, &pubKey);
+    if (status != ER_OK) {
+        if (ER_BUS_KEY_UNAVAILABLE == status) {
+            genKeys = true;
+        } else {
+            return status;
+        }
+    }
+    if (genKeys) {
+        Crypto_ECC ecc;
+        status = ecc.GenerateDSAKeyPair();
+        if (status != ER_OK) {
+            return ER_CRYPTO_KEY_UNAVAILABLE;
+        }
+        status = PermissionMgmtObj::StoreDSAKeys(ca, ecc.GetDSAPrivateKey(), ecc.GetDSAPublicKey());
+        if (status != ER_OK) {
+            return ER_CRYPTO_KEY_UNAVAILABLE;
+        }
+        /* retrieve the public key */
+        status = PermissionMgmtObj::RetrieveDSAPublicKey(ca, &pubKey);
+        if (status != ER_OK) {
+            return status;
+        }
+    }
+
+    qcc::GUID128 localGUID;
+    ca->GetGuid(localGUID);
+    keyInfo.SetKeyId(localGUID.GetBytes(), GUID128::SIZE);
+    keyInfo.SetPublicKey(&pubKey);
+    return ER_OK;
 }
 
 QStatus PermissionMgmtObj::GetACLGUID(ACLEntryType aclEntryType, qcc::GUID128& guid)
@@ -424,6 +465,20 @@ QStatus PermissionMgmtObj::MsgArgToKeyInfoNISTP256(MsgArg& variant, KeyInfoNISTP
     return ER_OK;
 }
 
+void PermissionMgmtObj::GetPublicKey(const InterfaceDescription::Member* member, Message& msg)
+{
+    KeyInfoNISTP256 replyKeyInfo;
+    QStatus status = RetrieveAndGenDSAPublicKey(ca, replyKeyInfo);
+    if (status != ER_OK) {
+        MethodReply(msg, status);
+        return;
+    }
+
+    MsgArg replyArgs[1];
+    KeyInfoNISTP256ToMsgArg(replyKeyInfo, replyArgs[0]);
+    MethodReply(msg, replyArgs, ArraySize(replyArgs));
+}
+
 void PermissionMgmtObj::Claim(const InterfaceDescription::Member* member, Message& msg)
 {
     if (claimableState == PermissionConfigurator::STATE_UNCLAIMABLE) {
@@ -451,7 +506,6 @@ void PermissionMgmtObj::Claim(const InterfaceDescription::Member* member, Messag
         MethodReply(msg, ER_INVALID_GUID);
         return;
     }
-    MsgArg replyArgs[1];
     KeyStore& keyStore = bus.GetInternal().GetKeyStore();
 
     GUID128 newGUID;
@@ -467,6 +521,9 @@ void PermissionMgmtObj::Claim(const InterfaceDescription::Member* member, Messag
     if (resetMasterGuid) {
         keyStore.ResetMasterGUID(newGUID);
     }
+    /* clear most of the key entries with the exception of the DSA keys and manifest */
+    PerformReset(true);
+
     /* install trust anchor */
     qcc::GUID128 peerGuid;
     status = GetPeerGUID(msg, peerGuid);
@@ -484,45 +541,14 @@ void PermissionMgmtObj::Claim(const InterfaceDescription::Member* member, Messag
         return;
     }
 
-    bool genKeys = false;
-    ECCPublicKey pubKey;
-    status = RetrieveDSAPublicKey(ca, &pubKey);
-    if (status != ER_OK) {
-        if (ER_BUS_KEY_UNAVAILABLE == status) {
-            genKeys = true;
-        } else {
-            MethodReply(msg, status);
-            return;
-        }
-    }
-    if (genKeys) {
-        Crypto_ECC ecc;
-        status = ecc.GenerateDSAKeyPair();
-        if (status != ER_OK) {
-            MethodReply(msg, ER_CRYPTO_KEY_UNAVAILABLE);
-            return;
-        }
-        status = StoreDSAKeys(ca, ecc.GetDSAPrivateKey(), ecc.GetDSAPublicKey());
-        if (status != ER_OK) {
-            MethodReply(msg, ER_CRYPTO_KEY_UNAVAILABLE);
-            return;
-        }
-        /* retrieve the public key */
-        status = RetrieveDSAPublicKey(ca, &pubKey);
-        if (status != ER_OK) {
-            MethodReply(msg, status);
-            return;
-        }
-    }
-
     claimableState = PermissionConfigurator::STATE_CLAIMED;
-
-    KeyInfoNISTP256 replyKeyInfo;
-    replyKeyInfo.SetKeyId(newGUID.GetBytes(), GUID128::SIZE);
-    replyKeyInfo.SetPublicKey(&pubKey);
-    KeyInfoNISTP256ToMsgArg(replyKeyInfo, replyArgs[0]);
-
-    MethodReply(msg, replyArgs, ArraySize(replyArgs));
+    status = StoreIdentityCertificate((MsgArg &) * msg->GetArg(2));
+    if (ER_OK != status) {
+        MethodReply(msg, status);
+    } else {
+        /* reply with the public key */
+        GetPublicKey(member, msg);
+    }
 
     NotifyConfig();
 }
@@ -687,56 +713,56 @@ static QStatus ValidateCertificateChain(std::vector<CertificateX509*>& certs, Pe
     return ER_OK;
 }
 
+static QStatus LoadCertificate(Certificate::EncodingType encoding, const uint8_t* encoded, size_t encodedLen, CertificateX509& cert)
+{
+    if (encoding == Certificate::ENCODING_X509_DER) {
+        return cert.DecodeCertificateDER(String((const char*) encoded, encodedLen));
+    } else if (encoding == Certificate::ENCODING_X509_DER_PEM) {
+        return cert.DecodeCertificatePEM(String((const char*) encoded, encodedLen));
+    }
+    return ER_NOT_IMPLEMENTED;
+}
+
 static QStatus LoadCertificate(Certificate::EncodingType encoding, const uint8_t* encoded, size_t encodedLen, CertificateX509& cert, PermissionMgmtObj::TrustAnchorList* taList)
 {
-    QStatus status;
-    if (encoding == Certificate::ENCODING_X509_DER) {
-        status = cert.DecodeCertificateDER(String((const char*) encoded, encodedLen));
-    } else if (encoding == Certificate::ENCODING_X509_DER_PEM) {
-        status = cert.DecodeCertificatePEM(String((const char*) encoded, encodedLen));
-    } else {
-        return ER_NOT_IMPLEMENTED;
-    }
+    QStatus status = LoadCertificate(encoding, encoded, encodedLen, cert);
     if (ER_OK != status) {
         return status;
-    }
-    /* verify its signature if requested */
-    if (!taList) {
-        return ER_OK;
     }
     return ValidateCertificate(cert, taList);
 }
 
-void PermissionMgmtObj::InstallIdentity(const InterfaceDescription::Member* member, Message& msg)
+QStatus PermissionMgmtObj::StoreIdentityCertificate(MsgArg& certArg)
 {
     uint8_t encoding;
     uint8_t* encoded;
     size_t encodedLen;
-    QStatus status = msg->GetArg(0)->Get("(yay)", &encoding, &encodedLen, &encoded);
+    QStatus status = certArg.Get("(yay)", &encoding, &encodedLen, &encoded);
     if (ER_OK != status) {
-        QCC_DbgPrintf(("PermissionMgmtObj::InstallIdentity failed to retrieve PEM status 0x%x", status));
-        MethodReply(msg, status);
-        return;
+        return status;
     }
     if ((encoding != Certificate::ENCODING_X509_DER) && (encoding != Certificate::ENCODING_X509_DER_PEM)) {
-        QCC_DbgPrintf(("PermissionMgmtObj::InstallIdentity does not support encoding %d", encoding));
-        MethodReply(msg, ER_NOT_IMPLEMENTED);
-        return;
+        QCC_DbgPrintf(("PermissionMgmtObj::StoreIdentityCertificate does not support encoding %d", encoding));
+        return ER_NOT_IMPLEMENTED;
     }
     IdentityCertificate cert;
     status = LoadCertificate((Certificate::EncodingType) encoding, encoded, encodedLen, cert, &trustAnchors);
     if (ER_OK != status) {
-        QCC_DbgPrintf(("PermissionMgmtObj::InstallIdentity failed to validate certificate status 0x%x", status));
-        MethodReply(msg, status);
-        return;
+        QCC_DbgPrintf(("PermissionMgmtObj::StoreIdentityCertificate failed to validate certificate status 0x%x", status));
+        return status;
     }
     GUID128 guid(cert.GetSubject());
     /* store the Identity PEM  into the key store */
     GetACLGUID(ENTRY_IDENTITY, guid);
     KeyBlob kb(encoded, encodedLen, KeyBlob::GENERIC);
 
-    status = ca->StoreKey(guid, kb);
-    MethodReply(msg, status);
+
+    return ca->StoreKey(guid, kb);
+}
+
+void PermissionMgmtObj::InstallIdentity(const InterfaceDescription::Member* member, Message& msg)
+{
+    MethodReply(msg, StoreIdentityCertificate((MsgArg &) * msg->GetArg(0)));
 }
 
 QStatus PermissionMgmtObj::GetIdentityBlob(KeyBlob& kb)
@@ -768,17 +794,6 @@ void PermissionMgmtObj::GetIdentity(const InterfaceDescription::Member* member, 
     MethodReply(msg, replyArgs, ArraySize(replyArgs));
 }
 
-void PermissionMgmtObj::RemoveIdentity(const InterfaceDescription::Member* member, Message& msg)
-{
-    GUID128 guid;
-    GetACLGUID(ENTRY_IDENTITY, guid);
-    QStatus status = ca->DeleteKey(guid);
-    if (ER_BUS_KEY_UNAVAILABLE == status) {
-        status = ER_CERTIFICATE_NOT_FOUND;
-    }
-    MethodReply(msg, status);
-}
-
 static QStatus GetMembershipCert(CredentialAccessor* ca, GUID128& guid, MembershipCertificate& cert)
 {
     KeyBlob kb;
@@ -786,7 +801,7 @@ static QStatus GetMembershipCert(CredentialAccessor* ca, GUID128& guid, Membersh
     if (ER_OK != status) {
         return status;
     }
-    return LoadCertificate(Certificate::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), cert, NULL);
+    return LoadCertificate(Certificate::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), cert);
 }
 
 static QStatus GetMembershipGuid(CredentialAccessor* ca, GUID128& membershipHead, const String& serialNum, const GUID128& issuer, GUID128& membershipGuid)
@@ -810,7 +825,7 @@ static QStatus GetMembershipGuid(CredentialAccessor* ca, GUID128& membershipHead
         if (kb.GetTag() == tag) {
             /* maybe a match, check both serial number and issuer */
             MembershipCertificate cert;
-            LoadCertificate(Certificate::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), cert, NULL);
+            LoadCertificate(Certificate::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), cert);
             if ((cert.GetSerial() == serialNum) && (cert.GetIssuer() == issuer)) {
                 membershipGuid = guids[cnt];
                 found = true;
@@ -840,7 +855,7 @@ static QStatus LoadX509CertFromMsgArg(const MsgArg& arg, CertificateX509& cert)
     if ((encoding != Certificate::ENCODING_X509_DER) && (encoding != Certificate::ENCODING_X509_DER_PEM)) {
         return ER_NOT_IMPLEMENTED;
     }
-    status = LoadCertificate((Certificate::EncodingType) encoding, encoded, encodedLen, cert, NULL);
+    status = LoadCertificate((Certificate::EncodingType) encoding, encoded, encodedLen, cert);
     if (ER_OK != status) {
         return ER_INVALID_CERTIFICATE;
     }
@@ -1094,7 +1109,7 @@ QStatus PermissionMgmtObj::GetAllMembershipCerts(MembershipCertMap& certMap)
             return status;
         }
         MembershipCertificate* cert = new MembershipCertificate();
-        status = LoadCertificate(Certificate::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), *cert, NULL);
+        status = LoadCertificate(Certificate::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), *cert);
         if (ER_OK != status) {
             QCC_DbgPrintf(("PermissionMgmtObj::GetAllMembershipCerts error loading membership certificate"));
             delete [] guids;
@@ -1414,7 +1429,7 @@ QStatus PermissionMgmtObj::SetClaimable(bool claimable)
     return status;
 }
 
-QStatus PermissionMgmtObj::Reset()
+QStatus PermissionMgmtObj::PerformReset(bool keepForClaim)
 {
     bus.GetInternal().GetKeyStore().Reload();
     GUID128 guid;
@@ -1424,15 +1439,17 @@ QStatus PermissionMgmtObj::Reset()
         return status;
     }
     ClearTrustAnchors();
-    ca->GetLocalGUID(KeyBlob::DSA_PRIVATE, guid);
-    status = ca->DeleteKey(guid);
-    if (status != ER_OK) {
-        return status;
-    }
-    ca->GetLocalGUID(KeyBlob::DSA_PUBLIC, guid);
-    status = ca->DeleteKey(guid);
-    if (status != ER_OK) {
-        return status;
+    if (!keepForClaim) {
+        ca->GetLocalGUID(KeyBlob::DSA_PRIVATE, guid);
+        status = ca->DeleteKey(guid);
+        if (status != ER_OK) {
+            return status;
+        }
+        ca->GetLocalGUID(KeyBlob::DSA_PUBLIC, guid);
+        status = ca->DeleteKey(guid);
+        if (status != ER_OK) {
+            return status;
+        }
     }
     ca->GetLocalGUID(KeyBlob::PEM, guid);
     status = ca->DeleteKey(guid);
@@ -1456,11 +1473,6 @@ QStatus PermissionMgmtObj::Reset()
     if (ER_OK != status) {
         return status;
     }
-    GetACLGUID(ENTRY_MANIFEST, guid);
-    status = ca->DeleteKey(guid);
-    if (ER_OK != status) {
-        return status;
-    }
     if (ER_OK == status) {
         serialNum = 0;
         PolicyChanged(NULL);
@@ -1475,10 +1487,20 @@ QStatus PermissionMgmtObj::Reset()
     if (ER_OK != status) {
         return status;
     }
+
+    /* clear out all the peer entries for all ECDHE key exchanges */
+    bus.GetInternal().GetKeyStore().Clear(String(ECDHE_NAME_PREFIX_PATTERN));
+
     claimableState = PermissionConfigurator::STATE_CLAIMABLE;
     serialNum = 0;
     PolicyChanged(NULL);
     return status;
+}
+
+QStatus PermissionMgmtObj::Reset()
+{
+    /* do full reset */
+    return PerformReset(false);
 }
 
 void PermissionMgmtObj::Reset(const InterfaceDescription::Member* member, Message& msg)
@@ -1592,14 +1614,6 @@ bool PermissionMgmtObj::ValidateCertChain(const qcc::String& certChainPEM, bool&
     return handled;
 }
 
-static void MakePEM(qcc::String& der, qcc::String& pem)
-{
-    qcc::String tag1 = "-----BEGIN CERTIFICATE-----\n";
-    qcc::String tag2 = "-----END CERTIFICATE-----";
-    Crypto_ASN1::EncodeBase64(der, pem);
-    pem = tag1 + pem + tag2;
-}
-
 bool PermissionMgmtObj::KeyExchangeListener::RequestCredentials(const char* authMechanism, const char* peerName, uint16_t authCount, const char* userName, uint16_t credMask, Credentials& credentials)
 {
     if (strcmp("ALLJOYN_ECDHE_ECDSA", authMechanism) == 0) {
@@ -1611,7 +1625,7 @@ bool PermissionMgmtObj::KeyExchangeListener::RequestCredentials(const char* auth
             if ((credMask & AuthListener::CRED_CERT_CHAIN) == AuthListener::CRED_CERT_CHAIN) {
                 String der((const char*) kb.GetData(), kb.GetSize());
                 String pem;
-                MakePEM(der, pem);
+                CertificateX509::EncodeCertificatePEM(der, pem);
                 credentials.SetCertChain(pem);
                 return true;
             }
@@ -1657,6 +1671,11 @@ QStatus PermissionMgmtObj::BindPort()
 {
     SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
     SessionPort sessionPort = ALLJOYN_SESSIONPORT_PERMISSION_MGMT;
+    if (portListener) {
+        bus.UnbindSessionPort(sessionPort);
+        delete portListener;
+    }
+
     portListener = new PortListener();
     QStatus status = bus.BindSessionPort(sessionPort, opts, *portListener);
     if (ER_OK != status) {

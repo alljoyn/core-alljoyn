@@ -52,7 +52,7 @@ class SigInfo {
      * Get the format
      * @return the format
      */
-    KeyInfo::FormatType GetFormat()
+    const KeyInfo::FormatType GetFormat() const
     {
         return format;
     }
@@ -61,7 +61,7 @@ class SigInfo {
      * Retrieve the signature algorithm
      * @return the signature ECC algorithm
      */
-    const uint8_t GetAlgorithm()
+    const uint8_t GetAlgorithm() const
     {
         return algorithm;
     }
@@ -86,6 +86,16 @@ class SigInfo {
 
 
   private:
+    /**
+     * Assignment operator is private
+     */
+    SigInfo& operator=(const SigInfo& other);
+
+    /**
+     * Copy constructor is private
+     */
+    SigInfo(const SigInfo& other);
+
     KeyInfo::FormatType format;
     uint8_t algorithm;
 };
@@ -126,7 +136,7 @@ class SigInfoECC : public SigInfo {
      * Retrieve the R coordinate value
      * @return the R coordinate value.  It's a pointer to an internal buffer. Its lifetime is the same as the object's lifetime.
      */
-    const uint8_t* GetRCoord()
+    const uint8_t* GetRCoord() const
     {
         return sig.r;
     }
@@ -144,7 +154,7 @@ class SigInfoECC : public SigInfo {
      * Retrieve the S coordinate value
      * @return the S coordinate value.  It's a pointer to an internal buffer. Its lifetime is the same as the object's lifetime.
      */
-    const uint8_t* GetSCoord()
+    const uint8_t* GetSCoord() const
     {
         return sig.s;
     }
@@ -160,12 +170,22 @@ class SigInfoECC : public SigInfo {
      * Get the signature.
      * @return the signature.
      */
-    const ECCSignature* GetSignature()
+    const ECCSignature* GetSignature() const
     {
         return &sig;
     }
 
   private:
+    /**
+     * Assignment operator is private
+     */
+    SigInfoECC& operator=(const SigInfoECC& other);
+
+    /**
+     * Copy constructor is private
+     */
+    SigInfoECC(const SigInfoECC& other);
+
     ECCSignature sig;
 };
 
@@ -210,7 +230,7 @@ class KeyInfoECC : public KeyInfo {
      * Retrieve the ECC algorithm
      * @return the ECC algorithm
      */
-    const uint8_t GetAlgorithm()
+    const uint8_t GetAlgorithm() const
     {
         return SigInfo::ALGORITHM_ECDSA_SHA_256;
     }
@@ -219,9 +239,18 @@ class KeyInfoECC : public KeyInfo {
      * Retrieve the ECC curve type.
      * @return the ECC curve type
      */
-    const uint8_t GetCurve()
+    const uint8_t GetCurve() const
     {
         return curve;
+    }
+
+    virtual const ECCPublicKey* GetPublicKey() const
+    {
+        return NULL;
+    }
+
+    virtual void SetPublicKey(const ECCPublicKey* key)
+    {
     }
 
     /**
@@ -248,7 +277,19 @@ class KeyInfoECC : public KeyInfo {
 
     QStatus Import(const uint8_t* buf, size_t count);
 
+    virtual qcc::String ToString() const;
+
   private:
+    /**
+     * Assignment operator is private
+     */
+    KeyInfoECC& operator=(const KeyInfoECC& other);
+
+    /**
+     * Copy constructor is private
+     */
+    KeyInfoECC(const KeyInfoECC& other);
+
     uint8_t curve;
 };
 
@@ -296,7 +337,7 @@ class KeyInfoNISTP256 : public KeyInfoECC {
      * Retrieve the X coordinate value
      * @return the ECC X coordinate value.  It's a pointer to an internal buffer. Its lifetime is the same as the object's lifetime.
      */
-    const uint8_t* GetXCoord()
+    const uint8_t* GetXCoord() const
     {
         return pubkey.key.x;
     }
@@ -314,7 +355,7 @@ class KeyInfoNISTP256 : public KeyInfoECC {
      * Retrieve the Y coordinate value
      * @return the ECC Y coordinate value.  It's a pointer to an internal buffer. Its lifetime is the same as the object's lifetime.
      */
-    const uint8_t* GetYCoord()
+    const uint8_t* GetYCoord() const
     {
         return pubkey.key.y;
     }
@@ -370,7 +411,14 @@ class KeyInfoNISTP256 : public KeyInfoECC {
 
     QStatus Import(const uint8_t* buf, size_t count);
 
+    virtual qcc::String ToString() const;
+
   private:
+    /**
+     * Assignment operator is private
+     */
+    KeyInfoNISTP256& operator=(const KeyInfoNISTP256& other);
+
     struct {
         uint8_t form;
         ECCPublicKey key;

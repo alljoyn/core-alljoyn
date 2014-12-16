@@ -38,6 +38,7 @@
 
 #include "PeerState.h"
 #include "KeyStore.h"
+#include "BusUtil.h"
 
 #include <alljoyn/Status.h>
 
@@ -165,7 +166,8 @@ KeyStore::KeyStore(const qcc::String& application) :
     shared(false),
     stored(NULL),
     loaded(NULL),
-    keyEventListener(NULL)
+    keyEventListener(NULL),
+    useDefaultListener(false)
 {
 }
 
@@ -199,12 +201,27 @@ KeyStore::~KeyStore()
 
 QStatus KeyStore::SetListener(KeyStoreListener& listener)
 {
+    /**
+     * only allow to set new listener when
+     *    listener was not previously set
+     *    listener was set with the default listener
+     */
+
+    bool setIt = false;
     if (this->listener != NULL) {
-        return ER_BUS_LISTENER_ALREADY_SET;
+        if (useDefaultListener) {
+            setIt = true;
+        }
     } else {
+        setIt = true;
+    }
+    if (setIt) {
+        delete this->listener;
         this->listener = new ProtectedKeyStoreListener(&listener);
+        useDefaultListener = false;
         return ER_OK;
     }
+    return ER_BUS_LISTENER_ALREADY_SET;
 }
 
 /**
@@ -219,7 +236,9 @@ QStatus KeyStore::SetKeyEventListener(KeyStoreKeyEventListener* listener) {
 
 QStatus KeyStore::SetDefaultListener()
 {
+    delete this->listener;
     this->listener = new ProtectedKeyStoreListener(defaultListener);
+    useDefaultListener = true;
     return ER_OK;
 }
 
@@ -233,6 +252,7 @@ QStatus KeyStore::Reset()
         delete defaultListener;
         defaultListener = NULL;
         shared = false;
+        useDefaultListener = false;
         return status;
     } else {
         return ER_FAIL;
@@ -249,7 +269,7 @@ QStatus KeyStore::Init(const char* fileName, bool isShared)
         shared = isShared;
         return Load();
     } else {
-        return ER_FAIL;
+        return ER_KEY_STORE_ALREADY_INITIALIZED;
     }
 }
 
@@ -490,10 +510,40 @@ QStatus KeyStore::Clear()
     return ER_OK;
 }
 
+static bool MatchesPrefix(const String& str, const String& prefixPattern)
+{
+    return !WildcardMatch(str, prefixPattern);
+}
+
+QStatus KeyStore::Clear(const qcc::String& tagPrefixPattern)
+{
+    if (storeState == UNAVAILABLE) {
+        return ER_BUS_KEYSTORE_NOT_LOADED;
+    }
+    lock.Lock(MUTEX_CONTEXT);
+    bool dirty = true;
+    while (dirty) {
+        dirty = false;
+        for (KeyMap::iterator it = keys->begin(); it != keys->end(); it++) {
+            if (it->second.key.GetTag().empty()) {
+                continue;  /* skip the untag */
+            }
+            if (MatchesPrefix(it->second.key.GetTag(), tagPrefixPattern)) {
+                DelKey(it->first);
+                dirty = true;
+                break;  /* redo the loop since the iterator is out-of-sync */
+            }
+        }
+    }
+    lock.Unlock(MUTEX_CONTEXT);
+    return ER_OK;
+}
+
 QStatus KeyStore::ResetMasterGUID(const GUID128& newMasterGUID)
 {
     thisGuid = newMasterGUID;
-    return Clear();
+    storeState = MODIFIED;
+    return Store();
 }
 
 QStatus KeyStore::Reload()

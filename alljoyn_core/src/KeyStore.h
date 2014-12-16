@@ -237,6 +237,14 @@ class KeyStore {
     QStatus Clear();
 
     /**
+     * Clear keys with tag with prefix match.
+     * @param tagPrefixPattern the tag prefix pattern to compare
+     *
+     * @return  ER_OK if the operation is successful
+     */
+    QStatus Clear(const qcc::String& tagPrefixPattern);
+
+    /**
      * Reset the state of
      *
      * @return  ER_OK if the state was cleared
@@ -410,6 +418,11 @@ class KeyStore {
 
     /* the key event listener */
     KeyStoreKeyEventListener* keyEventListener;
+
+    /**
+     * The default listener is activated.
+     */
+    bool useDefaultListener;
 
 };
 

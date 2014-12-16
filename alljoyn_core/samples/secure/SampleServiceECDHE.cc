@@ -246,7 +246,7 @@ class ECDHEKeyXListener : public AuthListener {
     QStatus CreateCert(const qcc::String& serial, const qcc::GUID128& issuer, const ECCPrivateKey* issuerPrivateKey, const ECCPublicKey* issuerPubKey, const qcc::GUID128& subject, const ECCPublicKey* subjectPubKey, qcc::String& der)
     {
         QStatus status = ER_CRYPTO_ERROR;
-        CertificateX509 x509(CertificateX509::GUID_CERTIFICATE);
+        CertificateX509 x509(CertificateX509::IDENTITY_CERTIFICATE);
 
         x509.SetSerial(serial);
         x509.SetIssuer(issuer);
