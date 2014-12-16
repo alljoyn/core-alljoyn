@@ -99,6 +99,7 @@ typedef int32_t QCC_BOOL;
 #define QCC_FALSE 0
 
 #ifdef __cplusplus
+#ifdef STATIC_GLOBALS_INIT
 /** Nifty counter used to ensure that AllJoyn Globals are initialized before any other client code static
  *  or global variables
  */
@@ -113,4 +114,6 @@ static struct StaticGlobalsInit {
 } staticGlobalsInit;
 
 #endif
+#endif
+
 #endif // _QCC_PLATFORM_H

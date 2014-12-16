@@ -167,6 +167,9 @@ if env['VARIANT'] == 'release' and env['NDEBUG'] == 'defined':
 
 env.Append(CPPDEFINES = ['QCC_OS_GROUP_%s' % env['OS_GROUP'].upper()])
 
+# StaticGlobalsInit needs to be present when building the AllJoyn core
+env.Append(CPPDEFINES = 'STATIC_GLOBALS_INIT')
+
 # "Standard" C/C++ header file include paths for all projects.
 env.Append(CPPPATH = ["$DISTDIR/cpp/inc",
                       "$DISTDIR/c/inc"])
