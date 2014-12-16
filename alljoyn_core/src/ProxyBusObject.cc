@@ -1092,7 +1092,16 @@ MethodCallExit:
             status = ER_FAIL;
         }
     } else {
-        replyMsg->ErrorMsg(status, 0);
+        /*
+         * We should not need to duplicate the status information into a synthesized
+         * replyMessage.  However 14.12 and prior behaved this way, so preserve the
+         * existing behavior.
+         */
+        String sender;
+        if (bus->IsStarted()) {
+            sender = bus->GetInternal().GetLocalEndpoint()->GetUniqueName();
+        }
+        replyMsg->ErrorMsg(sender, status, 0);
     }
 
     if ((status == ER_OK) && uniqueName.empty()) {
