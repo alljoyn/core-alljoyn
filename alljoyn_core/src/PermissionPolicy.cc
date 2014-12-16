@@ -35,7 +35,7 @@ using namespace qcc;
 
 namespace ajn {
 
-qcc::String PermissionPolicy::Rule::Member::ToString()
+qcc::String PermissionPolicy::Rule::Member::ToString() const
 {
     qcc::String str;
     str += "Member:\n";
@@ -66,7 +66,7 @@ qcc::String PermissionPolicy::Rule::Member::ToString()
     return str;
 }
 
-qcc::String PermissionPolicy::Rule::ToString()
+qcc::String PermissionPolicy::Rule::ToString() const
 {
     qcc::String str;
     str += "Rule:\n";
@@ -82,7 +82,7 @@ qcc::String PermissionPolicy::Rule::ToString()
     return str;
 }
 
-qcc::String PermissionPolicy::Peer::ToString()
+qcc::String PermissionPolicy::Peer::ToString() const
 {
     qcc::String str;
     str += "Peer:\n";
@@ -108,7 +108,7 @@ qcc::String PermissionPolicy::Peer::ToString()
     return str;
 }
 
-qcc::String PermissionPolicy::Term::ToString()
+qcc::String PermissionPolicy::Term::ToString() const
 {
     qcc::String str;
     str += "Term:\n";
@@ -125,7 +125,7 @@ qcc::String PermissionPolicy::Term::ToString()
     return str;
 }
 
-qcc::String PermissionPolicy::ToString()
+qcc::String PermissionPolicy::ToString() const
 {
     qcc::String str;
     str += "PermissionPolicy:\n";

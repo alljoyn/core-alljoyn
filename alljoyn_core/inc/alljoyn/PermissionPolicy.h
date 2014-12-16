@@ -136,7 +136,28 @@ class PermissionPolicy {
                 return mutualAuth;
             }
 
-            qcc::String ToString();
+            qcc::String ToString() const;
+
+            bool operator==(const Member& m) const
+            {
+                if (memberName != m.memberName) {
+                    return false;
+                }
+
+                if (memberType != m.memberType) {
+                    return false;
+                }
+
+                if (actionMask != m.actionMask) {
+                    return false;
+                }
+
+                if (mutualAuth != m.mutualAuth) {
+                    return false;
+                }
+
+                return true;
+            }
 
           private:
             qcc::String memberName;
@@ -216,7 +237,30 @@ class PermissionPolicy {
             return membersSize;
         }
 
-        qcc::String ToString();
+        qcc::String ToString() const;
+
+        bool operator==(const Rule& r) const
+        {
+            if (objPath != r.objPath) {
+                return false;
+            }
+
+            if (interfaceName != r.interfaceName) {
+                return false;
+            }
+
+            if (membersSize != r.membersSize) {
+                return false;
+            }
+
+            for (int i = 0; i < static_cast<int>(membersSize); i++) {
+                if (!(members[i] == r.members[i])) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
 
       private:
         qcc::String objPath;
@@ -326,7 +370,28 @@ class PermissionPolicy {
             return ID;
         }
 
-        qcc::String ToString();
+        qcc::String ToString() const;
+
+        bool operator==(const Peer& p) const
+        {
+            if (level != p.level) {
+                return false;
+            }
+
+            if (type != p.type) {
+                return false;
+            }
+
+            if (IDLen != p.IDLen) {
+                return false;
+            }
+
+            if (memcmp(ID, p.ID, IDLen) != 0) {
+                return false;
+            }
+
+            return true;
+        }
 
       private:
         PeerAuthLevel level;
@@ -410,7 +475,32 @@ class PermissionPolicy {
             return rules;
         }
 
-        qcc::String ToString();
+        qcc::String ToString() const;
+
+        bool operator==(const Term& t) const
+        {
+            if (peersSize != t.peersSize) {
+                return false;
+            }
+
+            for (int i = 0; i < static_cast<int>(peersSize); i++) {
+                if (!(peers[i] == t.peers[i])) {
+                    return false;
+                }
+            }
+
+            if (rulesSize != t.rulesSize) {
+                return false;
+            }
+
+            for (int i = 0; i < static_cast<int>(rulesSize); i++) {
+                if (!(rules[i] == t.rules[i])) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
 
       private:
         size_t peersSize;
@@ -559,7 +649,7 @@ class PermissionPolicy {
         return terms;
     }
 
-    qcc::String ToString();
+    qcc::String ToString() const;
 
     /**
      * Serialize the permission policy to a byte array.
