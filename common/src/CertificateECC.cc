@@ -24,6 +24,7 @@
 #include <qcc/String.h>
 #include <qcc/StringUtil.h>
 #include <qcc/Util.h>
+#include <qcc/Crypto.h>
 
 #include <Status.h>
 
