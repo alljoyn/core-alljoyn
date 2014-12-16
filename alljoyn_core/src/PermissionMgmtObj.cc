@@ -192,7 +192,7 @@ QStatus PermissionMgmtObj::InstallTrustAnchor(KeyInfoNISTP256* keyInfo)
         if ((*it)->GetKeyIdLen() == 0) {
             continue;
         }
-        if (memcmp((*it)->GetKeyId(), keyInfo->GetKeyId(), (*it)->GetKeyIdLen()) != 0) {
+        if (memcmp((*it)->GetKeyId(), keyInfo->GetKeyId(), (*it)->GetKeyIdLen()) == 0) {
             return ER_DUPLICATE_KEY;  /* duplicate */
         }
     }
