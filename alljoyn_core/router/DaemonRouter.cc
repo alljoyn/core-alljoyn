@@ -162,7 +162,8 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& origSender)
                 if ((destEndpoint->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL) && replyExpected && !sender->AllowRemoteMessages()) {
                     QCC_DbgPrintf(("DaemonRouter::PushMessage(): Blocked method call from \"%s\" to \"%s\" (serial=%d). Caller does not allow remote messages",
                                    msg->GetSender(), destEndpoint->GetUniqueName().c_str(), msg->GetCallSerial()));
-                    msg->ErrorMsg(msg, "org.alljoyn.Bus.Blocked", "Method reply would be blocked because caller does not allow remote messages");
+                    QStatus result = msg->ErrorMsg(msg, "org.alljoyn.Bus.Blocked", "Method reply would be blocked because caller does not allow remote messages");
+                    assert(ER_OK == result); (void)result;
                     BusEndpoint busEndpoint = BusEndpoint::cast(localEndpoint);
                     PushMessage(msg, busEndpoint);
 #ifdef ENABLE_POLICYDB
@@ -174,7 +175,8 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& origSender)
                     QCC_DbgPrintf(("DaemonRouter::PushMessage(): Blocked method call from \"%s\" to \"%s\" (serial=%d). Caller does not allow remote messages",
                                    msg->GetSender(), destEndpoint->GetUniqueName().c_str(), msg->GetCallSerial()));
                     if (replyExpected) {
-                        msg->ErrorMsg(msg, "org.alljoyn.Bus.Blocked", "Destination not allowed to receive method call");
+                        QStatus result = msg->ErrorMsg(msg, "org.alljoyn.Bus.Blocked", "Destination not allowed to receive method call");
+                        assert(ER_OK == result);
                         BusEndpoint busEndpoint = BusEndpoint::cast(localEndpoint);
                         PushMessage(msg, busEndpoint);
                     }
@@ -193,7 +195,8 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& origSender)
                 if (replyExpected) {
                     qcc::String description("Remote method calls blocked for bus name: ");
                     description += destination;
-                    msg->ErrorMsg(msg, "org.alljoyn.Bus.Blocked", description.c_str());
+                    QStatus result = msg->ErrorMsg(msg, "org.alljoyn.Bus.Blocked", description.c_str());
+                    assert(ER_OK == result); (void)result;
                     BusEndpoint busEndpoint = BusEndpoint::cast(localEndpoint);
                     PushMessage(msg, busEndpoint);
                 }
@@ -220,7 +223,8 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& origSender)
                     /* Need to let the sender know its reply message cannot be passed on. */
                     qcc::String description("Unknown bus name: ");
                     description += destination;
-                    msg->ErrorMsg(msg, "org.freedesktop.DBus.Error.ServiceUnknown", description.c_str());
+                    QStatus result = msg->ErrorMsg(msg, "org.freedesktop.DBus.Error.ServiceUnknown", description.c_str());
+                    assert(ER_OK == result); (void)result;
                     BusEndpoint busEndpoint = BusEndpoint::cast(localEndpoint);
                     PushMessage(msg, busEndpoint);
                 } else {

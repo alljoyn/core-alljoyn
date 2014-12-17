@@ -748,7 +748,8 @@ QStatus BusObject::MethodReply(const Message& msg, QStatus status)
             return ER_BUS_NO_CALL_FOR_REPLY;
         } else {
             Message error(*bus);
-            error->ErrorMsg(msg, status);
+            QStatus result = error->ErrorMsg(msg, status);
+            assert(ER_OK == result); (void)result;
             BusEndpoint bep = BusEndpoint::cast(bus->GetInternal().GetLocalEndpoint());
             return bus->GetInternal().GetRouter().PushMessage(error, bep);
         }

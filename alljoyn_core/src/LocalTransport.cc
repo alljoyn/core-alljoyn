@@ -370,7 +370,8 @@ QStatus _LocalEndpoint::PeerInterface(Message& message)
         if (ER_OK != status) {
             return status;
         }
-        message->ReplyMsg(message, NULL, 0);
+        status = message->ReplyMsg(message, NULL, 0);
+        assert(ER_OK == status);
         BusEndpoint busEndpoint = BusEndpoint::wrap(this);
         return bus->GetInternal().GetRouter().PushMessage(message, busEndpoint);
     }
@@ -384,7 +385,8 @@ QStatus _LocalEndpoint::PeerInterface(Message& message)
         qcc::String guidStr = bus->GetInternal().GetGlobalGUID().ToString();
         replyArg.v_string.str = guidStr.c_str();
         replyArg.v_string.len = guidStr.size();
-        message->ReplyMsg(message, &replyArg, 1);
+        status = message->ReplyMsg(message, &replyArg, 1);
+        assert(ER_OK == status);
         BusEndpoint busEndpoint = BusEndpoint::wrap(this);
         return bus->GetInternal().GetRouter().PushMessage(message, busEndpoint);
     }
@@ -1010,7 +1012,8 @@ QStatus _LocalEndpoint::HandleMethodCall(Message& message)
             errMsg = message->Description();
             break;
         }
-        message->ErrorMsg(message, errStr.c_str(), errMsg.c_str());
+        QStatus result = message->ErrorMsg(message, errStr.c_str(), errMsg.c_str());
+        assert(ER_OK == result); (void)result;
         BusEndpoint busEndpoint = BusEndpoint::wrap(this);
         status = bus->GetInternal().GetRouter().PushMessage(message, busEndpoint);
     } else {
