@@ -110,7 +110,8 @@ class FileTransferObject : public BusObject {
             streamBuf->pubseekpos(0, ios::in);
 
             while (length > 0) {
-                std::streamsize bufferLength = ALLJOYN_MAX_ARRAY_LEN;
+
+                size_t bufferLength = ALLJOYN_MAX_ARRAY_LEN;
 
                 if (length > (filebuf::pos_type)ALLJOYN_MAX_ARRAY_LEN) {
                     length -= (filebuf::pos_type)ALLJOYN_MAX_ARRAY_LEN;
