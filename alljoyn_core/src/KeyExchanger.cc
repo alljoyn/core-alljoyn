@@ -33,6 +33,7 @@
 #include "KeyExchanger.h"
 #include "AllJoynPeerObj.h"
 #include "CredentialAccessor.h"
+#include "KeyInfoHelper.h"
 
 #define QCC_MODULE "AUTH_KEY_EXCHANGER"
 
@@ -224,7 +225,7 @@ void KeyExchangerECDHE::KeyExchangeGenKeyInfo(MsgArg& variant)
     KeyInfoNISTP256 keyInfo;
     keyInfo.SetPublicKey(GetECDHEPublicKey());
     MsgArg* keyInfoVariant = new MsgArg();
-    PermissionMgmtObj::KeyInfoNISTP256ToMsgArg(keyInfo, *keyInfoVariant);
+    KeyInfoHelper::KeyInfoNISTP256ToMsgArg(keyInfo, *keyInfoVariant);
     variant.Set("(yv)", EXCHANGE_KEYINFO, keyInfoVariant);
     variant.SetOwnershipFlags(MsgArg::OwnsArgs, true);
     hashUtil.Update((uint8_t*) GetECDHEPublicKey(), sizeof(ECCPublicKey));
@@ -244,7 +245,7 @@ void KeyExchangerECDHE_ECDSA::KeyExchangeGenTrustAnchorKeyInfos(MsgArg& variant)
     size_t cnt = 0;
     for (PermissionMgmtObj::TrustAnchorList::iterator it = trustAnchorList->begin(); it != trustAnchorList->end(); it++) {
         KeyInfoNISTP256* keyInfo = *it;
-        PermissionMgmtObj::KeyInfoNISTP256ToMsgArg(*keyInfo, entries[cnt]);
+        KeyInfoHelper::KeyInfoNISTP256ToMsgArg(*keyInfo, entries[cnt]);
         hashUtil.Update((uint8_t*) keyInfo->GetPublicKey(), sizeof(ECCPublicKey));
     }
     variant.Set("(yv)", EXCHANGE_TRUST_ANCHORS, new MsgArg("a(yv)", trustAnchorList->size(), entries));
@@ -269,7 +270,7 @@ void KeyExchangerECDHE_ECDSA::KeyExchangeGenKey(MsgArg& variant)
 QStatus KeyExchangerECDHE::KeyExchangeReadKeyInfo(MsgArg& variant)
 {
     KeyInfoNISTP256 keyInfo;
-    QStatus status = PermissionMgmtObj::MsgArgToKeyInfoNISTP256(variant, keyInfo);
+    QStatus status = KeyInfoHelper::MsgArgToKeyInfoNISTP256(variant, keyInfo);
     if (status != ER_OK) {
         QCC_DbgHLPrintf(("KeyExchangerECDHE::KeyExchangeReadKeyInfo parsing KeyInfo fails status 0x%x\n", status));
         return status;
@@ -324,7 +325,7 @@ QStatus KeyExchangerECDHE_ECDSA::KeyExchangeReadTrustAnchorKeyInfo(MsgArg& varia
 
     for (size_t cnt = 0; cnt < numEntries; cnt++) {
         KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
-        status = PermissionMgmtObj::MsgArgToKeyInfoNISTP256(entries[cnt], *keyInfo);
+        status = KeyInfoHelper::MsgArgToKeyInfoNISTP256(entries[cnt], *keyInfo);
         if (status != ER_OK) {
             QCC_DbgHLPrintf(("KeyExchangerECDHE::KeyExchangeReadTrustAnchorKeyInfo parsing KeyInfo fails status 0x%x\n", status));
             return status;

@@ -28,6 +28,7 @@
 #include "PermissionMgmtObj.h"
 #include "PeerState.h"
 #include "BusInternal.h"
+#include "KeyInfoHelper.h"
 #include "KeyExchanger.h"
 
 #define QCC_MODULE "PERMISSION_MGMT"
@@ -230,6 +231,21 @@ void PermissionMgmtObj::ClearTrustAnchorList(TrustAnchorList& list)
     list.clear();
 }
 
+static void LoadGuildAuthorities(const PermissionPolicy& policy, PermissionMgmtObj::TrustAnchorList& guildAuthoritiesList)
+{
+    const PermissionPolicy::Term* terms = policy.GetTerms();
+    for (size_t cnt = 0; cnt < policy.GetTermsSize(); cnt++) {
+        const PermissionPolicy::Peer* peers = terms[cnt].GetPeers();
+        for (size_t idx = 0; idx < terms[cnt].GetPeersSize(); idx++) {
+            if ((peers[idx].GetType() == PermissionPolicy::Peer::PEER_GUILD) && peers[idx].GetKeyInfo()) {
+                if (KeyInfoHelper::InstanceOfKeyInfoNISTP256(*peers[idx].GetKeyInfo())) {
+                    guildAuthoritiesList.push_back((KeyInfoNISTP256*) peers[idx].GetKeyInfo());
+                }
+            }
+        }
+    }
+}
+
 void PermissionMgmtObj::ClearTrustAnchors()
 {
     ClearTrustAnchorList(trustAnchors);
@@ -401,71 +417,6 @@ QStatus PermissionMgmtObj::RetrieveDSAPrivateKey(CredentialAccessor* ca, ECCPriv
     return ER_OK;
 }
 
-void PermissionMgmtObj::KeyInfoNISTP256ToMsgArg(KeyInfoNISTP256& keyInfo, MsgArg& variant)
-{
-    MsgArg coordArg("(ayay)", ECC_COORDINATE_SZ, keyInfo.GetXCoord(), ECC_COORDINATE_SZ, keyInfo.GetYCoord());
-
-    variant.Set("(yv)", KeyInfo::FORMAT_ALLJOYN,
-                new MsgArg("(ayyyv)", keyInfo.GetKeyIdLen(), keyInfo.GetKeyId(), KeyInfo::USAGE_SIGNING, KeyInfoECC::KEY_TYPE,
-                           new MsgArg("(yyv)", keyInfo.GetAlgorithm(), keyInfo.GetCurve(), new MsgArg(coordArg))));
-    variant.SetOwnershipFlags(MsgArg::OwnsArgs, true);
-}
-
-QStatus PermissionMgmtObj::MsgArgToKeyInfoNISTP256(MsgArg& variant, KeyInfoNISTP256& keyInfo)
-{
-    QStatus status;
-    uint8_t keyFormat;
-    MsgArg* variantArg;
-    status = variant.Get("(yv)", &keyFormat, &variantArg);
-    if (ER_OK != status) {
-        return ER_INVALID_DATA;
-    }
-    if (keyFormat != KeyInfo::FORMAT_ALLJOYN) {
-        return ER_INVALID_DATA;
-    }
-    uint8_t* kid;
-    size_t kidLen;
-    uint8_t keyUsageType;
-    uint8_t keyType;
-    MsgArg* keyVariantArg;
-    status = variantArg->Get("(ayyyv)", &kidLen, &kid, &keyUsageType, &keyType, &keyVariantArg);
-    if (ER_OK != status) {
-        return ER_INVALID_DATA;
-    }
-    keyInfo.SetKeyId(kid, kidLen);
-    if ((keyUsageType != KeyInfo::USAGE_SIGNING) && (keyUsageType != KeyInfo::USAGE_ENCRYPTION)) {
-        return ER_INVALID_DATA;
-    }
-    if (keyType != KeyInfoECC::KEY_TYPE) {
-        return ER_INVALID_DATA;
-    }
-    uint8_t algorithm;
-    uint8_t curve;
-    MsgArg* curveVariant;
-    status = keyVariantArg->Get("(yyv)", &algorithm, &curve, &curveVariant);
-    if (ER_OK != status) {
-        return ER_INVALID_DATA;
-    }
-    if (curve != Crypto_ECC::ECC_NIST_P256) {
-        return ER_INVALID_DATA;
-    }
-
-    uint8_t* xCoord;
-    size_t xLen;
-    uint8_t* yCoord;
-    size_t yLen;
-    status = curveVariant->Get("(ayay)", &xLen, &xCoord, &yLen, &yCoord);
-    if (ER_OK != status) {
-        return ER_INVALID_DATA;
-    }
-    if ((xLen != ECC_COORDINATE_SZ) || (yLen != ECC_COORDINATE_SZ)) {
-        return ER_INVALID_DATA;
-    }
-    keyInfo.SetXCoord(xCoord);
-    keyInfo.SetYCoord(yCoord);
-    return ER_OK;
-}
-
 void PermissionMgmtObj::GetPublicKey(const InterfaceDescription::Member* member, Message& msg)
 {
     KeyInfoNISTP256 replyKeyInfo;
@@ -476,7 +427,7 @@ void PermissionMgmtObj::GetPublicKey(const InterfaceDescription::Member* member,
     }
 
     MsgArg replyArgs[1];
-    KeyInfoNISTP256ToMsgArg(replyKeyInfo, replyArgs[0]);
+    KeyInfoHelper::KeyInfoNISTP256ToMsgArg(replyKeyInfo, replyArgs[0]);
     MethodReply(msg, replyArgs, ArraySize(replyArgs));
 }
 
@@ -487,7 +438,7 @@ void PermissionMgmtObj::Claim(const InterfaceDescription::Member* member, Messag
         return;
     }
     KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
-    QStatus status = MsgArgToKeyInfoNISTP256((MsgArg &) * msg->GetArg(0), *keyInfo);
+    QStatus status = KeyInfoHelper::MsgArgToKeyInfoNISTP256((MsgArg &) * msg->GetArg(0), *keyInfo);
     if (ER_OK != status) {
         delete keyInfo;
         MethodReply(msg, status);
@@ -622,13 +573,7 @@ QStatus PermissionMgmtObj::StorePolicy(PermissionPolicy& policy)
     KeyBlob kb((uint8_t*) buf, size, KeyBlob::GENERIC);
     delete [] buf;
 
-    status = ca->StoreKey(policyGuid, kb);
-    QCC_DbgPrintf(("PermissionMgmtObj::StorePolicy save message size %d to key store return status 0x%x\n", size, status));
-    if (ER_OK != status) {
-        return status;
-    }
-
-    return ER_OK;
+    return ca->StoreKey(policyGuid, kb);
 }
 
 QStatus PermissionMgmtObj::RetrievePolicy(PermissionPolicy& policy)
@@ -660,7 +605,7 @@ QStatus PermissionMgmtObj::NotifyConfig()
         ca->GetGuid(localGUID);
         keyInfo.SetKeyId(localGUID.GetBytes(), GUID128::SIZE);
         keyInfo.SetPublicKey(&pubKey);
-        KeyInfoNISTP256ToMsgArg(keyInfo, keyInfoArgs[0]);
+        KeyInfoHelper::KeyInfoNISTP256ToMsgArg(keyInfo, keyInfoArgs[0]);
         args[0].Set("a(yv)", 1, keyInfoArgs);
     } else {
         args[0].Set("a(yv)", 0, NULL);
@@ -675,20 +620,48 @@ static QStatus ValidateCertificate(CertificateX509& cert, PermissionMgmtObj::Tru
 {
     for (PermissionMgmtObj::TrustAnchorList::iterator it = taList->begin(); it != taList->end(); it++) {
         KeyInfoNISTP256* keyInfo = *it;
-        if (cert.Verify(*keyInfo) == ER_OK) {
+        if (cert.Verify(keyInfo->GetPublicKey()) == ER_OK) {
             return ER_OK;  /* cert is verified */
         }
     }
     return ER_UNKNOWN_CERTIFICATE;
 }
 
-static QStatus ValidateCertificateChain(std::vector<CertificateX509*>& certs, PermissionMgmtObj::TrustAnchorList* taList)
+static QStatus ValidateMembershipCertificate(MembershipCertificate& cert, PermissionMgmtObj::TrustAnchorList* taList)
+{
+    for (PermissionMgmtObj::TrustAnchorList::iterator it = taList->begin(); it != taList->end(); it++) {
+        KeyInfoNISTP256* keyInfo = *it;
+        if (keyInfo->GetKeyIdLen() != GUID128::SIZE) {
+            continue;
+        }
+        GUID128 aGuid(0);
+        aGuid.SetBytes(keyInfo->GetKeyId());
+        if (aGuid != cert.GetGuild()) {
+            continue;
+        }
+
+        if (cert.Verify(keyInfo->GetPublicKey()) == ER_OK) {
+            return ER_OK;  /* cert is verified */
+        }
+    }
+    return ER_UNKNOWN_CERTIFICATE;
+}
+
+static QStatus ValidateCertificateChain(bool checkGuildID, std::vector<CertificateX509*>& certs, PermissionMgmtObj::TrustAnchorList* taList)
 {
     size_t idx = 0;
     bool validated = false;
     for (std::vector<CertificateX509*>::iterator it = certs.begin(); it != certs.end(); it++) {
         idx++;
-        QStatus status = ValidateCertificate(*(*it), taList);
+        QStatus status;
+        if (checkGuildID) {
+            if ((*it)->GetType() != CertificateX509::MEMBERSHIP_CERTIFICATE) {
+                continue;
+            }
+            status = ValidateMembershipCertificate(*((MembershipCertificate*) *it), taList);
+        } else {
+            status = ValidateCertificate(*(*it), taList);
+        }
         if (ER_OK == status) {
             validated = true;
             break;
@@ -1318,6 +1291,11 @@ QStatus PermissionMgmtObj::ParseSendMemberships(Message& msg)
     }
     if (needValidation) {
         /* do the membership cert validation for the peer */
+        TrustAnchorList guildAuthorities;
+        const PermissionPolicy* policy = bus.GetInternal().GetPermissionManager().GetPolicy();
+        if (policy) {
+            LoadGuildAuthorities(*policy, guildAuthorities);
+        }
         while (!peerState->guildMap.empty()) {
             bool verified = true;
             for (_PeerState::GuildMap::iterator it = peerState->guildMap.begin(); it != peerState->guildMap.end(); it++) {
@@ -1327,7 +1305,12 @@ QStatus PermissionMgmtObj::ParseSendMemberships(Message& msg)
                 certsToVerify.reserve(metadata->certChain.size() + 1);
                 certsToVerify.assign(1, &metadata->cert);
                 certsToVerify.insert(certsToVerify.begin() + 1, metadata->certChain.begin(), metadata->certChain.end());
-                status = ValidateCertificateChain(certsToVerify, &trustAnchors);
+                /* check against the trust anchors */
+                status = ValidateCertificateChain(false, certsToVerify, &trustAnchors);
+                if (ER_OK != status) {
+                    /* check against the guild authorities */
+                    status = ValidateCertificateChain(true, certsToVerify, &guildAuthorities);
+                }
                 if (ER_OK != status) {
                     /* remove this membership cert since it is not valid */
                     peerState->guildMap.erase(it);
@@ -1339,6 +1322,7 @@ QStatus PermissionMgmtObj::ParseSendMemberships(Message& msg)
                 break;  /* done */
             }
         }
+        guildAuthorities.clear();
     }
     return ER_OK;
 }

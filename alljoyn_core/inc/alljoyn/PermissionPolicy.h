@@ -28,6 +28,7 @@
 
 #include <qcc/platform.h>
 #include <qcc/String.h>
+#include <qcc/KeyInfoECC.h>
 #include <alljoyn/Status.h>
 #include <alljoyn/MsgArg.h>
 #include <alljoyn/Message.h>
@@ -136,9 +137,19 @@ class PermissionPolicy {
                 return mutualAuth;
             }
 
-            qcc::String ToString();
+            qcc::String ToString() const;
 
           private:
+            /**
+             * Assignment operator is private
+             */
+            Member& operator=(const Member& other);
+
+            /**
+             * Copy constructor is private
+             */
+            Member(const Member& other);
+
             qcc::String memberName;
             MemberType memberType;
             uint8_t actionMask;
@@ -216,9 +227,19 @@ class PermissionPolicy {
             return membersSize;
         }
 
-        qcc::String ToString();
+        qcc::String ToString() const;
 
       private:
+        /**
+         * Assignment operator is private
+         */
+        Rule& operator=(const Rule& other);
+
+        /**
+         * Copy constructor is private
+         */
+        Rule(const Rule& other);
+
         qcc::String objPath;
         qcc::String interfaceName;
         Member* members;
@@ -255,7 +276,7 @@ class PermissionPolicy {
          * Constructor
          *
          */
-        Peer() : level(PEER_LEVEL_ENCRYPTED), type(PEER_ANY), ID(NULL), IDLen(0)
+        Peer() : level(PEER_LEVEL_ENCRYPTED), type(PEER_ANY), keyInfo(NULL)
         {
         }
 
@@ -264,7 +285,7 @@ class PermissionPolicy {
          */
         virtual ~Peer()
         {
-            delete [] ID;
+            delete keyInfo;
         }
 
         /**
@@ -300,39 +321,43 @@ class PermissionPolicy {
         }
 
         /**
-         * Set the ID field.
-         * @param id the id to be copied
-         * @param len the number of bytes in the id field
+         * Set the keyInfo field.
+         * When peer type is PEER_ANY the keyInfo is not relevant.
+         * When peer type is PEER_GUID the only the public key in the keyInfo is relevant.
+         * When peer type is PEER_GUILD the keyInfo.keyId holds the GUILD ID (which is a GUID) and the keyInfo.PublicKey is the public key of the guild authority.
+         * @param keyInfo the keyInfo. The keyInfo must be new'd by the caller. It will be deleted by this object.
          */
-        void SetID(const uint8_t* id, size_t len)
+        void SetKeyInfo(qcc::KeyInfoECC* keyInfo)
         {
-            delete [] ID;
-            ID = NULL;
-            IDLen = len;
-            if (len == 0) {
-                return;
-            }
-            ID = new uint8_t[len];
-            memcpy(ID, id, len);
+            delete this->keyInfo;
+            this->keyInfo = keyInfo;
         }
 
-        const size_t GetIDLen() const
+        /**
+         * Get the keyInfo field.
+         * @return keyInfo the keyInfo.
+         */
+        const qcc::KeyInfoECC* GetKeyInfo() const
         {
-            return IDLen;
+            return keyInfo;
         }
 
-        const uint8_t* GetID() const
-        {
-            return ID;
-        }
-
-        qcc::String ToString();
+        qcc::String ToString() const;
 
       private:
+        /**
+         * Assignment operator is private
+         */
+        Peer& operator=(const Peer& other);
+
+        /**
+         * Copy constructor is private
+         */
+        Peer(const Peer& other);
+
         PeerAuthLevel level;
         PeerType type;
-        uint8_t* ID;
-        size_t IDLen;
+        qcc::KeyInfoECC* keyInfo;
     };
 
     /**
@@ -410,9 +435,20 @@ class PermissionPolicy {
             return rules;
         }
 
-        qcc::String ToString();
+        qcc::String ToString() const;
 
       private:
+
+        /**
+         * Assignment operator is private
+         */
+        Term& operator=(const Term& other);
+
+        /**
+         * Copy constructor is private
+         */
+        Term(const Term& other);
+
         size_t peersSize;
         Peer* peers;
         size_t rulesSize;
@@ -470,6 +506,7 @@ class PermissionPolicy {
         {
             return ER_NOT_IMPLEMENTED;
         }
+
     };
 
     /**
@@ -559,7 +596,7 @@ class PermissionPolicy {
         return terms;
     }
 
-    qcc::String ToString();
+    qcc::String ToString() const;
 
     /**
      * Serialize the permission policy to a byte array.
@@ -636,6 +673,16 @@ class PermissionPolicy {
     QStatus Digest(Marshaller& marshaller, uint8_t* digest, size_t len);
 
   private:
+
+    /**
+     * Assignment operator is private
+     */
+    PermissionPolicy& operator=(const PermissionPolicy& other);
+
+    /**
+     * Copy constructor is private
+     */
+    PermissionPolicy(const PermissionPolicy& other);
 
     uint8_t version;
     uint32_t serialNum;

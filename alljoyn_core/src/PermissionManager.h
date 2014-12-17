@@ -65,7 +65,7 @@ class PermissionManager {
      * Retrieve the permission policy.
      * @return the permission policy.
      */
-    const PermissionPolicy* GetPolicy()
+    const PermissionPolicy* GetPolicy() const
     {
         return policy;
     }
@@ -91,13 +91,6 @@ class PermissionManager {
     {
         return permissionMgmtObj;
     }
-
-    /**
-     * Set the permission manifest for the application.
-     * @params rules the permission rules.
-     * @params count the number of permission rules
-     */
-    QStatus SetManifest(PermissionPolicy::Rule* rules, size_t count);
 
   private:
 

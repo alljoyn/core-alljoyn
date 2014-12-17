@@ -146,21 +146,6 @@ class PermissionMgmtObj : public BusObject {
     }
 
     /**
-     * Helper function to generate a MsgArg for KeyInfoNISTP256 object.
-     * @param keyInfo the KeyInfoNISTP256 object
-     * @param variant[out] the output message arg.
-     */
-
-    static void KeyInfoNISTP256ToMsgArg(qcc::KeyInfoNISTP256& keyInfo, MsgArg& variant);
-
-    /**
-     * Helper function to load a KeyInfoNISTP256 object using data from the message arg.
-     * @param variant the input message arg.
-     * @param keyInfo[out] the output KeyInfoNISTP256 object
-     */
-    static QStatus MsgArgToKeyInfoNISTP256(MsgArg& variant, qcc::KeyInfoNISTP256& keyInfo);
-
-    /**
      * Helper function to release the allocated memory for the trust anchor list.
      * @param list the list to be clear of allocated memory.
      */

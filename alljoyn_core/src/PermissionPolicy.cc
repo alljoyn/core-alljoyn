@@ -27,6 +27,7 @@
 #include <qcc/Crypto.h>
 #include <alljoyn/PermissionPolicy.h>
 #include <alljoyn/BusAttachment.h>
+#include "KeyInfoHelper.h"
 
 #define QCC_MODULE "PERMISSION_MGMT"
 
@@ -35,7 +36,7 @@ using namespace qcc;
 
 namespace ajn {
 
-qcc::String PermissionPolicy::Rule::Member::ToString()
+qcc::String PermissionPolicy::Rule::Member::ToString() const
 {
     qcc::String str;
     str += "Member:\n";
@@ -66,7 +67,7 @@ qcc::String PermissionPolicy::Rule::Member::ToString()
     return str;
 }
 
-qcc::String PermissionPolicy::Rule::ToString()
+qcc::String PermissionPolicy::Rule::ToString() const
 {
     qcc::String str;
     str += "Rule:\n";
@@ -82,7 +83,7 @@ qcc::String PermissionPolicy::Rule::ToString()
     return str;
 }
 
-qcc::String PermissionPolicy::Peer::ToString()
+qcc::String PermissionPolicy::Peer::ToString() const
 {
     qcc::String str;
     str += "Peer:\n";
@@ -99,16 +100,19 @@ qcc::String PermissionPolicy::Peer::ToString()
         str += "  type: any\n";
     } else if (type == PEER_GUID) {
         str += "  type: GUID\n";
+        if (keyInfo) {
+            str += keyInfo->ToString();
+        }
     } else if (type == PEER_GUILD) {
         str += "  type: guild\n";
-    }
-    if (IDLen > 0) {
-        str += "  ID: " + BytesToHexString(ID, IDLen) + "\n";
+        if (keyInfo) {
+            str += keyInfo->ToString();
+        }
     }
     return str;
 }
 
-qcc::String PermissionPolicy::Term::ToString()
+qcc::String PermissionPolicy::Term::ToString() const
 {
     qcc::String str;
     str += "Term:\n";
@@ -125,7 +129,7 @@ qcc::String PermissionPolicy::Term::ToString()
     return str;
 }
 
-qcc::String PermissionPolicy::ToString()
+qcc::String PermissionPolicy::ToString() const
 {
     qcc::String str;
     str += "PermissionPolicy:\n";
@@ -152,7 +156,19 @@ static QStatus GeneratePeerArgs(MsgArg** retArgs, PermissionPolicy::Peer* peers,
         if (peers[cnt].GetType() == PermissionPolicy::Peer::PEER_ANY) {
             variants[cnt].Set("(yyv)", peers[cnt].GetLevel(), peers[cnt].GetType(), new MsgArg("ay", 0, NULL));
         } else {
-            variants[cnt].Set("(yyv)", peers[cnt].GetLevel(), peers[cnt].GetType(), new MsgArg("ay", peers[cnt].GetIDLen(), peers[cnt].GetID()));
+            const KeyInfoECC* keyInfo = peers[cnt].GetKeyInfo();
+            if (!keyInfo) {
+                delete [] variants;
+                return ER_INVALID_DATA;
+            }
+            if (!KeyInfoHelper::InstanceOfKeyInfoNISTP256(*keyInfo)) {
+                delete [] variants;
+                return ER_NOT_IMPLEMENTED;
+            }
+            KeyInfoNISTP256* keyInfoNISTP256 = (qcc::KeyInfoNISTP256*) keyInfo;
+            MsgArg* keyInfoArg = new MsgArg();
+            KeyInfoHelper::KeyInfoNISTP256ToMsgArg(*keyInfoNISTP256, *keyInfoArg);
+            variants[cnt].Set("(yyv)", peers[cnt].GetLevel(), peers[cnt].GetType(), keyInfoArg);
         }
         variants[cnt].SetOwnershipFlags(MsgArg::OwnsArgs, true);
     }
@@ -198,14 +214,14 @@ static QStatus BuildPeersFromArg(MsgArg& arg, PermissionPolicy::Peer** peers, si
         if (peerType == PermissionPolicy::Peer::PEER_ANY) {
             continue;
         }
-        size_t len;
-        uint8_t* data;
-        status = variant->Get("ay", &len, &data);
+        KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
+        status = KeyInfoHelper::MsgArgToKeyInfoNISTP256(*variant, *keyInfo);
         if (ER_OK != status) {
+            delete keyInfo;
             delete [] peerArray;
             return status;
         }
-        pp->SetID(data, len);
+        pp->SetKeyInfo(keyInfo);
     }
 
     *count = peerCount;
@@ -672,9 +688,12 @@ QStatus DefaultPolicyMarshaller::MarshalPrep(PermissionPolicy& policy)
     if (ER_OK != status) {
         return status;
     }
-    /* use an error message as it is the simplest message without many validition rules */
+    /**
+     * Use an error message as it is the simplest message without many validition rules.
+     * The ALLJOYN_FLAG_SESSIONLESS is set in order to skip the serial number
+     * check since the data can be stored for a long time*/
     msg->ErrorMsg("/", 0);
-    return msg->MarshalMessage("(yv)", "", MESSAGE_ERROR, &args, 1, 0, 0);
+    return msg->MarshalMessage("(yv)", "", MESSAGE_ERROR, &args, 1, ALLJOYN_FLAG_SESSIONLESS, 0);
 }
 
 QStatus DefaultPolicyMarshaller::Marshal(PermissionPolicy& policy, uint8_t** buf, size_t* size)

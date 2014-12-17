@@ -31,6 +31,7 @@
 #include <qcc/KeyInfoECC.h>
 #include <qcc/StringUtil.h>
 #include <alljoyn/PermissionPolicy.h>
+#include "KeyInfoHelper.h"
 #include "CredentialAccessor.h"
 #include "PermissionMgmtObj.h"
 
@@ -299,6 +300,8 @@ class PermissionMgmtTest : public testing::Test, public BusObject {
             EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
             status = ifc->AddMember(MESSAGE_METHOD_CALL, "Channel", NULL, NULL, NULL);
             EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+            status = ifc->AddMember(MESSAGE_METHOD_CALL, "Mute", NULL, NULL, NULL);
+            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
             ifc->Activate();
         }
         if (!addService) {
@@ -309,6 +312,7 @@ class PermissionMgmtTest : public testing::Test, public BusObject {
         AddMethodHandler(ifc->GetMember("Up"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtTest::TVUp));
         AddMethodHandler(ifc->GetMember("Down"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtTest::TVDown));
         AddMethodHandler(ifc->GetMember("Channel"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtTest::TVChannel));
+        AddMethodHandler(ifc->GetMember("Mute"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtTest::TVMute));
     }
 
     void CreateAppInterfaces(BusAttachment& bus, bool addService)
@@ -342,7 +346,7 @@ class PermissionMgmtTest : public testing::Test, public BusObject {
         EXPECT_EQ(ER_OK, status) << "  Retrieve the key info  failed.  Actual Status: " << QCC_StatusText(status);
         if (keyArrayLen > 0) {
             KeyInfoNISTP256 keyInfo;
-            status = PermissionMgmtObj::MsgArgToKeyInfoNISTP256(keyArrayArg[0], keyInfo);
+            status = KeyInfoHelper::MsgArgToKeyInfoNISTP256(keyArrayArg[0], keyInfo);
             EXPECT_EQ(ER_OK, status) << "  Parse the key info  failed.  Actual Status: " << QCC_StatusText(status);
         }
         status = msg->GetArg(1)->Get("y", &claimableState);
@@ -382,6 +386,11 @@ class PermissionMgmtTest : public testing::Test, public BusObject {
     }
 
     void TVChannel(const InterfaceDescription::Member* member, Message& msg)
+    {
+        MethodReply(msg, ER_OK);
+    }
+
+    void TVMute(const InterfaceDescription::Member* member, Message& msg)
     {
         MethodReply(msg, ER_OK);
     }
@@ -533,7 +542,7 @@ static QStatus Claim(BusAttachment& bus, ProxyBusObject& remoteObj, qcc::GUID128
     return status;
 }
 
-static PermissionPolicy* GeneratePolicy(qcc::GUID128& guid)
+static PermissionPolicy* GeneratePolicy(qcc::GUID128& guid, qcc::ECCPublicKey& adminPublicKey, qcc::ECCPublicKey& guildAuthority)
 {
     PermissionPolicy* policy = new PermissionPolicy();
 
@@ -542,12 +551,15 @@ static PermissionPolicy* GeneratePolicy(qcc::GUID128& guid)
     /* add the admin section */
     PermissionPolicy::Peer* admins = new PermissionPolicy::Peer[1];
     admins[0].SetType(PermissionPolicy::Peer::PEER_GUID);
-    admins[0].SetID(guid.GetBytes(), guid.SIZE);
+    KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
+    keyInfo->SetKeyId(guid.GetBytes(), guid.SIZE);
+    keyInfo->SetPublicKey(&adminPublicKey);
+    admins[0].SetKeyInfo(keyInfo);
     policy->SetAdmins(1, admins);
 
     /* add the provider section */
 
-    PermissionPolicy::Term* terms = new PermissionPolicy::Term[3];
+    PermissionPolicy::Term* terms = new PermissionPolicy::Term[4];
 
     /* terms record 0  ANY-USER */
     PermissionPolicy::Peer* peers = new PermissionPolicy::Peer[1];
@@ -567,7 +579,10 @@ static PermissionPolicy* GeneratePolicy(qcc::GUID128& guid)
     /* terms record 1 GUILD membershipGUID1 */
     peers = new PermissionPolicy::Peer[1];
     peers[0].SetType(PermissionPolicy::Peer::PEER_GUILD);
-    peers[0].SetID(membershipGUID1.GetBytes(), qcc::GUID128::SIZE);
+    keyInfo = new KeyInfoNISTP256();
+    keyInfo->SetKeyId(membershipGUID1.GetBytes(), qcc::GUID128::SIZE);
+    keyInfo->SetPublicKey(&guildAuthority);
+    peers[0].SetKeyInfo(keyInfo);
     terms[1].SetPeers(1, peers);
     rules = new PermissionPolicy::Rule[2];
     rules[0].SetInterfaceName(TV_IFC_NAME);
@@ -593,7 +608,10 @@ static PermissionPolicy* GeneratePolicy(qcc::GUID128& guid)
     /* terms record 2 GUILD membershipGUID2 */
     peers = new PermissionPolicy::Peer[1];
     peers[0].SetType(PermissionPolicy::Peer::PEER_GUILD);
-    peers[0].SetID(membershipGUID2.GetBytes(), qcc::GUID128::SIZE);
+    keyInfo = new KeyInfoNISTP256();
+    keyInfo->SetKeyId(membershipGUID2.GetBytes(), qcc::GUID128::SIZE);
+    keyInfo->SetPublicKey(&guildAuthority);
+    peers[0].SetKeyInfo(keyInfo);
     terms[2].SetPeers(1, peers);
     rules = new PermissionPolicy::Rule[2];
     rules[0].SetObjPath("/control/settings");
@@ -606,10 +624,25 @@ static PermissionPolicy* GeneratePolicy(qcc::GUID128& guid)
     prms[0].SetMemberName("*");
     prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
     rules[1].SetMembers(1, prms);
-
     terms[2].SetRules(2, rules);
 
-    policy->SetTerms(3, terms);
+    /* terms record 3 peer specific rule  */
+    peers = new PermissionPolicy::Peer[1];
+    peers[0].SetType(PermissionPolicy::Peer::PEER_GUID);
+    keyInfo = new KeyInfoNISTP256();
+    keyInfo->SetPublicKey(&guildAuthority);
+    peers[0].SetKeyInfo(keyInfo);
+    terms[3].SetPeers(1, peers);
+    rules = new PermissionPolicy::Rule[1];
+    rules[0].SetInterfaceName(TV_IFC_NAME);
+    prms = new PermissionPolicy::Rule::Member[1];
+    prms[0].SetMemberName("Mute");
+    prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+    rules[0].SetMembers(1, prms);
+    terms[3].SetRules(1, rules);
+
+    policy->SetTerms(4, terms);
 
     return policy;
 }
@@ -1033,6 +1066,22 @@ static QStatus ExcerciseTVChannel(BusAttachment& bus, ProxyBusObject& remoteObj)
     return status;
 }
 
+static QStatus ExcerciseTVMute(BusAttachment& bus, ProxyBusObject& remoteObj)
+{
+    QStatus status;
+    const InterfaceDescription* itf = bus.GetInterface(TV_IFC_NAME);
+    remoteObj.AddInterface(*itf);
+    Message reply(bus);
+
+    status = remoteObj.MethodCall(TV_IFC_NAME, "Mute", NULL, 0, reply, 5000);
+    if (ER_OK != status) {
+        if (IsPermissionDeniedError(status, reply)) {
+            status = ER_PERMISSION_DENIED;
+        }
+    }
+    return status;
+}
+
 static QStatus JoinPeerSession(BusAttachment& initiator, BusAttachment& responder, SessionId& sessionId)
 {
     SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
@@ -1239,9 +1288,17 @@ TEST_F(PermissionMgmtTest, InstallPolicy)
     qcc::GUID128 localGUID;
     status = ca.GetGuid(localGUID);
     EXPECT_EQ(ER_OK, status) << "  ca.GetGuid failed.  Actual Status: " << QCC_StatusText(status);
+    ECCPrivateKey issuerPrivateKey;
+    ECCPublicKey issuerPubKey;
+    status = RetrieveDSAKeys(adminBus, issuerPrivateKey, issuerPubKey);
+    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAKeys failed.  Actual Status: " << QCC_StatusText(status);
+
+    ECCPublicKey guildAuthorityPubKey;
+    status = RetrieveDSAPublicKeyFromKeyStore(consumerBus, &guildAuthorityPubKey);
+    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
 
     SetNotifyConfigSignalReceived(false);
-    PermissionPolicy* policy = GeneratePolicy(localGUID);
+    PermissionPolicy* policy = GeneratePolicy(localGUID, issuerPubKey, guildAuthorityPubKey);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
     status = InstallPolicy(adminBus, clientProxyObject, *policy);
     EXPECT_EQ(ER_OK, status) << "  InstallPolicy failed.  Actual Status: " << QCC_StatusText(status);
@@ -1254,7 +1311,6 @@ TEST_F(PermissionMgmtTest, InstallPolicy)
     EXPECT_EQ(policy->GetSerialNum(), retPolicy.GetSerialNum()) << " GetPolicy failed. Different serial number.";
     EXPECT_EQ(policy->GetAdminsSize(), retPolicy.GetAdminsSize()) << " GetPolicy failed. Different admin size.";
     EXPECT_EQ(policy->GetTermsSize(), retPolicy.GetTermsSize()) << " GetPolicy failed. Different provider size.";
-    printf("InstallPolicy gets back policy %s\n", retPolicy.ToString().c_str());
     delete policy;
     /* sleep a second to see whether the NotifyConfig signal is received */
     for (int cnt = 0; cnt < 100; cnt++) {
@@ -1355,7 +1411,9 @@ TEST_F(PermissionMgmtTest, InstallMembershipToConsumer)
     ECCPublicKey claimedPubKey;
     status = RetrieveDSAPublicKeyFromKeyStore(consumerBus, &claimedPubKey);
     EXPECT_EQ(ER_OK, status) << "  InstallMembershipToConsumer RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
-    status = InstallMembership(membershipSerial1, adminBus, clientProxyObject, adminBus, consumerGUID, &claimedPubKey, membershipGUID1);
+    /* use the consumer as the guild authority for the membership cert */
+    status = InstallMembership(membershipSerial1, adminBus, clientProxyObject, consumerBus, consumerGUID, &claimedPubKey, membershipGUID1);
+
     EXPECT_EQ(ER_OK, status) << "  InstallMembershipToConsumer cert1 failed.  Actual Status: " << QCC_StatusText(status);
 
 }
@@ -1418,6 +1476,20 @@ TEST_F(PermissionMgmtTest, GuildMemberCanTVUpAndDownAndNotChannel)
 }
 
 /*
+ *  Test access by consumer
+ */
+TEST_F(PermissionMgmtTest, ConsumerCanMuteTV)
+{
+
+    CreateAppInterfaces(serviceBus, true);
+    CreateAppInterfaces(consumerBus, false);
+    ProxyBusObject clientProxyObject(consumerBus, serviceBus.GetUniqueName().c_str(), APP_PATH, 0, false);
+    EnableSecurity("ALLJOYN_ECDHE_ECDSA", false);
+    QStatus status = ExcerciseTVMute(consumerBus, clientProxyObject);
+    EXPECT_EQ(ER_OK, status) << "  ExcerciseTVMute failed.  Actual Status: " << QCC_StatusText(status);
+}
+
+/*
  *  Test manifest
  */
 TEST_F(PermissionMgmtTest, SetPermissionManifest)
@@ -1454,8 +1526,15 @@ TEST_F(PermissionMgmtTest, RemovePolicy)
     qcc::GUID128 localGUID;
     status = ca.GetGuid(localGUID);
     EXPECT_EQ(ER_OK, status) << "  ca.GetGuid failed.  Actual Status: " << QCC_StatusText(status);
+    ECCPrivateKey issuerPrivateKey;
+    ECCPublicKey issuerPubKey;
+    status = RetrieveDSAKeys(adminBus, issuerPrivateKey, issuerPubKey);
+    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAKeys failed.  Actual Status: " << QCC_StatusText(status);
+    ECCPublicKey guildAuthorityPubKey;
+    status = RetrieveDSAPublicKeyFromKeyStore(consumerBus, &guildAuthorityPubKey);
+    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
 
-    PermissionPolicy* policy = GeneratePolicy(localGUID);
+    PermissionPolicy* policy = GeneratePolicy(localGUID, issuerPubKey, guildAuthorityPubKey);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
     status = InstallPolicy(adminBus, clientProxyObject, *policy);
     EXPECT_EQ(ER_OK, status) << "  InstallPolicy failed.  Actual Status: " << QCC_StatusText(status);

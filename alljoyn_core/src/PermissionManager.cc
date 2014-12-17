@@ -111,7 +111,7 @@ static bool IsRuleMatched(const PermissionPolicy::Rule& rule, const MessageHolde
     /* Only find match in object path or interface name, but not both */
     if (!rule.GetObjPath().empty()) {
         /* rule has an object path */
-        if (MatchesPrefix(msgHolder.objPath, rule.GetObjPath())) {
+        if ((rule.GetObjPath() == msgHolder.objPath) || MatchesPrefix(msgHolder.objPath, rule.GetObjPath())) {
             if (!rule.GetInterfaceName().empty()) {
                 /* rule has a specific interface name */
                 if (MatchesPrefix(msgHolder.iName, rule.GetInterfaceName())) {
@@ -122,7 +122,7 @@ static bool IsRuleMatched(const PermissionPolicy::Rule& rule, const MessageHolde
             }
         }
     } else if (!rule.GetInterfaceName().empty()) {
-        if (MatchesPrefix(msgHolder.iName, rule.GetInterfaceName())) {
+        if ((rule.GetInterfaceName() == msgHolder.iName) || MatchesPrefix(msgHolder.iName, rule.GetInterfaceName())) {
             /* rule has a specific interface name */
             firstPartMatch = true;
         }
@@ -218,27 +218,37 @@ static bool IsAuthorizedByAnyUserPolicy(const PermissionPolicy* policy, const Me
     return false;
 }
 
+static bool TermHasMatchingGuild(const PermissionPolicy::Term& term, const GUID128& guildGUID)
+{
+    bool matched = false;
+    /* is this peer entry has matching guild GUID */
+    const PermissionPolicy::Peer* peers = term.GetPeers();
+    for (size_t idx = 0; idx < term.GetPeersSize(); idx++) {
+        if ((peers[idx].GetType() == PermissionPolicy::Peer::PEER_GUILD) && peers[idx].GetKeyInfo()) {
+            const KeyInfoECC* keyInfo = peers[idx].GetKeyInfo();
+            if (keyInfo->GetKeyIdLen() == GUID128::SIZE) {
+                GUID128 aGuid(0);
+                aGuid.SetBytes(keyInfo->GetKeyId());
+                if (aGuid == guildGUID) {
+                    matched = true;
+                    break;
+                }
+            }
+        }
+    }
+    return matched;
+}
+
 static bool IsAuthorizedByMembership(const GUID128& guildGUID, PermissionPolicy* policy, const MessageHolder& msgHolder, const Right& right)
 {
     const PermissionPolicy::Term* terms = policy->GetTerms();
     for (size_t cnt = 0; cnt < policy->GetTermsSize(); cnt++) {
-        const PermissionPolicy::Peer* peers = terms[cnt].GetPeers();
         bool qualified = false;
-
         if (terms[cnt].GetPeersSize() == 0) {
             qualified = true;  /* there is no peer restriction for this term */
         } else {
             /* look for peer entry with matching guild GUID */
-            for (size_t idx = 0; idx < terms[cnt].GetPeersSize(); idx++) {
-                if ((peers[idx].GetType() == PermissionPolicy::Peer::PEER_GUILD) && (peers[idx].GetIDLen() > 0)) {
-                    GUID128 aGuid(0);
-                    aGuid.SetBytes(peers[idx].GetID());
-                    if (aGuid == guildGUID) {
-                        qualified = true;
-                        break;
-                    }
-                }
-            }
+            qualified = TermHasMatchingGuild(terms[cnt], guildGUID);
         }
         if (!qualified) {
             continue;
@@ -260,21 +270,8 @@ static bool IsAuthorizedByGuildsInCommonPolicies(const PermissionPolicy* policy,
         _PeerState::GuildMetadata* metadata = it->second;
         const PermissionPolicy::Term* terms = policy->GetTerms();
         for (size_t cnt = 0; cnt < policy->GetTermsSize(); cnt++) {
-            const PermissionPolicy::Peer* peers = terms[cnt].GetPeers();
-            bool qualified = false;
-
             /* look for peer entry with matching guild GUID */
-            for (size_t idx = 0; idx < terms[cnt].GetPeersSize(); idx++) {
-                if ((peers[idx].GetType() == PermissionPolicy::Peer::PEER_GUILD) && (peers[idx].GetIDLen() > 0)) {
-                    GUID128 aGuid(0);
-                    aGuid.SetBytes(peers[idx].GetID());
-                    if (aGuid == metadata->cert.GetGuild()) {
-                        qualified = true;
-                        break;
-                    }
-                }
-            }
-            if (!qualified) {
+            if (!TermHasMatchingGuild(terms[cnt], metadata->cert.GetGuild())) {
                 continue;
             }
             if (IsPolicyTermMatched(terms[cnt], msgHolder, right)) {
@@ -283,6 +280,30 @@ static bool IsAuthorizedByGuildsInCommonPolicies(const PermissionPolicy* policy,
                     return true;
                 }
             }
+        }
+    }
+    return false;
+}
+
+static bool IsAuthorizedByPeerPublicKey(const PermissionPolicy* policy, const ECCPublicKey& peerPublicKey, const MessageHolder& msgHolder, Right& right)
+{
+    const PermissionPolicy::Term* terms = policy->GetTerms();
+    for (size_t cnt = 0; cnt < policy->GetTermsSize(); cnt++) {
+        const PermissionPolicy::Peer* peers = terms[cnt].GetPeers();
+        bool qualified = false;
+        for (size_t idx = 0; idx < terms[cnt].GetPeersSize(); idx++) {
+            if ((peers[idx].GetType() == PermissionPolicy::Peer::PEER_GUID) && peers[idx].GetKeyInfo()) {
+                if (memcmp(peers[idx].GetKeyInfo()->GetPublicKey(), &peerPublicKey, sizeof(ECCPublicKey)) == 0) {
+                    qualified = true;
+                    break;
+                }
+            }
+        }
+        if (!qualified) {
+            continue;
+        }
+        if (IsPolicyTermMatched(terms[cnt], msgHolder, right)) {
+            return true;
         }
     }
     return false;
@@ -312,7 +333,7 @@ static void GenRight(const MessageHolder& msgHolder, Right& right)
     }
 }
 
-static bool IsAuthorized(const MessageHolder& msgHolder, const PermissionPolicy* policy, PeerState& peerState)
+static bool IsAuthorized(const MessageHolder& msgHolder, const PermissionPolicy* policy, PeerState& peerState, PermissionMgmtObj* permissionMgmtObj)
 {
     QCC_DbgPrintf(("IsAuthorized with objPath %s iName %s mbrName %s", msgHolder.objPath, msgHolder.iName, msgHolder.mbrName));
     if (policy == NULL) {
@@ -331,7 +352,14 @@ static bool IsAuthorized(const MessageHolder& msgHolder, const PermissionPolicy*
     if (authorized) {
         return true;
     }
-
+    if (!msgHolder.send) {
+        ECCPublicKey peerPublicKey;
+        QStatus status = permissionMgmtObj->GetConnectedPeerPublicKey(peerState->GetGuid(), &peerPublicKey);
+        if (ER_OK != status) {
+            return false;
+        }
+        return IsAuthorizedByPeerPublicKey(policy, peerPublicKey, msgHolder, right);
+    }
     return false;
 }
 
@@ -504,7 +532,6 @@ QStatus PermissionManager::AuthorizeMessage(bool send, Message& msg, PeerState& 
     }
     if (IsPermissionMgmtInterface(msg->GetInterface())) {
         if (!permissionMgmtObj) {
-            QCC_DbgPrintf(("PermissionManager::AuthorizeMessage does not have PermissionMgmtObj initialized"));
             return ER_PERMISSION_DENIED;
         }
         if (AuthorizePermissionMgmt(send, peerState->GetGuid(), msg)) {
@@ -516,7 +543,6 @@ QStatus PermissionManager::AuthorizeMessage(bool send, Message& msg, PeerState& 
         return ER_OK;  /* there is no policy to enforce */
     }
     if (!permissionMgmtObj) {
-        QCC_DbgPrintf(("PermissionManager::AuthorizeMessage does not have PermissionMgmtObj initialized"));
         return ER_PERMISSION_DENIED;
     }
     MessageHolder holder(msg, send);
@@ -531,21 +557,12 @@ QStatus PermissionManager::AuthorizeMessage(bool send, Message& msg, PeerState& 
     }
 
     QCC_DbgPrintf(("PermissionManager::AuthorizeMessage with send: %d msg %s\n", send, msg->ToString().c_str()));
-    authorized = IsAuthorized(holder, GetPolicy(), peerState);
+    authorized = IsAuthorized(holder, GetPolicy(), peerState, permissionMgmtObj);
     if (!authorized) {
         QCC_DbgPrintf(("PermissionManager::AuthorizeMessage IsAuthorized returns ER_PERMISSION_DENIED\n"));
         return status;
     }
     return ER_OK;
-}
-
-QStatus PermissionManager::SetManifest(PermissionPolicy::Rule* rules, size_t count)
-{
-    if (!permissionMgmtObj) {
-        QCC_DbgPrintf(("PermissionManager::SetManifest does not have PermissionMgmtObj initialized"));
-        return ER_PERMISSION_DENIED;
-    }
-    return permissionMgmtObj->SetManifest(rules, count);
 }
 
 } /* namespace ajn */
