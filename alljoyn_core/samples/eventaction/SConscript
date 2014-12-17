@@ -32,8 +32,6 @@ if enaEnv['OS'] == 'android':
 
 # This sample depends on the About Service
 if enaEnv['OS'] in ['linux', 'darwin', 'openwrt']:
-    enaEnv.SConscript('../../../services/about/SConscript')
-
     enaEnv.Append(CPPPATH = [ enaEnv.Dir('$CPP_DISTDIR/../about/inc') ])
     enaEnv.Append(LIBPATH = [ enaEnv.Dir('$CPP_DISTDIR/../about/lib') ])
 
