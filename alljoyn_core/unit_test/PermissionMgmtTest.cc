@@ -125,7 +125,7 @@ class ECDHEKeyXListener : public AuthListener {
         RUN_AS_CONSUMER = 2
     } AgentType;
 
-    ECDHEKeyXListener(AgentType agentType, BusAttachment& bus) : agentType(agentType), bus(bus)
+    ECDHEKeyXListener(AgentType agentType, BusAttachment& bus) : agentType(agentType)
     {
     }
 
@@ -187,7 +187,6 @@ class ECDHEKeyXListener : public AuthListener {
 
   private:
     AgentType agentType;
-    BusAttachment& bus;
 };
 
 class PermissionMgmtTest : public testing::Test, public BusObject {
@@ -1389,6 +1388,15 @@ TEST_F(PermissionMgmtTest, AnyUserCanCallOnAndNotOff)
     EXPECT_EQ(ER_OK, status) << "  AccessOnOffByAnyUser ExcerciseOn failed.  Actual Status: " << QCC_StatusText(status);
     status = ExcerciseOff(consumerBus, clientProxyObject);
     EXPECT_NE(ER_OK, status) << "  AccessOffByAnyUser ExcersizeOff did not fail.  Actual Status: " << QCC_StatusText(status);
+    ECCPublicKey publicKey;
+    PermissionConfigurator& pc = consumerBus.GetPermissionConfigurator();
+    GUID128 serviceGUID(0);
+    CredentialAccessor ca(consumerBus);
+    qcc::String peerName = serviceBus.GetUniqueName();
+    status = ca.GetPeerGuid(peerName, serviceGUID);
+    EXPECT_EQ(ER_OK, status) << "  ca.GetPeerGuid failed.  Actual Status: " << QCC_StatusText(status);
+    status = pc.GetConnectedPeerPublicKey(serviceGUID, &publicKey);
+    EXPECT_EQ(ER_OK, status) << "  GetConnectedPeerPublicKey failed.  Actual Status: " << QCC_StatusText(status);
 }
 
 /*

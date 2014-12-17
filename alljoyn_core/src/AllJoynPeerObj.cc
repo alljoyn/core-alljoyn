@@ -554,21 +554,25 @@ QStatus AllJoynPeerObj::KeyGen(PeerState& peerState, String seed, qcc::String& v
     assert(bus);
     QStatus status;
     KeyStore& keyStore = bus->GetInternal().GetKeyStore();
-    KeyBlob masterSecret;
+    KeyBlob peerSecret;
     uint8_t keyGenVersion = peerState->GetAuthVersion() & 0xFF;
 
-    status = keyStore.GetKey(peerState->GetGuid(), masterSecret, peerState->authorizations);
-    if ((status == ER_OK) && masterSecret.HasExpired()) {
+    status = keyStore.GetKey(peerState->GetGuid(), peerSecret, peerState->authorizations);
+    if ((status == ER_OK) && peerSecret.HasExpired()) {
         status = ER_BUS_KEY_EXPIRED;
     }
     if (status == ER_OK) {
-        String tag = masterSecret.GetTag();
+        String tag = peerSecret.GetTag();
         if (tag == "ALLJOYN_ECDHE_NULL") {
             /* expires the ECDHE_NULL after first use */
             Timespec now;
             GetTimeNow(&now);
             keyStore.SetKeyExpiration(peerState->GetGuid(), now);
         }
+    }
+    KeyBlob masterSecret;
+    if (status == ER_OK) {
+        status = KeyExchanger::ParsePeerSecretRecord(peerSecret, masterSecret);
     }
     if (status == ER_OK) {
         size_t keylen = Crypto_AES::AES128_SIZE + VERIFIER_LEN;
@@ -1148,6 +1152,7 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
          * session key on the first pass we start an authentication conversation to establish a new
          * master secret.
          */
+
         if (!keyStore.HasKey(remotePeerGuid)) {
             /*
              * If the key store is shared try reloading in case another application has already

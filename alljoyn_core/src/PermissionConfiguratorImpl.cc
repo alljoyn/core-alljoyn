@@ -120,4 +120,13 @@ QStatus PermissionConfiguratorImpl::SignCertificate(CertificateX509& cert)
     return cert.Sign(&privateKey);
 }
 
+QStatus PermissionConfiguratorImpl::GetConnectedPeerPublicKey(const GUID128& guid, qcc::ECCPublicKey* publicKey)
+{
+    PermissionMgmtObj* permissionMgmtObj = bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
+    if (!permissionMgmtObj) {
+        return ER_FEATURE_NOT_AVAILABLE;
+    }
+    return permissionMgmtObj->GetConnectedPeerPublicKey(guid, publicKey);
+}
+
 }

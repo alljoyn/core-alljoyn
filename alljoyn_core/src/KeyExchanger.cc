@@ -55,6 +55,20 @@ namespace ajn {
 #define EXCHANGE_KEYINFO 1
 #define EXCHANGE_TRUST_ANCHORS 2
 
+/* the size of the master secret based on RFC5246 */
+#define MASTER_SECRET_SIZE 48
+/* the size of the master secret used in the PIN key exchange */
+#define MASTER_SECRET_PINX_SIZE 24
+
+struct PeerSecretRecord {
+    uint8_t version;
+    uint8_t secret[MASTER_SECRET_SIZE];
+    ECCPublicKey publicKey;
+
+    PeerSecretRecord() : version(1)
+    {
+    }
+};
 
 QStatus KeyExchangerECDHE::GenerateECDHEKeyPair()
 {
@@ -96,7 +110,7 @@ QStatus KeyExchangerECDHE::GenerateECDHESecret(const ECCPublicKey* remotePubKey)
 QStatus KeyExchangerECDHE::GenerateMasterSecret()
 {
     QStatus status;
-    uint8_t keymatter[48];      /* RFC5246 */
+    uint8_t keymatter[MASTER_SECRET_SIZE];      /* RFC5246 */
     if (IsLegacyPeer()) {
         ECCSecretOldEncoding oldenc;
         ecc.ReEncode(&pms, &oldenc);
@@ -507,6 +521,48 @@ static QStatus DoStoreMasterSecret(BusAttachment& bus, const qcc::GUID128& guid,
 QStatus KeyExchangerECDHE::StoreMasterSecret(const qcc::GUID128& guid, const uint8_t accessRights[4])
 {
     return DoStoreMasterSecret(bus, guid, masterSecret, (const uint8_t*) GetSuiteName(), strlen(GetSuiteName()), secretExpiration, IsInitiator(), accessRights);
+}
+
+QStatus KeyExchanger::ParsePeerSecretRecord(const KeyBlob& rec, KeyBlob& masterSecret, ECCPublicKey* publicKey)
+{
+    if ((rec.GetSize() == MASTER_SECRET_SIZE) || (rec.GetSize() == MASTER_SECRET_PINX_SIZE)) {
+        /* support older format by the non ECDHE key exchanges */
+        masterSecret = rec;
+        if (publicKey) {
+            memset(publicKey, 0, sizeof(ECCPublicKey));
+        }
+        return ER_OK;
+    }
+    if (rec.GetSize() == 0) {
+        return ER_INVALID_DATA;
+    }
+    PeerSecretRecord* peerRec = (PeerSecretRecord*) rec.GetData();
+    if (peerRec->version != 1) {
+        return ER_NOT_IMPLEMENTED;
+    }
+    masterSecret = rec;
+    masterSecret.Set(peerRec->secret, MASTER_SECRET_SIZE, rec.GetType());
+
+    if (publicKey) {
+        memcpy(publicKey, &peerRec->publicKey, sizeof(ECCPublicKey));
+    }
+    return ER_OK;
+}
+
+QStatus KeyExchanger::ParsePeerSecretRecord(const KeyBlob& rec, KeyBlob& masterSecret)
+{
+    return ParsePeerSecretRecord(rec, masterSecret, NULL);
+}
+
+QStatus KeyExchangerECDHE_ECDSA::StoreMasterSecret(const qcc::GUID128& guid, const uint8_t accessRights[4])
+{
+    /* build a new keyblob with master secret and peer DSA public key */
+    PeerSecretRecord secretRecord;
+    memcpy(secretRecord.secret, masterSecret.GetData(), sizeof(secretRecord.secret));
+    memcpy(&secretRecord.publicKey, &peerDSAPubKey, sizeof(ECCPublicKey));
+    KeyBlob kb((const uint8_t*) &secretRecord, sizeof(secretRecord), KeyBlob::GENERIC);
+
+    return DoStoreMasterSecret(bus, guid, kb, (const uint8_t*) GetSuiteName(), strlen(GetSuiteName()), secretExpiration, IsInitiator(), accessRights);
 }
 
 QStatus KeyExchanger::ReplyWithVerifier(Message& msg)
@@ -1164,7 +1220,8 @@ QStatus KeyExchangerECDHE_ECDSA::ValidateRemoteVerifierVariant(const char* peerN
     }
     /* verify signature */
     Crypto_ECC ecc;
-    ecc.SetDSAPublicKey(certs[0].GetSubjectPublicKey());
+    memcpy(&peerDSAPubKey, certs[0].GetSubjectPublicKey(), sizeof(ECCPublicKey));
+    ecc.SetDSAPublicKey(&peerDSAPubKey);
     SigInfoECC sigInfo;
     sigInfo.SetRCoord(rCoord);
     sigInfo.SetSCoord(sCoord);

@@ -226,6 +226,15 @@ class PermissionMgmtObj : public BusObject {
      */
     QStatus Reset();
 
+    /**
+     * Get the connected peer ECC public key if the connection uses the
+     * ECDHE_ECDSA key exchange.
+     * @param guid the peer guid
+     * @param[out] the buffer to hold the ECC public key.
+     * @return ER_OK if successful; otherwise, error code.
+     */
+    QStatus GetConnectedPeerPublicKey(const qcc::GUID128& guid, qcc::ECCPublicKey* publicKey);
+
   private:
 
     typedef enum {

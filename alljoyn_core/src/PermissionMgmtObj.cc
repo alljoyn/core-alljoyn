@@ -28,6 +28,7 @@
 #include "PermissionMgmtObj.h"
 #include "PeerState.h"
 #include "BusInternal.h"
+#include "KeyExchanger.h"
 
 #define QCC_MODULE "PERMISSION_MGMT"
 
@@ -1506,6 +1507,18 @@ QStatus PermissionMgmtObj::Reset()
 void PermissionMgmtObj::Reset(const InterfaceDescription::Member* member, Message& msg)
 {
     MethodReply(msg, Reset());
+}
+
+QStatus PermissionMgmtObj::GetConnectedPeerPublicKey(const GUID128& guid, qcc::ECCPublicKey* publicKey)
+{
+    CredentialAccessor ca(bus);
+    KeyBlob kb;
+    QStatus status = ca.GetKey(guid, kb);
+    if (ER_OK != status) {
+        return status;
+    }
+    KeyBlob msBlob;
+    return KeyExchanger::ParsePeerSecretRecord(kb, msBlob, publicKey);
 }
 
 QStatus PermissionMgmtObj::SetManifest(PermissionPolicy::Rule* rules, size_t count)

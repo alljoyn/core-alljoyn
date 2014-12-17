@@ -140,6 +140,21 @@ class KeyExchanger {
 
     bool IsLegacyPeer();
 
+    /**
+     * Helper function to parse the peer secret record to retrieve the master secret and the DSA public key.
+     * @param rec the peer secret record
+     * @param[out] masterSecret the master secret
+     * @param[out] public key the buffer holding the public key.
+     */
+    static QStatus ParsePeerSecretRecord(const KeyBlob& rec, KeyBlob& masterSecret, ECCPublicKey* publicKey);
+
+    /**
+     * Helper function to parse the peer secret record to retrieve the master secret.
+     * @param rec the peer secret record
+     * @param[out] masterSecret the master secret
+     */
+    static QStatus ParsePeerSecretRecord(const KeyBlob& rec, KeyBlob& masterSecret);
+
   protected:
     AllJoynPeerObj* peerObj;
     BusAttachment& bus;
@@ -154,6 +169,16 @@ class KeyExchanger {
     Crypto_SHA256 hashUtil;
 
   private:
+    /**
+     * Assignment not allowed
+     */
+    KeyExchanger& operator=(const KeyExchanger& other);
+
+    /**
+     * Copy constructor not allowed
+     */
+    KeyExchanger(const KeyExchanger& other);
+
     bool initiator;
     int showDigestCounter;
     uint16_t peerAuthVersion;
@@ -214,6 +239,18 @@ class KeyExchangerECDHE : public KeyExchanger {
     Crypto_ECC ecc;
     qcc::KeyBlob masterSecret;
 
+  private:
+
+    /**
+     * Assignment not allowed
+     */
+    KeyExchangerECDHE& operator=(const KeyExchangerECDHE& other);
+
+    /**
+     * Copy constructor not allowed
+     */
+    KeyExchangerECDHE(const KeyExchangerECDHE& other);
+
 };
 
 class KeyExchangerECDHE_NULL : public KeyExchangerECDHE {
@@ -233,6 +270,18 @@ class KeyExchangerECDHE_NULL : public KeyExchangerECDHE {
     QStatus KeyAuthentication(KeyExchangerCB& callback, const char* peerName, uint8_t* authorized);
 
     QStatus RequestCredentialsCB(const char* peerName);
+
+  private:
+    /**
+     * Assignment not allowed
+     */
+    KeyExchangerECDHE_NULL& operator=(const KeyExchangerECDHE_NULL& other);
+
+    /**
+     * Copy constructor not allowed
+     */
+    KeyExchangerECDHE_NULL(const KeyExchangerECDHE_NULL& other);
+
 };
 
 class KeyExchangerECDHE_PSK : public KeyExchangerECDHE {
@@ -262,6 +311,16 @@ class KeyExchangerECDHE_PSK : public KeyExchangerECDHE {
     QStatus RequestCredentialsCB(const char* peerName);
 
   private:
+    /**
+     * Assignment not allowed
+     */
+    KeyExchangerECDHE_PSK& operator=(const KeyExchangerECDHE_PSK& other);
+
+    /**
+     * Copy constructor not allowed
+     */
+    KeyExchangerECDHE_PSK(const KeyExchangerECDHE_PSK& other);
+
     qcc::String pskName;
     qcc::String pskValue;
 };
@@ -288,8 +347,20 @@ class KeyExchangerECDHE_ECDSA : public KeyExchangerECDHE {
     QStatus ValidateRemoteVerifierVariant(const char* peerName, MsgArg* variant, uint8_t* authorized);
     void KeyExchangeGenKey(MsgArg& variant);
     QStatus KeyExchangeReadKey(MsgArg& variant);
+    virtual QStatus StoreMasterSecret(const qcc::GUID128& guid, const uint8_t accessRights[4]);
+
 
   private:
+    /**
+     * Assignment not allowed
+     */
+    KeyExchangerECDHE_ECDSA& operator=(const KeyExchangerECDHE_ECDSA& other);
+
+    /**
+     * Copy constructor not allowed
+     */
+    KeyExchangerECDHE_ECDSA(const KeyExchangerECDHE_ECDSA& other);
+
     QStatus GenerateLocalVerifierCert(CertificateType0& cert);
     QStatus VerifyCredentialsCB(const char* peerName, CertificateX509* certs, size_t numCerts);
     QStatus StoreDSAKeys(String& encodedPrivateKey, String& encodedCertChain);
@@ -311,6 +382,7 @@ class KeyExchangerECDHE_ECDSA : public KeyExchangerECDHE {
     PermissionMgmtObj::TrustAnchorList* trustAnchorList;
     PermissionMgmtObj::TrustAnchorList peerTrustAnchorList;
     bool hasCommonTrustAnchors;
+    ECCPublicKey peerDSAPubKey;
 };
 
 } /* namespace ajn */
