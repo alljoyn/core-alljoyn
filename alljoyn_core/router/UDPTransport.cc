@@ -5061,7 +5061,10 @@ QStatus UDPTransport::Join(void)
      * number of outstanding writes for all streams drop to zero -- so we do the
      * stop here in Join() where we can block until this all happens.  The
      * endpoint Stop() calls in UDPTransport::Stop() will begin the process.  We
-     * need to wait for it to complete here.
+     * need to wait for it to complete here.  Since the endpoint manager will be
+     * taking care of all of that and then deleting the endpoints, the most
+     * straightforward thing to do here is to wait for the endpoints to go away
+     * before proceeding with the transport takedown.
      */
     QCC_DbgPrintf(("UDPTransport::Join(): Taking endpoint list lock"));
     m_endpointListLock.Lock(MUTEX_CONTEXT);
@@ -5069,33 +5072,11 @@ QStatus UDPTransport::Join(void)
     QCC_DbgPrintf(("UDPTransport::Join(): Taking pre-auth list lock"));
     m_preListLock.Lock(MUTEX_CONTEXT);
 
-    bool sendOutstanding;
+    bool passive;
     do {
-        sendOutstanding = false;
+        passive = m_preList.empty() && m_authList.empty() && m_endpointList.empty();
 
-        for (set<UDPEndpoint>::iterator i = m_preList.begin(); i != m_preList.end(); ++i) {
-            UDPEndpoint ep = *i;
-            ArdpStream* stream = ep->GetStream();
-            if (stream && stream->GetSendsOutstanding()) {
-                sendOutstanding = true;
-            }
-        }
-        for (set<UDPEndpoint>::iterator i = m_authList.begin(); i != m_authList.end(); ++i) {
-            UDPEndpoint ep = *i;
-            ArdpStream* stream = ep->GetStream();
-            if (stream && stream->GetSendsOutstanding()) {
-                sendOutstanding = true;
-            }
-        }
-        for (set<UDPEndpoint>::iterator i = m_endpointList.begin(); i != m_endpointList.end(); ++i) {
-            UDPEndpoint ep = *i;
-            ArdpStream* stream = ep->GetStream();
-            if (stream && stream->GetSendsOutstanding()) {
-                sendOutstanding = true;
-            }
-        }
-
-        if (sendOutstanding) {
+        if (!passive) {
             QCC_DbgPrintf(("UDPTransport::Join(): Giving pre-auth list lock"));
             m_preListLock.Unlock(MUTEX_CONTEXT);
 
@@ -5110,7 +5091,7 @@ QStatus UDPTransport::Join(void)
             QCC_DbgPrintf(("UDPTransport::Join(): Taking pre-auth list lock"));
             m_preListLock.Lock(MUTEX_CONTEXT);
         }
-    } while (sendOutstanding);
+    } while (!passive);
 
     QCC_DbgPrintf(("UDPTransport::Join(): Giving pre-auth list lock"));
     m_preListLock.Unlock(MUTEX_CONTEXT);
@@ -5119,9 +5100,9 @@ QStatus UDPTransport::Join(void)
     m_endpointListLock.Unlock(MUTEX_CONTEXT);
 
     /*
-     * Now that there are no more sends outstanding in ARDP, we can go ahead and
-     * take down the message pumps and dispatcher threads since thre is no more
-     * work.
+     * Now that there are no enpoints needin them, we can go ahead and
+     * take down the message pumps and dispatcher threads since thre
+     * is no more work for them.
      */
     QCC_DbgPrintf(("UDPTransport::Stop(): Stop() message pumps"));
     for (uint32_t i = 0; i < N_PUMPS; ++i) {
