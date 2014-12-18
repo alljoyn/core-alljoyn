@@ -72,6 +72,7 @@ void Log(int priority, const char* format, ...);
  * calling qcc::Log() so that the log output will go somewhere useful.
  */
 class LoggerSetting {
+    friend class LoggerInit;
   public:
     /**
      * Enable or disable delivery to syslog.  This only affects POSIX systems
@@ -143,11 +144,6 @@ class LoggerSetting {
                                            bool useSyslog = LOGGERSETTING_DEFAULT_SYSLOG,
                                            FILE* file = LOGGERSETTING_DEFAULT_FILE);
 
-    /**
-     * Delete the static singleton object. Must be the last call.
-     */
-    static void Cleanup(void);
-
   private:
     static LoggerSetting* singleton;    ///< Static pointer to most recent instance.
     const char* name;                   ///< Process name for syslog.
@@ -176,5 +172,15 @@ class LoggerSetting {
      */
     friend void qcc::Log(int priority, const char* format, ...);
 };
+static class LoggerInit {
+  public:
+    LoggerInit();
+    ~LoggerInit();
+    static void Cleanup();
+
+  private:
+    static bool cleanedup;
+
+} loggerInit;
 }
 #endif

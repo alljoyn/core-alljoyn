@@ -1753,7 +1753,7 @@ class BusAttachment : public MessageReceiver {
     JoinObj joinObj;          /**< MUST BE LAST MEMBER. Ensure all threads are joined before BusAttachment destruction */
 
 };
-
+void AJCleanup();
 }
 
 #endif

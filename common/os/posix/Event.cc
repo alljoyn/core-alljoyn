@@ -68,9 +68,6 @@ static vector<pair<int, int> >* freePipeList;
 static vector<pair<int, int> >* usedPipeList;
 #endif
 
-Event Event::alwaysSet(0, 0);
-
-Event Event::neverSet(WAIT_FOREVER, 0);
 
 #if defined(QCC_OS_DARWIN)
 QStatus Event::Wait(Event& evt, uint32_t maxWaitMs)

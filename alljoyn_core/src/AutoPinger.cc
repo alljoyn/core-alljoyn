@@ -18,6 +18,31 @@
 
 namespace ajn {
 
+static int autoPingerCounter = 0;
+bool AutoPingerInit::cleanedup = false;
+AutoPingerInit::AutoPingerInit()
+{
+    if (autoPingerCounter++ == 0) {
+        AutoPingerInternal::Init();
+    }
+}
+
+AutoPingerInit::~AutoPingerInit()
+{
+    if (--autoPingerCounter == 0 && !cleanedup) {
+        AutoPingerInternal::Cleanup();
+        cleanedup = true;
+    }
+}
+
+void AutoPingerInit::Cleanup()
+{
+    if (!cleanedup) {
+        AutoPingerInternal::Cleanup();
+        cleanedup = true;
+    }
+}
+
 AutoPinger::AutoPinger(ajn::BusAttachment& _busAttachment) :
     internal(new AutoPingerInternal(_busAttachment))
 {

@@ -1,12 +1,11 @@
-#ifndef _CNG_CACHE_H
-#define _CNG_CACHE_H
 /**
  * @file
- *
- * This file defines the CngCache object used to manage the lifetime of global CNG handles.
+ * Common file for holding global variables.
  */
 
 /******************************************************************************
+ *
+ *
  * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
@@ -22,40 +21,27 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#include <assert.h>
-#include <windows.h>
-#include <bcrypt.h>
-
+#ifndef _COMMON_STATIC_H
+#define _COMMON_STATIC_H
+#include <qcc/Environ.h>
 #include <qcc/platform.h>
 
 namespace qcc {
 
-/**
- * This struct manages the lifetime of algorithm handles.
+/** Class that contains all the static class members/static objects
+ * instantiated in the common project.
  */
-struct CngCache {
-    CngCache();
-    ~CngCache();
+class StaticGlobals {
+  public:
+    StaticGlobals();
+    Event alwaysSet;
+    Event neverSet;
+    /** Environ variables */
+    Environ environSingleton;     // Environment variable singleton.
 
-    /**
-     * Delete the opened algorithm handles.
-     */
-    void Cleanup();
-
-    /**
-     * Number of supported algorithms as defined by Crypto_Hash::Algorithm enum
-     */
-    static const int ALGORITHM_COUNT = 3;
-
-    BCRYPT_ALG_HANDLE algHandles[ALGORITHM_COUNT][2];
-    BCRYPT_ALG_HANDLE ccmHandle;
-    BCRYPT_ALG_HANDLE ecbHandle;
-    BCRYPT_ALG_HANDLE rsaHandle;
 };
-
-extern CngCache cngCache;
-
-} // qcc
+/** The singleton instance of StaticGlobals. */
+extern StaticGlobals& commonGlobals;
+}
 
 #endif
-

@@ -133,6 +133,7 @@ SessionlessObj::SessionlessObj(Bus& bus, BusController* busController) :
             ConfigDB::GetConfigDB()->GetLimit("sls_backoff_exponential", 32),
             ConfigDB::GetConfigDB()->GetLimit("sls_backoff_max", 15 * 60))
 {
+    sessionOpts.transports = ConfigDB::GetConfigDB()->GetLimit("sls_preferred_transports", TRANSPORT_ANY & ~TRANSPORT_UDP);
 }
 
 SessionlessObj::~SessionlessObj()
@@ -624,6 +625,11 @@ void SessionlessObj::FoundAdvertisedNameSignalHandler(const InterfaceDescription
 void SessionlessObj::FoundAdvertisedNameHandler(const char* name, TransportMask transport, const char* prefix, bool doInitialBackoff)
 {
     /* Examine found name to see if we need to connect to it */
+    if ((transport & sessionOpts.transports) == 0) {
+        QCC_DbgPrintf(("FoundAdvertisedName(name=%s,transport=0x%x,...): Transport not preferred", name, transport));
+        return;
+    }
+
     String guid, iface;
     uint32_t version, changeId;
     QStatus status = ParseAdvertisedName(name, &version, &guid, &iface, &changeId);
@@ -868,7 +874,7 @@ void SessionlessObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
             MDNSPacket response;
             response->SetDestination(ctx->ns4);
             MDNSAdvertiseRData advRData;
-            advRData.SetTransport(TRANSPORT_TCP | TRANSPORT_UDP);
+            advRData.SetTransport(sessionOpts.transports & TRANSPORT_IP);
             advRData.SetValue("name", ctx->name);
             String guid = bus.GetInternal().GetGlobalGUID().ToString();
             MDNSResourceRecord advertiseRecord("advertise." + guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, &advRData);
@@ -1205,7 +1211,7 @@ QStatus SessionlessObj::AdvertiseName(const qcc::String& name)
 {
     QStatus status = bus.RequestName(name.c_str(), DBUS_NAME_FLAG_DO_NOT_QUEUE);
     if (status == ER_OK) {
-        status = bus.AdvertiseName(name.c_str(), TRANSPORT_ANY & ~TRANSPORT_LOCAL);
+        status = bus.AdvertiseName(name.c_str(), sessionOpts.transports & ~TRANSPORT_LOCAL);
     }
     if (status == ER_OK) {
         QCC_DbgPrintf(("AdvertiseName(name=%s)", name.c_str()));
@@ -1217,7 +1223,7 @@ QStatus SessionlessObj::AdvertiseName(const qcc::String& name)
 
 void SessionlessObj::CancelAdvertisedName(const qcc::String& name)
 {
-    QStatus status = bus.CancelAdvertiseName(name.c_str(), TRANSPORT_ANY & ~TRANSPORT_LOCAL);
+    QStatus status = bus.CancelAdvertiseName(name.c_str(), sessionOpts.transports & ~TRANSPORT_LOCAL);
     if (status != ER_OK) {
         QCC_LogError(status, ("Failed to cancel advertisment for \"%s\"", name.c_str()));
     }
@@ -1268,7 +1274,7 @@ void SessionlessObj::FindAdvertisedNames()
     while (it != names.end()) {
         String name = *it;
         QCC_DbgPrintf(("FindAdvertisement(%s)", name.c_str()));
-        QStatus status = FindAdvertisementByTransport(name.c_str(), TRANSPORT_ANY & ~TRANSPORT_LOCAL);
+        QStatus status = FindAdvertisementByTransport(name.c_str(), sessionOpts.transports & ~TRANSPORT_LOCAL);
         if (status != ER_OK) {
             QCC_LogError(status, ("FindAdvertisementByTransport failed for name %s :", name.c_str()));
         }
@@ -1288,7 +1294,7 @@ void SessionlessObj::CancelFindAdvertisedNames()
     set<String>::iterator it = names.begin();
     while (it != names.end()) {
         String name = *it;
-        QStatus status = CancelFindAdvertisementByTransport(name.c_str(), TRANSPORT_ANY & ~TRANSPORT_LOCAL);
+        QStatus status = CancelFindAdvertisementByTransport(name.c_str(), sessionOpts.transports & ~TRANSPORT_LOCAL);
         if (status == ER_OK) {
             QCC_DbgPrintf(("CancelFindAdvertisement(%s)", name.c_str()));
         } else {

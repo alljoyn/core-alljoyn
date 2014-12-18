@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -25,7 +25,40 @@
 #include "PasswordManager.h"
 
 namespace ajn {
-qcc::String PasswordManager::authMechanism = "ANONYMOUS";
-qcc::String PasswordManager::password = "";
+using namespace qcc;
+String* PasswordManager::authMechanism = NULL;
+String* PasswordManager::password = NULL;
+
+static int passwordManagerCounter = 0;
+bool PasswordManagerInit::cleanedup = false;
+PasswordManagerInit::PasswordManagerInit()
+{
+    if (0 == passwordManagerCounter++) {
+        PasswordManager::authMechanism = new String("ANONYMOUS");
+        PasswordManager::password = new String();
+    }
+}
+
+PasswordManagerInit::~PasswordManagerInit()
+{
+    if (0 == --passwordManagerCounter && !cleanedup) {
+        delete PasswordManager::authMechanism;
+        PasswordManager::authMechanism = NULL;
+        delete PasswordManager::password;
+        PasswordManager::password = NULL;
+        cleanedup = true;
+    }
+}
+
+void PasswordManagerInit::Cleanup()
+{
+    if (!cleanedup) {
+        delete PasswordManager::authMechanism;
+        PasswordManager::authMechanism = NULL;
+        delete PasswordManager::password;
+        PasswordManager::password = NULL;
+        cleanedup = true;
+    }
+}
 
 }

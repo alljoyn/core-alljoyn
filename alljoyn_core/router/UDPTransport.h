@@ -49,6 +49,8 @@
 
 #include "ns/IpNameService.h"
 
+#define WORKAROUND_1298 1 /**< Implement workaround for ASACORE-1298 */
+
 namespace ajn {
 
 class ConnectEntry;
@@ -846,6 +848,25 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
 
     DispatcherThread* m_dispatcher;  /** Pointer to the message dispatcher thread for the transport */
 
+    /**
+     * MessageDispatcherThread handles EndpointExit processing to avoid deadlock
+     * in cases where DaemonRouter::UnregisterEndpoint() calls back out into
+     * PushMessage() due to NameChanged.
+     */
+    class ExitDispatcherThread : public qcc::Thread {
+      public:
+        ExitDispatcherThread(UDPTransport* transport) : qcc::Thread(qcc::String("UDP Exit Dispatcher")), m_transport(transport) { }
+        void ThreadExit(Thread* thread);
+
+      protected:
+        qcc::ThreadReturn STDCALL Run(void* arg);
+
+      private:
+        UDPTransport* m_transport;
+    };
+
+    ExitDispatcherThread* m_exitDispatcher;  /** Pointer to the exit dispatcher thread for the transport */
+
     class WorkerCommandQueueEntry {
       public:
         WorkerCommandQueueEntry()
@@ -858,6 +879,7 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
             RECV_CB,
             SEND_CB
         };
+
         Command m_command;
         ArdpHandle* m_handle;
         ArdpConnRecord* m_conn;
@@ -870,8 +892,14 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     };
 
     std::queue<WorkerCommandQueueEntry> m_workerCommandQueue;  /** Queue of commands to dispatch to the router */
+    qcc::Mutex m_workerCommandQueueLock; /**< Lock to synchronize access to the message dispatcher command queue */
 
-    qcc::Mutex m_workerCommandQueueLock; /**< Lock to synchronize access to the rx queue */
+    std::queue<WorkerCommandQueueEntry> m_exitWorkerCommandQueue;  /** Queue of exit commands to dispatch to the router */
+    qcc::Mutex m_exitWorkerCommandQueueLock; /**< Lock to synchronize access to the exit dispatcher command queue */
+
+#if WORKAROUND_1298
+    bool m_done1298; /**< True if workaround for "socket closed during CancelAdvertise" issue (ASACORE-1298) has been done */
+#endif
 
 #ifndef NDEBUG
     void DebugPreListCheck(UDPEndpoint uep);

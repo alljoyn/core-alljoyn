@@ -33,7 +33,7 @@
 
 #include <Status.h>
 
-#include "CngCache.h"
+#include <qcc/CngCache.h>
 
 // This status code is defined in ntstatus.h but including nststatus.h generate numerous compiler
 // warnings about duplicate defines.

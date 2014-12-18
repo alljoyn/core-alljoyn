@@ -42,6 +42,7 @@ namespace ajn {
  */
 
 class PasswordManager {
+    friend class PasswordManagerInit;
   public:
     /**
      * @brief Set credentials used for the authentication of thin clients.
@@ -52,8 +53,8 @@ class PasswordManager {
      * @return   Returns ER_OK if the credentials was successfully set.
      */
     static QStatus SetCredentials(qcc::String authMechanism, qcc::String password) {
-        PasswordManager::authMechanism = authMechanism;
-        PasswordManager::password = password;
+        *PasswordManager::authMechanism = authMechanism;
+        *PasswordManager::password = password;
         return ER_OK;
     }
 
@@ -64,7 +65,7 @@ class PasswordManager {
      *
      * @return Returns the password set by the user/app.
      */
-    static qcc::String GetPassword() { return password; }
+    static qcc::String GetPassword() { return *password; }
 
     /**
      * @internal
@@ -72,12 +73,19 @@ class PasswordManager {
      *
      * @return Returns the authMechanism set by the user/app.
      */
-    static qcc::String GetAuthMechanism() { return authMechanism; }
+    static qcc::String GetAuthMechanism() { return *authMechanism; }
     /// @endcond
   private:
-    static qcc::String authMechanism;           /**< The auth mechanism selected by the user/app */
-    static qcc::String password;                /**< The password selected by the user/app */
+    static qcc::String* authMechanism;           /**< The auth mechanism selected by the user/app */
+    static qcc::String* password;                /**< The password selected by the user/app */
 };
-
+static class PasswordManagerInit {
+  public:
+    PasswordManagerInit();
+    ~PasswordManagerInit();
+    static void Cleanup();
+  private:
+    static bool cleanedup;
+} passwordManagerInitializer;
 }
 #endif
