@@ -62,7 +62,7 @@ class SvcTestObject : public BusObject {
                 { Intf1->GetMember("my_ping"), static_cast<MessageReceiver::MethodHandler>(&SvcTestObject::Ping) },
             };
             status = AddMethodHandlers(methodEntries, ArraySize(methodEntries));
-            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+            EXPECT_EQ(ER_OK, status);
         }
     }
 
@@ -76,12 +76,12 @@ class SvcTestObject : public BusObject {
         char* value = NULL;
         const MsgArg* arg((msg->GetArg(0)));
         QStatus status = arg->Get("s", &value);
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
         if (msg->IsEncrypted()) {
             msgEncrypted = true;
         }
         status = MethodReply(msg, arg, 1);
-        EXPECT_EQ(ER_OK, status) << "Ping: Error sending reply,  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status) << "Ping: Error sending reply";
     }
 
     void GetProp(const InterfaceDescription::Member* member, Message& msg)
@@ -93,7 +93,7 @@ class SvcTestObject : public BusObject {
             if (!msg->IsEncrypted() &&  (this->IsSecure() && Intf2->GetSecurityPolicy() != AJ_IFC_SECURITY_OFF)) {
                 status = ER_BUS_MESSAGE_NOT_ENCRYPTED;
                 status = MethodReply(msg, status);
-                EXPECT_EQ(ER_OK, status) << "Actual Status: " << QCC_StatusText(status);
+                EXPECT_EQ(ER_OK, status);
             } else {
                 get_property_called = true;
                 MsgArg prop("v", new MsgArg("i", prop_val));
@@ -102,7 +102,7 @@ class SvcTestObject : public BusObject {
                     msgEncrypted = true;
                 }
                 status = MethodReply(msg, &prop, 1);
-                EXPECT_EQ(ER_OK, status) << "Error getting property, Actual Status: " << QCC_StatusText(status);
+                EXPECT_EQ(ER_OK, status) << "Error getting property";
             }
         }
     }
@@ -116,7 +116,7 @@ class SvcTestObject : public BusObject {
             if (!msg->IsEncrypted() &&  (this->IsSecure() && Intf2->GetSecurityPolicy() != AJ_IFC_SECURITY_OFF)) {
                 status = ER_BUS_MESSAGE_NOT_ENCRYPTED;
                 status = MethodReply(msg, status);
-                EXPECT_EQ(ER_OK, status) << "Actual Status: " << QCC_StatusText(status);
+                EXPECT_EQ(ER_OK, status);
             } else {
                 set_property_called = true;
                 int32_t integer = 0;
@@ -126,10 +126,10 @@ class SvcTestObject : public BusObject {
                 const MsgArg* val = msg->GetArg(2);
                 MsgArg value = *(val->v_variant.val);
                 status = value.Get("i", &integer);
-                EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+                EXPECT_EQ(ER_OK, status);
                 prop_val = integer;
                 status = MethodReply(msg, status);
-                EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+                EXPECT_EQ(ER_OK, status);
             }
         }
     }
@@ -156,16 +156,16 @@ class ObjectSecurityTest : public testing::Test, public AuthListener {
 
     virtual void SetUp() {
         status = clientbus.Start();
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
         status = clientbus.Connect(ajn::getConnectArg().c_str());
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status);
         clientbus.EnablePeerSecurity("ALLJOYN_SRP_KEYX", this, NULL, false);
         clientbus.ClearKeyStore();
 
         status = servicebus.Start();
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
         status = servicebus.Connect(ajn::getConnectArg().c_str());
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status);
         servicebus.EnablePeerSecurity("ALLJOYN_SRP_KEYX", this, NULL, false);
         servicebus.ClearKeyStore();
     }
@@ -175,17 +175,17 @@ class ObjectSecurityTest : public testing::Test, public AuthListener {
         clientbus.ClearKeyStore();
         servicebus.ClearKeyStore();
         status = clientbus.Disconnect(ajn::getConnectArg().c_str());
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
         status = servicebus.Disconnect(ajn::getConnectArg().c_str());
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
         status = clientbus.Stop();
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
         status = servicebus.Stop();
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
         status = clientbus.Join();
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
         status = servicebus.Join();
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
     }
 
     BusAttachment clientbus;
@@ -225,17 +225,17 @@ TEST_F(ObjectSecurityTest, Test1) {
 
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_OFF);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_OFF);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf2->Activate();
 
     SvcTestObject serviceObject(object_path, servicebus);
@@ -251,52 +251,52 @@ TEST_F(ObjectSecurityTest, Test1) {
 
     InterfaceDescription* clienttestIntf = NULL;
     status = clientbus.CreateInterface(interface1, clienttestIntf, AJ_IFC_SECURITY_OFF);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(clienttestIntf != NULL);
     status = clienttestIntf->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     clienttestIntf->Activate();
     InterfaceDescription* clienttestIntf2 = NULL;
     status = clientbus.CreateInterface(interface2, clienttestIntf2, AJ_IFC_SECURITY_OFF);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(clienttestIntf2 != NULL);
     status = clienttestIntf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     clienttestIntf2->Activate();
 
 
     ProxyBusObject clientProxyObject(clientbus, servicebus.GetUniqueName().c_str(), object_path, 0, false);
     status = clientProxyObject.AddInterface(interface1);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Message reply(clientbus);
     const InterfaceDescription::Member* pingMethod;
     const InterfaceDescription* ifc = clientProxyObject.GetInterface(interface1);
     pingMethod = ifc->GetMember("my_ping");
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_FALSE(serviceObject.msgEncrypted);
 
     status = clientProxyObject.AddInterface(interface2);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     serviceObject.msgEncrypted = false;
     MsgArg val;
     status = val.Set("i", 421);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.SetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_FALSE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     status = clientProxyObject.GetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     int iVal = 0;
     status = val.Get("i", &iVal);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(421, iVal);
     EXPECT_FALSE(serviceObject.msgEncrypted);
 
@@ -320,17 +320,17 @@ TEST_F(ObjectSecurityTest, Test2) {
 
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_INHERIT);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_INHERIT);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf2->Activate();
 
     SvcTestObject serviceObject(object_path, servicebus);
@@ -347,51 +347,51 @@ TEST_F(ObjectSecurityTest, Test2) {
 
     InterfaceDescription* clienttestIntf = NULL;
     status = clientbus.CreateInterface(interface1, clienttestIntf, AJ_IFC_SECURITY_INHERIT);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(clienttestIntf != NULL);
     status = clienttestIntf->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     clienttestIntf->Activate();
     InterfaceDescription* clienttestIntf2 = NULL;
     status = clientbus.CreateInterface(interface2, clienttestIntf2, AJ_IFC_SECURITY_INHERIT);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(clienttestIntf2 != NULL);
     status = clienttestIntf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     clienttestIntf2->Activate();
 
     ProxyBusObject clientProxyObject(clientbus, servicebus.GetUniqueName().c_str(), object_path, 0, false);
     status = clientProxyObject.AddInterface(interface1);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Message reply(clientbus);
     const InterfaceDescription::Member* pingMethod;
     const InterfaceDescription* ifc = clientProxyObject.GetInterface(interface1);
     pingMethod = ifc->GetMember("my_ping");
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_FALSE(serviceObject.msgEncrypted);
 
     status = clientProxyObject.AddInterface(interface2);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     serviceObject.msgEncrypted = false;
     MsgArg val;
     status = val.Set("i", 421);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.SetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_FALSE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     status = clientProxyObject.GetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     int iVal = 0;
     status = val.Get("i", &iVal);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(421, iVal);
     EXPECT_FALSE(serviceObject.msgEncrypted);
 
@@ -413,17 +413,17 @@ TEST_F(ObjectSecurityTest, Test3) {
 
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_REQUIRED);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_REQUIRED);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf2->Activate();
 
     SvcTestObject serviceObject(object_path, servicebus);
@@ -440,51 +440,51 @@ TEST_F(ObjectSecurityTest, Test3) {
 
     InterfaceDescription* clienttestIntf = NULL;
     status = clientbus.CreateInterface(interface1, clienttestIntf, AJ_IFC_SECURITY_REQUIRED);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(clienttestIntf != NULL);
     status = clienttestIntf->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     clienttestIntf->Activate();
     InterfaceDescription* clienttestIntf2 = NULL;
     status = clientbus.CreateInterface(interface2, clienttestIntf2, AJ_IFC_SECURITY_REQUIRED);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(clienttestIntf2 != NULL);
     status = clienttestIntf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     clienttestIntf2->Activate();
 
     ProxyBusObject clientProxyObject(clientbus, servicebus.GetUniqueName().c_str(), object_path, 0, false);
     status = clientProxyObject.AddInterface(interface1);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Message reply(clientbus);
     const InterfaceDescription::Member* pingMethod;
     const InterfaceDescription* ifc = clientProxyObject.GetInterface(interface1);
     pingMethod = ifc->GetMember("my_ping");
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
     status = clientProxyObject.AddInterface(interface2);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     serviceObject.msgEncrypted = false;
     MsgArg val;
     status = val.Set("i", 421);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.SetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     status = clientProxyObject.GetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     int iVal = 0;
     status = val.Get("i", &iVal);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(421, iVal);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
@@ -507,17 +507,17 @@ TEST_F(ObjectSecurityTest, Test4) {
 
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_OFF);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_OFF);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf2->Activate();
 
     SvcTestObject serviceObject(object_path, servicebus);
@@ -534,51 +534,51 @@ TEST_F(ObjectSecurityTest, Test4) {
 
     InterfaceDescription* clienttestIntf = NULL;
     status = clientbus.CreateInterface(interface1, clienttestIntf, AJ_IFC_SECURITY_OFF);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(clienttestIntf != NULL);
     status = clienttestIntf->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     clienttestIntf->Activate();
     InterfaceDescription* clienttestIntf2 = NULL;
     status = clientbus.CreateInterface(interface2, clienttestIntf2, AJ_IFC_SECURITY_OFF);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(clienttestIntf2 != NULL);
     status = clienttestIntf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     clienttestIntf2->Activate();
 
     ProxyBusObject clientProxyObject(clientbus, servicebus.GetUniqueName().c_str(), object_path, 0, true);
     status = clientProxyObject.AddInterface(interface1);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Message reply(clientbus);
     const InterfaceDescription::Member* pingMethod;
     const InterfaceDescription* ifc = clientProxyObject.GetInterface(interface1);
     pingMethod = ifc->GetMember("my_ping");
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_FALSE(serviceObject.msgEncrypted);
 
     status = clientProxyObject.AddInterface(interface2);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     serviceObject.msgEncrypted = false;
     MsgArg val;
     status = val.Set("i", 421);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.SetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_FALSE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     status = clientProxyObject.GetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     int iVal = 0;
     status = val.Get("i", &iVal);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(421, iVal);
     EXPECT_FALSE(serviceObject.msgEncrypted);
 
@@ -601,17 +601,17 @@ TEST_F(ObjectSecurityTest, Test5) {
 
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_INHERIT);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_INHERIT);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf2->Activate();
 
     SvcTestObject serviceObject(object_path, servicebus);
@@ -628,51 +628,51 @@ TEST_F(ObjectSecurityTest, Test5) {
 
     InterfaceDescription* clienttestIntf = NULL;
     status = clientbus.CreateInterface(interface1, clienttestIntf, AJ_IFC_SECURITY_INHERIT);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(clienttestIntf != NULL);
     status = clienttestIntf->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     clienttestIntf->Activate();
     InterfaceDescription* clienttestIntf2 = NULL;
     status = clientbus.CreateInterface(interface2, clienttestIntf2, AJ_IFC_SECURITY_INHERIT);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(clienttestIntf2 != NULL);
     status = clienttestIntf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     clienttestIntf2->Activate();
 
     ProxyBusObject clientProxyObject(clientbus, servicebus.GetUniqueName().c_str(), object_path, 0, true);
     status = clientProxyObject.AddInterface(interface1);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Message reply(clientbus);
     const InterfaceDescription::Member* pingMethod;
     const InterfaceDescription* ifc = clientProxyObject.GetInterface(interface1);
     pingMethod = ifc->GetMember("my_ping");
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
     status = clientProxyObject.AddInterface(interface2);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     serviceObject.msgEncrypted = false;
     MsgArg val;
     status = val.Set("i", 421);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.SetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     status = clientProxyObject.GetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     int iVal = 0;
     status = val.Get("i", &iVal);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(421, iVal);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
@@ -696,17 +696,17 @@ TEST_F(ObjectSecurityTest, Test6) {
 
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_REQUIRED);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_REQUIRED);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf2->Activate();
 
     SvcTestObject serviceObject(object_path, servicebus);
@@ -723,51 +723,51 @@ TEST_F(ObjectSecurityTest, Test6) {
 
     InterfaceDescription* clienttestIntf = NULL;
     status = clientbus.CreateInterface(interface1, clienttestIntf, AJ_IFC_SECURITY_REQUIRED);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(clienttestIntf != NULL);
     status = clienttestIntf->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     clienttestIntf->Activate();
     InterfaceDescription* clienttestIntf2 = NULL;
     status = clientbus.CreateInterface(interface2, clienttestIntf2, AJ_IFC_SECURITY_REQUIRED);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(clienttestIntf2 != NULL);
     status = clienttestIntf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     clienttestIntf2->Activate();
 
     ProxyBusObject clientProxyObject(clientbus, servicebus.GetUniqueName().c_str(), object_path, 0, true);
     status = clientProxyObject.AddInterface(interface1);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Message reply(clientbus);
     const InterfaceDescription::Member* pingMethod;
     const InterfaceDescription* ifc = clientProxyObject.GetInterface(interface1);
     pingMethod = ifc->GetMember("my_ping");
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
     status = clientProxyObject.AddInterface(interface2);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     serviceObject.msgEncrypted = false;
     MsgArg val;
     status = val.Set("i", 421);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.SetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     status = clientProxyObject.GetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     int iVal = 0;
     status = val.Get("i", &iVal);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(421, iVal);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
@@ -790,17 +790,17 @@ TEST_F(ObjectSecurityTest, Test7) {
 
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_OFF);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_OFF);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf2->Activate();
 
     SvcTestObject serviceObject(object_path, servicebus);
@@ -819,33 +819,33 @@ TEST_F(ObjectSecurityTest, Test7) {
     status = clientProxyObject.IntrospectRemoteObject();
 
     serviceObject.msgEncrypted = false;
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Message reply(clientbus);
     const InterfaceDescription::Member* pingMethod;
     const InterfaceDescription* ifc = clientProxyObject.GetInterface(interface1);
     pingMethod = ifc->GetMember("my_ping");
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_FALSE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     MsgArg val;
     status = val.Set("i", 421);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.SetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_FALSE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     status = clientProxyObject.GetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     int iVal = 0;
     status = val.Get("i", &iVal);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(421, iVal);
     EXPECT_FALSE(serviceObject.msgEncrypted);
 
@@ -869,17 +869,17 @@ TEST_F(ObjectSecurityTest, Test8) {
 
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_INHERIT);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_INHERIT);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf2->Activate();
 
     SvcTestObject serviceObject(object_path, servicebus);
@@ -895,33 +895,33 @@ TEST_F(ObjectSecurityTest, Test8) {
 
     ProxyBusObject clientProxyObject(clientbus, servicebus.GetUniqueName().c_str(), object_path, 0, false);
     status = clientProxyObject.IntrospectRemoteObject();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Message reply(clientbus);
     const InterfaceDescription::Member* pingMethod;
     const InterfaceDescription* ifc = clientProxyObject.GetInterface(interface1);
     pingMethod = ifc->GetMember("my_ping");
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_FALSE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     MsgArg val;
     status = val.Set("i", 421);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.SetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_FALSE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     status = clientProxyObject.GetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     int iVal = 0;
     status = val.Get("i", &iVal);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(421, iVal);
     EXPECT_FALSE(serviceObject.msgEncrypted);
 
@@ -945,17 +945,17 @@ TEST_F(ObjectSecurityTest, Test9) {
 
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_REQUIRED);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_REQUIRED);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf2->Activate();
 
     SvcTestObject serviceObject(object_path, servicebus);
@@ -972,33 +972,33 @@ TEST_F(ObjectSecurityTest, Test9) {
 
     ProxyBusObject clientProxyObject(clientbus, servicebus.GetUniqueName().c_str(), object_path, 0, false);
     status = clientProxyObject.IntrospectRemoteObject();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Message reply(clientbus);
     const InterfaceDescription::Member* pingMethod;
     const InterfaceDescription* ifc = clientProxyObject.GetInterface(interface1);
     pingMethod = ifc->GetMember("my_ping");
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     MsgArg val;
     status = val.Set("i", 421);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.SetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     status = clientProxyObject.GetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     int iVal = 0;
     status = val.Get("i", &iVal);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(421, iVal);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
@@ -1020,17 +1020,17 @@ TEST_F(ObjectSecurityTest, Test10) {
 
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_OFF);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf1->Activate();
     InterfaceDescription* clienttestIntf2 = NULL;
     status = servicebus.CreateInterface(interface2, clienttestIntf2, AJ_IFC_SECURITY_OFF);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(clienttestIntf2 != NULL);
     status = clienttestIntf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     clienttestIntf2->Activate();
 
     SvcTestObject serviceObject(object_path, servicebus);
@@ -1047,33 +1047,33 @@ TEST_F(ObjectSecurityTest, Test10) {
 
     ProxyBusObject clientProxyObject(clientbus, servicebus.GetUniqueName().c_str(), object_path, 0, true);
     status = clientProxyObject.IntrospectRemoteObject();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Message reply(clientbus);
     const InterfaceDescription::Member* pingMethod;
     const InterfaceDescription* ifc = clientProxyObject.GetInterface(interface1);
     pingMethod = ifc->GetMember("my_ping");
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_FALSE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     MsgArg val;
     status = val.Set("i", 421);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.SetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_FALSE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     status = clientProxyObject.GetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     int iVal = 0;
     status = val.Get("i", &iVal);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(421, iVal);
     EXPECT_FALSE(serviceObject.msgEncrypted);
 
@@ -1096,17 +1096,17 @@ TEST_F(ObjectSecurityTest, Test11) {
 
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_INHERIT);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_INHERIT);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf2->Activate();
 
     SvcTestObject serviceObject(object_path, servicebus);
@@ -1123,33 +1123,33 @@ TEST_F(ObjectSecurityTest, Test11) {
 
     ProxyBusObject clientProxyObject(clientbus, servicebus.GetUniqueName().c_str(), object_path, 0, true);
     status = clientProxyObject.IntrospectRemoteObject();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Message reply(clientbus);
     const InterfaceDescription::Member* pingMethod;
     const InterfaceDescription* ifc = clientProxyObject.GetInterface(interface1);
     pingMethod = ifc->GetMember("my_ping");
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     MsgArg val;
     status = val.Set("i", 421);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.SetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     status = clientProxyObject.GetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     int iVal = 0;
     status = val.Get("i", &iVal);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(421, iVal);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
@@ -1172,17 +1172,17 @@ TEST_F(ObjectSecurityTest, Test12) {
 
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_REQUIRED);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_REQUIRED);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf2->Activate();
 
     SvcTestObject serviceObject(object_path, servicebus);
@@ -1199,33 +1199,33 @@ TEST_F(ObjectSecurityTest, Test12) {
 
     ProxyBusObject clientProxyObject(clientbus, servicebus.GetUniqueName().c_str(), object_path, 0, true);
     status = clientProxyObject.IntrospectRemoteObject();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Message reply(clientbus);
     const InterfaceDescription::Member* pingMethod;
     const InterfaceDescription* ifc = clientProxyObject.GetInterface(interface1);
     pingMethod = ifc->GetMember("my_ping");
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     MsgArg val;
     status = val.Set("i", 421);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.SetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     status = clientProxyObject.GetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     int iVal = 0;
     status = val.Get("i", &iVal);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(421, iVal);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
@@ -1248,17 +1248,17 @@ TEST_F(ObjectSecurityTest, Test13) {
 
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_OFF);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_OFF);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf2->Activate();
 
     SvcTestObject serviceObject(object_path, servicebus);
@@ -1278,33 +1278,33 @@ TEST_F(ObjectSecurityTest, Test13) {
     ASSERT_FALSE(clientProxyObject.IsSecure());
 
     status = clientProxyObject.IntrospectRemoteObject();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Message reply(clientbus);
     const InterfaceDescription::Member* pingMethod;
     const InterfaceDescription* ifc = clientProxyObject.GetInterface(interface1);
     pingMethod = ifc->GetMember("my_ping");
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_FALSE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     MsgArg val;
     status = val.Set("i", 421);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.SetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_FALSE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     status = clientProxyObject.GetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     int iVal = 0;
     status = val.Get("i", &iVal);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(421, iVal);
     EXPECT_FALSE(serviceObject.msgEncrypted);
 
@@ -1329,17 +1329,17 @@ TEST_F(ObjectSecurityTest, Test14) {
 
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_INHERIT);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_INHERIT);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf2->Activate();
 
     SvcTestObject serviceObject(object_path, servicebus);
@@ -1359,33 +1359,33 @@ TEST_F(ObjectSecurityTest, Test14) {
     ASSERT_FALSE(clientProxyObject.IsSecure());
 
     status = clientProxyObject.IntrospectRemoteObject();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Message reply(clientbus);
     const InterfaceDescription::Member* pingMethod;
     const InterfaceDescription* ifc = clientProxyObject.GetInterface(interface1);
     pingMethod = ifc->GetMember("my_ping");
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     MsgArg val;
     status = val.Set("i", 421);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.SetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     status = clientProxyObject.GetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     int iVal = 0;
     status = val.Get("i", &iVal);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(421, iVal);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
@@ -1409,17 +1409,17 @@ TEST_F(ObjectSecurityTest, Test15) {
 
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_REQUIRED);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_REQUIRED);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf2->Activate();
 
     SvcTestObject serviceObject(object_path, servicebus);
@@ -1439,33 +1439,33 @@ TEST_F(ObjectSecurityTest, Test15) {
     ASSERT_FALSE(clientProxyObject.IsSecure());
 
     status = clientProxyObject.IntrospectRemoteObject();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Message reply(clientbus);
     const InterfaceDescription::Member* pingMethod;
     const InterfaceDescription* ifc = clientProxyObject.GetInterface(interface1);
     pingMethod = ifc->GetMember("my_ping");
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     MsgArg val;
     status = val.Set("i", 421);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.SetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     status = clientProxyObject.GetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     int iVal = 0;
     status = val.Get("i", &iVal);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(421, iVal);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
@@ -1491,17 +1491,17 @@ TEST_F(ObjectSecurityTest, Test16) {
 
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_OFF);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_OFF);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf2->Activate();
 
     SvcTestObject serviceObject(object_path, servicebus);
@@ -1518,33 +1518,33 @@ TEST_F(ObjectSecurityTest, Test16) {
 
     ProxyBusObject clientProxyObject(clientbus, servicebus.GetUniqueName().c_str(), object_path, 0, true);
     status = clientProxyObject.IntrospectRemoteObject();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Message reply(clientbus);
     const InterfaceDescription::Member* pingMethod;
     const InterfaceDescription* ifc = clientProxyObject.GetInterface(interface1);
     pingMethod = ifc->GetMember("my_ping");
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_FALSE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     MsgArg val;
     status = val.Set("i", 421);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.SetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_FALSE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     status = clientProxyObject.GetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     int iVal = 0;
     status = val.Get("i", &iVal);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(421, iVal);
     EXPECT_FALSE(serviceObject.msgEncrypted);
 
@@ -1568,17 +1568,17 @@ TEST_F(ObjectSecurityTest, Test17) {
 
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_INHERIT);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_INHERIT);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf2->Activate();
 
     SvcTestObject serviceObject(object_path, servicebus);
@@ -1595,33 +1595,33 @@ TEST_F(ObjectSecurityTest, Test17) {
 
     ProxyBusObject clientProxyObject(clientbus, servicebus.GetUniqueName().c_str(), object_path, 0, true);
     status = clientProxyObject.IntrospectRemoteObject();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Message reply(clientbus);
     const InterfaceDescription::Member* pingMethod;
     const InterfaceDescription* ifc = clientProxyObject.GetInterface(interface1);
     pingMethod = ifc->GetMember("my_ping");
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     MsgArg val;
     status = val.Set("i", 421);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.SetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     status = clientProxyObject.GetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     int iVal = 0;
     status = val.Get("i", &iVal);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(421, iVal);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
@@ -1645,17 +1645,17 @@ TEST_F(ObjectSecurityTest, Test18) {
 
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_REQUIRED);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_REQUIRED);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf2->Activate();
 
     SvcTestObject serviceObject(object_path, servicebus);
@@ -1672,33 +1672,33 @@ TEST_F(ObjectSecurityTest, Test18) {
 
     ProxyBusObject clientProxyObject(clientbus, servicebus.GetUniqueName().c_str(), object_path, 0, true);
     status = clientProxyObject.IntrospectRemoteObject();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Message reply(clientbus);
     const InterfaceDescription::Member* pingMethod;
     const InterfaceDescription* ifc = clientProxyObject.GetInterface(interface1);
     pingMethod = ifc->GetMember("my_ping");
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     MsgArg val;
     status = val.Set("i", 421);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.SetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     status = clientProxyObject.GetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     int iVal = 0;
     status = val.Get("i", &iVal);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(421, iVal);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
@@ -1718,17 +1718,17 @@ TEST_F(ObjectSecurityTest, Test19) {
 
     InterfaceDescription* servicetestIntf = NULL;
     status = servicebus.CreateInterface(interface1, servicetestIntf, AJ_IFC_SECURITY_REQUIRED);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(servicetestIntf != NULL);
     status = servicetestIntf->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     servicetestIntf->Activate();
     InterfaceDescription* servicetestIntf2 = NULL;
     status = servicebus.CreateInterface(interface2, servicetestIntf2, AJ_IFC_SECURITY_REQUIRED);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(servicetestIntf2 != NULL);
     status = servicetestIntf2->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     servicetestIntf2->Activate();
 
     SvcTestObject serviceObject(object_path, servicebus);
@@ -1745,7 +1745,7 @@ TEST_F(ObjectSecurityTest, Test19) {
 
     ProxyBusObject clientProxyObject(clientbus, servicebus.GetUniqueName().c_str(), object_path, 0, true);
     status = clientProxyObject.IntrospectRemoteObject();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_FALSE(authComplete);
 }
 
@@ -1809,10 +1809,10 @@ TEST_F(ObjectSecurityTest, Test20) {
 
     InterfaceDescription* servicetestIntf = NULL;
     status = servicebus.CreateInterface(interface1, servicetestIntf, AJ_IFC_SECURITY_OFF);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(servicetestIntf != NULL);
     status = servicetestIntf->AddSignal("my_signal", "s", NULL, 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     servicetestIntf->Activate();
 
     SignalSecurityTestObject serviceObject(object_path, *servicetestIntf);
@@ -1828,10 +1828,10 @@ TEST_F(ObjectSecurityTest, Test20) {
 
     InterfaceDescription* clienttestIntf = NULL;
     status = clientbus.CreateInterface(interface1, clienttestIntf, AJ_IFC_SECURITY_OFF);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(clienttestIntf != NULL);
     status = clienttestIntf->AddSignal("my_signal", "s", NULL, 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     clienttestIntf->Activate();
     const InterfaceDescription::Member*  signal_member = clienttestIntf->GetMember("my_signal");
 
@@ -1840,19 +1840,19 @@ TEST_F(ObjectSecurityTest, Test20) {
                                              static_cast<MessageReceiver::SignalHandler>(&ObjectSecurityTestSignalReceiver::SignalHandler),
                                              signal_member,
                                              NULL);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientbus.AddMatch("type='signal',interface='org.alljoyn.alljoyn_test.interface1',member='my_signal'");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     ProxyBusObject clientProxyObject(clientbus, servicebus.GetUniqueName().c_str(), object_path, 0, false);
     EXPECT_FALSE(clientProxyObject.IsSecure());
     status = clientProxyObject.SecureConnection();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_FALSE(clientProxyObject.IsSecure());
 
     status = serviceObject.SendSignal();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     //Wait for a maximum of 3 sec for signal to be arrived
     for (int i = 0; i < 300; ++i) {
@@ -1880,10 +1880,10 @@ TEST_F(ObjectSecurityTest, Test21) {
 
     InterfaceDescription* servicetestIntf = NULL;
     status = servicebus.CreateInterface(interface1, servicetestIntf, AJ_IFC_SECURITY_INHERIT);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(servicetestIntf != NULL);
     status = servicetestIntf->AddSignal("my_signal", "s", NULL, 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     servicetestIntf->Activate();
 
     SignalSecurityTestObject serviceObject(object_path, *servicetestIntf);
@@ -1899,10 +1899,10 @@ TEST_F(ObjectSecurityTest, Test21) {
 
     InterfaceDescription* clienttestIntf = NULL;
     status = clientbus.CreateInterface(interface1, clienttestIntf, AJ_IFC_SECURITY_INHERIT);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(clienttestIntf != NULL);
     status = clienttestIntf->AddSignal("my_signal", "s", NULL, 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     clienttestIntf->Activate();
     const InterfaceDescription::Member*  signal_member = clienttestIntf->GetMember("my_signal");
 
@@ -1911,20 +1911,20 @@ TEST_F(ObjectSecurityTest, Test21) {
                                              static_cast<MessageReceiver::SignalHandler>(&ObjectSecurityTestSignalReceiver::SignalHandler),
                                              signal_member,
                                              NULL);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientbus.AddMatch("type='signal',interface='org.alljoyn.alljoyn_test.interface1',member='my_signal'");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     ProxyBusObject clientProxyObject(clientbus, servicebus.GetUniqueName().c_str(), object_path, 0, false);
     EXPECT_FALSE(clientProxyObject.IsSecure());
     status = clientProxyObject.SecureConnection();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     /* Even though we called ProxyBusObject.SecureConnection(), that is not going to mark the object as secure.*/
     EXPECT_FALSE(clientProxyObject.IsSecure());
 
     status = serviceObject.SendSignal();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     //Wait for a maximum of 3 sec for signal to be arrived
     for (int i = 0; i < 300; ++i) {
@@ -1952,10 +1952,10 @@ TEST_F(ObjectSecurityTest, Test22) {
 
     InterfaceDescription* servicetestIntf = NULL;
     status = servicebus.CreateInterface(interface1, servicetestIntf, AJ_IFC_SECURITY_REQUIRED);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(servicetestIntf != NULL);
     status = servicetestIntf->AddSignal("my_signal", "s", NULL, 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     servicetestIntf->Activate();
 
     SignalSecurityTestObject serviceObject(object_path, *servicetestIntf);
@@ -1971,10 +1971,10 @@ TEST_F(ObjectSecurityTest, Test22) {
 
     InterfaceDescription* clienttestIntf = NULL;
     status = clientbus.CreateInterface(interface1, clienttestIntf, AJ_IFC_SECURITY_REQUIRED);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(clienttestIntf != NULL);
     status = clienttestIntf->AddSignal("my_signal", "s", NULL, 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     clienttestIntf->Activate();
     const InterfaceDescription::Member*  signal_member = clienttestIntf->GetMember("my_signal");
 
@@ -1983,19 +1983,19 @@ TEST_F(ObjectSecurityTest, Test22) {
                                              static_cast<MessageReceiver::SignalHandler>(&ObjectSecurityTestSignalReceiver::SignalHandler),
                                              signal_member,
                                              NULL);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientbus.AddMatch("type='signal',interface='org.alljoyn.alljoyn_test.interface1',member='my_signal'");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     ProxyBusObject clientProxyObject(clientbus, servicebus.GetUniqueName().c_str(), object_path, 0, false);
     EXPECT_FALSE(clientProxyObject.IsSecure());
     status = clientProxyObject.SecureConnection();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_FALSE(clientProxyObject.IsSecure());
 
     status = serviceObject.SendSignal();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     //Wait for a maximum of 3 sec for signal to be arrived
     for (int i = 0; i < 300; ++i) {
@@ -2023,10 +2023,10 @@ TEST_F(ObjectSecurityTest, Test23) {
 
     InterfaceDescription* servicetestIntf = NULL;
     status = servicebus.CreateInterface(interface1, servicetestIntf, AJ_IFC_SECURITY_OFF);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(servicetestIntf != NULL);
     status = servicetestIntf->AddSignal("my_signal", "s", NULL, 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     servicetestIntf->Activate();
 
     SignalSecurityTestObject serviceObject(object_path, *servicetestIntf);
@@ -2042,10 +2042,10 @@ TEST_F(ObjectSecurityTest, Test23) {
 
     InterfaceDescription* clienttestIntf = NULL;
     status = clientbus.CreateInterface(interface1, clienttestIntf, AJ_IFC_SECURITY_OFF);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(clienttestIntf != NULL);
     status = clienttestIntf->AddSignal("my_signal", "s", NULL, 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     clienttestIntf->Activate();
     const InterfaceDescription::Member*  signal_member = clienttestIntf->GetMember("my_signal");
 
@@ -2054,19 +2054,19 @@ TEST_F(ObjectSecurityTest, Test23) {
                                              static_cast<MessageReceiver::SignalHandler>(&ObjectSecurityTestSignalReceiver::SignalHandler),
                                              signal_member,
                                              NULL);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientbus.AddMatch("type='signal',interface='org.alljoyn.alljoyn_test.interface1',member='my_signal'");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     ProxyBusObject clientProxyObject(clientbus, servicebus.GetUniqueName().c_str(), object_path, 0, false);
     EXPECT_FALSE(clientProxyObject.IsSecure());
     status = clientProxyObject.SecureConnection();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_FALSE(clientProxyObject.IsSecure());
 
     status = serviceObject.SendSignal();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     //Wait for a maximum of 3 sec for signal to be arrived
     for (int i = 0; i < 300; ++i) {
@@ -2094,10 +2094,10 @@ TEST_F(ObjectSecurityTest, Test24) {
 
     InterfaceDescription* servicetestIntf = NULL;
     status = servicebus.CreateInterface(interface1, servicetestIntf, AJ_IFC_SECURITY_INHERIT);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(servicetestIntf != NULL);
     status = servicetestIntf->AddSignal("my_signal", "s", NULL, 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     servicetestIntf->Activate();
 
     SignalSecurityTestObject serviceObject(object_path, *servicetestIntf);
@@ -2113,10 +2113,10 @@ TEST_F(ObjectSecurityTest, Test24) {
 
     InterfaceDescription* clienttestIntf = NULL;
     status = clientbus.CreateInterface(interface1, clienttestIntf, AJ_IFC_SECURITY_INHERIT);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(clienttestIntf != NULL);
     status = clienttestIntf->AddSignal("my_signal", "s", NULL, 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     clienttestIntf->Activate();
     const InterfaceDescription::Member*  signal_member = clienttestIntf->GetMember("my_signal");
 
@@ -2125,19 +2125,19 @@ TEST_F(ObjectSecurityTest, Test24) {
                                              static_cast<MessageReceiver::SignalHandler>(&ObjectSecurityTestSignalReceiver::SignalHandler),
                                              signal_member,
                                              NULL);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientbus.AddMatch("type='signal',interface='org.alljoyn.alljoyn_test.interface1',member='my_signal'");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     ProxyBusObject clientProxyObject(clientbus, servicebus.GetUniqueName().c_str(), object_path, 0, false);
     EXPECT_FALSE(clientProxyObject.IsSecure());
     status = clientProxyObject.SecureConnection();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_FALSE(clientProxyObject.IsSecure());
 
     status = serviceObject.SendSignal();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     //Wait for a maximum of 3 sec for signal to be arrived
     for (int i = 0; i < 300; ++i) {
@@ -2166,10 +2166,10 @@ TEST_F(ObjectSecurityTest, Test25) {
 
     InterfaceDescription* servicetestIntf = NULL;
     status = servicebus.CreateInterface(interface1, servicetestIntf, AJ_IFC_SECURITY_REQUIRED);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(servicetestIntf != NULL);
     status = servicetestIntf->AddSignal("my_signal", "s", NULL, 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     servicetestIntf->Activate();
 
     SignalSecurityTestObject serviceObject(object_path, *servicetestIntf);
@@ -2185,10 +2185,10 @@ TEST_F(ObjectSecurityTest, Test25) {
 
     InterfaceDescription* clienttestIntf = NULL;
     status = clientbus.CreateInterface(interface1, clienttestIntf, AJ_IFC_SECURITY_REQUIRED);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(clienttestIntf != NULL);
     status = clienttestIntf->AddSignal("my_signal", "s", NULL, 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     clienttestIntf->Activate();
     const InterfaceDescription::Member*  signal_member = clienttestIntf->GetMember("my_signal");
 
@@ -2197,19 +2197,19 @@ TEST_F(ObjectSecurityTest, Test25) {
                                              static_cast<MessageReceiver::SignalHandler>(&ObjectSecurityTestSignalReceiver::SignalHandler),
                                              signal_member,
                                              NULL);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = clientbus.AddMatch("type='signal',interface='org.alljoyn.alljoyn_test.interface1',member='my_signal'");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     ProxyBusObject clientProxyObject(clientbus, servicebus.GetUniqueName().c_str(), object_path, 0, false);
     EXPECT_FALSE(clientProxyObject.IsSecure());
     status = clientProxyObject.SecureConnection();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_FALSE(clientProxyObject.IsSecure());
 
     status = serviceObject.SendSignal();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     //Wait for a maximum of 3 sec for signal to be arrived
     for (int i = 0; i < 300; ++i) {
@@ -2254,7 +2254,7 @@ class GrandParentTestObject : public BusObject {
                 { Intf1->GetMember("grand_parent_ping"), static_cast<MessageReceiver::MethodHandler>(&GrandParentTestObject::GrandParentPing) },
             };
             status = AddMethodHandlers(methodEntries, ArraySize(methodEntries));
-            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+            EXPECT_EQ(ER_OK, status);
         }
     }
 
@@ -2268,12 +2268,12 @@ class GrandParentTestObject : public BusObject {
         char* value = NULL;
         const MsgArg* arg((msg->GetArg(0)));
         QStatus status = arg->Get("s", &value);
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
         if (msg->IsEncrypted()) {
             msgEncrypted = true;
         }
         status = MethodReply(msg, arg, 1);
-        EXPECT_EQ(ER_OK, status) << "GrandParentPing: Error sending reply,  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status) << "GrandParentPing: Error sending reply";
     }
 
 
@@ -2306,7 +2306,7 @@ class ParentTestObject : public BusObject {
                 { Intf1->GetMember("parent_ping"), static_cast<MessageReceiver::MethodHandler>(&ParentTestObject::ParentPing) },
             };
             status = AddMethodHandlers(methodEntries, ArraySize(methodEntries));
-            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+            EXPECT_EQ(ER_OK, status);
         }
     }
 
@@ -2320,12 +2320,12 @@ class ParentTestObject : public BusObject {
         char* value = NULL;
         const MsgArg* arg((msg->GetArg(0)));
         QStatus status = arg->Get("s", &value);
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
         if (msg->IsEncrypted()) {
             msgEncrypted = true;
         }
         status = MethodReply(msg, arg, 1);
-        EXPECT_EQ(ER_OK, status) << "ParentPing: Error sending reply,  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status) << "ParentPing: Error sending reply";
     }
 
 
@@ -2357,7 +2357,7 @@ class ChildTestObject : public BusObject {
                 { Intf1->GetMember("child_ping"), static_cast<MessageReceiver::MethodHandler>(&ChildTestObject::ChildPing) },
             };
             status = AddMethodHandlers(methodEntries, ArraySize(methodEntries));
-            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+            EXPECT_EQ(ER_OK, status);
         }
     }
 
@@ -2371,12 +2371,12 @@ class ChildTestObject : public BusObject {
         char* value = NULL;
         const MsgArg* arg((msg->GetArg(0)));
         QStatus status = arg->Get("s", &value);
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
         if (msg->IsEncrypted()) {
             msgEncrypted = true;
         }
         status = MethodReply(msg, arg, 1);
-        EXPECT_EQ(ER_OK, status) << "ChildPing: Error sending reply,  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status) << "ChildPing: Error sending reply";
     }
 
 
@@ -2402,26 +2402,26 @@ TEST_F(ObjectSecurityTest, Test26) {
 
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(grand_parent_interface1, Intf1, AJ_IFC_SECURITY_INHERIT);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("grand_parent_ping", "s", "s", "inStr,outStr", 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf1->Activate();
 
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(parent_interface1, Intf2, AJ_IFC_SECURITY_OFF);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddMethod("parent_ping", "s", "s", "inStr,outStr", 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf2->Activate();
 
     InterfaceDescription* Intf3 = NULL;
     status = servicebus.CreateInterface(child_interface1, Intf3, AJ_IFC_SECURITY_INHERIT);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf3 != NULL);
     status = Intf3->AddMethod("child_ping", "s", "s", "inStr,outStr", 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf3->Activate();
 
 
@@ -2444,17 +2444,17 @@ TEST_F(ObjectSecurityTest, Test26) {
 
     ProxyBusObject grandParentProxyObject(clientbus, servicebus.GetUniqueName().c_str(), grand_parent_object_path, 0, false);
     status = grandParentProxyObject.IntrospectRemoteObject();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_TRUE(grandParentProxyObject.IsSecure());
 
     ProxyBusObject parentProxyObject(clientbus, servicebus.GetUniqueName().c_str(), parent_object_path, 0, false);
     status = parentProxyObject.IntrospectRemoteObject();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_TRUE(parentProxyObject.IsSecure());
 
     ProxyBusObject childProxyObject(clientbus, servicebus.GetUniqueName().c_str(), child_object_path, 0, false);
     status = childProxyObject.IntrospectRemoteObject();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_TRUE(childProxyObject.IsSecure());
 
     grandParentTestObject.msgEncrypted = false;
@@ -2469,9 +2469,9 @@ TEST_F(ObjectSecurityTest, Test26) {
     const InterfaceDescription::Member* grandParentPingMethod;
     const InterfaceDescription* ifc = grandParentProxyObject.GetInterface(grand_parent_interface1);
     grandParentPingMethod = ifc->GetMember("grand_parent_ping");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = grandParentProxyObject.MethodCall(*grandParentPingMethod, &pingArgs, 1, reply, 5000);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(grandParentTestObject.msgEncrypted);
 
@@ -2479,9 +2479,9 @@ TEST_F(ObjectSecurityTest, Test26) {
     const InterfaceDescription::Member* parentPingMethod;
     const InterfaceDescription* ifc2 = parentProxyObject.GetInterface(parent_interface1);
     parentPingMethod = ifc2->GetMember("parent_ping");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = parentProxyObject.MethodCall(*parentPingMethod, &pingArgs, 1, reply, 5000);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_FALSE(parentTestObject.msgEncrypted);
 
@@ -2489,9 +2489,9 @@ TEST_F(ObjectSecurityTest, Test26) {
     const InterfaceDescription::Member* childPingMethod;
     const InterfaceDescription* ifc3 = childProxyObject.GetInterface(child_interface1);
     childPingMethod = ifc3->GetMember("child_ping");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = childProxyObject.MethodCall(*childPingMethod, &pingArgs, 1, reply, 5000);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(childTestObject.msgEncrypted);
 
@@ -2531,17 +2531,17 @@ TEST_F(ObjectSecurityTest, Test27) {
 
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_OFF);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_OFF);
     ASSERT_TRUE(Intf2 != NULL);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf2->Activate();
 
     SvcTestObject serviceObject(object_path, servicebus);
@@ -2557,7 +2557,7 @@ TEST_F(ObjectSecurityTest, Test27) {
 
     ProxyBusObject clientProxyObject(clientbus, servicebus.GetUniqueName().c_str(), object_path, 0, false);
     status = clientProxyObject.ParseXml(Test27XML);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     Message reply(clientbus);
     const InterfaceDescription::Member* pingMethod;
@@ -2565,26 +2565,26 @@ TEST_F(ObjectSecurityTest, Test27) {
     pingMethod = ifc->GetMember("my_ping");
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_FALSE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     MsgArg val;
     status = val.Set("i", 421);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.SetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_FALSE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     status = clientProxyObject.GetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     int iVal = 0;
     status = val.Get("i", &iVal);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(421, iVal);
     EXPECT_FALSE(serviceObject.msgEncrypted);
 
@@ -2623,17 +2623,17 @@ TEST_F(ObjectSecurityTest, Test28) {
 
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_REQUIRED);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_REQUIRED);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf2->Activate();
 
     SvcTestObject serviceObject(object_path, servicebus);
@@ -2649,7 +2649,7 @@ TEST_F(ObjectSecurityTest, Test28) {
 
     ProxyBusObject clientProxyObject(clientbus, servicebus.GetUniqueName().c_str(), object_path, 0, false);
     status = clientProxyObject.ParseXml(Test28XML);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     Message reply(clientbus);
     const InterfaceDescription::Member* pingMethod;
@@ -2657,26 +2657,26 @@ TEST_F(ObjectSecurityTest, Test28) {
     pingMethod = ifc->GetMember("my_ping");
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     MsgArg val;
     status = val.Set("i", 421);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.SetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     status = clientProxyObject.GetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     int iVal = 0;
     status = val.Get("i", &iVal);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(421, iVal);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
@@ -2716,17 +2716,17 @@ TEST_F(ObjectSecurityTest, Test29) {
 
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_INHERIT);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_INHERIT);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf2->Activate();
 
     SvcTestObject serviceObject(object_path, servicebus);
@@ -2742,7 +2742,7 @@ TEST_F(ObjectSecurityTest, Test29) {
 
     ProxyBusObject clientProxyObject(clientbus, servicebus.GetUniqueName().c_str(), object_path, 0, false);
     status = clientProxyObject.ParseXml(Test29XML);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     Message reply(clientbus);
     const InterfaceDescription::Member* pingMethod;
@@ -2750,26 +2750,26 @@ TEST_F(ObjectSecurityTest, Test29) {
     pingMethod = ifc->GetMember("my_ping");
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_FALSE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     MsgArg val;
     status = val.Set("i", 421);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.SetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_FALSE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     status = clientProxyObject.GetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     int iVal = 0;
     status = val.Get("i", &iVal);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(421, iVal);
     EXPECT_FALSE(serviceObject.msgEncrypted);
 
@@ -2809,17 +2809,17 @@ TEST_F(ObjectSecurityTest, Test30) {
 
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_OFF);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_OFF);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf2->Activate();
 
     SvcTestObject serviceObject(object_path, servicebus);
@@ -2835,7 +2835,7 @@ TEST_F(ObjectSecurityTest, Test30) {
 
     ProxyBusObject clientProxyObject(clientbus, servicebus.GetUniqueName().c_str(), object_path, 0, false);
     status = clientProxyObject.ParseXml(Test30XML);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     Message reply(clientbus);
     const InterfaceDescription::Member* pingMethod;
@@ -2843,26 +2843,26 @@ TEST_F(ObjectSecurityTest, Test30) {
     pingMethod = ifc->GetMember("my_ping");
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_FALSE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     MsgArg val;
     status = val.Set("i", 421);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.SetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_FALSE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     status = clientProxyObject.GetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     int iVal = 0;
     status = val.Get("i", &iVal);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(421, iVal);
     EXPECT_FALSE(serviceObject.msgEncrypted);
 
@@ -2901,17 +2901,17 @@ TEST_F(ObjectSecurityTest, Test31) {
 
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_REQUIRED);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_REQUIRED);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf2->Activate();
 
     SvcTestObject serviceObject(object_path, servicebus);
@@ -2927,7 +2927,7 @@ TEST_F(ObjectSecurityTest, Test31) {
 
     ProxyBusObject clientProxyObject(clientbus, servicebus.GetUniqueName().c_str(), object_path, 0, false);
     status = clientProxyObject.ParseXml(Test31XML);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     Message reply(clientbus);
     const InterfaceDescription::Member* pingMethod;
@@ -2935,26 +2935,26 @@ TEST_F(ObjectSecurityTest, Test31) {
     pingMethod = ifc->GetMember("my_ping");
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     MsgArg val;
     status = val.Set("i", 421);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.SetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     status = clientProxyObject.GetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     int iVal = 0;
     status = val.Get("i", &iVal);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(421, iVal);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
@@ -2993,17 +2993,17 @@ TEST_F(ObjectSecurityTest, Test32) {
 
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_INHERIT);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_INHERIT);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     Intf2->Activate();
 
     SvcTestObject serviceObject(object_path, servicebus);
@@ -3019,7 +3019,7 @@ TEST_F(ObjectSecurityTest, Test32) {
 
     ProxyBusObject clientProxyObject(clientbus, servicebus.GetUniqueName().c_str(), object_path, 0, false);
     status = clientProxyObject.ParseXml(Test32XML);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     Message reply(clientbus);
     const InterfaceDescription::Member* pingMethod;
@@ -3027,26 +3027,26 @@ TEST_F(ObjectSecurityTest, Test32) {
     pingMethod = ifc->GetMember("my_ping");
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     MsgArg val;
     status = val.Set("i", 421);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.SetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     status = clientProxyObject.GetProperty(interface2, "integer_property", val);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     int iVal = 0;
     status = val.Get("i", &iVal);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(421, iVal);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
@@ -3083,7 +3083,7 @@ TEST_F(ObjectSecurityTest, Test33) {
     ProxyBusObject clientProxyObject(clientbus, servicebus.GetUniqueName().c_str(), object_path, 0, false);
     EXPECT_FALSE(clientProxyObject.IsSecure());
     status = clientProxyObject.ParseXml(Test33XML);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     const InterfaceDescription* Intf1 = clientProxyObject.GetInterface(interface1);
     const InterfaceDescription* Intf2 = clientProxyObject.GetInterface(interface2);
     EXPECT_EQ(Intf1->GetSecurityPolicy(), AJ_IFC_SECURITY_INHERIT);

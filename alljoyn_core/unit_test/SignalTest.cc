@@ -107,10 +107,10 @@ class Participant : public SessionPortListener, public SessionListener {
         /* create test interface */
         InterfaceDescription* servicetestIntf = NULL;
         status = bus.CreateInterface("org.test", servicetestIntf);
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
         ASSERT_TRUE(servicetestIntf != NULL);
         status = servicetestIntf->AddSignal("my_signal", "s", NULL, 0);
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
         servicetestIntf->Activate();
 
         /* create bus object */
@@ -166,12 +166,12 @@ class Participant : public SessionPortListener, public SessionListener {
 
     void AddMatch() {
         QStatus status = bus.AddMatch("type='signal',interface='org.test',member='my_signal'");
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
     }
 
     void RemoveMatch() {
         QStatus status = bus.RemoveMatch("type='signal',interface='org.test',member='my_signal'");
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
     }
 
     void JoinSession(Participant& part, bool multipoint) {
@@ -249,7 +249,7 @@ class SignalReceiver : public MessageReceiver {
                                                                 static_cast<MessageReceiver::SignalHandler>(&SignalReceiver::SignalHandler),
                                                                 member,
                                                                 NULL);
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
     }
 
     void SignalHandler(const InterfaceDescription::Member* member, const char* sourcePath, Message& msg) {
@@ -282,7 +282,7 @@ class PathReceiver : public SignalReceiver {
                                                                 static_cast<MessageReceiver::SignalHandler>(&PathReceiver::SignalHandler),
                                                                 member,
                                                                 senderpath.c_str());
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
     }
 };
 
@@ -297,7 +297,7 @@ class RuleReceiver : public SignalReceiver {
                                                                         static_cast<MessageReceiver::SignalHandler>(&RuleReceiver::SignalHandler),
                                                                         member,
                                                                         matchRule.c_str());
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
     }
 };
 

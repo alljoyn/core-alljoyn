@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -20,6 +20,7 @@
  ******************************************************************************/
 
 #include "ServiceTestObject.h"
+#include "ajTestCommon.h"
 
 #define QCC_MODULE "ALLJOYN"
 

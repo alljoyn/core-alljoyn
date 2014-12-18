@@ -97,9 +97,9 @@ class ProxyBusObjectTest : public testing::Test {
 
     virtual void SetUp() {
         status = bus.Start();
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
         status = bus.Connect(ajn::getConnectArg().c_str());
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
     }
 
     virtual void TearDown() {
@@ -114,20 +114,20 @@ class ProxyBusObjectTest : public testing::Test {
         buslistener.name_owner_changed_flag = false;
         /* create/start/connect alljoyn_busattachment */
         status = servicebus.Start();
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
         status = servicebus.Connect(ajn::getConnectArg().c_str());
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
 
         /* create/activate alljoyn_interface */
         InterfaceDescription* testIntf = NULL;
         status = servicebus.CreateInterface(INTERFACE_NAME, testIntf, false);
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
         EXPECT_TRUE(testIntf != NULL);
         if (testIntf != NULL) {
             status = testIntf->AddMember(MESSAGE_METHOD_CALL, "ping", "s", "s", "in,out", 0);
-            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+            EXPECT_EQ(ER_OK, status);
             status = testIntf->AddMember(MESSAGE_METHOD_CALL, "chirp", "s", "", "chirp", 0);
-            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+            EXPECT_EQ(ER_OK, status);
             testIntf->Activate();
         }
         servicebus.RegisterBusListener(buslistener);
@@ -141,13 +141,13 @@ class ProxyBusObjectTest : public testing::Test {
         }
 
         status = servicebus.RegisterBusObject(testObj);
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
         buslistener.name_owner_changed_flag = false; //make sure the flag is false
 
         /* request name */
         uint32_t flags = DBUS_NAME_FLAG_REPLACE_EXISTING | DBUS_NAME_FLAG_DO_NOT_QUEUE;
         status = servicebus.RequestName(OBJECT_NAME, flags);
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
         for (size_t i = 0; i < 200; ++i) {
             if (buslistener.name_owner_changed_flag) {
                 break;
@@ -186,7 +186,7 @@ class ProxyBusObjectTest : public testing::Test {
         {
             QStatus status = ER_OK;
             status = AddInterface(intf);
-            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+            EXPECT_EQ(ER_OK, status);
 
             /* register method handlers */
             const InterfaceDescription::Member* ping_member = intf.GetMember("ping");
@@ -201,7 +201,7 @@ class ProxyBusObjectTest : public testing::Test {
                 { chirp_member, static_cast<MessageReceiver::MethodHandler>(&ProxyBusObjectTest::ProxyBusObjectTestBusObject::Chirp) }
             };
             status = AddMethodHandlers(methodEntries, sizeof(methodEntries) / sizeof(methodEntries[0]));
-            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+            EXPECT_EQ(ER_OK, status);
         }
 
         void Ping(const InterfaceDescription::Member* member, Message& msg)
@@ -247,7 +247,7 @@ TEST_F(ProxyBusObjectTest, ParseXml) {
 
     ProxyBusObject proxyObj(bus, NULL, NULL, 0);
     status = proxyObj.ParseXml(busObjectXML, NULL);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     EXPECT_TRUE(proxyObj.ImplementsInterface("org.alljoyn.test.ProxyBusObjectTest"));
 
@@ -276,40 +276,40 @@ TEST_F(ProxyBusObjectTest, SecureConnection) {
     /* create/activate alljoyn_interface */
     InterfaceDescription* testIntf = NULL;
     status = servicebus.CreateInterface(INTERFACE_NAME, testIntf, false);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(testIntf != NULL);
     status = testIntf->AddMember(MESSAGE_METHOD_CALL, "ping", "s", "s", "in,out", 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = testIntf->AddMember(MESSAGE_METHOD_CALL, "chirp", "s", "", "chirp", 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     testIntf->Activate();
 
     ProxyBusObjectTestBusObject testObj(OBJECT_PATH);
 
     status = servicebus.Start();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = servicebus.Connect(ajn::getConnectArg().c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = servicebus.RegisterBusObject(testObj);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = servicebus.RequestName(OBJECT_NAME, 0);
 
     proxyBusObjectTestAuthListenerOne = new ProxyBusObjectTestAuthListenerOne();
     status = servicebus.EnablePeerSecurity("ALLJOYN_SRP_KEYX", proxyBusObjectTestAuthListenerOne);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     servicebus.ClearKeyStore();
 
     proxyBusObjectTestAuthListenerTwo = new ProxyBusObjectTestAuthListenerTwo();
     status = bus.EnablePeerSecurity("ALLJOYN_SRP_KEYX", proxyBusObjectTestAuthListenerTwo);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     bus.ClearKeyStore();
 
     ProxyBusObject proxy(bus, OBJECT_NAME, OBJECT_PATH, 0);
 
     status = proxy.SecureConnection();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 }
 
 TEST_F(ProxyBusObjectTest, SecureConnectionAsync) {
@@ -319,40 +319,40 @@ TEST_F(ProxyBusObjectTest, SecureConnectionAsync) {
     /* create/activate alljoyn_interface */
     InterfaceDescription* testIntf = NULL;
     status = servicebus.CreateInterface(INTERFACE_NAME, testIntf, false);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(testIntf != NULL);
     status = testIntf->AddMember(MESSAGE_METHOD_CALL, "ping", "s", "s", "in,out", 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = testIntf->AddMember(MESSAGE_METHOD_CALL, "chirp", "s", "", "chirp", 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     testIntf->Activate();
 
     ProxyBusObjectTestBusObject testObj(OBJECT_PATH);
 
     status = servicebus.Start();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = servicebus.Connect(ajn::getConnectArg().c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = servicebus.RegisterBusObject(testObj);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = servicebus.RequestName(OBJECT_NAME, 0);
 
     proxyBusObjectTestAuthListenerOne = new ProxyBusObjectTestAuthListenerOne();
     status = servicebus.EnablePeerSecurity("ALLJOYN_SRP_KEYX", proxyBusObjectTestAuthListenerOne);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     servicebus.ClearKeyStore();
 
     proxyBusObjectTestAuthListenerTwo = new ProxyBusObjectTestAuthListenerTwo();
     status = bus.EnablePeerSecurity("ALLJOYN_SRP_KEYX", proxyBusObjectTestAuthListenerTwo);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     bus.ClearKeyStore();
 
     ProxyBusObject proxy(bus, OBJECT_NAME, OBJECT_PATH, 0);
 
     status = proxy.SecureConnectionAsync();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     for (size_t i = 0; i < 200; ++i) {
         if (auth_complete_listener1_flag && auth_complete_listener2_flag) {
             break;
@@ -370,22 +370,22 @@ TEST_F(ProxyBusObjectTest, GetChildren) {
     bus.CreateInterface("org.alljoyn.test.ProxyBusObjectTest", testIntf, false);
     ASSERT_TRUE(testIntf != NULL);
     status = testIntf->AddMember(MESSAGE_METHOD_CALL, "ping", "s", "s", "in,out", 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     ProxyBusObject proxyObjChildOne(bus, "org.alljoyn.test.ProxyBusObjectTest", "/org/alljoyn/test/ProxyObjectTest/ChildOne", 0);
     ProxyBusObject proxyObjChildTwo(bus, "org.alljoyn.test.ProxyBusObjectTest", "/org/alljoyn/test/ProxyObjectTest/ChildTwo", 0);
 
     status = proxyObjChildOne.AddInterface(*testIntf);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = proxyObjChildTwo.AddInterface(*testIntf);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     ProxyBusObject proxyObj(bus, NULL, NULL, 0);
 
     status = proxyObj.AddChild(proxyObjChildOne);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = proxyObj.AddChild(proxyObjChildTwo);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     EXPECT_TRUE(proxyObj.IsValid());
 
@@ -421,7 +421,7 @@ TEST_F(ProxyBusObjectTest, GetChildren) {
     }
 
     status = proxyObj.RemoveChild("/org/alljoyn/test/ProxyObjectTest/ChildOne");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     ProxyBusObject* removedProxyChild = proxyObj.GetChild("/org/alljoyn/test/ProxyObjectTest/ChildOne");
     EXPECT_EQ(NULL, removedProxyChild);
@@ -436,22 +436,22 @@ TEST_F(ProxyBusObjectTest, AddChild_regressionTest) {
     bus.CreateInterface("org.alljoyn.test.ProxyBusObjectTest", testIntf, false);
     ASSERT_TRUE(testIntf != NULL);
     status = testIntf->AddMember(MESSAGE_METHOD_CALL, "ping", "s", "s", "in,out", 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     ProxyBusObject proxyObjChildOne(bus, "org.alljoyn.test.ProxyBusObjectTest", "/aa/a", 0);
     ProxyBusObject proxyObjChildTwo(bus, "org.alljoyn.test.ProxyBusObjectTest", "/ab/a", 0);
 
     status = proxyObjChildOne.AddInterface(*testIntf);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = proxyObjChildTwo.AddInterface(*testIntf);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     ProxyBusObject proxyObj(bus, NULL, NULL, 0);
 
     status = proxyObj.AddChild(proxyObjChildOne);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = proxyObj.AddChild(proxyObjChildTwo);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     EXPECT_TRUE(proxyObj.IsValid());
 
@@ -469,16 +469,16 @@ TEST_F(ProxyBusObjectTest, AddPropertyInterfaceError) {
     bus.CreateInterface("org.alljoyn.test.ProxyBusObjectTest", testIntf, false);
     ASSERT_TRUE(testIntf != NULL);
     status = testIntf->AddMember(MESSAGE_METHOD_CALL, "ping", "s", "s", "in,out", 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = testIntf->AddProperty("stringProp", "s", PROP_ACCESS_RW);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     testIntf->Activate();
 
     ProxyBusObject proxyObj(bus, NULL, NULL, 0);
 
     status = proxyObj.AddInterface(*propIntf);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = proxyObj.AddInterface(*testIntf);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 }

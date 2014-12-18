@@ -118,7 +118,7 @@ TEST_F(BusListenerTest, bus_unregister_listener_when_busAttachment_destroyed) {
     EXPECT_TRUE(listener_registered_flag);
 
     status = busattachment->Start();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = busattachment->Connect(ajn::getConnectArg().c_str());
 
     busattachment->Stop();
@@ -167,7 +167,7 @@ TEST_F(BusListenerTest, bus_stopping_disconnected) {
     EXPECT_TRUE(listener_registered_flag);
 
     status = bus.Start();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = bus.Connect(ajn::getConnectArg().c_str());
 
     bus.Disconnect(ajn::getConnectArg().c_str());
@@ -206,7 +206,7 @@ TEST_F(BusListenerTest, bus_stopping_disconnected) {
 
 TEST_F(BusListenerTest, found_lost_advertised_name) {
     status = bus.Start();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = bus.Connect(ajn::getConnectArg().c_str());
 
     bus.RegisterBusListener(buslistener);
@@ -221,10 +221,10 @@ TEST_F(BusListenerTest, found_lost_advertised_name) {
     SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
 
     status = bus.FindAdvertisedName(objectName.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = bus.AdvertiseName(objectName.c_str(), opts.transports);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     for (size_t i = 0; i < 200; ++i) {
         if (found_advertised_name_flag) {
@@ -235,7 +235,7 @@ TEST_F(BusListenerTest, found_lost_advertised_name) {
     EXPECT_TRUE(found_advertised_name_flag);
 
     status = bus.CancelAdvertiseName(objectName.c_str(), opts.transports);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     for (size_t i = 0; i < 200; ++i) {
         if (lost_advertised_name_flag) {
             break;
@@ -272,12 +272,12 @@ TEST_F(BusListenerTest, found_lost_advertised_name) {
     EXPECT_TRUE(listener_unregistered_flag);
 
     status = bus.Stop();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 }
 
 TEST_F(BusListenerTest, name_owner_changed) {
     status = bus.Start();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = bus.Connect(ajn::getConnectArg().c_str());
 
     bus.RegisterBusListener(buslistener);
@@ -326,6 +326,6 @@ TEST_F(BusListenerTest, name_owner_changed) {
     EXPECT_TRUE(listener_unregistered_flag);
 
     status = bus.Stop();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 }
 

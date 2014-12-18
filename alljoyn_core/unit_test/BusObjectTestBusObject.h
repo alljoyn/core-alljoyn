@@ -26,6 +26,8 @@
 #include <qcc/Thread.h>
 #include <qcc/Util.h>
 
+#include "ajTestCommon.h"
+
 using namespace ajn;
 using namespace qcc;
 
@@ -58,7 +60,7 @@ class BusObjectTestBusObject : public BusObject {
     {
         const MsgArg* arg((msg->GetArg(0)));
         QStatus status = MethodReply(msg, arg, 1);
-        EXPECT_EQ(ER_OK, status) << "Pasta: Error sending reply,  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status) << "Pasta: Error sending reply";
     }
 
     BusAttachment& bus;

@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -29,7 +29,7 @@ class InterfaceTest : public testing::Test {
     virtual void SetUp() {
         g_msgBus = new BusAttachment("testservices", true);
         QStatus status = g_msgBus->Start();
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status);
     }
 
     virtual void TearDown() {
@@ -62,9 +62,9 @@ TEST_F(InterfaceTest, SUCCESS_AddInterfacestoBus_NoActivation) {
 
     /* Add org.alljoyn.alljoyn_test interface */
     status = g_msgBus->CreateInterface(myService.getAlljoynDummyInterfaceName1(), testIntf);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     status = g_msgBus->CreateInterface(myService.getAlljoynValuesDummyInterfaceName1(), testIntf);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
 }
 
 TEST_F(InterfaceTest, SUCCESS_AddSameInterfacestoBus_NoActivation) {
@@ -76,16 +76,16 @@ TEST_F(InterfaceTest, SUCCESS_AddSameInterfacestoBus_NoActivation) {
 
     /* Add org.alljoyn.alljoyn_test interface */
     status = g_msgBus->CreateInterface(myService.getAlljoynDummyInterfaceName1(), testIntf);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     status = g_msgBus->CreateInterface(myService.getAlljoynValuesDummyInterfaceName1(), testIntf);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
 
     /* Add org.alljoyn.alljoyn_test interface */
     /* Add same interfaces again should be successfull since we have not Activated */
     status = g_msgBus->CreateInterface(myService.getAlljoynDummyInterfaceName1(), testIntf);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     status = g_msgBus->CreateInterface(myService.getAlljoynValuesDummyInterfaceName1(), testIntf);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
 }
 
 TEST_F(InterfaceTest, SUCCESS_AddInterfacestoBus_Activation) {
@@ -97,11 +97,11 @@ TEST_F(InterfaceTest, SUCCESS_AddInterfacestoBus_Activation) {
 
     /* Add org.alljoyn.alljoyn_test interface */
     status = g_msgBus->CreateInterface(myService.getAlljoynDummyInterfaceName1(), testIntf);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     ASSERT_TRUE(testIntf != NULL);
     testIntf->Activate();
     status = g_msgBus->CreateInterface(myService.getAlljoynValuesDummyInterfaceName1(), testIntf);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     testIntf->Activate();
 }
 
@@ -110,26 +110,26 @@ TEST_F(InterfaceTest, FAIL_AddInterfacestoBus_AfterActivation_NoActivate) {
     InterfaceDescription* testIntf = NULL;
     ServiceObject myService(*g_msgBus, SERVICE_OBJECT_PATH);
 
-    ASSERT_EQ(ER_OK, ServiceBusSetup()) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, ServiceBusSetup());
 
     /* Add org.alljoyn.alljoyn_test interface */
     status = g_msgBus->CreateInterface(myService.getAlljoynDummyInterfaceName1(), testIntf);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     ASSERT_TRUE(testIntf != NULL);
     testIntf->Activate();
     status = g_msgBus->CreateInterface(myService.getAlljoynValuesDummyInterfaceName1(), testIntf);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     ASSERT_TRUE(testIntf != NULL);
     testIntf->Activate();
 
     /* Add org.alljoyn.alljoyn_test interface */
     /* Add same interfaces after activation should not be successfull */
     status = g_msgBus->CreateInterface(myService.getAlljoynDummyInterfaceName1(), testIntf);
-    ASSERT_EQ(ER_BUS_IFACE_ALREADY_EXISTS, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_BUS_IFACE_ALREADY_EXISTS, status);
     //testIntf should be NULL if call to CreateInterface fails
     ASSERT_EQ(NULL, testIntf);
     status = g_msgBus->CreateInterface(myService.getAlljoynValuesDummyInterfaceName1(), testIntf);
-    ASSERT_EQ(ER_BUS_IFACE_ALREADY_EXISTS, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_BUS_IFACE_ALREADY_EXISTS, status);
     ASSERT_EQ(NULL, testIntf);
 }
 
@@ -142,7 +142,7 @@ TEST_F(InterfaceTest, SUCCESS_RegisterBusObject) {
     /* Add the test interface to this object */
     //Register service object
     status =  g_msgBus->RegisterBusObject(myService);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     // wait for signal upto 1.0 sec (5 * 200 ms)
     for (int i = 0; i < 200; ++i) {
         if (true == myService.getobjectRegistered()) {
@@ -162,11 +162,11 @@ TEST_F(InterfaceTest, AddInterfacesToObject) {
     /* Add org.alljoyn.alljoyn_test interface  using one service object*/
     InterfaceDescription* testIntf = NULL;
     status = g_msgBus->CreateInterface(myService.getAlljoynDummyInterfaceName1(), testIntf);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     ASSERT_TRUE(testIntf != NULL);
     testIntf->Activate();
     status = g_msgBus->CreateInterface(myService.getAlljoynValuesDummyInterfaceName1(), testIntf);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     ASSERT_TRUE(testIntf != NULL);
     testIntf->Activate();
 
@@ -176,12 +176,12 @@ TEST_F(InterfaceTest, AddInterfacesToObject) {
     const InterfaceDescription* regTestIntf = g_msgBus->GetInterface(myService2.getAlljoynDummyInterfaceName1());
     ASSERT_TRUE(regTestIntf);
     status =  myService2.AddInterfaceToObject(regTestIntf);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     const InterfaceDescription* regTestIntfval = g_msgBus->GetInterface(myService2.getAlljoynValuesDummyInterfaceName1());
     ASSERT_TRUE(regTestIntfval);
     status = myService2.AddInterfaceToObject(regTestIntfval);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 }
 
 TEST_F(InterfaceTest, AddInterfaceToObjectAgain) {
@@ -193,11 +193,11 @@ TEST_F(InterfaceTest, AddInterfaceToObjectAgain) {
     /* Add org.alljoyn.alljoyn_test interface  using one service object*/
     InterfaceDescription* testIntf = NULL;
     status = g_msgBus->CreateInterface(myService.getAlljoynDummyInterfaceName1(), testIntf);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     ASSERT_TRUE(testIntf != NULL);
     testIntf->Activate();
     status = g_msgBus->CreateInterface(myService.getAlljoynValuesDummyInterfaceName1(), testIntf);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     ASSERT_TRUE(testIntf != NULL);
     testIntf->Activate();
 
@@ -205,19 +205,19 @@ TEST_F(InterfaceTest, AddInterfaceToObjectAgain) {
     ASSERT_TRUE(regTestIntf);
     /* Adding interface to the object for the first time - successfull */
     status = myService.AddInterfaceToObject(regTestIntf);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     /* trying to add the added interface again  -  error*/
     status = myService.AddInterfaceToObject(regTestIntf);
-    EXPECT_EQ(ER_BUS_IFACE_ALREADY_EXISTS, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_BUS_IFACE_ALREADY_EXISTS, status);
 
     /* trying top add val interface  to the object for the first time - successfull*/
     const InterfaceDescription* regTestIntfval = g_msgBus->GetInterface(myService.getAlljoynValuesDummyInterfaceName1());
     ASSERT_TRUE(regTestIntfval);
     status = myService.AddInterfaceToObject(regTestIntfval);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     /* trying top add val interface  to the object again - error*/
     status = myService.AddInterfaceToObject(regTestIntfval);
-    EXPECT_EQ(ER_BUS_IFACE_ALREADY_EXISTS, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_BUS_IFACE_ALREADY_EXISTS, status);
 }
 
 TEST_F(InterfaceTest, AddInterfaceAgainToRegisteredObject) {
@@ -227,7 +227,7 @@ TEST_F(InterfaceTest, AddInterfaceAgainToRegisteredObject) {
     ASSERT_EQ(ER_OK, ServiceBusSetup());
 
     status =  g_msgBus->RegisterBusObject(myService);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     //Wait for a maximum of 2 sec for object to be registered
     for (int i = 0; i < 200; ++i) {
         qcc::Sleep(10);
@@ -240,11 +240,11 @@ TEST_F(InterfaceTest, AddInterfaceAgainToRegisteredObject) {
     /* Add org.alljoyn.alljoyn_test interface  using one service object*/
     InterfaceDescription* testIntf = NULL;
     status = g_msgBus->CreateInterface(myService.getAlljoynDummyInterfaceName1(), testIntf);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     ASSERT_TRUE(testIntf != NULL);
     testIntf->Activate();
     status = g_msgBus->CreateInterface(myService.getAlljoynValuesDummyInterfaceName1(), testIntf);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     ASSERT_TRUE(testIntf != NULL);
     testIntf->Activate();
 
@@ -252,21 +252,21 @@ TEST_F(InterfaceTest, AddInterfaceAgainToRegisteredObject) {
     ASSERT_TRUE(regTestIntf);
     /* trying to add the added interface again  -  error*/
     status = myService.AddInterfaceToObject(regTestIntf);
-    EXPECT_EQ(ER_BUS_CANNOT_ADD_INTERFACE, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_BUS_CANNOT_ADD_INTERFACE, status);
 
     /* trying top add val interface  to the object for the first time - successfull*/
     const InterfaceDescription* regTestIntfval = g_msgBus->GetInterface(myService.getAlljoynValuesDummyInterfaceName1());
     ASSERT_TRUE(regTestIntfval);
     /* trying top add val interface  to the object again - error*/
     status = myService.AddInterfaceToObject(regTestIntfval);
-    EXPECT_EQ(ER_BUS_CANNOT_ADD_INTERFACE, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_BUS_CANNOT_ADD_INTERFACE, status);
     g_msgBus->UnregisterBusObject(myService);
 
     /* Adding interface to the object for the first time - successfull */
     status = myService.AddInterfaceToObject(regTestIntf);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = myService.AddInterfaceToObject(regTestIntfval);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 }
 
 TEST_F(InterfaceTest, AddSignalToInterface_AfterItIsActivated) {
@@ -277,14 +277,14 @@ TEST_F(InterfaceTest, AddSignalToInterface_AfterItIsActivated) {
     ASSERT_EQ(ER_OK, ServiceBusSetup());
 
     status = g_msgBus->CreateInterface(myService.getAlljoynDummyInterfaceName2(), regTestIntf);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
 
     assert(regTestIntf);
     regTestIntf->Activate();
 
     /* Adding a signal to the activated interface -- Error */
     status = regTestIntf->AddSignal("my_signal", "s", NULL, 0);
-    ASSERT_EQ(ER_BUS_INTERFACE_ACTIVATED, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_BUS_INTERFACE_ACTIVATED, status);
 }
 
 TEST_F(InterfaceTest, GetSignal) {
@@ -295,7 +295,7 @@ TEST_F(InterfaceTest, GetSignal) {
     ASSERT_EQ(ER_OK, ServiceBusSetup());
 
     status =  g_msgBus->RegisterBusObject(myService);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     //Wait for a maximum of 2 sec for object to be registered
     for (int i = 0; i < 200; ++i) {
         qcc::Sleep(10);
@@ -313,7 +313,7 @@ TEST_F(InterfaceTest, GetSignal) {
 
     /* Adding a signal to no */
     status = regTestIntf->AddSignal("my_signal1", "s", NULL, 0);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
 
     /* Get defined signal should return non NULL */
     ASSERT_TRUE(regTestIntf->GetSignal("my_signal1"));
@@ -329,7 +329,7 @@ TEST_F(InterfaceTest, AddSameSignalToInterface_AndActivateItLater) {
 
     /* After Activation nothing can be added to the interface - this test should throw an error*/
     status =  g_msgBus->RegisterBusObject(myService);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     //Wait for a maximum of 2 sec for object to be registered
     for (int i = 0; i < 200; ++i) {
         qcc::Sleep(10);
@@ -344,15 +344,15 @@ TEST_F(InterfaceTest, AddSameSignalToInterface_AndActivateItLater) {
 
     /* Adding a signal to no */
     status = regTestIntf->AddSignal("my_signal", "s", NULL, 0);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
 
     /* Adding a signal to the activated interface -- Error */
     status = regTestIntf->AddSignal("my_signal", "s", NULL, 0);
-    ASSERT_EQ(ER_BUS_MEMBER_ALREADY_EXISTS, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_BUS_MEMBER_ALREADY_EXISTS, status);
 
     /* Adding a signal to the activated interface -- Error */
     status = regTestIntf->AddSignal("my_signal", "s", "s", 0);
-    ASSERT_EQ(ER_BUS_MEMBER_ALREADY_EXISTS, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_BUS_MEMBER_ALREADY_EXISTS, status);
 
     status = myService.AddInterfaceToObject(regTestIntf);
     ASSERT_EQ(ER_BUS_CANNOT_ADD_INTERFACE, status);
@@ -368,7 +368,7 @@ TEST_F(InterfaceTest, AddSamePropertyToInterface_AndActivateItLater) {
     ASSERT_EQ(ER_OK, ServiceBusSetup());
 
     status =  g_msgBus->RegisterBusObject(myService);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     //Wait for a maximum of 2 sec for object to be registered
     for (int i = 0; i < 200; ++i) {
         qcc::Sleep(10);
@@ -383,7 +383,7 @@ TEST_F(InterfaceTest, AddSamePropertyToInterface_AndActivateItLater) {
 
     /* Adding properties to the interface */
     status = valuesIntf->AddProperty("int_val", "i", PROP_ACCESS_RW);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     /* Add the same property - diff signatures - diff accesses - all should give the same error */
     status = valuesIntf->AddProperty("int_val", "i", PROP_ACCESS_RW);
     ASSERT_EQ(ER_BUS_PROPERTY_ALREADY_EXISTS, status);
@@ -393,11 +393,11 @@ TEST_F(InterfaceTest, AddSamePropertyToInterface_AndActivateItLater) {
     ASSERT_EQ(ER_BUS_PROPERTY_ALREADY_EXISTS, status);
 
     status = valuesIntf->AddProperty("str_val", "s", PROP_ACCESS_RW);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     status = valuesIntf->AddProperty("ro_str", "s", PROP_ACCESS_READ);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     status = valuesIntf->AddProperty("prop_signal", "s", PROP_ACCESS_RW);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
 
     status = myService.AddInterfaceToObject(valuesIntf);
     ASSERT_EQ(ER_BUS_CANNOT_ADD_INTERFACE, status);

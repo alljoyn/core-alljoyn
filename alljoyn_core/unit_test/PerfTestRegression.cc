@@ -38,7 +38,7 @@ TEST(PerfTestRegression, Security_ALLJOYN_294_AddLogonEntry_Without_EnablePeerSe
     serviceBus->Start();
 
     QStatus status = serviceBus->Connect(clientArgs.c_str());
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
 
     status = serviceBus->AddLogonEntry("ALLJOYN_SRP_LOGON", "sleepy", "123456");
     ASSERT_EQ(status, ER_BUS_KEYSTORE_NOT_LOADED);

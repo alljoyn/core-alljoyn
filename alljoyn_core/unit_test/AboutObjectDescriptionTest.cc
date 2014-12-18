@@ -30,6 +30,7 @@
 #include <qcc/Thread.h>
 
 #include "BusInternal.h"
+#include "ajTestCommon.h"
 
 using namespace ajn;
 using namespace qcc;
@@ -45,7 +46,7 @@ class AboutObjectDescriptionTestObject_Add : public BusObject {
             return;
         }
         status = AddInterface(*test_iface, ANNOUNCED);
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
 
         const InterfaceDescription* game_iface = bus.GetInterface("org.alljoyn.game");
         EXPECT_TRUE(game_iface != NULL) << "NULL InterfaceDescription* for org.alljoyn.game";
@@ -54,7 +55,7 @@ class AboutObjectDescriptionTestObject_Add : public BusObject {
             return;
         }
         status = AddInterface(*game_iface, ANNOUNCED);
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
         const InterfaceDescription* mediaplayer_iface = bus.GetInterface("org.alljoyn.mediaplayer");
         EXPECT_TRUE(mediaplayer_iface != NULL) << "NULL InterfaceDescription* for org.alljoyn.mediaplayer";
         if (mediaplayer_iface == NULL) {
@@ -62,7 +63,7 @@ class AboutObjectDescriptionTestObject_Add : public BusObject {
             return;
         }
         status = AddInterface(*mediaplayer_iface, ANNOUNCED);
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
     }
 };
 
@@ -73,7 +74,7 @@ TEST(AboutObjectDescriptionTest, Construct)
     //add the org.alljoyn.Icon interface
     AboutIcon aicon;
     status = aicon.SetUrl("image/png", "http://www.example.com");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     AboutIconObj aboutIconObj(bus, aicon);
     //add org.alljoyn.test, org.alljoyn.game, and org.alljoyn.mediaplayer interfaces
     const qcc::String interface = "<node>"
@@ -91,11 +92,11 @@ TEST(AboutObjectDescriptionTest, Construct)
                                   "</interface>"
                                   "</node>";
     status = bus.CreateInterfacesFromXml(interface.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutObjectDescriptionTestObject_Add busObject(bus, "/org/alljoyn/test");
     status = bus.RegisterBusObject(busObject);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     MsgArg arg;
     bus.GetInternal().GetAnnouncedObjectDescription(arg);
@@ -123,7 +124,7 @@ TEST(AboutObjectDescriptionTest, Construct)
 
 //    MsgArg arg;
 //    status = aod.GetMsgArg(&arg);
-//    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+//    EXPECT_EQ(ER_OK, status);
 //
 //    printf("******************\n%s\n*****************\n", arg.ToString().c_str());
 }
@@ -137,7 +138,7 @@ TEST(AboutObjectDescriptionTest, GetMsgArg)
     //add the org.alljoyn.Icon interface
     AboutIcon aicon;
     status = aicon.SetUrl("image/png", "http://www.example.com");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     AboutIconObj aboutIconObj(bus, aicon);
     //add org.alljoyn.test, org.alljoyn.game, and org.alljoyn.mediaplayer interfaces
     const qcc::String interface = "<node>"
@@ -155,11 +156,11 @@ TEST(AboutObjectDescriptionTest, GetMsgArg)
                                   "</interface>"
                                   "</node>";
     status = bus.CreateInterfacesFromXml(interface.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutObjectDescriptionTestObject_Add busObject(bus, "/org/alljoyn/test");
     status = bus.RegisterBusObject(busObject);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     MsgArg argObj;
     bus.GetInternal().GetAnnouncedObjectDescription(argObj);
@@ -167,12 +168,12 @@ TEST(AboutObjectDescriptionTest, GetMsgArg)
 
     MsgArg arg;
     status = aod.GetMsgArg(&arg);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     MsgArg* structarg;
     size_t s_size;
     status = arg.Get("a(oas)", &s_size, &structarg);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     ASSERT_EQ(2u, s_size);
 
     if (s_size > 0) {
@@ -181,7 +182,7 @@ TEST(AboutObjectDescriptionTest, GetMsgArg)
         MsgArg** interfaces_arg = new MsgArg *[s_size];
         for (size_t i = 0; i < s_size; ++i) {
             status = structarg[i].Get("(oas)", &(object_path[i]), &number_itfs[i], &interfaces_arg[i]);
-            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+            EXPECT_EQ(ER_OK, status);
         }
 
         EXPECT_STREQ("/About/DeviceIcon", object_path[0]);
@@ -216,7 +217,7 @@ TEST(AboutObjectDescriptionTest, GetPaths) {
     //add the org.alljoyn.Icon interface
     AboutIcon aicon;
     status = aicon.SetUrl("image/png", "http://www.example.com");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     AboutIconObj aboutIconObj(bus, aicon);
     //add org.alljoyn.test, org.alljoyn.game, and org.alljoyn.mediaplayer interfaces
     const qcc::String interface = "<node>"
@@ -234,17 +235,17 @@ TEST(AboutObjectDescriptionTest, GetPaths) {
                                   "</interface>"
                                   "</node>";
     status = bus.CreateInterfacesFromXml(interface.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutObjectDescriptionTestObject_Add busObject(bus, "/org/alljoyn/test");
     status = bus.RegisterBusObject(busObject);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     MsgArg argObj;
     bus.GetInternal().GetAnnouncedObjectDescription(argObj);
     AboutObjectDescription aod;
     status = aod.CreateFromMsgArg(argObj);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     size_t numPaths = aod.GetPaths(NULL, 0);
     ASSERT_EQ(2u, numPaths);
@@ -262,7 +263,7 @@ TEST(AboutObjectDescriptionTest, GetInterfaces) {
     //add the org.alljoyn.Icon interface
     AboutIcon aicon;
     status = aicon.SetUrl("image/png", "http://www.example.com");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     AboutIconObj aboutIconObj(bus, aicon);
     //add org.alljoyn.test, org.alljoyn.game, and org.alljoyn.mediaplayer interfaces
     const qcc::String interface = "<node>"
@@ -280,17 +281,17 @@ TEST(AboutObjectDescriptionTest, GetInterfaces) {
                                   "</interface>"
                                   "</node>";
     status = bus.CreateInterfacesFromXml(interface.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutObjectDescriptionTestObject_Add busObject(bus, "/org/alljoyn/test");
     status = bus.RegisterBusObject(busObject);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     MsgArg argObj;
     bus.GetInternal().GetAnnouncedObjectDescription(argObj);
     AboutObjectDescription aod;
     status = aod.CreateFromMsgArg(argObj);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     size_t numPaths = aod.GetPaths(NULL, 0);
     ASSERT_EQ(2u, numPaths);
@@ -327,7 +328,7 @@ TEST(AboutObjectDescriptionTest, Clear)
     //add the org.alljoyn.Icon interface
     AboutIcon aicon;
     status = aicon.SetUrl("image/png", "http://www.example.com");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     AboutIconObj aboutIconObj(bus, aicon);
     //add org.alljoyn.test, org.alljoyn.game, and org.alljoyn.mediaplayer interfaces
     const qcc::String interface = "<node>"
@@ -345,11 +346,11 @@ TEST(AboutObjectDescriptionTest, Clear)
                                   "</interface>"
                                   "</node>";
     status = bus.CreateInterfacesFromXml(interface.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutObjectDescriptionTestObject_Add busObject(bus, "/org/alljoyn/test");
     status = bus.RegisterBusObject(busObject);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     MsgArg arg;
     bus.GetInternal().GetAnnouncedObjectDescription(arg);
@@ -404,17 +405,17 @@ TEST(AboutObjectDescriptionTest, PopulateAutomaticallyFromBusObject) {
                                    "</interface>";
     BusAttachment bus("AboutObjectDescriptionTest");
     status = bus.CreateInterfacesFromXml(interface);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     AboutObjectDescriptionTestBusObject1 busObject1(bus, "/test/path1");
     status = bus.RegisterBusObject(busObject1);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     MsgArg aodArg;
     status = bus.GetInternal().GetAnnouncedObjectDescription(aodArg);
     AboutObjectDescription aod;
     aod.CreateFromMsgArg(aodArg);
 
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     EXPECT_TRUE(aod.HasInterface("test.about.objectdescription.interface1"));
     EXPECT_TRUE(aod.HasPath("/test/path1"));
@@ -437,21 +438,21 @@ TEST(AboutObjectDescriptionTest, PopulateAutomaticallyFromMultipleBusObjects) {
                                     "</interface>";
     BusAttachment bus("AboutObjectDescriptionTest");
     status = bus.CreateInterfacesFromXml(interface1);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = bus.CreateInterfacesFromXml(interface2);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     AboutObjectDescriptionTestBusObject1 busObject1(bus, "/test/path1");
     AboutObjectDescriptionTestBusObject2 busObject2(bus, "/test/path2");
     status = bus.RegisterBusObject(busObject1);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = bus.RegisterBusObject(busObject2);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     MsgArg aodArg;
     status = bus.GetInternal().GetAnnouncedObjectDescription(aodArg);
     AboutObjectDescription aod;
     aod.CreateFromMsgArg(aodArg);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     EXPECT_TRUE(aod.HasInterface("test.about.objectdescription.interface1"));
     EXPECT_TRUE(aod.HasPath("/test/path1"));
@@ -478,22 +479,22 @@ TEST(AboutObjectDescriptionTest, PopulateAutomaticallyRemoveBusObject) {
                                     "</interface>";
     BusAttachment bus("AboutObjectDescriptionTest");
     status = bus.CreateInterfacesFromXml(interface1);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = bus.CreateInterfacesFromXml(interface2);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     AboutObjectDescriptionTestBusObject1 busObject1(bus, "/test/path1");
     AboutObjectDescriptionTestBusObject2 busObject2(bus, "/test/path2");
     status = bus.RegisterBusObject(busObject1);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = bus.RegisterBusObject(busObject2);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     MsgArg aodArg;
     status = bus.GetInternal().GetAnnouncedObjectDescription(aodArg);
     AboutObjectDescription aod;
     aod.CreateFromMsgArg(aodArg);
 
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     EXPECT_TRUE(aod.HasInterface("test.about.objectdescription.interface1"));
     EXPECT_TRUE(aod.HasPath("/test/path1"));
@@ -528,7 +529,7 @@ TEST(AboutObjectDescriptionTest, GetInterfacePaths) {
                                     "</interface>";
     BusAttachment bus("AboutObjectDescriptionTest");
     status = bus.CreateInterfacesFromXml(interface1);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutObjectDescriptionTestBusObject1 busObject1(bus, "/test/path1");
     AboutObjectDescriptionTestBusObject1 busObject2(bus, "/test/path2");
@@ -538,13 +539,13 @@ TEST(AboutObjectDescriptionTest, GetInterfacePaths) {
     AboutObjectDescriptionTestBusObject1 busObject6(bus, "/test/path6");
 
     status = bus.RegisterBusObject(busObject1);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     MsgArg aodArg;
     status = bus.GetInternal().GetAnnouncedObjectDescription(aodArg);
     AboutObjectDescription aod;
     aod.CreateFromMsgArg(aodArg);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     size_t pathNum = aod.GetInterfacePaths("test.about.objectdescription.interface1", NULL, 0);
     EXPECT_EQ((size_t)1, pathNum);
@@ -555,21 +556,21 @@ TEST(AboutObjectDescriptionTest, GetInterfacePaths) {
     paths = NULL;
 
     status = bus.RegisterBusObject(busObject2);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = bus.RegisterBusObject(busObject3);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = bus.RegisterBusObject(busObject4);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = bus.RegisterBusObject(busObject5);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     status = bus.RegisterBusObject(busObject6);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     // now that we have added the interface 5 more times renew the AboutObjectDescription
 
     status = bus.GetInternal().GetAnnouncedObjectDescription(aodArg);
     aod.CreateFromMsgArg(aodArg);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     pathNum = aod.GetInterfacePaths("test.about.objectdescription.interface1", NULL, 0);
     EXPECT_EQ((size_t)6, pathNum);
@@ -600,7 +601,7 @@ TEST(AboutObjectDescriptionTest, Empty_Negative)
 
     MsgArg arg;
     status = bus.GetInternal().GetAnnouncedObjectDescription(arg);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutObjectDescription aod(arg);
 
@@ -624,10 +625,10 @@ TEST(AboutObjectDescriptionTest, Empty_Negative)
                                   "</node>";
 
     status = bus.CreateInterfacesFromXml(interface.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     status = bus.GetInternal().GetAnnouncedObjectDescription(arg);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutObjectDescription aod1(arg);
 
@@ -657,7 +658,7 @@ TEST(AboutObjectDescriptionTest, AboutInterface)
     MsgArg arg;
 
     status = bus.GetInternal().GetAnnouncedObjectDescription(arg);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutObjectDescription aod(arg);
 
@@ -679,7 +680,7 @@ TEST(AboutObjectDescriptionTest, NoAboutInterface)
 
     MsgArg arg;
     status = bus.GetInternal().GetAnnouncedObjectDescription(arg);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutObjectDescription aod(arg);
 
@@ -698,7 +699,7 @@ TEST(AboutObjectDescriptionTest, CopyConstructor)
 
     MsgArg arg;
     status = bus.GetInternal().GetAnnouncedObjectDescription(arg);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutObjectDescription aod(arg);
 
@@ -734,7 +735,7 @@ TEST(AboutObjectDescriptionTest, AssignmentOperator)
 
     MsgArg arg;
     status = bus.GetInternal().GetAnnouncedObjectDescription(arg);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     AboutObjectDescription aod(arg);
 

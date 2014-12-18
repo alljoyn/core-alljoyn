@@ -56,4 +56,10 @@ qcc::String genUniqueName(const BusAttachment& bus);
 qcc::String getUniqueNamePrefix(const BusAttachment& bus);
 
 }
+
+/*
+ * gtest printers
+ */
+void PrintTo(const QStatus& status, ::std::ostream* os);
+
 #endif //AJTESTCOMMON_H

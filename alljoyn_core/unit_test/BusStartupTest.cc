@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -28,7 +28,7 @@ class BusStartupTest : public testing::Test {
     virtual void SetUp() {
         g_msgBus = new BusAttachment("testservices", true);
         QStatus status = g_msgBus->Start();
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status);
     }
 
     virtual void TearDown() {
@@ -70,16 +70,16 @@ TEST_F(BusStartupTest, Fail_Already_Started) {
 
 TEST_F(BusStartupTest, SUCCESS_Connect) {
     QStatus status = g_msgBus->Connect(ajn::getConnectArg().c_str());
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
 }
 
 TEST_F(BusStartupTest, Fail_Already_Connected) {
     QStatus status = ER_OK;
     /* Get env vars */
     status = g_msgBus->Connect(ajn::getConnectArg().c_str());
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
     ASSERT_TRUE(g_msgBus->IsConnected());
     /* Connect to the daemon and wait for the bus to exit */
     status = g_msgBus->Connect(ajn::getConnectArg().c_str());
-    ASSERT_EQ(ER_BUS_ALREADY_CONNECTED, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_BUS_ALREADY_CONNECTED, status);
 }
