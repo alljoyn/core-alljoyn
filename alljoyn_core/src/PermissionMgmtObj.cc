@@ -62,6 +62,8 @@ using namespace qcc;
 
 namespace ajn {
 
+static QStatus RetrieveAndGenDSAPublicKey(CredentialAccessor* ca, KeyInfoNISTP256& keyInfo);
+
 PermissionMgmtObj::PermissionMgmtObj(BusAttachment& bus) :
     BusObject(org::allseen::Security::PermissionMgmt::ObjectPath, false),
     bus(bus), notifySignalName(NULL), portListener(NULL)
@@ -105,6 +107,12 @@ PermissionMgmtObj::PermissionMgmtObj(BusAttachment& bus) :
             if (config.claimableState == PermissionConfigurator::STATE_UNCLAIMABLE) {
                 claimableState = PermissionConfigurator::STATE_UNCLAIMABLE;
             }
+        }
+
+        KeyInfoNISTP256 pubKey;
+        status = RetrieveAndGenDSAPublicKey(ca, pubKey);
+        if (status != ER_OK) {
+            return;
         }
     }
 
