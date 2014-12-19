@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2011,2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -62,25 +62,31 @@ static BusAttachment* s_bus = NULL;
 static ChatObject* s_chatObj = NULL;
 static qcc::String s_advertisedName;
 static MyBusListener* s_busListener = NULL;
+static qcc::String s_sessionHost;
 static SessionId s_sessionId = 0;
 
 class MyBusListener : public BusListener, public SessionPortListener, public SessionListener {
   public:
     void FoundAdvertisedName(const char* name, TransportMask transport, const char* namePrefix)
     {
-        const char* convName = name + strlen(NAME_PREFIX);
-        LOGD("Discovered chat conversation: %s \n", name);
+        printf("FoundAdvertisedName(name='%s', transport = 0x%x, prefix='%s')\n", name, transport, namePrefix);
 
-        /* Enable Concurrency since JoinSession can block */
-        s_bus->EnableConcurrentCallbacks();
+        if (s_sessionHost.empty()) {
+            const char* convName = name + strlen(NAME_PREFIX);
+            LOGD("Discovered chat conversation: %s \n", name);
 
-        /* Join the conversation */
-        SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, true, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
-        QStatus status = s_bus->JoinSession(name, CHAT_PORT, NULL, s_sessionId, opts);
-        if (ER_OK == status) {
-            LOGD("Joined conversation \"%s\"\n", name);
-        } else {
-            LOGD("JoinSession failed status=%s\n", QCC_StatusText(status));
+            /* Enable Concurrency since JoinSession can block */
+            s_sessionHost = name;
+            s_bus->EnableConcurrentCallbacks();
+
+            /* Join the conversation */
+            SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, true, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
+            QStatus status = s_bus->JoinSession(name, CHAT_PORT, NULL, s_sessionId, opts);
+            if (ER_OK == status) {
+                LOGD("Joined conversation \"%s\"\n", name);
+            } else {
+                LOGD("JoinSession failed status=%s\n", QCC_StatusText(status));
+            }
         }
     }
 

@@ -53,6 +53,7 @@ static const char* ECDHE_KEYX = "ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_PSK ALLJOYN_EC
 static const SessionPort SERVICE_PORT = 42;
 
 static bool s_joinComplete = false;
+static String s_sessionHost;
 static SessionId s_sessionId = 0;
 
 static volatile sig_atomic_t s_interrupt = false;
@@ -68,10 +69,11 @@ class MyBusListener : public BusListener, public SessionListener {
   public:
     void FoundAdvertisedName(const char* name, TransportMask transport, const char* namePrefix)
     {
-        printf("FoundAdvertisedName(name=%s, prefix=%s)\n", name, namePrefix);
-        if (0 == strcmp(name, SERVICE_NAME)) {
+        printf("FoundAdvertisedName(name='%s', transport = 0x%x, prefix='%s')\n", name, transport, namePrefix);
+        if (0 == strcmp(name, SERVICE_NAME) && s_sessionHost.empty()) {
             /* We found a remote bus that is advertising basic service's  well-known name so connect to it */
             /* Since we are in a callback we must enable concurrent callbacks before calling a synchronous method. */
+            s_sessionHost = name;
             g_msgBus->EnableConcurrentCallbacks();
             SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
             QStatus status = g_msgBus->JoinSession(name, SERVICE_PORT, this, s_sessionId, opts);
@@ -80,8 +82,8 @@ class MyBusListener : public BusListener, public SessionListener {
             } else {
                 printf("JoinSession SUCCESS (Session id=%d)\n", s_sessionId);
             }
+            s_joinComplete = true;
         }
-        s_joinComplete = true;
     }
 
 };
