@@ -7,7 +7,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -137,6 +137,27 @@ class KeyInfo {
     const FormatType GetFormat() const
     {
         return format;
+    }
+
+    bool operator==(const KeyInfo& ki) const
+    {
+        if (format != ki.format) {
+            return false;
+        }
+
+        if (keyIdLen != ki.keyIdLen) {
+            return false;
+        }
+
+        if (keyId == NULL || ki.keyId == NULL) {
+            return keyId == ki.keyId;
+        }
+
+        if (0 != memcmp(keyId, ki.keyId, keyIdLen)) {
+            return false;
+        }
+
+        return true;
     }
 
   private:
