@@ -107,6 +107,30 @@ struct ECCPublicKey {
         }
     }
 
+    void operator=(const ECCPublicKey& k)
+    {
+        memcpy(x, k.x, ECC_COORDINATE_SZ);
+        memcpy(y, k.y, ECC_COORDINATE_SZ);
+    }
+
+    /**
+     * Exports the key to a byte array.
+     * @param[in] data the array to store the data in
+     * @param[in, out] size provides the size of the passed buffer as input. On a  successfull return it
+     *   will contain the actual amount of data stored
+     *
+     * @return ER_OK on success others on failure
+     */
+    QStatus Export(uint8_t* data, size_t* size) const;
+
+    /**
+     * Imports the key from a byte array.
+     * @param[in] data the array to store the data in
+     * @param[in] size the size of the passed buffer.
+     *
+     * @return ER_OK  on success others on failure
+     */
+    QStatus Import(const uint8_t* data, size_t size);
     const qcc::String ToString() const;
 
 };
