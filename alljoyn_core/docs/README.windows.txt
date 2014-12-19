@@ -3,8 +3,8 @@ AllJoyn SDK for Windows 7
 -------------------------
 
 This subtree contains one complete copy of the AllJoyn SDK for Windows 7, built
-for a single CPU type (either x86 or x86_64), VARIANT (either debug or release),
-and for a single version of Microsoft Visual Studio (either 2010 or 2012).
+for a single CPU type (x86_64), VARIANT (either debug or release),
+and for a single version of Microsoft Visual Studio (2013).
 
 The CPU, VARIANT, and MSVS version is normally incorporated into the name of the
 package or folder containing this SDK.
@@ -12,11 +12,9 @@ package or folder containing this SDK.
 NOTE:
 
     This SDK works with the Microsoft Win32 architecture, used in
-    traditional Microsoft Windows desktops and servers with x86-based CPUs.
+    traditional Microsoft Windows desktops and servers with x86_64 CPUs.
 
-    This SDK does NOT work with the Microsoft WinRT architecture.  For that,
-    see the AllJoyn SDK for WinRT.
-
+    This SDK does NOT work with the Microsoft WinRT architecture.
 
 Windows, Win32, WinRT, and Visual Studio are registered trademarks or trademarks
 of the Microsoft group of companies.

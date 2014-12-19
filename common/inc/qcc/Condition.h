@@ -28,8 +28,6 @@
 #include <qcc/posix/Condition.h>
 #elif defined(QCC_OS_GROUP_WINDOWS)
 #include <qcc/windows/Condition.h>
-#elif defined(QCC_OS_GROUP_WINRT)
-#include <qcc/winrt/Condition.h>
 #else
 #error No OS GROUP defined.
 #endif
