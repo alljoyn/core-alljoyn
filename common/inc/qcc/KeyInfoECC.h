@@ -279,6 +279,15 @@ class KeyInfoECC : public KeyInfo {
 
     virtual qcc::String ToString() const;
 
+    bool operator==(const KeyInfoECC& ki) const
+    {
+        if (curve != ki.curve) {
+            return false;
+        }
+
+        return KeyInfo::operator==(ki);
+    }
+
   private:
     /**
      * Assignment operator is private
