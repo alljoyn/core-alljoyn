@@ -39,6 +39,9 @@
 #include <alljoyn/DBusStd.h>
 #include <alljoyn/AllJoynStd.h>
 #include <alljoyn/InterfaceDescription.h>
+#include <alljoyn/AutoPinger.h>
+#include <alljoyn/PasswordManager.h>
+
 #include "AuthMechanism.h"
 #include "AuthMechAnonymous.h"
 #include "AuthMechDBusCookieSHA1.h"
@@ -2834,5 +2837,26 @@ Translator* BusAttachment::GetDescriptionTranslator()
 {
     return translator;
 }
+typedef void (*RouterCleanupFunction)();
+void RegisterRouterCleanup(RouterCleanupFunction r);
 
+RouterCleanupFunction routerCleanup = NULL;
+void RegisterRouterCleanup(RouterCleanupFunction r)
+{
+    routerCleanup = r;
+}
+void AJCleanup()
+{
+    //Cleanup router Globals
+    if (routerCleanup) {
+        routerCleanup();
+    }
+
+    //Cleanup alljoyn_core/src Globals
+    AutoPingerInit::Cleanup();
+    PasswordManagerInit::Cleanup();
+
+    //Cleanup common globals
+    StaticGlobalsInit::Cleanup();
+}
 }

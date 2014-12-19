@@ -37,6 +37,7 @@ namespace qcc {
  */
 class String {
   public:
+    friend class StringInitializer;
 
     /** String index constant indicating "past the end" */
     static const size_t npos = static_cast<size_t>(-1);
@@ -522,7 +523,16 @@ class String {
 
     void NewContext(const char* str, size_t strLen, size_t sizeHint);
 };
+static class StringInit {
+  public:
+    StringInit();
+    ~StringInit();
+    static void Cleanup();
 
+  private:
+    static bool cleanedup;
+
+} stringInitializer;
 }
 
 /**

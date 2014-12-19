@@ -393,10 +393,6 @@ VOID CALLBACK NamedPipeIoEventCallback(PVOID arg, BOOLEAN TimerOrWaitFired)
 }
 #endif
 
-Event Event::alwaysSet(0, 0);
-
-Event Event::neverSet(WAIT_FOREVER, 0);
-
 QStatus Event::Wait(Event& evt, uint32_t maxWaitMs)
 {
     HANDLE handles[3];

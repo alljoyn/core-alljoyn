@@ -56,6 +56,7 @@ if env['OS_GROUP'] == 'windows':
         else:
             env.AppendUnique(LIBS = ['bcrypt', 'ncrypt', 'crypt32'])
             env['CRYPTO'] = 'cng'
+            env.Append(CPPDEFINES=['CRYPTO_CNG'])
             print 'Using CNG crypto libraries'
     else:
         env.Append(CPPPATH = ['$OPENSSL_BASE/include'])

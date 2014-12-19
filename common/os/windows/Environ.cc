@@ -32,6 +32,7 @@
 #include <qcc/String.h>
 #include <qcc/StringUtil.h>
 #include <qcc/Logger.h>
+#include <qcc/CommonGlobals.h>
 
 #include <Status.h>
 
@@ -41,22 +42,9 @@ using namespace std;
 
 namespace qcc {
 
-static Environ* environSingleton = NULL;
-
 Environ* Environ::GetAppEnviron(void)
 {
-    if (environSingleton == NULL) {
-        environSingleton = new Environ();
-    }
-    return environSingleton;
-}
-
-void Environ::Cleanup(void)
-{
-    if (environSingleton != NULL) {
-        delete environSingleton;
-        environSingleton = NULL;
-    }
+    return &commonGlobals.environSingleton;
 }
 
 qcc::String Environ::Find(const qcc::String& key, const char* defaultValue)

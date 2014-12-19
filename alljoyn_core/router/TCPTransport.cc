@@ -1057,11 +1057,13 @@ QStatus TCPTransport::Stop(void)
         IpNameService::Instance().CancelAdvertiseName(TRANSPORT_TCP, *i, TRANSPORT_TCP);
     }
     m_advertising.clear();
+    m_isAdvertising = false;
     QCC_DbgTrace(("TCPTransport::Stop(): Gratuitously clean out discoveries."));
     for (list<qcc::String>::iterator i = m_discovering.begin(); i != m_discovering.end(); ++i) {
         IpNameService::Instance().CancelFindAdvertisement(TRANSPORT_TCP, *i, TRANSPORT_TCP);
     }
     m_discovering.clear();
+    m_isDiscovering = false;
     m_listenRequestsLock.Unlock(MUTEX_CONTEXT);
 
     /*

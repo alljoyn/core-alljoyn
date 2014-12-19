@@ -193,12 +193,36 @@ LoggerSetting* LoggerSetting::GetLoggerSetting(const char* name, int level,
     }
     return singleton;
 }
-
-
-void LoggerSetting::Cleanup(void)
+int loggerInitCounter = 0;
+bool LoggerInit::cleanedup = false;
+LoggerInit::LoggerInit()
 {
-    if (singleton) {
-        delete singleton;
-        singleton = NULL;
+    loggerInitCounter++;
+    //Do nothing. singleton will be initialized in the first call to GetLoggerSetting
+}
+
+LoggerInit::~LoggerInit()
+{
+
+    if (--loggerInitCounter == 0 && !cleanedup) {
+        //Cleanup singleton
+        if (LoggerSetting::singleton) {
+            delete LoggerSetting::singleton;
+            LoggerSetting::singleton = NULL;
+        }
+        cleanedup = true;
     }
 }
+void LoggerInit::Cleanup()
+{
+    if (!cleanedup) {
+        //Cleanup singleton
+        if (LoggerSetting::singleton) {
+            delete LoggerSetting::singleton;
+            LoggerSetting::singleton = NULL;
+        }
+        cleanedup = true;
+
+    }
+}
+
