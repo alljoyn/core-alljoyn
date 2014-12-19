@@ -139,6 +139,27 @@ class KeyInfo {
         return format;
     }
 
+    bool operator==(const KeyInfo& ki) const
+    {
+        if (format != ki.format) {
+            return false;
+        }
+
+        if (keyIdLen != ki.keyIdLen) {
+            return false;
+        }
+
+        if (keyId == NULL || ki.keyId == NULL) {
+            return keyId == ki.keyId;
+        }
+
+        if (0 != memcmp(keyId, ki.keyId, keyIdLen)) {
+            return false;
+        }
+
+        return true;
+    }
+
   private:
     /**
      * Assignment operator is private

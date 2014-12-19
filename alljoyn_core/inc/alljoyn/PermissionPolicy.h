@@ -139,6 +139,27 @@ class PermissionPolicy {
 
             qcc::String ToString() const;
 
+            bool operator==(const Member& m) const
+            {
+                if (memberName != m.memberName) {
+                    return false;
+                }
+
+                if (memberType != m.memberType) {
+                    return false;
+                }
+
+                if (actionMask != m.actionMask) {
+                    return false;
+                }
+
+                if (mutualAuth != m.mutualAuth) {
+                    return false;
+                }
+
+                return true;
+            }
+
           private:
             /**
              * Assignment operator is private
@@ -228,6 +249,29 @@ class PermissionPolicy {
         }
 
         qcc::String ToString() const;
+
+        bool operator==(const Rule& r) const
+        {
+            if (objPath != r.objPath) {
+                return false;
+            }
+
+            if (interfaceName != r.interfaceName) {
+                return false;
+            }
+
+            if (membersSize != r.membersSize) {
+                return false;
+            }
+
+            for (size_t i = 0; i < membersSize; i++) {
+                if (!(members[i] == r.members[i])) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
 
       private:
         /**
@@ -344,6 +388,27 @@ class PermissionPolicy {
 
         qcc::String ToString() const;
 
+        bool operator==(const Peer& p) const
+        {
+            if (level != p.level) {
+                return false;
+            }
+
+            if (type != p.type) {
+                return false;
+            }
+
+            if (keyInfo == NULL || p.keyInfo == NULL) {
+                return keyInfo == p.keyInfo;
+            }
+
+            if (!(*keyInfo == *p.keyInfo)) {
+                return false;
+            }
+
+            return true;
+        }
+
       private:
         /**
          * Assignment operator is private
@@ -436,6 +501,31 @@ class PermissionPolicy {
         }
 
         qcc::String ToString() const;
+
+        bool operator==(const Term& t) const
+        {
+            if (peersSize != t.peersSize) {
+                return false;
+            }
+
+            for (size_t i = 0; i < peersSize; i++) {
+                if (!(peers[i] == t.peers[i])) {
+                    return false;
+                }
+            }
+
+            if (rulesSize != t.rulesSize) {
+                return false;
+            }
+
+            for (size_t i = 0; i < rulesSize; i++) {
+                if (!(rules[i] == t.rules[i])) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
 
       private:
 

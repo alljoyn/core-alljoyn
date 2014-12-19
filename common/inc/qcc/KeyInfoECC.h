@@ -279,6 +279,15 @@ class KeyInfoECC : public KeyInfo {
 
     virtual qcc::String ToString() const;
 
+    bool operator==(const KeyInfoECC& ki) const
+    {
+        if (curve != ki.curve) {
+            return false;
+        }
+
+        return KeyInfo::operator==(ki);
+    }
+
   private:
     /**
      * Assignment operator is private
@@ -412,6 +421,19 @@ class KeyInfoNISTP256 : public KeyInfoECC {
     QStatus Import(const uint8_t* buf, size_t count);
 
     virtual qcc::String ToString() const;
+
+    bool operator==(const KeyInfoNISTP256& ki) const
+    {
+        if (pubkey.form != ki.pubkey.form) {
+            return false;
+        }
+
+        if (pubkey.key != ki.pubkey.key) {
+            return false;
+        }
+
+        return KeyInfoECC::operator==(ki);
+    }
 
   private:
     /**
