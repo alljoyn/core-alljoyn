@@ -1327,13 +1327,10 @@ public class PropChangedTest
      *
      * Note: Tests have been adapted to fit the Java API. The wording that is used is still the one from the
      * "Test Approach ASACORE-47" document.
-     *
-     * This test is DISABLED until ASACORE-1294 is resolved.
      */
-    public void DISABLED_testUnregisterPropertiesChangedListener_Negative()
+    public void testUnregisterPropertiesChangedListener_Negative()
         throws BusException
     {
-        Exception ex;
         InterfaceParameters ip = new InterfaceParameters(InterfaceP1true.class, P1);
         TestParameters tp = new TestParameters(true, ip);
 
@@ -1343,19 +1340,16 @@ public class PropChangedTest
         PropertiesChangedListener invalidListener = new PropChangedTestListener(new SampleStore());
 
         // 9
-        try {
-            ex = null;
-            mProxy.unregisterPropertiesChangedListener(null, mProxy.mListeners.get(ip.name));
-        }
-        catch (NullPointerException e) {
-            ex = e;
-        }
-        assertNotNull(ex);
+        assertEquals(Status.BUS_OBJECT_NO_SUCH_INTERFACE,
+            mProxy.unregisterPropertiesChangedListener(null, mProxy.mListeners.get(ip.name)));
         // 10
-        mProxy.unregisterPropertiesChangedListener(getInterfaceName(InterfaceInvalid.class),
-            mProxy.mListeners.get(ip.name));
+        assertEquals(
+            Status.BUS_OBJECT_NO_SUCH_INTERFACE,
+            mProxy.unregisterPropertiesChangedListener(getInterfaceName(InterfaceInvalid.class),
+                mProxy.mListeners.get(ip.name)));
         // extra
-        mProxy.unregisterPropertiesChangedListener(getInterfaceName(InterfaceP1true.class), invalidListener);
+        assertEquals(Status.OK,
+            mProxy.unregisterPropertiesChangedListener(getInterfaceName(InterfaceP1true.class), invalidListener));
     }
 
     /*
