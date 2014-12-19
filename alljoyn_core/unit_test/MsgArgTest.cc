@@ -845,487 +845,488 @@ TEST(MsgArgTest, SetOwnershipFlags_struct) {
     arg.SetOwnershipFlags(MsgArg::OwnsData | MsgArg::OwnsArgs);
 }
 
-TEST(MsgArgTest, empyArrays_byte) {
+TEST(MsgArgTest, emptyArrays_byte) {
     QStatus status;
     //byte or uint8_t
     MsgArg arg;
     status = arg.Set("ay", 0, NULL);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     uint8_t* py;
     size_t lpy;
     status = arg.Get("ay", &lpy, &py);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(0u, lpy);
     EXPECT_TRUE(py == NULL);
 }
 
-TEST(MsgArgTest, empyArrays_bool) {
+TEST(MsgArgTest, emptyArrays_bool) {
     QStatus status;
     //bool
     MsgArg arg;
     status = arg.Set("ab", 0, NULL);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     bool* pb;
     size_t lpb;
     status = arg.Get("ab", &lpb, &pb);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(0u, lpb);
     EXPECT_TRUE(pb == NULL);
 }
-TEST(MsgArgTest, empyArrays_int16) {
+TEST(MsgArgTest, emptyArrays_int16) {
     QStatus status;
     //int16_t
     MsgArg arg;
     status = arg.Set("an", 0, NULL);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     int16_t* pn;
     size_t lpn;
     status = arg.Get("an", &lpn, &pn);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(0u, lpn);
     EXPECT_TRUE(pn == NULL);
 }
-TEST(MsgArgTest, empyArrays_uint16) {
+TEST(MsgArgTest, emptyArrays_uint16) {
     QStatus status;
     //uint16_t
     MsgArg arg;
     status = arg.Set("aq", 0, NULL);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     uint16_t* pq;
     size_t lpq;
     status = arg.Get("aq", &lpq, &pq);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(0u, lpq);
     EXPECT_TRUE(pq == NULL);
 }
-TEST(MsgArgTest, empyArrays_double) {
+TEST(MsgArgTest, emptyArrays_double) {
     QStatus status;
     //double
     MsgArg arg;
     status = arg.Set("ad", 0, NULL);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     double* pd;
     size_t lpd;
     status = arg.Get("ad", &lpd, &pd);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(0u, lpd);
     EXPECT_TRUE(pd == NULL);
 }
-TEST(MsgArgTest, empyArrays_int32) {
+TEST(MsgArgTest, emptyArrays_int32) {
     QStatus status;
     //int32_t
     MsgArg arg;
     status = arg.Set("ai", 0, NULL);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     int32_t* pi;
     size_t lpi;
     status = arg.Get("ai", &lpi, &pi);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(0u, lpi);
     EXPECT_TRUE(pi == NULL);
 }
-TEST(MsgArgTest, empyArrays_uint32) {
+TEST(MsgArgTest, emptyArrays_uint32) {
     QStatus status;
     //uint32_t
     MsgArg arg;
     status = arg.Set("au", 0, NULL);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     uint32_t* pu;
     size_t lpu;
     status = arg.Get("au", &lpu, &pu);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(0u, lpu);
     EXPECT_TRUE(pu == NULL);
 }
-TEST(MsgArgTest, empyArrays_int64) {
+TEST(MsgArgTest, emptyArrays_int64) {
     QStatus status;
     //int64_t
     MsgArg arg;
     status = arg.Set("ax", 0, NULL);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     int64_t* px;
     size_t lpx;
     status = arg.Get("ax", &lpx, &px);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(0u, lpx);
     EXPECT_TRUE(px == NULL);
 }
-TEST(MsgArgTest, empyArrays_uint64) {
+TEST(MsgArgTest, emptyArrays_uint64) {
     QStatus status;
     //uint64_t
     MsgArg arg;
     status = arg.Set("at", 0, NULL);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     uint64_t* pt;
     size_t lpt;
     status = arg.Get("at", &lpt, &pt);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(0u, lpt);
     EXPECT_TRUE(pt == NULL);
 }
-TEST(MsgArgTest, empyArrays_string) {
+TEST(MsgArgTest, emptyArrays_string) {
     QStatus status;
     //String
     MsgArg arg;
     status = arg.Set("as", 0, NULL);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     MsgArg* ps;
     size_t lps;
     status = arg.Get("as", &lps, &ps);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(0u, lps);
     EXPECT_TRUE(ps == NULL);
 }
-TEST(MsgArgTest, empyArrays_objectpath) {
+TEST(MsgArgTest, emptyArrays_objectpath) {
     QStatus status;
     //object path
     MsgArg arg;
     status = arg.Set("ao", 0, NULL);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     MsgArg* po;
     size_t lpo;
     status = arg.Get("ao", &lpo, &po);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(0u, lpo);
     EXPECT_TRUE(po == NULL);
 }
-TEST(MsgArgTest, empyArrays_signature) {
+TEST(MsgArgTest, emptyArrays_signature) {
     QStatus status;
     //Signature
     MsgArg arg;
     status = arg.Set("ag", 0, NULL);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     MsgArg* pg;
     size_t lpg;
     status = arg.Get("ag", &lpg, &pg);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(0u, lpg);
     EXPECT_TRUE(pg == NULL);
 }
-TEST(MsgArgTest, empyArrays_struct) {
+TEST(MsgArgTest, emptyArrays_struct) {
     QStatus status;
     //Struct
     MsgArg arg;
     status = arg.Set("a(sis)", 0, NULL);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     MsgArg* psis;
     size_t lpsis;
     status = arg.Get("a(sis)", &lpsis, &psis);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(0u, lpsis);
     EXPECT_TRUE(psis == NULL);
 }
-TEST(MsgArgTest, empyArrays_variant) {
+TEST(MsgArgTest, emptyArrays_variant) {
     QStatus status;
     //variant
     MsgArg arg;
     status = arg.Set("av", 0, NULL);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     MsgArg* pv;
     size_t lpv;
     status = arg.Get("av", &lpv, &pv);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(0u, lpv);
     EXPECT_TRUE(pv == NULL);
 }
-TEST(MsgArgTest, empyArrays_dictionary) {
+TEST(MsgArgTest, emptyArrays_dictionary) {
     QStatus status;
     //Dictionary
     MsgArg arg;
     status = arg.Set("a{sv}", 0, NULL);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     MsgArg* pdict;
     size_t lpdict;
     status = arg.Get("a{sv}", &lpdict, &pdict);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(0u, lpdict);
     EXPECT_TRUE(pdict == NULL);
 }
 
+static uint8_t max_length_ay[ALLJOYN_MAX_ARRAY_LEN];
 TEST(MsgArgTest, MaximumLengthArrays_byte) {
     QStatus status;
     MsgArg arg;
     // stdint.h is not avalible for all platforms so we create local variables
     const uint8_t uint8_max = 255;
-    uint8_t ay[ALLJOYN_MAX_ARRAY_LEN];
     for (size_t i = 0; i < ALLJOYN_MAX_ARRAY_LEN; ++i) {
-        ay[i] = i % uint8_max;
+        max_length_ay[i] = i % uint8_max;
     }
-    status = arg.Set("ay", ALLJOYN_MAX_ARRAY_LEN, ay);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = arg.Set("ay", ALLJOYN_MAX_ARRAY_LEN, max_length_ay);
+    EXPECT_EQ(ER_OK, status);
     uint8_t* py;
     size_t lpy;
     status = arg.Get("ay", &lpy, &py);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(ALLJOYN_MAX_ARRAY_LEN, lpy);
     for (size_t i = 0; i < ALLJOYN_MAX_ARRAY_LEN; ++i) {
         ASSERT_EQ(i % uint8_max, py[i]);
     }
 }
 
+static bool max_length_ab[ALLJOYN_MAX_ARRAY_LEN];
 TEST(MsgArgTest, MaximumLengthArrays_bool) {
     QStatus status;
     MsgArg arg;
-    bool ab[ALLJOYN_MAX_ARRAY_LEN];
     for (size_t i = 0; i < ALLJOYN_MAX_ARRAY_LEN; ++i) {
-        ab[i] = (i % 2) ? true : false;
+        max_length_ab[i] = (i % 2) ? true : false;
     }
-    status = arg.Set("ab", ALLJOYN_MAX_ARRAY_LEN, ab);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = arg.Set("ab", ALLJOYN_MAX_ARRAY_LEN, max_length_ab);
+    EXPECT_EQ(ER_OK, status);
     bool* pb;
     size_t lpb;
     status = arg.Get("ab", &lpb, &pb);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(ALLJOYN_MAX_ARRAY_LEN, lpb);
     for (size_t i = 0; i < ALLJOYN_MAX_ARRAY_LEN; i += 2) {
         ASSERT_FALSE(pb[i]);
         ASSERT_TRUE(pb[i + 1]);
     }
 }
+
+static int16_t max_length_an[ALLJOYN_MAX_ARRAY_LEN];
 TEST(MsgArgTest, MaximumLengthArrays_int16) {
     QStatus status;
     MsgArg arg;
     // stdint.h is not avalible for all platforms so we create local variables
     const int16_t int16_max = 32767;
-    int16_t an[ALLJOYN_MAX_ARRAY_LEN];
     for (size_t i = 0; i < ALLJOYN_MAX_ARRAY_LEN; ++i) {
-        an[i] = i % int16_max;
+        max_length_an[i] = i % int16_max;
     }
-    status = arg.Set("an", ALLJOYN_MAX_ARRAY_LEN, an);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = arg.Set("an", ALLJOYN_MAX_ARRAY_LEN, max_length_an);
+    EXPECT_EQ(ER_OK, status);
     int16_t* pan;
     size_t lpan;
     status = arg.Get("an", &lpan, &pan);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(ALLJOYN_MAX_ARRAY_LEN, lpan);
     for (size_t i = 0; i < lpan; ++i) {
         ASSERT_EQ(i % int16_max, pan[i]);
     }
 }
 
+static uint16_t max_length_aq[ALLJOYN_MAX_ARRAY_LEN];
 TEST(MsgArgTest, MaximumLengthArrays_uint16) {
     QStatus status;
     MsgArg arg;
     // stdint.h is not avalible for all platforms so we create local variables
     const uint16_t uint16_max = 65535;
-    uint16_t aq[ALLJOYN_MAX_ARRAY_LEN];
     for (size_t i = 0; i < ALLJOYN_MAX_ARRAY_LEN; ++i) {
-        aq[i] = i % uint16_max;
+        max_length_aq[i] = i % uint16_max;
     }
-    status = arg.Set("an", ALLJOYN_MAX_ARRAY_LEN, aq);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = arg.Set("an", ALLJOYN_MAX_ARRAY_LEN, max_length_aq);
+    EXPECT_EQ(ER_OK, status);
     uint16_t* paq;
     size_t lpaq;
     status = arg.Get("an", &lpaq, &paq);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(ALLJOYN_MAX_ARRAY_LEN, lpaq);
     for (size_t i = 0; i < lpaq; ++i) {
         ASSERT_EQ(i % uint16_max, paq[i]);
     }
 }
 
+static double max_length_ad[ALLJOYN_MAX_ARRAY_LEN];
 TEST(MsgArgTest, MaximumLengthArrays_double) {
     QStatus status;
     MsgArg arg;
-    double ad[ALLJOYN_MAX_ARRAY_LEN];
     for (size_t i = 0; i < ALLJOYN_MAX_ARRAY_LEN; ++i) {
-        ad[i] = static_cast<double>(i);
+        max_length_ad[i] = static_cast<double>(i);
     }
-    status = arg.Set("ad", ALLJOYN_MAX_ARRAY_LEN, ad);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = arg.Set("ad", ALLJOYN_MAX_ARRAY_LEN, max_length_ad);
+    EXPECT_EQ(ER_OK, status);
     double* pad;
     size_t lpad;
     status = arg.Get("ad", &lpad, &pad);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(ALLJOYN_MAX_ARRAY_LEN, lpad);
     for (size_t i = 0; i < lpad; ++i) {
-        ASSERT_EQ(ad[i], pad[i]);
+        ASSERT_EQ(max_length_ad[i], pad[i]);
     }
 }
 
+static int32_t max_length_ai[ALLJOYN_MAX_ARRAY_LEN];
 TEST(MsgArgTest, MaximumLengthArrays_int32) {
     QStatus status;
     MsgArg arg;
-    int32_t ai[ALLJOYN_MAX_ARRAY_LEN];
     for (size_t i = 0; i < ALLJOYN_MAX_ARRAY_LEN; ++i) {
-        ai[i] = i;
+        max_length_ai[i] = i;
     }
-    status = arg.Set("ai", ALLJOYN_MAX_ARRAY_LEN, ai);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = arg.Set("ai", ALLJOYN_MAX_ARRAY_LEN, max_length_ai);
+    EXPECT_EQ(ER_OK, status);
     int32_t* pai;
     size_t lpai;
     status = arg.Get("ai", &lpai, &pai);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(ALLJOYN_MAX_ARRAY_LEN, lpai);
     for (size_t i = 0; i < lpai; ++i) {
-        ASSERT_EQ(ai[i], pai[i]);
+        ASSERT_EQ(max_length_ai[i], pai[i]);
     }
 }
 
+static uint32_t max_length_au[ALLJOYN_MAX_ARRAY_LEN];
 TEST(MsgArgTest, MaximumLengthArrays_uint32) {
     QStatus status;
     MsgArg arg;
-    uint32_t au[ALLJOYN_MAX_ARRAY_LEN];
     for (size_t i = 0; i < ALLJOYN_MAX_ARRAY_LEN; ++i) {
-        au[i] = i;
+        max_length_au[i] = i;
     }
-    status = arg.Set("au", ALLJOYN_MAX_ARRAY_LEN, au);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = arg.Set("au", ALLJOYN_MAX_ARRAY_LEN, max_length_au);
+    EXPECT_EQ(ER_OK, status);
     uint32_t* pau;
     size_t lpau;
     status = arg.Get("au", &lpau, &pau);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(ALLJOYN_MAX_ARRAY_LEN, lpau);
     for (size_t i = 0; i < ALLJOYN_MAX_ARRAY_LEN; ++i) {
-        ASSERT_EQ(au[i], pau[i]);
+        ASSERT_EQ(max_length_au[i], pau[i]);
     }
 }
 
+static int64_t max_length_ax[ALLJOYN_MAX_ARRAY_LEN];
 TEST(MsgArgTest, MaximumLengthArrays_int64) {
     QStatus status;
     MsgArg arg;
-    int64_t ax[ALLJOYN_MAX_ARRAY_LEN];
     for (size_t i = 0; i < ALLJOYN_MAX_ARRAY_LEN; ++i) {
-        ax[i] = i;
+        max_length_ax[i] = i;
     }
-    status = arg.Set("ax", ALLJOYN_MAX_ARRAY_LEN, ax);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = arg.Set("ax", ALLJOYN_MAX_ARRAY_LEN, max_length_ax);
+    EXPECT_EQ(ER_OK, status);
     int64_t* pax;
     size_t lpax;
     status = arg.Get("ax", &lpax, &pax);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(ALLJOYN_MAX_ARRAY_LEN, lpax);
     for (size_t i = 0; i < lpax; ++i) {
-        ASSERT_EQ(ax[i], pax[i]);
+        ASSERT_EQ(max_length_ax[i], pax[i]);
     }
 }
 
+static uint64_t max_length_at[ALLJOYN_MAX_ARRAY_LEN];
 TEST(MsgArgTest, MaximumLengthArrays_uint64) {
     QStatus status;
     MsgArg arg;
-    uint64_t at[ALLJOYN_MAX_ARRAY_LEN];
     for (size_t i = 0; i < ALLJOYN_MAX_ARRAY_LEN; ++i) {
-        at[i] = i;
+        max_length_at[i] = i;
     }
-    status = arg.Set("at", ALLJOYN_MAX_ARRAY_LEN, at);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = arg.Set("at", ALLJOYN_MAX_ARRAY_LEN, max_length_at);
+    EXPECT_EQ(ER_OK, status);
     uint64_t* pat;
     size_t lpat;
     status = arg.Get("at", &lpat, &pat);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(ALLJOYN_MAX_ARRAY_LEN, lpat);
     for (size_t i = 0; i < ALLJOYN_MAX_ARRAY_LEN; ++i) {
-        ASSERT_EQ(at[i], pat[i]);
+        ASSERT_EQ(max_length_at[i], pat[i]);
     }
 }
 
+const char* max_length_as[ALLJOYN_MAX_ARRAY_LEN];
 TEST(MsgArgTest, MaximumLengthArrays_string) {
     QStatus status;
     MsgArg arg;
-    const char* as[ALLJOYN_MAX_ARRAY_LEN];
     const char* in_string = "a";
     for (size_t i = 0; i < ALLJOYN_MAX_ARRAY_LEN; ++i) {
-        as[i] = in_string;
+        max_length_as[i] = in_string;
     }
-    status = arg.Set("as", ALLJOYN_MAX_ARRAY_LEN, as);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = arg.Set("as", ALLJOYN_MAX_ARRAY_LEN, max_length_as);
+    EXPECT_EQ(ER_OK, status);
     MsgArg* pas;
     size_t lpas;
     status = arg.Get("as", &lpas, &pas);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(ALLJOYN_MAX_ARRAY_LEN, lpas);
     const char* s;
     for (size_t i = 0; i < ALLJOYN_MAX_ARRAY_LEN; ++i) {
         status = pas[i].Get("s", &s);
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
         ASSERT_STREQ(in_string, s);
     }
 }
 
+static const char* max_length_ao[ALLJOYN_MAX_ARRAY_LEN];
 TEST(MsgArgTest, MaximumLengthArrays_objectpath) {
     QStatus status;
     MsgArg arg;
-    const char* ao[ALLJOYN_MAX_ARRAY_LEN];
     const char* in_string = "/a";
     for (size_t i = 0; i < ALLJOYN_MAX_ARRAY_LEN; ++i) {
-        ao[i] = in_string;
+        max_length_ao[i] = in_string;
     }
-    status = arg.Set("ao", ALLJOYN_MAX_ARRAY_LEN, ao);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = arg.Set("ao", ALLJOYN_MAX_ARRAY_LEN, max_length_ao);
+    EXPECT_EQ(ER_OK, status);
     MsgArg* pao;
     size_t lpao;
     status = arg.Get("ao", &lpao, &pao);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(ALLJOYN_MAX_ARRAY_LEN, lpao);
     const char* o;
     for (size_t i = 0; i < ALLJOYN_MAX_ARRAY_LEN; ++i) {
         status = pao[i].Get("o", &o);
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
         ASSERT_STREQ(in_string, o);
     }
 }
 
+static const char* max_length_ag[ALLJOYN_MAX_ARRAY_LEN];
 TEST(MsgArgTest, MaximumLengthArrays_signature) {
     QStatus status;
     MsgArg arg;
-    const char* ag[ALLJOYN_MAX_ARRAY_LEN];
     const char* in_string = "sis";
     for (size_t i = 0; i < ALLJOYN_MAX_ARRAY_LEN; ++i) {
-        ag[i] = in_string;
+        max_length_ag[i] = in_string;
     }
-    status = arg.Set("ag", ALLJOYN_MAX_ARRAY_LEN, ag);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = arg.Set("ag", ALLJOYN_MAX_ARRAY_LEN, max_length_ag);
+    EXPECT_EQ(ER_OK, status);
     MsgArg* pag;
     size_t lpag;
     status = arg.Get("ag", &lpag, &pag);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(ALLJOYN_MAX_ARRAY_LEN, lpag);
     const char* g;
     for (size_t i = 0; i < ALLJOYN_MAX_ARRAY_LEN; ++i) {
         status = pag[i].Get("g", &g);
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
         ASSERT_STREQ(in_string, g);
     }
 }
 
+static MsgArg max_length_av[ALLJOYN_MAX_ARRAY_LEN];
 TEST(MsgArgTest, MaximumLengthArrays_variant) {
     QStatus status;
     MsgArg arg;
-    MsgArg av[ALLJOYN_MAX_ARRAY_LEN];
     for (size_t i = 0; i < ALLJOYN_MAX_ARRAY_LEN; ++i) {
-        status = av[i].Set("v", new MsgArg("i", i));
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-        av[i].SetOwnershipFlags(MsgArg::OwnsArgs);
+        status = max_length_av[i].Set("v", new MsgArg("i", i));
+        EXPECT_EQ(ER_OK, status);
+        max_length_av[i].SetOwnershipFlags(MsgArg::OwnsArgs);
     }
-    status = arg.Set("av", ALLJOYN_MAX_ARRAY_LEN, av);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = arg.Set("av", ALLJOYN_MAX_ARRAY_LEN, max_length_av);
+    EXPECT_EQ(ER_OK, status);
     MsgArg* pav;
     size_t lpav;
     status = arg.Get("av", &lpav, &pav);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(ALLJOYN_MAX_ARRAY_LEN, lpav);
     int32_t iValue;
     for (size_t i = 0; i < lpav; ++i) {
         status = pav[i].Get("i", &iValue);
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status);
         ASSERT_EQ(i, iValue);
     }
 }
 
+static MsgArg max_length_adictEntry[ALLJOYN_MAX_ARRAY_LEN];
 TEST(MsgArgTest, MaximumLengthArrays_dictionary) {
     QStatus status;
     MsgArg arg;
-    MsgArg adictEntry[ALLJOYN_MAX_ARRAY_LEN];
     for (size_t i = 0; i < ALLJOYN_MAX_ARRAY_LEN; ++i) {
-        status = adictEntry[i].Set("{xx}", i, i);
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        status = max_length_adictEntry[i].Set("{xx}", i, i);
+        EXPECT_EQ(ER_OK, status);
     }
-    status = arg.Set("a{xx}", ALLJOYN_MAX_ARRAY_LEN, adictEntry);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = arg.Set("a{xx}", ALLJOYN_MAX_ARRAY_LEN, max_length_adictEntry);
+    EXPECT_EQ(ER_OK, status);
     MsgArg* padict;
     size_t lpadict;
     status = arg.Get("a{xx}", &lpadict, &padict);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(ALLJOYN_MAX_ARRAY_LEN, lpadict);
     int64_t xKey;
     int64_t xValue;
@@ -1336,122 +1337,122 @@ TEST(MsgArgTest, MaximumLengthArrays_dictionary) {
     }
 }
 
+static uint8_t* over_max_length_ay[ALLJOYN_MAX_ARRAY_LEN + 1];
 TEST(MsgArgTest, MaximumLengthArraysPlusOne_byte) {
     QStatus status;
     MsgArg arg;
-    uint8_t* ay[ALLJOYN_MAX_ARRAY_LEN + 1];
-    status = arg.Set("ay", ALLJOYN_MAX_ARRAY_LEN + 1, ay);
-    EXPECT_EQ(ER_BUS_BAD_VALUE, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = arg.Set("ay", ALLJOYN_MAX_ARRAY_LEN + 1, over_max_length_ay);
+    EXPECT_EQ(ER_BUS_BAD_VALUE, status);
 }
 
+static bool* over_max_length_ab[ALLJOYN_MAX_ARRAY_LEN + 1];
 TEST(MsgArgTest, MaximumLengthArraysPlusOne_bool) {
     QStatus status;
     MsgArg arg;
-    bool* ab[ALLJOYN_MAX_ARRAY_LEN + 1];
-    status = arg.Set("ab", ALLJOYN_MAX_ARRAY_LEN + 1, ab);
-    EXPECT_EQ(ER_BUS_BAD_VALUE, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = arg.Set("ab", ALLJOYN_MAX_ARRAY_LEN + 1, over_max_length_ab);
+    EXPECT_EQ(ER_BUS_BAD_VALUE, status);
 }
 
+static int16_t* over_max_length_an[ALLJOYN_MAX_ARRAY_LEN + 1];
 TEST(MsgArgTest, MaximumLengthArraysPlusOne_int16) {
     QStatus status;
     MsgArg arg;
-    int16_t* an[ALLJOYN_MAX_ARRAY_LEN + 1];
-    status = arg.Set("an", ALLJOYN_MAX_ARRAY_LEN + 1, an);
-    EXPECT_EQ(ER_BUS_BAD_VALUE, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = arg.Set("an", ALLJOYN_MAX_ARRAY_LEN + 1, over_max_length_an);
+    EXPECT_EQ(ER_BUS_BAD_VALUE, status);
 }
 
+static uint16_t* over_max_length_aq[ALLJOYN_MAX_ARRAY_LEN + 1];
 TEST(MsgArgTest, MaximumLengthArraysPlusOne_uint16) {
     QStatus status;
     MsgArg arg;
-    uint16_t* aq[ALLJOYN_MAX_ARRAY_LEN + 1];
-    status = arg.Set("aq", ALLJOYN_MAX_ARRAY_LEN + 1, aq);
-    EXPECT_EQ(ER_BUS_BAD_VALUE, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = arg.Set("aq", ALLJOYN_MAX_ARRAY_LEN + 1, over_max_length_aq);
+    EXPECT_EQ(ER_BUS_BAD_VALUE, status);
 }
 
+static double* over_max_length_ad[ALLJOYN_MAX_ARRAY_LEN + 1];
 TEST(MsgArgTest, MaximumLengthArraysPlusOne_double) {
     QStatus status;
     MsgArg arg;
-    double* ad[ALLJOYN_MAX_ARRAY_LEN + 1];
-    status = arg.Set("ad", ALLJOYN_MAX_ARRAY_LEN + 1, ad);
-    EXPECT_EQ(ER_BUS_BAD_VALUE, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = arg.Set("ad", ALLJOYN_MAX_ARRAY_LEN + 1, over_max_length_ad);
+    EXPECT_EQ(ER_BUS_BAD_VALUE, status);
 }
 
+static int32_t* over_max_length_ai[ALLJOYN_MAX_ARRAY_LEN + 1];
 TEST(MsgArgTest, MaximumLengthArraysPlusOne_int32) {
     QStatus status;
     MsgArg arg;
-    int32_t* ai[ALLJOYN_MAX_ARRAY_LEN + 1];
-    status = arg.Set("ai", ALLJOYN_MAX_ARRAY_LEN + 1, ai);
-    EXPECT_EQ(ER_BUS_BAD_VALUE, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = arg.Set("ai", ALLJOYN_MAX_ARRAY_LEN + 1, over_max_length_ai);
+    EXPECT_EQ(ER_BUS_BAD_VALUE, status);
 }
 
+static uint32_t* over_max_length_au[ALLJOYN_MAX_ARRAY_LEN + 1];
 TEST(MsgArgTest, MaximumLengthArraysPlusOne_uint32) {
     QStatus status;
     MsgArg arg;
-    uint32_t* au[ALLJOYN_MAX_ARRAY_LEN + 1];
-    status = arg.Set("au", ALLJOYN_MAX_ARRAY_LEN + 1, au);
-    EXPECT_EQ(ER_BUS_BAD_VALUE, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = arg.Set("au", ALLJOYN_MAX_ARRAY_LEN + 1, over_max_length_au);
+    EXPECT_EQ(ER_BUS_BAD_VALUE, status);
 }
 
+static int64_t* over_max_length_ax[ALLJOYN_MAX_ARRAY_LEN + 1];
 TEST(MsgArgTest, MaximumLengthArraysPlusOne_int64) {
     QStatus status;
     MsgArg arg;
-    int64_t* ax[ALLJOYN_MAX_ARRAY_LEN + 1];
-    status = arg.Set("ax", ALLJOYN_MAX_ARRAY_LEN + 1, ax);
-    EXPECT_EQ(ER_BUS_BAD_VALUE, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = arg.Set("ax", ALLJOYN_MAX_ARRAY_LEN + 1, over_max_length_ax);
+    EXPECT_EQ(ER_BUS_BAD_VALUE, status);
 }
 
+static uint64_t* over_max_length_at[ALLJOYN_MAX_ARRAY_LEN + 1];
 TEST(MsgArgTest, MaximumLengthArraysPlusOne_uint64) {
     QStatus status;
     MsgArg arg;
-    uint64_t* at[ALLJOYN_MAX_ARRAY_LEN + 1];
-    status = arg.Set("at", ALLJOYN_MAX_ARRAY_LEN + 1, at);
-    EXPECT_EQ(ER_BUS_BAD_VALUE, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = arg.Set("at", ALLJOYN_MAX_ARRAY_LEN + 1, over_max_length_at);
+    EXPECT_EQ(ER_BUS_BAD_VALUE, status);
 }
 
+static const char* over_max_length_as[ALLJOYN_MAX_ARRAY_LEN + 1];
 TEST(MsgArgTest, MaximumLengthArraysPlusOne_string) {
     QStatus status;
     MsgArg arg;
-    const char* as[ALLJOYN_MAX_ARRAY_LEN + 1];
-    status = arg.Set("as", ALLJOYN_MAX_ARRAY_LEN + 1, as);
-    EXPECT_EQ(ER_BUS_BAD_VALUE, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = arg.Set("as", ALLJOYN_MAX_ARRAY_LEN + 1, over_max_length_as);
+    EXPECT_EQ(ER_BUS_BAD_VALUE, status);
 }
 
+static const char* over_max_length_ao[ALLJOYN_MAX_ARRAY_LEN + 1];
 TEST(MsgArgTest, MaximumLengthArraysPlusOne_objectpath) {
     QStatus status;
     MsgArg arg;
-    const char* ao[ALLJOYN_MAX_ARRAY_LEN + 1];
-    status = arg.Set("ao", ALLJOYN_MAX_ARRAY_LEN + 1, ao);
-    EXPECT_EQ(ER_BUS_BAD_VALUE, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = arg.Set("ao", ALLJOYN_MAX_ARRAY_LEN + 1, over_max_length_ao);
+    EXPECT_EQ(ER_BUS_BAD_VALUE, status);
 }
 
+static const char* over_max_length_ag[ALLJOYN_MAX_ARRAY_LEN + 1];
 TEST(MsgArgTest, MaximumLengthArraysPlusOne_signature) {
     QStatus status;
     MsgArg arg;
-    const char* ag[ALLJOYN_MAX_ARRAY_LEN + 1];
-    status = arg.Set("ag", ALLJOYN_MAX_ARRAY_LEN + 1, ag);
-    EXPECT_EQ(ER_BUS_BAD_VALUE, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = arg.Set("ag", ALLJOYN_MAX_ARRAY_LEN + 1, over_max_length_ag);
+    EXPECT_EQ(ER_BUS_BAD_VALUE, status);
 }
 
+static MsgArg* over_max_length_astruct[ALLJOYN_MAX_ARRAY_LEN + 1];
 TEST(MsgArgTest, MaximumLengthArraysPlusOne_struct) {
     QStatus status;
     MsgArg arg;
-    MsgArg* astruct[ALLJOYN_MAX_ARRAY_LEN + 1];
-    status = arg.Set("a(sis)", ALLJOYN_MAX_ARRAY_LEN + 1, astruct);
-    EXPECT_EQ(ER_BUS_BAD_VALUE, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = arg.Set("a(sis)", ALLJOYN_MAX_ARRAY_LEN + 1, over_max_length_astruct);
+    EXPECT_EQ(ER_BUS_BAD_VALUE, status);
 }
 
+static MsgArg* over_max_length_av[ALLJOYN_MAX_ARRAY_LEN + 1];
 TEST(MsgArgTest, MaximumLengthArraysPlusOne_variant) {
     QStatus status;
     MsgArg arg;
-    MsgArg* av[ALLJOYN_MAX_ARRAY_LEN + 1];
-    status = arg.Set("av", ALLJOYN_MAX_ARRAY_LEN + 1, av);
-    EXPECT_EQ(ER_BUS_BAD_VALUE, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = arg.Set("av", ALLJOYN_MAX_ARRAY_LEN + 1, over_max_length_av);
+    EXPECT_EQ(ER_BUS_BAD_VALUE, status);
 }
 
+static MsgArg* over_max_length_adict[ALLJOYN_MAX_ARRAY_LEN + 1];
 TEST(MsgArgTest, MaximumLengthArraysPlusOne_dictionary) {
     QStatus status;
     MsgArg arg;
-    MsgArg* adict[ALLJOYN_MAX_ARRAY_LEN + 1];
-    status = arg.Set("a{ss}", ALLJOYN_MAX_ARRAY_LEN + 1, adict);
-    EXPECT_EQ(ER_BUS_BAD_VALUE, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = arg.Set("a{ss}", ALLJOYN_MAX_ARRAY_LEN + 1, over_max_length_adict);
+    EXPECT_EQ(ER_BUS_BAD_VALUE, status);
 }
