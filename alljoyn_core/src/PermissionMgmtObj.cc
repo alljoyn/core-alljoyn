@@ -62,6 +62,8 @@ using namespace qcc;
 
 namespace ajn {
 
+static QStatus RetrieveAndGenDSAPublicKey(CredentialAccessor* ca, KeyInfoNISTP256& keyInfo);
+
 PermissionMgmtObj::PermissionMgmtObj(BusAttachment& bus) :
     BusObject(org::allseen::Security::PermissionMgmt::ObjectPath, false),
     bus(bus), notifySignalName(NULL), portListener(NULL)
@@ -92,6 +94,8 @@ PermissionMgmtObj::PermissionMgmtObj(BusAttachment& bus) :
     }
 
     ca = new CredentialAccessor(bus);
+    KeyInfoNISTP256 keyInfo;
+    RetrieveAndGenDSAPublicKey(ca, keyInfo);
     bus.GetInternal().GetPermissionManager().SetPermissionMgmtObj(this);
 
     QStatus status = LoadTrustAnchors();
