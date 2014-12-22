@@ -406,6 +406,7 @@ typedef void (^ AJNPingPeerBlock)(QStatus status, void *context);
  *
  * @return  - ER_OK if successful.
  *          - ER_BUS_BAD_OBJ_PATH for a bad object path
+ *          - ER_BUS_OBJ_ALREADY_EXISTS if an object is already registered at this path
  */
 - (QStatus)registerBusObject:(AJNBusObject *)busObject;
 
@@ -419,6 +420,7 @@ typedef void (^ AJNPingPeerBlock)(QStatus status, void *context);
  * @return
  *      - #ER_OK if successful.
  *      - #ER_BUS_BAD_OBJ_PATH for a bad object path
+ *      - #ER_BUS_OBJ_ALREADY_EXISTS if an object is already registered at this path
  */
 - (QStatus) registerBusObject:(AJNBusObject *) busObject enableSecurity:(BOOL)shouldEnableSecurity;
 

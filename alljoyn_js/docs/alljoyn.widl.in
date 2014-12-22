@@ -247,6 +247,7 @@ interface BusAttachment {
      * \brief Registers a locally located DBus object.
      *
      * Throws BusError BUS_BAD_OBJ_PATH if the object path is bad.
+     * Throws BusError BUS_OBJ_ALREADY_EXISTS if an object is already registered at this path.
      *
      * \param objectPath the absolute object path of the DBus object
      * \param busObject the DBus object implementation

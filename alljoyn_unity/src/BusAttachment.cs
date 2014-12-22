@@ -619,6 +619,7 @@ namespace AllJoynUnity
 			 * @return
 			 *      - QStatus.OK if successful.
 			 *      - QStatus.BUS_BAD_OBJ_PATH for a bad object path
+			 *      - QStatus.BUS_OBJ_ALREADY_EXISTS if an object is already registered at this path
 			 */
 			public QStatus RegisterBusObject(BusObject obj)
 			{
@@ -635,6 +636,7 @@ namespace AllJoynUnity
 			 * @return
 			 *      - QStatus.OK if successful.
 			 *      - QStatus.BUS_BAD_OBJ_PATH for a bad object path
+			 *      - QStatus.BUS_OBJ_ALREADY_EXISTS if an object is already registered at this path
 			 */
 			public QStatus RegisterBusObject(BusObject obj, bool secure)
 			{

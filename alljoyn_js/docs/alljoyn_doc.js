@@ -682,6 +682,7 @@ org.alljoyn.bus.BusAttachment = function() {
      * Registers a locally located DBus object.
      *
      * BusError BUS_BAD_OBJ_PATH if the object path is bad.
+     * BusError BUS_OBJ_ALREADY_EXISTS if an object is already registered at this path.
      *
      * @param {String} objectPath the absolute object path of the DBus object
      * @param {BusObject} busObject the DBus object implementation

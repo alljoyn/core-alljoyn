@@ -510,6 +510,7 @@ class BusAttachment : public MessageReceiver {
      * @return
      *      - #ER_OK if successful.
      *      - #ER_BUS_BAD_OBJ_PATH for a bad object path
+     *      - #ER_BUS_OBJ_ALREADY_EXISTS if an object is already registered at this path
      */
     QStatus RegisterBusObject(BusObject& obj, bool secure = false);
 

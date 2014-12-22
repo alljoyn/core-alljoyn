@@ -555,8 +555,12 @@ QStatus _LocalEndpoint::DoRegisterBusObject(BusObject& object, BusObject* parent
     /* If an object with this path already exists, replace it */
     BusObject* existingObj = FindLocalObject(objPath);
     if (NULL != existingObj) {
-        existingObj->Replace(object);
-        UnregisterBusObject(*existingObj);
+        if (existingObj->isPlaceholder) {
+            existingObj->Replace(object);
+            UnregisterBusObject(*existingObj);
+        } else {
+            return ER_BUS_OBJ_ALREADY_EXISTS;
+        }
     }
 
     /* Register object. */

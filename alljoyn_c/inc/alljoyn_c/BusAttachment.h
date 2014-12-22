@@ -546,6 +546,7 @@ extern AJ_API QStatus AJ_CALL alljoyn_busattachment_joinsessionasync(alljoyn_bus
  * @return
  *      - #ER_OK if successful.
  *      - #ER_BUS_BAD_OBJ_PATH for a bad object path
+ *      - #ER_BUS_OBJ_ALREADY_EXISTS if an object is already registered at this path
  */
 extern AJ_API QStatus AJ_CALL alljoyn_busattachment_registerbusobject(alljoyn_busattachment bus, alljoyn_busobject obj);
 
@@ -560,6 +561,7 @@ extern AJ_API QStatus AJ_CALL alljoyn_busattachment_registerbusobject(alljoyn_bu
  * @return
  *      - #ER_OK if successful.
  *      - #ER_BUS_BAD_OBJ_PATH for a bad object path
+ *      - #ER_BUS_OBJ_ALREADY_EXISTS if an object is already registered at this path
  *
  * @see alljoyn_busattachment_registerbusobject
  */
