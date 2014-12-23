@@ -1674,11 +1674,6 @@ class BusAttachment : public MessageReceiver {
     void WaitStopInternal();
 
     /**
-     * Try connect to the router with the spec.
-     */
-    QStatus TryConnect(const char* connectSpec);
-
-    /**
      * Validate the response to SetLinkTimeout
      */
     QStatus GetLinkTimeoutResponse(Message& reply, uint32_t& timeout);
@@ -1702,6 +1697,16 @@ class BusAttachment : public MessageReceiver {
      * Remove references to session
      */
     void ClearSessionSet(SessionId sessionId, SessionSideMask bitset);
+
+    /**
+     * Register signal handlers for BusListener
+     */
+    QStatus RegisterSignalHandlers();
+
+    /**
+     * Unregister signal handlers for BusListener
+     */
+    void UnregisterSignalHandlers();
 
     qcc::String connectSpec;  /**< The connect spec used to connect to the bus */
     bool isStarted;           /**< Indicates if the bus has been started */

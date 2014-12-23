@@ -219,6 +219,16 @@ class MyBusListener : public BusListener, public SessionPortListener, public Ses
         s_lock.Unlock(MUTEX_CONTEXT);
     }
 
+    void BusStopping()
+    {
+        printf("BusStopping\n");
+    }
+
+    void BusDisconnected()
+    {
+        printf("BusDisconnected\n");
+    }
+
     bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts)
     {
         bool ret = false;
@@ -758,6 +768,25 @@ static void DoPingAsync(String name, uint32_t timeout)
     }
 }
 
+static QStatus DoConnect()
+{
+    /* Get env vars */
+    const char* connectSpec = getenv("BUS_ADDRESS");
+
+    /* Connect to the local daemon */
+    QStatus status;
+    if (connectSpec) {
+        status = s_bus->Connect(connectSpec);
+    } else {
+        status = s_bus->Connect();
+    }
+    if (ER_OK != status) {
+        printf("BusAttachment::Connect(%s) failed (%s)\n", s_bus->GetConnectSpec().c_str(), QCC_StatusText(status));
+    }
+
+    return status;
+}
+
 int main(int argc, char** argv)
 {
     QStatus status = ER_OK;
@@ -799,19 +828,9 @@ int main(int argc, char** argv)
         s_bus->RegisterBusListener(*s_busListener);
     }
 
-    /* Get env vars */
-    const char* connectSpec = getenv("BUS_ADDRESS");
-
     /* Connect to the local daemon */
     if (ER_OK == status) {
-        if (connectSpec) {
-            status = s_bus->Connect(connectSpec);
-        } else {
-            status = s_bus->Connect();
-        }
-        if (ER_OK != status) {
-            printf("BusAttachment::Connect(%s) failed (%s)\n", s_bus->GetConnectSpec().c_str(), QCC_StatusText(status));
-        }
+        status = DoConnect();
     }
 
     /*
@@ -1166,6 +1185,8 @@ int main(int argc, char** argv)
             String name = NextTok(line);
             uint32_t timeout = StringToU32(NextTok(line), 0, 30000);
             DoPingAsync(name, timeout);
+        } else if (cmd == "connect") {
+            DoConnect();
         } else if (cmd == "exit") {
             break;
         } else if (cmd == "help" || cmd == "?") {
@@ -1200,6 +1221,7 @@ int main(int argc, char** argv)
             printf("wait <name>                                                   - Wait until <name> is found\n");
             printf("ping <name> [timeout]                                         - Ping a name\n");
             printf("asyncping <name> [timeout]                                    - Ping a name asynchronously\n");
+            printf("connect                                                       - Connect to the router\n");
             printf("exit                                                          - Exit this program\n");
             printf("\n");
             printf("SessionIds can be specified by value or by #<idx> where <idx> is the session index printed with \"list\" command\n");

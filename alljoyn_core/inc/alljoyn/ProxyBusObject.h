@@ -682,13 +682,13 @@ class ProxyBusObject : public MessageReceiver {
      *      - #ER_OK if the method call succeeded and the reply message type is #MESSAGE_METHOD_RET
      *      - #ER_BUS_REPLY_IS_ERROR_MESSAGE if the reply message type is #MESSAGE_ERROR
      */
-    QStatus MethodCall(const char* ifaceName,
-                       const char* methodName,
-                       const MsgArg* args,
-                       size_t numArgs,
-                       Message& replyMsg,
-                       uint32_t timeout = DefaultCallTimeout,
-                       uint8_t flags = 0) const;
+    virtual QStatus MethodCall(const char* ifaceName,
+                               const char* methodName,
+                               const MsgArg* args,
+                               size_t numArgs,
+                               Message& replyMsg,
+                               uint32_t timeout = DefaultCallTimeout,
+                               uint8_t flags = 0) const;
 
     /**
      * Make a fire-and-forget method call from this object. The caller will not be able to tell if

@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, 2015 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -340,7 +340,6 @@ qcc::String BusAttachment::GetConnectSpec()
     return connectSpec;
 }
 
-
 QStatus BusAttachment::Start()
 {
     QStatus status;
@@ -373,7 +372,7 @@ QStatus BusAttachment::Start()
     isStarted = true;
 
     /* Start the transports */
-    status = busInternal->transportList.Start(busInternal->GetListenAddresses());
+    status = busInternal->TransportsStart();
 
     if ((status == ER_OK) && isStopping) {
         status = ER_BUS_STOPPING;
@@ -382,22 +381,19 @@ QStatus BusAttachment::Start()
 
     if (status != ER_OK) {
         QCC_LogError(status, ("BusAttachment::Start failed to start"));
-        busInternal->transportList.Stop();
+        busInternal->TransportsStop();
         WaitStopInternal();
     }
     return status;
 }
 
-QStatus BusAttachment::TryConnect(const char* connectSpec)
+QStatus BusAttachment::Internal::TransportConnect(const char* connectSpec)
 {
-    QCC_DbgTrace(("BusAttachment::TryConnect to %s", connectSpec));
-    QStatus status = ER_OK;
-    BusEndpoint tempEp;
-
-    /* Get or create transport for connection */
-    Transport* trans = busInternal->transportList.GetTransport(connectSpec);
+    QStatus status;
+    Transport* trans = transportList.GetTransport(connectSpec);
     if (trans) {
         SessionOpts emptyOpts;
+        BusEndpoint tempEp;
         status = trans->Connect(connectSpec, emptyOpts, tempEp);
 
         /* Make sure the remote side (daemon) is at least as new as the client */
@@ -414,13 +410,36 @@ QStatus BusAttachment::TryConnect(const char* connectSpec)
              * the ALLJOYN_PROTOCOL_VERSION check.
              */
             if ((rem->GetRemoteAllJoynVersion() != 0) && (rem->GetRemoteProtocolVersion() < ALLJOYN_PROTOCOL_VERSION)) {
-                QCC_DbgPrintf(("Rejecting daemon at %s because its protocol version (%d) is less than ours (%d)", connectSpec, rem->GetRemoteProtocolVersion(), ALLJOYN_PROTOCOL_VERSION));
-                Disconnect(connectSpec);
+                QCC_DbgPrintf(("Rejecting daemon at %s because its protocol version (%d) is less than ours (%d)",
+                               connectSpec, rem->GetRemoteProtocolVersion(), ALLJOYN_PROTOCOL_VERSION));
+                TransportDisconnect(connectSpec);
                 status = ER_BUS_INCOMPATIBLE_DAEMON;
             }
         }
     } else {
         status = ER_BUS_TRANSPORT_NOT_AVAILABLE;
+    }
+    return status;
+}
+
+QStatus BusAttachment::Internal::TransportConnect(const char* requestedConnectSpec, qcc::String& actualConnectSpec)
+{
+    const char* bundledConnectSpec = "null:";
+
+    if (IsConnected() && !router->IsDaemon()) {
+        return ER_BUS_ALREADY_CONNECTED;
+    }
+
+    QStatus status = TransportConnect(requestedConnectSpec);
+    if (status != ER_OK && !router->IsDaemon() && (!requestedConnectSpec || strcmp(requestedConnectSpec, bundledConnectSpec))) {
+        /*
+         * Try using the null transport to connect to a bundled daemon if there is one
+         */
+        requestedConnectSpec = bundledConnectSpec;
+        status = TransportConnect(requestedConnectSpec);
+    }
+    if (status == ER_OK) {
+        actualConnectSpec = requestedConnectSpec;
     }
     return status;
 }
@@ -445,105 +464,115 @@ QStatus BusAttachment::Connect()
 QStatus BusAttachment::Connect(const char* connectSpec)
 {
     QStatus status;
-    bool isDaemon = busInternal->GetRouter().IsDaemon();
 
     if (!isStarted) {
         status = ER_BUS_BUS_NOT_STARTED;
     } else if (isStopping) {
         status = ER_BUS_STOPPING;
         QCC_LogError(status, ("BusAttachment::Connect cannot connect while bus is stopping"));
-    } else if (IsConnected() && !isDaemon) {
-        status = ER_BUS_ALREADY_CONNECTED;
     } else {
-        this->connectSpec = connectSpec;
-        status = TryConnect(connectSpec);
-        /*
-         * Try using the null transport to connect to a bundled daemon if there is one
-         */
-        if (status != ER_OK && !isDaemon) {
-            qcc::String bundledConnectSpec = "null:";
-            if (bundledConnectSpec != connectSpec) {
-                status = TryConnect(bundledConnectSpec.c_str());
-                if (ER_OK == status) {
-                    this->connectSpec = bundledConnectSpec;
-                }
-            }
-        }
-        /* If this is a client (non-daemon) bus attachment, then register signal handlers for BusListener */
-        if ((ER_OK == status) && !isDaemon) {
-            const InterfaceDescription* iface = GetInterface(org::freedesktop::DBus::InterfaceName);
-            assert(iface);
-            status = RegisterSignalHandler(busInternal,
-                                           static_cast<MessageReceiver::SignalHandler>(&BusAttachment::Internal::AllJoynSignalHandler),
-                                           iface->GetMember("NameOwnerChanged"),
-                                           NULL);
-
-            if (ER_OK == status) {
-                Message reply(*this);
-                MsgArg arg("s", "type='signal',interface='org.freedesktop.DBus'");
-                const ProxyBusObject& dbusObj = this->GetDBusProxyObj();
-                status = dbusObj.MethodCall(org::freedesktop::DBus::InterfaceName, "AddMatch", &arg, 1, reply);
-            }
-
-            /* Register org.alljoyn.Bus signal handler */
-            const InterfaceDescription* ajIface = GetInterface(org::alljoyn::Bus::InterfaceName);
-            if (ER_OK == status) {
-                assert(ajIface);
-                status = RegisterSignalHandler(busInternal,
-                                               static_cast<MessageReceiver::SignalHandler>(&BusAttachment::Internal::AllJoynSignalHandler),
-                                               ajIface->GetMember("FoundAdvertisedName"),
-                                               NULL);
-            }
-            if (ER_OK == status) {
-                assert(ajIface);
-                status = RegisterSignalHandler(busInternal,
-                                               static_cast<MessageReceiver::SignalHandler>(&BusAttachment::Internal::AllJoynSignalHandler),
-                                               ajIface->GetMember("LostAdvertisedName"),
-                                               NULL);
-            }
-            if (ER_OK == status) {
-                assert(ajIface);
-                status = RegisterSignalHandler(busInternal,
-                                               static_cast<MessageReceiver::SignalHandler>(&BusAttachment::Internal::AllJoynSignalHandler),
-                                               ajIface->GetMember("SessionLostWithReasonAndDisposition"),
-                                               NULL);
-            }
-            if (ER_OK == status) {
-                assert(ajIface);
-                status = RegisterSignalHandler(busInternal,
-                                               static_cast<MessageReceiver::SignalHandler>(&BusAttachment::Internal::AllJoynSignalHandler),
-                                               ajIface->GetMember("MPSessionChangedWithReason"),
-                                               NULL);
-            }
-            const InterfaceDescription* aboutIface = GetInterface(org::alljoyn::About::InterfaceName);
-            if (ER_OK == status) {
-                assert(aboutIface);
-                const ajn::InterfaceDescription::Member* announceSignalMember = aboutIface->GetMember("Announce");
-                assert(announceSignalMember);
-                status = RegisterSignalHandler(busInternal,
-                                               static_cast<MessageReceiver::SignalHandler>(&BusAttachment::Internal::AllJoynSignalHandler),
-                                               announceSignalMember,
-                                               NULL);
-            }
-            if (ER_OK == status) {
-                Message reply(*this);
-                MsgArg arg("s", "type='signal',interface='org.alljoyn.Bus'");
-                const ProxyBusObject& dbusObj = this->GetDBusProxyObj();
-                status = dbusObj.MethodCall(org::freedesktop::DBus::InterfaceName, "AddMatch", &arg, 1, reply);
-            } else {
+        status = busInternal->TransportConnect(connectSpec, this->connectSpec);
+        if (ER_OK == status) {
+            status = RegisterSignalHandlers();
+            if (ER_OK != status) {
                 /*
                  * We connected but failed to fully realize the connection so disconnect to cleanup.
                  */
-                Transport* trans = busInternal->transportList.GetTransport(connectSpec);
-                if (trans) {
-                    trans->Disconnect(connectSpec);
-                }
+                busInternal->TransportDisconnect(this->connectSpec.c_str());
             }
         }
     }
     if (ER_OK != status) {
         QCC_LogError(status, ("BusAttachment::Connect failed"));
     }
+    return status;
+}
+
+QStatus BusAttachment::RegisterSignalHandlers()
+{
+    QStatus status = ER_OK;
+
+    /* If this is a client (non-daemon) bus attachment, then register signal handlers for BusListener */
+    if (!busInternal->GetRouter().IsDaemon()) {
+        /* Register org.freedesktop.DBus signal handler */
+        const InterfaceDescription* iface = GetInterface(org::freedesktop::DBus::InterfaceName);
+        assert(iface);
+        QStatus status = RegisterSignalHandler(busInternal,
+                                               static_cast<MessageReceiver::SignalHandler>(&BusAttachment::Internal::AllJoynSignalHandler),
+                                               iface->GetMember("NameOwnerChanged"),
+                                               NULL);
+        if (ER_OK == status) {
+            Message reply(*this);
+            MsgArg arg("s", "type='signal',interface='org.freedesktop.DBus'");
+            const ProxyBusObject& dbusObj = this->GetDBusProxyObj();
+            status = dbusObj.MethodCall(org::freedesktop::DBus::InterfaceName, "AddMatch", &arg, 1, reply);
+        }
+        /* Register org.alljoyn.Bus signal handler */
+        const InterfaceDescription* ajIface = GetInterface(org::alljoyn::Bus::InterfaceName);
+        if (ER_OK == status) {
+            assert(ajIface);
+            status = RegisterSignalHandler(busInternal,
+                                           static_cast<MessageReceiver::SignalHandler>(&BusAttachment::Internal::AllJoynSignalHandler),
+                                           ajIface->GetMember("FoundAdvertisedName"),
+                                           NULL);
+        }
+        if (ER_OK == status) {
+            assert(ajIface);
+            status = RegisterSignalHandler(busInternal,
+                                           static_cast<MessageReceiver::SignalHandler>(&BusAttachment::Internal::AllJoynSignalHandler),
+                                           ajIface->GetMember("LostAdvertisedName"),
+                                           NULL);
+        }
+        if (ER_OK == status) {
+            assert(ajIface);
+            status = RegisterSignalHandler(busInternal,
+                                           static_cast<MessageReceiver::SignalHandler>(&BusAttachment::Internal::AllJoynSignalHandler),
+                                           ajIface->GetMember("SessionLostWithReasonAndDisposition"),
+                                           NULL);
+        }
+        if (ER_OK == status) {
+            assert(ajIface);
+            status = RegisterSignalHandler(busInternal,
+                                           static_cast<MessageReceiver::SignalHandler>(&BusAttachment::Internal::AllJoynSignalHandler),
+                                           ajIface->GetMember("MPSessionChangedWithReason"),
+                                           NULL);
+        }
+        const InterfaceDescription* aboutIface = GetInterface(org::alljoyn::About::InterfaceName);
+        if (ER_OK == status) {
+            assert(aboutIface);
+            const ajn::InterfaceDescription::Member* announceSignalMember = aboutIface->GetMember("Announce");
+            assert(announceSignalMember);
+            status = RegisterSignalHandler(busInternal,
+                                           static_cast<MessageReceiver::SignalHandler>(&BusAttachment::Internal::AllJoynSignalHandler),
+                                           announceSignalMember,
+                                           NULL);
+        }
+        if (ER_OK == status) {
+            Message reply(*this);
+            MsgArg arg("s", "type='signal',interface='org.alljoyn.Bus'");
+            const ProxyBusObject& dbusObj = this->GetDBusProxyObj();
+            status = dbusObj.MethodCall(org::freedesktop::DBus::InterfaceName, "AddMatch", &arg, 1, reply);
+        }
+    }
+    return status;
+}
+
+QStatus BusAttachment::Internal::TransportDisconnect(const char* connectSpec)
+{
+    QStatus status;
+
+    if (!router->IsDaemon() && !IsConnected()) {
+        status = ER_BUS_NOT_CONNECTED;
+    } else {
+        /* Terminate transport for connection */
+        Transport* trans = transportList.GetTransport(connectSpec);
+        if (trans) {
+            status = trans->Disconnect(connectSpec);
+        } else {
+            status = ER_BUS_TRANSPORT_NOT_AVAILABLE;
+        }
+    }
+
     return status;
 }
 
@@ -555,68 +584,16 @@ QStatus BusAttachment::Disconnect()
 QStatus BusAttachment::Disconnect(const char* connectSpec)
 {
     QStatus status;
-    bool isDaemon = busInternal->GetRouter().IsDaemon();
 
     if (!isStarted) {
         status = ER_BUS_BUS_NOT_STARTED;
     } else if (isStopping) {
         status = ER_BUS_STOPPING;
         QCC_LogError(status, ("BusAttachment::Disconnect cannot disconnect while bus is stopping"));
-    } else if (!isDaemon && !IsConnected()) {
-        status = ER_BUS_NOT_CONNECTED;
     } else {
-        /* Terminate transport for connection */
-        Transport* trans = busInternal->transportList.GetTransport(this->connectSpec.c_str());
-
-        if (trans) {
-            status = trans->Disconnect(this->connectSpec.c_str());
-        } else {
-            status = ER_BUS_TRANSPORT_NOT_AVAILABLE;
-        }
-
-        /* Unregister signal handlers if this is a client-side bus attachment */
-        if ((ER_OK == status) && !isDaemon) {
-            const InterfaceDescription* dbusIface = GetInterface(org::freedesktop::DBus::InterfaceName);
-            if (dbusIface) {
-                UnregisterSignalHandler(busInternal,
-                                        static_cast<MessageReceiver::SignalHandler>(&BusAttachment::Internal::AllJoynSignalHandler),
-                                        dbusIface->GetMember("NameOwnerChanged"),
-                                        NULL);
-            }
-            const InterfaceDescription* alljoynIface = GetInterface(org::alljoyn::Bus::InterfaceName);
-            if (alljoynIface) {
-                UnregisterSignalHandler(busInternal,
-                                        static_cast<MessageReceiver::SignalHandler>(&BusAttachment::Internal::AllJoynSignalHandler),
-                                        alljoynIface->GetMember("FoundAdvertisedName"),
-                                        NULL);
-            }
-            if (alljoynIface) {
-                UnregisterSignalHandler(busInternal,
-                                        static_cast<MessageReceiver::SignalHandler>(&BusAttachment::Internal::AllJoynSignalHandler),
-                                        alljoynIface->GetMember("LostAdvertisedName"),
-                                        NULL);
-            }
-            if (alljoynIface) {
-                UnregisterSignalHandler(busInternal,
-                                        static_cast<MessageReceiver::SignalHandler>(&BusAttachment::Internal::AllJoynSignalHandler),
-                                        alljoynIface->GetMember("SessionLostWithReasonAndDisposition"),
-                                        NULL);
-            }
-            if (alljoynIface) {
-                UnregisterSignalHandler(busInternal,
-                                        static_cast<MessageReceiver::SignalHandler>(&BusAttachment::Internal::AllJoynSignalHandler),
-                                        alljoynIface->GetMember("MPSessionChangedWithReason"),
-                                        NULL);
-            }
-            const InterfaceDescription* aboutIface = GetInterface(org::alljoyn::About::InterfaceName);
-            if (aboutIface) {
-                const ajn::InterfaceDescription::Member* announceSignalMember = aboutIface->GetMember("Announce");
-                assert(announceSignalMember);
-                UnregisterSignalHandler(busInternal,
-                                        static_cast<MessageReceiver::SignalHandler>(&BusAttachment::Internal::AllJoynSignalHandler),
-                                        announceSignalMember,
-                                        NULL);
-            }
+        status = busInternal->TransportDisconnect(this->connectSpec.c_str());
+        if (ER_OK == status) {
+            UnregisterSignalHandlers();
         }
     }
 
@@ -624,6 +601,54 @@ QStatus BusAttachment::Disconnect(const char* connectSpec)
         QCC_LogError(status, ("BusAttachment::Disconnect failed"));
     }
     return status;
+}
+
+void BusAttachment::UnregisterSignalHandlers()
+{
+    /* Unregister signal handlers if this is a client-side bus attachment */
+    if (!busInternal->GetRouter().IsDaemon()) {
+        const InterfaceDescription* dbusIface = GetInterface(org::freedesktop::DBus::InterfaceName);
+        if (dbusIface) {
+            UnregisterSignalHandler(busInternal,
+                                    static_cast<MessageReceiver::SignalHandler>(&BusAttachment::Internal::AllJoynSignalHandler),
+                                    dbusIface->GetMember("NameOwnerChanged"),
+                                    NULL);
+        }
+        const InterfaceDescription* alljoynIface = GetInterface(org::alljoyn::Bus::InterfaceName);
+        if (alljoynIface) {
+            UnregisterSignalHandler(busInternal,
+                                    static_cast<MessageReceiver::SignalHandler>(&BusAttachment::Internal::AllJoynSignalHandler),
+                                    alljoynIface->GetMember("FoundAdvertisedName"),
+                                    NULL);
+        }
+        if (alljoynIface) {
+            UnregisterSignalHandler(busInternal,
+                                    static_cast<MessageReceiver::SignalHandler>(&BusAttachment::Internal::AllJoynSignalHandler),
+                                    alljoynIface->GetMember("LostAdvertisedName"),
+                                    NULL);
+        }
+        if (alljoynIface) {
+            UnregisterSignalHandler(busInternal,
+                                    static_cast<MessageReceiver::SignalHandler>(&BusAttachment::Internal::AllJoynSignalHandler),
+                                    alljoynIface->GetMember("SessionLostWithReasonAndDisposition"),
+                                    NULL);
+        }
+        if (alljoynIface) {
+            UnregisterSignalHandler(busInternal,
+                                    static_cast<MessageReceiver::SignalHandler>(&BusAttachment::Internal::AllJoynSignalHandler),
+                                    alljoynIface->GetMember("MPSessionChangedWithReason"),
+                                    NULL);
+        }
+        const InterfaceDescription* aboutIface = GetInterface(org::alljoyn::About::InterfaceName);
+        if (aboutIface) {
+            const ajn::InterfaceDescription::Member* announceSignalMember = aboutIface->GetMember("Announce");
+            assert(announceSignalMember);
+            UnregisterSignalHandler(busInternal,
+                                    static_cast<MessageReceiver::SignalHandler>(&BusAttachment::Internal::AllJoynSignalHandler),
+                                    announceSignalMember,
+                                    NULL);
+        }
+    }
 }
 
 QStatus BusAttachment::Stop(void)
@@ -656,7 +681,7 @@ QStatus BusAttachment::StopInternal(bool blockUntilStopped)
         busInternal->listenersLock.Unlock(MUTEX_CONTEXT);
 
         /* Stop the transport list */
-        status = busInternal->transportList.Stop();
+        status = busInternal->TransportsStop();
         if (ER_OK != status) {
             QCC_LogError(status, ("TransportList::Stop() failed"));
         }
@@ -708,7 +733,7 @@ void BusAttachment::WaitStopInternal()
          * clear the isStarted flag.
          */
         if (isStarted) {
-            busInternal->transportList.Join();
+            busInternal->TransportsJoin();
 
             /* Clear peer state */
             busInternal->peerStateTable.Clear();
@@ -817,7 +842,7 @@ const qcc::String& BusAttachment::GetGlobalGUIDShortString() const
 
 const ProxyBusObject& BusAttachment::GetDBusProxyObj()
 {
-    return busInternal->localEndpoint->GetDBusProxyObj();
+    return busInternal->GetDBusProxyObj();
 }
 
 const ProxyBusObject& BusAttachment::GetAllJoynProxyObj()
@@ -835,7 +860,7 @@ QStatus BusAttachment::RegisterSignalHandlerWithRule(MessageReceiver* receiver,
                                                      const InterfaceDescription::Member* member,
                                                      const char* matchRule)
 {
-    return busInternal->localEndpoint->RegisterSignalHandler(receiver, signalHandler, member, matchRule);
+    return busInternal->RegisterSignalHandler(receiver, signalHandler, member, matchRule);
 }
 
 QStatus BusAttachment::RegisterSignalHandler(MessageReceiver* receiver,
@@ -877,7 +902,7 @@ QStatus BusAttachment::UnregisterSignalHandlerWithRule(MessageReceiver* receiver
                                                        const InterfaceDescription::Member* member,
                                                        const char* matchRule)
 {
-    return busInternal->localEndpoint->UnregisterSignalHandler(receiver, signalHandler, member, matchRule);
+    return busInternal->UnregisterSignalHandler(receiver, signalHandler, member, matchRule);
 }
 
 QStatus BusAttachment::UnregisterAllHandlers(MessageReceiver* receiver)
@@ -885,8 +910,13 @@ QStatus BusAttachment::UnregisterAllHandlers(MessageReceiver* receiver)
     return busInternal->localEndpoint->UnregisterAllHandlers(receiver);
 }
 
+bool BusAttachment::Internal::IsConnected() const {
+    assert(router);
+    return router->IsBusRunning();
+}
+
 bool BusAttachment::IsConnected() const {
-    return busInternal->router && busInternal->router->IsBusRunning();
+    return busInternal->IsConnected();
 }
 
 QStatus BusAttachment::RegisterBusObject(BusObject& obj, bool secure) {
@@ -2027,6 +2057,8 @@ QStatus BusAttachment::SetLinkTimeout(SessionId sessionId, uint32_t& linkTimeout
 
 void BusAttachment::Internal::NonLocalEndpointDisconnected()
 {
+    bus.UnregisterSignalHandlers();
+
     listenersLock.Lock(MUTEX_CONTEXT);
     ListenerSet::iterator it = listeners.begin();
     while (it != listeners.end()) {

@@ -16,6 +16,7 @@
 #include <qcc/platform.h>
 
 #include <alljoyn/BusAttachment.h>
+#include "BusInternal.h"
 
 /* Header files included for Google Test Framework */
 #include <gtest/gtest.h>
@@ -25,7 +26,9 @@ using namespace std;
 using namespace qcc;
 using namespace ajn;
 
-/* ASACORE-880 */
+/*
+ * ASACORE-880
+ */
 TEST(BusAttachmentTest, RegisterTwoBusObjectsWithSamePathFails)
 {
     BusAttachment bus(NULL);
@@ -35,7 +38,6 @@ TEST(BusAttachmentTest, RegisterTwoBusObjectsWithSamePathFails)
     EXPECT_NE(ER_OK, bus.RegisterBusObject(busObj1));
 }
 
-/* ASACORE-880 */
 TEST(BusAttachmentTest, RegisterChildThenParentBusObjectSucceeds)
 {
     BusAttachment bus(NULL);
@@ -43,4 +45,83 @@ TEST(BusAttachmentTest, RegisterChildThenParentBusObjectSucceeds)
     BusObject parent("/parent");
     EXPECT_EQ(ER_OK, bus.RegisterBusObject(child));
     EXPECT_EQ(ER_OK, bus.RegisterBusObject(parent));
+}
+
+/*
+ * ASACORE-123
+ */
+class TestDBusObj : public ProxyBusObject {
+  public:
+    virtual QStatus MethodCall(const char* ifaceName, const char* methodName, const MsgArg* args, size_t numArgs,
+                               Message& replyMsg, uint32_t timeout = DefaultCallTimeout, uint8_t flags = 0) const {
+        return ER_OK;
+    }
+};
+
+class TestBusAttachment : public BusAttachment {
+  public:
+    class TestInternal : public Internal {
+      public:
+        TestInternal(TestBusAttachment& bus, TransportFactoryContainer& factories) :
+            Internal(NULL, bus, factories, NULL, false, NULL, 4), bus(bus) { }
+        virtual QStatus TransportsStart() { return ER_OK; }
+        virtual QStatus TransportsStop() { return ER_OK; }
+        virtual QStatus TransportsJoin() { return ER_OK; }
+        virtual QStatus TransportConnect(const char* requestedConnectSpec, qcc::String& actualConnectSpec) {
+            actualConnectSpec = requestedConnectSpec;
+            return ER_OK;
+        }
+        virtual QStatus TransportDisconnect(const char* connectSpec) { return ER_OK; }
+        virtual const ProxyBusObject& GetDBusProxyObj() const { return dbusObj; }
+        virtual QStatus RegisterSignalHandler(MessageReceiver* receiver, MessageReceiver::SignalHandler signalHandler,
+                                              const InterfaceDescription::Member* member, const char* matchRule) {
+            if (member->name == "NameOwnerChanged") {
+                ++bus.nameOwnerChangedHandlerRegistered;
+            }
+            return ER_OK;
+        }
+        virtual QStatus UnregisterSignalHandler(MessageReceiver* receiver, MessageReceiver::SignalHandler signalHandler,
+                                                const InterfaceDescription::Member* member, const char* matchRule) {
+            if (member->name == "NameOwnerChanged") {
+                --bus.nameOwnerChangedHandlerRegistered;
+            }
+            return ER_OK;
+        }
+
+        TestBusAttachment& bus;
+        TestDBusObj dbusObj;
+    };
+
+    TransportFactoryContainer factories;
+    int nameOwnerChangedHandlerRegistered;
+
+    TestBusAttachment() : BusAttachment(new TestInternal(*this, factories), 4), nameOwnerChangedHandlerRegistered(0) { }
+};
+
+TEST(BusAttachmentTest, SingleSignalRegistrationWhenBusAttachmentIsLocallyDisconnectedThenConnected)
+{
+    TestBusAttachment bus;
+    ASSERT_EQ(ER_OK, bus.Start());
+    ASSERT_EQ(ER_OK, bus.Connect());
+
+    /* Locally disconnect BusAttachment */
+    ASSERT_EQ(ER_OK, bus.Disconnect());
+
+    /* Reconnect and verify that there is no duplicate signal handler registration */
+    ASSERT_EQ(ER_OK, bus.Connect());
+    EXPECT_EQ(1, bus.nameOwnerChangedHandlerRegistered);
+}
+
+TEST(BusAttachmentTest, SingleSignalRegistrationWhenBusAttachmentIsRemotelyDisconnectedThenConnected)
+{
+    TestBusAttachment bus;
+    ASSERT_EQ(ER_OK, bus.Start());
+    ASSERT_EQ(ER_OK, bus.Connect());
+
+    /* Remotely disconnect BusAttachment */
+    bus.GetInternal().NonLocalEndpointDisconnected();
+
+    /* Reconnect and verify that there is no duplicate signal handler registration */
+    ASSERT_EQ(ER_OK, bus.Connect());
+    EXPECT_EQ(1, bus.nameOwnerChangedHandlerRegistered);
 }
