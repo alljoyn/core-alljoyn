@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -6741,7 +6741,7 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
      * allocated above.
      */
     QCC_DbgPrintf(("UDPTransport::AcceptCb(): HelloReply(true, \"%s\")", udpEp->GetUniqueName().c_str()));
-    status = activeHello->HelloReply(true, udpEp->GetUniqueName());
+    status = activeHello->HelloReply(true, udpEp->GetUniqueName(), static_cast<SessionOpts::NameTransferType>(nameTransfer));
     if (status != ER_OK) {
         status = ER_UDP_BUSHELLO;
         QCC_LogError(status, ("UDPTransport::AcceptCb(): Can't make a BusHello Reply Message"));
@@ -7442,7 +7442,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
         qcc::String uniqueName = args[0].v_string.str;
         qcc::String remoteGUID = args[1].v_string.str;
         uint32_t protocolVersion = args[2].v_uint32 & 0x3FFFFFFF;
-        uint32_t nameTransfer = args[1].v_uint32 >> 30;
+        uint32_t nameTransfer = args[2].v_uint32 >> 30;
 
         QCC_DbgPrintf(("UDPTransport::DoConnectCb(): Got BusHello() reply. uniqueName=\"%s\", remoteGuid=\"%s\", protocolVersion=%d., nameTransfer=%d.",
                        uniqueName.c_str(), remoteGUID.c_str(), protocolVersion, nameTransfer));
