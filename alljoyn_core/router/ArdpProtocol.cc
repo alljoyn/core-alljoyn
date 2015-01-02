@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -84,10 +84,11 @@ namespace ajn {
 #define RSRV_OFFSET   34
 
 /* Additional Marshal/Unmarshal ARDP SYN header offsets */
-#define SEGMAX_OFFSET  16
-#define SEGBMAX_OFFSET 18
-#define DACKT_OFFSET   20
-#define OPTIONS_OFFSET 24
+#define SEGMAX_OFFSET   16
+#define SEGBMAX_OFFSET  18
+#define DACKT_OFFSET    20
+#define OPTIONS_OFFSET  24
+#define SYN_RSRV_OFFSET 26
 
 #define ARDP_SYN_HEADER_SIZE 28
 
@@ -712,6 +713,7 @@ static void MarshalSynHeader(uint32_t* buf32, ArdpSynHeader* h)
     *reinterpret_cast<uint16_t*>(txbuf + SEGBMAX_OFFSET) = h->segbmax;
     *reinterpret_cast<uint32_t*>(txbuf + DACKT_OFFSET) = h->dackt;
     *reinterpret_cast<uint16_t*>(txbuf + OPTIONS_OFFSET) = h->options;
+    *reinterpret_cast<uint16_t*>(txbuf + SYN_RSRV_OFFSET) = 0;
 }
 
 static QStatus SendMsgHeader(ArdpHandle* handle, ArdpConnRecord* conn, ArdpHeader* h)
