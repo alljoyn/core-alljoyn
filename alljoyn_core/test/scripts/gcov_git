@@ -1,0 +1,125 @@
+#!/usr/bin/perl
+
+# Copyright AllSeen Alliance. All rights reserved.
+#
+#    Permission to use, copy, modify, and/or distribute this software for any
+#    purpose with or without fee is hereby granted, provided that the above
+#    copyright notice and this permission notice appear in all copies.
+#
+#    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+#    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+#    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+#    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+#    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+#    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+# 
+
+use File::Basename;
+use Getopt::Long;
+use Term::ANSIColor qw(:constants);
+
+use warnings;
+use strict;
+
+my $silence = "2>/dev/null 1>/dev/null";
+
+my ($os, $cpu, $variant, $check) = ('linux', 'x86_64', 'debug', 0);
+GetOptions("check" => \$check) or die "error in command line arguments\n";
+
+my $test;
+if ($check) {
+    $test = "./build/$os/$cpu/$variant/test/cpp/bin/ajcheck";
+} else {
+#    $test = "./build/$os/$cpu/$variant/test/cpp/bin/ajtest";
+    $test = "./build/$os/$cpu/$variant/test/cpp/bin/cmtest";
+}
+
+# Checkout patch from gerrit
+
+# Build with gcov enabled
+system("scons -s OS=$os CPU=$cpu VARIANT=$variant BINDINGS=cpp -j8 GTEST_DIR=\$HOME/src/gtest-1.7.0/ WS=off GCOV=on $test $silence") == 0 || 
+    die "scons failed: $?";
+
+# Run unit tests
+system("$test $silence") == 0 || die "$test failed: $?";
+
+# Generate coverage report
+my (@gcov, $line_number_a, $line_number_b);
+open(GIT_DIFF, '-|', 'git diff HEAD^1');
+while (<GIT_DIFF>) {
+    if (/^diff /) {
+        # header
+        print $_;
+
+    } elsif (/^new file /) {
+        # header
+        print $_;
+
+    } elsif (/^index /) {
+        # header
+        print $_;
+
+    } elsif (/^--- [ab]?\/(.*)/) {
+        # file a (lines removed)
+        print $_;
+
+    } elsif (/^\+\+\+ [ab]\/(.*)/) {
+        # file b (lines added)
+        my $path = $1;
+        print $_;
+
+        my $dirname = dirname($path);
+        $dirname =~ s/\/src$//;
+        $dirname =~ s/\/unit_test$/\/unittest/;
+        my $filename = basename($path);
+
+        system("gcov -o ./build/$os/$cpu/$variant/obj/$dirname $path $silence") == 0 || die "gcov failed: $?";
+
+        if (open(my $fh, '<', "$filename.gcov")) {
+            chomp(@gcov = <$fh>);
+            close($fh);
+        } else {
+            @gcov = ();
+        }
+
+    } elsif (/^@@ -(\d+)(,\d+)? \+(\d+)(,\d+)? @@/) {
+        # file a and b line numbers
+        $line_number_a = $1;
+        $line_number_b = $3;
+        print $_;
+
+    } elsif (/^(-.*)/) {
+        # line removed
+        my $line = $1;
+
+        my $execution_count = "        -";
+        printf("%s:%5d:", $execution_count, $line_number_a);
+        print RED, "$line\n", RESET;
+        ++$line_number_a;
+
+    } elsif (/^(\+.*)/) {
+        # line added
+        my $line = $1;
+        my $execution_count = "    #####";
+        for my $i (0 .. $#gcov) {
+            if ($gcov[$i] =~ /:\s+$line_number_b:/) {
+                $execution_count = (split(':', $gcov[$i]))[0];
+            }
+        }
+        printf("%s:%5d:", $execution_count, $line_number_b);
+        print GREEN, "$line\n", RESET;
+        ++$line_number_b;
+
+    } else {
+        # context
+        my $execution_count = "        -";
+        printf("%s:%5d:", $execution_count, $line_number_b);
+        print $_;
+
+        ++$line_number_a;
+        ++$line_number_b;
+    }
+}
+close(GIT_DIFF);
+unlink(glob('*.gcov'));
