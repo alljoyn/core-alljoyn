@@ -326,7 +326,8 @@ class _Message {
      *      - An empty string if unable to find the AllJoyn signature
      */
     const char* GetSignature() const {
-        if (hdrFields.field[ALLJOYN_HDR_FIELD_SIGNATURE].typeId == ALLJOYN_SIGNATURE) {
+        if (hdrFields.field[ALLJOYN_HDR_FIELD_SIGNATURE].typeId == ALLJOYN_SIGNATURE &&
+            hdrFields.field[ALLJOYN_HDR_FIELD_SIGNATURE].v_signature.sig) {
             return hdrFields.field[ALLJOYN_HDR_FIELD_SIGNATURE].v_signature.sig;
         } else {
             return "";
@@ -341,7 +342,8 @@ class _Message {
      *      - An empty string if unable to find the AllJoyn object path
      */
     const char* GetObjectPath() const {
-        if (hdrFields.field[ALLJOYN_HDR_FIELD_PATH].typeId == ALLJOYN_OBJECT_PATH) {
+        if (hdrFields.field[ALLJOYN_HDR_FIELD_PATH].typeId == ALLJOYN_OBJECT_PATH &&
+            hdrFields.field[ALLJOYN_HDR_FIELD_PATH].v_objPath.str) {
             return hdrFields.field[ALLJOYN_HDR_FIELD_PATH].v_objPath.str;
         } else {
             return "";
@@ -356,7 +358,8 @@ class _Message {
      *      - An empty string if unable to find the interface
      */
     const char* GetInterface() const {
-        if (hdrFields.field[ALLJOYN_HDR_FIELD_INTERFACE].typeId == ALLJOYN_STRING) {
+        if (hdrFields.field[ALLJOYN_HDR_FIELD_INTERFACE].typeId == ALLJOYN_STRING &&
+            hdrFields.field[ALLJOYN_HDR_FIELD_INTERFACE].v_string.str) {
             return hdrFields.field[ALLJOYN_HDR_FIELD_INTERFACE].v_string.str;
         } else {
             return "";
@@ -370,7 +373,8 @@ class _Message {
      *      - An empty string if unable to find the member name
      */
     const char* GetMemberName() const {
-        if (hdrFields.field[ALLJOYN_HDR_FIELD_MEMBER].typeId == ALLJOYN_STRING) {
+        if (hdrFields.field[ALLJOYN_HDR_FIELD_MEMBER].typeId == ALLJOYN_STRING &&
+            hdrFields.field[ALLJOYN_HDR_FIELD_MEMBER].v_string.str) {
             return hdrFields.field[ALLJOYN_HDR_FIELD_MEMBER].v_string.str;
         } else {
             return "";
@@ -399,7 +403,8 @@ class _Message {
      *      - An empty string if the message did not specify a sender.
      */
     const char* GetSender() const {
-        if (hdrFields.field[ALLJOYN_HDR_FIELD_SENDER].typeId == ALLJOYN_STRING) {
+        if (hdrFields.field[ALLJOYN_HDR_FIELD_SENDER].typeId == ALLJOYN_STRING &&
+            hdrFields.field[ALLJOYN_HDR_FIELD_SENDER].v_string.str) {
             return hdrFields.field[ALLJOYN_HDR_FIELD_SENDER].v_string.str;
         } else {
             return "";
@@ -423,7 +428,8 @@ class _Message {
      *      - An empty string if unable to find the message destination.
      */
     const char* GetDestination() const {
-        if (hdrFields.field[ALLJOYN_HDR_FIELD_DESTINATION].typeId == ALLJOYN_STRING) {
+        if (hdrFields.field[ALLJOYN_HDR_FIELD_DESTINATION].typeId == ALLJOYN_STRING &&
+            hdrFields.field[ALLJOYN_HDR_FIELD_DESTINATION].v_string.str) {
             return hdrFields.field[ALLJOYN_HDR_FIELD_DESTINATION].v_string.str;
         } else {
             return "";
@@ -467,7 +473,7 @@ class _Message {
      *                      - leave errorMessage unchanged if error message string not found
      * @return
      *      - If the message is an error message return the error name from the AllJoyn header
-     *      - NULL if the message type is not MESSAGE_ERRORe.
+     *      - NULL if the message type is not MESSAGE_ERROR.
      */
     const char* GetErrorName(qcc::String* errorMessage = NULL) const;
 
@@ -549,6 +555,15 @@ class _Message {
      * These methods and members are protected rather than private to facilitate unit testing.
      */
     /// @cond ALLJOYN_DEV
+
+    /**
+     * Constructor for a message
+     *
+     * @param bus       The bus that this message is sent or received on.
+     * @param hdrFields The header fields for this message.
+     */
+    _Message(BusAttachment& bus, const HeaderFields& hdrFields);
+
     /**
      * @internal
      * Generate a method reply message from a method call.
@@ -911,6 +926,12 @@ class _Message {
     /// @endcond
 
   private:
+
+    /**
+     * Common initialization called by constructor.  Calling constructors from other constructors is
+     * not supported in some compilers.
+     */
+    void Init(BusAttachment& bus);
 
     /**
      * Message assignment is disallowed.
