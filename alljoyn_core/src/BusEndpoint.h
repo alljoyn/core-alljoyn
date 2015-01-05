@@ -68,7 +68,7 @@ class _BusEndpoint : public MessageSink {
      *
      * @param type    BusEndpoint type.
      */
-    _BusEndpoint(EndpointType type) : endpointType(type), isValid(type != ENDPOINT_TYPE_INVALID), userId(-1), groupId(-1) { }
+    _BusEndpoint(EndpointType type) : endpointType(type), isValid(type != ENDPOINT_TYPE_INVALID), disconnectStatus(ER_OK), userId(-1), groupId(-1) { }
 
     /**
      * Virtual destructor for derivable class.
