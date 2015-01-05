@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+// Copyright (c) 2014-2015, AllSeen Alliance. All rights reserved.
 //
 //    Permission to use, copy, modify, and/or distribute this software for any
 //    purpose with or without fee is hereby granted, provided that the above
@@ -28,10 +28,10 @@
 // Constants
 //
 
-static NSString* kAboutServiceInterfaceName = @"org.alljoyn.bus.sample";
-static NSString* kAboutServiceName = @"org.alljoyn.bus.sample";
-static NSString* kAboutServicePath = @"/sample";
-static const AJNSessionPort kAboutServicePort = 25;
+static NSString* kAboutServiceInterfaceName = @"com.example.about.feature.interface.sample";
+static NSString* kAboutServiceName = @"com.example.about.feature.interface.sample";
+static NSString* kAboutServicePath = @"/example/path";
+static const AJNSessionPort kAboutServicePort = 900;
 
 ////////////////////////////////////////////////////////////////////////////////
 

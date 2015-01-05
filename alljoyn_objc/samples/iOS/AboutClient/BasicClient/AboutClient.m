@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright (c) 2014 AllSeen Alliance. All rights reserved.
+// Copyright (c) 2014-2015, AllSeen Alliance. All rights reserved.
 //
 //    Permission to use, copy, modify, and/or distribute this software for any
 //    purpose with or without fee is hereby granted, provided that the above
@@ -29,10 +29,10 @@
 // Constants
 //
 
-static NSString* kAboutClientInterfaceName = @"org.alljoyn.Bus.sample";
-static NSString* kAboutClientServiceName = @"org.alljoyn.Bus.sample";
-static NSString* kAboutClientServicePath = @"/sample";
-static const AJNSessionPort kAboutClientServicePort = 25;
+static NSString* kAboutClientInterfaceName = @"com.example.about.feature.interface.sample";
+static NSString* kAboutClientServiceName = @"com.example.about.feature.interface.sample";
+static NSString* kAboutClientServicePath = @"/example/path";
+static const AJNSessionPort kAboutClientServicePort = 900;
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -101,7 +101,7 @@ static const AJNSessionPort kAboutClientServicePort = 25;
     
     // create an interface description
     //
-    AJNInterfaceDescription *interfaceDescription = [self.bus createInterfaceWithName:@"org.alljoyn.bus.sample" enableSecurity:NO];
+    AJNInterfaceDescription *interfaceDescription = [self.bus createInterfaceWithName:@"com.example.about.feature.interface.sample" enableSecurity:NO];
     
     // add the methods to the interface description
     //
@@ -150,7 +150,7 @@ static const AJNSessionPort kAboutClientServicePort = 25;
     
     // begin discovery of the well known name of the service to be called
     //
-    [self.bus whoImplementsInterface:@"org.alljoyn.bus.sample"];
+    [self.bus whoImplementsInterface:kAboutClientServiceName];
     
     [self.delegate didReceiveStatusUpdateMessage:@"Waiting to discover service...\n"];
 
