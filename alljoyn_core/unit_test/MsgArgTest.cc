@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2011, 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011, 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -1100,7 +1100,7 @@ TEST(MsgArgTest, MaximumLengthArrays_int16) {
     EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(ALLJOYN_MAX_ARRAY_LEN, lpan);
     for (size_t i = 0; i < lpan; ++i) {
-        ASSERT_EQ(i % int16_max, pan[i]);
+        ASSERT_EQ(static_cast<int16_t>(i % int16_max), pan[i]);
     }
 }
 
@@ -1309,7 +1309,7 @@ TEST(MsgArgTest, MaximumLengthArrays_variant) {
     for (size_t i = 0; i < lpav; ++i) {
         status = pav[i].Get("i", &iValue);
         EXPECT_EQ(ER_OK, status);
-        ASSERT_EQ(i, iValue);
+        ASSERT_EQ(static_cast<int32_t>(i), iValue);
     }
 }
 
@@ -1332,8 +1332,8 @@ TEST(MsgArgTest, MaximumLengthArrays_dictionary) {
     int64_t xValue;
     for (size_t i = 0; i < lpadict; ++i) {
         padict[i].Get("{xx}", &xKey, &xValue);
-        ASSERT_EQ(i, xKey);
-        ASSERT_EQ(i, xValue);
+        ASSERT_EQ(static_cast<int64_t>(i), xKey);
+        ASSERT_EQ(static_cast<int64_t>(i), xValue);
     }
 }
 
