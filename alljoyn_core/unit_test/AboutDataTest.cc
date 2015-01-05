@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -980,6 +980,49 @@ TEST(AboutDataTest, GetAnnouncedAboutData)
     char* modelNumber;
     args->Get("s", &modelNumber);
     EXPECT_STREQ("123456", modelNumber);
+}
+
+/*
+ * ASACORE-1348
+ * Unit test added to verify SetField is working as expected when following
+ * steps described in bug.
+ * 1. Create a new AboutData.
+ * 2. Set a new OEM/custom field named "Foo" to value "A" for locale "en"
+ * 3. Set a new value for "Foo" as "B" for locale "es"
+ * 4. Optionally, verify that both "en" and "es" are added to the list of
+ *    supported languages (they are).
+ * 5. Optionally, verify that the "Foo" field is localized (IsLocalized). It is.
+ * 6. Use GetField to retrieve the "Foo" value for "en". "A" should be returned.
+ */
+TEST(AboutDataTest, SetField) {
+    AboutData aboutData("en");
+
+    MsgArg en_arg("s", "A");
+    MsgArg es_arg("s", "B");
+    EXPECT_EQ(ER_OK, aboutData.SetField("Foo", en_arg, "en"));
+    EXPECT_EQ(ER_OK, aboutData.SetField("Foo", es_arg, "es"));
+    const char* languages[2];
+    EXPECT_EQ(2, aboutData.GetSupportedLanguages(languages, 2));
+    // order is unknown
+    if (languages[0][1] == 's') {
+        EXPECT_STREQ(languages[0], "es");
+        EXPECT_STREQ(languages[1], "en");
+    } else {
+        EXPECT_STREQ(languages[0], "en");
+        EXPECT_STREQ(languages[1], "es");
+    }
+    EXPECT_TRUE(aboutData.IsFieldLocalized("Foo"));
+    MsgArg* foo_en_arg;
+    MsgArg* foo_es_arg;
+    EXPECT_EQ(ER_OK, aboutData.GetField("Foo", foo_en_arg, "en"));
+    EXPECT_EQ(ER_OK, aboutData.GetField("Foo", foo_es_arg, "es"));
+    char* foo_en;
+    char* foo_es;
+    EXPECT_EQ(ER_OK, foo_en_arg->Get("s", &foo_en));
+    EXPECT_EQ(ER_OK, foo_es_arg->Get("s", &foo_es));
+
+    EXPECT_STREQ("A", foo_en);
+    EXPECT_STREQ("B", foo_es);
 }
 
 TEST(AboutDataTest, SetOEMSpecificField)
