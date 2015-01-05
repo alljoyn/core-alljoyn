@@ -25,6 +25,7 @@
 #include <qcc/platform.h>
 
 #include <qcc/Stream.h>
+#include <qcc/Thread.h>
 #include <qcc/Timer.h>
 #include <Status.h>
 #include <map>

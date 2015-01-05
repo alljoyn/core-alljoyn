@@ -15,6 +15,7 @@
  ******************************************************************************/
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/AutoPinger.h>
+#include <qcc/Thread.h>
 #include <gtest/gtest.h>
 #include <qcc/Thread.h>
 
