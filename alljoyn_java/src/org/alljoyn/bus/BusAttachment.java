@@ -1294,7 +1294,11 @@ public class BusAttachment {
      *
      * @param busObj the BusObject to register
      * @param objPath the object path of the BusObject
-     * @return OK if successful
+     * @return <ul>
+     *         <li>OK if succesful
+     *         <li>BUS_BAD_OBJ_PATH for a bad object path
+     *         <li>BUS_OBJ_ALREADY_EXISTS if an object is already registered at this path
+     *         </ul>
      * @see org.alljoyn.bus.annotation.BusInterface
      */
     public Status registerBusObject(BusObject busObj, String objPath) {
@@ -1311,7 +1315,11 @@ public class BusAttachment {
      * @param busObj the BusObject to register
      * @param objPath the object path of the BusObject
      * @param secure true if authentication is required to access this object
-     * @return OK if successful
+     * @return <ul>
+     *         <li>OK if succesful
+     *         <li>BUS_BAD_OBJ_PATH for a bad object path
+     *         <li>BUS_OBJ_ALREADY_EXISTS if an object is already registered at this path
+     *         </ul>
      * @see org.alljoyn.bus.annotation.BusInterface
      */
     public Status registerBusObject(BusObject busObj, String objPath, boolean secure) {
@@ -1330,7 +1338,11 @@ public class BusAttachment {
      * @param secure true if authentication is required to access this object
      * @param languageTag a language tag describing the language of the description of this BusObject
      * @param description a textual description of this BusObject
-     * @return OK if successful
+     * @return <ul>
+     *         <li>OK if succesful
+     *         <li>BUS_BAD_OBJ_PATH for a bad object path
+     *         <li>BUS_OBJ_ALREADY_EXISTS if an object is already registered at this path
+     *         </ul>
      * @see org.alljoyn.bus.annotation.BusInterface
      */
     public Status registerBusObject(BusObject busObj, String objPath, boolean secure, String languageTag, String description) {
@@ -1349,7 +1361,11 @@ public class BusAttachment {
      * @param languageTag a language tag describing the language of the description of this BusObject
      * @param description a textual description of this BusObject
      * @param dt a Translator instance to translate descriptions of this object
-     * @return OK if successful
+     * @return <ul>
+     *         <li>OK if succesful
+     *         <li>BUS_BAD_OBJ_PATH for a bad object path
+     *         <li>BUS_OBJ_ALREADY_EXISTS if an object is already registered at this path
+     *         </ul>
      * @see org.alljoyn.bus.annotation.BusInterface
      */
     public Status registerBusObject(BusObject busObj, String objPath, boolean secure,
