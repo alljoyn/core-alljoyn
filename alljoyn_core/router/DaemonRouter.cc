@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -176,7 +176,7 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& origSender)
                                    msg->GetSender(), destEndpoint->GetUniqueName().c_str(), msg->GetCallSerial()));
                     if (replyExpected) {
                         QStatus result = msg->ErrorMsg(msg, "org.alljoyn.Bus.Blocked", "Destination not allowed to receive method call");
-                        assert(ER_OK == result);
+                        assert(ER_OK == result); (void)result;
                         BusEndpoint busEndpoint = BusEndpoint::cast(localEndpoint);
                         PushMessage(msg, busEndpoint);
                     }
