@@ -7,7 +7,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011, 2014 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014-2015 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -171,7 +171,7 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
     /*
      * Destructor also called by BusAttachment
      */
-    ~Internal();
+    virtual ~Internal();
 
     /**
      * Filter out authentication mechanisms not present in the list.
@@ -308,6 +308,89 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
         return copy;
     }
 
+    /**
+     * Indicate whether bus is currently connected.
+     *
+     * Messages can only be sent or received when the bus is connected.
+     *
+     * @return true if the bus is connected.
+     */
+    bool IsConnected() const;
+
+    /**
+     * Start all the transports.
+     *
+     * @return
+     *         - ER_OK if successful.
+     */
+    virtual QStatus TransportsStart() { return transportList.Start(GetListenAddresses()); }
+
+    /**
+     * Stop all the transports.
+     *
+     * @return
+     *         - ER_OK if successful.
+     *         - an error status otherwise.
+     */
+    virtual QStatus TransportsStop() { return transportList.Stop(); }
+
+    /**
+     * Wait for all transports to stop.
+     *
+     * @return
+     *         - ER_OK if successful.
+     *         - an error status otherwise.
+     */
+    virtual QStatus TransportsJoin() { return transportList.Join(); }
+
+    /**
+     * Connect to an AllJoyn router at a specific connectSpec destination.
+     *
+     * If there is no router present at the given connectSpec or if the router
+     * at the connectSpec has an incompatible AllJoyn version, this method will
+     * attempt to use a bundled router if one exists.
+     *
+     * @param[in] requestedConnectSpec The transport connection spec to try.
+     * @param[out] actualConnectSpec The connected transport spec if successful.
+     *
+     * @return
+     *     - #ER_OK if successful.
+     *     - An error status otherwise
+     */
+    virtual QStatus TransportConnect(const char* requestedConnectSpec, qcc::String& actualConnectSpec);
+
+    /**
+     * Disconnect a remote bus address connection.
+     *
+     * @param[in] connectSpec The transport connection spec used to connect.
+     *
+     * @return
+     *     - #ER_OK if successful
+     *     - #ER_BUS_BUS_NOT_STARTED if the bus is not started
+     *     - #ER_BUS_NOT_CONNECTED if the %BusAttachment is not connected to the bus
+     *     - Other error status codes indicating a failure
+     */
+    virtual QStatus TransportDisconnect(const char* connectSpec);
+
+    /** @copydoc _LocalEndpoint::RegisterSignalHandler() */
+    virtual QStatus RegisterSignalHandler(MessageReceiver* receiver,
+                                          MessageReceiver::SignalHandler signalHandler,
+                                          const InterfaceDescription::Member* member,
+                                          const char* matchRule) {
+        return localEndpoint->RegisterSignalHandler(receiver, signalHandler, member, matchRule);
+    }
+
+    /** @copydoc _LocalEndpoint::UnregisterSignalHandler() */
+    virtual QStatus UnregisterSignalHandler(MessageReceiver* receiver,
+                                            MessageReceiver::SignalHandler signalHandler,
+                                            const InterfaceDescription::Member* member,
+                                            const char* matchRule) {
+        return localEndpoint->UnregisterSignalHandler(receiver, signalHandler, member, matchRule);
+    }
+
+    /** @copydoc _LocalEndpoint::GetDBusProxyObj() */
+    virtual const ProxyBusObject& GetDBusProxyObj() const { return localEndpoint->GetDBusProxyObj(); }
+
   private:
 
     /**
@@ -331,6 +414,18 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
      * JoinSessionAsync callback used by JoinSession
      */
     void JoinSessionCB(QStatus status, SessionId sessionId, const SessionOpts& opts, void* context);
+
+    /**
+     * @internal
+     * Connect to an AllJoyn router at a specific connectSpec destination.
+     *
+     * @param[in] connectSpec The transport connection spec to try.
+     *
+     * @return
+     *     - #ER_OK if successful.
+     *     - An error status otherwise
+     */
+    QStatus TransportConnect(const char* connectSpec);
 
     qcc::String application;              /* Name of the that owns the BusAttachment application */
     BusAttachment& bus;                   /* Reference back to the bus attachment that owns this state */
