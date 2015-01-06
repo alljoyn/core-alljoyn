@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2011,2014 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011, 2014-2015 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -17,6 +17,7 @@
 
 #include <deque>
 
+#include <qcc/Thread.h>
 #include <qcc/Timer.h>
 #include <Status.h>
 
@@ -197,4 +198,83 @@ TEST(TimerTest, TestReplaceTimer) {
     ASSERT_EQ(ER_OK, status) << "Status: " << QCC_StatusText(status);
 
     ASSERT_TRUE(testNextAlarm(ts + 5000, 0));
+}
+
+
+/*
+ * This test verifies Timer's ability to stop by validating the number of callbacks made per following:
+ *
+ * 1. Schedule ten alarms to expire immediately (t0).
+ * 2. Schedule ten alarms to expire 10 seconds from now (t2).
+ * 3. Wait for 5 seconds (t1) and see how many callbacks are made. The expectation is as follow...
+ *     a. ten t0 alarms fired with ER_OK result.
+ *     b. ten t2 alarms fired with ER_TIMER_EXITING result (since we're using expireOnExit=true).
+ * 4. Wait for additional 2 seconds (t3) to make sure no additional alarms are fired after stopped.
+ */
+TEST(TimerTest, TestStopTimer) {
+    const uint32_t t0 = 0;
+    const uint32_t t1 = 5000;
+    const uint32_t t2 = 10000;
+    const uint32_t t3 = 12000;
+    const uint32_t maxAlarms = 20;
+
+    QStatus status;
+    MyAlarmListener alarmListener(0);
+    AlarmListener* al = &alarmListener;
+    Timer timer("testTimer", true, maxAlarms);
+    status = timer.Start();
+    ASSERT_EQ(ER_OK, status) << "Status: " << QCC_StatusText(status);
+
+    /* reset the counts, just in case */
+    triggeredAlarmsLock.Lock();
+    triggeredAlarms.clear();
+    triggeredAlarmsLock.Unlock();
+
+    Timespec ts;
+    GetTimeNow(&ts);
+
+    /* t0: add t0 alarms */
+    for (uint32_t i = 0; (i < (maxAlarms / 2)); ++i) {
+        Alarm alarm(t0, al);
+        status = timer.AddAlarm(alarm);
+        ASSERT_EQ(ER_OK, status) << "Status: " << QCC_StatusText(status);
+    }
+
+    /* t0: add t2 alarms */
+    for (uint32_t i = 0; (i < (maxAlarms / 2)); ++i) {
+        Alarm alarm(t2, al);
+        status = timer.AddAlarm(alarm);
+        ASSERT_EQ(ER_OK, status) << "Status: " << QCC_StatusText(status);
+    }
+
+    /* Wait for t1 to pass */
+    qcc::Sleep(t1 - t0);
+
+    /* t1: stop the timer */
+    status = timer.Stop();
+    ASSERT_EQ(ER_OK, status) << "Status: " << QCC_StatusText(status);
+
+    /* Make sure there are ten t0 alarms fired with ER_OK and ten t2 alarms expired with ER_TIMER_EXITING */
+    triggeredAlarmsLock.Lock();
+    uint32_t alarmsFired = 0;
+    uint32_t alarmsExpired = 0;
+    while (!triggeredAlarms.empty()) {
+        pair<QStatus, Alarm> p = triggeredAlarms.front();
+        triggeredAlarms.pop_front();
+        if (p.first == ER_OK) {
+            ++alarmsFired;
+        } else if (p.first == ER_TIMER_EXITING) {
+            ++alarmsExpired;
+        }
+    }
+    triggeredAlarms.clear();
+    triggeredAlarmsLock.Unlock();
+    ASSERT_EQ(maxAlarms / 2, alarmsFired);
+    ASSERT_EQ(maxAlarms / 2, alarmsExpired);
+
+    /* Wait for t3 to pass */
+    qcc::Sleep(t3 - t2);
+
+    /* t3: triggeredAlarms should still be zero */
+    ASSERT_EQ(triggeredAlarms.size(), 0);
 }
