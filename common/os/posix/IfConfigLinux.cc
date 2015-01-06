@@ -699,12 +699,6 @@ static NetworkEventType NetworkEventRecv(qcc::SocketFd sockFd, char* buffer, int
                 newEventType = QCC_RTM_NEWADDR;
                 struct ifaddrmsg* ifa = (struct ifaddrmsg*)NLMSG_DATA(networkEvent);
                 uint32_t indexFamily = 0;
-                if (ifa->ifa_family == AF_INET) {
-                    indexFamily |= QCC_AF_INET_INDEX;
-                }
-                if (ifa->ifa_family == AF_INET6) {
-                    indexFamily |= QCC_AF_INET6_INDEX;
-                }
                 indexFamily |= (ifa->ifa_index << 2);
                 networkEvents.insert(indexFamily);
             } else if (networkEvent->nlmsg_type == NLMSG_DONE) {
