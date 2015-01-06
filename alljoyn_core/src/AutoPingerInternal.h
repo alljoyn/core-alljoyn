@@ -1,7 +1,7 @@
 /**
  * @file
  *
- * AutoPinger
+ * AutoPingerInternalInternal
  */
 
 /******************************************************************************
@@ -20,14 +20,15 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#ifndef _ALLJOYN_AUTOPINGER_H_
-#define _ALLJOYN_AUTOPINGER_H_
+#ifndef _ALLJOYN_AUTOPINGERINTERNAL_H_
+#define _ALLJOYN_AUTOPINGERINTERNAL_H_
 
 #ifndef __cplusplus
-#error Only include AutoPinger.h in C++ code.
+#error Only include AutoPingerInternal.h in C++ code.
 #endif
 
 #include <map>
+#include <qcc/Timer.h>
 #include <qcc/String.h>
 #include <qcc/Mutex.h>
 #include <qcc/Debug.h>
@@ -37,30 +38,28 @@
 namespace ajn {
 /// @cond ALLJOYN_DEV
 /** @internal Forward references */
-class AutoPingerInternal;
+struct PingGroup;
 class BusAttachment;
 /// @endcond
 
 /**
- * AutoPinger class
+ * AutoPingerInternal class
  */
-class AutoPinger {
+class AutoPingerInternal : public qcc::AlarmListener {
   public:
-
+    static void Init();
+    static void Cleanup();
 
     /**
      * Create instance of autopinger
      *
-     * @param busAttachment reference to the BusAttachment associated with this
-     *                      autopinger.
-     *
      */
-    AutoPinger(BusAttachment& busAttachment);
+    AutoPingerInternal(BusAttachment& busAttachment);
 
     /**
      * Destructor
      */
-    ~AutoPinger();
+    virtual ~AutoPingerInternal();
 
     /**
      * Pause all ping actions
@@ -125,19 +124,30 @@ class AutoPinger {
     QStatus RemoveDestination(const qcc::String& group, const qcc::String& destination, bool removeAll = false);
 
   private:
-    AutoPinger(const AutoPinger&);
-    void operator=(const AutoPinger&);
+    friend class AutoPingAsyncCB;
+    friend struct Destination;
+    friend class PingAsyncContext;
 
-    AutoPingerInternal*internal;
+    enum PingState {
+        UNKNOWN,
+        LOST,
+        AVAILABLE
+    };
 
+    AutoPingerInternal(const AutoPingerInternal&);
+    void operator=(const AutoPingerInternal&);
+
+    bool UpdatePingStateOfDestination(const qcc::String& group, const qcc::String& destination, const AutoPingerInternal::PingState state);
+    void PingGroupDestinations(const qcc::String& group);
+    bool IsRunning();
+    void AlarmTriggered(const qcc::Alarm& alarm, QStatus reason);
+
+    qcc::Timer timer; /* Single Timerthread */
+    BusAttachment& busAttachment;
+    qcc::Mutex pingerMutex;
+    std::map<qcc::String, PingGroup*> pingGroups;
+
+    bool pausing;
 };
-static class AutoPingerInit {
-  public:
-    AutoPingerInit();
-    ~AutoPingerInit();
-    static void Cleanup();
-  private:
-    static bool cleanedup;
-} autoPingerInit;
 }
-#endif /* AUTOPINGER_H_ */
+#endif /* AUTOPINGERINTERNAL_H_ */

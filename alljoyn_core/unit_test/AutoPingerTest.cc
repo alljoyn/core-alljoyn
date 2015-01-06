@@ -16,6 +16,9 @@
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/AutoPinger.h>
 #include <gtest/gtest.h>
+#include <qcc/Thread.h>
+
+#include "ajTestCommon.h"
 
 using namespace ajn;
 
@@ -29,10 +32,10 @@ class AutoPingerTest : public testing::Test {
     virtual void SetUp() {
         QStatus status = ER_OK;
         status = serviceBus.Start();
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status);
         ASSERT_FALSE(serviceBus.IsConnected());
         status = serviceBus.Connect();
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status);
         ASSERT_TRUE(serviceBus.IsConnected());
     }
 
