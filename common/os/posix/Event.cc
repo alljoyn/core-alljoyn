@@ -62,7 +62,7 @@ using namespace qcc;
 /** @internal */
 #define QCC_MODULE "EVENT"
 
-#if defined(MECHANISM_PIPE)
+#if defined(MECHANISM_PIPE) && !defined(DEBUG_EVENT_LEAKS)
 static Mutex* pipeLock = NULL;
 static vector<pair<int, int> >* freePipeList;
 static vector<pair<int, int> >* usedPipeList;
@@ -572,7 +572,7 @@ static void CreateMechanism(int* rdFd, int* wrFd)
 {
 #ifdef DEBUG_EVENT_LEAKS
     int fds[2];
-    int ret = pipe(fds);
+    pipe(fds);
     *rdFd = fds[0];
     *wrFd = fds[1];
     fcntl(fds[0], F_SETFL, O_NONBLOCK);
