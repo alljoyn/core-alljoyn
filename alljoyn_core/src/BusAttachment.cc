@@ -2384,7 +2384,7 @@ QStatus BusAttachment::Internal::SetSessionListener(SessionId id, SessionListene
         if (bitset & mask) {
             if (SessionExists(id, i) == true) {
                 sessionListenersLock[i].Lock(MUTEX_CONTEXT);
-                sessionListeners[i].insert(pair<SessionId, ProtectedSessionListener>(id, ProtectedSessionListener(listener)));
+                sessionListeners[i][id] = listener;
                 sessionListenersLock[i].Unlock(MUTEX_CONTEXT);
             } else {
                 ++fail;
