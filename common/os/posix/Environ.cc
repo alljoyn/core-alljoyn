@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -31,7 +31,7 @@
 #include <qcc/Environ.h>
 #include <qcc/String.h>
 #include <qcc/StringUtil.h>
-#include <qcc/CommonGlobals.h>
+#include <qcc/StaticGlobals.h>
 
 #define QCC_MODULE "ENVIRON"
 
@@ -48,7 +48,7 @@ extern char** environ;   // For Linux, this is all that's needed to access
 
 Environ* Environ::GetAppEnviron(void)
 {
-    return &commonGlobals.environSingleton;
+    return &staticGlobals.environSingleton;
 }
 
 qcc::String Environ::Find(const qcc::String& key, const char* defaultValue)

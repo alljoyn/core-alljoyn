@@ -8,7 +8,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2011, 2014 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2011, 2014-2015 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -98,19 +98,4 @@ typedef int32_t QCC_BOOL;
 /** Boolean logic false for QCC_BOOL type*/
 #define QCC_FALSE 0
 
-#ifdef __cplusplus
-/** Nifty counter used to ensure that AllJoyn Globals are initialized before any other client code static
- *  or global variables
- */
-static struct StaticGlobalsInit {
-    StaticGlobalsInit();
-    ~StaticGlobalsInit();
-    static void Cleanup();
-
-  private:
-    static bool cleanedup;
-
-} staticGlobalsInit;
-
-#endif
 #endif // _QCC_PLATFORM_H
