@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -251,9 +251,10 @@ QStatus Event::Wait(Event& evt, uint32_t maxWaitMs)
     }
 
     evt.IncrementNumThreads();
-
-    int ret = epoll_wait(epollfd, events, 2, pTval ? ((pTval->tv_sec * 1000) + (pTval->tv_usec / 1000)) : -1);
-
+    int ret;
+    do {
+        ret = epoll_wait(epollfd, events, 2, pTval ? ((pTval->tv_sec * 1000) + (pTval->tv_usec / 1000)) : -1);
+    } while (ret < 0 && errno == EINTR);
     evt.DecrementNumThreads();
 
     if (0 < ret && 0 <= stopFd) {
@@ -521,8 +522,10 @@ QStatus Event::Wait(const vector<Event*>& checkEvents, vector<Event*>& signaledE
             }
         }
     }
-
-    int ret = epoll_wait(epollfd, events, size, pTval ? ((pTval->tv_sec * 1000) + (pTval->tv_usec / 1000)) : -1);
+    int ret;
+    do {
+        ret = epoll_wait(epollfd, events, size, pTval ? ((pTval->tv_sec * 1000) + (pTval->tv_usec / 1000)) : -1);
+    } while (ret < 0 && errno == EINTR);
 
     if (0 <= ret) {
         for (int n = 0; n < ret; ++n) {
