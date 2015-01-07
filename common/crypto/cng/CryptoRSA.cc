@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2011, 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011, 2014-2015 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -368,7 +368,7 @@ class PBKD {
             return 0;
         }
         // Enable CBC mode
-        if (BCryptSetProperty(algHandle, BCRYPT_CHAINING_MODE, (PUCHAR)BCRYPT_CHAIN_MODE_CBC, wcslen(BCRYPT_CHAIN_MODE_CBC) + 1, 0) < 0) {
+        if (BCryptSetProperty(algHandle, BCRYPT_CHAINING_MODE, (PUCHAR)BCRYPT_CHAIN_MODE_CBC, sizeof(BCRYPT_CHAIN_MODE_CBC), 0) < 0) {
             QCC_LogError(ER_CRYPTO_ERROR, ("Failed to enable CBC mode on encryption algorithm provider"));
             return false;
         }
