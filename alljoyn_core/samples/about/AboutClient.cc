@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -38,7 +38,7 @@ static volatile sig_atomic_t s_interrupt = false;
 // connection between the service and the client using the about feature.
 static const char* INTERFACE_NAME = "com.example.about.feature.interface.sample";
 
-static void SigIntHandler(int sig) {
+static void CDECL_CALL SigIntHandler(int sig) {
     s_interrupt = true;
 }
 
