@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013,2015 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -50,7 +50,7 @@ static void LockingCb(int mode, int type, const char* file, int line)
 
 static int openSslCounter = 0;
 
-OpenSslInitializer::OpenSslInitializer()
+OpenSslInit::OpenSslInit()
 {
     if (0 == openSslCounter++) {
         locks = new Mutex[CRYPTO_num_locks()];
@@ -58,7 +58,7 @@ OpenSslInitializer::OpenSslInitializer()
     }
 }
 
-OpenSslInitializer::~OpenSslInitializer()
+OpenSslInit::~OpenSslInit()
 {
     if (0 == --openSslCounter) {
         CRYPTO_set_locking_callback(NULL);
@@ -90,9 +90,9 @@ OpenSsl_ScopedLock::~OpenSsl_ScopedLock()
     mutex->Unlock();
 }
 
-OpenSslInitializer::OpenSslInitializer() {
+OpenSslInit::OpenSslInit() {
 }
-OpenSslInitializer::~OpenSslInitializer() {
+OpenSslInit::~OpenSslInit() {
 }
 
 #endif

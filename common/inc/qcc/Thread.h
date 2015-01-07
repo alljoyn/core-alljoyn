@@ -6,7 +6,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011, 2014 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014-2015 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -75,13 +75,13 @@ class ThreadListener {
     virtual void ThreadExit(Thread* thread) = 0;
 };
 
-class ThreadListInitializer;
+class ThreadListInit;
 
 /**
  * Abstract encapsulation of the os-specific threads.
  */
 class Thread {
-    friend class ThreadListInitializer;
+    friend class ThreadListInit;
 
   public:
 
@@ -349,11 +349,11 @@ class Thread {
     static void SigHandler(int signal);
 };
 
-static class ThreadListInitializer {
+static class ThreadListInit {
   public:
-    ThreadListInitializer();
-    ~ThreadListInitializer();
-} threadListInitializer;
+    ThreadListInit();
+    ~ThreadListInit();
+} threadListInit;
 
 }
 

@@ -1,11 +1,12 @@
+#ifndef _QCC_STATICGLOBALSINIT_H
+#define _QCC_STATICGLOBALSINIT_H
 /**
  * @file
- *
- * Define utility functions for Windows.
+ * File for initializing global variables.
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011, 2014-2015, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -19,30 +20,27 @@
  *    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
-#ifndef _OS_QCC_UTILITY_H
-#define _OS_QCC_UTILITY_H
 
-#include <qcc/platform.h>
-#include <windows.h>
+#ifndef __cplusplus
+#error Only include StaticGlobalsInit.h in C++ code.
+#endif
 
-void strerror_r(uint32_t errCode, char* ansiBuf, uint16_t ansiBufSize);
-
-wchar_t* MultibyteToWideString(const char* str);
+namespace qcc {
 
 /**
- * Ensure that Winsock API is loaded.
- * Called before any operation that might be called before winsock has been started.
+ * Nifty counter used to ensure that common globals are initialized before any
+ * other client code static or global variables.
  */
-void WinsockCheck();
-
-static struct WinsockInit {
-    WinsockInit();
-    ~WinsockInit();
+static struct StaticGlobalsInit {
+    StaticGlobalsInit();
+    ~StaticGlobalsInit();
     static void Cleanup();
 
   private:
     static bool cleanedup;
 
-} winsockInit;
+} staticGlobalsInit;
 
-#endif
+}
+
+#endif // _QCC_STATICGLOBALSINIT_H
