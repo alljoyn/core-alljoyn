@@ -7,7 +7,7 @@
 /******************************************************************************
  *
  *
- * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -56,7 +56,7 @@ static alljoyn_sessionid s_sessionId = 0;
 
 static volatile sig_atomic_t g_interrupt = QCC_FALSE;
 
-static void SigIntHandler(int sig)
+static void CDECL_CALL SigIntHandler(int sig)
 {
     g_interrupt = QCC_TRUE;
 }

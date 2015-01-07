@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Copyright (c) 2010 - 2012, 2014 AllSeen Alliance. All rights reserved.
+# Copyright (c) 2010-2012, 2014-2015, AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -178,6 +178,15 @@ def writeHeaders():
 #    define AJ_CALL __stdcall
 #  else
 #    define AJ_CALL
+#  endif
+#endif
+
+/** This @#define allows for calling convention redefinition on relevant platforms */
+#ifndef CDECL_CALL
+#  if defined(QCC_OS_GROUP_WINDOWS)
+#    define CDECL_CALL __cdecl
+#  else
+#    define CDECL_CALL
 #  endif
 #endif
 

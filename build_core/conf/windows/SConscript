@@ -1,4 +1,4 @@
-# Copyright (c) 2010 - 2014, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2010 - 2015, AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -90,6 +90,12 @@ env.Append(CXXFLAGS=['/nologo', '/vmm', '/vmg'])
 env.Append(CFLAGS=['/EHsc'])
 env.Append(CXXFLAGS=['/EHsc'])
 
+# Enabling __stdcall calling convention on x86 results in smaller output EXE
+# files. This calling convention is also used by typical Windows APIs.
+if env['CPU'] == 'x86':
+    env.Append(CFLAGS=['/Gz'])
+    env.Append(CXXFLAGS=['/Gz'])
+
 # Lib setup
 env.Append(LFLAGS=['/NODEFAULTLIB:libcmt.lib'])
 env.Append(LINKFLAGS=['/NODEFAULTLIB:libcmt.lib'])
@@ -112,14 +118,14 @@ if env['VARIANT'] == 'debug':
    # (/MDd') to prevent build errors. 
    env.Append(CPPDEFINES=['_DEBUG', ('_ITERATOR_DEBUG_LEVEL', 2)])
    env.Append(CFLAGS=['/MDd', '/Od'])
-   env.Append(CXXFLAGS=['/MDd', '/Od', '/Gd', '/Ob1', '/W2', '/WX'])
+   env.Append(CXXFLAGS=['/MDd', '/Od', '/Ob1', '/W2', '/WX'])
    env.Append(LINKFLAGS=['/debug'])
    env.Append(JAVACFLAGS='-g -Xlint -Xlint:-serial')
 else:
    # MSVC 2010 an newer require _ITERATOR_DEBUG_LEVEL specified
    if env['MSVC_VERSION'] >= '10.0':
        env.Append(CPPDEFINES=[('_ITERATOR_DEBUG_LEVEL', 0)])
-   env.Append(CFLAGS=['/MD', '/Gy', '/O1', '/Ob2', '/Gd'])
+   env.Append(CFLAGS=['/MD', '/Gy', '/O1', '/Ob2'])
    env.Append(CXXFLAGS=['/MD', '/Gy', '/O1', '/Ob2', '/W2', '/WX'])
    env.Append(LINKFLAGS=['/opt:ref'])
    env.Append(JAVACFLAGS='-Xlint -Xlint:-serial')

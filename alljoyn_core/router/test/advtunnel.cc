@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2011,2014 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011, 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -66,7 +66,7 @@ const char* IPV6_MULTICAST_GROUP = "ff03::efff:2529";
 const uint16_t TUNNEL_PORT = 9973;
 
 /** Signal handler */
-static void SigIntHandler(int sig)
+static void CDECL_CALL SigIntHandler(int sig)
 {
     if (g_ns) {
         IpNameServiceImpl* ns = g_ns;

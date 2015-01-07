@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -471,7 +471,7 @@ void Client::Execute(uint64_t timeToRun)
 }
 
 
-void SignalHandler(int sig) {
+void CDECL_CALL SignalHandler(int sig) {
     if ((sig == SIGINT) ||
         (sig == SIGTERM)) {
         quit = 1;
