@@ -29,7 +29,6 @@
 
 #include <map>
 #include <qcc/String.h>
-#include <qcc/Mutex.h>
 #include <qcc/Debug.h>
 #include <alljoyn/Status.h>
 #include <alljoyn/PingListener.h>
