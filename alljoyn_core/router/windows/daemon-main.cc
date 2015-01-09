@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -69,7 +69,7 @@ using namespace std;
 
 static const char defaultConfig[] =
     "<busconfig>"
-    "  <limit name=\"auth_timeout\">5000</limit>"
+    "  <limit name=\"auth_timeout\">20000</limit>"
     "  <limit name=\"max_incomplete_connections\">16</limit>"
     "  <limit name=\"max_completed_connections\">64</limit>"
     "  <limit name=\"max_untrusted_clients\">48</limit>"
@@ -87,7 +87,7 @@ static const char internalConfig[] =
 
 static volatile sig_atomic_t g_interrupt = false;
 
-static void SignalHandler(int sig)
+static void CDECL_CALL SignalHandler(int sig)
 {
     g_interrupt = true;
 }

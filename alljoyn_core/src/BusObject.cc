@@ -32,6 +32,7 @@
 #include <qcc/Util.h>
 #include <qcc/String.h>
 #include <qcc/Mutex.h>
+#include <qcc/XmlElement.h>
 #include <alljoyn/DBusStd.h>
 #include <alljoyn/AllJoynStd.h>
 #include <alljoyn/BusObject.h>
@@ -60,7 +61,7 @@ typedef struct {
 
 struct BusObject::Components {
     /** The interfaces this object implements */
-    vector<const InterfaceDescription*> ifaces;
+    vector<pair<const InterfaceDescription*, bool> > ifaces;
     /** The method handlers for this object */
     vector<MethodContext> methodContexts;
     /** Child objects of this object */
@@ -88,12 +89,12 @@ static inline bool SecurityApplies(const BusObject* obj, const InterfaceDescript
  * Helper function to lookup an interface. Because we don't expect objects to implement more than a
  * small number of interfaces we just use a simple linear search.
  */
-static const InterfaceDescription* LookupInterface(vector<const InterfaceDescription*>& ifaces, const char* ifName)
+static const InterfaceDescription* LookupInterface(vector<pair<const InterfaceDescription*, bool> >& ifaces, const char* ifName)
 {
-    vector<const InterfaceDescription*>::const_iterator it = ifaces.begin();
+    vector<pair <const InterfaceDescription*, bool> >::const_iterator it = ifaces.begin();
     while (it != ifaces.end()) {
-        if (0 == strcmp((*it)->GetName(), ifName)) {
-            return *it;
+        if (0 == strcmp((it->first)->GetName(), ifName)) {
+            return it->first;
         } else {
             ++it;
         }
@@ -149,7 +150,7 @@ qcc::String BusObject::GenerateIntrospection(const char* languageTag, bool deep,
         if (deep || nodeDesc) {
             xml += ">\n";
             if (nodeDesc) {
-                xml += in + "  <description>" + nodeDesc + "</description>";
+                xml += in + "  <description>" + XmlElement::EscapeXml(nodeDesc) + "</description>";
             }
             if (deep) {
                 xml += child->GenerateIntrospection(languageTag, deep, indent + 2);
@@ -162,9 +163,22 @@ qcc::String BusObject::GenerateIntrospection(const char* languageTag, bool deep,
     }
     if (deep || !isPlaceholder) {
         /* Iterate over interfaces */
-        vector<const InterfaceDescription*>::const_iterator itIf = components->ifaces.begin();
+        vector<pair<const InterfaceDescription*, bool> >::const_iterator itIf = components->ifaces.begin();
         while (itIf != components->ifaces.end()) {
-            xml += (*itIf++)->Introspect(indent, languageTag, bus ? bus->GetDescriptionTranslator() : NULL);
+            /*
+             * We need to omit the standard D-Bus interfaces from the
+             * introspection data due to a bug in AllJoyn 14.06 and
+             * older.  This will allow older versions of AllJoyn to
+             * introspect us and not fail.  Sadly, this hack can never
+             * be removed.
+             */
+            if ((strcmp((itIf->first)->GetName(), org::freedesktop::DBus::InterfaceName) == 0) ||
+                (strcmp((itIf->first)->GetName(), org::freedesktop::DBus::Properties::InterfaceName) == 0)) {
+                ++itIf;
+            } else {
+                xml += (itIf->first)->Introspect(indent, languageTag, bus ? bus->GetDescriptionTranslator() : NULL);
+                ++itIf;
+            }
         }
     }
     return xml;
@@ -215,39 +229,107 @@ void BusObject::GetProp(const InterfaceDescription::Member* member, Message& msg
     }
 }
 
-void BusObject::EmitPropChanged(const char* ifcName, const char* propName, MsgArg& val, SessionId id)
+void BusObject::EmitPropChanged(const char* ifcName, const char* propName, MsgArg& val, SessionId id, uint8_t flags)
 {
+    QCC_DbgTrace(("BusObject::EmitPropChanged(ifcName = \"%s\", propName = \"%s\", val = <>, id = %u)",
+                  ifcName, propName, id));
     assert(bus);
     const InterfaceDescription* ifc = bus->GetInterface(ifcName);
 
     qcc::String emitsChanged;
     if (ifc && ifc->GetPropertyAnnotation(propName, org::freedesktop::DBus::AnnotateEmitsChanged, emitsChanged)) {
+        QCC_DbgPrintf(("emitsChanged = %s", emitsChanged.c_str()));
         if (emitsChanged == "true") {
-            const InterfaceDescription* bus_ifc = bus->GetInterface(org::freedesktop::DBus::InterfaceName);
+            const InterfaceDescription* bus_ifc = bus->GetInterface(org::freedesktop::DBus::Properties::InterfaceName);
             const InterfaceDescription::Member* propChanged = (bus_ifc ? bus_ifc->GetMember("PropertiesChanged") : NULL);
 
-            if (NULL != propChanged) {
+            QCC_DbgPrintf(("propChanged = %s", propChanged ? propChanged->name.c_str() : NULL));
+            if (propChanged != NULL) {
                 MsgArg args[3];
                 args[0].Set("s", ifcName);
                 MsgArg str("{sv}", propName, &val);
                 args[1].Set("a{sv}", 1, &str);
                 args[2].Set("as", 0, NULL);
-                Signal(NULL, id, *propChanged, args, ArraySize(args));
+                Signal(NULL, id, *propChanged, args, ArraySize(args), 0, flags);
             }
         } else if (emitsChanged == "invalidates") {
-            const InterfaceDescription* bus_ifc = bus->GetInterface(org::freedesktop::DBus::InterfaceName);
+            const InterfaceDescription* bus_ifc = bus->GetInterface(org::freedesktop::DBus::Properties::InterfaceName);
             const InterfaceDescription::Member* propChanged = (bus_ifc ? bus_ifc->GetMember("PropertiesChanged") : NULL);
-
             if (NULL != propChanged) {
                 // EMPTY array, followed by array of strings
                 MsgArg args[3];
                 args[0].Set("s", ifcName);
                 args[1].Set("a{sv}", 0, NULL);
                 args[2].Set("as", 1, &propName);
-                Signal(NULL, id, *propChanged, args, ArraySize(args));
+                Signal(NULL, id, *propChanged, args, ArraySize(args), 0, flags);
             }
         }
     }
+}
+
+QStatus BusObject::EmitPropChanged(const char* ifcName, const char** propNames, size_t numProps, SessionId id, uint8_t flags)
+{
+    assert(bus);
+    qcc::String emitsChanged;
+    QStatus status = ER_OK;
+
+    const InterfaceDescription* ifc = bus->GetInterface(ifcName);
+    if (!ifc) {
+        status = ER_BUS_UNKNOWN_INTERFACE;
+    } else {
+        MsgArg* updatedProp = new MsgArg[numProps];
+        const char** invalidatedProp = new const char*[numProps];
+        size_t updatedPropNum = 0;
+        size_t invalidatedPropNum = 0;
+
+        for (size_t i = 0; i < numProps; ++i) {
+            const char* propName = propNames[i];
+            const InterfaceDescription::Property* prop = ifc->GetProperty(propName);
+            if (!prop) {
+                status = ER_BUS_NO_SUCH_PROPERTY;
+                break;
+            }
+            if ((prop->access & PROP_ACCESS_READ) &&
+                ifc->GetPropertyAnnotation(String(propName), org::freedesktop::DBus::AnnotateEmitsChanged,
+                                           emitsChanged)) {
+                /* property has emitschanged annotation and is readable */
+                if (emitsChanged == "true") {
+                    /* also emit the value */
+                    MsgArg* val = new MsgArg();
+                    status = Get(ifcName, propName, *val);
+                    if (status != ER_OK) {
+                        delete val;
+                        status = ER_BUS_NO_SUCH_PROPERTY;
+                        break;
+                    }
+                    updatedProp[updatedPropNum].Set("{sv}", propName, val);
+                    updatedProp[updatedPropNum].SetOwnershipFlags(MsgArg::OwnsArgs, true /*deep*/);
+                    updatedPropNum++;
+                } else if (emitsChanged == "invalidates") {
+                    /* only emit that it's invalidated */
+                    invalidatedProp[invalidatedPropNum] = propName;
+                    invalidatedPropNum++;
+                }
+            }
+        }
+        if (status == ER_OK) {
+            const InterfaceDescription* bus_ifc = bus->GetInterface(org::freedesktop::DBus::Properties::InterfaceName);
+            assert(bus_ifc);
+            const InterfaceDescription::Member* propChanged = bus_ifc->GetMember("PropertiesChanged");
+            assert(propChanged);
+
+            MsgArg args[3];
+            args[0].Set("s", ifcName);
+            args[1].Set("a{sv}", updatedPropNum, updatedProp);
+            args[2].Set("as", invalidatedPropNum, invalidatedProp);
+            /* send the signal */
+            status = Signal(NULL, id, *propChanged, args, ArraySize(args), 0, flags);
+        }
+
+        delete[] updatedProp;
+        delete[] invalidatedProp;
+    }
+    return status;
 }
 
 
@@ -274,11 +356,7 @@ void BusObject::SetProp(const InterfaceDescription::Member* member, Message& msg
                     QCC_DbgPrintf(("Property value for %s has wrong type %s", property->v_string.str, prop->signature.c_str()));
                     status = ER_BUS_SET_WRONG_SIGNATURE;
                 } else if (prop->access & PROP_ACCESS_WRITE) {
-                    // set the value, then inform bus listeners via Signal
                     status = Set(iface->v_string.str, property->v_string.str, *(val->v_variant.val));
-                    // notify all session members that this property has changed
-                    const SessionId id = msg->hdrFields.field[ALLJOYN_HDR_FIELD_SESSION_ID].v_uint32;
-                    EmitPropChanged(iface->v_string.str, property->v_string.str, *(val->v_variant.val), id);
                 } else {
                     QCC_DbgPrintf(("No write access on property %s", property->v_string.str));
                     status = ER_BUS_PROPERTY_ACCESS_DENIED;
@@ -333,14 +411,12 @@ void BusObject::GetAllProps(const InterfaceDescription::Member* member, Message&
                         break;
                     }
                     entry->Set("{sv}", props[i]->name.c_str(), val);
+                    entry->v_dictEntry.val->SetOwnershipFlags(MsgArg::OwnsArgs, false);
                     entry++;
                 }
             }
             vals.Set("a{sv}", readable, dict);
-            /*
-             * Set ownership of the MsgArgs so they will be automatically freed.
-             */
-            vals.SetOwnershipFlags(MsgArg::OwnsArgs, true /*deep*/);
+            vals.SetOwnershipFlags(MsgArg::OwnsArgs, false);
         }
     } else {
         status = ER_BUS_UNKNOWN_INTERFACE;
@@ -417,7 +493,7 @@ void BusObject::InstallMethods(MethodTable& methodTable)
     }
 }
 
-QStatus BusObject::AddInterface(const InterfaceDescription& iface)
+QStatus BusObject::AddInterface(const InterfaceDescription& iface, AnnounceFlag isAnnounced)
 {
     QStatus status = ER_OK;
     if (isRegistered) {
@@ -457,7 +533,7 @@ QStatus BusObject::AddInterface(const InterfaceDescription& iface)
     }
 
     /* Add the new interface */
-    components->ifaces.push_back(&iface);
+    components->ifaces.push_back(make_pair(&iface, isAnnounced));
 
 ExitAddInterface:
 
@@ -475,11 +551,11 @@ QStatus BusObject::DoRegistration(BusAttachment& busAttachment)
     /* Add the standard DBus interfaces */
     const InterfaceDescription* introspectable = bus->GetInterface(org::freedesktop::DBus::Introspectable::InterfaceName);
     assert(introspectable);
-    components->ifaces.push_back(introspectable);
+    components->ifaces.push_back(make_pair(introspectable, false));
 
     const InterfaceDescription* allseenIntrospectable = bus->GetInterface(org::allseen::Introspectable::InterfaceName);
     assert(allseenIntrospectable);
-    components->ifaces.push_back(allseenIntrospectable);
+    components->ifaces.push_back(make_pair(allseenIntrospectable, false));
 
     /* Add the standard method handlers */
     const MethodEntry methodEntries[] = {
@@ -492,13 +568,13 @@ QStatus BusObject::DoRegistration(BusAttachment& busAttachment)
 
     /* If any of the interfaces has properties make sure the Properties interface and its method handlers are registered. */
     for (size_t i = 0; i < components->ifaces.size(); ++i) {
-        const InterfaceDescription* iface = components->ifaces[i];
+        const InterfaceDescription* iface = components->ifaces[i].first;
         if (iface->HasProperties() && !ImplementsInterface(org::freedesktop::DBus::Properties::InterfaceName)) {
 
             /* Add the org::freedesktop::DBus::Properties interface to this list of interfaces implemented by this obj */
             const InterfaceDescription* propIntf = bus->GetInterface(org::freedesktop::DBus::Properties::InterfaceName);
             assert(propIntf);
-            components->ifaces.push_back(propIntf);
+            components->ifaces.push_back(make_pair(propIntf, false));
 
             /* Attach the handlers */
             const MethodEntry propHandlerList[] = {
@@ -532,9 +608,6 @@ QStatus BusObject::Signal(const char* destination,
         return ER_BUS_OBJECT_NOT_REGISTERED;
     }
 
-    QStatus status;
-    Message msg(*bus);
-
     /*
      * If the object or interface is secure or encryption is explicitly requested the signal must be encrypted.
      */
@@ -544,21 +617,34 @@ QStatus BusObject::Signal(const char* destination,
     if ((flags & ALLJOYN_FLAG_ENCRYPTED) && !bus->IsPeerSecurityEnabled()) {
         return ER_BUS_SECURITY_NOT_ENABLED;
     }
-    status = msg->SignalMsg(signalMember.signature,
-                            destination,
-                            sessionId,
-                            path,
-                            signalMember.iface->GetName(),
-                            signalMember.name,
-                            args,
-                            numArgs,
-                            flags,
-                            timeToLive);
-    if (status == ER_OK) {
-        BusEndpoint bep = BusEndpoint::cast(bus->GetInternal().GetLocalEndpoint());
-        status = bus->GetInternal().GetRouter().PushMessage(msg, bep);
-        if ((status == ER_OK) && outMsg) {
-            *outMsg = msg;
+
+    std::set<SessionId> ids;
+    if (sessionId != SESSION_ID_ALL_HOSTED) {
+        ids.insert(sessionId);
+    } else {
+        ids = bus->GetInternal().GetHostedSessions();
+    }
+
+    QStatus status = ER_OK;
+
+    for (std::set<SessionId>::iterator it = ids.begin(); it != ids.end(); ++it) {
+        Message msg(*bus);
+        status = msg->SignalMsg(signalMember.signature,
+                                destination,
+                                *it,
+                                path,
+                                signalMember.iface->GetName(),
+                                signalMember.name,
+                                args,
+                                numArgs,
+                                flags,
+                                timeToLive);
+        if (status == ER_OK) {
+            BusEndpoint bep = BusEndpoint::cast(bus->GetInternal().GetLocalEndpoint());
+            QStatus status = bus->GetInternal().GetRouter().PushMessage(msg, bep);
+            if ((status == ER_OK) && outMsg) {
+                *outMsg = msg;
+            }
         }
     }
     return status;
@@ -662,7 +748,8 @@ QStatus BusObject::MethodReply(const Message& msg, QStatus status)
             return ER_BUS_NO_CALL_FOR_REPLY;
         } else {
             Message error(*bus);
-            error->ErrorMsg(msg, status);
+            QStatus result = error->ErrorMsg(msg, status);
+            assert(ER_OK == result); (void)result;
             BusEndpoint bep = BusEndpoint::cast(bus->GetInternal().GetLocalEndpoint());
             return bus->GetInternal().GetRouter().PushMessage(error, bep);
         }
@@ -826,7 +913,7 @@ void BusObject::IntrospectWithDescription(const InterfaceDescription::Member* me
     xml += "<node>\n";
     const char* desc = GetDescription(langTag, buffer);
     if (desc) {
-        xml += qcc::String("  <description>") + desc + "</description>\n";
+        xml += qcc::String("  <description>") + XmlElement::EscapeXml(desc) + "</description>\n";
     }
     if (isSecure) {
         xml += "  <annotation name=\"org.alljoyn.Bus.Secure\" value=\"true\"/>\n";
@@ -870,20 +957,20 @@ void BusObject::GetDescriptionLanguages(const InterfaceDescription::Member* memb
     }
 
     //...then add the languages of all this object's interfaces...
-    vector<const InterfaceDescription*>::const_iterator itIf = components->ifaces.begin();
+    vector<pair<const InterfaceDescription*, bool> >::const_iterator itIf = components->ifaces.begin();
     for (; itIf != components->ifaces.end(); itIf++) {
-        if (!(*itIf)->HasDescription()) {
+        if (!(itIf->first)->HasDescription()) {
             continue;
         }
 
         hasDescription = true;
 
-        const char* lang = (*itIf)->GetDescriptionLanguage();
+        const char* lang = (itIf->first)->GetDescriptionLanguage();
         if (lang && lang[0]) {
             langs.insert(qcc::String(lang));
         }
 
-        Translator* ifTranslator = (*itIf)->GetDescriptionTranslator();
+        Translator* ifTranslator = (itIf->first)->GetDescriptionTranslator();
         if (ifTranslator) {
             mergeTranslationLanguages(ifTranslator, langs);
         } else if (!someoneHasNoTranslator) {
@@ -924,6 +1011,30 @@ void BusObject::GetDescriptionLanguages(const InterfaceDescription::Member* memb
 void BusObject::SetDescriptionTranslator(Translator* translator)
 {
     this->translator = translator;
+}
+
+size_t BusObject::GetAnnouncedInterfaceNames(const char** interfaces, size_t numInterfaces)
+{
+    size_t retCount = 0;
+    for (size_t i = 0; i < components->ifaces.size(); ++i) {
+        if (components->ifaces[i].second == true) {
+            if (retCount < numInterfaces) {
+                interfaces[retCount] = components->ifaces[i].first->GetName();
+            }
+            ++retCount;
+        }
+    }
+    return retCount;
+}
+
+QStatus BusObject::SetAnnounceFlag(const InterfaceDescription* iface, AnnounceFlag isAnnounced) {
+    for (size_t i = 0; i < components->ifaces.size(); ++i) {
+        if (iface == components->ifaces[i].first) {
+            components->ifaces[i].second = isAnnounced;
+            return ER_OK;
+        }
+    }
+    return ER_BUS_OBJECT_NO_SUCH_INTERFACE;
 }
 
 }

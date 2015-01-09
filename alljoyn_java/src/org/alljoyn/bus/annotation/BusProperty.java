@@ -39,6 +39,8 @@ public @interface BusProperty {
      * The default property name is the method name without the "get"
      * or "set" prefix.  For example, if the method is getState() then
      * the default property name is "State".
+     *
+     * @return name specified in the BusProperty annotation
      */
     String name() default "";
 
@@ -46,11 +48,32 @@ public @interface BusProperty {
      * Signature of property.
      *
      * @see Signature
+     *
+     * @return signature specified in the BusProperty annotation
      */
     String signature() default "";
 
     /**
      * Description of this property
+     *
+     * @return descroption specified in the BusProperty annotation
      */
     String description() default "";
+
+    /** EmitChangedSignal annotate flag. */
+    int ANNOTATE_EMIT_CHANGED_SIGNAL = 1;
+
+    /** EmitChangedSignal annotate flag for invalidation notifications. */
+    int ANNOTATE_EMIT_CHANGED_SIGNAL_INVALIDATES = 2;
+
+    /**
+     * Annotate introspection data for method.
+     * The annotation may be the flag ANNOTATE_EMIT_CHANGED_SIGNAL or
+     * ANNOTATE_EMIT_CHANGED_SIGNAL_INVALIDATES.  See
+     * org.freedesktop.DBus.Property.EmitsChangedSignal in the D-Bus
+     * Specification.
+     *
+     * @return annotation EmitChagedSignal annotate flag specified in the BusProperty annotation
+     */
+    int annotation() default 0;
 }

@@ -38,7 +38,7 @@ using namespace std;
 
 namespace qcc {
 
-static qcc::String escapeXml(const qcc::String& str) {
+qcc::String XmlElement::EscapeXml(const qcc::String& str) {
     qcc::String outStr;
     qcc::String::const_iterator it = str.begin();
     int multi = 0;
@@ -114,7 +114,7 @@ static qcc::String escapeXml(const qcc::String& str) {
     return outStr;
 }
 
-static qcc::String unescapeXml(const qcc::String& str) {
+qcc::String XmlElement::UnescapeXml(const qcc::String& str) {
     bool inEsc = false;
     qcc::String outStr;
     qcc::String escName;
@@ -180,7 +180,7 @@ static qcc::String unescapeXml(const qcc::String& str) {
 void XmlElement::FinalizeElement(XmlParseContext& ctx)
 {
     /* Sanity check */
-    qcc::String cookedContent = Trim(unescapeXml(ctx.rawContent));
+    qcc::String cookedContent = Trim(UnescapeXml(ctx.rawContent));
     if ((0 < cookedContent.size()) && (0 < ctx.curElem->GetChildren().size())) {
         QCC_DbgPrintf(("XML Element <%s> has both children and content", ctx.curElem->GetName().c_str()));
     }
@@ -292,7 +292,7 @@ QStatus XmlElement::Parse(XmlParseContext& ctx)
         case XmlParseContext::IN_ATTR_VALUE:
             if (ctx.attrInQuote) {
                 if (ctx.quoteChar == c) {
-                    ctx.curElem->AddAttribute(ctx.attrName, unescapeXml(ctx.attrValue));
+                    ctx.curElem->AddAttribute(ctx.attrName, UnescapeXml(ctx.attrValue));
                     ctx.parseState = XmlParseContext::IN_ATTR_NAME;
                     ctx.attrName.clear();
                     ctx.attrValue.clear();
@@ -392,7 +392,7 @@ qcc::String XmlElement::Generate(qcc::String* outStr) const
             ++cit;
         }
     } else if (!content.empty()) {
-        outStr->append(escapeXml(content));
+        outStr->append(EscapeXml(content));
     }
 
     if (hasChildren || !content.empty()) {

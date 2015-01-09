@@ -60,10 +60,9 @@ class _DaemonEndpoint : public _RemoteEndpoint {
 
   public:
 
-    _DaemonEndpoint(BusAttachment& bus, bool incoming, const qcc::String connectSpec, SocketFd sock) :
+    _DaemonEndpoint(DaemonTransport* transport, BusAttachment& bus, bool incoming, const qcc::String connectSpec, SocketFd sock) :
         _RemoteEndpoint(bus, incoming, connectSpec, &stream, DaemonTransport::TransportName),
-        userId(-1),
-        groupId(-1),
+        m_transport(transport),
         processId(-1),
         stream(sock)
     {
@@ -72,39 +71,11 @@ class _DaemonEndpoint : public _RemoteEndpoint {
     ~_DaemonEndpoint() { }
 
     /**
-     * Set the user id of the endpoint.
-     *
-     * @param   userId      User ID number.
-     */
-    void SetUserId(uint32_t userId) { this->userId = userId; }
-
-    /**
-     * Set the group id of the endpoint.
-     *
-     * @param   groupId     Group ID number.
-     */
-    void SetGroupId(uint32_t groupId) { this->groupId = groupId; }
-
-    /**
      * Set the process id of the endpoint.
      *
      * @param   processId   Process ID number.
      */
     void SetProcessId(uint32_t processId) { this->processId = processId; }
-
-    /**
-     * Return the user id of the endpoint.
-     *
-     * @return  User ID number.
-     */
-    uint32_t GetUserId() const { return userId; }
-
-    /**
-     * Return the group id of the endpoint.
-     *
-     * @return  Group ID number.
-     */
-    uint32_t GetGroupId() const { return groupId; }
 
     /**
      * Return the process id of the endpoint.
@@ -120,9 +91,37 @@ class _DaemonEndpoint : public _RemoteEndpoint {
      */
     bool SupportsUnixIDs() const { return true; }
 
+    QStatus SetIdleTimeouts(uint32_t& reqIdleTimeout, uint32_t& reqProbeTimeout)
+    {
+        uint32_t maxIdleProbes = m_transport->m_numHbeatProbes;
+
+        /* If reqProbeTimeout == 0, Make no change to Probe timeout. */
+        if (reqProbeTimeout == 0) {
+            reqProbeTimeout = _RemoteEndpoint::GetProbeTimeout();
+        } else if (reqProbeTimeout > m_transport->m_maxHbeatProbeTimeout) {
+            /* Max allowed Probe timeout is m_maxHbeatProbeTimeout */
+            reqProbeTimeout = m_transport->m_maxHbeatProbeTimeout;
+        }
+
+        /* If reqIdleTimeout == 0, Make no change to Idle timeout. */
+        if (reqIdleTimeout == 0) {
+            reqIdleTimeout = _RemoteEndpoint::GetIdleTimeout();
+        }
+
+        /* Requested link timeout must be >= m_minHbeatIdleTimeout */
+        if (reqIdleTimeout < m_transport->m_minHbeatIdleTimeout) {
+            reqIdleTimeout = m_transport->m_minHbeatIdleTimeout;
+        }
+
+        /* Requested link timeout must be <= m_maxHbeatIdleTimeout */
+        if (reqIdleTimeout > m_transport->m_maxHbeatIdleTimeout) {
+            reqIdleTimeout = m_transport->m_maxHbeatIdleTimeout;
+        }
+        return _RemoteEndpoint::SetIdleTimeouts(reqIdleTimeout, reqProbeTimeout, maxIdleProbes);
+    }
+
   private:
-    uint32_t userId;
-    uint32_t groupId;
+    DaemonTransport* m_transport;        /**< The DaemonTransport holding the connection */
     uint32_t processId;
     SocketStream stream;
 };
@@ -242,7 +241,8 @@ void* DaemonTransport::Run(void* arg)
             qcc::String authName;
             qcc::String redirection;
             static const bool truthiness = true;
-            DaemonEndpoint conn = DaemonEndpoint(bus, truthiness, DaemonTransport::TransportName, newSock);
+            DaemonTransport* trans = this;
+            DaemonEndpoint conn = DaemonEndpoint(trans, bus, truthiness, DaemonTransport::TransportName, newSock);
 
             conn->SetUserId(uid);
             conn->SetGroupId(gid);
@@ -259,7 +259,7 @@ void* DaemonTransport::Run(void* arg)
             status = conn->Establish("EXTERNAL", authName, redirection);
             if (status == ER_OK) {
                 conn->SetListener(this);
-                status = conn->Start();
+                status = conn->Start(m_defaultHbeatIdleTimeout, m_defaultHbeatProbeTimeout, m_numHbeatProbes, m_maxHbeatProbeTimeout);
             }
             if (status != ER_OK) {
                 QCC_LogError(status, ("Error starting RemoteEndpoint"));

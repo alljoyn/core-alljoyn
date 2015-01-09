@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012,2014 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2012,2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -302,24 +302,35 @@ QStatus _Message::GetArgs(const char* signature, ...)
     return status;
 }
 
-_Message::_Message(BusAttachment& bus) :
-    bus(&bus),
-    endianSwap(false),
-    _msgBuf(NULL),
-    msgBuf(NULL),
-    msgArgs(NULL),
-    numMsgArgs(0),
-    refMsgArgs(NULL),
-    numRefMsgArgs(0),
-    ttl(0),
-    handles(NULL),
-    numHandles(0),
-    encrypt(false),
-    readState(MESSAGE_NEW),
-    countRead(0),
-    writeState(MESSAGE_NEW),
-    countWrite(0)
+_Message::_Message(BusAttachment& bus)
 {
+    Init(bus);
+}
+
+_Message::_Message(BusAttachment& bus, const HeaderFields& hdrFields)
+{
+    Init(bus);
+    this->hdrFields = hdrFields;
+}
+
+void _Message::Init(BusAttachment& bus)
+{
+    this->bus = &bus;
+    endianSwap = false;
+    _msgBuf = NULL;
+    msgBuf = NULL;
+    msgArgs = NULL;
+    numMsgArgs = 0;
+    refMsgArgs = NULL;
+    numRefMsgArgs = 0;
+    ttl = 0;
+    handles = NULL;
+    numHandles = 0;
+    encrypt = false;
+    readState = MESSAGE_NEW;
+    countRead = 0;
+    writeState = MESSAGE_NEW;
+    countWrite = 0;
     msgHeader.msgType = MESSAGE_INVALID;
     msgHeader.endian = myEndian;
 }
@@ -400,7 +411,6 @@ _Message::_Message(const _Message& other) :
         handles = NULL;
     }
 }
-
 
 QStatus _Message::ReMarshal(const char* senderName)
 {

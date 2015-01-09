@@ -33,7 +33,7 @@
 
 #include <Status.h>
 
-#include "CngCache.h"
+#include <qcc/CngCache.h>
 
 // This status code is defined in ntstatus.h but including nststatus.h generate numerous compiler
 // warnings about duplicate defines.
@@ -63,6 +63,25 @@ struct Crypto_AES::KeyState {
 
     BCRYPT_KEY_HANDLE handle;
     uint8_t* keyObj;
+  private:
+    /**
+     * Copy constructor
+     *
+     * @param src KeyState to be copied.
+     */
+    KeyState(const KeyState& src) {
+        /* private copy constructor to prevent copying */
+    }
+    /**
+     * Assignment operator
+     *
+     * @param src source KeyState
+     *
+     * @return copy of KeyState
+     */
+    KeyState& operator=(const KeyState& src) {
+        return *this;
+    }
 };
 
 Crypto_AES::Crypto_AES(const KeyBlob& key, Mode mode) : mode(mode), keyState(NULL)
@@ -81,7 +100,7 @@ Crypto_AES::Crypto_AES(const KeyBlob& key, Mode mode) : mode(mode), keyState(NUL
                 return;
             }
             // Enable CCM
-            if (BCryptSetProperty(cngCache.ccmHandle, BCRYPT_CHAINING_MODE, (PUCHAR)BCRYPT_CHAIN_MODE_CCM, wcslen(BCRYPT_CHAIN_MODE_CCM) + 1, 0) < 0) {
+            if (BCryptSetProperty(cngCache.ccmHandle, BCRYPT_CHAINING_MODE, (PUCHAR)BCRYPT_CHAIN_MODE_CCM, sizeof(BCRYPT_CHAIN_MODE_CCM), 0) < 0) {
                 status = ER_CRYPTO_ERROR;
                 QCC_LogError(status, ("Failed to enable CCM mode on AES algorithm provider"));
                 return;

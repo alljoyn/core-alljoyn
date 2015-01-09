@@ -1,4 +1,4 @@
-# Copyright (c) 2010 - 2014 AllSeen Alliance. All rights reserved.
+# Copyright (c) 2010 - 2015 AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -56,6 +56,7 @@ if env['OS_GROUP'] == 'windows':
         else:
             env.AppendUnique(LIBS = ['bcrypt', 'ncrypt', 'crypt32'])
             env['CRYPTO'] = 'cng'
+            env.Append(CPPDEFINES=['CRYPTO_CNG'])
             print 'Using CNG crypto libraries'
     else:
         env.Append(CPPPATH = ['$OPENSSL_BASE/include'])
@@ -67,6 +68,7 @@ elif env['OS'] in ['linux', 'openwrt']:
     env.AppendUnique(LIBS =['rt', 'stdc++', 'pthread', 'crypto', 'ssl', 'm'])
 
 elif env['OS'] == 'darwin':
+    env.Append(CPPDEFINES=['MECHANISM_PIPE'])
     env.AppendUnique(LIBS =['stdc++', 'pthread', 'crypto', 'ssl'])
     if env['CPU'] in ['arm', 'armv7', 'armv7s']:
         vars = Variables()

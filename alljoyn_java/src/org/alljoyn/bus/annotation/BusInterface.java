@@ -37,22 +37,39 @@ public @interface BusInterface {
      * The default AllJoyn interface name is the fully qualified name of
      * the Java interface.  The override may be used to specify the
      * explicit AllJoyn interface name.
+     *
+     * @return name specified by the BusInterface annotation
      */
     String name() default "";
 
     /**
+     * specify if the interface is announced
+     * possible values are "true" or "false"
+     * defaults to "false"
+     *
+     * @return announced value specified in the BusInterface annotation
+     */
+    String announced() default "false";
+
+    /**
      * This interface's description language
+     *
+     * @return descriptionLangauge specified in the BusInterface annotation
      */
     String descriptionLanguage() default "";
 
     /**
      * This interface's description
+     *
+     * @return description specified in the BusInterface annotation
      */
     String description() default "";
 
     /**
      * Class name of an org.alljoyn.bus.Translator instance used
      * to translate this interface's descriptions
+     *
+     * @return descriptionTranslator specified in the BusInterface annotation
      */
     String descriptionTranslator() default "";
 }

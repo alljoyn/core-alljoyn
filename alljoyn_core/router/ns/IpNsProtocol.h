@@ -2243,23 +2243,17 @@ class MDNSTextRData : public MDNSRData {
      * @brief Add/Set a key value pair.
      * @param key	The key to set.
      * @param value	The value to set.
+     * @param shared	Is this a shared key for the entire record.
      */
-    void SetValue(qcc::String key, qcc::String value);
-
-    /**
-     * @internal
-     * @brief Add/Set a key value pair.
-     * @param key	The key to set.
-     * @param value	The value to set.
-     */
-    void SetValue(qcc::String key, uint16_t value);
+    void SetValue(qcc::String key, qcc::String value, bool shared = false);
 
     /**
      * @internal
      * @brief Add/Set a key pair.
      * @param key	The key to set.
+     * @param shared	Is this a shared key for the entire record.
      */
-    void SetValue(qcc::String key);
+    void SetValue(qcc::String key, bool shared = false);
 
     /**
      * @internal
@@ -2268,6 +2262,14 @@ class MDNSTextRData : public MDNSRData {
      * @return The value in the map corresponding to the key.
      */
     qcc::String GetValue(qcc::String key);
+
+    /**
+     * @internal
+     * @brief Is this key present in the map.
+     * @param key	The key to search.
+     * @return true if key is present in the map.
+     */
+    bool HasKey(qcc::String key);
 
     /**
      * @internal
@@ -2896,6 +2898,15 @@ class MDNSSearchRData : public MDNSTextRData {
      * @return The name at the desired index in this Search RData.
      */
     qcc::String GetNameAt(int index) { return MDNSTextRData::GetFieldAt("n", index); }
+
+    /**
+     * @internal
+     * @brief Get the send_match_only option specified in the Search RData.
+     *
+     * @return true if only matching names need to be sent.
+     *         false if all names need to be sent.
+     */
+    bool SendMatchOnly();
 
     /**
      * @internal

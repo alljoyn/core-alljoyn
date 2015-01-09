@@ -62,7 +62,7 @@ class AnnounceHandlerTestPropertyStoreImpl {
         //setup the property store
         appId = new qcc::GUID128();
         deviceId = new qcc::GUID128();
-        status = propertyStore.setAppId(appId->RenderByteString());
+        status = propertyStore.setAppId(appId->ToString());
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         std::vector<qcc::String> languages(1);
         languages[0] = "en";
@@ -72,7 +72,7 @@ class AnnounceHandlerTestPropertyStoreImpl {
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         status = propertyStore.setDeviceName("AnnounceHandler Unit Test framework");
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-        status = propertyStore.setDeviceId(deviceId->RenderByteString());
+        status = propertyStore.setDeviceId(deviceId->ToString());
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         status = propertyStore.setAppName("AnnounceHander Unit Test");
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);

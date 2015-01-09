@@ -34,6 +34,8 @@ public @interface BusSignal {
     /**
      * Override of signal name.
      * The default AllJoyn signal name is the Java method name.
+     *
+     * @return name specified in the BusSignal annotation
      */
     String name() default "";
 
@@ -41,6 +43,8 @@ public @interface BusSignal {
      * Input signature for signal.
      *
      * @see Signature
+     *
+     * @return signature specified in the BusSignal annotation
      */
     String signature() default "";
 
@@ -48,11 +52,15 @@ public @interface BusSignal {
      * Output signature for signal.
      *
      * @see Signature
+     *
+     * @return replySignature specified in the BusSignal annotation
      */
     String replySignature() default "";
 
     /**
      * Description for this signal
+     *
+     * @return description specified in the BusSignal annotation
      */
     String description() default "";
 
@@ -60,6 +68,8 @@ public @interface BusSignal {
      * Set to true to document that this signal will be sent sessionless.
      * Note that this does not cause the signal to be sent sessionless,
      * just documents it as such.
+     *
+     * @return sessionless indicator specified in the BusSignal annotation
      */
     boolean sessionless() default false;
 
@@ -70,6 +80,8 @@ public @interface BusSignal {
      * Annotate introspection data for method.
      * The annotation may be the flag ANNOTATE_DEPRECATED.  See
      * org.freedesktop.DBus.Deprecated in the D-Bus Specification.
+     *
+     * @return annotation specifying if this signal is deprecated according to the BusSignal annotation
      */
     int annotation() default 0;
 }

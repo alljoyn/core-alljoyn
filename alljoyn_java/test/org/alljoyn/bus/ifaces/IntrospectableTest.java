@@ -54,8 +54,8 @@ public class IntrospectableTest extends TestCase {
         String data = introspectable.Introspect();
         // This test returns the xml definition of the org.freedesktop.DBus interface
         // rather than check the xml output we are only checking that the returned
-        // string is not empty and contains the tag <interface name="org.freedesktop.DBus">
+        // string is not empty and contains the tag <interface name="org.freedesktop.DBus.Introspectable">
         assertFalse(data.equals(""));
-        assertTrue(data.contains("<interface name=\"org.freedesktop.DBus\">"));
+        assertTrue(data.contains("<interface name=\"org.freedesktop.DBus.Introspectable\">"));
     }
 }

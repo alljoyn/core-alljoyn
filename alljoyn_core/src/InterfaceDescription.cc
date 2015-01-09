@@ -23,6 +23,7 @@
 #include <qcc/platform.h>
 #include <qcc/String.h>
 #include <qcc/StringMapKey.h>
+#include <qcc/XmlElement.h>
 #include <map>
 #include <alljoyn/AllJoynStd.h>
 #include <alljoyn/Status.h>
@@ -49,7 +50,7 @@ static size_t GetAnnotationsWithValues(
         typedef std::map<qcc::String, qcc::String> AnnotationsMap;
         count = std::min(count, size);
         AnnotationsMap::const_iterator mit = annotations.begin();
-        for (size_t i = 0; i < count; i++, mit++) {
+        for (size_t i = 0; i < count && mit != annotations.end(); ++i, ++mit) {
             names[i] = mit->first;
             values[i] = mit->second;
         }
@@ -113,19 +114,18 @@ void InterfaceDescription::AppendDescriptionXml(qcc::String& xml, const char* la
     if (!d || d[0] == '\0') {
         return;
     }
-    xml += indent + "  <description>" + d + "</description>\n";
+    xml += indent + "  <description>" + XmlElement::EscapeXml(d) + "</description>\n";
 }
 
-InterfaceDescription::Member::Member(
-    const InterfaceDescription* iface,
-    AllJoynMessageType type,
-    const char* name,
-    const char* signature,
-    const char* returnSignature,
-    const char* argNames,
-    uint8_t annotation,
-    const char* accessPerms)
-    : iface(iface),
+InterfaceDescription::Member::Member(const InterfaceDescription* iface,
+                                     AllJoynMessageType type,
+                                     const char* name,
+                                     const char* signature,
+                                     const char* returnSignature,
+                                     const char* argNames,
+                                     uint8_t annotation,
+                                     const char* accessPerms) :
+    iface(iface),
     memberType(type),
     name(name),
     signature(signature ? signature : ""),
@@ -200,10 +200,28 @@ bool InterfaceDescription::Member::operator==(const Member& o) const {
 }
 
 
-InterfaceDescription::Property::Property(const char* name, const char* signature, uint8_t access)
-    : name(name), signature(signature ? signature : ""), access(access), annotations(new AnnotationsMap()),
+InterfaceDescription::Property::Property(const char* name, const char* signature, uint8_t access) :
+    name(name),
+    signature(signature ? signature : ""),
+    access(access),
+    annotations(new AnnotationsMap()),
     description()
 {
+}
+
+
+InterfaceDescription::Property::Property(const char* name, const char* signature, uint8_t access, uint8_t annotation) :
+    name(name),
+    signature(signature ? signature : ""),
+    access(access),
+    annotations(new AnnotationsMap())
+{
+    if (annotation & PROP_ANNOTATE_EMIT_CHANGED_SIGNAL) {
+        (*annotations)[org::freedesktop::DBus::AnnotateEmitsChanged] = "true";
+    }
+    if (annotation & PROP_ANNOTATE_EMIT_CHANGED_SIGNAL_INVALIDATES) {
+        (*annotations)[org::freedesktop::DBus::AnnotateEmitsChanged] = "invalidates";
+    }
 }
 
 InterfaceDescription::Property::Property(const Property& other)
@@ -584,7 +602,7 @@ size_t InterfaceDescription::GetProperties(const Property** props, size_t numPro
     if (props) {
         count = min(count, numProps);
         Definitions::PropertyMap::const_iterator pit = defs->properties.begin();
-        for (size_t i = 0; i < count; i++, pit++) {
+        for (size_t i = 0; i < count && pit != defs->properties.end(); ++i, ++pit) {
             props[i] = &(pit->second);
         }
     }
@@ -603,7 +621,7 @@ size_t InterfaceDescription::GetMembers(const Member** members, size_t numMember
     if (members) {
         count = min(count, numMembers);
         Definitions::MemberMap::const_iterator mit = defs->members.begin();
-        for (size_t i = 0; i < count; i++, mit++) {
+        for (size_t i = 0; i < count && mit != defs->members.end(); ++i, ++mit) {
             members[i] = &(mit->second);
         }
     }

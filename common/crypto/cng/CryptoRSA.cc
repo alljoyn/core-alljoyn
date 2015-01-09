@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2011, 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011, 2014-2015 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -33,7 +33,7 @@
 
 #include <Status.h>
 
-#include "CngCache.h"
+#include <qcc/CngCache.h>
 
 
 using namespace std;
@@ -368,7 +368,7 @@ class PBKD {
             return 0;
         }
         // Enable CBC mode
-        if (BCryptSetProperty(algHandle, BCRYPT_CHAINING_MODE, (PUCHAR)BCRYPT_CHAIN_MODE_CBC, wcslen(BCRYPT_CHAIN_MODE_CBC) + 1, 0) < 0) {
+        if (BCryptSetProperty(algHandle, BCRYPT_CHAINING_MODE, (PUCHAR)BCRYPT_CHAIN_MODE_CBC, sizeof(BCRYPT_CHAIN_MODE_CBC), 0) < 0) {
             QCC_LogError(ER_CRYPTO_ERROR, ("Failed to enable CBC mode on encryption algorithm provider"));
             return false;
         }
@@ -403,6 +403,25 @@ class PBKD {
     DWORD keyLen;
     uint8_t* keyObj;
     BCRYPT_ALG_HANDLE algHandle;
+
+    /**
+     * Copy constructor
+     *
+     * @param src PBKD to be copied.
+     */
+    PBKD(const PBKD& src) {
+        /* private copy constructor to prevent copying */
+    }
+    /**
+     * Assignment operator
+     *
+     * @param src source PBKD
+     *
+     * @return copy of PBKD
+     */
+    PBKD& operator=(const PBKD& src) {
+        return *this;
+    }
 };
 
 static QStatus DecryptPriv(BCRYPT_KEY_HANDLE kdKey, qcc::String& ivec, const uint8_t* blob, size_t blobLen, BCRYPT_KEY_HANDLE& privKey, bool legacy)
@@ -777,7 +796,7 @@ size_t Crypto_RSA::GetSize()
         assert(ntStatus >= 0);
         if (ntStatus < 0) {
             QCC_LogError(ER_CRYPTO_ERROR, ("Failed to get key strength property"));
-            len = (size_t)-1;
+            len = -1;
         }
         size = len;
     }

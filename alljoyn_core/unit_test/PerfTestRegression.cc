@@ -4,7 +4,7 @@
  * automation framework.
  */
 /******************************************************************************
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011,2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -20,7 +20,6 @@
  ******************************************************************************/
 
 #include "ServiceSetup.h"
-#include "ClientSetup.h"
 #include "ServiceTestObject.h"
 #include "ajTestCommon.h"
 
@@ -30,16 +29,16 @@
 
 TEST(PerfTestRegression, Security_ALLJOYN_294_AddLogonEntry_Without_EnablePeerSecurity)
 {
-    ClientSetup testclient(ajn::getConnectArg().c_str());
-    qcc::String clientArgs = testclient.getClientArgs();
+    Environ*env = qcc::Environ::GetAppEnviron();
+    qcc::String clientArgs = env->Find("BUS_ADDRESS", ajn::getConnectArg().c_str());
 
     /* Create a Bus Attachment Object */
-    BusAttachment*serviceBus = new BusAttachment("ALLJOYN-294", true);
+    BusAttachment* serviceBus = new BusAttachment("ALLJOYN-294", true);
     ASSERT_TRUE(serviceBus != NULL);
     serviceBus->Start();
 
     QStatus status = serviceBus->Connect(clientArgs.c_str());
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
 
     status = serviceBus->AddLogonEntry("ALLJOYN_SRP_LOGON", "sleepy", "123456");
     ASSERT_EQ(status, ER_BUS_KEYSTORE_NOT_LOADED);

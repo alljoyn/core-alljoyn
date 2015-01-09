@@ -35,6 +35,7 @@
 #include <qcc/Timer.h>
 #include <qcc/GUID.h>
 
+#include <alljoyn/AllJoynStd.h>
 #include <alljoyn/BusObject.h>
 #include <alljoyn/Message.h>
 
@@ -60,6 +61,7 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
     public IpNameServiceListener {
     friend class _RemoteEndpoint;
     struct PingAlarmContext;
+    struct SessionMapEntry;
     class OutgoingPingInfo {
       public:
         qcc::Alarm alarm;
@@ -80,6 +82,11 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
         IncomingPingInfo();
     };
   public:
+    typedef enum {
+        LEAVE_HOSTED_SESSION,
+        LEAVE_JOINED_SESSION,
+        LEAVE_SESSION,
+    } LeaveSessionType;
     /**
      * Constructor
      *
@@ -170,6 +177,48 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
 
     /**
      * Respond to a bus request to leave a previously joined or created session.
+     * Note this function will produce an error if called on a self-joined session by
+     * a self-joined member (host or joiner)
+     *
+     * @param member  Member.
+     * @param msg     The incoming message.
+     */
+    void LeaveSession(const InterfaceDescription::Member* member, Message& msg);
+
+    /**
+     * Respond to a bus request to leave a created session.
+     *
+     *
+     * @param member  Member.
+     * @param msg     The incoming message.
+     */
+    void LeaveHostedSession(const InterfaceDescription::Member* member, Message& msg);
+
+    /**
+     * Respond to a bus request to leave a joined session.
+     *
+     * @param member  Member.
+     * @param msg     The incoming message.
+     */
+    void LeaveJoinedSession(const InterfaceDescription::Member* member, Message& msg);
+
+    /**
+     * Checks whether the LeaveSession/LeaveHostedSession/LeaveJoinedSession
+     * request is valid
+     *
+     * @param smEntry   Relevant sessionMapEntry
+     * @param sender    Sender of the request
+     * @param id        sessionid
+     * @param lst       type of leavesession request
+     * @param senderWasSelfJoined indicates whether sender was involved in self-joined session
+     *
+     * @return Returns an ALLJOYN_LEAVESESSION_REPLY_*
+     *
+     */
+    uint32_t CheckLeaveSession(const SessionMapEntry* smEntry, const char* sender, SessionId id, LeaveSessionType lst, bool& senderWasSelfJoined) const;
+
+    /**
+     * Common logic for all LeaveSession requests
      *
      * The input Message (METHOD_CALL) is expected to contain the following parameters:
      *   sessionId    uint32   Session identifier.
@@ -179,8 +228,9 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
      *
      * @param member  Member.
      * @param msg     The incoming message.
+     * @param lst     type of leavesession request
      */
-    void LeaveSession(const InterfaceDescription::Member* member, Message& msg);
+    void LeaveSessionCommon(const InterfaceDescription::Member* member, Message& msg, LeaveSessionType lst);
 
     /**
      * Respond to a bus request to advertise the existence of a remote AllJoyn instance.
@@ -331,6 +381,30 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
      * @param msg     The incoming message.
      */
     void SetLinkTimeout(const InterfaceDescription::Member* member, Message& msg);
+
+    /**
+     * Respond to a bus request to set the idle timeouts for a leaf node.
+     *
+     * The input Message (METHOD_CALL) is expected to contain the following parameters:
+     *   reqIdleTO    uint32  Requested Idle Timeout for the link. i.e. time after which the Routing node must
+     *                        must send a DBus ping to Leaf node in case of inactivity.
+     *                        Use 0 to leave unchanged.
+     *   reqProbeTO   uint32  Requested Probe timeout. The time from the Routing node sending the DBus
+     *                        ping to the expected response.
+     *                        Use 0 to leave unchanged.
+     *
+     *  Output params:
+     * The output Message (METHOD_REPLY) contains the following parameters:
+     *   disposition  uint32  ALLJOYN_SETIDLETIMEOUTS_* value
+     *   actIdleTO    uint32  Actual Idle Timeout. i.e. time after which the Routing node will
+     *                        send a DBus ping to Leaf node in case of inactivity.
+     *   actProbeTO   uint32  Actual Probe Timeout. The time from the Routing node sending the DBus ping
+     *                        to the expected response from the leaf node.
+     *
+     * @param member  Member.
+     * @param msg     The incoming message.
+     */
+    void SetIdleTimeouts(const InterfaceDescription::Member* member, Message& msg);
 
     /**
      * Add an alias to a Unix User ID
@@ -559,7 +633,9 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
     const InterfaceDescription::Member* lostAdvNameSignal; /**< org.alljoyn.Bus.LostAdvertisdName signal */
     const InterfaceDescription::Member* sessionLostSignal; /**< org.alljoyn.Bus.SessionLost signal */
     const InterfaceDescription::Member* sessionLostWithReasonSignal; /**< org.alljoyn.Bus.SessionLostWithReason signal */
+    const InterfaceDescription::Member* sessionLostWithReasonAndDispositionSignal; /**< org.alljoyn.Bus.SessionLostWithReasonAndDisposition signal */
     const InterfaceDescription::Member* mpSessionChangedSignal;  /**< org.alljoyn.Bus.MPSessionChanged signal */
+    const InterfaceDescription::Member* mpSessionChangedWithReason;  /**< org.alljoyn.Bus.MPSessionChangedWithReason signal */
     const InterfaceDescription::Member* mpSessionJoinedSignal;  /**< org.alljoyn.Bus.JoinSession signal */
 
     /** Map of open connectSpecs to local endpoint name(s) that require the connection. */
@@ -616,6 +692,30 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
         std::vector<qcc::String> memberNames;
         bool isInitializing;
         bool isRawReady;
+        bool IsSelfJoin() const {
+            return find(memberNames.begin(), memberNames.end(), sessionHost) != memberNames.end();
+        }
+
+        qcc::String ToString() const {
+            char idbuf[16];
+            qcc::String str;
+            str.append("endpoint: ");
+            str.append(endpointName);
+            str.append(", id: ");
+            snprintf(idbuf, sizeof(idbuf), "%u", id);
+            str.append(idbuf);
+            str.append(", host: ");
+            str.append(sessionHost);
+            str.append(", members: ");
+            for (std::vector<qcc::String>::const_iterator it = memberNames.begin(); it != memberNames.end(); ++it) {
+                str.append(*it);
+                str.append(",");
+            }
+            str.append(" selfjoin: ");
+            str.append(IsSelfJoin() ? "yes" : "no");
+            return str;
+        }
+
         SessionMapEntry() :
             id(0),
             sessionPort(0),
@@ -628,6 +728,11 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
     typedef std::multimap<std::pair<qcc::String, SessionId>, SessionMapEntry> SessionMapType;
 
     SessionMapType sessionMap;  /**< Map (endpointName,sessionId) to session info */
+
+    /**
+     * Helper function to convert a QStatus into a SessionLost reason
+     */
+    SessionListener::SessionLostReason ConvertReasonToSessionLostReason(QStatus reason) const;
 
     /*
      * Helper function to get session map interator
@@ -676,6 +781,33 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
     };
     std::map<qcc::String, std::set<AdvAliasEntry> > advAliasMap;  /**< Map remote daemon guid/transport to advertised name alias */
 
+    struct SentSetEntry {
+        qcc::String name;
+        TransportMask transport;
+        SentSetEntry(qcc::String name, TransportMask transport) : name(name), transport(transport) { }
+        bool operator<(const SentSetEntry& other) const {
+            // Order in descending order of transport so that UDP transport is sent first.
+            return (name < other.name) || ((name == other.name) && (transport > other.transport));
+        }
+        bool operator==(const SentSetEntry& other) const {
+            return name == other.name && transport == other.transport;
+        }
+    };
+
+    struct JoinSessionEntry {
+        qcc::String name;
+        TransportMask transport;
+        qcc::String busAddr;
+        JoinSessionEntry(qcc::String name, TransportMask transport, qcc::String busAddr) : name(name), transport(transport), busAddr(busAddr) { }
+        bool operator<(const JoinSessionEntry& other) const {
+            // Order in descending order of transport so that UDP transport is sent first.
+            return (name < other.name) || ((name == other.name) && (transport > other.transport))
+                   || ((name == other.name) && (transport == other.transport)  && (busAddr < other.busAddr));
+        }
+        bool operator==(const JoinSessionEntry& other) const {
+            return name == other.name && transport == other.transport && busAddr == other.busAddr;
+        }
+    };
     qcc::Timer timer;           /**< Timer object for reaping expired names */
 
     /**
@@ -815,17 +947,18 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
      * @param       entry    SessionMapEntry that was lost.
      * @param       reason   Reason for the SessionLost.
      */
-    void SendSessionLost(const SessionMapEntry& entry, QStatus reason);
+    void SendSessionLost(const SessionMapEntry& entry, QStatus reason, unsigned int disposition = 0);
 
     /**
      * Utility method used to send MPSessionChanged signal to locally attached endpoint.
      *
      * @param   sessionId   The sessionId.
      * @param   name        Unique name of session member that changed.
-     * @param   isAdd       true iff member added.
+     * @param   isAdd       true if member added.
      * @param   dest        Local destination for MPSessionChanged.
+     * @param   reason      Specifies the reason why the session changed
      */
-    void SendMPSessionChanged(SessionId sessionId, const char* name, bool isAdd, const char* dest);
+    void SendMPSessionChanged(SessionId sessionId, const char* name, bool isAdd, const char* dest, unsigned int reason);
 
     /**
      * Utility method used to invoke GetSessionInfo remote method.
@@ -961,8 +1094,9 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
      * @param id                Session id.
      * @param sendSessionLost   Whether to send a SessionLost to this endpoint.
      *                          Set to true if this endpoint is being forcefully removed from the session by the binder.
+     * @return   returns true if epName is still being used
      */
-    void RemoveSessionRefs(const char* epName, SessionId id, bool sendSessionLost = false);
+    bool RemoveSessionRefs(const char* epName, SessionId id, bool sendSessionLost = false, LeaveSessionType lst = LEAVE_SESSION);
 
     /**
      * Utility function used to clean up the session map when a virtual endpoint with a
@@ -1013,8 +1147,10 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
 
     std::multimap<std::pair<qcc::String, qcc::String>, OutgoingPingInfo> outgoingPingMap;
     std::multimap<qcc::String, IncomingPingInfo> incomingPingMap;
+    std::set<std::pair<qcc::String, qcc::String> > dbusPingsInProgress; //contains the caller of ping and destination of ping
     TransportMask GetCompleteTransportMaskFilter();
     void SendIPNSResponse(qcc::String name, uint32_t replyCode);
+    bool IsSelfJoinSupported(BusEndpoint& joinerEp) const;
 };
 
 }

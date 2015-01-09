@@ -7,7 +7,7 @@
 /******************************************************************************
  *
  *
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -34,6 +34,15 @@
 
 #include <Status.h>
 
+/*
+ * Must choose either pipes (MECHANISM_PIPE) or eventfd (MECHANISM_EVENTFD) as
+ * the underlying OS mechanism for events.  We prefer eventfd as it is more
+ * efficient, but we let users decide by pre-defining the mechanism.
+ */
+#if !defined(MECHANISM_EVENTFD) && !defined(MECHANISM_PIPE)
+// #define MECHANISM_PIPE
+#define MECHANISM_EVENTFD
+#endif
 
 /** @internal */
 namespace qcc {
@@ -51,10 +60,10 @@ class Event {
     static const uint32_t WAIT_FOREVER = static_cast<uint32_t>(-1);
 
     /** Singleton always set Event */
-    static Event alwaysSet;
+    static Event& alwaysSet;
 
     /** Singleton never set Event */
-    static Event neverSet;
+    static Event& neverSet;
 
     /** Type of event */
     typedef enum {
@@ -182,6 +191,13 @@ class Event {
      * @return  The underlying file descriptor or INVALID_SOCKET_FD.
      */
     SocketFd GetFD() { return ioFd; }
+
+    /**
+     * Get the underlying event type.
+     *
+     * @return  The underlying event type.
+     */
+    EventType GetEventType() { return eventType; }
 
     /**
      * Get the number of threads that are currently blocked waiting for this event

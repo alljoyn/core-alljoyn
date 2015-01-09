@@ -1,6 +1,6 @@
 /**
  * @file
- * This file redefines __dllexport or __dllimport on relevant platforms
+ * This file defines the attributes of exported functions.
  *
  * This file also defines the deferred callback mechanism used to make sure the
  * callbacks occur on the same thread that registered for the callback.
@@ -25,11 +25,11 @@
 
 #include <qcc/platform.h>
 
-/** This @#define allows for redefinition to __dllexport or __dllimport on relevant platforms */
+/**
+ * This @#define allows for setting of visibility support on relevant platforms
+ */
 #ifndef AJ_API
-#  if defined(QCC_OS_GROUP_WINDOWS)
-#    define AJ_API __declspec(dllexport)
-#  elif defined(QCC_OS_GROUP_POSIX)
+#  if defined(QCC_OS_GROUP_POSIX)
 #    define AJ_API __attribute__((visibility("default")))
 #  else
 #    define AJ_API
@@ -48,6 +48,11 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+typedef enum {
+    UNANNOUNCED, ///< The interface is not announced
+    ANNOUNCED    ///< The interface is announced
+} alljoyn_about_announceflag;
 
 /**
  * Unity-specific function to process alternate-thread callbacks on the main thread.

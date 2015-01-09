@@ -6,7 +6,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010 - 2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010 - 2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -201,6 +201,22 @@ class XmlElement {
      * @param path   The path to elements in the XML tree.
      */
     std::vector<const XmlElement*> GetPath(const qcc::String& path) const;
+
+    /**
+     * Utility function to escape text for use in XML
+     *
+     * @param str The unescaped string
+     * @return The escaped string
+     */
+    static qcc::String EscapeXml(const qcc::String& str);
+
+    /**
+     * Utility function to unescape text from XML
+     *
+     * @param str The escaped string
+     * @return The unescaped string
+     */
+    static qcc::String UnescapeXml(const qcc::String& str);
 
   private:
     qcc::String name;                                /**< Element name */

@@ -6,7 +6,7 @@
 /******************************************************************************
  *
  *
- * Copyright (c) 2009-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2012, 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -52,7 +52,7 @@ static SessionId s_sessionId = 0;
 
 static volatile sig_atomic_t s_interrupt = false;
 
-static void SigIntHandler(int sig)
+static void CDECL_CALL SigIntHandler(int sig)
 {
     s_interrupt = true;
 }
@@ -197,7 +197,7 @@ QStatus MakeMethodCall(void)
     inputs[0].Set("s", "Hello ");
     inputs[1].Set("s", "World!");
 
-    QStatus status = remoteObj.MethodCall(SERVICE_NAME, "cat", inputs, 2, reply, 5000);
+    QStatus status = remoteObj.MethodCall(INTERFACE_NAME, "cat", inputs, 2, reply, 5000);
 
     if (ER_OK == status) {
         printf("'%s.%s' (path='%s') returned '%s'.\n", SERVICE_NAME, "cat",

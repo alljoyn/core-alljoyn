@@ -7,7 +7,7 @@
 /******************************************************************************
  *
  *
- * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -53,7 +53,7 @@ static SessionId s_sessionId = 0;
 
 static volatile sig_atomic_t s_interrupt = false;
 
-static void SigIntHandler(int sig)
+static void CDECL_CALL SigIntHandler(int sig)
 {
     s_interrupt = true;
 }
@@ -295,21 +295,31 @@ QStatus MakeMethodCall(void)
     assert(alljoynTestIntf);
     remoteObj.AddInterface(*alljoynTestIntf);
 
-    Message reply(*g_msgBus);
-    MsgArg inputs[1];
-    char buffer[80];
+    /* The method call below specifies a small timeout value. Avoid timing out
+     * during the method call by prompting the user for a password here, instead
+     * of prompting the user during the method call.
+     */
+    QStatus status = remoteObj.SecureConnection(true);
 
-    sprintf(buffer, "%s says Hello AllJoyn!", clientName);
-
-    inputs[0].Set("s", buffer);
-
-    QStatus status = remoteObj.MethodCall(INTERFACE_NAME, "Ping", inputs, 1, reply, 5000);
-
-    if (ER_OK == status) {
-        printf("%s.Ping (path=%s) returned \"%s\".\n", INTERFACE_NAME,
-               SERVICE_PATH, reply->GetArg(0)->v_string.str);
+    if (ER_OK != status) {
+        printf("SecureConnection failed.\n");
     } else {
-        printf("MethodCall on %s.Ping failed.\n", INTERFACE_NAME);
+        Message reply(*g_msgBus);
+        MsgArg inputs[1];
+        char buffer[80];
+
+        sprintf(buffer, "%s says Hello AllJoyn!", clientName);
+
+        inputs[0].Set("s", buffer);
+
+        status = remoteObj.MethodCall(INTERFACE_NAME, "Ping", inputs, 1, reply, 5000);
+
+        if (ER_OK == status) {
+            printf("%s.Ping (path=%s) returned \"%s\".\n", INTERFACE_NAME,
+                   SERVICE_PATH, reply->GetArg(0)->v_string.str);
+        } else {
+            printf("MethodCall on %s.Ping failed.\n", INTERFACE_NAME);
+        }
     }
 
     return status;

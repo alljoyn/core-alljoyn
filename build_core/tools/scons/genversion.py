@@ -20,7 +20,7 @@ import re
 import sys
 from subprocess import *
 
-ver_re = re.compile('int\s+(?P<REL>year|month|feature|bugfix)\s*=\s*\'?(?P<VAL>\w+)\'?\s*;\s*$')
+ver_re = re.compile('int\s+(?P<REL>year|month|feature|bugfix)\s*=\s*\'?(?P<VAL>\w+)\'?\s*;')
 
 def GetBuildInfo(env, source, stderr=PIPE ):
     branches = []
@@ -91,7 +91,7 @@ def ParseSource(source):
     year = 0
     month = 0
     feature = 0
-    bugfix = 0
+    bugfix = ''
     f = open(source, 'r')
     lines = f.readlines()
     f.close();

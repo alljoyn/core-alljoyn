@@ -34,6 +34,7 @@
 #include "Router.h"
 #include "DaemonSLAPTransport.h"
 #include "BusController.h"
+#include "ConfigDB.h"
 
 #define QCC_MODULE "DAEMON_SLAP"
 
@@ -120,6 +121,36 @@ class _DaemonSLAPEndpoint : public _RemoteEndpoint {
     QStatus Join();
 
     virtual void ThreadExit(qcc::Thread* thread);
+
+    QStatus SetIdleTimeouts(uint32_t& reqIdleTimeout, uint32_t& reqProbeTimeout)
+    {
+        uint32_t maxIdleProbes = m_transport->m_numHbeatProbes;
+
+        /* If reqProbeTimeout == 0, Make no change to Probe timeout. */
+        if (reqProbeTimeout == 0) {
+            reqProbeTimeout = _RemoteEndpoint::GetProbeTimeout();
+        } else if (reqProbeTimeout > m_transport->m_maxHbeatProbeTimeout) {
+            /* Max allowed Probe timeout is m_maxHbeatProbeTimeout */
+            reqProbeTimeout = m_transport->m_maxHbeatProbeTimeout;
+        }
+
+        /* If reqIdleTimeout == 0, Make no change to Idle timeout. */
+        if (reqIdleTimeout == 0) {
+            reqIdleTimeout = _RemoteEndpoint::GetIdleTimeout();
+        }
+
+        /* Requested link timeout must be >= m_minHbeatIdleTimeout */
+        if (reqIdleTimeout < m_transport->m_minHbeatIdleTimeout) {
+            reqIdleTimeout = m_transport->m_minHbeatIdleTimeout;
+        }
+
+        /* Requested link timeout must be <= m_maxHbeatIdleTimeout */
+        if (reqIdleTimeout > m_transport->m_maxHbeatIdleTimeout) {
+            reqIdleTimeout = m_transport->m_maxHbeatIdleTimeout;
+        }
+
+        return _RemoteEndpoint::SetIdleTimeouts(reqIdleTimeout, reqProbeTimeout, maxIdleProbes);
+    }
 
   private:
     class AuthThread : public qcc::Thread {
@@ -378,6 +409,17 @@ DaemonSLAPTransport::~DaemonSLAPTransport()
 QStatus DaemonSLAPTransport::Start()
 {
     stopping = false;
+    ConfigDB* config = ConfigDB::GetConfigDB();
+    m_minHbeatIdleTimeout = config->GetLimit("slap_min_idle_timeout", MIN_HEARTBEAT_IDLE_TIMEOUT_DEFAULT);
+    m_maxHbeatIdleTimeout = config->GetLimit("slap_max_idle_timeout", MAX_HEARTBEAT_IDLE_TIMEOUT_DEFAULT);
+    m_defaultHbeatIdleTimeout = config->GetLimit("slap_default_idle_timeout", DEFAULT_HEARTBEAT_IDLE_TIMEOUT_DEFAULT);
+
+    m_numHbeatProbes = HEARTBEAT_NUM_PROBES;
+    m_maxHbeatProbeTimeout = config->GetLimit("slap_max_probe_timeout", MAX_HEARTBEAT_PROBE_TIMEOUT_DEFAULT);
+    m_defaultHbeatProbeTimeout = config->GetLimit("slap_default_probe_timeout", DEFAULT_HEARTBEAT_PROBE_TIMEOUT_DEFAULT);
+
+    QCC_DbgPrintf(("DaemonSLAPTransport: Using m_minHbeatIdleTimeout=%u, m_maxHbeatIdleTimeout=%u, m_numHbeatProbes=%u, m_defaultHbeatProbeTimeout=%u m_maxHbeatProbeTimeout=%u", m_minHbeatIdleTimeout, m_maxHbeatIdleTimeout, m_numHbeatProbes, m_defaultHbeatProbeTimeout, m_maxHbeatProbeTimeout));
+
     return Thread::Start();
 }
 
@@ -679,25 +721,25 @@ void* DaemonSLAPTransport::Run(void* arg)
         checkEvents.clear();
         checkEvents.push_back(&stopEvent);
 
-        for (list<ListenEntry>::iterator i = m_listenList.begin(); i != m_listenList.end(); i++) {
+        for (list<ListenEntry>::iterator it = m_listenList.begin(); it != m_listenList.end(); ++it) {
 
-            if (i->listenFd == -1) {
+            if (it->listenFd == -1) {
                 /* open the port and set listen fd */
                 UARTFd listenFd;
-                QStatus uartStatus = UART(i->args["dev"], StringToU32(i->args["baud"]), StringToU32(i->args["databits"]),
-                                          i->args["parity"], StringToU32(i->args["stopbits"]), listenFd);
+                QStatus uartStatus = UART(it->args["dev"], StringToU32(it->args["baud"]), StringToU32(it->args["databits"]),
+                                          it->args["parity"], StringToU32(it->args["stopbits"]), listenFd);
 
                 if (uartStatus == ER_OK && listenFd != -1) {
-                    i->listenFd = listenFd;
-                    checkEvents.push_back(new Event(i->listenFd, Event::IO_READ));
-                    QCC_DbgPrintf(("DaemonSLAPTransport::Run(): Adding checkevent for %s to list of events", i->args["dev"].c_str()));
+                    it->listenFd = listenFd;
+                    checkEvents.push_back(new Event(it->listenFd, Event::IO_READ));
+                    QCC_DbgPrintf(("DaemonSLAPTransport::Run(): Adding checkevent for %s to list of events", it->args["dev"].c_str()));
                 } else {
-                    QCC_LogError(uartStatus, ("DaemonSLAPTransport::Run(): Failed to open for %s", i->args["dev"].c_str()));
-                    m_listenList.erase(i++);
+                    QCC_LogError(uartStatus, ("DaemonSLAPTransport::Run(): Failed to open for %s", it->args["dev"].c_str()));
+                    m_listenList.erase(it++);
                 }
-            } else if (!i->endpointStarted) {
-                checkEvents.push_back(new Event(i->listenFd, Event::IO_READ));
-                QCC_DbgPrintf(("DaemonSLAPTransport::Run(): Adding checkevent for %s to list of events", i->args["dev"].c_str()));
+            } else if (!it->endpointStarted) {
+                checkEvents.push_back(new Event(it->listenFd, Event::IO_READ));
+                QCC_DbgPrintf(("DaemonSLAPTransport::Run(): Adding checkevent for %s to list of events", it->args["dev"].c_str()));
             }
         }
 
@@ -788,7 +830,7 @@ void DaemonSLAPTransport::Authenticated(DaemonSLAPEndpoint& conn)
 
     conn->SetEpStarting();
 
-    QStatus status = conn->Start();
+    QStatus status = conn->Start(m_defaultHbeatIdleTimeout, m_defaultHbeatProbeTimeout, m_numHbeatProbes, m_maxHbeatProbeTimeout);
     if (status != ER_OK) {
         QCC_LogError(status, ("DaemonSLAPTransport::Authenticated(): Failed to start DaemonSLAPEndpoint"));
         /*

@@ -17,7 +17,7 @@
  * \file
  *
  * \name AllJoyn&trade; JavaScript API Reference Manual
- * \version 0.0.1
+ * \version 00.00.01
  *
  * Type coercion between DBus and JavaScript types is done according to the following table.
  * <table>
@@ -247,6 +247,7 @@ interface BusAttachment {
      * \brief Registers a locally located DBus object.
      *
      * Throws BusError BUS_BAD_OBJ_PATH if the object path is bad.
+     * Throws BusError BUS_OBJ_ALREADY_EXISTS if an object is already registered at this path.
      *
      * \param objectPath the absolute object path of the DBus object
      * \param busObject the DBus object implementation

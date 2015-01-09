@@ -186,6 +186,14 @@ class NameTable {
     BusEndpoint FindEndpoint(const qcc::String& busName) const;
 
     /**
+     * Return whether this is a unique name of a locally connected endpoint.
+     *
+     * @param uniqueName   Unique name to check.
+     * @return  true if a locally connected endpoint has this unique name.
+     */
+    bool IsValidLocalUniqueName(const qcc::String& uniqueName) const;
+
+    /**
      * Get all bus names from name table.
      *
      * @param[out] names Vector of names.

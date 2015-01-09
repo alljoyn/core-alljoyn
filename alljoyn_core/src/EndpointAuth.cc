@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011,2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -199,7 +199,8 @@ QStatus EndpointAuth::WaitHello(qcc::String& authUsed)
                 status = endpoint->UntrustedClientStart();
                 if (status != ER_OK) {
                     QCC_DbgPrintf(("Untrusted client is being rejected"));
-                    hello->ErrorMsg(hello, UntrustedError, "");
+                    QStatus result = hello->ErrorMsg(hello, UntrustedError, "");
+                    assert(ER_OK == result); (void)result;
                     hello->Deliver(endpoint);
                     return status;
                 }

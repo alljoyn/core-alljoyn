@@ -17,6 +17,8 @@
 #include <alljoyn/MsgArg.h>
 #include <alljoyn/about/AboutPropertyStoreImpl.h>
 
+#include <qcc/GUID.h>
+
 using namespace ajn;
 using namespace ajn::services;
 
@@ -92,6 +94,29 @@ TEST(PropertyStoreImplTest, setDeviceId)
     const char* out;
     arg.Get("s", &out);
     EXPECT_STREQ("MyDeviceId", out);
+}
+
+// ASACORE-1119
+TEST(ProperteyStoreImplTest, setDeviceIdUsingGUIDWithZeroByteInString) {
+    const char* GUID = "00112233445566778899AABBCCDDEEFF";
+    AboutPropertyStoreImpl propertyStore;
+    qcc::GUID128* deviceId = new qcc::GUID128(qcc::String(GUID, 32));
+    QStatus status = propertyStore.setDeviceId(deviceId->ToString());
+    if (status == ER_INVALID_VALUE) {
+        ajn::MsgArg ma = propertyStore.getProperty(ajn::services::DEVICE_ID)->getPropertyValue();
+        printf("setDeviceId() failed because the length of the GUID is: %d \n", ma.v_string.len);
+    }
+    PropertyStoreProperty* psp = propertyStore.getProperty(DEVICE_ID);
+
+    EXPECT_TRUE(psp->getIsPublic());
+    EXPECT_FALSE(psp->getIsWritable());
+    EXPECT_TRUE(psp->getIsAnnouncable());
+
+    MsgArg arg = psp->getPropertyValue();
+    const char* out;
+    arg.Get("s", &out);
+    EXPECT_STRCASEEQ(GUID, out);
+    delete deviceId;
 }
 
 // TODO HLD says device name should be localizable

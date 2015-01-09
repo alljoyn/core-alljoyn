@@ -62,7 +62,9 @@ then
 	options='--no-bt --verbosity=5'
 
 	bus_address="tcp:addr=127.0.0.1,port=9956"
+	# sometimes Windows "home" does not work for keystore tests
 	export USERPROFILE="$( cygpath -wa . )"
+	export LOCALAPPDATA="$USERPROFILE"
 else
 	: any kind of Linux
 

@@ -73,16 +73,17 @@ TEST(ConcurrentCallbackTest, enableconcurrentcallbacks_not_used)
         if (listener_registered_flag) {
             break;
         }
-        qcc::Sleep(5);
+        qcc::Sleep(50);
     }
     EXPECT_TRUE(listener_registered_flag);
 
-    alljoyn_busattachment_requestname(s_bus, OBJECT_NAME, 0);
+    status = alljoyn_busattachment_requestname(s_bus, OBJECT_NAME, 0);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     for (size_t i = 0; i < 200; ++i) {
         if (name_owner_changed_flag) {
             break;
         }
-        qcc::Sleep(5);
+        qcc::Sleep(50);
     }
     EXPECT_TRUE(name_owner_changed_flag);
 

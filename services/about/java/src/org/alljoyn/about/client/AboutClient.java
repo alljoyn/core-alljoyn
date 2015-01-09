@@ -33,14 +33,14 @@ public interface AboutClient extends ClientBase
     /**
      * Get the language that is used for Announcements.
      * @return a String representing the language. IETF language tags specified by  RFC 5646.
-     * @throws BusException
+     * @throws BusException indicating failure getting the default language
      */
     public String getDefaultLanguage() throws BusException;
 
     /**
      * Get the languages that are supported by the device.
      * @return a String array of languages. IETF language tags specified by  RFC 5646.
-     * @throws BusException
+     * @throws BusException indicating failure getting the list of languages supported by the device
      */
     public String[] getLanguages() throws BusException;
 
@@ -50,7 +50,7 @@ public interface AboutClient extends ClientBase
      * @return All the configuration fields based on the language tag. 
      *         If language tag is not specified (i.e. ""), fields based on device's
      *         default language are returned
-     * @throws BusException
+     * @throws BusException indicating failure getting the AboutData for the specified language
      * @see AboutKeys
      */
     public Map <String, Object> getAbout(String languageTag) throws BusException;
@@ -59,7 +59,7 @@ public interface AboutClient extends ClientBase
      * Returns the Bus Interfaces and Bus Objects supported by the device.
      * @return the array of object paths and the list of all interfaces available
      *         at the given object path.
-     * @throws BusException
+     * @throws BusException indicating failure to get the BusObjectDescriptions
      */
     public BusObjectDescription[] getBusObjectDescriptions() throws BusException;
 }

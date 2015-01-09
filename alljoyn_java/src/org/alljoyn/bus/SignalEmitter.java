@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -19,6 +19,9 @@ package org.alljoyn.bus;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.util.Arrays;
+
+import org.alljoyn.bus.ifaces.Properties;
 
 /**
  * A helper proxy used by BusObjects to send signals.  A SignalEmitter
@@ -30,13 +33,13 @@ public class SignalEmitter {
     private static final int COMPRESSED = 0x40;
     private static final int SESSIONLESS = 0x10;
 
-    private BusObject source;
-    private String destination;
-    private int sessionId;
+    protected BusObject source;
+    private final String destination;
+    private final int sessionId;
     private int timeToLive;
     private int flags;
-    private Object proxy;
-    private MessageContext msgContext;
+    private final Object proxy;
+    private final MessageContext msgContext;
 
     /** Controls behavior of broadcast signals ({@code null} desintation). */
     public enum GlobalBroadcast {
@@ -59,7 +62,9 @@ public class SignalEmitter {
      *
      * @param source the source object of any signals sent from this emitter
      * @param destination well-known or unique name of destination for signal
-     * @param sessionId A unique SessionId for this AllJoyn session instance
+     * @param sessionId A unique SessionId for this AllJoyn session instance,
+     *                  or BusAttachment.SESSION_ID_ALL_HOSTED to emit on all
+     *                  sessions hosted by the BusAttachment.
      * @param globalBroadcast whether to forward broadcast signals
      *                        across bus-to-bus connections
      */
@@ -70,8 +75,11 @@ public class SignalEmitter {
         this.flags = (globalBroadcast == GlobalBroadcast.On)
                 ? this.flags | GLOBAL_BROADCAST
                 : this.flags & ~GLOBAL_BROADCAST;
-        proxy = Proxy.newProxyInstance(source.getClass().getClassLoader(),
-                                       source.getClass().getInterfaces(), new Emitter());
+
+        Class<?>[] interfaces = source.getClass().getInterfaces();
+        Class<?>[] interfacesNew = Arrays.copyOf(interfaces, interfaces.length + 1);
+        interfacesNew[interfaces.length] = Properties.class;
+        proxy = Proxy.newProxyInstance(source.getClass().getClassLoader(), interfacesNew, new Emitter());
         msgContext = new MessageContext();
     }
 
@@ -114,6 +122,7 @@ public class SignalEmitter {
 
     private class Emitter implements InvocationHandler {
 
+        @Override
         public Object invoke(Object proxy, Method method, Object[] args) throws BusException {
             for (Class<?> i : proxy.getClass().getInterfaces()) {
                 for (Method m : i.getMethods()) {
@@ -200,7 +209,9 @@ public class SignalEmitter {
     /**
      * Gets a proxy to the interface that emits signals.
      *
+     * @param <T> any class implementation of a interface annotated with AllJoyn interface annotations
      * @param intf the interface of the bus object that emits the signals
+     *
      * @return the proxy implementing the signal emitter
      */
     public <T> T getInterface(Class<T> intf) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -22,6 +22,7 @@ import org.alljoyn.bus.BusException;
 import org.alljoyn.bus.Variant;
 import org.alljoyn.bus.annotation.BusInterface;
 import org.alljoyn.bus.annotation.BusMethod;
+import org.alljoyn.bus.annotation.BusSignal;
 
 /**
  * The standard org.freedesktop.DBus.Properties interface that can be
@@ -62,4 +63,15 @@ public interface Properties {
      */
     @BusMethod(signature = "s", replySignature = "a{sv}")
     Map<String, Variant> GetAll(String iface) throws BusException;
+
+    /**
+     * Notifies others about changes to properties.
+     *
+     * @param iface the interface
+     * @param changedProps a map of property names an their new values
+     * @param invalidatedProps a list of property names whose values are invalidated
+     * @throws BusException indicating failure sending PropertiesChanged signal
+     */
+    @BusSignal(signature = "sa{sv}as")
+    void PropertiesChanged(String iface, Map<String, Variant> changedProps, String [] invalidatedProps) throws BusException;
 }

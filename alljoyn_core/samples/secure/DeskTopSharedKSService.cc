@@ -7,7 +7,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2011, 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2011, 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -55,7 +55,7 @@ static volatile sig_atomic_t s_interrupt = false;
 /**
  * Control-C signal handler
  */
-static void SigIntHandler(int sig)
+static void CDECL_CALL SigIntHandler(int sig)
 {
     s_interrupt = true;
 }

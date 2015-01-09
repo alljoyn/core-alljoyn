@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -144,6 +144,8 @@ public class BusListener {
     public void nameOwnerChanged(String busName, String previousOwner, String newOwner) {}
 
     /**
+     * @deprecated This is deprecated.  It is no longer called when properties change.  Use the property change notification mechanism for proxy bus objects instead.
+     *
      * Called by the bus when the value of a property changes if that property has annotation
      * org.freedesktop.DBus.Properties.PropertiesChanged=true
      *
@@ -153,6 +155,7 @@ public class BusListener {
      * @param propName       The well-known name that has changed.
      * @param propValue      The new value of the property; NULL if not present
      */
+    @Deprecated
     public void propertyChanged(String propName, Variant propValue) {}
 
     /**

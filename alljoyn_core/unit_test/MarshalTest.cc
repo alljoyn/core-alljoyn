@@ -36,6 +36,7 @@
 
 /* Header files included for Google Test Framework */
 #include <gtest/gtest.h>
+#include "ajTestCommon.h"
 
 using namespace ajn;
 using namespace qcc;
@@ -154,7 +155,7 @@ TEST(MarshalTest, ComplexSignatures) {
         while (*sig) {
             const char* start = sig;
             status = SignatureUtils::ParseCompleteType(sig);
-            ASSERT_EQ(status, ER_OK) <<  "Actual Status: " << QCC_StatusText(status) <<  "\nOriginal Signature:  " << goodOnes[i] <<
+            ASSERT_EQ(status, ER_OK) <<  "\nOriginal Signature:  " << goodOnes[i] <<
             "\nIncomplete type \"" << qcc::String(start, sig - start).c_str() << "\"";
         }
         /* If the string is successfully parsed, then its length must be 0. */
@@ -187,7 +188,7 @@ TEST(MarshalTest, InvalidSignatures) {
     for (size_t i = 0; i < ArraySize(badIncompleteTypes); i++) {
         const char* sig = badIncompleteTypes[i];
         status = SignatureUtils::ParseCompleteType(sig);
-        ASSERT_NE(ER_OK, status) << "Actual Status: " << QCC_StatusText(status) <<  "\nPassed parsing for OriginalSignature:  \"" << badIncompleteTypes[i] << "\"" <<
+        ASSERT_NE(ER_OK, status) <<  "\nPassed parsing for OriginalSignature:  \"" << badIncompleteTypes[i] << "\"" <<
         ", this was expected to fail.";
     }
 
@@ -269,31 +270,31 @@ TEST(MarshalTest, TestMsgUnpack) {
 
     MsgArg::Set(args, numArgs, "usyd", 4, "hello", 8, d);
     status = msg.MethodCall("a.b.c", "/foo/bar", "foo.bar", "test", args, numArgs);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
 
     status = msg.Deliver(ep);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
 
     status = msg.Read(ep, ":88.88");
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
 
     status = msg.Unmarshal(ep, ":88.88");
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
 
     status = msg.UnmarshalBody();
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
 
     uint32_t i;
     const char* s;
     uint8_t y;
     status = msg.GetArgs("usyd", &i, &s, &y, &d);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
 
     if ((i != 4) || (strcmp(s, "hello") != 0) || (y != 8) || (d != 0.9)) {
         status = ER_FAIL;
     }
 
-    ASSERT_EQ(status, ER_OK) << "Actual Status: " << QCC_StatusText(status) << ". TestMsgUnpack failed.";
+    ASSERT_EQ(status, ER_OK) << " TestMsgUnpack failed.";
     delete bus;
 }
 
@@ -516,7 +517,7 @@ static qcc::SocketFd MakeHandle()
     qcc::SocketFd sock;
     QStatus status = qcc::Socket(QCC_AF_INET, QCC_SOCK_STREAM, sock);
     if (status != ER_OK) {
-        EXPECT_EQ(status, ER_OK) << "Actual Status: " << QCC_StatusText(status) << " Failed to create socket";
+        EXPECT_EQ(status, ER_OK) << " Failed to create socket";
         return qcc::INVALID_SOCKET_FD;
     } else {
         return sock;
@@ -665,18 +666,18 @@ QStatus MarshalTests()
         status = TestMarshal(&arg, 1);
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
     if (fuzzing || (status == ER_OK)) {
         MsgArg arg("s", "hello");
         status = TestMarshal(&arg, 1);
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
     if (fuzzing || (status == ER_OK)) {
         MsgArg hello("s", "hello");
@@ -684,9 +685,9 @@ QStatus MarshalTests()
         MsgArg argList[] = { hello, hello, hello, goodbye };
         status = TestMarshal(argList, ArraySize(argList));
         if (!fuzzing) {
-            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+            EXPECT_EQ(ER_OK, status) << errString.c_str();
         } else {
-            EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+            EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
         }
 
         /* Zero length string */
@@ -694,9 +695,9 @@ QStatus MarshalTests()
         status = TestMarshal(&arg, 1);
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
     /*
      * Dynamic construction of an array of integers
@@ -717,9 +718,9 @@ QStatus MarshalTests()
         arg.SetOwnershipFlags(MsgArg::OwnsArgs);
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
     /*
      * Dynamic construction of a dictionary
@@ -742,9 +743,9 @@ QStatus MarshalTests()
         dict.SetOwnershipFlags(MsgArg::OwnsArgs, true);
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
     /*
      * Dynamic construction of an array of dictionaries
@@ -783,9 +784,9 @@ QStatus MarshalTests()
         }
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
     /*
      * Test cases using the varargList constructor. Note some of these test cases use the trick of wrapping an argument list
@@ -802,9 +803,9 @@ QStatus MarshalTests()
         }
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
     /*
      * Arrays
@@ -817,9 +818,9 @@ QStatus MarshalTests()
         }
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
     if (fuzzing || (status == ER_OK)) {
         MsgArg arg;
@@ -829,9 +830,9 @@ QStatus MarshalTests()
         }
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
     if (fuzzing || (status == ER_OK)) {
         MsgArg argList;
@@ -841,9 +842,9 @@ QStatus MarshalTests()
         }
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
     if (fuzzing || (status == ER_OK)) {
         MsgArg argList;
@@ -853,9 +854,9 @@ QStatus MarshalTests()
         }
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
     if (fuzzing || (status == ER_OK)) {
         MsgArg argList;
@@ -865,9 +866,9 @@ QStatus MarshalTests()
         }
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
     if (fuzzing || (status == ER_OK)) {
         MsgArg var("s", "hello");
@@ -880,9 +881,9 @@ QStatus MarshalTests()
         }
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
     /*
      * Arrays of arrays
@@ -898,9 +899,9 @@ QStatus MarshalTests()
         }
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
     if (fuzzing || (status == ER_OK)) {
         const char* ay1 = "foo";
@@ -915,9 +916,9 @@ QStatus MarshalTests()
         }
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
     if (fuzzing || (status == ER_OK)) {
         static const char* result =
@@ -948,9 +949,9 @@ QStatus MarshalTests()
         arg.SetOwnershipFlags(MsgArg::OwnsArgs, true);
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
     if (fuzzing || (status == ER_OK)) {
         const char* l[] = { "aristole", "plato", "socrates" };
@@ -966,9 +967,9 @@ QStatus MarshalTests()
         delete [] ayay;
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
     if (fuzzing || (status == ER_OK)) {
         static const char* result =
@@ -986,9 +987,9 @@ QStatus MarshalTests()
         }
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
     /*
      * Zero-length arrays of scalars
@@ -1001,9 +1002,9 @@ QStatus MarshalTests()
         }
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
     /*
      * Zero-length arrays
@@ -1016,9 +1017,9 @@ QStatus MarshalTests()
         }
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
     if (fuzzing || (status == ER_OK)) {
         MsgArg empty("a(ii)", (size_t)0, NULL);
@@ -1030,9 +1031,9 @@ QStatus MarshalTests()
         }
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
     if (fuzzing || (status == ER_OK)) {
         MsgArg arg;
@@ -1042,9 +1043,9 @@ QStatus MarshalTests()
         }
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
     if (fuzzing || (status == ER_OK)) {
         MsgArg arg;
@@ -1054,9 +1055,9 @@ QStatus MarshalTests()
         }
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
     /*
      * Empty strings
@@ -1070,9 +1071,9 @@ QStatus MarshalTests()
         }
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
 
     /*
@@ -1087,9 +1088,9 @@ QStatus MarshalTests()
         status = TestMarshal(&arg, 1);
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
     if (fuzzing || (status == ER_OK)) {
         MsgArg arg;
@@ -1099,9 +1100,9 @@ QStatus MarshalTests()
         status = TestMarshal(&arg, 1);
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
     if (fuzzing || (status == ER_OK)) {
         MsgArg arg;
@@ -1111,9 +1112,9 @@ QStatus MarshalTests()
         status = TestMarshal(&arg, 1);
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
     /*
      * Structs
@@ -1127,9 +1128,9 @@ QStatus MarshalTests()
         }
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
     if (fuzzing || (status == ER_OK)) {
         MsgArg argList;
@@ -1139,9 +1140,9 @@ QStatus MarshalTests()
         }
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
     if (fuzzing || (status == ER_OK)) {
         MsgArg arg;
@@ -1151,9 +1152,9 @@ QStatus MarshalTests()
         }
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
 
     if (fuzzing || (status == ER_OK)) {
@@ -1165,9 +1166,9 @@ QStatus MarshalTests()
         }
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
 
     if (fuzzing || (status == ER_OK)) {
@@ -1180,9 +1181,9 @@ QStatus MarshalTests()
         }
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
     /*
      * Dictionary
@@ -1204,9 +1205,9 @@ QStatus MarshalTests()
         }
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
     if (fuzzing || (status == ER_OK)) {
         const char* str[] = { "first", "second", "third" };
@@ -1226,9 +1227,9 @@ QStatus MarshalTests()
         }
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
     /*
      * Variants
@@ -1242,9 +1243,9 @@ QStatus MarshalTests()
         }
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
     if (fuzzing || (status == ER_OK)) {
         MsgArg arry;
@@ -1256,9 +1257,9 @@ QStatus MarshalTests()
         }
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
     if (fuzzing || (status == ER_OK)) {
         MsgArg dub;
@@ -1272,9 +1273,9 @@ QStatus MarshalTests()
         }
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
     /*
      * Extreme test case
@@ -1300,9 +1301,9 @@ QStatus MarshalTests()
         }
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
     /*
      * inner arrays
@@ -1318,9 +1319,9 @@ QStatus MarshalTests()
         }
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
     if (fuzzing || (status == ER_OK)) {
         MsgArg dogs;
@@ -1332,9 +1333,9 @@ QStatus MarshalTests()
         }
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
     /*
      * Handles
@@ -1346,9 +1347,9 @@ QStatus MarshalTests()
         qcc::Close(handle);
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
     if (fuzzing || (status == ER_OK)) {
         qcc::SocketFd h1 = MakeHandle();
@@ -1363,9 +1364,9 @@ QStatus MarshalTests()
         qcc::Close(h3);
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
     if (fuzzing || (status == ER_OK)) {
         qcc::SocketFd h1 = MakeHandle();
@@ -1378,9 +1379,9 @@ QStatus MarshalTests()
         qcc::Close(h3);
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
     if (fuzzing || (status == ER_OK)) {
         qcc::SocketFd h[8];
@@ -1396,9 +1397,9 @@ QStatus MarshalTests()
         }
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
     if (fuzzing || (status == ER_OK)) {
         qcc::SocketFd handle = MakeHandle();
@@ -1408,9 +1409,9 @@ QStatus MarshalTests()
         qcc::Close(handle);
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
     /*
      * Maximum array size 2^17 - last test case because it takes so long
@@ -1434,9 +1435,9 @@ QStatus MarshalTests()
         }
     }
     if (!fuzzing) {
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_EQ(ER_OK, status) << errString.c_str();
     } else {
-        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     }
     return status;
 }
@@ -1449,7 +1450,7 @@ TEST(MarshalTest, noFuzzing) {
     nobig = true;
     quiet = true;
     QStatus status = MarshalTests();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+    EXPECT_EQ(ER_OK, status) << errString.c_str();
     fuzzingBus->Stop();
     fuzzingBus->Join();
     delete fuzzingBus;
@@ -1467,7 +1468,7 @@ TEST(MarshalTest, fuzzing) {
     quiet = true;
     QStatus status;
     status = MarshalTests();
-    EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+    EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << errString.c_str();
     fuzzingBus->Stop();
     fuzzingBus->Join();
     delete fuzzingBus;
@@ -1487,19 +1488,19 @@ TEST(MarshalTest, TestBigArrays) {
     if (status == ER_OK) {
         status = TestMarshal(argList.v_struct.members, argList.v_struct.numMembers);
     }
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+    ASSERT_EQ(ER_OK, status) << errString.c_str();
 
     status = argList.Set("(anax)", ArraySize(aln), aln, ArraySize(alx), alx);
     if (status == ER_OK) {
         status = TestMarshal(argList.v_struct.members, argList.v_struct.numMembers);
     }
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+    ASSERT_EQ(ER_OK, status) << errString.c_str();
 
     status = argList.Set("(aias)", ArraySize(ali), ali, ArraySize(als), als);
     if (status == ER_OK) {
         status = TestMarshal(argList.v_struct.members, argList.v_struct.numMembers);
     }
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+    ASSERT_EQ(ER_OK, status) << errString.c_str();
 
     MsgArg inner[2];
     inner[0].Set("ai", ArraySize(ali), ali, ArraySize(ali) - 2, ali);
@@ -1509,7 +1510,7 @@ TEST(MarshalTest, TestBigArrays) {
     if (status == ER_OK) {
         status = TestMarshal(&arg, 1);
     }
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+    ASSERT_EQ(ER_OK, status) << errString.c_str();
     MsgArg arry;
     arry.Set("ai", ArraySize(ali), ali);
 
@@ -1517,31 +1518,31 @@ TEST(MarshalTest, TestBigArrays) {
     if (status == ER_OK) {
         status = TestMarshal(&arg, 1);
     }
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+    ASSERT_EQ(ER_OK, status) << errString.c_str();
 
     status = arg.Set("((iuiu)(yd)atab)", i, u, i, u, y, d, ArraySize(alt), alt, ArraySize(alb), alb);
     if (status == ER_OK) {
         status = TestMarshal(&arg, 1);
     }
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+    ASSERT_EQ(ER_OK, status) << errString.c_str();
 
     status = arg.Set("ad", ArraySize(ald), ald);
     if (status == ER_OK) {
         status = TestMarshal(&arg, 1);
     }
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+    ASSERT_EQ(ER_OK, status) << errString.c_str();
 
     status = argList.Set("(aias)", ArraySize(ali), ali, ArraySize(als), als);
     if (status == ER_OK) {
         status = TestMarshal(argList.v_struct.members, argList.v_struct.numMembers);
     }
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+    ASSERT_EQ(ER_OK, status) << errString.c_str();
 
     status = argList.Set("(agao)", ArraySize(alg), alg, ArraySize(alo), alo);
     if (status == ER_OK) {
         status = TestMarshal(argList.v_struct.members, argList.v_struct.numMembers);
     }
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+    ASSERT_EQ(ER_OK, status) << errString.c_str();
 
     MsgArg var1("s", "hello1");
     MsgArg var2("s", "hello2");
@@ -1571,7 +1572,7 @@ TEST(MarshalTest, TestBigArrays) {
     if (status == ER_OK) {
         status = TestMarshal(&arg, 1);
     }
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+    ASSERT_EQ(ER_OK, status) << errString.c_str();
     const char* breeds[] = { "labrador", "poodle", "mutt", "pomeranian", "porcelaine", "pug", "talbot", "german-shepard", "chihuahua" };
     MsgArg dogs[10];
     dogs[0].Set("(sas)", "dogs0", ArraySize(breeds), breeds);
@@ -1590,7 +1591,7 @@ TEST(MarshalTest, TestBigArrays) {
         status = TestMarshal(&arg, 1);
     }
 
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+    ASSERT_EQ(ER_OK, status) << errString.c_str();
 
     fuzzingBus->Stop();
     fuzzingBus->Join();

@@ -16,13 +16,12 @@
 
 package org.alljoyn.bus.ifaces;
 
+import java.util.Map;
+
 import org.alljoyn.bus.BusException;
-import org.alljoyn.bus.Variant;
 import org.alljoyn.bus.annotation.BusInterface;
 import org.alljoyn.bus.annotation.BusMethod;
 import org.alljoyn.bus.annotation.BusSignal;
-
-import java.util.Map;
 
 /**
  * The standard org.freedesktop.DBus interface that is implemented by the local
@@ -114,7 +113,7 @@ public interface DBusProxyObj {
      * Returns a list of well-known names registered with the bus.
      *
      * @return the well-known names
-     * @throws BusException
+     * @throws BusException indicating failure when calling ListNames method
      */
     @BusMethod(replySignature = "as")
     String[] ListNames() throws BusException;
@@ -125,7 +124,7 @@ public interface DBusProxyObj {
      * accessed.
      *
      * @return the well-known names
-     * @throws BusException
+     * @throws BusException indicating failure when calling ListActivatableNames method
      */
     @BusMethod(replySignature = "as")
     String[] ListActivatableNames() throws BusException;
@@ -136,7 +135,7 @@ public interface DBusProxyObj {
      * @param name name being requested
      * @param flags bitmask of RequestName flags
      * @return disposition of request name operation
-     * @throws BusException
+     * @throws BusException indicating failure when calling RequestName method
      */
     @BusMethod(signature = "su", replySignature = "u")
     RequestNameResult RequestName(String name, int flags) throws BusException;
@@ -146,7 +145,7 @@ public interface DBusProxyObj {
      *
      * @param name name being released
      * @return disposition of release name operation
-     * @throws BusException
+     * @throws BusException indicating failure when calling ReleaseName method
      */
     @BusMethod(signature = "s", replySignature = "u")
     ReleaseNameResult ReleaseName(String name) throws BusException;
@@ -156,7 +155,7 @@ public interface DBusProxyObj {
      *
      * @param name name to check for ownership
      * @return {@code true} iff the well-known name is currently registered with the bus
-     * @throws BusException
+     * @throws BusException indicating failure when calling NameHasOwner method
      */
     @BusMethod(signature = "s", replySignature = "b")
     boolean NameHasOwner(String name) throws BusException;
@@ -182,7 +181,7 @@ public interface DBusProxyObj {
      * @param name well-known name whose service process will be started
      * @param flags not used
      * @return disposition of start service by name operation
-     * @throws BusException
+     * @throws BusException indicating failure when when calling StartServiceByName method
      */
     @BusMethod(signature = "su", replySignature = "u")
     StartServiceByNameResult StartServiceByName(String name, int flags) throws BusException;
@@ -225,7 +224,7 @@ public interface DBusProxyObj {
      * See the DBus spec for details and format of DBus routing rules.
      *
      * @param rule match rule to add
-     * @throws BusException
+     * @throws BusException indicating failure when calling AddMatch method
      */
     @BusMethod(signature = "s")
     void AddMatch(String rule) throws BusException;
@@ -235,7 +234,7 @@ public interface DBusProxyObj {
      * See the DBus spec for details on DBus routing.
      *
      * @param rule match rule to remove
-     * @throws BusException
+     * @throws BusException indicating failure when calling RemoveMatch method
      */
     @BusMethod(signature = "s")
     void RemoveMatch(String rule) throws BusException;
@@ -244,7 +243,7 @@ public interface DBusProxyObj {
      * Gets the unique id of the bus.
      *
      * @return the GUID for the local AllJoyn router in string form
-     * @throws BusException
+     * @throws BusException indicating failure when calling GetId method
      */
     @BusMethod(replySignature = "s")
     String GetId() throws BusException;
@@ -253,7 +252,7 @@ public interface DBusProxyObj {
      * Updates the activation environment.
      *
      * @param environment the environment to add or update
-     * @throws BusException
+     * @throws BusException indicating failure when calling UpdateActivationEnvironment method
      */
     @BusMethod(signature = "a{ss}")
     void UpdateActivationEnvironment(Map<String, String> environment) throws BusException;
@@ -263,7 +262,7 @@ public interface DBusProxyObj {
      *
      * @param name the well-known bus name to query
      * @return the unique bus names of connections currently queued for the name
-     * @throws BusException
+     * @throws BusException indicating failure when calling ListQueuedOwners method
      */
     @BusMethod(signature = "s", replySignature = "as")
     String[] ListQueuedOwners(String name) throws BusException;
@@ -273,7 +272,7 @@ public interface DBusProxyObj {
      *
      * @param name the name of the connection to query
      * @return an array of bytes
-     * @throws BusException
+     * @throws BusException indicating failure when calling GetAdtAudidSessionData method
      */
     @BusMethod(signature = "s", replySignature = "ay")
     byte[] GetAdtAuditSessionData(String name) throws BusException;
@@ -283,7 +282,7 @@ public interface DBusProxyObj {
      *
      * @param name the name of the connection to query
      * @return an array of bytes
-     * @throws BusException
+     * @throws BusException indicating failure when calling GetConnectionSELinuxSecurityContext method
      */
     @BusMethod(signature = "s", replySignature = "ay")
     byte[] GetConnectionSELinuxSecurityContext(String name) throws BusException;
@@ -291,7 +290,7 @@ public interface DBusProxyObj {
     /**
      * Reloads the config file.
      *
-     * @throws BusException
+     * @throws BusException indicating failure when calling ReloadConfig method
      */
     @BusMethod
     void ReloadConfig() throws BusException;
@@ -305,7 +304,7 @@ public interface DBusProxyObj {
      *                 previous owner
      * @param newOwner unique name of new name owner or empty string if no new
      *                 owner
-     * @throws BusException
+     * @throws BusException indicating failure when sending the NameOwnerChanged signal
      */
     @BusSignal(signature = "sss")
     void NameOwnerChanged(String name, String oldOwner, String newOwner) throws BusException;
@@ -314,7 +313,7 @@ public interface DBusProxyObj {
      * Signal sent (non-broadcast) to the bus connection that loses a name.
      *
      * @param name name that was lost
-     * @throws BusException
+     * @throws BusException indicating failure when sending the NameLost signal
      */
     @BusSignal(signature = "s")
     void NameLost(String name) throws BusException;
@@ -323,18 +322,8 @@ public interface DBusProxyObj {
      * Signal sent (non-broadcast) to the bus connection that acquires a name.
      *
      * @param name name that was acquired from the bus
-     * @throws BusException
+     * @throws BusException indicating failure when sending the NameAcquired signal
      */
     @BusSignal(signature = "s")
     void NameAcquired(String name) throws BusException;
-
-    /**
-     * Signal sent when one or more properties change on an object.
-     *
-     * @param name the interface name
-     * @param changed the changed properties with their new values
-     * @param invalidated the changed properties without their new values
-     */
-    @BusSignal(signature = "sa{sv}as")
-    void PropertiesChanged(String name, Map<String, Variant> changed, String[] invalidated) throws BusException;
 }

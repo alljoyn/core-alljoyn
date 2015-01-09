@@ -105,7 +105,11 @@ uint32_t qcc::GetUsersGid(const char* name)
 
 qcc::String qcc::GetHomeDir()
 {
-    return Environ::GetAppEnviron()->Find("USERPROFILE");
+    qcc::String homeDir = Environ::GetAppEnviron()->Find("LOCALAPPDATA");
+    if (homeDir.empty()) {
+        homeDir = Environ::GetAppEnviron()->Find("USERPROFILE");
+    }
+    return homeDir;
 }
 
 qcc::OSType qcc::GetSystemOSType(void)

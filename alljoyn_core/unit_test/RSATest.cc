@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2011, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -40,6 +40,7 @@
 #include <SASLEngine.h>
 
 #include <gtest/gtest.h>
+#include "ajTestCommon.h"
 
 //#define QCC_MODULE "CRYPTO"
 
@@ -153,7 +154,7 @@ TEST(RSATest, Import_PEM_endcoded_PKCS8_3DES_encrypted) {
     //printf("Testing private key import 3DES SSLeay legacy format\n");
     Crypto_RSA priv;
     QStatus status = priv.ImportPKCS8(PEM_DES, "123456");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " ImportPKCS8 failed";
+    EXPECT_EQ(ER_OK, status) << " ImportPKCS8 failed";
 }
 
 TEST(RSATest, Import_PEM_endcoded_PKCS8_AES_encrypted) {
@@ -161,7 +162,7 @@ TEST(RSATest, Import_PEM_endcoded_PKCS8_AES_encrypted) {
     //printf("Testing private key import AES SSLeay legacy format\n");
     Crypto_RSA priv;
     QStatus status = priv.ImportPKCS8(PEM_AES, "123456");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " ImportPKCS8 failed";
+    EXPECT_EQ(ER_OK, status) << " ImportPKCS8 failed";
 }
 
 TEST(RSATest, Import_PEM_endocded_PKCS8_v1_5_encrypted) {
@@ -169,7 +170,7 @@ TEST(RSATest, Import_PEM_endocded_PKCS8_v1_5_encrypted) {
     //printf("Testing private key import PKCS8 PKCS#5 v1.5\n");
     Crypto_RSA priv;
     QStatus status = priv.ImportPKCS8(PEM_PKCS8_V1_5, "123456");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " ImportPKCS8 failed";
+    EXPECT_EQ(ER_OK, status) << " ImportPKCS8 failed";
 }
 
 TEST(RSATest, Import_PEM_encoded_PKCS8_v2_encrypted) {
@@ -177,7 +178,7 @@ TEST(RSATest, Import_PEM_encoded_PKCS8_v2_encrypted) {
     //printf("Testing private key import PKCS8 PKCS#5 v2.0\n");
     Crypto_RSA priv;
     QStatus status = priv.ImportPKCS8(PEM_PKCS8_V2, "123456");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " ImportPKCS8 failed";
+    EXPECT_EQ(ER_OK, status) << " ImportPKCS8 failed";
 }
 
 
@@ -185,11 +186,11 @@ TEST(RSATest, Import_public_key_from_cert) {
     // Import a public key from a cert
     Crypto_RSA pub;
     QStatus status = pub.ImportPEM(x509cert);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " ImportPEM failed";
+    EXPECT_EQ(ER_OK, status) << " ImportPEM failed";
 
     qcc::String str;
     status = pub.ExportPEM(str);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " ExportPEM failed\n"
+    EXPECT_EQ(ER_OK, status) << " ExportPEM failed\n"
                              << "PEM:\n" << str.c_str();
     //printf("PEM:\n%s\n", str.c_str());
 }
@@ -209,7 +210,7 @@ TEST(RSATest, encryption_decryption) {
 
     //printf("Public key:\n%s\n", pubStr.c_str());
     QStatus status = pk.ExportPrivateKey(privKey, "pa55pHr@8e");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " ExportPrivateKey failed";
+    EXPECT_EQ(ER_OK, status) << " ExportPrivateKey failed";
 
     /*
      * Test encryption with private key and decryption with public key
@@ -219,14 +220,14 @@ TEST(RSATest, encryption_decryption) {
     inLen = sizeof(hw);
     outLen = pkSize;
     status = pk.PublicEncrypt(in, inLen, out, outLen);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " PublicEncrypt failed";
+    EXPECT_EQ(ER_OK, status) << " PublicEncrypt failed";
     EXPECT_EQ(static_cast<size_t>(64), outLen);
 
     inLen = outLen;
     outLen = pkSize;
     memcpy(in, out, pkSize);
     status = pk.PrivateDecrypt(in, inLen, out, outLen);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " PrivateDecrypt failed";
+    EXPECT_EQ(ER_OK, status) << " PrivateDecrypt failed";
     EXPECT_EQ(static_cast<size_t>(12), outLen);
     EXPECT_STREQ("hello world", reinterpret_cast<char*>(out));
 }
@@ -249,30 +250,30 @@ TEST(RSATest, cert_generation) {
      * Test certificate generation
      */
     QStatus status = pk.MakeSelfCertificate("my name", "my app");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " MakeSelfCertificate failed";
+    EXPECT_EQ(ER_OK, status) << " MakeSelfCertificate failed";
 
     //TODO figure out best way to verify the cert
     //printf("Cert:\n%s", pk.CertToString().c_str());
 
     status = pk.ExportPrivateKey(privKey, "password1234");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " ExportPrivateKey failed";
+    EXPECT_EQ(ER_OK, status) << " ExportPrivateKey failed";
 
     status = pk.ExportPEM(pubStr);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " ExportPEM failed";
+    EXPECT_EQ(ER_OK, status) << " ExportPEM failed";
 
     /*
      * Initialize separate private and public key instances and test encryption a decryption
      */
     Crypto_RSA pub;
     status = pub.ImportPEM(pubStr);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " ImportPEM failed";
+    EXPECT_EQ(ER_OK, status) << " ImportPEM failed";
 
     //TODO figure out best way to verify the PEM
     //printf("PEM:\n%s\n", pubStr.c_str());
 
     Crypto_RSA pri;
     status = pri.ImportPrivateKey(privKey, "password1234");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " ImportPrivateKey failed";
+    EXPECT_EQ(ER_OK, status) << " ImportPrivateKey failed";
 
     pkSize = pub.GetSize();
 
@@ -280,14 +281,14 @@ TEST(RSATest, cert_generation) {
     inLen = sizeof(hw);
     outLen = pkSize;
     status = pub.PublicEncrypt(in, inLen, out, outLen);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " PublicEncrypt failed";
+    EXPECT_EQ(ER_OK, status) << " PublicEncrypt failed";
     EXPECT_EQ(static_cast<size_t>(64), outLen);
 
     inLen = outLen;
     outLen = pkSize;
     memcpy(in, out, pkSize);
     status = pri.PrivateDecrypt(in, inLen, out, outLen);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " PublicEncrypt failed";
+    EXPECT_EQ(ER_OK, status) << " PublicEncrypt failed";
     EXPECT_EQ(static_cast<size_t>(12), outLen);
     EXPECT_STREQ("hello world", reinterpret_cast<char*>(out));
 }
@@ -303,7 +304,7 @@ TEST(RSATest, empty_passphrase) {
      * Test certificate generation
      */
     QStatus status = pk.MakeSelfCertificate("my name", "my app");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " MakeSelfCertificate failed";
+    EXPECT_EQ(ER_OK, status) << " MakeSelfCertificate failed";
 
     //TODO figure out best way to verify the cert
     //printf("Cert:\n%s", pk.CertToString().c_str());
@@ -312,24 +313,24 @@ TEST(RSATest, empty_passphrase) {
      * Check we allow an empty password
      */
     status = pk.ExportPrivateKey(privKey, "");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " ExportPrivateKey failed";
+    EXPECT_EQ(ER_OK, status) << " ExportPrivateKey failed";
 
     status = pk.ExportPEM(pubStr);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " ExportPEM failed";
+    EXPECT_EQ(ER_OK, status) << " ExportPEM failed";
 
     /*
      * Initialize separate private and public key instances and test signing a verification
      */
     Crypto_RSA pub;
     status = pub.ImportPEM(pubStr);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " ImportPEM failed";
+    EXPECT_EQ(ER_OK, status) << " ImportPEM failed";
 
     //TODO figure out best way to verify the PEM
     //printf("PEM:\n%s\n", pubStr.c_str());
 
     Crypto_RSA pri;
     status = pri.ImportPrivateKey(privKey, "");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " ImportPrivateKey failed";
+    EXPECT_EQ(ER_OK, status) << " ImportPrivateKey failed";
 
     const char doc[] = "This document requires a signature";
     uint8_t signature[64];
@@ -339,10 +340,10 @@ TEST(RSATest, empty_passphrase) {
      * Test Sign and Verify APIs
      */
     status = pri.Sign((const uint8_t*)doc, sizeof(doc), signature, sigLen);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " Sign failed";
+    EXPECT_EQ(ER_OK, status) << " Sign failed";
 
     status = pub.Verify((const uint8_t*)doc, sizeof(doc), signature, sigLen);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " Verify failed";
+    EXPECT_EQ(ER_OK, status) << " Verify failed";
 }
 
 class MyAuthListener : public AuthListener {
@@ -386,10 +387,10 @@ TEST(RSATest, RSA_authentication_mechanism) {
 
     while (status == ER_OK) {
         status = responder.Advance(cStr, rStr, rState);
-        ASSERT_EQ(ER_OK, status) << "  Actual Responder Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status) << "  Actual Responder";
         status = challenger.Advance(rStr, cStr, cState);
 
-        ASSERT_EQ(ER_OK, status) << "  Actual Challenger Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status) << "  Actual Challenger";
         if ((rState == SASLEngine::ALLJOYN_AUTH_SUCCESS) && (cState == SASLEngine::ALLJOYN_AUTH_SUCCESS)) {
             break;
         }

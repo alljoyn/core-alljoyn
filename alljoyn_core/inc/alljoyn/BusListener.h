@@ -89,12 +89,13 @@ class BusListener {
     virtual void NameOwnerChanged(const char* busName, const char* previousOwner, const char* newOwner) { }
 
     /**
-     * Called by the bus when the value of a property changes if that property has annotation
+     * This has been deprecated.  It will not be called any more. Use the ProxyBusObject property change handling mechanism instead.
+     * Called by the bus when the value of a property changes if that property has annotation.
      *
      * @param propName       The well-known name that has changed.
      * @param propValue      The new value of the property; NULL if not present
      */
-    virtual void PropertyChanged(const char* propName, const MsgArg* propValue) { }
+    QCC_DEPRECATED(virtual void PropertyChanged(const char* propName, const MsgArg * propValue)) { }
 
     /**
      * Called when a BusAttachment this listener is registered with is stopping.

@@ -43,6 +43,10 @@ Help(vars.GenerateHelpText(javaenv))
 # Java requires a couple of header files in alljoyn_core/src
 javaenv.Append(CPPPATH = [javaenv.Dir('../alljoyn_core/src').srcnode()])
 
+# If files use UTF-8 encoded string then the encodeing must be specified as UTF-8
+# Unit tests for the About Feature use UTF-8 encoded string for localized values
+javaenv.Append(JAVACFLAGS = ['-encoding', 'UTF-8'])
+
 sys.path.append(str(javaenv.Dir('../build_core/tools/scons').srcnode()))
 from configurejni import ConfigureJNI
 
@@ -102,7 +106,7 @@ javaenv.SConscript('test/SConscript', exports = {'env':javaenv})
 # AllJoyn Java binding docs
 javaenv['PROJECT_SHORT_NAME'] = 'AllJoyn&trade; Java API<br/>Reference Manual'
 javaenv['PROJECT_LONG_NAME'] = 'AllJoyn&trade; Java API Reference Manual'
-javaenv['PROJECT_NUMBER'] = 'Version 0.0.1'
+javaenv['PROJECT_NUMBER'] = 'Version 00.00.01'
 javaenv.JavaDoc('$JAVA_DISTDIR/docs/html', ['src', '../services/about/java/src'], JAVACLASSPATH=javaenv.subst('$JAVACLASSPATH'))
 
 # AllJoyn samples

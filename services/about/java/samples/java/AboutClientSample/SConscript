@@ -22,6 +22,6 @@ sample_env.Depends(classes, sample_env['dep_jars'])
 # file
 sample_env.Clean(classes, sample_env.Dir('$OBJDIR_ABOUT/java/samples/classes').srcnode())
 
-jar = sample_env.Jar(target = 'about_client_sample', source = [sample_env.Dir('$OBJDIR_ABOUT/java/samples/classes').srcnode(), 'MANIFEST.MF'], JARCHDIR='$SOURCE')
+jar = sample_env.Jar(target = 'about_client_sample_legacy', source = [sample_env.Dir('$OBJDIR_ABOUT/java/samples/classes').srcnode(), 'MANIFEST.MF'], JARCHDIR='$SOURCE')
 
 Return('jar')

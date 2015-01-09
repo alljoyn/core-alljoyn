@@ -86,9 +86,13 @@ public class TransportUtil
 
     /**
      * A utility method for converting from a String-&gt;Variant map to a String-&gt;Object map
+     *
      * @param sToVariantMap input String-&gt;Variant map.
+     *
+     * @throws BusException indicating failure to convert Map from Variant map to Object map
+     *
      * @return String-&gt;Object map
-     * @throws BusException
+     *
      */
     public static Map<String, Object> fromVariantMap(Map<String, Variant> sToVariantMap) throws BusException
     {
@@ -139,8 +143,8 @@ public class TransportUtil
 
     /**
      * A utility method to convert from bytes to chars
-     * @param byteArray byte[]
-     * @return char[]
+     * @param byteArray array of bytes to convert to an array of chars
+     * @return a char array
      */
     public static char[] toCharArray(byte[] byteArray)
     {
@@ -159,8 +163,8 @@ public class TransportUtil
 
     /**
      * A utility method to convert from UUID to byte array
-     * @param uuid
-     * @return byte[]
+     * @param uuid Universally Unique identifier
+     * @return the byte representation of that UUID
      */
     public static byte[] uuidToByteArray(UUID uuid)
     {
@@ -185,7 +189,7 @@ public class TransportUtil
 
     /**
      * A utility method to convert from byte array to UUID
-     * @param bAppId
+     * @param bAppId byte representation of a UUID
      * @return UUID Returns the created {@link UUID} object or NULL on fail
      */
     public static UUID byteArrayToUUID(byte[] bAppId) {

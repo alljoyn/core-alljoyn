@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2011, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -37,7 +37,7 @@
 #include <RemoteEndpoint.h>
 
 #include <gtest/gtest.h>
-
+#include "ajTestCommon.h"
 
 using namespace qcc;
 using namespace std;
@@ -102,12 +102,12 @@ TEST(CompressionTest, Compression) {
     bus.Start();
 
     status = msg.MethodCall(":1.99", "/foo/bar", "foo.bar", "test");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     tok1 = msg.GetCompressionToken();
 
     status = msg.MethodCall(":1.99", "/foo/bar", "foo.bar", "test");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     tok2 = msg.GetCompressionToken();
 
@@ -115,7 +115,7 @@ TEST(CompressionTest, Compression) {
     ASSERT_EQ(tok1, tok2) << "FAILD 1";
 
     status = msg.MethodCall(":1.98", "/foo/bar", "foo.bar", "test");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     tok2 = msg.GetCompressionToken();
 
@@ -123,12 +123,12 @@ TEST(CompressionTest, Compression) {
     ASSERT_NE(tok1, tok2) << "FAILED 2";
 
     status = msg.Signal(":1.99", "/foo/bar/gorn", "foo.bar", "test", 0);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     tok1 = msg.GetCompressionToken();
 
     status = msg.Signal(":1.99", "/foo/bar/gorn", "foo.bar", "test", 1000);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
 
     tok2 = msg.GetCompressionToken();
 
@@ -137,7 +137,7 @@ TEST(CompressionTest, Compression) {
 
     /* Expect messages with different TTLs to have different token */
     status = msg.Signal(":1.99", "/foo/bar/gorn", "foo.bar", "test", 9999);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
 
     tok1 = msg.GetCompressionToken();
 
@@ -145,26 +145,26 @@ TEST(CompressionTest, Compression) {
 
     /* Expect messages with same TTL but different timestamps to have same token */
     status = msg.Signal(":1.1234", "/foo/bar/again", "boo.far", "test", 1700);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
 
     tok1 = msg.GetCompressionToken();
 
     qcc::Sleep(5);
 
     status = msg.Signal(":1.1234", "/foo/bar/again", "boo.far", "test", 1700);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
 
     tok2 = msg.GetCompressionToken();
 
     ASSERT_EQ(tok1, tok2) << "FAILD 5";
 
     status = msg.Signal(":1.99", "/foo/bar/gorn", "foo.bar", "test", 0, 1234);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status);
 
     tok1 = msg.GetCompressionToken();
 
     status = msg.Signal(":1.99", "/foo/bar/gorn", "foo.bar", "test", 0, 5678);
-    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status);
 
     tok2 = msg.GetCompressionToken();
 
@@ -176,10 +176,10 @@ TEST(CompressionTest, Compression) {
         SessionId sess = 1000 + i % 3;
         qcc::String sig = "test" + qcc::U32ToString(i);
         status = msg.Signal(":1.1234", "/fun/games", "boo.far", sig.c_str(), 1900, sess);
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status);
 
         status = msg.Deliver(ep);
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status);
     }
 
     for (int i = 0; i < 20; ++i) {
@@ -187,10 +187,10 @@ TEST(CompressionTest, Compression) {
         qcc::String sig = "test" + qcc::U32ToString(i);
         MyMessage msg2(bus);
         status = msg2.Read(ep, ":88.88");
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status);
 
         status = msg2.Unmarshal(ep, ":88.88");
-        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status);
         ASSERT_EQ(sess, msg2.GetSessionId()) << "FAILD 6." << 1;
 
         ASSERT_EQ(sig, msg2.GetMemberName()) << "FAILD 6." << 1;

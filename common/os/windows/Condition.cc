@@ -1,9 +1,7 @@
-#ifndef _CNG_CACHE_H
-#define _CNG_CACHE_H
 /**
  * @file
  *
- * This file defines the CngCache object used to manage the lifetime of global CNG handles.
+ * This file implements qcc::Condition for Windows systems
  */
 
 /******************************************************************************
@@ -24,38 +22,52 @@
 
 #include <assert.h>
 #include <windows.h>
-#include <bcrypt.h>
 
-#include <qcc/platform.h>
+#include <qcc/Debug.h>
+#include <qcc/Condition.h>
 
-namespace qcc {
+#define QCC_MODULE "CONDITION"
 
-/**
- * This struct manages the lifetime of algorithm handles.
- */
-struct CngCache {
-    CngCache();
-    ~CngCache();
+using namespace qcc;
 
-    /**
-     * Delete the opened algorithm handles.
-     */
-    void Cleanup();
+Condition::Condition()
+{
+    InitializeConditionVariable(&c);
+}
 
-    /**
-     * Number of supported algorithms as defined by Crypto_Hash::Algorithm enum
-     */
-    static const int ALGORITHM_COUNT = 3;
+Condition::~Condition()
+{
+}
 
-    BCRYPT_ALG_HANDLE algHandles[ALGORITHM_COUNT][2];
-    BCRYPT_ALG_HANDLE ccmHandle;
-    BCRYPT_ALG_HANDLE ecbHandle;
-    BCRYPT_ALG_HANDLE rsaHandle;
-};
+QStatus Condition::Wait(qcc::Mutex& m)
+{
+    return TimedWait(m, INFINITE);
+}
 
-extern CngCache cngCache;
+QStatus Condition::TimedWait(qcc::Mutex& m, uint32_t ms)
+{
+    bool ret = SleepConditionVariableCS(&c, &m.mutex, ms);
+    if (ret == true) {
+        return ER_OK;
+    }
 
-} // qcc
+    DWORD error = GetLastError();
+    if (error == ERROR_TIMEOUT) {
+        return ER_TIMEOUT;
+    }
 
-#endif
+    QCC_LogError(ER_OS_ERROR, ("Condition::TimedWait(): Cannot wait on Windows condition variable (%d)", error));
+    return ER_OS_ERROR;
+}
 
+QStatus Condition::Signal()
+{
+    WakeConditionVariable(&c);
+    return ER_OK;
+}
+
+QStatus Condition::Broadcast()
+{
+    WakeAllConditionVariable(&c);
+    return ER_OK;
+}

@@ -596,6 +596,36 @@ class _TCPEndpoint : public _RemoteEndpoint {
         return status;
     }
 
+    QStatus SetIdleTimeouts(uint32_t& reqIdleTimeout, uint32_t& reqProbeTimeout)
+    {
+        uint32_t maxIdleProbes = m_transport->m_numHbeatProbes;
+
+        /* If reqProbeTimeout == 0, Make no change to Probe timeout. */
+        if (reqProbeTimeout == 0) {
+            reqProbeTimeout = _RemoteEndpoint::GetProbeTimeout();
+        } else if (reqProbeTimeout > m_transport->m_maxHbeatProbeTimeout) {
+            /* Max allowed Probe timeout is m_maxHbeatProbeTimeout */
+            reqProbeTimeout = m_transport->m_maxHbeatProbeTimeout;
+        }
+
+        /* If reqIdleTimeout == 0, Make no change to Idle timeout. */
+        if (reqIdleTimeout == 0) {
+            reqIdleTimeout = _RemoteEndpoint::GetIdleTimeout();
+        }
+
+        /* Requested link timeout must be >= m_minHbeatIdleTimeout */
+        if (reqIdleTimeout < m_transport->m_minHbeatIdleTimeout) {
+            reqIdleTimeout = m_transport->m_minHbeatIdleTimeout;
+        }
+
+        /* Requested link timeout must be <= m_maxHbeatIdleTimeout */
+        if (reqIdleTimeout > m_transport->m_maxHbeatIdleTimeout) {
+            reqIdleTimeout = m_transport->m_maxHbeatIdleTimeout;
+        }
+
+        return _RemoteEndpoint::SetIdleTimeouts(reqIdleTimeout, reqProbeTimeout, maxIdleProbes);
+    }
+
     /*
      * Return true if the auth thread is STARTED, RUNNING or STOPPING.  A true
      * response means the authentication thread is in a state that indicates
@@ -762,10 +792,17 @@ void* _TCPEndpoint::AuthThread::Run(void* arg)
         return (void*)ER_FAIL;
     }
 
-    /* Initialized the features for this endpoint */
+    /* Initialize the features for this endpoint */
     m_endpoint->GetFeatures().isBusToBus = false;
     m_endpoint->GetFeatures().isBusToBus = false;
     m_endpoint->GetFeatures().handlePassing = false;
+
+    /*
+     * Check any application connecting over TCP to see if it is running on the same machine and
+     * set the group ID appropriately if so.
+     */
+    TCPEndpoint tcpEp = TCPEndpoint::wrap(m_endpoint);
+    TCPTransport::CheckEndpointLocalMachine(tcpEp);
 
     /* Run the actual connection authentication code. */
     qcc::String authName;
@@ -811,7 +848,6 @@ void* _TCPEndpoint::AuthThread::Run(void* arg)
      * Tell the transport that the authentication has succeeded and that it can
      * now bring the connection up.
      */
-    TCPEndpoint tcpEp = TCPEndpoint::wrap(m_endpoint);
     m_endpoint->m_transport->Authenticated(tcpEp);
 
     QCC_DbgTrace(("TCPEndpoint::AuthThread::Run(): Returning"));
@@ -899,7 +935,7 @@ void TCPTransport::Authenticated(TCPEndpoint& conn)
 
     conn->SetEpStarting();
 
-    QStatus status = conn->Start();
+    QStatus status = conn->Start(m_defaultHbeatIdleTimeout, m_defaultHbeatProbeTimeout, m_numHbeatProbes, m_maxHbeatProbeTimeout);
     if (status != ER_OK) {
         QCC_LogError(status, ("TCPTransport::Authenticated(): Failed to start TCP endpoint"));
         /*
@@ -1010,6 +1046,25 @@ QStatus TCPTransport::Stop(void)
      * call Stop() on a stopped transport.
      */
     m_stopping = true;
+
+    /*
+     * Tell the name service to disregard all our prior advertisements and
+     * discoveries. The internal state will shortly be discarded as well.
+     */
+    m_listenRequestsLock.Lock(MUTEX_CONTEXT);
+    QCC_DbgTrace(("TCPTransport::Stop(): Gratuitously clean out advertisements."));
+    for (list<qcc::String>::iterator i = m_advertising.begin(); i != m_advertising.end(); ++i) {
+        IpNameService::Instance().CancelAdvertiseName(TRANSPORT_TCP, *i, TRANSPORT_TCP);
+    }
+    m_advertising.clear();
+    m_isAdvertising = false;
+    QCC_DbgTrace(("TCPTransport::Stop(): Gratuitously clean out discoveries."));
+    for (list<qcc::String>::iterator i = m_discovering.begin(); i != m_discovering.end(); ++i) {
+        IpNameService::Instance().CancelFindAdvertisement(TRANSPORT_TCP, *i, TRANSPORT_TCP);
+    }
+    m_discovering.clear();
+    m_isDiscovering = false;
+    m_listenRequestsLock.Unlock(MUTEX_CONTEXT);
 
     /*
      * Tell the name service to stop calling us back if it's there (we may get
@@ -1156,6 +1211,44 @@ QStatus TCPTransport::Join(void)
     return ER_OK;
 }
 
+/**
+ * This is a convenience function that tells a caller whether or not this
+ * transport will support a set of options for a connection.  Lets the caller
+ * decide up front whether or not a connection will succeed due to options
+ * conflicts.
+ */
+bool TCPTransport::SupportsOptions(const SessionOpts& opts) const
+{
+    QCC_DbgTrace(("TCPTransport::SupportsOptions()"));
+    bool rc = true;
+
+    /*
+     * TCP only suports reliable messaging, which means TRAFFIC_RAW_RELIABLE
+     * (raw sockets over a reliable underlying transport) or TRAFFIC_MESSAGES
+     * (which is AllJoyn Messages over a reliable underlying transport).  It's
+     * not an error if we don't match, we just don't have anything to offer.
+     */
+    if (opts.traffic != SessionOpts::TRAFFIC_MESSAGES && opts.traffic != SessionOpts::TRAFFIC_RAW_RELIABLE) {
+        QCC_DbgPrintf(("TCPTransport::SupportsOptions(): traffic type mismatch"));
+        rc = false;
+    }
+
+    /*
+     * The other session option that we need to filter on is the transport
+     * bitfield.  This transport supports TRANSPORT_TCP of course, but we allow
+     * TRANSPORT_WLAN, TRANSPORT_WWAN, and TRANSPORT_LAN to be synonymous with
+     * TRANSPORT_TCP.  If you are explicitly looking for something other than
+     * TCP (or one of the aliases) we can't help you.
+     */
+    if (!(opts.transports & (TRANSPORT_TCP | TRANSPORT_WLAN | TRANSPORT_WWAN | TRANSPORT_LAN))) {
+        QCC_DbgPrintf(("TCPTransport::SupportsOptions(): transport mismatch"));
+        rc = false;
+    }
+
+    QCC_DbgPrintf(("TCPTransport::SupportsOptions(): returns \"%s\"", rc == true ? "true" : "false"));
+    return rc;
+}
+
 /*
  * The default interface for the name service to use.  The wildcard character
  * means to listen and transmit over all interfaces that are up and multicast
@@ -1170,25 +1263,11 @@ QStatus TCPTransport::GetListenAddresses(const SessionOpts& opts, std::vector<qc
 
     /*
      * We are given a session options structure that defines the kind of
-     * transports that are being sought.  TCP provides reliable traffic as
-     * understood by the session options, so we only return someting if
-     * the traffic type is TRAFFIC_MESSAGES or TRAFFIC_RAW_RELIABLE.  It's
-     * not an error if we don't match, we just don't have anything to offer.
+     * transports that are being sought.  It's not an error if we don't match
+     * requested options, we just don't have anything to offer.
      */
-    if (opts.traffic != SessionOpts::TRAFFIC_MESSAGES && opts.traffic != SessionOpts::TRAFFIC_RAW_RELIABLE) {
-        QCC_DbgPrintf(("TCPTransport::GetListenAddresses(): traffic mismatch"));
-        return ER_OK;
-    }
-
-    /*
-     * The other session option that we need to filter on is the transport
-     * bitfield.  We have no easy way of figuring out if we are a wireless
-     * local-area, wireless wide-area, wired local-area or local transport,
-     * but we do exist, so we respond if the caller is asking for any of
-     * those: cogito ergo some.
-     */
-    if (!(opts.transports & (TRANSPORT_WLAN | TRANSPORT_WWAN | TRANSPORT_LAN))) {
-        QCC_DbgPrintf(("TCPTransport::GetListenAddresses(): transport mismatch"));
+    if (SupportsOptions(opts) == false) {
+        QCC_DbgPrintf(("TCPTransport::GetListenAddresses(): Supported options mismatch"));
         return ER_OK;
     }
 
@@ -1625,6 +1704,16 @@ void* TCPTransport::Run(void* arg)
      */
     uint32_t maxConn = config->GetLimit("max_completed_connections", ALLJOYN_MAX_COMPLETED_CONNECTIONS_TCP_DEFAULT);
 
+    m_minHbeatIdleTimeout = config->GetLimit("tcp_min_idle_timeout", MIN_HEARTBEAT_IDLE_TIMEOUT_DEFAULT);
+    m_maxHbeatIdleTimeout = config->GetLimit("tcp_max_idle_timeout", MAX_HEARTBEAT_IDLE_TIMEOUT_DEFAULT);
+    m_defaultHbeatIdleTimeout = config->GetLimit("tcp_default_idle_timeout", DEFAULT_HEARTBEAT_IDLE_TIMEOUT_DEFAULT);
+
+    m_numHbeatProbes = HEARTBEAT_NUM_PROBES;
+    m_maxHbeatProbeTimeout = config->GetLimit("tcp_max_probe_timeout", MAX_HEARTBEAT_PROBE_TIMEOUT_DEFAULT);
+    m_defaultHbeatProbeTimeout = config->GetLimit("tcp_default_probe_timeout", DEFAULT_HEARTBEAT_PROBE_TIMEOUT_DEFAULT);
+
+    QCC_DbgPrintf(("TCPTransport: Using m_minHbeatIdleTimeout=%u, m_maxHbeatIdleTimeout=%u, m_numHbeatProbes=%u, m_defaultHbeatProbeTimeout=%u m_maxHbeatProbeTimeout=%u", m_minHbeatIdleTimeout, m_maxHbeatIdleTimeout, m_numHbeatProbes, m_defaultHbeatProbeTimeout, m_maxHbeatProbeTimeout));
+
     QStatus status = ER_OK;
 
     while (!IsStopping()) {
@@ -1769,7 +1858,7 @@ void* TCPTransport::Run(void* arg)
                     qcc::SetLinger(newSock, true, 0);
                     qcc::Shutdown(newSock);
                     qcc::Close(newSock);
-                    status = ER_AUTH_FAIL;
+                    status = ER_CONNECTION_LIMIT_EXCEEDED;
                     QCC_LogError(status, ("TCPTransport::Run(): No slot for new connection"));
                 }
             }
@@ -1980,7 +2069,7 @@ void TCPTransport::RunListenMachine(ListenRequest& listenRequest)
      * the different interfaces to the ports on which we are listening
      * on those interfaces) must be non-empty.
      */
-    if (m_isNsEnabled) {
+    if (m_isNsEnabled && !m_stopping) {
         assert(m_isListening);
         assert(!m_listenPortMap.empty());
     }
@@ -1992,7 +2081,7 @@ void TCPTransport::RunListenMachine(ListenRequest& listenRequest)
      * advertisements.  If we are advertising the name service had
      * better be enabled.
      */
-    if (m_isAdvertising) {
+    if (m_isAdvertising && !m_stopping) {
         assert(!m_advertising.empty());
         assert(m_isListening);
         assert(!m_listenPortMap.empty());
@@ -2006,7 +2095,7 @@ void TCPTransport::RunListenMachine(ListenRequest& listenRequest)
      * discoveries.  If we are discovering the name service had better be
      * enabled.
      */
-    if (m_isDiscovering) {
+    if (m_isDiscovering && !m_stopping) {
         assert(!m_discovering.empty());
         assert(m_isListening);
         assert(!m_listenPortMap.empty());
@@ -2749,6 +2838,17 @@ QStatus TCPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
     QCC_DbgHLPrintf(("TCPTransport::Connect(): %s", connectSpec));
 
     /*
+     * We are given a session options structure that defines the kind of
+     * connection that is being sought.  Can we support the connection being
+     * requested?  If not, don't even try.
+     */
+    if (SupportsOptions(opts) == false) {
+        QStatus status = ER_BUS_BAD_SESSION_OPTS;
+        QCC_LogError(status, ("TCPTransport::Connect(): Supported options mismatch"));
+        return status;
+    }
+
+    /*
      * We need to find the defaults for our connection limits.  These limits
      * can be specified in the configuration database with corresponding limits
      * used for DBus.  If any of those are present, we use them, otherwise we
@@ -2967,6 +3067,12 @@ QStatus TCPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
     tcpEp->GetFeatures().handlePassing = false;
     tcpEp->GetFeatures().nameTransfer = opts.nameTransfer;
 
+    /*
+     * Check any application connecting over TCP to see if it is running on the same machine and
+     * set the group ID appropriately if so.
+     */
+    CheckEndpointLocalMachine(tcpEp);
+
     qcc::String authName;
     qcc::String redirection;
 
@@ -3018,7 +3124,7 @@ QStatus TCPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
         assert(i != m_activeEndpointsThreadList.end() && "TCPTransport::Connect(): Thread* not on m_activeEndpointsThreadList");
         m_activeEndpointsThreadList.erase(i);
         m_endpointListLock.Unlock(MUTEX_CONTEXT);
-        return ER_AUTH_FAIL;
+        return ER_CONNECTION_LIMIT_EXCEEDED;
     }
     m_endpointListLock.Unlock();
     status = tcpEp->m_stream.SetNagle(false);
@@ -3052,11 +3158,12 @@ QStatus TCPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
         }
     }
     if (status == ER_OK) {
+
         status = tcpEp->Establish("ANONYMOUS", authName, redirection, authListener);
         if (status == ER_OK) {
             tcpEp->SetListener(this);
             tcpEp->SetEpStarting();
-            status = tcpEp->Start();
+            status = tcpEp->Start(m_defaultHbeatIdleTimeout, m_defaultHbeatProbeTimeout, m_numHbeatProbes, m_maxHbeatProbeTimeout);
             if (status == ER_OK) {
                 tcpEp->SetEpStarted();
                 tcpEp->SetAuthDone();
@@ -3301,6 +3408,10 @@ QStatus TCPTransport::DoStartListen(qcc::String& normSpec)
      */
     assert(IpNameService::Instance().Started() && "TCPTransport::DoStartListen(): IpNameService not started");
 
+    qcc::String interfaces = ConfigDB::GetConfigDB()->GetProperty("ns_interfaces");
+    if (interfaces.size()) {
+        QCC_LogError(ER_WARNING, ("TCPTransport::DoStartListen(): The mechanism implied by \"ns_interfaces\" is no longer supported."));
+    }
     /*
      * Parse the normalized listen spec.  The easiest way to do this is to
      * re-normalize it.  If there's an error at this point, we have done
@@ -4358,6 +4469,24 @@ void TCPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
         EnableDiscoveryInstance(*it);
     }
     m_pendingDiscoveries.clear();
+}
+
+void TCPTransport::CheckEndpointLocalMachine(TCPEndpoint endpoint)
+{
+#ifdef QCC_OS_GROUP_WINDOWS
+    String ipAddrStr;
+    endpoint->GetRemoteIp(ipAddrStr);
+
+    std::vector<IfConfigEntry> entries;
+    IfConfig(entries);
+
+    for (uint32_t i = 0; i < entries.size(); i++) {
+        if (ipAddrStr == entries[i].m_addr) {
+            endpoint->SetGroupId(GetUsersGid(DESKTOP_APPLICATION));
+            break;
+        }
+    }
+#endif
 }
 
 } // namespace ajn

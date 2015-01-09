@@ -475,11 +475,9 @@ class WFDTransport : public Transport, public _RemoteEndpoint::EndpointListener,
      * service attack by simply stopping in mid-authentication.  If an
      * authentication takes longer than this number of milliseconds, it may be
      * summarily aborted if another connection comes in.  This value can be
-     * overridden in the config file by setting "auth_timeout".  The 30 second
-     * number comes from the smaller of two common DBus auth_timeout settings:
-     * 30 sec or 240 sec.
+     * overridden in the config file by setting "auth_timeout".
      */
-    static const uint32_t ALLJOYN_AUTH_TIMEOUT_DEFAULT = 30000;
+    static const uint32_t ALLJOYN_AUTH_TIMEOUT_DEFAULT = 20000;
 
     /**
      * @brief The default value for the maximum number of authenticating

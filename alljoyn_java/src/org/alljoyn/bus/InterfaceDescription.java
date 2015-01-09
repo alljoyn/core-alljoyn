@@ -34,8 +34,6 @@ import org.alljoyn.bus.annotation.BusProperty;
 import org.alljoyn.bus.annotation.BusSignal;
 import org.alljoyn.bus.annotation.Secure;
 
-import org.alljoyn.bus.Translator;
-
 /**
  * InterfaceDescription represents a message bus interface.
  * This class is used internally by registered bus objects.
@@ -55,7 +53,6 @@ class InterfaceDescription {
     private static final int AJ_IFC_SECURITY_OFF       = 2; /**< Security does not apply to this interface */
 
     private static Map<String, Translator> translatorCache = new HashMap<String, Translator>();
-
     private class Property {
 
         public String name;
@@ -98,6 +95,8 @@ class InterfaceDescription {
         properties = new HashMap<String, Property>();
     }
 
+    private boolean announced;
+
     /** Allocate native resources. */
     private native Status create(BusAttachment busAttachment, String name,
             int securePolicy, int numProps, int numMembers);
@@ -110,7 +109,7 @@ class InterfaceDescription {
     private native Status addMemberAnnotation(String member, String annotation, String value);
 
     /** Add a property to the native interface description. */
-    private native Status addProperty(String name, String signature, int access);
+    private native Status addProperty(String name, String signature, int access, int annotation);
 
     /** Add an annotation to the specified interface property */
     private native Status addPropertyAnnotation(String property, String annotation, String value);
@@ -214,6 +213,17 @@ class InterfaceDescription {
 
         configureDescriptions(busAttachment, busInterface);
 
+        BusInterface intf = busInterface.getAnnotation(BusInterface.class);
+        if (intf != null) {
+            if(intf.announced().equals("true")) {
+                announced = true;
+            } else {
+                announced = false;
+            }
+        } else {
+            announced = false;
+        }
+
         activate();
         return Status.OK;
     }
@@ -275,10 +285,10 @@ class InterfaceDescription {
 
     private Status getProperties(Class<?> busInterface) throws AnnotationBusException {
         for (Method method : busInterface.getMethods()) {
+
             if (method.getAnnotation(BusProperty.class) != null) {
                 String name = getName(method);
                 Property property = properties.get(name);
-
                 BusAnnotations propertyAnnotations = method.getAnnotation(BusAnnotations.class);
                 TreeMap<String, String> annotations = new TreeMap<String, String>();
                 if (propertyAnnotations != null)
@@ -311,9 +321,25 @@ class InterfaceDescription {
     private Status addProperties(Class<?> busInterface) throws AnnotationBusException {
         for (Property property : properties.values()) {
             int access = ((property.get != null) ? READ : 0) | ((property.set != null) ? WRITE : 0);
-            Status status = addProperty(property.name, property.signature, access);
+            int annotation = 0;
+
+            for (Method method : busInterface.getMethods()) {
+                BusProperty p = method.getAnnotation(BusProperty.class);
+                if (p != null) {
+                    if (getName(method).equals(property.name)) {
+                        annotation = p.annotation();
+                    }
+                }
+            }
+            Status status = addProperty(property.name, property.signature, access, annotation);
             if (status != Status.OK) {
                 return status;
+            }
+
+            if (annotation == BusProperty.ANNOTATE_EMIT_CHANGED_SIGNAL) {
+                property.annotations.put("org.freedesktop.DBus.Property.EmitsChangedSignal", "true");
+            } else if (annotation == BusProperty.ANNOTATE_EMIT_CHANGED_SIGNAL_INVALIDATES) {
+                property.annotations.put("org.freedesktop.DBus.Property.EmitsChangedSignal", "invalidates");
             }
 
             // loop through the map of properties and add them via native code
@@ -416,6 +442,13 @@ class InterfaceDescription {
         } else {
             return intf.getName();
         }
+    }
+
+    /**
+     * Is the interface announced
+     */
+    public boolean isAnnounced() {
+        return announced;
     }
 
     /**

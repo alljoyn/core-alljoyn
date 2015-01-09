@@ -476,6 +476,17 @@ QStatus AJ_CALL alljoyn_busattachment_registersignalhandler(alljoyn_busattachmen
                                                                srcPath);
 }
 
+QStatus AJ_CALL alljoyn_busattachment_registersignalhandlerwithrule(alljoyn_busattachment bus,
+                                                                    alljoyn_messagereceiver_signalhandler_ptr signal_handler,
+                                                                    const alljoyn_interfacedescription_member member,
+                                                                    const char* matchRule)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    return ((ajn::BusAttachmentC*)bus)->RegisterSignalHandlerWithRuleC(signal_handler,
+                                                                       member,
+                                                                       matchRule);
+}
+
 QStatus AJ_CALL alljoyn_busattachment_unregistersignalhandler(alljoyn_busattachment bus,
                                                               alljoyn_messagereceiver_signalhandler_ptr signal_handler,
                                                               const alljoyn_interfacedescription_member member,
@@ -485,6 +496,17 @@ QStatus AJ_CALL alljoyn_busattachment_unregistersignalhandler(alljoyn_busattachm
     return ((ajn::BusAttachmentC*)bus)->UnregisterSignalHandlerC(signal_handler,
                                                                  member,
                                                                  srcPath);
+}
+
+QStatus AJ_CALL alljoyn_busattachment_unregistersignalhandlerwithrule(alljoyn_busattachment bus,
+                                                                      alljoyn_messagereceiver_signalhandler_ptr signal_handler,
+                                                                      const alljoyn_interfacedescription_member member,
+                                                                      const char* matchRule)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    return ((ajn::BusAttachmentC*)bus)->UnregisterSignalHandlerWithRuleC(signal_handler,
+                                                                         member,
+                                                                         matchRule);
 }
 
 QStatus AJ_CALL alljoyn_busattachment_unregisterallhandlers(alljoyn_busattachment bus)
@@ -510,3 +532,82 @@ QStatus AJ_CALL alljoyn_busattachment_ping(alljoyn_busattachment bus, const char
     QCC_DbgTrace(("%s", __FUNCTION__));
     return ((ajn::BusAttachmentC*)bus)->Ping(name, timeout);
 }
+
+/**
+ * This function is experimental, and as such has not been fully tested.
+ * Please help make it more robust by contributing fixes if you find problems.
+ */
+void AJ_CALL alljoyn_busattachment_registeraboutlistener(alljoyn_busattachment bus,
+                                                         alljoyn_aboutlistener aboutListener)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    return ((ajn::BusAttachmentC*)bus)->RegisterAboutListener(*(ajn::AboutListener*)aboutListener);
+}
+
+/**
+ * This function is experimental, and as such has not been fully tested.
+ * Please help make it more robust by contributing fixes if you find problems.
+ */
+void AJ_CALL alljoyn_busattachment_unregisteraboutlistener(alljoyn_busattachment bus,
+                                                           alljoyn_aboutlistener aboutListener)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    return ((ajn::BusAttachmentC*)bus)->UnregisterAboutListener(*(ajn::AboutListener*)aboutListener);
+}
+
+/**
+ * This function is experimental, and as such has not been fully tested.
+ * Please help make it more robust by contributing fixes if you find problems.
+ */
+void AJ_CALL alljoyn_busattachment_unregisterallaboutlisteners(alljoyn_busattachment bus)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    return ((ajn::BusAttachmentC*)bus)->UnregisterAllAboutListeners();
+}
+
+/**
+ * This function is experimental, and as such has not been fully tested.
+ * Please help make it more robust by contributing fixes if you find problems.
+ */
+QStatus AJ_CALL alljoyn_busattachment_whoimplements_interfaces(alljoyn_busattachment bus,
+                                                               const char** implementsInterfaces,
+                                                               size_t numberInterfaces)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    return ((ajn::BusAttachmentC*)bus)->WhoImplements(implementsInterfaces, numberInterfaces);
+}
+
+/**
+ * This function is experimental, and as such has not been fully tested.
+ * Please help make it more robust by contributing fixes if you find problems.
+ */
+QStatus AJ_CALL alljoyn_busattachment_whoimplements_interface(alljoyn_busattachment bus,
+                                                              const char* implementsInterface)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    return ((ajn::BusAttachmentC*)bus)->WhoImplements(implementsInterface);
+}
+
+/**
+ * This function is experimental, and as such has not been fully tested.
+ * Please help make it more robust by contributing fixes if you find problems.
+ */
+QStatus AJ_CALL alljoyn_busattachment_cancelwhoimplements_interfaces(alljoyn_busattachment bus,
+                                                                     const char** implementsInterfaces,
+                                                                     size_t numberInterfaces)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    return ((ajn::BusAttachmentC*)bus)->CancelWhoImplements(implementsInterfaces, numberInterfaces);
+}
+
+/**
+ * This function is experimental, and as such has not been fully tested.
+ * Please help make it more robust by contributing fixes if you find problems.
+ */
+QStatus AJ_CALL alljoyn_busattachment_cancelwhoimplements_interface(alljoyn_busattachment bus,
+                                                                    const char* implementsInterface)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    return ((ajn::BusAttachmentC*)bus)->CancelWhoImplements(implementsInterface);
+}
+

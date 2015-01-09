@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2012, 2014 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2012, 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -398,7 +398,7 @@ QStatus KeyStore::Pull(Source& source, const qcc::String& password)
     keyStoreKey->Derive(password + GetGuid(), Crypto_AES::AES128_SIZE, KeyBlob::AES);
 
     /* Allow for an uninitialized (empty) key store */
-    if (status == ER_NONE) {
+    if (status == ER_EOF) {
         keys->clear();
         storeState = MODIFIED;
         revision = 0;
@@ -467,7 +467,7 @@ QStatus KeyStore::Pull(Source& source, const qcc::String& password)
                     QCC_DbgPrintf(("KeyStore::Pull rev:%d GUID %s %s", rev, QCC_StatusText(status), guid.ToString().c_str()));
                 }
             }
-            if (status == ER_NONE) {
+            if (status == ER_EOF) {
                 status = ER_OK;
             }
         }

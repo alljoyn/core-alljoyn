@@ -5,7 +5,6 @@
  *
  * This file defines the base class for message bus objects that
  * are implemented and registered locally.
- *
  */
 
 /******************************************************************************
@@ -53,7 +52,14 @@ class BusObject : public MessageReceiver {
     friend class _LocalEndpoint;
 
   public:
-
+    /**
+     * flag used to specify if an interface is announced or not here
+     * @see AddInterface
+     */
+    typedef enum {
+        UNANNOUNCED, ///< The interface is not announced
+        ANNOUNCED ///< The interface is announced
+    } AnnounceFlag;
     /**
      * Return the path for the object
      *
@@ -103,8 +109,24 @@ class BusObject : public MessageReceiver {
      * @param propName  The name of the property being changed
      * @param val       The new value of the property
      * @param id        ID of the session we broadcast the signal to (0 for all)
+     * @param flags     Flags to be added to the signal.
      */
-    void EmitPropChanged(const char* ifcName, const char* propName, MsgArg& val, SessionId id);
+    void EmitPropChanged(const char* ifcName, const char* propName, MsgArg& val, SessionId id, uint8_t flags = 0);
+
+    /**
+     * Emit PropertiesChanged to signal the bus that these properties have been updated
+     *
+     *  BusObject must be registered before calling this method.
+     *
+     * @param ifcName   The name of the interface
+     * @param propNames An array with the names of the properties being changed
+     * @param numProps  The size of the propNames array
+     * @param id        ID of the session we broadcast the signal to (0 for all)
+     * @param flags     Flags to be added to the signal.
+     *
+     * @return   ER_OK if successful.
+     */
+    QStatus EmitPropChanged(const char* ifcName, const char** propNames, size_t numProps, SessionId id, uint8_t flags = 0);
 
     /**
      * Get a reference to the underlying BusAttachment
@@ -121,8 +143,9 @@ class BusObject : public MessageReceiver {
      * Send a signal.
      *
      * @param destination      The unique or well-known bus name or the signal recipient (NULL for broadcast signals)
-     * @param sessionId        A unique SessionId for this AllJoyn session instance. The session this message is for. For the signal to transmit outside of the
-     *                         current process this must be 0.
+     * @param sessionId        A unique SessionId for this AllJoyn session instance. The session this message is for.
+     *                         Use SESSION_ID_ALL_HOSTED to emit on all sessions hosted by this BusObject's BusAttachment.
+     *                         For broadcast or sessionless signals, the sessionId must be 0.
      * @param signal           Interface member of signal being emitted.
      * @param args             The arguments for the signal (can be NULL)
      * @param numArgs          The number of arguments
@@ -197,6 +220,46 @@ class BusObject : public MessageReceiver {
      */
     void SetDescriptionTranslator(Translator* translator);
 
+    /**
+     * Get a list of the interfaces that are added to this BusObject that will
+     * be announced.
+     *
+     * usage example
+     * @code
+     * size_t numInterfaces = busObject.GetAnnouncedInterfaces(NULL, 0);
+     * const char** interfaces = new const char*[numInterfaces];
+     * busObject.GetAnnouncedInterfaces(interfaces, numInterfaces);
+     * @endcode
+     *
+     * @param[in] interfaces an char* array pointer
+     * @param[in] numInterfaces the size of the char* array
+     *
+     * @return
+     *    The total number of interfaces found that are announced.  If this number
+     *    is larger than `numInterfaces` then only `numInterfaces` will be returned.
+     *
+     */
+    size_t GetAnnouncedInterfaceNames(const char** interfaces = NULL, size_t numInterfaces = 0);
+
+    /**
+     * Change the announce flag for an already added interface. Changes in the
+     * announce flag are not visible to other devices till Announce is called.
+     *
+     * @see AboutObj::Announce()
+     *
+     * @param[in] iface InterfaceDescription for the interface you wish to set
+     *                  the the announce flag.
+     * @param[in] isAnnounced This interface should be part of the Announce signal
+     *                        UNANNOUNCED - this interface will not be part of the Announce
+     *                                      signal
+     *                        ANNOUNCED - this interface will be part of the Announce
+     *                                    signal.
+     * @return
+     *  - #ER_OK if successful
+     *  - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the interface is not part of the
+     *                                     bus object.
+     */
+    QStatus SetAnnounceFlag(const InterfaceDescription* iface, AnnounceFlag isAnnounced = ANNOUNCED);
   protected:
 
     /**
@@ -260,14 +323,19 @@ class BusObject : public MessageReceiver {
      * Once an object is registered, it should not add any additional interfaces. Doing so would
      * confuse remote objects that may have already introspected this object.
      *
-     * @param iface  The interface to add
+     * @param iface       The interface to add
+     * @param isAnnounced This interface should be part of the Announce signal
+     *                    UNANNOUNCED - this interface will not be part of the Announce
+     *                                  signal
+     *                    ANNOUNCED - this interface will be part of the Announce
+     *                                signal.
      *
      * @return
      *      - #ER_OK if the interface was successfully added.
      *      - #ER_BUS_IFACE_ALREADY_EXISTS if the interface already exists.
      *      - An error status otherwise
      */
-    QStatus AddInterface(const InterfaceDescription& iface);
+    QStatus AddInterface(const InterfaceDescription& iface, AnnounceFlag isAnnounced = UNANNOUNCED);
 
     /**
      * Add a method handler to this object. The interface for the method handler must have already

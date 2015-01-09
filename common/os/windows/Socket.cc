@@ -52,25 +52,6 @@ namespace qcc {
 const SocketFd INVALID_SOCKET_FD = INVALID_SOCKET;
 const int MAX_LISTEN_CONNECTIONS = SOMAXCONN;
 
-/*
- * Called before any operation that might be called before winsock has been started.
- */
-void WinsockCheck()
-{
-    static bool initialized = false;
-    if (!initialized) {
-        QCC_DbgHLPrintf(("Initialized winsock"));
-        WSADATA wsaData;
-        WORD version = MAKEWORD(2, 0);
-        int error = WSAStartup(version, &wsaData);
-        if (error) {
-            QCC_LogError(ER_OS_ERROR, ("WSAStartup failed with error: %d", error));
-        } else {
-            initialized = true;
-        }
-    }
-}
-
 qcc::String StrError()
 {
     WinsockCheck();
@@ -952,6 +933,58 @@ QStatus SetBlocking(SocketFd sockfd, bool blocking)
         status = ER_OS_ERROR;
         QCC_LogError(status, ("Failed to set socket non-blocking %s", StrError().c_str()));
     }
+    return status;
+}
+
+QStatus SetSndBuf(SocketFd sockfd, size_t bufSize)
+{
+    QStatus status = ER_OK;
+    int arg = bufSize;
+    int r = setsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, (const char*)&arg, sizeof(arg));
+    if (r != 0) {
+        status = ER_OS_ERROR;
+        QCC_LogError(status, ("Setting SO_SNDBUF failed: (%d) %s", errno, strerror(errno)));
+    }
+    return status;
+}
+
+QStatus GetSndBuf(SocketFd sockfd, size_t& bufSize)
+{
+    QStatus status = ER_OK;
+    int arg = 0;
+    socklen_t len = sizeof(arg);
+    int r = getsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, (char*)&arg, &len);
+    if (r != 0) {
+        status = ER_OS_ERROR;
+        QCC_LogError(status, ("Getting SO_SNDBUF failed: (%d) %s", errno, strerror(errno)));
+    }
+    bufSize = arg;
+    return status;
+}
+
+QStatus SetRcvBuf(SocketFd sockfd, size_t bufSize)
+{
+    QStatus status = ER_OK;
+    int arg = bufSize;
+    int r = setsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, (const char*)&arg, sizeof(arg));
+    if (r != 0) {
+        status = ER_OS_ERROR;
+        QCC_LogError(status, ("Setting SO_RCVBUF failed: (%d) %s", errno, strerror(errno)));
+    }
+    return status;
+}
+
+QStatus GetRcvBuf(SocketFd sockfd, size_t& bufSize)
+{
+    QStatus status = ER_OK;
+    int arg = 0;
+    socklen_t len = sizeof(arg);
+    int r = getsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, (char*)&arg, &len);
+    if (r != 0) {
+        status = ER_OS_ERROR;
+        QCC_LogError(status, ("Getting SO_RCVBUF failed: (%d) %s", errno, strerror(errno)));
+    }
+    bufSize = arg;
     return status;
 }
 

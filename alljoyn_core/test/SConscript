@@ -24,9 +24,13 @@ if test_env['BR'] == 'on':
 
 # Test Programs
 progs = [
+    test_env.Program('aclient',       ['aclient.cc']),
+    test_env.Program('aservice',      ['aservice.cc']),
     test_env.Program('bastress',      ['bastress.cc']),
     test_env.Program('bastress2',     ['bastress2.cc']),
     test_env.Program('bignum',        ['bignum.cc']),
+    test_env.Program('propstresstest',['propstresstest.cc']),
+    test_env.Program('proptester',    ['proptester.cc']),
     test_env.Program('socktest',      ['socktest.cc']),
     test_env.Program('remarshal',     ['remarshal.cc']),
     test_env.Program('unpack',        ['unpack.cc']),

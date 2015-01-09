@@ -22,18 +22,27 @@
 #ifndef _ALLJOYN_ARDP_PROTOCOL_H
 #define _ALLJOYN_ARDP_PROTOCOL_H
 
+#ifndef ARDP_TESTHOOKS
+#define ARDP_TESTHOOKS 1  /**< Enabling test hooks defaults to off */
+#endif
+
+#ifndef ARDP_STATS
+#define ARDP_STATS 1  /**< Enabling statistics gathering defaults to off */
+#endif
+
 #include <alljoyn/Status.h>
 
 #include <qcc/platform.h>
 #include <qcc/IPAddress.h>
 #include <qcc/Socket.h>
 
+#if ARDP_TESTHOOKS
+#include "ScatterGatherList.h"
+#endif
+
 namespace ajn {
 
 const uint32_t ARDP_NO_TIMEOUT = 0xffffffff; /**< To indicate that no timed actions are pending */
-
-const uint16_t ARDP_SEGBMAX = 65535 - 20 - 8; /**< Maximum size of a datagram (UDP payload minus IP header size minus UDP header size */
-const uint16_t ARDP_SEGMAX = 16;              /**< Max number of segments in flight. */
 
 const uint32_t ARDP_CONN_ID_INVALID = 0xffffffff; /* To indicate invalid connection */
 
@@ -41,16 +50,20 @@ const uint32_t ARDP_CONN_ID_INVALID = 0xffffffff; /* To indicate invalid connect
  * @brief Per-protocol-instance (global) configuration variables.
  */
 typedef struct {
-    uint32_t connectTimeout;  /**< udp_connect_timeout configuration variable */
-    uint32_t connectRetries;  /**< udp_connect_retries configuration variable */
-    uint32_t dataTimeout;     /**< udp_data_timeout configuration variable */
-    uint32_t dataRetries;     /**< udp_data_retries configuration variable */
-    uint32_t persistTimeout;  /**< udp_persist_timeout configuration variable */
-    uint32_t persistRetries;  /**< udp_persist_retries configuration variable */
-    uint32_t probeTimeout;    /**< udp_probe_timeout configuration variable */
-    uint32_t probeRetries;    /**< udp_probe_retries configuration variable */
-    uint32_t dupackCounter;   /**< udp_dupack_counter configuration variable */
-    uint32_t timewait;        /**< udp_timewait configuration variable */
+    uint32_t connectTimeout;            /**< udp_connect_timeout configuration variable */
+    uint32_t connectRetries;            /**< udp_connect_retries configuration variable */
+    uint32_t initialDataTimeout;        /**< udp_initial_data_timeout configuration variable */
+    uint32_t totalDataRetryTimeout;     /**< udp_total_data_retry_timeout configuration variable */
+    uint32_t minDataRetries;            /**< udp_min_data_retries configuration variable */
+    uint32_t persistInterval;           /**< udp_persist_interval configuration variable */
+    uint32_t totalAppTimeout;           /**< udp_total_app_timeout configuration variable */
+    uint32_t linkTimeout;               /**< udp_link_timeout configuration variable */
+    uint32_t keepaliveRetries;          /**< udp_keepalive_retries configuration variable */
+    uint32_t fastRetransmitAckCounter;  /**< udp_fast_retransmit_ack_counter configuration variable */
+    uint32_t delayedAckTimeout;         /**< udp_delayed_ack_timeout configuration variable */
+    uint32_t timewait;                  /**< udp_timewait configuration variable */
+    uint32_t segbmax;                   /**< udp_segbmax configuration variable */
+    uint32_t segmax;                    /**< udp_segmax configuration variable */
 } ArdpGlobalConfig;
 
 /**
@@ -73,6 +86,7 @@ typedef struct {
     uint32_t acknxt;    /**< First unexpired segment, TTL accounting */
     uint32_t som;       /**< Start sequence number for fragmented message */
     uint16_t fcnt;      /**< Number of segments comprising fragmented message */
+    uint16_t reserve;   /**< Reserved for future use */
 } ArdpHeader;
 #pragma pack(pop)
 
@@ -80,15 +94,14 @@ typedef struct {
 static const uint16_t ARDP_MAX_HEADER_LEN = 255;
 
 /* Length of fixed part of the header (sans EACKs), see below ArdpHeader structure */
-static const uint16_t ARDP_FIXED_HEADER_LEN = sizeof(ArdpHeader);
+static const uint16_t ARDP_FIXED_HEADER_LEN = 36;
 
-/* Max size of  EACK mask (in 32-bit units) */
-const uint8_t ARDP_MAX_EACK_MASK_SZ = (ARDP_MAX_HEADER_LEN - ARDP_FIXED_HEADER_LEN) >> 2;
-
-/* Max number (times 32) of outstanding unacked segments the protocol allows per connection. */
-const uint32_t ARDP_MAX_EACK = ARDP_MAX_EACK_MASK_SZ * 32;
-
-const uint16_t ARDP_USRBMAX = (uint16_t)(ARDP_SEGBMAX - sizeof(ArdpHeader)); /**< Maximum size of an ARDP user datagram */
+/**
+ * Max window size (segments in flight). Limited by :
+ * a) header filed size (8 bit)
+ * b) presence of EACK mask that has to be in 32-bit chunks and depends on window size.
+ */
+const uint16_t ARDP_MAX_WINDOW_SIZE =  ((ARDP_MAX_HEADER_LEN * 2 - ARDP_FIXED_HEADER_LEN) >> 5) << 5;
 
 typedef struct ARDP_CONN_RECORD ArdpConnRecord;
 
@@ -98,7 +111,7 @@ typedef struct ARDP_CONN_RECORD ArdpConnRecord;
 #define ARDP_FLAG_RST  0x08    /**< Control flag. Reset this connection. Must be separate segment. */
 #define ARDP_FLAG_NUL  0x10    /**< Control flag. Null (zero-length) segment.  Must have zero data length but may share ACK and EACK info. */
 #define ARDP_FLAG_VER  0x40    /**< Control flag. Bits 6-7 of flags byte.  Current version is (1) */
-#define ARDP_FLAG_SDM  0x0001  /*<< Sequenced delivery mode option. Indicates in-order sequence delivery is in force. */
+#define ARDP_FLAG_SDM  0x0001  /**< Sequenced delivery mode option. Indicates in-order sequence delivery is in force. */
 
 typedef struct ARDP_HANDLE ArdpHandle;
 
@@ -107,13 +120,32 @@ typedef struct ARDP_RCV_BUFFER {
     uint32_t datalen;      /**< Data payload size */
     uint8_t* data;         /**< Pointer to data payload */
     ARDP_RCV_BUFFER* next; /**< Pointer to the next buffer */
-    bool inUse;            /**< Flag indicating that the buffer is occupied, but not delivered to the upper layer (fragment) */
-    bool isDelivered;      /**< Flag indicating that the buffer is not delivered to the upper layer */
-    uint32_t som;
-    uint16_t fcnt;
+    uint32_t som;          /**< Sequence number of first segment in fragmented message */
     uint32_t ttl;          /**< Remaining time to live of the AllJoyn message */
     uint32_t tRecv;        /**< Local time at which the segment was received (used for TTL calcs) */
+    uint16_t fcnt;         /**< Number of segments comprising fragmented message */
+    uint8_t flags;         /**< Buffer state flags */
 } ArdpRcvBuf;
+
+#if ARDP_TESTHOOKS
+enum TesthookSource {
+    SEND_MSG_HEADER = 1,
+    SEND_MSG_DATA,
+    DO_SEND_SYN,
+    SEND_RST,
+    ARDP_RUN
+};
+
+typedef void (*ARDP_SENDTOSG_TH)(ArdpHandle* handle, ArdpConnRecord* conn, TesthookSource source, qcc::ScatterGatherList& msgSG);
+typedef void (*ARDP_SENDTO_TH)(ArdpHandle* handle, ArdpConnRecord* conn, TesthookSource source, void* buf, uint32_t len);
+typedef void (*ARDP_RECVFROM_TH)(ArdpHandle* handle, ArdpConnRecord* conn, TesthookSource source, void* buf, uint32_t len);
+
+typedef struct {
+    ARDP_SENDTOSG_TH SendToSG;  /**< Called just before a scatter-gather list is sent to a socket, after ARDP is done with the data */
+    ARDP_SENDTO_TH SendTo;      /**< Called just before a buffer is sent to a socket, after ARDP is done with the data */
+    ARDP_RECVFROM_TH RecvFrom;  /**< Called after a message is received from a socket, before ARDP does anything */
+} ArdpTesthooks;
+#endif
 
 typedef void (*ARDP_CONNECT_CB)(ArdpHandle* handle, ArdpConnRecord* conn, bool passive, uint8_t* buf, uint16_t len, QStatus status);
 typedef void (*ARDP_DISCONNECT_CB)(ArdpHandle* handle, ArdpConnRecord* conn, QStatus status);
@@ -128,7 +160,7 @@ typedef struct {
     ARDP_DISCONNECT_CB DisconnectCb;  /**< Called when connection goes to CLOSE_WAIT state */
     ARDP_RECV_CB RecvCb;              /**< Called when new data arrives */
     ARDP_SEND_CB SendCb;              /**< Called when the buffer is sent off into the network */
-    ARDP_SEND_WINDOW_CB SendWindowCb; /**< Called when the send window changes for some reason */
+    ARDP_SEND_WINDOW_CB SendWindowCb; /**< Called when the send window changes */
 } ArdpCallbacks;
 
 /**
@@ -174,6 +206,7 @@ ArdpHandle* ARDP_AllocHandle(ArdpGlobalConfig* config);
 void ARDP_FreeHandle(ArdpHandle* handle);
 void ARDP_SetHandleContext(ArdpHandle* handle, void* context);
 void* ARDP_GetHandleContext(ArdpHandle* handle);
+bool ARDP_IsConnValid(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t connId);
 void ARDP_ReleaseConn(ArdpHandle* handle, ArdpConnRecord* conn);
 QStatus ARDP_SetConnContext(ArdpHandle* handle, ArdpConnRecord* conn, void* context);
 void* ARDP_GetConnContext(ArdpHandle* handle, ArdpConnRecord* conn);
@@ -181,7 +214,7 @@ uint32_t ARDP_GetConnId(ArdpHandle* handle, ArdpConnRecord* conn);
 uint32_t ARDP_GetConnPending(ArdpHandle* handle, ArdpConnRecord* conn);
 qcc::IPAddress ARDP_GetIpAddrFromConn(ArdpHandle* handle, ArdpConnRecord* conn);
 uint16_t ARDP_GetIpPortFromConn(ArdpHandle* handle, ArdpConnRecord* conn);
-QStatus ARDP_Run(ArdpHandle* handle, qcc::SocketFd sock, bool socketReady, uint32_t* ms);
+QStatus ARDP_Run(ArdpHandle* handle, qcc::SocketFd sock, bool readReady, bool writeReady, uint32_t* ms);
 QStatus ARDP_StartPassive(ArdpHandle* handle);
 QStatus ARDP_Accept(ArdpHandle* handle, ArdpConnRecord* conn, uint16_t segmax, uint16_t segbmax, uint8_t* buf, uint16_t len);
 QStatus ARDP_Acknowledge(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint16_t len);
@@ -196,6 +229,41 @@ void ARDP_SetRecvCb(ArdpHandle* handle, ARDP_RECV_CB RecvCb);
 QStatus ARDP_Send(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint32_t len, uint32_t ttl);
 void ARDP_SetSendCb(ArdpHandle* handle, ARDP_SEND_CB SendCb);
 void ARDP_SetSendWindowCb(ArdpHandle* handle, ARDP_SEND_WINDOW_CB SendWindowCb);
+uint32_t ARDP_GetDataTimeout(ArdpHandle* handle, ArdpConnRecord* conn);
+
+#if ARDP_TESTHOOKS
+void ARDP_HookSendToSG(ArdpHandle* handle, ARDP_SENDTOSG_TH SendToSG);
+void ARDP_HookSendTo(ArdpHandle* handle, ARDP_SENDTO_TH SendTo);
+void ARDP_HookRecvFrom(ArdpHandle* handle, ARDP_RECVFROM_TH RecvFrom);
+#endif
+
+#if ARDP_STATS
+typedef struct {
+    uint32_t acceptCbs;       /**< The number of times the accept callback was fired */
+    uint32_t connectCbs;      /**< The number of times the connect callback was fired */
+    uint32_t disconnectCbs;   /**< The number of times the disconnect callback was fired */
+    uint32_t sendCbs;         /**< The number of times the send callback was fired */
+    uint32_t recvCbs;         /**< The number of times the receive callback was fired */
+    uint32_t outboundDrops;   /**< The total number of outbound messages that have been dropped */
+    uint32_t preflightDrops;  /**< The number of outbound messages that have been dropped before making it to the wire */
+    uint32_t inflightDrops;   /**< The number of outbound messages that have been dropped after making it to the wire */
+    uint32_t inboundDrops;    /**< The total number of inbound messages that have been dropped */
+    uint32_t synSends;        /**< The number of SYN packets we have sent (3-way handshake part one) */
+    uint32_t synRecvs;        /**< The number of SYN packets we have received (3-way handshake part one) */
+    uint32_t synackSends;     /**< The number of SYN-ACK packets we have sent (3-way handshake part two) */
+    uint32_t synackRecvs;     /**< The number of SYN-ACK packets we have received (3-way handshake part two) */
+    uint32_t synackackSends;  /**< The number of SYN-ACK ACK packets we have sent (3-way handshake part three) */
+    uint32_t synackackRecvs;  /**< The number of SYN-ACK ACK packets we have received (3-way handshake part three) */
+    uint32_t rstSends;        /**< The number of RST packets we have sent */
+    uint32_t rstRecvs;        /**< The number of RST packets we have received */
+    uint32_t nulSends;        /**< The number of NUL packets we have sent */
+    uint32_t nulRecvs;        /**< The number of NUL packets we have received */
+} ArdpStats;
+
+ArdpStats* ARDP_GetStats(ArdpHandle* handle);
+void ARDP_ResetStats(ArdpHandle* handle);
+
+#endif
 
 } // namespace ajn
 

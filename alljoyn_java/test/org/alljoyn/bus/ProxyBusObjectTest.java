@@ -33,6 +33,11 @@ public class ProxyBusObjectTest extends TestCase {
         System.loadLibrary("alljoyn_java");
     }
 
+    private int uniquifier = 0;
+    private String genUniqueName(BusAttachment bus) {
+        return "test.x" + bus.getGlobalGUIDString() + ".x" + uniquifier++;
+    }
+
     private String name;
     private BusAttachment otherBus;
     private Service service;
@@ -40,8 +45,8 @@ public class ProxyBusObjectTest extends TestCase {
     private ProxyBusObject proxyObj;
 
     public void setUp() throws Exception {
-        name = "org.alljoyn.bus.ProxyBusObjectTest.advertise";
         otherBus = new BusAttachment(getClass().getName(), BusAttachment.RemoteMessage.Receive);
+        name = genUniqueName(otherBus);
         service = new Service();
         assertEquals(Status.OK, otherBus.registerBusObject(service, "/simple"));
         assertEquals(Status.OK, otherBus.connect());

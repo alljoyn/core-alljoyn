@@ -24,35 +24,35 @@ public interface GenericLogger {
     /**
      * Debug level message
      * @param TAG Tag to be added to the message, i.e. class that writes the message
-     * @param msg
+     * @param msg message to be sent to the logger
      */
     public void debug(String TAG, String msg);
 
     /**
      * Info level message
      * @param TAG Tag to be added to the message, i.e. class that writes the message
-     * @param msg
+     * @param msg message to be sent to the logger
      */
     public void info(String TAG, String msg);
 
     /**
      * Warn level message
      * @param TAG Tag to be added to the message, i.e. class that writes the message
-     * @param msg
+     * @param msg message to be sent to the logger
      */
     public void warn(String TAG, String msg);
 
     /**
      * Error level message
      * @param TAG Tag to be added to the message, i.e. class that writes the message
-     * @param msg
+     * @param msg message to be sent to the logger
      */
     public void error(String TAG, String msg);
 
     /**
      * Fatal level message
      * @param TAG Tag to be added to the message, i.e. class that writes the message
-     * @param msg
+     * @param msg message to be sent to the logger
      */
     public void fatal(String TAG, String msg);
 }

@@ -19,7 +19,7 @@ classes = sample_env.Java(sample_env.Dir('$OBJDIR_ABOUT/java/samples/classes').s
 sample_env.Depends(classes, sample_env['dep_jars'])
 classes.append('MANIFEST.MF') 
 
-jar = sample_env.Jar(target = 'about_server_sample', source = classes)
+jar = sample_env.Jar(target = 'about_server_sample_legacy', source = classes)
 
 Return('jar')
 

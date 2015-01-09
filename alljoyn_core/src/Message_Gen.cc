@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2012, 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -238,7 +238,9 @@ QStatus _Message::MarshalArgs(const MsgArg* arg, size_t numArgs)
                 }
             } else {
                 Marshal4(len);
-                MarshalBytes(arg->v_scalarArray.v_uint32, len);
+                if (arg->v_scalarArray.v_uint32) {
+                    MarshalBytes(arg->v_scalarArray.v_uint32, len);
+                }
             }
             break;
 
@@ -263,7 +265,9 @@ QStatus _Message::MarshalArgs(const MsgArg* arg, size_t numArgs)
                 } else {
                     Marshal4(len);
                     MarshalPad(8);
-                    MarshalBytes(arg->v_scalarArray.v_uint64, len);
+                    if (arg->v_scalarArray.v_uint64) {
+                        MarshalBytes(arg->v_scalarArray.v_uint64, len);
+                    }
                 }
             } else {
                 /* Even empty arrays are padded to the element type alignment boundary */
@@ -289,7 +293,9 @@ QStatus _Message::MarshalArgs(const MsgArg* arg, size_t numArgs)
                 }
             } else {
                 Marshal4(len);
-                MarshalBytes(arg->v_scalarArray.v_uint16, len);
+                if (arg->v_scalarArray.v_uint16) {
+                    MarshalBytes(arg->v_scalarArray.v_uint16, len);
+                }
             }
             break;
 
@@ -307,7 +313,9 @@ QStatus _Message::MarshalArgs(const MsgArg* arg, size_t numArgs)
             } else {
                 Marshal4(len);
             }
-            MarshalBytes(arg->v_scalarArray.v_byte, arg->v_scalarArray.numElements);
+            if (arg->v_scalarArray.v_byte) {
+                MarshalBytes(arg->v_scalarArray.v_byte, arg->v_scalarArray.numElements);
+            }
             break;
 
         case ALLJOYN_BOOLEAN:
@@ -657,7 +665,9 @@ void _Message::MarshalHeaderFields()
                 Marshal1(field->v_signature.len);
                 tPos = (char*)bufPos;
                 tLen = field->v_signature.len;
-                MarshalBytes((void*)field->v_signature.sig, field->v_signature.len + 1);
+                if ((void*)field->v_signature.sig) {
+                    MarshalBytes((void*)field->v_signature.sig, field->v_signature.len + 1);
+                }
                 field->Clear();
                 field->typeId = ALLJOYN_SIGNATURE;
                 field->v_signature.sig = tPos;
@@ -687,7 +697,9 @@ void _Message::MarshalHeaderFields()
                 }
                 tPos = (char*)bufPos;
                 tLen = field->v_string.len;
-                MarshalBytes((void*)field->v_string.str, field->v_string.len + 1);
+                if ((void*)field->v_string.str) {
+                    MarshalBytes((void*)field->v_string.str, field->v_string.len + 1);
+                }
                 field->Clear();
                 field->typeId = id;
                 field->v_string.str = tPos;
@@ -785,12 +797,14 @@ QStatus _Message::EncryptMessage()
 }
 
 QStatus _Message::MarshalMessage(const qcc::String& expectedSignature,
+                                 const qcc::String& sender,
                                  const qcc::String& destination,
                                  AllJoynMessageType msgType,
                                  const MsgArg* args,
                                  uint8_t numArgs,
                                  uint8_t flags,
-                                 uint32_t sessionId)
+                                 uint32_t sessionId,
+                                 CompressionRules& compressionRules)
 {
     char signature[256];
     QStatus status = ER_OK;
@@ -801,9 +815,6 @@ QStatus _Message::MarshalMessage(const qcc::String& expectedSignature,
     size_t argsLen = (numArgs == 0) ? 0 : SignatureUtils::GetSize(args, numArgs);
     size_t hdrLen = 0;
 
-    if (!bus->IsStarted()) {
-        return ER_BUS_BUS_NOT_STARTED;
-    }
     /*
      * Check if endianess needs to be swapped.
      */
@@ -858,7 +869,6 @@ QStatus _Message::MarshalMessage(const qcc::String& expectedSignature,
     /*
      * Sender is obtained from the bus
      */
-    const qcc::String& sender = bus->GetInternal().GetLocalEndpoint()->GetUniqueName();
     hdrFields.field[ALLJOYN_HDR_FIELD_SENDER].Clear();
     if (!sender.empty()) {
         hdrFields.field[ALLJOYN_HDR_FIELD_SENDER].typeId = ALLJOYN_STRING;
@@ -903,7 +913,7 @@ QStatus _Message::MarshalMessage(const qcc::String& expectedSignature,
      */
     hdrFields.field[ALLJOYN_HDR_FIELD_COMPRESSION_TOKEN].Clear();
     if ((msgHeader.flags & ALLJOYN_FLAG_COMPRESSED)) {
-        hdrFields.field[ALLJOYN_HDR_FIELD_COMPRESSION_TOKEN].v_uint32 = bus->GetInternal().GetCompressionRules()->GetToken(hdrFields);
+        hdrFields.field[ALLJOYN_HDR_FIELD_COMPRESSION_TOKEN].v_uint32 = compressionRules->GetToken(hdrFields);
         hdrFields.field[ALLJOYN_HDR_FIELD_COMPRESSION_TOKEN].typeId = ALLJOYN_UINT32;
     }
     /*
@@ -1024,10 +1034,21 @@ ExitMarshalMessage:
     return status;
 }
 
-
 QStatus _Message::HelloMessage(bool isBusToBus, bool allowRemote, SessionOpts::NameTransferType nameType)
 {
+    if (!bus->IsStarted()) {
+        return ER_BUS_BUS_NOT_STARTED;
+    }
+    return HelloMessage(isBusToBus, bus->GetInternal().GetLocalEndpoint()->GetUniqueName(), allowRemote,
+                        bus->GetInternal().GetGlobalGUID().ToString(), nameType);
+}
+
+QStatus _Message::HelloMessage(bool isBusToBus, const qcc::String& sender, bool allowRemote,
+                               const qcc::String& guid, SessionOpts::NameTransferType nameType)
+{
     QStatus status;
+    CompressionRules unused; /* Only needed if flags includes ALLJOYN_FLAG_COMPRESSED */
+
     /*
      * Clear any stale header fields
      */
@@ -1038,17 +1059,18 @@ QStatus _Message::HelloMessage(bool isBusToBus, bool allowRemote, SessionOpts::N
         hdrFields.field[ALLJOYN_HDR_FIELD_INTERFACE].Set("s", org::alljoyn::Bus::InterfaceName);
         hdrFields.field[ALLJOYN_HDR_FIELD_MEMBER].Set("s", "BusHello");
 
-        qcc::String guid = bus->GetInternal().GetGlobalGUID().ToString();
         MsgArg args[2];
         args[0].Set("s", guid.c_str());
         args[1].Set("u", nameType << 30 | ALLJOYN_PROTOCOL_VERSION);
         status = MarshalMessage("su",
+                                sender,
                                 org::alljoyn::Bus::WellKnownName,
                                 MESSAGE_METHOD_CALL,
                                 args,
                                 ArraySize(args),
                                 ALLJOYN_FLAG_AUTO_START | (allowRemote ? ALLJOYN_FLAG_ALLOW_REMOTE_MSG : 0),
-                                0);
+                                0,
+                                unused);
     } else {
         /* Standard org.freedesktop.DBus.Hello */
         hdrFields.field[ALLJOYN_HDR_FIELD_PATH].Set("o", org::freedesktop::DBus::ObjectPath);
@@ -1056,22 +1078,31 @@ QStatus _Message::HelloMessage(bool isBusToBus, bool allowRemote, SessionOpts::N
         hdrFields.field[ALLJOYN_HDR_FIELD_MEMBER].Set("s", "Hello");
 
         status = MarshalMessage("",
+                                sender,
                                 org::freedesktop::DBus::WellKnownName,
                                 MESSAGE_METHOD_CALL,
                                 NULL,
                                 0,
                                 ALLJOYN_FLAG_AUTO_START | (allowRemote ? ALLJOYN_FLAG_ALLOW_REMOTE_MSG : 0),
-                                0);
-
+                                0,
+                                unused);
     }
     return status;
 }
 
-
 QStatus _Message::HelloReply(bool isBusToBus, const qcc::String& uniqueName)
 {
+    if (!bus->IsStarted()) {
+        return ER_BUS_BUS_NOT_STARTED;
+    }
+    return HelloReply(isBusToBus, bus->GetInternal().GetLocalEndpoint()->GetUniqueName(), uniqueName,
+                      bus->GetInternal().GetGlobalGUID().ToString());
+}
+
+QStatus _Message::HelloReply(bool isBusToBus, const qcc::String& sender, const qcc::String& uniqueName, const qcc::String& guid)
+{
     QStatus status;
-    qcc::String guidStr;
+    CompressionRules unused; /* Only needed if flags includes ALLJOYN_FLAG_COMPRESSED */
 
     assert(msgHeader.msgType == MESSAGE_METHOD_CALL);
     /*
@@ -1084,22 +1115,20 @@ QStatus _Message::HelloReply(bool isBusToBus, const qcc::String& uniqueName)
     hdrFields.field[ALLJOYN_HDR_FIELD_REPLY_SERIAL].Set("u", msgHeader.serialNum);
 
     if (isBusToBus) {
-        guidStr = bus->GetInternal().GetGlobalGUID().ToString();
         MsgArg args[3];
         args[0].Set("s", uniqueName.c_str());
-        args[1].Set("s", guidStr.c_str());
+        args[1].Set("s", guid.c_str());
         args[2].Set("u", ALLJOYN_PROTOCOL_VERSION);
-        status = MarshalMessage("ssu", uniqueName, MESSAGE_METHOD_RET, args, ArraySize(args), 0, 0);
+        status = MarshalMessage("ssu", sender, uniqueName, MESSAGE_METHOD_RET, args, ArraySize(args), 0, 0, unused);
         QCC_DbgPrintf(("\n%s", ToString(args, 2).c_str()));
     } else {
         /* Destination and argument are both the unique name passed in. */
         MsgArg arg("s", uniqueName.c_str());
-        status = MarshalMessage("s", uniqueName, MESSAGE_METHOD_RET, &arg, 1, 0, 0);
+        status = MarshalMessage("s", sender, uniqueName, MESSAGE_METHOD_RET, &arg, 1, 0, 0, unused);
         QCC_DbgPrintf(("\n%s", ToString(&arg, 1).c_str()));
     }
     return status;
 }
-
 
 QStatus _Message::CallMsg(const qcc::String& signature,
                           const qcc::String& destination,
@@ -1110,6 +1139,26 @@ QStatus _Message::CallMsg(const qcc::String& signature,
                           const MsgArg* args,
                           size_t numArgs,
                           uint8_t flags)
+{
+    if (!bus->IsStarted()) {
+        return ER_BUS_BUS_NOT_STARTED;
+    }
+    return CallMsg(signature, bus->GetInternal().GetLocalEndpoint()->GetUniqueName(), destination,
+                   sessionId, objPath, iface, methodName, args, numArgs, flags,
+                   bus->GetInternal().GetCompressionRules());
+}
+
+QStatus _Message::CallMsg(const qcc::String& signature,
+                          const qcc::String& sender,
+                          const qcc::String& destination,
+                          SessionId sessionId,
+                          const qcc::String& objPath,
+                          const qcc::String& iface,
+                          const qcc::String& methodName,
+                          const MsgArg* args,
+                          size_t numArgs,
+                          uint8_t flags,
+                          CompressionRules& compressionRules)
 {
     QStatus status;
 
@@ -1161,12 +1210,12 @@ QStatus _Message::CallMsg(const qcc::String& signature,
     /*
      * Build method call message
      */
-    status = MarshalMessage(signature, destination, MESSAGE_METHOD_CALL, args, numArgs, flags, sessionId);
+    status = MarshalMessage(signature, sender, destination, MESSAGE_METHOD_CALL,
+                            args, numArgs, flags, sessionId, compressionRules);
 
 ExitCallMsg:
     return status;
 }
-
 
 QStatus _Message::SignalMsg(const qcc::String& signature,
                             const char* destination,
@@ -1178,6 +1227,27 @@ QStatus _Message::SignalMsg(const qcc::String& signature,
                             size_t numArgs,
                             uint8_t flags,
                             uint16_t timeToLive)
+{
+    if (!bus->IsStarted()) {
+        return ER_BUS_BUS_NOT_STARTED;
+    }
+    return SignalMsg(signature, bus->GetInternal().GetLocalEndpoint()->GetUniqueName(), destination,
+                     sessionId, objPath, iface, signalName, args, numArgs,
+                     flags, timeToLive, bus->GetInternal().GetCompressionRules());
+}
+
+QStatus _Message::SignalMsg(const qcc::String& signature,
+                            const qcc::String& sender,
+                            const char* destination,
+                            SessionId sessionId,
+                            const qcc::String& objPath,
+                            const qcc::String& iface,
+                            const qcc::String& signalName,
+                            const MsgArg* args,
+                            size_t numArgs,
+                            uint8_t flags,
+                            uint16_t timeToLive,
+                            CompressionRules& compressionRules)
 {
     QStatus status;
 
@@ -1236,16 +1306,25 @@ QStatus _Message::SignalMsg(const qcc::String& signature,
     /*
      * Build signal message
      */
-    status = MarshalMessage(signature, destination, MESSAGE_SIGNAL, args, numArgs, flags, sessionId);
+    status = MarshalMessage(signature, sender, destination, MESSAGE_SIGNAL,
+                            args, numArgs, flags, sessionId, compressionRules);
 
 ExitSignalMsg:
     return status;
 }
 
-
 QStatus _Message::ReplyMsg(const Message& call, const MsgArg* args, size_t numArgs)
 {
+    if (!bus->IsStarted()) {
+        return ER_BUS_BUS_NOT_STARTED;
+    }
+    return ReplyMsg(call, bus->GetInternal().GetLocalEndpoint()->GetUniqueName(), args, numArgs);
+}
+
+QStatus _Message::ReplyMsg(const Message& call, const qcc::String& sender, const MsgArg* args, size_t numArgs)
+{
     QStatus status;
+    CompressionRules unused; /* Only needed if flags includes ALLJOYN_FLAG_COMPRESSED */
     SessionId sessionId = call->GetSessionId();
 
     /*
@@ -1268,16 +1347,25 @@ QStatus _Message::ReplyMsg(const Message& call, const MsgArg* args, size_t numAr
     /*
      * Build method return message (encrypted if the method call was encrypted)
      */
-    status = MarshalMessage(call->replySignature, destination, MESSAGE_METHOD_RET, args,
-                            numArgs, call->msgHeader.flags & ALLJOYN_FLAG_ENCRYPTED, sessionId);
+    status = MarshalMessage(call->replySignature, sender, destination, MESSAGE_METHOD_RET,
+                            args, numArgs, call->msgHeader.flags & ALLJOYN_FLAG_ENCRYPTED, sessionId,
+                            unused);
 
     return status;
 }
 
-
 QStatus _Message::ErrorMsg(const Message& call, const char* errorName, const char* description)
 {
+    if (!bus->IsStarted()) {
+        return ER_BUS_BUS_NOT_STARTED;
+    }
+    return ErrorMsg(call, bus->GetInternal().GetLocalEndpoint()->GetUniqueName(), errorName, description);
+}
+
+QStatus _Message::ErrorMsg(const Message& call, const qcc::String& sender, const char* errorName, const char* description)
+{
     QStatus status;
+    CompressionRules unused; /* Only needed if flags includes ALLJOYN_FLAG_COMPRESSED */
     qcc::String destination = call->hdrFields.field[ALLJOYN_HDR_FIELD_SENDER].v_string.str;
     SessionId sessionId = call->GetSessionId();
 
@@ -1303,19 +1391,29 @@ QStatus _Message::ErrorMsg(const Message& call, const char* errorName, const cha
      * Build error message
      */
     if ('\0' == description[0]) {
-        status = MarshalMessage("", destination, MESSAGE_ERROR, NULL, 0, call->msgHeader.flags & ALLJOYN_FLAG_ENCRYPTED, sessionId);
+        status = MarshalMessage("", sender, destination, MESSAGE_ERROR, NULL, 0,
+                                call->msgHeader.flags & ALLJOYN_FLAG_ENCRYPTED, sessionId, unused);
     } else {
         MsgArg arg("s", description);
-        status = MarshalMessage("s", destination, MESSAGE_ERROR, &arg, 1, call->msgHeader.flags & ALLJOYN_FLAG_ENCRYPTED, sessionId);
+        status = MarshalMessage("s", sender, destination, MESSAGE_ERROR, &arg, 1,
+                                call->msgHeader.flags & ALLJOYN_FLAG_ENCRYPTED, sessionId, unused);
     }
 
 ExitErrorMsg:
     return status;
 }
 
-
 QStatus _Message::ErrorMsg(const Message& call, QStatus status)
 {
+    if (!bus->IsStarted()) {
+        return ER_BUS_BUS_NOT_STARTED;
+    }
+    return ErrorMsg(call, bus->GetInternal().GetLocalEndpoint()->GetUniqueName(), status);
+}
+
+QStatus _Message::ErrorMsg(const Message& call, const qcc::String& sender, QStatus status)
+{
+    CompressionRules unused; /* Only needed if flags includes ALLJOYN_FLAG_COMPRESSED */
     qcc::String destination = call->hdrFields.field[ALLJOYN_HDR_FIELD_SENDER].v_string.str;
     qcc::String msg = QCC_StatusText(status);
     uint16_t msgStatus = status;
@@ -1339,12 +1437,18 @@ QStatus _Message::ErrorMsg(const Message& call, QStatus status)
     MsgArg args[2];
     size_t numArgs = 2;
     MsgArg::Set(args, numArgs, "sq", msg.c_str(), msgStatus);
-    return MarshalMessage("sq", destination, MESSAGE_ERROR, args, numArgs, call->msgHeader.flags & ALLJOYN_FLAG_ENCRYPTED, GetSessionId());
+    return MarshalMessage("sq", sender, destination, MESSAGE_ERROR, args, numArgs,
+                          call->msgHeader.flags & ALLJOYN_FLAG_ENCRYPTED, GetSessionId(), unused);
 }
 
+void _Message::ErrorMsg(const char* errorName, uint32_t replySerial)
+{
+    assert(bus->IsStarted());
+    QStatus status = ErrorMsg(bus->GetInternal().GetLocalEndpoint()->GetUniqueName(), errorName, replySerial);
+    assert(ER_OK == status); (void)status;
+}
 
-void _Message::ErrorMsg(const char* errorName,
-                        uint32_t replySerial)
+QStatus _Message::ErrorMsg(const qcc::String& sender, const char* errorName, uint32_t replySerial)
 {
     /*
      * Clear any stale header fields
@@ -1364,11 +1468,18 @@ void _Message::ErrorMsg(const char* errorName,
     /*
      * Build error message
      */
-    MarshalMessage("", "", MESSAGE_ERROR, NULL, 0, 0, 0);
+    CompressionRules unused; /* Only needed if flags includes ALLJOYN_FLAG_COMPRESSED */
+    return MarshalMessage("", sender, "", MESSAGE_ERROR, NULL, 0, 0 /* flags */, 0, unused);
 }
 
-void _Message::ErrorMsg(QStatus status,
-                        uint32_t replySerial)
+void _Message::ErrorMsg(QStatus status, uint32_t replySerial)
+{
+    assert(bus->IsStarted());
+    QStatus result = ErrorMsg(bus->GetInternal().GetLocalEndpoint()->GetUniqueName(), status, replySerial);
+    assert(ER_OK == result); (void)result;
+}
+
+QStatus _Message::ErrorMsg(const qcc::String& sender, QStatus status, uint32_t replySerial)
 {
     qcc::String msg = QCC_StatusText(status);
     uint16_t msgStatus = status;
@@ -1384,7 +1495,8 @@ void _Message::ErrorMsg(QStatus status,
     MsgArg args[2];
     size_t numArgs = 2;
     MsgArg::Set(args, numArgs, "sq", msg.c_str(), msgStatus);
-    MarshalMessage("sq", "", MESSAGE_ERROR, args, numArgs, 0, 0);
+    CompressionRules unused; /* Only needed if flags includes ALLJOYN_FLAG_COMPRESSED */
+    return MarshalMessage("sq", sender, "", MESSAGE_ERROR, args, numArgs, 0 /* flags */, 0, unused);
 }
 
 QStatus _Message::GetExpansion(uint32_t token, MsgArg& replyArg)

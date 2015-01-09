@@ -31,6 +31,14 @@ def have_developer_license():
         print('Warning: No valid Windows Store developer license detected, unit tests will not be run.')
     return have_valid_license
 
+def builder_check(target, source, env):
+    check = str(source[0].abspath)
+    if os.spawnl(os.P_WAIT, check, check) == 0:
+        open(str(target[0]), 'w').write("PASSED\n")
+    else:
+        return 1
+
+env.Append(BUILDERS = {'Check' : Builder(action = builder_check)})
 
 if not env.has_key('GTEST_DIR'):
     print('GTEST_DIR not specified skipping alljoyn_core unit test build')
@@ -91,13 +99,13 @@ else:
     gtest_obj = gtest_env.StaticObject(target = 'gtest-all', source = [ '%s/src/gtest-all.cc' % gtest_src_base ])
     gtest_env.StaticLibrary(target = 'gtest', source = gtest_obj)
     
-    test_src = gtest_env.Glob('*.cc')
-
     unittest_env = env.Clone()
 
     if unittest_env['BR'] == 'on':
         # Build apps with bundled daemon support
         unittest_env.Prepend(LIBS = [unittest_env['brobj'], unittest_env['ajrlib']])
+        # Add private header include path to test bundled router code
+        unittest_env.Append(CPPPATH = [ unittest_env.Dir('../router').srcnode() ])
 
     unittest_env.Append(CPPPATH = unittest_env.Dir('..').srcnode())
 
@@ -107,7 +115,6 @@ else:
 
     if unittest_env['OS_GROUP'] == 'windows':
         unittest_env.Append(CXXFLAGS = ['/EHsc'])
-
 
     # we compile with no rtti and we are not using exceptions.
     unittest_env.Append(CPPDEFINES = ['GTEST_HAS_RTTI=0'])
@@ -128,10 +135,25 @@ else:
     
     unittest_env.Prepend(LIBS = ['gtest'])
 
-    obj = unittest_env.Object(test_src);
-        
-    unittest_prog = unittest_env.Program('ajtest', obj)
-    unittest_env.Install('$TESTDIR/cpp/bin', unittest_prog)
+    ajtest_src = unittest_env.Glob('*.cc')
+    ajtest_obj = unittest_env.Object(ajtest_src);
+    ajtest_prog = unittest_env.Program('ajtest', ajtest_obj)
+    unittest_env.Install('$TESTDIR/cpp/bin', ajtest_prog)
+
+    # 'Pure' unit tests that don't have external dependencies.  These
+    # are intended to be run frequently during development; individual
+    # tests should complete in under 10 msecs.
+    if unittest_env['BR'] == 'on':
+        ajcheck_src = [ 'ajTest.cc', 'ajTestCommon.cc' ] + unittest_env.Glob('check/*.cc')
+        ajcheck_obj = unittest_env.Object(ajcheck_src);
+        ajcheck_prog = unittest_env.Program('ajcheck', ajcheck_obj)
+        unittest_env.Install('$TESTDIR/cpp/bin', ajcheck_prog)
+        unittest_env.Check('check.passed', ajcheck_prog)
+        # The following two lines mean the ajcheck is not run by
+        # default, it must be explicitly specified on the command
+        # line, e.g. 'scons check'.
+        unittest_env.Ignore('.', 'check.passed')
+        unittest_env.Alias('check', 'check.passed')
 
     # install gtest utilities
     unittest_env.Install('$TESTDIR/cpp/bin', Dir('test_report').srcnode())

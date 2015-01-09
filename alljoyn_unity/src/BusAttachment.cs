@@ -619,6 +619,7 @@ namespace AllJoynUnity
 			 * @return
 			 *      - QStatus.OK if successful.
 			 *      - QStatus.BUS_BAD_OBJ_PATH for a bad object path
+			 *      - QStatus.BUS_OBJ_ALREADY_EXISTS if an object is already registered at this path
 			 */
 			public QStatus RegisterBusObject(BusObject obj)
 			{
@@ -635,6 +636,7 @@ namespace AllJoynUnity
 			 * @return
 			 *      - QStatus.OK if successful.
 			 *      - QStatus.BUS_BAD_OBJ_PATH for a bad object path
+			 *      - QStatus.BUS_OBJ_ALREADY_EXISTS if an object is already registered at this path
 			 */
 			public QStatus RegisterBusObject(BusObject obj, bool secure)
 			{
@@ -845,7 +847,7 @@ namespace AllJoynUnity
              * @param authMechanisms   The authentication mechanism(s) to use for peer-to-peer authentication.
              *                         If this parameter is NULL peer-to-peer authentication is disabled.
              *                         This is a space separated list of any of the following values:
-             *                          ALLJOYN_PIN_KEYX, ALLJOYN_SRP_LOGON, ALLJOYN_RSA_KEYX, ALLJOYN_SRP_KEYX, ALLJOYN_ECDHE_NULL, ALLJOYN_ECDHE_PSK, ALLJOYN_ECDHE_ECDSA.
+             *                          ALLJOYN_PIN_KEYX, ALLJOYN_SRP_LOGON, ALLJOYN_RSA_KEYX, ALLJOYN_SRP_KEYX, ALLJOYN_ECDHE_NULL, ALLJOYN_ECDHE_PSK, ALLJOYN_ECDHE_ECDSA, GSSAPI.
 			 *
 			 * @param listener         Passes password and other authentication related requests to the application.
 			 *

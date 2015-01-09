@@ -31,7 +31,7 @@
 
 #include <Status.h>
 
-#include "CngCache.h"
+#include <qcc/CngCache.h>
 
 using namespace std;
 using namespace qcc;
@@ -56,7 +56,25 @@ class Crypto_Hash::Context {
     BCRYPT_HASH_HANDLE handle;
     uint8_t* hashObj;
     DWORD hashObjLen;
-
+  private:
+    /**
+     * Copy constructor
+     *
+     * @param src Context to be copied.
+     */
+    Context(const Context& src) {
+        /* private copy constructor to prevent copying */
+    }
+    /**
+     * Assignment operator
+     *
+     * @param src source Context
+     *
+     * @return copy of Context
+     */
+    Context& operator=(const Context& src) {
+        return *this;
+    }
 };
 
 QStatus Crypto_Hash::Init(Algorithm alg, const uint8_t* hmacKey, size_t keyLen)

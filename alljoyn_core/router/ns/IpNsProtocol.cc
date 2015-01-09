@@ -868,7 +868,7 @@ size_t IsAt::Deserialize(uint8_t const* buffer, uint32_t bufsize)
         // If there's not enough room in the buffer to get the fixed part out then
         // bail (one byte of type and flags, one byte of name count)
         //
-        if (bufsize < 2) {
+        if (bufsize < 4) {
             QCC_DbgPrintf(("IsAt::Deserialize(): Insufficient bufsize %d", bufsize));
             return 0;
         }
@@ -2115,25 +2115,17 @@ void MDNSTextRData::RemoveEntry(qcc::String key)
     m_fields.erase(key);
 }
 
-void MDNSTextRData::SetValue(String key, String value)
+void MDNSTextRData::SetValue(String key, String value, bool shared)
 {
-    if (uniquifier) {
+    if (uniquifier && !shared) {
         key += "_" + U32ToString(uniquifier++);
     }
     m_fields[key] = value;
 }
 
-void MDNSTextRData::SetValue(String key, uint16_t value)
+void MDNSTextRData::SetValue(String key, bool shared)
 {
-    if (uniquifier) {
-        key += "_" + U32ToString(uniquifier++);
-    }
-    m_fields[key] = U32ToString(value);
-}
-
-void MDNSTextRData::SetValue(String key)
-{
-    if (uniquifier) {
+    if (uniquifier && !shared) {
         key += "_" + U32ToString(uniquifier++);
     }
     m_fields[key] = String();
@@ -2145,6 +2137,15 @@ String MDNSTextRData::GetValue(String key)
         return m_fields[key];
     } else {
         return "";
+    }
+}
+
+bool MDNSTextRData::HasKey(qcc::String key)
+{
+    if (m_fields.find(key) != m_fields.end()) {
+        return true;
+    } else {
+        return false;
     }
 }
 
@@ -2789,14 +2790,19 @@ void MDNSSearchRData::SetValue(String key, String value)
         MDNSTextRData::SetValue("n", value);
     } else if (key == "implements") {
         MDNSTextRData::SetValue("i", value);
+    } else if (key == "send_match_only" || key == "m") {
+        MDNSTextRData::SetValue("m", value, true);
     } else {
         MDNSTextRData::SetValue(key, value);
     }
 }
-
 void MDNSSearchRData::SetValue(String key)
 {
     MDNSTextRData::SetValue(key);
+}
+
+bool MDNSSearchRData::SendMatchOnly() {
+    return MDNSTextRData::HasKey("m");
 }
 
 uint16_t MDNSSearchRData::GetNumFields()
@@ -2949,8 +2955,8 @@ void MDNSPingReplyRData::SetReplyCode(qcc::String replyCode)
 MDNSSenderRData::MDNSSenderRData(uint16_t version)
     : MDNSTextRData(version)
 {
-    MDNSTextRData::SetValue("pv", NS_VERSION);
-    MDNSTextRData::SetValue("ajpv", ALLJOYN_PROTOCOL_VERSION);
+    MDNSTextRData::SetValue("pv", U32ToString(NS_VERSION));
+    MDNSTextRData::SetValue("ajpv", U32ToString(ALLJOYN_PROTOCOL_VERSION));
 }
 
 uint16_t MDNSSenderRData::GetSearchID()
@@ -2960,7 +2966,7 @@ uint16_t MDNSSenderRData::GetSearchID()
 
 void MDNSSenderRData::SetSearchID(uint16_t searchId)
 {
-    MDNSTextRData::SetValue("sid", searchId);
+    MDNSTextRData::SetValue("sid", U32ToString(searchId));
 }
 
 uint16_t MDNSSenderRData::GetIPV4ResponsePort()
@@ -2970,7 +2976,7 @@ uint16_t MDNSSenderRData::GetIPV4ResponsePort()
 
 void MDNSSenderRData::SetIPV4ResponsePort(uint16_t ipv4Port)
 {
-    MDNSTextRData::SetValue("upcv4", ipv4Port);
+    MDNSTextRData::SetValue("upcv4", U32ToString(ipv4Port));
 }
 
 qcc::String MDNSSenderRData::GetIPV4ResponseAddr()

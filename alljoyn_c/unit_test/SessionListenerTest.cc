@@ -25,7 +25,6 @@
 
 /*constants*/
 static const char* INTERFACE_NAME = "org.alljoyn.test.SessionListenerTest";
-static const char* OBJECT_NAME = "org.alljoyn.test.SessionListenerTest";
 static const char* OBJECT_PATH = "/org/alljoyn/test/SessionListenerTest";
 static const alljoyn_sessionport SESSION_PORT = 42;
 
@@ -127,6 +126,7 @@ class SessionListenerTest : public testing::Test {
     virtual void SetUp() {
         resetFlags();
         servicebus = alljoyn_busattachment_create("SessionListenerTestService", QCC_FALSE);
+        objectName = ajn::genUniqueName(servicebus);
         EXPECT_EQ(ER_OK, alljoyn_busattachment_start(servicebus));
         EXPECT_EQ(ER_OK, alljoyn_busattachment_connect(servicebus, ajn::getConnectArg().c_str()));
 
@@ -170,8 +170,8 @@ class SessionListenerTest : public testing::Test {
 
             /* request name from the bus */
             int flag = DBUS_NAME_FLAG_REPLACE_EXISTING | DBUS_NAME_FLAG_DO_NOT_QUEUE;
-            EXPECT_EQ(ER_OK, alljoyn_busattachment_requestname(servicebus, OBJECT_NAME, flag));
-            EXPECT_EQ(ER_OK, alljoyn_busattachment_advertisename(servicebus, OBJECT_NAME, alljoyn_sessionopts_get_transports(opts)));
+            EXPECT_EQ(ER_OK, alljoyn_busattachment_requestname(servicebus, objectName.c_str(), flag));
+            EXPECT_EQ(ER_OK, alljoyn_busattachment_advertisename(servicebus, objectName.c_str(), alljoyn_sessionopts_get_transports(opts)));
 
             clientbus = alljoyn_busattachment_create("SessionListenerTestClient", QCC_FALSE);
             EXPECT_EQ(ER_OK, alljoyn_busattachment_start(clientbus));
@@ -254,6 +254,7 @@ class SessionListenerTest : public testing::Test {
     alljoyn_buslistener buslistener;
     alljoyn_sessionportlistener sessionPortListener;
     alljoyn_sessionlistener sessionListener;
+    qcc::String objectName;
 
     alljoyn_sessionopts opts;
 };
@@ -261,7 +262,7 @@ class SessionListenerTest : public testing::Test {
 TEST_F(SessionListenerTest, sessionlosttest_remote_end_left_session) {
     resetFlags();
     /* Begin discover of the well-known name */
-    status = alljoyn_busattachment_findadvertisedname(clientbus, OBJECT_NAME);
+    status = alljoyn_busattachment_findadvertisedname(clientbus, objectName.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     for (size_t i = 0; i < 1000; ++i) {
         if (found_advertised_name_flag) {
@@ -273,7 +274,7 @@ TEST_F(SessionListenerTest, sessionlosttest_remote_end_left_session) {
 
     alljoyn_sessionid sid;
     joinsessionid = 0;
-    status = alljoyn_busattachment_joinsession(clientbus, OBJECT_NAME, SESSION_PORT, sessionListener, &sid, opts);
+    status = alljoyn_busattachment_joinsession(clientbus, objectName.c_str(), SESSION_PORT, sessionListener, &sid, opts);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     for (size_t i = 0; i < 1000; ++i) {
         if (session_joined_flag && session_member_added_flag) {
@@ -303,7 +304,7 @@ TEST_F(SessionListenerTest, sessionlosttest_remote_end_left_session) {
 TEST_F(SessionListenerTest, sessionlosttest_closed_abruptly) {
     resetFlags();
     /* Begin discover of the well-known name */
-    status = alljoyn_busattachment_findadvertisedname(clientbus, OBJECT_NAME);
+    status = alljoyn_busattachment_findadvertisedname(clientbus, objectName.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     for (size_t i = 0; i < 1000; ++i) {
         if (found_advertised_name_flag) {
@@ -315,7 +316,7 @@ TEST_F(SessionListenerTest, sessionlosttest_closed_abruptly) {
 
     alljoyn_sessionid sid;
     joinsessionid = 0;
-    status = alljoyn_busattachment_joinsession(clientbus, OBJECT_NAME, SESSION_PORT, sessionListener, &sid, opts);
+    status = alljoyn_busattachment_joinsession(clientbus, objectName.c_str(), SESSION_PORT, sessionListener, &sid, opts);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     for (size_t i = 0; i < 1000; ++i) {
         if (session_joined_flag && session_member_added_flag) {
@@ -350,7 +351,7 @@ TEST_F(SessionListenerTest, sessionlosttest_closed_abruptly) {
 TEST_F(SessionListenerTest, sessionmember_added_removed) {
     resetFlags();
     /* Begin discover of the well-known name */
-    status = alljoyn_busattachment_findadvertisedname(clientbus, OBJECT_NAME);
+    status = alljoyn_busattachment_findadvertisedname(clientbus, objectName.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     for (size_t i = 0; i < 1000; ++i) {
         if (found_advertised_name_flag) {
@@ -362,7 +363,7 @@ TEST_F(SessionListenerTest, sessionmember_added_removed) {
 
     alljoyn_sessionid sid;
     joinsessionid = 0;
-    status = alljoyn_busattachment_joinsession(clientbus, OBJECT_NAME, SESSION_PORT, NULL, &sid, opts);
+    status = alljoyn_busattachment_joinsession(clientbus, objectName.c_str(), SESSION_PORT, NULL, &sid, opts);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     for (size_t i = 0; i < 1000; ++i) {
         if (session_joined_flag) {
@@ -383,7 +384,7 @@ TEST_F(SessionListenerTest, sessionmember_added_removed) {
 
     /* we are only interested in the sessionListener used by the service not any of the clients */
     resetFlags();
-    status = alljoyn_busattachment_joinsession(clientbus2, OBJECT_NAME, SESSION_PORT, NULL, &sid, opts);
+    status = alljoyn_busattachment_joinsession(clientbus2, objectName.c_str(), SESSION_PORT, NULL, &sid, opts);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     for (size_t i = 0; i < 1000; ++i) {
         if (session_joined_flag && session_member_added_flag) {
@@ -493,7 +494,7 @@ TEST_F(SessionListenerTest, removesessionmember) {
     resetFlags();
     resetServicSessionListenerFlags();
     /* Begin discover of the well-known name */
-    status = alljoyn_busattachment_findadvertisedname(clientbus, OBJECT_NAME);
+    status = alljoyn_busattachment_findadvertisedname(clientbus, objectName.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     for (size_t i = 0; i < 1000; ++i) {
         if (found_advertised_name_flag) {
@@ -505,7 +506,7 @@ TEST_F(SessionListenerTest, removesessionmember) {
 
     alljoyn_sessionid sid;
     joinsessionid = 0;
-    status = alljoyn_busattachment_joinsession(clientbus, OBJECT_NAME, SESSION_PORT, sessionListener, &sid, opts);
+    status = alljoyn_busattachment_joinsession(clientbus, objectName.c_str(), SESSION_PORT, sessionListener, &sid, opts);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     for (size_t i = 0; i < 1000; ++i) {
         if (session_joined_flag && session_member_added_flag) {
@@ -529,7 +530,7 @@ TEST_F(SessionListenerTest, removesessionmember) {
     /* we are only interested in the sessionListener used by the service not any of the clients */
     resetFlags();
     resetServicSessionListenerFlags();
-    status = alljoyn_busattachment_joinsession(clientbus2, OBJECT_NAME, SESSION_PORT, sessionListener, &sid, opts);
+    status = alljoyn_busattachment_joinsession(clientbus2, objectName.c_str(), SESSION_PORT, sessionListener, &sid, opts);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     for (size_t i = 0; i < 1000; ++i) {
         if (session_joined_flag && service_session_member_added_flag && session_member_added_flag) {

@@ -219,13 +219,23 @@ class MyBusListener : public BusListener, public SessionPortListener, public Ses
         s_lock.Unlock(MUTEX_CONTEXT);
     }
 
+    void BusStopping()
+    {
+        printf("BusStopping\n");
+    }
+
+    void BusDisconnected()
+    {
+        printf("BusDisconnected\n");
+    }
+
     bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts)
     {
         bool ret = false;
         s_lock.Lock(MUTEX_CONTEXT);
         map<SessionPort, SessionPortInfo>::iterator it = s_sessionPortMap.find(sessionPort);
         if (it != s_sessionPortMap.end()) {
-            printf("Accepting join request on %u from %s\n", sessionPort, joiner);
+            printf("Accepting join request on %u from %s (multipoint=%d)\n", sessionPort, joiner, opts.isMultipoint);
             ret = true;
         } else {
             printf("Rejecting join attempt to unregistered port %u from %s\n", sessionPort, joiner);
@@ -239,7 +249,7 @@ class MyBusListener : public BusListener, public SessionPortListener, public Ses
         s_lock.Lock(MUTEX_CONTEXT);
         map<SessionPort, SessionPortInfo>::iterator it = s_sessionPortMap.find(sessionPort);
         if (it != s_sessionPortMap.end()) {
-            s_bus->SetSessionListener(id, this);
+            s_bus->SetHostedSessionListener(id, this);
             map<SessionId, SessionInfo>::iterator sit = s_sessionMap.find(id);
             if (sit == s_sessionMap.end()) {
                 SessionInfo sessionInfo(id, it->second);
@@ -613,6 +623,41 @@ static void DoLeave(SessionId id)
         printf("Invalid session id %u specified in LeaveSession\n", id);
     }
 }
+
+static void DoLeaveHosted(SessionId id)
+{
+    /* Validate session id */
+    map<SessionId, SessionInfo>::const_iterator it = s_sessionMap.find(id);
+    if (it != s_sessionMap.end()) {
+        QStatus status = s_bus->LeaveHostedSession(id);
+        if (status != ER_OK) {
+            printf("SessionLost(%u) failed with %s\n", id, QCC_StatusText(status));
+        }
+        s_lock.Lock(MUTEX_CONTEXT);
+        s_sessionMap.erase(id);
+        s_lock.Unlock(MUTEX_CONTEXT);
+    } else {
+        printf("Invalid session id %u specified in LeaveSession\n", id);
+    }
+}
+
+static void DoLeaveJoined(SessionId id)
+{
+    /* Validate session id */
+    map<SessionId, SessionInfo>::const_iterator it = s_sessionMap.find(id);
+    if (it != s_sessionMap.end()) {
+        QStatus status = s_bus->LeaveJoinedSession(id);
+        if (status != ER_OK) {
+            printf("SessionLost(%u) failed with %s\n", id, QCC_StatusText(status));
+        }
+        s_lock.Lock(MUTEX_CONTEXT);
+        s_sessionMap.erase(id);
+        s_lock.Unlock(MUTEX_CONTEXT);
+    } else {
+        printf("Invalid session id %u specified in LeaveSession\n", id);
+    }
+}
+
 static void DoRemoveMember(SessionId id, String memberName)
 {
     /* Validate session id */
@@ -723,6 +768,25 @@ static void DoPingAsync(String name, uint32_t timeout)
     }
 }
 
+static QStatus DoConnect()
+{
+    /* Get env vars */
+    const char* connectSpec = getenv("BUS_ADDRESS");
+
+    /* Connect to the local daemon */
+    QStatus status;
+    if (connectSpec) {
+        status = s_bus->Connect(connectSpec);
+    } else {
+        status = s_bus->Connect();
+    }
+    if (ER_OK != status) {
+        printf("BusAttachment::Connect(%s) failed (%s)\n", s_bus->GetConnectSpec().c_str(), QCC_StatusText(status));
+    }
+
+    return status;
+}
+
 int main(int argc, char** argv)
 {
     QStatus status = ER_OK;
@@ -764,19 +828,9 @@ int main(int argc, char** argv)
         s_bus->RegisterBusListener(*s_busListener);
     }
 
-    /* Get env vars */
-    const char* connectSpec = getenv("BUS_ADDRESS");
-
     /* Connect to the local daemon */
     if (ER_OK == status) {
-        if (connectSpec) {
-            status = s_bus->Connect(connectSpec);
-        } else {
-            status = s_bus->Connect();
-        }
-        if (ER_OK != status) {
-            printf("BusAttachment::Connect(%s) failed (%s)\n", s_bus->GetConnectSpec().c_str(), QCC_StatusText(status));
-        }
+        status = DoConnect();
     }
 
     /*
@@ -999,6 +1053,20 @@ int main(int argc, char** argv)
                 continue;
             }
             DoLeave(id);
+        } else if (cmd == "leavehosted") {
+            SessionId id = NextTokAsSessionId(line);
+            if (id == 0) {
+                printf("Usage: leavehosted <sessionId>\n");
+                continue;
+            }
+            DoLeaveHosted(id);
+        } else if (cmd == "leavejoiner") {
+            SessionId id = NextTokAsSessionId(line);
+            if (id == 0) {
+                printf("Usage: leavejoiner <sessionId>\n");
+                continue;
+            }
+            DoLeaveJoined(id);
         } else if (cmd == "removemember") {
             SessionId id = NextTokAsSessionId(line);
             String name = NextTok(line);
@@ -1041,6 +1109,14 @@ int main(int argc, char** argv)
                 continue;
             }
             sessionTestObj.SendChatSignal(id, chatMsg.c_str(), flags);
+        } else if (cmd == "anychat") {
+            uint8_t flags = 0;
+            String chatMsg = Trim(line);
+            if (chatMsg.empty()) {
+                printf("Usage: anychat <msg>\n");
+                continue;
+            }
+            sessionTestObj.SendChatSignal(ajn::SESSION_ID_ALL_HOSTED, chatMsg.c_str(), flags);
         } else if (cmd == "autochat") {
             SessionId id = NextTokAsSessionId(line);
             uint32_t count = StringToU32(NextTok(line), 0, 0);
@@ -1109,6 +1185,8 @@ int main(int argc, char** argv)
             String name = NextTok(line);
             uint32_t timeout = StringToU32(NextTok(line), 0, 30000);
             DoPingAsync(name, timeout);
+        } else if (cmd == "connect") {
+            DoConnect();
         } else if (cmd == "exit") {
             break;
         } else if (cmd == "help" || cmd == "?") {
@@ -1126,9 +1204,12 @@ int main(int argc, char** argv)
             printf("asyncjoin <name> <port> [isMultipoint] [traffic] [proximity] [transports] - Join a session asynchronously\n");
             printf("removemember <sessionId> <memberName>                         - Remove a session member\n");
             printf("leave <sessionId>                                             - Leave a session\n");
+            printf("leavehosted <sessionId>                                       - Leave a session as host\n");
+            printf("leavejoiner <sessionId>                                       - Leave a session as joiner\n");
             printf("chat <sessionId> <msg>                                        - Send a message over a given session\n");
             printf("cchat <sessionId> <msg>                                       - Send a message over a given session with compression\n");
             printf("schat <msg>                                                   - Send a sessionless message\n");
+            printf("anychat <msg>                                                 - Send a message on all hosted sessions\n");
             printf("cancelsessionless <serialNum>                                 - Cancel a sessionless message\n");
             printf("autochat <sessionId> [count] [delay] [minSize] [maxSize]      - Send periodic messages of various sizes\n");
             printf("timeout <sessionId> <linkTimeout>                             - Set link timeout for a session\n");
@@ -1140,6 +1221,7 @@ int main(int argc, char** argv)
             printf("wait <name>                                                   - Wait until <name> is found\n");
             printf("ping <name> [timeout]                                         - Ping a name\n");
             printf("asyncping <name> [timeout]                                    - Ping a name asynchronously\n");
+            printf("connect                                                       - Connect to the router\n");
             printf("exit                                                          - Exit this program\n");
             printf("\n");
             printf("SessionIds can be specified by value or by #<idx> where <idx> is the session index printed with \"list\" command\n");

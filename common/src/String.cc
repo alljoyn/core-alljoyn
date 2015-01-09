@@ -53,11 +53,40 @@ namespace qcc {
 
 /* Global Data */
 
-static const String emptyString;
+uint64_t emptyStringDummy[sizeof(String) / 8];
 
-const String& String::Empty = emptyString;
+String& emptyString = (String &)emptyStringDummy;
+
+const String& String::Empty = (String &)emptyString;
 
 String::ManagedCtx String::nullContext = { 0 };
+
+int stringInitCounter = 0;
+bool StringInit::cleanedup = false;
+StringInit::StringInit()
+{
+    if (stringInitCounter++ == 0) {
+        //placement new
+        new (&emptyString)String();
+    }
+}
+
+StringInit::~StringInit()
+{
+    if (--stringInitCounter == 0 && !cleanedup) {
+        //placement delete
+        emptyString.~String();
+        cleanedup = true;
+    }
+}
+void StringInit::Cleanup()
+{
+    if (!cleanedup) {
+        //placement delete
+        emptyString.~String();
+        cleanedup = true;
+    }
+}
 
 String::String()
 {
@@ -120,6 +149,7 @@ String& String::assign(const char* str, size_t len)
         append(str, len);
     } else if (context->refCount == 1) {
         context->offset = 0;
+        context->c_str[0] = 0;
         append(str, len);
     } else {
         /* Decrement ref of current context */

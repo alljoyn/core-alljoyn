@@ -18,6 +18,10 @@ package org.alljoyn.bus;
 
 import junit.framework.TestCase;
 
+import java.lang.reflect.Method;
+
+import org.alljoyn.bus.PropertyChangedEmitter;
+import org.alljoyn.bus.annotation.BusInterface;
 import org.alljoyn.bus.ifaces.DBusProxyObj;
 import org.alljoyn.bus.ifaces.Introspectable;
 
@@ -32,6 +36,9 @@ public class AnnotatedInterfaceTest extends TestCase {
     }
 
     public class AnnotatedService implements InterfaceWithAnnotations, BusObject {
+        public String prop1 = "prop1";
+        public String prop2 = "prop2";
+
         public String ping(String inStr) throws BusException {
             return inStr;
         }
@@ -44,6 +51,42 @@ public class AnnotatedInterfaceTest extends TestCase {
         }
 
         public void signal() throws BusException {
+        }
+
+        public String getProp1() throws BusException {
+            return prop1;
+        }
+
+        public void setProp1(String inStr) throws BusException {
+            prop1 = inStr;
+            PropertyChangedEmitter emitter = new PropertyChangedEmitter(this);
+            try {
+                Method m = getClass().getMethod("setProp1", String.class, String.class, Variant.class);
+                BusInterface ifc = m.getAnnotation(BusInterface.class);
+                String name = ifc.name();
+                emitter.PropertyChanged(name, "Prop1", new Variant(prop1));
+            } catch (BusException ex) {
+                throw ex;
+            } catch (Exception e) {
+            }
+        }
+
+        public String getProp2() throws BusException {
+            return prop2;
+        }
+
+        public void setProp2(String inStr) throws BusException {
+            prop2 = inStr;
+            PropertyChangedEmitter emitter = new PropertyChangedEmitter(this);
+            try {
+                Method m = getClass().getMethod("setProp2");
+                BusInterface ifc = m.getAnnotation(BusInterface.class);
+                String name = ifc.name();
+                emitter.PropertyChanged(name, "Prop2", new Variant(prop2));
+            } catch (BusException ex) {
+                throw ex;
+            } catch (Exception e) {
+            }
         }
     }
 
@@ -110,6 +153,12 @@ public class AnnotatedInterfaceTest extends TestCase {
                         "    <signal name=\"Signal\">\n" +
                         "      <annotation name=\"org.freedesktop.DBus.Deprecated\" value=\"true\"/>\n" +
                         "    </signal>\n" +
+                        "    <property name=\"Prop1\" type=\"s\" access=\"readwrite\">\n" +
+                        "      <annotation name=\"org.freedesktop.DBus.Property.EmitsChangedSignal\" value=\"true\"/>\n" +
+                        "    </property>\n" +
+                        "    <property name=\"Prop2\" type=\"s\" access=\"readwrite\">\n" +
+                        "      <annotation name=\"org.freedesktop.DBus.Property.EmitsChangedSignal\" value=\"invalidates\"/>\n" +
+                        "    </property>\n" +
                         "    <annotation name=\"org.freedesktop.DBus.Deprecated\" value=\"true\"/>\n" +
                         "  </interface>\n" +
                         "  <interface name=\"org.freedesktop.DBus.Introspectable\">\n" +

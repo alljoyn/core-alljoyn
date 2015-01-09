@@ -16,6 +16,7 @@
 #include "ClientSetup.h"
 #include <qcc/Thread.h>
 #include <gtest/gtest.h>
+#include "ajTestCommon.h"
 
 namespace cl {
 namespace org {
@@ -27,7 +28,6 @@ const char* InterfaceName1 = "org.alljoyn.test_services.dummy.Interface1";
 const char* InterfaceName2 = "org.alljoyn.test_services.dummy.Interface2";
 const char* InterfaceName3 = "org.alljoyn.test_services.dummy.Interface3";
 }
-const char* WellKnownName = "org.alljoyn.test_services";
 const char* ObjectPath = "/org/alljoyn/test_services";
 namespace values {
 const char* InterfaceName = "org.alljoyn.test_services.Interface.values";
@@ -43,8 +43,8 @@ const char* InterfaceName3 = "org.alljoyn.test_services.values.dummy.Interface3"
 }   // end of cl
 
 /* Client setup */
-ClientSetup::ClientSetup(const char* default_bus_addr) :
-    clientMsgBus("clientSetup", true)
+ClientSetup::ClientSetup(const char* default_bus_addr, const char* wellKnownName) :
+    clientMsgBus("clientSetup", true), wellKnownName(wellKnownName)
 {
     QStatus status = ER_OK;
     {
@@ -54,12 +54,12 @@ ClientSetup::ClientSetup(const char* default_bus_addr) :
 
         /* Start the msg bus */
         status = clientMsgBus.Start();
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " Client bus start failed";
+        EXPECT_EQ(ER_OK, status) << " Client bus start failed";
 
         if (status == ER_OK) {
             /* Connect to the Bus */
             status = clientMsgBus.Connect(clientArgs.c_str());
-            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " Client Bus connect failed";
+            EXPECT_EQ(ER_OK, status) << " Client Bus connect failed";
         }
     }
     return;
@@ -80,14 +80,14 @@ QStatus ClientSetup::MethodCall(int noOfCalls, int type)
     QStatus status = ER_OK;
 
     ProxyBusObject remoteObj(clientMsgBus,
-                             ::cl::org::alljoyn::alljoyn_test::WellKnownName,
+                             wellKnownName.c_str(),
                              ::cl::org::alljoyn::alljoyn_test::ObjectPath,
                              0);
 
     Message reply(clientMsgBus);
 
     status = remoteObj.IntrospectRemoteObject();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " Problem while introspecting remote object";
+    EXPECT_EQ(ER_OK, status) << " Problem while introspecting remote object";
     if (status != ER_OK) {
         return status;
     }
@@ -102,7 +102,7 @@ QStatus ClientSetup::MethodCall(int noOfCalls, int type)
                 1,
                 reply,
                 5000);
-            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " Problem while calling remote method.";
+            EXPECT_EQ(ER_OK, status) << " Problem while calling remote method.";
             if (status != ER_OK) {
                 //exit the if status not ER_OK
                 return status;
@@ -134,7 +134,7 @@ QStatus ClientSetup::MethodCall(int noOfCalls, int type)
                 10,
                 reply,
                 5000);
-            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " Problem while calling remote method";
+            EXPECT_EQ(ER_OK, status) << " Problem while calling remote method";
             if (status != ER_OK) {
                 return status;
             }
@@ -164,7 +164,7 @@ QStatus ClientSetup::MethodCall(int noOfCalls, int type)
                 10,
                 reply,
                 5000);
-            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " Problem while calling remote method";
+            EXPECT_EQ(ER_OK, status) << " Problem while calling remote method";
             if (status != ER_OK) {
                 return status;
             }
@@ -198,7 +198,7 @@ QStatus ClientSetup::MethodCall(int noOfCalls, int type)
                 10,
                 reply,
                 5000);
-            EXPECT_EQ(ER_BUS_UNEXPECTED_SIGNATURE, status) << "  Actual Status: " << QCC_StatusText(status);
+            EXPECT_EQ(ER_BUS_UNEXPECTED_SIGNATURE, status);
             if (status != ER_OK) {
                 return status;
             }
@@ -218,7 +218,7 @@ QStatus ClientSetup::AsyncMethodCall(int noOfCalls, int type)
 
     ProxyBusObject remoteObj(
         clientMsgBus,
-        ::cl::org::alljoyn::alljoyn_test::WellKnownName,
+        wellKnownName.c_str(),
         ::cl::org::alljoyn::alljoyn_test::ObjectPath,
         0);
 
@@ -235,7 +235,7 @@ QStatus ClientSetup::AsyncMethodCall(int noOfCalls, int type)
                                                &pingStr, 1);
             //don't clog up the the queue sending signals too quickly
             qcc::Sleep(1);
-            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " Problem while calling remote method";
+            EXPECT_EQ(ER_OK, status) << " Problem while calling remote method";
             if (status != ER_OK) {
                 return status;
             }
@@ -257,7 +257,7 @@ QStatus ClientSetup::AsyncMethodCall(int noOfCalls, int type)
 
         for (int i = 0; i < noOfCalls; i++) {
             status = remoteObj.MethodCall(::cl::org::alljoyn::alljoyn_test::InterfaceName, "my_param_test", inputArgs, 10, reply, 5000);
-            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " Problem while calling remote method";
+            EXPECT_EQ(ER_OK, status) << " Problem while calling remote method";
             if (status != ER_OK) {
                 return status;
             }
@@ -287,11 +287,11 @@ QStatus ClientSetup::SignalHandler(int noOfCalls, int type)
     const InterfaceDescription::Member* mysignal_2 = NULL;
 
     /* Create a remote object */
-    ProxyBusObject remoteObj(clientMsgBus, ::cl::org::alljoyn::alljoyn_test::WellKnownName, ::cl::org::alljoyn::alljoyn_test::ObjectPath, 0);
+    ProxyBusObject remoteObj(clientMsgBus, wellKnownName.c_str(), ::cl::org::alljoyn::alljoyn_test::ObjectPath, 0);
     Message reply(clientMsgBus);
 
     status = remoteObj.IntrospectRemoteObject();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " Problem while introspecting the remote object";
+    EXPECT_EQ(ER_OK, status) << " Problem while introspecting the remote object";
     if (status != ER_OK) {
         return status;
     }
@@ -309,9 +309,7 @@ QStatus ClientSetup::SignalHandler(int noOfCalls, int type)
                                                  static_cast<MessageReceiver::SignalHandler>(&ClientSetup::MySignalHandler),
                                                  mysignal,
                                                  NULL);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: "
-                             << QCC_StatusText(status)
-                             << " Problem while registering signal handler";
+    EXPECT_EQ(ER_OK, status) << " Problem while registering signal handler";
     if (status != ER_OK) {
         return status;
     }
@@ -321,35 +319,25 @@ QStatus ClientSetup::SignalHandler(int noOfCalls, int type)
                                                  static_cast<MessageReceiver::SignalHandler>(&ClientSetup::MySignalHandler2),
                                                  mysignal_2,
                                                  NULL);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: "
-                             << QCC_StatusText(status)
-                             << " Problem while registering signal handler";
+    EXPECT_EQ(ER_OK, status) << " Problem while registering signal handler";
 
     /* add the match rules */
     status = clientMsgBus.AddMatch("type='signal',interface='org.alljoyn.test_services.Interface',member='my_signal1'");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: "
-                             << QCC_StatusText(status)
-                             << "Failed to register Match rule for 'org.alljoyn.test_services.my_signal1'";
+    EXPECT_EQ(ER_OK, status) << "Failed to register Match rule for 'org.alljoyn.test_services.my_signal1'";
 
     status = clientMsgBus.AddMatch("type='signal',interface='org.alljoyn.test_services.Interface',member='my_signal_string'");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: "
-                             << QCC_StatusText(status)
-                             << "Failed to register Match rule for 'org.alljoyn.test_services.my_signal_string'";
+    EXPECT_EQ(ER_OK, status) << "Failed to register Match rule for 'org.alljoyn.test_services.my_signal_string'";
 
     if (type == 1) {
         MsgArg singStr("s", "Sing String");
         status = remoteObj.MethodCall(::cl::org::alljoyn::alljoyn_test::InterfaceName, "my_sing", &singStr, 1, reply, 5000);
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: "
-                                 << QCC_StatusText(status) << "\n"
-                                 << "MethodCall on " << ::cl::org::alljoyn::alljoyn_test::InterfaceName << "." << "my_sing";
+        EXPECT_EQ(ER_OK, status) << " MethodCall on " << ::cl::org::alljoyn::alljoyn_test::InterfaceName << "." << "my_sing";
         EXPECT_STREQ("Sing String", reply->GetArg(0)->v_string.str);
     } // end if type == 1
     else if (type == 2) {
         MsgArg singStr("s", "Huge String");
         status = remoteObj.MethodCall(::cl::org::alljoyn::alljoyn_test::InterfaceName, "my_sing", &singStr, 1, reply, 5000);
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: "
-                                 << QCC_StatusText(status) << "\n"
-                                 << "MethodCall on " << ::cl::org::alljoyn::alljoyn_test::InterfaceName << "." << "my_sing";
+        EXPECT_EQ(ER_OK, status) << " MethodCall on " << ::cl::org::alljoyn::alljoyn_test::InterfaceName << "." << "my_sing";
     } // end if type == 2
     return status;
 }
@@ -418,11 +406,6 @@ const char* ClientSetup::getClientDummyInterfaceName2() const
 const char* ClientSetup::getClientDummyInterfaceName3() const
 {
     return ::cl::org::alljoyn::alljoyn_test::dummy::InterfaceName3;
-}
-
-const char* ClientSetup::getClientWellknownName() const
-{
-    return ::cl::org::alljoyn::alljoyn_test::WellKnownName;
 }
 
 const char* ClientSetup::getClientObjectPath() const

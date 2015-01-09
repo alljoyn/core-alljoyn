@@ -117,11 +117,12 @@ class _PolicyDB {
      * Determine if the sender is allowed to send the specified message.
      *
      * @param nmh       Normalized message header
+     * @param dest      BusEndpoint where the router intends to send the message
      * @param destIDSet Alternate destination ID set (internal use only)
      *
      * @return true = send allowed, false = send denied.
      */
-    bool OKToSend(const NormalizedMsgHdr& nmh, const IDSet* destIDSet = NULL) const;
+    bool OKToSend(const NormalizedMsgHdr& nmh, BusEndpoint& dest, const IDSet* destIDSet = NULL) const;
 
     /**
      * Convert a string to a normalized form.
@@ -448,7 +449,8 @@ class _PolicyDB {
      * @return  true if match found, false if match not found
      */
     static bool CheckMessage(bool& allow, const PolicyRuleList& ruleList,
-                             const NormalizedMsgHdr& nmh, const IDSet& bnIDSet);
+                             const NormalizedMsgHdr& nmh, const IDSet& bnIDSet,
+                             uint32_t userId, uint32_t groupId);
 
     PolicyRuleListSet ownRS;        /**< bus name ownership policy rule sets */
     PolicyRuleListSet sendRS;       /**< sender message policy rule sets */
@@ -492,15 +494,23 @@ class NormalizedMsgHdr {
         sender(sender)
     {
         if (destIDSet->empty()) {
-            StringID nid = policy->LookupStringID(msg->GetDestination());
-            if (nid != _PolicyDB::ID_NOT_FOUND) {
-                destIDSet->insert(nid);
+            const char* destStr = msg->GetDestination();
+            // GetDestination() will return an empty string if there is no destination
+            if (destStr[0] != '\0') {
+                StringID nid = policy->LookupStringID(destStr);
+                if (nid != _PolicyDB::ID_NOT_FOUND) {
+                    destIDSet->insert(nid);
+                }
             }
         }
         if (senderIDSet->empty()) {
-            StringID nid = policy->LookupStringID(msg->GetSender());
-            if (nid != _PolicyDB::ID_NOT_FOUND) {
-                senderIDSet->insert(nid);
+            const char* senderStr = msg->GetSender();
+            // GetSender() will return an empty string if there is no sender
+            if (senderStr[0] != '\0') {
+                StringID nid = policy->LookupStringID(senderStr);
+                if (nid != _PolicyDB::ID_NOT_FOUND) {
+                    senderIDSet->insert(nid);
+                }
             }
         }
     }

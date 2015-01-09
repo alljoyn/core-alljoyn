@@ -7,7 +7,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011, 2014 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014-2015 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -47,12 +47,12 @@
 #include "PermissionConfiguratorImpl.h"
 
 #include <alljoyn/Status.h>
+#include <set>
 
 namespace ajn {
 
 class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncCB {
     friend class BusAttachment;
-
   public:
 
     /**
@@ -145,6 +145,21 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
     void OverrideCompressionRules(CompressionRules& newRules) { compressionRules = newRules; }
 
     /**
+     * Get the Announced Object Description for the BusObjects registered on
+     * the BusAttachment with interfaces marked as announced.
+     *
+     * This will clear any previous contents of the of the MsgArg provided. The
+     * resulting MsgArg will have a signature a(oas) and will contain an array
+     * of object paths. For each object path an array of announced interfaces found
+     * at that object path will be listed.
+     *
+     * @param[out] aboutObjectDescriptionArg reference to a MsgArg that will
+     *             be filled in.
+     * @return ER_OK on success
+     */
+    QStatus GetAnnouncedObjectDescription(MsgArg& objectDescriptionArg);
+
+    /**
      * Constructor called by BusAttachment.
      */
     Internal(const char* appName,
@@ -158,7 +173,7 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
     /*
      * Destructor also called by BusAttachment
      */
-    ~Internal();
+    virtual ~Internal();
 
     /**
      * Filter out authentication mechanisms not present in the list.
@@ -212,7 +227,25 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
      * @param listener   SessionListener to associate with sessionId.
      * @return  ER_OK if successful.
      */
-    QStatus SetSessionListener(SessionId id, SessionListener* listener);
+    QStatus SetSessionListener(SessionId id, SessionListener* listener, SessionSideMask bitset);
+
+    /**
+     * Check whether a session with a particular sessionId exists for host/joiner side
+     *
+     * @param id  Existing session Id.
+     * @param index      host/joiner
+     * @return  true if session exists
+     */
+    bool SessionExists(SessionId id, size_t index) const;
+
+    /**
+     * Check whether a session with a particular sessionId exists has been selfjoined
+     *
+     * @param sessionId  Existing session Id.
+     *
+     * @return  true if session exists and session was selfjoined on this leaf
+     */
+    bool IsSelfJoin(SessionId id) const;
 
     /**
      * Called if the bus attachment become disconnected from the bus.
@@ -255,6 +288,11 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
     PermissionConfigurator& GetPermissionConfigurator() { return permissionConfigurator; }
 
     /**
+     * GetNameOwnerAsync method_reply handler
+     */
+    void GetNameOwnerAsyncCB(Message& message, void* context);
+
+    /**
      * Push a message into the local endpoint
      *
      * @param msg  The message to push
@@ -264,6 +302,110 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
         BusEndpoint busEndpoint = BusEndpoint::cast(localEndpoint);
         return router->PushMessage(msg, busEndpoint);
     }
+
+    /**
+     * Find out if the BusAttachment has bound the specified SessionPort
+     *
+     * @param sessionPort port number being checked
+     *
+     * @return true if the sessionPort is bound
+     */
+    bool IsSessionPortBound(SessionPort sessionPort);
+
+    /**
+     * Return all hosted sessions
+     *
+     * @return set with all hosted session ids
+     */
+    std::set<SessionId> GetHostedSessions() const {
+        sessionSetLock[SESSION_SIDE_HOST].Lock(MUTEX_CONTEXT);
+        std::set<SessionId> copy = sessionSet[SESSION_SIDE_HOST];
+        sessionSetLock[SESSION_SIDE_HOST].Unlock(MUTEX_CONTEXT);
+        return copy;
+    }
+
+    /**
+     * Indicate whether bus is currently connected.
+     *
+     * Messages can only be sent or received when the bus is connected.
+     *
+     * @return true if the bus is connected.
+     */
+    bool IsConnected() const;
+
+    /**
+     * Start all the transports.
+     *
+     * @return
+     *         - ER_OK if successful.
+     */
+    virtual QStatus TransportsStart() { return transportList.Start(GetListenAddresses()); }
+
+    /**
+     * Stop all the transports.
+     *
+     * @return
+     *         - ER_OK if successful.
+     *         - an error status otherwise.
+     */
+    virtual QStatus TransportsStop() { return transportList.Stop(); }
+
+    /**
+     * Wait for all transports to stop.
+     *
+     * @return
+     *         - ER_OK if successful.
+     *         - an error status otherwise.
+     */
+    virtual QStatus TransportsJoin() { return transportList.Join(); }
+
+    /**
+     * Connect to an AllJoyn router at a specific connectSpec destination.
+     *
+     * If there is no router present at the given connectSpec or if the router
+     * at the connectSpec has an incompatible AllJoyn version, this method will
+     * attempt to use a bundled router if one exists.
+     *
+     * @param[in] requestedConnectSpec The transport connection spec to try.
+     * @param[out] actualConnectSpec The connected transport spec if successful.
+     *
+     * @return
+     *     - #ER_OK if successful.
+     *     - An error status otherwise
+     */
+    virtual QStatus TransportConnect(const char* requestedConnectSpec, qcc::String& actualConnectSpec);
+
+    /**
+     * Disconnect a remote bus address connection.
+     *
+     * @param[in] connectSpec The transport connection spec used to connect.
+     *
+     * @return
+     *     - #ER_OK if successful
+     *     - #ER_BUS_BUS_NOT_STARTED if the bus is not started
+     *     - #ER_BUS_NOT_CONNECTED if the %BusAttachment is not connected to the bus
+     *     - Other error status codes indicating a failure
+     */
+    virtual QStatus TransportDisconnect(const char* connectSpec);
+
+    /** @copydoc _LocalEndpoint::RegisterSignalHandler() */
+    virtual QStatus RegisterSignalHandler(MessageReceiver* receiver,
+                                          MessageReceiver::SignalHandler signalHandler,
+                                          const InterfaceDescription::Member* member,
+                                          const char* matchRule) {
+        return localEndpoint->RegisterSignalHandler(receiver, signalHandler, member, matchRule);
+    }
+
+    /** @copydoc _LocalEndpoint::UnregisterSignalHandler() */
+    virtual QStatus UnregisterSignalHandler(MessageReceiver* receiver,
+                                            MessageReceiver::SignalHandler signalHandler,
+                                            const InterfaceDescription::Member* member,
+                                            const char* matchRule) {
+        return localEndpoint->UnregisterSignalHandler(receiver, signalHandler, member, matchRule);
+    }
+
+    /** @copydoc _LocalEndpoint::GetDBusProxyObj() */
+    virtual const ProxyBusObject& GetDBusProxyObj() const { return localEndpoint->GetDBusProxyObj(); }
 
   private:
 
@@ -288,6 +430,18 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
      * JoinSessionAsync callback used by JoinSession
      */
     void JoinSessionCB(QStatus status, SessionId sessionId, const SessionOpts& opts, void* context);
+
+    /**
+     * @internal
+     * Connect to an AllJoyn router at a specific connectSpec destination.
+     *
+     * @param[in] connectSpec The transport connection spec to try.
+     *
+     * @return
+     *     - #ER_OK if successful.
+     *     - An error status otherwise
+     */
+    QStatus TransportConnect(const char* connectSpec);
 
     qcc::String application;              /* Name of the that owns the BusAttachment application */
     BusAttachment& bus;                   /* Reference back to the bus attachment that owns this state */
@@ -317,12 +471,18 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
     typedef qcc::ManagedObj<SessionPortListener*> ProtectedSessionPortListener;
     typedef std::map<SessionPort, ProtectedSessionPortListener> SessionPortListenerMap;
     SessionPortListenerMap sessionPortListeners;  /* Lookup SessionPortListener by session port */
+    qcc::Mutex sessionPortListenersLock;       /* Lock protecting sessionPortListeners maps */
 
     typedef qcc::ManagedObj<SessionListener*> ProtectedSessionListener;
     typedef std::map<SessionId, ProtectedSessionListener> SessionListenerMap;
-    SessionListenerMap sessionListeners;   /* Lookup SessionListener by session id */
+    SessionListenerMap sessionListeners[SESSION_SIDE_NUM];   /* Lookup SessionListener by session id (index 0 for hoster, index 1 for joiner)*/
+    mutable qcc::Mutex sessionListenersLock[SESSION_SIDE_NUM];       /* Lock protecting sessionListeners maps */
 
-    qcc::Mutex sessionListenersLock;       /* Lock protecting sessionListners maps */
+    typedef qcc::ManagedObj<AboutListener*> ProtectedAboutListener;
+    typedef std::set<ProtectedAboutListener> AboutListenerSet;
+    AboutListenerSet aboutListeners; /* About Signals are recieved out of Sessions so a set is all that is needed */
+
+    qcc::Mutex aboutListenersLock;   /* Lock protecting the aboutListeners set */
 
     struct JoinContext {
         QStatus status;
@@ -330,11 +490,18 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
         SessionOpts opts;
     };
 
+
+    std::set<SessionId> sessionSet[SESSION_SIDE_NUM];
+    mutable qcc::Mutex sessionSetLock[SESSION_SIDE_NUM];
+
     std::map<qcc::Thread*, JoinContext> joinThreads;  /* List of threads waiting to join */
     qcc::Mutex joinLock;                              /* Mutex that protects joinThreads */
     KeyStoreKeyEventListener ksKeyEventListener;
     PermissionManager permissionManager;
     PermissionConfiguratorImpl permissionConfigurator;
+
+    std::set<SessionId> hostedSessions;    /* session IDs for all sessions hosted by this bus attachment */
+    qcc::Mutex hostedSessionsLock;         /* Mutex that protects hostedSessions */
 };
 }
 

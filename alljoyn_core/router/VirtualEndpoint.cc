@@ -46,6 +46,13 @@ _VirtualEndpoint::_VirtualEndpoint(const String& uniqueName, RemoteEndpoint& b2b
     m_hasRefs(false),
     m_epState(EP_STARTED)
 {
+    /**
+     * Set the Virtual Endpoint's user and group IDs from the bus-to-bus endpoint since
+     * that is the machine that we are connecting to the remote endpoint through.
+     */
+    SetUserId(b2bEp->GetUserId());
+    SetGroupId(b2bEp->GetGroupId());
+
     m_b2bEndpoints.insert(pair<SessionId, RemoteEndpoint>(0, b2bEp));
 }
 

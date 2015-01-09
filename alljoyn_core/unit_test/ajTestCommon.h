@@ -1,7 +1,7 @@
 /******************************************************************************
  *
  *
- * Copyright (c) 2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -19,6 +19,7 @@
 #define AJTESTCOMMON_H
 
 #include <qcc/String.h>
+#include <alljoyn/BusAttachment.h>
 
 /*
  * this header file contains a functions that can be used to replace common
@@ -36,7 +37,29 @@ namespace ajn {
  *
  * @return a qcc::String containing the default connection arg
  */
-qcc::String getConnectArg();
+qcc::String getConnectArg(const char* envvar = "BUS_ADDRESS");
+
+/**
+ * Generate a globally unique name for use in advertising.
+ *
+ * Advertised names should be unique to avoid multiple running instances
+ * of the test suite from interferring with each other.
+ */
+qcc::String genUniqueName(const BusAttachment& bus);
+
+/**
+ * Get the prefix of the uniqueNames used in advertising
+ *
+ * Advertised names should be unique to avoid multiple running instances
+ * of the test suite from interferring with each other.
+ */
+qcc::String getUniqueNamePrefix(const BusAttachment& bus);
 
 }
+
+/*
+ * gtest printers
+ */
+void PrintTo(const QStatus& status, ::std::ostream* os);
+
 #endif //AJTESTCOMMON_H

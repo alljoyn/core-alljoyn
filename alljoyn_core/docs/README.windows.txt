@@ -3,8 +3,8 @@ AllJoyn SDK for Windows 7
 -------------------------
 
 This subtree contains one complete copy of the AllJoyn SDK for Windows 7, built
-for a single CPU type (either x86 or x86_64), VARIANT (either debug or release),
-and for a single version of Microsoft Visual Studio (either 2010 or 2012).
+for a single CPU type (x86_64), VARIANT (either debug or release),
+and for a single version of Microsoft Visual Studio (2013).
 
 The CPU, VARIANT, and MSVS version is normally incorporated into the name of the
 package or folder containing this SDK.
@@ -12,11 +12,9 @@ package or folder containing this SDK.
 NOTE:
 
     This SDK works with the Microsoft Win32 architecture, used in
-    traditional Microsoft Windows desktops and servers with x86-based CPUs.
+    traditional Microsoft Windows desktops and servers with x86_64 CPUs.
 
-    This SDK does NOT work with the Microsoft WinRT architecture.  For that,
-    see the AllJoyn SDK for WinRT.
-
+    This SDK does NOT work with the Microsoft WinRT architecture.
 
 Windows, Win32, WinRT, and Visual Studio are registered trademarks or trademarks
 of the Microsoft group of companies.
@@ -128,3 +126,26 @@ unity/  Unity binding
     package_support/            permits re-building the Unity package
 
     samples/                    sample Unity apps
+
+
+----------------------------------------------------------------------------------
+Running and developing AllJoyn 14.06 applications on Windows 10 Technical Preview 
+(released 10/21/2014)
+----------------------------------------------------------------------------------
+
+Windows 10 includes native support for AllJoyn 14.06. In the Windows 10 Technical 
+Preview build, you can use the built-in AllJoyn router node service which means 
+that your desktop applications don't need to bundle an AllJoyn router node, and 
+you don't need to run a stand-alone router node application in order to run AllJoyn 
+desktop applications.
+ 
+In Windows 10 Technical Preview builds, the AllJoyn router node service 
+(AJRouter.dll) must be started manually as follows from an elevated command prompt:
+    net start ajrouter
+ 
+If you need to stop the router node service, you can either reboot your PC, or 
+execute the following command from an elevated command prompt:
+    net stop ajrouter
+ 
+More information about AllJoyn integration in Windows will be available in future 
+releases of the AllSeen SDK for Windows.

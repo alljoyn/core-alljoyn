@@ -36,6 +36,7 @@
 #import "AJNSignalHandler.h"
 #import "AJNSignalHandlerImpl.h"
 #import "AJNTranslatorImpl.h"
+#import "AJNAboutListenerImpl.h"
 
 using namespace ajn;
 
@@ -222,6 +223,7 @@ public:
 @property (nonatomic, strong) NSMutableArray *keyStoreListeners;
 @property (nonatomic, strong) NSMutableArray *authenticationListeners;
 @property (nonatomic, strong) NSMutableArray *translatorImpls;
+@property (nonatomic, strong) NSMutableArray *aboutListeners;
 
 /** C++ AllJoyn API object
  */
@@ -238,6 +240,7 @@ public:
 @synthesize keyStoreListeners = _keyStoreListeners;
 @synthesize authenticationListeners = _authenticationListeners;
 @synthesize translatorImpls = _translatorImpls;
+@synthesize aboutListeners = _aboutListeners;
 
 /** Accessor for the internal C++ API object this objective-c class encapsulates
  */
@@ -292,6 +295,14 @@ public:
         _authenticationListeners = [[NSMutableArray alloc] init];
     }
     return _authenticationListeners;
+}
+
+- (NSMutableArray*)aboutListeners
+{
+    if (_aboutListeners == nil) {
+        _aboutListeners = [[NSMutableArray alloc] init];
+    }
+    return _aboutListeners;
 }
 
 - (NSMutableArray*)translatorImpls
@@ -448,6 +459,14 @@ public:
             delete translatorImpl;
         }
         [self.translatorImpls removeAllObjects];
+    }
+    
+    @synchronized(self.aboutListeners) {
+        for (NSValue *ptrValue in self.aboutListeners) {
+            AJNAboutListenerImpl * aboutListenerImpl = (AJNAboutListenerImpl*)[ptrValue pointerValue];
+            delete aboutListenerImpl;
+        }
+        [self.aboutListeners removeAllObjects];
     }
 
     @synchronized(self.signalHandlers) {
@@ -802,6 +821,34 @@ public:
     return status;        
 }
 
+- (QStatus)bindJoinedSessionListener:(id<AJNSessionListener>)delegate toSession:(AJNSessionId)sessionId
+{
+    AJNSessionListenerImpl *listenerImpl = new AJNSessionListenerImpl(self, delegate);
+    QStatus status = self.busAttachment->SetJoinedSessionListener(sessionId, listenerImpl);
+    @synchronized(self.sessionListeners) {
+        [self.sessionListeners addObject:[NSValue valueWithPointer:listenerImpl]];
+    }
+    if (status != ER_OK) {
+        NSLog(@"ERROR: AJNBusAttachment::bindJoinedSessionListener:toSession: failed. %@", [AJNStatus descriptionForStatusCode:status]);
+    }
+    
+    return status;
+}
+
+- (QStatus)bindHostedSessionListener:(id<AJNSessionListener>)delegate toSession:(AJNSessionId)sessionId
+{
+    AJNSessionListenerImpl *listenerImpl = new AJNSessionListenerImpl(self, delegate);
+    QStatus status = self.busAttachment->SetHostedSessionListener(sessionId, listenerImpl);
+    @synchronized(self.sessionListeners) {
+        [self.sessionListeners addObject:[NSValue valueWithPointer:listenerImpl]];
+    }
+    if (status != ER_OK) {
+        NSLog(@"ERROR: AJNBusAttachment::bindHostedSessionListener:toSession: failed. %@", [AJNStatus descriptionForStatusCode:status]);
+    }
+    
+    return status;
+}
+
 - (QStatus)leaveSession:(AJNSessionId)sessionId
 {
     QStatus status = self.busAttachment->LeaveSession(sessionId);
@@ -809,6 +856,24 @@ public:
         NSLog(@"ERROR: AJNBusAttachment::leaveSession: failed. %@", [AJNStatus descriptionForStatusCode:status]);
     }
     return status;    
+}
+
+- (QStatus)leaveJoinedSession:(AJNSessionId)sessionId
+{
+    QStatus status = self.busAttachment->LeaveJoinedSession(sessionId);
+    if (status != ER_OK) {
+        NSLog(@"ERROR: AJNBusAttachment::leaveJoinedSession: failed. %@", [AJNStatus descriptionForStatusCode:status]);
+    }
+    return status;
+}
+
+- (QStatus)leaveHostedSession:(AJNSessionId)sessionId
+{
+    QStatus status = self.busAttachment->LeaveHostedSession(sessionId);
+    if (status != ER_OK) {
+        NSLog(@"ERROR: AJNBusAttachment::leaveHostedSession: failed. %@", [AJNStatus descriptionForStatusCode:status]);
+    }
+    return status;
 }
 
 - (QStatus)removeSessionMember:(AJNSessionId)sessionId withName:(NSString *)memberName
@@ -1053,5 +1118,68 @@ public:
     }
 }
 
+- (void)registerAboutListener:(id<AJNAboutListener>)aboutListenerDelegate
+{
+    AJNAboutListenerImpl* aboutListenerImpl = new AJNAboutListenerImpl(self, aboutListenerDelegate);
+    @synchronized(self.aboutListeners) {
+        [self.aboutListeners addObject:[NSValue valueWithPointer:aboutListenerImpl]];
+        self.busAttachment->RegisterAboutListener(*aboutListenerImpl);
+    }
+}
+
+- (void)unregisterAboutListener:(id<AJNAboutListener>)aboutListenerDelegate
+{
+    @synchronized(self.aboutListeners) {
+        for (NSValue *ptrValue in self.aboutListeners) {
+            AJNAboutListenerImpl* aboutListenerImpl = (AJNAboutListenerImpl *)[ptrValue pointerValue];
+            if (aboutListenerImpl->getDelegate() == aboutListenerDelegate) {
+                self.busAttachment->UnregisterAboutListener(*aboutListenerImpl);
+                [self.aboutListeners removeObject:aboutListenerDelegate];
+            }
+        }
+    }
+}
+
+- (void)unregisterAllAboutListeners {
+    self.busAttachment->UnregisterAllAboutListeners();
+}
+
+- (QStatus)whoImplementsInterfaces:(NSArray *)interfaces numberOfInterfaces:(size_t)numberInterface
+{
+    unsigned long lengthOfArray = [interfaces count];
+    const char **listInterfaces = new const char*[lengthOfArray];
+    for (int i = 0; i < lengthOfArray ; i++) {
+        NSString *interfaceName = [interfaces objectAtIndex:i];
+        listInterfaces[i] = [interfaceName UTF8String];
+    }
+    QStatus status = self.busAttachment->WhoImplements(listInterfaces, lengthOfArray);
+    delete [] listInterfaces;
+    listInterfaces = NULL;
+    return status;
+}
+
+- (QStatus)whoImplementsInterface:(NSString*)interface
+{
+    return self.busAttachment->WhoImplements([interface UTF8String]);
+}
+
+- (QStatus)cancelWhoImplementsInterfaces:(NSArray *)interfaces numberOfInterfaces:(size_t)numberInterfaces
+{
+    unsigned long lengthOfArray = [interfaces count];
+    const char **listInterfaces = new const char*[lengthOfArray];
+    for (int i = 0; i < lengthOfArray ; i++) {
+        NSString *interfaceName = [interfaces objectAtIndex:i];
+        listInterfaces[i] = [interfaceName UTF8String];
+    }
+    QStatus status = self.busAttachment->CancelWhoImplements(listInterfaces, lengthOfArray);
+    delete [] listInterfaces;
+    listInterfaces = NULL;
+    return status;
+}
+
+-(QStatus)cancelWhoImplements:(NSString *)interface
+{
+    return self.busAttachment->CancelWhoImplements([interface UTF8String]);
+}
 
 @end

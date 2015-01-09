@@ -70,6 +70,8 @@ public @interface Signature {
      * <li>Java int defaults to "i", not "u",
      * <li>and Java String defaults to "s".
      * </ul>
+     *
+     * @return signature value
      */
     String value() default "";
 }

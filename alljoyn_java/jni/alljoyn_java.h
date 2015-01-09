@@ -230,6 +230,22 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_leaveSession
 
 /*
  * Class:     org_alljoyn_bus_BusAttachment
+ * Method:    leaveHostedSession
+ * Signature: (I)Lorg/alljoyn/bus/Status;
+ */
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_leaveHostedSession
+  (JNIEnv *, jobject, jint);
+
+/*
+ * Class:     org_alljoyn_bus_BusAttachment
+ * Method:    leaveJoinedSession
+ * Signature: (I)Lorg/alljoyn/bus/Status;
+ */
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_leaveJoinedSession
+  (JNIEnv *, jobject, jint);
+
+/*
+ * Class:     org_alljoyn_bus_BusAttachment
  * Method:    removeSessionMember
  * Signature: (I;Ljava/lang/String)Lorg/alljoyn/bus/Status;
  */
@@ -280,11 +296,27 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_OnJoinSessionListener_destroy
 /*
  * Class:     org_alljoyn_bus_BusAttachment
  * Method:    setSessionListener
- * Signature: (I)Lorg/alljoyn/bus/Status;
+ * Signature: (ILorg/alljoyn/bus/SessionListener;)Lorg/alljoyn/bus/Status;
  */
 JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_setSessionListener
   (JNIEnv *, jobject,
    jint, jobject);
+
+/*
+ * Class:     org_alljoyn_bus_BusAttachment
+ * Method:    setJoinedSessionListener
+ * Signature: (ILorg/alljoyn/bus/SessionListener;)Lorg/alljoyn/bus/Status;
+ */
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_setJoinedSessionListener
+  (JNIEnv *, jobject, jint, jobject);
+
+/*
+ * Class:     org_alljoyn_bus_BusAttachment
+ * Method:    setHostedSessionListener
+ * Signature: (ILorg/alljoyn/bus/SessionListener;)Lorg/alljoyn/bus/Status;
+ */
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_setHostedSessionListener
+  (JNIEnv *, jobject, jint, jobject);
 
 /*
  * Class:     org_alljoyn_bus_BusAttachment
@@ -377,8 +409,31 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusAttachment_setDebugLevel
  * Signature: (Z)V
  */
 JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusAttachment_useOSLogging
-  (JNIEnv *, jobject,
-   jboolean);
+  (JNIEnv *, jobject, jboolean);
+
+/*
+ * Class:     org_alljoyn_bus_BusAttachment
+ * Method:    setAnnounceFlag
+ * Signature: (Lorg/alljoyn/bus/BusObject;Ljava/lang/String;Z)Lorg/alljoyn/bus/Status;
+ */
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_setAnnounceFlag
+  (JNIEnv *, jobject, jobject, jstring, jboolean);
+
+/*
+ * Class:     org_alljoyn_bus_BusAttachment
+ * Method:    whoImplements
+ * Signature: ([Ljava/lang/String;)Lorg/alljoyn/bus/Status;
+ */
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_whoImplements
+  (JNIEnv *, jobject, jobjectArray);
+
+/*
+ * Class:     org_alljoyn_bus_BusAttachment
+ * Method:    cancelWhoImplements
+ * Signature: ([Ljava/lang/String;)Lorg/alljoyn/bus/Status;
+ */
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_cancelWhoImplements
+  (JNIEnv *, jobject, jobjectArray);
 
 /*
  * Class:     org_alljoyn_bus_BusAttachment
@@ -447,10 +502,18 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusAttachment_unregisterBusObject
 
 /*
  * Class:     org_alljoyn_bus_BusAttachment
- * Method:    registerNativeSignalHandler
+ * Method:    registerNativeSignalHandlerWithSrcPath
  * Signature: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Ljava/lang/reflect/Method;Ljava/lang/String;)Lorg/alljoyn/bus/Status;
  */
-JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_registerNativeSignalHandler
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_registerNativeSignalHandlerWithSrcPath
+  (JNIEnv *, jobject, jstring, jstring, jobject, jobject, jstring);
+
+/*
+ * Class:     org_alljoyn_bus_BusAttachment
+ * Method:    registerNativeSignalHandlerWithRule
+ * Signature: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Ljava/lang/reflect/Method;Ljava/lang/String;)Lorg/alljoyn/bus/Status;
+ */
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_registerNativeSignalHandlerWithRule
   (JNIEnv *, jobject, jstring, jstring, jobject, jobject, jstring);
 
 /*
@@ -645,7 +708,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_addMemberAnn
  * Signature: (Ljava/lang/String;Ljava/lang/String;I)Lorg/alljoyn/bus/Status;
  */
 JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_addProperty
-  (JNIEnv *, jobject, jstring, jstring, jint);
+  (JNIEnv *, jobject, jstring, jstring, jint, jint);
 
 /*
  * Class:     org_alljoyn_bus_InterfaceDescription
@@ -810,10 +873,57 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_ProxyBusObject_setProperty
 JNIEXPORT jboolean JNICALL Java_org_alljoyn_bus_ProxyBusObject_isProxyBusObjectSecure
   (JNIEnv *, jobject);
 
+/*
+ * Class:     org_alljoyn_bus_ProxyBusObject
+ * Method:    registerPropertiesChangedListener
+ * Signature: (Ljava/lang/String;[Ljava/lang/String;Lorg/alljoyn/bus/PropertyChangedListener;)Lorg/alljoyn/bus/Status;
+ */
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_registerPropertiesChangedListener
+  (JNIEnv *, jobject, jstring, jobjectArray, jobject);
+
+/*
+ * Class:     org_alljoyn_bus_ProxyBusObject
+ * Method:    unregisterPropertiesChangedListener
+ * Signature: (Ljava/lang/String;Lorg/alljoyn/bus/PropertyChangedListener;)Lorg/alljoyn/bus/Status;
+ */
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_unregisterPropertiesChangedListener
+  (JNIEnv *, jobject, jstring, jobject);
+
 #ifdef __cplusplus
 }
 #endif
 #endif
+
+/* Header for class org_alljoyn_bus_PropertiesChangedListener */
+
+#ifndef _Included_org_alljoyn_bus_PropertiesChangedListener
+#define _Included_org_alljoyn_bus_PropertiesChangedListener
+#ifdef __cplusplus
+extern "C" {
+#endif
+/*
+ * Class:     org_alljoyn_bus_PropertiesChangedListener
+ * Method:    create
+ * Signature: ()V
+ */
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_PropertiesChangedListener_create
+  (JNIEnv *, jobject, jobject, jobject);
+
+
+/*
+ * Class:     org_alljoyn_bus_PropertiesChangedListener
+ * Method:    destroy
+ * Signature: ()V
+ */
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_PropertiesChangedListener_destroy
+  (JNIEnv *, jobject);
+
+#ifdef __cplusplus
+}
+#endif
+#endif
+
+
 /* Header for class org_alljoyn_bus_ProxyBusObject_Handler */
 
 #ifndef _Included_org_alljoyn_bus_ProxyBusObject_Handler
@@ -1588,6 +1698,62 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_Translator_create
  */
 JNIEXPORT void JNICALL Java_org_alljoyn_bus_Translator_destroy
   (JNIEnv *, jobject);
+
+/*
+ * Class:     org_alljoyn_bus_AboutObj
+ * Method:    create
+ * Signature: (Lorg/alljoyn/bus/BusAttachment;Z)V
+ */
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_AboutObj_create
+  (JNIEnv *, jobject, jobject, jboolean);
+
+/*
+ * Class:     org_alljoyn_bus_AboutObj
+ * Method:    destroy
+ * Signature: ()V
+ */
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_AboutObj_destroy
+  (JNIEnv *, jobject);
+
+/*
+ * Class:     org_alljoyn_bus_AboutObj
+ * Method:    announce
+ * Signature: (SLorg/alljoyn/bus/AboutDataListener;)Lorg/alljoyn/bus/Status;
+ */
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_AboutObj_announce
+  (JNIEnv *, jobject, jshort, jobject);
+
+/*
+ * Class:     org_alljoyn_bus_AboutObj
+ * Method:    unannounce
+ * Signature: ()Lorg/alljoyn/bus/Status;
+ */
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_AboutObj_unannounce
+  (JNIEnv *, jobject);
+
+/*
+ * Class:     org_alljoyn_bus_Version
+ * Method:    get
+ * Signature: ()Ljava/lang/String;
+ */
+JNIEXPORT jstring JNICALL Java_org_alljoyn_bus_Version_get
+  (JNIEnv *, jclass);
+
+/*
+ * Class:     org_alljoyn_bus_Version
+ * Method:    getBuildInfo
+ * Signature: ()Ljava/lang/String;
+ */
+JNIEXPORT jstring JNICALL Java_org_alljoyn_bus_Version_getBuildInfo
+  (JNIEnv *, jclass);
+
+/*
+ * Class:     org_alljoyn_bus_Version
+ * Method:    getNumeric
+ * Signature: ()I
+ */
+JNIEXPORT jint JNICALL Java_org_alljoyn_bus_Version_getNumeric
+  (JNIEnv *, jclass);
 
 #ifdef __cplusplus
 }

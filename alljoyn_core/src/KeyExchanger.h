@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2014 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -46,6 +46,7 @@ namespace ajn {
 #define AUTH_KEYX_SRP_LOGON     0x00100000
 #define AUTH_KEYX_RSA           0x00200000
 #define AUTH_KEYX_ECDHE         0x00400000
+#define AUTH_KEYX_GSSAPI        0x00800000
 
 /*the key authentication suite is in the 16 LSB */
 
@@ -59,6 +60,8 @@ namespace ajn {
 #define AUTH_SUITE_ECDHE_NULL   (AUTH_KEYX_ECDHE | 0x0001)
 #define AUTH_SUITE_ECDHE_PSK    (AUTH_KEYX_ECDHE | 0x0002)
 #define AUTH_SUITE_ECDHE_ECDSA  (AUTH_KEYX_ECDHE | 0x0004)
+
+#define AUTH_SUITE_GSSAPI       AUTH_KEYX_GSSAPI
 
 #define AUTH_VERIFIER_LEN  Crypto_SHA256::DIGEST_SIZE
 

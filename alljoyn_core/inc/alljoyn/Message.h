@@ -6,7 +6,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -154,6 +154,7 @@ class HeaderFields {
 /**
  * Forward definition
  */
+class _CompressionRules;
 class _Message;
 class _RemoteEndpoint;
 class BusAttachment;
@@ -162,6 +163,7 @@ class BusAttachment;
  * @cond ALLJOYN_DEV
  * @internal
  */
+typedef qcc::ManagedObj<_CompressionRules> CompressionRules;
 typedef qcc::ManagedObj<_RemoteEndpoint> RemoteEndpoint;
 /// @endcond
 /**
@@ -333,7 +335,8 @@ class _Message {
      *      - An empty string if unable to find the AllJoyn signature
      */
     const char* GetSignature() const {
-        if (hdrFields.field[ALLJOYN_HDR_FIELD_SIGNATURE].typeId == ALLJOYN_SIGNATURE) {
+        if (hdrFields.field[ALLJOYN_HDR_FIELD_SIGNATURE].typeId == ALLJOYN_SIGNATURE &&
+            hdrFields.field[ALLJOYN_HDR_FIELD_SIGNATURE].v_signature.sig) {
             return hdrFields.field[ALLJOYN_HDR_FIELD_SIGNATURE].v_signature.sig;
         } else {
             return "";
@@ -348,7 +351,8 @@ class _Message {
      *      - An empty string if unable to find the AllJoyn object path
      */
     const char* GetObjectPath() const {
-        if (hdrFields.field[ALLJOYN_HDR_FIELD_PATH].typeId == ALLJOYN_OBJECT_PATH) {
+        if (hdrFields.field[ALLJOYN_HDR_FIELD_PATH].typeId == ALLJOYN_OBJECT_PATH &&
+            hdrFields.field[ALLJOYN_HDR_FIELD_PATH].v_objPath.str) {
             return hdrFields.field[ALLJOYN_HDR_FIELD_PATH].v_objPath.str;
         } else {
             return "";
@@ -363,7 +367,8 @@ class _Message {
      *      - An empty string if unable to find the interface
      */
     const char* GetInterface() const {
-        if (hdrFields.field[ALLJOYN_HDR_FIELD_INTERFACE].typeId == ALLJOYN_STRING) {
+        if (hdrFields.field[ALLJOYN_HDR_FIELD_INTERFACE].typeId == ALLJOYN_STRING &&
+            hdrFields.field[ALLJOYN_HDR_FIELD_INTERFACE].v_string.str) {
             return hdrFields.field[ALLJOYN_HDR_FIELD_INTERFACE].v_string.str;
         } else {
             return "";
@@ -377,7 +382,8 @@ class _Message {
      *      - An empty string if unable to find the member name
      */
     const char* GetMemberName() const {
-        if (hdrFields.field[ALLJOYN_HDR_FIELD_MEMBER].typeId == ALLJOYN_STRING) {
+        if (hdrFields.field[ALLJOYN_HDR_FIELD_MEMBER].typeId == ALLJOYN_STRING &&
+            hdrFields.field[ALLJOYN_HDR_FIELD_MEMBER].v_string.str) {
             return hdrFields.field[ALLJOYN_HDR_FIELD_MEMBER].v_string.str;
         } else {
             return "";
@@ -406,7 +412,8 @@ class _Message {
      *      - An empty string if the message did not specify a sender.
      */
     const char* GetSender() const {
-        if (hdrFields.field[ALLJOYN_HDR_FIELD_SENDER].typeId == ALLJOYN_STRING) {
+        if (hdrFields.field[ALLJOYN_HDR_FIELD_SENDER].typeId == ALLJOYN_STRING &&
+            hdrFields.field[ALLJOYN_HDR_FIELD_SENDER].v_string.str) {
             return hdrFields.field[ALLJOYN_HDR_FIELD_SENDER].v_string.str;
         } else {
             return "";
@@ -430,7 +437,8 @@ class _Message {
      *      - An empty string if unable to find the message destination.
      */
     const char* GetDestination() const {
-        if (hdrFields.field[ALLJOYN_HDR_FIELD_DESTINATION].typeId == ALLJOYN_STRING) {
+        if (hdrFields.field[ALLJOYN_HDR_FIELD_DESTINATION].typeId == ALLJOYN_STRING &&
+            hdrFields.field[ALLJOYN_HDR_FIELD_DESTINATION].v_string.str) {
             return hdrFields.field[ALLJOYN_HDR_FIELD_DESTINATION].v_string.str;
         } else {
             return "";
@@ -474,7 +482,7 @@ class _Message {
      *                      - leave errorMessage unchanged if error message string not found
      * @return
      *      - If the message is an error message return the error name from the AllJoyn header
-     *      - NULL if the message type is not MESSAGE_ERRORe.
+     *      - NULL if the message type is not MESSAGE_ERROR.
      */
     const char* GetErrorName(qcc::String* errorMessage = NULL) const;
 
@@ -556,6 +564,15 @@ class _Message {
      * These methods and members are protected rather than private to facilitate unit testing.
      */
     /// @cond ALLJOYN_DEV
+
+    /**
+     * Constructor for a message
+     *
+     * @param bus       The bus that this message is sent or received on.
+     * @param hdrFields The header fields for this message.
+     */
+    _Message(BusAttachment& bus, const HeaderFields& hdrFields);
+
     /**
      * @internal
      * Generate a method reply message from a method call.
@@ -568,6 +585,20 @@ class _Message {
      *      - An error status otherwise
      */
     QStatus ReplyMsg(const Message& call, const MsgArg* args, size_t numArgs);
+
+    /**
+     * @internal
+     * Generate a method reply message from a method call.
+     *
+     * @param call        The call message - can be this message.
+     * @param sender      The sender of the message
+     * @param args        The arguments for the reply (can be NULL)
+     * @param numArgs     The number of arguments
+     * @return
+     *      - #ER_OK if successful
+     *      - An error status otherwise
+     */
+    QStatus ReplyMsg(const Message& call, const qcc::String& sender, const MsgArg* args, size_t numArgs);
 
     /**
      * @internal
@@ -587,6 +618,20 @@ class _Message {
      * Generate an error message from a method call.
      *
      * @param call        The call message - can be this message.
+     * @param sender      The sender of the message
+     * @param errorName   The name of this error
+     * @param description Informational string describing details of the error
+     * @return
+     *      - #ER_OK if successful
+     *      - An error status otherwise
+     */
+    QStatus ErrorMsg(const Message& call, const qcc::String& sender, const char* errorName, const char* description);
+
+    /**
+     * @internal
+     * Generate an error message from a method call.
+     *
+     * @param call        The call message - can be this message.
      * @param status      The status code for this error
      * @return
      *      - #ER_OK if successful
@@ -596,13 +641,38 @@ class _Message {
 
     /**
      * @internal
+     * Generate an error message from a method call.
+     *
+     * @param call        The call message - can be this message.
+     * @param sender      The sender of the message
+     * @param status      The status code for this error
+     * @return
+     *      - #ER_OK if successful
+     *      - An error status otherwise
+     */
+    QStatus ErrorMsg(const Message& call, const qcc::String& sender, QStatus status);
+
+    /**
+     * @internal
      * Compose a new internally generated error message.
      *
      * @param errorName   The name of this error
      * @param replySerial The serial number the method call this message is replying to.
      */
-    void ErrorMsg(const char* errorName,
-                  uint32_t replySerial);
+    void ErrorMsg(const char* errorName, uint32_t replySerial);
+
+    /**
+     * @internal
+     * Compose a new internally generated error message.
+     *
+     * @param sender      The sender of this error message.
+     * @param errorName   The name of this error
+     * @param replySerial The serial number the method call this message is replying to.
+     * @return
+     *      - #ER_OK if successful
+     *      - An error status otherwise
+     */
+    QStatus ErrorMsg(const qcc::String& sender, const char* errorName, uint32_t replySerial);
 
     /**
      * @internal
@@ -611,8 +681,20 @@ class _Message {
      * @param status      The status code for this error
      * @param replySerial The serial number the method call this message is replying to.
      */
-    void ErrorMsg(QStatus status,
-                  uint32_t replySerial);
+    void ErrorMsg(QStatus status, uint32_t replySerial);
+
+    /**
+     * @internal
+     * Compose a new internally generated error message from a status code
+     *
+     * @param sender      The sender of this error message.
+     * @param status      The status code for this error
+     * @param replySerial The serial number the method call this message is replying to.
+     * @return
+     *      - #ER_OK if successful
+     *      - An error status otherwise
+     */
+    QStatus ErrorMsg(const qcc::String& sender, QStatus status, uint32_t replySerial);
 
     /**
      * @internal
@@ -640,6 +722,38 @@ class _Message {
                     const MsgArg* args,
                     size_t numArgs,
                     uint8_t flags);
+
+    /**
+     * @internal
+     * Compose a method call message
+     *
+     * @param signature   The signature (checked against the args)
+     * @param sender      sender of the message
+     * @param destination The destination for this message
+     * @param sessionId   The sessionId to use for this method call or 0 for any
+     * @param objPath     The object the method call is being sent to
+     * @param iface       The interface for the method (can be NULL)
+     * @param methodName  The name of the method to call
+     * @param args        The method call argument list (can be NULL)
+     * @param numArgs     The number of arguments
+     * @param flags       A logical OR of the AllJoyn flags
+     * @param compressionRules header compression rules, used only if flags include
+     *                         ALLJOYN_FLAG_COMPRESSED
+     * @return
+     *      - #ER_OK if successful
+     *      - An error status otherwise
+     */
+    QStatus CallMsg(const qcc::String& signature,
+                    const qcc::String& sender,
+                    const qcc::String& destination,
+                    SessionId sessionId,
+                    const qcc::String& objPath,
+                    const qcc::String& iface,
+                    const qcc::String& methodName,
+                    const MsgArg* args,
+                    size_t numArgs,
+                    uint8_t flags,
+                    CompressionRules& compressionRules);
 
     /**
      * @internal
@@ -671,6 +785,40 @@ class _Message {
                       uint8_t flags,
                       uint16_t timeToLive);
 
+    /**
+     * @internal
+     * Compose a signal message
+     *
+     * @param signature   The signature (checked against the args)
+     * @param sender      sender of the message
+     * @param destination The destination for this message
+     * @param sessionId   The sessionId to use for this signal msg or 0 for any
+     * @param objPath     The object sending the signal
+     * @param iface       The interface for the method (can be NULL)
+     * @param signalName  The name of the signal being sent
+     * @param args        The signal argument list (can be NULL)
+     * @param numArgs     The number of arguments
+     * @param flags       A logical OR of the AllJoyn flags.
+     * @param timeToLive  Time-to-live. Units are seconds for sessionless signals. Milliseconds for non-sessionless signals.
+     *                    Signals that cannot be sent within this time limit are discarded. Zero indicates reliable delivery.
+     * @param compressionRules header compression rules, used only if flags include
+     *                         ALLJOYN_FLAG_COMPRESSED
+     * @return
+     *      - #ER_OK if successful
+     *      - An error status otherwise
+     */
+    QStatus SignalMsg(const qcc::String& signature,
+                      const qcc::String& sender,
+                      const char* destination,
+                      SessionId sessionId,
+                      const qcc::String& objPath,
+                      const qcc::String& iface,
+                      const qcc::String& signalName,
+                      const MsgArg* args,
+                      size_t numArgs,
+                      uint8_t flags,
+                      uint16_t timeToLive,
+                      CompressionRules& compressionRules);
 
     /**
      * @internal
@@ -789,6 +937,12 @@ class _Message {
   private:
 
     /**
+     * Common initialization called by constructor.  Calling constructors from other constructors is
+     * not supported in some compilers.
+     */
+    void Init(BusAttachment& bus);
+
+    /**
      * Message assignment is disallowed.
      */
     _Message operator=(const _Message& other);
@@ -832,6 +986,22 @@ class _Message {
     QStatus HelloMessage(bool isBusToBus, bool allowRemote, SessionOpts::NameTransferType nametype);
 
     /**
+     * Compose the special hello method call required to establish a connection
+     *
+     * @param isBusToBus   true iff connection attempt is between two AllJoyn instances (bus joining).
+     * @param sender       sender of the message
+     * @param allowRemote  true iff connection allows messages from remote devices.
+     * @param guid         GUID of sender of message
+     * @param nametype     specify what names are transfered
+     *
+     * @return
+     *      - #ER_OK if hello method call was sent successfully.
+     *      - An error status otherwise
+     */
+    QStatus HelloMessage(bool isBusToBus, const qcc::String& sender, bool allowRemote,
+                         const qcc::String& guid, SessionOpts::NameTransferType nameType);
+
+    /**
      * Compose the reply to the hello method call
      *
      * @param isBusToBus  true iff connection attempt is between two AllJoyn instances (bus joining).
@@ -841,6 +1011,19 @@ class _Message {
      *      - An error status otherwise
      */
     QStatus HelloReply(bool isBusToBus, const qcc::String& uniqueName);
+
+    /**
+     * Compose the reply to the hello method call
+     *
+     * @param isBusToBus  true iff connection attempt is between two AllJoyn instances (bus joining).
+     * @param sender      sender of the message
+     * @param uniqueName  The new unique name for the sender.
+     * @param guid        GUID of sender of message
+     * @return
+     *      - #ER_OK if reply to the hello method call was successful
+     *      - An error status otherwise
+     */
+    QStatus HelloReply(bool isBusToBus, const qcc::String& sender, const qcc::String& uniqueName, const qcc::String& guid);
 
     /**
      * Get a pointer to the current backing buffer for the message.
@@ -1091,24 +1274,29 @@ class _Message {
      * Marshal (serialize) the Message so it is in the wire format
      *
      * @param signature   message signature
+     * @param sender      sender of the message
      * @param destination destination of the message
      * @param msgType     what type of message this is
      * @param args        pointer to an array of MsgArgs contained in the message
      * @param numArgs     number of MsgArg
      * @param flags       A logical OR of the AllJoyn flags
      * @param sessionId   The session id that the Message will be sent to
+     * @param compressionRules header compression rules, used only if flags include
+     *                         ALLJOYN_FLAG_COMPRESSED
      *
      *  @return
      *    - #ER_OK if successful
      *    - An error status otherwise
      */
     QStatus MarshalMessage(const qcc::String& signature,
+                           const qcc::String& sender,
                            const qcc::String& destination,
                            AllJoynMessageType msgType,
                            const MsgArg* args,
                            uint8_t numArgs,
                            uint8_t flags,
-                           SessionId sessionId);
+                           SessionId sessionId,
+                           CompressionRules& compressionRules);
 
     /**
      * Marshal the MsgArg arguments into the message

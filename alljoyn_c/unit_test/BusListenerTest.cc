@@ -19,11 +19,6 @@
 #include <qcc/Thread.h>
 #include <alljoyn_c/BusAttachment.h>
 
-/*constants*/
-//static const char* INTERFACE_NAME = "org.alljoyn.test.BusListenerTest";
-static const char* OBJECT_NAME = "org.alljoyn.test.BusListenerTest";
-//static const char* OBJECT_PATH = "/org/alljoyn/test/BusListenerTest";
-
 /* flags */
 static QCC_BOOL listener_registered_flag = QCC_FALSE;
 static QCC_BOOL listener_unregistered_flag = QCC_FALSE;
@@ -80,6 +75,7 @@ class BusListenerTest : public testing::Test {
         };
         buslistener = alljoyn_buslistener_create(&buslistenerCbs, NULL);
         bus = alljoyn_busattachment_create("BusListenerTest", QCC_FALSE);
+        object_name = ajn::genUniqueName(bus);
     }
 
     virtual void TearDown() {
@@ -101,6 +97,7 @@ class BusListenerTest : public testing::Test {
     QStatus status;
     alljoyn_busattachment bus;
     alljoyn_buslistener buslistener;
+    qcc::String object_name;
 };
 
 TEST_F(BusListenerTest, listner_registered_unregistered) {
@@ -182,10 +179,10 @@ TEST_F(BusListenerTest, found_lost_advertised_name) {
 
     alljoyn_sessionopts opts = alljoyn_sessionopts_create(ALLJOYN_TRAFFIC_TYPE_MESSAGES, QCC_FALSE, ALLJOYN_PROXIMITY_ANY, ALLJOYN_TRANSPORT_ANY);
 
-    status = alljoyn_busattachment_findadvertisedname(bus, OBJECT_NAME);
+    status = alljoyn_busattachment_findadvertisedname(bus, object_name.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    status = alljoyn_busattachment_advertisename(bus, OBJECT_NAME, alljoyn_sessionopts_get_transports(opts));
+    status = alljoyn_busattachment_advertisename(bus, object_name.c_str(), alljoyn_sessionopts_get_transports(opts));
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     for (size_t i = 0; i < 200; ++i) {
@@ -196,7 +193,7 @@ TEST_F(BusListenerTest, found_lost_advertised_name) {
     }
     EXPECT_TRUE(found_advertised_name_flag);
 
-    status = alljoyn_busattachment_canceladvertisename(bus, OBJECT_NAME, alljoyn_sessionopts_get_transports(opts));
+    status = alljoyn_busattachment_canceladvertisename(bus, object_name.c_str(), alljoyn_sessionopts_get_transports(opts));
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     for (size_t i = 0; i < 200; ++i) {
         if (lost_advertised_name_flag) {
@@ -254,10 +251,10 @@ TEST_F(BusListenerTest, found_name_by_transport) {
 
     alljoyn_sessionopts opts = alljoyn_sessionopts_create(ALLJOYN_TRAFFIC_TYPE_MESSAGES, QCC_FALSE, ALLJOYN_PROXIMITY_ANY, ALLJOYN_TRANSPORT_ANY);
 
-    status = alljoyn_busattachment_findadvertisednamebytransport(bus, OBJECT_NAME, ALLJOYN_TRANSPORT_LOCAL);
+    status = alljoyn_busattachment_findadvertisednamebytransport(bus, object_name.c_str(), ALLJOYN_TRANSPORT_LOCAL);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    status = alljoyn_busattachment_advertisename(bus, OBJECT_NAME, alljoyn_sessionopts_get_transports(opts));
+    status = alljoyn_busattachment_advertisename(bus, object_name.c_str(), alljoyn_sessionopts_get_transports(opts));
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     for (size_t i = 0; i < 200; ++i) {
@@ -269,14 +266,14 @@ TEST_F(BusListenerTest, found_name_by_transport) {
     EXPECT_TRUE(found_advertised_name_flag);
     EXPECT_EQ(ALLJOYN_TRANSPORT_LOCAL, transport_found);
 
-    status = alljoyn_busattachment_canceladvertisename(bus, OBJECT_NAME, alljoyn_sessionopts_get_transports(opts));
+    status = alljoyn_busattachment_canceladvertisename(bus, object_name.c_str(), alljoyn_sessionopts_get_transports(opts));
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    status = alljoyn_busattachment_cancelfindadvertisednamebytransport(bus, OBJECT_NAME, ALLJOYN_TRANSPORT_LOCAL);
+    status = alljoyn_busattachment_cancelfindadvertisednamebytransport(bus, object_name.c_str(), ALLJOYN_TRANSPORT_LOCAL);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     found_advertised_name_flag = QCC_FALSE;
-    status = alljoyn_busattachment_advertisename(bus, OBJECT_NAME, alljoyn_sessionopts_get_transports(opts));
+    status = alljoyn_busattachment_advertisename(bus, object_name.c_str(), alljoyn_sessionopts_get_transports(opts));
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     for (size_t i = 0; i < 50; ++i) {
@@ -334,7 +331,7 @@ TEST_F(BusListenerTest, name_owner_changed) {
     }
     EXPECT_TRUE(listener_registered_flag);
 
-    alljoyn_busattachment_requestname(bus, OBJECT_NAME, 0);
+    alljoyn_busattachment_requestname(bus, object_name.c_str(), 0);
     for (size_t i = 0; i < 200; ++i) {
         if (name_owner_changed_flag) {
             break;

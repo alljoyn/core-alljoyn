@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -1489,9 +1489,9 @@ void AllJoynPeerObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
                         /*
                          * If the failed message was a method call push an error response.
                          */
-                        if (req->msg->GetType() == MESSAGE_METHOD_CALL) {
+                        if (msg->GetType() == MESSAGE_METHOD_CALL) {
                             Message reply(*bus);
-                            reply->ErrorMsg(status, req->msg->GetCallSerial());
+                            reply->ErrorMsg(status, msg->GetCallSerial());
                             bus->GetInternal().GetLocalEndpoint()->PushMessage(reply);
                         }
                     } else {
@@ -1778,6 +1778,8 @@ void AllJoynPeerObj::SetupPeerAuthentication(const qcc::String& authMechanisms, 
             count++;
         } else if (mech == "ALLJOYN_ECDHE_ECDSA") {
             count++;
+        } else if (mech == "GSSAPI") {
+            count++;
         }
     }
     supportedAuthSuitesCount = count;
@@ -1820,6 +1822,8 @@ void AllJoynPeerObj::SetupPeerAuthentication(const qcc::String& authMechanisms, 
         } else if (mech == "ALLJOYN_ECDHE_ECDSA") {
             supportedAuthSuites[idx++] = AUTH_SUITE_ECDHE_ECDSA;
             hasECDHE = true;
+        } else if (mech == "GSSAPI") {
+            supportedAuthSuites[idx++] = AUTH_SUITE_GSSAPI;
         }
     }
     if (hasECDHE) {

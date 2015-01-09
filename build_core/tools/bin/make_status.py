@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Copyright (c) 2010 - 2012, 2014 AllSeen Alliance. All rights reserved.
+# Copyright (c) 2010-2012, 2014-2015, AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -161,13 +161,33 @@ def writeHeaders():
  ******************************************************************************/ 
 #ifndef _STATUS_H
 #define _STATUS_H
+/**
+ * This @#define allows for setting of visibility support on relevant platforms
+ */
+#ifndef AJ_API
+#  if defined(QCC_OS_GROUP_POSIX)
+#    define AJ_API __attribute__((visibility("default")))
+#  else
+#    define AJ_API
+#  endif
+#endif
 
-#ifndef ALLJOYN_DLLExport /* Used for extern C functions. Add __declspec(dllexport) when using MSVC */
-#  if defined(_MSC_VER) /* MSVC compiler*/
-#    define ALLJOYN_DLLExport __declspec(dllexport)
-#  else /* compiler other than MSVC */
-#    define ALLJOYN_DLLExport
-#  endif /* Compiler type */
+/** This @#define allows for calling convention redefinition on relevant platforms */
+#ifndef AJ_CALL
+#  if defined(QCC_OS_GROUP_WINDOWS)
+#    define AJ_CALL __stdcall
+#  else
+#    define AJ_CALL
+#  endif
+#endif
+
+/** This @#define allows for calling convention redefinition on relevant platforms */
+#ifndef CDECL_CALL
+#  if defined(QCC_OS_GROUP_WINDOWS)
+#    define CDECL_CALL __cdecl
+#  else
+#    define CDECL_CALL
+#  endif
 #endif
 
 #ifdef __cplusplus
@@ -210,7 +230,7 @@ typedef enum {""")
 #define CASE(_status) case _status: return #_status 
     
 """)
-        codeOut.write("const char* QCC_%sStatusText(QStatus status)" % prefix)
+        codeOut.write("AJ_API const char* AJ_CALL QCC_%sStatusText(QStatus status)" % prefix)
         codeOut.write("""
 {
     switch (status) {
@@ -237,7 +257,7 @@ def writeFooters():
  * @return  C string representation of the status code.
  */
 """)
-        headerOut.write("extern ALLJOYN_DLLExport const char* QCC_%sStatusText(QStatus status);" % prefix)
+        headerOut.write("extern AJ_API const char* AJ_CALL QCC_%sStatusText(QStatus status);" % prefix)
         headerOut.write("""
 
 #ifdef __cplusplus

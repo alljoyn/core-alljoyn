@@ -7,7 +7,7 @@
 /******************************************************************************
  *
  *
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -25,9 +25,31 @@
 #define _OS_QCC_UTILITY_H
 
 #include <qcc/platform.h>
+#include <windows.h>
 
 void strerror_r(uint32_t errCode, char* ansiBuf, uint16_t ansiBufSize);
 
+wchar_t* MultibyteToWideString(const char* str);
 
+/**
+ * Ensure that Winsock API is loaded.
+ * Called before any operation that might be called before winsock has been started.
+ */
+void WinsockCheck();
+
+/**
+ * Clean up Winsock API. Caller must ensure that this is the last call to Winsock.
+ */
+void WinsockCleanup();
+
+static struct WinsockInit {
+    WinsockInit();
+    ~WinsockInit();
+    static void Cleanup();
+
+  private:
+    static bool cleanedup;
+
+} winsockInit;
 
 #endif

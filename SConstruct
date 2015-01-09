@@ -23,6 +23,7 @@ vars = Variables()
 vars.Add('BINDINGS', 'Bindings to build (comma separated list): cpp, c, java, js, unity', 'cpp,c,java,js,unity')
 vars.Add('SERVICES', 'AllJoyn services libraries to build (comma separated list): config,controlpanel,notification,onboarding,audio', '')
 vars.Add(EnumVariable('BUILD_SERVICES_SAMPLES', 'Build the services samples that require libxml2 and json libraries.', 'on', allowed_values = ['on', 'off']))
+vars.Add(BoolVariable('BUILD_DDAPI', 'Flag to indicate if data-driven API has to be built or not', 0))
 vars.Update(env)
 Help(vars.GenerateHelpText(env))
 
@@ -85,8 +86,9 @@ if env.has_key('WIN7_MSI') and env['WIN7_MSI'] == 'true':
     env.Depends(win7Sdk, installedFiles)
 
 # Always build Datadriven_api if it is present
-if os.path.exists('../../data/datadriven_api/SConscript'):
-    env.SConscript(['../../data/datadriven_api/SConscript'])
+if env['BUILD_DDAPI'] == 1:
+    if os.path.exists('../../data/datadriven_api/SConscript'):
+        env.SConscript(['../../data/datadriven_api/SConscript'])
 
 # Build Alias to make cleaning, building and rebuilding the documentation when
 # working only on the documentation simpler. This can be run by using

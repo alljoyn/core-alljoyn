@@ -21,6 +21,12 @@ if samples_env['BR'] == 'on':
     # Build apps with bundled daemon support
     samples_env.Prepend(LIBS = [samples_env['brobj'], samples_env['ajrlib']])
 
+# About feature sample programs
+samples_env.SConscript('about/SConscript', exports = {'env': samples_env})
+
+# AboutListener sample program
+samples_env.SConscript('aboutlistener/SConscript', exports = {'env': samples_env})
+
 # Basic Sample programs
 samples_env.SConscript('basic/SConscript', exports = {'env': samples_env})
 

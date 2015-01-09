@@ -34,6 +34,8 @@ public @interface BusMethod {
     /**
      * Override of method name.
      * The default AllJoyn method name is the Java method name.
+     *
+     * @return name specified in the BusMethod annotation
      */
     String name() default "";
 
@@ -41,6 +43,8 @@ public @interface BusMethod {
      * Input signature for method.
      *
      * @see Signature
+     *
+     * @return signature specified in the BusMethod annotation
      */
     String signature() default "";
 
@@ -48,11 +52,15 @@ public @interface BusMethod {
      * Output signature for method.
      *
      * @see Signature
+     *
+     * @return replySignature specified in the BusMethod annotation
      */
     String replySignature() default "";
 
     /**
      * Description of this method
+     *
+     * @return description specified in the BusMethod annotation
      */
     String description() default "";
 
@@ -67,6 +75,8 @@ public @interface BusMethod {
      * The annotation is the exclusive OR of the flags ANNOTATE_NO_REPLY and
      * ANNOTATE_DEPRECATED.  See org.freedesktop.DBus.Deprecated and
      * org.freedesktop.DBus.Method.NoReply in the D-Bus Specification.
+     *
+     * @return annotation annotate flag specified in the BusMethod annotation
      */
     int annotation() default 0;
 }

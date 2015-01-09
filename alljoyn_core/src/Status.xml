@@ -1,5 +1,5 @@
 <!--
-Copyright (c) 2010 - 2012, 2014, AllSeen Alliance. All rights reserved.
+Copyright (c) 2010 - 2012, 2014-2015, AllSeen Alliance. All rights reserved.
 
    Permission to use, copy, modify, and/or distribute this software for any
    purpose with or without fee is hereby granted, provided that the above
@@ -271,23 +271,24 @@ Copyright (c) 2010 - 2012, 2014, AllSeen Alliance. All rights reserved.
   <status name="ER_ABOUT_DEFAULT_LANGUAGE_NOT_SPECIFIED" value="0x9123" comment="Default language must be specified before setting a localized field"/>
   <status name="ER_ABOUT_SESSIONPORT_NOT_BOUND" value="0x9124" comment="Unable to announce session port that is not bound to the BusAttachment"/>
   <status name="ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD" value="0x9125" comment="The AboutData is missing a required field."/>
-  <status name="ER_ABOUT_INVALID_ABOUT_DATA_LISTENER" value="0x9126" comment="The AboutDataListener returns invalid data. Most likely cause: the announced data does not match with non-announced data."/>
+  <status name="ER_ABOUT_INVALID_ABOUTDATA_LISTENER" value="0x9126" comment="The AboutDataListener returns invalid data. Most likely cause: the announced data does not match with non-announced data."/>
   <status name="ER_BUS_PING_GROUP_NOT_FOUND" value="0x9127" comment="Ping group did not exist"/>
   <status name="ER_BUS_REMOVED_BY_BINDER_SELF" value="0x9128" comment="The self-joined session member was removed by the binder"/>
   <status name="ER_INVALID_CONFIG" value="0x9129" comment="Invalid configuration item or combination of items detected"/>
-  <status name="ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE" value="0x912a" comment="General error indicating the value given for an About Data field is invalid."/> 
-  <status name="ER_INVALID_CERTIFICATE" value="0x912b" comment="Invalid certificate"/>
-  <status name="ER_CERTIFICATE_NOT_FOUND" value="0x912c" comment="Certificate not found"/>
-  <status name="ER_DUPLICATE_CERTIFICATE" value="0x912d" comment="Duplicate Certificate found"/>
-  <status name="ER_UNKNOWN_CERTIFICATE" value="0x912e" comment="Unknown Certificate"/>
-  <status name="ER_MISSING_DIGEST_IN_CERTIFICATE" value="0x912f" comment="Missing digest in certificate"/>
-  <status name="ER_DIGEST_MISMATCH" value="0x9130" comment="Digest mismatch"/>
-  <status name="ER_DUPLICATE_KEY" value="0x9131" comment="Duplicate key found"/>
-  <status name="ER_NO_COMMON_TRUST" value="0x9132" comment="No common trust anchor found"/>
-  <status name="ER_MANIFEST_NOT_FOUND" value="0x9133" comment="Permission manifest not found"/>
-  <status name="ER_INVALID_CERT_CHAIN" value="0x9134" comment="Invalid certificate chain"/>
-  <status name="ER_NO_TRUST_ANCHOR" value="0x9135" comment="No trust anchor"/>
-  <status name="ER_INVALID_CLAIMABLE_STATE" value="0x9136" comment="Invalid claimable state"/>
-  <status name="ER_FEATURE_NOT_AVAILABLE" value="0x9137" comment="Feature is not available"/>
-  <status name="ER_KEY_STORE_ALREADY_INITIALIZED" value="0x9138" comment="Key store is already initialized"/>
+  <status name="ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE" value="0x912a" comment="General error indicating the value given for an About Data field is invalid."/>
+  <status name="ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE" value="0x912b" comment="Error indicating the AppId field is not a 128-bit bite array."/>
+  <status name="ER_INVALID_CERTIFICATE" value="0x912c" comment="Invalid certificate"/>
+  <status name="ER_CERTIFICATE_NOT_FOUND" value="0x912d" comment="Certificate not found"/>
+  <status name="ER_DUPLICATE_CERTIFICATE" value="0x912e" comment="Duplicate Certificate found"/>
+  <status name="ER_UNKNOWN_CERTIFICATE" value="0x912f" comment="Unknown Certificate"/>
+  <status name="ER_MISSING_DIGEST_IN_CERTIFICATE" value="0x9130" comment="Missing digest in certificate"/>
+  <status name="ER_DIGEST_MISMATCH" value="0x9131" comment="Digest mismatch"/>
+  <status name="ER_DUPLICATE_KEY" value="0x9132" comment="Duplicate key found"/>
+  <status name="ER_NO_COMMON_TRUST" value="0x9133" comment="No common trust anchor found"/>
+  <status name="ER_MANIFEST_NOT_FOUND" value="0x9134" comment="Permission manifest not found"/>
+  <status name="ER_INVALID_CERT_CHAIN" value="0x9135" comment="Invalid certificate chain"/>
+  <status name="ER_NO_TRUST_ANCHOR" value="0x9136" comment="No trust anchor"/>
+  <status name="ER_INVALID_CLAIMABLE_STATE" value="0x9137" comment="Invalid claimable state"/>
+  <status name="ER_FEATURE_NOT_AVAILABLE" value="0x9138" comment="Feature is not available"/>
+  <status name="ER_KEY_STORE_ALREADY_INITIALIZED" value="0x9139" comment="Key store is already initialized"/>
 </status_block>

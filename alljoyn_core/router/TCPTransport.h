@@ -265,6 +265,17 @@ class TCPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     QStatus GetListenAddresses(const SessionOpts& opts, std::vector<qcc::String>& busAddrs) const;
 
     /**
+     * Does this transport support connections as described by the provided
+     * Session options.
+     *
+     * @param opts  Proposed session options.
+     * @return
+     *      - true if the SessionOpts specifies a supported option set.
+     *      - false otherwise.
+     */
+    bool SupportsOptions(const SessionOpts& opts) const;
+
+    /**
      * Indicates whether this transport is used for client-to-bus or bus-to-bus connections.
      *
      * @return  Always returns true, TCP is a bus-to-bus transport.
@@ -293,6 +304,18 @@ class TCPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
 
     TCPTransport(const TCPTransport& other);
     TCPTransport& operator =(const TCPTransport& other);
+
+    /**
+     * This function will check the given endpoint to see if it is running on the same machine or not
+     * by comparing the connecting IP address with the local machine's addresses. If there is a match
+     * then this app is running on the local machine. Windows Universal Applications aren't allowed
+     * to use the loopback interface so this must be a Desktop Application, set the group ID
+     * accordingly. Since this code is only needed on Windows it is inside #ifdef
+     * QCC_OS_GROUP_WINDOWS.
+     *
+     * @param endpoint The endpoint to check and set the group ID on
+     */
+    static void CheckEndpointLocalMachine(TCPEndpoint endpoint);
 
     BusAttachment& m_bus;                                          /**< The message bus for this transport */
     bool m_stopping;                                               /**< True if Stop() has been called but endpoints still exist */
@@ -502,11 +525,9 @@ class TCPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
      * service attack by simply stopping in mid-authentication.  If an
      * authentication takes longer than this number of milliseconds, it may be
      * summarily aborted if another connection comes in.  This value can be
-     * overridden in the config file by setting "auth_timeout".  The 30 second
-     * number comes from the smaller of two common DBus auth_timeout settings:
-     * 30 sec or 240 sec.
+     * overridden in the config file by setting "auth_timeout".
      */
-    static const uint32_t ALLJOYN_AUTH_TIMEOUT_DEFAULT = 30000;
+    static const uint32_t ALLJOYN_AUTH_TIMEOUT_DEFAULT = 20000;
 
     /**
      * @brief The default timeout for session establishment following authentication.
@@ -574,6 +595,35 @@ class TCPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
      *
      */
     static const char* const ALLJOYN_DEFAULT_ROUTER_ADVERTISEMENT_PREFIX;
+
+    /**
+     * @brief The default values for range and default idle timeout for TCPTransport in seconds.
+     *
+     * This corresponds to the configuration items "tcp_min_idle_timeout",
+     * "tcp_max_idle_timeout" and "tcp_default_idle_timeout"
+     * To override this value, change the limit, "tcp_min_idle_timeout",
+     * "tcp_max_idle_timeout" and "tcp_default_idle_timeout"
+     */
+    static const uint32_t MIN_HEARTBEAT_IDLE_TIMEOUT_DEFAULT = 3;
+    static const uint32_t MAX_HEARTBEAT_IDLE_TIMEOUT_DEFAULT = 30;
+    static const uint32_t DEFAULT_HEARTBEAT_IDLE_TIMEOUT_DEFAULT = 20;
+
+    /**
+     * @brief The default probe timeout for TCPTransport in seconds.
+     *
+     * This corresponds to the configuration item "tcp_default_probe_timeout"
+     * and "tcp_max_probe_timeout"
+     * To override this value, change the limit, "tcp_default_probe_timeout"
+     * and "tcp_max_probe_timeout"
+     */
+    static const uint32_t MAX_HEARTBEAT_PROBE_TIMEOUT_DEFAULT = 30;
+    static const uint32_t DEFAULT_HEARTBEAT_PROBE_TIMEOUT_DEFAULT = 3;
+
+    /**
+     * @brief The number of DBus pings sent from Routing node to leaf node.
+     *
+     */
+    static const uint32_t HEARTBEAT_NUM_PROBES = 1;
 
     /*
      * The Android Compatibility Test Suite (CTS) is used by Google to enforce a
@@ -715,8 +765,25 @@ class TCPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
 
     int32_t m_maxUntrustedClients; /**< the maximum number of untrusted clients allowed at any point of time */
 
-    int32_t m_numUntrustedClients;      /**< Number of untrusted clients currently registered with the daemon */
+    int32_t m_numUntrustedClients; /**< Number of untrusted clients currently registered with the daemon */
 
+    uint32_t m_minHbeatIdleTimeout; /**< The minimum allowed idle timeout for the Heartbeat between Routing node
+                                         and Leaf node - configurable in router config */
+
+    uint32_t m_defaultHbeatIdleTimeout; /**< The default idle timeout for the Heartbeat between Routing node
+                                           and Leaf node - configurable in router config */
+
+    uint32_t m_maxHbeatIdleTimeout; /**< The maximum allowed idle timeout for the Heartbeat between Routing node
+                                         and Leaf node - configurable in router config */
+
+    uint32_t m_defaultHbeatProbeTimeout;   /**< The time the Routing node should wait for Heartbeat response to be
+                                                  recieved from the Leaf node - configurable in router config */
+
+    uint32_t m_maxHbeatProbeTimeout;       /**< The max time the Routing node should wait for Heartbeat response to be
+                                                  recieved from the Leaf node - configurable in router config */
+
+    uint32_t m_numHbeatProbes;             /**< Number of probes Routing node should wait for Heartbeat response to be
+                                              recieved from the Leaf node before declaring it dead - Transport specific */
 };
 
 } // namespace ajn

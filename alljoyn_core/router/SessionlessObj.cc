@@ -37,9 +37,6 @@
 using namespace std;
 using namespace qcc;
 
-/** Constants */
-#define MAX_JOINSESSION_RETRIES 50
-
 /**
  * Inside window calculation.
  * Returns true if p is in range [beg, beg+sz)
@@ -130,15 +127,13 @@ SessionlessObj::SessionlessObj(Bus& bus, BusController* busController) :
     sessionOpts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY, SessionOpts::DAEMON_NAMES),
     sessionPort(SESSIONLESS_SESSION_PORT),
     advanceChangeId(false),
-    nextRulesId(0)
+    nextRulesId(0),
+    backoff(ConfigDB::GetConfigDB()->GetLimit("sls_backoff", 1500),
+            ConfigDB::GetConfigDB()->GetLimit("sls_backoff_linear", 4),
+            ConfigDB::GetConfigDB()->GetLimit("sls_backoff_exponential", 32),
+            ConfigDB::GetConfigDB()->GetLimit("sls_backoff_max", 15 * 60))
 {
-    /*
-     * Configurable for testing purposes only.  1500 msecs is chosen to minimize
-     * the probability of needing to do a retry.  This keeps the mean delay to
-     * 750 msecs and provides an optimal trade-off against the maximum number of
-     * connections allowed at the producer.
-     */
-    backoffDelayMs = ConfigDB::GetConfigDB()->GetLimit("sls_backoff", 1500);
+    sessionOpts.transports = ConfigDB::GetConfigDB()->GetLimit("sls_preferred_transports", TRANSPORT_ANY & ~TRANSPORT_UDP);
 }
 
 SessionlessObj::~SessionlessObj()
@@ -238,6 +233,16 @@ QStatus SessionlessObj::Init()
         QCC_LogError(status, ("Failed to register SessionLost signal handler"));
     }
 
+    /* Register signal handler for SessionLostWithReasonAndDisposition */
+    /* (If we werent in the daemon, we could just use SessionListener, but it doesnt work without the full BusAttachment implementation */
+    status = bus.RegisterSignalHandler(this,
+                                       static_cast<MessageReceiver::SignalHandler>(&SessionlessObj::SessionLostSignalHandler),
+                                       ajIntf->GetMember("SessionLostWithReasonAndDisposition"),
+                                       NULL);
+    if (status != ER_OK) {
+        QCC_LogError(status, ("Failed to register SessionLost signal handler"));
+    }
+
     /* Register a name table listener */
     if (status == ER_OK) {
         router.AddBusNameListener(this);
@@ -328,14 +333,13 @@ void SessionlessObj::AddRule(const qcc::String& epName, Rule& rule)
         uint32_t toChangeId = curChangeId + 1;
         uint32_t toRulesId = nextRulesId;
 
-        /* Retrieve from our own cache */
-        HandleRangeRequest(epName.c_str(), 0, fromChangeId, toChangeId, fromRulesId, toRulesId);
-
-        bus.EnableConcurrentCallbacks();
         FindAdvertisedNames();
 
         lock.Unlock();
         router.UnlockNameTable();
+
+        /* Retrieve from our own cache */
+        HandleRangeRequest(epName.c_str(), 0, fromChangeId, toChangeId, fromRulesId, toRulesId);
     }
 }
 
@@ -357,7 +361,6 @@ void SessionlessObj::RemoveRule(const qcc::String& epName, Rule& rule)
         }
 
         if (rules.empty()) {
-            bus.EnableConcurrentCallbacks();
             CancelFindAdvertisedNames();
         }
 
@@ -622,6 +625,11 @@ void SessionlessObj::FoundAdvertisedNameSignalHandler(const InterfaceDescription
 void SessionlessObj::FoundAdvertisedNameHandler(const char* name, TransportMask transport, const char* prefix, bool doInitialBackoff)
 {
     /* Examine found name to see if we need to connect to it */
+    if ((transport & sessionOpts.transports) == 0) {
+        QCC_DbgPrintf(("FoundAdvertisedName(name=%s,transport=0x%x,...): Transport not preferred", name, transport));
+        return;
+    }
+
     String guid, iface;
     uint32_t version, changeId;
     QStatus status = ParseAdvertisedName(name, &version, &guid, &iface, &changeId);
@@ -645,6 +653,7 @@ void SessionlessObj::FoundAdvertisedNameHandler(const char* name, TransportMask 
         cit->second.ifaces.insert(iface);
         if (IS_GREATER(uint32_t, changeId, cit->second.changeId)) {
             cit->second.changeId = changeId;
+            cit->second.retries = 0; /* Reset the backoff schedule when new signals are available. */
         }
         cit->second.transport = transport;
     }
@@ -865,7 +874,7 @@ void SessionlessObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
             MDNSPacket response;
             response->SetDestination(ctx->ns4);
             MDNSAdvertiseRData advRData;
-            advRData.SetTransport(TRANSPORT_TCP | TRANSPORT_UDP);
+            advRData.SetTransport(sessionOpts.transports & TRANSPORT_IP);
             advRData.SetValue("name", ctx->name);
             String guid = bus.GetInternal().GetGlobalGUID().ToString();
             MDNSResourceRecord advertiseRecord("advertise." + guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, &advRData);
@@ -899,49 +908,39 @@ void SessionlessObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
         lock.Lock();
         Timespec now;
         GetTimeNow(&now);
-        RemoteCaches::iterator cit = remoteCaches.begin();
-        while (cit != remoteCaches.end()) {
+        for (RemoteCaches::iterator cit = remoteCaches.begin(); cit != remoteCaches.end(); ++cit) {
             RemoteCache& cache = cit->second;
             WorkType pendingWork = PendingWork(cache);
             if ((cache.nextJoinTime <= now) && (cache.state == RemoteCache::IDLE) && pendingWork) {
-                if (cache.retries++ < MAX_JOINSESSION_RETRIES) {
-                    RemoteCacheSnapshot* ctx = new RemoteCacheSnapshot(cache);
-                    cache.state = RemoteCache::IN_PROGRESS;
-                    if (pendingWork == SessionlessObj::APPLY_NEW_RULES) {
-                        cache.fromChangeId = cache.receivedChangeId - (numeric_limits<uint32_t>::max() >> 1);
-                        cache.toChangeId = cache.receivedChangeId + 1;
-                        cache.fromRulesId = cache.appliedRulesId + 1;
-                        cache.toRulesId = nextRulesId;
-                    } else if (pendingWork == SessionlessObj::REQUEST_NEW_SIGNALS) {
-                        cache.fromChangeId = cache.receivedChangeId + 1;
-                        cache.toChangeId = cache.changeId + 1;
-                        cache.fromRulesId = cache.appliedRulesId - (numeric_limits<uint32_t>::max() >> 1);
-                        cache.toRulesId = nextRulesId;
-                    }
-                    SessionOpts opts = sessionOpts;
-                    opts.transports = cache.transport;
-                    status = bus.JoinSessionAsync(cache.name.c_str(), sessionPort, NULL, opts, this, reinterpret_cast<void*>(ctx));
-                    if (status == ER_OK) {
-                        QCC_DbgPrintf(("JoinSessionAsync(name=%s,...) pending", cache.name.c_str()));
-                    } else {
-                        QCC_LogError(status, ("JoinSessionAsync to %s failed", cache.name.c_str()));
-                        cache.state = RemoteCache::IDLE;
-                        delete ctx;
-                        /* Retry with a random backoff */
-                        ScheduleWork(cache, false);
-                        if ((tilExpire == Timespec::Zero) || (cache.nextJoinTime < tilExpire)) {
-                            tilExpire = cache.nextJoinTime;
-                        }
-                    }
-                    ++cit;
-                } else {
-                    QCC_LogError(ER_FAIL, ("Exhausted JoinSession retries to %s", cache.guid.c_str()));
-                    String guid = cache.guid;
-                    EraseRemoteCache(cit);
-                    cit = remoteCaches.upper_bound(guid);
+                RemoteCacheSnapshot* ctx = new RemoteCacheSnapshot(cache);
+                cache.state = RemoteCache::IN_PROGRESS;
+                if (pendingWork == SessionlessObj::APPLY_NEW_RULES) {
+                    cache.fromChangeId = cache.receivedChangeId - (numeric_limits<uint32_t>::max() >> 1);
+                    cache.toChangeId = cache.receivedChangeId + 1;
+                    cache.fromRulesId = cache.appliedRulesId + 1;
+                    cache.toRulesId = nextRulesId;
+                } else if (pendingWork == SessionlessObj::REQUEST_NEW_SIGNALS) {
+                    cache.fromChangeId = cache.receivedChangeId + 1;
+                    cache.toChangeId = cache.changeId + 1;
+                    cache.fromRulesId = cache.appliedRulesId - (numeric_limits<uint32_t>::max() >> 1);
+                    cache.toRulesId = nextRulesId;
                 }
-            } else {
-                ++cit;
+                SessionOpts opts = sessionOpts;
+                opts.transports = cache.transport;
+                status = bus.JoinSessionAsync(cache.name.c_str(), sessionPort, NULL, opts, this, reinterpret_cast<void*>(ctx));
+                if (status == ER_OK) {
+                    QCC_DbgPrintf(("JoinSessionAsync(name=%s,...) pending", cache.name.c_str()));
+                    ++cache.retries;
+                } else {
+                    QCC_LogError(status, ("JoinSessionAsync to %s failed", cache.name.c_str()));
+                    cache.state = RemoteCache::IDLE;
+                    delete ctx;
+                    /* Retry with a random backoff */
+                    ScheduleWork(cache, false);
+                    if ((tilExpire == Timespec::Zero) || (cache.nextJoinTime < tilExpire)) {
+                        tilExpire = cache.nextJoinTime;
+                    }
+                }
             }
         }
 
@@ -988,9 +987,10 @@ void SessionlessObj::JoinSessionCB(QStatus status, SessionId sid, const SessionO
             }
             if (!rangeCapable && (toId != cache.changeId + 1)) {
                 /* This session can't be used because the remote side doesn't support RequestRange */
-                bus.LeaveSession(sid);
+                status = bus.LeaveSession(sid);
+                QCC_LogError(status, ("Failed to leave session %u", sid));
                 DoSessionLost(sid, ALLJOYN_SESSIONLOST_REMOTE_END_LEFT_SESSION);
-                status = ER_NONE;
+                status = ER_FAIL;
             }
             if (matchCapable) {
                 uint32_t rulesRangeLen = cache.toRulesId - cache.fromRulesId;
@@ -1007,6 +1007,8 @@ void SessionlessObj::JoinSessionCB(QStatus status, SessionId sid, const SessionO
                 }
             }
         } else {
+            QCC_LogError(status, ("JoinSessionAsync to %s failed", cache.name.c_str()));
+
             /* Clear in progress */
             cache.state = RemoteCache::IDLE;
             cache.sid = 0;
@@ -1034,7 +1036,8 @@ void SessionlessObj::JoinSessionCB(QStatus status, SessionId sid, const SessionO
             }
             if (status != ER_OK) {
                 QCC_LogError(status, ("Failed to send Request to %s", ctx->name.c_str()));
-                bus.LeaveSession(sid);
+                status = bus.LeaveSession(sid);
+                QCC_LogError(status, ("Failed to leave session %u", sid));
 
                 lock.Lock();
                 cit = remoteCaches.find(ctx->guid);
@@ -1208,7 +1211,7 @@ QStatus SessionlessObj::AdvertiseName(const qcc::String& name)
 {
     QStatus status = bus.RequestName(name.c_str(), DBUS_NAME_FLAG_DO_NOT_QUEUE);
     if (status == ER_OK) {
-        status = bus.AdvertiseName(name.c_str(), TRANSPORT_ANY & ~TRANSPORT_LOCAL);
+        status = bus.AdvertiseName(name.c_str(), sessionOpts.transports & ~TRANSPORT_LOCAL);
     }
     if (status == ER_OK) {
         QCC_DbgPrintf(("AdvertiseName(name=%s)", name.c_str()));
@@ -1220,7 +1223,7 @@ QStatus SessionlessObj::AdvertiseName(const qcc::String& name)
 
 void SessionlessObj::CancelAdvertisedName(const qcc::String& name)
 {
-    QStatus status = bus.CancelAdvertiseName(name.c_str(), TRANSPORT_ANY & ~TRANSPORT_LOCAL);
+    QStatus status = bus.CancelAdvertiseName(name.c_str(), sessionOpts.transports & ~TRANSPORT_LOCAL);
     if (status != ER_OK) {
         QCC_LogError(status, ("Failed to cancel advertisment for \"%s\"", name.c_str()));
     }
@@ -1234,6 +1237,7 @@ void SessionlessObj::CancelAdvertisedName(const qcc::String& name)
 
 void SessionlessObj::FindAdvertisedNames()
 {
+    set<String> names;
     for (RuleIterator rit = rules.begin(); rit != rules.end(); ++rit) {
         String name;
         if (rit->second.implements.empty()) {
@@ -1250,11 +1254,7 @@ void SessionlessObj::FindAdvertisedNames()
             continue;
         }
         if (findingNames.insert(name).second) {
-            QCC_DbgPrintf(("FindAdvertisement(%s)", name.c_str()));
-            QStatus status = FindAdvertisementByTransport(name.c_str(), TRANSPORT_ANY & ~TRANSPORT_LOCAL);
-            if (status != ER_OK) {
-                QCC_LogError(status, ("FindAdvertisementByTransport failed"));
-            }
+            names.insert(name);
         }
     }
     if (!findingNames.empty()) {
@@ -1264,28 +1264,47 @@ void SessionlessObj::FindAdvertisedNames()
          */
         String name = String("name='") + WildcardInterfaceName + ".sl.*'";
         if (findingNames.insert(name).second) {
-            QCC_DbgPrintf(("FindAdvertisement(%s)", name.c_str()));
-            QStatus status = FindAdvertisementByTransport(name.c_str(), TRANSPORT_ANY & ~TRANSPORT_LOCAL);
-            if (status != ER_OK) {
-                QCC_LogError(status, ("FindAdvertisementByTransport failed"));
-            }
+            names.insert(name);
         }
     }
+
+    lock.Unlock();
+    router.UnlockNameTable();
+    set<String>::iterator it = names.begin();
+    while (it != names.end()) {
+        String name = *it;
+        QCC_DbgPrintf(("FindAdvertisement(%s)", name.c_str()));
+        QStatus status = FindAdvertisementByTransport(name.c_str(), sessionOpts.transports & ~TRANSPORT_LOCAL);
+        if (status != ER_OK) {
+            QCC_LogError(status, ("FindAdvertisementByTransport failed for name %s :", name.c_str()));
+        }
+        it++;
+    }
+    router.LockNameTable();
+    lock.Lock();
 }
 
 void SessionlessObj::CancelFindAdvertisedNames()
 {
-    set<String>::iterator it = findingNames.begin();
-    while (it != findingNames.end()) {
+    set<String> names = findingNames;
+    findingNames.clear();
+
+    lock.Unlock();
+    router.UnlockNameTable();
+    set<String>::iterator it = names.begin();
+    while (it != names.end()) {
         String name = *it;
-        QStatus status = CancelFindAdvertisementByTransport(name.c_str(), TRANSPORT_ANY & ~TRANSPORT_LOCAL);
+        QStatus status = CancelFindAdvertisementByTransport(name.c_str(), sessionOpts.transports & ~TRANSPORT_LOCAL);
         if (status == ER_OK) {
             QCC_DbgPrintf(("CancelFindAdvertisement(%s)", name.c_str()));
         } else {
-            QCC_LogError(status, ("CancelFindAdvertisementByTransport failed"));
+            QCC_LogError(status, ("CancelFindAdvertisementByTransport failed for name %s :", name.c_str()));
         }
-        findingNames.erase(it++);
+        it++;
     }
+    router.LockNameTable();
+    lock.Lock();
+
 }
 
 SessionlessObj::RemoteCaches::iterator SessionlessObj::FindRemoteCache(SessionId sid)
@@ -1320,32 +1339,14 @@ QStatus SessionlessObj::ScheduleWork(RemoteCache& cache, bool addAlarm, bool doI
     if (cache.state != RemoteCache::IDLE) {
         return ER_OK;
     }
-    if (cache.retries >= MAX_JOINSESSION_RETRIES) {
+
+    QStatus status = GetNextJoinTime(backoff, doInitialBackoff,
+                                     cache.retries, cache.firstJoinTime, cache.nextJoinTime);
+    if (status != ER_OK) {
         QCC_LogError(ER_FAIL, ("Exhausted JoinSession retries to %s", cache.guid.c_str()));
         return ER_FAIL;
     }
 
-    /*
-     * Shorten the schedule if we're doing a retry.  The model is that the first
-     * try should succeed with a high probability.  Therefore only a small
-     * percentage of the consumers will attempt to retry, thus the interval can
-     * be shorter.  Go exponentially shorter down to 250 msecs.
-     */
-    if (cache.retries == 0) {
-        GetTimeNow(&cache.firstJoinTime);
-    }
-    qcc::Timespec startTime;
-    uint32_t delayMs = 1;
-    for (uint32_t i = 0; i <= cache.retries; ++i) {
-        if (i == 0) {
-            startTime = cache.firstJoinTime;
-            delayMs = doInitialBackoff ? backoffDelayMs : 1;
-        } else {
-            startTime += delayMs;
-            delayMs = (delayMs > 500) ? (delayMs >> 1) : delayMs;
-        }
-    }
-    cache.nextJoinTime = startTime + qcc::Rand32() % delayMs;
     if (addAlarm) {
         SessionlessObj* slObj = this;
         QStatus status = timer.AddAlarm(Alarm(cache.nextJoinTime, slObj));
@@ -1354,6 +1355,56 @@ QStatus SessionlessObj::ScheduleWork(RemoteCache& cache, bool addAlarm, bool doI
         }
     }
     return ER_OK;
+}
+
+/*
+ * The backoff schedule looks like this:
+ *
+ * Initial
+ * |    Linear
+ * |    |                    Exponential
+ * |    |                    |                 Constant
+ * |    |                    |                 |
+ * v    v                    v                 v
+ * | T || 1T | 2T | 3T | 4T || 8T | 16T | 32T || 32T | 32T ...
+ *
+ * The actual join time is randomly distributed over the retry interval above.
+ */
+QStatus SessionlessObj::GetNextJoinTime(const BackoffLimits& backoff, bool doInitialBackoff,
+                                        uint32_t retries, qcc::Timespec& firstJoinTime, qcc::Timespec& nextJoinTime)
+{
+    if (retries == 0) {
+        GetTimeNow(&firstJoinTime);
+    }
+
+    qcc::Timespec startTime;
+    uint32_t delayMs = 1;
+    for (uint32_t m = 0, i = 0; i <= retries; ++i) {
+        if (i == 0) {
+            /* Initial backoff */
+            startTime = firstJoinTime;
+            delayMs = doInitialBackoff ? backoff.periodMs : 1;
+        } else if (i <= backoff.linear) {
+            /* Linear backoff */
+            m = m + 1;
+            startTime += delayMs;
+            delayMs = m * backoff.periodMs;
+        } else if (m < backoff.exponential) {
+            /* Exponential backoff */
+            m = m << 1;
+            startTime += delayMs;
+            delayMs = m * backoff.periodMs;
+        } else {
+            /* Constant backoff */
+            startTime += delayMs;
+        }
+    }
+    nextJoinTime = (startTime + qcc::Rand32() % delayMs);
+    if ((nextJoinTime - firstJoinTime) < (backoff.maxSecs * 1000)) {
+        return ER_OK;
+    } else {
+        return ER_FAIL;
+    }
 }
 
 SessionlessObj::WorkType SessionlessObj::PendingWork(RemoteCache& cache)

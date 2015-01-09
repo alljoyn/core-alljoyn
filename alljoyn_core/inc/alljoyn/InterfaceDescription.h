@@ -38,13 +38,18 @@
 
 namespace ajn {
 
-/** @name Access type */
+/** @name Property Access type */
 // @{
 static const uint8_t PROP_ACCESS_READ  = 1; /**< Read Access type */
 static const uint8_t PROP_ACCESS_WRITE = 2; /**< Write Access type */
 static const uint8_t PROP_ACCESS_RW    = 3; /**< Read-Write Access type */
 // @}
-/** @name Annotation flags */
+/** @name Property Annotation flags */
+// @{
+static const uint8_t PROP_ANNOTATE_EMIT_CHANGED_SIGNAL             = 1; /**< EmitChangedSignal annotate flag. */
+static const uint8_t PROP_ANNOTATE_EMIT_CHANGED_SIGNAL_INVALIDATES = 2; /**< EmitChangedSignal annotate flag (for notifying invalidation of property instead of value. */
+// @}
+/** @name Method/Signal Annotation flags */
 // @{
 static const uint8_t MEMBER_ANNOTATE_NO_REPLY   = 1; /**< No reply annotate flag */
 static const uint8_t MEMBER_ANNOTATE_DEPRECATED = 2; /**< Deprecated annotate flag */
@@ -102,17 +107,17 @@ class InterfaceDescription {
      * Structure representing the member to be added to the Interface
      */
     struct Member {
-        const InterfaceDescription* iface;   /**< Interface that this member belongs to */
-        AllJoynMessageType memberType;          /**< %Member type */
-        qcc::String name;                    /**< %Member name */
-        qcc::String signature;               /**< Method call IN arguments (NULL for signals) */
-        qcc::String returnSignature;         /**< Signal or method call OUT arguments */
-        qcc::String argNames;                /**< Comma separated list of argument names - can be NULL */
-        AnnotationsMap* annotations;           /**< Map of annotations */
-        qcc::String accessPerms;              /**< Required permissions to invoke this call */
+        const InterfaceDescription* iface;          /**< Interface that this member belongs to */
+        AllJoynMessageType memberType;              /**< %Member type */
+        qcc::String name;                           /**< %Member name */
+        qcc::String signature;                      /**< Method call IN arguments (NULL for signals) */
+        qcc::String returnSignature;                /**< Signal or method call OUT arguments */
+        qcc::String argNames;                       /**< Comma separated list of argument names - can be NULL */
+        AnnotationsMap* annotations;                /**< Map of annotations */
+        qcc::String accessPerms;                    /**< Required permissions to invoke this call */
         qcc::String description;                    /**< Introspection description for this member */
         ArgumentDescriptions* argumentDescriptions; /**< Introspection descriptions for arguments to this member */
-        bool isSessionlessSignal;                     /**< True if this is described as a sessionless signal */
+        bool isSessionlessSignal;                   /**< True if this is described as a sessionless signal */
 
         /**
          * %Member constructor.
@@ -152,7 +157,7 @@ class InterfaceDescription {
          * Get the names and values of all annotations
          *
          * @param[out] names    Annotation names
-         * @param[out] values    Annotation values
+         * @param[out] values   Annotation values
          * @param      size     Number of annotations to get
          * @return              The number of annotations returned or the total number of annotations if props is NULL.
          */
@@ -160,15 +165,19 @@ class InterfaceDescription {
 
         /**
          * Get this member's annotation value
-         * @param name   name of the annotation to look for
+         *
+         * @param        name   name of the annotation to look for
          * @param[out]   value  The value of the annotation, if found
          * @return    true iff annotations[name] == value
          */
         bool GetAnnotation(const qcc::String& name, qcc::String& value) const;
 
         /**
-         * Equality. Two members are defined to be equal if their members are equal except for iface which is ignored for equality.
+         * Equality. Two members are defined to be equal if their members are
+         * equal except for iface which is ignored for equality.
+         *
          * @param o   Member to compare against this member.
+         *
          * @return    true iff o == this member.
          */
         bool operator==(const Member& o) const;
@@ -178,11 +187,11 @@ class InterfaceDescription {
      * Structure representing properties of the Interface
      */
     struct Property {
-        qcc::String name;              /**< %Property name */
-        qcc::String signature;         /**< %Property type */
-        uint8_t access;                /**< Access is #PROP_ACCESS_READ, #PROP_ACCESS_WRITE, or #PROP_ACCESS_RW */
+        qcc::String name;               /**< %Property name */
+        qcc::String signature;          /**< %Property type */
+        uint8_t access;                 /**< Access is #PROP_ACCESS_READ, #PROP_ACCESS_WRITE, or #PROP_ACCESS_RW */
         AnnotationsMap* annotations;    /**< Map of annotations */
-        qcc::String description;             /**< Introspection description for this property */
+        qcc::String description;        /**< Introspection description for this property */
 
         /** %Property constructor.
          * @param name      The name of the property.
@@ -190,6 +199,9 @@ class InterfaceDescription {
          * @param access    The access type, may be #PROP_ACCESS_READ, #PROP_ACCESS_WRITE, or #PROP_ACCESS_RW.
          */
         Property(const char* name, const char* signature, uint8_t access);
+
+        /** %Property constructor */
+        Property(const char* name, const char* signature, uint8_t access, uint8_t annotation);
 
         /**
          * %Property copy constructor

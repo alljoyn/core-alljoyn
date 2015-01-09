@@ -1,12 +1,12 @@
 /**
  * @file
- *
- * SSL stream-based socket implementation for Windows
- *
+ * Common file for holding global variables.
  */
 
 /******************************************************************************
- * Copyright (c) 2012 AllSeen Alliance. All rights reserved.
+ *
+ *
+ * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -21,51 +21,27 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
+#ifndef _COMMON_STATIC_H
+#define _COMMON_STATIC_H
+#include <qcc/Environ.h>
 #include <qcc/platform.h>
-#include <qcc/IPAddress.h>
-#include <qcc/SslSocket.h>
-
-
-#define QCC_MODULE  "SSL"
-
 
 namespace qcc {
 
-SslSocket::SslSocket(String host, const char* rootCert, const char* caCert) :
-    internal(NULL),
-    sourceEvent(&qcc::Event::neverSet),
-    sinkEvent(&qcc::Event::neverSet),
-    Host(host),
-    sock(-1)
-{
+/** Class that contains all the static class members/static objects
+ * instantiated in the common project.
+ */
+class StaticGlobals {
+  public:
+    StaticGlobals();
+    Event alwaysSet;
+    Event neverSet;
+    /** Environ variables */
+    Environ environSingleton;     // Environment variable singleton.
+
+};
+/** The singleton instance of StaticGlobals. */
+extern StaticGlobals& commonGlobals;
 }
 
-SslSocket::~SslSocket() {
-
-}
-
-QStatus SslSocket::Connect(const qcc::String hostName, uint16_t port)
-{
-    return ER_FAIL;
-}
-
-void SslSocket::Close()
-{
-}
-
-QStatus SslSocket::PullBytes(void*buf, size_t reqBytes, size_t& actualBytes, uint32_t timeout)
-{
-    return ER_FAIL;
-}
-
-QStatus SslSocket::PushBytes(const void* buf, size_t numBytes, size_t& numSent)
-{
-    return ER_FAIL;
-}
-
-QStatus SslSocket::ImportPEM(const char* rootCert, const char* caCert)
-{
-    return ER_FAIL;
-}
-
-}  /* namespace */
+#endif
