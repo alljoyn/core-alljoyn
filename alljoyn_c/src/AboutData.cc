@@ -295,7 +295,7 @@ QStatus AJ_CALL alljoyn_aboutdata_setfield(alljoyn_aboutdata data,
 
 QStatus AJ_CALL alljoyn_aboutdata_getfield(alljoyn_aboutdata data,
                                            const char* name,
-                                           alljoyn_msgarg value,
+                                           alljoyn_msgarg* value,
                                            const char* language)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
