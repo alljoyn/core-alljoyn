@@ -1002,7 +1002,7 @@ TEST(AboutDataTest, SetField) {
     EXPECT_EQ(ER_OK, aboutData.SetField("Foo", en_arg, "en"));
     EXPECT_EQ(ER_OK, aboutData.SetField("Foo", es_arg, "es"));
     const char* languages[2];
-    EXPECT_EQ(2, aboutData.GetSupportedLanguages(languages, 2));
+    EXPECT_EQ((size_t)2, aboutData.GetSupportedLanguages(languages, 2));
     // order is unknown
     if (languages[0][1] == 's') {
         EXPECT_STREQ(languages[0], "es");
