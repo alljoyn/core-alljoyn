@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2012, 2014 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2012, 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -186,8 +186,9 @@ class KeyStore {
      */
     QStatus GetGuid(qcc::GUID128& guid)
     {
-        if (storeState == UNAVAILABLE) {
-            return ER_BUS_KEY_STORE_NOT_LOADED;
+        WaitForGuidSet();
+        if (!guidSet) {
+            return ER_KEY_STORE_ID_NOT_YET_SET;
         } else {
             guid = thisGuid;
             return ER_OK;
@@ -199,7 +200,11 @@ class KeyStore {
      *
      * @return  Returns the hex-encode string for the GUID or an empty string if the key store is not loaded.
      */
-    qcc::String GetGuid() {  return (storeState == UNAVAILABLE) ? "" : thisGuid.ToString(); }
+    qcc::String GetGuid()
+    {
+        WaitForGuidSet();
+        return !guidSet ? "" : thisGuid.ToString();
+    }
 
     /**
      * Override the default listener so the application can provide the load and store
@@ -305,6 +310,58 @@ class KeyStore {
 
   private:
 
+    class KeyStoreEncryptionKey : public qcc::KeyBlob {
+      public:
+        KeyStoreEncryptionKey() : qcc::KeyBlob()
+        {
+        }
+        virtual ~KeyStoreEncryptionKey()
+        {
+        }
+
+        /**
+         * Set the password
+         */
+        void SetPassword(const qcc::String& password)
+        {
+            this->password = password;
+        }
+
+        /**
+         * Set the guid
+         */
+        void SetGuidString(const qcc::String& guidString)
+        {
+            this->guidString = guidString;
+        }
+
+        /**
+         * build the encryption key
+         */
+        void Build();
+
+        /**
+         * build the encryption key
+         * @param password the password
+         * @param guid the guid
+         */
+        void Build(const qcc::String& password, const qcc::String& guidString);
+
+      private:
+        /**
+         * Assignment not allowed
+         */
+        KeyStoreEncryptionKey& operator=(const KeyStoreEncryptionKey& other);
+
+        /**
+         * Copy constructor not allowed
+         */
+        KeyStoreEncryptionKey(const KeyStoreEncryptionKey& other);
+
+        qcc::String password;
+        qcc::String guidString;
+    };
+
     /**
      * Assignment not allowed
      */
@@ -329,6 +386,26 @@ class KeyStore {
      * Internal Load function
      */
     QStatus Load();
+
+    /**
+     * wait for the guid to set
+     */
+    QStatus WaitForGuidSet();
+
+    /**
+     * mark that the guid is set so all the waiters can retrieve the GUID.
+     */
+    void MarkGuidSet();
+
+    /**
+     * synchronized method to invoke the listener load request
+     */
+    QStatus SendLoadRequest(bool waitFor);
+
+    /**
+     * synchronized method to invoke the listener store request
+     */
+    QStatus SendStoreRequest(bool waitFor);
 
     /**
      * The application that owns this key store. If the key store is shared this will be the name
@@ -394,7 +471,7 @@ class KeyStore {
     /**
      * Key for encrypting/decrypting the key store.
      */
-    qcc::KeyBlob* keyStoreKey;
+    KeyStoreEncryptionKey* keyStoreKey;
 
     /**
      * Revision number for the key store
@@ -410,11 +487,19 @@ class KeyStore {
      * Event for synchronizing store requests
      */
     qcc::Event* stored;
+    /**
+     * ref count for the stored event
+     */
+    uint8_t storedRefCount;
 
     /**
      * Event for synchronizing load requests
      */
     qcc::Event* loaded;
+    /**
+     * ref count for the loaded event
+     */
+    uint8_t loadedRefCount;
 
     /* the key event listener */
     KeyStoreKeyEventListener* keyEventListener;
@@ -424,6 +509,24 @@ class KeyStore {
      */
     bool useDefaultListener;
 
+    /**
+     * Event for synchronizing GetGuid requests
+     */
+    qcc::Event* guidSetEvent;
+    /**
+     * Key store guid is set
+     */
+    bool guidSet;
+
+    /**
+     * Mutex to protect guidSetEvent and its data
+     */
+    qcc::Mutex guidSetEventLock;
+
+    /**
+     * guidSet ref count
+     */
+    uint8_t guidSetRefCount;
 };
 
 class KeyStoreKeyEventListener {
