@@ -954,6 +954,8 @@ QStatus BusAttachment::EnablePeerSecurity(const char* authMechanisms,
             busInternal->authManager.RegisterMechanism(AuthMechLogon::Factory, AuthMechLogon::AuthName());
             /* Validate the list of auth mechanisms */
             status =  busInternal->authManager.CheckNames(authMechanisms);
+            /* Clear peer state */
+            busInternal->peerStateTable.Clear();
         }
     } else {
         status = busInternal->keyStore.Reset();

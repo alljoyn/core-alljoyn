@@ -125,6 +125,7 @@ PermissionMgmtObj::~PermissionMgmtObj()
         }
         delete portListener;
     }
+    bus.UnregisterBusObject(*this);
 }
 
 void PermissionMgmtObj::PolicyChanged(PermissionPolicy* policy)
