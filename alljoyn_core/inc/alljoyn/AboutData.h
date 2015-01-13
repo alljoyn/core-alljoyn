@@ -4,7 +4,7 @@
  * interface data fields.
  */
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -95,7 +95,7 @@ class AboutData : public AboutDataListener {
     ~AboutData();
 
     /**
-     * use xml definition of AboutData to set the about data.
+     * use an xml representation of AboutData to set the about data.
        @code
        "<AboutData>"
        "  <AppId>000102030405060708090A0B0C0D0E0C</AppId>"
@@ -127,6 +127,40 @@ class AboutData : public AboutDataListener {
      * @return ER_OK on success
      */
     QStatus CreateFromXml(const qcc::String& aboutDataXml);
+
+    /**
+     * use an xml representation of AboutData to set the about data.
+       @code
+       "<AboutData>"
+       "  <AppId>000102030405060708090A0B0C0D0E0C</AppId>"
+       "  <DefaultLanguage>en</DefaultLanguage>"
+       "  <DeviceName>My Device Name</DeviceName>"
+       "  <DeviceName lang = 'sp'>Nombre de mi dispositivo</DeviceName>"
+       "  <DeviceId>93c06771-c725-48c2-b1ff-6a2a59d445b8</DeviceId>"
+       "  <AppName>My Application Name</AppName>"
+       "  <AppName lang = 'sp'>Mi Nombre de la aplicacion</AppName>"
+       "  <Manufacturer>Company</Manufacturer>"
+       "  <Manufacturer lang = 'sp'>Empresa</Manufacturer>"
+       "  <ModelNumber>Wxfy388i</ModelNumber>"
+       "  <Description>A detailed description provided by the application.</Description>"
+       "  <Description lang = 'sp'>Una descripcion detallada proporcionada por la aplicacion.</Description>"
+       "  <DateOfManufacture>2014-01-08</DateOfManufacture>"
+       "  <SoftwareVersion>1.0.0</SoftwareVersion>"
+       "  <HardwareVersion>1.0.0</HardwareVersion>"
+       "  <SupportUrl>www.example.com</SupportUrl>"
+       "</AboutData>"
+       @endcode
+     *
+     * Note: AJSoftwareVersion is automatically set to the version of Alljoyn that
+     * is being used. The SupportedLanguages tag is automatically implied from
+     * the DefaultLanguage tag and the lang annotation from tags that are
+     * localizable.
+     *
+     * @param[in] aboutDataXml a string that contains an XML representation of
+     *                         the AboutData fields.
+     * @return ER_OK on success
+     */
+    QStatus CreateFromXml(const char* aboutDataXml);
 
     /**
      * The AboutData has all of the required fields
