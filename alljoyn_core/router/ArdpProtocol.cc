@@ -3083,8 +3083,8 @@ static QStatus Receive(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* rxbuf,
 
     /* Perform length validation checks */
     if (((seg.HLEN * 2) < hdrSz) || (len < hdrSz) || (seg.DLEN + (seg.HLEN * 2)) != len) {
-        QCC_DbgHLPrintf(("Receive: length check failed len = %u, seg.hlen = %u, seg.dlen = %u",
-                         len, (seg.HLEN * 2), seg.DLEN));
+        QCC_LogError(ER_ARDP_INVALID_RESPONSE, ("Receive: length check failed len = %u, seg.hlen = %u, seg.dlen = %u",
+                                                len, (seg.HLEN * 2), seg.DLEN));
         return ER_ARDP_INVALID_RESPONSE;
     }
 
@@ -3105,12 +3105,12 @@ static QStatus Receive(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* rxbuf,
 
         /* Perform sequence validation checks */
         if (SEQ32_LT(conn->snd.NXT, seg.ACK)) {
-            QCC_DbgHLPrintf(("Receive: ack %u ahead of SND>NXT %u", seg.ACK, conn->snd.NXT));
+            QCC_LogError(ER_ARDP_INVALID_RESPONSE, ("Receive: ack %u ahead of SND>NXT %u", seg.ACK, conn->snd.NXT));
             return ER_ARDP_INVALID_RESPONSE;
         }
 
         if (SEQ32_LT(seg.ACK, seg.LCS)) {
-            QCC_DbgHLPrintf(("Receive: lcs %u and ack %u out of order", seg.LCS, seg.ACK));
+            QCC_LogError(ER_ARDP_INVALID_RESPONSE, ("Receive: lcs %u and ack %u out of order", seg.LCS, seg.ACK));
             return ER_ARDP_INVALID_RESPONSE;
         }
 
@@ -3120,16 +3120,16 @@ static QStatus Receive(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* rxbuf,
          */
         if (((seg.SEQ - seg.ACKNXT) > conn->rcv.SEGMAX) || (SEQ32_LT(seg.SEQ, seg.ACKNXT)) ||
             ((seg.DLEN != 0) && ((seg.SEQ - seg.ACKNXT) == conn->rcv.SEGMAX))) {
-            QCC_DbgHLPrintf(("Receive: incorrect sequence numbers seg.seq = %u, seg.acknxt = %u",
-                             seg.SEQ, seg.ACKNXT));
+            QCC_LogError(ER_ARDP_INVALID_RESPONSE, ("Receive: incorrect sequence numbers seg.seq = %u, seg.acknxt = %u",
+                                                    seg.SEQ, seg.ACKNXT));
             return ER_ARDP_INVALID_RESPONSE;
         }
 
         /* Additional checks for invalid payload values */
         if (seg.DLEN != 0) {
             if ((seg.FCNT == 0) || (seg.FCNT > conn->rcv.SEGMAX) || ((seg.SEQ - seg.SOM) >= seg.FCNT)) {
-                QCC_DbgHLPrintf(("Receive: incorrect data segment seq = %u, som = %u,  fcnt = %u",
-                                 seg.SEQ, seg.SOM, seg.FCNT));
+                QCC_LogError(ER_ARDP_INVALID_RESPONSE, ("Receive: incorrect data segment seq = %u, som = %u,  fcnt = %u",
+                                                        seg.SEQ, seg.SOM, seg.FCNT));
                 return ER_ARDP_INVALID_RESPONSE;
             }
         }
@@ -3225,6 +3225,7 @@ QStatus ARDP_Run(ArdpHandle* handle, qcc::SocketFd sock, bool sockRead, bool soc
                         status = ER_ARDP_INVALID_STATE;
                     }
                     if (status != ER_OK) {
+                        QCC_LogError(status, ("Failed to accept incoming connection request from %s (ARDP port %u)", address.ToString().c_str(), foreign));
                         SendRst(handle, sock, address, port, local, foreign);
                     }
                 } else {
@@ -3245,7 +3246,15 @@ QStatus ARDP_Run(ArdpHandle* handle, qcc::SocketFd sock, bool sockRead, bool soc
                                 Disconnect(handle, conn, status);
                             }
                         } else {
-                            SendRst(handle, sock, address, port, local, foreign);
+                            uint8_t flags = *reinterpret_cast<uint8_t*>(buf + FLAGS_OFFSET);
+                            /* Only send repeat RST if this is a NUL segment.
+                             * This is done to alleviate a situation when original RST has not reached
+                             * the remote. This can potentially cause the remote to keep the link
+                             * alive (sending pings and retransmit data) until it hits probe timeout
+                             */
+                            if (flags & ARDP_FLAG_NUL) {
+                                SendRst(handle, sock, address, port, local, foreign);
+                            }
                         }
                     }
                 }
