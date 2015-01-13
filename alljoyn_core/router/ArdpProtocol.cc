@@ -508,8 +508,9 @@ static uint32_t CheckConnTimers(ArdpHandle* handle, ArdpConnRecord* conn, uint32
 
     /* Check persist timer */
     if (conn->persistTimer.retry != 0 && conn->persistTimer.when <= now) {
-        QCC_DbgPrintf(("CheckConnTimers: Fire persist( %p ) timer %p at %u (now=%u)",
-                       conn, conn->persistTimer, conn->persistTimer.when, now));
+        QCC_DbgHLPrintf(("CheckConnTimers: Fire persist timer: handle=%p, conn=%p, id=%u (%d)",
+                         handle, conn, conn->id, conn->id));
+
         (conn->persistTimer.handler)(handle, conn, conn->persistTimer.context);
         conn->persistTimer.when = now + conn->persistTimer.delta;
     }
@@ -1189,20 +1190,20 @@ static void PersistTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, void* 
     QCC_DbgHLPrintf(("PersistTimerHandler: handle=%p conn=%p context=%p delta %u retry %u",
                      handle, conn, context, timer->delta, timer->retry));
 
-    if (conn->window < conn->minSendWindow && !IsDataRetransmitScheduled(conn)) {
+    if ((conn->window < conn->snd.SEGMAX) && !IsDataRetransmitScheduled(conn)) {
         if (timer->retry > 1) {
             QCC_DbgPrintf(("PersistTimerHandler: window %u, need at least %u", conn->window, conn->minSendWindow));
             status = Send(handle, conn, ARDP_FLAG_ACK | ARDP_FLAG_VER | ARDP_FLAG_NUL, conn->snd.NXT, conn->rcv.CUR);
             if (status == ER_OK) {
                 timer->retry--;
-                timer->delta = handle->config.persistInterval << ((handle->config.totalAppTimeout / handle->config.persistInterval) - timer->retry);
+                //timer->delta = handle->config.persistInterval << ((handle->config.totalAppTimeout / handle->config.persistInterval) - timer->retry);
 #if ARDP_STATS
                 ++handle->stats.nulSends;
 #endif
             }
         } else {
-            QCC_DbgHLPrintf(("PersistTimerHandler: Persist Timeout (frozen window %d, need %d)",
-                             conn->window, conn->minSendWindow));
+            QCC_LogError(ER_ARDP_PERSIST_TIMEOUT, ("PersistTimerHandler: Persist Timeout (frozen window %d)",
+                                                   conn->window));
             Disconnect(handle, conn, ER_ARDP_PERSIST_TIMEOUT);
         }
     }
@@ -1685,6 +1686,9 @@ static QStatus SendData(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, 
             sBuf->inUse = true;
             UpdateTimer(handle, conn, &sBuf->timer, timeout, 1);
             /* Since we scheduled a retransmit timer, cancel active persist timer */
+            QCC_DbgHLPrintf(("Cancel persist timer: handle=%p, conn=%p, id=%u (%d)",
+                             handle, conn, conn->id, conn->id));
+
             conn->persistTimer.retry = 0;
             EnList(handle->dataTimers.bwd, (ListNode*) &sBuf->timer);
             conn->snd.pending++;
@@ -2869,17 +2873,22 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                 }
             }
 
-            if (conn->window != seg->WINDOW) {
-                /* Schedule persist timer only if there are no pending retransmits */
-                if (!IsDataRetransmitScheduled(conn) && (seg->WINDOW < conn->minSendWindow) && (conn->persistTimer.retry == 0)) {
-                    /* Start Persist Timer */
-                    UpdateTimer(handle, conn, &conn->persistTimer, handle->config.persistInterval,
-                                handle->config.totalAppTimeout / handle->config.persistInterval + 1);
-                } else if ((conn->persistTimer.retry != 0) && ((seg->WINDOW >= conn->minSendWindow) || IsDataRetransmitScheduled(conn))) {
-                    /* Cancel Persist Timer */
-                    conn->persistTimer.retry = 0;
-                }
+            /* Schedule persist timer only if there are no pending retransmits */
+            if (!IsDataRetransmitScheduled(conn) && (seg->WINDOW < conn->snd.SEGMAX) && (conn->persistTimer.retry == 0)) {
+                QCC_DbgHLPrintf(("Schedule persist timer: handle=%p, conn=%p, id=%u (%d)",
+                                 handle, conn, conn->id, conn->id));
+                /* Start Persist Timer */
+                UpdateTimer(handle, conn, &conn->persistTimer, handle->config.persistInterval,
+                            handle->config.totalAppTimeout / handle->config.persistInterval + 1);
+            } else if ((conn->persistTimer.retry != 0) && ((seg->WINDOW >= conn->snd.SEGMAX) || IsDataRetransmitScheduled(conn))) {
+                QCC_DbgHLPrintf(("Cancel persist timer: handle=%p, conn=%p, id=%u (%d)",
+                                 handle, conn, conn->id, conn->id));
 
+                /* Cancel Persist Timer */
+                conn->persistTimer.retry = 0;
+            }
+
+            if (conn->window != seg->WINDOW) {
                 conn->window = seg->WINDOW;
                 if (handle->cb.SendWindowCb != NULL) {
                     handle->cb.SendWindowCb(handle, conn, conn->window, (conn->window != 0) ? ER_OK : ER_ARDP_BACKPRESSURE);
