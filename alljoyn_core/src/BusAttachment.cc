@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -2384,7 +2384,7 @@ QStatus BusAttachment::Internal::SetSessionListener(SessionId id, SessionListene
         if (bitset & mask) {
             if (SessionExists(id, i) == true) {
                 sessionListenersLock[i].Lock(MUTEX_CONTEXT);
-                sessionListeners[i].insert(pair<SessionId, ProtectedSessionListener>(id, ProtectedSessionListener(listener)));
+                sessionListeners[i][id] = ProtectedSessionListener(listener);
                 sessionListenersLock[i].Unlock(MUTEX_CONTEXT);
             } else {
                 ++fail;
