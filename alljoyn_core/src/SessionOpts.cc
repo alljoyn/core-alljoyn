@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2011, 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -131,7 +131,9 @@ QStatus GetSessionOpts(const MsgArg& msgArg, SessionOpts& opts)
             } else if (::strcmp(SESSIONOPTS_TRANSPORTS, key) == 0) {
                 val->Get("q", &opts.transports);
             } else if (::strcmp(SESSIONOPTS_NAMETRANSFER, key) == 0) {
-                val->Get("y", &opts.nameTransfer);
+                uint8_t tmp;
+                val->Get("y", &tmp);
+                opts.nameTransfer = static_cast<SessionOpts::NameTransferType>(tmp);
             }
         }
     }

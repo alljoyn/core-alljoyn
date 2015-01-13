@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -59,7 +59,8 @@ class EndpointAuth : public SASLEngine::ExtensionHandler {
         endpoint(endpoint),
         uniqueName(bus.GetInternal().GetRouter().GenerateUniqueName()),
         isAccepting(isAcceptor),
-        remoteProtocolVersion(0)
+        remoteProtocolVersion(0),
+        nameTransfer(SessionOpts::ALL_NAMES)
     { }
 
     /**
@@ -119,7 +120,7 @@ class EndpointAuth : public SASLEngine::ExtensionHandler {
      */
     uint32_t GetRemoteProtocolVersion() const { return remoteProtocolVersion; }
 
-    uint32_t GetNameTransfer() const { return nameTransfer; }
+    SessionOpts::NameTransferType GetNameTransfer() const { return nameTransfer; }
   private:
 
     /**
@@ -142,7 +143,7 @@ class EndpointAuth : public SASLEngine::ExtensionHandler {
     qcc::GUID128 remoteGUID;            ///< GUID of the remote side (when applicable)
     uint32_t remoteProtocolVersion;     ///< ALLJOYN protocol version of the remote side
 
-    uint32_t nameTransfer;
+    SessionOpts::NameTransferType nameTransfer;
     ProtectedAuthListener authListener;  ///< Authentication listener
 
     /* Internal methods */

@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -234,7 +234,7 @@ QStatus EndpointAuth::WaitHello(qcc::String& authUsed)
                 remoteGUID = qcc::GUID128(args[0].v_string.str);
                 uint32_t temp = args[1].v_uint32;
                 remoteProtocolVersion = temp & 0x3FFFFFFF;
-                nameTransfer = temp >> 30;
+                nameTransfer = static_cast<SessionOpts::NameTransferType>(temp >> 30);
                 if (remoteGUID == bus.GetInternal().GetGlobalGUID()) {
                     QCC_DbgPrintf(("BusHello was sent by self"));
                     return ER_BUS_SELF_CONNECT;
@@ -258,7 +258,7 @@ QStatus EndpointAuth::WaitHello(qcc::String& authUsed)
         redirection = endpoint->RedirectionAddress();
         if (redirection.empty()) {
             QCC_DbgHLPrintf(("Endpoint remote %sname %s", endpoint->GetFeatures().isBusToBus ? "(bus-to-bus) " : "", remoteName.c_str()));
-            status = hello->HelloReply(endpoint->GetFeatures().isBusToBus, uniqueName);
+            status = hello->HelloReply(endpoint->GetFeatures().isBusToBus, uniqueName, nameTransfer);
         } else {
             QCC_DbgHLPrintf(("Endpoint redirecting name %s to %d", remoteName.c_str(), redirection.c_str()));
             status = hello->ErrorMsg(hello, RedirectError, redirection.c_str());
