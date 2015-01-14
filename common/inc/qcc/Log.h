@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2011,2015 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -23,6 +23,7 @@
 #define _QCC_LOG_H
 
 #include <qcc/platform.h>
+#include <qcc/StaticGlobalsInit.h>
 
 /**
  * Set AllJoyn debug levels.

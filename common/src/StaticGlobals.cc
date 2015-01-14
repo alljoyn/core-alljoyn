@@ -1,12 +1,10 @@
 /**
  * @file
- * Common file for holding global variables.
+ * File for holding global variables.
  */
 
 /******************************************************************************
- *
- *
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -20,24 +18,26 @@
  *    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
-#include <qcc/CommonGlobals.h>
+#include <qcc/StaticGlobals.h>
 #include <qcc/String.h>
 #include <qcc/Logger.h>
-
-#define QCC_MODULE "STATICGLOBALS"
 
 #ifdef CRYPTO_CNG
 #include <qcc/CngCache.h>
 #endif
+
+#define QCC_MODULE "STATICGLOBALS"
+
 namespace qcc {
+
 /** Assign enough memory to store all static/global values */
-static uint64_t commonDummy[sizeof(StaticGlobals) / 4];
+static uint64_t staticGlobalsBuffer[sizeof(StaticGlobals) / 4];
 
-/** Assign commonGlobals to be a reference to the allocated memory */
-StaticGlobals& commonGlobals = ((StaticGlobals &)commonDummy);
+/** Assign staticGlobals to be a reference to the allocated memory */
+StaticGlobals& staticGlobals = ((StaticGlobals &)staticGlobalsBuffer);
 
-Event& Event::alwaysSet = (Event &)commonGlobals.alwaysSet;
-Event& Event::neverSet = (Event &)commonGlobals.neverSet;
+Event& Event::alwaysSet = (Event &)staticGlobals.alwaysSet;
+Event& Event::neverSet = (Event &)staticGlobals.neverSet;
 
 StaticGlobals::StaticGlobals() :
     alwaysSet(0, 0),
@@ -45,25 +45,27 @@ StaticGlobals::StaticGlobals() :
 {
 }
 
-}
+} /* namespace qcc */
 
 using namespace qcc;
-static int alljoynCounter = 0;
+
+static int counter = 0;
 bool StaticGlobalsInit::cleanedup = false;
-/** Note: StaticGlobalsInit struct is defined in platform.h */
+
+/** Note: StaticGlobalsInit struct is defined in StaticGlobalsInit.h */
 StaticGlobalsInit::StaticGlobalsInit()
 {
-    if (alljoynCounter++ == 0) {
+    if (counter++ == 0) {
         /* Initialize globals in common */
-        new (&commonGlobals)StaticGlobals(); // placement new operator
+        new (&staticGlobals)StaticGlobals(); // placement new operator
     }
 }
 
 StaticGlobalsInit::~StaticGlobalsInit()
 {
-    if (--alljoynCounter == 0 && !cleanedup) {
+    if (--counter == 0 && !cleanedup) {
         /* Uninitialize globals in common */
-        commonGlobals.~StaticGlobals(); // explicitly call the destructor
+        staticGlobals.~StaticGlobals(); // explicitly call the destructor
         cleanedup = true;
     }
 }
@@ -72,7 +74,7 @@ void StaticGlobalsInit::Cleanup()
 {
     if (!cleanedup) {
         /* Uninitialize globals in common */
-        commonGlobals.~StaticGlobals(); // explicitly call the destructor
+        staticGlobals.~StaticGlobals(); // explicitly call the destructor
         cleanedup = true;
     }
     LoggerInit::Cleanup();
