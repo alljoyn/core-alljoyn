@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -43,6 +43,7 @@
 #include "RemoteEndpoint.h"
 #include "Router.h"
 #include "NamedPipeDaemonTransport.h"
+#include "unicode.h"
 
 #include <Netfw.h>
 
@@ -249,45 +250,94 @@ void* NamedPipeDaemonTransport::Run(void* arg)
                 QCC_LogError(status, ("NamedPipeDaemonTransport::Run(): RevertToSelf failed error=(0x%08X) status=(0x%08X)", ::GetLastError(), status));
             }
 
-            if (hClientToken != NULL && !CloseHandle(hClientToken)) {
-                status = ER_OS_ERROR;
-                QCC_LogError(status, ("NamedPipeDaemonTransport::Run(): CloseHandle failed error=(0x%08X) status=(0x%08X)", ::GetLastError(), status));
-            }
-
             /*
              * If a universal Windows app is in the loopback exemption list, then we will treat it as a desktop application. This
              * will allow the Universal Windows app to bypass the application isolation rules. This is allowed because an app on the
              * loopback exemption list could start its own bundled router, so it already has permissions to talk to the system.
              */
+            PTSTR sidString = NULL;
             if ((status == ER_OK) && isAppContainer == TRUE) {
                 appContainerSid = ((PTOKEN_APPCONTAINER_INFORMATION)buffer)->TokenAppContainer;
 
-                uint32_t err = NetworkIsolationGetAppContainerConfig(&numAppContainers, &sidAndAttributes);
-                if (err != ERROR_SUCCESS) {
-                    status = ER_FAIL;
-                    QCC_LogError(status, ("NamedPipeDaemonTransport::Run(): NetworkIsolationGetAppContainerConfig failed (0x%08X)", err));
+                if (!ConvertSidToStringSid(appContainerSid, &sidString)) {
+                    status = ER_OS_ERROR;
+                    QCC_LogError(status, ("NamedPipeDaemonTransport::Run(): ConvertSidToStringSid failed error=(0x%08X) status=(0x%08X)", ::GetLastError(), status));
+                }
+
+                if (status == ER_OK) {
+                    uint32_t err = NetworkIsolationGetAppContainerConfig(&numAppContainers, &sidAndAttributes);
+                    if (err != ERROR_SUCCESS) {
+                        status = ER_FAIL;
+                        QCC_LogError(status, ("NamedPipeDaemonTransport::Run(): NetworkIsolationGetAppContainerConfig failed (0x%08X)", err));
+                    }
                 }
 
                 if (status == ER_OK) {
                     for (uint32_t i = 0; i < numAppContainers; i++) {
                         if (EqualSid(appContainerSid, sidAndAttributes[i].Sid)) {
-                            LPTSTR sidString = NULL;
-                            if (ConvertSidToStringSid(appContainerSid, &sidString)) {
-                                QCC_DbgPrintf(("NamedPipeDaemonTransport::Run(): Connecting app with SID %s has a loopback exemption, will be treated as a Desktop application", sidString));
-                            }
-
-                            if (sidString != NULL) {
-                                if (LocalFree(sidString) != NULL) {
-                                    // Non-critical error, don't fail the connection but do log the error code
-                                    QCC_LogError(status, ("NamedPipeDaemonTransport::Run(): LocalFree of sidString failed error=(0x%08X) status=(0x%08X)", ::GetLastError(), status));
-                                }
-                            }
-
+                            QCC_DbgPrintf(("NamedPipeDaemonTransport::Run(): Connecting app with SID %s has a loopback exemption, will be treated as a Desktop application", sidString));
                             isAppContainer = FALSE;
                             break;
                         }
                     }
                 }
+
+                /*
+                 * Universal Windows apps will have a unique user ID constructed for each application. This ID will be
+                 * based on the app container SID and the user SID to ensure that multiple users running the same
+                 * application will receive separate IDs. This unique user ID is required for policy rules which
+                 * ensure app isolation doesn't prevent an application with multiple busattachments from talking
+                 * to itself.
+                 */
+                if (status == ER_OK) {
+                    TOKEN_USER* userToken = NULL;
+                    LPTSTR userSidString = NULL;
+                    String appIdStringUtf8;
+                    std::wstring appIdString(sidString);
+
+                    if (!GetTokenInformation(hClientToken, TokenUser, nullptr, 0, &length) && ::GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
+                        userToken = (TOKEN_USER*)new BYTE[length];
+                        if (userToken != NULL) {
+                            status = ER_OS_ERROR;
+                            QCC_LogError(status, ("NamedPipeDaemonTransport::Run(): TOKEN_USER allocation failed status=(0x%08X)", status));
+                        }
+
+                        if ((status == ER_OK) && !GetTokenInformation(hClientToken, TokenUser, userToken, length, &length)) {
+                            status = ER_OS_ERROR;
+                            QCC_LogError(status, ("NamedPipeDaemonTransport::Run(): GetTokenInformation - TokenUser failed OS error=(0x%08X) status=(0x%08X)", ::GetLastError(), status));
+                        }
+
+                        if ((status == ER_OK) && !ConvertSidToStringSid(userToken->User.Sid, &userSidString)) {
+                            status = ER_OS_ERROR;
+                            QCC_LogError(status, ("NamedPipeDaemonTransport::Run(): ConvertSidToStringSid - User SID failed OS error=(0x%08X) status=(0x%08X)", ::GetLastError(), status));
+                        }
+
+                        if (status == ER_OK) {
+                            appIdString += userSidString;
+
+                            status = ConvertUTF(appIdString, appIdStringUtf8, false);
+                            if (status != ER_OK) {
+                                QCC_LogError(status, ("NamedPipeDaemonTransport::Run(): ConvertUTF failed status=(0x%08X)", status));
+                            }
+                        }
+
+                        if (status == ER_OK) {
+                            conn->SetUserId(GetUsersUid(appIdStringUtf8.c_str()));
+                        }
+                    } else {
+                        status = ER_OS_ERROR;
+                        QCC_LogError(status, ("NamedPipeDaemonTransport::Run(): GetTokenInformation - TokenUser buffer size failed OS error=(0x%08X) status=(0x%08X)", ::GetLastError(), status));
+                    }
+
+                    delete[] userToken;
+                    LocalFree(userSidString);
+                }
+                LocalFree(sidString);
+            }
+
+            if ((hClientToken != NULL) && !CloseHandle(hClientToken)) {
+                status = ER_OS_ERROR;
+                QCC_LogError(status, ("NamedPipeDaemonTransport::Run(): CloseHandle failed error=(0x%08X) status=(0x%08X)", ::GetLastError(), status));
             }
 
             if (status == ER_OK) {
