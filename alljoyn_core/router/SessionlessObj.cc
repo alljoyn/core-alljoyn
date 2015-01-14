@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2012,2014 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2012,2014-2015 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -133,7 +133,7 @@ SessionlessObj::SessionlessObj(Bus& bus, BusController* busController) :
             ConfigDB::GetConfigDB()->GetLimit("sls_backoff_exponential", 32),
             ConfigDB::GetConfigDB()->GetLimit("sls_backoff_max", 15 * 60))
 {
-    sessionOpts.transports = ConfigDB::GetConfigDB()->GetLimit("sls_preferred_transports", TRANSPORT_ANY & ~TRANSPORT_UDP);
+    sessionOpts.transports = ConfigDB::GetConfigDB()->GetLimit("sls_preferred_transports", TRANSPORT_ANY);
 }
 
 SessionlessObj::~SessionlessObj()
