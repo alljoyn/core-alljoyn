@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2011, 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2011, 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -214,6 +214,8 @@ class _PolicyDB {
 
         bool userSet;                   /**< indicates if user has been set */
         bool userAny;                   /**< indicates if user has been set to "*" */
+        bool usersEqualSet;             /**< indicates if we should compare the sender and receiver users instead of to a static user ID */
+        bool usersEqual;                /**< indicates if the rule should apply when users are equal or when they are not equal */
         uint32_t user;                  /**< numeric user id */
         bool groupSet;                  /**< indicates if group has been set */
         bool groupAny;                  /**< indicates if group has been set to "*" */
@@ -241,6 +243,8 @@ class _PolicyDB {
             ownPrefix(WILDCARD),
             userSet(false),
             userAny(false),
+            usersEqualSet(false),
+            usersEqual(false),
             user(-1),
             groupSet(false),
             groupAny(false),
@@ -342,25 +346,33 @@ class _PolicyDB {
         /**
          * Check if user ID matches.
          *
-         * @param other     Numerical user id for comparision
+         * @param user1     Numerical user id for comparision
+         * @param user2     Numerical user id of the second user for a usersEqual comparison
          *
          * @return true = matches, false = does not match
          */
-        inline bool CheckUser(StringID other) const
+        inline bool CheckUser(StringID user1, StringID user2 = static_cast<uint32_t>(-1)) const
         {
-            return (!userSet || userAny || (user == other));
+            if (userSet == true) {
+                return userAny || (user == user1);
+            } else if (usersEqualSet == true) {
+                return (user1 == user2) == usersEqual;
+            } else {
+                return true;
+            }
         }
 
         /**
          * Check if group ID matches.
          *
-         * @param other     Numerical group id for comparision
+         * @param group1     Numerical group id for comparision
+         * @param group2     Numerical group id of the second group for a groupsEqual comparison
          *
          * @return true = matches, false = does not match
          */
-        inline bool CheckGroup(StringID other) const
+        inline bool CheckGroup(StringID group1, StringID group2 = static_cast<uint32_t>(-1)) const
         {
-            return (!groupSet || groupAny || (group == other));
+            return (!groupSet || groupAny || (group == group1));
         }
     };
 
@@ -450,7 +462,7 @@ class _PolicyDB {
      */
     static bool CheckMessage(bool& allow, const PolicyRuleList& ruleList,
                              const NormalizedMsgHdr& nmh, const IDSet& bnIDSet,
-                             uint32_t userId, uint32_t groupId);
+                             uint32_t userId, uint32_t userId2, uint32_t groupId, uint32_t groupId2);
 
     PolicyRuleListSet ownRS;        /**< bus name ownership policy rule sets */
     PolicyRuleListSet sendRS;       /**< sender message policy rule sets */
