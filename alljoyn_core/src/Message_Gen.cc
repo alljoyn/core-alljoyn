@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2012, 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -1071,16 +1071,16 @@ QStatus _Message::HelloMessage(bool isBusToBus, const qcc::String& sender, bool 
     return status;
 }
 
-QStatus _Message::HelloReply(bool isBusToBus, const qcc::String& uniqueName)
+QStatus _Message::HelloReply(bool isBusToBus, const qcc::String& uniqueName, SessionOpts::NameTransferType nameType)
 {
     if (!bus->IsStarted()) {
         return ER_BUS_BUS_NOT_STARTED;
     }
     return HelloReply(isBusToBus, bus->GetInternal().GetLocalEndpoint()->GetUniqueName(), uniqueName,
-                      bus->GetInternal().GetGlobalGUID().ToString());
+                      bus->GetInternal().GetGlobalGUID().ToString(), nameType);
 }
 
-QStatus _Message::HelloReply(bool isBusToBus, const qcc::String& sender, const qcc::String& uniqueName, const qcc::String& guid)
+QStatus _Message::HelloReply(bool isBusToBus, const qcc::String& sender, const qcc::String& uniqueName, const qcc::String& guid, SessionOpts::NameTransferType nameType)
 {
     QStatus status;
     CompressionRules unused; /* Only needed if flags includes ALLJOYN_FLAG_COMPRESSED */
@@ -1099,7 +1099,7 @@ QStatus _Message::HelloReply(bool isBusToBus, const qcc::String& sender, const q
         MsgArg args[3];
         args[0].Set("s", uniqueName.c_str());
         args[1].Set("s", guid.c_str());
-        args[2].Set("u", ALLJOYN_PROTOCOL_VERSION);
+        args[2].Set("u", nameType << 30 | ALLJOYN_PROTOCOL_VERSION);
         status = MarshalMessage("ssu", sender, uniqueName, MESSAGE_METHOD_RET, args, ArraySize(args), 0, 0, unused);
         QCC_DbgPrintf(("\n%s", ToString(args, 2).c_str()));
     } else {

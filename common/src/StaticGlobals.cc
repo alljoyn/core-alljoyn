@@ -22,6 +22,11 @@
 #include <qcc/String.h>
 #include <qcc/Logger.h>
 
+#define QCC_MODULE "STATICGLOBALS"
+
+#ifdef QCC_OS_GROUP_WINDOWS
+#include <qcc/windows/utility.h>
+#endif
 #ifdef CRYPTO_CNG
 #include <qcc/CngCache.h>
 #endif
