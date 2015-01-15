@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -8745,7 +8745,7 @@ void UDPTransport::DisableAdvertisementInstance(ListenRequest& listenRequest)
             qcc::String spec;
             QStatus status = NormalizeListenSpec(i->c_str(), spec, argMap);
             assert(status == ER_OK && "UDPTransport::DisableAdvertisementInstance(): Invalid UDP listen spec");
-            (void)status;  // Suppress unused warning from G++ when building is release mode.
+            QCC_UNUSED(status);
             if (argMap.find("iface") != argMap.end()) {
                 qcc::String interface = argMap["iface"];
                 qcc::String normSpec = "udp:addr=" + m_requestedInterfaces[interface].GetAddress().ToString() + ",port=" + U32ToString(m_requestedInterfaces[interface].GetPort());
@@ -8909,7 +8909,7 @@ void UDPTransport::DisableDiscoveryInstance(ListenRequest& listenRequest)
             qcc::String spec;
             QStatus status = NormalizeListenSpec(i->c_str(), spec, argMap);
             assert(status == ER_OK && "UDPTransport::DisableDiscoveryInstance(): Invalid UDP listen spec");
-            (void)status;  // Suppress unused warning from G++ when building is release mode.
+            QCC_UNUSED(status);
             if (argMap.find("iface") != argMap.end()) {
                 qcc::String interface = argMap["iface"];
                 qcc::String normSpec = "udp:addr=" + m_requestedInterfaces[interface].GetAddress().ToString() + ",port=" + U32ToString(m_requestedInterfaces[interface].GetPort());

@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2014-2015 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -26,7 +26,7 @@ static void* ExternalThread(void*) {
 static unsigned __stdcall ExternalThread(void*) {
 #endif
     Thread* thread = Thread::GetThread();
-    (void)thread;  // Suppress unused warning given by G++.
+    QCC_UNUSED(thread);
     return NULL;
 }
 

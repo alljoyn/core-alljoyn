@@ -6,7 +6,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -1017,7 +1017,8 @@ QStatus _LocalEndpoint::HandleMethodCall(Message& message)
             break;
         }
         QStatus result = message->ErrorMsg(message, errStr.c_str(), errMsg.c_str());
-        assert(ER_OK == result); (void)result;
+        assert(ER_OK == result);
+        QCC_UNUSED(result);
         BusEndpoint busEndpoint = BusEndpoint::wrap(this);
         status = bus->GetInternal().GetRouter().PushMessage(message, busEndpoint);
     } else {
