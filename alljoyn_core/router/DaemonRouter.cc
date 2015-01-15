@@ -163,7 +163,8 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& origSender)
                     QCC_DbgPrintf(("DaemonRouter::PushMessage(): Blocked method call from \"%s\" to \"%s\" (serial=%d). Caller does not allow remote messages",
                                    msg->GetSender(), destEndpoint->GetUniqueName().c_str(), msg->GetCallSerial()));
                     QStatus result = msg->ErrorMsg(msg, "org.alljoyn.Bus.Blocked", "Method reply would be blocked because caller does not allow remote messages");
-                    assert(ER_OK == result); (void)result;
+                    assert(ER_OK == result);
+                    QCC_UNUSED(result);
                     BusEndpoint busEndpoint = BusEndpoint::cast(localEndpoint);
                     PushMessage(msg, busEndpoint);
 #ifdef ENABLE_POLICYDB
@@ -176,7 +177,8 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& origSender)
                                    msg->GetSender(), destEndpoint->GetUniqueName().c_str(), msg->GetCallSerial()));
                     if (replyExpected) {
                         QStatus result = msg->ErrorMsg(msg, "org.alljoyn.Bus.Blocked", "Destination not allowed to receive method call");
-                        assert(ER_OK == result); (void)result;
+                        assert(ER_OK == result);
+                        QCC_UNUSED(result);
                         BusEndpoint busEndpoint = BusEndpoint::cast(localEndpoint);
                         PushMessage(msg, busEndpoint);
                     }
@@ -196,7 +198,8 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& origSender)
                     qcc::String description("Remote method calls blocked for bus name: ");
                     description += destination;
                     QStatus result = msg->ErrorMsg(msg, "org.alljoyn.Bus.Blocked", description.c_str());
-                    assert(ER_OK == result); (void)result;
+                    assert(ER_OK == result);
+                    QCC_UNUSED(result);
                     BusEndpoint busEndpoint = BusEndpoint::cast(localEndpoint);
                     PushMessage(msg, busEndpoint);
                 }
@@ -224,7 +227,8 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& origSender)
                     qcc::String description("Unknown bus name: ");
                     description += destination;
                     QStatus result = msg->ErrorMsg(msg, "org.freedesktop.DBus.Error.ServiceUnknown", description.c_str());
-                    assert(ER_OK == result); (void)result;
+                    assert(ER_OK == result);
+                    QCC_UNUSED(result);
                     BusEndpoint busEndpoint = BusEndpoint::cast(localEndpoint);
                     PushMessage(msg, busEndpoint);
                 } else {

@@ -1017,7 +1017,8 @@ QStatus _LocalEndpoint::HandleMethodCall(Message& message)
             break;
         }
         QStatus result = message->ErrorMsg(message, errStr.c_str(), errMsg.c_str());
-        assert(ER_OK == result); (void)result;
+        assert(ER_OK == result);
+        QCC_UNUSED(result);
         BusEndpoint busEndpoint = BusEndpoint::wrap(this);
         status = bus->GetInternal().GetRouter().PushMessage(message, busEndpoint);
     } else {

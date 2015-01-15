@@ -1426,7 +1426,8 @@ void _Message::ErrorMsg(const char* errorName, uint32_t replySerial)
 {
     assert(bus->IsStarted());
     QStatus status = ErrorMsg(bus->GetInternal().GetLocalEndpoint()->GetUniqueName(), errorName, replySerial);
-    assert(ER_OK == status); (void)status;
+    assert(ER_OK == status);
+    QCC_UNUSED(status);
 }
 
 QStatus _Message::ErrorMsg(const qcc::String& sender, const char* errorName, uint32_t replySerial)
@@ -1457,7 +1458,8 @@ void _Message::ErrorMsg(QStatus status, uint32_t replySerial)
 {
     assert(bus->IsStarted());
     QStatus result = ErrorMsg(bus->GetInternal().GetLocalEndpoint()->GetUniqueName(), status, replySerial);
-    assert(ER_OK == result); (void)result;
+    assert(ER_OK == result);
+    QCC_UNUSED(result);
 }
 
 QStatus _Message::ErrorMsg(const qcc::String& sender, QStatus status, uint32_t replySerial)
