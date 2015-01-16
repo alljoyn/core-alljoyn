@@ -92,7 +92,7 @@ struct Rule {
      * @param msg   Message to compare with rule.
      * @return  true if this rule matches the message.
      */
-    bool IsMatch(Message& msg) const;
+    bool IsMatch(const Message& msg) const;
 
     /**
      * String representation of a rule

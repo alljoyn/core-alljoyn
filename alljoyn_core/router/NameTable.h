@@ -208,6 +208,23 @@ class NameTable {
     void GetUniqueNamesAndAliases(std::vector<std::pair<qcc::String, std::vector<qcc::String> > >& nameVec) const;
 
     /**
+     * Get all the bus endpoints in the name table.
+     *
+     * @param[out]  epVec   Vector of BusEndpoints.
+     */
+    void GetAllBusEndpoints(std::vector<BusEndpoint>& epVec) const;
+
+    /**
+     * Determine if 2 bus names are aliases for the same endpoint.
+     *
+     * @param       name1   Bus name for alias check
+     * @param       name2   Bus name for alias check
+     *
+     * @return  true if name1 and name2 are aliases of each other, false otherwise
+     */
+    bool IsAlias(const qcc::String name1, const qcc::String name2) const;
+
+    /**
      * Get all the unique names that are in queue for the same alias (well-known) name
      *
      * @param[in] busName (well-known) name
@@ -256,9 +273,12 @@ class NameTable {
         }
     };
 
+    typedef std::unordered_map<qcc::String, std::deque<NameQueueEntry>, Hash, Equal> AliasMap;
+    typedef std::unordered_map<qcc::String, UniqueNameEntry, Hash, Equal> UniqueNameMap;
+
     mutable qcc::Mutex lock;                                             /**< Lock protecting name tables */
-    std::unordered_map<qcc::String, UniqueNameEntry, Hash, Equal> uniqueNames;   /**< Unique name table */
-    std::unordered_map<qcc::String, std::deque<NameQueueEntry>, Hash, Equal> aliasNames;  /**< Alias name table */
+    UniqueNameMap uniqueNames;   /**< Unique name table */
+    AliasMap aliasNames;  /**< Alias name table */
     uint32_t uniqueId;
     qcc::String uniquePrefix;
 
@@ -294,6 +314,8 @@ class NameTable {
     void CallListeners(const qcc::String& aliasName,
                        const qcc::String* oldOwner, SessionOpts::NameTransferType oldOwnerNameTransfer,
                        const qcc::String* newOwner, SessionOpts::NameTransferType newOwnerNameTransfer);
+
+    qcc::String GetNameOwner(const qcc::String& name) const;
 };
 
 /**

@@ -213,22 +213,9 @@ class _TestMessage : public _Message {
     }
 
     void AddNormalRx(BusEndpoint ep) { normalRx.insert(ep); }
-    bool RemoveNormalRx(BusEndpoint ep)
-    {
-        /*
-         * Work around bug in DaemonTransport::PushMessage() that pushes a
-         * broadcast signal twice to B2B endpoints.  This will be fixed in
-         * ASACORE-1532.
-         */
-        multiset<BusEndpoint>::iterator it = normalRx.find(ep);
-        if (it == normalRx.end()) {
-            return false;
-        }
-        normalRx.erase(it);
-        return true;
-    }
+    bool RemoveNormalRx(BusEndpoint ep) { return normalRx.erase(ep) > 0; }
     size_t NormalRxCount() const { return normalRx.size(); }
-    multiset<BusEndpoint>& GetNormalRxSet() { return normalRx; }
+    set<BusEndpoint>& GetNormalRxSet() { return normalRx; }
 
     void AddErrorRx(BusEndpoint ep) { errorRx.insert(ep); }
     bool RemoveErrorRx(BusEndpoint ep) { return errorRx.erase(ep) > 0; }
@@ -248,7 +235,7 @@ class _TestMessage : public _Message {
     AllJoynMessageType GetOrigType() const { return type; }
 
   private:
-    multiset<BusEndpoint> normalRx;
+    set<BusEndpoint> normalRx;
     set<BusEndpoint> errorRx;
     set<BusEndpoint> slsRxRoute;
     set<BusEndpoint> slsRxPush;
@@ -444,19 +431,6 @@ static std::ostream& operator<<(std::ostream& os, const set<BusEndpoint>& epSet)
 {
     for (set<BusEndpoint>::iterator it = epSet.begin(); it != epSet.end(); ++it) {
         const BusEndpoint& ep = *it;
-        TestEndpointInfo epInfo = GetTestEndpointInfo(ep);
-        os << "\n    " << epInfo;
-    }
-    return os;
-}
-
-/*
- * ostream formatter for a multiset of BusEndpoints.
- */
-static std::ostream& operator<<(std::ostream& os, const multiset<BusEndpoint>& epSet)
-{
-    for (multiset<BusEndpoint>::iterator it = epSet.begin(); it != epSet.end(); ++it) {
-        BusEndpoint ep = *it;
         TestEndpointInfo epInfo = GetTestEndpointInfo(ep);
         os << "\n    " << epInfo;
     }
@@ -903,7 +877,6 @@ TEST_P(DaemonRouterTest, PushMessage)
     const bool msgIsSessioncastable = msgIsSessioncast && (senderInfo->id == sessionId);  // Sender can sessioncast
 
     const bool msgIsMethodCall = (msgType == MESSAGE_METHOD_CALL);
-    const bool msgIsSignal = (msgType == MESSAGE_SIGNAL);
     const bool msgIsError = (msgType == MESSAGE_ERROR);
     const bool replyIsExpected = msgIsMethodCall && ((flags & ALLJOYN_FLAG_NO_REPLY_EXPECTED) == 0);
 
@@ -912,7 +885,6 @@ TEST_P(DaemonRouterTest, PushMessage)
 
     const bool senderIsB2b = (senderInfo->type == ENDPOINT_TYPE_BUS2BUS);
     const bool senderIsVirtual = (senderInfo->type == ENDPOINT_TYPE_VIRTUAL);
-    const bool senderIsRouterEp = (senderInfo->type == ENDPOINT_TYPE_LOCAL);
     const bool senderAllowsRemote = senderEp->AllowRemoteMessages();
     const bool senderIsRemote = (senderIsB2b || senderIsVirtual);
     const bool senderIsLocal = !senderIsRemote;
@@ -920,9 +892,6 @@ TEST_P(DaemonRouterTest, PushMessage)
     const bool senderDenied = msgIsError ? (errorName == TEST_ERROR_SENDER_DENIED) : (testMember == TEST_MEMBER_SENDER_DENIED);
     const bool receiverDenied = msgIsError ? (errorName == TEST_ERROR_RECEIVER_DENIED) : (testMember == TEST_MEMBER_RECEIVER_DENIED);
 
-    bool destIsB2b = false;
-    bool destIsRouterEp = false;
-    bool destIsVirtual = false;
     bool destAllowsRemote = false;
 
     bool policyError = false;
@@ -934,7 +903,6 @@ TEST_P(DaemonRouterTest, PushMessage)
         TestEndpointInfo epInfo = GetTestEndpointInfo(ep);
         const bool epIsDest = msgIsUnicast && (ep->GetUniqueName() == destName);
         const bool epIsB2b = (ep->GetEndpointType() == ENDPOINT_TYPE_BUS2BUS);
-        const bool epIsRouterEp = (ep->GetEndpointType() == ENDPOINT_TYPE_LOCAL);
         const bool epIsVirtual = (ep->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL);
         const bool epAllowsRemote = ep->AllowRemoteMessages();
         const bool epIsRemote = (epIsB2b || epIsVirtual);
@@ -948,19 +916,13 @@ TEST_P(DaemonRouterTest, PushMessage)
 
         if (epIsDest) {
             destEp = ep;
-            destIsB2b = epIsB2b;
-            destIsRouterEp = epIsRouterEp;
-            destIsVirtual = epIsVirtual;
             destAllowsRemote = epAllowsRemote;
         }
 
         /*
          * Normal expectation is that policy rules apply to all messages.
-         *
-         * PushMessage() oddity - msgs sent from/to the local EP generally
-         * ignore policy rules.  ASACORE-1532 will address this.
          */
-        if (senderIsRouterEp || epIsRouterEp || (!senderDenied && !receiverDenied)) {
+        if (!senderDenied && !receiverDenied) {
 
             /*
              * One would expect that DaemonRouter would route and deliver all
@@ -988,17 +950,6 @@ TEST_P(DaemonRouterTest, PushMessage)
                     willRxNorm = willRxNorm || destAllowsRemote;
 
                     /*
-                     * PushMessage() bug - virtualEP dest rx msgs regardless of AllowRemote.
-                     * ASACORE-1532 will address this.
-                     */
-                    if (destIsVirtual) {
-                        willRxNorm = willRxNorm || true;
-
-                        // ... except when the sender is a B2b ep, then the dest AllowRemote is checked
-                        willRxNorm = willRxNorm && (!senderIsB2b || destAllowsRemote);
-                    }
-
-                    /*
                      * PushMessage() optimization - method calls to virtual dest
                      * EPs gets blocked if sender does not allow remote msgs and
                      * a reply is expected.
@@ -1007,32 +958,6 @@ TEST_P(DaemonRouterTest, PushMessage)
                                                  !senderAllowsRemote &&
                                                  replyIsExpected &&
                                                  !localDelivery);
-
-                    /*
-                     * PushMessage() bug - above optimization not applied to
-                     * method calls from b2b EPs unless the destination is a
-                     * virtual EP.
-                     */
-                    willRxNorm = willRxNorm || (msgIsMethodCall &&
-                                                senderIsB2b &&
-                                                destAllowsRemote &&
-                                                !destIsVirtual &&
-                                                replyIsExpected);
-
-                    /*
-                     * PushMessage() bug - all direct msgs from Virtual EPs are
-                     * delivered regardless of dest AllowRemote as long as the
-                     * dest is not virtual as well.  ASACORE-1532 will address
-                     * this.
-                     */
-                    willRxNorm = willRxNorm || (senderIsVirtual && !destIsVirtual);
-
-                    /*
-                     * B2B dest EP is invalid in PushMessage() because B2B
-                     * endpoints are not in the NameTable.  This will be changed
-                     * in ASACORE-1532.
-                     */
-                    willRxNorm = willRxNorm && !destIsB2b;
 
                 } else if (msgIsBroadcast) {
                     if (!epInfo->slsMatchRule && !onlySls) {
@@ -1048,33 +973,14 @@ TEST_P(DaemonRouterTest, PushMessage)
                          * delivered when the dest allows remote msgs
                          */
                         willRxNorm = willRxNorm || epAllowsRemote;
-
-                        /*
-                         * PushMessage() bug - B2B and Virtual dest EPs still
-                         * get the msgs regardless of AllowRemote except when
-                         * the sender is B2B.  ASACORE-1532 will address this.
-                         */
-                        willRxNorm = willRxNorm || (!senderIsB2b && (epIsVirtual || epIsB2b) && !epAllowsRemote);
-
-                        /*
-                         * PushMessage() bug - msgs from Virtual EPs get
-                         * delivered regardless of AllowsRemote.  ASACORE-1532
-                         * will address this.
-                         */
-                        willRxNorm = willRxNorm || (senderIsVirtual && !epAllowsRemote);
                     }
 
                     /*
-                     * PushMessage() bug - B2B dest always get global broadcast
-                     * msgs via normal delivery regardless of AllowRemote.
-                     * ASACORE-1532 will address this.
-                     *
-                     * There is another issue about the validity of setting the
-                     * global broadcast flag and sessionless flag where doing so
-                     * could cause the message to be delivered twice.
-                     * ASACORE-1615 will address this.
+                     * PushMessage() bug - B2B dest may get global broadcast
+                     * msgs twice if sessionless flag is set.  ASACORE-1615 will
+                     * address this.
                      */
-                    willRxNorm = willRxNorm || (epIsB2b && msgIsGlobalBroadcast && (senderEp != ep));
+                    willRxNorm = willRxNorm || (epIsB2b && msgIsGlobalBroadcast && (senderEp != ep) && epAllowsRemote);
 
                 } else if (msgIsSessioncastable && epIsInSession) {
                     /*
@@ -1112,41 +1018,13 @@ TEST_P(DaemonRouterTest, PushMessage)
             }
         }
 
-        /*
-         * PushMessage() bug - localEP can't rx broadcast/sessioncast msgs when
-         * sender is blocked by policy rules but msgs sent from localEP are
-         * always delivered regardless of policy rules.  ASACORE-1532 will
-         * address this.
-         */
-        willRxSlsRoute = willRxSlsRoute && !(!senderIsRouterEp && senderDenied && !msgIsUnicast);
-        willRxNorm = willRxNorm && !(!senderIsRouterEp && senderDenied && !msgIsUnicast);
-
         if (willRxNorm) {
             testMsg->AddNormalRx(ep);
-
-            /*
-             * DaemonRouter::PushMessage() bug - broadcast signals are sent
-             * twice to B2B endpoints if there is not an SLS match rule.  Try to
-             * account for that oddity.  ASACORE-1532 will address this.
-             */
-            bool dupSend = false;
-            if (msgIsSignal && msgIsBroadcast && epIsB2b && msgIsGlobalBroadcast && !onlySls && !epInfo->slsMatchRule) {
-                dupSend = dupSend || (!senderIsB2b);
-                dupSend = dupSend || (senderIsB2b && epAllowsRemote && (ep != senderEp));
-            }
-            if (dupSend) {
-                /*
-                 * Add B2B dest twice due to bug in DaemonRouter::PushMessage()
-                 * that delivers broadcast signals twice to B2B endpoints.
-                 */
-                testMsg->AddNormalRx(ep);
-            }
-
         } else if (willRxSlsRoute) {
             testMsg->AddSlsRxRoute(ep);
         } else if (willRxSlsPush) {
             testMsg->AddSlsRxPush(ep);
-        } else if (replyIsExpected && !senderIsB2b && epIsDest) {
+        } else if (replyIsExpected && !senderIsB2b && epIsDest && (!senderIsVirtual || senderAllowsRemote)) {
             testMsg->AddErrorRx(senderEp);
         }
 
@@ -1168,27 +1046,6 @@ TEST_P(DaemonRouterTest, PushMessage)
      * ER_BUS_NO_ROUTE.)
      */
     policyError = (senderDenied || receiverDenied);
-
-    /*
-     * Exceptions to when error statuses will be returned.  This is probably
-     * incorrect behavior in DaemonRouter::PushMessage().  ASACORE-1532 will
-     * address this.
-     */
-    policyError = policyError && ((msgIsUnicast && !senderIsRouterEp && !destIsRouterEp) ||
-                                  (!msgIsUnicast && !senderIsRouterEp && noRoute));
-    policyError = policyError && !(destIsB2b && receiverDenied);
-    policyError = policyError && !(msgIsUnicast && senderIsB2b && !msgIsSessionless && !destAllowsRemote && receiverDenied);
-    policyError = policyError && !(msgIsUnicast && senderIsB2b && msgIsSessionless && receiverDenied);
-    policyError = policyError && !((msgIsBroadcast || (msgIsSessioncast && !msgIsSessioncastable)) && !senderIsB2b && receiverDenied && noRoute);
-    policyError = policyError && !((msgIsBroadcast || (msgIsSessioncast && !msgIsSessioncastable)) && senderIsB2b && receiverDenied);
-    policyError = policyError && !(msgIsUnicast && destIsVirtual && msgIsMethodCall && !senderAllowsRemote && replyIsExpected && receiverDenied);
-    policyError = policyError && !(onlySls && msgIsBroadcast && receiverDenied);
-
-    noRoute = noRoute && !(msgIsUnicast && senderIsB2b && !destIsB2b);
-    noRoute = noRoute && !(msgIsUnicast && senderIsB2b && destIsB2b && msgIsSessionless);
-    noRoute = noRoute && !(msgIsMethodCall && !senderIsB2b && destIsVirtual && !senderAllowsRemote);
-    noRoute = noRoute && !(onlySls && msgIsBroadcast);
-
 
     Message msg = Message::cast(testMsg);
     QStatus pushMessageStatus = router->PushMessage(msg, senderEp);

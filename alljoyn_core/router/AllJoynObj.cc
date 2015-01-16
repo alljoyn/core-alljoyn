@@ -2518,8 +2518,8 @@ bool AllJoynObj::RemoveSessionRefs(const char* epName, SessionId id, bool sendSe
                     SessionMapEntry tsme = it->second;
                     if (!it->second.isInitializing) {
                         toRemove = true;
+                        sessionsLost.push_back(tsme);
                     }
-                    sessionsLost.push_back(tsme);
                 }
             }
 
@@ -2556,6 +2556,7 @@ bool AllJoynObj::RemoveSessionRefs(const char* epName, SessionId id, bool sendSe
     /* Send session lost signals */
     vector<SessionMapEntry>::iterator slit = sessionsLost.begin();
     while (slit != sessionsLost.end()) {
+        router.RemoveSessionRoutes(slit->id);
         if (slit->memberNames.size() == 1) {
             SendSessionLost(*slit++, ER_OK, ALLJOYN_SESSIONLOST_DISPOSITION_MEMBER);
         } else {
@@ -2593,6 +2594,7 @@ void AllJoynObj::RemoveSessionRefs(const String& vepName, const String& b2bEpNam
 
     vector<pair<String, SessionId> > changedSessionMembers;
     vector<SessionMapEntry> sessionsLost;
+    vector<SessionId> sessionsRemoved;
     SessionMapType::iterator it = sessionMap.begin();
     while (it != sessionMap.end()) {
         int count;
@@ -2604,9 +2606,11 @@ void AllJoynObj::RemoveSessionRefs(const String& vepName, const String& b2bEpNam
         /* Examine sessions with ids that are affected by removal of vep through b2bep */
         /* Only sessions that route through a single (matching) b2bEp are affected */
         if ((vep->GetBusToBusEndpoint(it->first.second, &count) == b2bEp) && (count == 1)) {
+            sessionsRemoved.push_back(it->first.second);
             if (it->first.first == vepName) {
                 /* Key matches can be removed from sessionMap */
                 sessionMap.erase(it++);
+
             } else {
                 if (BusEndpoint::cast(vep) == FindEndpoint(it->second.sessionHost)) {
                     /* If the session's sessionHost is vep, then clear it out of the session */
@@ -2634,10 +2638,11 @@ void AllJoynObj::RemoveSessionRefs(const String& vepName, const String& b2bEpNam
                     pair<String, SessionId> key = it->first;
                     if (!it->second.isInitializing) {
                         sessionMap.erase(it++);
+                        sessionsLost.push_back(tsme);
                     } else {
                         ++it;
                     }
-                    sessionsLost.push_back(tsme);
+
                 } else {
                     ++it;
                 }
@@ -2654,9 +2659,16 @@ void AllJoynObj::RemoveSessionRefs(const String& vepName, const String& b2bEpNam
         SendMPSessionChanged(csit->second, vepName.c_str(), false, csit->first.c_str(), ALLJOYN_MPSESSIONCHANGED_REMOTE_MEMBER_REMOVED);
         csit++;
     }
+
+    vector<SessionId>::iterator srit = sessionsRemoved.begin();
+    while (srit != sessionsRemoved.end()) {
+        router.RemoveSessionRoutes(vepName.c_str(), *srit);
+        srit++;
+    }
     /* Send session lost signals */
     vector<SessionMapEntry>::iterator slit = sessionsLost.begin();
     while (slit != sessionsLost.end()) {
+        router.RemoveSessionRoutes(slit->id);
         if (slit->memberNames.size() == 1) {
             SendSessionLost(*slit++, disconnectReason, ALLJOYN_SESSIONLOST_DISPOSITION_MEMBER);
         } else {
@@ -4627,10 +4639,11 @@ void AllJoynObj::NameOwnerChanged(const qcc::String& alias,
                     pair<String, SessionId> key = it->first;
                     if (!it->second.isInitializing) {
                         sessionMap.erase(it++);
+                        sessionsLost.push_back(tsme);
                     } else {
                         ++it;
                     }
-                    sessionsLost.push_back(tsme);
+
                 } else {
                     ++it;
                 }
@@ -4649,6 +4662,7 @@ void AllJoynObj::NameOwnerChanged(const qcc::String& alias,
         /* Send session lost signals */
         vector<SessionMapEntry>::iterator slit = sessionsLost.begin();
         while (slit != sessionsLost.end()) {
+            router.RemoveSessionRoutes(slit->id);
             if (slit->memberNames.size() == 1) {
                 SendSessionLost(*slit++, ER_BUS_ENDPOINT_CLOSING, ALLJOYN_SESSIONLOST_DISPOSITION_MEMBER);
             } else {
