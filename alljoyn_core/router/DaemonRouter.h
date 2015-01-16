@@ -24,6 +24,8 @@
 
 #include <qcc/platform.h>
 
+#include <vector>
+
 #include <qcc/Thread.h>
 
 #include "Transport.h"
@@ -34,6 +36,8 @@
 #include "Router.h"
 #include "NameTable.h"
 #include "RuleTable.h"
+
+#define ENABLE_OLD_PUSHMESSAGE_COMPATABILITY
 
 namespace ajn {
 
@@ -274,7 +278,13 @@ class DaemonRouter : public Router {
      *
      * @return true iff the messages can be routed currently.
      */
-    bool IsBusRunning(void) const { return localEndpoint->IsValid(); }
+    bool IsBusRunning(void) const
+    {
+        localEndpointLock.Lock();
+        bool valid = localEndpoint->IsValid();
+        localEndpointLock.Unlock();
+        return valid;
+    }
 
     /**
      * Indicate that this Bus instance is an AllJoyn daemon
@@ -364,14 +374,30 @@ class DaemonRouter : public Router {
                             RemoteEndpoint& destB2bEp);
 
     /**
-     * Remove existing session routes.
-     * This method removes routes that involve uniqueName as a source or as a destination for a particular session id.
-     * When sessionId is 0, all routes that involved uniqueName are removed.
+     * Remove existing session routes.  This method removes routes
+     * that involve uniqueName as a source or as a destination for a
+     * particular session id.
      *
      * @param  uniqueName  Unique name.
-     * @param  id          Session id or 0 to indicate "all sessions".
+     * @param  id          Session id.
      */
     void RemoveSessionRoutes(const char* uniqueName, SessionId id);
+
+    /**
+     * Remove existing session routes.  This method removes routes for
+     * all endpoints associated with a particular session id.
+     *
+     * @param  id          Session id.
+     */
+    void RemoveSessionRoutes(SessionId id);
+
+    /**
+     * Remove existing session routes.
+     * This method removes routes that involve endpoint as a source or as a destination for all session ids.
+     *
+     * @param  endpoint    Endpoint to be removed.
+     */
+    void RemoveSessionRoutesForEndpoint(BusEndpoint& ep);
 
     /**
      * Remove self-join related session-route.
@@ -389,73 +415,21 @@ class DaemonRouter : public Router {
     RuleTable& GetRuleTable() { return ruleTable; }
 
   private:
-    LocalEndpoint localEndpoint;    /**< The local endpoint */
-    RuleTable ruleTable;            /**< Routing rule table */
-    NameTable nameTable;            /**< BusName to transport lookupl table */
-    BusController* busController;   /**< The bus controller used with this router */
-    AllJoynObj* alljoynObj;         /**< AllJoyn bus object used with this router */
-    SessionlessObj* sessionlessObj; /**< Sessionless bus object used with this router */
+    LocalEndpoint localEndpoint;          /**< The local endpoint */
+    mutable qcc::Mutex localEndpointLock; /**< Mutex to protect localEndpoint modification. */
+    RuleTable ruleTable;                  /**< Routing rule table */
+    NameTable nameTable;                  /**< BusName to transport lookupl table */
+    BusController* busController;         /**< The bus controller used with this router */
+    AllJoynObj* alljoynObj;               /**< AllJoyn bus object used with this router */
+    SessionlessObj* sessionlessObj;       /**< Sessionless bus object used with this router */
 
     std::set<RemoteEndpoint> m_b2bEndpoints; /**< Collection of Bus-to-bus endpoints */
     qcc::Mutex m_b2bEndpointsLock;           /**< Lock that protects m_b2bEndpoints */
 
-    /** Session multicast destination map */
-    struct SessionCastEntry {
-        SessionId id;
-        qcc::String src;
-        RemoteEndpoint b2bEp;
-        BusEndpoint destEp;
-
-        SessionCastEntry(SessionId id, const qcc::String& src) :
-            id(id), src(src) { }
-
-        SessionCastEntry(SessionId id, const qcc::String& src, RemoteEndpoint& b2bEp, BusEndpoint& destEp) :
-            id(id), src(src), b2bEp(b2bEp), destEp(destEp) { }
-
-        bool operator<(const SessionCastEntry& other) const {
-            /* The order of comparison of src and id has been reversed, so that upper_bound can be
-             * used with (desiredID -1) to obtain the first entry that has the desired src and id.
-             */
-            return (src < other.src) || ((src == other.src) && ((id < other.id) || ((id == other.id) && ((b2bEp < other.b2bEp) || ((b2bEp == other.b2bEp) && (destEp < other.destEp))))));
-
-        }
-
-        bool operator==(const SessionCastEntry& other) const {
-            return (id == other.id)  && (src == other.src) && (b2bEp == other.b2bEp) && (destEp == other.destEp);
-        }
-
-        qcc::String ToString() const {
-            char idbuf[16];
-            char ptrbuf[16];
-            qcc::String str;
-            str.append("id: ");
-            snprintf(idbuf, sizeof(idbuf), "%u", id);
-            str.append(idbuf);
-
-            str.append(", src: ");
-            str.append(src);
-
-            str.append(", remote: ");
-            snprintf(ptrbuf, sizeof(ptrbuf), "%p", b2bEp.unwrap());
-            str.append(ptrbuf);
-            str.append("(");
-            str.append(b2bEp->GetUniqueName());
-            str.append(",");
-            str.append(b2bEp->GetRemoteName());
-            str.append(")");
-
-            str.append(", dest: ");
-            snprintf(ptrbuf, sizeof(ptrbuf), "%p", destEp.unwrap());
-            str.append(ptrbuf);
-            str.append(" ");
-            str.append(destEp->GetUniqueName());
-
-            return str;
-        }
-    };
-
-    std::set<SessionCastEntry> sessionCastSet; /**< Session multicast set */
-    qcc::Mutex sessionCastSetLock;             /**< Lock that protects sessionCastSet */
+    typedef std::map<BusEndpoint, uint8_t> SessionEps;    /**< Set of endpoints in a session (with a flag bit field) */
+    typedef std::map<SessionId, SessionEps> SessionMap;   /**< Map of session IDs to sets endpoints */
+    SessionMap sessionMap;      /**< Provide a lookup table of which endpoints are members of which session.*/
+    qcc::Mutex sessionMapLock;  /**< Lock that protects the session map. */
 
     /* Add a session ref to the virtualendpoint with the specified name
      * @param  vepName: Name of virtual endpoint to which a ref needs to be added.
@@ -469,6 +443,72 @@ class DaemonRouter : public Router {
      * @param  id: Id of the session
      */
     void RemoveSessionRef(qcc::String vepName, SessionId id);
+
+    /**
+     * Helper function to determine if a message can be delivered over a given
+     * session from the source to the destination.
+     *
+     * @param id    Session ID
+     * @param src   Source endpoint
+     * @param dest  Destination endpoint
+     *
+     * @return  true iff message can be delivered.
+     */
+    bool IsSessionDeliverable(SessionId id, BusEndpoint& src, BusEndpoint& dest);
+
+
+#ifdef ENABLE_OLD_PUSHMESSAGE_COMPATABILITY
+    /**
+     * This function adapts the decision about which endpoints receive a given
+     * message based on the behavior of the previous implementation of
+     * PushMessage().  The previous version of PushMessage() exhibited some odd
+     * behaviors for certain corner cases.  So rather that burying the special
+     * case code in the new version of PushMessage(), the special case code is
+     * collected into a separate function to make it easier to find the code to
+     * remove when the old behavior is no longer required.
+     *
+     * @param add               decision to send to dest before override
+     * @param src               source endpoint
+     * @param dest              destination endpoint
+     * @param sessionId         session ID
+     * @param isBroadcast       indicates if message is a broadcast message
+     * @param isSessionCast     indicates if message is a sessioncast message
+     * @param isSessionless     indicates if message is a sessionless message
+     * @param isGlobalBroadcast indicates if message is a global broadcast message
+     * @param detachId          session ID for DetachSession message (0 otherwise)
+     *
+     * @return  New valued for add.
+     */
+    bool AddCompatabilityOverride(bool add,
+                                  BusEndpoint& src,
+                                  BusEndpoint& dest,
+                                  const SessionId sessionId,
+                                  const bool isBroadcast,
+                                  const bool isSessioncast,
+                                  const bool isSessionless,
+                                  const bool isGlobalBroadcast,
+                                  const SessionId detachId);
+
+    /**
+     * This function alters the resulting status code from PushMessage() so that
+     * its behavior is closer to that of the previous implementation of
+     * PushMessage().  Again, this handle certain corner cases where the
+     * original version of PushMessage() exhibited inconsistent behavior.
+     *
+     * @param status            return status code before override
+     * @param src               source endpoint
+     * @param isSessionCast     indicates if message is a sessioncast message
+     * @param isSessionless     indicates if message is a sessionless message
+     * @param policyRejected    indicates if PolicyDB rules prohibit message delivery
+     *
+     * @return  New return status value.
+     */
+    QStatus StatusCompatabilityOverride(QStatus status,
+                                        BusEndpoint& src,
+                                        const bool isSessioncast,
+                                        const bool isSessionless,
+                                        const bool policyRejected);
+#endif
 };
 
 }
