@@ -73,7 +73,7 @@ class _VirtualEndpoint : public _BusEndpoint {
      *      - ER_OK if successful.
      *      - An error status otherwise
      */
-    QStatus PushMessage(Message& msg);
+    virtual QStatus PushMessage(Message& msg);
 
     /**
      * Send an outgoing message over a specific session.
@@ -84,7 +84,7 @@ class _VirtualEndpoint : public _BusEndpoint {
      *      - ER_OK if successful.
      *      - An error status otherwise
      */
-    QStatus PushMessage(Message& msg, SessionId id);
+    virtual QStatus PushMessage(Message& msg, SessionId id);
 
     /**
      * Get unique bus name.
@@ -135,7 +135,7 @@ class _VirtualEndpoint : public _BusEndpoint {
      * @param b2bEp      The bus-to-bus endpoint for the session.
      * @return  ER_OK if successful.
      */
-    QStatus AddSessionRef(SessionId sessionId, RemoteEndpoint& b2bEp);
+    virtual QStatus AddSessionRef(SessionId sessionId, RemoteEndpoint& b2bEp);
 
     /**
      * Remove (counted) mapping of sessionId to B2B endpoint.

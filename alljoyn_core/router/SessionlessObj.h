@@ -100,7 +100,7 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      * @param epName   The name of the endpoint that this rule applies to.
      * @param rule     Rule for endpoint
      */
-    void AddRule(const qcc::String& epName, Rule& rule);
+    virtual void AddRule(const qcc::String& epName, Rule& rule);
 
     /**
      * Remove a rule for an endpoint.
@@ -108,14 +108,14 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      * @param epName      The name of the endpoint that rule applies to.
      * @param rule        Rule to remove.
      */
-    void RemoveRule(const qcc::String& epName, Rule& rule);
+    virtual void RemoveRule(const qcc::String& epName, Rule& rule);
 
     /**
      * Push a sessionless signal.
      *
      * @param msg    Message to be pushed.
      */
-    QStatus PushMessage(Message& msg);
+    virtual QStatus PushMessage(Message& msg);
 
     /**
      * Route an incoming sessionless signal if possible.
@@ -123,7 +123,7 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      * @param sid   Session ID associated with sessionless message.
      * @param msg   Sesionless message to be routed.
      */
-    void RouteSessionlessMessage(uint32_t sid, Message& msg);
+    virtual void RouteSessionlessMessage(uint32_t sid, Message& msg);
 
     /**
      * Remove a sessionless signal with a given serial number from the store/forward cache.

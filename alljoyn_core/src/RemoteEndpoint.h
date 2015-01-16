@@ -250,7 +250,7 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
      *      - The unique bus name for this endpoint
      *      - An empty string if called before the endpoint has been established.
      */
-    const qcc::String& GetUniqueName() const;
+    virtual const qcc::String& GetUniqueName() const;
 
     /**
      * Set the unique bus name assigned by the bus for this endpoint.
@@ -265,7 +265,7 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
      * @return  - The bus name of the remote side.
      *          - An empty string if called before the endpoint has been established.
      */
-    const qcc::String& GetRemoteName() const;
+    virtual const qcc::String& GetRemoteName() const;
 
     /**
      * Set the bus name for the peer at the remote end of this endpoint.
@@ -449,7 +449,7 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
      * Get SessionId for endpoint.
      * This is used for BusToBus endpoints only.
      */
-    uint32_t GetSessionId() const;
+    virtual uint32_t GetSessionId() const;
 
     /**
      * Set SessionId for endpoint.

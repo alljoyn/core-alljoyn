@@ -108,8 +108,15 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& origSender)
     PolicyDB policyDB = ConfigDB::GetConfigDB()->GetPolicyDB();
     NormalizedMsgHdr nmh(msg, policyDB, origSender);
 
-    if ((sender != localEndpoint) && !policyDB->OKToSend(nmh, destEndpoint)) {
+    if ((sender != localEndpoint) && (destEndpoint != localEndpoint) && !policyDB->OKToSend(nmh, destEndpoint)) {
         /* The sender is not allowed to send this message. */
+        if (replyExpected && (sender->GetEndpointType() != ENDPOINT_TYPE_BUS2BUS)) {
+            QStatus result = msg->ErrorMsg(msg, "org.alljoyn.Bus.Blocked", "Destination not allowed to receive method call");
+            assert(ER_OK == result);
+            QCC_UNUSED(result);
+            BusEndpoint busEndpoint = BusEndpoint::cast(localEndpoint);
+            PushMessage(msg, busEndpoint);
+        }
         return ER_BUS_POLICY_VIOLATION;
     }
 #endif
@@ -165,12 +172,12 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& origSender)
                     BusEndpoint busEndpoint = BusEndpoint::cast(localEndpoint);
                     PushMessage(msg, busEndpoint);
 #ifdef ENABLE_POLICYDB
-                } else if ((destEndpoint != localEndpoint) && !policyDB->OKToReceive(nmh, destEndpoint)) {
+                } else if ((destEndpoint != localEndpoint) && (sender != localEndpoint) && !policyDB->OKToReceive(nmh, destEndpoint)) {
                     /*
                      * The destination is not allowed to recieve the message.
                      * If a reply is expected, return an error to the sender.
                      */
-                    QCC_DbgPrintf(("DaemonRouter::PushMessage(): Blocked method call from \"%s\" to \"%s\" (serial=%d). Caller does not allow remote messages",
+                    QCC_DbgPrintf(("DaemonRouter::PushMessage(): Blocked method call from \"%s\" to \"%s\" (serial=%d). Policy rule violation",
                                    msg->GetSender(), destEndpoint->GetUniqueName().c_str(), msg->GetCallSerial()));
                     if (replyExpected) {
                         QStatus result = msg->ErrorMsg(msg, "org.alljoyn.Bus.Blocked", "Destination not allowed to receive method call");
@@ -268,7 +275,7 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& origSender)
                  */
                 bool sendMsg = !((sender->GetEndpointType() == ENDPOINT_TYPE_BUS2BUS) && !dest->AllowRemoteMessages());
 #ifdef ENABLE_POLICYDB
-                sendMsg = sendMsg && ((dest == localEndpoint) || policyDB->OKToReceive(nmh, dest));
+                sendMsg = sendMsg && ((dest == localEndpoint) || (sender == localEndpoint) || policyDB->OKToReceive(nmh, dest));
 #endif
                 if (sendMsg) {
                     ruleTable.Unlock();
@@ -331,7 +338,7 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& origSender)
                     BusEndpoint busEndpoint = BusEndpoint::cast(ep);
                     bool sendMsg = true;
 #ifdef ENABLE_POLICYDB
-                    sendMsg = sendMsg && ((busEndpoint == localEndpoint) || policyDB->OKToReceive(nmh, busEndpoint));
+                    sendMsg = sendMsg && ((busEndpoint == localEndpoint) || (sender == localEndpoint) || policyDB->OKToReceive(nmh, busEndpoint));
 #endif
                     if (sendMsg) {
                         m_b2bEndpointsLock.Unlock(MUTEX_CONTEXT);
@@ -387,7 +394,7 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& origSender)
                 BusEndpoint ep = sit->destEp;
 
 #ifdef ENABLE_POLICYDB
-                okToReceive = (ep == localEndpoint) || policyDB->OKToReceive(nmh, ep);
+                okToReceive = (ep == localEndpoint) || (sender == localEndpoint) || policyDB->OKToReceive(nmh, ep);
 #endif
 
                 if (okToReceive) {
