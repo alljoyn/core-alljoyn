@@ -94,7 +94,7 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
      * @param router         The DaemonRouter associated with the bus.
      * @param busController  Controller that created this object.
      */
-    AllJoynObj(Bus& bus, BusController* busController);
+    AllJoynObj(Bus& bus, BusController* busController, DaemonRouter& router);
 
     /**
      * Destructor
