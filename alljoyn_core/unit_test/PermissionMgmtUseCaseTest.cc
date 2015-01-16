@@ -26,6 +26,7 @@ static GUID128 membershipGUID1;
 static const char* membershipSerial1 = "10001";
 static GUID128 membershipGUID2;
 static GUID128 membershipGUID3;
+static const char* membershipSerial2 = "20002";
 static const char* membershipSerial3 = "30003";
 
 static const char sampleCertificatePEM[] = {
@@ -90,7 +91,7 @@ static PermissionPolicy* GeneratePolicy(qcc::GUID128& guid, qcc::ECCPublicKey& a
     prms[1].SetMemberName("Down");
     prms[1].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
     prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    prms[2].SetMemberName("Channel");
+    prms[2].SetMemberName("Volume");
     prms[2].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
     prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
     rules[0].SetMembers(3, prms);
@@ -144,7 +145,138 @@ static PermissionPolicy* GeneratePolicy(qcc::GUID128& guid, qcc::ECCPublicKey& a
     return policy;
 }
 
+static PermissionPolicy* GeneratePolicyPeerPublicKey(qcc::GUID128& guid, qcc::ECCPublicKey& adminPublicKey, qcc::ECCPublicKey& peerPublicKey)
+{
+    PermissionPolicy* policy = new PermissionPolicy();
+
+    policy->SetSerialNum(8742198);
+
+    /* add the admin section */
+    PermissionPolicy::Peer* admins = new PermissionPolicy::Peer[1];
+    admins[0].SetType(PermissionPolicy::Peer::PEER_GUID);
+    KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
+    keyInfo->SetKeyId(guid.GetBytes(), guid.SIZE);
+    keyInfo->SetPublicKey(&adminPublicKey);
+    admins[0].SetKeyInfo(keyInfo);
+    policy->SetAdmins(1, admins);
+
+    /* add the provider section */
+
+    PermissionPolicy::Term* terms = new PermissionPolicy::Term[1];
+
+    /* terms record 0 peer */
+    PermissionPolicy::Peer* peers = new PermissionPolicy::Peer[1];
+    peers[0].SetType(PermissionPolicy::Peer::PEER_GUID);
+    keyInfo = new KeyInfoNISTP256();
+    keyInfo->SetPublicKey(&peerPublicKey);
+    peers[0].SetKeyInfo(keyInfo);
+    terms[0].SetPeers(1, peers);
+    PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[2];
+    rules[0].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
+    PermissionPolicy::Rule::Member* prms = new PermissionPolicy::Rule::Member[3];
+    prms[0].SetMemberName("Up");
+    prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+    prms[1].SetMemberName("Down");
+    prms[1].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+    prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+    prms[2].SetMemberName("Volume");
+    prms[2].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
+    prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+    rules[0].SetMembers(3, prms);
+
+    rules[1].SetInterfaceName("org.allseenalliance.control.Mouse*");
+    prms = new PermissionPolicy::Rule::Member[1];
+    prms[0].SetMemberName("*");
+    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+    rules[1].SetMembers(1, prms);
+
+    terms[0].SetRules(2, rules);
+    policy->SetTerms(1, terms);
+
+    return policy;
+}
+
 static PermissionPolicy* GenerateMembeshipAuthData()
+{
+    PermissionPolicy* policy = new PermissionPolicy();
+
+    policy->SetSerialNum(88473);
+
+    /* add the provider section */
+
+    PermissionPolicy::Term* terms = new PermissionPolicy::Term[1];
+
+    /* terms record 0 */
+    PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[2];
+    rules[0].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
+    PermissionPolicy::Rule::Member* prms = new PermissionPolicy::Rule::Member[4];
+    prms[0].SetMemberName("Up");
+    prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+    prms[1].SetMemberName("Down");
+    prms[1].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+    prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+    prms[2].SetMemberName("ChannelChanged");
+    prms[2].SetMemberType(PermissionPolicy::Rule::Member::SIGNAL);
+    prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+    prms[3].SetMemberName("Volume");
+    prms[3].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
+    prms[3].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+    rules[0].SetMembers(4, prms);
+
+    rules[1].SetInterfaceName(BasePermissionMgmtTest::ONOFF_IFC_NAME);
+    prms = new PermissionPolicy::Rule::Member[1];
+    prms[0].SetMemberName("*");
+    prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+    rules[1].SetMembers(1, prms);
+
+    terms[0].SetRules(2, rules);
+    policy->SetTerms(1, terms);
+
+    return policy;
+}
+
+static PermissionPolicy* GenerateMembeshipAuthDataForAdmin()
+{
+    PermissionPolicy* policy = new PermissionPolicy();
+
+    policy->SetSerialNum(5672);
+
+    /* add the provider section */
+
+    PermissionPolicy::Term* terms = new PermissionPolicy::Term[1];
+
+    /* terms record 0 */
+    PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[2];
+    rules[0].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
+    PermissionPolicy::Rule::Member* prms = new PermissionPolicy::Rule::Member[3];
+    prms[0].SetMemberName("*");
+    prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+    prms[1].SetMemberName("*");
+    prms[1].SetMemberType(PermissionPolicy::Rule::Member::SIGNAL);
+    prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+    prms[2].SetMemberName("*");
+    prms[2].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
+    prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+    rules[0].SetMembers(3, prms);
+
+    rules[1].SetInterfaceName(BasePermissionMgmtTest::ONOFF_IFC_NAME);
+    prms = new PermissionPolicy::Rule::Member[1];
+    prms[0].SetMemberName("*");
+    prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+    rules[1].SetMembers(1, prms);
+
+    terms[0].SetRules(2, rules);
+    policy->SetTerms(1, terms);
+
+    return policy;
+}
+
+static PermissionPolicy* GenerateAuthDataProvideSignal()
 {
     PermissionPolicy* policy = new PermissionPolicy();
 
@@ -158,10 +290,10 @@ static PermissionPolicy* GenerateMembeshipAuthData()
     PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[1];
     rules[0].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
     PermissionPolicy::Rule::Member* prms = new PermissionPolicy::Rule::Member[2];
-    prms[0].SetMemberName("Up");
-    prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
-    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    prms[1].SetMemberName("Down");
+    prms[0].SetMemberName("ChannelChanged");
+    prms[0].SetMemberType(PermissionPolicy::Rule::Member::SIGNAL);
+    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+    prms[1].SetMemberName("*");
     prms[1].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
     prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
     rules[0].SetMembers(2, prms);
@@ -247,6 +379,14 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         status = newCert.EncodeCertificateDER(retIdentity);
         EXPECT_EQ(ER_OK, status) << "  newCert.EncodeCertificateDER failed.  Actual Status: " << QCC_StatusText(status);
         EXPECT_STREQ(der.c_str(), retIdentity.c_str()) << "  GetIdentity failed.  Return value does not equal original";
+
+        EnableSecurity("ALLJOYN_ECDHE_ECDSA");
+        /* reload the shared key store because of change on one bus */
+        adminProxyBus.ReloadKeyStore();
+        adminBus.ReloadKeyStore();
+        PermissionPolicy* policy = GenerateMembeshipAuthDataForAdmin();
+        InstallMembershipToAdmin(policy);
+        delete policy;
     }
 
     /**
@@ -376,12 +516,35 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         EXPECT_EQ(ER_OK, status) << "  LeaveSession failed.  Actual Status: " << QCC_StatusText(status);
     }
 
+    void Claims(bool usePSK)
+    {
+        if (usePSK) {
+            EnableSecurity("ALLJOYN_ECDHE_PSK");
+        } else {
+            EnableSecurity("ALLJOYN_ECDHE_NULL");
+        }
+        ClaimAdmin();
+        if (usePSK) {
+            EnableSecurity("ALLJOYN_ECDHE_PSK");
+        } else {
+            EnableSecurity("ALLJOYN_ECDHE_NULL");
+        }
+        ClaimService();
+        ClaimConsumer();
+        EnableSecurity("ALLJOYN_ECDHE_ECDSA");
+    }
+
     /**
      *  Install policy to service app
      */
     void InstallPolicyToService(PermissionPolicy& policy)
     {
         ProxyBusObject clientProxyObject(adminBus, serviceBus.GetUniqueName().c_str(), PERMISSION_MGMT_PATH, 0, false);
+
+        /* retrieve the policy */
+        PermissionPolicy aPolicy;
+        status = PermissionMgmtTestHelper::GetPolicy(adminBus, clientProxyObject, aPolicy);
+        EXPECT_NE(ER_OK, status) << "  GetPolicy not supposed to succeed.  Actual Status: " << QCC_StatusText(status);
 
         SetNotifyConfigSignalReceived(false);
         status = PermissionMgmtTestHelper::InstallPolicy(adminBus, clientProxyObject, policy);
@@ -441,20 +604,49 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
 
     }
 
+    void ReplaceServiceIdentityCertWithBadPublicKey()
+    {
+        ProxyBusObject clientProxyObject(adminBus, serviceBus.GetUniqueName().c_str(), PERMISSION_MGMT_PATH, 0, false);
+
+        /* retrieve the current identity cert */
+        IdentityCertificate cert;
+        status = PermissionMgmtTestHelper::GetIdentity(adminBus, clientProxyObject, cert);
+        EXPECT_EQ(ER_OK, status) << "  GetIdentity failed.  Actual Status: " << QCC_StatusText(status);
+
+        /* create a new identity cert */
+        ECCPrivateKey issuerPrivateKey;
+        ECCPublicKey issuerPubKey;
+        status = PermissionMgmtTestHelper::RetrieveDSAKeys(adminBus, issuerPrivateKey, issuerPubKey);
+        EXPECT_EQ(ER_OK, status) << "  RetrieveDSAKeys failed.  Actual Status: " << QCC_StatusText(status);
+        qcc::GUID128 issuerGUID;
+        PermissionMgmtTestHelper::GetGUID(adminBus, issuerGUID);
+        qcc::String der;
+        status = PermissionMgmtTestHelper::CreateIdentityCert("5050505", issuerGUID, &issuerPrivateKey, issuerGUID, &issuerPubKey, "Service Provider", der);
+        EXPECT_EQ(ER_OK, status) << "  CreateIdentityCert failed.  Actual Status: " << QCC_StatusText(status);
+
+        status = PermissionMgmtTestHelper::InstallIdentity(adminBus, clientProxyObject, der);
+        EXPECT_NE(ER_OK, status) << "  InstallIdentity did not fail.  Actual Status: " << QCC_StatusText(status);
+    }
+
     /**
      *  Install Membership to service provider
      */
-    void InstallMembershipToServiceProvider(PermissionPolicy* membershipAuthData)
+    void InstallMembershipToServiceProvider(const char* serial, qcc::GUID128& guildID, PermissionPolicy* membershipAuthData)
     {
         ProxyBusObject clientProxyObject(adminBus, serviceBus.GetUniqueName().c_str(), PERMISSION_MGMT_PATH, 0, false);
 
         ECCPublicKey claimedPubKey;
         status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(serviceBus, &claimedPubKey);
         EXPECT_EQ(ER_OK, status) << "  InstallMembership RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
-        status = PermissionMgmtTestHelper::InstallMembership(membershipSerial3, adminBus, clientProxyObject, adminBus, serviceGUID, &claimedPubKey, membershipGUID3, membershipAuthData);
+        status = PermissionMgmtTestHelper::InstallMembership(serial, adminBus, clientProxyObject, adminBus, serviceGUID, &claimedPubKey, guildID, membershipAuthData);
         EXPECT_EQ(ER_OK, status) << "  InstallMembership cert1 failed.  Actual Status: " << QCC_StatusText(status);
-        status = PermissionMgmtTestHelper::InstallMembership(membershipSerial3, adminBus, clientProxyObject, adminBus, serviceGUID, &claimedPubKey, membershipGUID3, membershipAuthData);
+        status = PermissionMgmtTestHelper::InstallMembership(serial, adminBus, clientProxyObject, adminBus, serviceGUID, &claimedPubKey, guildID, membershipAuthData);
         EXPECT_NE(ER_OK, status) << "  InstallMembership cert1 again is supposed to fail.  Actual Status: " << QCC_StatusText(status);
+    }
+
+    void InstallMembershipToServiceProvider(PermissionPolicy* membershipAuthData)
+    {
+        InstallMembershipToServiceProvider(membershipSerial3, membershipGUID3, membershipAuthData);
     }
 
     /**
@@ -479,15 +671,51 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     /**
      *  Install Membership to a consumer
      */
-    void InstallMembershipToConsumer(PermissionPolicy* membershipAuthData)
+    void InstallMembershipToConsumer(const char* serial, qcc::GUID128& guildID, PermissionPolicy* membershipAuthData)
     {
         ProxyBusObject clientProxyObject(adminBus, consumerBus.GetUniqueName().c_str(), PERMISSION_MGMT_PATH, 0, false);
 
         ECCPublicKey claimedPubKey;
         status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(consumerBus, &claimedPubKey);
         EXPECT_EQ(ER_OK, status) << "  InstallMembershipToConsumer RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
-        status = PermissionMgmtTestHelper::InstallMembership(membershipSerial1, adminBus, clientProxyObject, adminBus, consumerGUID, &claimedPubKey, membershipGUID1, membershipAuthData);
+        status = PermissionMgmtTestHelper::InstallMembership(serial, adminBus, clientProxyObject, adminBus, consumerGUID, &claimedPubKey, guildID, membershipAuthData);
         EXPECT_EQ(ER_OK, status) << "  InstallMembershipToConsumer cert1 failed.  Actual Status: " << QCC_StatusText(status);
+    }
+
+    /**
+     *  Install Membership to a consumer
+     */
+    void InstallMembershipToConsumer(PermissionPolicy* membershipAuthData)
+    {
+        InstallMembershipToConsumer(membershipSerial1, membershipGUID1, membershipAuthData);
+    }
+
+    /**
+     *  Install Membership to a consumer
+     */
+    void InstallOthersMembershipToConsumer(PermissionPolicy* membershipAuthData)
+    {
+        ProxyBusObject clientProxyObject(adminBus, consumerBus.GetUniqueName().c_str(), PERMISSION_MGMT_PATH, 0, false);
+
+        ECCPublicKey claimedPubKey;
+        status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(adminBus, &claimedPubKey);
+        EXPECT_EQ(ER_OK, status) << "  InstallOthersMembershipToConsumer RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
+        status = PermissionMgmtTestHelper::InstallMembership(membershipSerial1, adminBus, clientProxyObject, adminBus, consumerGUID, &claimedPubKey, membershipGUID1, membershipAuthData);
+        EXPECT_EQ(ER_OK, status) << "  InstallOthersMembershipToConsumer InstallMembership failed.  Actual Status: " << QCC_StatusText(status);
+    }
+
+    /**
+     *  Install Membership to the admin
+     */
+    void InstallMembershipToAdmin(PermissionPolicy* membershipAuthData)
+    {
+        ProxyBusObject clientProxyObject(adminProxyBus, adminBus.GetUniqueName().c_str(), PERMISSION_MGMT_PATH, 0, false);
+
+        ECCPublicKey claimedPubKey;
+        status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(adminBus, &claimedPubKey);
+        EXPECT_EQ(ER_OK, status) << "  InstallMembershipToAdmin RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
+        status = PermissionMgmtTestHelper::InstallMembership(membershipSerial1, adminProxyBus, clientProxyObject, adminBus, consumerGUID, &claimedPubKey, membershipGUID1, membershipAuthData);
+        EXPECT_EQ(ER_OK, status) << "  InstallMembershipToAdmin cert1 failed.  Actual Status: " << QCC_StatusText(status);
     }
 
     /**
@@ -509,23 +737,76 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
 
         ProxyBusObject clientProxyObject(consumerBus, serviceBus.GetUniqueName().c_str(), GetPath(), 0, false);
         QStatus status = PermissionMgmtTestHelper::ExcerciseOn(consumerBus, clientProxyObject);
-        EXPECT_EQ(ER_OK, status) << "  AccessOnOffByAnyUser ExcerciseOn failed.  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status) << "  AnyUserCanCallOnAndNotOff ExcerciseOn failed.  Actual Status: " << QCC_StatusText(status);
         status = PermissionMgmtTestHelper::ExcerciseOff(consumerBus, clientProxyObject);
-        EXPECT_NE(ER_OK, status) << "  AccessOffByAnyUser ExcersizeOff did not fail.  Actual Status: " << QCC_StatusText(status);
+        EXPECT_NE(ER_OK, status) << "  AnyUserCanCallOnAndNotOff ExcersizeOff did not fail.  Actual Status: " << QCC_StatusText(status);
     }
+
+    /**
+     *  Consumer can't call TV On
+     */
+    void ConsumerCannotCallTVOn()
+    {
+
+        ProxyBusObject clientProxyObject(consumerBus, serviceBus.GetUniqueName().c_str(), GetPath(), 0, false);
+        QStatus status = PermissionMgmtTestHelper::ExcerciseOn(consumerBus, clientProxyObject);
+        EXPECT_NE(ER_OK, status) << "  ConsumerCannotCallTVOn ExcerciseOn should have failed.  Actual Status: " << QCC_StatusText(status);
+    }
+
+    /**
+     *  Consumer can call TV Off
+     */
+    void ConsumerCanCallTVOff()
+    {
+
+        ProxyBusObject clientProxyObject(consumerBus, serviceBus.GetUniqueName().c_str(), GetPath(), 0, false);
+        QStatus status = PermissionMgmtTestHelper::ExcerciseOff(consumerBus, clientProxyObject);
+        EXPECT_EQ(ER_OK, status) << "  ConsumerCanCallTVOff ExcerciseOff failed.  Actual Status: " << QCC_StatusText(status);
+    }
+
     /**
      *  Guild member can turn up/down but can't specify a channel
      */
-    void GuildMemberCanTVUpAndDownAndNotChannel()
+    void ConsumerCanTVUpAndDownAndNotChannel()
     {
 
         ProxyBusObject clientProxyObject(consumerBus, serviceBus.GetUniqueName().c_str(), GetPath(), 0, false);
         QStatus status = PermissionMgmtTestHelper::ExcerciseTVUp(consumerBus, clientProxyObject);
-        EXPECT_EQ(ER_OK, status) << "  AccessTVByUserWithGuildMembership ExcerciseTVUp failed.  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status) << "  ConsumerCanTVUpAndDownAndNotChannel ExcerciseTVUp failed.  Actual Status: " << QCC_StatusText(status);
         status = PermissionMgmtTestHelper::ExcerciseTVDown(consumerBus, clientProxyObject);
-        EXPECT_EQ(ER_OK, status) << "  AccessTVByUserWithGuildMembership ExcerciseTVDown failed.  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status) << "  ConsumerCanTVUpAndDownAndNotChannel ExcerciseTVDown failed.  Actual Status: " << QCC_StatusText(status);
         status = PermissionMgmtTestHelper::ExcerciseTVChannel(consumerBus, clientProxyObject);
-        EXPECT_NE(ER_OK, status) << "  AccessTVByUserWithGuildMembership ExcerciseTVChannel did not fail.  Actual Status: " << QCC_StatusText(status);
+        EXPECT_NE(ER_OK, status) << "  ConsumerCanTVUpAndDownAndNotChannel ExcerciseTVChannel did not fail.  Actual Status: " << QCC_StatusText(status);
+
+        uint32_t tvVolume = 35;
+        status = PermissionMgmtTestHelper::SetTVVolume(consumerBus, clientProxyObject, tvVolume);
+        EXPECT_EQ(ER_OK, status) << "  ConsumerCanTVUpAndDownAndNotChannel SetTVVolume failed.  Actual Status: " << QCC_StatusText(status);
+        uint32_t newTvVolume = 0;
+        status = PermissionMgmtTestHelper::GetTVVolume(consumerBus, clientProxyObject, newTvVolume);
+        EXPECT_EQ(ER_OK, status) << "  ConsumerCanTVUpAndDownAndNotChannel GetTVVolume failed.  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(newTvVolume, tvVolume) << "  ConsumerCanTVUpAndDownAndNotChannel GetTVVolume got wrong TV volume.";
+    }
+
+    /**
+     *  consumer cannot turn TV up
+     */
+    void ConsumerCannotTurnTVUp()
+    {
+
+        ProxyBusObject clientProxyObject(consumerBus, serviceBus.GetUniqueName().c_str(), GetPath(), 0, false);
+        QStatus status = PermissionMgmtTestHelper::ExcerciseTVUp(consumerBus, clientProxyObject);
+        EXPECT_NE(ER_OK, status) << "  ConsumerCannotTurnTVUp ExcerciseTVUp failed.  Actual Status: " << QCC_StatusText(status);
+    }
+
+    /**
+     *  Guild member can turn up/down but can't specify a channel
+     */
+    void AdminCanChangeChannlel()
+    {
+
+        ProxyBusObject clientProxyObject(adminBus, serviceBus.GetUniqueName().c_str(), GetPath(), 0, false);
+        status = PermissionMgmtTestHelper::ExcerciseTVChannel(adminBus, clientProxyObject);
+        EXPECT_EQ(ER_OK, status) << "  AdminCanChangeChannlel failed.  Actual Status: " << QCC_StatusText(status);
     }
 
     /*
@@ -646,12 +927,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
  */
 TEST_F(PermissionMgmtUseCaseTest, TestAllCalls)
 {
-    EnableSecurity("ALLJOYN_ECDHE_NULL");
-    ClaimAdmin();
-    ClaimService();
-    ClaimConsumer();
-
-    EnableSecurity("ALLJOYN_ECDHE_ECDSA");
+    Claims(false);
     qcc::GUID128 issuerGUID;
     PermissionMgmtTestHelper::GetGUID(adminBus, issuerGUID);
     ECCPrivateKey issuerPrivateKey;
@@ -669,21 +945,34 @@ TEST_F(PermissionMgmtUseCaseTest, TestAllCalls)
     delete policy;
 
     ReplaceServiceIdentityCert();
-    policy = GenerateMembeshipAuthData();
+    policy = GenerateAuthDataProvideSignal();
     InstallMembershipToServiceProvider(policy);
+    delete policy;
+    policy = GenerateMembeshipAuthData();
     InstallMembershipToConsumer(policy);
     delete policy;
-    RemoveMembershipFromServiceProvider();
     InstallGuildEquivalence();
+
     /* setup the application interfaces for access tests */
     CreateAppInterfaces(serviceBus, true);
     CreateAppInterfaces(consumerBus, false);
 
     AnyUserCanCallOnAndNotOff();
-    GuildMemberCanTVUpAndDownAndNotChannel();
+    SetChannelChangedSignalReceived(false);
+    ConsumerCanTVUpAndDownAndNotChannel();
+    /* sleep a second to see whether the ChannelChanged signal is received */
+    for (int cnt = 0; cnt < 100; cnt++) {
+        if (GetChannelChangedSignalReceived()) {
+            break;
+        }
+        qcc::Sleep(10);
+    }
+    EXPECT_TRUE(GetChannelChangedSignalReceived()) << " Fail to receive expected ChannelChanged signal.";
+
     SetPermissionManifestOnServiceProvider();
 
     RetrieveServicePublicKey();
+    RemoveMembershipFromServiceProvider();
     RemovePolicyFromServiceProvider();
     RemoveMembershipFromConsumer();
     FailResetServiceByConsumer();
@@ -691,16 +980,11 @@ TEST_F(PermissionMgmtUseCaseTest, TestAllCalls)
 }
 
 /*
- *  Simple case: claiming, install policy, install membership, and access
+ *  Case: claiming, install policy, install membership, and access
  */
 TEST_F(PermissionMgmtUseCaseTest, ClaimPolicyMembershipAccess)
 {
-    EnableSecurity("ALLJOYN_ECDHE_PSK");
-    ClaimAdmin();
-    ClaimService();
-    ClaimConsumer();
-
-    EnableSecurity("ALLJOYN_ECDHE_ECDSA");
+    Claims(true);
     qcc::GUID128 issuerGUID;
     PermissionMgmtTestHelper::GetGUID(adminBus, issuerGUID);
     ECCPrivateKey issuerPrivateKey;
@@ -725,8 +1009,190 @@ TEST_F(PermissionMgmtUseCaseTest, ClaimPolicyMembershipAccess)
     CreateAppInterfaces(consumerBus, false);
 
     AnyUserCanCallOnAndNotOff();
-    GuildMemberCanTVUpAndDownAndNotChannel();
+    ConsumerCanTVUpAndDownAndNotChannel();
     SetPermissionManifestOnServiceProvider();
 
 }
 
+/*
+ *  Service Provider has no policy: claiming, access
+ */
+TEST_F(PermissionMgmtUseCaseTest, ClaimNoPolicyAccess)
+{
+    Claims(true);
+    qcc::GUID128 issuerGUID;
+    PermissionMgmtTestHelper::GetGUID(adminBus, issuerGUID);
+    ECCPrivateKey issuerPrivateKey;
+    ECCPublicKey issuerPubKey;
+    status = PermissionMgmtTestHelper::RetrieveDSAKeys(adminBus, issuerPrivateKey, issuerPubKey);
+    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAKeys failed.  Actual Status: " << QCC_StatusText(status);
+
+    PermissionPolicy* authData = GenerateMembeshipAuthData();
+    InstallMembershipToConsumer(authData);
+    delete authData;
+    /* setup the application interfaces for access tests */
+    CreateAppInterfaces(serviceBus, true);
+    CreateAppInterfaces(consumerBus, false);
+
+    ConsumerCannotCallTVOn();
+}
+
+/*
+ *  Access granted for peer public key
+ */
+TEST_F(PermissionMgmtUseCaseTest, AccessByPublicKey)
+{
+    Claims(true);
+    qcc::GUID128 issuerGUID;
+    PermissionMgmtTestHelper::GetGUID(adminBus, issuerGUID);
+    ECCPrivateKey issuerPrivateKey;
+    ECCPublicKey issuerPubKey;
+    status = PermissionMgmtTestHelper::RetrieveDSAKeys(adminBus, issuerPrivateKey, issuerPubKey);
+    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAKeys failed.  Actual Status: " << QCC_StatusText(status);
+
+    /* generate a policy */
+    ECCPublicKey consumerPublicKey;
+    status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(consumerBus, &consumerPublicKey);
+    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
+    PermissionPolicy* policy = GeneratePolicyPeerPublicKey(issuerGUID, issuerPubKey, consumerPublicKey);
+    ASSERT_TRUE(policy) << "GeneratePolicy failed.";
+    InstallPolicyToService(*policy);
+    delete policy;
+
+    policy = GenerateMembeshipAuthData();
+    InstallMembershipToConsumer(policy);
+    delete policy;
+    /* setup the application interfaces for access tests */
+    CreateAppInterfaces(serviceBus, true);
+    CreateAppInterfaces(consumerBus, false);
+
+    ConsumerCanTVUpAndDownAndNotChannel();
+}
+
+/*
+ *  Case: admin has full access after claim
+ */
+TEST_F(PermissionMgmtUseCaseTest, AdminHasFullAccess)
+{
+    Claims(true);
+
+    /* setup the application interfaces for access tests */
+    CreateAppInterfaces(serviceBus, true);
+    CreateAppInterfaces(adminBus, false);
+
+    AdminCanChangeChannlel();
+}
+
+/*
+ *  Case: install identity cert with different subject public key from target's
+ */
+TEST_F(PermissionMgmtUseCaseTest, InstallIdentityCertWithDifferentPubKey)
+{
+    Claims(false);
+    ReplaceServiceIdentityCertWithBadPublicKey();
+}
+
+/*
+ *  Case: claiming, install policy, install membership, and access
+ */
+TEST_F(PermissionMgmtUseCaseTest, SendingOthersMembershipCert)
+{
+    Claims(true);
+    qcc::GUID128 issuerGUID;
+    PermissionMgmtTestHelper::GetGUID(adminBus, issuerGUID);
+    ECCPrivateKey issuerPrivateKey;
+    ECCPublicKey issuerPubKey;
+    status = PermissionMgmtTestHelper::RetrieveDSAKeys(adminBus, issuerPrivateKey, issuerPubKey);
+    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAKeys failed.  Actual Status: " << QCC_StatusText(status);
+
+    /* generate a policy */
+    ECCPublicKey guildAuthorityPubKey;
+    status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(consumerBus, &guildAuthorityPubKey);
+    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
+    PermissionPolicy* policy = GeneratePolicy(issuerGUID, issuerPubKey, guildAuthorityPubKey);
+    ASSERT_TRUE(policy) << "GeneratePolicy failed.";
+    InstallPolicyToService(*policy);
+    delete policy;
+
+    policy = GenerateMembeshipAuthData();
+    InstallOthersMembershipToConsumer(policy);
+    delete policy;
+    /* setup the application interfaces for access tests */
+    CreateAppInterfaces(serviceBus, true);
+    CreateAppInterfaces(consumerBus, false);
+
+    ConsumerCannotTurnTVUp();
+}
+
+/*
+ *  Case: provider has more membership certs than consumer
+ */
+TEST_F(PermissionMgmtUseCaseTest, ProviderHasMoreMembershipCertsThanConsumer)
+{
+    Claims(false);
+    qcc::GUID128 issuerGUID;
+    PermissionMgmtTestHelper::GetGUID(adminBus, issuerGUID);
+    ECCPrivateKey issuerPrivateKey;
+    ECCPublicKey issuerPubKey;
+    status = PermissionMgmtTestHelper::RetrieveDSAKeys(adminBus, issuerPrivateKey, issuerPubKey);
+    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAKeys failed.  Actual Status: " << QCC_StatusText(status);
+
+    /* generate a policy */
+    ECCPublicKey guildAuthorityPubKey;
+    status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(consumerBus, &guildAuthorityPubKey);
+    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
+    PermissionPolicy* policy = GeneratePolicy(issuerGUID, issuerPubKey, guildAuthorityPubKey);
+    ASSERT_TRUE(policy) << "GeneratePolicy failed.";
+    InstallPolicyToService(*policy);
+    delete policy;
+    policy = GenerateAuthDataProvideSignal();
+    InstallMembershipToServiceProvider(policy);
+    delete policy;
+
+    policy = GenerateMembeshipAuthData();
+    InstallMembershipToConsumer(policy);
+    delete policy;
+    /* setup the application interfaces for access tests */
+    CreateAppInterfaces(serviceBus, true);
+    CreateAppInterfaces(consumerBus, false);
+
+    AnyUserCanCallOnAndNotOff();
+    ConsumerCanTVUpAndDownAndNotChannel();
+
+}
+
+/*
+ *  Case: consumer has more membership certs than provider
+ */
+TEST_F(PermissionMgmtUseCaseTest, ConsumerHasMoreMembershipCertsThanService)
+{
+    Claims(false);
+    qcc::GUID128 issuerGUID;
+    PermissionMgmtTestHelper::GetGUID(adminBus, issuerGUID);
+    ECCPrivateKey issuerPrivateKey;
+    ECCPublicKey issuerPubKey;
+    status = PermissionMgmtTestHelper::RetrieveDSAKeys(adminBus, issuerPrivateKey, issuerPubKey);
+    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAKeys failed.  Actual Status: " << QCC_StatusText(status);
+
+    /* generate a policy */
+    ECCPublicKey guildAuthorityPubKey;
+    status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(consumerBus, &guildAuthorityPubKey);
+    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
+    PermissionPolicy* policy = GeneratePolicy(issuerGUID, issuerPubKey, guildAuthorityPubKey);
+    ASSERT_TRUE(policy) << "GeneratePolicy failed.";
+    InstallPolicyToService(*policy);
+    delete policy;
+    policy = GenerateAuthDataProvideSignal();
+    InstallMembershipToServiceProvider(policy);
+    delete policy;
+
+    policy = GenerateMembeshipAuthData();
+    InstallMembershipToConsumer(policy);
+    InstallMembershipToConsumer(membershipSerial2, membershipGUID2, policy);
+    delete policy;
+    /* setup the application interfaces for access tests */
+    CreateAppInterfaces(serviceBus, true);
+    CreateAppInterfaces(consumerBus, false);
+
+    ConsumerCanCallTVOff();
+}

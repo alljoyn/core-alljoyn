@@ -7,7 +7,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -120,11 +120,17 @@ class PermissionMgmtObj : public BusObject {
     /**
      * Parse the message received from the PermissionMgmt's SendMembership method.
      * @param args the message
+     * @param[in,out] done output flag to indicate that process is complete
      * @return
      *         - ER_OK if successful.
      *         - an error status otherwise.
      */
-    QStatus ParseSendMemberships(Message& msg);
+    QStatus ParseSendMemberships(Message& msg, bool& done);
+    QStatus ParseSendMemberships(Message& msg)
+    {
+        bool done = false;
+        return ParseSendMemberships(msg, done);
+    }
 
     /**
      * Is there any trust anchor installed?
@@ -286,6 +292,7 @@ class PermissionMgmtObj : public BusObject {
     QStatus LocateMembershipEntry(const qcc::String& serialNum, const qcc::GUID128& issuer, qcc::GUID128& membershipGuid);
     QStatus LoadAndValidateAuthData(const qcc::String& serial, const qcc::GUID128& issuer, MsgArg& authDataArg, PermissionPolicy& authorization, qcc::GUID128& membershipGuid);
     void ClearMembershipCertMap(MembershipCertMap& certMap);
+    QStatus GetAllMembershipCerts(MembershipCertMap& certMap, bool loadCert);
     QStatus GetAllMembershipCerts(MembershipCertMap& certMap);
     void ClearTrustAnchors();
     void PolicyChanged(PermissionPolicy* policy);
@@ -293,7 +300,9 @@ class PermissionMgmtObj : public BusObject {
     QStatus GetConfiguration(Configuration& config);
     void Reset(const InterfaceDescription::Member* member, Message& msg);
     QStatus PerformReset(bool keepForClaim);
+    QStatus SameSubjectPublicKey(qcc::CertificateX509& cert, bool& outcome);
     QStatus StoreIdentityCertificate(MsgArg& certArg);
+    QStatus LocalMembershipsChanged();
 
     /**
      * Bind to an exclusive port for PermissionMgmt object.

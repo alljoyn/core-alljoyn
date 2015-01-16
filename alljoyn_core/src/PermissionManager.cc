@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -50,9 +50,11 @@ struct MessageHolder {
 };
 
 struct Right {
-    uint8_t auth;
+    uint8_t authByPolicy;   /* remote peer is authorized by local policy */
+    uint8_t authByLocalMembership;  /* local peer is authorized by installed membership certifates */
+    uint8_t authByRemoteMembership; /* remote peer is authorized by its membership certificates */
 
-    Right() : auth(0)
+    Right() : authByPolicy(0), authByLocalMembership(0), authByRemoteMembership(0)
     {
     }
 };
@@ -102,7 +104,7 @@ static bool IsActionAllowed(uint8_t allowedActions, uint8_t requestedAction)
  *
  */
 
-static bool IsRuleMatched(const PermissionPolicy::Rule& rule, const MessageHolder& msgHolder, const Right& right)
+static bool IsRuleMatched(const PermissionPolicy::Rule& rule, const MessageHolder& msgHolder, uint8_t requiredAuth)
 {
     if (rule.GetMembersSize() == 0) {
         return false;
@@ -150,7 +152,7 @@ static bool IsRuleMatched(const PermissionPolicy::Rule& rule, const MessageHolde
             /* match the member name, now check the action mask */
             if (IsActionDenied(members[cnt].GetActionMask())) {
                 buckets[cnt] = -buckets[cnt];
-            } else if (!IsActionAllowed(members[cnt].GetActionMask(), right.auth)) {
+            } else if (!IsActionAllowed(members[cnt].GetActionMask(), requiredAuth)) {
                 buckets[cnt] = 0;
             }
         }
@@ -184,19 +186,19 @@ static bool IsRuleMatched(const PermissionPolicy::Rule& rule, const MessageHolde
     return false;
 }
 
-static bool IsPolicyTermMatched(const PermissionPolicy::Term& term, const MessageHolder& msgHolder, const Right& right)
+static bool IsPolicyTermMatched(const PermissionPolicy::Term& term, const MessageHolder& msgHolder, uint8_t requiredAuth)
 {
 
     const PermissionPolicy::Rule* rules = term.GetRules();
     for (size_t cnt = 0; cnt < term.GetRulesSize(); cnt++) {
-        if (IsRuleMatched(rules[cnt], msgHolder, right)) {
+        if (IsRuleMatched(rules[cnt], msgHolder, requiredAuth)) {
             return true;
         }
     }
     return false;
 }
 
-static bool IsAuthorizedByAnyUserPolicy(const PermissionPolicy* policy, const MessageHolder& msgHolder, Right& right)
+static bool IsAuthorizedByAnyUserPolicy(const PermissionPolicy* policy, const MessageHolder& msgHolder, uint8_t requiredAuth)
 {
     const PermissionPolicy::Term* terms = policy->GetTerms();
     for (size_t cnt = 0; cnt < policy->GetTermsSize(); cnt++) {
@@ -211,7 +213,7 @@ static bool IsAuthorizedByAnyUserPolicy(const PermissionPolicy* policy, const Me
         if (!qualified) {
             continue;
         }
-        if (IsPolicyTermMatched(terms[cnt], msgHolder, right)) {
+        if (IsPolicyTermMatched(terms[cnt], msgHolder, requiredAuth)) {
             return true;
         }
     }
@@ -239,7 +241,7 @@ static bool TermHasMatchingGuild(const PermissionPolicy::Term& term, const GUID1
     return matched;
 }
 
-static bool IsAuthorizedByMembership(const GUID128& guildGUID, PermissionPolicy* policy, const MessageHolder& msgHolder, const Right& right)
+static bool IsAuthorizedByMembership(const GUID128& guildGUID, PermissionPolicy* policy, const MessageHolder& msgHolder, uint8_t requiredAuth)
 {
     const PermissionPolicy::Term* terms = policy->GetTerms();
     for (size_t cnt = 0; cnt < policy->GetTermsSize(); cnt++) {
@@ -253,7 +255,22 @@ static bool IsAuthorizedByMembership(const GUID128& guildGUID, PermissionPolicy*
         if (!qualified) {
             continue;
         }
-        if (IsPolicyTermMatched(terms[cnt], msgHolder, right)) {
+        if (IsPolicyTermMatched(terms[cnt], msgHolder, requiredAuth)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * Is the given message authorized by any of the remote peer membership certificate auth data?
+ */
+static bool IsAuthorizedByMembershipCerts(const _PeerState::GuildMap& guildMap, const MessageHolder& msgHolder, uint8_t requiredAuth)
+{
+    for (_PeerState::GuildMap::const_iterator it = guildMap.begin(); it != guildMap.end(); it++) {
+        _PeerState::GuildMetadata* metadata = it->second;
+        QCC_DbgTrace(("IsAuthorizedByMembershipCerts with cert %s authData %s\n", metadata->cert.ToString().c_str(), metadata->authData.ToString().c_str()));
+        if (IsAuthorizedByMembership(metadata->cert.GetGuild(), &metadata->authData, msgHolder, requiredAuth)) {
             return true;
         }
     }
@@ -264,7 +281,7 @@ static bool IsAuthorizedByMembership(const GUID128& guildGUID, PermissionPolicy*
  * Is the given message authorized by a guild policy that is common between the peer.
  * The consumer must be both authorized in its membership and in the provider's policy for any guild in common.
  */
-static bool IsAuthorizedByGuildsInCommonPolicies(const PermissionPolicy* policy, const MessageHolder& msgHolder, Right& right, PeerState& peerState)
+static bool IsAuthorizedByGuildsInCommonPolicies(const PermissionPolicy* policy, const MessageHolder& msgHolder, uint8_t policyAuth, PeerState& peerState, uint8_t peerAuth)
 {
     for (_PeerState::GuildMap::iterator it = peerState->guildMap.begin(); it != peerState->guildMap.end(); it++) {
         _PeerState::GuildMetadata* metadata = it->second;
@@ -274,9 +291,12 @@ static bool IsAuthorizedByGuildsInCommonPolicies(const PermissionPolicy* policy,
             if (!TermHasMatchingGuild(terms[cnt], metadata->cert.GetGuild())) {
                 continue;
             }
-            if (IsPolicyTermMatched(terms[cnt], msgHolder, right)) {
+            if (IsPolicyTermMatched(terms[cnt], msgHolder, policyAuth)) {
+                if (peerAuth == 0) {
+                    return true;
+                }
                 /* validate the peer auth data to make sure it was granted the same thing */
-                if (IsAuthorizedByMembership(metadata->cert.GetGuild(), &metadata->authData, msgHolder, right)) {
+                if (IsAuthorizedByMembership(metadata->cert.GetGuild(), &metadata->authData, msgHolder, peerAuth)) {
                     return true;
                 }
             }
@@ -285,7 +305,7 @@ static bool IsAuthorizedByGuildsInCommonPolicies(const PermissionPolicy* policy,
     return false;
 }
 
-static bool IsAuthorizedByPeerPublicKey(const PermissionPolicy* policy, const ECCPublicKey& peerPublicKey, const MessageHolder& msgHolder, Right& right)
+static bool IsAuthorizedByPeerPublicKey(const PermissionPolicy* policy, const ECCPublicKey& peerPublicKey, const MessageHolder& msgHolder, uint8_t requiredAuth)
 {
     const PermissionPolicy::Term* terms = policy->GetTerms();
     for (size_t cnt = 0; cnt < policy->GetTermsSize(); cnt++) {
@@ -302,7 +322,7 @@ static bool IsAuthorizedByPeerPublicKey(const PermissionPolicy* policy, const EC
         if (!qualified) {
             continue;
         }
-        if (IsPolicyTermMatched(terms[cnt], msgHolder, right)) {
+        if (IsPolicyTermMatched(terms[cnt], msgHolder, requiredAuth)) {
             return true;
         }
     }
@@ -314,53 +334,110 @@ static void GenRight(const MessageHolder& msgHolder, Right& right)
     if (msgHolder.propertyRequest) {
         if (msgHolder.isSetProperty) {
             /* SetProperty */
-            right.auth = PermissionPolicy::Rule::Member::ACTION_MODIFY;
+            if (msgHolder.send) {
+                right.authByLocalMembership = PermissionPolicy::Rule::Member::ACTION_MODIFY;
+            } else {
+                right.authByPolicy = PermissionPolicy::Rule::Member::ACTION_MODIFY;
+            }
         } else {
             /* a GetProperty */
-            right.auth = PermissionPolicy::Rule::Member::ACTION_OBSERVE;
+            if (msgHolder.send) {
+                right.authByLocalMembership = PermissionPolicy::Rule::Member::ACTION_OBSERVE;
+            } else {
+                right.authByPolicy = PermissionPolicy::Rule::Member::ACTION_OBSERVE;
+            }
         }
+        right.authByRemoteMembership = right.authByPolicy;
     } else if (msgHolder.msg->GetType() == MESSAGE_METHOD_CALL) {
         /* a method call */
-        right.auth = PermissionPolicy::Rule::Member::ACTION_MODIFY;
+        if (msgHolder.send) {
+            right.authByLocalMembership = PermissionPolicy::Rule::Member::ACTION_MODIFY;
+        } else {
+            right.authByPolicy = PermissionPolicy::Rule::Member::ACTION_MODIFY;
+        }
+        right.authByRemoteMembership = right.authByPolicy;
     } else if (msgHolder.msg->GetType() == MESSAGE_SIGNAL) {
         if (msgHolder.send) {
             /* send a signal */
-            right.auth = PermissionPolicy::Rule::Member::ACTION_PROVIDE;
+            right.authByLocalMembership = PermissionPolicy::Rule::Member::ACTION_PROVIDE;
         } else {
             /* receive a signal */
-            right.auth = PermissionPolicy::Rule::Member::ACTION_OBSERVE;
+            right.authByLocalMembership = PermissionPolicy::Rule::Member::ACTION_OBSERVE;
+            right.authByRemoteMembership = PermissionPolicy::Rule::Member::ACTION_PROVIDE;
         }
     }
 }
 
-static bool IsAuthorized(const MessageHolder& msgHolder, const PermissionPolicy* policy, PeerState& peerState, PermissionMgmtObj* permissionMgmtObj)
+static bool IsAuthorized(const MessageHolder& msgHolder, const PermissionPolicy* policy, const _PeerState::GuildMap& localMembershipMap, PeerState& peerState, PermissionMgmtObj* permissionMgmtObj)
 {
-    QCC_DbgPrintf(("IsAuthorized with objPath %s iName %s mbrName %s", msgHolder.objPath, msgHolder.iName, msgHolder.mbrName));
-    if (policy == NULL) {
-        return true;  /* no policy no enforcement */
-    }
     Right right;
     GenRight(msgHolder, right);
 
     bool authorized = false;
 
-    authorized = IsAuthorizedByAnyUserPolicy(policy, msgHolder, right);
-    if (authorized) {
-        return true;
-    }
-    authorized = IsAuthorizedByGuildsInCommonPolicies(policy, msgHolder, right, peerState);
-    if (authorized) {
-        return true;
-    }
-    if (!msgHolder.send) {
-        ECCPublicKey peerPublicKey;
-        QStatus status = permissionMgmtObj->GetConnectedPeerPublicKey(peerState->GetGuid(), &peerPublicKey);
-        if (ER_OK != status) {
-            return false;
+    QCC_DbgPrintf(("IsAuthorized with required permission local %d policy %d remote %d\n", right.authByLocalMembership, right.authByPolicy, right.authByRemoteMembership));
+    if (right.authByLocalMembership) {
+        /* validate the local peer auth data to make sure it was granted to perform such action */
+        if (localMembershipMap.empty()) {
+            /* default denied */
+            authorized = false;
+            QCC_DbgPrintf(("Not authorized because of missing local membership cert"));
+        } else {
+            authorized = IsAuthorizedByMembershipCerts(localMembershipMap, msgHolder, right.authByLocalMembership);
+            QCC_DbgPrintf(("authorized by local membership cert: %d", authorized));
         }
-        return IsAuthorizedByPeerPublicKey(policy, peerPublicKey, msgHolder, right);
     }
-    return false;
+
+    if (right.authByPolicy) {
+        if (policy == NULL) {
+            authorized = false;  /* no policy deny all */
+            QCC_DbgPrintf(("Not authorized because of missing policy"));
+            return false;
+        } else {
+            /* validate the remote peer auth data to make sure it was granted to perform such action */
+            authorized = IsAuthorizedByAnyUserPolicy(policy, msgHolder, right.authByPolicy);
+            QCC_DbgPrintf(("authorized by any user policy: %d", authorized));
+            if (authorized) {
+                right.authByRemoteMembership = 0;  /* mark to skip this check later since it is no longer required */
+            }
+            if (!authorized) {
+                authorized = IsAuthorizedByGuildsInCommonPolicies(policy, msgHolder, right.authByPolicy, peerState, right.authByRemoteMembership);
+                right.authByRemoteMembership = 0;  /* mark to skip this check later since it is already done */
+                QCC_DbgPrintf(("authorized by guild policy terms in common: %d", authorized));
+            }
+            if (!authorized) {
+                if (!msgHolder.send) {
+                    ECCPublicKey peerPublicKey;
+                    QStatus status = permissionMgmtObj->GetConnectedPeerPublicKey(peerState->GetGuid(), &peerPublicKey);
+                    if (ER_OK != status) {
+                        QCC_DbgPrintf(("Failed to retrieve public key from peer session"));
+                        return false;
+                    }
+                    authorized = IsAuthorizedByPeerPublicKey(policy, peerPublicKey, msgHolder, right.authByPolicy);
+                    QCC_DbgPrintf(("authorized by peer specific policy terms: %d", authorized));
+                    if (authorized) {
+                        right.authByRemoteMembership = 0;  /* mark to skip this check later since it is no longer required */
+                    }
+                }
+            }
+            if (!authorized) {
+                QCC_DbgPrintf(("Not authorized by policy"));
+                return false;
+            }
+        }
+    }
+
+    if (right.authByRemoteMembership) {
+        if (peerState->guildMap.empty()) {
+            authorized = false;
+            QCC_DbgPrintf(("Not authorized because of missing peer's membership cert"));
+        } else {
+            /* validate the remote peer auth data to make sure it was granted to perform such action */
+            authorized = IsAuthorizedByMembershipCerts(peerState->guildMap, msgHolder, right.authByRemoteMembership);
+            QCC_DbgPrintf(("authorized by peer's membership cert: %d", authorized));
+        }
+    }
+    return authorized;
 }
 
 static bool IsStdInterface(const char* iName)
@@ -469,7 +546,13 @@ static QStatus ParsePropertiesMessage(MessageHolder& holder)
 
 bool PermissionManager::PeerHasAdminPriv(const GUID128& peerGuid)
 {
-    return permissionMgmtObj->IsTrustAnchor(peerGuid);
+    ECCPublicKey peerPublicKey;
+    QStatus status = permissionMgmtObj->GetConnectedPeerPublicKey(peerGuid, &peerPublicKey);
+    if (ER_OK != status) {
+        QCC_DbgPrintf(("HsAdminPriv failed to retrieve public key for peer %s", peerGuid.ToString().c_str()));
+        return false;
+    }
+    return permissionMgmtObj->IsTrustAnchor(&peerPublicKey);
 }
 
 bool PermissionManager::AuthorizePermissionMgmt(bool send, const GUID128& peerGuid, Message& msg)
@@ -537,13 +620,19 @@ QStatus PermissionManager::AuthorizeMessage(bool send, Message& msg, PeerState& 
         if (AuthorizePermissionMgmt(send, peerState->GetGuid(), msg)) {
             return ER_OK;
         }
-        return status;
-    }
-    if (!GetPolicy()) {
-        return ER_OK;  /* there is no policy to enforce */
+        return ER_PERMISSION_DENIED;
     }
     if (!permissionMgmtObj) {
         return ER_PERMISSION_DENIED;
+    }
+    /* is the app claimed? If not claimed, no enforcement */
+    if (!permissionMgmtObj->HasTrustAnchors()) {
+        return ER_OK;
+    }
+
+    if (!send && PeerHasAdminPriv(peerState->GetGuid())) {
+        QCC_DbgPrintf(("PermissionManager::AuthorizeMessage peer has admin prividege"));
+        return ER_OK;  /* admin has full access */
     }
     MessageHolder holder(msg, send);
     if (IsPropertyInterface(msg->GetInterface())) {
@@ -556,11 +645,11 @@ QStatus PermissionManager::AuthorizeMessage(bool send, Message& msg, PeerState& 
         holder.mbrName = msg->GetMemberName();
     }
 
-    QCC_DbgPrintf(("PermissionManager::AuthorizeMessage with send: %d msg %s\n", send, msg->ToString().c_str()));
-    authorized = IsAuthorized(holder, GetPolicy(), peerState, permissionMgmtObj);
+    QCC_DbgPrintf(("PermissionManager::AuthorizeMessage with send: %d msg %s", send, msg->ToString().c_str()));
+    authorized = IsAuthorized(holder, GetPolicy(), GetGuildMap(), peerState, permissionMgmtObj);
     if (!authorized) {
         QCC_DbgPrintf(("PermissionManager::AuthorizeMessage IsAuthorized returns ER_PERMISSION_DENIED\n"));
-        return status;
+        return ER_PERMISSION_DENIED;
     }
     return ER_OK;
 }

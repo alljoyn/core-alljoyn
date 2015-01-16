@@ -1545,6 +1545,7 @@ void AllJoynPeerObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
             peerAuthListener.SecurityViolation(status, req->msg);
         }
         break;
+
     }
 
     delete req;
@@ -1791,7 +1792,6 @@ void AllJoynPeerObj::SetupPeerAuthentication(const qcc::String& authMechanisms, 
     done = false;
     int idx = 0;
     remainder = authMechanisms;
-    bool hasECDHE = false;
     while (!done) {
         pos = remainder.find_first_of(" ");
         if (pos == qcc::String::npos) {
@@ -1815,21 +1815,16 @@ void AllJoynPeerObj::SetupPeerAuthentication(const qcc::String& authMechanisms, 
             supportedAuthSuites[idx++] = AUTH_SUITE_RSA_KEYX;
         } else if (mech == "ALLJOYN_ECDHE_NULL") {
             supportedAuthSuites[idx++] = AUTH_SUITE_ECDHE_NULL;
-            hasECDHE = true;
         } else if (mech == "ALLJOYN_ECDHE_PSK") {
             supportedAuthSuites[idx++] = AUTH_SUITE_ECDHE_PSK;
-            hasECDHE = true;
         } else if (mech == "ALLJOYN_ECDHE_ECDSA") {
             supportedAuthSuites[idx++] = AUTH_SUITE_ECDHE_ECDSA;
-            hasECDHE = true;
         } else if (mech == "GSSAPI") {
             supportedAuthSuites[idx++] = AUTH_SUITE_GSSAPI;
         }
     }
-    if (hasECDHE) {
-        permissionMgmtObj = new PermissionMgmtObj(bus);
-        peerAuthListener.SetPermissionMgmtObj(permissionMgmtObj);
-    }
+    permissionMgmtObj = new PermissionMgmtObj(bus);
+    peerAuthListener.SetPermissionMgmtObj(permissionMgmtObj);
 }
 
 QStatus AllJoynPeerObj::SendMembershipData(ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc)
@@ -1841,17 +1836,39 @@ QStatus AllJoynPeerObj::SendMembershipData(ProxyBusObject& remotePeerObj, const 
         delete [] args;
         return status;
     }
+
     Message replyMsg(*bus);
     const InterfaceDescription::Member* sendMembershipData = ifc->GetMember("SendMemberships");
+    bool gotAllFromPeer = false;
+    size_t cnt = 0;
+    MsgArg dummy("y", 0);
+    MsgArg emptyMembership("(yv)", 0, &dummy);
+
     /* sending one item at time since some peer may not be able to handle large
-        amount of data */
-    for (size_t cnt = 0; cnt < argCount; cnt++) {
-        MsgArg variant("a(yyv)", 1, &args[cnt]);
-        Message replyMsg(*bus);
+       amount of data.  Read back the membership data from the peer.
+       Keep looping until both sides exchanged all the membeship certs and
+       authorization data.
+       A 0/0 entry indicates the peer does not have any membership data or
+       already sent all of its membership data in previous replies.
+     */
+    while (true) {
+        MsgArg variant;
+        if (cnt < argCount) {
+            variant.Set("a(yv)", 1, &args[cnt]);
+            cnt++;
+        } else {
+            /* still send the zero list so the peer knows */
+            variant.Set("a(yv)", 1, &emptyMembership);
+        }
         status = remotePeerObj.MethodCall(*sendMembershipData, &variant, 1, replyMsg, DEFAULT_TIMEOUT);
         if (status != ER_OK) {
             delete [] args;
             return status;
+        }
+        /* process the reply */
+        status = permissionMgmtObj->ParseSendMemberships(replyMsg, gotAllFromPeer);
+        if (gotAllFromPeer && (cnt == argCount)) {
+            break;
         }
     }
     delete [] args;
@@ -1860,8 +1877,48 @@ QStatus AllJoynPeerObj::SendMembershipData(ProxyBusObject& remotePeerObj, const 
 
 void AllJoynPeerObj::SendMemberships(const InterfaceDescription::Member* member, Message& msg)
 {
-    QStatus status = permissionMgmtObj->ParseSendMemberships(msg);
-    MethodReply(msg, status);
+    bool gotAllFromPeer = false;
+    QStatus status = permissionMgmtObj->ParseSendMemberships(msg, gotAllFromPeer);
+    if (ER_OK != status) {
+        PeerStateTable* peerStateTable = bus->GetInternal().GetPeerStateTable();
+        PeerState peerState = peerStateTable->GetPeerState(msg->GetSender());
+        delete [] peerState->guildArgs;
+        peerState->guildArgs = NULL;
+        peerState->guildArgsCount = 0;
+        MethodReply(msg, status);
+        return;
+    }
+    MsgArg replyArgs[1];
+    MsgArg dummy("y", 0);
+    MsgArg emptyMembership("(yv)", 0, &dummy);
+    PeerStateTable* peerStateTable = bus->GetInternal().GetPeerStateTable();
+    PeerState peerState = peerStateTable->GetPeerState(msg->GetSender());
+    if (peerState->guildArgsCount == 0) {
+        MsgArg* args = NULL;
+        size_t argCount = 0;
+        status = permissionMgmtObj->GenerateSendMemberships(&args, &argCount);
+        if (ER_OK != status) {
+            delete [] args;
+            return;
+        }
+        delete [] peerState->guildArgs;
+        peerState->guildArgs = args;
+        peerState->guildArgsCount = argCount;
+        peerState->guildArgsSentCount = 0;
+    }
+    if ((peerState->guildArgsCount == 0) || (peerState->guildArgsSentCount >= peerState->guildArgsCount)) {
+        replyArgs[0].Set("a(yv)", 1, &emptyMembership);
+    } else {
+        replyArgs[0].Set("a(yv)", 1, &peerState->guildArgs[peerState->guildArgsSentCount]);
+        peerState->guildArgsSentCount++;
+    }
+    MethodReply(msg, replyArgs, ArraySize(replyArgs));
+    if (peerState->guildArgsSentCount >= peerState->guildArgsCount) {
+        /* release this resource since it no longer used */
+        delete [] peerState->guildArgs;
+        peerState->guildArgs = NULL;
+    }
 }
+
 
 }

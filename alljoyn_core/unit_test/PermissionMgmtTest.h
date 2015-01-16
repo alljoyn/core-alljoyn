@@ -60,7 +60,7 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
             RUN_AS_CONSUMER = 2
         } AgentType;
 
-        ECDHEKeyXListener(AgentType agentType, BusAttachment& bus) : agentType(agentType), bus(bus)
+        ECDHEKeyXListener(AgentType agentType) : agentType(agentType)
         {
         }
 
@@ -118,12 +118,11 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
 
       private:
         AgentType agentType;
-        BusAttachment& bus;
     };
 
     BasePermissionMgmtTest(const char* path) : BusObject(path),
         adminBus("PermissionMgmtTestAdmin", false),
-        adminProxyBus("PermissionMgmtTestAdmin", false),
+        adminProxyBus("PermissionMgmtTestAdminProxy", false),
         serviceBus("PermissionMgmtTestService", false),
         consumerBus("PermissionMgmtTestConsumer", false),
         status(ER_OK),
@@ -131,7 +130,10 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
         serviceKeyListener(NULL),
         adminKeyListener(NULL),
         consumerKeyListener(NULL),
-        signalNotifyConfigReceived(false)
+        signalNotifyConfigReceived(false),
+        currentTVChannel(1),
+        volume(1),
+        channelChangedSignalReceived(false)
     {
     }
 
@@ -154,10 +156,15 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
     bool authComplete;
 
     QStatus InterestInSignal(BusAttachment* bus);
+    QStatus InterestInChannelChangedSignal(BusAttachment* bus);
     void SignalHandler(const InterfaceDescription::Member* member,
                        const char* sourcePath, Message& msg);
+    void ChannelChangedSignalHandler(const InterfaceDescription::Member* member,
+                                     const char* sourcePath, Message& msg);
     void SetNotifyConfigSignalReceived(bool flag);
     const bool GetNotifyConfigSignalReceived();
+    void SetChannelChangedSignalReceived(bool flag);
+    const bool GetChannelChangedSignalReceived();
 
     void OnOffOn(const InterfaceDescription::Member* member, Message& msg);
     void OnOffOff(const InterfaceDescription::Member* member, Message& msg);
@@ -165,7 +172,10 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
 
     void TVDown(const InterfaceDescription::Member* member, Message& msg);
     void TVChannel(const InterfaceDescription::Member* member, Message& msg);
+    void TVChannelChanged(const InterfaceDescription::Member* member, Message& msg);
     void TVMute(const InterfaceDescription::Member* member, Message& msg);
+    QStatus Get(const char* ifcName, const char* propName, MsgArg& val);
+    QStatus Set(const char* ifcName, const char* propName, MsgArg& val);
 
   private:
     void RegisterKeyStoreListeners();
@@ -179,6 +189,9 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
     InMemoryKeyStoreListener adminKeyStoreListener;
     InMemoryKeyStoreListener serviceKeyStoreListener;
     InMemoryKeyStoreListener consumerKeyStoreListener;
+    uint32_t currentTVChannel;
+    uint32_t volume;
+    bool channelChangedSignalReceived;
 
 };
 
@@ -219,6 +232,8 @@ class PermissionMgmtTestHelper {
     static QStatus JoinPeerSession(BusAttachment& initiator, BusAttachment& responder, SessionId& sessionId);
     static QStatus GetGUID(BusAttachment& bus, qcc::GUID128& guid);
     static QStatus GetPeerGUID(BusAttachment& bus, qcc::String& peerName, qcc::GUID128& peerGuid);
+    static QStatus GetTVVolume(BusAttachment& bus, ProxyBusObject& remoteObj, uint32_t& volume);
+    static QStatus SetTVVolume(BusAttachment& bus, ProxyBusObject& remoteObj, uint32_t volume);
 };
 
 }

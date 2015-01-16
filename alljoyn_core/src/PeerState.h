@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2012,2014 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2012,2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -99,6 +99,9 @@ class _PeerState {
      * Default constructor
      */
     _PeerState() :
+        guildArgs(NULL),
+        guildArgsCount(0),
+        guildArgsSentCount(0),
         isLocalPeer(false),
         clockOffset((std::numeric_limits<int32_t>::max)()),
         firstClockAdjust(true),
@@ -113,10 +116,8 @@ class _PeerState {
 
     ~_PeerState()
     {
-        for (GuildMap::iterator it = guildMap.begin(); it != guildMap.end(); it++) {
-            delete it->second;
-        }
-        guildMap.clear();
+        ClearGuildMap(guildMap);
+        delete [] guildArgs;
     }
 
     /**
@@ -305,6 +306,30 @@ class _PeerState {
      */
     GuildMap guildMap;
 
+    /**
+     * Clear the guild map and its members
+     */
+    static void ClearGuildMap(GuildMap& guildMap)
+    {
+        for (GuildMap::iterator it = guildMap.begin(); it != guildMap.end(); it++) {
+            delete it->second;
+        }
+        guildMap.clear();
+    }
+
+    /**
+     * The array of membership data msg args to reply to the peer
+     */
+    MsgArg* guildArgs;
+    /**
+     * The size of the array of membership data msg args to reply to the peer
+     */
+    uint8_t guildArgsCount;
+    /**
+     * The number of membership data msg args already replied to the peer
+     */
+    uint8_t guildArgsSentCount;
+
   private:
 
     /**
@@ -342,11 +367,6 @@ class _PeerState {
      * Event used to prevent simultaneous authorization requests to this peer.
      */
     qcc::Event* authEvent;
-
-    /**
-     * Set to true if this remote peer was not authenticated by the local peer.
-     */
-    bool peerNotAuthenticated;
 
     /**
      * The GUID for this peer.

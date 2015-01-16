@@ -6,7 +6,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -48,6 +48,7 @@ class PermissionManager {
     virtual ~PermissionManager()
     {
         delete policy;
+        _PeerState::ClearGuildMap(guildMap);
     }
 
     /**
@@ -68,6 +69,15 @@ class PermissionManager {
     const PermissionPolicy* GetPolicy() const
     {
         return policy;
+    }
+
+    /**
+     * Retrieve the membership certificate map.
+     * @return the membership certificate map.
+     */
+    _PeerState::GuildMap& GetGuildMap()
+    {
+        return guildMap;
     }
 
     /**
@@ -98,6 +108,7 @@ class PermissionManager {
     bool AuthorizePermissionMgmt(bool send, const qcc::GUID128& peerGuid, Message& msg);
 
     PermissionPolicy* policy;
+    _PeerState::GuildMap guildMap;
     PermissionMgmtObj* permissionMgmtObj;
 };
 
