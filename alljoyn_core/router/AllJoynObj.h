@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2012, 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2012, 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -478,6 +478,14 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
      *
      */
     void CancelSessionlessMessage(const InterfaceDescription::Member* member, Message& msg);
+
+    /**
+     * Sends a method reply to org.alljoyn.Bus.CancelSessionlessMessage.
+     *
+     * @param msg The org.alljoyn.Bus.CancelSessionlessMessage method call message.
+     * @param status The result of CancelSessionlessMessage.
+     */
+    void CancelSessionlessMessageReply(Message& msg, QStatus status);
 
     /**
      * Method handler for org.alljoyn.Bus.RemoveSessionMember

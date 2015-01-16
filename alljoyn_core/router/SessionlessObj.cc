@@ -93,13 +93,29 @@ const Rule SessionlessObj::legacyRule = Rule("type='error',sessionless='t'");
  * The context for the implements query response.  It must be delivered on
  * a separate thread than the Query callback to avoid deadlock.
  */
-struct ResponseContext {
-    TransportMask transport;
-    String name;
-    IPEndpoint ns4;
-    ResponseContext(TransportMask transport, const qcc::String& name, const qcc::IPEndpoint& ns4)
-        : transport(transport), name(name), ns4(ns4) { }
-};
+SessionlessObj::SendResponseWork::SendResponseWork(SessionlessObj& slObj,
+                                                   TransportMask transport, const qcc::String& name, const qcc::IPEndpoint& ns4)
+    : Work(slObj), transport(transport), name(name), ns4(ns4)
+{
+}
+
+void SessionlessObj::SendResponseWork::Run()
+{
+    MDNSPacket response;
+    response->SetDestination(ns4);
+    MDNSAdvertiseRData advRData;
+    advRData.SetTransport(slObj.sessionOpts.transports & TRANSPORT_IP);
+    advRData.SetValue("name", name);
+    String guid = slObj.bus.GetInternal().GetGlobalGUID().ToString();
+    MDNSResourceRecord advertiseRecord("advertise." + guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, &advRData);
+    response->AddAdditionalRecord(advertiseRecord);
+    QStatus status = IpNameService::Instance().Response(transport, 120, response);
+    if (ER_OK == status) {
+        QCC_DbgPrintf(("Sent implements response for name=%s", name.c_str()));
+    } else {
+        QCC_LogError(status, ("Response failed"));
+    }
+}
 
 /*
  * Internal context passed through JoinSessionAsync.  This holds a snapshot of
@@ -308,116 +324,128 @@ void SessionlessObj::AddRule(const qcc::String& epName, Rule& rule)
 {
     if (rule.sessionless == Rule::SESSIONLESS_TRUE) {
         QCC_DbgPrintf(("AddRule(epName=%s,rule=%s)", epName.c_str(), rule.ToString().c_str()));
-        router.LockNameTable();
-        lock.Lock();
-
-        uint32_t fromRulesId = nextRulesId;
-        bool isNewRule = true;
-        uint32_t ruleId = nextRulesId;
-        for (std::pair<RuleIterator, RuleIterator> range = rules.equal_range(epName); range.first != range.second; ++range.first) {
-            if (range.first->second == rule) {
-                isNewRule = false;
-                ruleId = range.first->second.id;
-                break;
-            }
-        }
-        rules.insert(std::pair<String, TimestampedRule>(epName, TimestampedRule(rule, ruleId)));
-        if (isNewRule) {
-            ++nextRulesId;
-        }
-
-        ScheduleWork();
-
-        /* For retrieving from our own cache after releasing the locks below */
-        uint32_t fromChangeId = curChangeId - (numeric_limits<uint32_t>::max() >> 1);
-        uint32_t toChangeId = curChangeId + 1;
-        uint32_t toRulesId = nextRulesId;
-
-        FindAdvertisedNames();
-
-        lock.Unlock();
-        router.UnlockNameTable();
-
-        /* Retrieve from our own cache */
-        HandleRangeRequest(epName.c_str(), 0, fromChangeId, toChangeId, fromRulesId, toRulesId);
+        ScheduleWork(new AddRuleWork(*this, epName, rule));
     }
+}
+
+SessionlessObj::AddRuleWork::AddRuleWork(SessionlessObj& slObj, const qcc::String& epName, Rule& rule)
+    : Work(slObj), epName(epName), rule(rule)
+{
+}
+
+void SessionlessObj::AddRuleWork::Run()
+{
+    slObj.router.LockNameTable();
+    slObj.lock.Lock();
+
+    uint32_t fromRulesId = slObj.nextRulesId;
+    bool isNewRule = true;
+    uint32_t ruleId = slObj.nextRulesId;
+    for (std::pair<RuleIterator, RuleIterator> range = slObj.rules.equal_range(epName); range.first != range.second; ++range.first) {
+        if (range.first->second == rule) {
+            isNewRule = false;
+            ruleId = range.first->second.id;
+            break;
+        }
+    }
+    slObj.rules.insert(std::pair<String, TimestampedRule>(epName, TimestampedRule(rule, ruleId)));
+    if (isNewRule) {
+        ++slObj.nextRulesId;
+    }
+
+    slObj.ScheduleWork();
+
+    /* For retrieving from our own cache after releasing the locks below */
+    uint32_t fromChangeId = slObj.curChangeId - (numeric_limits<uint32_t>::max() >> 1);
+    uint32_t toChangeId = slObj.curChangeId + 1;
+    uint32_t toRulesId = slObj.nextRulesId;
+
+    slObj.FindAdvertisedNames();
+
+    slObj.lock.Unlock();
+    slObj.router.UnlockNameTable();
+
+    /* Retrieve from our own cache */
+    slObj.HandleRangeRequest(epName.c_str(), 0, fromChangeId, toChangeId, fromRulesId, toRulesId);
 }
 
 void SessionlessObj::RemoveRule(const qcc::String& epName, Rule& rule)
 {
     if (rule.sessionless == Rule::SESSIONLESS_TRUE) {
         QCC_DbgPrintf(("RemoveRule(epName=%s,rule=%s)", epName.c_str(), rule.ToString().c_str()));
-        router.LockNameTable();
-        lock.Lock();
-
-        std::pair<RuleIterator, RuleIterator> range = rules.equal_range(epName);
-        while (range.first != range.second) {
-            if (range.first->second == rule) {
-                RemoveImplicitRules(range.first);
-                rules.erase(range.first);
-                break;
-            }
-            ++range.first;
-        }
-
-        if (rules.empty()) {
-            CancelFindAdvertisedNames();
-        }
-
-        lock.Unlock();
-        router.UnlockNameTable();
+        ScheduleWork(new RemoveRuleWork(*this, epName, rule));
     }
+}
+
+SessionlessObj::RemoveRuleWork::RemoveRuleWork(SessionlessObj& slObj, const qcc::String& epName, Rule& rule)
+    : Work(slObj), epName(epName), rule(rule)
+{
+}
+
+void SessionlessObj::RemoveRuleWork::Run()
+{
+    slObj.router.LockNameTable();
+    slObj.lock.Lock();
+
+    std::pair<RuleIterator, RuleIterator> range = slObj.rules.equal_range(epName);
+    while (range.first != range.second) {
+        if (range.first->second == rule) {
+            slObj.RemoveImplicitRules(range.first);
+            slObj.rules.erase(range.first);
+            break;
+        }
+        ++range.first;
+    }
+
+    if (slObj.rules.empty()) {
+        slObj.CancelFindAdvertisedNames();
+    }
+
+    slObj.lock.Unlock();
+    slObj.router.UnlockNameTable();
+}
+
+SessionlessObj::PushMessageWork::PushMessageWork(SessionlessObj& slObj, Message& msg)
+    : Work(slObj), msg(msg)
+{
+}
+
+void SessionlessObj::PushMessageWork::Run()
+{
+    slObj.router.LockNameTable();
+    slObj.lock.Lock();
+
+    /* Match the message against any existing implicit rules */
+    uint32_t fromRulesId = slObj.nextRulesId - (numeric_limits<uint32_t>::max() >> 1);
+    uint32_t toRulesId = slObj.nextRulesId;
+    slObj.SendMatchingThroughEndpoint(0, msg, fromRulesId, toRulesId);
+
+    /* Put the message in the local cache */
+    SessionlessMessageKey key(msg->GetSender(), msg->GetInterface(), msg->GetMemberName(), msg->GetObjectPath());
+    slObj.advanceChangeId = true;
+    SessionlessMessage val(slObj.curChangeId, msg);
+    LocalCache::iterator it = slObj.localCache.find(key);
+    if (it == slObj.localCache.end()) {
+        slObj.localCache.insert(pair<SessionlessMessageKey, SessionlessMessage>(key, val));
+    } else {
+        it->second = val;
+    }
+
+    slObj.lock.Unlock();
+    slObj.router.UnlockNameTable();
 }
 
 QStatus SessionlessObj::PushMessage(Message& msg)
 {
-    QCC_DbgTrace(("SessionlessObj::PushMessage(%s)", msg->ToString().c_str()));
+    QCC_DbgPrintf(("PushMessage(msg={sender='%s',interface='%s',member='%s',path='%s'})",
+                   msg->GetSender(), msg->GetInterface(), msg->GetMemberName(), msg->GetObjectPath()));
 
     /* Validate message */
     if (!msg->IsSessionless()) {
         return ER_FAIL;
     }
 
-    router.LockNameTable();
-    lock.Lock();
-
-    /* Match the message against any existing implicit rules */
-    uint32_t fromRulesId = nextRulesId - (numeric_limits<uint32_t>::max() >> 1);
-    uint32_t toRulesId = nextRulesId;
-    SendMatchingThroughEndpoint(0, msg, fromRulesId, toRulesId, true);
-
-    /* Put the message in the local cache */
-    SessionlessMessageKey key(msg->GetSender(), msg->GetInterface(), msg->GetMemberName(), msg->GetObjectPath());
-    advanceChangeId = true;
-    SessionlessMessage val(curChangeId, msg);
-    LocalCache::iterator it = localCache.find(key);
-    if (it == localCache.end()) {
-        localCache.insert(pair<SessionlessMessageKey, SessionlessMessage>(key, val));
-    } else {
-        it->second = val;
-    }
-
-    lock.Unlock();
-    router.UnlockNameTable();
-
-    /* Kick the worker */
-    uint32_t zero = 0;
-    SessionlessObj* slObj = this;
-    QStatus status = timer.AddAlarm(Alarm(zero, slObj));
-    if (ER_OK != status) {
-        /*
-         * When daemon is closing the daemon will receive multiple error
-         * because the timer is exiting.  print a high level debug message
-         * not a log error since this is expected behaver and should not
-         * be presented to the user if they don't want to see it.
-         */
-        if (ER_TIMER_EXITING == status) {
-            QCC_DbgHLPrintf(("Timer::AddAlarm failed : %s", QCC_StatusText(status)));
-        } else {
-            QCC_LogError(status, ("Timer::AddAlarm failed"));
-        }
-    }
-
+    ScheduleWork(new PushMessageWork(*this, msg));
     return ER_OK;
 }
 
@@ -454,8 +482,7 @@ bool SessionlessObj::RouteSessionlessMessage(SessionId sid, Message& msg)
     return true;
 }
 
-void SessionlessObj::SendMatchingThroughEndpoint(SessionId sid, Message msg, uint32_t fromRulesId, uint32_t toRulesId,
-                                                 bool onlySendIfImplicit)
+void SessionlessObj::SendMatchingThroughEndpoint(SessionId sid, Message msg, uint32_t fromRulesId, uint32_t toRulesId)
 {
     uint32_t rulesRangeLen = toRulesId - fromRulesId;
     RuleIterator rit = rules.begin();
@@ -504,8 +531,7 @@ void SessionlessObj::SendMatchingThroughEndpoint(SessionId sid, Message msg, uin
             isImplicitMatch = IsOnlyImplicitMatch(epName, msg);
         }
 
-        if ((onlySendIfImplicit && !isExplicitMatch && isImplicitMatch) ||
-            (!onlySendIfImplicit && (isExplicitMatch || isImplicitMatch))) {
+        if (isExplicitMatch || isImplicitMatch) {
             lock.Unlock();
             router.UnlockNameTable();
             SendThroughEndpoint(msg, ep, sid);
@@ -516,37 +542,40 @@ void SessionlessObj::SendMatchingThroughEndpoint(SessionId sid, Message msg, uin
     }
 }
 
-QStatus SessionlessObj::CancelMessage(const qcc::String& sender, uint32_t serialNum)
+SessionlessObj::CancelMessageWork::CancelMessageWork(SessionlessObj& slObj, Message& msg)
+    : Work(slObj), msg(msg)
+{
+}
+
+void SessionlessObj::CancelMessageWork::Run()
 {
     QStatus status = ER_BUS_NO_SUCH_MESSAGE;
-    bool messageErased = false;
 
-    QCC_DbgTrace(("SessionlessObj::CancelMessage(%s, 0x%x)", sender.c_str(), serialNum));
+    qcc::String sender = msg->GetSender();
+    uint32_t serialNum = msg->GetArg(0)->v_uint32;
 
-    lock.Lock();
+    slObj.lock.Lock();
     SessionlessMessageKey key(sender.c_str(), "", "", "");
-    LocalCache::iterator it = localCache.lower_bound(key);
-    while ((it != localCache.end()) && (sender == it->second.second->GetSender())) {
+    LocalCache::iterator it = slObj.localCache.lower_bound(key);
+    while ((it != slObj.localCache.end()) && (sender == it->second.second->GetSender())) {
         if (it->second.second->GetCallSerial() == serialNum) {
             if (!it->second.second->IsExpired()) {
                 status = ER_OK;
             }
-            localCache.erase(it);
-            messageErased = true;
+            slObj.localCache.erase(it);
             break;
         }
         ++it;
     }
-    lock.Unlock();
+    slObj.lock.Unlock();
 
-    /* Alert the advertiser worker */
-    if (messageErased) {
-        uint32_t zero = 0;
-        SessionlessObj* slObj = this;
-        status = timer.AddAlarm(Alarm(zero, slObj));
-    }
+    slObj.busController->GetAllJoynObj().CancelSessionlessMessageReply(msg, status);
+}
 
-    return status;
+void SessionlessObj::CancelMessage(Message& msg)
+{
+    QCC_DbgTrace(("SessionlessObj::CancelMessage(%s, 0x%x)", msg->GetSender(), msg->GetArg(0)->v_uint32));
+    ScheduleWork(new CancelMessageWork(*this, msg));
 }
 
 void SessionlessObj::NameOwnerChanged(const String& name,
@@ -562,47 +591,38 @@ void SessionlessObj::NameOwnerChanged(const String& name,
 
     /* Remove entries from rules for names exiting from the bus */
     if (oldOwner && !newOwner) {
-        router.LockNameTable();
-        lock.Lock();
-        std::pair<RuleIterator, RuleIterator> range = rules.equal_range(name);
-        if (range.first != rules.end()) {
-            RemoveImplicitRules(name);
-            rules.erase(range.first, range.second);
-        }
-
-        /* Remove stored sessionless messages sent by the old owner */
-        SessionlessMessageKey key(oldOwner->c_str(), "", "", "");
-        LocalCache::iterator mit = localCache.lower_bound(key);
-        while ((mit != localCache.end()) && (::strcmp(oldOwner->c_str(), mit->second.second->GetSender()) == 0)) {
-            localCache.erase(mit++);
-        }
-        /* Alert the advertiser worker if the local cache is empty */
-        if (localCache.empty()) {
-            uint32_t zero = 0;
-            SessionlessObj* slObj = this;
-            QStatus status = timer.AddAlarm(Alarm(zero, slObj));
-            if (status != ER_OK) {
-                /*
-                 * When daemon is closing the daemon will receive multiple error
-                 * because the timer is exiting.  print a high level debug message
-                 * not a log error since this is expected behaver and should not
-                 * be presented to the user if they don't want to see it.
-                 */
-                if (ER_TIMER_EXITING == status) {
-                    QCC_DbgHLPrintf(("Timer::AddAlarm failed : %s", QCC_StatusText(status)));
-                } else {
-                    QCC_LogError(status, ("Timer::AddAlarm failed"));
-                }
-            }
-        }
-
-        /* Stop discovery if nobody is looking for sessionless signals */
-        if (rules.empty()) {
-            CancelFindAdvertisedNames();
-        }
-        lock.Unlock();
-        router.UnlockNameTable();
+        ScheduleWork(new NameOwnerChangedWork(*this, name, *oldOwner));
     }
+}
+
+SessionlessObj::NameOwnerChangedWork::NameOwnerChangedWork(SessionlessObj& slObj, const qcc::String& name, const qcc::String& oldOwner)
+    : Work(slObj), name(name), oldOwner(oldOwner)
+{
+}
+
+void SessionlessObj::NameOwnerChangedWork::Run()
+{
+    slObj.router.LockNameTable();
+    slObj.lock.Lock();
+    std::pair<RuleIterator, RuleIterator> range = slObj.rules.equal_range(name);
+    if (range.first != slObj.rules.end()) {
+        slObj.RemoveImplicitRules(name);
+        slObj.rules.erase(range.first, range.second);
+    }
+
+    /* Remove stored sessionless messages sent by the old owner */
+    SessionlessMessageKey key(oldOwner.c_str(), "", "", "");
+    LocalCache::iterator mit = slObj.localCache.lower_bound(key);
+    while ((mit != slObj.localCache.end()) && (::strcmp(oldOwner.c_str(), mit->second.second->GetSender()) == 0)) {
+        slObj.localCache.erase(mit++);
+    }
+
+    /* Stop discovery if nobody is looking for sessionless signals */
+    if (slObj.rules.empty()) {
+        slObj.CancelFindAdvertisedNames();
+    }
+    slObj.lock.Unlock();
+    slObj.router.UnlockNameTable();
 }
 
 void SessionlessObj::FoundAdvertisedNameSignalHandler(const InterfaceDescription::Member* member,
@@ -735,6 +755,7 @@ void SessionlessObj::RequestSignalsSignalHandler(const InterfaceDescription::Mem
     if (status == ER_OK) {
         /* Send all signals in the range [fromId, curChangeId] */
         QCC_DbgPrintf(("RequestSignals(sender=%s,sid=%u,fromId=%u)", msg->GetSender(), msg->GetSessionId(), fromId));
+        bus.EnableConcurrentCallbacks(); /* HandleRangeRequest could block */
         HandleRangeRequest(msg->GetSender(), msg->GetSessionId(), fromId, curChangeId + 1);
     } else {
         QCC_LogError(status, ("Message::GetArgs failed"));
@@ -749,6 +770,7 @@ void SessionlessObj::RequestRangeSignalHandler(const InterfaceDescription::Membe
     QStatus status = msg->GetArgs("uu", &fromId, &toId);
     if (status == ER_OK) {
         QCC_DbgPrintf(("RequestRange(sender=%s,sid=%u,fromId=%u,toId=%u)", msg->GetSender(), msg->GetSessionId(), fromId, toId));
+        bus.EnableConcurrentCallbacks(); /* HandleRangeRequest could block */
         HandleRangeRequest(msg->GetSender(), msg->GetSessionId(), fromId, toId);
     } else {
         QCC_LogError(status, ("Message::GetArgs failed"));
@@ -773,6 +795,7 @@ void SessionlessObj::RequestRangeMatchSignalHandler(const InterfaceDescription::
             QCC_DbgPrintf(("  [%d] %s", i, matchRule));
             matchRules.push_back(matchRule);
         }
+        bus.EnableConcurrentCallbacks(); /* HandleRangeRequest could block */
         HandleRangeRequest(msg->GetSender(), msg->GetSessionId(), fromId, toId, 0, 0, matchRules);
     } else {
         QCC_LogError(status, ("Message::GetArgs failed"));
@@ -787,9 +810,6 @@ void SessionlessObj::HandleRangeRequest(const char* sender, SessionId sid,
     QStatus status = ER_OK;
     bool messageErased = false;
     QCC_DbgTrace(("SessionlessObj::HandleControlSignal(%d, %d)", fromChangeId, toChangeId));
-
-    /* Enable concurrency since PushMessage could block */
-    bus.EnableConcurrentCallbacks();
 
     /* Advance the curChangeId */
     router.LockNameTable();
@@ -869,23 +889,10 @@ void SessionlessObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
         uint32_t expire;
 
         /* Send name service responses if needed */
-        ResponseContext* ctx = static_cast<ResponseContext*>(alarm->GetContext());
-        if (ctx) {
-            MDNSPacket response;
-            response->SetDestination(ctx->ns4);
-            MDNSAdvertiseRData advRData;
-            advRData.SetTransport(sessionOpts.transports & TRANSPORT_IP);
-            advRData.SetValue("name", ctx->name);
-            String guid = bus.GetInternal().GetGlobalGUID().ToString();
-            MDNSResourceRecord advertiseRecord("advertise." + guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, &advRData);
-            response->AddAdditionalRecord(advertiseRecord);
-            QStatus status = IpNameService::Instance().Response(ctx->transport, 120, response);
-            if (ER_OK == status) {
-                QCC_DbgPrintf(("Sent implements response for name=%s", ctx->name.c_str()));
-            } else {
-                QCC_LogError(status, ("Response failed"));
-            }
-            delete ctx;
+        Work* work = static_cast<Work*>(alarm->GetContext());
+        if (work) {
+            work->Run();
+            delete work;
         }
 
         /* Purge the local cache of expired messages */
@@ -1490,15 +1497,7 @@ bool SessionlessObj::SendResponseIfMatch(TransportMask transport, const qcc::IPE
     lock.Unlock();
 
     if (sendResponse) {
-        ResponseContext* ctx = new ResponseContext(transport, name, ns4);
-        const uint32_t timeout = 0;
-        SessionlessObj* pObj = this;
-        Alarm alarm(timeout, pObj, ctx);
-        QStatus status = timer.AddAlarm(alarm);
-        if (ER_OK != status) {
-            QCC_LogError(status, ("Response failed"));
-            delete ctx;
-        }
+        ScheduleWork(new SendResponseWork(*this, transport, name, ns4));
     }
 
     return sendResponse;
@@ -1773,6 +1772,28 @@ bool SessionlessObj::IsOnlyImplicitMatch(const qcc::String& epName, Message& msg
         }
     }
     return false;
+}
+
+void SessionlessObj::ScheduleWork(Work* work)
+{
+    const uint32_t timeout = 0;
+    SessionlessObj* pObj = this;
+    Alarm alarm(timeout, pObj, work);
+    QStatus status = timer.AddAlarm(alarm);
+    if (ER_OK != status) {
+        /*
+         * When daemon is closing the daemon will receive multiple error
+         * because the timer is exiting.  print a high level debug message
+         * not a log error since this is expected behaver and should not
+         * be presented to the user if they don't want to see it.
+         */
+        if (ER_TIMER_EXITING == status) {
+            QCC_DbgHLPrintf(("Timer::AddAlarm failed : %s", QCC_StatusText(status)));
+        } else {
+            QCC_LogError(status, ("Timer::AddAlarm failed"));
+        }
+        delete work;
+    }
 }
 
 }

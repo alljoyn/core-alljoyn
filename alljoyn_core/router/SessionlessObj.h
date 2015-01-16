@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2012,2014 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2012,2014-2015 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -121,7 +121,7 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      * Route an incoming sessionless signal if possible.
      *
      * @param sid   Session ID associated with sessionless message.
-     * @param msg   Sesionless messgae to be routed.
+     * @param msg   Sesionless message to be routed.
      *
      * @return true if message was delivered, false otherwise.
      */
@@ -130,11 +130,9 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
     /**
      * Remove a sessionless signal with a given serial number from the store/forward cache.
      *
-     * @param sender      Unique name of message sender.
-     * @param serialNum   Serial number of message to be removed from cache.
-     * @param   ER_OK if successful
+     * @param msg      The org.alljoyn.Bus.CancelSessionlessMessage method call message.
      */
-    QStatus CancelMessage(const qcc::String& sender, uint32_t serialNum);
+    void CancelMessage(Message& msg);
 
     void NameOwnerChanged(const qcc::String& busName,
                           const qcc::String* oldOwner, SessionOpts::NameTransferType oldOwnerNameTransfer,
@@ -460,8 +458,7 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      * @param[in] fromRulesId Beginning of rules ID range (inclusive)
      * @param[in] toRulesId End of rules ID range (exclusive)
      */
-    void SendMatchingThroughEndpoint(SessionId sid, Message msg, uint32_t fromRulesId, uint32_t toRulesId,
-                                     bool onlySendIfImplicit = false);
+    void SendMatchingThroughEndpoint(SessionId sid, Message msg, uint32_t fromRulesId, uint32_t toRulesId);
 
     /**
      * A match rule that includes a change ID for recording when it was entered
@@ -631,6 +628,72 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
 
     void HandleRangeMatchRequest(const char* sender, SessionId sid, uint32_t fromChangeId, uint32_t toChangeId,
                                  std::vector<qcc::String>& matchRules);
+
+    /*
+     * Base class of work to execute on worker (AlarmTriggered) thread.
+     */
+    class Work {
+      public:
+        SessionlessObj& slObj;
+        Work(SessionlessObj& slObj) : slObj(slObj) { }
+        virtual ~Work() { }
+        virtual void Run() = 0;
+    };
+
+    class SendResponseWork : public Work {
+      public:
+        TransportMask transport;
+        qcc::String name;
+        qcc::IPEndpoint ns4;
+        SendResponseWork(SessionlessObj& slObj, TransportMask transport, const qcc::String& name, const qcc::IPEndpoint& ns4);
+        virtual void Run();
+    };
+
+    class AddRuleWork : public Work {
+      public:
+        qcc::String epName;
+        Rule rule;
+        AddRuleWork(SessionlessObj& slObj, const qcc::String& epName, Rule& rule);
+        virtual void Run();
+    };
+
+    class RemoveRuleWork : public Work {
+      public:
+        qcc::String epName;
+        Rule rule;
+        RemoveRuleWork(SessionlessObj& slObj, const qcc::String& epName, Rule& rule);
+        virtual void Run();
+    };
+
+    class PushMessageWork : public Work {
+      public:
+        Message msg;
+        PushMessageWork(SessionlessObj& slObj, Message& msg);
+        virtual void Run();
+    };
+
+    class CancelMessageWork : public Work {
+      public:
+        Message msg;
+        CancelMessageWork(SessionlessObj& slObj, Message& msg);
+        virtual void Run();
+    };
+
+    class NameOwnerChangedWork : public Work {
+      public:
+        qcc::String name;
+        qcc::String oldOwner;
+        NameOwnerChangedWork(SessionlessObj& slObj, const qcc::String& name, const qcc::String& oldOwner);
+        virtual void Run();
+    };
+
+    /*
+     * Schedule work to execute on worker (AlarmTriggered) thread.
+     *
+     * @param[in] work the work to execute.  It must be new'd by the caller and
+     *                 will be deleted after execution.
+     */
+    void ScheduleWork(Work* work);
 };
 
 }

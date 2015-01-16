@@ -255,7 +255,10 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& origSender)
         ruleTable.Lock();
         RuleIterator it = ruleTable.Begin();
         while (it != ruleTable.End()) {
-            if (it->second.IsMatch(msg)) {
+            if (msg->IsSessionless() && it->second.sessionless == Rule::SESSIONLESS_TRUE) {
+                /* Skip rule, it will be handled by SessionlessObj below */
+                ++it;
+            } else if (it->second.IsMatch(msg)) {
                 BusEndpoint dest = it->first;
                 QCC_DbgPrintf(("DaemonRouter::PushMessage(): Routing \"%s\" (%d) to \"%s\"", msg->Description().c_str(), msg->GetCallSerial(), dest->GetUniqueName().c_str()));
                 /*
