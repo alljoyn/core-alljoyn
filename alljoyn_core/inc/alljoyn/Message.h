@@ -6,7 +6,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -1001,7 +1001,7 @@ class _Message {
      *      - #ER_OK if reply to the hello method call was successful
      *      - An error status otherwise
      */
-    QStatus HelloReply(bool isBusToBus, const qcc::String& uniqueName);
+    QStatus HelloReply(bool isBusToBus, const qcc::String& uniqueName, SessionOpts::NameTransferType nametype);
 
     /**
      * Compose the reply to the hello method call
@@ -1014,7 +1014,7 @@ class _Message {
      *      - #ER_OK if reply to the hello method call was successful
      *      - An error status otherwise
      */
-    QStatus HelloReply(bool isBusToBus, const qcc::String& sender, const qcc::String& uniqueName, const qcc::String& guid);
+    QStatus HelloReply(bool isBusToBus, const qcc::String& sender, const qcc::String& uniqueName, const qcc::String& guid, SessionOpts::NameTransferType nameType);
 
     /**
      * Get a pointer to the current backing buffer for the message.

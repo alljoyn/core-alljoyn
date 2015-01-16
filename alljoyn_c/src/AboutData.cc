@@ -4,7 +4,7 @@
  * Please help make it more robust by contributing fixes if you find problems.
  */
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -295,7 +295,7 @@ QStatus AJ_CALL alljoyn_aboutdata_setfield(alljoyn_aboutdata data,
 
 QStatus AJ_CALL alljoyn_aboutdata_getfield(alljoyn_aboutdata data,
                                            const char* name,
-                                           alljoyn_msgarg value,
+                                           alljoyn_msgarg* value,
                                            const char* language)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
