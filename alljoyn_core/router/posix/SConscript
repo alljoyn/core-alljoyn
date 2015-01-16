@@ -17,7 +17,10 @@ Import('router_env', 'router_objs')
 
 # Build the posix daemon and service launcher helper.
 if router_env['OS'] != 'darwin':
-    daemon = router_env.Program('alljoyn-daemon', ['daemon-main.cc'] + router_objs)
+    daemon_env = router_env.Clone()
+    if daemon_env['OS'] != 'android':
+        daemon_env.Append(LIBS = 'cap')
+    daemon = daemon_env.Program('alljoyn-daemon', ['daemon-main.cc'] + router_objs)
 else:
     daemon = []
 	

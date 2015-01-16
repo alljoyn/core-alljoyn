@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -65,12 +65,15 @@
 
 #if !defined(ROUTER_LIB)
 
-#if defined(QCC_OS_LINUX) || defined(QCC_OS_ANDROID)
+#if defined(QCC_OS_LINUX)
 #include <sys/prctl.h>
+#include <sys/capability.h>
+#elif defined(QCC_OS_ANDROID)
 #include <linux/capability.h>
 extern "C" {
 extern int capset(cap_user_header_t hdrp, const cap_user_data_t datap);
 }
+
 #endif
 
 #endif
@@ -83,6 +86,7 @@ extern int capset(cap_user_header_t hdrp, const cap_user_data_t datap);
 #define DAEMON_EXIT_IO_ERROR      5
 #define DAEMON_EXIT_SESSION_ERROR 6
 #define DAEMON_EXIT_CHDIR_ERROR   7
+#define DAEMON_EXIT_CAP_ERROR     8
 
 using namespace ajn;
 using namespace qcc;
@@ -741,16 +745,27 @@ int main(int argc, char** argv, char** env)
             close(STDERR_FILENO);
 
 
-#if !defined(ROUTER_LIB)
-            if (!opts.GetNoSwitchUser()) {
-#if defined(QCC_OS_LINUX)
-                // Keep all capabilities before switching users
-                prctl(PR_SET_KEEPCAPS, 1, 0, 0, 0);
-#endif
-
-#if !defined(QCC_OS_ANDROID)
+#if !defined(ROUTER_LIB) && defined(QCC_OS_LINUX)
+            uid_t curr = getuid();
+            if (!opts.GetNoSwitchUser() && (curr == 0)) {
                 String user = config.GetUser();
-                if ((getuid() == 0) && !user.empty()) {
+                if (!user.empty()) {
+                    static const cap_value_t needed_caps[] = { CAP_NET_RAW,
+                                                               CAP_NET_ADMIN,
+                                                               CAP_NET_BIND_SERVICE };
+                    cap_t caps = cap_get_proc();
+                    if (cap_clear(caps) ||
+                        cap_set_flag(caps, CAP_PERMITTED, ArraySize(needed_caps), needed_caps, CAP_SET) ||
+                        cap_set_flag(caps, CAP_EFFECTIVE, ArraySize(needed_caps), needed_caps, CAP_SET)) {
+                        Log(LOG_ERR, "Failed to set capabilities.\n");
+                        return DAEMON_EXIT_CAP_ERROR;
+                    }
+                    // Keep all capabilities before switching users
+                    if (prctl(PR_SET_KEEPCAPS, 1, 0, 0, 0)) {
+                        Log(LOG_ERR, "Failed to persist capabilities before switching user.\n");
+                        return DAEMON_EXIT_CAP_ERROR;
+                    }
+
                     // drop root privileges if <user> is specified.
                     struct passwd* pwent;
                     setpwent();
@@ -772,22 +787,8 @@ int main(int argc, char** argv, char** env)
                         return DAEMON_EXIT_CONFIG_ERROR;
                     }
                 }
-#endif
-
-#if defined(QCC_OS_LINUX)
-                // Set the capabilities we need.
-                struct __user_cap_header_struct header;
-                struct __user_cap_data_struct cap;
-                header.version = _LINUX_CAPABILITY_VERSION;
-                header.pid = 0;
-                cap.permitted = (1 << CAP_NET_RAW | 1 << CAP_NET_ADMIN | 1 << CAP_NET_BIND_SERVICE);
-                cap.effective = cap.permitted;
-                cap.inheritable = 0;
-                capset(&header, &cap);
-#endif
             }
 #endif
-
             Log(LOG_INFO, "Running with effective userid %d\n", geteuid());
 
             // create new session ID
