@@ -23,6 +23,7 @@
 #include <qcc/CommonGlobals.h>
 #include <qcc/String.h>
 #include <qcc/Logger.h>
+#include <qcc/Util.h>
 
 #define QCC_MODULE "STATICGLOBALS"
 
@@ -34,7 +35,7 @@
 #endif
 namespace qcc {
 /** Assign enough memory to store all static/global values */
-static uint64_t commonDummy[sizeof(StaticGlobals) / 4];
+static uint64_t commonDummy[RequiredArrayLength(sizeof(StaticGlobals), uint64_t)];
 
 /** Assign commonGlobals to be a reference to the allocated memory */
 StaticGlobals& commonGlobals = ((StaticGlobals &)commonDummy);
