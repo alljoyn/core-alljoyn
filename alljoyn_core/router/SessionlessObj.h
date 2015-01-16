@@ -122,10 +122,8 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      *
      * @param sid   Session ID associated with sessionless message.
      * @param msg   Sesionless message to be routed.
-     *
-     * @return true if message was delivered, false otherwise.
      */
-    bool RouteSessionlessMessage(uint32_t sid, Message& msg);
+    void RouteSessionlessMessage(uint32_t sid, Message& msg);
 
     /**
      * Remove a sessionless signal with a given serial number from the store/forward cache.

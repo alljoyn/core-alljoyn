@@ -123,18 +123,14 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& origSender)
                        RemoteEndpoint::cast(sender)->GetSessionId()));
 
         /*
-         * The bus controller is responsible for "some" routing of sessionless signals.
-         * Specifically, sessionless signals that are received solely to "catch-up" a
-         * newly connected local client are routed directly to that client by the BusController.
-         * If RouteSessionlessSignal returns true, then the BusController has successfully
-         * routed the sessionless signal to its destination and no further action should be
-         * taken here. If it returns false, then the normal routing procedure should
-         * attempt to deliver the message.
+         * The Sessionless Object is responsible for routing of sessionless
+         * signals.  Specifically, sessionless signals that are received solely
+         * to "catch-up" a newly connected local client are routed directly to
+         * that client by the Sessionless Object.
          */
-        if (sessionlessObj->RouteSessionlessMessage(RemoteEndpoint::cast(sender)->GetSessionId(), msg)) {
-            return ER_OK;
-        }
-        QCC_DbgPrintf(("DaemonRouter::PushMessage(): Unable to RouteSessionlessMessage()"));
+        RemoteEndpoint rep = RemoteEndpoint::cast(sender);
+        sessionlessObj->RouteSessionlessMessage(rep->GetSessionId(), msg);
+        return ER_OK;
     }
 
     /*
