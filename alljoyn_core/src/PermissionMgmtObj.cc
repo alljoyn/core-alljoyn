@@ -1492,7 +1492,7 @@ QStatus PermissionMgmtObj::PerformReset(bool keepForClaim)
 QStatus PermissionMgmtObj::Reset()
 {
     /* do full reset */
-    return PerformReset(false);
+    return PerformReset(true);
 }
 
 void PermissionMgmtObj::Reset(const InterfaceDescription::Member* member, Message& msg)
