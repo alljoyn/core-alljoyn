@@ -28,23 +28,9 @@
 #include "AboutDataInternal.h"
 
 #define QCC_MODULE "ALLJOYN_ABOUT"
+using ajn::AboutKeys;
 
 namespace ajn {
-
-const char* AboutData::APP_ID = "AppId";
-const char* AboutData::DEFAULT_LANGUAGE = "DefaultLanguage";
-const char* AboutData::DEVICE_NAME = "DeviceName";
-const char* AboutData::DEVICE_ID = "DeviceId";
-const char* AboutData::APP_NAME = "AppName";
-const char* AboutData::MANUFACTURER = "Manufacturer";
-const char* AboutData::MODEL_NUMBER = "ModelNumber";
-const char* AboutData::SUPPORTED_LANGUAGES = "SupportedLanguages";
-const char* AboutData::DESCRIPTION = "Description";
-const char* AboutData::DATE_OF_MANUFACTURE = "DateOfManufacture";
-const char* AboutData::SOFTWARE_VERSION = "SoftwareVersion";
-const char* AboutData::AJ_SOFTWARE_VERSION = "AJSoftwareVersion";
-const char* AboutData::HARDWARE_VERSION = "HardwareVersion";
-const char* AboutData::SUPPORT_URL = "SupportUrl";
 
 AboutData::AboutData() {
     InitializeFieldDetails();
@@ -747,9 +733,13 @@ QStatus AboutData::SetField(const char* name, ajn::MsgArg value, const char* lan
     // At this time OEM specific fields are added as
     //    not required
     //    not announced
-    //    can be localized
+    //    if the field is a string it can be localized not localized otherwise
     if (aboutDataInternal->aboutFields.find(name) == aboutDataInternal->aboutFields.end()) {
-        aboutDataInternal->aboutFields[name] = FieldDetails(LOCALIZED, value.Signature().c_str());
+        if (value.Signature() == "s") {
+            aboutDataInternal->aboutFields[name] = FieldDetails(LOCALIZED, value.Signature().c_str());
+        } else {
+            aboutDataInternal->aboutFields[name] = FieldDetails(EMPTY_MASK, value.Signature().c_str());
+        }
     }
     if (IsFieldLocalized(name)) {
         if (language == NULL || strcmp(language, "") == 0) {
@@ -782,7 +772,7 @@ QStatus AboutData::GetField(const char* name, ajn::MsgArg*& value, const char* l
     if (!IsFieldLocalized(name)) {
         value = &(aboutDataInternal->propertyStore[name]);
     } else {
-        if (language == NULL) {
+        if (language == NULL || strcmp(language, "") == 0) {
             char* defaultLanguage;
             status = aboutDataInternal->propertyStore[DEFAULT_LANGUAGE].Get(aboutDataInternal->aboutFields[DEFAULT_LANGUAGE].signature.c_str(), &defaultLanguage);
             if (status != ER_OK) {
