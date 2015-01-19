@@ -13,32 +13,18 @@
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 Import('secenv')
-Import('sqlite_objs')
 
-lib_env = secenv.Clone()
+sqlite_env = secenv.Clone()
 
-srcs = Glob('*.cc')
-srcs.append(Glob('./external/sqlite3/*.c'))
+srcs = Glob('*.c')
 
-lib_env.Prepend(LIBS = ['dl'])
+#sqlite_env.Prepend(LIBS = ['dl'])
 
-libs = []
 
 # Header files
-lib_env.Append(CPPPATH = ['.'])
-lib_env.Append(CPPPATH = ['../../../../../../../storage/inc'])
-lib_env.Append(CPPPATH = ['../../../../../../../external/sqlite3'])
-lib_env.Append(CPPPATH = ['../../../../../../../core/inc/'])
+sqlite_env.Append(CPPPATH = ['.'])
 
-# Static library
-objs = lib_env.Object(srcs)
-objs.append(sqlite_objs[0])
-libs.append(lib_env.StaticLibrary('ajsecstorage', objs))
+objs = sqlite_env.Object(srcs)
+shobjs = sqlite_env.SharedObject(srcs)
 
-# Shared library
-if lib_env.get('LIBTYPE', 'static') != 'static':
-    shobjs = lib_env.SharedObject(srcs)
-    shobjs.append(sqlite_objs[1])
-    libs.append(lib_env.SharedLibrary('ajsecstorage', shobjs))
-
-Return ('libs')
+Return ('objs', 'shobjs')
