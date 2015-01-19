@@ -1,7 +1,7 @@
 /******************************************************************************
  *
  *
- * Copyright (c) 2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011, 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -17,12 +17,37 @@
  ******************************************************************************/
 #include <gtest/gtest.h>
 
+#include <qcc/Debug.h>
+
+#include <string.h>
+
+static void DebugOut(DbgMsgType type, const char* module, const char* msg, void* context)
+{
+    // Do nothing to suppress AJ errors and debug prints.
+}
+
+static bool IsDebugOn(char** env)
+{
+    while (env && *env) {
+        if (strncmp(*env, "ER_DEBUG_", 9) == 0) {
+            return true;
+        }
+        ++env;
+    }
+    return false;
+}
+
+
 /** Main entry point */
-int main(int argc, char**argv, char**envArg)
+int main(int argc, char** argv, char** envArg)
 {
     int status = 0;
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stderr, NULL, _IONBF, 0);
+
+    if (!IsDebugOn(envArg)) {
+        QCC_RegisterOutputCallback(DebugOut, NULL);
+    }
 
     printf("\n Running alljoyn_core unit test\n");
     testing::InitGoogleTest(&argc, argv);
