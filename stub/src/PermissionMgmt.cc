@@ -19,6 +19,7 @@
 #include "qcc/Crypto.h"
 
 #include <SecurityManagerImpl.h>
+#include <X509CertificateParser.h>
 
 qcc::String PermissionMgmt::PubKeyToString(const qcc::ECCPublicKey* pubKey)
 {
@@ -150,8 +151,8 @@ void PermissionMgmt::Claim(const ajn::InterfaceDescription::Member* member, ajn:
     }
 }
 
-QStatus PermissionMgmt::InstallIdentityCertificate(ajn::MsgArg& msgArg) {
-
+QStatus PermissionMgmt::InstallIdentityCertificate(ajn::MsgArg& msgArg)
+{
     uint8_t encoding;
     uint8_t* encoded;
     size_t encodedLen;
@@ -182,8 +183,6 @@ void PermissionMgmt::InstallIdentity(const ajn::InterfaceDescription::Member* me
     MethodReply(msg, status);
 }
 
-#define OID_X509_OUNIT_NAME "2.5.4.11"
-
 void PermissionMgmt::InstallMembership(const ajn::InterfaceDescription::Member* member, ajn::Message& msg)
 {
     size_t certChainCount;
@@ -204,27 +203,13 @@ void PermissionMgmt::InstallMembership(const ajn::InterfaceDescription::Member* 
         return;
     }
     qcc::String certificate((char*)encoded, encodedLen);
-    //Quickly parse the certificate and retrieve the guild.
-    size_t first = certificate.find_first_of('\n', 0);
-    size_t second = certificate.find_last_of('\n', certificate.length() - 10);
-    qcc::String base64 = certificate.substr(first + 1, second - first - 1);
-    qcc::String binary;
-    qcc::Crypto_ASN1::DecodeBase64(base64, binary);
-    qcc::String rawOID;
-    qcc::String oid = qcc::String(OID_X509_OUNIT_NAME);
-    qcc::Crypto_ASN1::Encode(rawOID, "o", &oid);
+    qcc::String serialNumber = ajn::securitymgr::X509CertificateParser::GetSerialNumber(certificate);
+    qcc::GUID128 guildID = ajn::securitymgr::X509CertificateParser::GetGuildID(certificate);
 
-    first = binary.find(rawOID) + rawOID.length();
-    second = binary.find_first_of('0', first);
-    qcc::String asnGuild = binary.substr(first);
-    qcc::String guildID;
+    printf("\nInstalling Membership certificate for guild %s with serial number %s\n%s\n",
+           guildID.ToString().c_str(), serialNumber.c_str(), certificate.c_str());
 
-    qcc::Crypto_ASN1::Decode(asnGuild, "u", &guildID);
-
-    printf("\nInstalling Membership certificate for guild ID: '%s'\n%s\n", guildID.c_str(), certificate.c_str());
-
-    GUID128 guildGUID(guildID.c_str());
-    memberships[guildGUID] = certificate;
+    memberships[guildID] = certificate;
 
     MethodReply(msg, ER_OK);
 
@@ -235,12 +220,49 @@ void PermissionMgmt::InstallMembership(const ajn::InterfaceDescription::Member* 
 
 void PermissionMgmt::RemoveMembership(const ajn::InterfaceDescription::Member* member, ajn::Message& msg)
 {
-    GUID128 guildID;
-    guildID.SetBytes(msg->GetArg(0)->v_scalarArray.v_byte);
+    QStatus status;
+    const char* serial;
+    status = msg->GetArg(0)->Get("s", &serial);
+    if (ER_OK != status) {
+        printf("Could not get serial.\n");
+        MethodReply(msg, status);
+        return;
+    }
 
-    printf("\nRemoving Membership for guild ID: '%s'\n", guildID.ToString().c_str());
-    memberships.erase(guildID);
-    MethodReply(msg, ER_OK);
+    uint8_t* issuer;
+    size_t issuerLen;
+    status = msg->GetArg(1)->Get("ay", &issuerLen, &issuer);
+    if (ER_OK != status) {
+        printf("Gould not get issuer.\n");
+        MethodReply(msg, status);
+        return;
+    }
+    if (issuerLen != GUID128::SIZE) {
+        MethodReply(msg, ER_INVALID_DATA);
+        return;
+    }
+
+    qcc::String serialNum(serial);
+
+    std::map<qcc::GUID128, qcc::String>::iterator it = memberships.begin();
+    while (it != memberships.end()) {
+        if (ajn::securitymgr::X509CertificateParser::GetSerialNumber(it->second) == serialNum) {
+            break;
+        }
+        ++it;
+    }
+    if (it != memberships.end()) {
+        qcc::GUID128 guildID = ajn::securitymgr::X509CertificateParser::GetGuildID(it->second);
+        memberships.erase(it);
+        printf("Removed membership certificate for guild %s with serial number %s\n",
+               guildID.ToString().c_str(), serialNum.c_str());
+        status = ER_OK;
+    } else {
+        printf("Could not find membership certificate with serial number %s\n", serialNum.c_str());
+        status = ER_CERTIFICATE_NOT_FOUND;
+    }
+
+    MethodReply(msg, status);
 }
 
 void PermissionMgmt::InstallMembershipAuthData(const ajn::InterfaceDescription::Member* member,
@@ -462,7 +484,7 @@ QStatus PermissionMgmt::CreateInterface(BusAttachment& ba)
         secIntf->AddMethod("Claim", "(yv)ay(yay)", "(yv)", "adminPublicKey,GUID,identityCert,publicKey");
         secIntf->AddMethod("InstallIdentity", "(yay)", NULL, "PEMofIdentityCert", 0);
         secIntf->AddMethod("InstallMembership", "a(yay)", NULL, "cert", 0);
-        secIntf->AddMethod("RemoveMembership", "ay", NULL, "guildID", 0);
+        secIntf->AddMethod("RemoveMembership",     "say", NULL, "serialNum,issuer");
         secIntf->AddMethod("GetManifest", NULL, "(yv)",  "manifest");
         secIntf->AddMethod("InstallMembershipAuthData", "say(yv)",  NULL, "serialNum,issuer,authorization");
         secIntf->AddMethod("InstallPolicy", "(yv)", NULL, "authorization");

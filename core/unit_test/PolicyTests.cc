@@ -40,46 +40,45 @@ class PolicyTest :
  *       -# A policy can be installed on it.
  *       -# A policy can be retrieved from it.
  * */
-TEST_F(PolicyTest, DISABLED_SuccessfulPolicy) {
+TEST_F(PolicyTest, SuccessfulPolicy) {
     GUID128 guildGUID1("B509480EE75397473B5A000B82A7E37E");
     GUID128 guildGUID2("0A716F627F53F91E62835CF3F6C7CD87");
 
     PermissionPolicy policy1;
     vector<GUID128> policy1Guilds;
     policy1Guilds.push_back(guildGUID1);
-    ASSERT_EQ(ER_OK, PolicyGenerator::DefaultPolicy(policy1Guilds, policy1));
+    ASSERT_EQ(ER_OK, PolicyGenerator::DefaultPolicy(policy1Guilds, secMgr->GetPublicKey(), policy1));
 
     PermissionPolicy policy2;
     vector<GUID128> policy2Guilds;
     policy2Guilds.push_back(guildGUID1);
     policy2Guilds.push_back(guildGUID2);
-    ASSERT_EQ(ER_OK, PolicyGenerator::DefaultPolicy(policy2Guilds, policy2));
+    ASSERT_EQ(ER_OK, PolicyGenerator::DefaultPolicy(policy2Guilds, secMgr->GetPublicKey(), policy2));
 
     PermissionPolicy policyRemote;
     PermissionPolicy policyLocal;
-    ASSERT_EQ(ER_OK, secMgr->GetPolicy(appInfo, policyRemote, true));
-    ASSERT_EQ(ER_OK, secMgr->GetPolicy(appInfo, policyLocal, false));
+    ASSERT_EQ(ER_OK, secMgr->GetPolicy(lastAppInfo, policyRemote, true));
+    ASSERT_EQ(ER_OK, secMgr->GetPolicy(lastAppInfo, policyLocal, false));
     ASSERT_EQ((size_t)0, policyRemote.GetTermsSize());
     ASSERT_EQ((size_t)0, policyLocal.GetTermsSize());
     ASSERT_EQ(0, policyRemote.ToString().compare(policyLocal.ToString()));
-
-    ASSERT_EQ(ER_OK, secMgr->InstallPolicy(appInfo, policy1));
-    ASSERT_EQ(ER_OK, secMgr->GetPolicy(appInfo, policyRemote, true));
-    ASSERT_EQ(ER_OK, secMgr->GetPolicy(appInfo, policyLocal, false));
+    ASSERT_EQ(ER_OK, secMgr->InstallPolicy(lastAppInfo, policy1));
+    ASSERT_EQ(ER_OK, secMgr->GetPolicy(lastAppInfo, policyRemote, true));
+    ASSERT_EQ(ER_OK, secMgr->GetPolicy(lastAppInfo, policyLocal, false));
     ASSERT_EQ((size_t)1, policyRemote.GetTermsSize());
     ASSERT_EQ((size_t)1, policyLocal.GetTermsSize());
     ASSERT_EQ(0, policyRemote.ToString().compare(policyLocal.ToString()));
 
-    ASSERT_EQ(ER_OK, secMgr->InstallPolicy(appInfo, policy2));
-    ASSERT_EQ(ER_OK, secMgr->GetPolicy(appInfo, policyRemote, true));
-    ASSERT_EQ(ER_OK, secMgr->GetPolicy(appInfo, policyLocal, false));
+    ASSERT_EQ(ER_OK, secMgr->InstallPolicy(lastAppInfo, policy2));
+    ASSERT_EQ(ER_OK, secMgr->GetPolicy(lastAppInfo, policyRemote, true));
+    ASSERT_EQ(ER_OK, secMgr->GetPolicy(lastAppInfo, policyLocal, false));
     ASSERT_EQ((size_t)2, policyRemote.GetTermsSize());
     ASSERT_EQ((size_t)2, policyLocal.GetTermsSize());
     ASSERT_EQ(0, policyRemote.ToString().compare(policyLocal.ToString()));
 
-    ASSERT_EQ(ER_OK, secMgr->InstallPolicy(appInfo, policy1));
-    ASSERT_EQ(ER_OK, secMgr->GetPolicy(appInfo, policyRemote, true));
-    ASSERT_EQ(ER_OK, secMgr->GetPolicy(appInfo, policyLocal, false));
+    ASSERT_EQ(ER_OK, secMgr->InstallPolicy(lastAppInfo, policy1));
+    ASSERT_EQ(ER_OK, secMgr->GetPolicy(lastAppInfo, policyRemote, true));
+    ASSERT_EQ(ER_OK, secMgr->GetPolicy(lastAppInfo, policyLocal, false));
     ASSERT_EQ((size_t)1, policyRemote.GetTermsSize());
     ASSERT_EQ((size_t)1, policyLocal.GetTermsSize());
     ASSERT_EQ(0, policyRemote.ToString().compare(policyLocal.ToString()));
@@ -92,9 +91,9 @@ TEST_F(PolicyTest, InvalidArgsPolicy)
     PermissionPolicy policy1;
     vector<GUID128> policy1Guilds;
     policy1Guilds.push_back(guildGUID1);
-    ASSERT_EQ(ER_OK, PolicyGenerator::DefaultPolicy(policy1Guilds, policy1));
+    ASSERT_EQ(ER_OK, PolicyGenerator::DefaultPolicy(policy1Guilds, secMgr->GetPublicKey(), policy1));
 
-    ApplicationInfo invalid = appInfo;
+    ApplicationInfo invalid = lastAppInfo;
     qcc::Crypto_ECC ecc;
     ecc.GenerateDSAKeyPair();
     invalid.publicKey = *ecc.GetDSAPublicKey();
@@ -102,8 +101,11 @@ TEST_F(PolicyTest, InvalidArgsPolicy)
 
     destroy();
     PermissionPolicy policy;
-    ASSERT_NE(ER_OK, secMgr->InstallPolicy(appInfo, policy1));
-    ASSERT_NE(ER_OK, secMgr->GetPolicy(appInfo, policy, true));
+
+    ASSERT_TRUE(WaitForState(ajn::PermissionConfigurator::STATE_CLAIMED, ajn::securitymgr::STATE_NOT_RUNNING));
+
+    ASSERT_NE(ER_OK, secMgr->InstallPolicy(lastAppInfo, policy1));
+    ASSERT_NE(ER_OK, secMgr->GetPolicy(lastAppInfo, policy, true));
 }
 }
 //namespace

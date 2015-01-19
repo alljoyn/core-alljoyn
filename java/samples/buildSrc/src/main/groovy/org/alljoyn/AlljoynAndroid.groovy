@@ -50,6 +50,10 @@ class AlljoynAndroid implements Plugin<Project> {
                     if (!soFileArmDebug.exists()) {
                         throw new GradleException("Can't find ${soFileArmDebug}. Did you run scons for \"BINDINGS=java OS=android CPU=arm\" first?")
                     }
+                    if (!soFileX86Debug.exists()) {
+                        //X86 .so file missing, only produce a warning for this.
+                        project.logger.warn("WARNING: Can't find ${soFileX86Debug}. This build won't work on x86.\nDid you run scons for \"BINDINGS=java OS=android CPU=x86\" first?")
+                    }
                 }
             }
             project.tasks.packageRelease.dependsOn("copySoFilesRelease")
@@ -92,7 +96,11 @@ class AlljoynAndroid implements Plugin<Project> {
                     minifyEnabled = true
                     shrinkResources = true
                     proguardFile getDefaultProguardFile('proguard-android-optimize.txt')
-                    proguardFile 'proguard-rules.pro'
+                    File proguardFileProject = project.file("proguard-rules.pro")
+                    if (!proguardFileProject.exists()) {
+                        throw new GradleException("Can't find ${proguardFileProject}");
+                    }
+                    proguardFile proguardFileProject
                 }
             }
             compileOptions {

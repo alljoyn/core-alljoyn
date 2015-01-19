@@ -16,15 +16,15 @@
 
 package org.alljoyn.securitymgr;
 
-import java.util.Collections;
-import java.util.List;
-
 import org.alljoyn.securitymgr.access.Manifest;
 import org.alljoyn.securitymgr.access.Peer;
 import org.alljoyn.securitymgr.access.PeerType;
 import org.alljoyn.securitymgr.access.Policy;
 import org.alljoyn.securitymgr.access.Rule;
 import org.alljoyn.securitymgr.access.Term;
+
+import java.util.Collections;
+import java.util.List;
 
 /**
  * The DefaultSecurityHandler is a utility class wrapping around a
@@ -40,25 +40,19 @@ public class DefaultSecurityHandler {
     private final SecurityManager smgr;
     private Guild theGuild;
     private Identity theIdenity;
-    private String userName;
 
-    public DefaultSecurityHandler(String userName,
-            ApplicationEventListener listener,
+   public DefaultSecurityHandler(ApplicationEventListener listener,
             ManifestApprover manifestApprover)
                     throws SecurityMngtException {
 
-        this.userName = userName;
         smgr = SecurityManager.getSecurityManager();
         init(listener, manifestApprover);
     }
 
-    public DefaultSecurityHandler(String userName,
-            ApplicationEventListener listener,
-            ManifestApprover manifestApprover, String path,
-            String keyStoreUser, String passwd) throws SecurityMngtException {
+    public DefaultSecurityHandler(ApplicationEventListener listener,
+            ManifestApprover manifestApprover, String path) throws SecurityMngtException {
 
-        this.userName = userName;
-        smgr = SecurityManager.getSecurityManager(path, keyStoreUser, passwd);
+        smgr = SecurityManager.getSecurityManager(path);
         init(listener, manifestApprover);
     }
     public List<ApplicationInfo> getApplications() {
@@ -80,36 +74,24 @@ public class DefaultSecurityHandler {
         smgr.installMembership(info, theGuild);
         Policy policy = new Policy(1);
         Term term = new Term();
-        term.addPeer(new Peer(PeerType.GUILD, theGuild.getGuid().guid));
+        term.addPeer(new Peer(PeerType.GUILD, theGuild.getGuid().guid, smgr.getPublicKey()));
         term.addRule(new Rule("*"));
         policy.addTerm(term);
         smgr.installPolicy(info, policy);
     }
 
     /**
-     * @return the userName
+     * Unclaims the specified application.
+     * @param info a non-null ApplicationInfo
+     * @throws SecurityMngtException when the unclaiming fails
      */
-    public final String getUserName() {
-        return userName;
-    }
-
-    /**
-     * Update the user name used by this DefaultSecurityHandler.
-     *
-     * @param userName the userName to set
-     * @throws SecurityMngtException
-     */
-    public final void setUserName(String userName) throws SecurityMngtException {
-        if (!userName.equals(theIdenity.getName())) {
-            theIdenity.setName(userName);
-            smgr.updateIdentity(theIdenity);
-            this.userName = userName;
-        }
+    public void unclaimApplication(ApplicationInfo info) throws SecurityMngtException {
+        smgr.unclaimApplication(info);
     }
 
     private void init(ApplicationEventListener listener,
             ManifestApprover manifestApprover) throws SecurityMngtException {
-        if (listener == null || manifestApprover == null || userName == null) {
+        if (listener == null || manifestApprover == null) {
             throw new IllegalArgumentException("Null Argument(s) provided");
         }
         smgr.setManifestApprover(manifestApprover);
@@ -130,7 +112,7 @@ public class DefaultSecurityHandler {
             theIdenity = smgr.getIdentity(guid);
         } catch (SecurityMngtException sme) {
             // Identity does not exist.
-            theIdenity = new Identity(userName, guidData);
+            theIdenity = new Identity("Admin", guidData);
             smgr.createIdentity(theIdenity);
         }
     }

@@ -62,16 +62,11 @@ TEST_F(ClaimingNominalTests, SuccessfulClaimingWithoutOOB) {
 
     Stub* stub = new Stub(&tcl);
     ASSERT_EQ(stub->GetInstalledIdentityCertificate(), "");
-    while (sem_trywait(&sem) == 0) {
-        ;
-    }
-    sem_wait(&sem);
-    ASSERT_EQ(tal->_lastAppInfo.runningState, ajn::securitymgr::STATE_RUNNING);
-    ASSERT_EQ(tal->_lastAppInfo.claimState, ajn::PermissionConfigurator::STATE_UNCLAIMABLE);
+    ASSERT_TRUE(WaitForState(ajn::PermissionConfigurator::STATE_UNCLAIMABLE, ajn::securitymgr::STATE_RUNNING));
 
-    ASSERT_TRUE(tal->_lastAppInfo == secMgr->GetApplications()[0]);
+    ASSERT_TRUE(lastAppInfo == secMgr->GetApplications()[0]);
 
-    ASSERT_EQ(tal->_lastAppInfo.rootOfTrustList.size(), (size_t)0);
+    ASSERT_EQ(lastAppInfo.rootOfTrustList.size(), (size_t)0);
     ASSERT_EQ(secMgr->GetApplications(ajn::PermissionConfigurator::STATE_CLAIMED).size(), (size_t)0);
 
     /* make sure we cannot claim yet */
@@ -79,60 +74,47 @@ TEST_F(ClaimingNominalTests, SuccessfulClaimingWithoutOOB) {
     idInfo.guid = GUID128("abcdef123456789");
     idInfo.name = "MyName";
     ASSERT_EQ(secMgr->StoreIdentity(idInfo, false), ER_OK);
-    ASSERT_NE(secMgr->ClaimApplication(tal->_lastAppInfo, idInfo, &AutoAcceptManifest), ER_OK);
-    ASSERT_EQ(tal->_lastAppInfo.runningState, ajn::securitymgr::STATE_RUNNING);
-    ASSERT_EQ(tal->_lastAppInfo.claimState, ajn::PermissionConfigurator::STATE_UNCLAIMABLE);
-    ASSERT_EQ(tal->_lastAppInfo, secMgr->GetApplications()[0]);
+    ASSERT_NE(secMgr->ClaimApplication(lastAppInfo, idInfo, &AutoAcceptManifest), ER_OK);
+    ASSERT_EQ(lastAppInfo, secMgr->GetApplications()[0]);
     ASSERT_EQ(secMgr->GetApplications(ajn::PermissionConfigurator::STATE_CLAIMED).size(), (size_t)0);
     //ASSERT_EQ(secMgr->GetIdentityForApplication(_lastAppInfo), NULL);
     ASSERT_EQ(stub->GetRoTKeys().size(), (size_t)0);
 
     /* Open claim window */
     ASSERT_EQ(stub->OpenClaimWindow(), ER_OK);
-    sem_wait(&sem);
-    ASSERT_EQ(tal->_lastAppInfo.runningState, ajn::securitymgr::STATE_RUNNING);
-    ASSERT_EQ(tal->_lastAppInfo.claimState, ajn::PermissionConfigurator::STATE_CLAIMABLE);
-    ASSERT_EQ(tal->_lastAppInfo, secMgr->GetApplications()[0]);
+    ASSERT_TRUE(WaitForState(ajn::PermissionConfigurator::STATE_CLAIMABLE, ajn::securitymgr::STATE_RUNNING));
+    ASSERT_EQ(lastAppInfo, secMgr->GetApplications()[0]);
     ASSERT_EQ(secMgr->GetApplications(ajn::PermissionConfigurator::STATE_CLAIMED).size(), (size_t)0);
     //ASSERT_EQ(secMgr->GetIdentityForApplication(_lastAppInfo), NULL);
     ASSERT_EQ(stub->GetRoTKeys().size(), (size_t)0);
 
     /* Claim ! */
-    ASSERT_EQ(secMgr->ClaimApplication(tal->_lastAppInfo, idInfo, &AutoAcceptManifest), ER_OK);
-    sem_wait(&sem);
+    ASSERT_EQ(secMgr->ClaimApplication(lastAppInfo, idInfo, &AutoAcceptManifest), ER_OK);
+    ASSERT_TRUE(WaitForState(ajn::PermissionConfigurator::STATE_CLAIMED, ajn::securitymgr::STATE_RUNNING));
+    ASSERT_EQ(lastAppInfo.peerID, secMgr->GetApplications()[0].peerID);
+    ASSERT_EQ(lastAppInfo.claimState, secMgr->GetApplications()[0].claimState);
+    ASSERT_EQ(lastAppInfo.runningState, secMgr->GetApplications()[0].runningState);
+    ASSERT_EQ(lastAppInfo.peerID, secMgr->GetApplications(ajn::PermissionConfigurator::STATE_CLAIMED)[0].peerID);
 
-    ASSERT_EQ(tal->_lastAppInfo.runningState, ajn::securitymgr::STATE_RUNNING);
-    ASSERT_EQ(tal->_lastAppInfo.claimState, ajn::PermissionConfigurator::STATE_CLAIMED);
-    ASSERT_EQ(tal->_lastAppInfo.peerID, secMgr->GetApplications()[0].peerID);
-    ASSERT_EQ(tal->_lastAppInfo.claimState, secMgr->GetApplications()[0].claimState);
-    ASSERT_EQ(tal->_lastAppInfo.runningState, secMgr->GetApplications()[0].runningState);
-    ASSERT_EQ(tal->_lastAppInfo.peerID, secMgr->GetApplications(ajn::PermissionConfigurator::STATE_CLAIMED)[0].peerID);
-
-    qcc::ECCPublicKey pb = secMgr->GetRootOfTrust().GetPublicKey();
+    qcc::ECCPublicKey pb = secMgr->GetPublicKey();
 
     printf("SECMGR ROT PUBLIC KEY: '%s'\n", pb.ToString().c_str());
     // ASSERT_NE(secMgr->GetIdentityForApplication(_lastAppInfo), NULL);
     ASSERT_EQ(stub->GetRoTKeys().size(), (size_t)1);
 
-    ASSERT_EQ(*stub->GetRoTKeys()[0], secMgr->GetRootOfTrust().GetPublicKey());
+    ASSERT_EQ(*stub->GetRoTKeys()[0], secMgr->GetPublicKey());
 
     ASSERT_NE(stub->GetInstalledIdentityCertificate(), "");
 
     /* make sure we cannot claim again */
-    ASSERT_NE(secMgr->ClaimApplication(tal->_lastAppInfo, idInfo, &AutoAcceptManifest), ER_OK);
+    ASSERT_NE(secMgr->ClaimApplication(lastAppInfo, idInfo, &AutoAcceptManifest), ER_OK);
 
     /* Stop the stub */
     delete stub;
 
-    while (sem_trywait(&sem) == 0) {
-        ;
-    }
-    sem_wait(&sem);
-
-    ASSERT_EQ(tal->_lastAppInfo.runningState, ajn::securitymgr::STATE_NOT_RUNNING);
-    ASSERT_EQ(tal->_lastAppInfo.claimState, ajn::PermissionConfigurator::STATE_CLAIMED);
-    ASSERT_EQ(tal->_lastAppInfo, secMgr->GetApplications()[0]);
-    ASSERT_EQ(tal->_lastAppInfo, secMgr->GetApplications(ajn::PermissionConfigurator::STATE_CLAIMED)[0]);
+    ASSERT_TRUE(WaitForState(ajn::PermissionConfigurator::STATE_CLAIMED, ajn::securitymgr::STATE_NOT_RUNNING));
+    ASSERT_EQ(lastAppInfo, secMgr->GetApplications()[0]);
+    ASSERT_EQ(lastAppInfo, secMgr->GetApplications(ajn::PermissionConfigurator::STATE_CLAIMED)[0]);
 }
 
 /**

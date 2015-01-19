@@ -22,8 +22,8 @@
 
 using namespace ajn;
 
-#define KEYX_ECDHE_NULL ((const char*)"ALLJOYN_ECDHE_NULL")
-#define ECDHE_KEYX ((const char*)"ALLJOYN_ECDHE_NULL")
+#define KEYX_ECDHE_NULL "ALLJOYN_ECDHE_NULL"
+#define ECDHE_KEYX "ALLJOYN_ECDHE_ECDSA"
 
 /**
  * Class to allow authentication mechanisms to interact with the user or application.

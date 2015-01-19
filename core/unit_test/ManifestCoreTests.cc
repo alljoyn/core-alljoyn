@@ -65,14 +65,7 @@ TEST_F(ManifestCoreTests, SuccessfulGetManifest) {
     Stub* stub = new Stub(&tcl);
 
     /* Wait for signals */
-    sem_wait(&sem); // security signal
-    if (tal->_lastAppInfo.appName.size() == 0) {
-        sem_wait(&sem); // about signal
-    } else {
-        sem_trywait(&sem);
-    }
-    ASSERT_EQ(ajn::securitymgr::STATE_RUNNING, tal->_lastAppInfo.runningState);
-    ASSERT_EQ(ajn::PermissionConfigurator::STATE_CLAIMABLE, tal->_lastAppInfo.claimState);
+    ASSERT_TRUE(WaitForState(ajn::PermissionConfigurator::STATE_CLAIMABLE, ajn::securitymgr::STATE_RUNNING));
 
     IdentityInfo idInfo;
     idInfo.guid = GUID128("abcdef123456789");
@@ -80,12 +73,10 @@ TEST_F(ManifestCoreTests, SuccessfulGetManifest) {
     ASSERT_EQ(secMgr->StoreIdentity(idInfo, false), ER_OK);
 
     /* Claim! */
-    ASSERT_EQ(ER_OK, secMgr->Claim(tal->_lastAppInfo, idInfo));
+    ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
 
     /* Check security signal */
-    sem_wait(&sem);
-    ASSERT_EQ(ajn::securitymgr::STATE_RUNNING, tal->_lastAppInfo.runningState);
-    ASSERT_EQ(ajn::PermissionConfigurator::STATE_CLAIMED, tal->_lastAppInfo.claimState);
+    ASSERT_TRUE(WaitForState(ajn::PermissionConfigurator::STATE_CLAIMED, ajn::securitymgr::STATE_RUNNING));
 
     /* Set manifest */
     PermissionPolicy::Rule* rules;
@@ -96,7 +87,7 @@ TEST_F(ManifestCoreTests, SuccessfulGetManifest) {
     /* Retrieve manifest */
     PermissionPolicy::Rule* retrievedRules;
     size_t retrievedCount;
-    ASSERT_EQ(ER_OK, secMgr->GetManifest(tal->_lastAppInfo, &retrievedRules, &retrievedCount));
+    ASSERT_EQ(ER_OK, secMgr->GetManifest(lastAppInfo, &retrievedRules, &retrievedCount));
 
     /* Compare set and retrieved manifest */
     ASSERT_EQ(count, retrievedCount);
@@ -109,11 +100,6 @@ TEST_F(ManifestCoreTests, SuccessfulGetManifest) {
 
     /* Stop the stub */
     delete stub;
-    sem_wait(&sem);
-    while (sem_trywait(&sem) == 0) {
-        ;
-    }
-    //ASSERT_EQ(ajn::securitymgr::STATE_NOT_RUNNING, tal->_lastAppInfo.runningState);
-    ASSERT_EQ(ajn::PermissionConfigurator::STATE_CLAIMED, tal->_lastAppInfo.claimState);
+    ASSERT_TRUE(WaitForState(ajn::PermissionConfigurator::STATE_CLAIMED, ajn::securitymgr::STATE_NOT_RUNNING));
 }
 } // namespace

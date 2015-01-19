@@ -48,8 +48,6 @@ Copyright (c) 2014, AllSeen Alliance. All rights reserved.
             <arg name="cert" type="ay" direction="in"/>
             <arg name="identity" type="ay" direction="in"/>
         </method>
-        <method name="RemoveIdentity">
-        </method>
         <method name="GetIdentity">
 		<arg name="cert" type="ay" direction="out"/>
             <arg name="identity" type="ay" direction="out"/>

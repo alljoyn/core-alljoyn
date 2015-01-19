@@ -18,10 +18,10 @@ JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_initJNI
 /*
  * Class:     org_alljoyn_securitymgr_SecurityManagerJNI
  * Method:    init
- * Signature: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Z
+ * Signature: (Ljava/lang/String;)Z
  */
 JNIEXPORT jboolean JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_init
-    (JNIEnv *, jobject, jstring, jstring, jstring);
+    (JNIEnv *, jobject, jstring);
 
 /*
  * Class:     org_alljoyn_securitymgr_SecurityManagerJNI
@@ -134,6 +134,14 @@ JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_deleteMem
  */
 JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_claimApplication
     (JNIEnv *, jobject, jobject, jbyteArray);
+
+/*
+ * Class:     org_alljoyn_securitymgr_SecurityManagerJNI
+ * Method:    getPubicKey
+ * Signature: ()[B
+ */
+JNIEXPORT jbyteArray JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_getPublicKey
+    (JNIEnv *, jobject);
 
 #ifdef __cplusplus
 }

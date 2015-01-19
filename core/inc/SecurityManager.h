@@ -21,7 +21,6 @@
 #include <alljoyn/Status.h>
 #include <alljoyn/AllJoynStd.h>
 #include <alljoyn/PermissionPolicy.h>
-#include <RootOfTrust.h>
 #include <ApplicationInfo.h>
 #include <AppGuildInfo.h>
 #include <ApplicationListener.h>
@@ -33,6 +32,7 @@
 
 #include <qcc/String.h>
 #include <qcc/X509Certificate.h>
+#include <qcc/CryptoECC.h>
 
 #include <qcc/Debug.h>
 #define QCC_MODULE "SEC_MGR"
@@ -62,11 +62,9 @@ typedef bool (*AcceptManifestCB)(const ApplicationInfo& appInfo,
 class SecurityManager {
   private:
     /* This constructor can only be called by the factory */
-    /* I don't like to pass the private key in memory like this but that is the alljoyn way of doing it (sigh) */
+    /* Passing the private key in memory like this is not a good idea but that is the AllJoyn way*/
 
-    SecurityManager(qcc::String userName,
-                    qcc::String password,
-                    IdentityData* id,                                              // Supports NULL identity
+    SecurityManager(IdentityData* id,                                              // Supports NULL identity
                     ajn::BusAttachment* ba,
                     const qcc::ECCPublicKey& pubKey,
                     const qcc::ECCPrivateKey& privKey,
@@ -97,7 +95,7 @@ class SecurityManager {
      * \param[in] app the application info of the application that we need to add the RoT to
      * \param[in] idInfo the identity info of the identity we want to link the application
      * \param[in] amcb the callback function for accepting the manifest of the app
-     * \param[in] cookie a pointer to application specific data. This pointer will be passed to claas made to AcceptManifestCB.
+     * \param[in] cookie a pointer to application specific data. This pointer will be passed to class made to AcceptManifestCB.
      *
      * \retval ER_OK  on success
      * \retval others on failure
@@ -160,14 +158,11 @@ class SecurityManager {
                             const IdentityInfo& id);
 
     /**
-     * \brief Get the RoT of this security manager.
+     * \brief Get the public key of this security manager.
      *
-     * REMARK: You need this if you want to remove the RoT or export
-     * the RoT (e.g. to another security manager on another physical device)
-     *
-     * \retval RootOfTrust the root of trust that is affiliated with this security manager.
+     * \retval publicKey the public key that of this security manager.
      */
-    const RootOfTrust& GetRootOfTrust() const;
+    const qcc::ECCPublicKey& GetPublicKey() const;
 
     /**
      * \brief Get a list of all Applications that were discovered using About.
@@ -343,6 +338,20 @@ class SecurityManager {
     QStatus GetPolicy(const ApplicationInfo& appInfo,
                       PermissionPolicy& policy,
                       bool remote);
+
+    /**
+     * \brief Removes any security configuration from a remote application. It
+     * removes any installed Root of Trust, identity certificate, membership
+     * certificate and policy. This method also removes any reference to the
+     * application from local storage.
+     *
+     * \param[in] appInfo the application from which the security config will
+     *                    be removed
+     *
+     * \retval ER_OK  on success
+     * \retval others on failure
+     */
+    QStatus Reset(const ApplicationInfo& appInfo);
 
     ~SecurityManager();
 

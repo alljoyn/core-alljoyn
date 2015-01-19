@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import org.alljoyn.securitymgr.ClaimState;
 import org.alljoyn.securitymgr.RunningState;
 import org.alljoyn.securitymgr.securitymgrsampleapp.AppsListFragment;
 import org.alljoyn.securitymgr.securitymgrsampleapp.R;
@@ -18,10 +17,13 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-public class MyAdapter extends RecyclerView.Adapter<MyAdapter.ViewHolder>
+/**
+ * RecyclerView adapter for tracking ApplicationInfoItems.
+ */
+public class AppsListAdapter extends RecyclerView.Adapter<AppsListAdapter.ViewHolder>
 {
-    private static final String TAG = "MyAdapter";
-    private List<ApplicationsTracker.AppInfoItem> mAppsList = new ArrayList<ApplicationsTracker.AppInfoItem>();
+    private static final String TAG = "AppsListAdapter";
+    private List<ApplicationsTracker.AppInfoItem> mAppsList = new ArrayList<>();
     private final Handler mHandler;
     private final ItemClickListener mListener;
     private final AppsListFragment.ClaimFilter mClaimFilter;
@@ -30,10 +32,10 @@ public class MyAdapter extends RecyclerView.Adapter<MyAdapter.ViewHolder>
     // Provide a reference to the views for each data item
     // Complex data items may need more than one view per item, and
     // you provide access to all the views for a data item in a view holder
-    public static class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener
+    public static class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener, View.OnLongClickListener
     {
         final CardView mRootView;
-        public final TextView mTextViewApplicationName;
+        final TextView mTextViewApplicationName;
         final TextView mTextViewDeviceName;
         final TextView mTextViewClaimState;
         final TextView mTextViewRunningState;
@@ -50,17 +52,33 @@ public class MyAdapter extends RecyclerView.Adapter<MyAdapter.ViewHolder>
             mTextViewClaimState = (TextView) v.findViewById(R.id.recyclerItem_ClaimState);
             mTextViewRunningState = (TextView) v.findViewById(R.id.recyclerItem_RunningState);
 
+            //make the root view clickable
             v.setOnClickListener(this);
+            v.setOnLongClickListener(this);
         }
 
         @Override
         public void onClick(View v)
         {
+            //Pass the onclick to the listener.
             mListener.onDeviceClicked(appInfoItem);
+        }
+
+        @Override
+        public boolean onLongClick(View v)
+        {
+            mListener.onDeviceLongClicked(appInfoItem);
+            return true;
         }
     }
 
-    public MyAdapter(Context ctx, ItemClickListener listener, AppsListFragment.ClaimFilter claimFilter)
+    /**
+     * Initialize the adapter.
+     * @param ctx Android context.
+     * @param listener Listener to receive click events.
+     * @param claimFilter The filter on which items to display.
+     */
+    public AppsListAdapter(Context ctx, ItemClickListener listener, AppsListFragment.ClaimFilter claimFilter)
     {
         mCtx = ctx;
         mHandler = new Handler();
@@ -70,8 +88,8 @@ public class MyAdapter extends RecyclerView.Adapter<MyAdapter.ViewHolder>
 
     // Create new views (invoked by the layout manager)
     @Override
-    public MyAdapter.ViewHolder onCreateViewHolder(ViewGroup parent,
-                                                   int viewType)
+    public AppsListAdapter.ViewHolder onCreateViewHolder(ViewGroup parent,
+                                                         int viewType)
     {
 
         CardView v = (CardView) LayoutInflater.from(parent.getContext())
@@ -110,11 +128,23 @@ public class MyAdapter extends RecyclerView.Adapter<MyAdapter.ViewHolder>
             holder.mTextViewRunningState.setEnabled(true);
         }
 
-        if (item.content.getClaimState() == ClaimState.CLAIMABLE) {
-            holder.mRootView.setClickable(true);
-        }
-        else {
-            holder.mRootView.setClickable(false);
+
+        //reset clickable status
+        holder.mRootView.setClickable(false);
+        holder.mRootView.setLongClickable(false);
+        if (item.content.getRunningState() == RunningState.RUNNING) {
+            //set clickable status
+            switch (item.content.getClaimState()) {
+                case CLAIMABLE:
+                    holder.mRootView.setClickable(true);
+                    break;
+                case CLAIMED:
+                    holder.mRootView.setLongClickable(true);
+                    break;
+                default:
+                    //nothing
+                    break;
+            }
         }
 
         holder.appInfoItem = item;
@@ -197,8 +227,21 @@ public class MyAdapter extends RecyclerView.Adapter<MyAdapter.ViewHolder>
         });
     }
 
+    /**
+     * Interface to receive click events from this adapter.
+     */
     public interface ItemClickListener
     {
+        /**
+         * Click event when a device is clicked.
+         * @param appInfoItem The AppInfoItem
+         */
         void onDeviceClicked(ApplicationsTracker.AppInfoItem appInfoItem);
+
+        /**
+         * Click event when a device is long clicked.
+         * @param appInfoItem The AppInfoItem
+         */
+        void onDeviceLongClicked(ApplicationsTracker.AppInfoItem appInfoItem);
     }
 }

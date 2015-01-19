@@ -11,7 +11,7 @@ import org.alljoyn.securitymgr.access.Manifest;
 import org.alljoyn.securitymgr.access.Member;
 import org.alljoyn.securitymgr.access.Rule;
 import org.alljoyn.securitymgr.securitymgrsampleapp.helper.ApplicationsTracker;
-import org.alljoyn.securitymgr.securitymgrsampleapp.helper.MyAdapter;
+import org.alljoyn.securitymgr.securitymgrsampleapp.helper.AppsListAdapter;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -27,22 +27,23 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.Toast;
 
 /**
  * Fragment containing a list of claimed/unclaimed/claimable apps.<br>
- * Activities containing this fragment MUST implement the {@link org.alljoyn.securitymgr.securitymgrsampleapp.AppsListFragment.AppsListFragmentCallbacks}
- * interface.
+ * Activities containing this fragment MUST implement the
+ * {@link org.alljoyn.securitymgr.securitymgrsampleapp.AppsListFragment.AppsListFragmentCallbacks} interface.
  */
 public class AppsListFragment extends Fragment implements SecurityManagerService.SecurityManagerServiceConnection,
-    MyAdapter.ItemClickListener
+    AppsListAdapter.ItemClickListener
 {
 
     private static final String TAG = "ItemFragment";
     private static final String ARG_CLAIM_FILTER = "claimFilter";
 
-    private AppsListFragmentCallbacks mListener;
+    //private AppsListFragmentCallbacks mListener;
     private SecurityManagerService mService;
-    private MyAdapter mAdapter;
+    private AppsListAdapter mAdapter;
     private SecurityManagerService.LocalServiceConnection mServiceConnection;
     private MyManifestApprover mManifestApprover;
     private ClaimFilter mClaimFilter;
@@ -75,9 +76,10 @@ public class AppsListFragment extends Fragment implements SecurityManagerService
             mClaimFilter = ClaimFilter.valueOf(getArguments().getString(ARG_CLAIM_FILTER));
         }
         else {
+            //default: show all.
             mClaimFilter = ClaimFilter.ALL;
         }
-        mAdapter = new MyAdapter(getActivity(), this, mClaimFilter);
+        mAdapter = new AppsListAdapter(getActivity(), this, mClaimFilter);
         mManifestApprover = new MyManifestApprover();
         mServiceConnection = SecurityManagerService.getLocalBind(getActivity(), this);
     }
@@ -86,7 +88,9 @@ public class AppsListFragment extends Fragment implements SecurityManagerService
     public void onDestroy()
     {
         if (mService != null) {
+            //cleanup
             mService.getApplicationsTracker().setAdapter(null);
+            mService.setManifestApprover(null);
         }
         mServiceConnection.unBind();
         super.onDestroy();
@@ -115,20 +119,20 @@ public class AppsListFragment extends Fragment implements SecurityManagerService
     public void onAttach(Activity activity)
     {
         super.onAttach(activity);
-        try {
-            mListener = (AppsListFragmentCallbacks) activity;
-        }
-        catch (ClassCastException e) {
-            throw new ClassCastException(activity.toString()
-                + " must implement OnFragmentInteractionListener");
-        }
+//        try {
+//            mListener = (AppsListFragmentCallbacks) activity;
+//        }
+//        catch (ClassCastException e) {
+//            throw new ClassCastException(activity.toString()
+//                + " must implement OnFragmentInteractionListener");
+//        }
     }
 
     @Override
     public void onDetach()
     {
         super.onDetach();
-        mListener = null;
+        //mListener = null;
     }
 
 
@@ -155,6 +159,8 @@ public class AppsListFragment extends Fragment implements SecurityManagerService
 
         if ((appInfo.getClaimState() == ClaimState.CLAIMABLE) && (appInfo.getRunningState() == RunningState.RUNNING)) {
 
+            //somebody clicked on a claimable device.
+            //Show confirmation first.
             final AlertDialog.Builder manifestDialogBuilder = new AlertDialog.Builder(getActivity());
             manifestDialogBuilder.setTitle(getActivity().getString(R.string.claiming_dialog_title));
             manifestDialogBuilder.setMessage(getActivity().getString(R.string.claiming_dialog_msg,
@@ -167,13 +173,14 @@ public class AppsListFragment extends Fragment implements SecurityManagerService
             dialog.show();
 
             //set the click listener on the positive button like this.
-            //This on done to be able to delay the dialog.dismiss() call untill the manifest is approved.
+            //This on done to be able to delay the dialog.dismiss() call until the manifest is approved.
             final Button b = dialog.getButton(DialogInterface.BUTTON_POSITIVE);
             b.setOnClickListener(new View.OnClickListener()
             {
                 @Override
                 public void onClick(View v)
                 {
+                    //user clicked yes, claim the device.
                     Log.d(TAG, "Trying to claim : " + appInfo.toString());
                     dialog.setMessage(getActivity().getString(R.string.claiming_dialog_claiming_msg));
 
@@ -188,7 +195,7 @@ public class AppsListFragment extends Fragment implements SecurityManagerService
                         protected Void doInBackground(Void... params)
                         {
                             try {
-                                mService.getSecurityHandler().claimApplication(appInfo);
+                                mService.claimApplication(appInfo);
                             }
                             catch (Exception e) {
                                 Log.e(TAG, "Error in claiming", e);
@@ -206,6 +213,49 @@ public class AppsListFragment extends Fragment implements SecurityManagerService
                 }
             });
         }
+    }
+
+    @Override
+    public void onDeviceLongClicked(ApplicationsTracker.AppInfoItem appInfoItem)
+    {
+        final ApplicationInfo appInfo = appInfoItem.content;
+
+        //somebody clicked on a claimed device.
+        //Show confirmation first.
+        final AlertDialog.Builder manifestDialogBuilder = new AlertDialog.Builder(getActivity());
+        manifestDialogBuilder.setTitle(getActivity().getString(R.string.unclaiming_dialog_title));
+        manifestDialogBuilder.setMessage(getActivity().getString(R.string.unclaiming_dialog_msg,
+            appInfo.getApplicationName()));
+        manifestDialogBuilder.setNegativeButton(android.R.string.no, null);
+        manifestDialogBuilder.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener()
+        {
+            @Override
+            public void onClick(DialogInterface dialog, int which)
+            {
+                Toast.makeText(getActivity(), getString(R.string.unclaiming_dialog_claiming_msg),
+                    Toast.LENGTH_SHORT).show();
+
+                //start the unclaim action on a background thread as this call will be blocking!
+                new AsyncTask<Void, Void, Void>()
+                {
+
+                    @Override
+                    protected Void doInBackground(Void... params)
+                    {
+                        try {
+                            mService.unClaimApplication(appInfo);
+                        }
+                        catch (Exception e) {
+                            Log.e(TAG, "Error in unclaiming", e);
+                        }
+                        return null;
+                    }
+                }.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+            }
+        });
+
+        final AlertDialog dialog = manifestDialogBuilder.create();
+        dialog.show();
     }
 
 
@@ -229,8 +279,9 @@ public class AppsListFragment extends Fragment implements SecurityManagerService
         @Override
         public boolean approveManifest(ApplicationInfo applicationInfo, Manifest manifest)
         {
-            Log.d(TAG, "Manifest Approver - appinfo: " + applicationInfo.toString());
-            Log.d(TAG, "Manifest Approver - manifest: " + manifest.toString());
+            //Note: this callback will not be on the UI thread!
+            Log.d(TAG, "Manifest Approver - appinfo: " + applicationInfo);
+            Log.d(TAG, "Manifest Approver - manifest: " + manifest);
 
             if (manifest.toString().isEmpty()) {
                 return false;
@@ -250,7 +301,7 @@ public class AppsListFragment extends Fragment implements SecurityManagerService
                     for (Action action : member.getActions()) {
                         if (!first) {
                             msg.append(", ");
-                            first =true;
+                            first = true;
                         }
                         msg.append(action.toString());
                     }
@@ -266,6 +317,7 @@ public class AppsListFragment extends Fragment implements SecurityManagerService
             manifestDialogBuilder.setPositiveButton(getActivity().getString(R.string.accept), this);
 
 
+            //show the dialog and wait for feedback.
             getActivity().runOnUiThread(new Runnable()
             {
                 @Override
@@ -275,6 +327,7 @@ public class AppsListFragment extends Fragment implements SecurityManagerService
                     manifestDialogBuilder.show();
                 }
             });
+
             try {
                 Log.d(TAG, "Waiting for manifest approval");
                 sem.acquire();
@@ -290,12 +343,15 @@ public class AppsListFragment extends Fragment implements SecurityManagerService
         @Override
         public void onClick(DialogInterface dialog, int which)
         {
-            Log.d(TAG, "Manifest approver choice: " + which);
             choice = (which == DialogInterface.BUTTON_POSITIVE);
-            sem.release();
+            Log.d(TAG, "Manifest approver choice: " + choice);
+            sem.release(); //unblock the thread.
         }
     }
 
+    /**
+     * Enum that list the possibilities to filter.
+     */
     public enum ClaimFilter
     {
         ALL,
@@ -303,6 +359,11 @@ public class AppsListFragment extends Fragment implements SecurityManagerService
         CLAIMABLE,
         NOT_CLAIMED;
 
+        /**
+         * Check if the currently ClaimState should be shown by this filter or not.
+         * @param state The ClaimState
+         * @return True if it should be shown, false otherwise.
+         */
         public boolean isAllowed(ClaimState state)
         {
             switch (this) {

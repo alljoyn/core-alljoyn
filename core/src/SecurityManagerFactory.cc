@@ -45,9 +45,7 @@ SecurityManagerFactory::~SecurityManagerFactory()
     }
 }
 
-SecurityManager* SecurityManagerFactory::GetSecurityManager(qcc::String userName,
-                                                            qcc::String password,
-                                                            const StorageConfig& storageCfg,
+SecurityManager* SecurityManagerFactory::GetSecurityManager(const StorageConfig& storageCfg,
                                                             const SecurityManagerConfig& smCfg,
                                                             IdentityData* id,
                                                             ajn::BusAttachment* _ba)
@@ -58,8 +56,6 @@ SecurityManager* SecurityManagerFactory::GetSecurityManager(qcc::String userName
     //       - where to locate database file ?
     //       - password encrypted stored in separate table ?
     if (/* TODO: check if exists */ true) {
-        // TODO: verify password
-        //
 #ifdef QCC_OS_ANDROID //TODO we should use Environ for every env variable we need anywhere
         std::map<qcc::String, qcc::String>::const_iterator pathItr = storageCfg.settings.find("APP_PATH");
         if (pathItr == storageCfg.settings.end()) {
@@ -101,19 +97,19 @@ SecurityManager* SecurityManagerFactory::GetSecurityManager(qcc::String userName
 
         qcc::Crypto_ECC crypto;
         qcc::KeyBlob pubKeyX;
-        qcc::String filenamePubKeyX =  keysStoragePath + userName + "pubx_keystore";
+        qcc::String filenamePubKeyX =  keysStoragePath + "pubx_keystore";
         QCC_DbgTrace(("filenamePubKeyX is : %s", filenamePubKeyX.c_str()));
         qcc::FileSource sourcePubKeyX(filenamePubKeyX);
         QStatus pubKeyXLoadResult = pubKeyX.Load(sourcePubKeyX);
 
         qcc::KeyBlob pubKeyY;
-        qcc::String filenamePubKeyY = keysStoragePath + userName + "puby_keystore";
+        qcc::String filenamePubKeyY = keysStoragePath + "puby_keystore";
         QCC_DbgTrace(("filenamePubKeyY is : %s", filenamePubKeyY.c_str()));
         qcc::FileSource sourcePubKeyY(filenamePubKeyY);
         QStatus pubKeyYLoadResult = pubKeyY.Load(sourcePubKeyY);
 
         qcc::KeyBlob privKey;
-        qcc::String filenamePrivKey = keysStoragePath + userName + "priv_keystore";
+        qcc::String filenamePrivKey = keysStoragePath + "priv_keystore";
         QCC_DbgTrace(("filenamePrivKey is : %s", filenamePrivKey.c_str()));
         qcc::FileSource sourcePrivKey(filenamePrivKey);
         QStatus privKeyLoadResult = privKey.Load(sourcePrivKey);
@@ -155,9 +151,7 @@ SecurityManager* SecurityManagerFactory::GetSecurityManager(qcc::String userName
             }
         }
 
-        sm = new SecurityManager(userName,
-                                 password,
-                                 id,
+        sm = new SecurityManager(id,
                                  _ba,
                                  *crypto.GetDHPublicKey(),
                                  *crypto.GetDHPrivateKey(),
@@ -173,10 +167,10 @@ SecurityManager* SecurityManagerFactory::GetSecurityManager(qcc::String userName
 
         return sm;
     } else {
-        // TODO: - validate given password <> empty
-        //               - create new database with user/password
-        //               - where to store the database ?
-        //               - what name should the database get ?
+        // TODO:
+        //       - create new database with credentials
+        //       - where to store the database ?
+        //       - what name should the database get ?
     }
 
     return NULL;

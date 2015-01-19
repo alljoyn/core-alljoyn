@@ -20,6 +20,7 @@
 #include <vector>
 #include <qcc/String.h>
 #include <qcc/GUID.h>
+#include <qcc/CryptoECC.h>
 #include <alljoyn/PermissionPolicy.h>
 #include <alljoyn/Status.h>
 
@@ -37,11 +38,13 @@ class PolicyGenerator {
      *
      */
     static QStatus DefaultPolicy(const std::vector<qcc::GUID128>& guildIds,
+                                 const qcc::ECCPublicKey& publicKey,
                                  PermissionPolicy& policy);
 
   private:
     static QStatus DefaultGuildPolicyTerm(const uint8_t* guildId,
                                           const size_t guildIdLen,
+                                          const qcc::ECCPublicKey& publicKey,
                                           PermissionPolicy::Term& term);
 
     static QStatus DefaultGuildPolicyRule(PermissionPolicy::Rule& rule);

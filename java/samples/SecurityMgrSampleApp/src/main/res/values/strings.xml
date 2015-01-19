@@ -4,7 +4,6 @@
     <string name="app_name">Security Manager Sample</string>
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>
-    <string name="action_example">Claim</string>
     <string name="action_settings">Info</string>
     <string-array name="navigation_filter">
         <item>All Apps</item>
@@ -12,11 +11,12 @@
         <item>Claimable Apps</item>
         <item>Unclaimed Apps</item>
     </string-array>
-    <string name="drawer_open">Open navigation drawer</string>
-    <string name="drawer_close">Close navigation drawer</string>
     <string name="claiming_dialog_title">Claiming application</string>
     <string name="claiming_dialog_msg">"Do you want to claim the application \"%1s\"?</string>
-    <string name="claiming_dialog_claiming_msg">Claiming...</string>
+    <string name="claiming_dialog_claiming_msg">Claiming&#8230;</string>
+    <string name="unclaiming_dialog_title">Unclaiming application</string>
+    <string name="unclaiming_dialog_msg">"Do you want to unclaim the application \"%1s\"?</string>
+    <string name="unclaiming_dialog_claiming_msg">Unclaiming&#8230;</string>
     <string name="manifestDialog_msg">Do you want to accept the following rules?</string>
     <string name="manifestDialog_title">Manifest approval required</string>
     <string name="reject">Reject</string>

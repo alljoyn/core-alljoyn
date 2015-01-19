@@ -65,7 +65,7 @@ TEST_F(MembershipNominalTests, SuccessfulMembership)
 
     ASSERT_EQ(stub->GetMembershipCertificates().size(), ((size_t)0));
     ASSERT_EQ(secMgr->StoreGuild(guildInfo1, false), ER_OK);
-    ASSERT_EQ(secMgr->InstallMembership(appInfo, guildInfo1), ER_OK);
+    ASSERT_EQ(secMgr->InstallMembership(lastAppInfo, guildInfo1), ER_OK);
     std::map<GUID128, qcc::String> certificates = stub->GetMembershipCertificates();
     ASSERT_EQ(certificates.size(), ((size_t)1));
     std::map<GUID128, qcc::String>::iterator it = certificates.find(guildInfo1.guid);
@@ -73,20 +73,20 @@ TEST_F(MembershipNominalTests, SuccessfulMembership)
     ASSERT_EQ(it->first, guildInfo1.guid);
 
     ASSERT_EQ(secMgr->StoreGuild(guildInfo2, false), ER_OK);
-    ASSERT_EQ(secMgr->InstallMembership(appInfo, guildInfo2), ER_OK);
+    ASSERT_EQ(secMgr->InstallMembership(lastAppInfo, guildInfo2), ER_OK);
     certificates = stub->GetMembershipCertificates();
     ASSERT_EQ(certificates.size(), ((size_t)2));
     it = certificates.find(guildInfo2.guid);
     ASSERT_FALSE(it == certificates.end());
     ASSERT_EQ(it->first, guildInfo2.guid);
 
-    ASSERT_EQ(secMgr->RemoveMembership(appInfo, guildInfo1), ER_OK);
+    ASSERT_EQ(secMgr->RemoveMembership(lastAppInfo, guildInfo1), ER_OK);
     certificates = stub->GetMembershipCertificates();
     ASSERT_EQ(certificates.size(), ((size_t)1));
     it = certificates.find(guildInfo1.guid);
     ASSERT_TRUE(it == certificates.end());
 
-    ASSERT_EQ(secMgr->RemoveMembership(appInfo, guildInfo2), ER_OK);
+    ASSERT_EQ(secMgr->RemoveMembership(lastAppInfo, guildInfo2), ER_OK);
     certificates = stub->GetMembershipCertificates();
     ASSERT_EQ(certificates.size(), ((size_t)0));
     it = certificates.find(guildInfo2.guid);
@@ -104,12 +104,12 @@ TEST_F(MembershipNominalTests, InvalidArgsMembership)
     guildInfo.desc = "My test guild description";
 
     //Guild is not known to security manager.
-    ASSERT_EQ(ER_FAIL, secMgr->InstallMembership(appInfo, guildInfo));
-    ASSERT_EQ(ER_FAIL, secMgr->RemoveMembership(appInfo, guildInfo));
+    ASSERT_EQ(ER_FAIL, secMgr->InstallMembership(lastAppInfo, guildInfo));
+    ASSERT_EQ(ER_FAIL, secMgr->RemoveMembership(lastAppInfo, guildInfo));
 
     //Guild known, invalid app.
     ASSERT_EQ(secMgr->StoreGuild(guildInfo, false), ER_OK);
-    ApplicationInfo invalid = appInfo;
+    ApplicationInfo invalid = lastAppInfo;
     qcc::Crypto_ECC ecc;
     ecc.GenerateDSAKeyPair();
     invalid.publicKey = *ecc.GetDSAPublicKey();
@@ -117,15 +117,15 @@ TEST_F(MembershipNominalTests, InvalidArgsMembership)
     ASSERT_EQ(ER_FAIL, secMgr->RemoveMembership(invalid, guildInfo));
 
     ASSERT_EQ(stub->GetMembershipCertificates().size(), ((size_t)0));
-    ASSERT_EQ(ER_OK, secMgr->InstallMembership(appInfo, guildInfo));
-    ASSERT_EQ(ER_OK, secMgr->InstallMembership(appInfo, guildInfo));
-    ASSERT_EQ(ER_OK, secMgr->InstallMembership(appInfo, guildInfo));
+    ASSERT_EQ(ER_OK, secMgr->InstallMembership(lastAppInfo, guildInfo));
+    ASSERT_EQ(ER_OK, secMgr->InstallMembership(lastAppInfo, guildInfo));
+    ASSERT_EQ(ER_OK, secMgr->InstallMembership(lastAppInfo, guildInfo));
     ASSERT_EQ(stub->GetMembershipCertificates().size(), ((size_t)1));
-    ASSERT_EQ(ER_OK, secMgr->RemoveMembership(appInfo, guildInfo));
+    ASSERT_EQ(ER_OK, secMgr->RemoveMembership(lastAppInfo, guildInfo));
     ASSERT_EQ(stub->GetMembershipCertificates().size(), ((size_t)0));
-    ASSERT_EQ(ER_FAIL, secMgr->RemoveMembership(appInfo, guildInfo));
+    ASSERT_EQ(ER_FAIL, secMgr->RemoveMembership(lastAppInfo, guildInfo));
 
-    invalid = appInfo;
+    invalid = lastAppInfo;
     invalid.busName = "invalidBusname";
     ASSERT_EQ(ER_OK, secMgr->InstallMembership(invalid, guildInfo));
     ASSERT_EQ(ER_OK, secMgr->InstallMembership(invalid, guildInfo));
@@ -134,7 +134,7 @@ TEST_F(MembershipNominalTests, InvalidArgsMembership)
     ASSERT_EQ(stub->GetMembershipCertificates().size(), ((size_t)0));
     ASSERT_EQ(ER_FAIL, secMgr->RemoveMembership(invalid, guildInfo));
 
-    ASSERT_EQ(ER_OK, secMgr->InstallMembership(appInfo, guildInfo));
+    ASSERT_EQ(ER_OK, secMgr->InstallMembership(lastAppInfo, guildInfo));
 
     GuildInfo guildInfo2;
     guildInfo2.name = "2 MyGuild";
@@ -142,12 +142,11 @@ TEST_F(MembershipNominalTests, InvalidArgsMembership)
     secMgr->StoreGuild(guildInfo2, true);
 
     destroy();
-    while (sem_trywait(&sem) == 0) {
-        ;
-    }
-    sem_wait(&sem);
-    ASSERT_NE(ER_OK, secMgr->InstallMembership(appInfo, guildInfo));
-    ASSERT_NE(ER_OK, secMgr->RemoveMembership(appInfo, guildInfo2));
+
+    ASSERT_TRUE(WaitForState(ajn::PermissionConfigurator::STATE_CLAIMED, ajn::securitymgr::STATE_NOT_RUNNING));
+
+    ASSERT_NE(ER_OK, secMgr->InstallMembership(lastAppInfo, guildInfo));
+    ASSERT_NE(ER_OK, secMgr->RemoveMembership(lastAppInfo, guildInfo2));
 }
 }
 //namespace

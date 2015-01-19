@@ -14,7 +14,6 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#include <SecurityManagerImpl.h>
 #include <ctime>
 #include <alljoyn/version.h>
 #include <alljoyn/Session.h>
@@ -46,9 +45,6 @@ using namespace ajn::services;
 
 namespace ajn {
 namespace securitymgr {
-static const char* KEYX_ECDHE_NULL = "ALLJOYN_ECDHE_NULL";
-static const char* ECDHE_KEYX = "ALLJOYN_ECDHE_NULL";         //"ALLJOYN_ECDHE_PSK ALLJOYN_ECDHE_ECDSA";
-
 class ECDHEKeyXListener :
     public AuthListener {
   public:
@@ -63,7 +59,7 @@ class ECDHEKeyXListener :
         QCC_DbgPrintf(("RequestCredentials %s", authMechanism));
 
         // only allow ECDHE_NULL sessions for now
-        if (strcmp(authMechanism, KEYX_ECDHE_NULL) == 0) {
+        if (strcmp(authMechanism, KEYX_ECDHE_NULL) == 0 || strcmp(authMechanism, ECDHE_KEYX)) {
             creds.SetExpiration(100);             /* set the master secret expiry time to 100 seconds */
             return true;
         }
@@ -84,15 +80,13 @@ class ECDHEKeyXListener :
     }
 };
 
-SecurityManagerImpl::SecurityManagerImpl(qcc::String userName,             //TODO userName and password don't seem to be used anywhere
-                                         qcc::String password,
-                                         IdentityData* id,
+SecurityManagerImpl::SecurityManagerImpl(IdentityData* id,
                                          ajn::BusAttachment* ba,
-                                         const qcc::ECCPublicKey& pubKey,
+                                         const qcc::ECCPublicKey& _pubKey,
                                          const qcc::ECCPrivateKey& privKey,
                                          const StorageConfig& _storageCfg,
                                          const SecurityManagerConfig& smCfg) :
-    status(ER_OK), id(id), privKey(privKey), rot(pubKey), storageCfg(_storageCfg),
+    status(ER_OK), id(id), privKey(privKey), pubKey(_pubKey), storageCfg(_storageCfg),
     appMonitor(ApplicationMonitor::GetApplicationMonitor(ba, smCfg.pmNotificationIfn)), busAttachment(ba), config(smCfg)
 {
     SessionOpts opts;
@@ -120,7 +114,7 @@ SecurityManagerImpl::SecurityManagerImpl(qcc::String userName,             //TOD
         }
 
         // TODO For now only ALLJOYN_ECDHE_NULL sessions are enabled on the bus
-        status = ba->EnablePeerSecurity(ECDHE_KEYX, new ECDHEKeyXListener(),
+        status = ba->EnablePeerSecurity(ECDHE_KEYX " " KEYX_ECDHE_NULL, new ECDHEKeyXListener(),
                                         AJNKEY_STORE, true);
         if (ER_OK != status) {
             QCC_LogError(status,
@@ -149,10 +143,10 @@ SecurityManagerImpl::SecurityManagerImpl(qcc::String userName,             //TOD
         if (storageCfg.settings.find(STORAGE_PATH_KEY)
             != storageCfg.settings.end()) {
             if (storageCfg.settings.at(STORAGE_PATH_KEY).empty()) {
-                storageCfg.settings[STORAGE_PATH_KEY] = storagePath;                        /* Maybe we can we make this dependent on username + salted hash of password ? */
+                storageCfg.settings[STORAGE_PATH_KEY] = storagePath;
             }
         } else {
-            storageCfg.settings[STORAGE_PATH_KEY] = storagePath;                        /* Maybe we can we make this dependent on username + salted hash of password ? */
+            storageCfg.settings[STORAGE_PATH_KEY] = storagePath;
         }
 
         QCC_DbgHLPrintf(("STORAGE PATH IS : %s", (storageCfg.settings.find(STORAGE_PATH_KEY)->second).c_str()));
@@ -252,7 +246,7 @@ QStatus SecurityManagerImpl::CreateStubInterface(ajn::BusAttachment* bus,
     intf->AddMethod("InstallIdentity", "(yay)", NULL, "cert,result", 0);
     intf->AddMethod("GetIdentity",     NULL, "(yay)", "cert");
     intf->AddMethod("InstallMembership", "a(yay)", NULL, "certChain", 0);
-    intf->AddMethod("RemoveMembership", "ay", NULL, "guildID", 0);
+    intf->AddMethod("RemoveMembership",     "say", NULL, "serialNum,issuer");
     intf->AddMethod("GetManifest", NULL, "(yv)",  "manifest");
     intf->AddMethod("InstallMembershipAuthData", "say(yv)", NULL, "serialNum,issuer,authorization", 0);
     intf->AddMethod("InstallPolicy", "(yv)",  NULL, "authorization");
@@ -270,8 +264,6 @@ QStatus SecurityManagerImpl::GetStatus() const
 QStatus SecurityManagerImpl::ClaimApplication(const ApplicationInfo& appInfo, const IdentityInfo& identityInfo,
                                               AcceptManifestCB amcb, void* cookie = NULL)
 {
-    ajn::ProxyBusObject* remoteObj = NULL;
-
     QStatus funcStatus = ER_FAIL;
 
     if (!amcb) {
@@ -305,20 +297,7 @@ QStatus SecurityManagerImpl::ClaimApplication(const ApplicationInfo& appInfo, co
         }
 
         /*===========================================================
-         * Step 1: Setup a session and get a proxy object to the remote application
-         */
-
-        funcStatus =
-            proxyObjMgr->GetProxyObject(app, ProxyObjectManager::ECDHE_NULL,
-                                        &remoteObj);
-        if (funcStatus != ER_OK) {
-            QCC_DbgRemoteError(
-                ("Could not create a ProxyBusObject to remote application"));
-            break;
-        }
-
-        /*===========================================================
-         * Step 2: Claim and install identity certificate
+         * Step 1: Claim and install identity certificate
          */
 
         if (ER_OK != (funcStatus = Claim(app, identityInfo))) {
@@ -327,7 +306,7 @@ QStatus SecurityManagerImpl::ClaimApplication(const ApplicationInfo& appInfo, co
         }
 
         /*===========================================================
-         * Step 3: Retrieve manifest and call accept manifest
+         * Step 2: Retrieve manifest and call accept manifest
          *         callback.
          */
 
@@ -342,12 +321,11 @@ QStatus SecurityManagerImpl::ClaimApplication(const ApplicationInfo& appInfo, co
             break;
         }
 
-
         /*===========================================================
-         * Step 4: Persist claimed app data
+         * Step 3: Persist claimed app data
          **/
 
-        if (ER_OK != (funcStatus = PersistApplication(app, manifestRules, manifestRulesCount))) {
+        if (ER_OK != (funcStatus = PersistManifest(app, manifestRules, manifestRulesCount))) {
             QCC_LogError(funcStatus, ("Could not persist application"));
             break;
         }
@@ -369,15 +347,6 @@ QStatus SecurityManagerImpl::ClaimApplication(const ApplicationInfo& appInfo, co
 
         funcStatus = ER_OK;
     } while (0);
-
-    /*===========================================================
-     * Step 5: close session
-     */
-    if (remoteObj) {
-        if (ER_OK != proxyObjMgr->ReleaseProxyObject(remoteObj)) {
-            QCC_DbgRemoteError(("Error: could not close session"));
-        }
-    }
 
     return funcStatus;
 }
@@ -403,22 +372,6 @@ QStatus SecurityManagerImpl::MarshalPublicKey(const ECCPublicKey* pubKey, const 
     ma.Stabilize();
 
     return status;
-}
-
-bool SecurityManagerImpl::IsPermissionDeniedError(QStatus status, Message& msg)
-{
-    if (ER_PERMISSION_DENIED == status) {
-        return true;
-    }
-    if (ER_BUS_REPLY_IS_ERROR_MESSAGE == status) {
-        if (msg->GetErrorName() == NULL) {
-            return false;
-        }
-        if (strcmp(msg->GetErrorName(), "org.alljoyn.Bus.ER_PERMISSION_DENIED") == 0) {
-            return true;
-        }
-    }
-    return false;
 }
 
 // TODO: move to ECCPublicKey class
@@ -530,7 +483,7 @@ QStatus SecurityManagerImpl::Claim(ApplicationInfo& appInfo, const IdentityInfo&
 
     MsgArg inputs[3];
 
-    if (ER_OK != (status = MarshalPublicKey(&rot.GetPublicKey(), localGuid, inputs[0]))) {
+    if (ER_OK != (status = MarshalPublicKey(&pubKey, localGuid, inputs[0]))) {
         QCC_LogError(status, ("Failed to marshal public key"));
         return status;
     }
@@ -544,23 +497,10 @@ QStatus SecurityManagerImpl::Claim(ApplicationInfo& appInfo, const IdentityInfo&
     qcc::String pem = idCertificate.GetPEM();
     inputs[2].Set("(yay)", Certificate::ENCODING_X509_DER_PEM, pem.size(), pem.data());
 
-    ProxyBusObject* remoteObj;
-    status = proxyObjMgr->GetProxyObject(app, ProxyObjectManager::ECDHE_NULL, &remoteObj);
-    if (ER_OK != status) {
-        QCC_DbgRemoteError(("Could not create a ProxyBusObject for remote application"));
-        return status;
-    }
-
     Message reply(*busAttachment);
-    uint32_t timeout = 10000;
-    status = remoteObj->MethodCall(config.pmIfn.c_str(), "Claim", inputs, 3, reply, timeout);
-    proxyObjMgr->ReleaseProxyObject(remoteObj);
+    status = proxyObjMgr->MethodCall(app, "Claim", inputs, 3, reply);
     if (ER_OK != status) {
-        if (IsPermissionDeniedError(status, reply)) {
-            QCC_LogError(status, ("Permission denied to call Claim method"));
-            return ER_PERMISSION_DENIED;
-        }
-        QCC_LogError(status, ("Failed to call Claim method"));
+        // errors logged in MethodCall
         return status;
     }
 
@@ -579,6 +519,13 @@ QStatus SecurityManagerImpl::Claim(ApplicationInfo& appInfo, const IdentityInfo&
 
     if (ER_OK == status) {
         storageMutex.Lock(__FILE__, __LINE__);
+        status = PersistApplication(app);
+        if (ER_OK != status) {
+            storageMutex.Unlock(__FILE__, __LINE__);
+            QCC_LogError(status, ("Could not persist application"));
+            return status;
+        }
+
         status = storage->StoreCertificate(idCertificate);
         storageMutex.Unlock(__FILE__, __LINE__);
         if (ER_OK != status) {
@@ -628,7 +575,6 @@ QStatus SecurityManagerImpl::InstallMembership(const ApplicationInfo& appInfo,
     // Create marshaller for policies
     Message tmpMsg(*busAttachment);
     DefaultPolicyMarshaller marshaller(tmpMsg);
-    ajn::ProxyBusObject* remoteObj = NULL;
 
     storageMutex.Lock(__FILE__, __LINE__);
     do {
@@ -722,26 +668,16 @@ QStatus SecurityManagerImpl::InstallMembership(const ApplicationInfo& appInfo,
 
         /**************Install generated certificate***************/
 
-        funcStatus = proxyObjMgr->GetProxyObject(app,
-                                                 ProxyObjectManager::ECDHE_DSA, &remoteObj);
-        if (funcStatus != ER_OK) {
-            QCC_DbgRemoteError(
-                ("Could not create a ProxyBusObject to remote application"));
-            break;
-        }
         ajn::MsgArg inputs[1];
         qcc::String pem = cert.GetPEM();
         inputs[0].Set("(yay)", Certificate::ENCODING_X509_DER_PEM, pem.length(),
                       pem.data());
         ajn::MsgArg arg("a(yay)", 1, inputs);
-        Message replyMsg(*busAttachment);
-        funcStatus = remoteObj->MethodCall(config.pmIfn.c_str(),
-                                           "InstallMembership", &arg, 1, replyMsg,
-                                           MSG_REPLY_TIMEOUT);
 
+        Message replyMsg(*busAttachment);
+        funcStatus = proxyObjMgr->MethodCall(app, "InstallMembership", &arg, 1, replyMsg);
         if (funcStatus != ER_OK) {
-            QCC_DbgRemoteError(
-                ("Could not call 'InstallMembership' on ProxyBusObject to remote application"));
+            // errors logged by MethodCall
             break;
         }
 
@@ -750,14 +686,12 @@ QStatus SecurityManagerImpl::InstallMembership(const ApplicationInfo& appInfo,
         args[1].Set("ay", GUID128::SIZE, localGuid.GetBytes());
         data->Export(args[2]);
         Message replyMsg1(*busAttachment);
-        funcStatus = remoteObj->MethodCall(config.pmIfn.c_str(),
-                                           "InstallMembershipAuthData", args, 3, replyMsg1,
-                                           MSG_REPLY_TIMEOUT);
+        funcStatus = proxyObjMgr->MethodCall(app, "InstallMembershipAuthData", args, 3, replyMsg1);
         if (funcStatus != ER_OK) {
-            QCC_DbgRemoteError(
-                ("Could not call 'InstallMembershipAuthData' on ProxyBusObject to remote application"));
+            // errors logged by MethodCall
             break;
         }
+
         /******************************************************************************/
 
         /************Persist the certificate and the authorization data****************/
@@ -774,9 +708,6 @@ QStatus SecurityManagerImpl::InstallMembership(const ApplicationInfo& appInfo,
         /******************************************************************************/
     } while (0);
 
-    if ((NULL != proxyObjMgr) && (NULL != remoteObj)) {
-        proxyObjMgr->ReleaseProxyObject(remoteObj);
-    }
     storageMutex.Unlock(__FILE__, __LINE__);
     delete[] policyData;
 
@@ -826,28 +757,14 @@ QStatus SecurityManagerImpl::RemoveMembership(const ApplicationInfo& appInfo,
         return funcStatus;
     }
 
-    ajn::ProxyBusObject* remoteObj = NULL;
-    funcStatus =
-        proxyObjMgr->GetProxyObject(app, ProxyObjectManager::ECDHE_DSA, &remoteObj);
-    if (funcStatus != ER_OK) {
-        QCC_DbgRemoteError(
-            ("Could not create a ProxyBusObject to remote application"));
-    } else {
-        ajn::MsgArg inputs[1];
-        GUID128 guildid = guildInfo.guid;
-        inputs[0].Set("ay", GUID128::SIZE, guildid.GetBytes());
+    MsgArg args[2];
+    Message replyMsg(*busAttachment);
+    const char* serial = cert.GetSerialNumber().c_str();
+    args[0].Set("s", serial);
+    args[1].Set("ay", GUID128::SIZE, localGuid.GetBytes());
+    QCC_DbgPrintf(("Removing membership certificate with serial number %s", serial));
+    funcStatus = proxyObjMgr->MethodCall(app, "RemoveMembership", args, 2, replyMsg);
 
-        Message replyMsg(*busAttachment);
-        funcStatus =
-            remoteObj->MethodCall(config.pmIfn.c_str(), "RemoveMembership", inputs, 1, replyMsg,
-                                  MSG_REPLY_TIMEOUT);
-        if (funcStatus != ER_OK) {
-            QCC_DbgRemoteError(
-                ("Could not call 'RemoveMembership' on ProxyBusObject to remote application"));
-        }
-
-        proxyObjMgr->ReleaseProxyObject(remoteObj);
-    }
     return funcStatus;
 }
 
@@ -856,7 +773,6 @@ QStatus SecurityManagerImpl::InstallPolicy(const ApplicationInfo& appInfo,
 {
     QStatus funcStatus = ER_OK;
     uint8_t* policyData = NULL;
-    ProxyBusObject* remoteObj = NULL;
     size_t policySize;
     bool exist;
     ApplicationInfoMap::iterator appItr = SafeAppExist(appInfo.publicKey, exist);
@@ -876,19 +792,9 @@ QStatus SecurityManagerImpl::InstallPolicy(const ApplicationInfo& appInfo,
             QCC_LogError(funcStatus, ("Failed to GeneratePolicyArgs."));
             break;
         }
-        funcStatus = proxyObjMgr->GetProxyObject(app,
-                                                 ProxyObjectManager::ECDHE_DSA, &remoteObj);
-        if (ER_OK != funcStatus) {
-            QCC_LogError(funcStatus,
-                         ("Could not create a ProxyBusObject to remote application."));
-            break;
-        }
         Message replyMsg(*busAttachment);
-        funcStatus = remoteObj->MethodCall(config.pmIfn.c_str(),
-                                           "InstallPolicy", &msgArg, 1, replyMsg, MSG_REPLY_TIMEOUT);
+        funcStatus = proxyObjMgr->MethodCall(app, "InstallPolicy", &msgArg, 1, replyMsg);
         if (ER_OK != funcStatus) {
-            QCC_DbgRemoteError(
-                ("Could not call 'InstallPolicy' on ProxyBusObject to remote application."));
             break;
         }
         // Persisting the policy on successful installation on remote app
@@ -925,9 +831,6 @@ QStatus SecurityManagerImpl::InstallPolicy(const ApplicationInfo& appInfo,
 
     delete[] policyData;
     storageMutex.Unlock(__FILE__, __LINE__);
-    if (remoteObj) {
-        proxyObjMgr->ReleaseProxyObject(remoteObj);
-    }
     return funcStatus;
 }
 
@@ -944,34 +847,13 @@ QStatus SecurityManagerImpl::GetPolicy(const ApplicationInfo& appInfo,
     ApplicationInfo app = appItr->second;
 
     if (remote) {
-        ProxyBusObject* remoteObj;
         Message replyMsg(*busAttachment);
-
-        status =
-            proxyObjMgr->GetProxyObject(app, ProxyObjectManager::ECDHE_DSA,
-                                        &remoteObj);
-        if (ER_OK != status) {
-            QCC_LogError(status,
-                         ("Could not create a ProxyBusObject to remote application."));
-            return status;
-        }
-
         QStatus methodStatus;
         methodStatus =
-            remoteObj->MethodCall(config.pmIfn.c_str(), "GetPolicy", NULL, 0, replyMsg, MSG_REPLY_TIMEOUT);
-        if (ER_OK != methodStatus) {
-            QCC_DbgRemoteError(
-                ("Could not call 'GetPolicy' on ProxyBusObject to remote application."));
-        }
-
-        status = proxyObjMgr->ReleaseProxyObject(remoteObj);
-        if (ER_OK != status) {
-            QCC_LogError(status,
-                         ("Could not release ProxyBusObject to remote application."));
-            return status;
-        }
+            proxyObjMgr->MethodCall(app, "GetPolicy", NULL, 0, replyMsg);
 
         if (ER_OK != methodStatus) {
+            // errors logged in MethodCall
             return methodStatus;
         }
 
@@ -1007,6 +889,34 @@ QStatus SecurityManagerImpl::GetPolicy(const ApplicationInfo& appInfo,
             QCC_DbgHLPrintf(("Empty policy"));
         }
         storageMutex.Unlock(__FILE__, __LINE__);
+    }
+
+    return status;
+}
+
+QStatus SecurityManagerImpl::Reset(const ApplicationInfo& appInfo)
+{
+    QStatus status = ER_FAIL;
+
+    bool exist;
+    ApplicationInfoMap::iterator appItr = SafeAppExist(appInfo.publicKey, exist);
+    if (!exist) {
+        QCC_LogError(ER_FAIL, ("App does not exist."));
+        return ER_FAIL;
+    }
+    ApplicationInfo app = appItr->second;
+
+    Message replyMsg(*busAttachment);
+    if (ER_OK != (status = proxyObjMgr->MethodCall(app, "Reset", NULL, 0, replyMsg))) {
+        // errors logged in MethodCall
+        return status;
+    }
+
+    ManagedApplicationInfo managedApplicationInfo;
+    managedApplicationInfo.publicKey = app.publicKey;
+    if (ER_OK != (status = storage->RemoveApplication(managedApplicationInfo))) {
+        QCC_LogError(status, ("Failed to remove application from storage"));
+        return status;
     }
 
     return status;
@@ -1080,7 +990,6 @@ void SecurityManagerImpl::OnSecurityStateChange(const SecurityInfo* oldSecInfo,
 
 QStatus SecurityManagerImpl::InstallIdentity(const ApplicationInfo& appInfo, const IdentityInfo& id)
 {
-    ajn::ProxyBusObject* remoteObj = NULL;
     qcc::X509IdentityCertificate idCertificate;
     QStatus funcStatus = ER_FAIL;
     do {
@@ -1109,34 +1018,20 @@ QStatus SecurityManagerImpl::InstallIdentity(const ApplicationInfo& appInfo, con
             break;
         }
 
-        funcStatus =
-            proxyObjMgr->GetProxyObject(app, ProxyObjectManager::ECDHE_DSA,
-                                        &remoteObj);
-        if (funcStatus != ER_OK) {
-            QCC_DbgRemoteError(
-                ("Could not create a ProxyBusObject to remote application"));
-            break;
-        }
         if (ER_OK !=
-            (funcStatus = InstallIdentityCertificate(idCertificate, remoteObj, MSG_REPLY_TIMEOUT))) {
+            (funcStatus = InstallIdentityCertificate(idCertificate, app))) {
             QCC_LogError(funcStatus,
                          ("Failed to install identity certificate on remote application"));
             break;
         }
     } while (0);
 
-    if (remoteObj) {
-        if (ER_OK != proxyObjMgr->ReleaseProxyObject(remoteObj)) {
-            QCC_DbgRemoteError(("Error: could not close session"));
-        }
-    }
-
     return funcStatus;
 }
 
-const RootOfTrust& SecurityManagerImpl::GetRootOfTrust() const
+const ECCPublicKey& SecurityManagerImpl::GetPublicKey() const
 {
-    return rot;
+    return pubKey;
 }
 
 std::vector<ApplicationInfo> SecurityManagerImpl::GetApplications(ajn::PermissionConfigurator::ClaimableState acs)
@@ -1458,25 +1353,9 @@ QStatus SecurityManagerImpl::GetManifest(const ApplicationInfo& appInfo,
     }
     ApplicationInfo app = appItr->second;
 
-    ProxyBusObject* remoteObj;
-    status = proxyObjMgr->GetProxyObject(app, ProxyObjectManager::ECDHE_NULL, &remoteObj);
-    if (ER_OK != status) {
-        QCC_DbgRemoteError(("Could not create a ProxyBusObject for remote application"));
-        return status;
-    }
-
     QCC_DbgPrintf(("Retrieving manifest of remote app..."));
     ajn::Message reply(*busAttachment);
-    status = remoteObj->MethodCall(config.pmIfn.c_str(), "GetManifest",
-                                   NULL, 0, reply, MSG_REPLY_TIMEOUT);
-
-    if (ER_OK != status) {
-        if (IsPermissionDeniedError(status, reply)) {
-            status = ER_PERMISSION_DENIED;
-        }
-        QCC_DbgPrintf(("Remote app returned error: %d", status));
-        return status;
-    }
+    status = proxyObjMgr->MethodCall(app, "GetManifest", NULL, 0, reply);
 
     uint8_t type;
     MsgArg* variant;
@@ -1522,35 +1401,30 @@ QStatus SecurityManagerImpl::GetIdentityCertificate(X509IdentityCertificate& idC
 }
 
 QStatus SecurityManagerImpl::InstallIdentityCertificate(X509IdentityCertificate& idCert,
-                                                        const ProxyBusObject* remoteObj,
-                                                        const uint32_t timeout)
+                                                        const ApplicationInfo& app)
 {
     QStatus funcStatus = ER_FAIL;
 
-    if (remoteObj) {
-        QCC_DbgPrintf(("Sending PEM of identity certificate: %s", idCert.GetPEM().c_str()));
+    QCC_DbgPrintf(("Sending PEM of identity certificate: %s", idCert.GetPEM().c_str()));
 
-        Message pemReply(*busAttachment);
-        qcc::String pem = idCert.GetPEM();
-        MsgArg arg("(yay)", Certificate::ENCODING_X509_DER_PEM, pem.size(), pem.data());
+    Message pemReply(*busAttachment);
+    qcc::String pem = idCert.GetPEM();
+    MsgArg arg("(yay)", Certificate::ENCODING_X509_DER_PEM, pem.size(), pem.data());
 
-        funcStatus = remoteObj->MethodCall(config.pmIfn.c_str(), "InstallIdentity",
-                                           &arg, 1, pemReply, timeout);
-        if (ER_OK != funcStatus) {
-            QCC_DbgRemoteError(
-                (
-                    "Remote app returned an error or timed out when calling the \"InstallIdentity\" function"));
-            return funcStatus;
-        }
-        if (pemReply->GetErrorName()) {
-            QCC_DbgRemoteError(
-                ("Identity certificate could not be installed on claimed application '%s'", pemReply->GetErrorName()));
-            funcStatus = ER_FAIL;
-            return funcStatus;
-        }
-    } else {
-        QCC_LogError(funcStatus, ("Null argument - remoteObj"));
+    funcStatus = proxyObjMgr->MethodCall(app, "InstallIdentity", &arg, 1, pemReply);
+    if (ER_OK != funcStatus) {
+        QCC_DbgRemoteError(
+            (
+                "Remote app returned an error or timed out when calling the \"InstallIdentity\" function"));
+        return funcStatus;
     }
+    if (pemReply->GetErrorName()) {
+        QCC_DbgRemoteError(
+            ("Identity certificate could not be installed on claimed application '%s'", pemReply->GetErrorName()));
+        funcStatus = ER_FAIL;
+        return funcStatus;
+    }
+
     return funcStatus;
 }
 
@@ -1568,17 +1442,11 @@ QStatus SecurityManagerImpl::GetRemoteIdentityCertificate(const ApplicationInfo&
     }
     app = appItr->second;
 
-    ProxyBusObject* remoteObj;
-    QStatus status = proxyObjMgr->GetProxyObject(app, ProxyObjectManager::ECDHE_NULL, &remoteObj);
-    if (ER_OK != status) {
-        QCC_DbgRemoteError(("Could not create a ProxyBusObject for remote application"));
-        return status;
-    }
     do {
         Message reply(*busAttachment);
-        status = remoteObj->MethodCall(config.pmIfn.c_str(), "GetIdentity", NULL, 0, reply, MSG_REPLY_TIMEOUT);
+        status = proxyObjMgr->MethodCall(app, "GetIdentity", NULL, 0, reply);
         if (ER_OK != status) {
-            QCC_LogError(status, ("Failed to call GetIdentity"));
+            // errors logged in MethodCall
             break;
         }
 
@@ -1603,13 +1471,42 @@ QStatus SecurityManagerImpl::GetRemoteIdentityCertificate(const ApplicationInfo&
         status = idCert.LoadEncoded(encoded, encodedLen);
     } while (0);
 
-    proxyObjMgr->ReleaseProxyObject(remoteObj);
     return status;
 }
 
-QStatus SecurityManagerImpl::PersistApplication(const ApplicationInfo& appInfo,
-                                                const PermissionPolicy::Rule* manifestRules,
-                                                size_t manifestRulesCount)
+QStatus SecurityManagerImpl::PersistManifest(const ApplicationInfo& appInfo,
+                                             const PermissionPolicy::Rule* manifestRules,
+                                             size_t manifestRulesCount)
+{
+    QStatus status = ER_FAIL;
+    ManagedApplicationInfo managedApplicationInfo;
+    managedApplicationInfo.publicKey = appInfo.publicKey;
+
+    storageMutex.Lock(__FILE__, __LINE__);
+    status = storage->GetManagedApplication(managedApplicationInfo);
+    if (ER_OK != status) {
+        storageMutex.Unlock(__FILE__, __LINE__);
+        QCC_LogError(status, ("Application not yet persisted"));
+        return status;
+    }
+
+    if (ER_OK != (status = SerializeManifest(managedApplicationInfo, manifestRules, manifestRulesCount))) {
+        storageMutex.Unlock(__FILE__, __LINE__);
+        // errors logged in SerializeManifest
+        return status;
+    }
+
+    status = storage->StoreApplication(managedApplicationInfo, true);
+    storageMutex.Unlock(__FILE__, __LINE__);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not update persisted application info"));
+        return status;
+    }
+
+    return status;
+}
+
+QStatus SecurityManagerImpl::PersistApplication(const ApplicationInfo& appInfo)
 {
     QCC_DbgPrintf(("Persisting ApplicationInfo"));
     ManagedApplicationInfo managedApplicationInfo;
@@ -1620,11 +1517,6 @@ QStatus SecurityManagerImpl::PersistApplication(const ApplicationInfo& appInfo,
     managedApplicationInfo.deviceName = appInfo.deviceName;
     managedApplicationInfo.userDefinedName = appInfo.userDefinedName;
     managedApplicationInfo.peerID = appInfo.peerID.ToString();
-
-    QCC_DbgPrintf(("Persisting %i manifest rules", manifestRulesCount));
-    if (ER_OK != (funcStatus = SerializeManifest(managedApplicationInfo, manifestRules, manifestRulesCount))) {
-        return funcStatus;
-    }
 
     storageMutex.Lock(__FILE__, __LINE__);
     funcStatus = storage->StoreApplication(managedApplicationInfo);

@@ -89,6 +89,7 @@ const ECCPublicKey* X509CertificateECC::GetSubject()
 {
     return &subject;
 }
+
 void X509CertificateECC::SetSubject(const ECCPublicKey* key)
 {
     memcpy(subject.x, key->x, sizeof(subject.x));
@@ -100,11 +101,13 @@ void X509CertificateECC::SetSerialNumber(const qcc::String& newSerialNumber)
     serialNumber = newSerialNumber;
 }
 
-const qcc::Certificate::ValidPeriod* X509CertificateECC::GetValidity() {
+const qcc::Certificate::ValidPeriod* X509CertificateECC::GetValidity()
+{
     return &validity;
 }
 
-void X509CertificateECC::SetValidity(const qcc::Certificate::ValidPeriod* validityPeriod) {
+void X509CertificateECC::SetValidity(const qcc::Certificate::ValidPeriod* validityPeriod)
+{
     validity.validFrom = validityPeriod->validFrom;
     validity.validTo = validityPeriod->validTo;
 }
@@ -128,7 +131,6 @@ void X509IdentityCertificate::SetAlias(const qcc::GUID128& newAlias)
 {
     alias = newAlias;
 }
-
 
 const qcc::String& X509IdentityCertificate::GetName() const
 {

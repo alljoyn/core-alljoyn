@@ -63,7 +63,8 @@ class Storage {
                                      const bool update = false) = 0;
 
     /**
-     * \brief Remove the information pertaining to a previously managed application.
+     * \brief Remove the information pertaining to a previously managed application, including
+     * its certificates.
      *
      * \param[in] managedApplicationInfo the application info, ONLY the publicKey is mandatory here
      *

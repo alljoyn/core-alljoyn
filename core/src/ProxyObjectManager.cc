@@ -24,8 +24,18 @@ namespace ajn {
 namespace securitymgr {
 ProxyObjectManager::ProxyObjectManager(ajn::BusAttachment* ba,
                                        const SecurityManagerConfig& config) :
-    bus(ba), objectPath(config.pmObjectPath), interfaceName(config.pmIfn)
+    bus(ba), objectPath(config.pmObjectPath.c_str()), interfaceName(config.pmIfn.c_str())
 {
+    methodToSessionType["Claim"] = ECDHE_NULL;
+    methodToSessionType["GetIdentity"] = ECDHE_NULL;
+    methodToSessionType["GetManifest"] = ECDHE_NULL;
+    methodToSessionType["GetPolicy"] = ECDHE_DSA;
+    methodToSessionType["InstallIdentity"] = ECDHE_DSA;
+    methodToSessionType["InstallMembership"] = ECDHE_DSA;
+    methodToSessionType["InstallMembershipAuthData"] = ECDHE_DSA;
+    methodToSessionType["InstallPolicy"] = ECDHE_DSA;
+    methodToSessionType["RemoveMembership"] = ECDHE_DSA;
+    methodToSessionType["Reset"] = ECDHE_DSA;
 }
 
 ProxyObjectManager::~ProxyObjectManager()
@@ -36,40 +46,47 @@ QStatus ProxyObjectManager::GetProxyObject(const ApplicationInfo appInfo,
                                            SessionType type,
                                            ajn::ProxyBusObject** remoteObject)
 {
+    QStatus status = ER_FAIL;
+    if (appInfo.busName == "") {
+        status = ER_FAIL;
+        QCC_DbgRemoteError(("Application is offline"));
+        return status;
+    }
+    const char* busName = appInfo.busName.c_str();
+
     ajn::SessionId sessionId;
     SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false,
                      SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
-    QStatus status = bus->JoinSession(appInfo.busName.c_str(), MNGT_SERVICE_PORT,
-                                      this, sessionId, opts);
+    status = bus->JoinSession(busName, MNGT_SERVICE_PORT,
+                              this, sessionId, opts);
     if (status != ER_OK) {
+        QCC_DbgRemoteError(("Could not join session with %s", busName));
         return status;
     }
-    /* B. Setup ProxyBusObject:
-     *     - Create a ProxyBusObject from remote application info and session
-     *     - Get the interface description from the bus based on the remote interface name
-     *     - Extend the ProxyBusObject with the interface description
-     */
 
-    do {
-        const InterfaceDescription* remoteIntf = bus->GetInterface(interfaceName.c_str());
-        if (NULL == remoteIntf) {
-            QCC_DbgRemoteError(("No remote interface found of app to claim"));
-            status = ER_FAIL;
-            break;
-        }
-        ajn::ProxyBusObject* remoteObj = new ajn::ProxyBusObject(*bus, appInfo.busName.c_str(),
-                                                                 objectPath.c_str(), sessionId);
-        if (remoteObj == NULL) {
-            break;
-        }
-        status = remoteObj->AddInterface(*remoteIntf);
-        if (status != ER_OK) {
-            QCC_LogError(status, ("Failed to add interface to proxy object."));
-            delete remoteObj;
-            break;
-        }
-        *remoteObject = remoteObj;
-    } while (0);
+    const InterfaceDescription* remoteIntf = bus->GetInterface(interfaceName);
+    if (NULL == remoteIntf) {
+        status = ER_FAIL;
+        QCC_LogError(status, ("Could not find interface %s", interfaceName));
+        return status;
+    }
+
+    ajn::ProxyBusObject* remoteObj = new ajn::ProxyBusObject(*bus, busName,
+                                                             objectPath, sessionId);
+    if (remoteObj == NULL) {
+        status = ER_FAIL;
+        QCC_LogError(status, ("Could not create ProxyBusObject for %s", busName));
+        return status;
+    }
+
+    status = remoteObj->AddInterface(*remoteIntf);
+    if (status != ER_OK) {
+        QCC_LogError(status, ("Failed to add interface %s to ProxyBusObject", interfaceName));
+        delete remoteObj;
+        return status;
+    }
+
+    *remoteObject = remoteObj;
     return status;
 }
 
@@ -78,6 +95,63 @@ QStatus ProxyObjectManager::ReleaseProxyObject(ajn::ProxyBusObject* remoteObject
     SessionId sessionId = remoteObject->GetSessionId();
     delete remoteObject;
     return bus->LeaveSession(sessionId);
+}
+
+bool ProxyObjectManager::IsPermissionDeniedError(QStatus status, Message& msg)
+{
+    if (ER_PERMISSION_DENIED == status) {
+        return true;
+    }
+    if (ER_BUS_REPLY_IS_ERROR_MESSAGE == status) {
+        if (msg->GetErrorName() == NULL) {
+            return false;
+        }
+        if (strcmp(msg->GetErrorName(), "org.alljoyn.Bus.ER_PERMISSION_DENIED") == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+QStatus ProxyObjectManager::MethodCall(const ApplicationInfo app,
+                                       const qcc::String methodName,
+                                       const MsgArg* args,
+                                       const size_t numArgs,
+                                       Message& replyMsg)
+{
+    QStatus status = ER_FAIL;
+    const char* method = methodName.c_str();
+
+    std::map<qcc::String, SessionType>::iterator it = methodToSessionType.begin();
+    it = methodToSessionType.find(methodName);
+    if (it == methodToSessionType.end()) {
+        status = ER_FAIL;
+        QCC_LogError(status, ("Could not determine session type for %s method", method));
+        return status;
+    }
+    SessionType sessionType = it->second;
+
+    ProxyBusObject* remoteObj;
+    status = GetProxyObject(app, sessionType, &remoteObj);
+    if (ER_OK != status) {
+        // errors logged in GetProxyObject
+        return status;
+    }
+
+    status = remoteObj->MethodCall(interfaceName, method, args, numArgs, replyMsg, MSG_REPLY_TIMEOUT);
+    ReleaseProxyObject(remoteObj);
+
+    if (ER_OK != status) {
+        if (IsPermissionDeniedError(status, replyMsg)) {
+            status = ER_PERMISSION_DENIED;
+            QCC_DbgRemoteError(("Permission denied to call %s method", method));
+            return status;
+        }
+        QCC_DbgRemoteError(("Failed to call %s method", method));
+        return status;
+    }
+
+    return status;
 }
 
 void ProxyObjectManager::SessionLost(ajn::SessionId sessionId,

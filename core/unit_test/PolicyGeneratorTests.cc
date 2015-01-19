@@ -26,6 +26,7 @@ using namespace qcc;
 using namespace securitymgr;
 
 TEST(PolicyGeneratorTest, BasicTest) {
+    ECCPublicKey publicKey;
     PermissionPolicy pol;
     GUID128 guildID;
     qcc::String guildIDString = BytesToHexString(guildID.GetBytes(), GUID128::SIZE);
@@ -33,7 +34,7 @@ TEST(PolicyGeneratorTest, BasicTest) {
     vector<GUID128> guilds;
     guilds.push_back(guildID);
 
-    PolicyGenerator::DefaultPolicy(guilds, pol);
+    PolicyGenerator::DefaultPolicy(guilds, publicKey, pol);
     qcc::String policyString = pol.ToString();
     ASSERT_EQ((size_t)1, pol.GetTermsSize());
     ASSERT_NE(string::npos, policyString.find(guildIDString));
@@ -42,7 +43,7 @@ TEST(PolicyGeneratorTest, BasicTest) {
     guilds.push_back(guildID2);
     qcc::String guildID2String = BytesToHexString(guildID2.GetBytes(), GUID128::SIZE);
 
-    PolicyGenerator::DefaultPolicy(guilds, pol);
+    PolicyGenerator::DefaultPolicy(guilds, publicKey, pol);
     policyString = pol.ToString();
 
     ASSERT_EQ((size_t)2, pol.GetTermsSize());

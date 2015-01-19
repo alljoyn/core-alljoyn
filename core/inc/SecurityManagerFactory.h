@@ -60,20 +60,13 @@ class SecurityManagerFactory {
         return smf;
     }
 
-    /* Responsibilities
-     * - Check in the keystore if we already had a key pair for this user
-     * -- if yes: construct a new SecurityManager for this user with the data
-     * -- if no: generate a new key pair, store it and construct a new SecurityManager for this user
+    /* \brief Check in the keystore if we already had a key pair for this user
+     *           -- if yes: construct a new SecurityManager for this user with the data
+     *           -- if no: generate a new key pair, store it and construct a new SecurityManager for this user
      *
      *
      */
-    /* REMARK: It's still under discussion whether we will already include username/password support, but
-     * I think we will need it at some point to know which RoT we are managing applications for */
-    //How about passing keystore here
-    //
-    SecurityManager* GetSecurityManager(qcc::String userName,
-                                        qcc::String password,
-                                        const StorageConfig& storageCfg,
+    SecurityManager* GetSecurityManager(const StorageConfig& storageCfg,
                                         const SecurityManagerConfig& smCfg,
                                         IdentityData* id = NULL,
                                         ajn::BusAttachment* ba = NULL);

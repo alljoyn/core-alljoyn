@@ -32,12 +32,14 @@ namespace secmgrcoretest_unit_testutil {
 class TestApplicationListener :
     public ApplicationListener {
   public:
-    TestApplicationListener(sem_t& _sem);
+    TestApplicationListener(sem_t& _sem,
+                            sem_t& _lock);
 
     ApplicationInfo _lastAppInfo;
 
   private:
     sem_t& sem;
+    sem_t& lock;
 
     void OnApplicationStateChange(const ApplicationInfo* old,
                                   const ApplicationInfo* updated);
@@ -46,8 +48,13 @@ class TestApplicationListener :
 class BasicTest :
     public::testing::Test {
   private:
+    TestApplicationListener* tal;
+
+    void UpdateLastAppInfo();
 
   protected:
+    sem_t sem;
+    sem_t lock;
 
     virtual void SetUp();
 
@@ -59,10 +66,14 @@ class BasicTest :
     ajn::securitymgr::StorageConfig sc;
     ajn::securitymgr::SecurityManagerConfig smc;
     ajn::BusAttachment* ba;
-    sem_t sem;
-    TestApplicationListener* tal;
+
+    ApplicationInfo lastAppInfo;
+
     BasicTest();
     void SetSmcStub();
+
+    bool WaitForState(ajn::PermissionConfigurator::ClaimableState newClaimState,
+                      ajn::securitymgr::ApplicationRunningState newRunningState);
 };
 
 class ClaimTest :
@@ -105,7 +116,6 @@ class ClaimedTest :
   public:
 
     Stub* stub;
-    ApplicationInfo appInfo;
     IdentityInfo idInfo;
     TestClaimListener* tcl;
 
@@ -115,20 +125,17 @@ class ClaimedTest :
 
         bool claimAnswer = true;
         tcl = new TestClaimListener(claimAnswer);
-
         stub = new Stub(tcl);
-        sem_wait(&sem);
         /* Open claim window */
         stub->OpenClaimWindow();
-        sem_wait(&sem);
+        ASSERT_TRUE(WaitForState(ajn::PermissionConfigurator::STATE_CLAIMABLE, ajn::securitymgr::STATE_RUNNING));
         /* Claim ! */
-        idInfo.guid = tal->_lastAppInfo.peerID;
+        idInfo.guid = lastAppInfo.peerID;
         idInfo.name = "MyTest ID Name";
         secMgr->StoreIdentity(idInfo);
-        secMgr->ClaimApplication(tal->_lastAppInfo, idInfo, &AutoAcceptManifest);
-        sem_wait(&sem);
-        appInfo = tal->_lastAppInfo;
-        secMgr->GetApplication(appInfo);
+        secMgr->ClaimApplication(lastAppInfo, idInfo, &AutoAcceptManifest);
+        ASSERT_TRUE(WaitForState(ajn::PermissionConfigurator::STATE_CLAIMED, ajn::securitymgr::STATE_RUNNING));
+        secMgr->GetApplication(lastAppInfo);
     }
 
     void TearDown()

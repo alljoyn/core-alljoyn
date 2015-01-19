@@ -40,14 +40,36 @@ class ProxyObjectManager :
 
     ~ProxyObjectManager();
 
+    QStatus MethodCall(const ApplicationInfo app,
+                       const qcc::String methodName,
+                       const MsgArg* args,
+                       const size_t numArgs,
+                       Message& replyMsg);
+
+  private:
+
+    ajn::BusAttachment* bus;
+
+    const char* objectPath;
+    const char* interfaceName;
+    std::map<qcc::String, SessionType> methodToSessionType;
+
+    /* ajn::SessionListener */
+    virtual void SessionLost(ajn::SessionId sessionId,
+                             SessionLostReason reason);
+
+    bool IsPermissionDeniedError(QStatus status,
+                                 Message& msg);
+
     /**
-     * \brief Ask the ProxyObjectManager to provide a ProxyBusObject to given application.
-     * Ask the ProxyObjectManager to provide a ProxyBusObject to given application. If such an object already
-     * exists that object will be returned, increasing the reference count on it. For every GetProxyObject a matching
-     * release object must be done.
+     * \brief Ask the ProxyObjectManager to provide a ProxyBusObject to given
+     * application. Ask the ProxyObjectManager to provide a ProxyBusObject to
+     * given application. For every GetProxyObject, a matching
+     * ReleaseProxyObject must be done.
      * \param[in] the application to connect to
      * \param[in] the type of session required
-     * \param[out] remoteObject the ProxyBusObject will be stored in this pointer on success.
+     * \param[out] remoteObject the ProxyBusObject will be stored in this
+     * pointer on success.
      */
     QStatus GetProxyObject(const ApplicationInfo appInfo,
                            SessionType type,
@@ -58,16 +80,6 @@ class ProxyObjectManager :
      * \param[in] the object to be released.
      */
     QStatus ReleaseProxyObject(ajn::ProxyBusObject* remoteObject);
-
-  private:
-    /* ajn::SessionListener */
-    virtual void SessionLost(ajn::SessionId sessionId,
-                             SessionLostReason reason);
-
-    ajn::BusAttachment* bus;
-
-    qcc::String objectPath;
-    qcc::String interfaceName;
 };
 }
 }

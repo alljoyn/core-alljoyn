@@ -42,32 +42,23 @@ TEST_F(IdentityCoreTests, SuccessfulInstallIdentity) {
     Stub* stub = new Stub(&tcl);
 
     /* Wait for signals */
-    sem_wait(&sem);
-    if (tal->_lastAppInfo.appName.size() == 0) {
-        sem_wait(&sem); // about signal
-    } else {
-        sem_trywait(&sem);
-    }
-    ASSERT_EQ(ajn::securitymgr::STATE_RUNNING, tal->_lastAppInfo.runningState);
-    ASSERT_EQ(ajn::PermissionConfigurator::STATE_CLAIMABLE, tal->_lastAppInfo.claimState);
+    ASSERT_TRUE(WaitForState(ajn::PermissionConfigurator::STATE_CLAIMABLE, ajn::securitymgr::STATE_RUNNING));
 
     IdentityInfo info;
     info.name = "MyName";
     ASSERT_EQ(ER_OK, secMgr->StoreIdentity(info, false));
 
     /* Claim! */
-    ASSERT_EQ(ER_OK, secMgr->Claim(tal->_lastAppInfo, info));
-    sem_wait(&sem);
-    ASSERT_EQ(ajn::securitymgr::STATE_RUNNING, tal->_lastAppInfo.runningState);
-    ASSERT_EQ(ajn::PermissionConfigurator::STATE_CLAIMED, tal->_lastAppInfo.claimState);
+    ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, info));
+    ASSERT_TRUE(WaitForState(ajn::PermissionConfigurator::STATE_CLAIMED, ajn::securitymgr::STATE_RUNNING));
 
     /* Try to install identity again */
     //QCC_SetLogLevels("PERMISSION_MGMT=7");
     //QCC_SetLogLevels("CRYPTO=7");
-    ASSERT_EQ(ER_OK, secMgr->InstallIdentity(tal->_lastAppInfo, info));
+    ASSERT_EQ(ER_OK, secMgr->InstallIdentity(lastAppInfo, info));
 
     qcc::IdentityCertificate certificate;
-    ASSERT_EQ(ER_OK, secMgr->GetIdentityCertificate(tal->_lastAppInfo, certificate));
+    ASSERT_EQ(ER_OK, secMgr->GetIdentityCertificate(lastAppInfo, certificate));
 
     printf("Retrieved id certificate = '%s'\n", certificate.GetPEM().c_str());
 
@@ -76,11 +67,6 @@ TEST_F(IdentityCoreTests, SuccessfulInstallIdentity) {
 
     /* Stop the stub */
     delete stub;
-    while (sem_trywait(&sem) == 0) {
-        ;
-    }
-    sem_wait(&sem);
-    ASSERT_EQ(ajn::securitymgr::STATE_NOT_RUNNING, tal->_lastAppInfo.runningState);
-    ASSERT_EQ(ajn::PermissionConfigurator::STATE_CLAIMED, tal->_lastAppInfo.claimState);
+    ASSERT_TRUE(WaitForState(ajn::PermissionConfigurator::STATE_CLAIMED, ajn::securitymgr::STATE_NOT_RUNNING));
 }
 } // namespace

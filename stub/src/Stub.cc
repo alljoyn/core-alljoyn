@@ -70,7 +70,7 @@ Stub::Stub(ClaimListener* cl) :
         // BusAttachment needs to be started before PeerSecurity is enabled
         // to deliver NotifyConfig signal
         if (ER_OK !=
-            ba.EnablePeerSecurity(ECDHE_KEYX, new ECDHEKeyXListener(),
+            ba.EnablePeerSecurity(ECDHE_KEYX " " KEYX_ECDHE_NULL, new ECDHEKeyXListener(),
                                   STUB_KEYSTORE, false)) {
             std::cerr << "BusAttachment::EnablePeerSecurity failed." << std::endl;
             break;

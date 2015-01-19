@@ -21,7 +21,6 @@
 
 namespace qcc {
 enum CertificateType {
-
     UNSUPPORTED_CERTIFICATE,
     IDENTITY_CERTIFICATE,
     MEMBERSHIP_CERTIFICATE,
@@ -55,12 +54,15 @@ class X509CertificateECC :
     void SetDataDigest(const qcc::String& digest);
 
     virtual QStatus LoadPEM(const String& PEM);
+
     virtual String GetPEM();
 
     virtual const ECCPublicKey* GetSubject();
+
     void SetSubject(const ECCPublicKey* key);
 
     virtual const ValidPeriod* GetValidity();
+
     void SetValidity(const ValidPeriod* validityPeriod);
 
   protected:

@@ -312,7 +312,7 @@ static int be_secmgr(size_t peers)
         smc.pmNotificationIfn = "org.allseen.Security.PermissionMgmt.Stub.Notification";
         smc.pmIfn = "org.allseen.Security.PermissionMgmt.Stub";
         smc.pmObjectPath = "/security/PermissionMgmt";
-        SecurityManager* secMgr = secFac.GetSecurityManager("hello", "world", sc, smc, NULL);
+        SecurityManager* secMgr = secFac.GetSecurityManager(sc, smc, NULL);
         if (secMgr == NULL) {
             cerr << "No security manager" << endl;
             break;
@@ -369,7 +369,7 @@ static int be_secmgr(size_t peers)
         PermissionPolicy policy;
         vector<GUID128> guildIds;
         guildIds.push_back(guild.guid);
-        if (ER_OK != PolicyGenerator::DefaultPolicy(guildIds, policy)) {
+        if (ER_OK != PolicyGenerator::DefaultPolicy(guildIds, secMgr->GetPublicKey(), policy)) {
             cerr << "Failed to generate policy." << endl;
             break;
         }

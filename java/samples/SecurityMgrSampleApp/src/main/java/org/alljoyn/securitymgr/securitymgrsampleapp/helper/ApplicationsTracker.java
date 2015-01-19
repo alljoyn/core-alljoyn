@@ -17,7 +17,7 @@
 package org.alljoyn.securitymgr.securitymgrsampleapp.helper;
 
 import java.util.Collection;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.alljoyn.securitymgr.ApplicationEventListener;
@@ -25,13 +25,15 @@ import org.alljoyn.securitymgr.ApplicationInfo;
 
 import android.util.Log;
 
-
+/**
+ * Helper class that keeps track of all discoverd applications.
+ */
 public class ApplicationsTracker implements ApplicationEventListener
 {
     private static final String TAG = "ApplicationsTracker";
-    private Map<String, AppInfoItem> appsInfo = new HashMap<>();
+    private Map<String, AppInfoItem> appsInfo = new LinkedHashMap<>();
 
-    private MyAdapter mAdapter;
+    private AppsListAdapter mAdapter;
 
     @Override
     public void onApplicationEvent(ApplicationInfo newInfo, ApplicationInfo oldInfo)
@@ -50,6 +52,10 @@ public class ApplicationsTracker implements ApplicationEventListener
         }
     }
 
+    /**
+     * Add a list of applications.
+     * @param apps The applications.
+     */
     public void addApplications(Collection<ApplicationInfo> apps)
     {
         for (ApplicationInfo app : apps) {
@@ -57,7 +63,11 @@ public class ApplicationsTracker implements ApplicationEventListener
         }
     }
 
-    public void setAdapter(MyAdapter adapter)
+    /**
+     * Set an adapter for an recyclerview.
+     * @param adapter The adapter. Null to unset.
+     */
+    public void setAdapter(AppsListAdapter adapter)
     {
         mAdapter = adapter;
         if (mAdapter != null) {
@@ -71,7 +81,8 @@ public class ApplicationsTracker implements ApplicationEventListener
 
 
     /**
-     * An item representing an app
+     * An item representing an app.
+     * ApplicationInfo is wrapped in here for a different implementation of hashCode and Equals.
      */
     public static class AppInfoItem
     {

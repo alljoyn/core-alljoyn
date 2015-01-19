@@ -21,8 +21,9 @@ using namespace ajn::securitymgr;
 using namespace std;
 
 namespace secmgrcoretest_unit_testutil {
-TestApplicationListener::TestApplicationListener(sem_t& _sem) :
-    sem(_sem)
+TestApplicationListener::TestApplicationListener(sem_t& _sem,
+                                                 sem_t& _lock) :
+    sem(_sem), lock(_lock)
 {
 }
 
@@ -42,15 +43,17 @@ void TestApplicationListener::OnApplicationStateChange(const ApplicationInfo* ol
     ToString(updated->runningState) <<
     endl << "> " << flush;
 #endif
-
+    sem_wait(&lock);
     _lastAppInfo = *updated;
     sem_post(&sem);
+    sem_post(&lock);
 }
 
 BasicTest::BasicTest()
 {
     secMgr = NULL;
     tal = NULL;
+    ba = NULL;
 }
 
 static int counter;
@@ -81,13 +84,52 @@ void BasicTest::SetUp()
 
     sc.settings["STORAGE_PATH"] = path;
     ASSERT_EQ(sc.settings.at("STORAGE_PATH").compare(path.c_str()), 0);
-    secMgr = secFac.GetSecurityManager("hello", "world", sc, smc, NULL, ba);
+    secMgr = secFac.GetSecurityManager(sc, smc, NULL, ba);
     ASSERT_TRUE(secMgr != NULL);
 
     sem_init(&sem, 0, 0);
+    sem_init(&lock, 0, 1);
 
-    tal = new TestApplicationListener(sem);
+    tal = new TestApplicationListener(sem, lock);
     secMgr->RegisterApplicationListener(tal);
+}
+
+void BasicTest::UpdateLastAppInfo()
+{
+    sem_wait(&lock);
+    lastAppInfo = tal->_lastAppInfo;
+    sem_post(&lock);
+}
+
+bool BasicTest::WaitForState(ajn::PermissionConfigurator::ClaimableState newState,
+                             ajn::securitymgr::ApplicationRunningState newRunningState)
+{
+    printf("\nWaitForState: waiting for event(s) ...\n");
+    //Prior to entering this function, the test should have taken an action which leads to one or more events.
+    //These events are handled in a separate thread.
+    timespec timeout;
+    do {
+        clock_gettime(CLOCK_REALTIME, &timeout);
+        timeout.tv_sec += 5; //Wait for a maximum of 5 seconds ...
+        if (sem_timedwait(&sem, &timeout) == 0) { //if events are in the queue, we will return immediately
+            UpdateLastAppInfo(); //update latest value.
+            printf("WaitForState: Checking event ... ");
+            if (lastAppInfo.claimState == newState && newRunningState == lastAppInfo.runningState &&
+                lastAppInfo.appName.size() != 0) {
+                printf("ok\n");
+                return true;
+            }
+        } else {
+            printf("timeout- failing test\n");
+            break;
+        }
+        printf("not ok, waiting for next event\n");
+    } while (true);
+    printf("WaitForState failed.\n");
+    printf("\tClaimableState: expected = %s, got %s\n", ToString(newState), ToString(lastAppInfo.claimState));
+    printf("\tRunningState: expected = %s, got %s\n", ToString(newRunningState), ToString(lastAppInfo.runningState));
+    printf("\tApplicationName = '%s' (size = %lu)\n", lastAppInfo.appName.c_str(), lastAppInfo.appName.size());
+    return false;
 }
 
 void BasicTest::TearDown()

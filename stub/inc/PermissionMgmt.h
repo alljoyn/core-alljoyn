@@ -136,7 +136,7 @@ class PermissionMgmt :
 
     qcc::String GetInstalledIdentityCertificate() const;
 
-    std::map<GUID128, qcc::String> GetMembershipCertificates() const;
+    std::map<qcc::GUID128, qcc::String> GetMembershipCertificates() const;
 
     void SetUsedManifest(PermissionPolicy::Rule* manifestRules,
                          size_t manifestRulesCount);

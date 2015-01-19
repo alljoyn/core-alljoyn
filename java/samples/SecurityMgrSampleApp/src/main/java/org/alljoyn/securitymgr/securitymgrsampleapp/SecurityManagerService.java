@@ -1,9 +1,6 @@
 package org.alljoyn.securitymgr.securitymgrsampleapp;
 
-import org.alljoyn.securitymgr.ApplicationInfo;
-import org.alljoyn.securitymgr.DefaultSecurityHandler;
-import org.alljoyn.securitymgr.ManifestApprover;
-import org.alljoyn.securitymgr.SecurityMngtException;
+import org.alljoyn.securitymgr.*;
 import org.alljoyn.securitymgr.access.Manifest;
 import org.alljoyn.securitymgr.securitymgrsampleapp.helper.ApplicationsTracker;
 
@@ -17,6 +14,9 @@ import android.os.Binder;
 import android.os.IBinder;
 import android.util.Log;
 
+/**
+ * Service that contains all logic to interact with the native layer.
+ */
 public class SecurityManagerService extends Service implements ManifestApprover
 {
     private static final String TAG = "SecurityManagerService";
@@ -42,17 +42,15 @@ public class SecurityManagerService extends Service implements ManifestApprover
             mMulticastLock.acquire();
         }
 
+
+        //Object that will get the callbacks if a new application is discovered.
         mApplicationsTracker = new ApplicationsTracker();
 
-        //Initialize native component
-        String userName = "Demo";
-        String keystoreUser = "Demo";
-        String keystorePass = "DemoPass";
         String appPath = getFilesDir().getAbsolutePath();
 
         try {
-            mSecurityHandler = new DefaultSecurityHandler(userName, mApplicationsTracker, this, appPath,
-                keystoreUser, keystorePass);
+            //initialize the native layer. This must only be done once in the entire lifecycle of the application!
+            mSecurityHandler = new DefaultSecurityHandler(mApplicationsTracker, this, appPath);
         }
         catch (SecurityMngtException e) {
             Log.e(TAG, "Error initializing native SecurityHandler", e);
@@ -63,6 +61,8 @@ public class SecurityManagerService extends Service implements ManifestApprover
             Log.e(TAG, "Could not create default security manager!");
             stopSelf();
         }
+
+        //Fetch the list of applications that are stored in the database.
         mApplicationsTracker.addApplications(mSecurityHandler.getApplications());
     }
 
@@ -71,6 +71,7 @@ public class SecurityManagerService extends Service implements ManifestApprover
     {
         Log.d(TAG, "Destroying SecurityManagerService");
         if (mMulticastLock != null && mMulticastLock.isHeld()) {
+            //release multicast lock
             mMulticastLock.release();
         }
         super.onDestroy();
@@ -82,6 +83,12 @@ public class SecurityManagerService extends Service implements ManifestApprover
         return mLocalBinder;
     }
 
+    /**
+     * Create a local bound connection to this service.
+     * @param ctx The android context.
+     * @param conn The callback interface that will be called when the service is bound.
+     * @return A connnection manager. Should be used for closing the connection.
+     */
     public static LocalServiceConnection getLocalBind(Context ctx, SecurityManagerServiceConnection conn)
     {
         Log.d(TAG, "Creating local bound connection");
@@ -102,16 +109,44 @@ public class SecurityManagerService extends Service implements ManifestApprover
         return mManifestApprover.approveManifest(applicationInfo, manifest);
     }
 
+    /**
+     * Get the ApplicationsTracker object.
+     * @return The ApplicationsTracker
+     */
     public ApplicationsTracker getApplicationsTracker()
     {
         return mApplicationsTracker;
     }
 
-    public DefaultSecurityHandler getSecurityHandler()
+    /**
+     * Claim an application. @see DefaultSecurityHandler#claimApplication(ApplicationInfo) <br>
+     * The @link setManifestApprover(ManifestApprover) function must be called upfront.<br>
+     * This call is blocking and should never be done from the UI thread.
+     * @param applicationInfo The application to claim.
+     * @throws SecurityMngtException On exception.
+     */
+    public void claimApplication(ApplicationInfo applicationInfo) throws SecurityMngtException
     {
-        return mSecurityHandler;
+        if (mManifestApprover == null) {
+            throw new IllegalStateException("ManifestApprover not yet set");
+        }
+        mSecurityHandler.claimApplication(applicationInfo);
     }
 
+    /**
+     * Unclaim an application. @see DefaultSecurityHandler#unclaimApplication(ApplicationInfo)
+     * @param applicationInfo The application to claim.
+     * @throws SecurityMngtException On exception.
+     */
+    public void unClaimApplication(ApplicationInfo applicationInfo) throws SecurityMngtException
+    {
+        mSecurityHandler.unclaimApplication(applicationInfo);
+    }
+
+    /**
+     * Set the ManifestApprover callbacks.
+     * @param manifestApprover the ManifestApprover. Set to null to unset.
+     */
     public void setManifestApprover(ManifestApprover manifestApprover)
     {
         mManifestApprover = manifestApprover;
@@ -141,7 +176,7 @@ public class SecurityManagerService extends Service implements ManifestApprover
         private final SecurityManagerServiceConnection mConn;
         private final Context mCtx;
 
-        public LocalServiceConnection(Context ctx, SecurityManagerServiceConnection conn)
+        private LocalServiceConnection(Context ctx, SecurityManagerServiceConnection conn)
         {
             mConn = conn;
             mCtx = ctx;
@@ -161,16 +196,29 @@ public class SecurityManagerService extends Service implements ManifestApprover
             mConn.onLocalServiceDisconnected();
         }
 
+        /**
+         * Close/unbind the serviceconnection.
+         */
         public void unBind()
         {
             mCtx.unbindService(this);
         }
     }
 
+    /**
+     * Interface to receive callbacks when the connection to the SecurityManagerService is bound/lost
+     */
     public interface SecurityManagerServiceConnection
     {
+        /**
+         * Called when the service is connected.
+         * @param service The service object.
+         */
         void onLocalServiceConnected(SecurityManagerService service);
 
+        /**
+         * Called when the service is lost unexpected.
+         */
         void onLocalServiceDisconnected();
     }
 

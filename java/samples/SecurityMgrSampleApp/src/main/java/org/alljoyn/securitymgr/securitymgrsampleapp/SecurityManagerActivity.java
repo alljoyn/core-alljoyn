@@ -31,6 +31,9 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 
+/**
+ * The main activity of this application.
+ */
 public class SecurityManagerActivity extends ActionBarActivity
     implements AppsListFragment.AppsListFragmentCallbacks, ListView.OnItemClickListener
 {
@@ -91,7 +94,7 @@ public class SecurityManagerActivity extends ActionBarActivity
 
         mDrawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
         mDrawerToggle = new ActionBarDrawerToggle(this, mDrawerLayout,
-            toolbar, R.string.drawer_open, R.string.drawer_close)
+            toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close)
         {
 
             /** Called when a drawer has settled in a completely closed state. */
@@ -122,9 +125,9 @@ public class SecurityManagerActivity extends ActionBarActivity
 
         // Set the drawer toggle as the DrawerListener
         mDrawerLayout.setDrawerListener(mDrawerToggle);
-        selectNaviationItem(mCurrentSelectedPosition);
+        selectNavigationItem(mCurrentSelectedPosition);
 
-        //configurure toolbar
+        //configure toolbar
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         getSupportActionBar().setHomeButtonEnabled(true);
 
@@ -147,7 +150,7 @@ public class SecurityManagerActivity extends ActionBarActivity
     {
         if (parent.getId() == R.id.left_drawer) {
             // Highlight the selected item, update the title, and close the drawer
-            selectNaviationItem(position);
+            selectNavigationItem(position);
             mDrawerLayout.closeDrawer(mDrawerList);
         }
         else {
@@ -156,7 +159,7 @@ public class SecurityManagerActivity extends ActionBarActivity
     }
 
 
-    public void selectNaviationItem(int position)
+    private void selectNavigationItem(int position)
     {
         mCurrentSelectedPosition = position;
         mDrawerList.setItemChecked(position, true);
@@ -199,7 +202,7 @@ public class SecurityManagerActivity extends ActionBarActivity
     public boolean onPrepareOptionsMenu(Menu menu)
     {
         // If the nav drawer is open, hide action items related to the content view
-        boolean drawerOpen = mDrawerLayout.isDrawerOpen(mDrawerList);
+        //boolean drawerOpen = mDrawerLayout.isDrawerOpen(mDrawerList);
         //menu.findItem(R.id.action_websearch).setVisible(!drawerOpen);
         return super.onPrepareOptionsMenu(menu);
     }

@@ -21,6 +21,7 @@ using namespace qcc;
 using namespace securitymgr;
 
 QStatus PolicyGenerator::DefaultPolicy(const std::vector<GUID128>& guildIDs,
+                                       const ECCPublicKey& publicKey,
                                        PermissionPolicy& policy)
 {
     QStatus status = ER_OK;
@@ -32,7 +33,7 @@ QStatus PolicyGenerator::DefaultPolicy(const std::vector<GUID128>& guildIDs,
 
     for (size_t i = 0; i < numGuilds; i++) {
         if (ER_OK !=
-            (status = DefaultGuildPolicyTerm(guildIDs[i].GetBytes(), GUID128::SIZE, terms[i]))) {
+            (status = DefaultGuildPolicyTerm(guildIDs[i].GetBytes(), GUID128::SIZE, publicKey, terms[i]))) {
             break;
         }
     }
@@ -48,6 +49,7 @@ QStatus PolicyGenerator::DefaultPolicy(const std::vector<GUID128>& guildIDs,
 
 QStatus PolicyGenerator::DefaultGuildPolicyTerm(const uint8_t* guildId,
                                                 const size_t guildIdLen,
+                                                const ECCPublicKey& publicKey,
                                                 PermissionPolicy::Term& term)
 {
     QStatus status = ER_OK;
@@ -65,8 +67,9 @@ QStatus PolicyGenerator::DefaultGuildPolicyTerm(const uint8_t* guildId,
     peers[0].SetType(PermissionPolicy::Peer::PEER_GUILD);
 
     // will be deleted by peer
-    KeyInfoECC* info = new KeyInfoECC();
+    KeyInfoNISTP256* info = new KeyInfoNISTP256();
     info->SetKeyId(guildId, guildIdLen);
+    info->SetPublicKey(&publicKey);
     peers[0].SetKeyInfo(info);
     term.SetPeers(1, peers);
     term.SetRules(1, rules);

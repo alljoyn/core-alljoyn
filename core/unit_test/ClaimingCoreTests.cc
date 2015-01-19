@@ -42,14 +42,7 @@ TEST_F(ClaimingCoreTests, SuccessfulClaim) {
     Stub* stub = new Stub(&tcl);
 
     /* Wait for signals */
-    sem_wait(&sem); // security signal
-    if (tal->_lastAppInfo.appName.size() == 0) {
-        sem_wait(&sem); // about signal
-    } else {
-        sem_trywait(&sem);
-    }
-    ASSERT_EQ(ajn::securitymgr::STATE_RUNNING, tal->_lastAppInfo.runningState);
-    ASSERT_EQ(ajn::PermissionConfigurator::STATE_CLAIMABLE, tal->_lastAppInfo.claimState);
+    ASSERT_TRUE(WaitForState(ajn::PermissionConfigurator::STATE_CLAIMABLE, ajn::securitymgr::STATE_RUNNING));
 
     /* Create identity */
     IdentityInfo idInfo;
@@ -58,15 +51,13 @@ TEST_F(ClaimingCoreTests, SuccessfulClaim) {
     ASSERT_EQ(secMgr->StoreIdentity(idInfo, false), ER_OK);
 
     /* Claim */
-    ASSERT_EQ(ER_OK, secMgr->Claim(tal->_lastAppInfo, idInfo));
+    ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
 
     /* Check security signal */
-    sem_wait(&sem);
-    ASSERT_EQ(ajn::securitymgr::STATE_RUNNING, tal->_lastAppInfo.runningState);
-    ASSERT_EQ(ajn::PermissionConfigurator::STATE_CLAIMED, tal->_lastAppInfo.claimState);
+    ASSERT_TRUE(WaitForState(ajn::PermissionConfigurator::STATE_CLAIMED, ajn::securitymgr::STATE_RUNNING));
 
     /* Try to claim again */
-    ASSERT_EQ(ER_PERMISSION_DENIED, secMgr->Claim(tal->_lastAppInfo, idInfo));
+    ASSERT_EQ(ER_PERMISSION_DENIED, secMgr->Claim(lastAppInfo, idInfo));
 
     /* Clear the keystore of the stub */
     stub->Reset();
@@ -74,13 +65,7 @@ TEST_F(ClaimingCoreTests, SuccessfulClaim) {
     /* Stop the stub */
     delete stub;
 
-    while (sem_trywait(&sem) == 0) {
-        ;
-    }
-    sem_wait(&sem);
-
-    ASSERT_EQ(ajn::securitymgr::STATE_NOT_RUNNING, tal->_lastAppInfo.runningState);
-    ASSERT_EQ(ajn::PermissionConfigurator::STATE_CLAIMED, tal->_lastAppInfo.claimState);
+    ASSERT_TRUE(WaitForState(ajn::PermissionConfigurator::STATE_CLAIMED, ajn::securitymgr::STATE_NOT_RUNNING));
 }
 
 TEST_F(ClaimingCoreTests, SuccessfulClaimApplication) {
@@ -91,14 +76,7 @@ TEST_F(ClaimingCoreTests, SuccessfulClaimApplication) {
     Stub* stub = new Stub(&tcl);
 
     /* Wait for signals */
-    sem_wait(&sem); // security signal
-    if (tal->_lastAppInfo.appName.size() == 0) {
-        sem_wait(&sem); // about signal
-    } else {
-        sem_trywait(&sem);
-    }
-    ASSERT_EQ(ajn::securitymgr::STATE_RUNNING, tal->_lastAppInfo.runningState);
-    ASSERT_EQ(ajn::PermissionConfigurator::STATE_CLAIMABLE, tal->_lastAppInfo.claimState);
+    ASSERT_TRUE(WaitForState(ajn::PermissionConfigurator::STATE_CLAIMABLE, ajn::securitymgr::STATE_RUNNING));
 
     /* Create identity */
     IdentityInfo idInfo;
@@ -107,15 +85,13 @@ TEST_F(ClaimingCoreTests, SuccessfulClaimApplication) {
     ASSERT_EQ(secMgr->StoreIdentity(idInfo, false), ER_OK);
 
     /* Claim application */
-    ASSERT_EQ(ER_OK, secMgr->ClaimApplication(tal->_lastAppInfo, idInfo, &AutoAcceptManifest));
+    ASSERT_EQ(ER_OK, secMgr->ClaimApplication(lastAppInfo, idInfo, &AutoAcceptManifest));
 
     /* Check security signal */
-    sem_wait(&sem);
-    ASSERT_EQ(ajn::securitymgr::STATE_RUNNING, tal->_lastAppInfo.runningState);
-    ASSERT_EQ(ajn::PermissionConfigurator::STATE_CLAIMED, tal->_lastAppInfo.claimState);
+    ASSERT_TRUE(WaitForState(ajn::PermissionConfigurator::STATE_CLAIMED, ajn::securitymgr::STATE_RUNNING));
 
     /* Try to claim again */
-    ASSERT_EQ(ER_PERMISSION_DENIED, secMgr->ClaimApplication(tal->_lastAppInfo, idInfo, &AutoAcceptManifest));
+    ASSERT_EQ(ER_PERMISSION_DENIED, secMgr->ClaimApplication(lastAppInfo, idInfo, &AutoAcceptManifest));
 
     /* Clear the keystore of the stub */
     stub->Reset();
@@ -123,12 +99,6 @@ TEST_F(ClaimingCoreTests, SuccessfulClaimApplication) {
     /* Stop the stub */
     delete stub;
 
-    while (sem_trywait(&sem) == 0) {
-        ;
-    }
-    sem_wait(&sem);
-
-    ASSERT_EQ(ajn::securitymgr::STATE_NOT_RUNNING, tal->_lastAppInfo.runningState);
-    ASSERT_EQ(ajn::PermissionConfigurator::STATE_CLAIMED, tal->_lastAppInfo.claimState);
+    ASSERT_TRUE(WaitForState(ajn::PermissionConfigurator::STATE_CLAIMED, ajn::securitymgr::STATE_NOT_RUNNING));
 }
 } // namespace

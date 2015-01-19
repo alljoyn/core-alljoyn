@@ -16,18 +16,18 @@
 
 package org.alljoyn.securitymgr;
 
+import org.alljoyn.securitymgr.access.Policy;
+
 import java.util.ArrayList;
 import java.util.List;
 
-import org.alljoyn.securitymgr.access.Policy;
-
 public abstract class SecurityManager {
 
-    public static SecurityManager getSecurityManager(String path, String userName, String pass) {
+    public static SecurityManager getSecurityManager(String path) {
         SecurityManagerJNI smJNI = new SecurityManagerJNI();
         boolean ret = false;
         try {
-            ret = smJNI.init(path,userName,pass);
+            ret = smJNI.init(path);
         } catch (SecurityMngtException e) {
             e.printStackTrace();
         }
@@ -123,4 +123,7 @@ public abstract class SecurityManager {
             applicationEventListener.onApplicationEvent(newInfo.clone(), oldInfo.clone());
         }
     }
+
+    public abstract byte[] getPublicKey() throws SecurityMngtException;
+
 }

@@ -69,7 +69,7 @@
         USERNAME TEXT NOT NULL,\
         PRIMARY KEY(SUBJECT, DATAID),\
         FOREIGN KEY(SUBJECT) REFERENCES " CLAIMED_APPS_TABLE_NAME                                                                                                                                                                                                                                                                                                                                                                                    \
-    " (APPLICATION_PUBKEY)\
+    " (APPLICATION_PUBKEY) ON DELETE CASCADE\
 ); "
 
 #define MEMBERSHIP_CERTS_TABLE_SCHEMA \
@@ -86,7 +86,7 @@
         GUID TEXT NOT NULL,\
         PRIMARY KEY(SUBJECT, GUID),\
         FOREIGN KEY(SUBJECT) REFERENCES " CLAIMED_APPS_TABLE_NAME                                                                                                                                                                                                                                                                                                                                                                                    \
-    " (APPLICATION_PUBKEY)\
+    " (APPLICATION_PUBKEY) ON DELETE CASCADE\
 ); "
 
 #define USER_EQ_CERTS_TABLE_SCHEMA \
@@ -100,7 +100,7 @@
         SN BLOB NOT NULL,\
         PRIMARY KEY(SUBJECT),\
         FOREIGN KEY(SUBJECT) REFERENCES " CLAIMED_APPS_TABLE_NAME                                                                                                                                                                                                                                                                                                                                                                                    \
-    " (APPLICATION_PUBKEY)\
+    " (APPLICATION_PUBKEY) ON DELETE CASCADE\
 ); "
 
 #define CERTSDATA_TABLE_SCHEMA \
@@ -119,6 +119,7 @@
 
 #define DEFAULT_PRAGMAS \
     "PRAGMA encoding = \"UTF-8\";\
+    PRAGMA foreign_keys = ON;\
     PRAGMA journal_mode = OFF; "
 
 #endif

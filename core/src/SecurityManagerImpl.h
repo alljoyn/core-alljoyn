@@ -25,7 +25,6 @@
 #include <qcc/Mutex.h>
 #include <qcc/GUID.h>
 
-#include <RootOfTrust.h>
 #include <ApplicationListener.h>
 #include <ApplicationInfo.h>
 #include <AppGuildInfo.h>
@@ -41,6 +40,8 @@
 #include <memory>
 
 #define QCC_MODULE "SEC_MGR"
+#define KEYX_ECDHE_NULL "ALLJOYN_ECDHE_NULL"
+#define ECDHE_KEYX "ALLJOYN_ECDHE_ECDSA"
 
 using namespace qcc;
 
@@ -61,9 +62,7 @@ class SecurityManagerImpl :
     private SecurityInfoListener {
   public:
 
-    SecurityManagerImpl(qcc::String userName,
-                        qcc::String password,
-                        IdentityData* id,                                             // !!! Changed to pointer to support NULL identity
+    SecurityManagerImpl(IdentityData* id,                                             // !!! Changed to pointer to support NULL identity
                         ajn::BusAttachment* ba,
                         const qcc::ECCPublicKey& pubKey,
                         const qcc::ECCPrivateKey& privKey,
@@ -87,7 +86,7 @@ class SecurityManagerImpl :
     QStatus GetRemoteIdentityCertificate(const ApplicationInfo& appInfo,
                                          IdentityCertificate& idCert);
 
-    const RootOfTrust& GetRootOfTrust() const;
+    const qcc::ECCPublicKey& GetPublicKey() const;
 
     std::vector<ApplicationInfo> GetApplications(ajn::PermissionConfigurator::ClaimableState acs =
                                                      ajn::PermissionConfigurator::STATE_UNKNOWN)
@@ -130,6 +129,8 @@ class SecurityManagerImpl :
     QStatus GetPolicy(const ApplicationInfo& appInfo,
                       PermissionPolicy& policy,
                       bool remote);
+
+    QStatus Reset(const ApplicationInfo& appInfo);
 
     QStatus GetStatus() const;
 
@@ -174,18 +175,30 @@ class SecurityManagerImpl :
                                    const ApplicationInfo& appInfo);
 
     QStatus InstallIdentityCertificate(X509IdentityCertificate& idCert,
-                                       const ProxyBusObject* remoteObj,
-                                       const uint32_t timeout);
+                                       const ApplicationInfo& app);
 
-    QStatus PersistApplication(const ApplicationInfo& appInfo,
-                               const PermissionPolicy::Rule* manifestRules,
-                               size_t manifestRulesCount);
+    QStatus PersistApplication(const ApplicationInfo& appInfo);
+
+    /**
+     * \brief Persists the manifest to storage. Assumes the application is
+     * already persisted using PersistApplication.
+     *
+     * \param[in] appInfo              the application for which the manifest
+     *                                 should be persisted
+     * \param[in] manifestRules        an array of PermissionPolicy::Rules
+     *                                 representing the manifest content
+     * \param[in] manifestRulesCount   the number of rules in the manifestRules
+     *                                 array
+     *
+     * \retval ER_OK  on success
+     * \retval others on failure
+     */
+    QStatus PersistManifest(const ApplicationInfo& appInfo,
+                            const PermissionPolicy::Rule* manifestRules,
+                            size_t manifestRulesCount);
 
     void CopySecurityInfo(ApplicationInfo& ai,
                           const SecurityInfo& si);
-
-    bool IsPermissionDeniedError(QStatus status,
-                                 Message& msg);
 
     QStatus SerializeManifest(ManagedApplicationInfo& managedAppInfo,
                               const PermissionPolicy::Rule* manifestRules,
@@ -199,7 +212,7 @@ class SecurityManagerImpl :
     QStatus status;
     IdentityData* id;
     const qcc::ECCPrivateKey privKey;
-    const RootOfTrust rot;  // !!! Verify this (added to get compiled)!!
+    const qcc::ECCPublicKey pubKey;
     StorageConfig storageCfg;
     ApplicationInfoMap applications;
     std::map<qcc::String, ApplicationInfo> aboutCache; /* key=busname of app, value = info */

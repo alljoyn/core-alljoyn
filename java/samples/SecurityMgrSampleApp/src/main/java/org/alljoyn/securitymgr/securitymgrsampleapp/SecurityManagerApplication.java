@@ -3,6 +3,9 @@ package org.alljoyn.securitymgr.securitymgrsampleapp;
 import android.app.Application;
 import android.util.Log;
 
+/**
+ * The implementation of the Application class.
+ */
 public class SecurityManagerApplication extends Application implements SecurityManagerService.SecurityManagerServiceConnection
 {
     private static final String TAG = "SecurityManagerApplication";
@@ -28,11 +31,11 @@ public class SecurityManagerApplication extends Application implements SecurityM
     public void onLocalServiceConnected(SecurityManagerService service)
     {
         Log.d(TAG, "Local service connected");
+        //nothing really done here. We only make the connection for the reason described above.
     }
 
     @Override
     public void onLocalServiceDisconnected()
     {
-
     }
 }

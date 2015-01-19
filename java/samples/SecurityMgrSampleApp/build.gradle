@@ -1,6 +1,8 @@
 
 apply plugin: "com.android.application"
 apply plugin: "alljoyn-android"
+apply plugin: "findbugs"
+apply plugin: "alljoyn-android-findbugs"
 
 android {
     compileSdkVersion rootProject.androidCompileSdkVersion

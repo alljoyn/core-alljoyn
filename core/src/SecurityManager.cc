@@ -34,15 +34,13 @@ using namespace ajn::services;
 
 namespace ajn {
 namespace securitymgr {
-SecurityManager::SecurityManager(qcc::String userName,
-                                 qcc::String password,
-                                 IdentityData* id,
+SecurityManager::SecurityManager(IdentityData* id,
                                  ajn::BusAttachment* ba,
                                  const qcc::ECCPublicKey& pubKey,
                                  const qcc::ECCPrivateKey& privKey,
                                  const StorageConfig& storageCfg,
                                  const SecurityManagerConfig& smCfg) :
-    securityManagerImpl(new SecurityManagerImpl(userName, password, id, ba, pubKey, privKey, storageCfg, smCfg))
+    securityManagerImpl(new SecurityManagerImpl(id, ba, pubKey, privKey, storageCfg, smCfg))
 {
 }
 
@@ -86,9 +84,9 @@ QStatus SecurityManager::GetIdentityCertificate(const ApplicationInfo& appInfo, 
     return securityManagerImpl->GetRemoteIdentityCertificate(appInfo, idCert);
 }
 
-const RootOfTrust& SecurityManager::GetRootOfTrust() const
+const ECCPublicKey& SecurityManager::GetPublicKey() const
 {
-    return securityManagerImpl->GetRootOfTrust();
+    return securityManagerImpl->GetPublicKey();
 }
 
 std::vector<ApplicationInfo> SecurityManager::GetApplications(ajn::PermissionConfigurator::ClaimableState acs) const
@@ -154,6 +152,11 @@ QStatus SecurityManager::GetPolicy(const ApplicationInfo& appInfo,
                                    PermissionPolicy& policy, bool remote)
 {
     return securityManagerImpl->GetPolicy(appInfo, policy, remote);
+}
+
+QStatus SecurityManager::Reset(const ApplicationInfo& appInfo)
+{
+    return securityManagerImpl->Reset(appInfo);
 }
 
 QStatus SecurityManager::StoreIdentity(const IdentityInfo& identityInfo,

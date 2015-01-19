@@ -219,6 +219,29 @@ static void claim_application(ajn::securitymgr::SecurityManager* secMgr,
     }
 }
 
+static void unclaim_application(ajn::securitymgr::SecurityManager* secMgr,
+                                const string& arg)
+{
+    if (arg.empty()) {
+        cout << "Please provide a busname" << endl;
+        return;
+    }
+
+    qcc::String busName(arg.c_str());
+    ajn::securitymgr::ApplicationInfo appInfo;
+    appInfo.busName = busName;
+
+    if (ER_OK != secMgr->GetApplication(appInfo)) {
+        cout << "Could not find busname" << endl;
+        return;
+    }
+
+    if (ER_OK != secMgr->Reset(appInfo)) {
+        cout << "Failed to unclaim application" << endl;
+        return;
+    }
+}
+
 static vector<string> split(const string& s, char delim)
 {
     vector<string> elems;
@@ -381,7 +404,7 @@ static void install_policy(SecurityManager* secMgr,
     }
 
     PermissionPolicy policy;
-    if (ER_OK != PolicyGenerator::DefaultPolicy(guilds, policy)) {
+    if (ER_OK != PolicyGenerator::DefaultPolicy(guilds, secMgr->GetPublicKey(), policy)) {
         cerr << "Failed to generate default policy." << endl;
         return;
     }
@@ -449,6 +472,7 @@ static void help()
     cout << "    d   delete a membership certificate (busnm guildid)" << endl;
     cout << "    o   install a policy (busnm guildid1 guildid2 ...)" << endl;
     cout << "    e   get policy (busnm)" << endl;
+    cout << "    u   unclaim an application (busnm)" << endl;
     cout << "    h   show this help message" << endl << endl;
 }
 
@@ -521,6 +545,10 @@ static bool parse(ajn::securitymgr::SecurityManager* secMgr,
         get_policy(secMgr, arg);
         break;
 
+    case 'u':
+        unclaim_application(secMgr, arg);
+        break;
+
     case 'h':
     default:
         help();
@@ -586,8 +614,7 @@ int main(int argc, char** argv)
         smc.pmObjectPath = "/security/PermissionMgmt";
     }
 
-    ajn::securitymgr::SecurityManager* secMgr = secFac.GetSecurityManager(
-        "hello", "world", storageCfg, smc, NULL);
+    ajn::securitymgr::SecurityManager* secMgr = secFac.GetSecurityManager(storageCfg, smc, NULL);
 
     if (NULL == secMgr) {
         cerr

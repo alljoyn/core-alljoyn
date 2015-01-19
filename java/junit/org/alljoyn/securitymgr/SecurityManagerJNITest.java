@@ -111,8 +111,8 @@ public class SecurityManagerJNITest extends TestCase {
         } catch (Exception sme) {
             //OK - not initialized
         }
-        assertFalse(smngr.init(null,  null, null));
-        assertTrue(smngr.init(f.getAbsolutePath(), "test", "testpwd"));
+        assertFalse(smngr.init(null));
+        assertTrue(smngr.init(f.getAbsolutePath()));
         List<ApplicationInfo> apps = smngr.getApplications();
         assertNotNull(apps);
         System.out.println("SecurityManagerJNITest.testInit()" + apps);

@@ -89,6 +89,7 @@ secenv.Install('$SEC_DISTDIR/lib', secenv.SConscript('java/jni/SConscript', expo
 
 # Security Manager App building
 secenv.Install('$SEC_DISTDIR/bin/samples', secenv.SConscript('samples/cli/SConscript', exports=['secenv'], variant_dir=buildroot+'/samples/cli', duplicate=0))
+secenv.Install('$SEC_DISTDIR/bin/samples', secenv.SConscript('samples/door/SConscript', exports=['secenv'], variant_dir=buildroot+'/samples/door', duplicate=0))
 secenv.Install('$SEC_DISTDIR/bin/stub', secenv.SConscript('samples/stub/SConscript', exports = ['secenv'], variant_dir=buildroot+'/samples/stub', duplicate=0))
     
 # Security core tests building (are not installed)

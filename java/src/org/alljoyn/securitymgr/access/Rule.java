@@ -17,6 +17,7 @@
 package org.alljoyn.securitymgr.access;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -77,14 +78,22 @@ public final class Rule {
         return "Rule [name=" + name + ", members=" + members + "]";
     }
 
+    /**
+     * Get the name of this rule.
+     * @return The name.
+     */
     public String getName()
     {
         return name;
     }
 
+    /**
+     * Get a list of members for this rule.
+     * @return The list of members.
+     */
     public List<Member> getMembers()
     {
-        return members;
+        return Collections.unmodifiableList(members);
     }
 
     /* A Helper function to support the JNI layer. */

@@ -86,12 +86,12 @@ TEST_F(ClaimingRobustnessTests, InvalidArguments) {
 
     Stub* stub = new Stub(&tcl);
     ASSERT_EQ(stub->OpenClaimWindow(), ER_OK);
-    sem_wait(&sem);
+    ASSERT_TRUE(WaitForState(ajn::PermissionConfigurator::STATE_CLAIMABLE, ajn::securitymgr::STATE_RUNNING));
 
-    ApplicationInfo info = tal->_lastAppInfo;
-    info.busName = tal->_lastAppInfo.busName;
+    ApplicationInfo info = lastAppInfo;
+    info.busName = lastAppInfo.busName;
 
-    info.publicKey = tal->_lastAppInfo.publicKey;
+    info.publicKey = lastAppInfo.publicKey;
     info.busName = "My Rubbish BusName";               //the bad busname should be ignored
     IdentityInfo idInfo;
     idInfo.guid = info.peerID;
@@ -100,15 +100,13 @@ TEST_F(ClaimingRobustnessTests, InvalidArguments) {
 
     ASSERT_EQ(ER_OK, secMgr->ClaimApplication(info, idInfo, &AutoAcceptManifest));
 
-    ASSERT_NE(ER_OK, secMgr->ClaimApplication(tal->_lastAppInfo, idInfo, &AutoAcceptManifest));                //already claimed
+    ASSERT_NE(ER_OK, secMgr->ClaimApplication(lastAppInfo, idInfo, &AutoAcceptManifest));                //already claimed
 
     delete stub;
-    while (sem_trywait(&sem) == 0) {
-        ;
-    }
-    sem_wait(&sem);
 
-    ASSERT_NE(ER_OK, secMgr->ClaimApplication(tal->_lastAppInfo, idInfo, &AutoAcceptManifest));                //we killed our peer.
+    ASSERT_TRUE(WaitForState(ajn::PermissionConfigurator::STATE_CLAIMED, ajn::securitymgr::STATE_NOT_RUNNING));
+
+    ASSERT_NE(ER_OK, secMgr->ClaimApplication(lastAppInfo, idInfo, &AutoAcceptManifest));                //we killed our peer.
 }
 
 /**
@@ -126,20 +124,18 @@ TEST_F(ClaimingRobustnessTests, SMClaimedAppsWarmStart) {
 
     Stub* stub = new Stub(&tcl);
     ASSERT_EQ(stub->OpenClaimWindow(), ER_OK);
-    sem_wait(&sem);
+    ASSERT_TRUE(WaitForState(ajn::PermissionConfigurator::STATE_CLAIMABLE, ajn::securitymgr::STATE_RUNNING));
 
     IdentityInfo idInfo;
     idInfo.guid = GUID128("abcdef123456789");
     idInfo.name = "MyName";
     ASSERT_EQ(secMgr->StoreIdentity(idInfo, false), ER_OK);
 
-    ASSERT_EQ(secMgr->ClaimApplication(tal->_lastAppInfo, idInfo, &AutoAcceptManifest), ER_OK);
-    sem_wait(&sem);
+    ASSERT_EQ(secMgr->ClaimApplication(lastAppInfo, idInfo, &AutoAcceptManifest), ER_OK);
 
-    ASSERT_EQ(tal->_lastAppInfo.runningState, ajn::securitymgr::STATE_RUNNING);
-    ASSERT_EQ(tal->_lastAppInfo.claimState, ajn::PermissionConfigurator::STATE_CLAIMED);
+    ASSERT_TRUE(WaitForState(ajn::PermissionConfigurator::STATE_CLAIMED, ajn::securitymgr::STATE_RUNNING));
 
-    qcc::String origBusName = tal->_lastAppInfo.busName;
+    qcc::String origBusName = lastAppInfo.busName;
     TearDown();                    //Kill secMgr and ba
 
     ajn::securitymgr::SecurityManagerFactory& secFac =
@@ -153,10 +149,10 @@ TEST_F(ClaimingRobustnessTests, SMClaimedAppsWarmStart) {
     smc.pmNotificationIfn = "org.allseen.Security.PermissionMgmt.Stub.Notification";
     smc.pmIfn = "org.allseen.Security.PermissionMgmt.Stub";
     smc.pmObjectPath = "/security/PermissionMgmt";
-    secMgr = secFac.GetSecurityManager("hello", "world", sc, smc, NULL, ba);
+    secMgr = secFac.GetSecurityManager(sc, smc, NULL, ba);
     ASSERT_TRUE(secMgr != NULL);
 
-    TestApplicationListener tal(sem);
+    TestApplicationListener tal(sem, lock);
     secMgr->RegisterApplicationListener(&tal);
     sem_wait(&sem);
 

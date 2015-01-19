@@ -16,14 +16,14 @@
 
 package org.alljoyn.securitymgr;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.alljoyn.securitymgr.access.Manifest;
 import org.alljoyn.securitymgr.access.Member;
 import org.alljoyn.securitymgr.access.Policy;
 import org.alljoyn.securitymgr.access.Rule;
 import org.alljoyn.securitymgr.access.Term;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class SecurityManagerJNI extends SecurityManager {
 
@@ -144,9 +144,10 @@ public class SecurityManagerJNI extends SecurityManager {
                 policy.getTerms().toArray(new Term[0]));
 
     }
+    @Override
+    public native byte[] getPublicKey() throws SecurityMngtException;
 
-    public native boolean init(String keyStorePath, String userName,
-            String passWD) throws SecurityMngtException;
+    public native boolean init(String keyStorePath) throws SecurityMngtException;
 
     @Override
     public native void unclaimApplication(ApplicationInfo app) throws SecurityMngtException;
