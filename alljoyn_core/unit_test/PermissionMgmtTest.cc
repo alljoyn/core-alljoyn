@@ -432,23 +432,24 @@ QStatus PermissionMgmtTestHelper::ReadClaimResponse(Message& msg, ECCPublicKey* 
     return RetrievePublicKeyFromMsgArg((MsgArg &) * msg->GetArg(0), pubKey);
 }
 
-QStatus PermissionMgmtTestHelper::Claim(BusAttachment& bus, ProxyBusObject& remoteObj, qcc::GUID128& issuerGUID, const ECCPublicKey* pubKey, ECCPublicKey* claimedPubKey, const GUID128& claimedGUID, qcc::String& identityCertDER)
+QStatus PermissionMgmtTestHelper::Claim(BusAttachment& bus, ProxyBusObject& remoteObj, qcc::GUID128& issuerGUID, const ECCPublicKey* pubKey, ECCPublicKey* claimedPubKey, qcc::String& identityCertDER, bool setKeyId)
 {
     QStatus status;
     const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::INTERFACE_NAME);
     remoteObj.AddInterface(*itf);
     Message reply(bus);
-    MsgArg inputs[3];
+    MsgArg inputs[2];
 
     KeyInfoNISTP256 keyInfo;
-    keyInfo.SetKeyId(issuerGUID.GetBytes(), GUID128::SIZE);
+    if (setKeyId) {
+        keyInfo.SetKeyId(issuerGUID.GetBytes(), GUID128::SIZE);
+    }
     keyInfo.SetPublicKey(pubKey);
     KeyInfoHelper::KeyInfoNISTP256ToMsgArg(keyInfo, inputs[0]);
-    inputs[1].Set("ay", GUID128::SIZE, claimedGUID.GetBytes());
-    inputs[2].Set("(yay)", Certificate::ENCODING_X509_DER, identityCertDER.size(), identityCertDER.data());
+    inputs[1].Set("(yay)", Certificate::ENCODING_X509_DER, identityCertDER.size(), identityCertDER.data());
     uint32_t timeout = 10000; /* Claim is a bit show */
 
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::INTERFACE_NAME, "Claim", inputs, 3, reply, timeout);
+    status = remoteObj.MethodCall(BasePermissionMgmtTest::INTERFACE_NAME, "Claim", inputs, 2, reply, timeout);
 
     if (ER_OK == status) {
         status = ReadClaimResponse(reply, claimedPubKey);
@@ -459,6 +460,11 @@ QStatus PermissionMgmtTestHelper::Claim(BusAttachment& bus, ProxyBusObject& remo
         status = ER_PERMISSION_DENIED;
     }
     return status;
+}
+
+QStatus PermissionMgmtTestHelper::Claim(BusAttachment& bus, ProxyBusObject& remoteObj, qcc::GUID128& issuerGUID, const ECCPublicKey* pubKey, ECCPublicKey* claimedPubKey, qcc::String& identityCertDER)
+{
+    return Claim(bus, remoteObj, issuerGUID, pubKey, claimedPubKey, identityCertDER, true);
 }
 
 QStatus PermissionMgmtTestHelper::GetManifest(BusAttachment& bus, ProxyBusObject& remoteObj, PermissionPolicy::Rule** retRules, size_t* count)

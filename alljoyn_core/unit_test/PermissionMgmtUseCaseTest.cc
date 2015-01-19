@@ -368,7 +368,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         qcc::String der;
         status = PermissionMgmtTestHelper::CreateIdentityCert("1010101", issuerGUID, &issuerPrivateKey, issuerGUID, &issuerPubKey, "Admin User", der);
         EXPECT_EQ(ER_OK, status) << "  CreateIdentityCert failed.  Actual Status: " << QCC_StatusText(status);
-        status = PermissionMgmtTestHelper::Claim(adminProxyBus, clientProxyObject, issuerGUID, &issuerPubKey, &claimedPubKey, issuerGUID, der);
+        status = PermissionMgmtTestHelper::Claim(adminProxyBus, clientProxyObject, issuerGUID, &issuerPubKey, &claimedPubKey, der);
         EXPECT_EQ(ER_OK, status) << "  Claim failed.  Actual Status: " << QCC_StatusText(status);
 
         /* retrieve back the identity cert to compare */
@@ -431,7 +431,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         EXPECT_EQ(ER_OK, status) << "  CreateIdentityCert failed.  Actual Status: " << QCC_StatusText(status);
 
         /* try claiming with state unclaimable.  Exptect to fail */
-        status = PermissionMgmtTestHelper::Claim(adminBus, clientProxyObject, issuerGUID, &issuerPubKey, &claimedPubKey, serviceGUID, der);
+        status = PermissionMgmtTestHelper::Claim(adminBus, clientProxyObject, issuerGUID, &issuerPubKey, &claimedPubKey, der, false);
         EXPECT_EQ(ER_PERMISSION_DENIED, status) << "  Claim is not supposed to succeed.  Actual Status: " << QCC_StatusText(status);
 
         /* now switch it back to claimable */
@@ -441,11 +441,11 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         EXPECT_EQ(PermissionConfigurator::STATE_CLAIMABLE, claimableState) << "  ClaimableState is not CLAIMABLE";
 
         /* try claiming with state laimable.  Exptect to succeed */
-        status = PermissionMgmtTestHelper::Claim(adminBus, clientProxyObject, issuerGUID, &issuerPubKey, &claimedPubKey, serviceGUID, der);
+        status = PermissionMgmtTestHelper::Claim(adminBus, clientProxyObject, issuerGUID, &issuerPubKey, &claimedPubKey, der);
         EXPECT_EQ(ER_OK, status) << "  Claim failed.  Actual Status: " << QCC_StatusText(status);
 
         /* try to claim one more time */
-        status = PermissionMgmtTestHelper::Claim(adminBus, clientProxyObject, issuerGUID, &issuerPubKey, &claimedPubKey, serviceGUID, der);
+        status = PermissionMgmtTestHelper::Claim(adminBus, clientProxyObject, issuerGUID, &issuerPubKey, &claimedPubKey, der);
         EXPECT_EQ(ER_PERMISSION_DENIED, status) << "  Claim is not supposed to succeed.  Actual Status: " << QCC_StatusText(status);
 
         ECCPublicKey claimedPubKey2;
@@ -497,11 +497,11 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         status = PermissionMgmtTestHelper::CreateIdentityCert("3030303", issuerGUID, &issuerPrivateKey, serviceGUID, &claimedPubKey, "Consumer", der);
         EXPECT_EQ(ER_OK, status) << "  CreateIdentityCert failed.  Actual Status: " << QCC_StatusText(status);
         SetNotifyConfigSignalReceived(false);
-        status = PermissionMgmtTestHelper::Claim(adminBus, clientProxyObject, issuerGUID, &issuerPubKey, &claimedPubKey, consumerGUID, der);
+        status = PermissionMgmtTestHelper::Claim(adminBus, clientProxyObject, issuerGUID, &issuerPubKey, &claimedPubKey, der);
         EXPECT_EQ(ER_OK, status) << "  Claim failed.  Actual Status: " << QCC_StatusText(status);
 
         /* try to claim a second time */
-        status = PermissionMgmtTestHelper::Claim(adminBus, clientProxyObject, issuerGUID, &issuerPubKey, &claimedPubKey, consumerGUID, der);
+        status = PermissionMgmtTestHelper::Claim(adminBus, clientProxyObject, issuerGUID, &issuerPubKey, &claimedPubKey, der);
         EXPECT_EQ(ER_PERMISSION_DENIED, status) << "  Claim is not supposed to succeed.  Actual Status: " << QCC_StatusText(status);
 
         /* sleep a second to see whether the NotifyConfig signal is received */
@@ -566,7 +566,11 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
             qcc::Sleep(10);
         }
         EXPECT_TRUE(GetNotifyConfigSignalReceived()) << " Fail to receive expected NotifyConfig signal.";
+        /* install a policy with the same serial number.  Expect to fail. */
+        status = PermissionMgmtTestHelper::InstallPolicy(adminBus, clientProxyObject, policy);
+        EXPECT_NE(ER_OK, status) << "  InstallPolicy again with same serial number expected to fail, but it did not.  Actual Status: " << QCC_StatusText(status);
     }
+
     /*
      *  Replace service app Identity Certificate
      */

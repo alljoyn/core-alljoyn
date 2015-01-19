@@ -255,7 +255,7 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
             QCC_LogError(status, ("Failed to create %s interface", org::allseen::Security::PermissionMgmt::InterfaceName));
             return status;
         }
-        ifc->AddMethod("Claim",     "(yv)ay(yay)",  "(yv)", "adminPublicKey,GUID,identityCert,publicKey");
+        ifc->AddMethod("Claim",     "(yv)(yay)",  "(yv)", "adminPublicKey,identityCert,publicKey");
         ifc->AddMethod("InstallPolicy",     "(yv)",  NULL, "authorization");
         ifc->AddMethod("InstallEncryptedPolicy",     "ay",  NULL, "encryptedAuthorization");
         ifc->AddMethod("GetPolicy",     NULL, "(yv)",  "authorization");

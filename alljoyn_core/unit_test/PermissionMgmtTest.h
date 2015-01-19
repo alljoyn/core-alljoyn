@@ -203,7 +203,8 @@ class PermissionMgmtTestHelper {
     static QStatus InterestInSignal(BusAttachment* bus);
     static bool IsPermissionDeniedError(QStatus status, Message& msg);
     static QStatus ReadClaimResponse(Message& msg, qcc::ECCPublicKey* pubKey);
-    static QStatus Claim(BusAttachment& bus, ProxyBusObject& remoteObj, qcc::GUID128& issuerGUID, const qcc::ECCPublicKey* pubKey, qcc::ECCPublicKey* claimedPubKey, const qcc::GUID128& claimedGUID, qcc::String& identityCertDER);
+    static QStatus Claim(BusAttachment& bus, ProxyBusObject& remoteObj, qcc::GUID128& issuerGUID, const qcc::ECCPublicKey* pubKey, qcc::ECCPublicKey* claimedPubKey, qcc::String& identityCertDER, bool setKeyId);
+    static QStatus Claim(BusAttachment& bus, ProxyBusObject& remoteObj, qcc::GUID128& issuerGUID, const qcc::ECCPublicKey* pubKey, qcc::ECCPublicKey* claimedPubKey, qcc::String& identityCertDER);
     static QStatus GenerateManifest(PermissionPolicy::Rule** retRules, size_t* count);
     static QStatus GetManifest(BusAttachment& bus, ProxyBusObject& remoteObj, PermissionPolicy::Rule** retRules, size_t* count);
     static QStatus InstallPolicy(BusAttachment& bus, ProxyBusObject& remoteObj, PermissionPolicy& policy);

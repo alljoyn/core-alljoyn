@@ -459,46 +459,21 @@ void PermissionMgmtObj::Claim(const InterfaceDescription::Member* member, Messag
         return;
     }
 
-    uint8_t* guid;
-    size_t guidLen;
-    status = msg->GetArg(1)->Get("ay", &guidLen, &guid);
-    if (ER_OK != status) {
-        delete keyInfo;
-        MethodReply(msg, ER_INVALID_DATA);
-        return;
-    }
-    if (guidLen != GUID128::SIZE) {
-        delete keyInfo;
-        MethodReply(msg, ER_INVALID_GUID);
-        return;
-    }
-    KeyStore& keyStore = bus.GetInternal().GetKeyStore();
-
-    GUID128 newGUID;
-    newGUID.SetBytes(guid);
-    bool resetMasterGuid = false;
-    qcc::GUID128 localGUID;
-    status = ca->GetGuid(localGUID);
-    if (ER_OK != status) {
-        resetMasterGuid = true;
-    } else if (newGUID != localGUID) {
-        resetMasterGuid = true;
-    }
-    if (resetMasterGuid) {
-        keyStore.ResetMasterGUID(newGUID);
-    }
     /* clear most of the key entries with the exception of the DSA keys and manifest */
     PerformReset(true);
 
     /* install trust anchor */
-    qcc::GUID128 peerGuid;
-    status = GetPeerGUID(msg, peerGuid);
-    if (ER_OK != status) {
-        delete keyInfo;
-        MethodReply(msg, status);
-        return;
+    if (keyInfo->GetKeyId() == NULL) {
+        /* the trust anchor guid is the calling peer's guid */
+        qcc::GUID128 peerGuid;
+        status = GetPeerGUID(msg, peerGuid);
+        if (ER_OK != status) {
+            delete keyInfo;
+            MethodReply(msg, status);
+            return;
+        }
+        keyInfo->SetKeyId(peerGuid.GetBytes(), qcc::GUID128::SIZE);
     }
-
     status = InstallTrustAnchor(keyInfo);
     if (ER_OK != status) {
         delete keyInfo;
@@ -508,7 +483,7 @@ void PermissionMgmtObj::Claim(const InterfaceDescription::Member* member, Messag
     }
 
     claimableState = PermissionConfigurator::STATE_CLAIMED;
-    status = StoreIdentityCertificate((MsgArg &) * msg->GetArg(2));
+    status = StoreIdentityCertificate((MsgArg &) * msg->GetArg(1));
     if (ER_OK != status) {
         MethodReply(msg, status);
     } else {
@@ -528,6 +503,23 @@ void PermissionMgmtObj::InstallPolicy(const InterfaceDescription::Member* member
 
     PermissionPolicy* policy = new PermissionPolicy();
     status = policy->Import(version, *variant);
+    if (ER_OK != status) {
+        delete policy;
+        MethodReply(msg, status);
+        return;
+    }
+
+    /* is there any existing policy?  If so, make sure the new policy must have
+       a serial number greater than the existing policy's serial number */
+    PermissionPolicy existingPolicy;
+    status = RetrievePolicy(existingPolicy);
+    if (ER_OK == status) {
+        if (policy->GetSerialNum() <= existingPolicy.GetSerialNum()) {
+            MethodReply(msg, ER_INSTALLING_OLDER_POLICY);
+            delete policy;
+            return;
+        }
+    }
 
     status = StorePolicy(*policy);
     if (ER_OK == status) {
@@ -764,7 +756,6 @@ QStatus PermissionMgmtObj::StoreIdentityCertificate(MsgArg& certArg)
     /* store the Identity PEM  into the key store */
     GetACLGUID(ENTRY_IDENTITY, guid);
     KeyBlob kb(encoded, encodedLen, KeyBlob::GENERIC);
-
 
     return ca->StoreKey(guid, kb);
 }
