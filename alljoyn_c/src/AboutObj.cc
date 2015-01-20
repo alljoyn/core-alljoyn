@@ -4,7 +4,7 @@
  * Please help make it more robust by contributing fixes if you find problems.
  */
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -51,6 +51,14 @@ QStatus AJ_CALL alljoyn_aboutobj_announce(alljoyn_aboutobj obj,
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return ((ajn::AboutObj*)obj)->Announce((ajn::SessionPort)sessionPort, *(ajn::AboutDataListener*)aboutData);
+}
+
+QStatus AJ_CALL alljoyn_aboutobj_announce_using_datalistener(alljoyn_aboutobj obj,
+                                                             alljoyn_sessionport sessionPort,
+                                                             alljoyn_aboutdatalistener aboutListener)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    return ((ajn::AboutObj*)obj)->Announce((ajn::SessionPort)sessionPort, *(ajn::AboutDataListener*)aboutListener);
 }
 
 QStatus AJ_CALL alljoyn_aboutobj_unannounce(alljoyn_aboutobj obj)
