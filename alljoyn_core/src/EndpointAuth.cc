@@ -63,7 +63,10 @@ QStatus EndpointAuth::Hello(qcc::String& redirection)
     Message hello(bus);
     Message response(bus);
     nameTransfer = endpoint->GetFeatures().nameTransfer;
-    status = hello->HelloMessage(endpoint->GetFeatures().isBusToBus, endpoint->GetFeatures().allowRemote, endpoint->GetFeatures().nameTransfer);
+    // Send value 0x01 for DAEMON_NAMES, 0x00 for other types.
+    // These are the older values of nameTransfer to be sent in BusHello.
+    status = hello->HelloMessage(endpoint->GetFeatures().isBusToBus, endpoint->GetFeatures().allowRemote,
+                                 (endpoint->GetFeatures().nameTransfer == SessionOpts::DAEMON_NAMES) ? 0x01 : 0x00);
     if (status != ER_OK) {
         return status;
     }
@@ -111,7 +114,6 @@ QStatus EndpointAuth::Hello(qcc::String& redirection)
      */
     remoteName = response->GetSender();
     QCC_DbgHLPrintf(("EP remote %sname %s", endpoint->GetFeatures().isBusToBus ? "(bus-to-bus) " : "", remoteName.c_str()));
-
     /*
      * bus-to-bus establishment uses an extended "hello" method.
      */
@@ -127,6 +129,11 @@ QStatus EndpointAuth::Hello(qcc::String& redirection)
             } else {
                 QCC_DbgPrintf(("Connection id: \"%s\", remoteGUID: \"%s\"\n", uniqueName.c_str(), remoteGUID.ToString().c_str()));
             }
+            /* Default to all names when interacting with older routing nodes */
+            if (remoteProtocolVersion < 12) {
+                nameTransfer = SessionOpts::ALL_NAMES;
+            }
+
         } else {
             return status;
         }
@@ -245,9 +252,13 @@ QStatus EndpointAuth::WaitHello(qcc::String& authUsed)
                 QCC_DbgPrintf(("BusHello expected 2 args with signature \"su\""));
                 return ER_BUS_ESTABLISH_FAILED;
             }
+
             endpoint->GetFeatures().isBusToBus = true;
             endpoint->GetFeatures().allowRemote = true;
-
+            /* Default to all names when interacting with older routing nodes */
+            if (remoteProtocolVersion < 12) {
+                endpoint->GetFeatures().nameTransfer = SessionOpts::ALL_NAMES;
+            }
             /*
              * Remote name for the endpoint is the sender of the hello.
              */

@@ -558,6 +558,26 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
     void AttachSession(const InterfaceDescription::Member* member, Message& msg);
 
     /**
+     * Respond to a remote daemon request to attach a session through this daemon.
+     *
+     * The input Message (METHOD_CALL) is expected to contain the following parameters:
+     *   sessionPort   SessionPort  The session port.
+     *   joiner        string       The unique name of the session joiner.
+     *   creator       string       The name of the session creator.
+     *   optsIn        SesionOpts   The session options requested by the joiner.
+     *   namesIn       Array of unique names with their aliases.
+     *
+     * The output Message (METHOD_REPLY) contains the following parameters:
+     *   resultCode    uint32       A ALLJOYN_JOINSESSION_* reply code (see AllJoynStd.h).
+     *   sessionId     uint32       The session id (valid if resultCode indicates success).
+     *   opts          SessionOpts  The actual (final) session options.
+     *   namesOut      Array of unique names with their aliases.
+     * @param member  Member.
+     * @param msg     The incoming message.
+     */
+    void AttachSessionWithNames(const InterfaceDescription::Member* member, Message& msg);
+
+    /**
      * Respond to a remote daemon request to get session info from this daemon.
      *
      * The input Message (METHOD_CALL) is expected to contain the following parameters:
@@ -1159,6 +1179,9 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
     TransportMask GetCompleteTransportMaskFilter();
     void SendIPNSResponse(qcc::String name, uint32_t replyCode);
     bool IsSelfJoinSupported(BusEndpoint& joinerEp) const;
+    QStatus GetNames(MsgArg& arg, RemoteEndpoint& endpoint, qcc::String joinerName, bool joiner, uint32_t sessionId);
+    bool NamesHandler(Message msg, MsgArg arg);
+    bool IsMemberOfSession(qcc::String hostName, qcc::String name, uint32_t sessionId);
 };
 
 }

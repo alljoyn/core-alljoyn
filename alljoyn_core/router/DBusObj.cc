@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2012, 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -539,14 +539,14 @@ void DBusObj::NameOwnerChanged(const qcc::String& alias,
     }
 
     /* Send NameOwnerChanged signal */
-    if ((oldOwner && SessionOpts::ALL_NAMES == oldOwnerNameTransfer) ||
-        (newOwner && SessionOpts::ALL_NAMES == newOwnerNameTransfer)) {
+    if ((oldOwner && SessionOpts::DAEMON_NAMES != oldOwnerNameTransfer) ||
+        (newOwner && SessionOpts::DAEMON_NAMES != newOwnerNameTransfer)) {
         MsgArg ownerChangedArgs[3];
         size_t numArgs = ArraySize(ownerChangedArgs);
         MsgArg::Set(ownerChangedArgs, numArgs, "sss",
                     alias.c_str(),
-                    (oldOwner && SessionOpts::ALL_NAMES == oldOwnerNameTransfer) ? oldOwner->c_str() : "",
-                    (newOwner && SessionOpts::ALL_NAMES == newOwnerNameTransfer) ? newOwner->c_str() : "");
+                    (oldOwner && SessionOpts::DAEMON_NAMES != oldOwnerNameTransfer) ? oldOwner->c_str() : "",
+                    (newOwner && SessionOpts::DAEMON_NAMES != newOwnerNameTransfer) ? newOwner->c_str() : "");
 
         const InterfaceDescription::Member* nameOwnerChanged = dbusIntf->GetMember("NameOwnerChanged");
         assert(nameOwnerChanged);

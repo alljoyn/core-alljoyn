@@ -6,7 +6,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -32,7 +32,7 @@
 #define QCC_MODULE  "ALLJOYN"
 
 /** Router-to-router protocol version number */
-#define ALLJOYN_PROTOCOL_VERSION  11
+#define ALLJOYN_PROTOCOL_VERSION  12
 
 namespace ajn {
 

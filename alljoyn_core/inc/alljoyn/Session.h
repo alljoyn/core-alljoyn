@@ -6,7 +6,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2011-2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -87,9 +87,22 @@ class SessionOpts {
         ALL_NAMES = 0x00,       /** < ExchangeNames and NameChanged to be propagated to this session,
                                       all NameChanged to be sent, all names to be sent as a part of
                                       initial ExchangeNames */
-        DAEMON_NAMES = 0x01     /** < No ExchangeNames and NameChanged propagation,
+        MP_NAMES = 0x01,       /** < ExchangeNames and NameChanged to be propagated to older routing
+                                      nodes in this session only,
+                                      NameChanged to be sent to older routing nodes only or to newer
+                                      routing nodes if a session to this leaf existed, only routing node and
+                                      joiner or host and existing older session member names
+                                      to be sent as a part of initial ExchangeNames */
+        P2P_NAMES = 0x02,       /** < ExchangeNames and NameChanged to be propagated to older routing
+                                      nodes in this session only,
+                                      NameChanged to be sent to older routing nodes only or to newer
+                                      routing nodes if a session to this leaf existed, only routing node and
+                                      joiner/host names to be sent as a part of initial ExchangeNames */
+        DAEMON_NAMES = 0x03     /** < No ExchangeNames and NameChanged propagation,
                                       no NameChanged to be sent, only router names to be sent as a part of
                                       initial ExchangeNames */
+
+
     } NameTransferType;
 
     /**
@@ -112,13 +125,13 @@ class SessionOpts {
         isMultipoint(isMultipoint),
         proximity(proximity),
         transports(transports),
-        nameTransfer(ALL_NAMES)
+        nameTransfer(isMultipoint ? MP_NAMES : P2P_NAMES)
     { }
 
     /**
      * Construct a default SessionOpts
      */
-    SessionOpts() : traffic(TRAFFIC_MESSAGES), isMultipoint(false), proximity(PROXIMITY_ANY), transports(TRANSPORT_ANY), nameTransfer(ALL_NAMES) { }
+    SessionOpts() : traffic(TRAFFIC_MESSAGES), isMultipoint(false), proximity(PROXIMITY_ANY), transports(TRANSPORT_ANY), nameTransfer(P2P_NAMES) { }
 
     /**
      * Determine whether this SessionOpts is compatible with the SessionOpts offered by other
