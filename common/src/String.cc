@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -22,6 +22,7 @@
 #include <qcc/platform.h>
 #include <qcc/atomic.h>
 #include <qcc/String.h>
+#include <qcc/Util.h>
 #include <assert.h>
 #include <limits>
 #include <new>
@@ -53,7 +54,7 @@ namespace qcc {
 
 /* Global Data */
 
-uint64_t emptyStringDummy[sizeof(String) / 8];
+uint64_t emptyStringDummy[RequiredArrayLength(sizeof(String), uint64_t)];
 
 String& emptyString = (String &)emptyStringDummy;
 

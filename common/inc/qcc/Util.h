@@ -7,7 +7,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011, 2014 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014-2015 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -70,6 +70,14 @@
  * @pram b   The byte boundary to align it on (b must be a power of 2)
  */
 #define AlignPtr(p, b) ((p) + PadBytes(p, b))
+
+/**
+ * Return the number of array elements needed to store a number of bytes
+ *
+ * @param bytes  Required number of bytes in the array
+ * @param type   Type of the array elements
+ */
+#define RequiredArrayLength(bytes, type) (((bytes) + sizeof(type) - 1) / sizeof(type))
 
 
 namespace qcc {
