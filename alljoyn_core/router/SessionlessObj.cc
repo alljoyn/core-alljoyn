@@ -908,7 +908,9 @@ void SessionlessObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
         lock.Lock();
         Timespec now;
         GetTimeNow(&now);
-        for (RemoteCaches::iterator cit = remoteCaches.begin(); cit != remoteCaches.end(); ++cit) {
+        RemoteCaches::iterator cit = remoteCaches.begin();
+        while (cit != remoteCaches.end()) {
+            String guid = cit->first;
             RemoteCache& cache = cit->second;
             WorkType pendingWork = PendingWork(cache);
             if ((cache.nextJoinTime <= now) && (cache.state == RemoteCache::IDLE) && pendingWork) {
@@ -925,23 +927,42 @@ void SessionlessObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
                     cache.fromRulesId = cache.appliedRulesId - (numeric_limits<uint32_t>::max() >> 1);
                     cache.toRulesId = nextRulesId;
                 }
+                String name = cache.name;
                 SessionOpts opts = sessionOpts;
                 opts.transports = cache.transport;
-                status = bus.JoinSessionAsync(cache.name.c_str(), sessionPort, NULL, opts, this, reinterpret_cast<void*>(ctx));
-                if (status == ER_OK) {
-                    QCC_DbgPrintf(("JoinSessionAsync(name=%s,...) pending", cache.name.c_str()));
-                    ++cache.retries;
-                } else {
-                    QCC_LogError(status, ("JoinSessionAsync to %s failed", cache.name.c_str()));
-                    cache.state = RemoteCache::IDLE;
-                    delete ctx;
-                    /* Retry with a random backoff */
-                    ScheduleWork(cache, false);
-                    if ((tilExpire == Timespec::Zero) || (cache.nextJoinTime < tilExpire)) {
-                        tilExpire = cache.nextJoinTime;
+                uint32_t retries = cache.retries;
+
+                /* Need to release locks around JoinSessionAsync to avoid deadlock, see ASACORE-1402 */
+                lock.Unlock();
+                router.UnlockNameTable();
+                status = bus.JoinSessionAsync(name.c_str(), sessionPort, NULL, opts, this, reinterpret_cast<void*>(ctx));
+                router.LockNameTable();
+                lock.Lock();
+
+                cit = remoteCaches.find(guid);
+                if (cit != remoteCaches.end()) {
+                    cache = cit->second;
+                    if (status == ER_OK) {
+                        QCC_DbgPrintf(("JoinSessionAsync(name=%s,...) pending", cache.name.c_str()));
+                        /* retries could be reset while unlocked, only increment if that hasn't happened */
+                        if (cache.retries == retries) {
+                            ++cache.retries;
+                        }
+                    } else {
+                        QCC_LogError(status, ("JoinSessionAsync to %s failed", cache.name.c_str()));
+                        cache.state = RemoteCache::IDLE;
+                        /* Retry with a random backoff */
+                        ScheduleWork(cache, false);
+                        if ((tilExpire == Timespec::Zero) || (cache.nextJoinTime < tilExpire)) {
+                            tilExpire = cache.nextJoinTime;
+                        }
                     }
                 }
+                if (status != ER_OK) {
+                    delete ctx;
+                }
             }
+            cit = remoteCaches.upper_bound(guid);
         }
 
         lock.Unlock();
