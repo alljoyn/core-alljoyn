@@ -1,5 +1,5 @@
 /////////////////////////////////////////////////////////////////////////////
-// Copyright (c) 2011 - 2014, AllSeen Alliance. All rights reserved.
+// Copyright (c) 2011-2015, AllSeen Alliance. All rights reserved.
 //
 //    Permission to use, copy, modify, and/or distribute this software for any
 //    purpose with or without fee is hereby granted, provided that the above
@@ -26,8 +26,8 @@
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION    14,12,0,0
- PRODUCTVERSION 14,12,0,0
+ FILEVERSION    14,12,0,97
+ PRODUCTVERSION 14,12,0,97
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -44,13 +44,13 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "AllSeen Alliance."
             VALUE "FileDescription", L"AllJoyn browser plugin"
-            VALUE "FileVersion", "14.12.00"
+            VALUE "FileVersion", "14.12.00a"
             VALUE "InternalName", "npalljoyn"
-            VALUE "LegalCopyright", "Copyright (c) 2011-2013, AllSeen Alliance."
+            VALUE "LegalCopyright", "Copyright (c) 2011-2015, AllSeen Alliance."
             VALUE "MIMEType", "application/x-alljoyn"
             VALUE "OriginalFilename", "npalljoyn.dll"
             VALUE "ProductName", "AllJoyn"
-            VALUE "ProductVersion", "14.12.00"
+            VALUE "ProductVersion", "14.12.00a"
         END
     END
     BLOCK "VarFileInfo"

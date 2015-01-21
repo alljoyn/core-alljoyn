@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -24,7 +24,7 @@
 static const unsigned int year = 14;
 static const unsigned int month = 12;
 static const unsigned int feature = 0; /* feature is always 0 for core. */
-static const unsigned int bugfix = ' ';
+static const unsigned int bugfix = 'a';
 
 static const char version[] = "##VERSION_STRING##";
 static const char build[] = "AllJoyn Library ##BUILD_STRING##";
