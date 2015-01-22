@@ -89,18 +89,21 @@ class Participant : public SessionPortListener, public SessionListener {
     SessionMap hostedSessionMap;
     SessionMap joinedSessionMap;
 
-    Participant() : port(42), mpport(84), bus("Participant"), name(genUniqueName(bus)),
+    Participant(qcc::String connectArg = "") : port(42), mpport(84), bus("Participant"), name(genUniqueName(bus)),
         opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY),
         mpopts(SessionOpts::TRAFFIC_MESSAGES, true, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY)
     {
-        Init();
+        Init(connectArg);
     }
 
-    void Init() {
+    void Init(qcc::String connectArg) {
         QStatus status;
 
+        if (connectArg == "") {
+            connectArg = getConnectArg();
+        }
         ASSERT_EQ(ER_OK, bus.Start());
-        ASSERT_EQ(ER_OK, bus.Connect(getConnectArg().c_str()));
+        ASSERT_EQ(ER_OK, bus.Connect(connectArg.c_str()));
 
         ASSERT_EQ(ER_OK, bus.BindSessionPort(port, opts, *this));
         ASSERT_EQ(ER_OK, bus.BindSessionPort(mpport, mpopts, *this));
@@ -216,6 +219,7 @@ class Participant : public SessionPortListener, public SessionListener {
     SessionId GetJoinedSessionId(Participant& part, bool multipoint) {
         return joinedSessionMap[SessionMapKey(part.name.c_str(), multipoint)];
     }
+
   private:
     //Private copy constructor to prevent copying the class and double freeing of memory
     Participant(const Participant& rhs) : bus("Participant") { }
@@ -703,8 +707,8 @@ TEST_F(SignalTest, Rules) {
    SLEEP_TIME ms until that signal handler returns.
  */
 TEST_F(SignalTest, BackPressure) {
-    Participant A;
-    Participant B;
+    Participant A("null:");
+    Participant B("null:");
     // Set blocking to true.
     PathReceiver recvBy("/signals/test", true);
     recvBy.Register(&B);
@@ -720,3 +724,4 @@ TEST_F(SignalTest, BackPressure) {
     wait_for_signal();
     recvBy.verify_recv(BACKPRESSURE_TEST_NUM_SIGNALS);
 }
+
