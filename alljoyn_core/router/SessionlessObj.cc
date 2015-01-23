@@ -1047,16 +1047,25 @@ void SessionlessObj::JoinSessionCB(QStatus status, SessionId sid, const SessionO
              * Send the request signal if join was successful.  Prefer
              * RequestRange since it may be possible to receive duplicates when
              * RequestSignals is used together with RequestRange.
+             *
+             * The request signal is sent to the owner of the cache's advertised
+             * name, not the advertised name.  The owner of the cache's name is
+             * the remote routing node, and will always be :GUID.1.  The reason
+             * to send to the owner and not the advertised name is that the
+             * advertised name can be cancelled/released after joining the
+             * session but before the request signal is sent if the remote
+             * router advertises a new change ID in that interval.
              */
+            String name = ":" + ctx->guid + ".1";
             if (matchCapable) {
-                status = RequestRangeMatch(ctx->name.c_str(), sid, fromId, toId, matchRules);
+                status = RequestRangeMatch(name.c_str(), sid, fromId, toId, matchRules);
             } else if (rangeCapable) {
-                status = RequestRange(ctx->name.c_str(), sid, fromId, toId);
+                status = RequestRange(name.c_str(), sid, fromId, toId);
             } else {
-                status = RequestSignals(ctx->name.c_str(), sid, fromId);
+                status = RequestSignals(name.c_str(), sid, fromId);
             }
             if (status != ER_OK) {
-                QCC_LogError(status, ("Failed to send Request to %s", ctx->name.c_str()));
+                QCC_LogError(status, ("Failed to send Request to %s", name.c_str()));
                 status = bus.LeaveSession(sid);
                 QCC_LogError(status, ("Failed to leave session %u", sid));
 
