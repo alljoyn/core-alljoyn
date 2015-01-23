@@ -104,7 +104,8 @@ static const char defaultConfig[] =
     "  <limit name=\"auth_timeout\">20000</limit>"
     "  <limit name=\"max_incomplete_connections\">16</limit>"
     "  <limit name=\"max_completed_connections\">32</limit>"
-    "  <limit name=\"max_untrusted_clients\">0</limit>"
+    "  <limit name=\"max_remote_clients_tcp\">0</limit>"
+    "  <limit name=\"max_remote_clients_udp\">0</limit>"
     "  <flag name=\"restrict_untrusted_clients\">true</flag>"
     "</busconfig>";
 #else
@@ -113,10 +114,44 @@ static const char defaultConfig[] =
     "  <limit name=\"auth_timeout\">20000</limit>"
     "  <limit name=\"max_incomplete_connections\">16</limit>"
     "  <limit name=\"max_completed_connections\">32</limit>"
-    "  <limit name=\"max_untrusted_clients\">16</limit>"
+    "  <limit name=\"max_remote_clients_tcp\">16</limit>"
+    "  <limit name=\"max_remote_clients_udp\">0</limit>"
+    "  <property name=\"router_power_source\">Always AC powered</property>"
+    "  <property name=\"router_mobility\">Always stationary</property>"
+    "  <property name=\"router_availability\">21-24 hr</property>"
+    "  <property name=\"router_node_connection\">Access Point</property>"
     "  <flag name=\"restrict_untrusted_clients\">false</flag>"
     "</busconfig>";
 #endif
+
+/*
+ * Router Power Source
+ *  Always AC powered
+ *  Battery powered and chargeable
+ *  Battery powered and not chargeable
+ *
+ * Router Mobility
+ *  Always Stationary
+ *  Low mobility
+ *  Intermediate mobility
+ *  High mobility
+ *
+ * Router Availability
+ *  0-3 hr
+ *  3-6 hr
+ *  6-9 hr
+ *  9-12 hr
+ *  12-15 hr
+ *  15-18 hr
+ *  18-21 hr
+ *  21-24 hr
+ *
+ * Router Node Connection
+ *  Access Point
+ *  Wired
+ *  Wireless
+ *
+ */
 
 static const char internalConfig[] =
     "<busconfig>"

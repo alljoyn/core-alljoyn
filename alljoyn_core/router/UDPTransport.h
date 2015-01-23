@@ -219,6 +219,8 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
      */
     void DisableAdvertisement(const qcc::String& advertiseName, TransportMask transports);
 
+    void UpdateDynamicScore();
+
     /**
      * Returns the name of this transport
      */
@@ -360,7 +362,8 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
         DISABLE_ADVERTISEMENT_INSTANCE,  /**< A DisableAdvertisement() has happened */
         ENABLE_DISCOVERY_INSTANCE,       /**< An EnableDiscovery() has happened */
         DISABLE_DISCOVERY_INSTANCE,      /**< A DisableDiscovery() has happened */
-        HANDLE_NETWORK_EVENT             /**< A network event has happened */
+        HANDLE_NETWORK_EVENT,            /**< A network event has happened */
+        UPDATE_DYNAMIC_RANK_INSTANCE     /**< A change to the dynamic rank has happened */
     };
 
     /**
@@ -594,15 +597,15 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     static const uint32_t ALLJOYN_MAX_COMPLETED_CONNECTIONS_UDP_DEFAULT = 50;
 
     /**
-     * @brief The default value for the maximum number of untrusted clients
+     * @brief The default value for the maximum number of remote clients over udp.
      *
-     * This corresponds to the configuration item "max_untrusted_clients"
-     * To override this value, change the limit, "max_untrusted_clients".
+     * This corresponds to the configuration item "max_remote_clients_udp"
+     * To override this value, change the limit, "max_remote_clients_udp".
      *
-     * @warning This maximum is enforced on incoming connections from untrusted clients only.
-     * This is to limit the amount of resources being used by untrusted clients.
+     * @warning This maximum is enforced on incoming connections from untrusted clients over udp.
+     * This is to limit the amount of resources being used by untrusted clients over udp.
      */
-    static const uint32_t ALLJOYN_MAX_UNTRUSTED_CLIENTS_DEFAULT = 0;
+    static const uint32_t ALLJOYN_MAX_REMOTE_CLIENTS_UDP_DEFAULT = 0;
 
     /**
      * @brief The default value for the router advertisement prefix that untrusted thin clients
@@ -706,6 +709,7 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     void QueueDisableDiscovery(const char* namePrefix, TransportMask transports);
     void QueueEnableAdvertisement(const qcc::String& advertiseName, bool quietly, TransportMask transports);
     void QueueDisableAdvertisement(const qcc::String& advertiseName, TransportMask transports);
+    void QueueUpdateDynamicScore();
 
     void RunListenMachine(ListenRequest& listenRequest);
 
@@ -716,6 +720,8 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     void EnableDiscoveryInstance(ListenRequest& listenRequest);
     void DisableDiscoveryInstance(ListenRequest& listenRequest);
     void HandleNetworkEventInstance(ListenRequest& listenRequest);
+    void UpdateDynamicScoreInstance(ListenRequest& listenRequest);
+
     void UntrustedClientExit();
     QStatus UntrustedClientStart();
     bool m_isAdvertising;
@@ -759,7 +765,7 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     /**< The router advertisement prefix set in the configuration file appended with the BusController's unique name */
     qcc::String m_routerName;
 
-    int32_t m_maxUntrustedClients; /**< the maximum number of untrusted clients allowed at any point of time */
+    int32_t m_maxRemoteClientsUdp; /**< the maximum number of untrusted clients allowed at any point of time */
 
     int32_t m_numUntrustedClients; /**< Number of untrusted clients currently registered with the daemon */
 
