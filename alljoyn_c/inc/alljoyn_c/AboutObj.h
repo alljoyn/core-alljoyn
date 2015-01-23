@@ -5,7 +5,7 @@
  * Please help make it more robust by contributing fixes if you find problems.
  */
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -24,6 +24,7 @@
 
 #include <alljoyn_c/AjAPI.h>
 #include <alljoyn_c/AboutData.h>
+#include <alljoyn_c/AboutDataListener.h>
 #include <alljoyn_c/BusAttachment.h>
 #include <alljoyn_c/Session.h>
 #include <alljoyn_c/SessionListener.h>
@@ -89,6 +90,32 @@ extern AJ_API void AJ_CALL alljoyn_aboutobj_destroy(alljoyn_aboutobj obj);
 extern AJ_API QStatus AJ_CALL alljoyn_aboutobj_announce(alljoyn_aboutobj obj,
                                                         alljoyn_sessionport sessionPort,
                                                         alljoyn_aboutdata aboutData);
+
+
+/**
+ * This is used to send the Announce signal.  It announces the list of all
+ * interfaces available at given object paths as well as the announced
+ * fields from the About data.
+ *
+ * This method will automatically obtain the announced object description from the
+ * alljoyn_busattachment that was used to create the alljoyn_aboutobj. Only alljoyn_busattachment
+ * objects that have marked their interfaces as announced and are registered will be announced.
+ *
+ * @see alljoyn_busattachment_registerbusobject
+ * @see alljoyn_busobject_addinterface
+ *
+ * @param obj           the alljoyn_aboutobj object this call is made for
+ * @param sessionPort   the session port the interfaces can be connected with
+ * @param aboutListener the alljoyn_aboutdatalistener that contains the About data for this announce signal
+ *
+ * @return
+ *  - ER_OK on success
+ *  - ER_ABOUT_SESSIONPORT_NOT_BOUND if the SessionPort given is not bound
+ */
+QStatus AJ_CALL alljoyn_aboutobj_announce_using_datalistener(alljoyn_aboutobj obj,
+                                                             alljoyn_sessionport sessionPort,
+                                                             alljoyn_aboutdatalistener aboutListener);
+
 
 /**
  * Cancel the last announce signal sent. If no signals have been sent this

@@ -56,10 +56,10 @@ void AJ_CALL alljoyn_aboutdata_destroy(alljoyn_aboutdata data)
 }
 
 QStatus AJ_CALL alljoyn_aboutdata_createfromxml(alljoyn_aboutdata data,
-                                                const qcc::String& aboutDataXml)
+                                                const char* aboutDataXml)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
-    return ((ajn::AboutData*)data)->CreateFromXml((qcc::String const &)aboutDataXml);
+    return ((ajn::AboutData*)data)->CreateFromXml(aboutDataXml);
 }
 
 bool AJ_CALL alljoyn_aboutdata_isvalid(alljoyn_aboutdata data,
