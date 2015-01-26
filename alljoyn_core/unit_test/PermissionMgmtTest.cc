@@ -87,6 +87,12 @@ QStatus BasePermissionMgmtTest::InterestInSignal(BusAttachment* bus)
     return bus->AddMatch(notifyConfigMatchRule);
 }
 
+QStatus BasePermissionMgmtTest::InterestInChannelChangedSignal(BusAttachment* bus)
+{
+    const char* tvChannelChangedMatchRule = "type='signal',interface='" "org.allseenalliance.control.TV" "',member='ChannelChanged'";
+    return bus->AddMatch(tvChannelChangedMatchRule);
+}
+
 void BasePermissionMgmtTest::RegisterKeyStoreListeners()
 {
     status = adminBus.RegisterKeyStoreListener(adminKeyStoreListener);
@@ -139,14 +145,14 @@ void BasePermissionMgmtTest::TearDown()
 void BasePermissionMgmtTest::EnableSecurity(const char* keyExchange)
 {
     delete adminKeyListener;
-    adminKeyListener = new ECDHEKeyXListener(ECDHEKeyXListener::RUN_AS_ADMIN, adminBus);
+    adminKeyListener = new ECDHEKeyXListener(ECDHEKeyXListener::RUN_AS_ADMIN);
     adminBus.EnablePeerSecurity(keyExchange, adminKeyListener, NULL, true);
     adminProxyBus.EnablePeerSecurity(keyExchange, adminKeyListener, NULL, true);
     delete serviceKeyListener;
-    serviceKeyListener = new ECDHEKeyXListener(ECDHEKeyXListener::RUN_AS_SERVICE, serviceBus);
+    serviceKeyListener = new ECDHEKeyXListener(ECDHEKeyXListener::RUN_AS_SERVICE);
     serviceBus.EnablePeerSecurity(keyExchange, serviceKeyListener, NULL, false);
     delete consumerKeyListener;
-    consumerKeyListener = new ECDHEKeyXListener(ECDHEKeyXListener::RUN_AS_CONSUMER, consumerBus);
+    consumerKeyListener = new ECDHEKeyXListener(ECDHEKeyXListener::RUN_AS_CONSUMER);
     consumerBus.EnablePeerSecurity(keyExchange, consumerKeyListener, NULL, false);
 }
 
@@ -189,7 +195,17 @@ void BasePermissionMgmtTest::CreateTVAppInterface(BusAttachment& bus, bool addSe
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         status = ifc->AddMember(MESSAGE_METHOD_CALL, "Mute", NULL, NULL, NULL);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        status = ifc->AddSignal("ChannelChanged", "u", "newChannel");
+        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        status = ifc->AddProperty("Volume", "u", PROP_ACCESS_RW);
+        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
         ifc->Activate();
+        status = bus.RegisterSignalHandler(this,
+                                           static_cast<MessageReceiver::SignalHandler>(&BasePermissionMgmtTest::ChannelChangedSignalHandler), ifc->GetMember("ChannelChanged"), NULL);
+        EXPECT_EQ(ER_OK, status) << "  Failed to register channel changed signal handler.  Actual Status: " << QCC_StatusText(status);
+        status = InterestInChannelChangedSignal(&bus);
+        EXPECT_EQ(ER_OK, status) << "  Failed to show interest in channel changed signal.  Actual Status: " << QCC_StatusText(status);
     }
     if (!addService) {
         return;  /* done */
@@ -233,6 +249,15 @@ void BasePermissionMgmtTest::SignalHandler(const InterfaceDescription::Member* m
     EXPECT_EQ(ER_OK, status) << "  Retrieve the serial number failed.  Actual Status: " << QCC_StatusText(status);
 }
 
+void BasePermissionMgmtTest::ChannelChangedSignalHandler(const InterfaceDescription::Member* member,
+                                                         const char* sourcePath, Message& msg)
+{
+    uint32_t channel;
+    QStatus status = msg->GetArg(0)->Get("u", &channel);
+    EXPECT_EQ(ER_OK, status) << "  Retrieve the TV channel failed.  Actual Status: " << QCC_StatusText(status);
+    SetChannelChangedSignalReceived(true);
+}
+
 void BasePermissionMgmtTest::SetNotifyConfigSignalReceived(bool flag)
 {
     signalNotifyConfigReceived = flag;
@@ -241,6 +266,16 @@ void BasePermissionMgmtTest::SetNotifyConfigSignalReceived(bool flag)
 const bool BasePermissionMgmtTest::GetNotifyConfigSignalReceived()
 {
     return signalNotifyConfigReceived;
+}
+
+void BasePermissionMgmtTest::SetChannelChangedSignalReceived(bool flag)
+{
+    channelChangedSignalReceived = flag;
+}
+
+const bool BasePermissionMgmtTest::GetChannelChangedSignalReceived()
+{
+    return channelChangedSignalReceived;
 }
 
 void BasePermissionMgmtTest::OnOffOn(const InterfaceDescription::Member* member, Message& msg)
@@ -255,17 +290,33 @@ void BasePermissionMgmtTest::OnOffOff(const InterfaceDescription::Member* member
 
 void BasePermissionMgmtTest::TVUp(const InterfaceDescription::Member* member, Message& msg)
 {
+    currentTVChannel++;
     MethodReply(msg, ER_OK);
+    TVChannelChanged(member, msg);
 }
 
 void BasePermissionMgmtTest::TVDown(const InterfaceDescription::Member* member, Message& msg)
 {
+    if (currentTVChannel > 1) {
+        currentTVChannel--;
+    }
     MethodReply(msg, ER_OK);
+    TVChannelChanged(member, msg);
 }
 
 void BasePermissionMgmtTest::TVChannel(const InterfaceDescription::Member* member, Message& msg)
 {
     MethodReply(msg, ER_OK);
+    /* emit a signal */
+    TVChannelChanged(member, msg);
+}
+
+void BasePermissionMgmtTest::TVChannelChanged(const InterfaceDescription::Member* member, Message& msg)
+{
+    /* emit a signal */
+    MsgArg args[1];
+    args[0].Set("u", currentTVChannel);
+    Signal(consumerBus.GetUniqueName().c_str(), 0, *member->iface->GetMember("ChannelChanged"), args, 1, 0, 0);
 }
 
 void BasePermissionMgmtTest::TVMute(const InterfaceDescription::Member* member, Message& msg)
@@ -381,27 +432,24 @@ QStatus PermissionMgmtTestHelper::ReadClaimResponse(Message& msg, ECCPublicKey* 
     return RetrievePublicKeyFromMsgArg((MsgArg &) * msg->GetArg(0), pubKey);
 }
 
-QStatus PermissionMgmtTestHelper::Claim(BusAttachment& bus, ProxyBusObject& remoteObj, qcc::GUID128& issuerGUID, const ECCPublicKey* pubKey, ECCPublicKey* claimedPubKey, const GUID128& claimedGUID, qcc::String& identityCertDER)
+QStatus PermissionMgmtTestHelper::Claim(BusAttachment& bus, ProxyBusObject& remoteObj, qcc::GUID128& issuerGUID, const ECCPublicKey* pubKey, ECCPublicKey* claimedPubKey, qcc::String& identityCertDER, bool setKeyId)
 {
     QStatus status;
     const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::INTERFACE_NAME);
     remoteObj.AddInterface(*itf);
     Message reply(bus);
-    MsgArg inputs[3];
+    MsgArg inputs[2];
 
     KeyInfoNISTP256 keyInfo;
+    if (setKeyId) {
+        keyInfo.SetKeyId(issuerGUID.GetBytes(), GUID128::SIZE);
+    }
     keyInfo.SetPublicKey(pubKey);
-    inputs[0].Set("(yv)", KeyInfo::FORMAT_ALLJOYN,
-                  new MsgArg("(ayyyv)", GUID128::SIZE, issuerGUID.GetBytes(), KeyInfo::USAGE_SIGNING, KeyInfoECC::KEY_TYPE,
-                             new MsgArg("(yyv)", keyInfo.GetAlgorithm(), keyInfo.GetCurve(),
-                                        new MsgArg("(ayay)", ECC_COORDINATE_SZ, keyInfo.GetXCoord(), ECC_COORDINATE_SZ, keyInfo.GetYCoord()))));
-    inputs[0].SetOwnershipFlags(MsgArg::OwnsArgs, true);
-
-    inputs[1].Set("ay", GUID128::SIZE, claimedGUID.GetBytes());
-    inputs[2].Set("(yay)", Certificate::ENCODING_X509_DER, identityCertDER.size(), identityCertDER.data());
+    KeyInfoHelper::KeyInfoNISTP256ToMsgArg(keyInfo, inputs[0]);
+    inputs[1].Set("(yay)", Certificate::ENCODING_X509_DER, identityCertDER.size(), identityCertDER.data());
     uint32_t timeout = 10000; /* Claim is a bit show */
 
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::INTERFACE_NAME, "Claim", inputs, 3, reply, timeout);
+    status = remoteObj.MethodCall(BasePermissionMgmtTest::INTERFACE_NAME, "Claim", inputs, 2, reply, timeout);
 
     if (ER_OK == status) {
         status = ReadClaimResponse(reply, claimedPubKey);
@@ -412,6 +460,11 @@ QStatus PermissionMgmtTestHelper::Claim(BusAttachment& bus, ProxyBusObject& remo
         status = ER_PERMISSION_DENIED;
     }
     return status;
+}
+
+QStatus PermissionMgmtTestHelper::Claim(BusAttachment& bus, ProxyBusObject& remoteObj, qcc::GUID128& issuerGUID, const ECCPublicKey* pubKey, ECCPublicKey* claimedPubKey, qcc::String& identityCertDER)
+{
+    return Claim(bus, remoteObj, issuerGUID, pubKey, claimedPubKey, identityCertDER, true);
 }
 
 QStatus PermissionMgmtTestHelper::GetManifest(BusAttachment& bus, ProxyBusObject& remoteObj, PermissionPolicy::Rule** retRules, size_t* count)
@@ -747,6 +800,27 @@ QStatus PermissionMgmtTestHelper::ExcerciseTVUp(BusAttachment& bus, ProxyBusObje
     return status;
 }
 
+QStatus PermissionMgmtTestHelper::GetTVVolume(BusAttachment& bus, ProxyBusObject& remoteObj, uint32_t& volume)
+{
+    QStatus status;
+    const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::TV_IFC_NAME);
+    remoteObj.AddInterface(*itf);
+    MsgArg val;
+    status = remoteObj.GetProperty(BasePermissionMgmtTest::TV_IFC_NAME, "Volume", val);
+    if (ER_OK == status) {
+        val.Get("u", &volume);
+    }
+    return status;
+}
+
+QStatus PermissionMgmtTestHelper::SetTVVolume(BusAttachment& bus, ProxyBusObject& remoteObj, uint32_t volume)
+{
+    const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::TV_IFC_NAME);
+    remoteObj.AddInterface(*itf);
+    MsgArg val("u", volume);
+    return remoteObj.SetProperty(BasePermissionMgmtTest::TV_IFC_NAME, "Volume", val);
+}
+
 QStatus PermissionMgmtTestHelper::ExcerciseTVDown(BusAttachment& bus, ProxyBusObject& remoteObj)
 {
     QStatus status;
@@ -823,4 +897,22 @@ QStatus PermissionMgmtTestHelper::GetPeerGUID(BusAttachment& bus, qcc::String& p
     return ca.GetPeerGuid(peerName, peerGuid);
 }
 
+QStatus BasePermissionMgmtTest::Get(const char* ifcName, const char* propName, MsgArg& val)
+{
+    if (0 == strcmp("Volume", propName)) {
+        val.typeId = ALLJOYN_UINT32;
+        val.v_uint32 = volume;
+        return ER_OK;
+    }
+    return ER_BUS_NO_SUCH_PROPERTY;
+}
+
+QStatus BasePermissionMgmtTest::Set(const char* ifcName, const char* propName, MsgArg& val)
+{
+    if ((0 == strcmp("Volume", propName)) && (val.typeId == ALLJOYN_UINT32)) {
+        volume = val.v_uint32;
+        return ER_OK;
+    }
+    return ER_BUS_NO_SUCH_PROPERTY;
+}
 
