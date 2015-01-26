@@ -544,6 +544,13 @@ class KeyStoreKeyEventListener {
     virtual bool NotifyAutoDelete(KeyStore* holder, const qcc::GUID128& guid);
 };
 
+class KeyStoreListenerFactory {
+
+  public:
+    static KeyStoreListener* CreateInstance(const qcc::String& application, const char* fname);
+
+};
+
 }
 
 #endif
