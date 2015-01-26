@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2014-2015 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -32,7 +32,7 @@ public class AboutIconProxyTest extends TestCase{
     static short PORT_NUMBER = 542;
 
     public void setUp() throws Exception {
-        serviceBus = new BusAttachment("AboutIconTestService");
+        serviceBus = new BusAttachment("AboutIconTestService", RemoteMessage.Receive);
 
         assertEquals(Status.OK, serviceBus.connect());
         sessionPortlistener = new AboutListenerTestSessionPortListener();
@@ -169,7 +169,7 @@ public class AboutIconProxyTest extends TestCase{
         AboutIconObj aio = new AboutIconObj(serviceBus, icon);
 
 
-        BusAttachment clientBus = new BusAttachment("AboutIconTestClient");
+        BusAttachment clientBus = new BusAttachment("AboutIconTestClient", RemoteMessage.Receive);
         assertEquals(Status.OK, clientBus.connect());
 
         AboutListenerTestAboutListener aListener = new AboutListenerTestAboutListener();
