@@ -82,7 +82,7 @@ class PermissionManager {
 
     /**
      * Authorize a message.  Make sure there is a proper permission is setup for this type of message.
-     * @param send indicating whether is a send or receive
+     * @param outgoing indicating whether is a outgoing or incoming
      * @param peerGuid the peer's GUID
      * @param msg the target message
      * @param peerState the peer's PeerState object
@@ -90,7 +90,7 @@ class PermissionManager {
      *  - ER_OK: authorized
      *  - ER_PERM_DENIED: permission denied
      */
-    QStatus AuthorizeMessage(bool send, Message& msg, PeerState& peerState);
+    QStatus AuthorizeMessage(bool outgoing, Message& msg, PeerState& peerState);
 
     void SetPermissionMgmtObj(PermissionMgmtObj* permissionMgmtObj)
     {
@@ -105,7 +105,7 @@ class PermissionManager {
   private:
 
     bool PeerHasAdminPriv(const qcc::GUID128& peerGuid);
-    bool AuthorizePermissionMgmt(bool send, const qcc::GUID128& peerGuid, Message& msg);
+    bool AuthorizePermissionMgmt(bool outgoing, const qcc::GUID128& peerGuid, Message& msg);
 
     PermissionPolicy* policy;
     _PeerState::GuildMap guildMap;
