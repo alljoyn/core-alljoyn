@@ -75,14 +75,10 @@ class ThreadListener {
     virtual void ThreadExit(Thread* thread) = 0;
 };
 
-class ThreadListInit;
-
 /**
  * Abstract encapsulation of the os-specific threads.
  */
 class Thread {
-    friend class ThreadListInit;
-
   public:
 
     /**
@@ -289,6 +285,10 @@ class Thread {
 
   private:
 
+    static QStatus Init();
+    static QStatus Shutdown();
+    friend class StaticGlobals;
+
     /**
      * Enumeration of thread states.
      */
@@ -348,12 +348,6 @@ class Thread {
      */
     static void SigHandler(int signal);
 };
-
-static class ThreadListInit {
-  public:
-    ThreadListInit();
-    ~ThreadListInit();
-} threadListInit;
 
 }
 

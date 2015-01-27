@@ -72,7 +72,6 @@ void Log(int priority, const char* format, ...);
  * calling qcc::Log() so that the log output will go somewhere useful.
  */
 class LoggerSetting {
-    friend class LoggerInit;
   public:
     /**
      * Enable or disable delivery to syslog.  This only affects POSIX systems
@@ -145,6 +144,10 @@ class LoggerSetting {
                                            FILE* file = LOGGERSETTING_DEFAULT_FILE);
 
   private:
+    static void Init();
+    static void Shutdown();
+    friend class StaticGlobals;
+
     static LoggerSetting* singleton;    ///< Static pointer to most recent instance.
     const char* name;                   ///< Process name for syslog.
     int level;                          ///< Logging filter level.
@@ -172,15 +175,6 @@ class LoggerSetting {
      */
     friend void qcc::Log(int priority, const char* format, ...);
 };
-static class LoggerInit {
-  public:
-    LoggerInit();
-    ~LoggerInit();
-    static void Cleanup();
 
-  private:
-    static bool cleanedup;
-
-} loggerInit;
 }
 #endif

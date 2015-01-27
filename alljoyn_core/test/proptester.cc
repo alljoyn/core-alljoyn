@@ -35,6 +35,7 @@
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/BusListener.h>
 #include <alljoyn/BusObject.h>
+#include <alljoyn/Init.h>
 #include <alljoyn/ProxyBusObject.h>
 
 
@@ -952,6 +953,16 @@ void Usage()
 
 int main(int argc, char** argv)
 {
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+#endif
+
     String serviceName = "org.alljoyn.Testing.PropertyTester";
     bool client = false;
 
@@ -988,7 +999,7 @@ int main(int argc, char** argv)
 
     QStatus status;
     int ret = 0;
-    BusAttachment bus("ProperyTester", true);
+    BusAttachment* bus = new BusAttachment("ProperyTester", true);
     Environ* env = Environ::GetAppEnviron();
     String connSpec = env->Find("DBUS_STARTER_ADDRESS");
 
@@ -1000,13 +1011,13 @@ int main(int argc, char** argv)
 #endif
     }
 
-    status = bus.Start();
+    status = bus->Start();
     if (status != ER_OK) {
         printf("Failed to start bus attachment: %s\n", QCC_StatusText(status));
         exit(1);
     }
 
-    status = bus.Connect(connSpec.c_str());
+    status = bus->Connect(connSpec.c_str());
     if (status != ER_OK) {
         printf("Failed to connect to \"%s\": %s\n", connSpec.c_str(), QCC_StatusText(status));
         exit(1);
@@ -1015,24 +1026,24 @@ int main(int argc, char** argv)
     App* app;
 
     if (client) {
-        app = new Client(bus);
-        status = bus.FindAdvertisedName(serviceName.c_str());
+        app = new Client(*bus);
+        status = bus->FindAdvertisedName(serviceName.c_str());
         if (status != ER_OK) {
             printf("Failed to find name to \"%s\": %s\n", serviceName.c_str(), QCC_StatusText(status));
             ret = 2;
             goto exit;
         }
     } else {
-        serviceName += ".A" + bus.GetGlobalGUIDString();
+        serviceName += ".A" + bus->GetGlobalGUIDString();
 
-        app = new Service(bus);
-        status = bus.RequestName(serviceName.c_str(), DBUS_NAME_FLAG_REPLACE_EXISTING | DBUS_NAME_FLAG_DO_NOT_QUEUE);
+        app = new Service(*bus);
+        status = bus->RequestName(serviceName.c_str(), DBUS_NAME_FLAG_REPLACE_EXISTING | DBUS_NAME_FLAG_DO_NOT_QUEUE);
         if (status != ER_OK) {
             printf("Failed to request name to \"%s\": %s\n", serviceName.c_str(), QCC_StatusText(status));
             ret = 2;
             goto exit;
         }
-        status = bus.AdvertiseName(serviceName.c_str(), TRANSPORT_ANY);
+        status = bus->AdvertiseName(serviceName.c_str(), TRANSPORT_ANY);
         if (status != ER_OK) {
             printf("Failed to request name to \"%s\": %s\n", serviceName.c_str(), QCC_StatusText(status));
             ret = 2;
@@ -1048,17 +1059,22 @@ int main(int argc, char** argv)
 
 exit:
     if (client) {
-        bus.CancelFindAdvertisedName(serviceName.c_str());
-        bus.Disconnect();
+        bus->CancelFindAdvertisedName(serviceName.c_str());
+        bus->Disconnect();
     } else {
-        bus.CancelAdvertiseName(serviceName.c_str(), TRANSPORT_ANY);
-        bus.ReleaseName(serviceName.c_str());
+        bus->CancelAdvertiseName(serviceName.c_str(), TRANSPORT_ANY);
+        bus->ReleaseName(serviceName.c_str());
     }
 
     delete app;
 
-    bus.Stop();
-    bus.Join();
+    bus->Stop();
+    bus->Join();
+    delete bus;
 
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return ret;
 }

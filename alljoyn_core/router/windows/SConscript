@@ -13,7 +13,7 @@
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # 
 
-Import('router_env', 'router_objs')
+Import('router_env', 'router_objs', 'srobj')
 
 # Build the resources for the dll
 rsc = router_env.RES('DaemonResources.rc')
@@ -22,7 +22,7 @@ daemon_static_lib = [];
 daemon_shared_lib = [];
 
 # Build the Windows daemon.
-router_libs = router_env.SharedLibrary('daemonlib', ['daemon-service.cc', 'daemon-main.cc'] + router_objs + rsc)
+router_libs = router_env.SharedLibrary('daemonlib', ['daemon-service.cc', 'daemon-main.cc'] + srobj + router_objs + rsc)
 
 # the variable router_libs contains the file nodes for the  static library and the 
 # shared library however it may contain more files such as .pdb files on windows.  

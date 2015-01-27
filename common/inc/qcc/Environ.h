@@ -38,6 +38,7 @@ namespace qcc {
  */
 class Environ {
   public:
+
     /** Environment variable const_iterator */
     typedef std::map<qcc::String, qcc::String>::const_iterator const_iterator;
 
@@ -101,6 +102,10 @@ class Environ {
     size_t Size(void) const { return vars.size(); }
 
   private:
+    static void Init();
+    static void Shutdown();
+    friend class StaticGlobals;
+
     std::map<qcc::String, qcc::String> vars;    ///< Environment variable storage.
     qcc::Mutex lock;                            ///< Mutex to make operations thread-safe.
 };

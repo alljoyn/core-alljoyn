@@ -40,7 +40,7 @@ unityenv['OBJDIR_UNITY'] = unityenv['OBJDIR'] + '/alljoyn_unity'
 
 # create the alljoyn_unity_native library this libary will link in the bundled daemon
 # similar to other language bindings.
-unityenv.Prepend(LIBS=[unityenv['brobj'], unityenv['ajrlib']])
+unityenv.Prepend(LIBS=[unityenv['ajrlib']])
 libaj_unity_native = unityenv.SharedLibrary('alljoyn_unity_native', [env['AJ_C_OBJS']])
 unityenv.Install('$UNITY_DISTDIR/lib', libaj_unity_native)
 

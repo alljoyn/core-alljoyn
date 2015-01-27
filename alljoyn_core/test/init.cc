@@ -1,10 +1,3 @@
-#ifndef _QCC_STATICGLOBALSINIT_H
-#define _QCC_STATICGLOBALSINIT_H
-/**
- * @file
- * File for initializing global variables.
- */
-
 /******************************************************************************
  * Copyright AllSeen Alliance. All rights reserved.
  *
@@ -20,27 +13,20 @@
  *    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
+#include <alljoyn/Init.h>
 
-#ifndef __cplusplus
-#error Only include StaticGlobalsInit.h in C++ code.
+int main(int argc, char* argv[])
+{
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+    AllJoynRouterShutdown();
 #endif
-
-namespace qcc {
-
-/**
- * Nifty counter used to ensure that common globals are initialized before any
- * other client code static or global variables.
- */
-static struct StaticGlobalsInit {
-    StaticGlobalsInit();
-    ~StaticGlobalsInit();
-    static void Cleanup();
-
-  private:
-    static bool cleanedup;
-
-} staticGlobalsInit;
-
+    AllJoynShutdown();
+    return 0;
 }
-
-#endif // _QCC_STATICGLOBALSINIT_H

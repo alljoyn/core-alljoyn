@@ -35,6 +35,7 @@
 #include <qcc/Thread.h>  // For qcc::Sleep()
 
 #include <alljoyn/Status.h>
+#include <alljoyn/Init.h>
 #include <ns/IpNameService.h>
 #include <ns/IpNameServiceImpl.h>
 #include <ConfigDB.h>
@@ -207,6 +208,14 @@ static void PrintFlags(uint32_t flags)
 
 int main(int argc, char** argv)
 {
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+
     QStatus status;
     uint16_t port = 0;
 
@@ -447,5 +456,7 @@ int main(int argc, char** argv)
         }
     }
 
+    AllJoynRouterShutdown();
+    AllJoynShutdown();
     return 0;
 }

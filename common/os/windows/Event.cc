@@ -37,6 +37,7 @@
 #include <qcc/Stream.h>
 #include <qcc/Thread.h>
 #include <qcc/time.h>
+#include <qcc/Util.h>
 
 #if (_WIN32_WINNT > 0x0603)
 #include <MSAJTransport.h>
@@ -461,21 +462,32 @@ class IoEventMonitor {
 
 };
 
+static uint64_t _alwaysSet[RequiredArrayLength(sizeof(Event), uint64_t)];
+static uint64_t _neverSet[RequiredArrayLength(sizeof(Event), uint64_t)];
 static IoEventMonitor* IoMonitor = NULL;
+static bool initialized = false;
 
-static int eventCounter = 0;
+Event& Event::alwaysSet = (Event&)_alwaysSet;
+Event& Event::neverSet = (Event&)_neverSet;
 
-Event::Init::Init()
+void Event::Init()
 {
-    if (0 == eventCounter++) {
+    if (!initialized) {
+        new (&alwaysSet)Event(0, 0);
+        new (&neverSet)Event(Event::WAIT_FOREVER, 0);
         IoMonitor = new IoEventMonitor;
+        initialized = true;
     }
 }
 
-Event::Init::~Init()
+void Event::Shutdown()
 {
-    if (0 == --eventCounter) {
+    if (initialized) {
         delete IoMonitor;
+        IoMonitor = NULL;
+        neverSet.~Event();
+        alwaysSet.~Event();
+        initialized = false;
     }
 }
 

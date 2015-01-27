@@ -20,7 +20,7 @@ test_env.Append(CPPPATH = test_env.Dir('..').srcnode())
 
 if test_env['BR'] == 'on':
     # Build apps with bundled daemon support
-    test_env.Prepend(LIBS = [test_env['brobj'], test_env['ajrlib']])
+    test_env.Prepend(LIBS = [test_env['ajrlib']])
 
 # Test Programs
 progs = [
@@ -48,7 +48,8 @@ progs = [
     test_env.Program('rawclient',     ['rawclient.cc']),
     test_env.Program('rawservice',    ['rawservice.cc']),
     test_env.Program('sessions',      ['sessions.cc']),
-    test_env.Program('bbsigtest',     ['bbsigtest.cc'])
+    test_env.Program('bbsigtest',     ['bbsigtest.cc']),
+    test_env.Program('init',          ['init.cc'])
     ]
 
 if test_env['OS'] == 'linux' or test_env['OS'] == 'android':

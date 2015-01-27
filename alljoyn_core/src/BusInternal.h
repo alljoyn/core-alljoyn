@@ -412,6 +412,10 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
 
   private:
 
+    static void Init();
+    static void Shutdown();
+    friend class StaticGlobals;
+
     /**
      * Copy constructor.
      * Internal may not be copy constructed.
@@ -506,6 +510,7 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
 
     ObserverManager* observerManager;      /* The observer manager for the bus attachment */
 };
+
 }
 
 #endif

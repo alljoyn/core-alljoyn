@@ -35,10 +35,11 @@
 #include <qcc/Util.h>
 
 #include <alljoyn/AboutObj.h>
+#include <alljoyn/AllJoynStd.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/BusObject.h>
 #include <alljoyn/DBusStd.h>
-#include <alljoyn/AllJoynStd.h>
+#include <alljoyn/Init.h>
 #include <alljoyn/MsgArg.h>
 #include <alljoyn/version.h>
 
@@ -806,6 +807,15 @@ static void usage(void)
 /** Main entry point */
 int main(int argc, char** argv)
 {
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+#endif
     QStatus status = ER_OK;
     InterfaceSecurityPolicy secPolicy = AJ_IFC_SECURITY_INHERIT;
     bool objSecure = false;
@@ -985,8 +995,8 @@ int main(int argc, char** argv)
     g_myBusListener = new MyBusListener(*g_msgBus, opts);
 
     /* Register local objects and connect to the daemon */
-    LocalTestObject testObj(*g_msgBus, ::org::alljoyn::alljoyn_test::ObjectPath, reportInterval, opts);
-    g_msgBus->RegisterBusObject(testObj, objSecure);
+    LocalTestObject* testObj = new LocalTestObject(*g_msgBus, ::org::alljoyn::alljoyn_test::ObjectPath, reportInterval, opts);
+    g_msgBus->RegisterBusObject(*testObj, objSecure);
 
     g_msgBus->EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA ALLJOYN_ECDHE_PSK ALLJOYN_RSA_KEYX ALLJOYN_SRP_KEYX ALLJOYN_SRP_LOGON ALLJOYN_ECDHE_NULL ALLJOYN_PIN_KEYX", new MyAuthListener(), keyStore, keyStore != NULL);
     /*
@@ -1018,14 +1028,19 @@ int main(int argc, char** argv)
         }
     }
 
-    g_msgBus->UnregisterBusObject(testObj);
+    g_msgBus->UnregisterBusObject(*testObj);
+    delete testObj;
 
-/* Clean up msg bus */
+    /* Clean up msg bus */
     delete g_msgBus;
     delete g_myBusListener;
 
     printf("Runtime elapsed: %u ms \n", (endTime - startTime));
     printf("%s exiting with status %d (%s)\n", argv[0], status, QCC_StatusText(status));
 
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return (int) status;
 }

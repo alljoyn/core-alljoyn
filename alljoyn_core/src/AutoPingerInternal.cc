@@ -158,7 +158,7 @@ void AutoPingerInternal::Init()
     pingCallback = new AutoPingAsyncCB();
 }
 
-void AutoPingerInternal::Cleanup()
+void AutoPingerInternal::Shutdown()
 {
     delete ctxs;
     ctxs = NULL;

@@ -46,7 +46,6 @@ class BusAttachment;
 class AutoPinger {
   public:
 
-
     /**
      * Create instance of autopinger
      *
@@ -136,13 +135,6 @@ class AutoPinger {
     AutoPingerInternal* internal;
 
 };
-static class AutoPingerInit {
-  public:
-    AutoPingerInit();
-    ~AutoPingerInit();
-    static void Cleanup();
-  private:
-    static bool cleanedup;
-} autoPingerInit;
+
 }
 #endif /* AUTOPINGER_H_ */

@@ -43,9 +43,9 @@
 #include <qcc/Logger.h>
 #include <qcc/Util.h>
 
-#include <alljoyn/version.h>
-
+#include <alljoyn/Init.h>
 #include <alljoyn/Status.h>
+#include <alljoyn/version.h>
 
 #include "Transport.h"
 #include "TCPTransport.h"
@@ -651,6 +651,14 @@ int DaemonMain(int argc, char** argv, char* serviceConfig)
 int main(int argc, char** argv, char** env)
 #endif
 {
+    if (AllJoynInit() != ER_OK) {
+        return DAEMON_EXIT_STARTUP_ERROR;
+    }
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return DAEMON_EXIT_STARTUP_ERROR;
+    }
+
 #if defined(QCC_OS_ANDROID) && !defined(ROUTER_LIB)
     //
     // Initialize the environment for Android if we use the command line to
@@ -660,6 +668,10 @@ int main(int argc, char** argv, char** env)
     //
     environ = env;
 #endif
+
+    int ret = 0;
+    String configStr;
+    ConfigDB* config = NULL;
 
     LoggerSetting* loggerSettings = LoggerSetting::GetLoggerSetting(argv[0], LOG_WARNING, true, NULL);
 
@@ -671,10 +683,12 @@ int main(int argc, char** argv, char** env)
         break;
 
     case OptParse::PR_EXIT_NO_ERROR:
-        return DAEMON_EXIT_OK;
+        ret = DAEMON_EXIT_OK;
+        goto exit;
 
     default:
-        return DAEMON_EXIT_OPTION_ERROR;
+        ret = DAEMON_EXIT_OPTION_ERROR;
+        goto exit;
     }
 
     loggerSettings->SetLevel(opts.GetVerbosity());
@@ -685,7 +699,7 @@ int main(int argc, char** argv, char** env)
         loggerSettings->SetFile(stderr);
     }
 
-    String configStr = defaultConfig;
+    configStr = defaultConfig;
 #if defined(QCC_OS_ANDROID) && defined(ROUTER_LIB)
     configStr.append(opts.GetServiceConfig() ? serviceConfig : internalConfig);
 #else
@@ -694,8 +708,8 @@ int main(int argc, char** argv, char** env)
     }
 #endif
 
-    ConfigDB config(configStr, opts.GetConfigFile());
-    if (!config.LoadConfig()) {
+    config = new ConfigDB(configStr, opts.GetConfigFile());
+    if (!config->LoadConfig()) {
         const char* errsrc;
         if (opts.GetInternalConfig()) {
             errsrc = "internal default config";
@@ -703,19 +717,21 @@ int main(int argc, char** argv, char** env)
             errsrc = opts.GetConfigFile().c_str();
         }
         Log(LOG_ERR, "Failed to load the configuration - problem with %s.\n", errsrc);
-        return DAEMON_EXIT_CONFIG_ERROR;
+        ret = DAEMON_EXIT_CONFIG_ERROR;
+        goto exit;
     }
 
-    loggerSettings->SetSyslog(config.GetSyslog());
-    loggerSettings->SetFile((opts.GetFork() || (config.GetFork() && !opts.GetNoFork())) ? NULL : stderr);
+    loggerSettings->SetSyslog(config->GetSyslog());
+    loggerSettings->SetFile((opts.GetFork() || (config->GetFork() && !opts.GetNoFork())) ? NULL : stderr);
 
-    if (opts.GetFork() || (config.GetFork() && !opts.GetNoFork())) {
+    if (opts.GetFork() || (config->GetFork() && !opts.GetNoFork())) {
         pid_t pid = fork();
         if (pid == -1) {
             Log(LOG_ERR, "Failed to fork(): %s\n", strerror(errno));
-            return DAEMON_EXIT_FORK_ERROR;
+            ret = DAEMON_EXIT_FORK_ERROR;
+            goto exit;
         } else if (pid > 0) {
-            String pidfn = config.GetPidfile();
+            String pidfn = config->GetPidfile();
             int fd = opts.GetPrintPidFd();
             String pidStr(U32ToString(pid));
             pidStr += "\n";
@@ -750,7 +766,7 @@ int main(int argc, char** argv, char** env)
 #if !defined(ROUTER_LIB) && defined(QCC_OS_LINUX)
             uid_t curr = getuid();
             if (!opts.GetNoSwitchUser() && (curr == 0)) {
-                String user = config.GetUser();
+                String user = config->GetUser();
                 if (!user.empty()) {
                     static const cap_value_t needed_caps[] = { CAP_NET_RAW,
                                                                CAP_NET_ADMIN,
@@ -760,12 +776,14 @@ int main(int argc, char** argv, char** env)
                         cap_set_flag(caps, CAP_PERMITTED, ArraySize(needed_caps), needed_caps, CAP_SET) ||
                         cap_set_flag(caps, CAP_EFFECTIVE, ArraySize(needed_caps), needed_caps, CAP_SET)) {
                         Log(LOG_ERR, "Failed to set capabilities.\n");
-                        return DAEMON_EXIT_CAP_ERROR;
+                        ret = DAEMON_EXIT_CAP_ERROR;
+                        goto exit;
                     }
                     // Keep all capabilities before switching users
                     if (prctl(PR_SET_KEEPCAPS, 1, 0, 0, 0)) {
                         Log(LOG_ERR, "Failed to persist capabilities before switching user.\n");
-                        return DAEMON_EXIT_CAP_ERROR;
+                        ret = DAEMON_EXIT_CAP_ERROR;
+                        goto exit;
                     }
 
                     // drop root privileges if <user> is specified.
@@ -778,7 +796,8 @@ int main(int argc, char** argv, char** env)
                             } else {
                                 Log(LOG_ERR, "Failed to drop root privileges - set userid failed: %s\n", user.c_str());
                                 endpwent();
-                                return DAEMON_EXIT_CONFIG_ERROR;
+                                ret = DAEMON_EXIT_CONFIG_ERROR;
+                                goto exit;
                             }
                             break;
                         }
@@ -786,7 +805,8 @@ int main(int argc, char** argv, char** env)
                     endpwent();
                     if (!pwent) {
                         Log(LOG_ERR, "Failed to drop root privileges - userid does not exist: %s\n", user.c_str());
-                        return DAEMON_EXIT_CONFIG_ERROR;
+                        ret = DAEMON_EXIT_CONFIG_ERROR;
+                        goto exit;
                     }
                 }
             }
@@ -797,18 +817,24 @@ int main(int argc, char** argv, char** env)
             pid_t sid = setsid();
             if (sid < 0) {
                 Log(LOG_ERR, "Failed to set session ID: %s\n", strerror(errno));
-                return DAEMON_EXIT_SESSION_ERROR;
+                ret = DAEMON_EXIT_SESSION_ERROR;
+                goto exit;
             }
             if (chdir("/tmp") == -1) {
                 Log(LOG_ERR, "Failed to change directory: %s\n", strerror(errno));
-                return DAEMON_EXIT_CHDIR_ERROR;
+                ret = DAEMON_EXIT_CHDIR_ERROR;
+                goto exit;
             }
         }
     }
 
     Log(LOG_NOTICE, versionPreamble, GetVersion(), GetBuildInfo());
 
-    int ret = daemon(opts);
+    ret = daemon(opts);
 
+exit:
+    delete config;
+    AllJoynRouterShutdown();
+    AllJoynShutdown();
     return ret;
 }

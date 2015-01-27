@@ -40,6 +40,7 @@
 #include <alljoyn/AllJoynStd.h>
 #include <alljoyn/AboutObj.h>
 #include <alljoyn/version.h>
+#include <alljoyn/Init.h>
 #include <CoreObserver.h>
 #include <BusInternal.h>
 
@@ -871,6 +872,15 @@ static jobject GetObjectArrayElement(JNIEnv* env, jobjectArray array, jsize inde
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm,
                                   void* reserved)
 {
+    if (AllJoynInit() != ER_OK) {
+        return JNI_ERR;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return JNI_ERR;
+    }
+#endif
     QCC_UseOSLogging(true);
     jvm = vm;
     JNIEnv* env;
@@ -1006,6 +1016,15 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm,
 
         return JNI_VERSION_1_2;
     }
+}
+
+JNIEXPORT void JNI_OnUnload(JavaVM* vm,
+                            void* reserved)
+{
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
 }
 
 /**

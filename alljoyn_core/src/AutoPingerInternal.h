@@ -47,9 +47,6 @@ class BusAttachment;
  */
 class AutoPingerInternal : public qcc::AlarmListener {
   public:
-    static void Init();
-    static void Cleanup();
-
     /**
      * Create instance of autopinger
      *
@@ -124,6 +121,10 @@ class AutoPingerInternal : public qcc::AlarmListener {
     QStatus RemoveDestination(const qcc::String& group, const qcc::String& destination, bool removeAll = false);
 
   private:
+    static void Init();
+    static void Shutdown();
+    friend class StaticGlobals;
+
     friend class AutoPingAsyncCB;
     friend struct Destination;
     friend class PingAsyncContext;
