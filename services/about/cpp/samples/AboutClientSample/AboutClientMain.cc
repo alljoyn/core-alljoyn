@@ -16,6 +16,7 @@
 
 #include <alljoyn/about/AboutClient.h>
 #include <alljoyn/about/AnnouncementRegistrar.h>
+#include <alljoyn/Init.h>
 
 #include <stdio.h>
 #include <signal.h>
@@ -392,6 +393,16 @@ void WaitForSigInt(void)
  */
 int main(int argc, char**argv, char**envArg)
 {
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+#endif
+
     QStatus status = ER_OK;
     std::cout << "AllJoyn Library version: " << ajn::GetVersion() << std::endl;
     std::cout << "AllJoyn Library build info: " << ajn::GetBuildInfo() << std::endl;
@@ -446,6 +457,10 @@ int main(int argc, char**argv, char**envArg)
     busAttachment->Join();
     delete busAttachment;
 
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return 0;
 
 } /* main() */

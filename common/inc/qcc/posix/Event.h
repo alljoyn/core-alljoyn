@@ -208,6 +208,10 @@ class Event {
 
   private:
 
+    static void Init();
+    static void Shutdown();
+    friend class StaticGlobals;
+
     int fd;                 /**< File descriptor linked to general purpose event or -1 */
     int signalFd;           /**< File descriptor used by GEN_PURPOSE events to manually set/reset event */
     SocketFd ioFd;          /**< I/O File descriptor associated with event or -1 */

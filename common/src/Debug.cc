@@ -38,6 +38,7 @@
 #include <qcc/Thread.h>
 #include <qcc/time.h>
 #include <qcc/OSLogger.h>
+#include "DebugControl.h"
 
 using namespace std;
 using namespace qcc;
@@ -47,11 +48,9 @@ using namespace qcc;
 #undef min
 #undef max
 
-class DebugControl;
-
 static qcc::Mutex* stdoutLock = NULL;
 static DebugControl* dbgControl = NULL;
-static int dbgControlCounter = 0;
+static bool initialized = false;
 static bool dbgUseEpoch = false;
 
 int QCC_SyncPrintf(const char* fmt, ...)
@@ -95,80 +94,80 @@ static void WriteMsg(DbgMsgType type, const char* module, const char* msg, void*
     }
 }
 
-
-class DebugControl {
-  public:
-
-    DebugControl(void) : cb(Output), context(stderr), allLevel(0), printThread(true)
-    {
-        Init();
+void DebugControl::Init()
+{
+    if (!initialized) {
+        stdoutLock = new qcc::Mutex();
+        dbgControl = new DebugControl();
+        initialized = true;
     }
+}
 
-    void AddTagLevelPair(const char* tag, uint32_t level)
-    {
-        modLevels.insert(pair<const qcc::String, uint32_t>(tag, level));
+void DebugControl::Shutdown()
+{
+    if (initialized) {
+        delete dbgControl;
+        delete stdoutLock;
+        initialized = false;
     }
+}
 
-    void SetAllLevel(uint32_t level)
-    {
-        allLevel = level;
-    }
+DebugControl::DebugControl(void) : cb(Output), context(stderr), allLevel(0), printThread(true)
+{
+    Environ* env = Environ::GetAppEnviron();
+    Environ::const_iterator iter;
+    static const char varPrefix[] = "ER_DEBUG_";
+    static const size_t varPrefixLen = sizeof(varPrefix) - 1;
+    env->Preload(varPrefix);
 
-    void WriteDebugMessage(DbgMsgType type, const char* module, const qcc::String msg)
-    {
-        mutex.Lock();
-        cb(type, module, msg.c_str(), context);
-        mutex.Unlock();
-    }
-
-    void Register(QCC_DbgMsgCallback cb, void* context)
-    {
-        assert(cb != NULL);
-        this->context = context;
-        this->cb = cb;
-    }
-
-    bool Check(DbgMsgType type, const char* module);
-
-    bool PrintThread() const { return printThread; }
-
-  private:
-    void Init(void)
-    {
-        Environ* env = Environ::GetAppEnviron();
-        Environ::const_iterator iter;
-        static const char varPrefix[] = "ER_DEBUG_";
-        static const size_t varPrefixLen = sizeof(varPrefix) - 1;
-        env->Preload(varPrefix);
-
-        for (iter = env->Begin(); iter != env->End(); ++iter) {
-            qcc::String var(iter->first);
-            if (var.compare("ER_DEBUG_EPOCH") == 0) {
-                dbgUseEpoch = true;
-            }
-            if (var.compare("ER_DEBUG_THREADNAME") == 0) {
-                printThread = ((iter->second.compare("0") != 0) &&
-                               (iter->second.compare("off") != 0) &&
-                               (iter->second.compare("OFF") != 0));
-            } else if (var.compare(0, varPrefixLen, varPrefix) == 0) {
-                uint32_t level = StringToU32(iter->second, 0, 0);
-                if (var.compare("ER_DEBUG_ALL") == 0) {
-                    allLevel = level;
-                } else {
-                    modLevels.insert(pair<const qcc::String, int>(var.substr(varPrefixLen), level));
-                }
+    for (iter = env->Begin(); iter != env->End(); ++iter) {
+        qcc::String var(iter->first);
+        if (var.compare("ER_DEBUG_EPOCH") == 0) {
+            dbgUseEpoch = true;
+        }
+        if (var.compare("ER_DEBUG_THREADNAME") == 0) {
+            printThread = ((iter->second.compare("0") != 0) &&
+                           (iter->second.compare("off") != 0) &&
+                           (iter->second.compare("OFF") != 0));
+        } else if (var.compare(0, varPrefixLen, varPrefix) == 0) {
+            uint32_t level = StringToU32(iter->second, 0, 0);
+            if (var.compare("ER_DEBUG_ALL") == 0) {
+                allLevel = level;
+            } else {
+                modLevels.insert(pair<const qcc::String, int>(var.substr(varPrefixLen), level));
             }
         }
     }
+}
 
-    Mutex mutex;
-    QCC_DbgMsgCallback cb;
-    void* context;
-    uint32_t allLevel;
-    map<const qcc::String, uint32_t> modLevels;
-    bool printThread;
-};
+void DebugControl::AddTagLevelPair(const char* tag, uint32_t level)
+{
+    modLevels.insert(pair<const qcc::String, uint32_t>(tag, level));
+}
 
+void DebugControl::SetAllLevel(uint32_t level)
+{
+    allLevel = level;
+}
+
+void DebugControl::WriteDebugMessage(DbgMsgType type, const char* module, const qcc::String msg)
+{
+    mutex.Lock();
+    cb(type, module, msg.c_str(), context);
+    mutex.Unlock();
+}
+
+void DebugControl::Register(QCC_DbgMsgCallback cb, void* context)
+{
+    assert(cb != NULL);
+    this->context = context;
+    this->cb = cb;
+}
+
+bool DebugControl::PrintThread() const
+{
+    return printThread;
+}
 
 bool DebugControl::Check(DbgMsgType type, const char* module)
 {
@@ -202,23 +201,6 @@ bool DebugControl::Check(DbgMsgType type, const char* module)
     }
 
     return false;  // Should never get here.
-}
-
-
-DebugInit::DebugInit()
-{
-    if (0 == dbgControlCounter++) {
-        stdoutLock = new qcc::Mutex();
-        dbgControl = new DebugControl();
-    }
-}
-
-DebugInit::~DebugInit()
-{
-    if (0 == --dbgControlCounter) {
-        delete dbgControl;
-        delete stdoutLock;
-    }
 }
 
 

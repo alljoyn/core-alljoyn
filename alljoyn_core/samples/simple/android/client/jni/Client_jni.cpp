@@ -15,6 +15,7 @@
  */
 
 #include "org_alljoyn_bus_samples_simpleclient_Client.h"
+#include <alljoyn/Init.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/ProxyBusObject.h>
 #include <alljoyn/AllJoynStd.h>
@@ -339,8 +340,26 @@ JNIEXPORT jstring JNICALL Java_org_alljoyn_bus_samples_simpleclient_Client_simpl
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm,
                                   void* reserved)
 {
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+#endif
     QCC_UseOSLogging(true);
     return JNI_VERSION_1_2;
+}
+
+JNIEXPORT void JNI_OnUnload(JavaVM* vm,
+                            void* reserved)
+{
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
 }
 
 #ifdef __cplusplus

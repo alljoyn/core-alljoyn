@@ -100,7 +100,7 @@ else:
 
     if unittest_env['BR'] == 'on':
         # Build apps with bundled daemon support
-        unittest_env.Prepend(LIBS = [unittest_env['brobj'], unittest_env['ajrlib']])
+        unittest_env.Prepend(LIBS = [unittest_env['ajrlib']])
     # Add private header include path to test bundled router code
     unittest_env.Append(CPPPATH = [ unittest_env.Dir('../router').srcnode() ])
 
@@ -140,13 +140,13 @@ else:
     # 'Pure' unit tests that don't have external dependencies.  These
     # are intended to be run frequently during development; individual
     # tests should complete in under 10 msecs.
+    #
+    # The Replace/Prepend lines below are to remove ajrlib if it is being linked
+    # in since we don't want to startup a bundled router for these tests and
+    # instead want to link explicitly with the router objects.
     check_env = unittest_env.Clone()
-    if unittest_env['BR'] == 'on':
-        # need to remove BundledRouter.o from LIBS
-        check_env.Replace(LIBS = [l for l in check_env['LIBS'] if l != check_env['brobj']])
-    else:
-        check_env.Prepend(LIBS = [unittest_env['ajrlib']])
-
+    check_env.Replace(LIBS = [l for l in check_env['LIBS'] if l != check_env['ajrlib']])
+    check_env.Prepend(LIBS = [check_env['srobj'], check_env['router_objs']])
 
     ajcheck_src = check_env.Glob('check/*.cc')
     vars = Variables()
@@ -157,7 +157,7 @@ else:
         check_env.Append(CPPDEFINES = ['ENABLE_POLICYDB'])
         check_env.Append(CPPPATH = [ check_env.Dir('../router/policydb').srcnode() ])
 
-    ajcheck_objs = [ obj for obj in ajtest_obj if str(obj).startswith('ajTest') ] + check_env.Object(ajcheck_src);
+    ajcheck_objs = [ obj for obj in ajtest_obj if str(obj).startswith('ajTestCommon') ] + check_env.Object(ajcheck_src)
     ajcheck_prog = check_env.Program('ajcheck', ajcheck_objs)
     check_env.Install('$TESTDIR/cpp/bin', ajcheck_prog)
     if check_env['OS_GROUP'] == 'posix':

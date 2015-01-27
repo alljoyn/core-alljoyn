@@ -51,7 +51,6 @@ cpp/    core AllJoyn functionality, implemented in C++
         liballjoyn.so                   requires LD_LIBRARY_PATH=/path/to/lib/folder
 
         libajrouter.a                   implements bundled-router
-        BundledRouter.o
 
     samples/                    C++ sample programs (see README)
 

@@ -17,8 +17,7 @@ Import('about_env')
 if not about_env.has_key('_ALLJOYNCORE_'):
     about_env.Append(LIBS = ['alljoyn'])
     if about_env['BR'] == 'on' :
-        bdFile = about_env.subst('$DISTDIR') + '/cpp/lib/BundledRouter.o'
-        about_env.Prepend(LIBS = [File(bdFile), 'ajrouter'])
+        about_env.Prepend(LIBS = ['ajrouter'])
     if about_env['OS'] == 'openwrt':
         about_env.AppendUnique(LIBS = [ 'stdc++', 'pthread' ])
 

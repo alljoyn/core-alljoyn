@@ -23,7 +23,6 @@
 #define _QCC_LOG_H
 
 #include <qcc/platform.h>
-#include <qcc/StaticGlobalsInit.h>
 
 /**
  * Set AllJoyn debug levels.
