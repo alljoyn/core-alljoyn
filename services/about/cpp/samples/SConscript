@@ -19,9 +19,9 @@ if about_env['OS_CONF'] in ['linux', 'openwrt', 'windows']:
 
     local_env.Prepend(LIBS = ['alljoyn_about'])
 
-    if local_env['BR'] == 'on' and local_env.has_key('brobj') and local_env.has_key('ajrlib'):
+    if local_env['BR'] == 'on' and local_env.has_key('ajrlib'):
         # Build apps with bundled daemon support
-        local_env.Prepend(LIBS = [local_env['brobj'], local_env['ajrlib']])
+        local_env.Prepend(LIBS = [local_env['ajrlib']])
 
     # Sample programs
     sample_dirs = [

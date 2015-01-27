@@ -48,13 +48,16 @@ router_objs = router_env.Object(srcs)
 
 router_objs.extend(router_env.SConscript('ns/SConscript', exports = ['router_env']))
 
+# Standalone daemon object file
+srobj = router_env.SConscript('standalone/SConscript', exports = ['router_env'])
+
 # Bundled daemon object file
 brobj = router_env.SConscript('bundled/SConscript', exports = ['router_env'])
 
-progs = router_env.SConscript('${OS_GROUP}/SConscript', exports=['router_env', 'router_objs'])
+progs = router_env.SConscript('${OS_GROUP}/SConscript', exports=['router_env', 'router_objs', 'srobj'])
 
-# Daemon library
-lib = router_env.StaticLibrary('ajrouter', router_objs);
+# Bundled daemon library
+lib = router_env.StaticLibrary('ajrouter', brobj + router_objs);
 
 # AllJoyn Daemon test programs
 if router_env['OS'] == 'darwin':
@@ -63,10 +66,10 @@ if router_env['OS'] == 'darwin':
         tests = []
     else:
         print 'Building unit tests for darwin...'
-        tests = router_env.SConscript('test/SConscript', exports = ['router_env', 'router_objs'])
+        tests = router_env.SConscript('test/SConscript', exports = ['router_env', 'router_objs', 'srobj'])
 else:
-    tests = router_env.SConscript('test/SConscript', exports = ['router_env', 'router_objs'])
+    tests = router_env.SConscript('test/SConscript', exports = ['router_env', 'router_objs', 'srobj'])
     
 # Return daemon and related tests
-ret = progs + tests, lib, brobj
+ret = progs + tests, lib, srobj
 Return('ret')

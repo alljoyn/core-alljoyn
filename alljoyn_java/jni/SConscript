@@ -18,8 +18,6 @@ Import('env')
 # JNI library sources
 srcs = ['alljoyn_java.cc']
 
-objs = env.SharedObject(srcs)
-
 # JNI library
 bdenv = env.Clone()
 
@@ -31,7 +29,9 @@ if bdenv['LIBTYPE'] == 'both':
 
 # The JNI code must link in the bundled daemon even if BR is set to 'off'
 if bdenv['BR'] == 'on':
-    bdenv.Prepend(LIBS = [env['brobj'], env['ajrlib']])
+    bdenv.Prepend(LIBS = [env['ajrlib']])
+
+objs = bdenv.SharedObject(srcs)
 
 liballjoyn_java = bdenv.SharedLibrary('alljoyn_java', objs)
 

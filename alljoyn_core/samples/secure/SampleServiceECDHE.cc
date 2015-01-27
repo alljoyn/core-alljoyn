@@ -28,10 +28,11 @@
 #include <qcc/String.h>
 #include <qcc/Log.h>
 
-#include <alljoyn/BusAttachment.h>
-#include <alljoyn/DBusStd.h>
 #include <alljoyn/AllJoynStd.h>
+#include <alljoyn/BusAttachment.h>
 #include <alljoyn/BusObject.h>
+#include <alljoyn/DBusStd.h>
+#include <alljoyn/Init.h>
 #include <alljoyn/MsgArg.h>
 #include <alljoyn/version.h>
 
@@ -394,6 +395,15 @@ void WaitForSigInt(void)
 /** Main entry point */
 int main(int argc, char** argv, char** envArg)
 {
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        return 1;
+    }
+#endif
+
     printf("AllJoyn Library version: %s.\n", ajn::GetVersion());
     printf("AllJoyn Library build info: %s.\n", ajn::GetBuildInfo());
 
@@ -470,5 +480,9 @@ int main(int argc, char** argv, char** envArg)
 
     printf("Basic service exiting with status 0x%04x (%s).\n", status, QCC_StatusText(status));
 
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return (int) status;
 }

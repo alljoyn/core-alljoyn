@@ -30,10 +30,11 @@
 #include <qcc/time.h>
 #include <qcc/Util.h>
 
+#include <alljoyn/AllJoynStd.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/BusObject.h>
 #include <alljoyn/DBusStd.h>
-#include <alljoyn/AllJoynStd.h>
+#include <alljoyn/Init.h>
 #include <alljoyn/MsgArg.h>
 #include <alljoyn/version.h>
 
@@ -68,7 +69,6 @@ static const char ifcXML[] =
 
 /** Static top level message bus object */
 static BusAttachment* g_msgBus = NULL;
-static Event g_discoverEvent;
 static String g_wellKnownName;
 static String g_findPrefix("org.alljoyn.jitter");
 SessionPort SESSION_PORT_MESSAGES_MP1 = 26;
@@ -323,6 +323,15 @@ static void usage(void)
 /** Main entry point */
 int main(int argc, char** argv)
 {
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        return 1;
+    }
+#endif
+
     QStatus status = ER_OK;
     uint32_t transportOpts = 0;
     uint32_t iterations = 500;
@@ -478,5 +487,9 @@ int main(int argc, char** argv)
 
     printf("\n %s exiting with status %d (%s)\n", argv[0], status, QCC_StatusText(status));
 
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return (int) status;
 }

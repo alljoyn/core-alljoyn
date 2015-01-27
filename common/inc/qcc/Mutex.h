@@ -23,7 +23,6 @@
 #define _QCC_MUTEX_H
 
 #include <qcc/platform.h>
-#include <qcc/StaticGlobalsInit.h>
 
 #if defined(QCC_OS_GROUP_POSIX)
 #include <qcc/posix/Mutex.h>

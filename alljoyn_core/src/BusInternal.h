@@ -393,6 +393,10 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
 
   private:
 
+    static void Init();
+    static void Shutdown();
+    friend class StaticGlobals;
+
     /**
      * Copy constructor.
      * Internal may not be copy constructed.
@@ -485,6 +489,7 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
     std::set<SessionId> hostedSessions;    /* session IDs for all sessions hosted by this bus attachment */
     qcc::Mutex hostedSessionsLock;         /* Mutex that protects hostedSessions */
 };
+
 }
 
 #endif

@@ -43,6 +43,7 @@
 #include <ns/IpNameServiceImpl.h>
 #include <Transport.h>
 
+#include <alljoyn/Init.h>
 #include <alljoyn/Status.h>
 
 #define QCC_MODULE "ALLJOYN"
@@ -410,6 +411,13 @@ static void usage(void)
 
 int main(int argc, char** argv)
 {
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+    if (AllJoynRouterInit() != ER_OK) {
+        return 1;
+    }
+
     QStatus status;
     IpNameServiceImpl ns;
     AdvTunnel tunnel;
@@ -515,5 +523,7 @@ int main(int argc, char** argv)
     }
     ns.Join();
 
+    AllJoynRouterShutdown();
+    AllJoynShutdown();
     return 0;
 }

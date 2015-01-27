@@ -24,41 +24,25 @@
 #include <qcc/String.h>
 #include "PasswordManager.h"
 
-namespace ajn {
 using namespace qcc;
+
+namespace ajn {
+
 String* PasswordManager::authMechanism = NULL;
 String* PasswordManager::password = NULL;
 
-static int passwordManagerCounter = 0;
-bool PasswordManagerInit::cleanedup = false;
-PasswordManagerInit::PasswordManagerInit()
+void PasswordManager::Init()
 {
-    if (0 == passwordManagerCounter++) {
-        PasswordManager::authMechanism = new String("ANONYMOUS");
-        PasswordManager::password = new String();
-    }
+    authMechanism = new String("ANONYMOUS");
+    password = new String();
 }
 
-PasswordManagerInit::~PasswordManagerInit()
+void PasswordManager::Shutdown()
 {
-    if (0 == --passwordManagerCounter && !cleanedup) {
-        delete PasswordManager::authMechanism;
-        PasswordManager::authMechanism = NULL;
-        delete PasswordManager::password;
-        PasswordManager::password = NULL;
-        cleanedup = true;
-    }
-}
-
-void PasswordManagerInit::Cleanup()
-{
-    if (!cleanedup) {
-        delete PasswordManager::authMechanism;
-        PasswordManager::authMechanism = NULL;
-        delete PasswordManager::password;
-        PasswordManager::password = NULL;
-        cleanedup = true;
-    }
+    delete authMechanism;
+    authMechanism = NULL;
+    delete password;
+    password = NULL;
 }
 
 }

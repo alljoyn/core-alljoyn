@@ -31,8 +31,11 @@
 #include <qcc/time.h>
 
 #include <alljoyn/AboutObj.h>
+#include <alljoyn/AllJoynStd.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/BusObject.h>
+#include <alljoyn/DBusStd.h>
+#include <alljoyn/Init.h>
 #include <alljoyn/MsgArg.h>
 #include <alljoyn/version.h>
 #include <alljoyn/Status.h>
@@ -617,6 +620,14 @@ static void usage(void)
 /** Main entry point */
 int main(int argc, char**argv)
 {
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        return 1;
+    }
+#endif
     QStatus status = ER_OK;
     uint32_t sleepTime = 600000;
     uint32_t threads = 5;
@@ -734,5 +745,10 @@ int main(int argc, char**argv)
             cout << "FAILED" << endl;
         }
     }
+
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return (int) status;
 }

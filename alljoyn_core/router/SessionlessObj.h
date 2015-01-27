@@ -296,7 +296,7 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
     /* The version implemented. */
     static const uint32_t version;
 
-    static const Rule legacyRule;
+    const Rule legacyRule;
 
     const InterfaceDescription* sessionlessIface;  /**< org.alljoyn.sl interface */
 

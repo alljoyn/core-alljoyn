@@ -33,6 +33,7 @@
 #include <qcc/ManagedObj.h>
 
 #include <alljoyn/BusAttachment.h>
+#include <alljoyn/Init.h>
 #include <alljoyn/Message.h>
 #include <alljoyn/version.h>
 
@@ -1068,6 +1069,14 @@ static void usage(void)
 
 int main(int argc, char** argv)
 {
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        return 1;
+    }
+#endif
     bool fuzz = false;
     QStatus status = ER_OK;
 
@@ -1325,5 +1334,9 @@ int main(int argc, char** argv)
         }
     }
 
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return 0;
 }

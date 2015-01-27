@@ -87,8 +87,6 @@ static const char* WildcardInterfaceName = "org.alljoyn";
  */
 const uint32_t SessionlessObj::version = 1;
 
-const Rule SessionlessObj::legacyRule = Rule("type='error',sessionless='t'");
-
 /*
  * The context for the implements query response.  It must be delivered on
  * a separate thread than the Query callback to avoid deadlock.
@@ -134,6 +132,7 @@ SessionlessObj::SessionlessObj(Bus& bus, BusController* busController, DaemonRou
     bus(bus),
     busController(busController),
     router(router),
+    legacyRule("type='error',sessionless='t'"),
     sessionlessIface(NULL),
     requestSignalsSignal(NULL),
     requestRangeSignal(NULL),

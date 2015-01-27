@@ -18,10 +18,22 @@
 
 #include <gtest/gtest.h>
 
+#include <alljoyn_c/Init.h>
+
 /** Main entry point */
 int main(int argc, char**argv, char**envArg)
 {
     int status = 0;
+
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        return 1;
+    }
+#endif
+
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stderr, NULL, _IONBF, 0);
 
@@ -31,5 +43,9 @@ int main(int argc, char**argv, char**envArg)
 
     printf("%s exiting with status %d \n", argv[0], status);
 
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return (int) status;
 }

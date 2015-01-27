@@ -1,5 +1,7 @@
 EXPORTS
 
+AllJoynInit
+AllJoynShutdown
 QCC_StatusText
 alljoyn_aboutdata_create
 alljoyn_aboutdata_create_empty

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		7D6808131A9806480000F28D /* AJNInit.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7D6808121A9806480000F28D /* AJNInit.mm */; };
 		7DCBEDD01A254CDA00A53A83 /* AJNAboutObjectDescription.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCBEDBC1A254CDA00A53A83 /* AJNAboutObjectDescription.mm */; };
 		7DCBEDD11A254CDA00A53A83 /* AJNAboutObject.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCBEDBE1A254CDA00A53A83 /* AJNAboutObject.mm */; };
 		7DCBEDD21A254CDA00A53A83 /* AJNAboutDataListenerImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCBEDC11A254CDA00A53A83 /* AJNAboutDataListenerImpl.mm */; };
@@ -63,6 +64,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		7D6808111A9806480000F28D /* AJNInit.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNInit.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNInit.h; sourceTree = "<group>"; };
+		7D6808121A9806480000F28D /* AJNInit.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNInit.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNInit.mm; sourceTree = "<group>"; };
 		7DCBEDBC1A254CDA00A53A83 /* AJNAboutObjectDescription.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNAboutObjectDescription.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNAboutObjectDescription.mm; sourceTree = "<group>"; };
 		7DCBEDBD1A254CDA00A53A83 /* AJNAboutObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNAboutObject.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNAboutObject.h; sourceTree = "<group>"; };
 		7DCBEDBE1A254CDA00A53A83 /* AJNAboutObject.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNAboutObject.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNAboutObject.mm; sourceTree = "<group>"; };
@@ -262,6 +265,8 @@
 		ACB05E2A16408DBD0024AC85 /* AllJoynFramework */ = {
 			isa = PBXGroup;
 			children = (
+				7D6808111A9806480000F28D /* AJNInit.h */,
+				7D6808121A9806480000F28D /* AJNInit.mm */,
 				7DCBEDBC1A254CDA00A53A83 /* AJNAboutObjectDescription.mm */,
 				7DCBEDBD1A254CDA00A53A83 /* AJNAboutObject.h */,
 				7DCBEDBE1A254CDA00A53A83 /* AJNAboutObject.mm */,
@@ -474,6 +479,7 @@
 				7DCBEDD51A254CDA00A53A83 /* AJNAboutIconProxy.mm in Sources */,
 				ACB05E7716408E330024AC85 /* AJNTransportMask.m in Sources */,
 				ACB05E7816408E330024AC85 /* AJNVersion.mm in Sources */,
+				7D6808131A9806480000F28D /* AJNInit.mm in Sources */,
 				ACB05E8816418E0B0024AC85 /* AJNServiceController.m in Sources */,
 				AC939FD516555BAE00C91CF0 /* AJNClientController.m in Sources */,
 			);

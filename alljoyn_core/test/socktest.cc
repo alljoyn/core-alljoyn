@@ -36,9 +36,10 @@
 #include <qcc/Util.h>
 #include <qcc/time.h>
 
+#include <alljoyn/AllJoynStd.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/DBusStd.h>
-#include <alljoyn/AllJoynStd.h>
+#include <alljoyn/Init.h>
 #include <alljoyn/version.h>
 
 #include <alljoyn/Status.h>
@@ -247,6 +248,15 @@ Exit:
 
 int main(int argc, char** argv)
 {
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        return 1;
+    }
+#endif
+
     qcc::SocketFd handles[2] = { 0, 0 };
     QStatus status = ER_OK;
     BusAttachment bus("sock_test");
@@ -414,5 +424,9 @@ Exit:
         qcc::Close(handles[1]);
     }
     printf("sock_test exiting with status %d (%s)\n", status, QCC_StatusText(status));
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return (int) status;
 }

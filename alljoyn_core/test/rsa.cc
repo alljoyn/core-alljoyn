@@ -31,8 +31,9 @@
 #include <qcc/Debug.h>
 
 #include <alljoyn/version.h>
-#include <alljoyn/BusAttachment.h>
 #include <alljoyn/AuthListener.h>
+#include <alljoyn/BusAttachment.h>
+#include <alljoyn/Init.h>
 
 #include <alljoyn/Status.h>
 
@@ -166,6 +167,15 @@ class MyAuthListener : public AuthListener {
 
 int main(int argc, char** argv)
 {
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        return 1;
+    }
+#endif
+
     QStatus status;
     qcc::KeyBlob privKey;
     qcc::String pubStr;
@@ -432,11 +442,19 @@ int main(int argc, char** argv)
     }
 
     printf("!!!PASSED\n");
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return 0;
 
 FailExit:
 
     printf("!!!FAILED\n");
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return -1;
 
 }

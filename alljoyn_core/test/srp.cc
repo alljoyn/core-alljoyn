@@ -32,8 +32,9 @@
 #include <qcc/BigNum.h>
 
 #include <alljoyn/version.h>
-#include <alljoyn/BusAttachment.h>
 #include <alljoyn/AuthListener.h>
+#include <alljoyn/BusAttachment.h>
+#include <alljoyn/Init.h>
 
 #include <alljoyn/Status.h>
 
@@ -58,6 +59,15 @@ class MyAuthListener : public AuthListener {
 
 int main(int argc, char** argv)
 {
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        return 1;
+    }
+#endif
+
     String toClient;
     String toServer;
     String verifier;
@@ -227,10 +237,18 @@ int main(int argc, char** argv)
     }
 
     printf("Passed\n");
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return 0;
 
 TestFail:
 
     printf("Failed\n");
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return -1;
 }

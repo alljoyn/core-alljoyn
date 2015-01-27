@@ -54,39 +54,22 @@ namespace qcc {
 
 /* Global Data */
 
-uint64_t emptyStringDummy[RequiredArrayLength(sizeof(String), uint64_t)];
+static uint64_t _emptyString[RequiredArrayLength(sizeof(String), uint64_t)];
 
-String& emptyString = (String &)emptyStringDummy;
+String& emptyString = (String &)_emptyString;
 
 const String& String::Empty = (String &)emptyString;
 
 String::ManagedCtx String::nullContext = { 0 };
 
-int stringInitCounter = 0;
-bool StringInit::cleanedup = false;
-StringInit::StringInit()
+void String::Init()
 {
-    if (stringInitCounter++ == 0) {
-        //placement new
-        new (&emptyString)String();
-    }
+    new (&emptyString)String();
 }
 
-StringInit::~StringInit()
+void String::Shutdown()
 {
-    if (--stringInitCounter == 0 && !cleanedup) {
-        //placement delete
-        emptyString.~String();
-        cleanedup = true;
-    }
-}
-void StringInit::Cleanup()
-{
-    if (!cleanedup) {
-        //placement delete
-        emptyString.~String();
-        cleanedup = true;
-    }
+    emptyString.~String();
 }
 
 String::String()
