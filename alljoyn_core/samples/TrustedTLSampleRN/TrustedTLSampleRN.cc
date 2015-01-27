@@ -21,6 +21,7 @@
  ******************************************************************************/
 
 #include <alljoyn/BusAttachment.h>
+#include <alljoyn/Init.h>
 #include <alljoyn/PasswordManager.h>
 #include <alljoyn/Status.h>
 #include <alljoyn/version.h>
@@ -70,6 +71,11 @@ static void usage(void)
 
 int main(int argc, char** argv)
 {
+    AllJoynInit();
+#ifdef ROUTER
+    AllJoynRouterInit();
+#endif
+
     printf("AllJoyn Library version: %s\n", ajn::GetVersion());
     printf("AllJoyn Library build info: %s\n", ajn::GetBuildInfo());
 
@@ -98,10 +104,10 @@ int main(int argc, char** argv)
         }
     }
 
-    BusAttachment msgBus("TrustedTLSampleRN", true);
+    BusAttachment* msgBus = new BusAttachment("TrustedTLSampleRN", true);
 
     QStatus status = ER_FAIL;
-    status = msgBus.Start();
+    status = msgBus->Start();
 
     if (ER_OK == status) {
         // Set the credential that thin clients have to offer to connect
@@ -116,14 +122,14 @@ int main(int argc, char** argv)
         //
         // NOTE: The above SetCredentials call doesn't take effect
         //       when connecting to a RN.
-        status = msgBus.Connect("null:");
+        status = msgBus->Connect("null:");
 
         if (ER_OK == status) {
             // Quietly advertise the name to be discovered by thin clients only
             // over the TCP Transport since they currently only support that
             // mechanism.
             nameToAdvertise = "quiet@" + nameToAdvertise;
-            status = msgBus.AdvertiseName(nameToAdvertise.c_str(), TRANSPORT_TCP);
+            status = msgBus->AdvertiseName(nameToAdvertise.c_str(), TRANSPORT_TCP);
             if (ER_OK != status) {
                 QCC_LogError(status, ("Unable to quietly advertise the name %s", nameToAdvertise.c_str()));
             }
@@ -135,6 +141,11 @@ int main(int argc, char** argv)
         qcc::Sleep(100);
     }
 
+    delete msgBus;
     printf("%s exiting with status %u (%s)\n", argv[0], status, QCC_StatusText(status));
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return (int) status;
 }

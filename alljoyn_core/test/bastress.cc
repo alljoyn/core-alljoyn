@@ -31,10 +31,11 @@
 #include <qcc/Util.h>
 #include <qcc/Thread.h>
 
+#include <alljoyn/AllJoynStd.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/DBusStd.h>
 #include <alljoyn/BusObject.h>
-#include <alljoyn/AllJoynStd.h>
+#include <alljoyn/Init.h>
 #include <alljoyn/MsgArg.h>
 #include <alljoyn/version.h>
 
@@ -108,6 +109,11 @@ static void usage(void)
 /** Main entry point */
 int main(int argc, char**argv)
 {
+    AllJoynInit();
+#ifdef ROUTER
+    AllJoynRouterInit();
+#endif
+
     QStatus status = ER_OK;
     uint32_t iterations = 1000;
     uint32_t threads = 5;
@@ -178,5 +184,9 @@ int main(int argc, char**argv)
 
     }
 
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return (int) status;
 }

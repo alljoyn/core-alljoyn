@@ -39,6 +39,7 @@
 #include "Bus.h"
 #include "BusController.h"
 #include "ConfigDB.h"
+#include "RouterGlobals.h"
 #include "Transport.h"
 #include "TCPTransport.h"
 #include "UDPTransport.h"
@@ -50,7 +51,8 @@
 
 using namespace qcc;
 using namespace std;
-using namespace ajn;
+
+namespace ajn {
 
 static const char bundledConfig[] =
     "<busconfig>"
@@ -75,8 +77,8 @@ class ClientAuthListener : public AuthListener {
 
   private:
 
-    bool RequestCredentials(const char* authMechanism, const char* authPeer, uint16_t authCount, const char* userId, uint16_t credMask, Credentials& creds) {
-
+    bool RequestCredentials(const char* authMechanism, const char* authPeer, uint16_t authCount, const char* userId, uint16_t credMask, Credentials& creds)
+    {
         if (authCount > maxAuth) {
             return false;
         }
@@ -92,7 +94,8 @@ class ClientAuthListener : public AuthListener {
         return false;
     }
 
-    void AuthenticationComplete(const char* authMechanism, const char* authPeer, bool success) {
+    void AuthenticationComplete(const char* authMechanism, const char* authPeer, bool success)
+    {
         QCC_DbgPrintf(("Authentication %s %s\n", authMechanism, success ? "succesful" : "failed"));
     }
 
@@ -129,7 +132,7 @@ class BundledRouter : public RouterLauncher, public TransportFactoryContainer {
     Bus* ajBus;
     BusController* ajBusController;
     ClientAuthListener authListener;
-    Mutex lock;
+    qcc::Mutex lock;
     std::set<NullTransport*> transports;
     ConfigDB* config;
 #ifndef NDEBUG
@@ -154,18 +157,11 @@ bool ExistFile(const char* fileName) {
  *
  * How this works is via a fairly non-obvious mechanism, so we describe the
  * process here.  If it is desired to use the bundled router, the user (for
- * example bbclient or bbservice) includes this compilation unit.  Since the
- * following defines a C++ static initializer, an instance of the BundledRouter
- * object will be created before any call into a function in this file.  In
- * Linux, for example, this happens as a result of _init() being called before
- * the main() function of the program using the bundled router.  _init() loops
- * through the list of compilation units in link order and will eventually call
- * out to BundledRouter.cc:__static_initialization_and_destruction_0().  This is
- * the initializer function for this file which will then calls the constructor
- * for the BundledRouter object.  The constructor calls into a static method
- * (RegisterRouterLauncher) of the NullTransport to register itself as the
- * router to be launched.  This sets the stage for the use of the bundled
- * router.
+ * example bbclient or bbservice) calls BundledRouterInit().  This will then
+ * call the constructor for the BundledRouter object.  The constructor calls
+ * into a static method (RegisterRouterLauncher) of the NullTransport to
+ * register itself as the router to be launched.  This sets the stage for the
+ * use of the bundled router.
  *
  * When the program using the bundled router tries to connect to a bus
  * attachment it calls BusAttachment::Connect().  This tries to connect to an
@@ -182,22 +178,18 @@ bool ExistFile(const char* fileName) {
  * NullTransport pointer.  The Start() method brings up the bundled router and
  * links the routing node to the bus attachment using the provided null transport.
  *
- * So to summarize, one uses the bundled router simply by linking to the object
- * file corresponding to this source file.  This automagically creates a bundled
- * router static object and registers it with the null transport.  When trying
- * to connect to a router using a bus attachment in the usual way, if there is
- * no currently running native router process, the bus attachment will
- * automagically try to connect to a registered bundled router using the null
- * transport.  This will start the bundled router and then connect to it.
+ * So to summarize, one uses the bundled router simply by calling
+ * BundledRouterInit() This creates a bundled router object and registers it with
+ * the null transport.  When trying to connect to a router using a bus
+ * attachment in the usual way, if there is no currently running native router
+ * process, the bus attachment will automagically try to connect to a registered
+ * bundled router using the null transport.  This will start the bundled router
+ * and then connect to it.
  *
- * The client uses the bundled router transparently -- it only has to link to it.
- *
- * Stopping the bundled router happens in the destructor for the C++ static
- * global object, again transparently to the client.
- *
- * It's pretty magical.
+ * Stopping the bundled router happens in the BundledRouterShutdown().
  */
-static BundledRouter bundledRouter;
+
+static BundledRouter* bundledRouter = NULL;
 
 BundledRouter::BundledRouter() : transportsInitialized(false), stopping(false), ajBus(NULL), ajBusController(NULL)
 {
@@ -373,3 +365,29 @@ QStatus BundledRouter::Stop(NullTransport* nullTransport)
     return status;
 }
 
+} // namespace ajn
+
+extern "C" {
+
+static bool initialized = false;
+
+void AJ_CALL AllJoynRouterInit(void)
+{
+    if (!initialized) {
+        ajn::RouterGlobals::Init();
+        ajn::bundledRouter = new ajn::BundledRouter();
+        initialized = true;
+    }
+}
+
+void AJ_CALL AllJoynRouterShutdown(void)
+{
+    if (initialized) {
+        delete ajn::bundledRouter;
+        ajn::bundledRouter = NULL;
+        ajn::RouterGlobals::Shutdown();
+        initialized = false;
+    }
+}
+
+}

@@ -30,10 +30,11 @@
 
 #include <qcc/String.h>
 
-#include <alljoyn/BusAttachment.h>
-#include <alljoyn/version.h>
 #include <alljoyn/AllJoynStd.h>
+#include <alljoyn/BusAttachment.h>
+#include <alljoyn/Init.h>
 #include <alljoyn/Status.h>
+#include <alljoyn/version.h>
 
 using namespace std;
 using namespace qcc;
@@ -199,6 +200,11 @@ QStatus DoNameChange(char* newName)
 /** Main entry point */
 int main(int argc, char** argv, char** envArg)
 {
+    AllJoynInit();
+#ifdef ROUTER
+    AllJoynRouterInit();
+#endif
+
     printf("AllJoyn Library version: %s.\n", ajn::GetVersion());
     printf("AllJoyn Library build info: %s.\n", ajn::GetBuildInfo());
 
@@ -244,5 +250,9 @@ int main(int argc, char** argv, char** envArg)
 
     printf("Name change client exiting with status 0x%04x (%s).\n", status, QCC_StatusText(status));
 
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return (int) status;
 }

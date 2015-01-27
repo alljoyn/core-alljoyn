@@ -28,8 +28,9 @@
 #include <qcc/StringUtil.h>
 
 #include <alljoyn/MsgArg.h>
-#include <alljoyn/version.h>
+#include <alljoyn/Init.h>
 #include <alljoyn/Status.h>
+#include <alljoyn/version.h>
 
 using namespace qcc;
 using namespace std;
@@ -81,6 +82,11 @@ static const char* ag[] = { "s", "sss", "as", "a(iiiiuu)" };
 
 int main(int argc, char** argv)
 {
+    AllJoynInit();
+#ifdef ROUTER
+    AllJoynRouterInit();
+#endif
+
     QStatus status = ER_OK;
 
     printf("AllJoyn Library version: %s\n", ajn::GetVersion());
@@ -492,5 +498,9 @@ int main(int argc, char** argv)
         QCC_SyncPrintf("\nFAILED %s\n", QCC_StatusText(status));
     }
 
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return 0;
 }

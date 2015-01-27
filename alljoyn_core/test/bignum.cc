@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <qcc/BigNum.h>
+#include <alljoyn/Init.h>
 
 using namespace qcc;
 
@@ -89,6 +90,11 @@ static const uint8_t zeroes[256] = { 0 };
 
 int main()
 {
+    AllJoynInit();
+#ifdef ROUTER
+    AllJoynRouterInit();
+#endif
+
     BigNum M;
     BigNum E;
     BigNum bn1;
@@ -487,6 +493,10 @@ int main()
 
     delete [] buf;
 
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     printf("\nPassed\n");
 
 }

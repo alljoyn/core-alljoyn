@@ -34,7 +34,6 @@ namespace qcc {
  * This struct manages the lifetime of algorithm handles.
  */
 struct CngCache {
-    friend class CngCacheInit;
     CngCache();
     ~CngCache();
 
@@ -55,17 +54,6 @@ struct CngCache {
 };
 
 extern CngCache& cngCache;
-static class CngCacheInit {
-  public:
-    CngCacheInit();
-    ~CngCacheInit();
-
-    static void Cleanup();
-
-  private:
-    static bool cleanedup;
-
-} cngCacheInit;
 
 } // qcc
 

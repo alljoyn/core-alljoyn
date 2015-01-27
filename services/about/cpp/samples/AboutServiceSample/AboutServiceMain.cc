@@ -14,10 +14,11 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#include <alljoyn/BusAttachment.h>
 #include <alljoyn/about/AboutIconService.h>
 #include <alljoyn/about/AboutServiceApi.h>
 #include <alljoyn/about/AboutPropertyStoreImpl.h>
+#include <alljoyn/BusAttachment.h>
+#include <alljoyn/Init.h>
 
 #include <signal.h>
 #include "BusListenerImpl.h"
@@ -262,6 +263,11 @@ static void shutdown(AboutPropertyStoreImpl*& aboutPropertyStore, AboutIconServi
 }
 
 int main(int argc, char**argv, char**envArg) {
+    AllJoynInit();
+#ifdef ROUTER
+    AllJoynRouterInit();
+#endif
+
     QStatus status = ER_OK;
     std::cout << "AllJoyn Library version: " << ajn::GetVersion() << std::endl;
     std::cout << "AllJoyn Library build info: " << ajn::GetBuildInfo() << std::endl;
@@ -383,6 +389,10 @@ int main(int argc, char**argv, char**envArg) {
 
     shutdown(aboutPropertyStore, aboutIconService);
 
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return 0;
 } /* main() */
 

@@ -53,7 +53,6 @@ static uint32_t joined = 0;
 Mutex* Thread::threadListLock = NULL;
 map<ThreadHandle, Thread*>* Thread::threadList = NULL;
 
-static int threadListCounter = 0;
 static pthread_key_t cleanExternalThreadKey;
 
 void Thread::CleanExternalThread(void* t)
@@ -75,33 +74,29 @@ void Thread::CleanExternalThread(void* t)
     threadListLock->Unlock();
 }
 
-ThreadListInit::ThreadListInit()
+void Thread::Init()
 {
-    if (0 == threadListCounter++) {
-        Thread::threadListLock = new Mutex();
-        Thread::threadList = new map<ThreadHandle, Thread*>();
-        int ret = pthread_key_create(&cleanExternalThreadKey, Thread::CleanExternalThread);
-        if (ret != 0) {
-            QCC_LogError(ER_OS_ERROR, ("Creating TLS key: %s", strerror(ret)));
-        }
-        assert(ret == 0);
+    Thread::threadListLock = new Mutex();
+    Thread::threadList = new map<ThreadHandle, Thread*>();
+    int ret = pthread_key_create(&cleanExternalThreadKey, Thread::CleanExternalThread);
+    if (ret != 0) {
+        QCC_LogError(ER_OS_ERROR, ("Creating TLS key: %s", strerror(ret)));
     }
+    assert(ret == 0);
 }
 
-ThreadListInit::~ThreadListInit()
+void Thread::Shutdown()
 {
-    if (0 == --threadListCounter) {
-        void* thread = pthread_getspecific(cleanExternalThreadKey);
-        // pthread_key_delete will not call CleanExternalThread for this thread,
-        // so we manually call it here.
-        Thread::CleanExternalThread(thread);
-        int ret = pthread_key_delete(cleanExternalThreadKey);
-        if (ret != 0) {
-            QCC_LogError(ER_OS_ERROR, ("Deleting TLS key: %s", strerror(ret)));
-        }
-        delete Thread::threadList;
-        delete Thread::threadListLock;
+    void* thread = pthread_getspecific(cleanExternalThreadKey);
+    // pthread_key_delete will not call CleanExternalThread for this thread,
+    // so we manually call it here.
+    Thread::CleanExternalThread(thread);
+    int ret = pthread_key_delete(cleanExternalThreadKey);
+    if (ret != 0) {
+        QCC_LogError(ER_OS_ERROR, ("Deleting TLS key: %s", strerror(ret)));
     }
+    delete Thread::threadList;
+    delete Thread::threadListLock;
 }
 
 QStatus Sleep(uint32_t ms) {

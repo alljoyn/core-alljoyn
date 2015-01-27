@@ -36,6 +36,7 @@
 #include <qcc/time.h>
 
 #include <alljoyn/version.h>
+#include <alljoyn/Init.h>
 #include "KeyStore.h"
 
 #include <alljoyn/Status.h>
@@ -48,6 +49,10 @@ static const char testData[] = "This is the message that we are going to encrypt
 
 int main(int argc, char** argv)
 {
+    AllJoynInit();
+#ifdef ROUTER
+    AllJoynRouterInit();
+#endif
     qcc::GUID128 guid1;
     qcc::GUID128 guid2;
     qcc::GUID128 guid3;
@@ -270,11 +275,18 @@ int main(int argc, char** argv)
     }
 
     printf("keystore unit test PASSED\n");
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return 0;
 
 ErrorExit:
 
     printf("keystore unit test FAILED %s\n", QCC_StatusText(status));
-
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return -1;
 }

@@ -32,6 +32,7 @@
 #include <qcc/Util.h>
 
 #include <alljoyn/DBusStd.h>
+#include <alljoyn/Init.h>
 #include <alljoyn/version.h>
 
 #include <alljoyn/Status.h>
@@ -357,6 +358,9 @@ extern "C" int DaemonMain(int argc, char** argv)
 int main(int argc, char** argv)
 #endif
 {
+    AllJoynInit();
+    AllJoynRouterInit();
+
 #if defined(NDEBUG) && defined(QCC_OS_ANDROID)
     LoggerSetting::GetLoggerSetting("bbdaemon", LOG_ERR, true, NULL);
 #else
@@ -366,12 +370,12 @@ int main(int argc, char** argv)
     QStatus status = ER_OK;
     qcc::GUID128 guid;
     bool mimicBbservice = false;
-    ConfigDB config(daemonConfig);
+    ConfigDB* config = new ConfigDB(daemonConfig);
 
     printf("AllJoyn Library version: %s\n", ajn::GetVersion());
     printf("AllJoyn Library build info: %s\n", ajn::GetBuildInfo());
 
-    if (!config.LoadConfig()) {
+    if (!config->LoadConfig()) {
         printf("Failed to load the internal config.\n");
         exit(1);
     }
@@ -482,13 +486,13 @@ int main(int argc, char** argv)
     cntr.Add(new TransportFactory<UDPTransport>(UDPTransport::TransportName, false));
 
     /* Create message bus with support for alternate transports */
-    Bus bus("bbdaemon", cntr, serverArgs.c_str());
-    BusController controller(bus);
+    Bus* bus = new Bus("bbdaemon", cntr, serverArgs.c_str());
+    BusController* controller = new BusController(*bus);
 
     if (mimicBbservice) {
         /* Add org.alljoyn.alljoyn_test interface */
         InterfaceDescription* testIntf = NULL;
-        status = bus.CreateInterface(::org::alljoyn::alljoyn_test::InterfaceName, testIntf);
+        status = bus->CreateInterface(::org::alljoyn::alljoyn_test::InterfaceName, testIntf);
         if (ER_OK == status) {
             testIntf->AddSignal("my_signal", NULL, NULL, 0);
             testIntf->AddMethod("my_ping", "s", "s", "outStr,inStr", 0);
@@ -500,7 +504,7 @@ int main(int argc, char** argv)
         /* Add org.alljoyn.alljoyn_test.values interface */
         if (ER_OK == status) {
             InterfaceDescription* valuesIntf = NULL;
-            status = bus.CreateInterface(::org::alljoyn::alljoyn_test::values::InterfaceName, valuesIntf);
+            status = bus->CreateInterface(::org::alljoyn::alljoyn_test::values::InterfaceName, valuesIntf);
             if (ER_OK == status) {
                 valuesIntf->AddProperty("int_val", "i", PROP_ACCESS_RW);
                 valuesIntf->AddProperty("str_val", "s", PROP_ACCESS_RW);
@@ -514,14 +518,14 @@ int main(int argc, char** argv)
 
     if (ER_OK == status) {
         /* Start the bus controller */
-        status = controller.Init(serverArgs);
+        status = controller->Init(serverArgs);
         if (ER_OK == status) {
             LocalTestObject* testObj = NULL;
 
             if (mimicBbservice) {
-                bus.EnablePeerSecurity("ALLJOYN_RSA_KEYX ALLJOYN_SRP_KEYX ALLJOYN_SRP_LOGON", new MyAuthListener());
-                testObj = new LocalTestObject(bus, ::org::alljoyn::alljoyn_test::ObjectPath, 10);
-                bus.RegisterBusObject(*testObj);
+                bus->EnablePeerSecurity("ALLJOYN_RSA_KEYX ALLJOYN_SRP_KEYX ALLJOYN_SRP_LOGON", new MyAuthListener());
+                testObj = new LocalTestObject(*bus, ::org::alljoyn::alljoyn_test::ObjectPath, 10);
+                bus->RegisterBusObject(*testObj);
             }
 
             printf("AllJoyn Daemon PID = %d\n", GetPid());
@@ -531,11 +535,11 @@ int main(int argc, char** argv)
                 while (g_interrupt == false) {
                     qcc::Sleep(100);
                 }
-                bus.StopListen(serverArgs.c_str());
+                bus->StopListen(serverArgs.c_str());
             }
 
             if (mimicBbservice) {
-                bus.UnregisterBusObject(*testObj);
+                bus->UnregisterBusObject(*testObj);
                 delete testObj;
             }
         } else {
@@ -545,5 +549,10 @@ int main(int argc, char** argv)
         QCC_LogError(status, ("BusController initialization failed"));
     }
 
+    delete controller;
+    delete bus;
+    delete config;
+    AllJoynRouterShutdown();
+    AllJoynShutdown();
     return (int) status;
 }

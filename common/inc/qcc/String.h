@@ -23,7 +23,6 @@
 #define _QCC_STRING_H
 
 #include <qcc/platform.h>
-#include <qcc/StaticGlobalsInit.h>
 #include <stdlib.h>
 #include <string.h>
 #include <iostream>
@@ -38,8 +37,6 @@ namespace qcc {
  */
 class String {
   public:
-    friend class StringInitializer;
-
     /** String index constant indicating "past the end" */
     static const size_t npos = static_cast<size_t>(-1);
 
@@ -504,6 +501,9 @@ class String {
     static const String& Empty;
 
   private:
+    static void Init();
+    static void Shutdown();
+    friend class StaticGlobals;
 
     static const size_t MinCapacity = 16;
 
@@ -524,16 +524,7 @@ class String {
 
     void NewContext(const char* str, size_t strLen, size_t sizeHint);
 };
-static class StringInit {
-  public:
-    StringInit();
-    ~StringInit();
-    static void Cleanup();
 
-  private:
-    static bool cleanedup;
-
-} stringInitializer;
 }
 
 /**

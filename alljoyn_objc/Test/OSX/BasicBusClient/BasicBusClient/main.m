@@ -15,8 +15,14 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #import <Cocoa/Cocoa.h>
+#import "AJNInit.h"
 
 int main(int argc, char *argv[])
 {
-    return NSApplicationMain(argc, (const char **)argv);
+    [AJNInit alljoynInit];
+    [AJNInit alljoynRouterInit];
+    int ret = NSApplicationMain(argc, (const char **)argv);
+    [AJNInit alljoynRouterShutdown];
+    [AJNInit alljoynShutdown];
+    return ret;
 }

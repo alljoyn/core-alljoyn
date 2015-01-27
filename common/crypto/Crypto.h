@@ -1,8 +1,7 @@
-#ifndef _QCC_STATICGLOBALSINIT_H
-#define _QCC_STATICGLOBALSINIT_H
 /**
  * @file
- * File for initializing global variables.
+ *
+ * Crypto
  */
 
 /******************************************************************************
@@ -20,27 +19,17 @@
  *    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
-
-#ifndef __cplusplus
-#error Only include StaticGlobalsInit.h in C++ code.
-#endif
+#ifndef _QCC_CRYPTO_H
+#define _QCC_CRYPTO_H
 
 namespace qcc {
 
-/**
- * Nifty counter used to ensure that common globals are initialized before any
- * other client code static or global variables.
- */
-static struct StaticGlobalsInit {
-    StaticGlobalsInit();
-    ~StaticGlobalsInit();
-    static void Cleanup();
-
-  private:
-    static bool cleanedup;
-
-} staticGlobalsInit;
+class Crypto {
+  public:
+    static void Init();
+    static void Shutdown();
+};
 
 }
 
-#endif // _QCC_STATICGLOBALSINIT_H
+#endif

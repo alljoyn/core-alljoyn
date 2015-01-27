@@ -24,6 +24,7 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include <alljoyn_c/Init.h>
 #include <alljoyn_c/DBusStdDefines.h>
 #include <alljoyn_c/BusAttachment.h>
 #include <alljoyn_c/version.h>
@@ -711,6 +712,11 @@ int main(int argc, char** argv)
 
     alljoyn_authlistener authListener;
 
+    AllJoynInit();
+#ifdef ROUTER
+    AllJoynRouterInit();
+#endif
+
     printf("AllJoyn Library version: %s\n", alljoyn_getversion());
     printf("AllJoyn Library build info: %s\n", alljoyn_getbuildinfo());
 
@@ -928,6 +934,10 @@ int main(int argc, char** argv)
     alljoyn_sessionlistener_destroy(g_sessionListener);
     alljoyn_busattachment_destroy(g_msgBus);
 
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return 0;
 }
 

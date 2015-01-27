@@ -32,6 +32,7 @@
 #include <qcc/Util.h>
 
 #include <alljoyn/Message.h>
+#include <alljoyn/Init.h>
 #include <alljoyn/version.h>
 #include "../src/BusUtil.h"
 
@@ -114,6 +115,10 @@ void PadTo(char* buf, const char* str, size_t len, char pad)
 
 int main(int argc, char** argv)
 {
+    AllJoynInit();
+#ifdef ROUTER
+    AllJoynRouterInit();
+#endif
     char buf[512];
 
     printf("AllJoyn Library version: %s\n", ajn::GetVersion());
@@ -203,5 +208,9 @@ int main(int argc, char** argv)
     for (size_t i = 0; i < ArraySize(strings); i++) {
         check(strings[i]);
     }
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return 0;
 }

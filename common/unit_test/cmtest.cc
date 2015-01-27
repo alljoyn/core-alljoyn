@@ -16,9 +16,13 @@
 
 #include <gtest/gtest.h>
 
+#include <qcc/StaticGlobals.h>
+
 /** Main entry point */
 int main(int argc, char**argv, char**envArg)
 {
+    qcc::Init();
+
     int status = 0;
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stderr, NULL, _IONBF, 0);
@@ -29,5 +33,6 @@ int main(int argc, char**argv, char**envArg)
 
     printf("%s exiting with status %d \n", argv[0], status);
 
+    qcc::Shutdown();
     return (int) status;
 }

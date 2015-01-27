@@ -34,7 +34,6 @@ LOCAL_LDLIBS := \
 	-L$(ALLJOYN_DIST)/about/lib \
     -L$(NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/libs/armeabi \
     -L$(NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/4.6/libs/armeabi \
-    $(ALLJOYN_DIST)/cpp/lib/BundledRouter.o \
 	-lajrouter -lalljoyn -llog -ldl -lssl -lcrypto -lm -lc -lstdc++ -lgcc -lgnustl_shared -lalljoyn_about
 
 LOCAL_ARM_MODE := arm

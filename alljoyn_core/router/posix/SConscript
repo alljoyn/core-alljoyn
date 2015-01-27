@@ -13,14 +13,14 @@
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # 
 
-Import('router_env', 'router_objs')
+Import('router_env', 'router_objs', 'srobj')
 
 # Build the posix daemon and service launcher helper.
 if router_env['OS'] != 'darwin':
     daemon_env = router_env.Clone()
     if daemon_env['OS'] != 'android':
         daemon_env.Append(LIBS = 'cap')
-    daemon = daemon_env.Program('alljoyn-daemon', ['daemon-main.cc'] + router_objs)
+    daemon = daemon_env.Program('alljoyn-daemon', ['daemon-main.cc'] + srobj + router_objs)
 else:
     daemon = []
 	
@@ -31,7 +31,7 @@ else:
 if router_env['OS'] == 'android':
    libenv = router_env.Clone(CCFLAGS = '-DROUTER_LIB')
    libenv.Object(target = 'alljoyn-daemon', source = 'daemon-main.cc')
-   libdaemon = libenv.StaticLibrary(['alljoyn-daemon'] + router_objs)
+   libdaemon = libenv.StaticLibrary(['alljoyn-daemon'] + srobj + router_objs)
    dlibs = libenv.Install('$CPP_DISTDIR/lib', libdaemon)
 
 #progs = daemon + servicehelper

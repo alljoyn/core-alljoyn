@@ -29,8 +29,8 @@
 #include <qcc/Debug.h>
 #include <qcc/Util.h>
 #include <qcc/Crypto.h>
-
 #include <qcc/CngCache.h>
+#include "Crypto.h"
 
 #define QCC_MODULE "CRYPTO"
 
@@ -79,37 +79,19 @@ void CngCache::Cleanup()
 /**
  * The one and only CNG cache instance.
  */
-uint64_t cngCacheDummy[RequiredArrayLength(sizeof(CngCache), uint64_t)];
+uint64_t _cngCache[RequiredArrayLength(sizeof(CngCache), uint64_t)];
 
-CngCache& cngCache = (CngCache &)cngCacheDummy;
+CngCache& cngCache = (CngCache &)_cngCache;
 
-static int cngCacheCounter = 0;
-bool CngCacheInit::cleanedup = false;
-CngCacheInit::CngCacheInit()
+void Crypto::Init()
 {
-    if (cngCacheCounter++ == 0) {
-        //placement new
-        new (&cngCache)CngCache();
-    }
+    new (&cngCache)CngCache();
 }
 
-CngCacheInit::~CngCacheInit()
+void Crypto::Shutdown()
 {
-    if (--cngCacheCounter == 0 && !cleanedup) {
-        //placement delete
-        cngCache.~CngCache();
-        cleanedup = true;
-    }
-
+    cngCache.~CngCache();
 }
 
-void CngCacheInit::Cleanup()
-{
-    if (!cleanedup) {
-        //placement delete
-        cngCache.~CngCache();
-        cleanedup = true;
-    }
-}
 }         // qcc
 
