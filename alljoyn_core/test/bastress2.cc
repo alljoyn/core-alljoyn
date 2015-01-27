@@ -1,6 +1,8 @@
 /**
  * @file
  * Bundled daemon bus attachment stress test
+ * TODO: Check for status of every alljoyn public API.
+ * TODO: Add all possible callbacks possiblke, disconnectcb, session -member left, session member joined, session lost, etc
  */
 
 /******************************************************************************
@@ -18,12 +20,7 @@
  *    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
-#include <qcc/platform.h>
-#include <time.h>
 #include <signal.h>
-#include <assert.h>
-#include <stdio.h>
-#include <vector>
 
 #include <qcc/Debug.h>
 #include <qcc/String.h>
@@ -31,28 +28,24 @@
 #include <qcc/Environ.h>
 #include <qcc/Util.h>
 #include <qcc/Thread.h>
+#include <qcc/time.h>
 
 #include <alljoyn/AboutObj.h>
 #include <alljoyn/BusAttachment.h>
-#include <alljoyn/DBusStd.h>
 #include <alljoyn/BusObject.h>
-#include <alljoyn/AllJoynStd.h>
 #include <alljoyn/MsgArg.h>
 #include <alljoyn/version.h>
-
 #include <alljoyn/Status.h>
 
-#define QCC_MODULE "ALLJOYN"
-#define THREAD_COUNT 5
+#define QCC_MODULE "BASTRESS2"
 
 using namespace std;
 using namespace qcc;
 using namespace ajn;
 
 enum OperationMode {
-    Default = 0,
-    Client = 1,
-    Service = 2
+    Client = 0,
+    Service = 1
 };
 
 class ClientBusListener;
@@ -60,7 +53,6 @@ class ClientAboutListener;
 class ServiceBusListener;
 class ThreadClass;
 
-static bool s_noDestruct = false;
 static bool s_useMultipointSessions = true;
 static OperationMode s_operationMode;
 static volatile sig_atomic_t g_interrupt = false;
@@ -76,11 +68,10 @@ static const char* INTERFACE_NAME = "org.alljoyn.Bus.test.bastress";
 static const char* DEFAULT_SERVICE_NAME = "org.alljoyn.Bus.test.bastress";
 static const char* SERVICE_PATH = "/sample";
 static const SessionPort SERVICE_PORT = 25;
-
 static String s_wellKnownName = DEFAULT_SERVICE_NAME;
-
 static String g_testAboutApplicationName = "bastress2";
 static bool g_useAboutFeatureDiscovery = false;
+static uint32_t g_lastIntrospectedTimestamp = 0;
 
 class BasicSampleObject : public BusObject {
   public:
@@ -102,16 +93,9 @@ class BasicSampleObject : public BusObject {
         };
         QStatus status = AddMethodHandlers(methodEntries, sizeof(methodEntries) / sizeof(methodEntries[0]));
         if (ER_OK != status) {
-            QCC_SyncPrintf("Failed to register method handlers for BasicSampleObject");
+            QCC_LogError(status, ("Failed to register method handlers for BasicSampleObject"));
         }
     }
-
-    void ObjectRegistered()
-    {
-        BusObject::ObjectRegistered();
-        QCC_SyncPrintf("ObjectRegistered has been called\n");
-    }
-
 
     void Cat(const InterfaceDescription::Member* member, Message& msg)
     {
@@ -123,7 +107,7 @@ class BasicSampleObject : public BusObject {
         MsgArg outArg("s", outStr.c_str());
         QStatus status = MethodReply(msg, &outArg, 1);
         if (ER_OK != status) {
-            QCC_SyncPrintf("Ping: Error sending reply\n");
+            QCC_LogError(status, ("Ping: Error sending reply\n"));
         }
     }
 };
@@ -147,10 +131,7 @@ class ThreadClass : public Thread {
     SessionId sessionId;
     qcc::String discoveredServiceName;
 
-    void DefaultRun();
-
     void ClientRun();
-
     void ServiceRun();
 
     qcc::ThreadReturn STDCALL Run(void* arg);
@@ -166,9 +147,11 @@ class ClientBusListener : public BusListener, public SessionListener {
 
     void FoundAdvertisedName(const char* name, TransportMask transport, const char* namePrefix)
     {
-        QCC_SyncPrintf("FoundAdvertisedName(name=%s, prefix=%s)\n", name, namePrefix);
 
         if (0 == strcmp(namePrefix, s_wellKnownName.c_str())) {
+
+            // If  a number is odd, then join a session. else dont.
+            if ((qcc::Rand32() % 2) == 0) { return; }
 
             mutex.Lock();
             bool shouldReturn = wasNameFoundAlready;
@@ -176,44 +159,26 @@ class ClientBusListener : public BusListener, public SessionListener {
             mutex.Unlock();
 
             if (shouldReturn) {
-                QCC_SyncPrintf("Will not form a session with(name=%s, prefix=%s) because we already joined a session.\n", name, namePrefix);
-                return;
-            }
-
-            /* Only proceed further if we want to connect over the transport over which the FoundAdvertisedName
-             * was received */
-            if ((s_transports & transport) == 0) {
-                QCC_SyncPrintf("We are not interested in connecting over a transport with mask 0x%x.\n", transport);
                 return;
             }
 
             /* Since we are in a callback we must enable concurrent callbacks before calling a synchronous method. */
             owner->bus->EnableConcurrentCallbacks();
+            cout << "[" << owner->name << "] FoundAdvertisedName(name=" << name << ", transport=" << transport << ")" << endl;
 
             SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, s_useMultipointSessions, SessionOpts::PROXIMITY_ANY, s_transports);
             QStatus status = owner->bus->JoinSession(name, SERVICE_PORT, owner->clientBusListener, owner->sessionId, opts);
             if (ER_OK != status) {
-                QCC_SyncPrintf("JoinSession to %s failed (status=%s)\n", name, QCC_StatusText(status));
+                QCC_LogError(status, ("JoinSession to %s failed.", name));
 
             } else {
-                QCC_SyncPrintf("JoinSession to %s SUCCEEDED (Session id=%d)\n", name, owner->sessionId);
-
+                cout << "JoinSession to " << name << " SUCCEEDED (Session id=" << owner->sessionId << ")" << endl;
                 if (!owner->joinComplete) {
                     owner->joinComplete = true;
                     owner->discoveredServiceName = name;
                 }
 
             }
-        }
-    }
-
-    void NameOwnerChanged(const char* busName, const char* previousOwner, const char* newOwner)
-    {
-        if (newOwner && (0 == strcmp(busName, s_wellKnownName.c_str()))) {
-            QCC_SyncPrintf("NameOwnerChanged: name=%s, oldOwner=%s, newOwner=%s\n",
-                           busName,
-                           previousOwner ? previousOwner : "<none>",
-                           newOwner ? newOwner : "<none>");
         }
     }
 
@@ -271,7 +236,6 @@ class ClientAboutListener : public AboutListener {
 
     void Announced(const char* busName, uint16_t version, SessionPort port,
                    const MsgArg& objectDescriptionArg, const MsgArg& aboutDataArg) {
-        QCC_SyncPrintf("Announce Signal Received busName=%s\n", busName);
 
         MyAboutData ad;
         ad.CreatefromMsgArg(aboutDataArg);
@@ -280,6 +244,10 @@ class ClientAboutListener : public AboutListener {
         ad.GetAppName(&appName);
 
         if (appName != NULL && strcmp(g_testAboutApplicationName.c_str(), appName) == 0) {
+
+            // If  a number is odd, then join a session. else dont.
+            if ((qcc::Rand32() % 2) == 0) { return; }
+
             TransportMask transport;
             ad.GetTransportOpts(&transport);
 
@@ -289,37 +257,28 @@ class ClientAboutListener : public AboutListener {
             mutex.Unlock();
 
             if (shouldReturn) {
-                QCC_SyncPrintf("Will not form a session with(name=%s) because we already joined a session.\n", busName);
-                return;
-            }
-
-            /* Only proceed further if we want to connect over the transport over which the FoundAdvertisedName
-             * was received */
-            if ((s_transports & transport) == 0) {
-                QCC_SyncPrintf("We are not interested in connecting over a transport with mask 0x%x.\n", transport);
                 return;
             }
 
             /* Since we are in a callback we must enable concurrent callbacks before calling a synchronous method. */
             owner->bus->EnableConcurrentCallbacks();
+            cout << "[" << owner->name << "] AnnounceSignal received(name=" << busName << ", transport=" << transport << ")" << endl;
 
             SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, s_useMultipointSessions, SessionOpts::PROXIMITY_ANY, s_transports);
             QStatus status = owner->bus->JoinSession(busName, port, owner->clientBusListener, owner->sessionId, opts);
             if (ER_OK != status) {
-                QCC_SyncPrintf("JoinSession to %s failed (status=%s)\n", busName, QCC_StatusText(status));
-
+                QCC_LogError(status, ("JoinSession to %s failed", busName));
             } else {
-                QCC_SyncPrintf("JoinSession to %s SUCCEEDED (Session id=%d)\n", busName, owner->sessionId);
+                cout << "JoinSession to " << busName << " SUCCEEDED (Session id=" << owner->sessionId << ")" << endl;
 
                 if (!owner->joinComplete) {
                     owner->joinComplete = true;
                     owner->discoveredServiceName = busName;
                 }
-
             }
         }
     }
-  private:
+  protected:
     ThreadClass* owner;
     Mutex mutex;
     bool wasNameFoundAlready;
@@ -327,23 +286,9 @@ class ClientAboutListener : public AboutListener {
 
 class ServiceBusListener : public BusListener, public SessionPortListener {
 
-    void NameOwnerChanged(const char* busName, const char* previousOwner, const char* newOwner)
-    {
-        if (newOwner && (0 == strcmp(busName, s_wellKnownName.c_str()))) {
-            QCC_SyncPrintf("NameOwnerChanged: name=%s, oldOwner=%s, newOwner=%s\n",
-                           busName,
-                           previousOwner ? previousOwner : "<none>",
-                           newOwner ? newOwner : "<none>");
-        }
-    }
     bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts)
     {
-        if (sessionPort != SERVICE_PORT) {
-            QCC_SyncPrintf("Rejecting join attempt on unexpected session port %d\n", sessionPort);
-            return false;
-        }
-        QCC_SyncPrintf("Accepting join session request from %s (opts.proximity=%x, opts.traffic=%x, opts.transports=%x)\n",
-                       joiner, opts.proximity, opts.traffic, opts.transports);
+        cout << "Accepting join session request from " << joiner << " (opts.transports=" << opts.transports << ")" << endl;
         return true;
     }
 };
@@ -360,36 +305,6 @@ inline ThreadClass::ThreadClass(char* name) : Thread(name),
 {
 }
 
-inline void ThreadClass::DefaultRun() {
-    char buf[256];
-    // Don't use qcc::Rand16() because it can result in the same exact sequence
-    // for multiple threads.
-    sprintf(buf, "Thread.i%05d", qcc::Rand32() & 0xffff);
-    QStatus status = bus->RequestName(name.c_str(), DBUS_NAME_FLAG_REPLACE_EXISTING | DBUS_NAME_FLAG_DO_NOT_QUEUE);
-    if (status != ER_OK) {
-        QCC_LogError(status, ("RequestName(%s) failed.", name.c_str()));
-    }
-    /* Begin Advertising the well-known name */
-    status = bus->AdvertiseName(name.c_str(), s_transports);
-    if (ER_OK != status) {
-        QCC_LogError(status, ("Could not advertise (%s)", name.c_str()));
-    }
-
-    BusObject bo("/org/cool");
-    bus->RegisterBusObject(bo);
-    bus->UnregisterBusObject(bo);
-    if (!s_noDestruct) {
-        /* Cancel Advertising the well-known name */
-        status = bus->CancelAdvertiseName(name.c_str(), s_transports);
-        if (ER_OK != status) {
-            QCC_LogError(status, ("Could not cancel advertising (%s)", name.c_str()));
-        }
-
-        delete bus;
-        bus = NULL;
-    }
-}
-
 inline void ThreadClass::ClientRun() {
     QStatus status = ER_OK;
 
@@ -398,51 +313,54 @@ inline void ThreadClass::ClientRun() {
     /* Register a bus listener in order to get discovery indications */
     clientBusListener = new ClientBusListener(this);
     bus->RegisterBusListener(*clientBusListener);
-    QCC_SyncPrintf("ClientBusListener Registered.\n");
 
-
+    clientAboutListener = new ClientAboutListener(this);
+    bus->RegisterAboutListener(*clientAboutListener);
+    const char* interfaces[] = { INTERFACE_NAME };
 
     if (g_useAboutFeatureDiscovery) {
-        clientAboutListener = new ClientAboutListener(this);
-        bus->RegisterAboutListener(*clientAboutListener);
-        QCC_SyncPrintf("ClientAboutListener Registered.\n");
-        const char* interfaces[] = { INTERFACE_NAME };
+        /* Begin discovery using About Who-implements */
         status = bus->WhoImplements(interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
-    } else {
-        /* Begin discovery on the well-known name of the service to be called */
-        status = bus->FindAdvertisedName(s_wellKnownName.c_str());
         if (status != ER_OK) {
-            QCC_SyncPrintf("org.alljoyn.Bus.FindAdvertisedName failed (%s))\n", QCC_StatusText(status));
+            QCC_LogError(status, ("WhoImplements failed"));
+        }
+    } else {
+        /* Begin name service based discovery on the well-known name of the service to be called */
+        status = bus->FindAdvertisedNameByTransport(s_wellKnownName.c_str(), s_transports);
+        if (status != ER_OK) {
+            QCC_LogError(status, ("FindAdvertisedName failed"));
         }
     }
 
-    /* Wait for join session to complete */
-    int count = 0;
-    // Don't use qcc::Rand16() because it can result in the same exact sequence
-    // for multiple threads.
-    int limit = 10 + (qcc::Rand32() % 50);
+    //Sleep for random amount of time, so that you discover some names.
     bool limitReached = false;
-    while (!joinComplete && !limitReached) {
-        qcc::Sleep(100);
-        if (count > limit) {
-            limitReached = true;
-        }
-        count++;
-        if (g_interrupt) {
-            break;
+    if (status == ER_OK) {
+        /* Wait for join session to complete */
+        int count = 0;
+        int limit = 10 + (qcc::Rand32() % 50);
+        while (!joinComplete && !limitReached) {
+            qcc::Sleep(100);
+            if (count > limit) {
+                limitReached = true;
+            }
+            count++;
+            if (g_interrupt) {
+                break;
+            }
         }
     }
 
-    if (joinComplete && limitReached == false) {
-
-        qcc::String serviceName = discoveredServiceName;
+    qcc::String serviceName = discoveredServiceName;
+    //Make the method call.
+    if ((status == ER_OK) && ((joinComplete && limitReached == false))) {
 
         ProxyBusObject remoteObj(*bus, serviceName.c_str(), SERVICE_PATH, sessionId);
         status = remoteObj.IntrospectRemoteObject();
+        g_lastIntrospectedTimestamp = GetTimestamp();
         if (status != ER_OK) {
-            QCC_SyncPrintf("Failed to introspect remote bus object.\n");
+            QCC_LogError(status, ("Failed to introspect remote bus object.\n"));
         } else {
-            QCC_SyncPrintf("Successfully introspected remote bus object.\n");
+            cout << "Successfully introspected remote bus object." << endl;
         }
 
         Message reply(*bus);
@@ -451,27 +369,26 @@ inline void ThreadClass::ClientRun() {
         inputs[1].Set("s", "World!");
         status = remoteObj.MethodCall(INTERFACE_NAME, "cat", inputs, 2, reply, 5000);
         if (ER_OK == status) {
-            QCC_SyncPrintf("%s.%s ( path=%s) returned \"%s\"\n", serviceName.c_str(), "cat",
-                           SERVICE_PATH, reply->GetArg(0)->v_string.str);
+            cout << serviceName.c_str() << ".cat (path=" << SERVICE_PATH << ") returned \"" << reply->GetArg(0)->v_string.str << "\" " << endl;
         } else {
-            QCC_SyncPrintf("MethodCall on %s.%s failed\n", serviceName.c_str(), "cat");
+            QCC_LogError(status, ("MethodCall on %s.%s failed\n", serviceName.c_str(), "cat"));
+        }
+
+        status = bus->LeaveSession(sessionId);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("LeaveSession failed."));
         }
     }
 
-
-    bus->LeaveSession(sessionId);
-
     if (g_useAboutFeatureDiscovery) {
-        clientAboutListener = new ClientAboutListener(this);
-        bus->RegisterAboutListener(*clientAboutListener);
-        QCC_SyncPrintf("ClientAboutListener Registered.\n");
-        const char* interfaces[] = { INTERFACE_NAME };
         status = bus->CancelWhoImplements(interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
+        if (status != ER_OK) {
+            QCC_LogError(status, ("CancelWhoImplements failed "));
+        }
     } else {
-        /* Cancel discovery on the well-known name of the service */
         status = bus->CancelFindAdvertisedName(s_wellKnownName.c_str());
         if (status != ER_OK) {
-            QCC_SyncPrintf("org.alljoyn.Bus.CancelFindAdvertisedName failed (%s))\n", QCC_StatusText(status));
+            QCC_LogError(status, ("CancelFindAdvertisedName failed "));
         }
     }
 
@@ -483,23 +400,23 @@ inline void ThreadClass::ClientRun() {
         bus->UnregisterAboutListener(*clientAboutListener);
     }
 
-    if (!s_noDestruct) {
-        /* Delete BusAttachment before deleting clientBusListener */
-        delete bus;
-        bus = NULL;
+    // If  a number is even,. do an explicit clean up of bus attachment, else just delete the bus attachment at the end.
+    if ((qcc::Rand32() % 2) == 0) {
+        //Stop bus attachment, cleanup and delete bus attachment
+        bus->Disconnect();
+        bus->Stop();
+        bus->Join();
     }
+
+    delete bus;
 
     if (clientBusListener) {
         delete clientBusListener;
-        clientBusListener = NULL;
     }
 
     if (clientAboutListener) {
         delete clientAboutListener;
-        clientAboutListener = NULL;
     }
-
-    QCC_SyncPrintf("client exiting with status %d (%s)\n", status, QCC_StatusText(status));
 
 }
 
@@ -510,11 +427,10 @@ inline void ThreadClass::ServiceRun() {
     InterfaceDescription* testIntf = NULL;
     status = bus->CreateInterface(INTERFACE_NAME, testIntf);
     if (status == ER_OK) {
-        QCC_SyncPrintf("Interface Created.\n");
         testIntf->AddMethod("cat", "ss",  "s", "inStr1,inStr2,outStr", 0);
         testIntf->Activate();
     } else {
-        QCC_SyncPrintf("Failed to create interface '%s'\n", INTERFACE_NAME);
+        QCC_LogError(status, ("Failed to create interface '%s'", INTERFACE_NAME));
     }
 
     /* Register a bus listener */
@@ -525,39 +441,24 @@ inline void ThreadClass::ServiceRun() {
     busObject = new BasicSampleObject(*bus, SERVICE_PATH);
     status = bus->RegisterBusObject(*busObject);
     if (status != ER_OK) {
-        QCC_SyncPrintf("Failed to register the service bus object.");
+        QCC_LogError(status, ("Failed to register the service bus object."));
     }
 
     /* Create session */
     SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, s_useMultipointSessions, SessionOpts::PROXIMITY_ANY, s_transports);
-    if (ER_OK == status) {
-        SessionPort sp = SERVICE_PORT;
-        status = bus->BindSessionPort(sp, opts, *serviceBusListener);
-        if (ER_OK != status) {
-            QCC_SyncPrintf("BindSessionPort failed (%s)\n", QCC_StatusText(status));
-        }
+    SessionPort sp = SERVICE_PORT;
+    status = bus->BindSessionPort(sp, opts, *serviceBusListener);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("BindSessionPort failed"));
     }
 
-    /*
-     * Advertise this service on the bus
-     * There are three steps to advertising this service on the bus
-     * 1) Request a well-known name that will be used by the client to discover
-     *    this service
-     * 2) Create a session
-     * 3) Advertise the well-known name
-     */
     char buf[512];
-    // Don't use qcc::Rand16() because it can result in the same exact sequence
-    // for multiple threads.
     sprintf(buf, "%s.i%05d", s_wellKnownName.c_str(), qcc::Rand32() & 0xffff);
     qcc::String serviceName(buf);
 
     AboutObj* aboutObj = new AboutObj(*bus);
 
     if (g_useAboutFeatureDiscovery) {
-        QCC_SyncPrintf("------------------------------------------------------------\n");
-        QCC_SyncPrintf("Service named %s is starting...\n", bus->GetUniqueName().c_str());
-        QCC_SyncPrintf("------------------------------------------------------------\n");
         //AppId is a 128bit uuid
         uint8_t appId[] = { 0x01, 0xB3, 0xBA, 0x14,
                             0x1E, 0x82, 0x11, 0xE4,
@@ -577,32 +478,23 @@ inline void ThreadClass::ServiceRun() {
 
         aboutObj->Announce(SERVICE_PORT, g_aboutData);
     } else {
-        QCC_SyncPrintf("------------------------------------------------------------\n");
-        QCC_SyncPrintf("Service named %s is starting...\n", buf);
-        QCC_SyncPrintf("------------------------------------------------------------\n");
 
         /* Request name */
-        if (ER_OK == status) {
-            uint32_t flags = DBUS_NAME_FLAG_REPLACE_EXISTING | DBUS_NAME_FLAG_DO_NOT_QUEUE;
-            QStatus status = bus->RequestName(serviceName.c_str(), flags);
-            if (ER_OK != status) {
-                QCC_SyncPrintf("RequestName(%s) failed (status=%s)\n", s_wellKnownName.c_str(), QCC_StatusText(status));
-            }
+        uint32_t flags = DBUS_NAME_FLAG_REPLACE_EXISTING | DBUS_NAME_FLAG_DO_NOT_QUEUE;
+        status = bus->RequestName(serviceName.c_str(), flags);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("RequestName(%s) failed", s_wellKnownName.c_str()));
         }
 
         /* Advertise name */
-        if (ER_OK == status) {
-            status = bus->AdvertiseName(serviceName.c_str(), opts.transports);
-            if (status != ER_OK) {
-                QCC_SyncPrintf("Failed to advertise name %s (%s)\n", serviceName.c_str(), QCC_StatusText(status));
-            }
+        status = bus->AdvertiseName(serviceName.c_str(), opts.transports);
+        if (status != ER_OK) {
+            QCC_LogError(status, ("Failed to advertise name %s", serviceName.c_str()));
         }
     }
 
     if (ER_OK == status) {
         int count = 0;
-        // Don't use qcc::Rand16() because it can result in the same exact sequence
-        // for multiple threads.
         int limit = 10 + (qcc::Rand32() % 50);
         bool limitReached = false;
         while (!limitReached) {
@@ -618,45 +510,46 @@ inline void ThreadClass::ServiceRun() {
     }
 
     if (g_useAboutFeatureDiscovery) {
-        QCC_SyncPrintf("------------------------------------------------------------\n");
-        QCC_SyncPrintf("Service named %s is stopping...\n", bus->GetUniqueName().c_str());
-        QCC_SyncPrintf("------------------------------------------------------------\n");
-        aboutObj->Unannounce();
+        status = aboutObj->Unannounce();
+        if (status != ER_OK) {
+            QCC_LogError(status, ("Error calling Unannounce."));
+        }
     } else {
-        QCC_SyncPrintf("------------------------------------------------------------\n");
-        QCC_SyncPrintf("Service named %s is stopping...\n", buf);
-        QCC_SyncPrintf("------------------------------------------------------------\n");
-
-        /* Cancel Advertise name */
         status = bus->CancelAdvertiseName(serviceName.c_str(), opts.transports);
         if (status != ER_OK) {
-            QCC_SyncPrintf("Failed to cancel advertise name %s (%s)\n", serviceName.c_str(), QCC_StatusText(status));
+            QCC_LogError(status, ("Failed to cancel advertise name %s", serviceName.c_str()));
         }
     }
 
-    delete aboutObj;
-    aboutObj = NULL;
-
     if (busObject) {
         bus->UnregisterBusObject(*busObject);
-        delete busObject;
-        busObject = NULL;
     }
 
     if (serviceBusListener) {
         bus->UnregisterBusListener(*serviceBusListener);
     }
 
-    if (!s_noDestruct) {
-        /* Delete BusAttachment before deleting serviceBusListener */
-        delete bus;
-        bus = NULL;
+    // If  a number is even,. do an explicit clean up of bus attachment, else just delete the bus attachment at the end.
+    if ((qcc::Rand32() % 2) == 0) {
+        //Stop bus attachment, cleanup and delete bus attachment
+        bus->Disconnect();
+        bus->Stop();
+        bus->Join();
+    }
+
+    if (busObject) {
+        delete busObject;
     }
 
     if (serviceBusListener) {
         delete serviceBusListener;
-        serviceBusListener = NULL;
     }
+
+    if (aboutObj) {
+        delete aboutObj;
+    }
+
+    delete bus;
 }
 
 inline qcc::ThreadReturn STDCALL ThreadClass::Run(void* arg) {
@@ -664,7 +557,7 @@ inline qcc::ThreadReturn STDCALL ThreadClass::Run(void* arg) {
     bus = new BusAttachment(name.c_str(), true);
     QStatus status =  bus->Start();
     if (status != ER_OK) {
-        QCC_LogError(status, ("ThreadClass::Run failed"));
+        QCC_LogError(status, ("BusAttachment start failed"));
         return this;
     }
 
@@ -675,12 +568,13 @@ inline qcc::ThreadReturn STDCALL ThreadClass::Run(void* arg) {
     } else {
         status = bus->Connect(connectArgs->c_str());
     }
+    if (status != ER_OK) {
+        QCC_LogError(status, ("BusAttachment connect failed"));
+        return this;
+    }
 
     // determine which operation mode we are running in
-    //
-    if (s_operationMode == Default) {
-        DefaultRun();
-    } else if (s_operationMode == Client) {
+    if (s_operationMode == Client) {
         ClientRun();
     } else if (s_operationMode == Service) {
         ServiceRun();
@@ -691,21 +585,32 @@ inline qcc::ThreadReturn STDCALL ThreadClass::Run(void* arg) {
 
 static void usage(void)
 {
-    QCC_SyncPrintf("Usage: bastress [-s] [-i <iterations>] [-t <threads>]\n\n");
-    QCC_SyncPrintf("Options:\n");
-    QCC_SyncPrintf("   -h                    = Print this help message\n");
-    QCC_SyncPrintf("   -i                    = Number of iterations, default is 1000\n");
-    QCC_SyncPrintf("   -t                    = Number of threads, default is 5\n");
-    QCC_SyncPrintf("   -s                    = Stop the threads before joining them\n");
-    QCC_SyncPrintf("   -d                    = Don't delete the bus attachments - implies \"-i 1\"r\n");
-    QCC_SyncPrintf("   -oc                   = Operate in client mode\n");
-    QCC_SyncPrintf("   -os                   = Operate in service mode\n");
-    QCC_SyncPrintf("   -p                    = Use point-to-point sessions, default is multipoint\n");
-    QCC_SyncPrintf("   -m <mask>             = Transport mask to use for client\n");
-    QCC_SyncPrintf("   -u                    = Use UDP Transport for client\n");
-    QCC_SyncPrintf("   -n <well-known-name>  = Well-known name to advertise\n");
-    QCC_SyncPrintf("   -about [iface name]   = use the about feature for discovery.\n");
-    QCC_SyncPrintf("\n");
+    cout << "Options:" << endl;
+    cout << "-h:			Print this help message again"<< endl;
+    cout << "-threads #:                Number of threads, default is 5" << endl;
+    cout << "-run-time #:               Run time of the program, Default is 10 minutes" << endl;
+    cout << "-s:                        Stop the threads before joining them" << endl;
+    cout << "-oc:                       Client mode of operation" << endl;
+    cout << "-os:                       Service mode of operation, this is default" << endl;
+    cout << "-p:                        point-to-point sessions, default is multipoint" << endl;
+    cout << "-tcp:                      TCP transport for discovery and sessions" << endl;
+    cout << "-udp:                      UDP transport for discovery and sessions" << endl;
+    cout << "-local:			LOCAL transport for discovery and sessions, both instances of bastress2 needs to be connected to standalone routing node."<< endl;
+    cout << "-n <well-known name>:      Well-known name to be requested and advertised" << endl;
+    cout << "-about <interface name>:   Use the about feature for discovery" << endl;
+    cout << endl;
+
+    cout <<  "Example of bastress2 with regular discovery" << endl;
+    cout <<  "-------------------------------------------" << endl;
+    cout << "bastress2  -os -s -n hello.a  -run-time  600000  -tcp" << endl;
+    cout << "bastress2  -oc -s -n hello.a  -run-time  600000  -tcp" << endl;
+    cout << endl;
+
+    cout <<  "Example of bastress2 with About discovery" << endl;
+    cout <<  "------------------------------------------" << endl;
+    cout << "bastress2  -os -s -about hello.a  -run-time  600000  -udp" << endl;
+    cout << "bastress2  -oc -s -about hello.a  -run-time  600000  -udp" << endl;
+    cout << endl;
 
 }
 
@@ -713,33 +618,31 @@ static void usage(void)
 int main(int argc, char**argv)
 {
     QStatus status = ER_OK;
-    uint32_t iterations = 1000;
+    uint32_t sleepTime = 600000;
     uint32_t threads = 5;
     bool stop = false;
-    s_operationMode = Default;
+    s_operationMode = Service;
 
     /* Parse command line args */
     for (int i = 1; i < argc; ++i) {
-        if (0 == strcmp("-i", argv[i])) {
+        if (0 == strcmp("-threads", argv[i])) {
             ++i;
             if (i == argc) {
-                QCC_SyncPrintf("option %s requires a parameter\n", argv[i - 1]);
-                usage();
-                exit(1);
-            } else {
-                iterations = strtoul(argv[i], NULL, 10);
-            }
-        } else if (0 == strcmp("-t", argv[i])) {
-            ++i;
-            if (i == argc) {
-                QCC_SyncPrintf("option %s requires a parameter\n", argv[i - 1]);
+                cout << "option " << argv[i - 1] << " requires a parameter" << endl;
                 usage();
                 exit(1);
             } else {
                 threads = strtoul(argv[i], NULL, 10);
             }
-        } else if (0 == strcmp("-d", argv[i])) {
-            s_noDestruct = true;
+        } else if (0 == strcmp("-run-time", argv[i])) {
+            ++i;
+            if (i == argc) {
+                cout << "option " << argv[i - 1] << " requires a parameter" << endl;
+                usage();
+                exit(1);
+            } else {
+                sleepTime = strtoul(argv[i], NULL, 10);
+            }
         } else if (0 == strcmp("-s", argv[i])) {
             stop = true;
         } else if (0 == strcmp("-oc", argv[i])) {
@@ -748,21 +651,16 @@ int main(int argc, char**argv)
             s_operationMode = Service;
         } else if (0 == strcmp("-p", argv[i])) {
             s_useMultipointSessions = false;
-        } else if (0 == strcmp("-m", argv[i])) {
-            ++i;
-            if (i == argc) {
-                QCC_SyncPrintf("option %s requires a parameter\n", argv[i - 1]);
-                usage();
-                exit(1);
-            } else {
-                s_transports = static_cast<TransportMask>(StringToU32(argv[i], 16, TRANSPORT_ANY));
-            }
-        } else if (0 == strcmp("-u", argv[i])) {
+        } else if (0 == strcmp("-tcp", argv[i])) {
+            s_transports = TRANSPORT_TCP;
+        } else if (0 == strcmp("-udp", argv[i])) {
             s_transports = TRANSPORT_UDP;
+        } else if (0 == strcmp("-local", argv[i])) {
+            s_transports = TRANSPORT_LOCAL;
         } else if (0 == strcmp("-n", argv[i])) {
             ++i;
             if (i == argc) {
-                QCC_SyncPrintf("option %s requires a parameter\n", argv[i - 1]);
+                cout << "option " << argv[i - 1] << " requires a parameter" << endl;
                 usage();
                 exit(1);
             } else {
@@ -778,12 +676,9 @@ int main(int argc, char**argv)
             }
         } else {
             usage();
+            cout << "Unknown option: " << argv[i] << endl;
             exit(1);
         }
-    }
-
-    if (s_noDestruct) {
-        iterations = 1;
     }
 
     /* Install SIGINT handler */
@@ -794,40 +689,50 @@ int main(int argc, char**argv)
     qcc::String connectArgs = env->Find("BUS_ADDRESS");
 
     ThreadClass** threadList = new ThreadClass *[threads];
+    uint32_t startTime = GetTimestamp();
+    uint32_t endTime = GetTimestamp();
 
-    while (!g_interrupt && iterations--) {
+    while (!g_interrupt && ((endTime - startTime) < sleepTime)) {
 
-        QCC_SyncPrintf("Starting threads... \n");
+        cout << "Starting batch of " << threads << " threads..." << endl;
         for (unsigned int i = 0; i < threads; i++) {
-            char buf[256];
+            char buf[20];
             sprintf(buf, "Thread.n%d", i);
             threadList[i] = new ThreadClass((char*)buf);
             threadList[i]->Start(&connectArgs);
-            QCC_SyncPrintf("started threadList[%d]... \n", i);
         }
 
         if (stop) {
             /*
              * Sleep a random time before stopping of bus attachments is tested at different states of up and running
-             * Don't use qcc::Rand16() because it can result in the same exact sequence for multiple threads.
              */
             qcc::Sleep(1000 + (qcc::Rand32() % 4000));
-            QCC_SyncPrintf("stopping threads... \n");
+            cout << "Stopping batch of " << threads << " threads..." << endl;
             for (unsigned int i = 0; i < threads; i++) {
-                QCC_SyncPrintf("stopping threadList[%d]... \n", i);
                 threadList[i]->Stop();
             }
         }
 
-        QCC_SyncPrintf("deleting threads... \n");
         for (unsigned int i = 0; i < threads; i++) {
             threadList[i]->Join();
-            QCC_SyncPrintf("deleting threadList[%d]... \n", i);
             delete threadList[i];
         }
-
+        endTime = GetTimestamp();
     }
 
     delete [] threadList;
+    cout << "bastress2 exiting after timed completion of " << sleepTime << " ms " << endl;
+
+    uint32_t last_introspection_time = endTime - g_lastIntrospectedTimestamp;
+
+    if (s_operationMode == Client) {
+        if (g_lastIntrospectedTimestamp && (last_introspection_time < 60000)) {
+            cout << "Last introspection happened at " << last_introspection_time << " ms" << endl;
+            cout << "PASSED" << endl;
+        } else {
+            cout << "Introspection did not happen in the last 1 minute." << endl;
+            cout << "FAILED" << endl;
+        }
+    }
     return (int) status;
 }
