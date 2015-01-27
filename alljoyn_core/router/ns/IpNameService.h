@@ -82,7 +82,6 @@ class IpNameServiceListener {
  * only be done in the transport's Join() method.
  */
 class IpNameService {
-    friend class IpNameServiceInit;
   public:
 
     /**
@@ -440,6 +439,11 @@ class IpNameService {
     bool RemoveFromPeerInfoMap(const qcc::String& guid);
 
   private:
+
+    static void Init();
+    static void Shutdown();
+    friend class RouterGlobals;
+
     /**
      * This is a singleton so the constructor is marked private to prevent
      * construction of an IpNameService instance in any other sneaky way than
@@ -532,17 +536,6 @@ class IpNameService {
     int32_t m_refCount;          /**< The number of transports that have registered as users of the singleton */
     IpNameServiceImpl* m_pimpl;  /**< A pointer to the private implementation of the name service */
 };
-
-static class IpNameServiceInit {
-  public:
-    IpNameServiceInit();
-    ~IpNameServiceInit();
-    static void Cleanup();
-
-  private:
-    static bool cleanedup;
-
-} ipNameServiceInit;
 
 } // namespace ajn
 

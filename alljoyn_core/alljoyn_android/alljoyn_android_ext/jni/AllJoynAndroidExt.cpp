@@ -23,6 +23,7 @@
 
 #include "org_alljoyn_jni_AllJoynAndroidExt.h"
 #include "org_alljoyn_jni_ScanResultMessage.h"
+#include <alljoyn/Init.h>
 #include <alljoyn/BusAttachment.h>
 #include <qcc/String.h>
 #include <android/log.h>
@@ -349,6 +350,10 @@ JNIEXPORT void JNICALL Java_org_alljoyn_jni_AllJoynAndroidExt_jniOnDestroy(JNIEn
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm,
                                   void* reserved)
 {
+    AllJoynInit();
+#ifdef ROUTER
+    AllJoynRouterInit();
+#endif
     /* Set AllJoyn logging */
     //QCC_SetLogLevels("ALLJOYN=7;ALL=1");
     //QCC_UseOSLogging(true);
@@ -380,6 +385,14 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm,
     return JNI_VERSION_1_2;
 }
 
+JNIEXPORT void JNI_OnUnload(JavaVM* vm,
+                            void* reserved)
+{
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
+}
 
 #ifdef __cplusplus
 }

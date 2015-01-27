@@ -30,7 +30,7 @@
 #include <qcc/String.h>
 #include <qcc/StringUtil.h>
 #include <qcc/Logger.h>
-#include <qcc/StaticGlobals.h>
+#include <qcc/Util.h>
 
 #include <Status.h>
 
@@ -40,9 +40,22 @@ using namespace std;
 
 namespace qcc {
 
+static uint64_t _environSingleton[RequiredArrayLength(sizeof(Environ), uint64_t)];
+static Environ& environSingleton = (Environ &)_environSingleton;
+
+void Environ::Init()
+{
+    new (&environSingleton)Environ();
+}
+
+void Environ::Shutdown()
+{
+    environSingleton.~Environ();
+}
+
 Environ* Environ::GetAppEnviron(void)
 {
-    return &staticGlobals.environSingleton;
+    return &environSingleton;
 }
 
 qcc::String Environ::Find(const qcc::String& key, const char* defaultValue)

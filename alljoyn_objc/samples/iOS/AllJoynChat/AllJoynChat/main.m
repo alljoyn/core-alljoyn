@@ -17,10 +17,16 @@
 #import <UIKit/UIKit.h>
 
 #import "AJNCAppDelegate.h"
+#import "AJNInit.h"
 
 int main(int argc, char *argv[])
 {
     @autoreleasepool {
-        return UIApplicationMain(argc, argv, nil, NSStringFromClass([AJNCAppDelegate class]));
+        [AJNInit alljoynInit];
+        [AJNInit alljoynRouterInit];
+        int ret = UIApplicationMain(argc, argv, nil, NSStringFromClass([AJNCAppDelegate class]));
+        [AJNInit alljoynRouterShutdown];
+        [AJNInit alljoynShutdown];
+        return ret;
     }
 }

@@ -165,6 +165,9 @@ else:
 if env['VARIANT'] == 'release' and env['NDEBUG'] == 'defined':
     env.Append(CPPDEFINES = 'NDEBUG')
 
+if env['BR'] == 'on':
+    env.Append(CPPDEFINES = 'ROUTER')
+
 env.Append(CPPDEFINES = ['QCC_OS_GROUP_%s' % env['OS_GROUP'].upper()])
 
 # "Standard" C/C++ header file include paths for all projects.

@@ -22,25 +22,24 @@
 #define _QCC_STATICGLOBALS_H
 
 #include <qcc/platform.h>
-#include <qcc/Environ.h>
 
 namespace qcc {
 
 /**
- * Class that contains all the static class members/static objects
- * instantiated in the common project.
+ * This must be called prior to instantiating or using any qcc
+ * functionality.
+ *
+ * This function is not thread-safe.
  */
-class StaticGlobals {
-  public:
-    StaticGlobals();
-    Event alwaysSet;
-    Event neverSet;
-    /** Environ variables */
-    Environ environSingleton;
-};
+void Init();
 
-/** The singleton instance of StaticGlobals. */
-extern StaticGlobals& staticGlobals;
+/**
+ * Call this to release any resources acquired in Init().  No qcc
+ * functionality may be used after calling this.
+ *
+ * This function is not thread-safe.
+ */
+void Shutdown();
 
 }
 

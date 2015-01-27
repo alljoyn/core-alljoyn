@@ -14,11 +14,12 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
+#include <alljoyn/AboutIconObj.h>
+#include <alljoyn/AboutObj.h>
+#include <alljoyn/Init.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/BusListener.h>
 #include <alljoyn/BusObject.h>
-#include <alljoyn/AboutObj.h>
-#include <alljoyn/AboutIconObj.h>
 
 #include <signal.h>
 #include <stdio.h>
@@ -93,14 +94,18 @@ class AboutServiceSampleBusObject : public BusObject {
 /** Main entry point */
 int main(int argc, char** argv)
 {
+    AllJoynInit();
+#ifdef ROUTER
+    AllJoynRouterInit();
+#endif
     /* Install SIGINT handler so Ctrl + C deallocates memory properly */
     signal(SIGINT, SigIntHandler);
 
     QStatus status;
 
-    BusAttachment bus("AboutServiceTest", true);
+    BusAttachment* bus = new BusAttachment("AboutServiceTest", true);
 
-    status = bus.Start();
+    status = bus->Start();
     if (ER_OK == status) {
         printf("BusAttachment started.\n");
     } else {
@@ -108,9 +113,9 @@ int main(int argc, char** argv)
         exit(1);
     }
 
-    status = bus.Connect();
+    status = bus->Connect();
     if (ER_OK == status) {
-        printf("BusAttachment connect succeeded. BusAttachment Unique name is %s\n", bus.GetUniqueName().c_str());
+        printf("BusAttachment connect succeeded. BusAttachment Unique name is %s\n", bus->GetUniqueName().c_str());
     } else {
         printf("FAILED to connect to router node (%s)\n", QCC_StatusText(status));
         exit(1);
@@ -131,16 +136,16 @@ int main(int argc, char** argv)
                              "</interface>"
                              "</node>";
 
-    status = bus.CreateInterfacesFromXml(interfaces);
+    status = bus->CreateInterfacesFromXml(interfaces);
 
-    AboutServiceSampleBusObject aboutServiceSampleBusObject(bus, "/org/alljoyn/test");
+    AboutServiceSampleBusObject* aboutServiceSampleBusObject = new AboutServiceSampleBusObject(*bus, "/org/alljoyn/test");
 
-    bus.RegisterBusObject(aboutServiceSampleBusObject);
+    bus->RegisterBusObject(*aboutServiceSampleBusObject);
 
     SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
     SessionPort sp = ASSIGNED_SESSION_PORT;
     MySessionPortListener sessionPortListener;
-    status = bus.BindSessionPort(sp, opts, sessionPortListener);
+    status = bus->BindSessionPort(sp, opts, sessionPortListener);
     if (ER_OK == status) {
         printf("BindSessionPort succeeded.\n");
     } else {
@@ -172,11 +177,11 @@ int main(int argc, char** argv)
     if (ER_OK != status) {
         printf("Failed to setup the AboutIcon.\n");
     }
-    AboutIconObj aboutIconObj(bus, icon);
+    AboutIconObj* aboutIconObj = new AboutIconObj(*bus, icon);
 
     // Announce about signal
-    AboutObj aboutObj(bus, BusObject::ANNOUNCED);
-    status = aboutObj.Announce(ASSIGNED_SESSION_PORT, aboutData);
+    AboutObj* aboutObj = new AboutObj(*bus, BusObject::ANNOUNCED);
+    status = aboutObj->Announce(ASSIGNED_SESSION_PORT, aboutData);
     if (ER_OK == status) {
         printf("AboutObj Announce Succeeded.\n");
     } else {
@@ -194,5 +199,13 @@ int main(int argc, char** argv)
         }
     }
 
+    delete aboutObj;
+    delete aboutIconObj;
+    delete aboutServiceSampleBusObject;
+    delete bus;
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return 0;
 }

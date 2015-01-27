@@ -19,7 +19,7 @@ samples_env = env.Clone()
 
 if samples_env['BR'] == 'on':
     # Build apps with bundled daemon support
-    samples_env.Prepend(LIBS = [samples_env['brobj'], samples_env['ajrlib']])
+    samples_env.Prepend(LIBS = [samples_env['ajrlib']])
 
 # About feature sample programs
 samples_env.SConscript('about/SConscript', exports = {'env': samples_env})

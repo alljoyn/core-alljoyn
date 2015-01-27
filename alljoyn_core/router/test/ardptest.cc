@@ -39,6 +39,7 @@
 #include <qcc/SocketTypes.h>
 #include <qcc/Thread.h>
 #include <qcc/StringUtil.h>
+#include <alljoyn/Init.h>
 #include <alljoyn/Status.h>
 
 #include <ArdpProtocol.h>
@@ -249,6 +250,9 @@ static void usage() {
 
 int main(int argc, char** argv)
 {
+    AllJoynInit();
+    AllJoynRouterInit();
+
     QStatus status = ER_OK;
 
     for (int i = 1; i < argc; ++i) {
@@ -513,5 +517,7 @@ int main(int argc, char** argv)
     t1.Stop();
     t1.Join();
 
+    AllJoynRouterShutdown();
+    AllJoynShutdown();
     return 0;
 }

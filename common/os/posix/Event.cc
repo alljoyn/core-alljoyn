@@ -48,6 +48,7 @@
 #include <qcc/Stream.h>
 #include <qcc/Thread.h>
 #include <qcc/time.h>
+#include <qcc/Util.h>
 
 #if defined(QCC_OS_DARWIN)
 #include <sys/event.h>
@@ -59,6 +60,24 @@ using namespace qcc;
 
 /** @internal */
 #define QCC_MODULE "EVENT"
+
+static uint64_t _alwaysSet[RequiredArrayLength(sizeof(Event), uint64_t)];
+static uint64_t _neverSet[RequiredArrayLength(sizeof(Event), uint64_t)];
+
+Event& Event::alwaysSet = (Event &)_alwaysSet;
+Event& Event::neverSet = (Event &)_neverSet;
+
+void Event::Init()
+{
+    new (&alwaysSet)Event(0, 0);
+    new (&neverSet)Event(Event::WAIT_FOREVER, 0);
+}
+
+void Event::Shutdown()
+{
+    neverSet.~Event();
+    alwaysSet.~Event();
+}
 
 #if defined(MECHANISM_PIPE) && !defined(DEBUG_EVENT_LEAKS)
 static Mutex* pipeLock = NULL;

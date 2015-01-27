@@ -26,6 +26,7 @@
 
 #include <qcc/Debug.h>
 
+#include "BusInternal.h"
 #include "IpNameService.h"
 #include "IpNameServiceImpl.h"
 
@@ -36,35 +37,16 @@ namespace ajn {
 const uint16_t IpNameService::MULTICAST_MDNS_PORT = 5353;
 
 static IpNameService* singletonIpNameService = NULL;
-static int ipNsCounter = 0;
-bool IpNameServiceInit::cleanedup = false;
-typedef void (*RouterCleanupFunction)();
 
-extern void RegisterRouterCleanup(RouterCleanupFunction r);
-
-IpNameServiceInit::IpNameServiceInit()
+void IpNameService::Init()
 {
-    if (0 == ipNsCounter++) {
-        singletonIpNameService = new IpNameService();
-        RegisterRouterCleanup(&IpNameServiceInit::Cleanup);
-
-    }
+    singletonIpNameService = new IpNameService();
 }
 
-IpNameServiceInit::~IpNameServiceInit()
+void IpNameService::Shutdown()
 {
-    if (0 == --ipNsCounter) {
-        Cleanup();
-    }
-}
-
-void IpNameServiceInit::Cleanup()
-{
-    if (!cleanedup) {
-        delete singletonIpNameService;
-        singletonIpNameService = NULL;
-        cleanedup = true;
-    }
+    delete singletonIpNameService;
+    singletonIpNameService = NULL;
 }
 
 IpNameService& IpNameService::Instance()

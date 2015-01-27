@@ -28,7 +28,7 @@ jsenv = env.Clone()
 
 if jsenv['BR'] == 'on':
     # Build JS with bundled daemon support
-    jsenv.Prepend(LIBS = [jsenv['brobj'], jsenv['ajrlib']])
+    jsenv.Prepend(LIBS = [jsenv['ajrlib']])
 
 jsenv['OBJDIR_ALLJOYN_JS'] = env['OBJDIR'] + '/alljoyn_js'
 

@@ -32,6 +32,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <alljoyn_c/Init.h>
 #include <alljoyn_c/BusAttachment.h>
 #include <alljoyn_c/version.h>
 #include <Status.h>
@@ -175,6 +176,11 @@ int main(int argc, char** argv, char** envArg)
         NULL
     };
     unsigned int count = 0;
+
+    AllJoynInit();
+#ifdef ROUTER
+    AllJoynRouterInit();
+#endif
 
     printf("AllJoyn Library version: %s\n", alljoyn_getversion());
     printf("AllJoyn Library build info: %s\n", alljoyn_getbuildinfo());
@@ -336,5 +342,9 @@ int main(int argc, char** argv, char** envArg)
 
     printf("exiting with status %d (%s)\n", status, QCC_StatusText(status));
 
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return (int) status;
 }

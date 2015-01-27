@@ -19,76 +19,79 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 #include <qcc/StaticGlobals.h>
-#include <qcc/String.h>
-#include <qcc/Logger.h>
-#include <qcc/Util.h>
 
-#define QCC_MODULE "STATICGLOBALS"
-
-#ifdef QCC_OS_GROUP_WINDOWS
-#include <qcc/windows/utility.h>
-#endif
 #ifdef CRYPTO_CNG
 #include <qcc/CngCache.h>
 #endif
+#include <qcc/Logger.h>
+#include <qcc/String.h>
+#include <qcc/Thread.h>
+#include <qcc/Util.h>
+#ifdef QCC_OS_GROUP_WINDOWS
+#include <qcc/windows/utility.h>
+#endif
+#include "Crypto.h"
+#include "DebugControl.h"
 
 #define QCC_MODULE "STATICGLOBALS"
 
 namespace qcc {
 
-/** Assign enough memory to store all static/global values */
-static uint64_t staticGlobalsBuffer[RequiredArrayLength(sizeof(StaticGlobals), uint64_t)];
+class StaticGlobals {
+  public:
+    static void Init()
+    {
+        Event::Init();
+        Environ::Init();
+        String::Init();
+        DebugControl::Init();
+        LoggerSetting::Init();
+        Thread::Init();
+        Crypto::Init();
+#if defined(QCC_OS_GROUP_WINDOWS)
+        WSADATA wsaData;
+        WORD version = MAKEWORD(2, 0);
+        int error = WSAStartup(version, &wsaData);
+        if (error) {
+            printf("WSAStartup failed with error: %d\n", error);
+        }
+#endif
+    }
 
-/** Assign staticGlobals to be a reference to the allocated memory */
-StaticGlobals& staticGlobals = ((StaticGlobals &)staticGlobalsBuffer);
+    static void Shutdown()
+    {
+#if defined(QCC_OS_GROUP_WINDOWS)
+        int error = WSACleanup();
+        if (SOCKET_ERROR == error) {
+            printf("WSACleanup failed with error: %d\n", WSAGetLastError());
+        }
+#endif
+        Crypto::Shutdown();
+        Thread::Shutdown();
+        LoggerSetting::Shutdown();
+        DebugControl::Shutdown();
+        String::Shutdown();
+        Environ::Shutdown();
+        Event::Shutdown();
+    }
+};
 
-Event& Event::alwaysSet = (Event &)staticGlobals.alwaysSet;
-Event& Event::neverSet = (Event &)staticGlobals.neverSet;
+static bool initialized = false;
 
-StaticGlobals::StaticGlobals() :
-    alwaysSet(0, 0),
-    neverSet(Event::WAIT_FOREVER, 0)
+void Init()
 {
+    if (!initialized) {
+        StaticGlobals::Init();
+        initialized = true;
+    }
+}
+
+void Shutdown()
+{
+    if (initialized) {
+        StaticGlobals::Shutdown();
+        initialized = false;
+    }
 }
 
 } /* namespace qcc */
-
-using namespace qcc;
-
-static int counter = 0;
-bool StaticGlobalsInit::cleanedup = false;
-
-/** Note: StaticGlobalsInit struct is defined in StaticGlobalsInit.h */
-StaticGlobalsInit::StaticGlobalsInit()
-{
-    if (counter++ == 0) {
-        /* Initialize globals in common */
-        new (&staticGlobals)StaticGlobals(); // placement new operator
-    }
-}
-
-StaticGlobalsInit::~StaticGlobalsInit()
-{
-    if (--counter == 0 && !cleanedup) {
-        /* Uninitialize globals in common */
-        staticGlobals.~StaticGlobals(); // explicitly call the destructor
-        cleanedup = true;
-    }
-}
-
-void StaticGlobalsInit::Cleanup()
-{
-    if (!cleanedup) {
-        /* Uninitialize globals in common */
-        staticGlobals.~StaticGlobals(); // explicitly call the destructor
-        cleanedup = true;
-    }
-    LoggerInit::Cleanup();
-    StringInit::Cleanup();
-#ifdef QCC_OS_GROUP_WINDOWS
-    WinsockInit::Cleanup();
-#endif
-#ifdef CRYPTO_CNG
-    CngCacheInit::Cleanup();
-#endif
-}

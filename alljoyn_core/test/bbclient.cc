@@ -35,9 +35,10 @@
 #include <qcc/Util.h>
 #include <qcc/time.h>
 
+#include <alljoyn/AllJoynStd.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/DBusStd.h>
-#include <alljoyn/AllJoynStd.h>
+#include <alljoyn/Init.h>
 #include <alljoyn/version.h>
 
 #include <alljoyn/Status.h>
@@ -69,7 +70,7 @@ static volatile sig_atomic_t g_interrupt = false;
 
 /** Static data */
 static BusAttachment* g_msgBus = NULL;
-static Event g_discoverEvent;
+static Event* g_discoverEvent = NULL;
 static String g_remoteBusName = ::org::alljoyn::alljoyn_test::DefaultWellKnownName;
 static TransportMask allowedTransports = TRANSPORT_ANY;
 static uint32_t findStartTime = 0;
@@ -124,7 +125,7 @@ class MyBusListener : public BusListener, public SessionListener {
                 joinEndTime = GetTimestamp();
                 QCC_SyncPrintf("JoinSession 0x%x takes %d ms \n", transport, (joinEndTime - joinStartTime));
 
-                g_discoverEvent.SetEvent();
+                g_discoverEvent->SetEvent();
             }
         }
     }
@@ -204,7 +205,7 @@ class MyAboutListener : public AboutListener {
                 joinEndTime = GetTimestamp();
                 QCC_SyncPrintf("JoinSession 0x%x takes %d ms \n", TRANSPORT_ANY, (joinEndTime - joinStartTime));
 
-                g_discoverEvent.SetEvent();
+                g_discoverEvent->SetEvent();
             }
         }
     }
@@ -669,6 +670,12 @@ int main(int argc, char** argv)
         }
     }
 
+    AllJoynInit();
+#ifdef ROUTER
+    AllJoynRouterInit();
+#endif
+    g_discoverEvent = new Event();
+
     /* Get env vars */
     env = Environ::GetAppEnviron();
     qcc::String connectArgs = env->Find("BUS_ADDRESS");
@@ -773,7 +780,7 @@ int main(int argc, char** argv)
                  * Make sure the g_discoverEvent flag has been set to the
                  * name-not-found state before trying to find the well-known name.
                  */
-                g_discoverEvent.ResetEvent();
+                g_discoverEvent->ResetEvent();
                 status = g_msgBus->FindAdvertisedName(g_remoteBusName.c_str());
                 if (status != ER_OK) {
                     QCC_LogError(status, ("FindAdvertisedName failed"));
@@ -786,7 +793,7 @@ int main(int argc, char** argv)
                  * Make sure the g_discoverEvent flag has been set to the
                  * name-not-found state before trying to find the well-known name.
                  */
-                g_discoverEvent.ResetEvent();
+                g_discoverEvent->ResetEvent();
                 g_aboutListener = new MyAboutListener(stopDiscover);
                 g_msgBus->RegisterAboutListener(*g_aboutListener);
                 const char* interfaces[] = { ::org::alljoyn::alljoyn_test::InterfaceName,
@@ -814,7 +821,7 @@ int main(int argc, char** argv)
                  */
                 qcc::Event timerEvent(100, 100);
                 vector<qcc::Event*> checkEvents, signaledEvents;
-                checkEvents.push_back(&g_discoverEvent);
+                checkEvents.push_back(g_discoverEvent);
                 checkEvents.push_back(&timerEvent);
                 status = qcc::Event::Wait(checkEvents, signaledEvents);
                 if (status != ER_OK && status != ER_TIMEOUT) {
@@ -825,7 +832,7 @@ int main(int argc, char** argv)
                  * If it was the discover event that popped, we're done.
                  */
                 for (vector<qcc::Event*>::iterator i = signaledEvents.begin(); i != signaledEvents.end(); ++i) {
-                    if (*i == &g_discoverEvent) {
+                    if (*i == g_discoverEvent) {
                         discovered = true;
                         break;
                     }
@@ -842,11 +849,11 @@ int main(int argc, char** argv)
         } else if (waitForService && (ER_OK == status)) {
             /* If bbservice's well-known name is not currently on the bus yet, then wait for it to appear */
             bool hasOwner = false;
-            g_discoverEvent.ResetEvent();
+            g_discoverEvent->ResetEvent();
             status = g_msgBus->NameHasOwner(g_remoteBusName.c_str(), hasOwner);
             if ((ER_OK == status) && !hasOwner) {
                 QCC_SyncPrintf("Waiting for name %s to appear on the bus\n", g_remoteBusName.c_str());
-                status = Event::Wait(g_discoverEvent);
+                status = Event::Wait(*g_discoverEvent);
                 if (ER_OK != status) {
                     QCC_LogError(status, ("Event::Wait failed"));
                 }
@@ -1039,5 +1046,10 @@ int main(int argc, char** argv)
 
     printf("bbclient exiting with status %d (%s)\n", status, QCC_StatusText(status));
 
+    delete g_discoverEvent;
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return (int) status;
 }

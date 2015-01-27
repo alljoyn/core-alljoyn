@@ -96,7 +96,6 @@ LOCAL_LDLIBS := \
         -L$(NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/libs/armeabi \
         -L$(NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/4.6/libs/armeabi \
 	-L./libs \
-    $(ALLJOYN_DIST)/lib/BundledRouter.o \
 	-lajrouter -lalljoyn -llog -lz -ldl -lssl -lcrypto -lm -lc -lstdc++  -lgcc -lgnustl_static
 
 # By default, ARM target binaries will be generated in 'thumb' mode, where
