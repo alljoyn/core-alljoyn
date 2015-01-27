@@ -40,7 +40,6 @@
 #include <alljoyn/AllJoynStd.h>
 #include <alljoyn/InterfaceDescription.h>
 #include <alljoyn/AutoPinger.h>
-#include <alljoyn/PasswordManager.h>
 
 #include "AuthMechanism.h"
 #include "AuthMechAnonymous.h"
@@ -66,7 +65,6 @@
 #include "NamedPipeClientTransport.h"
 
 #define QCC_MODULE "ALLJOYN"
-
 
 using namespace std;
 using namespace qcc;
@@ -183,7 +181,7 @@ BusAttachment::Internal::~Internal()
 /*
  * Transport factory container for transports this bus attachment uses to communicate with the daemon.
  */
-static class ClientTransportFactoryContainer : public TransportFactoryContainer {
+class ClientTransportFactoryContainer : public TransportFactoryContainer {
   public:
 
     ClientTransportFactoryContainer() : isInitialized(false) { }
@@ -213,18 +211,19 @@ static class ClientTransportFactoryContainer : public TransportFactoryContainer 
     bool isInitialized;
     qcc::Mutex lock;
 
-} clientTransportsContainer;
+};
 
+static ClientTransportFactoryContainer* clientTransportsContainer = NULL;
 
 BusAttachment::BusAttachment(const char* applicationName, bool allowRemoteMessages, uint32_t concurrency) :
     isStarted(false),
     isStopping(false),
     concurrency(concurrency),
-    busInternal(new Internal(applicationName, *this, clientTransportsContainer, NULL, allowRemoteMessages, NULL, concurrency)),
+    busInternal(new Internal(applicationName, *this, *clientTransportsContainer, NULL, allowRemoteMessages, NULL, concurrency)),
     translator(NULL),
     joinObj(this)
 {
-    clientTransportsContainer.Init();
+    clientTransportsContainer->Init();
     QCC_DbgTrace(("BusAttachment client constructor (%p)", this));
 }
 
@@ -236,7 +235,7 @@ BusAttachment::BusAttachment(Internal* busInternal, uint32_t concurrency) :
     translator(NULL),
     joinObj(this)
 {
-    clientTransportsContainer.Init();
+    clientTransportsContainer->Init();
     QCC_DbgTrace(("BusAttachment daemon constructor"));
 }
 
@@ -2871,26 +2870,16 @@ Translator* BusAttachment::GetDescriptionTranslator()
 {
     return translator;
 }
-typedef void (*RouterCleanupFunction)();
-void RegisterRouterCleanup(RouterCleanupFunction r);
 
-RouterCleanupFunction routerCleanup = NULL;
-void RegisterRouterCleanup(RouterCleanupFunction r)
+void BusAttachment::Internal::Init()
 {
-    routerCleanup = r;
+    clientTransportsContainer = new ClientTransportFactoryContainer();
 }
-void AJCleanup()
+
+void BusAttachment::Internal::Shutdown()
 {
-    //Cleanup router Globals
-    if (routerCleanup) {
-        routerCleanup();
-    }
-
-    //Cleanup alljoyn_core/src Globals
-    AutoPingerInit::Cleanup();
-    PasswordManagerInit::Cleanup();
-
-    //Cleanup common globals
-    StaticGlobalsInit::Cleanup();
+    delete clientTransportsContainer;
+    clientTransportsContainer = NULL;
 }
+
 }

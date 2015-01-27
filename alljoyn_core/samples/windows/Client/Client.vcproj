@@ -2,10 +2,9 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9.00"
-	Name="Client"
-	ProjectGUID="{CB35CD06-386B-4B67-BEBB-0C264A555E7A}"
-	RootNamespace="Client"
-	Keyword="Win32Proj"
+	Name="FileTransferService"
+	ProjectGUID="{DF15F3DB-EB39-47A4-B9AB-2734DB04B514}"
+	RootNamespace="basic_service"
 	TargetFrameworkVersion="196613"
 	>
 	<Platforms>
@@ -24,7 +23,7 @@
 			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
 			IntermediateDirectory="$(ConfigurationName)"
 			ConfigurationType="1"
-			CharacterSet="1"
+			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -45,12 +44,11 @@
 				Name="VCCLCompilerTool"
 				AdditionalOptions="/vmm /vmg"
 				Optimization="0"
-				AdditionalIncludeDirectories="$(ALLJOYN_SDK_HOME)\CPP\inc;$(NOINHERIT)"
-				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;QCC_OS_GROUP_WINDOWS;QCC_OS_WINDOWS;QCC_CPU_X86"
+				AdditionalIncludeDirectories="&quot;$(ALLJOYN_SDK_HOME)\inc&quot;;&quot;$(ProjectDir)\..\..\..\..\inc&quot;"
+				PreprocessorDefinitions="QCC_OS_GROUP_WINDOWS;UNICODE"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
-				UsePrecompiledHeader="0"
 				WarningLevel="3"
 				DebugInformationFormat="4"
 			/>
@@ -65,13 +63,85 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="alljoyn.lib wsock32.lib ws2_32.lib secur32.lib crypt32.lib Bcrypt.lib Ncrypt.lib iphlpapi.lib $(NOINHERIT)"
-				LinkIncremental="2"
-				AdditionalLibraryDirectories="$(ALLJOYN_SDK_HOME)\CPP\lib\Debug;$(NOINHERIT)"
-				IgnoreDefaultLibraryNames="msvcrt.lib"
+				AdditionalDependencies="alljoyn.lib ajrouter.lib ws2_32.lib Secur32.lib crypt32.lib Bcrypt.lib Ncrypt.lib iphlpapi.lib"
+				AdditionalLibraryDirectories="&quot;$(ALLJOYN_SDK_HOME)\lib&quot;;&quot;$(ProjectDir)\..\..\..\..\lib&quot;"
+				IgnoreDefaultLibraryNames="libcmt.lib"
 				GenerateDebugInformation="true"
-				SubSystem="1"
 				TargetMachine="1"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+		</Configuration>
+		<Configuration
+			Name="Debug|x64"
+			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
+			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
+			ConfigurationType="1"
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TargetEnvironment="3"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				AdditionalOptions="/vmm /vmg"
+				Optimization="0"
+				AdditionalIncludeDirectories="&quot;$(ALLJOYN_SDK_HOME)\inc&quot;;&quot;$(ProjectDir)\..\..\..\..\inc&quot;"
+				PreprocessorDefinitions="QCC_OS_GROUP_WINDOWS;UNICODE"
+				MinimalRebuild="true"
+				BasicRuntimeChecks="3"
+				RuntimeLibrary="3"
+				WarningLevel="3"
+				DebugInformationFormat="3"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalDependencies="alljoyn.lib ajrouter.lib ws2_32.lib Secur32.lib crypt32.lib Bcrypt.lib Ncrypt.lib iphlpapi.lib"
+				AdditionalLibraryDirectories="&quot;$(ALLJOYN_SDK_HOME)\lib&quot;;&quot;$(ProjectDir)\..\..\..\..\lib&quot;"
+				IgnoreDefaultLibraryNames="libcmt.lib"
+				GenerateDebugInformation="true"
+				TargetMachine="17"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -100,7 +170,7 @@
 			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
 			IntermediateDirectory="$(ConfigurationName)"
 			ConfigurationType="1"
-			CharacterSet="1"
+			CharacterSet="2"
 			WholeProgramOptimization="1"
 			>
 			<Tool
@@ -120,13 +190,13 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
+				AdditionalOptions="/vmm /vmg"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories="$(ALLJOYN_SDK_HOME)\CPP\inc;$(NOINHERIT)"
-				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;QCC_OS_GROUP_WINDOWS;QCC_OS_WINDOWS;QCC_CPU_X86"
+				AdditionalIncludeDirectories="$(ALLJOYN_SDK_HOME)\inc;$(ProjectDir)\..\..\..\..\inc"
+				PreprocessorDefinitions="QCC_OS_GROUP_WINDOWS;UNICODE;NDEBUG"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
-				UsePrecompiledHeader="0"
 				WarningLevel="3"
 				DebugInformationFormat="3"
 			/>
@@ -141,11 +211,10 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="alljoyn.lib wsock32.lib ws2_32.lib secur32.lib crypt32.lib Bcrypt.lib Ncrypt.lib iphlpapi.lib $(NOINHERIT)"
-				LinkIncremental="1"
-				AdditionalLibraryDirectories="$(ALLJOYN_SDK_HOME)\CPP\lib\Release;$(NOINHERIT)"
+				AdditionalDependencies="alljoyn.lib ajrouter.lib ws2_32.lib Secur32.lib crypt32.lib Bcrypt.lib Ncrypt.lib iphlpapi.lib"
+				AdditionalLibraryDirectories="$(ALLJOYN_SDK_HOME)\lib;$(ProjectDir)\..\..\..\..\lib"
+				IgnoreDefaultLibraryNames="libcmt.lib"
 				GenerateDebugInformation="true"
-				SubSystem="1"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
 				TargetMachine="1"
@@ -173,87 +242,11 @@
 			/>
 		</Configuration>
 		<Configuration
-			Name="Debug|x64"
-			OutputDirectory="$(SolutionDir)$(ConfigurationName)64"
-			IntermediateDirectory="$(ConfigurationName)64"
-			ConfigurationType="1"
-			CharacterSet="1"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-			/>
-			<Tool
-				Name="VCCLCompilerTool"
-				AdditionalOptions="/vmm /vmg"
-				Optimization="0"
-				AdditionalIncludeDirectories="$(ALLJOYN_SDK_HOME)\CPP\inc;$(NOINHERIT)"
-				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;QCC_OS_GROUP_WINDOWS;QCC_OS_WINDOWS;QCC_CPU_X86"
-				MinimalRebuild="true"
-				BasicRuntimeChecks="3"
-				RuntimeLibrary="3"
-				UsePrecompiledHeader="0"
-				WarningLevel="3"
-				DebugInformationFormat="4"
-			/>
-			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
-			<Tool
-				Name="VCLinkerTool"
-				AdditionalDependencies="alljoyn.lib wsock32.lib ws2_32.lib secur32.lib crypt32.lib Bcrypt.lib Ncrypt.lib iphlpapi.lib $(NOINHERIT)"
-				LinkIncremental="2"
-				AdditionalLibraryDirectories="$(ALLJOYN_SDK_HOME)\CPP\lib64\Debug;$(NOINHERIT)"
-				IgnoreDefaultLibraryNames="msvcrt.lib"
-				GenerateDebugInformation="true"
-				SubSystem="1"
-				TargetMachine="17"
-			/>
-			<Tool
-				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCManifestTool"
-			/>
-			<Tool
-				Name="VCXDCMakeTool"
-			/>
-			<Tool
-				Name="VCBscMakeTool"
-			/>
-			<Tool
-				Name="VCFxCopTool"
-			/>
-			<Tool
-				Name="VCAppVerifierTool"
-			/>
-			<Tool
-				Name="VCPostBuildEventTool"
-			/>
-		</Configuration>
-		<Configuration
 			Name="Release|x64"
-			OutputDirectory="$(SolutionDir)$(ConfigurationName)64"
-			IntermediateDirectory="$(ConfigurationName)64"
+			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
+			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="1"
-			CharacterSet="1"
+			CharacterSet="2"
 			WholeProgramOptimization="1"
 			>
 			<Tool
@@ -270,16 +263,17 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
+				TargetEnvironment="3"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
+				AdditionalOptions="/vmm /vmg"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories="$(ALLJOYN_SDK_HOME)\CPP\inc;$(NOINHERIT)"
-				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;QCC_OS_GROUP_WINDOWS;QCC_OS_WINDOWS;QCC_CPU_X86"
+				AdditionalIncludeDirectories="&quot;$(ALLJOYN_SDK_HOME)\inc&quot;;&quot;$(ProjectDir)\..\..\..\..\inc&quot;"
+				PreprocessorDefinitions="QCC_OS_GROUP_WINDOWS;UNICODE;NDEBUG"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
-				UsePrecompiledHeader="0"
 				WarningLevel="3"
 				DebugInformationFormat="3"
 			/>
@@ -294,11 +288,10 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="alljoyn.lib wsock32.lib ws2_32.lib secur32.lib crypt32.lib Bcrypt.lib Ncrypt.lib iphlpapi.lib $(NOINHERIT)"
-				LinkIncremental="1"
-				AdditionalLibraryDirectories="$(ALLJOYN_SDK_HOME)\CPP\lib64\Release;$(NOINHERIT)"
+				AdditionalDependencies="alljoyn.lib ajrouter.lib ws2_32.lib Secur32.lib crypt32.lib Bcrypt.lib Ncrypt.lib iphlpapi.lib"
+				AdditionalLibraryDirectories="&quot;$(ALLJOYN_SDK_HOME)\lib&quot;;&quot;$(ProjectDir)\..\..\..\..\lib&quot;"
+				IgnoreDefaultLibraryNames="libcmt.lib"
 				GenerateDebugInformation="true"
-				SubSystem="1"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
 				TargetMachine="17"
@@ -335,7 +328,7 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\Client.cpp"
+				RelativePath="..\..\FileTransferService.cc"
 				>
 			</File>
 		</Filter>
@@ -355,3 +348,4 @@
 	<Globals>
 	</Globals>
 </VisualStudioProject>
+

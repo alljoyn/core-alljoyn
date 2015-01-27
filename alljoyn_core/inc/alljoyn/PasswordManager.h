@@ -42,7 +42,6 @@ namespace ajn {
  */
 
 class PasswordManager {
-    friend class PasswordManagerInit;
   public:
     /**
      * @brief Set credentials used for the authentication of thin clients.
@@ -76,16 +75,13 @@ class PasswordManager {
     static qcc::String GetAuthMechanism() { return *authMechanism; }
     /// @endcond
   private:
+    static void Init();
+    static void Shutdown();
+    friend class StaticGlobals;
+
     static qcc::String* authMechanism;           /**< The auth mechanism selected by the user/app */
     static qcc::String* password;                /**< The password selected by the user/app */
 };
-static class PasswordManagerInit {
-  public:
-    PasswordManagerInit();
-    ~PasswordManagerInit();
-    static void Cleanup();
-  private:
-    static bool cleanedup;
-} passwordManagerInitializer;
+
 }
 #endif

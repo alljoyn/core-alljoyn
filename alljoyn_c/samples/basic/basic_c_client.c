@@ -31,6 +31,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <alljoyn_c/Init.h>
 #include <alljoyn_c/DBusStdDefines.h>
 #include <alljoyn_c/BusAttachment.h>
 #include <alljoyn_c/BusObject.h>
@@ -113,6 +114,16 @@ int main(int argc, char** argv, char** envArg)
         NULL,
         NULL
     };
+
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+#endif
 
     printf("AllJoyn Library version: %s\n", alljoyn_getversion());
     printf("AllJoyn Library build info: %s\n", alljoyn_getbuildinfo());
@@ -222,5 +233,9 @@ int main(int argc, char** argv, char** envArg)
 
     printf("basic client exiting with status %d (%s)\n", status, QCC_StatusText(status));
 
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return (int) status;
 }

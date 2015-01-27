@@ -30,6 +30,7 @@
 #include <qcc/StringUtil.h>
 
 #include <alljoyn/BusAttachment.h>
+#include <alljoyn/Init.h>
 #include <alljoyn/Message.h>
 #include <alljoyn/version.h>
 
@@ -175,6 +176,16 @@ static QStatus TestRemarshal(const MsgArg* argList, size_t numArgs, const char* 
 
 int main(int argc, char** argv)
 {
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+#endif
+
     QStatus status = ER_OK;
 
     printf("AllJoyn Library version: %s\n", ajn::GetVersion());
@@ -205,5 +216,9 @@ int main(int argc, char** argv)
     }
     printf("\n");
 
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return 0;
 }

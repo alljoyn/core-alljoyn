@@ -31,6 +31,7 @@
 
 #include <alljoyn/version.h>
 
+#include <alljoyn/Init.h>
 #include <alljoyn/Status.h>
 
 using namespace qcc;
@@ -325,6 +326,16 @@ static TEST_CASE testVector[] = {
 
 int main(int argc, char** argv)
 {
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+#endif
+
     QStatus status = ER_OK;
 
     printf("AllJoyn Library version: %s\n", ajn::GetVersion());
@@ -387,11 +398,19 @@ int main(int argc, char** argv)
         printf("Crypto_PseudorandomFunctionCCM test PASSED\n");
     }
 
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return 0;
 
 ErrorExit:
 
     printf("AES CCM unit test FAILED\n");
 
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return -1;
 }

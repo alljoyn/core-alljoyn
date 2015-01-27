@@ -35,14 +35,4 @@ wchar_t* MultibyteToWideString(const char* str);
  */
 void WinsockCheck();
 
-static struct WinsockInit {
-    WinsockInit();
-    ~WinsockInit();
-    static void Cleanup();
-
-  private:
-    static bool cleanedup;
-
-} winsockInit;
-
 #endif

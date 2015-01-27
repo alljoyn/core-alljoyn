@@ -40,6 +40,7 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include <alljoyn_c/Init.h>
 #include <alljoyn_c/DBusStdDefines.h>
 #include <alljoyn_c/BusAttachment.h>
 #include <alljoyn_c/version.h>
@@ -149,6 +150,16 @@ int main(int argc, char** argv, char** envArg)
         NULL
     };
     alljoyn_sessionopts opts;
+
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+#endif
 
     printf("AllJoyn Library version: %s\n", alljoyn_getversion());
     printf("AllJoyn Library build info: %s\n", alljoyn_getbuildinfo());
@@ -297,5 +308,9 @@ int main(int argc, char** argv, char** envArg)
         alljoyn_busobject_destroy(testObj);
     }
 
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return (int) status;
 }

@@ -51,12 +51,6 @@ class OpenSsl_ScopedLock {
     ~OpenSsl_ScopedLock();
 };
 
-static class OpenSslInit {
-  public:
-    OpenSslInit();
-    ~OpenSslInit();
-} openSslInit;
-
 }
 
 #endif

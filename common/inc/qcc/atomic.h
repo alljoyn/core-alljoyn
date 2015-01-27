@@ -25,7 +25,6 @@
 #define _QCC_ATOMIC_H
 
 #include <qcc/platform.h>
-#include <qcc/StaticGlobalsInit.h>
 
 #if defined(QCC_OS_GROUP_POSIX)
 #include <qcc/posix/atomic.h>

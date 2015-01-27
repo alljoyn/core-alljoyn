@@ -35,10 +35,11 @@
 #include <qcc/Util.h>
 
 #include <alljoyn/AboutObj.h>
+#include <alljoyn/AllJoynStd.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/BusObject.h>
 #include <alljoyn/DBusStd.h>
-#include <alljoyn/AllJoynStd.h>
+#include <alljoyn/Init.h>
 #include <alljoyn/MsgArg.h>
 #include <alljoyn/version.h>
 
@@ -806,6 +807,15 @@ static void usage(void)
 /** Main entry point */
 int main(int argc, char** argv)
 {
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+#endif
     QStatus status = ER_OK;
     InterfaceSecurityPolicy secPolicy = AJ_IFC_SECURITY_INHERIT;
     bool objSecure = false;
@@ -1027,5 +1037,9 @@ int main(int argc, char** argv)
     printf("Runtime elapsed: %u ms \n", (endTime - startTime));
     printf("%s exiting with status %d (%s)\n", argv[0], status, QCC_StatusText(status));
 
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return (int) status;
 }
