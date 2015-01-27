@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Copyright (c) 2011,2014 AllSeen Alliance. All rights reserved.
+# Copyright (c) 2011,2014-2015 AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -111,7 +111,7 @@ def writeHeaders():
     if None != codeOut:
         codeOut.write("""/* This file is auto-generated.  Do not modify. */
 /*
- * Copyright (c) 2011-2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
