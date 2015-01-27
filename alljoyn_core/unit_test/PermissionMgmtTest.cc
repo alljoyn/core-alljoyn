@@ -61,7 +61,7 @@ QStatus PermissionMgmtTestHelper::CreateIdentityCert(const qcc::String& serial, 
     return x509.EncodeCertificateDER(der);
 }
 
-QStatus PermissionMgmtTestHelper::CreateMembershipCert(const String& serial, const uint8_t* authDataHash, const qcc::GUID128& issuer, BusAttachment& signingBus, const qcc::GUID128& subject, const ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, qcc::String& der)
+QStatus PermissionMgmtTestHelper::CreateMembershipCert(const String& serial, const uint8_t* authDataHash, const qcc::GUID128& issuer, BusAttachment& signingBus, const qcc::GUID128& subject, const ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, bool delegate, qcc::String& der)
 {
     QStatus status = ER_CRYPTO_ERROR;
     MembershipCertificate x509;
@@ -71,6 +71,7 @@ QStatus PermissionMgmtTestHelper::CreateMembershipCert(const String& serial, con
     x509.SetSubject(subject);
     x509.SetSubjectPublicKey(subjectPubKey);
     x509.SetGuild(guild);
+    x509.SetCA(delegate);
     x509.SetDigest(authDataHash, Certificate::SHA256_DIGEST_SIZE);
     /* use the signing bus to sign the cert */
     PermissionConfigurator& pc = signingBus.GetPermissionConfigurator();
@@ -79,6 +80,11 @@ QStatus PermissionMgmtTestHelper::CreateMembershipCert(const String& serial, con
         return status;
     }
     return x509.EncodeCertificateDER(der);
+}
+
+QStatus PermissionMgmtTestHelper::CreateMembershipCert(const String& serial, const uint8_t* authDataHash, const qcc::GUID128& issuer, BusAttachment& signingBus, const qcc::GUID128& subject, const ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, qcc::String& der)
+{
+    return CreateMembershipCert(serial, authDataHash, issuer, signingBus, subject, subjectPubKey, guild, false, der);
 }
 
 QStatus BasePermissionMgmtTest::InterestInSignal(BusAttachment* bus)
@@ -195,9 +201,13 @@ void BasePermissionMgmtTest::CreateTVAppInterface(BusAttachment& bus, bool addSe
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         status = ifc->AddMember(MESSAGE_METHOD_CALL, "Mute", NULL, NULL, NULL);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        status = ifc->AddMember(MESSAGE_METHOD_CALL, "InputSource", NULL, NULL, NULL);
+        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         status = ifc->AddSignal("ChannelChanged", "u", "newChannel");
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         status = ifc->AddProperty("Volume", "u", PROP_ACCESS_RW);
+        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        status = ifc->AddProperty("Caption", "y", PROP_ACCESS_RW);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
         ifc->Activate();
@@ -216,6 +226,7 @@ void BasePermissionMgmtTest::CreateTVAppInterface(BusAttachment& bus, bool addSe
     AddMethodHandler(ifc->GetMember("Down"), static_cast<MessageReceiver::MethodHandler>(&BasePermissionMgmtTest::TVDown));
     AddMethodHandler(ifc->GetMember("Channel"), static_cast<MessageReceiver::MethodHandler>(&BasePermissionMgmtTest::TVChannel));
     AddMethodHandler(ifc->GetMember("Mute"), static_cast<MessageReceiver::MethodHandler>(&BasePermissionMgmtTest::TVMute));
+    AddMethodHandler(ifc->GetMember("InputSource"), static_cast<MessageReceiver::MethodHandler>(&BasePermissionMgmtTest::TVInputSource));
 }
 
 void BasePermissionMgmtTest::CreateAppInterfaces(BusAttachment& bus, bool addService)
@@ -320,6 +331,11 @@ void BasePermissionMgmtTest::TVChannelChanged(const InterfaceDescription::Member
 }
 
 void BasePermissionMgmtTest::TVMute(const InterfaceDescription::Member* member, Message& msg)
+{
+    MethodReply(msg, ER_OK);
+}
+
+void BasePermissionMgmtTest::TVInputSource(const InterfaceDescription::Member* member, Message& msg)
 {
     MethodReply(msg, ER_OK);
 }
@@ -591,6 +607,64 @@ QStatus PermissionMgmtTestHelper::LoadCertificateBytes(Message& msg, Certificate
     return status;
 }
 
+static QStatus InvokeInstallMembership(BusAttachment& bus, ProxyBusObject& remoteObj, qcc::String& der)
+{
+    const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::INTERFACE_NAME);
+    remoteObj.AddInterface(*itf);
+    Message reply(bus);
+    MsgArg certArgs[1];
+    certArgs[0].Set("(yay)", Certificate::ENCODING_X509_DER, der.length(), der.c_str());
+    MsgArg arg("a(yay)", 1, certArgs);
+
+    QStatus status = remoteObj.MethodCall(BasePermissionMgmtTest::INTERFACE_NAME, "InstallMembership", &arg, 1, reply, 5000);
+
+    if (ER_OK != status) {
+        if (PermissionMgmtTestHelper::IsPermissionDeniedError(status, reply)) {
+            status = ER_PERMISSION_DENIED;
+        }
+    }
+    return status;
+}
+
+static QStatus InvokeInstallMembership(BusAttachment& bus, ProxyBusObject& remoteObj, qcc::String* derArray, size_t derCount)
+{
+    const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::INTERFACE_NAME);
+    remoteObj.AddInterface(*itf);
+    Message reply(bus);
+    MsgArg* certArgs = new MsgArg[derCount];
+    for (size_t cnt = 0; cnt < derCount; cnt++) {
+        certArgs[cnt].Set("(yay)", Certificate::ENCODING_X509_DER, derArray[cnt].length(), derArray[cnt].c_str());
+    }
+    MsgArg arg("a(yay)", derCount, certArgs);
+
+    QStatus status = remoteObj.MethodCall(BasePermissionMgmtTest::INTERFACE_NAME, "InstallMembership", &arg, 1, reply, 5000);
+    delete [] certArgs;
+    if (ER_OK != status) {
+        if (PermissionMgmtTestHelper::IsPermissionDeniedError(status, reply)) {
+            status = ER_PERMISSION_DENIED;
+        }
+    }
+    return status;
+}
+
+static QStatus InvokeInstallMembershipAuthData(BusAttachment& bus, ProxyBusObject& remoteObj, const String& serial, const GUID128& issuer, PermissionPolicy& authData)
+{
+    const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::INTERFACE_NAME);
+    remoteObj.AddInterface(*itf);
+    Message reply(bus);
+    MsgArg args[3];
+    args[0].Set("s", serial.c_str());
+    args[1].Set("ay", GUID128::SIZE, issuer.GetBytes());
+    authData.Export(args[2]);
+    QStatus status = remoteObj.MethodCall(BasePermissionMgmtTest::INTERFACE_NAME, "InstallMembershipAuthData", args, ArraySize(args), reply, 5000);
+    if (ER_OK != status) {
+        if (PermissionMgmtTestHelper::IsPermissionDeniedError(status, reply)) {
+            status = ER_PERMISSION_DENIED;
+        }
+    }
+    return status;
+}
+
 QStatus PermissionMgmtTestHelper::InstallMembership(const String& serial, BusAttachment& bus, ProxyBusObject& remoteObj, BusAttachment& signingBus, const qcc::GUID128& subjectGUID, const ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, PermissionPolicy* membershipAuthData)
 {
     QStatus status;
@@ -614,31 +688,59 @@ QStatus PermissionMgmtTestHelper::InstallMembership(const String& serial, BusAtt
     if (status != ER_OK) {
         return status;
     }
-    MsgArg certArgs[1];
-    certArgs[0].Set("(yay)", Certificate::ENCODING_X509_DER, der.length(), der.c_str());
-    MsgArg arg("a(yay)", 1, certArgs);
-
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::INTERFACE_NAME, "InstallMembership", &arg, 1, reply, 5000);
-
+    status = InvokeInstallMembership(bus, remoteObj, der);
     if (ER_OK != status) {
-        if (IsPermissionDeniedError(status, reply)) {
-            status = ER_PERMISSION_DENIED;
-        }
+        return status;
     }
 
-    if (ER_OK == status) {
-        /* installing the auth data */
-        MsgArg args[3];
-        args[0].Set("s", serial.c_str());
-        args[1].Set("ay", GUID128::SIZE, localGUID.GetBytes());
-        membershipAuthData->Export(args[2]);
-        status = remoteObj.MethodCall(BasePermissionMgmtTest::INTERFACE_NAME, "InstallMembershipAuthData", args, ArraySize(args), reply, 5000);
-        if (ER_OK != status) {
-            if (IsPermissionDeniedError(status, reply)) {
-                status = ER_PERMISSION_DENIED;
-            }
-        }
+    /* installing the auth data */
+    return InvokeInstallMembershipAuthData(bus, remoteObj, serial, localGUID, *membershipAuthData);
+}
+
+QStatus PermissionMgmtTestHelper::InstallMembershipChain(const String& serial, BusAttachment& bus, ProxyBusObject& remoteObj, BusAttachment& signingBus, BusAttachment& subjectBus, const qcc::GUID128& subjectGUID, const ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, PermissionPolicy** authDataArray)
+{
+    CredentialAccessor ca(bus);
+    qcc::GUID128 localGUID;
+    QStatus status = ca.GetGuid(localGUID);
+    if (status != ER_OK) {
+        return status;
     }
+    /* create the second cert first -- with delegate on  */
+    uint8_t digest[Certificate::SHA256_DIGEST_SIZE];
+    Message tmpMsg(bus);
+    DefaultPolicyMarshaller marshaller(tmpMsg);
+    authDataArray[1]->Digest(marshaller, digest, Certificate::SHA256_DIGEST_SIZE);
+    qcc::String derArray[2];
+    status = CreateMembershipCert(serial, digest, localGUID, signingBus, subjectGUID, subjectPubKey, guild, true, derArray[1]);
+    if (status != ER_OK) {
+        return status;
+    }
+
+    /* create the leaf cert signed by the subject */
+    authDataArray[0]->Digest(marshaller, digest, Certificate::SHA256_DIGEST_SIZE);
+    status = CreateMembershipCert(serial, digest, subjectGUID, subjectBus, subjectGUID, subjectPubKey, guild, false, derArray[0]);
+    if (status != ER_OK) {
+        return status;
+    }
+
+    /* install cert chain */
+    status = InvokeInstallMembership(bus, remoteObj, derArray, 2);
+    if (ER_OK != status) {
+        return status;
+    }
+
+    /* installing the auth data for leaf cert*/
+    status = InvokeInstallMembershipAuthData(bus, remoteObj, serial, subjectGUID, *authDataArray[0]);
+    if (ER_OK != status) {
+        return status;
+    }
+
+    /* installing the auth data for second cert */
+    status = InvokeInstallMembershipAuthData(bus, remoteObj, serial, localGUID, *authDataArray[1]);
+    if (ER_OK != status) {
+        return status;
+    }
+
     return status;
 }
 
@@ -813,6 +915,16 @@ QStatus PermissionMgmtTestHelper::GetTVVolume(BusAttachment& bus, ProxyBusObject
     return status;
 }
 
+QStatus PermissionMgmtTestHelper::GetTVCaption(BusAttachment& bus, ProxyBusObject& remoteObj)
+{
+    const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::TV_IFC_NAME);
+    remoteObj.AddInterface(*itf);
+
+    /* test the GetAllProperites */
+    MsgArg mapVal;
+    return remoteObj.GetAllProperties(BasePermissionMgmtTest::TV_IFC_NAME, mapVal);
+}
+
 QStatus PermissionMgmtTestHelper::SetTVVolume(BusAttachment& bus, ProxyBusObject& remoteObj, uint32_t volume)
 {
     const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::TV_IFC_NAME);
@@ -869,6 +981,22 @@ QStatus PermissionMgmtTestHelper::ExcerciseTVMute(BusAttachment& bus, ProxyBusOb
     return status;
 }
 
+QStatus PermissionMgmtTestHelper::ExcerciseTVInputSource(BusAttachment& bus, ProxyBusObject& remoteObj)
+{
+    QStatus status;
+    const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::TV_IFC_NAME);
+    remoteObj.AddInterface(*itf);
+    Message reply(bus);
+
+    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "InputSource", NULL, 0, reply, 5000);
+    if (ER_OK != status) {
+        if (IsPermissionDeniedError(status, reply)) {
+            status = ER_PERMISSION_DENIED;
+        }
+    }
+    return status;
+}
+
 QStatus PermissionMgmtTestHelper::JoinPeerSession(BusAttachment& initiator, BusAttachment& responder, SessionId& sessionId)
 {
     SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
@@ -905,6 +1033,13 @@ QStatus BasePermissionMgmtTest::Get(const char* ifcName, const char* propName, M
         return ER_OK;
     }
     return ER_BUS_NO_SUCH_PROPERTY;
+}
+
+void BasePermissionMgmtTest::GetAllProps(const InterfaceDescription::Member* member, Message& msg)
+{
+    MsgArg vals;
+    vals.Set("a{sv}", 0, NULL);
+    MethodReply(msg, &vals, 1);
 }
 
 QStatus BasePermissionMgmtTest::Set(const char* ifcName, const char* propName, MsgArg& val)

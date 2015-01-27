@@ -174,8 +174,10 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
     void TVChannel(const InterfaceDescription::Member* member, Message& msg);
     void TVChannelChanged(const InterfaceDescription::Member* member, Message& msg);
     void TVMute(const InterfaceDescription::Member* member, Message& msg);
+    void TVInputSource(const InterfaceDescription::Member* member, Message& msg);
     QStatus Get(const char* ifcName, const char* propName, MsgArg& val);
     QStatus Set(const char* ifcName, const char* propName, MsgArg& val);
+    void GetAllProps(const InterfaceDescription::Member* member, Message& msg);
 
   private:
     void RegisterKeyStoreListeners();
@@ -199,6 +201,7 @@ class PermissionMgmtTestHelper {
   public:
     static QStatus CreateIdentityCert(const qcc::String& serial, const qcc::GUID128& issuer, const qcc::ECCPrivateKey* issuerPrivateKey, const qcc::GUID128& subject, const qcc::ECCPublicKey* subjectPubKey, const qcc::String& alias, qcc::String& der);
 
+    static QStatus CreateMembershipCert(const qcc::String& serial, const uint8_t* authDataHash, const qcc::GUID128& issuer, BusAttachment& signingBus, const qcc::GUID128& subject, const qcc::ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, bool delegate, qcc::String& der);
     static QStatus CreateMembershipCert(const qcc::String& serial, const uint8_t* authDataHash, const qcc::GUID128& issuer, BusAttachment& signingBus, const qcc::GUID128& subject, const qcc::ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, qcc::String& der);
     static QStatus InterestInSignal(BusAttachment* bus);
     static bool IsPermissionDeniedError(QStatus status, Message& msg);
@@ -217,6 +220,8 @@ class PermissionMgmtTestHelper {
     static QStatus RetrieveDSAKeys(BusAttachment& bus, qcc::ECCPrivateKey& privateKey, qcc::ECCPublicKey& publicKey);
     static QStatus LoadCertificateBytes(Message& msg, qcc::CertificateX509& cert);
     static QStatus InstallMembership(const qcc::String& serial, BusAttachment& bus, ProxyBusObject& remoteObj, BusAttachment& signingBus, const qcc::GUID128& subjectGUID, const qcc::ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, PermissionPolicy* membershipAuthData);
+    static QStatus InstallMembershipChain(const qcc::String& serial, BusAttachment& bus, ProxyBusObject& remoteObj, BusAttachment& signingBus, BusAttachment& subjectBus, const qcc::GUID128& subjectGUID, const qcc::ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, PermissionPolicy** authDataArray);
+
     static QStatus RemoveMembership(BusAttachment& bus, ProxyBusObject& remoteObj, const qcc::String serialNum, const qcc::GUID128& issuer);
     static QStatus InstallIdentity(BusAttachment& bus, ProxyBusObject& remoteObj, qcc::String& der);
     static QStatus RetrievePublicKeyFromMsgArg(MsgArg& arg, qcc::ECCPublicKey* pubKey);
@@ -230,11 +235,13 @@ class PermissionMgmtTestHelper {
     static QStatus ExcerciseTVDown(BusAttachment& bus, ProxyBusObject& remoteObj);
     static QStatus ExcerciseTVChannel(BusAttachment& bus, ProxyBusObject& remoteObj);
     static QStatus ExcerciseTVMute(BusAttachment& bus, ProxyBusObject& remoteObj);
+    static QStatus ExcerciseTVInputSource(BusAttachment& bus, ProxyBusObject& remoteObj);
     static QStatus JoinPeerSession(BusAttachment& initiator, BusAttachment& responder, SessionId& sessionId);
     static QStatus GetGUID(BusAttachment& bus, qcc::GUID128& guid);
     static QStatus GetPeerGUID(BusAttachment& bus, qcc::String& peerName, qcc::GUID128& peerGuid);
     static QStatus GetTVVolume(BusAttachment& bus, ProxyBusObject& remoteObj, uint32_t& volume);
     static QStatus SetTVVolume(BusAttachment& bus, ProxyBusObject& remoteObj, uint32_t volume);
+    static QStatus GetTVCaption(BusAttachment& bus, ProxyBusObject& remoteObj);
 };
 
 }

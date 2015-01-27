@@ -126,6 +126,7 @@ PermissionMgmtObj::~PermissionMgmtObj()
 {
     delete ca;
     ClearTrustAnchors();
+    _PeerState::ClearGuildMap(guildMap);
     if (portListener) {
         if (bus.IsStarted()) {
             bus.UnbindSessionPort(ALLJOYN_SESSIONPORT_PERMISSION_MGMT);
@@ -804,7 +805,49 @@ static QStatus GetMembershipCert(CredentialAccessor* ca, GUID128& guid, Membersh
     return LoadCertificate(Certificate::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), cert);
 }
 
-static QStatus GetMembershipGuid(CredentialAccessor* ca, GUID128& membershipHead, const String& serialNum, const GUID128& issuer, GUID128& membershipGuid)
+/**
+ * Get the guid of the membeship cert in the chain of membership certificate
+ */
+static QStatus GetMembershipChainGuid(CredentialAccessor* ca, GUID128& leafMembershipGuid, const String& serialNum, const GUID128& issuer, GUID128& membershipChainGuid)
+{
+    GUID128* guids = NULL;
+    size_t numOfGuids;
+    QStatus status = ca->GetKeys(leafMembershipGuid, &guids, &numOfGuids);
+    if (ER_OK != status) {
+        return status;
+    }
+    String tag = serialNum.substr(0, KeyBlob::MAX_TAG_LEN);
+    bool found = false;
+    status = ER_OK;
+    for (size_t cnt = 0; cnt < numOfGuids; cnt++) {
+        KeyBlob kb;
+        status = ca->GetKey(guids[cnt], kb);
+        if (ER_OK != status) {
+            break;
+        }
+        /* check the tag */
+        if (kb.GetTag() == CERT_CHAIN_TAG_NAME) {
+            /* check both serial number and issuer */
+            MembershipCertificate cert;
+            LoadCertificate(Certificate::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), cert);
+            if ((cert.GetSerial() == serialNum) && (cert.GetIssuer() == issuer)) {
+                membershipChainGuid = guids[cnt];
+                found = true;
+                break;
+            }
+        }
+    }
+    delete [] guids;
+    if (ER_OK != status) {
+        return status;
+    }
+    if (found) {
+        return ER_OK;
+    }
+    return ER_BUS_KEY_UNAVAILABLE;  /* not found */
+}
+
+static QStatus GetMembershipGuid(CredentialAccessor* ca, GUID128& membershipHead, const String& serialNum, const GUID128& issuer, bool searchLeafCertOnly, GUID128& membershipGuid)
 {
     GUID128* guids = NULL;
     size_t numOfGuids;
@@ -831,6 +874,17 @@ static QStatus GetMembershipGuid(CredentialAccessor* ca, GUID128& membershipHead
                 found = true;
                 break;
             }
+        }
+        if (searchLeafCertOnly) {
+            continue;
+        }
+        /* may be its cert chain is a match */
+        GUID128 tmpGuid(0);
+        status = GetMembershipChainGuid(ca, guids[cnt], serialNum, issuer, tmpGuid);
+        if (ER_OK == status) {
+            membershipGuid = tmpGuid;
+            found = true;
+            break;
         }
     }
     delete [] guids;
@@ -904,7 +958,7 @@ void PermissionMgmtObj::InstallMembership(const InterfaceDescription::Member* me
             /* check for duplicate */
             if (checkDup) {
                 GUID128 tmpGuid(0);
-                status = GetMembershipGuid(ca, membershipHead, cert.GetSerial(), cert.GetIssuer(), tmpGuid);
+                status = GetMembershipGuid(ca, membershipHead, cert.GetSerial(), cert.GetIssuer(), true, tmpGuid);
                 if (ER_OK == status) {
                     /* found a duplicate */
                     MethodReply(msg, ER_DUPLICATE_CERTIFICATE);
@@ -928,7 +982,7 @@ void PermissionMgmtObj::InstallMembership(const InterfaceDescription::Member* me
     MethodReply(msg, status);
 }
 
-QStatus PermissionMgmtObj::LocateMembershipEntry(const String& serialNum, const GUID128& issuer, GUID128& membershipGuid)
+QStatus PermissionMgmtObj::LocateMembershipEntry(const String& serialNum, const GUID128& issuer, GUID128& membershipGuid, bool searchLeafCertOnly)
 {
     /* look for memberships head in the key store */
     GUID128 membershipHead(0);
@@ -939,7 +993,12 @@ QStatus PermissionMgmtObj::LocateMembershipEntry(const String& serialNum, const 
     if (status == ER_BUS_KEY_UNAVAILABLE) {
         return status;
     }
-    return GetMembershipGuid(ca, membershipHead, serialNum, issuer, membershipGuid);
+    return GetMembershipGuid(ca, membershipHead, serialNum, issuer, searchLeafCertOnly, membershipGuid);
+}
+
+QStatus PermissionMgmtObj::LocateMembershipEntry(const String& serialNum, const GUID128& issuer, GUID128& membershipGuid)
+{
+    return LocateMembershipEntry(serialNum, issuer, membershipGuid, true);
 }
 
 static QStatus LoadPolicyFromMsgArg(MsgArg& arg, PermissionPolicy& policy)
@@ -981,7 +1040,7 @@ static QStatus LoadAndValidateAuthDataUsingCert(BusAttachment& bus, MsgArg& auth
 QStatus PermissionMgmtObj::LoadAndValidateAuthData(const String& serial, const GUID128& issuer, MsgArg& authDataArg, PermissionPolicy& authorization, GUID128& membershipGuid)
 {
     QStatus status;
-    status = LocateMembershipEntry(serial, issuer, membershipGuid);
+    status = LocateMembershipEntry(serial, issuer, membershipGuid, false);
     if (ER_OK != status) {
         return status;
     }
@@ -991,7 +1050,9 @@ QStatus PermissionMgmtObj::LoadAndValidateAuthData(const String& serial, const G
     if (ER_OK != status) {
         return status;
     }
-    return LoadAndValidateAuthDataUsingCert(bus, authDataArg, authorization, cert);
+    //return LoadAndValidateAuthDataUsingCert(bus, authDataArg, authorization, cert);
+    status = LoadAndValidateAuthDataUsingCert(bus, authDataArg, authorization, cert);
+    return status;
 }
 
 void PermissionMgmtObj::InstallMembershipAuthData(const InterfaceDescription::Member* member, Message& msg)
@@ -1164,6 +1225,85 @@ static void ClearArgVector(std::vector<MsgArg*>& argList)
     argList.clear();
 }
 
+/**
+ * The membership meta data is stored as
+ *               +-------------------+
+ *               | Membership Header |
+ *               +-------------------+
+ *                    |          |
+ *      +-------------+          |
+ *      |                        |
+ *   +-----------+           +-----------+
+ *   | leaf cert |           | leaf cert |
+ *   +-----------+           +-----------+
+ *      |                      |        |
+ * +-----------+       +-----------+   +-----------------+
+ * | auth data |       | auth data |   | cert 1 in chain |
+ * +-----------+       +-----------+   +-----------------+
+ *                                       |            |
+ *                                 +-----------+   +-----------------+
+ *                                 | auth data |   | cert 2 in chain |
+ *                                 +-----------+   +-----------------+
+ *                                                    |
+ *                                               +-----------+
+ *                                               | auth data |
+ *                                               +-----------+
+ *
+ */
+
+static QStatus LoadMembershipMetaData(BusAttachment& bus, CredentialAccessor* ca, const GUID128& entryGuid, MembershipCertificate& cert, PermissionPolicy& authData, std::vector<_PeerState::MembershipMetaPair*>& certChain)
+{
+    QStatus status = ReadMembershipCert(ca, entryGuid, cert);
+    if (ER_OK != status) {
+        return status;
+    }
+
+    /* look into its associated nodes */
+    GUID128* guids = NULL;
+    size_t numOfGuids;
+    status = ca->GetKeys((GUID128 &)entryGuid, &guids, &numOfGuids);
+    if (ER_OK != status) {
+        delete [] guids;
+        if (ER_BUS_KEY_UNAVAILABLE == status) {
+            return ER_OK; /* nothing to generate */
+        }
+        return status;
+    }
+
+    /* go through the associated entries of this guid */
+    status = ER_OK;
+    for (size_t cnt = 0; cnt < numOfGuids; cnt++) {
+        KeyBlob kb;
+        status = ca->GetKey(guids[cnt], kb);
+        if (ER_OK != status) {
+            break;
+        }
+
+        /* check the tag */
+        if (kb.GetTag() == AUTH_DATA_TAG_NAME) {
+            Message tmpMsg(bus);
+            DefaultPolicyMarshaller marshaller(tmpMsg);
+            status = authData.Import(marshaller, kb.GetData(), kb.GetSize());
+            if (ER_OK != status) {
+                delete [] guids;
+                return status;
+            }
+        } else if (kb.GetTag() == CERT_CHAIN_TAG_NAME) {
+            _PeerState::MembershipMetaPair* metaPair = new _PeerState::MembershipMetaPair();
+            certChain.push_back(metaPair);
+            status = LoadMembershipMetaData(bus, ca, guids[cnt], metaPair->cert, metaPair->authData, certChain);
+            if (ER_OK != status) {
+                delete [] guids;
+                certChain.pop_back();
+                delete metaPair;
+                return status;
+            }
+        }
+    }
+    delete [] guids;
+    return status;
+}
+
 QStatus PermissionMgmtObj::LocalMembershipsChanged()
 {
     MembershipCertMap certMap;
@@ -1171,67 +1311,90 @@ QStatus PermissionMgmtObj::LocalMembershipsChanged()
     if (ER_OK != status) {
         return status;
     }
-    _PeerState::GuildMap& guildMap = bus.GetInternal().GetPermissionManager().GetGuildMap();
-    /* clear the guild map */
+    /* clear the local guild map */
     _PeerState::ClearGuildMap(guildMap);
     if (certMap.size() == 0) {
         return ER_OK;
     }
 
     for (MembershipCertMap::iterator it = certMap.begin(); it != certMap.end(); it++) {
-        const GUID128& membershipGuid = it->first;
+
         _PeerState::GuildMetadata* meta = new _PeerState::GuildMetadata();
-        status = ReadMembershipCert(ca, membershipGuid, meta->cert);
+        status = LoadMembershipMetaData(bus, ca, it->first, meta->cert, meta->authData, meta->certChain);
         if (ER_OK != status) {
             delete meta;
             ClearMembershipCertMap(certMap);
             return status;
         }
-
-        GUID128* guids = NULL;
-        size_t numOfGuids;
-        status = ca->GetKeys((GUID128 &)membershipGuid, &guids, &numOfGuids);
-        if (ER_OK != status) {
-            delete meta;
-            delete [] guids;
-            ClearMembershipCertMap(certMap);
-            return status;
-        }
-
-        /* go through the associated entries of this membership */
-        for (size_t cnt = 0; cnt < numOfGuids; cnt++) {
-            KeyBlob kb;
-            status = ca->GetKey(guids[cnt], kb);
-            if (ER_OK != status) {
-                break;
-            }
-            /* check the tag */
-            if (kb.GetTag() == AUTH_DATA_TAG_NAME) {
-                Message tmpMsg(bus);
-                DefaultPolicyMarshaller marshaller(tmpMsg);
-                status = meta->authData.Import(marshaller, kb.GetData(), kb.GetSize());
-                if (ER_OK != status) {
-                    delete meta;
-                    delete [] guids;
-                    ClearMembershipCertMap(certMap);
-                    return status;
-                }
-            } else if (kb.GetTag() == CERT_CHAIN_TAG_NAME) {
-                CertificateX509* cert = new CertificateX509();
-                status = LoadCertificate(Certificate::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), *cert);
-                if (ER_OK != status) {
-                    delete meta;
-                    delete [] guids;
-                    ClearMembershipCertMap(certMap);
-                    return status;
-                }
-                meta->certChain.push_back(cert);
-            }
-        }
-        delete [] guids;
-        guildMap[membershipGuid.ToString()] = meta;
+        guildMap[it->first.ToString()] = meta;
     }
     ClearMembershipCertMap(certMap);
+    return ER_OK;
+}
+
+static QStatus GenerateSendMembershipForCertEntry(BusAttachment& bus, CredentialAccessor* ca, MembershipCertificate& cert, GUID128& entryGuid, std::vector<MsgArg*>& argList)
+{
+    GUID128* guids = NULL;
+    size_t numOfGuids;
+    QStatus status = ca->GetKeys(entryGuid, &guids, &numOfGuids);
+    if (ER_OK != status) {
+        delete [] guids;
+        if (ER_BUS_KEY_UNAVAILABLE == status) {
+            return ER_OK; /* nothing to generate */
+        }
+        return status;
+    }
+
+    /* go through the associated entries of this guid */
+    for (size_t cnt = 0; cnt < numOfGuids; cnt++) {
+        KeyBlob kb;
+        status = ca->GetKey(guids[cnt], kb);
+        if (ER_OK != status) {
+            break;
+        }
+        /* check the tag */
+        if (kb.GetTag() == AUTH_DATA_TAG_NAME) {
+            Message tmpMsg(bus);
+            DefaultPolicyMarshaller marshaller(tmpMsg);
+            PermissionPolicy authData;
+            status = authData.Import(marshaller, kb.GetData(), kb.GetSize());
+            if (ER_OK != status) {
+                delete [] guids;
+                return status;
+            }
+            MsgArg authDataArg;
+            status = authData.Export(authDataArg);
+            if (ER_OK != status) {
+                delete [] guids;
+                return status;
+            }
+
+            MsgArg toBeCopied("(ayay(v))", cert.GetSerial().size(), cert.GetSerial().data(), GUID128::SIZE, cert.GetIssuer().GetBytes(), &authDataArg);
+            MsgArg* msgArg = new MsgArg("(yv)", SEND_AUTH_DATA, new MsgArg(toBeCopied));
+            msgArg->SetOwnershipFlags(MsgArg::OwnsArgs, true);
+            argList.push_back(msgArg);
+        } else if (kb.GetTag() == CERT_CHAIN_TAG_NAME) {
+            MsgArg chainCertArg("(yay)", Certificate::ENCODING_X509_DER,  kb.GetSize(), kb.GetData());
+            MsgArg toBeCopied("(ayay(v))", cert.GetSerial().size(), cert.GetSerial().data(), GUID128::SIZE, cert.GetIssuer().GetBytes(), &chainCertArg);
+            MsgArg* msgArg = new MsgArg("(yv)", SEND_CERT_CHAIN, new MsgArg(toBeCopied));
+            msgArg->SetOwnershipFlags(MsgArg::OwnsArgs, true);
+            argList.push_back(msgArg);
+
+            /* this cert chain node may have a parent cert */
+            MembershipCertificate chainCert;
+            status = LoadCertificate(Certificate::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), chainCert);
+            if (ER_OK != status) {
+                delete [] guids;
+                return status;
+            }
+            status = GenerateSendMembershipForCertEntry(bus, ca, chainCert, guids[cnt], argList);
+            if (ER_OK != status) {
+                delete [] guids;
+                return status;
+            }
+        }
+    }
+    delete [] guids;
     return ER_OK;
 }
 
@@ -1258,60 +1421,17 @@ QStatus PermissionMgmtObj::GenerateSendMemberships(MsgArg** args, size_t* count)
             return status;
         }
         MsgArg toBeCopied("(yay)", Certificate::ENCODING_X509_DER, der.length(), der.c_str());
+        /* use a copy constructor of MsgArg to get a deep copy of all the array data */
         MsgArg* msgArg = new MsgArg("(yv)", SEND_CERT, new MsgArg(toBeCopied));
         msgArg->SetOwnershipFlags(MsgArg::OwnsArgs, true);
         argList.push_back(msgArg);
 
-        GUID128* guids = NULL;
-        size_t numOfGuids;
-        status = ca->GetKeys((GUID128 &)it->first, &guids, &numOfGuids);
+        status = GenerateSendMembershipForCertEntry(bus, ca, *cert, (GUID128 &)it->first, argList);
         if (ER_OK != status) {
-            delete [] guids;
             ClearArgVector(argList);
             ClearMembershipCertMap(certMap);
             return status;
         }
-
-        /* go through the associated entries of this membership */
-        for (size_t cnt = 0; cnt < numOfGuids; cnt++) {
-            KeyBlob kb;
-            status = ca->GetKey(guids[cnt], kb);
-            if (ER_OK != status) {
-                break;
-            }
-            /* check the tag */
-            if (kb.GetTag() == AUTH_DATA_TAG_NAME) {
-                Message tmpMsg(bus);
-                DefaultPolicyMarshaller marshaller(tmpMsg);
-                PermissionPolicy authData;
-                status = authData.Import(marshaller, kb.GetData(), kb.GetSize());
-                if (ER_OK != status) {
-                    delete [] guids;
-                    ClearArgVector(argList);
-                    ClearMembershipCertMap(certMap);
-                    return status;
-                }
-                MsgArg authDataArg;
-                status = authData.Export(authDataArg);
-                if (ER_OK != status) {
-                    delete [] guids;
-                    ClearArgVector(argList);
-                    ClearMembershipCertMap(certMap);
-                    return status;
-                }
-
-                MsgArg toBeCopied("(ayay(v))", cert->GetSerial().size(), cert->GetSerial().data(), GUID128::SIZE, cert->GetIssuer().GetBytes(), &authDataArg);
-                msgArg = new MsgArg("(yv)", SEND_AUTH_DATA, new MsgArg(toBeCopied));
-                msgArg->SetOwnershipFlags(MsgArg::OwnsArgs, true);
-                argList.push_back(msgArg);
-            } else if (kb.GetTag() == CERT_CHAIN_TAG_NAME) {
-                MsgArg toBeCopied("(ayay(v))", cert->GetSerial().size(), cert->GetSerial().data(), GUID128::SIZE, cert->GetIssuer().GetBytes(), new MsgArg("(yay)", Certificate::ENCODING_X509_DER,  kb.GetSize(), kb.GetData()));
-                msgArg = new MsgArg("(yv)", SEND_CERT_CHAIN, new MsgArg(toBeCopied));
-                msgArg->SetOwnershipFlags(MsgArg::OwnsArgs, true);
-                argList.push_back(msgArg);
-            }
-        }
-        delete [] guids;
     }
     *count = argList.size();
     MsgArg* retArgs = new MsgArg[*count];
@@ -1400,16 +1520,36 @@ QStatus PermissionMgmtObj::ParseSendMemberships(Message& msg, bool& done)
                 }
 
                 if (type == SEND_CERT_CHAIN) {
-                    CertificateX509* cert = new CertificateX509();
-                    status = LoadX509CertFromMsgArg(*variantArg, *cert);
+                    _PeerState::MembershipMetaPair* metaPair = new _PeerState::MembershipMetaPair();
+                    status = LoadX509CertFromMsgArg(*variantArg, metaPair->cert);
                     if (ER_OK != status) {
+                        delete metaPair;
                         return status;
                     }
-                    meta->certChain.push_back(cert);
+
+                    meta->certChain.push_back(metaPair);
                 } else if (type == SEND_AUTH_DATA) {
-                    status = LoadAndValidateAuthDataUsingCert(bus, *variantArg, meta->authData, meta->cert);
-                    if (ER_OK != status) {
-                        return status;
+                    MembershipCertificate* targetCert = NULL;
+                    PermissionPolicy* targetAuthData = NULL;
+                    if ((meta->cert.GetSerial() == serialNum) && (meta->cert.GetIssuer() == issuerGUID)) {
+                        targetCert = &meta->cert;
+                        targetAuthData = &meta->authData;
+                    } else {
+                        for (std::vector<_PeerState::MembershipMetaPair*>::iterator ccit = meta->certChain.begin(); ccit != meta->certChain.end(); ccit++) {
+                            if (((*ccit)->cert.GetSerial() == serialNum) && ((*ccit)->cert.GetIssuer() == issuerGUID)) {
+                                targetCert = &(*ccit)->cert;
+                                targetAuthData = &(*ccit)->authData;
+                                break;
+                            }
+                        }
+                    }
+                    if (targetCert) {
+                        status = LoadAndValidateAuthDataUsingCert(bus, *variantArg, *targetAuthData,  *targetCert);
+                        if (ER_OK != status) {
+                            return status;
+                        }
+                    } else {
+                        return ER_CERTIFICATE_NOT_FOUND;
                     }
                 }
             }
@@ -1443,6 +1583,7 @@ QStatus PermissionMgmtObj::ParseSendMemberships(Message& msg, bool& done)
                 if (memcmp(&peerPublicKey, metadata->cert.GetSubjectPublicKey(), sizeof(ECCPublicKey)) != 0) {
                     /* remove this membership cert since it is not valid */
                     peerState->guildMap.erase(it);
+                    delete metadata;
                     verified = false;
                     break;
                 }
@@ -1450,7 +1591,10 @@ QStatus PermissionMgmtObj::ParseSendMemberships(Message& msg, bool& done)
                 std::vector<CertificateX509*> certsToVerify;
                 certsToVerify.reserve(metadata->certChain.size() + 1);
                 certsToVerify.assign(1, &metadata->cert);
-                certsToVerify.insert(certsToVerify.begin() + 1, metadata->certChain.begin(), metadata->certChain.end());
+                int cnt = 1;
+                for (std::vector<_PeerState::MembershipMetaPair*>::iterator ccit = metadata->certChain.begin(); ccit != metadata->certChain.end(); ccit++) {
+                    certsToVerify.insert(certsToVerify.begin() + cnt, &((*ccit)->cert));
+                }
                 /* check against the trust anchors */
                 status = ValidateCertificateChain(false, certsToVerify, &trustAnchors);
                 if (ER_OK != status) {

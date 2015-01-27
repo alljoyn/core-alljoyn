@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2011, 2014 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2011, 2014-2015 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -218,10 +218,21 @@ _PeerState::GuildMetadata* _PeerState::GetGuildMetadata(const qcc::String& seria
 {
     String key = GenGuildMetadataKey(serial, issuer);
     GuildMap::iterator iter = guildMap.find(key);
-    if (iter == guildMap.end()) {
-        return NULL;
+    if (iter != guildMap.end()) {
+        return iter->second;  /* direct hit at the leaf cert */
     }
-    return iter->second;
+
+    /* the <serial,issuer> pair may be of a cert in the chain */
+    for (GuildMap::iterator it = guildMap.begin(); it != guildMap.end(); it++) {
+        GuildMetadata* meta = it->second;
+        for (std::vector<MembershipMetaPair*>::iterator ccit = meta->certChain.begin(); ccit != meta->certChain.end(); ccit++) {
+            if (((*ccit)->cert.GetSerial() == serial) && ((*ccit)->cert.GetIssuer() == issuer)) {
+                return meta;
+            }
+        }
+    }
+
+    return NULL;
 }
 
 }

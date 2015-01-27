@@ -137,11 +137,15 @@ static bool IsRuleMatched(const PermissionPolicy::Rule& rule, const MessageHolde
         return false;
     }
 
+    bool msgMbrNameEmpty = !msgHolder.mbrName || (strlen(msgHolder.mbrName) == 0);
     const PermissionPolicy::Rule::Member* members = rule.GetMembers();
     int8_t* buckets = new int8_t[rule.GetMembersSize()];
     for (size_t cnt = 0; cnt < rule.GetMembersSize(); cnt++) {
         buckets[cnt] = 0;
-        if (!members[cnt].GetMemberName().empty()) {
+        if (msgMbrNameEmpty) {
+            /* potential to match all members.  Additional check later */
+            buckets[cnt] = 1;
+        } else if (!members[cnt].GetMemberName().empty()) {
             if (members[cnt].GetMemberName() == msgHolder.mbrName) {
                 /* rule has a specific member name match */
                 buckets[cnt] = 2;
@@ -155,9 +159,11 @@ static bool IsRuleMatched(const PermissionPolicy::Rule& rule, const MessageHolde
         /* match member type */
         if (members[cnt].GetMemberType() != PermissionPolicy::Rule::Member::NOT_SPECIFIED) {
             if (msgHolder.mbrType != members[cnt].GetMemberType()) {
+                buckets[cnt] = 0;  /* reset since it's not a match */
                 continue;  /* no matching type */
             }
             if (buckets[cnt] == 0) {
+                /* rule has no name but type matches */
                 buckets[cnt] = 1;
             }
         }
@@ -167,7 +173,12 @@ static bool IsRuleMatched(const PermissionPolicy::Rule& rule, const MessageHolde
             if (IsActionDenied(members[cnt].GetActionMask())) {
                 buckets[cnt] = -buckets[cnt];
             } else if (!IsActionAllowed(members[cnt].GetActionMask(), requiredAuth)) {
-                buckets[cnt] = 0;
+                if (msgMbrNameEmpty) {
+                    /* one action not allowed will deny because only the interface name is specified.  All rules for the given member type must be satisfied. */
+                    buckets[cnt] = -buckets[cnt];
+                } else {
+                    buckets[cnt] = 0;
+                }
             }
         }
     }
@@ -255,10 +266,10 @@ static bool TermHasMatchingGuild(const PermissionPolicy::Term& term, const GUID1
     return matched;
 }
 
-static bool IsAuthorizedByMembership(const GUID128& guildGUID, PermissionPolicy* policy, const MessageHolder& msgHolder, uint8_t requiredAuth)
+static bool IsAuthorizedByMembership(const GUID128& guildGUID, PermissionPolicy& authData, const MessageHolder& msgHolder, uint8_t requiredAuth)
 {
-    const PermissionPolicy::Term* terms = policy->GetTerms();
-    for (size_t cnt = 0; cnt < policy->GetTermsSize(); cnt++) {
+    const PermissionPolicy::Term* terms = authData.GetTerms();
+    for (size_t cnt = 0; cnt < authData.GetTermsSize(); cnt++) {
         bool qualified = false;
         if (terms[cnt].GetPeersSize() == 0) {
             qualified = true;  /* there is no peer restriction for this term */
@@ -273,6 +284,27 @@ static bool IsAuthorizedByMembership(const GUID128& guildGUID, PermissionPolicy*
     return false;
 }
 
+static bool IsAuthorizedByMembershipChain(_PeerState::GuildMetadata& metadata, const MessageHolder& msgHolder, uint8_t requiredAuth)
+{
+    /* The message must be authorized by each of the auth data in the membership cert chain */
+
+    /* check the leaf cert first */
+    bool authorized = IsAuthorizedByMembership(metadata.cert.GetGuild(), metadata.authData, msgHolder, requiredAuth);
+    if (!authorized) {
+        return false;
+    }
+
+    /* check the remaining certs in the cert chain */
+    for (std::vector<_PeerState::MembershipMetaPair*>::iterator ccit = metadata.certChain.begin(); ccit != metadata.certChain.end(); ccit++) {
+        authorized = IsAuthorizedByMembership((*ccit)->cert.GetGuild(), (*ccit)->authData, msgHolder, requiredAuth);
+        if (!authorized) {
+            return false;
+        }
+    }
+
+    return authorized;
+}
+
 /**
  * Is the given message authorized by any of the remote peer membership certificate auth data?
  */
@@ -281,7 +313,7 @@ static bool IsAuthorizedByMembershipCerts(const _PeerState::GuildMap& guildMap, 
     for (_PeerState::GuildMap::const_iterator it = guildMap.begin(); it != guildMap.end(); it++) {
         _PeerState::GuildMetadata* metadata = it->second;
         QCC_DbgTrace(("IsAuthorizedByMembershipCerts with cert %s authData %s\n", metadata->cert.ToString().c_str(), metadata->authData.ToString().c_str()));
-        if (IsAuthorizedByMembership(metadata->cert.GetGuild(), &metadata->authData, msgHolder, requiredAuth)) {
+        if (IsAuthorizedByMembershipChain(*metadata, msgHolder, requiredAuth)) {
             return true;
         }
     }
@@ -304,7 +336,7 @@ static bool IsAuthorizedByGuildsInCommonPolicies(const PermissionPolicy* policy,
             }
             if (IsPolicyTermMatched(terms[cnt], msgHolder, policyAuth)) {
                 /* validate the peer auth data to make sure it was granted the same thing */
-                if (IsAuthorizedByMembership(metadata->cert.GetGuild(), &metadata->authData, msgHolder, policyAuth)) {
+                if (IsAuthorizedByMembershipChain(*metadata, msgHolder, policyAuth)) {
                     return true;
                 }
             }
@@ -492,7 +524,26 @@ static QStatus ParsePropertiesMessage(MessageHolder& holder)
     const char* propIName;
     const char* propName = "";
 
-    if ((strncmp(mbrName, "Get", 3) == 0) || (strncmp(mbrName, "Set", 3) == 0)) {
+    if (strncmp(mbrName, "GetAll", 6) == 0) {
+        propName = NULL;
+        if (holder.outgoing) {
+            const MsgArg* args;
+            size_t numArgs;
+            holder.msg->GetRefArgs(numArgs, args);
+            if (numArgs < 1) {
+                return ER_INVALID_DATA;
+            }
+            status = args[0].Get("s", &propIName);
+        } else {
+            status = holder.msg->GetArgs("s", &propIName);
+        }
+        if (status != ER_OK) {
+            return status;
+        }
+        holder.propertyRequest = true;
+        holder.mbrType = PermissionPolicy::Rule::Member::PROPERTY;
+        QCC_DbgPrintf(("PermissionManager::ParsePropertiesMessage %s %s", mbrName, propIName));
+    } else if ((strncmp(mbrName, "Get", 3) == 0) || (strncmp(mbrName, "Set", 3) == 0)) {
         const MsgArg* args;
         size_t numArgs;
         if (holder.outgoing) {
@@ -516,25 +567,6 @@ static QStatus ParsePropertiesMessage(MessageHolder& holder)
         holder.mbrType = PermissionPolicy::Rule::Member::PROPERTY;
         holder.isSetProperty = (strncmp(mbrName, "Set", 3) == 0);
         QCC_DbgPrintf(("PermissionManager::ParsePropertiesMessage %s %s.%s", mbrName, propIName, propName));
-    } else if (strncmp(mbrName, "GetAll", 6) == 0) {
-        propName = NULL;
-        if (holder.outgoing) {
-            const MsgArg* args;
-            size_t numArgs;
-            holder.msg->GetRefArgs(numArgs, args);
-            if (numArgs < 1) {
-                return ER_INVALID_DATA;
-            }
-            status = args[0].Get("s", &propIName);
-        } else {
-            status = holder.msg->GetArgs("s", &propIName);
-        }
-        if (status != ER_OK) {
-            return status;
-        }
-        holder.propertyRequest = true;
-        holder.mbrType = PermissionPolicy::Rule::Member::PROPERTY;
-        QCC_DbgPrintf(("PermissionManager::ParsePropertiesMessage %s %s.%s", mbrName, propIName));
     } else {
         return ER_FAIL;
     }
@@ -645,7 +677,7 @@ QStatus PermissionManager::AuthorizeMessage(bool outgoing, Message& msg, PeerSta
     }
 
     QCC_DbgPrintf(("PermissionManager::AuthorizeMessage with outgoing: %d msg %s", outgoing, msg->ToString().c_str()));
-    authorized = IsAuthorized(holder, GetPolicy(), GetGuildMap(), peerState, permissionMgmtObj);
+    authorized = IsAuthorized(holder, GetPolicy(), permissionMgmtObj->GetGuildMap(), peerState, permissionMgmtObj);
     if (!authorized) {
         QCC_DbgPrintf(("PermissionManager::AuthorizeMessage IsAuthorized returns ER_PERMISSION_DENIED\n"));
         return ER_PERMISSION_DENIED;

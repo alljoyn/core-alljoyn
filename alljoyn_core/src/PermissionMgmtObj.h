@@ -226,6 +226,15 @@ class PermissionMgmtObj : public BusObject {
      */
     QStatus GetConnectedPeerPublicKey(const qcc::GUID128& guid, qcc::ECCPublicKey* publicKey);
 
+    /**
+     * Retrieve the membership certificate map.
+     * @return the membership certificate map.
+     */
+    _PeerState::GuildMap& GetGuildMap()
+    {
+        return guildMap;
+    }
+
   private:
 
     typedef enum {
@@ -289,6 +298,7 @@ class PermissionMgmtObj : public BusObject {
     void InstallGuildEquivalence(const InterfaceDescription::Member* member, Message& msg);
     void GetManifest(const InterfaceDescription::Member* member, Message& msg);
     bool ValidateCertChain(const qcc::String& certChainPEM, bool& authorized);
+    QStatus LocateMembershipEntry(const qcc::String& serialNum, const qcc::GUID128& issuer, qcc::GUID128& membershipGuid, bool searchLeafCertOnly);
     QStatus LocateMembershipEntry(const qcc::String& serialNum, const qcc::GUID128& issuer, qcc::GUID128& membershipGuid);
     QStatus LoadAndValidateAuthData(const qcc::String& serial, const qcc::GUID128& issuer, MsgArg& authDataArg, PermissionPolicy& authorization, qcc::GUID128& membershipGuid);
     void ClearMembershipCertMap(MembershipCertMap& certMap);
@@ -315,6 +325,7 @@ class PermissionMgmtObj : public BusObject {
     PermissionConfigurator::ClaimableState claimableState;
     uint32_t serialNum;
     TrustAnchorList trustAnchors;
+    _PeerState::GuildMap guildMap;
     PortListener* portListener;
 };
 
