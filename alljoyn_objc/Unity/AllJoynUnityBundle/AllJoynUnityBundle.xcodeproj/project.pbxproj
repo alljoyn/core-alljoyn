@@ -12,7 +12,6 @@
 		AC4711C216276AF700599E95 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC4711C116276AF700599E95 /* CoreFoundation.framework */; };
 		AC4711C816276AF700599E95 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = AC4711C616276AF700599E95 /* InfoPlist.strings */; };
 		AC4711FA1627797E00599E95 /* libstdc++.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = AC4711F91627797E00599E95 /* libstdc++.dylib */; };
-		ACD90F331667ED4100AB8C99 /* BundledRouter.o in Frameworks */ = {isa = PBXBuildFile; fileRef = ACD90F2F1667ED4100AB8C99 /* BundledRouter.o */; };
 		ACD90F341667ED4100AB8C99 /* libajrouter.a in Frameworks */ = {isa = PBXBuildFile; fileRef = ACD90F301667ED4100AB8C99 /* libajrouter.a */; };
 		ACD90F351667ED4100AB8C99 /* liballjoyn_c.a in Frameworks */ = {isa = PBXBuildFile; fileRef = ACD90F311667ED4100AB8C99 /* liballjoyn_c.a */; };
 		ACD90F361667ED4100AB8C99 /* liballjoyn.a in Frameworks */ = {isa = PBXBuildFile; fileRef = ACD90F321667ED4100AB8C99 /* liballjoyn.a */; };
@@ -40,7 +39,6 @@
 		AC4711C916276AF700599E95 /* AllJoynUnityBundle-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "AllJoynUnityBundle-Prefix.pch"; sourceTree = "<group>"; };
 		AC4711F91627797E00599E95 /* libstdc++.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libstdc++.dylib"; path = "usr/lib/libstdc++.dylib"; sourceTree = SDKROOT; };
 		AC47120616277D8E00599E95 /* libmono.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libmono.0.dylib; path = ../../../../Applications/Unity/Unity.app/Contents/Frameworks/MonoEmbedRuntime/osx/libmono.0.dylib; sourceTree = "<group>"; };
-		ACD90F2F1667ED4100AB8C99 /* BundledRouter.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; name = BundledRouter.o; path = ../../../alljoyn_unity/build/darwin/x86/debug/dist/cpp/lib/BundledRouter.o; sourceTree = "<group>"; };
 		ACD90F301667ED4100AB8C99 /* libajrouter.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libajrouter.a; path = ../../../alljoyn_unity/build/darwin/x86/debug/dist/cpp/lib/libajrouter.a; sourceTree = "<group>"; };
 		ACD90F311667ED4100AB8C99 /* liballjoyn_c.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = liballjoyn_c.a; path = ../../../alljoyn_unity/build/darwin/x86/debug/dist/cpp/lib/liballjoyn_c.a; sourceTree = "<group>"; };
 		ACD90F321667ED4100AB8C99 /* liballjoyn.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = liballjoyn.a; path = ../../../alljoyn_unity/build/darwin/x86/debug/dist/cpp/lib/liballjoyn.a; sourceTree = "<group>"; };
@@ -51,7 +49,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				ACD90F331667ED4100AB8C99 /* BundledRouter.o in Frameworks */,
 				ACD90F341667ED4100AB8C99 /* libajrouter.a in Frameworks */,
 				ACD90F351667ED4100AB8C99 /* liballjoyn_c.a in Frameworks */,
 				ACD90F361667ED4100AB8C99 /* liballjoyn.a in Frameworks */,
@@ -85,7 +82,6 @@
 		AC4711C016276AF700599E95 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				ACD90F2F1667ED4100AB8C99 /* BundledRouter.o */,
 				ACD90F301667ED4100AB8C99 /* libajrouter.a */,
 				ACD90F311667ED4100AB8C99 /* liballjoyn_c.a */,
 				ACD90F321667ED4100AB8C99 /* liballjoyn.a */,

@@ -33,10 +33,11 @@
 
 #include <qcc/String.h>
 
-#include <alljoyn/BusAttachment.h>
-#include <alljoyn/DBusStd.h>
 #include <alljoyn/AllJoynStd.h>
+#include <alljoyn/BusAttachment.h>
 #include <alljoyn/BusObject.h>
+#include <alljoyn/DBusStd.h>
+#include <alljoyn/Init.h>
 #include <alljoyn/MsgArg.h>
 #include <alljoyn/version.h>
 
@@ -249,6 +250,16 @@ void WaitForSigInt(void)
 /** Main entry point */
 int main(int argc, char** argv, char** envArg)
 {
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+#endif
+
     printf("AllJoyn Library version: %s.\n", ajn::GetVersion());
     printf("AllJoyn Library build info: %s.\n", ajn::GetBuildInfo());
 
@@ -276,10 +287,10 @@ int main(int argc, char** argv, char** envArg)
         status = StartMessageBus();
     }
 
-    BasicSampleObject testObj(*s_msgBus, SERVICE_PATH);
+    BasicSampleObject* testObj = new BasicSampleObject(*s_msgBus, SERVICE_PATH);
 
     if (ER_OK == status) {
-        status = RegisterBusObject(&testObj);
+        status = RegisterBusObject(testObj);
     }
 
     if (ER_OK == status) {
@@ -313,11 +324,17 @@ int main(int argc, char** argv, char** envArg)
         WaitForSigInt();
     }
 
-    /* Clean up msg bus */
+    /* Clean up */
     delete s_msgBus;
     s_msgBus = NULL;
+    delete testObj;
+    testObj = NULL;
 
     printf("Basic service exiting with status 0x%04x (%s).\n", status, QCC_StatusText(status));
 
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return (int) status;
 }

@@ -23,6 +23,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include <alljoyn/Init.h>
+
 #define HELLO_PORT 9956
 #define HELLO_GROUP "239.255.37.41"
 #define HELLO_GROUP_IPV6 "ff03::239.255.37.41"
@@ -34,6 +36,15 @@
 
 int main(int argc, char** argv)
 {
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+#endif
     printf("%s main()\n", argv[0]);
 
 #if IPV4 && IPV6
@@ -216,5 +227,9 @@ int main(int argc, char** argv)
     }
 
     printf("n == %d\n", n);
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     exit(0);
 }

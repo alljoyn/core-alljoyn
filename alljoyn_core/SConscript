@@ -81,18 +81,18 @@ libs, static_objs, shared_objs = ajenv.SConscript('$OBJDIR_ALLJOYN_CORE/SConscri
 ajenv.Install('$CPP_DISTDIR/lib', libs)
 
 env.Prepend(LIBS = 'alljoyn')
-daemon_progs, ajrlib, brobj = ajenv.SConscript('$OBJDIR_ALLJOYN_CORE/router/SConscript')
+daemon_progs, ajrlib, srobj, router_objs = ajenv.SConscript('$OBJDIR_ALLJOYN_CORE/router/SConscript')
 ajenv.Install('$CPP_DISTDIR/bin', daemon_progs)
 ajenv.Install('$CPP_DISTDIR/lib', ajrlib)
-bundled_router_obj = ajenv.Install('$CPP_DISTDIR/lib', brobj)
 router_lib = 'ajrouter'
 
-# The global env needs the 'brobj' for the Java binding
-env['brobj'] = bundled_router_obj
+# The global env needs the 'ajrlib' for the Java binding
 env['ajrlib'] = router_lib
+env['srobj'] = srobj
+env['router_objs'] = router_objs
 
 # Always build C++ version of AboutService
-# brobj and ajrlib must be set before calling the SConscripts responsible for
+# ajrlib must be set before calling the SConscripts responsible for
 # building the AboutService.
 
 about_env = env.Clone()

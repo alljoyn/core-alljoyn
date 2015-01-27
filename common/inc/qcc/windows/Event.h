@@ -49,8 +49,6 @@ class Source;
 class Event {
   public:
 
-    class Init;
-
     /** Cause Wait to have no timeout */
     static const uint32_t WAIT_FOREVER = static_cast<uint32_t>(-1);
 
@@ -241,6 +239,10 @@ class Event {
 
   private:
 
+    static void Init();
+    static void Shutdown();
+    friend class StaticGlobals;
+
     HANDLE handle;          /**< General purpose event handle */
     HANDLE ioHandle;        /**< I/O event handle */
     EventType eventType;    /**< Type of event */
@@ -286,12 +288,6 @@ class Event {
     bool IsNetworkEventSet();
 
 };
-
-static class Event::Init {
-  public:
-    Init();
-    ~Init();
-} eventInit;
 
 }  /* namespace */
 

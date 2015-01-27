@@ -69,11 +69,12 @@ else:
     test_src = gtest_env.Glob('*.cc')
 
     unittest_env = env.Clone()
-    unittest_env.Prepend(LIBS = unittest_env['ALLJOYN_C_LIB_STATIC'])
 
     if unittest_env['BR'] == 'on':
         # Build apps with bundled daemon support
-        unittest_env.Prepend(LIBS = [unittest_env['brobj'], unittest_env['ajrlib']])
+        unittest_env.Prepend(LIBS = [unittest_env['ajrlib']])
+
+    unittest_env.Prepend(LIBS = unittest_env['ALLJOYN_C_LIB_STATIC'])
 
     gtest_dir = unittest_env['GTEST_DIR']
     if gtest_dir != '/usr':

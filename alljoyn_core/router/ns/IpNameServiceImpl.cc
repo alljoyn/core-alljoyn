@@ -346,7 +346,7 @@ const char* IpNameServiceImpl::IPV4_MDNS_MULTICAST_GROUP = "224.0.0.251";
 const uint16_t IpNameServiceImpl::MULTICAST_PORT = 9956;
 const uint16_t IpNameServiceImpl::BROADCAST_PORT = IpNameServiceImpl::MULTICAST_PORT;
 
-const uint16_t IpNameServiceImpl::MULTICAST_MDNS_PORT = IpNameService::MULTICAST_MDNS_PORT;
+const uint16_t IpNameServiceImpl::MULTICAST_MDNS_PORT = 5353;
 const uint16_t IpNameServiceImpl::BROADCAST_MDNS_PORT = IpNameServiceImpl::MULTICAST_MDNS_PORT;
 
 //

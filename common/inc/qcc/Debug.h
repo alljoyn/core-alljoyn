@@ -25,7 +25,6 @@
 #define _QCC_DEBUG_H
 
 #include <qcc/platform.h>
-#include <qcc/StaticGlobalsInit.h>
 
 #include <stdio.h>
 
@@ -322,12 +321,6 @@ const char* _QCC_DbgGetMsg(void* ctx);
  * @param ctx       Debug context created by _QCC_DbgPrintContext.
  */
 void _QCC_DbgDeleteCtx(void* ctx);
-
-static class DebugInit {
-  public:
-    DebugInit();
-    ~DebugInit();
-} debugInit;
 
 /** @endcond */
 #ifdef __cplusplus

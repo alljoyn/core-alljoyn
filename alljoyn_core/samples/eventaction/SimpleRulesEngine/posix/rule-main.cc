@@ -18,6 +18,7 @@
 #include <qcc/platform.h>
 #include <signal.h>
 #include <stdio.h>
+#include <alljoyn/Init.h>
 #include "MyAllJoynCode.h"
 
 using namespace std;
@@ -46,6 +47,16 @@ void WaitForSigInt(void)
 
 int main(int argc, char** argv, char** envArg)
 {
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+#endif
+
     printf("AllJoyn Library version: %s.\n", ajn::GetVersion());
     printf("AllJoyn Library build info: %s.\n", ajn::GetBuildInfo());
 
@@ -67,5 +78,9 @@ int main(int argc, char** argv, char** envArg)
 
     WaitForSigInt();
 
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return 0;
 }

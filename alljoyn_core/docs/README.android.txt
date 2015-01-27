@@ -51,7 +51,6 @@ cpp/    core AllJoyn functionality, implemented in C++
         libajrouter.a                   implements bundled-router
         liballjoyn-daemon.a
         libbbdaemon-lib.a
-        BundledRouter.o
 
     samples/                    C++ sample apps for Android (see README)
 

@@ -33,10 +33,11 @@
 
 #include <qcc/String.h>
 
+#include <alljoyn/AllJoynStd.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/BusObject.h>
+#include <alljoyn/Init.h>
 #include <alljoyn/version.h>
-#include <alljoyn/AllJoynStd.h>
 
 #include <alljoyn/Status.h>
 
@@ -270,6 +271,16 @@ void WaitForSigInt(void)
 /** Main entry point */
 int main(int argc, char** argv, char** envArg)
 {
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+#endif
+
     printf("AllJoyn Library version: %s.\n", ajn::GetVersion());
     printf("AllJoyn Library build info: %s.\n", ajn::GetBuildInfo());
 
@@ -292,10 +303,10 @@ int main(int argc, char** argv, char** envArg)
         status = StartMessageBus();
     }
 
-    SignalListeningObject object(*s_msgBus, SERVICE_PATH);
+    SignalListeningObject* object = new SignalListeningObject(*s_msgBus, SERVICE_PATH);
 
     if (ER_OK == status) {
-        status = RegisterBusObjectAndConnect(&object);
+        status = RegisterBusObjectAndConnect(object);
     }
 
     if (ER_OK == status) {
@@ -308,7 +319,7 @@ int main(int argc, char** argv, char** envArg)
     }
 
     if (ER_OK == status) {
-        status = SubscribeToNameChangedSignal(&object);
+        status = SubscribeToNameChangedSignal(object);
     }
 
     /* Wait for the name changes until the user signals for an exit. */
@@ -316,11 +327,17 @@ int main(int argc, char** argv, char** envArg)
         WaitForSigInt();
     }
 
-    /* Deallocate bus */
+    /* Clean up */
     delete s_msgBus;
     s_msgBus = NULL;
+    delete object;
+    object = NULL;
 
     printf("Signal consumer client exiting with status 0x%04x (%s).\n", status, QCC_StatusText(status));
 
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return (int) status;
 }
