@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2013,2015, AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -222,7 +222,7 @@ do
 	date
 	adb < /dev/null $device shell sh /data/alljoyn/$i.adb-sh > $i.log 2>&1
 	date
-	tail -1 $i.log | grep "exiting with status 0" || xit=1
+	tail -10 $i.log | grep "exiting with status 0" || xit=1
 
 	case "$xit" in
 	0 ) echo $i PASSED ;;

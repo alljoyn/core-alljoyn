@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright (c) 2013 - 2014, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2013-2015, AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -196,7 +196,7 @@ do
 	python -u test_harness.py -c $c -t $i -p "$gtest_bin_p" > "$i.log" 2>&1 < /dev/null || : exit status is $? / IGNORE IT
 	date
 	set +x
-	tail -1 "$i.log" | grep "exiting with status 0" || xit=1
+	tail -10 "$i.log" | grep "exiting with status 0" || xit=1
 
 	case "$xit" in
 	0 ) echo $i PASSED ;;

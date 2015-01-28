@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -84,10 +84,11 @@ namespace ajn {
 #define RSRV_OFFSET   34
 
 /* Additional Marshal/Unmarshal ARDP SYN header offsets */
-#define SEGMAX_OFFSET  16
-#define SEGBMAX_OFFSET 18
-#define DACKT_OFFSET   20
-#define OPTIONS_OFFSET 24
+#define SEGMAX_OFFSET   16
+#define SEGBMAX_OFFSET  18
+#define DACKT_OFFSET    20
+#define OPTIONS_OFFSET  24
+#define SYN_RSRV_OFFSET 26
 
 #define ARDP_SYN_HEADER_SIZE 28
 
@@ -508,8 +509,9 @@ static uint32_t CheckConnTimers(ArdpHandle* handle, ArdpConnRecord* conn, uint32
 
     /* Check persist timer */
     if (conn->persistTimer.retry != 0 && conn->persistTimer.when <= now) {
-        QCC_DbgPrintf(("CheckConnTimers: Fire persist( %p ) timer %p at %u (now=%u)",
-                       conn, conn->persistTimer, conn->persistTimer.when, now));
+        QCC_DbgHLPrintf(("CheckConnTimers: Fire persist timer: handle=%p, conn=%p, id=%u (%d)",
+                         handle, conn, conn->id, conn->id));
+
         (conn->persistTimer.handler)(handle, conn, conn->persistTimer.context);
         conn->persistTimer.when = now + conn->persistTimer.delta;
     }
@@ -712,6 +714,7 @@ static void MarshalSynHeader(uint32_t* buf32, ArdpSynHeader* h)
     *reinterpret_cast<uint16_t*>(txbuf + SEGBMAX_OFFSET) = h->segbmax;
     *reinterpret_cast<uint32_t*>(txbuf + DACKT_OFFSET) = h->dackt;
     *reinterpret_cast<uint16_t*>(txbuf + OPTIONS_OFFSET) = h->options;
+    *reinterpret_cast<uint16_t*>(txbuf + SYN_RSRV_OFFSET) = 0;
 }
 
 static QStatus SendMsgHeader(ArdpHandle* handle, ArdpConnRecord* conn, ArdpHeader* h)
@@ -1189,20 +1192,20 @@ static void PersistTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, void* 
     QCC_DbgHLPrintf(("PersistTimerHandler: handle=%p conn=%p context=%p delta %u retry %u",
                      handle, conn, context, timer->delta, timer->retry));
 
-    if (conn->window < conn->minSendWindow && !IsDataRetransmitScheduled(conn)) {
+    if ((conn->window < conn->snd.SEGMAX) && !IsDataRetransmitScheduled(conn)) {
         if (timer->retry > 1) {
             QCC_DbgPrintf(("PersistTimerHandler: window %u, need at least %u", conn->window, conn->minSendWindow));
             status = Send(handle, conn, ARDP_FLAG_ACK | ARDP_FLAG_VER | ARDP_FLAG_NUL, conn->snd.NXT, conn->rcv.CUR);
             if (status == ER_OK) {
                 timer->retry--;
-                timer->delta = handle->config.persistInterval << ((handle->config.totalAppTimeout / handle->config.persistInterval) - timer->retry);
+                //timer->delta = handle->config.persistInterval << ((handle->config.totalAppTimeout / handle->config.persistInterval) - timer->retry);
 #if ARDP_STATS
                 ++handle->stats.nulSends;
 #endif
             }
         } else {
-            QCC_DbgHLPrintf(("PersistTimerHandler: Persist Timeout (frozen window %d, need %d)",
-                             conn->window, conn->minSendWindow));
+            QCC_LogError(ER_ARDP_PERSIST_TIMEOUT, ("PersistTimerHandler: Persist Timeout (frozen window %d)",
+                                                   conn->window));
             Disconnect(handle, conn, ER_ARDP_PERSIST_TIMEOUT);
         }
     }
@@ -1685,6 +1688,9 @@ static QStatus SendData(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, 
             sBuf->inUse = true;
             UpdateTimer(handle, conn, &sBuf->timer, timeout, 1);
             /* Since we scheduled a retransmit timer, cancel active persist timer */
+            QCC_DbgHLPrintf(("Cancel persist timer: handle=%p, conn=%p, id=%u (%d)",
+                             handle, conn, conn->id, conn->id));
+
             conn->persistTimer.retry = 0;
             EnList(handle->dataTimers.bwd, (ListNode*) &sBuf->timer);
             conn->snd.pending++;
@@ -2869,17 +2875,22 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                 }
             }
 
-            if (conn->window != seg->WINDOW) {
-                /* Schedule persist timer only if there are no pending retransmits */
-                if (!IsDataRetransmitScheduled(conn) && (seg->WINDOW < conn->minSendWindow) && (conn->persistTimer.retry == 0)) {
-                    /* Start Persist Timer */
-                    UpdateTimer(handle, conn, &conn->persistTimer, handle->config.persistInterval,
-                                handle->config.totalAppTimeout / handle->config.persistInterval + 1);
-                } else if ((conn->persistTimer.retry != 0) && ((seg->WINDOW >= conn->minSendWindow) || IsDataRetransmitScheduled(conn))) {
-                    /* Cancel Persist Timer */
-                    conn->persistTimer.retry = 0;
-                }
+            /* Schedule persist timer only if there are no pending retransmits */
+            if (!IsDataRetransmitScheduled(conn) && (seg->WINDOW < conn->snd.SEGMAX) && (conn->persistTimer.retry == 0)) {
+                QCC_DbgHLPrintf(("Schedule persist timer: handle=%p, conn=%p, id=%u (%d)",
+                                 handle, conn, conn->id, conn->id));
+                /* Start Persist Timer */
+                UpdateTimer(handle, conn, &conn->persistTimer, handle->config.persistInterval,
+                            handle->config.totalAppTimeout / handle->config.persistInterval + 1);
+            } else if ((conn->persistTimer.retry != 0) && ((seg->WINDOW >= conn->snd.SEGMAX) || IsDataRetransmitScheduled(conn))) {
+                QCC_DbgHLPrintf(("Cancel persist timer: handle=%p, conn=%p, id=%u (%d)",
+                                 handle, conn, conn->id, conn->id));
 
+                /* Cancel Persist Timer */
+                conn->persistTimer.retry = 0;
+            }
+
+            if (conn->window != seg->WINDOW) {
                 conn->window = seg->WINDOW;
                 if (handle->cb.SendWindowCb != NULL) {
                     handle->cb.SendWindowCb(handle, conn, conn->window, (conn->window != 0) ? ER_OK : ER_ARDP_BACKPRESSURE);
@@ -3083,8 +3094,8 @@ static QStatus Receive(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* rxbuf,
 
     /* Perform length validation checks */
     if (((seg.HLEN * 2) < hdrSz) || (len < hdrSz) || (seg.DLEN + (seg.HLEN * 2)) != len) {
-        QCC_DbgHLPrintf(("Receive: length check failed len = %u, seg.hlen = %u, seg.dlen = %u",
-                         len, (seg.HLEN * 2), seg.DLEN));
+        QCC_LogError(ER_ARDP_INVALID_RESPONSE, ("Receive: length check failed len = %u, seg.hlen = %u, seg.dlen = %u",
+                                                len, (seg.HLEN * 2), seg.DLEN));
         return ER_ARDP_INVALID_RESPONSE;
     }
 
@@ -3105,12 +3116,12 @@ static QStatus Receive(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* rxbuf,
 
         /* Perform sequence validation checks */
         if (SEQ32_LT(conn->snd.NXT, seg.ACK)) {
-            QCC_DbgHLPrintf(("Receive: ack %u ahead of SND>NXT %u", seg.ACK, conn->snd.NXT));
+            QCC_LogError(ER_ARDP_INVALID_RESPONSE, ("Receive: ack %u ahead of SND>NXT %u", seg.ACK, conn->snd.NXT));
             return ER_ARDP_INVALID_RESPONSE;
         }
 
         if (SEQ32_LT(seg.ACK, seg.LCS)) {
-            QCC_DbgHLPrintf(("Receive: lcs %u and ack %u out of order", seg.LCS, seg.ACK));
+            QCC_LogError(ER_ARDP_INVALID_RESPONSE, ("Receive: lcs %u and ack %u out of order", seg.LCS, seg.ACK));
             return ER_ARDP_INVALID_RESPONSE;
         }
 
@@ -3120,16 +3131,16 @@ static QStatus Receive(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* rxbuf,
          */
         if (((seg.SEQ - seg.ACKNXT) > conn->rcv.SEGMAX) || (SEQ32_LT(seg.SEQ, seg.ACKNXT)) ||
             ((seg.DLEN != 0) && ((seg.SEQ - seg.ACKNXT) == conn->rcv.SEGMAX))) {
-            QCC_DbgHLPrintf(("Receive: incorrect sequence numbers seg.seq = %u, seg.acknxt = %u",
-                             seg.SEQ, seg.ACKNXT));
+            QCC_LogError(ER_ARDP_INVALID_RESPONSE, ("Receive: incorrect sequence numbers seg.seq = %u, seg.acknxt = %u",
+                                                    seg.SEQ, seg.ACKNXT));
             return ER_ARDP_INVALID_RESPONSE;
         }
 
         /* Additional checks for invalid payload values */
         if (seg.DLEN != 0) {
             if ((seg.FCNT == 0) || (seg.FCNT > conn->rcv.SEGMAX) || ((seg.SEQ - seg.SOM) >= seg.FCNT)) {
-                QCC_DbgHLPrintf(("Receive: incorrect data segment seq = %u, som = %u,  fcnt = %u",
-                                 seg.SEQ, seg.SOM, seg.FCNT));
+                QCC_LogError(ER_ARDP_INVALID_RESPONSE, ("Receive: incorrect data segment seq = %u, som = %u,  fcnt = %u",
+                                                        seg.SEQ, seg.SOM, seg.FCNT));
                 return ER_ARDP_INVALID_RESPONSE;
             }
         }
@@ -3225,6 +3236,7 @@ QStatus ARDP_Run(ArdpHandle* handle, qcc::SocketFd sock, bool sockRead, bool soc
                         status = ER_ARDP_INVALID_STATE;
                     }
                     if (status != ER_OK) {
+                        QCC_LogError(status, ("Failed to accept incoming connection request from %s (ARDP port %u)", address.ToString().c_str(), foreign));
                         SendRst(handle, sock, address, port, local, foreign);
                     }
                 } else {
@@ -3245,7 +3257,15 @@ QStatus ARDP_Run(ArdpHandle* handle, qcc::SocketFd sock, bool sockRead, bool soc
                                 Disconnect(handle, conn, status);
                             }
                         } else {
-                            SendRst(handle, sock, address, port, local, foreign);
+                            uint8_t flags = *reinterpret_cast<uint8_t*>(buf + FLAGS_OFFSET);
+                            /* Only send repeat RST if this is a NUL segment.
+                             * This is done to alleviate a situation when original RST has not reached
+                             * the remote. This can potentially cause the remote to keep the link
+                             * alive (sending pings and retransmit data) until it hits probe timeout
+                             */
+                            if (flags & ARDP_FLAG_NUL) {
+                                SendRst(handle, sock, address, port, local, foreign);
+                            }
                         }
                     }
                 }

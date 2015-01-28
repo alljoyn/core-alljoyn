@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright (c) 2010-2012, 2014, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2010 - 2015, AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -13,151 +13,142 @@
 #    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 #    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-# 
+#
 
+function Usage() {
+	set +ex
+	echo >&2 "
+Runs JUnit tests with Ant
 
-set -x
-killall -9 -v alljoyn-daemon
-rm -rf alljoyn-daemon.log junit.log
+Usage: $(basename -- "$0") [ -s -f FILE ] -o OS -c CPU -v VARIANT
+where
+	-s		# start and stop our own AllJoyn-Daemon (requires config file)
+	-f		# daemon config file
+	-o OS		# same meaning as SCONS
+	-c CPU
+	-v VARIANT
+"
+	exit 2
+}
 
-# set ALLJOYN_JAVA and/or ALLJOYN_DIST either through environment variables...
-# .. or by putting ALLJOYN_JAVA=something and/or ALLJOYN_DIST=something as commandline parameters
-while test $# -gt 0;
+: read commandline options
+
+set -e
+
+start_daemon=false
+config_file=junit-unix.conf
+target_cpu=$CPU
+target_os=$OS
+variant=$VARIANT
+
+while getopts sSf:c:o:v: option
 do
-	if test -n "$1"; then
-		eval "$1"
-	fi
-	shift
+	case "$option" in
+	( c ) target_cpu="$OPTARG" ;;
+	( o ) target_os="$OPTARG" ;;
+	( v ) variant="$OPTARG" ;;
+	( f ) config_file="$OPTARG" ;;
+	( s ) start_daemon=true ;;
+	( S ) start_daemon=false ;;
+	( \? ) Usage ;;
+	esac
 done
 
-if test -z "$ALLJOYN_JAVA"
-then
-	: setting default ALLJOYN_JAVA...
-	ALLJOYN_JAVA=` cd .. > /dev/null && pwd `
-fi
-t=` cd "$ALLJOYN_JAVA" > /dev/null && pwd `
-if test -z "$t"
-then
-	echo >&2 "error, ALLJOYN_JAVA=$ALLJOYN_JAVA not found."
-	exit 2
-else
-	ALLJOYN_JAVA=$t
-fi
+: check commandline options
 
-if test -z "$ALLJOYN_DIST"
-then
-	: setting default ALLJOYN_DIST...
-	ALLJOYN_DIST=` cd "$ALLJOYN_JAVA"/../build/*/*/*/dist > /dev/null && pwd `
-fi
-t=` cd "$ALLJOYN_DIST" > /dev/null && pwd `
-if test -z "$t"
-then
-	echo >&2 "error, ALLJOYN_DIST=$ALLJOYN_DIST not found."
-	exit 2
-else
-	ALLJOYN_DIST=$t
-fi
+case "/$target_os/$target_cpu/$variant/" in ( *//* | *\ * ) echo >&2 -- "error, -o OS, -c CPU, -v VARIANT are required"; Usage;; esac
 
-# sometimes Windows "home" does not work for JUnit tests ClearKeyStore, DefaultKeyStoreListener
 if cygpath -wa . > /dev/null 2>&1
 then
-	: Cygwin
+	: Cygwin, which means Windows
+
+	bus_address="null:"
+	if $start_daemon; then
+		echo >&2 "error, start_daemon=true but this is Windows and daemon is not supported"
+		exit 2
+	fi
+	# sometimes Windows "home" does not work for keystore tests
 	export USERPROFILE="$( cygpath -wa . )"
 	export LOCALAPPDATA="$USERPROFILE"
 fi
 
-: start two copies of alljoyn-daemon
-
-( cd "$ALLJOYN_DIST/bin" && ls -l alljoyn-daemon ) || { echo >&2 "error, alljoyn-daemon not found." ; exit 2 ; }
-
-: get target_os/target_cpu/variant
-os_cpu_variant=` cd "$ALLJOYN_DIST/.." > /dev/null && pwd | awk -F/ 'NR==1 && NF>=3 { print $(NF-2) "/" $(NF-1) "/" $NF; }' `
-if test -z "$os_cpu_variant"
+if $start_daemon
 then
-	echo >&2 "error, cannot get target_os/target_cpu/variant from ALLJOYN_DIST=$ALLJOYN_DIST"
+	: set up for standalone alljoyn-daemon
+
+	case "$config_file" in ( "" ) echo >&2 -- "error, -f CONFIG_FILE is required"; Usage;; esac
+	ls -ld "$config_file" || {
+		echo >&2 "error, -f config_file=$config_file not found"
+		exit 2
+	}
+	daemon_bin=../../build/$target_os/$target_cpu/$variant/dist/cpp/bin
+	"$daemon_bin/alljoyn-daemon" --version || {
+		echo >&2 "error, $daemon_bin/alljoyn-daemon exe not found"
+		exit 2
+	}
+
+    : generate a unique bus address and munge into daemon config file
+
+	bus_address="unix:abstract=$( uuidgen )"
+	config_uuid="$PWD/junit-uuid.tmp"
+	sed < "$config_file" > "$config_uuid" -e "s/unix:abstract=alljoyn/$bus_address/"
+	options="--config-file=$config_uuid --no-bt --no-udp --verbosity=5 --print-address"
+else
+    : no alljoyn-daemon, use null transport
+
+	bus_address="null:"
 fi
 
-(
-	:
-	: first alljoyn-daemon on port 5342
-	:
+ls -ld "../../build.xml" || {
+	echo >&2 "error, ../../build.xml not found"
+	exit 2
+}
 
-	if cygpath -wa . > /dev/null 2>&1
-	then
-		: Cygwin
-		configfile=$( cygpath -wa "$ALLJOYN_JAVA/test_report/junit-win.conf" )
-	else
-		: Linux
-		configfile="$ALLJOYN_JAVA/test_report/junit-unix.conf"
-	fi
+kill-alljoyn() {
 
-	cd "$ALLJOYN_DIST/bin" || exit 2
-	pwd
-	date
+	: kill any alljoyn-daemon
 
-	./alljoyn-daemon --config-file="$configfile"; xit=$?
+	killall -9 -v alljoyn-daemon || : ok
+	sleep 5
+	killall -9 -v alljoyn-daemon || : ok
+	sleep 5
+}
 
-	date
-	set +x
-	echo exit status $xit
-) > alljoyn-daemon.log 2>&1 </dev/null &
+: begin
+
+kill-alljoyn
+rm -f alljoyn-daemon.log
+
+if $start_daemon
+then
+	: start alljoyn-daemon
+
+	(
+		set -x
+		cd "$daemon_bin"
+		pwd
+		date
+
+		xit=0
+		./alljoyn-daemon $options || xit=$?
+
+		date
+		set +x
+		echo >&2 exit status $xit
+	) > alljoyn-daemon.log 2>&1 </dev/null &
+
+	sleep 5
+fi
+
+: run Ant JUnit
+
+xit=0
+ant > junit.log 2>&1 < /dev/null -f ../../build.xml -Dtest=alljoyn_java/test_report -Dorg.alljoyn.bus.address=$bus_address \
+	-DOS=$target_os -DCPU=$target_cpu -DVARIANT=$variant test || xit=$?
 
 sleep 5
 
-: run ant junit
-
-( cd "$ALLJOYN_JAVA" && ls -l build.xml ) || { echo >&2 "error, build.xml not found." ; exit 2 ; }
-ant -version || { echo >&2 "error, ant not found." ; exit 2 ; }
-
-pwd
-date
-
-(
-	test=$PWD
-	build=` cd "$ALLJOYN_DIST/.." > /dev/null && pwd `
-	classes="$ALLJOYN_JAVA/test/build/$os_cpu_variant/obj/classes"
-	cd "$ALLJOYN_JAVA" || exit 2
-	pwd
-	date
-
-	# 2011-01-06 Added explicit build, dist, classes properties definitions.
-	# 2011-05-11 Cleaned up, corrected errors in bus server address properties.
-	# Windows tests now succeed so long as you run both bbdaemons externally.
-	# If running both bbdaemons externally for Windows and Android,
-	# then may as well do so for Linux too- at least we will see the log file.
-	# Prevent JUnit from starting the second bbdaemon internally,
-	# by NOT adding ALLJOYN_DIST/bin to the PATH seen by Ant.
-
-	if cygpath -wa . > /dev/null 2>&1
-	then
-		: Cygwin
-		ant > test_report/junit.log 2>&1 < /dev/null \
-			-Dtest="$( cygpath -wa "$test" )" \
-			-Dbuild="$( cygpath -wa "$build" )" \
-			-Ddist="$( cygpath -wa "$ALLJOYN_DIST/java" )" \
-			-Dclasses="$( cygpath -wa "$classes" )" \
-			-Dorg.alljoyn.bus.address="tcp:addr=127.0.0.1,port=5342" \
-			test
-		xit=$?
-	else
-		: Linux
-		ant > test_report/junit.log 2>&1 < /dev/null \
-			-Dtest="$test" \
-			-Dbuild="$build" \
-			-Ddist="$ALLJOYN_DIST/java" \
-			-Dclasses="$classes" \
-			-Dorg.alljoyn.bus.address="unix:abstract=alljoyn" \
-			test
-		xit=$?
-	fi
-
-	date
-	set +x
-	echo exit status $xit
-	exit $xit
-) ; xit=$?
-
-killall -9 -v alljoyn-daemon
+kill-alljoyn
 
 echo exit status $xit
 exit $xit

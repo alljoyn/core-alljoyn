@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -5013,19 +5013,11 @@ void AllJoynObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
 
 void AllJoynObj::CancelSessionlessMessage(const InterfaceDescription::Member* member, Message& msg)
 {
-    size_t numArgs;
-    const MsgArg* args;
-    msg->GetArgs(numArgs, args);
+    busController->GetSessionlessObj().CancelMessage(msg);
+}
 
-    uint32_t serialNum = args[0].v_uint32;
-    qcc::String sender = msg->GetSender();
-
-    SessionlessObj& sessionlessObj = busController->GetSessionlessObj();
-    QStatus status = sessionlessObj.CancelMessage(sender, serialNum);
-    if (status != ER_OK) {
-        QCC_LogError(status, ("SessionlessObj::CancelMessage failed"));
-    }
-
+void AllJoynObj::CancelSessionlessMessageReply(Message& msg, QStatus status)
+{
     /* Form response and send it */
     MsgArg replyArg;
     uint32_t replyCode;

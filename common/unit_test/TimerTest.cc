@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2011,2014 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011,2014-2015 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -77,6 +77,25 @@ class MyAlarmListener : public AlarmListener {
     const uint32_t delay;
 };
 
+class MyAlarmListener2 : public AlarmListener {
+  public:
+    MyAlarmListener2(uint32_t delay) : AlarmListener(), delay(delay), first(true)
+    {
+    }
+    void AlarmTriggered(const Alarm& alarm, QStatus reason)
+    {
+        triggeredAlarmsLock.Lock();
+        triggeredAlarms.push_back(pair<QStatus, Alarm>(reason, alarm));
+        triggeredAlarmsLock.Unlock();
+        if (first == true) {
+            qcc::Sleep(delay);
+            first = false;
+        }
+    }
+  private:
+    const uint32_t delay;
+    bool first;
+};
 
 TEST(TimerTest, SingleThreaded) {
     Timer t1("testTimer");
@@ -197,4 +216,40 @@ TEST(TimerTest, TestReplaceTimer) {
     ASSERT_EQ(ER_OK, status) << "Status: " << QCC_StatusText(status);
 
     ASSERT_TRUE(testNextAlarm(ts + 5000, 0));
+}
+
+TEST(TimerTest, TestBackPressure) {
+    uint32_t delay = 2000;
+    MyAlarmListener2 alarmListener(delay);
+    AlarmListener* al = &alarmListener;
+    QStatus status;
+    Timer t3("testTimer", true, 4, true, 2);
+    status = t3.Start();
+    ASSERT_EQ(ER_OK, status) << "Status: " << QCC_StatusText(status);
+
+
+    uint32_t timeout = 0;
+    Alarm ar1(timeout, al);
+    timeout = 0;
+    Alarm ar2(timeout, al);
+    timeout = 0;
+    Alarm ar3(timeout, al);
+    timeout = 0;
+    Alarm ar4(timeout, al);
+
+    uint64_t start_time = qcc::GetTimestamp64();
+    status = t3.AddAlarm(ar1);
+    ASSERT_EQ(ER_OK, status) << "Status: " << QCC_StatusText(status);
+    status = t3.AddAlarm(ar2);
+    ASSERT_EQ(ER_OK, status) << "Status: " << QCC_StatusText(status);
+    status = t3.AddAlarm(ar3);
+    ASSERT_EQ(ER_OK, status) << "Status: " << QCC_StatusText(status);
+    status = t3.AddAlarm(ar4);
+    ASSERT_EQ(ER_OK, status) << "Status: " << QCC_StatusText(status);
+    uint64_t elapsed = qcc::GetTimestamp64() - start_time;
+
+    EXPECT_TRUE(elapsed >= delay);
+    t3.Stop();
+    t3.Join();
+
 }

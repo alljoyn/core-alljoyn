@@ -1,4 +1,4 @@
-# Copyright (c) 2010 - 2014, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2010-2015, AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -50,6 +50,7 @@ if ajenv['VARIANT'] == 'debug':
 # manually add dependencies for xml to h, and for files included in the xml
 ajenv.Depends('$OBJDIR_ALLJOYN_CORE/Status.h', 'src/Status.xml')
 ajenv.Depends('$OBJDIR_ALLJOYN_CORE/Status.h', '../common/src/Status.xml')
+ajenv.Depends('$OBJDIR_ALLJOYN_CORE/Status.h', '../build_core/tools/bin/make_status.py')
 ajenv.Append(STATUS_FLAGS=['--base=%s' % os.getcwd()])
 
 # Add support for multiple build targets in the same workset

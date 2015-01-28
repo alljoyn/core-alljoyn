@@ -5,9 +5,7 @@
  */
 
 /******************************************************************************
- *
- *
- * Copyright (c) 2009-2012, 2014 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2012, 2014-2015 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -207,7 +205,7 @@ bool DebugControl::Check(DbgMsgType type, const char* module)
 }
 
 
-DebugInitializer::DebugInitializer()
+DebugInit::DebugInit()
 {
     if (0 == dbgControlCounter++) {
         stdoutLock = new qcc::Mutex();
@@ -215,7 +213,7 @@ DebugInitializer::DebugInitializer()
     }
 }
 
-DebugInitializer::~DebugInitializer()
+DebugInit::~DebugInit()
 {
     if (0 == --dbgControlCounter) {
         delete dbgControl;

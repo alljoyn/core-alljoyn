@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013,2015 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -51,11 +51,11 @@ class OpenSsl_ScopedLock {
     ~OpenSsl_ScopedLock();
 };
 
-static class OpenSslInitializer {
+static class OpenSslInit {
   public:
-    OpenSslInitializer();
-    ~OpenSslInitializer();
-} openSslInitializer;
+    OpenSslInit();
+    ~OpenSslInit();
+} openSslInit;
 
 }
 

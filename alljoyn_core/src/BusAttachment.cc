@@ -190,14 +190,15 @@ BusAttachment::Internal::~Internal()
 static class ClientTransportFactoryContainer : public TransportFactoryContainer {
   public:
 
-    ClientTransportFactoryContainer() : transportInit(0) { }
+    ClientTransportFactoryContainer() : isInitialized(false) { }
 
     void Init()
     {
-        /*
-         * Registration of transport factories is a one time operation.
-         */
-        if (IncrementAndFetch(&transportInit) == 1) {
+        lock.Lock();
+        if (!isInitialized) {
+            /*
+             * Registration of transport factories is a one time operation.
+             */
             if (NamedPipeClientTransport::IsAvailable()) {
                 Add(new TransportFactory<NamedPipeClientTransport>(NamedPipeClientTransport::NamedPipeTransportName, true));
             }
@@ -207,13 +208,14 @@ static class ClientTransportFactoryContainer : public TransportFactoryContainer 
             if (NullTransport::IsAvailable()) {
                 Add(new TransportFactory<NullTransport>(NullTransport::TransportName, true));
             }
-        } else {
-            DecrementAndFetch(&transportInit);
+            isInitialized = true;
         }
+        lock.Unlock();
     }
 
   private:
-    volatile int32_t transportInit;
+    bool isInitialized;
+    qcc::Mutex lock;
 
 } clientTransportsContainer;
 
@@ -2425,7 +2427,7 @@ QStatus BusAttachment::Internal::SetSessionListener(SessionId id, SessionListene
         if (bitset & mask) {
             if (SessionExists(id, i) == true) {
                 sessionListenersLock[i].Lock(MUTEX_CONTEXT);
-                sessionListeners[i].insert(pair<SessionId, ProtectedSessionListener>(id, ProtectedSessionListener(listener)));
+                sessionListeners[i][id] = ProtectedSessionListener(listener);
                 sessionListenersLock[i].Unlock(MUTEX_CONTEXT);
             } else {
                 ++fail;

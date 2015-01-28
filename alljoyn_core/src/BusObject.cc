@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -749,7 +749,8 @@ QStatus BusObject::MethodReply(const Message& msg, QStatus status)
         } else {
             Message error(*bus);
             QStatus result = error->ErrorMsg(msg, status);
-            assert(ER_OK == result); (void)result;
+            assert(ER_OK == result);
+            QCC_UNUSED(result);
             BusEndpoint bep = BusEndpoint::cast(bus->GetInternal().GetLocalEndpoint());
             return bus->GetInternal().GetRouter().PushMessage(error, bep);
         }

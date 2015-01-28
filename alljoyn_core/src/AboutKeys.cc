@@ -1,10 +1,5 @@
-/**
- * @file
- * This file provides access to Alljoyn library version and build information.
- */
-
 /******************************************************************************
- * Copyright (c) 2010-2015, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -18,28 +13,24 @@
  *    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
+#include <alljoyn/AboutKeys.h>
 
-#include "alljoyn/version.h"
+#define QCC_MODULE "ALLJOYN_ABOUT"
 
-static const unsigned int year = 0;
-static const unsigned int month = 0;
-static const unsigned int feature = 1; /* feature is always 0 for core. */
-static const unsigned int bugfix = ' ';
+namespace ajn {
+const char* AboutKeys::APP_ID = "AppId";
+const char* AboutKeys::DEFAULT_LANGUAGE = "DefaultLanguage";
+const char* AboutKeys::DEVICE_NAME = "DeviceName";
+const char* AboutKeys::DEVICE_ID = "DeviceId";
+const char* AboutKeys::APP_NAME = "AppName";
+const char* AboutKeys::MANUFACTURER = "Manufacturer";
+const char* AboutKeys::MODEL_NUMBER = "ModelNumber";
+const char* AboutKeys::SUPPORTED_LANGUAGES = "SupportedLanguages";
+const char* AboutKeys::DESCRIPTION = "Description";
+const char* AboutKeys::DATE_OF_MANUFACTURE = "DateOfManufacture";
+const char* AboutKeys::SOFTWARE_VERSION = "SoftwareVersion";
+const char* AboutKeys::AJ_SOFTWARE_VERSION = "AJSoftwareVersion";
+const char* AboutKeys::HARDWARE_VERSION = "HardwareVersion";
+const char* AboutKeys::SUPPORT_URL = "SupportUrl";
 
-static const char version[] = "##VERSION_STRING##";
-static const char build[] = "AllJoyn Library ##BUILD_STRING##";
-
-const char* ajn::GetVersion()
-{
-    return version;
-}
-
-const char* ajn::GetBuildInfo()
-{
-    return build;
-}
-
-uint32_t ajn::GetNumericVersion()
-{
-    return GenerateNumericVersionValue(year, month, feature, bugfix);
 }

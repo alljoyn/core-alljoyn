@@ -1,5 +1,5 @@
 /////////////////////////////////////////////////////////////////////////////
-// Copyright (c) 2011 - 2014, AllSeen Alliance. All rights reserved.
+// Copyright (c) 2011-2015, AllSeen Alliance. All rights reserved.
 //
 //    Permission to use, copy, modify, and/or distribute this software for any
 //    purpose with or without fee is hereby granted, provided that the above
@@ -46,7 +46,7 @@ BEGIN
             VALUE "FileDescription", L"AllJoyn browser plugin"
             VALUE "FileVersion", "00.00.01"
             VALUE "InternalName", "npalljoyn"
-            VALUE "LegalCopyright", "Copyright (c) 2011-2013, AllSeen Alliance."
+            VALUE "LegalCopyright", "Copyright (c) 2011-2015, AllSeen Alliance."
             VALUE "MIMEType", "application/x-alljoyn"
             VALUE "OriginalFilename", "npalljoyn.dll"
             VALUE "ProductName", "AllJoyn"

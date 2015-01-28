@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -21,6 +21,7 @@
 #include <vector>
 
 #include <qcc/String.h>
+#include <qcc/time.h>
 #include <qcc/Thread.h>
 
 #include <alljoyn/BusAttachment.h>
@@ -39,6 +40,9 @@
 using namespace std;
 using namespace qcc;
 using namespace ajn;
+
+const uint32_t SLEEP_TIME = 2000;
+const uint32_t BACKPRESSURE_TEST_NUM_SIGNALS = 12;
 
 class TestObject : public BusObject {
   public:
@@ -85,18 +89,29 @@ class Participant : public SessionPortListener, public SessionListener {
     SessionMap hostedSessionMap;
     SessionMap joinedSessionMap;
 
-    Participant() : port(42), mpport(84), bus("Participant"), name(genUniqueName(bus)),
+    Participant(qcc::String connectArg = "") : port(42), mpport(84), bus("Participant"), name(genUniqueName(bus)),
         opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY),
-        mpopts(SessionOpts::TRAFFIC_MESSAGES, true, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY)
+        mpopts(SessionOpts::TRAFFIC_MESSAGES, true, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY),
+        inited(false)
     {
-        Init();
+        Init(connectArg);
     }
 
-    void Init() {
+    void Init(qcc::String connectArg) {
         QStatus status;
 
+        if (connectArg == "") {
+            connectArg = getConnectArg();
+        }
         ASSERT_EQ(ER_OK, bus.Start());
-        ASSERT_EQ(ER_OK, bus.Connect(getConnectArg().c_str()));
+        status = bus.Connect(connectArg.c_str());
+
+        if ((status != ER_OK) && (connectArg == "null:")) {
+            printf("Skipping test. Could not connect to Null transport.\n");
+            return;
+        }
+
+        ASSERT_EQ(ER_OK, status);
 
         ASSERT_EQ(ER_OK, bus.BindSessionPort(port, opts, *this));
         ASSERT_EQ(ER_OK, bus.BindSessionPort(mpport, mpopts, *this));
@@ -116,6 +131,8 @@ class Participant : public SessionPortListener, public SessionListener {
         /* create bus object */
         busobj = new TestObject(bus);
         bus.RegisterBusObject(*busobj);
+        inited = true;
+        return;
     }
 
     ~Participant() {
@@ -123,9 +140,11 @@ class Participant : public SessionPortListener, public SessionListener {
     }
 
     void Fini() {
-        bus.UnregisterBusObject(*busobj);
-        delete busobj;
-        ASSERT_EQ(ER_OK, bus.Disconnect());
+        if (inited) {
+            bus.UnregisterBusObject(*busobj);
+            delete busobj;
+            ASSERT_EQ(ER_OK, bus.Disconnect());
+        }
         ASSERT_EQ(ER_OK, bus.Stop());
         ASSERT_EQ(ER_OK, bus.Join());
     }
@@ -212,6 +231,7 @@ class Participant : public SessionPortListener, public SessionListener {
     SessionId GetJoinedSessionId(Participant& part, bool multipoint) {
         return joinedSessionMap[SessionMapKey(part.name.c_str(), multipoint)];
     }
+    bool inited;
   private:
     //Private copy constructor to prevent copying the class and double freeing of memory
     Participant(const Participant& rhs) : bus("Participant") { }
@@ -223,8 +243,9 @@ class SignalReceiver : public MessageReceiver {
   protected:
     Participant* participant;
     int signalReceived;
+    bool blocking;
   public:
-    SignalReceiver() : signalReceived(0) { }
+    SignalReceiver(bool blocking = false) : signalReceived(0), blocking(blocking) { }
     virtual ~SignalReceiver() { }
 
     void Register(Participant* part) {
@@ -253,6 +274,10 @@ class SignalReceiver : public MessageReceiver {
     }
 
     void SignalHandler(const InterfaceDescription::Member* member, const char* sourcePath, Message& msg) {
+        if (blocking) {
+            blocking = false;
+            qcc::Sleep(SLEEP_TIME);
+        }
         signalReceived++;
     }
 
@@ -274,7 +299,7 @@ class SignalReceiver : public MessageReceiver {
 class PathReceiver : public SignalReceiver {
     qcc::String senderpath;
   public:
-    PathReceiver(const char* path) : SignalReceiver(), senderpath(path) { }
+    PathReceiver(const char* path, bool blocking = false) : SignalReceiver(blocking), senderpath(path) { }
     virtual ~PathReceiver() { }
 
     virtual void RegisterSignalHandler(const InterfaceDescription::Member* member) {
@@ -289,7 +314,7 @@ class PathReceiver : public SignalReceiver {
 class RuleReceiver : public SignalReceiver {
     qcc::String matchRule;
   public:
-    RuleReceiver(const char* rule) : SignalReceiver(), matchRule(rule) { }
+    RuleReceiver(const char* rule, bool blocking = false) : SignalReceiver(blocking), matchRule(rule) { }
     virtual ~RuleReceiver() { }
 
     virtual void RegisterSignalHandler(const InterfaceDescription::Member* member) {
@@ -688,3 +713,30 @@ TEST_F(SignalTest, Rules) {
     recvAn.verify_norecv();
     recvBn.verify_norecv();
 }
+
+/* This is a blocking test. The idea is to send out 12 signals, the first signal hanlder
+   will sleep for SLEEP_TIME, as a result of which the SendSignal should block for approx
+   SLEEP_TIME ms until that signal handler returns.
+ */
+TEST_F(SignalTest, BackPressure) {
+    Participant A("null:");
+    Participant B("null:");
+
+    if (A.inited && B.inited) {
+        // Set blocking to true.
+        PathReceiver recvBy("/signals/test", true);
+        recvBy.Register(&B);
+
+        B.JoinSession(A, false);
+        uint64_t start_time = qcc::GetTimestamp64();
+        for (uint32_t i = 0; i < BACKPRESSURE_TEST_NUM_SIGNALS; i++) {
+            A.busobj->SendSignal(NULL, B.GetJoinedSessionId(A, false), 0);
+        }
+        uint64_t elapsed = qcc::GetTimestamp64() - start_time;
+
+        EXPECT_TRUE(elapsed >= SLEEP_TIME);
+        wait_for_signal();
+        recvBy.verify_recv(BACKPRESSURE_TEST_NUM_SIGNALS);
+    }
+}
+

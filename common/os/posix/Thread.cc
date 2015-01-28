@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -75,7 +75,7 @@ void Thread::CleanExternalThread(void* t)
     threadListLock->Unlock();
 }
 
-ThreadListInitializer::ThreadListInitializer()
+ThreadListInit::ThreadListInit()
 {
     if (0 == threadListCounter++) {
         Thread::threadListLock = new Mutex();
@@ -88,7 +88,7 @@ ThreadListInitializer::ThreadListInitializer()
     }
 }
 
-ThreadListInitializer::~ThreadListInitializer()
+ThreadListInit::~ThreadListInit()
 {
     if (0 == --threadListCounter) {
         void* thread = pthread_getspecific(cleanExternalThreadKey);

@@ -1090,16 +1090,16 @@ QStatus _Message::HelloMessage(bool isBusToBus, const qcc::String& sender, bool 
     return status;
 }
 
-QStatus _Message::HelloReply(bool isBusToBus, const qcc::String& uniqueName)
+QStatus _Message::HelloReply(bool isBusToBus, const qcc::String& uniqueName, SessionOpts::NameTransferType nameType)
 {
     if (!bus->IsStarted()) {
         return ER_BUS_BUS_NOT_STARTED;
     }
     return HelloReply(isBusToBus, bus->GetInternal().GetLocalEndpoint()->GetUniqueName(), uniqueName,
-                      bus->GetInternal().GetGlobalGUID().ToString());
+                      bus->GetInternal().GetGlobalGUID().ToString(), nameType);
 }
 
-QStatus _Message::HelloReply(bool isBusToBus, const qcc::String& sender, const qcc::String& uniqueName, const qcc::String& guid)
+QStatus _Message::HelloReply(bool isBusToBus, const qcc::String& sender, const qcc::String& uniqueName, const qcc::String& guid, SessionOpts::NameTransferType nameType)
 {
     QStatus status;
     CompressionRules unused; /* Only needed if flags includes ALLJOYN_FLAG_COMPRESSED */
@@ -1118,7 +1118,7 @@ QStatus _Message::HelloReply(bool isBusToBus, const qcc::String& sender, const q
         MsgArg args[3];
         args[0].Set("s", uniqueName.c_str());
         args[1].Set("s", guid.c_str());
-        args[2].Set("u", ALLJOYN_PROTOCOL_VERSION);
+        args[2].Set("u", nameType << 30 | ALLJOYN_PROTOCOL_VERSION);
         status = MarshalMessage("ssu", sender, uniqueName, MESSAGE_METHOD_RET, args, ArraySize(args), 0, 0, unused);
         QCC_DbgPrintf(("\n%s", ToString(args, 2).c_str()));
     } else {
@@ -1445,7 +1445,8 @@ void _Message::ErrorMsg(const char* errorName, uint32_t replySerial)
 {
     assert(bus->IsStarted());
     QStatus status = ErrorMsg(bus->GetInternal().GetLocalEndpoint()->GetUniqueName(), errorName, replySerial);
-    assert(ER_OK == status); (void)status;
+    assert(ER_OK == status);
+    QCC_UNUSED(status);
 }
 
 QStatus _Message::ErrorMsg(const qcc::String& sender, const char* errorName, uint32_t replySerial)
@@ -1476,7 +1477,8 @@ void _Message::ErrorMsg(QStatus status, uint32_t replySerial)
 {
     assert(bus->IsStarted());
     QStatus result = ErrorMsg(bus->GetInternal().GetLocalEndpoint()->GetUniqueName(), status, replySerial);
-    assert(ER_OK == result); (void)result;
+    assert(ER_OK == result);
+    QCC_UNUSED(result);
 }
 
 QStatus _Message::ErrorMsg(const qcc::String& sender, QStatus status, uint32_t replySerial)

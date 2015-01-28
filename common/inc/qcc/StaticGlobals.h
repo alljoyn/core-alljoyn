@@ -1,12 +1,10 @@
 /**
  * @file
- * Common file for holding global variables.
+ * File for holding static global variables.
  */
 
 /******************************************************************************
- *
- *
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -20,15 +18,16 @@
  *    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
+#ifndef _QCC_STATICGLOBALS_H
+#define _QCC_STATICGLOBALS_H
 
-#ifndef _COMMON_STATIC_H
-#define _COMMON_STATIC_H
-#include <qcc/Environ.h>
 #include <qcc/platform.h>
+#include <qcc/Environ.h>
 
 namespace qcc {
 
-/** Class that contains all the static class members/static objects
+/**
+ * Class that contains all the static class members/static objects
  * instantiated in the common project.
  */
 class StaticGlobals {
@@ -37,11 +36,12 @@ class StaticGlobals {
     Event alwaysSet;
     Event neverSet;
     /** Environ variables */
-    Environ environSingleton;     // Environment variable singleton.
-
+    Environ environSingleton;
 };
+
 /** The singleton instance of StaticGlobals. */
-extern StaticGlobals& commonGlobals;
+extern StaticGlobals& staticGlobals;
+
 }
 
 #endif

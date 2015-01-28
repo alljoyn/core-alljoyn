@@ -5,9 +5,7 @@
  */
 
 /******************************************************************************
- *
- *
- * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -51,7 +49,7 @@ class Source;
 class Event {
   public:
 
-    class Initializer;
+    class Init;
 
     /** Cause Wait to have no timeout */
     static const uint32_t WAIT_FOREVER = static_cast<uint32_t>(-1);
@@ -289,11 +287,11 @@ class Event {
 
 };
 
-static class Event::Initializer {
+static class Event::Init {
   public:
-    Initializer();
-    ~Initializer();
-} eventInitializer;
+    Init();
+    ~Init();
+} eventInit;
 
 }  /* namespace */
 

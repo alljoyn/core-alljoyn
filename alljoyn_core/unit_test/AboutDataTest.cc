@@ -1002,7 +1002,7 @@ TEST(AboutDataTest, SetField) {
     EXPECT_EQ(ER_OK, aboutData.SetField("Foo", en_arg, "en"));
     EXPECT_EQ(ER_OK, aboutData.SetField("Foo", es_arg, "es"));
     const char* languages[2];
-    EXPECT_EQ(2, aboutData.GetSupportedLanguages(languages, 2));
+    EXPECT_EQ((size_t)2, aboutData.GetSupportedLanguages(languages, 2));
     // order is unknown
     if (languages[0][1] == 's') {
         EXPECT_STREQ(languages[0], "es");
@@ -1280,7 +1280,7 @@ TEST(AboutDataTest, UTF8_test)
     EXPECT_STREQ(str, ruOut);
 }
 
-TEST(AboutDataTest, CreateFromXml) {
+TEST(AboutDataTest, CreateFromXml_from_qcc_string) {
     QStatus status = ER_FAIL;
     AboutData aboutData;
     qcc::String xml =
@@ -1422,6 +1422,136 @@ TEST(AboutDataTest, CreateFromXml) {
 //    status = value->Get("s", &userDefined);
 //    EXPECT_EQ(ER_OK, status);
 //    EXPECT_STREQ("Sólo se puede aceptar cadenas distintas de cadenas nada debe hacerse utilizando el método AboutData Clase SetField", userDefined);
+}
+
+/*
+ * This test is identical to AboutDataTest.CreateFromXml_from_qcc_string except
+ * the xml string is passed in as a const char* not a qcc::String
+ */
+TEST(AboutDataTest, CreateFromXml_from_char_string) {
+    QStatus status = ER_FAIL;
+    AboutData aboutData;
+    const char* xml =
+        "<AboutData>"
+        "  <AppId>000102030405060708090A0B0C0D0E0C</AppId>"
+        "  <DefaultLanguage>en</DefaultLanguage>"
+        "  <DeviceName>My Device Name</DeviceName>"
+        "  <DeviceName lang = 'es'>Nombre de mi dispositivo</DeviceName>"
+        "  <DeviceId>baddeviceid</DeviceId>"
+        "  <AppName>My Application Name</AppName>"
+        "  <AppName lang = 'es'>Mi Nombre de la aplicación</AppName>"
+        "  <Manufacturer>Company</Manufacturer>"
+        "  <Manufacturer lang = 'es'>Empresa</Manufacturer>"
+        "  <ModelNumber>Wxfy388i</ModelNumber>"
+        "  <Description>A detailed description provided by the application.</Description>"
+        "  <Description lang = 'es'>Una descripción detallada proporcionada por la aplicación.</Description>" /*TODO look into utf8*/
+        "  <DateOfManufacture>2014-01-08</DateOfManufacture>"
+        "  <SoftwareVersion>1.0.0</SoftwareVersion>"
+        "  <HardwareVersion>1.0.0</HardwareVersion>"
+        "  <SupportUrl>www.example.com</SupportUrl>"
+        "  <UserDefinedTag>Can only accept strings anything other than strings must be done using the AboutData Class SetField method</UserDefinedTag>"
+        "  <UserDefinedTag lang='es'>Sólo se puede aceptar cadenas distintas de cadenas nada debe hacerse utilizando el método AboutData Clase SetField</UserDefinedTag>"
+        "</AboutData>";
+    status = aboutData.CreateFromXml(xml);
+    EXPECT_EQ(ER_OK, status);
+
+    // originalAppId is the string 000102030405060708090A0B0C0D0E0C converted to an array of bytes
+    uint8_t originalAppId[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 12 };
+    uint8_t* appId;
+    size_t num;
+    status = aboutData.GetAppId(&appId, &num);
+    EXPECT_EQ(ER_OK, status);
+    ASSERT_EQ(16u, num);
+    for (size_t i = 0; i < num; i++) {
+        EXPECT_EQ(originalAppId[i], appId[i]) << i << ": " << originalAppId[i] << " = " << appId[i];
+    }
+
+    char* defaultLanguage;
+    status = aboutData.GetDefaultLanguage(&defaultLanguage);
+    EXPECT_EQ(ER_OK, status);
+    EXPECT_STREQ("en", defaultLanguage);
+
+    char* deviceName;
+    status = aboutData.GetDeviceName(&deviceName);
+    EXPECT_EQ(ER_OK, status);
+    EXPECT_STREQ("My Device Name", deviceName);
+
+    status = aboutData.GetDeviceName(&deviceName, "es");
+    EXPECT_EQ(ER_OK, status);
+    EXPECT_STREQ("Nombre de mi dispositivo", deviceName);
+
+    char* deviceId;
+    status = aboutData.GetDeviceId(&deviceId);
+    EXPECT_EQ(ER_OK, status);
+    EXPECT_STREQ("baddeviceid", deviceId);
+
+    char* appName;
+    status = aboutData.GetAppName(&appName);
+    EXPECT_EQ(ER_OK, status);
+    EXPECT_STREQ("My Application Name", appName);
+
+    status = aboutData.GetAppName(&appName, "es");
+    EXPECT_EQ(ER_OK, status);
+    EXPECT_STREQ("Mi Nombre de la aplicación", appName);
+
+    char* manufacturer;
+    status = aboutData.GetManufacturer(&manufacturer);
+    EXPECT_EQ(ER_OK, status);
+    EXPECT_STREQ("Company", manufacturer);
+
+    status = aboutData.GetManufacturer(&manufacturer, "es");
+    EXPECT_EQ(ER_OK, status);
+    EXPECT_STREQ("Empresa", manufacturer);
+
+    size_t numLanguages = aboutData.GetSupportedLanguages();
+    const char** languages = new const char*[numLanguages];
+
+    size_t numRetLang = aboutData.GetSupportedLanguages(languages, numLanguages);
+    EXPECT_EQ(numLanguages, numRetLang);
+    EXPECT_EQ(2u, numLanguages);
+    EXPECT_STREQ("en", languages[0]);
+    EXPECT_STREQ("es", languages[1]);
+    delete [] languages;
+    languages = NULL;
+
+    char* description;
+    status = aboutData.GetDescription(&description);
+    EXPECT_EQ(ER_OK, status);
+    EXPECT_STREQ("A detailed description provided by the application.", description);
+
+    status = aboutData.GetDescription(&description, "es");
+    EXPECT_EQ(ER_OK, status);
+    EXPECT_STREQ("Una descripción detallada proporcionada por la aplicación.", description);
+
+    char* modelNumber;
+    status = aboutData.GetModelNumber(&modelNumber);
+    EXPECT_EQ(ER_OK, status);
+    EXPECT_STREQ("Wxfy388i", modelNumber);
+
+    char* dateOfManufacture;
+    status = aboutData.GetDateOfManufacture(&dateOfManufacture);
+    EXPECT_EQ(ER_OK, status);
+    EXPECT_STREQ("2014-01-08", dateOfManufacture);
+
+    char* softwareVersion;
+    status = aboutData.GetSoftwareVersion(&softwareVersion);
+    EXPECT_EQ(ER_OK, status);
+    EXPECT_STREQ("1.0.0", softwareVersion);
+
+    char* ajSoftwareVersion;
+    status = aboutData.GetAJSoftwareVersion(&ajSoftwareVersion);
+    EXPECT_EQ(ER_OK, status);
+    EXPECT_STREQ(ajn::GetVersion(), ajSoftwareVersion);
+
+    char* hardwareVersion;
+    status = aboutData.GetHardwareVersion(&hardwareVersion);
+    EXPECT_EQ(ER_OK, status);
+    EXPECT_STREQ("1.0.0", hardwareVersion);
+
+    char* supportUrl;
+    status = aboutData.GetSupportUrl(&supportUrl);
+    EXPECT_EQ(ER_OK, status);
+    EXPECT_STREQ("www.example.com", supportUrl);
 }
 
 class AboutDataTestAboutData : public AboutData {

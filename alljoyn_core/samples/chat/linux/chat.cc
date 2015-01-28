@@ -39,6 +39,7 @@ static const SessionPort CHAT_PORT = 27;
 static ajn::BusAttachment* s_bus = NULL;
 static qcc::String s_advertisedName;
 static qcc::String s_joinName;
+static qcc::String s_sessionHost;
 static SessionId s_sessionId = 0;
 static bool s_joinComplete = false;
 static volatile sig_atomic_t s_interrupt = false;
@@ -128,27 +129,32 @@ class ChatObject : public BusObject {
 class MyBusListener : public BusListener, public SessionPortListener, public SessionListener {
     void FoundAdvertisedName(const char* name, TransportMask transport, const char* namePrefix)
     {
-        const char* convName = name + strlen(NAME_PREFIX);
-        printf("Discovered chat conversation: \"%s\"\n", convName);
+        printf("FoundAdvertisedName(name='%s', transport = 0x%x, prefix='%s')\n", name, transport, namePrefix);
 
-        /* Join the conversation */
-        /* Since we are in a callback we must enable concurrent callbacks before calling a synchronous method. */
-        s_bus->EnableConcurrentCallbacks();
-        SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, true, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
-        QStatus status = s_bus->JoinSession(name, CHAT_PORT, this, s_sessionId, opts);
-        if (ER_OK == status) {
-            printf("Joined conversation \"%s\"\n", convName);
-        } else {
-            printf("JoinSession failed (status=%s)\n", QCC_StatusText(status));
+        if (s_sessionHost.empty()) {
+            const char* convName = name + strlen(NAME_PREFIX);
+            printf("Discovered chat conversation: \"%s\"\n", convName);
+
+            /* Join the conversation */
+            /* Since we are in a callback we must enable concurrent callbacks before calling a synchronous method. */
+            s_sessionHost = name;
+            s_bus->EnableConcurrentCallbacks();
+            SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, true, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
+            QStatus status = s_bus->JoinSession(name, CHAT_PORT, this, s_sessionId, opts);
+            if (ER_OK == status) {
+                printf("Joined conversation \"%s\"\n", convName);
+            } else {
+                printf("JoinSession failed (status=%s)\n", QCC_StatusText(status));
+            }
+            uint32_t timeout = 20;
+            status = s_bus->SetLinkTimeout(s_sessionId, timeout);
+            if (ER_OK == status) {
+                printf("Set link timeout to %d\n", timeout);
+            } else {
+                printf("Set link timeout failed\n");
+            }
+            s_joinComplete = true;
         }
-        uint32_t timeout = 20;
-        status = s_bus->SetLinkTimeout(s_sessionId, timeout);
-        if (ER_OK == status) {
-            printf("Set link timeout to %d\n", timeout);
-        } else {
-            printf("Set link timeout failed\n");
-        }
-        s_joinComplete = true;
     }
     void LostAdvertisedName(const char* name, TransportMask transport, const char* namePrefix)
     {

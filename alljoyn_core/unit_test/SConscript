@@ -1,4 +1,4 @@
-# Copyright (c) 2011-2014, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2011-2015, AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -33,10 +33,7 @@ def have_developer_license():
 
 def builder_check(target, source, env):
     check = str(source[0].abspath)
-    if os.spawnl(os.P_WAIT, check, check) == 0:
-        open(str(target[0]), 'w').write("PASSED\n")
-    else:
-        return 1
+    return os.spawnve(os.P_WAIT, check, [check], env['ENV'])
 
 env.Append(BUILDERS = {'Check' : Builder(action = builder_check)})
 
@@ -148,12 +145,15 @@ else:
         ajcheck_obj = unittest_env.Object(ajcheck_src);
         ajcheck_prog = unittest_env.Program('ajcheck', ajcheck_obj)
         unittest_env.Install('$TESTDIR/cpp/bin', ajcheck_prog)
-        unittest_env.Check('check.passed', ajcheck_prog)
+        check_env = unittest_env.Clone()
+        if check_env['OS_GROUP'] == 'posix':
+            check_env.AppendENVPath('LD_LIBRARY_PATH', check_env.subst('$DISTDIR/cpp/lib'))
+        check_env.Check('check.passed', ajcheck_prog)
         # The following two lines mean the ajcheck is not run by
         # default, it must be explicitly specified on the command
         # line, e.g. 'scons check'.
-        unittest_env.Ignore('.', 'check.passed')
-        unittest_env.Alias('check', 'check.passed')
+        check_env.Ignore('.', 'check.passed')
+        check_env.Alias('check', 'check.passed')
 
     # install gtest utilities
     unittest_env.Install('$TESTDIR/cpp/bin', Dir('test_report').srcnode())

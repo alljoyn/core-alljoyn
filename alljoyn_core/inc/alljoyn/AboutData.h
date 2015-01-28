@@ -4,7 +4,7 @@
  * interface data fields.
  */
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -22,6 +22,7 @@
 #define _ALLJOYN_ABOUTDATA_H
 
 #include <alljoyn/AboutDataListener.h>
+#include <alljoyn/AboutKeys.h>
 #include <alljoyn/MsgArg.h>
 #include <alljoyn/Status.h>
 
@@ -32,9 +33,8 @@ namespace ajn {
 /**
  * AboutData is responsible for holding the org.alljoyn.about interface Data fields
  */
-class AboutData : public AboutDataListener {
+class AboutData : public AboutDataListener, public AboutKeys {
   public:
-
     /**
      * Create an AboutData class. The default language will will not be set.
      * Use the constructor that takes a default language tag; or set the
@@ -95,7 +95,41 @@ class AboutData : public AboutDataListener {
     ~AboutData();
 
     /**
-     * use xml definition of AboutData to set the about data.
+     * use an xml representation of AboutData to set the about data.
+       @code
+       "<AboutData>"
+       "  <AppId>000102030405060708090A0B0C0D0E0C</AppId>"
+       "  <DefaultLanguage>en</DefaultLanguage>"
+       "  <DeviceName>My Device Name</DeviceName>"
+       "  <DeviceName lang = 'es'>Nombre de mi dispositivo</DeviceName>"
+       "  <DeviceId>93c06771-c725-48c2-b1ff-6a2a59d445b8</DeviceId>"
+       "  <AppName>My Application Name</AppName>"
+       "  <AppName lang = 'es'>Mi Nombre de la aplicacion</AppName>"
+       "  <Manufacturer>Company</Manufacturer>"
+       "  <Manufacturer lang = 'es'>Empresa</Manufacturer>"
+       "  <ModelNumber>Wxfy388i</ModelNumber>"
+       "  <Description>A detailed description provided by the application.</Description>"
+       "  <Description lang = 'es'>Una descripcion detallada proporcionada por la aplicacion.</Description>"
+       "  <DateOfManufacture>2014-01-08</DateOfManufacture>"
+       "  <SoftwareVersion>1.0.0</SoftwareVersion>"
+       "  <HardwareVersion>1.0.0</HardwareVersion>"
+       "  <SupportUrl>www.example.com</SupportUrl>"
+       "</AboutData>"
+       @endcode
+     *
+     * Note: AJSoftwareVersion is automatically set to the version of Alljoyn that
+     * is being used. The SupportedLanguages tag is automatically implied from
+     * the DefaultLanguage tag and the lang annotation from tags that are
+     * localizable.
+     *
+     * @param[in] aboutDataXml a string that contains an XML representation of
+     *                         the AboutData fields.
+     * @return ER_OK on success
+     */
+    QStatus CreateFromXml(const qcc::String& aboutDataXml);
+
+    /**
+     * use an xml representation of AboutData to set the about data.
        @code
        "<AboutData>"
        "  <AppId>000102030405060708090A0B0C0D0E0C</AppId>"
@@ -126,7 +160,7 @@ class AboutData : public AboutDataListener {
      *                         the AboutData fields.
      * @return ER_OK on success
      */
-    QStatus CreateFromXml(const qcc::String& aboutDataXml);
+    QStatus CreateFromXml(const char* aboutDataXml);
 
     /**
      * The AboutData has all of the required fields
@@ -730,30 +764,6 @@ class AboutData : public AboutDataListener {
      * be a in common since generation of the RFC-4122 id is not really core to alljoyn
      * its self.
      */
-  public:
-    /**
-     * @anchor AboutFields
-     * @name Known AboutFields
-     *
-     * The known fields in the About interface
-     * TODO put in a table listing the properties for all of the about fields
-     */
-    // @{
-    static const char* APP_ID;           ///< The globally unique id for the application
-    static const char* DEFAULT_LANGUAGE; ///< The default language supported by the device. IETF language tags specified by RFC 5646.
-    static const char* DEVICE_NAME; ///< The name of the device
-    static const char* DEVICE_ID; ///< A unique strign with a value generated using platform specific means
-    static const char* APP_NAME; ///< The application name assigned by the manufacture
-    static const char* MANUFACTURER; ///< The manufacture's name
-    static const char* MODEL_NUMBER; ///< The application model number
-    static const char* SUPPORTED_LANGUAGES; ///< List of supported languages
-    static const char* DESCRIPTION; ///< Detailed descritption provided by the application
-    static const char* DATE_OF_MANUFACTURE; ///< The date of manufacture usign format YYYY-MM-DD
-    static const char* SOFTWARE_VERSION; ///< The software version for the OEM software
-    static const char* AJ_SOFTWARE_VERSION; ///< The current version of the AllJoyn SDK utilized by the application
-    static const char* HARDWARE_VERSION; ///< The device hardware version
-    static const char* SUPPORT_URL; ///< The support URL provided by the OEM or software developer
-    // @}
   protected:
     /**
      * typedef for byte mask used to specify properties of an AboutData field
