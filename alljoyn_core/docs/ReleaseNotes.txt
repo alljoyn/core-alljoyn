@@ -1,5 +1,5 @@
-AllJoyn Version 14.12 Release Notes
-===================================
+AllJoyn Version 14.12a Release Notes
+====================================
 
 Platform Support
 ----------------
@@ -14,7 +14,7 @@ Platform Support
  9) OpenWRT BB and CC branches
 
 
-Features added in Version 14.12
+Features added in Version 14.12a
 --------------------------------
 * Major Stabilization fixes for the system when it is under load.
 * Hardening and performance improvements of the UDP RN to RN transport
@@ -26,9 +26,12 @@ Features added in Version 14.12
 * Migration of PropertyChanged signal from BusListener to ProxyBusObject
   (ASACORE-47) 
 * Heartbeat from the Router to TC application (ASACORE-151)
+* UDP Transport: router to router transport using
+  reliability protocol on top of UDP.  Provide more control over the data
+  flow, and reduction of resources.
 
 
-Issues Addressed in Version 14.12
+Issues Addressed in Version 14.12a
 ----------------------------------
 ASACORE-51   Implicit PropertiesChanged emit only works for multi-point sessions
 ASACORE-189  BusObject::Unregistered callback is not called for busobjects
@@ -41,13 +44,33 @@ ASACORE-656  Notifications related to names appearing and disappearing
 ASACORE-748  Dismiss All Notifications Test Doesn't Achieve Receiving 95%
              Of DismissAll Signals Under 10 Seconds Time Frame
 ASACORE-785  Duplicate FoundAdvertisedName being received
+ASACORE-971  Make Visual Studio 2013 the default MSVC_VERSION
+ASACORE-1051 Support Xcode 6.1
+ASACORE-1238 AutoPinger includes private header files
+ASACORE-1306 SetSessionListener on Busattachment might not insert listener
+ASACORE-1324 UDP Transport CPU Usage hits rails in System Test
+ASACORE-1325 UDP Transport can deadlock on shutdown
+ASACORE-1333 ARDP protocol fails to detect unresponsive remote
+ASACORE-1334 Excessive amount of redundant RST segments
+ASACORE-1336 System Tests with UDP transport for SLS not achieving
+             performance requirements
+ASACORE-1337 ARDP header reserved bytes should be set to zero.
+ASACORE-1355 Excessive name propogation occurs while using SLS sessions
+ASACORE-1366 Wrong signature for alljoyn_aboutdata_getfield
+ASACORE-1368 utility.h is not included in the Windows SDK zip file
+ASACORE-1369 cpp/inc/qcc/windows/Mutex.h includes <Status.h>
+ASACORE-1390 cngCacheDummy array is too short
+ASACORE-1402 One consumer, multiple producers (96) scenario causes deadlock
+             in routing node of the consumer.
+ASACORE-1417  When SLS producer does not leave the session, the SLS
+              consumer will no longer fetch from the producer
 
 For a complete list of closed issues can be found at:
-https://jira.allseenalliance.org/issues/?jql=project%3D%22Core%20SW%22%20and%20status%20in%20%28closed%2C%20resolved%29%20and%20type%20not%20in%20%28task%2C%20%22New%20Feature%22%29%20%20and%20fixVersion%20%3D%20%2214.12%22%20and%20component%20not%20in%20%28%22Thin%20Core%20Library%22%2C%20%22About%20TC%22%29%20order%20by%20priority%20DESC%2C%20id%20ASC
+https://jira.allseenalliance.org/issues/?jql=project%3D%22Core%20SW%22%20and%20status%20in%20%28closed%2C%20resolved%29%20and%20type%20not%20in%20%28task%2C%20%22New%20Feature%22%29%20%20and%20fixVersion%20in%20%28%2214.12%22%2C%20%2214.12a%22%29%20and%20component%20not%20in%20%28%22Thin%20Core%20Library%22%2C%20%22About%20TC%22%29%20order%20by%20priority%20DESC%2C%20id%20ASC
 
 
-Known Issues in Version 14.12
------------------------------
+Known Issues in Version 14.12a
+------------------------------
 ASACORE-49    Multipoint session lost on joiner side and not binder side
               prevents joiner from rejoining
 ASACORE-181   Memory leak on repeated registration/unregistration of the same
@@ -67,6 +90,10 @@ ASACORE-1253  C++ sample apps discover and join session twice, print errors
 ASACORE-1286  FindAdvertised does not work with certain config options
 ASACORE-1300  After performing wireless interface up/down outstanding
               advertisement and discovery queries are sent out on IPv6 only
+ASACORE-1391  C-style exports in C++ API headers needs AJ_CALL annotation
+ASACORE-1394  AllJoyn Signal sent on an non-existent session id should not
+              return ER_OK
+ASACORE-1396  Crash if WSARecvMsg returns an error
 
 For a complete list of open issues:
 https://jira.allseenalliance.org/issues/?jql=project%3D%22Core%20SW%22%20and%20status%20not%20in%20%28closed%2C%20resolved%29%20and%20type%20not%20in%20%28task%2C%20%22New%20Feature%22%29%20%20and%20component%20not%20in%20%28%22Thin%20Core%20Library%22%2C%20%22About%20TC%22%29%20order%20by%20priority%20DESC%2C%20id%20ASC
@@ -74,7 +101,22 @@ https://jira.allseenalliance.org/issues/?jql=project%3D%22Core%20SW%22%20and%20s
 
 Compatibility
 -------------
-Version 14.12
+Version 14.12/14.12a
+- The AllJoyn protocol version changed from 10 to 11.
+- As part of making UDP/ARDP robust compatibility was broken between the
+  14.06 experimental version and the current implementation - this is not
+  considered significant as UDP was disabled by default in 14.06.
+- Self-Join - the addition of this feature means that applications can now
+  join their own sessions, previously this was explicitly disallowed.
+- The migration of the PropertyChanged signal from BusListener interface to
+  ProxyBusObject interface impacts compatibility as it will prevent
+  applications based on AllJoyn 14.06a and older from receiving this signal
+  from those based on 14.12 and newer, and vice versa. The impact should
+  not be significant since the the PropertiesChanged functionality prior to
+  the 14.12 release did not work.
+- The addition of the heartbeat from the router to a Thin Core App (TCA) can
+  result in a TCA being disconnected if it is unable to respond to the
+  AllJoyn Ping within the probe timeout period of 3 seconds.
 
 For details of previous releases please see the release notes
 14.06a: https://git.allseenalliance.org/cgit/core/alljoyn.git/tree/alljoyn_core/docs/ReleaseNotes.txt?id=v14.06a
@@ -84,6 +126,10 @@ For details of previous releases please see the release notes
 
 Change history
 --------------
+14.12a - Bug fixes: ASACORE-1324, ASACORE-1325, ASACORE-1333, ASACORE-1334,
+         ASACORE-1336, ASACORE-1337, ASACORE-1355, ASACORE-1366,
+	 ASACORE-1368, ASACORE-1369, ASACORE-1390, ASACORE-1402,
+	 ASACORE-1417
 14.12  - Bug fixes, major improvements to address scalability and
          stability, new features.
 14.06a - Bug fixes: ASACORE-713, ASACORE-747, ASACORE-760, ASACORE-779,

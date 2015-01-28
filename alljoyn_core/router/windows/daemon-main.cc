@@ -164,7 +164,7 @@ OptParse::ParseResultCode OptParse::ParseResult()
 
         if (arg.compare("--version") == 0) {
             printf("AllJoyn Message Bus Daemon version: %s\n"
-                   "Copyright (c) 2009-2014 AllSeen Alliance.\n"
+                   "Copyright (c) 2009-2015 AllSeen Alliance.\n"
                    "\n"
                    "\n"
                    "Build: %s\n", ajn::GetVersion(), GetBuildInfo());
