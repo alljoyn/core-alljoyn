@@ -45,8 +45,6 @@
 #include <alljoyn_c/version.h>
 #include <Status.h>
 
-#include <Status.h>
-
 /** Static top level message bus object */
 static alljoyn_busattachment g_msgBus = NULL;
 
@@ -202,7 +200,7 @@ int main(int argc, char** argv, char** envArg)
 
     status = alljoyn_busobject_addmethodhandlers(testObj, methodEntries, sizeof(methodEntries) / sizeof(methodEntries[0]));
     if (ER_OK != status) {
-        printf("Failed to register method handlers for BasicSampleObject");
+        printf("Failed to register method handlers for BasicSampleObject\n");
     }
 
     /* Start the msg bus */

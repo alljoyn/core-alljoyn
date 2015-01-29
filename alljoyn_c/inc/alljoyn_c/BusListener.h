@@ -97,7 +97,7 @@ typedef void (AJ_CALL * alljoyn_buslistener_lost_advertised_name_ptr)(const void
  * @param context        The context pointer that was passed into the alljoyn_buslistener_create function
  * @param busName        The well-known name that has changed.
  * @param previousOwner  The unique name that previously owned the name or NULL if there was no previous owner.
- * @param newOwner       The unique name that now owns the name or NULL if the there is no new owner.
+ * @param newOwner       The unique name that now owns the name or NULL if there is no new owner.
  */
 typedef void (AJ_CALL * alljoyn_buslistener_name_owner_changed_ptr)(const void* context, const char* busName, const char* previousOwner, const char* newOwner);
 

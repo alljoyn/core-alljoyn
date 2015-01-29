@@ -237,7 +237,7 @@ extern AJ_API alljoyn_proxybusobject AJ_CALL alljoyn_proxybusobject_getchild(all
  * @return
  *      - #ER_OK if successful.
  *      - #ER_BUS_BAD_CHILD_PATH if the path is a bad path
- *      - #ER_BUS_OBJ_ALREADY_EXISTS the the object already exists on the alljoyn_proxybusobject
+ *      - #ER_BUS_OBJ_ALREADY_EXISTS the object already exists on the alljoyn_proxybusobject
  */
 extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_addchild(alljoyn_proxybusobject proxyObj, const alljoyn_proxybusobject child);
 

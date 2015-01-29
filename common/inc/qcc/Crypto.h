@@ -732,7 +732,7 @@ class Crypto_SRP {
      * that encodes the startup parameters.
      *
      * @param fromServer   Hex-encoded parameter string from the server.
-     * @param toServer     Retusn a hex-encode parameter string to be sent to the server.
+     * @param toServer     Returns a hex-encoded parameter string to be sent to the server.
      *
      * @return  - ER_OK if the initialization was succesful.
      *          - ER_BAD_STRING_ENCODING if the hex-encoded parameter block is badly formed.

@@ -526,7 +526,7 @@ QStatus WFDTransport::Start()
     QCC_DbgTrace(("WFDTransport::Start()"));
 
     /*
-     * We rely on the status of the server accept thead as the primary
+     * We rely on the status of the server accept thread as the primary
      * gatekeeper.
      *
      * A true response from IsRunning tells us that the server accept thread is
@@ -614,7 +614,7 @@ QStatus WFDTransport::Stop(void)
     }
 
     /*
-     * Tell the server accept loop thread to shut down through the thead
+     * Tell the server accept loop thread to shut down through the thread
      * base class.
      */
     QStatus status = Thread::Stop();
@@ -711,7 +711,7 @@ QStatus WFDTransport::Join(void)
      * Since Stop() is a request to stop, and this is what has ultimately been
      * done to both authentication threads and Rx and Tx threads, it is possible
      * that a thread is actually running after the call to Stop().  If that
-     * thead happens to be an authenticating endpoint, it is possible that an
+     * thread happens to be an authenticating endpoint, it is possible that an
      * authentication actually completes after Stop() is called.  This will move
      * a connection from the m_authList to the m_endpointList, so we need to
      * make sure we wait for all of the connections on the m_authList to go away

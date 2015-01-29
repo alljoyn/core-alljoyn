@@ -391,7 +391,7 @@ public class AboutServerSample {
             try {
                 Thread.sleep(10000);
             } catch (InterruptedException e) {
-                System.out.println("Thead Exception caught");
+                System.out.println("Thread Exception caught");
                 e.printStackTrace();
             }
         }

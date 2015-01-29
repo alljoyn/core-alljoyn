@@ -95,7 +95,7 @@ class SimpleBusListener : public BusListener {
             struct {
                 const char* busName;       ///< The well-known name that has changed.
                 const char* previousOwner; ///< The unique name that previously owned the name or NULL if there was no previous owner.
-                const char* newOwner;      ///< The unique name that now owns the name or NULL if the there is no new owner.
+                const char* newOwner;      ///< The unique name that now owns the name or NULL if there is no new owner.
             } nameOwnerChanged;
         };
 

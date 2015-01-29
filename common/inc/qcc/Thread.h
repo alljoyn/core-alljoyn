@@ -276,7 +276,7 @@ class Thread {
 
     /**
      * Invoked by the new thread if Start() returns successfully.
-     * The new thead exits when this method returns.
+     * The new thread exits when this method returns.
      *
      * The default version of Run() calls the thread function passed into
      * the constructor. Override Run() the thread needs to be able

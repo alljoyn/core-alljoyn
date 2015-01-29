@@ -185,7 +185,7 @@ public class Service {
             try {
                 Thread.sleep(10);
             } catch (InterruptedException e) {
-                System.out.println("Thead Exception caught");
+                System.out.println("Thread Exception caught");
                 e.printStackTrace();
             }
         }
@@ -195,7 +195,7 @@ public class Service {
             try {
                 Thread.sleep(10000);
             } catch (InterruptedException e) {
-                System.out.println("Thead Exception caught");
+                System.out.println("Thread Exception caught");
                 e.printStackTrace();
             }
         }

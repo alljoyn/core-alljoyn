@@ -392,7 +392,7 @@ extern AJ_API const char* AJ_CALL alljoyn_credentials_getusername(const alljoyn_
 extern AJ_API const char* AJ_CALL alljoyn_credentials_getcertchain(const alljoyn_credentials cred);
 
 /**
- * Gets the PEM encode private key from this credentials instance.
+ * Gets the PEM encoded private key from this credentials instance.
  *
  * @param cred The credentials to query.
  * @return An PEM encode private key or an empty string.
