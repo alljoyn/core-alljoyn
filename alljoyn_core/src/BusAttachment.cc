@@ -580,11 +580,6 @@ QStatus BusAttachment::Internal::TransportDisconnect(const char* connectSpec)
 
 QStatus BusAttachment::Disconnect()
 {
-    return Disconnect(this->GetConnectSpec().c_str());
-}
-
-QStatus BusAttachment::Disconnect(const char* connectSpec)
-{
     QStatus status;
 
     if (!isStarted) {
@@ -603,6 +598,11 @@ QStatus BusAttachment::Disconnect(const char* connectSpec)
         QCC_LogError(status, ("BusAttachment::Disconnect failed"));
     }
     return status;
+}
+
+QStatus BusAttachment::Disconnect(const char* connectSpec)
+{
+    return Disconnect();
 }
 
 void BusAttachment::UnregisterSignalHandlers()

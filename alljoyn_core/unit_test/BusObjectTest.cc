@@ -54,7 +54,7 @@ TEST(BusObjectTest, ObjectRegisteredUnregistered) {
         qcc::Sleep(10);
     }
     EXPECT_TRUE(testObj.wasRegistered);
-    status = bus.Disconnect(ajn::getConnectArg().c_str());
+    status = bus.Disconnect();
     EXPECT_EQ(ER_OK, status);
 
     for (int msec = 0; msec < 5000; msec += 10) {
@@ -94,7 +94,7 @@ TEST(BusObjectTest, ObjectRegisteredUnregisteredMultipleConnectDisconnect) {
         qcc::Sleep(10);
     }
     EXPECT_TRUE(testObj.wasRegistered);
-    status = bus.Disconnect(ajn::getConnectArg().c_str());
+    status = bus.Disconnect();
     EXPECT_EQ(ER_OK, status);
 
     for (int msec = 0; msec < 5000; msec += 10) {
@@ -118,7 +118,7 @@ TEST(BusObjectTest, ObjectRegisteredUnregisteredMultipleConnectDisconnect) {
         qcc::Sleep(10);
     }
     EXPECT_TRUE(testObj.wasRegistered);
-    status = bus.Disconnect(ajn::getConnectArg().c_str());
+    status = bus.Disconnect();
     EXPECT_EQ(ER_OK, status);
 
     for (int msec = 0; msec < 5000; msec += 10) {
@@ -157,7 +157,7 @@ TEST(BusObjectTest, ObjectRegisteredAfterConnect) {
         qcc::Sleep(10);
     }
     EXPECT_TRUE(testObj.wasRegistered);
-    status = bus.Disconnect(ajn::getConnectArg().c_str());
+    status = bus.Disconnect();
     EXPECT_EQ(ER_OK, status);
 
     for (int msec = 0; msec < 5000; msec += 10) {
@@ -206,7 +206,7 @@ TEST(BusObjectTest, ObjectRegisteredAfterConnectUnregisteredBeforDisconnect) {
     EXPECT_TRUE(testObj.wasRegistered);
     EXPECT_TRUE(testObj.wasUnregistered);
 
-    status = bus.Disconnect(ajn::getConnectArg().c_str());
+    status = bus.Disconnect();
     EXPECT_EQ(ER_OK, status);
     testObj.wasRegistered = false;
     testObj.wasUnregistered = false;
@@ -376,14 +376,14 @@ TEST(BusObjectTest, SendSignalAfterUnregistersignalHandler)
     }
     EXPECT_EQ(0U, signalReceiver.signalReceived);
 
-    status = busService.Disconnect(ajn::getConnectArg().c_str());
+    status = busService.Disconnect();
     EXPECT_EQ(ER_OK, status);
     status = busService.Stop();
     EXPECT_EQ(ER_OK, status);
     status = busService.Join();
     EXPECT_EQ(ER_OK, status);
 
-    status = busClient.Disconnect(ajn::getConnectArg().c_str());
+    status = busClient.Disconnect();
     EXPECT_EQ(ER_OK, status);
     status = busClient.Stop();
     EXPECT_EQ(ER_OK, status);
@@ -508,14 +508,14 @@ TEST(BusObjectTest, Make_methodcall_after_unregister_bus_object)
 
 
     //Clean up
-    status = busService.Disconnect(ajn::getConnectArg().c_str());
+    status = busService.Disconnect();
     EXPECT_EQ(ER_OK, status);
     status = busService.Stop();
     EXPECT_EQ(ER_OK, status);
     status = busService.Join();
     EXPECT_EQ(ER_OK, status);
 
-    status = busClient.Disconnect(ajn::getConnectArg().c_str());
+    status = busClient.Disconnect();
     EXPECT_EQ(ER_OK, status);
     status = busClient.Stop();
     EXPECT_EQ(ER_OK, status);

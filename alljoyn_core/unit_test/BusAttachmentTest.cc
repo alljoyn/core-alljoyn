@@ -67,7 +67,7 @@ class BusAttachmentTest : public testing::Test {
 TEST_F(BusAttachmentTest, IsConnected)
 {
     EXPECT_TRUE(bus.IsConnected());
-    QStatus disconnectStatus = bus.Disconnect(getConnectArg().c_str());
+    QStatus disconnectStatus = bus.Disconnect();
     EXPECT_EQ(ER_OK, disconnectStatus);
     if (ER_OK == disconnectStatus) {
         EXPECT_FALSE(bus.IsConnected());

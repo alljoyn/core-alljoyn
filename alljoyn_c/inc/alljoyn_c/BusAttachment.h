@@ -774,9 +774,7 @@ extern AJ_API QCC_BOOL AJ_CALL alljoyn_busattachment_isconnected(const alljoyn_b
  * Disconnect a remote bus address connection.
  *
  * @param bus          The bus to disconnect.
- * @param connectSpec  The transport connection spec used to connect.
- *                     if connectSpec is NULL the function alljoyn_busattachment_getconnectspec
- *                     will be used to find the connectspec.
+ * @param unused       Deprecated parameter.
  *
  * @return
  *          - #ER_OK if successful
@@ -784,7 +782,7 @@ extern AJ_API QCC_BOOL AJ_CALL alljoyn_busattachment_isconnected(const alljoyn_b
  *          - #ER_BUS_NOT_CONNECTED if the %alljoyn_busattachment is not connected to the bus
  *          - Other error status codes indicating a failure
  */
-extern AJ_API QStatus AJ_CALL alljoyn_busattachment_disconnect(alljoyn_busattachment bus, const char* connectSpec);
+extern AJ_API QStatus AJ_CALL alljoyn_busattachment_disconnect(alljoyn_busattachment bus, const char* unused);
 
 /**
  * Get the org.freedesktop.DBus proxy object.

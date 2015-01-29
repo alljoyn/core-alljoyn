@@ -40,7 +40,6 @@ class _BusAttachmentHost : public ScriptableObject {
     BusAttachment* busAttachment;
     AuthListener* authListener;
     qcc::String applicationName;
-    qcc::String connectSpec;
     std::list<SignalReceiver*> signalReceivers;
     std::list<BusListener*> busListeners;
     std::map<ajn::SessionPort, SessionPortListener*> sessionPortListeners;

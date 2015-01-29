@@ -1111,7 +1111,7 @@ public class BusAttachment {
             String keyStoreFileName, boolean isShared);
 
     /** Stop and disconnect from the bus. */
-    private native void disconnect(String connectArgs);
+    private native void nativeDisconnect();
 
     private native Status enablePeerSecurity(String authMechanisms,
             AuthListenerInternal busAuthListener, String keyStoreFileName, Boolean isShared);
@@ -1277,12 +1277,8 @@ public class BusAttachment {
      * Disconnects from the local router and stops the message bus.
      */
     public void disconnect() {
-        if (address != null) {
-            //            unregisterSignalHandler(this, foundAdvertisedName);
-            //            unregisterSignalHandler(this, lostAdvertisedName);
-            disconnect(address);
-            isConnected = false;
-        }
+        nativeDisconnect();
+        isConnected = false;
     }
 
     /**

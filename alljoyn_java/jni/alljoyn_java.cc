@@ -1437,7 +1437,7 @@ class JBusAttachment : public BusAttachment {
     JBusAttachment(const char* applicationName, bool allowRemoteMessages, int concurrency);
     QStatus Connect(const char* connectArgs, jobject jkeyStoreListener, const char* authMechanisms,
                     jobject jauthListener, const char* keyStoreFileName, jboolean isShared);
-    void Disconnect(const char* connectArgs);
+    void Disconnect();
     QStatus EnablePeerSecurity(const char* authMechanisms, jobject jauthListener, const char* keyStoreFileName, jboolean isShared);
     QStatus RegisterBusObject(const char* objPath, jobject jbusObject, jobjectArray jbusInterfaces,
                               jboolean jsecure, jstring jlangTag, jstring jdesc, jobject jtranslator);
@@ -4395,7 +4395,7 @@ QStatus JBusAttachment::Connect(const char* connectArgs, jobject jkeyStoreListen
 
     exit :
     if (ER_OK != status) {
-        Disconnect(connectArgs);
+        Disconnect();
 
         QCC_DbgPrintf(("JBusAttachment::Connect(): Forgetting jkeyStoreListenerRef"));
         env->DeleteGlobalRef(jkeyStoreListenerRef);
@@ -4411,13 +4411,13 @@ QStatus JBusAttachment::Connect(const char* connectArgs, jobject jkeyStoreListen
     return status;
 }
 
-void JBusAttachment::Disconnect(const char* connectArgs)
+void JBusAttachment::Disconnect()
 {
     QCC_DbgPrintf(("JBusAttachment::Disconnect()"));
 
     if (IsConnected()) {
         QCC_DbgPrintf(("JBusAttachment::Disconnect(): calling BusAttachment::Disconnect()"));
-        QStatus status = BusAttachment::Disconnect(connectArgs);
+        QStatus status = BusAttachment::Disconnect();
         if (ER_OK != status) {
             QCC_LogError(status, ("Disconnect failed"));
         }
@@ -8491,7 +8491,7 @@ JNIEXPORT jboolean JNICALL Java_org_alljoyn_bus_BusAttachment_isConnected(JNIEnv
     return busPtr->IsConnected();
 }
 
-JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusAttachment_disconnect(JNIEnv* env, jobject thiz, jstring jconnectArgs)
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusAttachment_nativeDisconnect(JNIEnv* env, jobject thiz)
 {
     QCC_DbgPrintf(("BusAttachment_disconnect()"));
 
@@ -8513,15 +8513,9 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusAttachment_disconnect(JNIEnv* env
         return;
     }
 
-    JString connectArgs(jconnectArgs);
-    if (env->ExceptionCheck()) {
-        QCC_LogError(ER_FAIL, ("BusAttachment_disconnect(): Exception"));
-        return;
-    }
-
     QCC_DbgPrintf(("BusAttachment_disconnect(): Refcount on busPtr is %d", busPtr->GetRef()));
 
-    busPtr->Disconnect(connectArgs.c_str());
+    busPtr->Disconnect();
 }
 
 JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_enablePeerSecurity(JNIEnv* env, jobject thiz, jstring jauthMechanisms, jobject jauthListener,
