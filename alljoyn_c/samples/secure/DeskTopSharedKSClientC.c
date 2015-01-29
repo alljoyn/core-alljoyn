@@ -62,8 +62,8 @@ static void CDECL_CALL SigIntHandler(int sig)
 }
 
 /*
- * get a line of input from the the file pointer (most likely stdin).
- * This will capture the the num-1 characters or till a newline character is
+ * get a line of input from the file pointer (most likely stdin).
+ * This will capture the num-1 characters or till a newline character is
  * entered.
  *
  * @param[out] str a pointer to a character array that will hold the user input
@@ -262,7 +262,7 @@ int main(int argc, char** argv, char** envArg)
     if (ER_OK == status) {
         status = alljoyn_busattachment_findadvertisedname(g_msgBus, OBJECT_NAME);
         if (status != ER_OK) {
-            printf("alljoyn_busattachment_findadvertisednamee failed (%s))\n", QCC_StatusText(status));
+            printf("alljoyn_busattachment_findadvertisedname failed (%s))\n", QCC_StatusText(status));
         }
     }
 

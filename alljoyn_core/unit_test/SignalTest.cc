@@ -714,7 +714,7 @@ TEST_F(SignalTest, Rules) {
     recvBn.verify_norecv();
 }
 
-/* This is a blocking test. The idea is to send out 12 signals, the first signal hanlder
+/* This is a blocking test. The idea is to send out 12 signals, the first signal handler
    will sleep for SLEEP_TIME, as a result of which the SendSignal should block for approx
    SLEEP_TIME ms until that signal handler returns.
  */

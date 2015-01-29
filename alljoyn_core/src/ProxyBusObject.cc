@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -888,7 +888,7 @@ QStatus ProxyBusObject::MethodCallAsync(const InterfaceDescription::Member& meth
         flags |= ALLJOYN_FLAG_NO_REPLY_EXPECTED;
     }
     /*
-     * If the interface is secure or encryption is explicitly rerquested the method call must be encrypted.
+     * If the interface is secure or encryption is explicitly requested the method call must be encrypted.
      */
     if (SecurityApplies(this, method.iface)) {
         flags |= ALLJOYN_FLAG_ENCRYPTED;
