@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, 2014 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2012, 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -120,7 +120,7 @@ QStatus DaemonTransport::Join(void)
     /*
      * A call to Stop() above will ask all of the endpoints to stop.  We still
      * need to wait here until all of the threads running in those endpoints
-     * actually stop running.  When a remote endpoint thead exits the endpoint
+     * actually stop running.  When a remote endpoint thread exits the endpoint
      * will call back into our EndpointExit() and have itself removed from the
      * list.  We poll for the all-exited condition, yielding the CPU to let
      * the endpoint therad wake and exit.

@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011, 2014 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -84,7 +84,7 @@ class BusListener {
      *
      * @param busName        The well-known name that has changed.
      * @param previousOwner  The unique name that previously owned the name or NULL if there was no previous owner.
-     * @param newOwner       The unique name that now owns the name or NULL if the there is no new owner.
+     * @param newOwner       The unique name that now owns the name or NULL if there is no new owner.
      */
     virtual void NameOwnerChanged(const char* busName, const char* previousOwner, const char* newOwner) { }
 
