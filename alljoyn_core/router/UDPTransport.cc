@@ -2141,7 +2141,6 @@ class _UDPEndpoint : public _RemoteEndpoint {
         m_id(0),
         m_ipAddr(),
         m_ipPort(0),
-        m_suddenDisconnect(false),
         m_registered(false),
         m_sideState(SIDE_INITIALIZED),
         m_epState(EP_INITIALIZED),
@@ -3055,7 +3054,6 @@ class _UDPEndpoint : public _RemoteEndpoint {
          * connection.
          */
         bool sudden = (status != ER_OK);
-        SetSuddenDisconnect(sudden);
         QCC_DbgPrintf(("_UDPEndpoint::DisconnectCb(): sudden==\"%s\"", sudden ? "true" : "false"));
 
         /*
@@ -3063,18 +3061,16 @@ class _UDPEndpoint : public _RemoteEndpoint {
          * code that is really dealing with the hard details.
          *
          * Note that calling Disconnect() here and Stop() at the bottom of the
-         * function (making a call out to BusConnectionLost() in the middle)
-         * creates a transient situation in which the stream thinks it is
-         * disconnected and the endpoint thinks it is connected in the sudden
+         * function creates a transient situation in which the stream thinks it
+         * is disconnected and the endpoint thinks it is connected in the sudden
          * (remote) disconnect case.  These two calls, m_stream->Disconnect()
          * and Stop() should really be done "together" and with the stream lock
-         * and state lock held.  This was noticed very late in the game, and
-         * is now special-cased (checked for) in ArdpStream::PushBytes().
-         * This is harmless since ARDP_Send() will return an error since we are
-         * trying to send to a disconnected connection.  The point is, though,
-         * that the state of the endoint and the state of the stream will be
-         * transiently incoherent, so consistency checks will probably fail
-         * under stress.
+         * and state lock held.  This was noticed very late in the game, and is
+         * now special-cased (checked for) in ArdpStream::PushBytes().  This is
+         * harmless since ARDP_Send() will return an error since we are trying
+         * to send to a disconnected connection.  The point is, though, that the
+         * state of the endoint and the state of the stream will be transiently
+         * incoherent, so consistency checks will probably fail under stress.
          */
         if (m_stream) {
             QCC_DbgPrintf(("_UDPEndpoint::DisconnectCb(): Disconnect(): m_stream=%p", m_stream));
@@ -3120,15 +3116,6 @@ class _UDPEndpoint : public _RemoteEndpoint {
          * eventually regret it.
          */
         m_transport->m_endpointListLock.Unlock(MUTEX_CONTEXT);
-
-        /*
-         * Tell any listeners that the connection was lost.  Since we have a
-         * disconnect callback we know that the connection is gone, one way
-         * or the other.
-         */
-        if (m_transport->m_listener) {
-            m_transport->m_listener->BusConnectionLost(rep->GetConnectSpec());
-        }
 
         /*
          * The connection is gone, so Stop() so it can continue being torn down
@@ -3685,28 +3672,6 @@ class _UDPEndpoint : public _RemoteEndpoint {
     }
 
     /**
-     * Get the sudden disconnect indication.  If true, it means that the
-     * connection was unexpectedly disconnected.  If false, it means we
-     * are still connected, or we initiated the disconnection.
-     */
-    bool GetSuddenDisconnect()
-    {
-        QCC_DbgTrace(("_UDPEndpoint::GetSuddenDisconnect(): => %d.", m_suddenDisconnect));
-        return m_suddenDisconnect;
-    }
-
-    /**
-     * Get the sudden disconnect indication.  If true, it means that the
-     * connection was unexpectedly disconnected.  If false, it means we
-     * are still connected, or we initiated the disconnection.
-     */
-    void SetSuddenDisconnect(bool suddenDisconnect)
-    {
-        QCC_DbgTrace(("_UDPEndpoint::SetSuddenDisconnect(suddenDisconnect(suddenDisconnect=%d.)", suddenDisconnect));
-        m_suddenDisconnect = suddenDisconnect;
-    }
-
-    /**
      * Getting the local IP is not supported
      */
     QStatus GetLocalIp(qcc::String& ipAddrStr)
@@ -4073,7 +4038,6 @@ class _UDPEndpoint : public _RemoteEndpoint {
     uint32_t m_id;                    /**< The ID of the connection record for the underlying protocol */
     qcc::IPAddress m_ipAddr;          /**< Remote IP address. */
     uint16_t m_ipPort;                /**< Remote port. */
-    bool m_suddenDisconnect;          /**< If true, assumption is that any disconnect will be/was unexpected */
     bool m_registered;                /**< If true, a call-out to the daemon has been made to register this endpoint */
     volatile SideState m_sideState;   /**< Is this an active or passive connection */
     volatile EndpointState m_epState; /**< The state of the endpoint itself */
@@ -5714,8 +5678,7 @@ void UDPTransport::EmitStallWarnings(UDPEndpoint& ep)
                 bool disc = stream->GetDisconnected();
                 bool discSent = stream->GetDiscSent();
                 ArdpConnRecord* conn = stream->GetConn();
-                bool suddenDisconnect = ep->GetSuddenDisconnect();
-                QCC_DbgPrintf(("UDPTransport::EmitStallWarnings(): stalled not disconneccted. disc=\"%s\", discSent=\"%s\", conn=%p, suddendisconnect=\"%s\"", disc ? "true" : "false", discSent ? "true" : "false", conn, suddenDisconnect ? "true" : "false"));
+                QCC_DbgPrintf(("UDPTransport::EmitStallWarnings(): stalled not disconneccted. disc=\"%s\", discSent=\"%s\", conn=%p", disc ? "true" : "false", discSent ? "true" : "false", conn));
 #endif
                 QCC_LogError(ER_UDP_ENDPOINT_STALLED, ("UDPTransport::EmitStallWarnings(): stalled not disconneccted."));
             } else {
@@ -9926,27 +9889,6 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
     m_endpointListLock.Unlock(MUTEX_CONTEXT);
     DecrementAndFetch(&m_refCount);
     return status;
-}
-
-/**
- * This is a (surprisingly) unused method call.  One would expect that since it
- * is defined, it would be the symmetrical opposigte of Connect.  That turns out
- * not to be the case.  Some transports define implementations as if it was
- * used, but it is not.  Our implementation is to simply assert.
- */
-QStatus UDPTransport::Disconnect(const char* connectSpec)
-{
-    IncrementAndFetch(&m_refCount);
-    QCC_DbgHLPrintf(("UDPTransport::Disconnect(): %s", connectSpec));
-
-    /*
-     * Disconnect is actually not used in the transports architecture.  It is
-     * misleading and confusing to have it implemented.
-     */
-    assert(0 && "UDPTransport::Disconnect(): Unexpected call");
-    QCC_LogError(ER_FAIL, ("UDPTransport::Disconnect(): Unexpected call"));
-    DecrementAndFetch(&m_refCount);
-    return ER_FAIL;
 }
 
 /**
