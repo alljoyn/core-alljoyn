@@ -83,6 +83,13 @@ class FileSource : public Source {
     virtual ~FileSource();
 
     /**
+     * Return the size of the file
+     *
+     * @param fileSize The size of the file in bytes
+     */
+    QStatus GetSize(int64_t& fileSize);
+
+    /**
      * Pull bytes from the source.
      * The source is exhausted when ER_EOF is returned.
      *

@@ -121,6 +121,25 @@ FileSource::~FileSource()
     }
 }
 
+QStatus FileSource::GetSize(int64_t& fileSize)
+{
+    QStatus status = ER_OK;
+    LARGE_INTEGER fileSizeLargeInt;
+
+    if (INVALID_HANDLE_VALUE == handle) {
+        return ER_INIT_FAILED;
+    }
+
+    if (!::GetFileSizeEx(handle, &fileSizeLargeInt)) {
+        status = ER_OS_ERROR;
+        QCC_LogError(status, ("GetFileSizeEx return error=(0x%08X) status=(0x%08X)", ::GetLastError(), status));
+        return status;
+    }
+
+    fileSize = fileSizeLargeInt.QuadPart;
+    return status;
+}
+
 QStatus FileSource::PullBytes(void* buf, size_t reqBytes, size_t& actualBytes, uint32_t timeout)
 {
     if (INVALID_HANDLE_VALUE == handle) {

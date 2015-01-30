@@ -24,6 +24,8 @@
 #include <qcc/Debug.h>
 #include <qcc/String.h>
 #include <qcc/FileStream.h>
+#include <qcc/StringSource.h>
+#include <qcc/StringSink.h>
 #include <qcc/Util.h>
 
 #include <alljoyn/KeyStoreListener.h>
@@ -31,6 +33,7 @@
 #include "KeyStore.h"
 
 #include <alljoyn/Status.h>
+#include <dpapi.h>
 
 #define QCC_MODULE "ALLJOYN_AUTH"
 
@@ -45,9 +48,9 @@ class DefaultKeyStoreListener : public KeyStoreListener {
 
     DefaultKeyStoreListener(const qcc::String& application, const char* fname) {
         if (fname) {
-            fileName = GetHomeDir() + "/" + fname;
+            fileName = GetHomeDir() + "/.alljoyn_secure_keystore/" + fname;
         } else {
-            fileName = GetHomeDir() + "/.alljoyn_keystore/" + application;
+            fileName = GetHomeDir() + "/.alljoyn_secure_keystore/" + application;
         }
     }
 
@@ -56,13 +59,69 @@ class DefaultKeyStoreListener : public KeyStoreListener {
         /* Try to load the keystore */
         {
             FileSource source(fileName);
+            DATA_BLOB dataIn = { 0 };
+            DATA_BLOB dataOut = { 0 };
+
             if (source.IsValid()) {
                 source.Lock(true);
-                status = keyStore.Pull(source, fileName);
+
+                int64_t fileSize = 0;
+                size_t pulled = 0;
+                status = source.GetSize(fileSize);
+
+                /**
+                 * The key store should never be more than 4 GB, check here to prevent an overflow when assigning
+                 * the filesize to a 32 bit DWORD.
+                 */
+                if ((status == ER_OK) && (fileSize >= (int64_t)UINT_MAX)) {
+                    status = ER_BUS_CORRUPT_KEYSTORE;
+                }
+
+                if (status == ER_OK) {
+                    dataIn.cbData = fileSize;
+                    dataIn.pbData = new uint8_t[dataIn.cbData];
+                    if (dataIn.pbData == NULL) {
+                        status = ER_OUT_OF_MEMORY;
+                    }
+                }
+
+                if (status == ER_OK) {
+                    status = source.PullBytes(dataIn.pbData, dataIn.cbData, pulled);
+                }
+
+                if ((status == ER_OK) && (pulled != fileSize)) {
+                    status = ER_BUS_CORRUPT_KEYSTORE;
+                }
+
+                /**
+                 * CryptUnprotectData will return an invalid argument error if called with a 0 byte buffer. This happens after
+                 * AllJoyn creates the KeyStore file, but hasn't yet written any keys to the store. In this case, just skip
+                 * the CryptUnprotectData step and pass the empty buffer into the KeyStore.
+                 */
+                if ((status == ER_OK) && (fileSize > 0)) {
+                    if (!CryptUnprotectData(&dataIn, NULL, NULL, NULL, NULL, 0, &dataOut)) {
+                        status = ER_BUS_CORRUPT_KEYSTORE;
+                        QCC_LogError(status, ("CryptUnprotectData reading keystore failed error=(0x%08X) status=(0x%08X)", ::GetLastError(), status));
+                    }
+                }
+
+                if (status == ER_OK) {
+                    StringSource bufferSource(dataOut.pbData, dataOut.cbData);
+                    status = keyStore.Pull(bufferSource, fileName);
+                }
+
                 if (status == ER_OK) {
                     QCC_DbgHLPrintf(("Read key store from %s", fileName.c_str()));
                 }
                 source.Unlock();
+
+                delete[] dataIn.pbData;
+
+                if (dataOut.pbData != NULL) {
+                    SecureZeroMemory(dataOut.pbData, dataOut.cbData);
+                    LocalFree(dataOut.pbData);
+                }
+
                 return status;
             }
         }
@@ -97,9 +156,32 @@ class DefaultKeyStoreListener : public KeyStoreListener {
     QStatus StoreRequest(KeyStore& keyStore) {
         QStatus status;
         FileSink sink(fileName, FileSink::PRIVATE);
+        StringSink stringBuffer;
+        DATA_BLOB dataIn = { 0 };
+        DATA_BLOB dataOut = { 0 };
+        size_t pushed = 0;
+
         if (sink.IsValid()) {
             sink.Lock(true);
-            status = keyStore.Push(sink);
+            status = keyStore.Push(stringBuffer);
+
+            if (status == ER_OK) {
+                dataIn.pbData = (BYTE*)stringBuffer.GetString().data();
+                dataIn.cbData = stringBuffer.GetString().size();
+                if (!CryptProtectData(&dataIn, NULL, NULL, NULL, NULL, 0, &dataOut)) {
+                    status = ER_BUS_CORRUPT_KEYSTORE;
+                    QCC_LogError(status, ("CryptProtectData writing keystore failed error=(0x%08X) status=(0x%08X)", ::GetLastError(), status));
+                }
+            }
+
+            if (status == ER_OK) {
+                status = sink.PushBytes(dataOut.pbData, dataOut.cbData, pushed);
+            }
+
+            if (status == ER_OK && pushed != dataOut.cbData) {
+                status = ER_BUS_CORRUPT_KEYSTORE;
+            }
+
             if (status == ER_OK) {
                 QCC_DbgHLPrintf(("Wrote key store to %s", fileName.c_str()));
             }
@@ -108,6 +190,10 @@ class DefaultKeyStoreListener : public KeyStoreListener {
             status = ER_BUS_WRITE_ERROR;
             QCC_LogError(status, ("Cannot write key store to %s", fileName.c_str()));
         }
+
+        stringBuffer.GetString().secure_clear();
+        LocalFree(dataOut.pbData);
+
         return status;
     }
 
