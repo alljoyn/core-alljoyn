@@ -1,4 +1,4 @@
-# Copyright (c) 2010 - 2011, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2010 - 2011, 2015, AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -69,7 +69,7 @@ if os.environ.get('PLATFORM_NAME') == 'iphonesimulator':
     print 'Using flags for iOS simulator...'
     env.Append(CPPDEFINES=['QCC_OS_IPHONE_SIMULATOR'])
     print env['VARIANT']
-    if env['VARIANT'] == 'Debug' or env['VARIANT'] == 'debug':
+    if env['VARIANT'] == 'debug':
         ccld = [
                 '-g',
                 '-arch', 'i686',
@@ -89,7 +89,7 @@ if os.environ.get('PLATFORM_NAME') == 'iphonesimulator':
 
 else:
     print 'Using flags for iOS devices (armv7s)...'
-    if env['VARIANT'] == 'Debug' or env['VARIANT'] == 'debug':
+    if env['VARIANT'] == 'debug':
         ccld = [
                 '-g',
                 '-arch', 'armv7s',
