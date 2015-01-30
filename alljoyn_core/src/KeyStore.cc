@@ -76,84 +76,6 @@ QStatus KeyStoreListener::GetKeys(KeyStore& keyStore, qcc::String& sink)
     return status;
 }
 
-class DefaultKeyStoreListener : public KeyStoreListener {
-
-  public:
-
-    DefaultKeyStoreListener(const qcc::String& application, const char* fname) {
-        if (fname) {
-            fileName = GetHomeDir() + "/" + fname;
-        } else {
-            fileName = GetHomeDir() + "/.alljoyn_keystore/" + application;
-        }
-    }
-
-    QStatus LoadRequest(KeyStore& keyStore) {
-        QStatus status;
-        /* Try to load the keystore */
-        {
-            FileSource source(fileName);
-            if (source.IsValid()) {
-                source.Lock(true);
-                status = keyStore.Pull(source, fileName);
-                if (status == ER_OK) {
-                    QCC_DbgHLPrintf(("Read key store from %s", fileName.c_str()));
-                }
-                source.Unlock();
-                return status;
-            }
-        }
-        /* Create an empty keystore */
-        {
-            FileSink sink(fileName, FileSink::PRIVATE);
-            if (!sink.IsValid()) {
-                status = ER_BUS_WRITE_ERROR;
-                QCC_LogError(status, ("Cannot initialize key store %s", fileName.c_str()));
-                return status;
-            }
-        }
-        /* Load the empty keystore */
-        {
-            FileSource source(fileName);
-            if (source.IsValid()) {
-                source.Lock(true);
-                status = keyStore.Pull(source, fileName);
-                if (status == ER_OK) {
-                    QCC_DbgHLPrintf(("Initialized key store %s", fileName.c_str()));
-                } else {
-                    QCC_LogError(status, ("Failed to initialize key store %s", fileName.c_str()));
-                }
-                source.Unlock();
-            } else {
-                status = ER_BUS_READ_ERROR;
-            }
-            return status;
-        }
-    }
-
-    QStatus StoreRequest(KeyStore& keyStore) {
-        QStatus status;
-        FileSink sink(fileName, FileSink::PRIVATE);
-        if (sink.IsValid()) {
-            sink.Lock(true);
-            status = keyStore.Push(sink);
-            if (status == ER_OK) {
-                QCC_DbgHLPrintf(("Wrote key store to %s", fileName.c_str()));
-            }
-            sink.Unlock();
-        } else {
-            status = ER_BUS_WRITE_ERROR;
-            QCC_LogError(status, ("Cannot write key store to %s", fileName.c_str()));
-        }
-        return status;
-    }
-
-  private:
-
-    qcc::String fileName;
-
-};
-
 KeyStore::KeyStore(const qcc::String& application) :
     application(application),
     storeState(UNAVAILABLE),
@@ -243,7 +165,7 @@ QStatus KeyStore::Init(const char* fileName, bool isShared)
 {
     if (storeState == UNAVAILABLE) {
         if (listener == NULL) {
-            defaultListener = new DefaultKeyStoreListener(application, fileName);
+            defaultListener = KeyStoreListenerFactory::CreateInstance(application, fileName);
             listener = new ProtectedKeyStoreListener(defaultListener);
         }
         shared = isShared;
