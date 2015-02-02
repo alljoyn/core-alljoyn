@@ -8,7 +8,7 @@
 /******************************************************************************
  *
  *
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -102,7 +102,7 @@ class Condition {
      *
      * A condition variable is always associated with a specific lock.  In
      * AllJoyn a lock is a Mutex.  According to Mesa Semantics, a call to Wait()
-     * will enqueue the currenly executing thead on the condition variable
+     * will enqueue the currenly executing thread on the condition variable
      * (suspending its execution) and Unlock() the associated Mutex in a single
      * atomic action.  When the thread resumes exucution the condition variable
      * will Lock() the associated mutex and return.
@@ -118,7 +118,7 @@ class Condition {
      *
      * A condition variable is always associated with a specific lock.  In
      * AllJoyn a lock is a Mutex.  According to Mesa Semantics, a call to Wait()
-     * will enqueue the currenly executing thead on the condition variable
+     * will enqueue the currenly executing thread on the condition variable
      * (suspending its execution) and Unlock() the associated Mutex in a single
      * atomic action.  When the thread resumes exucution the condition variable
      * will Lock() the associated mutex and return.
