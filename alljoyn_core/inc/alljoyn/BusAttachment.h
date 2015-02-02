@@ -1071,8 +1071,12 @@ class BusAttachment : public MessageReceiver {
 
     /**
      * Join a session.
+     *
      * This method is a shortcut/helper that issues an org.alljoyn.Bus.JoinSession method call to the local router
      * and interprets the response.
+     *
+     * All transports specified in opts will be tried.  If the join fails over one of the transports, the join will
+     * be tried over subsequent ones until all are tried until the join succeeds or they all fail.
      *
      * @param[in]  sessionHost      Bus name of attachment that is hosting the session to be joined.
      * @param[in]  sessionPort      SessionPort of sessionHost to be joined.
@@ -1090,8 +1094,12 @@ class BusAttachment : public MessageReceiver {
 
     /**
      * Join a session.
+     *
      * This method is a shortcut/helper that issues an org.alljoyn.Bus.JoinSession method call to the local router
      * and interprets the response.
+     *
+     * All transports specified in opts will be tried.  If the join fails over one of the transports, the join will
+     * be tried over subsequent ones until all are tried until the join succeeds or they all fail.
      *
      * This call executes asynchronously. When the JoinSession response is received, the callback will be called.
      *

@@ -63,7 +63,8 @@ class _VirtualEndpoint : public _BusEndpoint {
      */
     _VirtualEndpoint(const qcc::String& uniqueName, RemoteEndpoint& b2bEp);
 
-    ~_VirtualEndpoint() { }
+    virtual ~_VirtualEndpoint() { }
+
     /**
      * Send an outgoing message.
      *
@@ -160,7 +161,7 @@ class _VirtualEndpoint : public _BusEndpoint {
      * @param b2bEndpoint   B2B endpoint being checked for suitability as a route for this virtual endpoint.
      * @return true iff the B2B endpoint can be used to route messages for this virtual endpoint.
      */
-    bool CanUseRoute(const RemoteEndpoint& b2bEndpoint) const;
+    virtual bool CanUseRoute(const RemoteEndpoint& b2bEndpoint) const;
 
     /**
      * Return true iff any of the B2B eps named in the set can be used to route messages for this virtual endpoint.
