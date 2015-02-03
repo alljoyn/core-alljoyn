@@ -11,7 +11,7 @@
 #    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 #    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-# 
+#
 
 Import('env')
 
@@ -44,6 +44,9 @@ samples_env.SConscript('SampleDaemon/SConscript', exports = {'env': samples_env}
 
 # Event and Action Sample program
 samples_env.SConscript('eventaction/SConscript', exports = {'env': samples_env})
+
+# Observer Sample program
+samples_env.SConscript('observer/SConscript', exports = {'env': samples_env})
 
 # Install readme
 if env['OS_CONF'] == 'windows':
