@@ -139,12 +139,12 @@ class AutoPingerInternal : public qcc::AlarmListener {
 
     bool UpdatePingStateOfDestination(const qcc::String& group, const qcc::String& destination, const AutoPingerInternal::PingState state);
     void PingGroupDestinations(const qcc::String& group);
+    void PingDestination(const qcc::String& group, const qcc::String& destination, PingState oldState, PingListener& pingListener);
     bool IsRunning();
     void AlarmTriggered(const qcc::Alarm& alarm, QStatus reason);
 
     qcc::Timer timer; /* Single Timerthread */
     BusAttachment& busAttachment;
-    qcc::Mutex pingerMutex;
     std::map<qcc::String, PingGroup*> pingGroups;
 
     bool pausing;
