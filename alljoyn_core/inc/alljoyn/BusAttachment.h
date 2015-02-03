@@ -72,6 +72,23 @@ class BusAttachment : public MessageReceiver {
     };
 
     /**
+     * Pure virtual base class implemented by classes that wish to call LeaveSessionAsync() or any of its variants.
+     */
+    class LeaveSessionAsyncCB {
+      public:
+        /** Destructor */
+        virtual ~LeaveSessionAsyncCB() { }
+
+        /**
+         * Called when LeaveSessionAsync() or any of its variants completes.
+         *
+         * @param status       ER_OK if successful
+         * @param context      User defined context which will be passed as-is to callback.
+         */
+        virtual void LeaveSessionCB(QStatus status, void* context) = 0;
+    };
+
+    /**
      * Pure virtual base class implemented by classes that wish to call SetLinkTimeoutAsync().
      */
     class SetLinkTimeoutAsyncCB {
@@ -923,6 +940,38 @@ class BusAttachment : public MessageReceiver {
     QStatus RemoveMatch(const char* rule);
 
     /**
+     * Add a DBus match rule.
+     *
+     * This method is a shortcut/helper that issues an org.freedesktop.DBus.AddMatch method call to the local router.
+     * In contrast with the regular AddMatch, this method does not wait for a reply from the local router. That makes
+     * the call non-blocking, and hence useful in cases where deadlocks might occur otherwise.
+     *
+     * @param[in]  rule  Match rule to be added (see DBus specification for format of this string).
+     *
+     * @return
+     *      - #ER_OK if the AddMatch request was successful.
+     *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
+     *      - Other error status codes indicating a failure.
+     */
+    QStatus AddMatchNonBlocking(const char* rule);
+
+    /**
+     * Remove a DBus match rule.
+     *
+     * This method is a shortcut/helper that issues an org.freedesktop.DBus.RemoveMatch method call to the local router.
+     * In contrast with the regular RemoveMatch, this method does not wait for a reply from the local router. That makes
+     * the call non-blocking, and hence useful in cases where deadlocks might occur otherwise.
+     *
+     * @param[in]  rule  Match rule to be removed (see DBus specification for format of this string).
+     *
+     * @return
+     *      - #ER_OK if the RemoveMatch request was successful.
+     *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
+     *      - Other error status codes indicating a failure.
+     */
+    QStatus RemoveMatchNonBlocking(const char* rule);
+
+    /**
      * Advertise the existence of a well-known name to other (possibly disconnected) AllJoyn routers.
      *
      * This method is a shortcut/helper that issues an org.alljoyn.Bus.AdvertisedName method call to the local router
@@ -1210,6 +1259,67 @@ class BusAttachment : public MessageReceiver {
      *      - Other error status codes indicating a failure.
      */
     QStatus LeaveJoinedSession(const SessionId& sessionId);
+
+    /**
+     * Leave an existing session.
+     * This method is a shortcut/helper that issues an org.alljoyn.Bus.LeaveSession method call to the local router
+     * and interprets the response.
+     * This method cannot be called on self-joined session.
+     *
+     * This call executes asynchronously. When the LeaveSession response is received, the callback will be called.
+     *
+     * @param[in]  sessionId     Session id.
+     * @param[in]  callback      Called when LeaveSession response is received.
+     * @param[in]  context       User defined context which will be passed as-is to callback.
+     *
+     * @return
+     *      - #ER_OK iff method call to local router response was successful.
+     *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
+     *      - Other error status codes indicating a failure.
+     */
+    QStatus LeaveSessionAsync(const SessionId& sessionId,
+                              BusAttachment::LeaveSessionAsyncCB* callback,
+                              void* context = NULL);
+
+    /**
+     * Leave an existing session as host. This function will fail if you were not the joiner.
+     * This method is a shortcut/helper that issues an org.alljoyn.Bus.LeaveHostedSession method call to the local router
+     * and interprets the response.
+     *
+     * This call executes asynchronously. When the LeaveHostedSession response is received, the callback will be called.
+     *
+     * @param[in]  sessionId     Session id.
+     * @param[in]  callback      Called when LeaveHostedSession response is received.
+     * @param[in]  context       User defined context which will be passed as-is to callback.
+     *
+     * @return
+     *      - #ER_OK iff method call to local router response was successful.
+     *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
+     *      - Other error status codes indicating a failure.
+     */
+    QStatus LeaveHostedSessionAsync(const SessionId& sessionId,
+                                    BusAttachment::LeaveSessionAsyncCB* callback,
+                                    void* context = NULL);
+
+    /**
+     * Leave an existing session as joiner. This function will fail if you were not the joiner.
+     * This method is a shortcut/helper that issues an org.alljoyn.Bus.LeaveJoinedSession method call to the local router
+     * and interprets the response.
+     *
+     * This call executes asynchronously. When the LeaveJoinedSession response is received, the callback will be called.
+     *
+     * @param[in]  sessionId     Session id.
+     * @param[in]  callback      Called when LeaveJoinedSession response is received.
+     * @param[in]  context       User defined context which will be passed as-is to callback.
+     *
+     * @return
+     *      - #ER_OK iff method call to local router response was successful.
+     *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
+     *      - Other error status codes indicating a failure.
+     */
+    QStatus LeaveJoinedSessionAsync(const SessionId& sessionId,
+                                    BusAttachment::LeaveSessionAsyncCB* callback,
+                                    void* context = NULL);
 
     /**
      * Remove a member from an existing multipoint session.
@@ -1523,6 +1633,21 @@ class BusAttachment : public MessageReceiver {
     QStatus WhoImplements(const char** implementsInterfaces, size_t numberInterfaces);
 
     /**
+     * Non-blocking variant of WhoImplements
+     * @see WhoImplements(const char**, size_t)
+     *
+     * @param[in] implementsInterfaces a list of interfaces that the Announce
+     *               signal reports as implemented. NULL to receive all Announce
+     *               signals regardless of interfaces
+     * @param[in] numberInterfaces the number of interfaces in the
+     *               implementsInterfaces list
+     * @return
+     *    - #ER_OK on success
+     *    - An error status otherwise
+     */
+    QStatus WhoImplementsNonBlocking(const char** implementsInterfaces, size_t numberInterfaces);
+
+    /**
      * List an interface your application is interested in.  If a remote device
      * is announcing that interface then the all Registered AnnounceListeners will
      * be called.
@@ -1535,7 +1660,7 @@ class BusAttachment : public MessageReceiver {
      * announcements are needed.
      *
      * @see WhoImplements(const char**, size_t)
-     * @param[in] iface     interface that the remove user must implement to
+     * @param[in] iface     interface that the remote user must implement to
      *                          receive the announce signal.
      *
      * @return
@@ -1543,6 +1668,18 @@ class BusAttachment : public MessageReceiver {
      *    - An error status otherwise
      */
     QStatus WhoImplements(const char* iface);
+
+    /**
+     * Non-blocking variant of WhoImplements
+     * @see WhoImplements(const char**, size_t)
+     *
+     * @param[in] iface     interface that the remote user must implement to
+     *                          receive the announce signal.
+     * @return
+     *    - #ER_OK on success
+     *    - An error status otherwise
+     */
+    QStatus WhoImplementsNonBlocking(const char* iface);
 
     /**
      * Stop showing interest in the listed interfaces. Stop receiving announce
@@ -1565,6 +1702,21 @@ class BusAttachment : public MessageReceiver {
     QStatus CancelWhoImplements(const char** implementsInterfaces, size_t numberInterfaces);
 
     /**
+     * Non-blocking variant of CancelWhoImplements.
+     *
+     * @see CancelWhoImplements(const char**, size_t)
+     * @param[in] implementsInterfaces a list of interfaces. The list must match the
+     *                                 list previously passed to the WhoImplements
+     *                                 member function
+     * @param[in] numberInterfaces the number of interfaces in the
+     *               implementsInterfaces list
+     * @return
+     *    - #ER_OK on success
+     *    - An error status otherwise
+     */
+    QStatus CancelWhoImplementsNonBlocking(const char** implementsInterfaces, size_t numberInterfaces);
+
+    /**
      * Stop showing interest in the listed interfaces. Stop receiving announce
      * signals from the devices with the listed interfaces.
      *
@@ -1582,6 +1734,18 @@ class BusAttachment : public MessageReceiver {
      *    - An error status otherwise
      */
     QStatus CancelWhoImplements(const char* iface);
+
+    /**
+     * Non-blocking variant of CancelWhoImplements.
+     *
+     * @see CancelWhoImplements(const char**, size_t)
+     * @param[in] iface     interface that the remove user must implement to
+     *                          receive the announce signal.
+     * @return
+     *    - #ER_OK on success
+     *    - An error status otherwise
+     */
+    QStatus CancelWhoImplementsNonBlocking(const char* iface);
 
     /// @cond ALLJOYN_DEV
     /**
@@ -1694,6 +1858,11 @@ class BusAttachment : public MessageReceiver {
      * Validate the response to JoinSession
      */
     QStatus GetJoinSessionResponse(Message& reply, SessionId& sessionId, SessionOpts& opts);
+
+    /**
+     * Leave the session as host and/or joiner, asynchronous version
+     */
+    QStatus LeaveSessionAsync(const SessionId& sessionId, const char* method, SessionSideMask bitset, BusAttachment::LeaveSessionAsyncCB* callback, void* context);
 
     /**
      * Leave the session as host and/or joiner
