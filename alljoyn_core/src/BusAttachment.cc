@@ -156,7 +156,8 @@ BusAttachment::Internal::Internal(const char* appName,
     stopLock(),
     stopCount(0),
     hostedSessions(),
-    hostedSessionsLock()
+    hostedSessionsLock(),
+    observerManager(NULL)
 {
     /*
      * Bus needs a pointer to this internal object.
@@ -188,6 +189,8 @@ BusAttachment::Internal::~Internal()
     transportList.Join();
     delete router;
     router = NULL;
+    delete observerManager;
+    observerManager = NULL;
 }
 
 /*
