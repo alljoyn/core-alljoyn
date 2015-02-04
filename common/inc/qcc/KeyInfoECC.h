@@ -323,6 +323,7 @@ class KeyInfoNISTP256 : public KeyInfoECC {
      */
     KeyInfoNISTP256(const KeyInfoNISTP256& other) : KeyInfoECC(Crypto_ECC::ECC_NIST_P256)
     {
+        SetKeyId(other.GetKeyId(), other.GetKeyIdLen());
         SetPublicCtx(other.GetPublicCtx());
     }
 

@@ -177,7 +177,7 @@ static void SetRights(PeerState& peerState, bool mutual, bool challenger)
 AllJoynPeerObj::AllJoynPeerObj(BusAttachment& bus) :
     BusObject(org::alljoyn::Bus::Peer::ObjectPath, false),
     AlarmListener(),
-    dispatcher("PeerObjDispatcher", true, 3), supportedAuthSuitesCount(0), supportedAuthSuites(NULL), permissionMgmtObj(NULL)
+    dispatcher("PeerObjDispatcher", true, 3), supportedAuthSuitesCount(0), supportedAuthSuites(NULL), permissionMgmtObj(bus)
 {
     /* Add org.alljoyn.Bus.Peer.HeaderCompression interface */
     {
@@ -258,9 +258,6 @@ AllJoynPeerObj::~AllJoynPeerObj()
 {
     if ((supportedAuthSuitesCount > 0) && supportedAuthSuites) {
         delete [] supportedAuthSuites;
-    }
-    if (permissionMgmtObj) {
-        delete permissionMgmtObj;
     }
 }
 
@@ -1685,7 +1682,7 @@ KeyExchanger* AllJoynPeerObj::GetKeyExchangerInstance(uint16_t peerAuthVersion, 
     for (size_t cnt = 0; cnt < requestingAuthCount; cnt++) {
         uint32_t suite = requestingAuthList[cnt];
         if ((suite & AUTH_SUITE_ECDHE_ECDSA) == AUTH_SUITE_ECDHE_ECDSA) {
-            return new KeyExchangerECDHE_ECDSA(initiator, this, *bus, peerAuthListener, peerAuthVersion, (PermissionMgmtObj::TrustAnchorList*) &permissionMgmtObj->GetTrustAnchors());
+            return new KeyExchangerECDHE_ECDSA(initiator, this, *bus, peerAuthListener, peerAuthVersion, (PermissionMgmtObj::TrustAnchorList*) &permissionMgmtObj.GetTrustAnchors());
         }
         if ((suite & AUTH_SUITE_ECDHE_PSK) == AUTH_SUITE_ECDHE_PSK) {
             return new KeyExchangerECDHE_PSK(initiator, this, *bus, peerAuthListener, peerAuthVersion);
@@ -1738,8 +1735,6 @@ void AllJoynPeerObj::SetupPeerAuthentication(const qcc::String& authMechanisms, 
     /* clean up first */
     delete [] supportedAuthSuites;
     supportedAuthSuites = NULL;
-    delete permissionMgmtObj;
-    permissionMgmtObj = NULL;
 
     peerAuthMechanisms = authMechanisms;
     peerAuthListener.Set(listener);
@@ -1823,15 +1818,16 @@ void AllJoynPeerObj::SetupPeerAuthentication(const qcc::String& authMechanisms, 
             supportedAuthSuites[idx++] = AUTH_SUITE_GSSAPI;
         }
     }
-    permissionMgmtObj = new PermissionMgmtObj(bus);
-    peerAuthListener.SetPermissionMgmtObj(permissionMgmtObj);
+    /* reload the object to reflect possible keystore changes */
+    permissionMgmtObj.Load();
+    peerAuthListener.SetPermissionMgmtObj(&permissionMgmtObj);
 }
 
 QStatus AllJoynPeerObj::SendMembershipData(ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc)
 {
     MsgArg* args = NULL;
     size_t argCount = 0;
-    QStatus status = permissionMgmtObj->GenerateSendMemberships(&args, &argCount);
+    QStatus status = permissionMgmtObj.GenerateSendMemberships(&args, &argCount);
     if (ER_OK != status) {
         delete [] args;
         return status;
@@ -1866,7 +1862,7 @@ QStatus AllJoynPeerObj::SendMembershipData(ProxyBusObject& remotePeerObj, const 
             return status;
         }
         /* process the reply */
-        status = permissionMgmtObj->ParseSendMemberships(replyMsg, gotAllFromPeer);
+        status = permissionMgmtObj.ParseSendMemberships(replyMsg, gotAllFromPeer);
         if (gotAllFromPeer && (cnt == argCount)) {
             break;
         }
@@ -1878,7 +1874,7 @@ QStatus AllJoynPeerObj::SendMembershipData(ProxyBusObject& remotePeerObj, const 
 void AllJoynPeerObj::SendMemberships(const InterfaceDescription::Member* member, Message& msg)
 {
     bool gotAllFromPeer = false;
-    QStatus status = permissionMgmtObj->ParseSendMemberships(msg, gotAllFromPeer);
+    QStatus status = permissionMgmtObj.ParseSendMemberships(msg, gotAllFromPeer);
     if (ER_OK != status) {
         PeerStateTable* peerStateTable = bus->GetInternal().GetPeerStateTable();
         PeerState peerState = peerStateTable->GetPeerState(msg->GetSender());
@@ -1896,7 +1892,7 @@ void AllJoynPeerObj::SendMemberships(const InterfaceDescription::Member* member,
     if (peerState->guildArgsCount == 0) {
         MsgArg* args = NULL;
         size_t argCount = 0;
-        status = permissionMgmtObj->GenerateSendMemberships(&args, &argCount);
+        status = permissionMgmtObj.GenerateSendMemberships(&args, &argCount);
         if (ER_OK != status) {
             delete [] args;
             return;

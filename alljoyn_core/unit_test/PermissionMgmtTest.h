@@ -38,6 +38,7 @@
 #include <qcc/Log.h>
 #include <alljoyn/PermissionPolicy.h>
 #include "KeyStore.h"
+#include "PermissionMgmtObj.h"
 #include "InMemoryKeyStore.h"
 
 namespace ajn {
@@ -125,11 +126,13 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
         adminProxyBus("PermissionMgmtTestAdminProxy", false),
         serviceBus("PermissionMgmtTestService", false),
         consumerBus("PermissionMgmtTestConsumer", false),
+        remoteControlBus("PermissionMgmtTestRemoteControl", false),
         status(ER_OK),
         authComplete(false),
         serviceKeyListener(NULL),
         adminKeyListener(NULL),
         consumerKeyListener(NULL),
+        remoteControlKeyListener(NULL),
         signalNotifyConfigReceived(false),
         currentTVChannel(1),
         volume(1),
@@ -150,6 +153,7 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
     BusAttachment adminProxyBus;
     BusAttachment serviceBus;
     BusAttachment consumerBus;
+    BusAttachment remoteControlBus;
     qcc::GUID128 serviceGUID;
     qcc::GUID128 consumerGUID;
     QStatus status;
@@ -187,10 +191,12 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
     ECDHEKeyXListener* serviceKeyListener;
     ECDHEKeyXListener* adminKeyListener;
     ECDHEKeyXListener* consumerKeyListener;
+    ECDHEKeyXListener* remoteControlKeyListener;
     bool signalNotifyConfigReceived;
     InMemoryKeyStoreListener adminKeyStoreListener;
     InMemoryKeyStoreListener serviceKeyStoreListener;
     InMemoryKeyStoreListener consumerKeyStoreListener;
+    InMemoryKeyStoreListener remoteControlKeyStoreListener;
     uint32_t currentTVChannel;
     uint32_t volume;
     bool channelChangedSignalReceived;
@@ -242,6 +248,8 @@ class PermissionMgmtTestHelper {
     static QStatus GetTVVolume(BusAttachment& bus, ProxyBusObject& remoteObj, uint32_t& volume);
     static QStatus SetTVVolume(BusAttachment& bus, ProxyBusObject& remoteObj, uint32_t volume);
     static QStatus GetTVCaption(BusAttachment& bus, ProxyBusObject& remoteObj);
+    static QStatus InstallCredential(const PermissionMgmtObj::TrustAnchorType taType, BusAttachment& bus, ProxyBusObject& remoteObj, const qcc::GUID128& guid, const qcc::ECCPublicKey* pubKey);
+    static QStatus RemoveCredential(const PermissionMgmtObj::TrustAnchorType taType, BusAttachment& bus, ProxyBusObject& remoteObj, const qcc::GUID128& guid, const qcc::ECCPublicKey* pubKey);
 };
 
 }

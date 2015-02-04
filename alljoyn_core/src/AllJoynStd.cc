@@ -270,6 +270,8 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         ifc->AddMethod("GetManifest",     NULL, "(yv)",  "manifest");
         ifc->AddMethod("Reset",     NULL, NULL, NULL);
         ifc->AddMethod("GetPublicKey", NULL, "(yv)", "publicKey");
+        ifc->AddMethod("InstallCredential",     "yv", NULL, "type, credential");
+        ifc->AddMethod("RemoveCredential",     "yv", NULL, "type, credential");
         ifc->Activate();
     }
     {

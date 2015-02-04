@@ -69,10 +69,31 @@ class PermissionMgmtObj : public BusObject {
         PermissionMgmtObj* pmo;
     };
 
+    typedef enum {
+        TRUST_ANCHOR_ANY = 0,   ///< Trust anchor for every thing.
+        TRUST_ANCHOR_IDENTITY = 1,   ///< Trust anchor for identity cert
+        TRUST_ANCHOR_MEMBERSHIP = 2   ///< Trust anchor for membership cert
+    } TrustAnchorType;
+
+    struct TrustAnchor {
+        TrustAnchorType use;
+        qcc::KeyInfoNISTP256 keyInfo;
+
+        TrustAnchor() : use(TRUST_ANCHOR_ANY)
+        {
+        }
+        TrustAnchor(TrustAnchorType use) : use(use)
+        {
+        }
+        TrustAnchor(TrustAnchorType use, qcc::KeyInfoNISTP256 keyInfo) : use(use), keyInfo(keyInfo)
+        {
+        }
+    };
+
     /**
      * The list of trust anchors
      */
-    typedef std::vector<qcc::KeyInfoNISTP256*> TrustAnchorList;
+    typedef std::vector<TrustAnchor*> TrustAnchorList;
 
     /**
      * Constructor
@@ -93,11 +114,11 @@ class PermissionMgmtObj : public BusObject {
     bool IsTrustAnchor(const qcc::GUID128& peerGuid);
 
     /**
-     * check whether the peer public key is a trust anchor.
+     * check whether the peer public key is an admin
      * @param publicKey the peer's public key
-     * return true if the peer public key is a trust anchor; false, otherwise.
+     * return true if the peer public key is an admin; false, otherwise.
      */
-    bool IsTrustAnchor(const qcc::ECCPublicKey* publicKey);
+    bool IsAdmin(const qcc::ECCPublicKey* publicKey);
 
     /**
      * Called by the message bus when the object has been successfully registered. The object can
@@ -235,6 +256,11 @@ class PermissionMgmtObj : public BusObject {
         return guildMap;
     }
 
+    /**
+     * Load the internal data from the key store
+     */
+    void Load();
+
   private:
 
     typedef enum {
@@ -277,9 +303,10 @@ class PermissionMgmtObj : public BusObject {
     void InstallPolicy(const InterfaceDescription::Member* member, Message& msg);
     QStatus GetACLGUID(ACLEntryType aclEntryType, qcc::GUID128& guid);
 
-    QStatus InstallTrustAnchor(qcc::KeyInfoNISTP256* keyInfo);
+    QStatus InstallTrustAnchor(TrustAnchor* trustAnchor);
     QStatus StoreTrustAnchors();
     QStatus LoadTrustAnchors();
+    QStatus RemoveTrustAnchor(TrustAnchor* trustAnchor);
 
     QStatus GetPeerGUID(Message& msg, qcc::GUID128& guid);
 
@@ -313,6 +340,11 @@ class PermissionMgmtObj : public BusObject {
     QStatus SameSubjectPublicKey(qcc::CertificateX509& cert, bool& outcome);
     QStatus StoreIdentityCertificate(MsgArg& certArg);
     QStatus LocalMembershipsChanged();
+    void InstallCredential(const InterfaceDescription::Member* member, Message& msg);
+    void RemoveCredential(const InterfaceDescription::Member* member, Message& msg);
+    bool IsTrustAnchor(bool specificMatch, TrustAnchorType taType, const qcc::GUID128& peerGuid);
+    bool IsTrustAnchor(bool specificMatch, TrustAnchorType taType, const qcc::ECCPublicKey* publicKey);
+
 
     /**
      * Bind to an exclusive port for PermissionMgmt object.

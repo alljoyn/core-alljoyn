@@ -92,6 +92,8 @@ PermissionMgmtObj::PermissionMgmtObj(BusAttachment& bus) :
         AddMethodHandler(ifc->GetMember("GetManifest"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::GetManifest));
         AddMethodHandler(ifc->GetMember("Reset"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::Reset));
         AddMethodHandler(ifc->GetMember("GetPublicKey"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::GetPublicKey));
+        AddMethodHandler(ifc->GetMember("InstallCredential"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::InstallCredential));
+        AddMethodHandler(ifc->GetMember("RemoveCredential"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::RemoveCredential));
     }
     /* Add org.allseen.Security.PermissionMgmt.Notification interface */
     const InterfaceDescription* notificationIfc = bus.GetInterface(org::allseen::Security::PermissionMgmt::Notification::InterfaceName);
@@ -99,11 +101,15 @@ PermissionMgmtObj::PermissionMgmtObj(BusAttachment& bus) :
         AddInterface(*notificationIfc);
         notifySignalName = notificationIfc->GetMember("NotifyConfig");
     }
-
     ca = new CredentialAccessor(bus);
+    bus.GetInternal().GetPermissionManager().SetPermissionMgmtObj(this);
+    bus.RegisterBusObject(*this, true);
+}
+
+void PermissionMgmtObj::Load()
+{
     KeyInfoNISTP256 keyInfo;
     RetrieveAndGenDSAPublicKey(ca, keyInfo);
-    bus.GetInternal().GetPermissionManager().SetPermissionMgmtObj(this);
 
     QStatus status = LoadTrustAnchors();
     if (ER_OK == status) {
@@ -118,9 +124,19 @@ PermissionMgmtObj::PermissionMgmtObj(BusAttachment& bus) :
             }
         }
     }
-
-    bus.RegisterBusObject(*this, true);
+    /* notify others */
+    PermissionPolicy* policy = new PermissionPolicy();
+    status = RetrievePolicy(*policy);
+    if (ER_OK == status) {
+        serialNum = policy->GetSerialNum();
+    } else {
+        serialNum = 0;
+        delete policy;
+        policy = NULL;
+    }
+    PolicyChanged(policy);
 }
+
 
 PermissionMgmtObj::~PermissionMgmtObj()
 {
@@ -214,12 +230,15 @@ QStatus PermissionMgmtObj::GetACLGUID(ACLEntryType aclEntryType, qcc::GUID128& g
     return ER_CRYPTO_KEY_UNAVAILABLE;      /* not available */
 }
 
-bool PermissionMgmtObj::IsTrustAnchor(const qcc::GUID128& peerGuid)
+bool PermissionMgmtObj::IsTrustAnchor(bool specificMatch, TrustAnchorType taType, const qcc::GUID128& peerGuid)
 {
     for (TrustAnchorList::iterator it = trustAnchors.begin(); it != trustAnchors.end(); it++) {
+        if (specificMatch && (taType != (*it)->use) && ((*it)->use != TRUST_ANCHOR_ANY)) {
+            continue;  /* no match */
+        }
         /* check against trust anchor */
         GUID128 taGuid(0);
-        taGuid.SetBytes((*it)->GetKeyId());
+        taGuid.SetBytes((*it)->keyInfo.GetKeyId());
         if (taGuid == peerGuid) {
             return true;
         }
@@ -227,16 +246,30 @@ bool PermissionMgmtObj::IsTrustAnchor(const qcc::GUID128& peerGuid)
     return false;
 }
 
-bool PermissionMgmtObj::IsTrustAnchor(const ECCPublicKey* publicKey)
+bool PermissionMgmtObj::IsTrustAnchor(bool specificMatch, TrustAnchorType taType, const ECCPublicKey* publicKey)
 {
     for (TrustAnchorList::iterator it = trustAnchors.begin(); it != trustAnchors.end(); it++) {
+        if (specificMatch && (taType != (*it)->use) && ((*it)->use != TRUST_ANCHOR_ANY)) {
+            continue;  /* no match */
+        }
         /* check against trust anchor */
-        if (memcmp((*it)->GetPublicKey(), publicKey, sizeof(ECCPublicKey)) == 0) {
+        if (memcmp((*it)->keyInfo.GetPublicKey(), publicKey, sizeof(ECCPublicKey)) == 0) {
             return true;
         }
     }
     return false;
 }
+
+bool PermissionMgmtObj::IsTrustAnchor(const qcc::GUID128& peerGuid)
+{
+    return IsTrustAnchor(false, TRUST_ANCHOR_ANY, peerGuid);
+}
+
+bool PermissionMgmtObj::IsAdmin(const ECCPublicKey* publicKey)
+{
+    return IsTrustAnchor(true, TRUST_ANCHOR_ANY, publicKey);
+}
+
 
 void PermissionMgmtObj::ClearTrustAnchorList(TrustAnchorList& list)
 {
@@ -252,9 +285,11 @@ static void LoadGuildAuthorities(const PermissionPolicy& policy, PermissionMgmtO
     for (size_t cnt = 0; cnt < policy.GetTermsSize(); cnt++) {
         const PermissionPolicy::Peer* peers = terms[cnt].GetPeers();
         for (size_t idx = 0; idx < terms[cnt].GetPeersSize(); idx++) {
+
             if ((peers[idx].GetType() == PermissionPolicy::Peer::PEER_GUILD) && peers[idx].GetKeyInfo()) {
                 if (KeyInfoHelper::InstanceOfKeyInfoNISTP256(*peers[idx].GetKeyInfo())) {
-                    guildAuthoritiesList.push_back((KeyInfoNISTP256*) peers[idx].GetKeyInfo());
+                    PermissionMgmtObj::TrustAnchor* ta = new PermissionMgmtObj::TrustAnchor(PermissionMgmtObj::TRUST_ANCHOR_MEMBERSHIP, *(KeyInfoNISTP256*) peers[idx].GetKeyInfo());
+                    guildAuthoritiesList.push_back(ta);
                 }
             }
         }
@@ -266,22 +301,19 @@ void PermissionMgmtObj::ClearTrustAnchors()
     ClearTrustAnchorList(trustAnchors);
 }
 
-QStatus PermissionMgmtObj::InstallTrustAnchor(KeyInfoNISTP256* keyInfo)
+QStatus PermissionMgmtObj::InstallTrustAnchor(TrustAnchor* trustAnchor)
 {
     LoadTrustAnchors();
     /* check for duplicate trust anchor */
     for (TrustAnchorList::iterator it = trustAnchors.begin(); it != trustAnchors.end(); it++) {
-        if ((*it)->GetKeyIdLen() != keyInfo->GetKeyIdLen()) {
+        if ((*it)->use != trustAnchor->use) {
             continue;
         }
-        if ((*it)->GetKeyIdLen() == 0) {
-            continue;
-        }
-        if (memcmp((*it)->GetKeyId(), keyInfo->GetKeyId(), (*it)->GetKeyIdLen()) == 0) {
+        if (memcmp((*it)->keyInfo.GetPublicKey(), trustAnchor->keyInfo.GetPublicKey(), sizeof(ECCPublicKey)) == 0) {
             return ER_DUPLICATE_KEY;  /* duplicate */
         }
     }
-    trustAnchors.push_back(keyInfo);
+    trustAnchors.push_back(trustAnchor);
     return StoreTrustAnchors();
 }
 
@@ -299,7 +331,8 @@ QStatus PermissionMgmtObj::StoreTrustAnchors()
     size_t bufferSize = sizeof(uint8_t);  /* the number of trust anchors */
     for (TrustAnchorList::iterator it = trustAnchors.begin(); it != trustAnchors.end(); it++) {
         bufferSize += sizeof(uint32_t);  /* account for the item size */
-        bufferSize += (*it)->GetExportSize();
+        bufferSize += sizeof(uint8_t);  /* account for the use field */
+        bufferSize += (*it)->keyInfo.GetExportSize();
     }
     uint8_t* buffer = new uint8_t[bufferSize];
     uint8_t* pBuf = buffer;
@@ -308,10 +341,12 @@ QStatus PermissionMgmtObj::StoreTrustAnchors()
     pBuf += sizeof(uint8_t);
     for (TrustAnchorList::iterator it = trustAnchors.begin(); it != trustAnchors.end(); it++) {
         uint32_t* itemSize = (uint32_t*) pBuf;
-        *itemSize = (uint32_t) (*it)->GetExportSize();
+        *itemSize = (uint32_t) (sizeof(uint8_t) + (*it)->keyInfo.GetExportSize());
         pBuf += sizeof(uint32_t);
-        (*it)->Export(pBuf);
-        pBuf += *itemSize;
+        *pBuf = (uint8_t) (*it)->use;
+        pBuf++;
+        (*it)->keyInfo.Export(pBuf);
+        pBuf += (*itemSize - 1);
     }
     GUID128 trustAnchorGuid;
     GetACLGUID(ENTRY_TRUST_ANCHOR, trustAnchorGuid);
@@ -358,24 +393,46 @@ QStatus PermissionMgmtObj::LoadTrustAnchors()
     }
     pBuf += sizeof(uint8_t);
     for (size_t cnt = 0; cnt < count; cnt++) {
-        uint32_t* itemSize = (uint32_t*) pBuf;
+        uint32_t itemSize = *(uint32_t*) pBuf;
         bytesRead += sizeof(uint32_t);
         if (bytesRead > kb.GetSize()) {
             ClearTrustAnchors();
             return ER_NO_TRUST_ANCHOR; /* no trust anchor */
         }
         pBuf += sizeof(uint32_t);
-        bytesRead += *itemSize;
+        bytesRead += itemSize;
         if (bytesRead > kb.GetSize()) {
             ClearTrustAnchors();
             return ER_NO_TRUST_ANCHOR; /* no trust anchor */
         }
-        KeyInfoNISTP256* ta = new KeyInfoNISTP256();
-        ta->Import(pBuf, *itemSize);
+        TrustAnchor* ta = new TrustAnchor();
+        ta->use = (TrustAnchorType) * pBuf;
+        pBuf++;
+        itemSize--;
+        ta->keyInfo.Import(pBuf, itemSize);
         trustAnchors.push_back(ta);
-        pBuf += *itemSize;
+        pBuf += itemSize;
     }
     return ER_OK;
+}
+
+QStatus PermissionMgmtObj::RemoveTrustAnchor(TrustAnchor* trustAnchor)
+{
+    LoadTrustAnchors();
+    bool dirty = false;
+    for (TrustAnchorList::iterator it = trustAnchors.begin(); it != trustAnchors.end(); it++) {
+        if (((*it)->use == trustAnchor->use) && (memcmp((*it)->keyInfo.GetPublicKey(), trustAnchor->keyInfo.GetPublicKey(), sizeof(ECCPublicKey)) == 0)) {
+            delete *it;
+            trustAnchors.erase(it);
+            dirty = true;
+            break;
+        }
+    }
+    QStatus status = ER_OK;
+    if (dirty) {
+        status = StoreTrustAnchors();
+    }
+    return status;
 }
 
 QStatus PermissionMgmtObj::GetPeerGUID(Message& msg, qcc::GUID128& guid)
@@ -452,10 +509,10 @@ void PermissionMgmtObj::Claim(const InterfaceDescription::Member* member, Messag
         MethodReply(msg, ER_PERMISSION_DENIED);
         return;
     }
-    KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
-    QStatus status = KeyInfoHelper::MsgArgToKeyInfoNISTP256((MsgArg &) * msg->GetArg(0), *keyInfo);
+    TrustAnchor* trustAnchor = new TrustAnchor();
+    QStatus status = KeyInfoHelper::MsgArgToKeyInfoNISTP256((MsgArg &) * msg->GetArg(0), trustAnchor->keyInfo);
     if (ER_OK != status) {
-        delete keyInfo;
+        delete trustAnchor;
         MethodReply(msg, status);
         return;
     }
@@ -464,20 +521,20 @@ void PermissionMgmtObj::Claim(const InterfaceDescription::Member* member, Messag
     PerformReset(true);
 
     /* install trust anchor */
-    if (keyInfo->GetKeyId() == NULL) {
+    if (trustAnchor->keyInfo.GetKeyId() == NULL) {
         /* the trust anchor guid is the calling peer's guid */
         qcc::GUID128 peerGuid;
         status = GetPeerGUID(msg, peerGuid);
         if (ER_OK != status) {
-            delete keyInfo;
+            delete trustAnchor;
             MethodReply(msg, status);
             return;
         }
-        keyInfo->SetKeyId(peerGuid.GetBytes(), qcc::GUID128::SIZE);
+        trustAnchor->keyInfo.SetKeyId(peerGuid.GetBytes(), qcc::GUID128::SIZE);
     }
-    status = InstallTrustAnchor(keyInfo);
+    status = InstallTrustAnchor(trustAnchor);
     if (ER_OK != status) {
-        delete keyInfo;
+        delete trustAnchor;
         QCC_DbgPrintf(("PermissionMgmtObj::Claim failed to store trust anchor"));
         MethodReply(msg, ER_PERMISSION_DENIED);
         return;
@@ -626,8 +683,7 @@ QStatus PermissionMgmtObj::NotifyConfig()
 static QStatus ValidateCertificate(CertificateX509& cert, PermissionMgmtObj::TrustAnchorList* taList)
 {
     for (PermissionMgmtObj::TrustAnchorList::iterator it = taList->begin(); it != taList->end(); it++) {
-        KeyInfoNISTP256* keyInfo = *it;
-        if (cert.Verify(keyInfo->GetPublicKey()) == ER_OK) {
+        if (cert.Verify((*it)->keyInfo.GetPublicKey()) == ER_OK) {
             return ER_OK;  /* cert is verified */
         }
     }
@@ -637,17 +693,17 @@ static QStatus ValidateCertificate(CertificateX509& cert, PermissionMgmtObj::Tru
 static QStatus ValidateMembershipCertificate(MembershipCertificate& cert, PermissionMgmtObj::TrustAnchorList* taList)
 {
     for (PermissionMgmtObj::TrustAnchorList::iterator it = taList->begin(); it != taList->end(); it++) {
-        KeyInfoNISTP256* keyInfo = *it;
-        if (keyInfo->GetKeyIdLen() != GUID128::SIZE) {
+        PermissionMgmtObj::TrustAnchor* ta = *it;
+        if (ta->keyInfo.GetKeyIdLen() != GUID128::SIZE) {
             continue;
         }
         GUID128 aGuid(0);
-        aGuid.SetBytes(keyInfo->GetKeyId());
+        aGuid.SetBytes(ta->keyInfo.GetKeyId());
         if (aGuid != cert.GetGuild()) {
             continue;
         }
 
-        if (cert.Verify(keyInfo->GetPublicKey()) == ER_OK) {
+        if (cert.Verify(ta->keyInfo.GetPublicKey()) == ER_OK) {
             return ER_OK;  /* cert is verified */
         }
     }
@@ -1603,7 +1659,9 @@ QStatus PermissionMgmtObj::ParseSendMemberships(Message& msg, bool& done)
                 }
                 if (ER_OK != status) {
                     /* remove this membership cert since it is not valid */
+                    QCC_DbgPrintf(("PermissionMgmtObj::ParseSendMemberships invalidated peer's membership guild thus removing it from peer's guild list"));
                     peerState->guildMap.erase(it);
+                    delete metadata;
                     verified = false;
                     break;
                 }
@@ -1612,7 +1670,7 @@ QStatus PermissionMgmtObj::ParseSendMemberships(Message& msg, bool& done)
                 break;  /* done */
             }
         }
-        guildAuthorities.clear();
+        ClearTrustAnchorList(guildAuthorities);
         done = true;
     }
     return ER_OK;
@@ -1793,7 +1851,15 @@ QStatus PermissionMgmtObj::GetConnectedPeerPublicKey(const GUID128& guid, qcc::E
         return status;
     }
     KeyBlob msBlob;
-    return KeyExchanger::ParsePeerSecretRecord(kb, msBlob, publicKey);
+    bool keyAvail = false;
+    status = KeyExchanger::ParsePeerSecretRecord(kb, msBlob, publicKey, keyAvail);
+    if (ER_OK != status) {
+        return status;
+    }
+    if (!keyAvail) {
+        return ER_BUS_KEY_UNAVAILABLE;
+    }
+    return status;
 }
 
 QStatus PermissionMgmtObj::SetManifest(PermissionPolicy::Rule* rules, size_t count)
@@ -1898,6 +1964,17 @@ bool PermissionMgmtObj::ValidateCertChain(const qcc::String& certChainPEM, bool&
             break;
         }
     }
+    if (!authorized) {
+        /* may be this app signed one of the cert in the peer's cert chain */
+        qcc::GUID128 localGUID(0);
+        ca->GetGuid(localGUID);
+        for (size_t cnt = 0; cnt < count; cnt++) {
+            if (certChain[cnt].GetIssuer() == localGUID) {
+                authorized = true;
+                break;
+            }
+        }
+    }
     delete [] certChain;
     return handled;
 }
@@ -1942,17 +2019,6 @@ void PermissionMgmtObj::ObjectRegistered(void)
 {
     /* Bind to the reserved port for PermissionMgmt */
     BindPort();
-    /* notify others */
-    PermissionPolicy* policy = new PermissionPolicy();
-    QStatus status = RetrievePolicy(*policy);
-    if (ER_OK == status) {
-        serialNum = policy->GetSerialNum();
-    } else {
-        serialNum = 0;
-        delete policy;
-        policy = NULL;
-    }
-    PolicyChanged(policy);
 }
 
 QStatus PermissionMgmtObj::BindPort()
@@ -1972,6 +2038,93 @@ QStatus PermissionMgmtObj::BindPort()
     }
     return status;
 }
+
+void PermissionMgmtObj::InstallCredential(const InterfaceDescription::Member* member, Message& msg)
+{
+    uint8_t credentialType;
+    MsgArg variant;
+    QStatus status = msg->GetArg(0)->Get("y", &credentialType);
+    if (ER_OK != status) {
+        MethodReply(msg, status);
+        return;
+    }
+    if (credentialType != 0) {
+        MethodReply(msg, ER_INVALID_DATA);
+        return;
+    }
+    uint8_t trustAnchorUsage;
+    MsgArg* keyInfoArg;
+    status = msg->GetArg(1)->Get("(yv)", &trustAnchorUsage, &keyInfoArg);
+    if (ER_OK != status) {
+        MethodReply(msg, status);
+        return;
+    }
+    if (trustAnchorUsage > TRUST_ANCHOR_MEMBERSHIP) {
+        MethodReply(msg, ER_INVALID_DATA);
+        return;
+    }
+    TrustAnchor* trustAnchor = new TrustAnchor((TrustAnchorType) trustAnchorUsage);
+    trustAnchor->use = (TrustAnchorType) trustAnchorUsage;
+
+    status = KeyInfoHelper::MsgArgToKeyInfoNISTP256(*keyInfoArg, trustAnchor->keyInfo);
+    if (ER_OK != status) {
+        delete trustAnchor;
+        MethodReply(msg, status);
+        return;
+    }
+    /* install trust anchor */
+    status = InstallTrustAnchor(trustAnchor);
+    if (ER_OK != status) {
+        delete trustAnchor;
+        QCC_DbgPrintf(("PermissionMgmtObj::InstallCredential failed to store trust anchor"));
+        status = ER_PERMISSION_DENIED;
+    }
+    MethodReply(msg, status);
+}
+
+void PermissionMgmtObj::RemoveCredential(const InterfaceDescription::Member* member, Message& msg)
+{
+    uint8_t credentialType;
+    MsgArg variant;
+    QStatus status = msg->GetArg(0)->Get("y", &credentialType);
+    if (ER_OK != status) {
+        MethodReply(msg, status);
+        return;
+    }
+    if (credentialType != 0) {
+        MethodReply(msg, ER_INVALID_DATA);
+        return;
+    }
+    uint8_t trustAnchorUsage;
+    MsgArg* keyInfoArg;
+    status = msg->GetArg(1)->Get("(yv)", &trustAnchorUsage, &keyInfoArg);
+    if (ER_OK != status) {
+        MethodReply(msg, status);
+        return;
+    }
+    if (trustAnchorUsage > TRUST_ANCHOR_MEMBERSHIP) {
+        MethodReply(msg, ER_INVALID_DATA);
+        return;
+    }
+    TrustAnchor* trustAnchor = new TrustAnchor((TrustAnchorType) trustAnchorUsage);
+    trustAnchor->use = (TrustAnchorType) trustAnchorUsage;
+
+    status = KeyInfoHelper::MsgArgToKeyInfoNISTP256(*keyInfoArg, trustAnchor->keyInfo);
+    if (ER_OK != status) {
+        delete trustAnchor;
+        MethodReply(msg, status);
+        return;
+    }
+    /* remove trust anchor */
+    status = RemoveTrustAnchor(trustAnchor);
+    delete trustAnchor;
+    if (ER_OK != status) {
+        QCC_DbgPrintf(("PermissionMgmtObj::RemoveCredential failed to remove trust anchor"));
+        status = ER_PERMISSION_DENIED;
+    }
+    MethodReply(msg, ER_OK);
+}
+
 
 } /* namespace ajn */
 

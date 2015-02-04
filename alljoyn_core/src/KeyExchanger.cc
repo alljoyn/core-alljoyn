@@ -244,12 +244,23 @@ void KeyExchangerECDHE_ECDSA::KeyExchangeGenTrustAnchorKeyInfos(MsgArg& variant)
     MsgArg* entries = new MsgArg[trustAnchorList->size()];
     size_t cnt = 0;
     for (PermissionMgmtObj::TrustAnchorList::iterator it = trustAnchorList->begin(); it != trustAnchorList->end(); it++) {
-        KeyInfoNISTP256* keyInfo = *it;
-        KeyInfoHelper::KeyInfoNISTP256ToMsgArg(*keyInfo, entries[cnt]);
-        hashUtil.Update((uint8_t*) keyInfo->GetPublicKey(), sizeof(ECCPublicKey));
+        PermissionMgmtObj::TrustAnchor* ta = *it;
+        KeyInfoHelper::KeyInfoNISTP256ToMsgArg(ta->keyInfo, entries[cnt]);
+        hashUtil.Update((uint8_t*) ta->keyInfo.GetPublicKey(), sizeof(ECCPublicKey));
+        cnt++;
     }
     variant.Set("(yv)", EXCHANGE_TRUST_ANCHORS, new MsgArg("a(yv)", trustAnchorList->size(), entries));
     variant.SetOwnershipFlags(MsgArg::OwnsArgs, true);
+}
+
+bool KeyExchangerECDHE_ECDSA::IsTrustAnchor(const ECCPublicKey* publicKey)
+{
+    for (PermissionMgmtObj::TrustAnchorList::iterator it = trustAnchorList->begin(); it != trustAnchorList->end(); it++) {
+        if (memcmp((*it)->keyInfo.GetPublicKey(), publicKey, sizeof(ECCPublicKey)) == 0) {
+            return true;
+        }
+    }
+    return false;
 }
 
 void KeyExchangerECDHE_ECDSA::KeyExchangeGenKey(MsgArg& variant)
@@ -324,16 +335,17 @@ QStatus KeyExchangerECDHE_ECDSA::KeyExchangeReadTrustAnchorKeyInfo(MsgArg& varia
     }
 
     for (size_t cnt = 0; cnt < numEntries; cnt++) {
-        KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
-        status = KeyInfoHelper::MsgArgToKeyInfoNISTP256(entries[cnt], *keyInfo);
+        PermissionMgmtObj::TrustAnchor* ta = new PermissionMgmtObj::TrustAnchor();
+        status = KeyInfoHelper::MsgArgToKeyInfoNISTP256(entries[cnt], ta->keyInfo);
         if (status != ER_OK) {
             QCC_DbgHLPrintf(("KeyExchangerECDHE::KeyExchangeReadTrustAnchorKeyInfo parsing KeyInfo fails status 0x%x\n", status));
+            delete ta;
             return status;
         }
 
-        peerTrustAnchorList.push_back(keyInfo);
+        peerTrustAnchorList.push_back(ta);
         /* hash the handshake data */
-        hashUtil.Update((uint8_t*) keyInfo->GetPublicKey(), sizeof(ECCPublicKey));
+        hashUtil.Update((uint8_t*) ta->keyInfo.GetPublicKey(), sizeof(ECCPublicKey));
     }
     return ER_OK;
 }
@@ -344,16 +356,9 @@ QStatus KeyExchangerECDHE_ECDSA::KeyExchangeReadTrustAnchorKeyInfo(MsgArg& varia
 static bool HasCommonTrustAnchors(PermissionMgmtObj::TrustAnchorList& list1, PermissionMgmtObj::TrustAnchorList& list2)
 {
     for (PermissionMgmtObj::TrustAnchorList::iterator it1 = list1.begin(); it1 != list1.end(); it1++) {
-        GUID128 l1Guid(0);
-        l1Guid.SetBytes((*it1)->GetKeyId());
         for (PermissionMgmtObj::TrustAnchorList::iterator it2 = list2.begin(); it2 != list2.end(); it2++) {
-            GUID128 l2Guid(0);
-            l2Guid.SetBytes((*it2)->GetKeyId());
-            if (l1Guid != l2Guid) {
-                continue;
-            }
             /* compare the public key */
-            if (memcmp((*it1)->GetPublicKey(), (*it2)->GetPublicKey(), sizeof(ECCPublicKey)) == 0) {
+            if (memcmp((*it1)->keyInfo.GetPublicKey(), (*it2)->keyInfo.GetPublicKey(), sizeof(ECCPublicKey)) == 0) {
                 return true;
             }
         }
@@ -524,8 +529,9 @@ QStatus KeyExchangerECDHE::StoreMasterSecret(const qcc::GUID128& guid, const uin
     return DoStoreMasterSecret(bus, guid, masterSecret, (const uint8_t*) GetSuiteName(), strlen(GetSuiteName()), secretExpiration, IsInitiator(), accessRights);
 }
 
-QStatus KeyExchanger::ParsePeerSecretRecord(const KeyBlob& rec, KeyBlob& masterSecret, ECCPublicKey* publicKey)
+QStatus KeyExchanger::ParsePeerSecretRecord(const KeyBlob& rec, KeyBlob& masterSecret, ECCPublicKey* publicKey, bool& publicKeyAvailable)
 {
+    publicKeyAvailable = false;
     if ((rec.GetSize() == MASTER_SECRET_SIZE) || (rec.GetSize() == MASTER_SECRET_PINX_SIZE)) {
         /* support older format by the non ECDHE key exchanges */
         masterSecret = rec;
@@ -547,23 +553,29 @@ QStatus KeyExchanger::ParsePeerSecretRecord(const KeyBlob& rec, KeyBlob& masterS
     if (publicKey) {
         memcpy(publicKey, &peerRec->publicKey, sizeof(ECCPublicKey));
     }
+    publicKeyAvailable = true;
     return ER_OK;
 }
 
 QStatus KeyExchanger::ParsePeerSecretRecord(const KeyBlob& rec, KeyBlob& masterSecret)
 {
-    return ParsePeerSecretRecord(rec, masterSecret, NULL);
+    bool publicKeyAvail;
+    return ParsePeerSecretRecord(rec, masterSecret, NULL, publicKeyAvail);
 }
 
 QStatus KeyExchangerECDHE_ECDSA::StoreMasterSecret(const qcc::GUID128& guid, const uint8_t accessRights[4])
 {
-    /* build a new keyblob with master secret and peer DSA public key */
-    PeerSecretRecord secretRecord;
-    memcpy(secretRecord.secret, masterSecret.GetData(), sizeof(secretRecord.secret));
-    memcpy(&secretRecord.publicKey, &peerDSAPubKey, sizeof(ECCPublicKey));
-    KeyBlob kb((const uint8_t*) &secretRecord, sizeof(secretRecord), KeyBlob::GENERIC);
+    if (peerDSAPubKey) {
+        /* build a new keyblob with master secret and peer DSA public key */
+        PeerSecretRecord secretRecord;
+        memcpy(secretRecord.secret, masterSecret.GetData(), sizeof(secretRecord.secret));
+        memcpy(&secretRecord.publicKey, peerDSAPubKey, sizeof(ECCPublicKey));
+        KeyBlob kb((const uint8_t*) &secretRecord, sizeof(secretRecord), KeyBlob::GENERIC);
 
-    return DoStoreMasterSecret(bus, guid, kb, (const uint8_t*) GetSuiteName(), strlen(GetSuiteName()), secretExpiration, IsInitiator(), accessRights);
+        return DoStoreMasterSecret(bus, guid, kb, (const uint8_t*) GetSuiteName(), strlen(GetSuiteName()), secretExpiration, IsInitiator(), accessRights);
+    } else {
+        return DoStoreMasterSecret(bus, guid, masterSecret, (const uint8_t*) GetSuiteName(), strlen(GetSuiteName()), secretExpiration, IsInitiator(), accessRights);
+    }
 }
 
 QStatus KeyExchanger::ReplyWithVerifier(Message& msg)
@@ -919,6 +931,7 @@ KeyExchangerECDHE_ECDSA::~KeyExchangerECDHE_ECDSA()
 {
     delete [] certChain;
     PermissionMgmtObj::ClearTrustAnchorList(peerTrustAnchorList);
+    delete peerDSAPubKey;
 }
 
 QStatus KeyExchangerECDHE_ECDSA::RetrieveDSAKeys(bool generateIfNotFound)
@@ -1221,8 +1234,7 @@ QStatus KeyExchangerECDHE_ECDSA::ValidateRemoteVerifierVariant(const char* peerN
     }
     /* verify signature */
     Crypto_ECC ecc;
-    memcpy(&peerDSAPubKey, certs[0].GetSubjectPublicKey(), sizeof(ECCPublicKey));
-    ecc.SetDSAPublicKey(&peerDSAPubKey);
+    ecc.SetDSAPublicKey(certs[0].GetSubjectPublicKey());
     SigInfoECC sigInfo;
     sigInfo.SetRCoord(rCoord);
     sigInfo.SetSCoord(sCoord);
@@ -1234,8 +1246,16 @@ QStatus KeyExchangerECDHE_ECDSA::ValidateRemoteVerifierVariant(const char* peerN
         return ER_OK;  /* not authorized */
     }
     status = VerifyCredentialsCB(peerName, certs, numCerts);
-    if (status != ER_OK) {
-        *authorized = false;
+    bool setPeerDSAPubKey = false;
+    if (ER_OK == status) {
+        setPeerDSAPubKey = true;
+    } else if (IsTrustAnchor(certs[0].GetSubjectPublicKey())) {
+        setPeerDSAPubKey = true;
+    }
+
+    if (setPeerDSAPubKey) {
+        peerDSAPubKey = (ECCPublicKey*) new uint8_t[sizeof(ECCPublicKey)];
+        memcpy(peerDSAPubKey, certs[0].GetSubjectPublicKey(), sizeof(ECCPublicKey));
     }
     delete [] certs;
     return ER_OK;

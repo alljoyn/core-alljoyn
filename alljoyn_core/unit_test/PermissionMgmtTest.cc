@@ -109,6 +109,8 @@ void BasePermissionMgmtTest::RegisterKeyStoreListeners()
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = consumerBus.RegisterKeyStoreListener(consumerKeyStoreListener);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = remoteControlBus.RegisterKeyStoreListener(remoteControlKeyStoreListener);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 }
 
 void BasePermissionMgmtTest::SetUp()
@@ -120,6 +122,8 @@ void BasePermissionMgmtTest::SetUp()
     status = SetupBus(serviceBus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = SetupBus(consumerBus);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = SetupBus(remoteControlBus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     RegisterKeyStoreListeners();
     const InterfaceDescription* itf = adminBus.GetInterface(BasePermissionMgmtTest::NOTIFY_INTERFACE_NAME);
@@ -140,12 +144,16 @@ void BasePermissionMgmtTest::TearDown()
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = TeardownBus(consumerBus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = TeardownBus(remoteControlBus);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     delete serviceKeyListener;
     serviceKeyListener = NULL;
     delete adminKeyListener;
     adminKeyListener = NULL;
     delete consumerKeyListener;
     consumerKeyListener = NULL;
+    delete remoteControlKeyListener;
+    remoteControlKeyListener = NULL;
 }
 
 void BasePermissionMgmtTest::EnableSecurity(const char* keyExchange)
@@ -160,6 +168,9 @@ void BasePermissionMgmtTest::EnableSecurity(const char* keyExchange)
     delete consumerKeyListener;
     consumerKeyListener = new ECDHEKeyXListener(ECDHEKeyXListener::RUN_AS_CONSUMER);
     consumerBus.EnablePeerSecurity(keyExchange, consumerKeyListener, NULL, false);
+    delete remoteControlKeyListener;
+    remoteControlKeyListener = new ECDHEKeyXListener(ECDHEKeyXListener::RUN_AS_CONSUMER);
+    remoteControlBus.EnablePeerSecurity(keyExchange, remoteControlKeyListener, NULL, false);
 }
 
 void BasePermissionMgmtTest::CreateOnOffAppInterface(BusAttachment& bus, bool addService)
@@ -328,6 +339,7 @@ void BasePermissionMgmtTest::TVChannelChanged(const InterfaceDescription::Member
     MsgArg args[1];
     args[0].Set("u", currentTVChannel);
     Signal(consumerBus.GetUniqueName().c_str(), 0, *member->iface->GetMember("ChannelChanged"), args, 1, 0, 0);
+    Signal(remoteControlBus.GetUniqueName().c_str(), 0, *member->iface->GetMember("ChannelChanged"), args, 1, 0, 0);
 }
 
 void BasePermissionMgmtTest::TVMute(const InterfaceDescription::Member* member, Message& msg)
@@ -1051,3 +1063,55 @@ QStatus BasePermissionMgmtTest::Set(const char* ifcName, const char* propName, M
     return ER_BUS_NO_SUCH_PROPERTY;
 }
 
+QStatus PermissionMgmtTestHelper::InstallCredential(const PermissionMgmtObj::TrustAnchorType taType, BusAttachment& bus, ProxyBusObject& remoteObj, const qcc::GUID128& guid, const ECCPublicKey* pubKey)
+{
+    QStatus status;
+    const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::INTERFACE_NAME);
+    remoteObj.AddInterface(*itf);
+    Message reply(bus);
+    MsgArg keyInfoArg;
+    KeyInfoNISTP256 keyInfo;
+    keyInfo.SetKeyId(guid.GetBytes(), GUID128::SIZE);
+    keyInfo.SetPublicKey(pubKey);
+    KeyInfoHelper::KeyInfoNISTP256ToMsgArg(keyInfo, keyInfoArg);
+    MsgArg credentialArg("(yv)", taType, &keyInfoArg);
+
+    MsgArg args[2];
+    args[0].Set("y", 0);
+    args[1].Set("v", &credentialArg);
+
+    status = remoteObj.MethodCall(BasePermissionMgmtTest::INTERFACE_NAME, "InstallCredential", args, 2, reply, 5000);
+
+    if (ER_OK != status) {
+        if (IsPermissionDeniedError(status, reply)) {
+            status = ER_PERMISSION_DENIED;
+        }
+    }
+    return status;
+}
+
+QStatus PermissionMgmtTestHelper::RemoveCredential(const PermissionMgmtObj::TrustAnchorType taType, BusAttachment& bus, ProxyBusObject& remoteObj, const qcc::GUID128& guid, const ECCPublicKey* pubKey)
+{
+    QStatus status;
+    const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::INTERFACE_NAME);
+    remoteObj.AddInterface(*itf);
+    Message reply(bus);
+    MsgArg keyInfoArg;
+    KeyInfoNISTP256 keyInfo;
+    keyInfo.SetKeyId(guid.GetBytes(), GUID128::SIZE);
+    keyInfo.SetPublicKey(pubKey);
+    KeyInfoHelper::KeyInfoNISTP256ToMsgArg(keyInfo, keyInfoArg);
+    MsgArg credentialArg("(yv)", taType, &keyInfoArg);
+
+    MsgArg args[2];
+    args[0].Set("y", 0);
+    args[1].Set("v", &credentialArg);
+
+    status = remoteObj.MethodCall(BasePermissionMgmtTest::INTERFACE_NAME, "RemoveCredential", args, 2, reply, 5000);
+    if (ER_OK != status) {
+        if (IsPermissionDeniedError(status, reply)) {
+            status = ER_PERMISSION_DENIED;
+        }
+    }
+    return status;
+}

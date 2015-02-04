@@ -677,7 +677,6 @@ QStatus PermissionPolicy::Import(uint8_t version, const MsgArg& msgArg)
             break;
         }
     }
-    QCC_DbgPrintf(("BuildPolicyFromArgs got pocily %s", ToString().c_str()));
 
     return ER_OK;
 }

@@ -110,7 +110,7 @@ static bool IsActionAllowed(uint8_t allowedActions, uint8_t requestedAction)
  *
  */
 
-static bool IsRuleMatched(const PermissionPolicy::Rule& rule, const MessageHolder& msgHolder, uint8_t requiredAuth)
+static bool IsRuleMatched(const PermissionPolicy::Rule& rule, const MessageHolder& msgHolder, uint8_t requiredAuth, bool& denied)
 {
     if (rule.GetMembersSize() == 0) {
         return false;
@@ -171,10 +171,12 @@ static bool IsRuleMatched(const PermissionPolicy::Rule& rule, const MessageHolde
         if (buckets[cnt] > 0) {
             /* now check the action mask */
             if (IsActionDenied(members[cnt].GetActionMask())) {
+                denied = true;
                 buckets[cnt] = -buckets[cnt];
             } else if (!IsActionAllowed(members[cnt].GetActionMask(), requiredAuth)) {
                 if (msgMbrNameEmpty) {
-                    /* one action not allowed will deny because only the interface name is specified.  All rules for the given member type must be satisfied. */
+                    /* When only the interface name is specified, all rules
+                       for the given member type must be satisfied. If any of the member fails to authorize then the whole thing would fail authorization */
                     buckets[cnt] = -buckets[cnt];
                 } else {
                     buckets[cnt] = 0;
@@ -211,26 +213,34 @@ static bool IsRuleMatched(const PermissionPolicy::Rule& rule, const MessageHolde
     return false;
 }
 
-static bool IsPolicyTermMatched(const PermissionPolicy::Term& term, const MessageHolder& msgHolder, uint8_t requiredAuth)
+static bool IsPolicyTermMatched(const PermissionPolicy::Term& term, const MessageHolder& msgHolder, uint8_t requiredAuth, bool& denied)
 {
-
     const PermissionPolicy::Rule* rules = term.GetRules();
     for (size_t cnt = 0; cnt < term.GetRulesSize(); cnt++) {
-        if (IsRuleMatched(rules[cnt], msgHolder, requiredAuth)) {
+        if (IsRuleMatched(rules[cnt], msgHolder, requiredAuth, denied)) {
             return true;
+        } else if (denied) {
+            /* skip the remainder of the search */
+            return false;
         }
     }
     return false;
 }
 
-static bool IsAuthorizedByAnyUserPolicy(const PermissionPolicy* policy, const MessageHolder& msgHolder, uint8_t requiredAuth)
+bool IsPeerLevelMatched(PermissionPolicy::Peer::PeerAuthLevel ruleLevel, PermissionPolicy::Peer::PeerAuthLevel requestingLevel)
 {
+    return requestingLevel >= ruleLevel;
+}
+
+static bool IsAuthorizedByAnyUserPolicy(const PermissionPolicy* policy, const MessageHolder& msgHolder, PermissionPolicy::Peer::PeerAuthLevel peerLevel, uint8_t requiredAuth, bool& denied)
+{
+    denied = false;
     const PermissionPolicy::Term* terms = policy->GetTerms();
     for (size_t cnt = 0; cnt < policy->GetTermsSize(); cnt++) {
         const PermissionPolicy::Peer* peers = terms[cnt].GetPeers();
         bool qualified = false;
         for (size_t idx = 0; idx < terms[cnt].GetPeersSize(); idx++) {
-            if (peers[idx].GetType() == PermissionPolicy::Peer::PEER_ANY) {
+            if ((peers[idx].GetType() == PermissionPolicy::Peer::PEER_ANY) && IsPeerLevelMatched(peers[idx].GetLevel(), peerLevel)) {
                 qualified = true;
                 break;
             }
@@ -238,8 +248,11 @@ static bool IsAuthorizedByAnyUserPolicy(const PermissionPolicy* policy, const Me
         if (!qualified) {
             continue;
         }
-        if (IsPolicyTermMatched(terms[cnt], msgHolder, requiredAuth)) {
+        if (IsPolicyTermMatched(terms[cnt], msgHolder, requiredAuth, denied)) {
             return true;
+        } else if (denied) {
+            /* skip the remainder of the search */
+            return false;
         }
     }
     return false;
@@ -266,7 +279,7 @@ static bool TermHasMatchingGuild(const PermissionPolicy::Term& term, const GUID1
     return matched;
 }
 
-static bool IsAuthorizedByMembership(const GUID128& guildGUID, PermissionPolicy& authData, const MessageHolder& msgHolder, uint8_t requiredAuth)
+static bool IsAuthorizedByMembership(const GUID128& guildGUID, PermissionPolicy& authData, const MessageHolder& msgHolder, uint8_t requiredAuth, bool& denied)
 {
     const PermissionPolicy::Term* terms = authData.GetTerms();
     for (size_t cnt = 0; cnt < authData.GetTermsSize(); cnt++) {
@@ -277,26 +290,31 @@ static bool IsAuthorizedByMembership(const GUID128& guildGUID, PermissionPolicy&
             /* look for peer entry with matching guild GUID */
             qualified = TermHasMatchingGuild(terms[cnt], guildGUID);
         }
-        if (qualified && IsPolicyTermMatched(terms[cnt], msgHolder, requiredAuth)) {
-            return true;
+        if (qualified) {
+            if (IsPolicyTermMatched(terms[cnt], msgHolder, requiredAuth, denied)) {
+                return true;
+            } else if (denied) {
+                /* skip the remainder of the search */
+                return false;
+            }
         }
     }
     return false;
 }
 
-static bool IsAuthorizedByMembershipChain(_PeerState::GuildMetadata& metadata, const MessageHolder& msgHolder, uint8_t requiredAuth)
+static bool IsAuthorizedByMembershipChain(_PeerState::GuildMetadata& metadata, const MessageHolder& msgHolder, uint8_t requiredAuth, bool& denied)
 {
     /* The message must be authorized by each of the auth data in the membership cert chain */
 
     /* check the leaf cert first */
-    bool authorized = IsAuthorizedByMembership(metadata.cert.GetGuild(), metadata.authData, msgHolder, requiredAuth);
+    bool authorized = IsAuthorizedByMembership(metadata.cert.GetGuild(), metadata.authData, msgHolder, requiredAuth, denied);
     if (!authorized) {
         return false;
     }
 
     /* check the remaining certs in the cert chain */
     for (std::vector<_PeerState::MembershipMetaPair*>::iterator ccit = metadata.certChain.begin(); ccit != metadata.certChain.end(); ccit++) {
-        authorized = IsAuthorizedByMembership((*ccit)->cert.GetGuild(), (*ccit)->authData, msgHolder, requiredAuth);
+        authorized = IsAuthorizedByMembership((*ccit)->cert.GetGuild(), (*ccit)->authData, msgHolder, requiredAuth, denied);
         if (!authorized) {
             return false;
         }
@@ -310,11 +328,15 @@ static bool IsAuthorizedByMembershipChain(_PeerState::GuildMetadata& metadata, c
  */
 static bool IsAuthorizedByMembershipCerts(const _PeerState::GuildMap& guildMap, const MessageHolder& msgHolder, uint8_t requiredAuth)
 {
+    bool denied = false;
     for (_PeerState::GuildMap::const_iterator it = guildMap.begin(); it != guildMap.end(); it++) {
         _PeerState::GuildMetadata* metadata = it->second;
         QCC_DbgTrace(("IsAuthorizedByMembershipCerts with cert %s authData %s\n", metadata->cert.ToString().c_str(), metadata->authData.ToString().c_str()));
-        if (IsAuthorizedByMembershipChain(*metadata, msgHolder, requiredAuth)) {
+        if (IsAuthorizedByMembershipChain(*metadata, msgHolder, requiredAuth, denied)) {
             return true;
+        } else if (denied) {
+            /* skip the remainder */
+            return false;
         }
     }
     return false;
@@ -324,8 +346,9 @@ static bool IsAuthorizedByMembershipCerts(const _PeerState::GuildMap& guildMap, 
  * Is the given message authorized by a guild policy that is common between the peer.
  * The consumer must be both authorized in its membership and in the provider's policy for any guild in common.
  */
-static bool IsAuthorizedByGuildsInCommonPolicies(const PermissionPolicy* policy, const MessageHolder& msgHolder, uint8_t policyAuth, PeerState& peerState)
+static bool IsAuthorizedByGuildsInCommonPolicies(const PermissionPolicy* policy, const MessageHolder& msgHolder, uint8_t policyAuth, PeerState& peerState, bool& denied)
 {
+    denied = false;
     for (_PeerState::GuildMap::iterator it = peerState->guildMap.begin(); it != peerState->guildMap.end(); it++) {
         _PeerState::GuildMetadata* metadata = it->second;
         const PermissionPolicy::Term* terms = policy->GetTerms();
@@ -334,19 +357,24 @@ static bool IsAuthorizedByGuildsInCommonPolicies(const PermissionPolicy* policy,
             if (!TermHasMatchingGuild(terms[cnt], metadata->cert.GetGuild())) {
                 continue;
             }
-            if (IsPolicyTermMatched(terms[cnt], msgHolder, policyAuth)) {
+            if (IsPolicyTermMatched(terms[cnt], msgHolder, policyAuth, denied)) {
                 /* validate the peer auth data to make sure it was granted the same thing */
-                if (IsAuthorizedByMembershipChain(*metadata, msgHolder, policyAuth)) {
+                if (IsAuthorizedByMembershipChain(*metadata, msgHolder, policyAuth, denied)) {
                     return true;
                 }
+            }
+            if (denied) {
+                /* skip the remainder */
+                return false;
             }
         }
     }
     return false;
 }
 
-static bool IsAuthorizedByPeerPublicKey(const PermissionPolicy* policy, const ECCPublicKey& peerPublicKey, const MessageHolder& msgHolder, uint8_t requiredAuth)
+static bool IsAuthorizedByPeerPublicKey(const PermissionPolicy* policy, const ECCPublicKey& peerPublicKey, const MessageHolder& msgHolder, uint8_t requiredAuth, bool& denied)
 {
+    denied = false;
     const PermissionPolicy::Term* terms = policy->GetTerms();
     for (size_t cnt = 0; cnt < policy->GetTermsSize(); cnt++) {
         const PermissionPolicy::Peer* peers = terms[cnt].GetPeers();
@@ -362,8 +390,11 @@ static bool IsAuthorizedByPeerPublicKey(const PermissionPolicy* policy, const EC
         if (!qualified) {
             continue;
         }
-        if (IsPolicyTermMatched(terms[cnt], msgHolder, requiredAuth)) {
+        if (IsPolicyTermMatched(terms[cnt], msgHolder, requiredAuth, denied)) {
             return true;
+        } else if (denied) {
+            /* skip the remainder */
+            return false;
         }
     }
     return false;
@@ -408,6 +439,13 @@ static void GenRight(const MessageHolder& msgHolder, Right& right)
     }
 }
 
+/**
+ * The search order through the terms:
+ * 1. Peer specific terms
+ * 2. guild-in-common terms
+ * 3. ANY-USER terms
+ */
+
 static bool IsAuthorized(const MessageHolder& msgHolder, const PermissionPolicy* policy, const _PeerState::GuildMap& localMembershipMap, PeerState& peerState, PermissionMgmtObj* permissionMgmtObj)
 {
     Right right;
@@ -415,6 +453,7 @@ static bool IsAuthorized(const MessageHolder& msgHolder, const PermissionPolicy*
 
     bool authorized = false;
     bool remoteAuthRequired = true;
+    bool denied = false;
 
     QCC_DbgPrintf(("IsAuthorized with required permission policy %d\n", right.authByPolicy));
 
@@ -425,34 +464,45 @@ static bool IsAuthorized(const MessageHolder& msgHolder, const PermissionPolicy*
             return false;
         }
         /* validate the remote peer auth data to make sure it was granted to perform such action */
-        authorized = IsAuthorizedByAnyUserPolicy(policy, msgHolder, right.authByPolicy);
-        QCC_DbgPrintf(("authorized by any user policy: %d", authorized));
-        if ((authorized) && (msgHolder.msg->GetType() != MESSAGE_SIGNAL)) {
-            remoteAuthRequired = false; /* mark to skip this check later since it is no longer required */
+        ECCPublicKey peerPublicKey;
+        PermissionPolicy::Peer::PeerAuthLevel peerAuthLevel = PermissionPolicy::Peer::PEER_LEVEL_ENCRYPTED;
+        QStatus status = permissionMgmtObj->GetConnectedPeerPublicKey(peerState->GetGuid(), &peerPublicKey);
+        if (ER_OK == status) {
+            peerAuthLevel = PermissionPolicy::Peer::PEER_LEVEL_AUTHENTICATED;
+            authorized = IsAuthorizedByPeerPublicKey(policy, peerPublicKey, msgHolder, right.authByPolicy, denied);
+            QCC_DbgPrintf(("authorized by peer specific policy terms: %d denied %d", authorized, denied));
+            if (authorized) {
+                remoteAuthRequired = false; /* mark to skip this check later since it is no longer required */
+            } else if (denied) {
+                QCC_DbgPrintf(("Denied by peer specific policy"));
+                return false;
+            }
         }
         if (!authorized) {
-            authorized = IsAuthorizedByGuildsInCommonPolicies(policy, msgHolder, right.authByPolicy, peerState);
+            authorized = IsAuthorizedByGuildsInCommonPolicies(policy, msgHolder, right.authByPolicy, peerState, denied);
             if (authorized) {
                 remoteAuthRequired = false; /* mark to skip this check later since it is already done */
+            } else if (denied) {
+                QCC_DbgPrintf(("Denied by guild specific policy"));
+                return false;
             }
             QCC_DbgPrintf(("authorized by guild policy terms in common: %d", authorized));
         }
         if (!authorized) {
-            ECCPublicKey peerPublicKey;
-            QStatus status = permissionMgmtObj->GetConnectedPeerPublicKey(peerState->GetGuid(), &peerPublicKey);
-            if (ER_OK != status) {
-                QCC_DbgPrintf(("Failed to retrieve public key from peer session"));
-                return false;
-            }
-            authorized = IsAuthorizedByPeerPublicKey(policy, peerPublicKey, msgHolder, right.authByPolicy);
-            QCC_DbgPrintf(("authorized by peer specific policy terms: %d", authorized));
+            authorized = IsAuthorizedByAnyUserPolicy(policy, msgHolder, peerAuthLevel, right.authByPolicy, denied);
+            QCC_DbgPrintf(("authorized by any user peer auth level %d policy: %d", peerAuthLevel, authorized));
             if (authorized) {
-                remoteAuthRequired = false; /* mark to skip this check later since it is no longer required */
-            }
-            if (!authorized) {
-                QCC_DbgPrintf(("Not authorized by policy"));
+                if (msgHolder.msg->GetType() != MESSAGE_SIGNAL) {
+                    remoteAuthRequired = false; /* mark to skip this check later since it is no longer required */
+                }
+            } else if (denied) {
+                QCC_DbgPrintf(("Denied by any-user policy"));
                 return false;
             }
+        }
+        if (!authorized) {
+            QCC_DbgPrintf(("Not authorized by policy"));
+            return false;
         }
     }
 
@@ -580,10 +630,10 @@ bool PermissionManager::PeerHasAdminPriv(const GUID128& peerGuid)
     ECCPublicKey peerPublicKey;
     QStatus status = permissionMgmtObj->GetConnectedPeerPublicKey(peerGuid, &peerPublicKey);
     if (ER_OK != status) {
-        QCC_DbgPrintf(("HsAdminPriv failed to retrieve public key for peer %s", peerGuid.ToString().c_str()));
+        QCC_DbgPrintf(("PermissionManager::PeerHasAdminPriv failed to retrieve public key for peer %s", peerGuid.ToString().c_str()));
         return false;
     }
-    return permissionMgmtObj->IsTrustAnchor(&peerPublicKey);
+    return permissionMgmtObj->IsAdmin(&peerPublicKey);
 }
 
 bool PermissionManager::AuthorizePermissionMgmt(bool outgoing, const GUID128& peerGuid, Message& msg)
@@ -608,6 +658,8 @@ bool PermissionManager::AuthorizePermissionMgmt(bool outgoing, const GUID128& pe
         (strncmp(mbrName, "InstallIdentity", 15) == 0) ||
         (strncmp(mbrName, "InstallGuildEquivalence", 23) == 0) ||
         (strncmp(mbrName, "RemoveGuildEquivalence", 22) == 0) ||
+        (strncmp(mbrName, "InstallCredential", 17) == 0) ||
+        (strncmp(mbrName, "RemoveCredential", 16) == 0) ||
         (strncmp(mbrName, "Reset", 5) == 0)
         ) {
         /* these actions require admin privilege */
@@ -676,7 +728,7 @@ QStatus PermissionManager::AuthorizeMessage(bool outgoing, Message& msg, PeerSta
         holder.mbrName = msg->GetMemberName();
     }
 
-    QCC_DbgPrintf(("PermissionManager::AuthorizeMessage with outgoing: %d msg %s", outgoing, msg->ToString().c_str()));
+    QCC_DbgPrintf(("PermissionManager::AuthorizeMessage with outgoing: %d msg %s\nLocal policy %s", outgoing, msg->ToString().c_str(), GetPolicy() ? GetPolicy()->ToString().c_str() : "NULL"));
     authorized = IsAuthorized(holder, GetPolicy(), permissionMgmtObj->GetGuildMap(), peerState, permissionMgmtObj);
     if (!authorized) {
         QCC_DbgPrintf(("PermissionManager::AuthorizeMessage IsAuthorized returns ER_PERMISSION_DENIED\n"));

@@ -320,7 +320,7 @@ class PermissionPolicy {
          * Constructor
          *
          */
-        Peer() : level(PEER_LEVEL_ENCRYPTED), type(PEER_ANY), keyInfo(NULL)
+        Peer() : level(PEER_LEVEL_AUTHENTICATED), type(PEER_ANY), keyInfo(NULL)
         {
         }
 

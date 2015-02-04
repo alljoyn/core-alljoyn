@@ -147,9 +147,10 @@ class KeyExchanger {
      * Helper function to parse the peer secret record to retrieve the master secret and the DSA public key.
      * @param rec the peer secret record
      * @param[out] masterSecret the master secret
-     * @param[out] public key the buffer holding the public key.
+     * @param[out] publicKey the buffer holding the public key.
+     * @param[out] publicKeyAvailable flag indicating whether the public key is available
      */
-    static QStatus ParsePeerSecretRecord(const KeyBlob& rec, KeyBlob& masterSecret, ECCPublicKey* publicKey);
+    static QStatus ParsePeerSecretRecord(const KeyBlob& rec, KeyBlob& masterSecret, ECCPublicKey* publicKey, bool& publicKeyAvailable);
 
     /**
      * Helper function to parse the peer secret record to retrieve the master secret.
@@ -330,7 +331,7 @@ class KeyExchangerECDHE_PSK : public KeyExchangerECDHE {
 
 class KeyExchangerECDHE_ECDSA : public KeyExchangerECDHE {
   public:
-    KeyExchangerECDHE_ECDSA(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, uint16_t peerAuthVersion, PermissionMgmtObj::TrustAnchorList* trustAnchorList) : KeyExchangerECDHE(initiator, peerObj, bus, listener, peerAuthVersion), certChainLen(0), certChain(NULL), hasDSAKeys(false), trustAnchorList(trustAnchorList), hasCommonTrustAnchors(false) {
+    KeyExchangerECDHE_ECDSA(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, uint16_t peerAuthVersion, PermissionMgmtObj::TrustAnchorList* trustAnchorList) : KeyExchangerECDHE(initiator, peerObj, bus, listener, peerAuthVersion), certChainLen(0), certChain(NULL), hasDSAKeys(false), trustAnchorList(trustAnchorList), hasCommonTrustAnchors(false), peerDSAPubKey(NULL) {
     }
 
     virtual ~KeyExchangerECDHE_ECDSA();
@@ -376,6 +377,7 @@ class KeyExchangerECDHE_ECDSA : public KeyExchangerECDHE {
     QStatus GenVerifierSigInfoArg(MsgArg& msgArg, bool updateHash);
     void KeyExchangeGenTrustAnchorKeyInfos(MsgArg& variant);
     QStatus KeyExchangeReadTrustAnchorKeyInfo(MsgArg& variant);
+    bool IsTrustAnchor(const qcc::ECCPublicKey* publicKey);
 
     ECCPrivateKey issuerPrivateKey;
     ECCPublicKey issuerPublicKey;
@@ -385,7 +387,7 @@ class KeyExchangerECDHE_ECDSA : public KeyExchangerECDHE {
     PermissionMgmtObj::TrustAnchorList* trustAnchorList;
     PermissionMgmtObj::TrustAnchorList peerTrustAnchorList;
     bool hasCommonTrustAnchors;
-    ECCPublicKey peerDSAPubKey;
+    ECCPublicKey* peerDSAPubKey;
 };
 
 } /* namespace ajn */
