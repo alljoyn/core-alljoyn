@@ -422,7 +422,7 @@ bool _LocalEndpoint::IsReentrantCall()
     if (!dispatcher) {
         return false;
     }
-    return dispatcher->ThreadHoldsLock();
+    return dispatcher->IsHoldingReentrantLock();
 
 }
 
