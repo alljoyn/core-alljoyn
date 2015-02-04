@@ -4408,28 +4408,7 @@ void AllJoynObj::NameOwnerChanged(const qcc::String& alias,
         /* If a local unique name dropped, then remove any refs it had in the connnect, advertise and discover maps */
         if ((NULL == newOwner) && (alias[0] == ':')) {
             /* Remove endpoint refs from connect map */
-            qcc::String last;
             AcquireLocks();
-            multimap<qcc::String, qcc::String>::iterator it = connectMap.begin();
-            while (it != connectMap.end()) {
-                if (it->second == *oldOwner) {
-                    bool isFirstSpec = (last != it->first);
-                    qcc::String lastOwner;
-                    do {
-                        last = it->first;
-                        connectMap.erase(it++);
-                    } while ((connectMap.end() != it) && (last == it->first) && (*oldOwner == it->second));
-                    if (isFirstSpec && ((connectMap.end() == it) || (last != it->first))) {
-                        QStatus status = bus.Disconnect(last.c_str());
-                        if (ER_OK != status) {
-                            QCC_LogError(status, ("Failed to disconnect connect spec %s", last.c_str()));
-                        }
-                    }
-                } else {
-                    last = it->first;
-                    ++it;
-                }
-            }
 
             /* Remove endpoint refs from advertise map */
             multimap<String, pair<TransportMask, String> >::const_iterator ait = advertiseMap.begin();
@@ -4454,7 +4433,7 @@ void AllJoynObj::NameOwnerChanged(const qcc::String& alias,
             DiscoverMapType::const_iterator dit = discoverMap.begin();
             while (dit != discoverMap.end()) {
                 if (dit->second.sender == *oldOwner) {
-                    last = dit->first;
+                    qcc::String last = dit->first;
                     TransportMask mask = dit->second.transportMask;
 
                     QCC_DbgPrintf(("Calling ProcCancelFindAdvertisement from NameOwnerChanged [%s]", Thread::GetThread()->GetName()));
@@ -5043,17 +5022,6 @@ void AllJoynObj::CancelSessionlessMessageReply(Message& msg, QStatus status)
     if (ER_OK != status) {
         QCC_LogError(status, ("AllJoynObj::CancelSessionlessMessage() failed to send reply message"));
     }
-}
-
-void AllJoynObj::BusConnectionLost(const qcc::String& busAddr)
-{
-    /* Clear the connection map of this busAddress */
-    AcquireLocks();
-    multimap<String, String>::iterator it = connectMap.lower_bound(busAddr);
-    while ((it != connectMap.end()) && (0 == busAddr.compare(it->first))) {
-        connectMap.erase(it++);
-    }
-    ReleaseLocks();
 }
 
 void AllJoynObj::Ping(const InterfaceDescription::Member* member, Message& msg)

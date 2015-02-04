@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2012, 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -65,13 +65,6 @@ class TransportListener {
                             TransportMask transport,
                             const std::vector<qcc::String>* names,
                             uint32_t timer) = 0;
-
-    /**
-     * Called when a transport gets a surprise disconnect from a remote bus.
-     *
-     * @param busAddr       The address of the bus formatted as a string.
-     */
-    virtual void BusConnectionLost(const qcc::String& busAddr) = 0;
 };
 
 
@@ -200,6 +193,8 @@ class Transport {
 
     /**
      * Disconnect from a specified AllJoyn/DBus address.
+     *
+     * This only needs to be implemented for client transports.
      *
      * @param connectSpec    The connectSpec used in Connect.
      *
