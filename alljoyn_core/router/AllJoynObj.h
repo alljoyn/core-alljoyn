@@ -907,6 +907,14 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
      */
     QStatus SendLostAdvertisedName(const qcc::String& name, TransportMask transport);
 
+    typedef enum {
+        JOINER, /* AttachSession from new session joiner to Host */
+        HOST,   /* AttachSession response from session host to new joiner */
+        HOST_FORWARD, /* MP member AttachSession forwarded by host to existing session member */
+        MEMBER,       /* Response from existing session member to MP member AttachSession. */
+        HOST_FORWARD_REPLY /* Reply from host to new joiner for MP AttachSession member attach */
+    }CallerType;
+
     /**
      * Utility method used to invoke SessionAttach remote method.
      *
@@ -919,6 +927,8 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
      * @param outgoingSessionId     SessionId to use for outgoing AttachSession message. Should
      *                              be 0 for newly created (non-multipoint) sessions.
      * @param busAddr          Destination bus address from advertisement or GetSessionInfo.
+     * @param nameTransfer     The Nametransfer for this session. One of ALL_NAMES, DAEMON_NAMES, P2P_NAMES and MP_NAMES.
+     * @param type             The type of caller of this function: JOINER, HOST, HOST_FORWARD, MEMBER and HOST_FORWARD_REPLY.
      * @param optsIn           Session options requested by joiner.
      * @param replyCode        [OUT] SessionAttach response code
      * @param sessionId        [OUT] session id if reply code indicates success.
@@ -933,6 +943,8 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
                               const char* remoteControllerName,
                               SessionId outgoingSessionId,
                               const char* busAddr,
+                              SessionOpts::NameTransferType nameTransfer,
+                              CallerType type,
                               const SessionOpts& optsIn,
                               uint32_t& replyCode,
                               SessionId& sessionId,
@@ -1179,9 +1191,47 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
     TransportMask GetCompleteTransportMaskFilter();
     void SendIPNSResponse(qcc::String name, uint32_t replyCode);
     bool IsSelfJoinSupported(BusEndpoint& joinerEp) const;
-    QStatus GetNames(MsgArg& arg, RemoteEndpoint& endpoint, qcc::String joinerName, bool joiner, uint32_t sessionId);
+
+    /**
+     * Get all the names to be sent for this session.
+     */
+    QStatus GetNames(MsgArg& argArray,
+                     RemoteEndpoint& endpoint,
+                     SessionOpts::NameTransferType nameTransfer,
+                     CallerType type = JOINER,
+                     qcc::String joinerName = "",
+                     uint32_t sessionId = 0,
+                     qcc::String sessionHost = "");
+
+    /**
+     * Add all the names in arg to the NameTable and forward this message to the required routing nodes.
+     */
     bool NamesHandler(Message msg, MsgArg arg);
+
+    /**
+     * Check if this endpoint is a member of the session or is a routing node that has a leaf that is a member in this session.
+     * @param hostName Host of the session
+     * @param name Endpoint to check
+     * @param sessionId ID of the session
+     * @return true if name is a member of the sessionId hosted by hostName.
+     */
     bool IsMemberOfSession(qcc::String hostName, qcc::String name, uint32_t sessionId);
+
+    /**
+     * Check if there is a multipoint session between the leaving endpoint and the remote RN.
+     * @param leavingEndpointName Name of the endpoint leaving the network.
+     * @param remoteRN Routing node to check whether to send this endpoint info to.
+     * @return true if there is a session with this leaving endpoint as a member and a leaf of the remote RN as a member.
+     */
+    bool HasMPSession(qcc::String leavingEndpointName, qcc::String remoteRN);
+
+    /**
+     * Check if there is a session between the leaving endpoint alias and the remote RN.
+     * @param alias Alias Name of the endpoint leaving the network.
+     * @param remoteRN Routing node to check whether to send this endpoint info to.
+     * @return true if there is a session with this leaving endpoint as a member and a leaf of the remote RN as a member.
+     */
+    bool HasSession(qcc::String alias, qcc::String remoteRN);
 };
 
 }
