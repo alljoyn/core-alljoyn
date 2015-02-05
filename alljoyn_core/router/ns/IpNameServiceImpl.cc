@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -362,7 +362,7 @@ IpNameServiceImpl::IpNameServiceImpl()
     m_terminal(false), m_protect_callback(false), m_protect_net_callback(false), m_timer(0),
     m_tDuration(DEFAULT_DURATION), m_tRetransmit(RETRANSMIT_TIME), m_tQuestion(QUESTION_TIME),
     m_modulus(QUESTION_MODULUS), m_retries(sizeof(RETRY_INTERVALS) / sizeof(RETRY_INTERVALS[0])),
-    m_loopback(false), m_enableIPv4(false), m_enableIPv6(false), m_enableV1(false),
+    m_loopback(false), m_enableIPv4(false), m_enableIPv6(false), m_enableV1(false), m_broadcast(false),
     m_wakeEvent(), m_forceLazyUpdate(false), m_refreshAdvertisements(false),
     m_enabled(false), m_doEnable(false), m_doDisable(false),
     m_ipv4QuietSockFd(qcc::INVALID_SOCKET_FD), m_ipv6QuietSockFd(qcc::INVALID_SOCKET_FD),
@@ -414,23 +414,26 @@ QStatus IpNameServiceImpl::Init(const qcc::String& guid, bool loopback)
     ConfigDB* config = ConfigDB::GetConfigDB();
 
     //
+    // We enable v0 and v1 traffic unless explicitly configured not to do so.
+    //
+    m_enableV1 = config->GetFlag("ns_enable_v1", true);
+
+    //
     // We enable outbound traffic on a per-interface basis.  Whether or not we
     // will consider using a network interface address to send name service
     // packets depends on the configuration.
     //
     m_enableIPv4 = !config->GetFlag("ns_disable_ipv4");
     m_enableIPv6 = !config->GetFlag("ns_disable_ipv6");
-    m_broadcast = !config->GetFlag("ns_disable_directed_broadcast");
 
-    //
-    // We enable v0 and v1 traffic unless explicitly configured not to do so.
-    //
-    m_enableV1 = config->GetFlag("ns_enable_v1", true);
-
-    //
-    // Set the broadcast bit to true for WinRT. For all other platforms,
-    // this field should be derived from the property disable_directed_broadcast
-    //
+    if (m_enableV1) {
+        m_broadcast = !config->GetFlag("ns_disable_directed_broadcast");
+    } else {
+        //
+        // V2 doesn't require broadcast.
+        //
+        m_broadcast = false;
+    }
 
     m_guid = guid;
     m_loopback = loopback;
@@ -3409,6 +3412,8 @@ void IpNameServiceImpl::SendProtocolMessage(
             // don't flood out any more, just silently ignore the problem.
             //
             if (m_broadcast && interfaceAddressPrefixLen != static_cast<uint32_t>(-1)) {
+                assert(m_enableV1 != false);
+
                 //
                 // In order to ensure that our broadcast goes to the correct
                 // interface and is not just sent out some default way, we
@@ -3438,7 +3443,7 @@ void IpNameServiceImpl::SendProtocolMessage(
                 QCC_DbgHLPrintf(("IpNameServiceImpl::SendProtocolMessage():  Sending actively to \"%s\" over \"%s\"",
                                  ipv4Broadcast.ToString().c_str(), m_liveInterfaces[interfaceIndex].m_interfaceName.c_str()));
 
-                if (msgVersion != 2 && m_enableV1 && (localAddress == qcc::IPAddress("0.0.0.0") || localAddress == ipv4Broadcast)) {
+                if (msgVersion != 2 && (localAddress == qcc::IPAddress("0.0.0.0") || localAddress == ipv4Broadcast)) {
                     QStatus status = qcc::SendTo(sockFd, ipv4Broadcast, BROADCAST_PORT, buffer, size, sent);
 
                     if (status != ER_OK) {
