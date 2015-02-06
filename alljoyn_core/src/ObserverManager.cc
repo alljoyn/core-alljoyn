@@ -20,7 +20,7 @@
 #include <alljoyn/AutoPinger.h>
 
 #include "ObserverManager.h"
-#include "ObserverInternal.h"
+#include "CoreObserver.h"
 #include "BusInternal.h"
 
 #include <algorithm>
@@ -130,9 +130,9 @@ struct ObserverManager::DestinationLostWork : public ObserverManager::WorkItem {
 };
 
 struct ObserverManager::RegisterObserverWork : public ObserverManager::WorkItem {
-    Observer::Internal* observer;
+    CoreObserver* observer;
 
-    RegisterObserverWork(Observer::Internal* observer)
+    RegisterObserverWork(CoreObserver* observer)
         : observer(observer) { }
     virtual ~RegisterObserverWork() { }
     void Execute() {
@@ -141,9 +141,9 @@ struct ObserverManager::RegisterObserverWork : public ObserverManager::WorkItem 
 };
 
 struct ObserverManager::UnregisterObserverWork : public ObserverManager::WorkItem {
-    Observer::Internal* observer;
+    CoreObserver* observer;
 
-    UnregisterObserverWork(Observer::Internal* observer)
+    UnregisterObserverWork(CoreObserver* observer)
         : observer(observer) { }
     virtual ~UnregisterObserverWork() {
         /* delete observer here to avoid memory leaks during shutdown */
@@ -155,10 +155,10 @@ struct ObserverManager::UnregisterObserverWork : public ObserverManager::WorkIte
 };
 
 struct ObserverManager::EnablePendingListenersWork : public ObserverManager::WorkItem {
-    Observer::Internal* observer;
+    CoreObserver* observer;
     InterfaceSet interfaces;
 
-    EnablePendingListenersWork(Observer::Internal* observer)
+    EnablePendingListenersWork(CoreObserver* observer)
         : observer(observer), interfaces(observer->mandatory) { }
     virtual ~EnablePendingListenersWork() { }
     void Execute() {
@@ -242,7 +242,7 @@ ObserverManager::~ObserverManager()
     wqLock.Unlock(MUTEX_CONTEXT);
 }
 
-void ObserverManager::RegisterObserver(Observer::Internal* observer)
+void ObserverManager::RegisterObserver(CoreObserver* observer)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     WorkItem* workitem = new RegisterObserverWork(observer);
@@ -256,7 +256,7 @@ void ObserverManager::RegisterObserver(Observer::Internal* observer)
     TriggerDoWork();
 }
 
-void ObserverManager::ProcessRegisterObserver(Observer::Internal* observer)
+void ObserverManager::ProcessRegisterObserver(CoreObserver* observer)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     InterfaceCombination* ic;
@@ -276,7 +276,7 @@ void ObserverManager::ProcessRegisterObserver(Observer::Internal* observer)
     ic->AddObserver(observer);
 }
 
-void ObserverManager::UnregisterObserver(Observer::Internal* observer)
+void ObserverManager::UnregisterObserver(CoreObserver* observer)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     WorkItem* workitem = new UnregisterObserverWork(observer);
@@ -290,7 +290,7 @@ void ObserverManager::UnregisterObserver(Observer::Internal* observer)
     TriggerDoWork();
 }
 
-void ObserverManager::ProcessUnregisterObserver(Observer::Internal* observer)
+void ObserverManager::ProcessUnregisterObserver(CoreObserver* observer)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     CombinationMap::iterator it = combinations.find(observer->mandatory);
@@ -311,7 +311,7 @@ void ObserverManager::ProcessUnregisterObserver(Observer::Internal* observer)
     }
 }
 
-void ObserverManager::EnablePendingListeners(Observer::Internal* observer)
+void ObserverManager::EnablePendingListeners(CoreObserver* observer)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     WorkItem* workitem = new EnablePendingListenersWork(observer);
@@ -319,7 +319,7 @@ void ObserverManager::EnablePendingListeners(Observer::Internal* observer)
     TriggerDoWork();
 }
 
-void ObserverManager::ProcessEnablePendingListeners(Observer::Internal* observer, const InterfaceSet& interfaces)
+void ObserverManager::ProcessEnablePendingListeners(CoreObserver* observer, const InterfaceSet& interfaces)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
 
@@ -333,7 +333,7 @@ void ObserverManager::ProcessEnablePendingListeners(Observer::Internal* observer
     if (cit == combinations.end()) {
         return;
     }
-    std::vector<Observer::Internal*>::iterator obsit;
+    std::vector<CoreObserver*>::iterator obsit;
     for (obsit = cit->second->observers.begin(); obsit != cit->second->observers.end(); ++obsit) {
         if (*obsit == observer) {
             break;
@@ -701,7 +701,7 @@ bool ObserverManager::InterfaceCombination::ObjectsDiscovered(const ObjectSet& o
         }
         relevant = true;
 
-        std::vector<Observer::Internal*>::iterator it;
+        std::vector<CoreObserver*>::iterator it;
         for (it = observers.begin(); it != observers.end(); ++it) {
             (*it)->ObjectDiscovered(oit->id, oit->implements, sessionid);
         }
@@ -720,7 +720,7 @@ bool ObserverManager::InterfaceCombination::ObjectsLost(const ObjectSet& objects
         }
         relevant = true;
 
-        std::vector<Observer::Internal*>::iterator it;
+        std::vector<CoreObserver*>::iterator it;
         for (it = observers.begin(); it != observers.end(); ++it) {
             (*it)->ObjectLost(oit->id);
         }
@@ -728,9 +728,9 @@ bool ObserverManager::InterfaceCombination::ObjectsLost(const ObjectSet& objects
     return relevant;
 }
 
-void ObserverManager::InterfaceCombination::AddObserver(Observer::Internal* observer)
+void ObserverManager::InterfaceCombination::AddObserver(CoreObserver* observer)
 {
-    std::vector<Observer::Internal*>::iterator it;
+    std::vector<CoreObserver*>::iterator it;
     bool found = false;
     for (it = observers.begin(); it != observers.end(); ++it) {
         if (*it == observer) {
@@ -757,9 +757,9 @@ void ObserverManager::InterfaceCombination::AddObserver(Observer::Internal* obse
     }
 }
 
-bool ObserverManager::InterfaceCombination::RemoveObserver(Observer::Internal* observer)
+bool ObserverManager::InterfaceCombination::RemoveObserver(CoreObserver* observer)
 {
-    std::vector<Observer::Internal*>::iterator it;
+    std::vector<CoreObserver*>::iterator it;
     bool found = false;
     for (it = observers.begin(); it != observers.end(); ++it) {
         if (*it == observer) {

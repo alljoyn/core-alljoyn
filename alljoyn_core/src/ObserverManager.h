@@ -31,6 +31,7 @@
 #include <alljoyn/AboutListener.h>
 #include <alljoyn/SessionListener.h>
 #include <alljoyn/AutoPinger.h>
+#include "CoreObserver.h"
 
 namespace ajn {
 
@@ -79,14 +80,14 @@ class ObserverManager :
      *
      * \param observer the observer to register
      */
-    void RegisterObserver(Observer::Internal* observer);
+    void RegisterObserver(CoreObserver* observer);
 
     /**
      * Unregister an Observer from the ObserverManager
      *
      * \param observer the observer that must be detached from the cache
      */
-    void UnregisterObserver(Observer::Internal* observer);
+    void UnregisterObserver(CoreObserver* observer);
 
     /**
      * Enable all pending listeners for an Observer.
@@ -100,7 +101,7 @@ class ObserverManager :
      *
      * \param observer the observer for which we want to enable pending listeners
      */
-    void EnablePendingListeners(Observer::Internal* observer);
+    void EnablePendingListeners(CoreObserver* observer);
 
     /**
      * Perform queued-up work.
@@ -178,7 +179,7 @@ class ObserverManager :
     struct InterfaceCombination {
         ObserverManager* obsmgr;
         InterfaceSet interfaces;
-        std::vector<Observer::Internal*> observers;
+        std::vector<CoreObserver*> observers;
 
         InterfaceCombination(ObserverManager* mgr, const InterfaceSet& intfs) :
             obsmgr(mgr), interfaces(intfs)
@@ -214,13 +215,13 @@ class ObserverManager :
          * Will populate the observer with all relevant objects that were
          * discovered prior to the creation of this observer.
          */
-        void AddObserver(Observer::Internal* observer);
+        void AddObserver(CoreObserver* observer);
 
         /**
          * Remove an observer.
          * \return true if more observers are left.
          */
-        bool RemoveObserver(Observer::Internal* observer);
+        bool RemoveObserver(CoreObserver* observer);
 
         bool operator<(const InterfaceCombination& other) const {
             return interfaces < other.interfaces;
@@ -370,12 +371,12 @@ class ObserverManager :
     /**
      * Process a RegisterObserver work item
      */
-    void ProcessRegisterObserver(Observer::Internal* observer);
+    void ProcessRegisterObserver(CoreObserver* observer);
 
     /**
      * Process an UnregisterObserver work item
      */
-    void ProcessUnregisterObserver(Observer::Internal* observer);
+    void ProcessUnregisterObserver(CoreObserver* observer);
 
     /**
      * Process an EnablePendingListeners work item
@@ -383,7 +384,7 @@ class ObserverManager :
      * \param observer the observer for which to enable all pending listeners
      * \param interfaces the set of mandatory interfaces for the observer
      */
-    void ProcessEnablePendingListeners(Observer::Internal* observer, const InterfaceSet& interfaces);
+    void ProcessEnablePendingListeners(CoreObserver* observer, const InterfaceSet& interfaces);
 
     /**
      * Helper function that parses the object description argument from the About announcement

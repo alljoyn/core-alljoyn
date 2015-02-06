@@ -747,6 +747,13 @@ extern AJ_API const char* AJ_CALL alljoyn_proxybusobject_getpath(alljoyn_proxybu
 extern AJ_API const char* AJ_CALL alljoyn_proxybusobject_getservicename(alljoyn_proxybusobject proxyObj);
 
 /**
+ * Return the remote unique name for this object.
+ *
+ * @return Unique name
+ */
+extern AJ_API const char* AJ_CALL alljoyn_proxybusobject_getuniquename(alljoyn_proxybusobject proxyObj);
+
+/**
  * Return the session Id for this object.
  *
  * @param proxyObj the proxy bus object we wish to obtain the session ID from.

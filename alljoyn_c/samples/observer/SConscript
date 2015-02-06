@@ -15,19 +15,13 @@
 
 Import('env')
 
-samples_env = env.Clone()
+clientDistDir = '$C_DISTDIR/samples/observer'
 
-samples_env.Prepend(LIBS = samples_env['ALLJOYN_C_LIB_STATIC'])
+# Sample Programs
+progs = [
+    env.Program('door_consumer_c',  ['door_consumer.c']),
+]
 
-if samples_env['BR'] == 'on':
-    # Build apps with bundled daemon support
-    samples_env.Prepend(LIBS = [samples_env['brobj'], samples_env['ajrlib']])
-
-# Basic Sample programs
-samples_env.SConscript('basic/SConscript', exports = {'env': samples_env })
-
-# Security Sample programs
-samples_env.SConscript('secure/SConscript', exports = {'env': samples_env })
-
-# Observer Sample programs
-samples_env.SConscript('observer/SConscript', exports = {'env': samples_env })
+if env['OS'] in ['linux', 'darwin']:
+    env.Install('$C_DISTDIR/bin/samples', progs )
+    env.Install(clientDistDir, env.Glob('*.c'))
