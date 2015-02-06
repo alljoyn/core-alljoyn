@@ -56,6 +56,34 @@ QStatus CredentialAccessor::GetPeerGuid(qcc::String& peerName, qcc::GUID128& gui
     return ER_BUS_NO_PEER_GUID;
 }
 
+QStatus CredentialAccessor::GetDSAPublicKey(qcc::ECCPublicKey& publicKey)
+{
+    qcc::GUID128 guid;
+    qcc::KeyBlob kb;
+    GetLocalGUID(qcc::KeyBlob::DSA_PUBLIC, guid);
+    QStatus status = GetKey(guid, kb);
+    if (status != ER_OK) {
+        return status;
+    }
+    memcpy(&publicKey, kb.GetData(), kb.GetSize());
+    return ER_OK;
+}
+
+QStatus CredentialAccessor::GetDSAPrivateKey(qcc::ECCPrivateKey& privateKey)
+{
+    qcc::GUID128 guid;
+    qcc::KeyBlob kb;
+    GetLocalGUID(qcc::KeyBlob::DSA_PRIVATE, guid);
+    QStatus status = GetKey(guid, kb);
+    if (status != ER_OK) {
+        return status;
+    }
+    memcpy(&privateKey, kb.GetData(), kb.GetSize());
+    return ER_OK;
+}
+
+
+
 QStatus CredentialAccessor::GetLocalGUID(qcc::KeyBlob::Type keyType, qcc::GUID128& guid)
 {
     /* each local key will be indexed by an hardcode randomly generated GUID.
