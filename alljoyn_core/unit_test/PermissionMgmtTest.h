@@ -205,8 +205,11 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
 
 class PermissionMgmtTestHelper {
   public:
+    static QStatus CreateIdentityCert(const qcc::String& serial, const qcc::GUID128& issuer, const qcc::ECCPrivateKey* issuerPrivateKey, const qcc::GUID128& subject, const qcc::ECCPublicKey* subjectPubKey, const qcc::String& alias, uint32_t expiredInSecs, qcc::String& der);
+
     static QStatus CreateIdentityCert(const qcc::String& serial, const qcc::GUID128& issuer, const qcc::ECCPrivateKey* issuerPrivateKey, const qcc::GUID128& subject, const qcc::ECCPublicKey* subjectPubKey, const qcc::String& alias, qcc::String& der);
 
+    static QStatus CreateMembershipCert(const qcc::String& serial, const uint8_t* authDataHash, const qcc::GUID128& issuer, BusAttachment& signingBus, const qcc::GUID128& subject, const qcc::ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, bool delegate, uint32_t expiredInSecs, qcc::String& der);
     static QStatus CreateMembershipCert(const qcc::String& serial, const uint8_t* authDataHash, const qcc::GUID128& issuer, BusAttachment& signingBus, const qcc::GUID128& subject, const qcc::ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, bool delegate, qcc::String& der);
     static QStatus CreateMembershipCert(const qcc::String& serial, const uint8_t* authDataHash, const qcc::GUID128& issuer, BusAttachment& signingBus, const qcc::GUID128& subject, const qcc::ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, qcc::String& der);
     static QStatus InterestInSignal(BusAttachment* bus);

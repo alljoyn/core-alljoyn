@@ -43,7 +43,13 @@ const char* BasePermissionMgmtTest::NOTIFY_INTERFACE_NAME = "org.allseen.Securit
 const char* BasePermissionMgmtTest::ONOFF_IFC_NAME = "org.allseenalliance.control.OnOff";
 const char* BasePermissionMgmtTest::TV_IFC_NAME = "org.allseenalliance.control.TV";
 
-QStatus PermissionMgmtTestHelper::CreateIdentityCert(const qcc::String& serial, const qcc::GUID128& issuer, const ECCPrivateKey* issuerPrivateKey, const qcc::GUID128& subject, const ECCPublicKey* subjectPubKey, const qcc::String& alias, qcc::String& der)
+static void BuildValidity(Certificate::ValidPeriod& validity, uint8_t expiredInSecs)
+{
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + expiredInSecs;
+}
+
+QStatus PermissionMgmtTestHelper::CreateIdentityCert(const qcc::String& serial, const qcc::GUID128& issuer, const ECCPrivateKey* issuerPrivateKey, const qcc::GUID128& subject, const ECCPublicKey* subjectPubKey, const qcc::String& alias, uint32_t expiredInSecs, qcc::String& der)
 {
     QStatus status = ER_CRYPTO_ERROR;
     CertificateX509 x509(CertificateX509::IDENTITY_CERTIFICATE);
@@ -53,6 +59,9 @@ QStatus PermissionMgmtTestHelper::CreateIdentityCert(const qcc::String& serial, 
     x509.SetSubject(subject);
     x509.SetSubjectPublicKey(subjectPubKey);
     x509.SetAlias(alias);
+    Certificate::ValidPeriod validity;
+    BuildValidity(validity, expiredInSecs);
+    x509.SetValidity(&validity);
 
     status = x509.Sign(issuerPrivateKey);
     if (ER_OK != status) {
@@ -61,7 +70,13 @@ QStatus PermissionMgmtTestHelper::CreateIdentityCert(const qcc::String& serial, 
     return x509.EncodeCertificateDER(der);
 }
 
-QStatus PermissionMgmtTestHelper::CreateMembershipCert(const String& serial, const uint8_t* authDataHash, const qcc::GUID128& issuer, BusAttachment& signingBus, const qcc::GUID128& subject, const ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, bool delegate, qcc::String& der)
+QStatus PermissionMgmtTestHelper::CreateIdentityCert(const qcc::String& serial, const qcc::GUID128& issuer, const ECCPrivateKey* issuerPrivateKey, const qcc::GUID128& subject, const ECCPublicKey* subjectPubKey, const qcc::String& alias, qcc::String& der)
+{
+    /* expire the cert in 1 hour */
+    return CreateIdentityCert(serial, issuer, issuerPrivateKey, subject, subjectPubKey, alias, 3600, der);
+}
+
+QStatus PermissionMgmtTestHelper::CreateMembershipCert(const String& serial, const uint8_t* authDataHash, const qcc::GUID128& issuer, BusAttachment& signingBus, const qcc::GUID128& subject, const ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, bool delegate, uint32_t expiredInSecs, qcc::String& der)
 {
     QStatus status = ER_CRYPTO_ERROR;
     MembershipCertificate x509;
@@ -73,6 +88,9 @@ QStatus PermissionMgmtTestHelper::CreateMembershipCert(const String& serial, con
     x509.SetGuild(guild);
     x509.SetCA(delegate);
     x509.SetDigest(authDataHash, Certificate::SHA256_DIGEST_SIZE);
+    Certificate::ValidPeriod validity;
+    BuildValidity(validity, expiredInSecs);
+    x509.SetValidity(&validity);
     /* use the signing bus to sign the cert */
     PermissionConfigurator& pc = signingBus.GetPermissionConfigurator();
     status = pc.SignCertificate(x509);
@@ -80,6 +98,12 @@ QStatus PermissionMgmtTestHelper::CreateMembershipCert(const String& serial, con
         return status;
     }
     return x509.EncodeCertificateDER(der);
+}
+
+QStatus PermissionMgmtTestHelper::CreateMembershipCert(const String& serial, const uint8_t* authDataHash, const qcc::GUID128& issuer, BusAttachment& signingBus, const qcc::GUID128& subject, const ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, bool delegate, qcc::String& der)
+{
+    /* expire the cert in 1 hour */
+    return CreateMembershipCert(serial, authDataHash, issuer, signingBus, subject, subjectPubKey, guild, delegate, 3600, der);
 }
 
 QStatus PermissionMgmtTestHelper::CreateMembershipCert(const String& serial, const uint8_t* authDataHash, const qcc::GUID128& issuer, BusAttachment& signingBus, const qcc::GUID128& subject, const ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, qcc::String& der)

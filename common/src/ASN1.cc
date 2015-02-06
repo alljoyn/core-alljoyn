@@ -550,6 +550,12 @@ QStatus Crypto_ASN1::DecodeV(const char*& syntax, const uint8_t* asn, size_t asn
             }
             break;
 
+        case 'T':
+            if ((tag != ASN_GEN_TIME) || !DecodeLen(asn, eod, len)) {
+                status = ER_FAIL;
+            }
+            break;
+
         case '?':
             {
                 const uint8_t* start = asn - 1;

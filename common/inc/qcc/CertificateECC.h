@@ -701,7 +701,8 @@ class CertificateX509 : public Certificate {
     }
     void SetValidity(const ValidPeriod* validPeriod)
     {
-        validity = *validPeriod;
+        validity.validFrom = validPeriod->validFrom;
+        validity.validTo = validPeriod->validTo;
     }
     const ValidPeriod* GetValidity()
     {
@@ -850,6 +851,8 @@ class CertificateX509 : public Certificate {
     QStatus EncodeCertificateName(qcc::String& dn, qcc::GUID128& cn);
     QStatus DecodeCertificateName(const qcc::String& dn, CertificateX509::DistinguishedName& name);
     QStatus EncodeCertificateName(qcc::String& dn, CertificateX509::DistinguishedName& name);
+    QStatus DecodeCertificateTime(const qcc::String& time);
+    QStatus EncodeCertificateTime(qcc::String& time);
     QStatus DecodeCertificatePub(const qcc::String& pub);
     QStatus EncodeCertificatePub(qcc::String& pub);
     QStatus DecodeCertificateExt(const qcc::String& ext);
@@ -857,6 +860,7 @@ class CertificateX509 : public Certificate {
     QStatus DecodeCertificateSig(const qcc::String& sig);
     QStatus EncodeCertificateSig(qcc::String& sig);
     QStatus GenEncoded();
+    QStatus VerifyValidity();
 
     CertificateType type;
     qcc::String tbs;

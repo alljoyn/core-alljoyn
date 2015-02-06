@@ -25,6 +25,8 @@
 #include <qcc/String.h>
 #include <qcc/StringUtil.h>
 #include <qcc/Util.h>
+#include <qcc/time.h>
+#include <time.h>
 
 #include <Status.h>
 
@@ -801,6 +803,133 @@ QStatus CertificateX509::EncodeCertificateName(qcc::String& dn, CertificateX509:
     return status;
 }
 
+static QStatus DecodeTime(uint64_t& epoch, const qcc::String& t)
+{
+    struct tm tm;
+
+    /* Parse the string into the tm struct.  Can't use strptime since it not
+        available in some platforms like Android or Windows */
+    if (0xD == t.size()) {
+        /* the time format is "%y%m%d%H%M%SZ".  Sample input: 150205230725Z */
+        sscanf(t.c_str(), "%2d%2d%2d%2d%2d%2dZ", &tm.tm_year, &tm.tm_mon, &tm.tm_mday, &tm.tm_hour, &tm.tm_min, &tm.tm_sec);
+        if ((tm.tm_year >= 0) && (tm.tm_year <= 68)) {
+            tm.tm_year += 100;    /* tm_year holds  Year - 1900 */
+        }
+    } else {
+        /* the time format is "%Y%m%d%H%M%SZ".  Sample input: 20150205230725Z*/
+        sscanf(t.c_str(), "%4d%2d%2d%2d%2d%2dZ", &tm.tm_year, &tm.tm_mon, &tm.tm_mday, &tm.tm_hour, &tm.tm_min, &tm.tm_sec);
+        tm.tm_year -= 1900;    /* tm_year hold Year - 1900 */
+    }
+    tm.tm_mon--;  /* month's range is [0-11] */
+
+    /* Compute the GMT time from struct tm.
+        Can't use timegm since it is not available in some platforms like Android and Windows */
+
+    /* figure out the local daylight saving value */
+    time_t currentTime = (time_t) GetEpochTimestamp() / 1000;
+    struct tm* ptm = gmtime(&currentTime);
+    tm.tm_isdst = ptm->tm_isdst;
+
+    /* convert the parsed tm struct to GMT time */
+    time_t localTime = mktime(&tm);
+    ptm = gmtime(&localTime);
+    int32_t tzDiff = ptm->tm_hour - tm.tm_hour;
+    if (tzDiff < 0) {
+        tzDiff += 24;
+    } else if (tzDiff > 12) {
+        tzDiff = 24 - tzDiff;
+    }
+    epoch = localTime - (tzDiff * 3600);
+    return ER_OK;
+}
+
+QStatus CertificateX509::DecodeCertificateTime(const qcc::String& time)
+{
+    QStatus status;
+    qcc::String tmp;
+    qcc::String time1;
+    qcc::String time2;
+
+    tmp = time;
+    status = Crypto_ASN1::Decode(tmp, "t.", &time1, &time2);
+    if (ER_OK != status) {
+        status = Crypto_ASN1::Decode(tmp, "T.", &time1, &time2);
+    }
+    if (ER_OK != status) {
+        return status;
+    }
+    tmp = time2;
+    status = Crypto_ASN1::Decode(tmp, "t", &time2);
+    if (ER_OK != status) {
+        status = Crypto_ASN1::Decode(tmp, "T", &time2);
+    }
+    if (ER_OK != status) {
+        return status;
+    }
+
+    if ((0xD != time1.size()) && (0xF != time1.size())) {
+        return ER_FAIL;
+    }
+    if ((0xD != time2.size()) && (0xF != time2.size())) {
+        return ER_FAIL;
+    }
+
+    status = DecodeTime(validity.validFrom, time1);
+    if (ER_OK != status) {
+        return status;
+    }
+    status = DecodeTime(validity.validTo, time2);
+    if (ER_OK != status) {
+        return status;
+    }
+
+    return ER_OK;
+}
+
+static QStatus EncodeTime(uint64_t epoch, qcc::String& t)
+{
+    time_t timer = (time_t) epoch;
+    struct tm* ptm = gmtime(&timer);
+    if (!ptm) {
+        return ER_FAIL;
+    }
+    /**
+     * RFC5280 section 4.1.2.5 specifies that
+     *      validity date through the year 2049 as UTC time YYMMDDHHMMSSZ
+     *      validity date in the year 2050 or later as UTC time YYYYMMDDHHMMSSZ
+     * The value 150 means 2050 - 1900 where tm_year is based.
+     */
+    const char* format = (ptm->tm_year < 150) ? "%y%m%d%H%M%SZ" : "%Y%m%d%H%M%SZ";
+    char buf[16];
+    size_t ret;
+    ret = strftime(buf, sizeof (buf), format, ptm);
+    if (!ret) {
+        return ER_FAIL;
+    }
+    t = qcc::String(buf, ret);
+    return ER_OK;
+}
+
+QStatus CertificateX509::EncodeCertificateTime(qcc::String& time)
+{
+    QStatus status;
+    qcc::String time1;
+    qcc::String time2;
+    status = EncodeTime(validity.validFrom, time1);
+    if (ER_OK != status) {
+        return status;
+    }
+    status = EncodeTime(validity.validTo, time2);
+    if (ER_OK != status) {
+        return status;
+    }
+    qcc::String fmt;
+    fmt += 0xD == time1.size() ? "t" : "T";
+    fmt += 0xD == time2.size() ? "t" : "T";
+    status = Crypto_ASN1::Encode(time, fmt.c_str(), &time1, &time2);
+    return status;
+}
+
 QStatus CertificateX509::DecodeCertificatePub(const qcc::String& pub)
 {
     QStatus status = ER_OK;
@@ -955,13 +1084,12 @@ QStatus CertificateX509::DecodeCertificateTBS()
     qcc::String oid;
     qcc::String iss;
     qcc::String sub;
-    qcc::String time1;
-    qcc::String time2;
+    qcc::String time;
     qcc::String pub;
     qcc::String ext;
 
-    status = Crypto_ASN1::Decode(tbs, "(c(i)l(o)(.)(tt)(.)(.).)",
-                                 0, &x509Version, &serial, &oid, &iss, &time1, &time2, &sub, &pub, &ext);
+    status = Crypto_ASN1::Decode(tbs, "(c(i)l(o)(.)(.)(.)(.).)",
+                                 0, &x509Version, &serial, &oid, &iss, &time, &sub, &pub, &ext);
     if (ER_OK != status) {
         return status;
     }
@@ -975,7 +1103,10 @@ QStatus CertificateX509::DecodeCertificateTBS()
     if (ER_OK != status) {
         return status;
     }
-    //TODO read out the time values
+    status = DecodeCertificateTime(time);
+    if (ER_OK != status) {
+        return status;
+    }
     status = DecodeCertificateName(sub, subject);
     if (ER_OK != status) {
         return status;
@@ -996,12 +1127,15 @@ QStatus CertificateX509::EncodeCertificateTBS()
     qcc::String oid = OID_SIG_ECDSA_SHA256;
     qcc::String iss;
     qcc::String sub;
-    qcc::String time1 = "140101000000Z";
-    qcc::String time2 = "150101000000Z";
+    qcc::String time;
     qcc::String pub;
     qcc::String ext;
 
     status = EncodeCertificateName(iss, issuer);
+    if (ER_OK != status) {
+        return status;
+    }
+    status = EncodeCertificateTime(time);
     if (ER_OK != status) {
         return status;
     }
@@ -1017,8 +1151,8 @@ QStatus CertificateX509::EncodeCertificateTBS()
     if (ER_OK != status) {
         return status;
     }
-    status = Crypto_ASN1::Encode(tbs, "(c(i)l(o)(R)(tt)(R)(R)R)",
-                                 0, x509Version, &serial, &oid, &iss, &time1, &time2, &sub, &pub, &ext);
+    status = Crypto_ASN1::Encode(tbs, "(c(i)l(o)(R)(R)(R)(R)R)",
+                                 0, x509Version, &serial, &oid, &iss, &time, &sub, &pub, &ext);
 
     return status;
 }
@@ -1170,6 +1304,17 @@ QStatus CertificateX509::EncodeCertificatePEM(qcc::String& pem)
     return EncodeCertificatePEM(der, pem);
 }
 
+QStatus CertificateX509::VerifyValidity()
+{
+    uint64_t currentTime = GetEpochTimestamp() / 1000;
+
+    if ((validity.validFrom > currentTime) || (validity.validTo < currentTime)) {
+        return ER_FAIL;
+    }
+
+    return ER_OK;
+}
+
 QStatus CertificateX509::Verify()
 {
     return Verify(&publickey);
@@ -1177,6 +1322,12 @@ QStatus CertificateX509::Verify()
 
 QStatus CertificateX509::Verify(const ECCPublicKey* key)
 {
+    QStatus status;
+    status = VerifyValidity();
+    if (ER_OK != status) {
+        QCC_DbgPrintf(("Invalid validity period"));
+        return status;
+    }
     Crypto_ECC ecc;
     ecc.SetDSAPublicKey(key);
     return ecc.DSAVerify((const uint8_t*) tbs.data(), tbs.size(), &signature);
@@ -1184,6 +1335,12 @@ QStatus CertificateX509::Verify(const ECCPublicKey* key)
 
 QStatus CertificateX509::Verify(const KeyInfoNISTP256& ta)
 {
+    QStatus status;
+    status = VerifyValidity();
+    if (ER_OK != status) {
+        QCC_DbgPrintf(("Invalid validity period"));
+        return status;
+    }
     Crypto_ECC ecc;
     if (qcc::GUID128::SIZE != ta.GetKeyIdLen()) {
         return ER_FAIL;
@@ -1218,6 +1375,11 @@ String CertificateX509::ToString()
     }
     str += "publickey: " + BytesToHexString((const uint8_t*) &publickey, sizeof(publickey)) + "\n";
     str += "ca:        " + BytesToHexString((const uint8_t*) &ca, sizeof(uint8_t)) + "\n";
+    str += "validity: not-before ";
+    str += U64ToString(GetValidity()->validFrom);
+    str += " not-after ";
+    str += U64ToString(GetValidity()->validTo);
+    str += "\n";
     if (digest.size()) {
         str += "digest:    " + BytesToHexString((const uint8_t*) digest.c_str(), digest.size()) + "\n";
     }

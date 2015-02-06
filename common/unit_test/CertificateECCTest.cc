@@ -17,6 +17,7 @@
 
 #include <iostream>
 #include <qcc/time.h>
+#include <qcc/Thread.h>
 #include <qcc/Crypto.h>
 #include <qcc/CertificateECC.h>
 #include <qcc/GUID.h>
@@ -156,7 +157,7 @@ static QStatus GenerateCertificateType2(CertificateType2& cert, const char* msg)
     return GenerateCertificateType2(false, true, 3600, cert, msg, &pk, &pubk, &subjectpk, &subjectk);
 }
 
-static QStatus CreateCert(const qcc::String& serial, const qcc::GUID128& issuer, const ECCPrivateKey* issuerPrivateKey, const ECCPublicKey* issuerPubKey, const qcc::GUID128& subject, const ECCPublicKey* subjectPubKey, CertificateX509& x509)
+static QStatus CreateCert(const qcc::String& serial, const qcc::GUID128& issuer, const ECCPrivateKey* issuerPrivateKey, const ECCPublicKey* issuerPubKey, const qcc::GUID128& subject, const ECCPublicKey* subjectPubKey, uint32_t expiredInSeconds, CertificateX509& x509)
 {
     QStatus status = ER_CRYPTO_ERROR;
 
@@ -164,6 +165,10 @@ static QStatus CreateCert(const qcc::String& serial, const qcc::GUID128& issuer,
     x509.SetIssuer(issuer);
     x509.SetSubject(subject);
     x509.SetSubjectPublicKey(subjectPubKey);
+    Certificate::ValidPeriod validity;
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + expiredInSeconds;
+    x509.SetValidity(&validity);
     status = x509.Sign(issuerPrivateKey);
     if (ER_OK != status) {
         return status;
@@ -171,7 +176,7 @@ static QStatus CreateCert(const qcc::String& serial, const qcc::GUID128& issuer,
     return ER_OK;
 }
 
-static QStatus CreateIdentityCert(qcc::GUID128& issuer, const qcc::String& serial, ECCPrivateKey* dsaPrivateKey, ECCPublicKey* dsaPublicKey, ECCPrivateKey* subjectPrivateKey, ECCPublicKey* subjectPublicKey, bool selfSign, CertificateX509& x509)
+static QStatus CreateIdentityCert(qcc::GUID128& issuer, const qcc::String& serial, ECCPrivateKey* dsaPrivateKey, ECCPublicKey* dsaPublicKey, ECCPrivateKey* subjectPrivateKey, ECCPublicKey* subjectPublicKey, bool selfSign, uint32_t expiredInSeconds, CertificateX509& x509)
 {
     Crypto_ECC ecc;
     ecc.GenerateDSAKeyPair();
@@ -183,7 +188,7 @@ static QStatus CreateIdentityCert(qcc::GUID128& issuer, const qcc::String& seria
     memcpy(subjectPrivateKey, ecc.GetDSAPrivateKey(), sizeof(ECCPrivateKey));
     memcpy(subjectPublicKey, ecc.GetDSAPublicKey(), sizeof(ECCPublicKey));
     qcc::GUID128 userGuid;
-    return CreateCert(serial, issuer, dsaPrivateKey, dsaPublicKey, userGuid, subjectPublicKey, x509);
+    return CreateCert(serial, issuer, dsaPrivateKey, dsaPublicKey, userGuid, subjectPublicKey, expiredInSeconds, x509);
 }
 
 TEST_F(CertificateECCTest, CertificateType1SignatureVerifies)
@@ -803,7 +808,8 @@ TEST_F(CertificateECCTest, GenSelfSignECCX509CertForBBservice)
     ECCPublicKey subjectPublicKey;
     CertificateX509 x509(CertificateX509::IDENTITY_CERTIFICATE);
 
-    QStatus status = CreateIdentityCert(issuer, "1010101", &dsaPrivateKey, &dsaPublicKey, &subjectPrivateKey, &subjectPublicKey, true, x509);
+    /* cert expires in one year */
+    QStatus status = CreateIdentityCert(issuer, "1010101", &dsaPrivateKey, &dsaPublicKey, &subjectPrivateKey, &subjectPublicKey, true, 365 * 24 * 3600, x509);
     ASSERT_EQ(ER_OK, status) << " CreateIdentityCert failed with actual status: " << QCC_StatusText(status);
 
     String encodedPK;
@@ -825,3 +831,25 @@ TEST_F(CertificateECCTest, GenSelfSignECCX509CertForBBservice)
     std::cout << "The ECC X.509 cert: " << endl << x509.ToString().c_str() << endl;
 }
 
+
+/**
+ * Test expiry date for X509 cert
+ */
+TEST_F(CertificateECCTest, ExpiredX509Cert)
+{
+    qcc::GUID128 issuer;
+    ECCPrivateKey dsaPrivateKey;
+    ECCPublicKey dsaPublicKey;
+    ECCPrivateKey subjectPrivateKey;
+    ECCPublicKey subjectPublicKey;
+    CertificateX509 x509(CertificateX509::IDENTITY_CERTIFICATE);
+
+    /* cert expires in one second */
+    QStatus status = CreateIdentityCert(issuer, "1010101", &dsaPrivateKey, &dsaPublicKey, &subjectPrivateKey, &subjectPublicKey, true, 1, x509);
+    ASSERT_EQ(ER_OK, status) << " CreateIdentityCert failed with actual status: " << QCC_StatusText(status);
+
+    /* sleep for 2 seconds to wait for the cert expires */
+    qcc::Sleep(2000);
+    status = x509.Verify(&dsaPublicKey);
+    ASSERT_NE(ER_OK, status) << " verify cert did not fail with actual status: " << QCC_StatusText(status);
+}

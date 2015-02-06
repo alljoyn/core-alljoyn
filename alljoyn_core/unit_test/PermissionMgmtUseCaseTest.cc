@@ -1267,6 +1267,32 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         EXPECT_NE(ER_OK, status) << "  InstallIdentity did not fail.  Actual Status: " << QCC_StatusText(status);
     }
 
+    void ReplaceIdentityCertWithExpiredCert(BusAttachment& installerBus, BusAttachment& targetBus)
+    {
+        ProxyBusObject clientProxyObject(installerBus, targetBus.GetUniqueName().c_str(), PERMISSION_MGMT_PATH, 0, false);
+
+        /* retrieve the current identity cert */
+        IdentityCertificate cert;
+        status = PermissionMgmtTestHelper::GetIdentity(installerBus, clientProxyObject, cert);
+        EXPECT_EQ(ER_OK, status) << "  GetIdentity failed.  Actual Status: " << QCC_StatusText(status);
+
+        /* create a new identity cert that will expire in 1 second */
+        ECCPrivateKey issuerPrivateKey;
+        ECCPublicKey issuerPubKey;
+        status = PermissionMgmtTestHelper::RetrieveDSAKeys(installerBus, issuerPrivateKey, issuerPubKey);
+        EXPECT_EQ(ER_OK, status) << "  RetrieveDSAKeys failed.  Actual Status: " << QCC_StatusText(status);
+        qcc::GUID128 issuerGUID;
+        PermissionMgmtTestHelper::GetGUID(adminBus, issuerGUID);
+        qcc::String der;
+        status = PermissionMgmtTestHelper::CreateIdentityCert("5050505", issuerGUID, &issuerPrivateKey, cert.GetSubject(), cert.GetSubjectPublicKey(), "Service Provider", 1, der);
+        EXPECT_EQ(ER_OK, status) << "  CreateIdentityCert failed.  Actual Status: " << QCC_StatusText(status);
+
+        /* sleep 2 seconds to get the cert to expire */
+        qcc::Sleep(2000);
+        status = PermissionMgmtTestHelper::InstallIdentity(adminBus, clientProxyObject, der);
+        EXPECT_NE(ER_OK, status) << "  InstallIdentity did not fail.  Actual Status: " << QCC_StatusText(status);
+    }
+
     void InstallAdditionalIdentityTrustAnchor(BusAttachment& installerBus, BusAttachment& sourceBus, BusAttachment& targetBus, bool testForDuplicates)
     {
         qcc::GUID128 installerGUID;
@@ -2078,6 +2104,15 @@ TEST_F(PermissionMgmtUseCaseTest, InstallIdentityCertWithDifferentPubKey)
 {
     Claims(false);
     ReplaceServiceIdentityCertWithBadPublicKey();
+}
+
+/*
+ *  Case: install identity cert with expired cert
+ */
+TEST_F(PermissionMgmtUseCaseTest, InstallIdentityCertWithExpiredCert)
+{
+    Claims(false);
+    ReplaceIdentityCertWithExpiredCert(adminBus, consumerBus);
 }
 
 /*
