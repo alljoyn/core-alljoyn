@@ -437,7 +437,7 @@ const char* DoorListener::props[] = {
 
 int main(int argc, char** argv)
 {
-    BusAttachment bus("door_consumer");
+    BusAttachment bus("door_consumer", true);
     SetupBusAttachment(bus);
 
     const char* intfname = INTF_NAME;
