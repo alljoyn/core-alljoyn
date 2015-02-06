@@ -372,7 +372,7 @@ int main(int argc, char** argv)
         } else if (0 == strcmp("-f", argv[i])) {
             g_findPrefix = argv[++i];
         } else if (0 == strcmp("-t", argv[i])) {
-            transportOpts |= TRANSPORT_WLAN;
+            transportOpts |= TRANSPORT_TCP;
         } else {
             status = ER_FAIL;
             printf("Unknown option %s\n", argv[i]);

@@ -37,8 +37,8 @@ TEST(SessionOptsTest, accessor_functions) {
     alljoyn_sessionopts_set_proximity(opts, ALLJOYN_PROXIMITY_PHYSICAL);
     EXPECT_EQ(ALLJOYN_PROXIMITY_PHYSICAL, alljoyn_sessionopts_get_proximity(opts));
 
-    alljoyn_sessionopts_set_transports(opts, ALLJOYN_TRANSPORT_LAN);
-    EXPECT_EQ(ALLJOYN_TRANSPORT_LAN, alljoyn_sessionopts_get_transports(opts));
+    alljoyn_sessionopts_set_transports(opts, ALLJOYN_TRANSPORT_TCP);
+    EXPECT_EQ(ALLJOYN_TRANSPORT_TCP, alljoyn_sessionopts_get_transports(opts));
 
     alljoyn_sessionopts_destroy(opts);
 }

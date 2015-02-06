@@ -789,7 +789,6 @@ static void usage(void)
     printf("   -n <well-known name>  = Well-known name to advertise\n");
     printf("   -t                    = Advertise over TCP (enables selective advertising)\n");
     printf("   -l                    = Advertise locally (enables selective advertising)\n");
-    printf("   -w                    = Advertise over Wi-Fi Direct (enables selective advertising)\n");
     printf("   -u                    = Advertise over UDP-based ARDP (enables selective advertising)\n");
     printf("   -a                    = Cancel advertising while servicing a single client (causes rediscovery between iterations)\n");
     printf("   -p                    = Respond to an incoming signal by pinging back to the sender\n");
@@ -880,11 +879,9 @@ int main(int argc, char** argv)
         } else if (0 == strcmp("-m", argv[i])) {
             opts.isMultipoint = true;
         } else if (0 == strcmp("-t", argv[i])) {
-            opts.transports |= TRANSPORT_WLAN;
+            opts.transports |= TRANSPORT_TCP;
         } else if (0 == strcmp("-l", argv[i])) {
             opts.transports |= TRANSPORT_LOCAL;
-        } else if (0 == strcmp("-w", argv[i])) {
-            opts.transports |= TRANSPORT_WFD;
         } else if (0 == strcmp("-u", argv[i])) {
             opts.transports |= TRANSPORT_UDP;
         } else if (0 == strcmp("-a", argv[i])) {
