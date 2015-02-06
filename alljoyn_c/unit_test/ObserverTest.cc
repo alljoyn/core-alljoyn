@@ -31,7 +31,8 @@
 #include <alljoyn/MsgArg.h>
 #include <alljoyn/version.h>
 #include <alljoyn/AboutObj.h>
-#include <alljoyn/Observer.h>
+
+#include <alljoyn_c/Observer.h>
 
 #include <alljoyn/Status.h>
 
@@ -39,7 +40,13 @@
 #include <gtest/gtest.h>
 #include "ajTestCommon.h"
 
-namespace test_unit_observer {
+namespace test_unit_observerC {
+
+/*
+ * This test suite is a straight-up port of the C++ Observer test suite.
+ * Observer is a consumer-only concept, so only the consumer-related bits have
+ * been converted to the C API to save some effort.
+ */
 
 using namespace std;
 using namespace qcc;
@@ -85,8 +92,9 @@ class TestObject : public BusObject {
 
 class Participant : public SessionPortListener, public SessionListener {
   public:
+    alljoyn_busattachment cbus;
+    BusAttachment& bus;
 
-    BusAttachment bus;
     String uniqueBusName;
 
     typedef std::pair<TestObject*, bool> ObjectState;
@@ -101,11 +109,11 @@ class Participant : public SessionPortListener, public SessionListener {
     bool acceptSessions;
 
     AboutData aboutData;
-    AboutObj aboutObj;
+    AboutObj* aboutObj;
 
-    Participant() : bus("Participant"),
+    Participant() : cbus(alljoyn_busattachment_create("Participant", QCC_TRUE)), bus(*(BusAttachment*)cbus),
         opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY),
-        port(42), acceptSessions(true), aboutData("en"), aboutObj(bus)
+        port(42), acceptSessions(true), aboutData("en"), aboutObj(new AboutObj(bus))
     {
         Init();
     }
@@ -156,7 +164,7 @@ class Participant : public SessionPortListener, public SessionListener {
         aboutData.SetHardwareVersion("0.0.1");
         aboutData.SetSupportUrl("http://www.example.org");
 
-        ASSERT_EQ(ER_OK, aboutObj.Announce(port, aboutData));
+        ASSERT_EQ(ER_OK, aboutObj->Announce(port, aboutData));
     }
 
     ~Participant() {
@@ -172,9 +180,13 @@ class Participant : public SessionPortListener, public SessionListener {
             }
         }
 
+        delete aboutObj;
+
         ASSERT_EQ(ER_OK, bus.Disconnect());
         ASSERT_EQ(ER_OK, bus.Stop());
         ASSERT_EQ(ER_OK, bus.Join());
+
+        alljoyn_busattachment_destroy(cbus);
     }
 
     void CreateObject(qcc::String name, vector<qcc::String> interfaces) {
@@ -190,7 +202,7 @@ class Participant : public SessionPortListener, public SessionListener {
         ASSERT_FALSE(it->second.second) << "Object already on bus.";
         ASSERT_EQ(ER_OK, bus.RegisterBusObject(*(it->second.first)));
         it->second.second = true;
-        ASSERT_EQ(ER_OK, aboutObj.Announce(port, aboutData));
+        ASSERT_EQ(ER_OK, aboutObj->Announce(port, aboutData));
     }
 
     void UnregisterObject(qcc::String name) {
@@ -199,7 +211,7 @@ class Participant : public SessionPortListener, public SessionListener {
         ASSERT_TRUE(it->second.second) << "Object not on bus.";
         bus.UnregisterBusObject(*(it->second.first));
         it->second.second = false;
-        ASSERT_EQ(ER_OK, aboutObj.Announce(port, aboutData));
+        ASSERT_EQ(ER_OK, aboutObj->Announce(port, aboutData));
     }
 
     virtual bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) {
@@ -270,17 +282,29 @@ class ObserverTest : public testing::Test {
     void SimpleScenario(Participant& provider, Participant& consumer);
 };
 
-class ObserverListener : public Observer::Listener {
-  public:
-    BusAttachment& bus;
+static void object_discovered(const void* ctx, alljoyn_proxybusobject_ref proxyref);
+static void object_lost(const void* ctx, alljoyn_proxybusobject_ref proxyref);
 
-    typedef vector<ManagedProxyBusObject> ProxyVector;
+static alljoyn_observerlistener_callback listener_cbs = { object_discovered, object_lost };
+
+struct ObserverListener {
+    alljoyn_busattachment bus;
+
+    typedef vector<alljoyn_proxybusobject_ref> ProxyVector;
     ProxyVector proxies;
 
     int counter;
     Event event;
 
-    ObserverListener(BusAttachment& bus) : bus(bus), counter(0) { }
+    alljoyn_observerlistener listener;
+
+    ObserverListener(alljoyn_busattachment bus) : bus(bus), counter(0) {
+        listener = alljoyn_observerlistener_create(&listener_cbs, this);
+    }
+
+    ~ObserverListener() {
+        alljoyn_observerlistener_destroy(listener);
+    }
 
     void ExpectInvocations(int newCounter) {
         /* first, check whether the counter was really 0 from last invocation */
@@ -290,59 +314,79 @@ class ObserverListener : public Observer::Listener {
         counter = newCounter;
     }
 
-    ProxyVector::iterator FindProxy(ManagedProxyBusObject proxy) {
+    ProxyVector::iterator FindProxy(alljoyn_proxybusobject_ref proxyref) {
         ProxyVector::iterator it;
         for (it = proxies.begin(); it != proxies.end(); ++it) {
-            if (it->iden(proxy)) {
+            if (*it == proxyref) {
                 break;
             }
         }
         return it;
     }
 
-    void CheckReentrancy(ManagedProxyBusObject& proxy) {
-        Message reply(bus);
+    void CheckReentrancy(alljoyn_proxybusobject_ref proxyref) {
+        alljoyn_proxybusobject proxy = alljoyn_proxybusobject_ref_get(proxyref);
+        alljoyn_message reply = alljoyn_message_create(bus);
         QStatus status;
 
         /* proxy object must implement at least one of A or B */
         const char* intfname = INTF_A;
-        if (!proxy->ImplementsInterface(INTF_A)) {
+        if (!alljoyn_proxybusobject_implementsinterface(proxy, INTF_A)) {
             intfname = INTF_B;
-            EXPECT_TRUE(proxy->ImplementsInterface(INTF_B));
+            EXPECT_TRUE(alljoyn_proxybusobject_implementsinterface(proxy, INTF_B));
         }
 
-        status = proxy->MethodCall(intfname, METHOD, NULL, 0, reply);
+        status = alljoyn_proxybusobject_methodcall(proxy, intfname, METHOD, NULL, 0, reply, MAX_WAIT_MS, 0);
         EXPECT_TRUE((status == ER_OK) || (status == ER_BUS_BLOCKING_CALL_NOT_ALLOWED));
 
-        bus.EnableConcurrentCallbacks();
-        status = proxy->MethodCall(intfname, METHOD, NULL, 0, reply);
+        alljoyn_busattachment_enableconcurrentcallbacks(bus);
+        status = alljoyn_proxybusobject_methodcall(proxy, intfname, METHOD, NULL, 0, reply, MAX_WAIT_MS, 0);
         EXPECT_EQ(ER_OK, status);
         if (ER_OK == status) {
-            String ubn(reply->GetArg(0)->v_string.str), path(reply->GetArg(1)->v_string.str);
-            EXPECT_EQ(proxy->GetUniqueName(), ubn);
-            EXPECT_EQ(proxy->GetPath(), path);
+            const char* ubn = NULL;
+            const char* path = NULL;
+            alljoyn_message_parseargs(reply, "ss", &ubn, &path);
+            EXPECT_STREQ(alljoyn_proxybusobject_getuniquename(proxy), ubn);
+            EXPECT_STREQ(alljoyn_proxybusobject_getpath(proxy), path);
         }
+        alljoyn_message_destroy(reply);
     }
 
-    virtual void ObjectDiscovered(ManagedProxyBusObject& proxy) {
-        ProxyVector::iterator it = FindProxy(proxy);
+    virtual void ObjectDiscovered(alljoyn_proxybusobject_ref proxyref) {
+        ProxyVector::iterator it = FindProxy(proxyref);
         EXPECT_EQ(it, proxies.end()) << "Discovering an already-discovered object";
-        proxies.push_back(proxy);
-        CheckReentrancy(proxy);
+        proxies.push_back(proxyref);
+        alljoyn_proxybusobject_ref_incref(proxyref);
+        CheckReentrancy(proxyref);
         if (--counter == 0) {
             event.SetEvent();
         }
     }
 
-    virtual void ObjectLost(ManagedProxyBusObject& proxy) {
-        ProxyVector::iterator it = FindProxy(proxy);
+    virtual void ObjectLost(alljoyn_proxybusobject_ref proxyref) {
+        ProxyVector::iterator it = FindProxy(proxyref);
         EXPECT_NE(it, proxies.end()) << "Lost a not-discovered object";
         proxies.erase(it);
+        alljoyn_proxybusobject_ref_decref(proxyref);
         if (--counter == 0) {
             event.SetEvent();
         }
     }
 };
+
+static void object_discovered(const void* ctx, alljoyn_proxybusobject_ref proxyref)
+{
+    EXPECT_TRUE(ctx != NULL);
+    ObserverListener* listener = (ObserverListener*) ctx;
+    listener->ObjectDiscovered(proxyref);
+}
+
+static void object_lost(const void* ctx, alljoyn_proxybusobject_ref proxyref)
+{
+    EXPECT_TRUE(ctx != NULL);
+    ObserverListener* listener = (ObserverListener*) ctx;
+    listener->ObjectLost(proxyref);
+}
 
 static bool WaitForAll(vector<Event*>& events, uint32_t wait_ms = MAX_WAIT_MS)
 {
@@ -376,11 +420,13 @@ static bool WaitForAll(vector<Event*>& events, uint32_t wait_ms = MAX_WAIT_MS)
     return true;
 }
 
-static int CountProxies(Observer& obs)
+static int CountProxies(alljoyn_observer observer)
 {
     int count;
-    ManagedProxyBusObject iter;
-    for (count = 0, iter = obs.GetFirst(); iter->IsValid(); iter = obs.GetNext(iter)) {
+    alljoyn_proxybusobject_ref iter;
+    for (count = 0, iter = alljoyn_observer_getfirst(observer);
+         iter != NULL;
+         iter = alljoyn_observer_getnext(observer, iter)) {
         ++count;
     }
     return count;
@@ -394,13 +440,15 @@ void ObserverTest::SimpleScenario(Participant& provider, Participant& consumer)
     provider.CreateObject("justB", intfB);
     provider.CreateObject("both", intfAB);
 
-    ObserverListener listenerA(consumer.bus), listenerB(consumer.bus), listenerAB(consumer.bus);
-    Observer obsA(consumer.bus, cintfA, 1);
-    obsA.RegisterListener(listenerA);
-    Observer obsB(consumer.bus, cintfB, 1);
-    obsB.RegisterListener(listenerB);
-    Observer obsAB(consumer.bus, cintfAB, 2);
-    obsAB.RegisterListener(listenerAB);
+    ObserverListener listenerA(consumer.cbus),
+    listenerB(consumer.cbus),
+    listenerAB(consumer.cbus);
+    alljoyn_observer obsA = alljoyn_observer_create(consumer.cbus, cintfA, 1);
+    alljoyn_observer_registerlistener(obsA, listenerA.listener, QCC_TRUE);
+    alljoyn_observer obsB = alljoyn_observer_create(consumer.cbus, cintfB, 1);
+    alljoyn_observer_registerlistener(obsB, listenerB.listener, QCC_TRUE);
+    alljoyn_observer obsAB = alljoyn_observer_create(consumer.cbus, cintfAB, 2);
+    alljoyn_observer_registerlistener(obsAB, listenerAB.listener, QCC_TRUE);
 
     vector<Event*> events;
     vector<Event*> allEvents;
@@ -443,9 +491,9 @@ void ObserverTest::SimpleScenario(Participant& provider, Participant& consumer)
     EXPECT_EQ(0, CountProxies(obsAB));
 
     /* remove all listeners */
-    obsA.UnregisterAllListeners();
-    obsB.UnregisterAllListeners();
-    obsAB.UnregisterListener(listenerAB);
+    alljoyn_observer_unregisteralllisteners(obsA);
+    alljoyn_observer_unregisteralllisteners(obsB);
+    alljoyn_observer_unregisterlistener(obsAB, listenerAB.listener);
 
     /* remove "justB" and reinstate the other objects */
     listenerA.ExpectInvocations(0);
@@ -472,16 +520,16 @@ void ObserverTest::SimpleScenario(Participant& provider, Participant& consumer)
     listenerA.ExpectInvocations(2);
     listenerB.ExpectInvocations(1);
     listenerAB.ExpectInvocations(1);
-    obsA.RegisterListener(listenerA);
-    obsB.RegisterListener(listenerB);
-    obsAB.RegisterListener(listenerAB);
+    alljoyn_observer_registerlistener(obsA, listenerA.listener, QCC_TRUE);
+    alljoyn_observer_registerlistener(obsB, listenerB.listener, QCC_TRUE);
+    alljoyn_observer_registerlistener(obsAB, listenerAB.listener, QCC_TRUE);
 
     EXPECT_TRUE(WaitForAll(allEvents));
 
     /* test multiple listeners for same observer */
-    ObserverListener listenerB2(consumer.bus);
+    ObserverListener listenerB2(consumer.cbus);
     listenerB2.ExpectInvocations(0);
-    obsB.RegisterListener(listenerB2, false);
+    alljoyn_observer_registerlistener(obsB, listenerB2.listener, QCC_FALSE);
 
     listenerA.ExpectInvocations(0);
     listenerB.ExpectInvocations(1);
@@ -499,34 +547,46 @@ void ObserverTest::SimpleScenario(Participant& provider, Participant& consumer)
     EXPECT_EQ(1, CountProxies(obsAB));
 
     /* test multiple observers for the same set of interfaces */
-    Observer obsB2(consumer.bus, cintfB, 1);
-    obsB.UnregisterListener(listenerB2); /* unregister listenerB2 from obsB so we can reuse it here */
+    alljoyn_observer obsB2 = alljoyn_observer_create(consumer.cbus, cintfB, 1);
+    alljoyn_observer_unregisterlistener(obsB, listenerB2.listener); /* unregister listenerB2 from obsB so we can reuse it here */
     listenerA.ExpectInvocations(0);
     listenerB.ExpectInvocations(0);
     listenerB2.ExpectInvocations(2);
     listenerAB.ExpectInvocations(0);
-    obsB2.RegisterListener(listenerB2);
+    alljoyn_observer_registerlistener(obsB2, listenerB2.listener, QCC_TRUE);
     events.clear();
     events.push_back(&(listenerB2.event));
     EXPECT_TRUE(WaitForAll(events));
+    alljoyn_observer_unregisterlistener(obsB2, listenerB2.listener);
+    alljoyn_observer_destroy(obsB2);
 
     /* test Observer::Get() and the proxy creation functionality */
-    ManagedProxyBusObject proxy;
-    ObjectId oid(provider.uniqueBusName, PATH_PREFIX "justA");
-    proxy = obsA.Get(oid);
-    EXPECT_TRUE(proxy->IsValid());
-    EXPECT_EQ((size_t)2, proxy->GetInterfaces()); // always one more than expected because of org.freedesktop.DBus.Peer
-    oid.objectPath = PATH_PREFIX "both";
-    proxy = obsA.Get(oid);
-    EXPECT_TRUE(proxy->IsValid());
-    EXPECT_EQ((size_t)3, proxy->GetInterfaces());
+    alljoyn_proxybusobject_ref proxyref = alljoyn_observer_get(obsA, provider.uniqueBusName.c_str(), PATH_PREFIX "justA");
+    EXPECT_TRUE(proxyref != NULL);
+    alljoyn_proxybusobject proxy = alljoyn_proxybusobject_ref_get(proxyref);
+    EXPECT_TRUE(proxy != NULL);
+    EXPECT_EQ((size_t)2, alljoyn_proxybusobject_getinterfaces(proxy, NULL, 0)); // always one more than expected because of org.freedesktop.DBus.Peer
+    alljoyn_proxybusobject_ref_decref(proxyref);
 
+    proxyref = alljoyn_observer_get(obsA, provider.uniqueBusName.c_str(), PATH_PREFIX "both");
+    EXPECT_TRUE(proxyref != NULL);
+    proxy = alljoyn_proxybusobject_ref_get(proxyref);
+    EXPECT_TRUE(proxy != NULL);
+    EXPECT_EQ((size_t)3, alljoyn_proxybusobject_getinterfaces(proxy, NULL, 0));
     /* verify that we can indeed perform method calls */
-    Message reply(consumer.bus);
-    EXPECT_EQ(ER_OK, proxy->MethodCall(INTF_A, METHOD, NULL, 0, reply));
-    String ubn(reply->GetArg(0)->v_string.str), path(reply->GetArg(1)->v_string.str);
-    EXPECT_EQ(provider.uniqueBusName, ubn);
-    EXPECT_EQ(qcc::String(PATH_PREFIX "both"), path);
+    alljoyn_message reply = alljoyn_message_create(consumer.cbus);
+    EXPECT_EQ(ER_OK, alljoyn_proxybusobject_methodcall(proxy, INTF_A, METHOD, NULL, 0, reply, MAX_WAIT_MS, 0));
+    const char* ubn;
+    const char* path;
+    EXPECT_EQ(ER_OK, alljoyn_message_parseargs(reply, "ss", &ubn, &path));
+    EXPECT_STREQ(provider.uniqueBusName.c_str(), ubn);
+    EXPECT_STREQ(PATH_PREFIX "both", path);
+    alljoyn_message_destroy(reply);
+    alljoyn_proxybusobject_ref_decref(proxyref);
+
+    alljoyn_observer_destroy(obsA);
+    alljoyn_observer_destroy(obsB);
+    alljoyn_observer_destroy(obsAB);
 }
 
 TEST_F(ObserverTest, Simple)
@@ -553,9 +613,9 @@ TEST_F(ObserverTest, Rejection)
 
     unwilling.acceptSessions = false;
 
-    ObserverListener listener(consumer.bus);
-    Observer obs(consumer.bus, cintfA, 1);
-    obs.RegisterListener(listener);
+    ObserverListener listener(consumer.cbus);
+    alljoyn_observer obs = alljoyn_observer_create(consumer.cbus, cintfA, 1);
+    alljoyn_observer_registerlistener(obs, listener.listener, QCC_TRUE);
     vector<Event*> events;
     events.push_back(&(listener.event));
 
@@ -585,6 +645,8 @@ TEST_F(ObserverTest, Rejection)
 
     /* now there should only be two objects */
     EXPECT_EQ(2, CountProxies(obs));
+
+    alljoyn_observer_destroy(obs);
 }
 
 TEST_F(ObserverTest, CreateDelete)
@@ -594,9 +656,9 @@ TEST_F(ObserverTest, CreateDelete)
     provider.CreateObject("ab", intfAB);
     provider.CreateObject("ab2", intfAB);
 
-    ObserverListener listener(consumer.bus);
-    Observer obs(consumer.bus, cintfA, 1);
-    obs.RegisterListener(listener);
+    ObserverListener listener(consumer.cbus);
+    alljoyn_observer obs = alljoyn_observer_create(consumer.cbus, cintfA, 1);
+    alljoyn_observer_registerlistener(obs, listener.listener, QCC_TRUE);
     vector<Event*> events;
     events.push_back(&(listener.event));
 
@@ -608,27 +670,27 @@ TEST_F(ObserverTest, CreateDelete)
     EXPECT_TRUE(WaitForAll(events));
 
     /* now create and destroy some observers */
-    Observer* spark;
-    Observer* flame;
-    ObserverListener dummy(consumer.bus);
+    alljoyn_observer spark;
+    alljoyn_observer flame;
+    ObserverListener dummy(consumer.cbus);
 
-    spark = new Observer(consumer.bus, cintfA, 1);
-    delete spark;
-    flame = new Observer(consumer.bus, cintfA, 1);
-    flame->RegisterListener(dummy);
-    delete flame;
+    spark = alljoyn_observer_create(consumer.cbus, cintfA, 1);
+    alljoyn_observer_destroy(spark);;
+    flame = alljoyn_observer_create(consumer.cbus, cintfA, 1);
+    alljoyn_observer_registerlistener(flame, dummy.listener, QCC_TRUE);;
+    alljoyn_observer_destroy(flame);;
 
-    spark = new Observer(consumer.bus, cintfA, 1);
-    flame = new Observer(consumer.bus, cintfA, 1);
-    flame->RegisterListener(dummy);
-    delete flame;
-    delete spark;
+    spark = alljoyn_observer_create(consumer.cbus, cintfA, 1);
+    flame = alljoyn_observer_create(consumer.cbus, cintfA, 1);
+    alljoyn_observer_registerlistener(flame, dummy.listener, QCC_TRUE);;
+    alljoyn_observer_destroy(flame);;
+    alljoyn_observer_destroy(spark);;
 
-    flame = new Observer(consumer.bus, cintfA, 1);
-    spark = new Observer(consumer.bus, cintfA, 1);
-    flame->RegisterListener(dummy);
-    delete flame;
-    delete spark;
+    flame = alljoyn_observer_create(consumer.cbus, cintfA, 1);
+    spark = alljoyn_observer_create(consumer.cbus, cintfA, 1);
+    alljoyn_observer_registerlistener(flame, dummy.listener, QCC_TRUE);;
+    alljoyn_observer_destroy(flame);;
+    alljoyn_observer_destroy(spark);;
 
     /* create some movement on the bus to see if there are any lingering
      * traces of spark and flame that create problems */
@@ -638,6 +700,8 @@ TEST_F(ObserverTest, CreateDelete)
     provider.UnregisterObject("ab2");
 
     EXPECT_TRUE(WaitForAll(events));
+
+    alljoyn_observer_destroy(obs);
 }
 
 TEST_F(ObserverTest, ListenTwice)
@@ -648,9 +712,9 @@ TEST_F(ObserverTest, ListenTwice)
     provider.CreateObject("ab", intfAB);
     provider.CreateObject("ab2", intfAB);
 
-    ObserverListener listener(consumer.bus);
-    Observer obs(consumer.bus, cintfA, 1);
-    obs.RegisterListener(listener);
+    ObserverListener listener(consumer.cbus);
+    alljoyn_observer obs = alljoyn_observer_create(consumer.cbus, cintfA, 1);
+    alljoyn_observer_registerlistener(obs, listener.listener, QCC_TRUE);
 
     vector<Event*> events;
     events.push_back(&(listener.event));
@@ -658,8 +722,8 @@ TEST_F(ObserverTest, ListenTwice)
     {
         /* use listener for 2 observers, so we expect to
          * see all events twice */
-        Observer obs2(consumer.bus, cintfA, 1);
-        obs2.RegisterListener(listener);
+        alljoyn_observer obs2 = alljoyn_observer_create(consumer.cbus, cintfA, 1);
+        alljoyn_observer_registerlistener(obs2, listener.listener, QCC_TRUE);
 
         listener.ExpectInvocations(6);
         provider.RegisterObject("a");
@@ -667,6 +731,8 @@ TEST_F(ObserverTest, ListenTwice)
         provider.RegisterObject("ab2");
 
         EXPECT_TRUE(WaitForAll(events));
+
+        alljoyn_observer_destroy(obs2);
     }
 
     /* one observer is gone, so we expect to see
@@ -677,6 +743,8 @@ TEST_F(ObserverTest, ListenTwice)
     provider.UnregisterObject("ab2");
 
     EXPECT_TRUE(WaitForAll(events));
+
+    alljoyn_observer_destroy(obs);
 }
 
 TEST_F(ObserverTest, Multi)
@@ -692,30 +760,30 @@ TEST_F(ObserverTest, Multi)
 
     vector<Event*> events;
 
-    Observer obsAone(one.bus, cintfA, 1);
-    ObserverListener lisAone(one.bus);
-    obsAone.RegisterListener(lisAone);
+    alljoyn_observer obsAone = alljoyn_observer_create(one.cbus, cintfA, 1);
+    ObserverListener lisAone(one.cbus);
+    alljoyn_observer_registerlistener(obsAone, lisAone.listener, QCC_TRUE);
     events.push_back(&(lisAone.event));
-    Observer obsBone(one.bus, cintfB, 1);
-    ObserverListener lisBone(one.bus);
-    obsBone.RegisterListener(lisBone);
+    alljoyn_observer obsBone = alljoyn_observer_create(one.cbus, cintfB, 1);
+    ObserverListener lisBone(one.cbus);
+    alljoyn_observer_registerlistener(obsBone, lisBone.listener, QCC_TRUE);
     events.push_back(&(lisBone.event));
-    Observer obsABone(one.bus, cintfAB, 2);
-    ObserverListener lisABone(one.bus);
-    obsABone.RegisterListener(lisABone);
+    alljoyn_observer obsABone = alljoyn_observer_create(one.cbus, cintfAB, 2);
+    ObserverListener lisABone(one.cbus);
+    alljoyn_observer_registerlistener(obsABone, lisABone.listener, QCC_TRUE);
     events.push_back(&(lisABone.event));
 
-    Observer obsAtwo(two.bus, cintfA, 1);
-    ObserverListener lisAtwo(two.bus);
-    obsAtwo.RegisterListener(lisAtwo);
+    alljoyn_observer obsAtwo = alljoyn_observer_create(two.cbus, cintfA, 1);
+    ObserverListener lisAtwo(two.cbus);
+    alljoyn_observer_registerlistener(obsAtwo, lisAtwo.listener, QCC_TRUE);
     events.push_back(&(lisAtwo.event));
-    Observer obsBtwo(two.bus, cintfB, 1);
-    ObserverListener lisBtwo(two.bus);
-    obsBtwo.RegisterListener(lisBtwo);
+    alljoyn_observer obsBtwo = alljoyn_observer_create(two.cbus, cintfB, 1);
+    ObserverListener lisBtwo(two.cbus);
+    alljoyn_observer_registerlistener(obsBtwo, lisBtwo.listener, QCC_TRUE);
     events.push_back(&(lisBtwo.event));
-    Observer obsABtwo(two.bus, cintfAB, 2);
-    ObserverListener lisABtwo(two.bus);
-    obsABtwo.RegisterListener(lisABtwo);
+    alljoyn_observer obsABtwo = alljoyn_observer_create(two.cbus, cintfAB, 2);
+    ObserverListener lisABtwo(two.cbus);
+    alljoyn_observer_registerlistener(obsABtwo, lisABtwo.listener, QCC_TRUE);
     events.push_back(&(lisABtwo.event));
 
     /* put objects on the bus */
@@ -763,6 +831,13 @@ TEST_F(ObserverTest, Multi)
     EXPECT_EQ(0, CountProxies(obsAtwo));
     EXPECT_EQ(0, CountProxies(obsBtwo));
     EXPECT_EQ(0, CountProxies(obsABtwo));
+
+    alljoyn_observer_destroy(obsAone);
+    alljoyn_observer_destroy(obsBone);
+    alljoyn_observer_destroy(obsABone);
+    alljoyn_observer_destroy(obsAtwo);
+    alljoyn_observer_destroy(obsBtwo);
+    alljoyn_observer_destroy(obsABtwo);
 }
 
 }

@@ -23,7 +23,7 @@
 #include <alljoyn/InterfaceDescription.h>
 
 #include "BusInternal.h"
-#include "ObserverInternal.h"
+#include "CoreObserver.h"
 #include "ObserverManager.h"
 
 #include <qcc/Debug.h>
@@ -33,12 +33,78 @@ using namespace std;
 
 namespace ajn {
 
+class Observer::Internal : public CoreObserver {
+  private:
+    BusAttachment& bus;
+    Observer* observer;
+
+    /* proxy object bookkeeping */
+    typedef std::map<ObjectId, ManagedProxyBusObject> ObjectMap;
+    ObjectMap proxies;
+    qcc::Mutex proxiesLock;
+
+    /* listener bookkeeping */
+    struct WrappedListener {
+        /* WrappedListener exists to keep track of whether a given listener
+         * is already enabled. triggerOnExisting listeners start off as
+         * disabled, until the ObserverManager has the chance to fire the
+         * initial callbacks (for "existing" objects) from the work queue. */
+        Observer::Listener* listener;
+        bool enabled;
+        WrappedListener(Observer::Listener* listener, bool enabled)
+            : listener(listener), enabled(enabled) { }
+    };
+    typedef qcc::ManagedObj<WrappedListener*> ProtectedObserverListener;
+    typedef std::set<ProtectedObserverListener> ObserverListenerSet;
+    ObserverListenerSet listeners;
+    qcc::Mutex listenersLock;
+
+  public:
+    Internal(BusAttachment& bus,
+             Observer* observer,
+             InterfaceSet mandatory);
+
+    virtual ~Internal();
+
+    /**
+     * Detach from the publicly visible Observer.
+     *
+     * Because of complicated threading/locking issues, it is not
+     * straightforward to just destroy the Internal object from the
+     * Observer destructor. Instead, we have a two-phase approach:
+     * ~Observer detaches from Internal, and when it is safe to do
+     * so, ObserverManager destroys the Internal object.
+     */
+    void Detach();
+
+    /* implementation of public Observer functionality */
+    void RegisterListener(Observer::Listener& listener, bool triggerOnExisting);
+    void UnregisterListener(Observer::Listener& listener);
+    void UnregisterAllListeners();
+
+    ManagedProxyBusObject Get(const ObjectId& oid);
+    ManagedProxyBusObject GetFirst();
+    ManagedProxyBusObject GetNext(const ObjectId& oid);
+
+    /* interface towards ObserverManager */
+    void ObjectDiscovered(const ObjectId& oid, const std::set<qcc::String>& interfaces, SessionId sessionid);
+    void ObjectLost(const ObjectId& oid);
+    /**
+     * Enable all disabled listeners for this observer.
+     *
+     * Called from the ObserverManager work queue to make sure the
+     * initial callbacks of triggerOnExisting listeners are called
+     * from the local endpoint dispatcher threads.
+     */
+    void EnablePendingListeners();
+};
+
 Observer::Internal::Internal(BusAttachment& bus,
                              Observer* observer,
                              InterfaceSet mandatory) :
+    CoreObserver(mandatory),
     bus(bus),
-    observer(observer),
-    mandatory(mandatory)
+    observer(observer)
 {
     ObserverManager& obsmgr = bus.GetInternal().GetObserverManager();
     obsmgr.RegisterObserver(this);

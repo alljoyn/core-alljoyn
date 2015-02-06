@@ -280,7 +280,7 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-    BusAttachment bus("door_provider");
+    BusAttachment bus("door_provider", true);
     AboutData aboutData("en");
     AboutObj aboutObj(bus);
 
