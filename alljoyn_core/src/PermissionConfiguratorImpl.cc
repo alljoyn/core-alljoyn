@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2014 - 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -94,7 +94,7 @@ QStatus PermissionConfiguratorImpl::GetSigningPublicKey(KeyInfoECC& keyInfo)
     }
     CredentialAccessor ca(bus);
     ECCPublicKey publicKey;
-    QStatus status = PermissionMgmtObj::RetrieveDSAPublicKey(&ca, &publicKey);
+    QStatus status = ca.GetDSAPublicKey(publicKey);
     if (status != ER_OK) {
         return status;
     }
@@ -113,7 +113,7 @@ QStatus PermissionConfiguratorImpl::SignCertificate(CertificateX509& cert)
 {
     CredentialAccessor ca(bus);
     ECCPrivateKey privateKey;
-    QStatus status = PermissionMgmtObj::RetrieveDSAPrivateKey(&ca, &privateKey);
+    QStatus status = ca.GetDSAPrivateKey(privateKey);
     if (status != ER_OK) {
         return status;
     }

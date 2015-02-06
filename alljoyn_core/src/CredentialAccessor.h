@@ -7,7 +7,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2014 - 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -96,6 +96,26 @@ class CredentialAccessor {
      *      - ER_CRYPTO_KEY_UNAVAILABLE if key is unavailable
      */
     QStatus GetKey(const qcc::GUID128& guid, qcc::KeyBlob& key);
+
+    /**
+     * Get DSA Public key linked with the CredentialAccessor
+     *
+     * @param[out] publicKey   holds the result of this call
+     * @return
+     *      - ER_OK if successful
+     *      - ER_CRYPTO_KEY_UNAVAILABLE if key is unavailable
+     */
+    QStatus GetDSAPublicKey(qcc::ECCPublicKey& publicKey);
+
+    /**
+     * Get DSA Private key linked with the CredentialAccessor
+     *
+     * @param[out] privateKey   The requested key
+     * @return
+     *      - ER_OK if successful
+     *      - ER_CRYPTO_KEY_UNAVAILABLE if key is unavailable
+     */
+    QStatus GetDSAPrivateKey(qcc::ECCPrivateKey& privateKey);
 
     /**
      * Delete a key blob

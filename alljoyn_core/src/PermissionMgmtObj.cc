@@ -169,7 +169,7 @@ static QStatus RetrieveAndGenDSAPublicKey(CredentialAccessor* ca, KeyInfoNISTP25
 {
     bool genKeys = false;
     ECCPublicKey pubKey;
-    QStatus status = PermissionMgmtObj::RetrieveDSAPublicKey(ca, &pubKey);
+    QStatus status = ca->GetDSAPublicKey(pubKey);
     if (status != ER_OK) {
         if (ER_BUS_KEY_UNAVAILABLE == status) {
             genKeys = true;
@@ -188,7 +188,7 @@ static QStatus RetrieveAndGenDSAPublicKey(CredentialAccessor* ca, KeyInfoNISTP25
             return ER_CRYPTO_KEY_UNAVAILABLE;
         }
         /* retrieve the public key */
-        status = PermissionMgmtObj::RetrieveDSAPublicKey(ca, &pubKey);
+        status = ca->GetDSAPublicKey(pubKey);
         if (status != ER_OK) {
             return status;
         }
@@ -468,32 +468,6 @@ QStatus PermissionMgmtObj::StoreDSAKeys(CredentialAccessor* ca, const ECCPrivate
     return ca->StoreKey(guid, dsaPubKb);
 }
 
-QStatus PermissionMgmtObj::RetrieveDSAPublicKey(CredentialAccessor* ca, ECCPublicKey* publicKey)
-{
-    GUID128 guid;
-    KeyBlob kb;
-    ca->GetLocalGUID(KeyBlob::DSA_PUBLIC, guid);
-    QStatus status = ca->GetKey(guid, kb);
-    if (status != ER_OK) {
-        return status;
-    }
-    memcpy(publicKey, kb.GetData(), kb.GetSize());
-    return ER_OK;
-}
-
-QStatus PermissionMgmtObj::RetrieveDSAPrivateKey(CredentialAccessor* ca, ECCPrivateKey* privateKey)
-{
-    GUID128 guid;
-    KeyBlob kb;
-    ca->GetLocalGUID(KeyBlob::DSA_PRIVATE, guid);
-    QStatus status = ca->GetKey(guid, kb);
-    if (status != ER_OK) {
-        return status;
-    }
-    memcpy(privateKey, kb.GetData(), kb.GetSize());
-    return ER_OK;
-}
-
 void PermissionMgmtObj::GetPublicKey(const InterfaceDescription::Member* member, Message& msg)
 {
     KeyInfoNISTP256 replyKeyInfo;
@@ -670,7 +644,7 @@ QStatus PermissionMgmtObj::NotifyConfig()
     /* public key */
     MsgArg keyInfoArgs[1];
     ECCPublicKey pubKey;
-    QStatus status = PermissionMgmtObj::RetrieveDSAPublicKey(ca, &pubKey);
+    QStatus status = ca->GetDSAPublicKey(pubKey);
     if (status == ER_OK) {
         KeyInfoNISTP256 keyInfo;
         qcc::GUID128 localGUID;
@@ -821,7 +795,7 @@ static QStatus LoadCertificate(Certificate::EncodingType encoding, const uint8_t
 QStatus PermissionMgmtObj::SameSubjectPublicKey(CertificateX509& cert, bool& outcome)
 {
     ECCPublicKey pubKey;
-    QStatus status = PermissionMgmtObj::RetrieveDSAPublicKey(ca, &pubKey);
+    QStatus status = ca->GetDSAPublicKey(pubKey);
     if (status != ER_OK) {
         return status;
     }
