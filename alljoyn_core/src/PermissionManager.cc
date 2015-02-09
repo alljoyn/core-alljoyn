@@ -636,13 +636,12 @@ bool PermissionManager::PeerHasAdminPriv(const GUID128& peerGuid)
     return permissionMgmtObj->IsAdmin(&peerPublicKey);
 }
 
-bool PermissionManager::AuthorizePermissionMgmt(bool outgoing, const GUID128& peerGuid, Message& msg)
+bool PermissionManager::AuthorizePermissionMgmt(bool outgoing, const GUID128& peerGuid, const char* mbrName)
 {
     if (outgoing) {
         return true;  /* always allow send action */
     }
     bool authorized = false;
-    const char* mbrName = msg->GetMemberName();
 
     if (strncmp(mbrName, "Claim", 5) == 0) {
         /* only allowed when there is no trust anchor */
@@ -668,7 +667,8 @@ bool PermissionManager::AuthorizePermissionMgmt(bool outgoing, const GUID128& pe
         (strncmp(mbrName, "NotifyConfig", 12) == 0) ||
         (strncmp(mbrName, "GetPublicKey", 12) == 0) ||
         (strncmp(mbrName, "GetIdentity", 11) == 0) ||
-        (strncmp(mbrName, "GetManifest", 11) == 0)
+        (strncmp(mbrName, "GetManifest", 11) == 0) ||
+        (strncmp(mbrName, "Version", 7) == 0)
         ) {
         return true;
     }
@@ -696,13 +696,24 @@ QStatus PermissionManager::AuthorizeMessage(bool outgoing, Message& msg, PeerSta
     if (IsStdInterface(msg->GetInterface())) {
         return ER_OK;
     }
-    if (IsPermissionMgmtInterface(msg->GetInterface())) {
+    MessageHolder holder(msg, outgoing);
+    if (IsPropertyInterface(msg->GetInterface())) {
+        status = ParsePropertiesMessage(holder);
+        if (status != ER_OK) {
+            return status;
+        }
+    } else {
+        holder.iName = msg->GetInterface();
+        holder.mbrName = msg->GetMemberName();
+    }
+    if (IsPermissionMgmtInterface(holder.iName)) {
         if (!permissionMgmtObj) {
             return ER_PERMISSION_DENIED;
         }
-        if (AuthorizePermissionMgmt(outgoing, peerState->GetGuid(), msg)) {
+        if (AuthorizePermissionMgmt(outgoing, peerState->GetGuid(), holder.mbrName)) {
             return ER_OK;
         }
+        QCC_DbgPrintf(("PermissionManager::AuthorizeMessage on PermissionMgmt::%s returns ER_PERMISSION_DENIED\n", holder.mbrName));
         return ER_PERMISSION_DENIED;
     }
     if (!permissionMgmtObj) {
@@ -716,16 +727,6 @@ QStatus PermissionManager::AuthorizeMessage(bool outgoing, Message& msg, PeerSta
     if (!outgoing && PeerHasAdminPriv(peerState->GetGuid())) {
         QCC_DbgPrintf(("PermissionManager::AuthorizeMessage peer has admin prividege"));
         return ER_OK;  /* admin has full access */
-    }
-    MessageHolder holder(msg, outgoing);
-    if (IsPropertyInterface(msg->GetInterface())) {
-        status = ParsePropertiesMessage(holder);
-        if (status != ER_OK) {
-            return status;
-        }
-    } else {
-        holder.iName = msg->GetInterface();
-        holder.mbrName = msg->GetMemberName();
     }
 
     QCC_DbgPrintf(("PermissionManager::AuthorizeMessage with outgoing: %d msg %s\nLocal policy %s", outgoing, msg->ToString().c_str(), GetPolicy() ? GetPolicy()->ToString().c_str() : "NULL"));

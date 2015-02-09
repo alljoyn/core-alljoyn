@@ -255,6 +255,7 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
             QCC_LogError(status, ("Failed to create %s interface", org::allseen::Security::PermissionMgmt::InterfaceName));
             return status;
         }
+        ifc->AddProperty("Version", "q", PROP_ACCESS_READ);
         ifc->AddMethod("Claim",     "(yv)(yay)",  "(yv)", "adminPublicKey,identityCert,publicKey");
         ifc->AddMethod("InstallPolicy",     "(yv)",  NULL, "authorization");
         ifc->AddMethod("InstallEncryptedPolicy",     "ay",  NULL, "encryptedAuthorization");
@@ -270,8 +271,8 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         ifc->AddMethod("GetManifest",     NULL, "(yv)",  "manifest");
         ifc->AddMethod("Reset",     NULL, NULL, NULL);
         ifc->AddMethod("GetPublicKey", NULL, "(yv)", "publicKey");
-        ifc->AddMethod("InstallCredential",     "yv", NULL, "type, credential");
-        ifc->AddMethod("RemoveCredential",     "yv", NULL, "type, credential");
+        ifc->AddMethod("InstallCredential",     "yv", NULL, "type,credential");
+        ifc->AddMethod("RemoveCredential",     "yv", NULL, "type,credential");
         ifc->Activate();
     }
     {
@@ -282,7 +283,7 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
             QCC_LogError(status, ("Failed to create %s interface", org::allseen::Security::PermissionMgmt::Notification::InterfaceName));
             return status;
         }
-        ifc->AddSignal("NotifyConfig", "a(yv)yua(ayay)", "publicKeyInfo,claimableState,serialNumber,memberships", 0);
+        ifc->AddSignal("NotifyConfig", "qa(yv)ya(yv)ua(ayay)", "version,publicKeyInfo,claimableState,trustAnchors,serialNumber,memberships", 0);
         ifc->Activate();
     }
     return status;

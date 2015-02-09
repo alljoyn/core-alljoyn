@@ -34,6 +34,11 @@
 #define QCC_MODULE "PERMISSION_MGMT"
 
 /**
+ * PermissionMgmt interface version number
+ */
+#define VERSION_NUM  1
+
+/**
  * Tag name used in the certificate nodes in the membership list in the key store.
  */
 #define AUTH_DATA_TAG_NAME "AUTH_DATA"
@@ -659,7 +664,10 @@ QStatus PermissionMgmtObj::NotifyConfig()
 {
     uint8_t flags = ALLJOYN_FLAG_SESSIONLESS;
 
-    MsgArg args[4];
+    MsgArg args[6];
+    /* version number */
+    args[0].Set("q", VERSION_NUM);
+    /* public key */
     MsgArg keyInfoArgs[1];
     ECCPublicKey pubKey;
     QStatus status = PermissionMgmtObj::RetrieveDSAPublicKey(ca, &pubKey);
@@ -670,14 +678,55 @@ QStatus PermissionMgmtObj::NotifyConfig()
         keyInfo.SetKeyId(localGUID.GetBytes(), GUID128::SIZE);
         keyInfo.SetPublicKey(&pubKey);
         KeyInfoHelper::KeyInfoNISTP256ToMsgArg(keyInfo, keyInfoArgs[0]);
-        args[0].Set("a(yv)", 1, keyInfoArgs);
+        args[1].Set("a(yv)", 1, keyInfoArgs);
     } else {
-        args[0].Set("a(yv)", 0, NULL);
+        args[1].Set("a(yv)", 0, NULL);
     }
-    args[1].Set("y", claimableState);
-    args[2].Set("u", serialNum);
-    args[3].Set("a(ayay)", 0, NULL);
-    return Signal(NULL, 0, *notifySignalName, args, 4, 0, flags);
+    /* claimable state */
+    args[2].Set("y", claimableState);
+    /* list of trust anchors */
+    MsgArg* trustAnchorArgs = NULL;
+    if (trustAnchors.size() == 0) {
+        args[3].Set("a(yv)", 0, NULL);
+    } else {
+        trustAnchorArgs = new MsgArg[trustAnchors.size()];
+        size_t cnt = 0;
+        for (TrustAnchorList::iterator it = trustAnchors.begin(); it != trustAnchors.end(); it++) {
+            MsgArg* keyInfoArgs = new MsgArg();
+            KeyInfoHelper::KeyInfoNISTP256ToMsgArg((*it)->keyInfo, *keyInfoArgs);
+            trustAnchorArgs[cnt].Set("(yv)", (*it)->use, keyInfoArgs);
+            trustAnchorArgs[cnt].SetOwnershipFlags(MsgArg::OwnsArgs, true);
+            cnt++;
+        }
+        args[3].Set("a(yv)", trustAnchors.size(), trustAnchorArgs);
+    }
+    /* serial number */
+    args[4].Set("u", serialNum);
+    /* memberships */
+    MembershipCertMap certMap;
+    status = GetAllMembershipCerts(certMap);
+    if (ER_OK != status) {
+        delete [] trustAnchorArgs;
+        return status;
+    }
+    MsgArg* membershipArgs = NULL;
+    if (certMap.size() == 0) {
+        args[5].Set("a(ayay)", 0, NULL);
+    } else {
+        membershipArgs = new MsgArg[certMap.size()];
+        size_t cnt = 0;
+        for (MembershipCertMap::iterator it = certMap.begin(); it != certMap.end(); it++) {
+            MembershipCertificate* cert = it->second;
+            membershipArgs[cnt].Set("(ayay)", GUID128::SIZE, cert->GetGuild().GetBytes(), cert->GetSerial().size(), cert->GetSerial().data());
+            cnt++;
+        }
+        args[5].Set("a(ayay)", certMap.size(), membershipArgs);
+    }
+    status = Signal(NULL, 0, *notifySignalName, args, 6, 0, flags);
+    delete [] trustAnchorArgs;
+    delete [] membershipArgs;
+    ClearMembershipCertMap(certMap);
+    return status;
 }
 
 static QStatus ValidateCertificate(CertificateX509& cert, PermissionMgmtObj::TrustAnchorList* taList)
@@ -2125,6 +2174,15 @@ void PermissionMgmtObj::RemoveCredential(const InterfaceDescription::Member* mem
     MethodReply(msg, ER_OK);
 }
 
+QStatus PermissionMgmtObj::Get(const char* ifcName, const char* propName, MsgArg& val)
+{
+    if (0 == strcmp("Version", propName)) {
+        val.typeId = ALLJOYN_UINT16;
+        val.v_uint16 = VERSION_NUM;
+        return ER_OK;
+    }
+    return ER_BUS_NO_SUCH_PROPERTY;
+}
 
 } /* namespace ajn */
 

@@ -278,21 +278,53 @@ void BasePermissionMgmtTest::SignalHandler(const InterfaceDescription::Member* m
                                            const char* sourcePath, Message& msg)
 {
     signalNotifyConfigReceived = true;
+    uint32_t versionNum;
     MsgArg* keyArrayArg;
     size_t keyArrayLen = 0;
     uint32_t serialNum;
     uint8_t claimableState;
-    QStatus status = msg->GetArg(0)->Get("a(yv)", &keyArrayLen, &keyArrayArg);
+    QStatus status = msg->GetArg(0)->Get("q", &versionNum);
+    EXPECT_EQ(ER_OK, status) << "  Get version number failed.  Actual Status: " << QCC_StatusText(status);
+    status = msg->GetArg(1)->Get("a(yv)", &keyArrayLen, &keyArrayArg);
     EXPECT_EQ(ER_OK, status) << "  Retrieve the key info  failed.  Actual Status: " << QCC_StatusText(status);
     if (keyArrayLen > 0) {
         KeyInfoNISTP256 keyInfo;
         status = KeyInfoHelper::MsgArgToKeyInfoNISTP256(keyArrayArg[0], keyInfo);
         EXPECT_EQ(ER_OK, status) << "  Parse the key info  failed.  Actual Status: " << QCC_StatusText(status);
     }
-    status = msg->GetArg(1)->Get("y", &claimableState);
+    status = msg->GetArg(2)->Get("y", &claimableState);
     EXPECT_EQ(ER_OK, status) << "  Retrieve the claimableState failed.  Actual Status: " << QCC_StatusText(status);
-    status = msg->GetArg(2)->Get("u", &serialNum);
+    MsgArg* taArrayArg;
+    size_t taArrayLen = 0;
+    status = msg->GetArg(3)->Get("a(yv)", &taArrayLen, &taArrayArg);
+    EXPECT_EQ(ER_OK, status) << "  Retrieve the trust anchor list failed. Actual Status: " << QCC_StatusText(status);
+    if (taArrayLen > 0) {
+        for (size_t cnt = 0; cnt < taArrayLen; cnt++) {
+            uint8_t trustAnchorUsage;
+            MsgArg* keyInfoArg;
+            status = taArrayArg[cnt].Get("(yv)", &trustAnchorUsage, &keyInfoArg);
+            EXPECT_EQ(ER_OK, status) << "  Retrieve the trust anchor key info failed.  Actual Status: " << QCC_StatusText(status);
+            KeyInfoNISTP256 keyInfo;
+            status = KeyInfoHelper::MsgArgToKeyInfoNISTP256(*keyInfoArg, keyInfo);
+            EXPECT_EQ(ER_OK, status) << "  Parse the trust anchor key info  failed.  Actual Status: " << QCC_StatusText(status);
+        }
+    }
+    status = msg->GetArg(4)->Get("u", &serialNum);
     EXPECT_EQ(ER_OK, status) << "  Retrieve the serial number failed.  Actual Status: " << QCC_StatusText(status);
+    MsgArg* mbrshipArrayArg;
+    size_t mbrshipArrayLen = 0;
+    status = msg->GetArg(5)->Get("a(ayay)", &mbrshipArrayLen, &mbrshipArrayArg);
+    EXPECT_EQ(ER_OK, status) << "  Retrieve the membership list failed. Actual Status: " << QCC_StatusText(status);
+    if (mbrshipArrayLen > 0) {
+        for (size_t cnt = 0; cnt < mbrshipArrayLen; cnt++) {
+            uint8_t* guild;
+            size_t guildLen;
+            uint8_t* serial;
+            size_t serialLen;
+            status = mbrshipArrayArg[cnt].Get("(ayay)", &guildLen, &guild, &serialLen, &serial);
+            EXPECT_EQ(ER_OK, status) << "  Retrieve the membership data failed.  Actual Status: " << QCC_StatusText(status);
+        }
+    }
 }
 
 void BasePermissionMgmtTest::ChannelChangedSignalHandler(const InterfaceDescription::Member* member,
@@ -947,6 +979,19 @@ QStatus PermissionMgmtTestHelper::GetTVVolume(BusAttachment& bus, ProxyBusObject
     status = remoteObj.GetProperty(BasePermissionMgmtTest::TV_IFC_NAME, "Volume", val);
     if (ER_OK == status) {
         val.Get("u", &volume);
+    }
+    return status;
+}
+
+QStatus PermissionMgmtTestHelper::GetPermissionMgmtVersion(BusAttachment& bus, ProxyBusObject& remoteObj, uint16_t& version)
+{
+    QStatus status;
+    const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::INTERFACE_NAME);
+    remoteObj.AddInterface(*itf);
+    MsgArg val;
+    status = remoteObj.GetProperty(BasePermissionMgmtTest::INTERFACE_NAME, "Version", val);
+    if (ER_OK == status) {
+        val.Get("q", &version);
     }
     return status;
 }

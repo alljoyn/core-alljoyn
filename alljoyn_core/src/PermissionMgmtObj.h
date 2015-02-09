@@ -261,6 +261,17 @@ class PermissionMgmtObj : public BusObject {
      */
     void Load();
 
+    /**
+     * Handle a bus request to read a property from this object.
+     *
+     * @param ifcName    Identifies the interface that the property is defined on
+     * @param propName  Identifies the the property to get
+     * @param[out] val        Returns the property value. The type of this value is the actual value
+     *                   type.
+     * @return ER_OK for success, error code otherwise.
+     */
+    QStatus Get(const char* ifcName, const char* propName, MsgArg& val);
+
   private:
 
     typedef enum {

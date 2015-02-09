@@ -1563,6 +1563,18 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     }
 
     /**
+     *  App gets the PermissionMgmt version number
+     */
+    void AppGetVersionNumber(BusAttachment& bus, BusAttachment& targetBus)
+    {
+        ProxyBusObject clientProxyObject(bus, targetBus.GetUniqueName().c_str(), PERMISSION_MGMT_PATH, 0, false);
+        uint16_t versionNum = 0;
+        status = PermissionMgmtTestHelper::GetPermissionMgmtVersion(bus, clientProxyObject, versionNum);
+        EXPECT_EQ(ER_OK, status) << "  AppGetVersionNumber GetPermissionMgmtVersion failed.  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(1, versionNum) << "  AppGetVersionNumber received unexpected version number.";
+    }
+
+    /**
      *  App can call TV Off
      */
     void AppCanCallTVOff(BusAttachment& bus, BusAttachment& targetBus)
@@ -1853,6 +1865,7 @@ TEST_F(PermissionMgmtUseCaseTest, TestAllCalls)
     RemoveMembershipFromConsumer();
     FailResetServiceByConsumer();
     SuccessfulResetServiceByAdmin();
+    AppGetVersionNumber(consumerBus, serviceBus);
 }
 
 /*

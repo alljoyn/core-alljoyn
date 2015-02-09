@@ -95,7 +95,7 @@ class PermissionManager {
   private:
 
     bool PeerHasAdminPriv(const qcc::GUID128& peerGuid);
-    bool AuthorizePermissionMgmt(bool outgoing, const qcc::GUID128& peerGuid, Message& msg);
+    bool AuthorizePermissionMgmt(bool outgoing, const qcc::GUID128& peerGuid, const char* mbrName);
 
     PermissionPolicy* policy;
     PermissionMgmtObj* permissionMgmtObj;
