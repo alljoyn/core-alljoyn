@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2015, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -41,6 +41,7 @@
 #include <alljoyn/SessionPortListener.h>
 #include <alljoyn/Status.h>
 #include <alljoyn/Translator.h>
+#include <alljoyn/PermissionMgmtListener.h>
 #include <alljoyn/PermissionPolicy.h>
 #include <alljoyn/PermissionConfigurator.h>
 
@@ -1531,7 +1532,7 @@ class BusAttachment : public MessageReceiver {
      *
      * @see WhoImplements(const char**, size_t)
      * @param[in] iface     interface that the remove user must implement to
-     *                          receive the announce signal.
+     *                      receive the announce signal.
      *
      * @return
      *    - #ER_OK on success
@@ -1577,6 +1578,51 @@ class BusAttachment : public MessageReceiver {
      *    - An error status otherwise
      */
     QStatus CancelWhoImplements(const char* iface);
+
+    /**
+     * Registers a handler to receive the org.allseen.Security.PermissionMgmt.Notification
+     * NotifyConfig signal.
+     *
+     * @param[in] permissionMgmtListener reference to a PermissionMgmtListener
+     */
+    void RegisterPermissionMgmtListener(PermissionMgmtListener& permissionMgmtListener);
+
+    /**
+     * Unregisters the PermissionMgmtListener from receiving the
+     * org.allseen.Security.PermissionMgmt.Notification NotifyConfig signal.
+     *
+     * @param[in] permissionMgmtListener reference to PermissionMgmtListener to
+     *                                   unregister
+     */
+    void UnregisterPermissionMgmtListener(PermissionMgmtListener& permissionMgmtListener);
+
+    /**
+     * This is a helper function that will add the match rule responsible for
+     * receiving the org.allseen.Security.PermissionMgmt.Notification.NotifyConfig
+     * signal.
+     *
+     * The PermissionMgmtListener should be registered before calling this method.
+     *
+     * This will only call AddMatch for the NotifyConfig signal.
+     *
+     * @return
+     *    - #ER_OK on success
+     *    - An error status otherwise
+     */
+    QStatus AddPermissionMgmtNotificationRule();
+
+    /**
+     * This is a helper function that will remove the match rule responsible for
+     * receiving the org.allseen.Security.PermissionMgmt.Notification.NotifyConfig
+     * signal.
+     *
+     * This will only call RemoveMatch for the NotifyConfig signal.
+     *
+     * @return
+     *    - #ER_OK on success
+     *    - An error status otherwise
+     */
+    QStatus RemovePermissionMgmtNotificationRule();
 
     /// @cond ALLJOYN_DEV
     /**
