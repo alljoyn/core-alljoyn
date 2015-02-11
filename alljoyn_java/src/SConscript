@@ -39,7 +39,7 @@ if env['OS'] == 'android':
 
     alljoyn_jar = env.Jar('$JARDIR/alljoyn.jar', source = [main_classes])
 
-elif (env['OS'] == 'linux' or env['OS_GROUP'] == 'windows'):
+elif (env['OS'] == 'linux' or env['OS_GROUP'] == 'windows' or env['OS'] == 'darwin'):
     main_classes = env.Java('$CLASSDIR', source = ['.'], JAVACLASSPATH = env.subst('$JAVACLASSPATH'))
     alljoyn_jar = env.Jar('$JARDIR/alljoyn.jar', source = [main_classes])
 

@@ -40,6 +40,8 @@
 #include <alljoyn/AllJoynStd.h>
 #include <alljoyn/AboutObj.h>
 #include <alljoyn/version.h>
+#include <CoreObserver.h>
+#include <BusInternal.h>
 
 #define QCC_MODULE "ALLJOYN_JAVA"
 
@@ -12831,4 +12833,196 @@ JNIEXPORT jstring JNICALL Java_org_alljoyn_bus_Version_getBuildInfo(JNIEnv* env,
 
 JNIEXPORT jint JNICALL Java_org_alljoyn_bus_Version_getNumeric(JNIEnv* env, jclass clazz) {
     return ajn::GetNumericVersion();
+}
+
+class JObserver : public CoreObserver {
+  public:
+    JBusAttachment* bus;
+    jweak jobserver;
+
+    JObserver(JBusAttachment* bus, jobject jobj, const InterfaceSet& mandatory)
+        : CoreObserver(mandatory), bus(bus), jobserver(NULL) {
+        JNIEnv* env = GetEnv();
+        jobserver = env->NewWeakGlobalRef(jobj);
+
+        bus->IncRef();
+        bus->GetInternal().GetObserverManager().RegisterObserver(this);
+    }
+
+    virtual ~JObserver() {
+        bus->DecRef();
+    }
+
+    virtual void ObjectDiscovered(const ObjectId& oid, const InterfaceSet& interfaces, SessionId sessionid) {
+        JScopedEnv env;
+
+        jobject jo = env->NewLocalRef(jobserver);
+        if (!jo) {
+            return;
+        }
+
+        JLocalRef<jclass> clazz = env->GetObjectClass(jo);
+        jmethodID mid = env->GetMethodID(clazz, "objectDiscovered", "(Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;I)V");
+        if (!mid) {
+            return;
+        }
+
+        JLocalRef<jstring> busname = env->NewStringUTF(oid.uniqueBusName.c_str());
+        if (env->ExceptionCheck()) {
+            QCC_LogError(ER_FAIL, ("JObserver::ObjectDiscovered exception"));
+            return;
+        }
+        JLocalRef<jstring> path = env->NewStringUTF(oid.objectPath.c_str());
+        if (env->ExceptionCheck()) {
+            QCC_LogError(ER_FAIL, ("JObserver::ObjectDiscovered exception"));
+            return;
+        }
+        jint jsessionid = sessionid;
+        JLocalRef<jobjectArray> jinterfaces = env->NewObjectArray(interfaces.size(), CLS_String, NULL);
+        if (env->ExceptionCheck()) {
+            QCC_LogError(ER_FAIL, ("JObserver::ObjectDiscovered exception"));
+            return;
+        }
+
+        jsize i = 0;
+        for (InterfaceSet::iterator it = interfaces.begin(); it != interfaces.end(); ++it) {
+            JLocalRef<jstring> intfname = env->NewStringUTF(it->c_str());
+            if (env->ExceptionCheck()) {
+                QCC_LogError(ER_FAIL, ("JObserver::ObjectDiscovered exception"));
+                return;
+            }
+            env->SetObjectArrayElement(jinterfaces, i++, intfname);
+            if (env->ExceptionCheck()) {
+                QCC_LogError(ER_FAIL, ("JObserver::ObjectDiscovered exception"));
+                return;
+            }
+        }
+
+        CallObjectMethod(env, jo, mid, jstring(busname), jstring(path), jobjectArray(jinterfaces), jsessionid);
+    }
+
+    virtual void ObjectLost(const ObjectId& oid) {
+        JScopedEnv env;
+
+        jobject jo = env->NewLocalRef(jobserver);
+        if (!jo) {
+            return;
+        }
+
+        JLocalRef<jclass> clazz = env->GetObjectClass(jo);
+        jmethodID mid = env->GetMethodID(clazz, "objectLost", "(Ljava/lang/String;Ljava/lang/String;)V");
+        if (!mid) {
+            return;
+        }
+
+        JLocalRef<jstring> busname = env->NewStringUTF(oid.uniqueBusName.c_str());
+        if (env->ExceptionCheck()) {
+            QCC_LogError(ER_FAIL, ("JObserver::ObjectLost exception"));
+            return;
+        }
+        JLocalRef<jstring> path = env->NewStringUTF(oid.objectPath.c_str());
+        if (env->ExceptionCheck()) {
+            QCC_LogError(ER_FAIL, ("JObserver::ObjectLost exception"));
+            return;
+        }
+
+        CallObjectMethod(env, jo, mid, jstring(busname), jstring(path));
+    }
+
+    virtual void EnablePendingListeners() {
+        JScopedEnv env;
+
+        jobject jo = env->NewLocalRef(jobserver);
+        if (!jo) {
+            return;
+        }
+
+        JLocalRef<jclass> clazz = env->GetObjectClass(jo);
+        jmethodID mid = env->GetMethodID(clazz, "enablePendingListeners", "()V");
+        if (!mid) {
+            return;
+        }
+
+        CallObjectMethod(env, jo, mid);
+    }
+
+    void TriggerEnablePendingListeners() {
+        bus->GetInternal().GetObserverManager().EnablePendingListeners(this);
+    }
+
+    void Detach() {
+        if (jobserver) {
+            JScopedEnv env;
+            env->DeleteWeakGlobalRef(jobserver);
+            jobserver = NULL;
+        }
+        bus->GetInternal().GetObserverManager().UnregisterObserver(this);
+    }
+};
+
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_Observer_create(JNIEnv* env, jobject thiz, jobject jbus, jobjectArray jintfs) {
+    assert(GetHandle<JObserver*>(thiz) == NULL);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("Observer_create(): Exception"));
+        return;
+    }
+
+    JBusAttachment* bus = GetHandle<JBusAttachment*>(jbus);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("Observer_create(): Exception"));
+        return;
+    } else if (bus == NULL) {
+        QCC_LogError(ER_FAIL, ("Observer_create(): NULL BusAttachment"));
+        return;
+    }
+
+    CoreObserver::InterfaceSet mandatory;
+    int size = env->GetArrayLength(jintfs);
+    for (int i = 0; i < size; ++i) {
+        jstring jstr = (jstring) env->GetObjectArrayElement(jintfs, i);
+        {
+            /* nested scope here is needed to ensure scopedstring is
+             * descoped before the DeleteLocalRef invocation */
+            JString scopedstring(jstr);
+            mandatory.insert(scopedstring.c_str());
+        }
+        env->DeleteLocalRef(jstr);
+    }
+
+    JObserver* obs = new JObserver(bus, thiz, mandatory);
+    if (!obs) {
+        Throw("java/lang/OutOfMemoryError", NULL);
+    }
+    if (env->ExceptionCheck()) {
+        return;
+    }
+
+    SetHandle(thiz, obs);
+}
+
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_Observer_destroy(JNIEnv* env, jobject thiz) {
+    JObserver* obs = GetHandle<JObserver*>(thiz);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("Observer_destroy(): Exception"));
+        return;
+    } else if (obs == NULL) {
+        QCC_LogError(ER_FAIL, ("Observer_destroy(): NULL JObserver"));
+        return;
+    }
+
+    obs->Detach(); // ObserverManager will take care of deletion
+    SetHandle(thiz, NULL);
+}
+
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_Observer_triggerEnablePendingListeners(JNIEnv* env, jobject thiz) {
+    JObserver* obs = GetHandle<JObserver*>(thiz);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("Observer_triggerEnablePendingListeners(): Exception"));
+        return;
+    } else if (obs == NULL) {
+        QCC_LogError(ER_FAIL, ("Observer_triggerEnablePendingListeners(): NULL JObserver"));
+        return;
+    }
+
+    obs->TriggerEnablePendingListeners();
 }
