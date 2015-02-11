@@ -11,7 +11,7 @@
 #    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 #    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-# 
+#
 
 import os
 
@@ -32,7 +32,8 @@ def ConfigureJNI(env):
 
     java_include.append(os.path.join(java_include[0], 'win32'))
     java_include.append(os.path.join(java_include[0], 'linux'))
-        
+    java_include.append(os.path.join(java_include[0], 'darwin'))
+
     env.Append(CPPPATH = java_include)
     env.Append(LIBPATH = java_lib)
 
