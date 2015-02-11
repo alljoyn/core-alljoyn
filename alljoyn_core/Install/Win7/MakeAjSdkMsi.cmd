@@ -3,7 +3,7 @@ Rem @file
 Rem @brief  Make the .cab file for Win7 installation.
 
 Rem ****************************************************************************
-Rem  Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+Rem  Copyright AllSeen Alliance. All rights reserved.
 Rem 
 Rem     Permission to use, copy, modify, and/or distribute this software for any
 Rem     purpose with or without fee is hereby granted, provided that the above
