@@ -174,9 +174,9 @@ class ObjectSecurityTest : public testing::Test, public AuthListener {
 
         clientbus.ClearKeyStore();
         servicebus.ClearKeyStore();
-        status = clientbus.Disconnect(ajn::getConnectArg().c_str());
+        status = clientbus.Disconnect();
         EXPECT_EQ(ER_OK, status);
-        status = servicebus.Disconnect(ajn::getConnectArg().c_str());
+        status = servicebus.Disconnect();
         EXPECT_EQ(ER_OK, status);
         status = clientbus.Stop();
         EXPECT_EQ(ER_OK, status);

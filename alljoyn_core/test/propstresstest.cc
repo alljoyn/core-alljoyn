@@ -602,7 +602,7 @@ int main(int argc, char** argv)
 exit:
     if (client) {
         bus.CancelFindAdvertisedName(serviceName.c_str());
-        bus.Disconnect(connSpec.c_str());
+        bus.Disconnect();
     } else {
         bus.CancelAdvertiseName(serviceName.c_str(), TRANSPORT_ANY);
         bus.ReleaseName(serviceName.c_str());

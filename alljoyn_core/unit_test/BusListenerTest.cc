@@ -170,7 +170,7 @@ TEST_F(BusListenerTest, bus_stopping_disconnected) {
     EXPECT_EQ(ER_OK, status);
     status = bus.Connect(ajn::getConnectArg().c_str());
 
-    bus.Disconnect(ajn::getConnectArg().c_str());
+    bus.Disconnect();
     for (size_t i = 0; i < 200; ++i) {
         if (bus_disconnected_flag) {
             break;
