@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2015, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -1720,6 +1720,23 @@ QStatus KeyExchangerCB::SendKeyAuthentication(MsgArg* variant, Message* replyMsg
     return remoteObj.MethodCall(*keyAuth, &arg, 1, *replyMsg, timeout);
 }
 
+class SortableAuthSuite {
+  public:
+    SortableAuthSuite(uint8_t weight, uint32_t suite) : weight(weight), suite(suite)
+    {
+    }
+
+    bool operator <(const SortableAuthSuite& other) const
+    {
+        /* sort with highest weight first */
+        return weight > other.weight;
+    }
+
+    uint8_t weight;
+    uint32_t suite;
+
+};
+
 /**
  * Setup for peer-to-peer authentication. The authentication mechanisms listed can only be used
  * if they are already registered with bus. The authentication mechanisms names are separated by
@@ -1744,9 +1761,10 @@ void AllJoynPeerObj::SetupPeerAuthentication(const qcc::String& authMechanisms, 
     qcc::String mech;
     supportedAuthSuitesCount = 0;
 
+    /* parse and load each auth mechanism into a vector with assigned weight */
     bool done = false;
-    int count = 0;
-    /* count the entries first */
+    remainder = authMechanisms;
+    std::vector<SortableAuthSuite> suiteList;
     while (!done) {
         pos = remainder.find_first_of(" ");
         if (pos == qcc::String::npos) {
@@ -1757,67 +1775,41 @@ void AllJoynPeerObj::SetupPeerAuthentication(const qcc::String& authMechanisms, 
         }
         remainder = remainder.substr(pos + 1);
         if (mech == "ANONYMOUS") {
-            count++;
+            suiteList.push_back(SortableAuthSuite(1, AUTH_SUITE_ANONYMOUS));
         } else if (mech == "EXTERNAL") {
-            count++;
+            suiteList.push_back(SortableAuthSuite(2, AUTH_SUITE_EXTERNAL));
         } else if (mech == "ALLJOYN_PIN_KEYX") {
-            count++;
-        } else if (mech == "ALLJOYN_SRP_KEYX") {
-            count++;
-        } else if (mech == "ALLJOYN_SRP_LOGON") {
-            count++;
-        } else if (mech == "ALLJOYN_RSA_KEYX") {
-            count++;
+            suiteList.push_back(SortableAuthSuite(3, AUTH_SUITE_PIN_KEYX));
         } else if (mech == "ALLJOYN_ECDHE_NULL") {
-            count++;
+            suiteList.push_back(SortableAuthSuite(4, AUTH_SUITE_ECDHE_NULL));
+        } else if (mech == "ALLJOYN_SRP_KEYX") {
+            suiteList.push_back(SortableAuthSuite(5, AUTH_SUITE_SRP_KEYX));
+        } else if (mech == "ALLJOYN_SRP_LOGON") {
+            suiteList.push_back(SortableAuthSuite(6, AUTH_SUITE_SRP_LOGON));
         } else if (mech == "ALLJOYN_ECDHE_PSK") {
-            count++;
-        } else if (mech == "ALLJOYN_ECDHE_ECDSA") {
-            count++;
+            suiteList.push_back(SortableAuthSuite(7, AUTH_SUITE_ECDHE_PSK));
+        } else if (mech == "ALLJOYN_RSA_KEYX") {
+            suiteList.push_back(SortableAuthSuite(8, AUTH_SUITE_RSA_KEYX));
         } else if (mech == "GSSAPI") {
-            count++;
+            suiteList.push_back(SortableAuthSuite(9, AUTH_SUITE_GSSAPI));
+        } else if (mech == "ALLJOYN_ECDHE_ECDSA") {
+            suiteList.push_back(SortableAuthSuite(10, AUTH_SUITE_ECDHE_ECDSA));
         }
     }
-    supportedAuthSuitesCount = count;
-    if (count == 0) {
+    if (suiteList.size() == 0) {
         return;
     }
-    supportedAuthSuites = new uint32_t[count];
 
-    done = false;
-    int idx = 0;
-    remainder = authMechanisms;
-    while (!done) {
-        pos = remainder.find_first_of(" ");
-        if (pos == qcc::String::npos) {
-            mech = remainder;
-            done = true;
-        } else {
-            mech = remainder.substr(0, pos);
-        }
-        remainder = remainder.substr(pos + 1);
-        if (mech == "ANONYMOUS") {
-            supportedAuthSuites[idx++] = AUTH_SUITE_ANONYMOUS;
-        } else if (mech == "EXTERNAL") {
-            supportedAuthSuites[idx++] = AUTH_SUITE_EXTERNAL;
-        } else if (mech == "ALLJOYN_PIN_KEYX") {
-            supportedAuthSuites[idx++] = AUTH_SUITE_PIN_KEYX;
-        } else if (mech == "ALLJOYN_SRP_KEYX") {
-            supportedAuthSuites[idx++] = AUTH_SUITE_SRP_KEYX;
-        } else if (mech == "ALLJOYN_SRP_LOGON") {
-            supportedAuthSuites[idx++] = AUTH_SUITE_SRP_LOGON;
-        } else if (mech == "ALLJOYN_RSA_KEYX") {
-            supportedAuthSuites[idx++] = AUTH_SUITE_RSA_KEYX;
-        } else if (mech == "ALLJOYN_ECDHE_NULL") {
-            supportedAuthSuites[idx++] = AUTH_SUITE_ECDHE_NULL;
-        } else if (mech == "ALLJOYN_ECDHE_PSK") {
-            supportedAuthSuites[idx++] = AUTH_SUITE_ECDHE_PSK;
-        } else if (mech == "ALLJOYN_ECDHE_ECDSA") {
-            supportedAuthSuites[idx++] = AUTH_SUITE_ECDHE_ECDSA;
-        } else if (mech == "GSSAPI") {
-            supportedAuthSuites[idx++] = AUTH_SUITE_GSSAPI;
-        }
+    /* need to have the vector sorted in highest weight first */
+    std::sort(suiteList.begin(), suiteList.end());
+
+    supportedAuthSuitesCount = suiteList.size();
+    supportedAuthSuites = new uint32_t[supportedAuthSuitesCount];
+    size_t cnt = 0;
+    for (std::vector<SortableAuthSuite>::iterator it = suiteList.begin(); it != suiteList.end(); it++) {
+        supportedAuthSuites[cnt++] = (*it).suite;
     }
+    suiteList.clear();
     /* reload the object to reflect possible keystore changes */
     permissionMgmtObj.Load();
     peerAuthListener.SetPermissionMgmtObj(&permissionMgmtObj);

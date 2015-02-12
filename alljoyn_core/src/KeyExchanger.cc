@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -1350,12 +1350,15 @@ QStatus KeyExchangerECDHE_ECDSA::GenVerifierSigInfoArg(MsgArg& msgArg, bool upda
     }
 
     MsgArg* certArgs = NULL;
+    size_t certArgsCount = 0;
+    IdentityCertificate cert;
 
     uint8_t encoding = Certificate::ENCODING_X509_DER;
     if (updateHash) {
         hashUtil.Update(&encoding, 1);
     }
     if (certChainLen > 0) {
+        certArgsCount = certChainLen;
         certArgs = new MsgArg[certChainLen];
         /* add the local cert chain to the list of certs to send */
         for (size_t cnt = 0; cnt < certChainLen; cnt++) {
@@ -1363,6 +1366,26 @@ QStatus KeyExchangerECDHE_ECDSA::GenVerifierSigInfoArg(MsgArg& msgArg, bool upda
             if (updateHash) {
                 hashUtil.Update(certChain[cnt].GetEncoded(), certChain[cnt].GetEncodedLen());
             }
+        }
+    } else {
+        /* generate a self sign cert to allow for the verification of the hash */
+        certArgsCount = 1;
+        certArgs = new MsgArg[1];
+        cert.SetSerial("1");
+        CredentialAccessor ca(bus);
+        GUID128 issuer(0);
+        ca.GetGuid(issuer);
+        cert.SetIssuer(issuer);
+        cert.SetSubject(issuer);
+        cert.SetSubjectPublicKey(&issuerPublicKey);
+        Certificate::ValidPeriod validity;
+        validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+        validity.validTo = validity.validFrom + 60;
+        cert.SetValidity(&validity);
+        cert.Sign(&issuerPrivateKey);
+        certArgs[0].Set("(ay)", cert.GetEncodedLen(), cert.GetEncoded());
+        if (updateHash) {
+            hashUtil.Update(cert.GetEncoded(), cert.GetEncodedLen());
         }
     }
     /* copy the message args */
@@ -1373,7 +1396,7 @@ QStatus KeyExchangerECDHE_ECDSA::GenVerifierSigInfoArg(MsgArg& msgArg, bool upda
                  new MsgArg("(yv)", sigInfo.GetAlgorithm(),
                             new MsgArg("(ayay)", ECC_COORDINATE_SZ, sigInfo.GetRCoord(), ECC_COORDINATE_SZ, sigInfo.GetSCoord())),
                  encoding,
-                 new MsgArg("a(ay)", certChainLen, certArgs));
+                 new MsgArg("a(ay)", certArgsCount, certArgs));
     localArg.SetOwnershipFlags(MsgArg::OwnsArgs, true);
     msgArg = localArg;
     return ER_OK;

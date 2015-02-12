@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -80,6 +80,8 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
                 qcc::String psk("123456");
                 creds.SetPassword(psk);
                 creds.SetExpiration(100);  /* set the master secret expiry time to 100 seconds */
+                return true;
+            } else if (strcmp(authMechanism, "ALLJOYN_ECDHE_ECDSA") == 0) {
                 return true;
             }
             return false;

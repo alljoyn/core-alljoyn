@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -1103,7 +1103,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         if (usePSK) {
             EnableSecurity("ALLJOYN_ECDHE_PSK");
         } else {
-            EnableSecurity("ALLJOYN_ECDHE_NULL");
+            EnableSecurity("ALLJOYN_ECDHE_ECDSA");
         }
         ClaimAdmin();
         if (usePSK) {
@@ -1116,7 +1116,11 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         if (claimRemoteControl) {
             ConsumerClaimsRemoteControl();
         }
-        EnableSecurity("ALLJOYN_ECDHE_ECDSA");
+        if (usePSK) {
+            EnableSecurity("ALLJOYN_ECDHE_PSK ALLJOYN_ECDHE_ECDSA");
+        } else {
+            EnableSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA");
+        }
     }
 
     void Claims(bool usePSK)
