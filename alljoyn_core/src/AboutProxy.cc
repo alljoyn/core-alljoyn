@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -28,8 +28,7 @@
 namespace ajn {
 
 AboutProxy::AboutProxy(BusAttachment& bus, const char* busName, SessionId sessionId) :
-    ProxyBusObject(bus, busName, org::alljoyn::About::ObjectPath, sessionId),
-    m_BusAttachment(&bus)
+    ProxyBusObject(bus, busName, org::alljoyn::About::ObjectPath, sessionId)
 {
     QCC_DbgTrace(("AboutProxy::%s", __FUNCTION__));
     const InterfaceDescription* p_InterfaceDescription = bus.GetInterface(org::alljoyn::About::InterfaceName);
@@ -46,7 +45,7 @@ QStatus AboutProxy::GetObjectDescription(MsgArg& objectDesc)
     QCC_DbgTrace(("AboutProxy::%s", __FUNCTION__));
     QStatus status = ER_OK;
 
-    Message replyMsg(*m_BusAttachment);
+    Message replyMsg(*bus);
     status = MethodCall(org::alljoyn::About::InterfaceName, "GetObjectDescription", NULL, 0, replyMsg);
     if (ER_OK != status) {
         if (replyMsg->GetErrorName() != NULL) {
@@ -79,7 +78,7 @@ QStatus AboutProxy::GetAboutData(const char* languageTag, MsgArg& data)
 {
     QCC_DbgTrace(("AboutClient::%s", __FUNCTION__));
     QStatus status = ER_OK;
-    Message replyMsg(*m_BusAttachment);
+    Message replyMsg(*bus);
     MsgArg args[1];
     status = args[0].Set("s", languageTag);
     if (ER_OK != status) {

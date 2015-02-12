@@ -511,125 +511,6 @@ QStatus PermissionMgmtTestHelper::ReadClaimResponse(Message& msg, ECCPublicKey* 
     return RetrievePublicKeyFromMsgArg((MsgArg &) * msg->GetArg(0), pubKey);
 }
 
-QStatus PermissionMgmtTestHelper::Claim(BusAttachment& bus, ProxyBusObject& remoteObj, qcc::GUID128& issuerGUID, const ECCPublicKey* pubKey, ECCPublicKey* claimedPubKey, qcc::String& identityCertDER, bool setKeyId)
-{
-    QStatus status;
-    const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::INTERFACE_NAME);
-    remoteObj.AddInterface(*itf);
-    Message reply(bus);
-    MsgArg inputs[2];
-
-    KeyInfoNISTP256 keyInfo;
-    if (setKeyId) {
-        keyInfo.SetKeyId(issuerGUID.GetBytes(), GUID128::SIZE);
-    }
-    keyInfo.SetPublicKey(pubKey);
-    KeyInfoHelper::KeyInfoNISTP256ToMsgArg(keyInfo, inputs[0]);
-    inputs[1].Set("(yay)", Certificate::ENCODING_X509_DER, identityCertDER.size(), identityCertDER.data());
-    uint32_t timeout = 10000; /* Claim is a bit show */
-
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::INTERFACE_NAME, "Claim", inputs, 2, reply, timeout);
-
-    if (ER_OK == status) {
-        status = ReadClaimResponse(reply, claimedPubKey);
-        if (ER_OK != status) {
-            return status;
-        }
-    } else if (IsPermissionDeniedError(status, reply)) {
-        status = ER_PERMISSION_DENIED;
-    }
-    return status;
-}
-
-QStatus PermissionMgmtTestHelper::Claim(BusAttachment& bus, ProxyBusObject& remoteObj, qcc::GUID128& issuerGUID, const ECCPublicKey* pubKey, ECCPublicKey* claimedPubKey, qcc::String& identityCertDER)
-{
-    return Claim(bus, remoteObj, issuerGUID, pubKey, claimedPubKey, identityCertDER, true);
-}
-
-QStatus PermissionMgmtTestHelper::GetManifest(BusAttachment& bus, ProxyBusObject& remoteObj, PermissionPolicy::Rule** retRules, size_t* count)
-{
-    QStatus status;
-    const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::INTERFACE_NAME);
-    remoteObj.AddInterface(*itf);
-    Message reply(bus);
-
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::INTERFACE_NAME, "GetManifest", NULL, 0, reply, 5000);
-
-    if (ER_OK != status) {
-        if (IsPermissionDeniedError(status, reply)) {
-            status = ER_PERMISSION_DENIED;
-        }
-        return status;
-    }
-    uint8_t type;
-    MsgArg* variant;
-    status = reply->GetArg(0)->Get("(yv)", &type, &variant);
-    if (ER_OK != status) {
-        return status;
-    }
-    return PermissionPolicy::ParseRules(*variant, retRules, count);
-}
-
-QStatus PermissionMgmtTestHelper::InstallPolicy(BusAttachment& bus, ProxyBusObject& remoteObj, PermissionPolicy& policy)
-{
-    QStatus status;
-    const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::INTERFACE_NAME);
-    remoteObj.AddInterface(*itf);
-    Message reply(bus);
-    MsgArg policyArg;
-
-    status = policy.Export(policyArg);
-    if (ER_OK != status) {
-        return status;
-    }
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::INTERFACE_NAME, "InstallPolicy", &policyArg, 1, reply, 5000);
-
-    if (ER_OK != status) {
-        if (IsPermissionDeniedError(status, reply)) {
-            status = ER_PERMISSION_DENIED;
-        }
-    }
-    return status;
-}
-
-QStatus PermissionMgmtTestHelper::GetPolicy(BusAttachment& bus, ProxyBusObject& remoteObj, PermissionPolicy& policy)
-{
-    QStatus status;
-    const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::INTERFACE_NAME);
-    remoteObj.AddInterface(*itf);
-    Message reply(bus);
-
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::INTERFACE_NAME, "GetPolicy", NULL, 0, reply, 5000);
-
-    if (ER_OK != status) {
-        if (IsPermissionDeniedError(status, reply)) {
-            status = ER_PERMISSION_DENIED;
-        }
-        return status;
-    }
-    uint8_t version;
-    MsgArg* variant;
-    reply->GetArg(0)->Get("(yv)", &version, &variant);
-    return policy.Import(version, *variant);
-}
-
-QStatus PermissionMgmtTestHelper::RemovePolicy(BusAttachment& bus, ProxyBusObject& remoteObj)
-{
-    QStatus status;
-    const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::INTERFACE_NAME);
-    remoteObj.AddInterface(*itf);
-    Message reply(bus);
-
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::INTERFACE_NAME, "RemovePolicy", NULL, 0, reply, 5000);
-
-    if (ER_OK != status) {
-        if (IsPermissionDeniedError(status, reply)) {
-            status = ER_PERMISSION_DENIED;
-        }
-    }
-    return status;
-}
-
 QStatus PermissionMgmtTestHelper::RetrieveDSAPrivateKeyFromKeyStore(BusAttachment& bus, ECCPrivateKey* privateKey)
 {
     CredentialAccessor ca(bus);
@@ -670,70 +551,10 @@ QStatus PermissionMgmtTestHelper::LoadCertificateBytes(Message& msg, Certificate
     return status;
 }
 
-static QStatus InvokeInstallMembership(BusAttachment& bus, ProxyBusObject& remoteObj, qcc::String& der)
+QStatus PermissionMgmtTestHelper::InstallMembership(const String& serial, BusAttachment& bus, const qcc::String& remoteObjName, BusAttachment& signingBus, const qcc::GUID128& subjectGUID, const ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, PermissionPolicy* membershipAuthData)
 {
-    const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::INTERFACE_NAME);
-    remoteObj.AddInterface(*itf);
-    Message reply(bus);
-    MsgArg certArgs[1];
-    certArgs[0].Set("(yay)", Certificate::ENCODING_X509_DER, der.length(), der.c_str());
-    MsgArg arg("a(yay)", 1, certArgs);
-
-    QStatus status = remoteObj.MethodCall(BasePermissionMgmtTest::INTERFACE_NAME, "InstallMembership", &arg, 1, reply, 5000);
-
-    if (ER_OK != status) {
-        if (PermissionMgmtTestHelper::IsPermissionDeniedError(status, reply)) {
-            status = ER_PERMISSION_DENIED;
-        }
-    }
-    return status;
-}
-
-static QStatus InvokeInstallMembership(BusAttachment& bus, ProxyBusObject& remoteObj, qcc::String* derArray, size_t derCount)
-{
-    const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::INTERFACE_NAME);
-    remoteObj.AddInterface(*itf);
-    Message reply(bus);
-    MsgArg* certArgs = new MsgArg[derCount];
-    for (size_t cnt = 0; cnt < derCount; cnt++) {
-        certArgs[cnt].Set("(yay)", Certificate::ENCODING_X509_DER, derArray[cnt].length(), derArray[cnt].c_str());
-    }
-    MsgArg arg("a(yay)", derCount, certArgs);
-
-    QStatus status = remoteObj.MethodCall(BasePermissionMgmtTest::INTERFACE_NAME, "InstallMembership", &arg, 1, reply, 5000);
-    delete [] certArgs;
-    if (ER_OK != status) {
-        if (PermissionMgmtTestHelper::IsPermissionDeniedError(status, reply)) {
-            status = ER_PERMISSION_DENIED;
-        }
-    }
-    return status;
-}
-
-static QStatus InvokeInstallMembershipAuthData(BusAttachment& bus, ProxyBusObject& remoteObj, const String& serial, const GUID128& issuer, PermissionPolicy& authData)
-{
-    const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::INTERFACE_NAME);
-    remoteObj.AddInterface(*itf);
-    Message reply(bus);
-    MsgArg args[3];
-    args[0].Set("s", serial.c_str());
-    args[1].Set("ay", GUID128::SIZE, issuer.GetBytes());
-    authData.Export(args[2]);
-    QStatus status = remoteObj.MethodCall(BasePermissionMgmtTest::INTERFACE_NAME, "InstallMembershipAuthData", args, ArraySize(args), reply, 5000);
-    if (ER_OK != status) {
-        if (PermissionMgmtTestHelper::IsPermissionDeniedError(status, reply)) {
-            status = ER_PERMISSION_DENIED;
-        }
-    }
-    return status;
-}
-
-QStatus PermissionMgmtTestHelper::InstallMembership(const String& serial, BusAttachment& bus, ProxyBusObject& remoteObj, BusAttachment& signingBus, const qcc::GUID128& subjectGUID, const ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, PermissionPolicy* membershipAuthData)
-{
+    PermissionMgmtProxy pmProxy(bus, remoteObjName.c_str());
     QStatus status;
-    const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::INTERFACE_NAME);
-    remoteObj.AddInterface(*itf);
-    Message reply(bus);
 
     CredentialAccessor ca(bus);
     qcc::GUID128 localGUID;
@@ -746,28 +567,38 @@ QStatus PermissionMgmtTestHelper::InstallMembership(const String& serial, BusAtt
     DefaultPolicyMarshaller marshaller(tmpMsg);
     membershipAuthData->Digest(marshaller, digest, Certificate::SHA256_DIGEST_SIZE);
 
-    qcc::String der;
-    status = CreateMembershipCert(serial, digest, localGUID, signingBus, subjectGUID, subjectPubKey, guild, der);
+    qcc::String der[1];
+    status = CreateMembershipCert(serial, digest, localGUID, signingBus, subjectGUID, subjectPubKey, guild, der[0]);
     if (status != ER_OK) {
         return status;
     }
-    status = InvokeInstallMembership(bus, remoteObj, der);
+
+    MsgArg certArgs[1];
+    for (size_t cnt = 0; cnt < 1; cnt++) {
+        certArgs[cnt].Set("(yay)", Certificate::ENCODING_X509_DER, der[cnt].length(), der[cnt].c_str());
+    }
+    MsgArg arg("a(yay)", 1, certArgs);
+    status = pmProxy.InstallMembership(arg);
     if (ER_OK != status) {
         return status;
     }
 
     /* installing the auth data */
-    return InvokeInstallMembershipAuthData(bus, remoteObj, serial, localGUID, *membershipAuthData);
+    return pmProxy.InstallMembershipAuthData(serial.c_str(), localGUID, *membershipAuthData);
 }
 
-QStatus PermissionMgmtTestHelper::InstallMembershipChain(BusAttachment& topBus, BusAttachment& secondBus, const String& serial0, const String& serial1, ProxyBusObject& remoteObj, const qcc::GUID128& secondGUID, const ECCPublicKey* secondPubKey, const qcc::GUID128& targetGUID, const ECCPublicKey* targetPubKey, const qcc::GUID128& guild, PermissionPolicy** authDataArray)
+QStatus PermissionMgmtTestHelper::InstallMembershipChain(BusAttachment& topBus, BusAttachment& secondBus, const String& serial0, const String& serial1, const qcc::String& remoteObjName, const qcc::GUID128& secondGUID, const ECCPublicKey* secondPubKey, const qcc::GUID128& targetGUID, const ECCPublicKey* targetPubKey, const qcc::GUID128& guild, PermissionPolicy** authDataArray)
 {
+    PermissionMgmtProxy pmTopProxy(topBus, remoteObjName.c_str());
+    PermissionMgmtProxy pmSecondProxy(secondBus, remoteObjName.c_str());
+
     CredentialAccessor ca(topBus);
     qcc::GUID128 topIssuerGUID;
     QStatus status = ca.GetGuid(topIssuerGUID);
     if (status != ER_OK) {
         return status;
     }
+
     /* create the second cert first -- with delegate on  */
     uint8_t digest[Certificate::SHA256_DIGEST_SIZE];
     Message tmpMsg(topBus);
@@ -787,133 +618,28 @@ QStatus PermissionMgmtTestHelper::InstallMembershipChain(BusAttachment& topBus, 
     }
 
     /* install cert chain */
-    status = InvokeInstallMembership(secondBus, remoteObj, derArray, 2);
+    MsgArg certArgs[2];
+    for (size_t cnt = 0; cnt < 2; cnt++) {
+        certArgs[cnt].Set("(yay)", Certificate::ENCODING_X509_DER, derArray[cnt].length(), derArray[cnt].c_str());
+    }
+    MsgArg arg("a(yay)", 2, certArgs);
+    status = pmSecondProxy.InstallMembership(arg);
     if (ER_OK != status) {
         return status;
     }
 
     /* installing the auth data for leaf cert*/
-    status = InvokeInstallMembershipAuthData(secondBus, remoteObj, serial0, secondGUID, *authDataArray[0]);
+    status = pmSecondProxy.InstallMembershipAuthData(serial0.c_str(), secondGUID, *authDataArray[0]);
     if (ER_OK != status) {
         return status;
     }
 
     /* installing the auth data for second cert */
-    status = InvokeInstallMembershipAuthData(secondBus, remoteObj, serial1, topIssuerGUID, *authDataArray[1]);
+    status = pmSecondProxy.InstallMembershipAuthData(serial1.c_str(), topIssuerGUID, *authDataArray[1]);
     if (ER_OK != status) {
         return status;
     }
 
-    return status;
-}
-
-QStatus PermissionMgmtTestHelper::RemoveMembership(BusAttachment& bus, ProxyBusObject& remoteObj, const qcc::String serialNum, const qcc::GUID128& issuer)
-{
-    QStatus status;
-    const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::INTERFACE_NAME);
-    remoteObj.AddInterface(*itf);
-    Message reply(bus);
-
-    MsgArg inputs[2];
-    inputs[0].Set("s", serialNum.c_str());
-    inputs[1].Set("ay", GUID128::SIZE, issuer.GetBytes());
-
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::INTERFACE_NAME, "RemoveMembership", inputs, 2, reply, 5000);
-
-    if (ER_OK != status) {
-        if (IsPermissionDeniedError(status, reply)) {
-            status = ER_PERMISSION_DENIED;
-        }
-    }
-    return status;
-}
-
-QStatus PermissionMgmtTestHelper::InstallIdentity(BusAttachment& bus, ProxyBusObject& remoteObj, qcc::String& der)
-{
-    QStatus status;
-    const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::INTERFACE_NAME);
-    remoteObj.AddInterface(*itf);
-    Message reply(bus);
-    MsgArg arg("(yay)", Certificate::ENCODING_X509_DER, der.size(), der.data());
-
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::INTERFACE_NAME, "InstallIdentity", &arg, 1, reply, 5000);
-
-    if (ER_OK != status) {
-        if (IsPermissionDeniedError(status, reply)) {
-            status = ER_PERMISSION_DENIED;
-        }
-    }
-    return status;
-}
-
-QStatus PermissionMgmtTestHelper::GetPeerPublicKey(BusAttachment& bus, ProxyBusObject& remoteObj, ECCPublicKey* pubKey)
-{
-    QStatus status;
-    const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::INTERFACE_NAME);
-    remoteObj.AddInterface(*itf);
-    Message reply(bus);
-
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::INTERFACE_NAME, "GetPublicKey", NULL, 0, reply, 5000);
-
-    if (ER_OK != status) {
-        if (IsPermissionDeniedError(status, reply)) {
-            status = ER_PERMISSION_DENIED;
-        }
-        return status;
-    }
-    return RetrievePublicKeyFromMsgArg((MsgArg &) * reply->GetArg(0), pubKey);
-}
-
-QStatus PermissionMgmtTestHelper::GetIdentity(BusAttachment& bus, ProxyBusObject& remoteObj, IdentityCertificate& cert)
-{
-    QStatus status;
-    const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::INTERFACE_NAME);
-    remoteObj.AddInterface(*itf);
-    Message reply(bus);
-
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::INTERFACE_NAME, "GetIdentity", NULL, 0, reply, 5000);
-
-    if (ER_OK != status) {
-        if (IsPermissionDeniedError(status, reply)) {
-            status = ER_PERMISSION_DENIED;
-        }
-        return status;
-    }
-    return LoadCertificateBytes(reply, cert);
-}
-
-QStatus PermissionMgmtTestHelper::Reset(BusAttachment& bus, ProxyBusObject& remoteObj)
-{
-    QStatus status;
-    const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::INTERFACE_NAME);
-    remoteObj.AddInterface(*itf);
-    Message reply(bus);
-
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::INTERFACE_NAME, "Reset", NULL, 0, reply, 5000);
-
-    if (ER_OK != status) {
-        if (IsPermissionDeniedError(status, reply)) {
-            status = ER_PERMISSION_DENIED;
-        }
-    }
-    return status;
-}
-
-QStatus PermissionMgmtTestHelper::InstallGuildEquivalence(BusAttachment& bus, ProxyBusObject& remoteObj, const char* pem)
-{
-    QStatus status;
-    const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::INTERFACE_NAME);
-    remoteObj.AddInterface(*itf);
-    Message reply(bus);
-    MsgArg arg("(yay)", Certificate::ENCODING_X509_DER_PEM, strlen(pem), pem);
-
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::INTERFACE_NAME, "InstallGuildEquivalence", &arg, 1, reply, 5000);
-
-    if (ER_OK != status) {
-        if (IsPermissionDeniedError(status, reply)) {
-            status = ER_PERMISSION_DENIED;
-        }
-    }
     return status;
 }
 
@@ -974,19 +700,6 @@ QStatus PermissionMgmtTestHelper::GetTVVolume(BusAttachment& bus, ProxyBusObject
     status = remoteObj.GetProperty(BasePermissionMgmtTest::TV_IFC_NAME, "Volume", val);
     if (ER_OK == status) {
         val.Get("u", &volume);
-    }
-    return status;
-}
-
-QStatus PermissionMgmtTestHelper::GetPermissionMgmtVersion(BusAttachment& bus, ProxyBusObject& remoteObj, uint16_t& version)
-{
-    QStatus status;
-    const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::INTERFACE_NAME);
-    remoteObj.AddInterface(*itf);
-    MsgArg val;
-    status = remoteObj.GetProperty(BasePermissionMgmtTest::INTERFACE_NAME, "Version", val);
-    if (ER_OK == status) {
-        val.Get("q", &version);
     }
     return status;
 }
@@ -1125,57 +838,4 @@ QStatus BasePermissionMgmtTest::Set(const char* ifcName, const char* propName, M
         return ER_OK;
     }
     return ER_BUS_NO_SUCH_PROPERTY;
-}
-
-QStatus PermissionMgmtTestHelper::InstallCredential(const PermissionMgmtObj::TrustAnchorType taType, BusAttachment& bus, ProxyBusObject& remoteObj, const qcc::GUID128& guid, const ECCPublicKey* pubKey)
-{
-    QStatus status;
-    const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::INTERFACE_NAME);
-    remoteObj.AddInterface(*itf);
-    Message reply(bus);
-    MsgArg keyInfoArg;
-    KeyInfoNISTP256 keyInfo;
-    keyInfo.SetKeyId(guid.GetBytes(), GUID128::SIZE);
-    keyInfo.SetPublicKey(pubKey);
-    KeyInfoHelper::KeyInfoNISTP256ToMsgArg(keyInfo, keyInfoArg);
-    MsgArg credentialArg("(yv)", taType, &keyInfoArg);
-
-    MsgArg args[2];
-    args[0].Set("y", 0);
-    args[1].Set("v", &credentialArg);
-
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::INTERFACE_NAME, "InstallCredential", args, 2, reply, 5000);
-
-    if (ER_OK != status) {
-        if (IsPermissionDeniedError(status, reply)) {
-            status = ER_PERMISSION_DENIED;
-        }
-    }
-    return status;
-}
-
-QStatus PermissionMgmtTestHelper::RemoveCredential(const PermissionMgmtObj::TrustAnchorType taType, BusAttachment& bus, ProxyBusObject& remoteObj, const qcc::GUID128& guid, const ECCPublicKey* pubKey)
-{
-    QStatus status;
-    const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::INTERFACE_NAME);
-    remoteObj.AddInterface(*itf);
-    Message reply(bus);
-    MsgArg keyInfoArg;
-    KeyInfoNISTP256 keyInfo;
-    keyInfo.SetKeyId(guid.GetBytes(), GUID128::SIZE);
-    keyInfo.SetPublicKey(pubKey);
-    KeyInfoHelper::KeyInfoNISTP256ToMsgArg(keyInfo, keyInfoArg);
-    MsgArg credentialArg("(yv)", taType, &keyInfoArg);
-
-    MsgArg args[2];
-    args[0].Set("y", 0);
-    args[1].Set("v", &credentialArg);
-
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::INTERFACE_NAME, "RemoveCredential", args, 2, reply, 5000);
-    if (ER_OK != status) {
-        if (IsPermissionDeniedError(status, reply)) {
-            status = ER_PERMISSION_DENIED;
-        }
-    }
-    return status;
 }
