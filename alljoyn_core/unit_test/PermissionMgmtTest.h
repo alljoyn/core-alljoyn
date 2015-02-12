@@ -36,6 +36,7 @@
 #include <qcc/CryptoECC.h>
 #include <qcc/CertificateECC.h>
 #include <qcc/Log.h>
+#include <alljoyn/PermissionMgmtProxy.h>
 #include <alljoyn/PermissionPolicy.h>
 #include "KeyStore.h"
 #include "PermissionMgmtObj.h"
@@ -223,29 +224,18 @@ class PermissionMgmtTestHelper {
     static QStatus CreateMembershipCert(const qcc::String& serial, const uint8_t* authDataHash, const qcc::GUID128& issuer, BusAttachment& signingBus, const qcc::GUID128& subject, const qcc::ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, qcc::String& der);
     static bool IsPermissionDeniedError(QStatus status, Message& msg);
     static QStatus ReadClaimResponse(Message& msg, qcc::ECCPublicKey* pubKey);
-    static QStatus Claim(BusAttachment& bus, ProxyBusObject& remoteObj, qcc::GUID128& issuerGUID, const qcc::ECCPublicKey* pubKey, qcc::ECCPublicKey* claimedPubKey, qcc::String& identityCertDER, bool setKeyId);
-    static QStatus Claim(BusAttachment& bus, ProxyBusObject& remoteObj, qcc::GUID128& issuerGUID, const qcc::ECCPublicKey* pubKey, qcc::ECCPublicKey* claimedPubKey, qcc::String& identityCertDER);
     static QStatus GenerateManifest(PermissionPolicy::Rule** retRules, size_t* count);
-    static QStatus GetManifest(BusAttachment& bus, ProxyBusObject& remoteObj, PermissionPolicy::Rule** retRules, size_t* count);
-    static QStatus InstallPolicy(BusAttachment& bus, ProxyBusObject& remoteObj, PermissionPolicy& policy);
-    static QStatus GetPolicy(BusAttachment& bus, ProxyBusObject& remoteObj, PermissionPolicy& policy);
-    static QStatus RemovePolicy(BusAttachment& bus, ProxyBusObject& remoteObj);
     static QStatus RetrieveDSAPrivateKeyFromKeyStore(BusAttachment& bus, qcc::ECCPrivateKey* privateKey);
 
     static QStatus RetrieveDSAPublicKeyFromKeyStore(BusAttachment& bus, qcc::ECCPublicKey* publicKey);
 
     static QStatus RetrieveDSAKeys(BusAttachment& bus, qcc::ECCPrivateKey& privateKey, qcc::ECCPublicKey& publicKey);
     static QStatus LoadCertificateBytes(Message& msg, qcc::CertificateX509& cert);
-    static QStatus InstallMembership(const qcc::String& serial, BusAttachment& bus, ProxyBusObject& remoteObj, BusAttachment& signingBus, const qcc::GUID128& subjectGUID, const qcc::ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, PermissionPolicy* membershipAuthData);
-    static QStatus InstallMembershipChain(const qcc::String& serial, BusAttachment& bus, ProxyBusObject& remoteObj, BusAttachment& signingBus, BusAttachment& subjectBus, const qcc::GUID128& subjectGUID, const qcc::ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, PermissionPolicy** authDataArray);
+    static QStatus InstallMembership(const qcc::String& serial, BusAttachment& bus, const qcc::String& remoteObjName, BusAttachment& signingBus, const qcc::GUID128& subjectGUID, const qcc::ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, PermissionPolicy* membershipAuthData);
+    static QStatus InstallMembershipChain(const qcc::String& serial, BusAttachment& bus, const qcc::String& remoteObjName, BusAttachment& signingBus, BusAttachment& subjectBus, const qcc::GUID128& subjectGUID, const qcc::ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, PermissionPolicy** authDataArray);
 
-    static QStatus RemoveMembership(BusAttachment& bus, ProxyBusObject& remoteObj, const qcc::String serialNum, const qcc::GUID128& issuer);
-    static QStatus InstallIdentity(BusAttachment& bus, ProxyBusObject& remoteObj, qcc::String& der);
     static QStatus RetrievePublicKeyFromMsgArg(MsgArg& arg, qcc::ECCPublicKey* pubKey);
     static QStatus GetPeerPublicKey(BusAttachment& bus, ProxyBusObject& remoteObj, qcc::ECCPublicKey* pubKey);
-    static QStatus GetIdentity(BusAttachment& bus, ProxyBusObject& remoteObj, qcc::IdentityCertificate& cert);
-    static QStatus Reset(BusAttachment& bus, ProxyBusObject& remoteObj);
-    static QStatus InstallGuildEquivalence(BusAttachment& bus, ProxyBusObject& remoteObj, const char* pem);
     static QStatus ExcerciseOn(BusAttachment& bus, ProxyBusObject& remoteObj);
     static QStatus ExcerciseOff(BusAttachment& bus, ProxyBusObject& remoteObj);
     static QStatus ExcerciseTVUp(BusAttachment& bus, ProxyBusObject& remoteObj);
@@ -256,12 +246,9 @@ class PermissionMgmtTestHelper {
     static QStatus JoinPeerSession(BusAttachment& initiator, BusAttachment& responder, SessionId& sessionId);
     static QStatus GetGUID(BusAttachment& bus, qcc::GUID128& guid);
     static QStatus GetPeerGUID(BusAttachment& bus, qcc::String& peerName, qcc::GUID128& peerGuid);
-    static QStatus GetPermissionMgmtVersion(BusAttachment& bus, ProxyBusObject& remoteObj, uint16_t& version);
     static QStatus GetTVVolume(BusAttachment& bus, ProxyBusObject& remoteObj, uint32_t& volume);
     static QStatus SetTVVolume(BusAttachment& bus, ProxyBusObject& remoteObj, uint32_t volume);
     static QStatus GetTVCaption(BusAttachment& bus, ProxyBusObject& remoteObj);
-    static QStatus InstallCredential(const PermissionMgmtObj::TrustAnchorType taType, BusAttachment& bus, ProxyBusObject& remoteObj, const qcc::GUID128& guid, const qcc::ECCPublicKey* pubKey);
-    static QStatus RemoveCredential(const PermissionMgmtObj::TrustAnchorType taType, BusAttachment& bus, ProxyBusObject& remoteObj, const qcc::GUID128& guid, const qcc::ECCPublicKey* pubKey);
 };
 
 }

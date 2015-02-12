@@ -3,7 +3,7 @@
  * This contains the AboutProxy class
  */
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -85,12 +85,6 @@ class AboutProxy : public ProxyBusObject {
      * @return ER_OK on success
      */
     QStatus GetVersion(uint16_t& version);
-  private:
-
-    /**
-     *  pointer to  BusAttachment
-     */
-    ajn::BusAttachment* m_BusAttachment;
 };
 
 }
