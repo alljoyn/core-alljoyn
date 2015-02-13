@@ -17,7 +17,7 @@
 #include <fstream>
 
 static const char versionPreamble[] = "AboutService version: %s\n"
-                                      "Copyright (c) 2014-2015 AllSeen Alliance.\n";
+                                      "Copyright AllSeen Alliance.\n";
 
 using namespace ajn;
 

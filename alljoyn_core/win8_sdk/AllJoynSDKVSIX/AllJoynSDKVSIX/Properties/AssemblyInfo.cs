@@ -28,7 +28,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("AllSeen Alliance.")]
 [assembly: AssemblyProduct("AllJoynSDK")]
-[assembly: AssemblyCopyright("Copyright (c) 2009-2013, AllSeen Alliance.")]
+[assembly: AssemblyCopyright("Copyright AllSeen Alliance.")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

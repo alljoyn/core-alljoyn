@@ -20,7 +20,7 @@
 #include <iostream>
 
 static const char versionPreamble[] = "AboutService version: 1\n"
-                                      "Copyright (c) 2009-2013 AllSeen Alliance.\n";
+                                      "Copyright AllSeen Alliance.\n";
 
 using namespace ajn;
 

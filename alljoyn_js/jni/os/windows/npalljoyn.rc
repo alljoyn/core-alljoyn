@@ -46,7 +46,7 @@ BEGIN
             VALUE "FileDescription", L"AllJoyn browser plugin"
             VALUE "FileVersion", "00.00.01"
             VALUE "InternalName", "npalljoyn"
-            VALUE "LegalCopyright", "Copyright (c) 2011-2015, AllSeen Alliance."
+            VALUE "LegalCopyright", "Copyright AllSeen Alliance."
             VALUE "MIMEType", "application/x-alljoyn"
             VALUE "OriginalFilename", "npalljoyn.dll"
             VALUE "ProductName", "AllJoyn"
