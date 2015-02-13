@@ -81,9 +81,15 @@ class PermissionMgmtObj : public BusObject {
 
         TrustAnchor() : use(TRUST_ANCHOR_ANY)
         {
+            qcc::ECCPublicKey pubKey;
+            memset(&pubKey, 0, sizeof(qcc::ECCPublicKey));
+            keyInfo.SetPublicKey(&pubKey);
         }
         TrustAnchor(TrustAnchorType use) : use(use)
         {
+            qcc::ECCPublicKey pubKey;
+            memset(&pubKey, 0, sizeof(qcc::ECCPublicKey));
+            keyInfo.SetPublicKey(&pubKey);
         }
         TrustAnchor(TrustAnchorType use, qcc::KeyInfoNISTP256 keyInfo) : use(use), keyInfo(keyInfo)
         {
@@ -355,7 +361,8 @@ class PermissionMgmtObj : public BusObject {
     void RemoveCredential(const InterfaceDescription::Member* member, Message& msg);
     bool IsTrustAnchor(bool specificMatch, TrustAnchorType taType, const qcc::GUID128& peerGuid);
     bool IsTrustAnchor(bool specificMatch, TrustAnchorType taType, const qcc::ECCPublicKey* publicKey);
-
+    QStatus GetTrustAnchorsFromAllMemberships(TrustAnchorList& taList);
+    QStatus ManageMembershipTrustAnchors(PermissionPolicy* policy);
 
     /**
      * Bind to an exclusive port for PermissionMgmt object.
