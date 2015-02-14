@@ -549,15 +549,15 @@ QStatus Send(SocketFd sockfd, const void* buf, size_t len, size_t& sent)
 }
 
 QStatus SendTo(SocketFd sockfd, IPAddress& remoteAddr, uint16_t remotePort, uint32_t scopeId,
-               const void* buf, size_t len, size_t& sent)
+               const void* buf, size_t len, size_t& sent, SendMsgFlags flags)
 {
     QStatus status = ER_OK;
     struct sockaddr_storage addr;
     socklen_t addrLen = sizeof(addr);
     ssize_t ret;
 
-    QCC_DbgTrace(("SendTo(sockfd = %d, remoteAddr = %s, remotePort = %u, *buf = <>, len = %lu, sent = <>)",
-                  sockfd, remoteAddr.ToString().c_str(), remotePort, len));
+    QCC_DbgTrace(("SendTo(sockfd = %d, remoteAddr = %s, remotePort = %u, *buf = <>, len = %lu, sent = <>, flags = 0x%x)",
+                  sockfd, remoteAddr.ToString().c_str(), remotePort, len, (int)flags));
     assert(buf != NULL);
 
     QCC_DbgLocalData(buf, len);
@@ -567,7 +567,11 @@ QStatus SendTo(SocketFd sockfd, IPAddress& remoteAddr, uint16_t remotePort, uint
         return status;
     }
 
-    ret = sendto(static_cast<int>(sockfd), buf, len, MSG_NOSIGNAL,
+    /*
+     * Always provide MSG_NOSIGNAL (request to not send SIGPIPE on error in
+     * connected case)
+     */
+    ret = sendto(static_cast<int>(sockfd), buf, len, flags | MSG_NOSIGNAL,
                  reinterpret_cast<struct sockaddr*>(&addr), addrLen);
     if (ret == -1) {
         status = ER_OS_ERROR;
@@ -580,9 +584,9 @@ QStatus SendTo(SocketFd sockfd, IPAddress& remoteAddr, uint16_t remotePort, uint
 }
 
 QStatus SendTo(SocketFd sockfd, IPAddress& remoteAddr, uint16_t remotePort,
-               const void* buf, size_t len, size_t& sent)
+               const void* buf, size_t len, size_t& sent, SendMsgFlags flags)
 {
-    return SendTo(sockfd, remoteAddr, remotePort, 0, buf, len, sent);
+    return SendTo(sockfd, remoteAddr, remotePort, 0, buf, len, sent, flags);
 }
 
 QStatus Recv(SocketFd sockfd, void* buf, size_t len, size_t& received)
