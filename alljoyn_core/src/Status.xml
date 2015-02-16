@@ -293,4 +293,5 @@ Copyright (c) 2010 - 2012, 2014-2015, AllSeen Alliance. All rights reserved.
   <status name="ER_KEY_STORE_ALREADY_INITIALIZED" value="0x9139" comment="Key store is already initialized"/>
   <status name="ER_KEY_STORE_ID_NOT_YET_SET" value="0x913a" comment="Key store ID is not yet set"/>
   <status name="ER_INSTALLING_OLDER_POLICY" value="0x913b" comment="Installing older permission policy"/>
+  <status name="ER_MANIFEST_REJECTED" value="0x913c" comment="The manifest of the application was rejected."/>
 </status_block>
