@@ -5754,24 +5754,9 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
     m_preListLock.Unlock(MUTEX_CONTEXT);
 
     /*
-     * This is an opportune time to deal with authenticating endpoints that have
-     * snuck in (asynchronously completed) due to race conditions if we are
-     * stopping.  If the transport is stopping, all of its endpoints must be in
-     * the process of stopping, so we walk the list of active endpoints and call
-     * Stop() on them.  If they are already stopping, no harm no foul.
-     *
-     * In the case of authenticating endpoints, we don't want to wait for some
-     * large number of seconds to time out, so we Stop() them and move them out
-     * of authenticating state.  If the endpoint is really in the middle of
-     * authenticating, in-process authentication responses will just be dropped
-     * at least until ARDP is finally killed, at which we will be all done
-     * anyway.
-     *
-     * Calling Stop() on an active or authenticating endpoint will begin the
-     * process of causing any waiting threads, etc., to be dislodged and remove
-     * depenencies on the endpoints in question.  When we look to do the Join()
-     * below, we will actually wait for the actions we start here to be
-     * completed.
+     * If the transport has been told to start the process of shutting down, we
+     * need to make sure we tell all of our endpoints to start the process of
+     * disconnecting.
      */
     if (IsRunning() == false || m_stopping == true) {
         QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): m_stopping: Stopping endpoints on m_endpointList"));
@@ -5792,6 +5777,7 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
              * the endpoint, which ...
              */
             if (ep->IsEpDone() == false && ep->IsEpJoined() == false && ep->IsEpWaiting() == false && ep->IsEpStopping() == false) {
+                ep->SetEpWaitEnable(false);
                 ep->Stop();
             }
         }
