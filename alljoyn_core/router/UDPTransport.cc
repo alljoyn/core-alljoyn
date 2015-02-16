@@ -1290,6 +1290,7 @@ class ArdpStream : public qcc::Stream {
         QCC_DbgPrintf(("ArdpStream::Disconnect(): sudden==%d., m_disc==%d., m_discSent==%d., status==\"%s\"",
                        sudden, m_disc, m_discSent, QCC_StatusText(status)));
         m_lock.Lock(MUTEX_CONTEXT);
+
         if (sudden == false) {
             if (m_disc == false) {
                 if (m_discSent == false) {
@@ -2582,6 +2583,15 @@ class _UDPEndpoint : public _RemoteEndpoint {
                 QCC_DbgPrintf(("_UDPEndpoint::Join(): Local stream->Disconnect()"));
                 stream->Disconnect(false, ER_UDP_LOCAL_DISCONNECT);
             }
+
+            /*
+             * Set the disconnect status of our underlying BusEndpoint so that
+             * higher levels can determine what to do in response.  ER_OK means
+             * voluntary here, and we are presumably voluntarily shutting down.
+             * Note that SetEpDisconnectStatus() may rewrite status code.
+             */
+            SetEpDisconnectStatus(ER_OK);
+
             SetEpWaitEnable(false);
             SetEpStopping();
         }
@@ -3077,6 +3087,13 @@ class _UDPEndpoint : public _RemoteEndpoint {
             QCC_DbgPrintf(("_UDPEndpoint::DisconnectCb(): m_stream->Disconnect() on endpoint with conn ID == %d.", GetConnId()));
             m_stream->Disconnect(sudden, status);
         }
+
+        /*
+         * Set the disconnect status in the underlying BusEndpoint so that
+         * higher levels can determine what to do in response to the endpoint
+         * stopping.  Note that SetEpDisconnectStatus() may rewrite status code.
+         */
+        SetEpDisconnectStatus(status);
 
         /*
          * We believe that the connection must go away here since this is either
@@ -3988,6 +4005,84 @@ class _UDPEndpoint : public _RemoteEndpoint {
     {
         QCC_DbgTrace(("_UDPEndpoint::IsEpDone() <= \"%s\"", m_epState == EP_DONE ? "true" : "false"));
         return m_epState == EP_DONE;
+    }
+
+    /**
+     * Set the disconnect status in the underlying BusEndpoint.  This is
+     * provided in order to let the endpoint management code set the protected
+     * status if it needs to.
+     */
+    void SetEpDisconnectStatus(QStatus status)
+    {
+        QCC_DbgTrace(("_UDPEndpoint::SetEpDisconnectStatus(status=%s)", QCC_StatusText(status)));
+
+        /*
+         * If something has previously gone wrong, leave it be.  Especially
+         * don't overwrite bad status with good.
+         */
+        QStatus oldStatus = GetDisconnectStatus();
+        if (oldStatus != ER_OK) {
+            QCC_DbgTrace(("_UDPEndpoint::SetEpDisconnectStatus(): Previously set status.  Ignoring new"));
+            return;
+        }
+
+        /*
+         * This status is going to eventually percolate up to AllJoynObj which
+         * translates it into its own version of status.  It looks for specific
+         * values, so we have to be careful that we don't surprise it.
+         *
+         * There are three values that AllJoynObj will be looking for that
+         * originate at the transport level:
+         *
+         *     ER_SOCK_OTHER_END_CLOSED: This is a very TCP-specific error that
+         *         means the stream socket on the other side of the L4 link
+         *         was closed.  There is no socket that was closed, but as it
+         *         stands uers expect to see the specific session error called
+         *         ALLJOYN_SESSIONLOST_REMOTE_END_CLOSED_ABRUPTLY on a control-C
+         *         of the remote side.  AllJoynObj requires the specific socket
+         *         error ER_SOCK_OTHER_END_CLOSED for this to happpen.  So, even
+         *         though there is no socket being closed, we map all of our
+         *         specific ARDP errors to this value, which effectively means
+         *         link lost despite its name.
+         *
+         *     ER_TIMEOUT: This means a link timeout was detected.  ARDP has
+         *         two separate timeouts (persist timeout corresponds to an
+         *         application not pulling data, and probe timeout correcponds
+         *         to a link problem).  We map both to ER_TIMEOUT since sessions
+         *         only admit one kind of timeout.
+         *
+         *     ER_OK: This means a link went down expectedly as a result of a
+         *         local action on the endpoint.  Even though we look at it as
+         *         a disconnect, higher levels want to see it as nothing went
+         *         wrong.
+         */
+        switch (status) {
+        case ER_ARDP_PERSIST_TIMEOUT:
+            QCC_DbgTrace(("_UDPEndpoint::SetEpDisconnectStatus(): Map \"%s\" to \"ER_TIMEOUT\"", QCC_StatusText(status)));
+            status = ER_TIMEOUT;
+            break;
+
+        case ER_ARDP_PROBE_TIMEOUT:
+            QCC_DbgTrace(("_UDPEndpoint::SetEpDisconnectStatus(): Map \"%s\" to \"ER_TIMEOUT\"", QCC_StatusText(status)));
+            status = ER_TIMEOUT;
+            break;
+
+        case ER_UDP_LOCAL_DISCONNECT:
+            QCC_DbgTrace(("_UDPEndpoint::SetEpDisconnectStatus(): Map \"%s\" to \"ER_OK\"", QCC_StatusText(status)));
+            status = ER_OK;
+            break;
+
+        default:
+            QCC_DbgTrace(("_UDPEndpoint::SetEpDisconnectStatus(): Map \"%s\" to \"ER_SOCK_OTHER_END_CLOSED\"", QCC_StatusText(status)));
+            status = ER_SOCK_OTHER_END_CLOSED;
+            break;
+        }
+
+        /*
+         * Set the bus endpoint version of the disconnect status with the
+         * sanitized version.
+         */
+        disconnectStatus = status;
     }
 
     /**
@@ -6086,6 +6181,15 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
                     if (stream->GetDiscSent() == false && stream->GetDiscStatus() == ER_OK) {
                         QCC_DbgHLPrintf(("UDPTransport::ManageEndpoints(): Endpoint with conn ID == %d. stream->Disconnect()", ep->GetConnId()));
                         stream->Disconnect(false, ER_UDP_LOCAL_DISCONNECT);
+
+                        /*
+                         * Set the disconnect status in the underlying
+                         * BusEndpoint so that higher levels can determine what
+                         * to do in response.  ER_OK means voluntary here, and
+                         * we are presumably voluntarily shutting down.  Note
+                         * that SetEpDisconnectStatus() may rewrite status code.
+                         */
+                        ep->SetEpDisconnectStatus(ER_OK);
                     }
                 }
             }
@@ -6136,6 +6240,17 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
                     ep->SetEpStopping();
                     stream->Disconnect(false, ER_UDP_LOCAL_DISCONNECT);
                     disconnected = stream->GetDisconnected();
+
+                    /*
+                     * Set the disconnect status of the underlying BusEndpoint
+                     * so that higher levels can determine what to do in
+                     * response.  This value percolates up to AllJoynObj and its
+                     * session lost handling, which will expect an ER_TIMEOUT if
+                     * a link timeout happens.  That is what we infer if we
+                     * can't get the final data out.  Note that
+                     * SetEpDisconnectStatus() may rewrite status code.
+                     */
+                    ep->SetEpDisconnectStatus(ER_TIMEOUT);
                 }
             }
 #endif
@@ -6154,6 +6269,16 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
                 ep->SetEpStopping();
                 stream->Disconnect(false, ER_UDP_LOCAL_DISCONNECT);
                 disconnected = stream->GetDisconnected();
+
+                /*
+                 * Set the disconnect status of the underlying BusEndpoint so
+                 * that higher levels can determine what to do in response.  We
+                 * got all of the queued data out, so this voluntary disconnect
+                 * ended up ER_OK.  Note that SetEpDisconnectStatus() may
+                 * rewrite status code.
+                 */
+                ep->SetEpDisconnectStatus(ER_OK);
+
             }
             ep->StateUnlock();
 
@@ -7146,6 +7271,16 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
                     assert(stream && "UDPTransport::DoConnectCb(): must have a stream at this point");
                     QCC_DbgPrintf(("UDPTransport::DoConnectCb(): Disconnect() stream for endpoint with conn ID == %d.", connId));
                     stream->Disconnect(false, ER_UDP_LOCAL_DISCONNECT);
+
+                    /*
+                     * Set the disconnect status of the underlying BusEndpoint
+                     * so that higher levels can determine what to do in
+                     * response.  Since this endpiont is not making it through
+                     * the connect process, most likely nobody will even notice
+                     * but we do so for completeness.  Note that
+                     * SetEpDisconnectStatus() may rewrite status code.
+                     */
+                    ep->SetEpDisconnectStatus(status);
 
                     /*
                      * If the connection faied before it was actually set up, we
