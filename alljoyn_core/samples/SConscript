@@ -39,8 +39,8 @@ samples_env.SConscript('secure/SConscript', exports = {'env': samples_env})
 # Chat Sample program
 samples_env.SConscript('chat/SConscript', exports = {'env': samples_env})
 
-# Sample Daemon program
-samples_env.SConscript('SampleDaemon/SConscript', exports = {'env': samples_env})
+# Trusted Thin Library Sample Routing Node program
+samples_env.SConscript('TrustedTLSampleRN/SConscript', exports = {'env': samples_env})
 
 # Event and Action Sample program
 samples_env.SConscript('eventaction/SConscript', exports = {'env': samples_env})
