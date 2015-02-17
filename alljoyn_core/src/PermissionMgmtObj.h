@@ -314,14 +314,18 @@ class PermissionMgmtObj : public BusObject {
     void InstallPolicy(const InterfaceDescription::Member* member, Message& msg);
     QStatus GetACLGUID(ACLEntryType aclEntryType, qcc::GUID128& guid);
 
+  public:
+    QStatus StorePolicy(PermissionPolicy& policy);
     QStatus InstallTrustAnchor(TrustAnchor* trustAnchor);
+    QStatus StoreIdentityCertificate(MsgArg& certArg);
+
+  private:
     QStatus StoreTrustAnchors();
     QStatus LoadTrustAnchors();
     QStatus RemoveTrustAnchor(TrustAnchor* trustAnchor);
 
     QStatus GetPeerGUID(Message& msg, qcc::GUID128& guid);
 
-    QStatus StorePolicy(PermissionPolicy& policy);
     QStatus RetrievePolicy(PermissionPolicy& policy);
     void RemovePolicy(const InterfaceDescription::Member* member, Message& msg);
     void GetPolicy(const InterfaceDescription::Member* member, Message& msg);
@@ -349,7 +353,6 @@ class PermissionMgmtObj : public BusObject {
     void Reset(const InterfaceDescription::Member* member, Message& msg);
     QStatus PerformReset(bool keepForClaim);
     QStatus SameSubjectPublicKey(qcc::CertificateX509& cert, bool& outcome);
-    QStatus StoreIdentityCertificate(MsgArg& certArg);
     QStatus LocalMembershipsChanged();
     void InstallCredential(const InterfaceDescription::Member* member, Message& msg);
     void RemoveCredential(const InterfaceDescription::Member* member, Message& msg);
