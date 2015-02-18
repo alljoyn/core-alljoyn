@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -310,7 +310,7 @@ static void LoadGuildAuthorities(const PermissionPolicy& policy, PermissionMgmtO
 
             if ((peers[idx].GetType() == PermissionPolicy::Peer::PEER_GUILD) && peers[idx].GetKeyInfo()) {
                 if (KeyInfoHelper::InstanceOfKeyInfoNISTP256(*peers[idx].GetKeyInfo())) {
-                    PermissionMgmtObj::TrustAnchor* ta = new PermissionMgmtObj::TrustAnchor(PermissionMgmtObj::TRUST_ANCHOR_MEMBERSHIP, *(KeyInfoNISTP256*) peers[idx].GetKeyInfo());
+                    PermissionMgmtObj::TrustAnchor* ta = new PermissionMgmtObj::TrustAnchor(PermissionMgmtObj::TRUST_ANCHOR_MEMBERSHIP, peers[idx].GetGuildId(), *(KeyInfoNISTP256*) peers[idx].GetKeyInfo());
                     guildAuthoritiesList.push_back(ta);
                 }
             }
@@ -760,12 +760,10 @@ static QStatus ValidateMembershipCertificate(MembershipCertificate& cert, Permis
 {
     for (PermissionMgmtObj::TrustAnchorList::iterator it = taList->begin(); it != taList->end(); it++) {
         PermissionMgmtObj::TrustAnchor* ta = *it;
-        if (ta->keyInfo.GetKeyIdLen() != GUID128::SIZE) {
+        if (ta->use != PermissionMgmtObj::TRUST_ANCHOR_MEMBERSHIP) {
             continue;
         }
-        GUID128 aGuid(0);
-        aGuid.SetBytes(ta->keyInfo.GetKeyId());
-        if (aGuid != cert.GetGuild()) {
+        if (ta->guildId != cert.GetGuild()) {
             continue;
         }
 
@@ -1873,10 +1871,6 @@ QStatus PermissionMgmtObj::PerformReset(bool keepForClaim)
     if (ER_OK != status) {
         return status;
     }
-    if (ER_OK == status) {
-        serialNum = 0;
-        PolicyChanged(NULL);
-    }
     GetACLGUID(ENTRY_EQUIVALENCES, guid);
     status = ca->DeleteKey(guid);
     if (ER_OK != status) {
@@ -2244,6 +2238,7 @@ QStatus PermissionMgmtObj::GetTrustAnchorsFromAllMemberships(TrustAnchorList& ta
         }
         std::map<qcc::GUID128, TrustAnchor*> chain;
         TrustAnchor* ta = new TrustAnchor(TRUST_ANCHOR_MEMBERSHIP);
+        ta->guildId = cert.GetGuild();
         ta->keyInfo.SetKeyId(cert.GetIssuer().GetBytes(), GUID128::SIZE);
         chain[cert.GetIssuer()] = ta;
         /* go through into its associated nodes */
@@ -2280,6 +2275,7 @@ QStatus PermissionMgmtObj::GetTrustAnchorsFromAllMemberships(TrustAnchorList& ta
                     continue;  /* skip since already got the same issuer */
                 }
                 TrustAnchor* ta = new TrustAnchor(TRUST_ANCHOR_MEMBERSHIP);
+                ta->guildId = cert.GetGuild();
                 ta->keyInfo.SetKeyId(cert.GetIssuer().GetBytes(), GUID128::SIZE);
                 chain[cert.GetIssuer()] = ta;
                 /* update the previous issuer for its public key */

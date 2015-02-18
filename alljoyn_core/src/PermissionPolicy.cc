@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -105,7 +105,7 @@ qcc::String PermissionPolicy::Peer::ToString() const
             str += keyInfo->ToString();
         }
     } else if (type == PEER_GUILD) {
-        str += "  type: guild\n";
+        str += "  type: guild guildId: " + guildId.ToString() + "\n";
         if (keyInfo) {
             str += keyInfo->ToString();
         }
@@ -155,7 +155,7 @@ static QStatus GeneratePeerArgs(MsgArg** retArgs, PermissionPolicy::Peer* peers,
     MsgArg* variants = new MsgArg[count];
     for (size_t cnt = 0; cnt < count; cnt++) {
         if (peers[cnt].GetType() == PermissionPolicy::Peer::PEER_ANY) {
-            variants[cnt].Set("(yyv)", peers[cnt].GetLevel(), peers[cnt].GetType(), new MsgArg("ay", 0, NULL));
+            variants[cnt].Set("(yyayv)", peers[cnt].GetLevel(), peers[cnt].GetType(), (size_t) 0, NULL, new MsgArg("ay", 0, NULL));
         } else {
             const KeyInfoECC* keyInfo = peers[cnt].GetKeyInfo();
             if (!keyInfo) {
@@ -169,7 +169,13 @@ static QStatus GeneratePeerArgs(MsgArg** retArgs, PermissionPolicy::Peer* peers,
             KeyInfoNISTP256* keyInfoNISTP256 = (qcc::KeyInfoNISTP256*) keyInfo;
             MsgArg* keyInfoArg = new MsgArg();
             KeyInfoHelper::KeyInfoNISTP256ToMsgArg(*keyInfoNISTP256, *keyInfoArg);
-            variants[cnt].Set("(yyv)", peers[cnt].GetLevel(), peers[cnt].GetType(), keyInfoArg);
+            size_t guildIdLen = 0;
+            uint8_t*guildId = NULL;
+            if (peers[cnt].GetType() == PermissionPolicy::Peer::PEER_GUILD) {
+                guildIdLen = GUID128::SIZE;
+                guildId = (uint8_t*) peers[cnt].GetGuildId().GetBytes();
+            }
+            variants[cnt].Set("(yyayv)", peers[cnt].GetLevel(), peers[cnt].GetType(), guildIdLen, guildId, keyInfoArg);
         }
         variants[cnt].SetOwnershipFlags(MsgArg::OwnsArgs, true);
     }
@@ -181,7 +187,7 @@ static QStatus BuildPeersFromArg(MsgArg& arg, PermissionPolicy::Peer** peers, si
 {
     MsgArg* peerListArgs = NULL;
     size_t peerCount;
-    QStatus status = arg.Get("a(yyv)", &peerCount, &peerListArgs);
+    QStatus status = arg.Get("a(yyayv)", &peerCount, &peerListArgs);
     if (ER_OK != status) {
         return status;
     }
@@ -193,8 +199,10 @@ static QStatus BuildPeersFromArg(MsgArg& arg, PermissionPolicy::Peer** peers, si
     for (size_t cnt = 0; cnt < peerCount; cnt++) {
         uint8_t peerLevel;
         uint8_t peerType;
+        size_t guildIdLen;
+        uint8_t* guildId;
         MsgArg* variant;
-        status = peerListArgs[cnt].Get("(yyv)", &peerLevel, &peerType, &variant);
+        status = peerListArgs[cnt].Get("(yyayv)", &peerLevel, &peerType, &guildIdLen, &guildId, &variant);
         if (ER_OK != status) {
             delete [] peerArray;
             return status;
@@ -214,6 +222,12 @@ static QStatus BuildPeersFromArg(MsgArg& arg, PermissionPolicy::Peer** peers, si
         }
         if (peerType == PermissionPolicy::Peer::PEER_ANY) {
             continue;
+        } else if (peerType == PermissionPolicy::Peer::PEER_GUILD) {
+            if (guildIdLen == GUID128::SIZE) {
+                GUID128 guid(0);
+                guid.SetBytes(guildId);
+                pp->SetGuildId(guid);
+            }
         }
         KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
         status = KeyInfoHelper::MsgArgToKeyInfoNISTP256(*variant, *keyInfo);
@@ -580,7 +594,7 @@ QStatus PermissionPolicy::Export(MsgArg& msgArg)
         MsgArg* adminVariants;
         GeneratePeerArgs(&adminVariants, (PermissionPolicy::Peer*) GetAdmins(), GetAdminsSize());
         sectionVariants[sectionIndex++].Set("(yv)", PermissionPolicy::TAG_ADMINS,
-                                            new MsgArg("a(yyv)", GetAdminsSize(), adminVariants));
+                                            new MsgArg("a(yyayv)", GetAdminsSize(), adminVariants));
     }
     if (GetTerms()) {
         MsgArg* termsVariants = new MsgArg[GetTermsSize()];
@@ -602,7 +616,7 @@ QStatus PermissionPolicy::Export(MsgArg& msgArg)
                 MsgArg* peerVariants;
                 GeneratePeerArgs(&peerVariants, (PermissionPolicy::Peer*) aTerm->GetPeers(), aTerm->GetPeersSize());
                 termItems[idx++].Set("(yv)", PermissionPolicy::Term::TAG_PEERS,
-                                     new MsgArg("a(yyv)", aTerm->GetPeersSize(), peerVariants));
+                                     new MsgArg("a(yyayv)", aTerm->GetPeersSize(), peerVariants));
             }
             if (aTerm->GetRules()) {
                 MsgArg* rulesVariants = NULL;

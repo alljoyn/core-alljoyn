@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2014-2015, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -260,23 +260,16 @@ static bool IsAuthorizedByAnyUserPolicy(const PermissionPolicy* policy, const Me
 
 static bool TermHasMatchingGuild(const PermissionPolicy::Term& term, const GUID128& guildGUID)
 {
-    bool matched = false;
     /* is this peer entry has matching guild GUID */
     const PermissionPolicy::Peer* peers = term.GetPeers();
     for (size_t idx = 0; idx < term.GetPeersSize(); idx++) {
-        if ((peers[idx].GetType() == PermissionPolicy::Peer::PEER_GUILD) && peers[idx].GetKeyInfo()) {
-            const KeyInfoECC* keyInfo = peers[idx].GetKeyInfo();
-            if (keyInfo->GetKeyIdLen() == GUID128::SIZE) {
-                GUID128 aGuid(0);
-                aGuid.SetBytes(keyInfo->GetKeyId());
-                if (aGuid == guildGUID) {
-                    matched = true;
-                    break;
-                }
+        if (peers[idx].GetType() == PermissionPolicy::Peer::PEER_GUILD) {
+            if (peers[idx].GetGuildId() == guildGUID) {
+                return true;
             }
         }
     }
-    return matched;
+    return false;
 }
 
 static bool IsAuthorizedByMembership(const GUID128& guildGUID, PermissionPolicy& authData, const MessageHolder& msgHolder, uint8_t requiredAuth, bool& denied)

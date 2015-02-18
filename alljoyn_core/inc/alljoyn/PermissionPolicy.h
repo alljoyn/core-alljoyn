@@ -7,7 +7,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2014-2015, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -29,6 +29,7 @@
 #include <qcc/platform.h>
 #include <qcc/String.h>
 #include <qcc/KeyInfoECC.h>
+#include <qcc/GUID.h>
 #include <alljoyn/Status.h>
 #include <alljoyn/MsgArg.h>
 #include <alljoyn/Message.h>
@@ -320,7 +321,7 @@ class PermissionPolicy {
          * Constructor
          *
          */
-        Peer() : level(PEER_LEVEL_AUTHENTICATED), type(PEER_ANY), keyInfo(NULL)
+        Peer() : level(PEER_LEVEL_AUTHENTICATED), type(PEER_ANY), guildId(0), keyInfo(NULL)
         {
         }
 
@@ -365,10 +366,28 @@ class PermissionPolicy {
         }
 
         /**
+         * Set the guild id
+         * @param guid the guild id
+         */
+        void SetGuildId(const qcc::GUID128& guid)
+        {
+            guildId = guid;
+        }
+
+        /**
+         * Get the guild id
+         * @return the guild id
+         */
+        const qcc::GUID128& GetGuildId() const
+        {
+            return guildId;
+        }
+
+        /**
          * Set the keyInfo field.
          * When peer type is PEER_ANY the keyInfo is not relevant.
          * When peer type is PEER_GUID the only the public key in the keyInfo is relevant.
-         * When peer type is PEER_GUILD the keyInfo.keyId holds the GUILD ID (which is a GUID) and the keyInfo.PublicKey is the public key of the guild authority.
+         * When peer type is PEER_GUILD the keyInfo.keyId holds the ID of the guild authority and the keyInfo.PublicKey is the public key of the guild authority.
          * @param keyInfo the keyInfo. The keyInfo must be new'd by the caller. It will be deleted by this object.
          */
         void SetKeyInfo(qcc::KeyInfoECC* keyInfo)
@@ -398,6 +417,11 @@ class PermissionPolicy {
                 return false;
             }
 
+            if (type == PEER_GUILD) {
+                if (guildId != p.GetGuildId()) {
+                    return false;
+                }
+            }
             if (keyInfo == NULL || p.keyInfo == NULL) {
                 return keyInfo == p.keyInfo;
             }
@@ -422,6 +446,7 @@ class PermissionPolicy {
 
         PeerAuthLevel level;
         PeerType type;
+        qcc::GUID128 guildId;
         qcc::KeyInfoECC* keyInfo;
     };
 

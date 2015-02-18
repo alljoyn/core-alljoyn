@@ -7,7 +7,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2014-2015, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -29,6 +29,7 @@
 #include <alljoyn/BusObject.h>
 #include <alljoyn/AllJoynStd.h>
 #include <alljoyn/BusAttachment.h>
+#include <qcc/GUID.h>
 #include <qcc/KeyBlob.h>
 #include <qcc/CryptoECC.h>
 #include <qcc/CertificateECC.h>
@@ -77,21 +78,25 @@ class PermissionMgmtObj : public BusObject {
 
     struct TrustAnchor {
         TrustAnchorType use;
+        qcc::GUID128 guildId;
         qcc::KeyInfoNISTP256 keyInfo;
 
-        TrustAnchor() : use(TRUST_ANCHOR_ANY)
+        TrustAnchor() : use(TRUST_ANCHOR_ANY), guildId(0)
         {
             qcc::ECCPublicKey pubKey;
             memset(&pubKey, 0, sizeof(qcc::ECCPublicKey));
             keyInfo.SetPublicKey(&pubKey);
         }
-        TrustAnchor(TrustAnchorType use) : use(use)
+        TrustAnchor(TrustAnchorType use) : use(use), guildId(0)
         {
             qcc::ECCPublicKey pubKey;
             memset(&pubKey, 0, sizeof(qcc::ECCPublicKey));
             keyInfo.SetPublicKey(&pubKey);
         }
-        TrustAnchor(TrustAnchorType use, qcc::KeyInfoNISTP256 keyInfo) : use(use), keyInfo(keyInfo)
+        TrustAnchor(TrustAnchorType use, qcc::KeyInfoNISTP256 keyInfo) : use(use), guildId(0), keyInfo(keyInfo)
+        {
+        }
+        TrustAnchor(TrustAnchorType use, qcc::GUID128 guildId, qcc::KeyInfoNISTP256 keyInfo) : use(use), guildId(guildId), keyInfo(keyInfo)
         {
         }
     };

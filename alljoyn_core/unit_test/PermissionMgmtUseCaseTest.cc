@@ -42,8 +42,14 @@ static const char sampleCertificatePEM[] = {
     "-----END CERTIFICATE-----"
 };
 
-static PermissionPolicy* GenerateWildCardPolicy(qcc::GUID128& guid, qcc::ECCPublicKey& adminPublicKey)
+static PermissionPolicy* GenerateWildCardPolicy(BusAttachment& issuerBus)
 {
+    qcc::GUID128 issuerGUID;
+    PermissionMgmtTestHelper::GetGUID(issuerBus, issuerGUID);
+    ECCPublicKey issuerPubKey;
+    QStatus status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(issuerBus, &issuerPubKey);
+    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
+
     PermissionPolicy* policy = new PermissionPolicy();
 
     policy->SetSerialNum(52516);
@@ -52,8 +58,8 @@ static PermissionPolicy* GenerateWildCardPolicy(qcc::GUID128& guid, qcc::ECCPubl
     PermissionPolicy::Peer* admins = new PermissionPolicy::Peer[1];
     admins[0].SetType(PermissionPolicy::Peer::PEER_GUID);
     KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
-    keyInfo->SetKeyId(guid.GetBytes(), guid.SIZE);
-    keyInfo->SetPublicKey(&adminPublicKey);
+    keyInfo->SetKeyId(issuerGUID.GetBytes(), GUID128::SIZE);
+    keyInfo->SetPublicKey(&issuerPubKey);
     admins[0].SetKeyInfo(keyInfo);
     policy->SetAdmins(1, admins);
 
@@ -81,8 +87,20 @@ static PermissionPolicy* GenerateWildCardPolicy(qcc::GUID128& guid, qcc::ECCPubl
 
     return policy;
 }
-static PermissionPolicy* GeneratePolicy(qcc::GUID128& guid, qcc::ECCPublicKey& adminPublicKey, qcc::ECCPublicKey& guildAuthority)
+
+static PermissionPolicy* GeneratePolicy(BusAttachment& issuerBus, BusAttachment& guildAuthorityBus)
 {
+    qcc::GUID128 issuerGUID;
+    PermissionMgmtTestHelper::GetGUID(issuerBus, issuerGUID);
+    ECCPublicKey issuerPubKey;
+    QStatus status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(issuerBus, &issuerPubKey);
+    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
+    qcc::GUID128 guildAuthorityGUID;
+    PermissionMgmtTestHelper::GetGUID(guildAuthorityBus, guildAuthorityGUID);
+    ECCPublicKey guildAuthorityPubKey;
+    status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(guildAuthorityBus, &guildAuthorityPubKey);
+    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
+
     PermissionPolicy* policy = new PermissionPolicy();
 
     policy->SetSerialNum(74892317);
@@ -91,8 +109,8 @@ static PermissionPolicy* GeneratePolicy(qcc::GUID128& guid, qcc::ECCPublicKey& a
     PermissionPolicy::Peer* admins = new PermissionPolicy::Peer[1];
     admins[0].SetType(PermissionPolicy::Peer::PEER_GUID);
     KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
-    keyInfo->SetKeyId(guid.GetBytes(), guid.SIZE);
-    keyInfo->SetPublicKey(&adminPublicKey);
+    keyInfo->SetKeyId(issuerGUID.GetBytes(), GUID128::SIZE);
+    keyInfo->SetPublicKey(&issuerPubKey);
     admins[0].SetKeyInfo(keyInfo);
     policy->SetAdmins(1, admins);
 
@@ -129,9 +147,10 @@ static PermissionPolicy* GeneratePolicy(qcc::GUID128& guid, qcc::ECCPublicKey& a
     /* terms record 1 GUILD membershipGUID1 */
     peers = new PermissionPolicy::Peer[1];
     peers[0].SetType(PermissionPolicy::Peer::PEER_GUILD);
+    peers[0].SetGuildId(membershipGUID1);
     keyInfo = new KeyInfoNISTP256();
-    keyInfo->SetKeyId(membershipGUID1.GetBytes(), qcc::GUID128::SIZE);
-    keyInfo->SetPublicKey(&guildAuthority);
+    keyInfo->SetKeyId(guildAuthorityGUID.GetBytes(), qcc::GUID128::SIZE);
+    keyInfo->SetPublicKey(&guildAuthorityPubKey);
     peers[0].SetKeyInfo(keyInfo);
     terms[1].SetPeers(1, peers);
     rules = new PermissionPolicy::Rule[2];
@@ -164,9 +183,10 @@ static PermissionPolicy* GeneratePolicy(qcc::GUID128& guid, qcc::ECCPublicKey& a
     /* terms record 2 GUILD membershipGUID2 */
     peers = new PermissionPolicy::Peer[1];
     peers[0].SetType(PermissionPolicy::Peer::PEER_GUILD);
+    peers[0].SetGuildId(membershipGUID2);
     keyInfo = new KeyInfoNISTP256();
-    keyInfo->SetKeyId(membershipGUID2.GetBytes(), qcc::GUID128::SIZE);
-    keyInfo->SetPublicKey(&guildAuthority);
+    keyInfo->SetKeyId(guildAuthorityGUID.GetBytes(), qcc::GUID128::SIZE);
+    keyInfo->SetPublicKey(&guildAuthorityPubKey);
     peers[0].SetKeyInfo(keyInfo);
     terms[2].SetPeers(1, peers);
     rules = new PermissionPolicy::Rule[3];
@@ -192,7 +212,8 @@ static PermissionPolicy* GeneratePolicy(qcc::GUID128& guid, qcc::ECCPublicKey& a
     peers = new PermissionPolicy::Peer[1];
     peers[0].SetType(PermissionPolicy::Peer::PEER_GUID);
     keyInfo = new KeyInfoNISTP256();
-    keyInfo->SetPublicKey(&guildAuthority);
+    keyInfo->SetKeyId(guildAuthorityGUID.GetBytes(), qcc::GUID128::SIZE);
+    keyInfo->SetPublicKey(&guildAuthorityPubKey);
     peers[0].SetKeyInfo(keyInfo);
     terms[3].SetPeers(1, peers);
     rules = new PermissionPolicy::Rule[1];
@@ -209,8 +230,13 @@ static PermissionPolicy* GeneratePolicy(qcc::GUID128& guid, qcc::ECCPublicKey& a
     return policy;
 }
 
-static PermissionPolicy* GenerateAnyUserPolicyWithLevel(qcc::GUID128& guid, qcc::ECCPublicKey& adminPublicKey)
+static PermissionPolicy* GenerateAnyUserPolicyWithLevel(BusAttachment& issuerBus)
 {
+    qcc::GUID128 issuerGUID;
+    PermissionMgmtTestHelper::GetGUID(issuerBus, issuerGUID);
+    ECCPublicKey issuerPubKey;
+    QStatus status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(issuerBus, &issuerPubKey);
+    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
     PermissionPolicy* policy = new PermissionPolicy();
 
     policy->SetSerialNum(726129);
@@ -219,8 +245,8 @@ static PermissionPolicy* GenerateAnyUserPolicyWithLevel(qcc::GUID128& guid, qcc:
     PermissionPolicy::Peer* admins = new PermissionPolicy::Peer[1];
     admins[0].SetType(PermissionPolicy::Peer::PEER_GUID);
     KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
-    keyInfo->SetKeyId(guid.GetBytes(), guid.SIZE);
-    keyInfo->SetPublicKey(&adminPublicKey);
+    keyInfo->SetKeyId(issuerGUID.GetBytes(), GUID128::SIZE);
+    keyInfo->SetPublicKey(&issuerPubKey);
     admins[0].SetKeyInfo(keyInfo);
     policy->SetAdmins(1, admins);
 
@@ -260,8 +286,14 @@ static PermissionPolicy* GenerateAnyUserPolicyWithLevel(qcc::GUID128& guid, qcc:
     return policy;
 }
 
-static PermissionPolicy* GenerateSmallAnyUserPolicy(qcc::GUID128& guid, qcc::ECCPublicKey& adminPublicKey)
+static PermissionPolicy* GenerateSmallAnyUserPolicy(BusAttachment& issuerBus)
 {
+    qcc::GUID128 issuerGUID;
+    PermissionMgmtTestHelper::GetGUID(issuerBus, issuerGUID);
+    ECCPublicKey issuerPubKey;
+    QStatus status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(issuerBus, &issuerPubKey);
+    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
+
     PermissionPolicy* policy = new PermissionPolicy();
 
     policy->SetSerialNum(552317);
@@ -270,8 +302,8 @@ static PermissionPolicy* GenerateSmallAnyUserPolicy(qcc::GUID128& guid, qcc::ECC
     PermissionPolicy::Peer* admins = new PermissionPolicy::Peer[1];
     admins[0].SetType(PermissionPolicy::Peer::PEER_GUID);
     KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
-    keyInfo->SetKeyId(guid.GetBytes(), guid.SIZE);
-    keyInfo->SetPublicKey(&adminPublicKey);
+    keyInfo->SetKeyId(issuerGUID.GetBytes(), GUID128::SIZE);
+    keyInfo->SetPublicKey(&issuerPubKey);
     admins[0].SetKeyInfo(keyInfo);
     policy->SetAdmins(1, admins);
 
@@ -305,8 +337,14 @@ static PermissionPolicy* GenerateSmallAnyUserPolicy(qcc::GUID128& guid, qcc::ECC
     return policy;
 }
 
-static PermissionPolicy* GenerateAnyUserDeniedPrefixPolicy(qcc::GUID128& guid, qcc::ECCPublicKey& adminPublicKey)
+static PermissionPolicy* GenerateAnyUserDeniedPrefixPolicy(BusAttachment& issuerBus)
 {
+    qcc::GUID128 issuerGUID;
+    PermissionMgmtTestHelper::GetGUID(issuerBus, issuerGUID);
+    ECCPublicKey issuerPubKey;
+    QStatus status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(issuerBus, &issuerPubKey);
+    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
+
     PermissionPolicy* policy = new PermissionPolicy();
 
     policy->SetSerialNum(552317);
@@ -315,8 +353,8 @@ static PermissionPolicy* GenerateAnyUserDeniedPrefixPolicy(qcc::GUID128& guid, q
     PermissionPolicy::Peer* admins = new PermissionPolicy::Peer[1];
     admins[0].SetType(PermissionPolicy::Peer::PEER_GUID);
     KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
-    keyInfo->SetKeyId(guid.GetBytes(), guid.SIZE);
-    keyInfo->SetPublicKey(&adminPublicKey);
+    keyInfo->SetKeyId(issuerGUID.GetBytes(), GUID128::SIZE);
+    keyInfo->SetPublicKey(&issuerPubKey);
     admins[0].SetKeyInfo(keyInfo);
     policy->SetAdmins(1, admins);
 
@@ -381,8 +419,14 @@ static PermissionPolicy* GenerateFullAccessOutgoingPolicy()
     return policy;
 }
 
-static PermissionPolicy* GenerateGuildSpecificAccessOutgoingPolicy(const GUID128& guildGUID, qcc::ECCPublicKey& guildAuthority)
+static PermissionPolicy* GenerateGuildSpecificAccessOutgoingPolicy(const GUID128& guildGUID, BusAttachment& guildAuthorityBus)
 {
+    qcc::GUID128 guildAuthorityGUID;
+    PermissionMgmtTestHelper::GetGUID(guildAuthorityBus, guildAuthorityGUID);
+    ECCPublicKey guildAuthorityPubKey;
+    QStatus status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(guildAuthorityBus, &guildAuthorityPubKey);
+    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
+
     PermissionPolicy* policy = new PermissionPolicy();
 
     policy->SetSerialNum(3827326);
@@ -412,9 +456,10 @@ static PermissionPolicy* GenerateGuildSpecificAccessOutgoingPolicy(const GUID128
     /* terms record 1 GUILD specific */
     peers = new PermissionPolicy::Peer[1];
     peers[0].SetType(PermissionPolicy::Peer::PEER_GUILD);
+    peers[0].SetGuildId(guildGUID);
     KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
-    keyInfo->SetKeyId(guildGUID.GetBytes(), qcc::GUID128::SIZE);
-    keyInfo->SetPublicKey(&guildAuthority);
+    keyInfo->SetKeyId(guildAuthorityGUID.GetBytes(), qcc::GUID128::SIZE);
+    keyInfo->SetPublicKey(&guildAuthorityPubKey);
     peers[0].SetKeyInfo(keyInfo);
     terms[1].SetPeers(1, peers);
     rules = new PermissionPolicy::Rule[1];
@@ -437,8 +482,14 @@ static PermissionPolicy* GenerateGuildSpecificAccessOutgoingPolicy(const GUID128
     return policy;
 }
 
-static PermissionPolicy* GenerateGuildSpecificAccessProviderAuthData(const GUID128& guildGUID, qcc::ECCPublicKey& guildAuthority)
+static PermissionPolicy* GenerateGuildSpecificAccessProviderAuthData(const GUID128& guildGUID, BusAttachment& guildAuthorityBus)
 {
+    qcc::GUID128 guildAuthorityGUID;
+    PermissionMgmtTestHelper::GetGUID(guildAuthorityBus, guildAuthorityGUID);
+    ECCPublicKey guildAuthorityPubKey;
+    QStatus status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(guildAuthorityBus, &guildAuthorityPubKey);
+    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
+
     PermissionPolicy* policy = new PermissionPolicy();
 
     policy->SetSerialNum(3827326);
@@ -448,9 +499,10 @@ static PermissionPolicy* GenerateGuildSpecificAccessProviderAuthData(const GUID1
     /* terms record 0 GUILD specific */
     PermissionPolicy::Peer* peers = new PermissionPolicy::Peer[1];
     peers[0].SetType(PermissionPolicy::Peer::PEER_GUILD);
+    peers[0].SetGuildId(guildGUID);
     KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
-    keyInfo->SetKeyId(guildGUID.GetBytes(), qcc::GUID128::SIZE);
-    keyInfo->SetPublicKey(&guildAuthority);
+    keyInfo->SetKeyId(guildAuthorityGUID.GetBytes(), qcc::GUID128::SIZE);
+    keyInfo->SetPublicKey(&guildAuthorityPubKey);
     peers[0].SetKeyInfo(keyInfo);
     terms[0].SetPeers(1, peers);
     PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[1];
@@ -473,8 +525,13 @@ static PermissionPolicy* GenerateGuildSpecificAccessProviderAuthData(const GUID1
     return policy;
 }
 
-static PermissionPolicy* GeneratePolicyPeerPublicKey(qcc::GUID128& guid, qcc::ECCPublicKey& adminPublicKey, qcc::ECCPublicKey& peerPublicKey)
+static PermissionPolicy* GeneratePolicyPeerPublicKey(BusAttachment& issuerBus, qcc::ECCPublicKey& peerPublicKey)
 {
+    qcc::GUID128 issuerGUID;
+    PermissionMgmtTestHelper::GetGUID(issuerBus, issuerGUID);
+    ECCPublicKey issuerPubKey;
+    QStatus status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(issuerBus, &issuerPubKey);
+    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
     PermissionPolicy* policy = new PermissionPolicy();
 
     policy->SetSerialNum(8742198);
@@ -483,8 +540,8 @@ static PermissionPolicy* GeneratePolicyPeerPublicKey(qcc::GUID128& guid, qcc::EC
     PermissionPolicy::Peer* admins = new PermissionPolicy::Peer[1];
     admins[0].SetType(PermissionPolicy::Peer::PEER_GUID);
     KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
-    keyInfo->SetKeyId(guid.GetBytes(), guid.SIZE);
-    keyInfo->SetPublicKey(&adminPublicKey);
+    keyInfo->SetKeyId(issuerGUID.GetBytes(), GUID128::SIZE);
+    keyInfo->SetPublicKey(&issuerPubKey);
     admins[0].SetKeyInfo(keyInfo);
     policy->SetAdmins(1, admins);
 
@@ -528,8 +585,13 @@ static PermissionPolicy* GeneratePolicyPeerPublicKey(qcc::GUID128& guid, qcc::EC
     return policy;
 }
 
-static PermissionPolicy* GeneratePolicyDenyPeerPublicKey(qcc::GUID128& guid, qcc::ECCPublicKey& adminPublicKey, qcc::ECCPublicKey& peerPublicKey)
+static PermissionPolicy* GeneratePolicyDenyPeerPublicKey(BusAttachment& issuerBus, qcc::ECCPublicKey& peerPublicKey)
 {
+    qcc::GUID128 issuerGUID;
+    PermissionMgmtTestHelper::GetGUID(issuerBus, issuerGUID);
+    ECCPublicKey issuerPubKey;
+    QStatus status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(issuerBus, &issuerPubKey);
+    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
     PermissionPolicy* policy = new PermissionPolicy();
 
     policy->SetSerialNum(32445);
@@ -538,8 +600,8 @@ static PermissionPolicy* GeneratePolicyDenyPeerPublicKey(qcc::GUID128& guid, qcc
     PermissionPolicy::Peer* admins = new PermissionPolicy::Peer[1];
     admins[0].SetType(PermissionPolicy::Peer::PEER_GUID);
     KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
-    keyInfo->SetKeyId(guid.GetBytes(), guid.SIZE);
-    keyInfo->SetPublicKey(&adminPublicKey);
+    keyInfo->SetKeyId(issuerGUID.GetBytes(), GUID128::SIZE);
+    keyInfo->SetPublicKey(&issuerPubKey);
     admins[0].SetKeyInfo(keyInfo);
     policy->SetAdmins(1, admins);
 
@@ -583,7 +645,7 @@ static PermissionPolicy* GeneratePolicyDenyPeerPublicKey(qcc::GUID128& guid, qcc
     return policy;
 }
 
-static PermissionPolicy* GenerateMembershipAuthData(const GUID128* guildGUID)
+static PermissionPolicy* GenerateMembershipAuthData(const GUID128* guildGUID, BusAttachment* guildAuthorityBus)
 {
     PermissionPolicy* policy = new PermissionPolicy();
 
@@ -597,9 +659,18 @@ static PermissionPolicy* GenerateMembershipAuthData(const GUID128* guildGUID)
     if (guildGUID) {
         PermissionPolicy::Peer* peers = new PermissionPolicy::Peer[1];
         peers[0].SetType(PermissionPolicy::Peer::PEER_GUILD);
-        KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
-        keyInfo->SetKeyId(guildGUID->GetBytes(), qcc::GUID128::SIZE);
-        peers[0].SetKeyInfo(keyInfo);
+        peers[0].SetGuildId(*guildGUID);
+        if (guildAuthorityBus) {
+            qcc::GUID128 guildAuthorityGUID;
+            PermissionMgmtTestHelper::GetGUID(*guildAuthorityBus, guildAuthorityGUID);
+            ECCPublicKey guildAuthorityPubKey;
+            QStatus status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(*guildAuthorityBus, &guildAuthorityPubKey);
+            EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
+            KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
+            keyInfo->SetKeyId(guildAuthorityGUID.GetBytes(), qcc::GUID128::SIZE);
+            keyInfo->SetPublicKey(&guildAuthorityPubKey);
+            peers[0].SetKeyInfo(keyInfo);
+        }
         terms[0].SetPeers(1, peers);
     }
     PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[2];
@@ -635,7 +706,7 @@ static PermissionPolicy* GenerateMembershipAuthData(const GUID128* guildGUID)
     return policy;
 }
 
-static PermissionPolicy* GenerateOverReachingMembershipAuthData(const GUID128* guildGUID)
+static PermissionPolicy* GenerateOverReachingMembershipAuthData(const GUID128* guildGUID, BusAttachment* guildAuthorityBus)
 {
     PermissionPolicy* policy = new PermissionPolicy();
 
@@ -649,9 +720,18 @@ static PermissionPolicy* GenerateOverReachingMembershipAuthData(const GUID128* g
     if (guildGUID) {
         PermissionPolicy::Peer* peers = new PermissionPolicy::Peer[1];
         peers[0].SetType(PermissionPolicy::Peer::PEER_GUILD);
-        KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
-        keyInfo->SetKeyId(guildGUID->GetBytes(), qcc::GUID128::SIZE);
-        peers[0].SetKeyInfo(keyInfo);
+        peers[0].SetGuildId(*guildGUID);
+        if (guildAuthorityBus) {
+            qcc::GUID128 guildAuthorityGUID;
+            PermissionMgmtTestHelper::GetGUID(*guildAuthorityBus, guildAuthorityGUID);
+            ECCPublicKey guildAuthorityPubKey;
+            QStatus status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(*guildAuthorityBus, &guildAuthorityPubKey);
+            EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
+            KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
+            keyInfo->SetKeyId(guildAuthorityGUID.GetBytes(), qcc::GUID128::SIZE);
+            keyInfo->SetPublicKey(&guildAuthorityPubKey);
+            peers[0].SetKeyInfo(keyInfo);
+        }
         terms[0].SetPeers(1, peers);
     }
     PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[2];
@@ -689,10 +769,10 @@ static PermissionPolicy* GenerateOverReachingMembershipAuthData(const GUID128* g
 
 static PermissionPolicy* GenerateMembershipAuthData()
 {
-    return GenerateMembershipAuthData(NULL);
+    return GenerateMembershipAuthData(NULL, NULL);
 }
 
-static PermissionPolicy* GenerateLesserMembershipAuthData(bool useDenied, const GUID128* guildGUID)
+static PermissionPolicy* GenerateLesserMembershipAuthData(bool useDenied, const GUID128* guildGUID, BusAttachment* guildAuthorityBus)
 {
     PermissionPolicy* policy = new PermissionPolicy();
 
@@ -706,9 +786,18 @@ static PermissionPolicy* GenerateLesserMembershipAuthData(bool useDenied, const 
     if (guildGUID) {
         PermissionPolicy::Peer* peers = new PermissionPolicy::Peer[1];
         peers[0].SetType(PermissionPolicy::Peer::PEER_GUILD);
-        KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
-        keyInfo->SetKeyId(guildGUID->GetBytes(), qcc::GUID128::SIZE);
-        peers[0].SetKeyInfo(keyInfo);
+        peers[0].SetGuildId(*guildGUID);
+        if (guildAuthorityBus) {
+            qcc::GUID128 guildAuthorityGUID;
+            PermissionMgmtTestHelper::GetGUID(*guildAuthorityBus, guildAuthorityGUID);
+            ECCPublicKey guildAuthorityPubKey;
+            QStatus status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(*guildAuthorityBus, &guildAuthorityPubKey);
+            EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
+            KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
+            keyInfo->SetKeyId(guildAuthorityGUID.GetBytes(), qcc::GUID128::SIZE);
+            keyInfo->SetPublicKey(&guildAuthorityPubKey);
+            peers[0].SetKeyInfo(keyInfo);
+        }
         terms[0].SetPeers(1, peers);
     }
     PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[2];
@@ -823,7 +912,7 @@ static void GenerateOverReachingMembershipAuthChain(PermissionPolicy** authDataA
 {
     if (count == 2) {
         authDataArray[1] = GenerateMembershipAuthData();
-        authDataArray[0] = GenerateOverReachingMembershipAuthData(NULL);
+        authDataArray[0] = GenerateOverReachingMembershipAuthData(NULL, NULL);
     }
 }
 
@@ -876,24 +965,21 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         status = pc.GenerateSigningKeyPair();
         EXPECT_EQ(ER_OK, status) << "  GenerateSigningKeyPair failed.  Actual Status: " << QCC_StatusText(status);
 
-        /* Retrieve the DSA keys */
-        ECCPrivateKey issuerPrivateKey;
-        ECCPublicKey issuerPubKey;
-        status = PermissionMgmtTestHelper::RetrieveDSAKeys(adminBus, issuerPrivateKey, issuerPubKey);
-        EXPECT_EQ(ER_OK, status) << "  RetrieveDSAKeys failed.  Actual Status: " << QCC_StatusText(status);
-
         SessionId sessionId;
         SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
         status = PermissionMgmtTestHelper::JoinPeerSession(adminProxyBus, adminBus, sessionId);
         EXPECT_EQ(ER_OK, status) << "  JoinSession failed.  Actual Status: " << QCC_StatusText(status);
 
         PermissionMgmtProxy pmProxy(adminProxyBus, adminBus.GetUniqueName().c_str());
+        /* retrieve public key from to-be-claimed app to create identity cert */
+        ECCPublicKey issuerPubKey;
+        status = pmProxy.GetPublicKey(&issuerPubKey);
         ECCPublicKey claimedPubKey;
         qcc::GUID128 issuerGUID;
         PermissionMgmtTestHelper::GetGUID(adminBus, issuerGUID);
 
         qcc::String der;
-        status = PermissionMgmtTestHelper::CreateIdentityCert("1010101", issuerGUID, &issuerPrivateKey, issuerGUID, &issuerPubKey, "Admin User", der);
+        status = PermissionMgmtTestHelper::CreateIdentityCert(adminBus, "1010101", issuerGUID, &issuerPubKey, "Admin User", der);
         EXPECT_EQ(ER_OK, status) << "  CreateIdentityCert failed.  Actual Status: " << QCC_StatusText(status);
 
         /* setup publicKey and identity certificate to pass into Claim */
@@ -957,17 +1043,13 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         PermissionMgmtTestHelper::GetGUID(serviceBus, subjectGUID);
         qcc::GUID128 issuerGUID;
         PermissionMgmtTestHelper::GetGUID(adminBus, issuerGUID);
-        ECCPrivateKey issuerPrivateKey;
-        ECCPublicKey issuerPubKey;
-        status = PermissionMgmtTestHelper::RetrieveDSAKeys(adminBus, issuerPrivateKey, issuerPubKey);
-        EXPECT_EQ(ER_OK, status) << "  RetrieveDSAKeys failed.  Actual Status: " << QCC_StatusText(status);
 
         ECCPublicKey claimedPubKey;
         /* retrieve public key from to-be-claimed app to create identity cert */
         EXPECT_EQ(ER_OK, pmProxy.GetPublicKey(&claimedPubKey)) << "GetPeerPublicKey failed.";
         /* create identity cert for the claimed app */
         qcc::String der;
-        status = PermissionMgmtTestHelper::CreateIdentityCert("2020202", issuerGUID, &issuerPrivateKey, subjectGUID, &claimedPubKey, "Service Provider", der);
+        status = PermissionMgmtTestHelper::CreateIdentityCert(adminBus, "2020202", subjectGUID, &claimedPubKey, "Service Provider", der);
         EXPECT_EQ(ER_OK, status) << "  CreateIdentityCert failed.  Actual Status: " << QCC_StatusText(status);
 
         /* try claiming with state unclaimable.  Exptect to fail */
@@ -975,8 +1057,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         MsgArg publicKeyArg;
         MsgArg identityCertArg;
         KeyInfoNISTP256 keyInfo;
-        keyInfo.SetKeyId(issuerGUID.GetBytes(), GUID128::SIZE);
-        keyInfo.SetPublicKey(&issuerPubKey);
+        adminBus.GetPermissionConfigurator().GetSigningPublicKey(keyInfo);
         KeyInfoHelper::KeyInfoNISTP256ToMsgArg(keyInfo, publicKeyArg);
         EXPECT_EQ(ER_OK, identityCertArg.Set("(yay)", Certificate::ENCODING_X509_DER, der.size(), der.data()));
         EXPECT_EQ(ER_PERMISSION_DENIED, pmProxy.Claim(publicKeyArg, identityCertArg, &claimedPubKey)) << "Claim is not supposed to succeed.";
@@ -1007,8 +1088,6 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         }
         EXPECT_TRUE(GetNotifyConfigSignalReceived()) << " Fail to receive expected NotifyConfig signal.";
 
-        //status = adminBus.LeaveSession(sessionId);
-        //EXPECT_EQ(ER_OK, status) << "  LeaveSession failed.  Actual Status: " << QCC_StatusText(status);
     }
 
     /**
@@ -1032,16 +1111,11 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         PermissionMgmtTestHelper::GetGUID(consumerBus, subjectGUID);
         qcc::GUID128 issuerGUID;
         PermissionMgmtTestHelper::GetGUID(adminBus, issuerGUID);
-        ECCPrivateKey issuerPrivateKey;
-        ECCPublicKey issuerPubKey;
-        status = PermissionMgmtTestHelper::RetrieveDSAKeys(adminBus, issuerPrivateKey, issuerPubKey);
-        EXPECT_EQ(ER_OK, status) << "  RetrieveDSAKeys failed.  Actual Status: " << QCC_StatusText(status);
-
         /* retrieve public key from to-be-claimed app to create identity cert */
         EXPECT_EQ(ER_OK, pmProxy.GetPublicKey(&claimedPubKey)) << "GetPeerPublicKey failed.";
         /* create identity cert for the claimed app */
         qcc::String der;
-        status = PermissionMgmtTestHelper::CreateIdentityCert("3030303", issuerGUID, &issuerPrivateKey, subjectGUID, &claimedPubKey, "Consumer", der);
+        status = PermissionMgmtTestHelper::CreateIdentityCert(adminBus, "3030303", subjectGUID, &claimedPubKey, "Consumer", der);
         EXPECT_EQ(ER_OK, status) << "  CreateIdentityCert failed.  Actual Status: " << QCC_StatusText(status);
         SetNotifyConfigSignalReceived(false);
 
@@ -1049,8 +1123,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         MsgArg publicKeyArg;
         MsgArg identityCertArg;
         KeyInfoNISTP256 keyInfo;
-        keyInfo.SetKeyId(issuerGUID.GetBytes(), GUID128::SIZE);
-        keyInfo.SetPublicKey(&issuerPubKey);
+        adminBus.GetPermissionConfigurator().GetSigningPublicKey(keyInfo);
         KeyInfoHelper::KeyInfoNISTP256ToMsgArg(keyInfo, publicKeyArg);
         EXPECT_EQ(ER_OK, identityCertArg.Set("(yay)", Certificate::ENCODING_X509_DER, der.size(), der.data()));
         EXPECT_EQ(ER_OK, pmProxy.Claim(publicKeyArg, identityCertArg, &claimedPubKey)) << "Claim failed.";
@@ -1066,8 +1139,6 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
             qcc::Sleep(10);
         }
         EXPECT_TRUE(GetNotifyConfigSignalReceived()) << " Fail to receive expected NotifyConfig signal.";
-        //status = adminBus.LeaveSession(sessionId);
-        //EXPECT_EQ(ER_OK, status) << "  LeaveSession failed.  Actual Status: " << QCC_StatusText(status);
     }
 
     /**
@@ -1089,17 +1160,12 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
 
         qcc::GUID128 remoteControlGUID;
         PermissionMgmtTestHelper::GetGUID(remoteControlBus, remoteControlGUID);
-        qcc::GUID128 issuerGUID;
-        PermissionMgmtTestHelper::GetGUID(consumerBus, issuerGUID);
-        ECCPrivateKey issuerPrivateKey;
-        ECCPublicKey issuerPubKey;
-        status = PermissionMgmtTestHelper::RetrieveDSAKeys(consumerBus, issuerPrivateKey, issuerPubKey);
         EXPECT_EQ(ER_OK, status) << "  RetrieveDSAKeys failed.  Actual Status: " << QCC_StatusText(status);
         /* retrieve public key from to-be-claimed app to create identity cert */
         EXPECT_EQ(ER_OK, pmProxy.GetPublicKey(&claimedPubKey)) << "GetPeerPublicKey failed.";
         /* create identity cert for the claimed app */
         qcc::String der;
-        status = PermissionMgmtTestHelper::CreateIdentityCert("6060606", issuerGUID, &issuerPrivateKey, remoteControlGUID, &claimedPubKey, "remote control", der);
+        status = PermissionMgmtTestHelper::CreateIdentityCert(consumerBus, "6060606", remoteControlGUID, &claimedPubKey, "remote control", der);
         EXPECT_EQ(ER_OK, status) << "  CreateIdentityCert failed.  Actual Status: " << QCC_StatusText(status);
         SetNotifyConfigSignalReceived(false);
 
@@ -1107,8 +1173,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         MsgArg publicKeyArg;
         MsgArg identityCertArg;
         KeyInfoNISTP256 keyInfo;
-        keyInfo.SetKeyId(issuerGUID.GetBytes(), GUID128::SIZE);
-        keyInfo.SetPublicKey(&issuerPubKey);
+        consumerBus.GetPermissionConfigurator().GetSigningPublicKey(keyInfo);
         KeyInfoHelper::KeyInfoNISTP256ToMsgArg(keyInfo, publicKeyArg);
         EXPECT_EQ(ER_OK, identityCertArg.Set("(yay)", Certificate::ENCODING_X509_DER, der.size(), der.data()));
         EXPECT_EQ(ER_OK, pmProxy.Claim(publicKeyArg, identityCertArg, &claimedPubKey)) << "Claim failed.";
@@ -1121,8 +1186,6 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
             qcc::Sleep(10);
         }
         EXPECT_TRUE(GetNotifyConfigSignalReceived()) << " Fail to receive expected NotifyConfig signal.";
-        //status = consumerBus.LeaveSession(sessionId);
-        //EXPECT_EQ(ER_OK, status) << "  LeaveSession failed.  Actual Status: " << QCC_StatusText(status);
     }
 
     void Claims(bool usePSK, bool claimRemoteControl)
@@ -1241,14 +1304,8 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         EXPECT_EQ(ER_OK, pmProxy.GetIdentity(&cert)) << "GetIdentity failed.";
 
         /* create a new identity cert */
-        ECCPrivateKey issuerPrivateKey;
-        ECCPublicKey issuerPubKey;
-        status = PermissionMgmtTestHelper::RetrieveDSAKeys(adminBus, issuerPrivateKey, issuerPubKey);
-        EXPECT_EQ(ER_OK, status) << "  RetrieveDSAKeys failed.  Actual Status: " << QCC_StatusText(status);
-        qcc::GUID128 issuerGUID;
-        PermissionMgmtTestHelper::GetGUID(adminBus, issuerGUID);
         qcc::String der;
-        status = PermissionMgmtTestHelper::CreateIdentityCert("4040404", issuerGUID, &issuerPrivateKey, cert.GetSubject(), cert.GetSubjectPublicKey(), "Service Provider", der);
+        status = PermissionMgmtTestHelper::CreateIdentityCert(adminBus, "4040404", cert.GetSubject(), cert.GetSubjectPublicKey(), "Service Provider", der);
         EXPECT_EQ(ER_OK, status) << "  CreateIdentityCert failed.  Actual Status: " << QCC_StatusText(status);
 
         MsgArg certArg("(yay)", Certificate::ENCODING_X509_DER, der.size(), der.data());
@@ -1271,14 +1328,10 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         IdentityCertificate cert;
         EXPECT_EQ(ER_OK, pmProxy.GetIdentity(&cert)) << "GetIdentity failed.";
         /* create a new identity cert */
-        ECCPrivateKey issuerPrivateKey;
-        ECCPublicKey issuerPubKey;
-        status = PermissionMgmtTestHelper::RetrieveDSAKeys(adminBus, issuerPrivateKey, issuerPubKey);
-        EXPECT_EQ(ER_OK, status) << "  RetrieveDSAKeys failed.  Actual Status: " << QCC_StatusText(status);
-        qcc::GUID128 issuerGUID;
-        PermissionMgmtTestHelper::GetGUID(adminBus, issuerGUID);
+        qcc::GUID128 guid;
+        qcc::ECCPublicKey randomKey;
         qcc::String der;
-        status = PermissionMgmtTestHelper::CreateIdentityCert("5050505", issuerGUID, &issuerPrivateKey, issuerGUID, &issuerPubKey, "Service Provider", der);
+        status = PermissionMgmtTestHelper::CreateIdentityCert(adminBus, "5050505", guid, &randomKey, "Service Provider", der);
         EXPECT_EQ(ER_OK, status) << "  CreateIdentityCert failed.  Actual Status: " << QCC_StatusText(status);
 
         MsgArg certArg("(yay)", Certificate::ENCODING_X509_DER, der.size(), der.data());
@@ -1293,14 +1346,8 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         IdentityCertificate cert;
         EXPECT_EQ(ER_OK, pmProxy.GetIdentity(&cert)) << "GetIdentity failed.";
         /* create a new identity cert that will expire in 1 second */
-        ECCPrivateKey issuerPrivateKey;
-        ECCPublicKey issuerPubKey;
-        status = PermissionMgmtTestHelper::RetrieveDSAKeys(installerBus, issuerPrivateKey, issuerPubKey);
-        EXPECT_EQ(ER_OK, status) << "  RetrieveDSAKeys failed.  Actual Status: " << QCC_StatusText(status);
-        qcc::GUID128 issuerGUID;
-        PermissionMgmtTestHelper::GetGUID(adminBus, issuerGUID);
         qcc::String der;
-        status = PermissionMgmtTestHelper::CreateIdentityCert("5050505", issuerGUID, &issuerPrivateKey, cert.GetSubject(), cert.GetSubjectPublicKey(), "Service Provider", 1, der);
+        status = PermissionMgmtTestHelper::CreateIdentityCert(installerBus, "5050505", cert.GetSubject(), cert.GetSubjectPublicKey(), "Service Provider", 1, der);
         EXPECT_EQ(ER_OK, status) << "  CreateIdentityCert failed.  Actual Status: " << QCC_StatusText(status);
 
         /* sleep 2 seconds to get the cert to expire */
@@ -1821,18 +1868,8 @@ class PathBasePermissionMgmtUseCaseTest : public PermissionMgmtUseCaseTest {
 TEST_F(PermissionMgmtUseCaseTest, TestAllCalls)
 {
     Claims(false);
-    qcc::GUID128 issuerGUID;
-    PermissionMgmtTestHelper::GetGUID(adminBus, issuerGUID);
-    ECCPrivateKey issuerPrivateKey;
-    ECCPublicKey issuerPubKey;
-    status = PermissionMgmtTestHelper::RetrieveDSAKeys(adminBus, issuerPrivateKey, issuerPubKey);
-    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAKeys failed.  Actual Status: " << QCC_StatusText(status);
-
     /* generate a policy */
-    ECCPublicKey guildAuthorityPubKey;
-    status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(consumerBus, &guildAuthorityPubKey);
-    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
-    PermissionPolicy* policy = GeneratePolicy(issuerGUID, issuerPubKey, guildAuthorityPubKey);
+    PermissionPolicy* policy = GeneratePolicy(adminBus, consumerBus);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
     InstallPolicyToService(*policy);
     delete policy;
@@ -1885,18 +1922,8 @@ TEST_F(PermissionMgmtUseCaseTest, TestAllCalls)
 TEST_F(PermissionMgmtUseCaseTest, ClaimPolicyMembershipAccess)
 {
     Claims(true);
-    qcc::GUID128 issuerGUID;
-    PermissionMgmtTestHelper::GetGUID(adminBus, issuerGUID);
-    ECCPrivateKey issuerPrivateKey;
-    ECCPublicKey issuerPubKey;
-    status = PermissionMgmtTestHelper::RetrieveDSAKeys(adminBus, issuerPrivateKey, issuerPubKey);
-    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAKeys failed.  Actual Status: " << QCC_StatusText(status);
-
     /* generate a policy */
-    ECCPublicKey guildAuthorityPubKey;
-    status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(consumerBus, &guildAuthorityPubKey);
-    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
-    PermissionPolicy* policy = GeneratePolicy(issuerGUID, issuerPubKey, guildAuthorityPubKey);
+    PermissionPolicy* policy = GeneratePolicy(adminBus, consumerBus);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
     InstallPolicyToService(*policy);
     delete policy;
@@ -1905,7 +1932,7 @@ TEST_F(PermissionMgmtUseCaseTest, ClaimPolicyMembershipAccess)
     InstallPolicyToConsumer(*policy);
     delete policy;
 
-    policy = GenerateMembershipAuthData(&membershipGUID1);
+    policy = GenerateMembershipAuthData(&membershipGUID1, &consumerBus);
     InstallMembershipToConsumer(policy);
     delete policy;
     /* setup the application interfaces for access tests */
@@ -1924,26 +1951,16 @@ TEST_F(PermissionMgmtUseCaseTest, ClaimPolicyMembershipAccess)
 TEST_F(PathBasePermissionMgmtUseCaseTest, OutboundAllowedByMembership)
 {
     Claims(true);
-    qcc::GUID128 issuerGUID;
-    PermissionMgmtTestHelper::GetGUID(adminBus, issuerGUID);
-    ECCPrivateKey issuerPrivateKey;
-    ECCPublicKey issuerPubKey;
-    status = PermissionMgmtTestHelper::RetrieveDSAKeys(adminBus, issuerPrivateKey, issuerPubKey);
-    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAKeys failed.  Actual Status: " << QCC_StatusText(status);
-
     /* generate a policy */
-    ECCPublicKey guildAuthorityPubKey;
-    status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(consumerBus, &guildAuthorityPubKey);
-    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
-    PermissionPolicy* policy = GeneratePolicy(issuerGUID, issuerPubKey, guildAuthorityPubKey);
+    PermissionPolicy* policy = GeneratePolicy(adminBus, consumerBus);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
     InstallPolicyToService(*policy);
     delete policy;
-    policy = GenerateGuildSpecificAccessProviderAuthData(membershipGUID1, guildAuthorityPubKey);
+    policy = GenerateGuildSpecificAccessProviderAuthData(membershipGUID1, consumerBus);
     InstallMembershipToServiceProvider("1234", membershipGUID1, policy);
     delete policy;
 
-    policy = GenerateGuildSpecificAccessOutgoingPolicy(membershipGUID1, guildAuthorityPubKey);
+    policy = GenerateGuildSpecificAccessOutgoingPolicy(membershipGUID1, consumerBus);
     InstallPolicyToConsumer(*policy);
     delete policy;
 
@@ -1965,23 +1982,13 @@ TEST_F(PathBasePermissionMgmtUseCaseTest, OutboundAllowedByMembership)
 TEST_F(PermissionMgmtUseCaseTest, OutboundNotAllowedByMissingPeerMembership)
 {
     Claims(true);
-    qcc::GUID128 issuerGUID;
-    PermissionMgmtTestHelper::GetGUID(adminBus, issuerGUID);
-    ECCPrivateKey issuerPrivateKey;
-    ECCPublicKey issuerPubKey;
-    status = PermissionMgmtTestHelper::RetrieveDSAKeys(adminBus, issuerPrivateKey, issuerPubKey);
-    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAKeys failed.  Actual Status: " << QCC_StatusText(status);
-
     /* generate a policy */
-    ECCPublicKey guildAuthorityPubKey;
-    status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(consumerBus, &guildAuthorityPubKey);
-    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
-    PermissionPolicy* policy = GeneratePolicy(issuerGUID, issuerPubKey, guildAuthorityPubKey);
+    PermissionPolicy* policy = GeneratePolicy(adminBus, consumerBus);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
     InstallPolicyToService(*policy);
     delete policy;
 
-    policy = GenerateGuildSpecificAccessOutgoingPolicy(membershipGUID1, guildAuthorityPubKey);
+    policy = GenerateGuildSpecificAccessOutgoingPolicy(membershipGUID1, consumerBus);
     InstallPolicyToConsumer(*policy);
     delete policy;
 
@@ -2003,13 +2010,6 @@ TEST_F(PermissionMgmtUseCaseTest, OutboundNotAllowedByMissingPeerMembership)
 TEST_F(PermissionMgmtUseCaseTest, ClaimNoPolicyAccess)
 {
     Claims(true);
-    qcc::GUID128 issuerGUID;
-    PermissionMgmtTestHelper::GetGUID(adminBus, issuerGUID);
-    ECCPrivateKey issuerPrivateKey;
-    ECCPublicKey issuerPubKey;
-    status = PermissionMgmtTestHelper::RetrieveDSAKeys(adminBus, issuerPrivateKey, issuerPubKey);
-    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAKeys failed.  Actual Status: " << QCC_StatusText(status);
-
     PermissionPolicy* authData = GenerateMembershipAuthData();
     InstallMembershipToConsumer(authData);
     delete authData;
@@ -2026,18 +2026,11 @@ TEST_F(PermissionMgmtUseCaseTest, ClaimNoPolicyAccess)
 TEST_F(PermissionMgmtUseCaseTest, AccessByPublicKey)
 {
     Claims(true);
-    qcc::GUID128 issuerGUID;
-    PermissionMgmtTestHelper::GetGUID(adminBus, issuerGUID);
-    ECCPrivateKey issuerPrivateKey;
-    ECCPublicKey issuerPubKey;
-    status = PermissionMgmtTestHelper::RetrieveDSAKeys(adminBus, issuerPrivateKey, issuerPubKey);
-    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAKeys failed.  Actual Status: " << QCC_StatusText(status);
-
     /* generate a policy */
     ECCPublicKey consumerPublicKey;
     status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(consumerBus, &consumerPublicKey);
     EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
-    PermissionPolicy* policy = GeneratePolicyPeerPublicKey(issuerGUID, issuerPubKey, consumerPublicKey);
+    PermissionPolicy* policy = GeneratePolicyPeerPublicKey(adminBus, consumerPublicKey);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
     InstallPolicyToService(*policy);
     delete policy;
@@ -2062,18 +2055,12 @@ TEST_F(PermissionMgmtUseCaseTest, AccessByPublicKey)
 TEST_F(PermissionMgmtUseCaseTest, AccessDeniedForPeerPublicKey)
 {
     Claims(true);
-    qcc::GUID128 issuerGUID;
-    PermissionMgmtTestHelper::GetGUID(adminBus, issuerGUID);
-    ECCPrivateKey issuerPrivateKey;
-    ECCPublicKey issuerPubKey;
-    status = PermissionMgmtTestHelper::RetrieveDSAKeys(adminBus, issuerPrivateKey, issuerPubKey);
-    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAKeys failed.  Actual Status: " << QCC_StatusText(status);
 
     /* generate a policy */
     ECCPublicKey consumerPublicKey;
     status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(consumerBus, &consumerPublicKey);
     EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
-    PermissionPolicy* policy = GeneratePolicyDenyPeerPublicKey(issuerGUID, issuerPubKey, consumerPublicKey);
+    PermissionPolicy* policy = GeneratePolicyDenyPeerPublicKey(adminBus, consumerPublicKey);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
     InstallPolicyToService(*policy);
     delete policy;
@@ -2145,18 +2132,8 @@ TEST_F(PermissionMgmtUseCaseTest, InstallIdentityCertWithExpiredCert)
 TEST_F(PermissionMgmtUseCaseTest, SendingOthersMembershipCert)
 {
     Claims(true);
-    qcc::GUID128 issuerGUID;
-    PermissionMgmtTestHelper::GetGUID(adminBus, issuerGUID);
-    ECCPrivateKey issuerPrivateKey;
-    ECCPublicKey issuerPubKey;
-    status = PermissionMgmtTestHelper::RetrieveDSAKeys(adminBus, issuerPrivateKey, issuerPubKey);
-    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAKeys failed.  Actual Status: " << QCC_StatusText(status);
-
     /* generate a policy */
-    ECCPublicKey guildAuthorityPubKey;
-    status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(consumerBus, &guildAuthorityPubKey);
-    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
-    PermissionPolicy* policy = GeneratePolicy(issuerGUID, issuerPubKey, guildAuthorityPubKey);
+    PermissionPolicy* policy = GeneratePolicy(adminBus, consumerBus);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
     InstallPolicyToService(*policy);
     delete policy;
@@ -2178,15 +2155,8 @@ TEST_F(PermissionMgmtUseCaseTest, SendingOthersMembershipCert)
 TEST_F(PermissionMgmtUseCaseTest, AccessNotAuthorizedBecauseOfWrongActionMask)
 {
     Claims(true);
-    qcc::GUID128 issuerGUID;
-    PermissionMgmtTestHelper::GetGUID(adminBus, issuerGUID);
-    ECCPrivateKey issuerPrivateKey;
-    ECCPublicKey issuerPubKey;
-    status = PermissionMgmtTestHelper::RetrieveDSAKeys(adminBus, issuerPrivateKey, issuerPubKey);
-    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAKeys failed.  Actual Status: " << QCC_StatusText(status);
-
     /* generate a limited policy */
-    PermissionPolicy* policy = GenerateSmallAnyUserPolicy(issuerGUID, issuerPubKey);
+    PermissionPolicy* policy = GenerateSmallAnyUserPolicy(adminBus);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
     InstallPolicyToService(*policy);
     delete policy;
@@ -2211,15 +2181,8 @@ TEST_F(PermissionMgmtUseCaseTest, AccessNotAuthorizedBecauseOfWrongActionMask)
 TEST_F(PermissionMgmtUseCaseTest, AccessNotAuthorizedBecauseOfDeniedOnPrefix)
 {
     Claims(true);
-    qcc::GUID128 issuerGUID;
-    PermissionMgmtTestHelper::GetGUID(adminBus, issuerGUID);
-    ECCPrivateKey issuerPrivateKey;
-    ECCPublicKey issuerPubKey;
-    status = PermissionMgmtTestHelper::RetrieveDSAKeys(adminBus, issuerPrivateKey, issuerPubKey);
-    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAKeys failed.  Actual Status: " << QCC_StatusText(status);
-
     /* generate a limited policy */
-    PermissionPolicy* policy = GenerateAnyUserDeniedPrefixPolicy(issuerGUID, issuerPubKey);
+    PermissionPolicy* policy = GenerateAnyUserDeniedPrefixPolicy(adminBus);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
     InstallPolicyToService(*policy);
     delete policy;
@@ -2244,18 +2207,8 @@ TEST_F(PermissionMgmtUseCaseTest, AccessNotAuthorizedBecauseOfDeniedOnPrefix)
 TEST_F(PathBasePermissionMgmtUseCaseTest, NoMatchGuildForConsumer)
 {
     Claims(false);
-    qcc::GUID128 issuerGUID;
-    PermissionMgmtTestHelper::GetGUID(adminBus, issuerGUID);
-    ECCPrivateKey issuerPrivateKey;
-    ECCPublicKey issuerPubKey;
-    status = PermissionMgmtTestHelper::RetrieveDSAKeys(adminBus, issuerPrivateKey, issuerPubKey);
-    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAKeys failed.  Actual Status: " << QCC_StatusText(status);
-
     /* generate a policy */
-    ECCPublicKey guildAuthorityPubKey;
-    status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(consumerBus, &guildAuthorityPubKey);
-    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
-    PermissionPolicy* policy = GeneratePolicy(issuerGUID, issuerPubKey, guildAuthorityPubKey);
+    PermissionPolicy* policy = GeneratePolicy(adminBus, consumerBus);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
     InstallPolicyToService(*policy);
     delete policy;
@@ -2284,18 +2237,8 @@ TEST_F(PathBasePermissionMgmtUseCaseTest, NoMatchGuildForConsumer)
 TEST_F(PermissionMgmtUseCaseTest, ProviderHasMoreMembershipCertsThanConsumer)
 {
     Claims(false);
-    qcc::GUID128 issuerGUID;
-    PermissionMgmtTestHelper::GetGUID(adminBus, issuerGUID);
-    ECCPrivateKey issuerPrivateKey;
-    ECCPublicKey issuerPubKey;
-    status = PermissionMgmtTestHelper::RetrieveDSAKeys(adminBus, issuerPrivateKey, issuerPubKey);
-    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAKeys failed.  Actual Status: " << QCC_StatusText(status);
-
     /* generate a policy */
-    ECCPublicKey guildAuthorityPubKey;
-    status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(consumerBus, &guildAuthorityPubKey);
-    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
-    PermissionPolicy* policy = GeneratePolicy(issuerGUID, issuerPubKey, guildAuthorityPubKey);
+    PermissionPolicy* policy = GeneratePolicy(adminBus, consumerBus);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
     InstallPolicyToService(*policy);
     delete policy;
@@ -2325,18 +2268,8 @@ TEST_F(PermissionMgmtUseCaseTest, ProviderHasMoreMembershipCertsThanConsumer)
 TEST_F(PermissionMgmtUseCaseTest, ConsumerHasMoreMembershipCertsThanService)
 {
     Claims(false);
-    qcc::GUID128 issuerGUID;
-    PermissionMgmtTestHelper::GetGUID(adminBus, issuerGUID);
-    ECCPrivateKey issuerPrivateKey;
-    ECCPublicKey issuerPubKey;
-    status = PermissionMgmtTestHelper::RetrieveDSAKeys(adminBus, issuerPrivateKey, issuerPubKey);
-    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAKeys failed.  Actual Status: " << QCC_StatusText(status);
-
     /* generate a policy */
-    ECCPublicKey guildAuthorityPubKey;
-    status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(consumerBus, &guildAuthorityPubKey);
-    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
-    PermissionPolicy* policy = GeneratePolicy(issuerGUID, issuerPubKey, guildAuthorityPubKey);
+    PermissionPolicy* policy = GeneratePolicy(adminBus, consumerBus);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
     InstallPolicyToService(*policy);
     delete policy;
@@ -2365,18 +2298,8 @@ TEST_F(PermissionMgmtUseCaseTest, ConsumerHasMoreMembershipCertsThanService)
 TEST_F(PermissionMgmtUseCaseTest, ConsumerHasGoodMembershipCertChain)
 {
     Claims(false);
-    qcc::GUID128 issuerGUID;
-    PermissionMgmtTestHelper::GetGUID(adminBus, issuerGUID);
-    ECCPrivateKey issuerPrivateKey;
-    ECCPublicKey issuerPubKey;
-    status = PermissionMgmtTestHelper::RetrieveDSAKeys(adminBus, issuerPrivateKey, issuerPubKey);
-    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAKeys failed.  Actual Status: " << QCC_StatusText(status);
-
     /* generate a policy */
-    ECCPublicKey guildAuthorityPubKey;
-    status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(consumerBus, &guildAuthorityPubKey);
-    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
-    PermissionPolicy* policy = GeneratePolicy(issuerGUID, issuerPubKey, guildAuthorityPubKey);
+    PermissionPolicy* policy = GeneratePolicy(adminBus, consumerBus);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
     InstallPolicyToService(*policy);
     delete policy;
@@ -2409,18 +2332,8 @@ TEST_F(PermissionMgmtUseCaseTest, ConsumerHasGoodMembershipCertChain)
 TEST_F(PermissionMgmtUseCaseTest, ConsumerHasOverreachingMembershipCertChain)
 {
     Claims(false);
-    qcc::GUID128 issuerGUID;
-    PermissionMgmtTestHelper::GetGUID(adminBus, issuerGUID);
-    ECCPrivateKey issuerPrivateKey;
-    ECCPublicKey issuerPubKey;
-    status = PermissionMgmtTestHelper::RetrieveDSAKeys(adminBus, issuerPrivateKey, issuerPubKey);
-    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAKeys failed.  Actual Status: " << QCC_StatusText(status);
-
     /* generate a policy */
-    ECCPublicKey guildAuthorityPubKey;
-    status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(consumerBus, &guildAuthorityPubKey);
-    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
-    PermissionPolicy* policy = GeneratePolicy(issuerGUID, issuerPubKey, guildAuthorityPubKey);
+    PermissionPolicy* policy = GeneratePolicy(adminBus, consumerBus);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
     InstallPolicyToService(*policy);
     delete policy;
@@ -2455,18 +2368,8 @@ TEST_F(PermissionMgmtUseCaseTest, ConsumerHasOverreachingMembershipCertChain)
 TEST_F(PathBasePermissionMgmtUseCaseTest, ConsumerHasLessAccessInMembershipUsingDenied)
 {
     Claims(false);
-    qcc::GUID128 issuerGUID;
-    PermissionMgmtTestHelper::GetGUID(adminBus, issuerGUID);
-    ECCPrivateKey issuerPrivateKey;
-    ECCPublicKey issuerPubKey;
-    status = PermissionMgmtTestHelper::RetrieveDSAKeys(adminBus, issuerPrivateKey, issuerPubKey);
-    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAKeys failed.  Actual Status: " << QCC_StatusText(status);
-
     /* generate a policy */
-    ECCPublicKey guildAuthorityPubKey;
-    status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(consumerBus, &guildAuthorityPubKey);
-    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
-    PermissionPolicy* policy = GeneratePolicy(issuerGUID, issuerPubKey, guildAuthorityPubKey);
+    PermissionPolicy* policy = GeneratePolicy(adminBus, consumerBus);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
     InstallPolicyToService(*policy);
     delete policy;
@@ -2478,7 +2381,7 @@ TEST_F(PathBasePermissionMgmtUseCaseTest, ConsumerHasLessAccessInMembershipUsing
     InstallPolicyToConsumer(*policy);
     delete policy;
 
-    policy = GenerateLesserMembershipAuthData(true, NULL);
+    policy = GenerateLesserMembershipAuthData(true, NULL, NULL);
     InstallMembershipToConsumer(policy);
     delete policy;
     /* setup the application interfaces for access tests */
@@ -2496,18 +2399,8 @@ TEST_F(PathBasePermissionMgmtUseCaseTest, ConsumerHasLessAccessInMembershipUsing
 TEST_F(PathBasePermissionMgmtUseCaseTest, ConsumerHasLessAccessInMembershipUsingEmptyAuthMask)
 {
     Claims(false);
-    qcc::GUID128 issuerGUID;
-    PermissionMgmtTestHelper::GetGUID(adminBus, issuerGUID);
-    ECCPrivateKey issuerPrivateKey;
-    ECCPublicKey issuerPubKey;
-    status = PermissionMgmtTestHelper::RetrieveDSAKeys(adminBus, issuerPrivateKey, issuerPubKey);
-    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAKeys failed.  Actual Status: " << QCC_StatusText(status);
-
     /* generate a policy */
-    ECCPublicKey guildAuthorityPubKey;
-    status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(consumerBus, &guildAuthorityPubKey);
-    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
-    PermissionPolicy* policy = GeneratePolicy(issuerGUID, issuerPubKey, guildAuthorityPubKey);
+    PermissionPolicy* policy = GeneratePolicy(adminBus, consumerBus);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
     InstallPolicyToService(*policy);
     delete policy;
@@ -2519,7 +2412,7 @@ TEST_F(PathBasePermissionMgmtUseCaseTest, ConsumerHasLessAccessInMembershipUsing
     InstallPolicyToConsumer(*policy);
     delete policy;
 
-    policy = GenerateLesserMembershipAuthData(false, NULL);
+    policy = GenerateLesserMembershipAuthData(false, NULL, NULL);
     InstallMembershipToConsumer(policy);
     delete policy;
     /* setup the application interfaces for access tests */
@@ -2538,15 +2431,8 @@ TEST_F(PathBasePermissionMgmtUseCaseTest, ConsumerHasLessAccessInMembershipUsing
 TEST_F(PermissionMgmtUseCaseTest, AllowEverything)
 {
     Claims(true);
-    qcc::GUID128 issuerGUID;
-    PermissionMgmtTestHelper::GetGUID(adminBus, issuerGUID);
-    ECCPrivateKey issuerPrivateKey;
-    ECCPublicKey issuerPubKey;
-    status = PermissionMgmtTestHelper::RetrieveDSAKeys(adminBus, issuerPrivateKey, issuerPubKey);
-    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAKeys failed.  Actual Status: " << QCC_StatusText(status);
-
     /* generate a limited policy */
-    PermissionPolicy* policy = GenerateWildCardPolicy(issuerGUID, issuerPubKey);
+    PermissionPolicy* policy = GenerateWildCardPolicy(adminBus);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
     InstallPolicyToService(*policy);
     delete policy;
@@ -2571,15 +2457,8 @@ TEST_F(PermissionMgmtUseCaseTest, AllowEverything)
 TEST_F(PermissionMgmtUseCaseTest, TwoTrustAnchors)
 {
     Claims(true);
-    qcc::GUID128 issuerGUID;
-    PermissionMgmtTestHelper::GetGUID(adminBus, issuerGUID);
-    ECCPrivateKey issuerPrivateKey;
-    ECCPublicKey issuerPubKey;
-    status = PermissionMgmtTestHelper::RetrieveDSAKeys(adminBus, issuerPrivateKey, issuerPubKey);
-    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAKeys failed.  Actual Status: " << QCC_StatusText(status);
-
     /* generate a policy */
-    PermissionPolicy* policy = GeneratePolicy(issuerGUID, issuerPubKey, issuerPubKey);
+    PermissionPolicy* policy = GeneratePolicy(adminBus, consumerBus);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
     InstallPolicyToService(*policy);
     delete policy;
@@ -2588,12 +2467,12 @@ TEST_F(PermissionMgmtUseCaseTest, TwoTrustAnchors)
     InstallPolicyToConsumer(*policy);
     delete policy;
 
-    policy = GenerateMembershipAuthData(&membershipGUID1);
+    policy = GenerateMembershipAuthData(&membershipGUID1, &consumerBus);
     InstallMembershipToConsumer(policy);
     delete policy;
 
     /* allow the remote control to trust the service provider */
-    policy = GenerateGuildSpecificAccessOutgoingPolicy(membershipGUID1, issuerPubKey);
+    policy = GenerateGuildSpecificAccessOutgoingPolicy(membershipGUID1, adminBus);
     InstallPolicyToClientBus(consumerBus, remoteControlBus, *policy);
     delete policy;
 
@@ -2623,18 +2502,8 @@ TEST_F(PermissionMgmtUseCaseTest, TwoTrustAnchors)
 TEST_F(PermissionMgmtUseCaseTest, AddDeleteIdentityTrustAnchors)
 {
     Claims(true);
-    qcc::GUID128 issuerGUID;
-    PermissionMgmtTestHelper::GetGUID(adminBus, issuerGUID);
-    ECCPrivateKey issuerPrivateKey;
-    ECCPublicKey issuerPubKey;
-    status = PermissionMgmtTestHelper::RetrieveDSAKeys(adminBus, issuerPrivateKey, issuerPubKey);
-    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAKeys failed.  Actual Status: " << QCC_StatusText(status);
-
-    /* generate a policy */
-    ECCPublicKey guildAuthorityPubKey;
-    status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(consumerBus, &guildAuthorityPubKey);
-    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
-    PermissionPolicy* policy = GeneratePolicy(issuerGUID, issuerPubKey, guildAuthorityPubKey);
+    /* generate a policy with adminBus as the guild authority */
+    PermissionPolicy* policy = GeneratePolicy(adminBus, adminBus);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
     InstallPolicyToService(*policy);
     delete policy;
@@ -2643,7 +2512,7 @@ TEST_F(PermissionMgmtUseCaseTest, AddDeleteIdentityTrustAnchors)
     InstallPolicyToConsumer(*policy);
     delete policy;
 
-    policy = GenerateMembershipAuthData(&membershipGUID1);
+    policy = GenerateMembershipAuthData(&membershipGUID1, &adminBus);
     InstallMembershipToConsumer(policy);
     delete policy;
 
@@ -2681,13 +2550,6 @@ TEST_F(PermissionMgmtUseCaseTest, DifferentPeerLevelsInAnyUserPolicy)
 {
     /* claims the apps with the exception of the remote control app */
     Claims(true, false);
-    qcc::GUID128 issuerGUID;
-    PermissionMgmtTestHelper::GetGUID(adminBus, issuerGUID);
-    ECCPrivateKey issuerPrivateKey;
-    ECCPublicKey issuerPubKey;
-    status = PermissionMgmtTestHelper::RetrieveDSAKeys(adminBus, issuerPrivateKey, issuerPubKey);
-    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAKeys failed.  Actual Status: " << QCC_StatusText(status);
-
     EnableSecurity("ALLJOYN_ECDHE_NULL");
 
     /* setup the application interfaces for access tests */
@@ -2699,7 +2561,7 @@ TEST_F(PermissionMgmtUseCaseTest, DifferentPeerLevelsInAnyUserPolicy)
 
     /* generate a policy for service */
     EnableSecurity("ALLJOYN_ECDHE_ECDSA");
-    PermissionPolicy* policy = GenerateAnyUserPolicyWithLevel(issuerGUID, issuerPubKey);
+    PermissionPolicy* policy = GenerateAnyUserPolicyWithLevel(adminBus);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
     InstallPolicyToService(*policy);
     delete policy;
