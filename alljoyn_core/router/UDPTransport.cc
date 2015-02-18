@@ -49,6 +49,8 @@
 #include "ScatterGatherList.h"
 #endif
 
+#define ADVERTISE_ROUTER_OVER_UDP 1
+
 /*
  * How the transport fits into the system
  * ======================================
@@ -6611,7 +6613,12 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
         return false;
     }
 
-    if (strcmp(activeHello->GetMemberName(), "BusHello") != 0) {
+    bool isBusToBus;
+    if (strcmp(activeHello->GetMemberName(), "BusHello") == 0) {
+        isBusToBus = true;
+    } else if (strcmp(activeHello->GetMemberName(), "SimpleHello") == 0) {
+        isBusToBus = false;
+    } else {
         status = ER_BUS_ESTABLISH_FAILED;
         QCC_LogError(status, ("UDPTransport::AcceptCb(): Unexpected member name=\"%s\" in BusHello Message",
                               activeHello->GetMemberName()));
@@ -6669,8 +6676,8 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
     }
 
     qcc::String remoteGUID = args[0].v_string.str;
-    uint32_t protocolVersion = args[1].v_uint32 & 0x3FFFFFFF;
-    uint32_t nameTransfer = args[1].v_uint32 >> 30;
+    uint32_t protocolVersion = isBusToBus ? args[1].v_uint32 & 0x3FFFFFFF : args[1].v_uint32;
+    uint32_t nameTransfer = isBusToBus ? args[1].v_uint32 >> 30 : 0;
 
     QCC_DbgPrintf(("UDPTransport::AcceptCb(): Got BusHello(). remoteGuid=\"%s\", protocolVersion=%d., nameTransfer=%d.",
                    remoteGUID.c_str(), protocolVersion, nameTransfer));
@@ -6703,11 +6710,11 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
      * are short-circuiting the process, we have to do the bookkeeping
      * ourselves.
      */
-    udpEp->GetFeatures().isBusToBus = true;
+    udpEp->GetFeatures().isBusToBus = isBusToBus;
     udpEp->GetFeatures().allowRemote = true;
     udpEp->GetFeatures().protocolVersion = protocolVersion;
-    udpEp->GetFeatures().trusted = false;
-    udpEp->GetFeatures().nameTransfer = static_cast<SessionOpts::NameTransferType>(nameTransfer);
+    udpEp->GetFeatures().trusted = isBusToBus ? false : true;
+    udpEp->GetFeatures().nameTransfer = isBusToBus ? static_cast<SessionOpts::NameTransferType>(nameTransfer) : SessionOpts::ALL_NAMES;
     udpEp->SetRemoteGUID(remoteGUID);
     udpEp->SetPassive();
     udpEp->SetIpAddr(ipAddr);
@@ -6754,6 +6761,9 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
      * anywhere.  Send a hello reply from our local endpoint.  The unique name
      * in the BusHello reponse is the unique name of our UDP endpoint we just
      * allocated above.
+     *
+     * Note: The first param to HelloReply() is true even if isBusToBus==false becuase we
+     *      always want to reply as if to a BusHello method (ARDPHello has the same return values)
      */
     QCC_DbgPrintf(("UDPTransport::AcceptCb(): HelloReply(true, \"%s\")", udpEp->GetUniqueName().c_str()));
     status = activeHello->HelloReply(true, udpEp->GetUniqueName(), static_cast<SessionOpts::NameTransferType>(nameTransfer));
@@ -10170,23 +10180,55 @@ QStatus UDPTransport::DoStartListen(qcc::String& normSpec)
     return status;
 }
 
-/**
- * Since untrusted clients are only Thin Library clients, and the Thin Library
- * only supports TCP, this is a NOP here.
- */
+
 void UDPTransport::UntrustedClientExit()
 {
     QCC_DbgTrace((" UDPTransport::UntrustedClientExit()"));
+#if ADVERTISE_ROUTER_OVER_UDP
+    /* An untrusted client has exited, update the counts and re-enable the advertisement if necessary. */
+    m_listenRequestsLock.Lock();
+    m_numUntrustedClients--;
+    QCC_DbgPrintf((" UDPTransport::UntrustedClientExit() m_numUntrustedClients=%d m_maxUntrustedClients=%d", m_numUntrustedClients, m_maxUntrustedClients));
+    if (!m_routerName.empty() && (m_numUntrustedClients == (m_maxUntrustedClients - 1))) {
+        EnableAdvertisement(m_routerName, true, TRANSPORT_UDP);
+    }
+    m_listenRequestsLock.Unlock();
+#endif
 }
 
-/**
- * Since untrusted clients are only Thin Library clients, and the Thin Library
- * only supports TCP, this is a NOP here.
- */
+
 QStatus UDPTransport::UntrustedClientStart()
 {
+#if ADVERTISE_ROUTER_OVER_UDP
+    QStatus status = ER_OK;
+    m_listenRequestsLock.Lock();
+    m_numUntrustedClients++;
+    QCC_DbgPrintf((" UDPTransport::UntrustedClientStart() m_numUntrustedClients=%d m_maxUntrustedClients=%d", m_numUntrustedClients, m_maxUntrustedClients));
+
+    if (m_numUntrustedClients > m_maxUntrustedClients) {
+        /* This could happen in the following situation:
+         * The max untrusted clients is set to 1. Two untrusted clients try to
+         * connect to this daemon at the same time. When the 2nd one
+         * finishes the EndpointAuth::Establish, it will call into this method
+         * and hit this case and will be rejected.
+         */
+        status = ER_BUS_NOT_ALLOWED;
+        m_numUntrustedClients--;
+    }
+    if (m_numUntrustedClients >= m_maxUntrustedClients) {
+        if (m_numUntrustedClients == m_maxUntrustedClients) {
+            QCC_DbgPrintf(("UDPTransport::UntrustedClientStart(): Last available slot is now filled - no more free slots"));
+        } else {
+            QCC_LogError(ER_BUS_NOT_ALLOWED, ("UDPTransport::UntrustedClientStart(): Disabling routing node advertisements"));
+        }
+        DisableAdvertisement(m_routerName, TRANSPORT_UDP);
+    }
+    m_listenRequestsLock.Unlock();
+    return status;
+#else
     QCC_DbgTrace((" UDPTransport::UntrustedClientStart()"));
-    return ER_UDP_NOT_IMPLEMENTED;
+    return ER_NOT_IMPLEMENTED;
+#endif
 }
 
 /**

@@ -118,6 +118,7 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
             return status;
         }
         ifc->AddMethod("BusHello",                 "su",                "ssu",               "GUIDC,protoVerC,GUIDS,uniqueName,protoVerS", 0);
+        ifc->AddMethod("SimpleHello",              "su",                "ssu",               "GUIDC,protoVerC,GUIDS,uniqueName,protoVerS", 0);
         ifc->AddMethod("BindSessionPort",          "q" SESSIONOPTS_SIG,  "uq",                "portIn,opts,disposition,portOut",           0);
         ifc->AddMethod("UnbindSessionPort",        "q",                 "u",                 "port,disposition",                           0);
         ifc->AddMethod("JoinSession",              "sq" SESSIONOPTS_SIG, "uu" SESSIONOPTS_SIG, "sessionHost,port,opts,disp,sessionId,opts", 0);
