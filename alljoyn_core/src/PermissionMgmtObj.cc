@@ -162,6 +162,7 @@ void PermissionMgmtObj::PolicyChanged(PermissionPolicy* policy)
     qcc::GUID128 localGUID;
     ca->GetGuid(localGUID);
     bus.GetInternal().GetPermissionManager().SetPolicy(policy);
+    ManageMembershipTrustAnchors(policy);
     NotifyConfig();
 }
 
@@ -284,6 +285,22 @@ void PermissionMgmtObj::ClearTrustAnchorList(TrustAnchorList& list)
     list.clear();
 }
 
+/**
+ * remove all occurences of trust anchor with given use type
+ */
+static void ClearTrustAnchorListByUse(PermissionMgmtObj::TrustAnchorType use, PermissionMgmtObj::TrustAnchorList& list)
+{
+    PermissionMgmtObj::TrustAnchorList::iterator it = list.begin();
+    while (it != list.end()) {
+        if ((*it)->use == use) {
+            delete *it;
+            it = list.erase(it);
+        } else {
+            it++;
+        }
+    }
+}
+
 static void LoadGuildAuthorities(const PermissionPolicy& policy, PermissionMgmtObj::TrustAnchorList& guildAuthoritiesList)
 {
     const PermissionPolicy::Term* terms = policy.GetTerms();
@@ -299,6 +316,32 @@ static void LoadGuildAuthorities(const PermissionPolicy& policy, PermissionMgmtO
             }
         }
     }
+}
+
+static bool AddToTrustAnchorList(PermissionMgmtObj::TrustAnchor* trustAnchor, bool checkKeyId, PermissionMgmtObj::TrustAnchorList& list)
+{
+    /* check for duplicate trust anchor */
+    for (PermissionMgmtObj::TrustAnchorList::iterator it = list.begin(); it != list.end(); it++) {
+        if (checkKeyId) {
+            if ((*it)->keyInfo.GetKeyIdLen() == trustAnchor->keyInfo.GetKeyIdLen()) {
+                if (memcmp((*it)->keyInfo.GetKeyId(), trustAnchor->keyInfo.GetKeyId(), trustAnchor->keyInfo.GetKeyIdLen()) == 0) {
+                    return false;  /* duplicate */
+                }
+            }
+        } else if (memcmp((*it)->keyInfo.GetPublicKey(), trustAnchor->keyInfo.GetPublicKey(), sizeof(ECCPublicKey)) == 0) {
+            return false;  /* duplicate */
+        }
+    }
+    list.push_back(trustAnchor);
+    return true;
+}
+
+static void ClearAnchorMap(std::map<qcc::GUID128, PermissionMgmtObj::TrustAnchor*>& map)
+{
+    for (std::map<qcc::GUID128, PermissionMgmtObj::TrustAnchor*>::iterator it = map.begin(); it != map.end(); it++) {
+        delete it->second;
+    }
+    map.clear();
 }
 
 void PermissionMgmtObj::ClearTrustAnchors()
@@ -1155,9 +1198,7 @@ QStatus PermissionMgmtObj::LoadAndValidateAuthData(const String& serial, const G
     if (ER_OK != status) {
         return status;
     }
-    //return LoadAndValidateAuthDataUsingCert(bus, authDataArg, authorization, cert);
-    status = LoadAndValidateAuthDataUsingCert(bus, authDataArg, authorization, cert);
-    return status;
+    return LoadAndValidateAuthDataUsingCert(bus, authDataArg, authorization, cert);
 }
 
 void PermissionMgmtObj::InstallMembershipAuthData(const InterfaceDescription::Member* member, Message& msg)
@@ -1434,6 +1475,7 @@ QStatus PermissionMgmtObj::LocalMembershipsChanged()
         guildMap[it->first.ToString()] = meta;
     }
     ClearMembershipCertMap(certMap);
+    ManageMembershipTrustAnchors(NULL);
     return ER_OK;
 }
 
@@ -1706,6 +1748,7 @@ QStatus PermissionMgmtObj::ParseSendMemberships(Message& msg, bool& done)
                     /* check against the guild authorities */
                     status = ValidateCertificateChain(true, certsToVerify, &guildAuthorities);
                 }
+
                 if (ER_OK != status) {
                     /* remove this membership cert since it is not valid */
                     QCC_DbgPrintf(("PermissionMgmtObj::ParseSendMemberships invalidated peer's membership guild thus removing it from peer's guild list"));
@@ -2182,6 +2225,150 @@ QStatus PermissionMgmtObj::Get(const char* ifcName, const char* propName, MsgArg
         return ER_OK;
     }
     return ER_BUS_NO_SUCH_PROPERTY;
+}
+
+QStatus PermissionMgmtObj::GetTrustAnchorsFromAllMemberships(TrustAnchorList& taList)
+{
+    /* look for memberships head in the key store */
+    GUID128 membershipHead(0);
+    GetACLGUID(ENTRY_MEMBERSHIPS, membershipHead);
+
+    KeyBlob headerBlob;
+    QStatus status = ca->GetKey(membershipHead, headerBlob);
+    if (status == ER_BUS_KEY_UNAVAILABLE) {
+        return ER_OK;  /* nothing to do */
+    }
+    GUID128* guids = NULL;
+    size_t numOfGuids;
+    status = ca->GetKeys(membershipHead, &guids, &numOfGuids);
+    if (ER_OK != status) {
+        QCC_DbgPrintf(("PermissionMgmtObj::GetTrustAnchorsFromAllMemberships failed to retrieve the list of membership certificates.  Status 0x%x", status));
+        return status;
+    }
+    if (numOfGuids == 0) {
+        return ER_OK;
+    }
+    GUID128 localGUID;
+    ca->GetGuid(localGUID);
+    for (size_t cnt = 0; cnt < numOfGuids; cnt++) {
+        KeyBlob kb;
+        status = ca->GetKey(guids[cnt], kb);
+        if (ER_OK != status) {
+            QCC_DbgPrintf(("PermissionMgmtObj::GetTrustAnchorsFromAllMemberships error looking for membership certificate"));
+            delete [] guids;
+            return status;
+        }
+        MembershipCertificate cert;
+        status = LoadCertificate(Certificate::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), cert);
+        if (ER_OK != status) {
+            QCC_DbgPrintf(("PermissionMgmtObj::GetTrustAnchorsFromAllMemberships error loading membership certificate"));
+            delete [] guids;
+            return status;
+        }
+        if (cert.GetIssuer() == localGUID) {
+            continue;  /* skip the self signed cert */
+        }
+        std::map<qcc::GUID128, TrustAnchor*> chain;
+        TrustAnchor* ta = new TrustAnchor(TRUST_ANCHOR_MEMBERSHIP);
+        ta->keyInfo.SetKeyId(cert.GetIssuer().GetBytes(), GUID128::SIZE);
+        chain[cert.GetIssuer()] = ta;
+        /* go through into its associated nodes */
+        GUID128* associateGuids = NULL;
+        size_t numOfAssociateGuids = 0;
+        status = ca->GetKeys((GUID128 &)guids[cnt], &associateGuids, &numOfAssociateGuids);
+        if ((ER_OK != status) && (ER_BUS_KEY_UNAVAILABLE != status)) {
+            ClearAnchorMap(chain);
+            delete [] guids;
+            return status;
+        }
+
+        /* go through the associated entries of this guid */
+        status = ER_OK;
+        for (size_t idx = 0; idx < numOfAssociateGuids; idx++) {
+            KeyBlob kb;
+            status = ca->GetKey(associateGuids[idx], kb);
+            if (ER_OK != status) {
+                break;
+            }
+            /* check the tag */
+            if (kb.GetTag() == CERT_CHAIN_TAG_NAME) {
+                MembershipCertificate cert;
+                status = LoadCertificate(Certificate::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), cert);
+                if (ER_OK != status) {
+                    QCC_DbgPrintf(("PermissionMgmtObj::GetAMembershipCertChain error loading membership certificate"));
+                    ClearAnchorMap(chain);
+                    delete [] associateGuids;
+                    delete [] guids;
+                    return status;
+                }
+                std::map<qcc::GUID128, TrustAnchor*>::iterator tcit = chain.find(cert.GetIssuer());
+                if (tcit != chain.end()) {
+                    continue;  /* skip since already got the same issuer */
+                }
+                TrustAnchor* ta = new TrustAnchor(TRUST_ANCHOR_MEMBERSHIP);
+                ta->keyInfo.SetKeyId(cert.GetIssuer().GetBytes(), GUID128::SIZE);
+                chain[cert.GetIssuer()] = ta;
+                /* update the previous issuer for its public key */
+                std::map<qcc::GUID128, TrustAnchor*>::iterator cit = chain.find(cert.GetSubject());
+                if (cit != chain.end()) {
+                    cit->second->keyInfo.SetPublicKey(cert.GetSubjectPublicKey());
+                }
+            }
+        }
+        delete [] associateGuids;
+        /* add the trust anchors to the list without duplicate base on issuer */
+        std::map<qcc::GUID128, TrustAnchor*>::iterator it = chain.begin();
+        while (it != chain.end()) {
+            std::map<qcc::GUID128, TrustAnchor*>::iterator current = it++;
+            if (AddToTrustAnchorList(current->second, true, taList)) {
+                chain.erase(current);
+            }
+        }
+        ClearAnchorMap(chain);
+    }
+    delete [] guids;
+    return ER_OK;
+}
+
+QStatus PermissionMgmtObj::ManageMembershipTrustAnchors(PermissionPolicy* policy)
+{
+    bool modified = false;
+    TrustAnchorList addOns;
+    if (policy) {
+        LoadGuildAuthorities(*policy, addOns);
+        if (addOns.size() > 0) {
+            /* remove all the membership trust anchors and re-add the new ones */
+            ClearTrustAnchorListByUse(TRUST_ANCHOR_MEMBERSHIP, trustAnchors);
+            trustAnchors.reserve(trustAnchors.size() + addOns.size());
+            trustAnchors.insert(trustAnchors.end(), addOns.begin(), addOns.end());
+            addOns.clear();
+            modified = true;
+        }
+    }
+    QStatus status = GetTrustAnchorsFromAllMemberships(addOns);
+    if (ER_OK != status) {
+        ClearTrustAnchorList(addOns);
+        return status;
+    }
+    if (!modified && (addOns.size() > 0)) {
+        /* remove all the membership trust anchors and re-add the new ones */
+        ClearTrustAnchorListByUse(TRUST_ANCHOR_MEMBERSHIP, trustAnchors);
+    }
+    /* add the trust anchors to the list without duplicate base on issuer */
+    TrustAnchorList::iterator it = addOns.begin();
+    while (it != addOns.end()) {
+        if (AddToTrustAnchorList(*it, true, trustAnchors)) {
+            modified = true;
+            it = addOns.erase(it);
+        } else {
+            it++;
+        }
+    }
+    ClearTrustAnchorList(addOns);
+    if (modified) {
+        return StoreTrustAnchors();
+    }
+    return ER_OK;
 }
 
 } /* namespace ajn */

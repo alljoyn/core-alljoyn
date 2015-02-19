@@ -765,46 +765,46 @@ QStatus PermissionMgmtTestHelper::InstallMembership(const String& serial, BusAtt
     return InvokeInstallMembershipAuthData(bus, remoteObj, serial, localGUID, *membershipAuthData);
 }
 
-QStatus PermissionMgmtTestHelper::InstallMembershipChain(const String& serial, BusAttachment& bus, ProxyBusObject& remoteObj, BusAttachment& signingBus, BusAttachment& subjectBus, const qcc::GUID128& subjectGUID, const ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, PermissionPolicy** authDataArray)
+QStatus PermissionMgmtTestHelper::InstallMembershipChain(BusAttachment& topBus, BusAttachment& secondBus, const String& serial0, const String& serial1, ProxyBusObject& remoteObj, const qcc::GUID128& secondGUID, const ECCPublicKey* secondPubKey, const qcc::GUID128& targetGUID, const ECCPublicKey* targetPubKey, const qcc::GUID128& guild, PermissionPolicy** authDataArray)
 {
-    CredentialAccessor ca(bus);
-    qcc::GUID128 localGUID;
-    QStatus status = ca.GetGuid(localGUID);
+    CredentialAccessor ca(topBus);
+    qcc::GUID128 topIssuerGUID;
+    QStatus status = ca.GetGuid(topIssuerGUID);
     if (status != ER_OK) {
         return status;
     }
     /* create the second cert first -- with delegate on  */
     uint8_t digest[Certificate::SHA256_DIGEST_SIZE];
-    Message tmpMsg(bus);
+    Message tmpMsg(topBus);
     DefaultPolicyMarshaller marshaller(tmpMsg);
     authDataArray[1]->Digest(marshaller, digest, Certificate::SHA256_DIGEST_SIZE);
     qcc::String derArray[2];
-    status = CreateMembershipCert(serial, digest, localGUID, signingBus, subjectGUID, subjectPubKey, guild, true, derArray[1]);
+    status = CreateMembershipCert(serial1, digest, topIssuerGUID, topBus, secondGUID, secondPubKey, guild, true, derArray[1]);
     if (status != ER_OK) {
         return status;
     }
 
     /* create the leaf cert signed by the subject */
     authDataArray[0]->Digest(marshaller, digest, Certificate::SHA256_DIGEST_SIZE);
-    status = CreateMembershipCert(serial, digest, subjectGUID, subjectBus, subjectGUID, subjectPubKey, guild, false, derArray[0]);
+    status = CreateMembershipCert(serial0, digest, secondGUID, secondBus, targetGUID, targetPubKey, guild, false, derArray[0]);
     if (status != ER_OK) {
         return status;
     }
 
     /* install cert chain */
-    status = InvokeInstallMembership(bus, remoteObj, derArray, 2);
+    status = InvokeInstallMembership(secondBus, remoteObj, derArray, 2);
     if (ER_OK != status) {
         return status;
     }
 
     /* installing the auth data for leaf cert*/
-    status = InvokeInstallMembershipAuthData(bus, remoteObj, serial, subjectGUID, *authDataArray[0]);
+    status = InvokeInstallMembershipAuthData(secondBus, remoteObj, serial0, secondGUID, *authDataArray[0]);
     if (ER_OK != status) {
         return status;
     }
 
     /* installing the auth data for second cert */
-    status = InvokeInstallMembershipAuthData(bus, remoteObj, serial, localGUID, *authDataArray[1]);
+    status = InvokeInstallMembershipAuthData(secondBus, remoteObj, serial1, topIssuerGUID, *authDataArray[1]);
     if (ER_OK != status) {
         return status;
     }

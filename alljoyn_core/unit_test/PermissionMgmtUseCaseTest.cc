@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -23,6 +23,7 @@ using namespace qcc;
 static const char* PERMISSION_MGMT_PATH = "/org/allseen/Security/PermissionMgmt";
 
 static GUID128 membershipGUID1;
+static const char* membershipSerial0 = "10000";
 static const char* membershipSerial1 = "10001";
 static GUID128 membershipGUID2;
 static GUID128 membershipGUID3;
@@ -1103,7 +1104,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         if (usePSK) {
             EnableSecurity("ALLJOYN_ECDHE_PSK");
         } else {
-            EnableSecurity("ALLJOYN_ECDHE_NULL");
+            EnableSecurity("ALLJOYN_ECDHE_ECDSA");
         }
         ClaimAdmin();
         if (usePSK) {
@@ -1116,7 +1117,11 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         if (claimRemoteControl) {
             ConsumerClaimsRemoteControl();
         }
-        EnableSecurity("ALLJOYN_ECDHE_ECDSA");
+        if (usePSK) {
+            EnableSecurity("ALLJOYN_ECDHE_PSK ALLJOYN_ECDHE_ECDSA");
+        } else {
+            EnableSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA");
+        }
     }
 
     void Claims(bool usePSK)
@@ -1401,15 +1406,24 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     /**
      *  Install Membership chain to a consumer
      */
-    void InstallMembershipChainToConsumer(const char* serial, qcc::GUID128& guildID, PermissionPolicy** authDataArray)
+    void InstallMembershipChainToTarget(BusAttachment& topBus, BusAttachment& middleBus, BusAttachment& targetBus, const char* serial0, const char* serial1, qcc::GUID128& guildID, PermissionPolicy** authDataArray)
     {
-        ProxyBusObject clientProxyObject(adminBus, consumerBus.GetUniqueName().c_str(), PERMISSION_MGMT_PATH, 0, false);
+        ProxyBusObject clientProxyObject(middleBus, targetBus.GetUniqueName().c_str(), PERMISSION_MGMT_PATH, 0, false);
 
-        ECCPublicKey claimedPubKey;
-        status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(consumerBus, &claimedPubKey);
-        EXPECT_EQ(ER_OK, status) << "  InstallMembershipChainToConsumer RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
-        status = PermissionMgmtTestHelper::InstallMembershipChain(serial, adminBus, clientProxyObject, adminBus, consumerBus, consumerGUID, &claimedPubKey, guildID, authDataArray);
-        EXPECT_EQ(ER_OK, status) << "  InstallMembershipChainToConsumer failed.  Actual Status: " << QCC_StatusText(status);
+        ECCPublicKey targetPubKey;
+        status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(targetBus, &targetPubKey);
+        EXPECT_EQ(ER_OK, status) << "  InstallMembershipChainToTarget RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
+        ECCPublicKey secondPubKey;
+        status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(middleBus, &secondPubKey);
+        EXPECT_EQ(ER_OK, status) << "  InstallMembershipChainToTarget RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
+        CredentialAccessor mca(middleBus);
+        qcc::GUID128 middleGUID;
+        status = mca.GetGuid(middleGUID);
+        CredentialAccessor tca(targetBus);
+        qcc::GUID128 targetGUID;
+        status = tca.GetGuid(targetGUID);
+        status = PermissionMgmtTestHelper::InstallMembershipChain(topBus, middleBus, serial0, serial1, clientProxyObject, middleGUID, &secondPubKey, targetGUID, &targetPubKey, guildID, authDataArray);
+        EXPECT_EQ(ER_OK, status) << "  InstallMembershipChainToTarget failed.  Actual Status: " << QCC_StatusText(status);
     }
 
     /**
@@ -2379,7 +2393,7 @@ TEST_F(PermissionMgmtUseCaseTest, ConsumerHasGoodMembershipCertChain)
 
     PermissionPolicy** authDataArray = new PermissionPolicy * [2];
     GenerateMembershipAuthChain(authDataArray, 2);
-    InstallMembershipChainToConsumer(membershipSerial1, membershipGUID1, authDataArray);
+    InstallMembershipChainToTarget(adminBus, adminBus, consumerBus, membershipSerial0, membershipSerial1, membershipGUID1, authDataArray);
     for (size_t cnt = 0; cnt < 2; cnt++) {
         delete authDataArray[cnt];
     }
@@ -2423,7 +2437,7 @@ TEST_F(PermissionMgmtUseCaseTest, ConsumerHasOverreachingMembershipCertChain)
 
     PermissionPolicy** authDataArray = new PermissionPolicy * [2];
     GenerateOverReachingMembershipAuthChain(authDataArray, 2);
-    InstallMembershipChainToConsumer(membershipSerial1, membershipGUID1, authDataArray);
+    InstallMembershipChainToTarget(adminBus, adminBus, consumerBus, membershipSerial0, membershipSerial1, membershipGUID1, authDataArray);
     for (size_t cnt = 0; cnt < 2; cnt++) {
         delete authDataArray[cnt];
     }
@@ -2568,10 +2582,7 @@ TEST_F(PermissionMgmtUseCaseTest, TwoTrustAnchors)
     EXPECT_EQ(ER_OK, status) << "  RetrieveDSAKeys failed.  Actual Status: " << QCC_StatusText(status);
 
     /* generate a policy */
-    ECCPublicKey guildAuthorityPubKey;
-    status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(consumerBus, &guildAuthorityPubKey);
-    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
-    PermissionPolicy* policy = GeneratePolicy(issuerGUID, issuerPubKey, guildAuthorityPubKey);
+    PermissionPolicy* policy = GeneratePolicy(issuerGUID, issuerPubKey, issuerPubKey);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
     InstallPolicyToService(*policy);
     delete policy;
@@ -2584,21 +2595,28 @@ TEST_F(PermissionMgmtUseCaseTest, TwoTrustAnchors)
     InstallMembershipToConsumer(policy);
     delete policy;
 
-    InstallAdditionalIdentityTrustAnchor(adminBus, consumerBus, serviceBus, true);
-    InstallAdditionalIdentityTrustAnchor(consumerBus, adminBus, remoteControlBus);
-
-    policy = GenerateFullAccessOutgoingPolicy();
+    /* allow the remote control to trust the service provider */
+    policy = GenerateGuildSpecificAccessOutgoingPolicy(membershipGUID1, issuerPubKey);
     InstallPolicyToClientBus(consumerBus, remoteControlBus, *policy);
     delete policy;
+
+    PermissionPolicy** authDataArray = new PermissionPolicy * [2];
+    GenerateMembershipAuthChain(authDataArray, 2);
+    InstallMembershipChainToTarget(adminBus, consumerBus, remoteControlBus, membershipSerial0, membershipSerial1, membershipGUID1, authDataArray);
+    for (size_t cnt = 0; cnt < 2; cnt++) {
+        delete authDataArray[cnt];
+    }
+    delete [] authDataArray;
+    /* install additional crentials on service so the service provider trust
+       the remote control */
+    InstallAdditionalIdentityTrustAnchor(adminBus, consumerBus, serviceBus);
 
     /* setup the application interfaces for access tests */
     CreateAppInterfaces(serviceBus, true);
     CreateAppInterfaces(consumerBus, false);
     CreateAppInterfaces(remoteControlBus, false);
 
-    AnyUserCanCallOnAndNotOff(consumerBus);
     AnyUserCanCallOnAndNotOff(remoteControlBus);
-    ConsumerCanTVUpAndDownAndNotChannel();
 
 }
 

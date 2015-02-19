@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -81,6 +81,8 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
                 creds.SetPassword(psk);
                 creds.SetExpiration(100);  /* set the master secret expiry time to 100 seconds */
                 return true;
+            } else if (strcmp(authMechanism, "ALLJOYN_ECDHE_ECDSA") == 0) {
+                return true;
             }
             return false;
         }
@@ -156,6 +158,7 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
     BusAttachment remoteControlBus;
     qcc::GUID128 serviceGUID;
     qcc::GUID128 consumerGUID;
+    qcc::GUID128 remoteControlGUID;
     QStatus status;
     bool authComplete;
 
@@ -229,7 +232,7 @@ class PermissionMgmtTestHelper {
     static QStatus RetrieveDSAKeys(BusAttachment& bus, qcc::ECCPrivateKey& privateKey, qcc::ECCPublicKey& publicKey);
     static QStatus LoadCertificateBytes(Message& msg, qcc::CertificateX509& cert);
     static QStatus InstallMembership(const qcc::String& serial, BusAttachment& bus, ProxyBusObject& remoteObj, BusAttachment& signingBus, const qcc::GUID128& subjectGUID, const qcc::ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, PermissionPolicy* membershipAuthData);
-    static QStatus InstallMembershipChain(const qcc::String& serial, BusAttachment& bus, ProxyBusObject& remoteObj, BusAttachment& signingBus, BusAttachment& subjectBus, const qcc::GUID128& subjectGUID, const qcc::ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, PermissionPolicy** authDataArray);
+    static QStatus InstallMembershipChain(BusAttachment& topBus, BusAttachment& secondBus, const qcc::String& serial0, const qcc::String& serial1, ProxyBusObject& remoteObj, const qcc::GUID128& secondGUID, const qcc::ECCPublicKey* secondPubKey, const qcc::GUID128& targetGUID, const qcc::ECCPublicKey* targetPubKey, const qcc::GUID128& guild, PermissionPolicy** authDataArray);
 
     static QStatus RemoveMembership(BusAttachment& bus, ProxyBusObject& remoteObj, const qcc::String serialNum, const qcc::GUID128& issuer);
     static QStatus InstallIdentity(BusAttachment& bus, ProxyBusObject& remoteObj, qcc::String& der);
