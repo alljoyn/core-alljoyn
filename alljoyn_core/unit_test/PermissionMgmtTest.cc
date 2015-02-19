@@ -638,13 +638,13 @@ QStatus PermissionMgmtTestHelper::RemovePolicy(BusAttachment& bus, ProxyBusObjec
 QStatus PermissionMgmtTestHelper::RetrieveDSAPrivateKeyFromKeyStore(BusAttachment& bus, ECCPrivateKey* privateKey)
 {
     CredentialAccessor ca(bus);
-    return PermissionMgmtObj::RetrieveDSAPrivateKey(&ca, privateKey);
+    return ca.GetDSAPrivateKey(*privateKey);
 }
 
 QStatus PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(BusAttachment& bus, ECCPublicKey* publicKey)
 {
     CredentialAccessor ca(bus);
-    return PermissionMgmtObj::RetrieveDSAPublicKey(&ca, publicKey);
+    return ca.GetDSAPublicKey(*publicKey);
 }
 
 QStatus PermissionMgmtTestHelper::RetrieveDSAKeys(BusAttachment& bus, ECCPrivateKey& privateKey, ECCPublicKey& publicKey)

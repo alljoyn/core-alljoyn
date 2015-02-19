@@ -195,23 +195,6 @@ class PermissionMgmtObj : public BusObject {
     static QStatus StoreDSAKeys(CredentialAccessor* ca, const qcc::ECCPrivateKey* privateKey, const qcc::ECCPublicKey* publicKey);
 
     /**
-     * Help function to retrieve DSA public key from the key store.
-     * @param ca the credential accesor object
-     * @param publicKey the buffer to hold DSA public key.
-     * @return ER_OK if successful; otherwise, error code.
-     */
-    static QStatus RetrieveDSAPublicKey(CredentialAccessor* ca, qcc::ECCPublicKey* publicKey);
-
-    /**
-     * Help function to retrieve DSA public key from the key store.
-     * @param ca the credential accesor object
-     * @param privateKey the buffer to hold DSA private key.
-     * @return ER_OK if successful; otherwise, error code.
-     */
-
-    static QStatus RetrieveDSAPrivateKey(CredentialAccessor* ca, qcc::ECCPrivateKey* privateKey);
-
-    /**
      * Set the permission manifest for the application.
      * @params rules the permission rules.
      * @params count the number of permission rules
