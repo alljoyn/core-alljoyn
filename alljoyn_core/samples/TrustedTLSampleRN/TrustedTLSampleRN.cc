@@ -1,4 +1,8 @@
-/* SampleDaemon - Allow thin client applications to slave off it */
+/**
+ * @file
+ * TrustedTLSampleRN is a sample Routing Node that provides credentials allowing
+ * trusted thin client applications connect.
+ */
 
 /******************************************************************************
  * Copyright AllSeen Alliance. All rights reserved.
@@ -32,7 +36,7 @@
 
 #include <csignal>
 
-#define QCC_MODULE "SAMPLE_DAEMON"
+#define QCC_MODULE "TRUSTED_TL_SAMPLE_RN"
 
 using namespace ajn;
 using namespace qcc;
@@ -40,8 +44,8 @@ using namespace std;
 
 namespace org {
 namespace alljoyn {
-namespace SampleDaemon {
-const char* DefaultDaemonBusName = "org.alljoyn.BusNode.TestingPurposesOnly";
+namespace TrustedTLSampleRN {
+const char* DefaultRNBusName = "org.alljoyn.BusNode.TestingPurposesOnly";
 
 const char* ThinClientAuthMechanism = "ALLJOYN_PIN_KEYX";
 const char* ThinClientDefaultBusPwd = "1234";
@@ -55,24 +59,24 @@ static void CDECL_CALL SigIntHandler(int sig)
     g_interrupted = true;
 }
 
-static void usage(void) {
-    std::cout << "Usage: SampleDaemon [-h] [-n <name-to-advertise>]\n\n" <<
-    "Options:\n" <<
-    "   -h                        = Print this help message\n" <<
-    "   -n <name-to-advertise>" <<
-    "    = Name to be advertised by the SampleDaemon, that thin client apps are looking for\n" <<
-    std::endl;
+static void usage(void)
+{
+    printf("Usage: TrustedTLSampleRN [-h] [-n <well-known-name>]\n\n");
+    printf("Options:\n");
+    printf("   -h                        = Print this help message\n");
+    printf("   -n <well-known name>      = Well-known bus name advertised by Routing Node\n");
+    printf("\n");
 }
 
 int main(int argc, char** argv)
 {
-    std::cout << "AllJoyn Library version: " << ajn::GetVersion() <<
-    "\nAllJoyn Library build info: " << ajn::GetBuildInfo() << std::endl;
+    printf("AllJoyn Library version: %s\n", ajn::GetVersion());
+    printf("AllJoyn Library build info: %s\n", ajn::GetBuildInfo());
 
     // Register SIGNT (Ctrl-C) handler
     signal(SIGINT, SigIntHandler);
 
-    String nameToAdvertise = ::org::alljoyn::SampleDaemon::DefaultDaemonBusName;
+    String nameToAdvertise = ::org::alljoyn::TrustedTLSampleRN::DefaultRNBusName;
 
     // Parse command line arguments, if any
     for (int i = 1; i < argc; i++) {
@@ -81,43 +85,43 @@ int main(int argc, char** argv)
             exit(0);
         } else if (0 == strcmp("-n", argv[i])) {
             if (argc == ++i) {
-                std::cout << "option " << argv[i - 1] << " requires a name parameter" << std::endl;
+                printf("option %s requires a parameter\n", argv[i - 1]);
                 usage();
                 exit(1);
             } else {
                 nameToAdvertise = argv[i];
             }
         } else {
-            std::cout << "Unknown option " << argv[i] << std::endl;
+            printf("Unknown option %s\n", argv[i]);
             usage();
             exit(1);
         }
     }
 
-    BusAttachment msgBus("SampleDaemon", true);
+    BusAttachment msgBus("TrustedTLSampleRN", true);
 
     QStatus status = ER_FAIL;
     status = msgBus.Start();
 
     if (ER_OK == status) {
         // Set the credential that thin clients have to offer to connect
-        // to this SampleDaemon in a trusted manner.
+        // to this TrustedTLSampleRN in a trusted manner.
         PasswordManager::SetCredentials(
-            ::org::alljoyn::SampleDaemon::ThinClientAuthMechanism,
-            ::org::alljoyn::SampleDaemon::ThinClientDefaultBusPwd
+            ::org::alljoyn::TrustedTLSampleRN::ThinClientAuthMechanism,
+            ::org::alljoyn::TrustedTLSampleRN::ThinClientDefaultBusPwd
             );
 
         // Force connecting to bundled router (i.e. null transport) to ensure
         // that credentials are correctly set.
         //
         // NOTE: The above SetCredentials call doesn't take effect
-        //       when connecting to a daemon.
+        //       when connecting to a RN.
         status = msgBus.Connect("null:");
 
         if (ER_OK == status) {
-            // 'Quiet'ly advertise the name to be discovered by thin clients.
-            // Also, given that thin clients are in the same network as the
-            // SampleDaemon, advertise the name ONLY over TCP Transport.
+            // Quietly advertise the name to be discovered by thin clients only
+            // over the TCP Transport since they currently only support that
+            // mechanism.
             nameToAdvertise = "quiet@" + nameToAdvertise;
             status = msgBus.AdvertiseName(nameToAdvertise.c_str(), TRANSPORT_TCP);
             if (ER_OK != status) {
@@ -131,6 +135,6 @@ int main(int argc, char** argv)
         qcc::Sleep(100);
     }
 
-    QCC_SyncPrintf("%s exiting with status %u (%s)\n", argv[0], status, QCC_StatusText(status));
+    printf("%s exiting with status %u (%s)\n", argv[0], status, QCC_StatusText(status));
     return (int) status;
 }
