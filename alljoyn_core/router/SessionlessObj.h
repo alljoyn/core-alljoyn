@@ -61,7 +61,7 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      * @param router         The DaemonRouter associated with the bus.
      * @param busController  Controller that created this object.
      */
-    SessionlessObj(Bus& bus, BusController* busController);
+    SessionlessObj(Bus& bus, BusController* busController, DaemonRouter& router);
 
     /**
      * Destructor

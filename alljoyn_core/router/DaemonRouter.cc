@@ -33,11 +33,12 @@
 #include <alljoyn/AllJoynStd.h>
 #include <alljoyn/Status.h>
 
-#include "BusController.h"
 #include "BusEndpoint.h"
 #include "ConfigDB.h"
 #include "DaemonRouter.h"
 #include "EndpointHelper.h"
+#include "AllJoynObj.h"
+#include "SessionlessObj.h"
 #ifdef ENABLE_POLICYDB
 #include "PolicyDB.h"
 #endif
@@ -51,7 +52,7 @@ using namespace qcc;
 namespace ajn {
 
 
-DaemonRouter::DaemonRouter() : ruleTable(), nameTable(), busController(NULL)
+DaemonRouter::DaemonRouter() : ruleTable(), nameTable(), busController(NULL), alljoynObj(NULL), sessionlessObj(NULL)
 {
 #ifdef ENABLE_POLICYDB
     AddBusNameListener(ConfigDB::GetConfigDB());
@@ -130,7 +131,7 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& origSender)
          * taken here. If it returns false, then the normal routing procedure should
          * attempt to deliver the message.
          */
-        if (busController->GetSessionlessObj().RouteSessionlessMessage(RemoteEndpoint::cast(sender)->GetSessionId(), msg)) {
+        if (sessionlessObj->RouteSessionlessMessage(RemoteEndpoint::cast(sender)->GetSessionId(), msg)) {
             return ER_OK;
         }
         QCC_DbgPrintf(("DaemonRouter::PushMessage(): Unable to RouteSessionlessMessage()"));
@@ -215,8 +216,8 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& origSender)
                 (sender->GetEndpointType() != ENDPOINT_TYPE_BUS2BUS) &&
                 (sender->GetEndpointType() != ENDPOINT_TYPE_NULL)) {
 
-                QCC_DbgPrintf(("DaemonRouter::PushMessage(): buscontroller->StartService()"));
-                status = busController->StartService(msg, sender);
+                QCC_DbgPrintf(("DaemonRouter::PushMessage(): Start service not implemented"));
+                status = ER_NOT_IMPLEMENTED;
             } else {
                 status = ER_BUS_NO_ROUTE;
             }
@@ -269,12 +270,11 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& origSender)
                  * If the message originated locally or the destination allows remote messages
                  * forward the message, otherwise silently ignore it.
                  */
+                bool sendMsg = !((sender->GetEndpointType() == ENDPOINT_TYPE_BUS2BUS) && !dest->AllowRemoteMessages());
 #ifdef ENABLE_POLICYDB
-                if (!((sender->GetEndpointType() == ENDPOINT_TYPE_BUS2BUS) && !dest->AllowRemoteMessages()) &&
-                    ((dest == localEndpoint) || policyDB->OKToReceive(nmh, dest))) {
-#else
-                if (!((sender->GetEndpointType() == ENDPOINT_TYPE_BUS2BUS) && !dest->AllowRemoteMessages())) {
+                sendMsg = sendMsg && (dest == localEndpoint) || policyDB->OKToReceive(nmh, dest);
 #endif
+                if (sendMsg) {
                     ruleTable.Unlock();
                     nameTable.Unlock();
                     QCC_DbgPrintf(("DaemonRouter::PushMessage(): SendThroughEndpoint()"));
@@ -294,7 +294,7 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& origSender)
         if (msg->IsSessionless()) {
             /* Give "locally generated" sessionless message to SessionlessObj */
             if (sender->GetEndpointType() != ENDPOINT_TYPE_BUS2BUS) {
-                status = busController->PushSessionlessMessage(msg);
+                status = sessionlessObj->PushMessage(msg);
             }
         } else if (msg->IsGlobalBroadcast()) {
             /*
@@ -333,11 +333,11 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& origSender)
                 RemoteEndpoint ep = *it;
                 if ((ep != origSender) && ((sessionId == 0) || ep->GetSessionId() == sessionId)) {
                     BusEndpoint busEndpoint = BusEndpoint::cast(ep);
+                    bool sendMsg = true;
 #ifdef ENABLE_POLICYDB
-                    if ((busEndpoint == localEndpoint) || policyDB->OKToReceive(nmh, busEndpoint)) {
-#else
-                    {
+                    sendMsg = sendMsg && (busEndpoint == localEndpoint) || policyDB->OKToReceive(nmh, busEndpoint);
 #endif
+                    if (sendMsg) {
                         m_b2bEndpointsLock.Unlock(MUTEX_CONTEXT);
                         QCC_DbgPrintf(("DaemonRouter::PushMessage(): SendThroughEndpoint()"));
                         QStatus tStatus = SendThroughEndpoint(msg, busEndpoint, sessionId);
@@ -446,9 +446,9 @@ QStatus DaemonRouter::AddRule(BusEndpoint& endpoint, Rule& rule)
 {
     QStatus status = ruleTable.AddRule(endpoint, rule);
 
-    /* Allow busController to examine this rule */
+    /* Allow sessionlessObj to examine this rule */
     if (status == ER_OK) {
-        busController->AddRule(endpoint->GetUniqueName(), rule);
+        sessionlessObj->AddRule(endpoint->GetUniqueName(), rule);
     }
 
     return status;
@@ -458,8 +458,8 @@ QStatus DaemonRouter::RemoveRule(BusEndpoint& endpoint, Rule& rule)
 {
     QStatus status = ruleTable.RemoveRule(endpoint, rule);
     if (ER_OK == status) {
-        /* Allow busController to examine rule being removed */
-        busController->RemoveRule(endpoint->GetUniqueName(), rule);
+        /* Allow sessionlessObj to examine rule being removed */
+        sessionlessObj->RemoveRule(endpoint->GetUniqueName(), rule);
     }
     return status;
 }
@@ -477,7 +477,7 @@ QStatus DaemonRouter::RegisterEndpoint(BusEndpoint& endpoint)
     if (endpoint->GetEndpointType() == ENDPOINT_TYPE_BUS2BUS) {
         /* AllJoynObj is in charge of managing bus-to-bus endpoints and their names */
         RemoteEndpoint busToBusEndpoint = RemoteEndpoint::cast(endpoint);
-        status = busController->GetAllJoynObj().AddBusToBusEndpoint(busToBusEndpoint);
+        status = alljoynObj->AddBusToBusEndpoint(busToBusEndpoint);
 
         /* Add to list of bus-to-bus endpoints */
         m_b2bEndpointsLock.Lock(MUTEX_CONTEXT);
@@ -509,7 +509,7 @@ void DaemonRouter::UnregisterEndpoint(const qcc::String& epName, EndpointType ep
         /* Inform bus controller of bus-to-bus endpoint removal */
         RemoteEndpoint busToBusEndpoint = RemoteEndpoint::cast(endpoint);
 
-        busController->GetAllJoynObj().RemoveBusToBusEndpoint(busToBusEndpoint);
+        alljoynObj->RemoveBusToBusEndpoint(busToBusEndpoint);
 
         /* Remove the bus2bus endpoint from the list */
         m_b2bEndpointsLock.Lock(MUTEX_CONTEXT);
@@ -552,7 +552,10 @@ void DaemonRouter::UnregisterEndpoint(const qcc::String& epName, EndpointType ep
     }
 }
 
-QStatus DaemonRouter::AddSessionRoute(SessionId id, BusEndpoint& srcEp, RemoteEndpoint* srcB2bEp, BusEndpoint& destEp, RemoteEndpoint& destB2bEp, SessionOpts* optsHint)
+QStatus DaemonRouter::AddSessionRoute(SessionId id,
+                                      BusEndpoint& srcEp, RemoteEndpoint* srcB2bEp,
+                                      BusEndpoint& destEp, RemoteEndpoint& destB2bEp,
+                                      SessionOpts* optsHint)
 {
     QCC_DbgTrace(("DaemonRouter::AddSessionRoute(%u, %s, %s, %s, %s, %s)", id, srcEp->GetUniqueName().c_str(), srcB2bEp ? (*srcB2bEp)->GetUniqueName().c_str() : "<none>", destEp->GetUniqueName().c_str(), destB2bEp->GetUniqueName().c_str(), optsHint ? "opts" : "NULL"));
     QStatus status = ER_OK;

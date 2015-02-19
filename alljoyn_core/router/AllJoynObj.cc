@@ -97,10 +97,10 @@ void AllJoynObj::ReleaseLocks()
     router.UnlockNameTable();
 }
 
-AllJoynObj::AllJoynObj(Bus& bus, BusController* busController) :
+AllJoynObj::AllJoynObj(Bus& bus, BusController* busController, DaemonRouter& router) :
     BusObject(org::alljoyn::Bus::ObjectPath, false),
     bus(bus),
-    router(reinterpret_cast<DaemonRouter&>(bus.GetInternal().GetRouter())),
+    router(router),
     foundNameSignal(NULL),
     lostAdvNameSignal(NULL),
     sessionLostSignal(NULL),

@@ -129,11 +129,11 @@ struct RemoteCacheSnapshot {
     qcc::String guid;
 };
 
-SessionlessObj::SessionlessObj(Bus& bus, BusController* busController) :
+SessionlessObj::SessionlessObj(Bus& bus, BusController* busController, DaemonRouter& router) :
     BusObject(ObjectPath, false),
     bus(bus),
     busController(busController),
-    router(reinterpret_cast<DaemonRouter&>(bus.GetInternal().GetRouter())),
+    router(router),
     sessionlessIface(NULL),
     requestSignalsSignal(NULL),
     requestRangeSignal(NULL),
