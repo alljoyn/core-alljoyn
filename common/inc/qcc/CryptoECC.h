@@ -36,6 +36,11 @@ namespace qcc {
 
 static const size_t ECC_COORDINATE_SZ = 8 * sizeof(uint32_t);
 
+/*
+ * Empty ECC coordinate
+ */
+static const uint8_t ECC_COORDINATE_EMPTY[ECC_COORDINATE_SZ] = { 0 };
+
 /**
  * The size of the ECC big value
  */
@@ -81,6 +86,17 @@ struct ECCPublicKeyOldEncoding {
 struct ECCPublicKey {
     uint8_t x[ECC_COORDINATE_SZ];
     uint8_t y[ECC_COORDINATE_SZ];
+
+    ECCPublicKey() {
+        memset(x, 0, ECC_COORDINATE_SZ);
+        memset(y, 0, ECC_COORDINATE_SZ);
+    }
+
+    bool empty() const
+    {
+        return (memcmp(x, ECC_COORDINATE_EMPTY, ECC_COORDINATE_SZ) == 0) &&
+               (memcmp(y, ECC_COORDINATE_EMPTY, ECC_COORDINATE_SZ) == 0);
+    }
 
     bool operator==(const ECCPublicKey& k) const
     {
