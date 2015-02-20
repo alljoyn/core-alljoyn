@@ -873,7 +873,7 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
                 /* Step 1b: If no busAddr, see if one exists in the adv alias map */
                 if (busAddrs.empty() && (sessionHost[0] == ':')) {
                     QCC_DbgPrintf(("JoinSessionThread::RunJoin(): look for busaddr in adv alias map"));
-                    String rguidStr = String(sessionHost).substr(1, GUID128::SHORT_SIZE);
+                    String rguidStr = String(sessionHost).substr(1, GUID128::SIZE_SHORT);
                     map<String, set<AdvAliasEntry> >::iterator ait = ajObj.advAliasMap.find(rguidStr);
                     if (ait != ajObj.advAliasMap.end()) {
                         set<AdvAliasEntry>::iterator bit = ait->second.begin();
@@ -2794,7 +2794,7 @@ void AllJoynObj::DetachSessionSignalHandler(const InterfaceDescription::Member* 
     QCC_DbgTrace(("AllJoynObj::DetachSessionSignalHandler(src=%s, id=%u)", src, id));
 
     /* Do not process our own detach message signals */
-    if (::strncmp(guid.ToShortString().c_str(), msg->GetSender() + 1, qcc::GUID128::SHORT_SIZE) == 0) {
+    if (::strncmp(guid.ToShortString().c_str(), msg->GetSender() + 1, qcc::GUID128::SIZE_SHORT) == 0) {
         return;
     }
 
@@ -5137,7 +5137,7 @@ void AllJoynObj::Ping(const InterfaceDescription::Member* member, Message& msg)
                 } else {
                     // Unique name
                     String nameStr(name);
-                    String guidStr = nameStr.substr(1, GUID128::SHORT_SIZE);
+                    String guidStr = nameStr.substr(1, GUID128::SIZE_SHORT);
                     if (guidStr == bus.GetInternal().GetGlobalGUID().ToShortString()) {
                         // Guid matches our guid but endpoint is invalid.
                         // Check NameTable to find out if this is a name that has been assigned.
@@ -5154,7 +5154,7 @@ void AllJoynObj::Ping(const InterfaceDescription::Member* member, Message& msg)
                 }
             } else if (ep->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL) {
                 VirtualEndpoint vep = VirtualEndpoint::cast(ep);
-                guid = String(vep->GetUniqueName()).substr(1, GUID128::SHORT_SIZE);
+                guid = String(vep->GetUniqueName()).substr(1, GUID128::SIZE_SHORT);
                 QCC_DbgPrintf(("Session found %s", name));
             }
 
