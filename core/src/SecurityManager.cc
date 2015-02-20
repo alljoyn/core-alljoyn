@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -14,8 +14,9 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#include <SecurityManager.h>
-#include <SecurityManagerImpl.h>
+#include <alljoyn/securitymgr/SecurityManager.h>
+
+#include "SecurityManagerImpl.h"
 
 #include <qcc/CryptoECC.h>
 #include <qcc/CryptoECC.h>
@@ -23,25 +24,22 @@
 #include <alljoyn/about/AnnouncementRegistrar.h>
 #include <alljoyn/about/AboutPropertyStoreImpl.h>
 
-#include "StorageConfig.h"
-#include "StorageFactory.h"
 #include <SecLibDef.h>
 
 #include <iostream>
 
 #define QCC_MODULE "SEC_MGR"
-using namespace ajn::services;
 
-namespace ajn {
-namespace securitymgr {
-SecurityManager::SecurityManager(IdentityData* id,
-                                 ajn::BusAttachment* ba,
-                                 const qcc::ECCPublicKey& pubKey,
-                                 const qcc::ECCPrivateKey& privKey,
-                                 const StorageConfig& storageCfg,
-                                 const SecurityManagerConfig& smCfg) :
-    securityManagerImpl(new SecurityManagerImpl(id, ba, pubKey, privKey, storageCfg, smCfg))
+using namespace ajn::services;
+using namespace ajn;
+using namespace qcc;
+using namespace securitymgr;
+
+SecurityManager::SecurityManager(BusAttachment* ba,
+                                 const Storage* storage) :
+    securityManagerImpl(NULL)
 {
+    securityManagerImpl = new SecurityManagerImpl(ba, storage);
 }
 
 SecurityManager::~SecurityManager()
@@ -49,39 +47,27 @@ SecurityManager::~SecurityManager()
     delete securityManagerImpl;
 }
 
-QStatus SecurityManager::GetStatus() const
+QStatus SecurityManager::Claim(const ApplicationInfo& app,
+                               const IdentityInfo& id)
 {
-    return securityManagerImpl->GetStatus();
+    return securityManagerImpl->Claim(app, id);
 }
 
-QStatus SecurityManager::ClaimApplication(const ApplicationInfo& app,
-                                          const IdentityInfo& id,
-                                          AcceptManifestCB amcb,
-                                          void* cookie)
+void SecurityManager::SetManifestListener(ManifestListener* listener)
 {
-    return securityManagerImpl->ClaimApplication(app, id, amcb, cookie);
-}
-
-QStatus SecurityManager::Claim(ApplicationInfo& app, const IdentityInfo& identityInfo)
-{
-    return securityManagerImpl->Claim(app, identityInfo);
+    securityManagerImpl->SetManifestListener(listener);
 }
 
 QStatus SecurityManager::GetManifest(const ApplicationInfo& appInfo,
-                                     PermissionPolicy::Rule** manifestRules,
+                                     const PermissionPolicy::Rule** manifestRules,
                                      size_t* manifestRulesCount)
 {
     return securityManagerImpl->GetManifest(appInfo, manifestRules, manifestRulesCount);
 }
 
-QStatus SecurityManager::InstallIdentity(const ApplicationInfo& app, const IdentityInfo& id)
+QStatus SecurityManager::UpdateIdentity(const ApplicationInfo& app, const IdentityInfo& id)
 {
-    return securityManagerImpl->InstallIdentity(app, id);
-}
-
-QStatus SecurityManager::GetIdentityCertificate(const ApplicationInfo& appInfo, IdentityCertificate& idCert) const
-{
-    return securityManagerImpl->GetRemoteIdentityCertificate(appInfo, idCert);
+    return securityManagerImpl->UpdateIdentity(app, id);
 }
 
 const ECCPublicKey& SecurityManager::GetPublicKey() const
@@ -109,14 +95,19 @@ QStatus SecurityManager::GetApplication(ApplicationInfo& ai) const
     return securityManagerImpl->GetApplication(ai);
 }
 
-QStatus SecurityManager::StoreGuild(const GuildInfo& guildInfo, const bool update)
+QStatus SecurityManager::SetApplicationName(ApplicationInfo& appInfo)
 {
-    return securityManagerImpl->StoreGuild(guildInfo, update);
+    return securityManagerImpl->SetApplicationName(appInfo);
 }
 
-QStatus SecurityManager::RemoveGuild(const GUID128& guildId)
+QStatus SecurityManager::StoreGuild(GuildInfo& guildInfo)
 {
-    return securityManagerImpl->RemoveGuild(guildId);
+    return securityManagerImpl->StoreGuild(guildInfo);
+}
+
+QStatus SecurityManager::RemoveGuild(GuildInfo& guildInfo)
+{
+    return securityManagerImpl->RemoveGuild(guildInfo);
 }
 
 QStatus SecurityManager::GetGuild(GuildInfo& guildInfo) const
@@ -124,9 +115,9 @@ QStatus SecurityManager::GetGuild(GuildInfo& guildInfo) const
     return securityManagerImpl->GetGuild(guildInfo);
 }
 
-QStatus SecurityManager::GetManagedGuilds(std::vector<GuildInfo>& guildsInfo) const
+QStatus SecurityManager::GetGuilds(std::vector<GuildInfo>& guildInfos) const
 {
-    return securityManagerImpl->GetManagedGuilds(guildsInfo);
+    return securityManagerImpl->GetGuilds(guildInfos);
 }
 
 QStatus SecurityManager::InstallMembership(const ApplicationInfo& appInfo,
@@ -142,16 +133,16 @@ QStatus SecurityManager::RemoveMembership(const ApplicationInfo& appInfo,
     return securityManagerImpl->RemoveMembership(appInfo, guildInfo);
 }
 
-QStatus SecurityManager::InstallPolicy(const ApplicationInfo& appInfo,
-                                       PermissionPolicy& policy)
+QStatus SecurityManager::UpdatePolicy(const ApplicationInfo& appInfo,
+                                      PermissionPolicy& policy)
 {
-    return securityManagerImpl->InstallPolicy(appInfo, policy);
+    return securityManagerImpl->UpdatePolicy(appInfo, policy);
 }
 
 QStatus SecurityManager::GetPolicy(const ApplicationInfo& appInfo,
-                                   PermissionPolicy& policy, bool remote)
+                                   PermissionPolicy& policy)
 {
-    return securityManagerImpl->GetPolicy(appInfo, policy, remote);
+    return securityManagerImpl->GetPolicy(appInfo, policy);
 }
 
 QStatus SecurityManager::Reset(const ApplicationInfo& appInfo)
@@ -159,15 +150,14 @@ QStatus SecurityManager::Reset(const ApplicationInfo& appInfo)
     return securityManagerImpl->Reset(appInfo);
 }
 
-QStatus SecurityManager::StoreIdentity(const IdentityInfo& identityInfo,
-                                       const bool update)
+QStatus SecurityManager::StoreIdentity(IdentityInfo& idInfo)
 {
-    return securityManagerImpl->StoreIdentity(identityInfo, update);
+    return securityManagerImpl->StoreIdentity(idInfo);
 }
 
-QStatus SecurityManager::RemoveIdentity(const GUID128& idId)
+QStatus SecurityManager::RemoveIdentity(IdentityInfo& idInfo)
 {
-    return securityManagerImpl->RemoveIdentity(idId);
+    return securityManagerImpl->RemoveIdentity(idInfo);
 }
 
 QStatus SecurityManager::GetIdentity(IdentityInfo& idInfo) const
@@ -175,10 +165,14 @@ QStatus SecurityManager::GetIdentity(IdentityInfo& idInfo) const
     return securityManagerImpl->GetIdentity(idInfo);
 }
 
-QStatus SecurityManager::GetManagedIdentities(std::vector<IdentityInfo>& identityInfos) const
+QStatus SecurityManager::GetIdentities(std::vector<IdentityInfo>& idInfos) const
 {
-    return securityManagerImpl->GetManagedIdentities(identityInfos);
+    return securityManagerImpl->GetIdentities(idInfos);
 }
+
+QStatus SecurityManager::Init()
+{
+    return securityManagerImpl->Init();
 }
-}
+
 #undef QCC_MODULE

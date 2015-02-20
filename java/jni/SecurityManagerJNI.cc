@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -14,9 +14,12 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#include <SecurityManagerFactory.h>
-#include <SecurityManager.h>
+#include <alljoyn/securitymgr/SecurityManagerFactory.h>
+#include <alljoyn/securitymgr/SecurityManager.h>
+#include <alljoyn/securitymgr/Storage.h>
+#include <alljoyn/securitymgr/sqlstorage/SQLStorageFactory.h>
 #include <alljoyn/Status.h>
+#include <qcc/Environ.h>
 #include "org_alljoyn_securitymgr_SecurityManagerJNI.h"
 #include "Common.h"
 #include "vector"
@@ -43,7 +46,7 @@ static jmethodID GetAddMethodID(JNIEnv* env, jobject jList)
 /**
  * Always check env for pending exceptions after calling this function !!!
  */
-static GuildInfo createGuildInfo(JNIEnv* env, jbyteArray jGuid)
+static GuildInfo createGuildInfo(JNIEnv* env, jbyteArray jGuid, jbyteArray jKey, SecurityManager* smc)
 {
     GuildInfo info;
     if (jGuid == NULL) {
@@ -53,6 +56,19 @@ static GuildInfo createGuildInfo(JNIEnv* env, jbyteArray jGuid)
         env->GetByteArrayRegion(jGuid, 0, GUID_SIZE, guidData);
         if (!env->ExceptionCheck()) {
             info.guid.SetBytes((uint8_t*)guidData);
+        }
+        if (jKey == NULL) {
+            info.authority = smc->GetPublicKey();
+        } else {
+            size_t size = (size_t)env->GetArrayLength(jKey);
+            jbyte* data = env->GetByteArrayElements(jKey, NULL);
+            if (data) {
+                QStatus status = info.authority.Import((const uint8_t*)data, size);
+                env->ReleaseByteArrayElements(jKey, data, JNI_ABORT);
+                if (status != ER_OK) {
+                    Common::Throw(env, ILLEGALARGUMENTEXCEPTION_CLASS, "Bad key data");
+                }
+            }
         }
     }
     return info;
@@ -260,7 +276,7 @@ static ajn::PermissionPolicy::Peer* GetPeers(JNIEnv* env, jobject jTerm, jmethod
             }
 
             if (guildIdBytes == NULL || keyBytes == NULL) {
-                Common::Throw(env, ILLEGALARGUMENTEXCEPTION_CLASS, "");
+                Common::Throw(env, ILLEGALARGUMENTEXCEPTION_CLASS, "Bad GUID and/or Key");
                 goto out;
             }
 
@@ -409,14 +425,11 @@ JNIEXPORT jboolean JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_init(
     // QCC_SetLogLevels("SEC_MGR=7;ALLJOYN=7");
 
     SecurityManagerFactory& secFac = SecurityManagerFactory::GetInstance();
-    StorageConfig storageCfg;
-    SecurityManagerConfig smc;
 
     const char* nativePath;
 
     SecurityManager* secMgr = NULL;
     do {
-        //TODO: check after each call ...
         nativePath = env->GetStringUTFChars(path, 0);
 
         if (!nativePath) {
@@ -424,10 +437,21 @@ JNIEXPORT jboolean JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_init(
             break;
         }
 
-        storageCfg.settings[qcc::String("STORAGE_PATH")] = qcc::String(nativePath) + "/secmgr.db";
-        storageCfg.settings[qcc::String("APP_PATH")] = nativePath;
+        qcc::Environ::GetAppEnviron()->Add("HOME", qcc::String(nativePath).append("/"));
+        QCC_DbgPrintf(("HOME was set to %s", qcc::Environ::GetAppEnviron()->Find("HOME").c_str()));
+
+        delete Common::storage;
+        Common::storage = SQLStorageFactory::GetInstance().GetStorage();
+
+        if (Common::storage == NULL) {
+            QCC_LogError(ER_FAIL, ("Could not initialize storage needed for the security manager"));
+            Common::Throw(env, SECURITY_MNGT_EXCEPTION_CLASS,
+                          "Could not initialize storage needed for the security manager");
+            break;
+        }
+
         secMgr =
-            secFac.GetSecurityManager(storageCfg, smc, NULL);
+            secFac.GetSecurityManager(Common::storage, NULL);
         env->ReleaseStringUTFChars(path, nativePath);
 
         if (secMgr == NULL) {
@@ -438,7 +462,7 @@ JNIEXPORT jboolean JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_init(
         }
         Common* cmn = new Common(env, thisObj, secMgr);
         if (cmn == NULL) {
-            QCC_LogError(ER_FAIL, ("Could Allocate native object"));
+            QCC_LogError(ER_FAIL, ("Could not allocate native object"));
         }
     } while (0);
 
@@ -488,13 +512,15 @@ JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_deleteGui
     }
     SecurityManager* smc = Common::GetSecurityManager(env, thisObj);
     if (smc) {
-        GUID128 info;
+        GuildInfo info;
+        GUID128 guid;
         jbyte guidData[GUID_SIZE];
         env->GetByteArrayRegion(jGuid, 0, GUID_SIZE, guidData);
         if (env->ExceptionCheck()) {
             return;
         }
-        info.SetBytes((uint8_t*)guidData);
+        guid.SetBytes((uint8_t*)guidData);
+        info.guid = guid;
         QStatus status = smc->RemoveGuild(info);
         if (status != ER_OK) {
             Common::Throw(env, SECURITY_MNGT_EXCEPTION_CLASS, "");
@@ -507,7 +533,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_createGui
                                                                                    jstring jName,
                                                                                    jstring jDescription,
                                                                                    jbyteArray jGuid,
-                                                                                   jboolean update)
+                                                                                   jbyteArray jKey)
 {
     if (jName == NULL || jDescription == NULL) {
         Common::Throw(env, NULLPOINTEREXCEPTION_CLASS, "");
@@ -515,7 +541,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_createGui
     }
     SecurityManager* smc = Common::GetSecurityManager(env, thisObj);
     if (smc) {
-        GuildInfo info = createGuildInfo(env, jGuid);
+        GuildInfo info = createGuildInfo(env, jGuid, jKey, smc);
         if (env->ExceptionCheck()) {
             return;
         }
@@ -533,7 +559,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_createGui
         } else {
             return;
         }
-        QStatus status = smc->StoreGuild(info, update);
+        QStatus status = smc->StoreGuild(info);
         if (status != ER_OK) {
             Common::Throw(env, SECURITY_MNGT_EXCEPTION_CLASS, "");
         }
@@ -556,7 +582,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_getGuilds
     }
 
     jmethodID constructor =
-        env->GetMethodID(guildClass, "<init>", "(" STRING_CLASS STRING_CLASS "[B)V");
+        env->GetMethodID(guildClass, "<init>", "(" STRING_CLASS STRING_CLASS "[B[B)V");
     if (constructor == NULL) {
         return;
     }
@@ -564,7 +590,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_getGuilds
     SecurityManager* smc = Common::GetSecurityManager(env, thisObj);
     if (smc) {
         std::vector<GuildInfo> list;
-        smc->GetManagedGuilds(list);
+        smc->GetGuilds(list);
         std::vector<GuildInfo>::const_iterator it = list.begin();
         for (; it != list.end(); ++it) {
             GuildInfo info = *it;
@@ -584,14 +610,20 @@ JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_getGuilds
             if (env->ExceptionCheck()) {
                 return;
             }
+            jbyteArray jKey = Common::ToKeyBytes(env, info.authority);
+            if (env->ExceptionCheck()) {
+                return;
+            }
+
             jobject guild =
-                env->NewObject(guildClass, constructor, jName, jDescription, jGuid);
+                env->NewObject(guildClass, constructor, jName, jDescription, jGuid, jKey);
             if (env->ExceptionCheck()) {
                 return;
             }
             env->DeleteLocalRef(jName);
             env->DeleteLocalRef(jDescription);
             env->DeleteLocalRef(jGuid);
+            env->DeleteLocalRef(jKey);
             env->CallBooleanMethod(jlist, addID, guild);
             if (env->ExceptionCheck()) {
                 return;
@@ -618,7 +650,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_getGui
     }
 
     jmethodID constructor =
-        env->GetMethodID(guildClass, "<init>", "(" STRING_CLASS STRING_CLASS "[B)V");
+        env->GetMethodID(guildClass, "<init>", "(" STRING_CLASS STRING_CLASS "[B[B)V");
     if (constructor == NULL) {
         return NULL;
     }
@@ -639,32 +671,19 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_getGui
     if (jDescription == NULL) {
         return NULL;
     }
-    return env->NewObject(guildClass, constructor, jName, jDescription, jGuid);
-}
-
-bool JNIAcceptManifestCB(const ApplicationInfo& appInfo,
-                         const PermissionPolicy::Rule* manifestRules,
-                         const size_t manifestRulesCount,
-                         void* cookie)
-{
-    Common* cmn = (Common*)cookie;
-    JNIEnv* env;
-    int attached = Common::GetJNIEnv(&env);
-    bool accept = false;
-    if (attached != -1) {
-        jobjectArray jManifestRules = Common::ToManifestRules(env, manifestRules, manifestRulesCount);
-        if (jManifestRules != NULL) {
-            accept = cmn->CallManifestCallback(env, appInfo, jManifestRules);
-        }
-        Common::DetachThread(env, attached);
+    jbyteArray jKey = Common::ToKeyBytes(env, guild.authority);
+    if (env->ExceptionCheck()) {
+        return NULL;
     }
-    return accept;
+
+    return env->NewObject(guildClass, constructor, jName, jDescription, jGuid, jKey);
 }
 
 JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_claimApplication(JNIEnv* env,
                                                                                         jobject thisObject,
                                                                                         jobject appInfo,
-                                                                                        jbyteArray idGuid)
+                                                                                        jbyteArray idGuid,
+                                                                                        jbyteArray jKey)
 {
     Common* cmn = Common::GetNativePeer(env, thisObject);
     IdentityInfo idInfo;
@@ -678,9 +697,26 @@ JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_claimAppl
             return;
         }
 
-        SecurityManager* smc = cmn->GetSecManager(env);
+        SecurityManager* smc = cmn->GetSecurityManager(env);
         if (smc) {
-            QStatus status = smc->ClaimApplication(info, idInfo, JNIAcceptManifestCB, cmn);
+            if (jKey == NULL) {
+                idInfo.authority = smc->GetPublicKey();
+            } else {
+                size_t size = (size_t)env->GetArrayLength(jKey);
+                jbyte* data = env->GetByteArrayElements(jKey, NULL);
+                if (data) {
+                    QStatus status = idInfo.authority.Import((const uint8_t*)data, size);
+                    env->ReleaseByteArrayElements(jKey, data, JNI_ABORT);
+                    if (status != ER_OK) {
+                        Common::Throw(env, ILLEGALARGUMENTEXCEPTION_CLASS, "Bad key data");
+                        return;
+                    }
+                } else {
+                    return;
+                }
+            }
+
+            QStatus status = smc->Claim(info, idInfo);
             if (status != ER_OK) {
                 QCC_LogError(status, ("Failed to claim application"));
                 Common::Throw(env, SECURITY_MNGT_EXCEPTION_CLASS,
@@ -715,7 +751,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_installPo
             return;
         }
         policy.SetTerms(term_count, terms);
-        QStatus status = smc->InstallPolicy(appInfo, policy);
+        QStatus status = smc->UpdatePolicy(appInfo, policy);
         if (status != ER_OK) {
             QCC_LogError(status, ("Failed to set policy"));
             Common::Throw(env, SECURITY_MNGT_EXCEPTION_CLASS, "Failed to set Policy");
@@ -731,12 +767,14 @@ Java_org_alljoyn_securitymgr_SecurityManagerJNI_installMembership(JNIEnv* env,
                                                                   jAppInfo,
                                                                   jbyteArray
                                                                   jGuildGuid,
+                                                                  jbyteArray
+                                                                  jKey,
                                                                   jobjectArray
                                                                   jTermArray)
 {
     SecurityManager* smc = Common::GetSecurityManager(env, thisObject);
     if (smc) {
-        GuildInfo info = createGuildInfo(env, jGuildGuid);
+        GuildInfo info = createGuildInfo(env, jGuildGuid, jKey, smc);
         if (env->ExceptionCheck()) {
             return;
         }
@@ -773,11 +811,12 @@ Java_org_alljoyn_securitymgr_SecurityManagerJNI_deleteMembership(JNIEnv* env,
                                                                  jobject
                                                                  jAppInfo,
                                                                  jbyteArray
-                                                                 jGuildGuid)
+                                                                 jGuildGuid,
+                                                                 jbyteArray jKey)
 {
     SecurityManager* smc = Common::GetSecurityManager(env, thisObject);
     if (smc) {
-        GuildInfo info = createGuildInfo(env, jGuildGuid);
+        GuildInfo info = createGuildInfo(env, jGuildGuid, jKey, smc);
         if (env->ExceptionCheck()) {
             return;
         }
@@ -820,7 +859,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_createIde
                                                                                       jobject thisObject,
                                                                                       jstring jName,
                                                                                       jbyteArray jGuid,
-                                                                                      jboolean update)
+                                                                                      jbyteArray jKey)
 {
     IdentityInfo info;
     if (jName == NULL) {
@@ -839,7 +878,23 @@ JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_createIde
         if (name) {
             info.name = name;
             env->ReleaseStringUTFChars(jName, name);
-            QStatus status = smc->StoreIdentity(info, update);
+            if (jKey == NULL) {
+                info.authority = smc->GetPublicKey();
+            } else {
+                size_t size = (size_t)env->GetArrayLength(jKey);
+                jbyte* data = env->GetByteArrayElements(jKey, NULL);
+                if (data) {
+                    QStatus status = info.authority.Import((const uint8_t*)data, size);
+                    env->ReleaseByteArrayElements(jKey, data, JNI_ABORT);
+                    if (status != ER_OK) {
+                        Common::Throw(env, ILLEGALARGUMENTEXCEPTION_CLASS, "Bad key data");
+                        return;
+                    }
+                } else {
+                    return;
+                }
+            }
+            QStatus status = smc->StoreIdentity(info);
             if (status != ER_OK) {
                 QCC_LogError(status, ("Failed to update/create identity"));
                 Common::Throw(env, SECURITY_MNGT_EXCEPTION_CLASS,
@@ -855,10 +910,12 @@ JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_deleteIde
 {
     SecurityManager* smc = Common::GetSecurityManager(env, thisObject);
     if (smc) {
+        IdentityInfo identity;
         GUID128 guid;
         Common::ToGUID(env, jGuid, guid);
+        identity.guid = guid;
         if (!env->ExceptionCheck()) {
-            QStatus status = smc->RemoveIdentity(guid);
+            QStatus status = smc->RemoveIdentity(identity);
             if (status != ER_OK) {
                 QCC_LogError(status, ("Failed to delete identity"));
                 Common::Throw(env, SECURITY_MNGT_EXCEPTION_CLASS,
@@ -909,7 +966,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_getIdenti
     }
 
     jmethodID constructor =
-        env->GetMethodID(identityClass, "<init>", "(" STRING_CLASS "[B)V");
+        env->GetMethodID(identityClass, "<init>", "(" STRING_CLASS "[B[B)V");
     if (constructor == NULL) {
         return;
     }
@@ -917,7 +974,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_getIdenti
     SecurityManager* smc = Common::GetSecurityManager(env, thisObject);
     if (smc) {
         std::vector<IdentityInfo> list;
-        smc->GetManagedIdentities(list);
+        smc->GetIdentities(list);
         std::vector<IdentityInfo>::const_iterator it = list.begin();
         for (; it != list.end(); ++it) {
             IdentityInfo info = *it;
@@ -933,8 +990,13 @@ JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_getIdenti
             if (env->ExceptionCheck()) {
                 return;
             }
+            jbyteArray jKey = Common::ToKeyBytes(env, info.authority);
+            if (env->ExceptionCheck()) {
+                return;
+            }
+
             jobject jIdentity =
-                env->NewObject(identityClass, constructor, jName, jGuid);
+                env->NewObject(identityClass, constructor, jName, jGuid, jKey);
             if (env->ExceptionCheck()) {
                 return;
             }
@@ -955,24 +1017,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_get
     jbyteArray jKey = NULL;
     SecurityManager* smc = Common::GetSecurityManager(env, thisObject);
     if (smc) {
-        const ECCPublicKey& publicKey = smc->GetPublicKey();
-        uint8_t data[ECC_COORDINATE_SZ + ECC_COORDINATE_SZ];
-        size_t keySize;
-        QStatus status = publicKey.Export(data, &keySize);
-
-        if (ER_OK != status) {
-            QCC_LogError(status, ("Failed to retrieve publicKey"));
-            Common::Throw(env, SECURITY_MNGT_EXCEPTION_CLASS,
-                          "Failed to retrieve publicKey");
-            return NULL;
-        }
-
-        jKey = env->NewByteArray(keySize);
-        if (jKey == NULL) {
-            return NULL;
-        }
-        //This may result in pending exceptions but we are returing anyway.
-        env->SetByteArrayRegion(jKey, 0, keySize, (jbyte*)data);
+        jKey = Common::ToKeyBytes(env, smc->GetPublicKey());
     }
     return jKey;
 }

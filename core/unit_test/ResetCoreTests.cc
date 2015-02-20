@@ -15,7 +15,6 @@
  ******************************************************************************/
 
 #include "TestUtil.h"
-#include <semaphore.h>
 
 using namespace ajn;
 using namespace ajn::securitymgr;
@@ -23,7 +22,7 @@ using namespace secmgrcoretest_unit_testutil;
 
 namespace secmgrcoretest_unit_nominaltests {
 class ResetCoreTests :
-    public ClaimTest {
+    public BasicTest {
   private:
 
   protected:
@@ -44,13 +43,17 @@ TEST_F(ResetCoreTests, SuccessfulReset) {
     IdentityInfo idInfo;
     idInfo.guid = GUID128();
     idInfo.name = "TestIdentity";
-    ASSERT_EQ(secMgr->StoreIdentity(idInfo, false), ER_OK);
+    ASSERT_EQ(secMgr->StoreIdentity(idInfo), ER_OK);
 
     ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
     ASSERT_TRUE(WaitForState(PermissionConfigurator::STATE_CLAIMED, STATE_RUNNING));
 
+    stub->SetDSASecurity(true);
+
     ASSERT_EQ(ER_OK, secMgr->Reset(lastAppInfo));
     ASSERT_TRUE(WaitForState(PermissionConfigurator::STATE_CLAIMABLE, STATE_RUNNING));
+
+    stub->SetDSASecurity(false);
 
     ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
     ASSERT_TRUE(WaitForState(PermissionConfigurator::STATE_CLAIMED, STATE_RUNNING));

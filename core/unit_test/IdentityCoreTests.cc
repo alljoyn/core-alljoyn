@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -15,7 +15,6 @@
  ******************************************************************************/
 
 #include "TestUtil.h"
-#include <semaphore.h>
 
 namespace secmgrcoretest_unit_nominaltests {
 using namespace secmgrcoretest_unit_testutil;
@@ -23,7 +22,7 @@ using namespace secmgrcoretest_unit_testutil;
 using namespace ajn::securitymgr;
 
 class IdentityCoreTests :
-    public ClaimTest {
+    public BasicTest {
   private:
 
   protected:
@@ -33,7 +32,6 @@ class IdentityCoreTests :
     {
     }
 };
-
 TEST_F(IdentityCoreTests, SuccessfulInstallIdentity) {
     bool claimAnswer = true;
     TestClaimListener tcl(claimAnswer);
@@ -46,21 +44,14 @@ TEST_F(IdentityCoreTests, SuccessfulInstallIdentity) {
 
     IdentityInfo info;
     info.name = "MyName";
-    ASSERT_EQ(ER_OK, secMgr->StoreIdentity(info, false));
+    ASSERT_EQ(ER_OK, secMgr->StoreIdentity(info));
 
     /* Claim! */
     ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, info));
     ASSERT_TRUE(WaitForState(ajn::PermissionConfigurator::STATE_CLAIMED, ajn::securitymgr::STATE_RUNNING));
 
     /* Try to install identity again */
-    //QCC_SetLogLevels("PERMISSION_MGMT=7");
-    //QCC_SetLogLevels("CRYPTO=7");
-    ASSERT_EQ(ER_OK, secMgr->InstallIdentity(lastAppInfo, info));
-
-    qcc::IdentityCertificate certificate;
-    ASSERT_EQ(ER_OK, secMgr->GetIdentityCertificate(lastAppInfo, certificate));
-
-    printf("Retrieved id certificate = '%s'\n", certificate.GetPEM().c_str());
+    ASSERT_EQ(ER_OK, secMgr->UpdateIdentity(lastAppInfo, info));
 
     /* Clear the keystore of the stub */
     stub->Reset();

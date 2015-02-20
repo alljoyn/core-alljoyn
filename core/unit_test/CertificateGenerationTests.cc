@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -18,6 +18,9 @@
 
 #include <qcc/CryptoECC.h>
 #include "X509CertificateGenerator.h"
+
+#define ECDHE_KEYX "ALLJOYN_ECDHE_ECDSA"
+
 #if 0
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -30,24 +33,39 @@ namespace secmgrcoretest_unit_certificatetests {
 class CertificateGenerationTests :
     public::testing::Test {
   public:
+
+    CertificateGenerationTests() :
+        ecc(NULL), ba(NULL)
+    {
+    }
+
     virtual void SetUp()
     {
         ecc = new qcc::Crypto_ECC();
         ASSERT_TRUE(ecc != NULL);
         ASSERT_EQ(ecc->GenerateDSAKeyPair(), ER_OK);
+        ba = new ajn::BusAttachment("testCert", true);
+        ba->Start();
+        ba->Connect();
+        ba->EnablePeerSecurity(ECDHE_KEYX, NULL, "test_path", true);
     }
 
     virtual void TearDown()
     {
+        ba->Disconnect();
+        ba->Stop();
+        ba->Join();
+        delete ba;
         delete ecc;
     }
 
     qcc::Crypto_ECC* ecc;
+    ajn::BusAttachment* ba;
 };
 
 TEST_F(CertificateGenerationTests, BasicGeneration) {
     qcc::String commonName = "MyIssuerCommonName";
-    ajn::securitymgr::X509CertificateGenerator* gen = new ajn::securitymgr::X509CertificateGenerator(commonName, ecc);
+    ajn::securitymgr::X509CertificateGenerator* gen = new ajn::securitymgr::X509CertificateGenerator(commonName, ba);
     ASSERT_TRUE(gen != NULL);
     ecc->GenerateDHKeyPair();
 
@@ -65,7 +83,7 @@ TEST_F(CertificateGenerationTests, BasicGeneration) {
 
     QStatus status = gen->GetIdentityCertificate(certificate);
 
-    qcc::String pemCertifcate = certificate.GetPEM();
+    qcc::String pemCertifcate = certificate.GetDER();
 #if 0
     int fd = open("log", O_RDWR | O_TRUNC | O_CREAT);
     write(fd, pemCertifcate.data(), pemCertifcate.size());
@@ -77,7 +95,7 @@ TEST_F(CertificateGenerationTests, BasicGeneration) {
 
 TEST_F(CertificateGenerationTests, MembershipGeneration) {
     qcc::String commonName = "MyIssuerCommonName";
-    ajn::securitymgr::X509CertificateGenerator* gen = new ajn::securitymgr::X509CertificateGenerator(commonName, ecc);
+    ajn::securitymgr::X509CertificateGenerator* gen = new ajn::securitymgr::X509CertificateGenerator(commonName, ba);
     ASSERT_TRUE(gen != NULL);
 
     qcc::X509MemberShipCertificate certificate;
@@ -97,7 +115,7 @@ TEST_F(CertificateGenerationTests, MembershipGeneration) {
     QStatus status = gen->GenerateMembershipCertificate(certificate);
 #if 0
     int fd = open("membership.log", O_RDWR | O_TRUNC | O_CREAT);
-    qcc::String pem = certificate.GetPEM();
+    qcc::String pem = certificate.GetDER();
     write(fd, pem.data(), pem.size());
     close(fd);
 #endif
@@ -146,11 +164,11 @@ TEST_F(CertificateGenerationTests, GetBasicConstraintsTest) {
 }
 
 TEST_F(CertificateGenerationTests, ToTimeStringTest) {
-    ASSERT_EQ(qcc::String("\u0017\u0011140930040640.000Z"),
+    ASSERT_EQ(qcc::String("\u0017\u000D140930040640Z"),
               ajn::securitymgr::X509CertificateGenerator::ToASN1TimeString(1412050000));                                               //Sep 30 04:06:40 UTC 2014
-    ASSERT_EQ(qcc::String("\u0017\u0011491202092640.000Z"),
+    ASSERT_EQ(qcc::String("\u0017\u000D491202092640Z"),
               ajn::securitymgr::X509CertificateGenerator::ToASN1TimeString(2522050000));                                               //Dec  2 09:26:40 UTC 2049
-    ASSERT_EQ(qcc::String("\u0017\u0011491231235959.000Z"),
+    ASSERT_EQ(qcc::String("\u0017\u000D491231235959Z"),
               ajn::securitymgr::X509CertificateGenerator::ToASN1TimeString(2524607999));                                               //Dec 31 23:59:59 UTC 2049
     ASSERT_EQ(qcc::String("\u0018\u000F20500101000000Z"),
               ajn::securitymgr::X509CertificateGenerator::ToASN1TimeString(2524608000));                                             //Jan  1 00:00:00 UTC 2050

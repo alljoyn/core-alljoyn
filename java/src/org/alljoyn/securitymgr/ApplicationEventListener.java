@@ -17,6 +17,14 @@
 package org.alljoyn.securitymgr;
 
 public interface ApplicationEventListener {
+    /**
+     * Informs the application listener of a state change in an application
+     *
+     * @param newInfo the current application info or null if the application is
+     *            no longer tracked.
+     * @param oldInfo the old state of the application or null if no old state
+     *            was known.
+     */
     void onApplicationEvent(ApplicationInfo newInfo, ApplicationInfo oldInfo);
 
 }

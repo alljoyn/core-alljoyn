@@ -16,21 +16,36 @@
 
 package org.alljoyn.securitymgr;
 
+import java.util.Arrays;
+
 public final class Guild {
     private String name;
     private String description;
     private final GUID guid;
+    final byte[] key;
 
-    Guild(String guildName, String guildDescription, byte[] guidData) {
+    Guild(String guildName, String guildDescription, byte[] guidData,
+            byte[] ownerKey) {
         this.name = guildName;
         this.description = guildDescription;
         guid = new GUID(guidData);
+        key = ownerKey;
     }
 
-    public Guild(String name, String description, GUID guid) {
+    /**
+     * Constructs a Guild.
+     *
+     * @param name The name of the guild.
+     * @param description The guild description
+     * @param guid the GUID for the guild
+     * @param ownerKey the key of the owner, null to indicate the key of the
+     *            local security manager.
+     */
+    public Guild(String name, String description, GUID guid, byte[] ownerKey) {
         this.name = name;
         this.description = description;
         this.guid = guid;
+        this.key = ownerKey;
     }
 
     public String getName() {
@@ -59,16 +74,22 @@ public final class Guild {
         return guid;
     }
 
+    /**
+     * @return the public key of the Guild owner.
+     */
+    public final byte[] getOwnerKey() {
+        return key == null ? null : key.clone();
+    }
     @Override
     public int hashCode() {
-        return 47 + guid.hashCode();
+        return 47 + guid.hashCode() + key.hashCode();
     }
 
     @Override
     public boolean equals(Object obj) {
         if (obj instanceof Guild) {
             Guild other = (Guild) obj;
-            return guid.equals(other.guid);
+            return guid.equals(other.guid) && Arrays.equals(key, other.key);
         }
         return true;
     }
@@ -76,6 +97,6 @@ public final class Guild {
     @Override
     public String toString() {
         return "Guild [name=" + name + ", description=" + description
-                + ", guid=" + guid + "]";
+                + ", guid=" + guid + ", owner=" + Arrays.toString(key) + "]";
     }
 }

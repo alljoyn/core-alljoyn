@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -18,32 +18,40 @@
 #define STORAGEFACTORY_H_
 
 /**
- * \class StorageFactory
- * \brief We need a StorageFactory because at run-time we are not sure which class (derived from Storage) we'll be using
+ * \class NativeStorageFactory
+ * \brief We need a NativeStorageFactory because at run-time we are not sure which class (derived from Storage) we'll be using
  *        Every implementation needs to provided their own implementation of this class.
  *
  */
 
-//#define QCC_MODULE "SEC_MGR"
-#include <Storage.h>
-#include <StorageConfig.h>
+#include <alljoyn/securitymgr/Storage.h>
 
 namespace ajn {
 namespace securitymgr {
-class StorageFactory {
+class SQLStorageFactory {
   private:
-    StorageFactory() { }
+    SQLStorageFactory() { }
 
-    void operator=(StorageFactory const&);
+    void operator=(SQLStorageFactory const&);
 
   public:
-    static StorageFactory& GetInstance()
+    /**
+     * \brief Get a singleton instance of the storage factory.
+     *
+     * \retval NativeStorageFactory reference to the singleton storage factory.
+     */
+    static SQLStorageFactory& GetInstance()
     {
-        static StorageFactory sf;
+        static SQLStorageFactory sf;
         return sf;
     }
 
-    Storage* GetStorage(const StorageConfig& storageConfig);
+    /* \brief Get a storage instance.
+     *
+     * \retval Storage a pointer to a storage instance. Native Storage by default.
+     * \retval NULL otherwise
+     */
+    Storage* GetStorage();
 };
 }
 }

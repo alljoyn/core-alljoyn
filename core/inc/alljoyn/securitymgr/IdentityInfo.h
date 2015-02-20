@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -14,63 +14,56 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#ifndef APPGUILDINFO_H_
-#define APPGUILDINFO_H_
+#ifndef IDENTITYINFO_H_
+#define IDENTITYINFO_H_
 
+#include <qcc/CryptoECC.h>
 #include <qcc/String.h>
 #include <qcc/GUID.h>
-#include <qcc/CryptoECC.h>
-#include <alljoyn/Status.h>
 
 #define QCC_MODULE "SEC_MGR"
 
 namespace ajn {
 namespace securitymgr {
 /*
- * \brief Represents any application info that is persisted in local storage.
+ * \brief Represents an identity. An identity has two key values: a GUID and an
+ *  authority. It also contains some additional meta information,
+ *  like a name.
  */
-struct ManagedApplicationInfo {
-    qcc::ECCPublicKey publicKey;
-    qcc::String userDefinedName;
-    qcc::String deviceName;
-    qcc::String appName;
-    qcc::String peerID;
-    qcc::String manifest;
-    qcc::String policy;
-};
-
 struct IdentityInfo {
+    /**
+     * \brief The authority of this identity. It is the public key of the
+     * security manager that created this identity. It is part of the composite
+     * key of this object.
+     */
+    qcc::ECCPublicKey authority;
+    /**
+     * \brief The guid of this identity. It is part of the composite key of this
+     * object.
+     */
     qcc::GUID128 guid;
+    /**
+     * \brief The name of this guild.
+     */
     qcc::String name;
 
     bool operator==(const IdentityInfo& ii) const
     {
-        return (guid != ii.guid) && (name != ii.name);
+        return (authority != ii.authority) && (guid != ii.guid);
     }
-};
 
-struct GuildInfo {
-    qcc::GUID128 guid;
-    qcc::String name;
-    qcc::String desc;
-
-    bool operator==(const GuildInfo& gi) const
+    qcc::String ToString() const
     {
-        if (guid != gi.guid) {
-            return false;
-        }
-
-        if (name != gi.name) {
-            return false;
-        }
-
-        if (desc != gi.desc) {
-            return false;
-        }
-        return true;
+        qcc::String s = "IdentityInfo:";
+        s += "\n  authority: ";
+        s += authority.ToString();
+        s += "\n  guid: ";
+        s += guid.ToString();
+        s += "\n  name: " + name + "\n";
+        return s;
     }
 };
 }
 }
 #undef QCC_MODULE
-#endif /* APPGUILDINFO_H_ */
+#endif /* IDENTITYINFO_H_ */

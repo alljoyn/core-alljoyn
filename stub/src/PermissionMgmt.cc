@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -90,27 +90,9 @@ void PermissionMgmt::Claim(const ajn::InterfaceDescription::Member* member, ajn:
         }
 
         //====================================================
-        // Step 1: Get new peer ID
-        //
-
-        // TODO: abstract in a function (also in ApplicationMonitor.cc)
-        uint8_t* guid;
-        size_t guidLen;
-        if (ER_OK != (status = msg->GetArg(1)->Get("ay", &guidLen, &guid))) {
-            printf("Failed to unmarshal Peer ID.\n");
-            break;
-        }
-        if (16 != guidLen) {
-            printf("Unexpected Peer ID length\r\n");
-            break;
-        }
-        peerID.SetBytes(guid);
-        printf("Received new PeerID: %s\n", peerID.ToString().c_str());
-
-        //====================================================
         // Step 1b: Install new identity certificate
 
-        if (ER_OK != (status = InstallIdentityCertificate((MsgArg &) * msg->GetArg(2)))) {
+        if (ER_OK != (status = InstallIdentityCertificate((MsgArg &) * msg->GetArg(1)))) {
             printf("Failed to install identity certificate\n");
             break;
         }
@@ -445,28 +427,33 @@ PermissionMgmt::~PermissionMgmt()
 QStatus PermissionMgmt::SendClaimDataSignal()
 {
     printf("Send the claimingInfo.\n");
-    /* Create a MsgArg array of 3 elements */
-    MsgArg claimData[4];
+    /* Create a MsgArg array of 6 elements */
+    //"NotifyConfig", "qa(yv)ya(yv)ua(ayay)", "version,publicKeyInfo,claimableState,trustAnchors,serialNumber,memberships"
 
-    /* Fill the first element with the public key info ID */
+    MsgArg claimData[6];
+    claimData[0].Set("q", 0);
+
+    /* Fill the second element with the public key info ID */
     MsgArg elements[1];
     QStatus status = ajn::securitymgr::SecurityManagerImpl::MarshalPublicKey(crypto->GetDHPublicKey(),
                                                                              peerID, elements[0]);
-    claimData[0].Set("a(yv)", 1, elements);
+    claimData[1].Set("a(yv)", 1, elements);
 
-    /* The second elements is the current claimable state */
-    claimData[1].Set("y", claimableState);
+    /* The third element is the current claimable state */
+    claimData[2].Set("y", claimableState);
 
-    /* The third elements should be the serial number of the policy */
-    claimData[2].Set("u", 0);
+    claimData[3].Set("a(yv)", 0, NULL);
+
+    /* The fifth element should be the serial number of the policy */
+    claimData[4].Set("u", 0);
 
     /* The fourth elements should contain a list of membership certificates */
     MsgArg memberCerts[1];
     memberCerts[0].Set("(ayay)", 0, NULL);
-    claimData[3].Set("a(ayay)", 0, memberCerts);
+    claimData[5].Set("a(ayay)", 0, memberCerts);
 
     uint8_t flags = ALLJOYN_FLAG_SESSIONLESS;
-    status = Signal(NULL, 0, *unsecInfoSignalMember, &claimData[0], 4, 0, flags);
+    status = Signal(NULL, 0, *unsecInfoSignalMember, &claimData[0], 6, 0, flags);
     if (ER_OK != status) {
         printf("Signal returned an error %s.\n", QCC_StatusText(status));
     }
@@ -481,7 +468,7 @@ QStatus PermissionMgmt::CreateInterface(BusAttachment& ba)
     QStatus status = ba.CreateInterface(SECINTFNAME, secIntf, AJ_IFC_SECURITY_REQUIRED);
     if (ER_OK == status) {
         printf("Secure Interface created.\n");
-        secIntf->AddMethod("Claim", "(yv)ay(yay)", "(yv)", "adminPublicKey,GUID,identityCert,publicKey");
+        secIntf->AddMethod("Claim", "(yv)(yay)", "(yv)", "adminPublicKey,GUID,identityCert,publicKey");
         secIntf->AddMethod("InstallIdentity", "(yay)", NULL, "PEMofIdentityCert", 0);
         secIntf->AddMethod("InstallMembership", "a(yay)", NULL, "cert", 0);
         secIntf->AddMethod("RemoveMembership",     "say", NULL, "serialNum,issuer");
@@ -505,7 +492,10 @@ QStatus PermissionMgmt::CreateInterface(BusAttachment& ba)
          * claimableState: enum ClaimableState
          * rotPublicKeys: array of rot public keys
          */
-        unsecIntf->AddSignal("NotifyConfig", "a(yv)yua(ayay)", "publicKey,claimableState,serialNumber,memberships", 0);
+        unsecIntf->AddSignal("NotifyConfig",
+                             "qa(yv)ya(yv)ua(ayay)",
+                             "version,publicKeyInfo,claimableState,trustAnchors,serialNumber,memberships",
+                             0);
         unsecIntf->Activate();
     } else {
         printf("Failed to create Unsecured PermissionsMgmt interface.\n");

@@ -17,7 +17,6 @@
 package org.alljoyn.securitymgr;
 
 import org.alljoyn.securitymgr.access.Policy;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -120,7 +119,7 @@ public abstract class SecurityManager {
 
     void dispatchEvent(ApplicationInfo newInfo, ApplicationInfo oldInfo) {
         for (ApplicationEventListener applicationEventListener : listeners) {
-            applicationEventListener.onApplicationEvent(newInfo.clone(), oldInfo.clone());
+            applicationEventListener.onApplicationEvent(newInfo == null ? null : newInfo.clone(), oldInfo == null ? null : oldInfo.clone());
         }
     }
 

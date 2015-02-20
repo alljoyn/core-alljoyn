@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -16,9 +16,6 @@
 
 #include "gtest/gtest.h"
 #include "TestUtil.h"
-#include <StorageConfig.h>
-#include "SecurityManagerFactory.h"
-#include <AppGuildInfo.h>
 #include <string>
 
 using namespace secmgrcoretest_unit_testutil;
@@ -38,9 +35,6 @@ class GuildManipulationRobustnessTests :
  *       -# Try to get an unknown guild and make sure this fails
  *       -# Try to remove an unknown guild and make sure this fails
  *       -# Try to get all managed guilds and make sure the vector is empty
- *       -# change the guildInfo to some dummy info
- *       -# Store it and make sure this was successful
- *       -# Try to store it again and make sure this fails
  * */
 TEST_F(GuildManipulationRobustnessTests, FailedBasicGuildOperations) {
     vector<GuildInfo> empty;
@@ -50,31 +44,23 @@ TEST_F(GuildManipulationRobustnessTests, FailedBasicGuildOperations) {
     guildInfo.name = "Wrong Guild";
     guildInfo.desc = "This is should never be there";
 
-    ASSERT_NE(secMgr->GetGuild(guildInfo), ER_OK);
-    ASSERT_NE(secMgr->RemoveGuild(guildInfo.guid), ER_OK);
-    ASSERT_EQ(secMgr->GetManagedGuilds(empty), ER_OK);
+    ASSERT_EQ(secMgr->GetGuild(guildInfo), ER_END_OF_DATA);
+    ASSERT_NE(secMgr->RemoveGuild(guildInfo), ER_OK);
+    ASSERT_EQ(secMgr->GetGuilds(empty), ER_OK);
     ASSERT_TRUE(empty.empty());
-
-    guildInfo.name = "Dummy Guild";
-    guildInfo.desc = "This is a dummy Guild";
-
-    ASSERT_EQ(secMgr->StoreGuild(guildInfo), ER_OK);
-    ASSERT_NE(secMgr->StoreGuild(guildInfo), ER_OK);
 }
 
 /**
  * \test The test should make sure that basic guild update works.
- *       -# Create a guildInfo with some Guild ID (guid)
- *       -# Try to store the guild with update=true and make sure this fails as the guild was not added before
- *       -# Try to store the guild with update=false and make sure this is successful
+ *       -# Create a guildInfo with some guid
+ *       -# Try to store the guild and make sure this is successful
  *       -# Get the guild and make sure this is successful
- *       -# Try to store the guild without the update flag and make sure this fails as the guild already exists
- *       -# Change the name and description of the guild and try to store with update=true and make sure this succeeds
- *       -# Get the guild and compare the updated fields with the new info and make sure this is successful
+ *       -# Change the name and description of the guild
+ *       -# Try to store the guild and make sure this is successful
+ *       -# Get the guild and compare the updated fields with the new info and
+ *          make sure this is successful
  * */
 TEST_F(GuildManipulationRobustnessTests, GuildUpdate) {
-    vector<GuildInfo> empty;
-
     GuildInfo guildInfo;
 
     qcc::String name = "Hello Guild";
@@ -83,11 +69,8 @@ TEST_F(GuildManipulationRobustnessTests, GuildUpdate) {
     guildInfo.name = name;
     guildInfo.desc = desc;
 
-    ASSERT_NE(secMgr->StoreGuild(guildInfo, true), ER_OK);
-    ASSERT_EQ(secMgr->StoreGuild(guildInfo, false), ER_OK);
+    ASSERT_EQ(secMgr->StoreGuild(guildInfo), ER_OK);
     ASSERT_EQ(secMgr->GetGuild(guildInfo), ER_OK);
-
-    ASSERT_NE(secMgr->StoreGuild(guildInfo), ER_OK);
 
     name += " - updated";
     desc += " - updated";
@@ -95,7 +78,7 @@ TEST_F(GuildManipulationRobustnessTests, GuildUpdate) {
     guildInfo.name = name;
     guildInfo.desc = desc;
 
-    ASSERT_EQ(secMgr->StoreGuild(guildInfo, true), ER_OK);
+    ASSERT_EQ(secMgr->StoreGuild(guildInfo), ER_OK);
     ASSERT_EQ(secMgr->GetGuild(guildInfo), ER_OK);
 
     ASSERT_EQ(guildInfo.name, name);

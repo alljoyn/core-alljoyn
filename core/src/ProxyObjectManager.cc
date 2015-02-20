@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -22,9 +22,11 @@
 
 namespace ajn {
 namespace securitymgr {
-ProxyObjectManager::ProxyObjectManager(ajn::BusAttachment* ba,
-                                       const SecurityManagerConfig& config) :
-    bus(ba), objectPath(config.pmObjectPath.c_str()), interfaceName(config.pmIfn.c_str())
+ajn::AuthListener* ProxyObjectManager::listener = NULL;
+
+ProxyObjectManager::ProxyObjectManager(ajn::BusAttachment* ba) :
+    bus(ba), objectPath("/org/allseen/Security/PermissionMgmt"),
+    interfaceName("org.allseen.Security.PermissionMgmt")
 {
     methodToSessionType["Claim"] = ECDHE_NULL;
     methodToSessionType["GetIdentity"] = ECDHE_NULL;
@@ -97,20 +99,26 @@ QStatus ProxyObjectManager::ReleaseProxyObject(ajn::ProxyBusObject* remoteObject
     return bus->LeaveSession(sessionId);
 }
 
-bool ProxyObjectManager::IsPermissionDeniedError(QStatus status, Message& msg)
+QStatus ProxyObjectManager::GetStatus(const QStatus status, const Message& msg) const
 {
-    if (ER_PERMISSION_DENIED == status) {
-        return true;
-    }
     if (ER_BUS_REPLY_IS_ERROR_MESSAGE == status) {
-        if (msg->GetErrorName() == NULL) {
-            return false;
+        qcc::String errorMessage;
+        msg->GetErrorName(&errorMessage);
+
+        if (strcmp(errorMessage.c_str(), "ER_DUPLICATE_CERTIFICATE") == 0) {
+            return ER_DUPLICATE_CERTIFICATE;
         }
+
+        if (msg->GetErrorName() == NULL) {
+            return ER_FAIL;
+        }
+
         if (strcmp(msg->GetErrorName(), "org.alljoyn.Bus.ER_PERMISSION_DENIED") == 0) {
-            return true;
+            return ER_PERMISSION_DENIED;
         }
     }
-    return false;
+
+    return status;
 }
 
 QStatus ProxyObjectManager::MethodCall(const ApplicationInfo app,
@@ -131,24 +139,33 @@ QStatus ProxyObjectManager::MethodCall(const ApplicationInfo app,
     }
     SessionType sessionType = it->second;
 
+    lock.Lock(__FILE__, __LINE__);
+
+    if (sessionType == ECDHE_NULL) {
+        bus->EnablePeerSecurity(KEYX_ECDHE_NULL, listener, AJNKEY_STORE, true);
+    } else if (sessionType == ECDHE_DSA) {
+        bus->EnablePeerSecurity(ECDHE_KEYX, listener, AJNKEY_STORE, true);
+    }
+
     ProxyBusObject* remoteObj;
     status = GetProxyObject(app, sessionType, &remoteObj);
     if (ER_OK != status) {
         // errors logged in GetProxyObject
+        lock.Unlock(__FILE__, __LINE__);
         return status;
     }
 
     status = remoteObj->MethodCall(interfaceName, method, args, numArgs, replyMsg, MSG_REPLY_TIMEOUT);
+
+    lock.Unlock(__FILE__, __LINE__);
+
     ReleaseProxyObject(remoteObj);
 
     if (ER_OK != status) {
-        if (IsPermissionDeniedError(status, replyMsg)) {
-            status = ER_PERMISSION_DENIED;
-            QCC_DbgRemoteError(("Permission denied to call %s method", method));
-            return status;
-        }
-        QCC_DbgRemoteError(("Failed to call %s method", method));
-        return status;
+        status = GetStatus(status, replyMsg);
+
+        qcc::String errorDescription = replyMsg->GetErrorDescription();
+        QCC_DbgRemoteError(("Failed to call %s method: %s", method, errorDescription.c_str()));
     }
 
     return status;

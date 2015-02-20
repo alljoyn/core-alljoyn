@@ -16,15 +16,14 @@
 
 package org.alljoyn.securitymgr;
 
+import java.util.Collections;
+import java.util.List;
+
 import org.alljoyn.securitymgr.access.Manifest;
 import org.alljoyn.securitymgr.access.Peer;
-import org.alljoyn.securitymgr.access.PeerType;
 import org.alljoyn.securitymgr.access.Policy;
 import org.alljoyn.securitymgr.access.Rule;
 import org.alljoyn.securitymgr.access.Term;
-
-import java.util.Collections;
-import java.util.List;
 
 /**
  * The DefaultSecurityHandler is a utility class wrapping around a
@@ -41,7 +40,7 @@ public class DefaultSecurityHandler {
     private Guild theGuild;
     private Identity theIdenity;
 
-   public DefaultSecurityHandler(ApplicationEventListener listener,
+    public DefaultSecurityHandler(ApplicationEventListener listener,
             ManifestApprover manifestApprover)
                     throws SecurityMngtException {
 
@@ -74,7 +73,7 @@ public class DefaultSecurityHandler {
         smgr.installMembership(info, theGuild);
         Policy policy = new Policy(1);
         Term term = new Term();
-        term.addPeer(new Peer(PeerType.GUILD, theGuild.getGuid().guid, smgr.getPublicKey()));
+        term.addPeer(new Peer(theGuild));
         term.addRule(new Rule("*"));
         policy.addTerm(term);
         smgr.installPolicy(info, policy);
@@ -105,14 +104,15 @@ public class DefaultSecurityHandler {
         } catch (SecurityMngtException sme) {
             // Guild does not exist.
             theGuild = new Guild("defaultGuild",
-                    "The default GUild of this Security manager", guidData);
+                    "The default GUild of this Security manager", guidData,
+                    smgr.getPublicKey());
             smgr.createGuild(theGuild);
         }
         try {
             theIdenity = smgr.getIdentity(guid);
         } catch (SecurityMngtException sme) {
             // Identity does not exist.
-            theIdenity = new Identity("Admin", guidData);
+            theIdenity = new Identity("Admin", guidData, smgr.getPublicKey());
             smgr.createIdentity(theIdenity);
         }
     }

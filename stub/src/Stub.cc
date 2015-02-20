@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -47,7 +47,8 @@ QStatus Stub::GenerateManifest(PermissionPolicy::Rule** retRules, size_t* count)
     return ER_OK;
 }
 
-Stub::Stub(ClaimListener* cl) :
+Stub::Stub(ClaimListener* cl,
+           bool dsa) :
     ba("mystub", true)
 {
     do {
@@ -70,7 +71,7 @@ Stub::Stub(ClaimListener* cl) :
         // BusAttachment needs to be started before PeerSecurity is enabled
         // to deliver NotifyConfig signal
         if (ER_OK !=
-            ba.EnablePeerSecurity(ECDHE_KEYX " " KEYX_ECDHE_NULL, new ECDHEKeyXListener(),
+            ba.EnablePeerSecurity(dsa ? ECDHE_KEYX : ECDHE_KEYX " " KEYX_ECDHE_NULL, new ECDHEKeyXListener(),
                                   STUB_KEYSTORE, false)) {
             std::cerr << "BusAttachment::EnablePeerSecurity failed." << std::endl;
             break;
@@ -104,6 +105,8 @@ Stub::~Stub()
         ba.UnregisterBusObject(*AboutServiceApi::getInstance());
         AboutServiceApi::DestroyInstance();
     }
+    ba.Disconnect();
+    ba.Stop();
     delete pm;
 }
 
@@ -260,4 +263,11 @@ QStatus Stub::Reset()
     } else {
         return ER_FAIL;
     }
+}
+
+void Stub::SetDSASecurity(bool dsa)
+{
+    QStatus status = ba.EnablePeerSecurity(dsa ? ECDHE_KEYX : KEYX_ECDHE_NULL, new ECDHEKeyXListener(),
+                                           STUB_KEYSTORE, false);
+    fprintf(stderr, "Stub::SetDSASecurity(%i) result = %i\n", dsa, status);
 }

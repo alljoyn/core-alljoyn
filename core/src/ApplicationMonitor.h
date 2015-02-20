@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -27,20 +27,14 @@
 #include <qcc/String.h>
 #include <qcc/GUID.h>
 
+#include "TaskQueue.h"
+
 #include <qcc/Debug.h>
 
 #define QCC_MODULE "SEC_MGR"
 
 namespace ajn {
 namespace securitymgr {
-/**
- * \class ApplicationMonitor
- * \brief Used for tracking security v2 applications based on the SecInfo sessionless signal.
- *
- * QUESTION: I think the ApplicationMonitor will not do any persistency keeping;
- *           it will only track aboutOnlyApplications from the moment the application monitor is started.
- */
-
 class ApplicationMonitor :
     public ajn::PingListener,
     public ajn::MessageReceiver {
@@ -49,6 +43,7 @@ class ApplicationMonitor :
     std::vector<SecurityInfoListener*> listeners; /*Ownership lies with the application that asks for listener registration*/
     ajn::AutoPinger* pinger;
     ajn::BusAttachment* busAttachment;
+    mutable qcc::Mutex securityListenersMutex;
 
     ApplicationMonitor();
     ApplicationMonitor(ajn::BusAttachment* ba,
@@ -68,6 +63,9 @@ class ApplicationMonitor :
 
     void DestinationFound(const qcc::String& group,
                           const qcc::String& destination);
+
+    void NotifySecurityInfoListeners(const SecurityInfo* oldSecInfo,
+                                     const SecurityInfo* newSecInfo);
 
   public:
     static ApplicationMonitor* GetApplicationMonitor(ajn::BusAttachment* ba, qcc::String signalIfn)

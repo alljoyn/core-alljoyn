@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -16,11 +16,10 @@
 
 #include "gtest/gtest.h"
 #include "Common.h"
-#include "SecurityManagerFactory.h"
+
 #include "PermissionMgmt.h"
 #include "TestUtil.h"
 #include "Stub.h"
-#include <semaphore.h>
 #include <stdio.h>
 
 /**
@@ -33,7 +32,7 @@ using namespace ajn::securitymgr;
 using namespace std;
 
 class ClaimingNominalTests :
-    public ClaimTest {
+    public BasicTest {
   private:
 
   protected:
@@ -41,7 +40,6 @@ class ClaimingNominalTests :
   public:
     ClaimingNominalTests()
     {
-        SetSmcStub();
     }
 };
 
@@ -56,7 +54,7 @@ class ClaimingNominalTests :
  *       -# Make sure that the stub client has the right ROT and Identity certificate as well as
  *          verify that it was tracked by the security manager as a claimed application.
  * */
-TEST_F(ClaimingNominalTests, SuccessfulClaimingWithoutOOB) {
+TEST_F(ClaimingNominalTests, DISABLED_SuccessfulClaimingWithoutOOB) {
     bool claimAnswer = true;
     TestClaimListener tcl(claimAnswer);
 
@@ -66,15 +64,15 @@ TEST_F(ClaimingNominalTests, SuccessfulClaimingWithoutOOB) {
 
     ASSERT_TRUE(lastAppInfo == secMgr->GetApplications()[0]);
 
-    ASSERT_EQ(lastAppInfo.rootOfTrustList.size(), (size_t)0);
+    ASSERT_EQ(lastAppInfo.rootsOfTrust.size(), (size_t)0);
     ASSERT_EQ(secMgr->GetApplications(ajn::PermissionConfigurator::STATE_CLAIMED).size(), (size_t)0);
 
     /* make sure we cannot claim yet */
     IdentityInfo idInfo;
     idInfo.guid = GUID128("abcdef123456789");
     idInfo.name = "MyName";
-    ASSERT_EQ(secMgr->StoreIdentity(idInfo, false), ER_OK);
-    ASSERT_NE(secMgr->ClaimApplication(lastAppInfo, idInfo, &AutoAcceptManifest), ER_OK);
+    ASSERT_EQ(secMgr->StoreIdentity(idInfo), ER_OK);
+    ASSERT_NE(secMgr->Claim(lastAppInfo, idInfo), ER_OK);
     ASSERT_EQ(lastAppInfo, secMgr->GetApplications()[0]);
     ASSERT_EQ(secMgr->GetApplications(ajn::PermissionConfigurator::STATE_CLAIMED).size(), (size_t)0);
     //ASSERT_EQ(secMgr->GetIdentityForApplication(_lastAppInfo), NULL);
@@ -89,7 +87,7 @@ TEST_F(ClaimingNominalTests, SuccessfulClaimingWithoutOOB) {
     ASSERT_EQ(stub->GetRoTKeys().size(), (size_t)0);
 
     /* Claim ! */
-    ASSERT_EQ(secMgr->ClaimApplication(lastAppInfo, idInfo, &AutoAcceptManifest), ER_OK);
+    ASSERT_EQ(secMgr->Claim(lastAppInfo, idInfo), ER_OK);
     ASSERT_TRUE(WaitForState(ajn::PermissionConfigurator::STATE_CLAIMED, ajn::securitymgr::STATE_RUNNING));
     ASSERT_EQ(lastAppInfo.peerID, secMgr->GetApplications()[0].peerID);
     ASSERT_EQ(lastAppInfo.claimState, secMgr->GetApplications()[0].claimState);
@@ -107,7 +105,7 @@ TEST_F(ClaimingNominalTests, SuccessfulClaimingWithoutOOB) {
     ASSERT_NE(stub->GetInstalledIdentityCertificate(), "");
 
     /* make sure we cannot claim again */
-    ASSERT_NE(secMgr->ClaimApplication(lastAppInfo, idInfo, &AutoAcceptManifest), ER_OK);
+    ASSERT_NE(secMgr->Claim(lastAppInfo, idInfo), ER_OK);
 
     /* Stop the stub */
     delete stub;

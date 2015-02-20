@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -32,7 +32,8 @@ using namespace services;
 
 class Stub {
   public:
-    Stub(ClaimListener* cl);
+    Stub(ClaimListener* cl,
+         bool dsa = false);
     virtual ~Stub();
 
     QStatus OpenClaimWindow();
@@ -66,6 +67,8 @@ class Stub {
     {
         return pm->GetRoTKeys();
     }
+
+    void SetDSASecurity(bool dsa);
 
     /* Not really clear why you need this */
     QStatus SendClaimDataSignal()

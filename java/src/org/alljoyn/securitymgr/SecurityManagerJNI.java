@@ -16,14 +16,14 @@
 
 package org.alljoyn.securitymgr;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.alljoyn.securitymgr.access.Manifest;
 import org.alljoyn.securitymgr.access.Member;
 import org.alljoyn.securitymgr.access.Policy;
 import org.alljoyn.securitymgr.access.Rule;
 import org.alljoyn.securitymgr.access.Term;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class SecurityManagerJNI extends SecurityManager {
 
@@ -64,7 +64,7 @@ public class SecurityManagerJNI extends SecurityManager {
     @Override
     public void createGuild(Guild guild) throws SecurityMngtException {
         createGuild(guild.getName(), guild.getDescription(),
-                guild.getGuid().guid, false);
+                guild.getGuid().guid, guild.key);
     }
 
 
@@ -83,7 +83,7 @@ public class SecurityManagerJNI extends SecurityManager {
     @Override
     public void updateGuild(Guild guild) throws SecurityMngtException {
         createGuild(guild.getName(), guild.getDescription(),
-                guild.getGuid().guid, true);
+                guild.getGuid().guid, guild.key);
     }
 
     @Override
@@ -94,17 +94,18 @@ public class SecurityManagerJNI extends SecurityManager {
     @Override
     public void claimApplication(ApplicationInfo app, Identity user)
             throws SecurityMngtException {
-        claimApplication(app, user.getGuid().guid);
+        claimApplication(app, user.getGuid().guid, user.key);
     }
 
     @Override
     public void createIdentity(Identity identity) throws SecurityMngtException {
-        createIdentity(identity.getName(), identity.getGuid().guid, false);
+        createIdentity(identity.getName(), identity.getGuid().guid,
+                identity.getKey());
     }
 
     @Override
     public Identity getIdentity(GUID guid) throws SecurityMngtException {
-        return new Identity(getIdentity(guid.guid), guid);
+        return new Identity(getIdentity(guid.guid), guid, getPublicKey());
     }
 
     @Override
@@ -116,7 +117,7 @@ public class SecurityManagerJNI extends SecurityManager {
 
     @Override
     public void updateIdentity(Identity id) throws SecurityMngtException {
-        createIdentity(id.getName(), id.getGuid().guid, true);
+        createIdentity(id.getName(), id.getGuid().guid, id.key);
     }
 
     @Override
@@ -127,14 +128,18 @@ public class SecurityManagerJNI extends SecurityManager {
     @Override
     public void installMembership(ApplicationInfo app, Guild guild,
             Policy policy) throws SecurityMngtException {
-        installMembership(app, guild.getGuid().guid, (policy != null ? policy
-                .getTerms().toArray(new Term[0]) : null));
+        installMembership(
+                app,
+                guild.getGuid().guid,
+                guild.key,
+                (policy != null ? policy
+                        .getTerms().toArray(new Term[0]) : null));
     }
 
     @Override
     public void deleteMembership(ApplicationInfo app, Guild guild)
             throws SecurityMngtException {
-        deleteMembership(app, guild.getGuid().guid);
+        deleteMembership(app, guild.getGuid().guid, guild.key);
     }
 
     @Override
@@ -147,7 +152,7 @@ public class SecurityManagerJNI extends SecurityManager {
     @Override
     public native byte[] getPublicKey() throws SecurityMngtException;
 
-    public native boolean init(String keyStorePath) throws SecurityMngtException;
+    public native boolean init(String path) throws SecurityMngtException;
 
     @Override
     public native void unclaimApplication(ApplicationInfo app) throws SecurityMngtException;
@@ -156,7 +161,7 @@ public class SecurityManagerJNI extends SecurityManager {
             throws SecurityMngtException;
 
     private native void createGuild(String name, String description,
-            byte[] guid, boolean update)
+            byte[] guid, byte[] ownerKey)
                     throws SecurityMngtException;
 
     private native void deleteGuild(byte[] guid) throws SecurityMngtException;
@@ -167,7 +172,7 @@ public class SecurityManagerJNI extends SecurityManager {
     private native void getGuilds(List<Guild> list, Class<Guild> clazz)
             throws SecurityMngtException;
 
-    private native void createIdentity(String name, byte[] guid, boolean update)
+    private native void createIdentity(String name, byte[] guid, byte[] key)
             throws SecurityMngtException;
 
     private native void deleteIdentity(byte[] guid)
@@ -182,12 +187,14 @@ public class SecurityManagerJNI extends SecurityManager {
             Term[] array) throws SecurityMngtException;
 
     private native void installMembership(ApplicationInfo app, byte[] guid,
-            Term[] array) throws SecurityMngtException;
+            byte[] ownerKey, Term[] array) throws SecurityMngtException;
 
-    private native void deleteMembership(ApplicationInfo app, byte[] guid)
-            throws SecurityMngtException;
+    private native void deleteMembership(ApplicationInfo app, byte[] guid,
+            byte[] ownerKey)
+                    throws SecurityMngtException;
 
-    private native void claimApplication(ApplicationInfo app, byte[] guid)
-            throws SecurityMngtException;
+    private native void claimApplication(ApplicationInfo app, byte[] guid,
+            byte[] key)
+                    throws SecurityMngtException;
 
 }

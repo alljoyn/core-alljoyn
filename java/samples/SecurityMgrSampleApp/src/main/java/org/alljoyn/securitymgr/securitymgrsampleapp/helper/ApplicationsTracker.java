@@ -42,12 +42,19 @@ public class ApplicationsTracker implements ApplicationEventListener
         * Don't care about the old info;
         * Always add/update with the newInfo
         */
-        AppInfoItem item = new AppInfoItem(newInfo);
         synchronized (appsInfo) {
             Log.d(TAG, "New App Info: " + newInfo);
-            appsInfo.put(newInfo.getApplicationId(), item);
-            if (mAdapter != null) {
-                mAdapter.addItem(item);
+            if (newInfo == null) {
+                AppInfoItem item = appsInfo.remove(oldInfo.getApplicationId());
+                if (item != null && mAdapter != null) {
+                    mAdapter.removeItem(item);
+                }
+            } else {
+                AppInfoItem item = new AppInfoItem(newInfo);
+                appsInfo.put(newInfo.getApplicationId(), item);
+                if (mAdapter != null) {
+                    mAdapter.addItem(item);
+                }
             }
         }
     }

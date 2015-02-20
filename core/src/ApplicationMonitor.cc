@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -14,11 +14,12 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#include "SecurityManagerImpl.h"
+#include <alljoyn/securitymgr/ApplicationState.h>
+#include <alljoyn/BusAttachment.h>
 
-#include <ApplicationMonitor.h>
-#include <BusAttachment.h>
-#include <Common.h>
+#include "ApplicationMonitor.h"
+#include "SecurityManagerImpl.h"
+#include "Common.h"
 
 #include <algorithm>
 #include <iostream>
@@ -31,8 +32,8 @@
 #define QCC_MODULE "SEC_MGR"
 
 #define PM_NOTIF_IFN "org.allseen.Security.PermissionMgmt.Notification"
-#define PM_NOTIF_SIG "a(yv)yua(ayay)"
-#define PM_NOTIF_ARGS "publicKeyInfo,claimableState,serialNumber,memberships"
+#define PM_NOTIF_SIG "qa(yv)ya(yv)ua(ayay)"
+#define PM_NOTIF_ARGS "version,publicKeyInfo,claimableState,trustAnchors,serialNumber,memberships"
 #define PM_NOTIF_MEMBER "NotifyConfig"
 
 #define PM_STUB_NOTIF_IFN "org.allseen.Security.PermissionMgmt.Stub.Notification"
@@ -107,7 +108,7 @@ QStatus ApplicationMonitor::UnmarshalSecuritySignal(Message& msg, SecurityInfo& 
 {
     MsgArg* keyArrayArg;
     size_t keyArrayLen = 0;
-    QStatus status = msg->GetArg(0)->Get("a(yv)", &keyArrayLen, &keyArrayArg);
+    QStatus status = msg->GetArg(1)->Get("a(yv)", &keyArrayLen, &keyArrayArg);
     if (ER_OK != status) {
         QCC_LogError(status, ("Failed to retrieve public keys."));
         return status;
@@ -124,14 +125,39 @@ QStatus ApplicationMonitor::UnmarshalSecuritySignal(Message& msg, SecurityInfo& 
     }
 
     uint8_t claimableState;
-    if (ER_OK != (status = msg->GetArg(1)->Get("y", &claimableState))) {
+    if (ER_OK != (status = msg->GetArg(2)->Get("y", &claimableState))) {
         QCC_LogError(status, ("Failed to unmarshal claimable state."));
         return status;
     }
     info.claimState = (ajn::PermissionConfigurator::ClaimableState)claimableState;
     QCC_DbgPrintf(("claimState = %s", ToString(info.claimState)));
 
-    if (ER_OK != (status = msg->GetArg(2)->Get("u", &(info.policySerialNum)))) {
+    MsgArg* rotArrayArg;
+    size_t rotArrayLen = 0;
+    if (ER_OK != (status = msg->GetArg(3)->Get("a(yv)", &rotArrayLen, &rotArrayArg))) {
+        QCC_LogError(status, ("Failed to unmarshal array of RoTs."));
+        return status;
+    }
+    QCC_DbgPrintf(("numberOfRoTs = %i", rotArrayLen));
+
+    if (rotArrayLen > 0) {
+        for (size_t i = 0; i < rotArrayLen; i++) {
+            uint8_t rotUsage;
+            MsgArg* rotArg;
+            if (ER_OK != (status = rotArrayArg[i].Get("(yv)", &rotUsage, &rotArg))) {
+                QCC_LogError(status, ("Failed to unmarshal array of RoT %i.", i));
+            }
+
+            ECCPublicKey rot;
+            if (ER_OK != (status = SecurityManagerImpl::UnmarshalPublicKey(rotArg, rot))) {
+                QCC_LogError(status, ("Failed to unmarshal array of RoT %i.", i));
+                return status;
+            }
+            info.rootsOfTrust.push_back(rot);
+        }
+    }
+
+    if (ER_OK != (status = msg->GetArg(4)->Get("u", &(info.policySerialNum)))) {
         QCC_LogError(status, ("Failed to unmarshal policy serial number."));
         return status;
     }
@@ -167,24 +193,23 @@ void ApplicationMonitor::StateChangedSignalHandler(const InterfaceDescription::M
         return;
     }
 
-    SecurityInfo oldInfo = info;
     std::map<qcc::String, SecurityInfo>::iterator it = applications.find(info.busName);
     if (it != applications.end()) {
-        // we know this application
-        oldInfo = it->second;
+        // known bus name
+        SecurityInfo oldInfo = it->second;
         it->second = info;
+
+        NotifySecurityInfoListeners(&oldInfo, &info);
     } else {
-        oldInfo.runningState = STATE_NOT_RUNNING;
-        oldInfo.claimState = ajn::PermissionConfigurator::STATE_UNKNOWN;
+        // new bus name
         applications[info.busName] = info;
+
         if (ER_OK != (status = pinger->AddDestination(AUTOPING_GROUPNAME, info.busName))) {
             QCC_LogError(status, ("Failed to add destination to AutoPinger."));
         }
         QCC_DbgPrintf(("Added destination %s", info.busName.c_str()));
-    }
 
-    for (size_t i = 0; i < listeners.size(); ++i) {
-        listeners[i]->OnSecurityStateChange(&oldInfo, &info);
+        NotifySecurityInfoListeners(NULL, &info);
     }
 }
 
@@ -205,21 +230,30 @@ std::vector<SecurityInfo> ApplicationMonitor::GetApplications() const
 void ApplicationMonitor::RegisterSecurityInfoListener(SecurityInfoListener* al)
 {
     if (NULL != al) {
+        securityListenersMutex.Lock(__FILE__, __LINE__);
         listeners.push_back(al);
-        std::map<qcc::String, SecurityInfo>::const_iterator it = applications.begin();
-        for (; it != applications.end(); ++it) {
-            const SecurityInfo& appInfo = it->second;
-            al->OnSecurityStateChange(&appInfo, &appInfo);
-        }
+        securityListenersMutex.Unlock(__FILE__, __LINE__);
     }
 }
 
 void ApplicationMonitor::UnregisterSecurityInfoListener(SecurityInfoListener* al)
 {
+    securityListenersMutex.Lock(__FILE__, __LINE__);
     std::vector<SecurityInfoListener*>::iterator it = std::find(listeners.begin(), listeners.end(), al);
     if (listeners.end() != it) {
         listeners.erase(it);
     }
+    securityListenersMutex.Unlock(__FILE__, __LINE__);
+}
+
+void ApplicationMonitor::NotifySecurityInfoListeners(const SecurityInfo* oldSecInfo,
+                                                     const SecurityInfo* newSecInfo)
+{
+    securityListenersMutex.Lock(__FILE__, __LINE__);
+    for (size_t i = 0; i < listeners.size(); ++i) {
+        listeners[i]->OnSecurityStateChange(oldSecInfo, newSecInfo);
+    }
+    securityListenersMutex.Unlock(__FILE__, __LINE__);
 }
 
 void ApplicationMonitor::DestinationLost(const qcc::String& group, const qcc::String& destination)
@@ -229,14 +263,8 @@ void ApplicationMonitor::DestinationLost(const qcc::String& group, const qcc::St
 
     if (it != applications.end()) {
         /* we already know this application */
-        if (it->second.runningState != STATE_NOT_RUNNING) {
-            SecurityInfo old = it->second;
-            it->second.runningState = STATE_NOT_RUNNING;
-
-            for (size_t i = 0; i < listeners.size(); ++i) {
-                listeners[i]->OnSecurityStateChange(&old, &it->second);
-            }
-        }
+        NotifySecurityInfoListeners(&it->second, NULL);
+        applications.erase(it);
     } else {
         /* We are monitoring an app not in the list. Remove it. */
         pinger->RemoveDestination(AUTOPING_GROUPNAME, destination);
@@ -253,10 +281,7 @@ void ApplicationMonitor::DestinationFound(const qcc::String& group, const qcc::S
         if (it->second.runningState != STATE_RUNNING) {
             SecurityInfo old = it->second;
             it->second.runningState = STATE_RUNNING;
-
-            for (size_t i = 0; i < listeners.size(); ++i) {
-                listeners[i]->OnSecurityStateChange(&old, &it->second);
-            }
+            NotifySecurityInfoListeners(&old, &it->second);
         }
     } else {
         /* We are monitoring an app not in the list. Remove it. */

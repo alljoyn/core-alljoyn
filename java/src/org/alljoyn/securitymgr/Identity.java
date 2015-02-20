@@ -16,6 +16,8 @@
 
 package org.alljoyn.securitymgr;
 
+import java.util.Arrays;
+
 /**
  * A class representing user identity.
  *
@@ -25,13 +27,25 @@ package org.alljoyn.securitymgr;
 public final class Identity {
     private String name;
     private final GUID guid;
+    final byte[] key;
 
     /*
      * Called from native.
      */
-    Identity(String idName, byte[] guidBytes) {
+    Identity(String idName, byte[] guidBytes, byte[] keyData) {
         guid = new GUID(guidBytes);
         name = idName;
+        key = keyData;
+    }
+
+    /**
+     * Constructs an Identity.
+     *
+     * @param name the non-null name of the user
+     * @param guid the non-null GUID identifying the Identity
+     */
+    public Identity(String name, GUID guid) {
+        this(name, guid, null);
     }
 
     /**
@@ -39,10 +53,12 @@ public final class Identity {
      *
      * @param name the non-null name of the user
      * @param guid the non-null GUID identifying the Identity
+     * @param
      */
-    public Identity(String name, GUID guid) {
+    public Identity(String name, GUID guid, byte[] ownerKey) {
         this.name = name;
         this.guid = guid;
+        key = ownerKey;
     }
 
     /**
@@ -67,13 +83,20 @@ public final class Identity {
     }
 
     /**
+     * @return the key
+     */
+    public final byte[] getKey() {
+        return key == null ? null : key.clone();
+    }
+
+    /**
      * {@inheritDoc}
      *
      * @see java.lang.Object#hashCode()
      */
     @Override
     public int hashCode() {
-        return 41 + guid.hashCode();
+        return 41 + guid.hashCode() + Arrays.hashCode(key);
     }
 
     /**
@@ -85,7 +108,7 @@ public final class Identity {
     public boolean equals(Object obj) {
         if (obj instanceof Identity) {
             Identity other = (Identity) obj;
-            return guid.equals(other.guid);
+            return guid.equals(other.guid) && Arrays.equals(key, other.key);
         }
         return false;
     }

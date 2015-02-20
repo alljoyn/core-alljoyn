@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -19,7 +19,13 @@
 #include <iostream>
 #include <cstdlib>
 #include <ctime>
-#include <unistd.h>
+
+#if defined(QCC_OS_GROUP_WINDOWS)
+#include <process.h> // _getpid()
+#else
+#include <unistd.h> // getpid()
+#endif
+
 #include "Stub.h"
 #include "MyClaimListener.h"
 
@@ -42,7 +48,12 @@ void printHelp()
 int main(int arg, char** argv)
 {
     char c;
+
+#if defined(QCC_OS_GROUP_WINDOWS)
+    srand(time(NULL) + (int)_getpid());
+#else
     srand(time(NULL) + (int)getpid());
+#endif
 
     MyClaimListener mycl;
     Stub stub(&mycl);

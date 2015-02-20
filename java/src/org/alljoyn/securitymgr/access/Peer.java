@@ -18,6 +18,8 @@ package org.alljoyn.securitymgr.access;
 
 import java.util.Arrays;
 
+import org.alljoyn.securitymgr.Guild;
+
 /**
  * A Class describing a peer. Policy Rules can be defined for peers.
  */
@@ -40,6 +42,12 @@ public final class Peer {
         this.keyInfo = null;
     }
 
+    /* Constructs a Peer */
+    public Peer(Guild guild) {
+        this.type = PeerType.GUILD;
+        this.id = guild.getGuid().getGuidData();
+        this.keyInfo = guild.getOwnerKey();
+    }
     /**
      * The type of peer.
      * @return a non-null PeerType.

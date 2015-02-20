@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -69,66 +69,6 @@ qcc::String PubKeyToString(const qcc::ECCPublicKey* pubKey)
         }
     }
     return str;
-}
-
-const char* ToString(const ajn::PermissionConfigurator::ClaimableState acs)
-{
-    switch (acs) {
-    case ajn::PermissionConfigurator::STATE_UNCLAIMABLE:
-        return "NOT CLAIMED";
-
-    case ajn::PermissionConfigurator::STATE_CLAIMABLE:
-        return "CLAIMABLE";
-
-    case ajn::PermissionConfigurator::STATE_CLAIMED:
-        return "CLAIMED";
-
-    case ajn::PermissionConfigurator::STATE_UNKNOWN:
-        return "UNKNOWN CLAIM STATE";
-    }
-
-    return "UNKNOWN CLAIM STATE";
-}
-
-const char* ToString(ApplicationRunningState acs)
-{
-    switch (acs) {
-    case STATE_UNKNOWN_RUNNING:
-        return "UNKNOWN RUNNING STATE";
-
-    case STATE_NOT_RUNNING:
-        return "NOT RUNNING STATE";
-
-    case STATE_RUNNING:
-        return "RUNNING STATE";
-    }
-
-    return "";
-}
-
-ApplicationRunningState ToRunningState(const unsigned char byte)
-{
-    switch (byte) {
-    case 0:
-        return STATE_UNKNOWN_RUNNING;
-
-    case 1:
-        return STATE_NOT_RUNNING;
-
-    case 2:
-        return STATE_RUNNING;
-    }
-    return STATE_UNKNOWN_RUNNING;
-}
-
-void PrettyPrintStateChangeSignal(const char* sourcePath, const Message& msg)
-{
-    printf("--==## State changed signal received ##==--\n");
-    printf("\t State '%s'.\n",
-           ToString(ajn::PermissionConfigurator::ClaimableState(const_cast<Message&>(msg)->GetArg(1)->v_byte)));
-    printf("\t SourcePath: '%s'.\n", sourcePath);
-    printf("\t ObjectPath: '%s'.\n", msg->GetObjectPath());
-    printf("\t Sender: '%s'.\n", msg->GetSender());
 }
 }
 }

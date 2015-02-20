@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -22,7 +22,9 @@
 #include <qcc/CryptoECC.h>
 
 #include <qcc/Debug.h>
-#include <qcc/X509Certificate.h>
+#include <alljoyn/securitymgr/cert/X509Certificate.h>
+
+#include <alljoyn/BusAttachment.h>
 
 #define QCC_MODULE "SEC_MGR"
 
@@ -48,16 +50,17 @@ class X509CertificateGenerator {
   private:
     qcc::String name;
     qcc::Crypto_ECC* keys;
+    ajn::BusAttachment* ba;
 
     static QStatus Decoding(qcc::String der);
 
-    QStatus GetPemEncodedX509Certificate(qcc::String extensions,
+    QStatus GetDerEncodedX509Certificate(qcc::String extensions,
                                          qcc::String subjectGUID,
                                          qcc::X509CertificateECC& certificate);
 
   public:
     X509CertificateGenerator(qcc::String issuerCommonName,
-                             qcc::Crypto_ECC* ca);
+                             ajn::BusAttachment* ba);
     ~X509CertificateGenerator();
 
     QStatus GetIdentityCertificate(qcc::X509IdentityCertificate& certificate);

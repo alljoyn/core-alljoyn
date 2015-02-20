@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -17,11 +17,13 @@
 #ifndef SECURITYINFO_H_
 #define SECURITYINFO_H_
 
+#include <vector>
 #include <alljoyn/about/AnnounceHandler.h>
 #include <alljoyn/about/AboutPropertyStoreImpl.h>
 #include <qcc/String.h>
 #include <qcc/GUID.h>
 #include <Common.h>
+#include <alljoyn/securitymgr/ApplicationInfo.h>
 
 #define QCC_MODULE "SEC_MGR"
 
@@ -37,6 +39,17 @@ struct SecurityInfo {
     ajn::PermissionConfigurator::ClaimableState claimState;
     uint32_t policySerialNum;
     ApplicationRunningState runningState;
+    std::vector<qcc::ECCPublicKey> rootsOfTrust;
+
+    SecurityInfo() { }
+
+    SecurityInfo(const ApplicationInfo& appInfo) :
+        busName(appInfo.busName),
+        publicKey(appInfo.publicKey),
+        claimState(appInfo.claimState),
+        runningState(appInfo.runningState)
+    {
+    }
 };
 }
 }

@@ -26,7 +26,6 @@ import org.alljoyn.securitymgr.access.Manifest;
 import org.alljoyn.securitymgr.access.Member;
 import org.alljoyn.securitymgr.access.MemberType;
 import org.alljoyn.securitymgr.access.Peer;
-import org.alljoyn.securitymgr.access.PeerType;
 import org.alljoyn.securitymgr.access.Policy;
 import org.alljoyn.securitymgr.access.Rule;
 import org.alljoyn.securitymgr.access.Term;
@@ -52,52 +51,75 @@ public class SecurityManagerJNITest extends TestCase {
             public void onApplicationEvent(final ApplicationInfo newInfo,
                     ApplicationInfo oldInfo) {
                 System.out
-                .println("SecurityManagerJNITest.testInit().onApplicationEvent(NEW)" + newInfo.getClaimState());
+                .println("SecurityManagerJNITest.testInit().onApplicationEvent(NEW)"
+                        + newInfo);
                 System.out
-                .println("SecurityManagerJNITest.testInit()..onApplicationEvent(OLD)" + oldInfo.getClaimState());
-                if (newInfo.getClaimState() == ClaimState.CLAIMABLE) {
+                .println("SecurityManagerJNITest.testInit()..onApplicationEvent(OLD)"
+                        + oldInfo);
+                if (newInfo != null
+                        && newInfo.getClaimState() == ClaimState.CLAIMABLE) {
                     new Thread(new Runnable() {
                         @Override
                         public void run() {
-                            try {
-                                Identity myId = new Identity("myTestName",
-                                        new byte[] { '1', '2', '3', '4', '5',
-                                        '6', '7', '8', '9', 'A', 'B',
-                                        'C', 'D', 'E', 'F', 'G' });
-                                smngr.createIdentity(myId);
-                                smngr.claimApplication(newInfo, myId);
-                                GUID myGuid = new GUID(new byte[] { 6, 1, 2, 3,
-                                        4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
-                                        15 });
-                                Guild myGuild = new Guild("myGuild",
-                                        "My own guild", myGuid);
+                            synchronized (SecurityManagerJNITest.this) {
 
-                                smngr.createGuild(myGuild);
+                                try {
+                                    List<ApplicationInfo> apps = smngr
+                                            .getApplications();
+                                    for (ApplicationInfo applicationInfo : apps) {
+                                        if (applicationInfo.equals(newInfo)) {
+                                            if (applicationInfo.getClaimState() != ClaimState.CLAIMABLE) {
+                                                return;
+                                            }
+                                            break;
+                                        }
+                                    }
 
-                                smngr.installMembership(newInfo, myGuild);
-                                smngr.deleteMembership(newInfo, myGuild);
+                                    Identity myId = new Identity("myTestName",
+                                            new byte[] { '1', '2', '3', '4', '5',
+                                            '6', '7', '8', '9', 'A', 'B',
+                                            'C', 'D', 'E', 'F', 'G' },
+                                            null);
+                                    smngr.createIdentity(myId);
+                                    smngr.claimApplication(newInfo, myId);
+                                    GUID myGuid = new GUID(new byte[] { 6, 1, 2, 3,
+                                            4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
+                                            15 });
+                                    Guild myGuild = new Guild("myGuild",
+                                            "My own guild", myGuid, smngr
+                                            .getPublicKey());
 
-                                Policy data = new Policy(1);
-                                Term dataTerm = new Term();
-                                dataTerm.addRule(new Rule("my.test.intf",
-                                        new Member("*", Action.fullAccess(),
-                                                MemberType.ANY)));
-                                data.addTerm(dataTerm);
-                                smngr.installMembership(newInfo, myGuild, data);
+                                    smngr.createGuild(myGuild);
 
-                                Policy policy = new Policy(1);
-                                Term term = new Term();
-                                term.addPeer(new Peer(PeerType.GUILD,
-                                        myGuid.guid));
-                                term.addRule(new Rule("my.test.intf",
-                                        new Member("*", Action.fullAccess(),
-                                                MemberType.ANY)));
-                                policy.addTerm(term);
-                                smngr.installPolicy(newInfo, policy);
-                                System.out
-                                .println("SecurityManagerJNITest.testInit(policy installed)");
-                            } catch (SecurityMngtException e) {
-                                e.printStackTrace();
+                                    System.out
+                                    .println("SecurityManagerJNITest.testInit().new ApplicationEventListener() {...}.onApplicationEvent(...).new Runnable() {...}.run()"
+                                            + myGuild);
+
+                                    smngr.installMembership(newInfo, myGuild);
+                                    smngr.deleteMembership(newInfo, myGuild);
+
+                                    Policy data = new Policy(1);
+                                    Term dataTerm = new Term();
+                                    dataTerm.addRule(new Rule("my.test.intf",
+                                            new Member("*", Action.fullAccess(),
+                                                    MemberType.ANY)));
+                                    data.addTerm(dataTerm);
+                                    // smngr.installMembership(newInfo, myGuild,
+                                    // data);
+
+                                    Policy policy = new Policy(1);
+                                    Term term = new Term();
+                                    term.addPeer(new Peer(myGuild));
+                                    term.addRule(new Rule("my.test.intf",
+                                            new Member("*", Action.fullAccess(),
+                                                    MemberType.ANY)));
+                                    policy.addTerm(term);
+                                    smngr.installPolicy(newInfo, policy);
+                                    System.out
+                                    .println("SecurityManagerJNITest.testInit(policy installed)");
+                                } catch (SecurityMngtException e) {
+                                    e.printStackTrace();
+                                }
                             }
                         }
                     }).start();
@@ -119,7 +141,8 @@ public class SecurityManagerJNITest extends TestCase {
         assertEquals(0, apps.size());
 
         // Basic Identities
-        Identity myId = new Identity("myID", new GUID(new byte[16]));
+        Identity myId = new Identity("myID", new GUID(new byte[16]),
+                smngr.getPublicKey());
         assertEquals(0, smngr.getIdentities().size());
         smngr.createIdentity(myId);
         List<Identity> ids = smngr.getIdentities();
@@ -156,7 +179,8 @@ public class SecurityManagerJNITest extends TestCase {
 
         GUID myGuid = new GUID(new byte[] { 5, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
                 11, 12, 13, 14, 15 });
-        Guild myGuild = new Guild("myGuild", "My own guild", myGuid);
+        Guild myGuild = new Guild("myGuild", "My own guild", myGuid,
+                smngr.getPublicKey());
 
         smngr.createGuild(myGuild);
         guilds = smngr.getGuilds();
@@ -188,6 +212,7 @@ public class SecurityManagerJNITest extends TestCase {
         assertNotNull(guilds);
         assertEquals(1, guilds.size());
         assertTrue(guilds.contains(myGuild));
+
         smngr.deleteGuild(myGuild);
         smngr.deleteIdentity(myId);
     }

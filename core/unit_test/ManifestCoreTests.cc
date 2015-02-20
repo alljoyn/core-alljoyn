@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -21,7 +21,7 @@ using namespace secmgrcoretest_unit_testutil;
 using namespace ajn::securitymgr;
 
 class ManifestCoreTests :
-    public ClaimTest {
+    public BasicTest {
   private:
 
   protected:
@@ -70,13 +70,7 @@ TEST_F(ManifestCoreTests, SuccessfulGetManifest) {
     IdentityInfo idInfo;
     idInfo.guid = GUID128("abcdef123456789");
     idInfo.name = "TestIdentity";
-    ASSERT_EQ(secMgr->StoreIdentity(idInfo, false), ER_OK);
-
-    /* Claim! */
-    ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
-
-    /* Check security signal */
-    ASSERT_TRUE(WaitForState(ajn::PermissionConfigurator::STATE_CLAIMED, ajn::securitymgr::STATE_RUNNING));
+    ASSERT_EQ(secMgr->StoreIdentity(idInfo), ER_OK);
 
     /* Set manifest */
     PermissionPolicy::Rule* rules;
@@ -84,8 +78,14 @@ TEST_F(ManifestCoreTests, SuccessfulGetManifest) {
     GenerateManifest(&rules, &count);
     stub->SetUsedManifest(rules, count);
 
+    /* Claim! */
+    ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
+
+    /* Check security signal */
+    ASSERT_TRUE(WaitForState(ajn::PermissionConfigurator::STATE_CLAIMED, ajn::securitymgr::STATE_RUNNING));
+
     /* Retrieve manifest */
-    PermissionPolicy::Rule* retrievedRules;
+    const PermissionPolicy::Rule* retrievedRules;
     size_t retrievedCount;
     ASSERT_EQ(ER_OK, secMgr->GetManifest(lastAppInfo, &retrievedRules, &retrievedCount));
 

@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -14,39 +14,29 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 #include "TestUtil.h"
-#include "Common.h"
 #include <qcc/Util.h>
+#include <stdlib.h>
 
 using namespace ajn::securitymgr;
 using namespace std;
 
 namespace secmgrcoretest_unit_testutil {
-TestApplicationListener::TestApplicationListener(sem_t& _sem,
-                                                 sem_t& _lock) :
-    sem(_sem), lock(_lock)
+TestApplicationListener::TestApplicationListener(qcc::Condition& _sem,
+                                                 qcc::Mutex& _lock) :
+    event(false), sem(_sem), lock(_lock)
 {
 }
 
 void TestApplicationListener::OnApplicationStateChange(const ApplicationInfo* old,
                                                        const ApplicationInfo* updated)
 {
-#if 1
-    cout << "  Application updated:" << endl;
-    cout << "  ====================" << endl;
-    cout << "  Application name :" << updated->appName << endl;
-    cout << "  Hostname            :" << updated->deviceName << endl;
-    cout << "  Busname            :" << updated->busName << endl;
-    cout << "  - claim state     :" << ToString(old->claimState) << " --> " <<
-    ToString(updated->claimState) <<
-    endl;
-    cout << "  - running state     :" << ToString(old->runningState) << " --> " <<
-    ToString(updated->runningState) <<
-    endl << "> " << flush;
-#endif
-    sem_wait(&lock);
-    _lastAppInfo = *updated;
-    sem_post(&sem);
-    sem_post(&lock);
+    const ApplicationInfo* info = updated ? updated : old;
+    ApplicationListener::PrintStateChangeEvent(old, updated);
+    lock.Lock();
+    _lastAppInfo = *info;
+    event = true;
+    sem.Broadcast();
+    lock.Unlock();
 }
 
 BasicTest::BasicTest()
@@ -56,39 +46,33 @@ BasicTest::BasicTest()
     ba = NULL;
 }
 
-static int counter;
-
 void BasicTest::SetUp()
 {
     const char* storage_path = NULL;
     if ((storage_path = getenv("STORAGE_PATH")) == NULL) {
         storage_path = "/tmp/secmgr.db";
+        ASSERT_EQ(0, setenv("STORAGE_PATH", storage_path, 1));
     }
-    qcc::String path = storage_path;
 
-    stringstream tmp;
-    tmp << (++counter);
-    path += tmp.str().c_str();
-    remove(path.c_str());
-
+    remove(storage_path);
     // clean up any lingering stub keystore
     qcc::String fname = GetHomeDir();
     fname.append("/.alljoyn_keystore/stub.ks");
     remove(fname.c_str());
 
-    ajn::securitymgr::SecurityManagerFactory& secFac = ajn::securitymgr::SecurityManagerFactory::GetInstance();
+    SecurityManagerFactory& secFac = SecurityManagerFactory::GetInstance();
+    SQLStorageFactory& storageFac = SQLStorageFactory::GetInstance();
+
     ba = new BusAttachment("test", true);
     ASSERT_TRUE(ba != NULL);
     ASSERT_EQ(ER_OK, ba->Start());
     ASSERT_EQ(ER_OK, ba->Connect());
 
-    sc.settings["STORAGE_PATH"] = path;
-    ASSERT_EQ(sc.settings.at("STORAGE_PATH").compare(path.c_str()), 0);
-    secMgr = secFac.GetSecurityManager(sc, smc, NULL, ba);
+    storage = storageFac.GetStorage();
+    secMgr = secFac.GetSecurityManager(storage, ba);
     ASSERT_TRUE(secMgr != NULL);
 
-    sem_init(&sem, 0, 0);
-    sem_init(&lock, 0, 1);
+    secMgr->SetManifestListener(&aa);
 
     tal = new TestApplicationListener(sem, lock);
     secMgr->RegisterApplicationListener(tal);
@@ -96,39 +80,45 @@ void BasicTest::SetUp()
 
 void BasicTest::UpdateLastAppInfo()
 {
-    sem_wait(&lock);
+    lock.Lock();
     lastAppInfo = tal->_lastAppInfo;
-    sem_post(&lock);
+    lock.Unlock();
 }
 
 bool BasicTest::WaitForState(ajn::PermissionConfigurator::ClaimableState newState,
                              ajn::securitymgr::ApplicationRunningState newRunningState)
 {
+    lock.Lock();
     printf("\nWaitForState: waiting for event(s) ...\n");
     //Prior to entering this function, the test should have taken an action which leads to one or more events.
     //These events are handled in a separate thread.
-    timespec timeout;
     do {
-        clock_gettime(CLOCK_REALTIME, &timeout);
-        timeout.tv_sec += 5; //Wait for a maximum of 5 seconds ...
-        if (sem_timedwait(&sem, &timeout) == 0) { //if events are in the queue, we will return immediately
+        if (tal->event) { //if event is in the queue, we will return immediately
+            tal->event = false;
             UpdateLastAppInfo(); //update latest value.
             printf("WaitForState: Checking event ... ");
             if (lastAppInfo.claimState == newState && newRunningState == lastAppInfo.runningState &&
                 lastAppInfo.appName.size() != 0) {
                 printf("ok\n");
+                lock.Unlock();
                 return true;
             }
-        } else {
-            printf("timeout- failing test\n");
+        }
+        QStatus status = sem.TimedWait(lock, 5000);
+        if (ER_OK != status) {
+            printf("timeout- failing test - %i\n", status);
             break;
         }
+        assert(tal->event); // asume TimedWait returns != ER_OK in case of timeout
         printf("not ok, waiting for next event\n");
     } while (true);
     printf("WaitForState failed.\n");
-    printf("\tClaimableState: expected = %s, got %s\n", ToString(newState), ToString(lastAppInfo.claimState));
-    printf("\tRunningState: expected = %s, got %s\n", ToString(newRunningState), ToString(lastAppInfo.runningState));
+    printf("\tClaimableState: expected = %s, got %s\n", ToString(newState),
+           ToString(lastAppInfo.claimState));
+    printf("\tRunningState: expected = %s, got %s\n", ToString(
+               newRunningState), ToString(lastAppInfo.runningState));
     printf("\tApplicationName = '%s' (size = %lu)\n", lastAppInfo.appName.c_str(), lastAppInfo.appName.size());
+    lock.Unlock();
     return false;
 }
 
@@ -139,22 +129,19 @@ void BasicTest::TearDown()
         delete tal;
         tal = NULL;
     }
-
-    sem_destroy(&sem);
+    delete secMgr;
 
     if (ba) {
         ba->Disconnect();
         ba->Stop();
         ba->Join();
     }
-    delete secMgr;
     delete ba;
-}
-
-void BasicTest::SetSmcStub()
-{
-    smc.pmNotificationIfn = "org.allseen.Security.PermissionMgmt.Stub.Notification";
-    smc.pmIfn = "org.allseen.Security.PermissionMgmt.Stub";
-    smc.pmObjectPath = "/security/PermissionMgmt";
+    storage->Reset();
+    delete storage;
+    storage = NULL;
+    ba = NULL;
+    secMgr = NULL;
+    tal = NULL;
 }
 }

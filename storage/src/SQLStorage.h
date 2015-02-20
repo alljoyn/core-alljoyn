@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -14,24 +14,29 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#ifndef NATIVESTORAGE_H_
-#define NATIVESTORAGE_H_
+#ifndef SQLSTORAGE_H_
+#define SQLSTORAGE_H_
 
 #include "sqlite3.h"
 
-#include <Storage.h>
-#include <StorageConfig.h>
-#include <AppGuildInfo.h>
+#include <alljoyn/securitymgr/Storage.h>
+#include <alljoyn/securitymgr/ManagedApplicationInfo.h>
+#include <alljoyn/securitymgr/GuildInfo.h>
+#include <alljoyn/securitymgr/IdentityInfo.h>
+#include <alljoyn/securitymgr/cert/X509Certificate.h>
+
 #include <alljoyn/Status.h>
 #include <qcc/String.h>
 #include <qcc/Certificate.h>
 #include <qcc/CertificateECC.h>
 #include <qcc/CryptoECC.h>
+#include <qcc/Mutex.h>
 
 #include <iostream>
+#include "SQLStorageConfig.h"
 
 /**
- * \class NativeStorage
+ * \class SQLStorage
  * \brief A class that is meant to implement the Storage abstract class in order to provide a persistent storage
  *        on a native Linux device.
  **/
@@ -45,27 +50,36 @@ struct Keys {
     qcc::String* guildID;
 };
 
-enum ItemType {
-    ITEM_GUILD,
-    ITEM_IDENTITY
+enum InfoType {
+    INFO_GUILD,
+    INFO_IDENTITY
 };
 
-class NativeStorage :
+class SQLStorage :
     public Storage {
   private:
 
     sqlite3* nativeStorageDB;
-    StorageConfig storageConfig;
+    SQLStorageConfig storageConfig;
+    mutable qcc::Mutex storageMutex;
 
     QStatus Init();
 
-    QStatus StoreItem(ItemType type,
+    QStatus StoreInfo(InfoType type,
+                      const qcc::ECCPublicKey& authority,
                       const GUID128& guid,
                       const qcc::String& name,
-                      const qcc::String& description,
+                      const qcc::String& desc,
                       bool update);
 
-    QStatus RemoveItem(ItemType type,
+    QStatus GetInfo(InfoType type,
+                    const qcc::ECCPublicKey& auth,
+                    const GUID128& guid,
+                    qcc::String& name,
+                    qcc::String& desc) const;
+
+    QStatus RemoveInfo(InfoType type,
+                       const qcc::ECCPublicKey& authority,
                        const GUID128& guid);
 
     QStatus BindCertForStorage(const qcc::Certificate& certificate,
@@ -82,9 +96,20 @@ class NativeStorage :
 
     qcc::String GetStoragePath() const;
 
+    QStatus PrepareCertificateQuery(const qcc::X509MemberShipCertificate& cert,
+                                    sqlite3_stmt** statement) const;
+
+    QStatus GetCertificateFromRow(sqlite3_stmt** statement,
+                                  qcc::X509MemberShipCertificate& cert) const;
+
+    QStatus GetCertificateFromRow(sqlite3_stmt** statement,
+                                  qcc::X509CertificateECC& cert,
+                                  const qcc::String tableName,
+                                  Keys keys) const;
+
   public:
 
-    NativeStorage(const StorageConfig& _storageConfig) :
+    SQLStorage(const SQLStorageConfig& _storageConfig) :
         storageConfig(_storageConfig)
     {
         status = Init();
@@ -112,33 +137,34 @@ class NativeStorage :
 
     QStatus GetCertificate(qcc::Certificate& certificate);
 
+    QStatus GetCertificates(const qcc::X509MemberShipCertificate& certificate,
+                            std::vector<qcc::X509MemberShipCertificate>& certificates) const;
+
     QStatus GetAssociatedData(const qcc::Certificate& certificate,
                               qcc::String& data) const;
 
-    QStatus StoreGuild(const GuildInfo& guildInfo,
-                       const bool update = false);
+    QStatus StoreGuild(const GuildInfo& guildInfo);
 
-    QStatus RemoveGuild(const GUID128& guildId);
+    QStatus RemoveGuild(const GuildInfo& guildInfo);
 
     QStatus GetGuild(GuildInfo& guildInfo) const;
 
-    QStatus GetManagedGuilds(std::vector<GuildInfo>& guildsInfo) const;
+    QStatus GetGuilds(std::vector<GuildInfo>& guildsInfo) const;
 
-    QStatus StoreIdentity(const IdentityInfo& idInfo,
-                          const bool update = false);
+    QStatus StoreIdentity(const IdentityInfo& idInfo);
 
-    QStatus RemoveIdentity(const GUID128& guildId);
+    QStatus RemoveIdentity(const IdentityInfo& idInfo);
 
     QStatus GetIdentity(IdentityInfo& idInfo) const;
 
-    QStatus GetManagedIdentities(std::vector<IdentityInfo>& idInfos) const;
+    QStatus GetIdentities(std::vector<IdentityInfo>& idInfos) const;
 
     QStatus GetNewSerialNumber(qcc::String& serialNumber) const;
 
     void Reset();
 
-    virtual ~NativeStorage();
+    virtual ~SQLStorage();
 };
 }
 }
-#endif /* NATIVESTORAGE_H_ */
+#endif /* SQLSTORAGE_H_ */

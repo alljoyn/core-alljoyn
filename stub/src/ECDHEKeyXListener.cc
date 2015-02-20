@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -27,7 +27,7 @@ bool ECDHEKeyXListener::RequestCredentials(const char* authMechanism,
                                            uint16_t credMask,
                                            Credentials& creds)
 {
-    printf("RequestCredentials %s\n", authMechanism);
+    printf("ECDHEKeyXListener::RequestCredentials %s\n", authMechanism);
 
     // only allow ECDHE_NULL sessions for now
     if (strcmp(authMechanism, KEYX_ECDHE_NULL) == 0) {
@@ -39,11 +39,14 @@ bool ECDHEKeyXListener::RequestCredentials(const char* authMechanism,
 
 bool ECDHEKeyXListener::VerifyCredentials(const char* authMechanism, const char* authPeer, const Credentials& creds)
 {
-    printf("VerifyCredentials %s\n", authMechanism);
+    fprintf(stderr, "ECDHEKeyXListener::VerifyCredentials %s\n", authMechanism);
+    if (strcmp(authMechanism, "ALLJOYN_ECDHE_ECDSA") == 0) {
+        return true;
+    }
     return false;
 }
 
 void ECDHEKeyXListener::AuthenticationComplete(const char* authMechanism, const char* authPeer, bool success)
 {
-    printf("AuthenticationComplete %s\n", authMechanism);
+    fprintf(stderr, "ECDHEKeyXListener::AuthenticationComplete %s success = %i\n", authMechanism, success);
 }

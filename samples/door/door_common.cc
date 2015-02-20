@@ -20,6 +20,10 @@
 
 #include <alljoyn/PermissionPolicy.h>
 
+#if defined(QCC_OS_GROUP_WINDOWS)
+#include <Winsock2.h> // gethostname
+#endif
+
 using namespace ajn;
 
 namespace sample {
@@ -231,7 +235,6 @@ QStatus DoorCommon::FillAboutPropertyStore()
     }
     return status;
 }
-
 
 QStatus DoorCommon::AdvertiseApplication()
 {

@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -25,7 +25,15 @@ namespace ajn {
 namespace securitymgr {
 class SecurityInfoListener {
   private:
-    /* Implementations have to implement this private pure virtual function */
+    /**
+     * \brief Callback function that is called when security information is
+     * discovered, updated or removed.
+     *
+     * \param[in] oldSecInfo   previous security information for a busname;
+     *                         NULL if a new security information is discovered
+     * \param[in] newSecInfo   updated security information for a busname;
+     *                         NULL if a security information has been removed
+     */
     virtual void OnSecurityStateChange(const SecurityInfo* oldSecInfo,
                                        const SecurityInfo* newSecInfo) = 0;
 

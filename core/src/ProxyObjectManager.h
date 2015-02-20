@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -15,14 +15,21 @@
  ******************************************************************************/
 #ifndef PROXYOBJECTMANAGER_H_
 #define PROXYOBJECTMANAGER_H_
-#include "ApplicationInfo.h"
-#include <SecurityManagerConfig.h>
+
+#include <map>
+
+#include <alljoyn/securitymgr/ApplicationInfo.h>
 
 #include <qcc/String.h>
+#include <qcc/Mutex.h>
 
 #include <alljoyn/Status.h>
 #include <alljoyn/Session.h>
 #include <alljoyn/BusAttachment.h>
+
+#define KEYX_ECDHE_NULL "ALLJOYN_ECDHE_NULL"
+#define ECDHE_KEYX "ALLJOYN_ECDHE_ECDSA"
+#define AJNKEY_STORE "/.alljoyn_keystore/c_ecdhe.ks"
 
 namespace ajn {
 namespace securitymgr {
@@ -35,8 +42,7 @@ class ProxyObjectManager :
         ECDHE_PSK
     };
 
-    ProxyObjectManager(ajn::BusAttachment* ba,
-                       const SecurityManagerConfig& config);
+    ProxyObjectManager(ajn::BusAttachment* ba);
 
     ~ProxyObjectManager();
 
@@ -46,8 +52,11 @@ class ProxyObjectManager :
                        const size_t numArgs,
                        Message& replyMsg);
 
+    static ajn::AuthListener* listener;
+
   private:
 
+    qcc::Mutex lock;
     ajn::BusAttachment* bus;
 
     const char* objectPath;
@@ -58,8 +67,8 @@ class ProxyObjectManager :
     virtual void SessionLost(ajn::SessionId sessionId,
                              SessionLostReason reason);
 
-    bool IsPermissionDeniedError(QStatus status,
-                                 Message& msg);
+    QStatus GetStatus(const QStatus status,
+                      const Message& msg) const;
 
     /**
      * \brief Ask the ProxyObjectManager to provide a ProxyBusObject to given

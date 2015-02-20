@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -22,17 +22,30 @@
 #include <condition_variable>
 #include <sys/wait.h>
 
-#include "SecurityManagerFactory.h"
-#include "PermissionMgmt.h"
-#include "Common.h"
-#include "Stub.h"
-#include "AppGuildInfo.h"
+#include <alljoyn/securitymgr/SecurityManagerFactory.h>
+#include <alljoyn/securitymgr/GuildInfo.h>
+#include <alljoyn/securitymgr/IdentityInfo.h>
+#include <alljoyn/securitymgr/ApplicationInfo.h>
+#include <alljoyn/securitymgr/PolicyGenerator.h>
 
-#include <PolicyGenerator.h>
+#include <alljoyn/securitymgr/sqlstorage/SQLStorageFactory.h>
+
+#include "PermissionMgmt.h"
+#include "Stub.h"
 #include <alljoyn/PermissionPolicy.h>
 
 using namespace ajn::securitymgr;
 using namespace std;
+
+class AutoAccepter :
+    public ManifestListener {
+    bool ApproveManifest(const ApplicationInfo& appInfo,
+                         const PermissionPolicy::Rule* manifestRules,
+                         const size_t manifestRulesCount)
+    {
+        return true;
+    }
+};
 
 class TestClaimListener :
     public ClaimListener {
@@ -40,39 +53,40 @@ class TestClaimListener :
     TestClaimListener(bool& _claimAnswer) :
         claimAnswer(_claimAnswer), claimed(false), pemIdentityCertificate("") { }
 
-    void WaitForClaimed()
+    void WaitForClaimed(Stub& stub)
     {
         std::unique_lock<std::mutex> lk(m);
         cv_claimed.wait(lk, [this] { return claimed; });
-        cout << "waitforclaimed --> ok" << endl;
+        stub.SetDSASecurity(true);
+        cout << "waitforclaimed --> ok " << getpid() << endl;
     }
 
     void WaitForIdentityCertificate()
     {
         std::unique_lock<std::mutex> lk(m);
         cv_id.wait(lk, [this] { return pemIdentityCertificate != ""; });
-        cout << "waitforidentity --> ok" << endl;
+        cout << "waitforidentity --> ok " << getpid() << endl;
     }
 
     void WaitForMembershipCertificate()
     {
         std::unique_lock<std::mutex> lk(m);
         cv_memb.wait(lk, [this] { return pemMembershipCertificates.size() > 0; });
-        cout << "waitformembership --> ok" << endl;
+        cout << "waitformembership --> ok " << getpid() << endl;
     }
 
     void WaitForAuthData()
     {
         std::unique_lock<std::mutex> lk(m);
         cv_auth.wait(lk, [this] { return authData.size() > 0; });
-        cout << "waitforauthdata --> ok" << endl;
+        cout << "waitforauthdata --> ok " << getpid() << endl;
     }
 
     void WaitForPolicy()
     {
         std::unique_lock<std::mutex> lk(m);
         cv_pol.wait(lk, [this] { return policy != ""; });
-        cout << "waitforpolicy --> ok" << endl;
+        cout << "waitforpolicy --> ok " << getpid() << endl;
     }
 
   private:
@@ -160,13 +174,13 @@ static int be_peer()
             break;
         }
 
-        if (stub.OpenClaimWindow() != ER_OK) {
-            retval = false;
-            break;
-        }
+        // if (stub.OpenClaimWindow() != ER_OK) {
+        //    retval = false;
+        //    break;
+        // }
 
         cout << "Waiting to be claimed " << getpid() << endl;
-        tcl.WaitForClaimed();
+        tcl.WaitForClaimed(stub);
         cout << "Waiting identity certificate " << getpid() << endl;
         tcl.WaitForIdentityCertificate();
         cout << "Waiting membership certificate " << getpid() << endl;
@@ -218,6 +232,8 @@ class TestApplicationListener :
                  size_t count)
     {
         std::unique_lock<std::mutex> lk(m);
+
+        cout << "[Boss] Waiting for " << count << " peers."  << endl;
         cv.wait(lk, [ = ] { return CheckPredicateLocked(runningState, claimState, count); });
 
         return true;
@@ -233,11 +249,14 @@ class TestApplicationListener :
                               size_t count) const
     {
         if (appInfo.size() != count) {
+            cout << "Not enough peers" << appInfo.size() << " != " << count << endl;
             return false;
         }
 
         for (pair<qcc::String, ApplicationInfo> businfo : appInfo) {
             if (businfo.second.runningState != runningState || businfo.second.claimState != claimState) {
+                cout << "Wrong states for " << businfo.second.busName << businfo.second.runningState << " != " <<
+                runningState << ", " <<  businfo.second.claimState << " != " << claimState << endl;
                 return false;
             }
         }
@@ -248,33 +267,14 @@ class TestApplicationListener :
     void OnApplicationStateChange(const ApplicationInfo* old,
                                   const ApplicationInfo* updated)
     {
-#if 1
-        cout << "  Application updated:" << endl;
-        cout << "  ====================" << endl;
-        cout << "  Application name :" << updated->appName << endl;
-        cout << "  Hostname            :" << updated->deviceName << endl;
-        cout << "  Busname            :" << updated->busName << endl;
-        cout << "  - claim state     :" << ToString(old->claimState) << " --> " <<
-        ToString(updated->claimState) <<
-        endl;
-        cout << "  - running state     :" << ToString(old->runningState) << " --> " <<
-        ToString(updated->runningState) <<
-        endl << "> " << flush;
-#endif
-
+        ApplicationListener::PrintStateChangeEvent(old, updated);
+        const ApplicationInfo* info = updated ? updated : old;
         std::unique_lock<std::mutex> lk(m);
-        appInfo[updated->busName] = *updated;
+        appInfo[updated->busName] = *info;
+        cout << "[Boss] Event peer count = " << appInfo.size() << endl;
         cv.notify_one();
     }
 };
-
-static bool AutoAcceptManifest(const ApplicationInfo& appInfo,
-                               const PermissionPolicy::Rule* manifestRules,
-                               const size_t manifestRulesCount,
-                               void* cookie)
-{
-    return true;
-}
 
 static int be_secmgr(size_t peers)
 {
@@ -289,6 +289,8 @@ static int be_secmgr(size_t peers)
     TestApplicationListener tal;
     BusAttachment ba("test", true);
     SecurityManager* secMgr = NULL;
+    Storage* storage = NULL;
+    AutoAccepter aa;
 
     do {
         status = ba.Start();
@@ -303,20 +305,16 @@ static int be_secmgr(size_t peers)
             break;
         }
 
-        ajn::securitymgr::SecurityManagerFactory& secFac = ajn::securitymgr::SecurityManagerFactory::GetInstance();
+        SecurityManagerFactory& secFac = SecurityManagerFactory::GetInstance();
 
-        ajn::securitymgr::StorageConfig sc;
-        sc.settings["STORAGE_PATH"] = qcc::String(storage_path);
-        assert(sc.settings.at("STORAGE_PATH").compare(storage_path) == 0);
-        ajn::securitymgr::SecurityManagerConfig smc;
-        smc.pmNotificationIfn = "org.allseen.Security.PermissionMgmt.Stub.Notification";
-        smc.pmIfn = "org.allseen.Security.PermissionMgmt.Stub";
-        smc.pmObjectPath = "/security/PermissionMgmt";
-        SecurityManager* secMgr = secFac.GetSecurityManager(sc, smc, NULL);
+        SQLStorageFactory& sf = SQLStorageFactory::GetInstance();
+        storage = sf.GetStorage();
+        SecurityManager* secMgr = secFac.GetSecurityManager(storage, NULL);
         if (secMgr == NULL) {
             cerr << "No security manager" << endl;
             break;
         }
+        secMgr->SetManifestListener(&aa);
 
         secMgr->RegisterApplicationListener(&tal);
 
@@ -324,6 +322,8 @@ static int be_secmgr(size_t peers)
         if (tal.WaitFor(STATE_RUNNING, ajn::PermissionConfigurator::STATE_CLAIMABLE, peers) == false) {
             break;
         }
+
+        sleep(2);
 
         vector<ApplicationInfo> apps = secMgr->GetApplications();
         bool breakhit = false;
@@ -334,13 +334,13 @@ static int be_secmgr(size_t peers)
                 IdentityInfo idInfo;
                 idInfo.guid = app.peerID;
                 idInfo.name = "MyTestName";
-                if (secMgr->StoreIdentity(idInfo, false) != ER_OK) {
+                if (secMgr->StoreIdentity(idInfo) != ER_OK) {
                     cerr << "Could not store identity " << endl;
                     breakhit = true;
                     break;
                 }
 
-                if (secMgr->ClaimApplication(app, idInfo, &AutoAcceptManifest) != ER_OK) {
+                if (secMgr->Claim(app, idInfo) != ER_OK) {
                     cerr << "Could not claim application " << app.busName.c_str() << endl;
                     breakhit = true;
                     break;
@@ -367,9 +367,9 @@ static int be_secmgr(size_t peers)
         secMgr->StoreGuild(guild);
 
         PermissionPolicy policy;
-        vector<GUID128> guildIds;
-        guildIds.push_back(guild.guid);
-        if (ER_OK != PolicyGenerator::DefaultPolicy(guildIds, secMgr->GetPublicKey(), policy)) {
+        vector<GuildInfo> guilds;
+        guilds.push_back(guild);
+        if (ER_OK != PolicyGenerator::DefaultPolicy(guilds, policy)) {
             cerr << "Failed to generate policy." << endl;
             break;
         }
@@ -384,7 +384,7 @@ static int be_secmgr(size_t peers)
                     breakhit = true;
                     break;
                 }
-                if (secMgr->InstallPolicy(app, policy) != ER_OK) {
+                if (secMgr->UpdatePolicy(app, policy) != ER_OK) {
                     cerr << "Could not install policy on " << app.busName.c_str() << endl;
                     breakhit = true;
                     break;
@@ -404,7 +404,7 @@ static int be_secmgr(size_t peers)
     ba.Disconnect();
     ba.Stop();
     ba.Join();
-
+    delete storage;
     cout << "Secmgr " << getpid()  << " finished " << retval << endl;
     return retval;
 }
@@ -417,7 +417,15 @@ int main(int argc, char** argv)
         peers = 4;
     } else if (argc == 2) {
         peers = atoi(argv[1]);
+    } else if (argc == 3) {
+        if (0 == strcmp(argv[1], "p")) {
+            return be_peer();
+        } else {
+            peers = atoi(argv[2]);
+            return be_secmgr(peers);
+        }
     }
+
     int secmgrs = 1;
 
     vector<pid_t> children(peers + secmgrs);
@@ -425,14 +433,25 @@ int main(int argc, char** argv)
     for (size_t i = 0; i < children.size(); ++i) {
         if ((children[i] = fork()) == 0) {
             cout << "pid = " << getpid() << endl;
+            char* newArgs[4];
+            newArgs[0] = argv[0];
+            char buf[20];
             if (i < (size_t)secmgrs) {
-                return be_secmgr(peers);
+                cout << "[MAIN] SecMgr needs " << peers << " peers." << endl;
+                newArgs[1] = (char*)"mgr";
+                snprintf(buf, 20, "%d", peers);
+                newArgs[2] = buf;
             } else {
                 /* TODO: REMOVE THIS WHEN RACE-CONDITION WITH APPLICATIONINFO LISTENER REGISTRATION IS REMOVED */
                 std::chrono::milliseconds dura(1000);
                 std::this_thread::sleep_for(dura);
-                return be_peer();
+                newArgs[1] = (char*)"p";
+                newArgs[2] = (char*)"10";
             }
+            newArgs[3] = NULL;
+            execv(argv[0], newArgs);
+            cout << "[MAIN] Exec fails." <<  endl;
+            return EXIT_FAILURE;
         } else if (children[i] == -1) {
             perror("fork");
             return EXIT_FAILURE;

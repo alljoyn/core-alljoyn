@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -22,7 +22,7 @@
 
 #include <alljoyn/BusAttachment.h>
 #include <qcc/String.h>
-#include <SecurityManager.h>
+#include <alljoyn/securitymgr/SecurityManager.h>
 
 #include <qcc/Debug.h>
 #define QCC_MODULE "SEC_MGR"
@@ -31,7 +31,7 @@ namespace ajn {
 namespace securitymgr {
 class SecurityManager;
 class IdentityData;
-class StorageConfig;
+struct NativeStorageConfig;
 
 /* This is a singleton */
 class SecurityManagerFactory {
@@ -49,34 +49,33 @@ class SecurityManagerFactory {
     {
         ba = sf.ba;
         ownBa = false;
+        status = ER_OK;
     }
 
     void operator=(SecurityManagerFactory const&) { }
 
   public:
+    /**
+     * \brief Get a singleton instance of the security manager factory.
+     *
+     * \retval SecurityManagerFactory reference to the singleton security manager factory.
+     */
     static SecurityManagerFactory& GetInstance()
     {
         static SecurityManagerFactory smf;
         return smf;
     }
 
-    /* \brief Check in the keystore if we already had a key pair for this user
-     *           -- if yes: construct a new SecurityManager for this user with the data
-     *           -- if no: generate a new key pair, store it and construct a new SecurityManager for this user
+    /* \brief Get a security manager instance.
      *
+     * \param[in] storage a pointer to the storage implementation to be used. (No ownership)
+     * \param[in] ba the bus attachment to be used.
      *
+     * \retval SecurityManager a pointer to a security manager instance
+     * \retval NULL otherwise
      */
-    SecurityManager* GetSecurityManager(const StorageConfig& storageCfg,
-                                        const SecurityManagerConfig& smCfg,
-                                        IdentityData* id = NULL,
+    SecurityManager* GetSecurityManager(const Storage* storage = NULL,
                                         ajn::BusAttachment* ba = NULL);
-
-    /* Allows you to show all Users in the UI */
-#if 0
-    /* TODO LATER */
-    const std::vector<qcc::String> GetUsers() const;
-
-#endif
 };
 }
 }

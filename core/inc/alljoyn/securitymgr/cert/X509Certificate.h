@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -53,9 +53,9 @@ class X509CertificateECC :
 
     void SetDataDigest(const qcc::String& digest);
 
-    virtual QStatus LoadPEM(const String& PEM);
+    virtual QStatus LoadDER(const String& der);
 
-    virtual String GetPEM();
+    virtual String GetDER();
 
     virtual const ECCPublicKey* GetSubject();
 
@@ -74,7 +74,7 @@ class X509CertificateECC :
     qcc::String serialNumber;
     qcc::String issuerName;
     qcc::String dataDigest;
-    qcc::String pemEncodedCertificate;
+    qcc::String derEncodedCertificate;
     qcc::ECCPublicKey subject;
     qcc::ECCPublicKey issuer;
     qcc::Certificate::ValidPeriod validity;

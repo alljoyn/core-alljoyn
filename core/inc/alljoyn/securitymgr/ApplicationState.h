@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -14,40 +14,28 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#ifndef COMMON_H_
-#define COMMON_H_
+#ifndef APPLICATIONSTATE_H_
+#define APPLICATIONSTATE_H_
 
-#include <qcc/CryptoECC.h>
 #include <alljoyn/PermissionConfigurator.h>
-#include <alljoyn/Message.h>
-#include <stdint.h>
-
-#define QCC_MODULE "SEC_MGR"
 
 namespace ajn {
 namespace securitymgr {
 typedef enum {
-    STATE_UNKNOWN_RUNNING = 0,
+    STATE_UNKNOWN_RUNNING = 0, /*From the security manager prespective, an application
+                                  is in this state if the manager had just warm-started
+                                  and is not sure about the running state of the application
+                                */
     STATE_NOT_RUNNING = 1,
     STATE_RUNNING = 2
 }ApplicationRunningState;
 
-qcc::String ByteArrayToHex(const uint8_t* bytes,
-                           const std::size_t len);
-
-qcc::String ByteArrayToString(const AllJoynScalarArray bytes);
-
-qcc::String PubKeyToString(const qcc::ECCPublicKey* pubKey);
-
-const char* ToString(const ajn::PermissionConfigurator::ClaimableState acs);
-
-const char* ToString(const ApplicationRunningState acs);
+const char* ToString(ApplicationRunningState acs);
 
 ApplicationRunningState ToRunningState(const unsigned char byte);
 
-void PrettyPrintStateChangeSignal(const char* sourcePath,
-                                  const Message& msg);
+/* This should be moved to core */
+const char* ToString(const PermissionConfigurator::ClaimableState acs);
 }
 }
-#undef QCC_MODULE
-#endif /* COMMON_H_ */
+#endif /* APPLICATIONSTATE_H_ */

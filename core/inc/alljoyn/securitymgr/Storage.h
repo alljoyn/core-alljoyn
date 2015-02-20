@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -17,15 +17,17 @@
 #ifndef STORAGE_H_
 #define STORAGE_H_
 
-#include <AppGuildInfo.h>
+#include <alljoyn/securitymgr/ManagedApplicationInfo.h>
+#include <alljoyn/securitymgr/IdentityInfo.h>
+#include <alljoyn/securitymgr/GuildInfo.h>
+#include <alljoyn/securitymgr/cert/X509Certificate.h>
 #include <alljoyn/Status.h>
+
 #include <qcc/String.h>
 #include <qcc/Certificate.h>
 #include <qcc/CryptoECC.h>
 
 #include <vector>
-
-#define QCC_MODULE "SEC_MGR"
 
 namespace ajn {
 namespace securitymgr {
@@ -91,6 +93,7 @@ class Storage {
      * \param[in, out] managed a boolean stating whether the application is managed or not
      *
      * \retval ER_OK  on success
+     * \retval ER_END_OF_DATA if no data is found
      * \retval others on failure
      */
     virtual QStatus GetManagedApplication(ManagedApplicationInfo& managedApplicationInfo) const = 0;
@@ -147,9 +150,24 @@ class Storage {
      * \param[in, out] certificate a certificate of some type
      *
      * \retval ER_OK  on success
+     * \retval ER_END_OF_DATA if no data is found
      * \retval others on failure
      */
     virtual QStatus GetCertificate(qcc::Certificate& certificate) = 0;
+
+    /*
+     * \brief Retrieve all matching membership certificates based on optional
+     * application key (subject) and/or guildId.
+     *
+     * \param[in]  certificate   input certificate that is used to match
+     * \param[out] certificates  the matching certificates will be pushed to
+     *                           the back of this vector
+     *
+     * \retval ER_OK  on success
+     * \retval others on failure
+     */
+    virtual QStatus GetCertificates(const qcc::X509MemberShipCertificate& certificate,
+                                    std::vector<qcc::X509MemberShipCertificate>& certificates) const = 0;
 
     /**
      * \brief Retrieve a given data that is associated with a given certificate.
@@ -158,6 +176,7 @@ class Storage {
      * \param[in, out] data the associated data
      *
      * \retval ER_OK  on success
+     * \retval ER_END_OF_DATA if no data is found
      * \retval others on failure
      */
     virtual QStatus GetAssociatedData(const qcc::Certificate& certificate,
@@ -169,93 +188,103 @@ class Storage {
      * \param[out] a string to contain the new serial number.
      *
      * \retval ER_OK  on success
+     * \retval ER_END_OF_DATA if no data is found
      * \retval others on failure
      */
     virtual QStatus GetNewSerialNumber(qcc::String& serialNumber) const = 0;
 
     /**
-     * \brief Add a Guild info to be persistently stored.
+     * \brief Store a guild. If a guild with the same keys was stored before,
+     * it will be updated.
      *
-     * \param[in] guildInfo the info of a given guild that needs to be stored
-     * \param[in] update a flag to specify whether guild info should be updated if the guild already exists
-     *
-     * \retval ER_OK  on success
-     * \retval others on failure
-     */
-    virtual QStatus StoreGuild(const GuildInfo& guildInfo,
-                               const bool update = false) = 0;
-
-    /**
-     * \brief Remove the stored information pertaining to a given Guild.
-     *
-     * \param[in] guildId the identifier of a given Guild
+     * \param[in] guildInfo  the info of a guild that needs to be stored;
+     *                       both authority and guid must be provided
      *
      * \retval ER_OK  on success
      * \retval others on failure
      */
-    virtual QStatus RemoveGuild(const qcc::GUID128& guildId) = 0;
+    virtual QStatus StoreGuild(const GuildInfo& guildInfo) = 0;
 
     /**
-     * \brief Get the info stored for a given Guild.
+     * \brief Remove a guild from storage.
      *
-     * \param[in, out] guildInfo info of a given Guild. Only the GUID is mandatory for input
+     * \param[in] guildInfo  the info of a guild that needs to be removed;
+     *                       both authority and guid must be provided
      *
      * \retval ER_OK  on success
+     * \retval others on failure
+     */
+    virtual QStatus RemoveGuild(const GuildInfo& guildInfo) = 0;
+
+    /**
+     * \brief Get the stored info for a provided guild.
+     *
+     * \param[in, out] guildInfo  the info of a guild that should be retrieved;
+     *                            both authority and guid must be provided
+     *
+     * \retval ER_OK  on success
+     * \retval ER_END_OF_DATA if no data is found
      * \retval others on failure
      */
     virtual QStatus GetGuild(GuildInfo& guildInfo) const = 0;
 
     /**
-     * \brief Get the info of all managed Guilds.
+     * \brief Get all stored guild information.
      *
-     * \param[in, out] guildsInfo all info of currently managed Guilds
-     *
-     * \retval ER_OK  on success
-     * \retval others on failure
-     */
-    virtual QStatus GetManagedGuilds(std::vector<GuildInfo>& guildsInfo) const = 0;
-
-    /**
-     * \brief Add an Identity info to be persistently stored.
-     *
-     * \param[in] identityInfo the info of a given identity that needs to be stored
-     * \param[in] update a flag to specify whether identity info should be updated if the identity already exists
+     * \param[in, out] guildInfos  a vector to which any stored guild info
+     *                             object will be pushed
      *
      * \retval ER_OK  on success
      * \retval others on failure
      */
-    virtual QStatus StoreIdentity(const IdentityInfo& identityInfo,
-                                  const bool update = false) = 0;
+    virtual QStatus GetGuilds(std::vector<GuildInfo>& guildInfos) const = 0;
 
     /**
-     * \brief Remove the stored information pertaining to a given Identity.
+     * \brief Store an identity. If an identity with the same keys was stored
+     * before, it will be updated.
      *
-     * \param[in] idId the identifier of a given identity
+     * \param[in] idInfo  the info of an identity that needs to be stored;
+     *                    both authority and guid must be provided
      *
      * \retval ER_OK  on success
      * \retval others on failure
      */
-    virtual QStatus RemoveIdentity(const qcc::GUID128& idId) = 0;
+    virtual QStatus StoreIdentity(const IdentityInfo& idInfo) = 0;
 
     /**
-     * \brief Get the info stored for a Identity Guild.
+     * \brief Remove an identity from storage.
      *
-     * \param[in, out] idInfo info of a given Identity. Only the GUID is mandatory for input
+     * \param[in] idInfo  the info of an identity that needs to be removed;
+     *                    both authority and guid must be provided
      *
      * \retval ER_OK  on success
+     * \retval others on failure
+     */
+    virtual QStatus RemoveIdentity(const IdentityInfo& idInfo) = 0;
+
+    /**
+     * \brief Get the stored info for a provided identity.
+     *
+     * \param[in, out] idInfo  the info of an identity that should be
+     *                         retrieved; both authority and guid must be
+     *                         provided
+     *
+     * \retval ER_OK  on success
+     * \retval ER_END_OF_DATA if no data is found
      * \retval others on failure
      */
     virtual QStatus GetIdentity(IdentityInfo& idInfo) const = 0;
 
     /**
-     * \brief Get the info of all managed Identities.
+     * \brief Get all stored identity information.
      *
-     * \param[in, out] identityInfos all info of currently managed Identities
+     * \param[in, out] idInfos  a vector to which any stored identity info
+     *                          object will be pushed
      *
      * \retval ER_OK  on success
      * \retval others on failure
      */
-    virtual QStatus GetManagedIdentities(std::vector<IdentityInfo>& identityInfos) const = 0;
+    virtual QStatus GetIdentities(std::vector<IdentityInfo>& idInfos) const = 0;
 
     /**
      * \brief Reset the storage and delete the database.
@@ -268,5 +297,4 @@ class Storage {
 };
 }
 }
-#undef QCC_MODULE
 #endif /* STORAGE_H_ */

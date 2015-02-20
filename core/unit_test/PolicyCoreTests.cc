@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -15,8 +15,7 @@
  ******************************************************************************/
 
 #include "TestUtil.h"
-#include <semaphore.h>
-#include <PolicyGenerator.h>
+#include <alljoyn/securitymgr/PolicyGenerator.h>
 
 namespace secmgrcoretest_unit_nominaltests {
 using namespace secmgrcoretest_unit_testutil;
@@ -24,7 +23,7 @@ using namespace secmgrcoretest_unit_testutil;
 using namespace ajn::securitymgr;
 
 class PolicyCoreTests :
-    public ClaimTest {
+    public BasicTest {
   private:
 
   protected:
@@ -38,8 +37,8 @@ class PolicyCoreTests :
 
     IdentityInfo idInfo;
 
-    GUID128 guild;
-    GUID128 guild2;
+    GUID128 guildGUID;
+    GUID128 guildGUID2;
     PermissionPolicy policy;
     PermissionPolicy policy2;
 };
@@ -48,11 +47,16 @@ TEST_F(PolicyCoreTests, SuccessfulInstallPolicy) {
     bool claimAnswer = true;
     TestClaimListener tcl(claimAnswer);
 
-    vector<GUID128> policyGuilds;
+    vector<GuildInfo> policyGuilds;
+    GuildInfo guild;
+    guild.guid = guildGUID;
     policyGuilds.push_back(guild);
-    PolicyGenerator::DefaultPolicy(policyGuilds, secMgr->GetPublicKey(), policy);
+    PolicyGenerator::DefaultPolicy(policyGuilds, policy);
+
+    GuildInfo guild2;
+    guild2.guid = guildGUID2;
     policyGuilds.push_back(guild2);
-    PolicyGenerator::DefaultPolicy(policyGuilds, secMgr->GetPublicKey(), policy2);
+    PolicyGenerator::DefaultPolicy(policyGuilds, policy2);
 
     /* Start the stub */
     Stub* stub = new Stub(&tcl);
@@ -62,38 +66,31 @@ TEST_F(PolicyCoreTests, SuccessfulInstallPolicy) {
 
     /* Installing/retrieving policy before claiming should fail */
     ApplicationInfo appInfo = lastAppInfo;
-    PermissionPolicy policyRemote;
     PermissionPolicy policyLocal;
-    ASSERT_EQ(ER_PERMISSION_DENIED, secMgr->InstallPolicy(appInfo, policy));
-    ASSERT_EQ(ER_PERMISSION_DENIED, secMgr->InstallPolicy(appInfo, policy2));
-    ASSERT_EQ(ER_PERMISSION_DENIED, secMgr->GetPolicy(appInfo, policyRemote, true));
-    ASSERT_EQ(ER_FAIL, secMgr->GetPolicy(appInfo, policyLocal, false));
+    ASSERT_NE(ER_OK, secMgr->UpdatePolicy(appInfo, policy));
+    ASSERT_NE(ER_OK, secMgr->UpdatePolicy(appInfo, policy2));
+    ASSERT_NE(ER_OK, secMgr->GetPolicy(appInfo, policyLocal));
 
     /* Create identity */
-    ASSERT_EQ(secMgr->StoreIdentity(idInfo, false), ER_OK);
+    ASSERT_EQ(secMgr->StoreIdentity(idInfo), ER_OK);
 
     /* Claim application */
-    ASSERT_EQ(ER_OK, secMgr->ClaimApplication(lastAppInfo, idInfo, &AutoAcceptManifest));
+    ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
 
     /* Check security signal */
     ASSERT_TRUE(WaitForState(ajn::PermissionConfigurator::STATE_CLAIMED, ajn::securitymgr::STATE_RUNNING));
 
     /* Check default policy */
-    ASSERT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, secMgr->GetPolicy(appInfo, policyRemote, true));
-    ASSERT_EQ(ER_OK, secMgr->GetPolicy(appInfo, policyLocal, false));
+    ASSERT_EQ(ER_END_OF_DATA, secMgr->GetPolicy(appInfo, policyLocal));
 
     /* Install policy and check retrieved policy */
-    ASSERT_EQ(ER_OK, secMgr->InstallPolicy(appInfo, policy));
-    ASSERT_EQ(ER_OK, secMgr->GetPolicy(appInfo, policyRemote, true));
-    ASSERT_EQ(ER_OK, secMgr->GetPolicy(appInfo, policyLocal, false));
-    ASSERT_EQ((size_t)1, policyRemote.GetTermsSize());
+    ASSERT_EQ(ER_OK, secMgr->UpdatePolicy(appInfo, policy));
+    ASSERT_EQ(ER_OK, secMgr->GetPolicy(appInfo, policyLocal));
     ASSERT_EQ((size_t)1, policyLocal.GetTermsSize());
 
     /* Install another policy and check retrieved policy */
-    ASSERT_EQ(ER_OK, secMgr->InstallPolicy(appInfo, policy2));
-    ASSERT_EQ(ER_OK, secMgr->GetPolicy(appInfo, policyRemote, true));
-    ASSERT_EQ(ER_OK, secMgr->GetPolicy(appInfo, policyLocal, false));
-    ASSERT_EQ((size_t)2, policyRemote.GetTermsSize());
+    ASSERT_EQ(ER_OK, secMgr->UpdatePolicy(appInfo, policy2));
+    ASSERT_EQ(ER_OK, secMgr->GetPolicy(appInfo, policyLocal));
     ASSERT_EQ((size_t)2, policyLocal.GetTermsSize());
 
     /* Clear the keystore of the stub */

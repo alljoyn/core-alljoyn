@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -17,18 +17,16 @@
 #include <cstdio>
 #include <iostream>
 #include <stdlib.h>
-#include <pthread.h>
 #include <vector>
-#include <Common.h>
-#include <ApplicationInfo.h>
-#include <SecurityManager.h>
-#include <StorageConfig.h>
-#include <SecurityManagerFactory.h>
-#include <ApplicationListener.h>
+#include <alljoyn/securitymgr/ApplicationInfo.h>
+#include <alljoyn/securitymgr/SecurityManager.h>
+#include <alljoyn/securitymgr/sqlstorage/SQLStorageFactory.h>
+#include <alljoyn/securitymgr/SecurityManagerFactory.h>
+#include <alljoyn/securitymgr/ApplicationListener.h>
 #include <alljoyn/BusAttachment.h>
 #include <string>
 #include <sstream>
-#include <PolicyGenerator.h>
+#include <alljoyn/securitymgr/PolicyGenerator.h>
 #include <alljoyn/PermissionPolicy.h>
 
 using namespace std;
@@ -46,17 +44,7 @@ class EventListener :
     virtual void OnApplicationStateChange(const ajn::securitymgr::ApplicationInfo* old,
                                           const ajn::securitymgr::ApplicationInfo* updated)
     {
-        cout << "  Application updated:" << endl;
-        cout << "  ====================" << endl;
-        cout << "  Application name : " << updated->appName << endl;
-        cout << "  Hostname         : " << updated->deviceName << endl;
-        cout << "  Busname          : " << updated->busName << endl;
-        cout << "  - claim state    : " << ToString(old->claimState) << " --> "
-             << ToString(updated->claimState) << endl;
-        cout << "  - running state  : "
-             << ajn::securitymgr::ToString(old->runningState) << " --> "
-             << ajn::securitymgr::ToString(updated->runningState) << endl
-             << "> " << flush;
+        ApplicationListener::PrintStateChangeEvent(old, updated);
     }
 };
 
@@ -64,6 +52,17 @@ std::ostream& operator<<(std::ostream& strm, const GuildInfo& gi)
 {
     return strm << "Guild: (" << gi.guid.ToString() << " / " << gi.name << " / " << gi.desc
            << ")";
+}
+
+static vector<string> split(const string& s, char delim)
+{
+    vector<string> elems;
+    stringstream ss(s);
+    string item;
+    while (getline(ss, item, delim)) {
+        elems.push_back(item);
+    }
+    return elems;
 }
 
 static void list_claimable_applications(ajn::securitymgr::SecurityManager* secMgr)
@@ -97,8 +96,8 @@ static void list_claimable_applications(ajn::securitymgr::SecurityManager* secMg
         const ajn::securitymgr::ApplicationInfo& info = *it;
         cout << i << ". bus name: " << info.busName << " (" << info.appName
         << "@" << info.deviceName << ") running: "
-        << ajn::securitymgr::ToString(info.runningState)
-        << ", claimed: " << ajn::securitymgr::ToString(info.claimState)
+        << ToString(info.runningState)
+        << ", claimed: " << ToString(info.claimState)
         << endl;
     }
 }
@@ -124,10 +123,20 @@ static void list_applications(ajn::securitymgr::SecurityManager* secMgr)
 
         cout << i << ". bus name: " << info.busName << " (" << info.appName
         << "@" << info.deviceName << ") running: "
-        << ajn::securitymgr::ToString(info.runningState)
-        << ", claimed: " << ajn::securitymgr::ToString(info.claimState)
-        << ", key = " << info.publicKey.ToString() << ", root of trust count = "
-        << info.rootOfTrustList.size() << endl;
+        << ToString(info.runningState)
+        << ", claimed: " << ToString(info.claimState)
+        << ", key = " << info.publicKey.ToString();
+
+        cout << ", roots of trust = [ ";
+        vector<ECCPublicKey>::const_iterator rotit;
+        int rotnr = 0;
+        for (rotit = info.rootsOfTrust.begin(); rotit != info.rootsOfTrust.end(); ++rotit, rotnr++) {
+            if (rotnr > 0) {
+                cout << ", ";
+            }
+            cout << rotit->ToString().c_str();
+        }
+        cout << " ]";
     }
 }
 
@@ -145,44 +154,47 @@ static void list_claimed_applications(ajn::securitymgr::SecurityManager* secMgr)
             const ajn::securitymgr::ApplicationInfo& info = *it;
             cout << i << ". bus name: " << info.busName << " (" << info.appName
             << "@" << info.deviceName << ") running: "
-            << ajn::securitymgr::ToString(info.runningState)
+            << ToString(info.runningState)
             << ", claimed: "
-            << ajn::securitymgr::ToString(info.claimState) << endl;
+            << ToString(info.claimState) << endl;
         }
     } else {
         cout << "There are currently no claimed applications" << endl;
     }
 }
 
-static bool accept_manifest(const ApplicationInfo& appInfo,
-                            const PermissionPolicy::Rule* manifestRules,
-                            const size_t manifestRulesCount,
-                            void* cookie)
-{
-    bool result = false;
+class CLIManifestListener :
+    public ManifestListener {
+  public:
 
-    cout << "The application requests the following rights:" << endl;
-    for (size_t i = 0; i < manifestRulesCount; i++) {
-        cout << manifestRules[i].ToString().c_str();
+    bool ApproveManifest(const ApplicationInfo& appInfo,
+                         const PermissionPolicy::Rule* manifestRules,
+                         const size_t manifestRulesCount)
+    {
+        bool result = false;
+
+        cout << "The application requests the following rights:" << endl;
+        for (size_t i = 0; i < manifestRulesCount; i++) {
+            cout << manifestRules[i].ToString().c_str();
+        }
+        cout << "Accept (y/n)? ";
+
+        string input;
+        getline(cin, input);
+
+        char cmd;
+        cmd = input[0];
+
+        switch (cmd) {
+        case 'y':
+        case 'Y':
+            result = true;
+            break;
+        }
+
+        return result;
     }
-    cout << "Accept (y/n)? ";
-
-    string input;
-    getline(cin, input);
-
-    char cmd;
-    cmd = input[0];
-
-    switch (cmd) {
-    case 'y':
-    case 'Y':
-        result = true;
-        break;
-    }
-
-    return result;
-}
-
+};
 static void claim_application(ajn::securitymgr::SecurityManager* secMgr,
                               const string& arg)
 {
@@ -195,7 +207,7 @@ static void claim_application(ajn::securitymgr::SecurityManager* secMgr,
     ajn::securitymgr::ApplicationInfo appInfo;
     appInfo.busName = busName;
 
-    if (ER_OK != secMgr->GetApplication(
+    if (ER_END_OF_DATA == secMgr->GetApplication(
             appInfo)) {
         cout
         << "Invalid bus name or Application for this bus name went offline..."
@@ -203,14 +215,14 @@ static void claim_application(ajn::securitymgr::SecurityManager* secMgr,
         return;
     } else {
         vector<IdentityInfo> list;
-        secMgr->GetManagedIdentities(list);
+        secMgr->GetIdentities(list);
         if (list.size() == 0) {
             cout
             << "No identity defined..."
             << endl;
             return;
         }
-        if (ER_OK != secMgr->ClaimApplication(appInfo, list.at(0), *accept_manifest)) {
+        if (ER_OK != secMgr->Claim(appInfo, list.at(0))) {
             cout
             << "Failed to claim application..."
             << endl;
@@ -231,7 +243,7 @@ static void unclaim_application(ajn::securitymgr::SecurityManager* secMgr,
     ajn::securitymgr::ApplicationInfo appInfo;
     appInfo.busName = busName;
 
-    if (ER_OK != secMgr->GetApplication(appInfo)) {
+    if (ER_END_OF_DATA == secMgr->GetApplication(appInfo)) {
         cout << "Could not find busname" << endl;
         return;
     }
@@ -242,15 +254,33 @@ static void unclaim_application(ajn::securitymgr::SecurityManager* secMgr,
     }
 }
 
-static vector<string> split(const string& s, char delim)
+static void name_application(SecurityManager* secMgr,
+                             const string& arg)
 {
-    vector<string> elems;
-    stringstream ss(s);
-    string item;
-    while (getline(ss, item, delim)) {
-        elems.push_back(item);
+    vector<string> args = split(arg, ' ');
+
+    if (args.size() != 2) {
+        cerr << "Please provide an application bus name and a user defined name." << endl;
+        return;
     }
-    return elems;
+
+    ApplicationInfo appInfo;
+    qcc::String busName = args[0].c_str();
+    appInfo.busName = busName;
+
+    if (ER_OK != secMgr->GetApplication(appInfo)) {
+        cerr << "Could not find application." << endl;
+        return;
+    }
+
+    qcc::String appName = args[1].c_str();
+    appInfo.userDefinedName = appName;
+
+    if (ER_OK != secMgr->SetApplicationName(appInfo)) {
+        cerr << "Failed to set application name." << endl;
+        return;
+    }
+    cout << "Successfully set name." << endl;
 }
 
 static void add_guild(ajn::securitymgr::SecurityManager* secMgr,
@@ -299,7 +329,7 @@ static void list_guilds(ajn::securitymgr::SecurityManager* secMgr)
 {
     vector<GuildInfo> guilds;
 
-    if (ER_OK != secMgr->GetManagedGuilds(guilds)) {
+    if (ER_OK != secMgr->GetGuilds(guilds)) {
         cerr << "Could not retrieve Guilds or none were found" << endl;
     } else {
         cout << "Retrieved Guild(s):" << endl;
@@ -320,7 +350,10 @@ static void remove_guild(ajn::securitymgr::SecurityManager* secMgr,
 
     GUID128 guildID(arg.substr(0, GUILD_ID_MAX).c_str());
 
-    if (ER_OK != secMgr->RemoveGuild(guildID)) {
+    GuildInfo guild;
+    guild.guid = guildID;
+
+    if (ER_OK != secMgr->RemoveGuild(guild)) {
         cerr << "Guild was not found" << endl;
     } else {
         cout << "Guild was successfully removed" << endl;
@@ -341,7 +374,7 @@ static void update_membership(ajn::securitymgr::SecurityManager* secMgr,
     ajn::securitymgr::ApplicationInfo appInfo;
     appInfo.busName = busName;
 
-    if (ER_OK != secMgr->GetApplication(
+    if (ER_END_OF_DATA == secMgr->GetApplication(
             appInfo)) {
         cerr << "Could not find application with bus name " << busName << "." << endl;
         return;
@@ -349,11 +382,6 @@ static void update_membership(ajn::securitymgr::SecurityManager* secMgr,
 
     if (appInfo.claimState != ajn::PermissionConfigurator::STATE_CLAIMED) {
         cerr << "The application is not claimed." << endl;
-        return;
-    }
-
-    if (appInfo.runningState != STATE_RUNNING) {
-        cerr << "The application is not running." << endl;
         return;
     }
 
@@ -386,12 +414,12 @@ static void install_policy(SecurityManager* secMgr,
     qcc::String busName = args[0].c_str();
     appInfo.busName = busName;
 
-    if (ER_OK != secMgr->GetApplication(appInfo)) {
+    if (ER_END_OF_DATA == secMgr->GetApplication(appInfo)) {
         cerr << "Could not find application." << endl;
         return;
     }
 
-    vector<GUID128> guilds;
+    vector<GuildInfo> guilds;
     for (size_t i = 1; i < args.size(); ++i) {
         GUID128 guildID(args[i].c_str());
         GuildInfo guildInfo;
@@ -400,16 +428,16 @@ static void install_policy(SecurityManager* secMgr,
             cerr << "Could not find guild with id " << args[i] << endl;
             return;
         }
-        guilds.push_back(guildID);
+        guilds.push_back(guildInfo);
     }
 
     PermissionPolicy policy;
-    if (ER_OK != PolicyGenerator::DefaultPolicy(guilds, secMgr->GetPublicKey(), policy)) {
+    if (ER_OK != PolicyGenerator::DefaultPolicy(guilds, policy)) {
         cerr << "Failed to generate default policy." << endl;
         return;
     }
 
-    if (ER_OK != secMgr->InstallPolicy(appInfo, policy)) {
+    if (ER_OK != secMgr->UpdatePolicy(appInfo, policy)) {
         cerr << "Failed to install policy." << endl;
         return;
     }
@@ -430,25 +458,16 @@ static void get_policy(SecurityManager* secMgr,
     qcc::String busName = args[0].c_str();
     appInfo.busName = busName;
 
-    if (ER_OK != secMgr->GetApplication(appInfo)) {
+    if (ER_END_OF_DATA == secMgr->GetApplication(appInfo)) {
         cerr << "Could not find application." << endl;
         return;
     }
-
-    PermissionPolicy policyRemote;
     PermissionPolicy policyLocal;
-    if (ER_OK != secMgr->GetPolicy(appInfo, policyRemote, true)) {
-        cerr << "Failed to get remote policy." << endl;
-        return;
-    }
 
-    if (ER_OK != secMgr->GetPolicy(appInfo, policyLocal, false)) {
+    if (ER_OK != secMgr->GetPolicy(appInfo, policyLocal)) {
         cerr << "Failed to get locally persisted policy." << endl;
         return;
     }
-
-    cout << "Successfully retrieved remote policy for " << busName.c_str() << ":" << endl;
-    cout << policyRemote.ToString() << endl;
 
     cout << "Successfully retrieved locally persisted policy for " << busName.c_str() << ":" << endl;
     cout << policyLocal.ToString() << endl;
@@ -473,6 +492,7 @@ static void help()
     cout << "    o   install a policy (busnm guildid1 guildid2 ...)" << endl;
     cout << "    e   get policy (busnm)" << endl;
     cout << "    u   unclaim an application (busnm)" << endl;
+    cout << "    n   set a user defined name for an application (busnm appname)" << endl;
     cout << "    h   show this help message" << endl << endl;
 }
 
@@ -549,6 +569,10 @@ static bool parse(ajn::securitymgr::SecurityManager* secMgr,
         unclaim_application(secMgr, arg);
         break;
 
+    case 'n':
+        name_application(secMgr, arg);
+        break;
+
     case 'h':
     default:
         help();
@@ -558,32 +582,8 @@ static bool parse(ajn::securitymgr::SecurityManager* secMgr,
     return true;
 }
 
-static void show_usage()
-{
-    cout << "AllSeen Security Manager CLI\n";
-    cout << endl;
-    cout << "Arguments:\n";
-    cout << "\t-s\tRun against the stub instead of the core implementation.\n";
-    cout << "\t-h\tDisplays this help message.\n";
-}
-
 int main(int argc, char** argv)
 {
-    // read command-line arguments
-    bool stub = false;
-    if (argc > 1) {
-        if (std::string(argv[1]) == "-h") {
-            show_usage();
-            return EXIT_FAILURE;
-        }
-        if (std::string(argv[1]) == "-s") {
-            stub = true;
-        } else {
-            show_usage();
-            return EXIT_FAILURE;
-        }
-    }
-
     cout << "################################################################################" << endl;
     cout << "##                  __                      _ _                               ##" << endl;
     cout << "##                 / _\\ ___  ___ _   _ _ __(_) |_ _   _                       ##" << endl;
@@ -602,19 +602,9 @@ int main(int argc, char** argv)
     cout << "##                    Type h for displaying the help menu                     ##" << endl;
     cout << endl;
 
-    ajn::securitymgr::SecurityManagerFactory& secFac =
-        ajn::securitymgr::SecurityManagerFactory::GetInstance();
-    ajn::securitymgr::StorageConfig storageCfg;     //Will rely on default storage path
-    ajn::securitymgr::SecurityManagerConfig smc;
-
-    // set stub configuration if needed
-    if (stub) {
-        smc.pmNotificationIfn = "org.allseen.Security.PermissionMgmt.Stub.Notification";
-        smc.pmIfn = "org.allseen.Security.PermissionMgmt.Stub";
-        smc.pmObjectPath = "/security/PermissionMgmt";
-    }
-
-    ajn::securitymgr::SecurityManager* secMgr = secFac.GetSecurityManager(storageCfg, smc, NULL);
+    SecurityManagerFactory& secFac = SecurityManagerFactory::GetInstance();
+    SQLStorageFactory& sf = SQLStorageFactory::GetInstance();
+    SecurityManager* secMgr = secFac.GetSecurityManager(sf.GetStorage(), NULL);
 
     if (NULL == secMgr) {
         cerr
@@ -624,11 +614,13 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
+    secMgr->SetManifestListener(new CLIManifestListener());
+
     // Activate live monitoring
     EventListener listener;
     secMgr->RegisterApplicationListener(&listener);
     vector<IdentityInfo> list;
-    if (ER_OK != secMgr->GetManagedIdentities(list)) {
+    if (ER_OK != secMgr->GetIdentities(list)) {
         cerr
         << "> Error: Failed to retrieve identities !!"
         << endl;
@@ -638,7 +630,7 @@ int main(int argc, char** argv)
         IdentityInfo info;
         info.guid = qcc::String("abcdef1234567890");
         info.name = "MyTestIdentity";
-        if (ER_OK != secMgr->StoreIdentity(info, false)) {
+        if (ER_OK != secMgr->StoreIdentity(info)) {
             cerr
             << "> Error: Failed to store default identity !!"
             << endl;

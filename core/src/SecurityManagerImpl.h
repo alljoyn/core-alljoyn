@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -25,23 +25,24 @@
 #include <qcc/Mutex.h>
 #include <qcc/GUID.h>
 
-#include <ApplicationListener.h>
-#include <ApplicationInfo.h>
-#include <AppGuildInfo.h>
-#include <ApplicationMonitor.h>
-#include <X509CertificateGenerator.h>
-#include <SecurityManager.h>
+#include <alljoyn/securitymgr/ApplicationListener.h>
+#include <alljoyn/securitymgr/ApplicationInfo.h>
+#include <alljoyn/securitymgr/ManagedApplicationInfo.h>
+#include <alljoyn/securitymgr/GuildInfo.h>
+#include <alljoyn/securitymgr/IdentityInfo.h>
+#include <alljoyn/securitymgr/SecurityManager.h>
+#include <alljoyn/securitymgr/Storage.h>
+
+#include "ApplicationMonitor.h"
+#include "X509CertificateGenerator.h"
 #include "ProxyObjectManager.h"
-#include <Storage.h>
-#include <StorageConfig.h>
-#include <IdentityData.h>
-#include <SecurityManagerConfig.h>
+#include "RemoteApplicationManager.h"
+#include "ApplicationUpdater.h"
+#include "TaskQueue.h"
 
 #include <memory>
 
 #define QCC_MODULE "SEC_MGR"
-#define KEYX_ECDHE_NULL "ALLJOYN_ECDHE_NULL"
-#define ECDHE_KEYX "ALLJOYN_ECDHE_ECDSA"
 
 using namespace qcc;
 
@@ -49,42 +50,54 @@ namespace ajn {
 namespace securitymgr {
 class Identity;
 class SecurityInfoListener;
-class SecurityInfo;
+struct SecurityInfo;
 
 /**
  * \class SecurityManagerImpl
  *
  * \brief the class provides for the SecurityManager implementation hiding
  */
+class AppInfoEvent {
+  public:
+    AppInfoEvent(const ApplicationInfo* oldInfo,
+                 const ApplicationInfo* newInfo) :
+        oldAppInfo(oldInfo), newAppInfo(newInfo)
+    {
+    }
+
+    ~AppInfoEvent()
+    {
+        delete oldAppInfo;
+        delete newAppInfo;
+    }
+
+    const ApplicationInfo* oldAppInfo;
+    const ApplicationInfo* newAppInfo;
+};
 
 class SecurityManagerImpl :
     public ajn::services::AnnounceHandler,
     private SecurityInfoListener {
   public:
 
-    SecurityManagerImpl(IdentityData* id,                                             // !!! Changed to pointer to support NULL identity
-                        ajn::BusAttachment* ba,
-                        const qcc::ECCPublicKey& pubKey,
-                        const qcc::ECCPrivateKey& privKey,
-                        const StorageConfig& _storageCfg,
-                        const SecurityManagerConfig& smCfg);
+    SecurityManagerImpl(ajn::BusAttachment* ba,
+                        const Storage* _storage);
+
+    QStatus Init();
 
     ~SecurityManagerImpl();
 
-    QStatus ClaimApplication(const ApplicationInfo &app, const IdentityInfo &id, AcceptManifestCB, void* cookie);
+    void SetManifestListener(ManifestListener* listerner);
 
-    QStatus Claim(ApplicationInfo& app,
+    QStatus Claim(const ApplicationInfo& app,
                   const IdentityInfo& identityInfo);
 
     QStatus GetManifest(const ApplicationInfo& appInfo,
-                        PermissionPolicy::Rule** manifestRules,
+                        const PermissionPolicy::Rule** manifestRules,
                         size_t* manifestRulesCount);
 
-    QStatus InstallIdentity(const ApplicationInfo& app,
-                            const IdentityInfo& id);
-
-    QStatus GetRemoteIdentityCertificate(const ApplicationInfo& appInfo,
-                                         IdentityCertificate& idCert);
+    QStatus UpdateIdentity(const ApplicationInfo& app,
+                           const IdentityInfo& id);
 
     const qcc::ECCPublicKey& GetPublicKey() const;
 
@@ -98,23 +111,23 @@ class SecurityManagerImpl :
 
     QStatus GetApplication(ApplicationInfo& ai) const;
 
-    QStatus StoreGuild(const GuildInfo& guildInfo,
-                       const bool update = false);
+    QStatus SetApplicationName(ApplicationInfo& appInfo);
 
-    QStatus RemoveGuild(const GUID128& guildId);
+    QStatus StoreGuild(GuildInfo& guildInfo);
+
+    QStatus RemoveGuild(GuildInfo& guildInfo);
 
     QStatus GetGuild(GuildInfo& guildInfo) const;
 
-    QStatus GetManagedGuilds(std::vector<GuildInfo>& guildsInfo) const;
+    QStatus GetGuilds(std::vector<GuildInfo>& guildInfos) const;
 
-    QStatus StoreIdentity(const IdentityInfo& identityInfo,
-                          const bool update = false);
+    QStatus StoreIdentity(IdentityInfo& idInfo);
 
-    QStatus RemoveIdentity(const GUID128& idId);
+    QStatus RemoveIdentity(IdentityInfo& idInfo);
 
     QStatus GetIdentity(IdentityInfo& idInfo) const;
 
-    QStatus GetManagedIdentities(std::vector<IdentityInfo>& identityInfos) const;
+    QStatus GetIdentities(std::vector<IdentityInfo>& idInfos) const;
 
     QStatus InstallMembership(const ApplicationInfo& appInfo,
                               const GuildInfo& guildInfo,
@@ -123,16 +136,13 @@ class SecurityManagerImpl :
     QStatus RemoveMembership(const ApplicationInfo& appInfo,
                              const GuildInfo& guildInfo);
 
-    QStatus InstallPolicy(const ApplicationInfo& appInfo,
-                          PermissionPolicy& policy);
+    QStatus UpdatePolicy(const ApplicationInfo& appInfo,
+                         PermissionPolicy& policy);
 
     QStatus GetPolicy(const ApplicationInfo& appInfo,
-                      PermissionPolicy& policy,
-                      bool remote);
+                      PermissionPolicy& policy);
 
     QStatus Reset(const ApplicationInfo& appInfo);
-
-    QStatus GetStatus() const;
 
     // TODO: move to ECCPublicKey class
     static QStatus MarshalPublicKey(const ECCPublicKey* pubKey,
@@ -142,6 +152,8 @@ class SecurityManagerImpl :
     // TODO: move to ECCPublicKey class
     static QStatus UnmarshalPublicKey(const MsgArg* ma,
                                       ECCPublicKey& pubKey);
+
+    void HandleTask(AppInfoEvent* event);
 
   private:
 
@@ -170,35 +182,41 @@ class SecurityManagerImpl :
     ApplicationInfoMap::iterator SafeAppExist(const ECCPublicKey key,
                                               bool& exist);
 
-    QStatus GetIdentityCertificate(X509IdentityCertificate& idCert,
-                                   const IdentityInfo& idInfo,
-                                   const ApplicationInfo& appInfo);
+    QStatus GenerateIdentityCertificate(X509IdentityCertificate& idCert,
+                                        const IdentityInfo& idInfo,
+                                        const ApplicationInfo& appInfo);
 
-    QStatus InstallIdentityCertificate(X509IdentityCertificate& idCert,
-                                       const ApplicationInfo& app);
-
-    QStatus PersistApplication(const ApplicationInfo& appInfo);
+    QStatus PersistApplication(const ApplicationInfo& appInfo,
+                               bool update = false,
+                               const PermissionPolicy::Rule* manifestRules = NULL,
+                               size_t manifestRulesCount = 0);
 
     /**
      * \brief Persists the manifest to storage. Assumes the application is
      * already persisted using PersistApplication.
      *
-     * \param[in] appInfo              the application for which the manifest
-     *                                 should be persisted
-     * \param[in] manifestRules        an array of PermissionPolicy::Rules
-     *                                 representing the manifest content
-     * \param[in] manifestRulesCount   the number of rules in the manifestRules
-     *                                 array
+     * \param[in] appInfo      the application for which the policy should
+     *                         be retrieved from storage
+     * \param[out] policy      the persisted policy of the application, iff
+     *                         the function returns ER_OK
      *
-     * \retval ER_OK  on success
-     * \retval others on failure
+     * \retval ER_OK           on success
+     * \retval ER_END_OF_DATA  no known policy for application
+     * \retval others          on failure
      */
-    QStatus PersistManifest(const ApplicationInfo& appInfo,
-                            const PermissionPolicy::Rule* manifestRules,
-                            size_t manifestRulesCount);
+    QStatus GetPersistedPolicy(const ApplicationInfo& appInfo,
+                               PermissionPolicy& policy);
 
-    void CopySecurityInfo(ApplicationInfo& ai,
-                          const SecurityInfo& si);
+    QStatus PartialClaim(const ApplicationInfo& app,
+                         const IdentityInfo& identityInfo);
+
+    void AddAboutInfo(ApplicationInfo& si);
+
+    void AddSecurityInfo(ApplicationInfo& ai,
+                         const SecurityInfo& si);
+
+    void RemoveSecurityInfo(ApplicationInfo& ai,
+                            const SecurityInfo& si);
 
     QStatus SerializeManifest(ManagedApplicationInfo& managedAppInfo,
                               const PermissionPolicy::Rule* manifestRules,
@@ -208,26 +226,28 @@ class SecurityManagerImpl :
                                 const PermissionPolicy::Rule** manifestRules,
                                 size_t* manifestRulesCount);
 
+    void NotifyApplicationListeners(const ApplicationInfo* oldAppInfo,
+                                    const ApplicationInfo* newAppInfo);
+
   private:
-    QStatus status;
-    IdentityData* id;
-    const qcc::ECCPrivateKey privKey;
-    const qcc::ECCPublicKey pubKey;
-    StorageConfig storageCfg;
+    qcc::ECCPublicKey pubKey;
     ApplicationInfoMap applications;
     std::map<qcc::String, ApplicationInfo> aboutCache; /* key=busname of app, value = info */
     std::vector<ApplicationListener*> listeners;
     X509CertificateGenerator* CertificateGen;
-    ProxyObjectManager* proxyObjMgr;
+    RemoteApplicationManager* remoteApplicationManager;
+    ProxyObjectManager* proxyObjMgr; // To be removed once remoteApplicationManager will provide all needed remote calls.
+    ApplicationUpdater* applicationUpdater;
     ApplicationMonitor* appMonitor;
     ajn::BusAttachment* busAttachment;
     Storage* storage;
     mutable qcc::Mutex appsMutex;
-    mutable qcc::Mutex storageMutex;
+    mutable qcc::Mutex applicationListenersMutex;
     qcc::Mutex aboutCacheMutex;
-    SecurityManagerConfig config;
     qcc::GUID128 localGuid;
     std::map<qcc::String, PermissionPolicy*> manifestCache;
+    TaskQueue<AppInfoEvent*, SecurityManagerImpl> queue;
+    ManifestListener* mfListener;
 };
 }
 }

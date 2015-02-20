@@ -55,7 +55,7 @@ else:
         secmgrgtest_env.Append(CPPDEFINES = ['_VARIADIC_MAX=10'])
     #we compile with no rtti and we are not using exceptions. 
     secmgrgtest_env.Append(CPPDEFINES = ['GTEST_HAS_RTTI=0'])
-    # we replace AllJoyn's include CPPPATH options.  AllJoyn includes stlport that will cause the 
+    # we replace AllJoyn's include CPPPATH options.  AllJoyn includes stlport that will cause the
     # gTest code to not compile as expected at this time
     secmgrgtest_env.Append(CPPPATH = [ gtest_src_base ])
     if gtest_dir != '/usr':
@@ -65,6 +65,9 @@ else:
     secmgrgtest_env.StaticLibrary(target = 'gtest', source = gtest_obj)
 
     test_src = secmgrgtest_env.Glob('*.cc')
+    if secmgrgtest_env['OS_GROUP'] == 'windows':
+        # to avoid unicode compilation issues
+        test_src = [f for f in test_src if os.path.basename(f.path) != 'CertificateGenerationTests.cc']
 
     unittest_env = secmgrgtest_env.Clone()
 #   unittest_env.Prepend(LIBS = unittest_env['ALLJOYN_C_LIB_STATIC'])

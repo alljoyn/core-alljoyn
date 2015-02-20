@@ -21,40 +21,46 @@ import java.util.Arrays;
 public class GUID {
     final byte[] guid;
 
-	public GUID(byte[] guid) {
-		if(guid.length != 16) {
-			throw new IllegalArgumentException("wrong size: " + guid.length);
-		}
-		this.guid = guid.clone();;
-	}
+    public GUID(byte[] guid) {
+        if(guid.length != 16) {
+            throw new IllegalArgumentException("wrong size: " + guid.length);
+        }
+        this.guid = guid.clone();;
+    }
 
-	@Override
-	public int hashCode() {
-		return 31 + Arrays.hashCode(guid);
-	}
+    /**
+     * @return the guid data
+     */
+    public byte[] getGuidData() {
+        return guid.clone();
+    }
+    @Override
+    public int hashCode() {
+        return 31 + Arrays.hashCode(guid);
+    }
 
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj) {
-			return true;
-		}
-		if (obj == null) {
-			return false;
-		}
-		if (getClass() != obj.getClass()) {
-			return false;
-		}
-		GUID other = (GUID) obj;
-		return Arrays.equals(guid, other.guid);
-	}
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        GUID other = (GUID) obj;
+        return Arrays.equals(guid, other.guid);
+    }
 
-	@Override
-	public String toString() {
-		StringBuilder builder = new StringBuilder("GUID [");
-		builder.append(Integer.toHexString(guid[0] & 0xff));
+    @Override
+    public String toString() {
+        StringBuilder builder = new StringBuilder("GUID [");
+        builder.append(Integer.toHexString(guid[0] & 0xff));
         for (int i = 1; i < guid.length; i++) {
-			builder.append('-').append(Integer.toHexString(guid[i] & 0xff));
-		}
-		return builder.append("]").toString();
-	}
+            builder.append('-').append(Integer.toHexString(guid[i] & 0xff));
+        }
+        return builder.append("]").toString();
+    }
 }

@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -14,26 +14,20 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#ifndef SECURITYMANAGERCONFIG_H_
-#define SECURITYMANAGERCONFIG_H_
+#ifndef SQLSTORAGECONFIG_H_
+#define SQLSTORAGECONFIG_H_
 
 #include <qcc/String.h>
+#include <map>
 
-#include <qcc/Debug.h>
-#define QCC_MODULE "SEC_MGR"
+#define DEFAULT_STORAGE_FILENAME "secmgrstorage.db"
+#define STORAGE_FILEPATH_KEY "STORAGE_PATH"
 
 namespace ajn {
 namespace securitymgr {
-struct SecurityManagerConfig {
-    qcc::String pmObjectPath;
-    qcc::String pmIfn;
-    qcc::String pmNotificationIfn;
-    SecurityManagerConfig() :
-        pmObjectPath("/org/allseen/Security/PermissionMgmt"),
-        pmIfn("org.allseen.Security.PermissionMgmt"),
-        pmNotificationIfn("org.allseen.Security.PermissionMgmt.Notification") { }
+struct SQLStorageConfig {
+    std::map<qcc::String, qcc::String> settings;
 };
 }
 }
-#undef QCC_MODULE
-#endif /* SECURITYMANAGERCONFIG_H_ */
+#endif /* SQLSTORAGECONFIG_H_ */

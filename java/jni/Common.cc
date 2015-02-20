@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -32,6 +32,7 @@ jclass Common::ruleClass = NULL;
 jmethodID Common::ruleConstructorMID = NULL;
 jclass Common::memberClass = NULL;
 jmethodID Common::memberConstructorMID = NULL;
+Storage* Common::storage = NULL;
 
 #define QCC_MODULE "SEC_MGR"
 
@@ -90,6 +91,7 @@ Common::Common(JNIEnv* env,
 {
     if (jSecmgr) {
         env->SetLongField(jSecmgr, mgrPointerFID, (jlong) this);
+        secMgr->SetManifestListener(this);
         secMgr->RegisterApplicationListener(this);
     }
 }
@@ -102,6 +104,7 @@ Common::~Common()
         env->DeleteGlobalRef(jSecmgr);
         DetachThread(env, result);
     }
+    delete storage;
 }
 
 void Common::Throw(JNIEnv* env, const char* name, const char* msg)
@@ -293,7 +296,7 @@ SecurityManager* Common::GetSecurityManager(JNIEnv* env, jobject securityMgr)
     return secMgr;
 }
 
-SecurityManager* Common::GetSecManager(JNIEnv* env)
+SecurityManager* Common::GetSecurityManager(JNIEnv* env)
 {
     if (secMgr == NULL) {
         Throw(env, SECURITY_MNGT_EXCEPTION_CLASS, "Not initialized properly");
@@ -340,11 +343,11 @@ void Common::OnApplicationStateChange(const ApplicationInfo* oldAppInfo,
     }
 
     do {
-        jobject newInfo = ToApplicationInfoObject(env, *newAppInfo);
+        jobject newInfo = newAppInfo ? ToApplicationInfoObject(env, *newAppInfo) : NULL;
         if (env->ExceptionCheck()) {
             break;
         }
-        jobject oldInfo = ToApplicationInfoObject(env, *oldAppInfo);
+        jobject oldInfo = oldAppInfo ? ToApplicationInfoObject(env, *oldAppInfo) : NULL;
         if (env->ExceptionCheck()) {
             break;
         }
@@ -447,6 +450,23 @@ error:
     return NULL;
 }
 
+bool Common::ApproveManifest(const ApplicationInfo& appInfo,
+                             const PermissionPolicy::Rule* manifestRules,
+                             const size_t manifestRulesCount)
+{
+    JNIEnv* env;
+    int attached = Common::GetJNIEnv(&env);
+    bool accept = false;
+    if (attached != -1) {
+        jobjectArray jManifestRules = Common::ToManifestRules(env, manifestRules, manifestRulesCount);
+        if (jManifestRules != NULL) {
+            accept = CallManifestCallback(env, appInfo, jManifestRules);
+        }
+        Common::DetachThread(env, attached);
+    }
+    return accept;
+}
+
 bool Common::CallManifestCallback(JNIEnv* env, const ApplicationInfo& appInfo, jobject manifest)
 {
     bool result = false;
@@ -463,6 +483,28 @@ bool Common::CallManifestCallback(JNIEnv* env, const ApplicationInfo& appInfo, j
         env->DeleteLocalRef(jAppInfo);
     }
     return result;
+}
+
+jbyteArray Common::ToKeyBytes(JNIEnv* env, const ECCPublicKey& publicKey)
+{
+    uint8_t data[ECC_COORDINATE_SZ + ECC_COORDINATE_SZ];
+    size_t keySize = sizeof(data);
+    QStatus status = publicKey.Export(data, &keySize);
+
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Failed to retrieve publicKey"));
+        Common::Throw(env, SECURITY_MNGT_EXCEPTION_CLASS,
+                      "Failed to retrieve publicKey");
+        return NULL;
+    }
+
+    jbyteArray jKey = env->NewByteArray(keySize);
+    if (jKey == NULL) {
+        return NULL;
+    }
+    //This may result in pending exceptions but we are returning anyway.
+    env->SetByteArrayRegion(jKey, 0, keySize, (jbyte*)data);
+    return jKey;
 }
 
 void Common::ToGUID(JNIEnv* env, jbyteArray jGuid, GUID128& guid)

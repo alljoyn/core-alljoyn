@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -14,26 +14,26 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#include "PolicyGenerator.h"
+#include "alljoyn/securitymgr/PolicyGenerator.h"
 
 using namespace ajn;
 using namespace qcc;
 using namespace securitymgr;
 
-QStatus PolicyGenerator::DefaultPolicy(const std::vector<GUID128>& guildIDs,
-                                       const ECCPublicKey& publicKey,
+QStatus PolicyGenerator::DefaultPolicy(const std::vector<GuildInfo>& guildInfos,
                                        PermissionPolicy& policy)
 {
     QStatus status = ER_OK;
 
-    size_t numGuilds = guildIDs.size();
+    size_t numGuilds = guildInfos.size();
 
     // will be deleted by policy
     PermissionPolicy::Term* terms = new PermissionPolicy::Term[numGuilds];
 
     for (size_t i = 0; i < numGuilds; i++) {
         if (ER_OK !=
-            (status = DefaultGuildPolicyTerm(guildIDs[i].GetBytes(), GUID128::SIZE, publicKey, terms[i]))) {
+            (status = DefaultGuildPolicyTerm(guildInfos[i].guid.GetBytes(),
+                                             GUID128::SIZE, guildInfos[i].authority, terms[i]))) {
             break;
         }
     }
@@ -49,7 +49,7 @@ QStatus PolicyGenerator::DefaultPolicy(const std::vector<GUID128>& guildIDs,
 
 QStatus PolicyGenerator::DefaultGuildPolicyTerm(const uint8_t* guildId,
                                                 const size_t guildIdLen,
-                                                const ECCPublicKey& publicKey,
+                                                const ECCPublicKey& authority,
                                                 PermissionPolicy::Term& term)
 {
     QStatus status = ER_OK;
@@ -69,7 +69,7 @@ QStatus PolicyGenerator::DefaultGuildPolicyTerm(const uint8_t* guildId,
     // will be deleted by peer
     KeyInfoNISTP256* info = new KeyInfoNISTP256();
     info->SetKeyId(guildId, guildIdLen);
-    info->SetPublicKey(&publicKey);
+    info->SetPublicKey(&authority);
     peers[0].SetKeyInfo(info);
     term.SetPeers(1, peers);
     term.SetRules(1, rules);

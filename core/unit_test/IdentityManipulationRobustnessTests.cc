@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -14,10 +14,7 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#include "gtest/gtest.h"
 #include "TestUtil.h"
-#include <StorageConfig.h>
-#include "SecurityManagerFactory.h"
 #include <string>
 
 using namespace secmgrcoretest_unit_testutil;
@@ -39,7 +36,6 @@ class IdentityManipulationRobustnessTests :
  *       -# Try to get all managed identities and make sure the vector is empty
  *       -# change the identityInfo to some dummy info
  *       -# Store it and make sure this was successful
- *       -# Try to store it again and make sure this fails
  * */
 TEST_F(IdentityManipulationRobustnessTests, FailedBasicIdentityOperations) {
     vector<IdentityInfo> empty;
@@ -48,25 +44,22 @@ TEST_F(IdentityManipulationRobustnessTests, FailedBasicIdentityOperations) {
 
     identityInfo.name = "Wrong Identity";
 
-    ASSERT_NE(secMgr->GetIdentity(identityInfo), ER_OK);
-    ASSERT_NE(secMgr->RemoveIdentity(identityInfo.guid), ER_OK);
-    ASSERT_EQ(secMgr->GetManagedIdentities(empty), ER_OK);
+    ASSERT_EQ(secMgr->GetIdentity(identityInfo), ER_END_OF_DATA);
+    ASSERT_NE(secMgr->RemoveIdentity(identityInfo), ER_OK);
+    ASSERT_EQ(secMgr->GetIdentities(empty), ER_OK);
     ASSERT_TRUE(empty.empty());
 
     identityInfo.name = "Dummy Identity";
 
     ASSERT_EQ(secMgr->StoreIdentity(identityInfo), ER_OK);
-    ASSERT_NE(secMgr->StoreIdentity(identityInfo), ER_OK);
 }
 
 /**
  * \test The test should make sure that basic identity update works.
  *       -# Create a identityInfo with some Identity ID (guid)
- *       -# Try to store the identity with update=true and make sure this fails as the identity was not added before
- *       -# Try to store the identity with update=false and make sure this is successful
+ *       -# Try to store the identity and make sure this is successful
  *       -# Get the identity and make sure this is successful
- *       -# Try to store the identity without the update flag and make sure this fails as the identity already exists
- *       -# Change the name and description of the identity and try to store with update=true and make sure this succeeds
+ *       -# Change the name and description of the identity and try to store it and make sure this succeeds
  *       -# Get the identity and compare the updated fields with the new info and make sure this is successful
  * */
 TEST_F(IdentityManipulationRobustnessTests, IdentityUpdate) {
@@ -79,18 +72,15 @@ TEST_F(IdentityManipulationRobustnessTests, IdentityUpdate) {
 
     identityInfo.name = name;
 
-    ASSERT_NE(secMgr->StoreIdentity(identityInfo, true), ER_OK);
-    ASSERT_EQ(secMgr->StoreIdentity(identityInfo, false), ER_OK);
+    ASSERT_EQ(secMgr->StoreIdentity(identityInfo), ER_OK);
     ASSERT_EQ(secMgr->GetIdentity(identityInfo), ER_OK);
-
-    ASSERT_NE(secMgr->StoreIdentity(identityInfo), ER_OK);
 
     name += " - updated";
     desc += " - updated";
 
     identityInfo.name = name;
 
-    ASSERT_EQ(secMgr->StoreIdentity(identityInfo, true), ER_OK);
+    ASSERT_EQ(secMgr->StoreIdentity(identityInfo), ER_OK);
     ASSERT_EQ(secMgr->GetIdentity(identityInfo), ER_OK);
 
     ASSERT_EQ(identityInfo.name, name);

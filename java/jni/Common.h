@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -18,7 +18,7 @@
 #define JAVA_JNI_COMMON_H_
 
 #include <jni.h>
-#include <SecurityManager.h>
+#include <alljoyn/securitymgr/SecurityManager.h>
 
 #define SECURITY_MNGT_EXCEPTION_CLASS "org/alljoyn/securitymgr/SecurityMngtException"
 #define NULLPOINTEREXCEPTION_CLASS "java/lang/NullPointerException"
@@ -38,7 +38,8 @@ using namespace ajn;
 using namespace ajn::securitymgr;
 
 class Common :
-    ApplicationListener {
+    ApplicationListener,
+    public ManifestListener {
   private:
     jobject jSecmgr;
     SecurityManager* secMgr;
@@ -61,6 +62,11 @@ class Common :
            SecurityManager* mngr);
     ~Common();
 
+    bool ApproveManifest(const ApplicationInfo& appInfo,
+                         const PermissionPolicy::Rule* manifestRules,
+                         const size_t manifestRulesCount);
+
+    static Storage* storage;
     static JavaVM* jvm;
 
     static jclass applicationInfoClass;
@@ -120,11 +126,14 @@ class Common :
                                         const PermissionPolicy::Rule* manifestRules,
                                         const size_t manifestRulesCount);
 
+    static jbyteArray ToKeyBytes(JNIEnv* env,
+                                 const qcc::ECCPublicKey& key);
+
     static void ToGUID(JNIEnv* env,
                        jbyteArray data,
                        GUID128& guid);
 
-    SecurityManager* GetSecManager(JNIEnv* env);
+    SecurityManager* GetSecurityManager(JNIEnv* env);
 
     bool CallManifestCallback(JNIEnv* env,
                               const ApplicationInfo& appInfo,

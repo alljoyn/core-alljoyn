@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -17,8 +17,6 @@
 #ifndef NATIVESTORAGESETTINGS_H_
 #define NATIVESTORAGESETTINGS_H_
 
-#define DEFAULT_STORAGE_PATH "~/.secmgr/secmgr.db"
-
 #define GUILDS_TABLE_NAME "GUILDS"
 #define IDENTITY_TABLE_NAME "IDENTITIES"
 #define CLAIMED_APPS_TABLE_NAME "CLAIMED_APPLICATIONS"
@@ -31,16 +29,20 @@
 #define GUILDS_TABLE_SCHEMA \
     "CREATE TABLE IF NOT EXISTS " GUILDS_TABLE_NAME \
     " (\
-        ID TEXT PRIMARY KEY    NOT NULL,\
-        GUILD_NAME   TEXT,    \
-        GUILD_DESC   TEXT\
+        AUTHORITY  BLOB NOT NULL,\
+        ID         TEXT NOT NULL,\
+        NAME       TEXT,\
+        DESC       TEXT,\
+        PRIMARY KEY(AUTHORITY, ID)\
 ); "
 
 #define IDENTITY_TABLE_SCHEMA \
     "CREATE TABLE IF NOT EXISTS " IDENTITY_TABLE_NAME \
     " (\
-        ID TEXT PRIMARY KEY    NOT NULL,\
-        ID_NAME   TEXT    \
+        AUTHORITY BLOB NOT NULL,\
+        ID        TEXT NOT NULL,\
+        NAME      TEXT,\
+        PRIMARY KEY(AUTHORITY, ID)\
 ); "
 
 #define CLAIMED_APPLICATIONS_TABLE_SCHEMA \

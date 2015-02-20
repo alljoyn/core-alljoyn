@@ -71,8 +71,10 @@ done
 
 # running system tests
 # echo "[[ Running system tests ]]"
-STORAGE_PATH=/tmp/secmgr.db "${TEST_ROOT}"/seccore/test/multipeer_claim/run.sh
+# STORAGE_PATH=/tmp/secmgr.db "${TEST_ROOT}"/seccore/test/multipeer_claim/run.sh
 
+#Kill any remaining multipeer_claim processes hanging around.
+kill $(pidof multipeer_claim) || true
 # generate coverage report (lcov 1.10 or better required for --no-external)
 if [ ! -z "$(which lcov)" ]; then
     if [ $(lcov --version | cut -d'.' -f2) -ge 10 ]; then
@@ -94,12 +96,6 @@ if [ ! -z "$(which lcov)" ]; then
             do
             lcov --quiet --capture -b "${AJN_SM_PATH}"/$target/inc --directory "${PLATFORM_ROOT}"/lib/$target $EXTRA_ARGS --output-file "${COVDIR}"/secmgr_"$target"_inc.info
             genhtml --quiet --output-directory "${COVDIR}"/"$target"inc "${COVDIR}"/secmgr_"$target"_inc.info || true
-
-            for type in "native"
-                do
-                lcov --quiet --capture -b "${AJN_SM_PATH}"/$target/src/$type --directory "${PLATFORM_ROOT}"/lib/$target/$type $EXTRA_ARGS --output-file "${COVDIR}"/secmgr_"$target"_"$type"_src.info
-                genhtml --quiet --output-directory "${COVDIR}"/"$target"src/"$type" "${COVDIR}"/secmgr_"$target"_"$type"_src.info 
-                done
             done
 fi
 

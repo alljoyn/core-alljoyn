@@ -2,7 +2,7 @@
 #define SECMGR_POLICY_H_
 
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -18,11 +18,14 @@
  ******************************************************************************/
 
 #include <vector>
+
 #include <qcc/String.h>
 #include <qcc/GUID.h>
 #include <qcc/CryptoECC.h>
 #include <alljoyn/PermissionPolicy.h>
 #include <alljoyn/Status.h>
+
+#include <alljoyn/securitymgr/GuildInfo.h>
 
 namespace ajn {
 namespace securitymgr {
@@ -33,18 +36,17 @@ class PolicyGenerator {
      * provide any interface to this application and can modify any interface
      * provided by this application.
      *
-     * \param[in]  guildIds  the ids of the guilds in the generated policy
-     * \param[out] policy    the generated policy
+     * \param[in]  guildInfos  the guilds in the generated policy
+     * \param[out] policy      the generated policy
      *
      */
-    static QStatus DefaultPolicy(const std::vector<qcc::GUID128>& guildIds,
-                                 const qcc::ECCPublicKey& publicKey,
+    static QStatus DefaultPolicy(const std::vector<GuildInfo>& guildInfos,
                                  PermissionPolicy& policy);
 
   private:
     static QStatus DefaultGuildPolicyTerm(const uint8_t* guildId,
                                           const size_t guildIdLen,
-                                          const qcc::ECCPublicKey& publicKey,
+                                          const qcc::ECCPublicKey& authority,
                                           PermissionPolicy::Term& term);
 
     static QStatus DefaultGuildPolicyRule(PermissionPolicy::Rule& rule);

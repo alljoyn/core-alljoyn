@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -14,29 +14,29 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#ifndef IDENTITY_H_
-#define IDENTITY_H_
+#ifndef MANAGEDAPPINFO_H_
+#define MANAGEDAPPINFO_H_
 
-#include <qcc/Certificate.h>
-#include <alljoyn/about/AboutClient.h>
 #include <qcc/String.h>
-#include <IdentityData.h>
+#include <qcc/CryptoECC.h>
 
-#include <qcc/Debug.h>
 #define QCC_MODULE "SEC_MGR"
 
 namespace ajn {
 namespace securitymgr {
-/* Combines IdentityCertificate + IdentityData */
-class Identity {
-  private:
-    qcc::Certificate identityCertificate; /*TODO should figure out which CertificateTypeX is the identity cert*/
-
-    ajn::services::AboutClient::AboutData about;
-    qcc::String userInput;
-    IdentityData id;
+/*
+ * \brief Represents any application info that is persisted in local storage.
+ */
+struct ManagedApplicationInfo {
+    qcc::ECCPublicKey publicKey;
+    qcc::String userDefinedName;
+    qcc::String deviceName;
+    qcc::String appName;
+    qcc::String peerID;
+    qcc::String manifest;
+    qcc::String policy;
 };
 }
 }
 #undef QCC_MODULE
-#endif /* IDENTITY_H_ */
+#endif /* MANAGEDAPPINFO_H_ */

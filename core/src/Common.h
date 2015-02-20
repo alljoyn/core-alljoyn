@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -14,30 +14,25 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#ifndef IDENTITYDATA_H_
-#define IDENTITYDATA_H_
+#ifndef COMMON_H_
+#define COMMON_H_
 
-#include <qcc/String.h>
+#include <qcc/CryptoECC.h>
+#include <alljoyn/PermissionConfigurator.h>
+#include <alljoyn/Message.h>
+#include <stdint.h>
 
-#include <qcc/Debug.h>
 #define QCC_MODULE "SEC_MGR"
 
 namespace ajn {
 namespace securitymgr {
-/* Stores the IdentityData as defined in the HLD */
-class IdentityData {
-  private:
-    qcc::String vCardData;
+qcc::String ByteArrayToHex(const uint8_t* bytes,
+                           const std::size_t len);
 
-  public:
-    IdentityData() { };
+qcc::String ByteArrayToString(const AllJoynScalarArray bytes);
 
-    IdentityData(qcc::String rfc_7095_vcard) :
-        vCardData(rfc_7095_vcard) { };
-
-    const qcc::String& GetVCardData() const { return vCardData; };
-};
+qcc::String PubKeyToString(const qcc::ECCPublicKey* pubKey);
 }
 }
 #undef QCC_MODULE
-#endif /* IDENTITYDATA_H_ */
+#endif /* COMMON_H_ */

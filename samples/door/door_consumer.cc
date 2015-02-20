@@ -17,6 +17,7 @@
 #include "door_common.h"
 #include <qcc/Crypto.h>
 #include <qcc/String.h>
+#include <qcc/Thread.h>
 #include <alljoyn/about/AnnouncementRegistrar.h>
 
 #include <set>
@@ -172,7 +173,7 @@ int main(int arg, char** argv)
     //Wait until we are claimed...
     while (PermissionConfigurator::STATE_CLAIMED != ba.GetPermissionConfigurator().GetClaimableState()) {
         printf("Consumer is not yet Claimed; Waiting to be claimed\n");
-        sleep(5);
+        qcc::Sleep(5000);
     }
 #endif
     //Register signal hander

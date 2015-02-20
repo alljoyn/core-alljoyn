@@ -23,7 +23,7 @@ app_env.Prepend(LIBS = ['alljoyn', 'stub', 'ajsecmgr', 'ajsecstorage'])
 #Bundled router
 if app_env['BR'] == 'on':
     app_env.Append(LIBPATH = ['$DISTDIR' + '/cpp/lib'])
-    brobj = app_env.File('$DISTDIR' + '/cpp/lib/BundledRouter.o')
+    brobj = app_env['brobj'];
     app_env.Prepend(LIBS = [brobj, 'ajrouter'])
 
 # build app

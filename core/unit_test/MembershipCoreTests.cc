@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -15,7 +15,6 @@
  ******************************************************************************/
 
 #include "TestUtil.h"
-#include <semaphore.h>
 
 namespace secmgrcoretest_unit_nominaltests {
 using namespace secmgrcoretest_unit_testutil;
@@ -23,7 +22,7 @@ using namespace secmgrcoretest_unit_testutil;
 using namespace ajn::securitymgr;
 
 class MembershipCoreTests :
-    public ClaimTest {
+    public BasicTest {
   private:
 
   protected:
@@ -53,8 +52,8 @@ TEST_F(MembershipCoreTests, SuccessfulInstallMembership) {
     TestClaimListener tcl(claimAnswer);
 
     /* Create guilds */
-    ASSERT_EQ(ER_OK, secMgr->StoreGuild(guildInfo1, false));
-    ASSERT_EQ(ER_OK, secMgr->StoreGuild(guildInfo2, false));
+    ASSERT_EQ(ER_OK, secMgr->StoreGuild(guildInfo1));
+    ASSERT_EQ(ER_OK, secMgr->StoreGuild(guildInfo2));
 
     /* Start the stub */
     Stub* stub = new Stub(&tcl);
@@ -64,14 +63,16 @@ TEST_F(MembershipCoreTests, SuccessfulInstallMembership) {
 
     /* Installing or removing membership before claiming should fail */
     ApplicationInfo appInfo = lastAppInfo;
-    ASSERT_EQ(ER_FAIL, secMgr->InstallMembership(appInfo, guildInfo2)); // fails due to manifest missing in persistency
-    ASSERT_EQ(ER_FAIL, secMgr->RemoveMembership(appInfo, guildInfo2)); // fails due to certificate missing in persistency
+    ASSERT_EQ(ER_END_OF_DATA, secMgr->InstallMembership(appInfo, guildInfo2)); // fails due to manifest missing in persistency
+    ASSERT_NE(ER_OK, secMgr->RemoveMembership(appInfo, guildInfo2)); // fails due to certificate missing in persistency
 
     /* Create identity */
-    ASSERT_EQ(secMgr->StoreIdentity(idInfo, false), ER_OK);
+    ASSERT_EQ(secMgr->StoreIdentity(idInfo), ER_OK);
 
     /* Claim application */
-    ASSERT_EQ(ER_OK, secMgr->ClaimApplication(lastAppInfo, idInfo, &AutoAcceptManifest));
+    ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
+
+    stub->SetDSASecurity(true);
 
     /* Check security signal */
     ASSERT_TRUE(WaitForState(ajn::PermissionConfigurator::STATE_CLAIMED, ajn::securitymgr::STATE_RUNNING));

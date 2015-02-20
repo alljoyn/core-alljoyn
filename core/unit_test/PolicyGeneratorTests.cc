@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -17,7 +17,8 @@
 #include "gtest/gtest.h"
 
 #include <stdio.h>
-#include <PolicyGenerator.h>
+#include <alljoyn/securitymgr/PolicyGenerator.h>
+#include <alljoyn/securitymgr/GuildInfo.h>
 #include <qcc/StringUtil.h>
 
 using namespace std;
@@ -31,19 +32,25 @@ TEST(PolicyGeneratorTest, BasicTest) {
     GUID128 guildID;
     qcc::String guildIDString = BytesToHexString(guildID.GetBytes(), GUID128::SIZE);
 
-    vector<GUID128> guilds;
-    guilds.push_back(guildID);
+    GuildInfo guild1;
+    guild1.guid = guildID;
 
-    PolicyGenerator::DefaultPolicy(guilds, publicKey, pol);
+    vector<GuildInfo> guilds;
+    guilds.push_back(guild1);
+
+    PolicyGenerator::DefaultPolicy(guilds, pol);
     qcc::String policyString = pol.ToString();
     ASSERT_EQ((size_t)1, pol.GetTermsSize());
     ASSERT_NE(string::npos, policyString.find(guildIDString));
 
     GUID128 guildID2;
-    guilds.push_back(guildID2);
     qcc::String guildID2String = BytesToHexString(guildID2.GetBytes(), GUID128::SIZE);
 
-    PolicyGenerator::DefaultPolicy(guilds, publicKey, pol);
+    GuildInfo guild2;
+    guild2.guid = guildID2;
+    guilds.push_back(guild2);
+
+    PolicyGenerator::DefaultPolicy(guilds, pol);
     policyString = pol.ToString();
 
     ASSERT_EQ((size_t)2, pol.GetTermsSize());

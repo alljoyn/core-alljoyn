@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -14,10 +14,7 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#include "gtest/gtest.h"
 #include "TestUtil.h"
-#include <StorageConfig.h>
-#include "SecurityManagerFactory.h"
 #include <string>
 
 using namespace secmgrcoretest_unit_testutil;
@@ -59,8 +56,8 @@ TEST_F(IdentityManipulationNominalTests, IdentityManipBasic) {
     ASSERT_EQ(identityInfo.guid, guid);
     ASSERT_EQ(identityInfo.name, name);
 
-    ASSERT_EQ(secMgr->RemoveIdentity(identityInfo.guid), ER_OK);
-    ASSERT_NE(secMgr->GetIdentity(identityInfo), ER_OK);
+    ASSERT_EQ(secMgr->RemoveIdentity(identityInfo), ER_OK);
+    ASSERT_EQ(secMgr->GetIdentity(identityInfo), ER_END_OF_DATA);
 }
 
 /**
@@ -71,7 +68,7 @@ TEST_F(IdentityManipulationNominalTests, IdentityManipBasic) {
  *       -# Remove all identities
  *       -# Ask the manager for all identities and verify that the returned vector is empty
  * */
-TEST_F(IdentityManipulationNominalTests, IdentityManipManyIdentitys) {
+TEST_F(IdentityManipulationNominalTests, IdentityManipManyIdentities) {
     IdentityInfo identityInfo;
     IdentityInfo compareToIdentity;
     int times = 200;
@@ -94,10 +91,10 @@ TEST_F(IdentityManipulationNominalTests, IdentityManipManyIdentitys) {
         ASSERT_EQ(secMgr->StoreIdentity(identityInfo), ER_OK);
     }
 
-    ASSERT_EQ(secMgr->GetManagedIdentities(identities), ER_OK);
+    ASSERT_EQ(secMgr->GetIdentities(identities), ER_OK);
     ASSERT_EQ(identities.size(), (size_t)times);
 
-    for (std::vector<IdentityInfo>::const_iterator g = identities.begin(); g != identities.end(); g++) {
+    for (std::vector<IdentityInfo>::iterator g = identities.begin(); g != identities.end(); g++) {
         int i = g - identities.begin();
 
         stringstream tmp;
@@ -107,12 +104,12 @@ TEST_F(IdentityManipulationNominalTests, IdentityManipManyIdentitys) {
         tmp << desc << i;
 
         ASSERT_EQ(g->name, compareToIdentity.name);
-        ASSERT_EQ(secMgr->RemoveIdentity(g->guid), ER_OK);
+        ASSERT_EQ(secMgr->RemoveIdentity(*g), ER_OK);
     }
 
     identities.clear();
 
-    ASSERT_EQ(secMgr->GetManagedIdentities(identities), ER_OK);
+    ASSERT_EQ(secMgr->GetIdentities(identities), ER_OK);
     ASSERT_TRUE(identities.empty());
 }
 }

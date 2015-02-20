@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -14,7 +14,7 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#include <qcc/X509Certificate.h>
+#include <alljoyn/securitymgr/cert/X509Certificate.h>
 
 namespace qcc {
 //X509CertificateECC
@@ -74,15 +74,15 @@ const qcc::String& X509CertificateECC::GetSerialNumber() const
     return serialNumber;
 }
 
-QStatus X509CertificateECC::LoadPEM(const String& PEM)
+QStatus X509CertificateECC::LoadDER(const String& der)
 {
-    pemEncodedCertificate = PEM;
+    derEncodedCertificate = der;
     return ER_OK;
 }
 
-String X509CertificateECC::GetPEM()
+String X509CertificateECC::GetDER()
 {
-    return pemEncodedCertificate;
+    return derEncodedCertificate;
 }
 
 const ECCPublicKey* X509CertificateECC::GetSubject()

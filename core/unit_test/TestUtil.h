@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -19,11 +19,14 @@
 
 #include "gtest/gtest.h"
 
-#include <SecurityManagerFactory.h>
+#include <alljoyn/securitymgr/ApplicationInfo.h>
+#include <alljoyn/securitymgr/SecurityManagerFactory.h>
+#include <alljoyn/securitymgr/sqlstorage/SQLStorageFactory.h>
+
 #include <PermissionMgmt.h>
 #include <qcc/String.h>
-
-#include <semaphore.h>
+#include <qcc/Mutex.h>
+#include <qcc/Condition.h>
 #include "Stub.h"
 
 using namespace ajn::securitymgr;
@@ -32,29 +35,39 @@ namespace secmgrcoretest_unit_testutil {
 class TestApplicationListener :
     public ApplicationListener {
   public:
-    TestApplicationListener(sem_t& _sem,
-                            sem_t& _lock);
+    TestApplicationListener(qcc::Condition& _sem,
+                            qcc::Mutex& _lock);
 
     ApplicationInfo _lastAppInfo;
+    bool event;
 
   private:
-    sem_t& sem;
-    sem_t& lock;
+    qcc::Condition& sem;
+    qcc::Mutex& lock;
 
     void OnApplicationStateChange(const ApplicationInfo* old,
                                   const ApplicationInfo* updated);
 };
 
+class AutoAccepter :
+    public ManifestListener {
+    bool ApproveManifest(const ApplicationInfo& appInfo,
+                         const PermissionPolicy::Rule* manifestRules,
+                         const size_t manifestRulesCount)
+    {
+        return true;
+    }
+};
+
 class BasicTest :
     public::testing::Test {
   private:
-    TestApplicationListener* tal;
-
     void UpdateLastAppInfo();
 
   protected:
-    sem_t sem;
-    sem_t lock;
+    qcc::Condition sem;
+    qcc::Mutex lock;
+    TestApplicationListener* tal;
 
     virtual void SetUp();
 
@@ -62,31 +75,16 @@ class BasicTest :
 
   public:
 
-    ajn::securitymgr::SecurityManager* secMgr;
-    ajn::securitymgr::StorageConfig sc;
-    ajn::securitymgr::SecurityManagerConfig smc;
-    ajn::BusAttachment* ba;
-
+    SecurityManager* secMgr;
+    BusAttachment* ba;
+    Storage* storage;
     ApplicationInfo lastAppInfo;
+    AutoAccepter aa;
 
     BasicTest();
-    void SetSmcStub();
 
     bool WaitForState(ajn::PermissionConfigurator::ClaimableState newClaimState,
                       ajn::securitymgr::ApplicationRunningState newRunningState);
-};
-
-class ClaimTest :
-    public BasicTest {
-  protected:
-
-    static bool AutoAcceptManifest(const ApplicationInfo& appInfo,
-                                   const PermissionPolicy::Rule* manifestRules,
-                                   const size_t manifestRulesCount,
-                                   void* cookie)
-    {
-        return true;
-    }
 };
 
 class TestClaimListener :
@@ -112,7 +110,7 @@ class TestClaimListener :
 };
 
 class ClaimedTest :
-    public ClaimTest {
+    public BasicTest {
   public:
 
     Stub* stub;
@@ -133,19 +131,19 @@ class ClaimedTest :
         idInfo.guid = lastAppInfo.peerID;
         idInfo.name = "MyTest ID Name";
         secMgr->StoreIdentity(idInfo);
-        secMgr->ClaimApplication(lastAppInfo, idInfo, &AutoAcceptManifest);
+        secMgr->Claim(lastAppInfo, idInfo);
         ASSERT_TRUE(WaitForState(ajn::PermissionConfigurator::STATE_CLAIMED, ajn::securitymgr::STATE_RUNNING));
-        secMgr->GetApplication(lastAppInfo);
+        stub->SetDSASecurity(true);
+        ASSERT_EQ(ER_OK, secMgr->GetApplication(lastAppInfo));
     }
 
     void TearDown()
     {
+        BasicTest::TearDown();
+
         if (stub) {
             destroy();
         }
-
-        BasicTest::TearDown();
-
         delete tcl;
         tcl = NULL;
     }
@@ -159,7 +157,6 @@ class ClaimedTest :
     ClaimedTest() :
         stub(NULL), tcl(NULL)
     {
-        SetSmcStub();
     }
 };
 }
