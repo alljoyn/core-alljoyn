@@ -15,10 +15,14 @@
  ******************************************************************************/
 #include "TestUtil.h"
 #include <qcc/Util.h>
+#include <qcc/Environ.h>
 #include <stdlib.h>
 
 using namespace ajn::securitymgr;
 using namespace std;
+
+#define STORAGE_DEFAULT_PATH "/tmp/secmgr.db"
+#define STORAGE_DEFAULT_PATH_KEY "STORAGE_PATH"
 
 namespace secmgrcoretest_unit_testutil {
 TestApplicationListener::TestApplicationListener(qcc::Condition& _sem,
@@ -48,13 +52,12 @@ BasicTest::BasicTest()
 
 void BasicTest::SetUp()
 {
-    const char* storage_path = NULL;
-    if ((storage_path = getenv("STORAGE_PATH")) == NULL) {
-        storage_path = "/tmp/secmgr.db";
-        ASSERT_EQ(0, setenv("STORAGE_PATH", storage_path, 1));
-    }
+    qcc::String storage_path;
 
-    remove(storage_path);
+    storage_path = qcc::Environ::GetAppEnviron()->Find(STORAGE_DEFAULT_PATH_KEY, STORAGE_DEFAULT_PATH);
+    qcc::Environ::GetAppEnviron()->Add(STORAGE_DEFAULT_PATH_KEY, STORAGE_DEFAULT_PATH);
+
+    remove(storage_path.c_str());
     // clean up any lingering stub keystore
     qcc::String fname = GetHomeDir();
     fname.append("/.alljoyn_keystore/stub.ks");

@@ -27,8 +27,9 @@
 #include <alljoyn/securitymgr/IdentityInfo.h>
 #include <alljoyn/securitymgr/ApplicationInfo.h>
 #include <alljoyn/securitymgr/PolicyGenerator.h>
-
 #include <alljoyn/securitymgr/sqlstorage/SQLStorageFactory.h>
+
+#include <qcc/Environ.h>
 
 #include "PermissionMgmt.h"
 #include "Stub.h"
@@ -280,11 +281,11 @@ static int be_secmgr(size_t peers)
 {
     QStatus status;
     bool retval = false;
-    const char* storage_path = NULL;
-    if ((storage_path = getenv("STORAGE_PATH")) == NULL) {
-        storage_path = "/tmp/secmgr.db";
-    }
-    remove(storage_path);
+    qcc::String storage_path;
+
+    storage_path = qcc::Environ::GetAppEnviron()->Find("STORAGE_PATH", "/tmp/secmgr.db");
+
+    remove(storage_path.c_str());
 
     TestApplicationListener tal;
     BusAttachment ba("test", true);
