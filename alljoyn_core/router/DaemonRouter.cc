@@ -272,7 +272,7 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& origSender)
                  */
                 bool sendMsg = !((sender->GetEndpointType() == ENDPOINT_TYPE_BUS2BUS) && !dest->AllowRemoteMessages());
 #ifdef ENABLE_POLICYDB
-                sendMsg = sendMsg && (dest == localEndpoint) || policyDB->OKToReceive(nmh, dest);
+                sendMsg = sendMsg && ((dest == localEndpoint) || policyDB->OKToReceive(nmh, dest));
 #endif
                 if (sendMsg) {
                     ruleTable.Unlock();
@@ -335,7 +335,7 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& origSender)
                     BusEndpoint busEndpoint = BusEndpoint::cast(ep);
                     bool sendMsg = true;
 #ifdef ENABLE_POLICYDB
-                    sendMsg = sendMsg && (busEndpoint == localEndpoint) || policyDB->OKToReceive(nmh, busEndpoint);
+                    sendMsg = sendMsg && ((busEndpoint == localEndpoint) || policyDB->OKToReceive(nmh, busEndpoint));
 #endif
                     if (sendMsg) {
                         m_b2bEndpointsLock.Unlock(MUTEX_CONTEXT);
