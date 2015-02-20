@@ -1308,7 +1308,11 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         status = PermissionMgmtTestHelper::CreateIdentityCert(adminBus, "4040404", cert.GetSubject(), cert.GetSubjectPublicKey(), "Service Provider", der);
         EXPECT_EQ(ER_OK, status) << "  CreateIdentityCert failed.  Actual Status: " << QCC_StatusText(status);
 
-        MsgArg certArg("(yay)", Certificate::ENCODING_X509_DER, der.size(), der.data());
+        /* test install identity using PEM format */
+        IdentityCertificate tempCert;
+        tempCert.DecodeCertificateDER(der);
+        String pem = tempCert.GetPEM();
+        MsgArg certArg("(yay)", Certificate::ENCODING_X509_DER_PEM, pem.size(), pem.data());
         EXPECT_EQ(ER_OK, pmProxy.InstallIdentity(certArg)) << "InstallIdentity failed.";
 
         /* retrieve back the identity cert to compare */

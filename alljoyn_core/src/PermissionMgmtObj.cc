@@ -874,9 +874,9 @@ QStatus PermissionMgmtObj::StoreIdentityCertificate(MsgArg& certArg)
         return ER_UNKNOWN_CERTIFICATE;
     }
     GUID128 guid(cert.GetSubject());
-    /* store the Identity PEM  into the key store */
+    /* store the Identity DER  into the key store */
     GetACLGUID(ENTRY_IDENTITY, guid);
-    KeyBlob kb(encoded, encodedLen, KeyBlob::GENERIC);
+    KeyBlob kb(cert.GetEncoded(), cert.GetEncodedLen(), KeyBlob::GENERIC);
 
     return ca->StoreKey(guid, kb);
 }
