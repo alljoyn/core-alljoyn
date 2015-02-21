@@ -1496,8 +1496,8 @@ void AllJoynPeerObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
                             bus->GetInternal().GetLocalEndpoint()->ResumeReplyHandlerTimeout(msg);
                         }
                         BusEndpoint busEndpoint = BusEndpoint::cast(bus->GetInternal().GetLocalEndpoint());
-                        QStatus pushStatus = bus->GetInternal().GetRouter().PushMessage(msg, busEndpoint);
-                        if (pushStatus == ER_PERMISSION_DENIED) {
+                        status = bus->GetInternal().GetRouter().PushMessage(msg, busEndpoint);
+                        if (status == ER_PERMISSION_DENIED) {
                             if (req->msg->GetType() == MESSAGE_METHOD_CALL) {
                                 Message reply(*bus);
                                 reply->ErrorMsg(status, req->msg->GetCallSerial());
