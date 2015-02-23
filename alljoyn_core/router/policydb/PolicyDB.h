@@ -221,9 +221,7 @@ class _PolicyDB {
         bool groupAny;                  /**< indicates if group has been set to "*" */
         uint32_t group;                 /**< numeric group id */
 
-#ifndef NDEBUG
         qcc::String ruleString;         /**< regenerated xml rule string for debugging purposes */
-#endif
 
         /**
          * Constructor.
@@ -491,9 +489,7 @@ class NormalizedMsgHdr {
      * @param policy    Pointer to the PolicyDB
      */
     NormalizedMsgHdr(const Message& msg, const PolicyDB& policy, BusEndpoint& sender) :
-#ifndef NDEBUG
         msg(msg),
-#endif
         ifcID(policy->LookupStringID(msg->GetInterface())),
         memberID(policy->LookupStringID(msg->GetMemberName())),
         errorID(policy->LookupStringID(msg->GetErrorName())),
@@ -529,9 +525,7 @@ class NormalizedMsgHdr {
   private:
     friend class _PolicyDB;  /**< Give PolicyDB access to the internals */
 
-#ifndef NDEBUG
     const Message msg;                      /**< Reference to original message for debug purposes */
-#endif
     StringID ifcID;                         /**< normalized interface name */
     StringID memberID;                      /**< normalized member name */
     StringID errorID;                       /**< normalized error name */

@@ -24,10 +24,7 @@
 #include <qcc/Debug.h>
 #include <qcc/Logger.h>
 #include <qcc/Util.h>
-
-#ifndef NDEBUG
 #include <qcc/StringUtil.h>
-#endif
 
 #include "PolicyDB.h"
 
@@ -75,8 +72,6 @@ using namespace std;
 #define RULE_RECEIVE    (0x1 << 2)
 #define RULE_CONNECT    (0x1 << 3)
 
-
-#ifndef NDEBUG
 static String IDSet2String(const _PolicyDB::IDSet& idset)
 {
     String ids;
@@ -90,7 +85,6 @@ static String IDSet2String(const _PolicyDB::IDSet& idset)
     }
     return ids;
 }
-#endif
 
 static bool MsgTypeStrToEnum(const String& str, AllJoynMessageType& type)
 {
@@ -859,7 +853,6 @@ bool _PolicyDB::OKToSend(const NormalizedMsgHdr& nmh, BusEndpoint& dest, const I
                    (dest->IsValid() ? dest->GetUniqueName().c_str() : ""),
                    nmh.msg->GetSender(), IDSet2String(nmh.senderIDSet).c_str(),
                    nmh.msg->GetDestination(), IDSet2String(*destIDSet).c_str()));
-
 
     uint32_t destUid = -1;
     uint32_t destGid = -1;
