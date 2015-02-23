@@ -27,6 +27,7 @@
 #include <map>
 #include <set>
 
+#include <qcc/Condition.h>
 #include <qcc/Debug.h>
 #include <qcc/String.h>
 #include <qcc/StringMapKey.h>
@@ -52,7 +53,7 @@
 
 #include <alljoyn/Status.h>
 
-#define QCC_MODULE "ALLJOYN"
+#define QCC_MODULE "ALLJOYN_PBO"
 
 #define SYNC_METHOD_ALERTCODE_OK     0
 #define SYNC_METHOD_ALERTCODE_ABORT  1
@@ -79,7 +80,7 @@ struct _PropertiesChangedCB {
                          const char** properties,
                          size_t numProps,
                          void* context) :
-        obj(obj), listener(listener), context(context)
+        obj(obj), listener(listener), context(context), isRegistered(true)
     {
         if (properties) {
             for (size_t i = 0; i < numProps; ++i) {
@@ -92,6 +93,7 @@ struct _PropertiesChangedCB {
     ProxyBusObject::PropertiesChangedListener& listener;
     void* context;
     set<StringMapKey> properties;  // Properties to monitor - empty set == all properties.
+    bool isRegistered;
 };
 
 typedef ManagedObj<_PropertiesChangedCB> PropertiesChangedCB;
@@ -398,6 +400,7 @@ QStatus ProxyBusObject::RegisterPropertiesChangedListener(const char* iface,
     while (it != end) {
         PropertiesChangedCB ctx = it->second;
         if (&ctx->listener == &listener) {
+            ctx->isRegistered = false;
             components->propertiesChangedCBs.erase(it);
             replace = true;
             break;
@@ -432,11 +435,25 @@ QStatus ProxyBusObject::UnregisterPropertiesChangedListener(const char* iface,
     bool removed = false;
 
     lock->Lock(MUTEX_CONTEXT);
+    while (activeListener && (activeListener == &listener)) {
+        if (handlerThread && (handlerThread == Thread::GetThread())) {
+            QCC_LogError(ER_DEADLOCK, ("Attempt to unregister listener from said listener would cause deadlock"));
+            lock->Unlock(MUTEX_CONTEXT);
+            return ER_DEADLOCK;
+        }
+        /*
+         * Some thread is trying to remove listeners while the listeners are
+         * being called.  Wait until the listener callbacks are done first.
+         */
+        listenerDone->Wait(*lock);
+    }
+
     multimap<StringMapKey, PropertiesChangedCB>::iterator it = components->propertiesChangedCBs.lower_bound(iface);
     multimap<StringMapKey, PropertiesChangedCB>::iterator end = components->propertiesChangedCBs.upper_bound(iface);
     while (it != end) {
         PropertiesChangedCB ctx = it->second;
         if (&ctx->listener == &listener) {
+            ctx->isRegistered = false;
             components->propertiesChangedCBs.erase(it);
             removed = true;
             break;
@@ -456,24 +473,33 @@ QStatus ProxyBusObject::UnregisterPropertiesChangedListener(const char* iface,
 
 void ProxyBusObject::PropertiesChangedHandler(const InterfaceDescription::Member* member, const char* srcPath, Message& message)
 {
+    QCC_DbgTrace(("ProxyBusObject::PropertiesChangedHandler(member = %s, srcPath = %s, message = <>)", member->name.c_str(), srcPath));
     const char* ifaceName;
     MsgArg* changedProps;
     size_t numChangedProps;
     MsgArg* invalidProps;
     size_t numInvalidProps;
 
-    if ((uniqueName != message->GetSender()) ||
-        (message->GetArgs("sa{sv}as", &ifaceName, &numChangedProps, &changedProps, &numInvalidProps, &invalidProps) != ER_OK)) {
-        // Either signal is not for us or it is invalid - ignore it
+    if (uniqueName != message->GetSender()) {
+        QCC_LogError(ER_FAIL, ("message not for us? (uniqueName = %s   sender = %s)", uniqueName.c_str(), message->GetSender()));
+        return;
+    }
+
+    QStatus status = message->GetArgs("sa{sv}as", &ifaceName, &numChangedProps, &changedProps, &numInvalidProps, &invalidProps);
+    if (status != ER_OK) {
+        QCC_LogError(status, ("invalid message args"));
         return;
     }
 
     lock->Lock(MUTEX_CONTEXT);
+    handlerThread = Thread::GetThread();
     multimap<StringMapKey, PropertiesChangedCB>::iterator it = components->propertiesChangedCBs.lower_bound(ifaceName);
     multimap<StringMapKey, PropertiesChangedCB>::iterator end = components->propertiesChangedCBs.upper_bound(ifaceName);
     list<PropertiesChangedCB> handlers;
     while (it != end) {
-        handlers.push_back(it->second);
+        if (it->second->isRegistered) {
+            handlers.push_back(it->second);
+        }
         ++it;
     }
     lock->Unlock(MUTEX_CONTEXT);
@@ -488,6 +514,17 @@ void ProxyBusObject::PropertiesChangedHandler(const InterfaceDescription::Member
 
     while (handlers.begin() != handlers.end()) {
         PropertiesChangedCB ctx = *handlers.begin();
+        lock->Lock(MUTEX_CONTEXT);
+        if (!ctx->isRegistered) {
+            // Skip invalidated handlers.
+            handlers.pop_front();
+            lock->Unlock(MUTEX_CONTEXT);
+            continue;
+        } else {
+            activeListener = &ctx->listener;
+            lock->Unlock(MUTEX_CONTEXT);
+        }
+
         changedOutDictSize = 0;
         invalidOutArraySize = 0;
 
@@ -536,10 +573,20 @@ void ProxyBusObject::PropertiesChangedHandler(const InterfaceDescription::Member
             ctx->listener.PropertiesChanged(ctx->obj, ifaceName, changedOut, invalidOut, ctx->context);
         }
         handlers.pop_front();
+
+        lock->Lock(MUTEX_CONTEXT);
+        activeListener = NULL;
+        listenerDone->Broadcast();
+        lock->Unlock(MUTEX_CONTEXT);
     }
 
     delete [] changedOutDict;
     delete [] invalidOutArray;
+
+    lock->Lock(MUTEX_CONTEXT);
+    handlerThread = NULL;
+    lock->Unlock(MUTEX_CONTEXT);
+
 }
 
 QStatus ProxyBusObject::SetPropertyAsync(const char* iface,
@@ -1288,10 +1335,10 @@ QStatus ProxyBusObject::ParseXml(const char* xml, const char* ident)
 ProxyBusObject::~ProxyBusObject()
 {
     DestructComponents();
-    if (lock) {
-        delete lock;
-        lock = NULL;
-    }
+    delete listenerDone;
+    listenerDone = NULL;
+    delete lock;
+    lock = NULL;
 }
 
 void ProxyBusObject::DestructComponents()
@@ -1324,6 +1371,27 @@ void ProxyBusObject::DestructComponents()
             qcc::Sleep(20);
             lock->Lock(MUTEX_CONTEXT);
         }
+
+        /* Clean up properties changed listeners */
+        while (activeListener) {
+            if (handlerThread && (handlerThread == Thread::GetThread())) {
+                QCC_LogError(ER_DEADLOCK, ("Deleting ProxyBusObject from PropertiesChangedListener registered with said ProxyBusObject - deadlocking!"));
+                lock->Unlock(MUTEX_CONTEXT);
+            }
+            assert(!handlerThread || (handlerThread != Thread::GetThread()));
+            /*
+             * Some thread is trying to remove listeners while the listeners are
+             * being called.  Wait until the listener callbacks are done first.
+             */
+            listenerDone->Wait(*lock);
+        }
+
+        while (!components->propertiesChangedCBs.empty()) {
+            PropertiesChangedCB ctx = components->propertiesChangedCBs.begin()->second;
+            ctx->isRegistered = false;
+            components->propertiesChangedCBs.erase(components->propertiesChangedCBs.begin());
+        }
+
         delete components;
         components = NULL;
         lock->Unlock(MUTEX_CONTEXT);
@@ -1340,7 +1408,10 @@ ProxyBusObject::ProxyBusObject(BusAttachment& bus, const char* service, const ch
     hasProperties(false),
     lock(new Mutex),
     isExiting(false),
-    isSecure(isSecure)
+    isSecure(isSecure),
+    handlerThread(NULL),
+    activeListener(NULL),
+    listenerDone(new Condition)
 {
     /* The Peer interface is implicitly defined for all objects */
     AddInterface(org::freedesktop::DBus::Peer::InterfaceName);
@@ -1356,7 +1427,10 @@ ProxyBusObject::ProxyBusObject(BusAttachment& bus, const char* service, const ch
     hasProperties(false),
     lock(new Mutex),
     isExiting(false),
-    isSecure(isSecure)
+    isSecure(isSecure),
+    handlerThread(NULL),
+    activeListener(NULL),
+    listenerDone(new Condition)
 {
     /* The Peer interface is implicitly defined for all objects */
     AddInterface(org::freedesktop::DBus::Peer::InterfaceName);
@@ -1369,7 +1443,10 @@ ProxyBusObject::ProxyBusObject() :
     hasProperties(false),
     lock(NULL),
     isExiting(false),
-    isSecure(false)
+    isSecure(false),
+    handlerThread(NULL),
+    activeListener(NULL),
+    listenerDone(NULL)
 {
 }
 
@@ -1384,7 +1461,11 @@ ProxyBusObject::ProxyBusObject(const ProxyBusObject& other) :
     b2bEp(other.b2bEp),
     lock(new Mutex),
     isExiting(false),
-    isSecure(other.isSecure)
+    isSecure(other.isSecure),
+    handlerThread(NULL),
+    activeListener(NULL),
+    listenerDone(new Condition)
+
 {
     *components = *other.components;
 }
@@ -1399,12 +1480,15 @@ ProxyBusObject& ProxyBusObject::operator=(const ProxyBusObject& other)
             if (!lock) {
                 lock = new Mutex();
             }
+            if (!listenerDone) {
+                listenerDone = new Condition();
+            }
         } else {
             components = NULL;
-            if (lock) {
-                delete lock;
-                lock = NULL;
-            }
+            delete listenerDone;
+            listenerDone = NULL;
+            delete lock;
+            lock = NULL;
         }
         bus = other.bus;
         path = other.path;
