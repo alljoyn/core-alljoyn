@@ -2418,11 +2418,21 @@ class JProxyBusObject : public ProxyBusObject {
   public:
     JProxyBusObject(jobject pbo, JBusAttachment* jbap, const char* endpoint, const char* path, SessionId sessionId, bool secure);
     ~JProxyBusObject();
+    QStatus RegisterPropertiesChangedListener(jstring jifaceName, jobjectArray jproperties, jobject jpropertiesChangedListener);
+    QStatus UnregisterPropertiesChangedListener(jstring jifaceName, jobject jpropertiesChangedListener);
     JBusAttachment* busPtr;
     jweak jpbo;
   private:
     JProxyBusObject(const JProxyBusObject& other);
     JProxyBusObject& operator =(const JProxyBusObject& other);
+    Mutex propertiesChangedListenersLock;
+    class Listener {
+      public:
+        const String ifaceName;
+        jobject jlistener;
+        Listener(const String& ifaceName, jobject jlistener) : ifaceName(ifaceName), jlistener(jlistener) { }
+    };
+    list<Listener> propertiesChangedListeners;
 };
 
 class JPropertiesChangedListener : public ProxyBusObject::PropertiesChangedListener {
@@ -10916,7 +10926,126 @@ JProxyBusObject::~JProxyBusObject()
     QCC_DbgPrintf(("JProxyBusObject::~JProxyBusObject(): Refcount on busPtr at destruction is %d", busPtr->GetRef()));
 
     JNIEnv* env = GetEnv();
+
+    propertiesChangedListenersLock.Lock();
+    for (list<Listener>::iterator i = propertiesChangedListeners.begin(); i != propertiesChangedListeners.end(); ++i) {
+        JPropertiesChangedListener* listener = GetHandle<JPropertiesChangedListener*>(i->jlistener);
+        if (env->ExceptionCheck()) {
+            env->ExceptionClear();
+        }
+        if (listener) {
+            ProxyBusObject::UnregisterPropertiesChangedListener(i->ifaceName.c_str(), *listener);
+        }
+        env->DeleteGlobalRef(i->jlistener);
+    }
+    propertiesChangedListenersLock.Unlock();
+
     env->DeleteWeakGlobalRef(jpbo);
+}
+
+QStatus JProxyBusObject::RegisterPropertiesChangedListener(jstring jifaceName,
+                                                           jobjectArray jproperties,
+                                                           jobject jpropertiesChangedListener)
+{
+    JNIEnv* env = GetEnv();
+
+    JString ifaceName(jifaceName);
+    if (env->ExceptionCheck()) {
+        return ER_FAIL;
+    }
+
+    size_t numProps = env->GetArrayLength(jproperties);
+    if (env->ExceptionCheck()) {
+        return ER_FAIL;
+    }
+
+    JPropertiesChangedListener* listener = GetHandle<JPropertiesChangedListener*>(jpropertiesChangedListener);
+    if (env->ExceptionCheck() || !listener) {
+        return ER_FAIL;
+    }
+
+    jobject pbo = env->NewLocalRef(jpbo);
+    if (!pbo) {
+        QCC_LogError(ER_FAIL, ("JProxyBusObject::RegisterPropertiesChangedListener(): Can't get new local reference to ProxyBusObject"));
+        return ER_FAIL;
+    }
+
+    QStatus status;
+
+    if (!ImplementsInterface(ifaceName.c_str())) {
+        status = AddInterfaceStatus(pbo, busPtr, jifaceName);
+        if (env->ExceptionCheck()) {
+            QCC_LogError(ER_FAIL, ("JProxyBusObject::RegisterPropertiesChangedListener(): Exception"));
+            return ER_FAIL;
+        }
+        if (status != ER_OK) {
+            return status;
+        }
+    }
+
+    const char** props = new const char*[numProps];
+    jstring* jprops = new jstring[numProps];
+    memset(props, 0, numProps * sizeof(props[0]));
+    memset(jprops, 0, numProps * sizeof(jprops[0]));
+
+    for (size_t i = 0; i < numProps; ++i) {
+        jprops[i] = (jstring)GetObjectArrayElement(env, jproperties, i);
+        if (env->ExceptionCheck()) {
+            goto exit;
+        }
+        props[i] = env->GetStringUTFChars(jprops[i], NULL);
+        if (env->ExceptionCheck()) {
+            goto exit;
+        }
+    }
+
+    status = ProxyBusObject::RegisterPropertiesChangedListener(ifaceName.c_str(), props, numProps, *listener, NULL);
+    if (status == ER_OK) {
+        propertiesChangedListenersLock.Lock();
+        jobject jglobalref = env->NewGlobalRef(jpropertiesChangedListener);
+        propertiesChangedListeners.push_back(Listener(ifaceName.c_str(), jglobalref));
+        propertiesChangedListenersLock.Unlock();
+    }
+
+exit:
+    for (size_t i = 0; i < numProps; ++i) {
+        if (props[i]) {
+            env->ReleaseStringUTFChars(jprops[i], props[i]);
+        }
+    }
+    delete [] props;
+    delete [] jprops;
+    return status;
+}
+
+QStatus JProxyBusObject::UnregisterPropertiesChangedListener(jstring jifaceName,
+                                                             jobject jpropertiesChangedListener)
+{
+    JNIEnv* env = GetEnv();
+
+    JString ifaceName(jifaceName);
+    if (env->ExceptionCheck()) {
+        return ER_FAIL;
+    }
+
+    JPropertiesChangedListener* listener = GetHandle<JPropertiesChangedListener*>(jpropertiesChangedListener);
+    if (env->ExceptionCheck() || !listener) {
+        return ER_FAIL;
+    }
+
+    QStatus status = ProxyBusObject::UnregisterPropertiesChangedListener(ifaceName.c_str(), *listener);
+    if (status == ER_OK) {
+        propertiesChangedListenersLock.Lock();
+        for (list<Listener>::iterator i = propertiesChangedListeners.begin(); i != propertiesChangedListeners.end(); ++i) {
+            if (env->IsSameObject(jpropertiesChangedListener, i->jlistener)) {
+                env->DeleteGlobalRef(i->jlistener);
+                propertiesChangedListeners.erase(i);
+                break;
+            }
+        }
+        propertiesChangedListenersLock.Unlock();
+    }
+    return status;
 }
 
 JPropertiesChangedListener::JPropertiesChangedListener(jobject jobj, jobject jch, jobject jinval)
@@ -11100,64 +11229,13 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_registerProperties
         return NULL;
     }
 
-    JString ifaceName(jifaceName);
+    QStatus status = proxyBusObj->RegisterPropertiesChangedListener(jifaceName, jproperties, jpropertiesChangedListener);
     if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("ProxyBusObject_registerPropertiesChangedListener(): Exception"));
         return NULL;
     }
 
-    size_t numProps = env->GetArrayLength(jproperties);
-    if (env->ExceptionCheck()) {
-        return NULL;
-    }
-
-    JPropertiesChangedListener* listener = GetHandle<JPropertiesChangedListener*>(jpropertiesChangedListener);
-    if (env->ExceptionCheck() || !listener) {
-        return NULL;
-    }
-
-    QStatus status;
-    jobject jstatus = NULL;
-
-    if (!proxyBusObj->ImplementsInterface(ifaceName.c_str())) {
-        status = AddInterfaceStatus(thiz, proxyBusObj->busPtr, jifaceName);
-        if (env->ExceptionCheck()) {
-            QCC_LogError(ER_FAIL, ("ProxyBusObject_registerPropertiesChangedListener(): Exception"));
-            return NULL;
-        }
-        if (status != ER_OK) {
-            jstatus = JStatus(status);
-            return jstatus;
-        }
-    }
-
-    const char** props = new const char*[numProps];
-    jstring* jprops = new jstring[numProps];
-    memset(props, 0, numProps * sizeof(props[0]));
-    memset(jprops, 0, numProps * sizeof(jprops[0]));
-
-    for (size_t i = 0; i < numProps; ++i) {
-        jprops[i] = (jstring)GetObjectArrayElement(env, jproperties, i);
-        if (env->ExceptionCheck()) {
-            goto exit;
-        }
-        props[i] = env->GetStringUTFChars(jprops[i], NULL);
-        if (env->ExceptionCheck()) {
-            goto exit;
-        }
-    }
-
-    status = proxyBusObj->RegisterPropertiesChangedListener(ifaceName.c_str(), props, numProps, *listener, NULL);
-    jstatus = JStatus(status);
-
-exit:
-    for (size_t i = 0; i < numProps; ++i) {
-        if (props[i]) {
-            env->ReleaseStringUTFChars(jprops[i], props[i]);
-        }
-    }
-    delete [] props;
-    delete [] jprops;
-    return jstatus;
+    return JStatus(status);
 }
 
 JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_unregisterPropertiesChangedListener(JNIEnv* env,
@@ -11172,17 +11250,11 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_unregisterProperti
         return NULL;
     }
 
-    JString ifaceName(jifaceName);
+    QStatus status = proxyBusObj->UnregisterPropertiesChangedListener(jifaceName, jpropertiesChangedListener);
     if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("ProxyBusObject_unregisterPropertiesChangedListener(): Exception"));
         return NULL;
     }
-
-    JPropertiesChangedListener* listener = GetHandle<JPropertiesChangedListener*>(jpropertiesChangedListener);
-    if (env->ExceptionCheck() || !listener) {
-        return NULL;
-    }
-
-    QStatus status = proxyBusObj->UnregisterPropertiesChangedListener(ifaceName.c_str(), *listener);
 
     return JStatus(status);
 }

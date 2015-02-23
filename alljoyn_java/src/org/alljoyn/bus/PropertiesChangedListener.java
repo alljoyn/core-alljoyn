@@ -78,6 +78,17 @@ public abstract class PropertiesChangedListener {
     private synchronized native void destroy();
 
     /**
+     * Destroy native resources held by objects of this class.
+     */
+    protected void finalize() throws Throwable {
+        try {
+            destroy();
+        } finally {
+            super.finalize();
+        }
+    }
+
+    /**
      * Called by the bus when the value of a property changes if that property has annotation
      * org.freedesktop.DBus.Properties.EmitChangedSignal=true or
      * org.freedesktop.DBus.Properties.EmitChangedSignal=invalidated
