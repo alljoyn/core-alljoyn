@@ -33,8 +33,7 @@ else:
 
 srcs += [router_env['OS_GROUP'] + '/Socket.cc']
 
-if router_env['OS'] != "android":
-    srcs += [router_env['OS_GROUP'] + '/PermissionMgr' + router_env['OS_GROUP'].capitalize() + '.cc']
+srcs += [router_env['OS_GROUP'] + '/PermissionMgr' + router_env['OS_GROUP'].capitalize() + '.cc']
 
 router_env.Append(CPPPATH = [ router_env.Dir('..').srcnode(),
                               router_env.Dir('.').srcnode(),
@@ -48,11 +47,6 @@ if router_env['POLICYDB'] == 'on':
 router_objs = router_env.Object(srcs)
 
 router_objs.extend(router_env.SConscript('ns/SConscript', exports = ['router_env']))
-
-# Add in P2P Helper support for Android only
-if router_env['OS'] == "android":
-    router_objs.extend(router_env.SConscript('android/SConscript', exports = ['router_env']))
-
 
 # Bundled daemon object file
 brobj = router_env.SConscript('bundled/SConscript', exports = ['router_env'])
