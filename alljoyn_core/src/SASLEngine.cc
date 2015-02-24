@@ -79,7 +79,6 @@ static const AuthCmd AllJoynAuthCmdList[] = {
 };
 
 
-#ifndef NDEBUG
 static const char* StateText[] = {
     "SEND_AUTH_REQ",
     "WAIT_FOR_AUTH",
@@ -91,7 +90,6 @@ static const char* StateText[] = {
     "AUTH_SUCCESS",
     "AUTH_FAILED"
 };
-#endif
 
 #define SetState(s) \
     do { \
