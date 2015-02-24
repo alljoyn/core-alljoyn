@@ -362,6 +362,7 @@ static void DumpBitMask(ArdpConnRecord* conn, uint32_t* msk, uint16_t sz, bool c
 
     }
 }
+#endif // NDEBUG
 
 static const char* State2Text(ArdpState state)
 {
@@ -381,7 +382,6 @@ static const char* State2Text(ArdpState state)
     default: return "UNDEFINED";
     }
 }
-#endif // NDEBUG
 
 static inline void SetState(ArdpConnRecord* conn, ArdpState state)
 {
