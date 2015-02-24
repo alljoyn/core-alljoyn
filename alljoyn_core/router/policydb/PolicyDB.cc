@@ -24,7 +24,6 @@
 #include <qcc/Debug.h>
 #include <qcc/Logger.h>
 #include <qcc/Util.h>
-
 #ifndef NDEBUG
 #include <qcc/StringUtil.h>
 #endif
@@ -74,7 +73,6 @@ using namespace std;
 #define RULE_SEND       (0x1 << 1)
 #define RULE_RECEIVE    (0x1 << 2)
 #define RULE_CONNECT    (0x1 << 3)
-
 
 #ifndef NDEBUG
 static String IDSet2String(const _PolicyDB::IDSet& idset)
@@ -805,10 +803,12 @@ bool _PolicyDB::OKToReceive(const NormalizedMsgHdr& nmh, BusEndpoint& dest) cons
         }
     }
 
+#ifndef NDEBUG
     QCC_DbgPrintf(("Check if OK for endpoint %s to receive %s (%s{%s} --> %s{%s})",
                    dest->GetUniqueName().c_str(), nmh.msg->Description().c_str(),
                    nmh.msg->GetSender(), IDSet2String(nmh.senderIDSet).c_str(),
                    nmh.msg->GetDestination(), IDSet2String(nmh.destIDSet).c_str()));
+#endif
 
     uint32_t senderUid = nmh.sender->GetUserId();
     uint32_t senderGid = nmh.sender->GetGroupId();
@@ -854,12 +854,13 @@ bool _PolicyDB::OKToSend(const NormalizedMsgHdr& nmh, BusEndpoint& dest, const I
         destIDSet = &nmh.destIDSet;
     }
 
+#ifndef NDEBUG
     QCC_DbgPrintf(("Check if OK for endpoint %s to send %s to destination %s (%s{%s} --> %s{%s})",
                    nmh.sender->GetUniqueName().c_str(), nmh.msg->Description().c_str(),
                    (dest->IsValid() ? dest->GetUniqueName().c_str() : ""),
                    nmh.msg->GetSender(), IDSet2String(nmh.senderIDSet).c_str(),
                    nmh.msg->GetDestination(), IDSet2String(*destIDSet).c_str()));
-
+#endif
 
     uint32_t destUid = -1;
     uint32_t destGid = -1;
