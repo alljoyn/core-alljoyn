@@ -883,8 +883,6 @@ int main(int argc, char** argv)
             opts.transports |= TRANSPORT_WLAN;
         } else if (0 == strcmp("-l", argv[i])) {
             opts.transports |= TRANSPORT_LOCAL;
-        } else if (0 == strcmp("-w", argv[i])) {
-            opts.transports |= TRANSPORT_WFD;
         } else if (0 == strcmp("-u", argv[i])) {
             opts.transports |= TRANSPORT_UDP;
         } else if (0 == strcmp("-a", argv[i])) {

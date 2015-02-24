@@ -784,8 +784,6 @@ int main(int argc, char** argv)
             alljoyn_sessionopts_set_transports(g_sessionOpts, ALLJOYN_TRANSPORT_WLAN);
         } else if (0 == strcmp("-l", argv[i])) {
             alljoyn_sessionopts_set_transports(g_sessionOpts, ALLJOYN_TRANSPORT_LOCAL);
-        } else if (0 == strcmp("-w", argv[i])) {
-            alljoyn_sessionopts_set_transports(g_sessionOpts, ALLJOYN_TRANSPORT_WFD);
         } else if (0 == strcmp("-a", argv[i])) {
             g_cancelAdvertise = QCC_TRUE;
         } else {
