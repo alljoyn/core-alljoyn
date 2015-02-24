@@ -78,8 +78,7 @@ static const AuthCmd AllJoynAuthCmdList[] = {
     { CMD_INVALID,  "invalid",  0 }
 };
 
-
-#ifndef NDEBUG
+#if !defined(NDEBUG) || defined(QCC_OS_GROUP_WINDOWS)
 static const char* StateText[] = {
     "SEND_AUTH_REQ",
     "WAIT_FOR_AUTH",
