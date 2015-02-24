@@ -7,7 +7,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011, 2014-2015 AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -502,6 +502,12 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
 
     std::set<SessionId> hostedSessions;    /* session IDs for all sessions hosted by this bus attachment */
     qcc::Mutex hostedSessionsLock;         /* Mutex that protects hostedSessions */
+
+    typedef qcc::ManagedObj<PermissionMgmtListener*> ProtectedPermissionMgmtListener;
+    typedef std::set<ProtectedPermissionMgmtListener> PermissionMgmtListenerSet;
+    PermissionMgmtListenerSet permissionMgmtListeners; /* NotifyConfig Signals are recieved out side Sessions so a set container is all that is needed */
+
+    qcc::Mutex permissionMgmtListenersLock;   /* Lock protecting the aboutListeners set */
 };
 }
 

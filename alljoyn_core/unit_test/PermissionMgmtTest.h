@@ -43,6 +43,19 @@
 
 namespace ajn {
 
+class TestPermissionMgmtListener : public PermissionMgmtListener {
+  public:
+    TestPermissionMgmtListener() : signalNotifyConfigReceived(false) { }
+    void NotifyConfig(const char* busName,
+                      uint16_t version,
+                      MsgArg publicKeyArg,
+                      PermissionConfigurator::ClaimableState claimableState,
+                      MsgArg trustAnchorsArg,
+                      uint32_t serialNumber,
+                      MsgArg membershipsArg);
+    bool signalNotifyConfigReceived;
+};
+
 class BasePermissionMgmtTest : public testing::Test, public BusObject {
   public:
 
@@ -135,10 +148,10 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
         adminKeyListener(NULL),
         consumerKeyListener(NULL),
         remoteControlKeyListener(NULL),
-        signalNotifyConfigReceived(false),
         currentTVChannel(1),
         volume(1),
-        channelChangedSignalReceived(false)
+        channelChangedSignalReceived(false),
+        testPML()
     {
     }
 
@@ -162,10 +175,7 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
     QStatus status;
     bool authComplete;
 
-    QStatus InterestInSignal(BusAttachment* bus);
     QStatus InterestInChannelChangedSignal(BusAttachment* bus);
-    void SignalHandler(const InterfaceDescription::Member* member,
-                       const char* sourcePath, Message& msg);
     void ChannelChangedSignalHandler(const InterfaceDescription::Member* member,
                                      const char* sourcePath, Message& msg);
     void SetNotifyConfigSignalReceived(bool flag);
@@ -195,7 +205,6 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
     ECDHEKeyXListener* adminKeyListener;
     ECDHEKeyXListener* consumerKeyListener;
     ECDHEKeyXListener* remoteControlKeyListener;
-    bool signalNotifyConfigReceived;
     InMemoryKeyStoreListener adminKeyStoreListener;
     InMemoryKeyStoreListener serviceKeyStoreListener;
     InMemoryKeyStoreListener consumerKeyStoreListener;
@@ -203,7 +212,7 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
     uint32_t currentTVChannel;
     uint32_t volume;
     bool channelChangedSignalReceived;
-
+    TestPermissionMgmtListener testPML;
 };
 
 class PermissionMgmtTestHelper {
@@ -215,7 +224,6 @@ class PermissionMgmtTestHelper {
     static QStatus CreateMembershipCert(const qcc::String& serial, const uint8_t* authDataHash, const qcc::GUID128& issuer, BusAttachment& signingBus, const qcc::GUID128& subject, const qcc::ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, bool delegate, uint32_t expiredInSecs, qcc::String& der);
     static QStatus CreateMembershipCert(const qcc::String& serial, const uint8_t* authDataHash, const qcc::GUID128& issuer, BusAttachment& signingBus, const qcc::GUID128& subject, const qcc::ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, bool delegate, qcc::String& der);
     static QStatus CreateMembershipCert(const qcc::String& serial, const uint8_t* authDataHash, const qcc::GUID128& issuer, BusAttachment& signingBus, const qcc::GUID128& subject, const qcc::ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, qcc::String& der);
-    static QStatus InterestInSignal(BusAttachment* bus);
     static bool IsPermissionDeniedError(QStatus status, Message& msg);
     static QStatus ReadClaimResponse(Message& msg, qcc::ECCPublicKey* pubKey);
     static QStatus Claim(BusAttachment& bus, ProxyBusObject& remoteObj, qcc::GUID128& issuerGUID, const qcc::ECCPublicKey* pubKey, qcc::ECCPublicKey* claimedPubKey, qcc::String& identityCertDER, bool setKeyId);
