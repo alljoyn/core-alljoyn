@@ -4259,11 +4259,6 @@ void AllJoynObj::NameOwnerChanged(const qcc::String& alias,
         QCC_LogError(ER_FAIL, ("Invalid unique name \"%s\"", un->c_str()));
     }
 
-    /* Ignore well-known name changes that involve any bus controller endpoint */
-    if ((::strcmp(un->c_str() + guidLen, ".1") == 0) && (alias[0] != ':')) {
-        return;
-    }
-
     /* Remove unique names from sessionMap entries */
     if (!newOwner && (alias[0] == ':')) {
         AcquireLocks();
