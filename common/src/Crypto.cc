@@ -60,16 +60,18 @@ QStatus Crypto_PseudorandomFunctionCCM(const KeyBlob& secret, const char* label,
      */
     Crypto_AES aes(KeyBlob((uint8_t*)in.data(), 16, KeyBlob::AES), Crypto_AES::CCM);
 
-    while (outLen) {
+    while ((ER_OK == status) && outLen) {
         uint8_t mac[16];
         size_t mlen = 0;
         size_t len =  (std::min)((size_t)16, outLen);
         KeyBlob nonce(counter, sizeof(counter), KeyBlob::GENERIC);
         status = aes.Encrypt_CCM(NULL, mac, mlen, nonce, in.data() + 16, in.size() - 16, 16);
-        memcpy(out, mac, len);
-        outLen -= len;
-        out += len;
-        ++counter[0];
+        if (ER_OK == status) {
+            memcpy(out, mac, len);
+            outLen -= len;
+            out += len;
+            ++counter[0];
+        }
     }
     in.secure_clear();
     return status;
