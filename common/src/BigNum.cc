@@ -89,6 +89,9 @@ class BigNum::Storage {
         size_t mallocSz = sizeof(Storage) + (sz + extra) * sizeof(uint32_t);
         uint8_t* p = (uint8_t*)malloc(mallocSz);
         assert(p);
+        if (NULL == p) {
+            throw std::bad_alloc();
+        }
         Storage* s = new (p)Storage();
         s->buffer = reinterpret_cast<uint32_t*>(p + sizeof(Storage));
         s->size = sz + extra;

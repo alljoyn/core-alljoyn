@@ -117,6 +117,9 @@ class ManagedObj {
             /* Deep copy */
             const size_t offset = (sizeof(ManagedCtx) + 7) & ~0x07;
             context = reinterpret_cast<ManagedCtx*>(malloc(offset + sizeof(T)));
+            if (NULL == context) {
+                throw std::bad_alloc();
+            }
             context = new (context) ManagedCtx(1);
             object = new ((char*)context + offset)T(*other);
         } else {
@@ -132,6 +135,9 @@ class ManagedObj {
     {
         const size_t offset = (sizeof(ManagedCtx) + 7) & ~0x07;
         context = reinterpret_cast<ManagedCtx*>(malloc(offset + sizeof(T)));
+        if (NULL == context) {
+            throw std::bad_alloc();
+        }
         context = new (context) ManagedCtx(1);
         object = new ((char*)context + offset)T();
     }
@@ -170,6 +176,9 @@ class ManagedObj {
     {
         const size_t offset = (sizeof(ManagedCtx) + 7) & ~0x07;
         context = reinterpret_cast<ManagedCtx*>(malloc(offset + sizeof(T)));
+        if (NULL == context) {
+            throw std::bad_alloc();
+        }
         context = new (context) ManagedCtx(1);
         object = new ((char*)context + offset)T(arg1);
     }
@@ -197,6 +206,9 @@ class ManagedObj {
     {
         const size_t offset = (sizeof(ManagedCtx) + 7) & ~0x07;
         context = reinterpret_cast<ManagedCtx*>(malloc(offset + sizeof(T)));
+        if (NULL == context) {
+            throw std::bad_alloc();
+        }
         context = new (context) ManagedCtx(1);
         object = new ((char*)context + offset)T(arg1, arg2, arg3);
     }
@@ -228,6 +240,9 @@ class ManagedObj {
     {
         const size_t offset = (sizeof(ManagedCtx) + 7) & ~0x07;
         context = reinterpret_cast<ManagedCtx*>(malloc(offset + sizeof(T)));
+        if (NULL == context) {
+            throw std::bad_alloc();
+        }
         context = new (context) ManagedCtx(1);
         object = new ((char*)context + offset)T(arg1, arg2, arg3, arg4, arg5);
     }
@@ -245,6 +260,9 @@ class ManagedObj {
     {
         const size_t offset = (sizeof(ManagedCtx) + 7) & ~0x07;
         context = reinterpret_cast<ManagedCtx*>(malloc(offset + sizeof(T)));
+        if (NULL == context) {
+            throw std::bad_alloc();
+        }
         context = new (context) ManagedCtx(1);
         object = new ((char*)context + offset)T(arg1, arg2, arg3, arg4, arg5, arg6);
     }
@@ -263,6 +281,9 @@ class ManagedObj {
     {
         const size_t offset = (sizeof(ManagedCtx) + 7) & ~0x07;
         context = reinterpret_cast<ManagedCtx*>(malloc(offset + sizeof(T)));
+        if (NULL == context) {
+            throw std::bad_alloc();
+        }
         context = new (context) ManagedCtx(1);
         object = new ((char*)context + offset)T(arg1, arg2, arg3, arg4, arg5, arg6, arg7);
     }
@@ -282,6 +303,9 @@ class ManagedObj {
     {
         const size_t offset = (sizeof(ManagedCtx) + 7) & ~0x07;
         context = reinterpret_cast<ManagedCtx*>(malloc(offset + sizeof(T)));
+        if (NULL == context) {
+            throw std::bad_alloc();
+        }
         context = new (context) ManagedCtx(1);
         object = new ((char*)context + offset)T(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
     }
@@ -302,6 +326,9 @@ class ManagedObj {
     {
         const size_t offset = (sizeof(ManagedCtx) + 7) & ~0x07;
         context = reinterpret_cast<ManagedCtx*>(malloc(offset + sizeof(T)));
+        if (NULL == context) {
+            throw std::bad_alloc();
+        }
         context = new (context) ManagedCtx(1);
         object = new ((char*)context + offset)T(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
     }
@@ -323,6 +350,9 @@ class ManagedObj {
     {
         const size_t offset = (sizeof(ManagedCtx) + 7) & ~0x07;
         context = reinterpret_cast<ManagedCtx*>(malloc(offset + sizeof(T)));
+        if (NULL == context) {
+            throw std::bad_alloc();
+        }
         context = new (context) ManagedCtx(1);
         object = new ((char*)context + offset)T(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
     }
