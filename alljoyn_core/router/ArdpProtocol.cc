@@ -362,7 +362,9 @@ static void DumpBitMask(ArdpConnRecord* conn, uint32_t* msk, uint16_t sz, bool c
 
     }
 }
+#endif // NDEBUG
 
+#if !defined(NDEBUG) || defined(QCC_OS_GROUP_WINDOWS)
 static const char* State2Text(ArdpState state)
 {
     switch (state) {
@@ -381,7 +383,7 @@ static const char* State2Text(ArdpState state)
     default: return "UNDEFINED";
     }
 }
-#endif // NDEBUG
+#endif
 
 static inline void SetState(ArdpConnRecord* conn, ArdpState state)
 {
