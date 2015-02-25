@@ -914,6 +914,9 @@ QStatus _RemoteEndpoint::WriteCallback(qcc::Sink& sink, bool isTimedOut)
     }
     QStatus status = ER_OK;
     while (status == ER_OK) {
+		if (!IsValid()) {
+			return ER_BUS_NO_ENDPOINT;
+		}
         if (internal->getNextMsg) {
             internal->lock.Lock(MUTEX_CONTEXT);
             if (!internal->txQueue.empty()) {
