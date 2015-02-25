@@ -89,6 +89,11 @@ class BigNum::Storage {
         size_t mallocSz = sizeof(Storage) + (sz + extra) * sizeof(uint32_t);
         uint8_t* p = (uint8_t*)malloc(mallocSz);
         assert(p);
+        if (NULL == p) {
+            /* We could return NULL from this function, but right now nothing that calls
+             * this function is designed to cope with that. Just abort. */
+            abort();
+        }
         Storage* s = new (p)Storage();
         s->buffer = reinterpret_cast<uint32_t*>(p + sizeof(Storage));
         s->size = sz + extra;
