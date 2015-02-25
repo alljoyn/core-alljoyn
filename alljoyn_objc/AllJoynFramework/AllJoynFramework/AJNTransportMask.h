@@ -25,11 +25,23 @@ typedef uint16_t AJNTransportMask;
 /**< no transports */
 extern const AJNTransportMask kAJNTransportMaskNone;
 
-/**< ANY transport */
-extern const AJNTransportMask kAJNTransportMaskAny;
-
 /**< Local (same device) transport */
 extern const AJNTransportMask kAJNTransportMaskLocal;
+
+/**< Transport using TCP transport */
+extern const AJNTransportMask kAJNTransportMaskTCP;
+
+/**< Transport using UDP transport */
+extern const AJNTransportMask kAJNTransportMaskUDP;
+
+/**< Placeholder for experimental transport */
+extern const AJNTransportMask kAJNTransportMaskExperimental;
+
+/**< Transport using IP-based transport */
+extern const AJNTransportMask kAJNTransportMaskIP;
+
+/**< ANY transport */
+extern const AJNTransportMask kAJNTransportMaskAny;
 
 /*
  * QCC_DEPRECATED is a macro defined in platform.h on Linux and Windows for C++
@@ -52,15 +64,6 @@ extern const AJNTransportMask kAJNTransportMaskLAN DEPRECATED_ATTRIBUTE;
 
 /**< Transport using Wi-Fi Direct transport */
 extern const AJNTransportMask kAJNTransportMaskWiFiDirect DEPRECATED_ATTRIBUTE;
-
-/**< Transport using TCP transport */
-extern const AJNTransportMask kAJNTransportMaskTCP;
-
-/**< Transport using UDP transport */
-extern const AJNTransportMask kAJNTransportMaskUDP;
-
-/**< Transport using IP-based transport */
-extern const AJNTransportMask kAJNTransportMaskIP;
 
 
 

@@ -135,6 +135,20 @@ public class SessionOpts {
     public static final short TRANSPORT_UDP = 0x0100;
 
     /**
+     * A placeholder for an experimental transport that has not yet reached the
+     * performance, stability or testing requirements of a commercialized
+     * transport.
+     *
+     * It is expected that each experimental Transport will alias this bit if
+     * included in an AllJoyn release and then allocate one of the reserved mask
+     * bits upon attaining commercialized status.
+     *
+     * For example,
+     *     public static final short TRANSPORT_CAN_AND_STRING = TRANSPORT_EXPERIMENTAL
+     */
+    public static final short TRANSPORT_EXPERIMENTAL = (short)0x8000;
+
+    /**
      * Use any available IP-based transport to communicate with a given session.
      *
      * Selecting the IP transport really implies letting the system decice which
@@ -146,11 +160,6 @@ public class SessionOpts {
      * Use any available non-experimental transport to communicate with a given session.
      */
     public static final short TRANSPORT_ANY = (TRANSPORT_LOCAL | TRANSPORT_IP);
-
-    /**
-     * Try to use all possible transports to communicate with a given session.
-     */
-    public static final short TRANSPORT_ALL = (short)0xffff;
 
     public String toString( ) {
         StringBuilder result = new StringBuilder();
