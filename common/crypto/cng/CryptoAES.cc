@@ -150,7 +150,7 @@ Crypto_AES::Crypto_AES(const KeyBlob& key, Mode mode) : mode(mode), keyState(NUL
         }
 
         free(kbh);
-    }catch (...)  {
+    }catch (...) {
         /* If call to operator new or our own code throws, handle cleanup and rethrow */
         if (NULL != keyState) {
             delete keyState;
