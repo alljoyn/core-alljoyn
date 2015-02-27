@@ -28,6 +28,7 @@
 #include <qcc/String.h>
 #include <qcc/Crypto.h>
 #include <qcc/Util.h>
+#include <qcc/StringUtil.h>
 #include <qcc/StringSink.h>
 #include <qcc/StringSource.h>
 
@@ -64,9 +65,14 @@ static const uint32_t MAX_KEYGEN_VERSION = 0x01;
  * The base authentication version number
  */
 static const uint32_t MIN_AUTH_VERSION = 0x0001;
-static const uint32_t MAX_AUTH_VERSION = 0x0002;
+static const uint32_t MAX_AUTH_VERSION = 0x0003;
 
 static const uint32_t PREFERRED_AUTH_VERSION = (MAX_AUTH_VERSION << 16) | MIN_KEYGEN_VERSION;
+
+/*
+ * the protocol version of the ECDHE_ECDSA with non X.509 certificate
+ */
+static const uint32_t NON_ECDSA_X509_VERSION = 0x0002;
 
 static bool IsCompatibleVersion(uint32_t version)
 {
@@ -702,7 +708,6 @@ void AllJoynPeerObj::AuthAdvance(Message& msg)
 void AllJoynPeerObj::DoKeyExchange(Message& msg)
 {
     QStatus status = ER_OK;
-    qcc::String sender = msg->GetSender();
 
     uint32_t authMask = msg->GetArg(0)->v_uint32;
     MsgArg* inVariant;
@@ -726,7 +731,16 @@ void AllJoynPeerObj::DoKeyExchange(Message& msg)
 
     uint32_t authMaskList[1];
     authMaskList[0] = effectiveAuthMask;
-    KeyExchanger*keyExchanger = GetKeyExchangerInstance(false, authMaskList, 1);
+    qcc::String sender = msg->GetSender();
+    PeerStateTable* peerStateTable = bus->GetInternal().GetPeerStateTable();
+    if (!peerStateTable->IsKnownPeer(sender)) {
+        lock.Unlock(MUTEX_CONTEXT);
+        status = ER_AUTH_FAIL;
+        MethodReply(msg, status);
+        return;
+    }
+    PeerState peerState = peerStateTable->GetPeerState(sender);
+    KeyExchanger* keyExchanger = GetKeyExchangerInstance(peerState->GetAuthVersion() >> 16, false, authMaskList, 1);
     if (!keyExchanger) {
         lock.Unlock(MUTEX_CONTEXT);
         status = ER_AUTH_FAIL;
@@ -868,9 +882,21 @@ void AllJoynPeerObj::ExchangeSuites(const ajn::InterfaceDescription::Member* mem
         /* the order of precedence is from the server perspective */
         for (size_t cnt = 0; cnt < supportedAuthSuitesCount; cnt++) {
             for (size_t idx = 0; idx < remoteSuitesLen; idx++) {
-                if ((supportedAuthSuites[cnt] & remoteSuites[idx]) == supportedAuthSuites[cnt]) {
+                if (supportedAuthSuites[cnt] == remoteSuites[idx]) {
+                    bool addIt = true;
+                    if (supportedAuthSuites[cnt] == AUTH_SUITE_ECDHE_ECDSA) {
+                        /* Does the peer auth version >= 3?  If not, the peer
+                           can't handle ECDSA with X.509 certificate */
+                        PeerStateTable* peerStateTable = bus->GetInternal().GetPeerStateTable();
+                        PeerState peerState = peerStateTable->GetPeerState(msg->GetSender());
+                        if ((peerState->GetAuthVersion() >> 16) <= NON_ECDSA_X509_VERSION) {
+                            addIt = false;
+                        }
+                    }
                     /* add it */
-                    effectiveAuthSuites[netCnt++] = supportedAuthSuites[cnt];
+                    if (addIt) {
+                        effectiveAuthSuites[netCnt++] = supportedAuthSuites[cnt];
+                    }
                     break;
                 }
             }
@@ -1158,7 +1184,7 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
         if (UseKeyExchanger(authVersion, supportedAuthSuites, supportedAuthSuitesCount)) {
             uint32_t*remoteAuthSuites = NULL;
             size_t remoteAuthSuitesCount = 0;
-            status = AskForAuthSuites(remotePeerObj, ifc, &remoteAuthSuites, &remoteAuthSuitesCount);
+            status = AskForAuthSuites(authVersion, remotePeerObj, ifc, &remoteAuthSuites, &remoteAuthSuitesCount);
             if (status == ER_OK) {
                 status = AuthenticatePeerUsingKeyExchange(remoteAuthSuites, remoteAuthSuitesCount, busName, peerState, localGuidStr, remotePeerObj, ifc, remotePeerGuid, mech);
                 if (remoteAuthSuites) {
@@ -1292,14 +1318,42 @@ QStatus AllJoynPeerObj::AuthenticatePeerUsingSASL(const qcc::String& busName, Pe
     return status;
 }
 
-QStatus AllJoynPeerObj::AskForAuthSuites(ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc, uint32_t** remoteAuthSuites, size_t* remoteAuthCount)
+QStatus AllJoynPeerObj::AskForAuthSuites(uint32_t peerAuthVersion, ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc, uint32_t** remoteAuthSuites, size_t* remoteAuthCount)
 {
+    if (supportedAuthSuitesCount == 0) {
+        return ER_AUTH_FAIL;
+    }
     MsgArg arg;
-    arg.Set("au", supportedAuthSuitesCount, supportedAuthSuites);
+    bool excludeECDHE_ECDSA = false;
+    if ((peerAuthVersion >> 16) <= NON_ECDSA_X509_VERSION) {
+        for (size_t cnt = 0; cnt < supportedAuthSuitesCount; cnt++) {
+            if (supportedAuthSuites[cnt] == AUTH_SUITE_ECDHE_ECDSA) {
+                excludeECDHE_ECDSA = true;
+                break;
+            }
+        }
+    }
+    uint32_t* authSuites = supportedAuthSuites;
+    size_t authSuitesCount = supportedAuthSuitesCount;
+    if (excludeECDHE_ECDSA) {
+        authSuites = new uint32_t[supportedAuthSuitesCount];
+        size_t netCnt = 0;
+        for (size_t cnt = 0; cnt < supportedAuthSuitesCount; cnt++) {
+            if (supportedAuthSuites[cnt] != AUTH_SUITE_ECDHE_ECDSA) {
+                authSuites[netCnt++] = supportedAuthSuites[cnt];
+            }
+        }
+        authSuitesCount = netCnt;
+    }
+
+    arg.Set("au", authSuitesCount, authSuites);
     Message replyMsg(*bus);
     const InterfaceDescription::Member* exchangeSuites = ifc->GetMember("ExchangeSuites");
     assert(exchangeSuites);
     QStatus status = remotePeerObj.MethodCall(*exchangeSuites, &arg, 1, replyMsg, DEFAULT_TIMEOUT);
+    if (excludeECDHE_ECDSA) {
+        delete [] authSuites;
+    }
     if (status != ER_OK) {
         return status;
     }
@@ -1324,7 +1378,7 @@ QStatus AllJoynPeerObj::AuthenticatePeerUsingKeyExchange(const uint32_t* request
     QStatus status;
 
     QCC_DbgHLPrintf(("AuthenticatePeerUsingKeyExchange"));
-    KeyExchanger*keyExchanger = GetKeyExchangerInstance(true, requestingAuthList, requestingAuthCount);  /* initiator */
+    KeyExchanger*keyExchanger = GetKeyExchangerInstance(peerState->GetAuthVersion() >> 16, true, requestingAuthList, requestingAuthCount);  /* initiator */
     if (!keyExchanger) {
         return ER_AUTH_FAIL;
     }
@@ -1624,21 +1678,26 @@ void AllJoynPeerObj::SessionJoined(const InterfaceDescription::Member* member, c
     bus->GetInternal().CallJoinedListeners(sessionPort, sessionId, joiner);
 }
 
-KeyExchanger* AllJoynPeerObj::GetKeyExchangerInstance(bool initiator, const uint32_t* requestingAuthList, size_t requestingAuthCount)
+KeyExchanger* AllJoynPeerObj::GetKeyExchangerInstance(uint16_t peerAuthVersion, bool initiator, const uint32_t* requestingAuthList, size_t requestingAuthCount)
 {
     for (size_t cnt = 0; cnt < requestingAuthCount; cnt++) {
         uint32_t suite = requestingAuthList[cnt];
         if ((suite & AUTH_SUITE_ECDHE_ECDSA) == AUTH_SUITE_ECDHE_ECDSA) {
-            return new KeyExchangerECDHE_ECDSA(initiator, this, *bus, peerAuthListener);
+            return new KeyExchangerECDHE_ECDSA(initiator, this, *bus, peerAuthListener, peerAuthVersion);
         }
         if ((suite & AUTH_SUITE_ECDHE_PSK) == AUTH_SUITE_ECDHE_PSK) {
-            return new KeyExchangerECDHE_PSK(initiator, this, *bus, peerAuthListener);
+            return new KeyExchangerECDHE_PSK(initiator, this, *bus, peerAuthListener, peerAuthVersion);
         }
         if ((suite & AUTH_SUITE_ECDHE_NULL) == AUTH_SUITE_ECDHE_NULL) {
-            return new KeyExchangerECDHE_NULL(initiator, this, *bus, peerAuthListener);
+            return new KeyExchangerECDHE_NULL(initiator, this, *bus, peerAuthListener, peerAuthVersion);
         }
     }
     return NULL;
+}
+
+QStatus AllJoynPeerObj::HandleMethodReply(Message& msg, QStatus status)
+{
+    return MethodReply(msg, status);
 }
 
 QStatus AllJoynPeerObj::HandleMethodReply(Message& msg, const MsgArg* args, size_t numArgs)

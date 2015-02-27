@@ -92,7 +92,6 @@ class BasicSampleObject : public BusObject {
     void ObjectRegistered()
     {
         BusObject::ObjectRegistered();
-        printf("ObjectRegistered has been called\n");
     }
 
 
@@ -172,55 +171,35 @@ class ECDHEKeyXListener : public AuthListener {
             creds.SetExpiration(100);  /* set the master secret expiry time to 100 seconds */
             return true;
         } else if (strcmp(authMechanism, KEYX_ECDHE_ECDSA) == 0) {
-            static const char privateKeyPEM[] = {
-                "-----BEGIN PRIVATE KEY-----\n"
-                "tV/tGPp7kI0pUohc+opH1LBxzk51pZVM/RVKXHGFjAcAAAAA\n"
-                "-----END PRIVATE KEY-----"
+            static const char ecdsaPrivateKeyPEM[] = {
+                "-----BEGIN EC PRIVATE KEY-----\n"
+                "MDECAQEEIICSqj3zTadctmGnwyC/SXLioO39pB1MlCbNEX04hjeioAoGCCqGSM49\n"
+                "AwEH\n"
+                "-----END EC PRIVATE KEY-----"
             };
-            static const char certChainType1PEM[] = {
-                "-----BEGIN CERTIFICATE-----\n"
-                "AAAAAfUQdhMSDuFWahMG/rFmFbKM06BjIA2Scx9GH+ENLAgtAAAAAIbhHnjAyFys\n"
-                "6DoN2kKlXVCgtHpFiEYszOYXI88QDvC1AAAAAAAAAAC5dRALLg6Qh1J2pVOzhaTP\n"
-                "xI+v/SKMFurIEo2b4S8UZAAAAADICW7LLp1pKlv6Ur9+I2Vipt5dDFnXSBiifTmf\n"
-                "irEWxQAAAAAAAAAAAAAAAAABXLAAAAAAAAFd3AABMa7uTLSqjDggO0t6TAgsxKNt\n"
-                "+Zhu/jc3s242BE0drPcL4K+FOVJf+tlivskovQ3RfzTQ+zLoBH5ZCzG9ua/dAAAA\n"
-                "ACt5bWBzbcaT0mUqwGOVosbMcU7SmhtE7vWNn/ECvpYFAAAAAA==\n"
-                "-----END CERTIFICATE-----"
-            };
-            static const char certChainType2PEM[] = {
-                "-----BEGIN CERTIFICATE-----\n"
-                "AAAAAvUQdhMSDuFWahMG/rFmFbKM06BjIA2Scx9GH+ENLAgtAAAAAIbhHnjAyFys\n"
-                "6DoN2kKlXVCgtHpFiEYszOYXI88QDvC1AAAAAAAAAAC5dRALLg6Qh1J2pVOzhaTP\n"
-                "xI+v/SKMFurIEo2b4S8UZAAAAADICW7LLp1pKlv6Ur9+I2Vipt5dDFnXSBiifTmf\n"
-                "irEWxQAAAAAAAAAAAAAAAAABXLAAAAAAAAFd3ABjeWi1/GbBcdnK0yJvL4X/UF0h\n"
-                "8plX3uAhOlF2vT2jfxe5U06zaWSXcs9kBEQvfOc+WvKloM7m5NFJNSd3qFFGUhfj\n"
-                "xx/0CCRJlk/jeIWmzQAAAAB8bexqa95eHEKTqdc8+qKFKggZZXlpaj9af/MFocIP\n"
-                "NQAAAAA=\n"
 
+            static const char ecdsaCertChainX509PEM[] = {
+                "-----BEGIN CERTIFICATE-----\n"
+                "MIIBWjCCAQGgAwIBAgIHMTAxMDEwMTAKBggqhkjOPQQDAjArMSkwJwYDVQQDDCAw\n"
+                "ZTE5YWZhNzlhMjliMjMwNDcyMGJkNGY2ZDVlMWIxOTAeFw0xNTAyMjYyMTU1MjVa\n"
+                "Fw0xNjAyMjYyMTU1MjVaMCsxKTAnBgNVBAMMIDZhYWM5MjQwNDNjYjc5NmQ2ZGIy\n"
+                "NmRlYmRkMGM5OWJkMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEP/HbYga30Afm\n"
+                "0fB6g7KaB5Vr5CDyEkgmlif/PTsgwM2KKCMiAfcfto0+L1N0kvyAUgff6sLtTHU3\n"
+                "IdHzyBmKP6MQMA4wDAYDVR0TBAUwAwEB/zAKBggqhkjOPQQDAgNHADBEAiAZmNVA\n"
+                "m/H5EtJl/O9x0P4zt/UdrqiPg+gA+wm0yRY6KgIgetWANAE2otcrsj3ARZTY/aTI\n"
+                "0GOQizWlQm8mpKaQ3uE=\n"
                 "-----END CERTIFICATE-----"
             };
             /*
              * The application may provide the DSA private key and public key in the certificate.
-             * AllJoyn stores the keys in the key store for future use.
-             * If the application does not provide the private key, AllJoyn will
-             * generate the DSA key pair.
              */
-            bool providePrivateKey = true;  /* use to toggle the test */
-            if (providePrivateKey) {
-                if ((credMask & AuthListener::CRED_PRIVATE_KEY) == AuthListener::CRED_PRIVATE_KEY) {
-                    String pk(privateKeyPEM, strlen(privateKeyPEM));
-                    creds.SetPrivateKey(pk);
-                }
-                if ((credMask & AuthListener::CRED_CERT_CHAIN) == AuthListener::CRED_CERT_CHAIN) {
-                    bool useType1 = true;  /* use to toggle which cert to send */
-                    if (useType1) {
-                        String cert(certChainType1PEM, strlen(certChainType1PEM));
-                        creds.SetCertChain(cert);
-                    } else {
-                        String cert(certChainType2PEM, strlen(certChainType2PEM));
-                        creds.SetCertChain(cert);
-                    }
-                }
+            if ((credMask & AuthListener::CRED_PRIVATE_KEY) == AuthListener::CRED_PRIVATE_KEY) {
+                String pk(ecdsaPrivateKeyPEM, strlen(ecdsaPrivateKeyPEM));
+                creds.SetPrivateKey(pk);
+            }
+            if ((credMask & AuthListener::CRED_CERT_CHAIN) == AuthListener::CRED_CERT_CHAIN) {
+                String cert(ecdsaCertChainX509PEM, strlen(ecdsaCertChainX509PEM));
+                creds.SetCertChain(cert);
             }
 
             creds.SetExpiration(100);  /* set the master secret expiry time to 100 seconds */

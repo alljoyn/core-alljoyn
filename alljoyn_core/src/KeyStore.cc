@@ -141,6 +141,7 @@ QStatus KeyStore::SetKeyEventListener(KeyStoreKeyEventListener* listener) {
 
 QStatus KeyStore::SetDefaultListener()
 {
+    delete listener;
     this->listener = new ProtectedKeyStoreListener(defaultListener);
     return ER_OK;
 }

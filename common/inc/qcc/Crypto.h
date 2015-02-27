@@ -872,6 +872,8 @@ class Crypto_ASN1 {
      * 'b'  ASN_BITS      A bit string, the argument must be a pointer to a qcc::String followe by a
      *                    pointer to a size_t value to receive the bit length.
      *
+     * 'z'  ASN_BOOLEAN   A boolean value, the argument must be a uint32. 0 is false, others true.
+     *
      * 'n'  ASN_NULL      Null, there is no argument for this item
      *
      * 'u'  ASN_UTF8      A utf8 string, the argument must be a pointer to a qcc::String
@@ -881,6 +883,8 @@ class Crypto_ASN1 {
      * 'p'  ASN_PRINTABLE A printable string, the argument must be a pointer to a qcc::String
      *
      * 't'  ASN_UTC_TIME  A UTC time string, the argument must be a pointer to a qcc::String
+     *
+     * 'T'  ASN_GEN_TIME  A Generic time string, the argument must be a pointer to a qcc::String
      *
      * '('  ASN_SEQ       Indicates the start of a sequence, there are no arguments this item.
      *
@@ -908,6 +912,15 @@ class Crypto_ASN1 {
      *                    must be a pointer to a qcc::String and type of the following element must
      *                    be appropriate for this argument type. Note that is it not possible to
      *                    distinguish between a missing element and a zero length element.
+     *
+     * 'c(...)' allows to insert a context specific information. This can be useful when handling optional fields.
+     *                   The value for this field must be an uint32 with value less than 32.
+     *                   Example: Snippet from X509 ASN.1 structure definition
+     *                   TBSCertificate  ::=  SEQUENCE  {
+     *                              version         [0]  Version DEFAULT v1,
+     *
+     *                   }
+     *                   Decode("(c(i))",0,2))
      *
      * @param asn      The input data for the encoding
      * @param asnLen   The length of the input data
@@ -974,6 +987,8 @@ class Crypto_ASN1 {
      * 'b'  ASN_BITS      A bit string, the argument must be a pointer to a qcc::String followed by a
      *                    size_t value that specifies the bit length.
      *
+     * 'z'  ASN_BOOLEAN   A boolean value, the argument must be a uint32. 0 is false, others true.
+     *
      * 'n'  ASN_NULL      Null, there is no argument for this item
      *
      * 'u'  ASN_UTF8      A utf8 string, the argument must be a pointer to a qcc::String
@@ -991,6 +1006,17 @@ class Crypto_ASN1 {
      * '{'  ASN_SET_OF    Indicates the start of a set-of, there are no arguments this item.
      *
      * '}'                Indicates the end of a set-of, there are no arguments this item.
+     *
+     * 'R' inserts raw data as is. This allows to include previously formatted ASN strings to be inserted
+     *                    The argument for this must be qcc::String
+     * 'c(...)' allows to insert a context specific information. This can be useful when handling optional fields.
+     *                   The value for this field must be an uint32 with value less than 32.
+     *                   Example: Snippet from X509 ASN.1 structure definition
+     *                   TBSCertificate  ::=  SEQUENCE  {
+     *                              version         [0]  Version DEFAULT v1,
+     *
+     *                   }
+     *                   Encode("(c(i))",0,2))
      *
      *
      * @param asn      The output string for the encoding
@@ -1053,6 +1079,8 @@ class Crypto_ASN1 {
     static const uint8_t ASN_PRINTABLE = 0x13;
     static const uint8_t ASN_ASCII     = 0x16;
     static const uint8_t ASN_UTC_TIME  = 0x17;
+    static const uint8_t ASN_GEN_TIME  = 0x18;
+    static const uint8_t ASN_CONTEXT_SPECIFIC = 0xA0;
 
     static QStatus DecodeV(const char*& syntax, const uint8_t* asn, size_t asnLen, va_list* argpIn);
 
