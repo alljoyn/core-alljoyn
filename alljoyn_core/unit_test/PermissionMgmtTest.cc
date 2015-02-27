@@ -423,7 +423,7 @@ QStatus BasePermissionMgmtTest::TeardownBus(BusAttachment& bus)
 {
     bus.UnregisterKeyStoreListener();
     bus.UnregisterBusObject(*this);
-    status = bus.Disconnect(getConnectArg().c_str());
+    status = bus.Disconnect();
     if (ER_OK != status) {
         return status;
     }
