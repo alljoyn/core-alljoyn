@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014,2015, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -15,6 +15,7 @@
  ******************************************************************************/
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/AutoPinger.h>
+#include <qcc/Thread.h>
 #include <gtest/gtest.h>
 #include <qcc/Thread.h>
 

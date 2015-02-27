@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2010 - 2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -81,11 +81,11 @@ JNIEXPORT jboolean JNICALL Java_org_alljoyn_bus_BusAttachment_isConnected
 
 /*
  * Class:     org_alljoyn_bus_BusAttachment
- * Method:    disconnect
- * Signature: (Ljava/lang/String)V
+ * Method:    nativeDisconnect
+ * Signature: ()V
  */
-JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusAttachment_disconnect
-  (JNIEnv *, jobject, jstring);
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusAttachment_nativeDisconnect
+  (JNIEnv *, jobject);
 
 /*
  * Class:     org_alljoyn_bus_BusAttachment

@@ -5,7 +5,7 @@
  */
 
 /*
- * Copyright (c) 2014-2015, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -1037,7 +1037,7 @@ int main(int argc, char** argv)
 exit:
     if (client) {
         bus.CancelFindAdvertisedName(serviceName.c_str());
-        bus.Disconnect(connSpec.c_str());
+        bus.Disconnect();
     } else {
         bus.CancelAdvertiseName(serviceName.c_str(), TRANSPORT_ANY);
         bus.ReleaseName(serviceName.c_str());

@@ -1,4 +1,4 @@
-# Copyright (c) 2010 - 2014, AllSeen Alliance. All rights reserved.
+# Copyright AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -38,9 +38,6 @@ samples_env.SConscript('secure/SConscript', exports = {'env': samples_env})
 
 # Chat Sample program
 samples_env.SConscript('chat/SConscript', exports = {'env': samples_env})
-
-# File transfer Sample program
-samples_env.SConscript('FileTransfer/SConscript', exports = {'env': samples_env})
 
 # Sample Daemon program
 samples_env.SConscript('SampleDaemon/SConscript', exports = {'env': samples_env})

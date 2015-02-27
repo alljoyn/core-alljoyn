@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -23,6 +23,7 @@
 #include <qcc/platform.h>
 
 #include <qcc/Debug.h>
+#include <qcc/Thread.h>
 #include <qcc/Timer.h>
 #include <qcc/StringUtil.h>
 #include <Status.h>
@@ -39,22 +40,20 @@
 using namespace std;
 using namespace qcc;
 
-int32_t qcc::_Alarm::nextId = 0;
-
 namespace qcc {
 
 class TimerThread : public Thread {
   public:
 
     enum {
-        STOPPED,    /**< Thread must be started via Start() */
-        STARTING,   /**< Thread has been Started but is not ready to service requests */
-        IDLE,       /**< Thrad is sleeping. Waiting to be alerted via Alert() */
-        RUNNING,    /**< Thread is servicing an AlarmTriggered callback */
-        STOPPING    /**< Thread is stopping due to extended idle time. Not ready for Start or Alert */
+        STOPPED,        /**< Thread must be started via Start() */
+        STARTING,       /**< Thread has been Started but is not ready to service requests */
+        IDLE,           /**< Thrad is sleeping. Waiting to be alerted via Alert() */
+        RUNNING,        /**< Thread is servicing an AlarmTriggered callback */
+        STOPPING        /**< Thread is stopping due to extended idle time. Not ready for Start or Alert */
     } state;
 
-    TimerThread(const String& name, int index, Timer* timer) :
+    TimerThread(const String& name, int index, TimerImpl* timer) :
         Thread(name),
         state(STOPPED),
         hasTimerLock(false),
@@ -79,77 +78,208 @@ class TimerThread : public Thread {
 
   private:
     const int index;
-    Timer* timer;
+    TimerImpl* timer;
     const Alarm* currentAlarm;
+};
+
+class TimerImpl : public ThreadListener {
+    friend class TimerThread;
+
+  public:
+
+    /**
+     * Constructor
+     *
+     * @param name               Name for the thread.
+     * @param expireOnExit       If true call all pending alarms when this thread exits.
+     * @param concurrency        Dispatch up to this number of alarms concurrently (using multiple threads).
+     * @param prevenReentrancy   Prevent re-entrant call of AlarmTriggered.
+     * @param maxAlarms          Maximum number of outstanding alarms allowed before blocking calls to AddAlarm or 0 for infinite.
+     */
+    TimerImpl(qcc::String name, bool expireOnExit, uint32_t concurrency, bool preventReentrancy, uint32_t maxAlarms);
+
+    /**
+     * Destructor.
+     */
+    ~TimerImpl();
+
+    /**
+     * Start the timer.
+     *
+     * @return  ER_OK if successful.
+     */
+    QStatus Start();
+
+    /**
+     * Stop the timer (and its associated threads).
+     *
+     * @return ER_OK if successful.
+     */
+    QStatus Stop();
+
+    /**
+     * Join the timer.
+     * Block the caller until all the timer's threads are stopped.
+     *
+     * @return ER_OK if successful.
+     */
+    QStatus Join();
+
+    /**
+     * Return true if Timer is running.
+     *
+     * @return true iff timer is running.
+     */
+    bool IsRunning() const { return isRunning; }
+
+    /**
+     * Associate an alarm with a timer.
+     *
+     * @param alarm     Alarm to add.
+     * @return ER_OK if alarm was added
+     *         ER_TIMER_EXITING if timer is exiting
+     */
+    QStatus AddAlarm(const Alarm& alarm);
+
+    /**
+     * Associate an alarm with a timer.
+     * Non-blocking version.
+     *
+     * @param alarm     Alarm to add.
+     * @return ER_OK if alarm was added
+     *         ER_TIMER_FULL if timer has maximum allowed alarms
+     *         ER_TIMER_EXITING if timer is exiting
+     */
+    QStatus AddAlarmNonBlocking(const Alarm& alarm);
+
+    /**
+     * Disassociate an alarm from a timer.
+     *
+     * @param alarm             Alarm to remove.
+     * @param blockIfTriggered  If alarm has already been triggered, block the caller until AlarmTriggered returns.
+     * @return  true iff the given alarm was found and removed.
+     */
+    bool RemoveAlarm(const Alarm& alarm, bool blockIfTriggered = true);
+
+    bool ForceRemoveAlarm(const Alarm& alarm, bool blockIfTriggered = true);
+
+    /**
+     * Remove any alarm for a specific listener returning the alarm. Returns a boolean if an alarm
+     * was removed. This function is designed to be called in a loop to remove all alarms for a
+     * specific listener. For example this function would be called from the listener's destructor.
+     * The alarm is returned so the listener can free any resource referenced by the alarm.
+     *
+     * @param listener  The specific listener.
+     * @param alarm     Alarm that was removed
+     * @return  true iff the given alarm was found and removed.
+     */
+    bool RemoveAlarm(const AlarmListener& listener, Alarm& alarm);
+
+    /**
+     * Replace an existing Alarm.
+     * Alarms that are already "in-progress" (meaning they are scheduled for callback) cannot be replaced.
+     * In this case, RemoveAlarm will return ER_NO_SUCH_ALARM and may optionally block until the triggered
+     * alarm's AlarmTriggered callback has returned.
+     *
+     * @param origAlarm    Existing alarm to be replaced.
+     * @param newAlarm     Alarm that will replace origAlarm if found.
+     * @param blockIfTriggered  If alarm has already been triggered, block the caller until AlarmTriggered returns.
+     *
+     * @return  ER_OK if alarm was replaced
+     *          ER_NO_SUCH_ALARM if origAlarm was already triggered or didn't exist.
+     *          Any other error indicates that adding newAlarm failed (orig alarm will have been removed in this case).
+     */
+    QStatus ReplaceAlarm(const Alarm& origAlarm, const Alarm& newAlarm, bool blockIfTriggered = true);
+
+    /**
+     * Remove all pending alarms with a given alarm listener.
+     *
+     * @param listener   AlarmListener whose alarms will be removed from this timer.
+     */
+    void RemoveAlarmsWithListener(const AlarmListener& listener);
+
+    /*
+     * Test if the specified alarm is associated with this timer.
+     *
+     * @param alarm     Alarm to check.
+     *
+     * @return  Returns true if the alarm is associated with this timer, false if not.
+     */
+    bool HasAlarm(const Alarm& alarm) const;
+
+    /**
+     * Allow the currently executing AlarmTriggered callback to be reentered if another alarm is triggered.
+     * Calling this method has no effect if timer was created with preventReentrancy == false;
+     * Calling this method can only be made from within the AlarmTriggered timer callback.
+     */
+    void EnableReentrancy();
+
+    /**
+     * Get the name of the Timer thread pool
+     *
+     * @return the name of the timer thread(s)
+     */
+    const qcc::String& GetName() const;
+
+    /**
+     * Check whether the current TimerThread is holding the lock
+     *
+     * @return true if the current thread is a timer thread that holds the reentrancy lock
+     */
+    bool ThreadHoldsLock() const;
+
+    /**
+     * TimerThread ThreadExit callback.
+     * For internal use only.
+     */
+    void ThreadExit(qcc::Thread* thread);
+
+    /**
+     * Callback used for asynchronous implementations of timer
+     * For internal use only.
+     */
+    void TimerCallback(void* context);
+
+    /**
+     * Callback used for asynchronous implementations of timer
+     * For internal use only.
+     */
+    void TimerCleanupCallback(void* context);
+
+  private:
+
+    mutable Mutex lock;
+    std::set<Alarm, std::less<Alarm> >  alarms;
+    Alarm* currentAlarm;
+    bool expireOnExit;
+    std::vector<TimerThread*> timerThreads;
+    bool isRunning;
+    int32_t controllerIdx;
+    qcc::Timespec yieldControllerTime;
+    bool preventReentrancy;
+    Mutex reentrancyLock;
+    qcc::String nameStr;
+    const uint32_t maxAlarms;
+    std::deque<qcc::Thread*> addWaitQueue;     /**< Threads waiting for alarms set to become not-full */
+
 };
 
 }
 
-_Alarm::_Alarm() : listener(NULL), periodMs(0), context(NULL), id(IncrementAndFetch(&nextId))
-{
-}
-
-_Alarm::_Alarm(Timespec absoluteTime, AlarmListener* listener, void* context, uint32_t periodMs)
-    : alarmTime(absoluteTime), listener(listener), periodMs(periodMs), context(context), id(IncrementAndFetch(&nextId))
-{
-}
-
-_Alarm::_Alarm(uint32_t relativeTime, AlarmListener* listener, void* context, uint32_t periodMs)
-    : alarmTime(), listener(listener), periodMs(periodMs), context(context), id(IncrementAndFetch(&nextId))
-{
-    if (relativeTime == WAIT_FOREVER) {
-        alarmTime = END_OF_TIME;
-    } else {
-        GetTimeNow(&alarmTime);
-        alarmTime += relativeTime;
-    }
-}
-
-_Alarm::_Alarm(AlarmListener* listener, void* context)
-    : alarmTime(0, TIME_RELATIVE), listener(listener), periodMs(0), context(context), id(IncrementAndFetch(&nextId))
-{
-}
-
-void* _Alarm::GetContext(void) const
-{
-    return context;
-}
-
-void _Alarm::SetContext(void* c) const
-{
-    context = c;
-}
-
-uint64_t _Alarm::GetAlarmTime() const
-{
-    return alarmTime.GetAbsoluteMillis();
-}
-
-bool _Alarm::operator<(const _Alarm& other) const
-{
-    return (alarmTime < other.alarmTime) || ((alarmTime == other.alarmTime) && (id < other.id));
-}
-
-bool _Alarm::operator==(const _Alarm& other) const
-{
-    return (alarmTime == other.alarmTime) && (id == other.id);
-}
-
-Timer::Timer(String name, bool expireOnExit, uint32_t concurency, bool preventReentrancy, uint32_t maxAlarms) :
-    OSTimer(this),
+TimerImpl::TimerImpl(String name, bool expireOnExit, uint32_t concurrency, bool preventReentrancy, uint32_t maxAlarms) :
     currentAlarm(NULL),
     expireOnExit(expireOnExit),
-    timerThreads(concurency),
+    timerThreads(concurrency),
     isRunning(false),
     controllerIdx(0),
     preventReentrancy(preventReentrancy),
     nameStr(name),
     maxAlarms(maxAlarms)
 {
-    /* Timer thread objects will be created when required */
+    /* TimerImpl thread objects will be created when required */
 }
 
-Timer::~Timer()
+TimerImpl::~TimerImpl()
 {
     Stop();
     Join();
@@ -161,7 +291,7 @@ Timer::~Timer()
     }
 }
 
-QStatus Timer::Start()
+QStatus TimerImpl::Start()
 {
     QStatus status = ER_OK;
     lock.Lock();
@@ -193,7 +323,7 @@ QStatus Timer::Start()
     return status;
 }
 
-QStatus Timer::Stop()
+QStatus TimerImpl::Stop()
 {
     QStatus status = ER_OK;
     lock.Lock();
@@ -213,7 +343,7 @@ QStatus Timer::Stop()
     return status;
 }
 
-QStatus Timer::Join()
+QStatus TimerImpl::Join()
 {
     QStatus status = ER_OK;
     lock.Lock();
@@ -231,7 +361,7 @@ QStatus Timer::Join()
     return status;
 }
 
-QStatus Timer::AddAlarm(const Alarm& alarm)
+QStatus TimerImpl::AddAlarm(const Alarm& alarm)
 {
     QStatus status = ER_OK;
     lock.Lock();
@@ -260,7 +390,7 @@ QStatus Timer::AddAlarm(const Alarm& alarm)
 
         /* Ensure timer is still running */
         if (isRunning) {
-            /* Insert the alarm and alert the Timer thread if necessary */
+            /* Insert the alarm and alert the TimerImpl thread if necessary */
             bool alertThread = alarms.empty() || (alarm < *alarms.begin());
             alarms.insert(alarm);
 
@@ -282,7 +412,7 @@ QStatus Timer::AddAlarm(const Alarm& alarm)
     return status;
 }
 
-QStatus Timer::AddAlarmNonBlocking(const Alarm& alarm)
+QStatus TimerImpl::AddAlarmNonBlocking(const Alarm& alarm)
 {
     QStatus status = ER_OK;
     lock.Lock();
@@ -293,7 +423,7 @@ QStatus Timer::AddAlarmNonBlocking(const Alarm& alarm)
             return ER_TIMER_FULL;
         }
 
-        /* Insert the alarm and alert the Timer thread if necessary */
+        /* Insert the alarm and alert the TimerImpl thread if necessary */
         bool alertThread = alarms.empty() || (alarm < *alarms.begin());
         alarms.insert(alarm);
 
@@ -311,7 +441,7 @@ QStatus Timer::AddAlarmNonBlocking(const Alarm& alarm)
     return status;
 }
 
-bool Timer::RemoveAlarm(const Alarm& alarm, bool blockIfTriggered)
+bool TimerImpl::RemoveAlarm(const Alarm& alarm, bool blockIfTriggered)
 {
     bool foundAlarm = false;
     lock.Lock();
@@ -359,7 +489,7 @@ bool Timer::RemoveAlarm(const Alarm& alarm, bool blockIfTriggered)
     return foundAlarm;
 }
 
-bool Timer::ForceRemoveAlarm(const Alarm& alarm, bool blockIfTriggered)
+bool TimerImpl::ForceRemoveAlarm(const Alarm& alarm, bool blockIfTriggered)
 {
     bool foundAlarm = false;
     lock.Lock();
@@ -408,7 +538,7 @@ bool Timer::ForceRemoveAlarm(const Alarm& alarm, bool blockIfTriggered)
     return foundAlarm;
 }
 
-QStatus Timer::ReplaceAlarm(const Alarm& origAlarm, const Alarm& newAlarm, bool blockIfTriggered)
+QStatus TimerImpl::ReplaceAlarm(const Alarm& origAlarm, const Alarm& newAlarm, bool blockIfTriggered)
 {
     QStatus status = ER_NO_SUCH_ALARM;
     lock.Lock();
@@ -443,7 +573,7 @@ QStatus Timer::ReplaceAlarm(const Alarm& origAlarm, const Alarm& newAlarm, bool 
     return status;
 }
 
-bool Timer::RemoveAlarm(const AlarmListener& listener, Alarm& alarm)
+bool TimerImpl::RemoveAlarm(const AlarmListener& listener, Alarm& alarm)
 {
     bool removedOne = false;
     lock.Lock();
@@ -483,14 +613,14 @@ bool Timer::RemoveAlarm(const AlarmListener& listener, Alarm& alarm)
     return removedOne;
 }
 
-void Timer::RemoveAlarmsWithListener(const AlarmListener& listener)
+void TimerImpl::RemoveAlarmsWithListener(const AlarmListener& listener)
 {
     Alarm a;
     while (RemoveAlarm(listener, a)) {
     }
 }
 
-bool Timer::HasAlarm(const Alarm& alarm)
+bool TimerImpl::HasAlarm(const Alarm& alarm) const
 {
     bool ret = false;
     lock.Lock();
@@ -499,6 +629,11 @@ bool Timer::HasAlarm(const Alarm& alarm)
     }
     lock.Unlock();
     return ret;
+}
+
+const qcc::String& TimerImpl::GetName() const
+{
+    return nameStr;
 }
 
 QStatus TimerThread::Start(void* arg, ThreadListener* listener)
@@ -513,11 +648,11 @@ QStatus TimerThread::Start(void* arg, ThreadListener* listener)
     return status;
 }
 
-void Timer::TimerCallback(void* context)
+void TimerImpl::TimerCallback(void* context)
 {
 }
 
-void Timer::TimerCleanupCallback(void* context)
+void TimerImpl::TimerCleanupCallback(void* context)
 {
 }
 
@@ -629,7 +764,7 @@ ThreadReturn STDCALL TimerThread::Run(void* arg)
                  * the constant FALLBEHIND_WARNING_MS.
                  */
                 if (delay < 0 && std::abs((long)delay) > FALLBEHIND_WARNING_MS) {
-                    QCC_DbgHLPrintf(("TimerThread::Run(): Timer \"%s\" alarm is late by %ld ms",
+                    QCC_DbgHLPrintf(("TimerThread::Run(): TimerImpl \"%s\" alarm is late by %ld ms",
                                      Thread::GetThreadName(), std::abs((long)delay)));
                 }
 
@@ -901,10 +1036,10 @@ ThreadReturn STDCALL TimerThread::Run(void* arg)
      */
     state = STOPPING;
     timer->lock.Unlock();
-    return (ThreadReturn) 0;
+    return (ThreadReturn)0;
 }
 
-void Timer::ThreadExit(Thread* thread)
+void TimerImpl::ThreadExit(Thread* thread)
 {
     TimerThread* tt = static_cast<TimerThread*>(thread);
     lock.Lock();
@@ -937,7 +1072,7 @@ void Timer::ThreadExit(Thread* thread)
     tt->Join();
 }
 
-void Timer::EnableReentrancy()
+void TimerImpl::EnableReentrancy()
 {
     Thread* thread = Thread::GetThread();
     lock.Lock();
@@ -956,11 +1091,11 @@ void Timer::EnableReentrancy()
             reentrancyLock.Unlock();
         }
     } else {
-        QCC_LogError(ER_TIMER_NOT_ALLOWED, ("Invalid call to Timer::EnableReentrancy from thread %s", Thread::GetThreadName()));
+        QCC_LogError(ER_TIMER_NOT_ALLOWED, ("Invalid call to TimerImpl::EnableReentrancy from thread %s", Thread::GetThreadName()));
     }
 }
 
-bool Timer::ThreadHoldsLock()
+bool TimerImpl::ThreadHoldsLock() const
 {
     Thread* thread = Thread::GetThread();
     lock.Lock();
@@ -980,7 +1115,79 @@ bool Timer::ThreadHoldsLock()
     return false;
 }
 
-OSTimer::OSTimer(qcc::Timer* timer) : _timer(timer)
+Timer::Timer(String name, bool expireOnExit, uint32_t concurrency, bool preventReentrancy, uint32_t maxAlarms) :
+    timerImpl(new TimerImpl(name, expireOnExit, concurrency, preventReentrancy, maxAlarms))
 {
+    /* Timer thread objects will be created when required */
+}
+
+Timer::~Timer()
+{
+    delete timerImpl;
+}
+
+QStatus Timer::Start()
+{
+    return timerImpl->Start();
+}
+
+QStatus Timer::Stop()
+{
+    return timerImpl->Stop();
+}
+
+QStatus Timer::Join()
+{
+    return timerImpl->Join();
+}
+
+QStatus Timer::AddAlarm(const Alarm& alarm)
+{
+    return timerImpl->AddAlarm(alarm);
+}
+
+QStatus Timer::AddAlarmNonBlocking(const Alarm& alarm)
+{
+    return timerImpl->AddAlarmNonBlocking(alarm);
+}
+
+bool Timer::RemoveAlarm(const Alarm& alarm, bool blockIfTriggered)
+{
+    return timerImpl->RemoveAlarm(alarm, blockIfTriggered);
+}
+
+void Timer::RemoveAlarmsWithListener(const AlarmListener& listener)
+{
+    timerImpl->RemoveAlarmsWithListener(listener);
+}
+
+bool Timer::ForceRemoveAlarm(const Alarm& alarm, bool blockIfTriggered)
+{
+    return timerImpl->ForceRemoveAlarm(alarm, blockIfTriggered);
+}
+
+QStatus Timer::ReplaceAlarm(const Alarm& origAlarm, const Alarm& newAlarm, bool blockIfTriggered)
+{
+    return timerImpl->ReplaceAlarm(origAlarm, newAlarm, blockIfTriggered);
+}
+
+bool Timer::HasAlarm(const Alarm& alarm) const
+{
+    return timerImpl->HasAlarm(alarm);
+}
+
+bool Timer::IsRunning() const
+{
+    return timerImpl->IsRunning();
+}
+
+void Timer::EnableReentrancy()
+{
+    timerImpl->EnableReentrancy();
+}
+
+bool Timer::IsHoldingReentrantLock() const
+{
+    return timerImpl->ThreadHoldsLock();
 }
 

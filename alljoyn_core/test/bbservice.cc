@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2015, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -57,7 +57,7 @@ namespace alljoyn_test {
 const char* InterfaceName = "org.alljoyn.alljoyn_test";
 const char* DefaultWellKnownName = "org.alljoyn.alljoyn_test";
 const char* ObjectPath = "/org/alljoyn/alljoyn_test";
-const SessionPort SessionPort = 24;    /**< Well-knwon session port value for bbclient/bbservice */
+const SessionPort SessionPort = 24;    /**< Well-known session port value for bbclient/bbservice */
 namespace values {
 const char* InterfaceName = "org.alljoyn.alljoyn_test.values";
 }

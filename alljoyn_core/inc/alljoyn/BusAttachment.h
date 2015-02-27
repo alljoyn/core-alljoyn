@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -471,6 +471,10 @@ class BusAttachment : public MessageReceiver {
     /**
      * Disconnect a remote bus address connection.
      *
+     * @deprecated When bundled router is enabled and in-use, the connectSpec
+     * will be ignored and the bundled router connectSpec will be used.  Use
+     * Disconnect() instead which will use correct connectSpec.
+     *
      * @param connectSpec  The transport connection spec used to connect.
      *
      * @return
@@ -479,7 +483,7 @@ class BusAttachment : public MessageReceiver {
      *          - #ER_BUS_NOT_CONNECTED if the %BusAttachment is not connected to the bus
      *          - Other error status codes indicating a failure
      */
-    QStatus Disconnect(const char* connectSpec);
+    QCC_DEPRECATED(QStatus Disconnect(const char* connectSpec));
 
     /**
      * %Disconnect the %BusAttachment from the remote bus.

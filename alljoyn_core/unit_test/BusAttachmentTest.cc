@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2012-2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -67,7 +67,7 @@ class BusAttachmentTest : public testing::Test {
 TEST_F(BusAttachmentTest, IsConnected)
 {
     EXPECT_TRUE(bus.IsConnected());
-    QStatus disconnectStatus = bus.Disconnect(getConnectArg().c_str());
+    QStatus disconnectStatus = bus.Disconnect();
     EXPECT_EQ(ER_OK, disconnectStatus);
     if (ER_OK == disconnectStatus) {
         EXPECT_FALSE(bus.IsConnected());

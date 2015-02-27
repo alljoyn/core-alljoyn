@@ -481,7 +481,7 @@
 			attributes = {
 				CLASSPREFIX = AJNC;
 				LastUpgradeCheck = 0430;
-				ORGANIZATIONNAME = "2012-2014 AllSeen Alliance.";
+				ORGANIZATIONNAME = "2012-2015 AllSeen Alliance.";
 			};
 			buildConfigurationList = AC67D652152CAFC4009DBFA9 /* Build configuration list for PBXProject "AllJoynChat" */;
 			compatibilityVersion = "Xcode 3.2";

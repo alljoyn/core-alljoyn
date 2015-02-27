@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2012, 2014-2015, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -639,13 +639,6 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
     void FoundNames(const qcc::String& busAddr, const qcc::String& guid, TransportMask transport, const std::vector<qcc::String>* names, uint32_t ttl);
 
     /**
-     * Called when a transport gets a surprise disconnect from a remote bus.
-     *
-     * @param busAddr       The address of the bus formatted as a string.
-     */
-    void BusConnectionLost(const qcc::String& busAddr);
-
-    /**
      * Get reference to the daemon router object
      */
     DaemonRouter& GetDaemonRouter() { return router; }
@@ -665,9 +658,6 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
     const InterfaceDescription::Member* mpSessionChangedSignal;  /**< org.alljoyn.Bus.MPSessionChanged signal */
     const InterfaceDescription::Member* mpSessionChangedWithReason;  /**< org.alljoyn.Bus.MPSessionChangedWithReason signal */
     const InterfaceDescription::Member* mpSessionJoinedSignal;  /**< org.alljoyn.Bus.JoinSession signal */
-
-    /** Map of open connectSpecs to local endpoint name(s) that require the connection. */
-    std::multimap<qcc::String, qcc::String> connectMap;
 
     /** Map of active advertised names to requesting local endpoint's permitted transport mask(s) and name(s) */
     std::multimap<qcc::String, std::pair<TransportMask, qcc::String> > advertiseMap;

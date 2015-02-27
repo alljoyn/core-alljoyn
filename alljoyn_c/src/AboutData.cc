@@ -4,7 +4,7 @@
  * Please help make it more robust by contributing fixes if you find problems.
  */
 /******************************************************************************
- * Copyright (c) 2014-2015, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -56,10 +56,10 @@ void AJ_CALL alljoyn_aboutdata_destroy(alljoyn_aboutdata data)
 }
 
 QStatus AJ_CALL alljoyn_aboutdata_createfromxml(alljoyn_aboutdata data,
-                                                const qcc::String& aboutDataXml)
+                                                const char* aboutDataXml)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
-    return ((ajn::AboutData*)data)->CreateFromXml((qcc::String const &)aboutDataXml);
+    return ((ajn::AboutData*)data)->CreateFromXml(aboutDataXml);
 }
 
 bool AJ_CALL alljoyn_aboutdata_isvalid(alljoyn_aboutdata data,

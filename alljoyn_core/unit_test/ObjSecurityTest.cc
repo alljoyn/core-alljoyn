@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -174,9 +174,9 @@ class ObjectSecurityTest : public testing::Test, public AuthListener {
 
         clientbus.ClearKeyStore();
         servicebus.ClearKeyStore();
-        status = clientbus.Disconnect(ajn::getConnectArg().c_str());
+        status = clientbus.Disconnect();
         EXPECT_EQ(ER_OK, status);
-        status = servicebus.Disconnect(ajn::getConnectArg().c_str());
+        status = servicebus.Disconnect();
         EXPECT_EQ(ER_OK, status);
         status = clientbus.Stop();
         EXPECT_EQ(ER_OK, status);
