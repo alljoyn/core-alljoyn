@@ -468,4 +468,9 @@ using namespace ajn;
     return self.proxyBusObject->SecureConnectionAsync(forceAuthentication);
 }
 
+- (void)enablePropertyCaching
+{
+    self.proxyBusObject->EnablePropertyCaching();
+}
+
 @end
