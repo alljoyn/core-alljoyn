@@ -792,6 +792,13 @@ extern AJ_API QCC_BOOL AJ_CALL alljoyn_proxybusobject_isvalid(alljoyn_proxybusob
  */
 extern AJ_API QCC_BOOL AJ_CALL alljoyn_proxybusobject_issecure(alljoyn_proxybusobject proxyObj);
 
+/**
+ * Enable property caching for this proxy bus object.
+ *
+ * @param proxyObj  The alljoyn_proxybusobject for which caching must be enabled
+ */
+extern AJ_API void AJ_CALL alljoyn_proxybusobject_enablepropertycaching(alljoyn_proxybusobject proxyObj);
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
