@@ -200,7 +200,7 @@ TEST(AllJoynObjTest, JoinSessionToUnadvertisedNameFails)
     ajObj.RunJoin();
 
     // Verify that join failed
-    EXPECT_NE(ALLJOYN_JOINSESSION_REPLY_SUCCESS, ajObj.replyCode);
+    EXPECT_NE(ALLJOYN_JOINSESSION_REPLY_SUCCESS, (int)ajObj.replyCode);
     EXPECT_EQ(TRANSPORT_NONE, ajObj.triedTransports);
     EXPECT_EQ(TRANSPORT_NONE, ajObj.connectedTransport);
 }
@@ -221,7 +221,7 @@ TEST(AllJoynObjTest, JoinSessionSkipsUnpermittedAvailableTransports)
     ajObj.RunJoin(opts);
 
     // Verify that join succeeded to TRANSPORT_TCP and that TRANSPORT_UDP was not tried
-    EXPECT_EQ(ALLJOYN_JOINSESSION_REPLY_SUCCESS, ajObj.replyCode);
+    EXPECT_EQ(ALLJOYN_JOINSESSION_REPLY_SUCCESS, (int)ajObj.replyCode);
     EXPECT_EQ(TRANSPORT_TCP, ajObj.triedTransports);
     EXPECT_EQ(TRANSPORT_TCP, ajObj.connectedTransport);
 }
@@ -240,7 +240,7 @@ TEST(AllJoynObjTest, JoinSessionTriesAllAvailableTransportsPass)
     ajObj.RunJoin();
 
     // Verify that join succeeded to second transport
-    EXPECT_EQ(ALLJOYN_JOINSESSION_REPLY_SUCCESS, ajObj.replyCode);
+    EXPECT_EQ(ALLJOYN_JOINSESSION_REPLY_SUCCESS, (int)ajObj.replyCode);
     EXPECT_EQ(TRANSPORT_UDP | TRANSPORT_TCP, ajObj.triedTransports);
     EXPECT_EQ(TRANSPORT_TCP, ajObj.connectedTransport);
 }
@@ -259,7 +259,7 @@ TEST(AllJoynObjTest, JoinSessionTriesAllAvailableTransportsFail)
     ajObj.RunJoin();
 
     // Verify that join failed to both transports
-    EXPECT_NE(ALLJOYN_JOINSESSION_REPLY_SUCCESS, ajObj.replyCode);
+    EXPECT_NE(ALLJOYN_JOINSESSION_REPLY_SUCCESS, (int)ajObj.replyCode);
     EXPECT_EQ(TRANSPORT_UDP | TRANSPORT_TCP, ajObj.triedTransports);
     EXPECT_EQ(TRANSPORT_NONE, ajObj.connectedTransport);
 }
@@ -296,7 +296,7 @@ TEST(AllJoynObjTest, JoinSessionTriesAllAvailableTransportsAfterAttachSessionFai
     ajObj.RunJoin();
 
     // Verify that join succeeded to second transport
-    EXPECT_EQ(ALLJOYN_JOINSESSION_REPLY_SUCCESS, ajObj.replyCode);
+    EXPECT_EQ(ALLJOYN_JOINSESSION_REPLY_SUCCESS, (int)ajObj.replyCode);
     EXPECT_EQ(TRANSPORT_UDP | TRANSPORT_TCP, ajObj.triedTransports);
     EXPECT_EQ(TRANSPORT_TCP, ajObj.connectedTransport);
 }
