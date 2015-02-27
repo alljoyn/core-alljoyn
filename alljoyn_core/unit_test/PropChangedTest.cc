@@ -330,6 +330,7 @@ class PropChangedTestBusObject :
     QStatus status;
     BusAttachment& bus;
     const vector<InterfaceParameters> intfParams;
+    map<String, int> propvalOffsets;
 
     PropChangedTestBusObject(BusAttachment& bus,
                              const vector<InterfaceParameters> ip,
@@ -341,6 +342,7 @@ class PropChangedTestBusObject :
         for (size_t i = 0; i < ip.size(); i++) {
             const InterfaceDescription* intf = SetupInterface(bus, ip[i]);
             status = AddInterface(*intf);
+            propvalOffsets[ip[i].name] = 0;
         }
         EXPECT_EQ(ER_OK, status);
         status = bus.RegisterBusObject(*this);
@@ -366,9 +368,21 @@ class PropChangedTestBusObject :
         EXPECT_NE(0, num); // property names range from P1 to P9 (max)
         EXPECT_TRUE(intfParams[i].rangeProp.IsIn(num));
         val.typeId = ALLJOYN_INT32;
-        val.v_int32 = num;
-        //QCC_SyncPrintf("PropChangedTestBusObject::Get(%s, %s) -> %d\n", ifcName, propName, num);
+        val.v_int32 = propvalOffsets[ifcName] + num;
+        //QCC_SyncPrintf("PropChangedTestBusObject::Get(%s, %s) -> %d\n", ifcName, propName, val.v_int32);
         return ER_OK;
+    }
+
+    void ChangePropertyValues(const InterfaceParameters& ip, int offset)
+    {
+        propvalOffsets[ip.name] = offset;
+    }
+
+    void ChangePropertyValues(const TestParameters& tp, int offset)
+    {
+        for (size_t intf = 0; intf < tp.intfParams.size(); intf++) {
+            ChangePropertyValues(tp.intfParams[intf], offset);
+        }
     }
 
     void EmitSignal(const TestParameters& tp,
@@ -600,6 +614,7 @@ class PropChangedTestProxyBusObject :
     QStatus status;
     BusAttachment& bus;
     vector<PropChangedTestListener*> listeners;
+    TestParameters tp;
 
     PropChangedTestProxyBusObject(ClientBusAttachment& clientBus,
                                   String serviceName,
@@ -607,7 +622,8 @@ class PropChangedTestProxyBusObject :
                                   const char* path = OBJECT_PATH) :
         ProxyBusObject(clientBus, serviceName.c_str(), path, clientBus.id),
         status(ER_OK),
-        bus(clientBus)
+        bus(clientBus),
+        tp(tp)
     {
         //QCC_SyncPrintf("PropChangedTestProxyBusObject::constructor for %s\n", path);
         status = AddProxyInterface(bus, *this, tp);
@@ -619,6 +635,29 @@ class PropChangedTestProxyBusObject :
                 PropChangedTestListener* listener = new PropChangedTestListener(*this);
                 String name = tp.intfParams[intf].name;
                 //QCC_SyncPrintf("Register listener %d for %s\n", num, name.c_str());
+                RegisterListener(listener, name, tp.rangePropListen[num]);
+                listeners.push_back(listener);
+            }
+        }
+    }
+
+    PropChangedTestProxyBusObject(const PropChangedTestProxyBusObject& other) :
+        ProxyBusObject(other),
+        status(ER_OK),
+        bus(other.bus),
+        tp(other.tp)
+    {
+        if (&other == this) {
+            return;
+        }
+
+        // loop listeners
+        for (size_t num = 0; num < tp.rangePropListen.size(); num++) {
+            // loop interfaces
+            for (size_t intf = 0; intf < tp.intfParams.size(); intf++) {
+                PropChangedTestListener* listener = new PropChangedTestListener(*this);
+                String name = tp.intfParams[intf].name;
+                //QCC_SyncPrintf("copy: Register listener %d for %s\n", num, name.c_str());
                 RegisterListener(listener, name, tp.rangePropListen[num]);
                 listeners.push_back(listener);
             }
@@ -1425,4 +1464,240 @@ TEST_F(PropChangedTest, ListenerNotCalled_PartialProxy)
     obj->EmitSignal(tpService, tpService.intfParams[1]);
     // expect time-out
     EXPECT_EQ(ER_TIMEOUT, proxy->signalSema.TimedWait(TIMEOUT_EXPECTED));
+}
+
+/*
+ * Copy proxy bus object, check if PropertiesChanged listeners function as expected
+ * disabled because of ASACORE-1522
+ */
+TEST_F(PropChangedTest, DISABLED_Copy)
+{
+    TestParameters tpClient(true, P1, P1, PCM_INTROSPECT);
+    tpClient.AddInterfaceParameters(InterfaceParameters(P1, "true", false, INTERFACE_NAME "1"));
+    TestParameters tpService = tpClient;
+
+    SetupPropChanged(tpService, tpClient);
+
+    PropChangedTestProxyBusObject* copy = new PropChangedTestProxyBusObject(*proxy);
+
+    obj->EmitSignals(tpService);
+    EXPECT_EQ(ER_OK, proxy->signalSema.TimedWait(TIMEOUT));
+    EXPECT_EQ(ER_OK, copy->signalSema.TimedWait(TIMEOUT));
+    copy->Clear();
+
+    delete proxy;
+    proxy = NULL;
+
+    obj->EmitSignals(tpService);
+    EXPECT_EQ(ER_OK, copy->signalSema.TimedWait(TIMEOUT));
+
+    delete copy;
+}
+
+
+/*
+ * Property cache tests.
+ * These are added here because they rely on the PropertiesChanged mechanism to maintain the cache.
+ */
+
+/*
+ * Basic property update scenario, with EmitsChanged="true"
+ */
+TEST_F(PropChangedTest, PropertyCache_updating)
+{
+    TestParameters tpClient(true, P1, P1, PCM_INTROSPECT);
+    tpClient.AddInterfaceParameters(InterfaceParameters(P1, "true", false, INTERFACE_NAME "1"));
+    TestParameters tpService = tpClient;
+
+    SetupPropChanged(tpService, tpClient);
+    proxy->EnablePropertyCaching();
+
+    MsgArg value;
+    int32_t intval = 0;
+
+    /* initial value is 1 */
+    EXPECT_EQ(ER_OK, proxy->GetProperty(INTERFACE_NAME "1", "P1", value));
+    EXPECT_EQ(ER_OK, value.Get("i", &intval));
+    EXPECT_EQ(1, intval);
+
+    /* change the value in the object */
+    obj->ChangePropertyValues(tpService, 100);
+    /* don't send update signal yet, we expect to see the old value because the
+     * client does not know the value has changed */
+    EXPECT_EQ(ER_OK, proxy->GetProperty(INTERFACE_NAME "1", "P1", value));
+    EXPECT_EQ(ER_OK, value.Get("i", &intval));
+    EXPECT_EQ(1, intval);
+    /* send update signal, see if the cache got updated */
+    obj->EmitSignals(tpService);
+    EXPECT_EQ(ER_OK, proxy->signalSema.TimedWait(TIMEOUT));
+    EXPECT_EQ(ER_OK, proxy->GetProperty(INTERFACE_NAME "1", "P1", value));
+    EXPECT_EQ(ER_OK, value.Get("i", &intval));
+    EXPECT_EQ(101, intval);
+}
+
+/*
+ * Basic property update scenario, with EmitsChanged="invalidates"
+ */
+TEST_F(PropChangedTest, PropertyCache_invalidating)
+{
+    TestParameters tpClient(true, P1, P1, PCM_INTROSPECT);
+    tpClient.AddInterfaceParameters(InterfaceParameters(P1, "invalidates", false, INTERFACE_NAME "1"));
+    TestParameters tpService = tpClient;
+
+    SetupPropChanged(tpService, tpClient);
+    proxy->EnablePropertyCaching();
+
+    MsgArg value;
+    int32_t intval = 0;
+
+    /* initial value is 1 */
+    EXPECT_EQ(ER_OK, proxy->GetProperty(INTERFACE_NAME "1", "P1", value));
+    EXPECT_EQ(ER_OK, value.Get("i", &intval));
+    EXPECT_EQ(1, intval);
+
+    /* change the value in the object */
+    obj->ChangePropertyValues(tpService, 100);
+    /* don't send update signal yet, we expect to see the old value because the
+     * client does not know the value has changed */
+    EXPECT_EQ(ER_OK, proxy->GetProperty(INTERFACE_NAME "1", "P1", value));
+    EXPECT_EQ(ER_OK, value.Get("i", &intval));
+    EXPECT_EQ(1, intval);
+    /* send update signal, see if the cache got updated */
+    obj->EmitSignals(tpService);
+    EXPECT_EQ(ER_OK, proxy->signalSema.TimedWait(TIMEOUT));
+    EXPECT_EQ(ER_OK, proxy->GetProperty(INTERFACE_NAME "1", "P1", value));
+    EXPECT_EQ(ER_OK, value.Get("i", &intval));
+    EXPECT_EQ(101, intval);
+}
+
+/*
+ * Basic property update scenario, with EmitsChanged="false"
+ */
+TEST_F(PropChangedTest, PropertyCache_notupdating)
+{
+    TestParameters tpClient(true, P1, P1, PCM_INTROSPECT);
+    tpClient.AddInterfaceParameters(InterfaceParameters(P1, "false", false, INTERFACE_NAME "1"));
+    TestParameters tpService = tpClient;
+
+    SetupPropChanged(tpService, tpClient);
+    proxy->EnablePropertyCaching();
+
+    MsgArg value;
+    int32_t intval = 0;
+
+    /* initial value is 1 */
+    EXPECT_EQ(ER_OK, proxy->GetProperty(INTERFACE_NAME "1", "P1", value));
+    EXPECT_EQ(ER_OK, value.Get("i", &intval));
+    EXPECT_EQ(1, intval);
+
+    /* change the value in the object */
+    obj->ChangePropertyValues(tpService, 100);
+    /* P1 is not cacheable, so we expect to see the updated value immediately */
+    EXPECT_EQ(ER_OK, proxy->GetProperty(INTERFACE_NAME "1", "P1", value));
+    EXPECT_EQ(ER_OK, value.Get("i", &intval));
+    EXPECT_EQ(101, intval);
+    /* send update signal, should not arrive */
+    obj->EmitSignals(tpService);
+    EXPECT_EQ(ER_TIMEOUT, proxy->signalSema.TimedWait(TIMEOUT_EXPECTED));
+    EXPECT_EQ(ER_OK, proxy->GetProperty(INTERFACE_NAME "1", "P1", value));
+    EXPECT_EQ(ER_OK, value.Get("i", &intval));
+    EXPECT_EQ(101, intval);
+}
+
+/*
+ * Cache should be copied along with the proxy bus object
+ * Disabled because of ASACORE-1522
+ */
+TEST_F(PropChangedTest, DISABLED_PropertyCache_copy)
+{
+    TestParameters tpClient(true, P1, P1, PCM_INTROSPECT);
+    tpClient.AddInterfaceParameters(InterfaceParameters(P1, "true", false, INTERFACE_NAME "1"));
+    TestParameters tpService = tpClient;
+
+    SetupPropChanged(tpService, tpClient);
+    proxy->EnablePropertyCaching();
+
+    MsgArg value;
+    int32_t intval = 0;
+
+    /* initial value is 1 */
+    EXPECT_EQ(ER_OK, proxy->GetProperty(INTERFACE_NAME "1", "P1", value));
+    EXPECT_EQ(ER_OK, value.Get("i", &intval));
+    EXPECT_EQ(1, intval);
+
+    /* OK, cache is primed. Let's copy and check if the cached value is still
+     * there. The easiest way to check if the cache is there is to update the
+     * source object but not let it emit an update signal yet. If the copy has
+     * a cache, it will report the old value. If not, it will fetch and report
+     * the new value. */
+    ProxyBusObject copy = *proxy;
+    obj->ChangePropertyValues(tpService, 200);
+    EXPECT_EQ(ER_OK, copy.GetProperty(INTERFACE_NAME "1", "P1", value));
+    EXPECT_EQ(ER_OK, value.Get("i", &intval));
+    EXPECT_EQ(1, intval);
+
+    /* emit the signal and verify that both proxies have their caches updated */
+    obj->EmitSignals(tpService);
+    EXPECT_EQ(ER_OK, proxy->signalSema.TimedWait(TIMEOUT));
+    qcc::Sleep(50); //wait a while longer to make sure copy got its update too
+    EXPECT_EQ(ER_OK, proxy->GetProperty(INTERFACE_NAME "1", "P1", value));
+    EXPECT_EQ(ER_OK, value.Get("i", &intval));
+    EXPECT_EQ(201, intval);
+    EXPECT_EQ(ER_OK, copy.GetProperty(INTERFACE_NAME "1", "P1", value));
+    EXPECT_EQ(ER_OK, value.Get("i", &intval));
+    EXPECT_EQ(201, intval);
+
+    /* now delete proxy and try again */
+    delete proxy;
+    proxy = NULL;
+
+    /* is the cache still there? */
+    obj->ChangePropertyValues(tpService, 300);
+    EXPECT_EQ(ER_OK, copy.GetProperty(INTERFACE_NAME "1", "P1", value));
+    EXPECT_EQ(ER_OK, value.Get("i", &intval));
+    EXPECT_EQ(201, intval);
+    /* do we still respond to updates? */
+    obj->EmitSignals(tpService);
+    qcc::Sleep(400); //wait a while to make sure copy got its update
+    EXPECT_EQ(ER_OK, copy.GetProperty(INTERFACE_NAME "1", "P1", value));
+    EXPECT_EQ(ER_OK, value.Get("i", &intval));
+    EXPECT_EQ(301, intval);
+}
+
+/*
+ * Caching feature should still work properly, even if the application does not
+ * register a PropertiesChangedListener.
+ */
+TEST_F(PropChangedTest, PropertyCache_nolistener)
+{
+    TestParameters tpClient(true, Pnone, PCM_PROGRAMMATIC);
+    tpClient.AddInterfaceParameters(InterfaceParameters(P1, "true", false, INTERFACE_NAME "1"));
+    TestParameters tpService(true, P1, P1, PCM_PROGRAMMATIC);
+    tpService.AddInterfaceParameters(InterfaceParameters(P1, "true", false, INTERFACE_NAME "1"));
+
+    SetupPropChanged(tpService, tpClient);
+    proxy->EnablePropertyCaching();
+
+    MsgArg value;
+    int32_t intval = 0;
+
+    /* initial value is 1 */
+    EXPECT_EQ(ER_OK, proxy->GetProperty(INTERFACE_NAME "1", "P1", value));
+    EXPECT_EQ(ER_OK, value.Get("i", &intval));
+    EXPECT_EQ(1, intval);
+
+    /* change the value in the object */
+    obj->ChangePropertyValues(tpService, 100);
+    /* don't send update signal yet, we expect to see the old value because the
+     * client does not know the value has changed */
+    EXPECT_EQ(ER_OK, proxy->GetProperty(INTERFACE_NAME "1", "P1", value));
+    EXPECT_EQ(ER_OK, value.Get("i", &intval));
+    EXPECT_EQ(1, intval);
+    /* send update signal, see if the cache got updated */
+    obj->EmitSignals(tpService);
+    qcc::Sleep(400); /* we deliberately did not install a signal handler, so we
+                        have little choice but to wait a fixed time here */
+    EXPECT_EQ(ER_OK, proxy->GetProperty(INTERFACE_NAME "1", "P1", value));
+    EXPECT_EQ(ER_OK, value.Get("i", &intval));
+    EXPECT_EQ(101, intval);
 }
