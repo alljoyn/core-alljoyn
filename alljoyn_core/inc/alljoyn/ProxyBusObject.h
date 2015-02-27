@@ -895,6 +895,11 @@ class ProxyBusObject : public MessageReceiver {
      */
     bool IsSecure() const { return isSecure; }
 
+    /**
+     * Enable property caching for this proxy bus object.
+     */
+    void EnablePropertyCaching() const;
+
   private:
 
     /**
@@ -1010,6 +1015,7 @@ class ProxyBusObject : public MessageReceiver {
     mutable qcc::Mutex* lock;   /**< Lock that protects access to components member */
     bool isExiting;             /**< true iff ProxyBusObject is in the process of begin destroyed */
     bool isSecure;              /**< Indicates if this object is secure or not */
+    mutable bool cacheProperties; /**< true if cacheable properties are cached */
 };
 
 /**
