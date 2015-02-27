@@ -895,6 +895,11 @@ class ProxyBusObject : public MessageReceiver {
      */
     bool IsSecure() const { return isSecure; }
 
+    /**
+     * Enable property caching for this proxy bus object.
+     */
+    void EnablePropertyCaching();
+
   private:
 
     /**
@@ -993,6 +998,28 @@ class ProxyBusObject : public MessageReceiver {
      */
     static QStatus ParseInterface(const IntrospectionXml& ifc);
 
+    /**
+     * @internal
+     * Add PropertiesChanged match rule for an interface
+     *
+     * @param intf the interface name
+     */
+    void AddPropertiesChangedRule(const qcc::String& intf);
+
+    /**
+     * @internal
+     * Remove PropertiesChanged match rule for an interface
+     *
+     * @param intf the interface name
+     */
+    void RemovePropertiesChangedRule(const qcc::String& intf);
+
+    /**
+     * @internal
+     * Remove all PropertiesChanged match rules for this proxy
+     */
+    void RemoveAllPropertiesChangedRules();
+
     /** Bus associated with object */
     BusAttachment* bus;
 
@@ -1010,6 +1037,8 @@ class ProxyBusObject : public MessageReceiver {
     mutable qcc::Mutex* lock;   /**< Lock that protects access to components member */
     bool isExiting;             /**< true iff ProxyBusObject is in the process of begin destroyed */
     bool isSecure;              /**< Indicates if this object is secure or not */
+    bool cacheProperties;       /**< true if cacheable properties are cached */
+    bool registeredPropChangedHandler; /**< true if our PropertiesChangedHandler is registered */
 };
 
 /**
