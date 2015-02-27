@@ -48,9 +48,9 @@ namespace ajn {
 /**< Reserved TTL value to indicate that data  associated with the message never expires */
 #define ARDP_TTL_INFINITE   0
 
-/**< Flag indicating that the buffer is occupied */
+/**< Flag indicating that the RCV buffer is occupied */
 #define ARDP_BUFFER_IN_USE 0x01
-/**< Flag indicating that the buffer is delivered to the upper layer */
+/**< Flag indicating that the RCV buffer is delivered to the upper layer */
 #define ARDP_BUFFER_DELIVERED 0x02
 
 /* Minimum Roundtrip Time */
@@ -136,7 +136,7 @@ typedef struct {
     uint32_t NXT;         /* The sequence number of the next segment that is to be sent (or buffered for sending) */
     uint32_t UNA;         /* The sequence number of the oldest unacknowledged segment */
     uint32_t ISS;         /* The initial send sequence number. The number that was sent in the SYN segment */
-    uint32_t LCS;         /* Sequence number of last consumed segment (we get this form them) */
+    uint32_t LCS;         /* Sequence number of last consumed segment (we get this from them) */
     uint32_t DACKT;       /* Delayed ACK timeout from the other side */
     ArdpSndBuf* buf;      /* Dynamically allocated array of unacked sent buffers */
 #if ARDP_TC_SUPPORT
@@ -1250,7 +1250,12 @@ static void RetransmitTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, voi
 #if ARDP_TC_SUPPORT
             if (conn->modeSimple) {
                 QCC_DbgPrintf(("RetransmitTimerHandler(): thinWindow %u, thinNXT %u", conn->snd.thinWindow, conn->snd.thinNXT));
-                if (conn->snd.thinWindow != 0) {
+                /*
+                 * If this is a Simple Mode connection and this segment has never been sent,
+                 * update our "thin" accounting.
+                 */
+                if (SEQ32_LET(conn->snd.thinNXT, ntohl(((ArdpHeader*)sBuf->hdr)->seq))) {
+                    assert(conn->snd.thinWindow != 0);
                     conn->snd.thinWindow--;
                     conn->snd.thinNXT++;
                 }
@@ -1795,7 +1800,7 @@ static QStatus SendData(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, 
 #endif
 
         /*
-         * We change update our accounting only if the message has been sent successfully
+         * We update our accounting only if the message has been sent successfully
          * or has been put on the retransmit queue.
          */
         if (status == ER_OK) {
