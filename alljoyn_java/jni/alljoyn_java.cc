@@ -11784,6 +11784,23 @@ JNIEXPORT jboolean JNICALL Java_org_alljoyn_bus_ProxyBusObject_isProxyBusObjectS
     return proxyBusObj->IsSecure();
 }
 
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_ProxyBusObject_enablePropertyCaching(JNIEnv* env, jobject thiz)
+{
+    QCC_DbgPrintf(("ProxyBusObject_enablePropertyCaching()"));
+    JProxyBusObject* proxyBusObj = GetHandle<JProxyBusObject*>(thiz);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("ProxyBusObject_enablePropertyCaching(): Exception"));
+        return;
+    }
+
+    if (proxyBusObj == NULL) {
+        QCC_LogError(ER_FAIL, ("ProxyBusObject_enablePropertyCaching(): NULL bus pointer"));
+        env->ThrowNew(CLS_BusException, QCC_StatusText(ER_FAIL));
+        return;
+    }
+    proxyBusObj->EnablePropertyCaching();
+}
+
 JNIEXPORT void JNICALL Java_org_alljoyn_bus_SignalEmitter_signal(JNIEnv* env, jobject thiz, jobject jbusObject, jstring jdestination,
                                                                  jint sessionId, jstring jifaceName, jstring jsignalName,
                                                                  jstring jinputSig, jobjectArray jargs, jint timeToLive, jint flags,
