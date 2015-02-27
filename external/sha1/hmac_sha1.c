@@ -56,8 +56,8 @@
 #ifndef __HMAC_SHA1_H__
 #define __HMAC_SHA1_H__
 
-#include "hmac_sha1.h"
 #include <string.h>
+#include "hmac_sha1.h"
 
 #ifdef  __cplusplus
 extern "C" {
@@ -181,7 +181,7 @@ void HMAC_SHA1_EndMessage(unsigned char *out, HMAC_SHA1_CTX *ctx) {
 void HMAC_SHA1_Done(HMAC_SHA1_CTX *ctx) {
 	/* Just to be safe, toast all context data */
 	memset(&(ctx->ipad[0]), ZERO_BYTE, HMAC_SHA1_BLOCK_LENGTH);
-	memset(&(ctx->ipad[0]), ZERO_BYTE, HMAC_SHA1_BLOCK_LENGTH);
+	memset(&(ctx->opad[0]), ZERO_BYTE, HMAC_SHA1_BLOCK_LENGTH);
 	memset(&(ctx->key[0]), ZERO_BYTE, HMAC_SHA1_BLOCK_LENGTH);
 	ctx->keylen = 0;
 	ctx->hashkey = 0;

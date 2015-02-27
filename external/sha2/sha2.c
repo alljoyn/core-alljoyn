@@ -49,7 +49,12 @@
 
 #include <string.h>	/* memcpy()/memset() or bcopy()/bzero() */
 #include <assert.h>	/* assert() */
+#include <qcc/platform.h>
 #include "sha2.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * ASSERT NOTE:
@@ -100,6 +105,7 @@
  * <machine/endian.h> where the appropriate definitions are actually
  * made).
  */
+#define BYTE_ORDER __BYTE_ORDER
 #if !defined(BYTE_ORDER) || (BYTE_ORDER != LITTLE_ENDIAN && BYTE_ORDER != BIG_ENDIAN)
 #define LITTLE_ENDIAN 1234
 #define BIG_ENDIAN    4321
@@ -1096,3 +1102,6 @@ char* SHA384_Data(const sha2_byte* data, size_t len, char digest[SHA384_DIGEST_S
 	return SHA384_End(&context, digest);
 }
 
+#ifdef	__cplusplus
+}
+#endif

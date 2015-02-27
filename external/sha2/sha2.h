@@ -35,10 +35,9 @@
 #ifndef __SHA2_H__
 #define __SHA2_H__
 
-#define SHA2_USE_INTTYPES_H
-#include "aj_target.h"
-
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*** SHA-256/384/512 Various Length Definitions ***********************/
 #define SHA256_BLOCK_LENGTH		64
@@ -78,6 +77,7 @@ typedef unsigned long long u_int64_t;	/* 8-bytes (64-bits) */
  *
  *   cc -DSHA2_USE_INTTYPES_H ...
  */
+#define SHA2_USE_INTTYPES_H
 #ifdef SHA2_USE_INTTYPES_H
 
 typedef struct _SHA256_CTX {
@@ -174,6 +174,10 @@ char* SHA512_End();
 char* SHA512_Data();
 
 #endif /* NOPROTO */
+
+#ifdef	__cplusplus
+}
+#endif
 
 #endif /* __SHA2_H__ */
 
