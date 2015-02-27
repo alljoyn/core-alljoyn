@@ -192,6 +192,7 @@ class InterfaceDescription {
         uint8_t access;                 /**< Access is #PROP_ACCESS_READ, #PROP_ACCESS_WRITE, or #PROP_ACCESS_RW */
         AnnotationsMap* annotations;    /**< Map of annotations */
         qcc::String description;        /**< Introspection description for this property */
+        bool cacheable;                 /**< Is this property cacheable? */
 
         /** %Property constructor.
          * @param name      The name of the property.
@@ -455,6 +456,13 @@ class InterfaceDescription {
      * @return  true if interface has any properties.
      */
     bool HasProperties() const { return GetProperties() != 0; }
+
+    /**
+     * Check for the existence of any cacheable properties.
+     *
+     * @return  true if the interface has any cacheable properties.
+     */
+    bool HasCacheableProperties() const;
 
     /**
      * Returns the name of the interface
