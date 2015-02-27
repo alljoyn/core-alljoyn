@@ -386,6 +386,15 @@ class _LocalEndpoint : public _BusEndpoint, public qcc::AlarmListener, public Me
      */
     bool IsReentrantCall();
 
+    /**
+     * Schedule a GetPropertyAsync reply for a cached property.
+     */
+    void ScheduleCachedGetPropertyReply(ProxyBusObject* proxy,
+                                        ProxyBusObject::Listener* listener,
+                                        ProxyBusObject::Listener::GetPropertyCB callback,
+                                        void* context,
+                                        const MsgArg& value);
+
   private:
 
     /**
@@ -400,6 +409,12 @@ class _LocalEndpoint : public _BusEndpoint, public qcc::AlarmListener, public Me
      */
     class DeferredCallbacks;
     DeferredCallbacks* deferredCallbacks;
+
+    /**
+     * Perform a GetPropertyAsync reply callback for a cached property.
+     */
+    class CachedPropertyCallbacks;
+    CachedPropertyCallbacks* cachedPropertyCallbacks;
 
     /**
      * PushMessage worker.

@@ -96,10 +96,32 @@ struct _PropertiesChangedCB {
 
 typedef ManagedObj<_PropertiesChangedCB> PropertiesChangedCB;
 
+class CachedProps {
+    qcc::Mutex lock;
+    typedef std::map<qcc::StringMapKey, MsgArg> ValueMap;
+    ValueMap values;
+    const InterfaceDescription* description;
+
+    bool IsCacheable(const char* propname);
+
+  public:
+    CachedProps() : description(NULL) { }
+    CachedProps(const InterfaceDescription*intf) : description(intf) { }
+    ~CachedProps() { }
+
+    bool Get(const char* propname, MsgArg& val);
+    void Set(const char* propname, const MsgArg& val);
+    void SetAll(const MsgArg& allValues);
+    void PropertiesChanged(MsgArg* changed, size_t numChanged, MsgArg* invalidated, size_t numInvalidated);
+};
+
 struct ProxyBusObject::Components {
 
     /** The interfaces this object implements */
     map<qcc::StringMapKey, const InterfaceDescription*> ifaces;
+
+    /** The property caches for the various interfaces */
+    map<qcc::StringMapKey, CachedProps> caches;
 
     /** Names of child objects of this object */
     vector<_ProxyBusObject> children;
@@ -146,6 +168,15 @@ QStatus ProxyBusObject::GetAllProperties(const char* iface, MsgArg& value, uint3
             status = MethodCall(*getAllProperties, &arg, 1, reply, timeout, flags);
             if (ER_OK == status) {
                 value = *(reply->GetArg(0));
+                /* use the retrieved property values to update the cache, if applicable */
+                lock->Lock(MUTEX_CONTEXT);
+                if (cacheProperties) {
+                    map<qcc::StringMapKey, CachedProps>::iterator it = components->caches.find(iface);
+                    if (it != components->caches.end()) {
+                        it->second.SetAll(value);
+                    }
+                }
+                lock->Unlock(MUTEX_CONTEXT);
             }
         }
     }
@@ -155,9 +186,22 @@ QStatus ProxyBusObject::GetAllProperties(const char* iface, MsgArg& value, uint3
 void ProxyBusObject::GetAllPropsMethodCB(Message& message, void* context)
 {
     CBContext<Listener::GetAllPropertiesCB>* ctx = reinterpret_cast<CBContext<Listener::GetAllPropertiesCB>*>(context);
+    std::pair<void*, qcc::String>* wrappedContext = reinterpret_cast<std::pair<void*, qcc::String>*>(ctx->context);
+    void* unwrappedContext = wrappedContext->first;
+    const char* iface = wrappedContext->second.c_str();
 
     if (message->GetType() == MESSAGE_METHOD_RET) {
-        (ctx->listener->*ctx->callback)(ER_OK, ctx->obj, *message->GetArg(0), ctx->context);
+        /* use the retrieved property values to update the cache, if applicable */
+        lock->Lock(MUTEX_CONTEXT);
+        if (cacheProperties) {
+            map<qcc::StringMapKey, CachedProps>::iterator it = components->caches.find(iface);
+            if (it != components->caches.end()) {
+                it->second.SetAll(*message->GetArg(0));
+            }
+        }
+        lock->Unlock(MUTEX_CONTEXT);
+        /* alert the application */
+        (ctx->listener->*ctx->callback)(ER_OK, ctx->obj, *message->GetArg(0), unwrappedContext);
     } else {
         const MsgArg noVal;
         QStatus status = ER_BUS_NO_SUCH_PROPERTY;
@@ -169,8 +213,9 @@ void ProxyBusObject::GetAllPropsMethodCB(Message& message, void* context)
                 QCC_DbgPrintf(("Asynch GetAllProperties call returned %s", err));
             }
         }
-        (ctx->listener->*ctx->callback)(status, ctx->obj, noVal, ctx->context);
+        (ctx->listener->*ctx->callback)(status, ctx->obj, noVal, unwrappedContext);
     }
+    delete wrappedContext;
     delete ctx;
 }
 
@@ -197,7 +242,8 @@ QStatus ProxyBusObject::GetAllPropertiesAsync(const char* iface,
         if (propIface == NULL) {
             status = ER_BUS_NO_SUCH_INTERFACE;
         } else {
-            CBContext<Listener::GetAllPropertiesCB>* ctx = new CBContext<Listener::GetAllPropertiesCB>(this, listener, callback, context);
+            std::pair<void*, qcc::String>* wrappedContext = new std::pair<void*, qcc::String>(context, iface);
+            CBContext<Listener::GetAllPropertiesCB>* ctx = new CBContext<Listener::GetAllPropertiesCB>(this, listener, callback, wrappedContext);
             const InterfaceDescription::Member* getAllProperties = propIface->GetMember("GetAll");
             assert(getAllProperties);
             status = MethodCallAsync(*getAllProperties,
@@ -209,6 +255,7 @@ QStatus ProxyBusObject::GetAllPropertiesAsync(const char* iface,
                                      timeout,
                                      flags);
             if (status != ER_OK) {
+                delete wrappedContext;
                 delete ctx;
             }
         }
@@ -223,6 +270,22 @@ QStatus ProxyBusObject::GetProperty(const char* iface, const char* property, Msg
     if (!valueIface) {
         status = ER_BUS_OBJECT_NO_SUCH_INTERFACE;
     } else {
+        /* if the property is cached, we can reply immediately */
+        bool cached = false;
+        lock->Lock(MUTEX_CONTEXT);
+        if (cacheProperties) {
+            map<qcc::StringMapKey, CachedProps>::iterator it = components->caches.find(iface);
+            if (it != components->caches.end()) {
+                cached = it->second.Get(property, value);
+            }
+        }
+        lock->Unlock(MUTEX_CONTEXT);
+        if (cached) {
+            QCC_DbgPrintf(("GetProperty(%s, %s) -> cache hit", iface, property));
+            return ER_OK;
+        }
+
+        QCC_DbgPrintf(("GetProperty(%s, %s) -> perform method call", iface, property));
         uint8_t flags = 0;
         /*
          * If the object or the property interface is secure method call must be encrypted.
@@ -243,6 +306,15 @@ QStatus ProxyBusObject::GetProperty(const char* iface, const char* property, Msg
             status = MethodCall(*getProperty, inArgs, numArgs, reply, timeout, flags);
             if (ER_OK == status) {
                 value = *(reply->GetArg(0));
+                /* use the retrieved property value to update the cache, if applicable */
+                lock->Lock(MUTEX_CONTEXT);
+                if (cacheProperties) {
+                    map<qcc::StringMapKey, CachedProps>::iterator it = components->caches.find(iface);
+                    if (it != components->caches.end()) {
+                        it->second.Set(property, value);
+                    }
+                }
+                lock->Unlock(MUTEX_CONTEXT);
             }
         }
     }
@@ -252,9 +324,23 @@ QStatus ProxyBusObject::GetProperty(const char* iface, const char* property, Msg
 void ProxyBusObject::GetPropMethodCB(Message& message, void* context)
 {
     CBContext<Listener::GetPropertyCB>* ctx = reinterpret_cast<CBContext<Listener::GetPropertyCB>*>(context);
+    std::pair<void*, std::pair<qcc::String, qcc::String> >* wrappedContext = reinterpret_cast<std::pair<void*, std::pair<qcc::String, qcc::String> >*>(ctx->context);
+    void* unwrappedContext = wrappedContext->first;
+    const char* iface = wrappedContext->second.first.c_str();
+    const char* property = wrappedContext->second.second.c_str();
 
     if (message->GetType() == MESSAGE_METHOD_RET) {
-        (ctx->listener->*ctx->callback)(ER_OK, ctx->obj, *message->GetArg(0), ctx->context);
+        /* use the retrieved property value to update the cache, if applicable */
+        lock->Lock(MUTEX_CONTEXT);
+        if (cacheProperties) {
+            map<qcc::StringMapKey, CachedProps>::iterator it = components->caches.find(iface);
+            if (it != components->caches.end()) {
+                it->second.Set(property, *message->GetArg(0));
+            }
+        }
+        lock->Unlock(MUTEX_CONTEXT);
+        /* let the application know we've got a result */
+        (ctx->listener->*ctx->callback)(ER_OK, ctx->obj, *message->GetArg(0), unwrappedContext);
     } else {
         const MsgArg noVal;
         QStatus status = ER_BUS_NO_SUCH_PROPERTY;
@@ -266,9 +352,10 @@ void ProxyBusObject::GetPropMethodCB(Message& message, void* context)
                 QCC_DbgPrintf(("Asynch GetProperty call returned %s", err));
             }
         }
-        (ctx->listener->*ctx->callback)(status, ctx->obj, noVal, ctx->context);
+        (ctx->listener->*ctx->callback)(status, ctx->obj, noVal, unwrappedContext);
     }
     delete ctx;
+    delete wrappedContext;
 }
 
 QStatus ProxyBusObject::GetPropertyAsync(const char* iface,
@@ -283,6 +370,24 @@ QStatus ProxyBusObject::GetPropertyAsync(const char* iface,
     if (!valueIface) {
         status = ER_BUS_OBJECT_NO_SUCH_INTERFACE;
     } else {
+        /* if the property is cached, we can reply immediately */
+        bool cached = false;
+        MsgArg value;
+        lock->Lock(MUTEX_CONTEXT);
+        if (cacheProperties) {
+            map<qcc::StringMapKey, CachedProps>::iterator it = components->caches.find(iface);
+            if (it != components->caches.end()) {
+                cached = it->second.Get(property, value);
+            }
+        }
+        lock->Unlock(MUTEX_CONTEXT);
+        if (cached) {
+            QCC_DbgPrintf(("GetPropertyAsync(%s, %s) -> cache hit", iface, property));
+            bus->GetInternal().GetLocalEndpoint()->ScheduleCachedGetPropertyReply(this, listener, callback, context, value);
+            return ER_OK;
+        }
+
+        QCC_DbgPrintf(("GetProperty(%s, %s) -> perform method call", iface, property));
         uint8_t flags = 0;
         if (SecurityApplies(this, valueIface)) {
             flags |= ALLJOYN_FLAG_ENCRYPTED;
@@ -294,7 +399,9 @@ QStatus ProxyBusObject::GetPropertyAsync(const char* iface,
         if (propIface == NULL) {
             status = ER_BUS_NO_SUCH_INTERFACE;
         } else {
-            CBContext<Listener::GetPropertyCB>* ctx = new CBContext<Listener::GetPropertyCB>(this, listener, callback, context);
+            /* we need to keep track of interface and property name to cache the GetProperty reply */
+            std::pair<void*, std::pair<qcc::String, qcc::String> >* wrappedContext = new std::pair<void*, std::pair<qcc::String, qcc::String> >(context, std::make_pair(qcc::String(iface), qcc::String(property)));
+            CBContext<Listener::GetPropertyCB>* ctx = new CBContext<Listener::GetPropertyCB>(this, listener, callback, wrappedContext);
             const InterfaceDescription::Member* getProperty = propIface->GetMember("Get");
             assert(getProperty);
             status = MethodCallAsync(*getProperty,
@@ -307,6 +414,7 @@ QStatus ProxyBusObject::GetPropertyAsync(const char* iface,
                                      flags);
             if (status != ER_OK) {
                 delete ctx;
+                delete wrappedContext;
             }
         }
     }
@@ -375,8 +483,8 @@ QStatus ProxyBusObject::RegisterPropertiesChangedListener(const char* iface,
                                                           ProxyBusObject::PropertiesChangedListener& listener,
                                                           void* context)
 {
-    QCC_DbgTrace(("ProxyBusObject::RegisterPropertiesChangedListener(iface = %s, properties = %p, propertiesSize = %u, listener = %p, context = %p",
-                  iface, properties, propertiesSize, &listener, context));
+    QCC_DbgTrace(("ProxyBusObject::RegisterPropertiesChangedListener(this = %p, iface = %s, properties = %p, propertiesSize = %u, listener = %p, context = %p",
+                  this, iface, properties, propertiesSize, &listener, context));
     const InterfaceDescription* ifc = bus->GetInterface(iface);
     if (!ifc) {
         return ER_BUS_OBJECT_NO_SUCH_INTERFACE;
@@ -469,6 +577,15 @@ void ProxyBusObject::PropertiesChangedHandler(const InterfaceDescription::Member
     }
 
     lock->Lock(MUTEX_CONTEXT);
+    /* first, update caches */
+    if (cacheProperties) {
+        map<StringMapKey, CachedProps>::iterator it = components->caches.find(ifaceName);
+        if (it != components->caches.end()) {
+            it->second.PropertiesChanged(changedProps, numChangedProps, invalidProps, numInvalidProps);
+        }
+    }
+
+    /* then, alert listeners */
     multimap<StringMapKey, PropertiesChangedCB>::iterator it = components->propertiesChangedCBs.lower_bound(ifaceName);
     multimap<StringMapKey, PropertiesChangedCB>::iterator end = components->propertiesChangedCBs.upper_bound(ifaceName);
     list<PropertiesChangedCB> handlers;
@@ -619,6 +736,13 @@ QStatus ProxyBusObject::AddInterface(const InterfaceDescription& iface) {
     pair<map<StringMapKey, const InterfaceDescription*>::const_iterator, bool> ret = components->ifaces.insert(item);
     QStatus status = ret.second ? ER_OK : ER_BUS_IFACE_ALREADY_EXISTS;
 
+    if ((status == ER_OK) && cacheProperties && iface.HasCacheableProperties()) {
+        components->caches.insert(std::make_pair(key, CachedProps(&iface)));
+        /* add match rules in case the PropertiesChanged signals are emitted as global broadcast */
+        String rule("type='signal',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged',arg0='" + qcc::String(iface.GetName()) + "'");
+        bus->AddMatchNonBlocking(rule.c_str());
+    }
+
     if ((status == ER_OK) && !hasProperties) {
         const InterfaceDescription* propIntf = bus->GetInterface(::ajn::org::freedesktop::DBus::Properties::InterfaceName);
         assert(propIntf);
@@ -645,6 +769,24 @@ QStatus ProxyBusObject::AddInterface(const char* ifaceName)
     } else {
         return AddInterface(*iface);
     }
+}
+
+void ProxyBusObject::EnablePropertyCaching() const
+{
+    lock->Lock(MUTEX_CONTEXT);
+    if (!cacheProperties) {
+        cacheProperties = true;
+        map<StringMapKey, const InterfaceDescription*>::const_iterator it = components->ifaces.begin();
+        for (; it != components->ifaces.end(); ++it) {
+            if (it->second->HasCacheableProperties()) {
+                components->caches.insert(std::make_pair(it->first, CachedProps(it->second)));
+                /* add match rules in case the PropertiesChanged signals are emitted as global broadcast */
+                String rule("type='signal',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged',arg0='" + qcc::String(it->first.c_str()) + "'");
+                bus->AddMatchNonBlocking(rule.c_str());
+            }
+        }
+    }
+    lock->Unlock(MUTEX_CONTEXT);
 }
 
 size_t ProxyBusObject::GetChildren(ProxyBusObject** children, size_t numChildren)
@@ -1318,6 +1460,13 @@ void ProxyBusObject::DestructComponents()
             bus->UnregisterAllHandlers(this);
         }
 
+        /* remove match rules added by the property caching mechanism */
+        map<StringMapKey, CachedProps>::iterator cit = components->caches.begin();
+        for (; cit != components->caches.end(); ++cit) {
+            String rule("type='signal',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged',arg0='" + qcc::String(cit->first.c_str()) + "'");
+            bus->RemoveMatchNonBlocking(rule.c_str());
+        }
+
         /* Wait for any waiting threads to exit this object's members */
         while (components->waitingThreads.size() > 0) {
             lock->Unlock(MUTEX_CONTEXT);
@@ -1424,4 +1573,103 @@ void ProxyBusObject::SetB2BEndpoint(RemoteEndpoint& b2bEp)
     this->b2bEp = b2bEp;
 }
 
+bool CachedProps::Get(const char* propname, MsgArg& val)
+{
+    bool found = false;
+    lock.Lock(MUTEX_CONTEXT);
+    ValueMap::iterator it = values.find(propname);
+    if (it != values.end()) {
+        found = true;
+        val = it->second;
+    }
+    lock.Unlock(MUTEX_CONTEXT);
+    return found;
+}
+
+bool CachedProps::IsCacheable(const char* propname)
+{
+    const InterfaceDescription::Property* prop = description->GetProperty(propname);
+    return (prop != NULL && prop->cacheable);
+}
+
+void CachedProps::Set(const char* propname, const MsgArg& val)
+{
+    if (!IsCacheable(propname)) {
+        return;
+    }
+    lock.Lock(MUTEX_CONTEXT);
+    values[qcc::String(propname)] = val;
+    lock.Unlock(MUTEX_CONTEXT);
+}
+
+void CachedProps::SetAll(const MsgArg& allValues)
+{
+    lock.Lock(MUTEX_CONTEXT);
+
+    size_t nelem;
+    MsgArg* elems;
+    QStatus status = allValues.Get("a{sv}", &nelem, &elems);
+    if (status != ER_OK) {
+        goto error;
+    }
+
+    for (size_t i = 0; i < nelem; ++i) {
+        const char* prop;
+        MsgArg* val;
+        status = elems[i].Get("{sv}", &prop, &val);
+        if (status != ER_OK) {
+            goto error;
+        }
+        if (IsCacheable(prop)) {
+            values[qcc::String(prop)] = *val;
+        }
+    }
+
+    lock.Unlock(MUTEX_CONTEXT);
+    return;
+
+    error :
+    /* We can't make sense of the property values for some reason.
+     * Play it safe and invalidate all properties */
+    QCC_LogError(status, ("Failed to parse GetAll return value. Invalidating property cache."));
+    values.clear();
+    lock.Unlock(MUTEX_CONTEXT);
+}
+
+void CachedProps::PropertiesChanged(MsgArg* changed, size_t numChanged, MsgArg* invalidated, size_t numInvalidated)
+{
+    lock.Lock(MUTEX_CONTEXT);
+
+    QStatus status;
+    for (size_t i = 0; i < numChanged; ++i) {
+        const char* prop;
+        MsgArg* val;
+        status = changed[i].Get("{sv}", &prop, &val);
+        if (status != ER_OK) {
+            goto error;
+        }
+        if (IsCacheable(prop)) {
+            values[qcc::String(prop)] = *val;
+        }
+    }
+
+    for (size_t i = 0; i < numInvalidated; ++i) {
+        char* prop;
+        status = invalidated[i].Get("s", &prop);
+        if (status != ER_OK) {
+            goto error;
+        }
+        values.erase(prop);
+    }
+
+    lock.Unlock(MUTEX_CONTEXT);
+    return;
+
+error:
+    /* We can't make sense of the property update signal for some reason.
+     * Play it safe and invalidate all properties */
+    QCC_LogError(status, ("Failed to parse PropertiesChanged signal. Invalidating property cache."));
+    values.clear();
+    lock.Unlock(MUTEX_CONTEXT);
+}
 }
