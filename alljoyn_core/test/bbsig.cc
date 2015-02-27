@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2015, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -529,7 +529,6 @@ static void usage(void)
     printf("   -t #                        = TTL for the signals\n");
     printf("   --tcp                       = Advertise and discover using the TCP transport\n");
     printf("   --udp                       = Advertise and discover using the UDP transport\n");
-    printf("   --wfd                       = Advertise and discover using the Wi-Fi Direct transport\n");
     printf("   -x                          = Compress headers\n");
     printf("   -e[k] [RSA|SRP|LOGON|PINX]   = Encrypt the test interface using specified auth mechanism, -ek means clear keys\n");
     printf("   -d                          = discover remote bus with test service\n");
@@ -579,9 +578,6 @@ int main(int argc, char** argv)
             transportSpecific = true;
         } else if (0 == strcmp("--udp", argv[i])) {
             g_preferredTransport = TRANSPORT_UDP;
-            transportSpecific = true;
-        } else if (0 == strcmp("--wfd", argv[i])) {
-            g_preferredTransport = TRANSPORT_WFD;
             transportSpecific = true;
         } else if (0 == strcmp("-n", argv[i])) {
             ++i;
@@ -763,7 +759,7 @@ int main(int argc, char** argv)
         }
 
         if (g_selfjoin) {
-            SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, true, SessionOpts::PROXIMITY_ANY, TRANSPORT_ALL);
+            SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, true, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
             SessionPort sessionPort = ::org::alljoyn::alljoyn_test::SessionPort;
             QStatus status = g_msgBus->BindSessionPort(sessionPort, opts, g_portListener);
             if (ER_OK != status) {

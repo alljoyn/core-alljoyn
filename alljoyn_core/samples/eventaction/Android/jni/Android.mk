@@ -25,6 +25,7 @@ LOCAL_CPP_EXTENSION := .cc
 
 LOCAL_SRC_FILES := \
 	event/AndroidJNIBridge.cc \
+	event/PresenceDetection.cc \
 	event/MyEventCode.cc
 	
 LOCAL_LDLIBS := \

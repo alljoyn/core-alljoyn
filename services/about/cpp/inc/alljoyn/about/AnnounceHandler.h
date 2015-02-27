@@ -3,7 +3,7 @@
  * MessageReceiver responsible for receiving the Announce signal from the org.alljoyn.About interface
  */
 /******************************************************************************
- * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above

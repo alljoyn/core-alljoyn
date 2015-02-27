@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -113,7 +113,7 @@ OptParse::ParseResultCode OptParse::ParseResult()
 
         if (arg.compare("--version") == 0) {
             printf("AllJoyn Message Bus Daemon service launcher helper version: %s\n"
-                   "Copyright (c) 2009-2013 AllSeen Alliance.\n"
+                   "Copyright AllSeen Alliance.\n"
                    "\n"
                    "\n"
                    "Build: %s\n", GetVersion(), GetBuildInfo());

@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2015, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -478,8 +478,7 @@ class _TCPEndpoint : public _RemoteEndpoint {
         m_authThread(this),
         m_stream(sock),
         m_ipAddr(ipAddr),
-        m_port(port),
-        m_wasSuddenDisconnect(!incoming) { }
+        m_port(port) { }
 
     _TCPEndpoint(TCPTransport* transport,
                  BusAttachment& bus,
@@ -496,8 +495,7 @@ class _TCPEndpoint : public _RemoteEndpoint {
         m_authThread(this),
         m_stream(family, type),
         m_ipAddr(ipAddr),
-        m_port(port),
-        m_wasSuddenDisconnect(!incoming) { }
+        m_port(port) { }
     virtual ~_TCPEndpoint() { }
 
     QStatus GetLocalIp(qcc::String& ipAddrStr) {
@@ -575,9 +573,6 @@ class _TCPEndpoint : public _RemoteEndpoint {
         assert(m_epState == EP_FAILED || m_epState == EP_STOPPING);
         m_epState = EP_DONE;
     }
-
-    bool IsSuddenDisconnect() { return m_wasSuddenDisconnect; }
-    void SetSuddenDisconnect(bool val) { m_wasSuddenDisconnect = val; }
 
     QStatus SetLinkTimeout(uint32_t& linkTimeout)
     {
@@ -658,7 +653,6 @@ class _TCPEndpoint : public _RemoteEndpoint {
     qcc::SocketStream m_stream;       /**< Stream used by authentication code */
     qcc::IPAddress m_ipAddr;          /**< Remote IP address. */
     uint16_t m_port;                  /**< Remote port. */
-    bool m_wasSuddenDisconnect;       /**< If true, assumption is that any disconnect is unexpected due to lower level error */
 };
 
 void _TCPEndpoint::ThreadExit(qcc::Thread* thread)
@@ -965,7 +959,7 @@ void TCPTransport::Authenticated(TCPEndpoint& conn)
 QStatus TCPTransport::Start()
 {
     /*
-     * We rely on the status of the server accept thead as the primary
+     * We rely on the status of the server accept thread as the primary
      * gatekeeper.
      *
      * A true response from IsRunning tells us that the server accept thread is
@@ -1076,7 +1070,7 @@ QStatus TCPTransport::Stop(void)
     IpNameService::Instance().SetNetworkEventCallback(TRANSPORT_TCP, NULL);
 
     /*
-     * Tell the server accept loop thread to shut down through the thead
+     * Tell the server accept loop thread to shut down through the thread
      * base class.
      */
     QStatus status = Thread::Stop();
@@ -1165,7 +1159,7 @@ QStatus TCPTransport::Join(void)
      * Since Stop() is a request to stop, and this is what has ultimately been
      * done to both authentication threads and Read and WriteCallbacks, it is possible
      * that a thread is actually running after the call to Stop().  If that
-     * thead happens to be an authenticating endpoint, it is possible that an
+     * thread happens to be an authenticating endpoint, it is possible that an
      * authentication actually completes after Stop() is called.  This will move
      * a connection from the m_authList to the m_endpointList, so we need to
      * make sure we wait for all of the connections on the m_authList to go away
@@ -1240,7 +1234,7 @@ bool TCPTransport::SupportsOptions(const SessionOpts& opts) const
      * TRANSPORT_TCP.  If you are explicitly looking for something other than
      * TCP (or one of the aliases) we can't help you.
      */
-    if (!(opts.transports & (TRANSPORT_TCP | TRANSPORT_WLAN | TRANSPORT_WWAN | TRANSPORT_LAN))) {
+    if (!(opts.transports & TRANSPORT_TCP)) {
         QCC_DbgPrintf(("TCPTransport::SupportsOptions(): transport mismatch"));
         rc = false;
     }
@@ -1480,15 +1474,6 @@ void TCPTransport::EndpointExit(RemoteEndpoint& ep)
      */
     QCC_DbgTrace(("TCPTransport::EndpointExit()"));
     TCPEndpoint tep = TCPEndpoint::cast(ep);
-    /*
-     * The endpoint can exit if it was asked to by us in response to a
-     * Disconnect() from higher level code, or if it got an error from the
-     * underlying transport.  We need to notify upper level code if the
-     * disconnect is due to an event from the transport.
-     */
-    if (m_listener && tep->IsSuddenDisconnect()) {
-        m_listener->BusConnectionLost(tep->GetConnectSpec());
-    }
 
     /*
      * If this is an active connection, what has happened is that the reference
@@ -3215,86 +3200,6 @@ QStatus TCPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
     m_endpointListLock.Unlock(MUTEX_CONTEXT);
 
     return status;
-}
-
-QStatus TCPTransport::Disconnect(const char* connectSpec)
-{
-    QCC_DbgHLPrintf(("TCPTransport::Disconnect(): %s", connectSpec));
-
-    /*
-     * Disconnect is actually not used in the transports architecture.  It is
-     * misleading and confusing to have it implemented.
-     */
-    assert(0 && "TCPTransport::Disconnect(): Unexpected call");
-    QCC_LogError(ER_FAIL, ("TCPTransport::Disconnect(): Unexpected call"));
-    return ER_FAIL;
-#if UNUSED_CODE
-    /*
-     * We only want to allow this call to proceed if we have a running server
-     * accept thread that isn't in the process of shutting down.  We use the
-     * thread response from IsRunning to give us an idea of what our server
-     * accept (Run) thread is doing, and by extension the endpoint threads which
-     * must be running to properly clean up.  See the comment in Start() for
-     * details about what IsRunning actually means, which might be subtly
-     * different from your intuitition.
-     *
-     * If we see IsRunning(), the thread might actually have gotten a Stop(),
-     * but has not yet exited its Run routine and become STOPPING.  To plug this
-     * hole, we need to check IsRunning() and also m_stopping, which is set in
-     * our Stop() method.
-     */
-    if (IsRunning() == false || m_stopping == true) {
-        QCC_LogError(ER_BUS_TRANSPORT_NOT_STARTED, ("TCPTransport::Disconnect(): Not running or stopping; exiting"));
-        return ER_BUS_TRANSPORT_NOT_STARTED;
-    }
-
-    /*
-     * If we pass the IsRunning() gate above, we must have a server accept
-     * thread spinning up or shutting down but not yet joined.  Since the name
-     * service is started before the server accept thread is spun up, and
-     * stopped after it is stopped, we must have a started name service or
-     * someone isn't playing by the rules; so an assert is appropriate here.
-     */
-    assert(IpNameService::Instance().Started() && "TCPTransport::Disconnect(): IpNameService not started");
-
-    /*
-     * Higher level code tells us which connection is refers to by giving us the
-     * same connect spec it used in the Connect() call.  We have to determine the
-     * address and port in exactly the same way
-     */
-    qcc::String normSpec;
-    map<qcc::String, qcc::String> argMap;
-    QStatus status = NormalizeTransportSpec(connectSpec, normSpec, argMap);
-    if (ER_OK != status) {
-        QCC_LogError(status, ("TCPTransport::Disconnect(): Invalid TCP connect spec \"%s\"", connectSpec));
-        return status;
-    }
-
-    IPAddress ipAddr(argMap.find("addr")->second); // Guaranteed to be there.
-    uint16_t port = StringToU32(argMap["port"]);   // Guaranteed to be there.
-
-    /*
-     * Stop the remote endpoint.  Be careful here since calling Stop() on the
-     * TCPEndpoint is going to cause the transmit and receive threads of the
-     * underlying RemoteEndpoint to exit, which will cause our EndpointExit()
-     * to be called, which will walk the list of endpoints and delete the one
-     * we are stopping.  Once we poke ep->Stop(), the pointer to ep must be
-     * considered dead.
-     */
-    status = ER_BUS_BAD_TRANSPORT_ARGS;
-    m_endpointListLock.Lock(MUTEX_CONTEXT);
-    for (set<TCPEndpoint>::iterator i = m_endpointList.begin(); i != m_endpointList.end(); ++i) {
-        TCPEndpoint ep = *i;
-        if (ep->GetPort() == port && ep->GetIPAddress() == ipAddr) {
-            ep->SetSuddenDisconnect(false);
-            m_endpointListLock.Unlock(MUTEX_CONTEXT);
-
-            return ep->Stop();
-        }
-    }
-    m_endpointListLock.Unlock(MUTEX_CONTEXT);
-    return status;
-#endif
 }
 
 QStatus TCPTransport::StartListen(const char* listenSpec)

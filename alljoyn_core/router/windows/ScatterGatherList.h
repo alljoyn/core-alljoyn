@@ -7,7 +7,7 @@
 /******************************************************************************
  *
  *
- * Copyright (c) 2009-2012, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -451,10 +451,11 @@ class ScatterGatherList {
  * @param sockfd        Socket descriptor.
  * @param sg            A scatter-gather list refering to the data to be sent.
  * @param sent          OUT: Number of octets sent.
+ * @param flags         SendMsgFlags to underlying sockets call (see sendmsg() in sockets API)
  *
  * @return  Indication of success of failure.
  */
-QStatus SendSG(SocketFd sockfd, const ScatterGatherList& sg, size_t& sent);
+QStatus SendSG(SocketFd sockfd, const ScatterGatherList& sg, size_t& sent, SendMsgFlags flags = QCC_MSG_NONE);
 
 /**
  * Send a collection of buffers from a scatter-gather list to a remote host on a socket.
@@ -464,11 +465,12 @@ QStatus SendSG(SocketFd sockfd, const ScatterGatherList& sg, size_t& sent);
  * @param remotePort    IP Port on remote host.
  * @param sg            A scatter-gather list refering to the data to be sent.
  * @param sent          OUT: Number of octets sent.
+ * @param flags         SendMsgFlags to underlying sockets call (see sendmsg() in sockets API)
  *
  * @return  Indication of success of failure.
  */
 QStatus SendToSG(SocketFd sockfd, IPAddress& remoteAddr, uint16_t remotePort,
-                 const ScatterGatherList& sg, size_t& sent);
+                 const ScatterGatherList& sg, size_t& sent, SendMsgFlags flags = QCC_MSG_NONE);
 
 /**
  * Receive data into a collection of buffers in a scatter-gather list from a

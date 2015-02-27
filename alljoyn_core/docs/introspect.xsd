@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!--
+    Copyright AllSeen Alliance. All rights reserved.
+
+    Permission to use, copy, modify, and/or distribute this software for any
+    purpose with or without fee is hereby granted, provided that the above
+    copyright notice and this permission notice appear in all copies.
+
+    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <!--
+         *******************************************************
+         *                                                     *
+         *               Attribute Definitions                 *
+         *                                                     *
+         *******************************************************
+  -->
+  <xs:attribute name="name" type="xs:string"/>
+  <xs:attribute name="access">
+    <xs:simpleType>
+      <xs:restriction base="xs:string">
+        <xs:enumeration value="read"/>
+        <xs:enumeration value="write"/>
+        <xs:enumeration value="readwrite"/>
+      </xs:restriction>
+    </xs:simpleType>
+  </xs:attribute>
+  <!--
+         *******************************************************
+         *                                                     *
+         *               Type Definitions                      *
+         *                                                     *
+         *******************************************************
+  -->
+  <xs:simpleType name="arg_direction">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="in"/>
+      <xs:enumeration value="out"/>
+      <!--  unset is used by the app as metadata. -->
+      <xs:enumeration value="unset"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="arg_and_property_type">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[ybnqiuxtdsogav\{\}\(\)]*"/>
+      <xs:minLength value="1"/>
+      <xs:maxLength value="255"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="arg_type">
+    <xs:sequence>
+      <xs:element maxOccurs="unbounded" minOccurs="0" ref="annotation"/>
+    </xs:sequence>
+    <xs:attribute ref="name"/>
+    <xs:attribute name="type" type="arg_and_property_type" use="required"/>
+    <xs:attribute default="unset" name="direction" type="arg_direction"/>
+  </xs:complexType>
+  <xs:complexType name="nested_node">
+    <xs:choice maxOccurs="unbounded" minOccurs="1">
+      <xs:element maxOccurs="unbounded" ref="interface"/>
+      <xs:element maxOccurs="unbounded" name="node" type="nested_node"/>
+    </xs:choice>
+    <xs:attribute ref="name" use="required"/>
+  </xs:complexType>
+  <!--
+         *******************************************************
+         *                                                     *
+         *               Element Definitions                   *
+         *                                                     *
+         *******************************************************
+  -->
+  <xs:element name="annotation">
+    <xs:complexType>
+      <xs:attribute name="name" type="xs:string" use="required"/>
+      <xs:attribute name="value" type="xs:string" use="required"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="signal">
+    <xs:complexType>
+      <xs:choice maxOccurs="unbounded" minOccurs="0">
+        <xs:element maxOccurs="unbounded" minOccurs="0" name="arg" type="arg_type"/>
+        <xs:element maxOccurs="unbounded" minOccurs="0" ref="annotation"/>
+      </xs:choice>
+      <xs:attribute ref="name" use="required"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="method">
+    <xs:complexType>
+      <xs:choice maxOccurs="unbounded" minOccurs="0">
+        <xs:element maxOccurs="unbounded" minOccurs="0" ref="annotation"/>
+        <xs:element maxOccurs="unbounded" minOccurs="0" name="arg" type="arg_type"/>
+      </xs:choice>
+      <xs:attribute ref="name" use="required"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="property">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element maxOccurs="unbounded" minOccurs="0" ref="annotation"/>
+      </xs:sequence>
+      <xs:attribute ref="name" use="required"/>
+      <xs:attribute name="type" type="arg_and_property_type" use="required"/>
+      <xs:attribute ref="access" use="required"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="interface">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element maxOccurs="unbounded" minOccurs="0" ref="annotation"/>
+        <xs:choice>
+          <xs:element ref="method"/>
+          <xs:element ref="signal"/>
+          <xs:element ref="property"/>
+        </xs:choice>
+        <xs:choice maxOccurs="unbounded" minOccurs="0">
+          <xs:element ref="annotation"/>
+          <xs:element ref="method"/>
+          <xs:element ref="signal"/>
+          <xs:element ref="property"/>
+        </xs:choice>
+      </xs:sequence>
+      <xs:attribute ref="name" use="required"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="node">
+    <xs:complexType>
+      <xs:choice maxOccurs="unbounded" minOccurs="1">
+        <xs:element maxOccurs="unbounded" ref="interface"/>
+        <xs:element maxOccurs="unbounded" name="node" type="nested_node"/>
+      </xs:choice>
+      <xs:attribute ref="name"/>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

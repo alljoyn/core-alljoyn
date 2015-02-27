@@ -10,7 +10,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2015, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -43,8 +43,6 @@
 #include <alljoyn_c/DBusStdDefines.h>
 #include <alljoyn_c/BusAttachment.h>
 #include <alljoyn_c/version.h>
-#include <Status.h>
-
 #include <Status.h>
 
 /** Static top level message bus object */
@@ -202,7 +200,7 @@ int main(int argc, char** argv, char** envArg)
 
     status = alljoyn_busobject_addmethodhandlers(testObj, methodEntries, sizeof(methodEntries) / sizeof(methodEntries[0]));
     if (ER_OK != status) {
-        printf("Failed to register method handlers for BasicSampleObject");
+        printf("Failed to register method handlers for BasicSampleObject\n");
     }
 
     /* Start the msg bus */

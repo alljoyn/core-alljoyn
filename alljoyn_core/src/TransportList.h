@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, 2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -142,13 +142,6 @@ class TransportList : public TransportListener {
      * @see TransportListener::FoundNames()
      */
     void FoundNames(const qcc::String& busAddr, const qcc::String& guid, TransportMask transport, const std::vector<qcc::String>* names, uint32_t ttl);
-
-    /**
-     * Called when a transport gets a surprise disconnect from a remote bus.
-     *
-     * @param busAddr       The address of the bus formatted as a string.
-     */
-    void BusConnectionLost(const qcc::String& busAddr);
 
   private:
 

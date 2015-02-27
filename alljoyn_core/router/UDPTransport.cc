@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2015, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -1290,6 +1290,7 @@ class ArdpStream : public qcc::Stream {
         QCC_DbgPrintf(("ArdpStream::Disconnect(): sudden==%d., m_disc==%d., m_discSent==%d., status==\"%s\"",
                        sudden, m_disc, m_discSent, QCC_StatusText(status)));
         m_lock.Lock(MUTEX_CONTEXT);
+
         if (sudden == false) {
             if (m_disc == false) {
                 if (m_discSent == false) {
@@ -2141,7 +2142,6 @@ class _UDPEndpoint : public _RemoteEndpoint {
         m_id(0),
         m_ipAddr(),
         m_ipPort(0),
-        m_suddenDisconnect(false),
         m_registered(false),
         m_sideState(SIDE_INITIALIZED),
         m_epState(EP_INITIALIZED),
@@ -2583,6 +2583,15 @@ class _UDPEndpoint : public _RemoteEndpoint {
                 QCC_DbgPrintf(("_UDPEndpoint::Join(): Local stream->Disconnect()"));
                 stream->Disconnect(false, ER_UDP_LOCAL_DISCONNECT);
             }
+
+            /*
+             * Set the disconnect status of our underlying BusEndpoint so that
+             * higher levels can determine what to do in response.  ER_OK means
+             * voluntary here, and we are presumably voluntarily shutting down.
+             * Note that SetEpDisconnectStatus() may rewrite status code.
+             */
+            SetEpDisconnectStatus(ER_OK);
+
             SetEpWaitEnable(false);
             SetEpStopping();
         }
@@ -3055,7 +3064,6 @@ class _UDPEndpoint : public _RemoteEndpoint {
          * connection.
          */
         bool sudden = (status != ER_OK);
-        SetSuddenDisconnect(sudden);
         QCC_DbgPrintf(("_UDPEndpoint::DisconnectCb(): sudden==\"%s\"", sudden ? "true" : "false"));
 
         /*
@@ -3063,24 +3071,29 @@ class _UDPEndpoint : public _RemoteEndpoint {
          * code that is really dealing with the hard details.
          *
          * Note that calling Disconnect() here and Stop() at the bottom of the
-         * function (making a call out to BusConnectionLost() in the middle)
-         * creates a transient situation in which the stream thinks it is
-         * disconnected and the endpoint thinks it is connected in the sudden
+         * function creates a transient situation in which the stream thinks it
+         * is disconnected and the endpoint thinks it is connected in the sudden
          * (remote) disconnect case.  These two calls, m_stream->Disconnect()
          * and Stop() should really be done "together" and with the stream lock
-         * and state lock held.  This was noticed very late in the game, and
-         * is now special-cased (checked for) in ArdpStream::PushBytes().
-         * This is harmless since ARDP_Send() will return an error since we are
-         * trying to send to a disconnected connection.  The point is, though,
-         * that the state of the endoint and the state of the stream will be
-         * transiently incoherent, so consistency checks will probably fail
-         * under stress.
+         * and state lock held.  This was noticed very late in the game, and is
+         * now special-cased (checked for) in ArdpStream::PushBytes().  This is
+         * harmless since ARDP_Send() will return an error since we are trying
+         * to send to a disconnected connection.  The point is, though, that the
+         * state of the endoint and the state of the stream will be transiently
+         * incoherent, so consistency checks will probably fail under stress.
          */
         if (m_stream) {
             QCC_DbgPrintf(("_UDPEndpoint::DisconnectCb(): Disconnect(): m_stream=%p", m_stream));
             QCC_DbgPrintf(("_UDPEndpoint::DisconnectCb(): m_stream->Disconnect() on endpoint with conn ID == %d.", GetConnId()));
             m_stream->Disconnect(sudden, status);
         }
+
+        /*
+         * Set the disconnect status in the underlying BusEndpoint so that
+         * higher levels can determine what to do in response to the endpoint
+         * stopping.  Note that SetEpDisconnectStatus() may rewrite status code.
+         */
+        SetEpDisconnectStatus(status);
 
         /*
          * We believe that the connection must go away here since this is either
@@ -3120,15 +3133,6 @@ class _UDPEndpoint : public _RemoteEndpoint {
          * eventually regret it.
          */
         m_transport->m_endpointListLock.Unlock(MUTEX_CONTEXT);
-
-        /*
-         * Tell any listeners that the connection was lost.  Since we have a
-         * disconnect callback we know that the connection is gone, one way
-         * or the other.
-         */
-        if (m_transport->m_listener) {
-            m_transport->m_listener->BusConnectionLost(rep->GetConnectSpec());
-        }
 
         /*
          * The connection is gone, so Stop() so it can continue being torn down
@@ -3685,28 +3689,6 @@ class _UDPEndpoint : public _RemoteEndpoint {
     }
 
     /**
-     * Get the sudden disconnect indication.  If true, it means that the
-     * connection was unexpectedly disconnected.  If false, it means we
-     * are still connected, or we initiated the disconnection.
-     */
-    bool GetSuddenDisconnect()
-    {
-        QCC_DbgTrace(("_UDPEndpoint::GetSuddenDisconnect(): => %d.", m_suddenDisconnect));
-        return m_suddenDisconnect;
-    }
-
-    /**
-     * Get the sudden disconnect indication.  If true, it means that the
-     * connection was unexpectedly disconnected.  If false, it means we
-     * are still connected, or we initiated the disconnection.
-     */
-    void SetSuddenDisconnect(bool suddenDisconnect)
-    {
-        QCC_DbgTrace(("_UDPEndpoint::SetSuddenDisconnect(suddenDisconnect(suddenDisconnect=%d.)", suddenDisconnect));
-        m_suddenDisconnect = suddenDisconnect;
-    }
-
-    /**
      * Getting the local IP is not supported
      */
     QStatus GetLocalIp(qcc::String& ipAddrStr)
@@ -4026,6 +4008,84 @@ class _UDPEndpoint : public _RemoteEndpoint {
     }
 
     /**
+     * Set the disconnect status in the underlying BusEndpoint.  This is
+     * provided in order to let the endpoint management code set the protected
+     * status if it needs to.
+     */
+    void SetEpDisconnectStatus(QStatus status)
+    {
+        QCC_DbgTrace(("_UDPEndpoint::SetEpDisconnectStatus(status=%s)", QCC_StatusText(status)));
+
+        /*
+         * If something has previously gone wrong, leave it be.  Especially
+         * don't overwrite bad status with good.
+         */
+        QStatus oldStatus = GetDisconnectStatus();
+        if (oldStatus != ER_OK) {
+            QCC_DbgTrace(("_UDPEndpoint::SetEpDisconnectStatus(): Previously set status.  Ignoring new"));
+            return;
+        }
+
+        /*
+         * This status is going to eventually percolate up to AllJoynObj which
+         * translates it into its own version of status.  It looks for specific
+         * values, so we have to be careful that we don't surprise it.
+         *
+         * There are three values that AllJoynObj will be looking for that
+         * originate at the transport level:
+         *
+         *     ER_SOCK_OTHER_END_CLOSED: This is a very TCP-specific error that
+         *         means the stream socket on the other side of the L4 link
+         *         was closed.  There is no socket that was closed, but as it
+         *         stands uers expect to see the specific session error called
+         *         ALLJOYN_SESSIONLOST_REMOTE_END_CLOSED_ABRUPTLY on a control-C
+         *         of the remote side.  AllJoynObj requires the specific socket
+         *         error ER_SOCK_OTHER_END_CLOSED for this to happpen.  So, even
+         *         though there is no socket being closed, we map all of our
+         *         specific ARDP errors to this value, which effectively means
+         *         link lost despite its name.
+         *
+         *     ER_TIMEOUT: This means a link timeout was detected.  ARDP has
+         *         two separate timeouts (persist timeout corresponds to an
+         *         application not pulling data, and probe timeout correcponds
+         *         to a link problem).  We map both to ER_TIMEOUT since sessions
+         *         only admit one kind of timeout.
+         *
+         *     ER_OK: This means a link went down expectedly as a result of a
+         *         local action on the endpoint.  Even though we look at it as
+         *         a disconnect, higher levels want to see it as nothing went
+         *         wrong.
+         */
+        switch (status) {
+        case ER_ARDP_PERSIST_TIMEOUT:
+            QCC_DbgTrace(("_UDPEndpoint::SetEpDisconnectStatus(): Map \"%s\" to \"ER_TIMEOUT\"", QCC_StatusText(status)));
+            status = ER_TIMEOUT;
+            break;
+
+        case ER_ARDP_PROBE_TIMEOUT:
+            QCC_DbgTrace(("_UDPEndpoint::SetEpDisconnectStatus(): Map \"%s\" to \"ER_TIMEOUT\"", QCC_StatusText(status)));
+            status = ER_TIMEOUT;
+            break;
+
+        case ER_UDP_LOCAL_DISCONNECT:
+            QCC_DbgTrace(("_UDPEndpoint::SetEpDisconnectStatus(): Map \"%s\" to \"ER_OK\"", QCC_StatusText(status)));
+            status = ER_OK;
+            break;
+
+        default:
+            QCC_DbgTrace(("_UDPEndpoint::SetEpDisconnectStatus(): Map \"%s\" to \"ER_SOCK_OTHER_END_CLOSED\"", QCC_StatusText(status)));
+            status = ER_SOCK_OTHER_END_CLOSED;
+            break;
+        }
+
+        /*
+         * Set the bus endpoint version of the disconnect status with the
+         * sanitized version.
+         */
+        disconnectStatus = status;
+    }
+
+    /**
      * Set the boolean indicating that the disconenct logic has happened.  This
      * is provided so that the transport can manually override this logic if an
      * error is detected prior to calling start (and where the disconnect
@@ -4073,7 +4133,6 @@ class _UDPEndpoint : public _RemoteEndpoint {
     uint32_t m_id;                    /**< The ID of the connection record for the underlying protocol */
     qcc::IPAddress m_ipAddr;          /**< Remote IP address. */
     uint16_t m_ipPort;                /**< Remote port. */
-    bool m_suddenDisconnect;          /**< If true, assumption is that any disconnect will be/was unexpected */
     bool m_registered;                /**< If true, a call-out to the daemon has been made to register this endpoint */
     volatile SideState m_sideState;   /**< Is this an active or passive connection */
     volatile EndpointState m_epState; /**< The state of the endpoint itself */
@@ -5714,8 +5773,7 @@ void UDPTransport::EmitStallWarnings(UDPEndpoint& ep)
                 bool disc = stream->GetDisconnected();
                 bool discSent = stream->GetDiscSent();
                 ArdpConnRecord* conn = stream->GetConn();
-                bool suddenDisconnect = ep->GetSuddenDisconnect();
-                QCC_DbgPrintf(("UDPTransport::EmitStallWarnings(): stalled not disconneccted. disc=\"%s\", discSent=\"%s\", conn=%p, suddendisconnect=\"%s\"", disc ? "true" : "false", discSent ? "true" : "false", conn, suddenDisconnect ? "true" : "false"));
+                QCC_DbgPrintf(("UDPTransport::EmitStallWarnings(): stalled not disconneccted. disc=\"%s\", discSent=\"%s\", conn=%p", disc ? "true" : "false", discSent ? "true" : "false", conn));
 #endif
                 QCC_LogError(ER_UDP_ENDPOINT_STALLED, ("UDPTransport::EmitStallWarnings(): stalled not disconneccted."));
             } else {
@@ -5791,24 +5849,9 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
     m_preListLock.Unlock(MUTEX_CONTEXT);
 
     /*
-     * This is an opportune time to deal with authenticating endpoints that have
-     * snuck in (asynchronously completed) due to race conditions if we are
-     * stopping.  If the transport is stopping, all of its endpoints must be in
-     * the process of stopping, so we walk the list of active endpoints and call
-     * Stop() on them.  If they are already stopping, no harm no foul.
-     *
-     * In the case of authenticating endpoints, we don't want to wait for some
-     * large number of seconds to time out, so we Stop() them and move them out
-     * of authenticating state.  If the endpoint is really in the middle of
-     * authenticating, in-process authentication responses will just be dropped
-     * at least until ARDP is finally killed, at which we will be all done
-     * anyway.
-     *
-     * Calling Stop() on an active or authenticating endpoint will begin the
-     * process of causing any waiting threads, etc., to be dislodged and remove
-     * depenencies on the endpoints in question.  When we look to do the Join()
-     * below, we will actually wait for the actions we start here to be
-     * completed.
+     * If the transport has been told to start the process of shutting down, we
+     * need to make sure we tell all of our endpoints to start the process of
+     * disconnecting.
      */
     if (IsRunning() == false || m_stopping == true) {
         QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): m_stopping: Stopping endpoints on m_endpointList"));
@@ -5829,6 +5872,7 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
              * the endpoint, which ...
              */
             if (ep->IsEpDone() == false && ep->IsEpJoined() == false && ep->IsEpWaiting() == false && ep->IsEpStopping() == false) {
+                ep->SetEpWaitEnable(false);
                 ep->Stop();
             }
         }
@@ -6123,6 +6167,15 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
                     if (stream->GetDiscSent() == false && stream->GetDiscStatus() == ER_OK) {
                         QCC_DbgHLPrintf(("UDPTransport::ManageEndpoints(): Endpoint with conn ID == %d. stream->Disconnect()", ep->GetConnId()));
                         stream->Disconnect(false, ER_UDP_LOCAL_DISCONNECT);
+
+                        /*
+                         * Set the disconnect status in the underlying
+                         * BusEndpoint so that higher levels can determine what
+                         * to do in response.  ER_OK means voluntary here, and
+                         * we are presumably voluntarily shutting down.  Note
+                         * that SetEpDisconnectStatus() may rewrite status code.
+                         */
+                        ep->SetEpDisconnectStatus(ER_OK);
                     }
                 }
             }
@@ -6173,6 +6226,17 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
                     ep->SetEpStopping();
                     stream->Disconnect(false, ER_UDP_LOCAL_DISCONNECT);
                     disconnected = stream->GetDisconnected();
+
+                    /*
+                     * Set the disconnect status of the underlying BusEndpoint
+                     * so that higher levels can determine what to do in
+                     * response.  This value percolates up to AllJoynObj and its
+                     * session lost handling, which will expect an ER_TIMEOUT if
+                     * a link timeout happens.  That is what we infer if we
+                     * can't get the final data out.  Note that
+                     * SetEpDisconnectStatus() may rewrite status code.
+                     */
+                    ep->SetEpDisconnectStatus(ER_TIMEOUT);
                 }
             }
 #endif
@@ -6191,6 +6255,16 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
                 ep->SetEpStopping();
                 stream->Disconnect(false, ER_UDP_LOCAL_DISCONNECT);
                 disconnected = stream->GetDisconnected();
+
+                /*
+                 * Set the disconnect status of the underlying BusEndpoint so
+                 * that higher levels can determine what to do in response.  We
+                 * got all of the queued data out, so this voluntary disconnect
+                 * ended up ER_OK.  Note that SetEpDisconnectStatus() may
+                 * rewrite status code.
+                 */
+                ep->SetEpDisconnectStatus(ER_OK);
+
             }
             ep->StateUnlock();
 
@@ -7183,6 +7257,16 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
                     assert(stream && "UDPTransport::DoConnectCb(): must have a stream at this point");
                     QCC_DbgPrintf(("UDPTransport::DoConnectCb(): Disconnect() stream for endpoint with conn ID == %d.", connId));
                     stream->Disconnect(false, ER_UDP_LOCAL_DISCONNECT);
+
+                    /*
+                     * Set the disconnect status of the underlying BusEndpoint
+                     * so that higher levels can determine what to do in
+                     * response.  Since this endpiont is not making it through
+                     * the connect process, most likely nobody will even notice
+                     * but we do so for completeness.  Note that
+                     * SetEpDisconnectStatus() may rewrite status code.
+                     */
+                    ep->SetEpDisconnectStatus(status);
 
                     /*
                      * If the connection faied before it was actually set up, we
@@ -9926,27 +10010,6 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
     m_endpointListLock.Unlock(MUTEX_CONTEXT);
     DecrementAndFetch(&m_refCount);
     return status;
-}
-
-/**
- * This is a (surprisingly) unused method call.  One would expect that since it
- * is defined, it would be the symmetrical opposigte of Connect.  That turns out
- * not to be the case.  Some transports define implementations as if it was
- * used, but it is not.  Our implementation is to simply assert.
- */
-QStatus UDPTransport::Disconnect(const char* connectSpec)
-{
-    IncrementAndFetch(&m_refCount);
-    QCC_DbgHLPrintf(("UDPTransport::Disconnect(): %s", connectSpec));
-
-    /*
-     * Disconnect is actually not used in the transports architecture.  It is
-     * misleading and confusing to have it implemented.
-     */
-    assert(0 && "UDPTransport::Disconnect(): Unexpected call");
-    QCC_LogError(ER_FAIL, ("UDPTransport::Disconnect(): Unexpected call"));
-    DecrementAndFetch(&m_refCount);
-    return ER_FAIL;
 }
 
 /**

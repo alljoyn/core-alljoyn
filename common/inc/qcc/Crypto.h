@@ -7,7 +7,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -731,7 +731,7 @@ class Crypto_SRP {
      * that encodes the startup parameters.
      *
      * @param fromServer   Hex-encoded parameter string from the server.
-     * @param toServer     Retusn a hex-encode parameter string to be sent to the server.
+     * @param toServer     Returns a hex-encoded parameter string to be sent to the server.
      *
      * @return  - ER_OK if the initialization was succesful.
      *          - ER_BAD_STRING_ENCODING if the hex-encoded parameter block is badly formed.

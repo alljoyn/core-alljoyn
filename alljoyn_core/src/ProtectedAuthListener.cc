@@ -3,7 +3,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2012, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -77,7 +77,7 @@ class AsyncTracker {
     static bool Trigger(AuthContext* context, bool accept, AuthListener::Credentials* credentials)
     {
         bool found = false;
-        /* Ensure that self has been Allocated in AsysncTracker::Allocate */
+        /* Ensure that self has been Allocated in AsyncTracker::Allocate */
         if (self) {
             if (IncrementAndFetch(&refs) > 1) {
                 self->lock.Lock();
@@ -94,7 +94,7 @@ class AsyncTracker {
                         context->event.SetEvent();
                         found = true;
                         /*
-                         * Decrement to balance increment in AsysncTracker::Allocate
+                         * Decrement to balance increment in AsyncTracker::Allocate
                          */
                         DecrementAndFetch(&refs);
                         break;
@@ -119,7 +119,7 @@ class AsyncTracker {
 
     static void RemoveAll(AuthListener* listener)
     {
-        /* Ensure that self has been Allocated in AsysncTracker::Allocate */
+        /* Ensure that self has been Allocated in AsyncTracker::Allocate */
         if (self) {
             if (IncrementAndFetch(&refs) > 1) {
                 self->lock.Lock();

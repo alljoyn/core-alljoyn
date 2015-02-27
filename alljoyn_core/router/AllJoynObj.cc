@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2015, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -97,10 +97,10 @@ void AllJoynObj::ReleaseLocks()
     router.UnlockNameTable();
 }
 
-AllJoynObj::AllJoynObj(Bus& bus, BusController* busController) :
+AllJoynObj::AllJoynObj(Bus& bus, BusController* busController, DaemonRouter& router) :
     BusObject(org::alljoyn::Bus::ObjectPath, false),
     bus(bus),
-    router(reinterpret_cast<DaemonRouter&>(bus.GetInternal().GetRouter())),
+    router(router),
     foundNameSignal(NULL),
     lostAdvNameSignal(NULL),
     sessionLostSignal(NULL),
@@ -873,7 +873,7 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
                 /* Step 1b: If no busAddr, see if one exists in the adv alias map */
                 if (busAddrs.empty() && (sessionHost[0] == ':')) {
                     QCC_DbgPrintf(("JoinSessionThread::RunJoin(): look for busaddr in adv alias map"));
-                    String rguidStr = String(sessionHost).substr(1, GUID128::SHORT_SIZE);
+                    String rguidStr = String(sessionHost).substr(1, GUID128::SIZE_SHORT);
                     map<String, set<AdvAliasEntry> >::iterator ait = ajObj.advAliasMap.find(rguidStr);
                     if (ait != ajObj.advAliasMap.end()) {
                         set<AdvAliasEntry>::iterator bit = ait->second.begin();
@@ -2794,7 +2794,7 @@ void AllJoynObj::DetachSessionSignalHandler(const InterfaceDescription::Member* 
     QCC_DbgTrace(("AllJoynObj::DetachSessionSignalHandler(src=%s, id=%u)", src, id));
 
     /* Do not process our own detach message signals */
-    if (::strncmp(guid.ToShortString().c_str(), msg->GetSender() + 1, qcc::GUID128::SHORT_SIZE) == 0) {
+    if (::strncmp(guid.ToShortString().c_str(), msg->GetSender() + 1, qcc::GUID128::SIZE_SHORT) == 0) {
         return;
     }
 
@@ -4259,11 +4259,6 @@ void AllJoynObj::NameOwnerChanged(const qcc::String& alias,
         QCC_LogError(ER_FAIL, ("Invalid unique name \"%s\"", un->c_str()));
     }
 
-    /* Ignore well-known name changes that involve any bus controller endpoint */
-    if ((::strcmp(un->c_str() + guidLen, ".1") == 0) && (alias[0] != ':')) {
-        return;
-    }
-
     /* Remove unique names from sessionMap entries */
     if (!newOwner && (alias[0] == ':')) {
         AcquireLocks();
@@ -4408,28 +4403,7 @@ void AllJoynObj::NameOwnerChanged(const qcc::String& alias,
         /* If a local unique name dropped, then remove any refs it had in the connnect, advertise and discover maps */
         if ((NULL == newOwner) && (alias[0] == ':')) {
             /* Remove endpoint refs from connect map */
-            qcc::String last;
             AcquireLocks();
-            multimap<qcc::String, qcc::String>::iterator it = connectMap.begin();
-            while (it != connectMap.end()) {
-                if (it->second == *oldOwner) {
-                    bool isFirstSpec = (last != it->first);
-                    qcc::String lastOwner;
-                    do {
-                        last = it->first;
-                        connectMap.erase(it++);
-                    } while ((connectMap.end() != it) && (last == it->first) && (*oldOwner == it->second));
-                    if (isFirstSpec && ((connectMap.end() == it) || (last != it->first))) {
-                        QStatus status = bus.Disconnect(last.c_str());
-                        if (ER_OK != status) {
-                            QCC_LogError(status, ("Failed to disconnect connect spec %s", last.c_str()));
-                        }
-                    }
-                } else {
-                    last = it->first;
-                    ++it;
-                }
-            }
 
             /* Remove endpoint refs from advertise map */
             multimap<String, pair<TransportMask, String> >::const_iterator ait = advertiseMap.begin();
@@ -4454,7 +4428,7 @@ void AllJoynObj::NameOwnerChanged(const qcc::String& alias,
             DiscoverMapType::const_iterator dit = discoverMap.begin();
             while (dit != discoverMap.end()) {
                 if (dit->second.sender == *oldOwner) {
-                    last = dit->first;
+                    qcc::String last = dit->first;
                     TransportMask mask = dit->second.transportMask;
 
                     QCC_DbgPrintf(("Calling ProcCancelFindAdvertisement from NameOwnerChanged [%s]", Thread::GetThread()->GetName()));
@@ -5045,17 +5019,6 @@ void AllJoynObj::CancelSessionlessMessageReply(Message& msg, QStatus status)
     }
 }
 
-void AllJoynObj::BusConnectionLost(const qcc::String& busAddr)
-{
-    /* Clear the connection map of this busAddress */
-    AcquireLocks();
-    multimap<String, String>::iterator it = connectMap.lower_bound(busAddr);
-    while ((it != connectMap.end()) && (0 == busAddr.compare(it->first))) {
-        connectMap.erase(it++);
-    }
-    ReleaseLocks();
-}
-
 void AllJoynObj::Ping(const InterfaceDescription::Member* member, Message& msg)
 {
     QCC_DbgTrace(("AllJoynObj::Ping()"));
@@ -5169,7 +5132,7 @@ void AllJoynObj::Ping(const InterfaceDescription::Member* member, Message& msg)
                 } else {
                     // Unique name
                     String nameStr(name);
-                    String guidStr = nameStr.substr(1, GUID128::SHORT_SIZE);
+                    String guidStr = nameStr.substr(1, GUID128::SIZE_SHORT);
                     if (guidStr == bus.GetInternal().GetGlobalGUID().ToShortString()) {
                         // Guid matches our guid but endpoint is invalid.
                         // Check NameTable to find out if this is a name that has been assigned.
@@ -5186,7 +5149,7 @@ void AllJoynObj::Ping(const InterfaceDescription::Member* member, Message& msg)
                 }
             } else if (ep->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL) {
                 VirtualEndpoint vep = VirtualEndpoint::cast(ep);
-                guid = String(vep->GetUniqueName()).substr(1, GUID128::SHORT_SIZE);
+                guid = String(vep->GetUniqueName()).substr(1, GUID128::SIZE_SHORT);
                 QCC_DbgPrintf(("Session found %s", name));
             }
 

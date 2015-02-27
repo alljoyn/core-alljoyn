@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, 2014 AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -41,7 +41,7 @@ static int MakeSock(AddressFamily family, SocketType type)
     QStatus status = Socket(family, type, sock);
     if (ER_OK != status) {
         QCC_LogError(status, ("Socket failed"));
-        sock = -1;
+        sock = qcc::INVALID_SOCKET_FD;
     }
     return sock;
 }
@@ -117,11 +117,18 @@ SocketStream::~SocketStream()
     /*
      * OK to close the socket now.
      */
-    qcc::Close(sock);
+    if (sock != qcc::INVALID_SOCKET_FD) {
+        qcc::Close(sock);
+        sock = qcc::INVALID_SOCKET_FD;
+    }
 }
 
 QStatus SocketStream::Connect(qcc::String& host, uint16_t port)
 {
+    if (sock == qcc::INVALID_SOCKET_FD) {
+        return ER_OS_ERROR;
+    }
+
     IPAddress ipAddr(host);
     QStatus status = qcc::Connect(sock, ipAddr, port);
 
@@ -138,6 +145,10 @@ QStatus SocketStream::Connect(qcc::String& host, uint16_t port)
 
 QStatus SocketStream::Connect(qcc::String& path)
 {
+    if (sock == qcc::INVALID_SOCKET_FD) {
+        return ER_OS_ERROR;
+    }
+
     QStatus status = qcc::Connect(sock, path.c_str());
     if (ER_WOULDBLOCK == status) {
         status = Event::Wait(*sinkEvent, Event::WAIT_FOREVER);
@@ -152,7 +163,7 @@ QStatus SocketStream::Connect(qcc::String& path)
 void SocketStream::Close()
 {
     isConnected = false;
-    if (!isDetached) {
+    if (!isDetached && (sock != qcc::INVALID_SOCKET_FD)) {
         qcc::SetLinger(sock, true, 0);
         qcc::Shutdown(sock);
     }
@@ -282,5 +293,9 @@ QStatus SocketStream::PushBytesAndFds(const void* buf, size_t numBytes, size_t& 
 
 QStatus SocketStream::SetNagle(bool reuse)
 {
-    return qcc::SetNagle(sock, reuse);
+    if (sock != qcc::INVALID_SOCKET_FD) {
+        return qcc::SetNagle(sock, reuse);
+    } else {
+        return ER_OS_ERROR;
+    }
 }

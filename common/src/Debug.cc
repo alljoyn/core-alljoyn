@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, 2014-2015 AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -359,6 +359,11 @@ class DebugContext {
 
     void Process(DbgMsgType type, const char* module, const char* filename, int lineno);
     void Vprintf(const char* fmt, va_list ap);
+
+    const char* GetMsg()
+    {
+        return (const char*)&msg[0];
+    }
 };
 
 void DebugContext::Process(DbgMsgType type, const char* module, const char* filename, int lineno)
@@ -568,3 +573,14 @@ void QCC_UseOSLogging(bool useOSLog)
     QCC_RegisterOutputCallback(cb, context);
 }
 
+const char* _QCC_DbgGetMsg(void* ctx)
+{
+    DebugContext* context = reinterpret_cast<DebugContext*>(ctx);
+    return context->GetMsg();
+}
+
+void _QCC_DbgDeleteCtx(void* ctx)
+{
+    DebugContext* context = reinterpret_cast<DebugContext*>(ctx);
+    delete context;
+}

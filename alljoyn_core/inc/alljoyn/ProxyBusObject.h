@@ -623,7 +623,7 @@ class ProxyBusObject : public MessageReceiver {
      * @return
      *      - #ER_OK if successful.
      *      - #ER_BUS_BAD_CHILD_PATH if the path is a bad path
-     *      - #ER_BUS_OBJ_ALREADY_EXISTS the the object already exists on the ProxyBusObject
+     *      - #ER_BUS_OBJ_ALREADY_EXISTS if the object already exists on the ProxyBusObject
      */
     QStatus AddChild(const ProxyBusObject& child);
 

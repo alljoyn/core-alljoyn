@@ -7,7 +7,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011,2014 AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -313,10 +313,10 @@ bool NameTable::IsValidLocalUniqueName(const qcc::String& uniqueName) const
         size_t period_pos1 = uniqueName.find(".", period_pos + 1);
         if (period_pos1 == String::npos) {
             // Contains exactly one "."
-            String guid = uniqueName.substr(0, GUID128::SHORT_SIZE + 2);
+            String guid = uniqueName.substr(0, GUID128::SIZE_SHORT + 2);
             if (guid == uniquePrefix) {
                 //guid matches uniquePrefix
-                String idStr = uniqueName.substr(GUID128::SHORT_SIZE + 2);
+                String idStr = uniqueName.substr(GUID128::SIZE_SHORT + 2);
                 uint32_t id = StringToU32(idStr);
                 if ((id != 0) && (id <= uniqueId)) {
                     //valid id

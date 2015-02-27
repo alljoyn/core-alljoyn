@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2012,2014-2015 AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -129,11 +129,11 @@ struct RemoteCacheSnapshot {
     qcc::String guid;
 };
 
-SessionlessObj::SessionlessObj(Bus& bus, BusController* busController) :
+SessionlessObj::SessionlessObj(Bus& bus, BusController* busController, DaemonRouter& router) :
     BusObject(ObjectPath, false),
     bus(bus),
     busController(busController),
-    router(reinterpret_cast<DaemonRouter&>(bus.GetInternal().GetRouter())),
+    router(router),
     sessionlessIface(NULL),
     requestSignalsSignal(NULL),
     requestRangeSignal(NULL),
@@ -449,7 +449,7 @@ QStatus SessionlessObj::PushMessage(Message& msg)
     return ER_OK;
 }
 
-bool SessionlessObj::RouteSessionlessMessage(SessionId sid, Message& msg)
+void SessionlessObj::RouteSessionlessMessage(SessionId sid, Message& msg)
 {
     QCC_DbgPrintf(("RouteSessionlessMessage(sid=%u,msg={sender='%s',interface='%s',member='%s',path='%s'})",
                    sid, msg->GetSender(), msg->GetInterface(), msg->GetMemberName(), msg->GetObjectPath()));
@@ -462,7 +462,7 @@ bool SessionlessObj::RouteSessionlessMessage(SessionId sid, Message& msg)
         QCC_LogError(ER_WARNING, ("Received message on unknown sid %u, ignoring", sid));
         lock.Unlock();
         router.UnlockNameTable();
-        return true;
+        return;
     }
     RemoteCache& cache = cit->second;
 
@@ -470,7 +470,7 @@ bool SessionlessObj::RouteSessionlessMessage(SessionId sid, Message& msg)
         /* We are retrying and have already routed this message, ignore it */
         lock.Unlock();
         router.UnlockNameTable();
-        return true;
+        return;
     } else {
         cache.routedMessages.push_back(RoutedMessage(msg));
     }
@@ -479,7 +479,7 @@ bool SessionlessObj::RouteSessionlessMessage(SessionId sid, Message& msg)
 
     lock.Unlock();
     router.UnlockNameTable();
-    return true;
+    return;
 }
 
 void SessionlessObj::SendMatchingThroughEndpoint(SessionId sid, Message msg, uint32_t fromRulesId, uint32_t toRulesId)
@@ -1054,16 +1054,25 @@ void SessionlessObj::JoinSessionCB(QStatus status, SessionId sid, const SessionO
              * Send the request signal if join was successful.  Prefer
              * RequestRange since it may be possible to receive duplicates when
              * RequestSignals is used together with RequestRange.
+             *
+             * The request signal is sent to the owner of the cache's advertised
+             * name, not the advertised name.  The owner of the cache's name is
+             * the remote routing node, and will always be :GUID.1.  The reason
+             * to send to the owner and not the advertised name is that the
+             * advertised name can be cancelled/released after joining the
+             * session but before the request signal is sent if the remote
+             * router advertises a new change ID in that interval.
              */
+            String name = ":" + ctx->guid + ".1";
             if (matchCapable) {
-                status = RequestRangeMatch(ctx->name.c_str(), sid, fromId, toId, matchRules);
+                status = RequestRangeMatch(name.c_str(), sid, fromId, toId, matchRules);
             } else if (rangeCapable) {
-                status = RequestRange(ctx->name.c_str(), sid, fromId, toId);
+                status = RequestRange(name.c_str(), sid, fromId, toId);
             } else {
-                status = RequestSignals(ctx->name.c_str(), sid, fromId);
+                status = RequestSignals(name.c_str(), sid, fromId);
             }
             if (status != ER_OK) {
-                QCC_LogError(status, ("Failed to send Request to %s", ctx->name.c_str()));
+                QCC_LogError(status, ("Failed to send Request to %s", name.c_str()));
                 status = bus.LeaveSession(sid);
                 QCC_LogError(status, ("Failed to leave session %u", sid));
 

@@ -8,7 +8,7 @@
 /******************************************************************************
  *
  *
- * Copyright (c) 2009-2012,2014 AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -39,8 +39,8 @@ BusController::BusController(Bus& alljoynBus, AuthListener* authListener) :
     bus(alljoynBus),
     authListener(authListener),
     dbusObj(bus, this),
-    alljoynObj(bus, this),
-    sessionlessObj(bus, this),
+    alljoynObj(bus, this, reinterpret_cast<DaemonRouter&>(bus.GetInternal().GetRouter())),
+    sessionlessObj(bus, this, reinterpret_cast<DaemonRouter&>(bus.GetInternal().GetRouter())),
 #ifndef NDEBUG
     alljoynDebugObj(this),
 #endif
@@ -49,6 +49,8 @@ BusController::BusController(Bus& alljoynBus, AuthListener* authListener) :
 {
     DaemonRouter& router(reinterpret_cast<DaemonRouter&>(bus.GetInternal().GetRouter()));
     router.SetBusController(this);
+    router.SetAllJoynObj(&alljoynObj);
+    router.SetSessionlessObj(&sessionlessObj);
 }
 
 BusController::~BusController()

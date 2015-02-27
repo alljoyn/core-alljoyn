@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2014-2015, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -97,36 +97,6 @@ void* NamedPipeDaemonTransport::Run(void* arg)
     QStatus status = ER_OK;
     static const uint32_t BUFSIZE = 128 * 1024;
 
-    /*
-     * Security Descriptor
-     */
-    SECURITY_ATTRIBUTES securityAttributes;
-    PSECURITY_DESCRIPTOR securityDescriptor = NULL;
-    ULONG securityDescriptorSize;
-    ZeroMemory(&securityAttributes, sizeof(securityAttributes));
-
-    /*
-     * Allows Read/Write access to all AppContainers (AC) and Built in Users (BU).
-     */
-    static const WCHAR securityDescriptorString[] = L"D:(A;;GA;;;BU)(A;;GA;;;AC)";
-
-    /*
-     * Using the wide character version because it is available on Windows versions with smaller footprints.
-     */
-    if (!ConvertStringSecurityDescriptorToSecurityDescriptorW(
-            securityDescriptorString,
-            SDDL_REVISION_1,
-            &securityDescriptor,
-            &securityDescriptorSize)) {
-        status = ER_OS_ERROR;
-        QCC_LogError(status, ("NamedPipeDaemonTransport::Run(): Conversion to Security Descriptor failed error=(0x%08X) status=(0x%08X)", ::GetLastError(), status));
-        return (void*) status;
-    }
-
-    securityAttributes.nLength = sizeof(SECURITY_ATTRIBUTES);
-    securityAttributes.bInheritHandle = FALSE;
-    securityAttributes.lpSecurityDescriptor = securityDescriptor;
-
     while (!IsStopping()) {
 
         HANDLE serverHandle = INVALID_HANDLE_VALUE;
@@ -134,7 +104,7 @@ void* NamedPipeDaemonTransport::Run(void* arg)
         /*
          * Creating a new instance of the AllJoyn router node named pipe.
          */
-        serverHandle = AllJoynCreateBus(BUFSIZE, BUFSIZE, &securityAttributes);
+        serverHandle = AllJoynCreateBus(BUFSIZE, BUFSIZE, nullptr);
 
         if (serverHandle == INVALID_HANDLE_VALUE) {
             status = ER_OS_ERROR;
@@ -191,7 +161,6 @@ void* NamedPipeDaemonTransport::Run(void* arg)
         if ((status != ER_OK) || (nbytes != 1) || (byte != 0)) {
             status = (status == ER_OK) ? ER_FAIL : status;
         } else {
-
             /*
              * We need to determine if the connecting client is a Desktop or Universal Windows app to correctly enforce the Windows app
              * isolation policies. Named pipe impersonation is used to determine who the caller is and the groupId is set to the
@@ -203,9 +172,18 @@ void* NamedPipeDaemonTransport::Run(void* arg)
             }
 
             HANDLE hClientToken = NULL;
-            if ((status == ER_OK) && !OpenThreadToken(GetCurrentThread(), TOKEN_ALL_ACCESS, TRUE, &hClientToken)) {
+            if ((status == ER_OK) && !OpenThreadToken(GetCurrentThread(), TOKEN_QUERY, TRUE, &hClientToken)) {
                 status = ER_OS_ERROR;
                 QCC_LogError(status, ("NamedPipeDaemonTransport::Run(): OpenThreadToken failed error=(0x%08X) status=(0x%08X)", ::GetLastError(), status));
+            }
+
+            /*
+             * Done impersonating at this point, revert to self.
+             * Always stop impersonating, even if there was a failure.
+             */
+            if (!RevertToSelf()) {
+                status = ER_OS_ERROR;
+                QCC_LogError(status, ("NamedPipeDaemonTransport::Run(): RevertToSelf failed error=(0x%08X) status=(0x%08X)", ::GetLastError(), status));
             }
 
             DWORD isAppContainer = 0;
@@ -234,7 +212,7 @@ void* NamedPipeDaemonTransport::Run(void* arg)
             PSID appContainerSid = NULL;
             PSID_AND_ATTRIBUTES sidAndAttributes = NULL;
             DWORD numAppContainers = 0;
-            BOOL isWhitelisted = FALSE;
+            BOOLEAN isWhitelisted = FALSE;
             length = SECURITY_MAX_SID_SIZE + sizeof(TOKEN_APPCONTAINER_INFORMATION);
             BYTE buffer[SECURITY_MAX_SID_SIZE + sizeof(TOKEN_APPCONTAINER_INFORMATION)];
             if ((status == ER_OK) && isAppContainer == TRUE) {
@@ -244,19 +222,14 @@ void* NamedPipeDaemonTransport::Run(void* arg)
                 }
             }
 
-            // Done impersonating at this point, revert to self
-            if (!RevertToSelf()) {
-                status = ER_OS_ERROR;
-                QCC_LogError(status, ("NamedPipeDaemonTransport::Run(): RevertToSelf failed error=(0x%08X) status=(0x%08X)", ::GetLastError(), status));
-            }
-
             /*
              * If a universal Windows app is in the loopback exemption list, then we will treat it as a desktop application. This
              * will allow the Universal Windows app to bypass the application isolation rules. This is allowed because an app on the
-             * loopback exemption list could start its own bundled router, so it already has permissions to talk to the system.
+             * loopback exemption list could start its own bundled router, so it already has permissions to talk to the system. Skip
+             * this step if the application is already whitelisted because of the isolation bypass capability.
              */
             PTSTR sidString = NULL;
-            if ((status == ER_OK) && isAppContainer == TRUE) {
+            if ((status == ER_OK) && (isAppContainer == TRUE) && (isWhitelisted == FALSE)) {
                 appContainerSid = ((PTOKEN_APPCONTAINER_INFORMATION)buffer)->TokenAppContainer;
 
                 if (!ConvertSidToStringSid(appContainerSid, &sidString)) {
@@ -383,10 +356,6 @@ void* NamedPipeDaemonTransport::Run(void* arg)
             QCC_LogError(status, ("Error accepting new connection. Ignoring..."));
         }
 
-    }
-
-    if (securityDescriptor != NULL) {
-        LocalFree(securityDescriptor);
     }
 
     QCC_DbgPrintf(("NamedPipeDaemonTransport::Run is exiting. status=%s", QCC_StatusText(status)));

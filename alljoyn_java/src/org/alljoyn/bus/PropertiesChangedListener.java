@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2011, 2014 AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -76,6 +76,17 @@ public abstract class PropertiesChangedListener {
 
     /** Release native resources. */
     private synchronized native void destroy();
+
+    /**
+     * Destroy native resources held by objects of this class.
+     */
+    protected void finalize() throws Throwable {
+        try {
+            destroy();
+        } finally {
+            super.finalize();
+        }
+    }
 
     /**
      * Called by the bus when the value of a property changes if that property has annotation
