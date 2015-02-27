@@ -135,6 +135,9 @@ public class ProxyBusObject {
     /** Is the remote object for this proxy bus object secure. */
     private native boolean isProxyBusObjectSecure();
 
+    /** Enable property caching for this proxy bus object. */
+    public native void enablePropertyCaching();
+
     /** The invocation handler for the bus interfaces. */
     private class Handler implements InvocationHandler {
 
