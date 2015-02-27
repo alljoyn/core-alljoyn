@@ -80,6 +80,16 @@ class _LocalEndpoint::DeferredCallbacks : public qcc::AlarmListener {
     _LocalEndpoint* endpoint;
 };
 
+class _LocalEndpoint::CachedPropertyCallbacks : public qcc::AlarmListener {
+  public:
+    CachedPropertyCallbacks(_LocalEndpoint* ep) : endpoint(ep) { }
+
+    void AlarmTriggered(const qcc::Alarm& alarm, QStatus reason);
+
+  private:
+    _LocalEndpoint* endpoint;
+};
+
 LocalTransport::~LocalTransport()
 {
     Stop();
@@ -153,10 +163,29 @@ class _LocalEndpoint::ReplyContext {
     ReplyContext operator=(const ReplyContext& other);
 };
 
+class _LocalEndpoint::CachedGetPropertyReplyContext {
+  public:
+    ProxyBusObject* proxy;
+    ProxyBusObject::Listener* listener;
+    ProxyBusObject::Listener::GetPropertyCB callback;
+    void* context;
+    MsgArg value;
+
+    CachedGetPropertyReplyContext(
+        ProxyBusObject* proxy,
+        ProxyBusObject::Listener* listener,
+        ProxyBusObject::Listener::GetPropertyCB callback,
+        void* context,
+        const MsgArg& value) :
+        proxy(proxy), listener(listener), callback(callback), context(context), value(value) { }
+
+};
+
 _LocalEndpoint::_LocalEndpoint(BusAttachment& bus, uint32_t concurrency) :
     _BusEndpoint(ENDPOINT_TYPE_LOCAL),
     dispatcher(new Dispatcher(this, concurrency)),
     deferredCallbacks(new DeferredCallbacks(this)),
+    cachedPropertyCallbacks(new CachedPropertyCallbacks(this)),
     running(false),
     isRegistered(false),
     bus(&bus),
@@ -210,6 +239,11 @@ _LocalEndpoint::~_LocalEndpoint()
         if (deferredCallbacks) {
             delete deferredCallbacks;
             deferredCallbacks = NULL;
+        }
+
+        if (cachedPropertyCallbacks) {
+            delete cachedPropertyCallbacks;
+            cachedPropertyCallbacks = NULL;
         }
 
         /*
@@ -876,6 +910,17 @@ QStatus _LocalEndpoint::UnregisterAllHandlers(MessageReceiver* receiver)
             ++iter;
         }
     }
+
+    for (set<CachedGetPropertyReplyContext*>::iterator iter = cachedGetPropertyReplyContexts.begin();
+         iter != cachedGetPropertyReplyContexts.end();) {
+        if (static_cast<MessageReceiver*>((*iter)->proxy) == receiver) {
+            delete *iter;
+            cachedGetPropertyReplyContexts.erase(iter);
+            iter = cachedGetPropertyReplyContexts.begin();
+        } else {
+            ++iter;
+        }
+    }
     replyMapLock.Unlock(MUTEX_CONTEXT);
     return ER_OK;
 }
@@ -1136,6 +1181,50 @@ QStatus _LocalEndpoint::HandleMethodReply(Message& message)
         QCC_DbgHLPrintf(("%s does not match any current method calls: %s", message->Description().c_str(), QCC_StatusText(status)));
     }
     return status;
+}
+
+void _LocalEndpoint::CachedPropertyCallbacks::AlarmTriggered(const qcc::Alarm& alarm, QStatus reason)
+{
+    if (reason == ER_OK) {
+        CachedGetPropertyReplyContext* ctx = reinterpret_cast<CachedGetPropertyReplyContext*>(alarm->GetContext());
+        endpoint->replyMapLock.Lock(MUTEX_CONTEXT);
+        std::set<CachedGetPropertyReplyContext*>::iterator it = endpoint->cachedGetPropertyReplyContexts.find(ctx);
+        if (it != endpoint->cachedGetPropertyReplyContexts.end()) {
+            endpoint->cachedGetPropertyReplyContexts.erase(ctx);
+        } else {
+            ctx = NULL;
+        }
+        endpoint->replyMapLock.Unlock(MUTEX_CONTEXT);
+        if (ctx != NULL) {
+            (ctx->listener->*ctx->callback)(ER_OK, ctx->proxy, ctx->value, ctx->context);
+            delete ctx;
+        }
+    }
+}
+
+void _LocalEndpoint::ScheduleCachedGetPropertyReply(
+    ProxyBusObject* proxy,
+    ProxyBusObject::Listener* listener,
+    ProxyBusObject::Listener::GetPropertyCB callback,
+    void* context,
+    const MsgArg& value)
+{
+    if (dispatcher) {
+        CachedGetPropertyReplyContext* ctx = new CachedGetPropertyReplyContext(proxy, listener, callback, context, value);
+        replyMapLock.Lock(MUTEX_CONTEXT);
+        cachedGetPropertyReplyContexts.insert(ctx);
+        replyMapLock.Unlock(MUTEX_CONTEXT);
+
+        uint32_t zero = 0;
+        QStatus status = dispatcher->AddAlarm(Alarm(zero, cachedPropertyCallbacks, ctx));
+        if (ER_OK != status) {
+            QCC_DbgHLPrintf(("ScheduleCachedGetPropertyReply failure to add Alarm: %s", QCC_StatusText(status)));
+            replyMapLock.Lock(MUTEX_CONTEXT);
+            cachedGetPropertyReplyContexts.erase(ctx);
+            replyMapLock.Unlock(MUTEX_CONTEXT);
+            delete ctx;
+        }
+    }
 }
 
 void _LocalEndpoint::DeferredCallbacks::AlarmTriggered(const qcc::Alarm& alarm, QStatus reason)
