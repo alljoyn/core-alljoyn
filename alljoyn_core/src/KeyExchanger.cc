@@ -706,34 +706,40 @@ static qcc::String EncodePEMCertChain(CertificateECC* certs[], size_t numCerts)
 
 QStatus KeyExchangerECDHE_ECDSA::VerifyCredentialsCB(const char* peerName, CertificateECC* certs[], size_t numCerts)
 {
-    if (numCerts <= 0) {
-        return ER_OK;
+    if (numCerts <= 1) {
+        /* At the very least, we need a leaf cert and one signer cert. */
+        return ER_AUTH_FAIL;
     }
     AuthListener::Credentials creds;
-    CertificateECC** certsToVerify;
+    CertificateECC** certsToVerify = NULL;
     size_t numCertsToVerify = 0;
-    bool copyCerts = false;
 
-    /* do not send the leaf cert */
-    if (certs[0]->GetVersion() == 0) {
-        if (numCerts == 1) {
-            return ER_OK;
-        }
-        numCertsToVerify = numCerts - 1;
-        certsToVerify = new CertificateECC * [numCertsToVerify];
-        for (size_t cnt = 0; cnt < numCertsToVerify; cnt++) {
-            certsToVerify[cnt] = certs[cnt + 1];
-        }
-        copyCerts = true;
-    } else {
-        certsToVerify = certs;
-        numCertsToVerify = numCerts;
+    if (certs[0]->GetVersion() != 0) {
+        /* Leaf cert has to be version 0. */
+        return ER_AUTH_FAIL;
+    }
+
+    /* Verify the cryptographic binding between the leaf cert and its issuer. */
+    const ECCPublicKey* issuer = certs[0]->GetIssuer();
+    const ECCPublicKey* subject = certs[1]->GetSubject();
+
+    if ((NULL == issuer) || (NULL == subject)) {
+        return ER_AUTH_FAIL;
+    }
+    if (0 != memcmp(issuer, subject, ECC_PUBLIC_KEY_SZ)) {
+        /* Certificate in slot 1 didn't actually issue the leaf cert! */
+        return ER_AUTH_FAIL;
+    }
+    /* The leaf cert isn't really a certificate; it's just the place we send the response to the challenge.
+     * The app has no use of that. So send up all the certs in the chain except that one. */
+    numCertsToVerify = numCerts - 1;
+    certsToVerify = new CertificateECC * [numCertsToVerify];
+    for (size_t cnt = 0; cnt < numCertsToVerify; cnt++) {
+        certsToVerify[cnt] = certs[cnt + 1];
     }
 
     creds.SetCertChain(EncodePEMCertChain(certsToVerify, numCertsToVerify));
-    if (copyCerts) {
-        delete [] certsToVerify;
-    }
+    delete [] certsToVerify;
 
     /* check with listener to validate the cert chain */
     bool ok = listener.VerifyCredentials(GetSuiteName(), peerName, creds);
