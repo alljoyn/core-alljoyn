@@ -119,7 +119,7 @@ QStatus Crypto_Hash::Init(Algorithm alg, const uint8_t* hmacKey, size_t keyLen)
 
     // Open algorithm provider if required
     if (!cngCache.algHandles[alg][MAC]) {
-        if (BCryptOpenAlgorithmProvider(&cngCache.algHandles[alg][MAC], algId, MS_PRIMITIVE_PROVIDER, MAC ? BCRYPT_ALG_HANDLE_HMAC_FLAG : 0) < 0) {
+        if (!BCRYPT_SUCCESS(BCryptOpenAlgorithmProvider(&cngCache.algHandles[alg][MAC], algId, MS_PRIMITIVE_PROVIDER, MAC ? BCRYPT_ALG_HANDLE_HMAC_FLAG : 0))) {
             status = ER_CRYPTO_ERROR;
             QCC_LogError(status, ("Failed to open algorithm provider"));
             delete ctx;
@@ -130,7 +130,7 @@ QStatus Crypto_Hash::Init(Algorithm alg, const uint8_t* hmacKey, size_t keyLen)
 
     // Get length of hash object and allocate the object
     DWORD got;
-    if (BCryptGetProperty(cngCache.algHandles[alg][MAC], BCRYPT_OBJECT_LENGTH, (PBYTE)&ctx->hashObjLen, sizeof(DWORD), &got, 0) < 0) {
+    if (!BCRYPT_SUCCESS(BCryptGetProperty(cngCache.algHandles[alg][MAC], BCRYPT_OBJECT_LENGTH, (PBYTE)&ctx->hashObjLen, sizeof(DWORD), &got, 0))) {
         status = ER_CRYPTO_ERROR;
         QCC_LogError(status, ("Failed to get object length property"));
         delete ctx;
@@ -140,7 +140,7 @@ QStatus Crypto_Hash::Init(Algorithm alg, const uint8_t* hmacKey, size_t keyLen)
 
     ctx->hashObj = new uint8_t[ctx->hashObjLen];
 
-    if (BCryptCreateHash(cngCache.algHandles[alg][MAC], &ctx->handle, ctx->hashObj, ctx->hashObjLen, (PUCHAR)hmacKey, (ULONG)keyLen, 0) < 0) {
+    if (!BCRYPT_SUCCESS(BCryptCreateHash(cngCache.algHandles[alg][MAC], &ctx->handle, ctx->hashObj, ctx->hashObjLen, (PUCHAR)hmacKey, (ULONG)keyLen, 0))) {
         status = ER_CRYPTO_ERROR;
         QCC_LogError(status, ("Failed to create hash"));
         delete ctx;
@@ -168,7 +168,7 @@ QStatus Crypto_Hash::Update(const uint8_t* buf, size_t bufSize)
         return ER_BAD_ARG_1;
     }
     if (initialized) {
-        if (BCryptHashData(ctx->handle, (PUCHAR)buf, bufSize, 0) < 0) {
+        if (!BCRYPT_SUCCESS(BCryptHashData(ctx->handle, (PUCHAR)buf, bufSize, 0))) {
             status = ER_CRYPTO_ERROR;
             QCC_LogError(status, ("Updating hash digest"));
         }
@@ -204,14 +204,14 @@ QStatus Crypto_Hash::GetDigest(uint8_t* digest, bool keepAlive)
             keep = new Context(ctx->digestSize);
             keep->hashObjLen = ctx->hashObjLen;
             keep->hashObj = new uint8_t[ctx->hashObjLen];
-            if (BCryptDuplicateHash(ctx->handle, &keep->handle, keep->hashObj, keep->hashObjLen, 0) < 0) {
+            if (!BCRYPT_SUCCESS(BCryptDuplicateHash(ctx->handle, &keep->handle, keep->hashObj, keep->hashObjLen, 0))) {
                 status = ER_CRYPTO_ERROR;
                 QCC_LogError(status, ("Failed to create hash"));
                 delete keep;
                 keep = NULL;
             }
         }
-        if (BCryptFinishHash(ctx->handle, digest, ctx->digestSize, 0) < 0) {
+        if (!BCRYPT_SUCCESS(BCryptFinishHash(ctx->handle, digest, ctx->digestSize, 0))) {
             status = ER_CRYPTO_ERROR;
             QCC_LogError(status, ("Finalizing hash digest"));
         }
