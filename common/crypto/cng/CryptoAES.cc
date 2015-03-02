@@ -165,7 +165,7 @@ QStatus Crypto_AES::Encrypt(const Block* in, Block* out, uint32_t numBlocks)
     }
     ULONG len = numBlocks * sizeof(Block);
     ULONG clen;
-    if (BCryptEncrypt(keyState->handle, (PUCHAR)in, len, NULL, NULL, 0, (PUCHAR)out, len, &clen, 0) < 0) {
+    if (!BCRYPT_SUCCESS(BCryptEncrypt(keyState->handle, (PUCHAR)in, len, NULL, NULL, 0, (PUCHAR)out, len, &clen, 0))) {
         return ER_CRYPTO_ERROR;
     } else {
         return ER_OK;
@@ -216,7 +216,7 @@ QStatus Crypto_AES::Decrypt(const Block* in, Block* out, uint32_t numBlocks)
     }
     ULONG len = numBlocks * sizeof(Block);
     ULONG clen;
-    if (BCryptDecrypt(keyState->handle, (PUCHAR)in, len, NULL, NULL, 0, (PUCHAR)out, len, &clen, 0) < 0) {
+    if (!BCRYPT_SUCCESS(BCryptDecrypt(keyState->handle, (PUCHAR)in, len, NULL, NULL, 0, (PUCHAR)out, len, &clen, 0))) {
         return ER_CRYPTO_ERROR;
     } else {
         return ER_OK;
@@ -307,7 +307,7 @@ QStatus Crypto_AES::Encrypt_CCM(const void* in, void* out, size_t& len, const Ke
     ULONG clen;
     Block iv;
     NTSTATUS ntstatus = BCryptEncrypt(keyState->handle, (PUCHAR)in, len, &cmi, NULL, 0, (PUCHAR)out, len, &clen, 0);
-    if (ntstatus < 0) {
+    if (!BCRYPT_SUCCESS(ntstatus)) {
         status = ER_CRYPTO_ERROR;
         QCC_LogError(status, ("CCM mode encryption failed NTSTATUS=%x", ntstatus));
     } else {
@@ -370,7 +370,7 @@ QStatus Crypto_AES::Decrypt_CCM(const void* in, void* out, size_t& len, const Ke
 
     ULONG clen;
     NTSTATUS ntstatus = BCryptDecrypt(keyState->handle, (PUCHAR)in, len - authLen, &cmi, NULL, 0, (PUCHAR)out, len, &clen, 0);
-    if (ntstatus < 0) {
+    if (!BCRYPT_SUCCESS(ntstatus)) {
         if (ntstatus == STATUS_AUTH_TAG_MISMATCH) {
             status = ER_AUTH_FAIL;
         } else {
