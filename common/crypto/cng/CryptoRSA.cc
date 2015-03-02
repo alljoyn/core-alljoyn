@@ -59,7 +59,7 @@ static const qcc::String OID_ORG             = "2.5.4.10";
 bool Crypto_RSA::RSA_Init()
 {
     if (!cngCache.rsaHandle) {
-        if (BCryptOpenAlgorithmProvider(&cngCache.rsaHandle, BCRYPT_RSA_ALGORITHM, MS_PRIMITIVE_PROVIDER, 0) < 0) {
+        if (!BCRYPT_SUCCESS(BCryptOpenAlgorithmProvider(&cngCache.rsaHandle, BCRYPT_RSA_ALGORITHM, MS_PRIMITIVE_PROVIDER, 0))) {
             QCC_LogError(ER_CRYPTO_ERROR, ("Failed to open RSA algorithm provider"));
             return false;
         }
@@ -70,11 +70,11 @@ bool Crypto_RSA::RSA_Init()
 void Crypto_RSA::Generate(uint32_t modLen)
 {
     if (RSA_Init()) {
-        if (BCryptGenerateKeyPair(cngCache.rsaHandle, (BCRYPT_KEY_HANDLE*)&key, modLen, 0) < 0) {
+        if (!BCRYPT_SUCCESS(BCryptGenerateKeyPair(cngCache.rsaHandle, (BCRYPT_KEY_HANDLE*)&key, modLen, 0))) {
             QCC_LogError(ER_CRYPTO_ERROR, ("Failed to generate RSA key pair"));
             return;
         }
-        if (BCryptFinalizeKeyPair((BCRYPT_KEY_HANDLE)key, 0) < 0) {
+        if (!BCRYPT_SUCCESS(BCryptFinalizeKeyPair((BCRYPT_KEY_HANDLE)key, 0))) {
             QCC_LogError(ER_CRYPTO_ERROR, ("Failed to finalize RSA key pair"));
             return;
         }
@@ -89,7 +89,7 @@ static NCRYPT_KEY_HANDLE Bkey2Nkey(BCRYPT_KEY_HANDLE bkey)
     // Dry run to get length
     NTSTATUS ntStatus = BCryptExportKey(bkey, NULL, BCRYPT_RSAPRIVATE_BLOB, NULL, 0, &len, 0);
     // Export BKey to the blob
-    if (ntStatus >= 0) {
+    if (BCRYPT_SUCCESS(ntStatus)) {
         blob = (BCRYPT_RSAKEY_BLOB*)malloc(len);
         if (blob) {
             ntStatus = BCryptExportKey(bkey, NULL, BCRYPT_RSAPRIVATE_BLOB, (PUCHAR)blob, len, &len, 0);
@@ -99,17 +99,17 @@ static NCRYPT_KEY_HANDLE Bkey2Nkey(BCRYPT_KEY_HANDLE bkey)
         }
     }
     // Now import the blob as an NKEY
-    if (ntStatus >= 0) {
+    if (BCRYPT_SUCCESS(ntStatus)) {
         NCRYPT_PROV_HANDLE provHandle;
         ntStatus = NCryptOpenStorageProvider(&provHandle, MS_KEY_STORAGE_PROVIDER, 0);
-        if (ntStatus >= 0) {
+        if (BCRYPT_SUCCESS(ntStatus)) {
             ntStatus = NCryptImportKey(provHandle, NULL, BCRYPT_RSAPRIVATE_BLOB, NULL, &nkey, (PUCHAR)blob, len, 0);
             NCryptFreeObject(provHandle);
         } else {
             QCC_LogError(ER_CRYPTO_ERROR, ("Failed to open storage provider NTSTATUS=%x", ntStatus));
         }
     }
-    if (ntStatus < 0) {
+    if (!BCRYPT_SUCCESS(ntStatus)) {
         QCC_LogError(ER_CRYPTO_ERROR, ("Failed to get NKey from BKey NTSTATUS=%x", ntStatus));
     }
     if (blob) {
@@ -240,7 +240,7 @@ class PBKD {
         BCRYPT_KEY_HANDLE key = NULL;
 
         if (prfAlg == OID_HMAC_SHA1) {
-            if (BCryptOpenAlgorithmProvider(&prf, BCRYPT_SHA1_ALGORITHM, MS_PRIMITIVE_PROVIDER, BCRYPT_ALG_HANDLE_HMAC_FLAG) < 0) {
+            if (!BCRYPT_SUCCESS(BCryptOpenAlgorithmProvider(&prf, BCRYPT_SHA1_ALGORITHM, MS_PRIMITIVE_PROVIDER, BCRYPT_ALG_HANDLE_HMAC_FLAG))) {
                 QCC_LogError(ER_CRYPTO_ERROR, ("Failed to open algorithm provider"));
                 return 0;
             }
@@ -256,7 +256,7 @@ class PBKD {
                 BCryptCloseAlgorithmProvider(prf, 0);
                 return 0;
             }
-            if (BCryptDeriveKeyPBKDF2(prf, (PUCHAR)passphrase.data(), passphrase.size(), (PUCHAR)salt.data(), salt.size(), iter, (uint8_t*)(kbh + 1), keyLen, 0) >= 0) {
+            if (BCRYPT_SUCCESS(BCryptDeriveKeyPBKDF2(prf, (PUCHAR)passphrase.data(), passphrase.size(), (PUCHAR)salt.data(), salt.size(), iter, (uint8_t*)(kbh + 1), keyLen, 0))) {
                 key = GenKey(kbh, kbhLen);
             }
             BCryptCloseAlgorithmProvider(prf, 0);
@@ -363,12 +363,12 @@ class PBKD {
             QCC_LogError(ER_CRYPTO_ERROR, ("Cipher %s not supported", cipher.c_str()));
             return false;
         }
-        if (BCryptOpenAlgorithmProvider(&algHandle, algId, MS_PRIMITIVE_PROVIDER, 0) < 0) {
+        if (!BCRYPT_SUCCESS(BCryptOpenAlgorithmProvider(&algHandle, algId, MS_PRIMITIVE_PROVIDER, 0))) {
             QCC_LogError(ER_CRYPTO_ERROR, ("Failed to open algorithm provider"));
             return 0;
         }
         // Enable CBC mode
-        if (BCryptSetProperty(algHandle, BCRYPT_CHAINING_MODE, (PUCHAR)BCRYPT_CHAIN_MODE_CBC, sizeof(BCRYPT_CHAIN_MODE_CBC), 0) < 0) {
+        if (!BCRYPT_SUCCESS(BCryptSetProperty(algHandle, BCRYPT_CHAINING_MODE, (PUCHAR)BCRYPT_CHAIN_MODE_CBC, sizeof(BCRYPT_CHAIN_MODE_CBC), 0))) {
             QCC_LogError(ER_CRYPTO_ERROR, ("Failed to enable CBC mode on encryption algorithm provider"));
             return false;
         }
@@ -384,7 +384,7 @@ class PBKD {
         DWORD keyObjLen;
         ULONG got;
         NTSTATUS ntStatus = BCryptGetProperty(algHandle, BCRYPT_OBJECT_LENGTH, (PBYTE)&keyObjLen, sizeof(DWORD), &got, 0);
-        if (ntStatus < 0) {
+        if (!BCRYPT_SUCCESS(ntStatus)) {
             QCC_LogError(ER_CRYPTO_ERROR, ("Failed to get object length property NTSTATUS=%x", ntStatus));
             memset(kbh, 0, kbhLen);
             return NULL;
@@ -392,7 +392,7 @@ class PBKD {
         keyObj = new uint8_t[keyObjLen];
         BCRYPT_KEY_HANDLE key = 0;
         ntStatus = BCryptImportKey(algHandle, NULL, BCRYPT_KEY_DATA_BLOB, &key, keyObj, keyObjLen, (PUCHAR)kbh, kbhLen, 0);
-        if (ntStatus < 0) {
+        if (!BCRYPT_SUCCESS(ntStatus)) {
             QCC_LogError(ER_CRYPTO_ERROR, ("Failed to import key NTSTATUS=%x", ntStatus));
         }
         memset(kbh, 0, kbhLen);
@@ -441,7 +441,7 @@ static QStatus DecryptPriv(BCRYPT_KEY_HANDLE kdKey, qcc::String& ivec, const uin
     DWORD len = blobLen + 8;
     uint8_t* buf = new uint8_t[len];
     ntStatus = BCryptDecrypt(kdKey, (PUCHAR)blob, blobLen, NULL, (PUCHAR)ivec.data(), ivec.size(), (PUCHAR)buf, len, &len, BCRYPT_BLOCK_PADDING);
-    if (ntStatus < 0) {
+    if (!BCRYPT_SUCCESS(ntStatus)) {
         QCC_LogError(status, ("Failed to decrypt private key NTSTATUS=%x", ntStatus));
         goto ExitDecryptPriv;
     }
@@ -492,7 +492,7 @@ static QStatus DecryptPriv(BCRYPT_KEY_HANDLE kdKey, qcc::String& ivec, const uin
     // Now import the key
     ntStatus = BCryptImportKeyPair(cngCache.rsaHandle, NULL, BCRYPT_PRIVATE_KEY_BLOB, &privKey, (PUCHAR)pkBlob, len, 0);
     memset(pkBlob, 0, len);
-    if (ntStatus < 0) {
+    if (!BCRYPT_SUCCESS(ntStatus)) {
         QCC_LogError(status, ("Failed to import RSA blob NTSTATUS=%x", ntStatus));
         goto ExitDecryptPriv;
     }
@@ -696,7 +696,7 @@ QStatus Crypto_RSA::ExportPrivateKey(qcc::KeyBlob& keyBlob, const qcc::String& p
         // Note that iv is modified by this call which is why we copied it into a string ealier
         ntStatus = BCryptEncrypt(kdKey, (PBYTE)pkInfo.data(), pkInfo.size(), NULL, iv, IVEC_LEN, buf, outLen, &outLen, BCRYPT_BLOCK_PADDING);
         pkInfo.secure_clear();
-        if (ntStatus < 0) {
+        if (!BCRYPT_SUCCESS(ntStatus)) {
             status = ER_CRYPTO_ERROR;
             QCC_LogError(status, ("Failed to encrypt private key NTSTATUS=%x", ntStatus));
         } else {
@@ -793,8 +793,8 @@ size_t Crypto_RSA::GetSize()
         DWORD got;
         DWORD len;
         NTSTATUS ntStatus = BCryptGetProperty((BCRYPT_KEY_HANDLE)key, BCRYPT_KEY_STRENGTH, (PBYTE)&len, sizeof(len), &got, 0);
-        assert(ntStatus >= 0);
-        if (ntStatus < 0) {
+        assert(BCRYPT_SUCCESS(ntStatus));
+        if (!BCRYPT_SUCCESS(ntStatus)) {
             QCC_LogError(ER_CRYPTO_ERROR, ("Failed to get key strength property"));
             len = -1;
         }
@@ -825,7 +825,7 @@ QStatus Crypto_RSA::SignDigest(const uint8_t* digest, size_t digLen, uint8_t* si
     DWORD len;
     // Dry run to check the signature length
     NTSTATUS ntStatus = BCryptSignHash((BCRYPT_KEY_HANDLE)key, (void*)&PadInfo, (PUCHAR)digest, digLen, NULL, 0, &len, BCRYPT_PAD_PKCS1);
-    if (ntStatus < 0) {
+    if (!BCRYPT_SUCCESS(ntStatus)) {
         QCC_LogError(status, ("Failed to get signature length %x", ntStatus));
         return ER_CRYPTO_ERROR;
     }
@@ -834,7 +834,7 @@ QStatus Crypto_RSA::SignDigest(const uint8_t* digest, size_t digLen, uint8_t* si
     }
     // Do the signing
     ntStatus = BCryptSignHash((BCRYPT_KEY_HANDLE)key, (void*)&PadInfo, (PUCHAR)digest, digLen, (PUCHAR)signature, sigLen, &len, BCRYPT_PAD_PKCS1);
-    if (ntStatus < 0) {
+    if (!BCRYPT_SUCCESS(ntStatus)) {
         status = ER_CRYPTO_ERROR;
         QCC_LogError(status, ("Failed to sign hash %x", ntStatus));
         sigLen = 0;
@@ -861,7 +861,7 @@ QStatus Crypto_RSA::VerifyDigest(const uint8_t* digest, size_t digLen, const uin
         return ER_CRYPTO_KEY_UNUSABLE;
     }
     NTSTATUS ntStatus = BCryptVerifySignature((BCRYPT_KEY_HANDLE)key, (void*)&PadInfo, (PUCHAR)digest, digLen, (PUCHAR)signature, sigLen, BCRYPT_PAD_PKCS1);
-    if (ntStatus < 0) {
+    if (!BCRYPT_SUCCESS(ntStatus)) {
         if (ntStatus == STATUS_INVALID_SIGNATURE) {
             status = ER_AUTH_FAIL;
         } else {
@@ -884,7 +884,7 @@ QStatus Crypto_RSA::PublicEncrypt(const uint8_t* inData, size_t inLen, uint8_t* 
         return ER_BUFFER_TOO_SMALL;
     }
     ULONG clen;
-    if (BCryptEncrypt((BCRYPT_KEY_HANDLE)key, (PUCHAR)inData, inLen, NULL, NULL, 0, (PUCHAR)outData, outLen, &clen, BCRYPT_PAD_PKCS1) < 0) {
+    if (!BCRYPT_SUCCESS(BCryptEncrypt((BCRYPT_KEY_HANDLE)key, (PUCHAR)inData, inLen, NULL, NULL, 0, (PUCHAR)outData, outLen, &clen, BCRYPT_PAD_PKCS1))) {
         return ER_CRYPTO_ERROR;
     } else {
         outLen = clen;
@@ -904,7 +904,7 @@ QStatus Crypto_RSA::PrivateDecrypt(const uint8_t* inData, size_t inLen, uint8_t*
         return ER_BUFFER_TOO_SMALL;
     }
     ULONG clen;
-    if (BCryptDecrypt((BCRYPT_KEY_HANDLE)key, (PUCHAR)inData, inLen, NULL, NULL, 0, (PUCHAR)outData, outLen, &clen, BCRYPT_PAD_PKCS1) < 0) {
+    if (!BCRYPT_SUCCESS(BCryptDecrypt((BCRYPT_KEY_HANDLE)key, (PUCHAR)inData, inLen, NULL, NULL, 0, (PUCHAR)outData, outLen, &clen, BCRYPT_PAD_PKCS1))) {
         return ER_CRYPTO_ERROR;
     } else {
         outLen = clen;
