@@ -31,7 +31,8 @@
 /***************************
  * STANDARD C++11
  ***************************/
-#if (__cplusplus >= 201100L) && !defined(QCC_OS_DARWIN)
+
+#if (((__cplusplus >= 201100L) && !defined(QCC_OS_DARWIN)) || (__IPHONE_OS_VERSION_MIN_REQUIRED >= 70000 && defined(QCC_OS_DARWIN)))
 /*
  * The compiler is conformant to the C++11 standard.  Use unordered_map,
  * etc. directly.
@@ -44,17 +45,16 @@
 
 
 #else
+
 /*
  * Compiling with a C++ compiler that predates the C++11 standard.  Need to
  * map compiler specific arrangements to match the standard arrangement.
  */
 
-
-
 /***************************
  * DARWIN
  ***************************/
-#if defined(QCC_OS_DARWIN)
+#if __IPHONE_OS_VERSION_MIN_REQUIRED <= 60000 && defined(QCC_OS_DARWIN)
 /*
  * Darwin (Mac OSX and iOS) currently put unordered_map, etc. under the tr1
  * subdirectory and place their template classes in the std::tr1 namespace.
