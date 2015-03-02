@@ -31,6 +31,20 @@
 /* End PBXGroup section */
 
 /* Begin PBXLegacyTarget section */
+		7D80B0531A8967D7008DFF80 /* alljoyn_core_arm64 */ = {
+			isa = PBXLegacyTarget;
+			buildArgumentsString = "$(SCONSFLAGS) -u OS=darwin CPU=arm64 BR=on BINDINGS=\"cpp\" SERVICES=\"\" WS=off VARIANT=$(CONFIGURATION) --$(ACTION)";
+			buildConfigurationList = 7D80B0541A8967D7008DFF80 /* Build configuration list for PBXLegacyTarget "alljoyn_core_arm64" */;
+			buildPhases = (
+			);
+			buildToolPath = scons;
+			buildWorkingDirectory = ../.;
+			dependencies = (
+			);
+			name = alljoyn_core_arm64;
+			passBuildSettingsInEnvironment = 1;
+			productName = alljoyn_core_arm64;
+		};
 		A441CDF7161F6479008A4779 /* alljoyn_unity_osx */ = {
 			isa = PBXLegacyTarget;
 			buildArgumentsString = "$(SCONSFLAGS) -u OS=darwin CPU=x86 DOCS=html BR=on WS=off VARIANT=$(CONFIGURATION) --$(ACTION)";
@@ -178,6 +192,11 @@
 			isa = PBXProject;
 			attributes = {
 				LastUpgradeCheck = 0450;
+				TargetAttributes = {
+					7D80B0531A8967D7008DFF80 = {
+						CreatedOnToolsVersion = 6.1.1;
+					};
+				};
 			};
 			buildConfigurationList = ACB4AFB4150E631F0054D964 /* Build configuration list for PBXProject "alljoyn_darwin" */;
 			compatibilityVersion = "Xcode 3.2";
@@ -200,11 +219,82 @@
 				AC8D8CFE161376FE00361742 /* alljoyn_c_ios */,
 				A441CDF7161F6479008A4779 /* alljoyn_unity_osx */,
 				ACFED7B21624CE2900697423 /* alljoyn_unity_ios */,
+				7D80B0531A8967D7008DFF80 /* alljoyn_core_arm64 */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin XCBuildConfiguration section */
+		7D80B0551A8967D7008DFF80 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = gnu99;
+				CLANG_CXX_LIBRARY = "libstdc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				DEBUGGING_SYMBOLS = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+			};
+			name = Debug;
+		};
+		7D80B0561A8967D7008DFF80 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = gnu99;
+				CLANG_CXX_LIBRARY = "libstdc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+			};
+			name = Release;
+		};
 		A441CDF8161F6479008A4779 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -525,6 +615,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		7D80B0541A8967D7008DFF80 /* Build configuration list for PBXLegacyTarget "alljoyn_core_arm64" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7D80B0551A8967D7008DFF80 /* Debug */,
+				7D80B0561A8967D7008DFF80 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		A441CDFA161F6479008A4779 /* Build configuration list for PBXLegacyTarget "alljoyn_unity_osx" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

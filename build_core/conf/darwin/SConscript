@@ -19,7 +19,7 @@ import os
 # Darwin specific flags
 env.Append(CPPDEFINES=['QCC_OS_DARWIN'])
 
-env.Append(CPPLAGS=['-Wall',
+env.Append(CFLAGS=['-Wall',
                    '-pipe',
                    '-std=c99',
                    '-fno-strict-aliasing',

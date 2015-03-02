@@ -73,16 +73,16 @@ if os.environ.get('PLATFORM_NAME') == 'iphonesimulator':
         ccld = [
                 '-g',
                 '-arch', 'i686',
-                '-miphoneos-version-min=6.0',
-                '-D__IPHONE_OS_VERSION_MIN_REQUIRED=60000',
+                '-miphoneos-version-min=7.0',
+                '-D__IPHONE_OS_VERSION_MIN_REQUIRED=70000',
                 '-isysroot', '$SDKROOT'
                 ]
         print 'Using iOS debug configuration'
     else:
         ccld = [
                 '-arch', 'i686', 
-                '-miphoneos-version-min=6.0',
-                '-D__IPHONE_OS_VERSION_MIN_REQUIRED=60000',
+                '-miphoneos-version-min=7.0',
+                '-D__IPHONE_OS_VERSION_MIN_REQUIRED=70000',
                 '-isysroot', '$SDKROOT'
                 ]        
         print 'Using iOS release configuration'
@@ -93,16 +93,16 @@ else:
         ccld = [
                 '-g',
                 '-arch', 'armv7',
-                '-miphoneos-version-min=6.0',
-                '-D__IPHONE_OS_VERSION_MIN_REQUIRED=60000',
+                '-miphoneos-version-min=7.0',
+                '-D__IPHONE_OS_VERSION_MIN_REQUIRED=70000',
                 '-isysroot', '$SDKROOT'
                 ]
         print 'Using iOS debug configuration'
     else:
         ccld = [
                 '-arch', 'armv7',
-                '-miphoneos-version-min=6.0',
-                '-D__IPHONE_OS_VERSION_MIN_REQUIRED=60000',
+                '-miphoneos-version-min=7.0',
+                '-D__IPHONE_OS_VERSION_MIN_REQUIRED=70000',
                 '-isysroot', '$SDKROOT'
                 ]        
         print 'Using iOS release configuration'
