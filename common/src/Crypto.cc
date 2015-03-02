@@ -56,6 +56,12 @@ QStatus Crypto_PseudorandomFunctionCCM(const KeyBlob& secret, const char* label,
     in += seed;
     in += label;
     /*
+     * Make sure we have sufficient input.
+     */
+    if (in.size() < 32) {
+        return ER_BUFFER_TOO_SMALL;
+    }
+    /*
      * Construct AES key from the first 16 bytes of the input.
      */
     Crypto_AES aes(KeyBlob((uint8_t*)in.data(), 16, KeyBlob::AES), Crypto_AES::CCM);

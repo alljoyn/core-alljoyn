@@ -261,7 +261,7 @@ bool BigNum::set_hex(const qcc::String& number)
         storage = NULL;
     }
     // Check for negation
-    if (p[0] == '-') {
+    if ((len >= 1) && (p[0] == '-')) {
         ++p;
         --len;
         neg = true;
@@ -269,12 +269,12 @@ bool BigNum::set_hex(const qcc::String& number)
         neg = false;
     }
     // Check for 0x prefix
-    if (p[0] == '0' && p[1] == 'x') {
+    if ((len >= 2) && (p[0] == '0') && (p[1] == 'x')) {
         p += 2;
         len -= 2;
     }
     // Skip leading zeroes
-    while (*p == '0') {
+    while ((len > 0) && (*p == '0')) {
         ++p;
         --len;
     }
@@ -289,7 +289,7 @@ bool BigNum::set_hex(const qcc::String& number)
     // Build in little-endian order
     uint32_t* v = digits;
     p += len - 1;
-    while (len) {
+    while (len > 0) {
         uint32_t n = 0;
         for (int i = 0; (i < 32) && len; i += 4, --len) {
             if (*p >= '0' && *p <= '9') {
