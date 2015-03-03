@@ -6353,10 +6353,10 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_unbindSessionPort(J
         QCC_DbgPrintf(("BusAttachment_unbindSessionPort(): Releasing Bus Attachment common lock"));
         busPtr->baCommonLock.Unlock();
 
-        QCC_DbgPrintf(("BusAttachment_bindSessionPort(): Releasing strong global reference to SessionPortListener %p", jglobalref));
+        QCC_DbgPrintf(("BusAttachment_unbindSessionPort(): Releasing strong global reference to SessionPortListener %p", jglobalref));
         env->DeleteGlobalRef(jglobalref);
     } else {
-        QCC_LogError(status, ("BusAttachment_bindSessionPort(): Error"));
+        QCC_LogError(status, ("BusAttachment_unbindSessionPort(): Error"));
     }
 
     return JStatus(status);
@@ -6470,7 +6470,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_joinSession(JNIEnv*
 
     JBusAttachment* busPtr = GetHandle<JBusAttachment*>(thiz);
     if (env->ExceptionCheck()) {
-        QCC_LogError(ER_FAIL, ("BusAttachment_bindSessionPort(): Exception"));
+        QCC_LogError(ER_FAIL, ("BusAttachment_joinSessionPort(): Exception"));
         return NULL;
     }
 
