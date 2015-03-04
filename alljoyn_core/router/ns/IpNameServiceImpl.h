@@ -48,6 +48,7 @@
 
 #include "IpNsProtocol.h"
 #include "IpNameService.h"
+#include "ConfigDB.h"
 
 namespace ajn {
 
@@ -228,6 +229,15 @@ class IpNameServiceImpl : public qcc::Thread {
     static const char* const ALLJOYN_DEFAULT_ROUTER_MOBILITY;
     static const char* const ALLJOYN_DEFAULT_ROUTER_AVAILABILITY;
     static const char* const ALLJOYN_DEFAULT_ROUTER_NODE_TYPE;
+
+    const static uint32_t ROUTER_POWER_SOURCE_MIN = 900;
+    const static uint32_t ROUTER_POWER_SOURCE_MAX = 2700;
+    const static uint32_t ROUTER_MOBILITY_MIN = 2025;
+    const static uint32_t ROUTER_MOBILITY_MAX = 8100;
+    const static uint32_t ROUTER_AVAILABILITY_MIN = 1012;
+    const static uint32_t ROUTER_AVAILABILITY_MAX = 8100;
+    const static uint32_t ROUTER_NODE_CONNECTION_MIN = 4050;
+    const static uint32_t ROUTER_NODE_CONNECTION_MAX = 8100;
 
     /**
      * This is the minimum number of connections we must
@@ -518,6 +528,10 @@ class IpNameServiceImpl : public qcc::Thread {
                    const std::map<qcc::String, uint16_t>& unreliableIPv4PortMap, uint16_t unreliableIPv6Port,
                    bool enableReliableIPv4, bool enableReliableIPv6,
                    bool enableUnreliableIPv4, bool enableUnreliableIPv6);
+
+    static uint32_t LoadParam(const ConfigDB* config, const qcc::String param);
+
+    void LoadStaticRouterParams(const ConfigDB* config);
 
     static uint16_t ComputePriority(uint32_t staticScore, uint32_t dynamicScore);
 
