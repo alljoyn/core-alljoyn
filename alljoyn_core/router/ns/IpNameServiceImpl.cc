@@ -46,7 +46,6 @@
 #include <qcc/Event.h>
 
 #include "BusUtil.h"
-#include "ConfigDB.h"
 #include "IpNameServiceImpl.h"
 
 #define QCC_MODULE "IPNS"
@@ -449,66 +448,7 @@ QStatus IpNameServiceImpl::Init(const qcc::String& guid, bool loopback)
 
     m_routerName = config->GetProperty("router_advertisement_prefix", ALLJOYN_DEFAULT_ROUTER_ADVERTISEMENT_PREFIX);
 
-    String powerSource = ToLowerCase(config->GetProperty("router_power_source", ALLJOYN_DEFAULT_ROUTER_POWER_SOURCE));
-    if (powerSource == "always ac powered") {
-        m_powerSource = 2700;
-    } else if (powerSource == "battery powered and chargeable") {
-        m_powerSource = 1800;
-    }  else if (powerSource == "battery powered and not chargeable") {
-        m_powerSource = 900;
-    } else {
-        QCC_LogError(ER_WARNING, ("Ignoring invalid config value:%s for router power source, using default value instead", powerSource.c_str()));
-        m_powerSource = 1800;
-    }
-
-    String mobility = ToLowerCase(config->GetProperty("router_mobility", ALLJOYN_DEFAULT_ROUTER_MOBILITY));
-    if (mobility == "always stationary") {
-        m_mobility = 8100;
-    } else if (mobility == "low mobility") {
-        m_mobility = 6075;
-    } else if (mobility == "intermediate mobility") {
-        m_mobility = 4050;
-    } else if (mobility == "high mobility") {
-        m_mobility = 2025;
-    } else {
-        QCC_LogError(ER_WARNING, ("Ignoring invalid config value:%s for router mobility, using default value instead", mobility.c_str()));
-        m_mobility = 4050;
-    }
-
-    String availability = ToLowerCase(config->GetProperty("router_availability", ALLJOYN_DEFAULT_ROUTER_AVAILABILITY));
-    if (availability == "0-3 hr") {
-        m_availability = 1012;
-    } else if (availability == "3-6 hr") {
-        m_availability = 2025;
-    }  else if (availability == "6-9 hr") {
-        m_availability = 3037;
-    }  else if (availability == "9-12 hr") {
-        m_availability = 4050;
-    }  else if (availability == "12-15 hr") {
-        m_availability = 5062;
-    }  else if (availability == "15-18 hr") {
-        m_availability = 6075;
-    }  else if (availability == "18-21 hr") {
-        m_availability = 7087;
-    }  else if (availability == "21-24 hr") {
-        m_availability = 8100;
-    }  else {
-        QCC_LogError(ER_WARNING, ("Ignoring invalid config value:%s for router availability, using default value instead", availability.c_str()));
-        m_availability = 2025;
-    }
-
-    String nodeConnection = ToLowerCase(config->GetProperty("router_node_connection", ALLJOYN_DEFAULT_ROUTER_NODE_TYPE));
-    if (nodeConnection == "access point") {
-        m_nodeConnection = 8100;
-    } else if (nodeConnection == "wired") {
-        m_nodeConnection = 8100;
-    } else if (nodeConnection == "wireless") {
-        m_nodeConnection = 4050;
-    } else {
-        QCC_LogError(ER_WARNING, ("Ignoring invalid config value:%s for router node connection, using default value instead", nodeConnection.c_str()));
-        m_nodeConnection = 4050;
-    }
-
+    LoadStaticRouterParams(config);
     m_staticScore = ComputeStaticScore(m_powerSource, m_mobility, m_availability, m_nodeConnection);
 
     if (m_enableV1) {
@@ -1780,14 +1720,97 @@ uint16_t IpNameServiceImpl::ComputePriority(uint32_t staticScore, uint32_t dynam
     return priority;
 }
 
+uint32_t IpNameServiceImpl::LoadParam(const ConfigDB* config, const qcc::String param)
+{
+    if (param == "router_power_source") {
+        String powerSource = ToLowerCase(config->GetProperty("router_power_source", ALLJOYN_DEFAULT_ROUTER_POWER_SOURCE));
+        if (powerSource == "always ac powered") {
+            return 2700;
+        } else if (powerSource == "battery powered and chargeable") {
+            return 1800;
+        }  else if (powerSource == "battery powered and not chargeable") {
+            return 900;
+        } else {
+            QCC_LogError(ER_WARNING, ("Ignoring invalid config value:%s for router power source, using default value instead", powerSource.c_str()));
+            return 1800;
+        }
+    } else if (param == "router_mobility") {
+        String mobility = ToLowerCase(config->GetProperty("router_mobility", ALLJOYN_DEFAULT_ROUTER_MOBILITY));
+        if (mobility == "always stationary") {
+            return 8100;
+        } else if (mobility == "low mobility") {
+            return 6075;
+        } else if (mobility == "intermediate mobility") {
+            return 4050;
+        } else if (mobility == "high mobility") {
+            return 2025;
+        } else {
+            QCC_LogError(ER_WARNING, ("Ignoring invalid config value:%s for router mobility, using default value instead", mobility.c_str()));
+            return 4050;
+        }
+    } else if (param == "router_availability") {
+        String availability = ToLowerCase(config->GetProperty("router_availability", ALLJOYN_DEFAULT_ROUTER_AVAILABILITY));
+        if (availability == "0-3 hr") {
+            return 1012;
+        } else if (availability == "3-6 hr") {
+            return 2025;
+        }  else if (availability == "6-9 hr") {
+            return 3037;
+        }  else if (availability == "9-12 hr") {
+            return 4050;
+        }  else if (availability == "12-15 hr") {
+            return 5062;
+        }  else if (availability == "15-18 hr") {
+            return 6075;
+        }  else if (availability == "18-21 hr") {
+            return 7087;
+        }  else if (availability == "21-24 hr") {
+            return 8100;
+        }  else {
+            QCC_LogError(ER_WARNING, ("Ignoring invalid config value:%s for router availability, using default value instead", availability.c_str()));
+            return 2025;
+        }
+    } else if (param == "router_node_connection") {
+        String nodeConnection = ToLowerCase(config->GetProperty("router_node_connection", ALLJOYN_DEFAULT_ROUTER_NODE_TYPE));
+        if (nodeConnection == "access point") {
+            return 8100;
+        } else if (nodeConnection == "wired") {
+            return 8100;
+        } else if (nodeConnection == "wireless") {
+            return 4050;
+        } else {
+            QCC_LogError(ER_WARNING, ("Ignoring invalid config value:%s for router node connection, using default value instead", nodeConnection.c_str()));
+            return 4050;
+        }
+    } else {
+        QCC_LogError(ER_WARNING, ("Ignoring invalid config parameter"));
+        return std::numeric_limits<uint32_t>::max();
+    }
+}
+
+void IpNameServiceImpl::LoadStaticRouterParams(const ConfigDB* config)
+{
+    m_powerSource = LoadParam(config, "router_power_source");
+    m_mobility = LoadParam(config, "router_mobility");
+    m_availability = LoadParam(config, "router_availability");
+    m_nodeConnection = LoadParam(config, "router_node_connection");
+}
+
 uint32_t IpNameServiceImpl::ComputeStaticScore(uint32_t powerSource, uint32_t mobility, uint32_t availability, uint32_t nodeConnection)
 {
+    assert(powerSource >= ROUTER_POWER_SOURCE_MIN && powerSource <= ROUTER_POWER_SOURCE_MAX);
+    assert(mobility >= ROUTER_MOBILITY_MIN && mobility <= ROUTER_MOBILITY_MAX);
+    assert(availability >= ROUTER_AVAILABILITY_MIN && availability <= ROUTER_AVAILABILITY_MAX);
+    assert(nodeConnection >= ROUTER_NODE_CONNECTION_MIN && nodeConnection <= ROUTER_NODE_CONNECTION_MAX);
     return (powerSource + mobility + availability + nodeConnection);
 
 }
 
 uint32_t IpNameServiceImpl::ComputeDynamicScore(uint32_t availableTcpConnections, uint32_t maximumTcpConnections, uint32_t availableUdpConnections, uint32_t maximumUdpConnections, uint32_t availableTcpRemoteClients, uint32_t maximumTcpRemoteClients)
 {
+    assert(availableTcpConnections <= maximumTcpConnections);
+    assert(availableUdpConnections <= maximumUdpConnections);
+    assert(availableTcpRemoteClients <= maximumTcpRemoteClients);
     uint32_t tcpScore = 0;
     uint32_t udpScore = 0;
     uint32_t tclScore = 0;
