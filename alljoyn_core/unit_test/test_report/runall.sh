@@ -22,19 +22,19 @@ Runs GTest executables created by scons in alljoyn_core, common, or services/abo
 
 Usage: $(basename -- "$0") [ -s -d alljoyn_dist ] [ -t alljoyn_test ] [-c configfile ] [ ajtest ] [ cmtest ] ...
 where
-    -s              # start and stop our own AllJoyn-Daemon (default internal transport address, --no-bt)
+	-s              # start and stop our own AllJoyn-Daemon (default internal transport address, --no-bt)
 
-    -d alljoyn_dist # path to the build/.../dist tree, used to find cpp/bin/alljoyn-daemon exe, if used
+	-d alljoyn_dist # path to the build/.../dist tree, used to find cpp/bin/alljoyn-daemon exe, if used
 
-    -t alljoyn_test # path to the build/.../test tree, used to find cpp/bin/cmtest exe, ajtest exe, ...
-                    # Note: do not include the 'cpp/bin' subpath in alljoyn_dist or alljoyn_test
+	-t alljoyn_test # path to the build/.../test tree, used to find cpp/bin/cmtest exe, ajtest exe, ...
+				# Note: do not include the 'cpp/bin' subpath in alljoyn_dist or alljoyn_test
 
-    -c configfile   # name of config file(s) (an embedded wildcard is replaced by the gtest test name)
-                    #  default '*.conf'
+	-c configfile   # name of config file(s) (an embedded wildcard is replaced by the gtest test name)
+				#  default '*.conf'
 
-    ajtest, cmtest, and/or abouttest
-                    # simple file name(s) of the gtest exe(s) to be run (found in -t path/cpp/bin)
-                    #  default runs ajtest and cmtest
+	ajtest, cmtest, and/or abouttest
+				# simple file name(s) of the gtest exe(s) to be run (found in -t path/cpp/bin)
+				#  default runs ajtest and cmtest
 "
 	exit 2
 }
@@ -113,12 +113,30 @@ ckbin alljoyn_test gtest_bin
 if cygpath -wa . > /dev/null 2>&1
 then
 	# found Cygwin, which means Windows
-	# alljoyn-daemon options are different
-	options='--no-bt --verbosity=5'
+
+	if $start_daemon; then
+		echo >&2 "error, start_daemon=true but this is Windows and daemon is not supported"
+		exit 2
+	fi
+
 	# gtest_bin needs to be Windows-style because we use pure Windows Python, not Cygwin Python
 	gtest_bin_p="$( cygpath -wa "$gtest_bin" )"
 	# sometimes Windows "home" does not work for keystore tests
 	export USERPROFILE="$( cygpath -wa . )"
+	export LOCALAPPDATA="$USERPROFILE"
+elif pwd -W > /dev/null 2>&1
+then
+	# found MSysGit, which also means Windows
+
+	if $start_daemon; then
+		echo >&2 "error, start_daemon=true but this is Windows and daemon is not supported"
+		exit 2
+	fi
+
+	# MSysGit will handle the *nix path
+	gtest_bin_p=$gtest_bin
+	# sometimes Windows "home" does not work for keystore tests
+	export USERPROFILE="$( pwd -W )"
 	export LOCALAPPDATA="$USERPROFILE"
 else
 	options='--internal --no-bt --verbosity=5'
