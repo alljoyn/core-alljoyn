@@ -60,7 +60,7 @@ extern QStatus MakeSockAddr(const IPAddress& addr, uint16_t port, struct sockadd
 extern QStatus GetSockAddr(const sockaddr_storage* addrBuf, socklen_t addrSize, IPAddress& addr, uint16_t& port);
 
 static QStatus SendSGCommon(SocketFd sockfd, struct sockaddr_storage* addr, socklen_t addrLen,
-                            const ScatterGatherList& sg, size_t& sent)
+                            const ScatterGatherList& sg, size_t& sent, SendMsgFlags flags)
 {
     QStatus status = ER_OK;
     ssize_t ret;
@@ -68,8 +68,8 @@ static QStatus SendSGCommon(SocketFd sockfd, struct sockaddr_storage* addr, sock
     size_t index;
     struct iovec* iov;
     ScatterGatherList::const_iterator iter;
-    QCC_DbgTrace(("SendSGCommon(sockfd = %d, *addr, addrLen, sg[%u:%u/%u], sent = <>)",
-                  sockfd, sg.Size(), sg.DataSize(), sg.MaxDataSize()));
+    QCC_DbgTrace(("SendSGCommon(sockfd = %d, *addr, addrLen, sg[%u:%u/%u], sent = <>, flags = 0x%x)",
+                  sockfd, sg.Size(), sg.DataSize(), sg.MaxDataSize(), (int)flags));
 
     iov = new struct iovec[sg.Size()];
     for (index = 0, iter = sg.Begin(); iter != sg.End(); ++index, ++iter) {
@@ -86,7 +86,7 @@ static QStatus SendSGCommon(SocketFd sockfd, struct sockaddr_storage* addr, sock
     msg.msg_controllen = 0;
     msg.msg_flags = 0;
 
-    ret = sendmsg(static_cast<int>(sockfd), &msg, MSG_NOSIGNAL);
+    ret = sendmsg(static_cast<int>(sockfd), &msg, (int)flags | MSG_NOSIGNAL);
     if (ret == -1) {
         if (errno == EAGAIN || errno == EINTR || errno == EWOULDBLOCK) {
             status = ER_WOULDBLOCK;
@@ -101,30 +101,30 @@ static QStatus SendSGCommon(SocketFd sockfd, struct sockaddr_storage* addr, sock
     return status;
 }
 
-QStatus SendSG(SocketFd sockfd, const ScatterGatherList& sg, size_t& sent)
+QStatus SendSG(SocketFd sockfd, const ScatterGatherList& sg, size_t& sent, SendMsgFlags flags)
 {
-    QCC_DbgTrace(("SendSG(sockfd = %d, sg[%u:%u/%u], sent = <>)",
-                  sockfd, sg.Size(), sg.DataSize(), sg.MaxDataSize()));
+    QCC_DbgTrace(("SendSG(sockfd = %d, sg[%u:%u/%u], sent = <>, flags = 0x%x)",
+                  sockfd, sg.Size(), sg.DataSize(), sg.MaxDataSize(), flags));
 
-    return SendSGCommon(sockfd, NULL, 0, sg, sent);
+    return SendSGCommon(sockfd, NULL, 0, sg, sent, flags);
 }
 
 QStatus SendToSG(SocketFd sockfd, IPAddress& remoteAddr, uint16_t remotePort,
-                 const ScatterGatherList& sg, size_t& sent)
+                 const ScatterGatherList& sg, size_t& sent, SendMsgFlags flags)
 {
     struct sockaddr_storage addr;
     socklen_t addrLen = sizeof(addr);
 
-    QCC_DbgTrace(("SendToSG(sockfd = %d, remoteAddr = %s, remotePort = %u, sg[%u:%u/%u], sent = <>)",
+    QCC_DbgTrace(("SendToSG(sockfd = %d, remoteAddr = %s, remotePort = %u, sg[%u:%u/%u], sent = <>, flags - 0x%x)",
                   sockfd, remoteAddr.ToString().c_str(), remotePort,
-                  sg.Size(), sg.DataSize(), sg.MaxDataSize()));
+                  sg.Size(), sg.DataSize(), sg.MaxDataSize(), flags));
 
     QStatus status = MakeSockAddr(remoteAddr, remotePort, &addr, addrLen);
     if (status != ER_OK) {
         return status;
     }
 
-    return SendSGCommon(sockfd, &addr, addrLen, sg, sent);
+    return SendSGCommon(sockfd, &addr, addrLen, sg, sent, flags);
 }
 
 static QStatus RecvSGCommon(SocketFd sockfd, struct sockaddr_storage* addr, socklen_t* addrLen,

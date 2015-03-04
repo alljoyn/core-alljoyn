@@ -23,6 +23,7 @@
 #include <alljoyn/Session.h>
 #include <alljoyn/DBusStd.h>
 #include <alljoyn/AllJoynStd.h>
+#include <alljoyn/version.h>
 #include <qcc/Util.h>
 #include <qcc/Log.h>
 #include <qcc/String.h>
@@ -30,6 +31,7 @@
 #include <qcc/Mutex.h>
 #include <qcc/Thread.h>
 #include <cassert>
+#include <signal.h>
 #include <cstdio>
 
 #include <set>
@@ -97,6 +99,14 @@ static bool s_chatEcho = true;
 
 static String s_name;
 static bool s_found = false;
+
+/** static interrupt flag */
+static volatile sig_atomic_t g_interrupt = false;
+
+static void CDECL_CALL SigIntHandler(int sig)
+{
+    g_interrupt = true;
+}
 
 /*
  * get a line of input from the the file pointer (most likely stdin).
@@ -221,12 +231,12 @@ class MyBusListener : public BusListener, public SessionPortListener, public Ses
 
     void BusStopping()
     {
-        printf("BusStopping\n");
+        printf("BusStopping() called\n");
     }
 
     void BusDisconnected()
     {
-        printf("BusDisconnected\n");
+        printf("BusDisconnected() called\n");
     }
 
     bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts)
@@ -791,6 +801,19 @@ int main(int argc, char** argv)
 {
     QStatus status = ER_OK;
 
+    printf("AllJoyn Library version: %s\n", ajn::GetVersion());
+    printf("AllJoyn Library build info: %s\n", ajn::GetBuildInfo());
+
+#ifdef QCC_OS_LINUX
+    struct sigaction action;
+    memset(&action, 0, sizeof(action));
+    action.sa_handler = SigIntHandler;
+    action.sa_flags = SA_SIGINFO;
+    sigaction(SIGINT, &action, NULL);
+#else
+    signal(SIGINT, SigIntHandler);
+#endif
+
     /* Parse command line args */
     if (argc > 2) {
         usage();
@@ -856,6 +879,9 @@ int main(int argc, char** argv)
     }
 
     while (ER_OK == status) {
+        if (g_interrupt) {
+            break;
+        }
         if (get_line(buf, bufSize, fp) == NULL) {
             if (fp == stdin) {
                 break;

@@ -209,7 +209,7 @@ class _BusEndpoint : public MessageSink {
     bool SurpriseDisconnect() const { return disconnectStatus != ER_OK; }
 
     /**
-     * Return true if the endpoint was disconnected due to an error rather than a clean shutdown.
+     * Return the status code underlying a disconnect event.
      */
     QStatus GetDisconnectStatus() const { return disconnectStatus; }
 

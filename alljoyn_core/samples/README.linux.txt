@@ -9,9 +9,16 @@ basic -
 
 chat -   
          This sample shows how to use AllJoyn's C++ API to discover and connect
-         with other AllJoyn enabled devices.
+         with other AllJoyn enabled devices implementing a specific kind of
+         peer service.  In particular this sample demonstrates the use of Signal
+         as the basis for the peer-to-peer communiation.
 
-SampleDaemon -
-         This sample runs a bundled AllJoyn router. It can be passed a name
-         via the command-line, that is quietly advertised, to be discovered
-         by thin-client applications (eg. apps running on Arduino Due)
+TrustedTLSampleRN -
+         This sample provides a bundled AllJoyn Routing Node, primaily to
+         demonstrate how provide credentials that enable thin library 
+         applications to form a trusted connection.
+
+         Additionally, the sample can be passed a name via the command-line to
+         be quietly advertised.  This demonstrates how a thin library
+         applications may be "bound" to a specific Routing Node bu using the
+         initial Thin Library Routing Node discovery process.

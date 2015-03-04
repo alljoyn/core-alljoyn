@@ -334,7 +334,7 @@ TEST(TimerTest, TestStopTimer) {
     qcc::Sleep(t3 - t1);
 
     /* t3: triggeredAlarms should still be zero */
-    ASSERT_EQ(triggeredAlarms.size(), 0);
+    ASSERT_EQ(triggeredAlarms.size(), (size_t)0);
 }
 
 /*
@@ -384,19 +384,19 @@ TEST(TimerTest, TestReentrancy) {
     /* Wait a tad bit and see how many callbacks are made; expecting 1 callbacks (sitting in MyAlarmListener callback) */
     qcc::Sleep(jitter);
     triggeredAlarmsLock.Lock();
-    ASSERT_EQ(triggeredAlarms.size(), 1);
+    ASSERT_EQ(triggeredAlarms.size(), (size_t)1);
     triggeredAlarmsLock.Unlock();
 
     /* Wait for 1s (t1) and see how many callbacks are made; expecting 2 callbacks (as 3rd alarm should be serialized) */
     qcc::Sleep(t1);
     triggeredAlarmsLock.Lock();
-    ASSERT_EQ(triggeredAlarms.size(), 2);
+    ASSERT_EQ(triggeredAlarms.size(), (size_t)2);
     triggeredAlarmsLock.Unlock();
 
     /* Wait for 4s (well after t3) and see how many callbacks are made; expecting all 3 */
     qcc::Sleep(t4 - t1);
     triggeredAlarmsLock.Lock();
-    ASSERT_EQ(triggeredAlarms.size(), 3);
+    ASSERT_EQ(triggeredAlarms.size(), (size_t)3);
     triggeredAlarmsLock.Unlock();
 }
 
@@ -456,7 +456,7 @@ TEST(TimerTest, TestMaxAlarms) {
 
     /* Make sure 2 alarms (a1) and (a2) fired */
     triggeredAlarmsLock.Lock();
-    ASSERT_EQ(triggeredAlarms.size(), 2);
+    ASSERT_EQ(triggeredAlarms.size(), (size_t)2);
     triggeredAlarmsLock.Unlock();
 
     /* Schedule alarm 3 */
@@ -473,7 +473,7 @@ TEST(TimerTest, TestMaxAlarms) {
 
     /* Make sure still 2 alarms fired */
     triggeredAlarmsLock.Lock();
-    ASSERT_EQ(triggeredAlarms.size(), 2);
+    ASSERT_EQ(triggeredAlarms.size(), (size_t)2);
     triggeredAlarmsLock.Unlock();
 
     /* Wait for (t3) to pass */
@@ -481,6 +481,6 @@ TEST(TimerTest, TestMaxAlarms) {
 
     /* Make sure all 3 alarms fired */
     triggeredAlarmsLock.Lock();
-    ASSERT_EQ(triggeredAlarms.size(), 3);
+    ASSERT_EQ(triggeredAlarms.size(), (size_t)3);
     triggeredAlarmsLock.Unlock();
 }

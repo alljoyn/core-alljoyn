@@ -18,9 +18,6 @@ Import('env')
 # JNI library sources
 srcs = ['alljoyn_java.cc']
 
-#if env['OS'] == 'android':
-#    srcs += ['P2pHelperService.cc']
-
 objs = env.SharedObject(srcs)
 
 # JNI library

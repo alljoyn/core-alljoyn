@@ -16,8 +16,6 @@
 
 package org.alljoyn.bus.alljoyn;
 
-// import org.alljoyn.bus.p2p.service.P2pHelperService;
-
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -39,7 +37,6 @@ public class DaemonInit {
     private static Context sContext;
 
     public static BroadcastReceiver receiver;
-    // public static P2pHelperService sP2pHelper;
 
     public static Context getContext(){
         return sContext;
@@ -60,11 +57,6 @@ public class DaemonInit {
         sContext = context.getApplicationContext();
         Log.v(TAG, "Saved application context");
 
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN) {
-        // Instantiate and start the P2pHelperService
-        // sP2pHelper = new P2pHelperService(sContext, "null:");
-        // sP2pHelper.startup();
-        }
         return true;
     }
 

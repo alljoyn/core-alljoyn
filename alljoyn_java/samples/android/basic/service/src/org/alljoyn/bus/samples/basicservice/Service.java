@@ -54,8 +54,6 @@ public class Service extends Activity {
     private ListView mListView;
     private Menu menu;
     
-    //private WifiDirectAutoAccept mWfdAutoAccept;
-
     private Handler mHandler = new Handler() {
             @Override
             public void handleMessage(Message msg) {
@@ -247,17 +245,7 @@ public class Service extends Activity {
                 sessionOpts.traffic = SessionOpts.TRAFFIC_MESSAGES;
                 sessionOpts.isMultipoint = false;
                 sessionOpts.proximity = SessionOpts.PROXIMITY_ANY;
-
-                /*
-                 * Explicitly add the Wi-Fi Direct transport into our
-                 * advertisements.  This sample is typically used in a "cable-
-                 * replacement" scenario and so it should work well over that
-                 * transport.  It may seem odd that ANY actually excludes Wi-Fi
-                 * Direct, but there are topological and advertisement/
-                 * discovery problems with WFD that make it problematic to
-                 * always enable.
-                 */
-                sessionOpts.transports = SessionOpts.TRANSPORT_ANY + SessionOpts.TRANSPORT_WFD;
+                sessionOpts.transports = SessionOpts.TRANSPORT_ANY;
 
                 status = mBus.bindSessionPort(contactPort, sessionOpts, new SessionPortListener() {
                     @Override

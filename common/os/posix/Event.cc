@@ -52,8 +52,6 @@
 #if defined(QCC_OS_DARWIN)
 #include <sys/event.h>
 #include <sys/time.h>
-#else
-#include <sys/epoll.h>
 #endif
 
 using namespace std;
@@ -171,22 +169,17 @@ QStatus Event::Wait(Event& evt, uint32_t maxWaitMs)
 #else
 QStatus Event::Wait(Event& evt, uint32_t maxWaitMs)
 {
+    fd_set set;
+    fd_set stopSet;
+    int maxFd = -1;
     struct timeval tval;
     struct timeval* pTval = NULL;
 
     Thread* thread = Thread::GetThread();
 
-#if defined(QCC_OS_LINUX)
-    int epollfd = epoll_create1(0);
-#elif defined (QCC_OS_ANDROID)
-    int epollfd = epoll_create(2);
-#endif
+    FD_ZERO(&set);
+    FD_ZERO(&stopSet);
 
-    if (epollfd == -1) {
-        QCC_LogError(ER_OS_ERROR, ("epoll_create failed with %d (%s)", errno, strerror(errno)));
-        return ER_OS_ERROR;
-    }
-    struct epoll_event ev, events[2];
     if (maxWaitMs != WAIT_FOREVER) {
         tval.tv_sec = maxWaitMs / 1000;
         tval.tv_usec = (maxWaitMs % 1000) * 1000;
@@ -199,7 +192,6 @@ QStatus Event::Wait(Event& evt, uint32_t maxWaitMs)
             if (0 < evt.period) {
                 evt.timestamp += (((now - evt.timestamp) / evt.period) + 1) * evt.period;
             }
-            close(epollfd);
             return ER_OK;
         } else if (!pTval || ((evt.timestamp - now) < (uint32_t) (tval.tv_sec * 1000 + tval.tv_usec / 1000))) {
             tval.tv_sec = (evt.timestamp - now) / 1000;
@@ -208,92 +200,53 @@ QStatus Event::Wait(Event& evt, uint32_t maxWaitMs)
         }
     } else {
         if (0 <= evt.fd) {
-            ev.events = (evt.eventType == IO_WRITE) ? EPOLLOUT : EPOLLIN;
-            ev.data.fd = evt.fd;
-            if (epoll_ctl(epollfd, EPOLL_CTL_ADD, evt.fd, &ev) == -1) {
-                if (errno == EEXIST) {
-                    QCC_DbgPrintf(("Duplicate epoll_ctl add for fd %u", evt.fd));
-                } else {
-                    QCC_LogError(ER_OS_ERROR, ("epoll_ctl add failed for fd %u with %d (%s)", evt.fd, errno, strerror(errno)));
-                    close(epollfd);
-                    return ER_OS_ERROR;
-                }
-            }
-        } else if (0 <= evt.ioFd) {
-            ev.events = (evt.eventType == IO_WRITE) ? EPOLLOUT : EPOLLIN;
-            ev.data.fd = evt.ioFd;
-            if (epoll_ctl(epollfd, EPOLL_CTL_ADD, evt.ioFd, &ev) == -1) {
-                if (errno == EEXIST) {
-                    QCC_DbgPrintf(("Duplicate epoll_ctl add for fd %u", evt.ioFd));
-                } else {
-                    QCC_LogError(ER_OS_ERROR, ("epoll_ctl add failed for fd %u with %d (%s)", evt.ioFd, errno, strerror(errno)));
-                    close(epollfd);
-                    return ER_OS_ERROR;
-                }
-            }
+            FD_SET(evt.fd, &set);
+            maxFd = max(maxFd, evt.fd);
+        }
+        if (0 <= evt.ioFd) {
+            FD_SET(evt.ioFd, &set);
+            maxFd = max(maxFd, evt.ioFd);
         }
     }
 
     int stopFd = -1;
     if (thread) {
         stopFd = thread->GetStopEvent().fd;
-        ev.events = EPOLLIN;
-        ev.data.fd = stopFd;
-        if (epoll_ctl(epollfd, EPOLL_CTL_ADD, stopFd, &ev) == -1) {
-            if (errno == EEXIST) {
-                QCC_DbgPrintf(("Duplicate epoll_ctl add for fd %u", stopFd));
-            } else {
-                QCC_LogError(ER_OS_ERROR, ("epoll_ctl add failed for fd %u with %d (%s)", stopFd, errno, strerror(errno)));
-                close(epollfd);
-                return ER_OS_ERROR;
-            }
+        if (evt.eventType == IO_WRITE) {
+            FD_SET(stopFd, &stopSet);
+        } else {
+            FD_SET(stopFd, &set);
         }
+        maxFd = max(maxFd, stopFd);
     }
 
     evt.IncrementNumThreads();
 
-    int ret = epoll_wait(epollfd, events, 2, pTval ? ((pTval->tv_sec * 1000) + (pTval->tv_usec / 1000)) : -1);
+    int ret = select(maxFd + 1,
+                     (evt.eventType == IO_WRITE) ? &stopSet : &set,
+                     (evt.eventType == IO_WRITE) ? &set : NULL,
+                     NULL,
+                     pTval);
 
     evt.DecrementNumThreads();
 
-    if (0 < ret && 0 <= stopFd) {
-        for (int n = 0; n < ret; ++n) {
-            if ((events[n].events & EPOLLIN) && events[n].data.fd == stopFd) {
-                close(epollfd);
-                return thread->IsStopping() ? ER_STOPPING_THREAD : ER_ALERTED_THREAD;
-            }
-        }
-    }
-    if (0 <= ret && evt.eventType == TIMED) {
+    if ((0 <= stopFd) && (FD_ISSET(stopFd, &set) || FD_ISSET(stopFd, &stopSet))) {
+        return thread->IsStopping() ? ER_STOPPING_THREAD : ER_ALERTED_THREAD;
+    } else if (evt.eventType == TIMED) {
         uint32_t now = GetTimestamp();
         if (now >= evt.timestamp) {
             if (0 < evt.period) {
                 evt.timestamp += (((now - evt.timestamp) / evt.period) + 1) * evt.period;
             }
-            close(epollfd);
             return ER_OK;
         } else {
-            close(epollfd);
             return ER_TIMEOUT;
         }
-    } else if ((0 < ret) && ((0 <= evt.fd) || (0 <= evt.ioFd))) {
-        for (int n = 0; n < ret; ++n) {
-            if ((events[n].events & EPOLLOUT) && evt.eventType == IO_WRITE && (events[n].data.fd == evt.fd || events[n].data.fd == evt.ioFd)) {
-                close(epollfd);
-                return ER_OK;
-            }
-            if ((events[n].events & EPOLLIN) && (evt.eventType == IO_READ || evt.eventType == GEN_PURPOSE) && (events[n].data.fd == evt.fd || events[n].data.fd == evt.ioFd)) {
-                close(epollfd);
-                return ER_OK;
-            }
-        }
-        close(epollfd);
-        return ER_TIMEOUT;
+    } else if ((0 < ret) && (((0 <= evt.fd) && FD_ISSET(evt.fd, &set)) || ((0 <= evt.ioFd) && FD_ISSET(evt.ioFd, &set)))) {
+        return ER_OK;
     } else if (0 <= ret) {
-        close(epollfd);
         return ER_TIMEOUT;
     } else {
-        close(epollfd);
         return ER_FAIL;
     }
 }
@@ -401,8 +354,12 @@ QStatus Event::Wait(const vector<Event*>& checkEvents, vector<Event*>& signaledE
 #else
 QStatus Event::Wait(const vector<Event*>& checkEvents, vector<Event*>& signaledEvents, uint32_t maxWaitMs)
 {
+    fd_set rdset;
+    fd_set wrset;
     struct timeval tval;
     struct timeval* pTval = NULL;
+    bool rdSetEmpty = true;
+    bool wrSetEmpty = true;
 
     if (maxWaitMs != WAIT_FOREVER) {
         tval.tv_sec = maxWaitMs / 1000;
@@ -410,103 +367,35 @@ QStatus Event::Wait(const vector<Event*>& checkEvents, vector<Event*>& signaledE
         pTval = &tval;
     }
 
-    vector<Event*>::const_iterator it, jit;
-    uint32_t size = checkEvents.empty() ? 1 : checkEvents.size();
-
-#if defined(QCC_OS_LINUX)
-    int epollfd = epoll_create1(0);
-#elif defined (QCC_OS_ANDROID)
-    int epollfd = epoll_create(size);
-#endif
-
-    if (epollfd == -1) {
-        QCC_LogError(ER_OS_ERROR, ("epoll_create failed with %d (%s)", errno, strerror(errno)));
-        return ER_OS_ERROR;
-    }
-    struct epoll_event ev, events[size];
+    FD_ZERO(&rdset);
+    FD_ZERO(&wrset);
+    int maxFd = 0;
+    vector<Event*>::const_iterator it;
 
     for (it = checkEvents.begin(); it != checkEvents.end(); ++it) {
         Event* evt = *it;
         evt->IncrementNumThreads();
         if ((evt->eventType == IO_READ) || (evt->eventType == GEN_PURPOSE)) {
             if (0 <= evt->fd) {
-                ev.events = EPOLLIN;
-                for (jit = checkEvents.begin(); jit != checkEvents.end(); ++jit) {
-                    Event* event = *jit;
-                    if ((event->fd == evt->fd || event->ioFd == evt->fd) && event->eventType == IO_WRITE) {
-                        ev.events |= EPOLLOUT;
-                        break;
-                    }
-                }
-                ev.data.fd = evt->fd;
-                if (epoll_ctl(epollfd, EPOLL_CTL_ADD, evt->fd, &ev) == -1) {
-                    if (errno == EEXIST) {
-                        QCC_DbgPrintf(("Duplicate epoll_ctl add for fd %u", evt->fd));
-                    } else {
-                        QCC_LogError(ER_OS_ERROR, ("epoll_ctl add failed for fd %u with %d (%s)", evt->fd, errno, strerror(errno)));
-                        close(epollfd);
-                        return ER_OS_ERROR;
-                    }
-                }
-            } else if (0 <= evt->ioFd) {
-                ev.events = EPOLLIN;
-                for (jit = checkEvents.begin(); jit != checkEvents.end(); ++jit) {
-                    Event* event = *jit;
-                    if ((event->fd == evt->ioFd || event->ioFd == evt->ioFd) && event->eventType == IO_WRITE) {
-                        ev.events |= EPOLLOUT;
-                        break;
-                    }
-                }
-                ev.data.fd = evt->ioFd;
-                if (epoll_ctl(epollfd, EPOLL_CTL_ADD, evt->ioFd, &ev) == -1) {
-                    if (errno == EEXIST) {
-                        QCC_DbgPrintf(("Duplicate epoll_ctl add for fd %u", evt->ioFd));
-                    } else {
-                        QCC_LogError(ER_OS_ERROR, ("epoll_ctl add failed for fd %u with %d (%s)", evt->ioFd, errno, strerror(errno)));
-                        close(epollfd);
-                        return ER_OS_ERROR;
-                    }
-                }
+                FD_SET(evt->fd, &rdset);
+                maxFd = std::max(maxFd, evt->fd);
+                rdSetEmpty = false;
+            }
+            if (0 <= evt->ioFd) {
+                FD_SET(evt->ioFd, &rdset);
+                maxFd = std::max(maxFd, evt->ioFd);
+                rdSetEmpty = false;
             }
         } else if (evt->eventType == IO_WRITE) {
             if (0 <= evt->fd) {
-                ev.events = EPOLLOUT;
-                for (jit = checkEvents.begin(); jit != checkEvents.end(); ++jit) {
-                    Event* event = *jit;
-                    if ((event->fd == evt->fd || event->ioFd == evt->fd) && ((event->eventType == IO_READ) || (event->eventType == GEN_PURPOSE))) {
-                        ev.events |= EPOLLIN;
-                        break;
-                    }
-                }
-                ev.data.fd = evt->fd;
-                if (epoll_ctl(epollfd, EPOLL_CTL_ADD, evt->fd, &ev) == -1) {
-                    if (errno == EEXIST) {
-                        QCC_DbgPrintf(("Duplicate epoll_ctl add for fd %u", evt->fd));
-                    } else {
-                        QCC_LogError(ER_OS_ERROR, ("epoll_ctl add failed for fd %u with %d (%s)", evt->fd, errno, strerror(errno)));
-                        close(epollfd);
-                        return ER_OS_ERROR;
-                    }
-                }
-            } else if (0 <= evt->ioFd) {
-                ev.events = EPOLLOUT;
-                for (jit = checkEvents.begin(); jit != checkEvents.end(); ++jit) {
-                    Event* event = *jit;
-                    if ((event->fd == evt->ioFd || event->ioFd == evt->ioFd) && ((event->eventType == IO_READ) || (event->eventType == GEN_PURPOSE))) {
-                        ev.events |= EPOLLIN;
-                        break;
-                    }
-                }
-                ev.data.fd = evt->ioFd;
-                if (epoll_ctl(epollfd, EPOLL_CTL_ADD, evt->ioFd, &ev) == -1) {
-                    if (errno == EEXIST) {
-                        QCC_DbgPrintf(("Duplicate epoll_ctl add for fd %u", evt->ioFd));
-                    } else {
-                        QCC_LogError(ER_OS_ERROR, ("epoll_ctl add failed for fd %u with %d (%s)", evt->ioFd, errno, strerror(errno)));
-                        close(epollfd);
-                        return ER_OS_ERROR;
-                    }
-                }
+                FD_SET(evt->fd, &wrset);
+                wrSetEmpty = false;
+                maxFd = std::max(maxFd, evt->fd);
+            }
+            if (0 <= evt->ioFd) {
+                FD_SET(evt->ioFd, &wrset);
+                wrSetEmpty = false;
+                maxFd = std::max(maxFd, evt->ioFd);
             }
         } else if (evt->eventType == TIMED) {
             uint32_t now = GetTimestamp();
@@ -522,28 +411,21 @@ QStatus Event::Wait(const vector<Event*>& checkEvents, vector<Event*>& signaledE
         }
     }
 
-    int ret = epoll_wait(epollfd, events, size, pTval ? ((pTval->tv_sec * 1000) + (pTval->tv_usec / 1000)) : -1);
+    int ret = select(maxFd + 1, rdSetEmpty ? NULL : &rdset, wrSetEmpty ? NULL : &wrset, NULL, pTval);
 
     if (0 <= ret) {
-        for (int n = 0; n < ret; ++n) {
-            for (it = checkEvents.begin(); it != checkEvents.end(); ++it) {
-                Event* evt = *it;
-                if ((events[n].events & EPOLLIN) && ((evt->eventType == IO_READ) || (evt->eventType == GEN_PURPOSE))) {
-                    if (((0 <= evt->fd) && events[n].data.fd == evt->fd) || ((0 <= evt->ioFd)  && events[n].data.fd == evt->ioFd)) {
-                        signaledEvents.push_back(evt);
-                    }
-                } else if ((events[n].events & EPOLLOUT) && (evt->eventType == IO_WRITE)) {
-                    if (((0 <= evt->fd) && events[n].data.fd == evt->fd) || ((0 <= evt->ioFd) && events[n].data.fd == evt->ioFd)) {
-                        signaledEvents.push_back(evt);
-                    }
-                }
-            }
-        }
-
         for (it = checkEvents.begin(); it != checkEvents.end(); ++it) {
             Event* evt = *it;
             evt->DecrementNumThreads();
-            if (evt->eventType == TIMED) {
+            if (!rdSetEmpty && ((evt->eventType == IO_READ) || (evt->eventType == GEN_PURPOSE))) {
+                if (((0 <= evt->fd) && FD_ISSET(evt->fd, &rdset)) || ((0 <= evt->ioFd) && FD_ISSET(evt->ioFd, &rdset))) {
+                    signaledEvents.push_back(evt);
+                }
+            } else if (!wrSetEmpty && (evt->eventType == IO_WRITE)) {
+                if (((0 <= evt->fd) && FD_ISSET(evt->fd, &wrset)) || ((0 <= evt->ioFd) && FD_ISSET(evt->ioFd, &wrset))) {
+                    signaledEvents.push_back(evt);
+                }
+            } else if (evt->eventType == TIMED) {
                 uint32_t now = GetTimestamp();
                 if (evt->timestamp <= now) {
                     signaledEvents.push_back(evt);
@@ -553,15 +435,13 @@ QStatus Event::Wait(const vector<Event*>& checkEvents, vector<Event*>& signaledE
                 }
             }
         }
-        close(epollfd);
         return signaledEvents.empty() ? ER_TIMEOUT : ER_OK;
     } else {
         for (it = checkEvents.begin(); it != checkEvents.end(); ++it) {
             (*it)->DecrementNumThreads();
         }
-        QCC_LogError(ER_OS_ERROR, ("epoll_wait failed with %d  (%s)", errno, strerror(errno)));
-        close(epollfd);
-        return ER_OS_ERROR;
+        QCC_LogError(ER_FAIL, ("select failed with %d (%s)", errno, strerror(errno)));
+        return ER_FAIL;
     }
 }
 #endif

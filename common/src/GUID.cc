@@ -76,9 +76,9 @@ const qcc::String& GUID128::ToString() const
 const qcc::String& GUID128::ToShortString() const
 {
     if (shortValue.empty()) {
-        char outBytes[SHORT_SIZE + 1];
-        outBytes[SHORT_SIZE] = '\0';
-        for (size_t i = 0; i < SHORT_SIZE; ++i) {
+        char outBytes[SIZE_SHORT + 1];
+        outBytes[SIZE_SHORT] = '\0';
+        for (size_t i = 0; i < SIZE_SHORT; ++i) {
             uint8_t cur = (guid[i] & 0x3F); /* gives a number between 0 and 63 */
             if (cur < 10) {
                 outBytes[i] = (cur + '0');

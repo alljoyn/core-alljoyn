@@ -39,8 +39,8 @@ BusController::BusController(Bus& alljoynBus, AuthListener* authListener) :
     bus(alljoynBus),
     authListener(authListener),
     dbusObj(bus, this),
-    alljoynObj(bus, this),
-    sessionlessObj(bus, this),
+    alljoynObj(bus, this, reinterpret_cast<DaemonRouter&>(bus.GetInternal().GetRouter())),
+    sessionlessObj(bus, this, reinterpret_cast<DaemonRouter&>(bus.GetInternal().GetRouter())),
 #ifndef NDEBUG
     alljoynDebugObj(this),
 #endif
@@ -49,6 +49,8 @@ BusController::BusController(Bus& alljoynBus, AuthListener* authListener) :
 {
     DaemonRouter& router(reinterpret_cast<DaemonRouter&>(bus.GetInternal().GetRouter()));
     router.SetBusController(this);
+    router.SetAllJoynObj(&alljoynObj);
+    router.SetSessionlessObj(&sessionlessObj);
 }
 
 BusController::~BusController()

@@ -1234,7 +1234,7 @@ bool TCPTransport::SupportsOptions(const SessionOpts& opts) const
      * TRANSPORT_TCP.  If you are explicitly looking for something other than
      * TCP (or one of the aliases) we can't help you.
      */
-    if (!(opts.transports & (TRANSPORT_TCP | TRANSPORT_WLAN | TRANSPORT_WWAN | TRANSPORT_LAN))) {
+    if (!(opts.transports & TRANSPORT_TCP)) {
         QCC_DbgPrintf(("TCPTransport::SupportsOptions(): transport mismatch"));
         rc = false;
     }

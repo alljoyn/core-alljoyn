@@ -104,52 +104,12 @@ class BusController {
     void ObjectRegistered(BusObject* obj);
 
     /**
-     * Attempt to start a service to handle the message received.
-     *
-     * @param msg       The message received.
-     * @param sendingEP The endpoint the message was received on
-     */
-    QStatus StartService(Message& msg, BusEndpoint sendingEP) {
-        return ER_NOT_IMPLEMENTED;
-    }
-
-    /**
      * Get the sessionlessObj.
      *
      * @return   The sessionlessObj singleton
      */
     SessionlessObj& GetSessionlessObj() {
         return sessionlessObj;
-    }
-
-    /**
-     * Send a sessionless message to the SessionlessObj.
-     *
-     * @param msg  Sessionless message to be pushed.
-     * @return     ER_OK if successful
-     */
-    QStatus PushSessionlessMessage(Message& msg) {
-        return sessionlessObj.PushMessage(msg);
-    }
-
-    /**
-     * Add a rule for an endpoint.
-     *
-     * @param epName   The name of the endpoint that this rule applies to.
-     * @param rule     Rule for endpoint
-     */
-    void AddRule(const qcc::String& epName, Rule& rule) {
-        sessionlessObj.AddRule(epName, rule);
-    }
-
-    /**
-     * Remove a rule for an endpoint.
-     *
-     * @param epName      The name of the endpoint that rule applies to.
-     * @param rule        Rule to remove.
-     */
-    void RemoveRule(const qcc::String& epName, Rule& rule) {
-        sessionlessObj.RemoveRule(epName, rule);
     }
 
     /**
