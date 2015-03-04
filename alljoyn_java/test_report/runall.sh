@@ -24,7 +24,7 @@ Usage: $(basename -- "$0") [ -s -f FILE ] -o OS -c CPU -v VARIANT
 where
 	-s		# start and stop our own AllJoyn-Daemon (requires config file)
 	-f		# daemon config file
-	-o OS		# same meaning as SCONS
+	-o OS	# same meaning as SCONS
 	-c CPU
 	-v VARIANT
 "
@@ -67,8 +67,22 @@ then
 		echo >&2 "error, start_daemon=true but this is Windows and daemon is not supported"
 		exit 2
 	fi
+
 	# sometimes Windows "home" does not work for keystore tests
 	export USERPROFILE="$( cygpath -wa . )"
+	export LOCALAPPDATA="$USERPROFILE"
+elif pwd -W > /dev/null 2>&1
+then
+	: MSysGit, which also means Windows
+
+	bus_address="null:"
+	if $start_daemon; then
+		echo >&2 "error, start_daemon=true but this is Windows and daemon is not supported"
+		exit 2
+	fi
+
+	# sometimes Windows "home" does not work for keystore tests
+	export USERPROFILE="$( pwd -W )"
 	export LOCALAPPDATA="$USERPROFILE"
 fi
 
@@ -87,14 +101,14 @@ then
 		exit 2
 	}
 
-    : generate a unique bus address and munge into daemon config file
+	: generate a unique bus address and munge into daemon config file
 
 	bus_address="unix:abstract=$( uuidgen )"
 	config_uuid="$PWD/junit-uuid.tmp"
 	sed < "$config_file" > "$config_uuid" -e "s/unix:abstract=alljoyn/$bus_address/"
 	options="--config-file=$config_uuid --no-bt --no-udp --verbosity=5 --print-address"
 else
-    : no alljoyn-daemon, use null transport
+	: no alljoyn-daemon, use null transport
 
 	bus_address="null:"
 fi
@@ -116,11 +130,11 @@ kill-alljoyn() {
 
 : begin
 
-kill-alljoyn
 rm -f alljoyn-daemon.log
 
 if $start_daemon
 then
+	kill-alljoyn
 	: start alljoyn-daemon
 
 	(
@@ -148,7 +162,10 @@ ant > junit.log 2>&1 < /dev/null -f ../../build.xml -Dtest=alljoyn_java/test_rep
 
 sleep 5
 
-kill-alljoyn
+if $start_daemon
+then
+	kill-alljoyn
+fi
 
 echo exit status $xit
 exit $xit
