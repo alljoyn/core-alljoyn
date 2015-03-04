@@ -190,7 +190,11 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         ifc->Activate();
     }
     {
-        /* Create the org.alljoyn.Bus.Peer.HeaderCompression interface */
+        /*
+         * Create the org.alljoyn.Bus.Peer.HeaderCompression interface
+         *
+         * Note that header compression was deprecated in March 2015 for 15.04 release.
+         */
         InterfaceDescription* ifc = NULL;
         status = bus.CreateInterface(org::alljoyn::Bus::Peer::HeaderCompression::InterfaceName, ifc);
         if (ER_OK != status) {

@@ -157,7 +157,6 @@ class BusObject : public MessageReceiver {
      *                         no guarantee that expired signals will not still be delivered.
      * @param flags            Logical OR of the message flags for this signals. The following flags apply to signals:
      *                         - If ::ALLJOYN_FLAG_GLOBAL_BROADCAST is set broadcast signal (null destination) will be forwarded across bus-to-bus connections.
-     *                         - If ::ALLJOYN_FLAG_COMPRESSED is set the header is compressed for destinations that can handle header compression.
      *                         - If ::ALLJOYN_FLAG_ENCRYPTED is set the message is authenticated and the payload if any is encrypted.
      * @param msg              [OUT] If non-null, the sent signal message is returned to the caller.
      * @return

@@ -42,7 +42,6 @@
 #include "KeyStore.h"
 #include "BusEndpoint.h"
 #include "PeerState.h"
-#include "CompressionRules.h"
 #include "AllJoynPeerObj.h"
 #include "SASLEngine.h"
 #include "AllJoynCrypto.h"
@@ -173,14 +172,6 @@ AllJoynPeerObj::AllJoynPeerObj(BusAttachment& bus) :
     AlarmListener(),
     dispatcher("PeerObjDispatcher", true, 3), supportedAuthSuitesCount(0), supportedAuthSuites(NULL)
 {
-    /* Add org.alljoyn.Bus.Peer.HeaderCompression interface */
-    {
-        const InterfaceDescription* ifc = bus.GetInterface(org::alljoyn::Bus::Peer::HeaderCompression::InterfaceName);
-        if (ifc) {
-            AddInterface(*ifc);
-            AddMethodHandler(ifc->GetMember("GetExpansion"), static_cast<MessageReceiver::MethodHandler>(&AllJoynPeerObj::GetExpansion));
-        }
-    }
     /* Add org.alljoyn.Bus.Peer.Authentication interface */
     {
         const InterfaceDescription* ifc = bus.GetInterface(org::alljoyn::Bus::Peer::Authentication::InterfaceName);
@@ -268,153 +259,9 @@ void AllJoynPeerObj::ObjectRegistered(void)
 
 }
 
-void AllJoynPeerObj::GetExpansion(const InterfaceDescription::Member* member, Message& msg)
-{
-    uint32_t token = msg->GetArg(0)->v_uint32;
-    MsgArg replyArg;
-    QStatus status = msg->GetExpansion(token, replyArg);
-    if (status == ER_OK) {
-        status = MethodReply(msg, &replyArg, 1);
-        if (ER_OK != status) {
-            QCC_LogError(status, ("Failed to send GetExpansion reply"));
-        }
-    } else {
-        MethodReply(msg, status);
-    }
-}
-
-QStatus AllJoynPeerObj::RequestHeaderExpansion(Message& msg, RemoteEndpoint& sender)
-{
-    bool expansionPending = false;
-    uint32_t token = msg->GetCompressionToken();
-
-    assert(bus);
-    //assert(sender == bus.GetInternal().GetRouter().FindEndpoint(msg->GetRcvEndpointName()));
-
-    lock.Lock(MUTEX_CONTEXT);
-    /*
-     * First check if there are any other messages waiting for the same expansion rule.
-     */
-    for (std::deque<Message>::iterator iter = msgsPendingExpansion.begin(); iter != msgsPendingExpansion.end(); ++iter) {
-        if ((*iter)->GetCompressionToken() == token) {
-            expansionPending = true;
-            break;
-        }
-    }
-    msgsPendingExpansion.push_back(msg);
-    lock.Unlock(MUTEX_CONTEXT);
-    /*
-     * If there is already an expansion request for this message we don't need another one.
-     */
-    if (expansionPending) {
-        return ER_OK;
-    } else {
-        return DispatchRequest(msg, EXPAND_HEADER, sender->GetRemoteName());
-    }
-}
-
 QStatus AllJoynPeerObj::RequestAuthentication(Message& msg)
 {
     return DispatchRequest(msg, AUTHENTICATE_PEER);
-}
-
-bool AllJoynPeerObj::RemoveCompressedMessage(Message& msg, uint32_t token)
-{
-    lock.Lock(MUTEX_CONTEXT);
-    for (std::deque<Message>::iterator iter = msgsPendingExpansion.begin(); iter != msgsPendingExpansion.end(); ++iter) {
-        if ((*iter)->GetCompressionToken() == token) {
-            msg = *iter;
-            msgsPendingExpansion.erase(iter);
-            lock.Unlock(MUTEX_CONTEXT);
-            return true;
-        }
-    }
-    lock.Unlock(MUTEX_CONTEXT);
-    return false;
-}
-
-/**
- * We keep the timeout for the expansion request small to bound the number of unexpanded messages
- * that we have to queue while we wait for the response. This neutralizes a DOS attack where a remote device
- * that is sending compressed messages never responds to the request for the expansion rule.
- */
-#define EXPANSION_TIMEOUT   1000
-
-void AllJoynPeerObj::ExpandHeader(Message& msg, const qcc::String& receivedFrom)
-{
-    assert(bus);
-    QStatus status = ER_OK;
-    uint32_t token = msg->GetCompressionToken();
-
-    const HeaderFields* expFields = bus->GetInternal().GetCompressionRules()->GetExpansion(token);
-    if (!expFields) {
-        Message replyMsg(*bus);
-        MsgArg arg("u", token);
-        /*
-         * The endpoint the message was received on knows the expansion rule for the token we just received.
-         */
-        ProxyBusObject remotePeerObj(*bus, receivedFrom.c_str(), org::alljoyn::Bus::Peer::ObjectPath, 0);
-        const InterfaceDescription* ifc = bus->GetInterface(org::alljoyn::Bus::Peer::HeaderCompression::InterfaceName);
-        if (ifc == NULL) {
-            status = ER_BUS_NO_SUCH_INTERFACE;
-        }
-        if (status == ER_OK) {
-            remotePeerObj.AddInterface(*ifc);
-            const InterfaceDescription::Member* getExpansionMember = ifc->GetMember("GetExpansion");
-            assert(getExpansionMember);
-            status = remotePeerObj.MethodCall(*getExpansionMember, &arg, 1, replyMsg, EXPANSION_TIMEOUT);
-        }
-        if (status == ER_OK) {
-            status = replyMsg->AddExpansionRule(token, replyMsg->GetArg(0));
-            if (status == ER_OK) {
-                expFields = bus->GetInternal().GetCompressionRules()->GetExpansion(token);
-                if (!expFields) {
-                    status = ER_BUS_HDR_EXPANSION_INVALID;
-                }
-            }
-        }
-    }
-    /*
-     * Clean up if we can't expand the messages.
-     */
-    if (status != ER_OK) {
-        while (RemoveCompressedMessage(msg, token)) {
-            QCC_LogError(status, ("Failed to expand message %s", msg->Description().c_str()));
-        }
-        return;
-    }
-    /*
-     * Calling RemoveCompressedMessage() in a loop may look innefficient but it is highly unlikely
-     * we will be expanding different headers at the same time so we are really just removing the
-     * front message from the list.
-     */
-    while (RemoveCompressedMessage(msg, token)) {
-        Router& router = bus->GetInternal().GetRouter();
-        BusEndpoint sender = router.FindEndpoint(msg->GetRcvEndpointName());
-        if (sender->IsValid()) {
-            /*
-             * Expand the compressed fields. Don't overwrite headers we received.
-             */
-            for (size_t id = 0; id < ArraySize(msg->hdrFields.field); id++) {
-                if (HeaderFields::Compressible[id] && (msg->hdrFields.field[id].typeId == ALLJOYN_INVALID)) {
-                    msg->hdrFields.field[id] = expFields->field[id];
-                }
-            }
-            /*
-             * Initialize ttl from the message header.
-             */
-            if (msg->hdrFields.field[ALLJOYN_HDR_FIELD_TIME_TO_LIVE].typeId != ALLJOYN_INVALID) {
-                msg->ttl = msg->hdrFields.field[ALLJOYN_HDR_FIELD_TIME_TO_LIVE].v_uint16;
-            } else {
-                msg->ttl = 0;
-            }
-            msg->hdrFields.field[ALLJOYN_HDR_FIELD_COMPRESSION_TOKEN].Clear();
-            /*
-             * we have succesfully expanded the message so now it can be routed.
-             */
-            router.PushMessage(msg, sender);
-        }
-    }
 }
 
 /*
@@ -1532,10 +1379,6 @@ void AllJoynPeerObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
 
     case KEY_AUTHENTICATION:
         DoKeyAuthentication(req->msg);
-        break;
-
-    case EXPAND_HEADER:
-        ExpandHeader(req->msg, req->data);
         break;
 
     case SECURE_CONNECTION:

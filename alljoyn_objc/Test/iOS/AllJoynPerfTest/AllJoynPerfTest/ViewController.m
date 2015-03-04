@@ -85,7 +85,6 @@
     [self.transportTypeSegmentedControl setEnabled:shouldEnable];
     [self.messageTypeSegmentedControl setEnabled:shouldEnable];
     [self.messageSizeSegmentedControl setEnabled:shouldEnable];
-    [self.headerCompressionSwitch setEnabled:shouldEnable];
     [self.operationTypeSegmentedControl setEnabled:shouldEnable];
 }
 
@@ -527,7 +526,7 @@
                 
                 [byteArrayArg setValue:@"ay", self.performanceStatistics.packetSize, byteArray];
                 
-                [self.performanceObject sendPacketAtIndex:[NSNumber numberWithInt:i] payLoad:byteArrayArg inSession:self.serviceController.sessionId toDestination:nil flags:self.headerCompressionSwitch.isOn ? kAJNMessageFlagCompressed : 0];
+                [self.performanceObject sendPacketAtIndex:[NSNumber numberWithInt:i] payLoad:byteArrayArg inSession:self.serviceController.sessionId toDestination:nil flags:0];
                 
                 free(byteArray);
                 

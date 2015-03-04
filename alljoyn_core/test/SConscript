@@ -44,7 +44,6 @@ progs = [
     test_env.Program('bbjitter',      ['bbjitter.cc']),
     test_env.Program('marshal',       ['marshal.cc']),
     test_env.Program('names',         ['names.cc']),
-    test_env.Program('compression',   ['compression.cc']),
     test_env.Program('rawclient',     ['rawclient.cc']),
     test_env.Program('rawservice',    ['rawservice.cc']),
     test_env.Program('sessions',      ['sessions.cc']),

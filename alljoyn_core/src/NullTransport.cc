@@ -209,7 +209,7 @@ QStatus _NullEndpoint::PushMessage(Message& msg)
         CheckRegisterEndpoint();
         /*
          * We need to clone broadcast signals because each receiving bus attachment must be
-         * able to unmarshal the arg list including decrypting and doing header expansion.
+         * able to unmarshal the arg list including decryption.
          */
         if (msg->IsBroadcastSignal()) {
             Message clone(msg, true /*deep copy*/);
@@ -274,10 +274,6 @@ QStatus NullTransport::LinkBus(BusAttachment* otherBus)
      * Initialize the null endpoint
      */
     NullEndpoint ep(bus, *otherBus);
-    /*
-     * The compression rules are shared between the client bus and the routing node bus
-     */
-    bus.GetInternal().OverrideCompressionRules(otherBus->GetInternal().GetCompressionRules());
     /*
      * Register the null endpoint with the daemon router. The endpoint is registered with the client
      * router either below or in PushMessage if a message is received before the call to register

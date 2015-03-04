@@ -760,12 +760,7 @@ QStatus _RemoteEndpoint::ReadCallback(qcc::Source& source, bool isTimedOut)
 
                 case ER_BUS_CANNOT_EXPAND_MESSAGE:
                     internal->idleTimeoutCount = 0;
-                    /*
-                     * The message could not be expanded so pass it the peer object to request the expansion
-                     * rule from the endpoint that sent it.
-                     */
-                    status = internal->bus.GetInternal().GetLocalEndpoint()->GetPeerObj()->RequestHeaderExpansion(msg, rep);
-                    if ((status != ER_OK) && router.IsDaemon()) {
+                    if (router.IsDaemon()) {
                         QCC_LogError(status, ("%s: Discarding %s", GetUniqueName().c_str(), msg->Description().c_str()));
                         status = ER_OK;
                     }

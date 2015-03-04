@@ -81,19 +81,6 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
     void ObjectRegistered(void);
 
     /**
-     * This function is called when a message with a compressed header has been received but the
-     * compression token is unknown. A method call is made to the remote peer to obtain the
-     * expansion rule for the compression token.
-     *
-     * @param msg     The message to be expanded.
-     * @param sender  The remote endpoint that the compressed message was received on.
-     * @return
-     *      - ER_OK if successful
-     *      - An error status otherwise
-     */
-    QStatus RequestHeaderExpansion(Message& msg, RemoteEndpoint& sender);
-
-    /**
      * This function is called when an encrypted message requires authentication.
      *
      * @param msg     The message to be encrypted.
@@ -242,7 +229,6 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
     typedef enum {
         AUTHENTICATE_PEER,
         AUTH_CHALLENGE,
-        EXPAND_HEADER,
         SECURE_CONNECTION,
         KEY_EXCHANGE,
         KEY_AUTHENTICATION
@@ -255,14 +241,6 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
         const qcc::String data;
         Request(const Message& msg, RequestType type, const qcc::String& data) : msg(msg), reqType(type), data(data) { }
     };
-
-    /**
-     * Header decompression method'
-     *
-     * @param member  The member that was called
-     * @param msg     The method call message
-     */
-    void GetExpansion(const InterfaceDescription::Member* member, Message& msg);
 
     /**
      * ExchangeGuids method call handler
@@ -349,13 +327,6 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
     void DoKeyAuthentication(Message& msg);
 
     /**
-     * Process a message to advance an authentication conversation.
-     *
-     * @param msg  The auth challenge message
-     */
-    void ExpandHeader(Message& msg, const qcc::String& sendingEndpoint);
-
-    /**
      * Session key generation algorithm.
      *
      * @param peerState  The peer state object where the session key will be store.
@@ -408,17 +379,6 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
      * @param data      Optional reqType specific data.
      */
     QStatus DispatchRequest(Message& msg, AllJoynPeerObj::RequestType reqType, const qcc::String data = "");
-
-    /**
-     * Get the next compressed message from the msgsPendingExpansion queue that has the specified
-     * compression token. The message is removed from the list.
-     *
-     * @param msg       Message that was removed.
-     * @param token     The compression token
-     *
-     * @return  Returns true if a message was removed and returned.
-     */
-    bool RemoveCompressedMessage(Message& msg, uint32_t token);
 
     /**
      * Record the master secret.
@@ -478,9 +438,6 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
 
     /** Queue of encrypted messages waiting for an authentication to complete */
     std::deque<Message> msgsPendingAuth;
-
-    /** Queue of compressed messages waiting for an expansion rule to be supplied */
-    std::deque<Message> msgsPendingExpansion;
 
     uint16_t supportedAuthSuitesCount;
     uint32_t* supportedAuthSuites;

@@ -464,7 +464,6 @@ extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_setpropertyasync(alljoyn_pr
  * @param timeout      Timeout specified in milliseconds to wait for a reply
  * @param flags        Logical OR of the message flags for this method call. The following flags apply to method calls:
  *                     - If #ALLJOYN_MESSAGE_FLAG_ENCRYPTED is set the message is authenticated and the payload if any is encrypted.
- *                     - If #ALLJOYN_MESSAGE_FLAG_COMPRESSED is set the header is compressed for destinations that can handle header compression.
  *                     - If #ALLJOYN_MESSAGE_FLAG_AUTO_START is set the bus will attempt to start a service if it is not running.
  *
  * @return
@@ -492,7 +491,6 @@ extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_methodcall(alljoyn_proxybus
  *                     Recommended default #ALLJOYN_MESSAGE_DEFAULT_TIMEOUT which is 25000 ms.
  * @param flags        Logical OR of the message flags for this method call. The following flags apply to method calls:
  *                     - If #ALLJOYN_MESSAGE_FLAG_ENCRYPTED is set the message is authenticated and the payload if any is encrypted.
- *                     - If #ALLJOYN_MESSAGE_FLAG_COMPRESSED is set the header is compressed for destinations that can handle header compression.
  *                     - If #ALLJOYN_MESSAGE_FLAG_AUTO_START is set the bus will attempt to start a service if it is not running.
  *                     Set value to '0' for no flags.
  *
@@ -522,7 +520,6 @@ extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_methodcall_member(alljoyn_p
  * @param numArgs      The number of arguments
  * @param flags        Logical OR of the message flags for this method call. The following flags apply to method calls:
  *                     - If #ALLJOYN_MESSAGE_FLAG_ENCRYPTED is set the message is authenticated and the payload if any is encrypted.
- *                     - If #ALLJOYN_MESSAGE_FLAG_COMPRESSED is set the header is compressed for destinations that can handle header compression.
  *                     - If #ALLJOYN_MESSAGE_FLAG_AUTO_START is set the bus will attempt to start a service if it is not running.
  *                     Set value to '0' for no flags.
  *
@@ -548,7 +545,6 @@ extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_methodcall_noreply(alljoyn_
  * @param numArgs      The number of arguments
  * @param flags        Logical OR of the message flags for this method call. The following flags apply to method calls:
  *                     - If #ALLJOYN_MESSAGE_FLAG_ENCRYPTED is set the message is authenticated and the payload if any is encrypted.
- *                     - If #ALLJOYN_MESSAGE_FLAG_COMPRESSED is set the header is compressed for destinations that can handle header compression.
  *                     - If #ALLJOYN_MESSAGE_FLAG_AUTO_START is set the bus will attempt to start a service if it is not running.
  *                     Set value to '0' for no flags.
  *
@@ -576,7 +572,6 @@ extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_methodcall_member_noreply(a
  *                     Recommended default #ALLJOYN_MESSAGE_DEFAULT_TIMEOUT which is 25000 ms
  * @param flags        Logical OR of the message flags for this method call. The following flags apply to method calls:
  *                     - If #ALLJOYN_MESSAGE_FLAG_ENCRYPTED is set the message is authenticated and the payload if any is encrypted.
- *                     - If #ALLJOYN_MESSAGE_FLAG_COMPRESSED is set the header is compressed for destinations that can handle header compression.
  *                     - If #ALLJOYN_MESSAGE_FLAG_AUTO_START is set the bus will attempt to start a service if it is not running.
  *                     Set value to '0' for no flags.
  * @return
@@ -607,7 +602,6 @@ extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_methodcallasync(alljoyn_pro
  *                     Recommended default #ALLJOYN_MESSAGE_DEFAULT_TIMEOUT which is 25000 ms
  * @param flags        Logical OR of the message flags for this method call. The following flags apply to method calls:
  *                     - If #ALLJOYN_MESSAGE_FLAG_ENCRYPTED is set the message is authenticated and the payload if any is encrypted.
- *                     - If #ALLJOYN_MESSAGE_FLAG_COMPRESSED is set the header is compressed for destinations that can handle header compression.
  *                     - If #ALLJOYN_MESSAGE_FLAG_AUTO_START is set the bus will attempt to start a service if it is not running.
  *                     Set value to '0' for no flags.
  * @return

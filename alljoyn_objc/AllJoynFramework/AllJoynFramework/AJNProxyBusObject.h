@@ -307,7 +307,6 @@
  * @param timeout      Timeout specified in milliseconds to wait for a reply
  * @param flags        Logical OR of the message flags for this method call. The following flags apply to method calls:
  *                     - If ALLJOYN_FLAG_ENCRYPTED is set the message is authenticated and the payload if any is encrypted.
- *                     - If ALLJOYN_FLAG_COMPRESSED is set the header is compressed for destinations that can handle header compression.
  *                     - If ALLJOYN_FLAG_AUTO_START is set the bus will attempt to start a service if it is not running.
  *
  *
@@ -326,7 +325,6 @@
  * @param timeout       Timeout specified in milliseconds to wait for a reply
  * @param flags         Logical OR of the message flags for this method call. The following flags apply to method calls:
  *                     - If ALLJOYN_FLAG_ENCRYPTED is set the message is authenticated and the payload if any is encrypted.
- *                     - If ALLJOYN_FLAG_COMPRESSED is set the header is compressed for destinations that can handle header compression.
  *                     - If ALLJOYN_FLAG_AUTO_START is set the bus will attempt to start a service if it is not running.
  * @return  - ER_OK if successful
  *          - An error status otherwise
@@ -356,7 +354,6 @@
  * @param timeout       Timeout specified in milliseconds to wait for a reply
  * @param flags         Logical OR of the message flags for this method call. The following flags apply to method calls:
  *                     - If ALLJOYN_FLAG_ENCRYPTED is set the message is authenticated and the payload if any is encrypted.
- *                     - If ALLJOYN_FLAG_COMPRESSED is set the header is compressed for destinations that can handle header compression.
  *                     - If ALLJOYN_FLAG_AUTO_START is set the bus will attempt to start a service if it is not running.
  *
  * @return  - ER_OK if the method call succeeded and the reply message type is MESSAGE_METHOD_RET
@@ -375,7 +372,6 @@
  * @param timeout       Timeout specified in milliseconds to wait for a reply
  * @param flags         Logical OR of the message flags for this method call. The following flags apply to method calls:
  *                     - If ALLJOYN_FLAG_ENCRYPTED is set the message is authenticated and the payload if any is encrypted.
- *                     - If ALLJOYN_FLAG_COMPRESSED is set the header is compressed for destinations that can handle header compression.
  *                     - If ALLJOYN_FLAG_AUTO_START is set the bus will attempt to start a service if it is not running.
  * @return  - ER_OK if successful
  *          - An error status otherwise

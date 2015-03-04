@@ -52,8 +52,12 @@ namespace AllJoynUnity
 		public const byte ALLJOYN_FLAG_SESSIONLESS = 0x10;
 		/** Global (bus-to-bus) broadcast */
 		public const byte ALLJOYN_FLAG_GLOBAL_BROADCAST = 0x20;
-		/** Header is compressed */
-		public const byte ALLJOYN_FLAG_COMPRESSED = 0x40;
+		/**
+		 * Header is compressed 
+		 *
+		 * @deprecated March 2015 for 15.04 release
+		 */
+		[Obsolete] public const byte ALLJOYN_FLAG_COMPRESSED = 0x40;
 		/** Body is encrypted */
 		public const byte ALLJOYN_FLAG_ENCRYPTED = 0x80;
 		// @}
@@ -493,10 +497,12 @@ namespace AllJoynUnity
 			 * Accessor function to get the compression token for the message.
 			 *
 			 * @return
-			 *      - Compression token for the message stored in the AllJoyn header field
 			 *      - 0 'zero' if there is no compression token.
+			 *
+			 * @deprecated Header compression was deprecated in March 2015 for 15.04
+			 * release
 			 */
-			public uint CompressionToken
+			[Obsolete] public uint CompressionToken
 			{
 				get
 				{

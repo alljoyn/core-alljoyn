@@ -1168,15 +1168,6 @@ int main(int argc, char** argv)
                 continue;
             }
             sessionTestObj->SendChatSignal(id, chatMsg.c_str(), flags);
-        } else if (cmd == "cchat") {
-            uint8_t flags = ALLJOYN_FLAG_COMPRESSED;
-            SessionId id = NextTokAsSessionId(line);
-            String chatMsg = Trim(line);
-            if ((id == 0) || chatMsg.empty()) {
-                printf("Usage: cchat <sessionId> <msg>\n");
-                continue;
-            }
-            sessionTestObj->SendChatSignal(id, chatMsg.c_str(), flags);
         } else if (cmd == "anychat") {
             uint8_t flags = 0;
             String chatMsg = Trim(line);
@@ -1275,7 +1266,6 @@ int main(int argc, char** argv)
             printf("leavehosted <sessionId>                                       - Leave a session as host\n");
             printf("leavejoiner <sessionId>                                       - Leave a session as joiner\n");
             printf("chat <sessionId> <msg>                                        - Send a message over a given session\n");
-            printf("cchat <sessionId> <msg>                                       - Send a message over a given session with compression\n");
             printf("schat <msg>                                                   - Send a sessionless message\n");
             printf("anychat <msg>                                                 - Send a message on all hosted sessions\n");
             printf("cancelsessionless <serialNum>                                 - Cancel a sessionless message\n");

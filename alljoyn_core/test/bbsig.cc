@@ -75,7 +75,6 @@ static bool g_selfjoin;
 
 static TransportMask g_preferredTransport = 0;
 
-static bool compress = false;
 static bool encryption = false;
 static bool broacast = false;
 static unsigned long timeToLive = 0;
@@ -263,9 +262,6 @@ class LocalTestObject : public BusObject {
         uint8_t flags = ALLJOYN_FLAG_GLOBAL_BROADCAST;
         assert(my_signal_member);
         MsgArg arg("a{ys}", 0, NULL);
-        if (compress) {
-            flags |= ALLJOYN_FLAG_COMPRESSED;
-        }
         if (encryption) {
             flags |= ALLJOYN_FLAG_ENCRYPTED;
         }
@@ -515,7 +511,7 @@ static MySessionPortListener g_portListener;
 
 static void usage(void)
 {
-    printf("Usage: bbsig [-n <name> ] [-a <name> ] [-h] [-l] [-s] [-r #] [-i #] [-c #] [-t #] [-x] [--tcp] [--udp] [-e[k] <mech>]\n\n");
+    printf("Usage: bbsig [-n <name> ] [-a <name> ] [-h] [-l] [-s] [-r #] [-i #] [-c #] [-t #] [--tcp] [--udp] [-e[k] <mech>]\n\n");
     printf("Options:\n");
     printf("   -h                          = Print this help message\n");
     printf("   -?                          = Print this help message\n");
@@ -530,7 +526,6 @@ static void usage(void)
     printf("   -t #                        = TTL for the signals\n");
     printf("   --tcp                       = Advertise and discover using the TCP transport\n");
     printf("   --udp                       = Advertise and discover using the UDP transport\n");
-    printf("   -x                          = Compress headers\n");
     printf("   -e[k] [RSA|SRP|LOGON|PINX]   = Encrypt the test interface using specified auth mechanism, -ek means clear keys\n");
     printf("   -d                          = discover remote bus with test service\n");
     printf("   -b                          = Signal is broadcast rather than multicast\n");
@@ -660,8 +655,6 @@ int main(int argc, char** argv)
             } else {
                 timeToLive = strtoul(argv[i], NULL, 10);
             }
-        } else if (0 == strcmp("-x", argv[i])) {
-            compress = true;
         } else if (0 == strcmp("-b", argv[i])) {
             broacast = true;
         } else if ((0 == strcmp("-e", argv[i])) || (0 == strcmp("-ek", argv[i]))) {

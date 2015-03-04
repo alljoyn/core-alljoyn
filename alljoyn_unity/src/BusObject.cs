@@ -276,7 +276,6 @@ namespace AllJoynUnity
 			 * @param flags            Logical OR of the message flags for this signals. The following flags apply to signals:
 			 *                         - If ALLJOYN_FLAG_SESSIONLESS is set the signal will be sent out to any listener without requireing a connected session.
 			 *                         - If ALLJOYN_FLAG_GLOBAL_BROADCAST is set broadcast signal (null destination) will be forwarded across bus-to-bus connections.
-			 *                         - If ALLJOYN_FLAG_COMPRESSED is set the header is compressed for destinations that can handle header compression.
 			 *                         - If ALLJOYN_FLAG_ENCRYPTED is set the message is authenticated and the payload if any is encrypted.
 			 * @return
 			 *      - QStatus.OK if successful
@@ -304,8 +303,6 @@ namespace AllJoynUnity
 			 *                         - If ALLJOYN_FLAG_SESSIONLESS is set the signal will be sent out to any listener without requireing a connected session
 			 *                         - If ALLJOYN_FLAG_GLOBAL_BROADCAST is set broadcast signal (null destination) will be
 			 *                           forwarded across bus-to-bus connections.
-			 *                         - If ALLJOYN_FLAG_COMPRESSED is set the header is compressed for destinations that can
-			 *                           handle header compression.
 			 *                         - If ALLJOYN_FLAG_ENCRYPTED is set the message is authenticated and the payload if any
 			 *                           is encrypted.
 			 * @return
@@ -334,8 +331,6 @@ namespace AllJoynUnity
 			 *                           requireing a connected session
 			 *                         - If ALLJOYN_FLAG_GLOBAL_BROADCAST is set broadcast signal (null destination) will be
 			 *                           forwarded across bus-to-bus connections.
-			 *                         - If ALLJOYN_FLAG_COMPRESSED is set the header is compressed for destinations that can
-			 *                           handle header compression.
 			 *                         - If ALLJOYN_FLAG_ENCRYPTED is set the message is authenticated and the payload if any
 			 *                           is encrypted.
 			 * @param msg              The sent signal message is returned to the caller.
