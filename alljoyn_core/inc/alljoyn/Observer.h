@@ -81,7 +81,7 @@ struct ObjectId {
      *
      * @param ppbo ProxyBusObject* for which to construct an object id
      */
-    ObjectId(const ProxyBusObject* ppbo) : uniqueBusName(ppbo->GetUniqueName()), objectPath(ppbo->GetPath()) { }
+    ObjectId(const ProxyBusObject* ppbo) : uniqueBusName((ppbo != NULL ? ppbo->GetUniqueName() : "")), objectPath((ppbo != NULL ? ppbo->GetPath() : "")) { }
 
     /**
      * Constructor.

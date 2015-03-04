@@ -279,8 +279,9 @@ class ObserverListener : public Observer::Listener {
 
     int counter;
     Event event;
+    bool tolerateAlreadyDiscoveredObjects;
 
-    ObserverListener(BusAttachment& bus) : bus(bus), counter(0) { }
+    ObserverListener(BusAttachment& bus) : bus(bus), counter(0), tolerateAlreadyDiscoveredObjects(false) { }
 
     void ExpectInvocations(int newCounter) {
         /* first, check whether the counter was really 0 from last invocation */
@@ -326,7 +327,9 @@ class ObserverListener : public Observer::Listener {
 
     virtual void ObjectDiscovered(ManagedProxyBusObject& proxy) {
         ProxyVector::iterator it = FindProxy(proxy);
-        EXPECT_EQ(it, proxies.end()) << "Discovering an already-discovered object";
+        if (!tolerateAlreadyDiscoveredObjects) {
+            EXPECT_EQ(it, proxies.end()) << "Discovering an already-discovered object";
+        }
         proxies.push_back(proxy);
         CheckReentrancy(proxy);
         if (--counter == 0) {
@@ -763,6 +766,236 @@ TEST_F(ObserverTest, Multi)
     EXPECT_EQ(0, CountProxies(obsAtwo));
     EXPECT_EQ(0, CountProxies(obsBtwo));
     EXPECT_EQ(0, CountProxies(obsABtwo));
+}
+
+TEST_F(ObserverTest, ObjectIdSanity) {
+
+    //Simple tests to exercise ObjectId constructors and operators
+
+    //Default
+    ObjectId emptyObjId;
+    EXPECT_FALSE(emptyObjId.IsValid());     // Empty unique busname and object path
+
+    //Basic construction
+    qcc::String busName("org/alljoyn/observer");
+    qcc::String objectPath("org/alljoyn/observer/test");
+    ObjectId objId(busName, objectPath);
+    EXPECT_TRUE(objId.IsValid()); // Filled-in unique busname and object path
+    ObjectId objId1("", "");
+    EXPECT_FALSE(emptyObjId.IsValid()); // Empty unique busname and object path
+
+    //Copy constructor and ==
+    ObjectId cpObjId(objId);
+    EXPECT_TRUE(cpObjId.IsValid());
+    EXPECT_EQ(cpObjId.objectPath, objId.objectPath);
+    EXPECT_EQ(cpObjId.uniqueBusName, objId.uniqueBusName);
+    EXPECT_TRUE(cpObjId == objId);
+
+    //Construction with ManagedProxyBusObject
+    ManagedProxyBusObject mgdProxyBusObj;
+    ObjectId emptyObj1(mgdProxyBusObj);
+    EXPECT_FALSE(emptyObj1.IsValid()); // Empty unique busname and object path
+
+    //Construction with ProxyBusObject* and ProxyBusObject
+    ProxyBusObject proxyBusObj;
+    ObjectId emptyObjId2(&proxyBusObj);
+    EXPECT_FALSE(emptyObjId2.IsValid()); // Empty unique busname and object path
+    ObjectId emptyObjId3(proxyBusObj);
+    EXPECT_FALSE(emptyObjId3.IsValid()); // Empty unique busname and object path
+
+    //Construction with dummy ProxyBusObject
+    BusAttachment bus("Dummy");
+    const uint32_t dummySessionId = 123456789;
+    SessionId someSessionId(dummySessionId);
+    ProxyBusObject validProxyBusObj(bus, "Dummy", busName.c_str(), objectPath.c_str(), someSessionId);
+    ObjectId validObjId(validProxyBusObj);
+    EXPECT_TRUE(validObjId.IsValid());
+    EXPECT_TRUE(validObjId.uniqueBusName == validProxyBusObj.GetUniqueName());
+    EXPECT_TRUE(validObjId.objectPath == validProxyBusObj.GetPath());
+
+    //Null test
+    ProxyBusObject* nullProxyBusObj = NULL;
+    EXPECT_FALSE(ObjectId(nullProxyBusObj).IsValid()); // Empty unique busname and object path
+
+    //Operator <
+    ObjectId cmpObjId(busName, "A/B/C");
+    ObjectId cmpObjId1(busName, "D/E/F");
+    EXPECT_TRUE(cmpObjId.IsValid());
+    EXPECT_TRUE(cmpObjId1.IsValid());
+    EXPECT_TRUE(cmpObjId < cmpObjId1);
+
+    ObjectId cmpObjId2(busName + "/A", objectPath);
+    ObjectId cmpObjId3(busName + "/B", objectPath);
+    EXPECT_TRUE(cmpObjId2.IsValid());
+    EXPECT_TRUE(cmpObjId3.IsValid());
+    EXPECT_TRUE(cmpObjId2 < cmpObjId3);
+
+    EXPECT_FALSE(cmpObjId2 < cmpObjId);
+}
+
+TEST_F(ObserverTest, ObserverSanity) {
+
+    /* Test basic construction with NULLs of the Observer.
+     * If the number of interfaces is not matching the actual number of interfaces in the array,
+     * then it's inevitable not to segfault.*/
+
+    Participant one;
+    const char* mandIntf[1] = { NULL };
+    const char* mandIntf2[10] = { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
+    Observer* obs  = NULL;
+    obs = new Observer(one.bus, mandIntf, 1); // Should not crash although the resulting observer is not useful
+    EXPECT_FALSE(NULL == obs);
+    Observer* obs2  = NULL;
+    obs2 = new Observer(one.bus, mandIntf2, 10); // Should not crash although the resulting observer is not useful
+    EXPECT_FALSE(NULL == obs2);
+
+    Observer* obs3 = NULL;
+    obs3 = new Observer(one.bus, NULL, 0);
+    EXPECT_FALSE(NULL == obs3);
+
+    Observer* obs4 = NULL;
+    obs4 = new Observer(one.bus, mandIntf, 0);
+    EXPECT_FALSE(NULL == obs4);
+
+    /* Test using same interface name twice */
+    vector<qcc::String> doubleIntf;
+    const char*doubleIntfA[] = { intfA[0].c_str(), intfA[0].c_str() };
+    doubleIntf.push_back(intfA[0]);
+    doubleIntf.push_back(intfA[0]); // Intentional
+
+    ObserverListener listener(one.bus);
+    Observer* obs5 = NULL;
+    obs5 = new Observer(one.bus, doubleIntfA, 2);
+    EXPECT_FALSE(NULL == obs5);
+    obs5->RegisterListener(listener);
+
+    vector<qcc::String> oneIntfA;
+    oneIntfA.push_back(intfA[0]);
+    one.CreateObject("doubleIntfA", oneIntfA);
+
+    vector<Event*> events;
+    events.push_back(&(listener.event));
+
+    listener.ExpectInvocations(1); // Should be triggered only once on object registration although we have duplicate interfaces
+    one.RegisterObject("doubleIntfA");
+
+    EXPECT_TRUE(WaitForAll(events));
+
+    EXPECT_EQ(1, CountProxies(*obs5)); // Make sure we have only one proxy for the remote object implementing duplicate interfaces
+
+    listener.ExpectInvocations(1); // Should be triggered only once on object un-registration although we have duplicate interfaces
+    one.UnregisterObject("doubleIntfA");
+
+    EXPECT_TRUE(WaitForAll(events));
+
+    obs5->UnregisterListener(listener);
+
+    delete obs;
+    delete obs2;
+    delete obs3;
+    delete obs4;
+    delete obs5;
+
+}
+
+TEST_F(ObserverTest, RegisterListenerTwice) {
+
+    /* Reuse the same listener for the same observer */
+    Participant provider, consumer;
+    provider.CreateObject("a", intfA);
+
+    ObserverListener listener(consumer.bus);
+    listener.tolerateAlreadyDiscoveredObjects = true;
+    Observer obs(consumer.bus, cintfA, 1);
+
+    obs.RegisterListener(listener);
+    obs.RegisterListener(listener); // Intentional
+
+    vector<Event*> events;
+    events.push_back(&(listener.event));
+
+    listener.ExpectInvocations(2); // Should be triggered twice on object registration as we registered the listener twice
+    provider.RegisterObject("a");
+
+    EXPECT_TRUE(WaitForAll(events));
+
+    listener.ExpectInvocations(2); // Should be triggered twice on object un-registration as we registered the listener twice
+    provider.UnregisterObject("a");
+
+    EXPECT_TRUE(WaitForAll(events));
+
+    obs.UnregisterListener(listener);
+
+    listener.ExpectInvocations(1); // Should be triggered once on object registration as we removed one listener
+    provider.RegisterObject("a");
+
+    EXPECT_TRUE(WaitForAll(events));
+
+    obs.UnregisterListener(listener);
+
+}
+
+TEST_F(ObserverTest, AnnounceLogicSanity) {
+
+    Participant provider, consumer;
+    ObserverListener listenerA(consumer.bus);
+    ObserverListener listenerB(consumer.bus);
+
+    provider.CreateObject("a", intfA);
+    provider.CreateObject("b", intfB);
+
+    provider.RegisterObject("a");
+    provider.RegisterObject("b");
+
+    vector<Event*> events;
+
+    {
+        Observer obsA(consumer.bus, cintfA, 1);
+
+        events.push_back(&(listenerA.event));
+
+        listenerA.ExpectInvocations(1); // Object with intfA was at least discovered
+        obsA.RegisterListener(listenerA);
+
+        EXPECT_TRUE(WaitForAll(events));
+
+        events.clear();
+        events.push_back(&(listenerB.event));
+        Observer obsB(consumer.bus, cintfB, 1);
+        listenerB.ExpectInvocations(1); // Object with intfB was at least discovered
+        obsB.RegisterListener(listenerB);
+
+        EXPECT_TRUE(WaitForAll(events));
+
+    }
+
+    events.clear();
+
+    // Try creating Observer on IntfB after destroying Observer on InftA
+
+    {
+        Observer obsA(consumer.bus, cintfA, 1);
+        events.push_back(&(listenerA.event));
+        listenerA.ExpectInvocations(1); // Object with intfA was at least discovered
+
+        obsA.RegisterListener(listenerA);
+        EXPECT_TRUE(WaitForAll(events));
+        obsA.UnregisterAllListeners();
+    }
+
+    events.clear();
+
+    Observer obsB(consumer.bus, cintfB, 1);
+    events.push_back(&(listenerB.event));
+
+    listenerB.ExpectInvocations(1);     // Object with intfB was at least discovered
+    obsB.RegisterListener(listenerB);
+
+    EXPECT_TRUE(WaitForAll(events));
+    obsB.UnregisterAllListeners();
+
+    provider.UnregisterObject("a");
+    provider.UnregisterObject("b");
 }
 
 }
