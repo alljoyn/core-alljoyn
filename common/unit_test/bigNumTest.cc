@@ -516,3 +516,12 @@ TEST(BigNumTest, ModularExponentiationStress) {
         }
     }
 }
+
+TEST(BigNumTest, ParseError) {
+    BigNum bn;
+
+    ASSERT_FALSE(bn.set_hex("001122Xx"));
+    ASSERT_FALSE(bn.set_hex("\t\n55aa"));
+    ASSERT_FALSE(bn.set_dec("123"));
+    ASSERT_FALSE(bn.set_dec("abc"));
+}

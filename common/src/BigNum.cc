@@ -296,7 +296,9 @@ bool BigNum::set_hex(const qcc::String& number)
             } else if (*p >= 'A' && *p <= 'F') {
                 n |=  (*p + 10 - 'A') << i;
             } else {
-                delete [] digits;
+                storage->Storage::~Storage();
+                free(storage);
+                storage = NULL;
                 digits = NULL;
                 length = 0;
                 return false;
