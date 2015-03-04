@@ -317,25 +317,6 @@ static bool IsAuthorizedByMembershipChain(_PeerState::GuildMetadata& metadata, c
 }
 
 /**
- * Is the given message authorized by any of the remote peer membership certificate auth data?
- */
-static bool IsAuthorizedByMembershipCerts(const _PeerState::GuildMap& guildMap, const MessageHolder& msgHolder, uint8_t requiredAuth)
-{
-    bool denied = false;
-    for (_PeerState::GuildMap::const_iterator it = guildMap.begin(); it != guildMap.end(); it++) {
-        _PeerState::GuildMetadata* metadata = it->second;
-        QCC_DbgTrace(("IsAuthorizedByMembershipCerts with cert %s authData %s\n", metadata->cert.ToString().c_str(), metadata->authData.ToString().c_str()));
-        if (IsAuthorizedByMembershipChain(*metadata, msgHolder, requiredAuth, denied)) {
-            return true;
-        } else if (denied) {
-            /* skip the remainder */
-            return false;
-        }
-    }
-    return false;
-}
-
-/**
  * Is the given message authorized by a guild policy that is common between the peer.
  * The consumer must be both authorized in its membership and in the provider's policy for any guild in common.
  */
@@ -445,7 +426,6 @@ static bool IsAuthorized(const MessageHolder& msgHolder, const PermissionPolicy*
     GenRight(msgHolder, right);
 
     bool authorized = false;
-    bool remoteAuthRequired = true;
     bool denied = false;
 
     QCC_DbgPrintf(("IsAuthorized with required permission policy %d\n", right.authByPolicy));
@@ -464,18 +444,14 @@ static bool IsAuthorized(const MessageHolder& msgHolder, const PermissionPolicy*
             peerAuthLevel = PermissionPolicy::Peer::PEER_LEVEL_AUTHENTICATED;
             authorized = IsAuthorizedByPeerPublicKey(policy, peerPublicKey, msgHolder, right.authByPolicy, denied);
             QCC_DbgPrintf(("authorized by peer specific policy terms: %d denied %d", authorized, denied));
-            if (authorized) {
-                remoteAuthRequired = false; /* mark to skip this check later since it is no longer required */
-            } else if (denied) {
+            if (denied) {
                 QCC_DbgPrintf(("Denied by peer specific policy"));
                 return false;
             }
         }
         if (!authorized) {
             authorized = IsAuthorizedByGuildsInCommonPolicies(policy, msgHolder, right.authByPolicy, peerState, denied);
-            if (authorized) {
-                remoteAuthRequired = false; /* mark to skip this check later since it is already done */
-            } else if (denied) {
+            if (denied) {
                 QCC_DbgPrintf(("Denied by guild specific policy"));
                 return false;
             }
@@ -484,11 +460,7 @@ static bool IsAuthorized(const MessageHolder& msgHolder, const PermissionPolicy*
         if (!authorized) {
             authorized = IsAuthorizedByAnyUserPolicy(policy, msgHolder, peerAuthLevel, right.authByPolicy, denied);
             QCC_DbgPrintf(("authorized by any user peer auth level %d policy: %d", peerAuthLevel, authorized));
-            if (authorized) {
-                if (msgHolder.msg->GetType() != MESSAGE_SIGNAL) {
-                    remoteAuthRequired = false; /* mark to skip this check later since it is no longer required */
-                }
-            } else if (denied) {
+            if (denied) {
                 QCC_DbgPrintf(("Denied by any-user policy"));
                 return false;
             }
@@ -499,16 +471,6 @@ static bool IsAuthorized(const MessageHolder& msgHolder, const PermissionPolicy*
         }
     }
 
-    if (remoteAuthRequired) {
-        if (peerState->guildMap.empty()) {
-            authorized = false;
-            QCC_DbgPrintf(("Not authorized because of missing peer's membership cert"));
-        } else {
-            /* validate the remote peer auth data to make sure it was granted to perform such action */
-            authorized = IsAuthorizedByMembershipCerts(peerState->guildMap, msgHolder, right.authByPolicy);
-            QCC_DbgPrintf(("authorized by peer's membership cert: %d", authorized));
-        }
-    }
     return authorized;
 }
 

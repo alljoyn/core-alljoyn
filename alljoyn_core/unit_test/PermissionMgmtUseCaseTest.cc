@@ -322,6 +322,7 @@ static PermissionPolicy* GenerateSmallAnyUserPolicy(BusAttachment& issuerBus)
     prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
     prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
     prms[1].SetMemberName("On");
+    prms[1].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
     prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
     rules[0].SetMembers(2, prms);
     rules[1].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
@@ -334,6 +335,67 @@ static PermissionPolicy* GenerateSmallAnyUserPolicy(BusAttachment& issuerBus)
 
     policy->SetTerms(1, terms);
 
+    return policy;
+}
+
+static PermissionPolicy* GenerateFullAccessAnyUserPolicy(BusAttachment& issuerBus, bool allowSignal)
+{
+    qcc::GUID128 issuerGUID;
+    PermissionMgmtTestHelper::GetGUID(issuerBus, issuerGUID);
+    ECCPublicKey issuerPubKey;
+    QStatus status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(issuerBus, &issuerPubKey);
+    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
+
+    PermissionPolicy* policy = new PermissionPolicy();
+
+    policy->SetSerialNum(552317);
+
+    /* add the admin section */
+    PermissionPolicy::Peer* admins = new PermissionPolicy::Peer[1];
+    admins[0].SetType(PermissionPolicy::Peer::PEER_GUID);
+    KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
+    keyInfo->SetKeyId(issuerGUID.GetBytes(), GUID128::SIZE);
+    keyInfo->SetPublicKey(&issuerPubKey);
+    admins[0].SetKeyInfo(keyInfo);
+    policy->SetAdmins(1, admins);
+
+    /* add the terms ection */
+
+    PermissionPolicy::Term* terms = new PermissionPolicy::Term[1];
+
+    /* terms record 0  ANY-USER */
+    PermissionPolicy::Peer* peers = new PermissionPolicy::Peer[1];
+    peers[0].SetType(PermissionPolicy::Peer::PEER_ANY);
+    terms[0].SetPeers(1, peers);
+    PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[2];
+    rules[0].SetInterfaceName(BasePermissionMgmtTest::ONOFF_IFC_NAME);
+    PermissionPolicy::Rule::Member* prms = new PermissionPolicy::Rule::Member[2];
+    prms[0].SetMemberName("Off");
+    prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+    prms[1].SetMemberName("On");
+    prms[1].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+    prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+    rules[0].SetMembers(2, prms);
+    rules[1].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
+    size_t count = 0;
+    if (allowSignal) {
+        prms = new PermissionPolicy::Rule::Member[2];
+        prms[count].SetMemberName("ChannelChanged");
+        prms[count].SetMemberType(PermissionPolicy::Rule::Member::SIGNAL);
+        prms[count].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        count++;
+    } else {
+        prms = new PermissionPolicy::Rule::Member[1];
+    }
+    prms[count].SetMemberName("*");
+    prms[count].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+    prms[count].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+    rules[1].SetMembers(count + 1, prms);
+
+    terms[0].SetRules(2, rules);
+
+    policy->SetTerms(1, terms);
     return policy;
 }
 
@@ -387,7 +449,7 @@ static PermissionPolicy* GenerateAnyUserDeniedPrefixPolicy(BusAttachment& issuer
     return policy;
 }
 
-static PermissionPolicy* GenerateFullAccessOutgoingPolicy()
+static PermissionPolicy* GenerateFullAccessOutgoingPolicy(bool allowIncomingSignal)
 {
     PermissionPolicy* policy = new PermissionPolicy();
 
@@ -401,22 +463,35 @@ static PermissionPolicy* GenerateFullAccessOutgoingPolicy()
     terms[0].SetPeers(1, peers);
     PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[1];
     rules[0].SetInterfaceName("*");
-    PermissionPolicy::Rule::Member* prms = new PermissionPolicy::Rule::Member[3];
-    prms[0].SetMemberName("*");
-    prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
-    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
-    prms[1].SetMemberName("*");
-    prms[1].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
-    prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
-    prms[2].SetMemberName("*");
-    prms[2].SetMemberType(PermissionPolicy::Rule::Member::SIGNAL);
-    prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-
-    rules[0].SetMembers(3, prms);
+    PermissionPolicy::Rule::Member* prms = NULL;
+    size_t count = 0;
+    if (allowIncomingSignal) {
+        prms = new PermissionPolicy::Rule::Member[3];
+        prms[count].SetMemberName("*");
+        prms[count].SetMemberType(PermissionPolicy::Rule::Member::SIGNAL);
+        prms[count].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+        count++;
+    } else {
+        prms = new PermissionPolicy::Rule::Member[2];
+    }
+    prms[count].SetMemberName("*");
+    prms[count].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+    prms[count].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+    count++;
+    prms[count].SetMemberName("*");
+    prms[count].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
+    prms[count].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+    count++;
+    rules[0].SetMembers(count, prms);
     terms[0].SetRules(1, rules);
 
     policy->SetTerms(1, terms);
     return policy;
+}
+
+static PermissionPolicy* GenerateFullAccessOutgoingPolicy()
+{
+    return GenerateFullAccessOutgoingPolicy(true);
 }
 
 static PermissionPolicy* GenerateGuildSpecificAccessOutgoingPolicy(const GUID128& guildGUID, BusAttachment& guildAuthorityBus)
@@ -2591,4 +2666,98 @@ TEST_F(PermissionMgmtUseCaseTest, DifferentPeerLevelsInAnyUserPolicy)
     InstallAdditionalIdentityTrustAnchor(adminBus, consumerBus, serviceBus);
     InstallAdditionalIdentityTrustAnchor(consumerBus, adminBus, remoteControlBus);
     AppCanCallTVOff(remoteControlBus, serviceBus);
+}
+
+/*
+ *  Test the signal allowed by ACL for any user
+ */
+TEST_F(PermissionMgmtUseCaseTest, SignalAllowedFromAnyUser)
+{
+    Claims(false);
+    /* generate a policy to permit sending a signal */
+    PermissionPolicy* policy = GenerateFullAccessAnyUserPolicy(adminBus, true);
+    ASSERT_TRUE(policy) << "GeneratePolicy failed.";
+    InstallPolicyToService(*policy);
+    delete policy;
+
+    policy = GenerateFullAccessOutgoingPolicy();
+    InstallPolicyToConsumer(*policy);
+    delete policy;
+    /* setup the application interfaces for access tests */
+    CreateAppInterfaces(serviceBus, true);
+    CreateAppInterfaces(consumerBus, false);
+
+    SetChannelChangedSignalReceived(false);
+    ConsumerCanChangeChannlel();
+    /* sleep a second to see whether the ChannelChanged signal is received */
+    for (int cnt = 0; cnt < 100; cnt++) {
+        if (GetChannelChangedSignalReceived()) {
+            break;
+        }
+        qcc::Sleep(10);
+    }
+    EXPECT_TRUE(GetChannelChangedSignalReceived()) << " Fail to receive expected ChannelChanged signal.";
+}
+
+/*
+ *  Test the signal not allowed to send
+ */
+TEST_F(PermissionMgmtUseCaseTest, SignalNotAllowedToEmit)
+{
+    Claims(false);
+    /* generate a policy not permit sending a signal */
+    PermissionPolicy* policy = GenerateFullAccessAnyUserPolicy(adminBus, false);
+    ASSERT_TRUE(policy) << "GeneratePolicy failed.";
+    InstallPolicyToService(*policy);
+    delete policy;
+
+    policy = GenerateFullAccessOutgoingPolicy();
+    InstallPolicyToConsumer(*policy);
+    delete policy;
+    /* setup the application interfaces for access tests */
+    CreateAppInterfaces(serviceBus, true);
+    CreateAppInterfaces(consumerBus, false);
+
+    SetChannelChangedSignalReceived(false);
+    ConsumerCanChangeChannlel();
+    /* sleep a second to see whether the ChannelChanged signal is received */
+    for (int cnt = 0; cnt < 100; cnt++) {
+        if (GetChannelChangedSignalReceived()) {
+            break;
+        }
+        qcc::Sleep(10);
+    }
+    EXPECT_FALSE(GetChannelChangedSignalReceived()) << " Unexpect to receive ChannelChanged signal.";
+}
+
+/*
+ *  Test the signal not allowed to receive
+ */
+TEST_F(PermissionMgmtUseCaseTest, SignalNotAllowedToReceive)
+{
+    Claims(false);
+    /* generate a policy to permit sending a signal */
+    PermissionPolicy* policy = GenerateFullAccessAnyUserPolicy(adminBus, true);
+    ASSERT_TRUE(policy) << "GeneratePolicy failed.";
+    InstallPolicyToService(*policy);
+    delete policy;
+
+    /* full access outgoing but do not accept incoming signal */
+    policy = GenerateFullAccessOutgoingPolicy(false);
+    InstallPolicyToConsumer(*policy);
+    delete policy;
+    /* setup the application interfaces for access tests */
+    CreateAppInterfaces(serviceBus, true);
+    CreateAppInterfaces(consumerBus, false);
+
+    SetChannelChangedSignalReceived(false);
+    ConsumerCanChangeChannlel();
+    /* sleep a second to see whether the ChannelChanged signal is received */
+    for (int cnt = 0; cnt < 100; cnt++) {
+        if (GetChannelChangedSignalReceived()) {
+            break;
+        }
+        qcc::Sleep(10);
+    }
+    EXPECT_FALSE(GetChannelChangedSignalReceived()) << " Unexpect to receive ChannelChanged signal.";
 }
