@@ -540,6 +540,27 @@ void DaemonRouter::UnregisterEndpoint(const qcc::String& epName, EndpointType ep
         localEndpoint = LocalEndpoint();
     }
 }
+QStatus DaemonRouter::AddSessionRef(String vepName, SessionId id, RemoteEndpoint b2bEp)
+{
+    if (!b2bEp->IsValid()) {
+        return ER_BUS_NO_ENDPOINT;
+    }
+    QStatus status = ER_BUS_NO_ENDPOINT;
+    VirtualEndpoint hostRNEp;
+    if (FindEndpoint(vepName, hostRNEp) && (hostRNEp->IsValid())) {
+        hostRNEp->AddSessionRef(id, b2bEp);
+        status = ER_OK;
+    }
+    return status;
+}
+
+void DaemonRouter::RemoveSessionRef(String vepName, SessionId id)
+{
+    VirtualEndpoint hostRNEp;
+    if (FindEndpoint(vepName, hostRNEp) && (hostRNEp->IsValid())) {
+        hostRNEp->RemoveSessionRef(id);
+    }
+}
 
 QStatus DaemonRouter::AddSessionRoute(SessionId id, BusEndpoint& srcEp, RemoteEndpoint* srcB2bEp, BusEndpoint& destEp, RemoteEndpoint& destB2bEp, SessionOpts* optsHint)
 {
@@ -548,11 +569,46 @@ QStatus DaemonRouter::AddSessionRoute(SessionId id, BusEndpoint& srcEp, RemoteEn
     if (id == 0) {
         return ER_BUS_NO_SESSION;
     }
+
     if (destEp->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL) {
+        VirtualEndpoint vDestEp = VirtualEndpoint::cast(destEp);
+        /* If the destination leaf node is virtual, add a session ref */
         QCC_DbgPrintf(("DaemonRouter::AddSessionRoute(): destEp is ENDPOINT_TYPE_VIRTUAL)"));
         if (destB2bEp->IsValid()) {
-            QCC_DbgPrintf(("DaemonRouter::AddSessionRoute(): AddSessionRef(id=%d., destB2bEp=\"%s\")", id, destB2bEp->GetUniqueName().c_str()));
-            status = VirtualEndpoint::cast(destEp)->AddSessionRef(id, destB2bEp);
+            QCC_DbgPrintf(("DaemonRouter::AddSessionRoute(): AddSessionRef(id=%d., destEp=%s, destB2bEp=\"%s\")", id, destEp->GetUniqueName().c_str(), destB2bEp->GetUniqueName().c_str()));
+            status = vDestEp->AddSessionRef(id, destB2bEp);
+            if (status == ER_OK) {
+                /* AddSessionRef for the directly connected routing node. */
+                QCC_DbgPrintf(("DaemonRouter::AddSessionRoute(): AddSessionRef routing node(id=%d., RN=%s, destB2bEp=\"%s\")", id, destB2bEp->GetRemoteName().c_str(), destB2bEp->GetUniqueName().c_str()));
+                status = AddSessionRef(destB2bEp->GetRemoteName(), id, destB2bEp);
+                if (status != ER_OK) {
+                    QCC_LogError(status, ("DaemonRouter::AddSessionRoute(): AddSessionRef routing node failed(id=%d., RN=%s, destB2bEp=\"%s\")", id, destB2bEp->GetRemoteName().c_str(), destB2bEp->GetUniqueName().c_str()));
+                    vDestEp->RemoveSessionRef(id);
+                    /* Need to hit NameTable here since name ownership of a destEp alias may have changed */
+                    nameTable.UpdateVirtualAliases(destEp->GetUniqueName());
+                }
+            }
+            if (status == ER_OK) {
+                String vepGuid = vDestEp->GetRemoteGUIDShortString();
+                if (vepGuid != destB2bEp->GetRemoteGUID().ToShortString()) {
+                    String memberRoutingNode = ":" + vepGuid + ".1";
+                    QCC_DbgPrintf(("DaemonRouter::AddSessionRoute(): AddSessionRef indirectly connected routing node(id=%d., memberRoutingNode=%s, destB2bEp=\"%s\")", id, memberRoutingNode.c_str(), destB2bEp->GetUniqueName().c_str()));
+
+                    /* If the directly connected routing node is not the destination's routing node.
+                     * i.e. multipoint session case where members are indirectly connected via the
+                     * host routing node, increment a ref for the destination's routing node.
+                     */
+                    status = AddSessionRef(memberRoutingNode, id, destB2bEp);
+                    if (status != ER_OK) {
+                        QCC_LogError(status, ("DaemonRouter::AddSessionRoute(): AddSessionRef indirectly connected routing node failed(id=%d., RN=%s, destB2bEp=\"%s\")", id, memberRoutingNode.c_str(), destB2bEp->GetUniqueName().c_str()));
+                        vDestEp->RemoveSessionRef(id);
+                        RemoveSessionRef(destB2bEp->GetRemoteName(), id);
+                        /* Need to hit NameTable here since name ownership of a destEp and destB2bEp->GetRemoteName() alias may have changed */
+                        nameTable.UpdateVirtualAliases(destEp->GetUniqueName());
+                        nameTable.UpdateVirtualAliases(destB2bEp->GetRemoteName());
+                    }
+                }
+            }
         } else if (optsHint) {
             QCC_DbgPrintf(("DaemonRouter::AddSessionRoute(): AddSessionRef(id=%d., optsHint, destB2bEp=\"%s\")", id, destB2bEp->GetUniqueName().c_str()));
             status = VirtualEndpoint::cast(destEp)->AddSessionRef(id, optsHint, destB2bEp);
@@ -564,19 +620,47 @@ QStatus DaemonRouter::AddSessionRoute(SessionId id, BusEndpoint& srcEp, RemoteEn
                                   id, destB2bEp->IsValid() ? "" : "opts, ", destB2bEp->GetUniqueName().c_str()));
         }
     }
+
     /*
      * srcB2bEp is only NULL when srcEP is non-virtual
      */
     if ((status == ER_OK) && srcB2bEp) {
         assert(srcEp->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL);
-        QCC_DbgPrintf(("DaemonRouter::AddSessionRoute(): AddSessionRef(id=%d., optsHint, srcB2bEp=\"%s\")", id, (*srcB2bEp)->GetUniqueName().c_str()));
+        QCC_DbgPrintf(("DaemonRouter::AddSessionRoute(): AddSessionRef(id=%d.,srcEp=%s, srcB2bEp=\"%s\")", id, srcEp->GetUniqueName().c_str(), (*srcB2bEp)->GetUniqueName().c_str()));
         status = VirtualEndpoint::cast(srcEp)->AddSessionRef(id, *srcB2bEp);
+        if (status == ER_OK) {
+            /* AddSessionRef for the directly connected routing node. */
+            QCC_DbgPrintf(("DaemonRouter::AddSessionRoute(): AddSessionRef routing node(id=%d.,RN=%s, srcB2bEp=\"%s\")", id, (*srcB2bEp)->GetRemoteName().c_str(), (*srcB2bEp)->GetUniqueName().c_str()));
+
+            status = AddSessionRef((*srcB2bEp)->GetRemoteName(), id, *srcB2bEp);
+            if (status != ER_OK) {
+                QCC_LogError(status, ("DaemonRouter::AddSessionRoute(): AddSessionRef routing node(id=%d.,RN=%s, srcB2bEp=\"%s\") failed", id, (*srcB2bEp)->GetRemoteName().c_str(), (*srcB2bEp)->GetUniqueName().c_str()));
+
+                VirtualEndpoint::cast(srcEp)->RemoveSessionRef(id);
+                /* Need to hit NameTable here since name ownership of a srcEp alias may have changed */
+                nameTable.UpdateVirtualAliases(srcEp->GetUniqueName());
+            }
+        }
         if (status != ER_OK) {
             assert(destEp->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL);
             QCC_LogError(status, ("AddSessionRef(this=%s, %u, %s) failed", srcEp->GetUniqueName().c_str(), id, (*srcB2bEp)->GetUniqueName().c_str()));
-            VirtualEndpoint::cast(destEp)->RemoveSessionRef(id);
-            /* Need to hit NameTable here since name ownership of a destEp alias may have changed */
+            VirtualEndpoint vDestEp = VirtualEndpoint::cast(destEp);
+            vDestEp->RemoveSessionRef(id);
+            RemoveSessionRef(destB2bEp->GetRemoteName(), id);
+            String vepGuid = vDestEp->GetRemoteGUIDShortString();
+
+            /* Need to hit NameTable here since name ownership of a destEp, destB2bEp->GetRemoteName()
+             * and memberRoutingNode alias may have changed
+             */
             nameTable.UpdateVirtualAliases(destEp->GetUniqueName());
+            nameTable.UpdateVirtualAliases(destB2bEp->GetRemoteName());
+            if (vepGuid != destB2bEp->GetRemoteGUID().ToShortString()) {
+                String memberRoutingNode = ":" + vepGuid + ".1";
+                RemoveSessionRef(memberRoutingNode, id);
+                nameTable.UpdateVirtualAliases(destB2bEp->GetRemoteName());
+            }
+
+
         }
     }
 
@@ -647,7 +731,19 @@ void DaemonRouter::RemoveSessionRoutes(const char* src, SessionId id)
             sessionCastSet.erase(it);
             sessionCastSetLock.Unlock();
             if ((entry.id != 0) && (entry.destEp->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL)) {
-                VirtualEndpoint::cast(entry.destEp)->RemoveSessionRef(entry.id);
+                VirtualEndpoint vDestEp = VirtualEndpoint::cast(entry.destEp);
+                String vepGuid = vDestEp->GetRemoteGUIDShortString();
+                vDestEp->RemoveSessionRef(entry.id);
+                /* RemoveSessionRef for the directly connected routing node. */
+                RemoveSessionRef(entry.b2bEp->GetRemoteName(), entry.id);
+                if (vepGuid != entry.b2bEp->GetRemoteGUID().ToShortString()) {
+                    /* If the directly connected routing node is not the destination's routing node.
+                     * i.e. multipoint session case where members are indirectly connected via the
+                     * host routing node, decrement a ref for the destination's routing node.
+                     */
+                    String memberRoutingNode = ":" + vepGuid + ".1";
+                    RemoveSessionRef(memberRoutingNode, entry.id);
+                }
                 /* Need to hit NameTable here since name ownership of a destEp alias may have changed */
                 nameTable.UpdateVirtualAliases(entry.destEp->GetUniqueName());
             }

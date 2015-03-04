@@ -207,6 +207,13 @@ class _VirtualEndpoint : public _BusEndpoint {
      * @return true iff the endpoint is in the process of being stopped.
      */
     bool IsStopping(void) { return m_epState == EP_STOPPING; }
+
+    /**
+     * Returns the remote GUID short string of the virtual endpoint
+     *
+     * @return remote short string of Virtual endpoint's guid.
+     */
+    qcc::String GetRemoteGUIDShortString();
   private:
 
     const qcc::String m_uniqueName;                             /**< The unique name for this endpoint */
