@@ -116,14 +116,20 @@ void SHA1_Update(SHA_CTX *context, sha1_byte *data, unsigned int len) {
 	if ((context->count[0] += len << 3) < (len << 3)) context->count[1]++;
 	context->count[1] += (len >> 29);
 	if ((j + len) > 63) {
+	    /* Fill buffer, which may have data from a previous update. */
 	    memcpy(&context->buffer[j], data, (i = 64-j));
 	    SHA1_Transform(context->state, context->buffer);
-	    for ( ; i + 63 < len; i += 64) {
-	        SHA1_Transform(context->state, &data[i]);
-	    }
+
+	    /* Transform full blocks */
 	    j = 0;
+	    for ( ; i + 63 < len; i += 64) {
+	        memcpy(&context->buffer[j], &data[i], 64);
+	        SHA1_Transform(context->state, context->buffer);
+	    }
 	}
 	else i = 0;
+
+	/* Not enough bytes to fill a block. Keep for next update */
 	memcpy(&context->buffer[j], &data[i], len - i);
 }
 
