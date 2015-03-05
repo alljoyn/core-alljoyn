@@ -153,7 +153,7 @@ QStatus Crypto_RSA::MakeSelfCertificate(const qcc::String& commonName, const qcc
         QCC_LogError(status, ("Failed to allocate memory for EVP PKEY"));
         return status;
     }
-    Generate(512);
+    Generate(RSA_DEFAULT_BITLEN);
     EVP_PKEY_set1_RSA(evpk, (RSA*)key);
     X509_set_pubkey(x509, evpk);
 

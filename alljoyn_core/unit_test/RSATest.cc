@@ -42,13 +42,13 @@
 #include <gtest/gtest.h>
 #include "ajTestCommon.h"
 
-//#define QCC_MODULE "CRYPTO"
 
 using namespace qcc;
 using namespace std;
 using namespace ajn;
 
-const char hw[] = "hello world";
+const char plaintext[] = "hello world";
+static const size_t plaintextLen = sizeof(plaintext);
 
 static const char x509cert[] = {
     "-----BEGIN CERTIFICATE-----\n"
@@ -199,14 +199,17 @@ TEST(RSATest, encryption_decryption) {
     qcc::String pubStr;
     qcc::KeyBlob privKey;
 
-    Crypto_RSA pk(512);
+    Crypto_RSA pk(Crypto_RSA::RSA_DEFAULT_BITLEN);
 
     size_t pkSize = pk.GetSize();
 
     size_t inLen;
     uint8_t in[2048];
     size_t outLen;
-    uint8_t out[2048];
+    uint8_t out[BitlenToBytelen(Crypto_RSA::RSA_DEFAULT_BITLEN)];
+
+    ASSERT_LE(pkSize, sizeof(out)) << "RSA public key larger than expected.";
+    assert(plaintextLen <= sizeof(in));
 
     //printf("Public key:\n%s\n", pubStr.c_str());
     QStatus status = pk.ExportPrivateKey(privKey, "pa55pHr@8e");
@@ -216,19 +219,19 @@ TEST(RSATest, encryption_decryption) {
      * Test encryption with private key and decryption with public key
      */
     //printf("Testing encryption/decryption\n");
-    memcpy(in, hw, sizeof(hw));
-    inLen = sizeof(hw);
+    inLen = plaintextLen;
+    memcpy(in, plaintext, inLen);
     outLen = pkSize;
     status = pk.PublicEncrypt(in, inLen, out, outLen);
     EXPECT_EQ(ER_OK, status) << " PublicEncrypt failed";
-    EXPECT_EQ(static_cast<size_t>(64), outLen);
+    EXPECT_EQ(static_cast<size_t>(BitlenToBytelen(Crypto_RSA::RSA_DEFAULT_BITLEN)), outLen);
 
     inLen = outLen;
     outLen = pkSize;
     memcpy(in, out, pkSize);
     status = pk.PrivateDecrypt(in, inLen, out, outLen);
     EXPECT_EQ(ER_OK, status) << " PrivateDecrypt failed";
-    EXPECT_EQ(static_cast<size_t>(12), outLen);
+    EXPECT_EQ(plaintextLen, outLen);
     EXPECT_STREQ("hello world", reinterpret_cast<char*>(out));
 }
 
@@ -236,14 +239,17 @@ TEST(RSATest, cert_generation) {
     qcc::String pubStr;
     qcc::KeyBlob privKey;
 
-    Crypto_RSA pk(512);
+    Crypto_RSA pk(Crypto_RSA::RSA_DEFAULT_BITLEN);
 
     size_t pkSize = pk.GetSize();
 
     size_t inLen;
     uint8_t in[2048];
     size_t outLen;
-    uint8_t out[2048];
+    uint8_t out[BitlenToBytelen(Crypto_RSA::RSA_DEFAULT_BITLEN)];
+
+    ASSERT_LE(pkSize, sizeof(out)) << "RSA public key larger than expected.";
+    assert(plaintextLen <= sizeof(in));
 
     //printf("Testing cert generation\n");
     /*
@@ -277,19 +283,19 @@ TEST(RSATest, cert_generation) {
 
     pkSize = pub.GetSize();
 
-    memcpy(in, hw, sizeof(hw));
-    inLen = sizeof(hw);
+    inLen = plaintextLen;
+    memcpy(in, plaintext, inLen);
     outLen = pkSize;
     status = pub.PublicEncrypt(in, inLen, out, outLen);
     EXPECT_EQ(ER_OK, status) << " PublicEncrypt failed";
-    EXPECT_EQ(static_cast<size_t>(64), outLen);
+    EXPECT_EQ(static_cast<size_t>(BitlenToBytelen(Crypto_RSA::RSA_DEFAULT_BITLEN)), outLen);
 
     inLen = outLen;
     outLen = pkSize;
-    memcpy(in, out, pkSize);
+    memcpy(in, out, inLen);
     status = pri.PrivateDecrypt(in, inLen, out, outLen);
     EXPECT_EQ(ER_OK, status) << " PublicEncrypt failed";
-    EXPECT_EQ(static_cast<size_t>(12), outLen);
+    EXPECT_EQ(plaintextLen, outLen);
     EXPECT_STREQ("hello world", reinterpret_cast<char*>(out));
 }
 
@@ -298,7 +304,7 @@ TEST(RSATest, empty_passphrase) {
     qcc::String pubStr;
     qcc::KeyBlob privKey;
 
-    Crypto_RSA pk(512);
+    Crypto_RSA pk(Crypto_RSA::RSA_DEFAULT_BITLEN);
 
     /*
      * Test certificate generation
@@ -333,7 +339,7 @@ TEST(RSATest, empty_passphrase) {
     EXPECT_EQ(ER_OK, status) << " ImportPrivateKey failed";
 
     const char doc[] = "This document requires a signature";
-    uint8_t signature[64];
+    uint8_t signature[BitlenToBytelen(Crypto_RSA::RSA_DEFAULT_BITLEN)];
     size_t sigLen = sizeof(signature);
 
     /*
