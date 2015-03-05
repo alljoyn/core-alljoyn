@@ -26,7 +26,7 @@
 #include "DeferredCallback.h"
 #include <qcc/Debug.h>
 
-#define QCC_MODULE "ALLJOYN_ABOUT_DATA_LISTENER_C"
+#define QCC_MODULE "ALLJOYN_C"
 
 namespace ajn {
 
