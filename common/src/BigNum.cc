@@ -511,7 +511,7 @@ BigNum BigNum::operator-(const BigNum& n) const
         xLen = length;
         while (digits[xLen - 1] == n.digits[xLen - 1]) {
             if (--xLen == 0) {
-                return 0;
+                return zero;
             }
         }
         if (digits[xLen - 1] > n.digits[xLen - 1]) {
@@ -677,11 +677,11 @@ BigNum BigNum::div(const BigNum& divisor, BigNum& rem) const
     switch (compare(x, y)) {
     case -1:
         rem = *this;
-        return 0;
+        return zero;
 
     case 0:
         rem = zero;
-        return 1;
+        return BigNum(static_cast<uint32_t>(1));
 
     default:
         break;
@@ -990,46 +990,6 @@ BigNum BigNum::mod_exp(const BigNum& e, const BigNum& m) const
     }
 }
 
-// Modular inverse
-BigNum BigNum::mod_inv(const BigNum& mod) const
-{
-    BigNum u = *this;
-
-    BigNum inv;
-    BigNum u1(1);
-    BigNum u3(u);
-    BigNum v1(0);
-    BigNum v3(mod);
-    BigNum t1;
-    BigNum t3;
-    BigNum q;
-
-    int iter = 1;
-
-    while (v3 != 0) {
-        q = u3 / v3;
-        t3 = u3 % v3;
-        t1 = u1 + q * v1;
-
-        u1 = v1;
-        v1 = t1;
-        u3 = v3;
-        v3 = t3;
-        iter = -iter;
-    }
-
-    if (u3 != 1) {
-        return 0;  // error, there is no inverse
-
-    }
-    if (iter < 0) {
-        inv = mod - u1;
-    } else {
-        inv = u1;
-    }
-
-    return inv;
-}
 
 int BigNum::compare(const BigNum& a, const BigNum& b)
 {
