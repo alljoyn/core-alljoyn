@@ -44,6 +44,16 @@ class Crypto_RSA {
   public:
 
     /**
+     *  Default bitlength for RSA key generation.  Used when generating self-signed certificates.
+     *  Currently set to 2048 bits to match guidance in NIST Special Publication 800-57,
+     *  Recommendation for Key Management -- Part 1: General (Revision 3).  SP 800-57 states that
+     *  1024-bit RSA is disallowed after 2014, and that 2048-bit RSA is acceptable for use between
+     *  2014 and 2030.  This default should be updated to match guidance in future revisions of
+     *  SP 800-57.
+     */
+    static const size_t RSA_DEFAULT_BITLEN = 2048;
+
+    /**
      * Class for calling back to get a passphrase for encrypting or decrypting a private key.
      */
     class PassphraseListener {
