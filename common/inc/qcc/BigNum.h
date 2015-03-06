@@ -211,11 +211,6 @@ class BigNum {
     // @param mod The modulus
     BigNum mod_exp(const BigNum& e, const BigNum& mod) const;
 
-    // Modular inverse
-    //
-    // @param mod The modulus
-    BigNum mod_inv(const BigNum& mod) const;
-
     // Returns the bit length of this BigNum
     size_t bit_len() const;
 

@@ -116,15 +116,13 @@ QStatus Mutex::Lock(const char* file, uint32_t line)
         status = ER_OK;
     } else {
         status = Lock();
-        if (status == ER_OK) {
-            QCC_DbgPrintf(("Lock Acquired %s:%d", file, line));
-        } else {
-            QCC_LogError(status, ("Mutex::Lock %s:%d failed", file, line));
-        }
     }
     if (status == ER_OK) {
+        QCC_DbgPrintf(("Lock Acquired %s:%d", file, line));
         this->file = reinterpret_cast<const char*>(file);
         this->line = line;
+    } else {
+        QCC_LogError(status, ("Mutex::Lock %s:%d failed", file, line));
     }
     return status;
 #endif
@@ -155,6 +153,7 @@ QStatus Mutex::Unlock(const char* file, uint32_t line)
     if (!isInitialized) {
         return ER_INIT_FAILED;
     }
+    QCC_DbgPrintf(("Lock Released: %s:%d (acquired at %s:%u)\n", file, line, this->file, this->line));
     this->file = NULL;
     this->line = -1;
     int ret = pthread_mutex_unlock(&mutex);

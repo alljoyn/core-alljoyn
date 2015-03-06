@@ -129,11 +129,11 @@ struct RemoteCacheSnapshot {
     qcc::String guid;
 };
 
-SessionlessObj::SessionlessObj(Bus& bus, BusController* busController) :
+SessionlessObj::SessionlessObj(Bus& bus, BusController* busController, DaemonRouter& router) :
     BusObject(ObjectPath, false),
     bus(bus),
     busController(busController),
-    router(reinterpret_cast<DaemonRouter&>(bus.GetInternal().GetRouter())),
+    router(router),
     sessionlessIface(NULL),
     requestSignalsSignal(NULL),
     requestRangeSignal(NULL),
@@ -449,7 +449,7 @@ QStatus SessionlessObj::PushMessage(Message& msg)
     return ER_OK;
 }
 
-bool SessionlessObj::RouteSessionlessMessage(SessionId sid, Message& msg)
+void SessionlessObj::RouteSessionlessMessage(SessionId sid, Message& msg)
 {
     QCC_DbgPrintf(("RouteSessionlessMessage(sid=%u,msg={sender='%s',interface='%s',member='%s',path='%s'})",
                    sid, msg->GetSender(), msg->GetInterface(), msg->GetMemberName(), msg->GetObjectPath()));
@@ -462,7 +462,7 @@ bool SessionlessObj::RouteSessionlessMessage(SessionId sid, Message& msg)
         QCC_LogError(ER_WARNING, ("Received message on unknown sid %u, ignoring", sid));
         lock.Unlock();
         router.UnlockNameTable();
-        return true;
+        return;
     }
     RemoteCache& cache = cit->second;
 
@@ -470,7 +470,7 @@ bool SessionlessObj::RouteSessionlessMessage(SessionId sid, Message& msg)
         /* We are retrying and have already routed this message, ignore it */
         lock.Unlock();
         router.UnlockNameTable();
-        return true;
+        return;
     } else {
         cache.routedMessages.push_back(RoutedMessage(msg));
     }
@@ -479,7 +479,7 @@ bool SessionlessObj::RouteSessionlessMessage(SessionId sid, Message& msg)
 
     lock.Unlock();
     router.UnlockNameTable();
-    return true;
+    return;
 }
 
 void SessionlessObj::SendMatchingThroughEndpoint(SessionId sid, Message msg, uint32_t fromRulesId, uint32_t toRulesId)

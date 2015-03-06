@@ -25,12 +25,3 @@ if env['OS'] == 'android':
     env.Install(distDir, env.Dir('alljoyn_android_ext/jni').srcnode())
     env.Install(distDir, env.Dir('alljoyn_android_ext/src').srcnode())
     env.Install(distDir, env.Dir('alljoyn_android_ext/res').srcnode())
-    
-#    distDir = '$CPP_DISTDIR/alljoyn_android/alljoyn_android_p2pservice'
-#    env.Install(distDir, 'alljoyn_android_p2pservice/AndroidManifest.xml')
-#    env.Install(distDir, 'alljoyn_android_p2pservice/.classpath')
-#    env.Install(distDir, 'alljoyn_android_p2pservice/.project')
-#    env.Install(distDir, 'alljoyn_android_p2pservice/default.properties')
-#    env.Install(distDir, env.Dir('alljoyn_android_p2pservice/jni').srcnode())
-#    env.Install(distDir, env.Dir('alljoyn_android_p2pservice/src').srcnode())
-#    env.Install(distDir, env.Dir('alljoyn_android_p2pservice/res').srcnode())

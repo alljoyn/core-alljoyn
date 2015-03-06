@@ -158,6 +158,7 @@ class _CompressionRules;
 class _Message;
 class _RemoteEndpoint;
 class BusAttachment;
+class PeerStateTable;
 
 /**
  * @cond ALLJOYN_DEV
@@ -825,6 +826,21 @@ class _Message {
      */
     QStatus UnmarshalArgs(const qcc::String& expectedSignature,
                           const char* expectedReplySignature = NULL);
+
+    /**
+     * @internal
+     * Unmarshal the message arguments.
+     *
+     * @param peerStateTable          The peer state table used when unmarshalling encrypted arguments.
+     * @param expectedSignature       The expected signature for this message.
+     * @param expectedReplySignature  The expected reply signature for this message if it is a
+     *                                method call message or NULL otherwise.
+     *
+     * @return
+     *         - #ER_OK if the message was unmarshaled
+     *         - Error status indicating why the unmarshal failed.
+     */
+    QStatus UnmarshalArgs(PeerStateTable* peerStateTable, const qcc::String& expectedSignature, const char* expectedReplySignature = NULL);
 
     /**
      * @internal

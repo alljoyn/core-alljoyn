@@ -78,6 +78,26 @@ struct MsgHdr {
     DWORD flags;            /**< Flags on received message. */
 };
 
+/**
+ * Many of the flags used in SendTo are supported in Posix, but not in Windows
+ */
+#define MSG_FLAG_UNSUPPORTED 0
+
+/**
+ * Flag bit definitions for the flags passed to sendmsg-related functions
+ * See platform sockets API for detailed descriptions.
+ */
+typedef enum {
+    QCC_MSG_NONE =      0,                     /**< No flag bits set */
+    QCC_MSG_CONFIRM =   MSG_FLAG_UNSUPPORTED,  /**< Progress happened, don't rerpbe using ARP. */
+    QCC_MSG_DONTROUTE = MSG_DONTROUTE,         /**< Don't send to gageway, only send on directly connected networks. */
+    QCC_MSG_DONTWAIT =  MSG_FLAG_UNSUPPORTED,  /**< Enable nonblocking operation (like O_NONBLOCK with fnctl. */
+    QCC_MSG_EOR =       MSG_FLAG_UNSUPPORTED,  /**< End of record (SOCK_SEQPACKET sockets). */
+    QCC_MSG_MORE =      MSG_FLAG_UNSUPPORTED,  /**< More data coming.  See TCP_CORK. */
+    QCC_MSG_NOSIGNAL =  MSG_FLAG_UNSUPPORTED,  /**< Request to not send SIGPIPE on stream sockets. */
+    QCC_MSG_OOB =       MSG_OOB                /**< Out of band data (SOCK_STREAM sockets). */
+} SendMsgFlags;
+
 }
 
 #endif

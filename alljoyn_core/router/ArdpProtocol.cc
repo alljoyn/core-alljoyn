@@ -23,6 +23,7 @@
 #include <qcc/platform.h>
 #include <qcc/IPAddress.h>
 #include <qcc/Socket.h>
+#include <qcc/SocketTypes.h>
 #include <qcc/time.h>
 #include <qcc/Util.h>
 
@@ -268,6 +269,7 @@ struct ARDP_CONN_RECORD {
     bool modeSimple;        /* Simple mode connection. No EACKs. */
 #endif
     void* context;          /* A client-defined context pointer */
+    qcc::SendMsgFlags sndFlags; /* SendMsgFlags to underlying sockets call */
 };
 
 struct ARDP_HANDLE {
@@ -369,7 +371,9 @@ static void DumpBitMask(ArdpConnRecord* conn, uint32_t* msk, uint16_t sz, bool c
 
     }
 }
+#endif // NDEBUG
 
+#if !defined(NDEBUG) || defined(QCC_OS_GROUP_WINDOWS)
 static const char* State2Text(ArdpState state)
 {
     switch (state) {
@@ -388,7 +392,7 @@ static const char* State2Text(ArdpState state)
     default: return "UNDEFINED";
     }
 }
-#endif // NDEBUG
+#endif
 
 static inline void SetState(ArdpConnRecord* conn, ArdpState state)
 {
@@ -788,7 +792,7 @@ static QStatus SendMsgHeader(ArdpHandle* handle, ArdpConnRecord* conn, ArdpHeade
     }
 #endif
 
-    status = SendToSG(conn->sock, conn->ipAddr, conn->ipPort, msgSG, sent);
+    status = SendToSG(conn->sock, conn->ipAddr, conn->ipPort, msgSG, sent, conn->sndFlags);
     if (status == ER_WOULDBLOCK) {
         QCC_DbgHLPrintf(("SendMsgHeader: ER_WOULDBLOCK"));
         handle->trafficJam = true;
@@ -797,6 +801,8 @@ static QStatus SendMsgHeader(ArdpHandle* handle, ArdpConnRecord* conn, ArdpHeade
         conn->ackTimer.retry = 0;
         conn->ackPending = 0;
     }
+    conn->sndFlags = qcc::QCC_MSG_NONE;
+
     return status;
 }
 
@@ -1047,7 +1053,7 @@ static QStatus SendMsgData(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf*
     }
 #endif
 
-    status = qcc::SendToSG(conn->sock, conn->ipAddr, conn->ipPort, msgSG, sent);
+    status = qcc::SendToSG(conn->sock, conn->ipAddr, conn->ipPort, msgSG, sent, conn->sndFlags);
 
     if (status == ER_OK) {
         /* Piggyback ACKs with data. Cancel ACK timer. */
@@ -1057,6 +1063,7 @@ static QStatus SendMsgData(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf*
     } else if (status == ER_WOULDBLOCK) {
         handle->trafficJam = true;
     }
+    conn->sndFlags = qcc::QCC_MSG_NONE;
 
     return status;
 }
@@ -2695,6 +2702,9 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                 assert(status == ER_OK && "ArdpMachine():SYN_SENT: Failed to initialize Send queue");
 
                 if (seg->FLG & ARDP_FLAG_ACK) {
+
+                    conn->sndFlags = qcc::QCC_MSG_CONFIRM;
+
                     if ((seg->FLG  & ARDP_VERSION_BITS) != ARDP_FLAG_VER) {
 
                         QCC_DbgHLPrintf(("ArdpMachine(): SYN_SENT: Unsupported protocol version 0x%x",
@@ -2821,6 +2831,9 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
             }
 
             if (seg->FLG & ARDP_FLAG_ACK) {
+
+                conn->sndFlags = qcc::QCC_MSG_CONFIRM;
+
                 if (seg->ACK == conn->snd.ISS) {
 
                     QCC_DbgPrintf(("ArdpMachine(): SYN_RCVD: Got ACK with correct acknowledge.  state -> OPEN"));
@@ -2947,6 +2960,8 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
             if (seg->FLG & ARDP_FLAG_ACK) {
                 QCC_DbgHLPrintf(("ArdpMachine(): OPEN: Got ACK %u LCS %u Window %u", seg->ACK, seg->LCS, seg->WINDOW));
                 bool needUpdate = false;
+
+                conn->sndFlags = qcc::QCC_MSG_CONFIRM;
 
                 if ((IN_RANGE(uint32_t, conn->snd.UNA, ((conn->snd.NXT - conn->snd.UNA) + 1), seg->ACK) == true) ||
                     (conn->snd.LCS != seg->LCS)) {

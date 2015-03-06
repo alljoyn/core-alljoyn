@@ -59,7 +59,7 @@ static void CloseAlgorithmProvider(BCRYPT_ALG_HANDLE* handle)
         return;
     }
     NTSTATUS ntStatus = BCryptCloseAlgorithmProvider(*handle, 0);
-    if (ntStatus < 0) {
+    if (!BCRYPT_SUCCESS(ntStatus)) {
         QCC_LogError(ER_OS_ERROR, ("BCryptCloseAlgorithmProvider failed NTSTATUS=0x%x", ntStatus));
     }
     *handle = NULL;

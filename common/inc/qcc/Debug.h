@@ -35,6 +35,11 @@
 /** @endcond */
 
 /**
+ * Some products using AllJoyn source code(e.g.Microsoft Windows) can override
+ * this macro to direct the log output to their product - specific log.
+ */
+#ifndef QCC_LogError
+/**
  * Macro for printing out error messagages.
  *
  * @param _status   Status code related to the message.
@@ -55,6 +60,7 @@
         _QCC_DbgPrintAppend(_ctx, ": %s", QCC_StatusText(_status));     \
         _QCC_DbgPrintProcess(_ctx, DBG_LOCAL_ERROR, QCC_MODULE, __FILE__, __LINE__); \
     } while (0)
+#endif
 #endif
 
 /**
@@ -122,7 +128,11 @@
 #define QCC_DEBUG_ONLY(_cmd) do { _cmd; } while (0)
 #endif
 
-
+/**
+ * Some products using AllJoyn source code(e.g.Microsoft Windows) can override
+ * this macro to direct the log output to their product - specific log.
+ */
+#ifndef _QCC_DbgPrint
 /**
  * @cond ALLJOYN_DEV
  * @internal
@@ -142,6 +152,7 @@
             _QCC_DbgPrintProcess(_ctx, (_msgType), QCC_MODULE, __FILE__, __LINE__); \
         }                                                               \
     } while (0)
+#endif
 #endif
 /** @endcond */
 
@@ -295,6 +306,22 @@ int _QCC_DbgPrintCheck(DbgMsgType type, const char* module);
  */
 void _QCC_DbgDumpHex(DbgMsgType type, const char* module, const char* filename, int lineno,
                      const char* dataStr, const void* data, size_t dataLen);
+
+/**
+ * @internal
+ * Retrieves the internal message contained by the specified debug context
+ *
+ * @param ctx       Debug context created by _QCC_DbgPrintContext.
+ */
+const char* _QCC_DbgGetMsg(void* ctx);
+
+/**
+ * @internal
+ * Frees memory occupied by the specified debug context object
+ *
+ * @param ctx       Debug context created by _QCC_DbgPrintContext.
+ */
+void _QCC_DbgDeleteCtx(void* ctx);
 
 static class DebugInit {
   public:

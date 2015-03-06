@@ -84,6 +84,43 @@ struct MsgHdr {
     int flags;              /**< Flags on received message. */
 };
 
+/**
+ * Some of the flags used in SendTo are supported in Linux, but not in Darwin
+ */
+#define MSG_FLAG_UNSUPPORTED 0
+
+/**
+ * Flag bit definitions for the flags passed to sendmsg-related functions.
+ * See platform sockets API for detailed descriptions.
+ */
+typedef enum {
+    QCC_MSG_NONE =      0,              /**< No flag bits set */
+
+#if defined(QCC_OS_DARWIN)
+    QCC_MSG_CONFIRM =   MSG_FLAG_UNSUPPORTED,
+#else
+    QCC_MSG_CONFIRM =   MSG_CONFIRM,    /**< Progress happened, don't reprobe using ARP. */
+#endif
+
+    QCC_MSG_DONTROUTE = MSG_DONTROUTE,  /**< Don't send to gageway, only send on directly connected networks. */
+    QCC_MSG_DONTWAIT =  MSG_DONTWAIT,   /**< Enable nonblocking operation (like O_NONBLOCK with fnctl. */
+    QCC_MSG_EOR =       MSG_EOR,        /**< End of record (SOCK_SEQPACKET sockets). */
+
+#if defined(QCC_OS_DARWIN)
+    QCC_MSG_MORE =      MSG_FLAG_UNSUPPORTED,
+#else
+    QCC_MSG_MORE =      MSG_MORE,       /**< More data coming.  See TCP_CORK. */
+#endif
+
+#if defined(QCC_OS_DARWIN)
+    QCC_MSG_NOSIGNAL =  MSG_FLAG_UNSUPPORTED,
+#else
+    QCC_MSG_NOSIGNAL =  MSG_NOSIGNAL,   /**< Request to not send SIGPIPE on stream sockets. */
+#endif
+
+    QCC_MSG_OOB =       MSG_OOB         /**< Out of band data (SOCK_STREAM sockets). */
+} SendMsgFlags;
+
 }
 
 #endif
