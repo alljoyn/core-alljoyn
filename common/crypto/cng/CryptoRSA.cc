@@ -282,6 +282,11 @@ class PBKD {
         ULONG kbhLen = sizeof(BCRYPT_KEY_DATA_BLOB_HEADER) + Crypto_MD5::DIGEST_SIZE;
         BCRYPT_KEY_DATA_BLOB_HEADER* kbh = (BCRYPT_KEY_DATA_BLOB_HEADER*)malloc(kbhLen);
 
+        if (NULL == kbh) {
+            QCC_LogError(ER_CRYPTO_ERROR, ("Unable to allocate memory for key blob header"));
+            return 0;
+        }
+
         Crypto_MD5 md;
         uint8_t* digest = (uint8_t*)(kbh + 1);
         // Derive the key
@@ -315,6 +320,11 @@ class PBKD {
         // Allocate and initialize a key blob big enough to compose 2 digests in-place
         ULONG kbhLen = sizeof(BCRYPT_KEY_DATA_BLOB_HEADER) + 2 * Crypto_MD5::DIGEST_SIZE;
         BCRYPT_KEY_DATA_BLOB_HEADER* kbh = (BCRYPT_KEY_DATA_BLOB_HEADER*)malloc(kbhLen);
+
+        if (NULL == kbh) {
+            QCC_LogError(ER_CRYPTO_ERROR, ("Unable to allocate memory for key blob header"));
+            return 0;
+        }
 
         Crypto_MD5 md;
         uint8_t* digest = (uint8_t*)(kbh + 1);
@@ -646,11 +656,15 @@ QStatus Crypto_RSA::ExportPrivateKey(qcc::KeyBlob& keyBlob, const qcc::String& p
 
     // Dry run to get length
     NTSTATUS ntStatus = BCryptExportKey((BCRYPT_KEY_HANDLE)key, NULL, BCRYPT_RSAFULLPRIVATE_BLOB, NULL, 0, &len, 0);
-    if (ntStatus >= 0) {
+    if (BCRYPT_SUCCESS(ntStatus)) {
         pkBlob = (BCRYPT_RSAKEY_BLOB*)malloc(len);
-        ntStatus = BCryptExportKey((BCRYPT_KEY_HANDLE)key, NULL, BCRYPT_RSAFULLPRIVATE_BLOB, (PUCHAR)pkBlob, len, &len, 0);
+        if (NULL == pkBlob) {
+            ntStatus = STATUS_NO_MEMORY;
+        } else {
+            ntStatus = BCryptExportKey((BCRYPT_KEY_HANDLE)key, NULL, BCRYPT_RSAFULLPRIVATE_BLOB, (PUCHAR)pkBlob, len, &len, 0);
+        }
     }
-    if (ntStatus >= 0) {
+    if (BCRYPT_SUCCESS(ntStatus)) {
         char* ptr = (char*)(pkBlob + 1);
         qcc::String e(ptr, pkBlob->cbPublicExp); // exponent
         ptr += pkBlob->cbPublicExp;
@@ -670,7 +684,6 @@ QStatus Crypto_RSA::ExportPrivateKey(qcc::KeyBlob& keyBlob, const qcc::String& p
 
         // We are done with the exported blob - clear it before freeing it.
         memset(pkBlob, 0, len);
-        free(pkBlob);
 
         // Encode the private key components in PKCS#8 order
         qcc::String pk;
@@ -712,9 +725,16 @@ QStatus Crypto_RSA::ExportPrivateKey(qcc::KeyBlob& keyBlob, const qcc::String& p
             // All done
             keyBlob.Set((uint8_t*)pem.data(), pem.size(), KeyBlob::PRIVATE);
         }
-        delete [] buf;
+        delete[] buf;
+    } else if (STATUS_NO_MEMORY == ntStatus) {
+        assert(NULL == pkBlob);
+        status = ER_OUT_OF_MEMORY;
     } else {
         status = ER_CRYPTO_ERROR;
+    }
+
+    if (NULL != pkBlob) {
+        free(pkBlob);
     }
     return status;
 }
