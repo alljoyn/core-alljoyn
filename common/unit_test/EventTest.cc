@@ -54,12 +54,12 @@ void RunEventTest(uint32_t instances, uint32_t signalIndex, uint32_t delayMs, ui
     if (timeoutMs < delayMs) {
         /* Expecting timeout */
         ASSERT_EQ(ER_TIMEOUT, status);
-        ASSERT_EQ(0, signalEvents.size());
+        ASSERT_EQ(0U, signalEvents.size());
         ASSERT_LE(timeoutMs, waitReturnTimeMs);
     } else {
         /* Expecting an event */
         ASSERT_EQ(ER_OK, status);
-        ASSERT_EQ(1, signalEvents.size());
+        ASSERT_EQ(1U, signalEvents.size());
         ASSERT_EQ(checkEvents[signalIndex], signalEvents[0]);
         ASSERT_LE(delayMs, waitReturnTimeMs);
         ASSERT_GT(timeoutMs, waitReturnTimeMs);
