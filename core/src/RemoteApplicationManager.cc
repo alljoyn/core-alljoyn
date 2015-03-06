@@ -59,8 +59,8 @@ QStatus RemoteApplicationManager::InstallIdentityCertificate(const ApplicationIn
 
     qcc::String errorMsg;
     Message replyMsg(*ba);
-    qcc::String pem = cert.GetDER();
-    MsgArg arg("(yay)", qcc::Certificate::ENCODING_X509_DER_PEM, pem.size(), pem.data());
+    qcc::String der = cert.GetDER();
+    MsgArg arg("(yay)", qcc::Certificate::ENCODING_X509_DER, der.size(), der.data());
 
     status = proxyObjectManager->MethodCall(app, "InstallIdentity", &arg, 1, replyMsg);
 
