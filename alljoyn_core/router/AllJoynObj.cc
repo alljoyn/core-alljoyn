@@ -1706,7 +1706,6 @@ bool AllJoynObj::NamesHandler(Message msg, MsgArg arg)
 
     /* Create a virtual endpoint for each unique name in args */
     AcquireLocks();
-
     map<qcc::StringMapKey, RemoteEndpoint>::iterator bit = b2bEndpoints.find(msg->GetRcvEndpointName());
 
     if (bit == b2bEndpoints.end()) {
@@ -1718,6 +1717,7 @@ bool AllJoynObj::NamesHandler(Message msg, MsgArg arg)
 
     GUID128 senderGuid = bit->second->GetRemoteGUID();
     const size_t numItems = arg.v_array.GetNumElements();
+    QCC_DbgTrace(("AllJoynObj::NamesHandler processing %d unique names", numItems));
 
     const String& shortOtherGuidStr = senderGuid.ToShortString();
     StringMapKey key = bit->first;
@@ -1786,39 +1786,37 @@ bool AllJoynObj::NamesHandler(Message msg, MsgArg arg)
 
     /*
      * ExchangeNames:
-     * Forward to all nodes with nameTransfer ALL_NAMES except the one that
-     * sent us this ExchangeNames.
+     * If there were changes, forward the message to all nodes with nameTransfer ALL_NAMES
+     * except the one that sent us this ExchangeNames.
      *
      * AttachSessionWithNames:
-     * If there were changes, generate an ExchangeNames and send to all
-     * directly connected 14.12- controllers
+     * If there were changes, generate an ExchangeNames and send to all nodes with nameTransfer
+     * ALL_NAMES except the one that sent us this AttachSessionWithNames.
      */
     if (madeChanges) {
         AcquireLocks();
+        Message exchangeMsg(bus);
+        if (strncmp(methodType, "ExchangeNames", 13) == 0) {
+            exchangeMsg = msg;
+        } else {
+
+            exchangeMsg->SignalMsg("a(sas)",
+                                   org::alljoyn::Daemon::WellKnownName,
+                                   0,
+                                   org::alljoyn::Daemon::ObjectPath,
+                                   org::alljoyn::Daemon::InterfaceName,
+                                   "ExchangeNames",
+                                   &arg,
+                                   1,
+                                   0,
+                                   0);
+        }
 
         map<qcc::StringMapKey, RemoteEndpoint>::iterator it = b2bEndpoints.begin();
         while (it != b2bEndpoints.end()) {
             if ((it->second->GetFeatures().nameTransfer == SessionOpts::ALL_NAMES) && (senderGuid != it->second->GetRemoteGUID())) {
                 QCC_DbgPrintf(("Sending ExchangeName signal to %s", it->second->GetUniqueName().c_str()));
-                Message exchangeMsg(bus);
-                if (strncmp(methodType, "ExchangeNames", 13) == 0) {
-                    exchangeMsg = msg;
-                } else if (it->second->GetRemoteProtocolVersion() < 12) {
 
-                    exchangeMsg->SignalMsg("a(sas)",
-                                           org::alljoyn::Daemon::WellKnownName,
-                                           0,
-                                           org::alljoyn::Daemon::ObjectPath,
-                                           org::alljoyn::Daemon::InterfaceName,
-                                           "ExchangeNames",
-                                           &arg,
-                                           1,
-                                           0,
-                                           0);
-                } else {
-                    ++it;
-                    continue;
-                }
                 StringMapKey key = it->first;
                 RemoteEndpoint ep = it->second;
                 ReleaseLocks();
@@ -4030,7 +4028,7 @@ void AllJoynObj::RemoveBusToBusEndpoint(RemoteEndpoint& endpoint)
                 while ((it2 != b2bEndpoints.end()) && (it != virtualEndpoints.end())) {
                     bool sendInfo = ((it2->second->GetFeatures().nameTransfer == SessionOpts::ALL_NAMES) ||
                                      ((it2->second->GetFeatures().nameTransfer == SessionOpts::MP_NAMES) &&
-                                      HasMPSession(exitingEpName, it2->second->GetRemoteName())));
+                                      endpoint->GetSessionId() == it2->second->GetSessionId()));
                     if ((it2->second != endpoint) && (it2->second->GetRemoteGUID() != otherSideGuid) && sendInfo) {
                         Message sigMsg(bus);
                         MsgArg args[3];
@@ -4100,73 +4098,6 @@ void AllJoynObj::RemoveBusToBusEndpoint(RemoteEndpoint& endpoint)
 
 }
 
-bool AllJoynObj::HasMPSession(qcc::String leavingEndpointName, qcc::String remoteRN)
-{
-    AcquireLocks();
-    const String& shortGuidStr = guid.ToShortString();
-    SessionMapType::iterator it = sessionMap.begin();
-    bool found = false;
-    while (it != sessionMap.end()) {
-        SessionMapEntry smEntry = it->second;
-        if (smEntry.opts.isMultipoint && ::strncmp(smEntry.sessionHost.c_str() + 1, shortGuidStr.c_str(), guid.ToShortString().size()) == 0) {
-            //Check for all entries with sessionHost local to this RN
-            vector<String>::iterator mit = smEntry.memberNames.begin();
-            bool foundLeavingEp = false;
-            bool foundRemoteRN = false;
-
-            while ((mit != smEntry.memberNames.end()) && (!foundLeavingEp || !foundRemoteRN)) {
-
-                // Check if there is a session common to the leaving endpoint and the remote routing node.
-                if (::strncmp((*mit).c_str(), remoteRN.c_str(), guid.ToShortString().size() + 1) == 0) {
-                    foundRemoteRN = true;
-                }
-                if (*mit == leavingEndpointName) {
-                    foundLeavingEp = true;
-                }
-                mit++;
-            }
-
-            if (foundRemoteRN && foundLeavingEp) {
-                found = true;
-                break;
-            }
-        }
-        it++;
-    }
-    ReleaseLocks();
-    return found;
-}
-
-bool AllJoynObj::HasSession(qcc::String uqn, qcc::String remoteRN)
-{
-    AcquireLocks();
-
-    bool found = false;
-    SessionMapType::iterator it = sessionMap.begin();
-    while (it != sessionMap.end() && !found) {
-        SessionMapEntry smEntry = it->second;
-        if ((it->first.first == uqn) && (it->first.second != 0)) {
-            if (::strncmp(smEntry.sessionHost.c_str(), remoteRN.c_str(), guid.ToShortString().size() + 1) == 0) {
-                found = true;
-            } else {
-                vector<String>::iterator mit = smEntry.memberNames.begin();
-                while (mit != smEntry.memberNames.end()) {
-                    if (::strncmp((*mit).c_str(), remoteRN.c_str(), guid.ToShortString().size() + 1) == 0) {
-                        found = true;
-                        break;
-                    }
-                    mit++;
-                }
-            }
-        }
-        it++;
-    }
-
-    ReleaseLocks();
-
-    return found;
-}
-
 bool AllJoynObj::IsMemberOfSession(qcc::String hostName, qcc::String name, uint32_t sessionId)
 {
     AcquireLocks();
@@ -4216,6 +4147,8 @@ QStatus AllJoynObj::GetNames(MsgArg& argArray, RemoteEndpoint& endpoint, Session
     vector<pair<qcc::String, vector<qcc::String> > >::const_iterator it = names.begin();
     LocalEndpoint localEndpoint = bus.GetInternal().GetLocalEndpoint();
 
+    size_t guidLen = joinerName.find_first_of('.');
+    String joinerRN = joinerName.substr(0, guidLen) + ".1";
     BusEndpoint hostEp = FindEndpoint(sessionHost);
     /* Send all endpoint info except for endpoints related to destination */
     while (it != names.end()) {
@@ -4228,12 +4161,17 @@ QStatus AllJoynObj::GetNames(MsgArg& argArray, RemoteEndpoint& endpoint, Session
             switch (nameTransfer) {
 
             case SessionOpts::ALL_NAMES:
+                /* All NameChanged need to be sent out for ALL_NAMES sessions. */
                 sendInfo = true;
                 break;
 
             case SessionOpts::DAEMON_NAMES:
+                /* The name of the local routing node and locally connected sessionless
+                 * signal emitters need to be sent out in the case of an incoming connection i.e.
+                 * another routing node is trying to fetch sessionless signals from this routing node.
+                 */
                 if (type == JOINER) {
-                    sendInfo = isLocalRNInfo || busController->GetSessionlessObj().IsSessionlessReceiver(it->first);
+                    sendInfo = isLocalRNInfo;
                 } else if (type == HOST) {
                     sendInfo = isLocalRNInfo || busController->GetSessionlessObj().IsSessionlessEmitter(it->first);
                 }
@@ -4241,22 +4179,36 @@ QStatus AllJoynObj::GetNames(MsgArg& argArray, RemoteEndpoint& endpoint, Session
 
             case SessionOpts::P2P_NAMES:
                 if (type == JOINER) {
+                    /* The name of the local routing node and session joiner need to
+                     * be sent out by the Joiner RN.
+                     */
                     sendInfo = isLocalRNInfo || (it->first == joinerName);
                 } else if (type == HOST) {
+                    /* The name of the local routing node and session host need to be
+                     * sent out by the Host RN
+                     */
                     sendInfo = isLocalRNInfo ||  (it->first == hostEp->GetUniqueName());
                 }
                 break;
 
             case SessionOpts::MP_NAMES:
                 if (type == JOINER) {
+                    /* The name of the local routing node and session joiner need to
+                     * be sent out by the Joiner RN.
+                     */
                     sendInfo = isLocalRNInfo || (it->first == joinerName);
                 } else if (type == HOST) {
+                    /* The name of the local routing node, session host and existing
+                     * session members need to be sent out by the Host RN.
+                     */
                     sendInfo = isLocalRNInfo || (it->first == hostEp->GetUniqueName()) || IsMemberOfSession(hostEp->GetUniqueName(), it->first, sessionId);
                 } else if (type == HOST_FORWARD) {
-                    //HOST_FORWARD
-                    sendInfo = IsMemberOfSession(hostEp->GetUniqueName(), it->first, sessionId);
+                    /* The names of new joiner and its routing node need to be sent
+                     * out by the Host RN to the existing session member RN.
+                     */
+                    sendInfo = (it->first == joinerName) || (it->first == joinerRN);
                 }
-                //No names required for HOST_FORWARD_REPLY or MEMBER
+                /* No names required for HOST_FORWARD_REPLY or MEMBER */
                 break;
 
             }
@@ -4301,7 +4253,7 @@ QStatus AllJoynObj::ExchangeNames(RemoteEndpoint& endpoint)
     QCC_DbgTrace(("AllJoynObj::ExchangeNames(endpoint = %s) NT %d", endpoint->GetUniqueName().c_str(), endpoint->GetFeatures().nameTransfer));
 
     MsgArg argArray(ALLJOYN_ARRAY);
-    QStatus status = GetNames(argArray, endpoint, SessionOpts::ALL_NAMES);
+    QStatus status = GetNames(argArray, endpoint, endpoint->GetFeatures().nameTransfer);
     if (ER_OK == status) {
         Message exchangeMsg(bus);
         status = exchangeMsg->SignalMsg("a(sas)",
@@ -4450,7 +4402,7 @@ void AllJoynObj::NameChangedSignalHandler(const InterfaceDescription::Member* me
 
             bool sendInfo = ((it->second->GetFeatures().nameTransfer == SessionOpts::ALL_NAMES) ||
                              ((it->second->GetFeatures().nameTransfer == SessionOpts::MP_NAMES) &&
-                              HasMPSession(oldOwner, it->second->GetRemoteName())));
+                              it->second->GetSessionId() == bit->second->GetSessionId()));
 
 
             if (sendInfo && ((bit == b2bEndpoints.end()) || (bit->second->GetRemoteGUID() != it->second->GetRemoteGUID()))) {
@@ -4579,7 +4531,7 @@ void AllJoynObj::NameOwnerChanged(const qcc::String& alias,
         QCC_LogError(ER_FAIL, ("Invalid unique name \"%s\"", un->c_str()));
     }
 
-    vector<SessionMapEntry> sessionsChanged;
+    set<SessionId> sessionsChanged;
 
     /* Remove unique names from sessionMap entries */
     if (!newOwner && (alias[0] == ':')) {
@@ -4590,7 +4542,7 @@ void AllJoynObj::NameOwnerChanged(const qcc::String& alias,
         while (it != sessionMap.end()) {
             if (it->first.first == alias) {
                 /* If endpoint has gone then just delete the session map entry */
-                sessionsChanged.push_back(it->second);
+                sessionsChanged.insert(it->first.second);
                 sessionMap.erase(it++);
             } else if (it->first.second != 0) {
                 /* Remove member entries from existing sessions */
@@ -4681,62 +4633,102 @@ void AllJoynObj::NameOwnerChanged(const qcc::String& alias,
     }
 
     /* Only if local name */
-    if (0 == ::strncmp(shortGuidStr.c_str(), un->c_str() + 1, shortGuidStr.size())) {
+    if ((oldOwner && (0 == ::strncmp(shortGuidStr.c_str(), oldOwner->c_str() + 1, shortGuidStr.size()))) ||
+        (newOwner && (0 == ::strncmp(shortGuidStr.c_str(), newOwner->c_str() + 1, shortGuidStr.size())))) {
 
         /* Send NameChanged to all directly connected controllers */
         AcquireLocks();
         map<qcc::StringMapKey, RemoteEndpoint>::iterator it = b2bEndpoints.begin();
         while (it != b2bEndpoints.end()) {
 
-            bool sendInfo = (it->second->GetFeatures().nameTransfer == SessionOpts::ALL_NAMES);
-            if (alias[0] == ':') {
-                switch (it->second->GetFeatures().nameTransfer) {
-                case SessionOpts::ALL_NAMES:
-                    sendInfo = true;
-                    break;
+            bool sendInfo = false;
+            LocalEndpoint localEndpoint = bus.GetInternal().GetLocalEndpoint();
+            switch (it->second->GetFeatures().nameTransfer) {
 
-                case SessionOpts::DAEMON_NAMES:
-                    if (it->second->IsIncomingConnection()) {
-                        sendInfo = busController->GetSessionlessObj().IsSessionlessEmitter(*un);
-                    } else {
-                        sendInfo = busController->GetSessionlessObj().IsSessionlessReceiver(*un);
-                    }
-                    break;
+            case SessionOpts::ALL_NAMES:
+                /* All NameChanged need to be sent out for ALL_NAMES sessions. */
+                sendInfo = true;
+                break;
 
-                case SessionOpts::P2P_NAMES:
-                case SessionOpts::MP_NAMES:
-                    vector<SessionMapEntry>::iterator sci = sessionsChanged.begin();
-                    while (!sendInfo && (sci != sessionsChanged.end())) {
-                        if (::strncmp(sci->sessionHost.c_str() + 1, it->second->GetRemoteGUID().ToShortString().c_str(), shortGuidStr.size()) == 0) {
-                            sendInfo = true;
-                        } else {
-                            vector<String>::iterator mit = sci->memberNames.begin();
-                            while (mit != sci->memberNames.end()) {
-                                if (::strncmp((*mit).c_str() + 1, it->second->GetRemoteGUID().ToShortString().c_str(), shortGuidStr.size()) == 0) {
-                                    sendInfo = true;
-                                    break;
-                                }
-                                ++mit;
-                            }
-
-                        }
-                        ++sci;
-                        break;
-
-                    }
-                    break;
-                }
-            } else {
-                /* NameChanged for well known names need to be sent out if there is a session
-                 * between any leaf node connected to the remote Routing node and the old or
-                 * new owner of the name.
+            case SessionOpts::DAEMON_NAMES:
+                /* NameChanged need to be sent out if the old or new owner is the routing node
+                 * or a sessionless signal emitter in the case of an incoming connection i.e.
+                 * another routing node is trying to fetch sessionless signals from this routing node.
                  */
-                if (oldOwner) {
-                    sendInfo |= HasSession(*oldOwner, it->second->GetRemoteName());
+                if (oldOwner && (0 == ::strncmp(shortGuidStr.c_str(), oldOwner->c_str() + 1, shortGuidStr.size()))) {
+                    sendInfo = (*oldOwner == localEndpoint->GetUniqueName());
+                    if (it->second->IsIncomingConnection()) {
+                        sendInfo = sendInfo || busController->GetSessionlessObj().IsSessionlessEmitter(*oldOwner);
+                    }
                 }
-                if (newOwner) {
-                    sendInfo |= HasSession(*newOwner, it->second->GetRemoteName());
+                if (newOwner && (0 == ::strncmp(shortGuidStr.c_str(), newOwner->c_str() + 1, shortGuidStr.size()))) {
+                    sendInfo = sendInfo || (*newOwner == localEndpoint->GetUniqueName());
+                    if (it->second->IsIncomingConnection()) {
+                        sendInfo = sendInfo || busController->GetSessionlessObj().IsSessionlessEmitter(*newOwner);
+                    }
                 }
+                break;
+
+            case SessionOpts::P2P_NAMES:
+
+                if (alias[0] == ':') {
+                    /* NameChanged for unique names need to be sent out if it gets rid of
+                     * the session that this bus-to-bus endpoint is set up for or this is
+                     * the unique name of the routing node.
+                     */
+                    sendInfo = (alias == localEndpoint->GetUniqueName())
+                               || sessionsChanged.find(it->second->GetSessionId()) != sessionsChanged.end();
+                } else {
+                    /* NameChanged for well known names need to be sent out if the old or
+                     * new owner of the name is in the session that this bus-to-bus endpoint
+                     * is set up for or if this is routing node info.
+                     */
+                    if (oldOwner && (0 == ::strncmp(shortGuidStr.c_str(), oldOwner->c_str() + 1, shortGuidStr.size()))) {
+                        sendInfo = (*oldOwner == localEndpoint->GetUniqueName())
+                                   || SessionMapFind(*oldOwner, it->second->GetSessionId()) != NULL;
+                    }
+                    if (newOwner && (0 == ::strncmp(shortGuidStr.c_str(), newOwner->c_str() + 1, shortGuidStr.size()))) {
+                        sendInfo = sendInfo || (*newOwner == localEndpoint->GetUniqueName());
+                        sendInfo = sendInfo || SessionMapFind(*newOwner, it->second->GetSessionId()) != NULL;
+                    }
+                }
+                break;
+
+            case SessionOpts::MP_NAMES:
+                if (alias[0] == ':') {
+                    if (oldOwner) {
+                        /* In case of MP_NAMES, we send out all unique names with an old owner.
+                         * This is to take care of the case where two or more members or a
+                         * host and one or more members share a routing node, and one of the
+                         * leaf nodes leaves the session. Now, if the leaf leaves the network,
+                         * the NameChanged must be sent out or else the remote routing nodes
+                         * will cache this name and its endpoint forever.
+                         */
+                        sendInfo = true;
+                    } else {
+                        /* NameChanged for unique names need to be sent out if it affects
+                         * the session that this bus-to-bus endpoint is set up for or this is
+                         * the unique name of the routing node.
+                         */
+                        sendInfo = (alias == localEndpoint->GetUniqueName())
+                                   || sessionsChanged.find(it->second->GetSessionId()) != sessionsChanged.end();
+                    }
+                } else {
+                    /* NameChanged for well known names need to be sent out if the old or
+                     * new owner of the name is in the session that this bus-to-bus endpoint
+                     * is set up for or if this is routing node info.
+                     */
+
+                    if (oldOwner && (0 == ::strncmp(shortGuidStr.c_str(), oldOwner->c_str() + 1, shortGuidStr.size()))) {
+                        sendInfo = (*oldOwner == localEndpoint->GetUniqueName())
+                                   || SessionMapFind(*oldOwner, it->second->GetSessionId()) != NULL;
+                    }
+                    if (newOwner && (0 == ::strncmp(shortGuidStr.c_str(), newOwner->c_str() + 1, shortGuidStr.size()))) {
+                        sendInfo = sendInfo || (*newOwner == localEndpoint->GetUniqueName());
+                        sendInfo = sendInfo || SessionMapFind(*newOwner, it->second->GetSessionId()) != NULL;
+                    }
+                }
+                break;
             }
 
             if (sendInfo) {

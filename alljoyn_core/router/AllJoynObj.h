@@ -1278,21 +1278,6 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
      */
     bool IsMemberOfSession(qcc::String hostName, qcc::String name, uint32_t sessionId);
 
-    /**
-     * Check if there is a multipoint session between the leaving endpoint and the remote RN.
-     * @param leavingEndpointName Name of the endpoint leaving the network.
-     * @param remoteRN Routing node to check whether to send this endpoint info to.
-     * @return true if there is a session with this leaving endpoint as a member and a leaf of the remote RN as a member.
-     */
-    bool HasMPSession(qcc::String leavingEndpointName, qcc::String remoteRN);
-
-    /**
-     * Check if there is a session between the leaving endpoint alias and the remote RN.
-     * @param alias Alias Name of the endpoint leaving the network.
-     * @param remoteRN Routing node to check whether to send this endpoint info to.
-     * @return true if there is a session with this leaving endpoint as a member and a leaf of the remote RN as a member.
-     */
-    bool HasSession(qcc::String alias, qcc::String remoteRN);
 };
 
 }

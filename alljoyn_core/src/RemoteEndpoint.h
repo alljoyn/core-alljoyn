@@ -446,7 +446,7 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
      * Get SessionId for endpoint.
      * This is used for BusToBus endpoints only.
      */
-    uint32_t GetSessionId();
+    uint32_t GetSessionId() const;
 
     /**
      * Set SessionId for endpoint.
