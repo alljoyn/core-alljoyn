@@ -28,6 +28,9 @@ void RunEventTest(uint32_t instances, uint32_t signalIndex, uint32_t delayMs, ui
         instances++;
     }
 
+    Timespec ts1;
+    GetTimeNow(&ts1);
+
     std::vector<Event*> checkEvents;
     for (uint32_t i = 0; i < instances; ++i) {
         Event* event = nullptr;
@@ -41,10 +44,6 @@ void RunEventTest(uint32_t instances, uint32_t signalIndex, uint32_t delayMs, ui
     }
 
     std::vector<Event*> signalEvents;
-
-    Timespec ts1;
-    GetTimeNow(&ts1);
-
     QStatus status = Event::Wait(checkEvents, signalEvents, timeoutMs);
 
     Timespec ts2;
