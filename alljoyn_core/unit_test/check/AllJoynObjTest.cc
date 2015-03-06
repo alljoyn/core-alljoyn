@@ -160,7 +160,7 @@ class TestAllJoynObj : public AllJoynObj {
         return ER_OK;
     }
     virtual QStatus AddSessionRoute(SessionId id, BusEndpoint& srcEp, RemoteEndpoint* srcB2bEp, BusEndpoint& destEp,
-                                    RemoteEndpoint& destB2bEp, SessionOpts* optsHint = NULL) {
+                                    RemoteEndpoint& destB2bEp) {
         return ER_OK;
     }
 
