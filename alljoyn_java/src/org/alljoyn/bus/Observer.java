@@ -16,12 +16,13 @@
 
 package org.alljoyn.bus;
 
+import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.List;
-import java.util.ArrayList;
 
 import org.alljoyn.bus.annotation.BusInterface;
 
@@ -76,16 +77,20 @@ public class Observer {
      * Create an Observer that discovers all objects implementing a minimum set
      * of Interfaces.
      *
-     * @param  bus  the bus attachment to be used by this Observer
-     * @param  mandatoryInterfaces the minimal set of Interfaces that have to
-     *                             be implemented by a bus object for the
-     *                             Observer to discover that object.
+     * @param bus the bus attachment to be used by this Observer
+     * @param mandatoryInterfaces the minimal set of Interfaces that have to be
+     *            implemented by a bus object for the Observer to discover that
+     *            object. This must be a non-null, non empty array.
      * @param optionalInterfaces additional Interfaces that will be added to the
-     *                           {@link ProxyBusObject}s managed created by this
-     *                           Observer, if they are supported by the
-     *                           discovered bus objects.
+     *            {@link ProxyBusObject}s managed created by this Observer, if
+     *            they are supported by the discovered bus objects or null if no
+     *            optional interfaces are required
      */
     public Observer(BusAttachment bus, Class<?>[] mandatoryInterfaces, Class<?>[] optionalInterfaces) {
+        if (mandatoryInterfaces.length == 0) {
+            throw new IllegalArgumentException();
+        }
+
         this.bus = bus;
         proxies = new TreeMap<ObjectId, ProxyBusObject>();
         listeners = new ArrayList<WrappedListener>();
@@ -94,16 +99,16 @@ public class Observer {
         /* build the list of mandatory AllJoyn interface names */
         String[] mandatoryNames = new String[mandatoryInterfaces.length];
         for (int i = 0; i < mandatoryInterfaces.length; ++i) {
-            String name = getBusInterfaceName(mandatoryInterfaces[i]);
+            Class<?> mandatoryInterface = mandatoryInterfaces[i];
+            String name = getBusInterfaceName(mandatoryInterface);
             mandatoryNames[i] = name;
-            interfaceMap.put(name, mandatoryInterfaces[i]);
+            interfaceMap.put(name, mandatoryInterface);
         }
         if (optionalInterfaces != null) {
             for (Class<?> intf : optionalInterfaces) {
                 interfaceMap.put(getBusInterfaceName(intf), intf);
             }
         }
-
         create(bus, mandatoryNames);
     }
 
@@ -111,13 +116,13 @@ public class Observer {
      * Create an Observer that discovers all objects implementing a minimum set
      * of Interfaces.
      *
-     * @param  bus  the bus attachment to be used by this Observer
-     * @param  mandatoryInterfaces the minimal set of Interfaces that have to
-     *                             be implemented by a bus object for the
-     *                             Observer to discover that object.
+     * @param bus the bus attachment to be used by this Observer
+     * @param mandatoryInterfaces the minimal set of Interfaces that have to be
+     *            implemented by a bus object for the Observer to discover that
+     *            object. This must be a non-null, non empty array.
      */
     public Observer(BusAttachment bus, Class<?>[] mandatoryInterfaces) {
-        this(bus, mandatoryInterfaces, new Class<?>[] {});
+        this(bus, mandatoryInterfaces, null);
     }
 
     /**
@@ -172,15 +177,18 @@ public class Observer {
     /**
      * Retrieve a {@link ProxyBusObject}.
      *
-     * If the supplied (busname, path) pair does not identify an object that
-     * has been discovered by this Observer, or identifies an object that has
-     * since disappeared from the bus, null will be returned.
+     * If the supplied (busname, path) pair does not identify an object that has
+     * been discovered by this Observer, or identifies an object that has since
+     * disappeared from the bus, null will be returned.
      *
-     * @param busname  unique bus name of the peer hosting the bus object
-     * @param path the object's path
+     * @param busname the non-null unique bus name of the peer hosting the bus
+     *            object
+     * @param path the non-null object's path
      * @return the ProxyBusObject or null if not found
      */
     public synchronized ProxyBusObject get(String busname, String path) {
+        // both busname and path could be null arguments.
+        // No extra checks added as passing null is harmless
         ObjectId oid = new ObjectId(busname, path);
         return proxies.get(oid);
     }
@@ -331,6 +339,9 @@ public class Observer {
         public Listener listener;
 
         WrappedListener(Listener l, boolean enable) {
+            if (l == null) {
+                throw new IllegalArgumentException();
+            }
             enabled = enable;
             listener = l;
         }
@@ -361,7 +372,13 @@ public class Observer {
          * proxies during iteration. */
         for (Listener l : pendingListeners) {
             for (ProxyBusObject proxy : proxies.values()) {
-                l.objectDiscovered(proxy);
+                try {
+                    // protect ourselves against exceptions in listeners...
+                    l.objectDiscovered(proxy);
+                } catch (Throwable t) {
+                    BusException.log(new InvocationTargetException(t,
+                            "Exception in Observer.Listener"));
+                }
             }
         }
     }
@@ -395,7 +412,13 @@ public class Observer {
          * lock ordering issues */
         for (WrappedListener wl : copiedListeners) {
             if (wl.enabled) {
-                wl.listener.objectDiscovered(proxy);
+                try {
+                    // protect against exceptions in listener code.
+                    wl.listener.objectDiscovered(proxy);
+                } catch (Throwable t) {
+                    BusException.log(new InvocationTargetException(t,
+                            "Exception in Observer.Listener"));
+                }
             }
         }
     }
@@ -425,7 +448,12 @@ public class Observer {
          * lock ordering issues */
         for (WrappedListener wl : copiedListeners) {
             if (wl.enabled) {
-                wl.listener.objectLost(obj);
+                try {
+                    wl.listener.objectLost(obj);
+                } catch (Throwable t) {
+                    BusException.log(new InvocationTargetException(t,
+                            "Exception in Observer.Listener"));
+                }
             }
         }
     }
@@ -434,11 +462,14 @@ public class Observer {
      * Extract AllJoyn interface name from a Java interface.
      */
     private static String getBusInterfaceName(Class<?> intf) {
-         BusInterface annotation = intf.getAnnotation(BusInterface.class);
-         if (annotation != null && !annotation.name().equals("")) {
-             return annotation.name();
-         }
-         return intf.getCanonicalName();
+        if (!intf.isInterface()) {
+            throw new IllegalArgumentException(intf + " is not an interface.");
+        }
+        BusInterface annotation = intf.getAnnotation(BusInterface.class);
+        if (annotation != null && !annotation.name().equals("")) {
+            return annotation.name();
+        }
+        return intf.getCanonicalName();
     }
 
     /** Bus attachment used by this Observer */

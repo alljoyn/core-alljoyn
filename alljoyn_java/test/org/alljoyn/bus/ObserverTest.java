@@ -16,33 +16,43 @@
 
 package org.alljoyn.bus;
 
-import java.util.Map;
-import java.util.HashMap;
-import java.util.UUID;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
-import org.alljoyn.bus.BusAttachment;
-import org.alljoyn.bus.BusException;
-import org.alljoyn.bus.ErrorReplyBusException;
-import org.alljoyn.bus.BusObject;
-import org.alljoyn.bus.SignalEmitter;
-import org.alljoyn.bus.Status;
-import org.alljoyn.bus.Observer;
-import org.alljoyn.bus.SessionPortListener;
-import org.alljoyn.bus.SessionOpts;
-import org.alljoyn.bus.ProxyBusObject;
-import org.alljoyn.bus.AboutDataListener;
-import org.alljoyn.bus.AboutObj;
-import org.alljoyn.bus.Mutable;
-import org.alljoyn.bus.Variant;
-import org.alljoyn.bus.Version;
+import junit.framework.TestCase;
 
 import org.alljoyn.bus.annotation.BusInterface;
 import org.alljoyn.bus.annotation.BusMethod;
 
-import junit.framework.TestCase;
-
 public class ObserverTest extends TestCase {
+    private static final String A = "a";
+    private static final String B = "b";
+    private static final String C = "c";
+    private static final String AB = "ab";
+    private static final String TEST_PATH_PREFIX = "/TEST/";
+    private static final int WAIT_TIMEOUT = 3000;
+
+    static class SingleLambda extends Lambda {
+        private ObserverListener listener;
+
+        public SingleLambda(ObserverListener l) {
+            listener = l;
+        }
+
+        @Override
+        public boolean func() {
+            return listener.getCounter() == 0;
+        }
+    }
+
+    private final ArrayList<Participant> participants = new ArrayList<Participant>();
+    private final ArrayList<Observer> observers = new ArrayList<Observer>();
+    public boolean failure;
+
     public ObserverTest(String name) {
         super(name);
     }
@@ -50,13 +60,6 @@ public class ObserverTest extends TestCase {
     static {
         System.loadLibrary("alljoyn_java");
     }
-
-    private int uniquifier = 0;
-    private String genUniqueName(BusAttachment bus) {
-        return "test.x" + bus.getGlobalGUIDString() + ".x" + uniquifier++;
-    }
-
-    private BusAttachment bus;
 
     public class SessionAccepter extends SessionPortListener {
         public boolean accept;
@@ -67,7 +70,9 @@ public class ObserverTest extends TestCase {
             sessions = new HashMap<String, Integer>();
         }
 
+        @Override
         public boolean acceptSessionJoiner(short sessionPort, String joiner, SessionOpts opts) {return accept;}
+        @Override
         public void sessionJoined(short port, int id, String joiner) {
             sessions.put(joiner, id);
         }
@@ -85,6 +90,7 @@ public class ObserverTest extends TestCase {
         public SessionAccepter accepter;
 
         public Participant(String _name) {
+            participants.add(this);
             try {
                 name = _name;
                 objects = new HashMap<String, BusObject>();
@@ -149,7 +155,11 @@ public class ObserverTest extends TestCase {
                     bus.unregisterBusObject(objects.get(name));
                 }
             }
-            aboutObj.unannounce();
+            objects.clear();
+            if (aboutObj != null) {
+                aboutObj.unannounce();
+                aboutObj = null;
+            }
         }
 
         public String getName() {
@@ -178,6 +188,7 @@ public class ObserverTest extends TestCase {
             path = _path;
         }
 
+        @Override
         public String methodA() throws BusException {
             return bus.getUniqueName() + "@" + path;
         }
@@ -192,6 +203,7 @@ public class ObserverTest extends TestCase {
             path = _path;
         }
 
+        @Override
         public String methodB() throws BusException {
             return bus.getUniqueName() + "@" + path;
         }
@@ -206,10 +218,12 @@ public class ObserverTest extends TestCase {
             path = _path;
         }
 
+        @Override
         public String methodA() throws BusException {
             return bus.getUniqueName() + "@" + path;
         }
 
+        @Override
         public String methodB() throws BusException {
             return bus.getUniqueName() + "@" + path;
         }
@@ -224,7 +238,7 @@ public class ObserverTest extends TestCase {
             aboutData.put("AppId", new Variant(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}));
             aboutData.put("DefaultLanguage", new Variant(new String("en")));
             aboutData.put("DeviceId", new Variant(new String(
-                            "93c06771-c725-48c2-b1ff-6a2a59d445b8")));
+                    "93c06771-c725-48c2-b1ff-6a2a59d445b8")));
             aboutData.put("ModelNumber", new Variant(new String("A1B2C3")));
             aboutData.put("SupportedLanguages", new Variant(new String[] { "en" }));
             aboutData.put("DateOfManufacture", new Variant(new String("2014-09-23")));
@@ -232,11 +246,11 @@ public class ObserverTest extends TestCase {
             aboutData.put("AJSoftwareVersion", new Variant(Version.get()));
             aboutData.put("HardwareVersion", new Variant(new String("0.1alpha")));
             aboutData.put("SupportUrl", new Variant(new String(
-                            "http://www.example.com/support")));
+                    "http://www.example.com/support")));
             aboutData.put("DeviceName", new Variant(new String("A device name")));
             aboutData.put("AppName", new Variant(new String("An application name")));
             aboutData.put("Manufacturer", new Variant(new String(
-                            "A mighty manufacturing company")));
+                    "A mighty manufacturing company")));
             aboutData.put("Description",
                     new Variant( new String("Sample showing the about feature in a service application")));
             return aboutData;
@@ -256,17 +270,30 @@ public class ObserverTest extends TestCase {
         }
 
     }
-    public void setUp() throws Exception {
-    }
 
+    @Override
     public void tearDown() throws Exception {
+        for (Participant participant : participants) {
+            participant.stop();
+        }
+        participants.clear();
+        for (Observer observer : observers) {
+            observer.unregisterAllListeners();
+        }
+        assertFalse(failure);
+        System.gc();
+        System.gc();
+        System.runFinalization();
+        System.runFinalization();
+
+        Thread.sleep(100);
     }
 
     public String makePath(String name) {
-        return "/TEST/" + name;
-     }
+        return TEST_PATH_PREFIX + name;
+    }
 
-    public class Lambda {
+    public static class Lambda {
         public boolean func() { return false; }
     }
 
@@ -274,10 +301,11 @@ public class ObserverTest extends TestCase {
         try {
             boolean ret = expression.func();
             long endMs = System.currentTimeMillis() + waitMs;
-            while (!ret && (System.currentTimeMillis() <= endMs)) {
+            while (!failure && !ret && (System.currentTimeMillis() <= endMs)) {
                 Thread.sleep(5);
                 ret = expression.func();
             }
+            assertFalse(failure);
             return ret;
         } catch (Exception e) {
             fail("exception during lambda evaluation");
@@ -295,35 +323,46 @@ public class ObserverTest extends TestCase {
     }
 
     public class ObserverListener implements Observer.Listener {
-        private BusAttachment bus;
-        public int counter;
-        private ArrayList<ProxyBusObject> proxies;
+        private final BusAttachment bus;
+        private final AtomicInteger counter;
+        private final ArrayList<ProxyBusObject> proxies;
+        private boolean allowDuplicates;
 
-        public ObserverListener(BusAttachment b) {
-            bus = b;
-            counter = 0;
+        public ObserverListener(Participant p) {
+            bus = p.bus;
+            counter = new AtomicInteger();
             proxies = new ArrayList<ProxyBusObject>();
         }
 
-        public void objectDiscovered(ProxyBusObject proxy) {
-            boolean found = proxies.contains(proxy);
-            assertFalse(found);
-            proxies.add(proxy);
-            checkReentrancy(proxy);
-            --counter;
+        public final int getCounter() {
+            return counter.get();
         }
 
+        @Override
+        public void objectDiscovered(ProxyBusObject proxy) {
+            boolean found = proxies.contains(proxy);
+            if (found && !allowDuplicates) {
+                failure = true;
+                assertFalse(found);
+            }
+            proxies.add(proxy);
+            checkReentrancy(proxy);
+            counter.decrementAndGet();
+        }
+
+
+        @Override
         public void objectLost(ProxyBusObject proxy) {
             boolean found = proxies.contains(proxy);
             assertTrue(found);
             proxies.remove(proxy);
-            --counter;
+            counter.decrementAndGet();
         }
 
         public void expectInvocations(int n) {
             /* check previous invocation count */
-            assertEquals(0, counter);
-            counter = n;
+            assertEquals(0, counter.get());
+            counter.set(n);
         }
 
         private void checkReentrancy(ProxyBusObject proxy) {
@@ -368,21 +407,23 @@ public class ObserverTest extends TestCase {
         provider.createB("justB");
         provider.createAB("both");
 
-        final Observer obsA = new Observer(consumer.bus, new Class<?>[] {InterfaceA.class});
-        final ObserverListener listenerA = new ObserverListener(consumer.bus);
+        final Observer obsA = newObserver(consumer, InterfaceA.class);
+        final ObserverListener listenerA = new ObserverListener(consumer);
         obsA.registerListener(listenerA);
-        final Observer obsB = new Observer(consumer.bus, new Class<?>[] {InterfaceB.class});
-        final ObserverListener listenerB = new ObserverListener(consumer.bus);
+        final Observer obsB = newObserver(consumer, InterfaceB.class);
+        final ObserverListener listenerB = new ObserverListener(consumer);
         obsB.registerListener(listenerB);
-        final Observer obsAB = new Observer(consumer.bus, new Class<?>[] {InterfaceA.class, InterfaceB.class});
-        final ObserverListener listenerAB = new ObserverListener(consumer.bus);
+        final Observer obsAB = newObserver(consumer, InterfaceA.class,
+                InterfaceB.class);
+        final ObserverListener listenerAB = new ObserverListener(consumer);
         obsAB.registerListener(listenerAB);
 
         Lambda allDone = new Lambda() {
+            @Override
             public boolean func() {
-                return listenerA.counter == 0 &&
-                    listenerB.counter == 0 &&
-                    listenerAB.counter == 0;
+                return listenerA.getCounter() == 0
+                        && listenerB.getCounter() == 0
+                        && listenerAB.getCounter() == 0;
             }
         };
         /* let provider publish objects on the bus */
@@ -432,10 +473,11 @@ public class ObserverTest extends TestCase {
 
         /* busy-wait for a second at most */
         assertTrue(waitForLambda(1000, new Lambda() {
+            @Override
             public boolean func() {
                 return 2 == countProxies(obsA) &&
-                       1 == countProxies(obsB) &&
-                       1 == countProxies(obsAB);
+                        1 == countProxies(obsB) &&
+                        1 == countProxies(obsAB);
             }}));
 
         /* reinstate listeners & test triggerOnExisting functionality */
@@ -449,16 +491,17 @@ public class ObserverTest extends TestCase {
         assertTrue(waitForLambda(3000, allDone));
 
         /* test multiple listeners for same observer */
-        final ObserverListener listenerB2 = new ObserverListener(consumer.bus);
+        final ObserverListener listenerB2 = new ObserverListener(consumer);
         listenerB2.expectInvocations(0);
         obsB.registerListener(listenerB2, false);
 
         Lambda allDone2 = new Lambda() {
+            @Override
             public boolean func() {
-                return listenerA.counter == 0 &&
-                    listenerB.counter == 0 &&
-                    listenerB2.counter == 0 &&
-                    listenerAB.counter == 0;
+                return listenerA.getCounter() == 0
+                        && listenerB.getCounter() == 0
+                        && listenerB2.getCounter() == 0
+                        && listenerAB.getCounter() == 0;
             }
         };
 
@@ -475,7 +518,7 @@ public class ObserverTest extends TestCase {
         assertEquals(1, countProxies(obsAB));
 
         /* test multiple observers for the same set of interfaces */
-        final Observer obsB2 = new Observer(consumer.bus, new Class<?>[]{InterfaceB.class});
+        final Observer obsB2 = newObserver(consumer, InterfaceB.class);
         obsB.unregisterListener(listenerB2); /* unregister listenerB2 from obsB so we can reuse it here */
         listenerA.expectInvocations(0);
         listenerB.expectInvocations(0);
@@ -500,25 +543,17 @@ public class ObserverTest extends TestCase {
         } catch (BusException e) {
             fail("method call failed: " + e);
         }
-
-        obsA.unregisterAllListeners();
-        obsB.unregisterAllListeners();
-        obsB2.unregisterAllListeners();
-        obsAB.unregisterAllListeners();
     }
 
     public void testSimple() {
         Participant provider = new Participant("prov");
         Participant consumer = new Participant("cons");
         simpleScenario(provider, consumer);
-        provider.stop();
-        consumer.stop();
     }
 
     public void testSimpleSelf() {
         Participant both = new Participant("both");
         simpleScenario(both, both);
-        both.stop();
     }
 
     public void testRejection() {
@@ -527,22 +562,22 @@ public class ObserverTest extends TestCase {
         Participant unwilling = new Participant("unwilling");
         Participant consumer = new Participant("consumer");
 
-        willing.createA("a");
-        doubtful.createAB("a");
-        unwilling.createAB("a");
+        willing.createA(A);
+        doubtful.createAB(A);
+        unwilling.createAB(A);
 
         unwilling.accepter.accept = false;
 
-        final ObserverListener listener = new ObserverListener(consumer.bus);
-        final Observer obs = new Observer(consumer.bus, new Class<?>[] {InterfaceA.class});
+        final ObserverListener listener = new ObserverListener(consumer);
+        final Observer obs = newObserver(consumer, InterfaceA.class);
         obs.registerListener(listener);
 
         listener.expectInvocations(2);
-        willing.registerObject("a");
-        doubtful.registerObject("a");
-        unwilling.registerObject("a");
+        willing.registerObject(A);
+        doubtful.registerObject(A);
+        unwilling.registerObject(A);
 
-        Lambda ok = new Lambda() { public boolean func() { return listener.counter == 0; }};
+        Lambda ok = new SingleLambda(listener);
         assertTrue(waitForLambda(3000, ok));
 
         /* now let doubtful kill the connection */
@@ -559,19 +594,123 @@ public class ObserverTest extends TestCase {
 
         /* unannounce and reannounce, connection should be restored */
         listener.expectInvocations(1);
-        doubtful.unregisterObject("a");
-        doubtful.registerObject("a");
+        doubtful.unregisterObject(A);
+        doubtful.registerObject(A);
         assertTrue(waitForLambda(3000, ok));
 
         /* now there should only be two objects */
         assertEquals(2, countProxies(obs));
+    }
 
-        willing.stop();
-        doubtful.stop();
-        unwilling.stop();
-        consumer.stop();
+    public void testInvalidArgs() throws Exception {
+        Participant test = new Participant("invArgs");
+        Observer obs = null;
+        try {
+            obs = newObserver(null, InterfaceA.class);
+            fail("bus can't be null");
+        } catch (NullPointerException rt) { /* OK */
+        }
+        try {
+            obs = new Observer(test.bus, null);
+        } catch (NullPointerException rt) { /* OK */
+        }
+        try {
+            obs = newObserver(test, new Class<?>[] { null });
+        } catch (NullPointerException rt) { /* OK */
+        }
 
-        obs.unregisterAllListeners();
+        try {
+            obs = newObserver(test);
+            fail("Empty array is not allowed");
+        } catch (IllegalArgumentException iae) { /* OK */
+        }
+
+        try {
+            obs = newObserver(test, String.class);
+            fail("Class is not allowed");
+        } catch (IllegalArgumentException iae) { /* OK */
+        }
+
+        try {
+            obs = new Observer(test.bus, new Class<?>[] { InterfaceA.class },
+                    new Class<?>[] { String.class });
+            fail("Class is not allowed");
+        } catch (IllegalArgumentException iae) { /* OK */
+        }
+        assertNull(obs);
+        obs = new Observer(test.bus, new Class<?>[] { InterfaceA.class }, null); // null
+        // allowed.
+
+        try {
+            obs.registerListener(null);
+            fail("null not allowed");
+        } catch (IllegalArgumentException rt) { /* OK */
+        }
+
+        final ObserverListener listener = new ObserverListener(test);
+        obs.registerListener(listener);
+        listener.expectInvocations(1);
+        test.createA(A);
+        test.registerObject(A);
+        assertTrue(waitForLambda(3000, new SingleLambda(listener)));
+
+        // null values are harmless for the object.
+        try {
+            assertNull(obs.get(null, A));
+        } catch (NullPointerException npe) {
+            // ok
+        }
+        try {
+            assertNull(obs.get(test.bus.getUniqueName(), null));
+        } catch (NullPointerException npe) {
+            // ok
+        }
+        assertNull(obs.get(test.bus.getUniqueName(), AB));
+        assertNull(obs.get(A, A));
+        assertNotNull(obs.get(test.bus.getUniqueName(), makePath(A)));
+
+
+        Method finalize = obs.getClass().getDeclaredMethod("finalize");
+        finalize.setAccessible(true);
+        finalize.invoke(obs);
+        finalize.invoke(obs);
+        finalize.invoke(obs);
+    }
+
+    final AtomicInteger exceptionCount = new AtomicInteger();
+
+    public void testExceptionInListener() {
+        Participant consumer = new Participant("one");
+        Participant provider = new Participant("two");
+
+        final Observer obs = newObserver(consumer, InterfaceA.class);
+        final ObserverListener listener = new ObserverListener(consumer);
+        final ObserverListener lateJoiner = new ObserverListener(consumer);
+        final Observer.Listener badListener = new Observer.Listener() {
+            @Override
+            public void objectLost(ProxyBusObject object) {
+                exceptionCount.incrementAndGet();
+                throw new RuntimeException();
+            }
+
+            @Override
+            public void objectDiscovered(ProxyBusObject object) {
+                exceptionCount.incrementAndGet();
+                throw new RuntimeException();
+            }
+        };
+        obs.registerListener(badListener);
+        obs.registerListener(listener);
+        provider.createA(A);
+        provider.registerObject(A);
+        waitForEvent(listener);
+        obs.registerListener(badListener, false);
+        obs.registerListener(badListener, true);
+        obs.registerListener(lateJoiner, true);
+        waitForEvent(lateJoiner);
+        provider.unregisterObject(A);
+        waitForEvent(listener);
+        assertEquals(5, exceptionCount.get());
     }
 
     public void testListenTwice() {
@@ -579,23 +718,23 @@ public class ObserverTest extends TestCase {
         Participant provider = new Participant("prov");
         Participant consumer = new Participant("cons");
 
-        provider.createA("a");
-        provider.createAB("ab");
+        provider.createA(A);
+        provider.createAB(AB);
         provider.createAB("ab2");
 
-        final ObserverListener listener = new ObserverListener(consumer.bus);
-        final Observer obs = new Observer(consumer.bus, new Class<?>[] {InterfaceA.class});
+        final ObserverListener listener = new ObserverListener(consumer);
+        final Observer obs = newObserver(consumer, InterfaceA.class);
         obs.registerListener(listener);
-        final Observer obs2 = new Observer(consumer.bus, new Class<?>[] {InterfaceA.class});
+        final Observer obs2 = newObserver(consumer, InterfaceA.class);
         obs2.registerListener(listener);
 
-        Lambda ok = new Lambda() { public boolean func() { return listener.counter == 0; }};
+        Lambda ok = new SingleLambda(listener);
 
         /* use listener for 2 observers, so we expect to
          * see all events twice */
         listener.expectInvocations(6);
-        provider.registerObject("a");
-        provider.registerObject("ab");
+        provider.registerObject(A);
+        provider.registerObject(AB);
         provider.registerObject("ab2");
 
         assertTrue(waitForLambda(3000, ok));
@@ -604,17 +743,209 @@ public class ObserverTest extends TestCase {
         /* one observer is gone, so we expect to see
          * every event just once. */
         listener.expectInvocations(3);
-        provider.unregisterObject("a");
-        provider.unregisterObject("ab");
+        provider.unregisterObject(A);
+        provider.unregisterObject(AB);
         provider.unregisterObject("ab2");
 
         assertTrue(waitForLambda(3000, ok));
+    }
 
-        provider.stop();
-        consumer.stop();
+    public void testListenTwiceOnSameObserver() throws Exception {
+        /* reuse the same listener for two observers */
+        Participant provider = new Participant("prov");
+        Participant consumer = new Participant("cons");
 
+        provider.createA(A);
+
+        final ObserverListener listener = new ObserverListener(consumer);
+        final Observer obs = newObserver(consumer, InterfaceA.class);
+        obs.registerListener(listener);
+        Lambda ok = new SingleLambda(listener);
+        /*
+         * use listener twice on observer, so we expect to see all events twice
+         */
+        listener.expectInvocations(1);
+        provider.registerObject(A);
+
+        assertTrue(waitForLambda(3000, ok));
+
+        /*
+         * one observer is gone, so we expect to see every event just once.
+         */
+        listener.allowDuplicates = true;
+        listener.expectInvocations(1);
+        obs.registerListener(listener, true);
+
+        boolean result = waitForLambda(3000, ok);
+        assertTrue("Counter value = " + listener.getCounter(), result);
+
+        listener.expectInvocations(2);
+        provider.createAB(AB);
+        provider.registerObject(AB);
+        result = waitForLambda(3000, ok);
+        assertTrue("Counter value = " + listener.getCounter(), result);
+        obs.unregisterListener(listener);
+        listener.expectInvocations(1);
+        provider.unregisterObject(AB);
+        assertTrue(waitForLambda(3000, ok));
+        obs.unregisterListener(listener);
+        provider.unregisterObject(A);
+        Thread.sleep(100);
+        listener.expectInvocations(0);
+
+        obs.unregisterListener(listener); // the listener is not registered
+        // anymore, but this should work.
+        obs.unregisterListener(null); // Does nothing sensible, but should not
+        // trigger an exception.
+
+        obs.registerListener(listener);
+        obs.registerListener(new ObserverListener(consumer));
+
+        // We should be able to unregisterAll multiple times
         obs.unregisterAllListeners();
-        obs2.unregisterAllListeners();
+        obs.unregisterAllListeners();
+        obs.unregisterAllListeners();
+        obs.unregisterAllListeners();
+        obs.unregisterAllListeners();
+    }
+
+    public void testMultipleListenersOnSingleObserver() {
+        Participant one = new Participant("one");
+        Participant two = new Participant("two");
+
+        final Observer obsA = newObserver(one, InterfaceA.class);
+        final ObserverListener lisAone = new ObserverListener(one);
+        final ObserverListener lisAtwo = new ObserverListener(one);
+
+        obsA.registerListener(lisAone);
+        obsA.registerListener(lisAtwo);
+        lisAone.expectInvocations(2);
+        lisAtwo.expectInvocations(2);
+
+        two.createA(A);
+        two.createAB(AB);
+        two.registerObject(A);
+        two.registerObject(AB);
+
+        Lambda ok = new Lambda() {
+            @Override
+            public boolean func() {
+                return lisAone.getCounter() == 0 && lisAtwo.getCounter() == 0;
+            }
+        };
+        boolean result = waitForLambda(3000, ok);
+        assertTrue("Count one =  " + lisAone.getCounter() + ", two = "
+                + lisAtwo.getCounter(), result);
+    }
+
+    public void testNativeCreate() throws Exception {
+        final Participant consumer = new Participant("one");
+        final Observer obs = newObserver(consumer, InterfaceA.class);
+        Method create = obs.getClass().getDeclaredMethod("create",
+                BusAttachment.class, String[].class);
+        create.setAccessible(true);
+        try {
+            create.invoke(obs, null, new String[0]);
+            fail();
+        } catch (InvocationTargetException npe) {
+            assertTrue(npe.getCause() instanceof NullPointerException);
+        }
+        try {
+            create.invoke(obs, consumer.bus, null);
+            fail();
+        } catch (InvocationTargetException npe) {
+            assertTrue(npe.getCause() instanceof NullPointerException);
+        }
+        try {
+            create.invoke(obs, consumer.bus, new String[1]);
+            fail();
+        } catch (InvocationTargetException npe) {
+            assertTrue(npe.getCause() instanceof NullPointerException);
+        }
+    }
+
+    public void testGetFirstNext() {
+        Participant consumer = new Participant("one");
+        Participant provider = new Participant("two");
+
+        final Observer obs = newObserver(consumer, InterfaceA.class);
+        final ObserverListener listener = new ObserverListener(consumer);
+        obs.registerListener(listener);
+
+        assertNull(obs.getFirst());
+        assertNull(obs.getNext(null));
+        ArrayList<ProxyBusObject> objects = null;
+
+        String[] names = new String[] { A, AB, B, C };
+        for (int i = 0; i < names.length;) {
+            provider.createA(names[i]);
+            provider.registerObject(names[i]);
+            waitForEvent(listener);
+            objects = checkObjects(++i, obs);
+        }
+
+        ProxyBusObject obj = objects.get(1);
+        unregisterObject(provider, obj, listener);
+        assertSame(objects.get(2), obs.getNext(obj));
+        assertSame(objects.get(2), obs.getNext(objects.get(0)));
+        objects = checkObjects(3, obs);
+        assertFalse(objects.contains(obj));
+
+        obj = objects.get(2);
+        unregisterObject(provider, obj, listener);
+        assertNull(obs.getNext(obj));
+        assertNull(obs.getNext(objects.get(1)));
+        objects = checkObjects(2, obs);
+        assertFalse(objects.contains(obj));
+
+        obj = objects.get(0);
+        unregisterObject(provider, obj, listener);
+        assertSame(objects.get(1), obs.getNext(obj));
+        assertSame(objects.get(1), obs.getFirst());
+        objects = checkObjects(1, obs);
+        assertFalse(objects.contains(obj));
+
+        obj = objects.get(0);
+        unregisterObject(provider, obj, listener);
+        assertNull(obs.getNext(obj));
+        assertNull(obs.getFirst());
+    }
+
+    private void unregisterObject(Participant provider, ProxyBusObject obj,
+            ObserverListener listener) {
+        provider.unregisterObject(obj.getObjPath().substring(
+                TEST_PATH_PREFIX.length()));
+        waitForEvent(listener);
+    }
+
+    private ArrayList<ProxyBusObject> checkObjects(int nrOfObjects, Observer obs) {
+        ArrayList<ProxyBusObject> objects = new ArrayList<ProxyBusObject>();
+        objects.add(obs.getFirst());
+        ProxyBusObject obj = obs.getFirst();
+        checkGet(obj, obs);
+        assertNotNull(obj);
+        assertSame(objects.get(0), obj);
+        for (int i = 1; i < nrOfObjects; i++) {
+            obj = obs.getNext(objects.get(i - 1));
+            assertNotNull(obj);
+            assertSame(obj, obs.getNext(objects.get(i - 1)));
+            assertFalse(objects.contains(obj));
+            checkGet(obj, obs);
+            objects.add(obj);
+        }
+        assertNull(obs.getNext(obj));
+        assertNull(obs.getNext(obj));
+        return objects;
+    }
+
+    private void checkGet(ProxyBusObject obj, Observer obs) {
+        assertSame(obj, obs.get(obj.getBusName(), obj.getObjPath()));
+    }
+
+    private void waitForEvent(ObserverListener listener) {
+        listener.expectInvocations(1);
+        Lambda ok = new SingleLambda(listener);
+        assertTrue(waitForLambda(WAIT_TIMEOUT, ok));
     }
 
     public void testMulti() {
@@ -622,42 +953,44 @@ public class ObserverTest extends TestCase {
         Participant one = new Participant("one");
         Participant two = new Participant("two");
 
-        one.createA("a");
-        one.createB("b");
-        one.createAB("ab");
-        two.createA("a");
-        two.createB("b");
-        two.createAB("ab");
+        one.createA(A);
+        one.createB(B);
+        one.createAB(AB);
+        two.createA(A);
+        two.createB(B);
+        two.createAB(AB);
 
-        final Observer obsAone = new Observer(one.bus, new Class<?>[] {InterfaceA.class});
-        final ObserverListener lisAone = new ObserverListener(one.bus);
+        final Observer obsAone = newObserver(one, InterfaceA.class);
+        final ObserverListener lisAone = new ObserverListener(one);
         obsAone.registerListener(lisAone);
-        final Observer obsBone = new Observer(one.bus, new Class<?>[] {InterfaceB.class});
-        final ObserverListener lisBone = new ObserverListener(one.bus);
+        final Observer obsBone = newObserver(one, InterfaceB.class);
+        final ObserverListener lisBone = new ObserverListener(one);
         obsBone.registerListener(lisBone);
-        final Observer obsABone = new Observer(one.bus, new Class<?>[] {InterfaceA.class, InterfaceB.class});
-        final ObserverListener lisABone = new ObserverListener(one.bus);
+        final Observer obsABone = newObserver(one, InterfaceA.class,
+                InterfaceB.class);
+        final ObserverListener lisABone = new ObserverListener(one);
         obsABone.registerListener(lisABone);
 
-        final Observer obsAtwo = new Observer(two.bus, new Class<?>[] {InterfaceA.class});
-        final ObserverListener lisAtwo = new ObserverListener(two.bus);
+        final Observer obsAtwo = newObserver(two, InterfaceA.class);
+        final ObserverListener lisAtwo = new ObserverListener(two);
         obsAtwo.registerListener(lisAtwo);
-        final Observer obsBtwo = new Observer(two.bus, new Class<?>[] {InterfaceB.class});
-        final ObserverListener lisBtwo = new ObserverListener(two.bus);
+        final Observer obsBtwo = newObserver(two, InterfaceB.class);
+        final ObserverListener lisBtwo = new ObserverListener(two);
         obsBtwo.registerListener(lisBtwo);
-        final Observer obsABtwo = new Observer(two.bus, new Class<?>[] {InterfaceA.class, InterfaceB.class});
-        final ObserverListener lisABtwo = new ObserverListener(two.bus);
+        final Observer obsABtwo = newObserver(two, InterfaceA.class,
+                InterfaceB.class);
+        final ObserverListener lisABtwo = new ObserverListener(two);
         obsABtwo.registerListener(lisABtwo);
 
 
         Lambda ok = new Lambda () {
+            @Override
             public boolean func() {
-                return lisAone.counter == 0 &&
-                    lisBone.counter == 0 &&
-                    lisABone.counter == 0 &&
-                    lisAtwo.counter == 0 &&
-                    lisBtwo.counter == 0 &&
-                    lisABtwo.counter == 0;
+                return lisAone.getCounter() == 0 && lisBone.getCounter() == 0
+                        && lisABone.getCounter() == 0
+                        && lisAtwo.getCounter() == 0
+                        && lisBtwo.getCounter() == 0
+                        && lisABtwo.getCounter() == 0;
             }
         };
 
@@ -669,12 +1002,12 @@ public class ObserverTest extends TestCase {
         lisBtwo.expectInvocations(4);
         lisABtwo.expectInvocations(2);
 
-        one.registerObject("a");
-        one.registerObject("b");
-        one.registerObject("ab");
-        two.registerObject("a");
-        two.registerObject("b");
-        two.registerObject("ab");
+        one.registerObject(A);
+        one.registerObject(B);
+        one.registerObject(AB);
+        two.registerObject(A);
+        two.registerObject(B);
+        two.registerObject(AB);
 
         assertTrue(waitForLambda(3000, ok));
         assertEquals(4, countProxies(obsAone));
@@ -692,12 +1025,12 @@ public class ObserverTest extends TestCase {
         lisBtwo.expectInvocations(4);
         lisABtwo.expectInvocations(2);
 
-        one.unregisterObject("a");
-        one.unregisterObject("b");
-        one.unregisterObject("ab");
-        two.unregisterObject("a");
-        two.unregisterObject("b");
-        two.unregisterObject("ab");
+        one.unregisterObject(A);
+        one.unregisterObject(B);
+        one.unregisterObject(AB);
+        two.unregisterObject(A);
+        two.unregisterObject(B);
+        two.unregisterObject(AB);
 
         assertTrue(waitForLambda(3000, ok));
         assertEquals(0, countProxies(obsAone));
@@ -706,15 +1039,11 @@ public class ObserverTest extends TestCase {
         assertEquals(0, countProxies(obsAtwo));
         assertEquals(0, countProxies(obsBtwo));
         assertEquals(0, countProxies(obsABtwo));
+    }
 
-        one.stop();
-        two.stop();
-
-        obsAone.unregisterAllListeners();
-        obsBone.unregisterAllListeners();
-        obsABone.unregisterAllListeners();
-        obsAtwo.unregisterAllListeners();
-        obsBtwo.unregisterAllListeners();
-        obsABtwo.unregisterAllListeners();
+    private Observer newObserver(Participant p, Class<?>... classes) {
+        Observer obs = new Observer(p.bus, classes);
+        observers.add(obs);
+        return obs;
     }
 }
