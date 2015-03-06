@@ -68,6 +68,7 @@ TEST(SRPTest, Basic_API) {
     KeyBlob clientPMS;
     String user = "someuser";
     String pwd = "a-secret-password";
+    String otherPwd = "a-different-password";
 
     for (int i = 0; i < 1; ++i) {
         {
@@ -97,12 +98,12 @@ TEST(SRPTest, Basic_API) {
 
             ASSERT_EQ(0, memcmp(serverPMS.GetData(), clientPMS.GetData(), serverPMS.GetSize()))
             << "Premaster secrets don't match\n"
-            << "client = " << BytesToHexString(serverPMS.GetData(), serverPMS.GetSize()).c_str() << "\n"
-            << "server = " << BytesToHexString(clientPMS.GetData(), clientPMS.GetSize()).c_str() << "\n"
+            << "server = " << BytesToHexString(serverPMS.GetData(), serverPMS.GetSize()).c_str() << "\n"
+            << "client = " << BytesToHexString(clientPMS.GetData(), clientPMS.GetSize()).c_str() << "\n"
             << "Premaster secret = " << BytesToHexString(serverPMS.GetData(), serverPMS.GetSize()).c_str();
 
-            //printf("Premaster secret = %s\n", BytesToHexString(serverPMS.GetData(), serverPMS.GetSize()).c_str());
             verifier = server.ServerGetVerifier();
+
         }
     }
 
@@ -137,21 +138,71 @@ TEST(SRPTest, Basic_API) {
 
         ASSERT_EQ(0, memcmp(serverPMS.GetData(), clientPMS.GetData(), serverPMS.GetSize()))
         << "Premaster secrets don't match\n"
-        << "client = " << BytesToHexString(serverPMS.GetData(), serverPMS.GetSize()).c_str() << "\n"
-        << "server = " << BytesToHexString(clientPMS.GetData(), clientPMS.GetSize()).c_str() << "\n"
+        << "server = " << BytesToHexString(serverPMS.GetData(), serverPMS.GetSize()).c_str() << "\n"
+        << "client = " << BytesToHexString(clientPMS.GetData(), clientPMS.GetSize()).c_str() << "\n"
         << "Premaster secret = " << BytesToHexString(serverPMS.GetData(), serverPMS.GetSize()).c_str();
 
+        /*
+         *  Testing pseudo random function with SRP output.
+         */
         qcc::String serverRand = RandHexString(64);
         qcc::String clientRand = RandHexString(64);
         uint8_t masterSecret[48];
-
-        //printf("testing pseudo random function\n");
 
         status = Crypto_PseudorandomFunction(serverPMS, "foobar", serverRand + clientRand, masterSecret, sizeof(masterSecret));
         ASSERT_EQ(ER_OK, status)
         << " SRP ClientFinish failed\n"
         << "Master secret = " << BytesToHexString(masterSecret, sizeof(masterSecret)).c_str();
     }
+
+
+
+    /*
+     * Ensure protocol *fails* with incorrect password.
+     * Use the server verifier for pwd, client will try to authenticated with otherPwd.
+     */
+    {
+        Crypto_SRP client;
+        Crypto_SRP server;
+
+        status = server.ServerInit(verifier, toClient);
+        ASSERT_EQ(ER_OK, status) << " SRP ServerInit failed";
+
+        status = client.ClientInit(toClient, toServer);
+        ASSERT_EQ(ER_OK, status) << " SRP ClientInit failed";
+
+        status = server.ServerFinish(toServer);
+        ASSERT_EQ(ER_OK, status) << " SRP ServerFinish failed";
+
+        status = client.ClientFinish(user, otherPwd);
+        ASSERT_EQ(ER_OK, status) << " SRP ClientFinish failed";
+
+        /*
+         * Check premaster secrets don't match
+         */
+        server.GetPremasterSecret(serverPMS);
+        client.GetPremasterSecret(clientPMS);
+        if (clientPMS.GetSize() == serverPMS.GetSize()) {
+            ASSERT_NE(0, memcmp(serverPMS.GetData(), clientPMS.GetData(), serverPMS.GetSize()))
+            << "Premaster secrets match but shouldn't (different passwords)\n"
+            << "server = " << BytesToHexString(serverPMS.GetData(), serverPMS.GetSize()).c_str() << "\n"
+            << "client = " << BytesToHexString(clientPMS.GetData(), clientPMS.GetSize()).c_str() << "\n"
+            << "Premaster secret = " << BytesToHexString(serverPMS.GetData(), serverPMS.GetSize()).c_str();
+        }
+
+        /*
+         *  Testing pseudo random function with SRP output.
+         */
+        qcc::String serverRand = RandHexString(64);
+        qcc::String clientRand = RandHexString(64);
+        uint8_t masterSecret[48];
+
+        status = Crypto_PseudorandomFunction(serverPMS, "foobar", serverRand + clientRand, masterSecret, sizeof(masterSecret));
+        ASSERT_EQ(ER_OK, status)
+        << " SRP ClientFinish failed\n"
+        << "Master secret = " << BytesToHexString(masterSecret, sizeof(masterSecret)).c_str();
+    }
+
 }
 
 class MyAuthListener : public AuthListener {
