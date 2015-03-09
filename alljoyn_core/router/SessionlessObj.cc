@@ -140,7 +140,7 @@ SessionlessObj::SessionlessObj(Bus& bus, BusController* busController, DaemonRou
     requestRangeMatchSignal(NULL),
     timer("sessionless"),
     curChangeId(0),
-    sessionOpts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY, SessionOpts::DAEMON_NAMES),
+    sessionOpts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY, SessionOpts::SLS_NAMES),
     sessionPort(SESSIONLESS_SESSION_PORT),
     advanceChangeId(false),
     nextRulesId(0),

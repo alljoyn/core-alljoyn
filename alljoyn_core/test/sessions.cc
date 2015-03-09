@@ -921,7 +921,7 @@ int main(int argc, char** argv)
             SessionOpts opts;
             SessionPort port = static_cast<SessionPort>(StringToU32(NextTok(line), 0, 0));
             if (port == 0) {
-                printf("Usage: bind <port> [isMultipoint (false)] [traffic (TRAFFIC_MESSAGES)] [proximity (PROXIMITY_ANY)] [transports (TRANSPORT_TCP)] [nametransfer (P2P_NAMES)]\n");
+                printf("Usage: bind <port> [isMultipoint (false)] [traffic (TRAFFIC_MESSAGES)] [proximity (PROXIMITY_ANY)] [transports (TRANSPORT_TCP)] [nametransfer (SESSION_NAMES)]\n");
                 printf("Example:    bind 1 true TRAFFIC_MESSAGES PROXIMITY_ANY TRANSPORT_UDP ALL_NAMES\n");
                 printf("Equivalent: bind 1 true 1 255 256 0\n");
                 continue;
@@ -963,13 +963,16 @@ int main(int argc, char** argv)
 
             tok = NextTok(line);
             if (tok == "ALL_NAMES") {
-                opts.nameTransfer = SessionOpts::ALL_NAMES;
-            } else if (tok == "P2P_NAMES") {
-                opts.nameTransfer = SessionOpts::P2P_NAMES;
-            } else if (tok == "MP_NAMES") {
-                opts.nameTransfer = SessionOpts::MP_NAMES;
+                opts.SetAllNames();
+            } else if (tok == "SESSION_NAMES") {
+                opts.SetSessionNames();
             } else {
-                opts.nameTransfer = static_cast<SessionOpts::NameTransferType>(StringToU32(tok, 0, SessionOpts::P2P_NAMES));
+                uint32_t nameTransfer = StringToU32(tok, 0, 1);
+                if (nameTransfer) {
+                    opts.SetSessionNames();
+                } else {
+                    opts.SetAllNames();
+                }
             }
             DoBind(port, opts);
         } else if (cmd == "unbind") {
@@ -1070,13 +1073,14 @@ int main(int argc, char** argv)
 
             tok = NextTok(line);
             if (tok == "ALL_NAMES") {
-                opts.nameTransfer = SessionOpts::ALL_NAMES;
-            } else if (tok == "P2P_NAMES") {
-                opts.nameTransfer = SessionOpts::P2P_NAMES;
-            } else if (tok == "MP_NAMES") {
-                opts.nameTransfer = SessionOpts::MP_NAMES;
+                opts.SetAllNames();
+            } else if (tok == "SESSION_NAMES") {
+                opts.SetSessionNames();
             } else {
-                opts.nameTransfer = static_cast<SessionOpts::NameTransferType>(StringToU32(tok, 0, SessionOpts::P2P_NAMES));
+                uint32_t nameTransfer = StringToU32(tok, 0, 1);
+                if (!nameTransfer) {
+                    opts.SetAllNames();
+                }
             }
             DoJoin(name, port, opts);
         } else if (cmd == "asyncjoin") {
@@ -1091,7 +1095,11 @@ int main(int argc, char** argv)
             opts.traffic = static_cast<SessionOpts::TrafficType>(StringToU32(NextTok(line), 0, 0x1));
             opts.proximity = static_cast<SessionOpts::Proximity>(StringToU32(NextTok(line), 0, 0xFF));
             opts.transports = static_cast<TransportMask>(StringToU32(NextTok(line), 0, TRANSPORT_ANY));
-            opts.nameTransfer = static_cast<SessionOpts::NameTransferType>(StringToU32(NextTok(line), 0, SessionOpts::P2P_NAMES));
+            uint32_t nameTransfer = StringToU32(NextTok(line), 0, 1);
+            if (!nameTransfer) {
+                opts.SetAllNames();
+            }
+
             DoJoinAsync(name, port, opts);
         } else if (cmd == "leave") {
             SessionId id = NextTokAsSessionId(line);

@@ -63,10 +63,12 @@ QStatus EndpointAuth::Hello(qcc::String& redirection)
     Message hello(bus);
     Message response(bus);
     nameTransfer = endpoint->GetFeatures().nameTransfer;
-    // Send value 0x01 for DAEMON_NAMES, 0x00 for other types.
-    // These are the older values of nameTransfer to be sent in BusHello.
+    /* Send value SLS_NAMES(also value of older DAEMON_NAMES) for SLS_NAMES,
+     * ALL_NAMES for other types.
+     * These are the older values of nameTransfer to be sent in BusHello.
+     */
     status = hello->HelloMessage(endpoint->GetFeatures().isBusToBus, endpoint->GetFeatures().allowRemote,
-                                 (endpoint->GetFeatures().nameTransfer == SessionOpts::DAEMON_NAMES) ? 0x01 : 0x00);
+                                 (endpoint->GetFeatures().nameTransfer == SessionOpts::SLS_NAMES) ? SessionOpts::SLS_NAMES : SessionOpts::ALL_NAMES);
     if (status != ER_OK) {
         return status;
     }

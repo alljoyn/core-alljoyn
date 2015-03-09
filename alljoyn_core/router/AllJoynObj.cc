@@ -391,13 +391,14 @@ void AllJoynObj::BindSessionPort(const InterfaceDescription::Member* member, Mes
     }
 
     /* If Binding for a multipoint session, the nameTransfer must be ALL_NAMES or MP_NAMES.
-     * If nameTransfer P2P_NAMES is passed in, change it to MP_NAMES */
+     * If nameTransfer P2P_NAMES or SLS_NAMES is passed in, change it to MP_NAMES
+     */
     if (opts.isMultipoint &&
         ((opts.nameTransfer == SessionOpts::P2P_NAMES) ||
-         (opts.nameTransfer == SessionOpts::DAEMON_NAMES))) {
+         (opts.nameTransfer == SessionOpts::SLS_NAMES))) {
         opts.nameTransfer = SessionOpts::MP_NAMES;
     }
-    /* If Binding for a point-to-point session, the nameTransfer must be ALL_NAMES, P2P_NAMES or DAEMON_NAMES.
+    /* If Binding for a point-to-point session, the nameTransfer must be ALL_NAMES, P2P_NAMES or SLS_NAMES.
      * If nameTransfer MP_NAMES is passed in, change it to P2P_NAMES */
     if (!opts.isMultipoint && opts.nameTransfer == SessionOpts::MP_NAMES) {
         opts.nameTransfer = SessionOpts::P2P_NAMES;
@@ -1735,9 +1736,9 @@ bool AllJoynObj::NamesHandler(Message msg, MsgArg arg)
         } else if (0 == ::strncmp(uniqueName.c_str() + 1, shortGuidStr.c_str(), shortGuidStr.size())) {
             /* Cant accept a request to change a local name */
             continue;
-        } else if ((bit->second->GetFeatures().nameTransfer == SessionOpts::DAEMON_NAMES) &&
+        } else if ((bit->second->GetFeatures().nameTransfer == SessionOpts::SLS_NAMES) &&
                    (0 != ::strncmp(uniqueName.c_str() + 1, shortOtherGuidStr.c_str(), shortOtherGuidStr.size()))) {
-            /* Filter out names from routers that predate the DAEMON_NAMES flag */
+            /* Filter out names from routers that predate the DAEMON_NAMES(now SLS_NAMES) flag */
             continue;
         }
         /* Add a virtual endpoint */
@@ -4130,7 +4131,7 @@ QStatus AllJoynObj::GetNames(MsgArg& argArray, RemoteEndpoint& endpoint, Session
     QCC_DbgPrintf(("AllJoynObj::GetNames(endpoint = %s joinerName %s endpoint->GetFeatures().nameTransfer %d type %d sessionId %u endpoint->GetRemoteGUID() %s)", endpoint->GetUniqueName().c_str(), joinerName.c_str(), nameTransfer, type, sessionId, endpoint->GetRemoteGUID().ToShortString().c_str()));
 
     /* Validate nameTransfer and type */
-    if ((((nameTransfer == SessionOpts::DAEMON_NAMES) || (nameTransfer == SessionOpts::P2P_NAMES)) && (type != JOINER) && (type != HOST)) ||
+    if ((((nameTransfer == SessionOpts::SLS_NAMES) || (nameTransfer == SessionOpts::P2P_NAMES)) && (type != JOINER) && (type != HOST)) ||
         ((nameTransfer == SessionOpts::MP_NAMES) && (type != JOINER) && (type != HOST) && (type != HOST_FORWARD))) {
         argArray.Set("a(sas)", 0, NULL);
         return ER_OK;
@@ -4165,7 +4166,7 @@ QStatus AllJoynObj::GetNames(MsgArg& argArray, RemoteEndpoint& endpoint, Session
                 sendInfo = true;
                 break;
 
-            case SessionOpts::DAEMON_NAMES:
+            case SessionOpts::SLS_NAMES:
                 /* The name of the local routing node and locally connected sessionless
                  * signal emitters need to be sent out in the case of an incoming connection i.e.
                  * another routing node is trying to fetch sessionless signals from this routing node.
@@ -4317,10 +4318,10 @@ void AllJoynObj::NameChangedSignalHandler(const InterfaceDescription::Member* me
         return;
     }
 
-    /* Ignore a NameChange for non-local names from routers that predate the DAEMON_NAMES flag */
+    /* Ignore a NameChange for non-local names from routers that predate the DAEMON_NAMES(now SLS_NAMES) flag */
     AcquireLocks();
     map<qcc::StringMapKey, RemoteEndpoint>::iterator bit = b2bEndpoints.find(msg->GetRcvEndpointName());
-    if (bit != b2bEndpoints.end() && (bit->second->GetFeatures().nameTransfer == SessionOpts::DAEMON_NAMES)) {
+    if (bit != b2bEndpoints.end() && (bit->second->GetFeatures().nameTransfer == SessionOpts::SLS_NAMES)) {
         qcc::GUID128 otherGuid = bit->second->GetRemoteGUID();
         const String& shortOtherGuidStr = otherGuid.ToShortString();
         if ((!oldOwner.empty() && (0 != ::strncmp(oldOwner.c_str() + 1, shortOtherGuidStr.c_str(), shortOtherGuidStr.size()))) ||
@@ -4650,7 +4651,7 @@ void AllJoynObj::NameOwnerChanged(const qcc::String& alias,
                 sendInfo = true;
                 break;
 
-            case SessionOpts::DAEMON_NAMES:
+            case SessionOpts::SLS_NAMES:
                 /* NameChanged need to be sent out if the old or new owner is the routing node
                  * or a sessionless signal emitter in the case of an incoming connection i.e.
                  * another routing node is trying to fetch sessionless signals from this routing node.

@@ -49,11 +49,14 @@ SessionOpts::NameTransferType NameTable::GetNameTransfer(const VirtualEndpoint& 
     if (b2bEps.empty()) {
         return SessionOpts::ALL_NAMES;
     } else {
-        SessionOpts::NameTransferType nameTransfer = SessionOpts::DAEMON_NAMES;
+        SessionOpts::NameTransferType nameTransfer = SessionOpts::SLS_NAMES;
         for (multimap<SessionId, RemoteEndpoint>::const_iterator it = b2bEps.begin();
-             (nameTransfer == SessionOpts::DAEMON_NAMES) && (it != b2bEps.end());
+             it != b2bEps.end();
              ++it) {
-            nameTransfer = min(nameTransfer, it->second->GetFeatures().nameTransfer);
+            if (it->second->GetFeatures().nameTransfer != SessionOpts::SLS_NAMES) {
+                nameTransfer = SessionOpts::ALL_NAMES;
+                break;
+            }
         }
         return nameTransfer;
     }

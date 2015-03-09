@@ -755,7 +755,7 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
      * @param outgoingSessionId     SessionId to use for outgoing AttachSession message. Should
      *                              be 0 for newly created (non-multipoint) sessions.
      * @param busAddr          Destination bus address from advertisement or GetSessionInfo.
-     * @param nameTransfer     The Nametransfer for this session. One of ALL_NAMES, DAEMON_NAMES, P2P_NAMES and MP_NAMES.
+     * @param nameTransfer     The Nametransfer for this session. One of ALL_NAMES, SLS_NAMES, P2P_NAMES and MP_NAMES.
      * @param type             The type of caller of this function: JOINER, HOST, HOST_FORWARD, MEMBER and HOST_FORWARD_REPLY.
      * @param optsIn           Session options requested by joiner.
      * @param replyCode        [OUT] SessionAttach response code
