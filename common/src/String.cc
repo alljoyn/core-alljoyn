@@ -582,6 +582,9 @@ void String::NewContext(const char* str, size_t strLen, size_t sizeHint)
     size_t mallocSz = capacity + 1 + sizeof(ManagedCtx) - MinCapacity;
     void* newCtxMem = malloc(mallocSz);
     assert(newCtxMem);
+    if (NULL == newCtxMem) {
+        abort();
+    }
     context = new (newCtxMem)ManagedCtx();
     context->refCount = 1;
 

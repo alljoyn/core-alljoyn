@@ -514,7 +514,7 @@ static MySessionPortListener g_portListener;
 
 static void usage(void)
 {
-    printf("Usage: bbsig [-n <name> ] [-a <name> ] [-h] [-l] [-s] [-r #] [-i #] [-c #] [-t #] [-x] [--tcp] [--udp] [--wfd] [-e[k] <mech>]\n\n");
+    printf("Usage: bbsig [-n <name> ] [-a <name> ] [-h] [-l] [-s] [-r #] [-i #] [-c #] [-t #] [-x] [--tcp] [--udp] [-e[k] <mech>]\n\n");
     printf("Options:\n");
     printf("   -h                          = Print this help message\n");
     printf("   -?                          = Print this help message\n");

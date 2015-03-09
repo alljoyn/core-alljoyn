@@ -358,11 +358,10 @@ class DaemonRouter : public Router {
      * @param  srcB2bEp    Source B2B endpoint. (NULL if srcEp is not virtual).
      * @param  destEp      BusEndpoint of route destination.
      * @param  destB2bEp   [IN/OUT] If passed in as invalid endpoint type, attempt to use optsHint to choose destB2bEp and return selected ep.
-     * @param  optsHint    Optional session options constraint for selection of destB2bEp if not explicitly specified.
      * @return  ER_OK if successful.
      */
     QStatus AddSessionRoute(SessionId id, BusEndpoint& srcEp, RemoteEndpoint* srcB2bEp, BusEndpoint& destEp,
-                            RemoteEndpoint& destB2bEp, SessionOpts* optsHint = NULL);
+                            RemoteEndpoint& destB2bEp);
 
     /**
      * Remove existing session routes.
