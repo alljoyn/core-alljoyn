@@ -99,6 +99,10 @@ public class AboutData implements AboutDataListener, AboutKeys {
      * @throws BusException
      */
     AboutData(Map<String, Variant> aboutData) throws BusException {
+        initializeFieldDetails();
+        propertyStore = new HashMap<String, Variant>();
+        localizedPropertyStore = new HashMap<String, Map<String, Variant>>();
+        supportedLanguages = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
         createFromAnnoncedAboutData(aboutData, null);
     }
 
@@ -112,6 +116,10 @@ public class AboutData implements AboutDataListener, AboutKeys {
      */
 
     AboutData(Map<String, Variant> aboutData, String language) throws BusException {
+        initializeFieldDetails();
+        propertyStore = new HashMap<String, Variant>();
+        localizedPropertyStore = new HashMap<String, Map<String, Variant>>();
+        supportedLanguages = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
         createFromAnnoncedAboutData(aboutData, language);
     }
     /**
@@ -289,6 +297,9 @@ public class AboutData implements AboutDataListener, AboutKeys {
      *                      language was not specified.
      */
     public void createFromAnnoncedAboutData(Map<String, Variant> aboutData, String language) throws BusException {
+        if(aboutData == null) {
+            throw new ErrorReplyBusException(Status.ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD);
+        }
         if (language == null || language.length() == 0) {
             Variant defaultLangArg = aboutData.get(ABOUT_DEFAULT_LANGUAGE);
             if (defaultLangArg == null) {
