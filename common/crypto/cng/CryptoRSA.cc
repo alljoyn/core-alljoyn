@@ -133,7 +133,7 @@ QStatus Crypto_RSA::MakeSelfCertificate(const qcc::String& commonName, const qcc
         cert = NULL;
     }
     // Generate a key pair
-    Generate(512);
+    Generate(RSA_DEFAULT_BITLEN);
     if (!key) {
         return ER_CRYPTO_ERROR;
     }
