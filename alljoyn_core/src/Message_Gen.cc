@@ -1015,7 +1015,7 @@ ExitMarshalMessage:
     return status;
 }
 
-QStatus _Message::HelloMessage(bool isBusToBus, bool allowRemote, SessionOpts::NameTransferType nameType)
+QStatus _Message::HelloMessage(bool isBusToBus, bool allowRemote, int nameType)
 {
     if (!bus->IsStarted()) {
         return ER_BUS_BUS_NOT_STARTED;
@@ -1025,7 +1025,7 @@ QStatus _Message::HelloMessage(bool isBusToBus, bool allowRemote, SessionOpts::N
 }
 
 QStatus _Message::HelloMessage(bool isBusToBus, const qcc::String& sender, bool allowRemote,
-                               const qcc::String& guid, SessionOpts::NameTransferType nameType)
+                               const qcc::String& guid, int nameType)
 {
     QStatus status;
     CompressionRules unused; /* Only needed if flags includes ALLJOYN_FLAG_COMPRESSED */
@@ -1071,7 +1071,7 @@ QStatus _Message::HelloMessage(bool isBusToBus, const qcc::String& sender, bool 
     return status;
 }
 
-QStatus _Message::HelloReply(bool isBusToBus, const qcc::String& uniqueName, SessionOpts::NameTransferType nameType)
+QStatus _Message::HelloReply(bool isBusToBus, const qcc::String& uniqueName, int nameType)
 {
     if (!bus->IsStarted()) {
         return ER_BUS_BUS_NOT_STARTED;
@@ -1080,7 +1080,7 @@ QStatus _Message::HelloReply(bool isBusToBus, const qcc::String& uniqueName, Ses
                       bus->GetInternal().GetGlobalGUID().ToString(), nameType);
 }
 
-QStatus _Message::HelloReply(bool isBusToBus, const qcc::String& sender, const qcc::String& uniqueName, const qcc::String& guid, SessionOpts::NameTransferType nameType)
+QStatus _Message::HelloReply(bool isBusToBus, const qcc::String& sender, const qcc::String& uniqueName, const qcc::String& guid, int nameType)
 {
     QStatus status;
     CompressionRules unused; /* Only needed if flags includes ALLJOYN_FLAG_COMPRESSED */
