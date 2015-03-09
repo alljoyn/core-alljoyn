@@ -16,6 +16,7 @@
 
 package org.alljoyn.bus;
 
+import java.io.Closeable;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -46,7 +47,7 @@ import org.alljoyn.bus.annotation.BusInterface;
  * <li> the hosting peer stopped responding to Ping requests
  * </ul>
  */
-public class Observer {
+public class Observer implements Closeable {
     /**
      * Listener for object life cycle events
      */
@@ -126,13 +127,29 @@ public class Observer {
     }
 
     /**
+     * Closes this observer and frees up any resource attached to it.
+     *
+     * @see java.io.Closeable#close()
+     */
+    @Override
+    public synchronized void close() {
+        // Add an explicit close function, so we don't have to rely on the
+        // finalizer to clean-up.
+        destroy();
+        listeners.clear();
+        proxies.clear();
+        interfaceMap.clear();
+        bus = null;
+    }
+
+    /**
      * Register an {@link Observer.Listener}.
      *
      * @param listener the listener to register
      * @param triggerOnExisting indicates whether the listener's
-     *                          objectDiscovered callback should be invoked for
-     *                          all objects that have been discovered prior to
-     *                          the registration of this listener.
+     *            objectDiscovered callback should be invoked for all objects
+     *            that have been discovered prior to the registration of this
+     *            listener.
      */
     public synchronized void registerListener(Listener listener, boolean triggerOnExisting) {
         listeners.add(new WrappedListener(listener, !triggerOnExisting));
@@ -149,7 +166,7 @@ public class Observer {
      *
      * @param listener the listener to register
      */
-    public synchronized void registerListener(Listener listener) {
+    public void registerListener(Listener listener) {
         registerListener(listener, true);
     }
 
@@ -236,7 +253,7 @@ public class Observer {
     @Override
     protected void finalize() throws Throwable {
         try {
-            destroy();
+            close();
         } finally {
             super.finalize();
         }
@@ -255,7 +272,7 @@ public class Observer {
     /**
      * Destroy native counterpart.
      */
-    private synchronized native void destroy();
+    private native void destroy();
 
     /**
      * Make native call us back on the dispatcher thread.

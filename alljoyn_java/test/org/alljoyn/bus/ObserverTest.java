@@ -273,13 +273,13 @@ public class ObserverTest extends TestCase {
 
     @Override
     public void tearDown() throws Exception {
+        for (Observer observer : observers) {
+            observer.close();
+        }
         for (Participant participant : participants) {
             participant.stop();
         }
         participants.clear();
-        for (Observer observer : observers) {
-            observer.unregisterAllListeners();
-        }
         assertFalse(failure);
         System.gc();
         System.gc();
@@ -543,6 +543,32 @@ public class ObserverTest extends TestCase {
         } catch (BusException e) {
             fail("method call failed: " + e);
         }
+    }
+
+    public void testClose() throws Exception {
+        Participant provider = new Participant("prov");
+        Participant consumer = new Participant("cons");
+        final Observer obs = newObserver(consumer, InterfaceA.class);
+        final ObserverListener listener = new ObserverListener(consumer);
+        obs.registerListener(listener);
+        provider.createA(A);
+        provider.registerObject(A);
+        waitForEvent(listener);
+
+        ProxyBusObject pbo = obs.getFirst();
+        assertNotNull(pbo);
+
+        obs.close();
+        obs.close();
+        obs.registerListener(listener);
+        assertNull(obs.getFirst());
+        assertNull(obs.get(pbo.getBusName(), pbo.getObjPath()));
+        assertNull(obs.getNext(pbo));
+        obs.unregisterListener(listener);
+        obs.unregisterAllListeners();
+        obs.close();
+        Thread.sleep(100);
+        listener.expectInvocations(0);
     }
 
     public void testSimple() {
