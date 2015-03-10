@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2011, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -32,7 +32,7 @@
 
 QStatus qcc::Crypto_GetRandomBytes(uint8_t* data, size_t len)
 {
-    if (BCryptGenRandom(NULL, data, len, BCRYPT_USE_SYSTEM_PREFERRED_RNG) <= 0) {
+    if (BCRYPT_SUCCESS(BCryptGenRandom(NULL, data, len, BCRYPT_USE_SYSTEM_PREFERRED_RNG))) {
         return ER_OK;
     } else {
         return ER_FAIL;

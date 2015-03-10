@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2015, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -488,6 +488,10 @@ class BusAttachment : public MessageReceiver {
     /**
      * Disconnect a remote bus address connection.
      *
+     * @deprecated When bundled router is enabled and in-use, the connectSpec
+     * will be ignored and the bundled router connectSpec will be used.  Use
+     * Disconnect() instead which will use correct connectSpec.
+     *
      * @param connectSpec  The transport connection spec used to connect.
      *
      * @return
@@ -496,7 +500,7 @@ class BusAttachment : public MessageReceiver {
      *          - #ER_BUS_NOT_CONNECTED if the %BusAttachment is not connected to the bus
      *          - Other error status codes indicating a failure
      */
-    QStatus Disconnect(const char* connectSpec);
+    QCC_DEPRECATED(QStatus Disconnect(const char* connectSpec));
 
     /**
      * %Disconnect the %BusAttachment from the remote bus.
@@ -1116,8 +1120,12 @@ class BusAttachment : public MessageReceiver {
 
     /**
      * Join a session.
+     *
      * This method is a shortcut/helper that issues an org.alljoyn.Bus.JoinSession method call to the local router
      * and interprets the response.
+     *
+     * All transports specified in opts will be tried.  If the join fails over one of the transports, the join will
+     * be tried over subsequent ones until all are tried until the join succeeds or they all fail.
      *
      * @param[in]  sessionHost      Bus name of attachment that is hosting the session to be joined.
      * @param[in]  sessionPort      SessionPort of sessionHost to be joined.
@@ -1135,8 +1143,12 @@ class BusAttachment : public MessageReceiver {
 
     /**
      * Join a session.
+     *
      * This method is a shortcut/helper that issues an org.alljoyn.Bus.JoinSession method call to the local router
      * and interprets the response.
+     *
+     * All transports specified in opts will be tried.  If the join fails over one of the transports, the join will
+     * be tried over subsequent ones until all are tried until the join succeeds or they all fail.
      *
      * This call executes asynchronously. When the JoinSession response is received, the callback will be called.
      *

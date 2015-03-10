@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2011, 2014-2015, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -24,8 +24,7 @@
 #include <qcc/Debug.h>
 #include <qcc/Logger.h>
 #include <qcc/Util.h>
-
-#ifndef NDEBUG
+#if !defined(NDEBUG) || defined(QCC_OS_GROUP_WINDOWS)
 #include <qcc/StringUtil.h>
 #endif
 
@@ -75,8 +74,7 @@ using namespace std;
 #define RULE_RECEIVE    (0x1 << 2)
 #define RULE_CONNECT    (0x1 << 3)
 
-
-#ifndef NDEBUG
+#if !defined(NDEBUG) || defined(QCC_OS_GROUP_WINDOWS)
 static String IDSet2String(const _PolicyDB::IDSet& idset)
 {
     String ids;
@@ -384,7 +382,7 @@ bool _PolicyDB::AddRule(PolicyRuleList& ownList,
         }
     }
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) || defined(QCC_OS_GROUP_WINDOWS)
     if (!success && (policyGroup != RULE_UNKNOWN)) {
         Log(LOG_ERR, "Invalid attribute \"%s\" in \"%s\".\n", attr->first.c_str(), rule.ruleString.c_str());
     }
@@ -859,7 +857,6 @@ bool _PolicyDB::OKToSend(const NormalizedMsgHdr& nmh, BusEndpoint& dest, const I
                    (dest->IsValid() ? dest->GetUniqueName().c_str() : ""),
                    nmh.msg->GetSender(), IDSet2String(nmh.senderIDSet).c_str(),
                    nmh.msg->GetDestination(), IDSet2String(*destIDSet).c_str()));
-
 
     uint32_t destUid = -1;
     uint32_t destGid = -1;

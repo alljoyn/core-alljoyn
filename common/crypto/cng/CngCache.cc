@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2014-2015, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -59,7 +59,7 @@ static void CloseAlgorithmProvider(BCRYPT_ALG_HANDLE* handle)
         return;
     }
     NTSTATUS ntStatus = BCryptCloseAlgorithmProvider(*handle, 0);
-    if (ntStatus < 0) {
+    if (!BCRYPT_SUCCESS(ntStatus)) {
         QCC_LogError(ER_OS_ERROR, ("BCryptCloseAlgorithmProvider failed NTSTATUS=0x%x", ntStatus));
     }
     *handle = NULL;

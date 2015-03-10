@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -81,6 +81,13 @@ class FileSource : public Source {
 
     /** Destructor */
     virtual ~FileSource();
+
+    /**
+     * Return the size of the file
+     *
+     * @param fileSize The size of the file in bytes
+     */
+    QStatus GetSize(int64_t& fileSize);
 
     /**
      * Pull bytes from the source.

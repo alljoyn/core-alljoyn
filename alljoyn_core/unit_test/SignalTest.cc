@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014-2015, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -714,7 +714,7 @@ TEST_F(SignalTest, Rules) {
     recvBn.verify_norecv();
 }
 
-/* This is a blocking test. The idea is to send out 12 signals, the first signal hanlder
+/* This is a blocking test. The idea is to send out 12 signals, the first signal handler
    will sleep for SLEEP_TIME, as a result of which the SendSignal should block for approx
    SLEEP_TIME ms until that signal handler returns.
  */

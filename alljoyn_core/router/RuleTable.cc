@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011,2014 AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -52,7 +52,9 @@ QStatus RuleTable::RemoveRule(BusEndpoint& endpoint, Rule& rule)
     std::pair<RuleIterator, RuleIterator> range = rules.equal_range(endpoint);
     while (range.first != range.second) {
         if (range.first->second == rule) {
-            rules.erase(range.first);
+            const RuleIterator begin = range.first;
+            const RuleIterator end = ++range.first;
+            rules.erase(begin, end);
             status = ER_OK;
             break;
         }

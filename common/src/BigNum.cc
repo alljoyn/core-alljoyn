@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2011, 2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -89,6 +89,11 @@ class BigNum::Storage {
         size_t mallocSz = sizeof(Storage) + (sz + extra) * sizeof(uint32_t);
         uint8_t* p = (uint8_t*)malloc(mallocSz);
         assert(p);
+        if (NULL == p) {
+            /* We could return NULL from this function, but right now nothing that calls
+             * this function is designed to cope with that. Just abort. */
+            abort();
+        }
         Storage* s = new (p)Storage();
         s->buffer = reinterpret_cast<uint32_t*>(p + sizeof(Storage));
         s->size = sz + extra;
@@ -258,7 +263,7 @@ bool BigNum::set_hex(const qcc::String& number)
         storage = NULL;
     }
     // Check for negation
-    if (p[0] == '-') {
+    if ((len >= 1) && (p[0] == '-')) {
         ++p;
         --len;
         neg = true;
@@ -266,12 +271,12 @@ bool BigNum::set_hex(const qcc::String& number)
         neg = false;
     }
     // Check for 0x prefix
-    if (p[0] == '0' && p[1] == 'x') {
+    if ((len >= 2) && (p[0] == '0') && (p[1] == 'x')) {
         p += 2;
         len -= 2;
     }
     // Skip leading zeroes
-    while (*p == '0') {
+    while ((len > 0) && (*p == '0')) {
         ++p;
         --len;
     }
@@ -286,7 +291,7 @@ bool BigNum::set_hex(const qcc::String& number)
     // Build in little-endian order
     uint32_t* v = digits;
     p += len - 1;
-    while (len) {
+    while (len > 0) {
         uint32_t n = 0;
         for (int i = 0; (i < 32) && len; i += 4, --len) {
             if (*p >= '0' && *p <= '9') {
@@ -511,7 +516,7 @@ BigNum BigNum::operator-(const BigNum& n) const
         xLen = length;
         while (digits[xLen - 1] == n.digits[xLen - 1]) {
             if (--xLen == 0) {
-                return 0;
+                return zero;
             }
         }
         if (digits[xLen - 1] > n.digits[xLen - 1]) {
@@ -677,11 +682,11 @@ BigNum BigNum::div(const BigNum& divisor, BigNum& rem) const
     switch (compare(x, y)) {
     case -1:
         rem = *this;
-        return 0;
+        return zero;
 
     case 0:
         rem = zero;
-        return 1;
+        return BigNum(static_cast<uint32_t>(1));
 
     default:
         break;
@@ -990,46 +995,6 @@ BigNum BigNum::mod_exp(const BigNum& e, const BigNum& m) const
     }
 }
 
-// Modular inverse
-BigNum BigNum::mod_inv(const BigNum& mod) const
-{
-    BigNum u = *this;
-
-    BigNum inv;
-    BigNum u1(1);
-    BigNum u3(u);
-    BigNum v1(0);
-    BigNum v3(mod);
-    BigNum t1;
-    BigNum t3;
-    BigNum q;
-
-    int iter = 1;
-
-    while (v3 != 0) {
-        q = u3 / v3;
-        t3 = u3 % v3;
-        t1 = u1 + q * v1;
-
-        u1 = v1;
-        v1 = t1;
-        u3 = v3;
-        v3 = t3;
-        iter = -iter;
-    }
-
-    if (u3 != 1) {
-        return 0;  // error, there is no inverse
-
-    }
-    if (iter < 0) {
-        inv = mod - u1;
-    } else {
-        inv = u1;
-    }
-
-    return inv;
-}
 
 int BigNum::compare(const BigNum& a, const BigNum& b)
 {

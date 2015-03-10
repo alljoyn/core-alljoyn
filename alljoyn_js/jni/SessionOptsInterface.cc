@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2012, 2014 AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -28,22 +28,23 @@ std::map<qcc::String, int32_t>& _SessionOptsInterface::Constants()
         CONSTANT("TRAFFIC_RAW_UNRELIABLE", 0x02);
         CONSTANT("TRAFFIC_RAW_RELIABLE",   0x04);
 
-        CONSTANT("PROXIMITY_ANY",      0xFF);
-        CONSTANT("PROXIMITY_PHYSICAL", 0x01);
-        CONSTANT("PROXIMITY_NETWORK",  0x02);
+        CONSTANT("PROXIMITY_ANY",          0xFF);
+        CONSTANT("PROXIMITY_PHYSICAL",     0x01);
+        CONSTANT("PROXIMITY_NETWORK",      0x02);
 
-        CONSTANT("TRANSPORT_NONE",      0x0000);
-        CONSTANT("TRANSPORT_LOCAL",     0x0001);
-        CONSTANT("TRANSPORT_WLAN",      0x0004);
-        CONSTANT("TRANSPORT_WWAN",      0x0008);
-        CONSTANT("TRANSPORT_LAN",       0x0010);
-        CONSTANT("TRANSPORT_PROXIMITY", 0x0040);
+        CONSTANT("TRANSPORT_NONE",         0x0000);
+        CONSTANT("TRANSPORT_LOCAL",        0x0001);
+        CONSTANT("TRANSPORT_TCP",          0x0004);
+        CONSTANT("TRANSPORT_UDP",          0x0100);
+        CONSTANT("TRANSPORT_EXPERIMENTAL", 0x8000);
+        CONSTANT("TRANSPORT_IP",           0x0104);
+        CONSTANT("TRANSPORT_ANY",          0x0105);
 
-        CONSTANT("TRANSPORT_TCP",       0x0004);
-        CONSTANT("TRANSPORT_UDP",       0x0100);
-        CONSTANT("TRANSPORT_IP",        0x0104);
+//      CONSTANT("TRANSPORT_WLAN",         0x0004);
+//      CONSTANT("TRANSPORT_WWAN",         0x0008);
+//      CONSTANT("TRANSPORT_LAN",          0x0010);
+//      CONSTANT("TRANSPORT_PROXIMITY",    0x0040);
 
-        CONSTANT("TRANSPORT_ANY",       0xFF7F);
     }
     return constants;
 }

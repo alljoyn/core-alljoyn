@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2011, 2014-2015, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -221,7 +221,7 @@ class _PolicyDB {
         bool groupAny;                  /**< indicates if group has been set to "*" */
         uint32_t group;                 /**< numeric group id */
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) || defined(QCC_OS_GROUP_WINDOWS)
         qcc::String ruleString;         /**< regenerated xml rule string for debugging purposes */
 #endif
 
@@ -491,7 +491,7 @@ class NormalizedMsgHdr {
      * @param policy    Pointer to the PolicyDB
      */
     NormalizedMsgHdr(const Message& msg, const PolicyDB& policy, BusEndpoint& sender) :
-#ifndef NDEBUG
+#if !defined(NDEBUG) || defined(QCC_OS_GROUP_WINDOWS)
         msg(msg),
 #endif
         ifcID(policy->LookupStringID(msg->GetInterface())),
@@ -529,7 +529,7 @@ class NormalizedMsgHdr {
   private:
     friend class _PolicyDB;  /**< Give PolicyDB access to the internals */
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) || defined(QCC_OS_GROUP_WINDOWS)
     const Message msg;                      /**< Reference to original message for debug purposes */
 #endif
     StringID ifcID;                         /**< normalized interface name */

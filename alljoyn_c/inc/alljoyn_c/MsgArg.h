@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -575,7 +575,7 @@ extern AJ_API void AJ_CALL alljoyn_msgarg_stabilize(alljoyn_msgarg arg);
 extern AJ_API QStatus AJ_CALL alljoyn_msgarg_array_set_offset(alljoyn_msgarg args, size_t argOffset, size_t* numArgs, const char* signature, ...);
 
 /**
- * This function is identical to alljoyn_msgarg_set except after the the values
+ * This function is identical to alljoyn_msgarg_set except after the values
  * in the message arg have been set the alljoyn_msgarg will be stabilized.
  * This is useful when the call is made from a manage language like C sharp where
  * objects like strings may be garbage collected.
@@ -1486,7 +1486,7 @@ extern AJ_API QStatus AJ_CALL alljoyn_msgarg_setstruct(alljoyn_msgarg arg, alljo
  */
 extern AJ_API size_t AJ_CALL alljoyn_msgarg_getnummembers(alljoyn_msgarg arg);
 /*
- * obtain the the member of an AllJoyn struct it the index location
+ * obtain the member of an AllJoyn struct at the index location
  * @remark This function exists for development of other language bindings and may
  *         be changed or removed in future updates and should not be used for reading
  *         values from an alljoyn_msgarg.

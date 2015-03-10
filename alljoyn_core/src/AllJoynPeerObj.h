@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2012, 2014 AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -371,7 +371,7 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
      *
      * @param busName        The well-known name that has changed.
      * @param previousOwner  The unique name that previously owned the name or NULL if there was no previous owner.
-     * @param newOwner       The unique name that now owns the name or NULL if the there is no new owner.
+     * @param newOwner       The unique name that now owns the name or NULL if there is no new owner.
      */
     void NameOwnerChanged(const char* busName, const char* previousOwner, const char* newOwner);
 

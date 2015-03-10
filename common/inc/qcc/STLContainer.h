@@ -6,7 +6,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2012, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -27,11 +27,11 @@
 
 #include <qcc/platform.h>
 
-
 /***************************
  * STANDARD C++11
  ***************************/
-#if (__cplusplus >= 201100L) && !defined(QCC_OS_DARWIN)
+
+#if (__cplusplus >= 201100L)
 /*
  * The compiler is conformant to the C++11 standard.  Use unordered_map,
  * etc. directly.
@@ -49,12 +49,10 @@
  * map compiler specific arrangements to match the standard arrangement.
  */
 
-
-
 /***************************
  * DARWIN
  ***************************/
-#if defined(QCC_OS_DARWIN)
+#if defined(QCC_OS_DARWIN) && (__cplusplus < 201100L)
 /*
  * Darwin (Mac OSX and iOS) currently put unordered_map, etc. under the tr1
  * subdirectory and place their template classes in the std::tr1 namespace.
@@ -99,7 +97,6 @@ using namespace std::tr1;
  */
 #define _BEGIN_NAMESPACE_CONTAINER_FOR_HASH namespace std { namespace tr1 {
 #define _END_NAMESPACE_CONTAINER_FOR_HASH } }
-
 namespace std {
 /*
  * Map everything in the std::tr1 namespace to the std namespace.

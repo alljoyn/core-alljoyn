@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2013, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -1639,7 +1639,6 @@ bool _BusAttachmentHost::connect(const NPVariant* args, uint32_t argCount, NPVar
 
     if ((ER_OK == status) && !(*busAttachment)->IsConnected()) {
         status = Connect(plugin, connectSpec.c_str());
-        this->connectSpec = connectSpec;
     }
 
     CallbackNative::DispatchCallback(plugin, callbackNative, status);
@@ -1892,7 +1891,7 @@ bool _BusAttachmentHost::disconnect(const NPVariant* args, uint32_t argCount, NP
     }
 
     if ((*busAttachment)->IsStarted() && !(*busAttachment)->IsStopping() && (*busAttachment)->IsConnected()) {
-        status = (*busAttachment)->Disconnect(connectSpec.c_str());
+        status = (*busAttachment)->Disconnect();
     }
 
     if ((ER_OK == status) && (*busAttachment)->IsStarted()) {

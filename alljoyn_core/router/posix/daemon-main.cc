@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2015, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -53,10 +53,6 @@
 #include "DaemonTransport.h"
 #if defined(QCC_OS_LINUX)
 #include "DaemonSLAPTransport.h"
-#endif
-
-#if defined(QCC_OS_ANDROID)
-//#include "android/WFDTransport.h"
 #endif
 
 #include "Bus.h"
@@ -131,7 +127,7 @@ static const char internalConfig[] =
 
 static const char versionPreamble[] =
     "AllJoyn Message Bus Daemon version: %s\n"
-    "Copyright (c) 2009-2015 AllSeen Alliance.\n"
+    "Copyright AllSeen Alliance.\n"
     "\n"
     "Build: %s\n";
 
@@ -166,9 +162,6 @@ class OptParse {
         noSLAP(false),
         noTCP(false),
         noUDP(false),
-#if defined(QCC_OS_ANDROID)
-        noWFD(false),
-#endif
 #if defined(QCC_OS_DARWIN)
         noLaunchd(false),
 #endif
@@ -199,11 +192,6 @@ class OptParse {
     bool GetNoUDP() const {
         return noUDP;
     }
-#if defined(QCC_OS_ANDROID)
-    bool GetNoWFD() const {
-        return noWFD;
-    }
-#endif
 #if defined(QCC_OS_DARWIN)
     bool GetNoLaunchd() const {
         return noLaunchd;
@@ -238,9 +226,6 @@ class OptParse {
     bool noSLAP;
     bool noTCP;
     bool noUDP;
-#if defined(QCC_OS_ANDROID)
-    bool noWFD;
-#endif
 #if defined(QCC_OS_DARWIN)
     bool noLaunchd;
 #endif
@@ -268,9 +253,6 @@ void OptParse::PrintUsage() {
         "%*s [--print-address[=DESCRIPTOR]] [--print-pid[=DESCRIPTOR]]\n"
         "%*s [--fork | --nofork] "
         "[--no-slap] [--no-tcp] [--no-udp] "
-#if defined(QCC_OS_ANDROID)
-        "[--no-wfd] "
-#endif
 #if defined(QCC_OS_DARWIN)
         "[--no-launchd]"
 #endif
@@ -302,10 +284,6 @@ void OptParse::PrintUsage() {
         "        Disable the TCP transport (override config file setting).\n\n"
         "    --no-udp\n"
         "        Disable the UDP transport (override config file setting).\n\n"
-#if defined(QCC_OS_ANDROID)
-        "    --no-wfd\n"
-        "        Disable the Wifi-Direct transport (override config file setting).\n\n"
-#endif
 #if defined(QCC_OS_DARWIN)
         "    --no-launchd\n"
         "        Disable the Launchd transport (override config file setting).\n\n"
@@ -439,10 +417,6 @@ OptParse::ParseResultCode OptParse::ParseResult()
             noTCP = true;
         } else if (arg.compare("--no-udp") == 0) {
             noUDP = true;
-#if defined(QCC_OS_ANDROID)
-        } else if (arg.compare("--no-wfd") == 0) {
-            noWFD = true;
-#endif
 #if defined(QCC_OS_DARWIN)
         } else if (arg.compare("--no-launchd") == 0) {
             noLaunchd = true;
@@ -538,10 +512,6 @@ int daemon(OptParse& opts) {
         } else if (addrStr.compare(0, sizeof("udp:") - 1, "udp:") == 0) {
             skip = opts.GetNoUDP();
 
-#if defined(QCC_OS_ANDROID)
-        } else if (addrStr.compare(0, sizeof("wfd:") - 1, "wfd:") == 0) {
-            skip = opts.GetNoWFD();
-#endif
         } else if (addrStr.compare(0, sizeof("slap:") - 1, "slap:") == 0) {
             skip = opts.GetNoSLAP();
 
@@ -575,9 +545,6 @@ int daemon(OptParse& opts) {
     cntr.Add(new TransportFactory<UDPTransport>(UDPTransport::TransportName, false));
 #if defined(QCC_OS_LINUX)
     cntr.Add(new TransportFactory<DaemonSLAPTransport>(DaemonSLAPTransport::TransportName, false));
-#endif
-#if defined(QCC_OS_ANDROID)
-//    cntr.Add(new TransportFactory<WFDTransport>(WFDTransport::TransportName, false));
 #endif
 
     Bus ajBus("alljoyn-daemon", cntr, listenSpecs.c_str());

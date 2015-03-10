@@ -6,7 +6,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2010, 2012, 2014 AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -28,45 +28,67 @@ namespace ajn {
 /** Bitmask of all transport types */
 typedef uint16_t TransportMask;
 
-const TransportMask TRANSPORT_NONE      = 0x0000;   /**< no transports */
-
-const TransportMask TRANSPORT_LOCAL     = 0x0001;   /**< Local (same device) transport */
-const TransportMask TRANSPORT_TCP       = 0x0004;   /**< Transport using TCP (same as TRANSPORT_WLAN) */
-const TransportMask TRANSPORT_WLAN      = 0x0004;   /**< Wireless local-area network transport (same as TRANSPORT_TCP) */
-const TransportMask TRANSPORT_WWAN      = 0x0008;   /**< Wireless wide-area network transport */
-const TransportMask TRANSPORT_LAN       = 0x0010;   /**< Wired local-area network transport */
-const TransportMask TRANSPORT_WFD       = 0x0080;   /**< Transport using Wi-Fi Direct transport (currently unused) */
-const TransportMask TRANSPORT_UDP       = 0x0100;   /**< Transport using the AllJoyn Reliable Datagram Protocol (flavor of reliable UDP) */
+const TransportMask TRANSPORT_NONE          = 0x0000;  /**< no transports */
+const TransportMask TRANSPORT_LOCAL         = 0x0001;  /**< Local (same device) transport */
+const TransportMask TRANSPORT_TCP           = 0x0004;  /**< Transport using TCP as the underlying mechanism */
+const TransportMask TRANSPORT_UDP           = 0x0100;  /**< Transport using UDP as the underlying mechanism */
 
 /**
- * A constant indicating that any transport is acceptable.
+ * A placeholder for an experimental transport that has not yet reached the
+ * performance, stability or testing requirements of a commercialized transport.
  *
- * It is the case that (1) certain topologies of AllJoyn distributed
- * applications can cause problems when run on Wi-Fi Direct substrate networks;
- * (2) the specifics of authentication in Wi-Fi Direct networks can also produce
- * surprising results in some AllJoyn topologies; and (3) there are
- * implementation problems in existing Wi-Fi Direct systems that prevent certain
- * AllJoyn topologies from forming.  Because these issues might produce
- * surprising results in existing applications that are unaware of the
- * limitations, we do no enable Wi-Fi Direct automatically.
+ * It is expected that each experimental Transport will alias this bit if
+ * included in an AllJoyn release and then allocate one of the reserved mask
+ * bits upon attaining commercialized status.
  *
- * Selecting ANY transport really means selecting ANY but Wi-Fi Direct.
+ * For example,
+ *     const TransportMask TRANSPORT_CAN_AND_STRING = TRANSPORT_EXPERIMENTAL
  */
-const TransportMask TRANSPORT_ANY       = (0xFFFF & ~TRANSPORT_WFD);
-
-/**
- * A constant indicating that literally any transport is acceptable.  It is
- * typically used in the routing node to enable advertisements over all
- * transports.
- */
-const TransportMask TRANSPORT_ALL       = (0xFFFF);
+const TransportMask TRANSPORT_EXPERIMENTAL  = 0x8000;
 
 /**
  * A constant indicating that any IP-based transport is acceptable.  It is left
- * up to the system to decide which of the available transports is best suited
- * to the implied situation.
+ * up to the system to decide which of the available transports is "best."
  */
 const TransportMask TRANSPORT_IP        = (TRANSPORT_TCP | TRANSPORT_UDP);
+
+/**
+ * A constant indicating that any commericalized transport is acceptable.  As
+ * more transports are introduced and reach commercial quality, we expect the
+ * corresponding mask bits to be added here.
+ */
+const TransportMask TRANSPORT_ANY       = (TRANSPORT_LOCAL | TRANSPORT_IP);
+
+/**
+ * Obsolete mask indicating that any transport as long as it is running over the
+ * local wireless local area network is acceptable.
+ *
+ * @deprecated February 2015 for 15.04 release
+ */
+QCC_DEPRECATED(const TransportMask TRANSPORT_WLAN) = 0x0004;   /**< Wireless local-area network transport (same as TRANSPORT_TCP) */
+
+/**
+ * Obsolete mask indicating that any transport as long as it is running over the
+ * local wireless wide area network is acceptable.
+ *
+ * @deprecated February 2015 for 15.04 release
+ */
+QCC_DEPRECATED(const TransportMask TRANSPORT_WWAN) = 0x0008;   /**< Wireless wide-area network transport */
+
+/**
+ * Obsolete mask indicating that any transport as long as it is running over the
+ * (non-wireless) local area network -- Ethernet -- is acceptable.
+ *
+ * @deprecated February 2015 for 15.04 release
+ */
+QCC_DEPRECATED(const TransportMask TRANSPORT_LAN) = 0x0010;   /**< Wired local-area network transport */
+
+/**
+ * Obsolete mask indicating that the Wi-Fi Direct Transport is acceptable.
+ *
+ * @deprecated February 2015 for 15.04 release
+ */
+QCC_DEPRECATED(const TransportMask TRANSPORT_WFD) = 0x0080;   /**< Transport using Wi-Fi Direct transport (currently unused) */
 
 }
 

@@ -7,7 +7,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -42,6 +42,16 @@ namespace qcc {
 class Crypto_RSA {
 
   public:
+
+    /**
+     *  Default bitlength for RSA key generation.  Used when generating self-signed certificates.
+     *  Currently set to 2048 bits to match guidance in NIST Special Publication 800-57,
+     *  Recommendation for Key Management -- Part 1: General (Revision 3).  SP 800-57 states that
+     *  1024-bit RSA is disallowed after 2014, and that 2048-bit RSA is acceptable for use between
+     *  2014 and 2030.  This default should be updated to match guidance in future revisions of
+     *  SP 800-57.
+     */
+    static const size_t RSA_DEFAULT_BITLEN = 2048;
 
     /**
      * Class for calling back to get a passphrase for encrypting or decrypting a private key.
@@ -732,7 +742,7 @@ class Crypto_SRP {
      * that encodes the startup parameters.
      *
      * @param fromServer   Hex-encoded parameter string from the server.
-     * @param toServer     Retusn a hex-encode parameter string to be sent to the server.
+     * @param toServer     Returns a hex-encoded parameter string to be sent to the server.
      *
      * @return  - ER_OK if the initialization was succesful.
      *          - ER_BAD_STRING_ENCODING if the hex-encoded parameter block is badly formed.

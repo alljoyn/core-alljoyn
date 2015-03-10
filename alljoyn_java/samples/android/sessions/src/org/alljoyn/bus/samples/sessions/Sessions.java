@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -64,7 +64,7 @@ public class Sessions extends Activity {
     /* Configure the following three variables to suit your needs */
 
     /* Which transport(s) would you like to advertise on? */
-    private short AdvertiseOn = SessionOpts.TRANSPORT_WFD;
+    private short AdvertiseOn = SessionOpts.TRANSPORT_ANY;
 
     /* Enter the network credentials if you wish to connect AP from the application. */
     private String networkName = "Enter SSID";

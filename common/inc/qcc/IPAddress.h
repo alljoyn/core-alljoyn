@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, 2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -37,10 +37,6 @@
 
 /** @internal */
 #define QCC_MODULE "NETWORK"
-
-static const uint32_t MAX_IPV4_MTU = 576;    ///< Max UDP payload size for IPv4 defined in RFC 5389.
-static const uint32_t MAX_IPV6_MTU = 1280;   ///< Max UDP payload size for IPv6 defined in RFC 5389.
-
 
 namespace qcc {
 

@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2011, 2014-2015, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -1318,7 +1318,7 @@ TEST(MsgArgTest, MaximumLengthArrays_dictionary) {
     QStatus status;
     MsgArg arg;
     for (size_t i = 0; i < ALLJOYN_MAX_ARRAY_LEN; ++i) {
-        status = max_length_adictEntry[i].Set("{xx}", i, i);
+        status = max_length_adictEntry[i].Set("{xx}", static_cast<int64_t>(i), static_cast<int64_t>(i));
         EXPECT_EQ(ER_OK, status);
     }
     status = arg.Set("a{xx}", ALLJOYN_MAX_ARRAY_LEN, max_length_adictEntry);

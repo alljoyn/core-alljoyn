@@ -1,4 +1,4 @@
-# Copyright (c) 2010 - 2011, AllSeen Alliance. All rights reserved.
+# Copyright AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -19,7 +19,7 @@ import os
 # Darwin specific flags
 env.Append(CPPDEFINES=['QCC_OS_DARWIN'])
 
-env.Append(CPPLAGS=['-Wall',
+env.Append(CFLAGS=['-Wall',
                    '-pipe',
                    '-std=c99',
                    '-fno-strict-aliasing',
@@ -34,7 +34,7 @@ env.Append(CXXFLAGS=['-Wall',
                      '-Wno-deprecated'])
 
 # Debug/Release Variants
-if env['VARIANT'] == 'debug' or env['VARIANT'] == 'Debug':
+if env['VARIANT'] == 'debug':
    env.Append(CFLAGS='-g')
    env.Append(CXXFLAGS='-g')
    env.Append(JAVACFLAGS='-g -Xlint -Xlint:-serial')

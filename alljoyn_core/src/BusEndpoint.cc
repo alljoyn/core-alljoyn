@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -35,8 +35,8 @@ String _BusEndpoint::GetControllerUniqueName() const {
 
     /* An endpoint with unique name :X.Y has a controller with a unique name :X.1 */
     String ret = GetUniqueName();
-    ret[qcc::GUID128::SHORT_SIZE + 2] = '1';
-    ret.resize(qcc::GUID128::SHORT_SIZE + 3);
+    ret[qcc::GUID128::SIZE_SHORT + 2] = '1';
+    ret.resize(qcc::GUID128::SIZE_SHORT + 3);
     return ret;
 }
 

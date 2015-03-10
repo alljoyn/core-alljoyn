@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009-2011, 2014 AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -72,7 +72,7 @@ public class SessionOpts {
     /**
      * Use reliable message-based communication to move data between session endpoints.
      */
-    public static final byte TRAFFIC_MESSAGES       = 0x01;
+    public static final byte TRAFFIC_MESSAGES = 0x01;
 
     /**
      * Use unreliable (e.g., UDP) socket-based communication to move data between
@@ -90,13 +90,13 @@ public class SessionOpts {
      * sense --MESSAGE encapsulation is not used, but for example UDP + IP + MAC
      * encapsulation is used.
      */
-    public static final byte TRAFFIC_RAW_RELIABLE   = 0x04;
+    public static final byte TRAFFIC_RAW_RELIABLE = 0x04;
 
     /**
      * Do not limit the spatial scope of sessions.  This means that sessions may
      * be joined by jointers located anywhere.
      */
-    public static final byte PROXIMITY_ANY      = (byte)0xff;
+    public static final byte PROXIMITY_ANY = (byte)0xff;
 
     /**
      * Limit the spatial scope of sessions to the local host.  Interpret as
@@ -111,67 +111,42 @@ public class SessionOpts {
      * network segment.  This means that sessions may be joined by jointers
      * located somewhere on the network.
      */
-    public static final byte PROXIMITY_NETWORK  = 0x02;
+    public static final byte PROXIMITY_NETWORK = 0x02;
 
     /**
      * Use no transport to communicate with a given session.
      */
-    public static final short TRANSPORT_NONE      = 0x0000;
+    public static final short TRANSPORT_NONE = 0x0000;
 
     /**
      * Use only the local transport to communicate with a given session.
      */
-    public static final short TRANSPORT_LOCAL     = 0x0001;
+    public static final short TRANSPORT_LOCAL = 0x0001;
 
     /**
-     * Use only a wireless local area network to communicate with a given session.
+     * Use the TCP Transport to communicate with a given session.
      */
-    public static final short TRANSPORT_WLAN      = 0x0004;
-
-    /**
-     * Transport using TCP (same as TRANSPORT_WLAN)
-     */
-    public static final short TRANSPORT_TCP       = TRANSPORT_WLAN;
-
-    /**
-     * Use only a wireless wide area network to communicate with a given session.
-     */
-    public static final short TRANSPORT_WWAN      = 0x0008;
-
-    /**
-     * Use only a wired local area network to communicate with a given session.
-     */
-    public static final short TRANSPORT_LAN      = 0x0010;
-
-    /**
-     * Use only the Wi-Fi Direct transport to communicate with a given session.
-     */
-    public static final short TRANSPORT_WFD      = 0x0080;
+    public static final short TRANSPORT_TCP = 0x0004;
 
     /**
      * Use only the AllJoyn Reliable Datagram Protocol (flavor of reliable UDP)
      * to communicate with a given session.
      */
-    public static final short TRANSPORT_UDP      = 0x0100;
+    public static final short TRANSPORT_UDP = 0x0100;
 
     /**
-     * Use any available transport to communicate with a given session.
+     * A placeholder for an experimental transport that has not yet reached the
+     * performance, stability or testing requirements of a commercialized
+     * transport.
      *
-     * It is the case that (1) certain topologies of AllJoyn distributed
-     * applications can cause problems when run on Wi-Fi Direct substrate
-     * networks; (2) the specifics of authentication in Wi-Fi Direct networks
-     * can also produce surprising results in some AllJoyn topologies; and (3)
-     * there are implementation problems in existing Wi-Fi Direct systems that
-     * prevent certain AllJoyn topologies from forming.  Because these issues
-     * might produce surprising results in existing applications that are
-     * unaware of the limitations, we do no enable Wi-Fi Direct automatically.
+     * It is expected that each experimental Transport will alias this bit if
+     * included in an AllJoyn release and then allocate one of the reserved mask
+     * bits upon attaining commercialized status.
      *
-     * Selecting ANY transport really means selecting ANY but Wi-Fi Direct.  In
-     * order to enable discovery over Wi-Fi Direct, and use of the Wi-Fi Direct
-     * transport an application author must positively act and OR in the
-     * TRANSPORT_WFD bit.
+     * For example,
+     *     public static final short TRANSPORT_CAN_AND_STRING = TRANSPORT_EXPERIMENTAL
      */
-    public static final short TRANSPORT_ANY       = (short)0xffff & ~TRANSPORT_WFD;
+    public static final short TRANSPORT_EXPERIMENTAL = (short)0x8000;
 
     /**
      * Use any available IP-based transport to communicate with a given session.
@@ -179,7 +154,12 @@ public class SessionOpts {
      * Selecting the IP transport really implies letting the system decice which
      * transport is best.
      */
-    public static final short TRANSPORT_IP       = (TRANSPORT_TCP | TRANSPORT_UDP);
+    public static final short TRANSPORT_IP = (TRANSPORT_TCP | TRANSPORT_UDP);
+
+    /**
+     * Use any available non-experimental transport to communicate with a given session.
+     */
+    public static final short TRANSPORT_ANY = (TRANSPORT_LOCAL | TRANSPORT_IP);
 
     public String toString( ) {
         StringBuilder result = new StringBuilder();
@@ -206,11 +186,34 @@ public class SessionOpts {
         value = String.format("(0x%04x)", transports);
         result.append(value);
         if ((transports & TRANSPORT_LOCAL) != 0) result.append(" TRANSPORT_LOCAL");
-        if ((transports & TRANSPORT_WLAN) != 0) result.append(" TRANSPORT_WLAN");
-        if ((transports & TRANSPORT_WWAN) != 0) result.append(" TRANSPORT_WWAN");
-        if ((transports & TRANSPORT_WFD) != 0) result.append(" TRANSPORT_WFD");
+        if ((transports & TRANSPORT_TCP) != 0) result.append(" TRANSPORT_TCP");
+        if ((transports & TRANSPORT_UDP) != 0) result.append(" TRANSPORT_UDP");
 
         result.append("}");
         return result.toString();
     }
+
+    /**
+     * Use only a wireless local area network to communicate with a given session.
+     * @deprecated
+     */
+    @Deprecated public static final short TRANSPORT_WLAN = 0x0004;
+
+    /**
+     * Use only a wireless wide area network to communicate with a given session.
+     * @deprecated
+     */
+    @Deprecated public static final short TRANSPORT_WWAN = 0x0008;
+
+    /**
+     * Use only a wired local area network to communicate with a given session.
+     * @deprecated
+     */
+    @Deprecated public static final short TRANSPORT_LAN = 0x0010;
+
+    /**
+     * Use only the Wi-Fi Direct transport to communicate with a given session.
+     * @deprecated
+     */
+    @Deprecated public static final short TRANSPORT_WFD = 0x0080;
 }

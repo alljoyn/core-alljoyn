@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Copyright (c) 2010-2012, 2014-2015, AllSeen Alliance. All rights reserved.
+# Copyright AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -145,7 +145,7 @@ def writeHeaders():
  * Note: This file is generated during the make process.
  */
 /******************************************************************************
- * Copyright (c) 2009-2015, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -209,7 +209,7 @@ typedef enum {""")
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2015, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above

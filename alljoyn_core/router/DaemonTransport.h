@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, 2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -162,16 +162,6 @@ class DaemonTransport : public Transport, public _RemoteEndpoint::EndpointListen
      * @param endpoint   Daemon RemoteEndpoint instance that has exited.
      */
     void EndpointExit(RemoteEndpoint& endpoint);
-
-    /**
-     * Callback indicating that an untrusted client is trying to connect to this daemon.
-     */
-    QStatus UntrustedClientStart();
-
-    /**
-     * Callback indicating that an untrusted client has disconnected from this daemon.
-     */
-    void UntrustedClientExit() { };
 
   protected:
     std::list<RemoteEndpoint> endpointList;   /**< List of active endpoints */

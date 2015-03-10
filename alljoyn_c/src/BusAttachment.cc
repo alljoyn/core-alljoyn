@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2014 AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -300,13 +300,10 @@ QCC_BOOL AJ_CALL alljoyn_busattachment_isconnected(const alljoyn_busattachment b
     return (((const ajn::BusAttachmentC*)bus)->IsConnected() == true ? QCC_TRUE : QCC_FALSE);
 }
 
-QStatus AJ_CALL alljoyn_busattachment_disconnect(alljoyn_busattachment bus, const char* connectSpec)
+QStatus AJ_CALL alljoyn_busattachment_disconnect(alljoyn_busattachment bus, const char* unused)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
-    if (connectSpec == NULL) {
-        return ((ajn::BusAttachmentC*)bus)->Disconnect(((ajn::BusAttachmentC*)bus)->GetConnectSpec().c_str());
-    }
-    return ((ajn::BusAttachmentC*)bus)->Disconnect(connectSpec);
+    return ((ajn::BusAttachmentC*)bus)->Disconnect();
 }
 
 const alljoyn_proxybusobject AJ_CALL alljoyn_busattachment_getdbusproxyobj(alljoyn_busattachment bus)

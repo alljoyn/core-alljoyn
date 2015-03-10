@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -51,7 +51,7 @@ class AboutData::Internal {
             }
         };
 
-        bool operator()(const qcc::String& lhs, const qcc::String& rhs)
+        bool operator()(const qcc::String& lhs, const qcc::String& rhs) const
         {
             return std::lexicographical_compare(lhs.begin(), lhs.end(),
                                                 rhs.begin(), rhs.end(),

@@ -8,7 +8,7 @@
 
 
 /******************************************************************************
- * Copyright (c) 2011, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -210,11 +210,6 @@ class BigNum {
     // @param e   The exponent
     // @param mod The modulus
     BigNum mod_exp(const BigNum& e, const BigNum& mod) const;
-
-    // Modular inverse
-    //
-    // @param mod The modulus
-    BigNum mod_inv(const BigNum& mod) const;
 
     // Returns the bit length of this BigNum
     size_t bit_len() const;

@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2012,2014-2015 AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -61,7 +61,7 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      * @param router         The DaemonRouter associated with the bus.
      * @param busController  Controller that created this object.
      */
-    SessionlessObj(Bus& bus, BusController* busController);
+    SessionlessObj(Bus& bus, BusController* busController, DaemonRouter& router);
 
     /**
      * Destructor
@@ -122,10 +122,8 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      *
      * @param sid   Session ID associated with sessionless message.
      * @param msg   Sesionless message to be routed.
-     *
-     * @return true if message was delivered, false otherwise.
      */
-    bool RouteSessionlessMessage(uint32_t sid, Message& msg);
+    void RouteSessionlessMessage(uint32_t sid, Message& msg);
 
     /**
      * Remove a sessionless signal with a given serial number from the store/forward cache.

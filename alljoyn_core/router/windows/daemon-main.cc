@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2015, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -81,8 +81,6 @@ static const char internalConfig[] =
     "  <type>alljoyn</type>"
     "  <listen>tcp:iface=*,port=9956</listen>"
     "  <listen>udp:iface=*,u4port=9955</listen>"
-    "  <listen>localhost:port=9955</listen>"
-    "  <listen>localhost:port=9956</listen>"
     "</busconfig>";
 
 static volatile sig_atomic_t g_interrupt = false;
@@ -164,7 +162,7 @@ OptParse::ParseResultCode OptParse::ParseResult()
 
         if (arg.compare("--version") == 0) {
             printf("AllJoyn Message Bus Daemon version: %s\n"
-                   "Copyright (c) 2009-2015 AllSeen Alliance.\n"
+                   "Copyright AllSeen Alliance.\n"
                    "\n"
                    "\n"
                    "Build: %s\n", ajn::GetVersion(), GetBuildInfo());
@@ -245,8 +243,6 @@ int daemon(OptParse& opts)
             // No special processing needed for TCP.
         } else if (addrStr.compare(0, sizeof("udp:") - 1, "udp:") == 0) {
             // No special processing needed for UDP.
-        } else if (addrStr.compare(0, sizeof("localhost:") - 1, "localhost:") == 0) {
-            // No special processing needed for localhost.
         } else {
             Log(LOG_ERR, "Unsupported listen address: %s (ignoring)\n", it->c_str());
             continue;

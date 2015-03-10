@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013-2015, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -664,9 +664,9 @@ void usage(void)
     printf("   -i #                  = Signal report interval (number of signals rx per update; default = 1000)\n");
     printf("   -n <well-known name>  = Well-known name to advertise\n");
     printf("   -t                    = Advertise over TCP (enables selective advertising)\n");
+    printf("   -u                    = Advertise over UDP (enables selective advertising)\n");
     printf("   -l                    = Advertise locally (enables selective advertising)\n");
     printf("   -r                    = Advertise using the Rendezvous Server (enables selective advertising)\n");
-    printf("   -w                    = Advertise over Wi-Fi Direct (enables selective advertising)\n");
     printf("   -a                    = Cancel advertising while servicing a single client (causes rediscovery between iterations)\n");
     printf("   -p                    = Respond to an incoming signal by pinging back to the sender\n");
 }
@@ -781,11 +781,11 @@ int main(int argc, char** argv)
         } else if (0 == strcmp("-m", argv[i])) {
             alljoyn_sessionopts_set_multipoint(g_sessionOpts, QCC_TRUE);
         } else if (0 == strcmp("-t", argv[i])) {
-            alljoyn_sessionopts_set_transports(g_sessionOpts, ALLJOYN_TRANSPORT_WLAN);
+            alljoyn_sessionopts_set_transports(g_sessionOpts, ALLJOYN_TRANSPORT_TCP);
+        } else if (0 == strcmp("-u", argv[i])) {
+            alljoyn_sessionopts_set_transports(g_sessionOpts, ALLJOYN_TRANSPORT_UDP);
         } else if (0 == strcmp("-l", argv[i])) {
             alljoyn_sessionopts_set_transports(g_sessionOpts, ALLJOYN_TRANSPORT_LOCAL);
-        } else if (0 == strcmp("-w", argv[i])) {
-            alljoyn_sessionopts_set_transports(g_sessionOpts, ALLJOYN_TRANSPORT_WFD);
         } else if (0 == strcmp("-a", argv[i])) {
             g_cancelAdvertise = QCC_TRUE;
         } else {

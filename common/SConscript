@@ -1,4 +1,4 @@
-# Copyright (c) 2010 - 2015 AllSeen Alliance. All rights reserved.
+# Copyright AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -70,7 +70,7 @@ elif env['OS'] in ['linux', 'openwrt']:
 elif env['OS'] == 'darwin':
     env.Append(CPPDEFINES=['MECHANISM_PIPE'])
     env.AppendUnique(LIBS =['stdc++', 'pthread', 'crypto', 'ssl'])
-    if env['CPU'] in ['arm', 'armv7', 'armv7s']:
+    if env['CPU'] in ['arm', 'armv7', 'armv7s', 'arm64']:
         vars = Variables()
         vars.Add(PathVariable('OPENSSL_ROOT', 'Base OpenSSL directory (darwin only)', os.environ.get('OPENSSL_ROOT')))
         vars.Update(env)

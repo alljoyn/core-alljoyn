@@ -1,7 +1,7 @@
 /* bbjitter - tests roundtrip times and computes  jitter */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, 2014-2015, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -372,7 +372,7 @@ int main(int argc, char** argv)
         } else if (0 == strcmp("-f", argv[i])) {
             g_findPrefix = argv[++i];
         } else if (0 == strcmp("-t", argv[i])) {
-            transportOpts |= TRANSPORT_WLAN;
+            transportOpts |= TRANSPORT_TCP;
         } else {
             status = ER_FAIL;
             printf("Unknown option %s\n", argv[i]);

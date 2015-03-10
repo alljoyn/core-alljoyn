@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2011, 2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -88,31 +88,32 @@ Crypto_AES::Crypto_AES(const KeyBlob& key, Mode mode) : mode(mode), keyState(NUL
 {
     QStatus status;
     BCRYPT_ALG_HANDLE aesHandle = 0;
+    BCRYPT_KEY_DATA_BLOB_HEADER* kbh = NULL;
 
     // We depend on this being true
     assert(sizeof(Block) == 16);
 
     if (mode == CCM) {
         if (!cngCache.ccmHandle) {
-            if (BCryptOpenAlgorithmProvider(&cngCache.ccmHandle, BCRYPT_AES_ALGORITHM, MS_PRIMITIVE_PROVIDER, 0) < 0) {
+            if (!BCRYPT_SUCCESS(BCryptOpenAlgorithmProvider(&cngCache.ccmHandle, BCRYPT_AES_ALGORITHM, MS_PRIMITIVE_PROVIDER, 0))) {
                 status = ER_CRYPTO_ERROR;
                 QCC_LogError(status, ("Failed to open AES algorithm provider"));
-                return;
+                abort();
             }
             // Enable CCM
-            if (BCryptSetProperty(cngCache.ccmHandle, BCRYPT_CHAINING_MODE, (PUCHAR)BCRYPT_CHAIN_MODE_CCM, sizeof(BCRYPT_CHAIN_MODE_CCM), 0) < 0) {
+            if (!BCRYPT_SUCCESS(BCryptSetProperty(cngCache.ccmHandle, BCRYPT_CHAINING_MODE, (PUCHAR)BCRYPT_CHAIN_MODE_CCM, sizeof(BCRYPT_CHAIN_MODE_CCM), 0))) {
                 status = ER_CRYPTO_ERROR;
                 QCC_LogError(status, ("Failed to enable CCM mode on AES algorithm provider"));
-                return;
+                abort();
             }
         }
         aesHandle = cngCache.ccmHandle;
     } else {
         if (!cngCache.ecbHandle) {
-            if (BCryptOpenAlgorithmProvider(&cngCache.ecbHandle, BCRYPT_AES_ALGORITHM, MS_PRIMITIVE_PROVIDER, 0) < 0) {
+            if (!BCRYPT_SUCCESS(BCryptOpenAlgorithmProvider(&cngCache.ecbHandle, BCRYPT_AES_ALGORITHM, MS_PRIMITIVE_PROVIDER, 0))) {
                 status = ER_CRYPTO_ERROR;
                 QCC_LogError(status, ("Failed to open AES algorithm provider"));
-                return;
+                abort();
             }
         }
         aesHandle = cngCache.ecbHandle;
@@ -120,7 +121,10 @@ Crypto_AES::Crypto_AES(const KeyBlob& key, Mode mode) : mode(mode), keyState(NUL
 
     // Initialize a BCRYPT key blob with the key
     ULONG kbhLen = sizeof(BCRYPT_KEY_DATA_BLOB_HEADER) + key.GetSize();
-    BCRYPT_KEY_DATA_BLOB_HEADER* kbh = (BCRYPT_KEY_DATA_BLOB_HEADER*)malloc(kbhLen);
+    kbh = (BCRYPT_KEY_DATA_BLOB_HEADER*)malloc(kbhLen);
+    if (NULL == kbh) {
+        abort();
+    }
     kbh->dwMagic = BCRYPT_KEY_DATA_BLOB_MAGIC;
     kbh->dwVersion = BCRYPT_KEY_DATA_BLOB_VERSION1;
     kbh->cbKeyData = key.GetSize();
@@ -129,21 +133,21 @@ Crypto_AES::Crypto_AES(const KeyBlob& key, Mode mode) : mode(mode), keyState(NUL
     // Get length of key object and allocate the object
     DWORD got;
     ULONG keyObjLen;
-    if (BCryptGetProperty(aesHandle, BCRYPT_OBJECT_LENGTH, (PBYTE)&keyObjLen, sizeof(ULONG), &got, 0) < 0) {
+
+    if (!BCRYPT_SUCCESS(BCryptGetProperty(aesHandle, BCRYPT_OBJECT_LENGTH, (PBYTE)&keyObjLen, sizeof(ULONG), &got, 0))) {
         status = ER_CRYPTO_ERROR;
         QCC_LogError(status, ("Failed to get AES object length property"));
-        free(kbh);
-        return;
+        abort();
     }
 
     keyState = new KeyState(keyObjLen);
 
-    if (BCryptImportKey(aesHandle, NULL, BCRYPT_KEY_DATA_BLOB, &keyState->handle, keyState->keyObj, keyObjLen, (PUCHAR)kbh, kbhLen, 0) < 0) {
+    if (!BCRYPT_SUCCESS(BCryptImportKey(aesHandle, NULL, BCRYPT_KEY_DATA_BLOB, &keyState->handle, keyState->keyObj, keyObjLen, (PUCHAR)kbh, kbhLen, 0))) {
         status = ER_CRYPTO_ERROR;
         QCC_LogError(status, ("Failed to import AES key"));
-        delete keyState;
-        keyState = NULL;
+        abort();
     }
+
     free(kbh);
 }
 
@@ -165,7 +169,7 @@ QStatus Crypto_AES::Encrypt(const Block* in, Block* out, uint32_t numBlocks)
     }
     ULONG len = numBlocks * sizeof(Block);
     ULONG clen;
-    if (BCryptEncrypt(keyState->handle, (PUCHAR)in, len, NULL, NULL, 0, (PUCHAR)out, len, &clen, 0) < 0) {
+    if (!BCRYPT_SUCCESS(BCryptEncrypt(keyState->handle, (PUCHAR)in, len, NULL, NULL, 0, (PUCHAR)out, len, &clen, 0))) {
         return ER_CRYPTO_ERROR;
     } else {
         return ER_OK;
@@ -216,7 +220,7 @@ QStatus Crypto_AES::Decrypt(const Block* in, Block* out, uint32_t numBlocks)
     }
     ULONG len = numBlocks * sizeof(Block);
     ULONG clen;
-    if (BCryptDecrypt(keyState->handle, (PUCHAR)in, len, NULL, NULL, 0, (PUCHAR)out, len, &clen, 0) < 0) {
+    if (!BCRYPT_SUCCESS(BCryptDecrypt(keyState->handle, (PUCHAR)in, len, NULL, NULL, 0, (PUCHAR)out, len, &clen, 0))) {
         return ER_CRYPTO_ERROR;
     } else {
         return ER_OK;
@@ -307,7 +311,7 @@ QStatus Crypto_AES::Encrypt_CCM(const void* in, void* out, size_t& len, const Ke
     ULONG clen;
     Block iv;
     NTSTATUS ntstatus = BCryptEncrypt(keyState->handle, (PUCHAR)in, len, &cmi, NULL, 0, (PUCHAR)out, len, &clen, 0);
-    if (ntstatus < 0) {
+    if (!BCRYPT_SUCCESS(ntstatus)) {
         status = ER_CRYPTO_ERROR;
         QCC_LogError(status, ("CCM mode encryption failed NTSTATUS=%x", ntstatus));
     } else {
@@ -370,7 +374,7 @@ QStatus Crypto_AES::Decrypt_CCM(const void* in, void* out, size_t& len, const Ke
 
     ULONG clen;
     NTSTATUS ntstatus = BCryptDecrypt(keyState->handle, (PUCHAR)in, len - authLen, &cmi, NULL, 0, (PUCHAR)out, len, &clen, 0);
-    if (ntstatus < 0) {
+    if (!BCRYPT_SUCCESS(ntstatus)) {
         if (ntstatus == STATUS_AUTH_TAG_MISMATCH) {
             status = ER_AUTH_FAIL;
         } else {

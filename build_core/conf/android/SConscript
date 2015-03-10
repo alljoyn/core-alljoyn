@@ -1,4 +1,4 @@
-# Copyright (c) 2013-2014 AllSeen Alliance. All rights reserved.
+# Copyright AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -16,10 +16,15 @@
 import os
 import string
 import subprocess
+import re
 
 
-# Froyo is API level 8
-min_api_level = 8
+# JellyBean is API level 16
+min_api_level = 16
+# Minimal required NDK version
+min_ndk_version = "r9b"
+# NDK should be equal to or lower as min_api_level
+ndk_level = min_api_level
 
 Import('env')
 
@@ -53,19 +58,14 @@ if env.get('ANDROID_SRC', '') == '':
 if env.get('ANDROID_TARGET', '') == '':
    env['ANDROID_TARGET'] = 'generic'
 
-
-ndk_api_levels = set([ int(d.split('-')[-1]) for d in os.listdir(env['ANDROID_NDK'] + '/platforms') ])
-max_ndk_api_level = max(ndk_api_levels)
 if env.get('ANDROID_SDK', '') != '':
-   if max_ndk_api_level < min_api_level:
-      print 'Installed Android NDK does not support the minimum API level %d.' % min_api_level
-      if not GetOption('help'):
-         Exit(1)
-
-   min_ndk_api_level = min([ level for level in ndk_api_levels if level >= min_api_level ])
+   # Get the list of supported SDK platforms.
+   # Use the latest one as compileSdkVersion (to define which android.jar to use).
+   # It should be pretty safe always to compile with the latest one.
+   # This should not be done for minSdkVersion or targetSdkVersion!
    api_levels = [ level
                   for level in set([ int(d.split('-')[-1]) for d in os.listdir(env['ANDROID_SDK'] + '/platforms') ])
-                  if level >= min_ndk_api_level ]
+                  if level >= min_api_level ]
 
    api_levels.sort()
 
@@ -74,6 +74,28 @@ if env.get('ANDROID_SDK', '') != '':
    vars2.Update(env)
    Help(vars2.GenerateHelpText(env))
 
+#take ndk_level same as SDK level
+ndk_platform_path = env['ANDROID_NDK'] + '/platforms/android-' + str(ndk_level)
+if not os.path.exists(ndk_platform_path) and not GetOption('help'):
+    print "Android NDK level not found"
+    Exit(1)
+
+# Read NDK RELEASE.TXT and check if the version is ok
+ndk_release = ''
+with open(env['ANDROID_NDK'] + '/RELEASE.TXT', 'r') as f:
+    ndk_release = f.read()
+f.closed
+ndk_version_required = re.match("^r(\d+)([a-z])", min_ndk_version)
+ndk_version_found = re.match("^r(\d+)([a-z])", ndk_release)
+if ndk_version_found == None or ndk_version_required == None:
+    print "WARNING: can't parse NDK release version"
+else:
+   # check if version is higher or equal to the required version.
+   if (int(ndk_version_found.group(1)) < int(ndk_version_required.group(1))
+      or (int(ndk_version_found.group(1)) == int(ndk_version_required.group(1)) and ord(ndk_version_found.group(2)) < ord(ndk_version_required.group(2)))):
+      if not GetOption('help'):
+         print "ERROR: This Android NDK is too old. Minimal required: \"" + min_ndk_version + "\", found \"" + ndk_version_found.group(0) + "\""
+         Exit(1)
 
 # Override MSVC build settings when building on windows.
 if 'win32' == env.subst('$HOST_OS'):
@@ -104,7 +126,7 @@ if not GetOption('help') and env.has_key('ANDROID_NDK'):
                            'NDK_PROJECT_PATH=%s' % curdir,
                            'APP_ABI=%s' % abi_map[env['CPU']],
                            'APP_STL=%s' % env['ANDROID_STL'],
-                           'APP_PLATFORM=android-%s' % str(max_ndk_api_level),
+                           'APP_PLATFORM=android-%s' % str(ndk_level),
                            '-n' ],
                          stdout = subprocess.PIPE)
    stdoutdata, stderrdata = tb.communicate()
@@ -159,8 +181,22 @@ if not GetOption('help') and env.has_key('ANDROID_NDK'):
    env.Append(LIBPATH = '$ANDROID_SRC/out/target/product/$ANDROID_TARGET/system/lib')
 
    env.Append(CPPDEFINES = 'QCC_OS_ANDROID')
-   env.Append(CFLAGS = ['-Wno-deprecated', '-pie', '-fPIE'])
-   env.Append(CXXFLAGS = ['-Wno-deprecated', '-pie', '-fPIE'])
+   env.Append(CFLAGS = ['-Wall',
+                       '-pipe',
+                       '-Wno-long-long',
+                       '-Wno-deprecated',
+                       '-Wno-unknown-pragmas',
+                       '-pie',
+                       '-fPIE'])
+   env.Append(CXXFLAGS = ['-Wall',
+                       '-pipe',
+                       '-std=gnu++0x',
+                       '-Wno-long-long',
+                       '-Wno-deprecated',
+                       '-Wno-unknown-pragmas',
+                       '-pie',
+                       '-fPIE'])
+
 
    env.Append(LINKFLAGS = ['-Wl,--gc-sections', '-Wl,-z,nocopyreloc', '-pie', '-fPIE'])
 

@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -65,11 +65,12 @@ static QStatus SendSGCommon(SocketFd sockfd,
                             SOCKADDR_STORAGE* addr,
                             socklen_t addrLen,
                             const ScatterGatherList& sg,
-                            size_t& sent)
+                            size_t& sent,
+                            SendMsgFlags flags)
 {
     QStatus status = ER_OK;
 
-    QCC_DbgTrace(("SendSGCommon(sockfd = %d, *addr, addrLen, sg, sent = <>)", sockfd));
+    QCC_DbgTrace(("SendSGCommon(sockfd = %d, *addr, addrLen, sg, sent = <>, flags = 0x%x)", sockfd, (int)flags));
 
     /*
      * We will usually avoid the memory allocation
@@ -91,7 +92,7 @@ static QStatus SendSGCommon(SocketFd sockfd,
     msg.dwBufferCount = sg.Size();
 
     DWORD dwsent;
-    DWORD ret = WSASendMsg(static_cast<SOCKET>(sockfd), &msg, 0, &dwsent, NULL, NULL);
+    DWORD ret = WSASendMsg(static_cast<SOCKET>(sockfd), &msg, (int)flags, &dwsent, NULL, NULL);
     DWORD err;
     if (ret == SOCKET_ERROR && (err = WSAGetLastError()) != WSA_IO_PENDING) {
         if (err == WSAEWOULDBLOCK || err == WSAEINPROGRESS || err == WSAEINTR) {
@@ -111,30 +112,31 @@ static QStatus SendSGCommon(SocketFd sockfd,
     return status;
 }
 
-QStatus SendSG(SocketFd sockfd, const ScatterGatherList& sg, size_t& sent)
+QStatus SendSG(SocketFd sockfd, const ScatterGatherList& sg, size_t& sent, SendMsgFlags flags)
 {
-    QCC_DbgTrace(("SendSG(sockfd = %d, sg, sent = <>)", sockfd));
+    QCC_DbgTrace(("SendSG(sockfd = %d, sg, sent = <>, flags = 0x%x)", sockfd, (int) flags));
 
-    return SendSGCommon(sockfd, NULL, 0, sg, sent);
+    return SendSGCommon(sockfd, NULL, 0, sg, sent, flags);
 }
 
 QStatus SendToSG(SocketFd sockfd, IPAddress& remoteAddr, uint16_t remotePort,
-                 const ScatterGatherList& sg, size_t& sent)
+                 const ScatterGatherList& sg, size_t& sent, SendMsgFlags flags)
 {
     SOCKADDR_STORAGE addr;
     socklen_t addrLen = sizeof(addr);
 
-    QCC_DbgTrace(("SendToSG(sockfd = %d, remoteAddr = %s, remotePort = %u, sg, sent = <>)",
-                  sockfd, remoteAddr.ToString().c_str(), remotePort));
+    QCC_DbgTrace(("SendToSG(sockfd = %d, remoteAddr = %s, remotePort = %u, sg, sent = <>, flags = 0x%x)",
+                  sockfd, remoteAddr.ToString().c_str(), remotePort, flags));
 
     MakeSockAddr(remoteAddr, remotePort, &addr, addrLen);
-    return SendSGCommon(sockfd, &addr, addrLen, sg, sent);
+    return SendSGCommon(sockfd, &addr, addrLen, sg, sent, flags);
 }
 
 #else
 
-QStatus SendSG(SocketFd sockfd, const ScatterGatherList& sg, size_t& sent)
+QStatus SendSG(SocketFd sockfd, const ScatterGatherList& sg, size_t& sent, SendMsgFlags flags)
 {
+    QCC_UNUSED(flags);
     QStatus status;
     uint8_t* tmpBuf = new uint8_t[sg.MaxDataSize()];
     sg.CopyToBuffer(tmpBuf, sg.MaxDataSize());
@@ -144,8 +146,9 @@ QStatus SendSG(SocketFd sockfd, const ScatterGatherList& sg, size_t& sent)
 }
 
 QStatus SendToSG(SocketFd sockfd, IPAddress& remoteAddr, uint16_t remotePort,
-                 const ScatterGatherList& sg, size_t& sent)
+                 const ScatterGatherList& sg, size_t& sent, SemdMsgFlags flags)
 {
+    QCC_UNUSED(flags);
     QStatus status;
     uint8_t* tmpBuf = new uint8_t[sg.MaxDataSize()];
     sg.CopyToBuffer(tmpBuf, sg.MaxDataSize());

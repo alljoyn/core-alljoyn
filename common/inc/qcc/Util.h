@@ -7,7 +7,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011, 2014-2015 AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -79,6 +79,13 @@
  */
 #define RequiredArrayLength(bytes, type) (((bytes) + sizeof(type) - 1) / sizeof(type))
 
+/**
+ * Return the number of bytes required to store a number of bits
+ * (rounds up to the next byte).
+ *
+ * @param bits Number of bits
+ */
+#define BitlenToBytelen(bits) (((bits) + 7) / 8)
 
 namespace qcc {
 /**

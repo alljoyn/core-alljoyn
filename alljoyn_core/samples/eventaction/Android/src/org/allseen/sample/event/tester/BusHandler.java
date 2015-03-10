@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -138,12 +138,20 @@ public class BusHandler extends Handler {
 
     /**
      * Callback from jni code invoked when a device goes away
-     * @param sessionId		sessionId that was lost
+     * @param busName		busName that failed to respond to a BusAttachment::Ping
      */
-	public void lostEventActionApplication(int sessionId) {
-		Log.d(TAG, "Lost applicatoin with session id: "+sessionId);
-		listener.onEventLost(sessionId);
-		listener.onActionLost(sessionId);
+	public void lostEventActionApplication(String busName) {
+		Log.d(TAG, "Lost application with bus name: "+busName);
+		listener.onAppLost(busName);
+	}
+	
+	/**
+     * Callback from jni code invoked when a device goes away
+     * @param busName		busName that failed to respond to a BusAttachment::Ping
+     */
+	public void returnedEventActionApplication(String busName) {
+		Log.d(TAG, "Application with bus name returned: "+busName);
+		listener.onAppReturned(busName);
 	}
 	
 	public void callAction(Bundle b) {

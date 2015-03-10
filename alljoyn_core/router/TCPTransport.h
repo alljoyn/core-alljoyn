@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -140,17 +140,6 @@ class TCPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     QStatus Connect(const char* connectSpec, const SessionOpts& opts, BusEndpoint& newep);
 
     /**
-     * Disconnect from a specified AllJoyn/DBus address.
-     *
-     * @param connectSpec    The connectSpec used in Connect.
-     *
-     * @return
-     *      - ER_OK if successful.
-     *      - an error status otherwise.
-     */
-    QStatus Disconnect(const char* connectSpec);
-
-    /**
      * Start listening for incomming connections on a specified bus address.
      *
      * @param listenSpec  Transport specific key/value arguments that specify the physical interface to listen on.
@@ -232,7 +221,7 @@ class TCPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
      *
      * @return the TransportMask for this transport.
      */
-    TransportMask GetTransportMask() const { return TRANSPORT_WLAN; }
+    TransportMask GetTransportMask() const { return TRANSPORT_TCP; }
 
     /**
      * Get a list of the possible listen specs of the current Transport for a

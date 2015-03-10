@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010-2011, 2013, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -210,7 +210,7 @@ public class Service {
             try {
                 Thread.sleep(10);
             } catch (InterruptedException e) {
-                System.out.println("Thead Exception caught");
+                System.out.println("Thread Exception caught");
                 e.printStackTrace();
             }
         }
@@ -221,7 +221,7 @@ public class Service {
             try {
                 Thread.sleep(10000);
             } catch (InterruptedException e) {
-                System.out.println("Thead Exception caught");
+                System.out.println("Thread Exception caught");
                 e.printStackTrace();
             }
         }

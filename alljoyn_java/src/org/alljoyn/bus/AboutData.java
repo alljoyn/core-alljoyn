@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015 AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -26,7 +26,6 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.UUID;
 
-import javax.xml.bind.DatatypeConverter;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -400,8 +399,21 @@ public class AboutData implements AboutDataListener, AboutKeys {
 
     public String getAppIdAsHexString() throws BusException {
         byte[] appId = getField(ABOUT_APP_ID).getObject(byte[].class);
-        return DatatypeConverter.printHexBinary(appId);
+        return byteArrayToHexString(appId);
     }
+
+    final protected static char[] hexCharArray = "0123456789ABCDEF".toCharArray();
+
+    private static String byteArrayToHexString(byte[] byteArray) {
+        char[] hexChars = new char[byteArray.length * 2];
+        for (int i = 0; i < byteArray.length; ++i) {
+            int x = byteArray[i] & 0xff;
+            hexChars[i*2] = hexCharArray[x >> 4];
+            hexChars[i*2 + 1] = hexCharArray[x & 0x0f];
+        }
+        return new String(hexChars);
+    }
+
     /**
      * Set the AppId for the AboutData using a UUID.
      *

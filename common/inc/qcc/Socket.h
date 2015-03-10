@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011, 2014 AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -207,11 +207,15 @@ QStatus GetLocalAddress(SocketFd sockfd, IPAddress& addr, uint16_t& port);
  * @param buf           Pointer to the buffer containing the data to send.
  * @param len           Number of octets in the buffer to be sent.
  * @param sent          OUT: Number of octets sent.
+ * @param flags         SendMsgFlags to underlying sockets call (see sendmsg() in sockets API)
  *
  * @return  Indication of success of failure.
+ *
+ * @warning Not all flags defined in SendMsgFlags are supported on all platforms.
+ *          Platform-dependent code may modify flags.
  */
 QStatus SendTo(SocketFd sockfd, IPAddress& remoteAddr, uint16_t remotePort,
-               const void* buf, size_t len, size_t& sent);
+               const void* buf, size_t len, size_t& sent, SendMsgFlags flags = QCC_MSG_NONE);
 
 /**
  * Send a buffer of data to a remote host on a socket.
@@ -223,11 +227,15 @@ QStatus SendTo(SocketFd sockfd, IPAddress& remoteAddr, uint16_t remotePort,
  * @param buf           Pointer to the buffer containing the data to send.
  * @param len           Number of octets in the buffer to be sent.
  * @param sent          OUT: Number of octets sent.
+ * @param flags         SendMsgFlags to underlying sockets call (see sendmsg() in sockets API)
  *
  * @return  Indication of success of failure.
+ *
+ * @warning Not all flags defined in SendMsgFlags are supported on all platforms.
+ *          Platform-dependent code may modify flags.
  */
 QStatus SendTo(SocketFd sockfd, IPAddress& remoteAddr, uint16_t remotePort, uint32_t scopeId,
-               const void* buf, size_t len, size_t& sent);
+               const void* buf, size_t len, size_t& sent, SendMsgFlags flags = QCC_MSG_NONE);
 
 /**
  * Receive a buffer of data from a remote host on a socket.

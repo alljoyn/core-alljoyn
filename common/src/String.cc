@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2015, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -582,6 +582,9 @@ void String::NewContext(const char* str, size_t strLen, size_t sizeHint)
     size_t mallocSz = capacity + 1 + sizeof(ManagedCtx) - MinCapacity;
     void* newCtxMem = malloc(mallocSz);
     assert(newCtxMem);
+    if (NULL == newCtxMem) {
+        abort();
+    }
     context = new (newCtxMem)ManagedCtx();
     context->refCount = 1;
 

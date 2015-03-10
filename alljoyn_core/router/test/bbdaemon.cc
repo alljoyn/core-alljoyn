@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, 2014-2015, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -39,10 +39,6 @@
 #include "UDPTransport.h"
 #include "TCPTransport.h"
 #include "DaemonTransport.h"
-
-#if defined(QCC_OS_ANDROID)
-#include "android/WFDTransport.h"
-#endif
 
 #include "Bus.h"
 #include "BusController.h"
@@ -413,7 +409,7 @@ int main(int argc, char** argv)
 
     /*
      * Windows uses the localhost transport as the local transport, uses the TCP
-     * transport with defaults, does not support the WFD transport.
+     * transport with defaults.
      */
     serverArgs = env->Find("BUS_SERVER_ADDRESSES",
                            "localhost:port=9956;tcp:;udp:u4addr=0.0.0.0,u4port=9955;");
@@ -430,22 +426,20 @@ int main(int argc, char** argv)
      *
      * The daemon lib version of the Android-based daemon supports the unix
      * transport as the local transport, uses the TCP transport with defaults as
-     * the remote transport, UDP, and since it is on Android, supports the WFD
-     * transport (which is an alternate remote transport).
+     * the remote transport, UDP.
      */
     serverArgs = env->Find("BUS_SERVER_ADDRESSES",
-                           "unix:abstract=alljoyn;tcp:;udp:u4addr=0.0.0.0,u4port=9955;wfd:");
+                           "unix:abstract=alljoyn;tcp:;udp:u4addr=0.0.0.0,u4port=9955");
 
 #else /* !defined(ROUTER_LIB) */
 
     /*
      * The native or bundled version of the Android-based daemon supports the
      * unix transport as the local transport, uses the TCP transport with
-     * defaults as the remote transport, UDP and since it is on Android,
-     * supports the WFD transport.
+     * defaults as the remote transport, UDP.
      */
     serverArgs = env->Find("BUS_SERVER_ADDRESSES",
-                           "unix:abstract=alljoyn;tcp:;udp:u4addr=0.0.0.0,u4port=9955;wfd:");
+                           "unix:abstract=alljoyn;tcp:;udp:u4addr=0.0.0.0,u4port=9955");
 
 #endif /* !defined(ROUTER_LIB) */
 #endif /* defined(QCC_OS_ANDROID) */
@@ -454,7 +448,7 @@ int main(int argc, char** argv)
 
     /*
      * Darwin uses the unix transport as the local transport, uses the TCP
-     * transport for the remote transport, UDP, and does not support WFD.
+     * transport for the remote transport, UDP.
      */
     serverArgs = env->Find("BUS_SERVER_ADDRESSES",
                            "unix:abstract=alljoyn;tcp:;udp:u4addr=0.0.0.0,u4port=9955");
@@ -486,10 +480,6 @@ int main(int argc, char** argv)
     cntr.Add(new TransportFactory<DaemonTransport>(DaemonTransport::TransportName, true));
     cntr.Add(new TransportFactory<TCPTransport>(TCPTransport::TransportName, false));
     cntr.Add(new TransportFactory<UDPTransport>(UDPTransport::TransportName, false));
-
-#if defined(QCC_OS_ANDROID)
-    cntr.Add(new TransportFactory<WFDTransport>(WFDTransport::TransportName, false));
-#endif
 
     /* Create message bus with support for alternate transports */
     Bus bus("bbdaemon", cntr, serverArgs.c_str());

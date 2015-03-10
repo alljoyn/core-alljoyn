@@ -4,7 +4,7 @@
  * This sample is identical to the simple sample, with the addition of security.  Refer to the
  * simple sample for further explanation of the AllJoyn code not called out here.
  *
- * Copyright (c) 2010-2011, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above

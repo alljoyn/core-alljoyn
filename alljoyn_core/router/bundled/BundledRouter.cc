@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2012, 2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -45,10 +45,6 @@
 
 #include "NullTransport.h"
 #include "PasswordManager.h"
-
-#if defined(QCC_OS_ANDROID)
-//#include "android/WFDTransport.h"
-#endif
 
 #define QCC_MODULE "ALLJOYN_ROUTER"
 
@@ -294,11 +290,6 @@ QStatus BundledRouter::Start(NullTransport* nullTransport)
         if (!transportsInitialized) {
             Add(new TransportFactory<TCPTransport>(TCPTransport::TransportName, false));
             Add(new TransportFactory<UDPTransport>(UDPTransport::TransportName, false));
-
-#if defined(QCC_OS_ANDROID)
-//            QCC_DbgPrintf(("adding WFD transport"));
-//            Add(new TransportFactory<WFDTransport>(WFDTransport::TransportName, false));
-#endif
             transportsInitialized = true;
         }
         QCC_DbgPrintf(("Starting bundled router bus attachment"));

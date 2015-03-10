@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -610,7 +610,7 @@ extern AJ_API QStatus AJ_CALL alljoyn_busattachment_releasename(alljoyn_busattac
  * Make an alljoyn_sessionport available for external alljoyn_busattachments to join.
  *
  * Each alljoyn_busattachment binds its own set of alljoyn_sessionports. Session joiners use the
- * bound session port along with the name of the attachement to create a persistent logical
+ * bound session port along with the name of the attachment to create a persistent logical
  * connection (called a Session) with the original alljoyn_busattachment.
  *
  * An alljoyn_sessionport and bus name form a unique identifier that
@@ -620,7 +620,7 @@ extern AJ_API QStatus AJ_CALL alljoyn_busattachment_releasename(alljoyn_busattac
  * alljoyn_sessionports).
  *
  * Once a session is joined using one of the service's well-known alljoyn_sessionports,
- * the service may bind additional alljoyn_sessionports (dyanamically) and share
+ * the service may bind additional alljoyn_sessionports (dynamically) and share
  * these alljoyn_sessionports with the joiner over the original session.
  * The joiner can then create additional sessions with the service by calling
  * JoinSession with these dynamic alljoyn_sessionport ids.
@@ -681,7 +681,7 @@ extern AJ_API QStatus AJ_CALL alljoyn_busattachment_unbindsessionport(alljoyn_bu
  *
  * @return
  *      - #ER_OK if peer security was enabled.
- *      - #ER_BUS_BUS_NOT_STARTED alljoyn_busattachment_start has not be called
+ *      - #ER_BUS_BUS_NOT_STARTED alljoyn_busattachment_start has not been called
  */
 extern AJ_API QStatus AJ_CALL alljoyn_busattachment_enablepeersecurity(alljoyn_busattachment bus, const char* authMechanisms,
                                                                        alljoyn_authlistener listener, const char* keyStoreFileName,
@@ -774,9 +774,7 @@ extern AJ_API QCC_BOOL AJ_CALL alljoyn_busattachment_isconnected(const alljoyn_b
  * Disconnect a remote bus address connection.
  *
  * @param bus          The bus to disconnect.
- * @param connectSpec  The transport connection spec used to connect.
- *                     if connectSpec is NULL the function alljoyn_busattachment_getconnectspec
- *                     will be used to find the connectspec.
+ * @param unused       Deprecated parameter.
  *
  * @return
  *          - #ER_OK if successful
@@ -784,7 +782,7 @@ extern AJ_API QCC_BOOL AJ_CALL alljoyn_busattachment_isconnected(const alljoyn_b
  *          - #ER_BUS_NOT_CONNECTED if the %alljoyn_busattachment is not connected to the bus
  *          - Other error status codes indicating a failure
  */
-extern AJ_API QStatus AJ_CALL alljoyn_busattachment_disconnect(alljoyn_busattachment bus, const char* connectSpec);
+extern AJ_API QStatus AJ_CALL alljoyn_busattachment_disconnect(alljoyn_busattachment bus, const char* unused);
 
 /**
  * Get the org.freedesktop.DBus proxy object.

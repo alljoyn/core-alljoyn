@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, 2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -557,6 +557,15 @@ static const char* WildCardSignature = "*";
 
 QStatus _Message::UnmarshalArgs(const qcc::String& expectedSignature, const char* expectedReplySignature)
 {
+    if (!bus->IsStarted()) {
+        return ER_BUS_BUS_NOT_STARTED;
+    }
+    return UnmarshalArgs(bus->GetInternal().GetPeerStateTable(), expectedSignature, expectedReplySignature);
+}
+
+QStatus _Message::UnmarshalArgs(PeerStateTable* peerStateTable,
+                                const qcc::String& expectedSignature, const char* expectedReplySignature)
+{
     const char* sig = GetSignature();
     QStatus status = ER_OK;
     int _numMsgArgs = 0;
@@ -567,9 +576,6 @@ QStatus _Message::UnmarshalArgs(const qcc::String& expectedSignature, const char
         return ER_OK;
     }
 
-    if (!bus->IsStarted()) {
-        return ER_BUS_BUS_NOT_STARTED;
-    }
     if (msgHeader.msgType == MESSAGE_INVALID) {
         return ER_FAIL;
     }
@@ -589,7 +595,7 @@ QStatus _Message::UnmarshalArgs(const qcc::String& expectedSignature, const char
     if (msgHeader.flags & ALLJOYN_FLAG_ENCRYPTED) {
         bool broadcast = (hdrFields.field[ALLJOYN_HDR_FIELD_DESTINATION].typeId == ALLJOYN_INVALID);
         size_t hdrLen = bodyPtr - (uint8_t*)msgBuf;
-        PeerState peerState = bus->GetInternal().GetPeerStateTable()->GetPeerState(GetSender());
+        PeerState peerState = peerStateTable->GetPeerState(GetSender());
         KeyBlob key;
         status = peerState->GetKey(key, broadcast ? PEER_GROUP_KEY : PEER_SESSION_KEY);
         if (status != ER_OK) {

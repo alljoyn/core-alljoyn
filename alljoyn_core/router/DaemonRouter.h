@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -42,6 +42,8 @@ namespace ajn {
  * @internal Forward delcarations
  */
 class BusController;
+class AllJoynObj;
+class SessionlessObj;
 
 /**
  * DaemonRouter is a "full-featured" router responsible for routing Bus messages
@@ -61,6 +63,20 @@ class DaemonRouter : public Router {
      * Destructor
      */
     ~DaemonRouter();
+
+    /**
+     * Set the AllJoynObj associated with this router.
+     *
+     * @param alljoynObj   The bus controller.
+     */
+    void SetAllJoynObj(AllJoynObj* alljoynObj) { this->alljoynObj = alljoynObj; }
+
+    /**
+     * Set the SessionlessObj associated with this router.
+     *
+     * @param sessionlessObj   The bus controller.
+     */
+    void SetSessionlessObj(SessionlessObj* sessionlessObj) { this->sessionlessObj = sessionlessObj; }
 
     /**
      * Set the busController associated with this router.
@@ -342,11 +358,10 @@ class DaemonRouter : public Router {
      * @param  srcB2bEp    Source B2B endpoint. (NULL if srcEp is not virtual).
      * @param  destEp      BusEndpoint of route destination.
      * @param  destB2bEp   [IN/OUT] If passed in as invalid endpoint type, attempt to use optsHint to choose destB2bEp and return selected ep.
-     * @param  optsHint    Optional session options constraint for selection of destB2bEp if not explicitly specified.
      * @return  ER_OK if successful.
      */
     QStatus AddSessionRoute(SessionId id, BusEndpoint& srcEp, RemoteEndpoint* srcB2bEp, BusEndpoint& destEp,
-                            RemoteEndpoint& destB2bEp, SessionOpts* optsHint = NULL);
+                            RemoteEndpoint& destB2bEp);
 
     /**
      * Remove existing session routes.
@@ -378,6 +393,8 @@ class DaemonRouter : public Router {
     RuleTable ruleTable;            /**< Routing rule table */
     NameTable nameTable;            /**< BusName to transport lookupl table */
     BusController* busController;   /**< The bus controller used with this router */
+    AllJoynObj* alljoynObj;         /**< AllJoyn bus object used with this router */
+    SessionlessObj* sessionlessObj; /**< Sessionless bus object used with this router */
 
     std::set<RemoteEndpoint> m_b2bEndpoints; /**< Collection of Bus-to-bus endpoints */
     qcc::Mutex m_b2bEndpointsLock;           /**< Lock that protects m_b2bEndpoints */
@@ -415,7 +432,7 @@ class DaemonRouter : public Router {
             snprintf(idbuf, sizeof(idbuf), "%u", id);
             str.append(idbuf);
 
-            str.append(",src: ");
+            str.append(", src: ");
             str.append(src);
 
             str.append(", remote: ");
@@ -430,6 +447,7 @@ class DaemonRouter : public Router {
             str.append(", dest: ");
             snprintf(ptrbuf, sizeof(ptrbuf), "%p", destEp.unwrap());
             str.append(ptrbuf);
+            str.append(" ");
             str.append(destEp->GetUniqueName());
 
             return str;

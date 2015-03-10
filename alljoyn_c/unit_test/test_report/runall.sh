@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright (c) 2013-2015, AllSeen Alliance. All rights reserved.
+# Copyright AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -93,7 +93,7 @@ fi
 ckbin() {
 	ckvar=$1
 	binvar=$2
-    cpp_or_c=$3
+	cpp_or_c=$3
 	eval ckval="\$$1"
 	binval=` cd "$ckval/$cpp_or_c/bin" > /dev/null && pwd ` || : ok
 	if test -z "$binval"
@@ -110,12 +110,30 @@ ckbin alljoyn_test gtest_bin c
 if cygpath -wa . > /dev/null 2>&1
 then
 	# found Cygwin, which means Windows
-	# alljoyn-daemon options are different
-	options='--no-bt --verbosity=5'
+
+	if $start_daemon; then
+		echo >&2 "error, start_daemon=true but this is Windows and daemon is not supported"
+		exit 2
+	fi
+
 	# gtest_bin needs to be Windows-style because we use pure Windows Python, not Cygwin Python
 	gtest_bin_p="$( cygpath -wa "$gtest_bin" )"
 	# sometimes Windows "home" does not work for keystore tests
 	export USERPROFILE="$( cygpath -wa . )"
+	export LOCALAPPDATA="$USERPROFILE"
+elif pwd -W > /dev/null 2>&1
+then
+	# found MSysGit, which also means Windows
+
+	if $start_daemon; then
+		echo >&2 "error, start_daemon=true but this is Windows and daemon is not supported"
+		exit 2
+	fi
+
+	# MSysGit will handle the *nix path
+	gtest_bin_p=$gtest_bin
+	# sometimes Windows "home" does not work for keystore tests
+	export USERPROFILE="$( pwd -W )"
 	export LOCALAPPDATA="$USERPROFILE"
 else
 	options='--internal --no-bt --verbosity=5'

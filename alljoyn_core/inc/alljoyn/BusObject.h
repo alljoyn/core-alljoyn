@@ -8,7 +8,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -370,7 +370,7 @@ class BusObject : public MessageReceiver {
      * The default version simply returns ER_BUS_NO_SUCH_PROPERTY.
      *
      * @param ifcName    Identifies the interface that the property is defined on
-     * @param propName  Identifies the the property to get
+     * @param propName  Identifies the property to get
      * @param[out] val        Returns the property value. The type of this value is the actual value
      *                   type.
      * @return #ER_BUS_NO_SUCH_PROPERTY (Should be changed by user implementation of BusObject)
@@ -383,7 +383,7 @@ class BusObject : public MessageReceiver {
      * This default version just replies with ER_BUS_NO_SUCH_PROPERTY
      *
      * @param ifcName    Identifies the interface that the property is defined on
-     * @param propName  Identifies the the property to set
+     * @param propName  Identifies the property to set
      * @param val        The property value to set. The type of this value is the actual value
      *                   type.
      * @return #ER_BUS_NO_SUCH_PROPERTY (Should be changed by user implementation of BusObject)

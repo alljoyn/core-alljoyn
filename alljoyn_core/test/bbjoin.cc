@@ -1,7 +1,7 @@
 /* bbjoin - will join any names on multipoint session port 26.*/
 
 /******************************************************************************
- * Copyright (c) 2009-2011, 2014-2015, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -294,7 +294,6 @@ static void usage(void)
     printf("   -f <prefix>  = FindAdvertisedName prefix\n");
     printf("   -t           = Advertise/Discover over TCP\n");
     printf("   -u           = Advertise/Discover over UDP\n");
-    printf("   -w           = Advertise/Discover over Wi-Fi Direct\n");
     printf("   -l           = Advertise/Discover over LOCAL\n");
     printf("   -dj <ms>     = Number of ms to delay between leaving and re-joining\n");
     printf("   -dl <ms>     = Number of ms to delay before leaving the session\n");
@@ -349,8 +348,6 @@ int main(int argc, char** argv)
             transportOpts = TRANSPORT_TCP;
         } else if (0 == strcmp("-u", argv[i])) {
             transportOpts = TRANSPORT_UDP;
-        } else if (0 == strcmp("-w", argv[i])) {
-            transportOpts = TRANSPORT_WFD;
         } else if (0 == strcmp("-l", argv[i])) {
             transportOpts |= TRANSPORT_LOCAL;
         } else if (0 == strcmp("-dj", argv[i])) {
