@@ -27,6 +27,7 @@
 #include <qcc/Crypto.h>
 #include <qcc/KeyBlob.h>
 #include <qcc/Util.h>
+#include <qcc/StringUtil.h>
 
 #include <alljoyn/Status.h>
 

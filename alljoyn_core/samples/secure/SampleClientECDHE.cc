@@ -124,54 +124,53 @@ class ECDHEKeyXListener : public AuthListener {
             creds.SetExpiration(100);  /* set the master secret expiry time to 100 seconds */
             return true;
         } else if (strcmp(authMechanism, KEYX_ECDHE_ECDSA) == 0) {
-            static const char privateKeyPEM[] = {
-                "-----BEGIN PRIVATE KEY-----\n"
-                "CkzgQdvZSOQMmqOnddsw0BRneCNZhioNMyUoJwec9rMAAAAA"
-                "-----END PRIVATE KEY-----"
+            /* the key and certificate is generated using openssl */
+
+            static const char ecdsaPrivateKeyPEM[] = {
+                "-----BEGIN EC PRIVATE KEY-----\n"
+                "MHcCAQEEIAqN6AtyOAPxY5k7eFNXAwzkbsGMl4uqvPrYkIj0LNZBoAoGCCqGSM49\n"
+                "AwEHoUQDQgAEvnRd4fX9opwgXX4Em2UiCMsBbfaqhB1U5PJCDZacz9HumDEzYdrS\n"
+                "MymSxR34lL0GJVgEECvBTvpaHP2bpTIl6g==\n"
+                "-----END EC PRIVATE KEY-----"
             };
-            static const char certChainType1PEM[] = {
+
+            static const char ecdsaCertChainX509PEM[] = {
                 "-----BEGIN CERTIFICATE-----\n"
-                "AAAAAZ1LKGlnpVVtV4Sa1TULsxGJR9C53Uq5AH3fxqxJjNdYAAAAAAobbdvBKaw9\n"
-                "eHox7o9fNbN5usuZw8XkSPSmipikYCPJAAAAAAAAAABiToQ8L3KZLwSCetlNJwfd\n"
-                "bbxbo2x/uooeYwmvXbH2uwAAAABFQGcdlcsvhdRxgI4SVziI4hbg2d2xAMI47qVB\n"
-                "ZZsqJAAAAAAAAAAAAAAAAAABYGEAAAAAAAFhjQABMa7uTLSqjDggO0t6TAgsxKNt\n"
-                "+Zhu/jc3s242BE0drNFJAiGa/u6AX5qdR+7RFxVuqm251vKPgWjfwN2AesHrAAAA\n"
-                "ANsNwJl8Z1v5jbqo077qdQIT6aM1jc+pKXdgNMk6loqFAAAAAA==\n"
+                "MIIBtDCCAVmgAwIBAgIJAMlyFqk69v+OMAoGCCqGSM49BAMCMFYxKTAnBgNVBAsM\n"
+                "IDdhNDhhYTI2YmM0MzQyZjZhNjYyMDBmNzdhODlkZDAyMSkwJwYDVQQDDCA3YTQ4\n"
+                "YWEyNmJjNDM0MmY2YTY2MjAwZjc3YTg5ZGQwMjAeFw0xNTAyMjYyMTUxMjVaFw0x\n"
+                "NjAyMjYyMTUxMjVaMFYxKTAnBgNVBAsMIDZkODVjMjkyMjYxM2IzNmUyZWVlZjUy\n"
+                "NzgwNDJjYzU2MSkwJwYDVQQDDCA2ZDg1YzI5MjI2MTNiMzZlMmVlZWY1Mjc4MDQy\n"
+                "Y2M1NjBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABL50XeH1/aKcIF1+BJtlIgjL\n"
+                "AW32qoQdVOTyQg2WnM/R7pgxM2Ha0jMpksUd+JS9BiVYBBArwU76Whz9m6UyJeqj\n"
+                "EDAOMAwGA1UdEwQFMAMBAf8wCgYIKoZIzj0EAwIDSQAwRgIhAKfmglMgl67L5ALF\n"
+                "Z63haubkItTMACY1k4ROC2q7cnVmAiEArvAmcVInOq/U5C1y2XrvJQnAdwSl/Ogr\n"
+                "IizUeK0oI5c=\n"
                 "-----END CERTIFICATE-----"
-            };
-            static const char certChainType2PEM[] = {
+                "\n"
                 "-----BEGIN CERTIFICATE-----\n"
-                "AAAAAp1LKGlnpVVtV4Sa1TULsxGJR9C53Uq5AH3fxqxJjNdYAAAAAAobbdvBKaw9\n"
-                "eHox7o9fNbN5usuZw8XkSPSmipikYCPJAAAAAAAAAABiToQ8L3KZLwSCetlNJwfd\n"
-                "bbxbo2x/uooeYwmvXbH2uwAAAABFQGcdlcsvhdRxgI4SVziI4hbg2d2xAMI47qVB\n"
-                "ZZsqJAAAAAAAAAAAAAAAAAABYGEAAAAAAAFhjQCJ9dkuY0Z6jjx+a8azIQh4UF0h\n"
-                "8plX3uAhOlF2vT2jfxe5U06zaWSXcs9kBEQvfOeMM4sUtoXPArUA+TNahfOS9Bbf\n"
-                "0Hh08SvDJSDgM2OetQAAAAAYUr2pw2kb90fWblBWVKnrddtrI5Zs8BYx/EodpMrS\n"
-                "twAAAAA=\n"
+                "MIIBszCCAVmgAwIBAgIJAILNujb37gH2MAoGCCqGSM49BAMCMFYxKTAnBgNVBAsM\n"
+                "IDdhNDhhYTI2YmM0MzQyZjZhNjYyMDBmNzdhODlkZDAyMSkwJwYDVQQDDCA3YTQ4\n"
+                "YWEyNmJjNDM0MmY2YTY2MjAwZjc3YTg5ZGQwMjAeFw0xNTAyMjYyMTUxMjNaFw0x\n"
+                "NjAyMjYyMTUxMjNaMFYxKTAnBgNVBAsMIDdhNDhhYTI2YmM0MzQyZjZhNjYyMDBm\n"
+                "NzdhODlkZDAyMSkwJwYDVQQDDCA3YTQ4YWEyNmJjNDM0MmY2YTY2MjAwZjc3YTg5\n"
+                "ZGQwMjBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABGEkAUATvOE4uYmt/10vkTcU\n"
+                "SA0C+YqHQ+fjzRASOHWIXBvpPiKgHcINtNFQsyX92L2tMT2Kn53zu+3S6UAwy6yj\n"
+                "EDAOMAwGA1UdEwQFMAMBAf8wCgYIKoZIzj0EAwIDSAAwRQIgKit5yeq1uxTvdFmW\n"
+                "LDeoxerqC1VqBrmyEvbp4oJfamsCIQDvMTmulW/Br/gY7GOP9H/4/BIEoR7UeAYS\n"
+                "4xLyu+7OEA==\n"
                 "-----END CERTIFICATE-----"
             };
             /*
              * The application may provide the DSA private key and public key in the certificate.
-             * AllJoyn stores the keys in the key store for future use.
-             * If the application does not provide the private key, AllJoyn will
-             * generate the DSA key pair.
              */
-            bool providePrivateKey = true;      /* use to toggle the test */
-            if (providePrivateKey) {
-                if ((credMask & AuthListener::CRED_PRIVATE_KEY) == AuthListener::CRED_PRIVATE_KEY) {
-                    String pk(privateKeyPEM, strlen(privateKeyPEM));
-                    creds.SetPrivateKey(pk);
-                }
-                if ((credMask & AuthListener::CRED_CERT_CHAIN) == AuthListener::CRED_CERT_CHAIN) {
-                    bool useType1 = false;  /* use to toggle which cert to send */
-                    if (useType1) {
-                        String cert(certChainType1PEM, strlen(certChainType1PEM));
-                        creds.SetCertChain(cert);
-                    } else {
-                        String cert(certChainType2PEM, strlen(certChainType2PEM));
-                        creds.SetCertChain(cert);
-                    }
-                }
+            if ((credMask & AuthListener::CRED_PRIVATE_KEY) == AuthListener::CRED_PRIVATE_KEY) {
+                String pk(ecdsaPrivateKeyPEM);
+                creds.SetPrivateKey(pk);
+            }
+            if ((credMask & AuthListener::CRED_CERT_CHAIN) == AuthListener::CRED_CERT_CHAIN) {
+                String cert(ecdsaCertChainX509PEM, strlen(ecdsaCertChainX509PEM));
+                creds.SetCertChain(cert);
             }
             creds.SetExpiration(100);  /* set the master secret expiry time to 100 seconds */
             return true;
