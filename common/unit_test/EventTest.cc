@@ -72,6 +72,14 @@ void RunEventTest(uint32_t instances, uint32_t signalIndex, uint32_t delayMs, ui
 
 const uint32_t T1 = 1000;
 const uint32_t T2 = 2000;
+/*
+ * On darwin platform the number of instances above 256 will cause "Too many open files" error
+ * due to number of file descriptors being limited to 256
+ */
+#if __MACH__
+const uint32_t INSTANCES_DARWIN = 100;
+const uint32_t SIGNAL_INDEX = 99;
+#endif
 
 TEST(EventTest, Below64Handles)
 {
@@ -86,7 +94,11 @@ TEST(EventTest, Exactly64Handles)
 
 TEST(EventTest, Above64Handles)
 {
+#if __MACH__
+    RunEventTest(INSTANCES_DARWIN, SIGNAL_INDEX, T1, T2);
+#else
     RunEventTest(1000, 999, T1, T2);
+#endif
 }
 
 TEST(EventTest, Below64HandlesTO)
@@ -101,5 +113,9 @@ TEST(EventTest, Exactly64HandlesTO)
 
 TEST(EventTest, Above64HandlesTO)
 {
+#if __MACH__
+    RunEventTest(INSTANCES_DARWIN, 1, T2, T1);
+#else
     RunEventTest(1000, 1, T2, T1);
+#endif
 }
