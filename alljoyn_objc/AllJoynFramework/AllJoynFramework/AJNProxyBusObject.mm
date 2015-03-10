@@ -16,6 +16,7 @@
 
 #import <alljoyn/BusAttachment.h>
 #import <alljoyn/ProxyBusObject.h>
+#import <alljoyn/Observer.h>
 
 #import "AJNProxyBusObject.h"
 #import "AJNBusAttachment.h"
@@ -177,6 +178,8 @@ using namespace ajn;
 
 @property (nonatomic, strong) AJNBusAttachment *bus;
 @property (nonatomic, readonly) ProxyBusObject *proxyBusObject;
+@property (nonatomic, readwrite) BOOL shouldDeleteHandleOnDealloc;
+@property (nonatomic, readwrite) ManagedProxyBusObject managedProxyBusObject;
 
 @end
 
@@ -256,14 +259,36 @@ using namespace ajn;
     if (self) {
         self.bus = busAttachment;
         self.handle = new ProxyBusObject(*((BusAttachment*)busAttachment.handle), [serviceName UTF8String], [path UTF8String], sessionId, shouldEnableSecurity);
+        self.shouldDeleteHandleOnDealloc = YES;
+    }
+    return self;
+}
+
+- (id)initWithBusAttachment:(AJNBusAttachment *)busAttachment managedProxyBusObject:(AJNHandle)proxyBusObject
+{
+    if (NULL == proxyBusObject){
+        return nil;
+    }
+    self.managedProxyBusObject = *((ManagedProxyBusObject*)proxyBusObject);
+    ProxyBusObject *pProxy = ((ManagedProxyBusObject*)proxyBusObject)->operator->();
+    if (!pProxy->IsValid()) {
+        return nil;
+    }
+    self = [super init];
+    if (self) {
+        self.bus = busAttachment;
+        self.handle = (AJNHandle)pProxy;
+        self.shouldDeleteHandleOnDealloc = NO;
     }
     return self;
 }
 
 - (void)dealloc
 {
-    BusAttachment *ptr = (BusAttachment*)self.handle;
-    delete ptr;
+    if (YES == self.shouldDeleteHandleOnDealloc) {
+        ProxyBusObject *ptr = (ProxyBusObject *)self.handle;
+        delete ptr;
+    }
     self.handle = nil;
 }
 
