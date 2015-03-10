@@ -992,10 +992,14 @@ int main(int argc, char** argv)
             }
 
             if (roundtrip) {
-                QCC_SyncPrintf("Round trip time MIN/AVG/MAX: %llu/%llu.%03u/%llu ms\n",
-                               min_delta,
-                               timeSum / pingCount, ((timeSum % pingCount) * 1000) / pingCount,
-                               max_delta);
+                if (pingCount > 0) {
+                    QCC_SyncPrintf("Round trip time MIN/AVG/MAX: %llu/%llu.%03u/%llu ms\n",
+                                   min_delta,
+                                   timeSum / pingCount, ((timeSum % pingCount) * 1000) / pingCount,
+                                   max_delta);
+                } else {
+                    QCC_SyncPrintf("Round trip time MIN/AVG/MAX: inf/inf/inf ms  -  ping timedout\n");
+                }
             }
 
             /* Get the test property */
