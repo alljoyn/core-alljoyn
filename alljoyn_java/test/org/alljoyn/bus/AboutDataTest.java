@@ -516,7 +516,7 @@ public class AboutDataTest extends TestCase{
     // This xml uses a UUID as per RFC-4122 as recommended in the design documents
     public void testCreateFromXml() {
         AboutData aboutData = new AboutData();
-        String xml = new String();
+        String xml;
         xml = "<AboutData>"
             + "  <AppId>b8b12eb2-5b66-4f28-b277-cbb05ad9a5f6</AppId>"
             + "  <DefaultLanguage>en</DefaultLanguage>"
@@ -689,7 +689,7 @@ public class AboutDataTest extends TestCase{
     // This xml uses an hex encoded byte string to pass in the AppId.
     public void testCreateFromXml2() {
         AboutData aboutData = new AboutData();
-        String xml = new String();
+        String xml;
         xml = "<AboutData>"
             + "  <AppId>000102030405060708090A0B0C0D0E0C</AppId>"
             + "  <DefaultLanguage>en</DefaultLanguage>"

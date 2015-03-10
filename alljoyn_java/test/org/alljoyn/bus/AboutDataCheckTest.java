@@ -191,39 +191,39 @@ public class AboutDataCheckTest extends TestCase{
         {
             //nonlocalized values
             aboutData.put("AppId",  new Variant(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}));
-            aboutData.put("DefaultLanguage",  new Variant(new String("en")));
-            aboutData.put("DeviceId",  new Variant(new String("sampleDeviceId")));
-            aboutData.put("ModelNumber", new Variant(new String("A1B2C3")));
+            aboutData.put("DefaultLanguage",  new Variant("en"));
+            aboutData.put("DeviceId",  new Variant("sampleDeviceId"));
+            aboutData.put("ModelNumber", new Variant("A1B2C3"));
             aboutData.put("SupportedLanguages", new Variant(new String[] {"en", "es"}));
-            aboutData.put("DateOfManufacture", new Variant(new String("2014-09-23")));
-            aboutData.put("SoftwareVersion", new Variant(new String("1.0")));
-            aboutData.put("AJSoftwareVersion", new Variant(new String("0.0.1")));
-            aboutData.put("HardwareVersion", new Variant(new String("0.1alpha")));
+            aboutData.put("DateOfManufacture", new Variant("2014-09-23"));
+            aboutData.put("SoftwareVersion", new Variant("1.0"));
+            aboutData.put("AJSoftwareVersion", new Variant("0.0.1"));
+            aboutData.put("HardwareVersion", new Variant("0.1alpha"));
             //localized values
             // If the language String is null or an empty string we return the
             // default language
             if ((language == null) || (language.length() == 0) || language.equalsIgnoreCase("en")) {
-                aboutData.put("DeviceName", new Variant(new String("A device name")));
-                aboutData.put("AppName", new Variant(new String("An application name")));
-                aboutData.put("Manufacturer", new Variant(new String("A mighty manufacturing company")));
-                aboutData.put("Description", new Variant(new String("Sample showing the about feature in a service application")));
+                aboutData.put("DeviceName", new Variant("A device name"));
+                aboutData.put("AppName", new Variant("An application name"));
+                aboutData.put("Manufacturer", new Variant("A mighty manufacturing company"));
+                aboutData.put("Description", new Variant("Sample showing the about feature in a service application"));
             } else if (language.equalsIgnoreCase("es")) { //Spanish
-                aboutData.put("DeviceName", new Variant(new String("Un nombre de dispositivo")));
-                aboutData.put("AppName", new Variant(new String("Un nombre de aplicación")));
-                aboutData.put("Manufacturer", new Variant(new String("Una empresa de fabricación de poderosos")));
-                aboutData.put("Description", new Variant(new String("Muestra que muestra la característica de sobre en una aplicación de servicio")));
+                aboutData.put("DeviceName", new Variant("Un nombre de dispositivo"));
+                aboutData.put("AppName", new Variant("Un nombre de aplicación"));
+                aboutData.put("Manufacturer", new Variant("Una empresa de fabricación de poderosos"));
+                aboutData.put("Description", new Variant("Muestra que muestra la característica de sobre en una aplicación de servicio"));
             }
         }
 
         private void setAnnouncedData()
         {
             announceData.put("AppId",  new Variant(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}));
-            announceData.put("DefaultLanguage",  new Variant(new String("en")));
-            announceData.put("DeviceName", new Variant(new String("A device name")));
-            announceData.put("DeviceId",  new Variant(new String("sampleDeviceId")));
-            announceData.put("AppName", new Variant(new String("An application name")));
-            announceData.put("Manufacturer", new Variant(new String("A mighty manufacturing company")));
-            announceData.put("ModelNumber", new Variant(new String("A1B2C3")));
+            announceData.put("DefaultLanguage",  new Variant("en"));
+            announceData.put("DeviceName", new Variant("A device name"));
+            announceData.put("DeviceId",  new Variant("sampleDeviceId"));
+            announceData.put("AppName", new Variant("An application name"));
+            announceData.put("Manufacturer", new Variant("A mighty manufacturing company"));
+            announceData.put("ModelNumber", new Variant("A1B2C3"));
         }
 
         public AboutDataTestImplmentation(String language)
@@ -258,39 +258,39 @@ public class AboutDataCheckTest extends TestCase{
         {
             //nonlocalized values
             aboutData.put("AppId",  new Variant(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}));
-            aboutData.put("DefaultLanguage",  new Variant(new String("en")));
+            aboutData.put("DefaultLanguage",  new Variant("en"));
             // Device Id is missing
-            aboutData.put("ModelNumber", new Variant(new String("A1B2C3")));
+            aboutData.put("ModelNumber", new Variant("A1B2C3"));
             aboutData.put("SupportedLanguages", new Variant(new String[] {"en", "es"}));
-            aboutData.put("DateOfManufacture", new Variant(new String("2014-09-23")));
-            aboutData.put("SoftwareVersion", new Variant(new String("1.0")));
-            aboutData.put("AJSoftwareVersion", new Variant(new String("0.0.1")));
-            aboutData.put("HardwareVersion", new Variant(new String("0.1alpha")));
+            aboutData.put("DateOfManufacture", new Variant("2014-09-23"));
+            aboutData.put("SoftwareVersion", new Variant("1.0"));
+            aboutData.put("AJSoftwareVersion", new Variant("0.0.1"));
+            aboutData.put("HardwareVersion", new Variant("0.1alpha"));
             //localized values
             // If the language String is null or an empty string we return the
             // default language
             if ((language == null) || (language.length() == 0) || language.equalsIgnoreCase("en")) {
-                aboutData.put("DeviceName", new Variant(new String("A device name")));
-                aboutData.put("AppName", new Variant(new String("An application name")));
-                aboutData.put("Manufacturer", new Variant(new String("A mighty manufacturing company")));
-                aboutData.put("Description", new Variant(new String("Sample showing the about feature in a service application")));
+                aboutData.put("DeviceName", new Variant("A device name"));
+                aboutData.put("AppName", new Variant("An application name"));
+                aboutData.put("Manufacturer", new Variant("A mighty manufacturing company"));
+                aboutData.put("Description", new Variant("Sample showing the about feature in a service application"));
             } else if (language.equalsIgnoreCase("es")) { //Spanish
-                aboutData.put("DeviceName", new Variant(new String("Un nombre de dispositivo")));
-                aboutData.put("AppName", new Variant(new String("Un nombre de aplicación")));
-                aboutData.put("Manufacturer", new Variant(new String("Una empresa de fabricación de poderosos")));
-                aboutData.put("Description", new Variant(new String("Muestra que muestra la característica de sobre en una aplicación de servicio")));
+                aboutData.put("DeviceName", new Variant("Un nombre de dispositivo"));
+                aboutData.put("AppName", new Variant("Un nombre de aplicación"));
+                aboutData.put("Manufacturer", new Variant("Una empresa de fabricación de poderosos"));
+                aboutData.put("Description", new Variant("Muestra que muestra la característica de sobre en una aplicación de servicio"));
             }
         }
 
         private void setAnnouncedData()
         {
             announceData.put("AppId",  new Variant(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}));
-            announceData.put("DefaultLanguage",  new Variant(new String("en")));
-            announceData.put("DeviceName", new Variant(new String("A device name")));
-            announceData.put("DeviceId",  new Variant(new String("sampleDeviceId")));
-            announceData.put("AppName", new Variant(new String("An application name")));
-            announceData.put("Manufacturer", new Variant(new String("A mighty manufacturing company")));
-            announceData.put("ModelNumber", new Variant(new String("A1B2C3")));
+            announceData.put("DefaultLanguage",  new Variant("en"));
+            announceData.put("DeviceName", new Variant("A device name"));
+            announceData.put("DeviceId",  new Variant("sampleDeviceId"));
+            announceData.put("AppName", new Variant("An application name"));
+            announceData.put("Manufacturer", new Variant("A mighty manufacturing company"));
+            announceData.put("ModelNumber", new Variant("A1B2C3"));
         }
 
         public AboutDataMissingRequiredField(String language)
@@ -325,39 +325,39 @@ public class AboutDataCheckTest extends TestCase{
         {
             //nonlocalized values
             aboutData.put("AppId",  new Variant(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}));
-            aboutData.put("DefaultLanguage",  new Variant(new String("en")));
-            aboutData.put("DeviceId",  new Variant(new String("sampleDeviceId")));
-            aboutData.put("ModelNumber", new Variant(new String("A1B2C3")));
+            aboutData.put("DefaultLanguage",  new Variant("en"));
+            aboutData.put("DeviceId",  new Variant("sampleDeviceId"));
+            aboutData.put("ModelNumber", new Variant("A1B2C3"));
             aboutData.put("SupportedLanguages", new Variant(new String[] {"en", "es"}));
-            aboutData.put("DateOfManufacture", new Variant(new String("2014-09-23")));
-            aboutData.put("SoftwareVersion", new Variant(new String("1.0")));
-            aboutData.put("AJSoftwareVersion", new Variant(new String("0.0.1")));
-            aboutData.put("HardwareVersion", new Variant(new String("0.1alpha")));
+            aboutData.put("DateOfManufacture", new Variant("2014-09-23"));
+            aboutData.put("SoftwareVersion", new Variant("1.0"));
+            aboutData.put("AJSoftwareVersion", new Variant("0.0.1"));
+            aboutData.put("HardwareVersion", new Variant("0.1alpha"));
             //localized values
             // If the language String is null or an empty string we return the
             // default language
             if ((language == null) || (language.length() == 0) || language.equalsIgnoreCase("en")) {
-                aboutData.put("DeviceName", new Variant(new String("A device name")));
-                aboutData.put("AppName", new Variant(new String("An application name")));
-                aboutData.put("Manufacturer", new Variant(new String("A mighty manufacturing company")));
-                aboutData.put("Description", new Variant(new String("Sample showing the about feature in a service application")));
+                aboutData.put("DeviceName", new Variant("A device name"));
+                aboutData.put("AppName", new Variant("An application name"));
+                aboutData.put("Manufacturer", new Variant("A mighty manufacturing company"));
+                aboutData.put("Description", new Variant("Sample showing the about feature in a service application"));
             } else if (language.equalsIgnoreCase("es")) { //Spanish
-                aboutData.put("DeviceName", new Variant(new String("Un nombre de dispositivo")));
-                aboutData.put("AppName", new Variant(new String("Un nombre de aplicación")));
-                aboutData.put("Manufacturer", new Variant(new String("Una empresa de fabricación de poderosos")));
-                aboutData.put("Description", new Variant(new String("Muestra que muestra la característica de sobre en una aplicación de servicio")));
+                aboutData.put("DeviceName", new Variant("Un nombre de dispositivo"));
+                aboutData.put("AppName", new Variant("Un nombre de aplicación"));
+                aboutData.put("Manufacturer", new Variant("Una empresa de fabricación de poderosos"));
+                aboutData.put("Description", new Variant("Muestra que muestra la característica de sobre en una aplicación de servicio"));
             }
         }
 
         private void setAnnouncedData()
         {
             announceData.put("AppId",  new Variant(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}));
-            announceData.put("DefaultLanguage",  new Variant(new String("en")));
-            announceData.put("DeviceName", new Variant(new String("A device name")));
-            announceData.put("DeviceId",  new Variant(new String("sampleDeviceId")));
+            announceData.put("DefaultLanguage",  new Variant("en"));
+            announceData.put("DeviceName", new Variant("A device name"));
+            announceData.put("DeviceId",  new Variant("sampleDeviceId"));
             //AppName is missing
-            announceData.put("Manufacturer", new Variant(new String("A mighty manufacturing company")));
-            announceData.put("ModelNumber", new Variant(new String("A1B2C3")));
+            announceData.put("Manufacturer", new Variant("A mighty manufacturing company"));
+            announceData.put("ModelNumber", new Variant("A1B2C3"));
         }
 
         public AnnounceDataMissingRequiredField(String language)
@@ -391,41 +391,41 @@ public class AboutDataCheckTest extends TestCase{
         {
             //nonlocalized values
             aboutData.put("AppId",  new Variant(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}));
-            aboutData.put("DefaultLanguage",  new Variant(new String("en")));
-            aboutData.put("DeviceId",  new Variant(new String("sampleDeviceId")));
+            aboutData.put("DefaultLanguage",  new Variant("en"));
+            aboutData.put("DeviceId",  new Variant("sampleDeviceId"));
             // Inconsistent with announcement
-            aboutData.put("ModelNumber", new Variant(new String("D4B2C3")));
+            aboutData.put("ModelNumber", new Variant("D4B2C3"));
             aboutData.put("SupportedLanguages", new Variant(new String[] {"en", "es"}));
-            aboutData.put("DateOfManufacture", new Variant(new String("2014-09-23")));
-            aboutData.put("SoftwareVersion", new Variant(new String("1.0")));
-            aboutData.put("AJSoftwareVersion", new Variant(new String("0.0.1")));
-            aboutData.put("HardwareVersion", new Variant(new String("0.1alpha")));
+            aboutData.put("DateOfManufacture", new Variant("2014-09-23"));
+            aboutData.put("SoftwareVersion", new Variant("1.0"));
+            aboutData.put("AJSoftwareVersion", new Variant("0.0.1"));
+            aboutData.put("HardwareVersion", new Variant("0.1alpha"));
             //localized values
             // If the language String is null or an empty string we return the
             // default language
             if ((language == null) || (language.length() == 0) || language.equalsIgnoreCase("en")) {
-                aboutData.put("DeviceName", new Variant(new String("A device name")));
-                aboutData.put("AppName", new Variant(new String("An application name")));
-                aboutData.put("Manufacturer", new Variant(new String("A mighty manufacturing company")));
-                aboutData.put("Description", new Variant(new String("Sample showing the about feature in a service application")));
+                aboutData.put("DeviceName", new Variant("A device name"));
+                aboutData.put("AppName", new Variant("An application name"));
+                aboutData.put("Manufacturer", new Variant("A mighty manufacturing company"));
+                aboutData.put("Description", new Variant("Sample showing the about feature in a service application"));
             } else if (language.equalsIgnoreCase("es")) { //Spanish
-                aboutData.put("DeviceName", new Variant(new String("Un nombre de dispositivo")));
-                aboutData.put("AppName", new Variant(new String("Un nombre de aplicación")));
-                aboutData.put("Manufacturer", new Variant(new String("Una empresa de fabricación de poderosos")));
-                aboutData.put("Description", new Variant(new String("Muestra que muestra la característica de sobre en una aplicación de servicio")));
+                aboutData.put("DeviceName", new Variant("Un nombre de dispositivo"));
+                aboutData.put("AppName", new Variant("Un nombre de aplicación"));
+                aboutData.put("Manufacturer", new Variant("Una empresa de fabricación de poderosos"));
+                aboutData.put("Description", new Variant("Muestra que muestra la característica de sobre en una aplicación de servicio"));
             }
         }
 
         private void setAnnouncedData()
         {
             announceData.put("AppId",  new Variant(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}));
-            announceData.put("DefaultLanguage",  new Variant(new String("en")));
-            announceData.put("DeviceName", new Variant(new String("A device name")));
-            announceData.put("DeviceId",  new Variant(new String("sampleDeviceId")));
-            announceData.put("AppName", new Variant(new String("An application name")));
-            announceData.put("Manufacturer", new Variant(new String("A mighty manufacturing company")));
+            announceData.put("DefaultLanguage",  new Variant("en"));
+            announceData.put("DeviceName", new Variant("A device name"));
+            announceData.put("DeviceId",  new Variant("sampleDeviceId"));
+            announceData.put("AppName", new Variant("An application name"));
+            announceData.put("Manufacturer", new Variant("A mighty manufacturing company"));
             // Inconsistent with About data value
-            announceData.put("ModelNumber", new Variant(new String("A1B2C3")));
+            announceData.put("ModelNumber", new Variant("A1B2C3"));
         }
 
         public InconsistentData(String language)
@@ -591,39 +591,39 @@ public class AboutDataCheckTest extends TestCase{
         {
             //nonlocalized values
             aboutData.put("AppId",  new Variant(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}));
-            aboutData.put("DefaultLanguage",  new Variant(new String("en")));
-            aboutData.put("DeviceId",  new Variant(new String("sampleDeviceId")));
-            aboutData.put("ModelNumber", new Variant(new String("A1B2C3")));
+            aboutData.put("DefaultLanguage",  new Variant("en"));
+            aboutData.put("DeviceId",  new Variant("sampleDeviceId"));
+            aboutData.put("ModelNumber", new Variant("A1B2C3"));
             aboutData.put("SupportedLanguages", new Variant(new String[] {"en", "es"}));
-            aboutData.put("DateOfManufacture", new Variant(new String("2014-09-23")));
-            aboutData.put("SoftwareVersion", new Variant(new String("1.0")));
-            aboutData.put("AJSoftwareVersion", new Variant(new String("0.0.1")));
-            aboutData.put("HardwareVersion", new Variant(new String("0.1alpha")));
+            aboutData.put("DateOfManufacture", new Variant("2014-09-23"));
+            aboutData.put("SoftwareVersion", new Variant("1.0"));
+            aboutData.put("AJSoftwareVersion", new Variant("0.0.1"));
+            aboutData.put("HardwareVersion", new Variant("0.1alpha"));
             //localized values
             // If the language String is null or an empty string we return the
             // default language
             if ((language == null) || (language.length() == 0) || language.equalsIgnoreCase("en")) {
-                aboutData.put("DeviceName", new Variant(new String("A device name")));
-                aboutData.put("AppName", new Variant(new String("An application name")));
-                aboutData.put("Manufacturer", new Variant(new String("A mighty manufacturing company")));
-                aboutData.put("Description", new Variant(new String("Sample showing the about feature in a service application")));
+                aboutData.put("DeviceName", new Variant("A device name"));
+                aboutData.put("AppName", new Variant("An application name"));
+                aboutData.put("Manufacturer", new Variant("A mighty manufacturing company"));
+                aboutData.put("Description", new Variant("Sample showing the about feature in a service application"));
             } else if (language.equalsIgnoreCase("es")) { //Spanish
-                aboutData.put("DeviceName", new Variant(new String("Un nombre de dispositivo")));
-                aboutData.put("AppName", new Variant(new String("Un nombre de aplicación")));
-                aboutData.put("Manufacturer", new Variant(new String("Una empresa de fabricación de poderosos")));
-                aboutData.put("Description", new Variant(new String("Muestra que muestra la característica de sobre en una aplicación de servicio")));
+                aboutData.put("DeviceName", new Variant("Un nombre de dispositivo"));
+                aboutData.put("AppName", new Variant("Un nombre de aplicación"));
+                aboutData.put("Manufacturer", new Variant("Una empresa de fabricación de poderosos"));
+                aboutData.put("Description", new Variant("Muestra que muestra la característica de sobre en una aplicación de servicio"));
             }
         }
 
         private void setAnnouncedData()
         {
             announceData.put("AppId",  new Variant(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}));
-            announceData.put("DefaultLanguage",  new Variant(new String("en")));
-            announceData.put("DeviceName", new Variant(new String("A device name")));
-            announceData.put("DeviceId",  new Variant(new String("sampleDeviceId")));
-            announceData.put("AppName", new Variant(new String("An application name")));
-            announceData.put("Manufacturer", new Variant(new String("A mighty manufacturing company")));
-            announceData.put("ModelNumber", new Variant(new String("A1B2C3")));
+            announceData.put("DefaultLanguage",  new Variant("en"));
+            announceData.put("DeviceName", new Variant("A device name"));
+            announceData.put("DeviceId",  new Variant("sampleDeviceId"));
+            announceData.put("AppName", new Variant("An application name"));
+            announceData.put("Manufacturer", new Variant("A mighty manufacturing company"));
+            announceData.put("ModelNumber", new Variant("A1B2C3"));
         }
 
         public AboutDataBadAppId(String language)
