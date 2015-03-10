@@ -13,6 +13,8 @@
  *    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
+#include <alljoyn/version.h>
+#include <qcc/Log.h>
 #include <qcc/platform.h>
 #include <signal.h>
 #include <stdio.h>
@@ -57,8 +59,8 @@ int main(int argc, char** argv, char** envArg)
     signal(SIGINT, SigIntHandler);
 
     /* Set AllJoyn logging */
-    QCC_SetLogLevels("ALLJOYN=7;ALL=1");
-    QCC_UseOSLogging(true);
+    //QCC_SetLogLevels("ALLJOYN=7;ALL=1");
+    //QCC_UseOSLogging(true);
 
     MyAllJoynCode myAllJoynCode;
     myAllJoynCode.initialize(argv[2]);
