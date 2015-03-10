@@ -799,6 +799,7 @@ static void usage(void)
     printf("   -dcon                 = Disable concurrency\n");
     printf("   -dpws                 = Use DelayedPingWithSleep as methodhandler instead of DelayedPing\n");
     printf("   -about [name]         = use the about feature for discovery. (optional override default application name.)\n");
+    printf("   -runtime #            = runtime of the program in ms. After this time has passed, the application will exit automatically. \n");
     printf("\n");
 }
 
@@ -812,6 +813,7 @@ int main(int argc, char** argv)
     const char* keyStore = NULL;
     SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_NONE);
     unsigned long concurrencyLevel = 4;
+    unsigned long run_time = 0;
 
     printf("AllJoyn Library version: %s\n", ajn::GetVersion());
     printf("AllJoyn Library build info: %s\n", ajn::GetBuildInfo());
@@ -913,7 +915,16 @@ int main(int argc, char** argv)
             } else {
                 g_testAboutApplicationName = "bbservice";
             }
-        } else {
+        } else if (0 == strcmp("-runtime", argv[i])) {
+            ++i;
+            if (i == argc) {
+                printf("option %s requires a parameter\n", argv[i - 1]);
+                usage();
+                exit(1);
+            } else {
+                run_time = ::strtoul(argv[i], NULL, 10);
+            }
+        }  else {
             status = ER_FAIL;
             printf("Unknown option %s\n", argv[i]);
             usage();
@@ -993,19 +1004,27 @@ int main(int argc, char** argv)
         QCC_LogError(status, ("Failed to connect to \"%s\"", clientArgs.c_str()));
     }
 
+    uint32_t startTime = GetTimestamp();
+    uint32_t endTime = GetTimestamp();
+
     if (ER_OK == status) {
         QCC_SyncPrintf("bbservice %s ready to accept connections\n", g_wellKnownName.c_str());
         while (g_interrupt == false) {
             qcc::Sleep(100);
+            if ((run_time != 0) && ((endTime - startTime) > run_time)) {
+                break;
+            }
+            endTime = GetTimestamp();
         }
     }
 
     g_msgBus->UnregisterBusObject(testObj);
 
-    /* Clean up msg bus */
+/* Clean up msg bus */
     delete g_msgBus;
     delete g_myBusListener;
 
+    printf("Runtime elapsed: %u ms \n", (endTime - startTime));
     printf("%s exiting with status %d (%s)\n", argv[0], status, QCC_StatusText(status));
 
     return (int) status;
