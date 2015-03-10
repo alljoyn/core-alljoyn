@@ -57,7 +57,10 @@ class AutoPinger {
     AutoPinger(BusAttachment& busAttachment);
 
     /**
-     * Destructor
+     * Destructor.
+     *
+     * Do not destroy an AutoPinger instance from within a PingListener
+     * callback. This will cause a deadlock.
      */
     ~AutoPinger();
 
@@ -82,6 +85,9 @@ class AutoPinger {
 
     /**
      * Remove complete ping group, including all destinations
+     *
+     * Do not invoke this method from within a PingListener callback. This will
+     * cause a deadlock.
      *
      * @param  group Ping group name
      */
