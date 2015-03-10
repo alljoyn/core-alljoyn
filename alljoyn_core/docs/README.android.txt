@@ -33,9 +33,6 @@ The contents of each top level folder are further arranged into sub-folders:
 cpp/    core AllJoyn functionality, implemented in C++
         ----------------------------------------------
 
-    alljoyn_android/            special-purpose Android apps, for OEMs
-                                  - not intended for AllJoyn app development
-
     bin/                        executable binaries
                                   - as of 3.4.0, several test programs are
                                     intentionally removed from published SDK's
