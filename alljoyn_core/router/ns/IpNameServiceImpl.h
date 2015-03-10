@@ -223,6 +223,19 @@ class IpNameServiceImpl : public qcc::Thread {
     const static uint8_t TRANSMIT_V2 = 4;
     const static uint8_t TRANSMIT_V0_V1 = (TRANSMIT_V0 | TRANSMIT_V1);
 
+    static const char* const ALLJOYN_DEFAULT_ROUTER_ADVERTISEMENT_PREFIX;
+    static const char* const ALLJOYN_DEFAULT_ROUTER_POWER_SOURCE;
+    static const char* const ALLJOYN_DEFAULT_ROUTER_MOBILITY;
+    static const char* const ALLJOYN_DEFAULT_ROUTER_AVAILABILITY;
+    static const char* const ALLJOYN_DEFAULT_ROUTER_NODE_TYPE;
+
+    /**
+     * This is the minimum number of connections we must
+     * have available before we respond to requests from
+     * thin clients.
+     */
+    const static uint8_t LOW_CONNECTION_WATERMARK = 1;
+
     /**
      * @internal
      *
@@ -505,6 +518,18 @@ class IpNameServiceImpl : public qcc::Thread {
                    const std::map<qcc::String, uint16_t>& unreliableIPv4PortMap, uint16_t unreliableIPv6Port,
                    bool enableReliableIPv4, bool enableReliableIPv6,
                    bool enableUnreliableIPv4, bool enableUnreliableIPv6);
+
+    static uint16_t ComputePriority(uint32_t staticScore, uint32_t dynamicScore);
+
+    static uint32_t ComputeStaticScore(uint32_t powerSource, uint32_t mobility, uint32_t availability, uint32_t nodeConnection);
+
+    static uint32_t ComputeDynamicScore(uint32_t availableTcpConnections, uint32_t maximumTcpConnections, uint32_t availableUdpConnections, uint32_t maximumUdpConnections, uint32_t availableTcpRemoteClients, uint32_t maximumTcpRemoteClients);
+
+    static qcc::String ToLowerCase(const qcc::String& str);
+
+    uint16_t GetCurrentPriority();
+
+    QStatus UpdateDynamicScore(TransportMask transportMask, uint32_t availableTransportConnections, uint32_t maximumTransportConnections, uint32_t availableTransportRemoteClients, uint32_t maximumTransportRemoteClients);
 
     /**
      * @brief Ask the name service whether or not it thinks there is or is not a
@@ -1621,10 +1646,25 @@ class IpNameServiceImpl : public qcc::Thread {
     bool m_protectListeners;
     PacketScheduler m_packetScheduler;
 
+    qcc::String m_routerName;
     uint32_t m_networkChangeScheduleCount;
     bool m_doNetworkCallback[N_TRANSPORTS];
     qcc::NetworkEventSet m_networkEvents;
     qcc::Timespec m_networkChangeTimeStamp;
+    uint32_t m_staticScore;
+    uint32_t m_dynamicScore;
+    uint16_t m_priority;
+    uint32_t m_powerSource;
+    uint32_t m_mobility;
+    uint32_t m_availability;
+    uint32_t m_nodeConnection;
+    struct DynamicParams {
+        uint32_t availableTransportConnections;
+        uint32_t availableTransportRemoteClients;
+        uint32_t maximumTransportConnections;
+        uint32_t maximumTransportRemoteClients;
+    };
+    DynamicParams m_dynamicParams[N_TRANSPORTS];
     bool PurgeAndUpdatePacket(MDNSPacket mdnspacket, bool updateSid);
 };
 
