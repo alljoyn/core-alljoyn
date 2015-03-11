@@ -583,7 +583,9 @@ QStatus _Message::DeliverNonBlocking(RemoteEndpoint& endpoint)
             countWrite -= pushed;
             writePtr += pushed;
             writeState = MESSAGE_HEADER_BODY;
-        } else { break; }
+        } else {
+            break;
+        }
     /* no break FALLTHROUGH*/
 
     case MESSAGE_HEADER_BODY:

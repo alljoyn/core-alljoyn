@@ -355,15 +355,14 @@ QStatus AJ_CALL alljoyn_busobject_signal(alljoyn_busobject bus,
     }
 
     /* must call the Signal Method through BusObjectC since Signal is a protected Method */
-    return ((ajn::BusObjectC*)bus)->SignalC(
-               destination,
-               sessionId,
-               *member,
-               args,
-               numArgs,
-               timeToLive,
-               flags,
-               msg);
+    return ((ajn::BusObjectC*)bus)->SignalC(destination,
+                                            sessionId,
+                                            *member,
+                                            args,
+                                            numArgs,
+                                            timeToLive,
+                                            flags,
+                                            msg);
 }
 
 QStatus AJ_CALL alljoyn_busobject_cancelsessionlessmessage_serial(alljoyn_busobject bus, uint32_t serialNumber)

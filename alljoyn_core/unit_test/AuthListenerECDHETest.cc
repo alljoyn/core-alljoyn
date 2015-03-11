@@ -76,7 +76,7 @@ class AuthListenerECDHETest : public testing::Test, public BusObject {
                 if (!sendKeys) {
                     return false;
                 }
-                if ((credMask & AuthListener::CRED_USER_NAME) == AuthListener::CRED_USER_NAME) {
+                if ((credMask& AuthListener::CRED_USER_NAME) == AuthListener::CRED_USER_NAME) {
                     if (pskName != creds.GetUserName()) {
                         return false;
                     }
@@ -213,7 +213,7 @@ class AuthListenerECDHETest : public testing::Test, public BusObject {
                 if (!sendKeys) {
                     return false;
                 }
-                if (sendPrivateKey && ((credMask & AuthListener::CRED_PRIVATE_KEY) == AuthListener::CRED_PRIVATE_KEY)) {
+                if (sendPrivateKey && ((credMask& AuthListener::CRED_PRIVATE_KEY) == AuthListener::CRED_PRIVATE_KEY)) {
                     if (sendInvalidChain || sendInvalidChainNoCA) {
                         String pk(pkWithInvalidChain);
                         creds.SetPrivateKey(pk);
@@ -225,7 +225,7 @@ class AuthListenerECDHETest : public testing::Test, public BusObject {
                         creds.SetPrivateKey(pk);
                     }
                 }
-                if (sendCertChain && ((credMask & AuthListener::CRED_CERT_CHAIN) == AuthListener::CRED_CERT_CHAIN)) {
+                if (sendCertChain && ((credMask& AuthListener::CRED_CERT_CHAIN) == AuthListener::CRED_CERT_CHAIN)) {
                     if (sendEmptyCertChain) {
                         String cert;
                         creds.SetCertChain(cert);

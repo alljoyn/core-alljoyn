@@ -53,17 +53,18 @@ void OptParser::PrintUsage() {
     cmd = cmd.substr(cmd.find_last_of('/') + 1);
 
     std::cerr << cmd.c_str() << " [--port=PORT  | --language=LANG |  --deviceId=DEVICEID | --appId=APPID"
-    "]\n"
-    "    --port=\n"
-    "        used to bind the service.\n\n"
-    "    --deviceId\n"
-    "        Use the specified DeviceID.\n\n"
-    "    --appId=\n"
-    "        Use the specified it is HexString of 16 bytes (32 chars) \n\n"
-    "    --language=\n"
-    "       default language for PropertyStore\n\n"
-    "    --version\n"
-    "        Print the version and copyright string, and exit." << std::endl;
+              << "]\n"
+              << "    --port=\n"
+              << "        used to bind the service.\n\n"
+              << "    --deviceId\n"
+              << "        Use the specified DeviceID.\n\n"
+              << "    --appId=\n"
+              << "        Use the specified it is HexString of 16 bytes (32 chars) \n\n"
+              << "    --language=\n"
+              << "       default language for PropertyStore\n\n"
+              << "    --version\n"
+              << "        Print the version and copyright string, and exit."
+              << std::endl;
 }
 
 bool OptParser::IsAllHex(const char* data) {

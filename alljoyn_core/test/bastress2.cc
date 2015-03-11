@@ -697,7 +697,7 @@ int main(int argc, char**argv)
     Environ* env = Environ::GetAppEnviron();
     qcc::String connectArgs = env->Find("BUS_ADDRESS");
 
-    ThreadClass** threadList = new ThreadClass *[threads];
+    ThreadClass** threadList = new ThreadClass*[threads];
     uint32_t startTime = GetTimestamp();
     uint32_t endTime = GetTimestamp();
 

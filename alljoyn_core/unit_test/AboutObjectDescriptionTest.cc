@@ -179,7 +179,7 @@ TEST(AboutObjectDescriptionTest, GetMsgArg)
     if (s_size > 0) {
         char** object_path = new char*[s_size];
         size_t* number_itfs = new size_t[s_size];
-        MsgArg** interfaces_arg = new MsgArg *[s_size];
+        MsgArg** interfaces_arg = new MsgArg*[s_size];
         for (size_t i = 0; i < s_size; ++i) {
             status = structarg[i].Get("(oas)", &(object_path[i]), &number_itfs[i], &interfaces_arg[i]);
             EXPECT_EQ(ER_OK, status);

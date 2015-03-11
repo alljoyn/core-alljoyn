@@ -4403,7 +4403,7 @@ QStatus JBusAttachment::Connect(const char* connectArgs, jobject jkeyStoreListen
 
     status = BusAttachment::Connect(connectArgs);
 
-    exit :
+exit:
     if (ER_OK != status) {
         Disconnect();
 
@@ -8728,7 +8728,7 @@ QStatus JBusObject::AddInterfaces(jobjectArray jbusInterfaces)
         }
 
         size_t numMembs = intf->GetMembers(NULL);
-        const InterfaceDescription::Member** membs = new const InterfaceDescription::Member *[numMembs];
+        const InterfaceDescription::Member** membs = new const InterfaceDescription::Member*[numMembs];
         if (!membs) {
             return ER_OUT_OF_MEMORY;
         }
@@ -8782,7 +8782,7 @@ QStatus JBusObject::AddInterfaces(jobjectArray jbusInterfaces)
         }
 
         size_t numProps = intf->GetProperties(NULL);
-        const InterfaceDescription::Property** props = new const InterfaceDescription::Property *[numProps];
+        const InterfaceDescription::Property** props = new const InterfaceDescription::Property*[numProps];
         if (!props) {
             return ER_OUT_OF_MEMORY;
         }
@@ -11119,7 +11119,7 @@ void JPropertiesChangedListener::PropertiesChanged(ProxyBusObject& obj, const ch
      * This call out to the property changed handler implies that the Java method must be
      * MT-safe.  This is implied by the definition of the listener.
      */
-    jobject pbo = env->NewLocalRef(((JProxyBusObject &)obj).jpbo);
+    jobject pbo = env->NewLocalRef(((JProxyBusObject&)obj).jpbo);
 
     if (pbo) {
         QCC_DbgPrintf(("JPropertiesChangedListener::PropertiesChanged(): Call out to listener object and method"));
