@@ -20,6 +20,10 @@
 #include <alljoyn/about/AnnounceHandler.h>
 
 typedef void (*AnnounceHandlerCallback)(qcc::String const& busName, unsigned short port);
+extern uint32_t g_start_timestamp;
+extern uint32_t g_count_ninety_five_percentile;
+extern uint32_t g_count_fifty_percentile;
+extern uint32_t g_count_remaining;
 
 class AboutClientAnnounceHandler : public ajn::services::AnnounceHandler {
 

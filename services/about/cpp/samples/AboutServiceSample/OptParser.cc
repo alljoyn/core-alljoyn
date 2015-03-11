@@ -107,10 +107,10 @@ OptParser::ParseResultCode OptParser::ParseResult() {
             PrintUsage();
             result = PR_EXIT_NO_ERROR;
             break;
-        } else {
-            result = PR_INVALID_OPTION;
-            std::cerr << "Invalid option: \"" << argv[indx] << "\"" << std::endl;
-            break;
+            //} else {
+            //    result = PR_INVALID_OPTION;
+            //    std::cerr << "Invalid option: \"" << argv[indx] << "\"" << std::endl;
+            //    break;
         }
     }
     return result;

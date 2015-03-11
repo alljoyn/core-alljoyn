@@ -18,9 +18,18 @@
 #include <alljoyn/about/AboutClient.h>
 #include <iostream>
 #include <iomanip>
+#include <qcc/Debug.h>
+#include <qcc/time.h>
+#include <map>
 
 using namespace ajn;
 using namespace services;
+
+#define QCC_MODULE "ABOUT_SAMPLE"
+
+std::map<qcc::String, uint32_t>  Announcement;
+#define FIFTY_PERCENTILE  1250
+#define NINETY_FIVE_PERCENTILE 10250
 
 AboutClientAnnounceHandler::AboutClientAnnounceHandler(AnnounceHandlerCallback callback) :
     AnnounceHandler(), m_Callback(callback)
@@ -35,6 +44,25 @@ AboutClientAnnounceHandler::~AboutClientAnnounceHandler()
 void AboutClientAnnounceHandler::Announce(unsigned short version, unsigned short port, const char* busName, const ObjectDescriptions& objectDescs,
                                           const AboutData& aboutData)
 {
+    static int count = 0;
+    uint32_t endTimeStamp = qcc::GetTimestamp();
+    uint32_t diff = endTimeStamp - g_start_timestamp;
+    QCC_LogError(ER_OK, ("ANNOUNCEMENT RECEIVED:  %u in %u ms", count, diff));
+    printf("ANNOUNCEMENT RECEIVED:  %u in %u ms \n", count, diff);
+    if (diff <= 1250) {
+        g_count_fifty_percentile++;
+    } else if ((diff > 1250) && (diff <= 10250)) {
+        g_count_ninety_five_percentile++;
+    } else {
+        g_count_remaining++;
+    }
+
+    Announcement[busName]++;
+    if (Announcement[busName] > 1) {
+        std::cout << "Danger. Received duplicate for " << busName << std::endl;
+        assert(false);
+    }
+
     std::cout << std::endl << std::endl << "*********************************************************************************"
               << std::endl;
     std::cout << "version   " << version << std::endl;
@@ -70,11 +98,12 @@ void AboutClientAnnounceHandler::Announce(unsigned short version, unsigned short
         }
     }
 
-    std::cout << "*********************************************************************************" << std::endl << std::endl;
+    std::cout << "*********************************************************************************" << std::endl;
+    count++;
 
-    if (m_Callback) {
-        std::cout << "Calling AnnounceHandler Callback" << std::endl;
-        m_Callback(busName, port);
-    }
+    //if (m_Callback) {
+    //    std::cout << "Calling AnnounceHandler Callback" << std::endl;
+    //    m_Callback(busName, port);
+    //}
 }
 
