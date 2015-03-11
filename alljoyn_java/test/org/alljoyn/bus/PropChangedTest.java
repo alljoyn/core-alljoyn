@@ -1262,21 +1262,25 @@ public class PropChangedTest
     /*
      * The following are the tests that check the return codes of RegisterPropertiesChangedListener.
      *
-     * 5. Create a ProxyBusObject and invoke RegisterPropertiesChangedListener with NULL as the interface parameter. The
-     * return code should be ER_BUS_OBJECT_NO_SUCH_INTERFACE.
+     * 5. Create a ProxyBusObject and invoke RegisterPropertiesChangedListener
+     *    with NULL as the interface parameter. The return code should be
+     *    ER_BUS_OBJECT_NO_SUCH_INTERFACE.
      *
-     * 6. Create a ProxyBusObject and invoke RegisterPropertiesChangedListener with an invalid string as an interface
-     * parameter. The return code should be ER_BUS_OBJECT_NO_SUCH_INTERFACE.
+     * 6. Create a ProxyBusObject and invoke RegisterPropertiesChangedListener
+     *    with an invalid string as an interface parameter. The return code
+     *    should be ER_BUS_OBJECT_NO_SUCH_INTERFACE.
      *
-     * 7. Create a ProxyBusObject and invoke RegisterPropertiesChangedListener with a non-existent property. The return
-     * code should be ER_BUS_NO_SUCH_PROPERTY.
+     * 7. Create a ProxyBusObject and invoke RegisterPropertiesChangedListener
+     *    with a non-existent property. The return code should be
+     *    ER_BUS_NO_SUCH_PROPERTY.
      *
-     * 8. Create a ProxyBusObject and invoke RegisterPropertiesChangedListener with an array of properties that contains
-     * a mix of valid properties and invalid / non-existent properties. The return code should be
-     * ER_BUS_NO_SUCH_PROPERTY.
+     * 8. Create a ProxyBusObject and invoke RegisterPropertiesChangedListener
+     *    with an array of properties that contains a mix of valid properties
+     *    and invalid / non-existent properties. The return code should be
+     *    ER_BUS_NO_SUCH_PROPERTY.
      *
-     * Note: Tests have been adapted to fit the Java API. The wording that is used is still the one from the
-     * "Test Approach ASACORE-47" document.
+     * Note: Tests have been adapted to fit the Java API. The wording that is
+     *       used is still the one from the "Test Approach ASACORE-47" document.
      */
     public void testRegisterPropertiesChangedListener_Negative()
         throws BusException
@@ -1296,37 +1300,37 @@ public class PropChangedTest
         PropertiesChangedListener listener = new PropChangedTestListener(new SampleStore());
 
         // 5
-        try {
-            ex = null;
-            mProxy.registerPropertiesChangedListener(null, okProps, listener);
-        }
-        catch (NullPointerException e) {
-            ex = e;
-        }
-        assertNotNull(ex);
+        assertEquals(Status.BUS_NO_SUCH_INTERFACE,
+                     mProxy.registerPropertiesChangedListener(null, okProps, listener));
 
         // 6
         assertEquals(Status.BUS_NO_SUCH_INTERFACE,
-            mProxy.registerPropertiesChangedListener(getInterfaceName(InterfaceInvalid.class), okProps, listener));
+                     mProxy.registerPropertiesChangedListener(getInterfaceName(InterfaceInvalid.class),
+                                                              okProps, listener));
         // 7
         assertEquals(Status.BUS_NO_SUCH_PROPERTY,
-            mProxy.registerPropertiesChangedListener(getInterfaceName(InterfaceP1true.class), nokProps, listener));
+                     mProxy.registerPropertiesChangedListener(getInterfaceName(InterfaceP1true.class),
+                                                              nokProps, listener));
         // 8
         assertEquals(Status.BUS_NO_SUCH_PROPERTY,
-            mProxy.registerPropertiesChangedListener(getInterfaceName(InterfaceP1true.class), mixProps, listener));
+                     mProxy.registerPropertiesChangedListener(getInterfaceName(InterfaceP1true.class),
+                                                              mixProps, listener));
     }
 
     /*
      * The following are the tests that check the return codes of RegisterPropertiesChangedListener.
      *
-     * 9. Create a ProxyBusObject and register a listener. Invoke UnregisterPropertiesChangedListener with NULL as
-     * interface parameter. The return code should be ER_BUS_OBJECT_NO_SUCH_INTERFACE.
+     * 9. Create a ProxyBusObject and register a listener. Invoke
+     *    UnregisterPropertiesChangedListener with NULL as interface
+     *    parameter. The return code should be ER_BUS_OBJECT_NO_SUCH_INTERFACE.
      *
-     * 10. Create a ProxyBusObject and register a listener. Invoke UnregisterPropertiesChangedListener with a
-     * non-existent random string as interface parameter. The return code should be ER_BUS_OBJECT_NO_SUCH_INTERFACE.
+     * 10. Create a ProxyBusObject and register a listener. Invoke
+     *     UnregisterPropertiesChangedListener with a non-existent random string
+     *     as interface parameter. The return code should be
+     *     ER_BUS_OBJECT_NO_SUCH_INTERFACE.
      *
-     * Note: Tests have been adapted to fit the Java API. The wording that is used is still the one from the
-     * "Test Approach ASACORE-47" document.
+     * Note: Tests have been adapted to fit the Java API. The wording that is
+     *       used is still the one from the "Test Approach ASACORE-47" document.
      */
     public void testUnregisterPropertiesChangedListener_Negative()
         throws BusException

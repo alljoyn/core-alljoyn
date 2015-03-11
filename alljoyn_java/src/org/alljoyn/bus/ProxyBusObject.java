@@ -107,11 +107,13 @@ public class ProxyBusObject {
 
     /** Called by native code to lazily add an interface when a proxy method is invoked. */
     protected int addInterface(String name) throws AnnotationBusException {
-        for (Class<?> intf : proxy.getClass().getInterfaces()) {
-            if (name.equals(InterfaceDescription.getName(intf))) {
-                InterfaceDescription desc = new InterfaceDescription();
-                Status status = desc.create(bus, intf);
-                return status.getErrorCode();
+        if (name != null) {
+            for (Class<?> intf : proxy.getClass().getInterfaces()) {
+                if (name.equals(InterfaceDescription.getName(intf))) {
+                    InterfaceDescription desc = new InterfaceDescription();
+                    Status status = desc.create(bus, intf);
+                    return status.getErrorCode();
+                }
             }
         }
         return Status.BUS_NO_SUCH_INTERFACE.getErrorCode();

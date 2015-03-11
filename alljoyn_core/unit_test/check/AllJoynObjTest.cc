@@ -16,6 +16,7 @@
 #include <qcc/platform.h>
 
 #include "AllJoynObj.h"
+#include "ConfigDB.h"
 #include "SessionInternal.h"
 
 /* Header files included for Google Test Framework */
@@ -189,6 +190,9 @@ class TestAllJoynObj : public AllJoynObj {
 
 TEST(AllJoynObjTest, JoinSessionToUnadvertisedNameFails)
 {
+    ConfigDB configDb("");
+    configDb.LoadConfig();
+
     TransportFactoryContainer factories;
     Bus bus("AllJoynObjTest", factories);
 
@@ -207,6 +211,9 @@ TEST(AllJoynObjTest, JoinSessionToUnadvertisedNameFails)
 
 TEST(AllJoynObjTest, JoinSessionSkipsUnpermittedAvailableTransports)
 {
+    ConfigDB configDb("");
+    configDb.LoadConfig();
+
     TransportFactoryContainer factories;
     Bus bus("AllJoynObjTest", factories);
 
@@ -228,6 +235,9 @@ TEST(AllJoynObjTest, JoinSessionSkipsUnpermittedAvailableTransports)
 
 TEST(AllJoynObjTest, JoinSessionTriesAllAvailableTransportsPass)
 {
+    ConfigDB configDb("");
+    configDb.LoadConfig();
+
     TransportFactoryContainer factories;
     Bus bus("AllJoynObjTest", factories);
 
@@ -247,6 +257,9 @@ TEST(AllJoynObjTest, JoinSessionTriesAllAvailableTransportsPass)
 
 TEST(AllJoynObjTest, JoinSessionTriesAllAvailableTransportsFail)
 {
+    ConfigDB configDb("");
+    configDb.LoadConfig();
+
     TransportFactoryContainer factories;
     Bus bus("AllJoynObjTest", factories);
 
@@ -286,6 +299,9 @@ class TestAllJoynObjBadSessionOpts : public TestAllJoynObj {
 
 TEST(AllJoynObjTest, JoinSessionTriesAllAvailableTransportsAfterAttachSessionFails)
 {
+    ConfigDB configDb("");
+    configDb.LoadConfig();
+
     TransportFactoryContainer factories;
     Bus bus("AllJoynObjTest", factories);
 

@@ -86,7 +86,7 @@ class KeyExchangerCB {
 class KeyExchanger {
   public:
 
-    KeyExchanger(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener) : peerObj(peerObj), bus(bus), authCount(0), listener(listener), secretExpiration(3600), initiator(initiator) {
+    KeyExchanger(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, uint16_t peerAuthVersion) : peerObj(peerObj), bus(bus), authCount(0), listener(listener), secretExpiration(3600), initiator(initiator), peerAuthVersion(peerAuthVersion) {
         hashUtil.Init();
         showDigestCounter = 0;
     }
@@ -134,6 +134,16 @@ class KeyExchanger {
 
     void ShowCurrentDigest(const char* ref);
 
+    const uint16_t GetPeerAuthVersion()
+    {
+        return peerAuthVersion;
+    }
+
+    /**
+     * Is the peer a legacy peer that uses the old ECC encoding
+     */
+    bool IsLegacyPeer();
+
   protected:
     AllJoynPeerObj* peerObj;
     BusAttachment& bus;
@@ -160,6 +170,7 @@ class KeyExchanger {
 
     bool initiator;
     int showDigestCounter;
+    uint16_t peerAuthVersion;
 };
 
 class KeyExchangerECDHE : public KeyExchanger {
@@ -169,7 +180,7 @@ class KeyExchangerECDHE : public KeyExchanger {
      * Constructor
      *
      */
-    KeyExchangerECDHE(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener) : KeyExchanger(initiator, peerObj, bus, listener) {
+    KeyExchangerECDHE(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, uint16_t peerAuthVersion) : KeyExchanger(initiator, peerObj, bus, listener, peerAuthVersion) {
     }
     /**
      * Desstructor
@@ -188,15 +199,16 @@ class KeyExchangerECDHE : public KeyExchanger {
     void SetECDHEPublicKey(const ECCPublicKey* publicKey);
     const ECCPrivateKey* GetECDHEPrivateKey();
     void SetECDHEPrivateKey(const ECCPrivateKey* privateKey);
-    const ECCSecret* GetECDHESecret();
-    void SetECDHESecret(const ECCSecret* newSecret);
 
-    QStatus GenerateECDHESecret(const ECCPublicKey* remotePubKey);
-    QStatus GenerateMasterSecret();
+    QStatus GenerateMasterSecret(const ECCPublicKey* remotePubKey);
 
     QStatus RespondToKeyExchange(Message& msg, MsgArg* variant, uint32_t remoteAuthMask, uint32_t authMask);
 
     virtual QStatus ExecKeyExchange(uint32_t authMask, KeyExchangerCB& callback, uint32_t* remoteAuthMask);
+    virtual void KeyExchangeGenLegacyKey(MsgArg& variant);
+    virtual void KeyExchangeGenKey(MsgArg& variant);
+    virtual QStatus KeyExchangeReadLegacyKey(MsgArg& variant);
+    virtual QStatus KeyExchangeReadKey(MsgArg& variant);
 
     virtual QStatus KeyAuthentication(KeyExchangerCB& callback, const char* peerName, uint8_t* authorized) {
         return ER_OK;
@@ -205,7 +217,6 @@ class KeyExchangerECDHE : public KeyExchanger {
 
   protected:
     ECCPublicKey peerPubKey;
-    ECCSecret pms;
     Crypto_ECC ecc;
     qcc::KeyBlob masterSecret;
 
@@ -225,7 +236,7 @@ class KeyExchangerECDHE : public KeyExchanger {
 
 class KeyExchangerECDHE_NULL : public KeyExchangerECDHE {
   public:
-    KeyExchangerECDHE_NULL(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener) : KeyExchangerECDHE(initiator, peerObj, bus, listener) {
+    KeyExchangerECDHE_NULL(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, uint16_t peerAuthVersion) : KeyExchangerECDHE(initiator, peerObj, bus, listener, peerAuthVersion) {
     }
 
     virtual ~KeyExchangerECDHE_NULL() {
@@ -256,7 +267,7 @@ class KeyExchangerECDHE_NULL : public KeyExchangerECDHE {
 
 class KeyExchangerECDHE_PSK : public KeyExchangerECDHE {
   public:
-    KeyExchangerECDHE_PSK(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener) : KeyExchangerECDHE(initiator, peerObj, bus, listener) {
+    KeyExchangerECDHE_PSK(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, uint16_t peerAuthVersion) : KeyExchangerECDHE(initiator, peerObj, bus, listener, peerAuthVersion) {
         pskName = "<anonymous>";
         pskValue = " ";
     }
@@ -297,7 +308,7 @@ class KeyExchangerECDHE_PSK : public KeyExchangerECDHE {
 
 class KeyExchangerECDHE_ECDSA : public KeyExchangerECDHE {
   public:
-    KeyExchangerECDHE_ECDSA(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener) : KeyExchangerECDHE(initiator, peerObj, bus, listener), certChainLen(0), hasDSAKeys(false) {
+    KeyExchangerECDHE_ECDSA(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, uint16_t peerAuthVersion) : KeyExchangerECDHE(initiator, peerObj, bus, listener, peerAuthVersion), certChainLen(0), certChain(NULL) {
     }
 
     virtual ~KeyExchangerECDHE_ECDSA();
@@ -328,17 +339,14 @@ class KeyExchangerECDHE_ECDSA : public KeyExchangerECDHE {
      */
     KeyExchangerECDHE_ECDSA(const KeyExchangerECDHE_ECDSA& other);
 
-    QStatus GenerateLocalVerifierCert(CertificateType0& cert);
-    QStatus VerifyCredentialsCB(const char* peerName, CertificateECC * certs[], size_t numCerts);
-    QStatus StoreDSAKeys(String& encodedPrivateKey, String& encodedCertChain);
-    QStatus RetrieveDSAKeys(bool generateIfNotFound);
+    QStatus VerifyCredentialsCB(const char* peerName, CertificateX509* certs, size_t numCerts);
     QStatus ParseCertChainPEM(String& encodedCertChain);
+    QStatus GenVerifierSigInfoArg(MsgArg& msgArg, bool updateHash);
 
     ECCPrivateKey issuerPrivateKey;
     ECCPublicKey issuerPublicKey;
     size_t certChainLen;
-    CertificateECC** certChain;
-    bool hasDSAKeys;
+    CertificateX509* certChain;
 };
 
 } /* namespace ajn */
