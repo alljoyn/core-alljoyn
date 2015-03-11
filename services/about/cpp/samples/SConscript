@@ -18,6 +18,11 @@ if about_env['OS_CONF'] in ['linux', 'openwrt', 'windows']:
     local_env = about_env.Clone()
 
     local_env.Prepend(LIBS = ['alljoyn_about'])
+    
+    # even though we have deprecated the About Service code we still want to 
+    # build the samples till the code is removed from the build tree.
+    if local_env['OS_GROUP'] == 'posix':
+        local_env.Append(CXXFLAGS = ['-Wno-deprecated-declarations'])
 
     if local_env['BR'] == 'on' and local_env.has_key('brobj') and local_env.has_key('ajrlib'):
         # Build apps with bundled daemon support

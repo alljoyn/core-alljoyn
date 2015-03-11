@@ -30,7 +30,10 @@ namespace services {
 
 /**
  * AnnounceHandler is a helper class used by an AllJoyn IoE client application to receive AboutService signal notification.
- * The user of the class need to implement   virtual void Announce(...) function
+ * The user of the class need to implement virtual void Announce(...) function
+ *
+ * @deprecated The AnnounceHandler class has been deprecated please see the
+ * AboutListener class for similar functionality as the AnnounceHandler class.
  */
 
 class AnnounceHandler : public ajn::MessageReceiver {
@@ -38,27 +41,34 @@ class AnnounceHandler : public ajn::MessageReceiver {
     friend class AnnouncementRegistrar;
   public:
     /**
-     *	map of AboutData using qcc::String as key and ajn::MsgArg as value.
+     * map of AboutData using qcc::String as key and ajn::MsgArg as value.
      */
     typedef std::map<qcc::String, ajn::MsgArg> AboutData;
 
     /**
      * map of ObjectDescriptions using qcc::String as key std::vector<qcc::String>   as value, describing interfaces
-     *
      */
     typedef std::map<qcc::String, std::vector<qcc::String> > ObjectDescriptions;
 
     /**
      * Construct an AnnounceHandler.
+     *
+     * @deprecated The AnnounceHandler class has been deprecated please see the
+     * AboutListener class.
      */
-    AnnounceHandler();
+    QCC_DEPRECATED(AnnounceHandler());
 
     /**
      * Destruct AnnounceHandler
+     *
+     * @deprecated The AnnounceHandler class has been deprecated please see the
+     * AboutListener class.
      */
-    ~AnnounceHandler();
+    QCC_DEPRECATED(~AnnounceHandler());
 
     /**
+     * @deprecated The AnnounceHandler::Announce callback function has been
+     * deprecated please see the AboutListener::Announced callback function.
      *
      * @param[in] version of the AboutService.
      * @param[in] port used by the AboutService
@@ -66,8 +76,8 @@ class AnnounceHandler : public ajn::MessageReceiver {
      * @param[in] objectDescs map of ObjectDescriptions using qcc::String as key std::vector<qcc::String>   as value, describing interfaces
      * @param[in] aboutData map of AboutData using qcc::String as key and ajn::MsgArg as value
      */
-    virtual void Announce(uint16_t version, uint16_t port, const char* busName, const ObjectDescriptions& objectDescs,
-                          const AboutData& aboutData) = 0;
+    QCC_DEPRECATED(virtual void Announce(uint16_t version, uint16_t port, const char* busName, const ObjectDescriptions &objectDescs,
+                                         const AboutData &aboutData)) = 0;
 
 };
 inline AnnounceHandler::~AnnounceHandler() {
