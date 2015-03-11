@@ -51,7 +51,7 @@ SessionOpts::NameTransferType NameTable::GetNameTransfer(const VirtualEndpoint& 
     } else {
         SessionOpts::NameTransferType nameTransfer = SessionOpts::DAEMON_NAMES;
         for (multimap<SessionId, RemoteEndpoint>::const_iterator it = b2bEps.begin();
-             (nameTransfer != SessionOpts::ALL_NAMES) && (it != b2bEps.end());
+             (nameTransfer == SessionOpts::DAEMON_NAMES) && (it != b2bEps.end());
              ++it) {
             nameTransfer = min(nameTransfer, it->second->GetFeatures().nameTransfer);
         }
@@ -89,7 +89,6 @@ void NameTable::AddUniqueName(BusEndpoint& endpoint)
     SessionOpts::NameTransferType nameTransfer = GetNameTransfer(endpoint);
 
     const qcc::String& uniqueName = endpoint->GetUniqueName();
-    QCC_DbgPrintf(("Add unique name %s", uniqueName.c_str()));
     lock.Lock(MUTEX_CONTEXT);
     UniqueNameEntry entry = { endpoint, nameTransfer };
     uniqueNames[uniqueName] = entry;
