@@ -435,6 +435,12 @@ const char* AJ_CALL alljoyn_proxybusobject_getservicename(alljoyn_proxybusobject
     return ((ProxyBusObjectC*)proxyObj)->GetServiceName().c_str();
 }
 
+const char* AJ_CALL alljoyn_proxybusobject_getuniquename(alljoyn_proxybusobject proxyObj)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    return ((ProxyBusObjectC*)proxyObj)->GetUniqueName().c_str();
+}
+
 alljoyn_sessionid AJ_CALL alljoyn_proxybusobject_getsessionid(alljoyn_proxybusobject proxyObj)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
