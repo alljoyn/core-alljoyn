@@ -30,6 +30,10 @@
 #define ARDP_STATS 1  /**< Enabling statistics gathering defaults to off */
 #endif
 
+#ifndef ARDP_TC_SUPPORT
+#define ARDP_TC_SUPPORT 0 /**< Enabling support for simple mode connection to Thin Client defaults to off */
+#endif
+
 #include <alljoyn/Status.h>
 
 #include <qcc/platform.h>
@@ -112,6 +116,10 @@ typedef struct ARDP_CONN_RECORD ArdpConnRecord;
 #define ARDP_FLAG_NUL  0x10    /**< Control flag. Null (zero-length) segment.  Must have zero data length but may share ACK and EACK info. */
 #define ARDP_FLAG_VER  0x40    /**< Control flag. Bits 6-7 of flags byte.  Current version is (1) */
 #define ARDP_FLAG_SDM  0x0001  /**< Sequenced delivery mode option. Indicates in-order sequence delivery is in force. */
+
+#if ARDP_TC_SUPPORT
+#define ARDP_FLAG_SIMPLE_MODE 0x0002 /**<  No EACKs */
+#endif
 
 typedef struct ARDP_HANDLE ArdpHandle;
 
