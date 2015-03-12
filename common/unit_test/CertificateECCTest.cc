@@ -113,11 +113,9 @@ static QStatus CreateCert(const qcc::String& serial, const qcc::GUID128& issuer,
     validity.validTo = validity.validFrom + expiredInSeconds;
     x509.SetValidity(&validity);
     status = x509.Sign(issuerPrivateKey);
-    if (ER_OK != status) {
-        return status;
-    }
-    return ER_OK;
+    return status;
 }
+
 static QStatus CreateIdentityCert(qcc::GUID128& issuer, const qcc::String& serial, ECCPrivateKey* dsaPrivateKey, ECCPublicKey* dsaPublicKey, ECCPrivateKey* subjectPrivateKey, ECCPublicKey* subjectPublicKey, bool selfSign, uint32_t expiredInSeconds, CertificateX509& x509)
 {
     Crypto_ECC ecc;
