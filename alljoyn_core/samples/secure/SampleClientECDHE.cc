@@ -33,6 +33,9 @@
 #include <alljoyn/version.h>
 #include <alljoyn/AllJoynStd.h>
 #include <alljoyn/Status.h>
+#include <qcc/time.h>
+#include <qcc/CryptoECC.h>
+#include <qcc/CertificateECC.h>
 #include <qcc/Log.h>
 
 using namespace std;
@@ -49,7 +52,7 @@ static const char* SERVICE_PATH = "/SecureService";
 static const char* KEYX_ECDHE_NULL = "ALLJOYN_ECDHE_NULL";
 static const char* KEYX_ECDHE_PSK = "ALLJOYN_ECDHE_PSK";
 static const char* KEYX_ECDHE_ECDSA = "ALLJOYN_ECDHE_ECDSA";
-static const char* ECDHE_KEYX = "ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_PSK ALLJOYN_ECDHE_ECDSA";
+static const char* ECDHE_KEYX = "ALLJOYN_ECDHE_ECDSA ALLJOYN_ECDHE_PSK ALLJOYN_ECDHE_NULL";
 static const SessionPort SERVICE_PORT = 42;
 
 static bool s_joinComplete = false;
@@ -124,53 +127,15 @@ class ECDHEKeyXListener : public AuthListener {
             creds.SetExpiration(100);  /* set the master secret expiry time to 100 seconds */
             return true;
         } else if (strcmp(authMechanism, KEYX_ECDHE_ECDSA) == 0) {
-            /* the key and certificate is generated using openssl */
-
-            static const char ecdsaPrivateKeyPEM[] = {
-                "-----BEGIN EC PRIVATE KEY-----\n"
-                "MHcCAQEEIAqN6AtyOAPxY5k7eFNXAwzkbsGMl4uqvPrYkIj0LNZBoAoGCCqGSM49\n"
-                "AwEHoUQDQgAEvnRd4fX9opwgXX4Em2UiCMsBbfaqhB1U5PJCDZacz9HumDEzYdrS\n"
-                "MymSxR34lL0GJVgEECvBTvpaHP2bpTIl6g==\n"
-                "-----END EC PRIVATE KEY-----"
-            };
-
-            static const char ecdsaCertChainX509PEM[] = {
-                "-----BEGIN CERTIFICATE-----\n"
-                "MIIBtDCCAVmgAwIBAgIJAMlyFqk69v+OMAoGCCqGSM49BAMCMFYxKTAnBgNVBAsM\n"
-                "IDdhNDhhYTI2YmM0MzQyZjZhNjYyMDBmNzdhODlkZDAyMSkwJwYDVQQDDCA3YTQ4\n"
-                "YWEyNmJjNDM0MmY2YTY2MjAwZjc3YTg5ZGQwMjAeFw0xNTAyMjYyMTUxMjVaFw0x\n"
-                "NjAyMjYyMTUxMjVaMFYxKTAnBgNVBAsMIDZkODVjMjkyMjYxM2IzNmUyZWVlZjUy\n"
-                "NzgwNDJjYzU2MSkwJwYDVQQDDCA2ZDg1YzI5MjI2MTNiMzZlMmVlZWY1Mjc4MDQy\n"
-                "Y2M1NjBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABL50XeH1/aKcIF1+BJtlIgjL\n"
-                "AW32qoQdVOTyQg2WnM/R7pgxM2Ha0jMpksUd+JS9BiVYBBArwU76Whz9m6UyJeqj\n"
-                "EDAOMAwGA1UdEwQFMAMBAf8wCgYIKoZIzj0EAwIDSQAwRgIhAKfmglMgl67L5ALF\n"
-                "Z63haubkItTMACY1k4ROC2q7cnVmAiEArvAmcVInOq/U5C1y2XrvJQnAdwSl/Ogr\n"
-                "IizUeK0oI5c=\n"
-                "-----END CERTIFICATE-----"
-                "\n"
-                "-----BEGIN CERTIFICATE-----\n"
-                "MIIBszCCAVmgAwIBAgIJAILNujb37gH2MAoGCCqGSM49BAMCMFYxKTAnBgNVBAsM\n"
-                "IDdhNDhhYTI2YmM0MzQyZjZhNjYyMDBmNzdhODlkZDAyMSkwJwYDVQQDDCA3YTQ4\n"
-                "YWEyNmJjNDM0MmY2YTY2MjAwZjc3YTg5ZGQwMjAeFw0xNTAyMjYyMTUxMjNaFw0x\n"
-                "NjAyMjYyMTUxMjNaMFYxKTAnBgNVBAsMIDdhNDhhYTI2YmM0MzQyZjZhNjYyMDBm\n"
-                "NzdhODlkZDAyMSkwJwYDVQQDDCA3YTQ4YWEyNmJjNDM0MmY2YTY2MjAwZjc3YTg5\n"
-                "ZGQwMjBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABGEkAUATvOE4uYmt/10vkTcU\n"
-                "SA0C+YqHQ+fjzRASOHWIXBvpPiKgHcINtNFQsyX92L2tMT2Kn53zu+3S6UAwy6yj\n"
-                "EDAOMAwGA1UdEwQFMAMBAf8wCgYIKoZIzj0EAwIDSAAwRQIgKit5yeq1uxTvdFmW\n"
-                "LDeoxerqC1VqBrmyEvbp4oJfamsCIQDvMTmulW/Br/gY7GOP9H/4/BIEoR7UeAYS\n"
-                "4xLyu+7OEA==\n"
-                "-----END CERTIFICATE-----"
-            };
-            /*
-             * The application may provide the DSA private key and public key in the certificate.
-             */
+            /* generate the private key and certificate */
+            String privateKeyPEM;
+            String certChainPEM;
+            GenKeyAndSelfSignCert(privateKeyPEM, certChainPEM);
             if ((credMask & AuthListener::CRED_PRIVATE_KEY) == AuthListener::CRED_PRIVATE_KEY) {
-                String pk(ecdsaPrivateKeyPEM);
-                creds.SetPrivateKey(pk);
+                creds.SetPrivateKey(privateKeyPEM);
             }
             if ((credMask & AuthListener::CRED_CERT_CHAIN) == AuthListener::CRED_CERT_CHAIN) {
-                String cert(ecdsaCertChainX509PEM, strlen(ecdsaCertChainX509PEM));
-                creds.SetCertChain(cert);
+                creds.SetCertChain(certChainPEM);
             }
             creds.SetExpiration(100);  /* set the master secret expiry time to 100 seconds */
             return true;
@@ -199,6 +164,38 @@ class ECDHEKeyXListener : public AuthListener {
         printf("SampleClientECDHE::AuthenticationComplete Authentication %s %s\n", authMechanism, success ? "successful" : "failed");
     }
 
+  private:
+
+    QStatus GenKeyAndSelfSignCert(String& privateKeyPEM, String& certPEM)
+    {
+        //Create a dsa key pair.
+        Crypto_ECC ecc;
+        ecc.GenerateDSAKeyPair();
+        //Encode the private key to PEM
+        QStatus status = CertificateX509::EncodePrivateKeyPEM((uint8_t*) ecc.GetDSAPrivateKey(), sizeof(ECCPrivateKey), privateKeyPEM);
+        if (ER_OK != status) {
+            return status;
+        }
+        //Generate a self-signed cert
+        CertificateX509 cert;
+        String issuerCN("Sample Code");
+
+        cert.SetSerial("10001000");
+        cert.SetIssuerCN((const uint8_t*) issuerCN.c_str(), issuerCN.size());
+        cert.SetSubjectCN((const uint8_t*) issuerCN.c_str(), issuerCN.size());
+        cert.SetSubjectPublicKey(ecc.GetDSAPublicKey());
+        cert.SetCA(false);
+        CertificateX509::ValidPeriod validity;
+        validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+        validity.validTo = validity.validFrom + 7200;
+        cert.SetValidity(&validity);
+        status = cert.Sign(ecc.GetDSAPrivateKey());
+        if (ER_OK != status) {
+            return status;
+        }
+        certPEM = cert.GetPEM();
+        return ER_OK;
+    }
 };
 
 /** Static bus listener */
