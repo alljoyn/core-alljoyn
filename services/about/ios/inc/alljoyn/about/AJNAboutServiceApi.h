@@ -21,29 +21,30 @@
 /**
  AJNAboutServiceApi is wrapper class that encapsulates the AJNAboutService using a shared instance.
  */
+__deprecated
 @interface AJNAboutServiceApi : AJNAboutService
 
 /**
  Destroy the shared instance.
  */
-- (void)destroyInstance;
+- (void)destroyInstance __deprecated;
 
 /**
  * Create an AboutServiceApi Shared instance.
  * @return AboutServiceApi instance(created only once).
  */
-+ (id)sharedInstance;
++ (id)sharedInstance __deprecated;
 
 /**
  Start teh service using a given AJNBusAttachment and PropertyStore.
  @param bus A reference to the AJNBusAttachment.
  @param store A reference to a property store.
  */
-- (void)startWithBus:(AJNBusAttachment *)bus andPropertyStore:(AJNAboutPropertyStoreImpl *)store;
+- (void)startWithBus:(AJNBusAttachment *)bus andPropertyStore:(AJNAboutPropertyStoreImpl *)store __deprecated;
 
 /**
  Return a reference to the property store.
  */
-- (ajn ::services ::AboutPropertyStoreImpl *)getPropertyStore;
+- (ajn ::services ::AboutPropertyStoreImpl *)getPropertyStore __deprecated;
 
 @end
