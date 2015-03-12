@@ -4128,7 +4128,7 @@ bool AllJoynObj::IsMemberOfSession(qcc::String hostName, qcc::String name, uint3
 
 QStatus AllJoynObj::GetNames(MsgArg& argArray, RemoteEndpoint& endpoint, SessionOpts::NameTransferType nameTransfer, CallerType type, String joinerName, uint32_t sessionId, String sessionHost)
 {
-    QCC_DbgPrintf(("AllJoynObj::GetNames(endpoint = %s joinerName %s endpoint->GetFeatures().nameTransfer %d type %d sessionId %u endpoint->GetRemoteGUID() %s)", endpoint->GetUniqueName().c_str(), joinerName.c_str(), nameTransfer, type, sessionId, endpoint->GetRemoteGUID().ToShortString().c_str()));
+    QCC_DbgTrace(("AllJoynObj::GetNames(endpoint = %s joinerName %s endpoint->GetFeatures().nameTransfer %d type %d sessionId %u endpoint->GetRemoteGUID() %s)", endpoint->GetUniqueName().c_str(), joinerName.c_str(), nameTransfer, type, sessionId, endpoint->GetRemoteGUID().ToShortString().c_str()));
 
     /* Validate nameTransfer and type */
     if ((((nameTransfer == SessionOpts::SLS_NAMES) || (nameTransfer == SessionOpts::P2P_NAMES)) && (type != JOINER) && (type != HOST)) ||
@@ -4254,7 +4254,7 @@ QStatus AllJoynObj::ExchangeNames(RemoteEndpoint& endpoint)
     QCC_DbgTrace(("AllJoynObj::ExchangeNames(endpoint = %s) NT %d", endpoint->GetUniqueName().c_str(), endpoint->GetFeatures().nameTransfer));
 
     MsgArg argArray(ALLJOYN_ARRAY);
-    QStatus status = GetNames(argArray, endpoint, endpoint->GetFeatures().nameTransfer);
+    QStatus status = GetNames(argArray, endpoint, endpoint->GetFeatures().nameTransfer, endpoint->IsIncomingConnection() ? HOST : JOINER);
     if (ER_OK == status) {
         Message exchangeMsg(bus);
         status = exchangeMsg->SignalMsg("a(sas)",

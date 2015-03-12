@@ -1259,7 +1259,7 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
     QStatus GetNames(MsgArg& argArray,
                      RemoteEndpoint& endpoint,
                      SessionOpts::NameTransferType nameTransfer,
-                     CallerType type = JOINER,
+                     CallerType type,
                      qcc::String joinerName = "",
                      uint32_t sessionId = 0,
                      qcc::String sessionHost = "");

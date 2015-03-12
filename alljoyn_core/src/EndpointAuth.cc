@@ -124,18 +124,15 @@ QStatus EndpointAuth::Hello(qcc::String& redirection)
         if (ER_OK == status) {
             uniqueName = response->GetArg(0)->v_string.str;
             remoteGUID = qcc::GUID128(response->GetArg(1)->v_string.str);
-            remoteProtocolVersion = response->GetArg(2)->v_uint32;
+            uint32_t temp = response->GetArg(2)->v_uint32;
+            remoteProtocolVersion = temp & 0x3FFFFFFF;
+            nameTransfer = static_cast<SessionOpts::NameTransferType>(temp >> 30);
             if (remoteGUID == bus.GetInternal().GetGlobalGUID()) {
                 QCC_DbgPrintf(("BusHello was sent to self"));
                 return ER_BUS_SELF_CONNECT;
             } else {
                 QCC_DbgPrintf(("Connection id: \"%s\", remoteGUID: \"%s\"\n", uniqueName.c_str(), remoteGUID.ToString().c_str()));
             }
-            /* Default to all names when interacting with older routing nodes */
-            if (remoteProtocolVersion < 12) {
-                nameTransfer = SessionOpts::ALL_NAMES;
-            }
-
         } else {
             return status;
         }
@@ -257,10 +254,7 @@ QStatus EndpointAuth::WaitHello(qcc::String& authUsed)
 
             endpoint->GetFeatures().isBusToBus = true;
             endpoint->GetFeatures().allowRemote = true;
-            /* Default to all names when interacting with older routing nodes */
-            if (remoteProtocolVersion < 12) {
-                endpoint->GetFeatures().nameTransfer = SessionOpts::ALL_NAMES;
-            }
+
             /*
              * Remote name for the endpoint is the sender of the hello.
              */
