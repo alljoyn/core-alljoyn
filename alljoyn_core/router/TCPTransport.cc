@@ -867,12 +867,12 @@ void* _TCPEndpoint::AuthThread::Run(void* arg)
 }
 
 TCPTransport::TCPTransport(BusAttachment& bus)
-    : Thread("TCPTransport"), m_bus(bus), m_stopping(false), m_listener(0),
-    m_foundCallback(m_listener), m_networkEventCallback(*this),
+    : Thread("TCPTransport"), m_bus(bus), m_stopping(false), m_routerNameAdvertised(false),
+    m_listener(0), m_foundCallback(m_listener), m_networkEventCallback(*this),
     m_isAdvertising(false), m_isDiscovering(false), m_isListening(false),
     m_isNsEnabled(false), m_reload(STATE_RELOADING),
     m_nsReleaseCount(0), m_wildcardIfaceProcessed(false),
-    m_maxRemoteClientsTcp(0), m_numUntrustedClients(0)
+    m_maxRemoteClientsTcp(0), m_numUntrustedClients(0), m_dynamicScoreUpdater(*this)
 {
     QCC_DbgTrace(("TCPTransport::TCPTransport()"));
     /*
@@ -954,7 +954,7 @@ void TCPTransport::Authenticated(TCPEndpoint& conn)
          */
         conn->SetEpStarted();
     }
-    UpdateDynamicScore();
+    m_dynamicScoreUpdater.Alert();
 }
 
 QStatus TCPTransport::Start()
@@ -1036,6 +1036,7 @@ QStatus TCPTransport::Start()
     }
     IpNameService::Instance().UpdateDynamicScore(TRANSPORT_TCP, (maxConn - (m_authList.size() + m_endpointList.size())),
                                                  maxConn, (m_maxRemoteClientsTcp - m_numUntrustedClients), m_maxRemoteClientsTcp);
+    m_dynamicScoreUpdater.Start();
     /*
      * Start the server accept loop through the thread base class.  This will
      * close or open the IsRunning() gate we use to control access to our
@@ -1064,6 +1065,7 @@ QStatus TCPTransport::Stop(void)
         IpNameService::Instance().CancelAdvertiseName(TRANSPORT_TCP, *i, TRANSPORT_TCP);
     }
     m_advertising.clear();
+    m_routerNameAdvertised = false;
     m_isAdvertising = false;
     QCC_DbgTrace(("TCPTransport::Stop(): Gratuitously clean out discoveries."));
     for (list<qcc::String>::iterator i = m_discovering.begin(); i != m_discovering.end(); ++i) {
@@ -1134,6 +1136,8 @@ QStatus TCPTransport::Stop(void)
     }
 
     m_endpointListLock.Unlock(MUTEX_CONTEXT);
+
+    m_dynamicScoreUpdater.Stop();
 
     return ER_OK;
 }
@@ -1215,6 +1219,8 @@ QStatus TCPTransport::Join(void)
     }
 
     m_endpointListLock.Unlock(MUTEX_CONTEXT);
+
+    m_dynamicScoreUpdater.Join();
 
     m_stopping = false;
     return ER_OK;
@@ -1667,7 +1673,7 @@ void TCPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
     }
     m_endpointListLock.Unlock(MUTEX_CONTEXT);
     if (managed) {
-        UpdateDynamicScore();
+        m_dynamicScoreUpdater.Alert();
     }
 }
 
@@ -2142,7 +2148,7 @@ void TCPTransport::RunListenMachine(ListenRequest& listenRequest)
         HandleNetworkEventInstance(listenRequest);
         break;
 
-    case UPDATE_DYNAMIC_RANK_INSTANCE:
+    case UPDATE_DYNAMIC_SCORE_INSTANCE:
         UpdateDynamicScoreInstance(listenRequest);
         break;
     }
@@ -2563,6 +2569,29 @@ void TCPTransport::DisableDiscoveryInstance(ListenRequest& listenRequest)
     if (isEmpty) {
         m_isDiscovering = false;
     }
+}
+
+bool TCPTransport::EnableRouterAdvertisement() {
+    ConfigDB* config = ConfigDB::GetConfigDB();
+    uint32_t maxConn = config->GetLimit("max_completed_connections", ALLJOYN_MAX_COMPLETED_CONNECTIONS_TCP_DEFAULT);
+    uint32_t maxAuth = config->GetLimit("max_incomplete_connections", ALLJOYN_MAX_INCOMPLETE_CONNECTIONS_TCP_DEFAULT);
+    if (m_routerNameAdvertised == false && !routerName.empty() && m_numUntrustedClients < m_maxRemoteClientsTcp &&
+        m_authList.size() < maxAuth && (m_authList.size() + m_endpointList.size()) < maxConn) {
+        return true;
+    }
+    return false;
+}
+
+bool TCPTransport::DisableRouterAdvertisement() {
+    ConfigDB* config = ConfigDB::GetConfigDB();
+    uint32_t maxConn = config->GetLimit("max_completed_connections", ALLJOYN_MAX_COMPLETED_CONNECTIONS_TCP_DEFAULT);
+    uint32_t maxAuth = config->GetLimit("max_incomplete_connections", ALLJOYN_MAX_INCOMPLETE_CONNECTIONS_TCP_DEFAULT);
+    if (m_routerNameAdvertised == true && !routerName.empty() &&
+        ((m_numUntrustedClients >= m_maxRemoteClientsTcp) ||
+         (m_authList.size() >= maxAuth) || (m_authList.size() + m_endpointList.size()) >= maxConn)) {
+        return true;
+    }
+    return false;
 }
 
 void TCPTransport::UpdateDynamicScoreInstance(ListenRequest& listenRequest)
@@ -3240,7 +3269,7 @@ QStatus TCPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
     m_activeEndpointsThreadList.erase(i);
     m_endpointListLock.Unlock(MUTEX_CONTEXT);
 
-    UpdateDynamicScore();
+    m_dynamicScoreUpdater.Alert();
     return status;
 }
 
@@ -3511,14 +3540,12 @@ void TCPTransport::UntrustedClientExit() {
 
     /* An untrusted client has exited, update the counts and re-enable the advertisement if necessary. */
     m_listenRequestsLock.Lock();
-    m_numUntrustedClients--;
-    QCC_DbgPrintf((" TCPTransport::UntrustedClientExit() m_numUntrustedClients=%d m_maxRemoteClientsTcp=%d", m_numUntrustedClients, m_maxRemoteClientsTcp));
-    if (!routerName.empty() && (m_numUntrustedClients == (m_maxRemoteClientsTcp - 1))) {
-        EnableAdvertisement(routerName, true, TRANSPORT_TCP);
+    if (m_numUntrustedClients >= 0) {
+        m_numUntrustedClients--;
+        QCC_DbgPrintf((" TCPTransport::UntrustedClientExit() m_numUntrustedClients=%d m_maxRemoteClientsTcp=%d", m_numUntrustedClients, m_maxRemoteClientsTcp));
     }
-    UpdateDynamicScore();
     m_listenRequestsLock.Unlock();
-
+    m_dynamicScoreUpdater.Alert();
 
 }
 
@@ -3540,16 +3567,8 @@ QStatus TCPTransport::UntrustedClientStart() {
         status = ER_BUS_NOT_ALLOWED;
         m_numUntrustedClients--;
     }
-    if (m_numUntrustedClients >= m_maxRemoteClientsTcp) {
-        if (m_numUntrustedClients == m_maxRemoteClientsTcp) {
-            QCC_DbgPrintf(("TCPTransport::UntrustedClientStart(): Last available slot is now filled - no more free slots"));
-        } else {
-            QCC_LogError(ER_BUS_NOT_ALLOWED, ("TCPTransport::UntrustedClientStart(): Disabling routing node advertisements"));
-        }
-        DisableAdvertisement(routerName, TRANSPORT_TCP);
-    }
-    UpdateDynamicScore();
     m_listenRequestsLock.Unlock();
+    m_dynamicScoreUpdater.Alert();
     return status;
 }
 
@@ -3939,9 +3958,9 @@ void TCPTransport::QueueDisableAdvertisement(const qcc::String& advertiseName, T
 
 }
 
-void TCPTransport::UpdateDynamicScore()
+void TCPTransport::UpdateRouterAdvertisementAndDynamicScore()
 {
-    QCC_DbgPrintf(("TCPTransport::UpdateDynamicScore()"));
+    QCC_DbgPrintf(("TCPTransport::UpdateRouterAdvertisementAndDynamicScore()"));
 
     /*
      * We only want to allow this call to proceed if we have a running server
@@ -3957,23 +3976,41 @@ void TCPTransport::UpdateDynamicScore()
      * our Stop() method.
      */
     if (IsRunning() == false || m_stopping == true) {
-        QCC_LogError(ER_BUS_TRANSPORT_NOT_STARTED, ("TCPTransport::UpdateDynamicScore(): Not running or stopping; exiting"));
+        QCC_LogError(ER_BUS_TRANSPORT_NOT_STARTED, ("TCPTransport::UpdateRouterAdvertisementAndDynamicScore(): Not running or stopping; exiting"));
         return;
     }
 
-    QueueUpdateDynamicScore();
+    QueueUpdateRouterAdvertisementAndDynamicScore();
 }
 
-void TCPTransport::QueueUpdateDynamicScore()
+void TCPTransport::QueueUpdateRouterAdvertisementAndDynamicScore()
 {
-    QCC_DbgPrintf(("TCPTransport::QueueUpdateDynamicScore()"));
+    QCC_DbgPrintf(("TCPTransport::QueueUpdateRouterAdvertisementAndDynamicScore()"));
 
-    ListenRequest listenRequest;
-    listenRequest.m_requestOp = UPDATE_DYNAMIC_RANK_INSTANCE;
+    ListenRequest updateScoreListenRequest;
+    updateScoreListenRequest.m_requestOp = UPDATE_DYNAMIC_SCORE_INSTANCE;
+
+    ListenRequest enableAdvListenRequest;
+    enableAdvListenRequest.m_requestOp = ENABLE_ADVERTISEMENT_INSTANCE;
+    enableAdvListenRequest.m_requestParam = routerName;
+    enableAdvListenRequest.m_requestParamOpt = true;
+    enableAdvListenRequest.m_requestTransportMask = TRANSPORT_TCP;
+
+    ListenRequest disableAdvListenRequest;
+    disableAdvListenRequest.m_requestOp = DISABLE_ADVERTISEMENT_INSTANCE;
+    disableAdvListenRequest.m_requestParam = routerName;
+    disableAdvListenRequest.m_requestTransportMask = TRANSPORT_TCP;
 
     m_listenRequestsLock.Lock(MUTEX_CONTEXT);
-    /* Process the request */
-    RunListenMachine(listenRequest);
+    /* Process the request(s) */
+    RunListenMachine(updateScoreListenRequest);
+    if (EnableRouterAdvertisement()) {
+        RunListenMachine(enableAdvListenRequest);
+        m_routerNameAdvertised = true;
+    } else if (DisableRouterAdvertisement()) {
+        RunListenMachine(disableAdvListenRequest);
+        m_routerNameAdvertised = false;
+    }
     m_listenRequestsLock.Unlock(MUTEX_CONTEXT);
 }
 
@@ -4354,13 +4391,14 @@ void TCPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
          * that we do not send gratuitous is-at (advertisements) of the name, but we
          * do respond to who-has requests on the name.
          */
-        if (!routerName.empty() && (m_numUntrustedClients < m_maxRemoteClientsTcp)) {
+        ConfigDB* config = ConfigDB::GetConfigDB();
+        uint32_t maxConn = config->GetLimit("max_completed_connections", ALLJOYN_MAX_COMPLETED_CONNECTIONS_TCP_DEFAULT);
+        if (EnableRouterAdvertisement()) {
             bool isFirst;
             NewAdvertiseOp(ENABLE_ADVERTISEMENT, routerName, isFirst);
-            ConfigDB* config = ConfigDB::GetConfigDB();
-            uint32_t maxConn = config->GetLimit("max_completed_connections", ALLJOYN_MAX_COMPLETED_CONNECTIONS_TCP_DEFAULT);
             IpNameService::Instance().UpdateDynamicScore(TRANSPORT_TCP, (maxConn - (m_authList.size() + m_endpointList.size())), maxConn, (m_maxRemoteClientsTcp - m_numUntrustedClients), m_maxRemoteClientsTcp);
             QStatus status = IpNameService::Instance().AdvertiseName(TRANSPORT_TCP, routerName, true, TRANSPORT_TCP);
+            m_routerNameAdvertised = true;
             if (status != ER_OK) {
                 QCC_LogError(status, ("TCPTransport::HandleNetworkEventInstance(): Failed to AdvertiseNameQuietly \"%s\"", routerName.c_str()));
             }
@@ -4479,4 +4517,12 @@ void TCPTransport::CheckEndpointLocalMachine(TCPEndpoint endpoint)
 #endif
 }
 
+ThreadReturn STDCALL TCPTransport::DynamicScoreUpdater::Run(void* arg) {
+    while (!IsStopping()) {
+        Event::Wait(Event::neverSet);
+        GetStopEvent().ResetEvent();
+        m_transport.UpdateRouterAdvertisementAndDynamicScore();
+    }
+    return 0;
+}
 } // namespace ajn

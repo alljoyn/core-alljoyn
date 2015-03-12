@@ -1660,7 +1660,6 @@ class IpNameServiceImpl : public qcc::Thread {
     bool m_protectListeners;
     PacketScheduler m_packetScheduler;
 
-    qcc::String m_routerName;
     uint32_t m_networkChangeScheduleCount;
     bool m_doNetworkCallback[N_TRANSPORTS];
     qcc::NetworkEventSet m_networkEvents;

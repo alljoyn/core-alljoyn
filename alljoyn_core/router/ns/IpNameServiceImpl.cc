@@ -380,7 +380,7 @@ IpNameServiceImpl::IpNameServiceImpl()
     m_enabled(false), m_doEnable(false), m_doDisable(false),
     m_ipv4QuietSockFd(qcc::INVALID_SOCKET_FD), m_ipv6QuietSockFd(qcc::INVALID_SOCKET_FD),
     m_ipv4UnicastSockFd(qcc::INVALID_SOCKET_FD), m_unicastEvent(NULL),
-    m_protectListeners(false), m_packetScheduler(*this), m_routerName(),
+    m_protectListeners(false), m_packetScheduler(*this),
     m_networkChangeScheduleCount(m_retries + 1), m_staticScore(0), m_dynamicScore(0), m_priority(0),
     m_powerSource(0), m_mobility(0), m_availability(0), m_nodeConnection(0)
 {
@@ -445,8 +445,6 @@ QStatus IpNameServiceImpl::Init(const qcc::String& guid, bool loopback)
     //
     m_enableIPv4 = !config->GetFlag("ns_disable_ipv4");
     m_enableIPv6 = !config->GetFlag("ns_disable_ipv6");
-
-    m_routerName = config->GetProperty("router_advertisement_prefix", ALLJOYN_DEFAULT_ROUTER_ADVERTISEMENT_PREFIX);
 
     LoadStaticRouterParams(config);
     m_staticScore = ComputeStaticScore(m_powerSource, m_mobility, m_availability, m_nodeConnection);
@@ -6958,34 +6956,6 @@ void IpNameServiceImpl::HandleProtocolQuestion(WhoHas whoHas, const qcc::IPEndpo
         bool respond = false;
         bool respondQuietly = false;
 
-        // Only send responses to single queries for the router
-        // prefix if there are available connections for a thin
-        // client to connect.
-        String routerSearchPrefix = "";
-        if (!m_routerName.empty()) {
-            routerSearchPrefix = m_routerName;
-            size_t len = routerSearchPrefix.length();
-            if (routerSearchPrefix[len - 1] == '.') {
-                routerSearchPrefix[len - 1] = '*';
-            } else {
-                routerSearchPrefix.append('*');
-            }
-        }
-        if (whoHas.GetNumberNames() == 1 && !routerSearchPrefix.empty() && whoHas.GetName(0) == routerSearchPrefix) {
-            // At least low_connection_watermak connection(s) available over tcp.
-            // If we don't have enough resources we do not respond.
-            if (m_dynamicParams[TRANSPORT_INDEX_TCP].maximumTransportConnections && m_dynamicParams[TRANSPORT_INDEX_TCP].availableTransportConnections < LOW_CONNECTION_WATERMARK) {
-                QCC_DbgPrintf(("Not responding to a V0/V1 request since no more room for tcp based thin clients"));
-                m_mutex.Unlock();
-                return;
-            }
-            if (m_dynamicParams[TRANSPORT_INDEX_TCP].availableTransportRemoteClients < LOW_CONNECTION_WATERMARK) {
-                QCC_DbgPrintf(("Not responding to a V0/V1 request since no more room for tcp based thin clients"));
-                m_mutex.Unlock();
-                return;
-            }
-        }
-
         for (uint32_t i = 0; i < whoHas.GetNumberNames(); ++i) {
 
             qcc::String wkn = whoHas.GetName(i);
@@ -8103,41 +8073,6 @@ bool IpNameServiceImpl::HandleSearchQuery(TransportMask completeTransportMask, M
         //
         bool respond = false;
         bool respondQuietly = false;
-        // Only send responses to single queries for the router
-        // prefix if there are available connections for a thin
-        // client to connect.
-        String routerSearchPrefix = "";
-        if (!m_routerName.empty()) {
-            routerSearchPrefix = m_routerName;
-            size_t len = routerSearchPrefix.length();
-            if (routerSearchPrefix[len - 1] == '.') {
-                routerSearchPrefix[len - 1] = '*';
-            } else {
-                routerSearchPrefix.append('*');
-            }
-        }
-        if (searchRData->GetNumNames() == 1 && !routerSearchPrefix.empty() && searchRData->GetNameAt(0) == routerSearchPrefix) {
-            // At least low_connection_watermak connection(s) available over tcp or udp.
-            // If we don't have enough resources for only one of the transports, we respond
-            // with the transport that we have resources for.  If we don't have resources
-            // for either transport, we don't respond at all.
-            if ((completeTransportMask & TRANSPORT_TCP) && (m_dynamicParams[TRANSPORT_INDEX_TCP].maximumTransportConnections && m_dynamicParams[TRANSPORT_INDEX_TCP].availableTransportConnections < LOW_CONNECTION_WATERMARK)) {
-                completeTransportMask &= ~TRANSPORT_TCP;
-            }
-            if ((completeTransportMask & TRANSPORT_UDP) && (m_dynamicParams[TRANSPORT_INDEX_UDP].maximumTransportConnections && m_dynamicParams[TRANSPORT_INDEX_UDP].availableTransportConnections < LOW_CONNECTION_WATERMARK)) {
-                completeTransportMask &= ~TRANSPORT_UDP;
-            }
-            if ((completeTransportMask & TRANSPORT_TCP) && (m_dynamicParams[TRANSPORT_INDEX_TCP].availableTransportRemoteClients < LOW_CONNECTION_WATERMARK)) {
-                completeTransportMask &= ~TRANSPORT_TCP;
-            }
-            if ((completeTransportMask & TRANSPORT_UDP) && (m_dynamicParams[TRANSPORT_INDEX_UDP].availableTransportRemoteClients < LOW_CONNECTION_WATERMARK)) {
-                completeTransportMask &= ~TRANSPORT_UDP;
-            }
-            if (!completeTransportMask) {
-                QCC_DbgPrintf(("Not responding since no more room for tcp or udp based thin clients"));
-                return true;
-            }
-        }
         for (int i = 0; i < searchRData->GetNumNames(); ++i) {
             String wkn = searchRData->GetNameAt(i);
             if (searchRData->SendMatchOnly()) {

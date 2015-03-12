@@ -73,6 +73,14 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     friend class ArdpStream;
 
   public:
+    class DynamicScoreUpdater : public qcc::Thread {
+      public:
+        DynamicScoreUpdater(UDPTransport& transport) : m_transport(transport) { };
+        virtual qcc::ThreadReturn STDCALL Run(void* arg);
+      private:
+        UDPTransport& m_transport;
+    };
+    friend class DynamicScoreUpdater;
     /**
      * Create a UDP based transport for use by daemons.
      *
@@ -219,7 +227,13 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
      */
     void DisableAdvertisement(const qcc::String& advertiseName, TransportMask transports);
 
+    bool EnableRouterAdvertisement();
+
+    bool DisableRouterAdvertisement();
+
     void UpdateDynamicScore();
+
+    void UpdateRouterAdvertisementAndDynamicScore();
 
     /**
      * Returns the name of this transport
@@ -330,6 +344,7 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     BusAttachment& m_bus;                                          /**< The message bus for this transport */
     mutable volatile int32_t m_refCount;                           /**< Incremented if a thread is doing something somewhere */
     bool m_stopping;                                               /**< True if Stop() has been called but endpoints still exist */
+    bool m_routerNameAdvertised;                                   /**< True if routerName is advertised */
     TransportListener* m_listener;                                 /**< Registered TransportListener */
     std::set<UDPEndpoint> m_preList;                               /**< "Pre" list of authenticating endpoints (see AcceptCb comments) */
     qcc::Mutex m_preListLock;                                      /**< Mutex that protects the endpoint and auth lists */
@@ -363,7 +378,7 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
         ENABLE_DISCOVERY_INSTANCE,       /**< An EnableDiscovery() has happened */
         DISABLE_DISCOVERY_INSTANCE,      /**< A DisableDiscovery() has happened */
         HANDLE_NETWORK_EVENT,            /**< A network event has happened */
-        UPDATE_DYNAMIC_RANK_INSTANCE     /**< A change to the dynamic rank has happened */
+        UPDATE_DYNAMIC_SCORE_INSTANCE    /**< A change to the dynamic score has happened */
     };
 
     /**
@@ -709,7 +724,7 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     void QueueDisableDiscovery(const char* namePrefix, TransportMask transports);
     void QueueEnableAdvertisement(const qcc::String& advertiseName, bool quietly, TransportMask transports);
     void QueueDisableAdvertisement(const qcc::String& advertiseName, TransportMask transports);
-    void QueueUpdateDynamicScore();
+    void QueueUpdateRouterAdvertisementAndDynamicScore();
 
     void RunListenMachine(ListenRequest& listenRequest);
 
@@ -812,6 +827,8 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     volatile int32_t m_currConn;
 
     qcc::Mutex m_connLock;  /**< m_currAuth and m_currConn must be changed atomically, so need to be mutex protected */
+
+    DynamicScoreUpdater m_dynamicScoreUpdater;
 
     /**
      * arcpConfig are the limits from the daemon configuration database relating

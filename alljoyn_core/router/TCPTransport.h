@@ -65,6 +65,14 @@ class TCPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     friend class _TCPEndpoint;
 
   public:
+    class DynamicScoreUpdater : public qcc::Thread {
+      public:
+        DynamicScoreUpdater(TCPTransport& transport) : m_transport(transport) { };
+        virtual qcc::ThreadReturn STDCALL Run(void* arg);
+      private:
+        TCPTransport& m_transport;
+    };
+    friend class DynamicScoreUpdater;
     /**
      * Create a TCP based transport for use by daemons.
      *
@@ -211,7 +219,13 @@ class TCPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
      */
     void DisableAdvertisement(const qcc::String& advertiseName, TransportMask completetransports);
 
+    bool EnableRouterAdvertisement();
+
+    bool DisableRouterAdvertisement();
+
     void UpdateDynamicScore();
+
+    void UpdateRouterAdvertisementAndDynamicScore();
 
     /**
      * Returns the name of this transport
@@ -310,6 +324,7 @@ class TCPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
 
     BusAttachment& m_bus;                                          /**< The message bus for this transport */
     bool m_stopping;                                               /**< True if Stop() has been called but endpoints still exist */
+    bool m_routerNameAdvertised;                                   /**< True if routerName is advertised */
     TransportListener* m_listener;                                 /**< Registered TransportListener */
     std::set<TCPEndpoint> m_authList;                              /**< List of authenticating endpoints */
     std::set<TCPEndpoint> m_endpointList;                          /**< List of active endpoints */
@@ -339,7 +354,7 @@ class TCPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
         ENABLE_DISCOVERY_INSTANCE,       /**< An EnableDiscovery() has happened */
         DISABLE_DISCOVERY_INSTANCE,      /**< A DisableDiscovery() has happened */
         HANDLE_NETWORK_EVENT,            /**< A network event has happened */
-        UPDATE_DYNAMIC_RANK_INSTANCE     /**< A change to the dynamic rank has happened */
+        UPDATE_DYNAMIC_SCORE_INSTANCE    /**< A change to the dynamic score has happened */
     };
 
     /**
@@ -709,7 +724,7 @@ class TCPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     void QueueDisableDiscovery(const char* namePrefix, TransportMask transports);
     void QueueEnableAdvertisement(const qcc::String& advertiseName, bool quietly, TransportMask completetransports);
     void QueueDisableAdvertisement(const qcc::String& advertiseName, TransportMask completetransports);
-    void QueueUpdateDynamicScore();
+    void QueueUpdateRouterAdvertisementAndDynamicScore();
 
     void RunListenMachine(ListenRequest& listenRequest);
 
@@ -779,6 +794,8 @@ class TCPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
 
     uint32_t m_numHbeatProbes;             /**< Number of probes Routing node should wait for Heartbeat response to be
                                               recieved from the Leaf node before declaring it dead - Transport specific */
+
+    DynamicScoreUpdater m_dynamicScoreUpdater;
 };
 
 } // namespace ajn
