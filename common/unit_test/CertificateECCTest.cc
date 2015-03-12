@@ -314,7 +314,7 @@ TEST_F(CertificateECCTest, VerifyX509ExternalCertChain)
     ASSERT_EQ(ER_OK, status) << " count the number of certs in the chain failed with actual status: " << QCC_StatusText(status);
     ASSERT_EQ((size_t) 2, count) << " expecting two certs in the cert chain";
 
-    CertificateX509* certs = new CertificateX509[2];
+    CertificateX509 certs[2];
     status = CertificateX509::DecodeCertChainPEM(pem, certs, count);
     ASSERT_EQ(ER_OK, status) << " decode the cert chain failed with actual status: " << QCC_StatusText(status);
     for (size_t cnt = 0; cnt < count; cnt++) {
@@ -322,6 +322,5 @@ TEST_F(CertificateECCTest, VerifyX509ExternalCertChain)
     }
     status = certs[0].Verify(certs[1].GetSubjectPublicKey());
     ASSERT_EQ(ER_OK, status) << " verify leaf cert failed with actual status: " << QCC_StatusText(status);
-    delete [] certs;
 }
 
