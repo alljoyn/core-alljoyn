@@ -23,16 +23,20 @@ import org.alljoyn.bus.ProxyBusObject;
 import org.alljoyn.services.common.ClientBaseImpl;
 import org.alljoyn.services.common.ServiceAvailabilityListener;
 
+@Deprecated
 public class AboutIconClientImpl extends ClientBaseImpl implements AboutIconClient
 {
+    @Deprecated
     public final static String TAG = AboutIconClientImpl.class.getName();
 
+    @Deprecated
     public AboutIconClientImpl(String peerName, BusAttachment bus, ServiceAvailabilityListener serviceAvailabilityListener, short port)
     {
         super(peerName, bus, serviceAvailabilityListener, IconTransport.OBJ_PATH, new Class<?>[] { IconTransport.class }, port);
     }
 
     @Override
+    @Deprecated
     public short getVersion() throws BusException {
         ProxyBusObject proxyObj = getProxyObject();
         /* We make calls to the methods of the AllJoyn object through one of its interfaces. */
@@ -41,6 +45,7 @@ public class AboutIconClientImpl extends ClientBaseImpl implements AboutIconClie
     }
 
     @Override
+    @Deprecated
     public String getMimeType() throws BusException {
         ProxyBusObject proxyObj = getProxyObject();
         /* We make calls to the methods of the AllJoyn object through one of its interfaces. */
@@ -49,6 +54,7 @@ public class AboutIconClientImpl extends ClientBaseImpl implements AboutIconClie
     }
 
     @Override
+    @Deprecated
     public int getSize() throws BusException {
         ProxyBusObject proxyObj = getProxyObject();
         /* We make calls to the methods of the AllJoyn object through one of its interfaces. */
@@ -57,6 +63,7 @@ public class AboutIconClientImpl extends ClientBaseImpl implements AboutIconClie
     }
 
     @Override
+    @Deprecated
     public String GetUrl() throws BusException {
         ProxyBusObject proxyObj = getProxyObject();
         /* We make calls to the methods of the AllJoyn object through one of its interfaces. */
@@ -65,6 +72,7 @@ public class AboutIconClientImpl extends ClientBaseImpl implements AboutIconClie
     }
 
     @Override
+    @Deprecated
     public byte[] GetContent() throws BusException {
         ProxyBusObject proxyObj = getProxyObject();
         /* We make calls to the methods of the AllJoyn object through one of its interfaces. */

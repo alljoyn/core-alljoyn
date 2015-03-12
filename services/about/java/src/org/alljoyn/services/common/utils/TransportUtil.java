@@ -27,15 +27,19 @@ import org.alljoyn.bus.Variant;
 
 /**
  * A utility class for transforming objects from one format to another
+ * @deprecated
  */
+@Deprecated
 public class TransportUtil
 {
 
     /**
      * A utility method for converting from a String-&gt;Object map to a String-&gt;Variant map
+     * @deprecated
      * @param sToObjectMap input String-&gt;Object map.
      * @return String-&gt;Variant map
      */
+    @Deprecated
     public static Map<String, Variant> toVariantMap(Map<String, Object> sToObjectMap)
     {
         Map<String,Variant> variantMap = new HashMap<String, Variant>(sToObjectMap.size());
@@ -86,6 +90,7 @@ public class TransportUtil
 
     /**
      * A utility method for converting from a String-&gt;Variant map to a String-&gt;Object map
+     * @deprecated
      *
      * @param sToVariantMap input String-&gt;Variant map.
      *
@@ -94,6 +99,7 @@ public class TransportUtil
      * @return String-&gt;Object map
      *
      */
+    @Deprecated
     public static Map<String, Object> fromVariantMap(Map<String, Variant> sToVariantMap) throws BusException
     {
         Map<String,Object> objectMap = new HashMap<String, Object>(sToVariantMap.size());
@@ -123,9 +129,11 @@ public class TransportUtil
 
     /**
      * A utility method to convert from chars to bytes
+     * @deprecated
      * @param charArray char[]
      * @return byte[]
      */
+    @Deprecated
     public static byte[] toByteArray(char[] charArray)
     {
         if ( charArray == null ) {
@@ -143,9 +151,11 @@ public class TransportUtil
 
     /**
      * A utility method to convert from bytes to chars
+     * @deprecated
      * @param byteArray array of bytes to convert to an array of chars
      * @return a char array
      */
+    @Deprecated
     public static char[] toCharArray(byte[] byteArray)
     {
         if ( byteArray == null ) {
@@ -163,9 +173,11 @@ public class TransportUtil
 
     /**
      * A utility method to convert from UUID to byte array
+     * @deprecated
      * @param uuid Universally Unique identifier
      * @return the byte representation of that UUID
      */
+    @Deprecated
     public static byte[] uuidToByteArray(UUID uuid)
     {
 
@@ -189,9 +201,11 @@ public class TransportUtil
 
     /**
      * A utility method to convert from byte array to UUID
+     * @deprecated
      * @param bAppId byte representation of a UUID
      * @return UUID Returns the created {@link UUID} object or NULL on fail
      */
+    @Deprecated
     public static UUID byteArrayToUUID(byte[] bAppId) {
         long msUuid = 0;
         long lsUuid = 0;

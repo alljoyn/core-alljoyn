@@ -18,8 +18,10 @@ package org.alljoyn.about;
 
 /**
  * About keys as defined by HLD
+ *
+ * @deprecated please see org.alljoyn.bus.AboutKeys class
  */
-
+@Deprecated
 public interface AboutKeys {
     /**
      * Required. If Config service exists on the device, About instance
