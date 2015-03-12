@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -59,6 +59,8 @@ using namespace ajn;
 #define PATH_PREFIX "/test/"
 
 #define MAX_WAIT_MS 3000
+
+#define STRESS_FACTOR 5
 
 class TestObject : public BusObject {
   public:
@@ -295,10 +297,10 @@ struct ObserverListener {
 
     int counter;
     Event event;
-
+    bool tolerateAlreadyDiscoveredObjects;
     alljoyn_observerlistener listener;
 
-    ObserverListener(alljoyn_busattachment bus) : bus(bus), counter(0) {
+    ObserverListener(alljoyn_busattachment bus) : bus(bus), counter(0), tolerateAlreadyDiscoveredObjects(false) {
         listener = alljoyn_observerlistener_create(&listener_cbs, this);
     }
 
@@ -354,7 +356,9 @@ struct ObserverListener {
 
     virtual void ObjectDiscovered(alljoyn_proxybusobject_ref proxyref) {
         ProxyVector::iterator it = FindProxy(proxyref);
-        EXPECT_EQ(it, proxies.end()) << "Discovering an already-discovered object";
+        if (!tolerateAlreadyDiscoveredObjects) {
+            EXPECT_EQ(it, proxies.end()) << "Discovering an already-discovered object";
+        }
         proxies.push_back(proxyref);
         alljoyn_proxybusobject_ref_incref(proxyref);
         CheckReentrancy(proxyref);
@@ -839,5 +843,222 @@ TEST_F(ObserverTest, Multi)
     alljoyn_observer_destroy(obsBtwo);
     alljoyn_observer_destroy(obsABtwo);
 }
+
+TEST_F(ObserverTest, ObserverSanity) {
+
+    /* Test basic construction with NULLs of the Observer.
+     * If the number of interfaces is not matching the actual number of interfaces in the array,
+     * then it's inevitable not to segfault.*/
+
+    Participant one;
+    const char* mandIntf[1] = { NULL };
+    const char* mandIntf2[10] = { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
+
+    // The following should not crash although the resulting observers are not useful
+    EXPECT_EQ(NULL, alljoyn_observer_create(one.cbus, mandIntf, 1));
+    EXPECT_EQ(NULL, alljoyn_observer_create(one.cbus, mandIntf2, 10));
+    EXPECT_EQ(NULL, alljoyn_observer_create(one.cbus, NULL, 0));
+    EXPECT_EQ(NULL, alljoyn_observer_create(one.cbus, mandIntf, 0));
+
+    /* Test using same interface name twice */
+    const char*doubleIntfA[] = { intfA[0].c_str(), intfA[0].c_str() };
+
+    ObserverListener listener(one.cbus);
+    alljoyn_observer obs5 = alljoyn_observer_create(one.cbus, doubleIntfA, 2);
+    alljoyn_observer_registerlistener(obs5, listener.listener, QCC_TRUE);
+
+    vector<qcc::String> oneIntfA;
+    oneIntfA.push_back(intfA[0]);
+    one.CreateObject("doubleIntfA", oneIntfA);
+
+    vector<Event*> events;
+    events.push_back(&(listener.event));
+
+    listener.ExpectInvocations(1); // Should be triggered only once on object registration although we have duplicate interfaces
+    one.RegisterObject("doubleIntfA");
+
+    EXPECT_TRUE(WaitForAll(events));
+
+    EXPECT_EQ(1, CountProxies(obs5)); // Make sure we have only one proxy for the remote object implementing duplicate interfaces
+
+    listener.ExpectInvocations(1); // Should be triggered only once on object un-registration although we have duplicate interfaces
+
+    one.UnregisterObject("doubleIntfA");
+
+    EXPECT_TRUE(WaitForAll(events));
+
+    alljoyn_observer_unregisterlistener(obs5, listener.listener);
+    alljoyn_observer_destroy(obs5);
+}
+
+TEST_F(ObserverTest, RegisterListenerTwice) {
+
+    /* Reuse the same listener for the same observer */
+    Participant provider, consumer;
+    provider.CreateObject("a", intfA);
+
+    ObserverListener listener(consumer.cbus);
+    listener.tolerateAlreadyDiscoveredObjects = true;
+    alljoyn_observer obs = alljoyn_observer_create(consumer.cbus, cintfA, 1);
+
+    alljoyn_observer_registerlistener(obs, listener.listener, QCC_TRUE);
+    alljoyn_observer_registerlistener(obs, listener.listener, QCC_TRUE); // Intentional
+
+    vector<Event*> events;
+    events.push_back(&(listener.event));
+
+    listener.ExpectInvocations(2); // Should be triggered twice on object registration as we registered the listener twice
+    provider.RegisterObject("a");
+
+    EXPECT_TRUE(WaitForAll(events));
+
+    listener.ExpectInvocations(2); // Should be triggered twice on object un-registration as we registered the listener twice
+    provider.UnregisterObject("a");
+
+    EXPECT_TRUE(WaitForAll(events));
+
+    alljoyn_observer_unregisterlistener(obs, listener.listener);
+
+    listener.ExpectInvocations(1); // Should be triggered once on object registration as we removed one listener
+    provider.RegisterObject("a");
+
+    EXPECT_TRUE(WaitForAll(events));
+
+    alljoyn_observer_unregisterlistener(obs, listener.listener);
+
+    alljoyn_observer_destroy(obs);
+}
+
+TEST_F(ObserverTest, AnnounceLogicSanity) {
+
+    Participant provider, consumer;
+    ObserverListener listenerA(consumer.cbus);
+    ObserverListener listenerB(consumer.cbus);
+
+    provider.CreateObject("a", intfA);
+    provider.CreateObject("b", intfB);
+
+    provider.RegisterObject("a");
+    provider.RegisterObject("b");
+
+    vector<Event*> events;
+
+    {
+        alljoyn_observer obsA = alljoyn_observer_create(consumer.cbus, cintfA, 1);
+
+        events.push_back(&(listenerA.event));
+
+        listenerA.ExpectInvocations(1); // Object with intfA was at least discovered
+        alljoyn_observer_registerlistener(obsA, listenerA.listener, QCC_TRUE);
+
+        EXPECT_TRUE(WaitForAll(events));
+
+        events.clear();
+        events.push_back(&(listenerB.event));
+        alljoyn_observer obsB = alljoyn_observer_create(consumer.cbus, cintfB, 1);
+        listenerB.ExpectInvocations(1); // Object with intfB was at least discovered
+        alljoyn_observer_registerlistener(obsB, listenerB.listener, QCC_TRUE);
+
+        EXPECT_TRUE(WaitForAll(events));
+
+        alljoyn_observer_destroy(obsA);
+        alljoyn_observer_destroy(obsB);
+    }
+
+    events.clear();
+
+    // Try creating Observer on IntfB after destroying Observer on InftA
+
+    {
+        alljoyn_observer obsA = alljoyn_observer_create(consumer.cbus, cintfA, 1);
+        events.push_back(&(listenerA.event));
+        listenerA.ExpectInvocations(1); // Object with intfA was at least discovered
+
+        alljoyn_observer_registerlistener(obsA, listenerA.listener, QCC_TRUE);
+        EXPECT_TRUE(WaitForAll(events));
+        alljoyn_observer_unregisterlistener(obsA, listenerA.listener);
+        alljoyn_observer_destroy(obsA);
+    }
+
+    events.clear();
+
+    alljoyn_observer obsB = alljoyn_observer_create(consumer.cbus, cintfB, 1);
+    events.push_back(&(listenerB.event));
+
+    listenerB.ExpectInvocations(1);     // Object with intfB was at least discovered
+    alljoyn_observer_registerlistener(obsB, listenerB.listener, QCC_TRUE);
+
+    EXPECT_TRUE(WaitForAll(events));
+    alljoyn_observer_unregisterlistener(obsB, listenerB.listener);
+
+    provider.UnregisterObject("a");
+    provider.UnregisterObject("b");
+
+    alljoyn_observer_destroy(obsB);
+
+}
+
+TEST_F(ObserverTest, StressNumPartObjects) {
+
+    // Stress the number of participants, observers and consumers
+
+    vector<Participant*> providers(STRESS_FACTOR);
+    vector<Participant*> consumers(STRESS_FACTOR);
+    vector<ObserverListener*> listeners(STRESS_FACTOR);
+    vector<alljoyn_observer> observers(STRESS_FACTOR);
+
+    vector<Event*> events;
+
+    for (int i = 0; i < STRESS_FACTOR; i++) {
+
+        providers.push_back(NULL);
+        providers[i] = new Participant();
+        EXPECT_TRUE(NULL != providers[i]);
+
+        consumers.push_back(NULL);
+        consumers[i] = new Participant();
+        EXPECT_TRUE(NULL != consumers[i]);
+
+        if (consumers[i] == NULL || providers[i] == NULL) {
+            break;     //clean up
+        }
+
+        providers[i]->CreateObject("a", intfAB);
+        providers[i]->CreateObject("b", intfAB);
+
+        providers[i]->RegisterObject("a");
+        providers[i]->RegisterObject("b");
+
+        listeners[i] = new ObserverListener(consumers[i]->cbus);
+        events.push_back(&(listeners[i]->event));
+        listeners[i]->ExpectInvocations(2 * STRESS_FACTOR);
+
+        if (listeners[i] == NULL) {
+            break;     //clean up;
+        }
+
+        observers.push_back(NULL);
+        observers[i] = alljoyn_observer_create(consumers[i]->cbus, cintfAB, 2);
+        if (observers[i] == NULL) {
+            break;       //clean up;
+        }
+        alljoyn_observer_registerlistener(observers[i], listeners[i]->listener, QCC_TRUE);
+    }
+
+    EXPECT_TRUE(WaitForAll(events));
+
+    //clean up
+    for (int i = 0; i < STRESS_FACTOR; i++) {
+        alljoyn_observer_unregisterlistener(observers[i], listeners[i]->listener);
+        alljoyn_observerlistener_destroy(listeners[i]->listener);
+        alljoyn_observer_destroy(observers[i]);
+        providers[i]->UnregisterObject("a");
+        providers[i]->UnregisterObject("b");
+        delete consumers[i];
+        delete providers[i];
+    }
+
+}
+
 
 }

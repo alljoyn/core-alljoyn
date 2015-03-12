@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -52,6 +52,8 @@ using namespace ajn;
 #define PATH_PREFIX "/test/"
 
 #define MAX_WAIT_MS 3000
+
+#define STRESS_FACTOR 5
 
 class TestObject : public BusObject {
   public:
@@ -110,15 +112,21 @@ class Participant : public SessionPortListener, public SessionListener {
         Init();
     }
 
+    void StartBus() {
+        ASSERT_EQ(ER_OK, bus.Start());
+        ASSERT_EQ(ER_OK, bus.Connect(getConnectArg().c_str()));
+        ASSERT_EQ(ER_OK, bus.BindSessionPort(port, opts, *this));
+        uniqueBusName = bus.GetUniqueName();
+    }
+
+    void PublishAbout() {
+        ASSERT_EQ(ER_OK, aboutObj.Announce(port, aboutData));
+    }
+
     void Init() {
         QStatus status;
 
-        ASSERT_EQ(ER_OK, bus.Start());
-        ASSERT_EQ(ER_OK, bus.Connect(getConnectArg().c_str()));
-
-        ASSERT_EQ(ER_OK, bus.BindSessionPort(port, opts, *this));
-
-        uniqueBusName = bus.GetUniqueName();
+        StartBus();
 
         /* create interfaces */
         InterfaceDescription* intf = NULL;
@@ -156,10 +164,10 @@ class Participant : public SessionPortListener, public SessionListener {
         aboutData.SetHardwareVersion("0.0.1");
         aboutData.SetSupportUrl("http://www.example.org");
 
-        ASSERT_EQ(ER_OK, aboutObj.Announce(port, aboutData));
+        PublishAbout();
     }
 
-    ~Participant() {
+    virtual ~Participant() {
         Fini();
     }
 
@@ -171,7 +179,10 @@ class Participant : public SessionPortListener, public SessionListener {
                 delete it->second.first;
             }
         }
+        StopBus();
+    }
 
+    void StopBus() {
         ASSERT_EQ(ER_OK, bus.Disconnect());
         ASSERT_EQ(ER_OK, bus.Stop());
         ASSERT_EQ(ER_OK, bus.Join());
@@ -244,6 +255,48 @@ class Participant : public SessionPortListener, public SessionListener {
     Participant& operator=(const Participant& rhs);
 };
 
+class PendingParticipant1 : public Participant {
+
+  public:
+    qcc::String objectToDrop;
+    uint32_t sleepAfter;
+
+    PendingParticipant1() : sleepAfter(0) {
+    }
+
+    // Participant removes the object that was originally interesting for the consuming observer
+    virtual bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) {
+        UnregisterObject(objectToDrop);
+        qcc::Sleep(sleepAfter);
+        return acceptSessions;
+    }
+
+    virtual ~PendingParticipant1() { }
+
+};
+
+class PendingParticipant2 : public Participant {
+
+  public:
+    qcc::String newObjectToAnnounce;
+    vector<qcc::String> objInterfaces;
+    bool once;
+
+    PendingParticipant2() : once(true) {
+    }
+    //Participant announces another object that is interesting for the calling consuming observer
+    virtual bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) {
+        if (once) {
+            CreateObject(newObjectToAnnounce, objInterfaces);
+            RegisterObject(newObjectToAnnounce);
+            once = false;
+        }
+        return acceptSessions;
+    }
+
+    virtual ~PendingParticipant2() { }
+
+};
 
 class ObserverTest : public testing::Test {
   public:
@@ -264,6 +317,7 @@ class ObserverTest : public testing::Test {
         cintfAB[1] = INTF_B;
         cintfA = &(cintfAB[0]);
         cintfB = &(cintfAB[1]);
+
     }
     virtual void TearDown() { }
 
@@ -279,8 +333,9 @@ class ObserverListener : public Observer::Listener {
 
     int counter;
     Event event;
+    bool strict;
 
-    ObserverListener(BusAttachment& bus) : bus(bus), counter(0) { }
+    ObserverListener(BusAttachment& bus) : bus(bus), counter(0), strict(true) { }
 
     void ExpectInvocations(int newCounter) {
         /* first, check whether the counter was really 0 from last invocation */
@@ -319,19 +374,24 @@ class ObserverListener : public Observer::Listener {
         EXPECT_EQ(ER_OK, status);
         if (ER_OK == status) {
             String ubn(reply->GetArg(0)->v_string.str), path(reply->GetArg(1)->v_string.str);
-            EXPECT_EQ(proxy->GetUniqueName(), ubn);
+            if (strict) {
+                EXPECT_EQ(proxy->GetUniqueName(), ubn);
+            }
             EXPECT_EQ(proxy->GetPath(), path);
         }
     }
 
     virtual void ObjectDiscovered(ManagedProxyBusObject& proxy) {
         ProxyVector::iterator it = FindProxy(proxy);
-        EXPECT_EQ(it, proxies.end()) << "Discovering an already-discovered object";
+        if (strict) {
+            EXPECT_EQ(it, proxies.end()) << "Discovering an already-discovered object";
+        }
         proxies.push_back(proxy);
         CheckReentrancy(proxy);
         if (--counter == 0) {
             event.SetEvent();
         }
+
     }
 
     virtual void ObjectLost(ManagedProxyBusObject& proxy) {
@@ -763,6 +823,500 @@ TEST_F(ObserverTest, Multi)
     EXPECT_EQ(0, CountProxies(obsAtwo));
     EXPECT_EQ(0, CountProxies(obsBtwo));
     EXPECT_EQ(0, CountProxies(obsABtwo));
+}
+
+TEST_F(ObserverTest, ObjectIdSanity) {
+
+    //Simple tests to exercise ObjectId constructors and operators
+
+    //Default
+    ObjectId emptyObjId;
+    EXPECT_FALSE(emptyObjId.IsValid());     // Empty unique busname and object path
+
+    //Basic construction
+    qcc::String busName(":org.alljoyn.observer");
+    qcc::String objectPath("/org/alljoyn/observer/test");
+    ObjectId objId(busName, objectPath);
+    EXPECT_TRUE(objId.IsValid()); // Filled-in unique busname and object path
+    ObjectId objId1("", "");
+    EXPECT_FALSE(emptyObjId.IsValid()); // Empty unique busname and object path
+
+    //Copy constructor and ==
+    ObjectId cpObjId(objId);
+    EXPECT_TRUE(cpObjId.IsValid());
+    EXPECT_EQ(cpObjId.objectPath, objId.objectPath);
+    EXPECT_EQ(cpObjId.uniqueBusName, objId.uniqueBusName);
+    EXPECT_TRUE(cpObjId == objId);
+
+    //Construction with ManagedProxyBusObject
+    ManagedProxyBusObject mgdProxyBusObj;
+    ObjectId emptyObj1(mgdProxyBusObj);
+    EXPECT_FALSE(emptyObj1.IsValid()); // Empty unique busname and object path
+
+    //Construction with ProxyBusObject* and ProxyBusObject
+    ProxyBusObject proxyBusObj;
+    ObjectId emptyObjId2(&proxyBusObj);
+    EXPECT_FALSE(emptyObjId2.IsValid()); // Empty unique busname and object path
+    ObjectId emptyObjId3(proxyBusObj);
+    EXPECT_FALSE(emptyObjId3.IsValid()); // Empty unique busname and object path
+
+    //Construction with dummy ProxyBusObject
+    BusAttachment bus("Dummy");
+    const uint32_t dummySessionId = 123456789;
+    SessionId someSessionId(dummySessionId);
+    ProxyBusObject validProxyBusObj(bus, "Dummy", busName.c_str(), objectPath.c_str(), someSessionId);
+    ObjectId validObjId(validProxyBusObj);
+    EXPECT_TRUE(validObjId.IsValid());
+    EXPECT_TRUE(validObjId.uniqueBusName == validProxyBusObj.GetUniqueName());
+    EXPECT_TRUE(validObjId.objectPath == validProxyBusObj.GetPath());
+
+    //Null test
+    ProxyBusObject* nullProxyBusObj = NULL;
+    EXPECT_FALSE(ObjectId(nullProxyBusObj).IsValid()); // Empty unique busname and object path
+
+    //Operator <
+    ObjectId cmpObjId(busName, "/A/B/C");
+    ObjectId cmpObjId1(busName, "/D/E/F");
+    EXPECT_TRUE(cmpObjId.IsValid());
+    EXPECT_TRUE(cmpObjId1.IsValid());
+    EXPECT_TRUE(cmpObjId < cmpObjId1);
+
+    ObjectId cmpObjId2(busName + ".A", objectPath);
+    ObjectId cmpObjId3(busName + ".B", objectPath);
+    EXPECT_TRUE(cmpObjId2.IsValid());
+    EXPECT_TRUE(cmpObjId3.IsValid());
+    EXPECT_TRUE(cmpObjId2 < cmpObjId3);
+
+    EXPECT_FALSE(cmpObjId2 < cmpObjId);
+}
+
+TEST_F(ObserverTest, ObserverSanity) {
+
+    /* Test basic construction with NULLs of the Observer.
+     * If the number of interfaces is not matching the actual number of interfaces in the array,
+     * then it's inevitable not to segfault.*/
+
+    Participant one;
+    const char* mandIntf[1] = { NULL };
+    const char* mandIntf2[10] = { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
+    Observer* obs  = NULL;
+    obs = new Observer(one.bus, mandIntf, 1); // Should not crash although the resulting observer is not useful
+    EXPECT_FALSE(NULL == obs);
+    Observer* obs2  = NULL;
+    obs2 = new Observer(one.bus, mandIntf2, 10); // Should not crash although the resulting observer is not useful
+    EXPECT_FALSE(NULL == obs2);
+
+    Observer* obs3 = NULL;
+    obs3 = new Observer(one.bus, NULL, 0);
+    EXPECT_FALSE(NULL == obs3);
+
+    Observer* obs4 = NULL;
+    obs4 = new Observer(one.bus, mandIntf, 0);
+    EXPECT_FALSE(NULL == obs4);
+
+    /* Test using same interface name twice */
+    vector<qcc::String> doubleIntf;
+    const char*doubleIntfA[] = { intfA[0].c_str(), intfA[0].c_str() };
+    doubleIntf.push_back(intfA[0]);
+    doubleIntf.push_back(intfA[0]); // Intentional
+
+    ObserverListener listener(one.bus);
+    Observer* obs5 = NULL;
+    obs5 = new Observer(one.bus, doubleIntfA, 2);
+    EXPECT_FALSE(NULL == obs5);
+    obs5->RegisterListener(listener);
+
+    vector<qcc::String> oneIntfA;
+    oneIntfA.push_back(intfA[0]);
+    one.CreateObject("doubleIntfA", oneIntfA);
+
+    vector<Event*> events;
+    events.push_back(&(listener.event));
+
+    listener.ExpectInvocations(1); // Should be triggered only once on object registration although we have duplicate interfaces
+    one.RegisterObject("doubleIntfA");
+
+    EXPECT_TRUE(WaitForAll(events));
+
+    EXPECT_EQ(1, CountProxies(*obs5)); // Make sure we have only one proxy for the remote object implementing duplicate interfaces
+
+    listener.ExpectInvocations(1); // Should be triggered only once on object un-registration although we have duplicate interfaces
+    one.UnregisterObject("doubleIntfA");
+
+    EXPECT_TRUE(WaitForAll(events));
+
+    obs5->UnregisterListener(listener);
+
+    delete obs;
+    delete obs2;
+    delete obs3;
+    delete obs4;
+    delete obs5;
+
+}
+
+TEST_F(ObserverTest, RegisterListenerTwice) {
+
+    /* Reuse the same listener for the same observer */
+    Participant provider, consumer;
+    provider.CreateObject("a", intfA);
+
+    ObserverListener listener(consumer.bus);
+    listener.strict = false;
+    Observer obs(consumer.bus, cintfA, 1);
+
+    obs.RegisterListener(listener);
+    obs.RegisterListener(listener); // Intentional
+
+    vector<Event*> events;
+    events.push_back(&(listener.event));
+
+    listener.ExpectInvocations(2); // Should be triggered twice on object registration as we registered the listener twice
+    provider.RegisterObject("a");
+
+    EXPECT_TRUE(WaitForAll(events));
+
+    listener.ExpectInvocations(2); // Should be triggered twice on object un-registration as we registered the listener twice
+    provider.UnregisterObject("a");
+
+    EXPECT_TRUE(WaitForAll(events));
+
+    obs.UnregisterListener(listener);
+
+    listener.ExpectInvocations(1); // Should be triggered once on object registration as we removed one listener
+    provider.RegisterObject("a");
+
+    EXPECT_TRUE(WaitForAll(events));
+
+    obs.UnregisterListener(listener);
+
+}
+
+TEST_F(ObserverTest, AnnounceLogicSanity) {
+
+    Participant provider, consumer;
+    ObserverListener listenerA(consumer.bus);
+    ObserverListener listenerB(consumer.bus);
+
+    provider.CreateObject("a", intfA);
+    provider.CreateObject("b", intfB);
+
+    provider.RegisterObject("a");
+    provider.RegisterObject("b");
+
+    vector<Event*> events;
+
+    {
+        Observer obsA(consumer.bus, cintfA, 1);
+
+        events.push_back(&(listenerA.event));
+
+        listenerA.ExpectInvocations(1); // Object with intfA was at least discovered
+        obsA.RegisterListener(listenerA);
+
+        EXPECT_TRUE(WaitForAll(events));
+
+        events.clear();
+        events.push_back(&(listenerB.event));
+        Observer obsB(consumer.bus, cintfB, 1);
+        listenerB.ExpectInvocations(1); // Object with intfB was at least discovered
+        obsB.RegisterListener(listenerB);
+
+        EXPECT_TRUE(WaitForAll(events));
+
+    }
+
+    events.clear();
+
+    // Try creating Observer on IntfB after destroying Observer on InftA
+
+    {
+        Observer obsA(consumer.bus, cintfA, 1);
+        events.push_back(&(listenerA.event));
+        listenerA.ExpectInvocations(1); // Object with intfA was at least discovered
+
+        obsA.RegisterListener(listenerA);
+        EXPECT_TRUE(WaitForAll(events));
+        obsA.UnregisterAllListeners();
+    }
+
+    events.clear();
+
+    Observer obsB(consumer.bus, cintfB, 1);
+    events.push_back(&(listenerB.event));
+
+    listenerB.ExpectInvocations(1);     // Object with intfB was at least discovered
+    obsB.RegisterListener(listenerB);
+
+    EXPECT_TRUE(WaitForAll(events));
+    obsB.UnregisterAllListeners();
+
+    provider.UnregisterObject("a");
+    provider.UnregisterObject("b");
+}
+
+TEST_F(ObserverTest, GetFirstGetNext) {
+    // set up two participants
+    Participant one, two;
+    one.CreateObject("a", intfA);
+    two.CreateObject("a", intfA);
+
+    // set up one observer
+    Participant obs;
+    Observer obsA(obs.bus, cintfA, 1);
+    ObserverListener lisA(obs.bus);
+    obsA.RegisterListener(lisA);
+
+    // register objects
+    vector<Event*> events;
+    events.push_back(&(lisA.event));
+    lisA.ExpectInvocations(2);
+    one.RegisterObject("a");
+    two.RegisterObject("a");
+    EXPECT_TRUE(WaitForAll(events));
+
+    // basic iterator access
+    ManagedProxyBusObject proxy = obsA.GetFirst();
+    EXPECT_TRUE(proxy->IsValid());
+    proxy = obsA.GetNext(proxy);
+    EXPECT_TRUE(proxy->IsValid());
+    proxy = obsA.GetNext(proxy);
+    EXPECT_FALSE(proxy->IsValid());
+
+    // start iterating
+    proxy = obsA.GetFirst();
+    EXPECT_TRUE(proxy->IsValid());
+    ManagedProxyBusObject proxy2 = obsA.GetFirst();
+    EXPECT_TRUE(proxy2->IsValid());
+
+    // unregister objects
+    lisA.ExpectInvocations(2);
+    one.UnregisterObject("a");
+    two.UnregisterObject("a");
+
+    // undefined behavior but should not crash
+    proxy2 = obsA.GetNext(proxy2);
+    proxy2->IsValid();
+    Message reply(obs.bus);
+    proxy2->MethodCall(INTF_A, METHOD, NULL, 0, reply);
+
+    // wait for events and check iterator
+    EXPECT_TRUE(WaitForAll(events));
+    proxy = obsA.GetNext(proxy);
+    EXPECT_FALSE(proxy->IsValid());
+}
+
+TEST_F(ObserverTest, RestartObserver) {
+    // set up two participants
+    Participant one, two;
+    one.CreateObject("a", intfA);
+    two.CreateObject("a", intfA);
+
+    // set up observer
+    Participant obs;
+    Observer* obsA = new Observer(obs.bus, cintfA, 1);
+    ObserverListener lisA(obs.bus);
+    obsA->RegisterListener(lisA);
+
+    // register objects
+    vector<Event*> events;
+    events.push_back(&(lisA.event));
+    lisA.ExpectInvocations(2);
+    one.RegisterObject("a");
+    two.RegisterObject("a");
+    EXPECT_TRUE(WaitForAll(events));
+
+    // destroy observer
+    obsA->UnregisterAllListeners();
+    delete obsA;
+
+    // create new observer
+    obsA = new Observer(obs.bus, cintfA, 1);
+    lisA.ExpectInvocations(2);
+    obsA->RegisterListener(lisA);
+    EXPECT_TRUE(WaitForAll(events));
+
+    // clean up observer
+    obsA->UnregisterAllListeners();
+    delete obsA;
+}
+
+TEST_F(ObserverTest, DiscoverWhileRunning) {
+    // set up observer
+    Participant obs;
+    Observer* obsA = new Observer(obs.bus, cintfA, 1);
+    ObserverListener lisA(obs.bus);
+    obsA->RegisterListener(lisA);
+    vector<Event*> events;
+    events.push_back(&(lisA.event));
+
+    // set up participant
+    Participant one;
+    one.CreateObject("a", intfA);
+    lisA.ExpectInvocations(1);
+    one.RegisterObject("a");
+    EXPECT_TRUE(WaitForAll(events));
+
+    // set up another participant
+    Participant two;
+    two.CreateObject("a", intfA);
+    lisA.ExpectInvocations(1);
+    two.RegisterObject("a");
+    EXPECT_TRUE(WaitForAll(events));
+
+    // removal of participants
+    lisA.ExpectInvocations(2);
+    one.UnregisterObject("a");
+    two.UnregisterObject("a");
+    EXPECT_TRUE(WaitForAll(events));
+}
+
+TEST_F(ObserverTest, StopBus) {
+    // set up two participants
+    Participant one, two;
+    one.CreateObject("a", intfA);
+    two.CreateObject("a", intfA);
+
+    // set up observer
+    Participant obs;
+    Observer obsA(obs.bus, cintfA, 1);
+
+    // register listener
+    ObserverListener lisA(obs.bus);
+    lisA.strict = false;
+    obsA.RegisterListener(lisA);
+    vector<Event*> events;
+    events.push_back(&(lisA.event));
+
+    // register two objects
+    lisA.ExpectInvocations(2);
+    one.RegisterObject("a");
+    two.RegisterObject("a");
+    EXPECT_TRUE(WaitForAll(events));
+
+    // stop participant buses
+    lisA.ExpectInvocations(2);
+    one.StopBus();
+    two.StopBus();
+    EXPECT_TRUE(WaitForAll(events));
+
+    // start participant buses
+    lisA.ExpectInvocations(2);
+    one.StartBus();
+    two.StartBus();
+    one.PublishAbout();
+    two.PublishAbout();
+    EXPECT_TRUE(WaitForAll(events));
+}
+TEST_F(ObserverTest, StressNumPartObjects) {
+
+    // Stress the number of participants, observers and consumers
+
+    vector<Participant*> providers(STRESS_FACTOR);
+    vector<Participant*> consumers(STRESS_FACTOR);
+    vector<ObserverListener*> listeners(STRESS_FACTOR);
+    vector<Observer*> observers(STRESS_FACTOR);
+
+    vector<Event*> events;
+
+    for (int i = 0; i < STRESS_FACTOR; i++) {
+
+        providers.push_back(NULL);
+        providers[i] = new Participant();
+        EXPECT_TRUE(NULL != providers[i]);
+
+        consumers.push_back(NULL);
+        consumers[i] = new Participant();
+        EXPECT_TRUE(NULL != consumers[i]);
+
+        if (consumers[i] == NULL || providers[i] == NULL) {
+            break;     //clean up
+        }
+
+        providers[i]->CreateObject("a", intfAB);
+        providers[i]->CreateObject("b", intfAB);
+
+        providers[i]->RegisterObject("a");
+        providers[i]->RegisterObject("b");
+
+        listeners[i] = new ObserverListener(consumers[i]->bus);
+        events.push_back(&(listeners[i]->event));
+        listeners[i]->ExpectInvocations(2 * STRESS_FACTOR);
+
+        if (listeners[i] == NULL) {
+            break;     //clean up;
+        }
+
+        observers.push_back(NULL);
+        observers[i] = new Observer(consumers[i]->bus, cintfAB, 2);
+        EXPECT_TRUE(NULL != observers[i]);
+        if (observers[i] == NULL) {
+            break;     //clean up;
+        }
+        observers[i]->RegisterListener(*(listeners[i]));
+
+        qcc::Sleep(20);
+    }
+
+    EXPECT_TRUE(WaitForAll(events));
+
+    //clean up
+    for (int i = 0; i < STRESS_FACTOR; i++) {
+        observers[i]->UnregisterAllListeners();
+        delete listeners[i];
+        delete observers[i];
+        providers[i]->UnregisterObject("a");
+        providers[i]->UnregisterObject("b");
+        delete consumers[i];
+        delete providers[i];
+    }
+}
+
+TEST_F(ObserverTest, PendingStateObjectLost) {
+
+    // Set-up an observer
+    Participant partObs;
+    Observer obs(partObs.bus, cintfAB, 1);
+    ObserverListener listener(partObs.bus);
+    obs.RegisterListener(listener);
+    vector<Event*> events;
+    events.push_back(&(listener.event));
+
+    // This provider will remove the object upon accepting the session join callback
+    PendingParticipant1 provider;
+    provider.objectToDrop = "a";
+    provider.CreateObject("a", intfAB);
+    provider.RegisterObject("a");
+
+    // No sessions should have been established (on both sides)
+    // as the object of interest was removed
+    EXPECT_TRUE(provider.hostedSessionMap.size() == 0);
+    EXPECT_TRUE(partObs.hostedSessionMap.size() == 0);
+
+}
+
+TEST_F(ObserverTest, PendingStateNewObjectAnnounced) {
+
+    // Set-up an observer
+    Participant partObs;
+    Observer obs(partObs.bus, cintfAB, 1);
+    ObserverListener listener(partObs.bus);
+    obs.RegisterListener(listener);
+    vector<Event*> events;
+    events.push_back(&(listener.event));
+
+    // This provider will announce a new object once it receives the initial accept session callback
+    PendingParticipant2 provider;
+
+    provider.newObjectToAnnounce = "b";
+    provider.objInterfaces = intfAB;
+
+    provider.CreateObject("a", intfAB); // Initial object to trigger the accept session callback
+    provider.RegisterObject("a");
+
+    listener.ExpectInvocations(2);
+    EXPECT_TRUE(WaitForAll(events));
+
 }
 
 }
