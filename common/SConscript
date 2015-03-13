@@ -93,6 +93,9 @@ commonenv = env.Clone()
 commonenv.VariantDir('$OBJDIR_COMMON', 'src', duplicate = 0)
 commonenv.VariantDir('$OBJDIR_COMMON/os', 'os/${OS_GROUP}', duplicate = 0)
 commonenv.VariantDir('$OBJDIR_COMMON/crypto', 'crypto/${CRYPTO}', duplicate = 0)
+# If we're not using CNG, also include the generic providers (currently only ECC)
+if env['CRYPTO'] != 'cng':
+    commonenv.VariantDir('$OBJDIR_COMMON/crypto', 'crypto/generic', duplicate = 0)
 
 # Setup dependent include directories
 hdrs = { 'qcc': commonenv.File(['inc/qcc/Log.h',
