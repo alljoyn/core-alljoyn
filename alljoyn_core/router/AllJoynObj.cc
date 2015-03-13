@@ -908,10 +908,12 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
                     ajObj.AcquireLocks();
                 }
 
-                if (b2bEp->GetRemoteProtocolVersion() < 12) {
-                    //Skip this wait for the new call flow.
+                if (!b2bEp->IsValid()) {
+                    replyCode = ALLJOYN_JOINSESSION_REPLY_FAILED;
+                } else if (b2bEp->GetRemoteProtocolVersion() < 12) {
                     /*
-                     * Step 2: Wait for the new b2b endpoint to have a virtual ep for nextController.
+                     * Step 2: Wait for the new b2b endpoint to have a virtual ep for nextController
+                     * only while interacting with a remote routing node with protocol version < 12.
                      */
                     QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Wait for virtual endpoint."));
                     uint64_t startTime = GetTimestamp64();
@@ -1148,13 +1150,15 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
             }
         }
     }
+    /* Set the name transfer for the bus-to-bus endpoint */
+    if (b2bEp->IsValid()) {
+        b2bEp->GetFeatures().nameTransfer = optsOut.nameTransfer;
+    }
     ajObj.ReleaseLocks();
 
     QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Reply to request"));
 
     /* Reply to request */
-
-    b2bEp->GetFeatures().nameTransfer = optsOut.nameTransfer;
     status = Reply(replyCode, id, optsOut);
 
     /* Log error if reply could not be sent */
