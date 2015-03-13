@@ -391,6 +391,11 @@ class _LocalEndpoint : public _BusEndpoint, public qcc::AlarmListener, public Me
      */
     void TriggerObserverWork();
 
+    /**
+     * Cancel any outstanding TriggerObserverWork alarms (during ObserverManager shutdown).
+     */
+    void DiscardObserverWork();
+
   private:
 
     /**

@@ -91,6 +91,7 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
     ObserverManager& GetObserverManager() {
         if (!observerManager) {
             observerManager = new ObserverManager(bus);
+            observerManager->Start();
         }
         return *observerManager;
     }

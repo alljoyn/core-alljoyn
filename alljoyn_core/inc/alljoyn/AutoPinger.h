@@ -133,7 +133,7 @@ class AutoPinger {
     AutoPinger(const AutoPinger&);
     void operator=(const AutoPinger&);
 
-    AutoPingerInternal*internal;
+    AutoPingerInternal* internal;
 
 };
 static class AutoPingerInit {

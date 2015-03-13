@@ -1177,6 +1177,13 @@ void _LocalEndpoint::TriggerObserverWork()
     }
 }
 
+void _LocalEndpoint::DiscardObserverWork()
+{
+    if (observerCallbacks) {
+        dispatcher->RemoveAlarmsWithListener(*observerCallbacks);
+    }
+}
+
 void _LocalEndpoint::DeferredCallbacks::AlarmTriggered(const qcc::Alarm& alarm, QStatus reason)
 {
     if (reason == ER_OK) {
