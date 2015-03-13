@@ -48,10 +48,17 @@ struct CngCache {
      */
     static const int ALGORITHM_COUNT = 3;
 
+    /**
+     * Number of supported curves for ECDSA. This should be equal to the number of
+     * ECC_* constants defined in CryptoECC.h.
+     */
+    static const int ECDSA_ALGORITHM_COUNT = 1;
+
     BCRYPT_ALG_HANDLE algHandles[ALGORITHM_COUNT][2];
     BCRYPT_ALG_HANDLE ccmHandle;
     BCRYPT_ALG_HANDLE ecbHandle;
     BCRYPT_ALG_HANDLE rsaHandle;
+    BCRYPT_ALG_HANDLE ecdsaHandles[ECDSA_ALGORITHM_COUNT];
 };
 
 extern CngCache& cngCache;
