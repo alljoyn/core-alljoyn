@@ -24,7 +24,7 @@
 static const unsigned int year = 14;
 static const unsigned int month = 12;
 static const unsigned int feature = 0; /* feature is always 0 for core. */
-static const unsigned int bugfix = 'a';
+static const unsigned int bugfix = 'b';
 
 static const char version[] = "##VERSION_STRING##";
 static const char build[] = "AllJoyn Library ##BUILD_STRING##";
