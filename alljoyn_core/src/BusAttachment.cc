@@ -183,6 +183,9 @@ BusAttachment::Internal::Internal(const char* appName,
 
 BusAttachment::Internal::~Internal()
 {
+    if (observerManager) {
+        observerManager->Stop();
+    }
     /*
      * Make sure that all threads that might possibly access this object have been joined.
      */
@@ -601,6 +604,13 @@ QStatus BusAttachment::Disconnect()
         status = ER_BUS_STOPPING;
         QCC_LogError(status, ("BusAttachment::Disconnect cannot disconnect while bus is stopping"));
     } else {
+        /*
+         * Shut down the ObserverManager
+         */
+        if (busInternal->observerManager) {
+            busInternal->observerManager->Stop();
+        }
+
         status = busInternal->TransportDisconnect(this->connectSpec.c_str());
         if (ER_OK == status) {
             UnregisterSignalHandlers();
