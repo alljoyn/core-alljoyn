@@ -6867,7 +6867,11 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
      * allocated above.
      */
     QCC_DbgPrintf(("UDPTransport::AcceptCb(): HelloReply(true, \"%s\")", udpEp->GetUniqueName().c_str()));
-    status = activeHello->HelloReply(true, udpEp->GetUniqueName(), static_cast<SessionOpts::NameTransferType>(nameTransfer));
+    /* Send value 0x01 for DAEMON_NAMES, 0x00 for other types.
+     * These are the older values of nameTransfer to be sent in BusHello.
+     */
+    status = activeHello->HelloReply(true, udpEp->GetUniqueName(),
+                                     static_cast<SessionOpts::NameTransferType>((nameTransfer == SessionOpts::DAEMON_NAMES) ? 0x01 : 0x00));
     if (status != ER_OK) {
         status = ER_UDP_BUSHELLO;
         QCC_LogError(status, ("UDPTransport::AcceptCb(): Can't make a BusHello Reply Message"));
@@ -9730,7 +9734,10 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
 
     QCC_DbgPrintf(("UDPTransport::Connect(): Compose BusHello"));
     Message hello(m_bus);
-    status = hello->HelloMessage(true, m_bus.GetInternal().AllowRemoteMessages(), opts.nameTransfer);
+    /* Send value 0x01 for DAEMON_NAMES, 0x00 for other types.
+     * These are the older values of nameTransfer to be sent in BusHello.
+     */
+    status = hello->HelloMessage(true, m_bus.GetInternal().AllowRemoteMessages(), (opts.nameTransfer == SessionOpts::DAEMON_NAMES) ? 0x01 : 0x00);
     if (status != ER_OK) {
         status = ER_UDP_BUSHELLO;
         QCC_LogError(status, ("UDPTransport::Connect(): Can't make a BusHello Message"));

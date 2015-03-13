@@ -167,6 +167,7 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
             return status;
         }
         ifc->AddMethod("AttachSession",  "qsssss" SESSIONOPTS_SIG, "uu" SESSIONOPTS_SIG "as", "port,joiner,creator,dest,b2b,busAddr,optsIn,status,id,optsOut,members", 0);
+        ifc->AddMethod("AttachSessionWithNames",  "qsssss" SESSIONOPTS_SIG "a(sas)", "uu" SESSIONOPTS_SIG "asa(sas)", "port,joiner,creator,dest,b2b,busAddr,optsIn,namesIn,status,id,optsOut,members,namesOut", 0);
         ifc->AddMethod("GetSessionInfo", "sq" SESSIONOPTS_SIG, "as", "creator,port,opts,busAddrs", 0);
         ifc->AddSignal("DetachSession",  "us",     "sessionId,joiner",       0);
         ifc->AddSignal("ExchangeNames",  "a(sas)", "uniqueName,aliases",     0);
