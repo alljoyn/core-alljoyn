@@ -1438,12 +1438,8 @@ qcc::IPAddress ARDP_GetIpAddrFromConn(ArdpHandle* handle, ArdpConnRecord* conn)
     QCC_DbgTrace(("ARDP_GetIpAddrFromConn(handle=%p, conn=%p)", handle, conn));
     if (!IsConnValid(handle, conn)) {
         QCC_LogError(ER_ARDP_INVALID_CONNECTION, ("ARDP_GetIpAddrFromConn(handle=%p), context = %p", handle, handle->context));
-        assert(false && "Connection not found");
+        return qcc::IPAddress();
     }
-    /*
-     * Note: this is called ONLY from successful ConnectCb(). It should be safe
-     * to return an address here. The above check is for catching programming error.
-     */
     return conn->ipAddr;
 }
 
@@ -1452,12 +1448,8 @@ uint16_t ARDP_GetIpPortFromConn(ArdpHandle* handle, ArdpConnRecord* conn)
     QCC_DbgTrace(("ARDP_GetIpPortFromConn(handle=%p, conn=%p)", handle, conn));
     if (!IsConnValid(handle, conn)) {
         QCC_LogError(ER_ARDP_INVALID_CONNECTION, ("ARDP_GetIpPortFromConn(handle=%p), context = %p", handle, handle->context));
-        assert(false && "Connection not found");
+        return 0;
     }
-    /*
-     * Note: this is called ONLY from successful ConnectCb(). It should be safe
-     * to return an IP port here. The above check is for catching programming error.
-     */
     return conn->ipPort;
 }
 

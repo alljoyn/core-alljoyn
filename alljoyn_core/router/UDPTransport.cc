@@ -3693,9 +3693,23 @@ class _UDPEndpoint : public _RemoteEndpoint {
      */
     QStatus GetLocalIp(qcc::String& ipAddrStr)
     {
-        // Can get this through conn if it remembers local address to which its socket was bound
-        assert(0);
-        return ER_UDP_NOT_IMPLEMENTED;
+        QCC_DbgTrace(("_UDPEndpoint::GetLocalIp(ipAddrStr=%0)", &ipAddrStr));
+
+        /*
+         * We are only sure about the endpoint's underlying address when it is
+         * running.  It may be the case that the endpoint completes the process
+         * of getting torn down between our test and the call ot get the address
+         * from ARDP, but the worst thing that can happen is that we return
+         * ER_OK but the IPAddress string returned is empty.
+         */
+        if (IsEpStarted() == false) {
+            return ER_UDP_ENDPOINT_NOT_STARTED;
+        }
+
+        m_transport->m_ardpLock.Lock();
+        ipAddrStr = ARDP_GetIpAddrFromConn(GetHandle(), GetConn()).ToString();
+        m_transport->m_ardpLock.Unlock();
+        return ER_OK;
     };
 
     /**
