@@ -250,7 +250,7 @@ static QStatus ListObjectPaths(BusAttachment& bus, ProxyBusObject& robj)
 
     if (status == ER_OK) {
         size_t numChildren = robj.GetChildren();
-        ProxyBusObject** children = new ProxyBusObject *[numChildren];
+        ProxyBusObject** children = new ProxyBusObject*[numChildren];
         robj.GetChildren(children, numChildren);
 
         Message rsp(bus);
@@ -847,13 +847,13 @@ static QStatus Introspect(BusAttachment& bus)
     status = robj.IntrospectRemoteObject();
     if (status == ER_OK) {
         size_t numIfaces = robj.GetInterfaces();
-        const InterfaceDescription** ifaces = new const InterfaceDescription *[numIfaces];
+        const InterfaceDescription** ifaces = new const InterfaceDescription*[numIfaces];
         robj.GetInterfaces(ifaces, numIfaces);
 
         for (size_t i = 0; i < numIfaces; i++) {
             const InterfaceDescription* ifc = ifaces[i];
             size_t numMembers = ifc->GetMembers();
-            const InterfaceDescription::Member** members = new const InterfaceDescription::Member *[numMembers];
+            const InterfaceDescription::Member** members = new const InterfaceDescription::Member*[numMembers];
             ifc->GetMembers(members, numMembers);
 
             for (size_t m = 0; m < numMembers; m++) {

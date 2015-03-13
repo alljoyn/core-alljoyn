@@ -92,14 +92,14 @@ TEST(SRPTest, Basic_API) {
             server.GetPremasterSecret(serverPMS);
             client.GetPremasterSecret(clientPMS);
             ASSERT_EQ(clientPMS.GetSize(), serverPMS.GetSize())
-            << "Premaster secrets have different sizes"
-            << "Premaster secret = " << BytesToHexString(serverPMS.GetData(), serverPMS.GetSize()).c_str();
+                << "Premaster secrets have different sizes"
+                << "Premaster secret = " << BytesToHexString(serverPMS.GetData(), serverPMS.GetSize()).c_str();
 
             ASSERT_EQ(0, memcmp(serverPMS.GetData(), clientPMS.GetData(), serverPMS.GetSize()))
-            << "Premaster secrets don't match\n"
-            << "client = " << BytesToHexString(serverPMS.GetData(), serverPMS.GetSize()).c_str() << "\n"
-            << "server = " << BytesToHexString(clientPMS.GetData(), clientPMS.GetSize()).c_str() << "\n"
-            << "Premaster secret = " << BytesToHexString(serverPMS.GetData(), serverPMS.GetSize()).c_str();
+                << "Premaster secrets don't match\n"
+                << "client = " << BytesToHexString(serverPMS.GetData(), serverPMS.GetSize()).c_str() << "\n"
+                << "server = " << BytesToHexString(clientPMS.GetData(), clientPMS.GetSize()).c_str() << "\n"
+                << "Premaster secret = " << BytesToHexString(serverPMS.GetData(), serverPMS.GetSize()).c_str();
 
             //printf("Premaster secret = %s\n", BytesToHexString(serverPMS.GetData(), serverPMS.GetSize()).c_str());
             verifier = server.ServerGetVerifier();
@@ -132,14 +132,14 @@ TEST(SRPTest, Basic_API) {
         server.GetPremasterSecret(serverPMS);
         client.GetPremasterSecret(clientPMS);
         ASSERT_EQ(clientPMS.GetSize(), serverPMS.GetSize())
-        << "Premaster secrets have different sizes"
-        << "Premaster secret = " << BytesToHexString(serverPMS.GetData(), serverPMS.GetSize()).c_str();
+            << "Premaster secrets have different sizes"
+            << "Premaster secret = " << BytesToHexString(serverPMS.GetData(), serverPMS.GetSize()).c_str();
 
         ASSERT_EQ(0, memcmp(serverPMS.GetData(), clientPMS.GetData(), serverPMS.GetSize()))
-        << "Premaster secrets don't match\n"
-        << "client = " << BytesToHexString(serverPMS.GetData(), serverPMS.GetSize()).c_str() << "\n"
-        << "server = " << BytesToHexString(clientPMS.GetData(), clientPMS.GetSize()).c_str() << "\n"
-        << "Premaster secret = " << BytesToHexString(serverPMS.GetData(), serverPMS.GetSize()).c_str();
+            << "Premaster secrets don't match\n"
+            << "client = " << BytesToHexString(serverPMS.GetData(), serverPMS.GetSize()).c_str() << "\n"
+            << "server = " << BytesToHexString(clientPMS.GetData(), clientPMS.GetSize()).c_str() << "\n"
+            << "Premaster secret = " << BytesToHexString(serverPMS.GetData(), serverPMS.GetSize()).c_str();
 
         qcc::String serverRand = RandHexString(64);
         qcc::String clientRand = RandHexString(64);
@@ -149,8 +149,8 @@ TEST(SRPTest, Basic_API) {
 
         status = Crypto_PseudorandomFunction(serverPMS, "foobar", serverRand + clientRand, masterSecret, sizeof(masterSecret));
         ASSERT_EQ(ER_OK, status)
-        << " SRP ClientFinish failed\n"
-        << "Master secret = " << BytesToHexString(masterSecret, sizeof(masterSecret)).c_str();
+            << " SRP ClientFinish failed\n"
+            << "Master secret = " << BytesToHexString(masterSecret, sizeof(masterSecret)).c_str();
     }
 }
 

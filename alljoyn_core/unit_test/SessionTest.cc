@@ -566,18 +566,18 @@ static bool SessionJoinLeaveTest(BusAttachment& busHost, BusAttachment& busJoine
     EXPECT_EQ(bindMemberSessionId, sessionId);
     if (&busHost == &busJoiner) { /* self join case */
         EXPECT_STREQ(busHost.GetUniqueName().c_str(), sessionPortListener.sessionJoinedTestJoiner.c_str()) <<
-        "The Joiner name " << sessionPortListener.sessionJoinedTestJoiner.c_str() <<
-        " should be the same as" << busHost.GetUniqueName().c_str();
+            "The Joiner name " << sessionPortListener.sessionJoinedTestJoiner.c_str() <<
+            " should be the same as" << busHost.GetUniqueName().c_str();
 
 
     } else {
         EXPECT_STRNE(busHost.GetUniqueName().c_str(), sessionPortListener.sessionJoinedTestJoiner.c_str()) <<
-        "The Joiner name " << sessionPortListener.sessionJoinedTestJoiner.c_str() <<
-        " should be different than " << busHost.GetUniqueName().c_str();
+            "The Joiner name " << sessionPortListener.sessionJoinedTestJoiner.c_str() <<
+            " should be different than " << busHost.GetUniqueName().c_str();
     }
     EXPECT_STREQ(busJoiner.GetUniqueName().c_str(), sessionPortListener.sessionJoinedTestJoiner.c_str()) <<
-    "The Joiner name " << sessionPortListener.sessionJoinedTestJoiner.c_str() <<
-    " should be the same as " << busJoiner.GetUniqueName().c_str();
+        "The Joiner name " << sessionPortListener.sessionJoinedTestJoiner.c_str() <<
+        " should be the same as " << busJoiner.GetUniqueName().c_str();
 
     testobjects[&busHost]->SendSignal(sessionId);
     //Wait up to 1 seconds for all callbacks and listeners to be called.
