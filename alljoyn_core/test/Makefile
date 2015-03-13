@@ -24,7 +24,6 @@ PROG_BINS =  \
         autochat \
         remarshal \
         unpack \
-        rsa \
         srp \
         aes_ccm \
         keystore \

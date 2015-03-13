@@ -138,7 +138,7 @@ SessionlessObj::SessionlessObj(Bus& bus, BusController* busController, DaemonRou
     requestSignalsSignal(NULL),
     requestRangeSignal(NULL),
     requestRangeMatchSignal(NULL),
-    timer("sessionless"),
+    timer("sessionless", true),
     curChangeId(0),
     sessionOpts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY, SessionOpts::DAEMON_NAMES),
     sessionPort(SESSIONLESS_SESSION_PORT),
@@ -979,6 +979,11 @@ void SessionlessObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
         if (tilExpire != Timespec::Zero) {
             SessionlessObj* slObj = this;
             timer.AddAlarm(Alarm(tilExpire, slObj));
+        }
+    } else if (reason == ER_TIMER_EXITING) {
+        Work* work = static_cast<Work*>(alarm->GetContext());
+        if (work) {
+            delete work;
         }
     }
 }

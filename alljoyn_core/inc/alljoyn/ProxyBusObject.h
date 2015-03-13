@@ -38,6 +38,7 @@ namespace qcc {
 /** @internal Forward references */
 class Mutex;
 class Condition;
+class Thread;
 }
 
 namespace ajn {
@@ -1010,6 +1011,9 @@ class ProxyBusObject : public MessageReceiver {
     mutable qcc::Mutex* lock;   /**< Lock that protects access to components member */
     bool isExiting;             /**< true iff ProxyBusObject is in the process of begin destroyed */
     bool isSecure;              /**< Indicates if this object is secure or not */
+    qcc::Thread* handlerThread;
+    PropertiesChangedListener* activeListener;
+    qcc::Condition* listenerDone;
 };
 
 /**
