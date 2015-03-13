@@ -21,6 +21,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -232,6 +233,20 @@ public class ProxyBusObject {
                     }
                 }
                 if (invocation == null) {
+                    try {
+                        Class<Object> objectClass = Object.class;
+                        if (method.equals(objectClass.getMethod("toString"))) {
+                            return proxyToString(proxy);
+                        }
+                        if (method.equals(objectClass.getMethod("equals",
+                                objectClass))) {
+                            return proxy == args[0];
+                        }
+                        if (method.equals(objectClass.getMethod("hashCode"))) {
+                            return System.identityHashCode(proxy);
+                        }
+                    } catch (NoSuchMethodException e) {
+                    }
                     throw new BusException("No such method: " + method);
                 }
                 invocationCache.put(methodName, invocationList);
@@ -469,5 +484,23 @@ public class ProxyBusObject {
      */
     public native Status unregisterPropertiesChangedListener(String iface,
                                                              PropertiesChangedListener listener);
+
+
+    /**
+     * The implementation of toString method of proxy objects provided by the InvocationHandler.
+     *
+     * @param proxy the proxy to generate a string for.
+     * @return a string representation of the proxy object.
+     */
+    static String proxyToString(Object proxy) {
+        Class<?> clazz = proxy.getClass();
+        Class<?>[] intfs = clazz.getInterfaces();
+        String[] names = new String[intfs.length];
+        for (int i = 0; i < intfs.length; i++) {
+            names[i] = intfs[i].getName();
+        }
+        return clazz.getCanonicalName() + Arrays.toString(names) + "@"
+        + System.identityHashCode(proxy);
+    }
 }
 

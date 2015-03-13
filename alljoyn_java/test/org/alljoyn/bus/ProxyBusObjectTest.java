@@ -220,4 +220,20 @@ public class ProxyBusObjectTest extends TestCase {
         assertEquals("/simple", proxyObj.getObjPath());
         proxyObj.release();
     }
+
+    public void testProxiedMethodsFromClassObject() throws Exception {
+        proxyObj = bus.getProxyBusObject(name, "/simple",
+                BusAttachment.SESSION_ID_ANY,
+                new Class<?>[] { SimpleInterface.class });
+        Object intfObject = proxyObj.getInterface(SimpleInterface.class);
+        assertTrue(intfObject.equals(intfObject));
+        assertFalse(intfObject.equals(null));
+        assertFalse(intfObject.equals(this));
+
+        assertNotNull(intfObject.toString());
+
+        assertEquals(System.identityHashCode(intfObject), intfObject.hashCode());
+
+        proxyObj.release();
+    }
 }
