@@ -15,6 +15,7 @@
  ******************************************************************************/
 
 #include <qcc/Mutex.h>
+#include <qcc/Condition.h>
 
 #include <alljoyn/Observer.h>
 #include <alljoyn/AutoPinger.h>
@@ -220,26 +221,87 @@ error:
 
 ObserverManager::ObserverManager(BusAttachment& bus) :
     bus(bus),
-    pinger(bus),
-    processingWork(false)
+    pinger(NULL),
+    processingWork(false),
+    stopping(false),
+    started(false)
 {
+}
+
+void ObserverManager::Start()
+{
+    wqLock.Lock(MUTEX_CONTEXT);
+    if (started) {
+        wqLock.Unlock(MUTEX_CONTEXT);
+        return;
+    }
+    started = true;
+
     bus.RegisterAboutListener(*this);
-    pinger.AddPingGroup(PING_GROUP, *this, PING_INTERVAL);
+    pinger = new AutoPinger(bus);
+    pinger->AddPingGroup(PING_GROUP, *this, PING_INTERVAL);
+    wqLock.Unlock(MUTEX_CONTEXT);
 }
 
 ObserverManager::~ObserverManager()
 {
     QCC_DbgTrace(("ObserverManager::~ObserverManager"));
-    pinger.RemovePingGroup(PING_GROUP);
-    bus.UnregisterAboutListener(*this);
+    Stop();
+    Join();
 
-    /* drop all remaining work from the queue */
+    /* clean up any remaining InterfaceCombinations */
+    CombinationMap::iterator it;
+    for (it = combinations.begin(); it != combinations.end(); ++it) {
+        delete it->second;
+    }
+    combinations.clear();
+}
+
+void ObserverManager::Stop() {
     wqLock.Lock(MUTEX_CONTEXT);
+    if (!started || stopping) {
+        wqLock.Unlock(MUTEX_CONTEXT);
+        return;
+    }
+    stopping = true;
+
+    /* clear the work queue */
     while (!work.empty()) {
         delete work.front();
         work.pop();
     }
     wqLock.Unlock(MUTEX_CONTEXT);
+
+    /* cancel any remaining TriggerObserverWork alarms on the local endpoints */
+    bus.GetInternal().GetLocalEndpoint()->DiscardObserverWork();
+
+    /* stop the AutoPinger */
+    if (pinger) {
+        pinger->RemovePingGroup(PING_GROUP);
+    }
+
+    /* unregister for About callbacks */
+    bus.UnregisterAboutListener(*this);
+}
+
+void ObserverManager::Join()
+{
+    /* wait for any in-flight work item to land */
+    wqLock.Lock(MUTEX_CONTEXT);
+    if (!started || !stopping) {
+        wqLock.Unlock(MUTEX_CONTEXT);
+        return;
+    }
+    while (processingWork) {
+        processingDone.Wait(wqLock);
+    }
+    wqLock.Unlock(MUTEX_CONTEXT);
+
+    /* destruct the AutoPinger (joins the AutoPinger timer thread) */
+    if (pinger) {
+        delete pinger;
+        pinger = NULL;
+    }
 }
 
 void ObserverManager::RegisterObserver(CoreObserver* observer)
@@ -422,7 +484,7 @@ void ObserverManager::HandleActivePeerAnnouncement(DiscoveryMap::iterator peerit
          * active peer list */
         QCC_DbgPrintf(("not relevant"));
         bus.LeaveJoinedSessionAsync(peerit->first.sessionid, this, NULL);
-        pinger.RemoveDestination(PING_GROUP, peerit->first.busname);
+        pinger->RemoveDestination(PING_GROUP, peerit->first.busname);
         active.erase(peerit);
     } else {
         /* update the set of discovered objects */
@@ -464,7 +526,7 @@ void ObserverManager::CheckRelevanceAllPeers()
     for (std::vector<DiscoveryMap::iterator>::iterator iit = irrelevant.begin();
          iit != irrelevant.end(); ++iit) {
         bus.LeaveJoinedSessionAsync((*iit)->first.sessionid, this, NULL);
-        pinger.RemoveDestination(PING_GROUP, (*iit)->first.busname);
+        pinger->RemoveDestination(PING_GROUP, (*iit)->first.busname);
         active.erase(*iit);
     }
 }
@@ -473,35 +535,26 @@ void ObserverManager::ScheduleWork(WorkItem* workitem)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     wqLock.Lock(MUTEX_CONTEXT);
-    workitem->mgr = this;
-    work.push(workitem);
+    if (started && !stopping) {
+        workitem->mgr = this;
+        work.push(workitem);
+    } else {
+        delete workitem;
+    }
     wqLock.Unlock(MUTEX_CONTEXT);
 }
 
 void ObserverManager::DoWork()
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
-    wqLock.Lock(MUTEX_CONTEXT);
-    if (processingWork || work.empty()) {
-        /* no work to do, or some other thread is alreadly doing it */
-        QCC_DbgPrintf(("No work to be done (processing = %d, work.size() = %d)", (int) processingWork, (int) work.size()));
-        wqLock.Unlock(MUTEX_CONTEXT);
-        return;
-    } else {
-        /* tell the world we're going to do the work */
-        processingWork = true;
-    }
-    wqLock.Unlock(MUTEX_CONTEXT);
 
     while (true) {
         WorkItem* workitem = NULL;
         wqLock.Lock(MUTEX_CONTEXT);
-        if (!work.empty()) {
+        if (!processingWork && !work.empty() && started && !stopping) {
             workitem = work.front();
             work.pop();
-        } else {
-            /* tell the world we won't do any more work */
-            processingWork = false;
+            processingWork = true;
         }
         wqLock.Unlock(MUTEX_CONTEXT);
 
@@ -513,6 +566,11 @@ void ObserverManager::DoWork()
 
         workitem->Execute();
         delete workitem;
+
+        wqLock.Lock(MUTEX_CONTEXT);
+        processingWork = false;
+        processingDone.Broadcast();
+        wqLock.Unlock(MUTEX_CONTEXT);
     }
 }
 
@@ -596,7 +654,7 @@ void ObserverManager::ProcessSessionEstablished(const ObserverManager::Peer& pee
         /* move peer from pending set to active set */
         DiscoveryMap::iterator newit = active.insert(std::make_pair(peer, peerit->second)).first;
         pending.erase(peerit);
-        pinger.AddDestination(PING_GROUP, peer.busname);
+        pinger->AddDestination(PING_GROUP, peer.busname);
 
         QCC_DbgPrintf(("Moving peer %s from pending to active state.", peer.busname.c_str()));
         /* notify interested observers of the newly announced objects */
@@ -645,7 +703,7 @@ void ObserverManager::ProcessSessionLost(SessionId sessionid)
             cit->second->ObjectsLost(peerit->second);
         }
 
-        pinger.RemoveDestination(PING_GROUP, peerit->first.busname);
+        pinger->RemoveDestination(PING_GROUP, peerit->first.busname);
         active.erase(peerit);
     } else {
         QCC_LogError(ER_FAIL, ("Unexpected: lost a session we didn't ask for to begin with"));
@@ -669,7 +727,7 @@ void ObserverManager::ProcessDestinationLost(const qcc::String& busname)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     /* we no longer care about this bus name */
-    pinger.RemoveDestination(PING_GROUP, busname);
+    pinger->RemoveDestination(PING_GROUP, busname);
 
     DiscoveryMap::iterator peerit;
     for (peerit = active.begin(); peerit != active.end(); ++peerit) {
