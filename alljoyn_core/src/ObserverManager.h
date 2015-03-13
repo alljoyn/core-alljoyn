@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -74,6 +74,13 @@ class ObserverManager :
      * Destructor.
      */
     ~ObserverManager();
+
+    /**
+     * Stop the ObserverManager and make sure no more work items are scheduled on
+     * the LocalEndpoint dispatcher thread to avoid issues during shutdown of the
+     * BusAttachment.
+     */
+    void Stop();
 
     /**
      * Register a new Observer with the ObserverManager
@@ -252,7 +259,7 @@ class ObserverManager :
     /**
      * An AutoPinger instance to do the periodic liveness checks for us.
      */
-    AutoPinger pinger;
+    AutoPinger* pinger;
 
     /**
      * Process an announcement from a peer with which we're currently in session.
@@ -286,6 +293,7 @@ class ObserverManager :
     std::queue<WorkItem*> work;
     qcc::Mutex wqLock;
     bool processingWork;
+    bool stopping;
 
     /**
      * Add a work item to the work queue
