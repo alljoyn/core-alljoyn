@@ -410,6 +410,25 @@ SessionlessObj::PushMessageWork::PushMessageWork(SessionlessObj& slObj, Message&
 {
 }
 
+bool SessionlessObj::IsSessionlessReceiver(String name)
+{
+    lock.Lock();
+    std::pair<RuleIterator, RuleIterator> range = rules.equal_range(name);
+    bool ret = (range.first != rules.end());
+    lock.Unlock();
+    return ret;
+}
+
+bool SessionlessObj::IsSessionlessEmitter(String name)
+{
+    lock.Lock();
+    SessionlessMessageKey key(name.c_str(), "", "", "");
+    LocalCache::iterator mit = localCache.lower_bound(key);
+    bool ret = (mit != localCache.end());
+    lock.Unlock();
+    return ret;
+}
+
 void SessionlessObj::PushMessageWork::Run()
 {
     slObj.router.LockNameTable();

@@ -244,6 +244,24 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
     static QStatus GetNextJoinTime(const BackoffLimits& backoff, bool doInitialBackoff,
                                    uint32_t retries, qcc::Timespec& firstJoinTime, qcc::Timespec& nextJoinTime);
 
+    /**
+     * Is this endpoint a sessionless receiver.
+     *
+     * @param name Name of endpoint to check.
+     *
+     * @return true if this endpoint wants to recieve a sessionless signal.
+     */
+    bool IsSessionlessReceiver(qcc::String name);
+
+    /**
+     * Is this endpoint a sessionless emitter.
+     *
+     * @param name Name of endpoint to check.
+     *
+     * @return true if this endpoint is emitting a sessionless signal.
+     */
+    bool IsSessionlessEmitter(qcc::String name);
+
   private:
     friend struct RemoteCacheSnapshot;
 
@@ -692,6 +710,7 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      *                 will be deleted after execution.
      */
     void ScheduleWork(Work* work);
+
 };
 
 }

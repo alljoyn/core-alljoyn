@@ -539,14 +539,14 @@ void DBusObj::NameOwnerChanged(const qcc::String& alias,
     }
 
     /* Send NameOwnerChanged signal */
-    if ((oldOwner && SessionOpts::ALL_NAMES == oldOwnerNameTransfer) ||
-        (newOwner && SessionOpts::ALL_NAMES == newOwnerNameTransfer)) {
+    if ((oldOwner && SessionOpts::DAEMON_NAMES != oldOwnerNameTransfer) ||
+        (newOwner && SessionOpts::DAEMON_NAMES != newOwnerNameTransfer)) {
         MsgArg ownerChangedArgs[3];
         size_t numArgs = ArraySize(ownerChangedArgs);
         MsgArg::Set(ownerChangedArgs, numArgs, "sss",
                     alias.c_str(),
-                    (oldOwner && SessionOpts::ALL_NAMES == oldOwnerNameTransfer) ? oldOwner->c_str() : "",
-                    (newOwner && SessionOpts::ALL_NAMES == newOwnerNameTransfer) ? newOwner->c_str() : "");
+                    (oldOwner && SessionOpts::DAEMON_NAMES != oldOwnerNameTransfer) ? oldOwner->c_str() : "",
+                    (newOwner && SessionOpts::DAEMON_NAMES != newOwnerNameTransfer) ? newOwner->c_str() : "");
 
         const InterfaceDescription::Member* nameOwnerChanged = dbusIntf->GetMember("NameOwnerChanged");
         assert(nameOwnerChanged);
