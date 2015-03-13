@@ -1,4 +1,4 @@
-# Copyright AllSeen Alliance. All rights reserved.
+# Copyright (c) 2015, AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -12,22 +12,18 @@
 #    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # 
-
 Import('env')
+clientDistDir = '$CPP_DISTDIR/samples/observer'
 
-samples_env = env.Clone()
+# Sample Programs
+progs = [
+    env.Program('door_provider',  ['door_provider.cc']),
+    env.Program('door_consumer',  ['door_consumer.cc']),
+    ]
 
-samples_env.Prepend(LIBS = samples_env['ALLJOYN_C_LIB_STATIC'])
+if env['OS'] in ['linux', 'darwin']:
+    env.Install('$CPP_DISTDIR/bin/samples', progs )
+    env.Install(clientDistDir, env.Glob('*.cc'))
+    env.Install(clientDistDir, 'Makefile')
+    env.Install(clientDistDir, 'README.txt')
 
-if samples_env['BR'] == 'on':
-    # Build apps with bundled daemon support
-    samples_env.Prepend(LIBS = [samples_env['brobj'], samples_env['ajrlib']])
-
-# Basic Sample programs
-samples_env.SConscript('basic/SConscript', exports = {'env': samples_env })
-
-# Security Sample programs
-samples_env.SConscript('secure/SConscript', exports = {'env': samples_env })
-
-# Observer Sample programs
-samples_env.SConscript('observer/SConscript', exports = {'env': samples_env })
