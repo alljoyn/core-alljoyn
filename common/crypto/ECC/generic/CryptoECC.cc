@@ -66,6 +66,15 @@ static const size_t U32_BIGVAL_SZ = ECC_BIGVAL_SZ;
 static const size_t U32_AFFINEPOINT_SZ = 2 * ECC_BIGVAL_SZ + 1;
 static const size_t U32_ECDSASIG_SZ = 2 * ECC_BIGVAL_SZ;
 
+struct Crypto_ECC::ECCState {
+  public:
+
+    ECCPrivateKey dhPrivateKey;
+    ECCPublicKey dhPublicKey;
+    ECCPrivateKey dsaPrivateKey;
+    ECCPublicKey dsaPublicKey;
+};
+
 /* P256 is tested directly with known answer tests from example in
    ANSI X9.62 Annex L.4.2.  (See item in pt_mpy_testcases below.)
    Mathematica code, written in a non-curve-specific way, was also
@@ -1776,7 +1785,7 @@ static QStatus Crypto_ECC_GenerateKeyPair(ECCPublicKey* publicKey, ECCPrivateKey
 }
 
 QStatus Crypto_ECC::GenerateDHKeyPair() {
-    return Crypto_ECC_GenerateKeyPair(&dhPublicKey, &dhPrivateKey);
+    return Crypto_ECC_GenerateKeyPair(&eccState->dhPublicKey, &eccState->dhPrivateKey);
 }
 
 
@@ -1824,7 +1833,7 @@ QStatus Crypto_ECC::GenerateSharedSecret(const ECCPublicKey* peerPublicKey, ECCS
 {
     QStatus status;
     ECCSecretOldEncoding oldenc;
-    status = Crypto_ECC_GenerateSharedSecret(peerPublicKey, &dhPrivateKey, &oldenc);
+    status = Crypto_ECC_GenerateSharedSecret(peerPublicKey, &eccState->dhPrivateKey, &oldenc);
     affine_point_t ap;
     ap.infinity = 0;
     U8BeArrayToU32Array((const uint8_t*) &oldenc, sizeof(ECCPublicKeyOldEncoding), (uint32_t*) &ap);
@@ -1834,7 +1843,7 @@ QStatus Crypto_ECC::GenerateSharedSecret(const ECCPublicKey* peerPublicKey, ECCS
 
 QStatus Crypto_ECC::GenerateDSAKeyPair()
 {
-    return Crypto_ECC_GenerateKeyPair(&dsaPublicKey, &dsaPrivateKey);
+    return Crypto_ECC_GenerateKeyPair(&eccState->dsaPublicKey, &eccState->dsaPrivateKey);
 }
 
 /*
@@ -1892,11 +1901,11 @@ static QStatus Crypto_ECC_DSASign(const uint8_t* buf, uint32_t len, const ECCPri
 
 QStatus Crypto_ECC::DSASignDigest(const uint8_t* digest, uint16_t len, ECCSignature* sig)
 {
-    return Crypto_ECC_DSASignDigest(digest, len, &dsaPrivateKey, sig);
+    return Crypto_ECC_DSASignDigest(digest, len, &eccState->dsaPrivateKey, sig);
 }
 
 QStatus Crypto_ECC::DSASign(const uint8_t* buf, uint16_t len, ECCSignature* sig) {
-    return Crypto_ECC_DSASign(buf, len, &dsaPrivateKey, sig);
+    return Crypto_ECC_DSASign(buf, len, &eccState->dsaPrivateKey, sig);
 }
 
 /*
@@ -1956,16 +1965,62 @@ static QStatus Crypto_ECC_DSAVerify(const uint8_t* buf, uint32_t len, const ECCP
 
 QStatus Crypto_ECC::DSAVerifyDigest(const uint8_t* digest, uint16_t len, const ECCSignature* sig)
 {
-    return Crypto_ECC_DSAVerifyDigest(digest, len, &dsaPublicKey, sig);
+    return Crypto_ECC_DSAVerifyDigest(digest, len, &eccState->dsaPublicKey, sig);
 }
 
 QStatus Crypto_ECC::DSAVerify(const uint8_t* buf, uint16_t len, const ECCSignature* sig)
 {
-    return Crypto_ECC_DSAVerify(buf, len, &dsaPublicKey, sig);
+    return Crypto_ECC_DSAVerify(buf, len, &eccState->dsaPublicKey, sig);
+}
+
+const ECCPublicKey* Crypto_ECC::GetDHPublicKey() const
+{
+    return &eccState->dhPublicKey;
+}
+
+void Crypto_ECC::SetDHPublicKey(const ECCPublicKey* pubKey)
+{
+    eccState->dhPublicKey = *pubKey;
+}
+
+const ECCPrivateKey* Crypto_ECC::GetDHPrivateKey()
+{
+    return &eccState->dhPrivateKey;
+}
+
+void Crypto_ECC::SetDHPrivateKey(const ECCPrivateKey* privateKey)
+{
+    eccState->dhPrivateKey = *privateKey;
+}
+
+const ECCPublicKey* Crypto_ECC::GetDSAPublicKey()
+{
+    return &eccState->dsaPublicKey;
+}
+
+void Crypto_ECC::SetDSAPublicKey(const ECCPublicKey* pubKey)
+{
+    eccState->dsaPublicKey = *pubKey;
+}
+
+const ECCPrivateKey* Crypto_ECC::GetDSAPrivateKey()
+{
+    return &eccState->dsaPrivateKey;
+}
+
+void Crypto_ECC::SetDSAPrivateKey(const ECCPrivateKey* privateKey)
+{
+    eccState->dsaPrivateKey = *privateKey;
+}
+
+Crypto_ECC::Crypto_ECC()
+{
+    eccState = new ECCState();
 }
 
 Crypto_ECC::~Crypto_ECC()
 {
+    delete eccState;
 }
 
 QStatus Crypto_ECC_OldEncoding::ReEncode(const ECCPublicKey* newenc, ECCPublicKeyOldEncoding* oldenc)

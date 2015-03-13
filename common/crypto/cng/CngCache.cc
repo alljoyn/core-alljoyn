@@ -40,6 +40,8 @@ CngCache::CngCache() : ccmHandle(NULL), ecbHandle(NULL), rsaHandle(NULL)
 {
     assert(sizeof(algHandles) == (sizeof(BCRYPT_ALG_HANDLE) * ALGORITHM_COUNT * 2));
     memset(&algHandles, 0, sizeof(algHandles));
+    assert(sizeof(ecdsaHandles) == (sizeof(BCRYPT_ALG_HANDLE) * ECDSA_ALGORITHM_COUNT));
+    memset(&ecdsaHandles, 0, sizeof(ecdsaHandles));
 }
 
 CngCache::~CngCache()
@@ -74,6 +76,9 @@ void CngCache::Cleanup()
     CloseAlgorithmProvider(&ccmHandle);
     CloseAlgorithmProvider(&ecbHandle);
     CloseAlgorithmProvider(&rsaHandle);
+    for (int i = 0; i < ECDSA_ALGORITHM_COUNT; ++i) {
+        CloseAlgorithmProvider(&ecdsaHandles[i]);
+    }
 }
 
 /**
