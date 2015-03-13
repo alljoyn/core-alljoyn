@@ -25,6 +25,7 @@
 
 #include <qcc/String.h>
 #include <qcc/Mutex.h>
+#include <qcc/Condition.h>
 
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/Observer.h>
@@ -74,6 +75,21 @@ class ObserverManager :
      * Destructor.
      */
     ~ObserverManager();
+
+    /**
+     * Start the ObserverManager.
+     */
+    void Start();
+
+    /**
+     * Request to stop all ObserverManager activities.
+     */
+    void Stop();
+
+    /**
+     * Blocks until all ObserverManager activities are stopped.
+     */
+    void Join();
 
     /**
      * Register a new Observer with the ObserverManager
@@ -252,7 +268,7 @@ class ObserverManager :
     /**
      * An AutoPinger instance to do the periodic liveness checks for us.
      */
-    AutoPinger pinger;
+    AutoPinger* pinger;
 
     /**
      * Process an announcement from a peer with which we're currently in session.
@@ -285,7 +301,10 @@ class ObserverManager :
      ****************************/
     std::queue<WorkItem*> work;
     qcc::Mutex wqLock;
+    qcc::Condition processingDone;
     bool processingWork;
+    bool stopping;
+    bool started;
 
     /**
      * Add a work item to the work queue

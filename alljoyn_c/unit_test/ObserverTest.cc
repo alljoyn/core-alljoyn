@@ -304,7 +304,7 @@ struct ObserverListener {
         listener = alljoyn_observerlistener_create(&listener_cbs, this);
     }
 
-    ~ObserverListener() {
+    virtual ~ObserverListener() {
         alljoyn_observerlistener_destroy(listener);
     }
 
