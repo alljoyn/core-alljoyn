@@ -465,6 +465,14 @@ QStatus IpNameService::Enable(TransportMask transportMask,
     return ER_OK;
 }
 
+QStatus IpNameService::UpdateDynamicScore(TransportMask transportMask, uint32_t availableTransportConnections, uint32_t maximumTransportConnections,
+                                          uint32_t availableTransportRemoteClients, uint32_t maximumTransportRemoteClients)
+{
+    ASSERT_STATE("UpdateDynamicScore");
+    m_pimpl->UpdateDynamicScore(transportMask, availableTransportConnections, maximumTransportConnections, availableTransportRemoteClients, maximumTransportRemoteClients);
+    return ER_OK;
+}
+
 QStatus IpNameService::Enabled(TransportMask transportMask,
                                std::map<qcc::String, uint16_t>& reliableIPv4PortMap, uint16_t& reliableIPv6Port,
                                std::map<qcc::String, uint16_t>& unreliableIPv4PortMap, uint16_t& unreliableIPv6Port)
