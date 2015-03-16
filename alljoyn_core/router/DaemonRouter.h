@@ -438,6 +438,19 @@ class DaemonRouter : public Router {
 
     std::set<SessionCastEntry> sessionCastSet; /**< Session multicast set */
     qcc::Mutex sessionCastSetLock;             /**< Lock that protects sessionCastSet */
+
+    /* Add a session ref to the virtualendpoint with the specified name
+     * @param  vepName: Name of virtual endpoint to which a ref needs to be added.
+     * @param  id: Id of the session
+     * @param  b2bEp: B2b endpoint of the session
+     */
+    QStatus AddSessionRef(qcc::String vepName, SessionId id, RemoteEndpoint b2bEp);
+
+    /* Remove a session ref to the virtualendpoint with the specified name
+     * @param  vepName: Name of virtual endpoint to which a ref needs to be decremented.
+     * @param  id: Id of the session
+     */
+    void RemoveSessionRef(qcc::String vepName, SessionId id);
 };
 
 }
