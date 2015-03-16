@@ -396,8 +396,8 @@ TEST_F(SessionListenerTest, sessionmember_added_removed) {
     EXPECT_EQ(sid, joinsessionid);
     EXPECT_TRUE(session_member_added_flag);
     EXPECT_STREQ(alljoyn_busattachment_getuniquename(clientbus2), member_added_uniquename)
-    << "clientbus UID = " << alljoyn_busattachment_getuniquename(clientbus) << "\nservicebus UID = "
-    << alljoyn_busattachment_getuniquename(servicebus);
+        << "clientbus UID = " << alljoyn_busattachment_getuniquename(clientbus) << "\nservicebus UID = "
+        << alljoyn_busattachment_getuniquename(servicebus);
 
     status = alljoyn_busattachment_leavesession(clientbus, sid);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -543,8 +543,8 @@ TEST_F(SessionListenerTest, removesessionmember) {
     EXPECT_TRUE(session_member_added_flag);
     EXPECT_TRUE(service_session_member_added_flag);
     EXPECT_STREQ(alljoyn_busattachment_getuniquename(clientbus2), service_member_added_uniquename)
-    << "clientbus UID = " << alljoyn_busattachment_getuniquename(clientbus) << "\nservicebus UID = "
-    << alljoyn_busattachment_getuniquename(servicebus);
+        << "clientbus UID = " << alljoyn_busattachment_getuniquename(clientbus) << "\nservicebus UID = "
+        << alljoyn_busattachment_getuniquename(servicebus);
 
 
     resetFlags();
