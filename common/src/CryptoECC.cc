@@ -1771,7 +1771,7 @@ static QStatus Crypto_ECC_GenerateKeyPair(ECCPublicKey* publicKey, ECCPrivateKey
     }
     bigval_to_binary(&ap.x, publicKey->x, sizeof(publicKey->x));
     bigval_to_binary(&ap.y, publicKey->y, sizeof(publicKey->y));
-    bigval_to_binary(&k, privateKey->x, sizeof(privateKey->x));
+    bigval_to_binary(&k, privateKey->d, sizeof(privateKey->d));
     return ER_OK;
 }
 
@@ -1792,8 +1792,6 @@ QStatus Crypto_ECC::GenerateDHKeyPair() {
  */
 static QStatus Crypto_ECC_GenerateSharedSecret(const ECCPublicKey* peerPublicKey, const ECCPrivateKey* privateKey, ECCSecretOldEncoding* secret)
 {
-
-    boolean_t derive_rv;
     affine_point_t localSecret;
     affine_point_t pub;
     bigval_t pk;
@@ -1801,15 +1799,9 @@ static QStatus Crypto_ECC_GenerateSharedSecret(const ECCPublicKey* peerPublicKey
     pub.infinity = 0;
     binary_to_bigval(peerPublicKey->x, &pub.x, sizeof(peerPublicKey->x));
     binary_to_bigval(peerPublicKey->y, &pub.y, sizeof(peerPublicKey->y));
-    binary_to_bigval(privateKey->x, &pk, sizeof(privateKey->x));
-    derive_rv = ECDH_derive_pt(&localSecret, &pk, &pub);
-    if (!derive_rv) {
+    binary_to_bigval(privateKey->d, &pk, sizeof(privateKey->d));
+    if (!ECDH_derive_pt(&localSecret, &pk, &pub)) {
         return ER_FAIL;  /* bad */
-    }
-    if (derive_rv) {
-        if (!in_curveP(&localSecret)) {
-            return ER_FAIL;  /* bad */
-        }
     }
     U32ArrayToU8BeArray((const uint32_t*) &localSecret, U32_AFFINEPOINT_SZ, (uint8_t*) secret);
     return ER_OK;
@@ -1822,14 +1814,19 @@ QStatus Crypto_ECC_OldEncoding::GenerateSharedSecret(Crypto_ECC& ecc, const ECCP
 
 QStatus Crypto_ECC::GenerateSharedSecret(const ECCPublicKey* peerPublicKey, ECCSecret* secret)
 {
-    QStatus status;
-    ECCSecretOldEncoding oldenc;
-    status = Crypto_ECC_GenerateSharedSecret(peerPublicKey, &dhPrivateKey, &oldenc);
-    affine_point_t ap;
-    ap.infinity = 0;
-    U8BeArrayToU32Array((const uint8_t*) &oldenc, sizeof(ECCPublicKeyOldEncoding), (uint32_t*) &ap);
-    bigval_to_binary(&ap.x, secret->x, sizeof(secret->x));
-    return status;
+    bigval_t sec;
+    bigval_t prv;
+    affine_point_t pub;
+
+    pub.infinity = 0;
+    binary_to_bigval(peerPublicKey->x, &pub.x, sizeof(peerPublicKey->x));
+    binary_to_bigval(peerPublicKey->y, &pub.y, sizeof(peerPublicKey->y));
+    binary_to_bigval(dhPrivateKey.d, &prv, sizeof(dhPrivateKey.d));
+    if (!ECDH_derive(&sec, &prv, &pub)) {
+        return ER_FAIL;  /* bad */
+    }
+    bigval_to_binary(&sec, secret->z, sizeof(secret->z));
+    return ER_OK;
 }
 
 QStatus Crypto_ECC::GenerateDSAKeyPair()
@@ -1858,7 +1855,7 @@ static QStatus Crypto_ECC_DSASignDigest(const uint8_t* digest, uint32_t len, con
     bigval_t privKey;
     ECDSA_sig_t localSig;
 
-    binary_to_bigval(signingPrivateKey->x, &privKey, sizeof(signingPrivateKey->x));
+    binary_to_bigval(signingPrivateKey->d, &privKey, sizeof(signingPrivateKey->d));
     if (ECDSA_sign(&source, &privKey, &localSig) != 0) {
         return ER_FAIL;
     }

@@ -46,19 +46,19 @@ static const uint8_t ECC_COORDINATE_EMPTY[ECC_COORDINATE_SZ] = { 0 };
  */
 
 struct ECCPrivateKey {
-    uint8_t x[ECC_COORDINATE_SZ];
+    uint8_t d[ECC_COORDINATE_SZ];
     ECCPrivateKey() {
-        memset(x, 0, ECC_COORDINATE_SZ);
+        memset(d, 0, ECC_COORDINATE_SZ);
     }
 
     void operator=(const ECCPrivateKey& k)
     {
-        memcpy(x, k.x, ECC_COORDINATE_SZ);
+        memcpy(d, k.d, ECC_COORDINATE_SZ);
     }
 
     bool operator==(const ECCPrivateKey& k) const
     {
-        return memcmp(x, k.x, ECC_COORDINATE_SZ) == 0;
+        return memcmp(d, k.d, ECC_COORDINATE_SZ) == 0;
     }
 };
 
@@ -88,8 +88,7 @@ struct ECCPublicKey {
 
     bool operator!=(const ECCPublicKey& k) const
     {
-        int n = memcmp(x, k.x, ECC_COORDINATE_SZ);
-        return (n != 0) || (0 != memcmp(y, k.y, ECC_COORDINATE_SZ));
+        return !(*this == k);
     }
 
     bool operator<(const ECCPublicKey& k) const
@@ -133,7 +132,24 @@ struct ECCPublicKey {
 
 };
 
-typedef ECCPrivateKey ECCSecret;
+/**
+ * The ECC secret
+ */
+struct ECCSecret {
+    uint8_t z[ECC_COORDINATE_SZ];
+
+    ECCSecret() {
+        memset(z, 0, ECC_COORDINATE_SZ);
+    }
+    void operator=(const ECCSecret& k)
+    {
+        memcpy(z, k.z, ECC_COORDINATE_SZ);
+    }
+    bool operator==(const ECCSecret& k) const
+    {
+        return memcmp(z, k.z, ECC_COORDINATE_SZ) == 0;
+    }
+};
 
 /**
  * The ECC signature big endian byte array
@@ -217,7 +233,7 @@ class Crypto_ECC {
      * Retrieve the DH private key
      * @return  the DH private key.  Same lifetime as the object.
      */
-    const ECCPrivateKey* GetDHPrivateKey()
+    const ECCPrivateKey* GetDHPrivateKey() const
     {
         return &dhPrivateKey;
     }
@@ -235,7 +251,7 @@ class Crypto_ECC {
      * Retrieve the DSA public key
      * @return  the DSA public key.  Same lifetime as the object.
      */
-    const ECCPublicKey* GetDSAPublicKey()
+    const ECCPublicKey* GetDSAPublicKey() const
     {
         return &dsaPublicKey;
     }
@@ -253,7 +269,7 @@ class Crypto_ECC {
      * Retrieve the DSA private key
      * @return  the DSA private key.  Same lifetime as the object.
      */
-    const ECCPrivateKey* GetDSAPrivateKey()
+    const ECCPrivateKey* GetDSAPrivateKey() const
     {
         return &dsaPrivateKey;
     }
