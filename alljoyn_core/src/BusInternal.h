@@ -37,6 +37,7 @@
 #include <alljoyn/InterfaceDescription.h>
 
 #include "AuthManager.h"
+#include "ObserverManager.h"
 #include "ClientRouter.h"
 #include "KeyStore.h"
 #include "PeerState.h"
@@ -81,6 +82,18 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
      * @return A pointer to the bus's authentication manager
      */
     AuthManager& GetAuthManager() { return authManager; }
+
+    /**
+     * Get a reference to the observer manager object.
+     *
+     * @return A pointer to the bus's observer manager
+     */
+    ObserverManager& GetObserverManager() {
+        if (!observerManager) {
+            observerManager = new ObserverManager(bus);
+        }
+        return *observerManager;
+    }
 
     /**
      * Get a reference to the internal transport list.
@@ -260,6 +273,11 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
      * JoinSessionAsync method_reply handler.
      */
     void JoinSessionAsyncCB(Message& message, void* context);
+
+    /**
+     * LeaveSessionAsync method_reply handler.
+     */
+    void LeaveSessionAsyncCB(Message& message, void* context);
 
     /**
      * SetLinkTimeoutAsync method_reply handler.
@@ -484,6 +502,8 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
 
     std::set<SessionId> hostedSessions;    /* session IDs for all sessions hosted by this bus attachment */
     qcc::Mutex hostedSessionsLock;         /* Mutex that protects hostedSessions */
+
+    ObserverManager* observerManager;      /* The observer manager for the bus attachment */
 };
 }
 

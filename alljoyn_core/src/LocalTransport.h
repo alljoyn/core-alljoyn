@@ -76,7 +76,7 @@ class _LocalEndpoint : public _BusEndpoint, public qcc::AlarmListener, public Me
     /**
      * Default constructor initializes an invalid endpoint. This allows for the declaration of uninitialized LocalEndpoint variables.
      */
-    _LocalEndpoint() : dispatcher(NULL), deferredCallbacks(NULL), bus(NULL), replyTimer("replyTimer", true) { }
+    _LocalEndpoint() : dispatcher(NULL), deferredCallbacks(NULL), observerCallbacks(NULL), bus(NULL), replyTimer("replyTimer", true) { }
 
     /**
      * Constructor
@@ -386,6 +386,11 @@ class _LocalEndpoint : public _BusEndpoint, public qcc::AlarmListener, public Me
      */
     bool IsReentrantCall();
 
+    /**
+     * Notify ObserverManager that there is some work to do.
+     */
+    void TriggerObserverWork();
+
   private:
 
     /**
@@ -400,6 +405,12 @@ class _LocalEndpoint : public _BusEndpoint, public qcc::AlarmListener, public Me
      */
     class DeferredCallbacks;
     DeferredCallbacks* deferredCallbacks;
+
+    /**
+     * Trigger the ObserverManager to process pending work on its work queue.
+     */
+    class ObserverCallbacks;
+    ObserverCallbacks* observerCallbacks;
 
     /**
      * PushMessage worker.
