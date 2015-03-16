@@ -1912,8 +1912,7 @@ QStatus BusAttachment::LeaveSessionAsync(const SessionId& sessionId, const char*
                                                 static_cast<MessageReceiver::ReplyHandler>(&BusAttachment::Internal::LeaveSessionAsyncCB),
                                                 &arg,
                                                 1,
-                                                cbCtx,
-                                                90000);
+                                                cbCtx);
     if (status != ER_OK) {
         delete cbCtx;
     }
@@ -2440,19 +2439,19 @@ QStatus BusAttachment::WhoImplementsNonBlocking(const char** implementsInterface
 QStatus BusAttachment::WhoImplements(const char* iface)
 {
     if (iface == NULL) {
-        return WhoImplements(NULL, size_t(0));
+        return WhoImplements(NULL, 0);
     }
     const char** tmp = &iface;
-    return WhoImplements(tmp, size_t(1));
+    return WhoImplements(tmp, 1);
 }
 
 QStatus BusAttachment::WhoImplementsNonBlocking(const char* iface)
 {
     if (iface == NULL) {
-        return WhoImplementsNonBlocking(NULL, size_t(0));
+        return WhoImplementsNonBlocking(NULL, 0);
     }
     const char** tmp = &iface;
-    return WhoImplementsNonBlocking(tmp, size_t(1));
+    return WhoImplementsNonBlocking(tmp, 1);
 }
 
 QStatus BusAttachment::CancelWhoImplements(const char** implementsInterfaces, size_t numberInterfaces)
@@ -2467,7 +2466,7 @@ QStatus BusAttachment::CancelWhoImplements(const char** implementsInterfaces, si
         matchRule += qcc::String(",implements='") + *it + qcc::String("'");
     }
 
-    QCC_DbgTrace(("Calling AddMatch(\"%s\")", matchRule.c_str()));
+    QCC_DbgTrace(("Calling RemoveMatch(\"%s\")", matchRule.c_str()));
     return RemoveMatch(matchRule.c_str());
 }
 
@@ -2483,7 +2482,7 @@ QStatus BusAttachment::CancelWhoImplementsNonBlocking(const char** implementsInt
         matchRule += qcc::String(",implements='") + *it + qcc::String("'");
     }
 
-    QCC_DbgTrace(("Calling AddMatch(\"%s\")", matchRule.c_str()));
+    QCC_DbgTrace(("Calling RemoveMatch(\"%s\")", matchRule.c_str()));
     return RemoveMatchNonBlocking(matchRule.c_str());
 }
 
