@@ -552,8 +552,7 @@ public class ObserverTest extends TestCase {
         final ObserverListener listener = new ObserverListener(consumer);
         obs.registerListener(listener);
         provider.createA(A);
-        provider.registerObject(A);
-        waitForEvent(listener);
+        waitForEvent(listener, provider, A);
 
         ProxyBusObject pbo = obs.getFirst();
         assertNotNull(pbo);
@@ -728,14 +727,20 @@ public class ObserverTest extends TestCase {
         obs.registerListener(badListener);
         obs.registerListener(listener);
         provider.createA(A);
-        provider.registerObject(A);
-        waitForEvent(listener);
+        waitForEvent(listener, provider, A);
         obs.registerListener(badListener, false);
         obs.registerListener(badListener, true);
+        lateJoiner.expectInvocations(1);
         obs.registerListener(lateJoiner, true);
-        waitForEvent(lateJoiner);
-        provider.unregisterObject(A);
-        waitForEvent(listener);
+        waitForLambda(WAIT_TIMEOUT, new SingleLambda(lateJoiner));
+        waitForEvent(listener, provider, A, false);
+        assertTrue(waitForLambda(WAIT_TIMEOUT, new Lambda() {
+            @Override
+            public boolean func() {
+
+                return 5 == exceptionCount.get();
+            }
+        }));
         assertEquals(5, exceptionCount.get());
     }
 
@@ -905,8 +910,7 @@ public class ObserverTest extends TestCase {
         String[] names = new String[] { A, AB, B, C };
         for (int i = 0; i < names.length;) {
             provider.createA(names[i]);
-            provider.registerObject(names[i]);
-            waitForEvent(listener);
+            waitForEvent(listener, provider, names[i]);
             objects = checkObjects(++i, obs);
         }
 
@@ -939,9 +943,8 @@ public class ObserverTest extends TestCase {
 
     private void unregisterObject(Participant provider, ProxyBusObject obj,
             ObserverListener listener) {
-        provider.unregisterObject(obj.getObjPath().substring(
-                TEST_PATH_PREFIX.length()));
-        waitForEvent(listener);
+        waitForEvent(listener, provider,
+                obj.getObjPath().substring(TEST_PATH_PREFIX.length()), false);
     }
 
     private ArrayList<ProxyBusObject> checkObjects(int nrOfObjects, Observer obs) {
@@ -968,8 +971,19 @@ public class ObserverTest extends TestCase {
         assertSame(obj, obs.get(obj.getBusName(), obj.getObjPath()));
     }
 
-    private void waitForEvent(ObserverListener listener) {
+    private void waitForEvent(ObserverListener listener, Participant provider,
+            String name) {
+        waitForEvent(listener, provider, name, true);
+    }
+
+    private void waitForEvent(ObserverListener listener, Participant provider,
+            String name, boolean register) {
         listener.expectInvocations(1);
+        if (register) {
+            provider.registerObject(name);
+        } else {
+            provider.unregisterObject(name);
+        }
         Lambda ok = new SingleLambda(listener);
         assertTrue(waitForLambda(WAIT_TIMEOUT, ok));
     }
