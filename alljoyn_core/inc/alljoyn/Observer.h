@@ -8,7 +8,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -59,7 +59,7 @@ struct ObjectId {
      *
      * Creates an invalid object id.
      */
-    ObjectId() { }
+    ObjectId();
 
     /**
      * Constructor.
@@ -67,53 +67,43 @@ struct ObjectId {
      * @param busname Unique(!) bus name of the peer hosting the object.
      * @param path    Object path
      */
-    ObjectId(const qcc::String& busname, const qcc::String& path) : uniqueBusName(busname), objectPath(path) { }
+    ObjectId(const qcc::String& busname, const qcc::String& path);
 
     /**
      * Constructor.
      *
      * @param mpbo ManagedProxyBusObject for which to construct an object id
      */
-    ObjectId(const ManagedProxyBusObject& mpbo) : uniqueBusName(mpbo->GetUniqueName()), objectPath(mpbo->GetPath()) { }
+    ObjectId(const ManagedProxyBusObject& mpbo);
 
     /**
      * Constructor.
      *
      * @param ppbo ProxyBusObject* for which to construct an object id
      */
-    ObjectId(const ProxyBusObject* ppbo) : uniqueBusName(ppbo->GetUniqueName()), objectPath(ppbo->GetPath()) { }
+    ObjectId(const ProxyBusObject* ppbo);
 
     /**
      * Constructor.
      *
      * @param pbo ProxyBusObject for which to construct an object id
      */
-    ObjectId(const ProxyBusObject& pbo) : uniqueBusName(pbo.GetUniqueName()), objectPath(pbo.GetPath()) { }
+    ObjectId(const ProxyBusObject& pbo);
 
     /**
      * Copy Constructor.
      */
-    ObjectId(const ObjectId& other) : uniqueBusName(other.uniqueBusName), objectPath(other.objectPath) { }
+    ObjectId(const ObjectId& other);
 
-    ObjectId& operator=(const ObjectId& other) {
-        uniqueBusName = other.uniqueBusName;
-        objectPath = other.objectPath;
-        return *this;
-    }
+    ObjectId& operator=(const ObjectId& other);
 
-    bool operator==(const ObjectId& other) const {
-        return uniqueBusName == other.uniqueBusName && objectPath == other.objectPath;
-    }
-    bool operator<(const ObjectId& other) const {
-        return (uniqueBusName == other.uniqueBusName) ? (objectPath < other.objectPath) : (uniqueBusName < other.uniqueBusName);
-    }
+    bool operator==(const ObjectId& other) const;
+    bool operator<(const ObjectId& other) const;
 
     /**
      * Check validity of the object path
      */
-    bool IsValid() const {
-        return (uniqueBusName != "") && (objectPath != "");
-    }
+    bool IsValid() const;
 };
 
 /**

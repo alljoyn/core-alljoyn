@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2015, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -25,6 +25,7 @@
 #include "BusInternal.h"
 #include "CoreObserver.h"
 #include "ObserverManager.h"
+#include "BusUtil.h"
 
 #include <qcc/Debug.h>
 #define QCC_MODULE "OBSERVER"
@@ -32,6 +33,50 @@
 using namespace std;
 
 namespace ajn {
+
+ObjectId::ObjectId() {
+}
+
+ObjectId::ObjectId(const qcc::String& busname, const qcc::String& path) :
+    uniqueBusName(IsLegalUniqueName(busname.c_str()) ? busname : ""),
+    objectPath(IsLegalObjectPath(path.c_str()) ? path : "") {
+}
+
+ObjectId::ObjectId(const ManagedProxyBusObject& mpbo) :
+    uniqueBusName(mpbo->GetUniqueName()), objectPath(mpbo->GetPath()) {
+}
+
+ObjectId::ObjectId(const ProxyBusObject* ppbo) :
+    uniqueBusName((ppbo != NULL ? ppbo->GetUniqueName() : "")),
+    objectPath((ppbo != NULL ? ppbo->GetPath() : "")) {
+}
+
+ObjectId::ObjectId(const ProxyBusObject& pbo) :
+    uniqueBusName(pbo.GetUniqueName()), objectPath(pbo.GetPath()) {
+}
+
+ObjectId::ObjectId(const ObjectId& other) :
+    uniqueBusName(other.uniqueBusName), objectPath(other.objectPath) {
+}
+
+ObjectId& ObjectId::operator=(const ObjectId& other) {
+    uniqueBusName = other.uniqueBusName;
+    objectPath = other.objectPath;
+    return *this;
+}
+
+bool ObjectId::operator==(const ObjectId& other) const {
+    return uniqueBusName == other.uniqueBusName && objectPath == other.objectPath;
+}
+
+bool ObjectId::operator<(const ObjectId& other) const {
+    return (uniqueBusName == other.uniqueBusName) ? (objectPath < other.objectPath) :
+           (uniqueBusName < other.uniqueBusName);
+}
+
+bool ObjectId::IsValid() const {
+    return (uniqueBusName != "") && (objectPath != "");
+}
 
 class Observer::Internal : public CoreObserver {
   private:
