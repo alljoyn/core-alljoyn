@@ -232,6 +232,13 @@ ObserverManager::~ObserverManager()
 {
     QCC_DbgTrace(("ObserverManager::~ObserverManager"));
     Stop();
+
+    /* clean up any remaining InterfaceCombination* */
+    CombinationMap::iterator it;
+    for (it = combinations.begin(); it != combinations.end(); ++it) {
+        delete it->second;
+    }
+    combinations.clear();
 }
 
 void ObserverManager::Stop() {
