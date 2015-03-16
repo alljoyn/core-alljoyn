@@ -11,7 +11,7 @@
 #    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 #    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-# 
+#
 
 Import('env')
 import os
@@ -57,14 +57,14 @@ env.Append(CFLAGS=[
             '-Wparentheses',
             '-Wswitch',
             '-Wno-unused-parameter',
-            '-Wunused-variable', 
+            '-Wunused-variable',
             '-Wunused-value'])
-            
+
 env.Append(CXXFLAGS=[
             '-fno-rtti',
             '-fno-exceptions',
             '-Wc++11-extensions'])
-            
+
 if os.environ.get('PLATFORM_NAME') == 'iphonesimulator':
     print 'Using flags for iOS simulator...'
     env.Append(CPPDEFINES=['QCC_OS_IPHONE_SIMULATOR'])
@@ -73,46 +73,46 @@ if os.environ.get('PLATFORM_NAME') == 'iphonesimulator':
         ccld = [
                 '-g',
                 '-arch', 'i686',
-                '-miphoneos-version-min=7.0',
-                '-D__IPHONE_OS_VERSION_MIN_REQUIRED=70000',
+                '-miphoneos-version-min=8.0',
+                '-D__IPHONE_OS_VERSION_MIN_REQUIRED=80000',
                 '-isysroot', '$SDKROOT'
                 ]
         print 'Using iOS debug configuration'
     else:
         ccld = [
-                '-arch', 'i686', 
-                '-miphoneos-version-min=7.0',
-                '-D__IPHONE_OS_VERSION_MIN_REQUIRED=70000',
+                '-arch', 'i686',
+                '-miphoneos-version-min=8.0',
+                '-D__IPHONE_OS_VERSION_MIN_REQUIRED=80000',
                 '-isysroot', '$SDKROOT'
-                ]        
+                ]
         print 'Using iOS release configuration'
 
 else:
-    print 'Using flags for iOS devices (armv7)...'
+    print 'Using flags for iOS devices (arm64)...'
     if env['VARIANT'] == 'debug':
         ccld = [
                 '-g',
-                '-arch', 'armv7',
-                '-miphoneos-version-min=7.0',
-                '-D__IPHONE_OS_VERSION_MIN_REQUIRED=70000',
+                '-arch', 'arm64',
+                '-miphoneos-version-min=8.0',
+                '-D__IPHONE_OS_VERSION_MIN_REQUIRED=80000',
                 '-isysroot', '$SDKROOT'
                 ]
         print 'Using iOS debug configuration'
     else:
         ccld = [
-                '-arch', 'armv7',
-                '-miphoneos-version-min=7.0',
-                '-D__IPHONE_OS_VERSION_MIN_REQUIRED=70000',
+                '-arch', 'arm64',
+                '-miphoneos-version-min=8.0',
+                '-D__IPHONE_OS_VERSION_MIN_REQUIRED=80000',
                 '-isysroot', '$SDKROOT'
-                ]        
+                ]
         print 'Using iOS release configuration'
 
-    
+
 ld = [
       '-framework', 'SystemConfiguration',
       '-framework', 'Foundation'
      ]
-    
+
 env.Append(CXXFLAGS=ccld)
 env.Append(CFLAGS=ccld)
 env.Append(LINKFLAGS=ccld)

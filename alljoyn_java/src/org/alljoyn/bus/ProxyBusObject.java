@@ -21,6 +21,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -107,11 +108,13 @@ public class ProxyBusObject {
 
     /** Called by native code to lazily add an interface when a proxy method is invoked. */
     protected int addInterface(String name) throws AnnotationBusException {
-        for (Class<?> intf : proxy.getClass().getInterfaces()) {
-            if (name.equals(InterfaceDescription.getName(intf))) {
-                InterfaceDescription desc = new InterfaceDescription();
-                Status status = desc.create(bus, intf);
-                return status.getErrorCode();
+        if (name != null) {
+            for (Class<?> intf : proxy.getClass().getInterfaces()) {
+                if (name.equals(InterfaceDescription.getName(intf))) {
+                    InterfaceDescription desc = new InterfaceDescription();
+                    Status status = desc.create(bus, intf);
+                    return status.getErrorCode();
+                }
             }
         }
         return Status.BUS_NO_SUCH_INTERFACE.getErrorCode();
@@ -233,6 +236,20 @@ public class ProxyBusObject {
                     }
                 }
                 if (invocation == null) {
+                    try {
+                        Class<Object> objectClass = Object.class;
+                        if (method.equals(objectClass.getMethod("toString"))) {
+                            return proxyToString(proxy);
+                        }
+                        if (method.equals(objectClass.getMethod("equals",
+                                objectClass))) {
+                            return proxy == args[0];
+                        }
+                        if (method.equals(objectClass.getMethod("hashCode"))) {
+                            return System.identityHashCode(proxy);
+                        }
+                    } catch (NoSuchMethodException e) {
+                    }
                     throw new BusException("No such method: " + method);
                 }
                 invocationCache.put(methodName, invocationList);
@@ -470,5 +487,23 @@ public class ProxyBusObject {
      */
     public native Status unregisterPropertiesChangedListener(String iface,
                                                              PropertiesChangedListener listener);
+
+
+    /**
+     * The implementation of toString method of proxy objects provided by the InvocationHandler.
+     *
+     * @param proxy the proxy to generate a string for.
+     * @return a string representation of the proxy object.
+     */
+    static String proxyToString(Object proxy) {
+        Class<?> clazz = proxy.getClass();
+        Class<?>[] intfs = clazz.getInterfaces();
+        String[] names = new String[intfs.length];
+        for (int i = 0; i < intfs.length; i++) {
+            names[i] = intfs[i].getName();
+        }
+        return clazz.getCanonicalName() + Arrays.toString(names) + "@"
+        + System.identityHashCode(proxy);
+    }
 }
 

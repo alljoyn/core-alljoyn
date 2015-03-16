@@ -52,9 +52,4 @@ QStatus DaemonTransport::StopListen(const char* listenSpec)
     return ER_OK;
 }
 
-QStatus DaemonTransport::UntrustedClientStart()
-{
-    return ER_NOT_IMPLEMENTED;
-}
-
 } // namespace ajn

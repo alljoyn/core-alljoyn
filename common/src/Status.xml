@@ -47,6 +47,7 @@ Copyright AllSeen Alliance. All rights reserved.
   <status name="ER_BAD_ARG_COUNT" value="0x1C" comment="Incorrect number of arguments given to function call"/>
   <status name="ER_WARNING" value="0x1D" comment="Generic warning"/>
   <status name="ER_EOF" value="0x1E" comment="End of file"/>
+  <status name="ER_DEADLOCK" value="0x1F" comment="Operation would cause deadlock"/>
 
   <status name="ER_COMMON_ERRORS" value="0x1000" comment="Error code block for the Common subsystem."/>
   <status name="ER_STOPPING_THREAD" value="0x1001" comment="Operation interrupted by ERThread stop signal."/>

@@ -38,6 +38,7 @@ namespace qcc {
 /** @internal Forward references */
 class Mutex;
 class Condition;
+class Thread;
 }
 
 namespace ajn {
@@ -1003,8 +1004,9 @@ class ProxyBusObject : public MessageReceiver {
      * Add PropertiesChanged match rule for an interface
      *
      * @param intf the interface name
+     * @param blocking true if this method may block on the AddMatch call
      */
-    void AddPropertiesChangedRule(const char* intf);
+    void AddPropertiesChangedRule(const char* intf, bool blocking);
 
     /**
      * @internal
@@ -1039,6 +1041,9 @@ class ProxyBusObject : public MessageReceiver {
     bool isSecure;              /**< Indicates if this object is secure or not */
     bool cacheProperties;       /**< true if cacheable properties are cached */
     bool registeredPropChangedHandler; /**< true if our PropertiesChangedHandler is registered */
+    qcc::Thread* handlerThread;
+    PropertiesChangedListener* activeListener;
+    qcc::Condition* listenerDone;
 };
 
 /**

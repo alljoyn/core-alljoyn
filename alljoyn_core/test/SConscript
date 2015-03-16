@@ -34,7 +34,6 @@ progs = [
     test_env.Program('socktest',      ['socktest.cc']),
     test_env.Program('remarshal',     ['remarshal.cc']),
     test_env.Program('unpack',        ['unpack.cc']),
-    test_env.Program('rsa',           ['rsa.cc']),
     test_env.Program('srp',           ['srp.cc']),
     test_env.Program('aes_ccm',       ['aes_ccm.cc']),
     test_env.Program('keystore',      ['keystore.cc']),

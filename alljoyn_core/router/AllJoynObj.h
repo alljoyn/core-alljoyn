@@ -759,8 +759,8 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
      * @return  ER_OK if successful.
      */
     virtual QStatus AddSessionRoute(SessionId id, BusEndpoint& srcEp, RemoteEndpoint* srcB2bEp, BusEndpoint& destEp,
-                                    RemoteEndpoint& destB2bEp, SessionOpts* optsHint = NULL) {
-        return router.AddSessionRoute(id, srcEp, srcB2bEp, destEp, destB2bEp, optsHint);
+                                    RemoteEndpoint& destB2bEp) {
+        return router.AddSessionRoute(id, srcEp, srcB2bEp, destEp, destB2bEp);
     }
 
     /// @endcond

@@ -22,61 +22,137 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
+#include <Status.h>
 #include <qcc/platform.h>
 
-#include <qcc/KeyBlob.h>
 #include <qcc/String.h>
-#include <qcc/StringUtil.h>
 
 
 namespace qcc {
 
 /**
- * The size of the ECC big value
+ * The ECC coordinate size
  */
-static const size_t ECC_BIGVAL_SZ = 9;
-/**
- * The size of the ECC private key
- */
-static const size_t ECC_PRIVATE_KEY_SZ = ECC_BIGVAL_SZ * sizeof(uint32_t);
 
-/**
- * The size of the ECC public key
- */
-static const size_t ECC_PUBLIC_KEY_SZ = (2 * ECC_BIGVAL_SZ * sizeof(uint32_t)) + sizeof(uint32_t);
+static const size_t ECC_COORDINATE_SZ = 8 * sizeof(uint32_t);
 
-/**
- * The size of the ECC secret
+/*
+ * Empty ECC coordinate
  */
-static const size_t ECC_SECRET_SZ = ECC_PUBLIC_KEY_SZ;
-
-/**
- * The size of the ECC signature
- */
-static const size_t ECC_SIGNATURE_SZ = 2 * ECC_BIGVAL_SZ * sizeof(uint32_t);
-
+static const uint8_t ECC_COORDINATE_EMPTY[ECC_COORDINATE_SZ] = { 0 };
 
 /**
  * The ECC private key big endian byte array
  */
+
 struct ECCPrivateKey {
-    uint8_t data[ECC_PRIVATE_KEY_SZ];
+    uint8_t x[ECC_COORDINATE_SZ];
+    ECCPrivateKey() {
+        memset(x, 0, ECC_COORDINATE_SZ);
+    }
+
+    void operator=(const ECCPrivateKey& k)
+    {
+        memcpy(x, k.x, ECC_COORDINATE_SZ);
+    }
+
+    bool operator==(const ECCPrivateKey& k) const
+    {
+        return memcmp(x, k.x, ECC_COORDINATE_SZ) == 0;
+    }
 };
 
 /**
  * The ECC public key big endian byte array
  */
 struct ECCPublicKey {
-    uint8_t data[ECC_PUBLIC_KEY_SZ];
+    uint8_t x[ECC_COORDINATE_SZ];
+    uint8_t y[ECC_COORDINATE_SZ];
+
+    ECCPublicKey() {
+        memset(x, 0, ECC_COORDINATE_SZ);
+        memset(y, 0, ECC_COORDINATE_SZ);
+    }
+
+    bool empty() const
+    {
+        return (memcmp(x, ECC_COORDINATE_EMPTY, ECC_COORDINATE_SZ) == 0) &&
+               (memcmp(y, ECC_COORDINATE_EMPTY, ECC_COORDINATE_SZ) == 0);
+    }
+
+    bool operator==(const ECCPublicKey& k) const
+    {
+        int n = memcmp(x, k.x, ECC_COORDINATE_SZ);
+        return (n == 0) && (0 == memcmp(y, k.y, ECC_COORDINATE_SZ));
+    }
+
+    bool operator!=(const ECCPublicKey& k) const
+    {
+        int n = memcmp(x, k.x, ECC_COORDINATE_SZ);
+        return (n != 0) || (0 != memcmp(y, k.y, ECC_COORDINATE_SZ));
+    }
+
+    bool operator<(const ECCPublicKey& k) const
+    {
+        int n = memcmp(x, k.x, ECC_COORDINATE_SZ);
+        if (n == 0) {
+            n = memcmp(y, k.y, ECC_COORDINATE_SZ);
+        }
+        if (n < 0) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    void operator=(const ECCPublicKey& k)
+    {
+        memcpy(x, k.x, ECC_COORDINATE_SZ);
+        memcpy(y, k.y, ECC_COORDINATE_SZ);
+    }
+
+    /**
+     * Exports the key to a byte array.
+     * @param[in] data the array to store the data in
+     * @param[in, out] size provides the size of the passed buffer as input. On a  successfull return it
+     *   will contain the actual amount of data stored
+     *
+     * @return ER_OK on success others on failure
+     */
+    QStatus Export(uint8_t* data, size_t* size) const;
+
+    /**
+     * Imports the key from a byte array.
+     * @param[in] data the array to store the data in
+     * @param[in] size the size of the passed buffer.
+     *
+     * @return ER_OK  on success others on failure
+     */
+    QStatus Import(const uint8_t* data, size_t size);
+    const qcc::String ToString() const;
+
 };
 
-typedef ECCPublicKey ECCSecret;
+typedef ECCPrivateKey ECCSecret;
 
 /**
  * The ECC signature big endian byte array
  */
+
 struct ECCSignature {
-    uint8_t data[ECC_SIGNATURE_SZ];
+    uint8_t r[ECC_COORDINATE_SZ];
+    uint8_t s[ECC_COORDINATE_SZ];
+
+    ECCSignature() {
+        memset(r, 0, ECC_COORDINATE_SZ);
+        memset(s, 0, ECC_COORDINATE_SZ);
+    }
+
+    void operator=(const ECCSignature& k)
+    {
+        memcpy(r, k.r, ECC_COORDINATE_SZ);
+        memcpy(s, k.s, ECC_COORDINATE_SZ);
+    }
 };
 
 /**
@@ -85,6 +161,11 @@ struct ECCSignature {
 class Crypto_ECC {
 
   public:
+
+    /**
+     * The NIST recommended elliptic curve P-256
+     */
+    static const uint8_t ECC_NIST_P256 = 0;
 
     /**
      * Default constructor.
@@ -112,13 +193,13 @@ class Crypto_ECC {
      *      ER_FAIL otherwise
      *      Other error status.
      */
-    QStatus GenerateSharedSecret(const ECCPublicKey* peerPublicKey, ECCPublicKey* secret);
+    QStatus GenerateSharedSecret(const ECCPublicKey* peerPublicKey, ECCSecret* secret);
 
     /**
      * Retrieve the DH public key
      * @return  the DH public key.  It's a pointer to an internal buffer. Its lifetime is the same as the object's lifetime.
      */
-    const ECCPublicKey* GetDHPublicKey()
+    const ECCPublicKey* GetDHPublicKey() const
     {
         return &dhPublicKey;
     }
@@ -197,9 +278,9 @@ class Crypto_ECC {
     QStatus GenerateDSAKeyPair();
 
     /**
-     * Sign a buffer using the DSA key
-     * @param buf The buffer to sign
-     * @param len The buffer len
+     * Sign a digest using the DSA key
+     * @param digest The digest to sign
+     * @param len The digest len
      * @param sig The output signature
      * @return
      *      ER_OK if the signing process succeeds
@@ -229,7 +310,7 @@ class Crypto_ECC {
      *          - ER_FAIL otherwise
      *          - Other error status.
      */
-    QStatus DSAVerifyDigest(const uint8_t* digest, uint16_t len, const ECCSignature*sig);
+    QStatus DSAVerifyDigest(const uint8_t* digest, uint16_t len, const ECCSignature* sig);
 
     /**
      * Verify DSA signature of a buffer
@@ -255,11 +336,6 @@ class Crypto_ECC {
     ~Crypto_ECC();
 
   private:
-
-    /**
-     * The NIST recommended elliptic curve P-256
-     */
-    static const uint8_t ECC_NIST_P256 = 0;
 
     ECCPrivateKey dhPrivateKey;
     ECCPublicKey dhPublicKey;

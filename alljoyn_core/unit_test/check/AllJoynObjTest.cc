@@ -16,6 +16,7 @@
 #include <qcc/platform.h>
 
 #include "AllJoynObj.h"
+#include "ConfigDB.h"
 #include "SessionInternal.h"
 
 /* Header files included for Google Test Framework */
@@ -160,7 +161,7 @@ class TestAllJoynObj : public AllJoynObj {
         return ER_OK;
     }
     virtual QStatus AddSessionRoute(SessionId id, BusEndpoint& srcEp, RemoteEndpoint* srcB2bEp, BusEndpoint& destEp,
-                                    RemoteEndpoint& destB2bEp, SessionOpts* optsHint = NULL) {
+                                    RemoteEndpoint& destB2bEp) {
         return ER_OK;
     }
 
@@ -189,6 +190,9 @@ class TestAllJoynObj : public AllJoynObj {
 
 TEST(AllJoynObjTest, JoinSessionToUnadvertisedNameFails)
 {
+    ConfigDB configDb("");
+    configDb.LoadConfig();
+
     TransportFactoryContainer factories;
     Bus bus("AllJoynObjTest", factories);
 
@@ -200,13 +204,16 @@ TEST(AllJoynObjTest, JoinSessionToUnadvertisedNameFails)
     ajObj.RunJoin();
 
     // Verify that join failed
-    EXPECT_NE(ALLJOYN_JOINSESSION_REPLY_SUCCESS, (int)ajObj.replyCode);
+    EXPECT_NE((uint32_t)ALLJOYN_JOINSESSION_REPLY_SUCCESS, ajObj.replyCode);
     EXPECT_EQ(TRANSPORT_NONE, ajObj.triedTransports);
     EXPECT_EQ(TRANSPORT_NONE, ajObj.connectedTransport);
 }
 
 TEST(AllJoynObjTest, JoinSessionSkipsUnpermittedAvailableTransports)
 {
+    ConfigDB configDb("");
+    configDb.LoadConfig();
+
     TransportFactoryContainer factories;
     Bus bus("AllJoynObjTest", factories);
 
@@ -221,13 +228,16 @@ TEST(AllJoynObjTest, JoinSessionSkipsUnpermittedAvailableTransports)
     ajObj.RunJoin(opts);
 
     // Verify that join succeeded to TRANSPORT_TCP and that TRANSPORT_UDP was not tried
-    EXPECT_EQ(ALLJOYN_JOINSESSION_REPLY_SUCCESS, (int)ajObj.replyCode);
+    EXPECT_EQ((uint32_t)ALLJOYN_JOINSESSION_REPLY_SUCCESS, ajObj.replyCode);
     EXPECT_EQ(TRANSPORT_TCP, ajObj.triedTransports);
     EXPECT_EQ(TRANSPORT_TCP, ajObj.connectedTransport);
 }
 
 TEST(AllJoynObjTest, JoinSessionTriesAllAvailableTransportsPass)
 {
+    ConfigDB configDb("");
+    configDb.LoadConfig();
+
     TransportFactoryContainer factories;
     Bus bus("AllJoynObjTest", factories);
 
@@ -240,13 +250,16 @@ TEST(AllJoynObjTest, JoinSessionTriesAllAvailableTransportsPass)
     ajObj.RunJoin();
 
     // Verify that join succeeded to second transport
-    EXPECT_EQ(ALLJOYN_JOINSESSION_REPLY_SUCCESS, (int)ajObj.replyCode);
+    EXPECT_EQ((uint32_t)ALLJOYN_JOINSESSION_REPLY_SUCCESS, ajObj.replyCode);
     EXPECT_EQ(TRANSPORT_UDP | TRANSPORT_TCP, ajObj.triedTransports);
     EXPECT_EQ(TRANSPORT_TCP, ajObj.connectedTransport);
 }
 
 TEST(AllJoynObjTest, JoinSessionTriesAllAvailableTransportsFail)
 {
+    ConfigDB configDb("");
+    configDb.LoadConfig();
+
     TransportFactoryContainer factories;
     Bus bus("AllJoynObjTest", factories);
 
@@ -259,7 +272,7 @@ TEST(AllJoynObjTest, JoinSessionTriesAllAvailableTransportsFail)
     ajObj.RunJoin();
 
     // Verify that join failed to both transports
-    EXPECT_NE(ALLJOYN_JOINSESSION_REPLY_SUCCESS, (int)ajObj.replyCode);
+    EXPECT_NE((uint32_t)ALLJOYN_JOINSESSION_REPLY_SUCCESS, ajObj.replyCode);
     EXPECT_EQ(TRANSPORT_UDP | TRANSPORT_TCP, ajObj.triedTransports);
     EXPECT_EQ(TRANSPORT_NONE, ajObj.connectedTransport);
 }
@@ -286,6 +299,9 @@ class TestAllJoynObjBadSessionOpts : public TestAllJoynObj {
 
 TEST(AllJoynObjTest, JoinSessionTriesAllAvailableTransportsAfterAttachSessionFails)
 {
+    ConfigDB configDb("");
+    configDb.LoadConfig();
+
     TransportFactoryContainer factories;
     Bus bus("AllJoynObjTest", factories);
 
@@ -296,7 +312,7 @@ TEST(AllJoynObjTest, JoinSessionTriesAllAvailableTransportsAfterAttachSessionFai
     ajObj.RunJoin();
 
     // Verify that join succeeded to second transport
-    EXPECT_EQ(ALLJOYN_JOINSESSION_REPLY_SUCCESS, (int)ajObj.replyCode);
+    EXPECT_EQ((uint32_t)ALLJOYN_JOINSESSION_REPLY_SUCCESS, ajObj.replyCode);
     EXPECT_EQ(TRANSPORT_UDP | TRANSPORT_TCP, ajObj.triedTransports);
     EXPECT_EQ(TRANSPORT_TCP, ajObj.connectedTransport);
 }

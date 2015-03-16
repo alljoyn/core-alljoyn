@@ -12,7 +12,3 @@ simple -
 chat -   
          This sample shows how to use AllJoyn's C++ API to discover and connect
          with other AllJoyn enabled devices.
-
-bus-daemon-service, bus-daemon-user -
-         Replaced by the new AllJoyn daemon application, AllJoyn.apk
-         See ../alljoyn_android/alljoyn.

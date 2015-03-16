@@ -890,6 +890,7 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
                         busAddr = *bit;
                     }
                     ajObj.AcquireLocks();
+                    ++bit;
                 }
 
                 /*
@@ -961,22 +962,20 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
                 /* If session was successful, Add two-way session routes to the table */
                 if (replyCode == ALLJOYN_JOINSESSION_REPLY_SUCCESS) {
                     QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Attach session success(\"%s\")", sessionHost));
-                    if (joinerEp->IsValid()) {
+                    if (joinerEp->IsValid() && b2bEp->IsValid()) {
                         BusEndpoint busEndpoint = BusEndpoint::cast(vSessionEp);
                         QCC_DbgPrintf(("JoinSessionThread::RunJoin(): AddSessionRoute() for session ID %d.", id));
-                        status = ajObj.AddSessionRoute(id, joinerEp, NULL, busEndpoint, b2bEp, b2bEp->IsValid() ? NULL : &optsOut);
+                        status = ajObj.AddSessionRoute(id, joinerEp, NULL, busEndpoint, b2bEp);
                         if (status != ER_OK) {
                             replyCode = ALLJOYN_JOINSESSION_REPLY_FAILED;
-                            QCC_LogError(status, ("AddSessionRoute(%u, %s, NULL, %s, %s, %s) failed", id, sender.c_str(),
-                                                  vSessionEp->GetUniqueName().c_str(), b2bEp->GetUniqueName().c_str(),
-                                                  b2bEp->IsValid() ? "NULL" : "opts"));
+                            QCC_LogError(status, ("AddSessionRoute(%u, %s, NULL, %s, %s) failed", id, sender.c_str(),
+                                                  vSessionEp->GetUniqueName().c_str(), b2bEp->GetUniqueName().c_str()));
                         }
                     } else {
                         replyCode = ALLJOYN_JOINSESSION_REPLY_FAILED;
                         QCC_LogError(ER_BUS_NO_ENDPOINT, ("Cannot find joiner endpoint %s", sender.c_str()));
                     }
                 }
-
                 /* Create session map entry */
                 bool sessionMapEntryCreated = false;
                 if (replyCode == ALLJOYN_JOINSESSION_REPLY_SUCCESS) {
@@ -1032,7 +1031,7 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
                     b2bEp->DecrementRef();
                 }
 
-            } while ((replyCode != ALLJOYN_JOINSESSION_REPLY_SUCCESS) && (bit++ != busAddrs.end()));
+            } while ((replyCode != ALLJOYN_JOINSESSION_REPLY_SUCCESS) && (bit != busAddrs.end()));
         }
     }
 
