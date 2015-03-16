@@ -58,7 +58,6 @@ ajenv.VariantDir('$OBJDIR_ALLJOYN_CORE', 'src', duplicate = 0)
 ajenv.VariantDir('$OBJDIR_ALLJOYN_CORE/test', 'test', duplicate = 0)
 ajenv.VariantDir('$OBJDIR_ALLJOYN_CORE/router', 'router', duplicate = 0)
 ajenv.VariantDir('$OBJDIR_ALLJOYN_CORE/samples', 'samples', duplicate = 0)
-ajenv.VariantDir('$OBJDIR_ALLJOYN_CORE/alljoyn_android', 'alljoyn_android', duplicate = 0)
 
 # AllJoyn Install
 ajenv.Install('$OBJDIR_ALLJOYN_CORE', ajenv.File('src/Status.xml'))
@@ -115,9 +114,6 @@ else:
 
     # Sample programs
     env.SConscript('$OBJDIR_ALLJOYN_CORE/samples/SConscript')
-
-# Android daemon runner
-ajenv.SConscript('$OBJDIR_ALLJOYN_CORE/alljoyn_android/SConscript')
 
 # Release notes and misc. legals
 if ajenv['OS_CONF'] == 'darwin':

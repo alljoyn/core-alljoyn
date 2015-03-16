@@ -203,13 +203,22 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
 
     /**
      * Factory method to insantiate a KeyExchanger class.
+     * @param peerAuthVersion the peer's auth protocol version
      * @param initiator initiator or responder
      * @param requestingAuthList the list of requesting auth masks
      * @param requestingAuthCount the length of the auth mask list
      * @return an instance of the KeyExchanger; NULL if none of the masks in the list is satisfied.
      */
 
-    KeyExchanger* GetKeyExchangerInstance(bool initiator, const uint32_t* requestingAuthList, size_t requestingAuthCount);
+    KeyExchanger* GetKeyExchangerInstance(uint16_t peerAuthVersion, bool initiator, const uint32_t* requestingAuthList, size_t requestingAuthCount);
+
+    /**
+     * Allow a KeyExchanger to send a reply message.
+     * @param msg the reference message
+     * @param status the status code
+     * @return status ER_OK for success; error otherwise.
+     */
+    QStatus HandleMethodReply(Message& msg, QStatus status);
 
     /**
      * All a KeyExchanger to send a reply message.
@@ -428,7 +437,7 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
      * @param remoteAuthMask the buffer to store the remote auth mask
      */
 
-    QStatus AskForAuthSuites(ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc, uint32_t**remoteAuthSuites, size_t*remoteAuthCount);
+    QStatus AskForAuthSuites(uint32_t peerAuthVersion, ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc, uint32_t**remoteAuthSuites, size_t*remoteAuthCount);
 
     /**
      * Authenticate Peer using SASL protocol

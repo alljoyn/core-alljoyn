@@ -890,6 +890,7 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
                         busAddr = *bit;
                     }
                     ajObj.AcquireLocks();
+                    ++bit;
                 }
 
                 /*
@@ -1030,7 +1031,7 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
                     b2bEp->DecrementRef();
                 }
 
-            } while ((replyCode != ALLJOYN_JOINSESSION_REPLY_SUCCESS) && (bit++ != busAddrs.end()));
+            } while ((replyCode != ALLJOYN_JOINSESSION_REPLY_SUCCESS) && (bit != busAddrs.end()));
         }
     }
 

@@ -10972,7 +10972,7 @@ QStatus JProxyBusObject::RegisterPropertiesChangedListener(jstring jifaceName,
         return ER_FAIL;
     }
 
-    QStatus status;
+    QStatus status = ER_FAIL;
 
     if (!ImplementsInterface(ifaceName.c_str())) {
         status = AddInterfaceStatus(pbo, busPtr, jifaceName);

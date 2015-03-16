@@ -220,10 +220,10 @@ public class AuthListenerECDHETest extends TestCase {
                         if (sendBackKeys) {
                             String certChainPEM;
                             if (mode == CLIENT_MODE) {
-                                certChainPEM = CLIENT_CERT2_PEM;
+                                certChainPEM = CLIENT_ECC_X509_PEM;
                             }
                             else {
-                                certChainPEM = SERVER_CERT1_PEM;
+                                certChainPEM = SERVER_ECC_X509_PEM;
                             }
                             CertificateRequest certChainRqst = (CertificateRequest) rqst;
                             certChainRqst.setCertificateChain(certChainPEM);
@@ -242,10 +242,18 @@ public class AuthListenerECDHETest extends TestCase {
                         /* verify cert chain if possible */
                         System.out.println(getName() + ": verifying cert " + certPEM);
                         if (mode == CLIENT_MODE) {
-                            peerCertVerified = certPEM.equals(SERVER_CERT1_PEM);
+                            peerCertVerified = certPEM.equals(SERVER_ECC_X509_PEM);
+                            if (!peerCertVerified) {
+                                System.out.println(getName() + ": verifying cert " + certPEM + " against server PEM " + SERVER_ECC_X509_PEM + " failed");
+                                
+                            }
                         }
                         else {
-                            peerCertVerified = certPEM.equals(CLIENT_CERT2_PEM);
+                            peerCertVerified = certPEM.equals(CLIENT_ECC_X509_PEM);
+                            if (!peerCertVerified) {
+                                System.out.println(getName() + ": verifying cert " + certPEM + " against client PEM " + CLIENT_ECC_X509_PEM + " failed");
+                                
+                            }
                         }
                         System.out.println(getName() + ": verifying cert succeeds");
                     }
@@ -275,7 +283,7 @@ public class AuthListenerECDHETest extends TestCase {
 
         @Override
         public void completed(String authMechanism, String authPeer, boolean authenticated) {
-            System.out.println(getName() + ": completed called with authenticated " + authenticated);
+            System.out.println(getName() + ": completed for mechanism " + authMechanism + " with authenticated " + authenticated);
             this.authenticated = authenticated;
             if (authenticated) {
                 setAuthenticatedMechanism(authMechanism);
@@ -317,33 +325,56 @@ public class AuthListenerECDHETest extends TestCase {
         private boolean peerVerificationCalled = false;
         private boolean failVerification = false;
 
+        /* the key and certificate is generated using openssl */
         private static final String CLIENT_PK_PEM =
-                "-----BEGIN PRIVATE KEY-----" +
-                "CkzgQdvZSOQMmqOnddsw0BRneCNZhioNMyUoJwec9rMAAAAA" +
-                "-----END PRIVATE KEY-----";
-
-        private static final String CLIENT_CERT2_PEM =
-        "-----BEGIN CERTIFICATE-----" +
-        "AAAAAp1LKGlnpVVtV4Sa1TULsxGJR9C53Uq5AH3fxqxJjNdYAAAAAAobbdvBKaw9\n" +
-        "eHox7o9fNbN5usuZw8XkSPSmipikYCPJAAAAAAAAAABiToQ8L3KZLwSCetlNJwfd\n" +
-        "bbxbo2x/uooeYwmvXbH2uwAAAABFQGcdlcsvhdRxgI4SVziI4hbg2d2xAMI47qVB\n" +
-        "ZZsqJAAAAAAAAAAAAAAAAAABYGEAAAAAAAFhjQCJ9dkuY0Z6jjx+a8azIQh4UF0h\n" +
-        "8plX3uAhOlF2vT2jfxe5U06zaWSXcs9kBEQvfOeMM4sUtoXPArUA+TNahfOS9Bbf\n" +
-        "0Hh08SvDJSDgM2OetQAAAAAYUr2pw2kb90fWblBWVKnrddtrI5Zs8BYx/EodpMrS\n" +
-        "twAAAAA=\n" +
-        "-----END CERTIFICATE-----";
+        "-----BEGIN EC PRIVATE KEY-----\n" +
+        "MHcCAQEEIAqN6AtyOAPxY5k7eFNXAwzkbsGMl4uqvPrYkIj0LNZBoAoGCCqGSM49\n" +
+        "AwEHoUQDQgAEvnRd4fX9opwgXX4Em2UiCMsBbfaqhB1U5PJCDZacz9HumDEzYdrS\n" +
+        "MymSxR34lL0GJVgEECvBTvpaHP2bpTIl6g==\n" +
+        "-----END EC PRIVATE KEY-----";
+        private static final String CLIENT_ECC_X509_PEM =
+        "-----BEGIN CERTIFICATE-----\n" +
+        "MIIBtDCCAVmgAwIBAgIJAMlyFqk69v+OMAoGCCqGSM49BAMCMFYxKTAnBgNVBAsM\n" +
+        "IDdhNDhhYTI2YmM0MzQyZjZhNjYyMDBmNzdhODlkZDAyMSkwJwYDVQQDDCA3YTQ4\n" +
+        "YWEyNmJjNDM0MmY2YTY2MjAwZjc3YTg5ZGQwMjAeFw0xNTAyMjYyMTUxMjVaFw0x\n" +
+        "NjAyMjYyMTUxMjVaMFYxKTAnBgNVBAsMIDZkODVjMjkyMjYxM2IzNmUyZWVlZjUy\n" +
+        "NzgwNDJjYzU2MSkwJwYDVQQDDCA2ZDg1YzI5MjI2MTNiMzZlMmVlZWY1Mjc4MDQy\n" +
+        "Y2M1NjBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABL50XeH1/aKcIF1+BJtlIgjL\n" +
+        "AW32qoQdVOTyQg2WnM/R7pgxM2Ha0jMpksUd+JS9BiVYBBArwU76Whz9m6UyJeqj\n" +
+        "EDAOMAwGA1UdEwQFMAMBAf8wCgYIKoZIzj0EAwIDSQAwRgIhAKfmglMgl67L5ALF\n" +
+        "Z63haubkItTMACY1k4ROC2q7cnVmAiEArvAmcVInOq/U5C1y2XrvJQnAdwSl/Ogr\n" +
+        "IizUeK0oI5c=\n" +
+        "-----END CERTIFICATE-----\n" +
+        "-----BEGIN CERTIFICATE-----\n" +
+        "MIIBszCCAVmgAwIBAgIJAILNujb37gH2MAoGCCqGSM49BAMCMFYxKTAnBgNVBAsM\n" +
+        "IDdhNDhhYTI2YmM0MzQyZjZhNjYyMDBmNzdhODlkZDAyMSkwJwYDVQQDDCA3YTQ4\n" +
+        "YWEyNmJjNDM0MmY2YTY2MjAwZjc3YTg5ZGQwMjAeFw0xNTAyMjYyMTUxMjNaFw0x\n" +
+        "NjAyMjYyMTUxMjNaMFYxKTAnBgNVBAsMIDdhNDhhYTI2YmM0MzQyZjZhNjYyMDBm\n" +
+        "NzdhODlkZDAyMSkwJwYDVQQDDCA3YTQ4YWEyNmJjNDM0MmY2YTY2MjAwZjc3YTg5\n" +
+        "ZGQwMjBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABGEkAUATvOE4uYmt/10vkTcU\n" +
+        "SA0C+YqHQ+fjzRASOHWIXBvpPiKgHcINtNFQsyX92L2tMT2Kn53zu+3S6UAwy6yj\n" +
+        "EDAOMAwGA1UdEwQFMAMBAf8wCgYIKoZIzj0EAwIDSAAwRQIgKit5yeq1uxTvdFmW\n" +
+        "LDeoxerqC1VqBrmyEvbp4oJfamsCIQDvMTmulW/Br/gY7GOP9H/4/BIEoR7UeAYS\n" +
+        "4xLyu+7OEA==\n" +
+        "-----END CERTIFICATE-----\n";
+        
+        /* these keys were generated by the unit test common/unit_test/CertificateECCTest.GenSelfSignECCX509CertForBBservice */
         private static final String SERVER_PK_PEM =
-                "-----BEGIN PRIVATE KEY-----" +
-                "tV/tGPp7kI0pUohc+opH1LBxzk51pZVM/RVKXHGFjAcAAAAA" +
-                "-----END PRIVATE KEY-----";
-        private static final String SERVER_CERT1_PEM =
-        "-----BEGIN CERTIFICATE-----" +
-        "AAAAAfUQdhMSDuFWahMG/rFmFbKM06BjIA2Scx9GH+ENLAgtAAAAAIbhHnjAyFys\n" +
-        "6DoN2kKlXVCgtHpFiEYszOYXI88QDvC1AAAAAAAAAAC5dRALLg6Qh1J2pVOzhaTP\n" +
-        "xI+v/SKMFurIEo2b4S8UZAAAAADICW7LLp1pKlv6Ur9+I2Vipt5dDFnXSBiifTmf\n" +
-        "irEWxQAAAAAAAAAAAAAAAAABXLAAAAAAAAFd3AABMa7uTLSqjDggO0t6TAgsxKNt\n" +
-        "+Zhu/jc3s242BE0drPcL4K+FOVJf+tlivskovQ3RfzTQ+zLoBH5ZCzG9ua/dAAAA\n" +
-        "ACt5bWBzbcaT0mUqwGOVosbMcU7SmhtE7vWNn/ECvpYFAAAAAA==\n" +
+            "-----BEGIN EC PRIVATE KEY-----\n" +
+            "MDECAQEEIICSqj3zTadctmGnwyC/SXLioO39pB1MlCbNEX04hjeioAoGCCqGSM49\n" +
+            "AwEH\n" +
+            "-----END EC PRIVATE KEY-----";
+
+        private static final String SERVER_ECC_X509_PEM =
+        "-----BEGIN CERTIFICATE-----\n" +
+        "MIIBWjCCAQGgAwIBAgIHMTAxMDEwMTAKBggqhkjOPQQDAjArMSkwJwYDVQQDDCAw\n" +
+        "ZTE5YWZhNzlhMjliMjMwNDcyMGJkNGY2ZDVlMWIxOTAeFw0xNTAyMjYyMTU1MjVa\n" +
+        "Fw0xNjAyMjYyMTU1MjVaMCsxKTAnBgNVBAMMIDZhYWM5MjQwNDNjYjc5NmQ2ZGIy\n" +
+        "NmRlYmRkMGM5OWJkMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEP/HbYga30Afm\n" +
+        "0fB6g7KaB5Vr5CDyEkgmlif/PTsgwM2KKCMiAfcfto0+L1N0kvyAUgff6sLtTHU3\n" +
+        "IdHzyBmKP6MQMA4wDAYDVR0TBAUwAwEB/zAKBggqhkjOPQQDAgNHADBEAiAZmNVA\n" +
+        "m/H5EtJl/O9x0P4zt/UdrqiPg+gA+wm0yRY6KgIgetWANAE2otcrsj3ARZTY/aTI\n" +
+        "0GOQizWlQm8mpKaQ3uE=\n" +
         "-----END CERTIFICATE-----";
     }
 
@@ -427,40 +458,64 @@ public class AuthListenerECDHETest extends TestCase {
         assertTrue(serviceAuthListener.isPeerCertVerified());
         assertTrue(clientAuthListener.isPeerCertVerified());
     }
-    public void testECDHESuccessECDSA_DoNotSendKeys() throws Exception {
+    public void testECDHEFailECDSA_DoNotSendKeys() throws Exception {
         ECDHEKeyXListener serviceAuthListener = new ServerECDHEKeyXListener(false, "ALLJOYN_ECDHE_ECDSA");
         ECDHEKeyXListener clientAuthListener = new ClientECDHEKeyXListener(false, "ALLJOYN_ECDHE_ECDSA");
-        doPing(serviceAuthListener, clientAuthListener);
-        assertTrue(serviceAuthListener.isAuthenticated());
-        assertTrue(clientAuthListener.isAuthenticated());
-        assertFalse(serviceAuthListener.isPeerVerificationCalled());
-        assertFalse(clientAuthListener.isPeerVerificationCalled());
-        assertFalse(serviceAuthListener.isPeerCertVerified());
-        assertFalse(clientAuthListener.isPeerCertVerified());
+        try {
+            doPing(serviceAuthListener, clientAuthListener);
+        }
+        catch (Exception e) {
+        }
+        assertFalse(serviceAuthListener.isAuthenticated());
+        assertFalse(clientAuthListener.isAuthenticated());
     }
 
-    public void testECDHESuccessECDSA_ClientNotSendKeys() throws Exception {
+    public void testECDHEFailECDSA_ClientNotSendKeys() throws Exception {
         ECDHEKeyXListener serviceAuthListener = new ServerECDHEKeyXListener(true, "ALLJOYN_ECDHE_ECDSA");
         ECDHEKeyXListener clientAuthListener = new ClientECDHEKeyXListener(false, "ALLJOYN_ECDHE_ECDSA");
-        doPing(serviceAuthListener, clientAuthListener);
-        assertTrue(serviceAuthListener.isAuthenticated());
-        assertTrue(clientAuthListener.isAuthenticated());
-        assertFalse(serviceAuthListener.isPeerVerificationCalled());
-        assertTrue(clientAuthListener.isPeerVerificationCalled());
-        assertFalse(serviceAuthListener.isPeerCertVerified());
-        assertTrue(clientAuthListener.isPeerCertVerified());
+        try {
+            doPing(serviceAuthListener, clientAuthListener);
+        }
+        catch (Exception e) {
+        }
+        assertFalse(serviceAuthListener.isAuthenticated());
+        assertFalse(clientAuthListener.isAuthenticated());
     }
-    public void testECDHESuccessECDSA_ServerNotSendKeys() throws Exception {
+    public void testECDHEFailECDSA_ServerNotSendKeys() throws Exception {
         ECDHEKeyXListener serviceAuthListener = new ServerECDHEKeyXListener(false, "ALLJOYN_ECDHE_ECDSA");
         ECDHEKeyXListener clientAuthListener = new ClientECDHEKeyXListener(true, "ALLJOYN_ECDHE_ECDSA");
-        doPing(serviceAuthListener, clientAuthListener);
-        assertTrue(serviceAuthListener.isAuthenticated());
-        assertTrue(clientAuthListener.isAuthenticated());
-        assertTrue(serviceAuthListener.isPeerVerificationCalled());
-        assertFalse(clientAuthListener.isPeerVerificationCalled());
-        assertTrue(serviceAuthListener.isPeerCertVerified());
-        assertFalse(clientAuthListener.isPeerCertVerified());
+        try {
+            doPing(serviceAuthListener, clientAuthListener);
+        }
+        catch (Exception e) {
+        }
+        assertFalse(clientAuthListener.isAuthenticated());
     }
+
+    public void testECDHEFailECDSA_ServerFailVerification() throws Exception {
+        ECDHEKeyXListener serviceAuthListener = new ServerECDHEKeyXListener(true, "ALLJOYN_ECDHE_ECDSA");
+        ECDHEKeyXListener clientAuthListener = new ClientECDHEKeyXListener(true, "ALLJOYN_ECDHE_ECDSA");
+        serviceAuthListener.setFailVerification(true);
+        try {
+            doPing(serviceAuthListener, clientAuthListener);
+        }
+        catch (Exception e) {
+        }
+        assertFalse(serviceAuthListener.isAuthenticated());
+        assertFalse(clientAuthListener.isAuthenticated());
+    }
+    public void testECDHEFailECDSA_ClientFailVerification() throws Exception {
+        ECDHEKeyXListener serviceAuthListener = new ServerECDHEKeyXListener(true, "ALLJOYN_ECDHE_ECDSA");
+        ECDHEKeyXListener clientAuthListener = new ClientECDHEKeyXListener(true, "ALLJOYN_ECDHE_ECDSA");
+        clientAuthListener.setFailVerification(true);
+        try {
+            doPing(serviceAuthListener, clientAuthListener);
+        }
+        catch (Exception e) {
+        }
+        assertFalse(clientAuthListener.isAuthenticated());
+    }
+
     public void testECDHESuccessPSK_ECDSA_SendKeys() throws Exception {
         ECDHEKeyXListener serviceAuthListener = new ServerECDHEKeyXListener(true, "ALLJOYN_ECDHE_ECDSA");
         ECDHEKeyXListener clientAuthListener = new ClientECDHEKeyXListener(true, "ALLJOYN_ECDHE_PSK ALLJOYN_ECDHE_ECDSA");

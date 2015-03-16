@@ -13,13 +13,14 @@
  *    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
+#include <alljoyn/AboutData.h>
+#include <alljoyn/AboutObj.h>
 
 #include "MyAllJoynCode.h"
 
 using namespace std;
 using namespace ajn;
 using namespace qcc;
-using namespace services;
 
 void MyAllJoynCode::initialize(const char* packageName) {
     QStatus status = ER_OK;
@@ -63,28 +64,28 @@ void MyAllJoynCode::initialize(const char* packageName) {
         }
 
         OptParser aboutOpts(0, NULL);
-        std::multimap<qcc::String, PropertyStoreImpl::Property> data;
-        FillPropertyStoreData(aboutOpts, data, packageName);
-        propertyStoreImpl = new PropertyStoreImpl(data);
-
-        AboutServiceApi::Init(*mBusAttachment, *propertyStoreImpl);
-
-        aboutService = AboutServiceApi::getInstance();
-
-        status = aboutService->Register(800);
-        if (ER_OK != status) {
-            LOGTHIS("Failed to register about! %d", status);
-        } else {
-            LOGTHIS("Should have registered about");
+        aboutData.SetDefaultLanguage("en");
+        aboutData.SetDeviceName(packageName);
+        srand(time(NULL));
+        qcc::String devId = "";
+        for (int i = 0; i < 16; i++) {
+            /* Rand val from 0-9 */
+            devId += '0' + rand() % 10;
         }
+        aboutData.SetDeviceId(devId.c_str());
+        aboutData.SetDescription("This is a sample rule application for developers to use as a simple reference application.");
+        uint8_t appId[16];
+        HexStringToBytes(aboutOpts.GetAppID(), appId, sizeof(appId) / sizeof(*appId));
+        aboutData.SetAppId(appId, sizeof(appId) / sizeof(*appId));
+        aboutData.SetAppName("SampleRuleEngine");
+        aboutData.SetManufacturer("AllSeen Developer Sample");
+        aboutData.SetModelNumber("Sample-1");
+        aboutData.SetDateOfManufacture("2014-06-06");
+        aboutData.SetSoftwareVersion(".001");
+        aboutData.SetHardwareVersion("Stuffing01");
+        aboutData.SetSupportUrl("http://www.allseenalliance.org");
 
-        status = mBusAttachment->RegisterBusObject(*aboutService);
-        if (ER_OK == status) {
-            LOGTHIS("Registered BusObjects");
-
-        } else {
-            LOGTHIS("Registering BusObject failed :(");
-        }
+        AboutObj aboutObj(*mBusAttachment);
 
         ruleBusObject = new RuleBusObject(mBusAttachment, "/ruleengine", &ruleEngine);
         status = mBusAttachment->RegisterBusObject(*ruleBusObject);
@@ -95,16 +96,10 @@ void MyAllJoynCode::initialize(const char* packageName) {
             LOGTHIS("Registering BusObject failed :(");
         }
 
-        std::vector<String> interfaces;
-        interfaces.push_back("org.allseen.sample.rule.engine");
-        aboutService->AddObjectDescription("/ruleengine", interfaces);
-
-        AnnouncementRegistrar::RegisterAnnounceHandler(*mBusAttachment, *this, NULL, 0);
-
-        status = mBusAttachment->AddMatch("sessionless='t'");
-
+        mBusAttachment->RegisterAboutListener(*this);
+        status = mBusAttachment->WhoImplements("*");
         if (ER_OK != status) {
-            LOGTHIS("Failed to addMatch for sessionless signals: %s\n", QCC_StatusText(status));
+            LOGTHIS("Failed WhoImplements method call: %s\n", QCC_StatusText(status));
         }
 
         LOGTHIS("Going to setup rule Engine");
@@ -120,31 +115,76 @@ void MyAllJoynCode::initialize(const char* packageName) {
             LOGTHIS("Advertisement was successfully advertised");
         }
 
-        aboutService->Announce();
+        aboutObj.Announce(sp, aboutData);
+
     }
 }
 
-void MyAllJoynCode::Announce(unsigned short version, unsigned short port, const char* busName,
-                             const ObjectDescriptions& objectDescs,
-                             const AboutData& aboutData)
+// Print out the fields found in the AboutData. Only fields with known signatures
+// are printed out.  All others will be treated as an unknown field.
+void LogAboutData(AboutData& aboutData, const char* language)
+{
+    size_t count = aboutData.GetFields();
+
+    const char** fields = new const char*[count];
+    aboutData.GetFields(fields, count);
+
+    for (size_t i = 0; i < count; ++i) {
+        MsgArg* tmp;
+        aboutData.GetField(fields[i], tmp, language);
+        if (tmp->Signature() == "s") {
+            const char* tmp_s;
+            tmp->Get("s", &tmp_s);
+            LOGTHIS("(AnnounceListener) aboutData (key, val) (%s, %s)", fields[i], tmp_s);
+        } else if (tmp->Signature() == "as") {
+            size_t las;
+            MsgArg* as_arg;
+            tmp->Get("as", &las, &as_arg);
+            qcc::String langs = "";
+            for (size_t j = 0; j < las; ++j) {
+                const char* tmp_s;
+                as_arg[j].Get("s", &tmp_s);
+                langs += tmp_s;
+                if (j < las - 1) {
+                    langs += ", ";
+                }
+            }
+            LOGTHIS("(AnnounceListener) aboutData (key, val) (%s, [%s])", fields[i], langs.c_str());
+        } else if (tmp->Signature() == "ay") {
+            uint8_t* appIdBuffer;
+            size_t numElements;
+            tmp->Get("ay", &numElements, &appIdBuffer);
+            char appIdStr[(numElements + 1) * 2];               //*2 due to hex format
+            for (size_t i = 0; i < numElements; i++) {
+                sprintf(appIdStr + (i * 2), "%02x", appIdBuffer[i]);
+            }
+            appIdStr[numElements * 2] = '\0';
+            LOGTHIS("(AnnounceListener) aboutData (key, val) (%s, %s)", fields[i], appIdStr);
+        } else {
+            LOGTHIS("(AnnounceListener) aboutData (key, val) (%s, User Defined Value with '%s' signature value)", fields[i], tmp->Signature().c_str());
+        }
+    }
+    delete [] fields;
+}
+
+void MyAllJoynCode::Announced(const char* busName, uint16_t version,
+                              SessionPort port, const MsgArg& objectDescriptionArg,
+                              const MsgArg& aboutDataArg)
 {
     LOGTHIS("Found about application with busName, port %s, %d", busName, port);
     if (mBusAttachment->GetUniqueName().compare(busName) == 0) {
         LOGTHIS("Found myself :)");
     }
     //For now lets just assume everything has events and actions and join
-    for (AboutClient::AboutData::const_iterator it = aboutData.begin(); it != aboutData.end(); ++it) {
-        qcc::String key = it->first;
-        ajn::MsgArg value = it->second;
-        if (value.typeId == ALLJOYN_STRING) {
-            if (key.compare("DeviceName") == 0) {
-                mBusFriendlyMap.insert(std::pair<qcc::String, qcc::String>(busName, value.v_string.str));
-            }
-            LOGTHIS("(Announce handler) aboutData (key, val) (%s, %s)", key.c_str(), value.v_string.str);
-        }
-    }
+    AboutData aboutData(aboutDataArg);
+    char* deviceName;
+    aboutData.GetDeviceName(&deviceName);
+    mBusFriendlyMap.insert(std::pair<qcc::String, qcc::String>(busName, deviceName));
+
+    LogAboutData(aboutData, NULL);
+
     //pass through to ruleEngine
-    ruleEngine.Announce(version, port, busName, objectDescs, aboutData);
+    ruleEngine.Announce(busName, version, port, objectDescriptionArg, aboutDataArg);
 }
 
 
@@ -208,68 +248,4 @@ void MyAllJoynCode::HexStringToBytes(const qcc::String& hex, uint8_t* outBytes, 
         bchar = HexToChar(hex[i * 2 + 1]);
         outBytes[i] = ((achar << 4) | bchar);
     }
-}
-
-void MyAllJoynCode::FillPropertyStoreData(OptParser const& opts, std::multimap<qcc::String, PropertyStoreImpl::Property>& data, const char* friendlyName)
-{
-    if (data.size() == 0) {
-        data.insert(
-            std::pair<qcc::String, PropertyStoreImpl::Property>("DefaultLanguage",
-                                                                PropertyStoreImpl::Property("DefaultLanguage", MsgArg("s", "en"), true, true, true)));
-        srand(time(NULL));
-        qcc::String devName = friendlyName;
-        data.insert(
-            std::pair<qcc::String, PropertyStoreImpl::Property>("DeviceName",
-                                                                PropertyStoreImpl::Property("DeviceName", MsgArg("s", devName.c_str()), true, true, true)));
-
-        qcc::String devId = "";
-        for (int i = 0; i < 16; i++) {
-            /* Rand val from 0-9 */
-            devId += '0' + rand() % 10;
-        }
-        data.insert(
-            std::pair<qcc::String, PropertyStoreImpl::Property>("DeviceId",
-                                                                PropertyStoreImpl::Property("DeviceId", MsgArg("s", devId.c_str()), true, false, true)));
-        data.insert(
-            std::pair<qcc::String, PropertyStoreImpl::Property>("Description",
-                                                                PropertyStoreImpl::Property("Description", MsgArg("s", "This is a sample rule application for developers to use as a simple reference application."), true, false, false)));
-    }
-
-    uint8_t AppId[16];
-    HexStringToBytes(opts.GetAppID(), AppId, 16);
-
-    data.insert(
-        std::pair<qcc::String, PropertyStoreImpl::Property>("AppId",
-                                                            PropertyStoreImpl::Property("AppId", MsgArg("ay", sizeof(AppId) / sizeof(*AppId), AppId), true, false,
-                                                                                        true)));
-
-    data.insert(
-        std::pair<qcc::String, PropertyStoreImpl::Property>("AppName",
-                                                            PropertyStoreImpl::Property("AppName", MsgArg("s", "SampleRuleEngine"), true, false, true)));
-    data.insert(
-        std::pair<qcc::String, PropertyStoreImpl::Property>("Manufacturer",
-                                                            PropertyStoreImpl::Property("Manufacturer", MsgArg("s", "AllSeen Developer Sample"), true, false, true)));
-    data.insert(
-        std::pair<qcc::String, PropertyStoreImpl::Property>("ModelNumber",
-                                                            PropertyStoreImpl::Property("ModelNumber", MsgArg("s", "Sample-1"), true, false, true)));
-    const char*languages[] = { "en" };
-    data.insert(
-        std::pair<qcc::String, PropertyStoreImpl::Property>("SupportedLanguages",
-                                                            PropertyStoreImpl::Property("SupportedLanguages",
-                                                                                        MsgArg("as", sizeof(languages) / sizeof(*languages), languages), true, false, false)));
-    data.insert(
-        std::pair<qcc::String, PropertyStoreImpl::Property>("DateOfManufacture",
-                                                            PropertyStoreImpl::Property("DateOfManufacture", MsgArg("s", "06/06/2014"), true, false, false)));
-    data.insert(
-        std::pair<qcc::String, PropertyStoreImpl::Property>("SoftwareVersion",
-                                                            PropertyStoreImpl::Property("SoftwareVersion", MsgArg("s", ".001"), true, false, false)));
-    data.insert(
-        std::pair<qcc::String, PropertyStoreImpl::Property>("AJSoftwareVersion",
-                                                            PropertyStoreImpl::Property("AJSoftwareVersion", MsgArg("s", ajn::GetVersion()), true, false, false)));
-    data.insert(
-        std::pair<qcc::String, PropertyStoreImpl::Property>("HardwareVersion",
-                                                            PropertyStoreImpl::Property("HardwareVersion", MsgArg("s", "Stuffing01"), true, false, false)));
-    data.insert(
-        std::pair<qcc::String, PropertyStoreImpl::Property>("SupportUrl",
-                                                            PropertyStoreImpl::Property("SupportUrl", MsgArg("s", "http://www.allseenalliance.org"), true, false, false)));
 }
