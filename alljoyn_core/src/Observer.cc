@@ -230,6 +230,7 @@ void Observer::Internal::UnregisterAllListeners()
         if (it != listeners.end()) {
             ProtectedObserverListener l = *it;
             listeners.erase(it);
+            delete (*l);
         }
         it = listeners.begin();
     }

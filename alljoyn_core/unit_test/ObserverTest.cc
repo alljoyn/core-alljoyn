@@ -51,7 +51,7 @@ using namespace ajn;
 
 #define PATH_PREFIX "/test/"
 
-#define MAX_WAIT_MS 3000
+#define MAX_WAIT_MS 6000
 
 class TestObject : public BusObject {
   public:
@@ -168,8 +168,8 @@ class Participant : public SessionPortListener, public SessionListener {
         for (it = objects.begin(); it != objects.end(); ++it) {
             if (it->second.second) {
                 bus.UnregisterBusObject(*(it->second.first));
-                delete it->second.first;
             }
+            delete it->second.first;
         }
 
         ASSERT_EQ(ER_OK, bus.Disconnect());
