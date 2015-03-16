@@ -1282,7 +1282,7 @@ class BusAttachment : public MessageReceiver {
                               void* context = NULL);
 
     /**
-     * Leave an existing session as joiner. This function will fail if you were not the joiner.
+     * Leave an existing session as host. This function will fail if you were not the joiner.
      * This method is a shortcut/helper that issues an org.alljoyn.Bus.LeaveHostedSession method call to the local router
      * and interprets the response.
      *
