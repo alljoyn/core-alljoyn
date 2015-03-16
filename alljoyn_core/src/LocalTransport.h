@@ -424,7 +424,11 @@ class _LocalEndpoint : public _BusEndpoint, public qcc::AlarmListener, public Me
     /**
      * Equality function for matching object paths
      */
-    struct PathEq { bool operator()(const char* p1, const char* p2) const { return (p1 == p2) || (strcmp(p1, p2) == 0); } };
+    struct PathEq {
+        bool operator()(const char* p1, const char* p2) const {
+            return (p1 == p2) || (strcmp(p1, p2) == 0);
+        }
+    };
 
     /**
      * Remove a reply handler from the reply handler list.

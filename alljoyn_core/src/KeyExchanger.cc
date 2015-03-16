@@ -757,7 +757,7 @@ QStatus KeyExchangerECDHE_ECDSA::RequestCredentialsCB(const char* peerName)
         QCC_DbgHLPrintf(("KeyExchangerECDHE_ECDSA::RequestCredentialsCB failed to parse the private key PEM"));
         return status;
     }
-    status = ParseCertChainPEM((qcc::String &)creds.GetCertChain());
+    status = ParseCertChainPEM((qcc::String&)creds.GetCertChain());
     if (status != ER_OK) {
         QCC_DbgHLPrintf(("KeyExchangerECDHE_ECDSA::RequestCredentialsCB failed to parse the certificate chain"));
         return status;

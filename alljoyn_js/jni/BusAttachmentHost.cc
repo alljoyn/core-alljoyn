@@ -861,7 +861,7 @@ class BusObjectListener : public _BusObjectListener {
                     continue;
                 }
 
-                const ajn::InterfaceDescription::Member** members = new const ajn::InterfaceDescription::Member *[numMembers];
+                const ajn::InterfaceDescription::Member** members = new const ajn::InterfaceDescription::Member*[numMembers];
                 interface->GetMembers(members, numMembers);
                 for (size_t j = 0; (ER_OK == status) && (j < numMembers); ++j) {
                     if (ajn::MESSAGE_METHOD_CALL == members[j]->memberType) {
@@ -3709,9 +3709,9 @@ bool _BusAttachmentHost::getInterfaces(const NPVariant* args, uint32_t argCount,
     }
 
     numIfaces = (*busAttachment)->GetInterfaces();
-    ifaces = new const ajn::InterfaceDescription *[numIfaces];
+    ifaces = new const ajn::InterfaceDescription*[numIfaces];
     (*busAttachment)->GetInterfaces(ifaces, numIfaces);
-    descs = new InterfaceDescriptionNative *[numIfaces];
+    descs = new InterfaceDescriptionNative*[numIfaces];
     for (uint32_t i = 0; i < numIfaces; ++i) {
         descs[i] = InterfaceDescriptionNative::GetInterface(plugin, *busAttachment, ifaces[i]->GetName());
     }

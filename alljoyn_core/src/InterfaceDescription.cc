@@ -59,9 +59,11 @@ static size_t GetAnnotationsWithValues(
     return count;
 }
 
-class InterfaceDescription::AnnotationsMap : public std::map<qcc::String, qcc::String> { };
+class InterfaceDescription::AnnotationsMap : public std::map<qcc::String, qcc::String> {
+};
 
-class InterfaceDescription::ArgumentDescriptions : public std::map<qcc::String, qcc::String> { };
+class InterfaceDescription::ArgumentDescriptions : public std::map<qcc::String, qcc::String> {
+};
 
 qcc::String InterfaceDescription::NextArg(const char*& signature, qcc::String& argNames, bool inOut,
                                           size_t indent, Member const& member, bool withDescriptions,

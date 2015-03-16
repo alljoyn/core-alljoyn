@@ -147,7 +147,7 @@ int main(int argc, char**argv)
         iterations = 1;
     }
 
-    ThreadClass** threadList = new ThreadClass *[threads];
+    ThreadClass** threadList = new ThreadClass*[threads];
 
     while (iterations--) {
 
