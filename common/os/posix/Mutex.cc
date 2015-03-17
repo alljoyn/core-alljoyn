@@ -153,7 +153,7 @@ QStatus Mutex::Unlock(const char* file, uint32_t line)
     if (!isInitialized) {
         return ER_INIT_FAILED;
     }
-    QCC_DbgPrintf(("Lock Released: %s:%d (acquired at %s:%u)\n", file, line, this->file, this->line));
+    QCC_DbgPrintf(("Lock Released: %s:%d (acquired at %s:%u)", file, line, this->file, this->line));
     this->file = NULL;
     this->line = -1;
     int ret = pthread_mutex_unlock(&mutex);

@@ -96,7 +96,7 @@ class ProxyBusObject : public MessageReceiver {
         /**
          * Callback registered with GetAllPropertiesAsync()
          *
-         * @param status      - ER_OK if the get all properties request was successfull or:
+         * @param status    - ER_OK if the get all properties request was successfull or:
          *                  - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
          *                  - Other error status codes indicating the reason the get request failed.
          * @param obj         Remote bus object that was introspected
@@ -210,28 +210,28 @@ class ProxyBusObject : public MessageReceiver {
      *
      * @return Object path
      */
-    const qcc::String& GetPath(void) const { return path; }
+    const qcc::String& GetPath(void) const;
 
     /**
      * Return the remote service name for this object.
      *
      * @return Service name (typically a well-known service name but may be a unique name)
      */
-    const qcc::String& GetServiceName(void) const { return serviceName; }
+    const qcc::String& GetServiceName(void) const;
 
     /**
      * Return the remote unique name for this object.
      *
      * @return Service name (typically a well-known service name but may be a unique name)
      */
-    const qcc::String& GetUniqueName(void) const { return uniqueName; }
+    const qcc::String& GetUniqueName(void) const;
 
     /**
      * Return the session Id for this object.
      *
      * @return Session Id
      */
-    SessionId GetSessionId(void) const { return sessionId; }
+    SessionId GetSessionId(void) const;
 
     /**
      * Query the remote object on the bus to determine the interfaces and
@@ -551,15 +551,20 @@ class ProxyBusObject : public MessageReceiver {
     QStatus AddInterface(const char* name);
 
     /**
-     * Returns an array of ProxyBusObjects for the children of this %ProxyBusObject.
+     * Returns an array of ProxyBusObject pointers for the children of this
+     * %ProxyBusObject.
      *
-     * @param children     A pointer to an %ProxyBusObject array to receive the children. Can be NULL in
-     *                     which case no children are returned and the return value gives the number
-     *                     of children available.
-     * @param numChildren  The size of the %ProxyBusObject array. If this value is smaller than the total
-     *                     number of children only numChildren will be returned.
+     * @param children     An array to %ProxyBusObject pointers to receive the
+     *                     children.  Can be NULL in which case no children are
+     *                     returned and the return value gives the number of
+     *                     children available.  Note that the lifetime of the
+     *                     pointers is limited to the lifetime of the parent.
+     * @param numChildren  The size of the %ProxyBusObject array. If this value
+     *                     is smaller than the total number of children only
+     *                     numChildren will be returned.
      *
-     * @return  The number of children returned or the total number of children if children is NULL.
+     * @return  The number of children returned or the total number of children
+     *          if children is NULL.
      */
     size_t GetChildren(ProxyBusObject** children = NULL, size_t numChildren = 0);
 
@@ -576,7 +581,7 @@ class ProxyBusObject : public MessageReceiver {
      *
      * @return  The number of children returned or the total number of children if children is NULL.
      */
-    size_t GetManagedChildren(void* children = NULL, size_t numChildren = 0);
+    QCC_DEPRECATED(size_t GetManagedChildren(void* children = NULL, size_t numChildren = 0));
 
     /**
      * Get a path descendant ProxyBusObject (child) by its absolute or relative path name.
@@ -609,7 +614,7 @@ class ProxyBusObject : public MessageReceiver {
      *      - The (potentially deep) descendant _ProxyBusObject
      *      - NULL if not found.
      */
-    void* GetManagedChild(const char* inPath);
+    QCC_DEPRECATED(void* GetManagedChild(const char* inPath));
 
     /**
      * Add a child object (direct or deep object path descendant) to this object.
@@ -862,6 +867,30 @@ class ProxyBusObject : public MessageReceiver {
     QStatus SecureConnectionAsync(bool forceAuth = false);
 
     /**
+     * Checks if other refers to the same internal instance has this.
+     *
+     * @param other  The object being compared
+     * @return true iff this has identical internals to other
+     */
+    bool iden(const ProxyBusObject& other) const { return internal.iden(other.internal); }
+
+    /**
+     * Equivalence operator.
+     *
+     * @param other  The object being compared
+     * @return true iff this is the same as other
+     */
+    bool operator==(const ProxyBusObject& other) const;
+
+    /**
+     * Less than operator.
+     *
+     * @param other  The object being compared
+     * @return true iff this is less than other
+     */
+    bool operator<(const ProxyBusObject& other) const;
+
+    /**
      * Assignment operator.
      *
      * @param other  The object being assigned from
@@ -881,14 +910,14 @@ class ProxyBusObject : public MessageReceiver {
      *
      * @return true if a valid proxy bus object, false otherwise.
      */
-    bool IsValid() const { return bus != NULL; }
+    bool IsValid() const;
 
     /**
      * Indicates if the remote object for this proxy bus object is secure.
      *
      * @return  true if the object is secure
      */
-    bool IsSecure() const { return isSecure; }
+    bool IsSecure() const;
 
     /**
      * Enable property caching for this proxy bus object.
@@ -896,6 +925,21 @@ class ProxyBusObject : public MessageReceiver {
     void EnablePropertyCaching();
 
   private:
+
+    class Internal;
+    qcc::ManagedObj<Internal> internal; /**< Internal ProxyBusObject state */
+
+    bool isExiting;             /**< true iff ProxyBusObject is in the process of being destroyed */
+
+    ProxyBusObject(qcc::ManagedObj<Internal> internal);
+
+    /**
+     * @internal
+     * Called by XmlHelper to set the secure flag when introspecting.
+     *
+     * @param isSecure  indicates if node is secure or not
+     */
+    void SetSecure(bool isSecure);
 
     /**
      * @internal
@@ -944,24 +988,12 @@ class ProxyBusObject : public MessageReceiver {
 
     /**
      * @internal
-     * Handle property changed signals. (Internal use only)
-     */
-    void PropertiesChangedHandler(const InterfaceDescription::Member* member, const char* srcPath, Message& message);
-
-    /**
-     * @internal
      * Set the B2B endpoint to use for all communication with remote object.
      * This method is for internal use only.
      *
      * @param b2bEp the RemoteEndpoint for Bus to Bus communication
      */
     void SetB2BEndpoint(RemoteEndpoint& b2bEp);
-
-    /**
-     * @internal
-     * Helper used to destruct and clean-up  ProxyBusObject::components member.
-     */
-    void DestructComponents();
 
     /**
      * @internal
@@ -992,58 +1024,12 @@ class ProxyBusObject : public MessageReceiver {
      *       - An error status otherwise
      */
     static QStatus ParseInterface(const IntrospectionXml& ifc);
-
-    /**
-     * @internal
-     * Add PropertiesChanged match rule for an interface
-     *
-     * @param intf the interface name
-     * @param blocking true if this method may block on the AddMatch call
-     */
-    void AddPropertiesChangedRule(const char* intf, bool blocking);
-
-    /**
-     * @internal
-     * Remove PropertiesChanged match rule for an interface
-     *
-     * @param intf the interface name
-     */
-    void RemovePropertiesChangedRule(const char* intf);
-
-    /**
-     * @internal
-     * Remove all PropertiesChanged match rules for this proxy
-     */
-    void RemoveAllPropertiesChangedRules();
-
-    /** Bus associated with object */
-    BusAttachment* bus;
-
-    struct Components;
-    Components* components;  /**< The subcomponents of this object */
-
-    /** Object path of this object */
-    qcc::String path;
-
-    qcc::String serviceName;    /**< Remote destination alias */
-    mutable qcc::String uniqueName; /**< Remote destination unique name */
-    SessionId sessionId;        /**< Session to use for communicating with remote object */
-    bool hasProperties;         /**< True if proxy object implements properties */
-    mutable RemoteEndpoint b2bEp; /**< B2B endpoint to use or NULL to indicates normal sessionId based routing */
-    mutable qcc::Mutex* lock;   /**< Lock that protects access to components member */
-    bool isExiting;             /**< true iff ProxyBusObject is in the process of begin destroyed */
-    bool isSecure;              /**< Indicates if this object is secure or not */
-    bool cacheProperties;       /**< true if cacheable properties are cached */
-    bool registeredPropChangedHandler; /**< true if our PropertiesChangedHandler is registered */
-    qcc::Thread* handlerThread;
-    PropertiesChangedListener* activeListener;
-    qcc::Condition* listenerDone;
 };
 
 /**
  * _ProxyBusObject is a reference counted (managed) version of ProxyBusObject
  */
-typedef qcc::ManagedObj<ProxyBusObject> _ProxyBusObject;
+QCC_DEPRECATED(typedef qcc::ManagedObj<ProxyBusObject> _ProxyBusObject);
 
 }
 

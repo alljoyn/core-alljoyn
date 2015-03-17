@@ -118,11 +118,11 @@ namespace ajn {
         NativeListener(AJNObserver *objCObject):objC(objCObject) {}
         virtual ~NativeListener() {}
 
-        virtual void ObjectDiscovered(ManagedProxyBusObject& proxyObj) {
+        virtual void ObjectDiscovered(ProxyBusObject& proxyObj) {
             [objC discoveredObject:&proxyObj];
         }
 
-        virtual void ObjectLost(ManagedProxyBusObject& proxyObj) {
+        virtual void ObjectLost(ProxyBusObject& proxyObj) {
             [objC lostObject:&proxyObj];
         }
     private:
@@ -356,12 +356,13 @@ namespace ajn {
 - (void)discoveredObject:(AJNHandle)proxyObject
 {
     // Create OjbC counterpart
-    AJNProxyBusObject *proxyObj = [[self.proxyType alloc]initWithBusAttachment:self.busAttachment
-                                                            managedProxyBusObject:proxyObject];
+
+   AJNProxyBusObject *proxyObj = [[AJNProxyBusObject alloc] initWithBusAttachment:self.busAttachment serviceName:[NSString stringWithUTF8String:((ProxyBusObject *)proxyObject)->GetServiceName().c_str()] objectPath:[NSString stringWithUTF8String:((ProxyBusObject *)proxyObject)->GetPath().c_str()] sessionId:((ProxyBusObject *)proxyObject)->GetSessionId()];
 
     // Create Key
-    AJNObjectId *objId =[[AJNObjectId alloc]initWithObjectPath:[NSString stringWithUTF8String:(*((ManagedProxyBusObject*)proxyObject))->GetPath().c_str()]
-                                                 uniqueBusName:[NSString stringWithUTF8String:(*((ManagedProxyBusObject*)proxyObject))->GetUniqueName().c_str()]];
+   AJNObjectId *objId =[[AJNObjectId alloc]initWithObjectPath:[NSString stringWithUTF8String:(((ProxyBusObject*)proxyObject))->GetPath().c_str()]
+                                                 uniqueBusName:[NSString stringWithUTF8String:(((ProxyBusObject*)proxyObject))->GetUniqueName().c_str()]];
+
     if (NO == [objId isValid]) {
         return;
     }
@@ -398,12 +399,12 @@ namespace ajn {
 - (void)lostObject:(AJNHandle)proxyObject
 {
     // Create OjbC counterpart
-    AJNProxyBusObject *proxyObj = [[AJNProxyBusObject alloc]initWithBusAttachment:self.busAttachment
-                                                            managedProxyBusObject:proxyObject];
+    AJNProxyBusObject *proxyObj = [[AJNProxyBusObject alloc] initWithBusAttachment:self.busAttachment serviceName:[NSString stringWithUTF8String:((ProxyBusObject *)proxyObject)->GetServiceName().c_str()] objectPath:[NSString stringWithUTF8String:((ProxyBusObject *)proxyObject)->GetPath().c_str()] sessionId:((ProxyBusObject *)proxyObject)->GetSessionId()];
 
     // Create Key
-    AJNObjectId *objId =[[AJNObjectId alloc]initWithObjectPath:[NSString stringWithUTF8String:(*((ManagedProxyBusObject*)proxyObject))->GetPath().c_str()]
-                                                 uniqueBusName:[NSString stringWithUTF8String:(*((ManagedProxyBusObject*)proxyObject))->GetUniqueName().c_str()]];
+    AJNObjectId *objId =[[AJNObjectId alloc]initWithObjectPath:[NSString stringWithUTF8String:(((ProxyBusObject*)proxyObject))->GetPath().c_str()]
+                                                 uniqueBusName:[NSString stringWithUTF8String:(((ProxyBusObject*)proxyObject))->GetUniqueName().c_str()]];
+
     if (NO == [objId isValid]) {
         return;
     }
