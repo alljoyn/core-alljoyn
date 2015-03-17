@@ -732,37 +732,37 @@ void <xsl:value-of select="../annotation[@name='org.alljoyn.lang.objc']/@value"/
 <xsl:template match="arg" mode="objc-proxy-method-multiple-return">
     <xsl:choose>
         <xsl:when test="@type='y'">
-    *<xsl:value-of select="@name"/> = [NSNumber numberWithUnsignedChar:reply-&gt;GetArg()-&gt;v_byte];
+    *<xsl:value-of select="@name"/> = [NSNumber numberWithUnsignedChar:reply-&gt;GetArg(<xsl:value-of select="position()-1"/>)-&gt;v_byte];
         </xsl:when>
         <xsl:when test="@type='b'">
-    *<xsl:value-of select="@name"/> = reply-&gt;GetArg()-&gt;v_bool;
+    *<xsl:value-of select="@name"/> = reply-&gt;GetArg(<xsl:value-of select="position()-1"/>)-&gt;v_bool;
         </xsl:when>
         <xsl:when test="@type='n'">
-    *<xsl:value-of select="@name"/> = [NSNumber numberWithShort:reply-&gt;GetArg()-&gt;v_int16];
+    *<xsl:value-of select="@name"/> = [NSNumber numberWithShort:reply-&gt;GetArg(<xsl:value-of select="position()-1"/>)-&gt;v_int16];
         </xsl:when>
         <xsl:when test="@type='q'">
-    *<xsl:value-of select="@name"/> = [NSNumber numberWithUnsignedShort:reply-&gt;GetArg()-&gt;v_uint16];
+    *<xsl:value-of select="@name"/> = [NSNumber numberWithUnsignedShort:reply-&gt;GetArg(<xsl:value-of select="position()-1"/>)-&gt;v_uint16];
         </xsl:when>
         <xsl:when test="@type='i'">
-    *<xsl:value-of select="@name"/> = [NSNumber numberWithInt:reply-&gt;GetArg()-&gt;v_int32];
+    *<xsl:value-of select="@name"/> = [NSNumber numberWithInt:reply-&gt;GetArg(<xsl:value-of select="position()-1"/>)-&gt;v_int32];
         </xsl:when>
         <xsl:when test="@type='u'">
-    *<xsl:value-of select="@name"/> = [NSNumber numberWithUnsignedInt:reply-&gt;GetArg()-&gt;v_uint32];
+    *<xsl:value-of select="@name"/> = [NSNumber numberWithUnsignedInt:reply-&gt;GetArg(<xsl:value-of select="position()-1"/>)-&gt;v_uint32];
         </xsl:when>
         <xsl:when test="@type='x'">
-    *<xsl:value-of select="@name"/> = [NSNumber numberWithLongLong:reply-&gt;GetArg()-&gt;v_int64];
+    *<xsl:value-of select="@name"/> = [NSNumber numberWithLongLong:reply-&gt;GetArg(<xsl:value-of select="position()-1"/>)-&gt;v_int64];
         </xsl:when>
         <xsl:when test="@type='t'">
-    *<xsl:value-of select="@name"/> = [NSNumber numberWithUnsignedLongLong:reply-&gt;GetArg()-&gt;v_uint64];
+    *<xsl:value-of select="@name"/> = [NSNumber numberWithUnsignedLongLong:reply-&gt;GetArg(<xsl:value-of select="position()-1"/>)-&gt;v_uint64];
         </xsl:when>
         <xsl:when test="@type='d'">
-    *<xsl:value-of select="@name"/> = [NSNumber numberWithDouble:reply-&gt;GetArg()-&gt;v_double];
+    *<xsl:value-of select="@name"/> = [NSNumber numberWithDouble:reply-&gt;GetArg(<xsl:value-of select="position()-1"/>)-&gt;v_double];
         </xsl:when>
         <xsl:when test="@type='s'">
-    *<xsl:value-of select="@name"/> = [NSString stringWithCString:reply-&gt;GetArg()-&gt;v_string.str encoding:NSUTF8StringEncoding];
+    *<xsl:value-of select="@name"/> = [NSString stringWithCString:reply-&gt;GetArg(<xsl:value-of select="position()-1"/>)-&gt;v_string.str encoding:NSUTF8StringEncoding];
         </xsl:when>
         <xsl:when test="@type='o'">
-    *<xsl:value-of select="@name"/> = [NSString stringWithCString:reply-&gt;GetArg()-&gt;v_objPath.str encoding:NSUTF8StringEncoding];
+    *<xsl:value-of select="@name"/> = [NSString stringWithCString:reply-&gt;GetArg(<xsl:value-of select="position()-1"/>)-&gt;v_objPath.str encoding:NSUTF8StringEncoding];
         </xsl:when>
     </xsl:choose>
 </xsl:template>
@@ -1023,7 +1023,7 @@ void <xsl:value-of select="../annotation[@name='org.alljoyn.lang.objc']/@value"/
     //
     interfaceDescription = bus.GetInterface("<xsl:value-of select="@name"/>");
     assert(interfaceDescription);
-    AddInterface(*interfaceDescription);
+    AddInterface(*interfaceDescription<xsl:if test="./annotation[@name='org.alljoyn.lang.objc.announced']/@value = 'true'">, ANNOUNCED</xsl:if>);
 
     <xsl:if test="count(./method) > 0">
     // Register the method handlers for interface <xsl:value-of select="./annotation[@name='org.alljoyn.lang.objc']/@value"/> with the object
