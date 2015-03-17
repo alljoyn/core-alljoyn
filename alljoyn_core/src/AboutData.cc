@@ -129,7 +129,7 @@ QStatus AboutData::CreateFromXml(const qcc::String& aboutDataXml)
         return status;
     }
     const qcc::XmlElement* root = pc.GetRoot();
-
+    QStatus returnStatus = ER_OK;
     /*
      * This will iterate through the list of known fields in the about data.  If
      * the field is not localized set that field. We grab the non-localized values
@@ -150,6 +150,14 @@ QStatus AboutData::CreateFromXml(const qcc::String& aboutDataXml)
             continue;
         }
         if (!IsFieldLocalized(it->first.c_str())) {
+            // if we are unable to find one of the required fields continue
+            // trying to find the rest of the fields.
+            if (root->GetChild(it->first) == NULL) {
+                if (IsFieldRequired(it->first.c_str())) {
+                    returnStatus = ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD;
+                }
+                continue;
+            }
             if (root->GetChild(it->first)->GetContent() != "") {
                 // All non-localized fields in the about data are strings and are
                 // treated like a string except for the AppId and SupportedLanguages
@@ -158,19 +166,25 @@ QStatus AboutData::CreateFromXml(const qcc::String& aboutDataXml)
                 if (it->first == APP_ID) {
                     status = SetAppId(root->GetChild(it->first)->GetContent().c_str());
                     if (ER_OK != status) {
-                        return status;
+                        returnStatus = status;
+                        continue;
                     }
                 } else {
                     assert(aboutDataInternal->aboutFields[it->first].signature == "s");
                     arg.Set("s", root->GetChild(it->first)->GetContent().c_str());
                     status = SetField(it->first.c_str(), arg);
                     if (status != ER_OK) {
-                        return status;
+                        returnStatus = status;
+                        continue;
                     }
                     // Make sure the DefaultLanguage is added to the list of
                     // SupportedLanguages.
                     if (it->first == DEFAULT_LANGUAGE) {
                         status = SetSupportedLanguage(root->GetChild(it->first)->GetContent().c_str());
+                        if (status != ER_OK) {
+                            returnStatus = status;
+                            continue;
+                        }
                     }
                 }
             }
@@ -189,21 +203,22 @@ QStatus AboutData::CreateFromXml(const qcc::String& aboutDataXml)
     std::vector<qcc::XmlElement*> elements = root->GetChildren();
     std::vector<qcc::XmlElement*>::iterator it;
     for (std::vector<qcc::XmlElement*>::iterator it = elements.begin(); it != elements.end(); ++it) {
-        if (IsFieldLocalized((*it)->GetName().c_str()) || (aboutDataInternal->aboutFields.find((*it)->GetName()) == aboutDataInternal->aboutFields.end())) {
-            //printf("Setting field: name=%s, value=%s, lang=%s\n", (*it)->GetName().c_str(), (*it)->GetContent().c_str(), (*it)->GetAttribute("lang").c_str());
-            //assert(aboutDataInternal->m_aboutFields[it->first].dataType == "s");
+        if (IsFieldLocalized((*it)->GetName().c_str()) ||
+            (aboutDataInternal->aboutFields.find((*it)->GetName()) == aboutDataInternal->aboutFields.end())) {
             status = arg.Set("s", (*it)->GetContent().c_str());
             if (status != ER_OK) {
-                return status;
+                returnStatus = status;
+                continue;
             }
             status = SetField((*it)->GetName().c_str(), arg, (*it)->GetAttribute("lang").c_str());
             if (status != ER_OK) {
-                return status;
+                returnStatus = status;
+                continue;
             }
         }
     }
 
-    return status;
+    return returnStatus;
 }
 
 bool AboutData::IsValid(const char* language)

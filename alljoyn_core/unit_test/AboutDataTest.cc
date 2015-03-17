@@ -915,8 +915,6 @@ TEST(AboutDataTest, GetMsgArg_language_not_supported)
     MsgArg aboutArg;
     status = aboutData.GetAboutData(&aboutArg, "fr");
     EXPECT_EQ(ER_LANGUAGE_NOT_SUPPORTED, status);
-
-    //printf("*****\n%s\n*****\n", aboutArg.ToString().c_str());
 }
 
 TEST(AboutDataTest, GetAnnouncedAboutData)
@@ -1109,8 +1107,6 @@ TEST(AboutDataTest, GetMsgArgWithOEMSpecificField)
     MsgArg aboutArg;
     aboutData.GetAboutData(&aboutArg);
 
-    //printf("*****\n%s\n*****\n", aboutArg.ToString().c_str());
-
     MsgArg* args;
 
     aboutArg.GetElement("{sv}", AboutData::APP_ID, &args);
@@ -1210,8 +1206,6 @@ TEST(AboutDataTest, InitUsingMsgArg)
     MsgArg aboutArg;
     aboutData.GetAboutData(&aboutArg);
 
-    //TODO make a constructor for about data that does not require the default
-    //     language
     AboutData aboutDataInit("en");
     status = aboutDataInit.CreatefromMsgArg(aboutArg);
     EXPECT_EQ(ER_OK, status);
@@ -1296,7 +1290,7 @@ TEST(AboutDataTest, CreateFromXml_from_qcc_string) {
         "  <Manufacturer lang = 'es'>Empresa</Manufacturer>"
         "  <ModelNumber>Wxfy388i</ModelNumber>"
         "  <Description>A detailed description provided by the application.</Description>"
-        "  <Description lang = 'es'>Una descripción detallada proporcionada por la aplicación.</Description>" /*TODO look into utf8*/
+        "  <Description lang = 'es'>Una descripción detallada proporcionada por la aplicación.</Description>"
         "  <DateOfManufacture>2014-01-08</DateOfManufacture>"
         "  <SoftwareVersion>1.0.0</SoftwareVersion>"
         "  <HardwareVersion>1.0.0</HardwareVersion>"
@@ -1405,25 +1399,24 @@ TEST(AboutDataTest, CreateFromXml_from_qcc_string) {
     EXPECT_EQ(ER_OK, status);
     EXPECT_STREQ("www.example.com", supportUrl);
 
-//    MsgArg* value;
-//    status = aboutData.GetField("UserDefinedTag", value);
-//    EXPECT_EQ(ER_OK, status);
-//
-//    EXPECT_STREQ("s", value->Signature().c_str()) << value->ToString();
-//    const char* userDefined;
-//    status = value->Get("s", &userDefined);
-//    EXPECT_EQ(ER_OK, status);
-//    EXPECT_STREQ("Can only accept strings anything other than strings must be done using the AboutData Class SetField method", userDefined);
-//
-//    status = aboutData.GetField("UserDefinedTag", value, "es");
-//    EXPECT_EQ(ER_OK, status);
-//
-//    EXPECT_STREQ("s", value->Signature().c_str());
-//    status = value->Get("s", &userDefined);
-//    EXPECT_EQ(ER_OK, status);
-//    EXPECT_STREQ("Sólo se puede aceptar cadenas distintas de cadenas nada debe hacerse utilizando el método AboutData Clase SetField", userDefined);
-}
+    MsgArg* value;
+    status = aboutData.GetField("UserDefinedTag", value);
+    EXPECT_EQ(ER_OK, status);
 
+    EXPECT_STREQ("s", value->Signature().c_str()) << value->ToString();
+    const char* userDefined;
+    status = value->Get("s", &userDefined);
+    EXPECT_EQ(ER_OK, status);
+    EXPECT_STREQ("Can only accept strings anything other than strings must be done using the AboutData Class SetField method", userDefined);
+
+    status = aboutData.GetField("UserDefinedTag", value, "es");
+    EXPECT_EQ(ER_OK, status);
+
+    EXPECT_STREQ("s", value->Signature().c_str());
+    status = value->Get("s", &userDefined);
+    EXPECT_EQ(ER_OK, status);
+    EXPECT_STREQ("Sólo se puede aceptar cadenas distintas de cadenas nada debe hacerse utilizando el método AboutData Clase SetField", userDefined);
+}
 /*
  * This test is identical to AboutDataTest.CreateFromXml_from_qcc_string except
  * the xml string is passed in as a const char* not a qcc::String
@@ -1444,7 +1437,7 @@ TEST(AboutDataTest, CreateFromXml_from_char_string) {
         "  <Manufacturer lang = 'es'>Empresa</Manufacturer>"
         "  <ModelNumber>Wxfy388i</ModelNumber>"
         "  <Description>A detailed description provided by the application.</Description>"
-        "  <Description lang = 'es'>Una descripción detallada proporcionada por la aplicación.</Description>" /*TODO look into utf8*/
+        "  <Description lang = 'es'>Una descripción detallada proporcionada por la aplicación.</Description>"
         "  <DateOfManufacture>2014-01-08</DateOfManufacture>"
         "  <SoftwareVersion>1.0.0</SoftwareVersion>"
         "  <HardwareVersion>1.0.0</HardwareVersion>"
@@ -1552,6 +1545,325 @@ TEST(AboutDataTest, CreateFromXml_from_char_string) {
     status = aboutData.GetSupportUrl(&supportUrl);
     EXPECT_EQ(ER_OK, status);
     EXPECT_STREQ("www.example.com", supportUrl);
+}
+
+/*
+ * ASACORE-1603 prevent the CreateFromXml function from segfaulting
+ * The CreateFromXml will continue parsing and will not report an error.
+ * Users will have to use the IsValid method to check if the AboutData contains
+ * all valid fields.
+ */
+TEST(AboutDataTest, CreateFromXml_missing_required_field) {
+    AboutData aboutData;
+    qcc::String xml =
+        "<AboutData>"
+        "  <Daemonrealm></Daemonrealm>"
+        "  <DateOfManufacture>2199-10-01</DateOfManufacture>"
+        "  <DefaultLanguage>en</DefaultLanguage>"
+        "  <HardwareVersion>355.499. b</HardwareVersion>"
+        "  <ModelNumber>Wxfy388i</ModelNumber>"
+        "  <Passcode>000000</Passcode>"
+        "  <SoftwareVersion>12.20.44 build 44454</SoftwareVersion>"
+        "  <SupportUrl>http://ask.allseenaliance.org</SupportUrl>"
+        "  <AppName>OnboardingServiceApp</AppName>"
+        "  <AppName lang='en'>OnboardingServiceApp</AppName>"
+        "  <AppName lang='es'>OnboardingServiceApp</AppName>"
+        "  <AppName lang='fr'>OnboardingServiceApp</AppName>"
+        "  <Description>This is an Alljoyn Application</Description>"
+        "  <Description lang='en'>This is an Alljoyn Application</Description>"
+        "  <Description lang='es'>Esta es una Alljoyn aplicacion</Description>"
+        "  <Description lang='fr'>C'est une Alljoyn application</Description>"
+        "  <DeviceName>My device name</DeviceName>"
+        "  <DeviceName lang='en'>My device name</DeviceName>"
+        "  <DeviceName lang='es'>Mi nombre de dispositivo</DeviceName>"
+        "  <DeviceName lang='fr'>Mon nom de l'appareil</DeviceName>"
+        "  <Manufacturer>Company</Manufacturer>"
+        "  <Manufacturer lang='en'>Company</Manufacturer>"
+        "  <Manufacturer lang='es'>Empresa</Manufacturer>"
+        "  <Manufacturer lang='fr'>Entreprise</Manufacturer>"
+        "  <scan_file>/tmp/wifi_scan_results</scan_file>"
+        "  <error_file>/tmp/state/alljoyn-onboarding-lasterror</error_file>"
+        "  <state_file>/tmp/state/alljoyn-onboarding</state_file>"
+        "  <connect_cmd>/etc/init.d/alljoyn-onboarding connect</connect_cmd>"
+        "  <offboard_cmd>/etc/init.d/alljoyn-onboarding offboard</offboard_cmd>"
+        "  <configure_cmd>/etc/init.d/alljoyn-onboarding configure %s %s %s</configure_cmd>"
+        "  <scan_cmd>/usr/sbin/wifi_scan</scan_cmd>"
+        "</AboutData>";
+    EXPECT_EQ(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, aboutData.CreateFromXml(xml));
+    EXPECT_FALSE(aboutData.IsValid());
+
+    uint8_t* appId;
+    size_t num;
+    // no AppId present in the Xml
+    EXPECT_EQ(ER_BUS_SIGNATURE_MISMATCH, aboutData.GetAppId(&appId, &num));
+
+    char* defaultLanguage;
+    EXPECT_EQ(ER_OK, aboutData.GetDefaultLanguage(&defaultLanguage));
+    EXPECT_STREQ("en", defaultLanguage);
+
+    char* deviceName;
+    EXPECT_EQ(ER_OK, aboutData.GetDeviceName(&deviceName));
+    EXPECT_STREQ("My device name", deviceName);
+
+    EXPECT_EQ(ER_OK, aboutData.GetDeviceName(&deviceName, "es"));
+    EXPECT_STREQ("Mi nombre de dispositivo", deviceName);
+
+    EXPECT_EQ(ER_OK, aboutData.GetDeviceName(&deviceName, "fr"));
+    EXPECT_STREQ("Mon nom de l'appareil", deviceName);
+
+    // No DeviceId present in the Xml
+    char* deviceId;
+    EXPECT_EQ(ER_BUS_SIGNATURE_MISMATCH, aboutData.GetDeviceId(&deviceId));
+
+    char* appName;
+    EXPECT_EQ(ER_OK, aboutData.GetAppName(&appName));
+    EXPECT_STREQ("OnboardingServiceApp", appName);
+
+    EXPECT_EQ(ER_OK, aboutData.GetAppName(&appName, "es"));
+    EXPECT_STREQ("OnboardingServiceApp", appName);
+
+    EXPECT_EQ(ER_OK, aboutData.GetAppName(&appName, "fr"));
+    EXPECT_STREQ("OnboardingServiceApp", appName);
+
+    char* manufacturer;
+    EXPECT_EQ(ER_OK, aboutData.GetManufacturer(&manufacturer));
+    EXPECT_STREQ("Company", manufacturer);
+
+    EXPECT_EQ(ER_OK, aboutData.GetManufacturer(&manufacturer, "es"));
+    EXPECT_STREQ("Empresa", manufacturer);
+
+    EXPECT_EQ(ER_OK, aboutData.GetManufacturer(&manufacturer, "fr"));
+    EXPECT_STREQ("Entreprise", manufacturer);
+
+    size_t numLanguages = aboutData.GetSupportedLanguages();
+    const char** languages = new const char*[numLanguages];
+
+    size_t numRetLang = aboutData.GetSupportedLanguages(languages, numLanguages);
+    EXPECT_EQ(numLanguages, numRetLang);
+    ASSERT_EQ(3u, numLanguages);
+    EXPECT_STREQ("en", languages[0]);
+    EXPECT_STREQ("es", languages[1]);
+    EXPECT_STREQ("fr", languages[2]);
+    delete [] languages;
+    languages = NULL;
+
+    char* description;
+    EXPECT_EQ(ER_OK, aboutData.GetDescription(&description));
+    EXPECT_STREQ("This is an Alljoyn Application", description);
+
+    EXPECT_EQ(ER_OK, aboutData.GetDescription(&description, "es"));
+    EXPECT_STREQ("Esta es una Alljoyn aplicacion", description);
+
+    EXPECT_EQ(ER_OK, aboutData.GetDescription(&description, "fr"));
+    EXPECT_STREQ("C'est une Alljoyn application", description);
+
+    char* modelNumber;
+    EXPECT_EQ(ER_OK, aboutData.GetModelNumber(&modelNumber));
+    EXPECT_STREQ("Wxfy388i", modelNumber);
+
+    char* dateOfManufacture;
+    EXPECT_EQ(ER_OK, aboutData.GetDateOfManufacture(&dateOfManufacture));
+    EXPECT_STREQ("2199-10-01", dateOfManufacture);
+
+    char* softwareVersion;
+    EXPECT_EQ(ER_OK, aboutData.GetSoftwareVersion(&softwareVersion));
+    EXPECT_STREQ("12.20.44 build 44454", softwareVersion);
+
+    char* ajSoftwareVersion;
+    EXPECT_EQ(ER_OK, aboutData.GetAJSoftwareVersion(&ajSoftwareVersion));
+    EXPECT_STREQ(ajn::GetVersion(), ajSoftwareVersion);
+
+    char* hardwareVersion;
+    EXPECT_EQ(ER_OK, aboutData.GetHardwareVersion(&hardwareVersion));
+    EXPECT_STREQ("355.499. b", hardwareVersion);
+
+    char* supportUrl;
+    EXPECT_EQ(ER_OK, aboutData.GetSupportUrl(&supportUrl));
+    EXPECT_STREQ("http://ask.allseenaliance.org", supportUrl);
+
+    MsgArg* value;
+    EXPECT_EQ(ER_OK, aboutData.GetField("Passcode", value));
+    EXPECT_STREQ("s", value->Signature().c_str()) << value->ToString();
+    const char* passcode;
+    EXPECT_EQ(ER_OK, value->Get("s", &passcode));
+    EXPECT_STREQ("000000", passcode);
+
+    EXPECT_EQ(ER_OK, aboutData.GetField("scan_file", value));
+    EXPECT_STREQ("s", value->Signature().c_str()) << value->ToString();
+    const char* scan_file;
+    EXPECT_EQ(ER_OK, value->Get("s", &scan_file));
+    EXPECT_STREQ("/tmp/wifi_scan_results", scan_file);
+
+    // "  <error_file>/tmp/state/alljoyn-onboarding-lasterror</error_file>"
+    EXPECT_EQ(ER_OK, aboutData.GetField("error_file", value));
+    EXPECT_STREQ("s", value->Signature().c_str()) << value->ToString();
+    const char* error_file;
+    EXPECT_EQ(ER_OK, value->Get("s", &error_file));
+    EXPECT_STREQ("/tmp/state/alljoyn-onboarding-lasterror", error_file);
+
+    //"  <state_file>/tmp/state/alljoyn-onboarding</state_file>"
+    EXPECT_EQ(ER_OK, aboutData.GetField("state_file", value));
+    EXPECT_STREQ("s", value->Signature().c_str()) << value->ToString();
+    const char* state_file;
+    EXPECT_EQ(ER_OK, value->Get("s", &state_file));
+    EXPECT_STREQ("/tmp/state/alljoyn-onboarding", state_file);
+
+    //"  <connect_cmd>/etc/init.d/alljoyn-onboarding connect</connect_cmd>"
+    EXPECT_EQ(ER_OK, aboutData.GetField("connect_cmd", value));
+    EXPECT_STREQ("s", value->Signature().c_str()) << value->ToString();
+    const char* connect_cmd;
+    EXPECT_EQ(ER_OK, value->Get("s", &connect_cmd));
+    EXPECT_STREQ("/etc/init.d/alljoyn-onboarding connect", connect_cmd);
+
+    //"  <offboard_cmd>/etc/init.d/alljoyn-onboarding offboard</offboard_cmd>"
+    EXPECT_EQ(ER_OK, aboutData.GetField("offboard_cmd", value));
+    EXPECT_STREQ("s", value->Signature().c_str()) << value->ToString();
+    const char* offboard_cmd;
+    EXPECT_EQ(ER_OK, value->Get("s", &offboard_cmd));
+    EXPECT_STREQ("/etc/init.d/alljoyn-onboarding offboard", offboard_cmd);
+
+    //"  <configure_cmd>/etc/init.d/alljoyn-onboarding configure %s %s %s</configure_cmd>"
+    EXPECT_EQ(ER_OK, aboutData.GetField("configure_cmd", value));
+    EXPECT_STREQ("s", value->Signature().c_str()) << value->ToString();
+    const char* configure_cmd;
+    EXPECT_EQ(ER_OK, value->Get("s", &configure_cmd));
+    EXPECT_STREQ("/etc/init.d/alljoyn-onboarding configure %s %s %s", configure_cmd);
+
+    //"  <scan_cmd>/usr/sbin/wifi_scan</scan_cmd>"
+    EXPECT_EQ(ER_OK, aboutData.GetField("scan_cmd", value));
+    EXPECT_STREQ("s", value->Signature().c_str()) << value->ToString();
+    const char* scan_cmd;
+    EXPECT_EQ(ER_OK, value->Get("s", &scan_cmd));
+    EXPECT_STREQ("/usr/sbin/wifi_scan", scan_cmd);
+
+}
+
+TEST(AboutDataTest, CreateFromXml_missing_default_language) {
+    AboutData aboutData;
+    qcc::String xml =
+        "<AboutData>"
+        "  <Daemonrealm></Daemonrealm>"
+        "  <DateOfManufacture>2199-10-01</DateOfManufacture>"
+        "  <HardwareVersion>355.499. b</HardwareVersion>"
+        "  <ModelNumber>Wxfy388i</ModelNumber>"
+        "  <Passcode>000000</Passcode>"
+        "  <SoftwareVersion>12.20.44 build 44454</SoftwareVersion>"
+        "  <SupportUrl>http://ask.allseenaliance.org</SupportUrl>"
+        "  <AppName>OnboardingServiceApp</AppName>"
+        "  <AppName lang='en'>OnboardingServiceApp</AppName>"
+        "  <AppName lang='es'>OnboardingServiceApp</AppName>"
+        "  <AppName lang='fr'>OnboardingServiceApp</AppName>"
+        "  <Description>This is an Alljoyn Application</Description>"
+        "  <Description lang='en'>This is an Alljoyn Application</Description>"
+        "  <Description lang='es'>Esta es una Alljoyn aplicacion</Description>"
+        "  <Description lang='fr'>C'est une Alljoyn application</Description>"
+        "  <DeviceName>My device name</DeviceName>"
+        "  <DeviceName lang='en'>My device name</DeviceName>"
+        "  <DeviceName lang='es'>Mi nombre de dispositivo</DeviceName>"
+        "  <DeviceName lang='fr'>Mon nom de l'appareil</DeviceName>"
+        "  <Manufacturer>Company</Manufacturer>"
+        "  <Manufacturer lang='en'>Company</Manufacturer>"
+        "  <Manufacturer lang='es'>Empresa</Manufacturer>"
+        "  <Manufacturer lang='fr'>Entreprise</Manufacturer>"
+        "</AboutData>";
+    EXPECT_EQ(ER_ABOUT_DEFAULT_LANGUAGE_NOT_SPECIFIED, aboutData.CreateFromXml(xml));
+
+    EXPECT_FALSE(aboutData.IsValid());
+
+    uint8_t* appId;
+    size_t num;
+    // no AppId present in the Xml
+    EXPECT_EQ(ER_BUS_SIGNATURE_MISMATCH, aboutData.GetAppId(&appId, &num));
+
+    char* defaultLanguage;
+    EXPECT_EQ(ER_BUS_SIGNATURE_MISMATCH, aboutData.GetDefaultLanguage(&defaultLanguage));
+
+    char* deviceName;
+    EXPECT_EQ(ER_BUS_SIGNATURE_MISMATCH, aboutData.GetDeviceName(&deviceName));
+    EXPECT_EQ(ER_OK, aboutData.GetDeviceName(&deviceName, "en"));
+    EXPECT_STREQ("My device name", deviceName);
+
+    EXPECT_EQ(ER_OK, aboutData.GetDeviceName(&deviceName, "es"));
+    EXPECT_STREQ("Mi nombre de dispositivo", deviceName);
+
+    EXPECT_EQ(ER_OK, aboutData.GetDeviceName(&deviceName, "fr"));
+    EXPECT_STREQ("Mon nom de l'appareil", deviceName);
+
+    // No DeviceId present in the Xml
+    char* deviceId;
+    EXPECT_EQ(ER_BUS_SIGNATURE_MISMATCH, aboutData.GetDeviceId(&deviceId));
+
+    char* appName;
+    EXPECT_EQ(ER_BUS_SIGNATURE_MISMATCH, aboutData.GetAppName(&appName));
+    EXPECT_EQ(ER_OK, aboutData.GetAppName(&appName, "en"));
+    EXPECT_STREQ("OnboardingServiceApp", appName);
+
+    EXPECT_EQ(ER_OK, aboutData.GetAppName(&appName, "es"));
+    EXPECT_STREQ("OnboardingServiceApp", appName);
+
+    EXPECT_EQ(ER_OK, aboutData.GetAppName(&appName, "fr"));
+    EXPECT_STREQ("OnboardingServiceApp", appName);
+
+    char* manufacturer;
+    EXPECT_EQ(ER_BUS_SIGNATURE_MISMATCH, aboutData.GetManufacturer(&manufacturer));
+    EXPECT_EQ(ER_OK, aboutData.GetManufacturer(&manufacturer, "en"));
+    EXPECT_STREQ("Company", manufacturer);
+
+    EXPECT_EQ(ER_OK, aboutData.GetManufacturer(&manufacturer, "es"));
+    EXPECT_STREQ("Empresa", manufacturer);
+
+    EXPECT_EQ(ER_OK, aboutData.GetManufacturer(&manufacturer, "fr"));
+    EXPECT_STREQ("Entreprise", manufacturer);
+
+    size_t numLanguages = aboutData.GetSupportedLanguages();
+    const char** languages = new const char*[numLanguages];
+
+    size_t numRetLang = aboutData.GetSupportedLanguages(languages, numLanguages);
+    EXPECT_EQ(numLanguages, numRetLang);
+    ASSERT_EQ(3u, numLanguages);
+    EXPECT_STREQ("en", languages[0]);
+    EXPECT_STREQ("es", languages[1]);
+    EXPECT_STREQ("fr", languages[2]);
+    delete [] languages;
+    languages = NULL;
+
+    char* description;
+    EXPECT_EQ(ER_BUS_SIGNATURE_MISMATCH, aboutData.GetDescription(&description));
+    EXPECT_EQ(ER_OK, aboutData.GetDescription(&description, "en"));
+    EXPECT_STREQ("This is an Alljoyn Application", description);
+
+    EXPECT_EQ(ER_OK, aboutData.GetDescription(&description, "es"));
+    EXPECT_STREQ("Esta es una Alljoyn aplicacion", description);
+
+    EXPECT_EQ(ER_OK, aboutData.GetDescription(&description, "fr"));
+    EXPECT_STREQ("C'est une Alljoyn application", description);
+
+    char* modelNumber;
+    EXPECT_EQ(ER_OK, aboutData.GetModelNumber(&modelNumber));
+    EXPECT_STREQ("Wxfy388i", modelNumber);
+
+    char* dateOfManufacture;
+    EXPECT_EQ(ER_OK, aboutData.GetDateOfManufacture(&dateOfManufacture));
+    EXPECT_STREQ("2199-10-01", dateOfManufacture);
+
+    char* softwareVersion;
+    EXPECT_EQ(ER_OK, aboutData.GetSoftwareVersion(&softwareVersion));
+    EXPECT_STREQ("12.20.44 build 44454", softwareVersion);
+
+    char* ajSoftwareVersion;
+    EXPECT_EQ(ER_OK, aboutData.GetAJSoftwareVersion(&ajSoftwareVersion));
+    EXPECT_STREQ(ajn::GetVersion(), ajSoftwareVersion);
+
+    char* hardwareVersion;
+    EXPECT_EQ(ER_OK, aboutData.GetHardwareVersion(&hardwareVersion));
+    EXPECT_STREQ("355.499. b", hardwareVersion);
+
+    char* supportUrl;
+    EXPECT_EQ(ER_OK, aboutData.GetSupportUrl(&supportUrl));
+    EXPECT_STREQ("http://ask.allseenaliance.org", supportUrl);
+
+    MsgArg* value;
+    EXPECT_EQ(ER_BUS_SIGNATURE_MISMATCH, aboutData.GetField("Passcode", value));
 }
 
 class AboutDataTestAboutData : public AboutData {
