@@ -46,7 +46,6 @@
 #include <qcc/Event.h>
 
 #include "BusUtil.h"
-#include "ConfigDB.h"
 #include "IpNameServiceImpl.h"
 
 #define QCC_MODULE "IPNS"
@@ -58,6 +57,11 @@ namespace ajn {
 int32_t INCREMENTAL_PACKET_ID;
 #define RESET_SCHEDULE_ALERTCODE  1
 #define PACKET_TIME_ACCURACY_MS 20
+
+#define DYNAMIC_RANK_RANGE 18000u
+#define TCP_NORMALIZED_CONNECTIONS 500u
+#define UDP_NORMALIZED_CONNECTIONS 5000u
+#define TCL_NORMALIZED_CONNECTIONS 100u
 
 // ============================================================================
 // Long sidebar on why this looks so complicated:
@@ -356,6 +360,15 @@ const char* IpNameServiceImpl::IPV6_MDNS_MULTICAST_GROUP = "ff02::fb";
 
 const uint32_t IpNameServiceImpl::RETRY_INTERVALS[] = { 1, 2, 6, 18 };
 
+/**
+ * Default router search prefix.
+ */
+const char* const IpNameServiceImpl::ALLJOYN_DEFAULT_ROUTER_ADVERTISEMENT_PREFIX = "org.alljoyn.BusNode.";
+const char* const IpNameServiceImpl::ALLJOYN_DEFAULT_ROUTER_POWER_SOURCE = "Battery powered and chargeable";
+const char* const IpNameServiceImpl::ALLJOYN_DEFAULT_ROUTER_MOBILITY = "Intermediate mobility";
+const char* const IpNameServiceImpl::ALLJOYN_DEFAULT_ROUTER_AVAILABILITY = "3-6 hr";
+const char* const IpNameServiceImpl::ALLJOYN_DEFAULT_ROUTER_NODE_TYPE = "Wireless";
+
 
 IpNameServiceImpl::IpNameServiceImpl()
     : Thread("IpNameServiceImpl"), m_state(IMPL_SHUTDOWN), m_isProcSuspending(false),
@@ -368,7 +381,8 @@ IpNameServiceImpl::IpNameServiceImpl()
     m_ipv4QuietSockFd(qcc::INVALID_SOCKET_FD), m_ipv6QuietSockFd(qcc::INVALID_SOCKET_FD),
     m_ipv4UnicastSockFd(qcc::INVALID_SOCKET_FD), m_unicastEvent(NULL),
     m_protectListeners(false), m_packetScheduler(*this),
-    m_networkChangeScheduleCount(m_retries + 1)
+    m_networkChangeScheduleCount(m_retries + 1), m_staticScore(0), m_dynamicScore(0), m_priority(0),
+    m_powerSource(0), m_mobility(0), m_availability(0), m_nodeConnection(0)
 {
     QCC_DbgHLPrintf(("IpNameServiceImpl::IpNameServiceImpl()"));
     TRANSPORT_INDEX_TCP = IndexFromBit(TRANSPORT_TCP);
@@ -388,6 +402,12 @@ IpNameServiceImpl::IpNameServiceImpl()
 
     memset(&m_processTransport[0], 0, sizeof(m_processTransport));
     memset(&m_doNetworkCallback[0], 0, sizeof(m_doNetworkCallback));
+    for (uint32_t i = 0; i < N_TRANSPORTS; i++) {
+        m_dynamicParams[i].availableTransportConnections = 0;
+        m_dynamicParams[i].availableTransportRemoteClients = 0;
+        m_dynamicParams[i].maximumTransportConnections = 0;
+        m_dynamicParams[i].maximumTransportRemoteClients = 0;
+    }
 }
 
 QStatus IpNameServiceImpl::Init(const qcc::String& guid, bool loopback)
@@ -425,6 +445,9 @@ QStatus IpNameServiceImpl::Init(const qcc::String& guid, bool loopback)
     //
     m_enableIPv4 = !config->GetFlag("ns_disable_ipv4");
     m_enableIPv6 = !config->GetFlag("ns_disable_ipv6");
+
+    LoadStaticRouterParams(config);
+    m_staticScore = ComputeStaticScore(m_powerSource, m_mobility, m_availability, m_nodeConnection);
 
     if (m_enableV1) {
         m_broadcast = !config->GetFlag("ns_disable_directed_broadcast");
@@ -1678,6 +1701,166 @@ QStatus IpNameServiceImpl::Enable(TransportMask transportMask,
     m_wakeEvent.SetEvent();
 
     return ER_OK;
+}
+
+uint16_t IpNameServiceImpl::ComputePriority(uint32_t staticScore, uint32_t dynamicScore)
+{
+    uint32_t combinedScore = staticScore + dynamicScore;
+    if (combinedScore > std::numeric_limits<uint16_t>::max()) {
+        combinedScore = std::numeric_limits<uint16_t>::max();
+    }
+    uint32_t priority = std::numeric_limits<uint16_t>::max() - combinedScore;
+    // Oldver versions of the name service without the router ranking
+    // feature use the priority value 1 and this needs to be excluded.
+    if (priority == 1) {
+        priority = 2;
+    }
+    return priority;
+}
+
+uint32_t IpNameServiceImpl::LoadParam(const ConfigDB* config, const qcc::String param)
+{
+    if (param == "router_power_source") {
+        String powerSource = ToLowerCase(config->GetProperty("router_power_source", ALLJOYN_DEFAULT_ROUTER_POWER_SOURCE));
+        if (powerSource == "always ac powered") {
+            return 2700;
+        } else if (powerSource == "battery powered and chargeable") {
+            return 1800;
+        }  else if (powerSource == "battery powered and not chargeable") {
+            return 900;
+        } else {
+            QCC_LogError(ER_WARNING, ("Ignoring invalid config value:%s for router power source, using default value instead", powerSource.c_str()));
+            return 1800;
+        }
+    } else if (param == "router_mobility") {
+        String mobility = ToLowerCase(config->GetProperty("router_mobility", ALLJOYN_DEFAULT_ROUTER_MOBILITY));
+        if (mobility == "always stationary") {
+            return 8100;
+        } else if (mobility == "low mobility") {
+            return 6075;
+        } else if (mobility == "intermediate mobility") {
+            return 4050;
+        } else if (mobility == "high mobility") {
+            return 2025;
+        } else {
+            QCC_LogError(ER_WARNING, ("Ignoring invalid config value:%s for router mobility, using default value instead", mobility.c_str()));
+            return 4050;
+        }
+    } else if (param == "router_availability") {
+        String availability = ToLowerCase(config->GetProperty("router_availability", ALLJOYN_DEFAULT_ROUTER_AVAILABILITY));
+        if (availability == "0-3 hr") {
+            return 1012;
+        } else if (availability == "3-6 hr") {
+            return 2025;
+        }  else if (availability == "6-9 hr") {
+            return 3037;
+        }  else if (availability == "9-12 hr") {
+            return 4050;
+        }  else if (availability == "12-15 hr") {
+            return 5062;
+        }  else if (availability == "15-18 hr") {
+            return 6075;
+        }  else if (availability == "18-21 hr") {
+            return 7087;
+        }  else if (availability == "21-24 hr") {
+            return 8100;
+        }  else {
+            QCC_LogError(ER_WARNING, ("Ignoring invalid config value:%s for router availability, using default value instead", availability.c_str()));
+            return 2025;
+        }
+    } else if (param == "router_node_connection") {
+        String nodeConnection = ToLowerCase(config->GetProperty("router_node_connection", ALLJOYN_DEFAULT_ROUTER_NODE_TYPE));
+        if (nodeConnection == "access point") {
+            return 8100;
+        } else if (nodeConnection == "wired") {
+            return 8100;
+        } else if (nodeConnection == "wireless") {
+            return 4050;
+        } else {
+            QCC_LogError(ER_WARNING, ("Ignoring invalid config value:%s for router node connection, using default value instead", nodeConnection.c_str()));
+            return 4050;
+        }
+    } else {
+        QCC_LogError(ER_WARNING, ("Ignoring invalid config parameter"));
+        return std::numeric_limits<uint32_t>::max();
+    }
+}
+
+void IpNameServiceImpl::LoadStaticRouterParams(const ConfigDB* config)
+{
+    m_powerSource = LoadParam(config, "router_power_source");
+    m_mobility = LoadParam(config, "router_mobility");
+    m_availability = LoadParam(config, "router_availability");
+    m_nodeConnection = LoadParam(config, "router_node_connection");
+}
+
+uint32_t IpNameServiceImpl::ComputeStaticScore(uint32_t powerSource, uint32_t mobility, uint32_t availability, uint32_t nodeConnection)
+{
+    assert(powerSource >= ROUTER_POWER_SOURCE_MIN && powerSource <= ROUTER_POWER_SOURCE_MAX);
+    assert(mobility >= ROUTER_MOBILITY_MIN && mobility <= ROUTER_MOBILITY_MAX);
+    assert(availability >= ROUTER_AVAILABILITY_MIN && availability <= ROUTER_AVAILABILITY_MAX);
+    assert(nodeConnection >= ROUTER_NODE_CONNECTION_MIN && nodeConnection <= ROUTER_NODE_CONNECTION_MAX);
+    return (powerSource + mobility + availability + nodeConnection);
+
+}
+
+uint32_t IpNameServiceImpl::ComputeDynamicScore(uint32_t availableTcpConnections, uint32_t maximumTcpConnections, uint32_t availableUdpConnections, uint32_t maximumUdpConnections, uint32_t availableTcpRemoteClients, uint32_t maximumTcpRemoteClients)
+{
+    assert(availableTcpConnections <= maximumTcpConnections);
+    assert(availableUdpConnections <= maximumUdpConnections);
+    assert(availableTcpRemoteClients <= maximumTcpRemoteClients);
+    uint32_t tcpScore = 0;
+    uint32_t udpScore = 0;
+    uint32_t tclScore = 0;
+    uint8_t transports = 0;
+    if (maximumTcpConnections) {
+        tcpScore = ((DYNAMIC_RANK_RANGE * availableTcpConnections) / (TCP_NORMALIZED_CONNECTIONS)) + ((DYNAMIC_RANK_RANGE * availableTcpConnections) / (maximumTcpConnections));
+        transports++;
+    }
+    if (maximumUdpConnections) {
+        udpScore = ((DYNAMIC_RANK_RANGE * availableUdpConnections) / (UDP_NORMALIZED_CONNECTIONS)) + ((DYNAMIC_RANK_RANGE * availableUdpConnections) / (maximumUdpConnections));
+        transports++;
+    }
+    if (maximumTcpRemoteClients) {
+        tclScore = ((DYNAMIC_RANK_RANGE * availableTcpRemoteClients) / (TCL_NORMALIZED_CONNECTIONS)) + ((DYNAMIC_RANK_RANGE * availableTcpRemoteClients) / (maximumTcpRemoteClients));
+        transports++;
+    }
+    if (transports == 2) {
+        return ((tcpScore + udpScore + tclScore) / (4u));
+    } else if (transports == 3) {
+        return ((tcpScore + udpScore + tclScore) / (6u));
+    }
+    return 0;
+}
+
+uint16_t IpNameServiceImpl::GetCurrentPriority()
+{
+    return m_priority;
+}
+
+QStatus IpNameServiceImpl::UpdateDynamicScore(TransportMask transportMask, uint32_t availableTransportConnections, uint32_t maximumTransportConnections, uint32_t availableTransportRemoteClients, uint32_t maximumTransportRemoteClients)
+{
+    uint32_t i = IndexFromBit(transportMask);
+    assert(i < 16 && "IpNameServiceImpl::UpdateDynamicScore(): Bad index");
+    m_dynamicParams[i].availableTransportConnections = availableTransportConnections;
+    m_dynamicParams[i].maximumTransportConnections = maximumTransportConnections;
+    m_dynamicParams[i].availableTransportRemoteClients = availableTransportRemoteClients;
+    m_dynamicParams[i].maximumTransportRemoteClients = maximumTransportRemoteClients;
+
+    m_dynamicScore = ComputeDynamicScore(m_dynamicParams[TRANSPORT_INDEX_TCP].availableTransportConnections, m_dynamicParams[TRANSPORT_INDEX_TCP].maximumTransportConnections, m_dynamicParams[TRANSPORT_INDEX_UDP].availableTransportConnections, m_dynamicParams[TRANSPORT_INDEX_UDP].maximumTransportConnections, m_dynamicParams[TRANSPORT_INDEX_TCP].availableTransportRemoteClients, m_dynamicParams[TRANSPORT_INDEX_TCP].maximumTransportRemoteClients);
+    m_priority = ComputePriority(m_staticScore, m_dynamicScore);
+    return ER_OK;
+}
+
+qcc::String IpNameServiceImpl::ToLowerCase(const qcc::String& str)
+{
+    qcc::String s = str;
+
+    for (unsigned i = 0; i < s.size(); ++i) {
+        s[i] = tolower(s[i]);
+    }
+
+    return s;
 }
 
 QStatus IpNameServiceImpl::Enabled(TransportMask transportMask,
@@ -6431,6 +6614,7 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
         MDNSPacket mdnsPacket;
         mdnsPacket->SetHeader(mdnsHeader);
 
+        QCC_DbgPrintf(("IpNameServiceImpl::::Retransmit(): Current priority is %d", GetCurrentPriority()));
         if ((completeTransportMask & TRANSPORT_TCP) && (!m_reliableIPv4PortMap[TRANSPORT_INDEX_TCP].empty() || m_reliableIPv6Port[TRANSPORT_INDEX_TCP])) {
 
             MDNSPtrRData* ptrRDataTcp = new MDNSPtrRData();
@@ -6438,7 +6622,7 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
             MDNSResourceRecord ptrRecordTcp("_alljoyn._tcp.local.", MDNSResourceRecord::PTR, MDNSResourceRecord::INTERNET, exiting ? 0 : m_tDuration, ptrRDataTcp);
             delete ptrRDataTcp;
 
-            MDNSSrvRData* srvRDataTcp = new MDNSSrvRData(1 /*priority */, 1 /* weight */,
+            MDNSSrvRData* srvRDataTcp = new MDNSSrvRData(GetCurrentPriority(), 0 /* weight */,
                                                          0 /* port */, m_guid + ".local." /* target */);
             MDNSResourceRecord srvRecordTcp(m_guid + "._alljoyn._tcp.local.", MDNSResourceRecord::SRV, MDNSResourceRecord::INTERNET, exiting ? 0 : m_tDuration, srvRDataTcp);
             delete srvRDataTcp;
@@ -6462,7 +6646,7 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
             MDNSResourceRecord ptrRecordUdp("_alljoyn._udp.local.", MDNSResourceRecord::PTR, MDNSResourceRecord::INTERNET, exiting ? 0 : m_tDuration, ptrRDataUdp);
             delete ptrRDataUdp;
 
-            MDNSSrvRData* srvRDataUdp = new MDNSSrvRData(1 /*priority */, 1 /* weight */,
+            MDNSSrvRData* srvRDataUdp = new MDNSSrvRData(GetCurrentPriority(), 0 /* weight */,
                                                          0 /* port */, m_guid + ".local." /* target */);
             MDNSResourceRecord srvRecordUdp(m_guid + "._alljoyn._udp.local.", MDNSResourceRecord::SRV, MDNSResourceRecord::INTERNET, exiting ? 0 : m_tDuration, srvRDataUdp);
             delete srvRDataUdp;
@@ -6771,6 +6955,7 @@ void IpNameServiceImpl::HandleProtocolQuestion(WhoHas whoHas, const qcc::IPEndpo
         //
         bool respond = false;
         bool respondQuietly = false;
+
         for (uint32_t i = 0; i < whoHas.GetNumberNames(); ++i) {
 
             qcc::String wkn = whoHas.GetName(i);

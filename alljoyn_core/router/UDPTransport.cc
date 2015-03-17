@@ -4359,15 +4359,15 @@ static bool IsUdpEpStarted(_UDPEndpoint* ep)
  */
 UDPTransport::UDPTransport(BusAttachment& bus) :
     Thread("UDPTransport"),
-    m_bus(bus), m_stopping(false), m_listener(0), m_foundCallback(m_listener), m_networkEventCallback(*this),
+    m_bus(bus), m_stopping(false), m_routerNameAdvertised(false), m_listener(0), m_foundCallback(m_listener), m_networkEventCallback(*this),
     m_isAdvertising(false), m_isDiscovering(false), m_isListening(false),
     m_isNsEnabled(false),
     m_reload(STATE_RELOADING),
     m_manage(STATE_MANAGE),
     m_nsReleaseCount(0), m_wildcardIfaceProcessed(false),
-    m_routerName(), m_maxUntrustedClients(0), m_numUntrustedClients(0),
+    m_routerName(), m_maxRemoteClientsUdp(0), m_numUntrustedClients(0),
     m_authTimeout(0), m_sessionSetupTimeout(0),
-    m_maxAuth(0), m_maxConn(0), m_currAuth(0), m_currConn(0), m_connLock(),
+    m_maxAuth(0), m_maxConn(0), m_currAuth(0), m_currConn(0), m_connLock(), m_dynamicScoreUpdater(*this),
     m_ardpLock(), m_cbLock(), m_handle(NULL),
     m_dispatcher(NULL), m_exitDispatcher(NULL),
     m_workerCommandQueue(), m_workerCommandQueueLock(), m_exitWorkerCommandQueue(), m_exitWorkerCommandQueueLock()
@@ -5015,6 +5015,7 @@ QStatus UDPTransport::Start()
                                                       new CallbackImpl<NetworkEventCallback, void, const std::map<qcc::String, qcc::IPAddress>&>
                                                           (&m_networkEventCallback, &NetworkEventCallback::Handler));
 
+    IpNameService::Instance().UpdateDynamicScore(TRANSPORT_UDP, (m_maxConn -  m_currConn), m_maxConn, (m_maxRemoteClientsUdp - m_numUntrustedClients), m_maxRemoteClientsUdp);
     QCC_DbgPrintf(("UDPTransport::Start(): Spin up message dispatcher thread"));
     m_dispatcher = new DispatcherThread(this);
     QStatus status = m_dispatcher->Start(NULL, NULL);
@@ -5040,6 +5041,7 @@ QStatus UDPTransport::Start()
      */
     QCC_DbgPrintf(("UDPTransport::Start(): Spin up main thread"));
     status = Thread::Start();
+    m_dynamicScoreUpdater.Start();
     DecrementAndFetch(&m_refCount);
     return status;
 }
@@ -5074,6 +5076,7 @@ QStatus UDPTransport::Stop(void)
         IpNameService::Instance().CancelAdvertiseName(TRANSPORT_UDP, *i, TRANSPORT_UDP);
     }
     m_advertising.clear();
+    m_routerNameAdvertised = false;
     m_isAdvertising = false;
     QCC_DbgPrintf(("UDPTransport::Stop(): Gratuitously clean out discoveries."));
     for (list<qcc::String>::iterator i = m_discovering.begin(); i != m_discovering.end(); ++i) {
@@ -5092,6 +5095,8 @@ QStatus UDPTransport::Stop(void)
     IpNameService::Instance().SetCallback(TRANSPORT_UDP, NULL);
 
     IpNameService::Instance().SetNetworkEventCallback(TRANSPORT_UDP, NULL);
+
+    IpNameService::Instance().UpdateDynamicScore(TRANSPORT_UDP, 0, 0, 0, 0);
 
     /*
      * Ask any running endpoints to shut down and stop allowing routing to
@@ -5146,6 +5151,7 @@ QStatus UDPTransport::Stop(void)
     QCC_DbgPrintf(("UDPTransport::Stop(): Giving endpoint list lock"));
     m_endpointListLock.Unlock(MUTEX_CONTEXT);
 
+    m_dynamicScoreUpdater.Stop();
     /*
      * This is the logical place to stop the dispatcher thread and the main
      * server thread, but we might have outstanding writes queued up with ARDP
@@ -5474,6 +5480,8 @@ QStatus UDPTransport::Join(void)
 
     QCC_DbgPrintf(("UDPTransport::Join(): Giving endpoint list lock"));
     m_endpointListLock.Unlock(MUTEX_CONTEXT);
+
+    m_dynamicScoreUpdater.Join();
 
     m_stopping = false;
     DecrementAndFetch(&m_refCount);
@@ -5818,6 +5826,7 @@ void UDPTransport::EmitStallWarnings(UDPEndpoint& ep)
 void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTimeout)
 {
     QCC_DbgTrace(("UDPTransport::ManageEndpoints()"));
+    bool managed = false;
 
     /*
      * We have an array of message pumps running in order to handle messages
@@ -6396,6 +6405,7 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
                     m_connLock.Unlock(MUTEX_CONTEXT);
 
                     i = m_endpointList.upper_bound(ep);
+                    managed = true;
                     continue;
                 }
                 ep->DecrementRefs();
@@ -6408,6 +6418,9 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
 
     QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): Giving endpoint list lock"));
     m_endpointListLock.Unlock(MUTEX_CONTEXT);
+    if (managed) {
+        m_dynamicScoreUpdater.Alert();
+    }
 }
 
 #if ARDP_TESTHOOKS
@@ -7000,6 +7013,7 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
      */
     m_manage = STATE_MANAGE;
     Alert();
+    m_dynamicScoreUpdater.Alert();
     DecrementAndFetch(&m_refCount);
     return true;
 }
@@ -8690,6 +8704,10 @@ void UDPTransport::RunListenMachine(ListenRequest& listenRequest)
     case HANDLE_NETWORK_EVENT:
         HandleNetworkEventInstance(listenRequest);
         break;
+
+    case UPDATE_DYNAMIC_SCORE_INSTANCE:
+        UpdateDynamicScoreInstance(listenRequest);
+        break;
     }
     DecrementAndFetch(&m_refCount);
 }
@@ -8716,13 +8734,21 @@ void UDPTransport::StartListenInstance(ListenRequest& listenRequest)
      * the corresponding <m_isAdvertising> must not yet be set.
      */
     ConfigDB* config = ConfigDB::GetConfigDB();
-    m_maxUntrustedClients = config->GetLimit("max_untrusted_clients", ALLJOYN_MAX_UNTRUSTED_CLIENTS_DEFAULT);
+    uint32_t maxRemoteClients = config->GetLimit("max_remote_clients_udp", ALLJOYN_MAX_REMOTE_CLIENTS_UDP_DEFAULT);
+    uint32_t maxUntrustedClients = config->GetLimit("max_untrusted_clients");
+    if (maxUntrustedClients) {
+        QCC_LogError(ER_WARNING, ("UDPTransport::StartListenInstance(): The config option \"max_untrusted_clients\" has been deprecated."));
+        m_maxRemoteClientsUdp = maxUntrustedClients;
+    } else {
+        m_maxRemoteClientsUdp = maxRemoteClients;
+    }
+
 
 #if ADVERTISE_ROUTER_OVER_UDP
     m_routerName = config->GetProperty("router_advertisement_prefix", ALLJOYN_DEFAULT_ROUTER_ADVERTISEMENT_PREFIX);
 #endif
 
-    if (m_isAdvertising || m_isDiscovering || (!m_routerName.empty() && (m_numUntrustedClients < m_maxUntrustedClients))) {
+    if (m_isAdvertising || m_isDiscovering || (!m_routerName.empty() && (m_numUntrustedClients < m_maxRemoteClientsUdp))) {
         m_routerName.append(m_bus.GetInternal().GetGlobalGUID().ToShortString());
         DoStartListen(listenRequest.m_requestParam);
     }
@@ -9104,6 +9130,29 @@ void UDPTransport::DisableDiscoveryInstance(ListenRequest& listenRequest)
         m_isDiscovering = false;
     }
     DecrementAndFetch(&m_refCount);
+}
+
+bool UDPTransport::EnableRouterAdvertisement() {
+    if (m_routerNameAdvertised == false && !m_routerName.empty() && m_numUntrustedClients < m_maxRemoteClientsUdp &&
+        (m_maxAuth - m_currAuth) > 0 &&  (m_maxConn - m_currConn) > 0) {
+        return true;
+    }
+    return false;
+}
+
+bool UDPTransport::DisableRouterAdvertisement() {
+    if (m_routerNameAdvertised == true && !m_routerName.empty() &&
+        ((m_numUntrustedClients >= m_maxRemoteClientsUdp) ||
+         (m_maxAuth - m_currAuth <= 0) || (m_maxConn - m_currConn <= 0))) {
+        return true;
+    }
+    return false;
+}
+
+void UDPTransport::UpdateDynamicScoreInstance(ListenRequest& listenRequest)
+{
+    IpNameService::Instance().UpdateDynamicScore(TRANSPORT_UDP, (m_maxConn -  m_currConn), m_maxConn,
+                                                 (m_maxRemoteClientsUdp - m_numUntrustedClients), m_maxRemoteClientsUdp);
 }
 
 /*
@@ -10022,6 +10071,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
     }
 
     m_endpointListLock.Unlock(MUTEX_CONTEXT);
+    m_dynamicScoreUpdater.Alert();
     DecrementAndFetch(&m_refCount);
     return status;
 }
@@ -10312,6 +10362,8 @@ QStatus UDPTransport::DoStartListen(qcc::String& normSpec)
 void UDPTransport::UntrustedClientExit()
 {
     QCC_DbgTrace((" UDPTransport::UntrustedClientExit()"));
+    // This should be a NOP until Thin Library supports UDP.
+    m_dynamicScoreUpdater.Alert();
 }
 
 /**
@@ -10321,6 +10373,8 @@ void UDPTransport::UntrustedClientExit()
 QStatus UDPTransport::UntrustedClientStart()
 {
     QCC_DbgTrace((" UDPTransport::UntrustedClientStart()"));
+    // This should be a NOP until the Thin Library supports UDP.
+    m_dynamicScoreUpdater.Alert();
     return ER_UDP_NOT_IMPLEMENTED;
 }
 
@@ -10776,6 +10830,62 @@ void UDPTransport::QueueDisableAdvertisement(const qcc::String& advertiseName, T
     DecrementAndFetch(&m_refCount);
 }
 
+void UDPTransport::UpdateRouterAdvertisementAndDynamicScore()
+{
+    QCC_DbgPrintf(("UDPTransport::UpdateRouterAdvertisementAndDynamicScore()"));
+
+    /*
+     * We only want to allow this call to proceed if we have a running server
+     * accept thread that isn't in the process of shutting down.  We use the
+     * thread response from IsRunning to give us an idea of what our server
+     * accept (Run) thread is doing.  See the comment in Start() for details
+     * about what IsRunning actually means, which might be subtly different from
+     * your intuitition.
+     *
+     * If we see IsRunning(), the thread might actually have gotten a Stop(),
+     * but has not yet exited its Run routine and become STOPPING.  To plug this
+     * hole, we need to check IsRunning() and also m_stopping, which is set in
+     * our Stop() method.
+     */
+    if (IsRunning() == false || m_stopping == true) {
+        QCC_LogError(ER_BUS_TRANSPORT_NOT_STARTED, ("UDPTransport::UpdateRouterAdvertisementAndDynamicScore(): Not running or stopping; exiting"));
+        return;
+    }
+
+    QueueUpdateRouterAdvertisementAndDynamicScore();
+}
+
+void UDPTransport::QueueUpdateRouterAdvertisementAndDynamicScore()
+{
+    QCC_DbgPrintf(("UDPTransport::QueueUpdateRouterAdvertisementAndDynamicScore()"));
+
+    ListenRequest updateScoreListenRequest;
+    updateScoreListenRequest.m_requestOp = UPDATE_DYNAMIC_SCORE_INSTANCE;
+
+    ListenRequest enableAdvListenRequest;
+    enableAdvListenRequest.m_requestOp = ENABLE_ADVERTISEMENT_INSTANCE;
+    enableAdvListenRequest.m_requestParam = m_routerName;
+    enableAdvListenRequest.m_requestParamOpt = true;
+    enableAdvListenRequest.m_requestTransportMask = TRANSPORT_UDP;
+
+    ListenRequest disableAdvListenRequest;
+    disableAdvListenRequest.m_requestOp = DISABLE_ADVERTISEMENT_INSTANCE;
+    disableAdvListenRequest.m_requestParam = m_routerName;
+    disableAdvListenRequest.m_requestTransportMask = TRANSPORT_UDP;
+
+    m_listenRequestsLock.Lock(MUTEX_CONTEXT);
+    /* Process the request(s) */
+    RunListenMachine(updateScoreListenRequest);
+    if (EnableRouterAdvertisement()) {
+        RunListenMachine(enableAdvListenRequest);
+        m_routerNameAdvertised = true;
+    } else if (DisableRouterAdvertisement()) {
+        RunListenMachine(disableAdvListenRequest);
+        m_routerNameAdvertised = false;
+    }
+    m_listenRequestsLock.Unlock(MUTEX_CONTEXT);
+}
+
 void UDPTransport::FoundCallback::Found(const qcc::String& busAddr, const qcc::String& guid,
                                         std::vector<qcc::String>& nameList, uint32_t timer)
 {
@@ -11180,10 +11290,12 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
          * that we do not send gratuitous is-at (advertisements) of the name, but we
          * do respond to who-has requests on the name.
          */
-        if (!m_routerName.empty() && (m_numUntrustedClients < m_maxUntrustedClients)) {
+        if (EnableRouterAdvertisement()) {
             QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Advertise m_routerName=\"%s\"", m_routerName.c_str()));
             bool isFirst;
             NewAdvertiseOp(ENABLE_ADVERTISEMENT, m_routerName, isFirst);
+            IpNameService::Instance().UpdateDynamicScore(TRANSPORT_UDP, (m_maxConn - m_currConn), m_maxConn, (m_maxRemoteClientsUdp - m_numUntrustedClients), m_maxRemoteClientsUdp);
+            m_routerNameAdvertised = true;
             QStatus status = IpNameService::Instance().AdvertiseName(TRANSPORT_UDP, m_routerName, true, TRANSPORT_UDP);
             if (status != ER_OK) {
                 QCC_LogError(status, ("UDPTransport::HandleNetworkEventInstance(): Failed to AdvertiseNameQuietly \"%s\"", m_routerName.c_str()));
@@ -11306,4 +11418,12 @@ void UDPTransport::CheckEndpointLocalMachine(UDPEndpoint endpoint)
 #endif
 }
 
+ThreadReturn STDCALL UDPTransport::DynamicScoreUpdater::Run(void* arg) {
+    while (!IsStopping()) {
+        Event::Wait(Event::neverSet);
+        GetStopEvent().ResetEvent();
+        m_transport.UpdateRouterAdvertisementAndDynamicScore();
+    }
+    return 0;
+}
 } // namespace ajn

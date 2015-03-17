@@ -356,6 +356,9 @@ class IpNameService {
                    bool enableReliableIPv4, bool enableReliableIPv6,
                    bool enableUnreliableIPv4, bool enableUnreliableIPv6);
 
+    QStatus UpdateDynamicScore(TransportMask transportMask, uint32_t availableTransportConnections, uint32_t maximumTransportConnections,
+                               uint32_t availableTransportRemoteClients, uint32_t maximumTransportRemoteClients);
+
     /**
      * @brief Ask the name service whether or not it thinks there is or is not a
      *     listener on the specified ports for the given transport.
