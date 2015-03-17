@@ -22,6 +22,7 @@
  AJNAboutIconService is an AJNBusObject that implements the org.alljoyn.Icon standard interface.
  Applications that provide AllJoyn IoE services to receive info about the Icon of the service.
  */
+__deprecated
 @interface AJNAboutIconService : AJNBusObject
 
 /**
@@ -34,12 +35,12 @@
  @param csize The size of the content in bytes.
  @return AJNAboutIconService if successful.
  */
-- (id)initWithBus:(AJNBusAttachment *)bus mimeType:(NSString *)mimetype url:(NSString *)url content:(uint8_t *)content csize:(size_t)csize;
+- (id)initWithBus:(AJNBusAttachment *)bus mimeType:(NSString *)mimetype url:(NSString *)url content:(uint8_t *)content csize:(size_t)csize __deprecated;
 
 /**
  Register the AJNAboutIconService  on the AllJoyn bus.
  @return ER_OK if successful.
  */
-- (QStatus)registerAboutIconService;
+- (QStatus)registerAboutIconService __deprecated;
 
 @end
