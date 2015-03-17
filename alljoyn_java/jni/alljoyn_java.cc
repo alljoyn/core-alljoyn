@@ -11047,7 +11047,7 @@ QStatus JProxyBusObject::RegisterPropertiesChangedListener(jstring jifaceName,
         }
     }
 
-    status = ProxyBusObject::RegisterPropertiesChangedListener(ifaceName.c_str(), props, numProps, *listener, NULL);
+    status = ProxyBusObject::RegisterPropertiesChangedListener(ifaceName.c_str(), props, numProps, *listener, this);
     if (status == ER_OK) {
         propertiesChangedListenersLock.Lock();
         jobject jglobalref = env->NewGlobalRef(jpropertiesChangedListener);
@@ -11115,6 +11115,7 @@ JPropertiesChangedListener::~JPropertiesChangedListener()
 
 void JPropertiesChangedListener::PropertiesChanged(ProxyBusObject& obj, const char* ifaceName, const MsgArg& changed, const MsgArg& invalidated, void* context)
 {
+    QCC_UNUSED(obj);
     QCC_UNUSED(context);
 
     QCC_DbgPrintf(("JPropertiesChangedListener::PropertiesChanged()"));
@@ -11169,7 +11170,7 @@ void JPropertiesChangedListener::PropertiesChanged(ProxyBusObject& obj, const ch
      * This call out to the property changed handler implies that the Java method must be
      * MT-safe.  This is implied by the definition of the listener.
      */
-    jobject pbo = env->NewLocalRef(((JProxyBusObject&)obj).jpbo);
+    jobject pbo = env->NewLocalRef(((JProxyBusObject*)context)->jpbo);
 
     if (pbo) {
         QCC_DbgPrintf(("JPropertiesChangedListener::PropertiesChanged(): Call out to listener object and method"));

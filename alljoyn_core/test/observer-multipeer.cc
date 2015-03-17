@@ -238,7 +238,7 @@ class ObserverListener : public Observer::Listener {
   public:
     BusAttachment& bus;
 
-    typedef vector<ManagedProxyBusObject> ProxyVector;
+    typedef vector<ProxyBusObject> ProxyVector;
     ProxyVector proxies;
 
     int counter;
@@ -256,7 +256,7 @@ class ObserverListener : public Observer::Listener {
         counter = newCounter;
     }
 
-    ProxyVector::iterator FindProxy(ManagedProxyBusObject proxy) {
+    ProxyVector::iterator FindProxy(ProxyBusObject proxy) {
         ProxyVector::iterator it;
         for (it = proxies.begin(); it != proxies.end(); ++it) {
             if (it->iden(proxy)) {
@@ -266,7 +266,7 @@ class ObserverListener : public Observer::Listener {
         return it;
     }
 
-    virtual void ObjectDiscovered(ManagedProxyBusObject& proxy) {
+    virtual void ObjectDiscovered(ProxyBusObject& proxy) {
         ProxyVector::iterator it = FindProxy(proxy);
         if (strict) {
             assert(it == proxies.end());
@@ -277,21 +277,21 @@ class ObserverListener : public Observer::Listener {
         QStatus status;
 
         bus.EnableConcurrentCallbacks();
-        status = proxy->MethodCall(intfName.c_str(), METHOD, NULL, 0, reply);
+        status = proxy.MethodCall(intfName.c_str(), METHOD, NULL, 0, reply);
         assert(ER_OK == status);
         if (ER_OK == status) {
             String ubn(reply->GetArg(0)->v_string.str), path(
                 reply->GetArg(1)->v_string.str);
             if (strict) {
-                assert(proxy->GetUniqueName() == ubn);
+                assert(proxy.GetUniqueName() == ubn);
             }
-            assert(proxy->GetPath() == path);
+            assert(proxy.GetPath() == path);
         }
 
         MsgArg updateArgs[2];
         updateArgs[0].Set("s", "insert");
         updateArgs[1].Set("u", (uint32_t)getpid());
-        status = proxy->MethodCall(intfName.c_str(), METHOD_OBSUPDATER, updateArgs, 2); // Tell the object that it's being observed by me
+        status = proxy.MethodCall(intfName.c_str(), METHOD_OBSUPDATER, updateArgs, 2); // Tell the object that it's being observed by me
         assert(ER_OK == status);
         QCC_UNUSED(status);
 
@@ -301,7 +301,7 @@ class ObserverListener : public Observer::Listener {
 
     }
 
-    virtual void ObjectLost(ManagedProxyBusObject& proxy) {
+    virtual void ObjectLost(ProxyBusObject& proxy) {
         ProxyVector::iterator it = FindProxy(proxy);
         assert(it != proxies.end());
         proxies.erase(it);

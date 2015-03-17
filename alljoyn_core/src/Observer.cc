@@ -42,10 +42,6 @@ ObjectId::ObjectId(const qcc::String& busname, const qcc::String& path) :
     objectPath(IsLegalObjectPath(path.c_str()) ? path : "") {
 }
 
-ObjectId::ObjectId(const ManagedProxyBusObject& mpbo) :
-    uniqueBusName(mpbo->GetUniqueName()), objectPath(mpbo->GetPath()) {
-}
-
 ObjectId::ObjectId(const ProxyBusObject* ppbo) :
     uniqueBusName((ppbo != NULL ? ppbo->GetUniqueName() : "")),
     objectPath((ppbo != NULL ? ppbo->GetPath() : "")) {
@@ -86,7 +82,7 @@ class Observer::Internal : public CoreObserver {
     Observer* observer;
 
     /* proxy object bookkeeping */
-    typedef std::map<ObjectId, ManagedProxyBusObject> ObjectMap;
+    typedef std::map<ObjectId, ProxyBusObject> ObjectMap;
     ObjectMap proxies;
     qcc::Mutex proxiesLock;
 
@@ -129,9 +125,9 @@ class Observer::Internal : public CoreObserver {
     void UnregisterListener(Observer::Listener& listener);
     void UnregisterAllListeners();
 
-    ManagedProxyBusObject Get(const ObjectId& oid);
-    ManagedProxyBusObject GetFirst();
-    ManagedProxyBusObject GetNext(const ObjectId& oid);
+    ProxyBusObject Get(const ObjectId& oid);
+    ProxyBusObject GetFirst();
+    ProxyBusObject GetNext(const ObjectId& oid);
 
     /* interface towards ObserverManager */
     void ObjectDiscovered(const ObjectId& oid, const std::set<qcc::String>& interfaces, SessionId sessionid);
@@ -247,7 +243,7 @@ void Observer::Internal::EnablePendingListeners()
         ObjectMap::iterator it = proxies.begin();
         while (it != proxies.end()) {
             ObjectId id = it->first;
-            ManagedProxyBusObject proxy = it->second;
+            ProxyBusObject proxy = it->second;
             proxiesLock.Unlock(MUTEX_CONTEXT);
             (*pol)->listener->ObjectDiscovered(proxy);
             proxiesLock.Lock(MUTEX_CONTEXT);
@@ -287,9 +283,9 @@ void Observer::Internal::UnregisterAllListeners()
     listenersLock.Unlock(MUTEX_CONTEXT);
 }
 
-ManagedProxyBusObject Observer::Internal::Get(const ObjectId& oid)
+ProxyBusObject Observer::Internal::Get(const ObjectId& oid)
 {
-    ManagedProxyBusObject obj;
+    ProxyBusObject obj;
     if (!oid.IsValid()) {
         return obj;
     }
@@ -302,9 +298,9 @@ ManagedProxyBusObject Observer::Internal::Get(const ObjectId& oid)
     return obj;
 }
 
-ManagedProxyBusObject Observer::Internal::GetFirst()
+ProxyBusObject Observer::Internal::GetFirst()
 {
-    ManagedProxyBusObject obj;
+    ProxyBusObject obj;
     proxiesLock.Lock(MUTEX_CONTEXT);
     ObjectMap::iterator it = proxies.begin();
     if (it != proxies.end()) {
@@ -314,9 +310,9 @@ ManagedProxyBusObject Observer::Internal::GetFirst()
     return obj;
 }
 
-ManagedProxyBusObject Observer::Internal::GetNext(const ObjectId& oid)
+ProxyBusObject Observer::Internal::GetNext(const ObjectId& oid)
 {
-    ManagedProxyBusObject obj;
+    ProxyBusObject obj;
     if (!oid.IsValid()) {
         return obj;
     }
@@ -339,10 +335,10 @@ void Observer::Internal::ObjectDiscovered(const ObjectId& oid,
     const char* path = oid.objectPath.c_str();
     QCC_DbgTrace(("ObjectDiscovered(%s:%s)", busname, path));
 
-    ManagedProxyBusObject proxy(bus, busname, path, sessionid);
+    ProxyBusObject proxy(bus, busname, path, sessionid);
     InterfaceSet::iterator it;
     for (it = interfaces.begin(); it != interfaces.end(); ++it) {
-        proxy->AddInterface(it->c_str());
+        proxy.AddInterface(it->c_str());
     }
 
     /* insert in proxy map */
@@ -372,7 +368,7 @@ void Observer::Internal::ObjectLost(const ObjectId& oid)
     QCC_DbgTrace(("Observer::Internal::ObjectLost(this = %p)", this));
     /* remove from proxy map */
     bool found = false;
-    ManagedProxyBusObject proxy;
+    ProxyBusObject proxy;
 
     proxiesLock.Lock(MUTEX_CONTEXT);
     ObjectMap::iterator it = proxies.find(oid);
@@ -464,26 +460,26 @@ void Observer::UnregisterAllListeners()
     internal->UnregisterAllListeners();
 }
 
-ManagedProxyBusObject Observer::Get(const ObjectId& oid)
+ProxyBusObject Observer::Get(const ObjectId& oid)
 {
     if (!internal) {
-        return ManagedProxyBusObject();
+        return ProxyBusObject();
     }
     return internal->Get(oid);
 }
 
-ManagedProxyBusObject Observer::GetFirst()
+ProxyBusObject Observer::GetFirst()
 {
     if (!internal) {
-        return ManagedProxyBusObject();
+        return ProxyBusObject();
     }
     return internal->GetFirst();
 }
 
-ManagedProxyBusObject Observer::GetNext(const ObjectId& oid)
+ProxyBusObject Observer::GetNext(const ObjectId& oid)
 {
     if (!internal) {
-        return ManagedProxyBusObject();
+        return ProxyBusObject();
     }
     return internal->GetNext(oid);
 }
