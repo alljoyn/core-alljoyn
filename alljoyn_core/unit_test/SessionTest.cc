@@ -1017,8 +1017,8 @@ static void MultipointMultipeerTest(BusAttachment& busHost, BusAttachment& busJo
     EXPECT_EQ(ER_OK, status);
 
     EXPECT_TRUE(sessionJoinerAcceptedFlag);
-    //Wait up to 3 seconds for all callbacks and listeners to be called.
-    for (int i = 0; i < 300; ++i) {
+    //Wait up to 6 seconds for all callbacks and listeners to be called.
+    for (int i = 0; i < 600; ++i) {
         if (MPJoinAllNotificationsDone(&sessionListenerHost, joiners, &sessionListenerJoiner)) {
             break;
         }
