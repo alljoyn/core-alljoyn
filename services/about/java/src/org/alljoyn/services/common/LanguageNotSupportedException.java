@@ -21,13 +21,17 @@ import org.alljoyn.bus.ErrorReplyBusException;
 /**
  * A BusException that is thrown when a remote client uses an unsupported
  * language to get/set data.
+ * @deprecated
  */
+@Deprecated
 public class LanguageNotSupportedException extends ErrorReplyBusException {
     private static final long serialVersionUID = -8150015063069797494L;
 
     /**
      * Constructor
+     * @deprecated
      */
+    @Deprecated
     public LanguageNotSupportedException() {
         super("org.alljoyn.Error.LanguageNotSupported", "The language specified is not supported");
     }

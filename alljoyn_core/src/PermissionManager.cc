@@ -77,7 +77,7 @@ static bool MatchesPrefix(const char* str, String prefix)
  */
 static bool IsActionDenied(uint8_t allowedActions)
 {
-    return (allowedActions & PermissionPolicy::Rule::Member::ACTION_DENIED) == PermissionPolicy::Rule::Member::ACTION_DENIED;
+    return (allowedActions& PermissionPolicy::Rule::Member::ACTION_DENIED) == PermissionPolicy::Rule::Member::ACTION_DENIED;
 }
 
 /**
@@ -91,7 +91,7 @@ static bool IsActionAllowed(uint8_t allowedActions, uint8_t requestedAction)
     if ((allowedActions & requestedAction) == requestedAction) {
         return true;
     }
-    if ((requestedAction == PermissionPolicy::Rule::Member::ACTION_OBSERVE) && ((allowedActions & PermissionPolicy::Rule::Member::ACTION_MODIFY) == PermissionPolicy::Rule::Member::ACTION_MODIFY)) {
+    if ((requestedAction == PermissionPolicy::Rule::Member::ACTION_OBSERVE) && ((allowedActions& PermissionPolicy::Rule::Member::ACTION_MODIFY) == PermissionPolicy::Rule::Member::ACTION_MODIFY)) {
         return true; /* lesser right is allowed */
     }
     return false;

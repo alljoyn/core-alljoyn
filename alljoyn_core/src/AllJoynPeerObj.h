@@ -439,7 +439,7 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
      * @param remoteAuthMask the buffer to store the remote auth mask
      */
 
-    QStatus AskForAuthSuites(ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc, uint32_t**remoteAuthSuites, size_t*remoteAuthCount);
+    QStatus AskForAuthSuites(uint32_t peerAuthVersion, ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc, uint32_t**remoteAuthSuites, size_t*remoteAuthCount);
 
     /**
      * Authenticate Peer using SASL protocol

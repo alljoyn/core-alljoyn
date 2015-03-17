@@ -16,8 +16,7 @@
 #ifndef OPTPARSER_H_
 #define OPTPARSER_H_
 
-#include <alljoyn/about/AboutServiceApi.h>
-#include "PropertyStoreImpl.h"
+#include <qcc/String.h>
 
 /*
  *

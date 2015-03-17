@@ -79,6 +79,13 @@
  */
 #define RequiredArrayLength(bytes, type) (((bytes) + sizeof(type) - 1) / sizeof(type))
 
+/**
+ * Return the number of bytes required to store a number of bits
+ * (rounds up to the next byte).
+ *
+ * @param bits Number of bits
+ */
+#define BitlenToBytelen(bits) (((bits) + 7) / 8)
 
 namespace qcc {
 /**
@@ -267,7 +274,7 @@ void CRC16_Compute(const uint8_t* buffer, size_t bufLen, uint16_t*runningCrc);
  *
  * @return  ER_OK if conversion was successful.
  */
-QStatus ResolveHostName(qcc::String hostname, uint8_t addr[], size_t addrSize, size_t & addrLen, uint32_t timeoutMs);
+QStatus ResolveHostName(qcc::String hostname, uint8_t addr[], size_t addrSize, size_t& addrLen, uint32_t timeoutMs);
 
 }
 #endif

@@ -21,6 +21,7 @@
 /**
  AJNAnnouncementReceiver enable registering an announcement listener to receive org.alljoyn.about Announce signals
  */
+__deprecated
 @interface AJNAnnouncementReceiver : NSObject
 
 /**
@@ -30,7 +31,7 @@
  @param bus A reference to the AJNBusAttachment.
  @return ER_OK if successful.
  */
-- (id)initWithAnnouncementListener:(id <AJNAnnouncementListener> )announcementListener andBus:(AJNBusAttachment *)bus;
+- (id)initWithAnnouncementListener:(id <AJNAnnouncementListener> )announcementListener andBus:(AJNBusAttachment *)bus __deprecated;
 
 /**
  Register the announcement listener to receive org.alljoyn.about Announce signals.
@@ -86,7 +87,7 @@
  @param numberInterfaces the number of interfaces in the interfaces list
  @return ER_OK if successful.
  */
-- (QStatus)registerAnnouncementReceiverForInterfaces:(const char **)interfaces withNumberOfInterfaces:(size_t)numOfInterfaces;
+- (QStatus)registerAnnouncementReceiverForInterfaces:(const char **)interfaces withNumberOfInterfaces:(size_t)numOfInterfaces __deprecated;
 
 /**
  @deprecated This function has been deprecated please change your code
@@ -104,7 +105,7 @@
 
  @return ER_OK if successful.
  */
-- (QStatus)registerAnnouncementReceiver;
+- (QStatus)registerAnnouncementReceiver __deprecated;
 
 /**
  Unregister the announcement listener from receiving org.alljoyn.about Announce signal.
@@ -113,7 +114,7 @@
  @param numberInterfaces the number of interfaces in the interfaces list
  @return ER_OK if successful.
  */
-- (QStatus)unRegisterAnnouncementReceiverForInterfaces:(const char  **)interfaces withNumberOfInterfaces:(size_t)numOfInterfaces;
+- (QStatus)unRegisterAnnouncementReceiverForInterfaces:(const char  **)interfaces withNumberOfInterfaces:(size_t)numOfInterfaces __deprecated;
 
 /**
  @deprecated This function has been deprecated in please change your code
@@ -125,6 +126,6 @@
 
  @return ER_OK if successful.
  */
-- (QStatus)unRegisterAnnouncementReceiver;
+- (QStatus)unRegisterAnnouncementReceiver __deprecated;
 
 @end

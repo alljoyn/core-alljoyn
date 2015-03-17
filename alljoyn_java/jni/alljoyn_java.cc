@@ -4403,7 +4403,7 @@ QStatus JBusAttachment::Connect(const char* connectArgs, jobject jkeyStoreListen
 
     status = BusAttachment::Connect(connectArgs);
 
-    exit :
+exit:
     if (ER_OK != status) {
         Disconnect();
 
@@ -6353,10 +6353,10 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_unbindSessionPort(J
         QCC_DbgPrintf(("BusAttachment_unbindSessionPort(): Releasing Bus Attachment common lock"));
         busPtr->baCommonLock.Unlock();
 
-        QCC_DbgPrintf(("BusAttachment_bindSessionPort(): Releasing strong global reference to SessionPortListener %p", jglobalref));
+        QCC_DbgPrintf(("BusAttachment_unbindSessionPort(): Releasing strong global reference to SessionPortListener %p", jglobalref));
         env->DeleteGlobalRef(jglobalref);
     } else {
-        QCC_LogError(status, ("BusAttachment_bindSessionPort(): Error"));
+        QCC_LogError(status, ("BusAttachment_unbindSessionPort(): Error"));
     }
 
     return JStatus(status);
@@ -6470,7 +6470,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_joinSession(JNIEnv*
 
     JBusAttachment* busPtr = GetHandle<JBusAttachment*>(thiz);
     if (env->ExceptionCheck()) {
-        QCC_LogError(ER_FAIL, ("BusAttachment_bindSessionPort(): Exception"));
+        QCC_LogError(ER_FAIL, ("BusAttachment_joinSessionPort(): Exception"));
         return NULL;
     }
 
@@ -8728,7 +8728,7 @@ QStatus JBusObject::AddInterfaces(jobjectArray jbusInterfaces)
         }
 
         size_t numMembs = intf->GetMembers(NULL);
-        const InterfaceDescription::Member** membs = new const InterfaceDescription::Member *[numMembs];
+        const InterfaceDescription::Member** membs = new const InterfaceDescription::Member*[numMembs];
         if (!membs) {
             return ER_OUT_OF_MEMORY;
         }
@@ -8782,7 +8782,7 @@ QStatus JBusObject::AddInterfaces(jobjectArray jbusInterfaces)
         }
 
         size_t numProps = intf->GetProperties(NULL);
-        const InterfaceDescription::Property** props = new const InterfaceDescription::Property *[numProps];
+        const InterfaceDescription::Property** props = new const InterfaceDescription::Property*[numProps];
         if (!props) {
             return ER_OUT_OF_MEMORY;
         }
@@ -10972,7 +10972,7 @@ QStatus JProxyBusObject::RegisterPropertiesChangedListener(jstring jifaceName,
         return ER_FAIL;
     }
 
-    QStatus status;
+    QStatus status = ER_FAIL;
 
     if (!ImplementsInterface(ifaceName.c_str())) {
         status = AddInterfaceStatus(pbo, busPtr, jifaceName);
@@ -11121,7 +11121,7 @@ void JPropertiesChangedListener::PropertiesChanged(ProxyBusObject& obj, const ch
      * This call out to the property changed handler implies that the Java method must be
      * MT-safe.  This is implied by the definition of the listener.
      */
-    jobject pbo = env->NewLocalRef(((JProxyBusObject &)obj).jpbo);
+    jobject pbo = env->NewLocalRef(((JProxyBusObject&)obj).jpbo);
 
     if (pbo) {
         QCC_DbgPrintf(("JPropertiesChangedListener::PropertiesChanged(): Call out to listener object and method"));
@@ -11784,6 +11784,23 @@ JNIEXPORT jboolean JNICALL Java_org_alljoyn_bus_ProxyBusObject_isProxyBusObjectS
         return false;
     }
     return proxyBusObj->IsSecure();
+}
+
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_ProxyBusObject_enablePropertyCaching(JNIEnv* env, jobject thiz)
+{
+    QCC_DbgPrintf(("ProxyBusObject_enablePropertyCaching()"));
+    JProxyBusObject* proxyBusObj = GetHandle<JProxyBusObject*>(thiz);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("ProxyBusObject_enablePropertyCaching(): Exception"));
+        return;
+    }
+
+    if (proxyBusObj == NULL) {
+        QCC_LogError(ER_FAIL, ("ProxyBusObject_enablePropertyCaching(): NULL bus pointer"));
+        env->ThrowNew(CLS_BusException, QCC_StatusText(ER_FAIL));
+        return;
+    }
+    proxyBusObj->EnablePropertyCaching();
 }
 
 JNIEXPORT void JNICALL Java_org_alljoyn_bus_SignalEmitter_signal(JNIEnv* env, jobject thiz, jobject jbusObject, jstring jdestination,

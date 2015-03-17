@@ -56,9 +56,9 @@ namespace qcc {
 
 uint64_t emptyStringDummy[RequiredArrayLength(sizeof(String), uint64_t)];
 
-String& emptyString = (String &)emptyStringDummy;
+String& emptyString = (String&)emptyStringDummy;
 
-const String& String::Empty = (String &)emptyString;
+const String& String::Empty = (String&)emptyString;
 
 String::ManagedCtx String::nullContext = { 0 };
 
@@ -582,6 +582,9 @@ void String::NewContext(const char* str, size_t strLen, size_t sizeHint)
     size_t mallocSz = capacity + 1 + sizeof(ManagedCtx) - MinCapacity;
     void* newCtxMem = malloc(mallocSz);
     assert(newCtxMem);
+    if (NULL == newCtxMem) {
+        abort();
+    }
     context = new (newCtxMem)ManagedCtx();
     context->refCount = 1;
 

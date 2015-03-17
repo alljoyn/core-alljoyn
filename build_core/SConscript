@@ -46,7 +46,7 @@ elif platform.system() == 'Darwin':
 
     # Darwin maps both 32-bit and 64-bit x86 CPUs to "x86"
     default_target_cpu = 'x86'
-    allowed_target_cpus = ('x86', 'arm', 'armv7', 'armv7s', 'openwrt')
+    allowed_target_cpus = ('x86', 'arm', 'armv7', 'armv7s', 'arm64', 'openwrt')
 
     default_msvc_version = None
 
@@ -234,7 +234,11 @@ if env['WS'] != 'off' and not env.GetOption('clean'):
     def wsbuild(target, source, env):
         print "Evaluating whitespace compliance..."
         curdir = os.path.abspath(os.path.dirname(wsbuild.func_code.co_filename))
-        config = os.path.join(curdir, 'tools', 'conf', 'ajuncrustify.cfg')
+        version = whitespace.get_uncrustify_version()
+        if (version == "0.57"):
+            config = os.path.join(curdir, 'tools', 'conf', 'ajuncrustify.0.57.cfg')
+        else: #use latest known version
+            config = os.path.join(curdir, 'tools', 'conf', 'ajuncrustify.0.61.cfg')
         print "Config:", config
         print "Note: enter 'scons -h' to see whitespace (WS) options"
         return whitespace.main([env['WS'], config])

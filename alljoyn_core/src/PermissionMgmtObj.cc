@@ -24,6 +24,7 @@
 #include <qcc/KeyInfoECC.h>
 #include <qcc/Crypto.h>
 #include <qcc/CertificateECC.h>
+#include <qcc/CertificateHelper.h>
 #include <qcc/StringUtil.h>
 #include "PermissionMgmtObj.h"
 #include "PeerState.h"
@@ -532,7 +533,7 @@ void PermissionMgmtObj::Claim(const InterfaceDescription::Member* member, Messag
         return;
     }
     TrustAnchor* trustAnchor = new TrustAnchor();
-    QStatus status = KeyInfoHelper::MsgArgToKeyInfoNISTP256((MsgArg &) * msg->GetArg(0), trustAnchor->keyInfo);
+    QStatus status = KeyInfoHelper::MsgArgToKeyInfoNISTP256((MsgArg&) *msg->GetArg(0), trustAnchor->keyInfo);
     if (ER_OK != status) {
         delete trustAnchor;
         MethodReply(msg, status);
@@ -563,7 +564,7 @@ void PermissionMgmtObj::Claim(const InterfaceDescription::Member* member, Messag
     }
 
     claimableState = PermissionConfigurator::STATE_CLAIMED;
-    status = StoreIdentityCertificate((MsgArg &) * msg->GetArg(1));
+    status = StoreIdentityCertificate((MsgArg&) *msg->GetArg(1));
     if (ER_OK != status) {
         MethodReply(msg, status);
     } else {
@@ -814,17 +815,17 @@ static QStatus ValidateCertificateChain(bool checkGuildID, std::vector<Certifica
     return ER_OK;
 }
 
-static QStatus LoadCertificate(Certificate::EncodingType encoding, const uint8_t* encoded, size_t encodedLen, CertificateX509& cert)
+static QStatus LoadCertificate(CertificateX509::EncodingType encoding, const uint8_t* encoded, size_t encodedLen, CertificateX509& cert)
 {
-    if (encoding == Certificate::ENCODING_X509_DER) {
+    if (encoding == CertificateX509::ENCODING_X509_DER) {
         return cert.DecodeCertificateDER(String((const char*) encoded, encodedLen));
-    } else if (encoding == Certificate::ENCODING_X509_DER_PEM) {
+    } else if (encoding == CertificateX509::ENCODING_X509_DER_PEM) {
         return cert.DecodeCertificatePEM(String((const char*) encoded, encodedLen));
     }
     return ER_NOT_IMPLEMENTED;
 }
 
-static QStatus LoadCertificate(Certificate::EncodingType encoding, const uint8_t* encoded, size_t encodedLen, CertificateX509& cert, PermissionMgmtObj::TrustAnchorList* taList)
+static QStatus LoadCertificate(CertificateX509::EncodingType encoding, const uint8_t* encoded, size_t encodedLen, CertificateX509& cert, PermissionMgmtObj::TrustAnchorList* taList)
 {
     QStatus status = LoadCertificate(encoding, encoded, encodedLen, cert);
     if (ER_OK != status) {
@@ -844,6 +845,11 @@ QStatus PermissionMgmtObj::SameSubjectPublicKey(CertificateX509& cert, bool& out
     return ER_OK;
 }
 
+QStatus PermissionMgmtObj::GetDSAPrivateKey(qcc::ECCPrivateKey& privateKey)
+{
+    return ca->GetDSAPrivateKey(privateKey);
+}
+
 QStatus PermissionMgmtObj::StoreIdentityCertificate(MsgArg& certArg)
 {
     uint8_t encoding;
@@ -853,12 +859,12 @@ QStatus PermissionMgmtObj::StoreIdentityCertificate(MsgArg& certArg)
     if (ER_OK != status) {
         return status;
     }
-    if ((encoding != Certificate::ENCODING_X509_DER) && (encoding != Certificate::ENCODING_X509_DER_PEM)) {
+    if ((encoding != CertificateX509::ENCODING_X509_DER) && (encoding != CertificateX509::ENCODING_X509_DER_PEM)) {
         QCC_DbgPrintf(("PermissionMgmtObj::StoreIdentityCertificate does not support encoding %d", encoding));
         return ER_NOT_IMPLEMENTED;
     }
     IdentityCertificate cert;
-    status = LoadCertificate((Certificate::EncodingType) encoding, encoded, encodedLen, cert, &trustAnchors);
+    status = LoadCertificate((CertificateX509::EncodingType) encoding, encoded, encodedLen, cert, &trustAnchors);
     if (ER_OK != status) {
         QCC_DbgPrintf(("PermissionMgmtObj::StoreIdentityCertificate failed to validate certificate status 0x%x", status));
         return status;
@@ -883,7 +889,7 @@ QStatus PermissionMgmtObj::StoreIdentityCertificate(MsgArg& certArg)
 
 void PermissionMgmtObj::InstallIdentity(const InterfaceDescription::Member* member, Message& msg)
 {
-    MethodReply(msg, StoreIdentityCertificate((MsgArg &) * msg->GetArg(0)));
+    MethodReply(msg, StoreIdentityCertificate((MsgArg&) *msg->GetArg(0)));
 }
 
 QStatus PermissionMgmtObj::GetIdentityBlob(KeyBlob& kb)
@@ -911,7 +917,7 @@ void PermissionMgmtObj::GetIdentity(const InterfaceDescription::Member* member, 
         return;
     }
     MsgArg replyArgs[1];
-    replyArgs[0].Set("(yay)", Certificate::ENCODING_X509_DER, kb.GetSize(), kb.GetData());
+    replyArgs[0].Set("(yay)", CertificateX509::ENCODING_X509_DER, kb.GetSize(), kb.GetData());
     MethodReply(msg, replyArgs, ArraySize(replyArgs));
 }
 
@@ -922,7 +928,7 @@ static QStatus GetMembershipCert(CredentialAccessor* ca, GUID128& guid, Membersh
     if (ER_OK != status) {
         return status;
     }
-    return LoadCertificate(Certificate::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), cert);
+    return LoadCertificate(CertificateX509::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), cert);
 }
 
 /**
@@ -949,7 +955,7 @@ static QStatus GetMembershipChainGuid(CredentialAccessor* ca, GUID128& leafMembe
         if (kb.GetTag() == CERT_CHAIN_TAG_NAME) {
             /* check both serial number and issuer */
             MembershipCertificate cert;
-            LoadCertificate(Certificate::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), cert);
+            LoadCertificate(CertificateX509::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), cert);
             if ((cert.GetSerial() == serialNum) && (cert.GetIssuer() == issuer)) {
                 membershipChainGuid = guids[cnt];
                 found = true;
@@ -985,10 +991,11 @@ static QStatus GetMembershipGuid(CredentialAccessor* ca, GUID128& membershipHead
             break;
         }
         /* check the tag */
+
         if (kb.GetTag() == tag) {
             /* maybe a match, check both serial number and issuer */
             MembershipCertificate cert;
-            LoadCertificate(Certificate::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), cert);
+            LoadCertificate(CertificateX509::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), cert);
             if ((cert.GetSerial() == serialNum) && (cert.GetIssuer() == issuer)) {
                 membershipGuid = guids[cnt];
                 found = true;
@@ -1026,10 +1033,10 @@ static QStatus LoadX509CertFromMsgArg(const MsgArg& arg, CertificateX509& cert)
     if (ER_OK != status) {
         return status;
     }
-    if ((encoding != Certificate::ENCODING_X509_DER) && (encoding != Certificate::ENCODING_X509_DER_PEM)) {
+    if ((encoding != CertificateX509::ENCODING_X509_DER) && (encoding != CertificateX509::ENCODING_X509_DER_PEM)) {
         return ER_NOT_IMPLEMENTED;
     }
-    status = LoadCertificate((Certificate::EncodingType) encoding, encoded, encodedLen, cert);
+    status = LoadCertificate((CertificateX509::EncodingType) encoding, encoded, encodedLen, cert);
     if (ER_OK != status) {
         return ER_INVALID_CERTIFICATE;
     }
@@ -1200,7 +1207,7 @@ void PermissionMgmtObj::InstallMembershipAuthData(const InterfaceDescription::Me
     issuerGUID.SetBytes(issuer);
     GUID128 membershipGuid(0);
     PermissionPolicy authorization;
-    status = LoadAndValidateAuthData(serialNum, issuerGUID, (MsgArg &) * (msg->GetArg(2)), authorization, membershipGuid);
+    status = LoadAndValidateAuthData(serialNum, issuerGUID, (MsgArg&) *(msg->GetArg(2)), authorization, membershipGuid);
     if (ER_OK != status) {
         MethodReply(msg, status);
         return;
@@ -1274,7 +1281,7 @@ static QStatus ReadMembershipCert(CredentialAccessor* ca, const GUID128& guid, M
     if (ER_OK != status) {
         return status;
     }
-    return LoadCertificate(Certificate::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), cert);
+    return LoadCertificate(CertificateX509::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), cert);
 }
 
 QStatus PermissionMgmtObj::GetAllMembershipCerts(MembershipCertMap& certMap, bool loadCert)
@@ -1309,7 +1316,7 @@ QStatus PermissionMgmtObj::GetAllMembershipCerts(MembershipCertMap& certMap, boo
         MembershipCertificate* cert = NULL;
         if (loadCert) {
             cert = new MembershipCertificate();
-            status = LoadCertificate(Certificate::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), *cert);
+            status = LoadCertificate(CertificateX509::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), *cert);
             if (ER_OK != status) {
                 QCC_DbgPrintf(("PermissionMgmtObj::GetAllMembershipCerts error loading membership certificate"));
                 delete [] guids;
@@ -1379,7 +1386,7 @@ static QStatus LoadMembershipMetaData(BusAttachment& bus, CredentialAccessor* ca
     /* look into its associated nodes */
     GUID128* guids = NULL;
     size_t numOfGuids;
-    status = ca->GetKeys((GUID128 &)entryGuid, &guids, &numOfGuids);
+    status = ca->GetKeys((GUID128&)entryGuid, &guids, &numOfGuids);
     if (ER_OK != status) {
         delete [] guids;
         if (ER_BUS_KEY_UNAVAILABLE == status) {
@@ -1493,7 +1500,7 @@ static QStatus GenerateSendMembershipForCertEntry(BusAttachment& bus, Credential
             msgArg->SetOwnershipFlags(MsgArg::OwnsArgs, true);
             argList.push_back(msgArg);
         } else if (kb.GetTag() == CERT_CHAIN_TAG_NAME) {
-            MsgArg chainCertArg("(yay)", Certificate::ENCODING_X509_DER,  kb.GetSize(), kb.GetData());
+            MsgArg chainCertArg("(yay)", CertificateX509::ENCODING_X509_DER,  kb.GetSize(), kb.GetData());
             MsgArg toBeCopied("(ayay(v))", cert.GetSerial().size(), cert.GetSerial().data(), GUID128::SIZE, cert.GetIssuer().GetBytes(), &chainCertArg);
             MsgArg* msgArg = new MsgArg("(yv)", SEND_CERT_CHAIN, new MsgArg(toBeCopied));
             msgArg->SetOwnershipFlags(MsgArg::OwnsArgs, true);
@@ -1501,7 +1508,7 @@ static QStatus GenerateSendMembershipForCertEntry(BusAttachment& bus, Credential
 
             /* this cert chain node may have a parent cert */
             MembershipCertificate chainCert;
-            status = LoadCertificate(Certificate::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), chainCert);
+            status = LoadCertificate(CertificateX509::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), chainCert);
             if (ER_OK != status) {
                 delete [] guids;
                 return status;
@@ -1539,13 +1546,13 @@ QStatus PermissionMgmtObj::GenerateSendMemberships(MsgArg** args, size_t* count)
             ClearMembershipCertMap(certMap);
             return status;
         }
-        MsgArg toBeCopied("(yay)", Certificate::ENCODING_X509_DER, der.length(), der.c_str());
+        MsgArg toBeCopied("(yay)", CertificateX509::ENCODING_X509_DER, der.length(), der.c_str());
         /* use a copy constructor of MsgArg to get a deep copy of all the array data */
         MsgArg* msgArg = new MsgArg("(yv)", SEND_CERT, new MsgArg(toBeCopied));
         msgArg->SetOwnershipFlags(MsgArg::OwnsArgs, true);
         argList.push_back(msgArg);
 
-        status = GenerateSendMembershipForCertEntry(bus, ca, *cert, (GUID128 &)it->first, argList);
+        status = GenerateSendMembershipForCertEntry(bus, ca, *cert, (GUID128&)it->first, argList);
         if (ER_OK != status) {
             ClearArgVector(argList);
             ClearMembershipCertMap(certMap);
@@ -1751,7 +1758,7 @@ void PermissionMgmtObj::InstallGuildEquivalence(const InterfaceDescription::Memb
         MethodReply(msg, status);
         return;
     }
-    if ((encoding != Certificate::ENCODING_X509_DER) && (encoding != Certificate::ENCODING_X509_DER_PEM)) {
+    if ((encoding != CertificateX509::ENCODING_X509_DER) && (encoding != CertificateX509::ENCODING_X509_DER_PEM)) {
         QCC_DbgPrintf(("PermissionMgmtObj::InstallGuildEquivalence does not support encoding %d", encoding));
         MethodReply(msg, ER_NOT_IMPLEMENTED);
         return;
@@ -2002,7 +2009,7 @@ bool PermissionMgmtObj::ValidateCertChain(const qcc::String& certChainPEM, bool&
     /* parse the PEM to retrieve the cert chain */
 
     size_t count = 0;
-    QStatus status = CertECCUtil_GetCertCount(certChainPEM, &count);
+    QStatus status = CertificateHelper::GetCertCount(certChainPEM, &count);
     if (status != ER_OK) {
         QCC_DbgHLPrintf(("PermissionMgmtObj::ValidateCertChain has error counting certs in the PEM"));
         return handled;
@@ -2046,12 +2053,25 @@ bool PermissionMgmtObj::KeyExchangeListener::RequestCredentials(const char* auth
         KeyBlob kb;
         QStatus status = pmo->GetIdentityBlob(kb);
         if ((ER_OK == status) && (kb.GetSize() > 0)) {
+            bool handled = true;
+            /* handle private key */
+            if ((credMask& AuthListener::CRED_PRIVATE_KEY) == AuthListener::CRED_PRIVATE_KEY) {
+                qcc::ECCPrivateKey pk;
+                if (ER_OK != pmo->GetDSAPrivateKey(pk)) {
+                    handled = false;
+                }
+                String pem;
+                CertificateX509::EncodePrivateKeyPEM((const uint8_t*) &pk, sizeof(qcc::ECCPrivateKey), pem);
+                credentials.SetPrivateKey(pem);
+            }
             /* build the cert chain based on the identity cert */
-            if ((credMask & AuthListener::CRED_CERT_CHAIN) == AuthListener::CRED_CERT_CHAIN) {
+            if ((credMask& AuthListener::CRED_CERT_CHAIN) == AuthListener::CRED_CERT_CHAIN) {
                 String der((const char*) kb.GetData(), kb.GetSize());
                 String pem;
                 CertificateX509::EncodeCertificatePEM(der, pem);
                 credentials.SetCertChain(pem);
+            }
+            if (handled) {
                 return true;
             }
         }
@@ -2227,7 +2247,7 @@ QStatus PermissionMgmtObj::GetTrustAnchorsFromAllMemberships(TrustAnchorList& ta
             return status;
         }
         MembershipCertificate cert;
-        status = LoadCertificate(Certificate::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), cert);
+        status = LoadCertificate(CertificateX509::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), cert);
         if (ER_OK != status) {
             QCC_DbgPrintf(("PermissionMgmtObj::GetTrustAnchorsFromAllMemberships error loading membership certificate"));
             delete [] guids;
@@ -2244,7 +2264,7 @@ QStatus PermissionMgmtObj::GetTrustAnchorsFromAllMemberships(TrustAnchorList& ta
         /* go through into its associated nodes */
         GUID128* associateGuids = NULL;
         size_t numOfAssociateGuids = 0;
-        status = ca->GetKeys((GUID128 &)guids[cnt], &associateGuids, &numOfAssociateGuids);
+        status = ca->GetKeys((GUID128&)guids[cnt], &associateGuids, &numOfAssociateGuids);
         if ((ER_OK != status) && (ER_BUS_KEY_UNAVAILABLE != status)) {
             ClearAnchorMap(chain);
             delete [] guids;
@@ -2262,7 +2282,7 @@ QStatus PermissionMgmtObj::GetTrustAnchorsFromAllMemberships(TrustAnchorList& ta
             /* check the tag */
             if (kb.GetTag() == CERT_CHAIN_TAG_NAME) {
                 MembershipCertificate cert;
-                status = LoadCertificate(Certificate::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), cert);
+                status = LoadCertificate(CertificateX509::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), cert);
                 if (ER_OK != status) {
                     QCC_DbgPrintf(("PermissionMgmtObj::GetAMembershipCertChain error loading membership certificate"));
                     ClearAnchorMap(chain);

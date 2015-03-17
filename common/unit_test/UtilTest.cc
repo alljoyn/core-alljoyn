@@ -45,9 +45,9 @@ TEST(UtilTest, crc16_computation_test) {
     CRC16_Compute(buffer, ArraySize(buffer), &actual_crc_value);
 
     EXPECT_EQ(expected_crc_value, actual_crc_value) <<
-    "The CRC16_Compute did not return the expected checksum value of 0x" <<
-    std::hex << expected_crc_value << " when \"" << ascii_string <<
-    "\" was fed. It returned 0x" << std::hex << actual_crc_value;
+        "The CRC16_Compute did not return the expected checksum value of 0x" <<
+        std::hex << expected_crc_value << " when \"" << ascii_string <<
+        "\" was fed. It returned 0x" << std::hex << actual_crc_value;
 }
 
 TEST(UtilTest, crc16_computation_stress) {
@@ -103,15 +103,15 @@ TEST(UtilTest, crc16_computation_stress) {
 
         // Compare the two CRCs
         EXPECT_EQ(expected_crc_value, actual_crc_value) <<
-        "The CRC of the string \"" <<
-        String(quote_from_the_blind_side, parition_marker).c_str() <<
-        "\" was computed and it was fed as the runningCrc to compute CRC of "
-        " the string \"" <<
-        String(quote_from_the_blind_side + parition_marker,
-               (ArraySize(buffer) - parition_marker)).c_str() <<
-        "\". The computed value 0x" << std::hex << actual_crc_value <<
-        "does not match the CRC of the concatenated string \"" <<
-        quote_from_the_blind_side << "\", which is 0x" << std::hex <<
-        expected_crc_value << ".";
+            "The CRC of the string \"" <<
+            String(quote_from_the_blind_side, parition_marker).c_str() <<
+            "\" was computed and it was fed as the runningCrc to compute CRC of "
+            " the string \"" <<
+            String(quote_from_the_blind_side + parition_marker,
+                   (ArraySize(buffer) - parition_marker)).c_str() <<
+            "\". The computed value 0x" << std::hex << actual_crc_value <<
+            "does not match the CRC of the concatenated string \"" <<
+            quote_from_the_blind_side << "\", which is 0x" << std::hex <<
+            expected_crc_value << ".";
     }
 }

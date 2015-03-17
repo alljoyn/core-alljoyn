@@ -1,7 +1,7 @@
 /**
  * @file CertificateECC.cc
  *
- * Utilites for SPKI-style Certificates
+ * Utilites for X.509 ECC Certificates
  */
 /******************************************************************************
  * Copyright AllSeen Alliance. All rights reserved.
@@ -50,67 +50,19 @@ const qcc::String OID_KEY_ECC = "1.2.840.10045.2.1";
 const qcc::String OID_CRV_PRIME256V1 = "1.2.840.10045.3.1.7";
 const qcc::String OID_DN_OU = "2.5.4.11";
 const qcc::String OID_DN_CN = "2.5.4.3";
-const qcc::String OID_SUB_ALTNAME = "2.5.29.17";
 const qcc::String OID_BASIC_CONSTRAINTS = "2.5.29.19";
 const qcc::String OID_DIG_SHA256 = "2.16.840.1.101.3.4.2.1";
+const qcc::String OID_SUB_ALTNAME = "2.5.29.17";
 const qcc::String OID_CUSTOM_CERT_TYPE = "1.3.6.1.4.1.44924.1.1";
 const qcc::String OID_CUSTOM_DIGEST = "1.3.6.1.4.1.44924.1.2";
 
-#define CERT_TYPE0_SIGN_LEN Crypto_SHA256::DIGEST_SIZE
-#define CERT_TYPE0_RAW_LEN sizeof(uint32_t) + sizeof(ECCPublicKeyOldEncoding) + CERT_TYPE0_SIGN_LEN + sizeof(ECCSignatureOldEncoding)
 
-#define CERT_TYPE1_SIGN_LEN sizeof(uint32_t) + 2 * sizeof(ECCPublicKeyOldEncoding) + sizeof(ValidPeriod) + sizeof (uint8_t) + Crypto_SHA256::DIGEST_SIZE
-#define CERT_TYPE1_RAW_LEN CERT_TYPE1_SIGN_LEN + sizeof(ECCSignatureOldEncoding)
-
-#define CERT_TYPE2_SIGN_LEN sizeof(uint32_t) + 2 * sizeof(ECCPublicKeyOldEncoding) + sizeof(ValidPeriod) + sizeof (uint8_t) + GUILD_ID_LEN + Crypto_SHA256::DIGEST_SIZE
-#define CERT_TYPE2_RAW_LEN CERT_TYPE2_SIGN_LEN + sizeof(ECCSignatureOldEncoding)
-
-static qcc::String EncodeRawByte(const uint8_t* raw, size_t rawLen, const char* beginToken, const char* endToken)
-{
-    qcc::String str;
-    qcc::String rawStr((const char*) raw, rawLen);
-    qcc::String base64;
-
-    QStatus status = Crypto_ASN1::EncodeBase64(rawStr, base64);
-    if (status != ER_OK) {
-        return "";
-    }
-
-    str += beginToken;
-    str += base64;
-    str += endToken;
-    return str;
-}
-
-static qcc::String EncodeCertRawByte(const uint8_t* raw, size_t rawLen)
-{
-    return EncodeRawByte(raw, rawLen, "-----BEGIN CERTIFICATE-----",
-                         "-----END CERTIFICATE-----");
-}
-
-static QStatus CountNumOfChunksFromEncoded(const String& encoded, const char* beginToken, const char* endToken, size_t* count)
-{
-
-    size_t pos;
-
-    *count = 0;
-    qcc::String remainder = encoded;
-    while (true) {
-        pos = remainder.find(beginToken);
-        if (pos == qcc::String::npos) {
-            /* no more */
-            return ER_OK;
-        }
-        remainder = remainder.substr(pos + strlen(beginToken));
-        pos = remainder.find(endToken);
-        if (pos == qcc::String::npos) {
-            return ER_OK;
-        }
-        *count += 1;
-        remainder = remainder.substr(pos + strlen(endToken));
-    }
-    return ER_OK;
-}
+static const char* EC_PRIVATE_KEY_PEM_BEGIN_TAG = "-----BEGIN EC PRIVATE KEY-----";
+static const char* EC_PRIVATE_KEY_PEM_END_TAG = "-----END EC PRIVATE KEY-----";
+static const char* PUBLIC_KEY_PEM_BEGIN_TAG = "-----BEGIN PUBLIC KEY-----";
+static const char* PUBLIC_KEY_PEM_END_TAG = "-----END PUBLIC KEY-----";
+static const char* CERTIFICATE_PEM_BEGIN_TAG = "-----BEGIN CERTIFICATE-----";
+static const char* CERTIFICATE_PEM_END_TAG = "-----END CERTIFICATE-----";
 
 static QStatus RetrieveNumOfChunksFromPEM(const String& encoded, const char* beginToken, const char* endToken, qcc::String chunks[],  size_t count)
 {
@@ -136,616 +88,159 @@ static QStatus RetrieveNumOfChunksFromPEM(const String& encoded, const char* beg
     return ER_OK;
 }
 
-
-static QStatus RetrieveRawFromPEM(const String& pem, const char* beginToken, const char* endToken, String& rawStr)
+static QStatus StripTags(String& pem, const char* beg, const char* end)
 {
-    qcc::String base64;
-
     size_t pos;
 
-    pos = pem.find(beginToken);
+    pos = pem.find(beg);
     if (pos == qcc::String::npos) {
         return ER_INVALID_DATA;
     }
-    qcc::String remainder = pem.substr(pos + strlen(beginToken));
-    pos = remainder.find(endToken);
-    if (pos == qcc::String::npos) {
-        base64 = remainder;
-    } else {
-        base64 = remainder.substr(0, pos);
+    pem = pem.erase(0, strlen(beg));
+    pos = pem.find(end);
+    if (pos != qcc::String::npos) {
+        pem = pem.erase(pos);
     }
-    return Crypto_ASN1::DecodeBase64(base64, rawStr);
-}
 
-static QStatus RetrieveRawCertFromPEM(const String& pem, String& rawStr)
-{
-    return RetrieveRawFromPEM(pem,
-                              "-----BEGIN CERTIFICATE-----",
-                              "-----END CERTIFICATE-----", rawStr);
-}
-
-static QStatus DecodeKeyFromPEM(const String& pem, uint32_t* key, size_t len, const char* beginToken, const char* endToken)
-{
-    String rawStr;
-    QStatus status = RetrieveRawFromPEM(pem, beginToken, endToken, rawStr);
-    if (status != ER_OK) {
-        return status;
-    }
-    if (len != rawStr.length()) {
-        return ER_INVALID_DATA;
-    }
-    memcpy(key, rawStr.data(), len);
     return ER_OK;
 }
 
-QStatus CertECCUtil_EncodePrivateKey(const uint32_t* privateKey, size_t len, String& encoded)
-{
-    encoded = EncodeRawByte((uint8_t*) privateKey, len,
-                            "-----BEGIN PRIVATE KEY-----", "-----END PRIVATE KEY-----");
-    return ER_OK;
-}
-
-
-QStatus CertECCUtil_DecodePrivateKey(const String& encoded, uint32_t* privateKey, size_t len)
-{
-    return DecodeKeyFromPEM(encoded, privateKey, len,
-                            "-----BEGIN PRIVATE KEY-----", "-----END PRIVATE KEY-----");
-}
-
-QStatus CertECCUtil_EncodePublicKey(const uint32_t* publicKey, size_t len, String& encoded)
-{
-    encoded = EncodeRawByte((uint8_t*) publicKey, len,
-                            "-----BEGIN PUBLIC KEY-----", "-----END PUBLIC KEY-----");
-    return ER_OK;
-}
-
-QStatus CertECCUtil_DecodePublicKey(const String& encoded, uint32_t* publicKey, size_t len)
-{
-    return DecodeKeyFromPEM(encoded, publicKey, len,
-                            "-----BEGIN PUBLIC KEY-----", "-----END PUBLIC KEY-----");
-}
-
-QStatus CertECCUtil_GetCertCount(const String& encoded, size_t* count)
-{
-    *count = 0;
-    return CountNumOfChunksFromEncoded(encoded,
-                                       "-----BEGIN CERTIFICATE-----", "-----END CERTIFICATE-----", count);
-}
-
-QStatus CertECCUtil_GetVersionFromEncoded(const uint8_t* encoded, size_t len, uint32_t* certVersion)
-{
-    if (len < sizeof(uint32_t)) {
-        return ER_INVALID_DATA;
-    }
-    uint32_t* p = (uint32_t*) encoded;
-    *certVersion = betoh32(*p);
-    return ER_OK;
-}
-
-QStatus CertECCUtil_GetVersionFromPEM(const String& pem, uint32_t* certVersion)
-{
-    qcc::String rawStr;
-    QStatus status = RetrieveRawCertFromPEM(pem, rawStr);
-    if (status != ER_OK) {
-        return status;
-    }
-    uint8_t* raw = (uint8_t*) rawStr.data();
-    size_t rawLen = rawStr.length();
-
-    return CertECCUtil_GetVersionFromEncoded(raw, rawLen, certVersion);
-}
-
-QStatus CertECCUtil_GetCertChain(const String& pem, CertificateECC* certChain[], size_t count)
-{
-    qcc::String* chunks = new  qcc::String[count];
-
-    QStatus status = RetrieveNumOfChunksFromPEM(pem, "-----BEGIN CERTIFICATE-----", "-----END CERTIFICATE-----", chunks, count);
-    if (status != ER_OK) {
-        delete [] chunks;
-        return status;
-    }
-
-    for (size_t idx = 0; idx < count; idx++) {
-        uint32_t certVersion;
-        status = CertECCUtil_GetVersionFromPEM(chunks[idx], &certVersion);
-        if (status != ER_OK) {
-            break;
-        }
-        switch (certVersion) {
-        case 0:
-            certChain[idx] = new CertificateType0();
-            break;
-
-        case 1:
-            certChain[idx] = new CertificateType1();
-            break;
-
-        case 2:
-            certChain[idx] = new CertificateType2();
-            break;
-
-        default:
-            delete [] chunks;
-            return ER_INVALID_DATA;
-        }
-        status = certChain[idx]->LoadPEM(chunks[idx]);
-        if (status != ER_OK) {
-            break;
-        }
-
-    }
-    delete [] chunks;
-    return status;
-}
-
-CertificateType0::CertificateType0(const ECCPublicKey* issuer, const uint8_t* externalDigest) : CertificateECC(0)
-{
-    SetVersion(0);
-    SetIssuer(issuer);
-    SetExternalDataDigest(externalDigest);
-}
-
-void CertificateType0::SetVersion(uint32_t val)
-{
-    uint32_t* p = (uint32_t*) &encoded[OFFSET_VERSION];
-    *p = htobe32(val);
-}
-
-const ECCPublicKey* CertificateType0::GetIssuer()
-{
-    Crypto_ECC ecc;
-    ecc.ReEncode((const ECCPublicKeyOldEncoding*) &encoded[OFFSET_ISSUER], &issuer);
-    return &issuer;
-}
-
-void CertificateType0::SetIssuer(const ECCPublicKey* issuer)
-{
-    Crypto_ECC ecc;
-    ECCPublicKeyOldEncoding oldenc;
-    ecc.ReEncode(issuer, &oldenc);
-    memcpy(&encoded[OFFSET_ISSUER], &oldenc, sizeof(ECCPublicKeyOldEncoding));
-}
-
-void CertificateType0::SetExternalDataDigest(const uint8_t* externalDataDigest)
-{
-    memcpy(&encoded[OFFSET_DIGEST], externalDataDigest, Crypto_SHA256::DIGEST_SIZE);
-}
-
-const ECCSignature* CertificateType0::GetSig()
-{
-    Crypto_ECC ecc;
-    ecc.ReEncode((const ECCSignatureOldEncoding*) &encoded[OFFSET_SIG], &signature);
-    return &signature;
-}
-
-void CertificateType0::SetSig(const ECCSignature* sig)
-{
-    Crypto_ECC ecc;
-    ECCSignatureOldEncoding oldenc;
-    ecc.ReEncode(sig, &oldenc);
-    memcpy(&encoded[OFFSET_SIG], &oldenc, sizeof(ECCSignatureOldEncoding));
-}
-
-QStatus CertificateType0::Sign(const ECCPrivateKey* dsaPrivateKey)
-{
-    Crypto_ECC ecc;
-    ECCSignature newenc;
-    ecc.SetDSAPrivateKey(dsaPrivateKey);
-    QStatus status = ecc.DSASignDigest(GetExternalDataDigest(), Crypto_SHA256::DIGEST_SIZE, &newenc);
-    ecc.ReEncode(&newenc, (ECCSignatureOldEncoding*) &encoded[OFFSET_SIG]);
-    return status;
-}
-
-bool CertificateType0::VerifySignature()
-{
-    Crypto_ECC ecc;
-    ecc.SetDSAPublicKey(GetIssuer());
-    return ecc.DSAVerifyDigest(GetExternalDataDigest(), Crypto_SHA256::DIGEST_SIZE, GetSig()) == ER_OK;
-}
-
-QStatus CertificateType0::LoadEncoded(const uint8_t* encodedBytes, size_t len)
-{
-    if (len != GetEncodedLen()) {
-        return ER_INVALID_DATA;
-    }
-    uint32_t*pVersion = (uint32_t*) encodedBytes;
-    uint32_t version = betoh32(*pVersion);
-    if (version != GetVersion()) {
-        return ER_INVALID_DATA;
-    }
-    memcpy(&encoded, encodedBytes, len);
-    return ER_OK;
-}
-
-String CertificateType0::GetPEM()
-{
-    return EncodeCertRawByte(GetEncoded(), GetEncodedLen());
-}
-
-QStatus CertificateType0::LoadPEM(const String& pem)
-{
-    qcc::String rawStr;
-    QStatus status = RetrieveRawCertFromPEM(pem, rawStr);
-    if (status != ER_OK) {
-        return status;
-    }
-    uint8_t* raw = (uint8_t*) rawStr.data();
-    size_t rawLen = rawStr.length();
-
-    return LoadEncoded(raw, rawLen);
-}
-
-qcc::String CertificateType0::ToString()
-{
-
-    qcc::String str("Certificate:\n");
-    str += "version: ";
-    str += U32ToString(GetVersion());
-    str += "\n";
-    str += "issuer: ";
-    str += BytesToHexString((const uint8_t*) &encoded[OFFSET_ISSUER], sizeof(ECCPublicKeyOldEncoding));
-    str += "\n";
-    str += "digest: ";
-    str += BytesToHexString((const uint8_t*) GetExternalDataDigest(), Crypto_SHA256::DIGEST_SIZE);
-    str += "\n";
-    str += "sig: ";
-    str += BytesToHexString((const uint8_t*) &encoded[OFFSET_SIG], sizeof(ECCSignatureOldEncoding));
-    str += "\n";
-    return str;
-}
-
-void CertificateType1::SetVersion(uint32_t val)
-{
-    uint32_t* p = (uint32_t*) &encoded[OFFSET_VERSION];
-    *p = htobe32(val);
-}
-
-const ECCPublicKey* CertificateType1::GetIssuer()
-{
-    Crypto_ECC ecc;
-    ecc.ReEncode((const ECCPublicKeyOldEncoding*) &encoded[OFFSET_ISSUER], &issuer);
-    return &issuer;
-}
-
-void CertificateType1::SetIssuer(const ECCPublicKey* issuer)
-{
-    Crypto_ECC ecc;
-    ECCPublicKeyOldEncoding oldenc;
-    ecc.ReEncode(issuer, &oldenc);
-    memcpy(&encoded[OFFSET_ISSUER], &oldenc, sizeof(ECCPublicKeyOldEncoding));
-}
-
-const ECCPublicKey* CertificateType1::GetSubject()
-{
-    Crypto_ECC ecc;
-    ecc.ReEncode((const ECCPublicKeyOldEncoding*) &encoded[OFFSET_SUBJECT], &subject);
-    return &subject;
-}
-
-void CertificateType1::SetSubject(const ECCPublicKey* issuer)
-{
-    Crypto_ECC ecc;
-    ECCPublicKeyOldEncoding oldenc;
-    ecc.ReEncode(issuer, &oldenc);
-    memcpy(&encoded[OFFSET_SUBJECT], &oldenc, sizeof(ECCPublicKeyOldEncoding));
-}
-
-void CertificateType1::SetValidity(const ValidPeriod* validPeriod)
-{
-    validity = *validPeriod;
-    /* setup encoded buffer */
-    uint64_t* p = (uint64_t*) &encoded[OFFSET_VALIDFROM];
-    *p = htobe64(validity.validFrom);
-    p = (uint64_t*) &encoded[OFFSET_VALIDTO];
-    *p = htobe64(validity.validTo);
-}
-
-CertificateType1::CertificateType1(const ECCPublicKey* issuer, const ECCPublicKey* subject) : CertificateECC(1)
-{
-    SetVersion(1);
-    SetIssuer(issuer);
-    SetSubject(subject);
-    SetDelegate(false);
-}
-
-void CertificateType1::SetExternalDataDigest(const uint8_t* externalDataDigest)
-{
-    memcpy(&encoded[OFFSET_DIGEST], externalDataDigest, Crypto_SHA256::DIGEST_SIZE);
-}
-
-const ECCSignature* CertificateType1::GetSig()
-{
-    Crypto_ECC ecc;
-    ecc.ReEncode((const ECCSignatureOldEncoding*) &encoded[OFFSET_SIG], &signature);
-    return &signature;
-}
-
-void CertificateType1::SetSig(const ECCSignature* sig)
-{
-    Crypto_ECC ecc;
-    ECCSignatureOldEncoding oldenc;
-    ecc.ReEncode(sig, &oldenc);
-    memcpy(&encoded[OFFSET_SIG], &oldenc, sizeof(ECCSignatureOldEncoding));
-}
-
-QStatus CertificateType1::Sign(const ECCPrivateKey* dsaPrivateKey)
+QStatus CertificateX509::EncodePrivateKeyPEM(const uint8_t* privateKey, size_t len, String& encoded)
 {
     QStatus status;
-    Crypto_ECC ecc;
-    ecc.SetDSAPrivateKey(dsaPrivateKey);
-    ECCSignature newenc;
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    Crypto_SHA256 hash;
-    hash.Init();
-    hash.Update(encoded, OFFSET_SIG);
-    hash.GetDigest(digest);
-    status = ecc.DSASignDigest(digest, sizeof(digest), &newenc);
-    ecc.ReEncode(&newenc, (ECCSignatureOldEncoding*) &encoded[OFFSET_SIG]);
-    return status;
-}
+    qcc::String beg = EC_PRIVATE_KEY_PEM_BEGIN_TAG;
+    qcc::String end = EC_PRIVATE_KEY_PEM_END_TAG;
+    qcc::String der;
+    qcc::String prv((const char*) privateKey, len);
+    qcc::String oid = OID_CRV_PRIME256V1;
+    qcc::String pem;
 
-bool CertificateType1::VerifySignature()
-{
-    Crypto_ECC ecc;
-    ecc.SetDSAPublicKey(GetIssuer());
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    Crypto_SHA256 hash;
-    hash.Init();
-    hash.Update(encoded, OFFSET_SIG);
-    hash.GetDigest(digest);
-    return ecc.DSAVerifyDigest(digest, sizeof(digest), GetSig()) == ER_OK;
-}
-
-QStatus CertificateType1::LoadEncoded(const uint8_t* encodedBytes, size_t len)
-{
-    if (len != GetEncodedLen()) {
-        return ER_INVALID_DATA;
+    status = Crypto_ASN1::Encode(der, "(ixc(o))", 1, &prv, 0, &oid);
+    if (ER_OK != status) {
+        return status;
     }
-    uint32_t* pVersion = (uint32_t*) encodedBytes;
-    uint32_t version = betoh32(*pVersion);
-    if (version != GetVersion()) {
-        return ER_INVALID_DATA;
+    status = Crypto_ASN1::EncodeBase64(der, pem);
+    if (ER_OK != status) {
+        return status;
     }
-    memcpy(&encoded, encodedBytes, len);
-    /* setup the localized validitiy value from the encoded bytes */
-    uint64_t* p = (uint64_t*) &encoded[OFFSET_VALIDFROM];
-    validity.validFrom = betoh64(*p);
-    p = (uint64_t*) &encoded[OFFSET_VALIDTO];
-    validity.validTo = betoh64(*p);
+    encoded = beg + "\n" + pem + end;
 
     return ER_OK;
 }
 
-String CertificateType1::GetPEM()
-{
-    return EncodeCertRawByte(GetEncoded(), GetEncodedLen());
-}
-
-QStatus CertificateType1::LoadPEM(const String& pem)
-{
-    qcc::String rawStr;
-    QStatus status = RetrieveRawCertFromPEM(pem, rawStr);
-    if (status != ER_OK) {
-        return status;
-    }
-    uint8_t* raw = (uint8_t*) rawStr.data();
-    size_t rawLen = rawStr.length();
-    return LoadEncoded(raw, rawLen);
-}
-
-qcc::String CertificateType1::ToString()
-{
-    qcc::String str("Certificate:\n");
-    str += "version: ";
-    str += U32ToString(GetVersion());
-    str += "\n";
-    str += "issuer: ";
-    str += BytesToHexString((const uint8_t*) &encoded[OFFSET_ISSUER], sizeof(ECCPublicKeyOldEncoding));
-    str += "\n";
-    str += "subject: ";
-    str += BytesToHexString((const uint8_t*) &encoded[OFFSET_SUBJECT], sizeof(ECCPublicKeyOldEncoding));
-    str += "\n";
-    str += "validity: not-before ";
-    str += U64ToString(GetValidity()->validFrom);
-    str += " not-after ";
-    str += U64ToString(GetValidity()->validTo);
-    str += "\n";
-    if (IsDelegate()) {
-        str += "delegate: true\n";
-    } else {
-        str += "delegate: false\n";
-    }
-    str += "digest: ";
-    str += BytesToHexString((const uint8_t*) GetExternalDataDigest(), Crypto_SHA256::DIGEST_SIZE);
-    str += "\n";
-    str += "sig: ";
-    str += BytesToHexString((const uint8_t*) &encoded[OFFSET_SIG], sizeof(ECCSignatureOldEncoding));
-    str += "\n";
-    return str;
-}
-
-
-void CertificateType2::SetVersion(uint32_t val)
-{
-    uint32_t* p = (uint32_t*) &encoded[OFFSET_VERSION];
-    *p = htobe32(val);
-}
-
-const ECCPublicKey* CertificateType2::GetIssuer()
-{
-    Crypto_ECC ecc;
-    ecc.ReEncode((const ECCPublicKeyOldEncoding*) &encoded[OFFSET_ISSUER], &issuer);
-    return &issuer;
-}
-
-void CertificateType2::SetIssuer(const ECCPublicKey* issuer)
-{
-    Crypto_ECC ecc;
-    ECCPublicKeyOldEncoding oldenc;
-    ecc.ReEncode(issuer, &oldenc);
-    memcpy(&encoded[OFFSET_ISSUER], &oldenc, sizeof(ECCPublicKeyOldEncoding));
-}
-
-const ECCPublicKey* CertificateType2::GetSubject()
-{
-    Crypto_ECC ecc;
-    ecc.ReEncode((const ECCPublicKeyOldEncoding*) &encoded[OFFSET_SUBJECT], &subject);
-    return &subject;
-}
-
-void CertificateType2::SetSubject(const ECCPublicKey* issuer)
-{
-    Crypto_ECC ecc;
-    ECCPublicKeyOldEncoding oldenc;
-    ecc.ReEncode(issuer, &oldenc);
-    memcpy(&encoded[OFFSET_SUBJECT], &oldenc, sizeof(ECCPublicKeyOldEncoding));
-}
-
-void CertificateType2::SetValidity(const ValidPeriod* validPeriod)
-{
-    validity = *validPeriod;
-    /* setup encoded buffer */
-    uint64_t* p = (uint64_t*) &encoded[OFFSET_VALIDFROM];
-    *p = htobe64(validity.validFrom);
-    p = (uint64_t*) &encoded[OFFSET_VALIDTO];
-    *p = htobe64(validity.validTo);
-}
-
-CertificateType2::CertificateType2(const ECCPublicKey* issuer, const ECCPublicKey* subject) : CertificateECC(2)
-{
-    SetVersion(2);
-    SetIssuer(issuer);
-    SetSubject(subject);
-    SetDelegate(false);
-}
-
-void CertificateType2::SetExternalDataDigest(const uint8_t* externalDataDigest)
-{
-    memcpy(&encoded[OFFSET_DIGEST], externalDataDigest, Crypto_SHA256::DIGEST_SIZE);
-}
-
-const ECCSignature* CertificateType2::GetSig()
-{
-    Crypto_ECC ecc;
-    ecc.ReEncode((const ECCSignatureOldEncoding*) &encoded[OFFSET_SIG], &signature);
-    return &signature;
-}
-
-void CertificateType2::SetSig(const ECCSignature* sig)
-{
-    Crypto_ECC ecc;
-    ECCSignatureOldEncoding oldenc;
-    ecc.ReEncode(sig, &oldenc);
-    memcpy(&encoded[OFFSET_SIG], &oldenc, sizeof(ECCSignatureOldEncoding));
-}
-
-QStatus CertificateType2::Sign(const ECCPrivateKey* dsaPrivateKey)
+QStatus CertificateX509::DecodePrivateKeyPEM(const String& encoded, uint8_t* privateKey, size_t len)
 {
     QStatus status;
-    Crypto_ECC ecc;
-    ecc.SetDSAPrivateKey(dsaPrivateKey);
-    ECCSignature newenc;
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    Crypto_SHA256 hash;
-    hash.Init();
-    hash.Update(encoded, OFFSET_SIG);
-    hash.GetDigest(digest);
-    status = ecc.DSASignDigest(digest, sizeof(digest), &newenc);
-    ecc.ReEncode(&newenc, (ECCSignatureOldEncoding*) &encoded[OFFSET_SIG]);
-    return status;
-}
+    qcc::String pem = encoded;
 
-bool CertificateType2::VerifySignature()
-{
-    Crypto_ECC ecc;
-    ecc.SetDSAPublicKey(GetIssuer());
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    Crypto_SHA256 hash;
-    hash.Init();
-    hash.Update(encoded, OFFSET_SIG);
-    hash.GetDigest(digest);
-    return ecc.DSAVerifyDigest(digest, sizeof(digest), GetSig()) == ER_OK;
-}
-
-QStatus CertificateType2::LoadEncoded(const uint8_t* encodedBytes, size_t len)
-{
-    if (len != GetEncodedLen()) {
-        return ER_INVALID_DATA;
+    status = StripTags(pem, EC_PRIVATE_KEY_PEM_BEGIN_TAG, EC_PRIVATE_KEY_PEM_END_TAG);
+    if (ER_OK != status) {
+        return status;
     }
-    uint32_t* pVersion = (uint32_t*) encodedBytes;
-    uint32_t version = betoh32(*pVersion);
-    if (version != GetVersion()) {
-        return ER_INVALID_DATA;
+    qcc::String der;
+    status = Crypto_ASN1::DecodeBase64(pem, der);
+    if (ER_OK != status) {
+        return status;
     }
-    memcpy(&encoded, encodedBytes, len);
-    /* setup the localized validitiy value from the encoded bytes */
-    uint64_t* p = (uint64_t*) &encoded[OFFSET_VALIDFROM];
-    validity.validFrom = betoh64(*p);
-    p = (uint64_t*) &encoded[OFFSET_VALIDTO];
-    validity.validTo = betoh64(*p);
+    uint32_t ver;
+    qcc::String prv;
+    qcc::String oid;
+    qcc::String rem;
+    bool hasOID = true;
+    /* the OID and public key fields are optional */
+    status = Crypto_ASN1::Decode(der, "(ixc(o).)", &ver, &prv, 0, &oid, &rem);
+    if (ER_OK != status) {
+        status = Crypto_ASN1::Decode(der, "(ixc(o))", &ver, &prv, 0, &oid);
+        if (ER_OK != status) {
+            status = Crypto_ASN1::Decode(der, "(ixc)", &ver, &prv, 0);
+            hasOID = false;
+        }
+    }
+    if (ER_OK != status) {
+        return status;
+    }
+    if (1 != ver) {
+        return ER_FAIL;
+    }
+    if (hasOID) {
+        /* check the oid */
+        if (OID_CRV_PRIME256V1 != oid) {
+            return ER_FAIL;
+        }
+    }
+    if (len != prv.size()) {
+        return ER_FAIL;
+    }
+    memcpy(privateKey, prv.data(), len);
 
     return ER_OK;
 }
 
-String CertificateType2::GetPEM()
+QStatus CertificateX509::EncodePublicKeyPEM(const uint8_t* publicKey, size_t len, String& encoded)
 {
-    return EncodeCertRawByte(GetEncoded(), GetEncodedLen());
-}
+    QStatus status;
+    qcc::String beg = PUBLIC_KEY_PEM_BEGIN_TAG;
+    qcc::String end = PUBLIC_KEY_PEM_END_TAG;
+    qcc::String der;
+    qcc::String oid1 = OID_KEY_ECC;
+    qcc::String oid2 = OID_CRV_PRIME256V1;
+    qcc::String pem;
 
-QStatus CertificateType2::LoadPEM(const String& pem)
-{
-    qcc::String rawStr;
-    QStatus status = RetrieveRawCertFromPEM(pem, rawStr);
-    if (status != ER_OK) {
+    // Uncompressed points only
+    qcc::String key(0x4);
+    key += qcc::String((const char*) publicKey, len);
+    status = Crypto_ASN1::Encode(der, "((oo)b)", &oid1, &oid2, &key, 8 * key.size());
+    if (ER_OK != status) {
         return status;
     }
-    uint8_t* raw = (uint8_t*) rawStr.data();
-    size_t rawLen = rawStr.length();
-    return LoadEncoded(raw, rawLen);
+    status = Crypto_ASN1::EncodeBase64(der, pem);
+    if (ER_OK != status) {
+        return status;
+    }
+    encoded = beg + "\n" + pem + end;
+
+    return ER_OK;
 }
 
-void CertificateType2::SetGuild(const uint8_t* newGuild, size_t guildLen)
+QStatus CertificateX509::DecodePublicKeyPEM(const String& encoded, uint8_t* publicKey, size_t len)
 {
-    size_t len = GUILD_ID_LEN;
-    memset(&encoded[OFFSET_GUILD], 0, len);
-    if (len > guildLen) {
-        len = guildLen;
-    }
-    memcpy(&encoded[OFFSET_GUILD], newGuild, len);
-}
+    QStatus status;
+    qcc::String pem = encoded;
 
-String CertificateType2::ToString()
-{
-    qcc::String str("Certificate:\n");
-    str += "version: ";
-    str += U32ToString(GetVersion());
-    str += "\n";
-    str += "issuer: ";
-    str += BytesToHexString((const uint8_t*) &encoded[OFFSET_ISSUER], sizeof(ECCPublicKeyOldEncoding));
-    str += "\n";
-    str += "subject: ";
-    str += BytesToHexString((const uint8_t*) &encoded[OFFSET_SUBJECT], sizeof(ECCPublicKeyOldEncoding));
-    str += "\n";
-    str += "validity: not-before ";
-    str += U64ToString(GetValidity()->validFrom);
-    str += " not-after ";
-    str += U64ToString(GetValidity()->validTo);
-    str += "\n";
-    if (IsDelegate()) {
-        str += "delegate: true\n";
-    } else {
-        str += "delegate: false\n";
+    status = StripTags(pem, PUBLIC_KEY_PEM_BEGIN_TAG, PUBLIC_KEY_PEM_END_TAG);
+    if (ER_OK != status) {
+        return status;
     }
-    str += "guild: ";
-    str += BytesToHexString((const uint8_t*) GetGuild(), GUILD_ID_LEN);
-    str += "\n";
-    str += "digest: ";
-    str += BytesToHexString((const uint8_t*) GetExternalDataDigest(), Crypto_SHA256::DIGEST_SIZE);
-    str += "\n";
-    str += "sig: ";
-    str += BytesToHexString((const uint8_t*) &encoded[OFFSET_SIG], sizeof(ECCSignatureOldEncoding));
-    str += "\n";
-    return str;
+    qcc::String der;
+    status = Crypto_ASN1::DecodeBase64(pem, der);
+    if (ER_OK != status) {
+        return status;
+    }
+
+    qcc::String oid1;
+    qcc::String oid2;
+    qcc::String key;
+    size_t keylen;
+    status = Crypto_ASN1::Decode(der, "((oo)b)", &oid1, &oid2, &key, &keylen);
+    if (ER_OK != status) {
+        return status;
+    }
+    if (OID_KEY_ECC != oid1) {
+        return ER_FAIL;
+    }
+    if (OID_CRV_PRIME256V1 != oid2) {
+        return ER_FAIL;
+    }
+    if (1 + len != key.size()) {
+        return ER_FAIL;
+    }
+    // Uncompressed points only
+    if (0x4 != *key.data()) {
+        return ER_FAIL;
+    }
+    memcpy(publicKey, key.data() + 1, len);
+
+    return ER_OK;
 }
 
 QStatus CertificateX509::DecodeCertificateName(const qcc::String& dn, CertificateX509::DistinguishedName& name)
@@ -761,15 +256,10 @@ QStatus CertificateX509::DecodeCertificateName(const qcc::String& dn, Certificat
         if (ER_OK != status) {
             return status;
         }
-        if (!qcc::GUID128::IsGUID(str)) {
-            return ER_FAIL;
-        }
         if (OID_DN_OU == oid) {
-            name.ou = GUID128(str);
-            name.ouExists = true;
+            name.SetOU((const uint8_t*) str.data(), str.length());
         } else if (OID_DN_CN == oid) {
-            name.cn = GUID128(str);
-            name.cnExists = true;
+            name.SetCN((const uint8_t*) str.data(), str.length());
         }
         tmp = rem;
     }
@@ -779,28 +269,24 @@ QStatus CertificateX509::DecodeCertificateName(const qcc::String& dn, Certificat
 
 QStatus CertificateX509::EncodeCertificateName(qcc::String& dn, CertificateX509::DistinguishedName& name)
 {
-    QStatus status;
-    qcc::String oid;
-    qcc::String tmp;
-
-    if (name.ouExists) {
-        oid = OID_DN_OU;
-        tmp = name.ou.ToString();
-        status = Crypto_ASN1::Encode(dn, "{(ou)}", &oid, &tmp);
+    if (name.ouLen > 0) {
+        qcc::String oid = OID_DN_OU;
+        qcc::String tmp((const char*) name.ou, name.ouLen);
+        QStatus status = Crypto_ASN1::Encode(dn, "{(ou)}", &oid, &tmp);
         if (ER_OK != status) {
             return status;
         }
     }
-    if (name.cnExists) {
-        oid = OID_DN_CN;
-        tmp = name.cn.ToString();
-        status = Crypto_ASN1::Encode(dn, "{(ou)}", &oid, &tmp);
+    if (name.cnLen > 0) {
+        qcc::String oid = OID_DN_CN;
+        qcc::String tmp((const char*) name.cn, name.cnLen);
+        QStatus status = Crypto_ASN1::Encode(dn, "{(ou)}", &oid, &tmp);
         if (ER_OK != status) {
             return status;
         }
     }
 
-    return status;
+    return ER_OK;
 }
 
 static QStatus DecodeTime(uint64_t& epoch, const qcc::String& t)
@@ -811,33 +297,49 @@ static QStatus DecodeTime(uint64_t& epoch, const qcc::String& t)
         available in some platforms like Android or Windows */
     if (0xD == t.size()) {
         /* the time format is "%y%m%d%H%M%SZ".  Sample input: 150205230725Z */
-        sscanf(t.c_str(), "%2d%2d%2d%2d%2d%2dZ", &tm.tm_year, &tm.tm_mon, &tm.tm_mday, &tm.tm_hour, &tm.tm_min, &tm.tm_sec);
+        if (sscanf(t.c_str(), "%2d%2d%2d%2d%2d%2dZ", &tm.tm_year, &tm.tm_mon, &tm.tm_mday, &tm.tm_hour, &tm.tm_min, &tm.tm_sec) != 6) {
+            return ER_FAIL;
+        }
         if ((tm.tm_year >= 0) && (tm.tm_year <= 68)) {
             tm.tm_year += 100;    /* tm_year holds  Year - 1900 */
         }
-    } else {
+    } else if (0xF == t.size()) {
         /* the time format is "%Y%m%d%H%M%SZ".  Sample input: 20150205230725Z*/
-        sscanf(t.c_str(), "%4d%2d%2d%2d%2d%2dZ", &tm.tm_year, &tm.tm_mon, &tm.tm_mday, &tm.tm_hour, &tm.tm_min, &tm.tm_sec);
+        if (sscanf(t.c_str(), "%4d%2d%2d%2d%2d%2dZ", &tm.tm_year, &tm.tm_mon, &tm.tm_mday, &tm.tm_hour, &tm.tm_min, &tm.tm_sec) != 6) {
+            return ER_FAIL;
+        }
         tm.tm_year -= 1900;    /* tm_year hold Year - 1900 */
+    } else {
+        return ER_FAIL;
     }
     tm.tm_mon--;  /* month's range is [0-11] */
+    tm.tm_isdst = 0;
 
     /* Compute the GMT time from struct tm.
         Can't use timegm since it is not available in some platforms like Android and Windows */
 
-    /* figure out the local daylight saving value */
-    time_t currentTime = (time_t) GetEpochTimestamp() / 1000;
-    struct tm* ptm = gmtime(&currentTime);
-    tm.tm_isdst = ptm->tm_isdst;
-
-    /* convert the parsed tm struct to GMT time */
     time_t localTime = mktime(&tm);
-    ptm = gmtime(&localTime);
-    int32_t tzDiff = ptm->tm_hour - tm.tm_hour;
+    if (localTime < 0) {
+        return ER_FAIL;
+    }
+    struct tm* gtm = gmtime(&localTime);
+    if (!gtm) {
+        return ER_FAIL;
+    }
+    /* figure the time zone offset */
+    int32_t tzDiff = gtm->tm_hour - tm.tm_hour;
     if (tzDiff < 0) {
         tzDiff += 24;
     } else if (tzDiff > 12) {
         tzDiff = 24 - tzDiff;
+    }
+    /* figure out the local daylight saving value */
+    struct tm* ltm = localtime(&localTime);
+    if (!ltm) {
+        return ER_FAIL;
+    }
+    if (ltm->tm_isdst > 0) {
+        tzDiff++;
     }
     epoch = localTime - (tzDiff * 3600);
     return ER_OK;
@@ -874,6 +376,12 @@ QStatus CertificateX509::DecodeCertificateTime(const qcc::String& time)
         return ER_FAIL;
     }
 
+    char buf1[16];
+    char buf2[16];
+    memset(buf1, 0, 16);
+    memset(buf2, 0, 16);
+    memcpy(buf1, time1.data(), time1.size());
+    memcpy(buf2, time2.data(), time2.size());
     status = DecodeTime(validity.validFrom, time1);
     if (ER_OK != status) {
         return status;
@@ -995,9 +503,15 @@ QStatus CertificateX509::DecodeCertificateExt(const qcc::String& ext)
             return status;
         }
         if (OID_BASIC_CONSTRAINTS == oid) {
-            status = Crypto_ASN1::Decode(str, "(z)", &ca);
+            qcc::String opt;
+            status = Crypto_ASN1::Decode(str, "(.)", &opt);
             if (ER_OK != status) {
-                return status;
+                status = ER_OK;  /* The sequence can be empty since CA is false by default */
+            } else if (opt.size()) {
+                status = Crypto_ASN1::Decode(opt, "z", &ca);
+                if (ER_OK != status) {
+                    return status;
+                }
             }
         } else if (OID_CUSTOM_CERT_TYPE == oid) {
             status = Crypto_ASN1::Decode(str, "(i)", (uint32_t*) &type);
@@ -1020,7 +534,6 @@ QStatus CertificateX509::DecodeCertificateExt(const qcc::String& ext)
         }
         tmp = rem;
     }
-
     return status;
 }
 
@@ -1033,7 +546,11 @@ QStatus CertificateX509::EncodeCertificateExt(qcc::String& ext)
     qcc::String tmp1;
     qcc::String raw;
 
-    status = Crypto_ASN1::Encode(tmp, "(z)", ca);
+    if (ca) {
+        status = Crypto_ASN1::Encode(tmp, "(z)", ca);
+    } else {
+        status = Crypto_ASN1::Encode(tmp, "()");
+    }
     if (ER_OK != status) {
         return status;
     }
@@ -1103,6 +620,9 @@ QStatus CertificateX509::DecodeCertificateTBS()
     if (ER_OK != status) {
         return status;
     }
+    if (GetIssuerCNLength() == qcc::GUID128::SIZE) {
+        issuerGUID.SetBytes(GetIssuerCN());
+    }
     status = DecodeCertificateTime(time);
     if (ER_OK != status) {
         return status;
@@ -1110,6 +630,9 @@ QStatus CertificateX509::DecodeCertificateTBS()
     status = DecodeCertificateName(sub, subject);
     if (ER_OK != status) {
         return status;
+    }
+    if (GetSubjectCNLength() == qcc::GUID128::SIZE) {
+        subjectGUID.SetBytes(GetSubjectCN());
     }
     status = DecodeCertificatePub(pub);
     if (ER_OK != status) {
@@ -1254,8 +777,8 @@ QStatus CertificateX509::DecodeCertificatePEM(const qcc::String& pem)
     size_t pos;
     qcc::String rem;
     qcc::String der;
-    qcc::String tag1 = "-----BEGIN CERTIFICATE-----";
-    qcc::String tag2 = "-----END CERTIFICATE-----";
+    qcc::String tag1 = CERTIFICATE_PEM_BEGIN_TAG;
+    qcc::String tag2 = CERTIFICATE_PEM_END_TAG;
 
     pos = pem.find(tag1);
     if (pos == qcc::String::npos) {
@@ -1282,14 +805,14 @@ QStatus CertificateX509::EncodeCertificatePEM(qcc::String& der, qcc::String& pem
 {
     QStatus status;
     qcc::String rem;
-    qcc::String tag1 = "-----BEGIN CERTIFICATE-----\n";
-    qcc::String tag2 = "-----END CERTIFICATE-----";
+    qcc::String tag1 = CERTIFICATE_PEM_BEGIN_TAG;
+    qcc::String tag2 = CERTIFICATE_PEM_END_TAG;
 
     status = Crypto_ASN1::EncodeBase64(der, rem);
     if (ER_OK != status) {
         return status;
     }
-    pem = tag1 + rem + tag2;
+    pem = tag1 + "\n" + rem + tag2;
 
     return status;
 }
@@ -1345,7 +868,7 @@ QStatus CertificateX509::Verify(const KeyInfoNISTP256& ta)
     if (qcc::GUID128::SIZE != ta.GetKeyIdLen()) {
         return ER_FAIL;
     }
-    if (0 != memcmp(issuer.cn.GetBytes(), ta.GetKeyId(), qcc::GUID128::SIZE)) {
+    if (0 != memcmp(issuerGUID.GetBytes(), ta.GetKeyId(), qcc::GUID128::SIZE)) {
         return ER_FAIL;
     }
     ecc.SetDSAPublicKey(ta.GetPublicKey());
@@ -1364,21 +887,33 @@ QStatus CertificateX509::Sign(const ECCPrivateKey* key)
     return ecc.DSASign((const uint8_t*) tbs.data(), tbs.size(), &signature);
 }
 
-String CertificateX509::ToString()
+String CertificateX509::ToString() const
 {
     qcc::String str("Certificate:\n");
-    str += "serial:    " + serial + "\n";
-    str += "issuer:    " + issuer.cn.ToString() + "\n";
-    str += "subject:   " + subject.cn.ToString() + "\n";
-    if (subject.ouExists) {
-        str += "guild:     " + subject.ou.ToString() + "\n";
+    str += "serial:    " + serial + " (0x" + BytesToHexString((const uint8_t*) serial.data(), serial.length()) + ")\n";
+    if (GetIssuerCNLength() > 0) {
+        str += "issuer:    " + qcc::String((const char*) GetIssuerCN(), GetIssuerCNLength()) +
+               " (0x" + BytesToHexString(GetIssuerCN(), GetIssuerCNLength()) + ")\n";
+    }
+    if (GetSubjectOULength() > 0) {
+        str += "guild:    " + qcc::String((const char*) GetSubjectOU(), GetSubjectOULength()) +
+               " (0x" + BytesToHexString(GetSubjectOU(), GetSubjectOULength()) + ")\n";
+    }
+    if (GetSubjectCNLength() > 0) {
+        str += "subject:    " + qcc::String((const char*) GetSubjectCN(), GetSubjectCNLength()) +
+               " (0x" + BytesToHexString(GetSubjectCN(), GetSubjectCNLength()) + ")\n";
     }
     str += "publickey: " + BytesToHexString((const uint8_t*) &publickey, sizeof(publickey)) + "\n";
     str += "ca:        " + BytesToHexString((const uint8_t*) &ca, sizeof(uint8_t)) + "\n";
     str += "validity: not-before ";
     str += U64ToString(GetValidity()->validFrom);
+    qcc::String tmpTime;
+    EncodeTime(GetValidity()->validFrom, tmpTime);
+    str += " (" + tmpTime + ") ";
     str += " not-after ";
     str += U64ToString(GetValidity()->validTo);
+    EncodeTime(GetValidity()->validTo, tmpTime);
+    str += " (" + tmpTime + ") ";
     str += "\n";
     if (digest.size()) {
         str += "digest:    " + BytesToHexString((const uint8_t*) digest.c_str(), digest.size()) + "\n";
@@ -1447,7 +982,7 @@ QStatus CertificateX509::DecodeCertChainPEM(const String& encoded, CertificateX5
 {
     qcc::String* chunks = new  qcc::String[count];
 
-    QStatus status = RetrieveNumOfChunksFromPEM(encoded, "-----BEGIN CERTIFICATE-----", "-----END CERTIFICATE-----", chunks, count);
+    QStatus status = RetrieveNumOfChunksFromPEM(encoded, CERTIFICATE_PEM_BEGIN_TAG, CERTIFICATE_PEM_END_TAG, chunks, count);
     if (status != ER_OK) {
         delete [] chunks;
         return status;
@@ -1460,6 +995,19 @@ QStatus CertificateX509::DecodeCertChainPEM(const String& encoded, CertificateX5
         }
     }
     delete [] chunks;
+
+    return status;
+}
+
+QStatus MembershipCertificate::DecodeCertificateDER(const qcc::String& der)
+{
+    QStatus status = CertificateX509::DecodeCertificateDER(der);
+    if (ER_OK != status) {
+        return status;
+    }
+    if (GetSubjectOULength() == GUID128::SIZE) {
+        guildGUID.SetBytes(GetSubjectOU());
+    }
     return status;
 }
 

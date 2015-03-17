@@ -307,13 +307,9 @@ class PermissionMgmtObj : public BusObject {
     void Claim(const InterfaceDescription::Member* member, Message& msg);
     void InstallPolicy(const InterfaceDescription::Member* member, Message& msg);
     QStatus GetACLGUID(ACLEntryType aclEntryType, qcc::GUID128& guid);
-
-  public:
     QStatus StorePolicy(PermissionPolicy& policy);
     QStatus InstallTrustAnchor(TrustAnchor* trustAnchor);
     QStatus StoreIdentityCertificate(MsgArg& certArg);
-
-  private:
     QStatus StoreTrustAnchors();
     QStatus LoadTrustAnchors();
     QStatus RemoveTrustAnchor(TrustAnchor* trustAnchor);
@@ -354,6 +350,7 @@ class PermissionMgmtObj : public BusObject {
     bool IsTrustAnchor(bool specificMatch, TrustAnchorType taType, const qcc::ECCPublicKey* publicKey);
     QStatus GetTrustAnchorsFromAllMemberships(TrustAnchorList& taList);
     QStatus ManageMembershipTrustAnchors(PermissionPolicy* policy);
+    QStatus GetDSAPrivateKey(qcc::ECCPrivateKey& privateKey);
 
     /**
      * Bind to an exclusive port for PermissionMgmt object.

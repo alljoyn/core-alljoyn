@@ -15,6 +15,8 @@
  ******************************************************************************/
 
 #include <alljoyn/Status.h>
+#include <alljoyn/AboutData.h>
+#include <alljoyn/AboutListener.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/ProxyBusObject.h>
 #include <alljoyn/BusObject.h>
@@ -26,12 +28,7 @@
 #include <stdio.h>
 #include <qcc/platform.h>
 
-#include <alljoyn/about/AboutClient.h>
-#include <alljoyn/about/AboutService.h>
-#include <alljoyn/about/AnnouncementRegistrar.h>
-
 #include "../SimpleRuleEngine.h"
-#include "PropertyStoreImpl.h"
 #include "OptParser.h"
 #include "RuleBusObject.h"
 
@@ -41,7 +38,7 @@
 class MyAllJoynCode;
 
 class MyAllJoynCode :
-    public ajn::services::AnnounceHandler,
+    public ajn::AboutListener,
     public ajn::SessionPortListener,
     public ajn::SessionListener {
   public:
@@ -50,7 +47,7 @@ class MyAllJoynCode :
      *
      */
     MyAllJoynCode()
-        : AnnounceHandler(), mBusAttachment(NULL), aboutService(NULL), ruleEngine(), ruleBusObject(NULL)
+        : aboutData(), mBusAttachment(NULL), ruleEngine(), ruleBusObject(NULL)
     { };
 
     /**
@@ -76,9 +73,7 @@ class MyAllJoynCode :
   private:
 
     /* From About */
-    void Announce(unsigned short version, unsigned short port, const char* busName,
-                  const ajn::services::AboutClient::ObjectDescriptions& objectDescs,
-                  const ajn::services::AboutClient::AboutData& aboutData);
+    void Announced(const char* busName, uint16_t version, ajn::SessionPort port, const ajn::MsgArg& objectDescriptionArg, const ajn::MsgArg& aboutDataArg);
 
     /* From SessionPortListener */
     virtual bool AcceptSessionJoiner(ajn::SessionPort sessionPort, const char* joiner, const ajn::SessionOpts& opts);
@@ -96,14 +91,11 @@ class MyAllJoynCode :
 
     void HexStringToBytes(const qcc::String& hex, uint8_t* outBytes, size_t len);
 
-    void FillPropertyStoreData(OptParser const& opts, std::multimap<qcc::String, PropertyStoreImpl::Property>& data, const char* friendlyName);
-
   private:
     std::map<qcc::String, qcc::String> mBusFriendlyMap;
 
-    PropertyStoreImpl* propertyStoreImpl;
+    ajn::AboutData aboutData;
     ajn::BusAttachment* mBusAttachment;
-    ajn::services::AboutServiceApi* aboutService;
 
     SimpleRuleEngine ruleEngine;
     RuleBusObject* ruleBusObject;

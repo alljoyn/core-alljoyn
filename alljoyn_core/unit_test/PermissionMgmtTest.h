@@ -75,14 +75,14 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
             RUN_AS_CONSUMER = 2
         } AgentType;
 
-        ECDHEKeyXListener(AgentType agentType) : agentType(agentType)
+        ECDHEKeyXListener(AgentType agentType) : agentType(agentType), authComplete(false)
         {
         }
 
         bool RequestCredentials(const char* authMechanism, const char* authPeer, uint16_t authCount, const char* userId, uint16_t credMask, Credentials& creds)
         {
             if (strcmp(authMechanism, "ALLJOYN_ECDHE_NULL") == 0) {
-                creds.SetExpiration(100);  /* set the master secret expiry time to 100 seconds */
+                // creds.SetExpiration(100);  /* set the master secret expiry time to 100 seconds */
                 return true;
             } else if (strcmp(authMechanism, "ALLJOYN_ECDHE_PSK") == 0) {
                 /*
@@ -129,12 +129,23 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
             }
             msg += "AuthenticationComplete auth mechanism ";
             msg += authMechanism;
-            msg += " failed";
-            ASSERT_TRUE(success) << msg.c_str();
+            printf("%s ", msg.c_str());
+            if (success) {
+                printf("succeeded\n");
+            } else {
+                printf("failed\n");
+            }
+            authComplete = success;
+        }
+
+        bool IsAuthComplete()
+        {
+            return authComplete;
         }
 
       private:
         AgentType agentType;
+        bool authComplete;
     };
 
     BasePermissionMgmtTest(const char* path) : BusObject(path),
@@ -144,7 +155,6 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
         consumerBus("PermissionMgmtTestConsumer", false),
         remoteControlBus("PermissionMgmtTestRemoteControl", false),
         status(ER_OK),
-        authComplete(false),
         serviceKeyListener(NULL),
         adminKeyListener(NULL),
         consumerKeyListener(NULL),
@@ -174,7 +184,6 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
     qcc::GUID128 consumerGUID;
     qcc::GUID128 remoteControlGUID;
     QStatus status;
-    bool authComplete;
 
     QStatus InterestInChannelChangedSignal(BusAttachment* bus);
     void ChannelChangedSignalHandler(const InterfaceDescription::Member* member,
@@ -196,16 +205,17 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
     QStatus Get(const char* ifcName, const char* propName, MsgArg& val);
     QStatus Set(const char* ifcName, const char* propName, MsgArg& val);
     void GetAllProps(const InterfaceDescription::Member* member, Message& msg);
-
-  private:
-    void RegisterKeyStoreListeners();
-    QStatus SetupBus(BusAttachment& bus);
-    QStatus TeardownBus(BusAttachment& bus);
+    const qcc::String& GetAuthMechanisms() const;
 
     ECDHEKeyXListener* serviceKeyListener;
     ECDHEKeyXListener* adminKeyListener;
     ECDHEKeyXListener* consumerKeyListener;
     ECDHEKeyXListener* remoteControlKeyListener;
+  private:
+    void RegisterKeyStoreListeners();
+    QStatus SetupBus(BusAttachment& bus);
+    QStatus TeardownBus(BusAttachment& bus);
+
     InMemoryKeyStoreListener adminKeyStoreListener;
     InMemoryKeyStoreListener serviceKeyStoreListener;
     InMemoryKeyStoreListener consumerKeyStoreListener;
@@ -213,6 +223,7 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
     uint32_t currentTVChannel;
     uint32_t volume;
     bool channelChangedSignalReceived;
+    qcc::String authMechanisms;
     TestPermissionMgmtListener testPML;
 };
 

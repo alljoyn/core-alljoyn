@@ -42,47 +42,29 @@ static const size_t ECC_COORDINATE_SZ = 8 * sizeof(uint32_t);
 static const uint8_t ECC_COORDINATE_EMPTY[ECC_COORDINATE_SZ] = { 0 };
 
 /**
- * The size of the ECC big value
- */
-static const size_t ECC_BIGVAL_SZ = 9;
-/**
- * The size of the ECC private key
- */
-static const size_t ECC_PRIVATE_KEY_SZ = ECC_BIGVAL_SZ * sizeof(uint32_t);
-
-/**
- * The size of the ECC public key
- */
-static const size_t ECC_PUBLIC_KEY_SZ = (2 * ECC_BIGVAL_SZ * sizeof(uint32_t)) + sizeof(uint32_t);
-
-/**
- * The size of the ECC secret
- */
-static const size_t ECC_SECRET_SZ = ECC_PUBLIC_KEY_SZ;
-
-/**
- * The size of the ECC signature
- */
-static const size_t ECC_SIGNATURE_SZ = 2 * ECC_BIGVAL_SZ * sizeof(uint32_t);
-
-/**
  * The ECC private key big endian byte array
  */
-struct ECCPrivateKeyOldEncoding {
-    uint8_t data[ECC_PRIVATE_KEY_SZ];
-};
 
 struct ECCPrivateKey {
-    uint8_t x[ECC_COORDINATE_SZ];
+    uint8_t d[ECC_COORDINATE_SZ];
+    ECCPrivateKey() {
+        memset(d, 0, ECC_COORDINATE_SZ);
+    }
+
+    void operator=(const ECCPrivateKey& k)
+    {
+        memcpy(d, k.d, ECC_COORDINATE_SZ);
+    }
+
+    bool operator==(const ECCPrivateKey& k) const
+    {
+        return memcmp(d, k.d, ECC_COORDINATE_SZ) == 0;
+    }
 };
 
 /**
  * The ECC public key big endian byte array
  */
-struct ECCPublicKeyOldEncoding {
-    uint8_t data[ECC_PUBLIC_KEY_SZ];
-}
-;
 struct ECCPublicKey {
     uint8_t x[ECC_COORDINATE_SZ];
     uint8_t y[ECC_COORDINATE_SZ];
@@ -106,8 +88,7 @@ struct ECCPublicKey {
 
     bool operator!=(const ECCPublicKey& k) const
     {
-        int n = memcmp(x, k.x, ECC_COORDINATE_SZ);
-        return (n != 0) || (0 != memcmp(y, k.y, ECC_COORDINATE_SZ));
+        return !(*this == k);
     }
 
     bool operator<(const ECCPublicKey& k) const
@@ -151,19 +132,43 @@ struct ECCPublicKey {
 
 };
 
-typedef ECCPublicKeyOldEncoding ECCSecretOldEncoding;
-typedef ECCPublicKey ECCSecret;
+/**
+ * The ECC secret
+ */
+struct ECCSecret {
+    uint8_t z[ECC_COORDINATE_SZ];
+
+    ECCSecret() {
+        memset(z, 0, ECC_COORDINATE_SZ);
+    }
+    void operator=(const ECCSecret& k)
+    {
+        memcpy(z, k.z, ECC_COORDINATE_SZ);
+    }
+    bool operator==(const ECCSecret& k) const
+    {
+        return memcmp(z, k.z, ECC_COORDINATE_SZ) == 0;
+    }
+};
 
 /**
  * The ECC signature big endian byte array
  */
-struct ECCSignatureOldEncoding {
-    uint8_t data[ECC_SIGNATURE_SZ];
-};
 
 struct ECCSignature {
     uint8_t r[ECC_COORDINATE_SZ];
     uint8_t s[ECC_COORDINATE_SZ];
+
+    ECCSignature() {
+        memset(r, 0, ECC_COORDINATE_SZ);
+        memset(s, 0, ECC_COORDINATE_SZ);
+    }
+
+    void operator=(const ECCSignature& k)
+    {
+        memcpy(r, k.r, ECC_COORDINATE_SZ);
+        memcpy(s, k.s, ECC_COORDINATE_SZ);
+    }
 };
 
 /**
@@ -204,13 +209,13 @@ class Crypto_ECC {
      *      ER_FAIL otherwise
      *      Other error status.
      */
-    QStatus GenerateSharedSecret(const ECCPublicKey* peerPublicKey, ECCPublicKey* secret);
+    QStatus GenerateSharedSecret(const ECCPublicKey* peerPublicKey, ECCSecret* secret);
 
     /**
      * Retrieve the DH public key
      * @return  the DH public key.  It's a pointer to an internal buffer. Its lifetime is the same as the object's lifetime.
      */
-    const ECCPublicKey* GetDHPublicKey()
+    const ECCPublicKey* GetDHPublicKey() const
     {
         return &dhPublicKey;
     }
@@ -228,7 +233,7 @@ class Crypto_ECC {
      * Retrieve the DH private key
      * @return  the DH private key.  Same lifetime as the object.
      */
-    const ECCPrivateKey* GetDHPrivateKey()
+    const ECCPrivateKey* GetDHPrivateKey() const
     {
         return &dhPrivateKey;
     }
@@ -246,7 +251,7 @@ class Crypto_ECC {
      * Retrieve the DSA public key
      * @return  the DSA public key.  Same lifetime as the object.
      */
-    const ECCPublicKey* GetDSAPublicKey()
+    const ECCPublicKey* GetDSAPublicKey() const
     {
         return &dsaPublicKey;
     }
@@ -264,7 +269,7 @@ class Crypto_ECC {
      * Retrieve the DSA private key
      * @return  the DSA private key.  Same lifetime as the object.
      */
-    const ECCPrivateKey* GetDSAPrivateKey()
+    const ECCPrivateKey* GetDSAPrivateKey() const
     {
         return &dsaPrivateKey;
     }
@@ -289,9 +294,9 @@ class Crypto_ECC {
     QStatus GenerateDSAKeyPair();
 
     /**
-     * Sign a buffer using the DSA key
-     * @param buf The buffer to sign
-     * @param len The buffer len
+     * Sign a digest using the DSA key
+     * @param digest The digest to sign
+     * @param len The digest len
      * @param sig The output signature
      * @return
      *      ER_OK if the signing process succeeds
@@ -343,13 +348,6 @@ class Crypto_ECC {
     {
         return ECC_NIST_P256;
     }
-
-    QStatus ReEncode(const ECCPrivateKey* newenc, ECCPrivateKeyOldEncoding* oldenc);
-    QStatus ReEncode(const ECCPublicKey* newenc, ECCPublicKeyOldEncoding* oldenc);
-    QStatus ReEncode(const ECCSignature* newenc, ECCSignatureOldEncoding* oldenc);
-    QStatus ReEncode(const ECCPrivateKeyOldEncoding* oldenc, ECCPrivateKey* newenc);
-    QStatus ReEncode(const ECCPublicKeyOldEncoding* oldenc, ECCPublicKey* newenc);
-    QStatus ReEncode(const ECCSignatureOldEncoding* oldenc, ECCSignature* newenc);
 
     ~Crypto_ECC();
 

@@ -1064,7 +1064,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         keyInfo.SetKeyId(issuerGUID.GetBytes(), GUID128::SIZE);
         keyInfo.SetPublicKey(&issuerPubKey);
         KeyInfoHelper::KeyInfoNISTP256ToMsgArg(keyInfo, publicKeyArg);
-        EXPECT_EQ(ER_OK, identityCertArg.Set("(yay)", Certificate::ENCODING_X509_DER, der.size(), der.data()));
+        EXPECT_EQ(ER_OK, identityCertArg.Set("(yay)", CertificateX509::ENCODING_X509_DER, der.size(), der.data()));
         ASSERT_EQ(ER_OK, pmProxy.Claim(publicKeyArg, identityCertArg, &claimedPubKey)) << "Claim failed.";
 
         /* retrieve back the identity cert to compare */
@@ -1079,6 +1079,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         /* reload the shared key store because of change on one bus */
         adminProxyBus.ReloadKeyStore();
         adminBus.ReloadKeyStore();
+        qcc::String currentAuthMechanisms = GetAuthMechanisms();
         EnableSecurity("ALLJOYN_ECDHE_ECDSA");
         PermissionPolicy* policy = GenerateMembershipAuthDataForAdmin();
         InstallMembershipToAdmin(policy);
@@ -1086,6 +1087,8 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         policy = GenerateFullAccessOutgoingPolicy();
         InstallPolicyToAdmin(*policy);
         delete policy;
+        /* restore the current security mode */
+        EnableSecurity(currentAuthMechanisms.c_str());
     }
 
     /**
@@ -1134,7 +1137,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         KeyInfoNISTP256 keyInfo;
         adminBus.GetPermissionConfigurator().GetSigningPublicKey(keyInfo);
         KeyInfoHelper::KeyInfoNISTP256ToMsgArg(keyInfo, publicKeyArg);
-        EXPECT_EQ(ER_OK, identityCertArg.Set("(yay)", Certificate::ENCODING_X509_DER, der.size(), der.data()));
+        EXPECT_EQ(ER_OK, identityCertArg.Set("(yay)", CertificateX509::ENCODING_X509_DER, der.size(), der.data()));
         EXPECT_EQ(ER_PERMISSION_DENIED, pmProxy.Claim(publicKeyArg, identityCertArg, &claimedPubKey)) << "Claim is not supposed to succeed.";
 
         /* now switch it back to claimable */
@@ -1200,7 +1203,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         KeyInfoNISTP256 keyInfo;
         adminBus.GetPermissionConfigurator().GetSigningPublicKey(keyInfo);
         KeyInfoHelper::KeyInfoNISTP256ToMsgArg(keyInfo, publicKeyArg);
-        EXPECT_EQ(ER_OK, identityCertArg.Set("(yay)", Certificate::ENCODING_X509_DER, der.size(), der.data()));
+        EXPECT_EQ(ER_OK, identityCertArg.Set("(yay)", CertificateX509::ENCODING_X509_DER, der.size(), der.data()));
         EXPECT_EQ(ER_OK, pmProxy.Claim(publicKeyArg, identityCertArg, &claimedPubKey)) << "Claim failed.";
 
         /* try to claim a second time */
@@ -1250,7 +1253,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         KeyInfoNISTP256 keyInfo;
         consumerBus.GetPermissionConfigurator().GetSigningPublicKey(keyInfo);
         KeyInfoHelper::KeyInfoNISTP256ToMsgArg(keyInfo, publicKeyArg);
-        EXPECT_EQ(ER_OK, identityCertArg.Set("(yay)", Certificate::ENCODING_X509_DER, der.size(), der.data()));
+        EXPECT_EQ(ER_OK, identityCertArg.Set("(yay)", CertificateX509::ENCODING_X509_DER, der.size(), der.data()));
         EXPECT_EQ(ER_OK, pmProxy.Claim(publicKeyArg, identityCertArg, &claimedPubKey)) << "Claim failed.";
 
         /* sleep a second to see whether the NotifyConfig signal is received */
@@ -1268,14 +1271,9 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         if (usePSK) {
             EnableSecurity("ALLJOYN_ECDHE_PSK");
         } else {
-            EnableSecurity("ALLJOYN_ECDHE_ECDSA");
-        }
-        ClaimAdmin();
-        if (usePSK) {
-            EnableSecurity("ALLJOYN_ECDHE_PSK");
-        } else {
             EnableSecurity("ALLJOYN_ECDHE_NULL");
         }
+        ClaimAdmin();
         ClaimService();
         ClaimConsumer();
         if (claimRemoteControl) {
@@ -1387,7 +1385,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         IdentityCertificate tempCert;
         tempCert.DecodeCertificateDER(der);
         String pem = tempCert.GetPEM();
-        MsgArg certArg("(yay)", Certificate::ENCODING_X509_DER_PEM, pem.size(), pem.data());
+        MsgArg certArg("(yay)", CertificateX509::ENCODING_X509_DER_PEM, pem.size(), pem.data());
         EXPECT_EQ(ER_OK, pmProxy.InstallIdentity(certArg)) << "InstallIdentity failed.";
 
         /* retrieve back the identity cert to compare */
@@ -1413,7 +1411,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         status = PermissionMgmtTestHelper::CreateIdentityCert(adminBus, "5050505", guid, &randomKey, "Service Provider", der);
         EXPECT_EQ(ER_OK, status) << "  CreateIdentityCert failed.  Actual Status: " << QCC_StatusText(status);
 
-        MsgArg certArg("(yay)", Certificate::ENCODING_X509_DER, der.size(), der.data());
+        MsgArg certArg("(yay)", CertificateX509::ENCODING_X509_DER, der.size(), der.data());
         EXPECT_NE(ER_OK, pmProxy.InstallIdentity(certArg)) << "InstallIdentity did not fail.";
     }
 
@@ -1431,7 +1429,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
 
         /* sleep 2 seconds to get the cert to expire */
         qcc::Sleep(2000);
-        MsgArg certArg("(yay)", Certificate::ENCODING_X509_DER, der.size(), der.data());
+        MsgArg certArg("(yay)", CertificateX509::ENCODING_X509_DER, der.size(), der.data());
         EXPECT_NE(ER_OK, pmProxy.InstallIdentity(certArg)) << "InstallIdentity did not fail.";
     }
 
@@ -1598,7 +1596,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     void InstallGuildEquivalence()
     {
         PermissionMgmtProxy pmProxy(adminBus, serviceBus.GetUniqueName().c_str());
-        MsgArg arg("(yay)", Certificate::ENCODING_X509_DER_PEM, strlen(sampleCertificatePEM), sampleCertificatePEM);
+        MsgArg arg("(yay)", CertificateX509::ENCODING_X509_DER_PEM, strlen(sampleCertificatePEM), sampleCertificatePEM);
         EXPECT_EQ(ER_OK, pmProxy.InstallGuildEquivalence(arg)) << "InstallGuildEquivalence failed.";
 
     }
@@ -2390,7 +2388,7 @@ TEST_F(PermissionMgmtUseCaseTest, ConsumerHasGoodMembershipCertChain)
     InstallPolicyToConsumer(*policy);
     delete policy;
 
-    PermissionPolicy** authDataArray = new PermissionPolicy * [2];
+    PermissionPolicy** authDataArray = new PermissionPolicy* [2];
     GenerateMembershipAuthChain(authDataArray, 2);
     InstallMembershipChainToTarget(adminBus, adminBus, consumerBus, membershipSerial0, membershipSerial1, membershipGUID1, authDataArray);
     for (size_t cnt = 0; cnt < 2; cnt++) {
@@ -2424,7 +2422,7 @@ TEST_F(PermissionMgmtUseCaseTest, ConsumerHasOverreachingMembershipCertChain)
     InstallPolicyToConsumer(*policy);
     delete policy;
 
-    PermissionPolicy** authDataArray = new PermissionPolicy * [2];
+    PermissionPolicy** authDataArray = new PermissionPolicy* [2];
     GenerateOverReachingMembershipAuthChain(authDataArray, 2);
     InstallMembershipChainToTarget(adminBus, adminBus, consumerBus, membershipSerial0, membershipSerial1, membershipGUID1, authDataArray);
     for (size_t cnt = 0; cnt < 2; cnt++) {
@@ -2555,7 +2553,7 @@ TEST_F(PermissionMgmtUseCaseTest, TwoTrustAnchors)
     InstallPolicyToClientBus(consumerBus, remoteControlBus, *policy);
     delete policy;
 
-    PermissionPolicy** authDataArray = new PermissionPolicy * [2];
+    PermissionPolicy** authDataArray = new PermissionPolicy* [2];
     GenerateMembershipAuthChain(authDataArray, 2);
     InstallMembershipChainToTarget(adminBus, consumerBus, remoteControlBus, membershipSerial0, membershipSerial1, membershipGUID1, authDataArray);
     for (size_t cnt = 0; cnt < 2; cnt++) {
@@ -2620,6 +2618,7 @@ TEST_F(PermissionMgmtUseCaseTest, AddDeleteIdentityTrustAnchors)
     ClearPeerKeys(remoteControlBus, serviceBus);
     EnableSecurity("ALLJOYN_ECDHE_ECDSA");
     AppCannotCallTVOn(remoteControlBus, serviceBus);
+    ASSERT_FALSE(remoteControlKeyListener->IsAuthComplete()) << " remote control did not fail the secure ECDSA connection";
 }
 
 /*

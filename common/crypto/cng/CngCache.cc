@@ -59,7 +59,7 @@ static void CloseAlgorithmProvider(BCRYPT_ALG_HANDLE* handle)
         return;
     }
     NTSTATUS ntStatus = BCryptCloseAlgorithmProvider(*handle, 0);
-    if (ntStatus < 0) {
+    if (!BCRYPT_SUCCESS(ntStatus)) {
         QCC_LogError(ER_OS_ERROR, ("BCryptCloseAlgorithmProvider failed NTSTATUS=0x%x", ntStatus));
     }
     *handle = NULL;
@@ -81,7 +81,7 @@ void CngCache::Cleanup()
  */
 uint64_t cngCacheDummy[RequiredArrayLength(sizeof(CngCache), uint64_t)];
 
-CngCache& cngCache = (CngCache &)cngCacheDummy;
+CngCache& cngCache = (CngCache&)cngCacheDummy;
 
 static int cngCacheCounter = 0;
 bool CngCacheInit::cleanedup = false;

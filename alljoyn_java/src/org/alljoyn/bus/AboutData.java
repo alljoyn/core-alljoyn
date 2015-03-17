@@ -26,7 +26,6 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.UUID;
 
-import javax.xml.bind.DatatypeConverter;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -100,6 +99,10 @@ public class AboutData implements AboutDataListener, AboutKeys {
      * @throws BusException
      */
     AboutData(Map<String, Variant> aboutData) throws BusException {
+        initializeFieldDetails();
+        propertyStore = new HashMap<String, Variant>();
+        localizedPropertyStore = new HashMap<String, Map<String, Variant>>();
+        supportedLanguages = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
         createFromAnnoncedAboutData(aboutData, null);
     }
 
@@ -113,6 +116,10 @@ public class AboutData implements AboutDataListener, AboutKeys {
      */
 
     AboutData(Map<String, Variant> aboutData, String language) throws BusException {
+        initializeFieldDetails();
+        propertyStore = new HashMap<String, Variant>();
+        localizedPropertyStore = new HashMap<String, Map<String, Variant>>();
+        supportedLanguages = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
         createFromAnnoncedAboutData(aboutData, language);
     }
     /**
@@ -156,13 +163,9 @@ public class AboutData implements AboutDataListener, AboutKeys {
         DocumentBuilder builder = null;
         try {
             builder = factory.newDocumentBuilder();
-        } catch (ParserConfigurationException e1) {
-            // TODO Auto-generated catch block
-            e1.printStackTrace();
-        }
-        InputSource inputSource = new InputSource();
-        inputSource.setCharacterStream(new StringReader(aboutDataXml));
-        try {
+
+            InputSource inputSource = new InputSource();
+            inputSource.setCharacterStream(new StringReader(aboutDataXml));
             Document doc = builder.parse(inputSource);
             //Document doc = parser.getDocument();
             // First process all fields that are not localized so we can get the
@@ -170,12 +173,12 @@ public class AboutData implements AboutDataListener, AboutKeys {
             for(String field : aboutFields.keySet()) {
                 // Supported languages are implicitly added no need to look for a
                 // SupportedLanguages languages tag.
-                if (field == AboutData.ABOUT_SUPPORTED_LANGUAGES) {
+                if (field.equals(AboutData.ABOUT_SUPPORTED_LANGUAGES)) {
                     continue;
                 }
                 // The Alljoyn software version is implicitly added so we don't need to
                 // look for this tag
-                if (field == AboutData.ABOUT_AJ_SOFTWARE_VERSION) {
+                if (field.equals(AboutData.ABOUT_AJ_SOFTWARE_VERSION)) {
                     continue;
                 }
                 // We only expect to see one tag for non-localized values.
@@ -183,7 +186,7 @@ public class AboutData implements AboutDataListener, AboutKeys {
                 if(!isFieldLocalized(field)) {
                     try {
                         NodeList nl = doc.getElementsByTagName(field);
-                        if(field == AboutData.ABOUT_APP_ID) {
+                        if(field.equals(AboutData.ABOUT_APP_ID)) {
                             try {
                                 setAppId(UUID.fromString(nl.item(0).getTextContent()));
                             } catch(IllegalArgumentException e) {
@@ -194,8 +197,8 @@ public class AboutData implements AboutDataListener, AboutKeys {
                         } else {
                             setField(field, new Variant(nl.item(0).getTextContent()));
                         }
-                    // if a element is not found it will throw a NullPointerException
-                    // we will continue to process any tags that are found.
+                        // if a element is not found it will throw a NullPointerException
+                        // we will continue to process any tags that are found.
                     } catch(NullPointerException e) {
                         continue;
                     } catch (DOMException e) {
@@ -221,12 +224,12 @@ public class AboutData implements AboutDataListener, AboutKeys {
                     }
                 }
             }
+        } catch (ParserConfigurationException e1) {
+            throw new BusException("Failed to parse XML");
         } catch (SAXException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+            throw new BusException("Failed to parse XML");
         } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+            throw new BusException("Failed to parse XML");
         }
     }
 
@@ -294,16 +297,20 @@ public class AboutData implements AboutDataListener, AboutKeys {
      *                      language was not specified.
      */
     public void createFromAnnoncedAboutData(Map<String, Variant> aboutData, String language) throws BusException {
+        if(aboutData == null) {
+            throw new ErrorReplyBusException(Status.ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD);
+        }
         if (language == null || language.length() == 0) {
-            try {
-                language = aboutData.get(ABOUT_DEFAULT_LANGUAGE).getObject(String.class);
-            } catch (NullPointerException e) {
+            Variant defaultLangArg = aboutData.get(ABOUT_DEFAULT_LANGUAGE);
+            if (defaultLangArg == null) {
                 throw new ErrorReplyBusException(Status.ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD);
+            } else {
+                language = defaultLangArg.getObject(String.class);
             }
         }
 
         if (language == null || language.length() == 0) {
-            new ErrorReplyBusException(Status.ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD);
+            throw new ErrorReplyBusException(Status.ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD);
         }
 
         for (String s : aboutData.keySet()) {
@@ -400,8 +407,21 @@ public class AboutData implements AboutDataListener, AboutKeys {
 
     public String getAppIdAsHexString() throws BusException {
         byte[] appId = getField(ABOUT_APP_ID).getObject(byte[].class);
-        return DatatypeConverter.printHexBinary(appId);
+        return byteArrayToHexString(appId);
     }
+
+    final protected static char[] hexCharArray = "0123456789ABCDEF".toCharArray();
+
+    private static String byteArrayToHexString(byte[] byteArray) {
+        char[] hexChars = new char[byteArray.length * 2];
+        for (int i = 0; i < byteArray.length; ++i) {
+            int x = byteArray[i] & 0xff;
+            hexChars[i*2] = hexCharArray[x >> 4];
+            hexChars[i*2 + 1] = hexCharArray[x & 0x0f];
+        }
+        return new String(hexChars);
+    }
+
     /**
      * Set the AppId for the AboutData using a UUID.
      *
@@ -991,13 +1011,16 @@ public class AboutData implements AboutDataListener, AboutKeys {
         //    not announced
         //    can be localized
         if (!aboutFields.containsKey(name)) {
-            if (value.getSignature().equals("s")) {
+            String signature = value.getSignature();
+            if (signature == null) {
+                throw new BusException("Unable to find Variant signature.");
+            } else if (signature.equals("s")) {
             aboutFields.put(name, new FieldDetails(FieldDetails.LOCALIZED, value.getSignature()));
             } else {
                 aboutFields.put(name, new FieldDetails(FieldDetails.EMPTY_MASK, value.getSignature()));
             }
         }
-        if (name == ABOUT_DEFAULT_LANGUAGE) {
+        if (name.equals(ABOUT_DEFAULT_LANGUAGE)) {
             setSupportedLanguage(value.getObject(String.class));
         }
         if (isFieldLocalized(name)) {
@@ -1087,10 +1110,11 @@ public class AboutData implements AboutDataListener, AboutKeys {
      * </ul>
      */
     public boolean isFieldRequired(String fieldName) {
-        try {
-            return ((aboutFields.get(fieldName).fieldMask & FieldDetails.REQUIRED) == FieldDetails.REQUIRED);
-        } catch (NullPointerException e) {
+        FieldDetails fieldDetails = aboutFields.get(fieldName);
+        if(fieldDetails == null) {
             return false;
+        } else {
+            return ((fieldDetails.fieldMask & FieldDetails.REQUIRED) == FieldDetails.REQUIRED);
         }
     }
 
@@ -1106,10 +1130,11 @@ public class AboutData implements AboutDataListener, AboutKeys {
      * </ul>
      */
     public boolean isFieldAnnounced(String fieldName) {
-        try {
-            return ((aboutFields.get(fieldName).fieldMask  & FieldDetails.ANNOUNCED) == FieldDetails.ANNOUNCED);
-        } catch(NullPointerException e) {
+        FieldDetails fieldDetails = aboutFields.get(fieldName);
+        if (fieldDetails == null) {
             return false;
+        } else {
+            return ((fieldDetails.fieldMask & FieldDetails.ANNOUNCED) == FieldDetails.ANNOUNCED);
         }
     }
 
@@ -1127,10 +1152,11 @@ public class AboutData implements AboutDataListener, AboutKeys {
      * </ul>
      */
     public boolean isFieldLocalized(String fieldName) {
-        try {
-            return ((aboutFields.get(fieldName).fieldMask  & FieldDetails.LOCALIZED) == FieldDetails.LOCALIZED);
-        } catch(NullPointerException e) {
+        FieldDetails fieldDetails = aboutFields.get(fieldName);
+        if(fieldDetails == null) {
             return false;
+        } else {
+            return (fieldDetails.fieldMask  & FieldDetails.LOCALIZED) == FieldDetails.LOCALIZED;
         }
     }
 
@@ -1146,10 +1172,11 @@ public class AboutData implements AboutDataListener, AboutKeys {
      * </ul>
      */
     String getFieldSignature(String fieldName) {
-        try {
-            return aboutFields.get(fieldName).signature;
-        } catch(NullPointerException e) {
+        FieldDetails fieldDetails = aboutFields.get(fieldName);
+        if(fieldDetails == null) {
             return null;
+        } else {
+            return fieldDetails.signature;
         }
     }
 
@@ -1237,18 +1264,18 @@ public class AboutData implements AboutDataListener, AboutKeys {
         }
 
         if (!supportedLanguages.contains(language)) {
-            new ErrorReplyBusException(Status.LANGUAGE_NOT_SUPPORTED);
+            throw new ErrorReplyBusException(Status.LANGUAGE_NOT_SUPPORTED);
         }
 
         for (String s: aboutFields.keySet()) {
             if(isFieldRequired(s)) {
                 if (isFieldLocalized(s)) {
                     if (!localizedPropertyStore.containsKey(s) ||!localizedPropertyStore.get(s).containsKey(language)) {
-                        new ErrorReplyBusException(Status.ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD);
+                        throw new ErrorReplyBusException(Status.ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD);
                     }
                 } else {
                     if (!propertyStore.containsKey(s)) {
-                        new ErrorReplyBusException(Status.ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD);
+                        throw new ErrorReplyBusException(Status.ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD);
                     }
                 }
             }

@@ -25,7 +25,6 @@ JavaStatus('org/alljoyn/bus/Status')
 
 # AllJoyn Java binding
 if env['OS'] == 'android':
-    # Get P2P java files from core
     main_classes = env.Java('$CLASSDIR', source = ['.'], JAVACLASSPATH = env.subst('$JAVACLASSPATH'))
 
     if env['OS'] == 'android':

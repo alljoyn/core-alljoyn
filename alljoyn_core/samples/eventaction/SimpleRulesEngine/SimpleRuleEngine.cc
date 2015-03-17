@@ -19,7 +19,6 @@
 using namespace std;
 using namespace ajn;
 using namespace qcc;
-using namespace services;
 
 QStatus SimpleRuleEngine::initialize(const char* engineName, BusAttachment* bus)
 {
@@ -80,37 +79,29 @@ QStatus SimpleRuleEngine::shutdown()
     return status;
 }
 
-void SimpleRuleEngine::Announce(unsigned short version, unsigned short port, const char* busName,
-                                const ajn::services::AboutClient::ObjectDescriptions& objectDescs,
-                                const ajn::services::AboutClient::AboutData& aboutData)
+void SimpleRuleEngine::Announce(const char* busName, uint16_t version,
+                                SessionPort port, const MsgArg& objectDescriptionArg,
+                                const MsgArg& aboutDataArg)
 {
     NearbyAppInfo* nearbyAppInfo = new NearbyAppInfo();
-    for (AboutClient::AboutData::const_iterator it = aboutData.begin(); it != aboutData.end(); ++it) {
-        qcc::String key = it->first;
-        ajn::MsgArg value = it->second;
-        if (value.typeId == ALLJOYN_STRING) {
-            LOGTHIS("Key: %s, Val: %s", key.c_str(), value.v_string.str);
-            if (key.compare("DeviceName") == 0) {
-                nearbyAppInfo->friendlyName = value.v_string.str;
-            } else if (key.compare("DeviceId") == 0) {
-                nearbyAppInfo->deviceId = value.v_string.str;
-            }
-        } else if (value.typeId == ALLJOYN_BYTE_ARRAY) {
-            LOGTHIS("Key: %s, Val: %s", key.c_str(), "BYTE_ARRAY");
-            if (key.compare("AppId") == 0) {
-                uint8_t* AppIdBuffer;
-                size_t numElements;
-                value.Get("ay", &numElements, &AppIdBuffer);
-                char temp[(numElements + 1) * 2];               //*2 due to hex format
-                for (size_t i = 0; i < numElements; i++) {
-                    sprintf(temp + (i * 2), "%02x", AppIdBuffer[i]);
-                }
-                temp[numElements * 2] = '\0';
-                nearbyAppInfo->appId = temp;
-                LOGTHIS("Key: %s, Val: %s", key.c_str(), temp);
-            }
-        }
+    AboutData aboutData(aboutDataArg);
+    char* deviceName;
+    aboutData.GetDeviceName(&deviceName);
+    nearbyAppInfo->friendlyName = deviceName;
+    char* deviceId;
+    aboutData.GetDeviceId(&deviceId);
+    nearbyAppInfo->deviceId = deviceId;
+
+    uint8_t* appIdBuffer;
+    size_t numElements;
+    aboutData.GetAppId(&appIdBuffer, &numElements);
+    char temp[(numElements + 1) * 2];               //*2 due to hex format
+    for (size_t i = 0; i < numElements; i++) {
+        sprintf(temp + (i * 2), "%02x", appIdBuffer[i]);
     }
+    temp[numElements * 2] = '\0';
+    nearbyAppInfo->appId = temp;
+
     nearbyAppInfo->port = port;
     mNearbyAppMap.insert(std::pair<qcc::String, NearbyAppInfo*>(busName, nearbyAppInfo));
 

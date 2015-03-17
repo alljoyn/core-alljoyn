@@ -18,8 +18,7 @@
 #include <alljoyn/BusAttachment.h>
 #include <qcc/String.h>
 #include <vector>
-
-#include <alljoyn/about/AboutClient.h>
+#include <map>
 
 #include "Rule.h"
 #if TARGET_ANDROID
@@ -87,9 +86,9 @@ class SimpleRuleEngine {
 
     //Application using this engine is responsible for registering for About handler and passing
     //through the call to this engine
-    void Announce(unsigned short version, unsigned short port, const char* busName,
-                  const ajn::services::AboutClient::ObjectDescriptions& objectDescs,
-                  const ajn::services::AboutClient::AboutData& aboutData);
+    void Announce(const char* busName, uint16_t version,
+                  ajn::SessionPort port, const ajn::MsgArg& objectDescriptionArg,
+                  const ajn::MsgArg& aboutDataArg);
 
     /**
      * Free up and release the objects used

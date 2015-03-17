@@ -14,12 +14,15 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 #include "OptParser.h"
+#include <alljoyn/version.h>
 #include <fstream>
+
 
 static const char versionPreamble[] = "AboutService version: %s\n"
                                       "Copyright AllSeen Alliance.\n";
 
 using namespace ajn;
+using namespace qcc;
 
 OptParser::OptParser(int argc, char** argv) :
     argc(argc), argv(argv), internal(false) {

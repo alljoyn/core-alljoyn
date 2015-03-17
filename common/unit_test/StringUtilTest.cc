@@ -73,8 +73,8 @@ TEST(StringUtilTest, hex_string_to_byte_array_conversion_off_by_one) {
 
     EXPECT_EQ(desired_number_of_bytes_to_be_copied,
               actual_number_of_bytes_copied) <<
-    "The function HexStringToBytes was unable to copy the entire string \"" <<
-    fee.c_str() << "\" to a byte array.";
+        "The function HexStringToBytes was unable to copy the entire string \"" <<
+        fee.c_str() << "\" to a byte array.";
 
     desired_number_of_bytes_to_be_copied = substring_of_fee.length() / 2;
     actual_number_of_bytes_copied = HexStringToBytes(substring_of_fee,
@@ -83,17 +83,17 @@ TEST(StringUtilTest, hex_string_to_byte_array_conversion_off_by_one) {
 
     EXPECT_EQ(desired_number_of_bytes_to_be_copied,
               actual_number_of_bytes_copied) <<
-    "The function HexStringToBytes was unable to copy the entire string \"" <<
-    substring_of_fee.c_str() << "\" to a byte array.";
+        "The function HexStringToBytes was unable to copy the entire string \"" <<
+        substring_of_fee.c_str() << "\" to a byte array.";
 
     // Compare the byte arrays
     for (uint8_t i = 0; i < fee.length() / 2; i++) {
         EXPECT_EQ(bytes_corresponding_to_string[i],
                   bytes_corresponding_to_substring[i]) <<
-        "At arrray index " << (unsigned int) i <<
-        ", element of byte array created from String \"" << fee.c_str() <<
-        "\", does not match the element of byte array created from \"" <<
-        substring_of_fee.c_str() << "\".";
+            "At arrray index " << (unsigned int) i <<
+            ", element of byte array created from String \"" << fee.c_str() <<
+            "\", does not match the element of byte array created from \"" <<
+            substring_of_fee.c_str() << "\".";
     }
 
     // Clean up
@@ -123,8 +123,8 @@ TEST(StringUtilTest, hex_string_to_byte_array_conversion) {
 
     EXPECT_EQ(desired_number_of_bytes_to_be_copied,
               actual_number_of_bytes_copied) <<
-    "The function HexStringToBytes was unable to convert the string \"" <<
-    ate_bad_f00d.c_str() << "\" into a byte array.";
+        "The function HexStringToBytes was unable to convert the string \"" <<
+        ate_bad_f00d.c_str() << "\" into a byte array.";
 
     // If string is copied into byte array completely,
     // perform the reverse conversion and verify equality.
@@ -136,9 +136,9 @@ TEST(StringUtilTest, hex_string_to_byte_array_conversion) {
                                                    prefer_lower_case);
 
         EXPECT_STREQ(ate_bad_f00d.c_str(), converted_string.c_str()) <<
-        "The string \"" << ate_bad_f00d.c_str() <<
-        "\" was converted into a byte array, which was again converted back "
-        "to the string \"" << converted_string.c_str() << "\".";
+            "The string \"" << ate_bad_f00d.c_str() <<
+            "\" was converted into a byte array, which was again converted back "
+            "to the string \"" << converted_string.c_str() << "\".";
     }
 
     // Clean up
@@ -168,13 +168,13 @@ TEST(StringUtilTest, hex_string_to_byte_array_conversion_with_delimiter) {
 
     EXPECT_NE(desired_number_of_bytes_to_be_copied,
               actual_number_of_bytes_copied) <<
-    "Tried to force the HexStringToBytes function to process "
-    "the non-hex-digit character \':\' of String \"" <<
-    bad_cafe.c_str() << "\" and expected it to be skipped.";
+        "Tried to force the HexStringToBytes function to process "
+        "the non-hex-digit character \':\' of String \"" <<
+        bad_cafe.c_str() << "\" and expected it to be skipped.";
 
     EXPECT_EQ((unsigned int) 1, actual_number_of_bytes_copied) <<
-    "The function did not copy the expected number of bytes (= " << 1 <<
-    ") from the string \"" << bad_cafe.c_str() << "\".";
+        "The function did not copy the expected number of bytes (= " << 1 <<
+        ") from the string \"" << bad_cafe.c_str() << "\".";
 
     // If it copied one byte as expected,
     // Perform the reverse conversion and verify
@@ -189,9 +189,9 @@ TEST(StringUtilTest, hex_string_to_byte_array_conversion_with_delimiter) {
         String expected_string = bad_cafe.substr(0, 2);
 
         EXPECT_STREQ(expected_string.c_str(), converted_string.c_str()) <<
-        "Expected the string \"" << converted_string.c_str() <<
-        "\" created from the byte array, to match the original string \"" <<
-        expected_string.c_str() << "\".";
+            "Expected the string \"" << converted_string.c_str() <<
+            "\" created from the byte array, to match the original string \"" <<
+            expected_string.c_str() << "\".";
     }
 
     // Clean up
@@ -290,9 +290,9 @@ TEST(StringUtilTest, string_to_double_conversion_negative_testcases) {
         improper_fp_string = String(improperly_formatted_fp_string_array[i]);
         is_nan = IS_NAN(StringToDouble(improper_fp_string));
         EXPECT_TRUE(is_nan) <<
-        "The function StringToDouble did not return: " << nan_representation <<
-        ", when the string \"" << improper_fp_string.c_str() << "\" was passed."
-        " The return value was: " << StringToDouble(improper_fp_string);
+            "The function StringToDouble did not return: " << nan_representation <<
+            ", when the string \"" << improper_fp_string.c_str() << "\" was passed."
+            " The return value was: " << StringToDouble(improper_fp_string);
     }
 }
 
@@ -316,8 +316,8 @@ TEST(StringUtilTest, string_to_double_conversion) {
     for (uint8_t i = 0; i < ArraySize(known_double_values); i++) {
         String double_string = String(string_representation[i]);
         EXPECT_DOUBLE_EQ(known_double_values[i], StringToDouble(double_string)) <<
-        "The StringToDouble did not return the expected value " <<
-        known_double_values[i] << " when converting the string \"" <<
-        double_string.c_str() << "\".";
+            "The StringToDouble did not return the expected value " <<
+            known_double_values[i] << " when converting the string \"" <<
+            double_string.c_str() << "\".";
     }
 }

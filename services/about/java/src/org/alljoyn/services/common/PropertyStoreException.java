@@ -19,7 +19,9 @@ package org.alljoyn.services.common;
 /**
  * An exception that is thrown by the PropertyStore when illegal arguments are given in set/get methods.
  * @see PropertyStore
+ * @deprecated
  */
+@Deprecated
 public class PropertyStoreException extends Exception {
     private static final long serialVersionUID = -8488311339426012157L;
 
@@ -45,6 +47,7 @@ public class PropertyStoreException extends Exception {
 
     private int m_reason;
 
+    @Deprecated
     public PropertyStoreException(int reason)
     {
         m_reason = reason;
@@ -52,8 +55,10 @@ public class PropertyStoreException extends Exception {
 
     /**
      * The reason for failure
+     * @deprecated
      * @return reason for failure
      */
+    @Deprecated
     public int getReason()
     {
         return m_reason;

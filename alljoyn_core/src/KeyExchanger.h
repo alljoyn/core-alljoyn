@@ -88,7 +88,7 @@ class KeyExchangerCB {
 class KeyExchanger {
   public:
 
-    KeyExchanger(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, uint16_t peerAuthVersion) : peerObj(peerObj), bus(bus), authCount(0), listener(listener), secretExpiration(3600), initiator(initiator), peerAuthVersion(peerAuthVersion) {
+    KeyExchanger(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, uint16_t peerAuthVersion) : peerObj(peerObj), bus(bus), authCount(1), listener(listener), secretExpiration(3600), initiator(initiator), peerAuthVersion(peerAuthVersion) {
         hashUtil.Init();
         showDigestCounter = 0;
     }
@@ -141,6 +141,9 @@ class KeyExchanger {
         return peerAuthVersion;
     }
 
+    /**
+     * Is the peer a legacy peer that uses the old ECC encoding
+     */
     bool IsLegacyPeer();
 
     /**
@@ -158,6 +161,10 @@ class KeyExchanger {
      * @param[out] masterSecret the master secret
      */
     static QStatus ParsePeerSecretRecord(const KeyBlob& rec, KeyBlob& masterSecret);
+    /**
+     * Can peer provide a list of trust anchors
+     */
+    bool PeerSupportsTrustAnchors();
 
   protected:
     AllJoynPeerObj* peerObj;
@@ -214,11 +221,8 @@ class KeyExchangerECDHE : public KeyExchanger {
     void SetECDHEPublicKey(const ECCPublicKey* publicKey);
     const ECCPrivateKey* GetECDHEPrivateKey();
     void SetECDHEPrivateKey(const ECCPrivateKey* privateKey);
-    const ECCSecret* GetECDHESecret();
-    void SetECDHESecret(const ECCSecret* newSecret);
 
-    QStatus GenerateECDHESecret(const ECCPublicKey* remotePubKey);
-    QStatus GenerateMasterSecret();
+    QStatus GenerateMasterSecret(const ECCPublicKey* remotePubKey);
 
     QStatus RespondToKeyExchange(Message& msg, MsgArg* variant, uint32_t remoteAuthMask, uint32_t authMask);
 
@@ -239,7 +243,6 @@ class KeyExchangerECDHE : public KeyExchanger {
     QStatus KeyExchangeReadKeyInfo(MsgArg& variant);
 
     ECCPublicKey peerPubKey;
-    ECCSecret pms;
     Crypto_ECC ecc;
     qcc::KeyBlob masterSecret;
 
@@ -331,7 +334,7 @@ class KeyExchangerECDHE_PSK : public KeyExchangerECDHE {
 
 class KeyExchangerECDHE_ECDSA : public KeyExchangerECDHE {
   public:
-    KeyExchangerECDHE_ECDSA(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, uint16_t peerAuthVersion, PermissionMgmtObj::TrustAnchorList* trustAnchorList) : KeyExchangerECDHE(initiator, peerObj, bus, listener, peerAuthVersion), certChainLen(0), certChain(NULL), hasDSAKeys(false), trustAnchorList(trustAnchorList), hasCommonTrustAnchors(false), peerDSAPubKey(NULL) {
+    KeyExchangerECDHE_ECDSA(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, uint16_t peerAuthVersion, PermissionMgmtObj::TrustAnchorList* trustAnchorList) : KeyExchangerECDHE(initiator, peerObj, bus, listener, peerAuthVersion), certChainLen(0), certChain(NULL), trustAnchorList(trustAnchorList), hasCommonTrustAnchors(false), peerDSAPubKey(NULL) {
     }
 
     virtual ~KeyExchangerECDHE_ECDSA();
@@ -365,14 +368,8 @@ class KeyExchangerECDHE_ECDSA : public KeyExchangerECDHE {
      */
     KeyExchangerECDHE_ECDSA(const KeyExchangerECDHE_ECDSA& other);
 
-    QStatus GenerateLocalVerifierCert(CertificateType0& cert);
     QStatus VerifyCredentialsCB(const char* peerName, CertificateX509* certs, size_t numCerts);
-    QStatus StoreDSAKeys(String& encodedPrivateKey, String& encodedCertChain);
-    QStatus RetrieveDSAKeys(bool generateIfNotFound);
     QStatus ParseCertChainPEM(String& encodedCertChain);
-    QStatus PrepareKeyAuthenticationLegacy(MsgArg& msgArg);
-    QStatus ValidateLegacyRemoteVerifierVariant(MsgArg* variant, uint8_t* authorized);
-    QStatus GenerateLocalVerifierSigInfo(SigInfoECC& sigInfo);
     QStatus GenVerifierCertArg(MsgArg& msgArg, bool updateHash);
     QStatus GenVerifierSigInfoArg(MsgArg& msgArg, bool updateHash);
     void KeyExchangeGenTrustAnchorKeyInfos(MsgArg& variant);
@@ -383,7 +380,6 @@ class KeyExchangerECDHE_ECDSA : public KeyExchangerECDHE {
     ECCPublicKey issuerPublicKey;
     size_t certChainLen;
     CertificateX509* certChain;
-    bool hasDSAKeys;
     PermissionMgmtObj::TrustAnchorList* trustAnchorList;
     PermissionMgmtObj::TrustAnchorList peerTrustAnchorList;
     bool hasCommonTrustAnchors;

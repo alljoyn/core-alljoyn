@@ -168,14 +168,14 @@ namespace AllJoynUnity
 		/** Bitmask of all transport types */
 		public enum TransportMask : ushort
 		{
-			None = 0x0000,   /**< no transports */
-			Local = 0x0001,  /**< Local (same device) transport */
-			TCP = 0x0004,    /**< TCP/IP transport */
-			UDP = 0x0100,    /**< UDP/IP transport */
-			IP =  0x0104,    /**< IP transport (system chooses best IP transport) */
-			Any = 0x0105,    /**< ANY non-experimental transport */
-
-            [Obsolete] WLAN = 0x0004, /**< Wireless local-area network transport */
+			None = 0x0000,            /**< no transports */
+			Local = 0x0001,           /**< Local (same device) transport */
+			TCP = 0x0004,             /**< TCP/IP transport */
+			UDP = 0x0100,             /**< UDP/IP transport */
+			IP =  0x0104,             /**< IP transport (system chooses best IP transport) */
+			Experimental = 0x8000,    /**< Placeholder for an experimental transport */
+			Any = 0x0105,             /**< ANY non-experimental transport */
+			[Obsolete] WLAN = 0x0004, /**< Wireless local-area network transport */
 			[Obsolete] WWAN = 0x0008, /**< Wireless wide-area network transport */
 			[Obsolete] LAN = 0x0010   /**< Wired local-area network transport */
 		}

@@ -135,9 +135,9 @@ static void DeliverLine(AddressFamily addr_family, SocketType sock_type, String&
             if (ER_OK == heard) {
                 // Compare the number of said and heard octets
                 EXPECT_EQ(amount_said, amount_heard) << debug_string.c_str() <<
-                "The number of octets transmitted by the talker: " <<
-                amount_said << ", was not equal to the number of "
-                "octets received by the listenener: " << amount_heard;
+                    "The number of octets transmitted by the talker: " <<
+                    amount_said << ", was not equal to the number of "
+                    "octets received by the listenener: " << amount_heard;
 
                 if (amount_said == amount_heard) {
                     debug_string = debug_string.append("Talker's message: ");
@@ -146,11 +146,11 @@ static void DeliverLine(AddressFamily addr_family, SocketType sock_type, String&
                     for (uint8_t i = 0; i < amount_heard; i++) {
                         // Compare each said octet with respective heard octet
                         EXPECT_EQ(static_cast<uint8_t> (line_literal[i]), scratch_pad[i]) <<
-                        debug_string.c_str() <<
-                        " The octet sent by the talker '" << line_literal[i] <<
-                        "' does not match the octet got by the listener '" <<
-                        scratch_pad[i] << "' at offset " << static_cast<unsigned int> (i) <<
-                        " out of " << amount_said << ".";
+                            debug_string.c_str() <<
+                            " The octet sent by the talker '" << line_literal[i] <<
+                            "' does not match the octet got by the listener '" <<
+                            scratch_pad[i] << "' at offset " << static_cast<unsigned int> (i) <<
+                            " out of " << amount_said << ".";
                     }
                 }
             }
@@ -294,8 +294,8 @@ TEST(SocketTest, send_and_receive_with_dummy_fds) {
             if (ER_OK == received) {
                 // Compare the number of sent and received message octets
                 EXPECT_EQ(amount_sent, amount_received) << debug_string.c_str() <<
-                "The number of octets sent by the sender: " << amount_sent <<
-                ", was not equal to the number of octets received by the receiver: " << amount_received;
+                    "The number of octets sent by the sender: " << amount_sent <<
+                    ", was not equal to the number of octets received by the receiver: " << amount_received;
 
                 if (amount_sent == amount_received) {
                     debug_string = debug_string.append("Sender's message: ");
@@ -304,18 +304,18 @@ TEST(SocketTest, send_and_receive_with_dummy_fds) {
                     for (uint8_t i = 0; i < amount_received; i++) {
                         // Compare each sent octect with respective received octet
                         EXPECT_EQ(static_cast<uint8_t> (message_literal[i]), scratch_pad[i]) <<
-                        debug_string.c_str() <<
-                        " The octet sent by the sender '" << message_literal[i] <<
-                        "' does not match the octet received by the receiver '" << scratch_pad[i] <<
-                        "' at offset " << static_cast<unsigned int> (i) <<
-                        " out of " << (amount_sent - 1) << ".";
+                            debug_string.c_str() <<
+                            " The octet sent by the sender '" << message_literal[i] <<
+                            "' does not match the octet received by the receiver '" << scratch_pad[i] <<
+                            "' at offset " << static_cast<unsigned int> (i) <<
+                            " out of " << (amount_sent - 1) << ".";
                     }
                 }
 
                 // Compare the number of fds sent and received
                 EXPECT_EQ(num_of_total_fds, num_of_recvd_fds) << debug_string.c_str() <<
-                " The number of fds transmitted by the sender: " << num_of_total_fds <<
-                ", was not equal to the number of fds received by the receiver: " << num_of_recvd_fds;
+                    " The number of fds transmitted by the sender: " << num_of_total_fds <<
+                    ", was not equal to the number of fds received by the receiver: " << num_of_recvd_fds;
 
                 if (num_of_total_fds == num_of_recvd_fds) {
                     debug_string = debug_string.append(" Sequence of port numbers (corresponding to sent fds): ");
@@ -339,10 +339,10 @@ TEST(SocketTest, send_and_receive_with_dummy_fds) {
                         if (ER_OK == GetLocalAddress(original_list_of_fds[i], this_host, local_addr_of_sent_fd) &&
                             ER_OK == GetLocalAddress(stash_of_fds[i], this_host, local_addr_of_received_fd)) {
                             EXPECT_EQ(local_addr_of_sent_fd, local_addr_of_received_fd) <<
-                            debug_string.c_str() << "At index: " << static_cast<unsigned int> (i) <<
-                            ", the local address (port) of fd sent by the sender: " << local_addr_of_sent_fd <<
-                            " does not match the local address (port) of fd received by the receiver: " <<
-                            local_addr_of_received_fd;
+                                debug_string.c_str() << "At index: " << static_cast<unsigned int> (i) <<
+                                ", the local address (port) of fd sent by the sender: " << local_addr_of_sent_fd <<
+                                " does not match the local address (port) of fd received by the receiver: " <<
+                                local_addr_of_received_fd;
 
                         }
                     }

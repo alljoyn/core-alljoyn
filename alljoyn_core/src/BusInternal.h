@@ -264,6 +264,11 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
     void JoinSessionAsyncCB(Message& message, void* context);
 
     /**
+     * LeaveSessionAsync method_reply handler.
+     */
+    void LeaveSessionAsyncCB(Message& message, void* context);
+
+    /**
      * SetLinkTimeoutAsync method_reply handler.
      */
     void SetLinkTimeoutAsyncCB(Message& message, void* context);

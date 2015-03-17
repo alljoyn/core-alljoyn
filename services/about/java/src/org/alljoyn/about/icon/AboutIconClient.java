@@ -22,7 +22,9 @@ import org.alljoyn.services.common.ClientBase;
 /**
  * An interface for retrieval of remote IoE device's Icon.
  * Encapsulates the IconTransport BusInterface
+ * @deprecated see org.alljoyn.bus.AboutIconProxy
  */
+@Deprecated
 public interface AboutIconClient extends ClientBase
 {
     public String getMimeType() throws BusException;

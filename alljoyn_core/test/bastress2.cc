@@ -521,6 +521,15 @@ inline void ThreadClass::ServiceRun() {
         }
     }
 
+
+    //We need to unbind the session port so that the SessionPortListener is freed from the bus attachment.
+    //Thus we can safely delete the SessionPortListener before deleting the bus attachment.
+    status = bus->UnbindSessionPort(sp);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("UnbindSessionPort failed"));
+    }
+
+
     if (busObject) {
         bus->UnregisterBusObject(*busObject);
     }
@@ -688,7 +697,7 @@ int main(int argc, char**argv)
     Environ* env = Environ::GetAppEnviron();
     qcc::String connectArgs = env->Find("BUS_ADDRESS");
 
-    ThreadClass** threadList = new ThreadClass *[threads];
+    ThreadClass** threadList = new ThreadClass*[threads];
     uint32_t startTime = GetTimestamp();
     uint32_t endTime = GetTimestamp();
 

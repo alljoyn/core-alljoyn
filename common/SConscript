@@ -61,16 +61,16 @@ if env['OS_GROUP'] == 'windows':
     else:
         env.Append(CPPPATH = ['$OPENSSL_BASE/include'])
         env.Append(LIBPATH = ['$OPENSSL_BASE/lib'])
-        env.AppendUnique(LIBS = ['libeay32', 'ssleay32'])
+        env.AppendUnique(LIBS = ['libeay32'])
         print 'Using OPENSSL crypto libraries'
 
 elif env['OS'] in ['linux', 'openwrt']:
-    env.AppendUnique(LIBS =['rt', 'stdc++', 'pthread', 'crypto', 'ssl', 'm'])
+    env.AppendUnique(LIBS =['rt', 'stdc++', 'pthread', 'crypto', 'm'])
 
 elif env['OS'] == 'darwin':
     env.Append(CPPDEFINES=['MECHANISM_PIPE'])
-    env.AppendUnique(LIBS =['stdc++', 'pthread', 'crypto', 'ssl'])
-    if env['CPU'] in ['arm', 'armv7', 'armv7s']:
+    env.AppendUnique(LIBS =['stdc++', 'pthread', 'crypto'])
+    if env['CPU'] in ['arm', 'armv7', 'armv7s', 'arm64']:
         vars = Variables()
         vars.Add(PathVariable('OPENSSL_ROOT', 'Base OpenSSL directory (darwin only)', os.environ.get('OPENSSL_ROOT')))
         vars.Update(env)
@@ -84,7 +84,7 @@ elif env['OS'] == 'darwin':
         env.Append(LIBPATH = ['$OPENSSL_ROOT/build/' + os.environ.get('CONFIGURATION') + '-' + os.environ.get('PLATFORM_NAME')])
 
 elif env['OS'] == 'android':
-    env.AppendUnique(LIBS = ['m', 'c', 'stdc++', 'crypto', 'log', 'gcc', 'ssl', '$ANDROID_STL'])
+    env.AppendUnique(LIBS = ['m', 'c', 'stdc++', 'crypto', 'log', 'gcc', '$ANDROID_STL'])
 
 
 commonenv = env.Clone()
@@ -107,7 +107,6 @@ hdrs = { 'qcc': commonenv.File(['inc/qcc/Log.h',
                                 'inc/qcc/CryptoECC.h',
                                 'inc/qcc/KeyInfo.h',
                                 'inc/qcc/KeyInfoECC.h',
-                                'inc/qcc/Certificate.h',
                                 'inc/qcc/CertificateECC.h',
                                 'inc/qcc/platform.h']),
          'qcc/${OS_GROUP}': commonenv.File(['inc/qcc/${OS_GROUP}/atomic.h',

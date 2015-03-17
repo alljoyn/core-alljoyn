@@ -477,7 +477,7 @@ static QStatus BuildRulesFromArg(MsgArg& arg, PermissionPolicy::Rule** rules, si
                 break;
 
             case PermissionPolicy::Rule::TAG_INTERFACE_MEMBERS:
-                PermissionPolicy::Rule::Member * memberRules = NULL;
+                PermissionPolicy::Rule::Member* memberRules = NULL;
                 size_t ruleCount = 0;
                 status = BuildMembersFromArg(*field, &memberRules, &ruleCount);
                 if (ER_OK != status) {

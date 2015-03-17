@@ -65,14 +65,19 @@ static const uint32_t MAX_KEYGEN_VERSION = 0x01;
  * The base authentication version number
  */
 static const uint32_t MIN_AUTH_VERSION = 0x0001;
-static const uint32_t MAX_AUTH_VERSION = 0x0003;
+static const uint32_t MAX_AUTH_VERSION = 0x0004;
 
 /**
  * starting version with capability of supporting membership certificates.
  */
-static const uint32_t CAPABLE_MEMBESHIP_CERT_VERSION = 0x0003;
+static const uint32_t CAPABLE_MEMBERSHIP_CERT_VERSION = 0x0004;
 
 static const uint32_t PREFERRED_AUTH_VERSION = (MAX_AUTH_VERSION << 16) | MIN_KEYGEN_VERSION;
+
+/*
+ * the protocol version of the ECDHE_ECDSA with non X.509 certificate
+ */
+static const uint32_t NON_ECDSA_X509_VERSION = 0x0002;
 
 static bool IsCompatibleVersion(uint32_t version)
 {
@@ -103,7 +108,7 @@ static bool IsCompatibleVersion(uint32_t version)
 static bool IsMembershipCertCapable(uint32_t version)
 {
     uint16_t authV = version >> 16;
-    return (authV >= CAPABLE_MEMBESHIP_CERT_VERSION);
+    return (authV >= CAPABLE_MEMBERSHIP_CERT_VERSION);
 }
 
 static uint32_t GetLowerVersion(uint32_t v1, uint32_t v2)
@@ -905,8 +910,20 @@ void AllJoynPeerObj::ExchangeSuites(const ajn::InterfaceDescription::Member* mem
         for (size_t cnt = 0; cnt < supportedAuthSuitesCount; cnt++) {
             for (size_t idx = 0; idx < remoteSuitesLen; idx++) {
                 if (supportedAuthSuites[cnt] == remoteSuites[idx]) {
+                    bool addIt = true;
+                    if (supportedAuthSuites[cnt] == AUTH_SUITE_ECDHE_ECDSA) {
+                        /* Does the peer auth version >= 3?  If not, the peer
+                           can't handle ECDSA with X.509 certificate */
+                        PeerStateTable* peerStateTable = bus->GetInternal().GetPeerStateTable();
+                        PeerState peerState = peerStateTable->GetPeerState(msg->GetSender());
+                        if ((peerState->GetAuthVersion() >> 16) <= NON_ECDSA_X509_VERSION) {
+                            addIt = false;
+                        }
+                    }
                     /* add it */
-                    effectiveAuthSuites[netCnt++] = supportedAuthSuites[cnt];
+                    if (addIt) {
+                        effectiveAuthSuites[netCnt++] = supportedAuthSuites[cnt];
+                    }
                     break;
                 }
             }
@@ -1197,7 +1214,7 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
         if (useKeyExchanger) {
             uint32_t*remoteAuthSuites = NULL;
             size_t remoteAuthSuitesCount = 0;
-            status = AskForAuthSuites(remotePeerObj, ifc, &remoteAuthSuites, &remoteAuthSuitesCount);
+            status = AskForAuthSuites(authVersion, remotePeerObj, ifc, &remoteAuthSuites, &remoteAuthSuitesCount);
             if (status == ER_OK) {
                 status = AuthenticatePeerUsingKeyExchange(remoteAuthSuites, remoteAuthSuitesCount, busName, peerState, localGuidStr, remotePeerObj, ifc, remotePeerGuid, mech);
                 if (remoteAuthSuites) {
@@ -1337,14 +1354,42 @@ QStatus AllJoynPeerObj::AuthenticatePeerUsingSASL(const qcc::String& busName, Pe
     return status;
 }
 
-QStatus AllJoynPeerObj::AskForAuthSuites(ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc, uint32_t** remoteAuthSuites, size_t* remoteAuthCount)
+QStatus AllJoynPeerObj::AskForAuthSuites(uint32_t peerAuthVersion, ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc, uint32_t** remoteAuthSuites, size_t* remoteAuthCount)
 {
+    if (supportedAuthSuitesCount == 0) {
+        return ER_AUTH_FAIL;
+    }
     MsgArg arg;
-    arg.Set("au", supportedAuthSuitesCount, supportedAuthSuites);
+    bool excludeECDHE_ECDSA = false;
+    if ((peerAuthVersion >> 16) <= NON_ECDSA_X509_VERSION) {
+        for (size_t cnt = 0; cnt < supportedAuthSuitesCount; cnt++) {
+            if (supportedAuthSuites[cnt] == AUTH_SUITE_ECDHE_ECDSA) {
+                excludeECDHE_ECDSA = true;
+                break;
+            }
+        }
+    }
+    uint32_t* authSuites = supportedAuthSuites;
+    size_t authSuitesCount = supportedAuthSuitesCount;
+    if (excludeECDHE_ECDSA) {
+        authSuites = new uint32_t[supportedAuthSuitesCount];
+        size_t netCnt = 0;
+        for (size_t cnt = 0; cnt < supportedAuthSuitesCount; cnt++) {
+            if (supportedAuthSuites[cnt] != AUTH_SUITE_ECDHE_ECDSA) {
+                authSuites[netCnt++] = supportedAuthSuites[cnt];
+            }
+        }
+        authSuitesCount = netCnt;
+    }
+
+    arg.Set("au", authSuitesCount, authSuites);
     Message replyMsg(*bus);
     const InterfaceDescription::Member* exchangeSuites = ifc->GetMember("ExchangeSuites");
     assert(exchangeSuites);
     QStatus status = remotePeerObj.MethodCall(*exchangeSuites, &arg, 1, replyMsg, DEFAULT_TIMEOUT);
+    if (excludeECDHE_ECDSA) {
+        delete [] authSuites;
+    }
     if (status != ER_OK) {
         return status;
     }

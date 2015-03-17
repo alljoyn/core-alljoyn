@@ -23,31 +23,32 @@
  Applications that provide AllJoyn IoE services use an instance of this class to announce
  their capabilities and other identifying details of the services being provided.
  */
+__deprecated
 @interface AJNAboutService : NSObject
 
 /**
  A flag that indicate the service mode.
  */
-@property bool isServiceStarted;
+@property bool isServiceStarted __deprecated;
 
 /**
  Register the bus and the property store to be used by AJNAboutService and set the isServiceStarted to true.
  @param bus A reference to the AJNBusAttachment.
  @param store A reference to a property store.
  */
-- (void)registerBus:(AJNBusAttachment *)bus andPropertystore:(id <AJNPropertyStore> )store;
+- (void)registerBus:(AJNBusAttachment *)bus andPropertystore:(id <AJNPropertyStore> )store __deprecated;
 
 /**
  Register the AJNAboutService on the AllJoyn bus passing the port to be announced - only if isServiceStarted is true.
  @param port used to bind the session.
  @return ER_OK if successful.
  */
-- (QStatus)registerPort:(AJNSessionPort)port;
+- (QStatus)registerPort:(AJNSessionPort)port __deprecated;
 
 /**
  * Unregister the AJNAboutService  from the bus.
  */
-- (void)unregister;
+- (void)unregister __deprecated;
 
 /**
  Add object Descriptions to the AJNAboutService announcement.
@@ -55,7 +56,7 @@
  @param interfaceNames The name of the interface.
  @return ER_OK if successful.
  */
-- (QStatus)addObjectDescriptionWithPath:(NSString *)path andInterfaceNames:(NSMutableArray *)interfaceNames;
+- (QStatus)addObjectDescriptionWithPath:(NSString *)path andInterfaceNames:(NSMutableArray *)interfaceNames __deprecated;
 
 /**
  Remove object Descriptions from the AboutService announcement.
@@ -63,13 +64,13 @@
  @param interfaceNames The name of the interface.
  @return ER_OK if successful.
  */
-- (QStatus)removeObjectDescriptionWithPath:(NSString *)path andInterfaceNames:(NSMutableArray *)interfaceNames;
+- (QStatus)removeObjectDescriptionWithPath:(NSString *)path andInterfaceNames:(NSMutableArray *)interfaceNames __deprecated;
 
 /**
  Send or replace the org.alljoyn.About.Announce sessionless signal.
  </br>Validate store and object announcements and emit the announce signal.
  @return ER_MANDATORY_FIELD_MISSING: Logs an error with specific field that has a problem.
  */
-- (QStatus)announce;
+- (QStatus)announce __deprecated;
 
 @end

@@ -244,33 +244,6 @@ QStatus _VirtualEndpoint::AddSessionRef(SessionId id, RemoteEndpoint& b2bEp)
     return canUse ? ER_OK : ER_BUS_NO_ENDPOINT;
 }
 
-QStatus _VirtualEndpoint::AddSessionRef(SessionId id, SessionOpts* opts, RemoteEndpoint& b2bEp)
-{
-    QCC_DbgTrace(("_VirtualEndpoint::AddSessionRef(this=%s [%x], %u, <opts>, %s)", GetUniqueName().c_str(), this, id, b2bEp->GetUniqueName().c_str()));
-
-    RemoteEndpoint bestEp;
-    //uint32_t hops = 1000;
-
-    m_b2bEndpointsLock.Lock(MUTEX_CONTEXT);
-
-    /* TODO: Placeholder until we exchange session opts and hop count via ExchangeNames */
-    multimap<SessionId, RemoteEndpoint>::const_iterator it = m_b2bEndpoints.find(id);
-    if (it == m_b2bEndpoints.end()) {
-        it = m_b2bEndpoints.begin();
-    }
-    if ((it != m_b2bEndpoints.end()) && ((it->first == 0) || it->first == id)) {
-        bestEp = it->second;
-    }
-
-    /* Map session id to bestEp */
-    if (bestEp->IsValid()) {
-        AddSessionRef(id, bestEp);
-    }
-    b2bEp = bestEp;
-    m_b2bEndpointsLock.Unlock(MUTEX_CONTEXT);
-    return bestEp->IsValid() ? ER_OK : ER_BUS_NO_ENDPOINT;
-}
-
 void _VirtualEndpoint::RemoveSessionRef(SessionId id)
 {
     QCC_DbgTrace(("_VirtualEndpoint::RemoveSessionRef(this=%s [%x], id=%u)", GetUniqueName().c_str(), this, id));
@@ -297,30 +270,6 @@ bool _VirtualEndpoint::CanUseRoute(const RemoteEndpoint& b2bEndpoint) const
             break;
         }
         ++it;
-    }
-    m_b2bEndpointsLock.Unlock(MUTEX_CONTEXT);
-    return isFound;
-}
-
-bool _VirtualEndpoint::CanUseRoutes(const multiset<String>& b2bNameSet) const
-{
-    bool isFound = false;
-    m_b2bEndpointsLock.Lock(MUTEX_CONTEXT);
-    multiset<String>::const_iterator nit = b2bNameSet.begin();
-    while (nit != b2bNameSet.end()) {
-        multimap<SessionId, RemoteEndpoint>::const_iterator eit = m_b2bEndpoints.begin();
-        while (eit != m_b2bEndpoints.end()) {
-            String n = eit->second->GetUniqueName();
-            if (*nit == n) {
-                isFound = true;
-                break;
-            }
-            ++eit;
-        }
-        if (isFound) {
-            break;
-        }
-        ++nit;
     }
     m_b2bEndpointsLock.Unlock(MUTEX_CONTEXT);
     return isFound;

@@ -382,7 +382,6 @@ QStatus Crypto_ASN1::DecodeV(const char*& syntax, const uint8_t* asn, size_t asn
     while ((asn < eod) && (status == ER_OK)) {
         size_t len = 0;
         uint8_t tag = *asn++;
-        //TODO: check this
         if (ASN_CONTEXT_SPECIFIC != (tag & ASN_CONTEXT_SPECIFIC)) {
             tag &= 0x1F;
         }

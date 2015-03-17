@@ -204,9 +204,9 @@ QStatus PermissionMgmtProxy::GetIdentity(qcc::IdentityCertificate* cert) {
         return status;
     }
     status = ER_NOT_IMPLEMENTED;
-    if (encoding == qcc::Certificate::ENCODING_X509_DER) {
+    if (encoding == qcc::CertificateX509::ENCODING_X509_DER) {
         status = cert->DecodeCertificateDER(qcc::String((const char*) encoded, encodedLen));
-    } else if (encoding == qcc::Certificate::ENCODING_X509_DER_PEM) {
+    } else if (encoding == qcc::CertificateX509::ENCODING_X509_DER_PEM) {
         status = cert->DecodeCertificatePEM(qcc::String((const char*) encoded, encodedLen));
     }
     return status;

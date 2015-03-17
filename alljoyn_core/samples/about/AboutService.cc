@@ -154,16 +154,16 @@ int main(int argc, char** argv)
         printf("failed to setup about data.\n");
     }
 
-    qcc::String interface = "<node>"
-                            "<interface name='" + qcc::String(INTERFACE_NAME) + "'>"
-                            "  <method name='Echo'>"
-                            "    <arg name='out_arg' type='s' direction='in' />"
-                            "    <arg name='return_arg' type='s' direction='out' />"
-                            "  </method>"
-                            "</interface>"
-                            "</node>";
+    qcc::String iface = "<node>"
+                        "<interface name='" + qcc::String(INTERFACE_NAME) + "'>"
+                        "  <method name='Echo'>"
+                        "    <arg name='out_arg' type='s' direction='in' />"
+                        "    <arg name='return_arg' type='s' direction='out' />"
+                        "  </method>"
+                        "</interface>"
+                        "</node>";
 
-    status = bus.CreateInterfacesFromXml(interface.c_str());
+    status = bus.CreateInterfacesFromXml(iface.c_str());
     if (ER_OK != status) {
         printf("Failed to parse the xml interface definition (%s)", QCC_StatusText(status));
         exit(1);

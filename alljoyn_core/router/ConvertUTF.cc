@@ -261,8 +261,10 @@ ConversionResult ConvertUTF16toUTF8(
             bytesToWrite = 3;
         } else if (ch < (UTF32)0x110000) {
             bytesToWrite = 4;
-        } else {                            bytesToWrite = 3;
-                                            ch = UNI_REPLACEMENT_CHAR; }
+        } else {
+            bytesToWrite = 3;
+            ch = UNI_REPLACEMENT_CHAR;
+        }
 
         target += bytesToWrite;
         if (target > targetEnd) {
@@ -480,9 +482,11 @@ ConversionResult ConvertUTF32toUTF8(
             bytesToWrite = 3;
         } else if (ch <= UNI_MAX_LEGAL_UTF32) {
             bytesToWrite = 4;
-        } else {                            bytesToWrite = 3;
-                                            ch = UNI_REPLACEMENT_CHAR;
-                                            result = sourceIllegal; }
+        } else {
+            bytesToWrite = 3;
+            ch = UNI_REPLACEMENT_CHAR;
+            result = sourceIllegal;
+        }
 
         target += bytesToWrite;
         if (target > targetEnd) {

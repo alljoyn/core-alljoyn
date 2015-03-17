@@ -550,10 +550,9 @@ void DaemonRouter::UnregisterEndpoint(const qcc::String& epName, EndpointType ep
 
 QStatus DaemonRouter::AddSessionRoute(SessionId id,
                                       BusEndpoint& srcEp, RemoteEndpoint* srcB2bEp,
-                                      BusEndpoint& destEp, RemoteEndpoint& destB2bEp,
-                                      SessionOpts* optsHint)
+                                      BusEndpoint& destEp, RemoteEndpoint& destB2bEp)
 {
-    QCC_DbgTrace(("DaemonRouter::AddSessionRoute(%u, %s, %s, %s, %s, %s)", id, srcEp->GetUniqueName().c_str(), srcB2bEp ? (*srcB2bEp)->GetUniqueName().c_str() : "<none>", destEp->GetUniqueName().c_str(), destB2bEp->GetUniqueName().c_str(), optsHint ? "opts" : "NULL"));
+    QCC_DbgTrace(("DaemonRouter::AddSessionRoute(%u, %s, %s, %s, %s)", id, srcEp->GetUniqueName().c_str(), srcB2bEp ? (*srcB2bEp)->GetUniqueName().c_str() : "<none>", destEp->GetUniqueName().c_str(), destB2bEp->GetUniqueName().c_str()));
     QStatus status = ER_OK;
     if (id == 0) {
         return ER_BUS_NO_SESSION;
@@ -563,9 +562,6 @@ QStatus DaemonRouter::AddSessionRoute(SessionId id,
         if (destB2bEp->IsValid()) {
             QCC_DbgPrintf(("DaemonRouter::AddSessionRoute(): AddSessionRef(id=%d., destB2bEp=\"%s\")", id, destB2bEp->GetUniqueName().c_str()));
             status = VirtualEndpoint::cast(destEp)->AddSessionRef(id, destB2bEp);
-        } else if (optsHint) {
-            QCC_DbgPrintf(("DaemonRouter::AddSessionRoute(): AddSessionRef(id=%d., optsHint, destB2bEp=\"%s\")", id, destB2bEp->GetUniqueName().c_str()));
-            status = VirtualEndpoint::cast(destEp)->AddSessionRef(id, optsHint, destB2bEp);
         } else {
             status = ER_BUS_NO_SESSION;
         }
@@ -579,7 +575,7 @@ QStatus DaemonRouter::AddSessionRoute(SessionId id,
      */
     if ((status == ER_OK) && srcB2bEp) {
         assert(srcEp->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL);
-        QCC_DbgPrintf(("DaemonRouter::AddSessionRoute(): AddSessionRef(id=%d., optsHint, srcB2bEp=\"%s\")", id, (*srcB2bEp)->GetUniqueName().c_str()));
+        QCC_DbgPrintf(("DaemonRouter::AddSessionRoute(): AddSessionRef(id=%d., srcB2bEp=\"%s\")", id, (*srcB2bEp)->GetUniqueName().c_str()));
         status = VirtualEndpoint::cast(srcEp)->AddSessionRef(id, *srcB2bEp);
         if (status != ER_OK) {
             assert(destEp->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL);
