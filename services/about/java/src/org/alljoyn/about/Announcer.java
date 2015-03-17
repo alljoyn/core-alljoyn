@@ -24,24 +24,32 @@ import org.alljoyn.services.common.BusObjectDescription;
 /**
  * An interface that publishes Announcements
  * @see AboutTransport#Announce(short, short, BusObjectDescription[], java.util.Map)
+ * @deprecated
  */
+@Deprecated
 public interface Announcer
 {
     /**
      * cause an Announcement to be emitted.
+     * @deprecated org.alljoyn.bus.BusAttachment.announce
      */
+    @Deprecated
     public void announce();
 
     /**
      * whether Announcements are emitted.
      * @return true if Announcements are emitted.
+     * @deprecated
      */
+    @Deprecated
     public boolean isAnnouncing();
 
     /**
      * set whether Announcements are emitted.
      * @param enable enable Announcement emitting.
+     * @deprecated
      */
+    @Deprecated
     public void setAnnouncing(boolean enable);
 
     /**
@@ -49,13 +57,17 @@ public interface Announcer
      * should save it here so that we can announce it
      * and include it in the About contents.
      * @param descriptions list of BusObjectDescriptions to be announced
+     * @deprecated
      */
+    @Deprecated
     public void addBusObjectAnnouncements(List<BusObjectDescription> descriptions);
 
     /**
      * Remove the passed BusObjectDescriptions from the Announcement
      * @param descriptions list of BusOBjectDescriptions to remove from the announcement
+     * @deprecated
      */
+    @Deprecated
     public void removeBusObjectAnnouncements(List<BusObjectDescription> descriptions);
 
 }

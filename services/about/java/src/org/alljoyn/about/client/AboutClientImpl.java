@@ -31,16 +31,20 @@ import org.alljoyn.services.common.ClientBaseImpl;
 import org.alljoyn.services.common.ServiceAvailabilityListener;
 import org.alljoyn.services.common.utils.TransportUtil;
 
+@Deprecated
 public class AboutClientImpl extends ClientBaseImpl implements AboutClient
 {
+    @Deprecated
     public final static String TAG = AboutClientImpl.class.getName();
 
+    @Deprecated
     public AboutClientImpl(String deviceName, BusAttachment bus, ServiceAvailabilityListener serviceAvailabilityListener, short port)
     {
         super(deviceName, bus, serviceAvailabilityListener,AboutTransport.OBJ_PATH, new Class<?>[]{AboutTransport.class}, port);
     }
 
     @Override
+    @Deprecated
     public String[] getLanguages() throws BusException
     {
         ProxyBusObject proxyObj = getProxyObject();
@@ -61,6 +65,7 @@ public class AboutClientImpl extends ClientBaseImpl implements AboutClient
     }
 
     @Override
+    @Deprecated
     public String getDefaultLanguage() throws BusException
     {
         ProxyBusObject proxyObj = getProxyObject();
@@ -73,6 +78,7 @@ public class AboutClientImpl extends ClientBaseImpl implements AboutClient
     }
 
     @Override
+    @Deprecated
     public Map<String, Object> getAbout(String languageTag) throws BusException
     {
         ProxyBusObject proxyObj = getProxyObject();
@@ -83,6 +89,7 @@ public class AboutClientImpl extends ClientBaseImpl implements AboutClient
     }
 
     @Override
+    @Deprecated
     public BusObjectDescription[] getBusObjectDescriptions() throws BusException
     {
         ProxyBusObject proxyObj = getProxyObject();
@@ -93,6 +100,7 @@ public class AboutClientImpl extends ClientBaseImpl implements AboutClient
     }
 
     @Override
+    @Deprecated
     public  short getVersion() throws BusException
     {
         ProxyBusObject proxyObj = getProxyObject();
@@ -103,8 +111,10 @@ public class AboutClientImpl extends ClientBaseImpl implements AboutClient
 
     /**
      * @see org.alljoyn.services.common.ClientBaseImpl#connect()
+     * @deprecated
      */
     @Override
+    @Deprecated
     public Status connect() {
         AboutServiceImpl service = (AboutServiceImpl)AboutServiceImpl.getInstance();
         return super.connect();

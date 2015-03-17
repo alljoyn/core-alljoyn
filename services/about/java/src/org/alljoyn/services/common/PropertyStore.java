@@ -23,7 +23,9 @@ import java.util.Map;
  * The application creates this store and passes it to the About and Config
  * services that use it for Announcements and for Get/Set data support.
  * The application is responsible for the persistence of this store.
+ * @deprecated see org.alljoyn.bus.AboutDataListener
  */
+@Deprecated
 public interface PropertyStore {
 
     /**
@@ -48,35 +50,43 @@ public interface PropertyStore {
 
     /**
      * Get all the properties that are stored for the given language
+     * @deprecated see org.alljoyn.bus.AboutDataListener
      * @param languageTag IETF language tag
      * @param filter classifies the properties to get: for announcement,
      *               for get-about, for get-config
      * @param dataMap the map to fill
      * @throws PropertyStoreException if language is not supported.
      */
+    @Deprecated
     void readAll(String languageTag, Filter filter, Map<String, Object> dataMap) throws PropertyStoreException;
 
     /**
      * Update a property value for a given language.
+     * @deprecated see org.alljoyn.bus.AboutDataListener
      * @param key the property name
      * @param languageTag the language in which this property should be set
      * @param newValue the property value
      * @throws PropertyStoreException if language isn't supported, key not found, or illegal value
      */
+    @Deprecated
     void update(String key, String languageTag, Object newValue) throws PropertyStoreException;
 
     /**
      * Reset a property for a given language
+     * @deprecated see org.alljoyn.bus.AboutDataListener
      * @param key the property name
      * @param languageTag the language in which this property should be set
      * @throws PropertyStoreException if language isn't supported, or key not found
      */
+    @Deprecated
     void reset(String key, String languageTag) throws PropertyStoreException;
 
     /**
      * Reset all the properties in the store
+     * @deprecated see org.alljoyn.bus.AboutDataListener
      * @throws PropertyStoreException indicating failure to reset all the properties in the store
      */
+    @Deprecated
     void resetAll() throws PropertyStoreException;
 
 }
