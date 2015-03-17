@@ -14,7 +14,7 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
  ******************************************************************************/
-#if defined(QCC_MAEMO)and defined(QCC_X86)
+#if defined(QCC_MAEMO) and defined(QCC_X86)
 
 #include <qcc/platform.h>
 

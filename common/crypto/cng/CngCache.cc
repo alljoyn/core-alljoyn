@@ -81,7 +81,7 @@ void CngCache::Cleanup()
  */
 uint64_t cngCacheDummy[RequiredArrayLength(sizeof(CngCache), uint64_t)];
 
-CngCache& cngCache = (CngCache &)cngCacheDummy;
+CngCache& cngCache = (CngCache&)cngCacheDummy;
 
 static int cngCacheCounter = 0;
 bool CngCacheInit::cleanedup = false;

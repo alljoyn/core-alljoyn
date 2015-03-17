@@ -26,8 +26,9 @@ from subprocess import Popen, STDOUT, PIPE
 def main(argv=None):
     start_time = time.clock()
     dir_ignore = ["stlport", "build", ".git", ".repo", "alljoyn_objc", "ios", "external" ]
-    file_ignore_patterns = ['\.#.*', 'alljoyn_java\.h', 'Status\.h', 'Internal\.h', 
-                            'org_alljoyn_jni_AllJoynAndroidExt\.h', 
+    file_ignore_patterns = ['\.#.*', 'alljoyn_java\.h', 'Status\.h', 'Internal\.h',
+                            'ManagedObj.h', #uncrustify has a problem with its private constructor
+                            'org_alljoyn_jni_AllJoynAndroidExt\.h',
                             'org_alljoyn_bus_samples_chat_Chat\.h',
                             'org_allseen_sample_event_tester_BusHandler\.h',
                             'org_allseen_sample_action_tester_BusHandler\.h',
@@ -53,7 +54,7 @@ def main(argv=None):
         print ("******************************************************************************")
         print ("*         NOTICE         **         NOTICE         **         NOTICE         *")
         print ("******************************************************************************")
-        print ("You are using uncrustify v" + version + ".") 
+        print ("You are using uncrustify v" + version + ".")
         print ("You must be using one of the following versions of uncrustify v" + (", v".join(supported_uncrustify_versions)) + "." )
         print ("Please use the recommended version of uncrustify v" + recommended_uncrustify_version + ".");
         print "(Or, run SCons with 'WS=off' to bypass the whitespace check)"
@@ -71,12 +72,15 @@ def main(argv=None):
 
     # if an legacy version of uncrustify does not correctly work for a specific file
     # and we can not find another way around the issues we can selectively ignore
-    # files only for the legacy version of uncrustify. 
+    # files only for the legacy version of uncrustify.
     if version == "0.57":
+        # v0.57 does not process #if <value> and <value> correctly
+        file_ignore_patterns.append("atomic.cc")
         # v0.57 does not process the case statements correctly for the json_value.cc file
         file_ignore_patterns.append("json_value\.cc")
-        # v0.57 does not process the case statements correctly for the BusAttachment.cc file
+        # v0.57 does not process the case statements correctly
         file_ignore_patterns.append("BusAttachment\.cc")
+        file_ignore_patterns.append("FileStream\.cc")
         # v0.57 does not process the case statements and goto labels correctly
         # for the alljoyn_java.cc file
         file_ignore_patterns.append("alljoyn_java\.cc")
@@ -88,7 +92,15 @@ def main(argv=None):
         file_ignore_patterns.append("MarshalTest\.cc")
         file_ignore_patterns.append("SRPTest\.cc")
         file_ignore_patterns.append("SessionTest\.cc")
-        
+        file_ignore_patterns.append("IPAddressTest\.cc")
+        file_ignore_patterns.append("ASN1Test\.cc")
+        file_ignore_patterns.append("bigNumTest\.cc")
+        file_ignore_patterns.append("SocketTest\.cc")
+        file_ignore_patterns.append("UtilTest\.cc")
+        # v0.57 CruptoECC.cc has a return statement with a buch of ifdefs that
+        # confuse the whitespace checker.
+        file_ignore_patterns.append("CryptoECC\.cc")
+
 
     # try an load the whitespace.db file.  The file is dictionary of key:value pairs
     # where the key is the name of a file that has been checked by the WS checker

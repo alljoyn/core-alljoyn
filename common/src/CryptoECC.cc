@@ -315,8 +315,7 @@ static affine_point_t const baseP256 = {
 #else /* ARM7_ASM, below is platform independent */
 
 /* (sum, carry) += a * b */
-static void
-mpy_accum(int* cumcarry, uint64_t* sum, uint32_t a, uint32_t b)
+static void mpy_accum(int* cumcarry, uint64_t* sum, uint32_t a, uint32_t b)
 {
     uint64_t product = (uint64_t)a * (uint64_t)b;
     uint64_t lsum = *sum;
@@ -332,8 +331,7 @@ mpy_accum(int* cumcarry, uint64_t* sum, uint32_t a, uint32_t b)
 
 /* (sum, carry += 2 * a * b.  Attempts to reduce writes to memory and
    branches caused slowdown on windows machines. */
-static void
-mpy_accum_dbl(int* cumcarry, uint64_t* sum, uint32_t a, uint32_t b)
+static void mpy_accum_dbl(int* cumcarry, uint64_t* sum, uint32_t a, uint32_t b)
 {
     uint64_t product = (uint64_t)a * (uint64_t)b;
     uint64_t lsum = *sum;
@@ -394,9 +392,8 @@ mpy_accum_dbl(int* cumcarry, uint64_t* sum, uint32_t a, uint32_t b)
  * Computes a * b, approximately reduced mod modulusP or orderP,
  * depending on the modselect flag.
  */
-static void
-big_mpyP(bigval_t* tgt, bigval_t const* a, bigval_t const* b,
-         modulus_val_t modselect)
+static void big_mpyP(bigval_t* tgt, bigval_t const* a, bigval_t const* b,
+                     modulus_val_t modselect)
 {
     int64_t w[2 * BIGLEN];
     int64_t s_accum; /* signed */
@@ -767,8 +764,7 @@ big_mpyP(bigval_t* tgt, bigval_t const* a, bigval_t const* b,
  * Adds k * modulusP to a and stores into target.  -2^62 <= k <= 2^62 .
  * (This is conservative.)
  */
-static void
-big_adjustP(bigval_t* tgt, bigval_t const* a, int64_t k)
+static void big_adjustP(bigval_t* tgt, bigval_t const* a, int64_t k)
 {
 
 
@@ -800,8 +796,7 @@ big_adjustP(bigval_t* tgt, bigval_t const* a, int64_t k)
  * Computes k * a and stores into target.  Conditions: product must
  * be representable in bigval_t.
  */
-static void
-big_1wd_mpy(bigval_t* tgt, bigval_t const* a, int32_t k)
+static void big_1wd_mpy(bigval_t* tgt, bigval_t const* a, int32_t k)
 {
     int64_t w = 0;
     int64_t tmp;
@@ -823,8 +818,7 @@ big_1wd_mpy(bigval_t* tgt, bigval_t const* a, int32_t k)
  * Adds a to b as signed (2's complement) numbers.  Ok to use for
  * modular values if you don't let the sum overflow.
  */
-COND_STATIC void
-big_add(bigval_t* tgt, bigval_t const* a, bigval_t const* b)
+COND_STATIC void big_add(bigval_t* tgt, bigval_t const* a, bigval_t const* b)
 {
     uint64_t v;
     int i;
@@ -841,8 +835,7 @@ big_add(bigval_t* tgt, bigval_t const* a, bigval_t const* b)
 /*
  * modulo modulusP addition with approximate reduction.
  */
-static void
-big_addP(bigval_t* tgt, bigval_t const* a, bigval_t const* b)
+static void big_addP(bigval_t* tgt, bigval_t const* a, bigval_t const* b)
 {
     big_add(tgt, a, b);
     big_approx_reduceP(tgt, tgt);
@@ -850,8 +843,7 @@ big_addP(bigval_t* tgt, bigval_t const* a, bigval_t const* b)
 
 
 /* 2's complement subtraction */
-static void
-big_sub(bigval_t* tgt, bigval_t const* a, bigval_t const* b)
+static void big_sub(bigval_t* tgt, bigval_t const* a, bigval_t const* b)
 {
     uint64_t v;
     int i;
@@ -870,8 +862,7 @@ big_sub(bigval_t* tgt, bigval_t const* a, bigval_t const* b)
 /*
  * modulo modulusP subtraction with approximate reduction.
  */
-static void
-big_subP(bigval_t* tgt, bigval_t const* a, bigval_t const* b)
+static void big_subP(bigval_t* tgt, bigval_t const* a, bigval_t const* b)
 {
     big_sub(tgt, a, b);
     big_approx_reduceP(tgt, tgt);
@@ -881,8 +872,7 @@ big_subP(bigval_t* tgt, bigval_t const* a, bigval_t const* b)
 /* returns 1 if a > b, -1 if a < b, and 0 if a == b.
    a and b are 2's complement.  When applied to modular values,
    args must be precisely reduced. */
-static int
-big_cmp(bigval_t const* a, bigval_t const* b)
+static int big_cmp(bigval_t const* a, bigval_t const* b)
 {
     int i;
 
@@ -908,8 +898,7 @@ big_cmp(bigval_t const* a, bigval_t const* b)
  * Computes tgt = a mod modulus.  Only works with modluii slightly
  * less than 2**(32*(BIGLEN-1)).  Both modulusP and orderP qualify.
  */
-static void
-big_precise_reduce(bigval_t* tgt, bigval_t const* a, bigval_t const* modulus)
+static void big_precise_reduce(bigval_t* tgt, bigval_t const* a, bigval_t const* modulus)
 {
     /*
      * src is a trick to avoid an extra copy of a to arg a to a
@@ -961,8 +950,7 @@ big_precise_reduce(bigval_t* tgt, bigval_t const* a, bigval_t const* modulus)
 }
 
 /* computes floor(a / 2), 2's complement. */
-static void
-big_halve(bigval_t* tgt, bigval_t const* a)
+static void big_halve(bigval_t* tgt, bigval_t const* a)
 {
     uint32_t shiftval;
     uint32_t new_shiftval;
@@ -986,8 +974,7 @@ big_halve(bigval_t* tgt, bigval_t const* a)
  * want to waste cycles.  The code could be written more cleverly to
  * avoid passing over the data twice in the case of an odd value.
  */
-static void
-big_halveP(bigval_t* tgt, bigval_t const* a)
+static void big_halveP(bigval_t* tgt, bigval_t const* a)
 {
     if (a->data[0] & 1) {
         /* odd */
@@ -1000,8 +987,7 @@ big_halveP(bigval_t* tgt, bigval_t const* a)
 }
 
 /* returns B_TRUE if a is zero */
-boolean_t
-big_is_zero(bigval_t const* a)
+boolean_t big_is_zero(bigval_t const* a)
 {
     int i;
 
@@ -1014,8 +1000,7 @@ big_is_zero(bigval_t const* a)
 }
 
 /* returns B_TRUE if a is one */
-static boolean_t
-big_is_one(bigval_t const* a)
+static boolean_t big_is_one(bigval_t const* a)
 {
     int i;
 
@@ -1043,9 +1028,8 @@ big_is_one(bigval_t const* a)
  * If the denominator is zero, it will loop forever.  Be careful!
  * Modulus must be odd.  num and den must be positive.
  */
-static void
-big_divide(bigval_t* tgt, bigval_t const* num, bigval_t const* den,
-           bigval_t const* modulus)
+static void big_divide(bigval_t* tgt, bigval_t const* num, bigval_t const* den,
+                       bigval_t const* modulus)
 {
     bigval_t u, v, x1, x2;
 
@@ -1086,8 +1070,7 @@ big_divide(bigval_t* tgt, bigval_t const* num, bigval_t const* den,
 }
 
 
-static void
-big_triple(bigval_t* tgt, bigval_t const* a)
+static void big_triple(bigval_t* tgt, bigval_t const* a)
 {
     int i;
     uint64_t accum = 0;
@@ -1122,16 +1105,14 @@ big_triple(bigval_t* tgt, bigval_t const* a)
 
 #define jacobian_point_is_infinity(P) (big_is_zero(&(P)->Z))
 
-static void
-toJacobian(jacobian_point_t* tgt, affine_point_t const* a) {
+static void toJacobian(jacobian_point_t* tgt, affine_point_t const* a) {
     tgt->X = a->x;
     tgt->Y = a->y;
     tgt->Z = big_one;
 }
 
 /* a->Z must be precisely reduced */
-static void
-toAffine(affine_point_t* tgt, jacobian_point_t const* a)
+static void toAffine(affine_point_t* tgt, jacobian_point_t const* a)
 {
     bigval_t zinv, zinvpwr;
 
@@ -1155,8 +1136,7 @@ toAffine(affine_point_t* tgt, jacobian_point_t const* a)
 
 /* tgt = 2 * P.  P->Z must be precisely reduced and
    tgt->Z will be precisely reduced */
-static void
-pointDouble(jacobian_point_t* tgt, jacobian_point_t const* P)
+static void pointDouble(jacobian_point_t* tgt, jacobian_point_t const* P)
 {
     bigval_t x3loc, y3loc, z3loc, t1, t2, t3;
 
@@ -1211,9 +1191,8 @@ pointDouble(jacobian_point_t* tgt, jacobian_point_t const* P)
 /* tgt = P + Q.  P->Z must be precisely reduced.
    tgt->Z will be precisely reduced.  tgt and P can be aliased.
  */
-static void
-pointAdd(jacobian_point_t* tgt, jacobian_point_t const* P,
-         affine_point_t const* Q)
+static void pointAdd(jacobian_point_t* tgt, jacobian_point_t const* P,
+                     affine_point_t const* Q)
 {
     bigval_t t1, t2, t3, t4, x3loc;
 
@@ -1304,8 +1283,7 @@ pointAdd(jacobian_point_t* tgt, jacobian_point_t const* P,
 /* k must be non-negative.  Negative values (incorrectly)
    return the infinite point */
 
-static void
-pointMpyP(affine_point_t* tgt, bigval_t const* k, affine_point_t const* P)
+static void pointMpyP(affine_point_t* tgt, bigval_t const* k, affine_point_t const* P)
 {
     int i;
     jacobian_point_t Q;
@@ -1384,8 +1362,7 @@ pointMpyP(affine_point_t* tgt, bigval_t const* k, affine_point_t const* P)
     toAffine(tgt, &Q);
 }
 
-COND_STATIC boolean_t
-in_curveP(affine_point_t const* P)
+COND_STATIC boolean_t in_curveP(affine_point_t const* P)
 {
     bigval_t sum, product;
 
@@ -1408,8 +1385,7 @@ in_curveP(affine_point_t const* P)
 
 /* returns a bigval between 0 or 1 (depending on allow_zero)
    and order-1, inclusive.  Returns 0 on success, -1 otherwise */
-COND_STATIC int
-big_get_random_n(bigval_t* tgt, boolean_t allow_zero)
+COND_STATIC int big_get_random_n(bigval_t* tgt, boolean_t allow_zero)
 {
     int rv;
 
@@ -1429,8 +1405,7 @@ big_get_random_n(bigval_t* tgt, boolean_t allow_zero)
  * computes a secret value, k, and a point, P1, to send to the other
  * party.  Returns 0 on success, -1 on failure (of the RNG).
  */
-int
-ECDH_generate(affine_point_t* P1, bigval_t* k)
+int ECDH_generate(affine_point_t* P1, bigval_t* k)
 {
     int rv;
 
@@ -1449,8 +1424,7 @@ ECDH_generate(affine_point_t* P1, bigval_t* k)
    returns B_FALSE.  The behavior with k out of range is unspecified,
    but safe. */
 
-COND_STATIC boolean_t
-ECDH_derive_pt(affine_point_t* tgt, bigval_t const* k, affine_point_t const* Q)
+COND_STATIC boolean_t ECDH_derive_pt(affine_point_t* tgt, bigval_t const* k, affine_point_t const* Q)
 {
     if (Q->infinity) {
         return (B_FALSE);
@@ -1491,8 +1465,7 @@ ECDH_derive_pt(affine_point_t* tgt, bigval_t const* k, affine_point_t const* Q)
  * The ECDH_derive functionality is split in two so that the test
  * program can get the entire point.
  */
-boolean_t
-ECDH_derive(bigval_t* tgt, bigval_t const* k, affine_point_t const* Q)
+boolean_t ECDH_derive(bigval_t* tgt, bigval_t const* k, affine_point_t const* Q)
 {
     affine_point_t Q2;
     boolean_t rv;
@@ -1510,8 +1483,7 @@ ECDH_derive(bigval_t* tgt, bigval_t const* k, affine_point_t const* Q)
  * the value is written sign-extended.  If tgtlen is too small to hold
  * the value, high order bytes are silently dropped.
  */
-void
-bigval_to_binary(bigval_t const* src, void* tgt, size_t tgtlen)
+void bigval_to_binary(bigval_t const* src, void* tgt, size_t tgtlen)
 {
     size_t i;
     uint8_t v;
@@ -1536,8 +1508,7 @@ bigval_to_binary(bigval_t const* src, void* tgt, size_t tgtlen)
  * then the length of a bigval_t, the high order bytes are silently
  * dropped.
  */
-void
-binary_to_bigval(const void* src, bigval_t* tgt, size_t srclen)
+void binary_to_bigval(const void* src, bigval_t* tgt, size_t srclen)
 {
     size_t i;
     uint8_t v;
@@ -1560,10 +1531,9 @@ binary_to_bigval(const void* src, bigval_t* tgt, size_t srclen)
  * This function sets the r and s fields of sig.  The implementation
  * follows HMV Algorithm 4.29.
  */
-static int
-ECDSA_sign(bigval_t const* msgdgst,
-           bigval_t const* privkey,
-           ECDSA_sig_t* sig)
+static int ECDSA_sign(bigval_t const* msgdgst,
+                      bigval_t const* privkey,
+                      ECDSA_sig_t* sig)
 {
     int rv;
     affine_point_t P1;
@@ -1597,10 +1567,9 @@ startpoint:
  * Returns B_TRUE if the signature is valid.
  * The implementation follow HMV Algorithm 4.30.
  */
-static verify_res_t
-ECDSA_verify_inner(bigval_t const* msgdgst,
-                   affine_point_t const* pubkey,
-                   ECDSA_sig_t const* sig)
+static verify_res_t ECDSA_verify_inner(bigval_t const* msgdgst,
+                                       affine_point_t const* pubkey,
+                                       ECDSA_sig_t const* sig)
 {
 
     /* We could reuse variables and save stack space.  If stack space
@@ -1654,10 +1623,9 @@ ECDSA_verify_inner(bigval_t const* msgdgst,
     return (V_SUCCESS);
 }
 
-bool
-ECDSA_verify(bigval_t const* msgdgst,
-             affine_point_t const* pubkey,
-             ECDSA_sig_t const* sig)
+bool ECDSA_verify(bigval_t const* msgdgst,
+                  affine_point_t const* pubkey,
+                  ECDSA_sig_t const* sig)
 {
     return (ECDSA_verify_inner(msgdgst, pubkey, sig) == V_SUCCESS);
 }
@@ -1672,8 +1640,7 @@ ECDSA_verify(bigval_t const* msgdgst,
  * number. The hash must be big-endian by byte. There is no alignment
  * requirement on hashp.
  */
-void
-ECC_hash_to_bigval(bigval_t* tgt, void const* hashp, unsigned int hashlen)
+void ECC_hash_to_bigval(bigval_t* tgt, void const* hashp, unsigned int hashlen)
 {
     unsigned int i;
 
@@ -1697,32 +1664,30 @@ ECC_hash_to_bigval(bigval_t* tgt, void const* hashp, unsigned int hashlen)
 #endif /* ECDSA */
 
 #ifdef ECC_TEST
-char*
-ECC_feature_list(void)
+char*ECC_feature_list(void)
 {
     return (
-               "ECC_P256"
+        "ECC_P256"
 #ifdef ECDSA
-               " ECDSA"
+        " ECDSA"
 #endif
 #ifdef SPECIAL_SQUARE
-               " SPECIAL_SQUARE"
+        " SPECIAL_SQUARE"
 #endif
 #ifdef SMALL_CODE
-               " SMALL_CODE"
+        " SMALL_CODE"
 #endif
 #ifdef MPY2BITS
-               " MPY2BITS"
+        " MPY2BITS"
 #endif
 #ifdef ARM7_ASM
-               " ARM7_ASM"
+        " ARM7_ASM"
 #endif
-               );
+        );
 }
 #endif /* ECC_TEST */
 
-static int
-get_random_bytes(void* buf, int len) {
+static int get_random_bytes(void* buf, int len) {
     QStatus status = qcc::Crypto_GetRandomBytes((uint8_t*) buf, len);
     if (status == ER_OK) {
         return 0;
