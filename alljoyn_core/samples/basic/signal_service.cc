@@ -332,50 +332,50 @@ int main(int argc, char** argv, char** envArg)
     /* This test for NULL is only required if new() behavior is to return NULL
      * instead of throwing an exception upon an out of memory failure.
      */
-    if (!s_msgBus) {
+    if (s_msgBus) {
+        /* Register a bus listener */
+        if (ER_OK == status) {
+            s_msgBus->RegisterBusListener(s_busListener);
+        }
+
+        if (ER_OK == status) {
+            status = StartMessageBus();
+        }
+
+        BasicSampleObject testObj(*s_msgBus, SERVICE_PATH);
+
+        if (ER_OK == status) {
+            status = RegisterBusObjectAndConnect(&testObj);
+        }
+
+        /*
+         * Advertise this service on the bus.
+         * There are three steps to advertising this service on the bus.
+         * 1) Request a well-known name that will be used by the client to discover
+         *    this service.
+         * 2) Create a session.
+         * 3) Advertise the well-known name.
+         */
+        if (ER_OK == status) {
+            status = RequestName();
+        }
+
+        const TransportMask SERVICE_TRANSPORT_TYPE = TRANSPORT_ANY;
+
+        if (ER_OK == status) {
+            status = CreateSession(SERVICE_TRANSPORT_TYPE);
+        }
+
+        if (ER_OK == status) {
+            status = AdvertiseName(SERVICE_TRANSPORT_TYPE);
+        }
+
+        /* Perform the service asynchronously until the user signals for an exit. */
+        if (ER_OK == status) {
+            WaitForSigInt();
+        }
+    } else {
         status = ER_OUT_OF_MEMORY;
-    }
-
-    /* Register a bus listener */
-    if (ER_OK == status) {
-        s_msgBus->RegisterBusListener(s_busListener);
-    }
-
-    if (ER_OK == status) {
-        status = StartMessageBus();
-    }
-
-    BasicSampleObject testObj(*s_msgBus, SERVICE_PATH);
-
-    if (ER_OK == status) {
-        status = RegisterBusObjectAndConnect(&testObj);
-    }
-
-    /*
-     * Advertise this service on the bus.
-     * There are three steps to advertising this service on the bus.
-     * 1) Request a well-known name that will be used by the client to discover
-     *    this service.
-     * 2) Create a session.
-     * 3) Advertise the well-known name.
-     */
-    if (ER_OK == status) {
-        status = RequestName();
-    }
-
-    const TransportMask SERVICE_TRANSPORT_TYPE = TRANSPORT_ANY;
-
-    if (ER_OK == status) {
-        status = CreateSession(SERVICE_TRANSPORT_TYPE);
-    }
-
-    if (ER_OK == status) {
-        status = AdvertiseName(SERVICE_TRANSPORT_TYPE);
-    }
-
-    /* Perform the service asynchronously until the user signals for an exit. */
-    if (ER_OK == status) {
-        WaitForSigInt();
     }
 
     /* Clean up msg bus */
