@@ -82,8 +82,8 @@ def main(argv=None):
         file_ignore_patterns.append("BusAttachment\.cc")
         file_ignore_patterns.append("FileStream\.cc")
         # v0.57 does not process the case statements and goto labels correctly
-        # for the alljoyn_java.cc file
         file_ignore_patterns.append("alljoyn_java\.cc")
+        file_ignore_patterns.append("ProxyBusObject\.cc")
         # v0.57 of has a problem with multi-line strings and lines that start with
         # the '<<' stream operator most of these issues only exist in unit-test code
         file_ignore_patterns.append("SessionListenerTest\.cc")
