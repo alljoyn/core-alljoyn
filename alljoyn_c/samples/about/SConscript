@@ -12,22 +12,15 @@
 #    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # 
-
 Import('env')
+clientDistDir = '$C_DISTDIR/samples/about'
 
-samples_env = env.Clone()
+# Sample Programs
+progs = [
+    env.Program('about_service',  ['about_service.cc']),
+    env.Program('about_client',   ['about_client.cc'])
+    ]
 
-samples_env.Prepend(LIBS = samples_env['ALLJOYN_C_LIB_STATIC'])
-
-if samples_env['BR'] == 'on':
-    # Build apps with bundled daemon support
-    samples_env.Prepend(LIBS = [samples_env['brobj'], samples_env['ajrlib']])
-
-# Basic Sample programs
-samples_env.SConscript('basic/SConscript', exports = {'env': samples_env })
-
-# About Sample programs
-samples_env.SConscript('about/SConscript', exports = {'env': samples_env })
-
-# Security Sample programs
-samples_env.SConscript('secure/SConscript', exports = {'env': samples_env })
+if env['OS_GROUP'] in ['windows', 'posix']:
+    env.Install('$C_DISTDIR/bin/samples', progs )
+    env.Install(clientDistDir, env.Glob('*.cc'))
