@@ -108,6 +108,25 @@ qcc::String SessionOpts::ToString() const
 
     return str;
 }
+void SessionOpts::SetAllNames()
+{
+    nameTransfer = ALL_NAMES;
+}
+
+void SessionOpts::SetSessionNames()
+{
+    nameTransfer = (isMultipoint ? MP_NAMES : P2P_NAMES);
+}
+
+bool SessionOpts::IsAllNames()
+{
+    return nameTransfer == ALL_NAMES;
+}
+
+bool SessionOpts::IsSessionNames()
+{
+    return (nameTransfer == P2P_NAMES) || (nameTransfer == MP_NAMES);
+}
 
 QStatus GetSessionOpts(const MsgArg& msgArg, SessionOpts& opts)
 {

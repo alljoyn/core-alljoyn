@@ -63,7 +63,12 @@ QStatus EndpointAuth::Hello(qcc::String& redirection)
     Message hello(bus);
     Message response(bus);
     nameTransfer = endpoint->GetFeatures().nameTransfer;
-    status = hello->HelloMessage(endpoint->GetFeatures().isBusToBus, endpoint->GetFeatures().allowRemote, endpoint->GetFeatures().nameTransfer);
+    /* Send value SLS_NAMES(also value of older DAEMON_NAMES) for SLS_NAMES,
+     * ALL_NAMES for other types.
+     * These are the older values of nameTransfer to be sent in BusHello.
+     */
+    status = hello->HelloMessage(endpoint->GetFeatures().isBusToBus, endpoint->GetFeatures().allowRemote,
+                                 (endpoint->GetFeatures().nameTransfer == SessionOpts::SLS_NAMES) ? SessionOpts::SLS_NAMES : SessionOpts::ALL_NAMES);
     if (status != ER_OK) {
         return status;
     }
@@ -111,7 +116,6 @@ QStatus EndpointAuth::Hello(qcc::String& redirection)
      */
     remoteName = response->GetSender();
     QCC_DbgHLPrintf(("EP remote %sname %s", endpoint->GetFeatures().isBusToBus ? "(bus-to-bus) " : "", remoteName.c_str()));
-
     /*
      * bus-to-bus establishment uses an extended "hello" method.
      */
@@ -120,7 +124,9 @@ QStatus EndpointAuth::Hello(qcc::String& redirection)
         if (ER_OK == status) {
             uniqueName = response->GetArg(0)->v_string.str;
             remoteGUID = qcc::GUID128(response->GetArg(1)->v_string.str);
-            remoteProtocolVersion = response->GetArg(2)->v_uint32;
+            uint32_t temp = response->GetArg(2)->v_uint32;
+            remoteProtocolVersion = temp & 0x3FFFFFFF;
+            nameTransfer = static_cast<SessionOpts::NameTransferType>(temp >> 30);
             if (remoteGUID == bus.GetInternal().GetGlobalGUID()) {
                 QCC_DbgPrintf(("BusHello was sent to self"));
                 return ER_BUS_SELF_CONNECT;
@@ -245,6 +251,7 @@ QStatus EndpointAuth::WaitHello(qcc::String& authUsed)
                 QCC_DbgPrintf(("BusHello expected 2 args with signature \"su\""));
                 return ER_BUS_ESTABLISH_FAILED;
             }
+
             endpoint->GetFeatures().isBusToBus = true;
             endpoint->GetFeatures().allowRemote = true;
 
