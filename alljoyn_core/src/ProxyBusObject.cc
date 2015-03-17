@@ -118,7 +118,7 @@ class CachedProps {
         numProperties = description->GetProperties();
         if (numProperties > 0) {
             isFullyCacheable = true;
-            const InterfaceDescription::Property** props = new const InterfaceDescription::Property * [numProperties];
+            const InterfaceDescription::Property** props = new const InterfaceDescription::Property* [numProperties];
             description->GetProperties(props, numProperties);
             for (size_t i = 0; i < numProperties; ++i) {
                 if (props[i]->cacheable == false) {
@@ -1912,7 +1912,7 @@ void CachedProps::SetAll(const MsgArg& allValues)
     lock.Unlock(MUTEX_CONTEXT);
     return;
 
-    error :
+error:
     /* We can't make sense of the property values for some reason.
      * Play it safe and invalidate all properties */
     QCC_LogError(status, ("Failed to parse GetAll return value. Invalidating property cache."));
