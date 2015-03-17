@@ -1094,11 +1094,13 @@ TEST_F(ObserverTest, GetFirstGetNext) {
     one.UnregisterObject("a");
     two.UnregisterObject("a");
 
-    // undefined behavior but should not crash
+    // don't wait for the listener notification; should not crash either way.
     proxy2 = obsA.GetNext(proxy2);
-    proxy2->IsValid();
-    Message reply(obs.bus);
-    proxy2->MethodCall(INTF_A, METHOD, NULL, 0, reply);
+    if (proxy2->IsValid()) {
+        Message reply(obs.bus);
+        // the object is no longer on the bus so the method call must not succeed
+        EXPECT_NE(ER_OK, proxy2->MethodCall(INTF_A, METHOD, NULL, 0, reply));
+    }
 
     // wait for events and check iterator
     EXPECT_TRUE(WaitForAll(events));

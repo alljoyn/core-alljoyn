@@ -98,7 +98,7 @@ class AutoPingAsyncCB : public BusAttachment::PingAsyncCB {
         PingAsyncContext* ctx = (PingAsyncContext*)context;
         bool found = false;
 
-        globalPingerLock->Lock();
+        globalPingerLock->Lock(MUTEX_CONTEXT);
         std::set<PingAsyncContext*>::iterator it = ctxs->find(ctx);
         if (it != ctxs->end()) {
             found = true;
@@ -115,9 +115,9 @@ class AutoPingAsyncCB : public BusAttachment::PingAsyncCB {
 
                                 // call external listener
                                 callbackInProgress = true;
-                                globalPingerLock->Unlock();
+                                globalPingerLock->Unlock(MUTEX_CONTEXT);
                                 ctx->pingListener.DestinationLost(ctx->group, ctx->destination);
-                                globalPingerLock->Lock();
+                                globalPingerLock->Lock(MUTEX_CONTEXT);
                                 callbackInProgress = false;
                             }
                         }
@@ -129,9 +129,9 @@ class AutoPingAsyncCB : public BusAttachment::PingAsyncCB {
 
                             // call external listener
                             callbackInProgress = true;
-                            globalPingerLock->Unlock();
+                            globalPingerLock->Unlock(MUTEX_CONTEXT);
                             ctx->pingListener.DestinationFound(ctx->group, ctx->destination);
-                            globalPingerLock->Lock();
+                            globalPingerLock->Lock(MUTEX_CONTEXT);
                             callbackInProgress = false;
                         }
                     }
@@ -143,7 +143,7 @@ class AutoPingAsyncCB : public BusAttachment::PingAsyncCB {
         } else {
             QCC_DbgPrintf(("AutoPingerInternal: ignoring callback - ping already gone"));
         }
-        globalPingerLock->Unlock();
+        globalPingerLock->Unlock(MUTEX_CONTEXT);
 
         delete ctx;
     }
@@ -189,7 +189,7 @@ AutoPingerInternal::~AutoPingerInternal()
     timer.Join();
 
     // Invalidate all ctx;
-    globalPingerLock->Lock();
+    globalPingerLock->Lock(MUTEX_CONTEXT);
     for (std::set<PingAsyncContext*>::iterator it = ctxs->begin(); it != ctxs->end();) {
         if ((*it)->pinger == this) {
             ctxs->erase(it++);
@@ -203,16 +203,16 @@ AutoPingerInternal::~AutoPingerInternal()
      * we may end up deleting a ping listener that is in the process of
      * being invoked from another thread. */
     while (callbackInProgress) {
-        globalPingerLock->Unlock();
+        globalPingerLock->Unlock(MUTEX_CONTEXT);
         qcc::Sleep(10);
-        globalPingerLock->Lock();
+        globalPingerLock->Lock(MUTEX_CONTEXT);
     }
 
     // Cleanup all groups
     for (std::map<qcc::String, PingGroup*>::iterator pair = pingGroups.begin(); pair != pingGroups.end(); ++pair) {
         delete pair->second;
     }
-    globalPingerLock->Unlock();
+    globalPingerLock->Unlock(MUTEX_CONTEXT);
 
     QCC_DbgPrintf(("AutoPingerInternal destructed"));
 }
@@ -221,12 +221,12 @@ void AutoPingerInternal::AlarmTriggered(const qcc::Alarm& alarm, QStatus reason)
 {
     qcc::String* groupName(reinterpret_cast<qcc::String*>(alarm->GetContext()));
 
-    globalPingerLock->Lock();
+    globalPingerLock->Lock(MUTEX_CONTEXT);
     if ((false == pausing) && (NULL != groupName)) {
         // Ping all destination of the group
         PingGroupDestinations(*groupName);
     }
-    globalPingerLock->Unlock();
+    globalPingerLock->Unlock(MUTEX_CONTEXT);
 }
 
 void AutoPingerInternal::PingGroupDestinations(const qcc::String& group)
@@ -258,17 +258,17 @@ void AutoPingerInternal::PingDestination(const qcc::String& group, const qcc::St
 void AutoPingerInternal::Pause()
 {
     // Stop all pending alarms
-    globalPingerLock->Lock();
+    globalPingerLock->Lock(MUTEX_CONTEXT);
     pausing = true;
     timer.RemoveAlarmsWithListener(*this);
-    globalPingerLock->Unlock();
+    globalPingerLock->Unlock(MUTEX_CONTEXT);
 
     QCC_DbgPrintf(("AutoPingerInternal paused"));
 }
 
 void AutoPingerInternal::Resume()
 {
-    globalPingerLock->Lock();
+    globalPingerLock->Lock(MUTEX_CONTEXT);
 
     assert(timer.IsRunning());
     if (true == pausing) {
@@ -282,12 +282,12 @@ void AutoPingerInternal::Resume()
         QCC_DbgPrintf(("AutoPingerInternal resumed"));
     }
 
-    globalPingerLock->Unlock();
+    globalPingerLock->Unlock(MUTEX_CONTEXT);
 }
 
 void AutoPingerInternal::AddPingGroup(const qcc::String& group, PingListener& listener, uint32_t pingInterval)
 {
-    globalPingerLock->Lock();
+    globalPingerLock->Lock(MUTEX_CONTEXT);
 
     uint32_t intervalMillisec = pingInterval * 1000;
     std::map<qcc::String, PingGroup*>::iterator it = pingGroups.find(group);
@@ -319,21 +319,21 @@ void AutoPingerInternal::AddPingGroup(const qcc::String& group, PingListener& li
         timer.AddAlarmNonBlocking(pingGroup->alarm);
     }
 
-    globalPingerLock->Unlock();
+    globalPingerLock->Unlock(MUTEX_CONTEXT);
 }
 
 void AutoPingerInternal::RemovePingGroup(const qcc::String& group)
 {
     QCC_DbgPrintf(("AutoPingerInternal: removing group: '%s'", group.c_str()));
-    globalPingerLock->Lock();
+    globalPingerLock->Lock(MUTEX_CONTEXT);
     /* Caution: removing a ping group also means removing the associated listener.
      * There may be ping calls in flight that will cause a callback to this listener
      * to be triggered. We have no choice but to busy-wait until there is no
      * callback in progress. */
     while (callbackInProgress) {
-        globalPingerLock->Unlock();
+        globalPingerLock->Unlock(MUTEX_CONTEXT);
         qcc::Sleep(10);
-        globalPingerLock->Lock();
+        globalPingerLock->Lock(MUTEX_CONTEXT);
     }
 
     std::map<qcc::String, PingGroup*>::iterator it = pingGroups.find(group);
@@ -343,13 +343,13 @@ void AutoPingerInternal::RemovePingGroup(const qcc::String& group)
         delete it->second;
         pingGroups.erase(it);
     }
-    globalPingerLock->Unlock();
+    globalPingerLock->Unlock(MUTEX_CONTEXT);
 }
 
 QStatus AutoPingerInternal::SetPingInterval(const qcc::String& group, uint32_t pingInterval)
 {
     QStatus status = ER_FAIL;
-    globalPingerLock->Lock();
+    globalPingerLock->Lock(MUTEX_CONTEXT);
     std::map<qcc::String, PingGroup*>::iterator it = pingGroups.find(group);
     if (it != pingGroups.end()) {
         QCC_DbgPrintf(("AutoPingerInternal: updating group: '%s' with ping time: %u", group.c_str(), pingInterval));
@@ -374,14 +374,14 @@ QStatus AutoPingerInternal::SetPingInterval(const qcc::String& group, uint32_t p
         status = ER_BUS_PING_GROUP_NOT_FOUND;
         QCC_LogError(status, ("AutoPingerInternal: cannot update ping time for non-existing group: '%s'", group.c_str()));
     }
-    globalPingerLock->Unlock();
+    globalPingerLock->Unlock(MUTEX_CONTEXT);
     return status;
 }
 
 QStatus AutoPingerInternal::AddDestination(const qcc::String& group, const qcc::String& destination)
 {
     QStatus status = ER_FAIL;
-    globalPingerLock->Lock();
+    globalPingerLock->Lock(MUTEX_CONTEXT);
     std::map<qcc::String, PingGroup*>::iterator it = pingGroups.find(group);
     if (it != pingGroups.end()) {
         status = ER_OK;
@@ -403,7 +403,7 @@ QStatus AutoPingerInternal::AddDestination(const qcc::String& group, const qcc::
         status = ER_BUS_PING_GROUP_NOT_FOUND;
         QCC_LogError(status, ("AutoPingerInternal: cannot add destination: '%s' to non-existing group: %u", destination.c_str(), group.c_str()));
     }
-    globalPingerLock->Unlock();
+    globalPingerLock->Unlock(MUTEX_CONTEXT);
 
     return status;
 }
@@ -412,7 +412,7 @@ QStatus AutoPingerInternal::RemoveDestination(const qcc::String& group, const qc
 {
     QStatus status = ER_FAIL;
     QCC_DbgPrintf(("AutoPingerInternal: remove destination: '%s' from group: %s", destination.c_str(), group.c_str()));
-    globalPingerLock->Lock();
+    globalPingerLock->Lock(MUTEX_CONTEXT);
     /* in theory, it would be a good idea to busy-wait here until we're sure there are no
      * callbacks in flight. The downside of that is that it would be impossible to call
      * RemoveDestination from within a DestinationLost callback. That's not acceptable.
@@ -434,7 +434,7 @@ QStatus AutoPingerInternal::RemoveDestination(const qcc::String& group, const qc
             }
         }
     }
-    globalPingerLock->Unlock();
+    globalPingerLock->Unlock(MUTEX_CONTEXT);
 
     return status;
 }

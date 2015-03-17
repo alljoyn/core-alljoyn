@@ -57,6 +57,15 @@
  * The wqLock mutex and processingWork flag make sure that only one dispatcher
  * thread ever simultaneously processes work from the work queue. No additional
  * locking is needed to protect the ObserverManager's internal data structures.
+ *
+ * Note: initially, the ObserverManager wasn't too choosy in which context it
+ * started doing work (i.e. it would do work in the SessionLost handler or in
+ * the Announce handler). It turns out that this behavior resulted in some
+ * unexpected deadlocks (where, for example, a previously scheduled action
+ * caused a session to be left with LeaveSessionAsync from the context of the
+ * SessionLost callback for that same session). Therefore, the Observer now
+ * only performs work when it is triggered directly from its own private alarm
+ * in the LocalEndpoint.
  */
 
 
@@ -540,7 +549,7 @@ void ObserverManager::Announced(const char* busName, uint16_t version,
 
     AnnouncementWork* workitem = new AnnouncementWork(busName, port, announced);
     ScheduleWork(workitem);
-    DoWork();
+    TriggerDoWork();
 }
 
 void ObserverManager::ProcessAnnouncement(const Peer& peer, const ObjectSet& announced)
@@ -575,7 +584,7 @@ void ObserverManager::JoinSessionCB(QStatus status, SessionId sessionId, const S
     delete peer;
 
     ScheduleWork(workitem);
-    DoWork();
+    TriggerDoWork();
 }
 
 void ObserverManager::ProcessSessionEstablished(const ObserverManager::Peer& peer)
@@ -626,7 +635,7 @@ void ObserverManager::SessionLost(SessionId sessionId, SessionLostReason reason)
     QCC_DbgPrintf(("Session lost for '%u'", (unsigned) sessionId));
     WorkItem* workitem = new SessionLostWork(sessionId);
     ScheduleWork(workitem);
-    DoWork();
+    TriggerDoWork();
 }
 
 void ObserverManager::ProcessSessionLost(SessionId sessionid)
@@ -662,7 +671,7 @@ void ObserverManager::DestinationLost(const qcc::String& group, const qcc::Strin
     QCC_DbgPrintf(("Destination lost for '%s'", destination.c_str()));
     WorkItem* workitem = new DestinationLostWork(destination);
     ScheduleWork(workitem);
-    DoWork();
+    TriggerDoWork();
 }
 
 void ObserverManager::ProcessDestinationLost(const qcc::String& busname)
