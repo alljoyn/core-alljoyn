@@ -34,23 +34,23 @@ using namespace qcc;
 
 /* convenience class that hides all the marshalling boilerplate from sight */
 class DoorProxy {
-    ManagedProxyBusObject proxy;
+    ProxyBusObject proxy;
     BusAttachment& bus;
   private:
     /* Private assigment operator - does nothing */
     DoorProxy operator=(const DoorProxy&);
   public:
-    DoorProxy(ManagedProxyBusObject _proxy, BusAttachment& bus) : proxy(_proxy), bus(bus) {
-        proxy->EnablePropertyCaching();
+    DoorProxy(ProxyBusObject proxy, BusAttachment& bus) : proxy(proxy), bus(bus) {
+        proxy.EnablePropertyCaching();
     }
 
     bool IsValid() {
-        return proxy->IsValid();
+        return proxy.IsValid();
     }
 
     QStatus IsOpen(bool& val) {
         MsgArg value;
-        QStatus status = proxy->GetProperty(INTF_NAME, "IsOpen", value);
+        QStatus status = proxy.GetProperty(INTF_NAME, "IsOpen", value);
         if (ER_OK == status) {
             status = value.Get("b", &val);
         }
@@ -59,7 +59,7 @@ class DoorProxy {
 
     QStatus GetLocation(string& val) {
         MsgArg value;
-        QStatus status = proxy->GetProperty(INTF_NAME, "Location", value);
+        QStatus status = proxy.GetProperty(INTF_NAME, "Location", value);
         if (ER_OK == status) {
             char* cstr;
             status = value.Get("s", &cstr);
@@ -72,7 +72,7 @@ class DoorProxy {
 
     QStatus GetKeyCode(uint32_t& val) {
         MsgArg value;
-        QStatus status = proxy->GetProperty(INTF_NAME, "KeyCode", value);
+        QStatus status = proxy.GetProperty(INTF_NAME, "KeyCode", value);
         if (ER_OK == status) {
             status = value.Get("u", &val);
         }
@@ -92,18 +92,18 @@ class DoorProxy {
 
     QStatus Open() {
         Message reply(bus);
-        QStatus status = proxy->MethodCall(INTF_NAME, "Open", NULL, 0, reply);
+        QStatus status = proxy.MethodCall(INTF_NAME, "Open", NULL, 0, reply);
         return status;
     }
 
     QStatus Close() {
         Message reply(bus);
-        QStatus status = proxy->MethodCall(INTF_NAME, "Close", NULL, 0, reply);
+        QStatus status = proxy.MethodCall(INTF_NAME, "Close", NULL, 0, reply);
         return status;
     }
 
     QStatus KnockAndRun() {
-        QStatus status = proxy->MethodCall(INTF_NAME, "KnockAndRun", NULL, 0);
+        QStatus status = proxy.MethodCall(INTF_NAME, "KnockAndRun", NULL, 0);
         return status;
     }
 };
@@ -120,19 +120,19 @@ static void Help()
 
 static void ListDoors(BusAttachment& bus, Observer* observer)
 {
-    ManagedProxyBusObject proxy = observer->GetFirst();
-    for (; proxy->IsValid(); proxy = observer->GetNext(proxy)) {
+    ProxyBusObject proxy = observer->GetFirst();
+    for (; proxy.IsValid(); proxy = observer->GetNext(proxy)) {
         DoorProxy door(proxy, bus);
         string location;
         bool isOpen;
         QStatus status = door.IsOpen(isOpen);
         if (ER_OK != status) {
-            cerr << "Could not get IsOpen property for object " << proxy->GetUniqueName() << ":" << proxy->GetPath() << endl;
+            cerr << "Could not get IsOpen property for object " << proxy.GetUniqueName() << ":" << proxy.GetPath() << endl;
             continue;
         }
         status = door.GetLocation(location);
         if (ER_OK != status) {
-            cerr << "Could not get Location property for object " << proxy->GetUniqueName() << ":" << proxy->GetPath() << endl;
+            cerr << "Could not get Location property for object " << proxy.GetUniqueName() << ":" << proxy.GetPath() << endl;
             continue;
         }
         cout << "Door location: " << location << " open: " << isOpen << endl;
@@ -141,13 +141,13 @@ static void ListDoors(BusAttachment& bus, Observer* observer)
 
 static DoorProxy GetDoorAtLocation(BusAttachment& bus, Observer* observer, const string& find_location)
 {
-    ManagedProxyBusObject proxy = observer->GetFirst();
-    for (; proxy->IsValid(); proxy = observer->GetNext(proxy)) {
+    ProxyBusObject proxy = observer->GetFirst();
+    for (; proxy.IsValid(); proxy = observer->GetNext(proxy)) {
         DoorProxy door(proxy, bus);
         string location;
         QStatus status = door.GetLocation(location);
         if (ER_OK != status) {
-            cerr << "Could not get Location property for object " << proxy->GetUniqueName() << ":" << proxy->GetPath() << endl;
+            cerr << "Could not get Location property for object " << proxy.GetUniqueName() << ":" << proxy.GetPath() << endl;
             continue;
         }
         if (location == find_location) {
@@ -337,20 +337,20 @@ class DoorListener :
         cout.flush();
     }
 
-    virtual void ObjectDiscovered(ManagedProxyBusObject& proxy) {
-        cout << "[listener] Door " << proxy->GetUniqueName() << ":"
-             << proxy->GetPath() << " has just been discovered." << endl;
+    virtual void ObjectDiscovered(ProxyBusObject& proxy) {
+        cout << "[listener] Door " << proxy.GetUniqueName() << ":"
+             << proxy.GetPath() << " has just been discovered." << endl;
 
         bus->EnableConcurrentCallbacks();
-        proxy->RegisterPropertiesChangedListener(INTF_NAME, props, 3, *this, NULL);
+        proxy.RegisterPropertiesChangedListener(INTF_NAME, props, 3, *this, NULL);
 
         DoorProxy door(proxy, *bus);
         PrintDoorState(door);
     }
 
-    virtual void ObjectLost(ManagedProxyBusObject& proxy) {
-        cout << "[listener] Door " << proxy->GetUniqueName() << ":"
-             << proxy->GetPath() << " no longer exists." << endl;
+    virtual void ObjectLost(ProxyBusObject& proxy) {
+        cout << "[listener] Door " << proxy.GetUniqueName() << ":"
+             << proxy.GetPath() << " no longer exists." << endl;
 
         cout << "\tLast known state for lost object:" << endl;
         DoorProxy door(proxy, *bus);

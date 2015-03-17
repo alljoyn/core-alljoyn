@@ -179,8 +179,6 @@ using namespace ajn;
 @property (nonatomic, strong) AJNBusAttachment *bus;
 @property (nonatomic, readonly) ProxyBusObject *proxyBusObject;
 @property (nonatomic, readwrite) BOOL shouldDeleteHandleOnDealloc;
-@property (nonatomic, readwrite) ManagedProxyBusObject managedProxyBusObject;
-
 @end
 
 @implementation AJNProxyBusObject
@@ -195,6 +193,11 @@ using namespace ajn;
 - (NSString *)serviceName
 {
     return [NSString stringWithCString:self.proxyBusObject->GetServiceName().c_str() encoding:NSUTF8StringEncoding];
+}
+
+- (NSString *)uniqueName
+{
+    return [NSString stringWithCString:self.proxyBusObject->GetUniqueName().c_str() encoding:NSUTF8StringEncoding];
 }
 
 - (AJNSessionId)sessionId
@@ -264,21 +267,13 @@ using namespace ajn;
     return self;
 }
 
-- (id)initWithBusAttachment:(AJNBusAttachment *)busAttachment managedProxyBusObject:(AJNHandle)proxyBusObject
+- (id)initWithBusAttachment:(AJNBusAttachment *)busAttachment usingProxyBusObject:(AJNHandle)proxyBusObject
 {
-    if (NULL == proxyBusObject){
-        return nil;
-    }
-    ProxyBusObject *pProxy = ((ManagedProxyBusObject*)proxyBusObject)->operator->();
-    if (!pProxy->IsValid()) {
-        return nil;
-    }
     self = [super init];
     if (self) {
-        self.managedProxyBusObject = *((ManagedProxyBusObject*)proxyBusObject);
         self.bus = busAttachment;
-        self.handle = (AJNHandle)pProxy;
-        self.shouldDeleteHandleOnDealloc = NO;
+        self.handle = new ProxyBusObject(*(ProxyBusObject *)proxyBusObject);
+        self.shouldDeleteHandleOnDealloc = YES;
     }
     return self;
 }
@@ -288,10 +283,6 @@ using namespace ajn;
     if (YES == self.shouldDeleteHandleOnDealloc) {
         ProxyBusObject *ptr = (ProxyBusObject *)self.handle;
         delete ptr;
-    } else {
-        /* make sure the proxy's reference to the C++ BusAttachment
-         * is gone before we drop our Obj-C reference to the AJNBusAttachment */
-        self.managedProxyBusObject = ManagedProxyBusObject();
     }
     self.handle = nil;
 }
