@@ -30,12 +30,23 @@
 #include "KeyStore.h"
 #include "InMemoryKeyStore.h"
 
+#if defined(QCC_OS_GROUP_WINDOWS)
+/*
+ * This pragma prevents Microsoft compiler warning C4407: cast between different pointer to member representations, compiler may generate incorrect code.
+ * This is equivalent to /vmg compiler option but without the burden of forcing that everywhere.
+ *
+ * Specifically the warning is caused by AuthListenerECDHETest class using multiple inheritance and implementing a member function (MessageReceiver::MethodHandler)
+ * that is declared in the base class.
+ */
+#pragma pointers_to_members(full_generality, virtual_inheritance)
+#endif
+
 using namespace ajn;
 using namespace qcc;
 
 static const char* ONOFF_IFC_NAME = "org.allseenalliance.control.OnOff";
 
-class AuthListenerECDHETest : public testing::Test, public BusObject {
+class AuthListenerECDHETest : public BusObject, public testing::Test {
   public:
 
     class ECDHEKeyXListener : public AuthListener {

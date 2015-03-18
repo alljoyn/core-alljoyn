@@ -84,8 +84,8 @@ elif env['OS'] == 'winxp':
 #       intentional part of the algorithm so the warning can be suppressed.
 env.Append(CXXFLAGS=['/wd4244', '/wd4267','/wd4345', '/wd4355', '/wd4800', '/wd4996', '/wd4351', '/wd4146'])
 
-env.Append(CFLAGS=['/nologo', '/vmm', '/vmg'])
-env.Append(CXXFLAGS=['/nologo', '/vmm', '/vmg'])
+env.Append(CFLAGS=['/nologo'])
+env.Append(CXXFLAGS=['/nologo'])
 
 env.Append(CFLAGS=['/EHsc'])
 env.Append(CXXFLAGS=['/EHsc'])
