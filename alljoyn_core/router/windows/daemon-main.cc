@@ -74,10 +74,10 @@ static const char defaultConfig[] =
     "  <limit name=\"max_completed_connections\">64</limit>"
     "  <limit name=\"max_remote_clients_tcp\">48</limit>"
     "  <limit name=\"max_remote_clients_udp\">0</limit>"
-    "  <property name=\"router_power_source\">Always AC powered</property>"
-    "  <property name=\"router_mobility\">Always stationary</property>"
-    "  <property name=\"router_availability\">21-24 hr</property>"
-    "  <property name=\"router_node_connection\">Access Point</property>"
+    "  <property name=\"router_power_source\">Battery powered and chargeable</property>"
+    "  <property name=\"router_mobility\">Intermediate mobility</property>"
+    "  <property name=\"router_availability\">3-6 hr</property>"
+    "  <property name=\"router_node_connection\">Wireless</property>"
     "  <flag name=\"restrict_untrusted_clients\">false</flag>"
     "</busconfig>";
 
