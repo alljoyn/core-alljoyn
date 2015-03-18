@@ -20,17 +20,17 @@
     package="org.alljoyn.about.test"
     android:versionCode="1000000"
     android:versionName="1.0.0" >
-    
 
-    
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"></uses-permission>    
+
+
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"></uses-permission>
 	<uses-permission android:name="android.permission.ACCESS_WIFI_STATE"></uses-permission>
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE"></uses-permission>
     <uses-permission android:name="android.permission.INTERNET"></uses-permission>
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE"></uses-permission>
-	
-	<uses-sdk android:minSdkVersion="15" />
-	
+
+	<uses-sdk android:minSdkVersion="16" />
+
     <application
         android:name="org.alljoyn.about.test.AboutApplication"
         android:icon="@drawable/ic_launcher"
@@ -45,10 +45,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        
-        <activity android:name="org.alljoyn.about.test.AboutActivity" android:configChanges="keyboardHidden|orientation|screenSize"> </activity>        
+
+        <activity android:name="org.alljoyn.about.test.AboutActivity" android:configChanges="keyboardHidden|orientation|screenSize"> </activity>
         <activity android:name="org.alljoyn.about.test.IconActivity" android:configChanges="keyboardHidden|orientation|screenSize"> </activity>
-	   	
+
     </application>
 
 </manifest>
