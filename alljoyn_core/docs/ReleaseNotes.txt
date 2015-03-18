@@ -1,4 +1,4 @@
-AllJoyn Version 14.12a Release Notes
+AllJoyn Version 14.12b Release Notes
 ====================================
 
 Platform Support
@@ -14,7 +14,7 @@ Platform Support
  9) OpenWRT BB and CC branches
 
 
-Features added in Version 14.12a
+Features added in Version 14.12b
 --------------------------------
 * Major Stabilization fixes for the system when it is under load.
 * Hardening and performance improvements of the UDP RN to RN transport
@@ -30,8 +30,7 @@ Features added in Version 14.12a
   reliability protocol on top of UDP.  Provide more control over the data
   flow, and reduction of resources.
 
-
-Issues Addressed in Version 14.12a
+Issues Addressed in Version 14.12b
 ----------------------------------
 ASACORE-51   Implicit PropertiesChanged emit only works for multi-point sessions
 ASACORE-189  BusObject::Unregistered callback is not called for busobjects
@@ -43,9 +42,13 @@ ASACORE-656  Notifications related to names appearing and disappearing
              appear to be out of order
 ASACORE-748  Dismiss All Notifications Test Doesn't Achieve Receiving 95%
              Of DismissAll Signals Under 10 Seconds Time Frame
+ASACORE-780  junit tests will connect to a running daemon by default, this
+             interferes with running the two instances of the test
+	     simultaneously
 ASACORE-785  Duplicate FoundAdvertisedName being received
 ASACORE-971  Make Visual Studio 2013 the default MSVC_VERSION
 ASACORE-1051 Support Xcode 6.1
+ASACORE-1143 Use a unique name for each junit test
 ASACORE-1238 AutoPinger includes private header files
 ASACORE-1306 SetSessionListener on Busattachment might not insert listener
 ASACORE-1324 UDP Transport CPU Usage hits rails in System Test
@@ -62,14 +65,18 @@ ASACORE-1369 cpp/inc/qcc/windows/Mutex.h includes <Status.h>
 ASACORE-1390 cngCacheDummy array is too short
 ASACORE-1402 One consumer, multiple producers (96) scenario causes deadlock
              in routing node of the consumer.
-ASACORE-1417  When SLS producer does not leave the session, the SLS
-              consumer will no longer fetch from the producer
+ASACORE-1417 When SLS producer does not leave the session, the SLS
+             consumer will no longer fetch from the producer
+ASACORE-1504 Clean up transport masks
+ASACORE-1549 ExchangeNames signal contains large number of unowned names
+ASACORE-1576 Some stale virtual endpoints and names may remain even after
+             the remote routing node has exited
+ASACORE-1596 BigNum::set_hex() crashes with invalid input
 
 For a complete list of closed issues can be found at:
-https://jira.allseenalliance.org/issues/?jql=project%3D%22Core%20SW%22%20and%20status%20in%20%28closed%2C%20resolved%29%20and%20type%20not%20in%20%28task%2C%20%22New%20Feature%22%29%20%20and%20fixVersion%20in%20%28%2214.12%22%2C%20%2214.12a%22%29%20and%20component%20not%20in%20%28%22Thin%20Core%20Library%22%2C%20%22About%20TC%22%29%20order%20by%20priority%20DESC%2C%20id%20ASC
+https://jira.allseenalliance.org/issues/?jql=project%20%3D%20%22Core%20SW%22%20AND%20status%20in%20%28closed%2C%20resolved%29%20AND%20type%20%3D%20Bug%20AND%20fixVersion%20in%20%28%2214.12%22%2C%20%2214.12a%22%2C%20%2214.12b%22%29%20AND%20component%20not%20in%20%28%22Thin%20Core%20Library%22%2C%20%22About%20TC%22%29%20or%20key%20%3D%20%20ASACORE-1504%20ORDER%20BY%20id%20DESC%2C%20priority%20DESC
 
-
-Known Issues in Version 14.12a
+Known Issues in Version 14.12b
 ------------------------------
 ASACORE-49    Multipoint session lost on joiner side and not binder side
               prevents joiner from rejoining
@@ -81,8 +88,8 @@ ASACORE-367   Router AJ objects that don't call BusController::ObjectRegister()
 ASACORE-370   AllJoyn does not build with Android 4.4 (KitKat) sources
 ASACORE-732   Duplicate About announcements received while running large
               number of About based applications
-ASACORE-935   Router Nodes can allow open communication between subnets
-              (Network Isolation)
+ASACORE-1046  iOS: 14.12 app coming into foreground after suspension causes
+              1 thread with 100% cpu usage
 ASACORE-1230  iOS test app Bus Stress crashes with an Assert failure
 ASACORE-1244  service/about truncates the AppID to 16 bytes
 ASACORE-1253  C++ sample apps discover and join session twice, print errors
@@ -94,6 +101,13 @@ ASACORE-1391  C-style exports in C++ API headers needs AJ_CALL annotation
 ASACORE-1394  AllJoyn Signal sent on an non-existent session id should not
               return ER_OK
 ASACORE-1396  Crash if WSARecvMsg returns an error
+ASACORE-1557  A routing node should not respond to a Thin Client if it
+              doesn't have any available TCP slots.
+ASACORE-1600  iOS AboutService sample can not inter-operate with Java
+              AboutClient sample
+ASACORE-1603  Invoking AboutData::CreateFromXml() results in a seg fault
+              when a required About field is missing in the XML data that
+	      is passed in
 
 For a complete list of open issues:
 https://jira.allseenalliance.org/issues/?jql=project%3D%22Core%20SW%22%20and%20status%20not%20in%20%28closed%2C%20resolved%29%20and%20type%20not%20in%20%28task%2C%20%22New%20Feature%22%29%20%20and%20component%20not%20in%20%28%22Thin%20Core%20Library%22%2C%20%22About%20TC%22%29%20order%20by%20priority%20DESC%2C%20id%20ASC
@@ -101,7 +115,7 @@ https://jira.allseenalliance.org/issues/?jql=project%3D%22Core%20SW%22%20and%20s
 
 Compatibility
 -------------
-Version 14.12/14.12a
+Version 14.12/14.12a/14.12b
 - The AllJoyn protocol version changed from 10 to 11.
 - As part of making UDP/ARDP robust compatibility was broken between the
   14.06 experimental version and the current implementation - this is not
@@ -125,7 +139,9 @@ For details of previous releases please see the release notes
 
 
 Change history
---------------
+-------------
+14.12b - Bug fixes: ASACORE-780, ASACORE-1143, ASACORE-1504, ASACORE-1549,
+         ASACORE-1576, ASACORE-1596
 14.12a - Bug fixes: ASACORE-1324, ASACORE-1325, ASACORE-1333, ASACORE-1334,
          ASACORE-1336, ASACORE-1337, ASACORE-1355, ASACORE-1366,
 	 ASACORE-1368, ASACORE-1369, ASACORE-1390, ASACORE-1402,
