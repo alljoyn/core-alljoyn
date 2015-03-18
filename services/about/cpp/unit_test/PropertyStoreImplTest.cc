@@ -685,8 +685,10 @@ TEST(PropertyStoreImplTest, ReadAll_read)
     EXPECT_STREQ("a{sv}", readArg2.Signature().c_str());
 
     // an empty string should return the same as the default language
-    EXPECT_TRUE(readArg2 == readArg) << "Read Arg for \"en\" \n----------------------\n" <<
-    readArg.ToString().c_str() << "\nRead Arg for \"\"\n---------------------\n" << readArg2.ToString().c_str();
+    EXPECT_TRUE(readArg2 == readArg) << "Read Arg for \"en\" \n----------------------\n"
+                                     << readArg.ToString().c_str()
+                                     << "\nRead Arg for \"\"\n---------------------\n"
+                                     << readArg2.ToString().c_str();
 
     MsgArg* args;
 

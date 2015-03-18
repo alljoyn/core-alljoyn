@@ -179,7 +179,7 @@ bool _VirtualEndpoint::RemoveBusToBusEndpoint(RemoteEndpoint& endpoint)
      * This Virtual endpoint reports itself as empty (of b2b endpoints) when any of the following are true:
      * 1) The last b2b ep is being removed.
      * 2) A last session route through this vep is being removed and the b2bEp being removed doesnt connect to the same
-     *    remote daemon as a different b2bEp in the vep.
+     *    remote daemon directly.
      *
      * This algorithm allows for cleanup of the following triangular routing problem:
      * - Device A connects to device B
@@ -192,28 +192,19 @@ bool _VirtualEndpoint::RemoveBusToBusEndpoint(RemoteEndpoint& endpoint)
      * This algorithm solves this problem by removing the veps when they no longer route for any session AND
      * when they are suseptible to the triangular route problem.
      */
-    bool isEmpty;
-    if (m_hasRefs) {
-        isEmpty = (m_b2bEndpoints.lower_bound(1) == m_b2bEndpoints.end());
-        size_t pos = GetUniqueName().find_first_of(".");
-        String vepGUID = GetUniqueName().substr(1, pos - 1);
-        if (isEmpty) {
-            const qcc::GUID128& guid = endpoint->GetRemoteGUID();
-            it = m_b2bEndpoints.begin();
-            while (it != m_b2bEndpoints.end()) {
-                /* If the endpoint going away has the same remote GUID as another one in the m_b2bEndpoints map OR
-                 * If the Remote guid of a endpoint in the m_b2bEndpoints map is the same as the VirtualEndpoint GUID:
-                 * then this Virtual endpoint is still valid.
-                 */
-                if ((it->second->GetRemoteGUID() == guid) || (it->second->GetRemoteGUID().ToShortString() == vepGUID)) {
-                    isEmpty = false;
-                    break;
-                }
-                ++it;
+    bool isEmpty = (m_b2bEndpoints.lower_bound(1) == m_b2bEndpoints.end());
+    if (isEmpty) {
+        it = m_b2bEndpoints.begin();
+        while (it != m_b2bEndpoints.end()) {
+            /* If the Remote guid of a endpoint in the m_b2bEndpoints map is the same as the VirtualEndpoint GUID:
+             * then this Virtual endpoint is still valid.
+             */
+            if (it->second->GetRemoteGUID().ToShortString() == GetRemoteGUIDShortString()) {
+                isEmpty = false;
+                break;
             }
+            ++it;
         }
-    } else {
-        isEmpty = m_b2bEndpoints.empty();
     }
     if (isEmpty) {
         /* The last b2b endpoint has been removed from this virtual endpoint. Set the state to STOPPING. */
@@ -221,6 +212,12 @@ bool _VirtualEndpoint::RemoveBusToBusEndpoint(RemoteEndpoint& endpoint)
     }
     m_b2bEndpointsLock.Unlock(MUTEX_CONTEXT);
     return isEmpty;
+}
+
+String _VirtualEndpoint::GetRemoteGUIDShortString()
+{
+    size_t pos = GetUniqueName().find_first_of(".");
+    return GetUniqueName().substr(1, pos - 1);
 }
 
 QStatus _VirtualEndpoint::AddSessionRef(SessionId id, RemoteEndpoint& b2bEp)
@@ -242,33 +239,6 @@ QStatus _VirtualEndpoint::AddSessionRef(SessionId id, RemoteEndpoint& b2bEp)
     }
     m_b2bEndpointsLock.Unlock(MUTEX_CONTEXT);
     return canUse ? ER_OK : ER_BUS_NO_ENDPOINT;
-}
-
-QStatus _VirtualEndpoint::AddSessionRef(SessionId id, SessionOpts* opts, RemoteEndpoint& b2bEp)
-{
-    QCC_DbgTrace(("_VirtualEndpoint::AddSessionRef(this=%s [%x], %u, <opts>, %s)", GetUniqueName().c_str(), this, id, b2bEp->GetUniqueName().c_str()));
-
-    RemoteEndpoint bestEp;
-    //uint32_t hops = 1000;
-
-    m_b2bEndpointsLock.Lock(MUTEX_CONTEXT);
-
-    /* TODO: Placeholder until we exchange session opts and hop count via ExchangeNames */
-    multimap<SessionId, RemoteEndpoint>::const_iterator it = m_b2bEndpoints.find(id);
-    if (it == m_b2bEndpoints.end()) {
-        it = m_b2bEndpoints.begin();
-    }
-    if ((it != m_b2bEndpoints.end()) && ((it->first == 0) || it->first == id)) {
-        bestEp = it->second;
-    }
-
-    /* Map session id to bestEp */
-    if (bestEp->IsValid()) {
-        AddSessionRef(id, bestEp);
-    }
-    b2bEp = bestEp;
-    m_b2bEndpointsLock.Unlock(MUTEX_CONTEXT);
-    return bestEp->IsValid() ? ER_OK : ER_BUS_NO_ENDPOINT;
 }
 
 void _VirtualEndpoint::RemoveSessionRef(SessionId id)
@@ -297,30 +267,6 @@ bool _VirtualEndpoint::CanUseRoute(const RemoteEndpoint& b2bEndpoint) const
             break;
         }
         ++it;
-    }
-    m_b2bEndpointsLock.Unlock(MUTEX_CONTEXT);
-    return isFound;
-}
-
-bool _VirtualEndpoint::CanUseRoutes(const multiset<String>& b2bNameSet) const
-{
-    bool isFound = false;
-    m_b2bEndpointsLock.Lock(MUTEX_CONTEXT);
-    multiset<String>::const_iterator nit = b2bNameSet.begin();
-    while (nit != b2bNameSet.end()) {
-        multimap<SessionId, RemoteEndpoint>::const_iterator eit = m_b2bEndpoints.begin();
-        while (eit != m_b2bEndpoints.end()) {
-            String n = eit->second->GetUniqueName();
-            if (*nit == n) {
-                isFound = true;
-                break;
-            }
-            ++eit;
-        }
-        if (isFound) {
-            break;
-        }
-        ++nit;
     }
     m_b2bEndpointsLock.Unlock(MUTEX_CONTEXT);
     return isFound;

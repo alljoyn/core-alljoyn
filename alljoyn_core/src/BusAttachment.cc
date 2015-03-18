@@ -88,6 +88,16 @@ struct JoinSessionAsyncCBContext {
     { }
 };
 
+struct LeaveSessionAsyncCBContext {
+    BusAttachment::LeaveSessionAsyncCB* callback;
+    void* context;
+
+    LeaveSessionAsyncCBContext(BusAttachment::LeaveSessionAsyncCB* callback, void* context) :
+        callback(callback),
+        context(context)
+    { }
+};
+
 struct SetLinkTimeoutAsyncCBContext {
     BusAttachment::SetLinkTimeoutAsyncCB* callback;
     void* context;
@@ -1013,14 +1023,14 @@ QStatus BusAttachment::RequestName(const char* requestedName, uint32_t flags)
         status = reply->GetArgs("u", &disposition);
         if (ER_OK == status) {
             switch (disposition) {
-            case DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER :
+            case DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER:
                 break;
 
-            case DBUS_REQUEST_NAME_REPLY_IN_QUEUE :
+            case DBUS_REQUEST_NAME_REPLY_IN_QUEUE:
                 status = ER_DBUS_REQUEST_NAME_REPLY_IN_QUEUE;
                 break;
 
-            case DBUS_REQUEST_NAME_REPLY_EXISTS :
+            case DBUS_REQUEST_NAME_REPLY_EXISTS:
                 status = ER_DBUS_REQUEST_NAME_REPLY_EXISTS;
                 break;
 
@@ -1100,6 +1110,22 @@ QStatus BusAttachment::AddMatch(const char* rule)
     return status;
 }
 
+QStatus BusAttachment::AddMatchNonBlocking(const char* rule)
+{
+    if (!IsConnected()) {
+        return ER_BUS_NOT_CONNECTED;
+    }
+
+    MsgArg args[1];
+    size_t numArgs = ArraySize(args);
+
+    MsgArg::Set(args, numArgs, "s", rule);
+
+    const ProxyBusObject& dbusObj = this->GetDBusProxyObj();
+    QStatus status = dbusObj.MethodCall(org::freedesktop::DBus::InterfaceName, "AddMatch", args, numArgs);
+    return status;
+}
+
 QStatus BusAttachment::RemoveMatch(const char* rule)
 {
     if (!IsConnected()) {
@@ -1120,6 +1146,22 @@ QStatus BusAttachment::RemoveMatch(const char* rule)
             status = ER_BUS_MATCH_RULE_NOT_FOUND;
         }
     }
+    return status;
+}
+
+QStatus BusAttachment::RemoveMatchNonBlocking(const char* rule)
+{
+    if (!IsConnected()) {
+        return ER_BUS_NOT_CONNECTED;
+    }
+
+    MsgArg args[1];
+    size_t numArgs = ArraySize(args);
+
+    MsgArg::Set(args, numArgs, "s", rule);
+
+    const ProxyBusObject& dbusObj = this->GetDBusProxyObj();
+    QStatus status = dbusObj.MethodCall(org::freedesktop::DBus::InterfaceName, "RemoveMatch", args, numArgs);
     return status;
 }
 
@@ -1602,7 +1644,6 @@ QStatus BusAttachment::JoinSessionAsync(const char* sessionHost, SessionPort ses
     return status;
 }
 
-
 void BusAttachment::Internal::JoinSessionAsyncCB(Message& reply, void* context)
 {
     JoinSessionAsyncCBContext* ctx = reinterpret_cast<JoinSessionAsyncCBContext*>(context);
@@ -1810,6 +1851,84 @@ void BusAttachment::ClearSessionListener(SessionId sessionId, SessionSideMask bi
         }
     }
 
+}
+
+void BusAttachment::Internal::LeaveSessionAsyncCB(Message& reply, void* context)
+{
+    LeaveSessionAsyncCBContext* ctx = reinterpret_cast<LeaveSessionAsyncCBContext*>(context);
+
+    QStatus status = ER_FAIL;
+    if (reply->GetType() == MESSAGE_METHOD_RET) {
+        uint32_t disposition;
+        status = reply->GetArgs("u", &disposition);
+        if (ER_OK == status) {
+            switch (disposition) {
+            case ALLJOYN_LEAVESESSION_REPLY_SUCCESS:
+                break;
+
+            case ALLJOYN_LEAVESESSION_REPLY_NO_SESSION:
+                status = ER_ALLJOYN_LEAVESESSION_REPLY_NO_SESSION;
+                break;
+
+            case ALLJOYN_LEAVESESSION_REPLY_FAILED:
+                status = ER_ALLJOYN_LEAVESESSION_REPLY_FAILED;
+                break;
+
+            default:
+                status = ER_BUS_UNEXPECTED_DISPOSITION;
+                break;
+            }
+        }
+    } else if (reply->GetType() == MESSAGE_ERROR) {
+        status = ER_BUS_REPLY_IS_ERROR_MESSAGE;
+        QCC_LogError(status, ("%s.LeaveSession returned ERROR_MESSAGE (error=%s)", org::alljoyn::Bus::InterfaceName, reply->GetErrorDescription().c_str()));
+    }
+
+    /* Call the callback */
+    ctx->callback->LeaveSessionCB(status, ctx->context);
+    delete ctx;
+}
+
+QStatus BusAttachment::LeaveSessionAsync(const SessionId& sessionId, const char* method, SessionSideMask bitset, BusAttachment::LeaveSessionAsyncCB* callback, void* context)
+{
+    if (!IsConnected()) {
+        return ER_BUS_NOT_CONNECTED;
+    }
+
+    ClearSessionListener(sessionId, bitset);
+    ClearSessionSet(sessionId, bitset);
+
+    MsgArg arg("u", sessionId);
+
+    const ProxyBusObject& alljoynObj = this->GetAllJoynProxyObj();
+    LeaveSessionAsyncCBContext* cbCtx = new LeaveSessionAsyncCBContext(callback, context);
+
+    QStatus status = alljoynObj.MethodCallAsync(org::alljoyn::Bus::InterfaceName,
+                                                method,
+                                                busInternal,
+                                                static_cast<MessageReceiver::ReplyHandler>(&BusAttachment::Internal::LeaveSessionAsyncCB),
+                                                &arg,
+                                                1,
+                                                cbCtx);
+    if (status != ER_OK) {
+        delete cbCtx;
+    }
+    return status;
+}
+
+QStatus BusAttachment::LeaveSessionAsync(const SessionId& sessionId, BusAttachment::LeaveSessionAsyncCB* callback, void* context)
+{
+    return LeaveSessionAsync(sessionId, "LeaveSession", SESSION_SIDE_MASK_BOTH, callback, context);
+}
+
+QStatus BusAttachment::LeaveHostedSessionAsync(const SessionId& sessionId, BusAttachment::LeaveSessionAsyncCB* callback, void* context)
+{
+    return LeaveSessionAsync(sessionId, "LeaveHostedSession", SESSION_SIDE_MASK_HOST, callback, context);
+}
+
+QStatus BusAttachment::LeaveJoinedSessionAsync(const SessionId& sessionId, BusAttachment::LeaveSessionAsyncCB* callback, void* context)
+{
+    return LeaveSessionAsync(sessionId, "LeaveJoinedSession", SESSION_SIDE_MASK_JOINER, callback, context);
 }
 
 QStatus BusAttachment::LeaveSession(const SessionId& sessionId, const char*method, SessionSideMask bitset)
@@ -2298,15 +2417,7 @@ QStatus BusAttachment::WhoImplements(const char** implementsInterfaces, size_t n
     return AddMatch(matchRule.c_str());
 }
 
-QStatus BusAttachment::WhoImplements(const char* iface)
-{
-    if (iface == NULL) {
-        return WhoImplements(NULL, size_t(0));
-    }
-    const char** tmp = &iface;
-    return WhoImplements(tmp, size_t(1));
-}
-QStatus BusAttachment::CancelWhoImplements(const char** implementsInterfaces, size_t numberInterfaces)
+QStatus BusAttachment::WhoImplementsNonBlocking(const char** implementsInterfaces, size_t numberInterfaces)
 {
     std::set<qcc::String> interfaces;
     for (size_t i = 0; i < numberInterfaces; ++i) {
@@ -2319,7 +2430,57 @@ QStatus BusAttachment::CancelWhoImplements(const char** implementsInterfaces, si
     }
 
     QCC_DbgTrace(("Calling AddMatch(\"%s\")", matchRule.c_str()));
+    return AddMatchNonBlocking(matchRule.c_str());
+}
+
+QStatus BusAttachment::WhoImplements(const char* iface)
+{
+    if (iface == NULL) {
+        return WhoImplements(NULL, 0);
+    }
+    const char** tmp = &iface;
+    return WhoImplements(tmp, 1);
+}
+
+QStatus BusAttachment::WhoImplementsNonBlocking(const char* iface)
+{
+    if (iface == NULL) {
+        return WhoImplementsNonBlocking(NULL, 0);
+    }
+    const char** tmp = &iface;
+    return WhoImplementsNonBlocking(tmp, 1);
+}
+
+QStatus BusAttachment::CancelWhoImplements(const char** implementsInterfaces, size_t numberInterfaces)
+{
+    std::set<qcc::String> interfaces;
+    for (size_t i = 0; i < numberInterfaces; ++i) {
+        interfaces.insert(implementsInterfaces[i]);
+    }
+
+    qcc::String matchRule = "type='signal',interface='org.alljoyn.About',member='Announce',sessionless='t'";
+    for (std::set<qcc::String>::iterator it = interfaces.begin(); it != interfaces.end(); ++it) {
+        matchRule += qcc::String(",implements='") + *it + qcc::String("'");
+    }
+
+    QCC_DbgTrace(("Calling RemoveMatch(\"%s\")", matchRule.c_str()));
     return RemoveMatch(matchRule.c_str());
+}
+
+QStatus BusAttachment::CancelWhoImplementsNonBlocking(const char** implementsInterfaces, size_t numberInterfaces)
+{
+    std::set<qcc::String> interfaces;
+    for (size_t i = 0; i < numberInterfaces; ++i) {
+        interfaces.insert(implementsInterfaces[i]);
+    }
+
+    qcc::String matchRule = "type='signal',interface='org.alljoyn.About',member='Announce',sessionless='t'";
+    for (std::set<qcc::String>::iterator it = interfaces.begin(); it != interfaces.end(); ++it) {
+        matchRule += qcc::String(",implements='") + *it + qcc::String("'");
+    }
+
+    QCC_DbgTrace(("Calling RemoveMatch(\"%s\")", matchRule.c_str()));
+    return RemoveMatchNonBlocking(matchRule.c_str());
 }
 
 QStatus BusAttachment::CancelWhoImplements(const char* iface)
@@ -2329,6 +2490,15 @@ QStatus BusAttachment::CancelWhoImplements(const char* iface)
     }
     const char** tmp = &iface;
     return CancelWhoImplements(tmp, 1);
+}
+
+QStatus BusAttachment::CancelWhoImplementsNonBlocking(const char* iface)
+{
+    if (iface == NULL) {
+        return CancelWhoImplementsNonBlocking(NULL, 0);
+    }
+    const char** tmp = &iface;
+    return CancelWhoImplementsNonBlocking(tmp, 1);
 }
 
 QStatus BusAttachment::Internal::GetAnnouncedObjectDescription(MsgArg& objectDescriptionArg) {

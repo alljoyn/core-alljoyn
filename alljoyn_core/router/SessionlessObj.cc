@@ -138,9 +138,9 @@ SessionlessObj::SessionlessObj(Bus& bus, BusController* busController, DaemonRou
     requestSignalsSignal(NULL),
     requestRangeSignal(NULL),
     requestRangeMatchSignal(NULL),
-    timer("sessionless"),
+    timer("sessionless", true),
     curChangeId(0),
-    sessionOpts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY, SessionOpts::DAEMON_NAMES),
+    sessionOpts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY, SessionOpts::SLS_NAMES),
     sessionPort(SESSIONLESS_SESSION_PORT),
     advanceChangeId(false),
     nextRulesId(0),
@@ -408,6 +408,16 @@ void SessionlessObj::RemoveRuleWork::Run()
 SessionlessObj::PushMessageWork::PushMessageWork(SessionlessObj& slObj, Message& msg)
     : Work(slObj), msg(msg)
 {
+}
+
+bool SessionlessObj::IsSessionlessEmitter(String name)
+{
+    lock.Lock();
+    SessionlessMessageKey key(name.c_str(), "", "", "");
+    LocalCache::iterator mit = localCache.lower_bound(key);
+    bool ret = (mit != localCache.end() && (mit->first.find(name) == 0));
+    lock.Unlock();
+    return ret;
 }
 
 void SessionlessObj::PushMessageWork::Run()
@@ -979,6 +989,11 @@ void SessionlessObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
         if (tilExpire != Timespec::Zero) {
             SessionlessObj* slObj = this;
             timer.AddAlarm(Alarm(tilExpire, slObj));
+        }
+    } else if (reason == ER_TIMER_EXITING) {
+        Work* work = static_cast<Work*>(alarm->GetContext());
+        if (work) {
+            delete work;
         }
     }
 }

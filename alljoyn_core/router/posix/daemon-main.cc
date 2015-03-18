@@ -55,10 +55,6 @@
 #include "DaemonSLAPTransport.h"
 #endif
 
-#if defined(QCC_OS_ANDROID)
-//#include "android/WFDTransport.h"
-#endif
-
 #include "Bus.h"
 #include "BusController.h"
 #include "ConfigDB.h"
@@ -104,7 +100,8 @@ static const char defaultConfig[] =
     "  <limit name=\"auth_timeout\">20000</limit>"
     "  <limit name=\"max_incomplete_connections\">16</limit>"
     "  <limit name=\"max_completed_connections\">32</limit>"
-    "  <limit name=\"max_untrusted_clients\">0</limit>"
+    "  <limit name=\"max_remote_clients_tcp\">0</limit>"
+    "  <limit name=\"max_remote_clients_udp\">0</limit>"
     "  <flag name=\"restrict_untrusted_clients\">true</flag>"
     "</busconfig>";
 #else
@@ -113,10 +110,44 @@ static const char defaultConfig[] =
     "  <limit name=\"auth_timeout\">20000</limit>"
     "  <limit name=\"max_incomplete_connections\">16</limit>"
     "  <limit name=\"max_completed_connections\">32</limit>"
-    "  <limit name=\"max_untrusted_clients\">16</limit>"
+    "  <limit name=\"max_remote_clients_tcp\">16</limit>"
+    "  <limit name=\"max_remote_clients_udp\">0</limit>"
+    "  <property name=\"router_power_source\">Always AC powered</property>"
+    "  <property name=\"router_mobility\">Always stationary</property>"
+    "  <property name=\"router_availability\">21-24 hr</property>"
+    "  <property name=\"router_node_connection\">Access Point</property>"
     "  <flag name=\"restrict_untrusted_clients\">false</flag>"
     "</busconfig>";
 #endif
+
+/*
+ * Router Power Source
+ *  Always AC powered
+ *  Battery powered and chargeable
+ *  Battery powered and not chargeable
+ *
+ * Router Mobility
+ *  Always Stationary
+ *  Low mobility
+ *  Intermediate mobility
+ *  High mobility
+ *
+ * Router Availability
+ *  0-3 hr
+ *  3-6 hr
+ *  6-9 hr
+ *  9-12 hr
+ *  12-15 hr
+ *  15-18 hr
+ *  18-21 hr
+ *  21-24 hr
+ *
+ * Router Node Connection
+ *  Access Point
+ *  Wired
+ *  Wireless
+ *
+ */
 
 static const char internalConfig[] =
     "<busconfig>"
@@ -166,9 +197,6 @@ class OptParse {
         noSLAP(false),
         noTCP(false),
         noUDP(false),
-#if defined(QCC_OS_ANDROID)
-        noWFD(false),
-#endif
 #if defined(QCC_OS_DARWIN)
         noLaunchd(false),
 #endif
@@ -199,11 +227,6 @@ class OptParse {
     bool GetNoUDP() const {
         return noUDP;
     }
-#if defined(QCC_OS_ANDROID)
-    bool GetNoWFD() const {
-        return noWFD;
-    }
-#endif
 #if defined(QCC_OS_DARWIN)
     bool GetNoLaunchd() const {
         return noLaunchd;
@@ -238,9 +261,6 @@ class OptParse {
     bool noSLAP;
     bool noTCP;
     bool noUDP;
-#if defined(QCC_OS_ANDROID)
-    bool noWFD;
-#endif
 #if defined(QCC_OS_DARWIN)
     bool noLaunchd;
 #endif
@@ -268,9 +288,6 @@ void OptParse::PrintUsage() {
         "%*s [--print-address[=DESCRIPTOR]] [--print-pid[=DESCRIPTOR]]\n"
         "%*s [--fork | --nofork] "
         "[--no-slap] [--no-tcp] [--no-udp] "
-#if defined(QCC_OS_ANDROID)
-        "[--no-wfd] "
-#endif
 #if defined(QCC_OS_DARWIN)
         "[--no-launchd]"
 #endif
@@ -302,10 +319,6 @@ void OptParse::PrintUsage() {
         "        Disable the TCP transport (override config file setting).\n\n"
         "    --no-udp\n"
         "        Disable the UDP transport (override config file setting).\n\n"
-#if defined(QCC_OS_ANDROID)
-        "    --no-wfd\n"
-        "        Disable the Wifi-Direct transport (override config file setting).\n\n"
-#endif
 #if defined(QCC_OS_DARWIN)
         "    --no-launchd\n"
         "        Disable the Launchd transport (override config file setting).\n\n"
@@ -439,10 +452,6 @@ OptParse::ParseResultCode OptParse::ParseResult()
             noTCP = true;
         } else if (arg.compare("--no-udp") == 0) {
             noUDP = true;
-#if defined(QCC_OS_ANDROID)
-        } else if (arg.compare("--no-wfd") == 0) {
-            noWFD = true;
-#endif
 #if defined(QCC_OS_DARWIN)
         } else if (arg.compare("--no-launchd") == 0) {
             noLaunchd = true;
@@ -538,10 +547,6 @@ int daemon(OptParse& opts) {
         } else if (addrStr.compare(0, sizeof("udp:") - 1, "udp:") == 0) {
             skip = opts.GetNoUDP();
 
-#if defined(QCC_OS_ANDROID)
-        } else if (addrStr.compare(0, sizeof("wfd:") - 1, "wfd:") == 0) {
-            skip = opts.GetNoWFD();
-#endif
         } else if (addrStr.compare(0, sizeof("slap:") - 1, "slap:") == 0) {
             skip = opts.GetNoSLAP();
 
@@ -575,9 +580,6 @@ int daemon(OptParse& opts) {
     cntr.Add(new TransportFactory<UDPTransport>(UDPTransport::TransportName, false));
 #if defined(QCC_OS_LINUX)
     cntr.Add(new TransportFactory<DaemonSLAPTransport>(DaemonSLAPTransport::TransportName, false));
-#endif
-#if defined(QCC_OS_ANDROID)
-//    cntr.Add(new TransportFactory<WFDTransport>(WFDTransport::TransportName, false));
 #endif
 
     Bus ajBus("alljoyn-daemon", cntr, listenSpecs.c_str());

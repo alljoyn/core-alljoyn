@@ -35,8 +35,8 @@
 
     Each routine converts the text between *sourceStart and sourceEnd,
     putting the result into the buffer between *targetStart and
-    targetEnd. Note: the end pointers are *after* the last item: e.g.
-   *(sourceEnd - 1) is the last item.
+    targetEnd. Note: the end pointers are *after* the last item:
+    e.g. *(sourceEnd - 1) is the last item.
 
     The return result indicates whether the conversion was successful,
     and if not, whether the problem was in the source or target buffers.

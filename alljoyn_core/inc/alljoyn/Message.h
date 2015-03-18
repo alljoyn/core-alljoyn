@@ -158,6 +158,7 @@ class _CompressionRules;
 class _Message;
 class _RemoteEndpoint;
 class BusAttachment;
+class PeerStateTable;
 
 /**
  * @cond ALLJOYN_DEV
@@ -828,6 +829,21 @@ class _Message {
 
     /**
      * @internal
+     * Unmarshal the message arguments.
+     *
+     * @param peerStateTable          The peer state table used when unmarshalling encrypted arguments.
+     * @param expectedSignature       The expected signature for this message.
+     * @param expectedReplySignature  The expected reply signature for this message if it is a
+     *                                method call message or NULL otherwise.
+     *
+     * @return
+     *         - #ER_OK if the message was unmarshaled
+     *         - Error status indicating why the unmarshal failed.
+     */
+    QStatus UnmarshalArgs(PeerStateTable* peerStateTable, const qcc::String& expectedSignature, const char* expectedReplySignature = NULL);
+
+    /**
+     * @internal
      * Reads a message from a remote endpoint.
      *
      * @param endpoint       The endpoint to marshal the message data from.
@@ -974,7 +990,7 @@ class _Message {
      *      - #ER_OK if hello method call was sent successfully.
      *      - An error status otherwise
      */
-    QStatus HelloMessage(bool isBusToBus, bool allowRemote, SessionOpts::NameTransferType nametype);
+    QStatus HelloMessage(bool isBusToBus, bool allowRemote, int nametype);
 
     /**
      * Compose the special hello method call required to establish a connection
@@ -990,7 +1006,7 @@ class _Message {
      *      - An error status otherwise
      */
     QStatus HelloMessage(bool isBusToBus, const qcc::String& sender, bool allowRemote,
-                         const qcc::String& guid, SessionOpts::NameTransferType nameType);
+                         const qcc::String& guid, int nameType);
 
     /**
      * Compose the reply to the hello method call
@@ -1001,7 +1017,7 @@ class _Message {
      *      - #ER_OK if reply to the hello method call was successful
      *      - An error status otherwise
      */
-    QStatus HelloReply(bool isBusToBus, const qcc::String& uniqueName, SessionOpts::NameTransferType nametype);
+    QStatus HelloReply(bool isBusToBus, const qcc::String& uniqueName, int nametype);
 
     /**
      * Compose the reply to the hello method call
@@ -1014,7 +1030,7 @@ class _Message {
      *      - #ER_OK if reply to the hello method call was successful
      *      - An error status otherwise
      */
-    QStatus HelloReply(bool isBusToBus, const qcc::String& sender, const qcc::String& uniqueName, const qcc::String& guid, SessionOpts::NameTransferType nameType);
+    QStatus HelloReply(bool isBusToBus, const qcc::String& sender, const qcc::String& uniqueName, const qcc::String& guid, int nameType);
 
     /**
      * Get a pointer to the current backing buffer for the message.

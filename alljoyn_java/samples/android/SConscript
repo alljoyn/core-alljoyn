@@ -27,7 +27,6 @@ returnValue = []
 # Application samples
 for sample in ['simple/client', 
                'simple/service', 
-               'simple/wfd_service',
                'chat', 
                'raw/client', 
                'raw/service', 

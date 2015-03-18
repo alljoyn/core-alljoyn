@@ -577,4 +577,9 @@
  */
 - (QStatus)secureConnectionAsync:(BOOL)forceAuthentication;
 
+/**
+ * Enable property caching.
+ */
+- (void)enablePropertyCaching;
+
 @end

@@ -227,22 +227,6 @@ ThreadInternalReturn STDCALL Thread::RunInternal(void* threadArg)
     assert(thread->state == STARTED);
     assert(!thread->isExternal);
 
-    if (thread->state != STARTED) {
-        return 0;
-    }
-
-    if (NULL == thread->handle) {
-        QCC_DbgPrintf(("Starting thread had NULL thread handle, exiting..."));
-    }
-
-    /* Wait for about 100ms max for the thread structure to be initialized.
-     * Typically, this should be initialized by 1ms.
-     */
-    int count = 0;
-    while (!thread->isStopping && ((thread->handle == reinterpret_cast<HANDLE>(-1) || thread->threadId == 0)) && (count++ < 50)) {
-        qcc::Sleep(2);
-    }
-
     ++started;
 
     /* Add this Thread to list of running threads */
@@ -251,11 +235,11 @@ ThreadInternalReturn STDCALL Thread::RunInternal(void* threadArg)
     thread->state = RUNNING;
     threadListLock->Unlock();
 
-    /* Start the thread if it hasn't been stopped and is fully initialized */
-    if (!thread->isStopping && NULL != thread->handle) {
+    /* Start the thread if it hasn't been stopped */
+    if (!thread->isStopping) {
         QCC_DbgPrintf(("Starting thread: %s", thread->funcName));
         ++running;
-        thread->exitValue  = thread->Run(thread->arg);
+        thread->exitValue = thread->Run(thread->arg);
         --running;
         QCC_DbgPrintf(("Thread function exited: %s --> %p", thread->funcName, thread->exitValue));
     }
@@ -330,8 +314,14 @@ QStatus Thread::Start(void* arg, ThreadListener* listener)
         this->listener = listener;
 
         state = STARTED;
-        handle = reinterpret_cast<HANDLE>(-1);
-        handle = reinterpret_cast<HANDLE>(_beginthreadex(NULL, stacksize, RunInternal, this, 0, &threadId));
+        handle = reinterpret_cast<HANDLE>(_beginthreadex(NULL, stacksize, RunInternal, this, CREATE_SUSPENDED, &threadId));
+        if (handle != 0) {
+            if (ResumeThread(handle) == (DWORD)-1) {
+                QCC_LogError(ER_OS_ERROR, ("Resuming thread: %d", GetLastError()));
+                CloseHandle(handle);
+                handle = 0;
+            }
+        }
         if (handle == 0) {
             state = DEAD;
             isStopping = false;

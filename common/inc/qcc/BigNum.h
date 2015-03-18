@@ -39,7 +39,7 @@ class BigNum {
   public:
 
     // Default constructor - initializes the BigNum to zero
-    BigNum() : digits((uint32_t*) & zero_digit), length(1), neg(false), storage(NULL) { }
+    BigNum() : digits((uint32_t*) &zero_digit), length(1), neg(false), storage(NULL) { }
 
     // Constructor that initializes a BigNum from a small integer value.
     BigNum(uint32_t v);
@@ -210,11 +210,6 @@ class BigNum {
     // @param e   The exponent
     // @param mod The modulus
     BigNum mod_exp(const BigNum& e, const BigNum& mod) const;
-
-    // Modular inverse
-    //
-    // @param mod The modulus
-    BigNum mod_inv(const BigNum& mod) const;
 
     // Returns the bit length of this BigNum
     size_t bit_len() const;

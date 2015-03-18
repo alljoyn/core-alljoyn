@@ -46,10 +46,6 @@
 #include "NullTransport.h"
 #include "PasswordManager.h"
 
-#if defined(QCC_OS_ANDROID)
-//#include "android/WFDTransport.h"
-#endif
-
 #define QCC_MODULE "ALLJOYN_ROUTER"
 
 using namespace qcc;
@@ -68,9 +64,43 @@ static const char bundledConfig[] =
     "  <limit name=\"auth_timeout\">20000</limit>"
     "  <limit name=\"max_incomplete_connections\">4</limit>"
     "  <limit name=\"max_completed_connections\">16</limit>"
-    "  <limit name=\"max_untrusted_clients\">8</limit>"
+    "  <limit name=\"max_remote_clients_tcp\">8</limit>"
+    "  <limit name=\"max_remote_clients_udp\">0</limit>"
+    "  <property name=\"router_power_source\">Always AC powered</property>"
+    "  <property name=\"router_mobility\">Always stationary</property>"
+    "  <property name=\"router_availability\">21-24 hr</property>"
+    "  <property name=\"router_node_connection\">Access Point</property>"
     "  <flag name=\"restrict_untrusted_clients\">false</flag>"
     "</busconfig>";
+
+/*
+ * Router Power Source
+ *  Always AC powered
+ *  Battery powered and chargeable
+ *  Battery powered and not chargeable
+ *
+ * Router Mobility
+ *  Always Stationary
+ *  Low mobility
+ *  Intermediate mobility
+ *  High mobility
+ *
+ * Router Availability
+ *  0-3 hr
+ *  3-6 hr
+ *  6-9 hr
+ *  9-12 hr
+ *  12-15 hr
+ *  15-18 hr
+ *  18-21 hr
+ *  21-24 hr
+ *
+ * Router Node Connection
+ *  Access Point
+ *  Wired
+ *  Wireless
+ *
+ */
 
 class ClientAuthListener : public AuthListener {
   public:
@@ -294,11 +324,6 @@ QStatus BundledRouter::Start(NullTransport* nullTransport)
         if (!transportsInitialized) {
             Add(new TransportFactory<TCPTransport>(TCPTransport::TransportName, false));
             Add(new TransportFactory<UDPTransport>(UDPTransport::TransportName, false));
-
-#if defined(QCC_OS_ANDROID)
-//            QCC_DbgPrintf(("adding WFD transport"));
-//            Add(new TransportFactory<WFDTransport>(WFDTransport::TransportName, false));
-#endif
             transportsInitialized = true;
         }
         QCC_DbgPrintf(("Starting bundled router bus attachment"));

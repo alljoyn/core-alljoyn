@@ -386,12 +386,10 @@ QStatus TimerImpl::ReplaceAlarm(const Alarm& origAlarm, const Alarm& newAlarm, b
     }
     timersLock.Unlock();
     if (timerFound == NULL) {
-        CloseThreadpoolTimer(ptpTimerLocal);
         return ER_NO_SUCH_ALARM;
     }
     if (blockIfTriggered) {
         WaitForThreadpoolTimerCallbacks(timerFound, FALSE);
-        CloseThreadpoolTimer(timerFound);
     }
     return ER_OK;
 }
@@ -415,7 +413,6 @@ bool TimerImpl::RemoveAlarm(const Alarm& alarm, bool blockIfTriggered)
             SetThreadpoolTimer(timerLocal->ptpTimer, NULL, 0, 0);
             if (blockIfTriggered) {
                 WaitForThreadpoolTimerCallbacks(timerLocal->ptpTimer, FALSE);
-                CloseThreadpoolTimer(timerLocal->ptpTimer);
             }
         }
     }

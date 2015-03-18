@@ -26,13 +26,13 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.UUID;
 
-import javax.xml.bind.DatatypeConverter;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
+import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
@@ -100,6 +100,10 @@ public class AboutData implements AboutDataListener, AboutKeys {
      * @throws BusException
      */
     AboutData(Map<String, Variant> aboutData) throws BusException {
+        initializeFieldDetails();
+        propertyStore = new HashMap<String, Variant>();
+        localizedPropertyStore = new HashMap<String, Map<String, Variant>>();
+        supportedLanguages = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
         createFromAnnoncedAboutData(aboutData, null);
     }
 
@@ -113,6 +117,10 @@ public class AboutData implements AboutDataListener, AboutKeys {
      */
 
     AboutData(Map<String, Variant> aboutData, String language) throws BusException {
+        initializeFieldDetails();
+        propertyStore = new HashMap<String, Variant>();
+        localizedPropertyStore = new HashMap<String, Map<String, Variant>>();
+        supportedLanguages = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
         createFromAnnoncedAboutData(aboutData, language);
     }
     /**
@@ -138,6 +146,10 @@ public class AboutData implements AboutDataListener, AboutKeys {
        "</AboutData>"
        @endcode
      *
+     * The createFromXml method will attempt to process the entire xml passed
+     * in. If a parsing error is encountered the last error found will be thrown
+     * as a BusException.
+     *
      * Note: AJSoftwareVersion is automatically set to the version of Alljoyn that
      * is being used. The SupportedLanguages tag is automatically implied from
      * the DefaultLanguage tag and the lang annotation from tags that are
@@ -146,87 +158,95 @@ public class AboutData implements AboutDataListener, AboutKeys {
      * @param aboutDataXml a string that contains an XML representation of
      *                     the AboutData fields.
      * @return ER_OK on success
-     * @throws BusException Indicating failure to parse the xml or failure to
-     *                      add one or more fields.
+     * @throws BusException Indicating failure to find one or more AboutData tags
+     * @throws ParserConfigurationException If a DocumentBuilder cannot be created.
+     *                                       This is required to parse the xml.
+     * @throws IOException If any IO errors occur.
+     * @throws SAXException If any parse errors occur.
      */
-    void createFromXml(String aboutDataXml) throws BusException {
-
-        //DOMParser builder = new DOMParser();
+    void createFromXml(String aboutDataXml) throws BusException, 
+                                                   ParserConfigurationException,
+                                                   SAXException,
+                                                   IOException {
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         DocumentBuilder builder = null;
-        try {
-            builder = factory.newDocumentBuilder();
-        } catch (ParserConfigurationException e1) {
-            // TODO Auto-generated catch block
-            e1.printStackTrace();
-        }
+        boolean IsDefaultLangaugeMissing = false;
+        builder = factory.newDocumentBuilder();
+
         InputSource inputSource = new InputSource();
         inputSource.setCharacterStream(new StringReader(aboutDataXml));
-        try {
-            Document doc = builder.parse(inputSource);
-            //Document doc = parser.getDocument();
-            // First process all fields that are not localized so we can get the
-            // default language
-            for(String field : aboutFields.keySet()) {
-                // Supported languages are implicitly added no need to look for a
-                // SupportedLanguages languages tag.
-                if (field == AboutData.ABOUT_SUPPORTED_LANGUAGES) {
+        Document doc = builder.parse(inputSource);
+        // First process all fields that are not localized so we can get the
+        // default language
+        for(String field : aboutFields.keySet()) {
+            // Supported languages are implicitly added no need to look for a
+            // SupportedLanguages languages tag.
+            if (field.equals(AboutData.ABOUT_SUPPORTED_LANGUAGES)) {
+                continue;
+            }
+            // The Alljoyn software version is implicitly added so we don't need to
+            // look for this tag
+            if (field.equals(AboutData.ABOUT_AJ_SOFTWARE_VERSION)) {
+                continue;
+            }
+            // We only expect to see one tag for non-localized values.
+            // So we automatically take the first field seen by the parser.
+            if(!isFieldLocalized(field)) {
+                NodeList nl = doc.getElementsByTagName(field);
+                if (nl == null) {
                     continue;
                 }
-                // The Alljoyn software version is implicitly added so we don't need to
-                // look for this tag
-                if (field == AboutData.ABOUT_AJ_SOFTWARE_VERSION) {
+                // if the NodeList length is not greater than 0 then the
+                // element was not found. We continue to look for the
+                // next expected element.
+                if (nl.getLength() <= 0) {
                     continue;
                 }
-                // We only expect to see one tag for non-localized values.
-                // So we automatically take the first field seen by the parser.
-                if(!isFieldLocalized(field)) {
+                if(field.equals(AboutData.ABOUT_APP_ID)) {
+                    // try to construct the AppId using a UUID if that fails
+                    // due to an IllegalArgumentException or a BusException
+                    // try to construct the AppId using a String.
                     try {
-                        NodeList nl = doc.getElementsByTagName(field);
-                        if(field == AboutData.ABOUT_APP_ID) {
-                            try {
-                                setAppId(UUID.fromString(nl.item(0).getTextContent()));
-                            } catch(IllegalArgumentException e) {
-                                setAppId(nl.item(0).getTextContent());
-                            } catch (BusException e) {
-                                setAppId(nl.item(0).getTextContent());
-                            }
-                        } else {
-                            setField(field, new Variant(nl.item(0).getTextContent()));
-                        }
-                    // if a element is not found it will throw a NullPointerException
-                    // we will continue to process any tags that are found.
-                    } catch(NullPointerException e) {
-                        continue;
-                    } catch (DOMException e) {
-                        throw new BusException("Failed to parse XML");
+                        setAppId(UUID.fromString(nl.item(0).getTextContent()));
+                    } catch(IllegalArgumentException e) {
+                        setAppId(nl.item(0).getTextContent());
+                    } catch (BusException e) {
+                        setAppId(nl.item(0).getTextContent());
                     }
+                } else {
+                    setField(field, new Variant(nl.item(0).getTextContent()));
                 }
             }
-            // At this point we should have the default language if its not set
-            // we will throw a BusException if the 'lang' attribute is not set.
-            org.w3c.dom.NodeList nl = doc.getElementsByTagName("*");
-            for (int i = 0; i < nl.getLength(); ++i) {
-                // If the Tag is unknown is will be added using the default rules
-                // if the Tag is already known we check to see if its a localized
-                // field.  If the field is localized we process the tag. If its
-                // not localized we ignore the tag since it was processed above
-                if (!aboutFields.containsKey(nl.item(i).getNodeName()) || isFieldLocalized(nl.item(i).getNodeName())) {
-                    // if the 'lang' attribute is found us the language
-                    // specified.  Otherwise use the default language
-                    if (nl.item(i).getAttributes().getNamedItem("lang") != null) {
-                        setField(nl.item(i).getNodeName(), new Variant(nl.item(i).getTextContent()), nl.item(i).getAttributes().getNamedItem("lang").getNodeValue());
-                    } else {
+        }
+        // At this point we should have the default language if its not set
+        // we will throw a BusException if the 'lang' attribute is not set.
+        org.w3c.dom.NodeList nl = doc.getElementsByTagName("*");
+        for (int i = 0; i < nl.getLength(); ++i) {
+            // If the Tag is unknown is will be added using the default rules
+            // if the Tag is already known we check to see if its a localized
+            // field.  If the field is localized we process the tag. If its
+            // not localized we ignore the tag since it was processed above
+            if (!aboutFields.containsKey(nl.item(i).getNodeName()) || isFieldLocalized(nl.item(i).getNodeName())) {
+                // if the 'lang' attribute is found us the language
+                // specified.  Otherwise use the default language
+                if (nl.item(i).getAttributes().getNamedItem("lang") != null) {
+                    setField(nl.item(i).getNodeName(), new Variant(nl.item(i).getTextContent()), nl.item(i).getAttributes().getNamedItem("lang").getNodeValue());
+                } else {
+                    try {
                         setField(nl.item(i).getNodeName(), new Variant(nl.item(i).getTextContent()));
+                    } catch (BusException e) {
+                        if (e.getMessage().equals("Specified language tag not found.")) {
+                            IsDefaultLangaugeMissing = true;
+                            continue;
+                        } else {
+                            throw e;
+                        }
                     }
                 }
             }
-        } catch (SAXException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+        }
+        if(IsDefaultLangaugeMissing) {
+            throw new BusException("DefaultLanguage language tag not found.");
         }
     }
 
@@ -294,16 +314,20 @@ public class AboutData implements AboutDataListener, AboutKeys {
      *                      language was not specified.
      */
     public void createFromAnnoncedAboutData(Map<String, Variant> aboutData, String language) throws BusException {
+        if(aboutData == null) {
+            throw new ErrorReplyBusException(Status.ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD);
+        }
         if (language == null || language.length() == 0) {
-            try {
-                language = aboutData.get(ABOUT_DEFAULT_LANGUAGE).getObject(String.class);
-            } catch (NullPointerException e) {
+            Variant defaultLangArg = aboutData.get(ABOUT_DEFAULT_LANGUAGE);
+            if (defaultLangArg == null) {
                 throw new ErrorReplyBusException(Status.ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD);
+            } else {
+                language = defaultLangArg.getObject(String.class);
             }
         }
 
         if (language == null || language.length() == 0) {
-            new ErrorReplyBusException(Status.ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD);
+            throw new ErrorReplyBusException(Status.ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD);
         }
 
         for (String s : aboutData.keySet()) {
@@ -400,8 +424,21 @@ public class AboutData implements AboutDataListener, AboutKeys {
 
     public String getAppIdAsHexString() throws BusException {
         byte[] appId = getField(ABOUT_APP_ID).getObject(byte[].class);
-        return DatatypeConverter.printHexBinary(appId);
+        return byteArrayToHexString(appId);
     }
+
+    final protected static char[] hexCharArray = "0123456789ABCDEF".toCharArray();
+
+    private static String byteArrayToHexString(byte[] byteArray) {
+        char[] hexChars = new char[byteArray.length * 2];
+        for (int i = 0; i < byteArray.length; ++i) {
+            int x = byteArray[i] & 0xff;
+            hexChars[i*2] = hexCharArray[x >> 4];
+            hexChars[i*2 + 1] = hexCharArray[x & 0x0f];
+        }
+        return new String(hexChars);
+    }
+
     /**
      * Set the AppId for the AboutData using a UUID.
      *
@@ -991,13 +1028,16 @@ public class AboutData implements AboutDataListener, AboutKeys {
         //    not announced
         //    can be localized
         if (!aboutFields.containsKey(name)) {
-            if (value.getSignature().equals("s")) {
+            String signature = value.getSignature();
+            if (signature == null) {
+                throw new BusException("Unable to find Variant signature.");
+            } else if (signature.equals("s")) {
             aboutFields.put(name, new FieldDetails(FieldDetails.LOCALIZED, value.getSignature()));
             } else {
                 aboutFields.put(name, new FieldDetails(FieldDetails.EMPTY_MASK, value.getSignature()));
             }
         }
-        if (name == ABOUT_DEFAULT_LANGUAGE) {
+        if (name.equals(ABOUT_DEFAULT_LANGUAGE)) {
             setSupportedLanguage(value.getObject(String.class));
         }
         if (isFieldLocalized(name)) {
@@ -1049,7 +1089,11 @@ public class AboutData implements AboutDataListener, AboutKeys {
             return propertyStore.get(name);
         } else {
             if (language == null || language.length() == 0) {
-                language = propertyStore.get(ABOUT_DEFAULT_LANGUAGE).getObject(String.class);
+                Variant v = propertyStore.get(ABOUT_DEFAULT_LANGUAGE);
+                if (v == null) {
+                    throw new BusException("DefaultLanguage language tag not found.");
+                }
+                language = v.getObject(String.class);
             }
             if(!supportedLanguages.contains(language)) {
                 throw new BusException("Specified language tag not found.");
@@ -1087,10 +1131,11 @@ public class AboutData implements AboutDataListener, AboutKeys {
      * </ul>
      */
     public boolean isFieldRequired(String fieldName) {
-        try {
-            return ((aboutFields.get(fieldName).fieldMask & FieldDetails.REQUIRED) == FieldDetails.REQUIRED);
-        } catch (NullPointerException e) {
+        FieldDetails fieldDetails = aboutFields.get(fieldName);
+        if(fieldDetails == null) {
             return false;
+        } else {
+            return ((fieldDetails.fieldMask & FieldDetails.REQUIRED) == FieldDetails.REQUIRED);
         }
     }
 
@@ -1106,10 +1151,11 @@ public class AboutData implements AboutDataListener, AboutKeys {
      * </ul>
      */
     public boolean isFieldAnnounced(String fieldName) {
-        try {
-            return ((aboutFields.get(fieldName).fieldMask  & FieldDetails.ANNOUNCED) == FieldDetails.ANNOUNCED);
-        } catch(NullPointerException e) {
+        FieldDetails fieldDetails = aboutFields.get(fieldName);
+        if (fieldDetails == null) {
             return false;
+        } else {
+            return ((fieldDetails.fieldMask & FieldDetails.ANNOUNCED) == FieldDetails.ANNOUNCED);
         }
     }
 
@@ -1127,10 +1173,11 @@ public class AboutData implements AboutDataListener, AboutKeys {
      * </ul>
      */
     public boolean isFieldLocalized(String fieldName) {
-        try {
-            return ((aboutFields.get(fieldName).fieldMask  & FieldDetails.LOCALIZED) == FieldDetails.LOCALIZED);
-        } catch(NullPointerException e) {
+        FieldDetails fieldDetails = aboutFields.get(fieldName);
+        if(fieldDetails == null) {
             return false;
+        } else {
+            return (fieldDetails.fieldMask  & FieldDetails.LOCALIZED) == FieldDetails.LOCALIZED;
         }
     }
 
@@ -1146,10 +1193,11 @@ public class AboutData implements AboutDataListener, AboutKeys {
      * </ul>
      */
     String getFieldSignature(String fieldName) {
-        try {
-            return aboutFields.get(fieldName).signature;
-        } catch(NullPointerException e) {
+        FieldDetails fieldDetails = aboutFields.get(fieldName);
+        if(fieldDetails == null) {
             return null;
+        } else {
+            return fieldDetails.signature;
         }
     }
 
@@ -1237,18 +1285,18 @@ public class AboutData implements AboutDataListener, AboutKeys {
         }
 
         if (!supportedLanguages.contains(language)) {
-            new ErrorReplyBusException(Status.LANGUAGE_NOT_SUPPORTED);
+            throw new ErrorReplyBusException(Status.LANGUAGE_NOT_SUPPORTED);
         }
 
         for (String s: aboutFields.keySet()) {
             if(isFieldRequired(s)) {
                 if (isFieldLocalized(s)) {
                     if (!localizedPropertyStore.containsKey(s) ||!localizedPropertyStore.get(s).containsKey(language)) {
-                        new ErrorReplyBusException(Status.ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD);
+                        throw new ErrorReplyBusException(Status.ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD);
                     }
                 } else {
                     if (!propertyStore.containsKey(s)) {
-                        new ErrorReplyBusException(Status.ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD);
+                        throw new ErrorReplyBusException(Status.ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD);
                     }
                 }
             }

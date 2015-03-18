@@ -348,7 +348,7 @@ int main(int argc, char** argv)
             transportOpts = TRANSPORT_TCP;
         } else if (0 == strcmp("-u", argv[i])) {
             transportOpts = TRANSPORT_UDP;
-        } else if (0 == strcmp("-w", argv[i])) {
+        } else if (0 == strcmp("-l", argv[i])) {
             transportOpts |= TRANSPORT_LOCAL;
         } else if (0 == strcmp("-dj", argv[i])) {
             g_sleepBeforeRejoin = qcc::StringToU32(argv[++i], 0);

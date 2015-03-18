@@ -32,7 +32,7 @@
 
 QStatus qcc::Crypto_GetRandomBytes(uint8_t* data, size_t len)
 {
-    if (BCryptGenRandom(NULL, data, len, BCRYPT_USE_SYSTEM_PREFERRED_RNG) <= 0) {
+    if (BCRYPT_SUCCESS(BCryptGenRandom(NULL, data, len, BCRYPT_USE_SYSTEM_PREFERRED_RNG))) {
         return ER_OK;
     } else {
         return ER_FAIL;

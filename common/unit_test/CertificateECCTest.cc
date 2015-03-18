@@ -17,12 +17,69 @@
 
 #include <iostream>
 #include <qcc/time.h>
+#include <qcc/Thread.h>
+#include <qcc/Crypto.h>
 #include <qcc/CertificateECC.h>
+#include <qcc/CertificateHelper.h>
 #include <qcc/GUID.h>
+#include <qcc/StringUtil.h>
 
 using namespace qcc;
 using namespace std;
 
+
+#define AUTH_VERIFIER_LEN  Crypto_SHA256::DIGEST_SIZE
+
+/* The key and certificate are generated using openssl */
+static const char eccPrivateKeyPEM[] = {
+    "-----BEGIN EC PRIVATE KEY-----\n"
+    "MHcCAQEEICkeoQeosiS380hFJYo9zL1ziyTbea1mYqqqgHvGKZ6qoAoGCCqGSM49\n"
+    "AwEHoUQDQgAE9jiMexU/7Z55ZQQU67Rn/MpXzAkYx5m6nQt2lWWUvWXYbOOLUBx0\n"
+    "Tdw/Gy3Ia1WmLSY5ecyw1CUtHsZxjhrlcg==\n"
+    "-----END EC PRIVATE KEY-----"
+};
+
+static const char eccSelfSignCertX509PEM[] = {
+    "-----BEGIN CERTIFICATE-----\n"
+    "MIIBsDCCAVagAwIBAgIJAJVJ9/7bbQcWMAoGCCqGSM49BAMCMFYxKTAnBgNVBAsM\n"
+    "IDZkODVjMjkyMjYxM2IzNmUyZWVlZjUyNzgwNDJjYzU2MSkwJwYDVQQDDCA2ZDg1\n"
+    "YzI5MjI2MTNiMzZlMmVlZWY1Mjc4MDQyY2M1NjAeFw0xNTAyMjYxODAzNDlaFw0x\n"
+    "NjAyMjYxODAzNDlaMFYxKTAnBgNVBAsMIDZkODVjMjkyMjYxM2IzNmUyZWVlZjUy\n"
+    "NzgwNDJjYzU2MSkwJwYDVQQDDCA2ZDg1YzI5MjI2MTNiMzZlMmVlZWY1Mjc4MDQy\n"
+    "Y2M1NjBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABPY4jHsVP+2eeWUEFOu0Z/zK\n"
+    "V8wJGMeZup0LdpVllL1l2Gzji1AcdE3cPxstyGtVpi0mOXnMsNQlLR7GcY4a5XKj\n"
+    "DTALMAkGA1UdEwQCMAAwCgYIKoZIzj0EAwIDSAAwRQIhAKrCirrUWNNAO2gFiNTl\n"
+    "/ncnbELhDiDq/N43LIpfAfX8AiAKX7h/9nXEerJlthl5gUOa4xV6UjqbZLM6+KH/\n"
+    "Hk/Yvw==\n"
+    "-----END CERTIFICATE-----"
+};
+static const char eccCertChainX509PEM[] = {
+    "-----BEGIN CERTIFICATE-----\n"
+    "MIIBtDCCAVmgAwIBAgIJAMlyFqk69v+OMAoGCCqGSM49BAMCMFYxKTAnBgNVBAsM\n"
+    "IDdhNDhhYTI2YmM0MzQyZjZhNjYyMDBmNzdhODlkZDAyMSkwJwYDVQQDDCA3YTQ4\n"
+    "YWEyNmJjNDM0MmY2YTY2MjAwZjc3YTg5ZGQwMjAeFw0xNTAyMjYyMTUxMjVaFw0x\n"
+    "NjAyMjYyMTUxMjVaMFYxKTAnBgNVBAsMIDZkODVjMjkyMjYxM2IzNmUyZWVlZjUy\n"
+    "NzgwNDJjYzU2MSkwJwYDVQQDDCA2ZDg1YzI5MjI2MTNiMzZlMmVlZWY1Mjc4MDQy\n"
+    "Y2M1NjBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABL50XeH1/aKcIF1+BJtlIgjL\n"
+    "AW32qoQdVOTyQg2WnM/R7pgxM2Ha0jMpksUd+JS9BiVYBBArwU76Whz9m6UyJeqj\n"
+    "EDAOMAwGA1UdEwQFMAMBAf8wCgYIKoZIzj0EAwIDSQAwRgIhAKfmglMgl67L5ALF\n"
+    "Z63haubkItTMACY1k4ROC2q7cnVmAiEArvAmcVInOq/U5C1y2XrvJQnAdwSl/Ogr\n"
+    "IizUeK0oI5c=\n"
+    "-----END CERTIFICATE-----"
+    "\n"
+    "-----BEGIN CERTIFICATE-----\n"
+    "MIIBszCCAVmgAwIBAgIJAILNujb37gH2MAoGCCqGSM49BAMCMFYxKTAnBgNVBAsM\n"
+    "IDdhNDhhYTI2YmM0MzQyZjZhNjYyMDBmNzdhODlkZDAyMSkwJwYDVQQDDCA3YTQ4\n"
+    "YWEyNmJjNDM0MmY2YTY2MjAwZjc3YTg5ZGQwMjAeFw0xNTAyMjYyMTUxMjNaFw0x\n"
+    "NjAyMjYyMTUxMjNaMFYxKTAnBgNVBAsMIDdhNDhhYTI2YmM0MzQyZjZhNjYyMDBm\n"
+    "NzdhODlkZDAyMSkwJwYDVQQDDCA3YTQ4YWEyNmJjNDM0MmY2YTY2MjAwZjc3YTg5\n"
+    "ZGQwMjBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABGEkAUATvOE4uYmt/10vkTcU\n"
+    "SA0C+YqHQ+fjzRASOHWIXBvpPiKgHcINtNFQsyX92L2tMT2Kn53zu+3S6UAwy6yj\n"
+    "EDAOMAwGA1UdEwQFMAMBAf8wCgYIKoZIzj0EAwIDSAAwRQIgKit5yeq1uxTvdFmW\n"
+    "LDeoxerqC1VqBrmyEvbp4oJfamsCIQDvMTmulW/Br/gY7GOP9H/4/BIEoR7UeAYS\n"
+    "4xLyu+7OEA==\n"
+    "-----END CERTIFICATE-----"
+};
 
 class CertificateECCTest : public testing::Test {
   public:
@@ -42,468 +99,36 @@ class CertificateECCTest : public testing::Test {
 
 };
 
-static QStatus GenerateCertificateType1(bool selfSign, bool regenKeys, uint32_t expiredInSecs, CertificateType1& cert, const char* msg,
-                                        ECCPrivateKey* dsaPrivateKey, ECCPublicKey* dsaPublicKey, ECCPrivateKey* subjectPrivateKey, ECCPublicKey* subjectPublicKey)
+static QStatus CreateCert(const qcc::String& serial, const qcc::GUID128& issuer, const ECCPrivateKey* issuerPrivateKey, const ECCPublicKey* issuerPubKey, const qcc::GUID128& subject, const ECCPublicKey* subjectPubKey, uint32_t expiredInSeconds, CertificateX509& x509)
+{
+    QStatus status = ER_CRYPTO_ERROR;
+
+    x509.SetSerial(serial);
+    x509.SetIssuerCN(issuer.GetBytes(), issuer.SIZE);
+    x509.SetSubjectCN(subject.GetBytes(), subject.SIZE);
+    x509.SetSubjectPublicKey(subjectPubKey);
+    x509.SetCA(true);
+    CertificateX509::ValidPeriod validity;
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + expiredInSeconds;
+    x509.SetValidity(&validity);
+    status = x509.Sign(issuerPrivateKey);
+    return status;
+}
+
+static QStatus CreateIdentityCert(qcc::GUID128& issuer, const qcc::String& serial, ECCPrivateKey* dsaPrivateKey, ECCPublicKey* dsaPublicKey, ECCPrivateKey* subjectPrivateKey, ECCPublicKey* subjectPublicKey, bool selfSign, uint32_t expiredInSeconds, CertificateX509& x509)
 {
     Crypto_ECC ecc;
-
-    if (regenKeys) {
+    ecc.GenerateDSAKeyPair();
+    *dsaPrivateKey = *ecc.GetDSAPrivateKey();
+    *dsaPublicKey = *ecc.GetDSAPublicKey();
+    if (!selfSign) {
         ecc.GenerateDSAKeyPair();
-        memcpy(dsaPrivateKey, ecc.GetDSAPrivateKey(), sizeof(ECCPrivateKey));
-        memcpy(dsaPublicKey, ecc.GetDSAPublicKey(), sizeof(ECCPublicKey));
-        ecc.GenerateDSAKeyPair();
-        memcpy(subjectPrivateKey, ecc.GetDSAPrivateKey(), sizeof(ECCPrivateKey));
-        memcpy(subjectPublicKey, ecc.GetDSAPublicKey(), sizeof(ECCPublicKey));
     }
-    cert.SetIssuer(dsaPublicKey);
-    if (selfSign) {
-        cert.SetSubject(cert.GetIssuer());
-    } else {
-        cert.SetSubject(subjectPublicKey);
-    }
-
-    Timespec now;
-    GetTimeNow(&now);
-    Certificate::ValidPeriod valid;
-    valid.validFrom = now.seconds;
-    valid.validTo = valid.validFrom + expiredInSecs;
-
-
-    cert.SetValidity(&valid);
-    cert.SetDelegate(false);
-
-    String externalData(msg);
-    Crypto_SHA256 digestUtil;
-    digestUtil.Init();
-    digestUtil.Update(externalData);
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    digestUtil.GetDigest(digest);
-
-    cert.SetExternalDataDigest(digest);
-
-    return cert.Sign(dsaPrivateKey);
-}
-
-static QStatus GenerateCertificateType1(CertificateType1& cert, const char* msg)
-{
-    ECCPrivateKey pk;
-    ECCPublicKey pubk;
-    ECCPrivateKey subjectpk;
-    ECCPublicKey subjectk;
-    /* not self signed and expired in 1 hour */
-    return GenerateCertificateType1(false, true, 3600, cert, msg, &pk, &pubk, &subjectpk, &subjectk);
-}
-
-static QStatus GenerateCertificateType2(bool selfSign, bool regenKeys, uint32_t expiredInSecs, CertificateType2& cert, const char* msg,
-                                        ECCPrivateKey* dsaPrivateKey, ECCPublicKey* dsaPublicKey, ECCPrivateKey* subjectPrivateKey, ECCPublicKey* subjectPublicKey)
-{
-    Crypto_ECC ecc;
-
-    if (regenKeys) {
-        ecc.GenerateDSAKeyPair();
-        memcpy(dsaPrivateKey, ecc.GetDSAPrivateKey(), sizeof(ECCPrivateKey));
-        memcpy(dsaPublicKey, ecc.GetDSAPublicKey(), sizeof(ECCPublicKey));
-        ecc.GenerateDSAKeyPair();
-        memcpy(subjectPrivateKey, ecc.GetDSAPrivateKey(), sizeof(ECCPrivateKey));
-        memcpy(subjectPublicKey, ecc.GetDSAPublicKey(), sizeof(ECCPublicKey));
-    }
-    cert.SetIssuer(dsaPublicKey);
-    if (selfSign) {
-        cert.SetSubject(cert.GetIssuer());
-    } else {
-        cert.SetSubject(subjectPublicKey);
-    }
-
-    Timespec now;
-    GetTimeNow(&now);
-    Certificate::ValidPeriod valid;
-    valid.validFrom = now.seconds;
-    valid.validTo = valid.validFrom + expiredInSecs;
-
-
-    cert.SetValidity(&valid);
-    cert.SetDelegate(false);
-    GUID128 aGuid;
-    cert.SetGuild(aGuid.GetBytes(), GUID128::SIZE);
-
-    String externalData(msg);
-    Crypto_SHA256 digestUtil;
-    digestUtil.Init();
-    digestUtil.Update(externalData);
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    digestUtil.GetDigest(digest);
-
-    cert.SetExternalDataDigest(digest);
-
-    return cert.Sign(dsaPrivateKey);
-}
-
-static QStatus GenerateCertificateType2(CertificateType2& cert, const char* msg)
-{
-    ECCPrivateKey pk;
-    ECCPublicKey pubk;
-    ECCPrivateKey subjectpk;
-    ECCPublicKey subjectk;
-    /* not self signed and expired in 1 hour */
-    return GenerateCertificateType2(false, true, 3600, cert, msg, &pk, &pubk, &subjectpk, &subjectk);
-}
-
-TEST_F(CertificateECCTest, CertificateType1SignatureVerifies)
-{
-    CertificateType1 cert1(ecc.GetDSAPublicKey(), ecc.GetDHPublicKey());
-
-    ASSERT_EQ(memcmp(ecc.GetDSAPublicKey(), cert1.GetIssuer(), sizeof(ECCPublicKey)), 0) << " cert1's issuer not equal to original";
-
-    ASSERT_EQ(memcmp(ecc.GetDHPublicKey(), cert1.GetSubject(), sizeof(ECCPublicKey)), 0) << " cert1's subject not equal to original";
-
-    Timespec now;
-    GetTimeNow(&now);
-    Certificate::ValidPeriod valid;
-    valid.validFrom = now.seconds;
-    valid.validTo = valid.validFrom + 3600;   /* one hour from now */
-
-    cert1.SetValidity(&valid);
-    ASSERT_EQ(cert1.GetValidity()->validFrom, valid.validFrom) << " cert1's validity.validFrom not equal to original";
-    ASSERT_EQ(cert1.GetValidity()->validTo, valid.validTo) << " cert1's validity.validTo not equal to original";
-
-
-    cert1.SetDelegate(true);
-    EXPECT_TRUE(cert1.IsDelegate());
-
-    String externalData("This is a test from the emergency network");
-    Crypto_SHA256 digestUtil;
-    digestUtil.Init();
-    digestUtil.Update(externalData);
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    digestUtil.GetDigest(digest);
-
-    cert1.SetExternalDataDigest(digest);
-
-    ASSERT_EQ(memcmp(cert1.GetExternalDataDigest(), digest, sizeof(digest)), 0) << " cert1's digest not equal to original";
-
-    QStatus status = cert1.Sign(ecc.GetDSAPrivateKey());
-    ASSERT_EQ(ER_OK, status) << " cert1.Sign() failed with actual status: " << QCC_StatusText(status);
-
-    EXPECT_TRUE(cert1.VerifySignature());
-
-    std::cout << cert1.ToString().c_str() << endl;
-}
-
-TEST_F(CertificateECCTest, CertificateType1SignatureNotVerified)
-{
-
-    CertificateType1 cert1(ecc.GetDSAPublicKey(), ecc.GetDHPublicKey());
-
-    ASSERT_EQ(memcmp(ecc.GetDSAPublicKey(), cert1.GetIssuer(), sizeof(ECCPublicKey)), 0) << " cert1's issuer not equal to original";
-
-    ASSERT_EQ(memcmp(ecc.GetDHPublicKey(), cert1.GetSubject(), sizeof(ECCPublicKey)), 0) << " cert1's subject not equal to original";
-
-    Timespec now;
-    GetTimeNow(&now);
-    Certificate::ValidPeriod valid;
-    valid.validFrom = now.seconds;
-    valid.validTo = valid.validFrom + 3600;   /* one hour from now */
-
-    cert1.SetValidity(&valid);
-    ASSERT_EQ(cert1.GetValidity()->validFrom, valid.validFrom) << " cert1's validity.validFrom not equal to original";
-    ASSERT_EQ(cert1.GetValidity()->validTo, valid.validTo) << " cert1's validity.validTo not equal to original";
-
-
-    cert1.SetDelegate(true);
-    EXPECT_TRUE(cert1.IsDelegate());
-
-    String externalData("The quick brown fox jumps over the lazy dog");
-    Crypto_SHA256 digestUtil;
-    digestUtil.Init();
-    digestUtil.Update(externalData);
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    digestUtil.GetDigest(digest);
-
-    cert1.SetExternalDataDigest(digest);
-
-    ASSERT_EQ(memcmp(cert1.GetExternalDataDigest(), digest, sizeof(digest)), 0) << " cert1's digest not equal to original";
-
-    ECCSignature garbage;
-    cert1.SetSig(&garbage);
-
-    EXPECT_TRUE(!cert1.VerifySignature());
-
-    std::cout << cert1.ToString().c_str() << endl;
-}
-
-TEST_F(CertificateECCTest, CertificateType2SignatureVerifies)
-{
-    CertificateType2 cert2(ecc.GetDSAPublicKey(), ecc.GetDHPublicKey());
-
-    ASSERT_EQ(memcmp(ecc.GetDSAPublicKey(), cert2.GetIssuer(), sizeof(ECCPublicKey)), 0) << " cert2's issuer not equal to original";
-
-    ASSERT_EQ(memcmp(ecc.GetDHPublicKey(), cert2.GetSubject(), sizeof(ECCPublicKey)), 0) << " cert2's subject not equal to original";
-
-    Timespec now;
-    GetTimeNow(&now);
-    Certificate::ValidPeriod valid;
-    valid.validFrom = now.seconds;
-    valid.validTo = valid.validFrom + 3600;   /* one hour from now */
-
-    cert2.SetValidity(&valid);
-    ASSERT_EQ(cert2.GetValidity()->validFrom, valid.validFrom) << " cert2's validity.validFrom not equal to original";
-    ASSERT_EQ(cert2.GetValidity()->validTo, valid.validTo) << " cert2's validity.validTo not equal to original";
-
-    EXPECT_FALSE(cert2.IsDelegate());
-
-    GUID128 aGuid;
-    cert2.SetGuild(aGuid.GetBytes(), GUID128::SIZE);
-    ASSERT_EQ(memcmp(cert2.GetGuild(), aGuid.GetBytes(), GUID128::SIZE), 0) << " cert2's guild not equal to original";
-
-    String externalData("This is a test from the emergency network");
-    Crypto_SHA256 digestUtil;
-    digestUtil.Init();
-    digestUtil.Update(externalData);
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    digestUtil.GetDigest(digest);
-
-    cert2.SetExternalDataDigest(digest);
-
-    ASSERT_EQ(memcmp(cert2.GetExternalDataDigest(), digest, sizeof(digest)), 0) << " cert2's digest not equal to original";
-
-    QStatus status = cert2.Sign(ecc.GetDSAPrivateKey());
-    ASSERT_EQ(ER_OK, status) << " cert2.Sign() failed with actual status: " << QCC_StatusText(status);
-
-    EXPECT_TRUE(cert2.VerifySignature());
-
-    std::cout << cert2.ToString().c_str() << endl;
-}
-
-TEST_F(CertificateECCTest, CertificateType2FailsSignatureVerification)
-{
-    CertificateType2 cert2(ecc.GetDSAPublicKey(), ecc.GetDHPublicKey());
-
-    ASSERT_EQ(memcmp(ecc.GetDSAPublicKey(), cert2.GetIssuer(), sizeof(ECCPublicKey)), 0) << " cert2's issuer not equal to original";
-
-    ASSERT_EQ(memcmp(ecc.GetDHPublicKey(), cert2.GetSubject(), sizeof(ECCPublicKey)), 0) << " cert2's subject not equal to original";
-
-    Timespec now;
-    GetTimeNow(&now);
-    Certificate::ValidPeriod valid;
-    valid.validFrom = now.seconds;
-    valid.validTo = valid.validFrom + 3600;   /* one hour from now */
-
-    cert2.SetValidity(&valid);
-    ASSERT_EQ(cert2.GetValidity()->validFrom, valid.validFrom) << " cert2's validity.validFrom not equal to original";
-    ASSERT_EQ(cert2.GetValidity()->validTo, valid.validTo) << " cert2's validity.validTo not equal to original";
-
-
-    cert2.SetDelegate(true);
-    EXPECT_TRUE(cert2.IsDelegate());
-
-    GUID128 aGuid;
-    cert2.SetGuild(aGuid.GetBytes(), GUID128::SIZE);
-    ASSERT_EQ(memcmp(cert2.GetGuild(), aGuid.GetBytes(), GUID128::SIZE), 0) << " cert2's guild not equal to original";
-    String externalData("The quick brown fox jumps over the lazy dog");
-    Crypto_SHA256 digestUtil;
-    digestUtil.Init();
-    digestUtil.Update(externalData);
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    digestUtil.GetDigest(digest);
-
-    cert2.SetExternalDataDigest(digest);
-
-    ASSERT_EQ(memcmp(cert2.GetExternalDataDigest(), digest, sizeof(digest)), 0) << " cert1's digest not equal to original";
-
-    ECCSignature garbage;
-    cert2.SetSig(&garbage);
-
-    EXPECT_TRUE(!cert2.VerifySignature());
-
-    std::cout << cert2.ToString().c_str() << endl;
-}
-
-TEST_F(CertificateECCTest, LoadCertificateType1)
-{
-    QStatus status;
-
-    CertificateType1 cert1(ecc.GetDSAPublicKey(), ecc.GetDHPublicKey());
-
-    Timespec now;
-    GetTimeNow(&now);
-    Certificate::ValidPeriod valid;
-    valid.validFrom = now.seconds;
-    valid.validTo = valid.validFrom + 3600;   /* one hour from now */
-
-    cert1.SetValidity(&valid);
-    cert1.SetDelegate(true);
-
-    String externalData("This is a test from generate encoded cert");
-    Crypto_SHA256 digestUtil;
-    digestUtil.Init();
-    digestUtil.Update(externalData);
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    digestUtil.GetDigest(digest);
-
-    cert1.SetExternalDataDigest(digest);
-
-    status = cert1.Sign(ecc.GetDSAPrivateKey());
-
-    const uint8_t* encoded = cert1.GetEncoded();
-    CertificateType1 cert2;
-
-    status = cert2.LoadEncoded(encoded, cert1.GetEncodedLen());
-    ASSERT_EQ(ER_OK, status) << " CertificateType1::LoadEncoded failed with actual status: " << QCC_StatusText(status);
-
-    ASSERT_EQ(memcmp(cert2.GetIssuer(), cert1.GetIssuer(), sizeof(ECCPublicKey)), 0) << " new cert's issuer not equal to original";
-    ASSERT_EQ(memcmp(cert2.GetSubject(), cert1.GetSubject(), sizeof(ECCPublicKey)), 0) << " new cert's subject not equal to original";
-    ASSERT_EQ(cert2.GetValidity()->validFrom, cert1.GetValidity()->validFrom) << " new cert's validity.validFrom not equal to original";
-    ASSERT_EQ(cert2.GetValidity()->validTo, cert1.GetValidity()->validTo) << " new cert's validity.validTo not equal to original";
-    EXPECT_TRUE(cert2.IsDelegate());
-    ASSERT_EQ(memcmp(cert2.GetExternalDataDigest(), cert1.GetExternalDataDigest(), sizeof(digest)), 0) << " new cert's digest not equal to original";
-
-    EXPECT_TRUE(cert2.VerifySignature());
-    ASSERT_EQ(memcmp(cert2.GetSig(), cert1.GetSig(), sizeof(ECCSignature)), 0) << " new cert's signature not equal to original";
-
-    std::cout << "Original cert: " << cert1.ToString().c_str() << endl;
-    std::cout << "New cert loaded from encoded string: " << cert2.ToString().c_str() << endl;
-}
-
-TEST_F(CertificateECCTest, LoadCertificateType1PEM)
-{
-    QStatus status;
-
-    CertificateType1 cert1(ecc.GetDSAPublicKey(), ecc.GetDHPublicKey());
-
-    Timespec now;
-    GetTimeNow(&now);
-    Certificate::ValidPeriod valid;
-    valid.validFrom = now.seconds;
-    valid.validTo = valid.validFrom + 3600;   /* one hour from now */
-
-    cert1.SetValidity(&valid);
-    cert1.SetDelegate(true);
-
-    String externalData("This is a test from generate encoded cert");
-    Crypto_SHA256 digestUtil;
-    digestUtil.Init();
-    digestUtil.Update(externalData);
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    digestUtil.GetDigest(digest);
-
-    cert1.SetExternalDataDigest(digest);
-
-    status = cert1.Sign(ecc.GetDSAPrivateKey());
-
-    String pem = cert1.GetPEM();
-    CertificateType1 cert2;
-
-    status = cert2.LoadPEM(pem);
-    ASSERT_EQ(ER_OK, status) << " CertificateType1::LoadPEM failed with actual status: " << QCC_StatusText(status);
-
-    ASSERT_EQ(memcmp(cert2.GetIssuer(), cert1.GetIssuer(), sizeof(ECCPublicKey)), 0) << " new cert's issuer not equal to original";
-    ASSERT_EQ(memcmp(cert2.GetSubject(), cert1.GetSubject(), sizeof(ECCPublicKey)), 0) << " new cert's subject not equal to original";
-    ASSERT_EQ(cert2.GetValidity()->validFrom, cert1.GetValidity()->validFrom) << " new cert's validity.validFrom not equal to original";
-    ASSERT_EQ(cert2.GetValidity()->validTo, cert1.GetValidity()->validTo) << " new cert's validity.validTo not equal to original";
-    EXPECT_TRUE(cert2.IsDelegate());
-    ASSERT_EQ(memcmp(cert2.GetExternalDataDigest(), cert1.GetExternalDataDigest(), sizeof(digest)), 0) << " new cert's digest not equal to original";
-
-    EXPECT_TRUE(cert2.VerifySignature());
-    ASSERT_EQ(memcmp(cert2.GetSig(), cert1.GetSig(), sizeof(ECCSignature)), 0) << " new cert's signature not equal to original";
-
-    std::cout << "Original cert: " << cert1.ToString().c_str() << endl;
-    std::cout << "New cert loaded from encoded string: " << cert2.ToString().c_str() << endl;
-}
-
-TEST_F(CertificateECCTest, LoadCertificateType2)
-{
-    QStatus status;
-    CertificateType2 cert1(ecc.GetDSAPublicKey(), ecc.GetDHPublicKey());
-
-    Timespec now;
-    GetTimeNow(&now);
-    Certificate::ValidPeriod valid;
-    valid.validFrom = now.seconds;
-    valid.validTo = valid.validFrom + 3600;   /* one hour from now */
-
-    cert1.SetValidity(&valid);
-    cert1.SetDelegate(true);
-    GUID128 aGuid;
-    cert1.SetGuild(aGuid.GetBytes(), GUID128::SIZE);
-
-    String externalData("This is a test from generate encoded cert");
-    Crypto_SHA256 digestUtil;
-    digestUtil.Init();
-    digestUtil.Update(externalData);
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    digestUtil.GetDigest(digest);
-
-    cert1.SetExternalDataDigest(digest);
-
-    status = cert1.Sign(ecc.GetDSAPrivateKey());
-
-    const uint8_t* encoded = cert1.GetEncoded();
-    CertificateType2 cert2;
-
-    status = cert2.LoadEncoded(encoded, cert1.GetEncodedLen());
-    ASSERT_EQ(ER_OK, status) << " CertificateType2::LoadEncoded failed with actual status: " << QCC_StatusText(status);
-
-    ASSERT_EQ(memcmp(cert2.GetIssuer(), cert1.GetIssuer(), sizeof(ECCPublicKey)), 0) << " new cert's issuer not equal to original";
-    ASSERT_EQ(memcmp(cert2.GetSubject(), cert1.GetSubject(), sizeof(ECCPublicKey)), 0) << " new cert's subject not equal to original";
-    ASSERT_EQ(cert2.GetValidity()->validFrom, cert1.GetValidity()->validFrom) << " new cert's validity.validFrom not equal to original";
-    ASSERT_EQ(cert2.GetValidity()->validTo, cert1.GetValidity()->validTo) << " new cert's validity.validTo not equal to original";
-    EXPECT_TRUE(cert2.IsDelegate());
-    ASSERT_EQ(memcmp(cert2.GetGuild(), cert1.GetGuild(), GUID128::SIZE), 0) << " new cert's guild not equal to original";
-    ASSERT_EQ(memcmp(cert2.GetExternalDataDigest(), cert1.GetExternalDataDigest(), sizeof(digest)), 0) << " new cert's digest not equal to original";
-
-    EXPECT_TRUE(cert2.VerifySignature());
-    ASSERT_EQ(memcmp(cert2.GetSig(), cert1.GetSig(), sizeof(ECCSignature)), 0) << " new cert's signature not equal to original";
-
-    std::cout << "Original cert: " << cert1.ToString().c_str() << endl;
-    std::cout << "New cert loaded from encoded string: " << cert2.ToString().c_str() << endl;
-}
-
-TEST_F(CertificateECCTest, LoadCertificateType2PEM)
-{
-    QStatus status;
-    CertificateType2 cert1(ecc.GetDSAPublicKey(), ecc.GetDHPublicKey());
-
-    Timespec now;
-    GetTimeNow(&now);
-    Certificate::ValidPeriod valid;
-    valid.validFrom = now.seconds;
-    valid.validTo = valid.validFrom + 3600;   /* one hour from now */
-
-    cert1.SetValidity(&valid);
-    cert1.SetDelegate(true);
-    GUID128 aGuid;
-    cert1.SetGuild(aGuid.GetBytes(), GUID128::SIZE);
-
-    String externalData("This is a test from generate encoded cert");
-    Crypto_SHA256 digestUtil;
-    digestUtil.Init();
-    digestUtil.Update(externalData);
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    digestUtil.GetDigest(digest);
-
-    cert1.SetExternalDataDigest(digest);
-
-    status = cert1.Sign(ecc.GetDSAPrivateKey());
-
-    String pem = cert1.GetPEM();
-    CertificateType2 cert2;
-
-    status = cert2.LoadPEM(pem);
-    ASSERT_EQ(ER_OK, status) << " CertificateType2::LoadPEM failed with actual status: " << QCC_StatusText(status);
-
-    ASSERT_EQ(memcmp(cert2.GetIssuer(), cert1.GetIssuer(), sizeof(ECCPublicKey)), 0) << " new cert's issuer not equal to original";
-    ASSERT_EQ(memcmp(cert2.GetSubject(), cert1.GetSubject(), sizeof(ECCPublicKey)), 0) << " new cert's subject not equal to original";
-    ASSERT_EQ(cert2.GetValidity()->validFrom, cert1.GetValidity()->validFrom) << " new cert's validity.validFrom not equal to original";
-    ASSERT_EQ(cert2.GetValidity()->validTo, cert1.GetValidity()->validTo) << " new cert's validity.validTo not equal to original";
-    EXPECT_TRUE(cert2.IsDelegate());
-    ASSERT_EQ(memcmp(cert2.GetGuild(), cert1.GetGuild(), GUID128::SIZE), 0) << " new cert's guild not equal to original";
-    ASSERT_EQ(memcmp(cert2.GetExternalDataDigest(), cert1.GetExternalDataDigest(), sizeof(digest)), 0) << " new cert's digest not equal to original";
-
-    EXPECT_TRUE(cert2.VerifySignature());
-    ASSERT_EQ(memcmp(cert2.GetSig(), cert1.GetSig(), sizeof(ECCSignature)), 0) << " new cert's signature not equal to original";
-
-    std::cout << "Original cert: " << cert1.ToString().c_str() << endl;
-    std::cout << "New cert loaded from encoded string: " << cert2.ToString().c_str() << endl;
+    *subjectPrivateKey = *ecc.GetDSAPrivateKey();
+    *subjectPublicKey = *ecc.GetDSAPublicKey();
+    qcc::GUID128 userGuid;
+    return CreateCert(serial, issuer, dsaPrivateKey, dsaPublicKey, userGuid, subjectPublicKey, expiredInSeconds, x509);
 }
 
 TEST_F(CertificateECCTest, EncodePrivateKey)
@@ -511,67 +136,35 @@ TEST_F(CertificateECCTest, EncodePrivateKey)
     QStatus status;
 
     qcc::String encoded;
-    status = CertECCUtil_EncodePrivateKey((uint32_t*) ecc.GetDSAPrivateKey(), sizeof(ECCPrivateKey), encoded);
-    ASSERT_EQ(ER_OK, status) << " CertECCUtil_EncodePrivateKey failed with actual status: " << QCC_StatusText(status);
+    status = CertificateX509::EncodePrivateKeyPEM((uint8_t*) ecc.GetDSAPrivateKey(), sizeof(ECCPrivateKey), encoded);
+    ASSERT_EQ(ER_OK, status) << " CertificateX509::EncodePrivateKeyPEM failed with actual status: " << QCC_StatusText(status);
 
     printf("The encoded private key PEM %s\n", encoded.c_str());
 
     ECCPrivateKey pk;
-    status = CertECCUtil_DecodePrivateKey(encoded, (uint32_t*) &pk, sizeof(pk));
-    ASSERT_EQ(ER_OK, status) << " CertECCUtil_DecodePrivateKey failed with actual status: " << QCC_StatusText(status);
+    status = CertificateX509::DecodePrivateKeyPEM(encoded, (uint8_t*) &pk, sizeof(pk));
+    ASSERT_EQ(ER_OK, status) << " CertificateX509::DecodePrivateKeyPEM failed with actual status: " << QCC_StatusText(status);
 
     printf("Original private key %s\n", BytesToHexString((uint8_t*) ecc.GetDSAPrivateKey(), sizeof(ECCPrivateKey)).c_str());
     printf("Decoded private key %s\n", BytesToHexString((uint8_t*) &pk, sizeof(pk)).c_str());
-    ASSERT_EQ(memcmp(ecc.GetDSAPrivateKey(), &pk, sizeof(ECCPrivateKey)), 0) << " decoded private key not equal to original";
+    ASSERT_EQ(pk, *ecc.GetDSAPrivateKey()) << " decoded private key not equal to original";
 
     /* test buffer len */
-    status = CertECCUtil_DecodePrivateKey(encoded, (uint32_t*) &pk, 3);
-    ASSERT_NE(ER_OK, status) << " CertECCUtil_DecodePrivateKey succeeded when expected to fail.  The actual actual status: " << QCC_StatusText(status);
+    status = CertificateX509::DecodePrivateKeyPEM(encoded, (uint8_t*) &pk, 3);
+    ASSERT_NE(ER_OK, status) << " CertificateX509::DecodePrivateKeyPEM succeeded when expected to fail.  The actual actual status: " << QCC_StatusText(status);
 
 }
 
-TEST_F(CertificateECCTest, CompareWithWrongPEM)
+TEST_F(CertificateECCTest, DecodePrivateKey)
 {
     QStatus status;
 
-    qcc::String pkEncoded;
-    status = CertECCUtil_EncodePrivateKey((uint32_t*) ecc.GetDSAPrivateKey(), sizeof(ECCPrivateKey), pkEncoded);
-    ASSERT_EQ(ER_OK, status) << " CertECCUtil_EncodePrivateKey failed with actual status: " << QCC_StatusText(status);
-
-    printf("The encoded private key PEM %s\n", pkEncoded.c_str());
-
-    CertificateType1 cert1(ecc.GetDSAPublicKey(), ecc.GetDHPublicKey());
-
-    Timespec now;
-    GetTimeNow(&now);
-    Certificate::ValidPeriod valid;
-    valid.validFrom = now.seconds;
-    valid.validTo = valid.validFrom + 3600;   /* one hour from now */
-
-    cert1.SetValidity(&valid);
-    cert1.SetDelegate(true);
-
-    String externalData("This is a test from generate encoded cert");
-    Crypto_SHA256 digestUtil;
-    digestUtil.Init();
-    digestUtil.Update(externalData);
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    digestUtil.GetDigest(digest);
-
-    cert1.SetExternalDataDigest(digest);
-
-    status = cert1.Sign(ecc.GetDSAPrivateKey());
-
-    String certPEM = cert1.GetPEM();
-
-    /* test decode with the wrong PEM */
-    CertificateType1 cert2;
-    status = cert2.LoadPEM(pkEncoded);
-    ASSERT_NE(ER_OK, status) << " cert2.LoadEncoded succeeded when expected to fail.  The actual actual status: " << QCC_StatusText(status);
+    qcc::String encoded(eccPrivateKeyPEM);
 
     ECCPrivateKey pk;
-    status = CertECCUtil_DecodePrivateKey(certPEM, (uint32_t* ) &pk, sizeof(pk));
-    ASSERT_NE(ER_OK, status) << " CertECCUtil_DecodePrivateKey succeeded when expected to fail.  The actual actual status: " << QCC_StatusText(status);
+    status = CertificateX509::DecodePrivateKeyPEM(encoded, (uint8_t*) &pk, sizeof(pk));
+    ASSERT_EQ(ER_OK, status) << " CertificateX509::DecodePrivateKeyPEM failed with actual status: " << QCC_StatusText(status);
+    printf("Decoded private key %s\n", BytesToHexString((uint8_t*) &pk, sizeof(pk)).c_str());
 }
 
 TEST_F(CertificateECCTest, EncodePublicKey)
@@ -579,122 +172,153 @@ TEST_F(CertificateECCTest, EncodePublicKey)
     QStatus status;
 
     qcc::String encoded;
-    status = CertECCUtil_EncodePublicKey((uint32_t*) ecc.GetDSAPublicKey(), sizeof(ECCPublicKey), encoded);
-    ASSERT_EQ(ER_OK, status) << " CertECCUtil_EncodePublicKey failed with actual status: " << QCC_StatusText(status);
+    status = CertificateX509::EncodePublicKeyPEM((uint8_t*) ecc.GetDSAPublicKey(), sizeof(ECCPublicKey), encoded);
+    ASSERT_EQ(ER_OK, status) << " CertificateX509::EncodePublicKeyPEM failed with actual status: " << QCC_StatusText(status);
 
     printf("The encoded public key PEM %s\n", encoded.c_str());
 
     ECCPublicKey pk;
-    memset(&pk, 0, sizeof(ECCPublicKey));
-    status = CertECCUtil_DecodePublicKey(encoded, (uint32_t*) &pk, sizeof(pk));
-    ASSERT_EQ(ER_OK, status) << " CertECCUtil_DecodePublicKey failed with actual status: " << QCC_StatusText(status);
+    status = CertificateX509::DecodePublicKeyPEM(encoded, (uint8_t*) &pk, sizeof(pk));
+    ASSERT_EQ(ER_OK, status) << " CertificateX509::DecodePublicKeyPEM failed with actual status: " << QCC_StatusText(status);
 
     printf("Original public key %s\n", BytesToHexString((uint8_t*) ecc.GetDSAPublicKey(), sizeof(ECCPublicKey)).c_str());
     printf("Decoded public key %s\n", BytesToHexString((uint8_t*) &pk, sizeof(pk)).c_str());
-    ASSERT_EQ(memcmp(ecc.GetDSAPublicKey(), &pk, sizeof(ECCPublicKey)), 0) << " decoded private key not equal to original";
+    ASSERT_EQ(pk, *ecc.GetDSAPublicKey()) << " decoded private key not equal to original";
 
     /* test buffer len */
-    status = CertECCUtil_DecodePublicKey(encoded, (uint32_t*) &pk, 3);
-    ASSERT_NE(ER_OK, status) << " CertECCUtil_DecodePublicKey succeeded when expected to fail.  The actual actual status: " << QCC_StatusText(status);
+    status = CertificateX509::DecodePublicKeyPEM(encoded, (uint8_t*) &pk, 3);
+    ASSERT_NE(ER_OK, status) << " CertificateX509::DecodePublicKeyPEM succeeded when expected to fail.  The actual actual status: " << QCC_StatusText(status);
 
-}
-
-
-
-TEST_F(CertificateECCTest, GenerateKeyPairs)
-{
-    CertificateType1 cert;
-    ECCPrivateKey dsaPrivateKey;
-    ECCPublicKey dsaPublicKey;
-    ECCPrivateKey subjectPrivateKey;
-    ECCPublicKey subjectPublicKey;
-    uint32_t expiresInSecsFromNow = 300; /* this key expires in 5 minutes */
-    QStatus status = GenerateCertificateType1(true, true, expiresInSecsFromNow, cert, "Sample ECDSA KeyPair", &dsaPrivateKey, &dsaPublicKey, &subjectPrivateKey, &subjectPublicKey);
-    ASSERT_EQ(ER_OK, status) << " GenereateCertificateType1 failed with actual status: " << QCC_StatusText(status);
-
-    String encodedPK;
-    status = CertECCUtil_EncodePrivateKey((uint32_t*) &dsaPrivateKey, sizeof(ECCPrivateKey), encodedPK);
-    ASSERT_EQ(ER_OK, status) << " CertECCUtil_EncodePrivateKey failed with actual status: " << QCC_StatusText(status);
-
-    std::cout << "The encoded private key PEM:" << endl << encodedPK.c_str() << endl;
-
-    String pem = cert.GetPEM();
-    std::cout << "The encoded cert PEM:" << endl << pem.c_str() << endl;
-
-    std::cout << "The cert: " << endl << cert.ToString().c_str() << endl;
-
-}
-
-TEST_F(CertificateECCTest, GenerateCertChain)
-{
-    CertificateType1 cert1;
-    CertificateType2 cert2;
-    QStatus status = GenerateCertificateType1(cert1, "SUCCESS_GetLeafCert 1");;
-    ASSERT_EQ(ER_OK, status) << " GenereateCertificateType1 failed with actual status: " << QCC_StatusText(status);
-    status = GenerateCertificateType2(cert2, "SUCCESS_GetLeafCert 2");;
-    ASSERT_EQ(ER_OK, status) << " GenereateCertificateType2 failed with actual status: " << QCC_StatusText(status);
-
-    String pem = cert1.GetPEM();
-    pem += "\n";
-    pem += cert2.GetPEM();
-
-    size_t count = 0;
-    status = CertECCUtil_GetCertCount(pem, &count);
-    ASSERT_EQ(ER_OK, status) << " CertECCUtil_GetCertCount failed with actual status: " << QCC_StatusText(status);
-    ASSERT_EQ(2U, count) << " CertECCUtil_GetCertCount failed to count certs: ";
-
-    cout << "Calling CertECCUtil_GetCertChain" << endl;
-    CertificateECC** certChain = new CertificateECC * [count];
-    status = CertECCUtil_GetCertChain(pem, certChain, count);
-    if (status == ER_OK) {
-        std::cout << "The cert chain:" << endl;
-        for (size_t idx = 0; idx < count; idx++) {
-            std::cout << certChain[idx]->ToString().c_str() << endl;
-            delete certChain[idx];
-        }
-    }
-    delete [] certChain;
-    ASSERT_EQ(ER_OK, status) << " CertECCUtil_GetCertChain failed with actual status: " << QCC_StatusText(status);
 }
 
 /**
  * Use the encoded texts to put in the bbservice and bbclient files
  */
-TEST_F(CertificateECCTest, GenCertForBBservice)
+TEST_F(CertificateECCTest, GenSelfSignECCX509CertForBBservice)
 {
-    CertificateType1 cert1;
-    CertificateType2 cert2;
+    qcc::GUID128 issuer;
     ECCPrivateKey dsaPrivateKey;
     ECCPublicKey dsaPublicKey;
     ECCPrivateKey subjectPrivateKey;
     ECCPublicKey subjectPublicKey;
-    uint32_t expiresInSecsFromNow = 300; /* this key expires in 5 minutes.  Feel free to change it to fit your needs */
+    CertificateX509 x509;
 
-    QStatus status = GenerateCertificateType1(false, true, expiresInSecsFromNow, cert1, "Sample Certificate Type 1", &dsaPrivateKey, &dsaPublicKey, &subjectPrivateKey, &subjectPublicKey);
-    ASSERT_EQ(ER_OK, status) << " GenereateCertificateType1 failed with actual status: " << QCC_StatusText(status);
+    /* cert expires in one year */
+    QStatus status = CreateIdentityCert(issuer, "1010101", &dsaPrivateKey, &dsaPublicKey, &subjectPrivateKey, &subjectPublicKey, true, 365 * 24 * 3600, x509);
+    ASSERT_EQ(ER_OK, status) << " CreateIdentityCert failed with actual status: " << QCC_StatusText(status);
 
     String encodedPK;
-    status = CertECCUtil_EncodePrivateKey((uint32_t*) &subjectPrivateKey, sizeof(ECCPrivateKey), encodedPK);
-    ASSERT_EQ(ER_OK, status) << " CertECCUtil_EncodePrivateKey failed with actual status: " << QCC_StatusText(status);
+    status = CertificateX509::EncodePrivateKeyPEM((uint8_t*) &subjectPrivateKey, sizeof(ECCPrivateKey), encodedPK);
+    ASSERT_EQ(ER_OK, status) << " CertificateX509::EncodePrivateKeyPEM failed with actual status: " << QCC_StatusText(status);
 
-    std::cout << "The encoded private key PEM:" << endl << encodedPK.c_str() << endl;
+    std::cout << "The encoded subject private key PEM:" << endl << encodedPK.c_str() << endl;
 
-    EXPECT_TRUE(cert1.VerifySignature());
-    String pem1 = cert1.GetPEM();
-    std::cout << "The encoded cert PEM for cert1:" << endl << pem1.c_str() << endl;
+    status = CertificateX509::EncodePublicKeyPEM((uint8_t*) &subjectPublicKey, sizeof(ECCPublicKey), encodedPK);
+    ASSERT_EQ(ER_OK, status) << " CertificateX509::EncodePublicKeyPEM failed with actual status: " << QCC_StatusText(status);
 
-    std::cout << "The cert1: " << endl << cert1.ToString().c_str() << endl;
+    std::cout << "The encoded subject public key PEM:" << endl << encodedPK.c_str() << endl;
 
+    status = x509.Verify(&dsaPublicKey);
+    ASSERT_EQ(ER_OK, status) << " verify cert failed with actual status: " << QCC_StatusText(status);
+    String pem = x509.GetPEM();
+    std::cout << "The encoded cert PEM for ECC X.509 cert:" << endl << pem.c_str() << endl;
 
-    /* build cert2 of type2 with the same subject and signed by the same issuer as cert1*/
-
-    status = GenerateCertificateType2(false, false, expiresInSecsFromNow, cert2, "Sample Certificate Type 2", &dsaPrivateKey, &dsaPublicKey, &subjectPrivateKey, &subjectPublicKey);
-    ASSERT_EQ(ER_OK, status) << " GenereateCertificateType2 failed with actual status: " << QCC_StatusText(status);
-    EXPECT_TRUE(cert2.VerifySignature());
-
-    String pem2 = cert2.GetPEM();
-    std::cout << "The encoded cert PEM for cert2:" << endl << pem2.c_str() << endl;
-
-    std::cout << "The cert2: " << endl << cert2.ToString().c_str() << endl;
-
+    std::cout << "The ECC X.509 cert: " << endl << x509.ToString().c_str() << endl;
 }
+
+
+/**
+ * Test expiry date for X509 cert
+ */
+TEST_F(CertificateECCTest, ExpiredX509Cert)
+{
+    qcc::GUID128 issuer;
+    ECCPrivateKey dsaPrivateKey;
+    ECCPublicKey dsaPublicKey;
+    ECCPrivateKey subjectPrivateKey;
+    ECCPublicKey subjectPublicKey;
+    CertificateX509 x509;
+
+    /* cert expires in one second */
+    QStatus status = CreateIdentityCert(issuer, "1010101", &dsaPrivateKey, &dsaPublicKey, &subjectPrivateKey, &subjectPublicKey, true, 1, x509);
+    ASSERT_EQ(ER_OK, status) << " CreateIdentityCert failed with actual status: " << QCC_StatusText(status);
+
+    /* sleep for 2 seconds to wait for the cert expires */
+    qcc::Sleep(2000);
+    status = x509.Verify(&dsaPublicKey);
+    ASSERT_NE(ER_OK, status) << " verify cert did not fail with actual status: " << QCC_StatusText(status);
+}
+
+/**
+ * Generate certificate with expiry date past the year 2050
+ */
+TEST_F(CertificateECCTest, X509CertExpiresBeyond2050)
+{
+    qcc::GUID128 issuer;
+    ECCPrivateKey dsaPrivateKey;
+    ECCPublicKey dsaPublicKey;
+    ECCPrivateKey subjectPrivateKey;
+    ECCPublicKey subjectPublicKey;
+    CertificateX509 cert;
+
+    /* cert expires in about 36 years */
+    uint32_t expiredInSecs = 36 * 365 * 24 * 60 * 60;
+    QStatus status = CreateIdentityCert(issuer, "1010101", &dsaPrivateKey, &dsaPublicKey, &subjectPrivateKey, &subjectPublicKey, true, expiredInSecs, cert);
+    ASSERT_EQ(ER_OK, status) << " CreateIdentityCert failed with actual status: " << QCC_StatusText(status);
+    status = cert.Verify(&dsaPublicKey);
+    ASSERT_EQ(ER_OK, status) << " verify cert failed with actual status: " << QCC_StatusText(status);
+}
+
+/**
+ * Verify a X509 self signed certificate generated by external tool.
+ */
+TEST_F(CertificateECCTest, VerifyX509SelfSignExternalCert)
+{
+    CertificateX509 cert;
+    String pem(eccSelfSignCertX509PEM);
+    QStatus status = cert.LoadPEM(pem);
+    ASSERT_EQ(ER_OK, status) << " load external cert PEM failed with actual status: " << QCC_StatusText(status);
+    status = cert.Verify();
+    ASSERT_EQ(ER_OK, status) << " verify cert failed with actual status: " << QCC_StatusText(status);
+}
+
+/**
+ * Verify a X509 self signed certificate generated by external tool.
+ * Add check that it does not verify with a different public key.
+ *
+ */
+TEST_F(CertificateECCTest, VerifyX509SelfSignCertPlusDoNotVerifyWithOtherKey)
+{
+    CertificateX509 cert;
+    String pem(eccSelfSignCertX509PEM);
+    QStatus status = cert.LoadPEM(pem);
+    ASSERT_EQ(ER_OK, status) << " load external cert PEM failed with actual status: " << QCC_StatusText(status);
+    status = cert.Verify();
+    ASSERT_EQ(ER_OK, status) << " verify cert failed with actual status: " << QCC_StatusText(status);
+    /* now verify with a different public key.  It is expected to fail */
+    status = cert.Verify(ecc.GetDSAPublicKey());
+    ASSERT_NE(ER_OK, status) << " verify cert did not fail";
+}
+
+/**
+ * Verify a X509 self signed certificate generated by external tool.
+ */
+TEST_F(CertificateECCTest, VerifyX509ExternalCertChain)
+{
+    String pem(eccCertChainX509PEM);
+    /* count how many certs in the chain */
+    size_t count = 0;
+    QStatus status = CertificateHelper::GetCertCount(pem, &count);
+    ASSERT_EQ(ER_OK, status) << " count the number of certs in the chain failed with actual status: " << QCC_StatusText(status);
+    ASSERT_EQ((size_t) 2, count) << " expecting two certs in the cert chain";
+
+    CertificateX509 certs[2];
+    status = CertificateX509::DecodeCertChainPEM(pem, certs, count);
+    ASSERT_EQ(ER_OK, status) << " decode the cert chain failed with actual status: " << QCC_StatusText(status);
+    for (size_t cnt = 0; cnt < count; cnt++) {
+        printf("certs[%d]: %s\n", (int) cnt, certs[cnt].ToString().c_str());
+    }
+    status = certs[0].Verify(certs[1].GetSubjectPublicKey());
+    ASSERT_EQ(ER_OK, status) << " verify leaf cert failed with actual status: " << QCC_StatusText(status);
+}
+

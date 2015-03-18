@@ -72,17 +72,49 @@ static const char defaultConfig[] =
     "  <limit name=\"auth_timeout\">20000</limit>"
     "  <limit name=\"max_incomplete_connections\">16</limit>"
     "  <limit name=\"max_completed_connections\">64</limit>"
-    "  <limit name=\"max_untrusted_clients\">48</limit>"
+    "  <limit name=\"max_remote_clients_tcp\">48</limit>"
+    "  <limit name=\"max_remote_clients_udp\">0</limit>"
+    "  <property name=\"router_power_source\">Always AC powered</property>"
+    "  <property name=\"router_mobility\">Always stationary</property>"
+    "  <property name=\"router_availability\">21-24 hr</property>"
+    "  <property name=\"router_node_connection\">Access Point</property>"
     "  <flag name=\"restrict_untrusted_clients\">false</flag>"
     "</busconfig>";
+
+/*
+ * Router Power Source
+ *  Always AC powered
+ *  Battery powered and chargeable
+ *  Battery powered and not chargeable
+ *
+ * Router Mobility
+ *  Always Stationary
+ *  Low mobility
+ *  Intermediate mobility
+ *  High mobility
+ *
+ * Router Availability
+ *  0-3 hr
+ *  3-6 hr
+ *  6-9 hr
+ *  9-12 hr
+ *  12-15 hr
+ *  15-18 hr
+ *  18-21 hr
+ *  21-24 hr
+ *
+ * Router Node Connection
+ *  Access Point
+ *  Wired
+ *  Wireless
+ *
+ */
 
 static const char internalConfig[] =
     "<busconfig>"
     "  <type>alljoyn</type>"
     "  <listen>tcp:iface=*,port=9956</listen>"
     "  <listen>udp:iface=*,u4port=9955</listen>"
-    "  <listen>localhost:port=9955</listen>"
-    "  <listen>localhost:port=9956</listen>"
     "</busconfig>";
 
 static volatile sig_atomic_t g_interrupt = false;
@@ -245,8 +277,6 @@ int daemon(OptParse& opts)
             // No special processing needed for TCP.
         } else if (addrStr.compare(0, sizeof("udp:") - 1, "udp:") == 0) {
             // No special processing needed for UDP.
-        } else if (addrStr.compare(0, sizeof("localhost:") - 1, "localhost:") == 0) {
-            // No special processing needed for localhost.
         } else {
             Log(LOG_ERR, "Unsupported listen address: %s (ignoring)\n", it->c_str());
             continue;

@@ -299,7 +299,7 @@ QStatus AJ_CALL alljoyn_aboutdata_getfield(alljoyn_aboutdata data,
                                            const char* language)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
-    return ((ajn::AboutData*)data)->GetField(name, (ajn::MsgArg * &) * value, language);
+    return ((ajn::AboutData*)data)->GetField(name, (ajn::MsgArg*&) *value, language);
 }
 
 size_t AJ_CALL alljoyn_aboutdata_getfields(alljoyn_aboutdata data,

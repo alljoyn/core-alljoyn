@@ -99,7 +99,7 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
     /**
      * Destructor
      */
-    ~AllJoynObj();
+    virtual ~AllJoynObj();
 
     /**
      * Initialize and register this DBusObj instance.
@@ -558,6 +558,26 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
     void AttachSession(const InterfaceDescription::Member* member, Message& msg);
 
     /**
+     * Respond to a remote daemon request to attach a session through this daemon.
+     *
+     * The input Message (METHOD_CALL) is expected to contain the following parameters:
+     *   sessionPort   SessionPort  The session port.
+     *   joiner        string       The unique name of the session joiner.
+     *   creator       string       The name of the session creator.
+     *   optsIn        SesionOpts   The session options requested by the joiner.
+     *   namesIn       Array of unique names with their aliases.
+     *
+     * The output Message (METHOD_REPLY) contains the following parameters:
+     *   resultCode    uint32       A ALLJOYN_JOINSESSION_* reply code (see AllJoynStd.h).
+     *   sessionId     uint32       The session id (valid if resultCode indicates success).
+     *   opts          SessionOpts  The actual (final) session options.
+     *   namesOut      Array of unique names with their aliases.
+     * @param member  Member.
+     * @param msg     The incoming message.
+     */
+    void AttachSessionWithNames(const InterfaceDescription::Member* member, Message& msg);
+
+    /**
      * Respond to a remote daemon request to get session info from this daemon.
      *
      * The input Message (METHOD_CALL) is expected to contain the following parameters:
@@ -622,6 +642,160 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
      * Get reference to the daemon router object
      */
     DaemonRouter& GetDaemonRouter() { return router; }
+
+  protected:
+    /*
+     * These methods and members are protected rather than private to facilitate unit testing.
+     */
+    /// @cond ALLJOYN_DEV
+
+    /** JoinSessionThread handles a JoinSession request from a local client on a separate thread */
+    class JoinSessionThread : public qcc::Thread, public qcc::ThreadListener {
+      public:
+        JoinSessionThread(AllJoynObj& ajObj, const Message& msg, bool isJoin) :
+            qcc::Thread(qcc::String("JoinS-") + qcc::U32ToString(qcc::IncrementAndFetch(&jstCount))),
+            ajObj(ajObj),
+            msg(msg),
+            isJoin(isJoin) { }
+
+        qcc::ThreadReturn STDCALL RunJoin();
+        virtual QStatus Reply(uint32_t replyCode, SessionId id, SessionOpts optsOut);
+        void ThreadExit(Thread* thread);
+
+      protected:
+        qcc::ThreadReturn STDCALL Run(void* arg);
+
+      private:
+        static int jstCount;
+        qcc::ThreadReturn STDCALL RunAttach();
+        /*
+         * This must be called with the locks as it looks through the various advertisement maps.
+         */
+        void GetBusAddrsFromAdvertisements(const char* sessionHost, const SessionOpts& optsIn,
+                                           std::vector<qcc::String>& busAddrs);
+        /*
+         * This must be called without the locks as it makes a blocking method call (GetSessionInfo).
+         */
+        void GetBusAddrsFromSession(const char* sessionHost, SessionPort sessionPort, const SessionOpts& optsIn,
+                                    std::vector<qcc::String>& busAddrs);
+        RemoteEndpoint ConnectBusToBusEndpoint(const qcc::String& busAddr, const SessionOpts& optsIn,
+                                               TransportMask& transport, uint32_t& replyCode);
+
+        AllJoynObj& ajObj;
+        Message msg;
+        bool isJoin;
+    };
+
+    typedef enum {
+        JOINER, /* AttachSession from new session joiner to Host */
+        HOST,   /* AttachSession response from session host to new joiner */
+        HOST_FORWARD, /* MP member AttachSession forwarded by host to existing session member */
+        MEMBER,       /* Response from existing session member to MP member AttachSession. */
+        HOST_FORWARD_REPLY /* Reply from host to new joiner for MP AttachSession member attach */
+    }CallerType;
+
+    /**
+     * Get a Transport instance for a specified transport specification.
+     * Transport specifications have the form:
+     *   &lt;transportName&gt;:&lt;param1&gt;=&lt;value1&gt;,&lt;param2&gt;=&lt;value2&gt;[;]
+     *
+     * @param transportSpec  Either a connectSpec or a listenSpec. Must be a string that starts with one
+     *                       of the known transport types: @c tcp, @c unix or or @c ice.
+     * @return  A transport instance or NULL if no such transport exists
+     */
+    virtual Transport* GetTransport(const qcc::String& transportSpec) {
+        return bus.GetInternal().GetTransportList().GetTransport(transportSpec);
+    }
+
+    /**
+     * Find the endpoint that owns the given unique or well-known name.
+     *
+     * @param busName    Unique or well-known bus name
+     *
+     * @return  Returns the requested endpoint or an invalid endpoint if the
+     *          endpoint was not found.
+     */
+    virtual BusEndpoint FindEndpoint(const qcc::String& busName) {
+        return router.FindEndpoint(busName);
+    }
+
+    /**
+     * Find the remote or bus-to-bus endpoint that owns the given unique or well-known name.
+     *
+     * @param busName    Unique or well-known bus name
+     * @param endpoint   Returns the bus endpoint
+     *
+     * @return  Returns true if the endpoint was found, false if it was not found.
+     */
+    virtual bool FindEndpoint(const qcc::String& busName, RemoteEndpoint& endpoint) {
+        return router.FindEndpoint(busName, endpoint);
+    }
+
+    /**
+     * Find the virtual endpoint that owns the given unique or well-known name.
+     *
+     * @param busName    Unique or well-known bus name
+     * @param endpoint   Returns the bus endpoint
+     *
+     * @return  Returns true if the endpoint was found, false if it was not found.
+     */
+    virtual bool FindEndpoint(const qcc::String& busName, VirtualEndpoint& endpoint) {
+        return router.FindEndpoint(busName, endpoint);
+    }
+
+    /**
+     * Utility method used to invoke SessionAttach remote method.
+     *
+     * @param sessionPort      SessionPort used in join request.
+     * @param src              Unique name of session joiner.
+     * @param sessionHost      Unique name of sessionHost.
+     * @param dest             Unique name of session creator.
+     * @param b2bEp            Directly connected (next hop) B2B endpoint.
+     * @param remoteControllerName  Unique name of bus controller at next hop.
+     * @param outgoingSessionId     SessionId to use for outgoing AttachSession message. Should
+     *                              be 0 for newly created (non-multipoint) sessions.
+     * @param busAddr          Destination bus address from advertisement or GetSessionInfo.
+     * @param nameTransfer     The Nametransfer for this session. One of ALL_NAMES, SLS_NAMES, P2P_NAMES and MP_NAMES.
+     * @param type             The type of caller of this function: JOINER, HOST, HOST_FORWARD, MEMBER and HOST_FORWARD_REPLY.
+     * @param optsIn           Session options requested by joiner.
+     * @param replyCode        [OUT] SessionAttach response code
+     * @param sessionId        [OUT] session id if reply code indicates success.
+     * @param optsOut          [OUT] Actual (final) session options.
+     * @param members          [OUT] Array or session members (strings) formatted as MsgArg.
+     */
+    virtual QStatus SendAttachSession(SessionPort sessionPort,
+                                      const char* src,
+                                      const char* sessionHost,
+                                      const char* dest,
+                                      RemoteEndpoint& b2bEp,
+                                      const char* remoteControllerName,
+                                      SessionId outgoingSessionId,
+                                      const char* busAddr,
+                                      SessionOpts::NameTransferType nameTransfer,
+                                      CallerType type,
+                                      const SessionOpts& optsIn,
+                                      uint32_t& replyCode,
+                                      SessionId& sessionId,
+                                      SessionOpts& optsOut,
+                                      MsgArg& members);
+
+    /**
+     * Add a session route.
+     *
+     * @param  id          Session Id.
+     * @param  srcEp       Route source endpoint.
+     * @param  srcB2bEp    Source B2B endpoint. (NULL if srcEp is not virtual).
+     * @param  destEp      BusEndpoint of route destination.
+     * @param  destB2bEp   [IN/OUT] If passed in as invalid endpoint type, attempt to use optsHint to choose destB2bEp and return selected ep.
+     * @param  optsHint    Optional session options constraint for selection of destB2bEp if not explicitly specified.
+     * @return  ER_OK if successful.
+     */
+    virtual QStatus AddSessionRoute(SessionId id, BusEndpoint& srcEp, RemoteEndpoint* srcB2bEp, BusEndpoint& destEp,
+                                    RemoteEndpoint& destB2bEp) {
+        return router.AddSessionRoute(id, srcEp, srcB2bEp, destEp, destB2bEp);
+    }
+
+    /// @endcond
 
   private:
     Bus& bus;                             /**< The bus */
@@ -759,7 +933,6 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
 
     const qcc::GUID128& guid;                                  /**< Global GUID of this daemon */
 
-    const InterfaceDescription::Member* exchangeNamesSignal;   /**< org.alljoyn.Daemon.ExchangeNames signal member */
     const InterfaceDescription::Member* detachSessionSignal;   /**< org.alljoyn.Daemon.DetachSession signal member */
 
     std::map<qcc::String, VirtualEndpoint> virtualEndpoints;   /**< Map of endpoints that reside behind a connected AllJoyn daemon */
@@ -815,30 +988,6 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
      */
     void AlarmTriggered(const qcc::Alarm& alarm, QStatus reason);
 
-    /** JoinSessionThread handles a JoinSession request from a local client on a separate thread */
-    class JoinSessionThread : public qcc::Thread, public qcc::ThreadListener {
-      public:
-        JoinSessionThread(AllJoynObj& ajObj, const Message& msg, bool isJoin) :
-            qcc::Thread(qcc::String("JoinS-") + qcc::U32ToString(qcc::IncrementAndFetch(&jstCount))),
-            ajObj(ajObj),
-            msg(msg),
-            isJoin(isJoin) { }
-
-        void ThreadExit(Thread* thread);
-
-      protected:
-        qcc::ThreadReturn STDCALL Run(void* arg);
-
-      private:
-        static int jstCount;
-        qcc::ThreadReturn STDCALL RunJoin();
-        qcc::ThreadReturn STDCALL RunAttach();
-
-        AllJoynObj& ajObj;
-        Message msg;
-        bool isJoin;
-    };
-
     std::vector<JoinSessionThread*> joinSessionThreads;  /**< List of outstanding join session requests */
     qcc::Mutex joinSessionThreadsLock;                   /**< Lock that protects joinSessionThreads */
     bool isStopping;                                     /**< True while waiting for threads to exit */
@@ -876,38 +1025,6 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
      * @return ER_OK if succssful.
      */
     QStatus SendLostAdvertisedName(const qcc::String& name, TransportMask transport);
-
-    /**
-     * Utility method used to invoke SessionAttach remote method.
-     *
-     * @param sessionPort      SessionPort used in join request.
-     * @param src              Unique name of session joiner.
-     * @param sessionHost      Unique name of sessionHost.
-     * @param dest             Unique name of session creator.
-     * @param b2bEp            Directly connected (next hop) B2B endpoint.
-     * @param remoteControllerName  Unique name of bus controller at next hop.
-     * @param outgoingSessionId     SessionId to use for outgoing AttachSession message. Should
-     *                              be 0 for newly created (non-multipoint) sessions.
-     * @param busAddr          Destination bus address from advertisement or GetSessionInfo.
-     * @param optsIn           Session options requested by joiner.
-     * @param replyCode        [OUT] SessionAttach response code
-     * @param sessionId        [OUT] session id if reply code indicates success.
-     * @param optsOut          [OUT] Actual (final) session options.
-     * @param members          [OUT] Array or session members (strings) formatted as MsgArg.
-     */
-    QStatus SendAttachSession(SessionPort sessionPort,
-                              const char* src,
-                              const char* sessionHost,
-                              const char* dest,
-                              RemoteEndpoint& b2bEp,
-                              const char* remoteControllerName,
-                              SessionId outgoingSessionId,
-                              const char* busAddr,
-                              const SessionOpts& optsIn,
-                              uint32_t& replyCode,
-                              SessionId& sessionId,
-                              SessionOpts& optsOut,
-                              MsgArg& members);
 
     /**
      * Utility method used to invoke AcceptSession on device local endpoint.
@@ -957,20 +1074,6 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
      * @param   reason      Specifies the reason why the session changed
      */
     void SendMPSessionChanged(SessionId sessionId, const char* name, bool isAdd, const char* dest, unsigned int reason);
-
-    /**
-     * Utility method used to invoke GetSessionInfo remote method.
-     *
-     * @param       creatorName    Bus name of session creator.
-     * @param       sessionPort    Session port value.
-     * @param       opts           Requested session options.
-     * @param[out]  busAddrs       Returned busAddrs for session (if return value is ER_OK)
-     * @return  ER_OK if successful.
-     */
-    QStatus SendGetSessionInfo(const char* creatorName,
-                               SessionPort sessionPort,
-                               const SessionOpts& opts,
-                               std::vector<qcc::String>& busAddrs);
 
     /**
      * Add a virtual endpoint with a given unique name.
@@ -1149,6 +1252,32 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
     TransportMask GetCompleteTransportMaskFilter();
     void SendIPNSResponse(qcc::String name, uint32_t replyCode);
     bool IsSelfJoinSupported(BusEndpoint& joinerEp) const;
+
+    /**
+     * Get all the names to be sent for this session.
+     */
+    QStatus GetNames(MsgArg& argArray,
+                     RemoteEndpoint& endpoint,
+                     SessionOpts::NameTransferType nameTransfer,
+                     CallerType type,
+                     qcc::String joinerName = "",
+                     uint32_t sessionId = 0,
+                     qcc::String sessionHost = "");
+
+    /**
+     * Add all the names in arg to the NameTable and forward this message to the required routing nodes.
+     */
+    bool NamesHandler(Message msg, MsgArg arg);
+
+    /**
+     * Check if this endpoint is a member of the session or is a routing node that has a leaf that is a member in this session.
+     * @param hostName Host of the session
+     * @param name Endpoint to check
+     * @param sessionId ID of the session
+     * @return true if name is a member of the sessionId hosted by hostName.
+     */
+    bool IsMemberOfSession(qcc::String hostName, qcc::String name, uint32_t sessionId);
+
 };
 
 }

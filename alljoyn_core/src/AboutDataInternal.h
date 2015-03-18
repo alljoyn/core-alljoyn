@@ -51,7 +51,7 @@ class AboutData::Internal {
             }
         };
 
-        bool operator()(const qcc::String& lhs, const qcc::String& rhs)
+        bool operator()(const qcc::String& lhs, const qcc::String& rhs) const
         {
             return std::lexicographical_compare(lhs.begin(), lhs.end(),
                                                 rhs.begin(), rhs.end(),

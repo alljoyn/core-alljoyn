@@ -42,7 +42,7 @@ RuleBusObject::RuleBusObject(BusAttachment* busAttachment, const char* path, Sim
     /* Add the service interface to this object */
     const InterfaceDescription* ruleEngineTestIntf = mBusAttachment->GetInterface("org.allseen.sample.rule.engine");
     assert(ruleEngineTestIntf);
-    AddInterface(*ruleEngineTestIntf);
+    AddInterface(*ruleEngineTestIntf, ANNOUNCED);
     const MethodEntry methodEntries[] = {
         { ruleEngineTestIntf->GetMember("addRule"), static_cast<MessageReceiver::MethodHandler>(&RuleBusObject::addRule) },
         { ruleEngineTestIntf->GetMember("deleteAllRules"), static_cast<MessageReceiver::MethodHandler>(&RuleBusObject::deleteAllRules) },

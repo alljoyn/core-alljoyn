@@ -63,7 +63,8 @@ class _VirtualEndpoint : public _BusEndpoint {
      */
     _VirtualEndpoint(const qcc::String& uniqueName, RemoteEndpoint& b2bEp);
 
-    ~_VirtualEndpoint() { }
+    virtual ~_VirtualEndpoint() { }
+
     /**
      * Send an outgoing message.
      *
@@ -137,16 +138,6 @@ class _VirtualEndpoint : public _BusEndpoint {
     QStatus AddSessionRef(SessionId sessionId, RemoteEndpoint& b2bEp);
 
     /**
-     * Map a session id to the best of this VirtualEndpoint's B2B endpoints that match session opts.
-     *
-     * @param sessionId  The session id.
-     * @param opts       Qualifying session opts for B2B endpoint or NULL to indicate no constraints.
-     * @param b2bEp      [OUT] Written with B2B chosen for session.
-     * @return  ER_OK if successful.
-     */
-    QStatus AddSessionRef(SessionId sessionId, SessionOpts* opts, RemoteEndpoint& b2bEp);
-
-    /**
      * Remove (counted) mapping of sessionId to B2B endpoint.
      *
      * @param sessionId  The session id.
@@ -160,15 +151,7 @@ class _VirtualEndpoint : public _BusEndpoint {
      * @param b2bEndpoint   B2B endpoint being checked for suitability as a route for this virtual endpoint.
      * @return true iff the B2B endpoint can be used to route messages for this virtual endpoint.
      */
-    bool CanUseRoute(const RemoteEndpoint& b2bEndpoint) const;
-
-    /**
-     * Return true iff any of the B2B eps named in the set can be used to route messages for this virtual endpoint.
-     *
-     * @param b2bNames   Set of unique-names of b2b endpoints to be tested.
-     * @return true iff any of the B2B endpoints can be used to route messages for this virtual endpoint.
-     */
-    bool CanUseRoutes(const std::multiset<qcc::String>& b2bNames) const;
+    virtual bool CanUseRoute(const RemoteEndpoint& b2bEndpoint) const;
 
     /**
      * Return true iff the virtual endpoint can route to destination without the aid of the
@@ -207,16 +190,18 @@ class _VirtualEndpoint : public _BusEndpoint {
      * @return true iff the endpoint is in the process of being stopped.
      */
     bool IsStopping(void) { return m_epState == EP_STOPPING; }
+
+    /**
+     * Returns the remote GUID short string of the virtual endpoint
+     *
+     * @return remote short string of Virtual endpoint's guid.
+     */
+    qcc::String GetRemoteGUIDShortString();
   private:
 
     const qcc::String m_uniqueName;                             /**< The unique name for this endpoint */
     std::multimap<SessionId, RemoteEndpoint> m_b2bEndpoints;    /**< Set of b2bs that can route for this virtual ep */
 
-    /** B2BInfo is a data container that holds B2B endpoint selection criteria */
-    struct B2BInfo {
-        SessionOpts opts;     /**< Session options for B2BEndpoint */
-        uint32_t hops;        /**< Currently unused hop count from local daemon to final destination */
-    };
     mutable qcc::Mutex m_b2bEndpointsLock;      /**< Lock that protects m_b2bEndpoints */
     bool m_hasRefs;
     EndpointState m_epState;                                    /**< The state of the virtual endpoint */
