@@ -216,9 +216,9 @@ const AJNMessageFlag kAJNMessageFlagEncrypted           = 0x80;
 - (void)dealloc
 {
     if (self.shouldDeleteHandleOnDealloc) {
-        if (self.message)
+        if (self.handle)
         {
-            delete self.message;
+            delete static_cast<Message*>(self.handle);
         }
         self.handle = nil;
     }
