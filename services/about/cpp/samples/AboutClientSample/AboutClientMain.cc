@@ -404,7 +404,7 @@ int main(int argc, char**argv, char**envArg)
 
     //set Daemon password only for bundled app
     #ifdef QCC_USING_BD
-    PasswordManager::SetCredentials("ALLJOYN_PIN_KEYX", "000000");
+    PasswordManager::SetCredentials("ALLJOYN_SRP_KEYX", "000000");
     #endif
 
     // Install SIGINT handler

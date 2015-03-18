@@ -229,7 +229,7 @@ static void usage(void)
     printf("   -k <key store name>       = The key store file name\n");
     printf("   -c <count>                = Number of pings to send to the server\n");
     printf("   -i                        = Use introspection to discover remote interfaces\n");
-    printf("   -e[k] [RSA|SRP|PIN|LOGON|ECDHE_NULL|ECDHE_PSK|ECDHE_ECDSA] = Encrypt the test interface using specified auth mechanism, -ek means clear keys\n");
+    printf("   -e[k] [RSA|SRP|LOGON|ECDHE_NULL|ECDHE_PSK|ECDHE_ECDSA] = Encrypt the test interface using specified auth mechanism, -ek means clear keys\n");
     printf("   -en                       = Interface security is N/A\n");
     printf("   -eo                       = Enable object security\n");
     printf("   -a #                      = Max authentication attempts\n");
@@ -346,13 +346,6 @@ class MyAuthListener : public AuthListener {
 
         if (keyExpiration != 0xFFFFFFFF) {
             creds.SetExpiration(keyExpiration);
-        }
-
-        if (strcmp(authMechanism, "ALLJOYN_PIN_KEYX") == 0) {
-            if (credMask & AuthListener::CRED_PASSWORD) {
-                creds.SetPassword("ABCDEFGH");
-            }
-            return authCount == 1;
         }
 
         if (strcmp(authMechanism, "ALLJOYN_SRP_KEYX") == 0) {
@@ -541,9 +534,6 @@ int main(int argc, char** argv)
 
                 if (strcmp(argv[i], "RSA") == 0) {
                     authMechs += "ALLJOYN_RSA_KEYX";
-                    ok = true;
-                } else if (strcmp(argv[i], "PIN") == 0) {
-                    authMechs += "ALLJOYN_PIN_KEYX";
                     ok = true;
                 } else if (strcmp(argv[i], "SRP") == 0) {
                     authMechs += "ALLJOYN_SRP_KEYX";
@@ -895,7 +885,7 @@ int main(int argc, char** argv)
                 /* Enable security if it is needed */
                 if ((remoteObj.IsSecure() || (secPolicy == AJ_IFC_SECURITY_REQUIRED)) && !g_msgBus->IsPeerSecurityEnabled()) {
                     QCC_SyncPrintf("Enabling peer security\n");
-                    g_msgBus->EnablePeerSecurity("ALLJOYN_SRP_KEYX ALLJOYN_PIN_KEYX ALLJOYN_RSA_KEYX ALLJOYN_SRP_LOGON",
+                    g_msgBus->EnablePeerSecurity("ALLJOYN_SRP_KEYX ALLJOYN_RSA_KEYX ALLJOYN_SRP_LOGON",
                                                  new MyAuthListener(userId, authCount),
                                                  keyStore,
                                                  keyStore != NULL);
