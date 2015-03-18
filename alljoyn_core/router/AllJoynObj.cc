@@ -2136,28 +2136,6 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
                 if (b2bEp->IsValid()) {
                     b2bEp->IncrementRef();
                 }
-            } else if (busAddr[0] != '\0') {
-                QCC_DbgPrintf(("AllJoynObj::RunAttach(): Indirect route.  Find transport for busAddr=\"%s\"", busAddr));
-                /* Ask the transport for an endpoint */
-                Transport* trans = ajObj.GetTransport(busAddr);
-                if (trans == NULL) {
-                    replyCode = ALLJOYN_JOINSESSION_REPLY_UNREACHABLE;
-                } else {
-                    ajObj.ReleaseLocks();
-                    BusEndpoint ep;
-                    QCC_DbgPrintf(("AllJoynObj::RunAttach(): Indirect route. Connect() to  busAddr=\"%s\"", busAddr));
-                    status = trans->Connect(busAddr, optsIn, ep);
-                    ajObj.AcquireLocks();
-                    if (status == ER_OK) {
-                        b2bEp = RemoteEndpoint::cast(ep);
-                        if (b2bEp->IsValid()) {
-                            b2bEp->IncrementRef();
-                        }
-                    } else {
-                        QCC_LogError(status, ("trans->Connect(%s) failed", busAddr));
-                        replyCode = ALLJOYN_JOINSESSION_REPLY_CONNECT_FAILED;
-                    }
-                }
             }
 
             if (!b2bEp->IsValid()) {
@@ -2184,45 +2162,16 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
 
                     QCC_DbgPrintf(("AllJoynObj::RunAttach(): SendAttachSession() success"));
 
-                    /* Wait for dest to appear with a route through b2bEp */
-                    uint64_t startTime = GetTimestamp64();
-                    VirtualEndpoint vDestEp;
-                    while (replyCode == ALLJOYN_JOINSESSION_REPLY_SUCCESS) {
-                        /* Does vSessionEp route through b2bEp? If so, we're done */
-                        if (!b2bEp->IsValid()) {
-                            QCC_LogError(ER_FAIL, ("B2B endpoint disappeared during AttachSession"));
-                            replyCode = ALLJOYN_JOINSESSION_REPLY_FAILED;
-                            break;
-                        }
-                        if (ajObj.FindEndpoint(destStr, vDestEp) && vDestEp->CanUseRoute(b2bEp)) {
-                            QCC_DbgPrintf(("AllJoynObj::RunAttach(): Indirect route appeared"));
-                            break;
-                        }
-                        /* Otherwise wait */
-                        uint64_t now = GetTimestamp64();
-                        if (now > (startTime + 30000LL)) {
-                            replyCode = ALLJOYN_JOINSESSION_REPLY_FAILED;
-                            QCC_LogError(ER_FAIL, ("AttachSession timed out waiting for destination to appear"));
-                            break;
-                        } else {
-                            /* Give up the locks while waiting */
-                            ajObj.ReleaseLocks();
-                            qcc::Sleep(10);
-                            ajObj.AcquireLocks();
-                        }
-                    }
-
                     BusEndpoint tempEp = ajObj.FindEndpoint(srcStr);
                     VirtualEndpoint srcEp = VirtualEndpoint::cast(tempEp);
                     tempEp = ajObj.FindEndpoint(srcB2BStr);
                     srcB2BEp = RemoteEndpoint::cast(tempEp);
                     /* Add bi-directional session routes */
-                    if (srcB2BEp->IsValid() && srcEp->IsValid() && vDestEp->IsValid() && b2bEp->IsValid()) {
+                    if (srcB2BEp->IsValid() && srcEp->IsValid() && destEp->IsValid() && b2bEp->IsValid()) {
                         id = tempId;
                         optsOut = tempOpts;
-                        BusEndpoint busEndpointDest = BusEndpoint::cast(vDestEp);
                         BusEndpoint busEndpointSrc = BusEndpoint::cast(srcEp);
-                        status = ajObj.AddSessionRoute(id, busEndpointDest, &b2bEp, busEndpointSrc, srcB2BEp);
+                        status = ajObj.AddSessionRoute(id, destEp, &b2bEp, busEndpointSrc, srcB2BEp);
                         if (status != ER_OK) {
                             QCC_LogError(status, ("AddSessionRoute(%u, %s, %s, %s) failed",
                                                   id, dest, b2bEp->GetUniqueName().c_str(), srcEp->GetUniqueName().c_str(), srcB2BEp->GetUniqueName().c_str()));
