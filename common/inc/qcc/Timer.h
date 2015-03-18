@@ -188,6 +188,15 @@ class Timer {
     const qcc::String& GetName() const;
 
   private:
+    /*
+     * private copy constructor
+     */
+    Timer(const Timer&);
+
+    /*
+     * private assignment operator
+     */
+    Timer& operator=(const Timer& src);
 
     TimerImpl* timerImpl;
 };
