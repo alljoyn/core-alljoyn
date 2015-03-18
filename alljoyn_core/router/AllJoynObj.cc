@@ -1092,6 +1092,20 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
 
                     uint32_t tReplyCode;
                     ajObj.ReleaseLocks();
+
+                    /*
+                     * This is a joiner-to-joiner attach.  We presume that any
+                     * joiners must have already negotiated transport mask with
+                     * the session host.  TRANSPORT_ANY is appropriate here
+                     * since it really means join ANY transport previously
+                     * okayed by the session host.  This enables multipoint
+                     * sessions with heterogeneous transports explicity set at
+                     * the joiner -- i.e., one joiner can use TRANSPORT_TCP and
+                     * another can use TRANSPORT_UDP if the host binds with
+                     * TRANSPORT_TCP | TRANSPORT_UDP.
+                     */
+                    sme.opts.transports = TRANSPORT_ANY;
+
                     QCC_DbgPrintf(("JoinSessionThread::RunJoin(): SendAttachSession()"));
                     status = ajObj.SendAttachSession(sessionPort,
                                                      sender.c_str(),
