@@ -202,14 +202,6 @@ public class AboutApplication extends Application
         String ss = getPackageName();
         m_Bus = new BusAttachment(ss , BusAttachment.RemoteMessage.Receive);
 
-        //setting the password for the daemon to allow thin clients to connect
-        Log.d(TAG, "Setting daemon password");
-        Status pasStatus = PasswordManager.setCredentials("ALLJOYN_PIN_KEYX", "000000");
-
-        if ( pasStatus != Status.OK ) {
-            Log.e(TAG, "Failed to set password for daemon, Error: " + pasStatus);
-        }
-
         Status status = m_Bus.connect();
         Log.d(TAG, "bus.connect status: "+status);
 

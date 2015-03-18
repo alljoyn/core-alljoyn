@@ -58,7 +58,7 @@ namespace AllJoynUnityTest
 		[Fact]
 		public void SetCredentials()
 		{
-			Assert.Equal(AllJoyn.QStatus.OK, AllJoyn.PasswordManager.SetCredentials("ALLJOYN_PIN_KEYX", "1234"));
+			Assert.Equal(AllJoyn.QStatus.OK, AllJoyn.PasswordManager.SetCredentials("ALLJOYN_SRP_KEYX", "1234"));
 		}
 	}
 }

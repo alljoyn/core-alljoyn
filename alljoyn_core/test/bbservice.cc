@@ -192,14 +192,6 @@ class MyAuthListener : public AuthListener {
             creds.SetExpiration(g_keyExpiration);
         }
 
-        if (strcmp(authMechanism, "ALLJOYN_PIN_KEYX") == 0) {
-            if (credMask & AuthListener::CRED_PASSWORD) {
-                creds.SetPassword("ABCDEFGH");
-                printf("AuthListener returning fixed pin \"%s\" for %s\n", creds.GetPassword().c_str(), authMechanism);
-            }
-            return RequestCredentialsResponse(context, true, creds);
-        }
-
         if (strcmp(authMechanism, "ALLJOYN_SRP_KEYX") == 0) {
             if (credMask & AuthListener::CRED_PASSWORD) {
                 if (authCount == 1) {
@@ -988,7 +980,7 @@ int main(int argc, char** argv)
     LocalTestObject testObj(*g_msgBus, ::org::alljoyn::alljoyn_test::ObjectPath, reportInterval, opts);
     g_msgBus->RegisterBusObject(testObj, objSecure);
 
-    g_msgBus->EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA ALLJOYN_ECDHE_PSK ALLJOYN_RSA_KEYX ALLJOYN_SRP_KEYX ALLJOYN_SRP_LOGON ALLJOYN_ECDHE_NULL ALLJOYN_PIN_KEYX", new MyAuthListener(), keyStore, keyStore != NULL);
+    g_msgBus->EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA ALLJOYN_ECDHE_PSK ALLJOYN_RSA_KEYX ALLJOYN_SRP_KEYX ALLJOYN_SRP_LOGON ALLJOYN_ECDHE_NULL", new MyAuthListener(), keyStore, keyStore != NULL);
     /*
      * Pre-compute logon entry for user sleepy
      */
