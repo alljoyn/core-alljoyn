@@ -16,7 +16,7 @@
   </application>
   <uses-feature android:glEsVersion="0x00010001" />
   <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-  <uses-sdk android:minSdkVersion="10" android:targetSdkVersion="11" />
+  <uses-sdk android:minSdkVersion="16" />
 
   <!-- Permission required to use the TCP transport -->
   <uses-permission android:name="android.permission.INTERNET" />

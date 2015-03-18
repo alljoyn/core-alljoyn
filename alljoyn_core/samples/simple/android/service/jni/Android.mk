@@ -14,7 +14,7 @@ ALLJOYN_DIST := ../../..
 # (e.g. LOCAL_MODULE, LOCAL_SRC_FILES, LOCAL_STATIC_LIBRARIES, etc...),
 # with the exception of LOCAL_PATH. This is needed because all build
 # control files are parsed in a single GNU Make execution context where
-# all variables are global. 
+# all variables are global.
 #
 include $(CLEAR_VARS)
 
@@ -23,16 +23,16 @@ include $(CLEAR_VARS)
 # any spaces. Note that the build system will automatically add proper
 # prefix and suffix to the corresponding generated file. In other words,
 # a shared library module named 'foo' will generate 'libfoo.so'.
-# 
+#
 LOCAL_MODULE := SimpleService
 
 
 # The TARGET_PLATFORM defines the targetted Android Platform API level
-TARGET_PLATFORM := android-10
+TARGET_PLATFORM := android-16
 
 # An optional list of paths, relative to the NDK *root* directory,
 # which will be appended to the include search path when compiling
-# all sources (C, C++ and Assembly). These are placed before any 
+# all sources (C, C++ and Assembly). These are placed before any
 # corresponding inclusion flag in LOCAL_CFLAGS / LOCAL_CPPFLAGS.
 #
 # The path for NDK r8 and below is:
@@ -61,17 +61,17 @@ LOCAL_C_INCLUDES := \
 #
 LOCAL_CFLAGS := -Wno-psabi -Wno-write-strings -DANDROID_NDK -DTARGET_ANDROID -DLINUX -DQCC_OS_GROUP_POSIX -DQCC_OS_ANDROID -DQCC_CPU_ARM -DANDROID
 
-# The following line is just for reference here (thus commented out) 
-# as it is unnecessary because the default extension for C++ source 
-# files is '.cpp'. 
+# The following line is just for reference here (thus commented out)
+# as it is unnecessary because the default extension for C++ source
+# files is '.cpp'.
 #
-LOCAL_DEFAULT_CPP_EXTENSION := cc 
+LOCAL_DEFAULT_CPP_EXTENSION := cc
 
 # The LOCAL_SRC_FILES variables must contain a list of C and/or C++ source
 # files that will be built and assembled into a module. Note that you should
 # not list header and included files here, because the build system will
 # compute dependencies automatically for you; just list the source files
-# that will be passed directly to a compiler, and you should be good. 
+# that will be passed directly to a compiler, and you should be good.
 #
 LOCAL_SRC_FILES := \
 	Service_jni.cpp
@@ -110,6 +110,6 @@ LOCAL_ARM_MODE := arm
 # points to a GNU Makefile script that is in charge of collecting all the
 # information you defined in LOCAL_XXX variables since the latest
 # 'include $(CLEAR_VARS)' and determine what to build, and how to do it
-# exactly. There is also BUILD_STATIC_LIBRARY to generate a static library. 
+# exactly. There is also BUILD_STATIC_LIBRARY to generate a static library.
 #
 include $(BUILD_SHARED_LIBRARY)

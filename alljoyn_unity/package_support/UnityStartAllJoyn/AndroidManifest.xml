@@ -3,7 +3,7 @@
     android:versionCode="000001"
     android:versionName="00.00.01">
 
-    <uses-sdk android:minSdkVersion="10" />
+    <uses-sdk android:minSdkVersion="16" />
 
     <application android:label="@string/app_name"
         android:theme="@style/AppTheme">
