@@ -231,8 +231,6 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
 
     bool DisableRouterAdvertisement();
 
-    void UpdateDynamicScore();
-
     void UpdateRouterAdvertisementAndDynamicScore();
 
     /**
