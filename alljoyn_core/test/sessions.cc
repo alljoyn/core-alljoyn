@@ -921,9 +921,9 @@ int main(int argc, char** argv)
             SessionOpts opts;
             SessionPort port = static_cast<SessionPort>(StringToU32(NextTok(line), 0, 0));
             if (port == 0) {
-                printf("Usage: bind <port> [isMultipoint (false)] [traffic (TRAFFIC_MESSAGES)] [proximity (PROXIMITY_ANY)] [transports (TRANSPORT_TCP)]\n");
-                printf("Example:    bind 1 true TRAFFIC_MESSAGES PROXIMITY_ANY TRANSPORT_UDP\n");
-                printf("Equivalent: bind 1 true 1 255 256\n");
+                printf("Usage: bind <port> [isMultipoint (false)] [traffic (TRAFFIC_MESSAGES)] [proximity (PROXIMITY_ANY)] [transports (TRANSPORT_TCP)] [nametransfer (SESSION_NAMES)]\n");
+                printf("Example:    bind 1 true TRAFFIC_MESSAGES PROXIMITY_ANY TRANSPORT_UDP ALL_NAMES\n");
+                printf("Equivalent: bind 1 true 1 255 256 0\n");
                 continue;
             }
 
@@ -961,6 +961,19 @@ int main(int argc, char** argv)
                 opts.transports = static_cast<TransportMask>(StringToU32(tok, 0, TRANSPORT_ANY));
             }
 
+            tok = NextTok(line);
+            if (tok == "ALL_NAMES") {
+                opts.SetAllNames();
+            } else if (tok == "SESSION_NAMES") {
+                opts.SetSessionNames();
+            } else {
+                uint32_t nameTransfer = StringToU32(tok, 0, 1);
+                if (nameTransfer) {
+                    opts.SetSessionNames();
+                } else {
+                    opts.SetAllNames();
+                }
+            }
             DoBind(port, opts);
         } else if (cmd == "unbind") {
             SessionPort port = static_cast<SessionPort>(StringToU32(NextTok(line), 0, 0));
@@ -1017,9 +1030,9 @@ int main(int argc, char** argv)
             String name = NextTok(line);
             SessionPort port = static_cast<SessionPort>(StringToU32(NextTok(line), 0, 0));
             if (name.empty() || (port == 0)) {
-                printf("Usage:      join <name> <port> [isMultipoint] [traffic] [proximity] [transports]\n");
-                printf("Example:    join com.yadda 1 true TRAFFIC_MESSAGES PROXIMITY_ANY TRANSPORT_UDP\n");
-                printf("Equivalent: join com.yadda 1 true 1 255 256\n");
+                printf("Usage:      join <name> <port> [isMultipoint] [traffic] [proximity] [transports] [nameTransfer]\n");
+                printf("Example:    join com.yadda 1 true TRAFFIC_MESSAGES PROXIMITY_ANY TRANSPORT_UDP ALL_NAMES\n");
+                printf("Equivalent: join com.yadda 1 true 1 255 256 0\n");
                 continue;
             }
 
@@ -1058,12 +1071,23 @@ int main(int argc, char** argv)
                 opts.transports = static_cast<TransportMask>(StringToU32(tok, 0, TRANSPORT_ANY));
             }
 
+            tok = NextTok(line);
+            if (tok == "ALL_NAMES") {
+                opts.SetAllNames();
+            } else if (tok == "SESSION_NAMES") {
+                opts.SetSessionNames();
+            } else {
+                uint32_t nameTransfer = StringToU32(tok, 0, 1);
+                if (!nameTransfer) {
+                    opts.SetAllNames();
+                }
+            }
             DoJoin(name, port, opts);
         } else if (cmd == "asyncjoin") {
             String name = NextTok(line);
             SessionPort port = static_cast<SessionPort>(StringToU32(NextTok(line), 0, 0));
             if (name.empty() || (port == 0)) {
-                printf("Usage: asyncjoin <name> <port> [isMultipoint] [traffic] [proximity] [transports]\n");
+                printf("Usage: asyncjoin <name> <port> [isMultipoint] [traffic] [proximity] [transports] [nameTransfer]\n");
                 continue;
             }
             SessionOpts opts;
@@ -1071,6 +1095,11 @@ int main(int argc, char** argv)
             opts.traffic = static_cast<SessionOpts::TrafficType>(StringToU32(NextTok(line), 0, 0x1));
             opts.proximity = static_cast<SessionOpts::Proximity>(StringToU32(NextTok(line), 0, 0xFF));
             opts.transports = static_cast<TransportMask>(StringToU32(NextTok(line), 0, TRANSPORT_ANY));
+            uint32_t nameTransfer = StringToU32(NextTok(line), 0, 1);
+            if (!nameTransfer) {
+                opts.SetAllNames();
+            }
+
             DoJoinAsync(name, port, opts);
         } else if (cmd == "leave") {
             SessionId id = NextTokAsSessionId(line);
@@ -1219,15 +1248,15 @@ int main(int argc, char** argv)
             printf("debug <module_name> <level>                                   - Set debug level for a module\n");
             printf("requestname <name>                                            - Request a well-known name\n");
             printf("releasename <name>                                            - Release a well-known name\n");
-            printf("bind <port> [isMultipoint] [traffic] [proximity] [transports] - Bind a session port\n");
+            printf("bind <port> [isMultipoint] [traffic] [proximity] [transports] [nameTransfer] - Bind a session port\n");
             printf("unbind <port>                                                 - Unbind a session port\n");
             printf("advertise <name> [transports]                                 - Advertise a name\n");
             printf("canceladvertise <name> [transports]                           - Cancel an advertisement\n");
             printf("find <name_prefix>                                            - Discover names that begin with prefix\n");
             printf("cancelfind <name_prefix>                                      - Cancel discovering names that begins with prefix\n");
             printf("list                                                          - List port bindings, discovered names and active sessions\n");
-            printf("join <name> <port> [isMultipoint] [traffic] [proximity] [transports] - Join a session\n");
-            printf("asyncjoin <name> <port> [isMultipoint] [traffic] [proximity] [transports] - Join a session asynchronously\n");
+            printf("join <name> <port> [isMultipoint] [traffic] [proximity] [transports] [nameTransfer] - Join a session\n");
+            printf("asyncjoin <name> <port> [isMultipoint] [traffic] [proximity] [transports] [nameTransfer] - Join a session asynchronously\n");
             printf("removemember <sessionId> <memberName>                         - Remove a session member\n");
             printf("leave <sessionId>                                             - Leave a session\n");
             printf("leavehosted <sessionId>                                       - Leave a session as host\n");

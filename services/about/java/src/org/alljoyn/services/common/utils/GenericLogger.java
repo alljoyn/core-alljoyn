@@ -18,41 +18,53 @@ package org.alljoyn.services.common.utils;
 
 /**
  * A generic Java logger utility, that needs to be implemented per platform
+ * @deprecated
  */
+@Deprecated
 public interface GenericLogger {
 
     /**
      * Debug level message
+     * @deprecated
      * @param TAG Tag to be added to the message, i.e. class that writes the message
      * @param msg message to be sent to the logger
      */
+    @Deprecated
     public void debug(String TAG, String msg);
 
     /**
      * Info level message
+     * @deprecated
      * @param TAG Tag to be added to the message, i.e. class that writes the message
      * @param msg message to be sent to the logger
      */
+    @Deprecated
     public void info(String TAG, String msg);
 
     /**
      * Warn level message
+     * @deprecated
      * @param TAG Tag to be added to the message, i.e. class that writes the message
      * @param msg message to be sent to the logger
      */
+    @Deprecated
     public void warn(String TAG, String msg);
 
     /**
      * Error level message
+     * @deprecated
      * @param TAG Tag to be added to the message, i.e. class that writes the message
      * @param msg message to be sent to the logger
      */
+    @Deprecated
     public void error(String TAG, String msg);
 
     /**
      * Fatal level message
+     * @deprecated
      * @param TAG Tag to be added to the message, i.e. class that writes the message
      * @param msg message to be sent to the logger
      */
+    @Deprecated
     public void fatal(String TAG, String msg);
 }

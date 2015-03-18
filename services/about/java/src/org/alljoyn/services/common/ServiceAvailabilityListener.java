@@ -18,11 +18,15 @@ package org.alljoyn.services.common;
 
 /**
  * Listens to connection losses with a peer device
+ * @deprecated
  */
+@Deprecated
 public interface ServiceAvailabilityListener
 {
     /**
      * Fired when a connection to the peer device was lost.
+     * @deprecated
      */
+    @Deprecated
     public void connectionLost();
 }

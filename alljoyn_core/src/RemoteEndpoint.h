@@ -62,7 +62,8 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
 
       public:
 
-        Features() : isBusToBus(false), allowRemote(false), handlePassing(false), ajVersion(0), protocolVersion(0), processId(0), trusted(false)
+        Features() : isBusToBus(false), allowRemote(false), handlePassing(false), ajVersion(0), protocolVersion(0),
+            processId(0), trusted(false), nameTransfer(SessionOpts::P2P_NAMES)
         { }
 
         bool isBusToBus;       /**< When initiating connection this is an input value indicating if this is a bus-to-bus connection.
@@ -82,7 +83,8 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
         uint32_t processId;        /**< Process id optionally obtained from the remote peer */
 
         bool trusted;              /**< Indicated if the remote client was trusted */
-        SessionOpts::NameTransferType nameTransfer;
+
+        SessionOpts::NameTransferType nameTransfer; /**< The name transfer type set up for this endpoint */
 
     };
 
@@ -446,7 +448,7 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
      * Get SessionId for endpoint.
      * This is used for BusToBus endpoints only.
      */
-    uint32_t GetSessionId();
+    uint32_t GetSessionId() const;
 
     /**
      * Set SessionId for endpoint.

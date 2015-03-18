@@ -402,14 +402,14 @@ TEST_F(ProxyBusObjectTest, GetChildren) {
     numChildren = proxyObjSub->GetChildren();
     EXPECT_EQ((size_t)2, numChildren);
 
-    children = new ProxyBusObject *[numChildren];
+    children = new ProxyBusObject*[numChildren];
     proxyObjSub->GetChildren(children, numChildren);
 
     for (size_t i = 0; i < numChildren; ++i) {
         ASSERT_TRUE(children[i]) << "Test interface for children[" << i << "] should not be NULL.";
         ASSERT_TRUE(children[i]->IsValid()) << "Test interface for children[" << i << "] should a valid ProxyBusObject.";
         EXPECT_TRUE(children[i]->ImplementsInterface("org.alljoyn.test.ProxyBusObjectTest")) <<
-        "Test interface for children[" << i << "] should implement the org.alljoyn.test.ProxyBusObjectTest interface.";
+            "Test interface for children[" << i << "] should implement the org.alljoyn.test.ProxyBusObjectTest interface.";
 
         const InterfaceDescription* childIntf = children[i]->GetInterface("org.alljoyn.test.ProxyBusObjectTest");
         qcc::String introspect = childIntf->Introspect();
@@ -422,7 +422,7 @@ TEST_F(ProxyBusObjectTest, GetChildren) {
             "  </method>\n"
             "</interface>\n";
         EXPECT_STREQ(expectedIntrospect, introspect.c_str()) <<
-        "Test interface for children[" << i << "] did not have expected introspection.";
+            "Test interface for children[" << i << "] did not have expected introspection.";
     }
 
     status = proxyObj.RemoveChild("/org/alljoyn/test/ProxyObjectTest/ChildOne");

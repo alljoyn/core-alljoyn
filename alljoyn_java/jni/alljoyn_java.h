@@ -889,6 +889,14 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_registerProperties
 JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_unregisterPropertiesChangedListener
   (JNIEnv *, jobject, jstring, jobject);
 
+/*
+ * Class:     org_alljoyn_bus_ProxyBusObject
+ * Method:    enablePropertyCaching
+ * Signature: ()V
+ */
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_ProxyBusObject_enablePropertyCaching
+  (JNIEnv* env, jobject thiz);
+
 #ifdef __cplusplus
 }
 #endif

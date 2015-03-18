@@ -71,7 +71,7 @@ struct PingGroup {
 };
 
 // Context used to pass additional info in callbacks
-class PingAsyncContext  {
+class PingAsyncContext {
   public:
     PingAsyncContext(AutoPingerInternal* _pinger,
                      const qcc::String& _group,

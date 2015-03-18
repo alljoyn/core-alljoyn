@@ -220,7 +220,7 @@ class IPAddress {
      *
      * @return  ER_OK iff conversion was successful.
      */
-    static QStatus StringToIPv6(const qcc::String & address, uint8_t addrBuf[], size_t addrBufSize);
+    static QStatus StringToIPv6(const qcc::String& address, uint8_t addrBuf[], size_t addrBufSize);
 
     /**
      * Helper function to convert an IPv6 address string to its byte packed equivalent.
@@ -231,7 +231,7 @@ class IPAddress {
      *
      * @return  ER_OK iff conversion was successful.
      */
-    static QStatus StringToIPv4(const qcc::String & address, uint8_t addrBuf[], size_t addrBufSize);
+    static QStatus StringToIPv4(const qcc::String& address, uint8_t addrBuf[], size_t addrBufSize);
 
     /**
      * Renders the IPv4 address in binary format into a buffer.

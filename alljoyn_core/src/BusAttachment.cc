@@ -1026,14 +1026,14 @@ QStatus BusAttachment::RequestName(const char* requestedName, uint32_t flags)
         status = reply->GetArgs("u", &disposition);
         if (ER_OK == status) {
             switch (disposition) {
-            case DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER :
+            case DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER:
                 break;
 
-            case DBUS_REQUEST_NAME_REPLY_IN_QUEUE :
+            case DBUS_REQUEST_NAME_REPLY_IN_QUEUE:
                 status = ER_DBUS_REQUEST_NAME_REPLY_IN_QUEUE;
                 break;
 
-            case DBUS_REQUEST_NAME_REPLY_EXISTS :
+            case DBUS_REQUEST_NAME_REPLY_EXISTS:
                 status = ER_DBUS_REQUEST_NAME_REPLY_EXISTS;
                 break;
 

@@ -114,7 +114,7 @@ class ECDHEKeyXListener : public AuthListener {
             /*
              * Solicit the Pre shared secret
              */
-            if ((credMask & AuthListener::CRED_USER_NAME) == AuthListener::CRED_USER_NAME) {
+            if ((credMask& AuthListener::CRED_USER_NAME) == AuthListener::CRED_USER_NAME) {
                 printf("RequestCredentials received psk ID %s\n", creds.GetUserName().c_str());
             }
             /*
@@ -131,10 +131,10 @@ class ECDHEKeyXListener : public AuthListener {
             String privateKeyPEM;
             String certChainPEM;
             GenKeyAndSelfSignCert(privateKeyPEM, certChainPEM);
-            if ((credMask & AuthListener::CRED_PRIVATE_KEY) == AuthListener::CRED_PRIVATE_KEY) {
+            if ((credMask& AuthListener::CRED_PRIVATE_KEY) == AuthListener::CRED_PRIVATE_KEY) {
                 creds.SetPrivateKey(privateKeyPEM);
             }
-            if ((credMask & AuthListener::CRED_CERT_CHAIN) == AuthListener::CRED_CERT_CHAIN) {
+            if ((credMask& AuthListener::CRED_CERT_CHAIN) == AuthListener::CRED_CERT_CHAIN) {
                 creds.SetCertChain(certChainPEM);
             }
             creds.SetExpiration(100);  /* set the master secret expiry time to 100 seconds */

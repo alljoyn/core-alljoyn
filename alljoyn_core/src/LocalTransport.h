@@ -76,7 +76,7 @@ class _LocalEndpoint : public _BusEndpoint, public qcc::AlarmListener, public Me
     /**
      * Default constructor initializes an invalid endpoint. This allows for the declaration of uninitialized LocalEndpoint variables.
      */
-    _LocalEndpoint() : dispatcher(NULL), deferredCallbacks(NULL), observerCallbacks(NULL), bus(NULL), replyTimer("replyTimer", true) { }
+    _LocalEndpoint() : dispatcher(NULL), deferredCallbacks(NULL), observerCallbacks(NULL), cachedPropertyCallbacks(NULL), bus(NULL), replyTimer("replyTimer", true) { }
 
     /**
      * Constructor
@@ -391,6 +391,15 @@ class _LocalEndpoint : public _BusEndpoint, public qcc::AlarmListener, public Me
      */
     void TriggerObserverWork();
 
+    /**
+     * Schedule a GetPropertyAsync reply for a cached property.
+     */
+    void ScheduleCachedGetPropertyReply(ProxyBusObject* proxy,
+                                        ProxyBusObject::Listener* listener,
+                                        ProxyBusObject::Listener::GetPropertyCB callback,
+                                        void* context,
+                                        const MsgArg& value);
+
   private:
 
     /**
@@ -413,6 +422,13 @@ class _LocalEndpoint : public _BusEndpoint, public qcc::AlarmListener, public Me
     ObserverCallbacks* observerCallbacks;
 
     /**
+     * Perform a GetPropertyAsync reply callback for a cached property.
+     */
+    class CachedPropertyCallbacks;
+    friend class CachedPropertyCallbacks;
+    CachedPropertyCallbacks* cachedPropertyCallbacks;
+
+    /**
      * PushMessage worker.
      */
     QStatus DoPushMessage(Message& msg);
@@ -433,9 +449,18 @@ class _LocalEndpoint : public _BusEndpoint, public qcc::AlarmListener, public Me
     class ReplyContext;
 
     /**
+     * Type definition for a cached GetPropertyAsync reply context
+     */
+    class CachedGetPropertyReplyContext;
+
+    /**
      * Equality function for matching object paths
      */
-    struct PathEq { bool operator()(const char* p1, const char* p2) const { return (p1 == p2) || (strcmp(p1, p2) == 0); } };
+    struct PathEq {
+        bool operator()(const char* p1, const char* p2) const {
+            return (p1 == p2) || (strcmp(p1, p2) == 0);
+        }
+    };
 
     /**
      * Remove a reply handler from the reply handler list.
@@ -464,6 +489,15 @@ class _LocalEndpoint : public _BusEndpoint, public qcc::AlarmListener, public Me
      * List of contexts for method call replies.
      */
     std::map<uint32_t, ReplyContext*> replyMap;
+
+    /**
+     * List of contexts for cached GetProperty replies.
+     * This list is conceptually similar to the replyMap above, but it covers the
+     * special case where a GetPropertyAsync call can be serviced without an actual
+     * outgoing method call taking place.
+     * This list is protected with the replyMapLock.
+     */
+    std::set<CachedGetPropertyReplyContext*> cachedGetPropertyReplyContexts;
 
     bool running;                      /**< Is the local endpoint up and running */
     bool isRegistered;                 /**< true iff endpoint has been registered with router */

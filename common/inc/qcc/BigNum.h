@@ -39,7 +39,7 @@ class BigNum {
   public:
 
     // Default constructor - initializes the BigNum to zero
-    BigNum() : digits((uint32_t*) & zero_digit), length(1), neg(false), storage(NULL) { }
+    BigNum() : digits((uint32_t*) &zero_digit), length(1), neg(false), storage(NULL) { }
 
     // Constructor that initializes a BigNum from a small integer value.
     BigNum(uint32_t v);

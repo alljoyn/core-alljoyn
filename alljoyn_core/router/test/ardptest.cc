@@ -129,7 +129,9 @@ static bool FindConn(uint32_t number) {
     it = connList.find(number);
     if (it != connList.end()) {
         return true;
-    } else { return false; }
+    } else {
+        return false;
+    }
 }
 
 void GetData(ArdpRcvBuf* rcv) {

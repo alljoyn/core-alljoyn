@@ -56,9 +56,9 @@ namespace qcc {
 
 uint64_t emptyStringDummy[RequiredArrayLength(sizeof(String), uint64_t)];
 
-String& emptyString = (String &)emptyStringDummy;
+String& emptyString = (String&)emptyStringDummy;
 
-const String& String::Empty = (String &)emptyString;
+const String& String::Empty = (String&)emptyString;
 
 String::ManagedCtx String::nullContext = { 0 };
 

@@ -486,7 +486,7 @@ class ManagedObj {
 
   private:
 
-    ManagedObj<T>(ManagedCtx * context, T * object) : context(context), object(object)
+    ManagedObj<T>(ManagedCtx* context, T* object) : context(context), object(object)
     {
         assert(context->magic == ManagedCtxMagic);
         IncRef();
