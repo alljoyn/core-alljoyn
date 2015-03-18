@@ -793,7 +793,7 @@ TEST_F(ObserverTest, Multi)
     two.RegisterObject("b");
     two.RegisterObject("ab");
 
-    EXPECT_TRUE(WaitForAll(events));
+    EXPECT_TRUE(WaitForAll(events, 2 * MAX_WAIT_MS));
     EXPECT_EQ(4, CountProxies(obsAone));
     EXPECT_EQ(4, CountProxies(obsBone));
     EXPECT_EQ(2, CountProxies(obsABone));
@@ -816,7 +816,7 @@ TEST_F(ObserverTest, Multi)
     two.UnregisterObject("b");
     two.UnregisterObject("ab");
 
-    EXPECT_TRUE(WaitForAll(events));
+    EXPECT_TRUE(WaitForAll(events, 2 * MAX_WAIT_MS));
     EXPECT_EQ(0, CountProxies(obsAone));
     EXPECT_EQ(0, CountProxies(obsBone));
     EXPECT_EQ(0, CountProxies(obsABone));
@@ -1260,7 +1260,7 @@ TEST_F(ObserverTest, StressNumPartObjects) {
         qcc::Sleep(20);
     }
 
-    EXPECT_TRUE(WaitForAll(events));
+    EXPECT_TRUE(WaitForAll(events, MAX_WAIT_MS * (1 + STRESS_FACTOR / 2)));
 
     //clean up
     for (int i = 0; i < STRESS_FACTOR; i++) {
