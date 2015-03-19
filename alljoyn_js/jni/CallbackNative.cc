@@ -523,7 +523,7 @@ class GetInterfacesCallbackContext : public CallbackContext {
     GetInterfacesCallbackContext(CallbackNative* callbackNative, QStatus status, InterfaceDescriptionNative** interfaceDescriptions, size_t numInterfaces) :
         CallbackContext(callbackNative, status),
         numInterfaces(numInterfaces) {
-        this->interfaceDescriptions = new InterfaceDescriptionNative *[numInterfaces];
+        this->interfaceDescriptions = new InterfaceDescriptionNative*[numInterfaces];
         for (size_t i = 0; i < numInterfaces; ++i) {
             this->interfaceDescriptions[i] = interfaceDescriptions[i];
         }

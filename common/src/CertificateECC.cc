@@ -53,6 +53,13 @@ const qcc::String OID_DN_CN = "2.5.4.3";
 const qcc::String OID_BASIC_CONSTRAINTS = "2.5.29.19";
 const qcc::String OID_DIG_SHA256 = "2.16.840.1.101.3.4.2.1";
 
+static const char* EC_PRIVATE_KEY_PEM_BEGIN_TAG = "-----BEGIN EC PRIVATE KEY-----";
+static const char* EC_PRIVATE_KEY_PEM_END_TAG = "-----END EC PRIVATE KEY-----";
+static const char* PUBLIC_KEY_PEM_BEGIN_TAG = "-----BEGIN PUBLIC KEY-----";
+static const char* PUBLIC_KEY_PEM_END_TAG = "-----END PUBLIC KEY-----";
+static const char* CERTIFICATE_PEM_BEGIN_TAG = "-----BEGIN CERTIFICATE-----";
+static const char* CERTIFICATE_PEM_END_TAG = "-----END CERTIFICATE-----";
+
 static QStatus RetrieveNumOfChunksFromPEM(const String& encoded, const char* beginToken, const char* endToken, qcc::String chunks[],  size_t count)
 {
     size_t pos;
@@ -97,8 +104,8 @@ static QStatus StripTags(String& pem, const char* beg, const char* end)
 QStatus CertificateX509::EncodePrivateKeyPEM(const uint8_t* privateKey, size_t len, String& encoded)
 {
     QStatus status;
-    qcc::String beg = "-----BEGIN EC PRIVATE KEY-----\n";
-    qcc::String end = "-----END EC PRIVATE KEY-----";
+    qcc::String beg = EC_PRIVATE_KEY_PEM_BEGIN_TAG;
+    qcc::String end = EC_PRIVATE_KEY_PEM_END_TAG;
     qcc::String der;
     qcc::String prv((const char*) privateKey, len);
     qcc::String oid = OID_CRV_PRIME256V1;
@@ -112,7 +119,7 @@ QStatus CertificateX509::EncodePrivateKeyPEM(const uint8_t* privateKey, size_t l
     if (ER_OK != status) {
         return status;
     }
-    encoded = beg + pem + end;
+    encoded = beg + "\n" + pem + end;
 
     return ER_OK;
 }
@@ -122,7 +129,7 @@ QStatus CertificateX509::DecodePrivateKeyPEM(const String& encoded, uint8_t* pri
     QStatus status;
     qcc::String pem = encoded;
 
-    status = StripTags(pem, "-----BEGIN EC PRIVATE KEY-----", "-----END EC PRIVATE KEY-----");
+    status = StripTags(pem, EC_PRIVATE_KEY_PEM_BEGIN_TAG, EC_PRIVATE_KEY_PEM_END_TAG);
     if (ER_OK != status) {
         return status;
     }
@@ -168,8 +175,8 @@ QStatus CertificateX509::DecodePrivateKeyPEM(const String& encoded, uint8_t* pri
 QStatus CertificateX509::EncodePublicKeyPEM(const uint8_t* publicKey, size_t len, String& encoded)
 {
     QStatus status;
-    qcc::String beg = "-----BEGIN PUBLIC KEY-----\n";
-    qcc::String end = "-----END PUBLIC KEY-----";
+    qcc::String beg = PUBLIC_KEY_PEM_BEGIN_TAG;
+    qcc::String end = PUBLIC_KEY_PEM_END_TAG;
     qcc::String der;
     qcc::String oid1 = OID_KEY_ECC;
     qcc::String oid2 = OID_CRV_PRIME256V1;
@@ -186,7 +193,7 @@ QStatus CertificateX509::EncodePublicKeyPEM(const uint8_t* publicKey, size_t len
     if (ER_OK != status) {
         return status;
     }
-    encoded = beg + pem + end;
+    encoded = beg + "\n" + pem + end;
 
     return ER_OK;
 }
@@ -196,7 +203,7 @@ QStatus CertificateX509::DecodePublicKeyPEM(const String& encoded, uint8_t* publ
     QStatus status;
     qcc::String pem = encoded;
 
-    status = StripTags(pem, "-----BEGIN PUBLIC KEY-----", "-----END PUBLIC KEY-----");
+    status = StripTags(pem, PUBLIC_KEY_PEM_BEGIN_TAG, PUBLIC_KEY_PEM_END_TAG);
     if (ER_OK != status) {
         return status;
     }
@@ -286,33 +293,49 @@ static QStatus DecodeTime(uint64_t& epoch, const qcc::String& t)
         available in some platforms like Android or Windows */
     if (0xD == t.size()) {
         /* the time format is "%y%m%d%H%M%SZ".  Sample input: 150205230725Z */
-        sscanf(t.c_str(), "%2d%2d%2d%2d%2d%2dZ", &tm.tm_year, &tm.tm_mon, &tm.tm_mday, &tm.tm_hour, &tm.tm_min, &tm.tm_sec);
+        if (sscanf(t.c_str(), "%2d%2d%2d%2d%2d%2dZ", &tm.tm_year, &tm.tm_mon, &tm.tm_mday, &tm.tm_hour, &tm.tm_min, &tm.tm_sec) != 6) {
+            return ER_FAIL;
+        }
         if ((tm.tm_year >= 0) && (tm.tm_year <= 68)) {
             tm.tm_year += 100;    /* tm_year holds  Year - 1900 */
         }
-    } else {
+    } else if (0xF == t.size()) {
         /* the time format is "%Y%m%d%H%M%SZ".  Sample input: 20150205230725Z*/
-        sscanf(t.c_str(), "%4d%2d%2d%2d%2d%2dZ", &tm.tm_year, &tm.tm_mon, &tm.tm_mday, &tm.tm_hour, &tm.tm_min, &tm.tm_sec);
+        if (sscanf(t.c_str(), "%4d%2d%2d%2d%2d%2dZ", &tm.tm_year, &tm.tm_mon, &tm.tm_mday, &tm.tm_hour, &tm.tm_min, &tm.tm_sec) != 6) {
+            return ER_FAIL;
+        }
         tm.tm_year -= 1900;    /* tm_year hold Year - 1900 */
+    } else {
+        return ER_FAIL;
     }
     tm.tm_mon--;  /* month's range is [0-11] */
+    tm.tm_isdst = 0;
 
     /* Compute the GMT time from struct tm.
         Can't use timegm since it is not available in some platforms like Android and Windows */
 
-    /* figure out the local daylight saving value */
-    time_t currentTime = (time_t) GetEpochTimestamp() / 1000;
-    struct tm* ptm = gmtime(&currentTime);
-    tm.tm_isdst = ptm->tm_isdst;
-
-    /* convert the parsed tm struct to GMT time */
     time_t localTime = mktime(&tm);
-    ptm = gmtime(&localTime);
-    int32_t tzDiff = ptm->tm_hour - tm.tm_hour;
+    if (localTime < 0) {
+        return ER_FAIL;
+    }
+    struct tm* gtm = gmtime(&localTime);
+    if (!gtm) {
+        return ER_FAIL;
+    }
+    /* figure the time zone offset */
+    int32_t tzDiff = gtm->tm_hour - tm.tm_hour;
     if (tzDiff < 0) {
         tzDiff += 24;
     } else if (tzDiff > 12) {
         tzDiff = 24 - tzDiff;
+    }
+    /* figure out the local daylight saving value */
+    struct tm* ltm = localtime(&localTime);
+    if (!ltm) {
+        return ER_FAIL;
+    }
+    if (ltm->tm_isdst > 0) {
+        tzDiff++;
     }
     epoch = localTime - (tzDiff * 3600);
     return ER_OK;
@@ -690,8 +713,8 @@ QStatus CertificateX509::DecodeCertificatePEM(const qcc::String& pem)
     size_t pos;
     qcc::String rem;
     qcc::String der;
-    qcc::String tag1 = "-----BEGIN CERTIFICATE-----";
-    qcc::String tag2 = "-----END CERTIFICATE-----";
+    qcc::String tag1 = CERTIFICATE_PEM_BEGIN_TAG;
+    qcc::String tag2 = CERTIFICATE_PEM_END_TAG;
 
     pos = pem.find(tag1);
     if (pos == qcc::String::npos) {
@@ -718,14 +741,14 @@ QStatus CertificateX509::EncodeCertificatePEM(qcc::String& der, qcc::String& pem
 {
     QStatus status;
     qcc::String rem;
-    qcc::String tag1 = "-----BEGIN CERTIFICATE-----\n";
-    qcc::String tag2 = "-----END CERTIFICATE-----";
+    qcc::String tag1 = CERTIFICATE_PEM_BEGIN_TAG;
+    qcc::String tag2 = CERTIFICATE_PEM_END_TAG;
 
     status = Crypto_ASN1::EncodeBase64(der, rem);
     if (ER_OK != status) {
         return status;
     }
-    pem = tag1 + rem + tag2;
+    pem = tag1 + "\n" + rem + tag2;
 
     return status;
 }
@@ -867,7 +890,7 @@ QStatus CertificateX509::DecodeCertChainPEM(const String& encoded, CertificateX5
 {
     qcc::String* chunks = new  qcc::String[count];
 
-    QStatus status = RetrieveNumOfChunksFromPEM(encoded, "-----BEGIN CERTIFICATE-----", "-----END CERTIFICATE-----", chunks, count);
+    QStatus status = RetrieveNumOfChunksFromPEM(encoded, CERTIFICATE_PEM_BEGIN_TAG, CERTIFICATE_PEM_END_TAG, chunks, count);
     if (status != ER_OK) {
         delete [] chunks;
         return status;

@@ -986,7 +986,7 @@ TEST(InterfaceDescriptionTest, multiple_annotations)
                     (strcmp("org.alljoyn.test.five", name) == 0 && strcmp("luck", value) == 0) ||
                     (strcmp("org.alljoyn.test.six", name) == 0 && strcmp("bad", value) == 0) ||
                     (strcmp("org.freedesktop.DBus.Method.NoReply", name) == 0 && strcmp("true", value) == 0))
-        << "Expected annotation not found : " << name << " = " << value << "\n";
+            << "Expected annotation not found : " << name << " = " << value << "\n";
 
         free(name);
         free(value);

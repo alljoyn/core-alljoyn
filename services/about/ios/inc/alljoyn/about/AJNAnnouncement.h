@@ -18,13 +18,14 @@
 
 /** AJNAnnouncement is a storage class that holds information received from the server during announce
  */
+__deprecated
 @interface AJNAnnouncement : NSObject
 
-@property uint16_t version;
-@property uint16_t port;
-@property (strong, nonatomic) NSString *busName;
-@property (strong, nonatomic) NSMutableDictionary *objectDescriptions;
-@property (strong, nonatomic) NSMutableDictionary *aboutData;
+@property uint16_t version __deprecated;
+@property uint16_t port __deprecated;
+@property (strong, nonatomic) NSString *busName __deprecated;
+@property (strong, nonatomic) NSMutableDictionary *objectDescriptions __deprecated;
+@property (strong, nonatomic) NSMutableDictionary *aboutData __deprecated;
 
 /**
  Designated initializer
@@ -36,6 +37,6 @@
  @param aboutData Map of AboutData using NSMutableDictionary.
  @return AJNAnnouncement if successful.
  */
-- (id)initWithVersion:(uint16_t)version port:(uint16_t)port busName:(NSString *)busName objectDescriptions:(NSMutableDictionary *)objectDescs aboutData:(NSMutableDictionary **)aboutData;
+- (id)initWithVersion:(uint16_t)version port:(uint16_t)port busName:(NSString *)busName objectDescriptions:(NSMutableDictionary *)objectDescs aboutData:(NSMutableDictionary **)aboutData __deprecated;
 
 @end

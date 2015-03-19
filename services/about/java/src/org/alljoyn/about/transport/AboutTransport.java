@@ -32,7 +32,9 @@ import org.alljoyn.services.common.BusObjectDescription;
 
 /**
  * Definition of the About BusInterface
+ * @deprecated see org.alljoyn.bus.ifaces.About
  */
+@Deprecated
 @BusInterface (name = AboutTransport.INTERFACE_NAME)
 public interface AboutTransport extends BusObject
 {
@@ -40,35 +42,41 @@ public interface AboutTransport extends BusObject
     public final static String OBJ_PATH       = "/About";
 
     /**
+     * @deprecated see org.alljoyn.bus.ifaces.About
      * @return the version of the protocol
      * @throws BusException indicating failure obtaining Version property
      */
+    @Deprecated
     @BusProperty(signature="q")
     public short getVersion() throws BusException;
 
 
     /**
-     *
+     * @deprecated see org.alljoyn.bus.ifaces.About
      * @param languageTag IETF language tags specified by  RFC 5646
      * @return all the configuration fields based on the language tag.
      *         See The list of known configuration fields in About interface for
      *         more details.
      * @throws BusException indicating failure making GetAboutData method call 
      */
+    @Deprecated
     @BusMethod(signature = "s", replySignature="a{sv}")
     public Map<String, Variant> GetAboutData(String languageTag) throws BusException;
 
     /**
+     * @deprecated see org.alljoyn.bus.ifaces.About
      * Return the array of object paths and the list of all interfaces available
      * at the given object path.
      * @return the array of object paths and the list of all interfaces available
      *         at the given object path.
      * @throws BusException indicating failure making GetObjectDescription method call
      */
+    @Deprecated
     @BusMethod(replySignature="a(oas)")
     public BusObjectDescription[] GetObjectDescription() throws BusException;
 
     /**
+     * @deprecated see org.alljoyn.bus.ifaces.About
      * This signal is used to announce the list of all interfaces available at
      * the given object path.
      * @param version The interface version is added since it might help with the
@@ -80,6 +88,7 @@ public interface AboutTransport extends BusObject
      *                        pairs that are meaningful to the service and its
      *                        potential consumers) "a{sv}"
      */
+    @Deprecated
     @BusSignal (signature="qqa(oas)a{sv}")
     public void Announce(short version, short port, BusObjectDescription[] objectDescriptions, Map<String,Variant> serviceMetadata);
 

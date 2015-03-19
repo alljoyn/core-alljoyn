@@ -20,6 +20,7 @@
  AJNAnnouncementListener is a helper protocol used by AnnounceHandlerAdapter to receive AboutService signal notification.
  The user of the class need to implement the protocol method.
  */
+__deprecated
 @protocol AJNAnnouncementListener <NSObject>
 
 /**
@@ -30,5 +31,5 @@
  @param objectDescs Map of ObjectDescriptions using NSMutableDictionary, describing interfaces
  @param aboutData Map of AboutData using NSMutableDictionary, describing message args
  */
-- (void)announceWithVersion:(uint16_t)version port:(uint16_t)port busName:(NSString *)busName objectDescriptions:(NSMutableDictionary *)objectDescs aboutData:(NSMutableDictionary **)aboutData;
+- (void)announceWithVersion:(uint16_t)version port:(uint16_t)port busName:(NSString *)busName objectDescriptions:(NSMutableDictionary *)objectDescs aboutData:(NSMutableDictionary **)aboutData __deprecated;
 @end

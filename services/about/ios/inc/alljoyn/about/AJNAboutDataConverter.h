@@ -24,6 +24,7 @@
  AJNAboutDataConverter is a utility class to convert About Service data structurs into an Objective-c objects.
  Note that incase of illegal content - an emty string will be in use:  ERRORSTRING = @"";
  */
+__deprecated
 @interface AJNAboutDataConverter : NSObject
 
 /**
@@ -31,32 +32,32 @@
  @param ajnMsgArg An AJNMessageArgument object.
  @return NSString representation of the AJNMessageArgument content.
  */
-+ (NSString *)messageArgumentToString:(AJNMessageArgument *)ajnMsgArg;
++ (NSString *)messageArgumentToString:(AJNMessageArgument *)ajnMsgArg __deprecated;
 
 /**
  Convert NSMutableDictionary of about data in the format of NSString/AJNMessageArgument to NSString.
  @param aboutDataDict NSMutableDictionary of about data in the format of NSString/AJNMessageArgument.
  @return NSString representation of the NSMutableDictionary content.
  */
-+ (NSString *)aboutDataDictionaryToString:(NSMutableDictionary *)aboutDataDict;
++ (NSString *)aboutDataDictionaryToString:(NSMutableDictionary *)aboutDataDict __deprecated;
 
 /**
  Convert c++ map of about data in the format of qcc::String/ajn::MsgArg to NSMutableDictionary of NSString/AJNMessageArgument.
  @param aboutData C++ map of about data in the format of qcc::String/ajn::MsgArg.
  @return NSMutableDictionary of NSString/AJNMessageArgument.
  */
-+ (NSMutableDictionary *)convertToAboutDataDictionary:(const ajn ::services ::AnnounceHandler ::AboutData&)aboutData;
++ (NSMutableDictionary *)convertToAboutDataDictionary:(const ajn ::services ::AnnounceHandler ::AboutData&)aboutData __deprecated;
 
 /** Convert c++ map of object descriptions in the format of qcc::String/std::vector<qcc::String> to NSMutableDictionary of NSString/NSMutableArray.
  @param objectDescs C++ map of object descriptions in the format of qcc::String/std::vector<qcc::String>.
  @return NSMutableDictionary of NSString/NSMutableArray.
  */
-+ (NSMutableDictionary *)convertToObjectDescriptionsDictionary:(const ajn ::services ::AnnounceHandler ::ObjectDescriptions&)objectDescs;
++ (NSMutableDictionary *)convertToObjectDescriptionsDictionary:(const ajn ::services ::AnnounceHandler ::ObjectDescriptions&)objectDescs __deprecated;
 
 /**
  Convert NSMutableDictionary of object descriptions in the format of NSString/NSMutableArray to NSString.
  @param objectDescDict NSMutableDictionary of object descriptions in the format of NSString/NSMutableArray.
  @return NSString representation of the object descriptions NSMutableDictionary content.
  */
-+ (NSString *)objectDescriptionsDictionaryToString:(NSMutableDictionary *)objectDescDict;
++ (NSString *)objectDescriptionsDictionaryToString:(NSMutableDictionary *)objectDescDict __deprecated;
 @end

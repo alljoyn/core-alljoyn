@@ -558,6 +558,26 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
     void AttachSession(const InterfaceDescription::Member* member, Message& msg);
 
     /**
+     * Respond to a remote daemon request to attach a session through this daemon.
+     *
+     * The input Message (METHOD_CALL) is expected to contain the following parameters:
+     *   sessionPort   SessionPort  The session port.
+     *   joiner        string       The unique name of the session joiner.
+     *   creator       string       The name of the session creator.
+     *   optsIn        SesionOpts   The session options requested by the joiner.
+     *   namesIn       Array of unique names with their aliases.
+     *
+     * The output Message (METHOD_REPLY) contains the following parameters:
+     *   resultCode    uint32       A ALLJOYN_JOINSESSION_* reply code (see AllJoynStd.h).
+     *   sessionId     uint32       The session id (valid if resultCode indicates success).
+     *   opts          SessionOpts  The actual (final) session options.
+     *   namesOut      Array of unique names with their aliases.
+     * @param member  Member.
+     * @param msg     The incoming message.
+     */
+    void AttachSessionWithNames(const InterfaceDescription::Member* member, Message& msg);
+
+    /**
      * Respond to a remote daemon request to get session info from this daemon.
      *
      * The input Message (METHOD_CALL) is expected to contain the following parameters:
@@ -666,6 +686,14 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
         bool isJoin;
     };
 
+    typedef enum {
+        JOINER, /* AttachSession from new session joiner to Host */
+        HOST,   /* AttachSession response from session host to new joiner */
+        HOST_FORWARD, /* MP member AttachSession forwarded by host to existing session member */
+        MEMBER,       /* Response from existing session member to MP member AttachSession. */
+        HOST_FORWARD_REPLY /* Reply from host to new joiner for MP AttachSession member attach */
+    }CallerType;
+
     /**
      * Get a Transport instance for a specified transport specification.
      * Transport specifications have the form:
@@ -727,6 +755,8 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
      * @param outgoingSessionId     SessionId to use for outgoing AttachSession message. Should
      *                              be 0 for newly created (non-multipoint) sessions.
      * @param busAddr          Destination bus address from advertisement or GetSessionInfo.
+     * @param nameTransfer     The Nametransfer for this session. One of ALL_NAMES, SLS_NAMES, P2P_NAMES and MP_NAMES.
+     * @param type             The type of caller of this function: JOINER, HOST, HOST_FORWARD, MEMBER and HOST_FORWARD_REPLY.
      * @param optsIn           Session options requested by joiner.
      * @param replyCode        [OUT] SessionAttach response code
      * @param sessionId        [OUT] session id if reply code indicates success.
@@ -741,6 +771,8 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
                                       const char* remoteControllerName,
                                       SessionId outgoingSessionId,
                                       const char* busAddr,
+                                      SessionOpts::NameTransferType nameTransfer,
+                                      CallerType type,
                                       const SessionOpts& optsIn,
                                       uint32_t& replyCode,
                                       SessionId& sessionId,
@@ -1220,6 +1252,32 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
     TransportMask GetCompleteTransportMaskFilter();
     void SendIPNSResponse(qcc::String name, uint32_t replyCode);
     bool IsSelfJoinSupported(BusEndpoint& joinerEp) const;
+
+    /**
+     * Get all the names to be sent for this session.
+     */
+    QStatus GetNames(MsgArg& argArray,
+                     RemoteEndpoint& endpoint,
+                     SessionOpts::NameTransferType nameTransfer,
+                     CallerType type,
+                     qcc::String joinerName = "",
+                     uint32_t sessionId = 0,
+                     qcc::String sessionHost = "");
+
+    /**
+     * Add all the names in arg to the NameTable and forward this message to the required routing nodes.
+     */
+    bool NamesHandler(Message msg, MsgArg arg);
+
+    /**
+     * Check if this endpoint is a member of the session or is a routing node that has a leaf that is a member in this session.
+     * @param hostName Host of the session
+     * @param name Endpoint to check
+     * @param sessionId ID of the session
+     * @return true if name is a member of the sessionId hosted by hostName.
+     */
+    bool IsMemberOfSession(qcc::String hostName, qcc::String name, uint32_t sessionId);
+
 };
 
 }

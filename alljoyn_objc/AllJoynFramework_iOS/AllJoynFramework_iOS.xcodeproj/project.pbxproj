@@ -45,6 +45,12 @@
 		7DD10A6E19F9720500CACF38 /* AJNAboutObjectDescription.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DD10A6219F9720500CACF38 /* AJNAboutObjectDescription.mm */; };
 		7DD10A6F19F9720500CACF38 /* AJNAboutProxy.h in Headers */ = {isa = PBXBuildFile; fileRef = 7DD10A6319F9720500CACF38 /* AJNAboutProxy.h */; };
 		7DD10A7019F9720500CACF38 /* AJNAboutProxy.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DD10A6419F9720500CACF38 /* AJNAboutProxy.mm */; };
+		89E26B861AB85A1E0030629B /* AJNObserverTestObjects.mm in Sources */ = {isa = PBXBuildFile; fileRef = 89E26B811AB85A1E0030629B /* AJNObserverTestObjects.mm */; };
+		89E26B871AB85A1E0030629B /* ObserverTestObjects.m in Sources */ = {isa = PBXBuildFile; fileRef = 89E26B831AB85A1E0030629B /* ObserverTestObjects.m */; };
+		89E26B881AB85A1E0030629B /* ObserverTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 89E26B851AB85A1E0030629B /* ObserverTests.m */; };
+		89E26B8C1AB860AF0030629B /* AJNObserver.h in Headers */ = {isa = PBXBuildFile; fileRef = 89E26B891AB860AF0030629B /* AJNObserver.h */; };
+		89E26B8D1AB860AF0030629B /* AJNObserver.mm in Sources */ = {isa = PBXBuildFile; fileRef = 89E26B8A1AB860AF0030629B /* AJNObserver.mm */; };
+		89E26B8E1AB860AF0030629B /* AJNObserverListener.h in Headers */ = {isa = PBXBuildFile; fileRef = 89E26B8B1AB860AF0030629B /* AJNObserverListener.h */; };
 		AC1030AC156EC82300D2853A /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC1030AB156EC82300D2853A /* Foundation.framework */; };
 		AC1030BA156EC82300D2853A /* SenTestingKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC1030B9156EC82300D2853A /* SenTestingKit.framework */; };
 		AC1030BD156EC82300D2853A /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC1030AB156EC82300D2853A /* Foundation.framework */; };
@@ -166,6 +172,15 @@
 		7DD10A6219F9720500CACF38 /* AJNAboutObjectDescription.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNAboutObjectDescription.mm; path = ../../AllJoynFramework/AllJoynFramework/AJNAboutObjectDescription.mm; sourceTree = "<group>"; };
 		7DD10A6319F9720500CACF38 /* AJNAboutProxy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNAboutProxy.h; path = ../../AllJoynFramework/AllJoynFramework/AJNAboutProxy.h; sourceTree = "<group>"; };
 		7DD10A6419F9720500CACF38 /* AJNAboutProxy.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNAboutProxy.mm; path = ../../AllJoynFramework/AllJoynFramework/AJNAboutProxy.mm; sourceTree = "<group>"; };
+		89E26B801AB85A1E0030629B /* AJNObserverTestObjects.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNObserverTestObjects.h; path = ../../AllJoynFramework/AllJoynFrameworkTests/AJNObserverTestObjects.h; sourceTree = "<group>"; };
+		89E26B811AB85A1E0030629B /* AJNObserverTestObjects.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNObserverTestObjects.mm; path = ../../AllJoynFramework/AllJoynFrameworkTests/AJNObserverTestObjects.mm; sourceTree = "<group>"; };
+		89E26B821AB85A1E0030629B /* ObserverTestObjects.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ObserverTestObjects.h; path = ../../AllJoynFramework/AllJoynFrameworkTests/ObserverTestObjects.h; sourceTree = "<group>"; };
+		89E26B831AB85A1E0030629B /* ObserverTestObjects.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = ObserverTestObjects.m; path = ../../AllJoynFramework/AllJoynFrameworkTests/ObserverTestObjects.m; sourceTree = "<group>"; };
+		89E26B841AB85A1E0030629B /* ObserverTests.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ObserverTests.h; path = ../../AllJoynFramework/AllJoynFrameworkTests/ObserverTests.h; sourceTree = "<group>"; };
+		89E26B851AB85A1E0030629B /* ObserverTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = ObserverTests.m; path = ../../AllJoynFramework/AllJoynFrameworkTests/ObserverTests.m; sourceTree = "<group>"; };
+		89E26B891AB860AF0030629B /* AJNObserver.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNObserver.h; path = ../../AllJoynFramework/AllJoynFramework/AJNObserver.h; sourceTree = "<group>"; };
+		89E26B8A1AB860AF0030629B /* AJNObserver.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNObserver.mm; path = ../../AllJoynFramework/AllJoynFramework/AJNObserver.mm; sourceTree = "<group>"; };
+		89E26B8B1AB860AF0030629B /* AJNObserverListener.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNObserverListener.h; path = ../../AllJoynFramework/AllJoynFramework/AJNObserverListener.h; sourceTree = "<group>"; };
 		AC1030A8156EC82300D2853A /* libAllJoynFramework_iOS.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libAllJoynFramework_iOS.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		AC1030AB156EC82300D2853A /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		AC1030AF156EC82300D2853A /* AllJoynFramework_iOS-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "AllJoynFramework_iOS-Prefix.pch"; sourceTree = "<group>"; };
@@ -312,6 +327,9 @@
 		AC1030AD156EC82300D2853A /* AllJoynFramework_iOS */ = {
 			isa = PBXGroup;
 			children = (
+				89E26B891AB860AF0030629B /* AJNObserver.h */,
+				89E26B8A1AB860AF0030629B /* AJNObserver.mm */,
+				89E26B8B1AB860AF0030629B /* AJNObserverListener.h */,
 				7DC6D47C1A02867500764C73 /* AJNAboutIconObject.mm */,
 				7DC6D47D1A02867500764C73 /* AJNAboutIconObject.h */,
 				7DC6D47E1A02867500764C73 /* AJNAboutIconProxy.mm */,
@@ -408,6 +426,12 @@
 		AC1030C1156EC82300D2853A /* AllJoynFramework_iOSTests */ = {
 			isa = PBXGroup;
 			children = (
+				89E26B801AB85A1E0030629B /* AJNObserverTestObjects.h */,
+				89E26B811AB85A1E0030629B /* AJNObserverTestObjects.mm */,
+				89E26B821AB85A1E0030629B /* ObserverTestObjects.h */,
+				89E26B831AB85A1E0030629B /* ObserverTestObjects.m */,
+				89E26B841AB85A1E0030629B /* ObserverTests.h */,
+				89E26B851AB85A1E0030629B /* ObserverTests.m */,
 				AC339C99157FBF8700AF660C /* AJNBasicObject.h */,
 				AC339C9A157FBF8700AF660C /* AJNBasicObject.mm */,
 				AC339C9B157FBF8700AF660C /* BasicObject.h */,
@@ -443,6 +467,8 @@
 			files = (
 				7DD10A6919F9720500CACF38 /* AJNAboutListenerImpl.h in Headers */,
 				7DD10A6619F9720500CACF38 /* AJNAboutDataListenerImpl.h in Headers */,
+				89E26B8E1AB860AF0030629B /* AJNObserverListener.h in Headers */,
+				89E26B8C1AB860AF0030629B /* AJNObserver.h in Headers */,
 				7DC6D4831A02867500764C73 /* AJNAboutIconObject.h in Headers */,
 				AC1030D3156EC84000D2853A /* AJNBus.h in Headers */,
 				AC103103156EC85100D2853A /* AJNBusAttachment.h in Headers */,
@@ -601,6 +627,7 @@
 				AC103113156EC85100D2853A /* AJNInterfaceProperty.mm in Sources */,
 				7DD10A6C19F9720500CACF38 /* AJNAboutObject.mm in Sources */,
 				AC103115156EC85100D2853A /* AJNMessage.mm in Sources */,
+				89E26B8D1AB860AF0030629B /* AJNObserver.mm in Sources */,
 				AC103117156EC85100D2853A /* AJNMessageArgument.mm in Sources */,
 				AC103119156EC85100D2853A /* AJNObject.m in Sources */,
 				AC10311B156EC85100D2853A /* AJNProxyBusObject.mm in Sources */,
@@ -632,9 +659,12 @@
 			files = (
 				AC103162156ED19100D2853A /* BusAttachmentTests.m in Sources */,
 				AC103163156ED19100D2853A /* InterfaceDescriptionTests.m in Sources */,
+				89E26B871AB85A1E0030629B /* ObserverTestObjects.m in Sources */,
+				89E26B861AB85A1E0030629B /* AJNObserverTestObjects.mm in Sources */,
 				AC339C9F157FBF8700AF660C /* AJNBasicObject.mm in Sources */,
 				AC339CA0157FBF8700AF660C /* BasicObject.m in Sources */,
 				AC339CA1157FBF8700AF660C /* BusObjectTests.m in Sources */,
+				89E26B881AB85A1E0030629B /* ObserverTests.m in Sources */,
 				AC60949D15A24A1C0006B735 /* TestAuthenticationListener.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

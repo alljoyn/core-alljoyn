@@ -196,7 +196,7 @@ FileSink::FileSink(qcc::String fileName, Mode mode) : handle(INVALID_HANDLE_VALU
 
     DWORD attributes;
     switch (mode) {
-    case PRIVATE :
+    case PRIVATE:
         attributes = FILE_ATTRIBUTE_HIDDEN;
         break;
 

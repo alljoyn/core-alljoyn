@@ -889,6 +889,14 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_registerProperties
 JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_unregisterPropertiesChangedListener
   (JNIEnv *, jobject, jstring, jobject);
 
+/*
+ * Class:     org_alljoyn_bus_ProxyBusObject
+ * Method:    enablePropertyCaching
+ * Signature: ()V
+ */
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_ProxyBusObject_enablePropertyCaching
+  (JNIEnv* env, jobject thiz);
+
 #ifdef __cplusplus
 }
 #endif
@@ -1754,6 +1762,41 @@ JNIEXPORT jstring JNICALL Java_org_alljoyn_bus_Version_getBuildInfo
  */
 JNIEXPORT jint JNICALL Java_org_alljoyn_bus_Version_getNumeric
   (JNIEnv *, jclass);
+
+#ifdef __cplusplus
+}
+#endif
+#endif
+/* Header for class org_alljoyn_bus_Observer */
+
+#ifndef _Included_org_alljoyn_bus_Observer
+#define _Included_org_alljoyn_bus_Observer
+#ifdef __cplusplus
+extern "C" {
+#endif
+/*
+ * Class:     org_alljoyn_bus_Observer
+ * Method:    create
+ * Signature: (Lorg/alljoyn/bus/BusAttachment;[Ljava/lang/String;)V
+ */
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_Observer_create
+  (JNIEnv *, jobject, jobject, jobjectArray);
+
+/*
+ * Class:     org_alljoyn_bus_Observer
+ * Method:    destroy
+ * Signature: ()V
+ */
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_Observer_destroy
+  (JNIEnv *, jobject);
+
+/*
+ * Class:     org_alljoyn_bus_Observer
+ * Method:    triggerEnablePendingListeners
+ * Signature: ()V
+ */
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_Observer_triggerEnablePendingListeners
+  (JNIEnv *, jobject);
 
 #ifdef __cplusplus
 }

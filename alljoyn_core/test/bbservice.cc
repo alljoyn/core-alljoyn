@@ -260,7 +260,7 @@ class MyAuthListener : public AuthListener {
             return RequestCredentialsResponse(context, true, creds);
         }
         if (strcmp(authMechanism, "ALLJOYN_ECDHE_PSK") == 0) {
-            if ((credMask & AuthListener::CRED_USER_NAME) == AuthListener::CRED_USER_NAME) {
+            if ((credMask& AuthListener::CRED_USER_NAME) == AuthListener::CRED_USER_NAME) {
                 printf("AuthListener::RequestCredentials for key exchange %s received psk ID %s\n", authMechanism, creds.GetUserName().c_str());
             }
             String psk("123456");
@@ -268,12 +268,12 @@ class MyAuthListener : public AuthListener {
             return RequestCredentialsResponse(context, true, creds);
         }
         if (strcmp(authMechanism, "ALLJOYN_ECDHE_ECDSA") == 0) {
-            if ((credMask & AuthListener::CRED_PRIVATE_KEY) == AuthListener::CRED_PRIVATE_KEY) {
+            if ((credMask& AuthListener::CRED_PRIVATE_KEY) == AuthListener::CRED_PRIVATE_KEY) {
                 String pk(ecdsaPrivateKeyPEM, strlen(ecdsaPrivateKeyPEM));
                 creds.SetPrivateKey(pk);
                 printf("AuthListener::RequestCredentials for key exchange %s sends DSA private key %s\n", authMechanism, pk.c_str());
             }
-            if ((credMask & AuthListener::CRED_CERT_CHAIN) == AuthListener::CRED_CERT_CHAIN) {
+            if ((credMask& AuthListener::CRED_CERT_CHAIN) == AuthListener::CRED_CERT_CHAIN) {
                 String cert(ecdsaCertChainX509PEM, strlen(ecdsaCertChainX509PEM));
                 creds.SetCertChain(cert);
                 printf("AuthListener::RequestCredentials for key exchange %s sends DSA public cert %s\n", authMechanism, cert.c_str());

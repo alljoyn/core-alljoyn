@@ -25,6 +25,7 @@ import org.alljoyn.bus.SessionListener;
 import org.alljoyn.bus.SessionOpts;
 import org.alljoyn.bus.Status;
 
+@Deprecated
 public abstract class ClientBaseImpl implements ClientBase
 {
     public final static String TAG = ClientBaseImpl.class.getName();
@@ -81,6 +82,7 @@ public abstract class ClientBaseImpl implements ClientBase
 
     /**
      * Constructor
+     * @deprecated
      * @param peerName The PeerName to connect
      * @param bus {@link BusAttachment}
      * @param serviceAvailabilityListener Listener to receive session related events
@@ -88,7 +90,6 @@ public abstract class ClientBaseImpl implements ClientBase
      * @param interfaceClass The reflection of the AllJoyn {@link BusObject}
      *                       interface that the remote object implements
      * @param port port number to connect
-     * @deprecated
      */
     @Deprecated
     public ClientBaseImpl( String peerName,
@@ -110,6 +111,7 @@ public abstract class ClientBaseImpl implements ClientBase
 
     /**
      * Constructor
+     * @deprecated
      * @param peerName The PeerName to connect
      * @param bus {@link BusAttachment}
      * @param serviceAvailabilityListener Listener to receive session related events
@@ -119,6 +121,7 @@ public abstract class ClientBaseImpl implements ClientBase
      * The array is used in {@link ProxyBusObject} creation
      * @param port port number to connect
      */
+    @Deprecated
     public ClientBaseImpl( String peerName,
             BusAttachment bus,
             ServiceAvailabilityListener serviceAvailabilityListener,
@@ -174,8 +177,10 @@ public abstract class ClientBaseImpl implements ClientBase
 
     /**
      * @see org.alljoyn.services.common.ClientBase#initBus(org.alljoyn.bus.BusAttachment)
+     * @deprecated
      */
     @Override
+    @Deprecated
     public void initBus(BusAttachment busAttachment) throws Exception {
         if ( !setBusAttachment(busAttachment) ) {
             throw new Exception("Illegal BusAttachment received");
@@ -184,8 +189,10 @@ public abstract class ClientBaseImpl implements ClientBase
 
     /**
      * @see org.alljoyn.services.common.ClientBase#getVersion()
+     * @deprecated
      */
     @Override
+    @Deprecated
     public abstract short getVersion() throws BusException;
 
     /**
@@ -208,8 +215,10 @@ public abstract class ClientBaseImpl implements ClientBase
 
     /**
      * @see org.alljoyn.services.common.ClientBase#getPeerName()
+     * @deprecated
      */
     @Override
+    @Deprecated
     public String getPeerName()
     {
         return m_peerName;
@@ -217,8 +226,10 @@ public abstract class ClientBaseImpl implements ClientBase
 
     /**
      * @see org.alljoyn.services.common.ClientBase#getSessionId()
+     * @deprecated
      */
     @Override
+    @Deprecated
     public int getSessionId()
     {
         return m_sessionId;
@@ -230,8 +241,10 @@ public abstract class ClientBaseImpl implements ClientBase
      * Providing sessionId of NULL changes the internal object state to be disconnected,
      * otherwise the state of the object is set to be connected.
      *
+     * @deprecated see org.alljoyn.bus.BusAttachment.announce
      * @param sessionId The session id to be set to the object
      */
+    @Deprecated
     public void setSessionId(Integer sessionId) {
         if ( sessionId == null ) {
             m_isConnected = false;
@@ -244,8 +257,10 @@ public abstract class ClientBaseImpl implements ClientBase
     }//setSessionId
 
     /**
+     * @deprecated
      * @return The name of the remote object
      */
+    @Deprecated
     public String getObjectPath()
     {
         return m_objectPath;
@@ -268,8 +283,10 @@ public abstract class ClientBaseImpl implements ClientBase
     }//getObjectClass
 
     /**
+     * @deprecated
      * @return Array of the AllJoyn {@link BusObject} interfaces classes that the remote object implements
      */
+    @Deprecated
     public Class<?>[] getObjClassArr()
     {
         return m_interfaceClassArr;
@@ -277,8 +294,10 @@ public abstract class ClientBaseImpl implements ClientBase
 
     /**
      * @see org.alljoyn.services.common.ClientBase#disconnect()
+     * @deprecated
      */
     @Override
+    @Deprecated
     public void disconnect()
     {
         if (m_isConnected)
@@ -293,8 +312,10 @@ public abstract class ClientBaseImpl implements ClientBase
 
     /**
      * @see org.alljoyn.services.common.ClientBase#connect()
+     * @deprecated
      */
     @Override
+    @Deprecated
     public Status connect() {
 
         SessionOpts sessionOpts        = createSessionOpts();
@@ -303,6 +324,7 @@ public abstract class ClientBaseImpl implements ClientBase
         Status status = m_bus.joinSession(getPeerName(), m_port, sessionId, sessionOpts, new SessionListener()
         {
             @Override
+            @Deprecated
             public void sessionLost(int sessionId, int reason)
             {
                 if (getSessionId() == sessionId)
@@ -313,10 +335,12 @@ public abstract class ClientBaseImpl implements ClientBase
             }
 
             @Override
+            @Deprecated
             public void sessionMemberAdded(int sessionId, String uniqueName)
             {
             }
 
+            @Deprecated
             public void sessionMemberRemoved(int sessionId, String uniqueName)
             {
             }
@@ -337,7 +361,9 @@ public abstract class ClientBaseImpl implements ClientBase
 
     /**
      * The method is called by the {@link SessionListener#sessionLost(int)}
+     * @deprecated
      */
+    @Deprecated
     public void connectionLost()
     {
         m_isConnected = false;
@@ -349,8 +375,10 @@ public abstract class ClientBaseImpl implements ClientBase
 
     /**
      * @see org.alljoyn.services.common.ClientBase#isConnected()
+     * @deprecated
      */
     @Override
+    @Deprecated
     public boolean isConnected(){
         return m_isConnected;
     }

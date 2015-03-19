@@ -21,7 +21,7 @@
  AJNAboutClient is a helper class used by an AllJoyn IoE client application to discover services being offered by nearby AllJoyn
  IoE service applications. AJNAboutClient enables the user of the class to interact with the remote AboutService instance.
  */
-
+__deprecated
 @interface AJNAboutClient : NSObject
 
 /**
@@ -30,7 +30,7 @@
  @param bus A reference to the AJNBusAttachment.
  @return AboutClient if successful.
  */
-- (id)initWithBus:(AJNBusAttachment *)bus;
+- (id)initWithBus:(AJNBusAttachment *)bus __deprecated;
 
 /**
  Populate a given dictionary with the object Description(s) for a specified bus name.
@@ -39,7 +39,7 @@
  @param sessionId The session received  after joining AllJoyn session.
  @return ER_OK if successful.
  */
-- (QStatus)objectDescriptionsWithBusName:(NSString *)busName andObjectDescriptions:(NSMutableDictionary **)objectDescs andSessionId:(uint32_t)sessionId;
+- (QStatus)objectDescriptionsWithBusName:(NSString *)busName andObjectDescriptions:(NSMutableDictionary **)objectDescs andSessionId:(uint32_t)sessionId __deprecated;
 
 /**
  Populate a given dictionary with the AboutData for specified bus name.
@@ -49,7 +49,7 @@
  @param sessionId The session received  after joining AllJoyn session.
  @return ER_OK if successful.
  */
-- (QStatus)aboutDataWithBusName:(NSString *)busName andLanguageTag:(NSString *)languageTag andAboutData:(NSMutableDictionary **)data andSessionId:(uint32_t)sessionId;
+- (QStatus)aboutDataWithBusName:(NSString *)busName andLanguageTag:(NSString *)languageTag andAboutData:(NSMutableDictionary **)data andSessionId:(uint32_t)sessionId __deprecated;
 
 /**
  Populate a given parameter with the About version
@@ -58,6 +58,6 @@
  @param sessionId The session received  after joining AllJoyn session.
  @return ER_OK if successful.
  */
-- (QStatus)versionWithBusName:(NSString *)busName andVersion:(int)version andSessionId:(AJNSessionId)sessionId;
+- (QStatus)versionWithBusName:(NSString *)busName andVersion:(int)version andSessionId:(AJNSessionId)sessionId __deprecated;
 
 @end
