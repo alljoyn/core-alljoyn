@@ -155,7 +155,8 @@ class TestAllJoynObj : public AllJoynObj {
     }
     virtual QStatus SendAttachSession(SessionPort sessionPort, const char* src, const char* sessionHost, const char* dest,
                                       RemoteEndpoint& b2bEp, const char* remoteControllerName, SessionId outgoingSessionId,
-                                      const char* busAddr, const SessionOpts& optsIn, uint32_t& replyCode, SessionId& sessionId,
+                                      const char* busAddr, SessionOpts::NameTransferType nameTransfer,
+                                      CallerType type, const SessionOpts& optsIn, uint32_t& replyCode, SessionId& sessionId,
                                       SessionOpts& optsOut, MsgArg& members) {
         optsOut.transports = optsIn.transports;
         return ER_OK;
@@ -285,7 +286,8 @@ class TestAllJoynObjBadSessionOpts : public TestAllJoynObj {
     }
     virtual QStatus SendAttachSession(SessionPort sessionPort, const char* src, const char* sessionHost, const char* dest,
                                       RemoteEndpoint& b2bEp, const char* remoteControllerName, SessionId outgoingSessionId,
-                                      const char* busAddr, const SessionOpts& optsIn, uint32_t& replyCode, SessionId& sessionId,
+                                      const char* busAddr, SessionOpts::NameTransferType nameTransfer,
+                                      CallerType type, const SessionOpts& optsIn, uint32_t& replyCode, SessionId& sessionId,
                                       SessionOpts& optsOut, MsgArg& members) {
         if (optsIn.transports == TRANSPORT_UDP) {
             replyCode = ALLJOYN_JOINSESSION_REPLY_BAD_SESSION_OPTS;
