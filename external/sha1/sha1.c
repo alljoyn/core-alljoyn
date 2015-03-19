@@ -31,7 +31,7 @@
 /* blk0() and blk() perform the initial expand. */
 /* I got the idea of expanding during the round function from SSLeay */
 
-#ifdef LITTLE_ENDIAN
+#if (QCC_TARGET_ENDIAN == QCC_LITTLE_ENDIAN)
 #define blk0(i) (block->l[i] = (rol(block->l[i],24)&(sha1_quadbyte)0xFF00FF00) \
 	|(rol(block->l[i],8)&(sha1_quadbyte)0x00FF00FF))
 #else
