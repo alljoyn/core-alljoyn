@@ -21,8 +21,7 @@ srcs = env.Glob('*.cc')
 objs = env.Object(srcs)
 objs_shared = env.SharedObject(srcs)
 
-# Add the export DEF file for Windows. Path has to be absolute because 
-# the alljoyn_unity_native lib is using it too.
+# Add the export DEF file for Windows.
 if env['OS_GROUP'] == 'windows':
     objs_shared.append(env.Dir('.').abspath + '/${OS_GROUP}/alljoyn_c.def')
 
