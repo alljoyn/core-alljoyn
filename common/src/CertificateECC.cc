@@ -309,23 +309,33 @@ static QStatus DecodeTime(uint64_t& epoch, const qcc::String& t)
         return ER_FAIL;
     }
     tm.tm_mon--;  /* month's range is [0-11] */
+    tm.tm_isdst = 0;
 
     /* Compute the GMT time from struct tm.
         Can't use timegm since it is not available in some platforms like Android and Windows */
 
-    /* figure out the local daylight saving value */
-    time_t currentTime = (time_t) GetEpochTimestamp() / 1000;
-    struct tm* ptm = gmtime(&currentTime);
-    tm.tm_isdst = ptm->tm_isdst;
-
-    /* convert the parsed tm struct to GMT time */
     time_t localTime = mktime(&tm);
-    ptm = gmtime(&localTime);
-    int32_t tzDiff = ptm->tm_hour - tm.tm_hour;
+    if (localTime < 0) {
+        return ER_FAIL;
+    }
+    struct tm* gtm = gmtime(&localTime);
+    if (!gtm) {
+        return ER_FAIL;
+    }
+    /* figure the time zone offset */
+    int32_t tzDiff = gtm->tm_hour - tm.tm_hour;
     if (tzDiff < 0) {
         tzDiff += 24;
     } else if (tzDiff > 12) {
         tzDiff = 24 - tzDiff;
+    }
+    /* figure out the local daylight saving value */
+    struct tm* ltm = localtime(&localTime);
+    if (!ltm) {
+        return ER_FAIL;
+    }
+    if (ltm->tm_isdst > 0) {
+        tzDiff++;
     }
     epoch = localTime - (tzDiff * 3600);
     return ER_OK;

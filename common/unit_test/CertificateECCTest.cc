@@ -239,12 +239,16 @@ TEST_F(CertificateECCTest, ExpiredX509Cert)
     ECCPublicKey subjectPublicKey;
     CertificateX509 x509;
 
-    /* cert expires in one second */
-    QStatus status = CreateIdentityCert(issuer, "1010101", &dsaPrivateKey, &dsaPublicKey, &subjectPrivateKey, &subjectPublicKey, true, 1, x509);
+    /* cert expires in two seconds */
+    QStatus status = CreateIdentityCert(issuer, "1010101", &dsaPrivateKey, &dsaPublicKey, &subjectPrivateKey, &subjectPublicKey, true, 2, x509);
     ASSERT_EQ(ER_OK, status) << " CreateIdentityCert failed with actual status: " << QCC_StatusText(status);
 
-    /* sleep for 2 seconds to wait for the cert expires */
-    qcc::Sleep(2000);
+    /* verify that the cert is not yet expired */
+    status = x509.Verify(&dsaPublicKey);
+    ASSERT_EQ(ER_OK, status) << " verify cert failed with actual status: " << QCC_StatusText(status);
+
+    /* sleep for 3 seconds to wait for the cert expires */
+    qcc::Sleep(3000);
     status = x509.Verify(&dsaPublicKey);
     ASSERT_NE(ER_OK, status) << " verify cert did not fail with actual status: " << QCC_StatusText(status);
 }
