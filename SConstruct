@@ -20,7 +20,7 @@ env = SConscript(['build_core/SConscript'])
 
 vars = Variables()
 
-vars.Add('BINDINGS', 'Bindings to build (comma separated list): cpp, c, java, js, unity', 'cpp,c,java,js,unity')
+vars.Add('BINDINGS', 'Bindings to build (comma separated list): cpp, c, java, js', 'cpp,c,java,js')
 vars.Add('SERVICES', 'AllJoyn services libraries to build (comma separated list): config,controlpanel,notification,onboarding,audio', '')
 vars.Add(EnumVariable('BUILD_SERVICES_SAMPLES', 'Build the services samples that require libxml2 and json libraries.', 'on', allowed_values = ['on', 'off']))
 vars.Add(BoolVariable('BUILD_DDAPI', 'Flag to indicate if data-driven API has to be built or not', 0))
@@ -43,12 +43,8 @@ env['services'] = services
 # Always build AllJoyn Core
 env.SConscript(['alljoyn_core/SConscript'])
 
-if bindings.intersection(['c', 'unity']):
-    # unity depends on the C bindings
+if 'c' in bindings:
     env.SConscript(['alljoyn_c/SConscript'])
-
-    if 'unity' in bindings:
-        env.SConscript(['alljoyn_unity/SConscript'])
 
 if 'java' in bindings:
     env.SConscript(['alljoyn_java/SConscript'])
@@ -93,4 +89,4 @@ if env['BUILD_DDAPI'] == 1:
 # Build Alias to make cleaning, building and rebuilding the documentation when
 # working only on the documentation simpler. This can be run by using
 # `scons all_docs`
-env.Alias('all_docs', ['core_docs', 'c_docs', 'unity_docs'])
+env.Alias('all_docs', ['core_docs', 'c_docs'])
