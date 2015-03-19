@@ -172,12 +172,12 @@ void ViewAboutServiceData(qcc::String const& busName, SessionId id) {
         std::cout << std::endl << busName.c_str() << " AboutClient GetVersion" << std::endl;
         std::cout << "-----------------------------------" << std::endl;
 
-        int ver;
+        int ver = 0;
         status = aboutClient->GetVersion(busName.c_str(), ver, id);
-        if (status != ER_OK) {
-            std::cout << "Call to to getVersion failed " << QCC_StatusText(status) << std::endl;
-        } else {
+        if (status == ER_OK) {
             std::cout << "Version = " << ver << std::endl;
+        } else {
+            std::cout << "Call to to getVersion failed " << QCC_StatusText(status) << std::endl;
         }
     } //if (aboutClient)
 

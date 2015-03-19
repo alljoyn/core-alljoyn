@@ -40,10 +40,10 @@ namespace qcc {
 static uint64_t staticGlobalsBuffer[RequiredArrayLength(sizeof(StaticGlobals), uint64_t)];
 
 /** Assign staticGlobals to be a reference to the allocated memory */
-StaticGlobals& staticGlobals = ((StaticGlobals &)staticGlobalsBuffer);
+StaticGlobals& staticGlobals = ((StaticGlobals&)staticGlobalsBuffer);
 
-Event& Event::alwaysSet = (Event &)staticGlobals.alwaysSet;
-Event& Event::neverSet = (Event &)staticGlobals.neverSet;
+Event& Event::alwaysSet = (Event&)staticGlobals.alwaysSet;
+Event& Event::neverSet = (Event&)staticGlobals.neverSet;
 
 StaticGlobals::StaticGlobals() :
     alwaysSet(0, 0),

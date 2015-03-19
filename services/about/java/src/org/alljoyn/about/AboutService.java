@@ -33,56 +33,74 @@ import org.alljoyn.services.common.ServiceCommon;
  * An interface for both About client (consumer) and server (producer).
  * An application may want to implement both, but still use one bus, so for
  * convenience both functionalities are encapsulated here.
+ *
+ * @deprecated please see org.alljoyn.bus.AboutObj class and
+ * org.alljoyn.bus.AboutIconObj class
  */
+@Deprecated
 public interface AboutService extends ServiceCommon
 {
     /**
      * The About protocol version.
+     * @deprecated please see org.alljoyn.bus.AboutObj class
      */
+    @Deprecated
     public static final int PROTOCOL_VERSION = 1;
 
     /**
      * The About AllJoyn BusInterface name
+     * @deprecated please see org.alljoyn.bus.AboutObj class
      */
+    @Deprecated
     public static final String ANNOUNCE_IFNAME   = AboutTransport.INTERFACE_NAME;
 
     /**
      * The Announcement signal name
+     * @deprecated please see org.alljoyn.bus.AboutObj class
      */
+    @Deprecated
     public static final String SIGNAL_NAME       = "Announce";
 
     /**
      * Starts the {@link AboutService} in client mode.
+     * @deprecated please see org.alljoyn.bus.AboutObj class
      * @param bus the AllJoyn bus attachment
      * @throws Exception Is thrown if a failure has occurred while starting the client
      */
+    @Deprecated
     public void startAboutClient(BusAttachment bus) throws Exception;
 
     /**
      * Creates an About client for a peer to receive Announcement signals and
      * to call remote methods.
+     * @deprecated please see org.alljoyn.bus.AboutObj class
      * @param peerName The bus unique name of the remote About server
      * @param serviceAvailabilityListener listener for connection loss
      * @param port the peer's bound port of the About server
      * @return AboutClient to create a session with the peer
      * @throws Exception indicating failure to create an AboutClient
      */
+    @Deprecated
     public AboutClient createAboutClient(String peerName, ServiceAvailabilityListener serviceAvailabilityListener, short port) throws Exception;
 
     /**
      * Create an Icon client for a peer.
+     * @deprecated please see org.alljoyn.bus.AboutIconObj class
      * @param peerName The bus unique name of the remote About server
      * @param serviceAvailabilityListener listener for connection loss
      * @param port the peer's bound port of the About server
      * @return AboutIconClient to create a session with the peer
      * @throws BusException indicating failure to creat an AboutIconClient
      */
+    @Deprecated
     public AboutIconClient createAboutIconClient(String peerName, ServiceAvailabilityListener serviceAvailabilityListener, short port) throws BusException;
 
     /**
      * Stops client mode. Disconnect all sessions.
+     * @deprecated please see org.alljoyn.bus.AboutObj class
      * @throws Exception indicating issue when stopping the AboutClient
      */
+    @Deprecated
     public void stopAboutClient() throws Exception;
 
     /**
@@ -137,7 +155,8 @@ public interface AboutService extends ServiceCommon
      * <p><em>Note:</em> specifying null for the interfaces parameter could have
      * significant impact on network performance and should be avoided unless
      * all announcements are needed.</p>
-     *
+     * @deprecated please see org.alljoyn.bus.BusAttachment.registerAboutListener
+     * and org.alljoyn.bus.BusAttachment.whoImplements
      * @param handler the AnnouncementHandler that will be receiving the
      *                announcement.
      * @param interfaces an array of interfaces the remote service must
@@ -147,6 +166,7 @@ public interface AboutService extends ServiceCommon
      *
      * @see AboutTransport#Announce(short, short, BusObjectDescription[], java.util.Map)
      */
+    @Deprecated
     public void addAnnouncementHandler(AnnouncementHandler handler, String[] interfaces);
 
     /**
@@ -155,16 +175,20 @@ public interface AboutService extends ServiceCommon
      * When calling this the array of interfaces must match the array that was
      * used when calling <code>addAnnouncementHander</code>.
      *
+     * @deprecated please see org.alljoyn.bus.BusAttachment.unregisterAboutListener
+     * and org.alljoyn.bus.BusAttachment.cancelWhoImplements
      * @param handler the AnnouncementHandler to remove. The array of interfaces
      *                must be the same as the array used when calling
      *                addAnnouncementHandler.
      * @param interfaces an array of interfaces that were used when calling
      *                   addAnnouncementHandler
      */
+    @Deprecated
     public void removeAnnouncementHandler(AnnouncementHandler handler, String[] interfaces);
 
     /**
      * Start server mode.  The application creates the BusAttachment
+     * @deprecated please see org.alljoyn.bus.AboutObj class
      * @param port the bound AllJoyn session port. The application binds the port,
      *             and the about server announces it.
      * @param propertyStore a container of device/application properties.
@@ -172,63 +196,86 @@ public interface AboutService extends ServiceCommon
      * @throws Exception indicating failure when starting the AboutServer
      * @see AboutKeys
      */
+    @Deprecated
     public void startAboutServer(short port, PropertyStore propertyStore, BusAttachment m_bus) throws Exception;
 
     /**
      * Stop server mode.
+     * @deprecated please see org.alljoyn.bus.AboutObj class
      */
+    @Deprecated
     public void stopAboutServer();
 
     /**
      * Add a BusObject and the BusInterfaces that it implements, to the server's
      * Announcement.
+     * @deprecated please see org.alljoyn.bus.BusAttachment.registerBusObject class,
+     * org.alljoyn.bus.BusAttachment.setAnnounceFlag,
+     * and org.alljoyn.bus.annotation.BusInterface.announced
      * @param objPath the path of the BusObject
      * @param interfaces the BusInterfaces that the BusObject implements.
      * @see BusObjectDescription
      * @see AboutTransport#Announce(short, short, BusObjectDescription[], java.util.Map)
      */
+    @Deprecated
     public void addObjectDescription(String objPath, String [] interfaces);
 
     /**
      * Remove the BusInterfaces that the given BusObject implements, from the
      * server's Announcement
+     * @deprecated please see org.alljoyn.bus.BusAttachment.unregisterBusObject class,
+     * and org.alljoyn.bus.BusAttachment.setAnnounceFlag.
      * @param objPath the path of the BusObject
      * @param interfaces the interfaces to remove.
      *                   Note: only the passed interfaces will be removed.
      */
+    @Deprecated
     public void removeObjectDescription(String objPath, String [] interfaces);
 
     /**
      * A plural call of addBusObjectDescription
+     * @deprecated please see org.alljoyn.bus.BusAttachment.registerBusObject class,
+     * org.alljoyn.bus.BusAttachment.setAnnounceFlag,
+     * and org.alljoyn.bus.annotation.BusInterface.announced
      * @param addBusObjectDescriptions list of BusObjectDescriptions to add to the next Announce signal
      * @see #addObjectDescription(String, String[])
      */
+    @Deprecated
     public void addObjectDescriptions(List<BusObjectDescription> addBusObjectDescriptions);
 
     /**
      * A plural call of removeBusObjectDescription
+     * @deprecated please see org.alljoyn.bus.BusAttachment.unregisterBusObject class,
+     * and org.alljoyn.bus.BusAttachment.setAnnounceFlag.
      * @param removeBusObjectDescriptions list of BusObjectDescriptions to remove from next the Announce signal
      * @see #removeObjectDescription(String, String[])
      */
+    @Deprecated
     public void removeObjectDescriptions(List<BusObjectDescription> removeBusObjectDescriptions);
 
     /**
      * Make the server send an Announcement
+     * @deprecated please see org.alljoyn.bus.BusAttachment.announce
      */
+    @Deprecated
     public void announce();
 
     /**
      * Register the application icon with the server
      *
+     * @deprecated please see org.alljoyn.bus.AboutIconObj
      * @param mimetype the MimeType for the image
      * @param url  A URL that contains the location of the icon hosted in the cloud.
      * @param content an array of bytes that represent an icon
      * @throws Exception indicating failure to register the icon.
      */
+    @Deprecated
     public void registerIcon(String mimetype, String url, byte[] content) throws Exception;
 
     /**
      * Unregister the application icon
+     * @deprecated please see org.alljoyn.bus.AboutIconObj
      */
+    @Deprecated
     public void unregisterIcon();
 }

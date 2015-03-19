@@ -38,9 +38,9 @@ TEST(IPAddressTest, ipv4_to_string) {
 
     EXPECT_STREQ(expected_string_representation.c_str(),
                  actual_string_representation.c_str()) <<
-    "The function IPv4ToString did not return \"" <<
-    expected_string_representation.c_str() << "\", when passed "
-    "the byte array: {" <<
+        "The function IPv4ToString did not return \"" <<
+        expected_string_representation.c_str() << "\", when passed "
+        "the byte array: {" <<
     (unsigned int) localhost[0] << ", " <<
     (unsigned int) localhost[1] << ", " <<
     (unsigned int) localhost[2] << ", " <<
@@ -58,20 +58,20 @@ TEST(IPAddressTest, string_to_ipv4) {
                                      address_buffer,
                                      IPAddress::IPv4_SIZE);
     EXPECT_EQ(ER_OK, status) <<
-    "The function StringToIPv4 was unable to convert the string \"" <<
-    localhost.c_str() << "\" to a byte array. The status returned was: " <<
-    QCC_StatusText(status);
+        "The function StringToIPv4 was unable to convert the string \"" <<
+        localhost.c_str() << "\" to a byte array. The status returned was: " <<
+        QCC_StatusText(status);
 
     if (ER_OK == status) {
         uint8_t expected_address_buffer[] = { 127, 0, 0, 1 };
 
         for (size_t i = 0; i < IPAddress::IPv4_SIZE; i++) {
             EXPECT_EQ(expected_address_buffer[i], address_buffer[i]) <<
-            "At index " << i << ", the octet value " <<
+                "At index " << i << ", the octet value " <<
             (unsigned int) address_buffer[i] << ", of the byte array "
-            "converted from string \"" << localhost.c_str() <<
-            "\" by the function StringToIPv4 does not match the "
-            "expected value " << (unsigned int) expected_address_buffer[i];
+                "converted from string \"" << localhost.c_str() <<
+                "\" by the function StringToIPv4 does not match the "
+                "expected value " << (unsigned int) expected_address_buffer[i];
         }
     }
 
@@ -94,9 +94,9 @@ TEST(IPAddressTest, string_to_ipv4_other_bases_viz_octal_hex) {
                                      address_buffer,
                                      IPAddress::IPv4_SIZE);
     EXPECT_EQ(ER_OK, status) <<
-    "The function StringToIPv4 was unable to convert the string \"" <<
-    google_public_dns_server_in_octal.c_str() << "\" to a byte array. "
-    "The status returned was: " << QCC_StatusText(status);
+        "The function StringToIPv4 was unable to convert the string \"" <<
+        google_public_dns_server_in_octal.c_str() << "\" to a byte array. "
+        "The status returned was: " << QCC_StatusText(status);
 
     if (ER_OK == status) {
         // Convert the address_buffer back to a string and compare
@@ -104,12 +104,12 @@ TEST(IPAddressTest, string_to_ipv4_other_bases_viz_octal_hex) {
 
         EXPECT_STREQ(google_public_dns_server_in_decimal.c_str(),
                      converted_string.c_str()) <<
-        "The ip address string \"" <<
-        google_public_dns_server_in_octal.c_str() << "\" (in octal) "
-        "was converted to a byte array and re-converted back to a string "
-        "(in decimal). The converted string \"" << converted_string.c_str() <<
-        "\" isn't matching the expected string \"" <<
-        google_public_dns_server_in_decimal.c_str() << "\".";
+            "The ip address string \"" <<
+            google_public_dns_server_in_octal.c_str() << "\" (in octal) "
+            "was converted to a byte array and re-converted back to a string "
+            "(in decimal). The converted string \"" << converted_string.c_str() <<
+            "\" isn't matching the expected string \"" <<
+            google_public_dns_server_in_decimal.c_str() << "\".";
     }
 
     String open_dns_server_in_decimal = String("208.67.222.222");
@@ -124,9 +124,9 @@ TEST(IPAddressTest, string_to_ipv4_other_bases_viz_octal_hex) {
                                      address_buffer,
                                      IPAddress::IPv4_SIZE);
     EXPECT_EQ(ER_OK, status) <<
-    "The function StringToIPv4 was unable to convert the string \"" <<
-    open_dns_server_in_hex.c_str() << "\" to a byte array. "
-    "The status returned was: " << QCC_StatusText(status);
+        "The function StringToIPv4 was unable to convert the string \"" <<
+        open_dns_server_in_hex.c_str() << "\" to a byte array. "
+        "The status returned was: " << QCC_StatusText(status);
 
     if (ER_OK == status) {
         // Convert the address_buffer back to a string and compare
@@ -134,12 +134,12 @@ TEST(IPAddressTest, string_to_ipv4_other_bases_viz_octal_hex) {
 
         EXPECT_STREQ(open_dns_server_in_decimal.c_str(),
                      converted_string.c_str()) <<
-        "The ip address string \"" <<
-        open_dns_server_in_hex.c_str() << "\" (in hex) was converted to "
-        "a byte array and re-converted back to a string (in decimal). "
-        "The converted string \"" << converted_string.c_str() <<
-        "\" isn't matching the expected string \"" <<
-        open_dns_server_in_decimal.c_str() << "\".";
+            "The ip address string \"" <<
+            open_dns_server_in_hex.c_str() << "\" (in hex) was converted to "
+            "a byte array and re-converted back to a string (in decimal). "
+            "The converted string \"" << converted_string.c_str() <<
+            "\" isn't matching the expected string \"" <<
+            open_dns_server_in_decimal.c_str() << "\".";
     }
 
     // Clean-up
@@ -159,8 +159,8 @@ TEST(IPAddressTest, string_to_ipv4_negative_test_cases) {
                                      NULL,
                                      IPAddress::IPv4_SIZE);
     EXPECT_EQ(ER_BAD_ARG_2, status) <<
-    "The function StringToIPv4 should have complained when passed a NULL value "
-    "as second parameter. The status returned was: " << QCC_StatusText(status);
+        "The function StringToIPv4 should have complained when passed a NULL value "
+        "as second parameter. The status returned was: " << QCC_StatusText(status);
 
     /*
      * The googletest macros seem to cause linker errors when asked to print
@@ -177,10 +177,10 @@ TEST(IPAddressTest, string_to_ipv4_negative_test_cases) {
                                      address_buffer,
                                      IPAddress::IPv6_SIZE);
     EXPECT_EQ(ER_BAD_ARG_3, status) <<
-    "The function StringToIPv4 should have complained when passed " <<
-    ipv6_size << " (an incompatible value), instead of " <<
-    ipv4_size << " as third parameter. The status returned was: " <<
-    QCC_StatusText(status);
+        "The function StringToIPv4 should have complained when passed " <<
+        ipv6_size << " (an incompatible value), instead of " <<
+        ipv4_size << " as third parameter. The status returned was: " <<
+        QCC_StatusText(status);
 
     const char* improperly_formatted_ip_address[] = {
         ".0.0.1",       // missing the first octet
@@ -196,9 +196,9 @@ TEST(IPAddressTest, string_to_ipv4_negative_test_cases) {
                                          address_buffer,
                                          IPAddress::IPv4_SIZE);
         EXPECT_EQ(ER_PARSE_ERROR, status) <<
-        "The function StringToIPv4 should have complained while parsing "
-        "the string \"" << some_ip_address_string.c_str() << "\". "
-        "The status returned was: " << QCC_StatusText(status);
+            "The function StringToIPv4 should have complained while parsing "
+            "the string \"" << some_ip_address_string.c_str() << "\". "
+            "The status returned was: " << QCC_StatusText(status);
     }
 
     // Clean-up

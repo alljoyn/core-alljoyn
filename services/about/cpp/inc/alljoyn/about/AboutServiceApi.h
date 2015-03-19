@@ -30,7 +30,11 @@ namespace ajn {
 namespace services {
 
 /**
- *      AboutServiceApi  is wrapper class that encapsulates the AboutService with a Singelton.
+ * AboutServiceApi  is wrapper class that encapsulates the AboutService with a Singelton.
+ *
+ * @deprecated The AboutServiceApi class has been deprecated please see the
+ * AboutObj class. There is no direct equivalent class to the AboutServiceApi
+ * since the use of a singelton has been completely removed.
  */
 class AboutServiceApi : public AboutService {
 
@@ -38,20 +42,34 @@ class AboutServiceApi : public AboutService {
 
     /**
      * GetInstance
+     *
+     * @deprecated The AboutServiceApi class has been deprecated please see the
+     * AboutObj class.
+     *
      * @return AboutServiceApi created only once.
      */
-    static AboutServiceApi* getInstance();
+    QCC_DEPRECATED(static AboutServiceApi * getInstance());
+
     /**
      * Init with  BusAttachment and PropertyStore only once.
-     * After the first Init you can call getInstance to receive a proper instance of the class
+     * After the first Init you can call getInstance to receive a proper
+     * instance of the class
+     *
+     * @deprecated The AboutServiceApi::Init function has been deprecated please see the
+     * AboutObj class.
+     *
      * @param bus
      * @param store
      */
-    static void Init(ajn::BusAttachment& bus, PropertyStore& store);
+    QCC_DEPRECATED(static void Init(ajn::BusAttachment & bus, PropertyStore & store));
+
     /**
      * Destroy the instance only once after finished
+     *
+     * @deprecated The AboutServiceApi::DestroyInstance function has been
+     * deprecated please see the AboutObj class.
      */
-    static void DestroyInstance();
+    QCC_DEPRECATED(static void DestroyInstance());
 
   private:
     /**

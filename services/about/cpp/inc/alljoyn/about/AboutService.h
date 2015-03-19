@@ -33,57 +33,89 @@ namespace services {
  * AboutService is an AllJoyn BusObject that implements the org.alljoyn.About standard interface.
  * Applications that provide AllJoyn IoE services use an instance of this class to announce
  * their capabilities and other identifying details of the services being provided.
+ *
+ * @deprecated The AboutService class has been deprecated please see the
+ * AboutObj class for similar functionality as the AboutService class.
  */
 class AboutService : public ajn::BusObject {
   public:
     /**
      * Construct an AboutService.
+     *
+     * @deprecated The AboutService class has been deprecated please see the
+     * AboutObj class.
+     *
      * @param[in]  bus    BusAttachment instance associated with this AboutService
      * @param[in]  store  Set of key/value pairs used to populate required/optional/app-defined
      *               members of about and announce data
      */
-    AboutService(ajn::BusAttachment& bus, PropertyStore& store);
+    QCC_DEPRECATED(AboutService(ajn::BusAttachment& bus, PropertyStore& store));
     /**
      * destructor
+     *
+     * @deprecated The AboutService class has been deprecated please see the
+     * AboutObj class.
      */
-    virtual ~AboutService() {
+    QCC_DEPRECATED(virtual ~AboutService()) {
     }
 
     /**
      * Register  the AboutService on the AllJoyn bus passing the port to be announced.
+     *
+     * @deprecated The AboutService::Register function has been deprecated please
+     * see the AboutObj::Announce function.
+     *
      * @param port used to bind the session.
      * @return status.
      */
-    QStatus Register(int port);
+    QCC_DEPRECATED(QStatus Register(int port));
     /**
      * Unregister the About service  from the bus
+     *
+     * @deprecated The AboutService::Unregister function has been deprecated please
+     * see the AboutObj::Unannounce function.
      */
-    void Unregister();
+    QCC_DEPRECATED(void Unregister());
 
     /**
      * AddObjectDescription adds objects Description to the AboutService announcement.
+     *
+     * @deprecated The AboutService::AddObjectDescription function has been
+     * deprecated please see the BusObject::AddInterface function,
+     * BusObject::SetAnnounceFlag function, and BusAttahcment::RegisterBusObject
+     * function
+     *
      * @param[in]  path of the interface.
      * @param[in]  interfaceNames
      * @return ER_OK if successful.
      */
-    QStatus AddObjectDescription(qcc::String const& path, std::vector<qcc::String> const& interfaceNames);
+    QCC_DEPRECATED(QStatus AddObjectDescription(qcc::String const & path, std::vector<qcc::String> const & interfaceNames));
     /**
      * RemoveObjectDescription adds objects Description to the AboutService announcement.
+     *
+     * @deprecated The AboutService::RemoveObjectDescription function has been
+     * deprecated please see the BusObject::AddInterface function,
+     * BusObject::SetAnnounceFlag function, and BusAttahcment::UnregisterBusObject
+     * function
+     *
      * @param[in]  path of the interface.
      * @param[in]  interfaceNames
      * @return ER_OK if successful.
      */
-    QStatus RemoveObjectDescription(qcc::String const& path, std::vector<qcc::String> const& interfaceNames);
+    QCC_DEPRECATED(QStatus RemoveObjectDescription(qcc::String const & path, std::vector<qcc::String> const & interfaceNames));
 
     /**
      * Send or replace the org.alljoyn.About.Announce sessionless signal.
      *
      * Validate store and object announcements and emit the announce signal.
      *
+     * @deprecated The AboutService::Announce function has been deprecated please
+     * see the AboutObj::Announce function.
+     *
      * @return
      * - ER_MANDATORY_FIELD_MISSING: Logs an error with specific field that has a problem.
      */
-    QStatus Announce();
+    QCC_DEPRECATED(QStatus Announce());
 
   private:
     /**

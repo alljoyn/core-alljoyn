@@ -30,12 +30,23 @@
 #include "KeyStore.h"
 #include "InMemoryKeyStore.h"
 
+#if defined(QCC_OS_GROUP_WINDOWS)
+/*
+ * This pragma prevents Microsoft compiler warning C4407: cast between different pointer to member representations, compiler may generate incorrect code.
+ * This is equivalent to /vmg compiler option but without the burden of forcing that everywhere.
+ *
+ * Specifically the warning is caused by AuthListenerECDHETest class using multiple inheritance and implementing a member function (MessageReceiver::MethodHandler)
+ * that is declared in the base class.
+ */
+#pragma pointers_to_members(full_generality, virtual_inheritance)
+#endif
+
 using namespace ajn;
 using namespace qcc;
 
 static const char* ONOFF_IFC_NAME = "org.allseenalliance.control.OnOff";
 
-class AuthListenerECDHETest : public testing::Test, public BusObject {
+class AuthListenerECDHETest : public BusObject, public testing::Test {
   public:
 
     class ECDHEKeyXListener : public AuthListener {
@@ -76,7 +87,7 @@ class AuthListenerECDHETest : public testing::Test, public BusObject {
                 if (!sendKeys) {
                     return false;
                 }
-                if ((credMask & AuthListener::CRED_USER_NAME) == AuthListener::CRED_USER_NAME) {
+                if ((credMask& AuthListener::CRED_USER_NAME) == AuthListener::CRED_USER_NAME) {
                     if (pskName != creds.GetUserName()) {
                         return false;
                     }
@@ -213,7 +224,7 @@ class AuthListenerECDHETest : public testing::Test, public BusObject {
                 if (!sendKeys) {
                     return false;
                 }
-                if (sendPrivateKey && ((credMask & AuthListener::CRED_PRIVATE_KEY) == AuthListener::CRED_PRIVATE_KEY)) {
+                if (sendPrivateKey && ((credMask& AuthListener::CRED_PRIVATE_KEY) == AuthListener::CRED_PRIVATE_KEY)) {
                     if (sendInvalidChain || sendInvalidChainNoCA) {
                         String pk(pkWithInvalidChain);
                         creds.SetPrivateKey(pk);
@@ -225,7 +236,7 @@ class AuthListenerECDHETest : public testing::Test, public BusObject {
                         creds.SetPrivateKey(pk);
                     }
                 }
-                if (sendCertChain && ((credMask & AuthListener::CRED_CERT_CHAIN) == AuthListener::CRED_CERT_CHAIN)) {
+                if (sendCertChain && ((credMask& AuthListener::CRED_CERT_CHAIN) == AuthListener::CRED_CERT_CHAIN)) {
                     if (sendEmptyCertChain) {
                         String cert;
                         creds.SetCertChain(cert);

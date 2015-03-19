@@ -1321,7 +1321,7 @@ void _RemoteEndpoint::SetSessionId(uint32_t sessionId) {
     }
 }
 
-uint32_t _RemoteEndpoint::GetSessionId() {
+uint32_t _RemoteEndpoint::GetSessionId() const {
     if (internal) {
         return internal->sessionId;
     } else {

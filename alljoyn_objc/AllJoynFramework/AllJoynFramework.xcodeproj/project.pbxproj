@@ -44,6 +44,12 @@
 		8341BF0A193B10650009B66E /* AJNTranslator.h in Headers */ = {isa = PBXBuildFile; fileRef = 8341BF07193B10650009B66E /* AJNTranslator.h */; };
 		8341BF0B193B10650009B66E /* AJNTranslatorImpl.h in Headers */ = {isa = PBXBuildFile; fileRef = 8341BF08193B10650009B66E /* AJNTranslatorImpl.h */; };
 		8341BF0C193B10650009B66E /* AJNTranslatorImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 8341BF09193B10650009B66E /* AJNTranslatorImpl.mm */; };
+		89153DE31AADB332009DB2EA /* AJNObserver.h in Headers */ = {isa = PBXBuildFile; fileRef = 89153DE01AADB332009DB2EA /* AJNObserver.h */; };
+		89153DE41AADB332009DB2EA /* AJNObserver.mm in Sources */ = {isa = PBXBuildFile; fileRef = 89153DE11AADB332009DB2EA /* AJNObserver.mm */; };
+		89153DE51AADB332009DB2EA /* AJNObserverListener.h in Headers */ = {isa = PBXBuildFile; fileRef = 89153DE21AADB332009DB2EA /* AJNObserverListener.h */; };
+		89153DE71AADCFBF009DB2EA /* ObserverTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 89153DE61AADCFBF009DB2EA /* ObserverTests.m */; };
+		89DE861E1AB17C94001251E8 /* AJNObserverTestObjects.mm in Sources */ = {isa = PBXBuildFile; fileRef = 89DE861B1AB17C94001251E8 /* AJNObserverTestObjects.mm */; };
+		89DE861F1AB17C94001251E8 /* ObserverTestObjects.m in Sources */ = {isa = PBXBuildFile; fileRef = 89DE861D1AB17C94001251E8 /* ObserverTestObjects.m */; };
 		AC3A98441577CF9700CFF856 /* AJNKeyStoreListenerImpl.h in Headers */ = {isa = PBXBuildFile; fileRef = AC3A98421577CF9600CFF856 /* AJNKeyStoreListenerImpl.h */; };
 		AC3A98451577CF9700CFF856 /* AJNKeyStoreListenerImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = AC3A98431577CF9600CFF856 /* AJNKeyStoreListenerImpl.mm */; };
 		AC3A98471577D5E400CFF856 /* AJNAuthenticationListener.h in Headers */ = {isa = PBXBuildFile; fileRef = AC3A98461577D5E300CFF856 /* AJNAuthenticationListener.h */; };
@@ -154,6 +160,15 @@
 		8341BF07193B10650009B66E /* AJNTranslator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNTranslator.h; sourceTree = "<group>"; };
 		8341BF08193B10650009B66E /* AJNTranslatorImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNTranslatorImpl.h; sourceTree = "<group>"; };
 		8341BF09193B10650009B66E /* AJNTranslatorImpl.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNTranslatorImpl.mm; sourceTree = "<group>"; };
+		89153DE01AADB332009DB2EA /* AJNObserver.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNObserver.h; sourceTree = "<group>"; };
+		89153DE11AADB332009DB2EA /* AJNObserver.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNObserver.mm; sourceTree = "<group>"; };
+		89153DE21AADB332009DB2EA /* AJNObserverListener.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNObserverListener.h; sourceTree = "<group>"; };
+		89153DE61AADCFBF009DB2EA /* ObserverTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ObserverTests.m; sourceTree = "<group>"; };
+		89153DE81AADD0D0009DB2EA /* ObserverTests.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ObserverTests.h; sourceTree = "<group>"; };
+		89DE861A1AB17C94001251E8 /* AJNObserverTestObjects.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNObserverTestObjects.h; sourceTree = "<group>"; };
+		89DE861B1AB17C94001251E8 /* AJNObserverTestObjects.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNObserverTestObjects.mm; sourceTree = "<group>"; };
+		89DE861C1AB17C94001251E8 /* ObserverTestObjects.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ObserverTestObjects.h; sourceTree = "<group>"; };
+		89DE861D1AB17C94001251E8 /* ObserverTestObjects.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ObserverTestObjects.m; sourceTree = "<group>"; };
 		AC3A983D1576DE4100CFF856 /* AJNKeyStoreListener.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AJNKeyStoreListener.h; sourceTree = "<group>"; };
 		AC3A98421577CF9600CFF856 /* AJNKeyStoreListenerImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNKeyStoreListenerImpl.h; sourceTree = "<group>"; };
 		AC3A98431577CF9600CFF856 /* AJNKeyStoreListenerImpl.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNKeyStoreListenerImpl.mm; sourceTree = "<group>"; };
@@ -327,6 +342,9 @@
 		ACB44E5B15485F3E00FF7DBC /* AllJoynFramework */ = {
 			isa = PBXGroup;
 			children = (
+				89153DE01AADB332009DB2EA /* AJNObserver.h */,
+				89153DE11AADB332009DB2EA /* AJNObserver.mm */,
+				89153DE21AADB332009DB2EA /* AJNObserverListener.h */,
 				7D74A7A519E711870055CD21 /* AJNAboutObject.h */,
 				7D5C090819E88CDD00214D48 /* AJNAboutObject.mm */,
 				7D74A7A619E711870055CD21 /* AJNAboutDataListenerImpl.mm */,
@@ -421,6 +439,12 @@
 		ACB44E6D15485F3E00FF7DBC /* AllJoynFrameworkTests */ = {
 			isa = PBXGroup;
 			children = (
+				89DE861A1AB17C94001251E8 /* AJNObserverTestObjects.h */,
+				89DE861B1AB17C94001251E8 /* AJNObserverTestObjects.mm */,
+				89DE861C1AB17C94001251E8 /* ObserverTestObjects.h */,
+				89DE861D1AB17C94001251E8 /* ObserverTestObjects.m */,
+				89153DE81AADD0D0009DB2EA /* ObserverTests.h */,
+				89153DE61AADCFBF009DB2EA /* ObserverTests.m */,
 				ACDD11D715797DE1004D34DE /* AJNBasicObject.h */,
 				ACDD11D815797DE1004D34DE /* AJNBasicObject.mm */,
 				ACDD11BE157969B4004D34DE /* BasicObject.h */,
@@ -460,6 +484,7 @@
 				ACB44EAA15485F7800FF7DBC /* AJNBusAttachment.h in Headers */,
 				7DC6D4791A0205E000764C73 /* AJNAboutIconObject.h in Headers */,
 				ACB44EAC15485F7800FF7DBC /* AJNBusInterface.h in Headers */,
+				89153DE51AADB332009DB2EA /* AJNObserverListener.h in Headers */,
 				ACB44EAD15485F7800FF7DBC /* AJNBusListener.h in Headers */,
 				ACB44EAE15485F7800FF7DBC /* AJNBusListenerImpl.h in Headers */,
 				ACB44EB015485F7800FF7DBC /* AJNBusObject.h in Headers */,
@@ -489,6 +514,7 @@
 				7D91B93E19E744AE00FA4C8B /* AJNAboutProxy.h in Headers */,
 				ACB44ED015485F7800FF7DBC /* AJNVersion.h in Headers */,
 				AC5C5609154A157900C13A0B /* AJNMessageArgument.h in Headers */,
+				89153DE31AADB332009DB2EA /* AJNObserver.h in Headers */,
 				7D74A7B219E711870055CD21 /* AJNAboutListener.h in Headers */,
 				AC77FEBD154B285400D39DFE /* AJNType.h in Headers */,
 				7D74A7AF19E711870055CD21 /* AJNAboutDataListener.h in Headers */,
@@ -547,6 +573,7 @@
 		ACB44E4915485F3E00FF7DBC /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
+				LastTestingUpgradeCheck = 0510;
 				LastUpgradeCheck = 0440;
 				ORGANIZATIONNAME = "2012-2015 AllSeen Alliance.";
 			};
@@ -593,7 +620,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "/usr/local/bin/appledoc \\\n--project-name \"AllJoynFramework\" \\\n--project-company \"AllSeen Alliance.\" \\\n--output ~/help \\\n--logformat xcode \\\n--keep-undocumented-objects \\\n--keep-undocumented-members \\\n--no-repeat-first-par \\\n--exit-threshold 2 \\\n--ignore .m \\\n--ignore AllJoynFrameworkTests \\\n--templates \"~/Library/Application Support/appledoc/Templates\" \\\n\"${SRCROOT}\"";
+			shellScript = "/usr/local/bin/appledoc \\\n--project-name \"AllJoynFramework\" \\\n--project-company \"AllSeen Alliance.\" \\\n--output ~/help \\\n--logformat xcode \\\n--keep-undocumented-objects \\\n--keep-undocumented-members \\\n--no-repeat-first-par \\\n--exit-threshold 2 \\\n--ignore .m \\\n--ignore .mm \\\n--ignore AllJoynFrameworkTests \\\n--templates \"~/Library/Application Support/appledoc/Templates\" \\\n\"${SRCROOT}\"";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -613,6 +640,7 @@
 				7DBACA2419EB8444007DF927 /* AJNAboutProxy.mm in Sources */,
 				7D5C090919E88CDD00214D48 /* AJNAboutObject.mm in Sources */,
 				ACB44EB815485F7800FF7DBC /* AJNInterfaceMember.mm in Sources */,
+				89153DE41AADB332009DB2EA /* AJNObserver.mm in Sources */,
 				7DC6D47B1A02075C00764C73 /* AJNAboutIconObject.mm in Sources */,
 				ACB44EBA15485F7800FF7DBC /* AJNInterfaceProperty.mm in Sources */,
 				ACB44EBC15485F7800FF7DBC /* AJNMessage.mm in Sources */,
@@ -646,7 +674,10 @@
 				AC77FEA2154B0D9600D39DFE /* InterfaceDescriptionTests.m in Sources */,
 				ACDD11B615795A2A004D34DE /* BusObjectTests.m in Sources */,
 				ACDD11C1157969B4004D34DE /* BasicObject.m in Sources */,
+				89DE861E1AB17C94001251E8 /* AJNObserverTestObjects.mm in Sources */,
 				ACDD11D915797DE1004D34DE /* AJNBasicObject.mm in Sources */,
+				89DE861F1AB17C94001251E8 /* ObserverTestObjects.m in Sources */,
+				89153DE71AADCFBF009DB2EA /* ObserverTests.m in Sources */,
 				AC77324715A3452B00C7A9A4 /* TestAuthenticationListener.m in Sources */,
 				AC4FF04115A3A928006C2FB4 /* AuthenticationTests.m in Sources */,
 			);
