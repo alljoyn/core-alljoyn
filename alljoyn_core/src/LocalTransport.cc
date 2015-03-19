@@ -80,6 +80,16 @@ class _LocalEndpoint::DeferredCallbacks : public qcc::AlarmListener {
     _LocalEndpoint* endpoint;
 };
 
+class _LocalEndpoint::ObserverCallbacks : public qcc::AlarmListener {
+  public:
+    ObserverCallbacks(_LocalEndpoint*ep) : endpoint(ep) { }
+
+    void AlarmTriggered(const qcc::Alarm& alarm, QStatus reason);
+
+  private:
+    _LocalEndpoint* endpoint;
+};
+
 class _LocalEndpoint::CachedPropertyCallbacks : public qcc::AlarmListener {
   public:
     CachedPropertyCallbacks(_LocalEndpoint* ep) : endpoint(ep) { }
@@ -185,6 +195,7 @@ _LocalEndpoint::_LocalEndpoint(BusAttachment& bus, uint32_t concurrency) :
     _BusEndpoint(ENDPOINT_TYPE_LOCAL),
     dispatcher(new Dispatcher(this, concurrency)),
     deferredCallbacks(new DeferredCallbacks(this)),
+    observerCallbacks(new ObserverCallbacks(this)),
     cachedPropertyCallbacks(new CachedPropertyCallbacks(this)),
     running(false),
     isRegistered(false),
@@ -239,6 +250,11 @@ _LocalEndpoint::~_LocalEndpoint()
         if (deferredCallbacks) {
             delete deferredCallbacks;
             deferredCallbacks = NULL;
+        }
+
+        if (observerCallbacks) {
+            delete observerCallbacks;
+            observerCallbacks = NULL;
         }
 
         if (cachedPropertyCallbacks) {
@@ -1183,6 +1199,29 @@ QStatus _LocalEndpoint::HandleMethodReply(Message& message)
     return status;
 }
 
+void _LocalEndpoint::ObserverCallbacks::AlarmTriggered(const qcc::Alarm& alarm, QStatus reason)
+{
+    if (reason == ER_OK) {
+        ObserverManager& obsmgr = endpoint->bus->GetInternal().GetObserverManager();
+        obsmgr.DoWork();
+    }
+}
+
+void _LocalEndpoint::TriggerObserverWork()
+{
+    /*
+     * Use the local endpoint's dispatcher to let the ObserverManager process items from its
+     * work queue.
+     */
+    uint32_t zero = 0;
+    if (dispatcher) {
+        QStatus status = dispatcher->AddAlarm(Alarm(zero, observerCallbacks));
+        if (ER_OK != status) {
+            QCC_DbgHLPrintf(("TriggerObserverWork failure to add Alarm: %s", QCC_StatusText(status)));
+        }
+    }
+}
+
 void _LocalEndpoint::CachedPropertyCallbacks::AlarmTriggered(const qcc::Alarm& alarm, QStatus reason)
 {
     if (reason == ER_OK) {
@@ -1224,6 +1263,13 @@ void _LocalEndpoint::ScheduleCachedGetPropertyReply(
             replyMapLock.Unlock(MUTEX_CONTEXT);
             delete ctx;
         }
+    }
+}
+
+void _LocalEndpoint::DiscardObserverWork()
+{
+    if (observerCallbacks) {
+        dispatcher->RemoveAlarmsWithListener(*observerCallbacks);
     }
 }
 
