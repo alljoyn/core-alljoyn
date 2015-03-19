@@ -38,6 +38,8 @@ namespace services {
  *  GetAboutData
  *  GetVersion
  *
+ * @deprecated The AboutClient class has been deprecated please see the
+ * AboutProxy class for similar functionality as the AboutClient class.
  */
 class AboutClient : public ajn::MessageReceiver {
   public:
@@ -54,43 +56,61 @@ class AboutClient : public ajn::MessageReceiver {
 
     /**
      * AboutClient Constructor
+     *
+     * @deprecated The AboutClient class has been deprecated please see the
+     * AboutProxy class for similar functionality as the AboutClient class.
+     *
      * @param  bus reference to BusAttachment
      */
-    AboutClient(ajn::BusAttachment& bus);
+    QCC_DEPRECATED(AboutClient(ajn::BusAttachment& bus));
 
     /**
      * Destruct AboutClient
+     *
+     * @deprecated The AboutClient class has been deprecated please see the
+     * AboutProxy class for similar functionality as the AboutClient class.
      */
-    virtual ~AboutClient();
+    QCC_DEPRECATED(virtual ~AboutClient());
 
     /**
      * Get the ObjectDescription array for specified bus name.
+     *
+     * @deprecated The AboutClient class and its member functions have been
+     * deprecated please see the AboutProxy::GetObjectDescription.
      *
      * @param[in] busName Unique or well-known name of AllJoyn bus
      * @param[in,out] objectDescs  objectDescs  Description of busName's remote objects.
      * @param[in] sessionId the session received  after joining AllJoyn session
      * @return ER_OK if successful.
      */
-    QStatus GetObjectDescriptions(const char* busName, ObjectDescriptions& objectDescs, ajn::SessionId sessionId = 0);
+    QCC_DEPRECATED(QStatus GetObjectDescriptions(const char* busName, ObjectDescriptions & objectDescs, ajn::SessionId sessionId = 0));
 
     /**
      * Get the AboutData  for specified bus name.
+     *
+     * @deprecated The AboutClient class and its member functions have been
+     * deprecated please see the AboutProxy::GetAboutData function.
+     *
      * @param[in] busName Unique or well-known name of AllJoyn bus
      * @param[in] languageTag is the language used to request the AboutData.
      * @param[in,out] data is reference of AboutData that is filled by the function
      * @param[in] sessionId the session received  after joining AllJoyn session
      * @return ER_OK if successful.
      */
-    QStatus GetAboutData(const char* busName, const char* languageTag, AboutData& data, ajn::SessionId sessionId = 0);
+    QCC_DEPRECATED(QStatus GetAboutData(const char* busName, const char* languageTag, AboutData & data, ajn::SessionId sessionId = 0));
 
     /**
      * GetVersion get the About version
+     *
+     * @deprecated The AboutClient class and its member functions have been
+     * deprecated please see the AboutProxy::GetVersion function.
+     *
      * @param[in] busName Unique or well-known name of AllJoyn bus
      * @param[in] version of the service.
      * @param[in] sessionId the session received  after joining AllJoyn session
      * @return
      */
-    QStatus GetVersion(const char* busName, int& version, ajn::SessionId sessionId = 0);
+    QCC_DEPRECATED(QStatus GetVersion(const char* busName, int& version, ajn::SessionId sessionId = 0));
 
   private:
 

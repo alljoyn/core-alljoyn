@@ -15,6 +15,11 @@
 Import('about_env')
 import os
 
+# even though we have deprecated the About Service code we still want to build
+# the code till the code is ready for removal.
+if about_env['OS_GROUP'] == 'posix':
+    about_env.Append(CXXFLAGS = ['-Wno-deprecated-declarations'])
+
 # Sources
 srcs = about_env.Glob('*.cc')
 
