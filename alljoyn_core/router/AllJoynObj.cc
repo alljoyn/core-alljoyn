@@ -4061,7 +4061,7 @@ void AllJoynObj::RemoveBusToBusEndpoint(RemoteEndpoint& endpoint)
     //
     // Check if guid for this name is eligible for removal from PeerInfoMap in NameService
     //
-    if (!IsGuidLongStringKnown(guidToBeChecked)) {
+    if (!IsGuidLongStringAdvertising(guidToBeChecked)) {
         IpNameService::Instance().RemoveFromPeerInfoMap(guidToBeChecked);
     }
 
@@ -4936,7 +4936,7 @@ void AllJoynObj::FoundNames(const qcc::String& busAddr,
                     //
                     // Check if guid for this name is eligible for removal from PeerInfoMap in Name service
                     //
-                    if (!IsGuidLongStringKnown(guidToBeChecked)) {
+                    if (!IsGuidLongStringAdvertising(guidToBeChecked)) {
                         QCC_DbgPrintf(("TTl=0. Removing GUID %s", guidToBeChecked.c_str()));
                         IpNameService::Instance().RemoveFromPeerInfoMap(guidToBeChecked);
                     }
@@ -4967,7 +4967,7 @@ void AllJoynObj::FoundNames(const qcc::String& busAddr,
     }
 }
 
-bool AllJoynObj::IsGuidShortStringKnown(qcc::String& guid)
+bool AllJoynObj::IsGuidShortStringAdvertising(qcc::String& guid)
 {
     //
     //Check if there any other name in the NameMap from this guid
@@ -4981,24 +4981,13 @@ bool AllJoynObj::IsGuidShortStringKnown(qcc::String& guid)
         }
         ++it;
     }
-    //
-    //Check if there is any active session with this guid
-    //
-    BusEndpoint bep = FindEndpoint(":" + guid + ".1");
-    if (bep->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL) {
-        QCC_DbgPrintf(("Session found for %s", guid.c_str()));
-        ReleaseLocks();
-        return true;
-    } else {
-        QCC_DbgPrintf(("EndpoinType = %d,  Session not found for %s", bep->GetEndpointType(), guid.c_str()));
-    }
 
     ReleaseLocks();
     return false;
 }
 
 
-bool AllJoynObj::IsGuidLongStringKnown(qcc::String& guid)
+bool AllJoynObj::IsGuidLongStringAdvertising(qcc::String& guid)
 {
     //
     //Check if there any other name in the NameMap from this guid
@@ -5012,20 +5001,6 @@ bool AllJoynObj::IsGuidLongStringKnown(qcc::String& guid)
         }
         ++it;
     }
-    //
-    //Check if there is any active session with this guid
-    //
-    GUID128 wellFormedBusName(guid);
-    QCC_DbgPrintf(("wellFormedBusName.ToShortString()(%s)", wellFormedBusName.ToShortString().c_str()));
-    BusEndpoint bep = FindEndpoint(":" + wellFormedBusName.ToShortString() + ".1");
-    if (bep->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL) {
-        QCC_DbgPrintf(("Session found ", wellFormedBusName.ToShortString().c_str()));
-        ReleaseLocks();
-        return true;
-    } else {
-        QCC_DbgPrintf(("EndpoinType = %d,  Session not found for %s", bep->GetEndpointType(), wellFormedBusName.ToShortString().c_str()));
-    }
-
     ReleaseLocks();
     return false;
 }
@@ -5300,7 +5275,7 @@ void AllJoynObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
                     //
                     // Check if guid for this name is eligible for removal from PeerInfoMap in Name service
                     //
-                    if (!IsGuidLongStringKnown(guidToBeChecked)) {
+                    if (!IsGuidLongStringAdvertising(guidToBeChecked)) {
                         IpNameService::Instance().RemoveFromPeerInfoMap(guidToBeChecked);
                     }
                 } else {
@@ -5434,8 +5409,6 @@ void AllJoynObj::Ping(const InterfaceDescription::Member* member, Message& msg)
                 }
             }
         } else {
-            /* Ping is to a connected or unconnected remote device */
-
             /*
              * First order of business is to locate a guid corresponding to the name.
              * The logic below follows the same logic as joining a session.
@@ -5476,16 +5449,12 @@ void AllJoynObj::Ping(const InterfaceDescription::Member* member, Message& msg)
                         } else {
                             replyCode = ALLJOYN_PING_REPLY_UNREACHABLE;
                         }
-                    } else if (IsGuidShortStringKnown(guidStr)) {
+                    } else if (IsGuidShortStringAdvertising(guidStr)) {
                         guid = guidStr;
                     } else {
                         replyCode = ALLJOYN_PING_REPLY_UNKNOWN_NAME;
                     }
                 }
-            } else if (ep->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL) {
-                VirtualEndpoint vep = VirtualEndpoint::cast(ep);
-                guid = String(vep->GetUniqueName()).substr(1, GUID128::SIZE_SHORT);
-                QCC_DbgPrintf(("Session found %s", name));
             }
 
             if (!guid.empty() && replyCode == ALLJOYN_PING_REPLY_SUCCESS) {
