@@ -390,7 +390,7 @@ bool _ProxyBusObjectHost::getChildren(const NPVariant* args, uint32_t argCount, 
     }
 
     numChildren = proxyBusObject->GetChildren();
-    children = new ajn::ProxyBusObject *[numChildren];
+    children = new ajn::ProxyBusObject*[numChildren];
     proxyBusObject->GetChildren(children, numChildren);
 
     for (uint32_t i = 0; i < numChildren; ++i) {
@@ -488,9 +488,9 @@ bool _ProxyBusObjectHost::getInterfaces(const NPVariant* args, uint32_t argCount
     }
 
     numIfaces = proxyBusObject->GetInterfaces();
-    ifaces = new const ajn::InterfaceDescription *[numIfaces];
+    ifaces = new const ajn::InterfaceDescription*[numIfaces];
     proxyBusObject->GetInterfaces(ifaces, numIfaces);
-    descs = new InterfaceDescriptionNative *[numIfaces];
+    descs = new InterfaceDescriptionNative*[numIfaces];
     for (uint32_t i = 0; i < numIfaces; ++i) {
         descs[i] = InterfaceDescriptionNative::GetInterface(plugin, busAttachment, ifaces[i]->GetName());
     }

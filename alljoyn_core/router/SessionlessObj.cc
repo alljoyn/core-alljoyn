@@ -140,7 +140,7 @@ SessionlessObj::SessionlessObj(Bus& bus, BusController* busController, DaemonRou
     requestRangeMatchSignal(NULL),
     timer("sessionless", true),
     curChangeId(0),
-    sessionOpts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY, SessionOpts::DAEMON_NAMES),
+    sessionOpts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY, SessionOpts::SLS_NAMES),
     sessionPort(SESSIONLESS_SESSION_PORT),
     advanceChangeId(false),
     nextRulesId(0),
@@ -408,6 +408,16 @@ void SessionlessObj::RemoveRuleWork::Run()
 SessionlessObj::PushMessageWork::PushMessageWork(SessionlessObj& slObj, Message& msg)
     : Work(slObj), msg(msg)
 {
+}
+
+bool SessionlessObj::IsSessionlessEmitter(String name)
+{
+    lock.Lock();
+    SessionlessMessageKey key(name.c_str(), "", "", "");
+    LocalCache::iterator mit = localCache.lower_bound(key);
+    bool ret = (mit != localCache.end() && (mit->first.find(name) == 0));
+    lock.Unlock();
+    return ret;
 }
 
 void SessionlessObj::PushMessageWork::Run()

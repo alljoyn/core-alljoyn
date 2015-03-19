@@ -59,9 +59,11 @@ static size_t GetAnnotationsWithValues(
     return count;
 }
 
-class InterfaceDescription::AnnotationsMap : public std::map<qcc::String, qcc::String> { };
+class InterfaceDescription::AnnotationsMap : public std::map<qcc::String, qcc::String> {
+};
 
-class InterfaceDescription::ArgumentDescriptions : public std::map<qcc::String, qcc::String> { };
+class InterfaceDescription::ArgumentDescriptions : public std::map<qcc::String, qcc::String> {
+};
 
 qcc::String InterfaceDescription::NextArg(const char*& signature, qcc::String& argNames, bool inOut,
                                           size_t indent, Member const& member, bool withDescriptions,
@@ -205,7 +207,8 @@ InterfaceDescription::Property::Property(const char* name, const char* signature
     signature(signature ? signature : ""),
     access(access),
     annotations(new AnnotationsMap()),
-    description()
+    description(),
+    cacheable(false)
 {
 }
 
@@ -214,13 +217,17 @@ InterfaceDescription::Property::Property(const char* name, const char* signature
     name(name),
     signature(signature ? signature : ""),
     access(access),
-    annotations(new AnnotationsMap())
+    annotations(new AnnotationsMap()),
+    description(),
+    cacheable(false)
 {
     if (annotation & PROP_ANNOTATE_EMIT_CHANGED_SIGNAL) {
         (*annotations)[org::freedesktop::DBus::AnnotateEmitsChanged] = "true";
+        cacheable = true;
     }
     if (annotation & PROP_ANNOTATE_EMIT_CHANGED_SIGNAL_INVALIDATES) {
         (*annotations)[org::freedesktop::DBus::AnnotateEmitsChanged] = "invalidates";
+        cacheable = true;
     }
 }
 
@@ -229,7 +236,8 @@ InterfaceDescription::Property::Property(const Property& other)
     signature(other.signature),
     access(other.access),
     annotations(new AnnotationsMap(*(other.annotations))),
-    description(other.description)
+    description(other.description),
+    cacheable(other.cacheable)
 {
 
 }
@@ -545,7 +553,11 @@ QStatus InterfaceDescription::AddPropertyAnnotation(const qcc::String& p_name, c
 
     Property& property = pit->second;
     std::pair<AnnotationsMap::iterator, bool> ret = property.annotations->insert(AnnotationsMap::value_type(name, value));
-    return (ret.second || (ret.first->first == name && ret.first->second == value)) ? ER_OK : ER_BUS_ANNOTATION_ALREADY_EXISTS;
+    QStatus status = (ret.second || (ret.first->first == name && ret.first->second == value)) ? ER_OK : ER_BUS_ANNOTATION_ALREADY_EXISTS;
+    if (status == ER_OK && name == org::freedesktop::DBus::AnnotateEmitsChanged && value != "false") {
+        property.cacheable = true;
+    }
+    return status;
 }
 
 bool InterfaceDescription::GetPropertyAnnotation(const qcc::String& p_name, const qcc::String& name, qcc::String& value) const
@@ -594,6 +606,17 @@ bool InterfaceDescription::operator==(const InterfaceDescription& other) const
     }
 
     return true;
+}
+
+bool InterfaceDescription::HasCacheableProperties() const
+{
+    Definitions::PropertyMap::const_iterator pit = defs->properties.begin();
+    for (; pit != defs->properties.end(); ++pit) {
+        if (pit->second.cacheable) {
+            return true;
+        }
+    }
+    return false;
 }
 
 size_t InterfaceDescription::GetProperties(const Property** props, size_t numProps) const

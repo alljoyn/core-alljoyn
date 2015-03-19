@@ -49,7 +49,7 @@
 
 namespace qcc {
 
-extern String StrError();
+extern String GetLastErrorString();
 
 extern void MakeSockAddr(const IPAddress& addr,
                          uint16_t port,
@@ -100,7 +100,7 @@ static QStatus SendSGCommon(SocketFd sockfd,
             sent = 0;
         } else {
             status = ER_OS_ERROR;
-            QCC_LogError(status, ("Send: %s", StrError().c_str()));
+            QCC_LogError(status, ("Send: %s", GetLastErrorString().c_str()));
         }
     }
     QCC_DbgPrintf(("Sent %u bytes", dwsent));
@@ -169,7 +169,7 @@ static QStatus RecvSGCommon(SocketFd sockfd, SOCKADDR_STORAGE* addr, socklen_t& 
     DWORD dwRecv;
     DWORD ret;
 
-    QCC_DbgTrace(("RecvSGCommon(sockfd = &d, addr, addrLen, sg = <>, received = <>)", sockfd));
+    QCC_DbgTrace(("RecvSGCommon(sockfd = %d, addr, addrLen, sg = <>, received = <>)", sockfd));
 
     /*
      * Get extension function pointer
@@ -182,7 +182,7 @@ static QStatus RecvSGCommon(SocketFd sockfd, SOCKADDR_STORAGE* addr, socklen_t& 
                        &dwRecv, NULL, NULL);
         if (ret == SOCKET_ERROR) {
             status = ER_OS_ERROR;
-            QCC_LogError(status, ("Receive: %s", StrError().c_str()));
+            QCC_LogError(status, ("Receive: %s", GetLastErrorString().c_str()));
             return status;
         }
     }
@@ -211,7 +211,7 @@ static QStatus RecvSGCommon(SocketFd sockfd, SOCKADDR_STORAGE* addr, socklen_t& 
             status = ER_WOULDBLOCK;
         } else {
             status = ER_OS_ERROR;
-            QCC_LogError(status, ("Receive: %s", StrError().c_str()));
+            QCC_LogError(status, ("Receive: %s", GetLastErrorString().c_str()));
         }
     } else {
         sg.SetDataSize(received);

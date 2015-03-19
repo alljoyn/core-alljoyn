@@ -20,34 +20,41 @@ import org.alljoyn.services.common.utils.GenericLogger;
 
 /**
  * An Android implementation of the {@link GenericLogger} class
+ * @deprecated
  */
+@Deprecated
 public class DefaultGenericLogger implements GenericLogger {
 
     @Override
+    @Deprecated
     public void warn(String TAG, String msg)
     {
         System.out.println(new StringBuilder(TAG).append(" Warning: ").append(msg).toString());
     }
 
     @Override
+    @Deprecated
     public void info(String TAG, String msg)
     {
         System.out.println(new StringBuilder(TAG).append(" Info: ").append(msg).toString());
     }
 
     @Override
+    @Deprecated
     public void fatal(String TAG, String msg)
     {
         System.out.println(new StringBuilder(TAG).append(" WTF: ").append(msg).toString());
     }
 
     @Override
+    @Deprecated
     public void error(String TAG, String msg)
     {
         System.out.println(new StringBuilder(TAG).append(" Error: ").append(msg).toString());
     }
 
     @Override
+    @Deprecated
     public void debug(String TAG, String msg)
     {
         System.out.println(new StringBuilder(TAG).append(" Debug: ").append(msg).toString());

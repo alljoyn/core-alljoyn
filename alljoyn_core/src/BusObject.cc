@@ -390,7 +390,7 @@ void BusObject::GetAllProps(const InterfaceDescription::Member* member, Message&
             QCC_LogError(status, ("Attempt to get properties from a secure %s", isSecure ? "object" : "interface"));
         } else {
             size_t numProps = ifc->GetProperties();
-            props = new const InterfaceDescription::Property *[numProps];
+            props = new const InterfaceDescription::Property*[numProps];
             ifc->GetProperties(props, numProps);
             size_t readable = 0;
             /* Count readable properties */

@@ -20,6 +20,7 @@
 /**
  AJNConvertUtil class includes a string convert methods.
  */
+__deprecated
 @interface AJNConvertUtil : NSObject
 
 /**
@@ -27,26 +28,26 @@
  @param nsstring String from type NSString.
  @return qcc::String.
  */
-+ (qcc ::String)convertNSStringToQCCString:(NSString *)nsstring;
++ (qcc ::String)convertNSStringToQCCString:(NSString *)nsstring __deprecated;
 
 /**
  Convert qcc::String to NSString.
  @param qccstring String from type qcc::String.
  @return NSString.
  */
-+ (NSString *)convertQCCStringtoNSString:(qcc ::String)qccstring;
++ (NSString *)convertQCCStringtoNSString:(qcc ::String)qccstring __deprecated;
 
 /**
  Convert NSString to const char.
  @param nsstring String from type NSString.
  @return const char.
  */
-+ (const char *)convertNSStringToConstChar:(NSString *)nsstring;
++ (const char *)convertNSStringToConstChar:(NSString *)nsstring __deprecated;
 
 /**
  Convert const char to NSString.
  @param constchar const char.
  @return NSString.
  */
-+ (NSString *)convertConstCharToNSString:(const char *)constchar;
++ (NSString *)convertConstCharToNSString:(const char *)constchar __deprecated;
 @end

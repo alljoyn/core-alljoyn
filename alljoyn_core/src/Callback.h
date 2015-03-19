@@ -115,7 +115,8 @@ namespace ajn {
  * Making this facility more generic and easier to use makes the templates
  * more complicated, but the basic idea remains.
  */
-class empty { };
+class empty {
+};
 
 /**
  * @defgroup callback_usage Callback example

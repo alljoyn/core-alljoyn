@@ -747,6 +747,13 @@ extern AJ_API const char* AJ_CALL alljoyn_proxybusobject_getpath(alljoyn_proxybu
 extern AJ_API const char* AJ_CALL alljoyn_proxybusobject_getservicename(alljoyn_proxybusobject proxyObj);
 
 /**
+ * Return the remote unique name for this object.
+ *
+ * @return Unique name
+ */
+extern AJ_API const char* AJ_CALL alljoyn_proxybusobject_getuniquename(alljoyn_proxybusobject proxyObj);
+
+/**
  * Return the session Id for this object.
  *
  * @param proxyObj the proxy bus object we wish to obtain the session ID from.
@@ -791,6 +798,13 @@ extern AJ_API QCC_BOOL AJ_CALL alljoyn_proxybusobject_isvalid(alljoyn_proxybusob
  * @return  true if the object is secure
  */
 extern AJ_API QCC_BOOL AJ_CALL alljoyn_proxybusobject_issecure(alljoyn_proxybusobject proxyObj);
+
+/**
+ * Enable property caching for this proxy bus object.
+ *
+ * @param proxyObj  The alljoyn_proxybusobject for which caching must be enabled
+ */
+extern AJ_API void AJ_CALL alljoyn_proxybusobject_enablepropertycaching(alljoyn_proxybusobject proxyObj);
 
 #ifdef __cplusplus
 } /* extern "C" */

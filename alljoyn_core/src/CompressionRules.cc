@@ -80,7 +80,9 @@ uint32_t _CompressionRules::GetToken(const HeaderFields& hdrFields)
         /*
          * Allocate a random token (check it isn't zero and not in use)
          */
-        do { token = Rand32(); } while (token && GetExpansion(token));
+        do {
+            token = Rand32();
+        } while (token && GetExpansion(token));
         Add(hdrFields, token);
     }
     lock.Unlock(MUTEX_CONTEXT);

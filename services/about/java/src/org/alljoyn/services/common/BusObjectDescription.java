@@ -21,21 +21,31 @@ import org.alljoyn.bus.annotation.Position;
 /**
  * Descriptions of the BusObjects that make up the service.
  * Pairing a BusObject with the BusInterfaces that it implements.
+ * @deprecated see org.alljoyn.bus.AboutObjectDescription
  */
+@Deprecated
 public class BusObjectDescription {
 
-    /* The object path of the BusObject */
+    /**
+     * The object path of the BusObject 
+     * @deprecated see org.alljoyn.bus.AboutObjectDescription
+     */
+    @Deprecated
     @Position(0) public String path;
-    /* 
+    /**
      * An array of strings where each element of the array names an AllJoyn
      * interface that is implemented by the given BusObject.
+     * @deprecated see org.alljoyn.bus.AboutObjectDescription
      */
+    @Deprecated
     @Position(1) public String[] interfaces;
 
     /**
      * Return the BusObject path
+     * @deprecated see org.alljoyn.bus.AboutObjectDescription
      * @return the BusObject path
      */
+    @Deprecated
     public String getPath()
     {
         return path;
@@ -43,16 +53,20 @@ public class BusObjectDescription {
 
     /**
      * Set the BusObject path
+     * @deprecated see org.alljoyn.bus.AboutObjectDescription
      * @param path the BusObject path
      */
+    @Deprecated
     public void setPath(String path)
     {
         this.path = path;
     }
 
     /**
+     * @deprecated see org.alljoyn.bus.AboutObjectDescription
      * @return Returns the interfaces that are implemented by this BusObject
      */
+    @Deprecated
     public String[] getInterfaces()
     {
         return interfaces;
@@ -60,14 +74,17 @@ public class BusObjectDescription {
 
     /**
      * Set the interfaces that are implemented by this BusObject
+     * @deprecated see org.alljoyn.bus.AboutObjectDescription
      * @param interfaces the interfaces that are implemented by this BusObject
      */
+    @Deprecated
     public void setInterfaces(String[] interfaces)
     {
         this.interfaces = interfaces;
     }
 
     @Override
+    @Deprecated
     public String toString() {
 
         StringBuilder s = new StringBuilder("");

@@ -35,6 +35,9 @@ namespace services {
 /**
  *  AnnouncementRegistrar is a helper class enable the Application to register
  *  AnnounceHandlers to receive org.alljoyn.about Announce signals.
+ *
+ * @deprecated The AnnouncementRegistrar class has been deprecated please see the
+ * BusAttachment class for similar functionality as the AnnouncementRegistrar class.
  */
 class AnnouncementRegistrar {
 
@@ -102,6 +105,10 @@ class AnnouncementRegistrar {
      * significant impact on network performance and should be avoided unless
      * its known that all announcements are needed.
      *
+     * @deprecated The AnnouncementRegistrar::RegisterAnnounceHandler function
+     * has been deprecated please see the BusAttachment::RegisterAboutListener
+     * function and the BusAttachment::WhoImplements function.
+     *
      * @param[in] bus reference to BusAttachment
      * @param[in] handler reference to AnnounceHandler
      * @param[in] implementsInterfaces a list of interfaces that the Announce
@@ -111,7 +118,7 @@ class AnnouncementRegistrar {
      *               implementsInterfaces list
      * @return status
      */
-    static QStatus RegisterAnnounceHandler(ajn::BusAttachment& bus, AnnounceHandler& handler, const char** implementsInterfaces, size_t numberInterfaces);
+    QCC_DEPRECATED(static QStatus RegisterAnnounceHandler(ajn::BusAttachment & bus, AnnounceHandler & handler, const char** implementsInterfaces, size_t numberInterfaces));
 
     /**
      * @deprecated This function has been deprecated please change your code
@@ -125,6 +132,10 @@ class AnnouncementRegistrar {
      *
      * Registers a handler to receive the org.alljoyn.about Announce signal.
      *
+     * @deprecated The AnnouncementRegistrar::RegisterAnnounceHandler function
+     * has been deprecated please see the BusAttachment::RegisterAboutListener
+     * function and the BusAttachment::WhoImplements function.
+     *
      * @param[in] bus reference to BusAttachment
      * @param[in] handler reference to AnnounceHandler
      *
@@ -133,6 +144,10 @@ class AnnouncementRegistrar {
     QCC_DEPRECATED(static QStatus RegisterAnnounceHandler(ajn::BusAttachment & bus, AnnounceHandler & handler));
     /**
      * Unregisters the AnnounceHandler from receiving the org.alljoyn.about Announce signal.
+     *
+     * @deprecated The AnnouncementRegistrar::UnRegisterAnnounceHandler function
+     * has been deprecated please see the BusAttachment::UnregisterAboutListener
+     * function and the BusAttachment::CancelWhoImplements function.
      *
      * @param[in] bus reference to BusAttachment
      * @param[in] handler reference to AnnounceHandler
@@ -143,7 +158,7 @@ class AnnouncementRegistrar {
      *               implementsInterfaces list
      * @return status
      */
-    static QStatus UnRegisterAnnounceHandler(ajn::BusAttachment& bus, AnnounceHandler& handler, const char** implementsInterfaces, size_t numberInterfaces);
+    QCC_DEPRECATED(static QStatus UnRegisterAnnounceHandler(ajn::BusAttachment & bus, AnnounceHandler & handler, const char** implementsInterfaces, size_t numberInterfaces));
 
     /**
      * @deprecated This function has been deprecated please change your code
@@ -152,6 +167,10 @@ class AnnouncementRegistrar {
      * @see UnRegisterAnnounceHandler(ajn::BusAttachment&, AnnounceHandler&, const char**, size_t)
      *
      * Unregisters the AnnounceHandler from receiving the org.alljoyn.about Announce signal.
+     *
+     * @deprecated The AnnouncementRegistrar::UnRegisterAnnounceHandler function
+     * has been deprecated please see the BusAttachment::UnregisterAboutListener
+     * function and the BusAttachment::CancelWhoImplements function.
      *
      * @param[in] bus reference to BusAttachment
      * @param[in] handler reference to AnnounceHandler
@@ -162,10 +181,15 @@ class AnnouncementRegistrar {
 
     /**
      * Unregisters all AnnounceHandlers from receiving any org.alljoyn.about Announce signal
+     *
+     * @deprecated The AnnouncementRegistrar::UnRegisterAnnounceHandler function
+     * has been deprecated please see the BusAttachment::UnregisterAllAboutListeners
+     * function and the BusAttachment::CancelWhoImplements function.
+     *
      * @param[in] bus reference to BusAttachment
      * @return status
      */
-    static QStatus UnRegisterAllAnnounceHandlers(ajn::BusAttachment& bus);
+    QCC_DEPRECATED(static QStatus UnRegisterAllAnnounceHandlers(ajn::BusAttachment & bus));
 };
 
 }

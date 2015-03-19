@@ -29,11 +29,16 @@ namespace services {
 /**
  * AboutIconService is an AllJoyn BusObject that implements the org.alljoyn.Icon standard interface.
  * Applications that provide AllJoyn IoE services to receive info about the Icon of the service.
+ *
+ * @deprecated The AboutIconService class has been deprecated please see the
+ * AboutIconObj class for similar functionality as the AboutIconService class.
  */
 class AboutIconService : public ajn::BusObject {
   public:
 
     /**
+     * @deprecated The AboutIconService class has been deprecated please see the
+     * AboutIconObj class.
      *
      * @param[in] bus  BusAttachment instance associated with this AboutService
      * @param[in]  mimetype of the icon
@@ -41,18 +46,26 @@ class AboutIconService : public ajn::BusObject {
      * @param[in]  data	is the content of the icon
      * @param[in]  csize is the size of the content in bytes.
      */
-    AboutIconService(ajn::BusAttachment& bus, qcc::String const& mimetype, qcc::String const& url, uint8_t* data, size_t csize);
+    QCC_DEPRECATED(AboutIconService(ajn::BusAttachment& bus, qcc::String const& mimetype, qcc::String const& url, uint8_t* data, size_t csize));
+
     /**
-     *	Desctructor of AboutIconService
+     * @deprecated The AboutIconService class has been deprecated please see the
+     * AboutIconObj class.
+     *
+     * Desctructor of AboutIconService
      */
-    virtual ~AboutIconService() {
+    QCC_DEPRECATED(virtual ~AboutIconService()) {
     }
 
     /**
      * Register the AboutIconService  on the AllJoyn bus.
+     *
+     * @deprecated The AboutIconService class has been deprecated please see the
+     * AboutIconObj class.
+     *
      * @return status.
      */
-    QStatus Register();
+    QCC_DEPRECATED(QStatus Register());
 
   private:
     /**

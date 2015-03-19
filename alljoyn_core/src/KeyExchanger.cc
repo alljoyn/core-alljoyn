@@ -65,7 +65,7 @@ class SigInfo {
     }
 
     /**
-     * desstructor.
+     * destructor.
      */
     virtual ~SigInfo()
     {
@@ -464,11 +464,11 @@ QStatus KeyExchanger::ValidateRemoteVerifierVariant(const char* peerName, MsgArg
         return ER_INVALID_DATA;
     }
     uint8_t computedRemoteVerifier[AUTH_VERIFIER_LEN];
-    status = GenerateRemoteVerifier(computedRemoteVerifier, AUTH_VERIFIER_LEN);
+    status = GenerateRemoteVerifier(computedRemoteVerifier, sizeof(computedRemoteVerifier));
     if (status != ER_OK) {
         return status;
     }
-    *authorized = (memcmp(remoteVerifier, computedRemoteVerifier, AUTH_VERIFIER_LEN) == 0);
+    *authorized = (memcmp(remoteVerifier, computedRemoteVerifier, sizeof(computedRemoteVerifier)) == 0);
     if (!IsInitiator()) {
         hashUtil.Update(remoteVerifier, remoteVerifierLen);
     }
@@ -497,12 +497,12 @@ QStatus KeyExchanger::ReplyWithVerifier(Message& msg)
 {
     /* compute the local verifier to send back */
     uint8_t verifier[AUTH_VERIFIER_LEN];
-    QStatus status = GenerateLocalVerifier(verifier, AUTH_VERIFIER_LEN);
+    QStatus status = GenerateLocalVerifier(verifier, sizeof(verifier));
     if (status != ER_OK) {
         return status;
     }
     MsgArg variant;
-    variant.Set("ay", AUTH_VERIFIER_LEN, verifier);
+    variant.Set("ay", sizeof(verifier), verifier);
     MsgArg replyMsg("v", &variant);
     return peerObj->HandleMethodReply(msg, &replyMsg, 1);
 }
@@ -557,12 +557,12 @@ QStatus KeyExchangerECDHE_PSK::ReplyWithVerifier(Message& msg)
 {
     /* compute the local verifier to send back */
     uint8_t verifier[AUTH_VERIFIER_LEN];
-    QStatus status = GenerateLocalVerifier(verifier, AUTH_VERIFIER_LEN);
+    QStatus status = GenerateLocalVerifier(verifier, sizeof(verifier));
     if (status != ER_OK) {
         return status;
     }
     MsgArg variant;
-    variant.Set("(ayay)", pskName.length(), pskName.data(), AUTH_VERIFIER_LEN, verifier);
+    variant.Set("(ayay)", pskName.length(), pskName.data(), sizeof(verifier), verifier);
     MsgArg replyMsg("v", &variant);
     return peerObj->HandleMethodReply(msg, &replyMsg, 1);
 }
@@ -645,11 +645,11 @@ QStatus KeyExchangerECDHE_PSK::ValidateRemoteVerifierVariant(const char* peerNam
         return ER_INVALID_DATA;
     }
     uint8_t computedRemoteVerifier[AUTH_VERIFIER_LEN];
-    status = GenerateRemoteVerifier(computedRemoteVerifier, AUTH_VERIFIER_LEN);
+    status = GenerateRemoteVerifier(computedRemoteVerifier, sizeof(computedRemoteVerifier));
     if (status != ER_OK) {
         return status;
     }
-    *authorized = (memcmp(remoteVerifier, computedRemoteVerifier, AUTH_VERIFIER_LEN) == 0);
+    *authorized = (memcmp(remoteVerifier, computedRemoteVerifier, sizeof(computedRemoteVerifier)) == 0);
     if (!IsInitiator()) {
         hashUtil.Update(remoteVerifier, remoteVerifierLen);
     }
@@ -757,7 +757,7 @@ QStatus KeyExchangerECDHE_ECDSA::RequestCredentialsCB(const char* peerName)
         QCC_DbgHLPrintf(("KeyExchangerECDHE_ECDSA::RequestCredentialsCB failed to parse the private key PEM"));
         return status;
     }
-    status = ParseCertChainPEM((qcc::String &)creds.GetCertChain());
+    status = ParseCertChainPEM((qcc::String&)creds.GetCertChain());
     if (status != ER_OK) {
         QCC_DbgHLPrintf(("KeyExchangerECDHE_ECDSA::RequestCredentialsCB failed to parse the certificate chain"));
         return status;
@@ -870,7 +870,7 @@ QStatus KeyExchangerECDHE_ECDSA::ValidateRemoteVerifierVariant(const char* peerN
     }
     /* compute the remote verifier */
     uint8_t computedRemoteVerifier[AUTH_VERIFIER_LEN];
-    status = GenerateRemoteVerifier(computedRemoteVerifier, AUTH_VERIFIER_LEN);
+    status = GenerateRemoteVerifier(computedRemoteVerifier, sizeof(computedRemoteVerifier));
     if (status != ER_OK) {
         return status;
     }
@@ -921,7 +921,7 @@ QStatus KeyExchangerECDHE_ECDSA::ValidateRemoteVerifierVariant(const char* peerN
     SigInfoECC sigInfo;
     sigInfo.SetRCoord(rCoord);
     sigInfo.SetSCoord(sCoord);
-    status = ecc.DSAVerifyDigest(computedRemoteVerifier, AUTH_VERIFIER_LEN, sigInfo.GetSignature());
+    status = ecc.DSAVerifyDigest(computedRemoteVerifier, sizeof(computedRemoteVerifier), sigInfo.GetSignature());
     *authorized = (ER_OK == status);
 
     if (!*authorized) {
@@ -963,7 +963,7 @@ QStatus KeyExchangerECDHE_ECDSA::GenVerifierSigInfoArg(MsgArg& msgArg, bool upda
     ecc.SetDSAPrivateKey(&issuerPrivateKey);
     ECCSignature sig;
     QCC_DbgHLPrintf(("Verifier: %s\n", BytesToHexString(verifier, sizeof(verifier)).c_str()));
-    QStatus status = ecc.DSASignDigest(verifier, AUTH_VERIFIER_LEN, &sig);
+    QStatus status = ecc.DSASignDigest(verifier, sizeof(verifier), &sig);
     if (status != ER_OK) {
         QCC_LogError(status, ("KeyExchangerECDHE_ECDSA::GenVerifierSigInfoArg failed to generate local verifier sig info"));
         return status;

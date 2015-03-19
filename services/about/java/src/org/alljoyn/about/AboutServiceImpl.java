@@ -50,7 +50,9 @@ import org.alljoyn.services.common.utils.TransportUtil;
 
 /**
  * An implementation of the AboutService interface
+ * @deprecated please see org.alljoyn.bus.AboutObj class and
  */
+@Deprecated
 public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
 {
 
@@ -86,7 +88,9 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
 
     /**
      * @return {@link AboutService} instance
+     * @deprecated
      */
+    @Deprecated
     public static AboutService getInstance()
     {
         return m_instance;
@@ -107,8 +111,10 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
 
     /**
      * @see org.alljoyn.about.AboutService#startAboutClient(org.alljoyn.bus.BusAttachment)
+     * @deprecated please see org.alljoyn.bus.AboutProxy class and
      */
     @Override
+    @Deprecated
     public void startAboutClient(BusAttachment bus) throws Exception
     {
         super.startClient();
@@ -127,6 +133,8 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
      * Using this member function could have significant impact on network
      * performance.
      *
+     * @deprecated please see org.alljoyn.bus.BusAttachment.registerAboutListener class
+     *
      * @param handler the AnnouncementHandler that will receive the announce signal
      *
      * @see org.alljoyn.about.AboutService#addAnnouncementHandler(org.alljoyn.services.common.AnnouncementHandler, String[] interfaces)
@@ -137,9 +145,12 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
         addAnnouncementHandler(handler, null);
     }
     /**
+     * @deprecated please see org.alljoyn.bus.BusAttachment.registerAboutListener class and
+     * org.alljoyn.bus.BusAttachment.whoImplements
      * @see org.alljoyn.about.AboutService#addAnnouncementHandler(org.alljoyn.services.common.AnnouncementHandler, String[] interfaces)
      */
     @Override
+    @Deprecated
     public synchronized void addAnnouncementHandler(AnnouncementHandler handler, String[] interfaces)
     {
         if ( handler == null ) {
@@ -184,9 +195,11 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
     }
 
     /**
+     * @deprecated
      * @see org.alljoyn.about.AboutService#removeAnnouncementHandler
      */
     @Override
+    @Deprecated
     public synchronized void removeAnnouncementHandler(AnnouncementHandler handler, String[] interfaces)
     {
         if (m_announcementHandlers == null) {
@@ -295,7 +308,9 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
     /**
      * The class is an Announcement signal receiver.
      * The class implements {@link AboutTransport} interface that extends {@link BusObject}
+     * @deprecated please see org.alljoyn.bus.AboutListener
      */
+    @Deprecated
     public class AnnouncmentReceiver implements AboutTransport
     {
         /*
@@ -321,8 +336,10 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
         /**
          * Signal handler
          * @see org.alljoyn.about.transport.AboutTransport#Announce(short, short, org.alljoyn.services.common.BusObjectDescription[], java.util.Map)
+         * @deprecated please see org.alljoyn.bus.AboutListener
          */
         @Override
+        @Deprecated
         @BusSignalHandler(iface = ANNOUNCE_IFNAME, signal = SIGNAL_NAME)
         public void Announce(short version, short port, BusObjectDescription[] objectDescriptions, Map<String, Variant> aboutData)
         {
@@ -368,20 +385,24 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
         /**
          * Intentionally empty implementation. Since class is only used as a
          * signal handler, it will never be called directly.
+         * @deprecated please see org.alljoyn.bus.AboutProxy
          */
         @Override
+        @Deprecated
         public short getVersion() throws BusException
         {
             return 0;
         }
 
         @Override
+        @Deprecated
         public Map<String, Variant> GetAboutData(String languageTag)
                 throws BusException {
             return null;
         }
 
         @Override
+        @Deprecated
         public BusObjectDescription[] GetObjectDescription()
                 throws BusException {
             return null;
@@ -390,8 +411,10 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
 
     /**
      * @see org.alljoyn.about.AboutService#stopAboutClient()
+     * @deprecated
      */
     @Override
+    @Deprecated
     public void stopAboutClient() throws Exception
     {
         BusAttachment bus = getBus();
@@ -416,8 +439,10 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
 
     /**
      * @see org.alljoyn.about.AboutService#createAboutClient(java.lang.String, org.alljoyn.services.common.ServiceAvailabilityListener, short)
+     * @deprecated
      */
     @Override
+    @Deprecated
     public AboutClient createAboutClient(String peerName, ServiceAvailabilityListener serviceAvailabilityListener, short port) throws Exception
     {
         return  new AboutClientImpl(peerName, getBus(), serviceAvailabilityListener, port);
@@ -425,8 +450,10 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
 
     /**
      * @see org.alljoyn.about.AboutService#createAboutIconClient(java.lang.String, org.alljoyn.services.common.ServiceAvailabilityListener, short)
+     * @deprecated
      */
     @Override
+    @Deprecated
     public AboutIconClient createAboutIconClient(String peerName,ServiceAvailabilityListener serviceAvailabilityListener, short port)
             throws BusException {
 
@@ -438,8 +465,10 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
 
     /**
      * @see org.alljoyn.about.AboutService#startAboutServer(short, org.alljoyn.services.common.PropertyStore, org.alljoyn.bus.BusAttachment)
+     * @deprecated
      */
     @Override
+    @Deprecated
     public void startAboutServer(short port, PropertyStore propertyStore, BusAttachment bus) throws Exception {
 
         super.startServer();
@@ -461,8 +490,10 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
 
     /**
      * @see org.alljoyn.about.AboutService#registerIcon(java.lang.String, java.lang.String, byte[])
+     * @deprecated
      */
     @Override
+    @Deprecated
     public void registerIcon(String mimetype, String url, byte[] content) throws Exception {
 
         super.startServer();
@@ -478,8 +509,10 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
     /**
      * Creates the Announcer object which is responsible for sending sessionless
      * Announce signal
+     * @deprecated
      * @throws Exception
      */
+    @Deprecated
     private void createAnnouncer() throws Exception
     {
         if (m_announcer == null)
@@ -597,8 +630,10 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
 
     /**
      * Registers the {@link AboutInterface} that implements the {@link BusObject} interface
+     * @deprecated
      * @throws Exception
      */
+    @Deprecated
     private void registerAboutInterface() throws Exception
     {
         m_aboutInterface = new AboutInterface();
@@ -609,6 +644,7 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
         }
     }
 
+    @Deprecated
     private void registerAboutIconInterface() throws Exception
     {
         m_iconInterface = new IconInterface();
@@ -621,8 +657,10 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
 
     /**
      * @see org.alljoyn.about.AboutService#addObjectDescription(java.lang.String, java.lang.String[])
+     * @deprecated
      */
     @Override
+    @Deprecated
     public void addObjectDescription(String objPath, String [] interfaces)
     {
         if ( objPath == null ) {
@@ -649,8 +687,10 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
 
     /**
      * @see org.alljoyn.about.AboutService#addObjectDescriptions(java.util.List)
+     * @deprecated
      */
     @Override
+    @Deprecated
     public void addObjectDescriptions(List<BusObjectDescription> addBusObjectDescriptions)
     {
         Announcer announcer = getAnnouncer();
@@ -666,6 +706,7 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
     }
 
     @Override
+    @Deprecated
     public void removeObjectDescription(String objPath, String[] interfaces) {
 
         List<BusObjectDescription> addBusObjectDescriptions = new ArrayList<BusObjectDescription>(2);
@@ -683,6 +724,7 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
     }
 
     @Override
+    @Deprecated
     public void removeObjectDescriptions(List<BusObjectDescription> removeBusObjectDescriptions)
     {
         Announcer announcer = getAnnouncer();
@@ -694,6 +736,7 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
     }
 
     @Override
+    @Deprecated
     public void stopAboutServer()
     {
         unregisterIcon();
@@ -713,6 +756,7 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
     }
 
     @Override
+    @Deprecated
     public void unregisterIcon() {
 
         if(getBus() != null){
@@ -725,7 +769,9 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
 
     /**
      * @return The handle for triggering announcements, or NULL on failure
+     * @deprecated
      */
+    @Deprecated
     public Announcer getAnnouncer()
     {
         try {
@@ -743,7 +789,9 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
     /**
      * The AllJoyn BusObject that exposes the About interface of this device over
      * the Bus.
+     * @deprecated
      */
+    @Deprecated
     private class AboutInterface implements BusObject, AboutTransport
     {
 
@@ -768,6 +816,7 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
             return aboutMap;
         }
 
+        @Deprecated
         @Override
         public BusObjectDescription[] GetObjectDescription()
                 throws BusException
@@ -775,6 +824,7 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
             return m_ObjectDescriptions.toArray(new BusObjectDescription[]{});
                 }
 
+        @Deprecated
         @Override
         public short getVersion() throws BusException
         {
@@ -785,8 +835,9 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
          * Intentionally empty implementation of ServiceAnnouncement method.
          * Since this method is only used as a signal emitter, it will never be
          * called directly.
+         * @deprecated
          */
-
+        @Deprecated
         @Override
         public void Announce(short version, short port, BusObjectDescription[] objectDescriptions,
                 Map<String, Variant> aboutData)
@@ -796,6 +847,7 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
 
 
     @Override
+    @Deprecated
     public List<BusObjectDescription> getBusObjectDescriptions() {
         // add self. announcer isn't ready yet, so no announcement will go
         List<BusObjectDescription> addBusObjectDescriptions = new ArrayList<BusObjectDescription>(2);
@@ -807,6 +859,7 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
     }
 
     @Override
+    @Deprecated
     public void announce() {
         Announcer announcer = getAnnouncer();
         if ( announcer == null ) {
@@ -818,20 +871,24 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
 
     /**
      * The AllJoyn BusObject that exposes the application icon
+     * @deprecated
      */
+    @Deprecated
     private class IconInterface implements BusObject, IconTransport
     {
-
+        @Deprecated
         @Override
         public short getVersion() throws BusException {
             return PROTOCOL_VERSION;
         }
 
+        @Deprecated
         @Override
         public String getMimeType() throws BusException {
             return m_iconMimeType;
         }
 
+        @Deprecated
         @Override
         public int getSize() throws BusException {
             if(m_iconContent != null) {
@@ -841,11 +898,13 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
             }
         }
 
+        @Deprecated
         @Override
         public String GetUrl() throws BusException {
             return m_iconUrl;
         }
 
+        @Deprecated
         @Override
         public byte[] GetContent() throws BusException {
             return m_iconContent;

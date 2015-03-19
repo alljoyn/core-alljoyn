@@ -191,6 +191,15 @@
 - (id)initWithBusAttachment:(AJNBusAttachment *)busAttachment serviceName:(NSString *)serviceName objectPath:(NSString *)path sessionId:(AJNSessionId)sessionId enableSecurity:(BOOL)shouldEnableSecurity;
 
 /**
+ * Create an empty proxy object that refers to an managed proxy bus object.
+ * The created proxy object will get the interfaces from the managed proxy bus object.
+ *
+ * @param busAttachment  The bus.
+ * @param proxyBusObject Managed proxy bus object
+ */
+- (id)initWithBusAttachment:(AJNBusAttachment *)busAttachment managedProxyBusObject:(AJNHandle)proxyBusObject;
+
+/**
  * Add an existing interface to this object using the interface's name.
  *
  * @param interfaceName   Name of existing interface to add to this object.
@@ -576,5 +585,10 @@
  *          - Other error status codes indicating a failure.
  */
 - (QStatus)secureConnectionAsync:(BOOL)forceAuthentication;
+
+/**
+ * Enable property caching.
+ */
+- (void)enablePropertyCaching;
 
 @end

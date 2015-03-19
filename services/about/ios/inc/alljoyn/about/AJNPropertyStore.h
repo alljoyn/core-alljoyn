@@ -23,6 +23,7 @@
 /**
  AJNPropertyStore protocol overview
  */
+__deprecated
 @protocol AJNPropertyStore <NSObject>
 
 #pragma mark – Protocol enum
@@ -53,7 +54,7 @@ typedef enum {
  Calls Reset() implemented only for  ConfigService
  @return status
  */
-- (QStatus)reset;
+- (QStatus)reset __deprecated;
 
 /**
  Update properties method
@@ -62,7 +63,7 @@ typedef enum {
  @param value value is a pointer to the data to change.
  @return status
  */
-- (QStatus)updatePropertyName:(NSString *)name andLanguageTag:(NSString *)languageTag andValue:(NSMutableArray **)value;
+- (QStatus)updatePropertyName:(NSString *)name andLanguageTag:(NSString *)languageTag andValue:(NSMutableArray **)value __deprecated;
 
 /**
  Delete property method
@@ -70,7 +71,7 @@ typedef enum {
  @param languageTag languageTag is the language to use for the action can't be NULL.
  @return status
  */
-- (QStatus)deletePropertyName:(NSString *)name andLanguageTag:(NSString *)languageTag;
+- (QStatus)deletePropertyName:(NSString *)name andLanguageTag:(NSString *)languageTag __deprecated;
 
 @end
 

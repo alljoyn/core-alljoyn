@@ -799,7 +799,7 @@ TEST_F(ProxyBusObjectTest, getchildren) {
         ASSERT_TRUE(children[i]) << "Test interface for child " << i << " should not be NULL";
         ASSERT_TRUE(alljoyn_proxybusobject_isvalid(children[i])) << "Test interface for child " << i << " should be a valid alljoyn_proxybusobject.";
         EXPECT_TRUE(alljoyn_proxybusobject_implementsinterface(children[i], "org.alljoyn.test.ProxyBusObjectTest")) <<
-        "Test interface for child " << i << " should implement the org.alljoyn.test.ProxyBusObjectTest interface.";
+            "Test interface for child " << i << " should implement the org.alljoyn.test.ProxyBusObjectTest interface.";
 
         alljoyn_interfacedescription testIntfChild = alljoyn_proxybusobject_getinterface(children[i], "org.alljoyn.test.ProxyBusObjectTest");
         char* introspect;
