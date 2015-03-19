@@ -330,7 +330,7 @@ class Crypto_RSA {
 /**
  * AES block encryption/decryption class
  */
-class Crypto_AES  {
+class Crypto_AES {
 
   public:
 

@@ -24,7 +24,9 @@ import org.alljoyn.bus.annotation.BusProperty;
 
 /**
  * Definition of the Icon BusInterface
+ * @deprecated see org.alljoyn.bus.ifaces.Icon
  */
+@Deprecated
 @BusInterface (name = IconTransport.INTERFACE_NAME)
 public interface IconTransport extends BusObject
 {
@@ -32,39 +34,49 @@ public interface IconTransport extends BusObject
     public final static String OBJ_PATH = "/About/DeviceIcon";
 
     /**
+     * @deprecated see org.alljoyn.bus.ifaces.Icon
      * @return Interface version
      * @throws BusException indicating failure to obtain Version property
      */
+    @Deprecated
     @BusProperty(signature="q")
     public short getVersion() throws BusException;
 
     /**
+     * @deprecated see org.alljoyn.bus.ifaces.Icon
      * @return Mime type for the icon
      * @throws BusException indicating failure to obtain MimeType property
      */
+    @Deprecated
     @BusProperty(signature="s")
     public String getMimeType() throws BusException;
 
     /**
+     * @deprecated see org.alljoyn.bus.ifaces.Icon
      * @return Size of the icon
      * @throws BusException indicating failure to obtain Size property
      */
+    @Deprecated
     @BusProperty(signature="u")
     public int getSize() throws BusException;
 
     /**
      * Returns the URL if the icon is hosted on the cloud
+     * @deprecated see org.alljoyn.bus.ifaces.Icon
      * @return the URL if the icon is hosted on the cloud
      * @throws BusException indicating failure to make GetUrl method call
      */
+    @Deprecated
     @BusMethod(replySignature="s")
     public String GetUrl() throws BusException;
 
     /**
      * Returns binary content for the icon
+     * @deprecated see org.alljoyn.bus.ifaces.Icon
      * @return binary content for the icon
      * @throws BusException indicating failure to make GetContent method call
      */
+    @Deprecated
     @BusMethod(replySignature="ay")
     public byte[] GetContent() throws BusException;
 }

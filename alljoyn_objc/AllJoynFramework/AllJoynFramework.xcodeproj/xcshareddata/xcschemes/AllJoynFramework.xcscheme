@@ -59,6 +59,11 @@
             value = "15"
             isEnabled = "NO">
          </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "ER_DEBUG_OBSERVER"
+            value = "7"
+            isEnabled = "NO">
+         </EnvironmentVariable>
       </EnvironmentVariables>
    </TestAction>
    <LaunchAction

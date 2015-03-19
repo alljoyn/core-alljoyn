@@ -317,7 +317,7 @@ size_t AJ_CALL alljoyn_interfacedescription_getmembers(const alljoyn_interfacede
     size_t ret = 0;
     const ajn::InterfaceDescription::Member** tempMembers = NULL;
     if (members != NULL) {
-        tempMembers = new const ajn::InterfaceDescription::Member *[numMembers];
+        tempMembers = new const ajn::InterfaceDescription::Member*[numMembers];
         ret = ((const ajn::InterfaceDescription*)iface)->GetMembers(tempMembers, numMembers);
         for (size_t i = 0; i < ret; i++) {
             members[i].iface = (alljoyn_interfacedescription)tempMembers[i]->iface;
@@ -439,7 +439,7 @@ size_t AJ_CALL alljoyn_interfacedescription_getproperties(const alljoyn_interfac
     size_t ret = 0;
     const ajn::InterfaceDescription::Property** tempProps = NULL;
     if (props != NULL) {
-        tempProps = new const ajn::InterfaceDescription::Property *[numProps];
+        tempProps = new const ajn::InterfaceDescription::Property*[numProps];
 
         ret = ((const ajn::InterfaceDescription*)iface)->GetProperties(tempProps, numProps);
         for (size_t i = 0; i < ret; i++) {

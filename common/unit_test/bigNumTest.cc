@@ -477,10 +477,10 @@ TEST(BigNumTest, DivisionAndMultiplicationStress) {
             bn3 = bn1 / bn2;
             bn4 = bn1 % bn2;
             EXPECT_TRUE(((bn2 * bn3) + bn4) == bn1) <<
-            "bn1: " << bn1.get_hex().c_str() << "\n" <<
-            "bn2: " << bn2.get_hex().c_str() << "\n" <<
-            "bn3: " << bn3.get_hex().c_str() << "\n" <<
-            "bn4: " << bn4.get_hex().c_str();
+                "bn1: " << bn1.get_hex().c_str() << "\n" <<
+                "bn2: " << bn2.get_hex().c_str() << "\n" <<
+                "bn3: " << bn3.get_hex().c_str() << "\n" <<
+                "bn4: " << bn4.get_hex().c_str();
             //}
         }
     }
@@ -509,10 +509,10 @@ TEST(BigNumTest, ModularExponentiationStress) {
             }
             BigNum exp = a.mod_exp(e, m);
             EXPECT_FALSE(exp != check) <<
-            "val exp: " << exp.get_hex().c_str() << "\n" <<
-            "val a: " << a.get_hex().c_str() << "\n" <<
-            "val e: " << e.get_hex().c_str() << "\n" <<
-            "val m: " << m.get_hex().c_str();
+                "val exp: " << exp.get_hex().c_str() << "\n" <<
+                "val a: " << a.get_hex().c_str() << "\n" <<
+                "val e: " << e.get_hex().c_str() << "\n" <<
+                "val m: " << m.get_hex().c_str();
         }
     }
 }

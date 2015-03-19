@@ -117,6 +117,10 @@ class AboutData : public AboutDataListener, public AboutKeys {
        "</AboutData>"
        @endcode
      *
+     * The CreateFromXml function will attempt to process the entire xml passed
+     * in.  If an error is encountered it will continue to try and process the
+     * xml. If multiple errors are encountered the last error is returned.
+     *
      * Note: AJSoftwareVersion is automatically set to the version of Alljoyn that
      * is being used. The SupportedLanguages tag is automatically implied from
      * the DefaultLanguage tag and the lang annotation from tags that are
@@ -124,7 +128,13 @@ class AboutData : public AboutDataListener, public AboutKeys {
      *
      * @param[in] aboutDataXml a string that contains an XML representation of
      *                         the AboutData fields.
-     * @return ER_OK on success
+     * @return
+     *   - ER_OK on success
+     *   - ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD if the XML representation
+     *     did not include all required AboutData fields.
+     *   - ER_ABOUT_DEFAULT_LANGUAGE_NOT_SPECIFIED if a localizable value was
+     *     was found with out the `lang` attribute and the DefaultLanguage
+     *     field is missing.
      */
     QStatus CreateFromXml(const qcc::String& aboutDataXml);
 
@@ -151,6 +161,10 @@ class AboutData : public AboutDataListener, public AboutKeys {
        "</AboutData>"
        @endcode
      *
+     * The CreateFromXml function will attempt to process the entire xml passed
+     * in.  If an error is encountered it will continue to try and process the
+     * xml. If multiple errors are encountered the last error is returned.
+     *
      * Note: AJSoftwareVersion is automatically set to the version of Alljoyn that
      * is being used. The SupportedLanguages tag is automatically implied from
      * the DefaultLanguage tag and the lang annotation from tags that are
@@ -158,7 +172,13 @@ class AboutData : public AboutDataListener, public AboutKeys {
      *
      * @param[in] aboutDataXml a string that contains an XML representation of
      *                         the AboutData fields.
-     * @return ER_OK on success
+     * @return
+     *   - ER_OK on success
+     *   - ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD if the XML representation
+     *     did not include all required AboutData fields.
+     *   - ER_ABOUT_DEFAULT_LANGUAGE_NOT_SPECIFIED if a localizable value was
+     *     was found with out the `lang` attribute and the DefaultLanguage
+     *     field is missing.
      */
     QStatus CreateFromXml(const char* aboutDataXml);
 

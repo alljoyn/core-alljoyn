@@ -43,7 +43,6 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalOptions="/vmm /vmg"
 				Optimization="0"
 				AdditionalIncludeDirectories="$(ALLJOYN_SDK_HOME)\CPP\inc;$(NOINHERIT)"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;QCC_OS_GROUP_WINDOWS;QCC_OS_WINDOWS"
@@ -196,7 +195,6 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalOptions="/vmm /vmg"
 				Optimization="0"
 				AdditionalIncludeDirectories="$(ALLJOYN_SDK_HOME)\CPP\inc;$(NOINHERIT)"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;QCC_OS_GROUP_WINDOWS;QCC_OS_WINDOWS;QCC_CPU_X86"

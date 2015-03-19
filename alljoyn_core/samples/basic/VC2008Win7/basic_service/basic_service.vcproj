@@ -42,7 +42,6 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalOptions="/vmm /vmg"
 				Optimization="0"
 				AdditionalIncludeDirectories="&quot;$(ALLJOYN_SDK_HOME)\inc&quot;;&quot;$(ProjectDir)\..\..\..\..\inc&quot;"
 				PreprocessorDefinitions="QCC_OS_GROUP_WINDOWS;UNICODE"
@@ -116,7 +115,6 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalOptions="/vmm /vmg"
 				Optimization="0"
 				AdditionalIncludeDirectories="&quot;$(ALLJOYN_SDK_HOME)\inc&quot;;&quot;$(ProjectDir)\..\..\..\..\inc&quot;"
 				PreprocessorDefinitions="QCC_OS_GROUP_WINDOWS;UNICODE"
@@ -190,7 +188,6 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalOptions="/vmm /vmg"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
 				AdditionalIncludeDirectories="$(ALLJOYN_SDK_HOME)\inc;$(ProjectDir)\..\..\..\..\inc"
@@ -267,7 +264,6 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalOptions="/vmm /vmg"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
 				AdditionalIncludeDirectories="&quot;$(ALLJOYN_SDK_HOME)\inc&quot;;&quot;$(ProjectDir)\..\..\..\..\inc&quot;"

@@ -1808,7 +1808,7 @@ static QStatus Crypto_ECC_GenerateKeyPair(ECCPublicKey* publicKey, ECCPrivateKey
     }
     bigval_to_binary(&ap.x, publicKey->x, sizeof(publicKey->x));
     bigval_to_binary(&ap.y, publicKey->y, sizeof(publicKey->y));
-    bigval_to_binary(&k, privateKey->x, sizeof(privateKey->x));
+    bigval_to_binary(&k, privateKey->d, sizeof(privateKey->d));
     return ER_OK;
 }
 
@@ -1838,7 +1838,7 @@ static QStatus Crypto_ECC_GenerateSharedSecret(const ECCPublicKey* peerPublicKey
     pub.infinity = 0;
     binary_to_bigval(peerPublicKey->x, &pub.x, sizeof(peerPublicKey->x));
     binary_to_bigval(peerPublicKey->y, &pub.y, sizeof(peerPublicKey->y));
-    binary_to_bigval(privateKey->x, &pk, sizeof(privateKey->x));
+    binary_to_bigval(privateKey->d, &pk, sizeof(privateKey->d));
     derive_rv = ECDH_derive_pt(&localSecret, &pk, &pub);
     if (!derive_rv) {
         return ER_FAIL;  /* bad */
@@ -1865,7 +1865,7 @@ QStatus Crypto_ECC::GenerateSharedSecret(const ECCPublicKey* peerPublicKey, ECCS
     affine_point_t ap;
     ap.infinity = 0;
     U8BeArrayToU32Array((const uint8_t*) &oldenc, sizeof(ECCPublicKeyOldEncoding), (uint32_t*) &ap);
-    bigval_to_binary(&ap.x, secret->x, sizeof(secret->x));
+    bigval_to_binary(&ap.x, secret->z, sizeof(secret->z));
     return status;
 }
 
@@ -1941,7 +1941,7 @@ void Crypto_ECC::SetDHPublicKey(const ECCPublicKey* pubKey)
     eccState->dhPublicKey = *pubKey;
 }
 
-const ECCPrivateKey* Crypto_ECC::GetDHPrivateKey()
+const ECCPrivateKey* Crypto_ECC::GetDHPrivateKey() const
 {
     /* TODO: temporarily using previous method until ECDH is ported to CNG */
     return &eccState->dhPrivateKey;
@@ -1953,7 +1953,7 @@ void Crypto_ECC::SetDHPrivateKey(const ECCPrivateKey* privateKey)
     eccState->dhPrivateKey = *privateKey;
 }
 
-const ECCPublicKey* Crypto_ECC::GetDSAPublicKey()
+const ECCPublicKey* Crypto_ECC::GetDSAPublicKey() const
 {
     QStatus status = ER_OK;
     NTSTATUS ntStatus;
@@ -2161,7 +2161,7 @@ Exit:
     }
 }
 
-const ECCPrivateKey* Crypto_ECC::GetDSAPrivateKey()
+const ECCPrivateKey* Crypto_ECC::GetDSAPrivateKey() const
 {
     QStatus status = ER_OK;
     NTSTATUS ntStatus;
@@ -2204,7 +2204,7 @@ const ECCPrivateKey* Crypto_ECC::GetDSAPrivateKey()
     header = reinterpret_cast<PBCRYPT_ECCKEY_BLOB>(keyBlob);
     d = keyBlob + sizeof(BCRYPT_ECCKEY_BLOB) + (2 * header->cbKey); /* Skip header, X and Y. */
 
-    err = memcpy_s(eccState->dsaPrivateKey.x, sizeof(eccState->dsaPrivateKey.x), d, header->cbKey);
+    err = memcpy_s(eccState->dsaPrivateKey.d, sizeof(eccState->dsaPrivateKey.d), d, header->cbKey);
     if (0 != err) {
         status = ER_CRYPTO_ERROR;
         QCC_LogError(status, ("Failed to copy private key out, errno=%d", err));
@@ -2212,10 +2212,10 @@ const ECCPrivateKey* Crypto_ECC::GetDSAPrivateKey()
     }
 
     /* Fill out the extra high order bytes with zero. */
-    for (int i = (header->cbKey / sizeof(eccState->dsaPrivateKey.x[0]));
-         i < (sizeof(eccState->dsaPrivateKey.x) / sizeof(eccState->dsaPrivateKey.x[0]));
+    for (int i = (header->cbKey / sizeof(eccState->dsaPrivateKey.d[0]));
+         i < (sizeof(eccState->dsaPrivateKey.d) / sizeof(eccState->dsaPrivateKey.d[0]));
          i++) {
-        eccState->dsaPrivateKey.x[i] = 0;
+        eccState->dsaPrivateKey.d[i] = 0;
     }
 
 Exit:
@@ -2299,17 +2299,17 @@ void Crypto_ECC::SetDSAPrivateKey(const ECCPrivateKey* privateKey)
     /* Interop private keys can have extra bytes. Make sure the high
      * order bytes are zero and copy the rest.
      */
-    assert(header->cbKey <= sizeof(privateKey->x));
-    for (int i = (header->cbKey / sizeof(privateKey->x[0]));
-         i < (sizeof(privateKey->x) / sizeof(privateKey->x[0]));
+    assert(header->cbKey <= sizeof(privateKey->d));
+    for (int i = (header->cbKey / sizeof(privateKey->d[0]));
+         i < (sizeof(privateKey->d) / sizeof(privateKey->d[0]));
          i++) {
-        if (privateKey->x[i] != 0) {
+        if (privateKey->d[i] != 0) {
             status = ER_CRYPTO_ERROR;
             QCC_LogError(status, ("High order bytes of input private key are not zero"));
             goto Exit;
         }
     }
-    err = memcpy_s(d, header->cbKey, privateKey->x, header->cbKey);
+    err = memcpy_s(d, header->cbKey, privateKey->d, header->cbKey);
     if (0 != err) {
         status = ER_CRYPTO_ERROR;
         QCC_LogError(status, ("Failed to copy private key bytes, errno=%d", err));

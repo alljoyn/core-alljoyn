@@ -3661,15 +3661,16 @@ TransportMask _MDNSPacket::GetTransportMask()
             transportMask |= TRANSPORT_UDP;
 
         }
-    } else { MDNSResourceRecord* answer;
-             if (GetAnswer("_alljoyn._tcp.local.", MDNSResourceRecord::PTR, &answer)) {
-                 transportMask |= TRANSPORT_TCP;
+    } else {
+        MDNSResourceRecord* answer;
+        if (GetAnswer("_alljoyn._tcp.local.", MDNSResourceRecord::PTR, &answer)) {
+            transportMask |= TRANSPORT_TCP;
 
 
-             }
-             if (GetAnswer("_alljoyn._udp.local.", MDNSResourceRecord::PTR, &answer)) {
-                 transportMask |= TRANSPORT_UDP;
-             }
+        }
+        if (GetAnswer("_alljoyn._udp.local.", MDNSResourceRecord::PTR, &answer)) {
+            transportMask |= TRANSPORT_UDP;
+        }
     }
     return transportMask;
 }

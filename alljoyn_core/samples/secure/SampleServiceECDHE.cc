@@ -158,7 +158,7 @@ class ECDHEKeyXListener : public AuthListener {
             /*
              * Solicit the Pre shared secret
              */
-            if ((credMask & AuthListener::CRED_USER_NAME) == AuthListener::CRED_USER_NAME) {
+            if ((credMask& AuthListener::CRED_USER_NAME) == AuthListener::CRED_USER_NAME) {
                 printf("RequestCredentials received psk ID %s\n", creds.GetUserName().c_str());
             }
             /*
@@ -193,11 +193,11 @@ class ECDHEKeyXListener : public AuthListener {
             /*
              * The application may provide the DSA private key and public key in the certificate.
              */
-            if ((credMask & AuthListener::CRED_PRIVATE_KEY) == AuthListener::CRED_PRIVATE_KEY) {
+            if ((credMask& AuthListener::CRED_PRIVATE_KEY) == AuthListener::CRED_PRIVATE_KEY) {
                 String pk(ecdsaPrivateKeyPEM, strlen(ecdsaPrivateKeyPEM));
                 creds.SetPrivateKey(pk);
             }
-            if ((credMask & AuthListener::CRED_CERT_CHAIN) == AuthListener::CRED_CERT_CHAIN) {
+            if ((credMask& AuthListener::CRED_CERT_CHAIN) == AuthListener::CRED_CERT_CHAIN) {
                 String cert(ecdsaCertChainX509PEM, strlen(ecdsaCertChainX509PEM));
                 creds.SetCertChain(cert);
             }

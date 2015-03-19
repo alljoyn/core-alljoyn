@@ -373,7 +373,7 @@ InterfaceDescriptionNative* InterfaceDescriptionNative::GetInterface(Plugin& plu
         }
 
         numMembers = iface->GetMembers();
-        members = new const ajn::InterfaceDescription::Member *[numMembers];
+        members = new const ajn::InterfaceDescription::Member*[numMembers];
         iface->GetMembers(members, numMembers);
         for (size_t i = 0; i < numMembers; ++i) {
             switch (members[i]->memberType) {
@@ -513,7 +513,7 @@ InterfaceDescriptionNative* InterfaceDescriptionNative::GetInterface(Plugin& plu
         }
 
         if (numProps) {
-            props = new const ajn::InterfaceDescription::Property *[numProps];
+            props = new const ajn::InterfaceDescription::Property*[numProps];
             iface->GetProperties(props, numProps);
             if (!NewArray(plugin, propertyArray)) {
                 status = ER_FAIL;

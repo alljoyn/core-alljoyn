@@ -21,6 +21,13 @@ else:
     about_env.Append(JAVACLASSPATH = [ str(about_env.File('$ALLJOYN_DISTDIR/java/jar/alljoyn.jar')) ])
     about_env['dep_jars'] = [ ]
 
+# Since everything in the AboutService has been deprecated and many internal
+# classes reference other classes we want to turn off the deprecation warning
+# when building the java AboutService. A single warning it still printed
+# letting us know we are using deprecated code. This is better than 100s of
+# warnings across the AboutService code.
+about_env.Append(JAVACFLAGS = ['-Xlint:-deprecation'])
+
 jars = []
 jars += about_env.SConscript('src/SConscript', exports = ['about_env']),
 

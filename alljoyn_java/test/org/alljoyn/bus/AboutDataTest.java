@@ -15,7 +15,12 @@
  */
 package org.alljoyn.bus;
 
+import java.io.IOException;
 import java.util.UUID;
+
+import javax.xml.parsers.ParserConfigurationException;
+
+import org.xml.sax.SAXException;
 
 import junit.framework.TestCase;
 
@@ -281,7 +286,7 @@ public class AboutDataTest extends TestCase{
             e.printStackTrace();
             fail("Unexpected error thrown");
         }
-        try{
+        try {
             //no Chinese language should throw a BusException
             String deviceName = aboutData.getDeviceName("zh");
             fail("Expected error thrown and it was not thrown.");
@@ -315,7 +320,7 @@ public class AboutDataTest extends TestCase{
             e.printStackTrace();
             fail("Unexpected error thrown");
         }
-        try{
+        try {
             //no Chinese language should throw a BusException
             String appName = aboutData.getAppName("zh");
             fail("Expected error thrown and it was not thrown.");
@@ -337,7 +342,7 @@ public class AboutDataTest extends TestCase{
             e.printStackTrace();
             fail("Unexpected error thrown");
         }
-        try{
+        try {
             //no Chinese language should throw a BusException
             String manufacturer = aboutData.getManufacturer("zh");
             fail("Expected error thrown and it was not thrown.");
@@ -537,9 +542,18 @@ public class AboutDataTest extends TestCase{
             + "  <UserDefinedTag>Can only accept strings anything other than strings must be done using the AboutData Class SetField method</UserDefinedTag>"
             + "  <UserDefinedTag lang='es'>Sólo se puede aceptar cadenas distintas de cadenas nada debe hacerse utilizando el método AboutData Clase SetField</UserDefinedTag>"
             + "</AboutData>";
-        try{
+        try {
             aboutData.createFromXml(xml);
         } catch (BusException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
+        } catch (ParserConfigurationException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
+        } catch (SAXException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
+        } catch (IOException e) {
             e.printStackTrace();
             fail("Unexpected error thrown");
         }
@@ -710,9 +724,18 @@ public class AboutDataTest extends TestCase{
             + "  <UserDefinedTag>Can only accept strings anything other than strings must be done using the AboutData Class SetField method</UserDefinedTag>"
             + "  <UserDefinedTag lang='es'>Sólo se puede aceptar cadenas distintas de cadenas nada debe hacerse utilizando el método AboutData Clase SetField</UserDefinedTag>"
             + "</AboutData>";
-        try{
+        try {
             aboutData.createFromXml(xml);
         } catch (BusException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
+        } catch (ParserConfigurationException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
+        } catch (SAXException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
+        } catch (IOException e) {
             e.printStackTrace();
             fail("Unexpected error thrown");
         }
@@ -723,6 +746,122 @@ public class AboutDataTest extends TestCase{
         } catch (BusException e) {
             e.printStackTrace();
             fail("Unexpected error thrown");
+        }
+    }
+
+ // This xml uses an hex encoded byte string to pass in the AppId.
+    public void testCreateFromXml_missing_appid() {
+        AboutData aboutData = new AboutData();
+        String xml;
+        xml = "<AboutData>"
+            + "  <DefaultLanguage>en</DefaultLanguage>"
+            + "  <DeviceName>My Device Name</DeviceName>"
+            + "  <DeviceName lang = 'es'>Nombre de mi dispositivo</DeviceName>"
+            + "  <DeviceId>baddeviceid</DeviceId>"
+            + "  <AppName>My Application Name</AppName>"
+            + "  <AppName lang = 'es'>Mi Nombre de la aplicación</AppName>"
+            + "  <Manufacturer>Company</Manufacturer>"
+            + "  <Manufacturer lang = 'es'>Empresa</Manufacturer>"
+            + "  <ModelNumber>Wxfy388i</ModelNumber>"
+            + "  <Description>A detailed description provided by the application.</Description>"
+            + "  <Description lang = 'es'>Una descripción detallada proporcionada por la aplicación.</Description>" /*TODO look into utf8*/
+            + "  <DateOfManufacture>2014-01-08</DateOfManufacture>"
+            + "  <SoftwareVersion>1.0.0</SoftwareVersion>"
+            + "  <HardwareVersion>1.0.0</HardwareVersion>"
+            + "  <SupportUrl>www.example.com</SupportUrl>"
+            + "  <UserDefinedTag>Can only accept strings anything other than strings must be done using the AboutData Class SetField method</UserDefinedTag>"
+            + "  <UserDefinedTag lang='es'>Sólo se puede aceptar cadenas distintas de cadenas nada debe hacerse utilizando el método AboutData Clase SetField</UserDefinedTag>"
+            + "</AboutData>";
+        try {
+            aboutData.createFromXml(xml);
+        } catch (BusException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
+        } catch (ParserConfigurationException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
+        } catch (SAXException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
+        } catch (IOException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
+        }
+
+        try {
+            String uuid = aboutData.getAppIdAsHexString();
+            assertEquals("000102030405060708090A0B0C0D0E0C", uuid);
+            fail("expected error was not thrown.");
+        } catch (BusException e) {
+            assertEquals("About Field Not Found.", e.getMessage());
+        }
+    }
+
+    // This xml uses an hex encoded byte string to pass in the AppId.
+    public void testCreateFromXml_default_language_not_specified() {
+        AboutData aboutData = new AboutData();
+        String xml;
+        xml = "<AboutData>"
+            + "  <AppId>000102030405060708090A0B0C0D0E0C</AppId>"
+            + "  <DeviceName>My Device Name</DeviceName>"
+            + "  <DeviceName lang = 'en'>My Device Name</DeviceName>"
+            + "  <DeviceName lang = 'es'>Nombre de mi dispositivo</DeviceName>"
+            + "  <DeviceId>baddeviceid</DeviceId>"
+            + "  <AppName>My Application Name</AppName>"
+            + "  <AppName lang = 'es'>Mi Nombre de la aplicación</AppName>"
+            + "  <Manufacturer>Company</Manufacturer>"
+            + "  <Manufacturer lang = 'es'>Empresa</Manufacturer>"
+            + "  <ModelNumber>Wxfy388i</ModelNumber>"
+            + "  <Description>A detailed description provided by the application.</Description>"
+            + "  <Description lang = 'es'>Una descripción detallada proporcionada por la aplicación.</Description>" /*TODO look into utf8*/
+            + "  <DateOfManufacture>2014-01-08</DateOfManufacture>"
+            + "  <SoftwareVersion>1.0.0</SoftwareVersion>"
+            + "  <HardwareVersion>1.0.0</HardwareVersion>"
+            + "  <SupportUrl>www.example.com</SupportUrl>"
+            + "  <UserDefinedTag>Can only accept strings anything other than strings must be done using the AboutData Class SetField method</UserDefinedTag>"
+            + "  <UserDefinedTag lang='es'>Sólo se puede aceptar cadenas distintas de cadenas nada debe hacerse utilizando el método AboutData Clase SetField</UserDefinedTag>"
+            + "</AboutData>";
+        try {
+            aboutData.createFromXml(xml);
+            fail("expected error was not thrown.");
+        } catch (ParserConfigurationException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
+        } catch (SAXException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
+        } catch (IOException e) {
+            e.printStackTrace();
+            fail("Unexpected error thrown");
+        } catch (BusException e) {
+            assertEquals("DefaultLanguage language tag not found.", e.getMessage());
+        }
+
+        try {
+            String defaultLanguage = aboutData.getDefaultLanguage();
+            fail("expected error was not thrown.");
+            assertEquals("en", defaultLanguage);
+        } catch (BusException e) {
+            assertEquals("About Field Not Found.", e.getMessage());
+        }
+
+        try {
+            String deviceName = aboutData.getDeviceName();
+            assertEquals("My Device Name", deviceName);
+        } catch (BusException e) {
+            assertEquals("DefaultLanguage language tag not found.", e.getMessage());
+        }
+        try {
+            String deviceName = aboutData.getDeviceName("en");
+            assertEquals("My Device Name", deviceName);
+        } catch (BusException e) {
+            fail("expected error thrown.");
+        }
+        try {
+            String deviceName = aboutData.getDeviceName("es");
+            assertEquals("Nombre de mi dispositivo", deviceName);
+        } catch (BusException e) {
+            fail("expected error thrown.");
         }
     }
 }

@@ -23,7 +23,9 @@ import org.alljoyn.services.common.utils.GenericLogger;
 
 /**
  * A default implementation of {@link ServiceCommon}.
+ * @deprecated
  */
+@Deprecated
 public abstract class ServiceCommonImpl implements ServiceCommon {
     protected String TAG = "";
 
@@ -66,7 +68,9 @@ public abstract class ServiceCommonImpl implements ServiceCommon {
 
     /**
      * Constructor
+     * @deprecated
      */
+    @Deprecated
     public ServiceCommonImpl() {
     }
 
@@ -145,8 +149,10 @@ public abstract class ServiceCommonImpl implements ServiceCommon {
 
     /**
      * @see org.alljoyn.services.common.ServiceCommon#isClientRunning()
+     * @deprecated
      */
     @Override
+    @Deprecated
     public boolean isClientRunning()
     {
         return m_isClientRunning;
@@ -154,8 +160,10 @@ public abstract class ServiceCommonImpl implements ServiceCommon {
 
     /**
      * @see org.alljoyn.services.common.ServiceCommon#isServerRunning()
+     * @deprecated
      */
     @Override
+    @Deprecated
     public boolean isServerRunning()
     {
         return m_isServerRunning;
@@ -163,17 +171,21 @@ public abstract class ServiceCommonImpl implements ServiceCommon {
 
     /**
      * @see org.alljoyn.services.common.ServiceCommon#setLogger(org.alljoyn.services.common.utils.GenericLogger)
+     * @deprecated
      */
     @Override
+    @Deprecated
     public void setLogger(GenericLogger logger)
     {
         m_logger = logger;
     }
 
     /**
+     * @deprecated
      * @return Returns the logger that is set for this object. If the object's 
      *         logger is NULL creates and returns an instance of the {@link DefaultGenericLogger}
      */
+    @Deprecated
     public GenericLogger getLogger()
     {
         if (m_logger == null)
@@ -185,9 +197,11 @@ public abstract class ServiceCommonImpl implements ServiceCommon {
     }
 
     /**
+     * @deprecated
      * @see org.alljoyn.services.common.ServiceCommon#getBusObjectDescriptions()
      */
     @Override
+    @Deprecated
     public abstract List<BusObjectDescription> getBusObjectDescriptions();
 
 }

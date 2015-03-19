@@ -25,11 +25,14 @@ import org.alljoyn.bus.Variant;
 
 /**
  * An interface to be implemented in order to receive Announcements
+ * @deprecated org.alljoyn.bus.AboutListener
  */
+@Deprecated
 public interface AnnouncementHandler
 {
     /**
      * Handle a received About Announcement
+     * @deprecated org.alljoyn.bus.AboutListener
      * @param serviceName the peer's AllJoyn bus name
      * @param port the peer's bound port for accepting About session connections
      * @param objectDescriptions the peer's BusInterfaces and BusObjects
@@ -37,11 +40,14 @@ public interface AnnouncementHandler
      * @see AboutKeys
      * @see AboutTransport#Announce(short, short, BusObjectDescription[], java.util.Map)
      */
+    @Deprecated
     public void onAnnouncement(String serviceName, short port, BusObjectDescription[] objectDescriptions, Map<String, Variant> aboutData);
 
     /**
      * Handle a loss of connectivity with this bus name
+     * @deprecated
      * @param serviceName the AllJoyn bus name of the lost peer
      */
+    @Deprecated
     public void onDeviceLost(String serviceName);
 }
