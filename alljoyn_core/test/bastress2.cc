@@ -112,6 +112,46 @@ class BasicSampleObject : public BusObject {
     }
 };
 
+class MyAboutData : public AboutData {
+  public:
+    static const char* TRANSPORT_OPTS;
+
+    MyAboutData() : AboutData() {
+        // TRANSPORT_OPTS field is required, is announced, not localized
+        SetNewFieldDetails(TRANSPORT_OPTS, REQUIRED | ANNOUNCED, "q");
+    }
+
+    MyAboutData(const char* defaultLanguage) : AboutData(defaultLanguage) {
+        SetNewFieldDetails(TRANSPORT_OPTS, REQUIRED | ANNOUNCED, "q");
+    }
+
+    QStatus SetTransportOpts(TransportMask transportOpts)
+    {
+        QStatus status = ER_OK;
+        MsgArg arg;
+        status = arg.Set(GetFieldSignature(TRANSPORT_OPTS), transportOpts);
+        if (status != ER_OK) {
+            return status;
+        }
+        status = SetField(TRANSPORT_OPTS, arg);
+        return status;
+    }
+
+    QStatus GetTransportOpts(TransportMask* transportOpts)
+    {
+        QStatus status;
+        MsgArg* arg;
+        status = GetField(TRANSPORT_OPTS, arg);
+        if (status != ER_OK) {
+            return status;
+        }
+        status = arg->Get(GetFieldSignature(TRANSPORT_OPTS), transportOpts);
+        return status;
+    }
+};
+
+const char* MyAboutData::TRANSPORT_OPTS = "TransportOpts";
+
 class ThreadClass : public Thread {
 
   public:
@@ -130,6 +170,7 @@ class ThreadClass : public Thread {
     BusObject* busObject;
     SessionId sessionId;
     qcc::String discoveredServiceName;
+    MyAboutData aboutData;
 
     void ClientRun();
     void ServiceRun();
@@ -188,47 +229,6 @@ class ClientBusListener : public BusListener, public SessionListener {
     bool wasNameFoundAlready;
 };
 
-class MyAboutData : public AboutData {
-  public:
-    static const char* TRANSPORT_OPTS;
-
-    MyAboutData() : AboutData() {
-        // TRANSPORT_OPTS field is required, is announced, not localized
-        SetNewFieldDetails(TRANSPORT_OPTS, REQUIRED | ANNOUNCED, "q");
-    }
-
-    MyAboutData(const char* defaultLanguage) : AboutData(defaultLanguage) {
-        SetNewFieldDetails(TRANSPORT_OPTS, REQUIRED | ANNOUNCED, "q");
-    }
-
-    QStatus SetTransportOpts(TransportMask transportOpts)
-    {
-        QStatus status = ER_OK;
-        MsgArg arg;
-        status = arg.Set(GetFieldSignature(TRANSPORT_OPTS), transportOpts);
-        if (status != ER_OK) {
-            return status;
-        }
-        status = SetField(TRANSPORT_OPTS, arg);
-        return status;
-    }
-
-    QStatus GetTransportOpts(TransportMask* transportOpts)
-    {
-        QStatus status;
-        MsgArg* arg;
-        status = GetField(TRANSPORT_OPTS, arg);
-        if (status != ER_OK) {
-            return status;
-        }
-        status = arg->Get(GetFieldSignature(TRANSPORT_OPTS), transportOpts);
-        return status;
-    }
-};
-
-const char* MyAboutData::TRANSPORT_OPTS = "TransportOpts";
-
-static MyAboutData g_aboutData("en");
 
 class ClientAboutListener : public AboutListener {
   public:
@@ -464,19 +464,19 @@ inline void ThreadClass::ServiceRun() {
                             0x1E, 0x82, 0x11, 0xE4,
                             0x86, 0x51, 0xD1, 0x56,
                             0x1D, 0x5D, 0x46, 0xB0 };
-        g_aboutData.SetAppId(appId, 16);
-        g_aboutData.SetDeviceName("DeviceName");
+        aboutData.SetAppId(appId, 16);
+        aboutData.SetDeviceName("DeviceName");
         //DeviceId is a string encoded 128bit UUID
-        g_aboutData.SetDeviceId("1273b650-49bc-11e4-916c-0800200c9a66");
-        g_aboutData.SetAppName(g_testAboutApplicationName.c_str());
-        g_aboutData.SetManufacturer("AllSeen Alliance");
-        g_aboutData.SetModelNumber("");
-        g_aboutData.SetDescription("bastress2 is a test application used to verify AllJoyn functionality");
+        aboutData.SetDeviceId("1273b650-49bc-11e4-916c-0800200c9a66");
+        aboutData.SetAppName(g_testAboutApplicationName.c_str());
+        aboutData.SetManufacturer("AllSeen Alliance");
+        aboutData.SetModelNumber("");
+        aboutData.SetDescription("bastress2 is a test application used to verify AllJoyn functionality");
         // software version of bbservice is the same as the AllJoyn version
-        g_aboutData.SetSoftwareVersion(ajn::GetVersion());
-        g_aboutData.SetTransportOpts(s_transports);
+        aboutData.SetSoftwareVersion(ajn::GetVersion());
+        aboutData.SetTransportOpts(s_transports);
 
-        aboutObj->Announce(SERVICE_PORT, g_aboutData);
+        aboutObj->Announce(SERVICE_PORT, aboutData);
     } else {
 
         /* Request name */
