@@ -22,8 +22,6 @@ cpp/    core AllJoyn functionality, implemented in C++
 java/   optional Java language binding          (built from alljoyn_java)
           - required for Android apps
 c/      optional ANSI C language binding        (built from alljoyn_c)
-          - required by Unity binding
-unity/  optional Unity language binding         (built from alljoyn_unity)
 about/  implements AllJoyn About Feature. (built from services/about/(cpp and java))
 
 
@@ -80,21 +78,6 @@ c/      ANSI C language binding
     inc/qcc/
 
     lib/                        client libraries
-
-
-        -------------
-unity/  Unity binding
-        -------------
-
-    AllJoyn.unitypackage        installable Unity package for AllJoyn
-
-    docs/html/                  API documentation
-
-    lib/alljoyn_unity.dll       client library
-
-    package_support/            permits re-building the Unity package
-
-    samples/                    sample apps for Android
 
 
         ---------------------

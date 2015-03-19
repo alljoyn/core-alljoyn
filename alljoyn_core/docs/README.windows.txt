@@ -35,8 +35,6 @@ cpp/    core AllJoyn functionality, implemented in C++
 java/   optional Java language binding          (built from alljoyn_java)
 js/     optional Javascript binding             (built from alljoyn_js)
 c/      optional ANSI C language binding        (built from alljoyn_c)
-          - required by Unity binding
-unity/  optional Unity language binding         (built from alljoyn_unity)
 
 
 The contents of each top level folder are further arranged into sub-folders:
@@ -110,21 +108,6 @@ c/      ANSI C language binding
     inc/qcc/
 
     lib/                        client libraries
-
-
-        -------------
-unity/  Unity binding
-        -------------
-
-    AllJoyn.unitypackage        installable Unity package for AllJoyn
-
-    docs/html/                  API documentation
-
-    lib/alljoyn_unity.dll       client library
-
-    package_support/            permits re-building the Unity package
-
-    samples/                    sample Unity apps
 
 
 ----------------------------------------------------------------------------------
