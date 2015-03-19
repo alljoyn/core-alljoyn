@@ -86,7 +86,7 @@ class KeyExchangerCB {
 class KeyExchanger {
   public:
 
-    KeyExchanger(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, uint16_t peerAuthVersion) : peerObj(peerObj), bus(bus), authCount(0), listener(listener), secretExpiration(3600), initiator(initiator), peerAuthVersion(peerAuthVersion) {
+    KeyExchanger(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, uint16_t peerAuthVersion) : peerObj(peerObj), bus(bus), authCount(1), listener(listener), secretExpiration(3600), initiator(initiator), peerAuthVersion(peerAuthVersion) {
         hashUtil.Init();
         showDigestCounter = 0;
     }
