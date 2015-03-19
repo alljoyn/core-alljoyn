@@ -10382,25 +10382,21 @@ void UDPTransport::UntrustedClientExit()
 {
     QCC_DbgTrace((" UDPTransport::UntrustedClientExit()"));
 
-    m_dynamicScoreUpdater.Alert();
-
 #if ADVERTISE_ROUTER_OVER_UDP
     /* An untrusted client has exited, update the counts and re-enable the advertisement if necessary. */
     m_listenRequestsLock.Lock();
-    m_numUntrustedClients--;
-    QCC_DbgPrintf((" UDPTransport::UntrustedClientExit() m_numUntrustedClients=%d m_maxRemoteClientsUdp=%d", m_numUntrustedClients, m_maxRemoteClientsUdp));
-    if (!m_routerName.empty() && (m_numUntrustedClients == (m_maxRemoteClientsUdp - 1))) {
-        EnableAdvertisement(m_routerName, true, TRANSPORT_UDP);
+    if (m_numUntrustedClients >= 0) {
+        m_numUntrustedClients--;
+        QCC_DbgPrintf((" UDPTransport::UntrustedClientExit() m_numUntrustedClients=%d m_maxRemoteClientsUdp=%d", m_numUntrustedClients, m_maxRemoteClientsUdp));
     }
-    UpdateDynamicScore();
     m_listenRequestsLock.Unlock();
+    m_dynamicScoreUpdater.Alert();
 #endif
 }
 
 QStatus UDPTransport::UntrustedClientStart()
 {
     QCC_DbgTrace((" UDPTransport::UntrustedClientStart()"));
-    m_dynamicScoreUpdater.Alert();
 
 #if ADVERTISE_ROUTER_OVER_UDP
     QStatus status = ER_OK;
@@ -10419,17 +10415,8 @@ QStatus UDPTransport::UntrustedClientStart()
         status = ER_BUS_NOT_ALLOWED;
         m_numUntrustedClients--;
     }
-    if (m_numUntrustedClients >= m_maxRemoteClientsUdp) {
-        if (m_numUntrustedClients == m_maxRemoteClientsUdp) {
-            QCC_DbgPrintf(("UDPTransport::UntrustedClientStart(): Last available slot is now filled - no more free slots"));
-        } else {
-            QCC_LogError(ER_BUS_NOT_ALLOWED, ("UDPTransport::UntrustedClientStart(): Disabling routing node advertisements"));
-        }
-        DisableAdvertisement(m_routerName, TRANSPORT_UDP);
-    }
-
-    UpdateDynamicScore();
     m_listenRequestsLock.Unlock();
+    m_dynamicScoreUpdater.Alert();
     return status;
 #else
     return ER_UDP_NOT_IMPLEMENTED;
