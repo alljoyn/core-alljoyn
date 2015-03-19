@@ -284,36 +284,36 @@ int main(int argc, char** argv, char** envArg)
     /* This test for NULL is only required if new() behavior is to return NULL
      * instead of throwing an exception upon an out of memory failure.
      */
-    if (!s_msgBus) {
+    if (s_msgBus) {
+        if (ER_OK == status) {
+            status = StartMessageBus();
+        }
+
+        SignalListeningObject object(*s_msgBus, SERVICE_PATH);
+
+        if (ER_OK == status) {
+            status = RegisterBusObjectAndConnect(&object);
+        }
+
+        if (ER_OK == status) {
+            RegisterBusListener();
+            status = FindAdvertisedName();
+        }
+
+        if (ER_OK == status) {
+            status = WaitForJoinSessionCompletion();
+        }
+
+        if (ER_OK == status) {
+            status = SubscribeToNameChangedSignal(&object);
+        }
+
+        /* Wait for the name changes until the user signals for an exit. */
+        if (ER_OK == status) {
+            WaitForSigInt();
+        }
+    } else {
         status = ER_OUT_OF_MEMORY;
-    }
-
-    if (ER_OK == status) {
-        status = StartMessageBus();
-    }
-
-    SignalListeningObject object(*s_msgBus, SERVICE_PATH);
-
-    if (ER_OK == status) {
-        status = RegisterBusObjectAndConnect(&object);
-    }
-
-    if (ER_OK == status) {
-        RegisterBusListener();
-        status = FindAdvertisedName();
-    }
-
-    if (ER_OK == status) {
-        status = WaitForJoinSessionCompletion();
-    }
-
-    if (ER_OK == status) {
-        status = SubscribeToNameChangedSignal(&object);
-    }
-
-    /* Wait for the name changes until the user signals for an exit. */
-    if (ER_OK == status) {
-        WaitForSigInt();
     }
 
     /* Deallocate bus */
