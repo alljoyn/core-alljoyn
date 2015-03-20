@@ -1210,7 +1210,7 @@ TEST_F(ObserverTest, StopBus) {
     two.PublishAbout();
     EXPECT_TRUE(WaitForAll(events));
 }
-TEST_F(ObserverTest, DISABLED_StressNumPartObjects) {
+TEST_F(ObserverTest, StressNumPartObjects) {
 
     // Stress the number of participants, observers and consumers
 
