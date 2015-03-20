@@ -499,12 +499,10 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm,
     if (AllJoynInit() != ER_OK) {
         return 1;
     }
-#ifdef ROUTER
     if (AllJoynRouterInit() != ER_OK) {
         AllJoynShutdown();
         return 1;
     }
-#endif
     /* Set AllJoyn logging */
     //QCC_SetLogLevels("ALLJOYN=7;ALL=1");
     QCC_UseOSLogging(true);
@@ -515,9 +513,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm,
 JNIEXPORT void JNI_OnUnload(JavaVM* vm,
                             void* reserved)
 {
-#ifdef ROUTER
     AllJoynRouterShutdown();
-#endif
     AllJoynShutdown();
 }
 
