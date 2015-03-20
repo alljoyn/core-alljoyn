@@ -23,17 +23,6 @@
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/Observer.h>
 
-#if defined(QCC_OS_GROUP_WINDOWS)
-/*
- * This pragma prevents Microsoft compiler warning C4407: cast between different pointer to member representations, compiler may generate incorrect code.
- * This is equivalent to /vmg compiler option but without the burden of forcing that everywhere.
- *
- * Specifically the warning is caused by DoorListener class using multiple inheritance and implementing a member function (PersonPassedThrough) that
- * is declared in the base class (MessageReceiver).
- */
-#pragma pointers_to_members(full_generality, virtual_inheritance)
-#endif
-
 #define INTF_NAME "com.example.Door"
 
 using namespace std;
