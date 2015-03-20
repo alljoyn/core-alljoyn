@@ -58,47 +58,41 @@ static const uint32_t LOCAL_ENDPOINT_CONCURRENCY = 4;
 
 class _LocalEndpoint::Dispatcher : public qcc::Timer, public qcc::AlarmListener {
   public:
-    Dispatcher(_LocalEndpoint* endpoint, uint32_t concurrency = LOCAL_ENDPOINT_CONCURRENCY) : Timer("lepDisp" + U32ToString(qcc::IncrementAndFetch(&dispatcherCnt)), true, concurrency, true, 10), AlarmListener(), endpoint(endpoint) { }
+    Dispatcher(_LocalEndpoint* endpoint, uint32_t concurrency = LOCAL_ENDPOINT_CONCURRENCY) :
+        Timer("lepDisp" + U32ToString(qcc::IncrementAndFetch(&dispatcherCnt)), true, concurrency, true, 10),
+        AlarmListener(), endpoint(endpoint), pendingWork(),
+        needDeferredCallbacks(false), needObserverWork(false),
+        needCachedPropertyReplyWork(false)
+    {
+        uint32_t zero = 0;
+        qcc::AlarmListener* listener = static_cast<qcc::AlarmListener*>(this);
+        pendingWork = Alarm(zero, listener);
+    }
+
     QStatus DispatchMessage(Message& msg);
+
+    void TriggerDeferredCallbacks();
+    void TriggerObserverWork();
+    void TriggerCachedPropertyReplyWork();
+
+    void PerformDeferredCallbacks();
+    void PerformObserverWork();
+    void PerformCachedPropertyReplyWork();
 
     void AlarmTriggered(const qcc::Alarm& alarm, QStatus reason);
 
   private:
     _LocalEndpoint* endpoint;
     static int32_t dispatcherCnt;
+
+    Alarm pendingWork;
+    bool needDeferredCallbacks;
+    bool needObserverWork;
+    bool needCachedPropertyReplyWork;
+    qcc::Mutex workLock;
 };
 
 int32_t _LocalEndpoint::Dispatcher::dispatcherCnt = 0;
-
-class _LocalEndpoint::DeferredCallbacks : public qcc::AlarmListener {
-  public:
-    DeferredCallbacks(_LocalEndpoint* ep) : endpoint(ep) { }
-
-    void AlarmTriggered(const qcc::Alarm& alarm, QStatus reason);
-
-  private:
-    _LocalEndpoint* endpoint;
-};
-
-class _LocalEndpoint::ObserverCallbacks : public qcc::AlarmListener {
-  public:
-    ObserverCallbacks(_LocalEndpoint*ep) : endpoint(ep) { }
-
-    void AlarmTriggered(const qcc::Alarm& alarm, QStatus reason);
-
-  private:
-    _LocalEndpoint* endpoint;
-};
-
-class _LocalEndpoint::CachedPropertyCallbacks : public qcc::AlarmListener {
-  public:
-    CachedPropertyCallbacks(_LocalEndpoint* ep) : endpoint(ep) { }
-
-    void AlarmTriggered(const qcc::Alarm& alarm, QStatus reason);
-
-  private:
-    _LocalEndpoint* endpoint;
-};
 
 LocalTransport::~LocalTransport()
 {
@@ -194,9 +188,6 @@ class _LocalEndpoint::CachedGetPropertyReplyContext {
 _LocalEndpoint::_LocalEndpoint(BusAttachment& bus, uint32_t concurrency) :
     _BusEndpoint(ENDPOINT_TYPE_LOCAL),
     dispatcher(new Dispatcher(this, concurrency)),
-    deferredCallbacks(new DeferredCallbacks(this)),
-    observerCallbacks(new ObserverCallbacks(this)),
-    cachedPropertyCallbacks(new CachedPropertyCallbacks(this)),
     running(false),
     isRegistered(false),
     bus(&bus),
@@ -240,26 +231,11 @@ _LocalEndpoint::~_LocalEndpoint()
         }
 
         /*
-         * Shutdown the dispatcher and deferredCallbacks
+         * Shutdown the dispatcher
          */
         if (dispatcher) {
             delete dispatcher;
             dispatcher = NULL;
-        }
-
-        if (deferredCallbacks) {
-            delete deferredCallbacks;
-            deferredCallbacks = NULL;
-        }
-
-        if (observerCallbacks) {
-            delete observerCallbacks;
-            observerCallbacks = NULL;
-        }
-
-        if (cachedPropertyCallbacks) {
-            delete cachedPropertyCallbacks;
-            cachedPropertyCallbacks = NULL;
         }
 
         /*
@@ -476,8 +452,129 @@ bool _LocalEndpoint::IsReentrantCall()
 
 }
 
+void _LocalEndpoint::Dispatcher::TriggerDeferredCallbacks()
+{
+    workLock.Lock(MUTEX_CONTEXT);
+    if (needDeferredCallbacks) {
+        workLock.Unlock(MUTEX_CONTEXT);
+        return;
+    }
+    needDeferredCallbacks = true;
+    workLock.Unlock(MUTEX_CONTEXT);
+
+    /*
+     * Don't block while adding the alarm.
+     * First, we may be calling this method from within the context of a
+     * triggered Alarm. In this case a blocking AddAlarm is an instant
+     * deadlock.
+     * Second, AddAlarm would only block if the our alarm queue is already
+     * full. The work will be picked up by the first existing alarm that
+     * triggers anyway.
+     */
+    AddAlarmNonBlocking(pendingWork);
+}
+
+void _LocalEndpoint::Dispatcher::TriggerObserverWork()
+{
+    workLock.Lock(MUTEX_CONTEXT);
+    if (needObserverWork) {
+        workLock.Unlock(MUTEX_CONTEXT);
+        return;
+    }
+    needObserverWork = true;
+    workLock.Unlock(MUTEX_CONTEXT);
+
+    /*
+     * Don't block while adding the alarm.
+     * First, we may be calling this method from within the context of a
+     * triggered Alarm. In this case a blocking AddAlarm is an instant
+     * deadlock.
+     * Second, AddAlarm would only block if the our alarm queue is already
+     * full. The work will be picked up by the first existing alarm that
+     * triggers anyway.
+     */
+    AddAlarmNonBlocking(pendingWork);
+}
+
+void _LocalEndpoint::Dispatcher::TriggerCachedPropertyReplyWork()
+{
+    workLock.Lock(MUTEX_CONTEXT);
+    if (needCachedPropertyReplyWork) {
+        workLock.Unlock(MUTEX_CONTEXT);
+        return;
+    }
+    needCachedPropertyReplyWork = true;
+    workLock.Unlock(MUTEX_CONTEXT);
+
+    /*
+     * Don't block while adding the alarm.
+     * First, we may be calling this method from within the context of a
+     * triggered Alarm. In this case a blocking AddAlarm is an instant
+     * deadlock.
+     * Second, AddAlarm would only block if the our alarm queue is already
+     * full. The work will be picked up by the first existing alarm that
+     * triggers anyway.
+     */
+    AddAlarmNonBlocking(pendingWork);
+}
+
+void _LocalEndpoint::Dispatcher::PerformDeferredCallbacks()
+{
+    /*
+     * Allow synchronous method calls from within the object registration callbacks
+     */
+    endpoint->bus->EnableConcurrentCallbacks();
+    /*
+     * Call ObjectRegistered for any unregistered bus objects
+     */
+    endpoint->objectsLock.Lock(MUTEX_CONTEXT);
+    unordered_map<const char*, BusObject*, Hash, PathEq>::iterator iter = endpoint->localObjects.begin();
+    while (endpoint->running && (iter != endpoint->localObjects.end())) {
+        if (!iter->second->isRegistered) {
+            BusObject* bo = iter->second;
+            bo->isRegistered = true;
+            bo->InUseIncrement();
+            endpoint->objectsLock.Unlock(MUTEX_CONTEXT);
+            bo->ObjectRegistered();
+            endpoint->objectsLock.Lock(MUTEX_CONTEXT);
+            bo->InUseDecrement();
+            iter = endpoint->localObjects.begin();
+        } else {
+            ++iter;
+        }
+    }
+    endpoint->objectsLock.Unlock(MUTEX_CONTEXT);
+}
+
+void _LocalEndpoint::Dispatcher::PerformObserverWork()
+{
+    ObserverManager& obsmgr = endpoint->bus->GetInternal().GetObserverManager();
+    obsmgr.DoWork();
+}
+
+void _LocalEndpoint::Dispatcher::PerformCachedPropertyReplyWork()
+{
+    CachedGetPropertyReplyContext* ctx;
+    endpoint->replyMapLock.Lock(MUTEX_CONTEXT);
+    while (!endpoint->cachedGetPropertyReplyContexts.empty()) {
+        std::set<CachedGetPropertyReplyContext*>::iterator it = endpoint->cachedGetPropertyReplyContexts.begin();
+        ctx = *it;
+        endpoint->cachedGetPropertyReplyContexts.erase(it);
+        endpoint->replyMapLock.Unlock(MUTEX_CONTEXT);
+
+        if (ctx != NULL) {
+            (ctx->listener->*ctx->callback)(ER_OK, ctx->proxy, ctx->value, ctx->context);
+            delete ctx;
+        }
+
+        endpoint->replyMapLock.Lock(MUTEX_CONTEXT);
+    }
+    endpoint->replyMapLock.Unlock(MUTEX_CONTEXT);
+}
+
 void _LocalEndpoint::Dispatcher::AlarmTriggered(const Alarm& alarm, QStatus reason)
 {
+    /* first deal with incoming messages */
     Message* msg = static_cast<Message*>(alarm->GetContext());
     if (msg) {
         if (reason == ER_OK) {
@@ -489,6 +586,39 @@ void _LocalEndpoint::Dispatcher::AlarmTriggered(const Alarm& alarm, QStatus reas
         }
         delete msg;
     }
+
+    /* next, deal with any pending work */
+    if (reason != ER_OK) {
+        return;
+    }
+
+    workLock.Lock(MUTEX_CONTEXT);
+
+    if (needObserverWork) {
+        needObserverWork = false;
+        workLock.Unlock(MUTEX_CONTEXT);
+        PerformObserverWork();
+        workLock.Lock(MUTEX_CONTEXT);
+    }
+
+    if (needCachedPropertyReplyWork) {
+        needCachedPropertyReplyWork = false;
+        workLock.Unlock(MUTEX_CONTEXT);
+        PerformCachedPropertyReplyWork();
+        workLock.Lock(MUTEX_CONTEXT);
+    }
+
+    /*
+     * DeferredCallbacks work has to go last, because it enables concurrent callbacks
+     * by default, and we don't want this to influence any of the preceding work items.
+     */
+    if (needDeferredCallbacks) {
+        needDeferredCallbacks = false;
+        workLock.Unlock(MUTEX_CONTEXT);
+        PerformDeferredCallbacks();
+        workLock.Lock(MUTEX_CONTEXT);
+    }
+    workLock.Unlock(MUTEX_CONTEXT);
 }
 
 QStatus _LocalEndpoint::PushMessage(Message& message)
@@ -1199,45 +1329,14 @@ QStatus _LocalEndpoint::HandleMethodReply(Message& message)
     return status;
 }
 
-void _LocalEndpoint::ObserverCallbacks::AlarmTriggered(const qcc::Alarm& alarm, QStatus reason)
-{
-    if (reason == ER_OK) {
-        ObserverManager& obsmgr = endpoint->bus->GetInternal().GetObserverManager();
-        obsmgr.DoWork();
-    }
-}
-
 void _LocalEndpoint::TriggerObserverWork()
 {
     /*
      * Use the local endpoint's dispatcher to let the ObserverManager process items from its
      * work queue.
      */
-    uint32_t zero = 0;
     if (dispatcher) {
-        QStatus status = dispatcher->AddAlarm(Alarm(zero, observerCallbacks));
-        if (ER_OK != status) {
-            QCC_DbgHLPrintf(("TriggerObserverWork failure to add Alarm: %s", QCC_StatusText(status)));
-        }
-    }
-}
-
-void _LocalEndpoint::CachedPropertyCallbacks::AlarmTriggered(const qcc::Alarm& alarm, QStatus reason)
-{
-    if (reason == ER_OK) {
-        CachedGetPropertyReplyContext* ctx = reinterpret_cast<CachedGetPropertyReplyContext*>(alarm->GetContext());
-        endpoint->replyMapLock.Lock(MUTEX_CONTEXT);
-        std::set<CachedGetPropertyReplyContext*>::iterator it = endpoint->cachedGetPropertyReplyContexts.find(ctx);
-        if (it != endpoint->cachedGetPropertyReplyContexts.end()) {
-            endpoint->cachedGetPropertyReplyContexts.erase(it);
-        } else {
-            ctx = NULL;
-        }
-        endpoint->replyMapLock.Unlock(MUTEX_CONTEXT);
-        if (ctx != NULL) {
-            (ctx->listener->*ctx->callback)(ER_OK, ctx->proxy, ctx->value, ctx->context);
-            delete ctx;
-        }
+        dispatcher->TriggerObserverWork();
     }
 }
 
@@ -1253,53 +1352,7 @@ void _LocalEndpoint::ScheduleCachedGetPropertyReply(
         replyMapLock.Lock(MUTEX_CONTEXT);
         cachedGetPropertyReplyContexts.insert(ctx);
         replyMapLock.Unlock(MUTEX_CONTEXT);
-
-        uint32_t zero = 0;
-        QStatus status = dispatcher->AddAlarm(Alarm(zero, cachedPropertyCallbacks, ctx));
-        if (ER_OK != status) {
-            QCC_DbgHLPrintf(("ScheduleCachedGetPropertyReply failure to add Alarm: %s", QCC_StatusText(status)));
-            replyMapLock.Lock(MUTEX_CONTEXT);
-            cachedGetPropertyReplyContexts.erase(ctx);
-            replyMapLock.Unlock(MUTEX_CONTEXT);
-            delete ctx;
-        }
-    }
-}
-
-void _LocalEndpoint::DiscardObserverWork()
-{
-    if (observerCallbacks) {
-        dispatcher->RemoveAlarmsWithListener(*observerCallbacks);
-    }
-}
-
-void _LocalEndpoint::DeferredCallbacks::AlarmTriggered(const qcc::Alarm& alarm, QStatus reason)
-{
-    if (reason == ER_OK) {
-        /*
-         * Allow synchronous method calls from within the object registration callbacks
-         */
-        endpoint->bus->EnableConcurrentCallbacks();
-        /*
-         * Call ObjectRegistered for any unregistered bus objects
-         */
-        endpoint->objectsLock.Lock(MUTEX_CONTEXT);
-        unordered_map<const char*, BusObject*, Hash, PathEq>::iterator iter = endpoint->localObjects.begin();
-        while (endpoint->running && (iter != endpoint->localObjects.end())) {
-            if (!iter->second->isRegistered) {
-                BusObject* bo = iter->second;
-                bo->isRegistered = true;
-                bo->InUseIncrement();
-                endpoint->objectsLock.Unlock(MUTEX_CONTEXT);
-                bo->ObjectRegistered();
-                endpoint->objectsLock.Lock(MUTEX_CONTEXT);
-                bo->InUseDecrement();
-                iter = endpoint->localObjects.begin();
-            } else {
-                ++iter;
-            }
-        }
-        endpoint->objectsLock.Unlock(MUTEX_CONTEXT);
+        dispatcher->TriggerCachedPropertyReplyWork();
     }
 }
 
@@ -1308,12 +1361,8 @@ void _LocalEndpoint::OnBusConnected()
     /*
      * Use the local endpoint's dispatcher to call back to report the object registrations.
      */
-    uint32_t zero = 0;
     if (dispatcher) {
-        QStatus status = dispatcher->AddAlarm(Alarm(zero, deferredCallbacks));
-        if (ER_OK != status) {
-            QCC_DbgHLPrintf(("OnBusConnected failure to add Alarm: %s", QCC_StatusText(status)));
-        }
+        dispatcher->TriggerDeferredCallbacks();
     }
 }
 
