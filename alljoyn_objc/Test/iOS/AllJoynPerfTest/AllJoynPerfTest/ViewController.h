@@ -25,7 +25,6 @@
 @property (weak, nonatomic) IBOutlet UISegmentedControl *transportTypeSegmentedControl;
 @property (weak, nonatomic) IBOutlet UISegmentedControl *messageTypeSegmentedControl;
 @property (weak, nonatomic) IBOutlet UISegmentedControl *messageSizeSegmentedControl;
-@property (weak, nonatomic) IBOutlet UISwitch *headerCompressionSwitch;
 @property (weak, nonatomic) IBOutlet UISegmentedControl *operationTypeSegmentedControl;
 @property (weak, nonatomic) IBOutlet UILabel *statusTextField1;
 @property (weak, nonatomic) IBOutlet UILabel *statusTextField2;

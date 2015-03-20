@@ -74,7 +74,6 @@ static BusAttachment* g_msgBus = NULL;
 static MyBusListener* g_myBusListener = NULL;
 static String g_wellKnownName = ::org::alljoyn::alljoyn_test::DefaultWellKnownName;
 static bool g_echo_signal = false;
-static bool g_compress = false;
 static uint32_t g_keyExpiration = 0xFFFFFFFF;
 static bool g_cancelAdvertise = false;
 static bool g_ping_back = false;
@@ -619,9 +618,6 @@ class LocalTestObject : public BusObject {
         if (g_echo_signal) {
             MsgArg arg("a{ys}", 0, NULL);
             uint8_t flags = 0;
-            if (g_compress) {
-                flags |= ALLJOYN_FLAG_COMPRESSED;
-            }
             QStatus status = Signal(msg->GetSender(), msg->GetSessionId(), *member, &arg, 1, 0, flags);
             if (status != ER_OK) {
                 QCC_LogError(status, ("Failed to send Signal"));
@@ -777,7 +773,7 @@ Mutex LocalTestObject::DelayedResponse::delayedResponseThreadLock;
 
 static void usage(void)
 {
-    printf("Usage: bbservice [-h <name>] [-m] [-e] [-x] [-i #] [-n <name>] [-b] [-t] [-l]\n\n");
+    printf("Usage: bbservice [-h <name>] [-m] [-e] [-i #] [-n <name>] [-b] [-t] [-l]\n\n");
     printf("Options:\n");
     printf("   -h                    = Print this help message\n");
     printf("   -?                    = Print this help message\n");
@@ -785,7 +781,6 @@ static void usage(void)
     printf("   -kx #                 = Authentication key expiration (seconds)\n");
     printf("   -m                    = Session is a multi-point session\n");
     printf("   -e                    = Echo received signals back to sender\n");
-    printf("   -x                    = Compress signals echoed back to sender\n");
     printf("   -i #                  = Signal report interval (number of signals rx per update; default = 1000)\n");
     printf("   -n <well-known name>  = Well-known name to advertise\n");
     printf("   -t                    = Advertise over TCP (enables selective advertising)\n");
@@ -850,8 +845,6 @@ int main(int argc, char** argv)
                 exit(1);
             }
             g_echo_signal = true;
-        } else if (0 == strcmp("-x", argv[i])) {
-            g_compress = true;
         } else if (0 == strcmp("-i", argv[i])) {
             ++i;
             if (i == argc) {

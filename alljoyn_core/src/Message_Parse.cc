@@ -36,7 +36,6 @@
 #include "KeyStore.h"
 #include "LocalTransport.h"
 #include "PeerState.h"
-#include "CompressionRules.h"
 #include "BusUtil.h"
 #include "AllJoynCrypto.h"
 #include "AllJoynPeerObj.h"
@@ -1161,31 +1160,6 @@ QStatus _Message::Unmarshal(qcc::String& endpointName, bool handlePassing, bool 
     bufPos = AlignPtr(bufPos, 8);
     bodyPtr = bufPos;
     /*
-     * If header is compressed try to expand it*/
-    if (msgHeader.flags & ALLJOYN_FLAG_COMPRESSED) {
-        uint32_t token = hdrFields.field[ALLJOYN_HDR_FIELD_COMPRESSION_TOKEN].v_uint32;
-        QCC_DbgPrintf(("Expanding compressed header token %u", token));
-        if (hdrFields.field[ALLJOYN_HDR_FIELD_COMPRESSION_TOKEN].typeId == ALLJOYN_INVALID) {
-            status = ER_BUS_MISSING_COMPRESSION_TOKEN;
-            goto ExitUnmarshal;
-        }
-        const HeaderFields* expFields = bus->GetInternal().GetCompressionRules()->GetExpansion(token);
-        if (!expFields) {
-            QCC_DbgPrintf(("No expansion for token %u", token));
-            status = ER_BUS_CANNOT_EXPAND_MESSAGE;
-            goto ExitUnmarshal;
-        }
-        /*
-         * Expand the compressed fields. Don't overwrite headers we received in the message.
-         */
-        for (size_t id = 0; id < ArraySize(hdrFields.field); id++) {
-            if (HeaderFields::Compressible[id] && (hdrFields.field[id].typeId == ALLJOYN_INVALID)) {
-                hdrFields.field[id] = expFields->field[id];
-            }
-        }
-        hdrFields.field[ALLJOYN_HDR_FIELD_COMPRESSION_TOKEN].typeId = ALLJOYN_INVALID;
-    }
-    /*
      * Check the validity of the message header
      */
     status = HeaderChecks(pedantic);
@@ -1334,82 +1308,6 @@ ExitUnmarshal:
             QCC_LogError(status, ("Failed to unmarshal message received on %s", endpointName.c_str()));
         }
     }
-    return status;
-}
-
-QStatus _Message::AddExpansionRule(uint32_t token, const MsgArg* expansionArg)
-{
-    /*
-     * Validate the expansion response.
-     */
-    if (msgHeader.msgType != MESSAGE_METHOD_RET) {
-        return ER_FAIL;
-    }
-    if (!expansionArg || !expansionArg->HasSignature("a(yv)")) {
-        return ER_BUS_SIGNATURE_MISMATCH;
-    }
-    /*
-     * Unpack the expansion into a standard header field structure.
-     */
-    QStatus status = ER_BUS_HDR_EXPANSION_INVALID;
-    HeaderFields expFields;
-    for (size_t i = 0; i < ArraySize(expFields.field); i++) {
-        expFields.field[i].typeId = ALLJOYN_INVALID;
-    }
-    const MsgArg* field = expansionArg->v_array.elements;
-    for (size_t i = 0; i < expansionArg->v_array.numElements; i++, field++) {
-        const MsgArg* id = &(field->v_struct.members[0]);
-        const MsgArg* variant =  &(field->v_struct.members[1]);
-        /*
-         * Note we don't assign the MsgArg because that will cause unnecessary string copies.
-         */
-        AllJoynFieldType fieldId = (id->v_byte >= ArraySize(FieldTypeMapping)) ? ALLJOYN_HDR_FIELD_UNKNOWN : FieldTypeMapping[id->v_byte];
-        if (!HeaderFields::Compressible[fieldId]) {
-            QCC_DbgPrintf(("Expansion has invalid field id %d", fieldId));
-            goto ExitAddExpansion;
-        }
-        if (variant->v_variant.val->typeId != HeaderFields::FieldType[fieldId]) {
-            QCC_DbgPrintf(("Expansion for field %d has wrong type %s", fieldId, variant->v_variant.val->ToString().c_str()));
-            goto ExitAddExpansion;
-        }
-        switch (fieldId) {
-        case ALLJOYN_HDR_FIELD_PATH:
-            expFields.field[fieldId].typeId = ALLJOYN_OBJECT_PATH;
-            expFields.field[fieldId].v_objPath.str = variant->v_variant.val->v_string.str;
-            expFields.field[fieldId].v_objPath.len = variant->v_variant.val->v_string.len;
-            break;
-
-        case ALLJOYN_HDR_FIELD_INTERFACE:
-        case ALLJOYN_HDR_FIELD_MEMBER:
-        case ALLJOYN_HDR_FIELD_DESTINATION:
-        case ALLJOYN_HDR_FIELD_SENDER:
-            expFields.field[fieldId].typeId = ALLJOYN_STRING;
-            expFields.field[fieldId].v_string.str = variant->v_variant.val->v_string.str;
-            expFields.field[fieldId].v_string.len = variant->v_variant.val->v_string.len;
-            break;
-
-        case ALLJOYN_HDR_FIELD_SIGNATURE:
-            expFields.field[fieldId].typeId = ALLJOYN_SIGNATURE;
-            expFields.field[fieldId].v_signature.sig = variant->v_variant.val->v_signature.sig;
-            expFields.field[fieldId].v_signature.len = variant->v_variant.val->v_signature.len;
-            break;
-
-        case ALLJOYN_HDR_FIELD_UNKNOWN:
-            QCC_DbgPrintf(("Unknown header field %d in expansion", id->v_byte));
-            goto ExitAddExpansion;
-
-        default:
-            expFields.field[fieldId] = *variant->v_variant.val;
-            break;
-        }
-    }
-    /*
-     * Add the expansion to the compression engine.
-     */
-    bus->GetInternal().GetCompressionRules()->AddExpansion(expFields, token);
-    return ER_OK;
-
-ExitAddExpansion:
     return status;
 }
 

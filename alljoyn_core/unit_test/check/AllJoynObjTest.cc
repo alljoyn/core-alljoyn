@@ -86,11 +86,10 @@ class _JoinSessionMethodCall : public _Message {
         EXPECT_EQ(ER_OK, args[0].Set("s", host));
         EXPECT_EQ(ER_OK, args[1].Set("q", port));
         SetSessionOpts(opts, args[2]);
-        CompressionRules compressionRules;
         EXPECT_EQ(ER_OK, CallMsg(signature, joiner, org::alljoyn::Bus::WellKnownName, id,
                                  org::alljoyn::Bus::ObjectPath, org::alljoyn::Bus::InterfaceName, "JoinSession",
                                  args, 3,
-                                 0, compressionRules));
+                                 0));
         PeerStateTable peerStateTable;
         EXPECT_EQ(ER_OK, UnmarshalArgs(&peerStateTable, signature));
     }

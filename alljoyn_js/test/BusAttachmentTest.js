@@ -137,7 +137,6 @@ AsyncTestCase("BusAttachmentTest", {
                 }
                 assertTrue(property["org.alljoyn.Bus"]);
                 assertTrue(property["org.alljoyn.Bus.Peer.Authentication"]);
-                assertTrue(property["org.alljoyn.Bus.Peer.HeaderCompression"]);
                 assertTrue(property["org.freedesktop.DBus"]);
                 assertTrue(property["org.freedesktop.DBus.Introspectable"]);
                 assertTrue(property["org.freedesktop.DBus.Peer"]);

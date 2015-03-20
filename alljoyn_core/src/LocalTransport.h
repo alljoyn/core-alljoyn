@@ -44,7 +44,6 @@
 #include <alljoyn/Status.h>
 
 #include "BusEndpoint.h"
-#include "CompressionRules.h"
 #include "MethodTable.h"
 #include "SignalTable.h"
 #include "Transport.h"

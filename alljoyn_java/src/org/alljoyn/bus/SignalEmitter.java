@@ -30,7 +30,6 @@ import org.alljoyn.bus.ifaces.Properties;
 public class SignalEmitter {
 
     private static final int GLOBAL_BROADCAST = 0x20;
-    private static final int COMPRESSED = 0x40;
     private static final int SESSIONLESS = 0x10;
 
     protected BusObject source;
@@ -164,9 +163,11 @@ public class SignalEmitter {
      *
      * @param compress if {@code true} compress header for destinations that can handle
      *                 header compression
+     *
+     * @deprecated March 2015 for 15.04 release
      */
+    @Deprecated
     public void setCompressHeader(boolean compress) {
-        this.flags = compress ? this.flags | COMPRESSED : this.flags & ~COMPRESSED;
     }
 
     /**

@@ -43,7 +43,6 @@
 #include "PeerState.h"
 #include "Transport.h"
 #include "TransportList.h"
-#include "CompressionRules.h"
 
 #include <alljoyn/Status.h>
 #include <set>
@@ -144,17 +143,6 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
      * @return  The iodispatch
      */
     qcc::IODispatch& GetIODispatch(void) { return m_ioDispatch; }
-    /**
-     * Get the header compression rules
-     *
-     * @return The header compression rules.
-     */
-    CompressionRules& GetCompressionRules() { return compressionRules; };
-
-    /**
-     * Override the compressions rules for this bus attachment.
-     */
-    void OverrideCompressionRules(CompressionRules& newRules) { compressionRules = newRules; }
 
     /**
      * Get the Announced Object Description for the BusObjects registered on
@@ -468,7 +456,6 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
     Router* router;                       /* Message bus router */
     PeerStateTable peerStateTable;        /* Table that maintains state information about remote peers */
     LocalEndpoint localEndpoint;          /* The local endpoint */
-    CompressionRules compressionRules;    /* Rules for compresssing and decompressing headers */
 
     bool allowRemoteMessages;             /* true iff endpoints of this attachment can receive messages from remote devices */
     qcc::String listenAddresses;          /* The set of bus addresses that this bus can listen on. (empty for clients) */
