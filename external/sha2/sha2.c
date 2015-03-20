@@ -105,15 +105,20 @@ extern "C" {
  * <machine/endian.h> where the appropriate definitions are actually
  * made).
  */
-#define BYTE_ORDER __BYTE_ORDER
-#if !defined(BYTE_ORDER) || (BYTE_ORDER != LITTLE_ENDIAN && BYTE_ORDER != BIG_ENDIAN)
+#ifndef LITTLE_ENDIAN
 #define LITTLE_ENDIAN 1234
+#endif
+#ifndef BIG_ENDIAN
 #define BIG_ENDIAN    4321
-#if HOST_IS_LITTLE_ENDIAN
+#endif
+
+#ifdef BYTE_ORDER
+#undef BYTE_ORDER
+#endif
+#if (QCC_TARGET_ENDIAN == QCC_LITTLE_ENDIAN)
 #define BYTE_ORDER LITTLE_ENDIAN
 #else
 #define BYTE_ORDER BIG_ENDIAN
-#endif
 #endif
 
 /*
