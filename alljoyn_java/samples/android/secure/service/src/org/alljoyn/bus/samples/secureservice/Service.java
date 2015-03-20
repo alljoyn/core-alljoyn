@@ -474,10 +474,6 @@ public class Service extends Activity {
                     if (rqst instanceof PrivateKeyRequest) {
                         /*
                          * Only the ALLJOYN_ECDHE_ECDSA requests for DSA private key.
-                         * The application may provide the DSA private key and public key in the certificate.
-                         * AllJoyn stores the keys in the key store for future use.
-                         * If the application does not provide the private key, AllJoyn will
-                         * generate the DSA key pair.
                          */
                         if (sendBackKeys) {
                             PrivateKeyRequest pkRqst = (PrivateKeyRequest) rqst;
@@ -488,21 +484,10 @@ public class Service extends Activity {
                     }
                     else if (rqst instanceof CertificateRequest) {
                         /*
-                         * Only the ALLJOYN_ECDHE_ECDSA requests for DSA private key.
-                         * The application may provide the DSA private key and public key in the certificate.
-                         * AllJoyn stores the keys in the key store for future use.
-                         * If the application does not provide the private key, AllJoyn will
-                         * generate the DSA key pair.
+                         * Only the ALLJOYN_ECDHE_ECDSA requests for certificate
                          */
                         if (sendBackKeys) {
-                        	String certChainPEM;
-                        	boolean useCert1 = true;
-                        	if (useCert1) {
-                        		certChainPEM = SERVER_CERT1_PEM;
-                        	}
-                        	else {
-                        		certChainPEM = SERVER_CERT2_PEM;
-                        	}
+                            String certChainPEM = SERVER_ECC_X509_PEM;
                             CertificateRequest certChainRqst = (CertificateRequest) rqst;
                             certChainRqst.setCertificateChain(certChainPEM);
                             Log.d(TAG, "Listener sends back cert chain " + certChainPEM);
@@ -553,29 +538,24 @@ public class Service extends Activity {
 
 
         private boolean sendBackKeys = true;  /* toggle the send back keys */
-        /* the followings are same data to try out the ECDHE_ECDSA key exchange */
+        /* the followings are sample data to try out the ECDHE_ECDSA key exchange */
         private static final String SERVER_PK_PEM =
-                "-----BEGIN PRIVATE KEY-----" +
-                "tV/tGPp7kI0pUohc+opH1LBxzk51pZVM/RVKXHGFjAcAAAAA" +
-                "-----END PRIVATE KEY-----";
-        private static final String SERVER_CERT1_PEM =
-                "-----BEGIN CERTIFICATE-----" +
-                "AAAAAfUQdhMSDuFWahMG/rFmFbKM06BjIA2Scx9GH+ENLAgtAAAAAIbhHnjAyFys\n" + 
-                "6DoN2kKlXVCgtHpFiEYszOYXI88QDvC1AAAAAAAAAAC5dRALLg6Qh1J2pVOzhaTP\n" + 
-                "xI+v/SKMFurIEo2b4S8UZAAAAADICW7LLp1pKlv6Ur9+I2Vipt5dDFnXSBiifTmf\n" + 
-                "irEWxQAAAAAAAAAAAAAAAAABXLAAAAAAAAFd3AABMa7uTLSqjDggO0t6TAgsxKNt\n" + 
-                "+Zhu/jc3s242BE0drPcL4K+FOVJf+tlivskovQ3RfzTQ+zLoBH5ZCzG9ua/dAAAA\n" + 
-                "ACt5bWBzbcaT0mUqwGOVosbMcU7SmhtE7vWNn/ECvpYFAAAAAA==\n" +
-                "-----END CERTIFICATE-----";
-        private static final String SERVER_CERT2_PEM =
-        		"AAAAAvUQdhMSDuFWahMG/rFmFbKM06BjIA2Scx9GH+ENLAgtAAAAAIbhHnjAyFys\n" +
-                "6DoN2kKlXVCgtHpFiEYszOYXI88QDvC1AAAAAAAAAAC5dRALLg6Qh1J2pVOzhaTP\n" +
-                "xI+v/SKMFurIEo2b4S8UZAAAAADICW7LLp1pKlv6Ur9+I2Vipt5dDFnXSBiifTmf\n" +
-                "irEWxQAAAAAAAAAAAAAAAAABXLAAAAAAAAFd3ABjeWi1/GbBcdnK0yJvL4X/UF0h\n" +
-                "8plX3uAhOlF2vT2jfxe5U06zaWSXcs9kBEQvfOc+WvKloM7m5NFJNSd3qFFGUhfj\n" +
-                "xx/0CCRJlk/jeIWmzQAAAAB8bexqa95eHEKTqdc8+qKFKggZZXlpaj9af/MFocIP\n" +
-                "NQAAAAA=\n" +
-                "-----END CERTIFICATE-----";
+            "-----BEGIN EC PRIVATE KEY-----\n" +
+            "MDECAQEEIICSqj3zTadctmGnwyC/SXLioO39pB1MlCbNEX04hjeioAoGCCqGSM49\n" +
+            "AwEH\n" +
+            "-----END EC PRIVATE KEY-----";
+
+        private static final String SERVER_ECC_X509_PEM =
+        "-----BEGIN CERTIFICATE-----\n" +
+        "MIIBWjCCAQGgAwIBAgIHMTAxMDEwMTAKBggqhkjOPQQDAjArMSkwJwYDVQQDDCAw\n" +
+        "ZTE5YWZhNzlhMjliMjMwNDcyMGJkNGY2ZDVlMWIxOTAeFw0xNTAyMjYyMTU1MjVa\n" +
+        "Fw0xNjAyMjYyMTU1MjVaMCsxKTAnBgNVBAMMIDZhYWM5MjQwNDNjYjc5NmQ2ZGIy\n" +
+        "NmRlYmRkMGM5OWJkMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEP/HbYga30Afm\n" +
+        "0fB6g7KaB5Vr5CDyEkgmlif/PTsgwM2KKCMiAfcfto0+L1N0kvyAUgff6sLtTHU3\n" +
+        "IdHzyBmKP6MQMA4wDAYDVR0TBAUwAwEB/zAKBggqhkjOPQQDAgNHADBEAiAZmNVA\n" +
+        "m/H5EtJl/O9x0P4zt/UdrqiPg+gA+wm0yRY6KgIgetWANAE2otcrsj3ARZTY/aTI\n" +
+        "0GOQizWlQm8mpKaQ3uE=\n" +
+        "-----END CERTIFICATE-----";
     }
 
     class SecureService implements SecureInterface, BusObject {
