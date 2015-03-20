@@ -1787,16 +1787,18 @@ static QStatus SendData(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, 
             }
         }
 
-#if ARDP_TC_SUPPORT
         /*
          * If we are unable to write to socket right away, buffer the outbound segments
          * in retransmit queue.
          */
-        if (handle->trafficJam || (conn->modeSimple && (conn->snd.thinWindow == 0))) {
+        if (handle->trafficJam
+#if ARDP_TC_SUPPORT
+            || (conn->modeSimple && (conn->snd.thinWindow == 0))
+#endif
+            ) {
             timeout = 0;
             status = ER_OK;
         }
-#endif
 
         /*
          * We update our accounting only if the message has been sent successfully
