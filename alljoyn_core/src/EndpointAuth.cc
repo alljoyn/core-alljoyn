@@ -376,7 +376,8 @@ qcc::String EndpointAuth::SASLCallout(SASLEngine& sasl, const qcc::String& extCm
 QStatus EndpointAuth::Establish(const qcc::String& authMechanisms,
                                 qcc::String& authUsed,
                                 qcc::String& redirection,
-                                AuthListener* listener)
+                                AuthListener* listener,
+                                uint32_t timeout)
 {
     QCC_DbgTrace(("EndpointAuth::Establish(authMechanism=\"%s\", authUsed=\"%s\", redirection=\"%s\", listener=0x%p)",
                   authMechanisms.c_str(), authUsed.c_str(), redirection.c_str(), listener));
@@ -408,7 +409,7 @@ QStatus EndpointAuth::Establish(const qcc::String& authMechanisms,
              * Get the challenge
              */
             inStr.clear();
-            status = endpoint->GetSource().GetLine(inStr);
+            status = endpoint->GetSource().GetLine(inStr, timeout);
             if (status != ER_OK) {
                 QCC_LogError(status, ("Failed to read from stream"));
                 goto ExitEstablish;
@@ -487,7 +488,7 @@ QStatus EndpointAuth::Establish(const qcc::String& authMechanisms,
              * Get the challenge
              */
             inStr.clear();
-            status = endpoint->GetSource().GetLine(inStr);
+            status = endpoint->GetSource().GetLine(inStr, timeout);
             if (status != ER_OK) {
                 QCC_LogError(status, ("Failed to read from stream"));
                 goto ExitEstablish;

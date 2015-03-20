@@ -273,7 +273,7 @@ const _RemoteEndpoint::Features&  _RemoteEndpoint::GetFeatures() const
     }
 }
 
-QStatus _RemoteEndpoint::Establish(const qcc::String& authMechanisms, qcc::String& authUsed, qcc::String& redirection, AuthListener* listener)
+QStatus _RemoteEndpoint::Establish(const qcc::String& authMechanisms, qcc::String& authUsed, qcc::String& redirection, AuthListener* listener, uint32_t timeout)
 {
     QStatus status = ER_OK;
 
@@ -283,7 +283,7 @@ QStatus _RemoteEndpoint::Establish(const qcc::String& authMechanisms, qcc::Strin
         RemoteEndpoint rep = RemoteEndpoint::wrap(this);
         EndpointAuth auth(internal->bus, rep, internal->incoming);
 
-        status = auth.Establish(authMechanisms, authUsed, redirection, listener);
+        status = auth.Establish(authMechanisms, authUsed, redirection, listener, timeout);
         if (status == ER_OK) {
             internal->uniqueName = auth.GetUniqueName();
             internal->remoteName = auth.GetRemoteName();
