@@ -296,15 +296,16 @@ int main(int argc, char** argv)
 
     signal(SIGINT, SigIntHandler);
 
-    Test test;
-    test.TestStart();
+    Test* test = new Test();
+    test->TestStart();
 
     while (g_interrupt == false) {
         qcc::Sleep(100);
     }
 
-    test.Stop();
-    test.Join();
+    test->Stop();
+    test->Join();
+    delete test;
 
     AllJoynRouterShutdown();
     AllJoynShutdown();

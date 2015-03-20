@@ -28,6 +28,7 @@
 #include <ctype.h>
 
 #include <alljoyn_c/BusAttachment.h>
+#include <alljoyn_c/Init.h>
 #include <alljoyn_c/Observer.h>
 
 #define INTF_NAME "com.example.Door"
@@ -472,6 +473,16 @@ static void person_passed_through(const alljoyn_interfacedescription_member* mem
 
 int main(int argc, char** argv)
 {
+    if (alljoyn_init() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (alljoyn_routerinit() != ER_OK) {
+        alljoyn_shutdown();
+        return 1;
+    }
+#endif
+
     alljoyn_busattachment bus = alljoyn_busattachment_create("door_consumer_c", QCC_TRUE);
     SetupBusAttachment(bus);
 
@@ -509,5 +520,9 @@ int main(int argc, char** argv)
     alljoyn_busattachment_join(bus);
     alljoyn_busattachment_destroy(bus);
 
+#ifdef ROUTER
+    alljoyn_routershutdown();
+#endif
+    alljoyn_shutdown();
     return 0;
 }
