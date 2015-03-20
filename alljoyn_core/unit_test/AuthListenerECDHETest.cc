@@ -29,6 +29,7 @@
 #include <qcc/Log.h>
 #include "KeyStore.h"
 #include "InMemoryKeyStore.h"
+#include "SettableGuidKeyStore.h"
 
 #if defined(QCC_OS_GROUP_WINDOWS)
 /*
@@ -45,6 +46,8 @@ using namespace ajn;
 using namespace qcc;
 
 static const char* ONOFF_IFC_NAME = "org.allseenalliance.control.OnOff";
+static const char* CLIENT_NAME = "AuthListenerECDHETestClient";
+static const char* SERVER_NAME = "AuthListenerECDHETestServer";
 
 class AuthListenerECDHETest : public BusObject, public testing::Test {
   public:
@@ -305,8 +308,8 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
     };
 
     AuthListenerECDHETest() : BusObject("/AuthListenerECDHETest"),
-        clientBus("AuthListenerECDHETestClient", false),
-        serverBus("AuthListenerECDHETestServer", false),
+        clientBus(CLIENT_NAME, false),
+        serverBus(SERVER_NAME, false),
         clientAuthListener(false),
         serverAuthListener(true)
     {
@@ -385,7 +388,7 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
         MethodReply(msg, ER_OK);
     }
 
-    QStatus ExcerciseOn()
+    QStatus ExerciseOn()
     {
         ProxyBusObject proxyObj(clientBus, serverBus.GetUniqueName().c_str(), GetPath(), 0, false);
         const InterfaceDescription* itf = clientBus.GetInterface(ONOFF_IFC_NAME);
@@ -393,6 +396,37 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
         Message reply(clientBus);
 
         return proxyObj.MethodCall(ONOFF_IFC_NAME, "On", NULL, 0, reply, 5000);
+    }
+
+    void ProtectedGuidTest(const qcc::String& protectedGuid, bool serverIsAttacker)
+    {
+        const char* authMechanisms = "ALLJOYN_ECDHE_ECDSA";
+        SettableGuidKeyStore keyStore((serverIsAttacker) ? (SERVER_NAME) : (CLIENT_NAME));
+        InMemoryKeyStoreListener listener;
+
+        /* Set up a keystore with the arbitrary GUID desired. */
+        EXPECT_EQ(ER_OK, keyStore.SetListener(listener));
+        EXPECT_EQ(ER_OK, keyStore.Init("", false));
+        keyStore.SetGuid(qcc::GUID128(protectedGuid));
+        EXPECT_EQ(ER_OK, keyStore.Store());
+
+        if (serverIsAttacker) {
+            EXPECT_EQ(ER_OK, serverBus.EnablePeerSecurity(authMechanisms, &serverAuthListener, NULL, false));
+            EXPECT_EQ(ER_OK, serverBus.EnablePeerSecurity(NULL, &serverAuthListener, NULL, false));
+            EXPECT_EQ(ER_OK, serverBus.RegisterKeyStoreListener(listener));
+        } else {
+            EXPECT_EQ(ER_OK, clientBus.EnablePeerSecurity(authMechanisms, &clientAuthListener, NULL, false));
+            EXPECT_EQ(ER_OK, clientBus.EnablePeerSecurity(NULL, &clientAuthListener, NULL, false));
+            EXPECT_EQ(ER_OK, clientBus.RegisterKeyStoreListener(listener));
+        }
+
+        EXPECT_EQ(ER_OK, EnableSecurity(true, authMechanisms));
+        EXPECT_EQ(ER_OK, EnableSecurity(false, authMechanisms));
+
+        EXPECT_NE(ER_OK, ExerciseOn());
+
+        EXPECT_FALSE(clientAuthListener.authComplete);
+        EXPECT_FALSE(serverAuthListener.authComplete);
     }
 
   private:
@@ -405,7 +439,7 @@ TEST_F(AuthListenerECDHETest, ECDHE_NULL_Success)
     EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_NULL"));
     EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_NULL"));
     QCC_SetDebugLevel("AUTH_KEY_EXCHANGER", 3);
-    EXPECT_EQ(ER_OK, ExcerciseOn());
+    EXPECT_EQ(ER_OK, ExerciseOn());
     EXPECT_TRUE(clientAuthListener.authComplete);
     EXPECT_TRUE(serverAuthListener.authComplete);
 }
@@ -416,7 +450,7 @@ TEST_F(AuthListenerECDHETest, ECDHE_NULL_Fail)
     EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_NULL"));
     clientAuthListener.sendKeys = false;
     serverAuthListener.sendKeys = false;
-    EXPECT_NE(ER_OK, ExcerciseOn());
+    EXPECT_NE(ER_OK, ExerciseOn());
     EXPECT_FALSE(clientAuthListener.authComplete);
     EXPECT_FALSE(serverAuthListener.authComplete);
 }
@@ -426,7 +460,7 @@ TEST_F(AuthListenerECDHETest, ECDHE_NULL_Success_DoNotSendExpiry)
     EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_NULL"));
     EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_NULL"));
     clientAuthListener.sendExpiry = false;
-    EXPECT_EQ(ER_OK, ExcerciseOn());
+    EXPECT_EQ(ER_OK, ExerciseOn());
     EXPECT_TRUE(clientAuthListener.authComplete);
     EXPECT_TRUE(serverAuthListener.authComplete);
 }
@@ -435,7 +469,7 @@ TEST_F(AuthListenerECDHETest, ECDHE_PSK_Success_SendKeys)
 {
     EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_PSK"));
     EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_PSK"));
-    EXPECT_EQ(ER_OK, ExcerciseOn());
+    EXPECT_EQ(ER_OK, ExerciseOn());
     EXPECT_TRUE(clientAuthListener.authComplete);
     EXPECT_TRUE(serverAuthListener.authComplete);
 }
@@ -445,7 +479,7 @@ TEST_F(AuthListenerECDHETest, ECDHE_PSK_Success_DoNotSendExpiry)
     EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_PSK"));
     EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_PSK"));
     clientAuthListener.sendExpiry = false;
-    EXPECT_EQ(ER_OK, ExcerciseOn());
+    EXPECT_EQ(ER_OK, ExerciseOn());
     EXPECT_TRUE(clientAuthListener.authComplete);
     EXPECT_TRUE(serverAuthListener.authComplete);
 }
@@ -456,7 +490,7 @@ TEST_F(AuthListenerECDHETest, ECDHE_PSK_Fail_DoNotSendKeys)
     EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_PSK"));
     clientAuthListener.sendKeys = false;
     serverAuthListener.sendKeys = false;
-    EXPECT_NE(ER_OK, ExcerciseOn());
+    EXPECT_NE(ER_OK, ExerciseOn());
     EXPECT_FALSE(clientAuthListener.authComplete);
     EXPECT_FALSE(serverAuthListener.authComplete);
 }
@@ -466,7 +500,7 @@ TEST_F(AuthListenerECDHETest, ECDHE_PSK_Fail_ServerDoNotSendKeys)
     EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_PSK"));
     EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_PSK"));
     serverAuthListener.sendKeys = false;
-    EXPECT_NE(ER_OK, ExcerciseOn());
+    EXPECT_NE(ER_OK, ExerciseOn());
     EXPECT_FALSE(clientAuthListener.authComplete);
     EXPECT_FALSE(serverAuthListener.authComplete);
 }
@@ -476,7 +510,7 @@ TEST_F(AuthListenerECDHETest, ECDHE_PSK_Fail_ClientDoNotSendKeys)
     EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_PSK"));
     EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_PSK"));
     clientAuthListener.sendKeys = false;
-    EXPECT_NE(ER_OK, ExcerciseOn());
+    EXPECT_NE(ER_OK, ExerciseOn());
     EXPECT_FALSE(clientAuthListener.authComplete);
     EXPECT_FALSE(serverAuthListener.authComplete);
 }
@@ -487,7 +521,7 @@ TEST_F(AuthListenerECDHETest, ECDHE_PSK_Fail_DifferentPSK)
     EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_PSK"));
     clientAuthListener.psk = "123456789";
     serverAuthListener.psk = "nada";
-    EXPECT_NE(ER_OK, ExcerciseOn());
+    EXPECT_NE(ER_OK, ExerciseOn());
     EXPECT_FALSE(clientAuthListener.authComplete);
     EXPECT_FALSE(serverAuthListener.authComplete);
 }
@@ -498,7 +532,7 @@ TEST_F(AuthListenerECDHETest, ECDHE_PSK_Success_PSKName)
     EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_PSK"));
     clientAuthListener.pskName = "abc";
     serverAuthListener.pskName = "abc";
-    EXPECT_EQ(ER_OK, ExcerciseOn());
+    EXPECT_EQ(ER_OK, ExerciseOn());
     EXPECT_TRUE(clientAuthListener.authComplete);
     EXPECT_TRUE(serverAuthListener.authComplete);
 }
@@ -509,7 +543,7 @@ TEST_F(AuthListenerECDHETest, ECDHE_PSK_Fail_DifferentPSKName)
     EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_PSK"));
     clientAuthListener.pskName = "abc";
     serverAuthListener.pskName = "dfe";
-    EXPECT_NE(ER_OK, ExcerciseOn());
+    EXPECT_NE(ER_OK, ExerciseOn());
     EXPECT_FALSE(clientAuthListener.authComplete);
     EXPECT_FALSE(serverAuthListener.authComplete);
 }
@@ -518,7 +552,7 @@ TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_Success)
 {
     EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_ECDSA"));
     EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_ECDSA"));
-    EXPECT_EQ(ER_OK, ExcerciseOn());
+    EXPECT_EQ(ER_OK, ExerciseOn());
     EXPECT_TRUE(clientAuthListener.authComplete);
     EXPECT_TRUE(serverAuthListener.authComplete);
 }
@@ -528,7 +562,7 @@ TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_Success_DoNotSendExpiry)
     EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_ECDSA"));
     EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_ECDSA"));
     clientAuthListener.sendExpiry = false;
-    EXPECT_EQ(ER_OK, ExcerciseOn());
+    EXPECT_EQ(ER_OK, ExerciseOn());
     EXPECT_TRUE(clientAuthListener.authComplete);
     EXPECT_TRUE(serverAuthListener.authComplete);
 }
@@ -539,7 +573,7 @@ TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_Fail_DoNotSendKeys)
     EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_ECDSA"));
     clientAuthListener.sendKeys = false;
     serverAuthListener.sendKeys = false;
-    EXPECT_NE(ER_OK, ExcerciseOn());
+    EXPECT_NE(ER_OK, ExerciseOn());
     EXPECT_FALSE(clientAuthListener.authComplete);
     EXPECT_FALSE(serverAuthListener.authComplete);
 }
@@ -549,7 +583,7 @@ TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_Fail_ServerDoNotSendKeys)
     EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_ECDSA"));
     EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_ECDSA"));
     serverAuthListener.sendKeys = false;
-    EXPECT_NE(ER_OK, ExcerciseOn());
+    EXPECT_NE(ER_OK, ExerciseOn());
     EXPECT_FALSE(clientAuthListener.authComplete);
     EXPECT_FALSE(serverAuthListener.authComplete);
 }
@@ -559,7 +593,7 @@ TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_Fail_ClientDoNotSendKeys)
     EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_ECDSA"));
     EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_ECDSA"));
     clientAuthListener.sendKeys = false;
-    EXPECT_NE(ER_OK, ExcerciseOn());
+    EXPECT_NE(ER_OK, ExerciseOn());
     EXPECT_FALSE(clientAuthListener.authComplete);
     EXPECT_FALSE(serverAuthListener.authComplete);
 }
@@ -570,7 +604,7 @@ TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_Fail_DoNotSendPrivateKey)
     EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_ECDSA"));
     clientAuthListener.sendPrivateKey = false;
     serverAuthListener.sendPrivateKey = false;
-    EXPECT_NE(ER_OK, ExcerciseOn());
+    EXPECT_NE(ER_OK, ExerciseOn());
     EXPECT_FALSE(clientAuthListener.authComplete);
     EXPECT_FALSE(serverAuthListener.authComplete);
 }
@@ -580,7 +614,7 @@ TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_Fail_ServerDoNotSendPrivateKey)
     EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_ECDSA"));
     EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_ECDSA"));
     serverAuthListener.sendPrivateKey = false;
-    EXPECT_NE(ER_OK, ExcerciseOn());
+    EXPECT_NE(ER_OK, ExerciseOn());
     EXPECT_FALSE(clientAuthListener.authComplete);
     EXPECT_FALSE(serverAuthListener.authComplete);
 }
@@ -590,7 +624,7 @@ TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_Fail_ClientDoNotSendPrivateKey)
     EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_ECDSA"));
     EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_ECDSA"));
     clientAuthListener.sendPrivateKey = false;
-    EXPECT_NE(ER_OK, ExcerciseOn());
+    EXPECT_NE(ER_OK, ExerciseOn());
     EXPECT_FALSE(clientAuthListener.authComplete);
     EXPECT_FALSE(serverAuthListener.authComplete);
 }
@@ -601,7 +635,7 @@ TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_Fail_DoNotSendCertChain)
     EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_ECDSA"));
     clientAuthListener.sendCertChain = false;
     serverAuthListener.sendCertChain = false;
-    EXPECT_NE(ER_OK, ExcerciseOn());
+    EXPECT_NE(ER_OK, ExerciseOn());
     EXPECT_FALSE(clientAuthListener.authComplete);
     EXPECT_FALSE(serverAuthListener.authComplete);
 }
@@ -611,7 +645,7 @@ TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_Fail_ServerDoNotSendCertChain)
     EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_ECDSA"));
     EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_ECDSA"));
     serverAuthListener.sendCertChain = false;
-    EXPECT_NE(ER_OK, ExcerciseOn());
+    EXPECT_NE(ER_OK, ExerciseOn());
     EXPECT_FALSE(clientAuthListener.authComplete);
     EXPECT_FALSE(serverAuthListener.authComplete);
 }
@@ -621,7 +655,7 @@ TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_Fail_ClientDoNotSendCertChain)
     EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_ECDSA"));
     EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_ECDSA"));
     clientAuthListener.sendCertChain = false;
-    EXPECT_NE(ER_OK, ExcerciseOn());
+    EXPECT_NE(ER_OK, ExerciseOn());
     EXPECT_FALSE(clientAuthListener.authComplete);
     EXPECT_FALSE(serverAuthListener.authComplete);
 }
@@ -631,7 +665,7 @@ TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_Fail_SendEmptyCertChain)
     EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_ECDSA"));
     EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_ECDSA"));
     clientAuthListener.sendEmptyCertChain = true;
-    EXPECT_NE(ER_OK, ExcerciseOn());
+    EXPECT_NE(ER_OK, ExerciseOn());
     EXPECT_FALSE(clientAuthListener.authComplete);
     EXPECT_FALSE(serverAuthListener.authComplete);
 }
@@ -641,7 +675,7 @@ TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_Fail_SendInvalidCertChainWithCA)
     EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_ECDSA"));
     EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_ECDSA"));
     clientAuthListener.sendInvalidChain = true;
-    EXPECT_NE(ER_OK, ExcerciseOn());
+    EXPECT_NE(ER_OK, ExerciseOn());
     EXPECT_FALSE(clientAuthListener.authComplete);
     EXPECT_FALSE(serverAuthListener.authComplete);
 }
@@ -651,7 +685,7 @@ TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_Fail_SendInvalidCertChainWithNoCA)
     EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_ECDSA"));
     EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_ECDSA"));
     clientAuthListener.sendInvalidChainNoCA = true;
-    EXPECT_NE(ER_OK, ExcerciseOn());
+    EXPECT_NE(ER_OK, ExerciseOn());
     EXPECT_FALSE(clientAuthListener.authComplete);
     EXPECT_FALSE(serverAuthListener.authComplete);
 }
@@ -662,7 +696,7 @@ TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_Fail_FailVerification)
     EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_ECDSA"));
     clientAuthListener.failVerifyCertChain = true;
     serverAuthListener.failVerifyCertChain = true;
-    EXPECT_NE(ER_OK, ExcerciseOn());
+    EXPECT_NE(ER_OK, ExerciseOn());
     EXPECT_FALSE(clientAuthListener.authComplete);
     EXPECT_FALSE(serverAuthListener.authComplete);
 }
@@ -672,7 +706,7 @@ TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_Fail_ServerFailVerification)
     EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_ECDSA"));
     EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_ECDSA"));
     serverAuthListener.failVerifyCertChain = true;
-    EXPECT_NE(ER_OK, ExcerciseOn());
+    EXPECT_NE(ER_OK, ExerciseOn());
     EXPECT_FALSE(serverAuthListener.authComplete);
 }
 
@@ -681,7 +715,7 @@ TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_Fail_ClientFailVerification)
     EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_ECDSA"));
     EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_ECDSA"));
     clientAuthListener.failVerifyCertChain = true;
-    EXPECT_NE(ER_OK, ExcerciseOn());
+    EXPECT_NE(ER_OK, ExerciseOn());
     EXPECT_FALSE(clientAuthListener.authComplete);
 }
 
@@ -689,7 +723,7 @@ TEST_F(AuthListenerECDHETest, ECDHE_PSK_ECDSA_SuccessChosenByServer)
 {
     EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_ECDSA"));
     EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_PSK ALLJOYN_ECDHE_ECDSA"));
-    EXPECT_EQ(ER_OK, ExcerciseOn());
+    EXPECT_EQ(ER_OK, ExerciseOn());
     EXPECT_TRUE(clientAuthListener.authComplete);
     EXPECT_TRUE(serverAuthListener.authComplete);
     EXPECT_STREQ(clientAuthListener.chosenMechanism.c_str(), "ALLJOYN_ECDHE_ECDSA");
@@ -700,7 +734,7 @@ TEST_F(AuthListenerECDHETest, ECDHE_PSK_ECDSA_SuccessChosenByClient)
 {
     EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_PSK ALLJOYN_ECDHE_ECDSA"));
     EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_ECDSA"));
-    EXPECT_EQ(ER_OK, ExcerciseOn());
+    EXPECT_EQ(ER_OK, ExerciseOn());
     EXPECT_TRUE(clientAuthListener.authComplete);
     EXPECT_TRUE(serverAuthListener.authComplete);
     EXPECT_STREQ(clientAuthListener.chosenMechanism.c_str(), "ALLJOYN_ECDHE_ECDSA");
@@ -711,7 +745,7 @@ TEST_F(AuthListenerECDHETest, ECDHE_NULL_ECDSA_SuccessChosenByServer)
 {
     EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_ECDSA"));
     EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA"));
-    EXPECT_EQ(ER_OK, ExcerciseOn());
+    EXPECT_EQ(ER_OK, ExerciseOn());
     EXPECT_TRUE(clientAuthListener.authComplete);
     EXPECT_TRUE(serverAuthListener.authComplete);
     EXPECT_STREQ(clientAuthListener.chosenMechanism.c_str(), "ALLJOYN_ECDHE_ECDSA");
@@ -722,7 +756,7 @@ TEST_F(AuthListenerECDHETest, ECDHE_NULL_ECDSA_SuccessChosenByClient)
 {
     EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA"));
     EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_ECDSA"));
-    EXPECT_EQ(ER_OK, ExcerciseOn());
+    EXPECT_EQ(ER_OK, ExerciseOn());
     EXPECT_TRUE(clientAuthListener.authComplete);
     EXPECT_TRUE(serverAuthListener.authComplete);
     EXPECT_STREQ(clientAuthListener.chosenMechanism.c_str(), "ALLJOYN_ECDHE_ECDSA");
@@ -733,7 +767,7 @@ TEST_F(AuthListenerECDHETest, ECDHE_NULL_PSK_SuccessChosenByServer)
 {
     EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_PSK"));
     EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_PSK"));
-    EXPECT_EQ(ER_OK, ExcerciseOn());
+    EXPECT_EQ(ER_OK, ExerciseOn());
     EXPECT_TRUE(clientAuthListener.authComplete);
     EXPECT_TRUE(serverAuthListener.authComplete);
     EXPECT_STREQ(clientAuthListener.chosenMechanism.c_str(), "ALLJOYN_ECDHE_PSK");
@@ -744,7 +778,7 @@ TEST_F(AuthListenerECDHETest, ECDHE_NULL_PSK_SuccessChosenByClient)
 {
     EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_PSK"));
     EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_PSK"));
-    EXPECT_EQ(ER_OK, ExcerciseOn());
+    EXPECT_EQ(ER_OK, ExerciseOn());
     EXPECT_TRUE(clientAuthListener.authComplete);
     EXPECT_TRUE(serverAuthListener.authComplete);
     EXPECT_STREQ(clientAuthListener.chosenMechanism.c_str(), "ALLJOYN_ECDHE_PSK");
@@ -755,7 +789,7 @@ TEST_F(AuthListenerECDHETest, ECDHE_NULL_PSK_ECDSA_SuccessChosenByServer)
 {
     EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_ECDSA"));
     EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_PSK ALLJOYN_ECDHE_ECDSA"));
-    EXPECT_EQ(ER_OK, ExcerciseOn());
+    EXPECT_EQ(ER_OK, ExerciseOn());
     EXPECT_TRUE(clientAuthListener.authComplete);
     EXPECT_TRUE(serverAuthListener.authComplete);
     EXPECT_STREQ(clientAuthListener.chosenMechanism.c_str(), "ALLJOYN_ECDHE_ECDSA");
@@ -766,7 +800,7 @@ TEST_F(AuthListenerECDHETest, ECDHE_NULL_PSK_ECDSA_SuccessChosenByClient)
 {
     EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_PSK ALLJOYN_ECDHE_ECDSA"));
     EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_ECDSA"));
-    EXPECT_EQ(ER_OK, ExcerciseOn());
+    EXPECT_EQ(ER_OK, ExerciseOn());
     EXPECT_TRUE(clientAuthListener.authComplete);
     EXPECT_TRUE(serverAuthListener.authComplete);
     EXPECT_STREQ(clientAuthListener.chosenMechanism.c_str(), "ALLJOYN_ECDHE_ECDSA");
@@ -777,10 +811,99 @@ TEST_F(AuthListenerECDHETest, ECDHE_NULL_PSK_ECDSA_AcceptableDowngradeByServer)
 {
     EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_PSK ALLJOYN_ECDHE_ECDSA"));
     EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_PSK"));
-    EXPECT_EQ(ER_OK, ExcerciseOn());
+    EXPECT_EQ(ER_OK, ExerciseOn());
     EXPECT_TRUE(clientAuthListener.authComplete);
     EXPECT_TRUE(serverAuthListener.authComplete);
     EXPECT_STREQ(clientAuthListener.chosenMechanism.c_str(), "ALLJOYN_ECDHE_PSK");
     EXPECT_STREQ(serverAuthListener.chosenMechanism.c_str(), "ALLJOYN_ECDHE_PSK");
 }
 
+TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_Fail_ProtectedGuid_KeyBlobPrivate_Client)
+{
+    ProtectedGuidTest(qcc::String(GUID_KEYBLOB_PRIVATE), false);
+}
+
+TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_Fail_ProtectedGuid_KeyBlobPrivate_Server)
+{
+    ProtectedGuidTest(qcc::String(GUID_KEYBLOB_PRIVATE), true);
+}
+
+TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_Fail_ProtectedGuid_KeyBlobAES_Client)
+{
+    ProtectedGuidTest(qcc::String(GUID_KEYBLOB_AES), false);
+}
+
+TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_Fail_ProtectedGuid_KeyBlobAES_Server)
+{
+    ProtectedGuidTest(qcc::String(GUID_KEYBLOB_AES), true);
+}
+
+TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_Fail_ProtectedGuid_KeyBlobPEM_Client)
+{
+    ProtectedGuidTest(qcc::String(GUID_KEYBLOB_PEM), false);
+}
+
+TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_Fail_ProtectedGuid_KeyBlobPEM_Server)
+{
+    ProtectedGuidTest(qcc::String(GUID_KEYBLOB_PEM), true);
+}
+
+TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_Fail_ProtectedGuid_KeyBlobPublic_Client)
+{
+    ProtectedGuidTest(qcc::String(GUID_KEYBLOB_PUBLIC), false);
+}
+
+TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_Fail_ProtectedGuid_KeyBlobPublic_Server)
+{
+    ProtectedGuidTest(qcc::String(GUID_KEYBLOB_PUBLIC), true);
+}
+
+TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_Fail_ProtectedGuid_KeyBlobSPKICert_Client)
+{
+    ProtectedGuidTest(qcc::String(GUID_KEYBLOB_SPKI_CERT), false);
+}
+
+TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_Fail_ProtectedGuid_KeyBlobSPKICert_Server)
+{
+    ProtectedGuidTest(qcc::String(GUID_KEYBLOB_SPKI_CERT), true);
+}
+
+TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_Fail_ProtectedGuid_KeyBlobDSAPrivate_Client)
+{
+    ProtectedGuidTest(qcc::String(GUID_KEYBLOB_DSA_PRIVATE), false);
+}
+
+TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_Fail_ProtectedGuid_KeyBlobDSAPrivate_Server)
+{
+    ProtectedGuidTest(qcc::String(GUID_KEYBLOB_DSA_PRIVATE), true);
+}
+
+TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_Fail_ProtectedGuid_KeyBlobDSAPublic_Client)
+{
+    ProtectedGuidTest(qcc::String(GUID_KEYBLOB_DSA_PUBLIC), false);
+}
+
+TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_Fail_ProtectedGuid_KeyBlobDSAPublic_Server)
+{
+    ProtectedGuidTest(qcc::String(GUID_KEYBLOB_DSA_PUBLIC), true);
+}
+
+TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_Fail_ProtectedGuid_AuthMechRSASelfCert_Client)
+{
+    ProtectedGuidTest(qcc::String(GUID_AUTHMECHRSA_SELF_CERT_GUID), false);
+}
+
+TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_Fail_ProtectedGuid_AuthMechRSASelfCert_Server)
+{
+    ProtectedGuidTest(qcc::String(GUID_AUTHMECHRSA_SELF_CERT_GUID), true);
+}
+
+TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_Fail_ProtectedGuid_AuthMechRSASelfPriv_Client)
+{
+    ProtectedGuidTest(qcc::String(GUID_AUTHMECHRSA_SELF_PRIV_GUID), false);
+}
+
+TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_Fail_ProtectedGuid_AuthMechRSASelfPriv_Server)
+{
+    ProtectedGuidTest(qcc::String(GUID_AUTHMECHRSA_SELF_PRIV_GUID), true);
+}

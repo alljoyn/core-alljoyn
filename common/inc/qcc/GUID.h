@@ -32,6 +32,22 @@
 
 #include <string.h>
 
+/**
+ * GUIDs for local keys.
+ */
+#define GUID_KEYBLOB_PRIVATE "a62655061e8295e2462794065f2a1c95"
+#define GUID_KEYBLOB_AES     "b4dc47954ce6e94f6669f31b343b91d8"
+#define GUID_KEYBLOB_PEM     "29ebe36c0ac308c8eb808cfdf1f36953"
+#define GUID_KEYBLOB_PUBLIC  "48b020fc3a65c6bc5ac22b949a869dab"
+#define GUID_KEYBLOB_SPKI_CERT "9ddf8d784fef4b57d5103e3bef656067"
+#define GUID_KEYBLOB_DSA_PRIVATE "d1b60ce37ba71ea4b870d73b6cd676f5"
+#define GUID_KEYBLOB_DSA_PUBLIC "19409269762da560d7812cb8a542f024"
+
+/**
+ * GUID for storing and loading a self-signed cert.
+ */
+#define GUID_AUTHMECHRSA_SELF_CERT_GUID "9D689C804B9C47C1ADA7397AE0215B26"
+#define GUID_AUTHMECHRSA_SELF_PRIV_GUID "B125ABEF3724453899E04B6B1D5C2CC4"
 
 namespace qcc {
 
@@ -150,12 +166,22 @@ class GUID128 {
      */
     const uint8_t* GetBytes() const { return guid; }
 
+    /**
+     * Determine if this guid is one of our special, protected guids.
+     * Use this when receiving a guid from a remote peer, as a remote peer should
+     * never legitimately try to use one of these.
+     *
+     * @return    true if guid is a protected guid, false if not
+     */
+    bool IsProtectedGuid() const;
 
   private:
 
     uint8_t guid[SIZE];
     mutable qcc::String value;
     mutable qcc::String shortValue;
+
+    static const GUID128 ProtectedGuids[];
 };
 
 }  /* namespace qcc */
