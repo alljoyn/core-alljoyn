@@ -19,6 +19,7 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
+#include <algorithm>
 #include <qcc/platform.h>
 #include <qcc/IPAddress.h>
 #include <qcc/Socket.h>
@@ -1034,8 +1035,11 @@ QStatus TCPTransport::Start()
     } else {
         m_maxRemoteClientsTcp = maxRemoteClients;
     }
-    IpNameService::Instance().UpdateDynamicScore(TRANSPORT_TCP, (maxConn - (m_authList.size() + m_endpointList.size())),
-                                                 maxConn, (m_maxRemoteClientsTcp - m_numUntrustedClients), m_maxRemoteClientsTcp);
+    m_maxRemoteClientsTcp = std::min(m_maxRemoteClientsTcp, (int32_t) maxConn);
+    uint32_t availConn = maxConn - (m_authList.size() + m_endpointList.size());
+    uint32_t availRemoteClientsTcp = m_maxRemoteClientsTcp - m_numUntrustedClients;
+    availRemoteClientsTcp = std::min(availRemoteClientsTcp, availConn);
+    IpNameService::Instance().UpdateDynamicScore(TRANSPORT_TCP, availConn, maxConn, availRemoteClientsTcp, m_maxRemoteClientsTcp);
     m_dynamicScoreUpdater.Start();
     /*
      * Start the server accept loop through the thread base class.  This will
@@ -2598,8 +2602,11 @@ void TCPTransport::UpdateDynamicScoreInstance(ListenRequest& listenRequest)
 {
     ConfigDB* config = ConfigDB::GetConfigDB();
     uint32_t maxConn = config->GetLimit("max_completed_connections", ALLJOYN_MAX_COMPLETED_CONNECTIONS_TCP_DEFAULT);
-    IpNameService::Instance().UpdateDynamicScore(TRANSPORT_TCP, (maxConn - (m_authList.size() + m_endpointList.size())), maxConn,
-                                                 (m_maxRemoteClientsTcp - m_numUntrustedClients), m_maxRemoteClientsTcp);
+    uint32_t availConn = maxConn - (m_authList.size() + m_endpointList.size());
+    uint32_t availRemoteClientsTcp = m_maxRemoteClientsTcp - m_numUntrustedClients;
+    availRemoteClientsTcp = std::min(availRemoteClientsTcp, availConn);
+
+    IpNameService::Instance().UpdateDynamicScore(TRANSPORT_TCP, availConn, maxConn, availRemoteClientsTcp, m_maxRemoteClientsTcp);
 }
 
 /*
@@ -4396,7 +4403,10 @@ void TCPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
         if (EnableRouterAdvertisement()) {
             bool isFirst;
             NewAdvertiseOp(ENABLE_ADVERTISEMENT, routerName, isFirst);
-            IpNameService::Instance().UpdateDynamicScore(TRANSPORT_TCP, (maxConn - (m_authList.size() + m_endpointList.size())), maxConn, (m_maxRemoteClientsTcp - m_numUntrustedClients), m_maxRemoteClientsTcp);
+            uint32_t availConn = maxConn - (m_authList.size() + m_endpointList.size());
+            uint32_t availRemoteClientsTcp = m_maxRemoteClientsTcp - m_numUntrustedClients;
+            availRemoteClientsTcp = std::min(availRemoteClientsTcp, availConn);
+            IpNameService::Instance().UpdateDynamicScore(TRANSPORT_TCP, availConn, maxConn, availRemoteClientsTcp, m_maxRemoteClientsTcp);
             QStatus status = IpNameService::Instance().AdvertiseName(TRANSPORT_TCP, routerName, true, TRANSPORT_TCP);
             m_routerNameAdvertised = true;
             if (status != ER_OK) {
