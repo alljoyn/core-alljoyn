@@ -32,6 +32,11 @@
 
 #include <string.h>
 
+/**
+ * GUID for storing and loading a self-signed cert.
+ */
+#define GUID_AUTHMECHRSA_SELF_CERT_GUID "9D689C804B9C47C1ADA7397AE0215B26"
+#define GUID_AUTHMECHRSA_SELF_PRIV_GUID "B125ABEF3724453899E04B6B1D5C2CC4"
 
 namespace qcc {
 
@@ -150,12 +155,22 @@ class GUID128 {
      */
     const uint8_t* GetBytes() const { return guid; }
 
+    /**
+     * Determine if this guid is one of our special, protected guids.
+     * Use this when receiving a guid from a remote peer, as a remote peer should
+     * never legitimately try to use one of these.
+     *
+     * @return    true if guid is a protected guid, false if not
+     */
+    bool IsProtectedGuid() const;
 
   private:
 
     uint8_t guid[SIZE];
     mutable qcc::String value;
     mutable qcc::String shortValue;
+
+    static const GUID128 ProtectedGuids[];
 };
 
 }  /* namespace qcc */

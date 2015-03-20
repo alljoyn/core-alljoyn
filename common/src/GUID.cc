@@ -34,9 +34,27 @@ using namespace qcc;
 
 namespace qcc {
 
+const GUID128 GUID128::ProtectedGuids[] = {
+    GUID128(qcc::String(GUID_AUTHMECHRSA_SELF_CERT_GUID)),
+    GUID128(qcc::String(GUID_AUTHMECHRSA_SELF_PRIV_GUID))
+};
+
 GUID128::GUID128() : guid(), value(), shortValue()
 {
-    Crypto_GetRandomBytes(guid, SIZE);
+    /* Loop in case we hit the very unlikely case and generate one of the protected GUIDs. */
+    const int MAX_ATTEMPTS = 10;
+
+    int attempts = 0;
+    do {
+        Crypto_GetRandomBytes(guid, SIZE);
+    } while ((IsProtectedGuid()) && (++attempts < MAX_ATTEMPTS));
+
+    /* If we generate a protected GUID ten times, the RNG is broken,
+     * and probably maliciously so if it's generating only protected GUIDs. */
+    if (attempts == MAX_ATTEMPTS) {
+        QCC_LogError(ER_CRYPTO_ERROR, ("Generated a protected GUID ten times in a row"));
+        abort(); /* Throw an exception eventually. */
+    }
 }
 
 GUID128::GUID128(uint8_t init) : guid(), value(), shortValue()
@@ -134,6 +152,19 @@ void GUID128::SetBytes(const uint8_t* rawBytes)
     ::memcpy(guid, rawBytes, SIZE);
     value.clear();
     shortValue.clear();
+}
+
+bool GUID128::IsProtectedGuid() const
+{
+    for (size_t i = 0;
+         i < (sizeof(ProtectedGuids) / sizeof(ProtectedGuids[0]));
+         i++) {
+        if (*this == ProtectedGuids[i]) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 }
