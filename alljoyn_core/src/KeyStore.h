@@ -363,11 +363,6 @@ class KeyStore {
     ProtectedKeyStoreListener* listener;
 
     /**
-     * The guid for this key store
-     */
-    qcc::GUID128 thisGuid;
-
-    /**
      * Mutex to protect key store
      */
     qcc::Mutex lock;
@@ -399,6 +394,14 @@ class KeyStore {
 
     /* the key event listener */
     KeyStoreKeyEventListener* keyEventListener;
+
+  protected:
+
+    /**
+     * The guid for this key store. Protected rather than
+     * private to enable arbitrary setting of GUID in unit tests.
+     */
+    qcc::GUID128 thisGuid;
 
 };
 

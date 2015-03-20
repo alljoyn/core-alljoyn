@@ -28,13 +28,10 @@
 
 #define QCC_MODULE "ALLJOYN"
 
-
 using namespace std;
 using namespace qcc;
 
-
 namespace ajn {
-
 
 CredentialAccessor::CredentialAccessor(BusAttachment& bus) :
     bus(bus) {
@@ -51,6 +48,16 @@ QStatus CredentialAccessor::GetPeerGuid(qcc::String& peerName, qcc::GUID128& gui
     if (peerStateTable->IsKnownPeer(peerName)) {
         PeerState peerState = peerStateTable->GetPeerState(peerName);
         guid = peerState->GetGuid();
+        /*
+         * The peer should never have been able to authenticate with a protected GUID.
+         * If it did, this is a bug. Assert so we'll drop into the debugger in a debug
+         * build, and return failure either way.
+         */
+        if (guid.IsProtectedGuid()) {
+            assert(false);
+            return ER_BUS_NO_PEER_GUID;
+        }
+
         return ER_OK;
     }
     return ER_BUS_NO_PEER_GUID;
@@ -58,35 +65,35 @@ QStatus CredentialAccessor::GetPeerGuid(qcc::String& peerName, qcc::GUID128& gui
 
 QStatus CredentialAccessor::GetLocalGUID(qcc::KeyBlob::Type keyType, qcc::GUID128& guid)
 {
-    /* each local key will be indexed by an hardcode randomly generated GUID.
+    /* Each local key will be indexed by a hardcoded randomly generated GUID.
        This method is similar to that used by the RSA Key exchange to store
-       the private key and cert chain */
+       the private key and cert chain. */
     if (keyType == KeyBlob::PRIVATE) {
-        guid = GUID128(qcc::String("a62655061e8295e2462794065f2a1c95"));
+        guid = GUID128(qcc::String(GUID_KEYBLOB_PRIVATE));
         return ER_OK;
     }
     if (keyType == KeyBlob::AES) {
-        guid = GUID128(qcc::String("b4dc47954ce6e94f6669f31b343b91d8"));
+        guid = GUID128(qcc::String(GUID_KEYBLOB_AES));
         return ER_OK;
     }
     if (keyType == KeyBlob::PEM) {
-        guid = GUID128(qcc::String("29ebe36c0ac308c8eb808cfdf1f36953"));
+        guid = GUID128(qcc::String(GUID_KEYBLOB_PEM));
         return ER_OK;
     }
     if (keyType == KeyBlob::PUBLIC) {
-        guid = GUID128(qcc::String("48b020fc3a65c6bc5ac22b949a869dab"));
+        guid = GUID128(qcc::String(GUID_KEYBLOB_PUBLIC));
         return ER_OK;
     }
     if (keyType == KeyBlob::SPKI_CERT) {
-        guid = GUID128(qcc::String("9ddf8d784fef4b57d5103e3bef656067"));
+        guid = GUID128(qcc::String(GUID_KEYBLOB_SPKI_CERT));
         return ER_OK;
     }
     if (keyType == KeyBlob::DSA_PRIVATE) {
-        guid = GUID128(qcc::String("d1b60ce37ba71ea4b870d73b6cd676f5"));
+        guid = GUID128(qcc::String(GUID_KEYBLOB_DSA_PRIVATE));
         return ER_OK;
     }
     if (keyType == KeyBlob::DSA_PUBLIC) {
-        guid = GUID128(qcc::String("19409269762da560d7812cb8a542f024"));
+        guid = GUID128(qcc::String(GUID_KEYBLOB_DSA_PUBLIC));
         return ER_OK;
     }
     return ER_CRYPTO_KEY_UNAVAILABLE;      /* not available */
@@ -181,4 +188,5 @@ QStatus CredentialAccessor::AddAssociatedKey(qcc::GUID128& headerGuid, qcc::GUID
     key.SetAssociation(headerGuid);
     return StoreKey(guid, key);
 }
+
 }
