@@ -125,7 +125,7 @@ static void usage(void)
     printf("   -k <key store name>       = The key store file name\n");
     printf("   -c <count>                = Number of pings to send to the server\n");
     printf("   -i                        = Use introspection to discover remote interfaces\n");
-    printf("   -e[k] [RSA|SRP|PIN|LOGON] = Encrypt the test interface using specified auth mechanism, -ek means clear keys\n");
+    printf("   -e[k] [RSA|SRP|LOGON]     = Encrypt the test interface using specified auth mechanism, -ek means clear keys\n");
     printf("   -a #                      = Max authentication attempts\n");
     printf("   -kx #                     = Authentication key expiration (seconds)\n");
     printf("   -r #                      = AllJoyn attachment restart count\n");
@@ -201,14 +201,6 @@ QCC_BOOL AJ_CALL request_credentials(const void* context, const char* authMechan
 
     if (g_keyExpiration != 0xFFFFFFFF) {
         alljoyn_busattachment_setkeyexpiration(g_msgBus, guid, g_keyExpiration);
-    }
-
-    if (strcmp(authMechanism, "ALLJOYN_PIN_KEYX") == 0) {
-        if (credMask & ALLJOYN_CRED_PASSWORD) {
-            alljoyn_credentials_setpassword(credentials, "ABCDEFGH");
-            printf("AuthListener returning fixed pin \"%s\" for %s\n", alljoyn_credentials_getpassword(credentials), authMechanism);
-        }
-        return (authCount == 1);
     }
 
     if (strcmp(authMechanism, "ALLJOYN_SRP_KEYX") == 0) {
@@ -391,9 +383,6 @@ int main(int argc, char** argv)
             if (i != argc) {
                 if (strcmp(argv[i], "RSA") == 0) {
                     strcat(authMechs, "ALLJOYN_RSA_KEYX");
-                    ok = QCC_TRUE;
-                } else if (strcmp(argv[i], "PIN") == 0) {
-                    strcat(authMechs, "ALLJOYN_PIN_KEYX");
                     ok = QCC_TRUE;
                 } else if (strcmp(argv[i], "SRP") == 0) {
                     strcat(authMechs, "ALLJOYN_SRP_KEYX");

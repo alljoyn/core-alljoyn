@@ -811,7 +811,7 @@ void* _TCPEndpoint::AuthThread::Run(void* arg)
      */
     m_endpoint->SetListener(m_endpoint->m_transport);
     if (authListener) {
-        status = m_endpoint->Establish("ALLJOYN_PIN_KEYX ANONYMOUS", authName, redirection, authListener);
+        status = m_endpoint->Establish("ALLJOYN_SRP_KEYX ANONYMOUS", authName, redirection, authListener);
     } else {
         status = m_endpoint->Establish("ANONYMOUS", authName, redirection, authListener);
     }

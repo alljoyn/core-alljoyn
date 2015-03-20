@@ -204,7 +204,7 @@ public class AboutApplication extends Application
 
         //setting the password for the daemon to allow thin clients to connect
         Log.d(TAG, "Setting daemon password");
-        Status pasStatus = PasswordManager.setCredentials("ALLJOYN_PIN_KEYX", "000000");
+        Status pasStatus = PasswordManager.setCredentials("ALLJOYN_SRP_KEYX", "000000");
 
         if ( pasStatus != Status.OK ) {
             Log.e(TAG, "Failed to set password for daemon, Error: " + pasStatus);
