@@ -44,13 +44,6 @@ namespace ajn {
 #define RAND_LEN  28 // This is the length for random hello data used in RFC 5246
 #define PMS_LEN   48 // Per RFC 5246 the premaster secret is always 48 bytes
 
-
-/**
- * GUID for storing and loading a self-signed cert.
- */
-static const char* SELF_CERT_GUID = "9D689C804B9C47C1ADA7397AE0215B26";
-static const char* SELF_PRIV_GUID = "B125ABEF3724453899E04B6B1D5C2CC4";
-
 AuthMechRSA::AuthMechRSA(KeyStore& keyStore, ProtectedAuthListener& listener) : AuthMechanism(keyStore, listener), step(255)
 {
 }
@@ -82,8 +75,8 @@ QStatus AuthMechRSA::Init(AuthRole authRole, const qcc::String& authPeer)
     /*
      * GUIDS for storing cert and private key blobs in the key store
      */
-    qcc::GUID128 certGuid(SELF_CERT_GUID);
-    qcc::GUID128 privGuid(SELF_PRIV_GUID);
+    qcc::GUID128 certGuid(GUID_AUTHMECHRSA_SELF_CERT_GUID);
+    qcc::GUID128 privGuid(GUID_AUTHMECHRSA_SELF_PRIV_GUID);
     if (!listener.RequestCredentials(GetName(), authPeer.c_str(), authCount, "", mask, creds)) {
         return ER_AUTH_FAIL;
     }

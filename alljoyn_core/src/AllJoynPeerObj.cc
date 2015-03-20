@@ -541,12 +541,19 @@ void AllJoynPeerObj::ExchangeGuids(const InterfaceDescription::Member* member, M
 QStatus AllJoynPeerObj::KeyGen(PeerState& peerState, String seed, qcc::String& verifier, KeyBlob::Role role)
 {
     assert(bus);
-    QStatus status;
+    QStatus status = ER_OK;
     KeyStore& keyStore = bus->GetInternal().GetKeyStore();
     KeyBlob masterSecret;
     uint8_t keyGenVersion = peerState->GetAuthVersion() & 0xFF;
 
-    status = keyStore.GetKey(peerState->GetGuid(), masterSecret, peerState->authorizations);
+    /* Refuse to generate a key if the peer claims a protected GUID. */
+    if (peerState->GetGuid().IsProtectedGuid()) {
+        status = ER_AUTH_FAIL;
+        QCC_LogError(status, ("Peer attempted to use protected GUID %s", peerState->GetGuid().ToString().c_str()));
+    }
+    if (status == ER_OK) {
+        status = keyStore.GetKey(peerState->GetGuid(), masterSecret, peerState->authorizations);
+    }
     if ((status == ER_OK) && masterSecret.HasExpired()) {
         status = ER_BUS_KEY_EXPIRED;
     }
@@ -790,6 +797,11 @@ void AllJoynPeerObj::DoKeyAuthentication(Message& msg)
 
     if (!keyExchanger) {
         status = ER_AUTH_FAIL;
+    }
+    /* Refuse to authenticate a peer claiming a protected GUID. */
+    if (status == ER_OK && peerState->GetGuid().IsProtectedGuid()) {
+        status = ER_AUTH_FAIL;
+        QCC_LogError(status, ("Peer attempted to use protected GUID %s", peerState->GetGuid().ToString().c_str()));
     }
     if (status == ER_OK) {
         bool authorized = false;
@@ -1047,6 +1059,15 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
     qcc::GUID128 remotePeerGuid(replyMsg->GetArg(0)->v_string.str);
     uint32_t authVersion = replyMsg->GetArg(1)->v_uint32;
     qcc::String remoteGuidStr = remotePeerGuid.ToString();
+    /*
+     * Check that the peer isn't trying to claim one of the protected guids.
+     * Only a malicious peer would attempt to do this.
+     */
+    if (remotePeerGuid.IsProtectedGuid()) {
+        status = ER_AUTH_FAIL;
+        QCC_LogError(status, ("Peer attempted to use protected GUID %s", remoteGuidStr.c_str()));
+        return status;
+    }
     /*
      * Check that we can support the version the remote peer proposed.
      */
