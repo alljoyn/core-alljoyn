@@ -57,7 +57,7 @@ class DaemonTransport : public Transport, public _RemoteEndpoint::EndpointListen
     /**
      * Destructor
      */
-    ~DaemonTransport();
+    virtual ~DaemonTransport();
 
     /**
      * Start the transport and associate it with the router.
@@ -85,7 +85,7 @@ class DaemonTransport : public Transport, public _RemoteEndpoint::EndpointListen
      * Pend the caller until the transport stops.
      * @return ER_OK if successful.
      */
-    QStatus Join();
+    virtual QStatus Join();
 
     /**
      * Determine if this transport is running. Running means Start() has been called.
@@ -166,6 +166,7 @@ class DaemonTransport : public Transport, public _RemoteEndpoint::EndpointListen
   protected:
     std::list<RemoteEndpoint> endpointList;   /**< List of active endpoints */
     qcc::Mutex endpointListLock;              /**< Mutex that protects the endpoint list */
+    BusAttachment& bus;                       /**< The message bus for this transport */
 
   private:
 
@@ -206,7 +207,6 @@ class DaemonTransport : public Transport, public _RemoteEndpoint::EndpointListen
      */
     QStatus Start(void* arg, qcc::ThreadListener* listener) { return Thread::Start(arg, listener); }
 
-    BusAttachment& bus;                       /**< The message bus for this transport */
     bool stopping;                            /**< True if Stop() has been called but endpoints still exist */
 
     /**
