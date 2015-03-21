@@ -408,11 +408,7 @@ QStatus AllJoynPeerObj::KeyGen(PeerState& peerState, String seed, qcc::String& v
              */
             status = Crypto_PseudorandomFunction(masterSecret, "session key", seed, keymatter, keylen);
         } else {
-            assert(keyGenVersion == 1);
-            /*
-             * Session key is generated using AES-CCM key gen procedure
-             */
-            status = Crypto_PseudorandomFunctionCCM(masterSecret, "session key", seed, keymatter, keylen);
+            status = ER_CRYPTO_ILLEGAL_PARAMETERS;
         }
         if (status == ER_OK) {
             KeyBlob sessionKey(keymatter, Crypto_AES::AES128_SIZE, KeyBlob::AES);
