@@ -13007,7 +13007,7 @@ class JObserver : public CoreObserver {
             }
         }
 
-        CallObjectMethod(env, jo, mid, jstring(busname), jstring(path), jobjectArray(jinterfaces), jsessionid);
+        env->CallVoidMethod(jo, mid, jstring(busname), jstring(path), jobjectArray(jinterfaces), jsessionid);
     }
 
     virtual void ObjectLost(const ObjectId& oid) {
@@ -13038,7 +13038,7 @@ class JObserver : public CoreObserver {
             return;
         }
 
-        CallObjectMethod(env, jo, mid, jstring(busname), jstring(path));
+        env->CallVoidMethod(jo, mid, jstring(busname), jstring(path));
     }
 
     virtual void EnablePendingListeners() {
@@ -13057,8 +13057,7 @@ class JObserver : public CoreObserver {
         if (!mid) {
             return;
         }
-
-        CallObjectMethod(env, jo, mid);
+        env->CallVoidMethod(jo, mid);
     }
 
     void TriggerEnablePendingListeners() {
