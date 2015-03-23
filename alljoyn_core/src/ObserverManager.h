@@ -205,7 +205,7 @@ class ObserverManager :
             obsmgr(other.obsmgr), interfaces(other.interfaces), observers(other.observers)
         { }
 
-        const InterfaceCombination& operator=(const InterfaceCombination& other) {
+        InterfaceCombination& operator=(const InterfaceCombination& other) {
             obsmgr = other.obsmgr;
             interfaces = other.interfaces;
             observers = other.observers;
