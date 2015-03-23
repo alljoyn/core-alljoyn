@@ -135,20 +135,54 @@ struct ECCPublicKey {
 /**
  * The ECC secret
  */
-struct ECCSecret {
-    uint8_t z[ECC_COORDINATE_SZ];
 
-    ECCSecret() {
-        memset(z, 0, ECC_COORDINATE_SZ);
-    }
-    void operator=(const ECCSecret& k)
-    {
-        memcpy(z, k.z, ECC_COORDINATE_SZ);
-    }
-    bool operator==(const ECCSecret& k) const
-    {
-        return memcmp(z, k.z, ECC_COORDINATE_SZ) == 0;
-    }
+class ECCSecret {
+  public:
+
+    /**
+     * Opaque type for the internal state.
+     */
+    struct ECCSecretState;
+
+    /**
+     * Default Constructor;
+     */
+    ECCSecret();
+
+    /**
+     * Set the opaque secret state for this object
+     * @param   pEccSecretState the internal secret state to set.
+     * @return
+     *      ER_OK if the secret is successfully set.
+     *      ER_FAIL otherwise.
+     *      Other error status.
+     */
+    QStatus SetSecretState(const ECCSecretState* pEccSecretState);
+
+    /**
+     * Derives the PreMasterSecret.
+     * Current implementaiton uses SHA256 HASH KDF.
+     * @param   pbPreMasterSecret buffer to receive premaster secret.
+     * @param   cbPreMasterSecret count of buffer to receive premaster secret.
+     * @return
+     *      ER_OK if the pre-master secret is successfully computed and put in pbPreMasterSecret.
+     *      ER_FAIL otherwise.
+     *      Other error status.
+     */
+    QStatus DerivePreMasterSecret(uint8_t* pbPreMasterSecret, size_t cbPreMasterSecret);
+
+    /**
+     * Default Destructor
+     */
+
+    ~ECCSecret();
+
+  private:
+    /**
+     * Private internal state
+     */
+    ECCSecretState* eccSecretState;
+
 };
 
 /**
