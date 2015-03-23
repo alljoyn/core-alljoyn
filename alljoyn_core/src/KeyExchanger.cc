@@ -245,12 +245,9 @@ QStatus KeyExchangerECDHE::GenerateMasterSecret(const ECCPublicKey* remotePubKey
         if (ER_OK != status) {
             return status;
         }
-        Crypto_SHA256 sha;
-        uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-        sha.Init();
-        sha.Update((const uint8_t*) &pms, sizeof (ECCSecret));
-        sha.GetDigest(digest);
-        KeyBlob pmsBlob(digest, sizeof (digest), KeyBlob::GENERIC);
+        uint8_t pmsDigest[Crypto_SHA256::DIGEST_SIZE];
+        status = pms.DerivePreMasterSecret(pmsDigest, sizeof(pmsDigest));
+        KeyBlob pmsBlob(pmsDigest, sizeof (pmsDigest), KeyBlob::GENERIC);
         status = Crypto_PseudorandomFunction(pmsBlob, "master secret", "", keymatter, sizeof (keymatter));
     }
     masterSecret.Set(keymatter, sizeof(keymatter), KeyBlob::GENERIC);
