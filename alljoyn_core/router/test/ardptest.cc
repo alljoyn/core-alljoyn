@@ -344,8 +344,8 @@ int main(int argc, char** argv)
     // This API is only for server side.
     ARDP_StartPassive(handle);
 
-    ThreadClass t1((char*)"t1", handle, sock);
-    t1.Start();
+    ThreadClass* t1 = new ThreadClass((char*)"t1", handle, sock);
+    t1->Start();
 
 
     while (!g_interrupt) {
@@ -521,8 +521,9 @@ int main(int argc, char** argv)
         }
     }
 
-    t1.Stop();
-    t1.Join();
+    t1->Stop();
+    t1->Join();
+    delete t1;
 
     AllJoynRouterShutdown();
     AllJoynShutdown();

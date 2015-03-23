@@ -21,6 +21,7 @@
 #include <string>
 
 #include <alljoyn/BusAttachment.h>
+#include <alljoyn/Init.h>
 #include <alljoyn/Observer.h>
 
 #define INTF_NAME "com.example.Door"
@@ -437,29 +438,46 @@ const char* DoorListener::props[] = {
 
 int main(int argc, char** argv)
 {
-    BusAttachment bus("door_consumer", true);
-    SetupBusAttachment(bus);
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+#endif
+
+    BusAttachment* bus = new BusAttachment("door_consumer", true);
+    SetupBusAttachment(*bus);
 
     const char* intfname = INTF_NAME;
-    Observer obs(bus, &intfname, 1);
-    DoorListener listener;
-    listener.observer = &obs;
-    listener.bus = &bus;
-    obs.RegisterListener(listener);
-    bus.RegisterSignalHandler(&listener, static_cast<MessageReceiver::SignalHandler>(&DoorListener::PersonPassedThrough), bus.GetInterface(INTF_NAME)->GetMember("PersonPassedThrough"), NULL);
+    Observer* obs = new Observer(*bus, &intfname, 1);
+    DoorListener* listener = new DoorListener();
+    listener->observer = obs;
+    listener->bus = bus;
+    obs->RegisterListener(*listener);
+    bus->RegisterSignalHandler(listener, static_cast<MessageReceiver::SignalHandler>(&DoorListener::PersonPassedThrough), bus->GetInterface(INTF_NAME)->GetMember("PersonPassedThrough"), NULL);
 
     bool done = false;
     while (!done) {
         string input;
         cout << "> ";
         getline(cin, input);
-        done = !parse(bus, &obs, input);
+        done = !parse(*bus, obs, input);
     }
 
     // Cleanup
-    obs.UnregisterAllListeners();
-    bus.Stop();
-    bus.Join();
+    obs->UnregisterAllListeners();
+    bus->Stop();
+    bus->Join();
+    delete bus;
+    delete obs;
+    delete listener;
 
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return 0;
 }
