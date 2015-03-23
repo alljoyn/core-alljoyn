@@ -27,6 +27,7 @@
 
 #include <map>
 
+#include <qcc/Condition.h>
 #include <qcc/String.h>
 #include <qcc/GUID.h>
 #include <qcc/Event.h>
@@ -510,6 +511,12 @@ class _LocalEndpoint : public _BusEndpoint, public qcc::AlarmListener, public Me
      * The local AllJoyn peer object that implements AllJoyn endpoint functionality
      */
     AllJoynPeerObj* peerObj;
+
+    typedef std::map<MessageReceiver*, std::set<qcc::Thread*> > ActiveHandlers;
+    ActiveHandlers activeHandlers;                       /**< Tracking for currently active handlers */
+    std::set<MessageReceiver*> unregisteringObjects;     /**< Tracking for objects being unregistered */
+    qcc::Mutex handlerThreadsLock;                       /**< Mutex to protect the tracking containers */
+    qcc::Condition handlerThreadsDone;                   /**< Condition variable for signaling when a handler is done */
 
     /** Helper to diagnose misses in the methodTable */
     QStatus Diagnose(Message& msg);

@@ -811,8 +811,8 @@ void ProxyBusObject::PropertiesChangedHandler(const InterfaceDescription::Member
 
     lock->Lock(MUTEX_CONTEXT);
     handlerThread = NULL;
+    listenerDone->Broadcast();
     lock->Unlock(MUTEX_CONTEXT);
-
 }
 
 QStatus ProxyBusObject::SetPropertyAsync(const char* iface,
@@ -1685,12 +1685,12 @@ void ProxyBusObject::DestructComponents()
         }
 
         /* Clean up properties changed listeners */
-        while (activeListener) {
-            if (handlerThread && (handlerThread == Thread::GetThread())) {
-                QCC_LogError(ER_DEADLOCK, ("Deleting ProxyBusObject from PropertiesChangedListener registered with said ProxyBusObject - deadlocking!"));
-                lock->Unlock(MUTEX_CONTEXT);
+        while (handlerThread) {
+            if (handlerThread == Thread::GetThread()) {
+                QCC_LogError(ER_DEADLOCK, ("Deleting ProxyBusObject from PropertiesChangedListener registered with said ProxyBusObject - crash likely!"));
+                assert(false);
+                break;
             }
-            assert(!handlerThread || (handlerThread != Thread::GetThread()));
             /*
              * Some thread is trying to remove listeners while the listeners are
              * being called.  Wait until the listener callbacks are done first.
