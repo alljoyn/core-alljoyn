@@ -157,6 +157,18 @@ void _VirtualEndpoint::GetSessionIdsForB2B(RemoteEndpoint& endpoint, set<Session
     m_b2bEndpointsLock.Unlock(MUTEX_CONTEXT);
 }
 
+bool _VirtualEndpoint::HasSession(SessionId sessionId)
+{
+    m_b2bEndpointsLock.Lock(MUTEX_CONTEXT);
+    bool found = false;
+    multimap<SessionId, RemoteEndpoint>::iterator it = m_b2bEndpoints.lower_bound(sessionId);
+    if (it != m_b2bEndpoints.end() && (it->first == sessionId)) {
+        found = true;
+    }
+    m_b2bEndpointsLock.Unlock(MUTEX_CONTEXT);
+    return found;
+}
+
 bool _VirtualEndpoint::RemoveBusToBusEndpoint(RemoteEndpoint& endpoint)
 {
     QCC_DbgTrace(("_VirtualEndpoint::RemoveBusToBusEndpoint(this=%s, b2b=%s)", GetUniqueName().c_str(), endpoint->GetUniqueName().c_str()));

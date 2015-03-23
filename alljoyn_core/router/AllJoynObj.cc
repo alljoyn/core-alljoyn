@@ -4067,31 +4067,17 @@ void AllJoynObj::RemoveBusToBusEndpoint(RemoteEndpoint& endpoint)
 
 }
 
-bool AllJoynObj::IsMemberOfSession(qcc::String hostName, qcc::String name, uint32_t sessionId)
+bool AllJoynObj::IsMemberOfSession(BusEndpoint endpoint, uint32_t sessionId)
 {
     AcquireLocks();
-    SessionMapEntry* smEntry = SessionMapFind(hostName, sessionId);
-    bool found = false;
-
-    if (smEntry != NULL) {
-        size_t guidLen = name.find_first_of('.');
-        bool isRoutingNode = ::strcmp(name.c_str() + guidLen, ".1") == 0;
-        vector<String>::iterator mit = smEntry->memberNames.begin();
-        while (mit != smEntry->memberNames.end()) {
-            // For Routing nodes, if the guid matches an entry in the member names, send it out, since it is
-            // the routing node of a session member.
-            // For other nodes, send the name only if this is a complete match.
-            if ((isRoutingNode && (::strncmp((*mit).c_str(), name.c_str(), guid.ToShortString().size() + 1) == 0))
-                || (!isRoutingNode && *mit == name)) {
-
-                found = true;
-                break;
-            }
-            mit++;
-        }
+    bool ret = false;
+    if (endpoint->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL) {
+        ret = VirtualEndpoint::cast(endpoint)->HasSession(sessionId);
+    } else {
+        ret = SessionMapFind(endpoint->GetUniqueName(), sessionId) != NULL;
     }
     ReleaseLocks();
-    return found;
+    return ret;
 }
 
 QStatus AllJoynObj::GetNames(MsgArg& argArray, RemoteEndpoint& endpoint, SessionOpts::NameTransferType nameTransfer, CallerType type, String joinerName, uint32_t sessionId, String sessionHost)
@@ -4169,8 +4155,11 @@ QStatus AllJoynObj::GetNames(MsgArg& argArray, RemoteEndpoint& endpoint, Session
                 } else if (type == HOST) {
                     /* The name of the local routing node, session host and existing
                      * session members need to be sent out by the Host RN.
+                     * Do not send the joiner names back to the joiner.
                      */
-                    sendInfo = isLocalRNInfo || (it->first == hostEp->GetUniqueName()) || IsMemberOfSession(hostEp->GetUniqueName(), it->first, sessionId);
+                    sendInfo = isLocalRNInfo || (it->first == hostEp->GetUniqueName()) ||
+                               ((it->first != joinerName) && (it->first != joinerRN) &&
+                                IsMemberOfSession(ep, sessionId));
                 } else if (type == HOST_FORWARD) {
                     /* The names of new joiner and its routing node need to be sent
                      * out by the Host RN to the existing session member RN.

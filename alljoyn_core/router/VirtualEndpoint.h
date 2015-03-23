@@ -178,6 +178,14 @@ class _VirtualEndpoint : public _BusEndpoint {
      */
     bool AllowRemoteMessages() { return true; }
 
+    /**
+     * Return true if this Virtual endpoint is a member of the specified session.
+     * @param sessionId  The session id.
+     *
+     * @return true if this endpoint is a member of the session Id passed in.
+     */
+    bool HasSession(SessionId sessionId);
+
     enum EndpointState {
         EP_ILLEGAL = 0,      /**< This is an invalid endpoint. i.e. constructed with the default constructor. */
         EP_STARTED,          /**< The endpoint has at least one bus-to-bus endpoint */
