@@ -3976,7 +3976,7 @@ void TCPTransport::UpdateRouterAdvertisementAndDynamicScore()
      * our Stop() method.
      */
     if (IsRunning() == false || m_stopping == true) {
-        QCC_LogError(ER_BUS_TRANSPORT_NOT_STARTED, ("TCPTransport::UpdateRouterAdvertisementAndDynamicScore(): Not running or stopping; exiting"));
+        QCC_DbgPrintf(("TCPTransport::UpdateRouterAdvertisementAndDynamicScore(): Not running or stopping; exiting"));
         return;
     }
 
