@@ -87,6 +87,7 @@ static volatile sig_atomic_t g_interrupt = false;
 
 static void CDECL_CALL SigIntHandler(int sig)
 {
+    UNREFERENCED_PARAMETER(sig);
     g_interrupt = true;
 }
 
@@ -284,6 +285,8 @@ class MyAuthListener : public AuthListener {
     }
 
     QStatus VerifyCredentialsAsync(const char* authMechanism, const char* authPeer, const Credentials& creds, void* context) {
+        UNREFERENCED_PARAMETER(authPeer);
+
         if (strcmp(authMechanism, "ALLJOYN_RSA_KEYX") == 0) {
             if (creds.IsSet(AuthListener::CRED_CERT_CHAIN)) {
                 printf("Verify\n%s\n", creds.GetCertChain().c_str());
@@ -299,10 +302,13 @@ class MyAuthListener : public AuthListener {
     }
 
     void AuthenticationComplete(const char* authMechanism, const char* authPeer, bool success) {
+        UNREFERENCED_PARAMETER(authPeer);
+
         printf("Authentication %s %s\n", authMechanism, success ? "succesful" : "failed");
     }
 
     void SecurityViolation(QStatus status, const Message& msg) {
+        UNREFERENCED_PARAMETER(msg);
         printf("Security violation %s\n", QCC_StatusText(status));
     }
 
@@ -334,6 +340,8 @@ class MyBusListener : public SessionPortListener, public SessionListener {
 
     void SessionJoined(SessionPort sessionPort, SessionId sessionId, const char* joiner)
     {
+        UNREFERENCED_PARAMETER(sessionPort);
+
         QCC_SyncPrintf("Session Established: joiner=%s, sessionId=%08x\n", joiner, sessionId);
 
         /* Enable concurrent callbacks since some of the calls below could block */
@@ -378,6 +386,8 @@ class MyBusListener : public SessionPortListener, public SessionListener {
     }
 
   private:
+    MyBusListener operator=(const MyBusListener&) { return *this; };
+
     BusAttachment& bus;
     SessionOpts opts;
 };
@@ -427,6 +437,8 @@ class LocalTestObject : public BusObject {
       protected:
         ThreadReturn STDCALL Run(void* arg)
         {
+            UNREFERENCED_PARAMETER(arg);
+
             delayedResponseLock.Lock(MUTEX_CONTEXT);
             bool done = delayedResponses.empty();
             delayedResponseLock.Unlock(MUTEX_CONTEXT);
@@ -645,6 +657,8 @@ class LocalTestObject : public BusObject {
 
     void Ping(const InterfaceDescription::Member* member, Message& msg)
     {
+        UNREFERENCED_PARAMETER(member);
+
         char* value = NULL;
         /* Reply with same string that was sent to us */
         const MsgArg* arg((msg->GetArg(0)));
@@ -661,6 +675,8 @@ class LocalTestObject : public BusObject {
 
     void DelayedPingWithSleep(const InterfaceDescription::Member* member, Message& msg)
     {
+        UNREFERENCED_PARAMETER(member);
+
         /* Enable concurrent callbacks since some of the calls take a long time to execute */
         g_msgBus->EnableConcurrentCallbacks();
 
@@ -681,6 +697,8 @@ class LocalTestObject : public BusObject {
 
     void DelayedPing(const InterfaceDescription::Member* member, Message& msg)
     {
+        UNREFERENCED_PARAMETER(member);
+
         /* Enable concurrent callbacks since some of the calls take a long time to execute */
         g_msgBus->EnableConcurrentCallbacks();
 
@@ -698,7 +716,7 @@ class LocalTestObject : public BusObject {
 
     void TimePing(const InterfaceDescription::Member* member, Message& msg)
     {
-
+        UNREFERENCED_PARAMETER(member);
         /* Reply with same data that was sent to us */
         MsgArg args[] = { (*(msg->GetArg(0))), (*(msg->GetArg(1))) };
         QStatus status = MethodReply(msg, args, 2);
@@ -709,6 +727,7 @@ class LocalTestObject : public BusObject {
 
     QStatus Get(const char* ifcName, const char* propName, MsgArg& val)
     {
+        UNREFERENCED_PARAMETER(ifcName);
         QStatus status = ER_OK;
         if (0 == strcmp("int_val", propName)) {
             // val.Set("i", prop_int_val);
@@ -732,6 +751,8 @@ class LocalTestObject : public BusObject {
 
     QStatus Set(const char* ifcName, const char* propName, MsgArg& val)
     {
+        UNREFERENCED_PARAMETER(ifcName);
+
         QStatus status = ER_OK;
         if ((0 == strcmp("int_val", propName)) && (val.typeId == ALLJOYN_INT32)) {
             prop_int_val = val.v_int32;
@@ -800,7 +821,7 @@ static void usage(void)
 }
 
 /** Main entry point */
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
     if (AllJoynInit() != ER_OK) {
         return 1;

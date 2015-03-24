@@ -277,7 +277,7 @@ bool AboutData::IsValid(const char* language)
 QStatus AboutData::CreatefromMsgArg(const MsgArg& arg, const char* language)
 {
     QStatus status = ER_OK;
-    char* defaultLanguage;
+    char* defaultLanguage = NULL;
     MsgArg* fields;
     size_t numFields;
     status = arg.Get("a{sv}", &numFields, &fields);

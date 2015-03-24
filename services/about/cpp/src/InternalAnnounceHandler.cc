@@ -192,6 +192,8 @@ bool InternalAnnounceHandler::ContainsInterface(const ObjectDescriptions& object
 
 void InternalAnnounceHandler::AnnounceSignalHandler(const ajn::InterfaceDescription::Member* member, const char* srcPath,
                                                     ajn::Message& message) {
+    UNREFERENCED_PARAMETER(member);
+    UNREFERENCED_PARAMETER(srcPath);
 
     QCC_DbgTrace(("InternalAnnounceHandler::%s", __FUNCTION__));
 

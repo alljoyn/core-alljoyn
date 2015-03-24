@@ -104,12 +104,12 @@ class BufferedSource : public Source {
     /**
      * Copy constructor is private and does nothing
      */
-    BufferedSource(const BufferedSource& other) : source(NULL), buf(NULL), rdPtr(NULL), endPtr(NULL) { }
+    BufferedSource(const BufferedSource&) : source(NULL), buf(NULL), rdPtr(NULL), endPtr(NULL) { }
 
     /**
      * Assigment operator is private and does nothing
      */
-    BufferedSource& operator=(const BufferedSource& other) { return *this; }
+    BufferedSource& operator=(const BufferedSource&) { return *this; }
 
     Source* source;         /**< Underlying raw source */
     Event event;            /**< IO event for this buffered source */

@@ -155,7 +155,9 @@ class NullTransport : public Transport {
      *
      * @param listener  Listener for transport related events.
      */
-    void SetListener(TransportListener* listener) { }
+    void SetListener(TransportListener* listener) {
+        UNREFERENCED_PARAMETER(listener);
+    }
 
     /**
      * Returns the name of this transport
@@ -202,6 +204,7 @@ class NullTransport : public Transport {
     static const char* TransportName;
 
   private:
+    NullTransport operator=(const NullTransport&) { return *this; };
     BusAttachment& bus;           /**< The message bus for this transport */
     bool running;                 /**< True after Start() has been called, before Stop() */
     BusEndpoint endpoint;         /**< The active endpoint */

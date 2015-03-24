@@ -374,7 +374,12 @@ class BusObject : public MessageReceiver {
      *                   type.
      * @return #ER_BUS_NO_SUCH_PROPERTY (Should be changed by user implementation of BusObject)
      */
-    virtual QStatus Get(const char* ifcName, const char* propName, MsgArg& val) { return ER_BUS_NO_SUCH_PROPERTY; }
+    virtual QStatus Get(const char* ifcName, const char* propName, MsgArg& val) {
+        UNREFERENCED_PARAMETER(ifcName);
+        UNREFERENCED_PARAMETER(propName);
+        UNREFERENCED_PARAMETER(val);
+        return ER_BUS_NO_SUCH_PROPERTY;
+    }
 
     /**
      * Handle a bus attempt to write a property value to this object.
@@ -387,7 +392,12 @@ class BusObject : public MessageReceiver {
      *                   type.
      * @return #ER_BUS_NO_SUCH_PROPERTY (Should be changed by user implementation of BusObject)
      */
-    virtual QStatus Set(const char* ifcName, const char* propName, MsgArg& val) { return ER_BUS_NO_SUCH_PROPERTY; }
+    virtual QStatus Set(const char* ifcName, const char* propName, MsgArg& val) {
+        UNREFERENCED_PARAMETER(ifcName);
+        UNREFERENCED_PARAMETER(propName);
+        UNREFERENCED_PARAMETER(val);
+        return ER_BUS_NO_SUCH_PROPERTY;
+    }
 
     /**
      * Returns a description of the object in the D-Bus introspection XML format.
@@ -505,6 +515,7 @@ class BusObject : public MessageReceiver {
      * @param context NULL or a private context passed in when the method handler was registered.
      */
     virtual void CallMethodHandler(MessageReceiver::MethodHandler handler, const InterfaceDescription::Member* member, Message& message, void* context) {
+        UNREFERENCED_PARAMETER(context);
         (this->*handler)(member, message);
     }
 
@@ -513,7 +524,7 @@ class BusObject : public MessageReceiver {
     /**
      * Assignment operator is private.
      */
-    BusObject& operator=(const BusObject& other) { return *this; }
+    BusObject& operator=(const BusObject&) { return *this; }
 
     /**
      * Copy constructor is private.

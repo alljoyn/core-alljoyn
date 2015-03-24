@@ -40,12 +40,14 @@ class ProxyBusObjectTestMethodHandlers {
   public:
     static void Ping(const InterfaceDescription::Member* member, Message& msg)
     {
-
+        UNREFERENCED_PARAMETER(member);
+        UNREFERENCED_PARAMETER(msg);
     }
 
     static void Chirp(const InterfaceDescription::Member* member, Message& msg)
     {
-
+        UNREFERENCED_PARAMETER(member);
+        UNREFERENCED_PARAMETER(msg);
     }
 };
 
@@ -55,6 +57,10 @@ class ProxyBusObjectTestAuthListenerOne : public AuthListener {
 
     QStatus RequestCredentialsAsync(const char* authMechanism, const char* authPeer, uint16_t authCount, const char* userId, uint16_t credMask, void* context)
     {
+        UNREFERENCED_PARAMETER(authPeer);
+        UNREFERENCED_PARAMETER(authCount);
+        UNREFERENCED_PARAMETER(userId);
+
         Credentials creds;
         EXPECT_STREQ("ALLJOYN_SRP_KEYX", authMechanism);
         if (strcmp(authMechanism, "ALLJOYN_SRP_KEYX") == 0) {
@@ -67,6 +73,8 @@ class ProxyBusObjectTestAuthListenerOne : public AuthListener {
     }
 
     void AuthenticationComplete(const char* authMechanism, const char* authPeer, bool success) {
+        UNREFERENCED_PARAMETER(authPeer);
+
         EXPECT_STREQ("ALLJOYN_SRP_KEYX", authMechanism);
         EXPECT_TRUE(success);
         auth_complete_listener1_flag = true;
@@ -77,12 +85,19 @@ class ProxyBusObjectTestAuthListenerTwo : public AuthListener {
 
     QStatus RequestCredentialsAsync(const char* authMechanism, const char* authPeer, uint16_t authCount, const char* userId, uint16_t credMask, void* context)
     {
+        UNREFERENCED_PARAMETER(authMechanism);
+        UNREFERENCED_PARAMETER(authPeer);
+        UNREFERENCED_PARAMETER(authCount);
+        UNREFERENCED_PARAMETER(userId);
+        UNREFERENCED_PARAMETER(credMask);
+
         Credentials creds;
         creds.SetPassword("123456");
         return RequestCredentialsResponse(context, true, creds);
     }
 
     void AuthenticationComplete(const char* authMechanism, const char* authPeer, bool success) {
+        UNREFERENCED_PARAMETER(authPeer);
 
         EXPECT_STREQ("ALLJOYN_SRP_KEYX", authMechanism);
         EXPECT_TRUE(success);
@@ -170,7 +185,10 @@ class ProxyBusObjectTest : public testing::Test {
     class ProxyBusObjectTestBusListener : public BusListener {
       public:
         ProxyBusObjectTestBusListener() : name_owner_changed_flag(false) { };
-        void    NameOwnerChanged(const char*busName, const char*previousOwner, const char*newOwner) {
+        void NameOwnerChanged(const char*busName, const char*previousOwner, const char*newOwner) {
+            UNREFERENCED_PARAMETER(previousOwner);
+            UNREFERENCED_PARAMETER(newOwner);
+
             if (strcmp(busName, OBJECT_NAME) == 0) {
                 name_owner_changed_flag = true;
             }
@@ -211,12 +229,14 @@ class ProxyBusObjectTest : public testing::Test {
 
         void Ping(const InterfaceDescription::Member* member, Message& msg)
         {
-
+            UNREFERENCED_PARAMETER(member);
+            UNREFERENCED_PARAMETER(msg);
         }
 
         void Chirp(const InterfaceDescription::Member* member, Message& msg)
         {
-
+            UNREFERENCED_PARAMETER(member);
+            UNREFERENCED_PARAMETER(msg);
         }
     };
 
@@ -536,6 +556,11 @@ class ChangeListener : public ProxyBusObject::PropertiesChangedListener {
                            const MsgArg& invalidated,
                            void* context)
     {
+		UNREFERENCED_PARAMETER(obj);
+		UNREFERENCED_PARAMETER(ifaceName);
+		UNREFERENCED_PARAMETER(changed);
+		UNREFERENCED_PARAMETER(invalidated);
+		UNREFERENCED_PARAMETER(context);
         testLock.Lock();
         running = true;
         testCond.Signal();
@@ -597,6 +622,7 @@ class UnregisterThread : public Thread {
 
     ThreadReturn STDCALL Run(void* arg)
     {
+		UNREFERENCED_PARAMETER(arg);
         QStatus status = ER_OK;
         ChangeListener* l = NULL;
         bool wait = true;

@@ -79,6 +79,7 @@ class MyAlarmListener : public AlarmListener {
         qcc::Sleep(delay);
     }
   private:
+    MyAlarmListener operator=(const MyAlarmListener&) { return *this; };
     const uint32_t delay;
     Timer* callEnableReentrancyInCallback;
 };
@@ -99,6 +100,7 @@ class MyAlarmListener2 : public AlarmListener {
         }
     }
   private:
+    MyAlarmListener2 operator=(const MyAlarmListener2&) { return *this; };
     const uint32_t delay;
     bool first;
 };

@@ -406,20 +406,21 @@ QStatus SignatureUtils::ParseContainerSignature(MsgArg& container, const char*& 
     uint8_t structDepth = 0;
     uint8_t arrayDepth = 0;
 
-#define PushContainer(t)  do {                  \
+#define PushContainer(t)  for (;;) {                \
         assert(outer < &containerStack[64]);        \
         outer++;                                    \
         outer->typeId = (t);                        \
         outer->members = 0;                         \
-} \
-    while (0);
+        break;                                      \
+}
 
-#define PopContainer() do {                     \
+#define PopContainer()  for (;;) {                  \
         if (outer > &containerStack[0]) {           \
             outer--;                                \
         }                                           \
         outer->members++;                           \
-} while (0);
+        break;                                      \
+}
 
     memset(containerStack, 0, sizeof(containerStack));
     outer->typeId = container.typeId;

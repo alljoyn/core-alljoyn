@@ -226,6 +226,8 @@ bool ConfigDB::DB::ParseFile(const String& fileName, bool ignoreMissing)
 
 bool ConfigDB::DB::ProcessAuth(const String& fileName, const XmlElement& auth)
 {
+    UNREFERENCED_PARAMETER(fileName);
+
     static const char wspace[] = " \t\v\r\n";
     bool success = true;
     String mechanisms(auth.GetContent());
@@ -303,6 +305,9 @@ bool ConfigDB::DB::ProcessBusconfig(const String& fileName, const XmlElement& bu
 
 bool ConfigDB::DB::ProcessFork(const String& fileName, const XmlElement& fork)
 {
+    UNREFERENCED_PARAMETER(fileName);
+    UNREFERENCED_PARAMETER(fork);
+
     bool success = true;
 
     this->fork = true;
@@ -401,6 +406,9 @@ exit:
 
 bool ConfigDB::DB::ProcessKeepUmask(const String& fileName, const XmlElement& keepUmask)
 {
+    UNREFERENCED_PARAMETER(fileName);
+    UNREFERENCED_PARAMETER(keepUmask);
+
     bool success = true;
 
     this->keepUmask = true;
@@ -570,6 +578,9 @@ bool ConfigDB::DB::ProcessPolicy(const String& fileName, const XmlElement& polic
 
 bool ConfigDB::DB::ProcessSyslog(const String& fileName, const XmlElement& syslog)
 {
+    UNREFERENCED_PARAMETER(fileName);
+    UNREFERENCED_PARAMETER(syslog);
+
     bool success = true;
 
     this->syslog = true;

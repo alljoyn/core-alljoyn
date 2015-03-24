@@ -19,9 +19,10 @@
 #include <gtest/gtest.h>
 
 #include <alljoyn_c/Init.h>
+#include <alljoyn/Status.h>
 
 /** Main entry point */
-int main(int argc, char**argv, char**envArg)
+int CDECL_CALL main(int argc, char**argv, char**)
 {
     int status = 0;
 

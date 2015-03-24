@@ -326,7 +326,7 @@ qcc::String EndpointAuth::SASLCallout(SASLEngine& sasl, const qcc::String& extCm
         } else if (extCmd.find(AgreeUnixFd) == 0) {
             // step 3: client receives "AGREE_UNIX_FD [<pid>]" and sets options
             endpoint->GetFeatures().handlePassing = true;
-            endpoint->GetFeatures().processId = (qcc::StringToU32(extCmd.substr(sizeof(AgreeUnixFd) - 1), 0, -1));
+            endpoint->GetFeatures().processId = (qcc::StringToU32(extCmd.substr(sizeof(AgreeUnixFd) - 1), 0, (uint32_t)-1));
 
             // step 4: client sends "EXTENSION_NEGOTIATE_VERSION <version>"
             rsp = NegotiateVersion;
@@ -334,7 +334,7 @@ qcc::String EndpointAuth::SASLCallout(SASLEngine& sasl, const qcc::String& extCm
         } else if (extCmd.find(AgreeVersion) == 0) {
             // step 7: client receives negotiated version from the client
             // pre-2.5 daemons will not send this message, leaving endpoint->alljoynVersion with default value of 0
-            const uint32_t version = qcc::StringToU32(extCmd.substr(sizeof(AgreeVersion) - 1), 0, -1);
+            const uint32_t version = qcc::StringToU32(extCmd.substr(sizeof(AgreeVersion) - 1), 0, (uint32_t)-1);
             endpoint->GetFeatures().ajVersion = version;
 
             // step 8: Send the protocol version
@@ -353,11 +353,11 @@ qcc::String EndpointAuth::SASLCallout(SASLEngine& sasl, const qcc::String& extCm
             rsp += " " + qcc::U32ToString(qcc::GetPid());
 #endif
             endpoint->GetFeatures().handlePassing = true;
-            endpoint->GetFeatures().processId = qcc::StringToU32(extCmd.substr(sizeof(NegotiateUnixFd) - 1), 0, -1);
+            endpoint->GetFeatures().processId = qcc::StringToU32(extCmd.substr(sizeof(NegotiateUnixFd) - 1), 0, (uint32_t)-1);
         } else if (extCmd.find(NegotiateVersion) == 0) {
             // step 5: daemon receives "EXTENSION_NEGOTIATE_VERSION <version>", negotiates lowest common version
             rsp = AgreeVersion;
-            const uint32_t clientVersion = qcc::StringToU32(extCmd.substr(sizeof(NegotiateVersion) - 1), 0, -1);
+            const uint32_t clientVersion = qcc::StringToU32(extCmd.substr(sizeof(NegotiateVersion) - 1), 0, (uint32_t)-1);
 
             // step 6: daemon responds with "EXTENSION_AGREE_VERSION <min ver>"
             const uint32_t negotiatedVersion = std::min(clientVersion, ajn::GetNumericVersion());
@@ -404,7 +404,7 @@ QStatus EndpointAuth::Establish(const qcc::String& authMechanisms,
          */
         String guidStr = bus.GetInternal().GetGlobalGUID().ToString();
         sasl.SetLocalId(guidStr);
-        while (true) {
+        for (;;) {
             /*
              * Get the challenge
              */
@@ -449,7 +449,7 @@ QStatus EndpointAuth::Establish(const qcc::String& authMechanisms,
     } else {
         QCC_DbgPrintf(("EndpointAuth::Establish(): Not accepting"));
         SASLEngine sasl(bus, AuthMechanism::RESPONDER, authMechanisms, NULL, authListener, endpoint->GetFeatures().isBusToBus ? NULL : this);
-        while (true) {
+        for (;;) {
             QCC_DbgPrintf(("EndpointAuth::Establish(): Advance()"));
             status = sasl.Advance(inStr, outStr, state);
             if (status != ER_OK) {

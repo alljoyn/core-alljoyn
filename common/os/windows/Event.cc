@@ -67,6 +67,9 @@ VOID CALLBACK IoEventCallback(PVOID arg, BOOLEAN TimerOrWaitFired);
 
 void WINAPI IpInterfaceChangeCallback(PVOID arg, PMIB_IPINTERFACE_ROW row, MIB_NOTIFICATION_TYPE notificationType)
 {
+    UNREFERENCED_PARAMETER(row);
+    UNREFERENCED_PARAMETER(notificationType);
+
     Event* event = (Event*) arg;
     QCC_DbgHLPrintf(("Received network interface event type %u", notificationType));
     if (!::SetEvent(event->GetHandle())) {
@@ -198,6 +201,7 @@ class SuperWaiter {
         const size_t m_numHandles;
         const size_t m_groupIndex;
         const size_t m_timeoutMsec;
+        WaitGroup operator=(const WaitGroup&) { return *this; };
     };
 
     static VOID CALLBACK s_WaitThread(_Inout_ PTP_CALLBACK_INSTANCE instance, _Inout_opt_ PVOID context, _Inout_ PTP_WORK work)
@@ -414,6 +418,8 @@ class IoEventMonitor {
             AllJoynEventSelect(pipe, eventList->ioEvent, fdSet);
         }
         lock.Unlock();
+#else
+        UNREFERENCED_PARAMETER(event);
 #endif
     }
 
@@ -457,6 +463,8 @@ class IoEventMonitor {
             QCC_LogError(ER_OS_ERROR, ("eventList for fd %d missing from event map", event->GetFD()));
         }
         lock.Unlock();
+#else
+        UNREFERENCED_PARAMETER(event);
 #endif
     }
 
@@ -493,6 +501,8 @@ void Event::Shutdown()
 
 VOID CALLBACK IoEventCallback(PVOID arg, BOOLEAN TimerOrWaitFired)
 {
+    UNREFERENCED_PARAMETER(TimerOrWaitFired);
+
     SocketFd sock = (SocketFd)arg;
     IoMonitor->lock.Lock();
     std::map<SocketFd, IoEventMonitor::EventList*>::iterator iter = IoMonitor->eventMap.find(sock);
@@ -716,6 +726,7 @@ QStatus Event::Wait(const vector<Event*>& checkEvents, vector<Event*>& signaledE
         }
     }
 
+
     bool somethingSet = true;
     bool timedOut = false;
 
@@ -755,7 +766,7 @@ QStatus Event::Wait(const vector<Event*>& checkEvents, vector<Event*>& signaledE
             }
             if ((ER_OK != status) && (!timedOut)) {
                 /* Restore thread counts if we did not block */
-                while (true) {
+                for (;;) {
                     Event* evt = *it;
                     evt->DecrementNumThreads();
                     if (it == checkEvents.begin()) {

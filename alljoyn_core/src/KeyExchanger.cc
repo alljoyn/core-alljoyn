@@ -259,6 +259,8 @@ QStatus KeyExchangerECDHE::GenerateMasterSecret(const ECCPublicKey* remotePubKey
 
 void KeyExchanger::ShowCurrentDigest(const char* ref)
 {
+    UNREFERENCED_PARAMETER(ref);
+
     uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
     hashUtil.GetDigest(digest, true);
     QCC_DbgHLPrintf(("Current digest [%d] ref[%s]: %s\n", ++showDigestCounter, ref, BytesToHexString(digest, sizeof(digest)).c_str()));
