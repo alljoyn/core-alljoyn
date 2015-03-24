@@ -109,6 +109,11 @@ class SessionOpts {
     SessionOpts() : traffic(TRAFFIC_MESSAGES), isMultipoint(false), proximity(PROXIMITY_ANY), transports(TRANSPORT_ANY), nameTransfer(P2P_NAMES) { }
 
     /**
+     * Destructor
+     */
+    virtual ~SessionOpts() { }
+
+    /**
      * Determine whether this SessionOpts is compatible with the SessionOpts offered by other
      *
      * Compatibility means that the SessionOpts share at least one of each
@@ -189,13 +194,13 @@ class SessionOpts {
      * Is this session set up to exchange all names
      * @return true if session is set up to exchange all names.
      */
-    bool IsAllNames();
+    bool IsAllNames() const;
 
     /**
      * Is this session set up to exchange only session related names
      * @return true if session is set up to exchange only session related names.
      */
-    bool IsSessionNames();
+    bool IsSessionNames() const;
 
 
     /** Internal
@@ -224,15 +229,7 @@ class SessionOpts {
                                       AttachSessionWithNames */
     } NameTransferType;
 
-  private:
-    friend class SessionlessObj;
-    friend class AllJoynObj;
-    friend class TCPTransport;
-    friend class UDPTransport;
-    friend class Features;
-    friend void SetSessionOpts(const SessionOpts& opts, MsgArg& msgArg);
-    friend QStatus GetSessionOpts(const MsgArg& msgArg, SessionOpts& opts);
-
+  protected:
     /**
      * Construct a SessionOpts with specific parameters.
      *
@@ -250,6 +247,15 @@ class SessionOpts {
         transports(transports),
         nameTransfer(nameType)
     { }
+
+  private:
+    friend class SessionlessObj;
+    friend class AllJoynObj;
+    friend class TCPTransport;
+    friend class UDPTransport;
+    friend class Features;
+    friend void SetSessionOpts(const SessionOpts& opts, MsgArg& msgArg);
+    friend QStatus GetSessionOpts(const MsgArg& msgArg, SessionOpts& opts);
 
     /**
      * NameTransferType used for specifying the name propagation during initial
