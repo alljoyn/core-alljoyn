@@ -47,8 +47,8 @@ namespace alljoyn {
 namespace TrustedTLSampleRN {
 const char* DefaultRNBusName = "org.alljoyn.BusNode.TestingPurposesOnly";
 
-const char* ThinClientAuthMechanism = "ALLJOYN_PIN_KEYX";
-const char* ThinClientDefaultBusPwd = "1234";
+const char* ThinClientAuthMechanism = "ANONYMOUS";
+const char* ThinClientDefaultBusPwd = "";
 }
 }
 }

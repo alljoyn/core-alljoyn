@@ -436,13 +436,6 @@ class MyAuthListener : public AuthListener {
             return false;
         }
 
-        if (strcmp(authMechanism, "ALLJOYN_PIN_KEYX") == 0) {
-            if (credMask & AuthListener::CRED_PASSWORD) {
-                creds.SetPassword("ABCDEFGH");
-            }
-            return true;
-        }
-
         if (strcmp(authMechanism, "ALLJOYN_SRP_KEYX") == 0) {
             if (credMask & AuthListener::CRED_PASSWORD) {
                 creds.SetPassword("123456");
@@ -530,7 +523,7 @@ static void usage(void)
     printf("   --tcp                       = Advertise and discover using the TCP transport\n");
     printf("   --udp                       = Advertise and discover using the UDP transport\n");
     printf("   -x                          = Compress headers\n");
-    printf("   -e[k] [RSA|SRP|LOGON|PINX]   = Encrypt the test interface using specified auth mechanism, -ek means clear keys\n");
+    printf("   -e[k] [RSA|SRP|LOGON]       = Encrypt the test interface using specified auth mechanism, -ek means clear keys\n");
     printf("   -d                          = discover remote bus with test service\n");
     printf("   -b                          = Signal is broadcast rather than multicast\n");
     printf("   --ls                        = Call LeaveSession before tearing down the Bus Attachment\n");
@@ -668,9 +661,6 @@ int main(int argc, char** argv)
                     ok = true;
                 } else if (strcmp(argv[i], "SRP") == 0) {
                     authMechs += "ALLJOYN_SRP_KEYX";
-                    ok = true;
-                } else if (strcmp(argv[i], "PINX") == 0) {
-                    authMechs += "ALLJOYN_PIN_KEYX";
                     ok = true;
                 } else if (strcmp(argv[i], "LOGON") == 0) {
                     if (++i == argc) {

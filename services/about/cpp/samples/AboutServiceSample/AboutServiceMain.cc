@@ -293,11 +293,6 @@ int main(int argc, char**argv, char**envArg) {
     /* Install SIGINT handler so Ctrl + C deallocates memory properly */
     signal(SIGINT, SigIntHandler);
 
-    //set Daemon password only for bundled app
-    #ifdef QCC_USING_BD
-    PasswordManager::SetCredentials("ALLJOYN_PIN_KEYX", "000000");
-    #endif
-
     /* Create message bus */
     s_msgBus = new BusAttachment("AboutServiceName", true);
 
