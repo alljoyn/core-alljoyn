@@ -1270,13 +1270,12 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
     bool NamesHandler(Message msg, MsgArg arg);
 
     /**
-     * Check if this endpoint is a member of the session or is a routing node that has a leaf that is a member in this session.
-     * @param hostName Host of the session
-     * @param name Endpoint to check
+     * Check if this endpoint is a member of the session or is a remote routing node that has a leaf that is a member in this session.
+     * @param endpoint Endpoint to check
      * @param sessionId ID of the session
      * @return true if name is a member of the sessionId hosted by hostName.
      */
-    bool IsMemberOfSession(qcc::String hostName, qcc::String name, uint32_t sessionId);
+    bool IsMemberOfSession(BusEndpoint endpoint, uint32_t sessionId);
 
 };
 
