@@ -27,6 +27,7 @@
 #include <qcc/platform.h>
 
 #include <qcc/Crypto.h>
+#include "Crypto.h"
 
 #include <Status.h>
 
@@ -43,7 +44,7 @@ struct Crypto_DRBG::Context {
 };
 
 // One instance per application
-static Crypto_DRBG drbgctx;
+static Crypto_DRBG* drbgctx = NULL;
 
 static uint32_t PlatformEntropy(uint8_t* data, uint32_t size)
 {
@@ -156,7 +157,7 @@ QStatus qcc::Crypto_GetRandomBytes(uint8_t* data, size_t len)
     size_t size;
 
     if (NULL != data) {
-        status = drbgctx.Generate(data, len);
+        status = drbgctx->Generate(data, len);
         if (ER_OK == status) {
             return status;
         }
@@ -173,12 +174,23 @@ QStatus qcc::Crypto_GetRandomBytes(uint8_t* data, size_t len)
              */
             QCC_DbgHLPrintf(("Low entropy: %zu (requested %zu)\n", size, sizeof (seed)));
         }
-        status = drbgctx.Seed(seed, sizeof (seed));
+        status = drbgctx->Seed(seed, sizeof (seed));
         if (ER_OK != status) {
             return status;
         }
-        status = drbgctx.Generate(data, len);
+        status = drbgctx->Generate(data, len);
     }
 
     return status;
+}
+
+void Crypto::Init() {
+    if (!drbgctx) {
+        drbgctx = new Crypto_DRBG;
+    }
+}
+
+void Crypto::Shutdown() {
+    delete drbgctx;
+    drbgctx = NULL;
 }
