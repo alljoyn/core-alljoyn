@@ -94,6 +94,8 @@ class MyMessage : public _Message {
 
     MyMessage(BusAttachment& Bus) : _Message(Bus) { };
 
+    MyMessage(MyMessage& msg) : _Message(msg) { };
+
     QStatus MethodCall(const char* destination,
                        const char* objPath,
                        const char* iface,
@@ -297,6 +299,48 @@ TEST(MarshalTest, TestMsgUnpack) {
     ASSERT_EQ(status, ER_OK) << " TestMsgUnpack failed.";
     delete bus;
 }
+
+TEST(MarshalTest, ReplayProtection) {
+    QStatus status = ER_OK;
+
+    BusAttachment* bus = new BusAttachment("ReplayProtection", false);
+    bus->Start();
+
+    TestPipe stream;
+    MyMessage msg(*bus);
+    MsgArg args[4];
+    size_t numArgs = ArraySize(args);
+    double d = 0.9;
+
+    TestPipe* pStream = &stream;
+    static const bool falsiness = false;
+    RemoteEndpoint ep(*bus, falsiness, String::Empty, pStream);
+    ep->GetFeatures().handlePassing = true;
+
+    MsgArg::Set(args, numArgs, "usyd", 4, "hello", 8, d);
+    status = msg.MethodCall("a.b.c", "/foo/bar", "foo.bar", "test", args, numArgs);
+    ASSERT_EQ(ER_OK, status);
+
+    status = msg.Deliver(ep);
+    ASSERT_EQ(ER_OK, status);
+
+    status = msg.Read(ep, ":88.88");
+    ASSERT_EQ(ER_OK, status);
+
+    MyMessage msgDupe(msg);
+
+    status = msg.Unmarshal(ep, ":88.88");
+    ASSERT_EQ(ER_OK, status);
+
+    status = msg.UnmarshalBody();
+    ASSERT_EQ(ER_OK, status);
+
+    status = msgDupe.Unmarshal(ep, ":88.88");
+    ASSERT_EQ(ER_BUS_INVALID_HEADER_SERIAL, status);
+
+    delete bus;
+}
+
 
 /*--------------------------FUZZING TEST CODE---------------------------------*/
 static bool fuzzing = false;
