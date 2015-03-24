@@ -64,12 +64,17 @@ const char*InterfaceName3 = "org.alljoyn.service_test.values.dummy.Interface3";
 
 bool MyBusListener::AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts)
 {
+    UNREFERENCED_PARAMETER(sessionPort);
+    UNREFERENCED_PARAMETER(joiner);
+    UNREFERENCED_PARAMETER(opts);
     //printf("\n Inside Accept session Joiner  \n");
     return true;
 }
 
 QStatus MyAuthListener::RequestPwd(const qcc::String& authMechanism, uint8_t minLen, qcc::String& pwd)
 {
+    UNREFERENCED_PARAMETER(authMechanism);
+    UNREFERENCED_PARAMETER(minLen);
     pwd = "123456";
     return ER_OK;
 }
@@ -114,6 +119,7 @@ void ServiceObject::PopulateSignalMembers()
 
 void ServiceObject::NameAcquiredCB(Message& msg, void* context)
 {
+    UNREFERENCED_PARAMETER(context);
     /* Check name acquired result */
     size_t numArgs;
     const MsgArg* args;
@@ -167,6 +173,7 @@ QStatus ServiceObject::InstallMethodHandlers()
 
 void ServiceObject::Ping(const InterfaceDescription::Member* member, Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
     /* Reply with same string that was sent to us */
     MsgArg arg(*(msg->GetArg(0)));
     //printf("Pinged with: %s\n", msg->GetArg(0)->ToString().c_str());
@@ -178,6 +185,7 @@ void ServiceObject::Ping(const InterfaceDescription::Member* member, Message& ms
 
 void ServiceObject::Sing(const InterfaceDescription::Member* member, Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
     /* Reply with same string that was sent to us */
     MsgArg arg(*(msg->GetArg(0)));
     char temp_str[15];
@@ -209,6 +217,7 @@ void ServiceObject::Sing(const InterfaceDescription::Member* member, Message& ms
 
 void ServiceObject::ParamTest(const InterfaceDescription::Member* member, Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
     /* Reply has multiple */
     MsgArg arg[10];
 
@@ -240,8 +249,9 @@ QStatus ServiceObject::EmitTestSignal(String newName)
 }
 
 
-QStatus ServiceObject::Get(const char*ifcName, const char*propName, MsgArg& val)
+QStatus ServiceObject::Get(const char* ifcName, const char*propName, MsgArg& val)
 {
+    UNREFERENCED_PARAMETER(ifcName);
     QStatus status = ER_OK;
     if (0 == strcmp("int_val", propName)) {
         //val.Set("i", prop_int_val);
@@ -268,8 +278,10 @@ QStatus ServiceObject::Get(const char*ifcName, const char*propName, MsgArg& val)
     return status;
 }
 
-QStatus ServiceObject::Set(const char*ifcName, const char*propName, MsgArg& val)
+QStatus ServiceObject::Set(const char* ifcName, const char*propName, MsgArg& val)
 {
+    UNREFERENCED_PARAMETER(ifcName);
+
     QStatus status = ER_OK;
     if ((0 == strcmp("int_val", propName)) && (val.typeId == ALLJOYN_INT32)) {
         prop_int_val = val.v_int32;

@@ -557,7 +557,7 @@ void ObserverManager::DoWork()
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
 
-    while (true) {
+    for (;;) {
         WorkItem* workitem = NULL;
         wqLock.Lock(MUTEX_CONTEXT);
         if (!processingWork && !work.empty() && started && !stopping) {
@@ -592,6 +592,8 @@ void ObserverManager::Announced(const char* busName, uint16_t version,
                                 SessionPort port, const MsgArg& objectDescriptionArg,
                                 const MsgArg& aboutDataArg)
 {
+    UNREFERENCED_PARAMETER(version);
+    UNREFERENCED_PARAMETER(aboutDataArg);
     QCC_DbgPrintf(("Received announcement from '%s'", busName));
 
     ObjectSet announced = ParseObjectDescriptionArg(busName, objectDescriptionArg);
@@ -631,6 +633,7 @@ void ObserverManager::ProcessAnnouncement(const Peer& peer, const ObjectSet& ann
 
 void ObserverManager::JoinSessionCB(QStatus status, SessionId sessionId, const SessionOpts& opts, void*ctx)
 {
+    UNREFERENCED_PARAMETER(opts);
     QCC_DbgTrace(("%s", __FUNCTION__));
     Peer* peer = reinterpret_cast<Peer*>(ctx);
     WorkItem* workitem;
@@ -690,6 +693,7 @@ void ObserverManager::ProcessSessionEstablishmentFailed(const ObserverManager::P
 
 void ObserverManager::SessionLost(SessionId sessionId, SessionLostReason reason)
 {
+    UNREFERENCED_PARAMETER(reason);
     QCC_DbgPrintf(("Session lost for '%u'", (unsigned) sessionId));
     WorkItem* workitem = new SessionLostWork(sessionId);
     ScheduleWork(workitem);
@@ -721,11 +725,14 @@ void ObserverManager::ProcessSessionLost(SessionId sessionid)
 
 void ObserverManager::LeaveSessionCB(QStatus status, void* context)
 {
+    UNREFERENCED_PARAMETER(status);
+    UNREFERENCED_PARAMETER(context);
     QCC_DbgTrace(("%s", __FUNCTION__));
 }
 
 void ObserverManager::DestinationLost(const qcc::String& group, const qcc::String& destination)
 {
+    UNREFERENCED_PARAMETER(group);
     QCC_DbgPrintf(("Destination lost for '%s'", destination.c_str()));
     WorkItem* workitem = new DestinationLostWork(destination);
     ScheduleWork(workitem);

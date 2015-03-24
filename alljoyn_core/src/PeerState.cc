@@ -100,6 +100,9 @@ uint32_t _PeerState::EstimateTimestamp(uint32_t remote)
 
 bool _PeerState::IsValidSerial(uint32_t serial, bool secure, bool unreliable)
 {
+    UNREFERENCED_PARAMETER(secure);
+    UNREFERENCED_PARAMETER(unreliable);
+
     bool ret = false;
     /*
      * Serial 0 is always invalid.

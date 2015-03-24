@@ -36,6 +36,7 @@ static volatile sig_atomic_t s_interrupt = false;
 
 static void CDECL_CALL SigIntHandler(int sig)
 {
+    UNREFERENCED_PARAMETER(sig);
     s_interrupt = true;
 }
 
@@ -391,8 +392,12 @@ void WaitForSigInt(void)
  *      - 0 if successful.
  *      - 1 if error.
  */
-int main(int argc, char**argv, char**envArg)
+int CDECL_CALL main(int argc, char** argv, char** envArg)
 {
+    UNREFERENCED_PARAMETER(argc);
+    UNREFERENCED_PARAMETER(argv);
+    UNREFERENCED_PARAMETER(envArg);
+
     if (AllJoynInit() != ER_OK) {
         return 1;
     }

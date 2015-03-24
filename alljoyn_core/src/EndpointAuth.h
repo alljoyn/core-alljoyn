@@ -124,6 +124,7 @@ class EndpointAuth : public SASLEngine::ExtensionHandler {
     SessionOpts::NameTransferType GetNameTransfer() const { return nameTransfer; }
   private:
 
+    EndpointAuth operator=(const EndpointAuth&) { return *this; };
     /**
      * Handle SASL extension commands during establishment.
      *

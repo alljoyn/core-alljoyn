@@ -284,6 +284,7 @@ QStatus AllJoynPeerObj::Get(const char* ifcName, const char* propName, MsgArg& v
 
 void AllJoynPeerObj::ExchangeGroupKeys(const InterfaceDescription::Member* member, Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
     assert(bus);
 
     QStatus status;
@@ -340,7 +341,9 @@ void AllJoynPeerObj::ExchangeGroupKeys(const InterfaceDescription::Member* membe
 
 void AllJoynPeerObj::ExchangeGuids(const InterfaceDescription::Member* member, Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
     assert(bus);
+
     qcc::GUID128 remotePeerGuid(msg->GetArg(0)->v_string.str);
     uint32_t authVersion = msg->GetArg(1)->v_uint32;
     qcc::String localGuidStr = bus->GetInternal().GetKeyStore().GetGuid();
@@ -441,7 +444,9 @@ QStatus AllJoynPeerObj::KeyGen(PeerState& peerState, String seed, qcc::String& v
 
 void AllJoynPeerObj::GenSessionKey(const InterfaceDescription::Member* member, Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
     assert(bus);
+
     QStatus status;
     PeerState peerState = bus->GetInternal().GetPeerStateTable()->GetPeerState(msg->GetSender());
     qcc::GUID128 remotePeerGuid(msg->GetArg(0)->v_string.str);
@@ -471,7 +476,7 @@ void AllJoynPeerObj::AuthAdvance(Message& msg)
     assert(bus);
     QStatus status = ER_OK;
     ajn::SASLEngine* sasl = NULL;
-    ajn::SASLEngine::AuthState authState;
+    ajn::SASLEngine::AuthState authState = SASLEngine::ALLJOYN_AUTH_FAILED;
     qcc::String outStr;
     qcc::String sender = msg->GetSender();
     qcc::String mech;
@@ -684,6 +689,7 @@ void AllJoynPeerObj::DoKeyAuthentication(Message& msg)
 
 void AllJoynPeerObj::AuthChallenge(const ajn::InterfaceDescription::Member* member, ajn::Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
     /*
      * Cannot authenticate if we don't have any authentication mechanisms
      */
@@ -703,6 +709,8 @@ void AllJoynPeerObj::AuthChallenge(const ajn::InterfaceDescription::Member* memb
 
 void AllJoynPeerObj::ExchangeSuites(const ajn::InterfaceDescription::Member* member, ajn::Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
+
     uint32_t*remoteSuites;
     size_t remoteSuitesLen;
 
@@ -759,6 +767,7 @@ void AllJoynPeerObj::ExchangeSuites(const ajn::InterfaceDescription::Member* mem
 
 void AllJoynPeerObj::KeyExchange(const ajn::InterfaceDescription::Member* member, ajn::Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
     /*
      * Cannot authenticate if we don't have any authentication mechanisms
      */
@@ -778,6 +787,7 @@ void AllJoynPeerObj::KeyExchange(const ajn::InterfaceDescription::Member* member
 
 void AllJoynPeerObj::KeyAuthentication(const ajn::InterfaceDescription::Member* member, ajn::Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
     /*
      * Cannot authenticate if we don't have any authentication mechanisms
      */
@@ -1304,6 +1314,8 @@ QStatus AllJoynPeerObj::DispatchRequest(Message& msg, RequestType reqType, const
 
 void AllJoynPeerObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
 {
+    UNREFERENCED_PARAMETER(reason);
+
     QStatus status;
 
     assert(bus);
@@ -1431,6 +1443,7 @@ void AllJoynPeerObj::HandleSecurityViolation(Message& msg, QStatus status)
 
 void AllJoynPeerObj::NameOwnerChanged(const char* busName, const char* previousOwner, const char* newOwner)
 {
+    UNREFERENCED_PARAMETER(previousOwner);
     assert(bus);
 
     /*
@@ -1456,6 +1469,8 @@ void AllJoynPeerObj::NameOwnerChanged(const char* busName, const char* previousO
 
 void AllJoynPeerObj::AcceptSession(const InterfaceDescription::Member* member, Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
+
     QStatus status;
     size_t numArgs;
     const MsgArg* args;
@@ -1507,6 +1522,8 @@ void AllJoynPeerObj::AcceptSession(const InterfaceDescription::Member* member, M
 
 void AllJoynPeerObj::SessionJoined(const InterfaceDescription::Member* member, const char* srcPath, Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
+    UNREFERENCED_PARAMETER(srcPath);
     assert(bus);
 
     // dispatch to the dispatcher thread

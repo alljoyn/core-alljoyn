@@ -57,7 +57,7 @@ class SimpleBusListener : public BusListener {
      * Indicator used when calling the #WaitForEvent method to indicate that the
      * listener should wait forever for the specified BusEvent.
      */
-    static const uint32_t FOREVER = -1;
+    static const uint32_t FOREVER = (uint32_t)-1;
 
     /**
      * Constructor that initializes a bus listener with specific events enabled.

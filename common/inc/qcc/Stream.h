@@ -55,7 +55,10 @@ class Source {
      *
      * @param source   Source to be reset.
      */
-    virtual void Reset(Source& source) { return; }
+    virtual void Reset(Source& source) {
+        UNREFERENCED_PARAMETER(source);
+        return;
+    }
 
     /**
      * Pull bytes from the source.
@@ -67,7 +70,13 @@ class Source {
      * @param timeout      Time to wait to pull the requested bytes.
      * @return   ER_OK if successful. ER_EOF if source is exhausted. Otherwise an error.
      */
-    virtual QStatus PullBytes(void* buf, size_t reqBytes, size_t& actualBytes, uint32_t timeout = Event::WAIT_FOREVER) { return ER_EOF; }
+    virtual QStatus PullBytes(void* buf, size_t reqBytes, size_t& actualBytes, uint32_t timeout = Event::WAIT_FOREVER) {
+        UNREFERENCED_PARAMETER(buf);
+        UNREFERENCED_PARAMETER(reqBytes);
+        UNREFERENCED_PARAMETER(actualBytes);
+        UNREFERENCED_PARAMETER(timeout);
+        return ER_EOF;
+    }
 
     /**
      * Pull bytes and any accompanying file/socket descriptors from the source.
@@ -81,7 +90,15 @@ class Source {
      * @param timeout      Timeout in milliseconds.
      * @return   ER_OK if successful. ER_EOF if source is exhausted. Otherwise an error.
      */
-    virtual QStatus PullBytesAndFds(void* buf, size_t reqBytes, size_t& actualBytes, SocketFd* fdList, size_t& numFds, uint32_t timeout = Event::WAIT_FOREVER) { return ER_NOT_IMPLEMENTED; }
+    virtual QStatus PullBytesAndFds(void* buf, size_t reqBytes, size_t& actualBytes, SocketFd* fdList, size_t& numFds, uint32_t timeout = Event::WAIT_FOREVER) {
+        UNREFERENCED_PARAMETER(buf);
+        UNREFERENCED_PARAMETER(reqBytes);
+        UNREFERENCED_PARAMETER(actualBytes);
+        UNREFERENCED_PARAMETER(fdList);
+        UNREFERENCED_PARAMETER(numFds);
+        UNREFERENCED_PARAMETER(timeout);
+        return ER_NOT_IMPLEMENTED;
+    }
 
     /**
      * Get the Event indicating that data is available when signaled.
@@ -120,7 +137,12 @@ class Sink {
      * @param numSent      Number of bytes actually consumed by sink.
      * @return   ER_OK if successful.
      */
-    virtual QStatus PushBytes(const void* buf, size_t numBytes, size_t& numSent) { return ER_NOT_IMPLEMENTED; }
+    virtual QStatus PushBytes(const void* buf, size_t numBytes, size_t& numSent) {
+        UNREFERENCED_PARAMETER(buf);
+        UNREFERENCED_PARAMETER(numBytes);
+        UNREFERENCED_PARAMETER(numSent);
+        return ER_NOT_IMPLEMENTED;
+    }
 
     /**
      * Push zero or more bytes into the sink.
@@ -131,7 +153,10 @@ class Sink {
      * @param ttl          Time-to-live for message or 0 for infinite.
      * @return   ER_OK if successful.
      */
-    virtual QStatus PushBytes(const void* buf, size_t numBytes, size_t& numSent, uint32_t ttl) { return PushBytes(buf, numBytes, numSent); }
+    virtual QStatus PushBytes(const void* buf, size_t numBytes, size_t& numSent, uint32_t ttl) {
+        UNREFERENCED_PARAMETER(ttl);
+        return PushBytes(buf, numBytes, numSent);
+    }
 
     /**
      * Push one or more byte accompanied by one or more file/socket descriptors to a sink.
@@ -145,7 +170,15 @@ class Sink {
      *
      * @return  ER_OK or an error.
      */
-    virtual QStatus PushBytesAndFds(const void* buf, size_t numBytes, size_t& numSent, SocketFd* fdList, size_t numFds, uint32_t pid = -1) { return ER_NOT_IMPLEMENTED; }
+    virtual QStatus PushBytesAndFds(const void* buf, size_t numBytes, size_t& numSent, SocketFd* fdList, size_t numFds, uint32_t pid = (uint32_t)-1) {
+        UNREFERENCED_PARAMETER(buf);
+        UNREFERENCED_PARAMETER(numBytes);
+        UNREFERENCED_PARAMETER(numSent);
+        UNREFERENCED_PARAMETER(fdList);
+        UNREFERENCED_PARAMETER(numFds);
+        UNREFERENCED_PARAMETER(pid);
+        return ER_NOT_IMPLEMENTED;
+    }
 
     /**
      * Get the Event that indicates when data can be pushed to sink.
@@ -176,7 +209,9 @@ class Sink {
      *
      * @param sendTimeout   Send timeout in ms.
      */
-    virtual void SetSendTimeout(uint32_t sendTimeout) { }
+    virtual void SetSendTimeout(uint32_t sendTimeout) {
+        UNREFERENCED_PARAMETER(sendTimeout);
+    }
 };
 
 /**

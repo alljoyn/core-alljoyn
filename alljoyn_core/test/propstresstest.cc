@@ -218,6 +218,8 @@ void _PropTesterProxyObject::PropertiesChanged(ProxyBusObject& obj,
                                                const MsgArg& invalidated,
                                                void* context)
 {
+    UNREFERENCED_PARAMETER(context);
+
     MsgArg* entries;
     const char** propNames;
     size_t numEntries;
@@ -271,11 +273,18 @@ class Service : public App, private SessionPortListener, private SessionListener
     void Add(SessionId id, uint32_t number);
 
     // SessionPortListener methods
-    bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) { return true; }
+    bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) {
+        UNREFERENCED_PARAMETER(sessionPort);
+        UNREFERENCED_PARAMETER(joiner);
+        UNREFERENCED_PARAMETER(opts);
+        return true;
+    }
     void SessionJoined(SessionPort sessionPort, SessionId id, const char* joiner);
 
     // SessionListener methods
     void SessionLost(SessionId sessionId);
+    /* Private Copy-constructor - does nothing */
+    Service& operator=(const Service&) { return *this; }
 };
 
 Service::Service(BusAttachment& bus, int nbrOfObjects) :
@@ -312,6 +321,9 @@ void Service::Add(SessionId id, uint32_t number)
 
 void Service::SessionJoined(SessionPort sessionPort, SessionId id, const char* joiner)
 {
+    UNREFERENCED_PARAMETER(sessionPort);
+    UNREFERENCED_PARAMETER(joiner);
+
     bus.SetSessionListener(id, this);
     for (int i = 0; i < nbrOfObjects; i++) {
         Add(id, i);
@@ -373,6 +385,7 @@ class Client : public App, private BusListener, private BusAttachment::JoinSessi
 
     //BusAttachment::JoinsessionAsyncCB methods
     void JoinSessionCB(QStatus status, SessionId sessionId, const SessionOpts& opts, void* context);
+    Client& operator=(const Client&) { return *this; }
 };
 
 Client::Client(BusAttachment& bus, int nbrOfObjects) :
@@ -402,6 +415,9 @@ void Client::Add(const String& name, SessionId id, uint32_t number)
 
 void Client::FoundAdvertisedName(const char* name, TransportMask transport, const char* namePrefix)
 {
+    UNREFERENCED_PARAMETER(transport);
+    UNREFERENCED_PARAMETER(namePrefix);
+
     QCC_SyncPrintf("FoundAdvertisedName: \"%s\"\n", name);
     String nameStr = name;
     lock.Lock();
@@ -417,6 +433,9 @@ void Client::FoundAdvertisedName(const char* name, TransportMask transport, cons
 
 void Client::LostAdvertisedName(const char* name, TransportMask transport, const char* namePrefix)
 {
+    UNREFERENCED_PARAMETER(transport);
+    UNREFERENCED_PARAMETER(namePrefix);
+
     QCC_SyncPrintf("LostAdvertisedName: \"%s\"\n", name);
     String nameStr = name;
     lock.Lock();
@@ -429,6 +448,8 @@ void Client::LostAdvertisedName(const char* name, TransportMask transport, const
 
 void Client::JoinSessionCB(QStatus status, SessionId sessionId, const SessionOpts& opts, void* context)
 {
+    UNREFERENCED_PARAMETER(opts);
+
     String* nameStr = reinterpret_cast<String*>(context);
     QCC_SyncPrintf("JoinSessionCB: name = %s   status = %s\n", nameStr->c_str(), QCC_StatusText(status));
     if (status == ER_OK) {
@@ -488,7 +509,7 @@ void Usage()
            "    -o <NBR>      Create <NBR> objects.\n");
 }
 
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
     if (AllJoynInit() != ER_OK) {
         return 1;

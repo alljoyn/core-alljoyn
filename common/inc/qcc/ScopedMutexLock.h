@@ -71,6 +71,7 @@ class ScopedMutexLock {
     }
 
   private:
+    ScopedMutexLock& operator=(const ScopedMutexLock&) { return *this; }
     Mutex& lock;
     const char* file;
     const uint32_t line;

@@ -93,7 +93,7 @@ int MakeDestination(char* destination, size_t destSizeInBytes, const char* arg0)
  *
  * @return - EXIT_SUCCESS if successful.
  */
-int main(int argc, char* argv[])
+int CDECL_CALL main(int argc, char* argv[])
 {
     int returnValue = EXIT_FAILURE;
 

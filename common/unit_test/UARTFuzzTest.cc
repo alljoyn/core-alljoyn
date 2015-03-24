@@ -269,7 +269,7 @@ class SLAPFuzzWritePacket {
      *
      * @param other  SLAPFuzzWritePacket to assign from.
      */
-    SLAPFuzzWritePacket operator=(const SLAPFuzzWritePacket& other) { return *this; };
+    SLAPFuzzWritePacket operator=(const SLAPFuzzWritePacket&) { return *this; };
 
     size_t m_maxPacketSize;               /**< Maximum packet size supported. */
 
@@ -373,6 +373,8 @@ QStatus SLAPFuzzWritePacket::PrependHeader()
  */
 void FuzzBuffer(Stream* link, uint8_t* buf, size_t& len, uint8_t recoverable_errors)
 {
+    UNREFERENCED_PARAMETER(link);
+
     size_t offset;
     uint8_t test;
     if (recoverable_errors) {

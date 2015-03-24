@@ -190,6 +190,10 @@ def writeHeaders():
 #  endif
 #endif
 
+#if !defined(UNREFERENCED_PARAMETER) && !defined(QCC_OS_GROUP_WINDOWS)
+#  define UNREFERENCED_PARAMETER(...) (void)(__VA_ARGS__)
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif

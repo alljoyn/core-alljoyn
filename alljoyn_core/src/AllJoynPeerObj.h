@@ -240,6 +240,7 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
         RequestType reqType;
         const qcc::String data;
         Request(const Message& msg, RequestType type, const qcc::String& data) : msg(msg), reqType(type), data(data) { }
+        Request& operator=(const Request& other);
     };
 
     /**

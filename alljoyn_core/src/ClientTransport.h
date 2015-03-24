@@ -189,6 +189,7 @@ class ClientTransport : public Transport, public _RemoteEndpoint::EndpointListen
     void EndpointExit(RemoteEndpoint& endpoint);
 
   private:
+    ClientTransport operator=(const ClientTransport&) { return *this; };
     BusAttachment& m_bus;           /**< The message bus for this transport */
     bool m_running;                 /**< True after Start() has been called, before Stop() */
     TransportListener* m_listener;  /**< Registered TransportListener */
