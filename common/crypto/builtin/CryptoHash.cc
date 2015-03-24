@@ -29,6 +29,7 @@
 #include <qcc/Util.h>
 #include <hmac_sha1.h>
 #include <sha2.h>
+#include "Crypto.h"
 
 #include <Status.h>
 
@@ -265,6 +266,12 @@ QStatus Crypto_Hash::GetDigest(uint8_t* digest, bool keepAlive)
     }
 
     return status;
+}
+
+void Crypto::Init() {
+}
+
+void Crypto::Shutdown() {
 }
 
 }
