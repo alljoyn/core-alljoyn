@@ -84,7 +84,7 @@ TEST(BusAttachmentTest, isstarted_isstopping) {
 
 TEST(BusAttachmentTest, getconcurrency) {
     alljoyn_busattachment bus = NULL;
-    unsigned int concurrency = -1;
+    unsigned int concurrency = (unsigned int)-1;
     bus = alljoyn_busattachment_create("BusAttachmentTest", QCC_TRUE);
 
     concurrency = alljoyn_busattachment_getconcurrency(bus);
@@ -94,7 +94,7 @@ TEST(BusAttachmentTest, getconcurrency) {
     alljoyn_busattachment_destroy(bus);
 
     bus = NULL;
-    concurrency = -1;
+    concurrency = (unsigned int)-1;
 
     bus = alljoyn_busattachment_create_concurrency("BusAttachmentTest", QCC_TRUE, 8);
 

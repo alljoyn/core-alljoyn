@@ -33,6 +33,8 @@ static QCC_BOOL name_owner_changed_flag = QCC_FALSE;
 /* Exposed methods */
 static void AJ_CALL ping_method(alljoyn_busobject bus, const alljoyn_interfacedescription_member* member, alljoyn_message msg)
 {
+    UNREFERENCED_PARAMETER(member);
+
     alljoyn_msgarg outArg = alljoyn_msgarg_create();
     alljoyn_msgarg inArg = alljoyn_message_getarg(msg, 0);
     const char* str;
@@ -45,6 +47,8 @@ static void AJ_CALL ping_method(alljoyn_busobject bus, const alljoyn_interfacede
 
 static void AJ_CALL chirp_method(alljoyn_busobject bus, const alljoyn_interfacedescription_member* member, alljoyn_message msg)
 {
+    UNREFERENCED_PARAMETER(member);
+
     chirp_method_flag = QCC_TRUE;
     alljoyn_msgarg outArg = alljoyn_msgarg_create();
     alljoyn_msgarg inArg = alljoyn_message_getarg(msg, 0);
@@ -59,6 +63,10 @@ static void AJ_CALL chirp_method(alljoyn_busobject bus, const alljoyn_interfaced
 /* NameOwnerChanged callback */
 static void AJ_CALL name_owner_changed(const void* context, const char* busName, const char* previousOwner, const char* newOwner)
 {
+    UNREFERENCED_PARAMETER(context);
+    UNREFERENCED_PARAMETER(previousOwner);
+    UNREFERENCED_PARAMETER(newOwner);
+
     if (strcmp(busName, OBJECT_NAME) == 0) {
         name_owner_changed_flag = QCC_TRUE;
     }
@@ -217,6 +225,8 @@ QCC_BOOL introspect_callback_flag = QCC_FALSE;
 
 void AJ_CALL introspect_callback(QStatus status, alljoyn_proxybusobject obj, void* context)
 {
+    UNREFERENCED_PARAMETER(context);
+
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     alljoyn_interfacedescription intf = alljoyn_proxybusobject_getinterface(obj, "org.freedesktop.DBus.Introspectable");
     size_t buf;
@@ -549,6 +559,8 @@ void AJ_CALL ping_methodcall_reply_handler(alljoyn_message message, void* contex
 
 void chirp_methodcall_reply_handler(alljoyn_message message, void* context)
 {
+    UNREFERENCED_PARAMETER(message);
+    UNREFERENCED_PARAMETER(context);
     //not yet used in any tests
 }
 

@@ -121,6 +121,9 @@ class _NullEndpoint : public _BusEndpoint {
             }
         }
     }
+
+  private:
+    _NullEndpoint operator=(const _NullEndpoint&) { return *this; };
 };
 
 _NullEndpoint::_NullEndpoint(BusAttachment& clientBus, BusAttachment& routerBus) :
@@ -260,6 +263,8 @@ QStatus NullTransport::Join(void)
 
 QStatus NullTransport::NormalizeTransportSpec(const char* inSpec, qcc::String& outSpec, std::map<qcc::String, qcc::String>& argMap) const
 {
+    UNREFERENCED_PARAMETER(argMap);
+
     outSpec = inSpec;
     return ER_OK;
 }
@@ -296,6 +301,9 @@ QStatus NullTransport::LinkBus(BusAttachment* otherBus)
 
 QStatus NullTransport::Connect(const char* connectSpec, const SessionOpts& opts, BusEndpoint& newep)
 {
+    UNREFERENCED_PARAMETER(connectSpec);
+    UNREFERENCED_PARAMETER(opts);
+
     QStatus status = ER_OK;
 
     if (!running) {
@@ -314,6 +322,8 @@ QStatus NullTransport::Connect(const char* connectSpec, const SessionOpts& opts,
 
 QStatus NullTransport::Disconnect(const char* connectSpec)
 {
+    UNREFERENCED_PARAMETER(connectSpec);
+
     if (endpoint->IsValid()) {
         NullEndpoint ep = NullEndpoint::cast(endpoint);
         assert(routerLauncher);

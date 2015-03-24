@@ -333,7 +333,11 @@ class NameListener {
      */
     virtual void AddAliasComplete(const qcc::String& aliasName,
                                   uint32_t disposition,
-                                  void* context) { }
+                                  void* context) {
+        UNREFERENCED_PARAMETER(aliasName);
+        UNREFERENCED_PARAMETER(disposition);
+        UNREFERENCED_PARAMETER(context);
+    }
 
     /**
      * Called upon completion of RemoveAlias call.
@@ -346,7 +350,11 @@ class NameListener {
      */
     virtual void RemoveAliasComplete(const qcc::String& aliasName,
                                      uint32_t disposition,
-                                     void* context) { }
+                                     void* context) {
+        UNREFERENCED_PARAMETER(aliasName);
+        UNREFERENCED_PARAMETER(disposition);
+        UNREFERENCED_PARAMETER(context);
+    }
 };
 
 }

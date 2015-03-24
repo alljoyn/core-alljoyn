@@ -164,6 +164,8 @@ class MyAboutListener : public AboutListener {
     MyAboutListener(bool stopDiscover) : sessionId(0), stopDiscover(stopDiscover) { }
     void Announced(const char* busName, uint16_t version, SessionPort port,
                    const MsgArg& objectDescriptionArg, const MsgArg& aboutDataArg) {
+        UNREFERENCED_PARAMETER(version);
+        UNREFERENCED_PARAMETER(objectDescriptionArg);
 
         AboutData ad;
         ad.CreatefromMsgArg(aboutDataArg);
@@ -219,6 +221,7 @@ static MyAboutListener* g_aboutListener;
 
 static void CDECL_CALL SigIntHandler(int sig)
 {
+    UNREFERENCED_PARAMETER(sig);
     g_interrupt = true;
 }
 
@@ -338,6 +341,7 @@ class MyAuthListener : public AuthListener {
   private:
 
     bool RequestCredentials(const char* authMechanism, const char* authPeer, uint16_t authCount, const char* userId, uint16_t credMask, Credentials& creds) {
+        UNREFERENCED_PARAMETER(userId);
 
         if (authCount > maxAuth) {
             return false;
@@ -424,6 +428,8 @@ class MyAuthListener : public AuthListener {
     }
 
     bool VerifyCredentials(const char* authMechanism, const char* authPeer, const Credentials& creds) {
+        UNREFERENCED_PARAMETER(authPeer);
+
         if (strcmp(authMechanism, "ALLJOYN_RSA_KEYX") == 0) {
             if (creds.IsSet(AuthListener::CRED_CERT_CHAIN)) {
                 printf("Verify\n%s\n", creds.GetCertChain().c_str());
@@ -439,10 +445,12 @@ class MyAuthListener : public AuthListener {
     }
 
     void AuthenticationComplete(const char* authMechanism, const char* authPeer, bool success) {
+        UNREFERENCED_PARAMETER(authPeer);
         printf("Authentication %s %s\n", authMechanism, success ? "succesful" : "failed");
     }
 
     void SecurityViolation(QStatus status, const Message& msg) {
+        UNREFERENCED_PARAMETER(msg);
         printf("Security violation %s\n", QCC_StatusText(status));
     }
 
@@ -478,7 +486,7 @@ class MyMessageReceiver : public MessageReceiver {
 
 
 /** Main entry point */
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
     QStatus status = ER_OK;
     bool useIntrospection = false;
@@ -919,7 +927,7 @@ int main(int argc, char** argv)
             uint64_t sample = 0;
             uint64_t timeSum = 0;
             uint64_t max_delta = 0;
-            uint64_t min_delta = ~0;
+            uint64_t min_delta = (uint64_t)-1;
 
             /* Call the remote method */
             while ((ER_OK == status) && pings--) {

@@ -44,6 +44,8 @@ namespace ajn {
 
 qcc::String MsgArg::ToString(size_t indent) const
 {
+    UNREFERENCED_PARAMETER(indent);
+
     qcc::String str;
 #ifndef NDEBUG
 #define CHK_STR(s)  (((s) == NULL) ? "" : (s))
@@ -731,6 +733,10 @@ void MsgArg::Clear()
 
 qcc::String MsgArg::ToString(const MsgArg* args, size_t numArgs, size_t indent)
 {
+    UNREFERENCED_PARAMETER(args);
+    UNREFERENCED_PARAMETER(numArgs);
+    UNREFERENCED_PARAMETER(indent);
+
     qcc::String outStr;
 #ifndef NDEBUG
     for (size_t i = 0; i < numArgs; ++i) {

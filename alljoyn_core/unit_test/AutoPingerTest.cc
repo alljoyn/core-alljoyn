@@ -59,6 +59,7 @@ class TestPingListener : public PingListener {
     qcc::Mutex lostmutex;
 
     virtual void DestinationLost(const qcc::String& group, const qcc::String& destination) {
+        UNREFERENCED_PARAMETER(group);
 
         std::cout << "on lost " << destination  << std::endl;
         lostmutex.Lock();
@@ -68,6 +69,7 @@ class TestPingListener : public PingListener {
     }
 
     virtual void DestinationFound(const qcc::String& group, const qcc::String& destination) {
+        UNREFERENCED_PARAMETER(group);
 
         std::cout << "on found " << destination  << std::endl;
         foundmutex.Lock();

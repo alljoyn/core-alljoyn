@@ -194,7 +194,9 @@ struct IODispatchEntry {
         mainAddingRead(false),
         mainAddingWrite(false),
         stopping_state(IO_RUNNING)
-    { }
+    {
+        UNREFERENCED_PARAMETER(stream);
+    }
 };
 
 class IODispatch : public Thread, public AlarmListener {
