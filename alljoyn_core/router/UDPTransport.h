@@ -49,7 +49,7 @@
 
 #include "ns/IpNameService.h"
 
-#define WORKAROUND_1298 1 /**< Implement workaround for ASACORE-1298 */
+#define WORKAROUND_1298 0 /**< Implement workaround for ASACORE-1298 */
 
 namespace ajn {
 
@@ -353,8 +353,16 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
 
     MessagePump* m_messagePumps[N_PUMPS];                          /**< array of MessagePumps (with possiblly running pump threads) */
 
-    std::list<std::pair<qcc::String, qcc::SocketFd> > m_listenFds; /**< File descriptors the transport is listening on */
-    qcc::Mutex m_listenFdsLock;                                    /**< Mutex that protects m_listenFds */
+    class ListenFdEntry {
+      public:
+        ListenFdEntry(qcc::String normSpec, qcc::SocketFd sockFd) : m_normSpec(normSpec), m_sockFd(sockFd), m_remove(false) { }
+        qcc::String m_normSpec;  /**< The normalized listen spec for this entry */
+        qcc::SocketFd m_sockFd;  /**< The socket associated with this entry */
+        bool m_remove;           /**< If true, a request to stop listening on this liste spec has been received */
+    };
+
+    std::list<ListenFdEntry> m_listenFds; /**< Listen specs that the transport should be listening on */
+    qcc::Mutex m_listenFdsLock;             /**< Mutex that protects m_listenFds */
 
     std::list<qcc::String> m_listenSpecs;                          /**< Listen specs clients have requested us to listen on */
     qcc::Mutex m_listenSpecsLock;                                  /**< Mutex that protects m_listenSpecs */
@@ -728,6 +736,9 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     void QueueDisableAdvertisement(const qcc::String& advertiseName, TransportMask transports);
     void QueueUpdateRouterAdvertisementAndDynamicScore();
 
+    void ScheduleEndpointDeletedHook();
+    void EndpointDeletedHook();
+
     void RunListenMachine(ListenRequest& listenRequest);
 
     void StartListenInstance(ListenRequest& listenRequest);
@@ -739,12 +750,15 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     void HandleNetworkEventInstance(ListenRequest& listenRequest);
     void UpdateDynamicScoreInstance(ListenRequest& listenRequest);
 
+    void EnableDiscoveryListen();
+
     void UntrustedClientExit();
     QStatus UntrustedClientStart();
     bool m_isAdvertising;
     bool m_isDiscovering;
     bool m_isListening;
     bool m_isNsEnabled;
+    volatile int32_t m_connecting;
 
     enum ReloadState {
         STATE_RELOADING = 0,    /**< The set of listen FDs has changed and needs to be reloaded by the main thread */
@@ -891,7 +905,8 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
             CONNECT_CB,
             DISCONNECT_CB,
             RECV_CB,
-            SEND_CB
+            SEND_CB,
+            ENDPOINT_DELETED
         };
 
         Command m_command;
