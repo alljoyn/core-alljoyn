@@ -1036,7 +1036,7 @@ static void ParseCmdLine(int argc, char** argv)
 
 
 /** Main entry point */
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
     QStatus status = ER_OK;
     qcc::GUID128 guid;

@@ -97,6 +97,10 @@
  */
 #define QCC_UNUSED(x) (void)(x)
 
+#if !defined(UNREFERENCED_PARAMETER) && !defined(QCC_OS_GROUP_WINDOWS)
+#  define UNREFERENCED_PARAMETER(...);
+#endif
+
 /** Boolean type for C */
 typedef int32_t QCC_BOOL;
 /** Boolean logic true for QCC_BOOL type*/

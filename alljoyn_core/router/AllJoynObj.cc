@@ -346,6 +346,8 @@ void AllJoynObj::ObjectRegistered(void)
 
 void AllJoynObj::BindSessionPort(const InterfaceDescription::Member* member, Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
+
     uint32_t replyCode = ALLJOYN_BINDSESSIONPORT_REPLY_SUCCESS;
     size_t numArgs;
     const MsgArg* args;
@@ -482,6 +484,8 @@ void AllJoynObj::BindSessionPort(const InterfaceDescription::Member* member, Mes
 
 void AllJoynObj::UnbindSessionPort(const InterfaceDescription::Member* member, Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
+
     uint32_t replyCode = ALLJOYN_UNBINDSESSIONPORT_REPLY_FAILED;
     size_t numArgs;
     const MsgArg* args;
@@ -520,6 +524,8 @@ void AllJoynObj::UnbindSessionPort(const InterfaceDescription::Member* member, M
 
 ThreadReturn STDCALL AllJoynObj::JoinSessionThread::Run(void* arg)
 {
+    UNREFERENCED_PARAMETER(arg);
+
     if (isJoin) {
         QCC_DbgTrace(("JoinSessionThread::RunJoin()"));
         return RunJoin();
@@ -1369,6 +1375,7 @@ void AllJoynObj::JoinSessionThread::ThreadExit(Thread* thread)
 
 void AllJoynObj::JoinSession(const InterfaceDescription::Member* member, Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
     /* Handle JoinSession on another thread since JoinThread can block waiting for NameOwnerChanged */
     joinSessionThreadsLock.Lock(MUTEX_CONTEXT);
     if (!isStopping) {
@@ -1386,6 +1393,7 @@ void AllJoynObj::JoinSession(const InterfaceDescription::Member* member, Message
 
 void AllJoynObj::AttachSession(const InterfaceDescription::Member* member, Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
     /* Handle AttachSession on another thread since AttachSession can block when connecting through an intermediate node */
     joinSessionThreadsLock.Lock(MUTEX_CONTEXT);
     if (!isStopping) {
@@ -1464,6 +1472,8 @@ uint32_t AllJoynObj::CheckLeaveSession(const SessionMapEntry*smEntry, const char
 
 void AllJoynObj::LeaveSessionCommon(const InterfaceDescription::Member* member, Message& msg, LeaveSessionType lst)
 {
+    UNREFERENCED_PARAMETER(member);
+
     uint32_t replyCode = ALLJOYN_LEAVESESSION_REPLY_SUCCESS;
 
     size_t numArgs;
@@ -1529,6 +1539,8 @@ void AllJoynObj::LeaveSessionCommon(const InterfaceDescription::Member* member, 
 
 void AllJoynObj::RemoveSessionMember(const InterfaceDescription::Member* member, Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
+
     uint32_t replyCode = ALLJOYN_REMOVESESSIONMEMBER_REPLY_SUCCESS;
 
     size_t numArgs;
@@ -1642,6 +1654,8 @@ void AllJoynObj::RemoveSessionMember(const InterfaceDescription::Member* member,
 
 void AllJoynObj::GetHostInfo(const InterfaceDescription::Member* member, Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
+
     uint32_t replyCode = ALLJOYN_GETHOSTINFO_REPLY_SUCCESS;
 
     size_t numArgs;
@@ -1705,6 +1719,8 @@ void AllJoynObj::GetHostInfo(const InterfaceDescription::Member* member, Message
 
 void AllJoynObj::ReloadConfig(const InterfaceDescription::Member* member, Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
+
     ConfigDB* config = ConfigDB::GetConfigDB();
     bool loaded = config->LoadConfig(&bus);
     MsgArg replyArg;
@@ -2648,6 +2664,7 @@ void AllJoynObj::RemoveSessionRefs(const String& vepName, const String& b2bEpNam
 
 void AllJoynObj::GetSessionInfo(const InterfaceDescription::Member* member, Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
     /* Received a daemon request for session info */
 
     /* Parse message args */
@@ -3013,6 +3030,9 @@ QStatus AllJoynObj::ShutdownEndpoint(RemoteEndpoint& b2bEp, SocketFd& sockFd)
 
 void AllJoynObj::DetachSessionSignalHandler(const InterfaceDescription::Member* member, const char* sourcePath, Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
+    UNREFERENCED_PARAMETER(sourcePath);
+
     size_t numArgs;
     const MsgArg* args;
 
@@ -3038,6 +3058,7 @@ void AllJoynObj::DetachSessionSignalHandler(const InterfaceDescription::Member* 
 
 void AllJoynObj::GetSessionFd(const InterfaceDescription::Member* member, Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
     /* Parse args */
     size_t numArgs;
     const MsgArg* args;
@@ -3120,6 +3141,7 @@ void AllJoynObj::SessionMapErase(SessionMapEntry& sme)
 
 void AllJoynObj::SetLinkTimeout(const InterfaceDescription::Member* member, Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
     /* Parse args */
     size_t numArgs;
     const MsgArg* args;
@@ -3191,6 +3213,7 @@ void AllJoynObj::SetLinkTimeout(const InterfaceDescription::Member* member, Mess
 }
 void AllJoynObj::SetIdleTimeouts(const InterfaceDescription::Member* member, Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
     /* Parse args */
     uint32_t disposition = ALLJOYN_SETIDLETIMEOUTS_REPLY_FAILED;
     size_t numArgs;
@@ -3236,6 +3259,8 @@ void AllJoynObj::SetIdleTimeouts(const InterfaceDescription::Member* member, Mes
 }
 void AllJoynObj::AliasUnixUser(const InterfaceDescription::Member* member, Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
+
     uint32_t replyCode = ALLJOYN_ALIASUNIXUSER_REPLY_SUCCESS;
     /* Parse args */
     size_t numArgs;
@@ -3256,6 +3281,8 @@ void AllJoynObj::AliasUnixUser(const InterfaceDescription::Member* member, Messa
 
 void AllJoynObj::OnAppSuspend(const InterfaceDescription::Member* member, Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
+
     uint32_t replyCode = ALLJOYN_ONAPPSUSPEND_REPLY_SUCCESS;
     qcc::String sender = msg->GetSender();
     BusEndpoint srcEp = FindEndpoint(sender);
@@ -3285,6 +3312,8 @@ void AllJoynObj::OnAppSuspend(const InterfaceDescription::Member* member, Messag
 
 void AllJoynObj::OnAppResume(const InterfaceDescription::Member* member, Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
+
     uint32_t replyCode = ALLJOYN_ONAPPRESUME_REPLY_SUCCESS;
     qcc::String sender = msg->GetSender();
     BusEndpoint srcEp = FindEndpoint(sender);
@@ -3321,6 +3350,8 @@ TransportMask AllJoynObj::GetCompleteTransportMaskFilter() {
 }
 void AllJoynObj::AdvertiseName(const InterfaceDescription::Member* member, Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
+
     uint32_t replyCode = ALLJOYN_ADVERTISENAME_REPLY_SUCCESS;
     size_t numArgs;
     const MsgArg* args;
@@ -3461,6 +3492,8 @@ void AllJoynObj::AdvertiseName(const InterfaceDescription::Member* member, Messa
 
 void AllJoynObj::CancelAdvertiseName(const InterfaceDescription::Member* member, Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
+
     const MsgArg* args;
     size_t numArgs;
 
@@ -3565,6 +3598,8 @@ QStatus AllJoynObj::ProcCancelAdvertise(const qcc::String& sender, const qcc::St
 
 void AllJoynObj::FindAdvertisedName(const InterfaceDescription::Member* member, Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
+
     size_t numArgs;
     const MsgArg* args;
     msg->GetArgs(numArgs, args);
@@ -3602,6 +3637,8 @@ void AllJoynObj::FindAdvertisedName(const InterfaceDescription::Member* member, 
 
 void AllJoynObj::FindAdvertisedNameByTransport(const InterfaceDescription::Member* member, Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
+
     size_t numArgs;
     const MsgArg* args;
     msg->GetArgs(numArgs, args);
@@ -3619,6 +3656,8 @@ void AllJoynObj::FindAdvertisedNameByTransport(const InterfaceDescription::Membe
 
 void AllJoynObj::FindAdvertisementByTransport(const InterfaceDescription::Member* member, Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
+
     size_t numArgs;
     const MsgArg* args;
     msg->GetArgs(numArgs, args);
@@ -3790,6 +3829,8 @@ void AllJoynObj::ProcFindAdvertisement(QStatus status, Message& msg, const qcc::
 
 void AllJoynObj::CancelFindAdvertisedName(const InterfaceDescription::Member* member, Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
+
     size_t numArgs;
     const MsgArg* args;
     msg->GetArgs(numArgs, args);
@@ -3806,6 +3847,8 @@ void AllJoynObj::CancelFindAdvertisedName(const InterfaceDescription::Member* me
 
 void AllJoynObj::CancelFindAdvertisedNameByTransport(const InterfaceDescription::Member* member, Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
+
     size_t numArgs;
     const MsgArg* args;
     msg->GetArgs(numArgs, args);
@@ -3823,6 +3866,8 @@ void AllJoynObj::CancelFindAdvertisedNameByTransport(const InterfaceDescription:
 
 void AllJoynObj::CancelFindAdvertisementByTransport(const InterfaceDescription::Member* member, Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
+
     size_t numArgs;
     const MsgArg* args;
     msg->GetArgs(numArgs, args);
@@ -4249,6 +4294,9 @@ QStatus AllJoynObj::ExchangeNames(RemoteEndpoint& endpoint)
 
 void AllJoynObj::ExchangeNamesSignalHandler(const InterfaceDescription::Member* member, const char* sourcePath, Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
+    UNREFERENCED_PARAMETER(sourcePath);
+
     QCC_DbgTrace(("AllJoynObj::ExchangeNamesSignalHandler(msg sender = \"%s\")", msg->GetSender()));
 
 
@@ -4264,6 +4312,9 @@ void AllJoynObj::ExchangeNamesSignalHandler(const InterfaceDescription::Member* 
 
 void AllJoynObj::NameChangedSignalHandler(const InterfaceDescription::Member* member, const char* sourcePath, Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
+    UNREFERENCED_PARAMETER(sourcePath);
+
     size_t numArgs;
     const MsgArg* args;
     msg->GetArgs(numArgs, args);
@@ -4480,6 +4531,9 @@ void AllJoynObj::NameOwnerChanged(const qcc::String& alias,
                                   const qcc::String* oldOwner, SessionOpts::NameTransferType oldOwnerNameTransfer,
                                   const qcc::String* newOwner, SessionOpts::NameTransferType newOwnerNameTransfer)
 {
+    UNREFERENCED_PARAMETER(oldOwnerNameTransfer);
+    UNREFERENCED_PARAMETER(newOwnerNameTransfer);
+
     QStatus status;
     const String& shortGuidStr = guid.ToShortString();
     /* When newOwner and oldOwner are the same, only the name transfer changed. */
@@ -5297,6 +5351,7 @@ void AllJoynObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
 
 void AllJoynObj::CancelSessionlessMessage(const InterfaceDescription::Member* member, Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
     busController->GetSessionlessObj().CancelMessage(msg);
 }
 
@@ -5331,6 +5386,8 @@ void AllJoynObj::CancelSessionlessMessageReply(Message& msg, QStatus status)
 
 void AllJoynObj::Ping(const InterfaceDescription::Member* member, Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
+
     QCC_DbgTrace(("AllJoynObj::Ping()"));
 
     uint32_t replyCode = ALLJOYN_PING_REPLY_SUCCESS;
@@ -5539,6 +5596,7 @@ void AllJoynObj::PingReplyMethodHandler(Message& reply, void* context)
 /* From IpNameServiceListener */
 bool AllJoynObj::ResponseHandler(TransportMask transport, MDNSPacket response, uint16_t recvPort)
 {
+    UNREFERENCED_PARAMETER(transport);
     /*
      * Note that we always return false here so that other name service
      * listeners can process other records in the response.

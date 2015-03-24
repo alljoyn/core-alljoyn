@@ -36,6 +36,10 @@ static alljoyn_sessionid joinsessionid_alt;
 static QCC_BOOL AJ_CALL accept_session_joiner(const void* context, alljoyn_sessionport sessionPort,
                                               const char* joiner,  const alljoyn_sessionopts opts)
 {
+    UNREFERENCED_PARAMETER(context);
+    UNREFERENCED_PARAMETER(joiner);
+    UNREFERENCED_PARAMETER(opts);
+
     QCC_BOOL ret = QCC_FALSE;
     if (sessionPort == SESSION_PORT) {
         ret = QCC_TRUE;
@@ -45,6 +49,8 @@ static QCC_BOOL AJ_CALL accept_session_joiner(const void* context, alljoyn_sessi
 
 static void AJ_CALL session_joined(const void* context, alljoyn_sessionport sessionPort, alljoyn_sessionid id, const char* joiner)
 {
+    UNREFERENCED_PARAMETER(context);
+    UNREFERENCED_PARAMETER(joiner);
     //printf("session_joined\n");
     EXPECT_EQ(SESSION_PORT, sessionPort);
     joinsessionid = id;
@@ -53,6 +59,9 @@ static void AJ_CALL session_joined(const void* context, alljoyn_sessionport sess
 
 static void AJ_CALL joinsessionhandler(QStatus status, alljoyn_sessionid sessionId, const alljoyn_sessionopts opts, void* context)
 {
+    UNREFERENCED_PARAMETER(status);
+    UNREFERENCED_PARAMETER(opts);
+
     EXPECT_STREQ("A test string to send as the context void*", (char*)context);
     joinsessionid_alt = sessionId;
     joinsessionhandler_flag = QCC_TRUE;
@@ -62,6 +71,9 @@ static void AJ_CALL joinsessionhandler(QStatus status, alljoyn_sessionid session
 /* FoundAdvertisedName callback */
 void AJ_CALL found_advertised_name(const void* context, const char* name, alljoyn_transportmask transport, const char* namePrefix)
 {
+    UNREFERENCED_PARAMETER(context);
+    UNREFERENCED_PARAMETER(transport);
+    UNREFERENCED_PARAMETER(namePrefix);
     //printf("FoundAdvertisedName(name=%s, prefix=%s)\n", name, namePrefix);
     EXPECT_STREQ(objectName.c_str(), name);
     if (0 == strcmp(name, objectName.c_str())) {
@@ -71,6 +83,8 @@ void AJ_CALL found_advertised_name(const void* context, const char* name, alljoy
 /* Exposed methods */
 static void AJ_CALL ping_method(alljoyn_busobject bus, const alljoyn_interfacedescription_member* member, alljoyn_message msg)
 {
+    UNREFERENCED_PARAMETER(member);
+
     alljoyn_msgarg outArg = alljoyn_msgarg_create();
     outArg = alljoyn_message_getarg(msg, 0);
     const char* str;

@@ -116,7 +116,7 @@ class SLAPStream : public Stream, public UARTReadListener, public AlarmListener 
      *
      * @param other  SLAPStream to assign from.
      */
-    SLAPStream operator=(const SLAPStream& other) { return *this; };
+    SLAPStream operator=(const SLAPStream&) { return *this; };
 
     /** Internal functions used by SLAPStream */
     void EnqueueCtrl(ControlPacketType type, uint8_t* config = NULL);

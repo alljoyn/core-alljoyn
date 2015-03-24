@@ -49,7 +49,10 @@ class PingListener {
      * @param  group Pinging group name
      * @param  destination Destination that was pinged
      */
-    virtual void DestinationLost(const qcc::String& group, const qcc::String& destination) { }
+    virtual void DestinationLost(const qcc::String& group, const qcc::String& destination) {
+        UNREFERENCED_PARAMETER(group);
+        UNREFERENCED_PARAMETER(destination);
+    }
 
     /**
      * Destination Found: called when the destination becomes reachable.
@@ -58,7 +61,10 @@ class PingListener {
      * @param  group Pinging group name
      * @param  destination Destination that was pinged
      */
-    virtual void DestinationFound(const qcc::String& group, const qcc::String& destination) { }
+    virtual void DestinationFound(const qcc::String& group, const qcc::String& destination) {
+        UNREFERENCED_PARAMETER(group);
+        UNREFERENCED_PARAMETER(destination);
+    }
 };
 }
 #endif /* PINGLISTENER_H_ */

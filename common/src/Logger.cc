@@ -99,6 +99,7 @@ LoggerSetting* LoggerSetting::singleton = NULL;
 
 void LoggerSetting::SetSyslog(bool enable)
 {
+
 #if !defined(QCC_OS_GROUP_WINDOWS)
     lock.Lock();
 #if !defined(QCC_OS_ANDROID)
@@ -115,9 +116,13 @@ void LoggerSetting::SetSyslog(bool enable)
             closelog();
         }
     }
+#else
+    UNREFERENCED_PARAMETER(enable);
 #endif
     useSyslog = enable;
     lock.Unlock();
+#else
+    UNREFERENCED_PARAMETER(enable);
 #endif
 }
 

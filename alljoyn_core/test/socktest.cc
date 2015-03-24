@@ -69,6 +69,7 @@ static volatile sig_atomic_t g_interrupt = false;
 
 static void CDECL_CALL SigIntHandler(int sig)
 {
+    UNREFERENCED_PARAMETER(sig);
     g_interrupt = true;
 }
 
@@ -132,6 +133,8 @@ class SockService : public BusObject {
 
     void PutSock(const InterfaceDescription::Member* member, Message& msg)
     {
+        UNREFERENCED_PARAMETER(member);
+
         QStatus status;
         SocketFd handle;
 
@@ -159,10 +162,13 @@ class SockService : public BusObject {
 
     void GetSock(const InterfaceDescription::Member* member, Message& msg)
     {
+        UNREFERENCED_PARAMETER(member);
+        UNREFERENCED_PARAMETER(msg);
     }
 
     void NameAcquiredCB(Message& msg, void* context)
     {
+        UNREFERENCED_PARAMETER(context);
         uint32_t ownership = 0;
         QStatus status = msg->GetArgs("u", &ownership);
         if ((status != ER_OK) || (ownership != DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER)) {
@@ -246,7 +252,7 @@ Exit:
     return status;
 }
 
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
     if (AllJoynInit() != ER_OK) {
         return 1;
@@ -378,7 +384,7 @@ int main(int argc, char** argv)
                     uint8_t buf[256];
                     size_t recvd;
                     /* Read from the socket */
-                    while (true) {
+                    for (;;) {
                         status = qcc::Recv(handles[1], buf, sizeof(buf), recvd);
                         /* This is just a test program so try again if the read blocks */
                         if (status == ER_WOULDBLOCK) {

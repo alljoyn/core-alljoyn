@@ -143,6 +143,8 @@ class CredentialAccessor {
     QStatus StoreKey(qcc::GUID128& guid, qcc::KeyBlob& key);
 
   private:
+    CredentialAccessor operator=(const CredentialAccessor&) { return *this; };
+
     BusAttachment& bus;
 
 };

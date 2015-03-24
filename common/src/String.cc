@@ -234,6 +234,8 @@ size_t String::secure_clear()
 
 void String::clear(size_t sizeHint)
 {
+    UNREFERENCED_PARAMETER(sizeHint);
+
     DecRef(context);
     context = &nullContext;
 }

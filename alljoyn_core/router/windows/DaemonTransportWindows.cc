@@ -34,21 +34,27 @@ const char* DaemonTransport::TransportName = "";
 
 void* DaemonTransport::Run(void* arg)
 {
+    UNREFERENCED_PARAMETER(arg);
     return NULL;
 }
 
 QStatus DaemonTransport::NormalizeTransportSpec(const char* inSpec, qcc::String& outSpec, map<qcc::String, qcc::String>& argMap) const
 {
+    UNREFERENCED_PARAMETER(inSpec);
+    UNREFERENCED_PARAMETER(outSpec);
+    UNREFERENCED_PARAMETER(argMap);
     return ER_OK;
 }
 
 QStatus DaemonTransport::StartListen(const char* listenSpec)
 {
+    UNREFERENCED_PARAMETER(listenSpec);
     return ER_OK;
 }
 
 QStatus DaemonTransport::StopListen(const char* listenSpec)
 {
+    UNREFERENCED_PARAMETER(listenSpec);
     return ER_OK;
 }
 

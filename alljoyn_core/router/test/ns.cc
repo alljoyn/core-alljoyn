@@ -206,7 +206,7 @@ static void PrintFlags(uint32_t flags)
 
 #define ERROR_EXIT exit(1)
 
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
     if (AllJoynInit() != ER_OK) {
         return 1;

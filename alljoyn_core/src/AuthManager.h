@@ -151,6 +151,7 @@ class AuthManager {
 
 
   private:
+    AuthManager operator=(const AuthManager&) { return *this; };
 
     /**
      * Reference to the keyStore

@@ -267,6 +267,8 @@ QStatus _DaemonSLAPEndpoint::Join(void)
 
 void* _DaemonSLAPEndpoint::AuthThread::Run(void* arg)
 {
+    UNREFERENCED_PARAMETER(arg);
+
     QCC_DbgPrintf(("DaemonSLAPEndpoint::AuthThread::Run()"));
 
     m_endpoint->m_authState = AUTH_AUTHENTICATING;
@@ -590,6 +592,7 @@ QStatus DaemonSLAPTransport::StartListen(const char* listenSpec)
 
 QStatus DaemonSLAPTransport::StopListen(const char* listenSpec)
 {
+    UNREFERENCED_PARAMETER(listenSpec);
     return ER_OK;
 }
 
@@ -614,6 +617,7 @@ void DaemonSLAPTransport::EndpointExit(RemoteEndpoint& ep)
 
 void* DaemonSLAPTransport::Run(void* arg)
 {
+    UNREFERENCED_PARAMETER(arg);
 
     QStatus status = ER_OK;
     m_lock.Lock(MUTEX_CONTEXT);
@@ -629,10 +633,10 @@ void* DaemonSLAPTransport::Run(void* arg)
          */
         QCC_DbgPrintf(("DaemonSLAPTransport::Run()"));
 
-        UARTFd uartFd = -1;
+        UARTFd uartFd = (UARTFd)-1;
         set<DaemonSLAPEndpoint>::iterator i = m_authList.begin();
         while (i != m_authList.end()) {
-            uartFd = -1;
+            uartFd = (UARTFd)-1;
             DaemonSLAPEndpoint ep = *i;
             _DaemonSLAPEndpoint::AuthState authState = ep->GetAuthState();
 
@@ -655,7 +659,7 @@ void* DaemonSLAPTransport::Run(void* arg)
 
                     if (it->listenFd == uartFd) {
                         QCC_DbgPrintf(("DaemonSLAPTransport::Run(): Reenabling %s in the listenEvents", it->args["port"].c_str()));
-                        it->listenFd = -1;
+                        it->listenFd = (UARTFd)-1;
                         it->endpointStarted = false;
                         Thread::Alert();
                     }
@@ -666,7 +670,7 @@ void* DaemonSLAPTransport::Run(void* arg)
         }
         i = m_endpointList.begin();
         while (i != m_endpointList.end()) {
-            uartFd = -1;
+            uartFd = (UARTFd)-1;
             DaemonSLAPEndpoint ep = *i;
 
             _DaemonSLAPEndpoint::EndpointState endpointState = ep->GetEpState();
@@ -710,7 +714,7 @@ void* DaemonSLAPTransport::Run(void* arg)
 
                     if (it->listenFd == uartFd) {
                         QCC_DbgPrintf(("DaemonSLAPTransport::Run(): Reenabling back %s in the listenEvents", it->args["port"].c_str()));
-                        it->listenFd = -1;
+                        it->listenFd = (UARTFd)-1;
                         it->endpointStarted = false;
                         break;
                     }

@@ -68,6 +68,7 @@ struct PingGroup {
     qcc::Alarm alarm;
     PingListener& pingListener;
     std::map<Destination, unsigned int> destinations;
+    PingGroup& operator=(const PingGroup&) { return *this; }
 };
 
 // Context used to pass additional info in callbacks
@@ -85,6 +86,7 @@ class PingAsyncContext {
     qcc::String destination;
     AutoPingerInternal::PingState oldState;
     PingListener& pingListener;
+    PingAsyncContext& operator=(const PingAsyncContext&) { return *this; }
 };
 
 static std::set<PingAsyncContext*>* ctxs = NULL;
@@ -219,6 +221,8 @@ AutoPingerInternal::~AutoPingerInternal()
 
 void AutoPingerInternal::AlarmTriggered(const qcc::Alarm& alarm, QStatus reason)
 {
+    UNREFERENCED_PARAMETER(reason);
+
     qcc::String* groupName(reinterpret_cast<qcc::String*>(alarm->GetContext()));
 
     globalPingerLock->Lock(MUTEX_CONTEXT);

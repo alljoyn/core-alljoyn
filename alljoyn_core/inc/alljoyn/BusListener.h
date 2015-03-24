@@ -53,7 +53,9 @@ class BusListener {
      *
      * @param bus  The bus the listener is registered with.
      */
-    virtual void ListenerRegistered(BusAttachment* bus) { }
+    virtual void ListenerRegistered(BusAttachment* bus) {
+        UNREFERENCED_PARAMETER(bus);
+    }
 
     /**
      * Called by the bus when the listener is unregistered.
@@ -68,7 +70,11 @@ class BusListener {
      * @param transport    Transport that received the advertisement.
      * @param namePrefix   The well-known name prefix used in call to FindAdvertisedName that triggered this callback.
      */
-    virtual void FoundAdvertisedName(const char* name, TransportMask transport, const char* namePrefix) { }
+    virtual void FoundAdvertisedName(const char* name, TransportMask transport, const char* namePrefix) {
+        UNREFERENCED_PARAMETER(name);
+        UNREFERENCED_PARAMETER(transport);
+        UNREFERENCED_PARAMETER(namePrefix);
+    }
 
     /**
      * Called by the bus when an advertisement previously reported through FoundName has become unavailable.
@@ -77,7 +83,11 @@ class BusListener {
      * @param transport    Transport that stopped receiving the given advertised name.
      * @param namePrefix   The well-known name prefix that was used in a call to FindAdvertisedName that triggered this callback.
      */
-    virtual void LostAdvertisedName(const char* name, TransportMask transport, const char* namePrefix) { }
+    virtual void LostAdvertisedName(const char* name, TransportMask transport, const char* namePrefix) {
+        UNREFERENCED_PARAMETER(name);
+        UNREFERENCED_PARAMETER(transport);
+        UNREFERENCED_PARAMETER(namePrefix);
+    }
 
     /**
      * Called by the bus when the ownership of any well-known name changes.
@@ -86,7 +96,11 @@ class BusListener {
      * @param previousOwner  The unique name that previously owned the name or NULL if there was no previous owner.
      * @param newOwner       The unique name that now owns the name or NULL if there is no new owner.
      */
-    virtual void NameOwnerChanged(const char* busName, const char* previousOwner, const char* newOwner) { }
+    virtual void NameOwnerChanged(const char* busName, const char* previousOwner, const char* newOwner) {
+        UNREFERENCED_PARAMETER(busName);
+        UNREFERENCED_PARAMETER(previousOwner);
+        UNREFERENCED_PARAMETER(newOwner);
+    }
 
     /**
      * This has been deprecated.  It will not be called any more. Use the ProxyBusObject property change handling mechanism instead.
@@ -95,7 +109,10 @@ class BusListener {
      * @param propName       The well-known name that has changed.
      * @param propValue      The new value of the property; NULL if not present
      */
-    QCC_DEPRECATED(virtual void PropertyChanged(const char* propName, const MsgArg * propValue)) { }
+    QCC_DEPRECATED(virtual void PropertyChanged(const char* propName, const MsgArg * propValue)) {
+        UNREFERENCED_PARAMETER(propName);
+        UNREFERENCED_PARAMETER(propValue);
+    }
 
     /**
      * Called when a BusAttachment this listener is registered with is stopping.

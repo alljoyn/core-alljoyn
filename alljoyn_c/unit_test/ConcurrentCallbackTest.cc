@@ -31,10 +31,16 @@ static QCC_BOOL name_owner_changed_flag = QCC_FALSE;
 static QCC_BOOL listener_registered_flag = QCC_FALSE;
 
 static void AJ_CALL listener_registered(const void* context, alljoyn_busattachment s_bus) {
+    UNREFERENCED_PARAMETER(context);
+    UNREFERENCED_PARAMETER(s_bus);
     listener_registered_flag = QCC_TRUE;
 }
 
 static void AJ_CALL name_owner_changed_blocking_call(const void* context, const char* busName, const char* previousOwner, const char* newOwner) {
+    UNREFERENCED_PARAMETER(context);
+    UNREFERENCED_PARAMETER(busName);
+    UNREFERENCED_PARAMETER(previousOwner);
+    UNREFERENCED_PARAMETER(newOwner);
     QStatus status = ER_FAIL;
     alljoyn_proxybusobject proxyObj = alljoyn_proxybusobject_create(s_bus, "org.alljoyn.Bus", "/org/alljoyn/Bus", 0);
     EXPECT_TRUE(proxyObj);
@@ -96,6 +102,10 @@ TEST(ConcurrentCallbackTest, enableconcurrentcallbacks_not_used)
 }
 
 static void AJ_CALL name_owner_changed_enableconcurrentcallbacks(const void* context, const char* busName, const char* previousOwner, const char* newOwner) {
+    UNREFERENCED_PARAMETER(context);
+    UNREFERENCED_PARAMETER(busName);
+    UNREFERENCED_PARAMETER(previousOwner);
+    UNREFERENCED_PARAMETER(newOwner);
     QStatus status = ER_FAIL;
     alljoyn_proxybusobject proxyObj = alljoyn_proxybusobject_create(s_bus, "org.alljoyn.Bus", "/org/alljoyn/Bus", 0);
     EXPECT_TRUE(proxyObj);

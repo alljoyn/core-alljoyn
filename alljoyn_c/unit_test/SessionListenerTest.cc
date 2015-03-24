@@ -55,11 +55,17 @@ static char* member_added_uniquename = NULL;
 static char* member_removed_uniquename = NULL;
 /* session listener functions */
 static void AJ_CALL session_lost(const void* context, alljoyn_sessionid sessionId, alljoyn_sessionlostreason reason) {
+    UNREFERENCED_PARAMETER(context);
+    UNREFERENCED_PARAMETER(sessionId);
+
     sessionlostreason = reason;
     session_lost_flag = QCC_TRUE;
 }
 
 static void AJ_CALL session_member_added(const void* context, alljoyn_sessionid sessionid, const char* uniqueName) {
+    UNREFERENCED_PARAMETER(context);
+    UNREFERENCED_PARAMETER(sessionid);
+
     int uniqueNameSize = strlen(uniqueName);
     if (member_added_uniquename != NULL) {
         free(member_added_uniquename);
@@ -72,6 +78,9 @@ static void AJ_CALL session_member_added(const void* context, alljoyn_sessionid 
 }
 
 static void AJ_CALL session_member_removed(const void* context, alljoyn_sessionid sessionId, const char* uniqueName) {
+    UNREFERENCED_PARAMETER(context);
+    UNREFERENCED_PARAMETER(sessionId);
+
     int uniqueNameSize = strlen(uniqueName);
     if (member_removed_uniquename != NULL) {
         free(member_removed_uniquename);
@@ -86,6 +95,10 @@ static void AJ_CALL session_member_removed(const void* context, alljoyn_sessioni
 /* session port listener */
 static QCC_BOOL AJ_CALL accept_session_joiner(const void* context, alljoyn_sessionport sessionPort,
                                               const char* joiner,  const alljoyn_sessionopts opts) {
+    UNREFERENCED_PARAMETER(context);
+    UNREFERENCED_PARAMETER(joiner);
+    UNREFERENCED_PARAMETER(opts);
+
     QCC_BOOL ret = QCC_FALSE;
     if (sessionPort == SESSION_PORT) {
         ret = QCC_TRUE;
@@ -96,6 +109,9 @@ static QCC_BOOL AJ_CALL accept_session_joiner(const void* context, alljoyn_sessi
 
 static void AJ_CALL session_joined(const void* context, alljoyn_sessionport sessionPort,
                                    alljoyn_sessionid id, const char* joiner) {
+    UNREFERENCED_PARAMETER(context);
+    UNREFERENCED_PARAMETER(joiner);
+
     EXPECT_EQ(SESSION_PORT, sessionPort);
     joinsessionid = id;
     session_joined_flag = QCC_TRUE;
@@ -103,16 +119,26 @@ static void AJ_CALL session_joined(const void* context, alljoyn_sessionport sess
 
 /* bus listener functions */
 static void AJ_CALL found_advertised_name(const void* context, const char* name, alljoyn_transportmask transport, const char* namePrefix) {
+    UNREFERENCED_PARAMETER(context);
+    UNREFERENCED_PARAMETER(name);
+    UNREFERENCED_PARAMETER(namePrefix);
+
     transport_found |= transport;
     found_advertised_name_flag = QCC_TRUE;
 }
 static void AJ_CALL lost_advertised_name(const void* context, const char* name, alljoyn_transportmask transport, const char* namePrefix) {
+    UNREFERENCED_PARAMETER(context);
+    UNREFERENCED_PARAMETER(name);
+    UNREFERENCED_PARAMETER(transport);
+    UNREFERENCED_PARAMETER(namePrefix);
     lost_advertised_name_flag = QCC_TRUE;
 }
 
 /* Exposed methods */
 static void AJ_CALL ping_method(alljoyn_busobject bus, const alljoyn_interfacedescription_member* member, alljoyn_message msg)
 {
+    UNREFERENCED_PARAMETER(member);
+
     alljoyn_msgarg outArg = alljoyn_msgarg_create();
     outArg = alljoyn_message_getarg(msg, 0);
     const char* str;
@@ -455,11 +481,17 @@ void resetServicSessionListenerFlags() {
 
 /* service session listener functions */
 static void AJ_CALL service_session_lost(const void* context, alljoyn_sessionid sessionId, alljoyn_sessionlostreason reason) {
+    UNREFERENCED_PARAMETER(context);
+    UNREFERENCED_PARAMETER(sessionId);
+
     service_sessionlostreason = reason;
     service_session_lost_flag = QCC_TRUE;
 }
 
 static void AJ_CALL service_session_member_added(const void* context, alljoyn_sessionid sessionid, const char* uniqueName) {
+    UNREFERENCED_PARAMETER(context);
+    UNREFERENCED_PARAMETER(sessionid);
+
     int uniqueNameSize = strlen(uniqueName);
     if (service_member_added_uniquename != NULL) {
         free(service_member_added_uniquename);
@@ -472,6 +504,9 @@ static void AJ_CALL service_session_member_added(const void* context, alljoyn_se
 }
 
 static void AJ_CALL service_session_member_removed(const void* context, alljoyn_sessionid sessionId, const char* uniqueName) {
+    UNREFERENCED_PARAMETER(context);
+    UNREFERENCED_PARAMETER(sessionId);
+
     int uniqueNameSize = strlen(uniqueName);
     if (service_member_removed_uniquename != NULL) {
         free(service_member_removed_uniquename);

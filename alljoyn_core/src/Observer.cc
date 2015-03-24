@@ -80,6 +80,7 @@ bool ObjectId::IsValid() const {
 
 class Observer::Internal : public CoreObserver {
   private:
+    Observer::Internal operator=(const Observer::Internal&) { return *this; };
     BusAttachment& bus;
     Observer* observer;
 

@@ -82,6 +82,8 @@ class TestObject : public BusObject {
     virtual ~TestObject() { }
 
     void HandleIdentify(const InterfaceDescription::Member* member, Message& message) {
+        UNREFERENCED_PARAMETER(member);
+
         MsgArg args[2] = { MsgArg("s", busname.c_str()), MsgArg("s", path.c_str()) };
         EXPECT_EQ(ER_OK, MethodReply(message, args, 2)) << "Method reply failed";
     }
@@ -217,10 +219,15 @@ class Participant : public SessionPortListener, public SessionListener {
     }
 
     virtual bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) {
+        UNREFERENCED_PARAMETER(sessionPort);
+        UNREFERENCED_PARAMETER(joiner);
+        UNREFERENCED_PARAMETER(opts);
         return acceptSessions;
     }
 
     virtual void SessionJoined(SessionPort sessionPort, SessionId id, const char* joiner) {
+        UNREFERENCED_PARAMETER(sessionPort);
+
         hsmLock.Lock(MUTEX_CONTEXT);
         hostedSessionMap[joiner] = id;
         bus.SetHostedSessionListener(id, this);
@@ -228,6 +235,7 @@ class Participant : public SessionPortListener, public SessionListener {
     }
 
     virtual void SessionLost(SessionId sessionId, SessionLostReason reason) {
+        UNREFERENCED_PARAMETER(reason);
         /* we only set a session listener on the hosted sessions */
         hsmLock.Lock(MUTEX_CONTEXT);
         SessionMap::iterator iter = hostedSessionMap.begin();

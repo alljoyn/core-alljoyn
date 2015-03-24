@@ -49,16 +49,26 @@ using namespace ajn;
 
 class MyAuthListener : public AuthListener {
     bool RequestCredentials(const char* authMechanism, const char* authPeer, uint16_t authCount, const char* userId, uint16_t credMask, Credentials& creds) {
+        UNREFERENCED_PARAMETER(authMechanism);
+        UNREFERENCED_PARAMETER(authPeer);
+        UNREFERENCED_PARAMETER(authCount);
+        UNREFERENCED_PARAMETER(userId);
+        UNREFERENCED_PARAMETER(credMask);
+
         creds.SetPassword("123456");
         return true;
     }
     void AuthenticationComplete(const char* authMechanism, const char* authPeer, bool success) {
+        UNREFERENCED_PARAMETER(authPeer);
         printf("Authentication %s %s\n", authMechanism, success ? "succesful" : "failed");
     }
 };
 
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
+    UNREFERENCED_PARAMETER(argc);
+    UNREFERENCED_PARAMETER(argv);
+
     if (AllJoynInit() != ER_OK) {
         return 1;
     }

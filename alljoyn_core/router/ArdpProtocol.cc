@@ -373,7 +373,7 @@ static void DumpBitMask(ArdpConnRecord* conn, uint32_t* msk, uint16_t sz, bool c
 }
 #endif // NDEBUG
 
-#if !defined(NDEBUG) || defined(QCC_OS_GROUP_WINDOWS)
+#if !defined(NDEBUG)
 static const char* State2Text(ArdpState state)
 {
     switch (state) {
@@ -623,6 +623,7 @@ static uint32_t CheckTimers(ArdpHandle* handle)
 
 static void DelConnRecord(ArdpHandle* handle, ArdpConnRecord* conn, bool forced)
 {
+    UNREFERENCED_PARAMETER(handle);
     QCC_DbgTrace(("DelConnRecord(handle=%p conn=%p forced=%s state=%s)",
                   handle, conn, forced ? "true" : "false", State2Text(conn->state)));
 
@@ -710,6 +711,8 @@ static void FlushSendQueue(ArdpHandle* handle, ArdpConnRecord* conn, QStatus sta
 
 static bool IsRcvQueueEmpty(ArdpHandle* handle, ArdpConnRecord* conn)
 {
+    UNREFERENCED_PARAMETER(handle);
+
     for (uint32_t i = 0; i < conn->rcv.SEGMAX; i++) {
         if (conn->rcv.buf[i].flags & ARDP_BUFFER_DELIVERED) {
             return false;
@@ -898,6 +901,8 @@ static void DisconnectTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, voi
 
 static void ConnectTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, void* context)
 {
+    UNREFERENCED_PARAMETER(context);
+
     QCC_DbgTrace(("ConnectTimerHandler: handle=%p conn=%p", handle, conn));
     QStatus status = ER_FAIL;
     ArdpTimer* timer = &conn->connectTimer;
@@ -943,6 +948,8 @@ static void ConnectTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, void* 
 
 static void AckTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, void* context)
 {
+    UNREFERENCED_PARAMETER(context);
+
 #if ARDP_TC_SUPPORT
     QStatus status = Send(handle, conn, ARDP_FLAG_ACK | ARDP_FLAG_VER, (conn->modeSimple) ? conn->snd.thinNXT : conn->snd.NXT, conn->rcv.CUR);
 #else
@@ -956,6 +963,8 @@ static void AckTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, void* cont
 
 static void ExpireMessageSnd(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf* sBuf, uint32_t msElapsed)
 {
+    UNREFERENCED_PARAMETER(msElapsed);
+
     ArdpHeader* h = (ArdpHeader*) sBuf->hdr;
     uint32_t som = ntohl(h->som);
     uint16_t fcnt = ntohs(h->fcnt);
@@ -1171,6 +1180,8 @@ static void AdjustRTT(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf* sBuf
 
 inline static uint32_t GetRTO(ArdpHandle* handle, ArdpConnRecord* conn)
 {
+    UNREFERENCED_PARAMETER(handle);
+
     /* RTO = (rttMean + (4 * rttMeanVar)) << backoff */
     uint32_t ms = (MAX((uint32_t)ARDP_MIN_RTO, conn->rttMean + (4 * conn->rttMeanVar))) << conn->backoff;
     if (ms < conn->snd.DACKT) {
@@ -1287,6 +1298,7 @@ static inline bool IsDataRetransmitScheduled(ArdpConnRecord* conn)
 
 static void PersistTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, void* context)
 {
+    UNREFERENCED_PARAMETER(context);
     ArdpTimer* timer = &conn->persistTimer;
     QStatus status;
 
@@ -1662,6 +1674,7 @@ static QStatus InitConnRecord(ArdpHandle* handle, ArdpConnRecord* conn, qcc::Soc
 
 static void ProtocolDemux(uint8_t* buf, uint16_t len, uint16_t* local, uint16_t* foreign)
 {
+    UNREFERENCED_PARAMETER(len);
     QCC_DbgTrace(("ProtocolDemux(buf=%p, len=%d, local*=%p, foreign*=%p)", buf, len, local, foreign));
     *local = ntohs(*reinterpret_cast<uint16_t*>(buf + DST_OFFSET));
     *foreign = ntohs(*reinterpret_cast<uint16_t*>(buf + SRC_OFFSET));
@@ -1839,6 +1852,7 @@ static QStatus SendData(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, 
 
 static QStatus DoSendSyn(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint16_t len)
 {
+    UNREFERENCED_PARAMETER(buf);
     ArdpSynHeader hSyn;
     qcc::ScatterGatherList msgSG;
     uint32_t buf32[(ARDP_SYN_HEADER_SIZE + 3) >> 2];
@@ -2030,6 +2044,7 @@ static QStatus UpdateSndSegments(ArdpHandle* handle, ArdpConnRecord* conn, uint3
 
 static void FastRetransmit(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf* sBuf)
 {
+    UNREFERENCED_PARAMETER(conn);
     /*
      * Fast retransmit to fill the gap. Schedule only for those segments that haven't been
      * tried for retransmission yet.
@@ -2047,7 +2062,7 @@ static void CancelEackedSegments(ArdpHandle* handle, ArdpConnRecord* conn, uint3
     uint32_t start = ack + 1;
     uint32_t index =  start % conn->snd.SEGMAX;
     ArdpSndBuf* sBuf = &conn->snd.buf[index];
-    uint32_t bitCheck = 1 << 31;
+    uint32_t bitCheck = (uint32_t)(1 << 31);
 
 #ifndef NDEBUG
     DumpBitMask(conn, bitMask, conn->remoteMskSz, true);
@@ -2250,8 +2265,8 @@ static void AdvanceRcvQueue(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf
     bool isExpiring = false;
     ArdpRcvBuf* startFrag;
     ArdpRcvBuf* fragment;
-    uint32_t startSeq;
-    uint16_t fcnt;
+    uint32_t startSeq = 0;
+    uint16_t fcnt = 0;
     uint16_t count;
 
     do {
@@ -2422,6 +2437,7 @@ static void FlushExpiredRcvMessages(ArdpHandle* handle, ArdpConnRecord* conn, ui
 
 static QStatus AddRcvBuffer(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, uint8_t* buf, uint16_t len, bool ordered)
 {
+    UNREFERENCED_PARAMETER(len);
     uint16_t index = seg->SEQ % conn->rcv.SEGMAX;
     ArdpRcvBuf* current = &conn->rcv.buf[index];
 
