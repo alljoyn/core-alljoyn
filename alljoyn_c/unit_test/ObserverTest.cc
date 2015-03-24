@@ -70,7 +70,10 @@ class TestObject : public BusObject {
         vector<qcc::String>::iterator it;
         for (it = interfaces.begin(); it != interfaces.end(); ++it) {
             const InterfaceDescription* intf = bus.GetInterface(it->c_str());
-            EXPECT_TRUE(intf != NULL);
+            EXPECT_TRUE(intf != NULL) << "failed to get interface " << it->c_str();
+            if (intf == NULL) {
+                continue;
+            }
             AddInterface(*intf, ANNOUNCED);
 
             QStatus status = AddMethodHandler(intf->GetMember(METHOD),
@@ -566,16 +569,16 @@ void ObserverTest::SimpleScenario(Participant& provider, Participant& consumer)
 
     /* test Observer::Get() and the proxy creation functionality */
     alljoyn_proxybusobject_ref proxyref = alljoyn_observer_get(obsA, provider.uniqueBusName.c_str(), PATH_PREFIX "justA");
-    EXPECT_TRUE(proxyref != NULL);
+    ASSERT_TRUE(proxyref != NULL);
     alljoyn_proxybusobject proxy = alljoyn_proxybusobject_ref_get(proxyref);
-    EXPECT_TRUE(proxy != NULL);
+    ASSERT_TRUE(proxy != NULL);
     EXPECT_EQ((size_t)2, alljoyn_proxybusobject_getinterfaces(proxy, NULL, 0)); // always one more than expected because of org.freedesktop.DBus.Peer
     alljoyn_proxybusobject_ref_decref(proxyref);
 
     proxyref = alljoyn_observer_get(obsA, provider.uniqueBusName.c_str(), PATH_PREFIX "both");
-    EXPECT_TRUE(proxyref != NULL);
+    ASSERT_TRUE(proxyref != NULL);
     proxy = alljoyn_proxybusobject_ref_get(proxyref);
-    EXPECT_TRUE(proxy != NULL);
+    ASSERT_TRUE(proxy != NULL);
     EXPECT_EQ((size_t)3, alljoyn_proxybusobject_getinterfaces(proxy, NULL, 0));
     /* verify that we can indeed perform method calls */
     alljoyn_message reply = alljoyn_message_create(consumer.cbus);
