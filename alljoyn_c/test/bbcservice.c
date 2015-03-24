@@ -24,6 +24,7 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include <alljoyn_c/Init.h>
 #include <alljoyn_c/DBusStdDefines.h>
 #include <alljoyn_c/BusAttachment.h>
 #include <alljoyn_c/version.h>
@@ -48,7 +49,6 @@ static alljoyn_busobject g_testObj = NULL;
 static alljoyn_sessionopts g_sessionOpts = NULL;
 static char* g_wellKnownName = NULL;;
 static QCC_BOOL g_echo_signal = QCC_FALSE;
-static QCC_BOOL g_compress = QCC_FALSE;
 static uint32_t g_keyExpiration = 0xFFFFFFFF;
 static QCC_BOOL g_cancelAdvertise = QCC_FALSE;
 static QCC_BOOL g_ping_back = QCC_FALSE;
@@ -415,16 +415,11 @@ void AJ_CALL signal_handler(const alljoyn_interfacedescription_member* member, c
 
     if (g_echo_signal) {
         alljoyn_msgarg arg;
-        uint8_t flags = 0;
         alljoyn_interfacedescription intf = NULL;
         alljoyn_interfacedescription_member my_signal_member;
         QCC_BOOL foundMember = QCC_FALSE;
 
         arg = alljoyn_msgarg_create_and_set("a{ys}", 0);
-
-        if (g_compress) {
-            flags |= ALLJOYN_MESSAGE_FLAG_COMPRESSED;
-        }
 
         intf = alljoyn_busattachment_getinterface(g_msgBus, alljoyn_message_getinterface(msg));
         if (intf != NULL) {
@@ -652,7 +647,7 @@ QStatus AJ_CALL bus_object_init() {
 
 void usage(void)
 {
-    printf("Usage: bbcservice [-h <name>] [-m] [-e] [-x] [-i #] [-n <name>] [-b] [-t] [-r] [-l]\n\n");
+    printf("Usage: bbcservice [-h <name>] [-m] [-e] [-i #] [-n <name>] [-b] [-t] [-r] [-l]\n\n");
     printf("Options:\n");
     printf("   -h                    = Print this help message\n");
     printf("   -?                    = Print this help message\n");
@@ -660,7 +655,6 @@ void usage(void)
     printf("   -kx #                 = Authentication key expiration (seconds)\n");
     printf("   -m                    = Session is a multi-point session\n");
     printf("   -e                    = Echo received signals back to sender\n");
-    printf("   -x                    = Compress signals echoed back to sender\n");
     printf("   -i #                  = Signal report interval (number of signals rx per update; default = 1000)\n");
     printf("   -n <well-known name>  = Well-known name to advertise\n");
     printf("   -t                    = Advertise over TCP (enables selective advertising)\n");
@@ -711,6 +705,16 @@ int main(int argc, char** argv)
 
     alljoyn_authlistener authListener;
 
+    if (alljoyn_init() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (alljoyn_routerinit() != ER_OK) {
+        alljoyn_shutdown();
+        return 1;
+    }
+#endif
+
     printf("AllJoyn Library version: %s\n", alljoyn_getversion());
     printf("AllJoyn Library build info: %s\n", alljoyn_getbuildinfo());
 
@@ -740,8 +744,6 @@ int main(int argc, char** argv)
                 exit(1);
             }
             g_echo_signal = QCC_TRUE;;
-        } else if (0 == strcmp("-x", argv[i])) {
-            g_compress = QCC_TRUE;
         } else if (0 == strcmp("-i", argv[i])) {
             ++i;
             if (i == argc) {
@@ -928,6 +930,10 @@ int main(int argc, char** argv)
     alljoyn_sessionlistener_destroy(g_sessionListener);
     alljoyn_busattachment_destroy(g_msgBus);
 
+#ifdef ROUTER
+    alljoyn_routershutdown();
+#endif
+    alljoyn_shutdown();
     return 0;
 }
 

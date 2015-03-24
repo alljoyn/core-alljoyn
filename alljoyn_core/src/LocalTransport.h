@@ -44,7 +44,6 @@
 #include <alljoyn/Status.h>
 
 #include "BusEndpoint.h"
-#include "CompressionRules.h"
 #include "MethodTable.h"
 #include "SignalTable.h"
 #include "Transport.h"
@@ -76,7 +75,7 @@ class _LocalEndpoint : public _BusEndpoint, public qcc::AlarmListener, public Me
     /**
      * Default constructor initializes an invalid endpoint. This allows for the declaration of uninitialized LocalEndpoint variables.
      */
-    _LocalEndpoint() : dispatcher(NULL), deferredCallbacks(NULL), cachedPropertyCallbacks(NULL), bus(NULL), replyTimer("replyTimer", true) { }
+    _LocalEndpoint() : dispatcher(NULL), deferredCallbacks(NULL), observerCallbacks(NULL), cachedPropertyCallbacks(NULL), bus(NULL), replyTimer("replyTimer", true) { }
 
     /**
      * Constructor
@@ -387,6 +386,16 @@ class _LocalEndpoint : public _BusEndpoint, public qcc::AlarmListener, public Me
     bool IsReentrantCall();
 
     /**
+     * Notify ObserverManager that there is some work to do.
+     */
+    void TriggerObserverWork();
+
+    /**
+     * Cancel any outstanding TriggerObserverWork alarms (during ObserverManager shutdown).
+     */
+    void DiscardObserverWork();
+
+    /**
      * Schedule a GetPropertyAsync reply for a cached property.
      */
     void ScheduleCachedGetPropertyReply(ProxyBusObject* proxy,
@@ -409,6 +418,12 @@ class _LocalEndpoint : public _BusEndpoint, public qcc::AlarmListener, public Me
      */
     class DeferredCallbacks;
     DeferredCallbacks* deferredCallbacks;
+
+    /**
+     * Trigger the ObserverManager to process pending work on its work queue.
+     */
+    class ObserverCallbacks;
+    ObserverCallbacks* observerCallbacks;
 
     /**
      * Perform a GetPropertyAsync reply callback for a cached property.

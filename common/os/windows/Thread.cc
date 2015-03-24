@@ -54,8 +54,8 @@ static const uint32_t MAX_SELECT_WAIT_MS = 10000;
 Mutex* Thread::threadListLock = NULL;
 map<ThreadHandle, Thread*>* Thread::threadList = NULL;
 
-static int threadListCounter = 0;
 static DWORD cleanExternalThreadKey;
+static bool initialized = false;
 
 void Thread::CleanExternalThread(void* t)
 {
@@ -75,28 +75,34 @@ void Thread::CleanExternalThread(void* t)
     threadListLock->Unlock();
 }
 
-ThreadListInit::ThreadListInit()
+QStatus Thread::Init()
 {
-    if (0 == threadListCounter++) {
+    if (!initialized) {
         Thread::threadListLock = new Mutex();
         Thread::threadList = new map<ThreadHandle, Thread*>();
         cleanExternalThreadKey = FlsAlloc(Thread::CleanExternalThread);
         if (cleanExternalThreadKey == FLS_OUT_OF_INDEXES) {
             QCC_LogError(ER_OS_ERROR, ("Creating TLS key: %d", GetLastError()));
+            delete threadList;
+            delete threadListLock;
+            return ER_OS_ERROR;
         }
-        assert(cleanExternalThreadKey != FLS_OUT_OF_INDEXES);
+        initialized = true;
     }
+    return ER_OK;
 }
 
-ThreadListInit::~ThreadListInit()
+QStatus Thread::Shutdown()
 {
-    if (0 == --threadListCounter) {
+    if (initialized) {
         // Note that FlsFree will call the callback function for all
         // fibers with a valid key in the Fls slot.
         FlsFree(cleanExternalThreadKey);
         delete Thread::threadList;
         delete Thread::threadListLock;
+        initialized = false;
     }
+    return ER_OK;
 }
 
 QStatus Sleep(uint32_t ms) {

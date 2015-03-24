@@ -19,6 +19,7 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
+#include <algorithm>
 #include <qcc/platform.h>
 #include <qcc/IPAddress.h>
 #include <qcc/Socket.h>
@@ -5018,8 +5019,10 @@ QStatus UDPTransport::Start()
     IpNameService::Instance().SetNetworkEventCallback(TRANSPORT_UDP,
                                                       new CallbackImpl<NetworkEventCallback, void, const std::map<qcc::String, qcc::IPAddress>&>
                                                           (&m_networkEventCallback, &NetworkEventCallback::Handler));
-
-    IpNameService::Instance().UpdateDynamicScore(TRANSPORT_UDP, (m_maxConn -  m_currConn), m_maxConn, (m_maxRemoteClientsUdp - m_numUntrustedClients), m_maxRemoteClientsUdp);
+    uint32_t availConn = m_maxConn -  m_currConn;
+    uint32_t availRemoteClientsUdp = m_maxRemoteClientsUdp - m_numUntrustedClients;
+    availRemoteClientsUdp = std::min(availRemoteClientsUdp, availConn);
+    IpNameService::Instance().UpdateDynamicScore(TRANSPORT_UDP, availConn, m_maxConn, availRemoteClientsUdp, m_maxRemoteClientsUdp);
     QCC_DbgPrintf(("UDPTransport::Start(): Spin up message dispatcher thread"));
     m_dispatcher = new DispatcherThread(this);
     QStatus status = m_dispatcher->Start(NULL, NULL);
@@ -8759,7 +8762,7 @@ void UDPTransport::StartListenInstance(ListenRequest& listenRequest)
     } else {
         m_maxRemoteClientsUdp = maxRemoteClients;
     }
-
+    m_maxRemoteClientsUdp = std::min(m_maxRemoteClientsUdp, (int32_t) m_maxConn);
 
 #if ADVERTISE_ROUTER_OVER_UDP
     m_routerName = config->GetProperty("router_advertisement_prefix", ALLJOYN_DEFAULT_ROUTER_ADVERTISEMENT_PREFIX);
@@ -9168,8 +9171,10 @@ bool UDPTransport::DisableRouterAdvertisement() {
 
 void UDPTransport::UpdateDynamicScoreInstance(ListenRequest& listenRequest)
 {
-    IpNameService::Instance().UpdateDynamicScore(TRANSPORT_UDP, (m_maxConn -  m_currConn), m_maxConn,
-                                                 (m_maxRemoteClientsUdp - m_numUntrustedClients), m_maxRemoteClientsUdp);
+    uint32_t availConn = m_maxConn -  m_currConn;
+    uint32_t availRemoteClientsUdp = m_maxRemoteClientsUdp - m_numUntrustedClients;
+    availRemoteClientsUdp = std::min(availRemoteClientsUdp, availConn);
+    IpNameService::Instance().UpdateDynamicScore(TRANSPORT_UDP, availConn, m_maxConn, availRemoteClientsUdp, m_maxRemoteClientsUdp);
 }
 
 /*
@@ -10382,25 +10387,21 @@ void UDPTransport::UntrustedClientExit()
 {
     QCC_DbgTrace((" UDPTransport::UntrustedClientExit()"));
 
-    m_dynamicScoreUpdater.Alert();
-
 #if ADVERTISE_ROUTER_OVER_UDP
     /* An untrusted client has exited, update the counts and re-enable the advertisement if necessary. */
     m_listenRequestsLock.Lock();
-    m_numUntrustedClients--;
-    QCC_DbgPrintf((" UDPTransport::UntrustedClientExit() m_numUntrustedClients=%d m_maxRemoteClientsUdp=%d", m_numUntrustedClients, m_maxRemoteClientsUdp));
-    if (!m_routerName.empty() && (m_numUntrustedClients == (m_maxRemoteClientsUdp - 1))) {
-        EnableAdvertisement(m_routerName, true, TRANSPORT_UDP);
+    if (m_numUntrustedClients >= 0) {
+        m_numUntrustedClients--;
+        QCC_DbgPrintf((" UDPTransport::UntrustedClientExit() m_numUntrustedClients=%d m_maxRemoteClientsUdp=%d", m_numUntrustedClients, m_maxRemoteClientsUdp));
     }
-    UpdateDynamicScore();
     m_listenRequestsLock.Unlock();
+    m_dynamicScoreUpdater.Alert();
 #endif
 }
 
 QStatus UDPTransport::UntrustedClientStart()
 {
     QCC_DbgTrace((" UDPTransport::UntrustedClientStart()"));
-    m_dynamicScoreUpdater.Alert();
 
 #if ADVERTISE_ROUTER_OVER_UDP
     QStatus status = ER_OK;
@@ -10419,17 +10420,8 @@ QStatus UDPTransport::UntrustedClientStart()
         status = ER_BUS_NOT_ALLOWED;
         m_numUntrustedClients--;
     }
-    if (m_numUntrustedClients >= m_maxRemoteClientsUdp) {
-        if (m_numUntrustedClients == m_maxRemoteClientsUdp) {
-            QCC_DbgPrintf(("UDPTransport::UntrustedClientStart(): Last available slot is now filled - no more free slots"));
-        } else {
-            QCC_LogError(ER_BUS_NOT_ALLOWED, ("UDPTransport::UntrustedClientStart(): Disabling routing node advertisements"));
-        }
-        DisableAdvertisement(m_routerName, TRANSPORT_UDP);
-    }
-
-    UpdateDynamicScore();
     m_listenRequestsLock.Unlock();
+    m_dynamicScoreUpdater.Alert();
     return status;
 #else
     return ER_UDP_NOT_IMPLEMENTED;
@@ -10906,7 +10898,7 @@ void UDPTransport::UpdateRouterAdvertisementAndDynamicScore()
      * our Stop() method.
      */
     if (IsRunning() == false || m_stopping == true) {
-        QCC_LogError(ER_BUS_TRANSPORT_NOT_STARTED, ("UDPTransport::UpdateRouterAdvertisementAndDynamicScore(): Not running or stopping; exiting"));
+        QCC_DbgPrintf(("UDPTransport::UpdateRouterAdvertisementAndDynamicScore(): Not running or stopping; exiting"));
         return;
     }
 
@@ -11352,7 +11344,10 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
             QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Advertise m_routerName=\"%s\"", m_routerName.c_str()));
             bool isFirst;
             NewAdvertiseOp(ENABLE_ADVERTISEMENT, m_routerName, isFirst);
-            IpNameService::Instance().UpdateDynamicScore(TRANSPORT_UDP, (m_maxConn - m_currConn), m_maxConn, (m_maxRemoteClientsUdp - m_numUntrustedClients), m_maxRemoteClientsUdp);
+            uint32_t availConn = m_maxConn -  m_currConn;
+            uint32_t availRemoteClientsUdp = m_maxRemoteClientsUdp - m_numUntrustedClients;
+            availRemoteClientsUdp = std::min(availRemoteClientsUdp, availConn);
+            IpNameService::Instance().UpdateDynamicScore(TRANSPORT_UDP, availConn, m_maxConn, availRemoteClientsUdp, m_maxRemoteClientsUdp);
             m_routerNameAdvertised = true;
             QStatus status = IpNameService::Instance().AdvertiseName(TRANSPORT_UDP, m_routerName, true, TRANSPORT_UDP);
             if (status != ER_OK) {

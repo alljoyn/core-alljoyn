@@ -18,6 +18,7 @@
  *    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
+#ifndef NDEBUG
 #include "ns/IpNameServiceImpl.h"
 
 /* Header files included for Google Test Framework */
@@ -102,3 +103,4 @@ INSTANTIATE_TEST_CASE_P(DiscoveryDynamicDeath, DiscoveryDynamicDeathTest,
                         testing::Values(DynamicParams(17, 16, 2, 16, 2, 8),
                                         DynamicParams(2, 16, 17, 16, 2, 8),
                                         DynamicParams(2, 16, 2, 16, 9, 8)));
+#endif

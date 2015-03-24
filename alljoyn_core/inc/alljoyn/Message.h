@@ -51,19 +51,23 @@ static const uint8_t ALLJOYN_BIG_ENDIAN    = 'B';
 /** @name Flag types */
 // @{
 /** No reply is expected*/
-static const uint8_t ALLJOYN_FLAG_NO_REPLY_EXPECTED  = 0x01;
+static const uint8_t ALLJOYN_FLAG_NO_REPLY_EXPECTED          = 0x01;
 /** Auto start the service */
-static const uint8_t ALLJOYN_FLAG_AUTO_START         = 0x02;
+static const uint8_t ALLJOYN_FLAG_AUTO_START                 = 0x02;
 /** Allow messages from remote hosts (valid only in Hello message) */
-static const uint8_t ALLJOYN_FLAG_ALLOW_REMOTE_MSG   = 0x04;
+static const uint8_t ALLJOYN_FLAG_ALLOW_REMOTE_MSG           = 0x04;
 /** Sessionless message  */
-static const uint8_t ALLJOYN_FLAG_SESSIONLESS        = 0x10;
+static const uint8_t ALLJOYN_FLAG_SESSIONLESS                = 0x10;
 /** Global (bus-to-bus) broadcast */
-static const uint8_t ALLJOYN_FLAG_GLOBAL_BROADCAST   = 0x20;
-/** Header is compressed */
-static const uint8_t ALLJOYN_FLAG_COMPRESSED         = 0x40;
+static const uint8_t ALLJOYN_FLAG_GLOBAL_BROADCAST           = 0x20;
+/**
+ * Header is compressed
+ *
+ * @deprecated March 2015 for 15.04 release
+ */
+QCC_DEPRECATED(static const uint8_t ALLJOYN_FLAG_COMPRESSED) = 0x40;
 /** Body is encrypted */
-static const uint8_t ALLJOYN_FLAG_ENCRYPTED          = 0x80;
+static const uint8_t ALLJOYN_FLAG_ENCRYPTED                  = 0x80;
 // @}
 
 /** ALLJOYN protocol version */
@@ -97,7 +101,7 @@ typedef enum {
     /* AllJoyn defined header field types */
     ALLJOYN_HDR_FIELD_TIMESTAMP,                ///< time stamp header field type
     ALLJOYN_HDR_FIELD_TIME_TO_LIVE,             ///< messages time-to-live header field type
-    ALLJOYN_HDR_FIELD_COMPRESSION_TOKEN,        ///< message compression token header field type
+    ALLJOYN_HDR_FIELD_COMPRESSION_TOKEN,        ///< message compression token header field type @deprecated
     ALLJOYN_HDR_FIELD_SESSION_ID,               ///< Session id field type
     ALLJOYN_HDR_FIELD_UNKNOWN                   ///< unknown header field type also used as maximum number of header field types.
 } AllJoynFieldType;
@@ -123,6 +127,8 @@ class HeaderFields {
 
     /**
      * Table to identify which header fields can be compressed.
+     *
+     * @deprecated March 2015 for 15.04 release
      */
     static const bool Compressible[ALLJOYN_HDR_FIELD_UNKNOWN + 1];
 
@@ -154,7 +160,6 @@ class HeaderFields {
 /**
  * Forward definition
  */
-class _CompressionRules;
 class _Message;
 class _RemoteEndpoint;
 class BusAttachment;
@@ -164,7 +169,6 @@ class PeerStateTable;
  * @cond ALLJOYN_DEV
  * @internal
  */
-typedef qcc::ManagedObj<_CompressionRules> CompressionRules;
 typedef qcc::ManagedObj<_RemoteEndpoint> RemoteEndpoint;
 /// @endcond
 /**
@@ -441,15 +445,13 @@ class _Message {
      * Accessor function to get the compression token for the message.
      *
      * @return
-     *      - Compression token for the message stored in the AllJoyn header field
      *      - 0 'zero' if there is no compression token.
+     *
+     * @deprecated Header compression was deprecated in March 2015 for 15.04
+     * release
      */
     uint32_t GetCompressionToken() const {
-        if (hdrFields.field[ALLJOYN_HDR_FIELD_COMPRESSION_TOKEN].typeId == ALLJOYN_UINT32) {
-            return hdrFields.field[ALLJOYN_HDR_FIELD_COMPRESSION_TOKEN].v_uint32;
-        } else {
-            return 0;
-        }
+        return 0;
     }
 
     /**
@@ -729,8 +731,7 @@ class _Message {
      * @param args        The method call argument list (can be NULL)
      * @param numArgs     The number of arguments
      * @param flags       A logical OR of the AllJoyn flags
-     * @param compressionRules header compression rules, used only if flags include
-     *                         ALLJOYN_FLAG_COMPRESSED
+     *
      * @return
      *      - #ER_OK if successful
      *      - An error status otherwise
@@ -744,8 +745,7 @@ class _Message {
                     const qcc::String& methodName,
                     const MsgArg* args,
                     size_t numArgs,
-                    uint8_t flags,
-                    CompressionRules& compressionRules);
+                    uint8_t flags);
 
     /**
      * @internal
@@ -793,8 +793,7 @@ class _Message {
      * @param flags       A logical OR of the AllJoyn flags.
      * @param timeToLive  Time-to-live. Units are seconds for sessionless signals. Milliseconds for non-sessionless signals.
      *                    Signals that cannot be sent within this time limit are discarded. Zero indicates reliable delivery.
-     * @param compressionRules header compression rules, used only if flags include
-     *                         ALLJOYN_FLAG_COMPRESSED
+     *
      * @return
      *      - #ER_OK if successful
      *      - An error status otherwise
@@ -809,8 +808,7 @@ class _Message {
                       const MsgArg* args,
                       size_t numArgs,
                       uint8_t flags,
-                      uint16_t timeToLive,
-                      CompressionRules& compressionRules);
+                      uint16_t timeToLive);
 
     /**
      * @internal
@@ -953,31 +951,6 @@ class _Message {
      * Message assignment is disallowed.
      */
     _Message operator=(const _Message& other);
-
-    /**
-     * Add the expansion rule described in the message args to the remote endpoint from which this message
-     * was received.
-     *
-     * @param token         The expansion token.
-     * @param expansionArg  The the list of arguments that describes the expansion.
-     *
-     * @return
-     *      - #ER_OK if the expansion rule was successfully parsed and added.
-     *      - An error status otherwise
-     */
-    QStatus AddExpansionRule(uint32_t token, const MsgArg* expansionArg);
-
-    /**
-     * Get a MsgArg that describes the header expansion of a given compression token.
-     *
-     * @param      token        The compression token.
-     * @param[out] expansionArg Returns a MsgArg that describes the expansion. The MsgArg has the
-     *                          signature "a(yv)".
-     *
-     * @return - #ER_OK if the expansion is available.
-     *         - #ER_BUS_CANNOT_EXPAND_MESSAGE if there is not expansion for the specified token.
-     */
-    QStatus GetExpansion(uint32_t token, MsgArg& expansionArg);
 
     /**
      * Compose the special hello method call required to establish a connection
@@ -1272,8 +1245,6 @@ class _Message {
      * @param numArgs     number of MsgArg
      * @param flags       A logical OR of the AllJoyn flags
      * @param sessionId   The session id that the Message will be sent to
-     * @param compressionRules header compression rules, used only if flags include
-     *                         ALLJOYN_FLAG_COMPRESSED
      *
      *  @return
      *    - #ER_OK if successful
@@ -1286,8 +1257,7 @@ class _Message {
                            const MsgArg* args,
                            uint8_t numArgs,
                            uint8_t flags,
-                           SessionId sessionId,
-                           CompressionRules& compressionRules);
+                           SessionId sessionId);
 
     /**
      * Marshal the MsgArg arguments into the message

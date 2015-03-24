@@ -1256,7 +1256,11 @@ interface Message {
     const octet ALLJOYN_FLAG_ALLOW_REMOTE_MSG = 0x04;
     /** Global (bus-to-bus) broadcast */
     const octet ALLJOYN_FLAG_GLOBAL_BROADCAST = 0x20;
-    /** Header is compressed */
+    /**
+     * Header is compressed 
+     *
+     * @deprecated March 2015 for 15.04 release
+     */
     const octet ALLJOYN_FLAG_COMPRESSED = 0x40;
     /** Body is encrypted */
     const octet ALLJOYN_FLAG_ENCRYPTED = 0x80;

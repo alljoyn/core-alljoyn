@@ -35,10 +35,11 @@
 #include <qcc/Util.h>
 
 #include <alljoyn/AboutObj.h>
+#include <alljoyn/AllJoynStd.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/BusObject.h>
 #include <alljoyn/DBusStd.h>
-#include <alljoyn/AllJoynStd.h>
+#include <alljoyn/Init.h>
 #include <alljoyn/MsgArg.h>
 #include <alljoyn/version.h>
 
@@ -73,7 +74,6 @@ static BusAttachment* g_msgBus = NULL;
 static MyBusListener* g_myBusListener = NULL;
 static String g_wellKnownName = ::org::alljoyn::alljoyn_test::DefaultWellKnownName;
 static bool g_echo_signal = false;
-static bool g_compress = false;
 static uint32_t g_keyExpiration = 0xFFFFFFFF;
 static bool g_cancelAdvertise = false;
 static bool g_ping_back = false;
@@ -618,9 +618,6 @@ class LocalTestObject : public BusObject {
         if (g_echo_signal) {
             MsgArg arg("a{ys}", 0, NULL);
             uint8_t flags = 0;
-            if (g_compress) {
-                flags |= ALLJOYN_FLAG_COMPRESSED;
-            }
             QStatus status = Signal(msg->GetSender(), msg->GetSessionId(), *member, &arg, 1, 0, flags);
             if (status != ER_OK) {
                 QCC_LogError(status, ("Failed to send Signal"));
@@ -776,7 +773,7 @@ Mutex LocalTestObject::DelayedResponse::delayedResponseThreadLock;
 
 static void usage(void)
 {
-    printf("Usage: bbservice [-h <name>] [-m] [-e] [-x] [-i #] [-n <name>] [-b] [-t] [-l]\n\n");
+    printf("Usage: bbservice [-h <name>] [-m] [-e] [-i #] [-n <name>] [-b] [-t] [-l]\n\n");
     printf("Options:\n");
     printf("   -h                    = Print this help message\n");
     printf("   -?                    = Print this help message\n");
@@ -784,7 +781,6 @@ static void usage(void)
     printf("   -kx #                 = Authentication key expiration (seconds)\n");
     printf("   -m                    = Session is a multi-point session\n");
     printf("   -e                    = Echo received signals back to sender\n");
-    printf("   -x                    = Compress signals echoed back to sender\n");
     printf("   -i #                  = Signal report interval (number of signals rx per update; default = 1000)\n");
     printf("   -n <well-known name>  = Well-known name to advertise\n");
     printf("   -t                    = Advertise over TCP (enables selective advertising)\n");
@@ -806,6 +802,15 @@ static void usage(void)
 /** Main entry point */
 int main(int argc, char** argv)
 {
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+#endif
     QStatus status = ER_OK;
     InterfaceSecurityPolicy secPolicy = AJ_IFC_SECURITY_INHERIT;
     bool objSecure = false;
@@ -840,8 +845,6 @@ int main(int argc, char** argv)
                 exit(1);
             }
             g_echo_signal = true;
-        } else if (0 == strcmp("-x", argv[i])) {
-            g_compress = true;
         } else if (0 == strcmp("-i", argv[i])) {
             ++i;
             if (i == argc) {
@@ -985,8 +988,8 @@ int main(int argc, char** argv)
     g_myBusListener = new MyBusListener(*g_msgBus, opts);
 
     /* Register local objects and connect to the daemon */
-    LocalTestObject testObj(*g_msgBus, ::org::alljoyn::alljoyn_test::ObjectPath, reportInterval, opts);
-    g_msgBus->RegisterBusObject(testObj, objSecure);
+    LocalTestObject* testObj = new LocalTestObject(*g_msgBus, ::org::alljoyn::alljoyn_test::ObjectPath, reportInterval, opts);
+    g_msgBus->RegisterBusObject(*testObj, objSecure);
 
     g_msgBus->EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA ALLJOYN_ECDHE_PSK ALLJOYN_RSA_KEYX ALLJOYN_SRP_KEYX ALLJOYN_SRP_LOGON ALLJOYN_ECDHE_NULL ALLJOYN_PIN_KEYX", new MyAuthListener(), keyStore, keyStore != NULL);
     /*
@@ -1018,14 +1021,19 @@ int main(int argc, char** argv)
         }
     }
 
-    g_msgBus->UnregisterBusObject(testObj);
+    g_msgBus->UnregisterBusObject(*testObj);
+    delete testObj;
 
-/* Clean up msg bus */
+    /* Clean up msg bus */
     delete g_msgBus;
     delete g_myBusListener;
 
     printf("Runtime elapsed: %u ms \n", (endTime - startTime));
     printf("%s exiting with status %d (%s)\n", argv[0], status, QCC_StatusText(status));
 
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return (int) status;
 }

@@ -42,8 +42,6 @@ alljoyn_objc/       Objective-C language binding for core AllJoyn functionality
 
     AllJoynCodeGenerator/                   Development aid
 
-    Unity/                                  Unity language binding
-
     samples/OSX/                            sample apps
     samples/iOS/
 

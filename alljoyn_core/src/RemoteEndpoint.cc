@@ -273,7 +273,7 @@ const _RemoteEndpoint::Features&  _RemoteEndpoint::GetFeatures() const
     }
 }
 
-QStatus _RemoteEndpoint::Establish(const qcc::String& authMechanisms, qcc::String& authUsed, qcc::String& redirection, AuthListener* listener)
+QStatus _RemoteEndpoint::Establish(const qcc::String& authMechanisms, qcc::String& authUsed, qcc::String& redirection, AuthListener* listener, uint32_t timeout)
 {
     QStatus status = ER_OK;
 
@@ -283,7 +283,7 @@ QStatus _RemoteEndpoint::Establish(const qcc::String& authMechanisms, qcc::Strin
         RemoteEndpoint rep = RemoteEndpoint::wrap(this);
         EndpointAuth auth(internal->bus, rep, internal->incoming);
 
-        status = auth.Establish(authMechanisms, authUsed, redirection, listener);
+        status = auth.Establish(authMechanisms, authUsed, redirection, listener, timeout);
         if (status == ER_OK) {
             internal->uniqueName = auth.GetUniqueName();
             internal->remoteName = auth.GetRemoteName();
@@ -760,12 +760,7 @@ QStatus _RemoteEndpoint::ReadCallback(qcc::Source& source, bool isTimedOut)
 
                 case ER_BUS_CANNOT_EXPAND_MESSAGE:
                     internal->idleTimeoutCount = 0;
-                    /*
-                     * The message could not be expanded so pass it the peer object to request the expansion
-                     * rule from the endpoint that sent it.
-                     */
-                    status = internal->bus.GetInternal().GetLocalEndpoint()->GetPeerObj()->RequestHeaderExpansion(msg, rep);
-                    if ((status != ER_OK) && router.IsDaemon()) {
+                    if (router.IsDaemon()) {
                         QCC_LogError(status, ("%s: Discarding %s", GetUniqueName().c_str(), msg->Description().c_str()));
                         status = ER_OK;
                     }

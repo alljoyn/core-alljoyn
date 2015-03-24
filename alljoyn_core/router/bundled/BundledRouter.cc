@@ -36,6 +36,7 @@
 
 #include <alljoyn/Status.h>
 
+#include "BundledRouter.h"
 #include "Bus.h"
 #include "BusController.h"
 #include "ConfigDB.h"
@@ -43,14 +44,12 @@
 #include "TCPTransport.h"
 #include "UDPTransport.h"
 
-#include "NullTransport.h"
-#include "PasswordManager.h"
-
 #define QCC_MODULE "ALLJOYN_ROUTER"
 
 using namespace qcc;
 using namespace std;
-using namespace ajn;
+
+namespace ajn {
 
 static const char bundledConfig[] =
     "<busconfig>"
@@ -66,10 +65,10 @@ static const char bundledConfig[] =
     "  <limit name=\"max_completed_connections\">16</limit>"
     "  <limit name=\"max_remote_clients_tcp\">8</limit>"
     "  <limit name=\"max_remote_clients_udp\">0</limit>"
-    "  <property name=\"router_power_source\">Always AC powered</property>"
-    "  <property name=\"router_mobility\">Always stationary</property>"
-    "  <property name=\"router_availability\">21-24 hr</property>"
-    "  <property name=\"router_node_connection\">Access Point</property>"
+    "  <property name=\"router_power_source\">Battery powered and chargeable</property>"
+    "  <property name=\"router_mobility\">Intermediate mobility</property>"
+    "  <property name=\"router_availability\">3-6 hr</property>"
+    "  <property name=\"router_node_connection\">Wireless</property>"
     "  <flag name=\"restrict_untrusted_clients\">false</flag>"
     "</busconfig>";
 
@@ -102,74 +101,32 @@ static const char bundledConfig[] =
  *
  */
 
-class ClientAuthListener : public AuthListener {
-  public:
+ClientAuthListener::ClientAuthListener()
+    : AuthListener(), maxAuth(2)
+{
+}
 
-    ClientAuthListener() : AuthListener(), maxAuth(2) { }
-
-  private:
-
-    bool RequestCredentials(const char* authMechanism, const char* authPeer, uint16_t authCount, const char* userId, uint16_t credMask, Credentials& creds) {
-
-        if (authCount > maxAuth) {
-            return false;
-        }
-
-        printf("RequestCredentials for authenticating %s using mechanism %s\n", authPeer, authMechanism);
-
-        if (strcmp(authMechanism, PasswordManager::GetAuthMechanism().c_str()) == 0) {
-            if (credMask & AuthListener::CRED_PASSWORD) {
-                creds.SetPassword(PasswordManager::GetPassword());
-            }
-            return true;
-        }
+bool ClientAuthListener::RequestCredentials(const char* authMechanism, const char* authPeer, uint16_t authCount, const char* userId, uint16_t credMask, Credentials& creds)
+{
+    if (authCount > maxAuth) {
         return false;
     }
 
-    void AuthenticationComplete(const char* authMechanism, const char* authPeer, bool success) {
-        QCC_DbgPrintf(("Authentication %s %s\n", authMechanism, success ? "succesful" : "failed"));
+    printf("RequestCredentials for authenticating %s using mechanism %s\n", authPeer, authMechanism);
+
+    if (strcmp(authMechanism, PasswordManager::GetAuthMechanism().c_str()) == 0) {
+        if (credMask & AuthListener::CRED_PASSWORD) {
+            creds.SetPassword(PasswordManager::GetPassword());
+        }
+        return true;
     }
+    return false;
+}
 
-    uint32_t maxAuth;
-};
-
-class BundledRouter : public RouterLauncher, public TransportFactoryContainer {
-
-  public:
-
-    BundledRouter();
-
-    ~BundledRouter();
-
-    /**
-     * Launch the bundled router
-     */
-    QStatus Start(NullTransport* nullTransport);
-
-    /**
-     * Terminate the bundled router
-     */
-    QStatus Stop(NullTransport* nullTransport);
-
-    /**
-     * Wait for bundled router to exit
-     */
-    void Join();
-
-  private:
-
-    bool transportsInitialized;
-    bool stopping;
-    Bus* ajBus;
-    BusController* ajBusController;
-    ClientAuthListener authListener;
-    Mutex lock;
-    std::set<NullTransport*> transports;
-    ConfigDB* config;
-#ifndef NDEBUG
-    qcc::String configFile;
-#endif
-};
+void ClientAuthListener::AuthenticationComplete(const char* authMechanism, const char* authPeer, bool success)
+{
+    QCC_DbgPrintf(("Authentication %s %s\n", authMechanism, success ? "succesful" : "failed"));
+}
 
 bool ExistFile(const char* fileName) {
     FILE* file = NULL;
@@ -188,18 +145,11 @@ bool ExistFile(const char* fileName) {
  *
  * How this works is via a fairly non-obvious mechanism, so we describe the
  * process here.  If it is desired to use the bundled router, the user (for
- * example bbclient or bbservice) includes this compilation unit.  Since the
- * following defines a C++ static initializer, an instance of the BundledRouter
- * object will be created before any call into a function in this file.  In
- * Linux, for example, this happens as a result of _init() being called before
- * the main() function of the program using the bundled router.  _init() loops
- * through the list of compilation units in link order and will eventually call
- * out to BundledRouter.cc:__static_initialization_and_destruction_0().  This is
- * the initializer function for this file which will then calls the constructor
- * for the BundledRouter object.  The constructor calls into a static method
- * (RegisterRouterLauncher) of the NullTransport to register itself as the
- * router to be launched.  This sets the stage for the use of the bundled
- * router.
+ * example bbclient or bbservice) calls BundledRouterInit().  This will then
+ * call the constructor for the BundledRouter object.  The constructor calls
+ * into a static method (RegisterRouterLauncher) of the NullTransport to
+ * register itself as the router to be launched.  This sets the stage for the
+ * use of the bundled router.
  *
  * When the program using the bundled router tries to connect to a bus
  * attachment it calls BusAttachment::Connect().  This tries to connect to an
@@ -216,22 +166,16 @@ bool ExistFile(const char* fileName) {
  * NullTransport pointer.  The Start() method brings up the bundled router and
  * links the routing node to the bus attachment using the provided null transport.
  *
- * So to summarize, one uses the bundled router simply by linking to the object
- * file corresponding to this source file.  This automagically creates a bundled
- * router static object and registers it with the null transport.  When trying
- * to connect to a router using a bus attachment in the usual way, if there is
- * no currently running native router process, the bus attachment will
- * automagically try to connect to a registered bundled router using the null
- * transport.  This will start the bundled router and then connect to it.
+ * So to summarize, one uses the bundled router simply by calling
+ * BundledRouterInit() This creates a bundled router object and registers it with
+ * the null transport.  When trying to connect to a router using a bus
+ * attachment in the usual way, if there is no currently running native router
+ * process, the bus attachment will automagically try to connect to a registered
+ * bundled router using the null transport.  This will start the bundled router
+ * and then connect to it.
  *
- * The client uses the bundled router transparently -- it only has to link to it.
- *
- * Stopping the bundled router happens in the destructor for the C++ static
- * global object, again transparently to the client.
- *
- * It's pretty magical.
+ * Stopping the bundled router happens in the BundledRouterShutdown().
  */
-static BundledRouter bundledRouter;
 
 BundledRouter::BundledRouter() : transportsInitialized(false), stopping(false), ajBus(NULL), ajBusController(NULL)
 {
@@ -407,3 +351,4 @@ QStatus BundledRouter::Stop(NullTransport* nullTransport)
     return status;
 }
 
+} // namespace ajn

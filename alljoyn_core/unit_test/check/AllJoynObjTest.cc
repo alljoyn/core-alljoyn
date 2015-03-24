@@ -86,11 +86,10 @@ class _JoinSessionMethodCall : public _Message {
         EXPECT_EQ(ER_OK, args[0].Set("s", host));
         EXPECT_EQ(ER_OK, args[1].Set("q", port));
         SetSessionOpts(opts, args[2]);
-        CompressionRules compressionRules;
         EXPECT_EQ(ER_OK, CallMsg(signature, joiner, org::alljoyn::Bus::WellKnownName, id,
                                  org::alljoyn::Bus::ObjectPath, org::alljoyn::Bus::InterfaceName, "JoinSession",
                                  args, 3,
-                                 0, compressionRules));
+                                 0));
         PeerStateTable peerStateTable;
         EXPECT_EQ(ER_OK, UnmarshalArgs(&peerStateTable, signature));
     }
@@ -155,7 +154,8 @@ class TestAllJoynObj : public AllJoynObj {
     }
     virtual QStatus SendAttachSession(SessionPort sessionPort, const char* src, const char* sessionHost, const char* dest,
                                       RemoteEndpoint& b2bEp, const char* remoteControllerName, SessionId outgoingSessionId,
-                                      const char* busAddr, const SessionOpts& optsIn, uint32_t& replyCode, SessionId& sessionId,
+                                      const char* busAddr, SessionOpts::NameTransferType nameTransfer,
+                                      CallerType type, const SessionOpts& optsIn, uint32_t& replyCode, SessionId& sessionId,
                                       SessionOpts& optsOut, MsgArg& members) {
         optsOut.transports = optsIn.transports;
         return ER_OK;
@@ -285,7 +285,8 @@ class TestAllJoynObjBadSessionOpts : public TestAllJoynObj {
     }
     virtual QStatus SendAttachSession(SessionPort sessionPort, const char* src, const char* sessionHost, const char* dest,
                                       RemoteEndpoint& b2bEp, const char* remoteControllerName, SessionId outgoingSessionId,
-                                      const char* busAddr, const SessionOpts& optsIn, uint32_t& replyCode, SessionId& sessionId,
+                                      const char* busAddr, SessionOpts::NameTransferType nameTransfer,
+                                      CallerType type, const SessionOpts& optsIn, uint32_t& replyCode, SessionId& sessionId,
                                       SessionOpts& optsOut, MsgArg& members) {
         if (optsIn.transports == TRANSPORT_UDP) {
             replyCode = ALLJOYN_JOINSESSION_REPLY_BAD_SESSION_OPTS;

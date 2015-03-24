@@ -32,10 +32,11 @@
 #include <qcc/Util.h>
 #include <qcc/Thread.h>
 
+#include <alljoyn/AllJoynStd.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/BusObject.h>
 #include <alljoyn/DBusStd.h>
-#include <alljoyn/AllJoynStd.h>
+#include <alljoyn/Init.h>
 #include <alljoyn/version.h>
 
 #include <alljoyn/Status.h>
@@ -69,12 +70,11 @@ const SessionPort SessionPort = 24;   /**< Well-known session port value for bbs
 static BusAttachment* g_msgBus = NULL;
 static String g_wellKnownName = ::org::alljoyn::alljoyn_test::DefaultWellKnownName;
 static String g_advertiseName = ::org::alljoyn::alljoyn_test::DefaultAdvertiseName;
-static Event g_discoverEvent;
+static Event* g_discoverEvent = NULL;
 static bool g_selfjoin;
 
 static TransportMask g_preferredTransport = 0;
 
-static bool compress = false;
 static bool encryption = false;
 static bool broacast = false;
 static unsigned long timeToLive = 0;
@@ -109,7 +109,7 @@ class MyBusListener : public BusListener, public SessionListener {
                     }
                 }
                 /* Release main thread */
-                g_discoverEvent.SetEvent();
+                g_discoverEvent->SetEvent();
             } else {
                 QCC_LogError(status, ("JoinSession failed (status=%s)", QCC_StatusText(status)));
             }
@@ -120,7 +120,7 @@ class MyBusListener : public BusListener, public SessionListener {
     {
         QCC_SyncPrintf("LostAdvertisedName(name=%s, transport=0x%x, prefix=%s)\n", name, transport, namePrefix);
         if (0 == strcmp(name, g_wellKnownName.c_str())) {
-            g_discoverEvent.ResetEvent();
+            g_discoverEvent->ResetEvent();
         }
     }
 
@@ -175,7 +175,7 @@ class MyAboutListener : public AboutListener {
                     }
                 }
                 /* Release main thread */
-                g_discoverEvent.SetEvent();
+                g_discoverEvent->SetEvent();
             } else {
                 QCC_LogError(status, ("JoinSession failed (status=%s)", QCC_StatusText(status)));
             }
@@ -262,9 +262,6 @@ class LocalTestObject : public BusObject {
         uint8_t flags = ALLJOYN_FLAG_GLOBAL_BROADCAST;
         assert(my_signal_member);
         MsgArg arg("a{ys}", 0, NULL);
-        if (compress) {
-            flags |= ALLJOYN_FLAG_COMPRESSED;
-        }
         if (encryption) {
             flags |= ALLJOYN_FLAG_ENCRYPTED;
         }
@@ -514,7 +511,7 @@ static MySessionPortListener g_portListener;
 
 static void usage(void)
 {
-    printf("Usage: bbsig [-n <name> ] [-a <name> ] [-h] [-l] [-s] [-r #] [-i #] [-c #] [-t #] [-x] [--tcp] [--udp] [-e[k] <mech>]\n\n");
+    printf("Usage: bbsig [-n <name> ] [-a <name> ] [-h] [-l] [-s] [-r #] [-i #] [-c #] [-t #] [--tcp] [--udp] [-e[k] <mech>]\n\n");
     printf("Options:\n");
     printf("   -h                          = Print this help message\n");
     printf("   -?                          = Print this help message\n");
@@ -529,7 +526,6 @@ static void usage(void)
     printf("   -t #                        = TTL for the signals\n");
     printf("   --tcp                       = Advertise and discover using the TCP transport\n");
     printf("   --udp                       = Advertise and discover using the UDP transport\n");
-    printf("   -x                          = Compress headers\n");
     printf("   -e[k] [RSA|SRP|LOGON|PINX]   = Encrypt the test interface using specified auth mechanism, -ek means clear keys\n");
     printf("   -d                          = discover remote bus with test service\n");
     printf("   -b                          = Signal is broadcast rather than multicast\n");
@@ -542,6 +538,15 @@ static void usage(void)
 /** Main entry point */
 int main(int argc, char** argv)
 {
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+#endif
     QStatus status = ER_OK;
 
     bool clearKeys = false;
@@ -650,8 +655,6 @@ int main(int argc, char** argv)
             } else {
                 timeToLive = strtoul(argv[i], NULL, 10);
             }
-        } else if (0 == strcmp("-x", argv[i])) {
-            compress = true;
         } else if (0 == strcmp("-b", argv[i])) {
             broacast = true;
         } else if ((0 == strcmp("-e", argv[i])) || (0 == strcmp("-ek", argv[i]))) {
@@ -713,6 +716,8 @@ int main(int argc, char** argv)
     }
 
     do {
+        g_discoverEvent = new Event();
+
         /* Create message bus */
         g_msgBus = new BusAttachment("bbsig", true);
 
@@ -774,7 +779,7 @@ int main(int argc, char** argv)
              * Make sure the event is cleared so we don't pick up a stale event from the previous
              * iteration when running the stress test.
              */
-            g_discoverEvent.ResetEvent();
+            g_discoverEvent->ResetEvent();
 
             /* Begin discovery on the well-known name of the service to be called */
             Message reply(*g_msgBus);
@@ -795,7 +800,7 @@ int main(int argc, char** argv)
              * Make sure the event is cleared so we don't pick up a stale event from the previous
              * iteration when running the stress test.
              */
-            g_discoverEvent.ResetEvent();
+            g_discoverEvent->ResetEvent();
             const char* interfaces[] = { ::org::alljoyn::alljoyn_test::InterfaceName };
             status = g_msgBus->WhoImplements(interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
         }
@@ -816,7 +821,7 @@ int main(int argc, char** argv)
                  */
                 qcc::Event timerEvent(100, 100);
                 vector<qcc::Event*> checkEvents, signaledEvents;
-                checkEvents.push_back(&g_discoverEvent);
+                checkEvents.push_back(g_discoverEvent);
                 checkEvents.push_back(&timerEvent);
                 status = qcc::Event::Wait(checkEvents, signaledEvents);
                 if (status != ER_OK && status != ER_TIMEOUT) {
@@ -827,7 +832,7 @@ int main(int argc, char** argv)
                  * If it was the discover event that popped, we're done.
                  */
                 for (vector<qcc::Event*>::iterator i = signaledEvents.begin(); i != signaledEvents.end(); ++i) {
-                    if (*i == &g_discoverEvent) {
+                    if (*i == g_discoverEvent) {
                         discovered = true;
                         break;
                     }
@@ -898,8 +903,16 @@ int main(int argc, char** argv)
         delete g_msgBus;
         g_msgBus = NULL;
     }
+    if (g_discoverEvent) {
+        delete g_discoverEvent;
+        g_discoverEvent = NULL;
+    }
 
     QCC_SyncPrintf("bbsig exiting with %d (%s)\n", status, QCC_StatusText(status));
 
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return (int) status;
 }

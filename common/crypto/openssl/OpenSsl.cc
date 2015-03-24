@@ -24,6 +24,7 @@
 #include <qcc/Thread.h>
 #include <assert.h>
 
+#include "Crypto.h"
 #include "OpenSsl.h"
 #define OPENSSL_THREAD_DEFINES
 #include <openssl/opensslconf.h>
@@ -48,22 +49,19 @@ static void LockingCb(int mode, int type, const char* file, int line)
     }
 }
 
-static int openSslCounter = 0;
-
-OpenSslInit::OpenSslInit()
+void Crypto::Init()
 {
-    if (0 == openSslCounter++) {
+    if (!locks) {
         locks = new Mutex[CRYPTO_num_locks()];
         CRYPTO_set_locking_callback(LockingCb);
     }
 }
 
-OpenSslInit::~OpenSslInit()
+void Crypto::Shutdown()
 {
-    if (0 == --openSslCounter) {
-        CRYPTO_set_locking_callback(NULL);
-        delete[] locks;
-    }
+    CRYPTO_set_locking_callback(NULL);
+    delete[] locks;
+    locks = NULL;
 }
 
 #else /* !OPENSSL_THREADS */
@@ -90,9 +88,10 @@ OpenSsl_ScopedLock::~OpenSsl_ScopedLock()
     mutex->Unlock();
 }
 
-OpenSslInit::OpenSslInit() {
+void Crypto::Init() {
 }
-OpenSslInit::~OpenSslInit() {
+
+void Crypto::Shutdown() {
 }
 
 #endif

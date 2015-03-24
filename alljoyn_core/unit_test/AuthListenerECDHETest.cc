@@ -35,7 +35,7 @@ using namespace qcc;
 
 static const char* ONOFF_IFC_NAME = "org.allseenalliance.control.OnOff";
 
-class AuthListenerECDHETest : public testing::Test, public BusObject {
+class AuthListenerECDHETest : public BusObject, public testing::Test {
   public:
 
     class ECDHEKeyXListener : public AuthListener {

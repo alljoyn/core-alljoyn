@@ -56,42 +56,6 @@ QStatus CredentialAccessor::GetPeerGuid(qcc::String& peerName, qcc::GUID128& gui
     return ER_BUS_NO_PEER_GUID;
 }
 
-QStatus CredentialAccessor::GetLocalGUID(qcc::KeyBlob::Type keyType, qcc::GUID128& guid)
-{
-    /* each local key will be indexed by an hardcode randomly generated GUID.
-       This method is similar to that used by the RSA Key exchange to store
-       the private key and cert chain */
-    if (keyType == KeyBlob::PRIVATE) {
-        guid = GUID128(qcc::String("a62655061e8295e2462794065f2a1c95"));
-        return ER_OK;
-    }
-    if (keyType == KeyBlob::AES) {
-        guid = GUID128(qcc::String("b4dc47954ce6e94f6669f31b343b91d8"));
-        return ER_OK;
-    }
-    if (keyType == KeyBlob::PEM) {
-        guid = GUID128(qcc::String("29ebe36c0ac308c8eb808cfdf1f36953"));
-        return ER_OK;
-    }
-    if (keyType == KeyBlob::PUBLIC) {
-        guid = GUID128(qcc::String("48b020fc3a65c6bc5ac22b949a869dab"));
-        return ER_OK;
-    }
-    if (keyType == KeyBlob::SPKI_CERT) {
-        guid = GUID128(qcc::String("9ddf8d784fef4b57d5103e3bef656067"));
-        return ER_OK;
-    }
-    if (keyType == KeyBlob::DSA_PRIVATE) {
-        guid = GUID128(qcc::String("d1b60ce37ba71ea4b870d73b6cd676f5"));
-        return ER_OK;
-    }
-    if (keyType == KeyBlob::DSA_PUBLIC) {
-        guid = GUID128(qcc::String("19409269762da560d7812cb8a542f024"));
-        return ER_OK;
-    }
-    return ER_CRYPTO_KEY_UNAVAILABLE;      /* not available */
-}
-
 QStatus CredentialAccessor::GetKey(const qcc::GUID128& guid, qcc::KeyBlob& key) {
     return bus.GetInternal().GetKeyStore().GetKey(guid, key);
 }

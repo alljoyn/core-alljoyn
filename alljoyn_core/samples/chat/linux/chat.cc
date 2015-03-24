@@ -14,12 +14,13 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <alljoyn/BusAttachment.h>
-#include <alljoyn/ProxyBusObject.h>
-#include <alljoyn/BusObject.h>
-#include <alljoyn/InterfaceDescription.h>
-#include <alljoyn/DBusStd.h>
 #include <alljoyn/AllJoynStd.h>
+#include <alljoyn/BusAttachment.h>
+#include <alljoyn/BusObject.h>
+#include <alljoyn/DBusStd.h>
+#include <alljoyn/Init.h>
+#include <alljoyn/InterfaceDescription.h>
+#include <alljoyn/ProxyBusObject.h>
 #include <qcc/Log.h>
 #include <qcc/String.h>
 #include <cassert>
@@ -406,6 +407,16 @@ QStatus DoTheChat(void)
 
 int main(int argc, char** argv)
 {
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+#endif
+
     /* Install SIGINT handler. */
     signal(SIGINT, SigIntHandler);
 
@@ -417,70 +428,70 @@ int main(int argc, char** argv)
     /* Create message bus */
     s_bus = new BusAttachment("chat", true);
 
-    if (!s_bus) {
-        status = ER_OUT_OF_MEMORY;
-    }
-
-    if (ER_OK == status) {
-        status = CreateInterface();
-    }
-
-    if (ER_OK == status) {
-        s_bus->RegisterBusListener(s_busListener);
-    }
-
-    if (ER_OK == status) {
-        status = StartMessageBus();
-    }
-
-    /* Create the bus object that will be used to send and receive signals */
-    ChatObject chatObj(*s_bus, CHAT_SERVICE_OBJECT_PATH);
-
-    s_chatObj = &chatObj;
-
-    if (ER_OK == status) {
-        status = RegisterBusObject();
-    }
-
-    if (ER_OK == status) {
-        status = ConnectBusAttachment();
-    }
-
-    /* Advertise or discover based on command line options */
-    if (!s_advertisedName.empty()) {
-        /*
-         * Advertise this service on the bus.
-         * There are three steps to advertising this service on the bus.
-         * 1) Request a well-known name that will be used by the client to discover
-         *    this service.
-         * 2) Create a session.
-         * 3) Advertise the well-known name.
-         */
+    if (s_bus) {
         if (ER_OK == status) {
-            status = RequestName();
-        }
-
-        const TransportMask SERVICE_TRANSPORT_TYPE = TRANSPORT_ANY;
-
-        if (ER_OK == status) {
-            status = CreateSession(SERVICE_TRANSPORT_TYPE);
+            status = CreateInterface();
         }
 
         if (ER_OK == status) {
-            status = AdvertiseName(SERVICE_TRANSPORT_TYPE);
+            s_bus->RegisterBusListener(s_busListener);
+        }
+
+        if (ER_OK == status) {
+            status = StartMessageBus();
+        }
+
+        /* Create the bus object that will be used to send and receive signals */
+        ChatObject chatObj(*s_bus, CHAT_SERVICE_OBJECT_PATH);
+
+        s_chatObj = &chatObj;
+
+        if (ER_OK == status) {
+            status = RegisterBusObject();
+        }
+
+        if (ER_OK == status) {
+            status = ConnectBusAttachment();
+        }
+
+        /* Advertise or discover based on command line options */
+        if (!s_advertisedName.empty()) {
+            /*
+             * Advertise this service on the bus.
+             * There are three steps to advertising this service on the bus.
+             * 1) Request a well-known name that will be used by the client to discover
+             *    this service.
+             * 2) Create a session.
+             * 3) Advertise the well-known name.
+             */
+            if (ER_OK == status) {
+                status = RequestName();
+            }
+
+            const TransportMask SERVICE_TRANSPORT_TYPE = TRANSPORT_ANY;
+
+            if (ER_OK == status) {
+                status = CreateSession(SERVICE_TRANSPORT_TYPE);
+            }
+
+            if (ER_OK == status) {
+                status = AdvertiseName(SERVICE_TRANSPORT_TYPE);
+            }
+        } else {
+            if (ER_OK == status) {
+                status = FindAdvertisedName();
+            }
+
+            if (ER_OK == status) {
+                status = WaitForJoinSessionCompletion();
+            }
+        }
+
+        if (ER_OK == status) {
+            status = DoTheChat();
         }
     } else {
-        if (ER_OK == status) {
-            status = FindAdvertisedName();
-        }
-
-        if (ER_OK == status) {
-            status = WaitForJoinSessionCompletion();
-        }
-    }
-
-    if (ER_OK == status) {
-        status = DoTheChat();
+        status = ER_OUT_OF_MEMORY;
     }
 
     /* Cleanup */
@@ -489,6 +500,10 @@ int main(int argc, char** argv)
 
     printf("Chat exiting with status 0x%04x (%s).\n", status, QCC_StatusText(status));
 
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return (int) status;
 }
 

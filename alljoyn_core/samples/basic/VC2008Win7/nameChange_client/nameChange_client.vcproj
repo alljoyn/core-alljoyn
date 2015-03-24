@@ -42,7 +42,6 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalOptions="/vmm /vmg"
 				Optimization="0"
 				AdditionalIncludeDirectories="$(ALLJOYN_SDK_HOME)\inc;$(ProjectDir)\..\..\..\..\inc"
 				PreprocessorDefinitions="QCC_OS_GROUP_WINDOWS;UNICODE"
@@ -63,7 +62,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="alljoyn.lib ajrouter.lib BundledRouter.obj ws2_32.lib Secur32.lib crypt32.lib Bcrypt.lib Ncrypt.lib iphlpapi.lib"
+				AdditionalDependencies="alljoyn.lib ajrouter.lib ws2_32.lib Secur32.lib crypt32.lib Bcrypt.lib Ncrypt.lib iphlpapi.lib"
 				AdditionalLibraryDirectories="$(ALLJOYN_SDK_HOME)\lib\;$(ProjectDir)\..\..\..\..\lib"
 				IgnoreDefaultLibraryNames="libcmt.lib"
 				GenerateDebugInformation="true"
@@ -116,7 +115,6 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalOptions="/vmm /vmg"
 				Optimization="0"
 				AdditionalIncludeDirectories="$(ALLJOYN_SDK_HOME)\inc;$(ProjectDir)\..\..\..\..\inc"
 				PreprocessorDefinitions="QCC_OS_GROUP_WINDOWS;UNICODE"
@@ -137,7 +135,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="alljoyn.lib ajrouter.lib BundledRouter.obj ws2_32.lib Secur32.lib crypt32.lib Bcrypt.lib Ncrypt.lib iphlpapi.lib"
+				AdditionalDependencies="alljoyn.lib ajrouter.lib ws2_32.lib Secur32.lib crypt32.lib Bcrypt.lib Ncrypt.lib iphlpapi.lib"
 				AdditionalLibraryDirectories="$(ALLJOYN_SDK_HOME)\lib\;$(ProjectDir)\..\..\..\..\lib"
 				IgnoreDefaultLibraryNames="libcmt.lib"
 				GenerateDebugInformation="true"
@@ -190,7 +188,6 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalOptions="/vmm /vmg"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
 				AdditionalIncludeDirectories="$(ALLJOYN_SDK_HOME)\inc;$(ProjectDir)\..\..\..\..\inc"
@@ -211,7 +208,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="alljoyn.lib ajrouter.lib BundledRouter.obj ws2_32.lib Secur32.lib crypt32.lib Bcrypt.lib Ncrypt.lib iphlpapi.lib"
+				AdditionalDependencies="alljoyn.lib ajrouter.lib ws2_32.lib Secur32.lib crypt32.lib Bcrypt.lib Ncrypt.lib iphlpapi.lib"
 				AdditionalLibraryDirectories="$(ALLJOYN_SDK_HOME)\lib\;$(ProjectDir)\..\..\..\..\lib"
 				IgnoreDefaultLibraryNames="libcmt.lib"
 				GenerateDebugInformation="true"
@@ -267,7 +264,6 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalOptions="/vmm /vmg"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
 				AdditionalIncludeDirectories="$(ALLJOYN_SDK_HOME)\inc;$(ProjectDir)\..\..\..\..\inc"
@@ -288,7 +284,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="alljoyn.lib ajrouter.lib BundledRouter.obj ws2_32.lib Secur32.lib crypt32.lib Bcrypt.lib Ncrypt.lib iphlpapi.lib"
+				AdditionalDependencies="alljoyn.lib ajrouter.lib ws2_32.lib Secur32.lib crypt32.lib Bcrypt.lib Ncrypt.lib iphlpapi.lib"
 				AdditionalLibraryDirectories="$(ALLJOYN_SDK_HOME)\lib\;$(ProjectDir)\..\..\..\..\lib"
 				IgnoreDefaultLibraryNames="libcmt.lib"
 				GenerateDebugInformation="true"

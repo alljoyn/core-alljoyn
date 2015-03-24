@@ -35,13 +35,14 @@
 
 #include <qcc/String.h>
 
+#include <alljoyn/AllJoynStd.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/BusObject.h>
-#include <alljoyn/MsgArg.h>
 #include <alljoyn/DBusStd.h>
-#include <alljoyn/AllJoynStd.h>
-#include <alljoyn/version.h>
+#include <alljoyn/Init.h>
+#include <alljoyn/MsgArg.h>
 #include <alljoyn/Status.h>
+#include <alljoyn/version.h>
 
 using namespace std;
 using namespace qcc;
@@ -318,6 +319,16 @@ void WaitForSigInt(void)
 /** Main entry point */
 int main(int argc, char** argv, char** envArg)
 {
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+#endif
+
     printf("AllJoyn Library version: %s.\n", ajn::GetVersion());
     printf("AllJoyn Library build info: %s.\n", ajn::GetBuildInfo());
 
@@ -325,6 +336,7 @@ int main(int argc, char** argv, char** envArg)
     signal(SIGINT, SigIntHandler);
 
     QStatus status = ER_OK;
+    BasicSampleObject* testObj = NULL;
 
     /* Create message bus */
     s_msgBus = new BusAttachment("myApp", true);
@@ -332,57 +344,63 @@ int main(int argc, char** argv, char** envArg)
     /* This test for NULL is only required if new() behavior is to return NULL
      * instead of throwing an exception upon an out of memory failure.
      */
-    if (!s_msgBus) {
+    if (s_msgBus) {
+        /* Register a bus listener */
+        if (ER_OK == status) {
+            s_msgBus->RegisterBusListener(s_busListener);
+        }
+
+        if (ER_OK == status) {
+            status = StartMessageBus();
+        }
+
+        testObj = new BasicSampleObject(*s_msgBus, SERVICE_PATH);
+
+        if (ER_OK == status) {
+            status = RegisterBusObjectAndConnect(testObj);
+        }
+
+        /*
+         * Advertise this service on the bus.
+         * There are three steps to advertising this service on the bus.
+         * 1) Request a well-known name that will be used by the client to discover
+         *    this service.
+         * 2) Create a session.
+         * 3) Advertise the well-known name.
+         */
+        if (ER_OK == status) {
+            status = RequestName();
+        }
+
+        const TransportMask SERVICE_TRANSPORT_TYPE = TRANSPORT_ANY;
+
+        if (ER_OK == status) {
+            status = CreateSession(SERVICE_TRANSPORT_TYPE);
+        }
+
+        if (ER_OK == status) {
+            status = AdvertiseName(SERVICE_TRANSPORT_TYPE);
+        }
+
+        /* Perform the service asynchronously until the user signals for an exit. */
+        if (ER_OK == status) {
+            WaitForSigInt();
+        }
+    } else {
         status = ER_OUT_OF_MEMORY;
     }
 
-    /* Register a bus listener */
-    if (ER_OK == status) {
-        s_msgBus->RegisterBusListener(s_busListener);
-    }
-
-    if (ER_OK == status) {
-        status = StartMessageBus();
-    }
-
-    BasicSampleObject testObj(*s_msgBus, SERVICE_PATH);
-
-    if (ER_OK == status) {
-        status = RegisterBusObjectAndConnect(&testObj);
-    }
-
-    /*
-     * Advertise this service on the bus.
-     * There are three steps to advertising this service on the bus.
-     * 1) Request a well-known name that will be used by the client to discover
-     *    this service.
-     * 2) Create a session.
-     * 3) Advertise the well-known name.
-     */
-    if (ER_OK == status) {
-        status = RequestName();
-    }
-
-    const TransportMask SERVICE_TRANSPORT_TYPE = TRANSPORT_ANY;
-
-    if (ER_OK == status) {
-        status = CreateSession(SERVICE_TRANSPORT_TYPE);
-    }
-
-    if (ER_OK == status) {
-        status = AdvertiseName(SERVICE_TRANSPORT_TYPE);
-    }
-
-    /* Perform the service asynchronously until the user signals for an exit. */
-    if (ER_OK == status) {
-        WaitForSigInt();
-    }
-
-    /* Clean up msg bus */
+    /* Clean up */
     delete s_msgBus;
     s_msgBus = NULL;
+    delete testObj;
+    testObj = NULL;
 
     printf("Signal service exiting with status 0x%04x (%s).\n", status, QCC_StatusText(status));
 
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return (int) status;
 }

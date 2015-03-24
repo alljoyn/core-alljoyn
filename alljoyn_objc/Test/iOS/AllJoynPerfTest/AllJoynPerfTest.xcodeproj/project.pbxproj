@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		7D68081C1A9807310000F28D /* AJNInit.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7D68081B1A9807310000F28D /* AJNInit.mm */; };
 		7DCBEE7C1A254DF200A53A83 /* AJNAboutObjectDescription.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCBEE6A1A254DF200A53A83 /* AJNAboutObjectDescription.mm */; };
 		7DCBEE7D1A254DF200A53A83 /* AJNAboutObject.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCBEE6C1A254DF200A53A83 /* AJNAboutObject.mm */; };
 		7DCBEE7E1A254DF200A53A83 /* AJNAboutDataListenerImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCBEE6F1A254DF200A53A83 /* AJNAboutDataListenerImpl.mm */; };
@@ -64,6 +65,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		7D68081A1A9807310000F28D /* AJNInit.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNInit.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNInit.h; sourceTree = "<group>"; };
+		7D68081B1A9807310000F28D /* AJNInit.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNInit.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNInit.mm; sourceTree = "<group>"; };
 		7DCBEE6A1A254DF200A53A83 /* AJNAboutObjectDescription.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNAboutObjectDescription.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNAboutObjectDescription.mm; sourceTree = "<group>"; };
 		7DCBEE6B1A254DF200A53A83 /* AJNAboutObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNAboutObject.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNAboutObject.h; sourceTree = "<group>"; };
 		7DCBEE6C1A254DF200A53A83 /* AJNAboutObject.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNAboutObject.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNAboutObject.mm; sourceTree = "<group>"; };
@@ -263,6 +266,8 @@
 		AC0C821016B1B09100B60EE3 /* AllJoyn Framework */ = {
 			isa = PBXGroup;
 			children = (
+				7D68081A1A9807310000F28D /* AJNInit.h */,
+				7D68081B1A9807310000F28D /* AJNInit.mm */,
 				7DCBEE841A254E0400A53A83 /* AJNPasswordManager.h */,
 				7DCBEE851A254E0400A53A83 /* AJNPasswordManager.mm */,
 				7DCBEE6A1A254DF200A53A83 /* AJNAboutObjectDescription.mm */,
@@ -437,6 +442,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				AC0C81D116B05D9A00B60EE3 /* main.m in Sources */,
+				7D68081C1A9807310000F28D /* AJNInit.mm in Sources */,
 				7DCBEE7E1A254DF200A53A83 /* AJNAboutDataListenerImpl.mm in Sources */,
 				AC0C81D516B05D9A00B60EE3 /* AppDelegate.m in Sources */,
 				7DCBEE821A254DF200A53A83 /* AJNAboutListenerImpl.mm in Sources */,
@@ -566,10 +572,7 @@
 		AC0C81E816B05D9A00B60EE3 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = (
-					"$(ARCHS_STANDARD_32_BIT)",
-					armv7,
-				);
+				ARCHS = "$(ARCHS_STANDARD)";
 				GCC_ENABLE_CPP_EXCEPTIONS = NO;
 				GCC_ENABLE_CPP_RTTI = NO;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
@@ -597,6 +600,7 @@
 					"-lcrypto",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				VALID_ARCHS = "arm64 armv7";
 				WRAPPER_EXTENSION = app;
 			};
 			name = Debug;
@@ -604,10 +608,7 @@
 		AC0C81E916B05D9A00B60EE3 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = (
-					"$(ARCHS_STANDARD_32_BIT)",
-					armv7,
-				);
+				ARCHS = "$(ARCHS_STANDARD)";
 				GCC_ENABLE_CPP_EXCEPTIONS = NO;
 				GCC_ENABLE_CPP_RTTI = NO;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
@@ -636,6 +637,7 @@
 					"-lcrypto",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				VALID_ARCHS = "arm64 armv7";
 				WRAPPER_EXTENSION = app;
 			};
 			name = Release;

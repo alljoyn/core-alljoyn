@@ -231,10 +231,6 @@ public class Client extends Activity {
                     if (rqst instanceof PrivateKeyRequest) {
                         /*
                          * Only the ALLJOYN_ECDHE_ECDSA requests for DSA private key.
-                         * The application may provide the DSA private key and public key in the certificate.
-                         * AllJoyn stores the keys in the key store for future use.
-                         * If the application does not provide the private key, AllJoyn will
-                         * generate the DSA key pair.
                          */
                         if (sendBackKeys) {
                             PrivateKeyRequest pkRqst = (PrivateKeyRequest) rqst;
@@ -245,21 +241,10 @@ public class Client extends Activity {
                     }
                     else if (rqst instanceof CertificateRequest) {
                         /*
-                         * Only the ALLJOYN_ECDHE_ECDSA requests for DSA private key.
-                         * The application may provide the DSA private key and public key in the certificate.
-                         * AllJoyn stores the keys in the key store for future use.
-                         * If the application does not provide the private key, AllJoyn will
-                         * generate the DSA key pair.
+                         * Only the ALLJOYN_ECDHE_ECDSA requests for certificate.
                          */
                         if (sendBackKeys) {
-                        	String certChainPEM;
-                        	boolean useCert1 = false;
-                        	if (useCert1) {
-                        		certChainPEM = CLIENT_CERT1_PEM;
-                        	}
-                        	else {
-                        		certChainPEM = CLIENT_CERT2_PEM;
-                        	}
+                            String certChainPEM = CLIENT_ECC_X509_PEM;
                             CertificateRequest certChainRqst = (CertificateRequest) rqst;
                             certChainRqst.setCertificateChain(certChainPEM);
                             Log.d(TAG, "Listener sends back cert chain " + certChainPEM);
@@ -305,35 +290,45 @@ public class Client extends Activity {
         }
 
         public void completed(String authMechanism, String authPeer, boolean authenticated) {
+            Log.d(TAG, "Listener: authentication " + authMechanism + " completed " + authenticated);
             sendUiMessage(MESSAGE_AUTH_COMPLETE, authenticated);
         }
 
 
         private boolean sendBackKeys = true;  /* toggle the send back keys */
         /* the followings are same data to try out the ECDHE_ECDSA key exchange */
+        /* the key and certificate is generated using openssl */
         private static final String CLIENT_PK_PEM =
-                "-----BEGIN PRIVATE KEY-----" +
-                "CkzgQdvZSOQMmqOnddsw0BRneCNZhioNMyUoJwec9rMAAAAA" +
-                "-----END PRIVATE KEY-----";
-        private static final String CLIENT_CERT1_PEM =
-                "-----BEGIN CERTIFICATE-----" +
-                "AAAAAZ1LKGlnpVVtV4Sa1TULsxGJR9C53Uq5AH3fxqxJjNdYAAAAAAobbdvBKaw9\n" +
-                "eHox7o9fNbN5usuZw8XkSPSmipikYCPJAAAAAAAAAABiToQ8L3KZLwSCetlNJwfd\n" +
-                "bbxbo2x/uooeYwmvXbH2uwAAAABFQGcdlcsvhdRxgI4SVziI4hbg2d2xAMI47qVB\n" +
-                "ZZsqJAAAAAAAAAAAAAAAAAABYGEAAAAAAAFhjQABMa7uTLSqjDggO0t6TAgsxKNt\n" +
-                "+Zhu/jc3s242BE0drNFJAiGa/u6AX5qdR+7RFxVuqm251vKPgWjfwN2AesHrAAAA\n" +
-                "ANsNwJl8Z1v5jbqo077qdQIT6aM1jc+pKXdgNMk6loqFAAAAAA==\n" +
-                "-----END CERTIFICATE-----";
-        private static final String CLIENT_CERT2_PEM =
-                "-----BEGIN CERTIFICATE-----" +
-                "AAAAAp1LKGlnpVVtV4Sa1TULsxGJR9C53Uq5AH3fxqxJjNdYAAAAAAobbdvBKaw9\n" +
-                "eHox7o9fNbN5usuZw8XkSPSmipikYCPJAAAAAAAAAABiToQ8L3KZLwSCetlNJwfd\n" +
-                "bbxbo2x/uooeYwmvXbH2uwAAAABFQGcdlcsvhdRxgI4SVziI4hbg2d2xAMI47qVB\n" +
-                "ZZsqJAAAAAAAAAAAAAAAAAABYGEAAAAAAAFhjQCJ9dkuY0Z6jjx+a8azIQh4UF0h\n" +
-                "8plX3uAhOlF2vT2jfxe5U06zaWSXcs9kBEQvfOeMM4sUtoXPArUA+TNahfOS9Bbf\n" +
-                "0Hh08SvDJSDgM2OetQAAAAAYUr2pw2kb90fWblBWVKnrddtrI5Zs8BYx/EodpMrS\n" +
-                "twAAAAA=\n" +
-                "-----END CERTIFICATE-----";
+        "-----BEGIN EC PRIVATE KEY-----\n" +
+        "MHcCAQEEIAqN6AtyOAPxY5k7eFNXAwzkbsGMl4uqvPrYkIj0LNZBoAoGCCqGSM49\n" +
+        "AwEHoUQDQgAEvnRd4fX9opwgXX4Em2UiCMsBbfaqhB1U5PJCDZacz9HumDEzYdrS\n" +
+        "MymSxR34lL0GJVgEECvBTvpaHP2bpTIl6g==\n" +
+        "-----END EC PRIVATE KEY-----";
+        private static final String CLIENT_ECC_X509_PEM =
+        "-----BEGIN CERTIFICATE-----\n" +
+        "MIIBtDCCAVmgAwIBAgIJAMlyFqk69v+OMAoGCCqGSM49BAMCMFYxKTAnBgNVBAsM\n" +
+        "IDdhNDhhYTI2YmM0MzQyZjZhNjYyMDBmNzdhODlkZDAyMSkwJwYDVQQDDCA3YTQ4\n" +
+        "YWEyNmJjNDM0MmY2YTY2MjAwZjc3YTg5ZGQwMjAeFw0xNTAyMjYyMTUxMjVaFw0x\n" +
+        "NjAyMjYyMTUxMjVaMFYxKTAnBgNVBAsMIDZkODVjMjkyMjYxM2IzNmUyZWVlZjUy\n" +
+        "NzgwNDJjYzU2MSkwJwYDVQQDDCA2ZDg1YzI5MjI2MTNiMzZlMmVlZWY1Mjc4MDQy\n" +
+        "Y2M1NjBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABL50XeH1/aKcIF1+BJtlIgjL\n" +
+        "AW32qoQdVOTyQg2WnM/R7pgxM2Ha0jMpksUd+JS9BiVYBBArwU76Whz9m6UyJeqj\n" +
+        "EDAOMAwGA1UdEwQFMAMBAf8wCgYIKoZIzj0EAwIDSQAwRgIhAKfmglMgl67L5ALF\n" +
+        "Z63haubkItTMACY1k4ROC2q7cnVmAiEArvAmcVInOq/U5C1y2XrvJQnAdwSl/Ogr\n" +
+        "IizUeK0oI5c=\n" +
+        "-----END CERTIFICATE-----\n" +
+        "-----BEGIN CERTIFICATE-----\n" +
+        "MIIBszCCAVmgAwIBAgIJAILNujb37gH2MAoGCCqGSM49BAMCMFYxKTAnBgNVBAsM\n" +
+        "IDdhNDhhYTI2YmM0MzQyZjZhNjYyMDBmNzdhODlkZDAyMSkwJwYDVQQDDCA3YTQ4\n" +
+        "YWEyNmJjNDM0MmY2YTY2MjAwZjc3YTg5ZGQwMjAeFw0xNTAyMjYyMTUxMjNaFw0x\n" +
+        "NjAyMjYyMTUxMjNaMFYxKTAnBgNVBAsMIDdhNDhhYTI2YmM0MzQyZjZhNjYyMDBm\n" +
+        "NzdhODlkZDAyMSkwJwYDVQQDDCA3YTQ4YWEyNmJjNDM0MmY2YTY2MjAwZjc3YTg5\n" +
+        "ZGQwMjBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABGEkAUATvOE4uYmt/10vkTcU\n" +
+        "SA0C+YqHQ+fjzRASOHWIXBvpPiKgHcINtNFQsyX92L2tMT2Kn53zu+3S6UAwy6yj\n" +
+        "EDAOMAwGA1UdEwQFMAMBAf8wCgYIKoZIzj0EAwIDSAAwRQIgKit5yeq1uxTvdFmW\n" +
+        "LDeoxerqC1VqBrmyEvbp4oJfamsCIQDvMTmulW/Br/gY7GOP9H/4/BIEoR7UeAYS\n" +
+        "4xLyu+7OEA==\n" +
+        "-----END CERTIFICATE-----\n";
     }
 
     class BusHandler extends Handler {

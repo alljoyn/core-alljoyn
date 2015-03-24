@@ -31,7 +31,7 @@
 #include <qcc/Environ.h>
 #include <qcc/String.h>
 #include <qcc/StringUtil.h>
-#include <qcc/StaticGlobals.h>
+#include <qcc/Util.h>
 
 #define QCC_MODULE "ENVIRON"
 
@@ -46,9 +46,29 @@ extern char** environ;   // For Linux, this is all that's needed to access
                          // environment variables.
 #endif
 
+static uint64_t _environSingleton[RequiredArrayLength(sizeof(Environ), uint64_t)];
+static Environ& environSingleton = (Environ&)_environSingleton;
+static bool initialized = false;
+
+void Environ::Init()
+{
+    if (!initialized) {
+        new (&environSingleton)Environ();
+        initialized = true;
+    }
+}
+
+void Environ::Shutdown()
+{
+    if (initialized) {
+        environSingleton.~Environ();
+        initialized = false;
+    }
+}
+
 Environ* Environ::GetAppEnviron(void)
 {
-    return &staticGlobals.environSingleton;
+    return &environSingleton;
 }
 
 qcc::String Environ::Find(const qcc::String& key, const char* defaultValue)

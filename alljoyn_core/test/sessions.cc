@@ -16,10 +16,13 @@
 
 #include <qcc/platform.h>
 
+#include <alljoyn/AllJoynStd.h>
 #include <alljoyn/BusAttachment.h>
-#include <alljoyn/ProxyBusObject.h>
 #include <alljoyn/BusObject.h>
+#include <alljoyn/DBusStd.h>
+#include <alljoyn/Init.h>
 #include <alljoyn/InterfaceDescription.h>
+#include <alljoyn/ProxyBusObject.h>
 #include <alljoyn/Session.h>
 #include <alljoyn/DBusStd.h>
 #include <alljoyn/AllJoynStd.h>
@@ -799,6 +802,16 @@ static QStatus DoConnect()
 
 int main(int argc, char** argv)
 {
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+#endif
+
     QStatus status = ER_OK;
 
     printf("AllJoyn Library version: %s\n", ajn::GetVersion());
@@ -834,8 +847,8 @@ int main(int argc, char** argv)
     }
 
     /* Create and register the bus object that will be used to send and receive signals */
-    SessionTestObject sessionTestObj(*bus, TEST_SERVICE_OBJECT_PATH);
-    bus->RegisterBusObject(sessionTestObj);
+    SessionTestObject* sessionTestObj = new SessionTestObject(*bus, TEST_SERVICE_OBJECT_PATH);
+    bus->RegisterBusObject(*sessionTestObj);
 
     /* Start the msg bus */
     if (ER_OK == status) {
@@ -1154,16 +1167,7 @@ int main(int argc, char** argv)
                 printf("Usage: chat <sessionId> <msg>\n");
                 continue;
             }
-            sessionTestObj.SendChatSignal(id, chatMsg.c_str(), flags);
-        } else if (cmd == "cchat") {
-            uint8_t flags = ALLJOYN_FLAG_COMPRESSED;
-            SessionId id = NextTokAsSessionId(line);
-            String chatMsg = Trim(line);
-            if ((id == 0) || chatMsg.empty()) {
-                printf("Usage: cchat <sessionId> <msg>\n");
-                continue;
-            }
-            sessionTestObj.SendChatSignal(id, chatMsg.c_str(), flags);
+            sessionTestObj->SendChatSignal(id, chatMsg.c_str(), flags);
         } else if (cmd == "anychat") {
             uint8_t flags = 0;
             String chatMsg = Trim(line);
@@ -1171,7 +1175,7 @@ int main(int argc, char** argv)
                 printf("Usage: anychat <msg>\n");
                 continue;
             }
-            sessionTestObj.SendChatSignal(ajn::SESSION_ID_ALL_HOSTED, chatMsg.c_str(), flags);
+            sessionTestObj->SendChatSignal(ajn::SESSION_ID_ALL_HOSTED, chatMsg.c_str(), flags);
         } else if (cmd == "autochat") {
             SessionId id = NextTokAsSessionId(line);
             uint32_t count = StringToU32(NextTok(line), 0, 0);
@@ -1182,7 +1186,7 @@ int main(int argc, char** argv)
                 printf("Usage: autochat <sessionId> [count] [delay] [minSize] [maxSize]\n");
                 continue;
             }
-            AutoChatThread::Launch(sessionTestObj, id, count, delay, minSize, maxSize);
+            AutoChatThread::Launch(*sessionTestObj, id, count, delay, minSize, maxSize);
         } else if (cmd == "chatecho") {
             String arg = NextTok(line);
             if (arg == "on") {
@@ -1199,7 +1203,7 @@ int main(int argc, char** argv)
                 printf("Usage: schat <msg>\n");
                 continue;
             }
-            sessionTestObj.SendChatSignal(0, chatMsg.c_str(), flags);
+            sessionTestObj->SendChatSignal(0, chatMsg.c_str(), flags);
         } else if (cmd == "cancelsessionless") {
             uint32_t serial = StringToU32(NextTok(line), 0, 0);
             if (serial == 0) {
@@ -1207,7 +1211,7 @@ int main(int argc, char** argv)
                 printf("Usage: cancelsessionless <serialNum>\n");
                 continue;
             }
-            sessionTestObj.CancelSessionless(serial);
+            sessionTestObj->CancelSessionless(serial);
         } else if (cmd == "addmatch") {
             String rule = Trim(line);
             if (rule.empty()) {
@@ -1228,7 +1232,7 @@ int main(int argc, char** argv)
                 printf("Usage: sendttl <ttl>\n");
                 continue;
             }
-            sessionTestObj.SetTtl(ttl);
+            sessionTestObj->SetTtl(ttl);
         } else if (cmd == "wait") {
             String name = NextTok(line);
             DoWait(name);
@@ -1262,7 +1266,6 @@ int main(int argc, char** argv)
             printf("leavehosted <sessionId>                                       - Leave a session as host\n");
             printf("leavejoiner <sessionId>                                       - Leave a session as joiner\n");
             printf("chat <sessionId> <msg>                                        - Send a message over a given session\n");
-            printf("cchat <sessionId> <msg>                                       - Send a message over a given session with compression\n");
             printf("schat <msg>                                                   - Send a sessionless message\n");
             printf("anychat <msg>                                                 - Send a message on all hosted sessions\n");
             printf("cancelsessionless <serialNum>                                 - Cancel a sessionless message\n");
@@ -1290,11 +1293,18 @@ int main(int argc, char** argv)
     bus = NULL;
     s_bus = NULL;
 
+    delete sessionTestObj;
+    sessionTestObj = NULL;
+
     if (NULL != s_busListener) {
         delete s_busListener;
         s_busListener = NULL;
     }
 
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return (int) status;
 }
 

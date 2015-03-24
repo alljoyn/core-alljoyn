@@ -299,13 +299,14 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
      * @param[out] redirection Returns a redirection address for the endpoint. This value
      *                         is only meaninful if the return status is ER_BUS_ENDPOINT_REDIRECT.
      * @param[in] listener     Optional authentication listener
+     * @param[in] timeout      Optional timeout in milliseconds, used to detect deniers of service.
      *
      * @return
      *      - ER_OK if successful.
      *      = ER_BUS_ENDPOINT_REDIRECT if the endpoint is being redirected.
      *      - An error status otherwise
      */
-    QStatus Establish(const qcc::String& authMechanisms, qcc::String& authUsed, qcc::String& redirection, AuthListener* listener = NULL);
+    QStatus Establish(const qcc::String& authMechanisms, qcc::String& authUsed, qcc::String& redirection, AuthListener* listener = NULL, uint32_t timeout = qcc::Event::WAIT_FOREVER);
 
     /**
      * Get the GUID of the remote side of a bus-to-bus endpoint.

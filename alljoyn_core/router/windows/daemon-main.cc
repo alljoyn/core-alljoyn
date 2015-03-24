@@ -38,7 +38,7 @@
 #include <qcc/FileStream.h>
 
 #include <alljoyn/version.h>
-
+#include <alljoyn/Init.h>
 #include <alljoyn/Status.h>
 
 #include "Transport.h"
@@ -74,10 +74,10 @@ static const char defaultConfig[] =
     "  <limit name=\"max_completed_connections\">64</limit>"
     "  <limit name=\"max_remote_clients_tcp\">48</limit>"
     "  <limit name=\"max_remote_clients_udp\">0</limit>"
-    "  <property name=\"router_power_source\">Always AC powered</property>"
-    "  <property name=\"router_mobility\">Always stationary</property>"
-    "  <property name=\"router_availability\">21-24 hr</property>"
-    "  <property name=\"router_node_connection\">Access Point</property>"
+    "  <property name=\"router_power_source\">Battery powered and chargeable</property>"
+    "  <property name=\"router_mobility\">Intermediate mobility</property>"
+    "  <property name=\"router_availability\">3-6 hr</property>"
+    "  <property name=\"router_node_connection\">Wireless</property>"
     "  <flag name=\"restrict_untrusted_clients\">false</flag>"
     "</busconfig>";
 
@@ -351,6 +351,14 @@ int daemon(OptParse& opts)
 
 DAEMONLIBRARY_API int LoadDaemon(int argc, char** argv)
 {
+    if (AllJoynInit() != ER_OK) {
+        return DAEMON_EXIT_STARTUP_ERROR;
+    }
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return DAEMON_EXIT_STARTUP_ERROR;
+    }
+
     LoggerSetting* loggerSettings(LoggerSetting::GetLoggerSetting(argv[0], LOG_WARNING));
     loggerSettings->SetSyslog(false);
     if (g_isManaged) {
@@ -396,7 +404,11 @@ DAEMONLIBRARY_API int LoadDaemon(int argc, char** argv)
         return DAEMON_EXIT_CONFIG_ERROR;
     }
 
-    return daemon(opts);
+    int ret = daemon(opts);
+
+    AllJoynRouterShutdown();
+    AllJoynShutdown();
+    return ret;
 }
 
 DAEMONLIBRARY_API void UnloadDaemon() {

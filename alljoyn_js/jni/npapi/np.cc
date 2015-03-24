@@ -16,6 +16,7 @@
 #include "npn.h"
 
 #include "PluginData.h"
+#include <alljoyn/Init.h>
 #include <alljoyn/Status.h>
 #include <qcc/Debug.h>
 #include <qcc/Log.h>
@@ -127,6 +128,15 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 
 NP_EXPORT(NPError) OSCALL NP_Initialize(NPNetscapeFuncs* bFuncs)
 {
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+#endif
     PluginData::InitializeStaticData();
     gPluginThread = qcc::Thread::GetThread();
     InitializeDebug();
@@ -136,6 +146,15 @@ NP_EXPORT(NPError) OSCALL NP_Initialize(NPNetscapeFuncs* bFuncs)
 #else
 NP_EXPORT(NPError) OSCALL NP_Initialize(NPNetscapeFuncs* bFuncs, NPPluginFuncs* pFuncs)
 {
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+#endif
     PluginData::InitializeStaticData();
     gPluginThread = qcc::Thread::GetThread();
 
@@ -161,6 +180,10 @@ NP_EXPORT(NPError) OSCALL NP_Shutdown()
     QCC_DbgPrintf(("%s", __FUNCTION__));
     qcc::Thread::CleanExternalThreads();
     PluginData::DumpNPObjects();
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return NPERR_NO_ERROR;
 }
 

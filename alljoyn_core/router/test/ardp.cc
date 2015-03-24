@@ -38,6 +38,7 @@
 #include <qcc/SocketTypes.h>
 #include <qcc/Thread.h>
 
+#include <alljoyn/Init.h>
 #include <alljoyn/Status.h>
 
 #include <ArdpProtocol.h>
@@ -260,6 +261,14 @@ void* Test::Run(void* arg)
 
 int main(int argc, char** argv)
 {
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+
     printf("%s main()\n", argv[0]);
 
     for (int i = 1; i < argc; ++i) {
@@ -287,15 +296,18 @@ int main(int argc, char** argv)
 
     signal(SIGINT, SigIntHandler);
 
-    Test test;
-    test.TestStart();
+    Test* test = new Test();
+    test->TestStart();
 
     while (g_interrupt == false) {
         qcc::Sleep(100);
     }
 
-    test.Stop();
-    test.Join();
+    test->Stop();
+    test->Join();
+    delete test;
 
+    AllJoynRouterShutdown();
+    AllJoynShutdown();
     exit(0);
 }

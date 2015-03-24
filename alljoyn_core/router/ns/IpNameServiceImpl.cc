@@ -346,7 +346,7 @@ const char* IpNameServiceImpl::IPV4_MDNS_MULTICAST_GROUP = "224.0.0.251";
 const uint16_t IpNameServiceImpl::MULTICAST_PORT = 9956;
 const uint16_t IpNameServiceImpl::BROADCAST_PORT = IpNameServiceImpl::MULTICAST_PORT;
 
-const uint16_t IpNameServiceImpl::MULTICAST_MDNS_PORT = IpNameService::MULTICAST_MDNS_PORT;
+const uint16_t IpNameServiceImpl::MULTICAST_MDNS_PORT = 5353;
 const uint16_t IpNameServiceImpl::BROADCAST_MDNS_PORT = IpNameServiceImpl::MULTICAST_MDNS_PORT;
 
 //
@@ -1813,18 +1813,27 @@ uint32_t IpNameServiceImpl::ComputeDynamicScore(uint32_t availableTcpConnections
     uint32_t udpScore = 0;
     uint32_t tclScore = 0;
     uint8_t transports = 0;
-    if (maximumTcpConnections) {
-        tcpScore = ((DYNAMIC_RANK_RANGE * availableTcpConnections) / (TCP_NORMALIZED_CONNECTIONS)) + ((DYNAMIC_RANK_RANGE * availableTcpConnections) / (maximumTcpConnections));
-        transports++;
-    }
-    if (maximumUdpConnections) {
-        udpScore = ((DYNAMIC_RANK_RANGE * availableUdpConnections) / (UDP_NORMALIZED_CONNECTIONS)) + ((DYNAMIC_RANK_RANGE * availableUdpConnections) / (maximumUdpConnections));
-        transports++;
-    }
+
+    /*
+     * The dynamic score should be zero whenever the tclScore is zero irrespective of advertisements.
+     * The tcpScore and the udpScore are only relevant to the computation of the dynamic score if
+     * the tclScore is non-zero.
+     */
     if (maximumTcpRemoteClients) {
         tclScore = ((DYNAMIC_RANK_RANGE * availableTcpRemoteClients) / (TCL_NORMALIZED_CONNECTIONS)) + ((DYNAMIC_RANK_RANGE * availableTcpRemoteClients) / (maximumTcpRemoteClients));
-        transports++;
+        if (tclScore) {
+            transports++;
+            if (maximumTcpConnections) {
+                tcpScore = ((DYNAMIC_RANK_RANGE * availableTcpConnections) / (TCP_NORMALIZED_CONNECTIONS)) + ((DYNAMIC_RANK_RANGE * availableTcpConnections) / (maximumTcpConnections));
+                transports++;
+            }
+            if (maximumUdpConnections) {
+                udpScore = ((DYNAMIC_RANK_RANGE * availableUdpConnections) / (UDP_NORMALIZED_CONNECTIONS)) + ((DYNAMIC_RANK_RANGE * availableUdpConnections) / (maximumUdpConnections));
+                transports++;
+            }
+        }
     }
+
     if (transports == 2) {
         return ((tcpScore + udpScore + tclScore) / (4u));
     } else if (transports == 3) {

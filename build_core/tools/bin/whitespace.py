@@ -100,6 +100,10 @@ def main(argv=None):
         # v0.57 CruptoECC.cc has a return statement with a buch of ifdefs that
         # confuse the whitespace checker.
         file_ignore_patterns.append("CryptoECC\.cc")
+        # v0.57 the use of QCC_DEPRECATED confuses the parser.
+        file_ignore_patterns.append("AboutClient\.h")
+        file_ignore_patterns.append("AboutIconClient\.h")
+
 
 
     # try an load the whitespace.db file.  The file is dictionary of key:value pairs

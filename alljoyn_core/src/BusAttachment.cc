@@ -40,7 +40,6 @@
 #include <alljoyn/AllJoynStd.h>
 #include <alljoyn/InterfaceDescription.h>
 #include <alljoyn/AutoPinger.h>
-#include <alljoyn/PasswordManager.h>
 
 #include "AuthMechanism.h"
 #include "AuthMechAnonymous.h"
@@ -66,7 +65,6 @@
 #include "NamedPipeClientTransport.h"
 
 #define QCC_MODULE "ALLJOYN"
-
 
 using namespace std;
 using namespace qcc;
@@ -156,7 +154,8 @@ BusAttachment::Internal::Internal(const char* appName,
     stopLock(),
     stopCount(0),
     hostedSessions(),
-    hostedSessionsLock()
+    hostedSessionsLock(),
+    observerManager(NULL)
 {
     /*
      * Bus needs a pointer to this internal object.
@@ -182,6 +181,12 @@ BusAttachment::Internal::Internal(const char* appName,
 
 BusAttachment::Internal::~Internal()
 {
+    if (observerManager) {
+        observerManager->Stop();
+        observerManager->Join();
+        delete observerManager;
+        observerManager = NULL;
+    }
     /*
      * Make sure that all threads that might possibly access this object have been joined.
      */
@@ -193,7 +198,7 @@ BusAttachment::Internal::~Internal()
 /*
  * Transport factory container for transports this bus attachment uses to communicate with the daemon.
  */
-static class ClientTransportFactoryContainer : public TransportFactoryContainer {
+class ClientTransportFactoryContainer : public TransportFactoryContainer {
   public:
 
     ClientTransportFactoryContainer() : isInitialized(false) { }
@@ -223,18 +228,19 @@ static class ClientTransportFactoryContainer : public TransportFactoryContainer 
     bool isInitialized;
     qcc::Mutex lock;
 
-} clientTransportsContainer;
+};
 
+static ClientTransportFactoryContainer* clientTransportsContainer = NULL;
 
 BusAttachment::BusAttachment(const char* applicationName, bool allowRemoteMessages, uint32_t concurrency) :
     isStarted(false),
     isStopping(false),
     concurrency(concurrency),
-    busInternal(new Internal(applicationName, *this, clientTransportsContainer, NULL, allowRemoteMessages, NULL, concurrency)),
+    busInternal(new Internal(applicationName, *this, *clientTransportsContainer, NULL, allowRemoteMessages, NULL, concurrency)),
     translator(NULL),
     joinObj(this)
 {
-    clientTransportsContainer.Init();
+    clientTransportsContainer->Init();
     QCC_DbgTrace(("BusAttachment client constructor (%p)", this));
 }
 
@@ -246,7 +252,7 @@ BusAttachment::BusAttachment(Internal* busInternal, uint32_t concurrency) :
     translator(NULL),
     joinObj(this)
 {
-    clientTransportsContainer.Init();
+    clientTransportsContainer->Init();
     QCC_DbgTrace(("BusAttachment daemon constructor"));
 }
 
@@ -598,6 +604,14 @@ QStatus BusAttachment::Disconnect()
         status = ER_BUS_STOPPING;
         QCC_LogError(status, ("BusAttachment::Disconnect cannot disconnect while bus is stopping"));
     } else {
+        /*
+         * Shut down the ObserverManager
+         */
+        if (busInternal->observerManager) {
+            busInternal->observerManager->Stop();
+            busInternal->observerManager->Join();
+        }
+
         status = busInternal->TransportDisconnect(this->connectSpec.c_str());
         if (ER_OK == status) {
             UnregisterSignalHandlers();
@@ -3041,26 +3055,16 @@ Translator* BusAttachment::GetDescriptionTranslator()
 {
     return translator;
 }
-typedef void (*RouterCleanupFunction)();
-void RegisterRouterCleanup(RouterCleanupFunction r);
 
-RouterCleanupFunction routerCleanup = NULL;
-void RegisterRouterCleanup(RouterCleanupFunction r)
+void BusAttachment::Internal::Init()
 {
-    routerCleanup = r;
+    clientTransportsContainer = new ClientTransportFactoryContainer();
 }
-void AJCleanup()
+
+void BusAttachment::Internal::Shutdown()
 {
-    //Cleanup router Globals
-    if (routerCleanup) {
-        routerCleanup();
-    }
-
-    //Cleanup alljoyn_core/src Globals
-    AutoPingerInit::Cleanup();
-    PasswordManagerInit::Cleanup();
-
-    //Cleanup common globals
-    StaticGlobalsInit::Cleanup();
+    delete clientTransportsContainer;
+    clientTransportsContainer = NULL;
 }
+
 }

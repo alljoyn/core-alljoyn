@@ -262,7 +262,6 @@ TEST_F(MessageTest, message_properties) {
     sender_uniqueName = alljoyn_busattachment_getuniquename(servicebus);
     EXPECT_STREQ(sender_uniqueName, alljoyn_message_getsender(reply));
 
-    EXPECT_EQ((uint32_t)0, alljoyn_message_getcompressiontoken(reply));
     EXPECT_EQ((alljoyn_sessionid)0, alljoyn_message_getsessionid(reply));
 
 #if NDEBUG
