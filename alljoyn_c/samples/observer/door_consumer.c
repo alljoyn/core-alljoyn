@@ -44,7 +44,9 @@ static QStatus proxy_get_location(alljoyn_proxybusobject proxy, char** location_
         status = alljoyn_msgarg_get_string(value, &location);
         if (ER_OK == status) {
             *location_ret = malloc(strlen(location) + 1);
-            strcpy(*location_ret, location);
+            if (*location_ret != NULL) {
+                strcpy(*location_ret, location);
+            }
         }
     }
 
