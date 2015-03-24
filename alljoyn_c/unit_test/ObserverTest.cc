@@ -376,6 +376,10 @@ struct ObserverListener {
             event.SetEvent();
         }
     }
+  private:
+    /* private copy constructor and assign operator to prevent double freeing of memory */
+    ObserverListener(const ObserverListener&);
+    ObserverListener& operator=(const ObserverListener&);
 };
 
 static void object_discovered(const void* ctx, alljoyn_proxybusobject_ref proxyref)
