@@ -20,6 +20,7 @@
 #include <alljoyn/ProxyBusObject.h>
 #include <alljoyn/DBusStd.h>
 #include <alljoyn/AllJoynStd.h>
+#include <alljoyn/Init.h>
 #include "MyAllJoynCode.h"
 
 /* Static data */
@@ -28,6 +29,28 @@ static MyAllJoynCode* myAllJoynCode = NULL;
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm,
+                                  void* reserved)
+{
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+    QCC_UseOSLogging(true);
+    return JNI_VERSION_1_2;
+}
+
+JNIEXPORT void JNI_OnUnload(JavaVM* vm,
+                            void* reserved)
+{
+    AllJoynRouterShutdown();
+    AllJoynShutdown();
+}
+
 /*
  * Class:     org_allseen_sample_action_tester_BusHandler
  * Method:    initialize

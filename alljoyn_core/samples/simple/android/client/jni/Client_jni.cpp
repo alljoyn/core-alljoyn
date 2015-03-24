@@ -343,12 +343,10 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm,
     if (AllJoynInit() != ER_OK) {
         return 1;
     }
-#ifdef ROUTER
     if (AllJoynRouterInit() != ER_OK) {
         AllJoynShutdown();
         return 1;
     }
-#endif
     QCC_UseOSLogging(true);
     return JNI_VERSION_1_2;
 }
@@ -356,9 +354,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm,
 JNIEXPORT void JNI_OnUnload(JavaVM* vm,
                             void* reserved)
 {
-#ifdef ROUTER
     AllJoynRouterShutdown();
-#endif
     AllJoynShutdown();
 }
 
