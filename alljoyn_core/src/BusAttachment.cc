@@ -47,7 +47,6 @@
 #include "AuthMechExternal.h"
 #include "AuthMechSRP.h"
 #include "AuthMechRSA.h"
-#include "AuthMechPIN.h"
 #include "AuthMechLogon.h"
 #include "SessionInternal.h"
 #include "Transport.h"
@@ -174,7 +173,6 @@ BusAttachment::Internal::Internal(const char* appName,
         QCC_LogError(status, ("Cannot create %s interface", org::alljoyn::Bus::InterfaceName));
     }
     /* Register bus client authentication mechanisms */
-    authManager.RegisterMechanism(AuthMechPIN::Factory, AuthMechPIN::AuthName());
     authManager.RegisterMechanism(AuthMechExternal::Factory, AuthMechExternal::AuthName());
     authManager.RegisterMechanism(AuthMechAnonymous::Factory, AuthMechAnonymous::AuthName());
 }
@@ -968,7 +966,6 @@ QStatus BusAttachment::EnablePeerSecurity(const char* authMechanisms,
         if (status == ER_OK) {
             /* Register peer-to-peer authentication mechanisms */
             busInternal->authManager.RegisterMechanism(AuthMechSRP::Factory, AuthMechSRP::AuthName());
-            busInternal->authManager.RegisterMechanism(AuthMechPIN::Factory, AuthMechPIN::AuthName());
             busInternal->authManager.RegisterMechanism(AuthMechRSA::Factory, AuthMechRSA::AuthName());
             busInternal->authManager.RegisterMechanism(AuthMechLogon::Factory, AuthMechLogon::AuthName());
             /* Validate the list of auth mechanisms */
@@ -977,7 +974,6 @@ QStatus BusAttachment::EnablePeerSecurity(const char* authMechanisms,
     } else {
         status = busInternal->keyStore.Reset();
         busInternal->authManager.UnregisterMechanism(AuthMechSRP::AuthName());
-        busInternal->authManager.UnregisterMechanism(AuthMechPIN::AuthName());
         busInternal->authManager.UnregisterMechanism(AuthMechRSA::AuthName());
         busInternal->authManager.UnregisterMechanism(AuthMechLogon::AuthName());
     }

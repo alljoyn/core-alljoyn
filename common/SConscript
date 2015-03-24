@@ -93,6 +93,11 @@ commonenv = env.Clone()
 commonenv.VariantDir('$OBJDIR_COMMON', 'src', duplicate = 0)
 commonenv.VariantDir('$OBJDIR_COMMON/os', 'os/${OS_GROUP}', duplicate = 0)
 commonenv.VariantDir('$OBJDIR_COMMON/crypto', 'crypto/${CRYPTO}', duplicate = 0)
+# If we're using CNG, use the CNG ECC provider code. Anything else, use the generic provider.
+if env['CRYPTO'] == 'cng':
+    commonenv.VariantDir('$OBJDIR_COMMON/crypto/ECC', 'crypto/ECC/cng', duplicate = 0)
+else:
+    commonenv.VariantDir('$OBJDIR_COMMON/crypto/ECC', 'crypto/ECC/generic', duplicate = 0)
 
 commonenv.Append(CPPPATH = ['crypto'])
 
@@ -132,7 +137,7 @@ else:
 status_src = ['Status.cc']
 
 
-srcs = commonenv.Glob('$OBJDIR_COMMON/*.cc') + commonenv.Glob('$OBJDIR_COMMON/os/*.cc') + commonenv.Glob('$OBJDIR_COMMON/crypto/*.cc')
+srcs = commonenv.Glob('$OBJDIR_COMMON/*.cc') + commonenv.Glob('$OBJDIR_COMMON/os/*.cc') + commonenv.Glob('$OBJDIR_COMMON/crypto/*.cc') + commonenv.Glob('$OBJDIR_COMMON/crypto/ECC/*.cc')
 
 # Make sure Status never gets included from common for contained projects
 srcs = [ f for f in srcs if basename(str(f)) not in status_src ]

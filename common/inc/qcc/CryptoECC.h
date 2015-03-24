@@ -135,20 +135,54 @@ struct ECCPublicKey {
 /**
  * The ECC secret
  */
-struct ECCSecret {
-    uint8_t z[ECC_COORDINATE_SZ];
 
-    ECCSecret() {
-        memset(z, 0, ECC_COORDINATE_SZ);
-    }
-    void operator=(const ECCSecret& k)
-    {
-        memcpy(z, k.z, ECC_COORDINATE_SZ);
-    }
-    bool operator==(const ECCSecret& k) const
-    {
-        return memcmp(z, k.z, ECC_COORDINATE_SZ) == 0;
-    }
+class ECCSecret {
+  public:
+
+    /**
+     * Opaque type for the internal state.
+     */
+    struct ECCSecretState;
+
+    /**
+     * Default Constructor;
+     */
+    ECCSecret();
+
+    /**
+     * Set the opaque secret state for this object
+     * @param   pEccSecretState the internal secret state to set.
+     * @return
+     *      ER_OK if the secret is successfully set.
+     *      ER_FAIL otherwise.
+     *      Other error status.
+     */
+    QStatus SetSecretState(const ECCSecretState* pEccSecretState);
+
+    /**
+     * Derives the PreMasterSecret.
+     * Current implementaiton uses SHA256 HASH KDF.
+     * @param   pbPreMasterSecret buffer to receive premaster secret.
+     * @param   cbPreMasterSecret count of buffer to receive premaster secret.
+     * @return
+     *      ER_OK if the pre-master secret is successfully computed and put in pbPreMasterSecret.
+     *      ER_FAIL otherwise.
+     *      Other error status.
+     */
+    QStatus DerivePreMasterSecret(uint8_t* pbPreMasterSecret, size_t cbPreMasterSecret);
+
+    /**
+     * Default Destructor
+     */
+
+    ~ECCSecret();
+
+  private:
+    /**
+     * Private internal state
+     */
+    ECCSecretState* eccSecretState;
+
 };
 
 /**
@@ -186,9 +220,7 @@ class Crypto_ECC {
     /**
      * Default constructor.
      */
-    Crypto_ECC()
-    {
-    }
+    Crypto_ECC();
 
     /**
      * Generates the Ephemeral Diffie-Hellman key pair.
@@ -215,73 +247,49 @@ class Crypto_ECC {
      * Retrieve the DH public key
      * @return  the DH public key.  It's a pointer to an internal buffer. Its lifetime is the same as the object's lifetime.
      */
-    const ECCPublicKey* GetDHPublicKey() const
-    {
-        return &dhPublicKey;
-    }
+    const ECCPublicKey* GetDHPublicKey() const;
 
     /**
      * Assign the DH public key
      * @param pubKey the public key to copy
      */
-    void SetDHPublicKey(const ECCPublicKey* pubKey)
-    {
-        dhPublicKey = *pubKey;
-    }
+    void SetDHPublicKey(const ECCPublicKey* pubKey);
 
     /**
      * Retrieve the DH private key
      * @return  the DH private key.  Same lifetime as the object.
      */
-    const ECCPrivateKey* GetDHPrivateKey() const
-    {
-        return &dhPrivateKey;
-    }
+    const ECCPrivateKey* GetDHPrivateKey() const;
 
     /**
      * Assign the DH private key
      * @param privateKey the private key to copy
      */
-    void SetDHPrivateKey(const ECCPrivateKey* privateKey)
-    {
-        dhPrivateKey = *privateKey;
-    }
+    void SetDHPrivateKey(const ECCPrivateKey* privateKey);
 
     /**
      * Retrieve the DSA public key
      * @return  the DSA public key.  Same lifetime as the object.
      */
-    const ECCPublicKey* GetDSAPublicKey() const
-    {
-        return &dsaPublicKey;
-    }
+    const ECCPublicKey* GetDSAPublicKey() const;
 
     /**
      * Assign the DSA public key
      * @param pubKey the public key to copy
      */
-    void SetDSAPublicKey(const ECCPublicKey* pubKey)
-    {
-        dsaPublicKey = *pubKey;
-    }
+    void SetDSAPublicKey(const ECCPublicKey* pubKey);
 
     /**
      * Retrieve the DSA private key
      * @return  the DSA private key.  Same lifetime as the object.
      */
-    const ECCPrivateKey* GetDSAPrivateKey() const
-    {
-        return &dsaPrivateKey;
-    }
+    const ECCPrivateKey* GetDSAPrivateKey() const;
 
     /**
      * Assign the DSA private key
      * @param privateKey the private key to copy
      */
-    void SetDSAPrivateKey(const ECCPrivateKey* privateKey)
-    {
-        dsaPrivateKey = *privateKey;
-    }
+    void SetDSAPrivateKey(const ECCPrivateKey* privateKey);
 
     /**
      * Generates the DSA key pair.
@@ -353,11 +361,15 @@ class Crypto_ECC {
 
   private:
 
-    ECCPrivateKey dhPrivateKey;
-    ECCPublicKey dhPublicKey;
-    ECCPrivateKey dsaPrivateKey;
-    ECCPublicKey dsaPublicKey;
+    /**
+     * Opaque type for the internal state.
+     */
+    struct ECCState;
 
+    /**
+     * Private internal state
+     */
+    ECCState* eccState;
 };
 
 } /* namespace qcc */

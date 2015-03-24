@@ -369,13 +369,6 @@ static NSString * const ABOUT_INTERFACE_NAME = @"org.alljoyn.About";
 		exit(1);
 	}
     
-    status = [AJNPasswordManager setCredentialsForAuthMechanism:@"ALLJOYN_PIN_KEYX" usingPassword:@"000000"];
-	if (status != ER_OK) {
-        NSLog(@"[%@] [%@] Failed to SetCredentials %@", @"FATAL", [[self class] description],[AJNStatus descriptionForStatusCode:status]);
-        
-		exit(1);
-	}
-    
 	// Connect AJNBusAttachment
 	status = [self.clientBusAttachment connectWithArguments:@""];
 	if (status != ER_OK) {

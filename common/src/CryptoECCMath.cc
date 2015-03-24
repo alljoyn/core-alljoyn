@@ -1,7 +1,7 @@
 /**
- * @file CryptoECC.cc
+ * @file CryptoECCMath.cc
  *
- * Class for ECC public/private key encryption
+ * Class for ECC Crypto Math.
  */
 
 /******************************************************************************
@@ -30,6 +30,8 @@
 #include <qcc/CryptoECCOldEncoding.h>
 #include <qcc/Crypto.h>
 
+#include <qcc/CryptoECCMath.h>
+
 #include <Status.h>
 
 using namespace std;
@@ -38,33 +40,16 @@ namespace qcc {
 
 #define QCC_MODULE "CRYPTO"
 
-#define EXPIRE_DAYS(days)   (long)(60 * 60 * 24 * (days))
-
-typedef enum {B_FALSE, B_TRUE} boolean_t;
-static const int BIGLEN = ECC_BIGVAL_SZ;
-
-struct ECCBigVal {
-    uint32_t data[ECC_BIGVAL_SZ];
-};
-
-struct ECCAffinePoint {
-    ECCBigVal x;
-    ECCBigVal y;
-    uint32_t infinity;
-};
-
-struct ECDSASig {
-    ECCBigVal r;
-    ECCBigVal s;
-};
-
-typedef ECCBigVal bigval_t;
-typedef ECCAffinePoint affine_point_t;
-typedef ECDSASig ECDSA_sig_t;
-
-static const size_t U32_BIGVAL_SZ = ECC_BIGVAL_SZ;
-static const size_t U32_AFFINEPOINT_SZ = 2 * ECC_BIGVAL_SZ + 1;
-static const size_t U32_ECDSASIG_SZ = 2 * ECC_BIGVAL_SZ;
+/* ------------------------------------------------------------------------------------------------------
+ * This file contains the mathematics routines for Ellitpic Curve Cryptography.
+ * It is used in the generic case, or when CNG is present (on windows) it will only used by the
+ * Crypto_ECC_Old_Encoding class for legacy key exchange that uses the whole of the agreed point (in ECDH)
+ * for shared key derivation.  (Which is not currently supported by CNG.)
+ *
+ * All this code was copied from CryptoECC.cc to remerge after the files were split
+ * to wrap CNG or use the original method from the generic file.
+ *
+ */
 
 /* P256 is tested directly with known answer tests from example in
    ANSI X9.62 Annex L.4.2.  (See item in pt_mpy_testcases below.)
@@ -134,15 +119,6 @@ static const size_t U32_ECDSASIG_SZ = 2 * ECC_BIGVAL_SZ;
  */
 
 /*
- * The external function get_random_bytes is expected to be avaiable.
- * It must return 0 on success, and -1 on error.  Feel free to raname
- * this function, if necessary.
- */
-static int get_random_bytes(void*buf, int len);
-
-static boolean_t big_is_zero(bigval_t const* a);
-
-/*
  * CONFIGURATION STUFF
  *
  * All these values are undefined.  It seems better to set the
@@ -189,21 +165,10 @@ typedef struct {
 } dblbigval_t;
 
 
-/* These values describe why the verify failed.  This simplifies testing. */
-typedef enum {V_SUCCESS = 0, V_R_ZERO, V_R_BIG, V_S_ZERO, V_S_BIG,
-              V_INFINITY, V_UNEQUAL} verify_res_t;
 
-typedef enum {MOD_MODULUS = 0, MOD_ORDER} modulus_val_t;
-
-
-#define MSW (BIGLEN - 1)
 static void big_adjustP(bigval_t* tgt, bigval_t const* a, int64_t k);
 static void big_1wd_mpy(bigval_t* tgt, bigval_t const* a, int32_t k);
 static void big_sub(bigval_t* tgt, bigval_t const* a, bigval_t const* b);
-static void big_precise_reduce(bigval_t* tgt, bigval_t const* a,
-                               bigval_t const* modulus);
-
-#define big_is_negative(a) ((int32_t)(a)->data[MSW] < 0)
 
 /*
  * Does approximate reduction.  Subtracts most significant word times
@@ -219,38 +184,22 @@ static void big_precise_reduce(bigval_t* tgt, bigval_t const* a,
 // Squares, always modulo the modulus
 #define big_sqrP(tgt, a) big_mpyP(tgt, a, a, MOD_MODULUS)
 
-
-#define m1 0xffffffffU
-
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
 #define OVERFLOWCHECK(sum, a, b) ((((a) > 0) && ((b) > 0) && ((sum) <= 0)) || \
                                   (((a) < 0) && ((b) < 0) && ((sum) >= 0)))
 
-/* NOTE WELL! The Z component must always be precisely reduced. */
-typedef struct {
-    bigval_t X;
-    bigval_t Y;
-    bigval_t Z;
-} jacobian_point_t;
-
-static bigval_t const big_zero = { { 0, 0, 0, 0, 0, 0, 0 } };
-static bigval_t const big_one = { { 1, 0, 0, 0, 0, 0, 0 } };
 static affine_point_t const affine_infinity = { { { 0, 0, 0, 0, 0, 0, 0 } },
                                                 { { 0, 0, 0, 0, 0, 0, 0 } },
                                                 B_TRUE };
 static jacobian_point_t const jacobian_infinity = { { { 1, 0, 0, 0, 0, 0, 0 } },
                                                     { { 1, 0, 0, 0, 0, 0, 0 } },
                                                     { { 0, 0, 0, 0, 0, 0, 0 } } };
-static bigval_t const modulusP256 = { { m1, m1, m1, 0, 0, 0, 1, m1, 0 } };
+
 static bigval_t const b_P256 =
 { { 0x27d2604b, 0x3bce3c3e, 0xcc53b0f6, 0x651d06b0,
     0x769886bc, 0xb3ebbd55, 0xaa3a93e7, 0x5ac635d8, 0x00000000 } };
-static bigval_t const orderP256 =
-{ { 0xfc632551, 0xf3b9cac2, 0xa7179e84, 0xbce6faad,
-    0xffffffff, 0xffffffff, 0x00000000, 0xffffffff,
-    0x00000000 } };
 #ifdef ECDSA
 static dblbigval_t const orderDBL256 =
 { { 0xfc632551LL - 0x100000000LL,
@@ -265,17 +214,7 @@ static dblbigval_t const orderDBL256 =
 #endif /* ECDSA */
 
 
-static affine_point_t const baseP256 = {
-    { { 0xd898c296, 0xf4a13945, 0x2deb33a0, 0x77037d81,
-        0x63a440f2, 0xf8bce6e5, 0xe12c4247, 0x6b17d1f2 } },
-    { { 0x37bf51f5, 0xcbb64068, 0x6b315ece, 0x2bce3357,
-        0x7c0f9e16, 0x8ee7eb4a, 0xfe1a7f9b, 0x4fe342e2 } },
-    B_FALSE
-};
-#define modulusP modulusP256
-#define orderP orderP256
 #define orderDBL orderDBL256
-#define base_point baseP256
 #define curve_b b_P256
 
 
@@ -392,8 +331,8 @@ static void mpy_accum_dbl(int* cumcarry, uint64_t* sum, uint32_t a, uint32_t b)
  * Computes a * b, approximately reduced mod modulusP or orderP,
  * depending on the modselect flag.
  */
-static void big_mpyP(bigval_t* tgt, bigval_t const* a, bigval_t const* b,
-                     modulus_val_t modselect)
+void big_mpyP(bigval_t* tgt, bigval_t const* a, bigval_t const* b,
+              modulus_val_t modselect)
 {
     int64_t w[2 * BIGLEN];
     int64_t s_accum; /* signed */
@@ -818,7 +757,7 @@ static void big_1wd_mpy(bigval_t* tgt, bigval_t const* a, int32_t k)
  * Adds a to b as signed (2's complement) numbers.  Ok to use for
  * modular values if you don't let the sum overflow.
  */
-COND_STATIC void big_add(bigval_t* tgt, bigval_t const* a, bigval_t const* b)
+void big_add(bigval_t* tgt, bigval_t const* a, bigval_t const* b)
 {
     uint64_t v;
     int i;
@@ -872,7 +811,7 @@ static void big_subP(bigval_t* tgt, bigval_t const* a, bigval_t const* b)
 /* returns 1 if a > b, -1 if a < b, and 0 if a == b.
    a and b are 2's complement.  When applied to modular values,
    args must be precisely reduced. */
-static int big_cmp(bigval_t const* a, bigval_t const* b)
+int big_cmp(bigval_t const* a, bigval_t const* b)
 {
     int i;
 
@@ -898,7 +837,7 @@ static int big_cmp(bigval_t const* a, bigval_t const* b)
  * Computes tgt = a mod modulus.  Only works with modluii slightly
  * less than 2**(32*(BIGLEN-1)).  Both modulusP and orderP qualify.
  */
-static void big_precise_reduce(bigval_t* tgt, bigval_t const* a, bigval_t const* modulus)
+void big_precise_reduce(bigval_t* tgt, bigval_t const* a, bigval_t const* modulus)
 {
     /*
      * src is a trick to avoid an extra copy of a to arg a to a
@@ -1028,8 +967,8 @@ static boolean_t big_is_one(bigval_t const* a)
  * If the denominator is zero, it will loop forever.  Be careful!
  * Modulus must be odd.  num and den must be positive.
  */
-static void big_divide(bigval_t* tgt, bigval_t const* num, bigval_t const* den,
-                       bigval_t const* modulus)
+void big_divide(bigval_t* tgt, bigval_t const* num, bigval_t const* den,
+                bigval_t const* modulus)
 {
     bigval_t u, v, x1, x2;
 
@@ -1105,14 +1044,14 @@ static void big_triple(bigval_t* tgt, bigval_t const* a)
 
 #define jacobian_point_is_infinity(P) (big_is_zero(&(P)->Z))
 
-static void toJacobian(jacobian_point_t* tgt, affine_point_t const* a) {
+void toJacobian(jacobian_point_t* tgt, affine_point_t const* a) {
     tgt->X = a->x;
     tgt->Y = a->y;
     tgt->Z = big_one;
 }
 
 /* a->Z must be precisely reduced */
-static void toAffine(affine_point_t* tgt, jacobian_point_t const* a)
+void toAffine(affine_point_t* tgt, jacobian_point_t const* a)
 {
     bigval_t zinv, zinvpwr;
 
@@ -1191,8 +1130,8 @@ static void pointDouble(jacobian_point_t* tgt, jacobian_point_t const* P)
 /* tgt = P + Q.  P->Z must be precisely reduced.
    tgt->Z will be precisely reduced.  tgt and P can be aliased.
  */
-static void pointAdd(jacobian_point_t* tgt, jacobian_point_t const* P,
-                     affine_point_t const* Q)
+void pointAdd(jacobian_point_t* tgt, jacobian_point_t const* P,
+              affine_point_t const* Q)
 {
     bigval_t t1, t2, t3, t4, x3loc;
 
@@ -1283,7 +1222,7 @@ static void pointAdd(jacobian_point_t* tgt, jacobian_point_t const* P,
 /* k must be non-negative.  Negative values (incorrectly)
    return the infinite point */
 
-static void pointMpyP(affine_point_t* tgt, bigval_t const* k, affine_point_t const* P)
+void pointMpyP(affine_point_t* tgt, bigval_t const* k, affine_point_t const* P)
 {
     int i;
     jacobian_point_t Q;
@@ -1362,7 +1301,7 @@ static void pointMpyP(affine_point_t* tgt, bigval_t const* k, affine_point_t con
     toAffine(tgt, &Q);
 }
 
-COND_STATIC boolean_t in_curveP(affine_point_t const* P)
+boolean_t in_curveP(affine_point_t const* P)
 {
     bigval_t sum, product;
 
@@ -1418,65 +1357,6 @@ int ECDH_generate(affine_point_t* P1, bigval_t* k)
     return (0);
 }
 
-/* takes the point sent by the other party, and verifies that it is a
-   valid point.  If 1 <= k < orderP and the point is valid, it stores
-   the resuling point *tgt and returns B_TRUE.  If the point is invalid it
-   returns B_FALSE.  The behavior with k out of range is unspecified,
-   but safe. */
-
-COND_STATIC boolean_t ECDH_derive_pt(affine_point_t* tgt, bigval_t const* k, affine_point_t const* Q)
-{
-    if (Q->infinity) {
-        return (B_FALSE);
-    }
-    if (big_is_negative(&Q->x)) {
-        return (B_FALSE);
-    }
-    if (big_cmp(&Q->x, &modulusP) >= 0) {
-        return (B_FALSE);
-    }
-    if (big_is_negative(&Q->y)) {
-        return (B_FALSE);
-    }
-    if (big_cmp(&Q->y, &modulusP) >= 0) {
-        return (B_FALSE);
-    }
-    if (!in_curveP(Q)) {
-        return (B_FALSE);
-    }
-
-    /* [HMV] Section 4.3 states that the above steps, combined with the
-     * fact the h=1 for the curves used here, implies that order*Q =
-     * Infinity, which is required by ANSI X9.63.
-     */
-
-    pointMpyP(tgt, k, Q);
-    /* Q2 can't be infinity if 1 <= k < orderP, which is supposed to be
-       the case, but the test is so cheap, we just do it. */
-    if (tgt->infinity) {
-        return (B_FALSE);
-    }
-    return (B_TRUE);
-}
-
-/*
- * The exported ECDH derive function.  Differs from ECHD_derive_pt
- * only in that it returns just the X coordinate of the derived point.
- * The ECDH_derive functionality is split in two so that the test
- * program can get the entire point.
- */
-boolean_t ECDH_derive(bigval_t* tgt, bigval_t const* k, affine_point_t const* Q)
-{
-    affine_point_t Q2;
-    boolean_t rv;
-
-    rv = ECDH_derive_pt(&Q2, k, Q);
-    if (rv) {
-        *tgt = Q2.x;
-    }
-    return (rv);
-}
-
 /*
  * Converts bigval_t src to a network order (big-endian) binary (byte
  * vector) representation. The if tgtlen is longer that the bigval_t,
@@ -1524,144 +1404,46 @@ void binary_to_bigval(const void* src, bigval_t* tgt, size_t srclen)
     }
 }
 
+/* Take the point sent by the other party, and verify that it is a
+   valid point.  If 1 <= k < orderP and the point is valid, store
+   the resuling point *tgt and returns B_TRUE.  If the point is invalid
+   return B_FALSE.  The behavior with k out of range is unspecified,
+   but safe. */
 
-
-#ifdef ECDSA
-/*
- * This function sets the r and s fields of sig.  The implementation
- * follows HMV Algorithm 4.29.
- */
-static int ECDSA_sign(bigval_t const* msgdgst,
-                      bigval_t const* privkey,
-                      ECDSA_sig_t* sig)
+boolean_t ECDH_derive_pt(affine_point_t* tgt, bigval_t const* k, affine_point_t const* Q)
 {
-    int rv;
-    affine_point_t P1;
-    bigval_t k;
-    bigval_t t;
-
-startpoint:
-
-    rv = ECDH_generate(&P1, &k);
-    if (rv) {
-        return (rv);
+    if (Q->infinity) {
+        return (B_FALSE);
+    }
+    if (big_is_negative(&Q->x)) {
+        return (B_FALSE);
+    }
+    if (big_cmp(&Q->x, &modulusP) >= 0) {
+        return (B_FALSE);
+    }
+    if (big_is_negative(&Q->y)) {
+        return (B_FALSE);
+    }
+    if (big_cmp(&Q->y, &modulusP) >= 0) {
+        return (B_FALSE);
+    }
+    if (!in_curveP(Q)) {
+        return (B_FALSE);
     }
 
-    big_precise_reduce(&sig->r, &P1.x, &orderP);
-    if (big_is_zero(&sig->r)) {
-        goto startpoint;
-    }
+    /* [HMV] Section 4.3 states that the above steps, combined with the
+     * fact the h=1 for the curves used here, implies that order*Q =
+     * Infinity, which is required by ANSI X9.63.
+     */
 
-    big_mpyP(&t, privkey, &sig->r, MOD_ORDER);
-    big_add(&t, &t, msgdgst);
-    big_precise_reduce(&t, &t, &orderP); /* may not be necessary */
-    big_divide(&sig->s, &t, &k, &orderP);
-    if (big_is_zero(&sig->s)) {
-        goto startpoint;
+    pointMpyP(tgt, k, Q);
+    /* Q2 can't be infinity if 1 <= k < orderP, which is supposed to be
+       the case, but the test is so cheap, we just do it. */
+    if (tgt->infinity) {
+        return (B_FALSE);
     }
-
-    return (0);
+    return (B_TRUE);
 }
-
-/*
- * Returns B_TRUE if the signature is valid.
- * The implementation follow HMV Algorithm 4.30.
- */
-static verify_res_t ECDSA_verify_inner(bigval_t const* msgdgst,
-                                       affine_point_t const* pubkey,
-                                       ECDSA_sig_t const* sig)
-{
-
-    /* We could reuse variables and save stack space.  If stack space
-       is tight, u1 and u2 could be the same variable by interleaving
-       the big multiplies and the point multiplies. P2 and X could be
-       the same variable.  X.x could be reduced in place, eliminating
-       v. And if you really wanted to get tricky, I think one could use
-       unions between the affine and jacobian versions of points. But
-       check that out before doing it. */
-
-    bigval_t v;
-    bigval_t w;
-    bigval_t u1;
-    bigval_t u2;
-    affine_point_t P1;
-    affine_point_t P2;
-    affine_point_t X;
-    jacobian_point_t P2Jacobian;
-    jacobian_point_t XJacobian;
-
-    if (big_cmp(&sig->r, &big_one) < 0) {
-        return (V_R_ZERO);
-    }
-    if (big_cmp(&sig->r, &orderP) >= 0) {
-        return(V_R_BIG);
-    }
-    if (big_cmp(&sig->s, &big_one) < 0) {
-        return (V_S_ZERO);
-    }
-    if (big_cmp(&sig->s, &orderP) >= 0) {
-        return(V_S_BIG);
-    }
-
-    big_divide(&w, &big_one, &sig->s, &orderP);
-    big_mpyP(&u1, msgdgst, &w, MOD_ORDER);
-    big_precise_reduce(&u1, &u1, &orderP);
-    big_mpyP(&u2, &sig->r, &w, MOD_ORDER);
-    big_precise_reduce(&u2, &u2, &orderP);
-    pointMpyP(&P1, &u1, &base_point);
-    pointMpyP(&P2, &u2, pubkey);
-    toJacobian(&P2Jacobian, &P2);
-    pointAdd(&XJacobian, &P2Jacobian, &P1);
-    toAffine(&X, &XJacobian);
-    if (X.infinity) {
-        return (V_INFINITY);
-    }
-    big_precise_reduce(&v, &X.x, &orderP);
-    if (big_cmp(&v, &sig->r) != 0) {
-        return (V_UNEQUAL);
-    }
-    return (V_SUCCESS);
-}
-
-bool ECDSA_verify(bigval_t const* msgdgst,
-                  affine_point_t const* pubkey,
-                  ECDSA_sig_t const* sig)
-{
-    return (ECDSA_verify_inner(msgdgst, pubkey, sig) == V_SUCCESS);
-}
-
-
-/*
- * Converts a hash value to a bigval_t.  The rules for this in
- * ANSIX9.62 are strange.  Let b be the number of octets necessary to
- * represent the modulus.  If the size of the hash is less than or
- * equal to b, the hash is interpreted directly as a number.
- * Otherwise the left most b octets of the hash are converted to a
- * number. The hash must be big-endian by byte. There is no alignment
- * requirement on hashp.
- */
-void ECC_hash_to_bigval(bigval_t* tgt, void const* hashp, unsigned int hashlen)
-{
-    unsigned int i;
-
-    /* The "4"s in the rest of this function are the number of bytes in
-       a uint32_t (what bigval_t's are made of).  The "8" is the number
-       of bits in a byte. */
-
-    /* reduce hashlen to modulus size, if necessary */
-
-    if (hashlen > 4 * (BIGLEN - 1)) {
-        hashlen = 4 * (BIGLEN - 1);
-    }
-
-    *tgt = big_zero;
-    /* move one byte at a time starting with least significant byte */
-    for (i = 0; i < hashlen; ++i) {
-        tgt->data[i / 4] |=
-            ((uint8_t*)hashp)[hashlen - 1 - i] << (8 * (i % 4));
-    }
-}
-#endif /* ECDSA */
 
 #ifdef ECC_TEST
 char*ECC_feature_list(void)
@@ -1687,7 +1469,7 @@ char*ECC_feature_list(void)
 }
 #endif /* ECC_TEST */
 
-static int get_random_bytes(void* buf, int len) {
+int get_random_bytes(void* buf, int len) {
     QStatus status = qcc::Crypto_GetRandomBytes((uint8_t*) buf, len);
     if (status == ER_OK) {
         return 0;
@@ -1698,7 +1480,7 @@ static int get_random_bytes(void* buf, int len) {
 /*
  * convert a host uint32_t array to a big-endian byte array
  */
-static void U32ArrayToU8BeArray(const uint32_t* src, size_t len, uint8_t* dest)
+void U32ArrayToU8BeArray(const uint32_t* src, size_t len, uint8_t* dest)
 {
     uint32_t* p = (uint32_t*) dest;
     for (size_t cnt = 0; cnt < len; cnt++) {
@@ -1709,7 +1491,7 @@ static void U32ArrayToU8BeArray(const uint32_t* src, size_t len, uint8_t* dest)
 /*
  * convert a big-endian byte array to a host uint32_t array
  */
-static void U8BeArrayToU32Array(const uint8_t* src, size_t len, uint32_t* dest)
+void U8BeArrayToU32Array(const uint8_t* src, size_t len, uint32_t* dest)
 {
     uint32_t* p = (uint32_t*) src;
     size_t u32Len = len / sizeof(uint32_t);
@@ -1717,33 +1499,6 @@ static void U8BeArrayToU32Array(const uint8_t* src, size_t len, uint32_t* dest)
         dest[cnt] = betoh32(p[cnt]);
     }
 }
-
-/*
- * Generates the key pair.
- * @param[out]   publicKey output public key
- * @param[out]   privateKey output private key
- * @return
- *      ER_OK if the key pair is successfully generated.
- *      ER_FAIL otherwise
- *      Other error status.
- */
-static QStatus Crypto_ECC_GenerateKeyPair(ECCPublicKey* publicKey, ECCPrivateKey* privateKey)
-{
-    affine_point_t ap;
-    bigval_t k;
-    if (ECDH_generate(&ap, &k) != 0) {
-        return ER_FAIL;
-    }
-    bigval_to_binary(&ap.x, publicKey->x, sizeof(publicKey->x));
-    bigval_to_binary(&ap.y, publicKey->y, sizeof(publicKey->y));
-    bigval_to_binary(&k, privateKey->d, sizeof(privateKey->d));
-    return ER_OK;
-}
-
-QStatus Crypto_ECC::GenerateDHKeyPair() {
-    return Crypto_ECC_GenerateKeyPair(&dhPublicKey, &dhPrivateKey);
-}
-
 
 /*
  * Generates the Diffie-Hellman shared secret.
@@ -1755,8 +1510,10 @@ QStatus Crypto_ECC::GenerateDHKeyPair() {
  *      ER_FAIL otherwise
  *      Other error status.
  */
-static QStatus Crypto_ECC_GenerateSharedSecret(const ECCPublicKey* peerPublicKey, const ECCPrivateKey* privateKey, ECCSecretOldEncoding* secret)
+QStatus Crypto_ECC_GenerateSharedSecret(const ECCPublicKey* peerPublicKey, const ECCPrivateKey* privateKey, ECCSecretOldEncoding* secret)
 {
+
+    boolean_t derive_rv;
     affine_point_t localSecret;
     affine_point_t pub;
     bigval_t pk;
@@ -1765,223 +1522,19 @@ static QStatus Crypto_ECC_GenerateSharedSecret(const ECCPublicKey* peerPublicKey
     binary_to_bigval(peerPublicKey->x, &pub.x, sizeof(peerPublicKey->x));
     binary_to_bigval(peerPublicKey->y, &pub.y, sizeof(peerPublicKey->y));
     binary_to_bigval(privateKey->d, &pk, sizeof(privateKey->d));
-    if (!ECDH_derive_pt(&localSecret, &pk, &pub)) {
+    derive_rv = ECDH_derive_pt(&localSecret, &pk, &pub);
+    if (!derive_rv) {
         return ER_FAIL;  /* bad */
     }
-    U32ArrayToU8BeArray((const uint32_t*) &localSecret, U32_AFFINEPOINT_SZ, (uint8_t*) secret);
-    return ER_OK;
-}
-
-QStatus Crypto_ECC_OldEncoding::GenerateSharedSecret(Crypto_ECC& ecc, const ECCPublicKey* peerPublicKey, ECCSecretOldEncoding* secret)
-{
-    return Crypto_ECC_GenerateSharedSecret(peerPublicKey, ecc.GetDHPrivateKey(), secret);
-}
-
-QStatus Crypto_ECC::GenerateSharedSecret(const ECCPublicKey* peerPublicKey, ECCSecret* secret)
-{
-    bigval_t sec;
-    bigval_t prv;
-    affine_point_t pub;
-
-    pub.infinity = 0;
-    binary_to_bigval(peerPublicKey->x, &pub.x, sizeof(peerPublicKey->x));
-    binary_to_bigval(peerPublicKey->y, &pub.y, sizeof(peerPublicKey->y));
-    binary_to_bigval(dhPrivateKey.d, &prv, sizeof(dhPrivateKey.d));
-    if (!ECDH_derive(&sec, &prv, &pub)) {
-        return ER_FAIL;  /* bad */
+    if (derive_rv) {
+        if (!in_curveP(&localSecret)) {
+            return ER_FAIL;  /* bad */
+        }
     }
-    bigval_to_binary(&sec, secret->z, sizeof(secret->z));
+    U32ArrayToU8BeArray((const uint32_t*)&localSecret, U32_AFFINEPOINT_SZ, (uint8_t*)secret);
     return ER_OK;
 }
 
-QStatus Crypto_ECC::GenerateDSAKeyPair()
-{
-    return Crypto_ECC_GenerateKeyPair(&dsaPublicKey, &dsaPrivateKey);
-}
 
-/*
- * Sign a digest using the DSA key
- * @param digest The digest to sign
- * @param len The digest len.  Must be equal to 32.
- * @param signingPrivateKey The signing private key
- * @param[out] sig The output signature
- * @return
- *      ER_OK if the signing process succeeds
- *      ER_FAIL otherwise
- *      Other error status.
- */
-static QStatus Crypto_ECC_DSASignDigest(const uint8_t* digest, uint32_t len, const ECCPrivateKey* signingPrivateKey, ECCSignature* sig)
-{
-    if (len != Crypto_SHA256::DIGEST_SIZE) {
-        return ER_FAIL;
-    }
-    bigval_t source;
-    ECC_hash_to_bigval(&source, digest, len);
-    bigval_t privKey;
-    ECDSA_sig_t localSig;
 
-    binary_to_bigval(signingPrivateKey->d, &privKey, sizeof(signingPrivateKey->d));
-    if (ECDSA_sign(&source, &privKey, &localSig) != 0) {
-        return ER_FAIL;
-    }
-    bigval_to_binary(&localSig.r, sig->r, sizeof(sig->r));
-    bigval_to_binary(&localSig.s, sig->s, sizeof(sig->s));
-
-    return ER_OK;
-}
-
-/*
- * Sign a buffer using the DSA key
- * @param buf The buffer to sign
- * @param len The buffer len
- * @param signingPrivateKey The signing private key
- * @param[out] sig The output signature
- * @return
- *      ER_OK if the signing process succeeds
- *      ER_FAIL otherwise
- *      Other error status.
- */
-static QStatus Crypto_ECC_DSASign(const uint8_t* buf, uint32_t len, const ECCPrivateKey* signingPrivateKey, ECCSignature* sig)
-{
-    Crypto_SHA256 hash;
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-
-    hash.Init();
-    hash.Update((const uint8_t*) buf, len);
-    hash.GetDigest(digest);
-    return Crypto_ECC_DSASignDigest(digest, sizeof(digest), signingPrivateKey, sig);
-}
-
-QStatus Crypto_ECC::DSASignDigest(const uint8_t* digest, uint16_t len, ECCSignature* sig)
-{
-    return Crypto_ECC_DSASignDigest(digest, len, &dsaPrivateKey, sig);
-}
-
-QStatus Crypto_ECC::DSASign(const uint8_t* buf, uint16_t len, ECCSignature* sig) {
-    return Crypto_ECC_DSASign(buf, len, &dsaPrivateKey, sig);
-}
-
-/*
- * export style function to verify DSA signature of a digest
- * @param digest The digest to sign
- * @param len The digest len.  Must be 32.
- * @param signingPubKey The signing public key
- * @param sig The signature
- * @return
- *      ER_OK if the signature verification succeeds
- *      ER_FAIL otherwise
- *      Other error status.
- */
-static QStatus Crypto_ECC_DSAVerifyDigest(const uint8_t* digest, uint32_t len, const ECCPublicKey* signingPubKey, const ECCSignature* sig)
-{
-    if (len != Crypto_SHA256::DIGEST_SIZE) {
-        return ER_FAIL;
-    }
-    bigval_t source;
-    affine_point_t pub;
-    ECDSA_sig_t localSig;
-
-    pub.infinity = 0;
-    binary_to_bigval(signingPubKey->x, &pub.x, sizeof(signingPubKey->x));
-    binary_to_bigval(signingPubKey->y, &pub.y, sizeof(signingPubKey->y));
-    binary_to_bigval(sig->r, &localSig.r, sizeof(sig->r));
-    binary_to_bigval(sig->s, &localSig.s, sizeof(sig->s));
-
-    ECC_hash_to_bigval(&source, digest, len);
-    if (!ECDSA_verify(&source, &pub, &localSig)) {
-        return ER_FAIL;
-    }
-    return ER_OK;
-}
-
-/*
- * export style function to verify DSA signature of a buffer
- * @param buf The buffer to sign
- * @param len The buffer len
- * @param signingPubKey The signing public key
- * @param sig The signature
- * @return
- *      ER_OK if the signature verification succeeds
- *      ER_FAIL otherwise
- *      Other error status.
- */
-static QStatus Crypto_ECC_DSAVerify(const uint8_t* buf, uint32_t len, const ECCPublicKey* signingPubKey, const ECCSignature* sig)
-{
-    Crypto_SHA256 hash;
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-
-    hash.Init();
-    hash.Update((const uint8_t*) buf, len);
-    hash.GetDigest(digest);
-    return Crypto_ECC_DSAVerifyDigest(digest, sizeof(digest), signingPubKey, sig);
-}
-
-QStatus Crypto_ECC::DSAVerifyDigest(const uint8_t* digest, uint16_t len, const ECCSignature* sig)
-{
-    return Crypto_ECC_DSAVerifyDigest(digest, len, &dsaPublicKey, sig);
-}
-
-QStatus Crypto_ECC::DSAVerify(const uint8_t* buf, uint16_t len, const ECCSignature* sig)
-{
-    return Crypto_ECC_DSAVerify(buf, len, &dsaPublicKey, sig);
-}
-
-Crypto_ECC::~Crypto_ECC()
-{
-}
-
-QStatus Crypto_ECC_OldEncoding::ReEncode(const ECCPublicKey* newenc, ECCPublicKeyOldEncoding* oldenc)
-{
-    affine_point_t ap;
-    ap.infinity = 0;
-    binary_to_bigval(newenc->x, &ap.x, sizeof(newenc->x));
-    binary_to_bigval(newenc->y, &ap.y, sizeof(newenc->y));
-    U32ArrayToU8BeArray((const uint32_t*) &ap, U32_AFFINEPOINT_SZ, (uint8_t*) oldenc);
-    return ER_OK;
-}
-
-QStatus Crypto_ECC_OldEncoding::ReEncode(const ECCPublicKeyOldEncoding* oldenc, ECCPublicKey* newenc)
-{
-    affine_point_t ap;
-    ap.infinity = 0;
-    U8BeArrayToU32Array((const uint8_t*) oldenc, sizeof(ECCPublicKeyOldEncoding), (uint32_t*) &ap);
-    bigval_to_binary(&ap.x, newenc->x, sizeof(newenc->x));
-    bigval_to_binary(&ap.y, newenc->y, sizeof(newenc->y));
-    return ER_OK;
-}
-
-const qcc::String ECCPublicKey::ToString() const
-{
-    qcc::String s = "x=[";
-    s.append(BytesToHexString(x, ECC_COORDINATE_SZ));
-    s.append("], y=[");
-    s.append(BytesToHexString(y, ECC_COORDINATE_SZ));
-    s.append("]");
-    return s;
-}
-
-QStatus ECCPublicKey::Export(uint8_t* data, size_t* size) const
-{
-    if (data == NULL || size == NULL || *size < (ECC_COORDINATE_SZ + ECC_COORDINATE_SZ)) {
-        return ER_FAIL;
-    }
-
-    memcpy(data, x, ECC_COORDINATE_SZ);
-    memcpy(data + ECC_COORDINATE_SZ, y, ECC_COORDINATE_SZ);
-    *size = ECC_COORDINATE_SZ + ECC_COORDINATE_SZ;
-    return ER_OK;
-}
-
-QStatus ECCPublicKey::Import(const uint8_t* data, size_t size)
-{
-    if ((size != (ECC_COORDINATE_SZ + ECC_COORDINATE_SZ)) || (!data)) {
-        return ER_FAIL;
-    }
-
-    memcpy(x, data, ECC_COORDINATE_SZ);
-    memcpy(y, data + ECC_COORDINATE_SZ, ECC_COORDINATE_SZ);
-
-    return ER_OK;
-}
-
-} /* namespace qcc */
+} /*namespace qcc*/

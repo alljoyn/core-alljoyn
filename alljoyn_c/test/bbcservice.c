@@ -144,17 +144,6 @@ QStatus AJ_CALL request_credentials_async(const void* context, alljoyn_authliste
         alljoyn_busattachment_setkeyexpiration(g_msgBus, guid, g_keyExpiration);
     }
 
-    if (strcmp(authMechanism, "ALLJOYN_PIN_KEYX") == 0) {
-        if (credMask & ALLJOYN_CRED_PASSWORD) {
-            alljoyn_credentials_setpassword(creds, "ABCDEFGH");
-            printf("AuthListener returning fixed pin \"%s\" for %s\n", alljoyn_credentials_getpassword(creds), authMechanism);
-        }
-
-        status = alljoyn_authlistener_requestcredentialsresponse(listener, authContext, QCC_TRUE, creds);
-        alljoyn_credentials_destroy(creds);
-        return status;
-    }
-
     if (strcmp(authMechanism, "ALLJOYN_SRP_KEYX") == 0) {
         if (credMask & ALLJOYN_CRED_PASSWORD) {
             if (authCount == 1) {
@@ -900,7 +889,7 @@ int main(int argc, char** argv)
     /* Auth listener callbacks. */
     authListener = alljoyn_authlistenerasync_create(&authcbs, NULL);
 
-    status = alljoyn_busattachment_enablepeersecurity(g_msgBus, "ALLJOYN_SRP_KEYX ALLJOYN_PIN_KEYX ALLJOYN_RSA_KEYX ALLJOYN_SRP_LOGON", authListener, keyStore, keyStore != NULL);
+    status = alljoyn_busattachment_enablepeersecurity(g_msgBus, "ALLJOYN_SRP_KEYX ALLJOYN_RSA_KEYX ALLJOYN_SRP_LOGON", authListener, keyStore, keyStore != NULL);
     if (ER_OK != status) {
         printf("enablePeerSecurity failed (%s)\n", QCC_StatusText(status));
         return status;
