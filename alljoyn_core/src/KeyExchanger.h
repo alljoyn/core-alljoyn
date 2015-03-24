@@ -36,7 +36,10 @@ using namespace qcc;
 
 namespace ajn {
 
-/* the key exchange is in the 16 MSB */
+/* the key exchange is in the 16 MSB.
+   The PIN-based key exchange mechanism is removed:
+   #define AUTH_KEYX_PIN           0x00040000
+ */
 #define AUTH_KEYX_ANONYMOUS     0x00010000
 #define AUTH_KEYX_EXTERNAL      0x00020000
 #define AUTH_KEYX_PIN           0x00040000

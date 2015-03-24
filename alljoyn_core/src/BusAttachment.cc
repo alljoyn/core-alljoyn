@@ -176,7 +176,6 @@ BusAttachment::Internal::Internal(const char* appName,
         QCC_LogError(status, ("Cannot create %s interface", org::alljoyn::Bus::InterfaceName));
     }
     /* Register bus client authentication mechanisms */
-    authManager.RegisterMechanism(AuthMechPIN::Factory, AuthMechPIN::AuthName());
     authManager.RegisterMechanism(AuthMechExternal::Factory, AuthMechExternal::AuthName());
     authManager.RegisterMechanism(AuthMechAnonymous::Factory, AuthMechAnonymous::AuthName());
 }
