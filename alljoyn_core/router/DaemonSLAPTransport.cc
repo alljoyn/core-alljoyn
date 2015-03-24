@@ -777,7 +777,6 @@ void* DaemonSLAPTransport::Run(void* arg)
                         break;
                     }
                 }
-                delete e;
             }
         }
         for (vector<qcc::Event*>::iterator i = checkEvents.begin(); i != checkEvents.end(); ++i) {
