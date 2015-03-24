@@ -76,17 +76,6 @@ class CredentialAccessor {
     QStatus GetPeerGuid(qcc::String& peerName, qcc::GUID128& guid);
 
     /**
-     * Get the guid to index a local key blob.
-     *
-     * @param keyType     The key blob type
-     * @param[out] guid   The matching guid
-     * @return
-     *      - ER_OK if successful
-     *      - ER_CRYPTO_KEY_UNAVAILABLE if key is unavailable
-     */
-    QStatus GetLocalGUID(qcc::KeyBlob::Type keyType, qcc::GUID128& guid);
-
-    /**
      * Get a key blob
      *
      * @param guid  The unique identifier for the key
