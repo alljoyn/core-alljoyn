@@ -328,13 +328,10 @@ void* _DaemonSLAPEndpoint::AuthThread::Run(void* arg)
      * As a part of Establish, the endpoint can call the Transport's UntrustedClientStart method if
      * it is an untrusted client, so the transport MUST call m_endpoint->SetListener before calling Establish
      * Note: This is only required on the accepting end i.e. for incoming endpoints.
+     * Thin Client 14.06 or higher uses ANONYMOUS to connect to routing nodes.
      */
     m_endpoint->SetListener(m_endpoint->m_transport);
-    if (authListener) {
-        status = m_endpoint->Establish("ALLJOYN_PIN_KEYX ANONYMOUS", authName, redirection, authListener);
-    } else {
-        status = m_endpoint->Establish("ANONYMOUS", authName, redirection, authListener);
-    }
+    status = m_endpoint->Establish("ANONYMOUS", authName, redirection, authListener);
     if (status != ER_OK) {
         QCC_LogError(status, ("Failed to establish SLAP endpoint"));
 

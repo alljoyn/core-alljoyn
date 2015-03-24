@@ -413,11 +413,6 @@ int main(int argc, char**argv, char**envArg)
     //QCC_SetLogLevels("ALLJOYN_ABOUT_ANNOUNCE_HANDLER=7");
     //QCC_SetLogLevels("ALLJOYN_ABOUT_ANNOUNCEMENT_REGISTRAR=7");
 
-    //set Daemon password only for bundled app
-    #ifdef QCC_USING_BD
-    PasswordManager::SetCredentials("ALLJOYN_PIN_KEYX", "000000");
-    #endif
-
     // Install SIGINT handler
     signal(SIGINT, SigIntHandler);
 

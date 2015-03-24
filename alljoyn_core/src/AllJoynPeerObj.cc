@@ -1599,8 +1599,6 @@ void AllJoynPeerObj::SetupPeerAuthentication(const qcc::String& authMechanisms, 
             count++;
         } else if (mech == "EXTERNAL") {
             count++;
-        } else if (mech == "ALLJOYN_PIN_KEYX") {
-            count++;
         } else if (mech == "ALLJOYN_SRP_KEYX") {
             count++;
         } else if (mech == "ALLJOYN_SRP_LOGON") {
@@ -1639,8 +1637,6 @@ void AllJoynPeerObj::SetupPeerAuthentication(const qcc::String& authMechanisms, 
             supportedAuthSuites[idx++] = AUTH_SUITE_ANONYMOUS;
         } else if (mech == "EXTERNAL") {
             supportedAuthSuites[idx++] = AUTH_SUITE_EXTERNAL;
-        } else if (mech == "ALLJOYN_PIN_KEYX") {
-            supportedAuthSuites[idx++] = AUTH_SUITE_PIN_KEYX;
         } else if (mech == "ALLJOYN_SRP_KEYX") {
             supportedAuthSuites[idx++] = AUTH_SUITE_SRP_KEYX;
         } else if (mech == "ALLJOYN_SRP_LOGON") {
