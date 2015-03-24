@@ -774,10 +774,10 @@ static qcc::String EncodePEMCertChain(CertificateX509* certs, size_t numCerts)
 {
     qcc::String chain;
     for (size_t cnt = 0; cnt < numCerts; cnt++) {
-        chain += certs[cnt].GetPEM();
-        if (numCerts > 1) {
+        if (cnt > 0) {
             chain += "\n";
         }
+        chain += certs[cnt].GetPEM();
     }
     return chain;
 }
@@ -806,6 +806,11 @@ static bool IsCertChainStructureValid(CertificateX509* certs, size_t numCerts)
 {
     if ((numCerts == 0) || !certs) {
         return false;
+    }
+    for (size_t cnt = 0; cnt < numCerts; cnt++) {
+        if (ER_OK != certs[cnt].VerifyValidity()) {
+            return false;
+        }
     }
     if (numCerts == 1) {
         return true;

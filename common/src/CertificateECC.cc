@@ -781,12 +781,6 @@ QStatus CertificateX509::Verify()
 
 QStatus CertificateX509::Verify(const ECCPublicKey* key)
 {
-    QStatus status;
-    status = VerifyValidity();
-    if (ER_OK != status) {
-        QCC_DbgPrintf(("Invalid validity period"));
-        return status;
-    }
     Crypto_ECC ecc;
     ecc.SetDSAPublicKey(key);
     return ecc.DSAVerify((const uint8_t*) tbs.data(), tbs.size(), &signature);
