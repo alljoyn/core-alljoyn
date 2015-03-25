@@ -22,8 +22,9 @@
 #include <errno.h>
 #include <string>
 
-#include <alljoyn/BusAttachment.h>
 #include <alljoyn/AboutObj.h>
+#include <alljoyn/BusAttachment.h>
+#include <alljoyn/Init.h>
 
 #define INTF_NAME "com.example.Door"
 
@@ -265,6 +266,11 @@ class Door : public BusObject {
     {
         cout << who.c_str() << " will pass through door @ " << location.c_str() << "." << endl;
         const InterfaceDescription* intf = bus.GetInterface(INTF_NAME);
+        if (intf == NULL) {
+            printf("Failed to obtain the %s interface. Unable to invoke the 'PersonPassedThrough' signal for %s.\n",
+                   INTF_NAME, who.c_str());
+            return;
+        }
         MsgArg arg("s", who.c_str());
         Signal(NULL, SESSION_ID_ALL_HOSTED, *(intf->GetMember("PersonPassedThrough")), &arg, 1);
     }
@@ -283,25 +289,35 @@ static void help()
 
 int CDECL_CALL main(int argc, char** argv)
 {
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+#endif
+
     /* parse command line arguments */
     if (argc == 1) {
         cerr << "Usage: " << argv[0] << " location1 [location2 [... [locationN] ...]]" << endl;
         return EXIT_FAILURE;
     }
 
-    BusAttachment bus("door_provider", true);
-    AboutData aboutData("en");
-    AboutObj aboutObj(bus);
+    BusAttachment* bus = new BusAttachment("door_provider", true);
+    AboutData* aboutData = new AboutData("en");
+    AboutObj* aboutObj = new AboutObj(*bus);
 
-    SetupBusAttachment(bus, aboutData);
-    aboutObj.Announce(port, aboutData);
+    SetupBusAttachment(*bus, *aboutData);
+    aboutObj->Announce(port, *aboutData);
 
     for (int i = 1; i < argc; ++i) {
-        Door* door = new Door(bus, argv[i]);
-        bus.RegisterBusObject(*door);
+        Door* door = new Door(*bus, argv[i]);
+        bus->RegisterBusObject(*door);
         g_doors.push_back(door);
         g_doors_registered.push_back(true);
-        aboutObj.Announce(port, aboutData);
+        aboutObj->Announce(port, *aboutData);
     }
 
     if (g_doors.empty()) {
@@ -349,12 +365,12 @@ int CDECL_CALL main(int argc, char** argv)
         case 'r': {
                 Door& d = *g_doors[g_turn];
                 if (g_doors_registered[g_turn]) {
-                    bus.UnregisterBusObject(d);
+                    bus->UnregisterBusObject(d);
                 } else {
-                    bus.RegisterBusObject(d);
+                    bus->RegisterBusObject(d);
                 }
                 g_doors_registered[g_turn] = !g_doors_registered[g_turn];
-                aboutObj.Announce(port, aboutData);
+                aboutObj->Announce(port, *aboutData);
                 break;
             }
 
@@ -374,6 +390,14 @@ int CDECL_CALL main(int argc, char** argv)
             g_turn = (g_turn + 1) % g_doors.size();
         }
     }
+
+    delete aboutObj;
+    delete aboutData;
+    delete bus;
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
 
     return EXIT_SUCCESS;
 }
