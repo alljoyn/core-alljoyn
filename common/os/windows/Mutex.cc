@@ -78,6 +78,8 @@ QStatus Mutex::Lock(void)
 QStatus Mutex::Lock(const char* file, uint32_t line)
 {
 #if NO_LOCK_TRACE
+    QCC_UNUSED(file);
+    QCC_UNUSED(line);
     return Lock();
 #else
     QStatus status;
@@ -108,6 +110,8 @@ QStatus Mutex::Unlock(void)
 QStatus Mutex::Unlock(const char* file, uint32_t line)
 {
 #if NO_LOCK_TRACE
+    QCC_UNUSED(file);
+    QCC_UNUSED(line);
     return Unlock();
 #else
     if (!initialized) {

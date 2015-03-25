@@ -30,6 +30,9 @@
 
 static void WindowsLogCB(DbgMsgType type, const char* module, const char* msg, void* context)
 {
+    QCC_UNUSED(type);
+    QCC_UNUSED(module);
+    QCC_UNUSED(context);
     OutputDebugStringA(msg);
 }
 

@@ -176,7 +176,7 @@ QStatus SocketStream::PullBytes(void* buf, size_t reqBytes, size_t& actualBytes,
         return isConnected ? ER_OK : ER_READ_ERROR;
     }
     QStatus status;
-    while (true) {
+    for (;;) {
         if (!isConnected) {
             return ER_READ_ERROR;
         }
@@ -202,7 +202,7 @@ QStatus SocketStream::PullBytesAndFds(void* buf, size_t reqBytes, size_t& actual
 {
     QStatus status;
     size_t recvdFds = 0;
-    while (true) {
+    for (;;) {
         if (!isConnected) {
             return ER_READ_ERROR;
         }
@@ -240,7 +240,7 @@ QStatus SocketStream::PushBytes(const void* buf, size_t numBytes, size_t& numSen
         return ER_OK;
     }
     QStatus status;
-    while (true) {
+    for (;;) {
         if (!isConnected) {
             return ER_WRITE_ERROR;
         }
@@ -270,7 +270,7 @@ QStatus SocketStream::PushBytesAndFds(const void* buf, size_t numBytes, size_t& 
         return ER_BAD_ARG_5;
     }
     QStatus status;
-    while (true) {
+    for (;;) {
         if (!isConnected) {
             return ER_WRITE_ERROR;
         }

@@ -155,6 +155,10 @@ static QCC_BOOL my_sessionportlistener_acceptsessionjoiner(const void* context,
                                                            const char* joiner,
                                                            const alljoyn_sessionopts opts)
 {
+    QCC_UNUSED(context);
+    QCC_UNUSED(sessionPort);
+    QCC_UNUSED(joiner);
+    QCC_UNUSED(opts);
     return QCC_TRUE;
 }
 
@@ -165,7 +169,8 @@ static void about_obj_test_about_listener_announced_cb(const void* context,
                                                        const alljoyn_msgarg objectDescriptionArg,
                                                        const alljoyn_msgarg aboutDataArg)
 {
-
+    QCC_UNUSED(objectDescriptionArg);
+    QCC_UNUSED(aboutDataArg);
     about_obj_test_about_listener_2* listener =
         (about_obj_test_about_listener_2*)(context);
     EXPECT_FALSE(listener->announceListenerFlag == 1)

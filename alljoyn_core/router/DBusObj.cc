@@ -148,6 +148,7 @@ void DBusObj::ObjectRegistered()
 
 void DBusObj::ListNames(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
     /* Get the name list */
     vector<qcc::String> namesVec;
     router.GetBusNames(namesVec);
@@ -175,6 +176,8 @@ void DBusObj::ListNames(const InterfaceDescription::Member* member, Message& msg
 
 void DBusObj::ListActivatableNames(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
+
     MsgArg namesArray(ALLJOYN_ARRAY);
     namesArray.v_array.SetElements("s", 0, NULL);
 
@@ -186,6 +189,8 @@ void DBusObj::ListActivatableNames(const InterfaceDescription::Member* member, M
 
 void DBusObj::NameHasOwner(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
+
     QStatus status;
     MsgArg boolArg = MsgArg(ALLJOYN_BOOLEAN);
 
@@ -207,6 +212,8 @@ void DBusObj::NameHasOwner(const InterfaceDescription::Member* member, Message& 
 
 void DBusObj::RequestName(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
+
     QStatus status;
     void* context = (void*) &msg;
 
@@ -240,6 +247,8 @@ void DBusObj::RequestName(const InterfaceDescription::Member* member, Message& m
 
 void DBusObj::ReleaseName(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
+
     void* context = (void*) &msg;
 
     const MsgArg* nameArg = msg->GetArg(0);
@@ -252,6 +261,8 @@ void DBusObj::ReleaseName(const InterfaceDescription::Member* member, Message& m
 
 void DBusObj::StartServiceByName(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
+
     qcc::String description("Unable to start service: ");
     description += msg->GetDestination();
     description += "(";
@@ -262,6 +273,8 @@ void DBusObj::StartServiceByName(const InterfaceDescription::Member* member, Mes
 
 void DBusObj::GetNameOwner(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
+
     QStatus status;
     const MsgArg* nameArg = msg->GetArg(0);
 
@@ -284,6 +297,8 @@ void DBusObj::GetNameOwner(const InterfaceDescription::Member* member, Message& 
 
 void DBusObj::GetConnectionUnixUser(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
+
     QStatus status;
     const MsgArg* nameArg = msg->GetArg(0);
 
@@ -307,6 +322,8 @@ void DBusObj::GetConnectionUnixUser(const InterfaceDescription::Member* member, 
 
 void DBusObj::GetConnectionUnixProcessID(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
+
     QStatus status;
     const MsgArg* nameArg = msg->GetArg(0);
 
@@ -330,6 +347,8 @@ void DBusObj::GetConnectionUnixProcessID(const InterfaceDescription::Member* mem
 
 void DBusObj::AddMatch(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
+
     QStatus status;
     const MsgArg* nameArg = msg->GetArg(0);
 
@@ -354,6 +373,8 @@ void DBusObj::AddMatch(const InterfaceDescription::Member* member, Message& msg)
 
 void DBusObj::RemoveMatch(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
+
     QStatus status;
     const MsgArg* nameArg = msg->GetArg(0);
 
@@ -378,6 +399,8 @@ void DBusObj::RemoveMatch(const InterfaceDescription::Member* member, Message& m
 
 void DBusObj::GetId(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
+
     MsgArg replyArg(ALLJOYN_STRING);
 
     const qcc::String& guid = bus.GetInternal().GetGlobalGUID().ToString();
@@ -393,6 +416,7 @@ void DBusObj::GetId(const InterfaceDescription::Member* member, Message& msg)
 
 void DBusObj::UpdateActivationEnvironment(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
     // TODO: Implement me.
     QStatus status = MethodReply(msg, "org.freedesktop.DBus.Error.NotSupported", NULL);
     if (ER_OK != status) {
@@ -402,6 +426,8 @@ void DBusObj::UpdateActivationEnvironment(const InterfaceDescription::Member* me
 
 void DBusObj::ListQueuedOwners(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
+
     const MsgArg* nameArg = msg->GetArg(0);
     assert(nameArg && (ALLJOYN_STRING == nameArg->typeId));
 
@@ -445,6 +471,7 @@ void DBusObj::ListQueuedOwners(const InterfaceDescription::Member* member, Messa
 
 void DBusObj::GetAdtAuditSessionData(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
     // TODO: Implement me.
     QStatus status = MethodReply(msg, "org.freedesktop.DBus.Error.NotSupported", NULL);
     if (ER_OK != status) {
@@ -454,6 +481,7 @@ void DBusObj::GetAdtAuditSessionData(const InterfaceDescription::Member* member,
 
 void DBusObj::GetConnectionSELinuxSecurityContext(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
     // TODO: Implement me.
     QStatus status = MethodReply(msg, "org.freedesktop.DBus.Error.NotSupported", NULL);
     if (ER_OK != status) {
@@ -463,11 +491,14 @@ void DBusObj::GetConnectionSELinuxSecurityContext(const InterfaceDescription::Me
 
 void DBusObj::ReloadConfig(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
     MethodReply(msg, "org.freedesktop.DBus.Error.Failed");
 }
 
 void DBusObj::AddAliasComplete(const qcc::String& aliasName, uint32_t disposition, void* context)
 {
+    QCC_UNUSED(aliasName);
+
     assert(context);
     Message* msg = (Message*) context;
     MsgArg replyArg(ALLJOYN_UINT32);
@@ -482,6 +513,8 @@ void DBusObj::RemoveAliasComplete(const qcc::String& aliasName,
                                   uint32_t disposition,
                                   void* context)
 {
+    QCC_UNUSED(aliasName);
+
     assert(context);
     Message* msg = (Message*) context;
     MsgArg replyArg(ALLJOYN_UINT32);

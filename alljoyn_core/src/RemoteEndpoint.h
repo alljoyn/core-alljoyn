@@ -467,14 +467,20 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
      * @param[out] ipAddr The IP address of the remote end.
      * @return status ER_OK if the IP address is valid, or error.
      */
-    virtual QStatus GetRemoteIp(qcc::String& ipAddr) { return ER_NOT_IMPLEMENTED; };
+    virtual QStatus GetRemoteIp(qcc::String& ipAddr) {
+        QCC_UNUSED(ipAddr);
+        return ER_NOT_IMPLEMENTED;
+    };
 
     /**
      * Get the IP address of the local end.
      * @param[out] ipAddr The IP address of the local end.
      * @return status ER_OK if the IP address is valid, or error.
      */
-    virtual QStatus GetLocalIp(qcc::String& ipAddr) { return ER_NOT_IMPLEMENTED; };
+    virtual QStatus GetLocalIp(qcc::String& ipAddr) {
+        QCC_UNUSED(ipAddr);
+        return ER_NOT_IMPLEMENTED;
+    };
 
   protected:
 

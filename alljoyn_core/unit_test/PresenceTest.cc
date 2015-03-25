@@ -85,6 +85,9 @@ String wellKnownNameReqAdvLocalOnly;
 // find name listener class
 class PresenceTestFindNameListener : public BusListener {
     void FoundAdvertisedName(const char* name, TransportMask transport, const char* namePrefix) {
+        QCC_UNUSED(transport);
+        QCC_UNUSED(namePrefix);
+
         printf("FoundAdvertisedName %s\n", name);
         if (wellKnownNameAdvReq == name) {
             presenceFoundAdvReq = true;
@@ -96,6 +99,9 @@ class PresenceTestFindNameListener : public BusListener {
     }
 
     void LostAdvertisedName(const char* name, TransportMask transport, const char* namePrefix) {
+        QCC_UNUSED(transport);
+        QCC_UNUSED(namePrefix);
+
         printf("LostAdvertisedName %s\n", name);
 
         if (wellKnownNameAdvReq == name) {
@@ -107,6 +113,8 @@ class PresenceTestFindNameListener : public BusListener {
         }
     }
     void NameOwnerChanged(const char* busName, const char* previousOwner, const char* newOwner) {
+        QCC_UNUSED(previousOwner);
+
         printf("NameOwnerChanged %s newOwner %s\n", busName, newOwner);
 
         if (wellKnownNameNotAdvReq == busName) {
@@ -333,7 +341,12 @@ TEST_F(PresenceTest, PingExitedApp) {
 }
 class PresenceSessionPortListener : public SessionPortListener {
   public:
-    bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) { return true; }
+    bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) {
+        QCC_UNUSED(sessionPort);
+        QCC_UNUSED(joiner);
+        QCC_UNUSED(opts);
+        return true;
+    }
 };
 TEST_F(PresenceTest, PingSessionNames) {
     QStatus status = ER_OK;

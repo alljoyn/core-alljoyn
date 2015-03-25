@@ -35,6 +35,7 @@ static void foo_cb(alljoyn_busobject object,
                    const alljoyn_interfacedescription_member* member,
                    alljoyn_message msg)
 {
+    QCC_UNUSED(member);
     alljoyn_busobject_methodreply_args(object, msg, NULL, 0);
 }
 
@@ -45,6 +46,11 @@ static void announced_cb(const void* context,
                          const alljoyn_msgarg objectDescriptionArg,
                          const alljoyn_msgarg aboutDataArg)
 {
+    QCC_UNUSED(busName);
+    QCC_UNUSED(version);
+    QCC_UNUSED(port);
+    QCC_UNUSED(objectDescriptionArg);
+    QCC_UNUSED(aboutDataArg);
     int* idx = (int*) context;
     announceListenerFlags[*idx] = QCC_TRUE;
 }
@@ -56,6 +62,11 @@ static void about_test_wildcard_about_listener_announced_cb(const void* context,
                                                             const alljoyn_msgarg objectDescriptionArg,
                                                             const alljoyn_msgarg aboutDataArg)
 {
+    QCC_UNUSED(busName);
+    QCC_UNUSED(version);
+    QCC_UNUSED(port);
+    QCC_UNUSED(objectDescriptionArg);
+    QCC_UNUSED(aboutDataArg);
     about_test_wildcard_about_listener* listener =
         (about_test_wildcard_about_listener*)(context);
     listener->announcelistenercount++;
@@ -68,6 +79,10 @@ static void non_128_bit_app_id_about_listener_announced_cb(const void* context,
                                                            const alljoyn_msgarg objectDescriptionArg,
                                                            const alljoyn_msgarg aboutDataArg)
 {
+    QCC_UNUSED(busName);
+    QCC_UNUSED(version);
+    QCC_UNUSED(port);
+    QCC_UNUSED(objectDescriptionArg);
     announce_non_128_bit_app_id_about_listener* listener =
         (announce_non_128_bit_app_id_about_listener*)(context);
     announceListenerFlags[0] = QCC_TRUE;
@@ -82,6 +97,11 @@ static void remove_object_description_about_listener_cb(const void* context,
                                                         const alljoyn_msgarg objectDescriptionArg,
                                                         const alljoyn_msgarg aboutDataArg)
 {
+    QCC_UNUSED(busName);
+    QCC_UNUSED(version);
+    QCC_UNUSED(port);
+    QCC_UNUSED(objectDescriptionArg);
+    QCC_UNUSED(aboutDataArg);
     QStatus status = ER_FAIL;
     alljoyn_aboutobjectdescription objectDescription = alljoyn_aboutobjectdescription_create();
     status = alljoyn_aboutobjectdescription_createfrommsgarg(objectDescription, objectDescriptionArg);
@@ -105,6 +125,11 @@ static void filtered_about_listener_cb(const void* context,
                                        const alljoyn_msgarg objectDescriptionArg,
                                        const alljoyn_msgarg aboutDataArg)
 {
+    QCC_UNUSED(busName);
+    QCC_UNUSED(version);
+    QCC_UNUSED(port);
+    QCC_UNUSED(objectDescriptionArg);
+    QCC_UNUSED(aboutDataArg);
     QStatus status = ER_OK;
     alljoyn_aboutobjectdescription aod = alljoyn_aboutobjectdescription_create();
     status = alljoyn_aboutobjectdescription_createfrommsgarg(aod, objectDescriptionArg);

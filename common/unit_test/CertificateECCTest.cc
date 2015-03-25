@@ -101,6 +101,8 @@ class CertificateECCTest : public testing::Test {
 
 static QStatus CreateCert(const qcc::String& serial, const qcc::GUID128& issuer, const ECCPrivateKey* issuerPrivateKey, const ECCPublicKey* issuerPubKey, const qcc::GUID128& subject, const ECCPublicKey* subjectPubKey, uint32_t expiredInSeconds, CertificateX509& x509)
 {
+    QCC_UNUSED(issuerPubKey);
+
     QStatus status = ER_CRYPTO_ERROR;
 
     x509.SetSerial(serial);

@@ -37,6 +37,7 @@ static volatile sig_atomic_t s_interrupt = QCC_FALSE;
 
 static void CDECL_CALL sig_int_handler(int sig)
 {
+    QCC_UNUSED(sig);
     s_interrupt = QCC_TRUE;
 }
 
@@ -48,6 +49,9 @@ static void sessionportlistener_sessionjoined_cb(const void* context,
                                                  alljoyn_sessionid id,
                                                  const char* joiner)
 {
+    QCC_UNUSED(context);
+    QCC_UNUSED(sessionPort);
+    QCC_UNUSED(joiner);
     printf("Session Joined SessionId = %u\n", id);
 }
 
@@ -56,6 +60,9 @@ static QCC_BOOL sessionportlistener_acceptsessionjoiner_cb(const void* context,
                                                            const char* joiner,
                                                            const alljoyn_sessionopts opts)
 {
+    QCC_UNUSED(context);
+    QCC_UNUSED(joiner);
+    QCC_UNUSED(opts);
     if (sessionPort != ASSIGNED_SESSION_PORT) {
         printf("Rejecting join attempt on unexpected session port %d\n", sessionPort);
         return QCC_FALSE;
@@ -81,6 +88,7 @@ static alljoyn_sessionportlistener create_my_alljoyn_sessionportlistener()
 static void echo_cb(alljoyn_busobject object,
                     const alljoyn_interfacedescription_member* member,
                     alljoyn_message msg) {
+    QCC_UNUSED(member);
     alljoyn_msgarg arg = alljoyn_message_getarg(msg, 0);
     printf("Echo method called %s\n", ((ajn::MsgArg*)arg)->v_string.str);
 
@@ -118,8 +126,10 @@ static alljoyn_busobject create_my_alljoyn_busobject(alljoyn_busattachment bus,
     return result;
 }
 
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
+    QCC_UNUSED(argc);
+    QCC_UNUSED(argv);
     /* Install SIGINT handler so Ctrl + C deallocates memory properly */
     signal(SIGINT, sig_int_handler);
 

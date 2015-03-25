@@ -197,7 +197,7 @@ void XmlElement::FinalizeElement(XmlParseContext& ctx)
 QStatus XmlElement::Parse(XmlParseContext& ctx)
 {
     bool done = false;
-    QStatus status;
+    QStatus status = ER_OK;
 
     while (!done) {
         char c;

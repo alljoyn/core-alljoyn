@@ -81,7 +81,7 @@ qcc::String IPAddress::IPv4ToString(const uint8_t addr[])
 {
     qcc::String result = "";
 
-    while (true) {
+    for (;;) {
         if (NULL == addr) {
             break;
         }
@@ -126,7 +126,7 @@ qcc::String IPAddress::IPv6ToString(const uint8_t addr[])
 {
     qcc::String result = "";
 
-    while (true) {
+    for (;;) {
         if (NULL == addr) {
             break;
         }
@@ -315,7 +315,7 @@ QStatus IPAddress::StringToIPv6(const qcc::String& address, uint8_t addrBuf[], s
 {
     QStatus result = ER_OK;
 
-    while (true) {
+    for (;;) {
         if (NULL == addrBuf) {
             result = ER_BAD_ARG_2;
             break;
@@ -694,7 +694,7 @@ QStatus IPAddress::StringToIPv4(const qcc::String& address, uint8_t addrBuf[], s
 {
     QStatus result = ER_OK;
 
-    while (true) {
+    for (;;) {
         if (NULL == addrBuf) {
             result = ER_BAD_ARG_2;
             break;

@@ -528,7 +528,7 @@ TEST(UARTTest, DISABLED_serial_testrandomecho) {
     uc.Start();
     int iter = 0;
     size_t actual;
-    while (1) {
+    for (;;) {
         printf("iteration %d\n", iter);
         status = h1.PullBytes(rxBuffer, RANDOM_BYTES_MAX, x, 5000);
         if (status == ER_TIMEOUT) {
@@ -589,7 +589,7 @@ TEST(UARTTest, DISABLED_serial_testsendrecv) {
     uc.Start();
     int iter = 0;
     size_t txlen;
-    while (1) {
+    for (;;) {
         printf("iteration %d\n", iter);
         iter++;
         txlen = rand() % RANDOM_BYTES_MAX;
@@ -634,7 +634,7 @@ TEST(UARTTest, DISABLED_valid_parameters)
                 UARTFd fd;
                 QStatus status = UART("/tmp/COM0", BAUDRATE, databits[d], parity[p], stopbits[s], fd);
                 ASSERT_EQ(ER_OK, status);
-                ASSERT_NE(-1, fd);
+                ASSERT_NE((UARTFd) - 1, fd);
                 close(fd);
             }
         }

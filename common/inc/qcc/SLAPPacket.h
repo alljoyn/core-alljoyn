@@ -152,7 +152,7 @@ class SLAPReadPacket {
      *
      * @param other  SLAPReadPacket to assign from.
      */
-    SLAPReadPacket operator=(const SLAPReadPacket& other) { return *this; };
+    SLAPReadPacket operator=(const SLAPReadPacket&);
 
     enum PACKET_READ_STATE {
         PACKET_NEW,
@@ -277,7 +277,7 @@ class SLAPWritePacket {
      *
      * @param other  SLAPWritePacket to assign from.
      */
-    SLAPWritePacket operator=(const SLAPWritePacket& other) { return *this; };
+    SLAPWritePacket operator=(const SLAPWritePacket&);
 
     size_t m_maxPacketSize;               /**< Maximum packet size supported. */
 

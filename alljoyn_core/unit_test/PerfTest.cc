@@ -35,16 +35,25 @@ class ClientBusListener : public BusListener {
 
     void FoundAdvertisedName(const char* name, TransportMask transport, const char* namePrefix)
     {
+        QCC_UNUSED(name);
+        QCC_UNUSED(transport);
+        QCC_UNUSED(namePrefix);
         //QCC_SyncPrintf("FoundAdvertisedName(name=%s, transport=0x%x, prefix=%s)\n", name, transport, namePrefix);
         discoverEvent.SetEvent();
     }
 
     void LostAdvertisedName(const char* name, TransportMask transport, const char* namePrefix)
     {
+        QCC_UNUSED(name);
+        QCC_UNUSED(transport);
+        QCC_UNUSED(namePrefix);
         //QCC_SyncPrintf("LostAdvertisedName(name=%s, transport=0x%x, namePrefix=%s)\n", name, transport, namePrefix);
     }
 
     Event& discoverEvent;
+  private:
+    /* Private assigment operator - does nothing */
+    ClientBusListener operator=(const ClientBusListener&);
 };
 
 class PerfTest : public::testing::Test {

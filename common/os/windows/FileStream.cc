@@ -142,6 +142,8 @@ QStatus FileSource::GetSize(int64_t& fileSize)
 
 QStatus FileSource::PullBytes(void* buf, size_t reqBytes, size_t& actualBytes, uint32_t timeout)
 {
+    QCC_UNUSED(timeout);
+
     if (INVALID_HANDLE_VALUE == handle) {
         return ER_INIT_FAILED;
     }
