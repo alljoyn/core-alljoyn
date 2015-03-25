@@ -42,7 +42,7 @@ using namespace qcc;
 
 namespace ajn {
 _Packet::_Packet()
-    : m_timer(0), m_destination("0.0.0.0", 0), m_destinationSet(false), m_interfaceIndex(-1), m_interfaceIndexSet(false), m_addressFamily(qcc::QCC_AF_UNSPEC), m_addressFamilySet(false), m_retries(0), m_tick(0), m_version(0)
+    : m_timer(0), m_destination("0.0.0.0", 0), m_destinationSet(false), m_interfaceIndex((uint32_t)-1), m_interfaceIndexSet(false), m_addressFamily(qcc::QCC_AF_UNSPEC), m_addressFamilySet(false), m_retries(0), m_tick(0), m_version(0)
 {
 }
 
@@ -1642,7 +1642,7 @@ size_t MDNSDomainName::GetSerializedSize(std::map<qcc::String, uint32_t>& offset
 {
     size_t size = 0;
     String name = m_name;
-    while (true) {
+    for (;;) {
         if (name.empty()) {
             size++;
             break;
@@ -1667,7 +1667,7 @@ size_t MDNSDomainName::Serialize(uint8_t* buffer, std::map<qcc::String, uint32_t
 {
     size_t size = 0;
     String name = m_name;
-    while (true) {
+    for (;;) {
         if (name.empty()) {
             buffer[size++] = 0;
             break;
@@ -2055,16 +2055,22 @@ MDNSRData* MDNSResourceRecord::GetRData()
 //MDNSDefaultRData
 size_t MDNSDefaultRData::GetSerializedSize(std::map<qcc::String, uint32_t>& offsets) const
 {
+    UNREFERENCED_PARAMETER(offsets);
     return 0;
 }
 
 size_t MDNSDefaultRData::Serialize(uint8_t* buffer, std::map<qcc::String, uint32_t>& offsets, uint32_t headerOffset) const
 {
+    UNREFERENCED_PARAMETER(buffer);
+    UNREFERENCED_PARAMETER(offsets);
+    UNREFERENCED_PARAMETER(headerOffset);
     return 0;
 }
 
 size_t MDNSDefaultRData::Deserialize(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset)
 {
+    UNREFERENCED_PARAMETER(compressedOffsets);
+    UNREFERENCED_PARAMETER(headerOffset);
     //
     // If there's not enough data in the buffer to even get the string size out
     // then bail.
@@ -2201,6 +2207,7 @@ void MDNSTextRData::RemoveFieldAt(String key, int i)
 
 size_t MDNSTextRData::GetSerializedSize(std::map<qcc::String, uint32_t>& offsets) const
 {
+    UNREFERENCED_PARAMETER(offsets);
     size_t rdlen = 0;
     Fields::const_iterator it = m_fields.begin();
 
@@ -2217,6 +2224,9 @@ size_t MDNSTextRData::GetSerializedSize(std::map<qcc::String, uint32_t>& offsets
 
 size_t MDNSTextRData::Serialize(uint8_t* buffer, std::map<qcc::String, uint32_t>& offsets, uint32_t headerOffset) const
 {
+    UNREFERENCED_PARAMETER(offsets);
+    UNREFERENCED_PARAMETER(headerOffset);
+
     size_t rdlen = 0;
     uint8_t* p = &buffer[2];
 
@@ -2257,6 +2267,8 @@ size_t MDNSTextRData::Serialize(uint8_t* buffer, std::map<qcc::String, uint32_t>
 
 size_t MDNSTextRData::Deserialize(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset)
 {
+    UNREFERENCED_PARAMETER(compressedOffsets);
+    UNREFERENCED_PARAMETER(headerOffset);
     //
     // If there's not enough data in the buffer to even get the string size out
     // then bail.
@@ -2319,12 +2331,16 @@ qcc::String MDNSARData::GetAddr()
 
 size_t MDNSARData::GetSerializedSize(std::map<qcc::String, uint32_t>& offsets) const
 {
+    UNREFERENCED_PARAMETER(offsets);
     //4 bytes for address, 2 bytes length
     return 4 + 2;
 }
 
 size_t MDNSARData::Serialize(uint8_t* buffer, std::map<qcc::String, uint32_t>& offsets, uint32_t headerOffset) const
 {
+    UNREFERENCED_PARAMETER(offsets);
+    UNREFERENCED_PARAMETER(headerOffset);
+
     buffer[0] = 0;
     buffer[1] = 4;
     uint8_t* p = &buffer[2];
@@ -2338,6 +2354,8 @@ size_t MDNSARData::Serialize(uint8_t* buffer, std::map<qcc::String, uint32_t>& o
 
 size_t MDNSARData::Deserialize(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset)
 {
+    UNREFERENCED_PARAMETER(compressedOffsets);
+    UNREFERENCED_PARAMETER(headerOffset);
 
     if (bufsize < 6) {
         QCC_DbgPrintf(("MDNSTextRecord::Deserialize(): Insufficient bufsize %d", bufsize));
@@ -2367,12 +2385,16 @@ qcc::String MDNSAAAARData::GetAddr() const
 
 size_t MDNSAAAARData::GetSerializedSize(std::map<qcc::String, uint32_t>& offsets) const
 {
+    UNREFERENCED_PARAMETER(offsets);
     //16 bytes for address, 2 bytes length
     return 16 + 2;
 }
 
 size_t MDNSAAAARData::Serialize(uint8_t* buffer, std::map<qcc::String, uint32_t>& offsets, uint32_t headerOffset) const
 {
+    UNREFERENCED_PARAMETER(offsets);
+    UNREFERENCED_PARAMETER(headerOffset);
+
     buffer[0] = 0;
     buffer[1] = 16;
     uint8_t* p = &buffer[2];
@@ -2382,6 +2404,9 @@ size_t MDNSAAAARData::Serialize(uint8_t* buffer, std::map<qcc::String, uint32_t>
 
 size_t MDNSAAAARData::Deserialize(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset)
 {
+    UNREFERENCED_PARAMETER(compressedOffsets);
+    UNREFERENCED_PARAMETER(headerOffset);
+
     if (bufsize < 18) {
         QCC_DbgPrintf(("MDNSTextRecord::Deserialize(): Insufficient bufsize %d", bufsize));
         return 0;
@@ -2411,7 +2436,7 @@ size_t MDNSPtrRData::GetSerializedSize(std::map<qcc::String, uint32_t>& offsets)
 {
     size_t size = 2;
     String name = m_rdataStr;
-    while (true) {
+    for (;;) {
         if (name.empty()) {
             size++;
             break;
@@ -2436,7 +2461,7 @@ size_t MDNSPtrRData::Serialize(uint8_t* buffer, std::map<qcc::String, uint32_t>&
 {
     size_t size = 2;
     String name = m_rdataStr;
-    while (true) {
+    for (;;) {
         if (name.empty()) {
             buffer[size++] = 0;
             break;

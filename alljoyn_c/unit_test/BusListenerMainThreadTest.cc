@@ -35,24 +35,41 @@ static QCC_BOOL bus_disconnected_flag = QCC_FALSE;
 
 /* bus listener functions */
 static void AJ_CALL listener_registered(const void* context, alljoyn_busattachment bus) {
+    UNREFERENCED_PARAMETER(context);
+    UNREFERENCED_PARAMETER(bus);
     listener_registered_flag = QCC_TRUE;
 }
 static void AJ_CALL listener_unregistered(const void* context) {
+    UNREFERENCED_PARAMETER(context);
     listener_unregistered_flag = QCC_TRUE;
 }
 static void AJ_CALL found_advertised_name(const void* context, const char* name, alljoyn_transportmask transport, const char* namePrefix) {
+    UNREFERENCED_PARAMETER(context);
+    UNREFERENCED_PARAMETER(name);
+    UNREFERENCED_PARAMETER(transport);
+    UNREFERENCED_PARAMETER(namePrefix);
     found_advertised_name_flag = QCC_TRUE;
 }
 static void AJ_CALL lost_advertised_name(const void* context, const char* name, alljoyn_transportmask transport, const char* namePrefix) {
+    UNREFERENCED_PARAMETER(context);
+    UNREFERENCED_PARAMETER(name);
+    UNREFERENCED_PARAMETER(transport);
+    UNREFERENCED_PARAMETER(namePrefix);
     lost_advertised_name_flag = QCC_TRUE;
 }
 static void AJ_CALL name_owner_changed(const void* context, const char* busName, const char* previousOwner, const char* newOwner) {
+    UNREFERENCED_PARAMETER(context);
+    UNREFERENCED_PARAMETER(busName);
+    UNREFERENCED_PARAMETER(previousOwner);
+    UNREFERENCED_PARAMETER(newOwner);
     name_owner_changed_flag = QCC_TRUE;
 }
 static void AJ_CALL bus_stopping(const void* context) {
+    UNREFERENCED_PARAMETER(context);
     bus_stopping_flag = QCC_TRUE;
 }
 static void AJ_CALL bus_disconnected(const void* context) {
+    UNREFERENCED_PARAMETER(context);
     bus_disconnected_flag = QCC_TRUE;
 }
 

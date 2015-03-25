@@ -64,6 +64,9 @@ class Translator {
      * @return The translated text or NULL
      */
     virtual const char* Translate(const char* sourceLanguage, const char* targetLanguage, const char* source) {
+        UNREFERENCED_PARAMETER(sourceLanguage);
+        UNREFERENCED_PARAMETER(targetLanguage);
+        UNREFERENCED_PARAMETER(source);
         return NULL;
     }
 
@@ -83,6 +86,7 @@ class Translator {
      */
     virtual const char* Translate(const char* sourceLanguage,
                                   const char* targetLanguage, const char* source, qcc::String& buffer) {
+        UNREFERENCED_PARAMETER(buffer);
         return Translate(sourceLanguage, targetLanguage, source);
     }
 };

@@ -78,7 +78,11 @@ class AuthMechAnonymous : public AuthMechanism {
      *
      * @return an empty string.
      */
-    qcc::String Response(const qcc::String& challenge, AuthMechanism::AuthResult& result) { result = ALLJOYN_AUTH_OK; return ""; }
+    qcc::String Response(const qcc::String& challenge, AuthMechanism::AuthResult& result) {
+        UNREFERENCED_PARAMETER(challenge);
+        result = ALLJOYN_AUTH_OK;
+        return "";
+    }
 
     /**
      * Server's challenge to be sent to the client.
@@ -106,7 +110,11 @@ class AuthMechAnonymous : public AuthMechanism {
      *
      * @see AuthMechanism::Challenge
      */
-    qcc::String Challenge(const qcc::String& response, AuthMechanism::AuthResult& result) { result = ALLJOYN_AUTH_OK; return ""; }
+    qcc::String Challenge(const qcc::String& response, AuthMechanism::AuthResult& result) {
+        UNREFERENCED_PARAMETER(response);
+        result = ALLJOYN_AUTH_OK;
+        return "";
+    }
 
     ~AuthMechAnonymous() { }
 

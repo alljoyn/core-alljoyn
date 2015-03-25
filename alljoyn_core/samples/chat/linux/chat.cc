@@ -47,6 +47,7 @@ static volatile sig_atomic_t s_interrupt = false;
 
 static void CDECL_CALL SigIntHandler(int sig)
 {
+    UNREFERENCED_PARAMETER(sig);
     s_interrupt = true;
 }
 
@@ -120,6 +121,8 @@ class ChatObject : public BusObject {
     /** Receive a signal from another Chat client */
     void ChatSignalHandler(const InterfaceDescription::Member* member, const char* srcPath, Message& msg)
     {
+        UNREFERENCED_PARAMETER(member);
+        UNREFERENCED_PARAMETER(srcPath);
         printf("%s: %s\n", msg->GetSender(), msg->GetArg(0)->v_string.str);
     }
 
@@ -159,6 +162,7 @@ class MyBusListener : public BusListener, public SessionPortListener, public Ses
     }
     void LostAdvertisedName(const char* name, TransportMask transport, const char* namePrefix)
     {
+        UNREFERENCED_PARAMETER(namePrefix);
         printf("Got LostAdvertisedName for %s from transport 0x%x\n", name, transport);
     }
     void NameOwnerChanged(const char* busName, const char* previousOwner, const char* newOwner)
@@ -180,6 +184,8 @@ class MyBusListener : public BusListener, public SessionPortListener, public Ses
 
     void SessionJoined(SessionPort sessionPort, SessionId id, const char* joiner)
     {
+        UNREFERENCED_PARAMETER(sessionPort);
+
         s_sessionId = id;
         printf("SessionJoined with %s (id=%d)\n", joiner, id);
         s_bus->EnableConcurrentCallbacks();
@@ -405,7 +411,7 @@ QStatus DoTheChat(void)
     return status;
 }
 
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
     if (AllJoynInit() != ER_OK) {
         return 1;

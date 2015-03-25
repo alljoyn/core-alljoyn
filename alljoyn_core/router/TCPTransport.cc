@@ -713,6 +713,8 @@ void _TCPEndpoint::AuthJoin(void)
 
 void* _TCPEndpoint::AuthThread::Run(void* arg)
 {
+    UNREFERENCED_PARAMETER(arg);
+
     QCC_DbgTrace(("TCPEndpoint::AuthThread::Run()"));
 
     m_endpoint->m_authState = AUTH_AUTHENTICATING;
@@ -1680,6 +1682,8 @@ void TCPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
 
 void* TCPTransport::Run(void* arg)
 {
+    UNREFERENCED_PARAMETER(arg);
+
     QCC_DbgTrace(("TCPTransport::Run()"));
 
     /*
@@ -1825,7 +1829,7 @@ void* TCPTransport::Run(void* arg)
             uint16_t remotePort;
             SocketFd newSock;
 
-            while (true) {
+            for (;;) {
                 status = Accept((*i)->GetFD(), remoteAddr, remotePort, newSock);
                 if (status != ER_OK) {
                     break;
@@ -2597,6 +2601,8 @@ bool TCPTransport::DisableRouterAdvertisement() {
 
 void TCPTransport::UpdateDynamicScoreInstance(ListenRequest& listenRequest)
 {
+    UNREFERENCED_PARAMETER(listenRequest);
+
     ConfigDB* config = ConfigDB::GetConfigDB();
     uint32_t maxConn = config->GetLimit("max_completed_connections", ALLJOYN_MAX_COMPLETED_CONNECTIONS_TCP_DEFAULT);
     uint32_t availConn = maxConn - (m_authList.size() + m_endpointList.size());
@@ -4525,6 +4531,8 @@ void TCPTransport::CheckEndpointLocalMachine(TCPEndpoint endpoint)
 }
 
 ThreadReturn STDCALL TCPTransport::DynamicScoreUpdater::Run(void* arg) {
+    UNREFERENCED_PARAMETER(arg);
+
     while (!IsStopping()) {
         Event::Wait(Event::neverSet);
         GetStopEvent().ResetEvent();

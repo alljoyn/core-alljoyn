@@ -61,7 +61,9 @@ class SessionListener {
      *
      * @param sessionId     Id of session that was lost.
      */
-    virtual void SessionLost(SessionId sessionId) { };
+    virtual void SessionLost(SessionId sessionId) {
+        UNREFERENCED_PARAMETER(sessionId);
+    };
 
     /**
      * Called by the bus when an existing session becomes disconnected.
@@ -69,7 +71,10 @@ class SessionListener {
      * @param sessionId     Id of session that was lost.
      * @param reason        The reason for the session being lost
      */
-    virtual void SessionLost(SessionId sessionId, SessionLostReason reason) { }
+    virtual void SessionLost(SessionId sessionId, SessionLostReason reason) {
+        UNREFERENCED_PARAMETER(sessionId);
+        UNREFERENCED_PARAMETER(reason);
+    }
 
     /**
      * Called by the bus when a member of a multipoint session is added.
@@ -77,7 +82,10 @@ class SessionListener {
      * @param sessionId     Id of session whose member(s) changed.
      * @param uniqueName    Unique name of member who was added.
      */
-    virtual void SessionMemberAdded(SessionId sessionId, const char* uniqueName) { }
+    virtual void SessionMemberAdded(SessionId sessionId, const char* uniqueName) {
+        UNREFERENCED_PARAMETER(sessionId);
+        UNREFERENCED_PARAMETER(uniqueName);
+    }
 
     /**
      * Called by the bus when a member of a multipoint session is removed.
@@ -85,7 +93,10 @@ class SessionListener {
      * @param sessionId     Id of session whose member(s) changed.
      * @param uniqueName    Unique name of member who was removed.
      */
-    virtual void SessionMemberRemoved(SessionId sessionId, const char* uniqueName) { }
+    virtual void SessionMemberRemoved(SessionId sessionId, const char* uniqueName) {
+        UNREFERENCED_PARAMETER(sessionId);
+        UNREFERENCED_PARAMETER(uniqueName);
+    }
 };
 
 }

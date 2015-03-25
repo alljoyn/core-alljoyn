@@ -836,8 +836,6 @@ Exit:
 
 const ECCPublicKey* Crypto_ECC::GetDHPublicKey() const
 {
-    errno_t err;
-
     ECCPublicKey* pEccPubKey = NULL;
 
     QCC_DbgTrace(("Crypto_ECC::GetDHPublicKey"));
@@ -930,8 +928,6 @@ QStatus Crypto_ECC::GenerateSharedSecret(const ECCPublicKey* peerPublicKey, ECCS
     QStatus status = ER_FAIL;
     NTSTATUS ntStatus;
 
-    uint8_t CurveType;
-
     Crypto_ECC* pEccPeerPublicKey = NULL;
 
     BCRYPT_SECRET_HANDLE hSecret = NULL;
@@ -987,8 +983,6 @@ Exit:
 
 const ECCPublicKey* Crypto_ECC::GetDSAPublicKey() const
 {
-    errno_t err;
-
     ECCPublicKey* pEccPubKey = NULL;
 
     QCC_DbgTrace(("Crypto_ECC::GetDSAPublicKey"));

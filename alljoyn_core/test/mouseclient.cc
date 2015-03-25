@@ -150,6 +150,7 @@ static MyBusListener* g_busListener;
 
 static void CDECL_CALL SigIntHandler(int sig)
 {
+    UNREFERENCED_PARAMETER(sig);
     g_interrupt = true;
 }
 
@@ -231,6 +232,9 @@ class LocalTestObject : public BusObject {
                      const char* sourcePath,
                      Message& msg)
     {
+        UNREFERENCED_PARAMETER(member);
+        UNREFERENCED_PARAMETER(sourcePath);
+
         const static int CX = (65536 / GetSystemMetrics(SM_CXSCREEN));
         const static int CY = (65536 / GetSystemMetrics(SM_CYSCREEN));
 
@@ -259,6 +263,9 @@ class LocalTestObject : public BusObject {
         const char* sourcePath,
         Message& msg)
     {
+        UNREFERENCED_PARAMETER(member);
+        UNREFERENCED_PARAMETER(sourcePath);
+
         int32_t clicks;
         msg->GetArgs("i", &clicks);
 
@@ -279,6 +286,9 @@ class LocalTestObject : public BusObject {
                     const char* sourcePath,
                     Message& msg)
     {
+        UNREFERENCED_PARAMETER(member);
+        UNREFERENCED_PARAMETER(sourcePath);
+
         int32_t i;
         msg->GetArgs("i", &i);
         printf("ADC_Update: %d\n", i);
@@ -291,7 +301,7 @@ class LocalTestObject : public BusObject {
 
 
 /** Main entry point */
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
     QStatus status = ER_OK;
 

@@ -29,6 +29,9 @@ namespace qcc {
 
 void Runnable::AlarmTriggered(const Alarm& alarm, QStatus reason)
 {
+    UNREFERENCED_PARAMETER(alarm);
+    UNREFERENCED_PARAMETER(reason);
+
     QCC_DbgPrintf(("Runnable::AlarmTriggered()"));
 
     /*

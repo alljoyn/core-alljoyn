@@ -48,17 +48,19 @@
  */
 #if defined(NDEBUG)
 #define QCC_LogError(_status, _msg)                                     \
-    do {                                                                \
+    for (;;) {                                                          \
         void* _ctx = _QCC_DbgPrintContext(" 0x%04x", _status);          \
         _QCC_DbgPrintProcess(_ctx, DBG_LOCAL_ERROR, QCC_MODULE, __FILE__, __LINE__); \
-    } while (0)
+        break;                                                          \
+    }
 #else
 #define QCC_LogError(_status, _msg)                                     \
-    do {                                                                \
+    for (;;) {                                                          \
         void* _ctx = _QCC_DbgPrintContext _msg;                         \
         _QCC_DbgPrintAppend(_ctx, ": %s", QCC_StatusText(_status));     \
         _QCC_DbgPrintProcess(_ctx, DBG_LOCAL_ERROR, QCC_MODULE, __FILE__, __LINE__); \
-    } while (0)
+        break;                                                          \
+    }
 #endif
 #endif
 
@@ -122,9 +124,9 @@
  * @param _cmd  Single, simple, complete C statement to be compiled out in release mode.
  */
 #if defined(NDEBUG)
-#define QCC_DEBUG_ONLY(_cmd) do { } while (0)
+#define QCC_DEBUG_ONLY(_cmd) for (;;) { break; }
 #else
-#define QCC_DEBUG_ONLY(_cmd) do { _cmd; } while (0)
+#define QCC_DEBUG_ONLY(_cmd) for (;;) { _cmd; break; }
 #endif
 
 /**
@@ -142,15 +144,16 @@
  *                  Example: ("value: %d", variable)
  */
 #if defined(NDEBUG)
-#define _QCC_DbgPrint(_msgType, _msg) do { } while (0)
+#define _QCC_DbgPrint(_msgType, _msg) for (;;) { break; }
 #else
 #define _QCC_DbgPrint(_msgType, _msg)                                  \
-    do {                                                               \
+    for (;;) {                                                         \
         if (_QCC_DbgPrintCheck((_msgType), QCC_MODULE)) {              \
             void* _ctx = _QCC_DbgPrintContext _msg;                    \
             _QCC_DbgPrintProcess(_ctx, (_msgType), QCC_MODULE, __FILE__, __LINE__); \
-        }                                                               \
-    } while (0)
+        }                                                              \
+        break;                                                          \
+    }
 #endif
 #endif
 /** @endcond */
@@ -166,7 +169,7 @@
  * @param _len      Length of data to dump.
  */
 #if defined(NDEBUG)
-#define _QCC_DbgDumpData(_msgType, _data, _len) do { } while (0)
+#define _QCC_DbgDumpData(_msgType, _data, _len) for (;;) { break; }
 #else
 #define _QCC_DbgDumpData(_msgType, _data, _len)                         \
     _QCC_DbgDumpHex((_msgType), QCC_MODULE, __FILE__, __LINE__, # _data, (_data), (_len))

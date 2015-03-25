@@ -234,7 +234,15 @@ class AuthListener {
      *          requests is being rejected. If the request is rejected the authentication is
      *          complete.
      */
-    virtual bool RequestCredentials(const char* authMechanism, const char* peerName, uint16_t authCount, const char* userName, uint16_t credMask, Credentials& credentials) { return false; }
+    virtual bool RequestCredentials(const char* authMechanism, const char* peerName, uint16_t authCount, const char* userName, uint16_t credMask, Credentials& credentials) {
+        UNREFERENCED_PARAMETER(authMechanism);
+        UNREFERENCED_PARAMETER(peerName);
+        UNREFERENCED_PARAMETER(authCount);
+        UNREFERENCED_PARAMETER(userName);
+        UNREFERENCED_PARAMETER(credMask);
+        UNREFERENCED_PARAMETER(credentials);
+        return false;
+    }
 
     /**
      * Authentication mechanism asynchronous request for credentials. If the user name is not an empty string
@@ -254,7 +262,15 @@ class AuthListener {
      *
      * @return  Return ER_OK if the request is handled.
      */
-    virtual QStatus RequestCredentialsAsync(const char* authMechanism, const char* peerName, uint16_t authCount, const char* userName, uint16_t credMask, void* authContext) { return ER_NOT_IMPLEMENTED; }
+    virtual QStatus RequestCredentialsAsync(const char* authMechanism, const char* peerName, uint16_t authCount, const char* userName, uint16_t credMask, void* authContext) {
+        UNREFERENCED_PARAMETER(authMechanism);
+        UNREFERENCED_PARAMETER(peerName);
+        UNREFERENCED_PARAMETER(authCount);
+        UNREFERENCED_PARAMETER(userName);
+        UNREFERENCED_PARAMETER(credMask);
+        UNREFERENCED_PARAMETER(authContext);
+        return ER_NOT_IMPLEMENTED;
+    }
 
     /**
      * Respond to a call to RequestCredentialsAsync.
@@ -280,7 +296,12 @@ class AuthListener {
      * @return  The listener should return true if the credentials are acceptable or false if the
      *          credentials are being rejected.
      */
-    virtual bool VerifyCredentials(const char* authMechanism, const char* peerName, const Credentials& credentials) { return true; }
+    virtual bool VerifyCredentials(const char* authMechanism, const char* peerName, const Credentials& credentials) {
+        UNREFERENCED_PARAMETER(authMechanism);
+        UNREFERENCED_PARAMETER(peerName);
+        UNREFERENCED_PARAMETER(credentials);
+        return true;
+    }
 
     /**
      * Authentication mechanism asynchronous request for verification of credentials from a remote peer.
@@ -294,7 +315,13 @@ class AuthListener {
      *
      * @return  Return ER_OK if the request is handled.
      */
-    virtual QStatus VerifyCredentialsAsync(const char* authMechanism, const char* peerName, const Credentials& credentials, void* authContext) { return ER_NOT_IMPLEMENTED; }
+    virtual QStatus VerifyCredentialsAsync(const char* authMechanism, const char* peerName, const Credentials& credentials, void* authContext) {
+        UNREFERENCED_PARAMETER(authMechanism);
+        UNREFERENCED_PARAMETER(peerName);
+        UNREFERENCED_PARAMETER(credentials);
+        UNREFERENCED_PARAMETER(authContext);
+        return ER_NOT_IMPLEMENTED;
+    }
 
     /**
      * Respond to a call to VerifyCredentialsAsync.
@@ -316,7 +343,10 @@ class AuthListener {
      * @param status  A status code indicating the type of security violation.
      * @param msg     The message that cause the security violation.
      */
-    virtual void SecurityViolation(QStatus status, const Message& msg) { }
+    virtual void SecurityViolation(QStatus status, const Message& msg) {
+        UNREFERENCED_PARAMETER(status);
+        UNREFERENCED_PARAMETER(msg);
+    }
 
     /**
      * Reports successful or unsuccessful completion of authentication.

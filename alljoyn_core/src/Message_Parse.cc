@@ -925,6 +925,9 @@ QStatus _Message::InterpretHeader()
 
 QStatus _Message::PullBytes(RemoteEndpoint& endpoint, bool checkSender, bool pedantic, uint32_t timeout)
 {
+    UNREFERENCED_PARAMETER(checkSender);
+    UNREFERENCED_PARAMETER(pedantic);
+
     QStatus status;
     qcc::SocketFd fdList[qcc::SOCKET_MAX_FILE_DESCRIPTORS];
     Source& source = endpoint->GetSource();
@@ -1058,6 +1061,8 @@ QStatus _Message::ReadNonBlocking(RemoteEndpoint& endpoint, bool checkSender, bo
 
 QStatus _Message::Read(RemoteEndpoint& endpoint, bool checkSender, bool pedantic, uint32_t timeout)
 {
+    UNREFERENCED_PARAMETER(timeout);
+
     QStatus status = ER_OK;
     /*
      * Clear out any stale message state
@@ -1090,6 +1095,8 @@ QStatus _Message::Unmarshal(RemoteEndpoint& endpoint, bool checkSender, bool ped
 
 QStatus _Message::Unmarshal(qcc::String& endpointName, bool handlePassing, bool checkSender, bool pedantic, uint32_t timeout)
 {
+    UNREFERENCED_PARAMETER(timeout);
+
     QStatus status;
 
     uint8_t* endOfHdr;

@@ -72,8 +72,16 @@ class AllJoynDebugObj : public BusObject {
 
         Properties() { }
         virtual ~Properties() { }
-        virtual QStatus Get(const char* propName, MsgArg& val) const { return ER_BUS_NO_SUCH_PROPERTY; }
-        virtual QStatus Set(const char* propName, MsgArg& val) { return ER_BUS_NO_SUCH_PROPERTY; }
+        virtual QStatus Get(const char* propName, MsgArg& val) const {
+            UNREFERENCED_PARAMETER(propName);
+            UNREFERENCED_PARAMETER(val);
+            return ER_BUS_NO_SUCH_PROPERTY;
+        }
+        virtual QStatus Set(const char* propName, MsgArg& val) {
+            UNREFERENCED_PARAMETER(propName);
+            UNREFERENCED_PARAMETER(val);
+            return ER_BUS_NO_SUCH_PROPERTY;
+        }
         virtual void GetProperyInfo(const Info*& info, size_t& infoSize) = 0;
     };
 

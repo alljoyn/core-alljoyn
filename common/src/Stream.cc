@@ -41,7 +41,7 @@ QStatus Source::GetLine(qcc::String& outStr, uint32_t timeout)
     size_t actual;
     bool hasBytes = false;
 
-    while (true) {
+    for (;;) {
         status = PullBytes(&c, 1, actual, timeout);
         if (ER_OK != status) {
             break;

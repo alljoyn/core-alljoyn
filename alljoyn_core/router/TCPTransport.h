@@ -510,6 +510,8 @@ class TCPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
         FoundCallback(TransportListener*& listener) : m_listener(listener) { }
         void Found(const qcc::String& busAddr, const qcc::String& guid, std::vector<qcc::String>& nameList, uint32_t timer);
       private:
+        /* Private Copy-constructor - does nothing */
+        FoundCallback operator=(const FoundCallback&) { return *this; };
         TransportListener*& m_listener;
     };
 
@@ -520,6 +522,8 @@ class TCPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
         NetworkEventCallback(TCPTransport& transport) : m_transport(transport) { }
         void Handler(const std::map<qcc::String, qcc::IPAddress>&);
       private:
+        /* Private Copy-constructor - does nothing */
+        NetworkEventCallback operator=(const NetworkEventCallback&) { return *this; };
         TCPTransport& m_transport;
     };
 
