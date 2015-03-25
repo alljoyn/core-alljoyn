@@ -29,6 +29,9 @@ namespace qcc {
 
 void Runnable::AlarmTriggered(const Alarm& alarm, QStatus reason)
 {
+    QCC_UNUSED(alarm);
+    QCC_UNUSED(reason);
+
     QCC_DbgPrintf(("Runnable::AlarmTriggered()"));
 
     /*

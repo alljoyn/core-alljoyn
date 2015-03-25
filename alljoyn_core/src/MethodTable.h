@@ -50,6 +50,7 @@ class MethodTable {
     /**
      * Type definition for a method hash table entry
      */
+#pragma pack(push, Entry, 4)
     struct Entry {
         /**
          * Construct an Entry
@@ -81,7 +82,7 @@ class MethodTable {
         qcc::String methodStr;                         /**<  Method string */
         mutable volatile int32_t refCount;
     };
-
+#pragma pack(pop, Entry)
     struct SafeEntry {
         SafeEntry() : entry(NULL) {   }
 

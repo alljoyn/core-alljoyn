@@ -32,29 +32,49 @@ static alljoyn_transportmask transport_found = 0;
 
 /* bus listener functions */
 static void AJ_CALL listener_registered(const void* context, alljoyn_busattachment bus) {
+    QCC_UNUSED(context);
+    QCC_UNUSED(bus);
     listener_registered_flag = QCC_TRUE;
 }
 static void AJ_CALL listener_unregistered(const void* context) {
+    QCC_UNUSED(context);
     listener_unregistered_flag = QCC_TRUE;
 }
 static void AJ_CALL found_advertised_name(const void* context, const char* name, alljoyn_transportmask transport, const char* namePrefix) {
+    QCC_UNUSED(context);
+    QCC_UNUSED(name);
+    QCC_UNUSED(namePrefix);
+
     transport_found |= transport;
     found_advertised_name_flag = QCC_TRUE;
 }
 static void AJ_CALL lost_advertised_name(const void* context, const char* name, alljoyn_transportmask transport, const char* namePrefix) {
+    QCC_UNUSED(context);
+    QCC_UNUSED(name);
+    QCC_UNUSED(transport);
+    QCC_UNUSED(namePrefix);
     lost_advertised_name_flag = QCC_TRUE;
 }
 static void AJ_CALL name_owner_changed(const void* context, const char* busName, const char* previousOwner, const char* newOwner) {
+    QCC_UNUSED(context);
+    QCC_UNUSED(busName);
+    QCC_UNUSED(previousOwner);
+    QCC_UNUSED(newOwner);
     name_owner_changed_flag = QCC_TRUE;
 }
 static void AJ_CALL bus_stopping(const void* context) {
+    QCC_UNUSED(context);
     bus_stopping_flag = QCC_TRUE;
 }
 static void AJ_CALL bus_disconnected(const void* context) {
+    QCC_UNUSED(context);
     bus_disconnected_flag = QCC_TRUE;
 }
 
 static void AJ_CALL bus_prop_changed(const void* context, const char* prop_name, alljoyn_msgarg prop_value) {
+    QCC_UNUSED(context);
+    QCC_UNUSED(prop_name);
+    QCC_UNUSED(prop_value);
     prop_changed_flag = QCC_TRUE;
 }
 

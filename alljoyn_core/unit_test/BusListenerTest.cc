@@ -35,18 +35,29 @@ static bool bus_disconnected_flag = false;
 class TestBusListener : public BusListener {
   public:
     virtual void ListenerRegistered(BusAttachment* bus) {
+        QCC_UNUSED(bus);
+
         listener_registered_flag = true;
     }
     virtual void ListenerUnregistered() {
         listener_unregistered_flag = true;
     }
     virtual void FoundAdvertisedName(const char* name, TransportMask transport, const char* namePrefix) {
+        QCC_UNUSED(name);
+        QCC_UNUSED(transport);
+        QCC_UNUSED(namePrefix);
         found_advertised_name_flag = true;
     }
     virtual void LostAdvertisedName(const char* name, TransportMask transport, const char* namePrefix) {
+        QCC_UNUSED(name);
+        QCC_UNUSED(transport);
+        QCC_UNUSED(namePrefix);
         lost_advertised_name_flag = true;
     }
     virtual void NameOwnerChanged(const char* busName, const char* previousOwner, const char* newOwner) {
+        QCC_UNUSED(busName);
+        QCC_UNUSED(previousOwner);
+        QCC_UNUSED(newOwner);
         name_owner_changed_flag = true;
     }
     virtual void BusStopping() {

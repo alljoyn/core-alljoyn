@@ -212,7 +212,7 @@ QStatus SASLEngine::NewAuthRequest(qcc::String& authCmd)
     /*
      * Use current or get next auth mechanism
      */
-    while (true) {
+    for (;;) {
         if (authMechanism) {
             status = authMechanism->Init(authRole, authPeer);
             if (status == ER_OK) {

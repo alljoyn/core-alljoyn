@@ -48,7 +48,12 @@ using namespace services;
 
 
 class AnnounceHandlerTestSessionPortListener : public SessionPortListener {
-    virtual bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) { return true; }
+    virtual bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) {
+        QCC_UNUSED(sessionPort);
+        QCC_UNUSED(joiner);
+        QCC_UNUSED(opts);
+        return true;
+    }
 };
 
 /*
@@ -174,6 +179,11 @@ class MyAnnounceHandler : public ajn::services::AnnounceHandler {
 
     virtual void Announce(unsigned short version, unsigned short port, const char* busName, const ObjectDescriptions& objectDescs,
                           const AboutData& aboutData) {
+        QCC_UNUSED(version);
+        QCC_UNUSED(port);
+        QCC_UNUSED(busName);
+        QCC_UNUSED(objectDescs);
+        QCC_UNUSED(aboutData);
         announceHandlerFlag = true;
     }
 };
@@ -363,6 +373,11 @@ class AnnounceHandlerTestAnnounceHandler1 : public ajn::services::AnnounceHandle
 
     virtual void Announce(unsigned short version, unsigned short port, const char* busName, const ObjectDescriptions& objectDescs,
                           const AboutData& aboutData) {
+        QCC_UNUSED(version);
+        QCC_UNUSED(port);
+        QCC_UNUSED(busName);
+        QCC_UNUSED(objectDescs);
+        QCC_UNUSED(aboutData);
         announceHandler1Flag = true;
     }
 };
@@ -373,6 +388,11 @@ class AnnounceHandlerTestAnnounceHandler2 : public ajn::services::AnnounceHandle
 
     virtual void Announce(unsigned short version, unsigned short port, const char* busName, const ObjectDescriptions& objectDescs,
                           const AboutData& aboutData) {
+        QCC_UNUSED(version);
+        QCC_UNUSED(port);
+        QCC_UNUSED(busName);
+        QCC_UNUSED(objectDescs);
+        QCC_UNUSED(aboutData);
         announceHandler2Flag = true;
     }
 };
@@ -383,6 +403,11 @@ class AnnounceHandlerTestAnnounceHandler3 : public ajn::services::AnnounceHandle
 
     virtual void Announce(unsigned short version, unsigned short port, const char* busName, const ObjectDescriptions& objectDescs,
                           const AboutData& aboutData) {
+        QCC_UNUSED(version);
+        QCC_UNUSED(port);
+        QCC_UNUSED(busName);
+        QCC_UNUSED(objectDescs);
+        QCC_UNUSED(aboutData);
         announceHandler3Flag = true;
     }
 };
@@ -857,6 +882,11 @@ class WildCardAnnounceHandler : public ajn::services::AnnounceHandler {
     WildCardAnnounceHandler() : announceHandlerCount(0) { }
     virtual void Announce(unsigned short version, unsigned short port, const char* busName, const ObjectDescriptions& objectDescs,
                           const AboutData& aboutData) {
+        QCC_UNUSED(version);
+        QCC_UNUSED(port);
+        QCC_UNUSED(busName);
+        QCC_UNUSED(objectDescs);
+        QCC_UNUSED(aboutData);
         announceHandlerCount++;
     }
     uint32_t announceHandlerCount;
@@ -1109,6 +1139,11 @@ class RemoveObjectDescriptionAnnounceHandler : public ajn::services::AnnounceHan
     RemoveObjectDescriptionAnnounceHandler(const char* objToBeRemoved) : announceHandlerCount(0), toRemove(objToBeRemoved) { }
     void Announce(unsigned short version, unsigned short port, const char* busName, const ObjectDescriptions& objectDescs,
                   const AboutData& aboutData) {
+        QCC_UNUSED(version);
+        QCC_UNUSED(port);
+        QCC_UNUSED(busName);
+        QCC_UNUSED(aboutData);
+
         if (announceHandlerCount == 0) {
             EXPECT_NE(objectDescs.end(), objectDescs.find("/org/alljoyn/test/a"));
             EXPECT_NE(objectDescs.end(), objectDescs.find("/org/alljoyn/test/b"));

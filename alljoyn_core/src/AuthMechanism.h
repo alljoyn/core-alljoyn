@@ -220,6 +220,9 @@ class AuthMechanism {
      * A name for the remote peer that is being authenticated.
      */
     qcc::String authPeer;
+
+  private:
+    AuthMechanism& operator=(const AuthMechanism& other);
 };
 
 }

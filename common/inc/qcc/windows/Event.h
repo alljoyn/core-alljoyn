@@ -255,10 +255,10 @@ class Event {
     bool isSocket;          /**< Is this event for socket or named pipe */
 
     /**
-     * Protected copy constructor.
+     * Private copy constructor.
      * Events cannot be safely copied because they contain events handles.
      */
-    Event& operator=(const Event& evt) { return *this; }
+    Event& operator=(const Event&);
 
     /**
      * Helper method used to calculate mask for WSAEventSelect

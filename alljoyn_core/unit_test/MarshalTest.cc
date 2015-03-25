@@ -49,6 +49,8 @@ class TestPipe : public qcc::Pipe {
 
     QStatus PullBytesAndFds(void* buf, size_t reqBytes, size_t& actualBytes, SocketFd* fdList, size_t& numFds, uint32_t timeout = Event::WAIT_FOREVER)
     {
+        QCC_UNUSED(timeout);
+
         QStatus status = ER_OK;
         numFds = std::min(numFds, fds.size());
         for (size_t i = 0; i < numFds; ++i) {
@@ -61,8 +63,10 @@ class TestPipe : public qcc::Pipe {
         return status;
     }
 
-    QStatus PushBytesAndFds(const void* buf, size_t numBytes, size_t& numSent, SocketFd* fdList, size_t numFds, uint32_t pid = -1)
+    QStatus PushBytesAndFds(const void* buf, size_t numBytes, size_t& numSent, SocketFd* fdList, size_t numFds, uint32_t pid = (uint32_t)-1)
     {
+        QCC_UNUSED(pid);
+
         QStatus status = ER_OK;
         while (numFds--) {
             qcc::SocketFd sock;
@@ -123,12 +127,15 @@ class MyMessage : public _Message {
 
     QStatus Read(RemoteEndpoint& ep, const qcc::String& endpointName, bool pedantic = true)
     {
+        QCC_UNUSED(endpointName);
+
         QStatus test = _Message::Read(ep, pedantic);
         return test;
     }
 
     QStatus Unmarshal(RemoteEndpoint& ep, const qcc::String& endpointName, bool pedantic = true)
     {
+        QCC_UNUSED(endpointName);
         return _Message::Unmarshal(ep, pedantic);
     }
 
