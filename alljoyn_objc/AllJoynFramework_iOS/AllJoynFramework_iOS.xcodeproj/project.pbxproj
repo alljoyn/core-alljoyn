@@ -45,6 +45,8 @@
 		7DD10A6E19F9720500CACF38 /* AJNAboutObjectDescription.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DD10A6219F9720500CACF38 /* AJNAboutObjectDescription.mm */; };
 		7DD10A6F19F9720500CACF38 /* AJNAboutProxy.h in Headers */ = {isa = PBXBuildFile; fileRef = 7DD10A6319F9720500CACF38 /* AJNAboutProxy.h */; };
 		7DD10A7019F9720500CACF38 /* AJNAboutProxy.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DD10A6419F9720500CACF38 /* AJNAboutProxy.mm */; };
+		89BCFD621AC01133004CAAFD /* AJNInit.mm in Sources */ = {isa = PBXBuildFile; fileRef = 89BCFD601AC01133004CAAFD /* AJNInit.mm */; };
+		89BCFD631AC01133004CAAFD /* AJNInit.h in Headers */ = {isa = PBXBuildFile; fileRef = 89BCFD611AC01133004CAAFD /* AJNInit.h */; };
 		89E26B861AB85A1E0030629B /* AJNObserverTestObjects.mm in Sources */ = {isa = PBXBuildFile; fileRef = 89E26B811AB85A1E0030629B /* AJNObserverTestObjects.mm */; };
 		89E26B871AB85A1E0030629B /* ObserverTestObjects.m in Sources */ = {isa = PBXBuildFile; fileRef = 89E26B831AB85A1E0030629B /* ObserverTestObjects.m */; };
 		89E26B881AB85A1E0030629B /* ObserverTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 89E26B851AB85A1E0030629B /* ObserverTests.m */; };
@@ -172,6 +174,8 @@
 		7DD10A6219F9720500CACF38 /* AJNAboutObjectDescription.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNAboutObjectDescription.mm; path = ../../AllJoynFramework/AllJoynFramework/AJNAboutObjectDescription.mm; sourceTree = "<group>"; };
 		7DD10A6319F9720500CACF38 /* AJNAboutProxy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNAboutProxy.h; path = ../../AllJoynFramework/AllJoynFramework/AJNAboutProxy.h; sourceTree = "<group>"; };
 		7DD10A6419F9720500CACF38 /* AJNAboutProxy.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNAboutProxy.mm; path = ../../AllJoynFramework/AllJoynFramework/AJNAboutProxy.mm; sourceTree = "<group>"; };
+		89BCFD601AC01133004CAAFD /* AJNInit.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNInit.mm; path = ../../AllJoynFramework/AllJoynFramework/AJNInit.mm; sourceTree = "<group>"; };
+		89BCFD611AC01133004CAAFD /* AJNInit.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNInit.h; path = ../../AllJoynFramework/AllJoynFramework/AJNInit.h; sourceTree = "<group>"; };
 		89E26B801AB85A1E0030629B /* AJNObserverTestObjects.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNObserverTestObjects.h; path = ../../AllJoynFramework/AllJoynFrameworkTests/AJNObserverTestObjects.h; sourceTree = "<group>"; };
 		89E26B811AB85A1E0030629B /* AJNObserverTestObjects.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNObserverTestObjects.mm; path = ../../AllJoynFramework/AllJoynFrameworkTests/AJNObserverTestObjects.mm; sourceTree = "<group>"; };
 		89E26B821AB85A1E0030629B /* ObserverTestObjects.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ObserverTestObjects.h; path = ../../AllJoynFramework/AllJoynFrameworkTests/ObserverTestObjects.h; sourceTree = "<group>"; };
@@ -327,6 +331,8 @@
 		AC1030AD156EC82300D2853A /* AllJoynFramework_iOS */ = {
 			isa = PBXGroup;
 			children = (
+				89BCFD601AC01133004CAAFD /* AJNInit.mm */,
+				89BCFD611AC01133004CAAFD /* AJNInit.h */,
 				89E26B891AB860AF0030629B /* AJNObserver.h */,
 				89E26B8A1AB860AF0030629B /* AJNObserver.mm */,
 				89E26B8B1AB860AF0030629B /* AJNObserverListener.h */,
@@ -466,6 +472,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				7DD10A6919F9720500CACF38 /* AJNAboutListenerImpl.h in Headers */,
+				89BCFD631AC01133004CAAFD /* AJNInit.h in Headers */,
 				7DD10A6619F9720500CACF38 /* AJNAboutDataListenerImpl.h in Headers */,
 				89E26B8E1AB860AF0030629B /* AJNObserverListener.h in Headers */,
 				89E26B8C1AB860AF0030629B /* AJNObserver.h in Headers */,
@@ -627,6 +634,7 @@
 				AC103113156EC85100D2853A /* AJNInterfaceProperty.mm in Sources */,
 				7DD10A6C19F9720500CACF38 /* AJNAboutObject.mm in Sources */,
 				AC103115156EC85100D2853A /* AJNMessage.mm in Sources */,
+				89BCFD621AC01133004CAAFD /* AJNInit.mm in Sources */,
 				89E26B8D1AB860AF0030629B /* AJNObserver.mm in Sources */,
 				AC103117156EC85100D2853A /* AJNMessageArgument.mm in Sources */,
 				AC103119156EC85100D2853A /* AJNObject.m in Sources */,
@@ -850,7 +858,6 @@
 					"-ObjC",
 					"-lalljoyn",
 					"-lajrouter",
-					"-lBundledRouter.o",
 					"-lssl",
 					"-lcrypto",
 				);
@@ -895,7 +902,6 @@
 					"-ObjC",
 					"-lalljoyn",
 					"-lajrouter",
-					"-lBundledRouter.o",
 					"-lssl",
 					"-lcrypto",
 				);

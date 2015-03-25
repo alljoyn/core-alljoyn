@@ -20,6 +20,7 @@
 #import "AJNObserverListener.h"
 #import "ObserverTestObjects.h"
 #import "AJNAboutObject.h"
+#import "AJNInit.h"
 #import <sys/time.h>
 
 static NSString * const kObserverTestsAdvertisedName = @"org.alljoyn.observer.tests.AReallyNiftyNameThatNoOneWillUse";
@@ -465,7 +466,7 @@ static NSString * const kPathPrefix = @"/test/";
         }
     }
     [self.proxies addObject:obj];
- //   [self checkReentrancyForProxy:obj];
+    [self checkReentrancyForProxy:obj];
     --self.counter;
 }
 
@@ -524,6 +525,18 @@ typedef BOOL (^verifyObjects)();
     long now = (time.tv_sec * 1000) + (time.tv_usec / 1000);
     long final = now + 500;
     [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode beforeDate:[NSDate dateWithTimeIntervalSince1970:(final/1000)]];
+}
+
++(void)setUp
+{
+    [AJNInit alljoynInit];
+    [AJNInit alljoynRouterInit];
+}
+
++(void)tearDown
+{
+    [AJNInit alljoynRouterShutdown];
+    [AJNInit alljoynShutdown];
 }
 
 -(NSUInteger)countProxies:(AJNObserver *) observer
@@ -746,8 +759,8 @@ typedef BOOL (^verifyObjects)();
     Participant *provider = [[Participant alloc]initWithInterfaceRegistration:NO];
     Participant *consumer = [[Participant alloc]initWithInterfaceRegistration:YES];
     [self simpleScenario:provider consumer:consumer];
-    consumer = nil;
     provider = nil;
+    consumer = nil;
 }
 
 - (void)testSimpleSelfDiscovery
