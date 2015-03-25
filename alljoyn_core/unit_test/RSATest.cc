@@ -356,6 +356,10 @@ TEST(RSATest, empty_passphrase) {
 
 class MyAuthListener : public AuthListener {
     bool RequestCredentials(const char* authMechanism, const char* authPeer, uint16_t authCount, const char* userId, uint16_t credMask, Credentials& creds) {
+        QCC_UNUSED(authMechanism);
+        QCC_UNUSED(authPeer);
+        QCC_UNUSED(authCount);
+        QCC_UNUSED(userId);
         if (credMask & AuthListener::CRED_CERT_CHAIN) {
             creds.SetCertChain(x509cert);
         }
@@ -368,6 +372,7 @@ class MyAuthListener : public AuthListener {
         return true;
     }
     void AuthenticationComplete(const char* authMechanism, const char* authPeer, bool success) {
+        QCC_UNUSED(authPeer);
         printf("Authentication %s %s\n", authMechanism, success ? "succesful" : "failed");
     }
 };

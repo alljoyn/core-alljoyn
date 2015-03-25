@@ -71,6 +71,9 @@ int QCC_SyncPrintf(const char* fmt, ...)
 
 static void Output(DbgMsgType type, const char* module, const char* msg, void* context)
 {
+    QCC_UNUSED(module);
+    QCC_UNUSED(context);
+
     const static int priorityMap[] = {
         LOG_ERR,        // Local error messages
         LOG_WARNING,    // Remote error messages
@@ -85,6 +88,9 @@ static void Output(DbgMsgType type, const char* module, const char* msg, void* c
 
 static void WriteMsg(DbgMsgType type, const char* module, const char* msg, void* context)
 {
+    QCC_UNUSED(type);
+    QCC_UNUSED(module);
+
     FILE* file = reinterpret_cast<FILE*>(context);
 
     if (ER_OK == stdoutLock->Lock()) {

@@ -47,7 +47,12 @@
 using namespace ajn;
 
 class AboutObjTestSessionPortListener : public SessionPortListener {
-    virtual bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) { return true; }
+    virtual bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) {
+        QCC_UNUSED(sessionPort);
+        QCC_UNUSED(joiner);
+        QCC_UNUSED(opts);
+        return true;
+    }
 };
 
 
@@ -136,6 +141,8 @@ class AboutObjTestBusObject : public BusObject {
 
     }
     void Echo(const InterfaceDescription::Member* member, Message& msg) {
+        QCC_UNUSED(member);
+
         const MsgArg* arg((msg->GetArg(0)));
         QStatus status = MethodReply(msg, arg, 1);
         EXPECT_EQ(ER_OK, status) << "Echo: Error sending reply";
@@ -148,6 +155,9 @@ class AboutObjTestAboutListener : public AboutListener {
 
     void Announced(const char* busName, uint16_t version, SessionPort port,
                    const MsgArg& objectDescription, const MsgArg& aboutData) {
+        QCC_UNUSED(objectDescription);
+        QCC_UNUSED(aboutData);
+
         EXPECT_FALSE(announceListenerFlag) << "We don't expect the flag to already be true when an AnnouceSignal is received.";
         this->busName = qcc::String(busName);
         this->port = port;
@@ -430,6 +440,9 @@ class AboutObjTestAboutListener2 : public AboutListener {
 
     void Announced(const char* busName, uint16_t version, SessionPort port,
                    const MsgArg& objectDescription, const MsgArg& aboutData) {
+        QCC_UNUSED(version);
+        QCC_UNUSED(aboutData);
+
         EXPECT_FALSE(announceListenerFlag) << "We don't expect the flag to already be true when an AnnouceSignal is received.";
         this->busName = qcc::String(busName);
         this->port = port;

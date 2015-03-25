@@ -334,7 +334,7 @@ static void SignalHandler(int sig)
     }
 }
 
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
     struct sigaction act, oldact;
     sigset_t sigmask, waitmask;

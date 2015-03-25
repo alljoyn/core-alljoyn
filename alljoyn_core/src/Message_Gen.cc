@@ -52,49 +52,56 @@ namespace ajn {
 
 
 #define Marshal8(n) \
-    do { \
+    for (;;) { \
         *((uint64_t*)bufPos) = n; \
         bufPos += 8; \
-    } while (0)
+        break; \
+    }
 
 #define Marshal4(n) \
-    do { \
+    for (;;) { \
         *((uint32_t*)bufPos) = n; \
         bufPos += 4; \
-    } while (0)
+        break; \
+    }
 
 #define Marshal2(n) \
-    do { \
+    for (;;) { \
         *((uint16_t*)bufPos) = n; \
         bufPos += 2; \
-    } while (0)
+        break; \
+    }
 
 #define Marshal1(n) \
-    do { \
+    for (;;) { \
         *bufPos++ = n; \
-    } while (0)
+        break; \
+    }
 
 #define MarshalBytes(data, len) \
-    do { \
+    for (;;) { \
         memcpy(bufPos, data, len); \
         bufPos += len; \
-    } while (0)
+        break; \
+    }
 
 #define MarshalReversed(data, len) \
-    do { \
+    for (;;) { \
         uint8_t* p = ((uint8_t*)(void*)data) + len; \
         while (p-- != (uint8_t*)(void*)data) { \
             *bufPos++ = *p; \
         } \
-    } while (0)
+        break; \
+    }
 
 #define MarshalPad(_alignment) \
-    do { \
+    for (;;) { \
         size_t pad = PadBytes(bufPos, _alignment); \
         if (pad & 1) { Marshal1(0); } \
         if (pad & 2) { Marshal2(0); } \
         if (pad & 4) { Marshal4(0); } \
-    } while (0)
+        break; \
+    }
 
 /*
  * Round up to a multiple of 8
@@ -461,7 +468,7 @@ QStatus _Message::Deliver(RemoteEndpoint& endpoint)
     Sink& sink = endpoint->GetSink();
     uint8_t* buf = reinterpret_cast<uint8_t*>(msgBuf);
     size_t len = bufEOD - buf;
-    size_t pushed;
+    size_t pushed = 0;
 
     QCC_DbgPrintf(("Deliver %s", this->Description().c_str()));
 

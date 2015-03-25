@@ -63,6 +63,8 @@ AboutIconObj::~AboutIconObj()
 }
 
 void AboutIconObj::GetUrl(const ajn::InterfaceDescription::Member* member, ajn::Message& msg) {
+    QCC_UNUSED(member);
+
     QCC_DbgTrace(("AboutIconObj::%s", __FUNCTION__));
     const ajn::MsgArg* args;
     size_t numArgs;
@@ -81,6 +83,8 @@ void AboutIconObj::GetUrl(const ajn::InterfaceDescription::Member* member, ajn::
 }
 
 void AboutIconObj::GetContent(const ajn::InterfaceDescription::Member* member, ajn::Message& msg) {
+    QCC_UNUSED(member);
+
     QCC_DbgTrace(("AboutIconObj::%s", __FUNCTION__));
     const ajn::MsgArg* args;
     size_t numArgs;

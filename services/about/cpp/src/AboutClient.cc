@@ -37,7 +37,7 @@ AboutClient::AboutClient(ajn::BusAttachment& bus) :
         InterfaceDescription* p_InterfaceDescription = NULL;
         status = m_BusAttachment->CreateInterface(ABOUT_INTERFACE_NAME, p_InterfaceDescription, false);
         if (p_InterfaceDescription && status == ER_OK) {
-            do {
+            for (;;) {
                 status = p_InterfaceDescription->AddMethod("GetAboutData", "s", "a{sv}", "languageTag,aboutData");
                 if (status != ER_OK) {
                     break;
@@ -56,7 +56,7 @@ AboutClient::AboutClient(ajn::BusAttachment& bus) :
                 }
                 p_InterfaceDescription->Activate();
                 return;
-            } while (0);
+            }
         }
         QCC_DbgPrintf(("AboutClient::AboutClient - interface=[%s] could not be created. status=[%s]",
                        ABOUT_INTERFACE_NAME, QCC_StatusText(status)));
@@ -82,7 +82,7 @@ QStatus AboutClient::GetObjectDescriptions(const char* busName, AboutClient::Obj
         return ER_FAIL;
     }
 
-    do {
+    for (;;) {
         status = proxyBusObj->AddInterface(*p_InterfaceDescription);
         if (status != ER_OK) {
             break;
@@ -129,7 +129,8 @@ QStatus AboutClient::GetObjectDescriptions(const char* busName, AboutClient::Obj
                 objectDescs.insert(std::pair<qcc::String, std::vector<qcc::String> >(objectDescriptionPath, localVector));
             }
         }
-    } while (0);
+        break;
+    }
 
     delete proxyBusObj;
     proxyBusObj = NULL;
@@ -149,7 +150,7 @@ QStatus AboutClient::GetAboutData(const char* busName, const char* languageTag, 
     if (!proxyBusObj) {
         return ER_FAIL;
     }
-    do {
+    for (;;) {
         status = proxyBusObj->AddInterface(*p_InterfaceDescription);
         if (status != ER_OK) {
             break;
@@ -192,7 +193,8 @@ QStatus AboutClient::GetAboutData(const char* busName, const char* languageTag, 
                 data.insert(std::pair<qcc::String, ajn::MsgArg>(tempKey, *tempValue));
             }
         }
-    } while (0);
+        break;
+    }
 
     delete proxyBusObj;
     proxyBusObj = NULL;

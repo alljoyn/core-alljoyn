@@ -82,9 +82,12 @@ QStatus ServiceTestObject::AddInterfaceToObject(const InterfaceDescription* intf
 }
 
 
-void ServiceTestObject::NameAcquiredSignalHandler(const InterfaceDescription::Member*member,
+void ServiceTestObject::NameAcquiredSignalHandler(const InterfaceDescription::Member* member,
                                                   const char* sourcePath,
                                                   Message& msg) {
+    QCC_UNUSED(member);
+    QCC_UNUSED(sourcePath);
+    QCC_UNUSED(msg);
     //QCC_SyncPrintf("Inside the Name Acquired  signal handler\n");
     output1++;
 }
@@ -98,6 +101,7 @@ void ServiceTestObject::ObjectRegistered(void) {
 
 void ServiceTestObject::Ping(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
 
     MsgArg arg(*(msg->GetArg(0)));
     printf("Pinged with: %s\n", msg->GetArg(0)->ToString().c_str());
@@ -115,6 +119,7 @@ void ServiceTestObject::Ping(const InterfaceDescription::Member* member, Message
 
 void ServiceTestObject::Sing(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
     /* Reply with same string that was sent to us */
     MsgArg arg(*(msg->GetArg(0)));
     printf("Sung with: %s\n", msg->GetArg(0)->ToString().c_str());
@@ -127,6 +132,7 @@ void ServiceTestObject::Sing(const InterfaceDescription::Member* member, Message
 
 void ServiceTestObject::King(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
     /* Reply with same string that was sent to us */
     MsgArg arg(*(msg->GetArg(0)));
     printf("King with: %s\n", msg->GetArg(0)->ToString().c_str());
@@ -156,6 +162,8 @@ void ServiceTestObject::King(const InterfaceDescription::Member* member, Message
 
 void ServiceTestObject::ByteArrayTest(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
+
     MsgArg arg(*(msg->GetArg(0)));
     QStatus status = MethodReply(msg, &arg, 1);
     if (ER_OK != status) {
@@ -165,6 +173,8 @@ void ServiceTestObject::ByteArrayTest(const InterfaceDescription::Member* member
 
 void ServiceTestObject::DoubleArrayTest(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
+
     MsgArg arg(*(msg->GetArg(0)));
     QStatus status = MethodReply(msg, &arg, 1);
     if (ER_OK != status) {
@@ -175,8 +185,10 @@ void ServiceTestObject::DoubleArrayTest(const InterfaceDescription::Member* memb
 
 
 
-QStatus ServiceTestObject::Get(const char*ifcName, const char*propName, MsgArg& val)
+QStatus ServiceTestObject::Get(const char* ifcName, const char*propName, MsgArg& val)
 {
+    QCC_UNUSED(ifcName);
+
     QStatus status = ER_OK;
     if (0 == strcmp("int_val", propName)) {
         //val.Set("i", prop_int_val);
@@ -198,8 +210,9 @@ QStatus ServiceTestObject::Get(const char*ifcName, const char*propName, MsgArg& 
     return status;
 }
 
-QStatus ServiceTestObject::Set(const char*ifcName, const char*propName, MsgArg& val)
+QStatus ServiceTestObject::Set(const char* ifcName, const char*propName, MsgArg& val)
 {
+    QCC_UNUSED(ifcName);
     QStatus status = ER_OK;
     if ((0 == strcmp("int_val", propName)) && (val.typeId == ALLJOYN_INT32)) {
         prop_int_val = val.v_int32;

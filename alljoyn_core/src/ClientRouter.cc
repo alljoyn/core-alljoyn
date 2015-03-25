@@ -110,6 +110,7 @@ void ClientRouter::UnregisterEndpoint(const String& epName, EndpointType epType)
 
 BusEndpoint ClientRouter::FindEndpoint(const qcc::String& busname)
 {
+    QCC_UNUSED(busname);
     return nonLocalEndpoint;
 }
 
