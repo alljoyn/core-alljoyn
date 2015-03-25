@@ -19,7 +19,7 @@
             </intent-filter>
         </activity>
     </application>
-    <uses-sdk android:minSdkVersion="10" />
+    <uses-sdk android:minSdkVersion="16" />
     <!-- The application indirectly uses resources that requires this permission -->
     <uses-permission android:name="android.permission.READ_CONTACTS"></uses-permission>
-</manifest> 
+</manifest>
