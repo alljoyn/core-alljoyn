@@ -606,7 +606,12 @@ class LocalTransport : public Transport {
      */
     QStatus NormalizeTransportSpec(const char* inSpec,
                                    qcc::String& outSpec,
-                                   std::map<qcc::String, qcc::String>& argMap) const { return ER_NOT_IMPLEMENTED; }
+                                   std::map<qcc::String, qcc::String>& argMap) const {
+        UNREFERENCED_PARAMETER(inSpec);
+        UNREFERENCED_PARAMETER(outSpec);
+        UNREFERENCED_PARAMETER(argMap);
+        return ER_NOT_IMPLEMENTED;
+    }
 
     /**
      * Start the transport and associate it with a router.
@@ -648,7 +653,12 @@ class LocalTransport : public Transport {
      * @param newep           [OUT] Endpoint created as a result of successful connect.
      * @return  ER_NOT_IMPLEMENTED.
      */
-    QStatus Connect(const char* connectSpec, const SessionOpts& opts, BusEndpoint& newep) { return ER_NOT_IMPLEMENTED; }
+    QStatus Connect(const char* connectSpec, const SessionOpts& opts, BusEndpoint& newep) {
+        UNREFERENCED_PARAMETER(connectSpec);
+        UNREFERENCED_PARAMETER(opts);
+        UNREFERENCED_PARAMETER(newep);
+        return ER_NOT_IMPLEMENTED;
+    }
 
     /**
      * Disconnect a local endpoint. (Not used for local transports)
@@ -656,7 +666,10 @@ class LocalTransport : public Transport {
      * @param args   Connect args used to create connection that is now being disconnected.
      * @return  ER_NOT_IMPLEMENTED.
      */
-    QStatus Disconnect(const char* args) { return ER_NOT_IMPLEMENTED; }
+    QStatus Disconnect(const char* args) {
+        UNREFERENCED_PARAMETER(args);
+        return ER_NOT_IMPLEMENTED;
+    }
 
     /**
      * Start listening for incomming connections  (Not used for local transports)
@@ -664,7 +677,10 @@ class LocalTransport : public Transport {
      * @param listenSpec      Unused parameter.
      * @return  ER_NOT_IMPLEMENTED.
      */
-    QStatus StartListen(const char* listenSpec) { return ER_NOT_IMPLEMENTED; }
+    QStatus StartListen(const char* listenSpec) {
+        UNREFERENCED_PARAMETER(listenSpec);
+        return ER_NOT_IMPLEMENTED;
+    }
 
     /**
      * Stop listening for incoming connections.  (Not used for local transports)
@@ -672,7 +688,10 @@ class LocalTransport : public Transport {
      * @param listenSpec      Unused parameter.
      * @return  ER_NOT_IMPLEMENTED.
      */
-    QStatus StopListen(const char* listenSpec) { return ER_NOT_IMPLEMENTED; }
+    QStatus StopListen(const char* listenSpec) {
+        UNREFERENCED_PARAMETER(listenSpec);
+        return ER_NOT_IMPLEMENTED;
+    }
 
     /**
      * Register a BusLocalObject.
@@ -714,24 +733,37 @@ class LocalTransport : public Transport {
      *
      * @param listener  Listener for transport related events.
      */
-    void SetListener(TransportListener* listener) { };
+    void SetListener(TransportListener* listener) {
+        UNREFERENCED_PARAMETER(listener);
+    };
 
     /**
      * Start discovering busses.
      */
-    void EnableDiscovery(const char* namePrefix, TransportMask transports) { }
+    void EnableDiscovery(const char* namePrefix, TransportMask transports) {
+        UNREFERENCED_PARAMETER(namePrefix);
+        UNREFERENCED_PARAMETER(transports);
+    }
 
     /**
      * Stop discovering busses to connect to
      */
-    void DisableDiscovery(const char* namePrefix, TransportMask transports) { }
+    void DisableDiscovery(const char* namePrefix, TransportMask transports) {
+        UNREFERENCED_PARAMETER(namePrefix);
+        UNREFERENCED_PARAMETER(transports);
+    }
 
     /**
      * Start advertising a well-known name with a given quality of service.
      *
      * @param advertiseName   Well-known name to add to list of advertised names.
      */
-    QStatus EnableAdvertisement(const qcc::String& advertiseName, bool quietly, TransportMask transports) { return ER_FAIL; }
+    QStatus EnableAdvertisement(const qcc::String& advertiseName, bool quietly, TransportMask transports) {
+        UNREFERENCED_PARAMETER(advertiseName);
+        UNREFERENCED_PARAMETER(quietly);
+        UNREFERENCED_PARAMETER(transports);
+        return ER_FAIL;
+    }
 
     /**
      * Stop advertising a well-known name with a given quality of service.
@@ -739,7 +771,10 @@ class LocalTransport : public Transport {
      * @param advertiseName   Well-known name to remove from list of advertised names.
      * @param nameListEmpty   Indicates whether advertise name list is completely empty (safe to disable OTA advertising).
      */
-    void DisableAdvertisement(const qcc::String& advertiseName, TransportMask transports) { }
+    void DisableAdvertisement(const qcc::String& advertiseName, TransportMask transports) {
+        UNREFERENCED_PARAMETER(advertiseName);
+        UNREFERENCED_PARAMETER(transports);
+    }
 
     /**
      * Returns the name of this transport
@@ -759,7 +794,11 @@ class LocalTransport : public Transport {
      * @param[OUT]   busAddrs  Set of listen addresses. Always empty for this transport.
      * @return ER_OK if successful.
      */
-    QStatus GetListenAddresses(const SessionOpts& opts, std::vector<qcc::String>& busAddrs) const { return ER_OK; }
+    QStatus GetListenAddresses(const SessionOpts& opts, std::vector<qcc::String>& busAddrs) const {
+        UNREFERENCED_PARAMETER(opts);
+        UNREFERENCED_PARAMETER(busAddrs);
+        return ER_OK;
+    }
 
     /**
      * Does this transport support connections as described by the provided

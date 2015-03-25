@@ -166,13 +166,19 @@ void AJ_CALL alljoyn_authlistenerasync_destroy(alljoyn_authlistener listener)
 
 QStatus AJ_CALL alljoyn_authlistener_requestcredentialsresponse(alljoyn_authlistener listener, void* authContext, QCC_BOOL accept, alljoyn_credentials credentials)
 {
+    UNREFERENCED_PARAMETER(listener);
+
     QCC_DbgTrace(("%s", __FUNCTION__));
+    assert(listener != NULL && "listener parameter must not be NULL");
     return ((ajn::AuthListenerAsyncCallbackC*)listener)->RequestCredentialsResponse(authContext, (accept == QCC_TRUE) ? true : false, *((ajn::AuthListener::Credentials*)credentials));
 }
 
 QStatus AJ_CALL alljoyn_authlistener_verifycredentialsresponse(alljoyn_authlistener listener, void* authContext, QCC_BOOL accept)
 {
+    UNREFERENCED_PARAMETER(listener);
+
     QCC_DbgTrace(("%s", __FUNCTION__));
+    assert(listener != NULL && "listener parameter must not be NULL");
     return ((ajn::AuthListenerAsyncCallbackC*)listener)->VerifyCredentialsResponse(authContext, (accept == QCC_TRUE) ? true : false);
 }
 struct _alljoyn_credentials_handle {

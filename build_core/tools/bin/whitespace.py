@@ -217,7 +217,7 @@ def main(argv=None):
                     xit=1
 
             '''detail command'''
-            if wscmd == valid_commands[1]:
+            #if wscmd == valid_commands[1]:
 
                 '''If the src file and the uncrustify file are different
                 then diff the files'''

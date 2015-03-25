@@ -121,6 +121,7 @@ static volatile sig_atomic_t g_interrupt = false;
 
 static void CDECL_CALL SignalHandler(int sig)
 {
+    UNREFERENCED_PARAMETER(sig);
     g_interrupt = true;
 }
 

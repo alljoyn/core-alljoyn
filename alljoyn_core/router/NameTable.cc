@@ -411,7 +411,7 @@ void NameTable::GetUniqueNamesAndAliases(vector<pair<qcc::String, vector<qcc::St
     BusEndpoint lastEp;
     multimap<BusEndpoint, qcc::String>::iterator it = epMap.begin();
     names.reserve(uniqueNames.size());  // prevent dynamic resizing in loop
-    while (true) {
+    for (;;) {
         if ((it == epMap.end()) || (lastEp != it->first)) {
             if (!uniqueName.empty()) {
                 names.push_back(pair<qcc::String, vector<qcc::String> >(uniqueName, aliasVec));

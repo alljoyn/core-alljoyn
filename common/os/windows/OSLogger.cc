@@ -30,6 +30,9 @@
 
 static void WindowsLogCB(DbgMsgType type, const char* module, const char* msg, void* context)
 {
+    UNREFERENCED_PARAMETER(type);
+    UNREFERENCED_PARAMETER(module);
+    UNREFERENCED_PARAMETER(context);
     OutputDebugStringA(msg);
 }
 

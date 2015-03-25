@@ -70,6 +70,7 @@ static volatile sig_atomic_t s_interrupt = false;
 
 static void CDECL_CALL SigIntHandler(int sig)
 {
+    UNREFERENCED_PARAMETER(sig);
     s_interrupt = true;
 }
 
@@ -157,6 +158,9 @@ class SignalListeningObject : public BusObject {
                                   const char* sourcePath,
                                   Message& msg)
     {
+        UNREFERENCED_PARAMETER(member);
+        UNREFERENCED_PARAMETER(sourcePath);
+
         printf("--==## signalConsumer: Name Changed signal Received ##==--\n");
         printf("\tNew name: '%s'.\n", msg->GetArg(0)->v_string.str);
     }
@@ -269,8 +273,12 @@ void WaitForSigInt(void)
 }
 
 /** Main entry point */
-int main(int argc, char** argv, char** envArg)
+int CDECL_CALL main(int argc, char** argv, char** envArg)
 {
+    UNREFERENCED_PARAMETER(argc);
+    UNREFERENCED_PARAMETER(argv);
+    UNREFERENCED_PARAMETER(envArg);
+
     if (AllJoynInit() != ER_OK) {
         return 1;
     }

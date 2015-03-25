@@ -31,6 +31,8 @@ AboutClientSessionJoiner::~AboutClientSessionJoiner()
 
 void AboutClientSessionJoiner::JoinSessionCB(QStatus status, SessionId id, const SessionOpts& opts, void* context)
 {
+    UNREFERENCED_PARAMETER(opts);
+
     if (status == ER_OK) {
         std::cout << "JoinSessionCB(" << m_BusName << ") succeeded with id: " << id << std::endl;
         if (m_Callback) {

@@ -115,7 +115,9 @@ class ClientRouter : public Router {
      *
      * @param guid   GUID of bus associated with this router.
      */
-    void SetGlobalGUID(const qcc::GUID128& guid) { }
+    void SetGlobalGUID(const qcc::GUID128& guid) {
+        UNREFERENCED_PARAMETER(guid);
+    }
 
     /**
      * Destructor

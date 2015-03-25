@@ -119,18 +119,27 @@ qcc::OSType qcc::GetSystemOSType(void)
 
 QStatus qcc::GetDirListing(const char* path, DirListing& listing)
 {
+    UNREFERENCED_PARAMETER(path);
+    UNREFERENCED_PARAMETER(listing);
     return ER_NOT_IMPLEMENTED;
 }
 
 
 QStatus qcc::Exec(const char* exec, const ExecArgs& args, const qcc::Environ& envs)
 {
+    UNREFERENCED_PARAMETER(exec);
+    UNREFERENCED_PARAMETER(args);
+    UNREFERENCED_PARAMETER(envs);
     return ER_NOT_IMPLEMENTED;
 }
 
 
 QStatus qcc::ExecAs(const char* user, const char* exec, const ExecArgs& args, const qcc::Environ& envs)
 {
+    UNREFERENCED_PARAMETER(user);
+    UNREFERENCED_PARAMETER(exec);
+    UNREFERENCED_PARAMETER(args);
+    UNREFERENCED_PARAMETER(envs);
     return ER_NOT_IMPLEMENTED;
 }
 

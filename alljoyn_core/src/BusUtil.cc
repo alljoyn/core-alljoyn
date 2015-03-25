@@ -57,7 +57,7 @@ bool IsLegalUniqueName(const char* str)
     p++;
 
     size_t periods = 0;
-    while ((c = *p++)) {
+    for (c = *p++; c; c = *p++) {
         if (!IsAlphaNumeric(c) && (c != '-') && (c != '_')) {
             if ((c != '.') || (*p == '.') || (*p == 0)) {
                 return false;

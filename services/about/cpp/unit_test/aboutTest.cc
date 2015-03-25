@@ -15,9 +15,10 @@
  ******************************************************************************/
 #include <gtest/gtest.h>
 #include <alljoyn/Init.h>
+#include <alljoyn/Status.h>
 
 /** Main entry point */
-int main(int argc, char**argv, char**envArg)
+int CDECL_CALL main(int argc, char**argv, char**)
 {
     if (AllJoynInit() != ER_OK) {
         return 1;

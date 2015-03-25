@@ -58,6 +58,10 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
 
         bool RequestCredentials(const char* authMechanism, const char* authPeer, uint16_t authCount, const char* userId, uint16_t credMask, Credentials& creds)
         {
+            UNREFERENCED_PARAMETER(authPeer);
+            UNREFERENCED_PARAMETER(authCount);
+            UNREFERENCED_PARAMETER(userId);
+
             if (strcmp(authMechanism, "ALLJOYN_ECDHE_NULL") == 0) {
                 if (!sendKeys) {
                     return false;
@@ -254,6 +258,8 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
 
         bool VerifyCredentials(const char* authMechanism, const char* authPeer, const Credentials& creds)
         {
+            UNREFERENCED_PARAMETER(authPeer);
+
             /* only the ECDHE_ECDSA calls for peer credential verification */
             if (strcmp(authMechanism, "ALLJOYN_ECDHE_ECDSA") == 0) {
                 if (failVerifyCertChain) {
@@ -273,6 +279,8 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
         }
 
         void AuthenticationComplete(const char* authMechanism, const char* authPeer, bool success) {
+            UNREFERENCED_PARAMETER(authPeer);
+
             authComplete = success;
             chosenMechanism = authMechanism;
         }
@@ -367,10 +375,12 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
 
     void OnOffOn(const InterfaceDescription::Member* member, Message& msg)
     {
+        UNREFERENCED_PARAMETER(member);
         MethodReply(msg, ER_OK);
     }
     void OnOffOff(const InterfaceDescription::Member* member, Message& msg)
     {
+        UNREFERENCED_PARAMETER(member);
         MethodReply(msg, ER_OK);
     }
 

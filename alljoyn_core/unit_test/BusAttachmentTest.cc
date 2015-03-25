@@ -125,6 +125,8 @@ bool foundNameB = false;
 
 class FindMulipleNamesBusListener : public BusListener {
     void FoundAdvertisedName(const char* name, TransportMask transport, const char* namePrefix) {
+        UNREFERENCED_PARAMETER(transport);
+
         printf("FoundAdvertisedName name=%s  prefix=%s\n", name, namePrefix);
         if (strcmp(name, nameA.c_str()) == 0) {
             foundNameA = true;
@@ -299,6 +301,7 @@ TEST_F(BusAttachmentTest, find_names_by_transport)
 bool foundQuietAdvertisedName = false;
 class QuietAdvertiseNameListener : public BusListener {
     void FoundAdvertisedName(const char* name, TransportMask transport, const char* namePrefix) {
+        UNREFERENCED_PARAMETER(transport);
         printf("FoundAdvertisedName name=%s  prefix=%s\n", name, namePrefix);
         if (strcmp(name, "org.alljoyn.BusNode.test") == 0) {
             foundQuietAdvertisedName = true;
@@ -306,6 +309,7 @@ class QuietAdvertiseNameListener : public BusListener {
     }
 
     void LostAdvertisedName(const char* name, TransportMask transport, const char* namePrefix) {
+        UNREFERENCED_PARAMETER(transport);
         printf("LostAdvertisedName name=%s  prefix=%s\n", name, namePrefix);
         if (strcmp(name, "org.alljoyn.BusNode.test") == 0) {
             foundQuietAdvertisedName = false;
@@ -368,9 +372,12 @@ bool lost;
 
 class FindNewNameBusListener : public BusListener, public BusAttachmentTest {
     virtual void FoundAdvertisedName(const char* name, TransportMask transport, const char* namePrefix) {
+        UNREFERENCED_PARAMETER(name);
+        UNREFERENCED_PARAMETER(transport);
+        UNREFERENCED_PARAMETER(namePrefix);
+
         found = true;
         bus.EnableConcurrentCallbacks();
-
     }
 };
 
@@ -388,6 +395,9 @@ class JoinSession_SessionPortListener : public SessionPortListener, SessionListe
     JoinSession_SessionPortListener(BusAttachment* bus) : bus(bus) { };
 
     bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) {
+        UNREFERENCED_PARAMETER(joiner);
+        UNREFERENCED_PARAMETER(opts);
+
         if (sessionPort == 42) {
             sessionAccepted = true;
             bus->EnableConcurrentCallbacks();
@@ -399,10 +409,13 @@ class JoinSession_SessionPortListener : public SessionPortListener, SessionListe
     }
 
     void SessionLost(SessionId id, SessionListener::SessionLostReason reason) {
+        UNREFERENCED_PARAMETER(id);
         sessionLostReason = reason;
         sessionLost = true;
     }
     void SessionJoined(SessionPort sessionPort, SessionId id, const char* joiner) {
+        UNREFERENCED_PARAMETER(joiner);
+
         if (sessionPort == 42) {
             busSessionId = id;
             sessionJoined = true;
@@ -419,6 +432,9 @@ class JoinSession_BusListener : public BusListener {
     JoinSession_BusListener(BusAttachment* bus) : bus(bus) { }
 
     void FoundAdvertisedName(const char* name, TransportMask transport, const char* namePrefix) {
+        UNREFERENCED_PARAMETER(transport);
+        UNREFERENCED_PARAMETER(namePrefix);
+
         found = true;
         SessionOpts sessionOpts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
 

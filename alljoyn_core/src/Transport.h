@@ -149,7 +149,11 @@ class Transport {
      *      - ER_OK if successful.
      *      - an error status otherwise.
      */
-    virtual QStatus GetListenAddresses(const SessionOpts& opts, std::vector<qcc::String>& busAddrs) const { return ER_FAIL; }
+    virtual QStatus GetListenAddresses(const SessionOpts& opts, std::vector<qcc::String>& busAddrs) const {
+        UNREFERENCED_PARAMETER(opts);
+        UNREFERENCED_PARAMETER(busAddrs);
+        return ER_FAIL;
+    }
 
     /**
      * Does this transport support connections as described by the provided
@@ -162,7 +166,10 @@ class Transport {
      *      - true if the SessionOpts specifies a supported option set.
      *      - false otherwise.
      */
-    virtual bool SupportsOptions(const SessionOpts& opts) const { return false; }
+    virtual bool SupportsOptions(const SessionOpts& opts) const {
+        UNREFERENCED_PARAMETER(opts);
+        return false;
+    }
 
     /**
      * Normalize a transport specification.
@@ -189,7 +196,12 @@ class Transport {
      *      - ER_OK if successful.
      *      - an error status otherwise.
      */
-    virtual QStatus Connect(const char* connectSpec, const SessionOpts& opts, BusEndpoint& newep) { return ER_FAIL; }
+    virtual QStatus Connect(const char* connectSpec, const SessionOpts& opts, BusEndpoint& newep) {
+        UNREFERENCED_PARAMETER(connectSpec);
+        UNREFERENCED_PARAMETER(opts);
+        UNREFERENCED_PARAMETER(newep);
+        return ER_FAIL;
+    }
 
     /**
      * Disconnect from a specified AllJoyn/DBus address.
@@ -202,7 +214,10 @@ class Transport {
      *      - ER_OK if successful.
      *      - an error status otherwise.
      */
-    virtual QStatus Disconnect(const char* connectSpec) { return ER_FAIL; }
+    virtual QStatus Disconnect(const char* connectSpec) {
+        UNREFERENCED_PARAMETER(connectSpec);
+        return ER_FAIL;
+    }
 
     /**
      * Start listening for incoming connections on a specified bus address.
@@ -212,7 +227,10 @@ class Transport {
      *
      * @return ER_OK if successful.
      */
-    virtual QStatus StartListen(const char* listenSpec) { return ER_FAIL; }
+    virtual QStatus StartListen(const char* listenSpec) {
+        UNREFERENCED_PARAMETER(listenSpec);
+        return ER_FAIL;
+    }
 
     /**
      * Stop listening for incoming connections on a specified bus address.
@@ -224,7 +242,10 @@ class Transport {
      *      - ER_OK if successful.
      *      - an error status otherwise.
      */
-    virtual QStatus StopListen(const char* listenSpec) { return ER_FAIL; }
+    virtual QStatus StopListen(const char* listenSpec) {
+        UNREFERENCED_PARAMETER(listenSpec);
+        return ER_FAIL;
+    }
 
     /**
      * Set a listener for transport related events.
@@ -233,14 +254,19 @@ class Transport {
      *
      * @param listener  Listener for transport related events.
      */
-    virtual void SetListener(TransportListener* listener) { }
+    virtual void SetListener(TransportListener* listener) {
+        UNREFERENCED_PARAMETER(listener);
+    }
 
     /**
      * Start discovering remotely advertised names that match prefix.
      *
      * @param namePrefix    Well-known name prefix.
      */
-    virtual void EnableDiscovery(const char* namePrefix, TransportMask transportmask) { }
+    virtual void EnableDiscovery(const char* namePrefix, TransportMask transportmask) {
+        UNREFERENCED_PARAMETER(namePrefix);
+        UNREFERENCED_PARAMETER(transportmask);
+    }
 
     /**
      * Stop discovering remotely advertised names that match prefix.
@@ -248,7 +274,10 @@ class Transport {
      * @param namePrefix    Well-known name prefix.
      *
      */
-    virtual void DisableDiscovery(const char* namePrefix, TransportMask transportmask) { }
+    virtual void DisableDiscovery(const char* namePrefix, TransportMask transportmask) {
+        UNREFERENCED_PARAMETER(namePrefix);
+        UNREFERENCED_PARAMETER(transportmask);
+    }
 
     /**
      * Start advertising a well-known name
@@ -257,14 +286,22 @@ class Transport {
      * @param quietly         Advertise the name quietly
      * @return  ER_NOT_IMPLEMENTED unless overridden by a derived class.
      */
-    virtual QStatus EnableAdvertisement(const qcc::String& advertiseName, bool quietly, TransportMask transports) { return ER_NOT_IMPLEMENTED; }
+    virtual QStatus EnableAdvertisement(const qcc::String& advertiseName, bool quietly, TransportMask transports) {
+        UNREFERENCED_PARAMETER(advertiseName);
+        UNREFERENCED_PARAMETER(quietly);
+        UNREFERENCED_PARAMETER(transports);
+        return ER_NOT_IMPLEMENTED;
+    }
 
     /**
      * Stop advertising a well-known name with a given quality of service.
      *
      * @param advertiseName   Well-known name to remove from list of advertised names.
      */
-    virtual void DisableAdvertisement(const qcc::String& advertiseName, TransportMask transports) { }
+    virtual void DisableAdvertisement(const qcc::String& advertiseName, TransportMask transports) {
+        UNREFERENCED_PARAMETER(advertiseName);
+        UNREFERENCED_PARAMETER(transports);
+    }
 
     /**
      * Returns the name of the transport
