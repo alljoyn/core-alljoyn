@@ -14,34 +14,11 @@
 //    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 
-#import "AJNInit.h"
-#import <alljoyn/Init.h>
+#import <UIKit/UIKit.h>
+#import "AppDelegate.h"
 
-@implementation AJNInit
-
-+ (QStatus)alljoynInit
-{
-    return AllJoynInit();
-}
-
-+ (QStatus)alljoynShutdown
-{
-    return AllJoynShutdown();
-}
-
-+ (QStatus)alljoynRouterInit
-{
-    if (ER_OK != AllJoynRouterInit()) {
-        AllJoynShutdown();
-        return ER_FAIL;
+int main(int argc, char * argv[]) {
+    @autoreleasepool {
+        return UIApplicationMain(argc, argv, nil, NSStringFromClass([AppDelegate class]));
     }
-    return ER_OK;
 }
-
-+ (QStatus)alljoynRouterShutdown
-{
-    return AllJoynRouterShutdown();
-}
-
-@end
-

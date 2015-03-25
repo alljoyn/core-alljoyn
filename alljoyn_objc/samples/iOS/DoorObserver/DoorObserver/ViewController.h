@@ -14,34 +14,11 @@
 //    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 
-#import "AJNInit.h"
-#import <alljoyn/Init.h>
+#import <UIKit/UIKit.h>
 
-@implementation AJNInit
+@interface ViewController : UITableViewController
 
-+ (QStatus)alljoynInit
-{
-    return AllJoynInit();
-}
-
-+ (QStatus)alljoynShutdown
-{
-    return AllJoynShutdown();
-}
-
-+ (QStatus)alljoynRouterInit
-{
-    if (ER_OK != AllJoynRouterInit()) {
-        AllJoynShutdown();
-        return ER_FAIL;
-    }
-    return ER_OK;
-}
-
-+ (QStatus)alljoynRouterShutdown
-{
-    return AllJoynRouterShutdown();
-}
+- (IBAction)unwindToList:(UIStoryboardSegue *)segue;
 
 @end
 

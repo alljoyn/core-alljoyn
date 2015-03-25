@@ -16,6 +16,7 @@
 
 #import <Foundation/Foundation.h>
 #import "AJNObject.h"
+#import <alljoyn/Status.h>
 
 @interface AJNInit : NSObject
 

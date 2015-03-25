@@ -14,34 +14,12 @@
 //    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 
-#import "AJNInit.h"
-#import <alljoyn/Init.h>
+#import <UIKit/UIKit.h>
 
-@implementation AJNInit
+#import "DoorObject.h"
 
-+ (QStatus)alljoynInit
-{
-    return AllJoynInit();
-}
+@interface AddDoorViewController : UIViewController
 
-+ (QStatus)alljoynShutdown
-{
-    return AllJoynShutdown();
-}
-
-+ (QStatus)alljoynRouterInit
-{
-    if (ER_OK != AllJoynRouterInit()) {
-        AllJoynShutdown();
-        return ER_FAIL;
-    }
-    return ER_OK;
-}
-
-+ (QStatus)alljoynRouterShutdown
-{
-    return AllJoynRouterShutdown();
-}
+@property AJNDoorObject* doorObject;
 
 @end
-
