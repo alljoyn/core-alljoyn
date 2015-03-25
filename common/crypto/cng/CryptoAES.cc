@@ -65,13 +65,11 @@ struct Crypto_AES::KeyState {
     uint8_t* keyObj;
   private:
     /**
-     * Copy constructor
+     * Private copy constructor to prevent copying
      *
      * @param src KeyState to be copied.
      */
-    KeyState(const KeyState& src) {
-        /* private copy constructor to prevent copying */
-    }
+    KeyState(const KeyState&);
     /**
      * Assignment operator
      *
@@ -79,9 +77,7 @@ struct Crypto_AES::KeyState {
      *
      * @return copy of KeyState
      */
-    KeyState& operator=(const KeyState& src) {
-        return *this;
-    }
+    KeyState& operator=(const KeyState&);
 };
 
 Crypto_AES::Crypto_AES(const KeyBlob& key, Mode mode) : mode(mode), keyState(NULL)

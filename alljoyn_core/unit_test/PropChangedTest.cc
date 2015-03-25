@@ -484,11 +484,14 @@ class PropChangedTestListener :
                                    const MsgArg& invalidated,
                                    void* context)
     {
+        QCC_UNUSED(context);
         ASSERT_EQ(ALLJOYN_ARRAY, changed.typeId);
         ASSERT_EQ(ALLJOYN_ARRAY, invalidated.typeId);
         //QCC_SyncPrintf("PropChangedTestListener::PropertiesChanged called (changed:%d,invalidated:%d) for %s\n", changed.v_array.GetNumElements(), invalidated.v_array.GetNumElements(), (context ? (const char*)context : "?"));
         store.AddSample(obj, ifaceName, changed, invalidated);
     }
+    /* Private assigment operator - does nothing */
+    PropChangedTestListener& operator=(const PropChangedTestListener&);
 };
 
 static void BuildXMLProperty(String& xml, const String& name, const String& annotation)
@@ -591,6 +594,8 @@ class ClientBusAttachment :
                              TransportMask transport,
                              const char* namePrefix)
     {
+        QCC_UNUSED(transport);
+        QCC_UNUSED(namePrefix);
         JoinSessionAsync(name, SERVICE_PORT, NULL, SESSION_OPTS, this, NULL);
     }
 
@@ -599,6 +604,9 @@ class ClientBusAttachment :
                        const SessionOpts& opts,
                        void* context)
     {
+        QCC_UNUSED(opts);
+        QCC_UNUSED(context);
+
         EXPECT_EQ(ER_OK, status);
         id = sessionId;
         sessionSema.Post();
@@ -899,6 +907,9 @@ class PropChangedTestTwoBusSetup :
                              const char* joiner,
                              const SessionOpts& opts)
     {
+        QCC_UNUSED(sessionPort);
+        QCC_UNUSED(joiner);
+        QCC_UNUSED(opts);
         return true;
     }
 };
@@ -1854,6 +1865,9 @@ struct GetPropertyListener : public ProxyBusObject::Listener {
     virtual ~GetPropertyListener() { }
 
     void GetPropCallback(QStatus status, ProxyBusObject* obj, const MsgArg& value, void* context) {
+        QCC_UNUSED(obj);
+        QCC_UNUSED(context);
+
         EXPECT_EQ(ER_OK, status);
         val = value;
         ev.SetEvent();

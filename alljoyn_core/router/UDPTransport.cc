@@ -834,7 +834,7 @@ class ArdpStream : public qcc::Stream {
     QStatus PushBytes(const void* buf, size_t numBytes, size_t& numSent, uint32_t ttl)
     {
         QCC_DbgTrace(("ArdpStream::PushBytes(buf=%p, numBytes=%d., numSent=%p)", buf, numBytes, &numSent));
-        QStatus status;
+        QStatus status = ER_OK;
 
         /*
          * Start out by assuming that nothing worked and we have sent nothing.
@@ -1197,6 +1197,10 @@ class ArdpStream : public qcc::Stream {
      */
     QStatus PullBytes(void* buf, size_t reqBytes, size_t& actualBytes, uint32_t timeout)
     {
+        QCC_UNUSED(buf);
+        QCC_UNUSED(reqBytes);
+        QCC_UNUSED(actualBytes);
+        QCC_UNUSED(timeout);
         QCC_DbgTrace(("ArdpStream::PullBytes(buf=%p, reqBytes=%d., actualBytes=%d., timeout=%d.)",
                       buf, reqBytes, actualBytes, timeout));
         assert(0 && "ArdpStream::PullBytes(): Should never be called");
@@ -1474,6 +1478,11 @@ class ArdpStream : public qcc::Stream {
      */
     void SendCb(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint32_t len, QStatus status)
     {
+        QCC_UNUSED(handle);
+        QCC_UNUSED(conn);
+        QCC_UNUSED(len);
+        QCC_UNUSED(status);
+
         QCC_DbgTrace(("ArdpStream::SendCb(handle=%p, conn=%p, buf=%p, len=%d.)", handle, conn, buf, len));
         m_transport->m_cbLock.Lock();
         --m_sendsOutstanding;
@@ -2795,6 +2804,9 @@ class _UDPEndpoint : public _RemoteEndpoint {
      */
     void CreateStream(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t dataTimeout, uint32_t dataRetries)
     {
+        QCC_UNUSED(dataTimeout);
+        QCC_UNUSED(dataRetries);
+
         IncrementAndFetch(&m_refCount);
         QCC_DbgHLPrintf(("_UDPEndpoint::CreateStream(handle=%p, conn=%p)", handle, conn));
 
@@ -3026,6 +3038,10 @@ class _UDPEndpoint : public _RemoteEndpoint {
      */
     void DisconnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t connId, QStatus status)
     {
+        QCC_UNUSED(handle);
+        QCC_UNUSED(conn);
+        QCC_UNUSED(connId);
+
         IncrementAndFetch(&m_refCount);
         QCC_DbgHLPrintf(("_UDPEndpoint::DisconnectCb(handle=%p, conn=%p, connId=%d.)", handle, conn, connId));
 
@@ -3171,6 +3187,8 @@ class _UDPEndpoint : public _RemoteEndpoint {
      */
     void RecvCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t connId, ArdpRcvBuf* rcv, QStatus status)
     {
+        QCC_UNUSED(connId);
+
         IncrementAndFetch(&m_refCount);
         QCC_DbgHLPrintf(("_UDPEndpoint::RecvCb(handle=%p, conn=%p, connId=%d., rcv=%p, status=%s)",
                          handle, conn, connId, rcv, QCC_StatusText(status)));
@@ -3528,6 +3546,8 @@ class _UDPEndpoint : public _RemoteEndpoint {
      */
     void SendCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t connId, uint8_t* buf, uint32_t len, QStatus status)
     {
+        QCC_UNUSED(connId);
+
         IncrementAndFetch(&m_refCount);
         QCC_DbgHLPrintf(("_UDPEndpoint::SendCb(handle=%p, conn=%p, buf=%p, len=%d.)", handle, conn, buf, len));
 
@@ -3698,6 +3718,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
      */
     QStatus GetLocalIp(qcc::String& ipAddrStr)
     {
+        QCC_UNUSED(ipAddrStr);
         QCC_DbgTrace(("_UDPEndpoint::GetLocalIp(ipAddrStr=%0)", &ipAddrStr));
 
         /*
@@ -4129,6 +4150,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
      */
     QStatus SetLinkTimeout(uint32_t& linkTimeout)
     {
+        QCC_UNUSED(linkTimeout);
         QCC_DbgTrace(("_UDPEndpoint::SetLinkTimeout(linkTimeout=%d.)", linkTimeout));
         QCC_DbgPrintf(("_UDPEndpoint::SetLinkTimeout(): Ignored", linkTimeout));
         return ER_OK;
@@ -4173,6 +4195,8 @@ class _UDPEndpoint : public _RemoteEndpoint {
  */
 ThreadReturn STDCALL MessagePump::PumpThread::Run(void* arg)
 {
+    QCC_UNUSED(arg);
+
     QCC_DbgTrace(("MessagePump::PumpThread::Run()"));
     assert(m_pump && "MessagePump::PumpThread::Run(): pointer to enclosing pump must be specified");
 
@@ -4512,6 +4536,7 @@ UDPTransport::~UDPTransport()
  */
 void UDPTransport::EndpointExit(RemoteEndpoint& ep)
 {
+    QCC_UNUSED(ep);
     QCC_DbgTrace(("UDPTransport::EndpointExit()"));
 }
 
@@ -4520,6 +4545,8 @@ void UDPTransport::EndpointExit(RemoteEndpoint& ep)
  */
 ThreadReturn STDCALL UDPTransport::DispatcherThread::Run(void* arg)
 {
+    QCC_UNUSED(arg);
+
     IncrementAndFetch(&m_transport->m_refCount);
     QCC_DbgTrace(("UDPTransport::DispatcherThread::Run()"));
 
@@ -4837,6 +4864,7 @@ ThreadReturn STDCALL UDPTransport::DispatcherThread::Run(void* arg)
  */
 ThreadReturn STDCALL UDPTransport::ExitDispatcherThread::Run(void* arg)
 {
+    QCC_UNUSED(arg);
     IncrementAndFetch(&m_transport->m_refCount);
     QCC_DbgTrace(("UDPTransport::ExitDispatcherThread::Run()"));
 
@@ -5832,6 +5860,8 @@ void UDPTransport::EmitStallWarnings(UDPEndpoint& ep)
  */
 void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTimeout)
 {
+    QCC_UNUSED(sessionSetupTimeout);
+
     QCC_DbgTrace(("UDPTransport::ManageEndpoints()"));
     bool managed = false;
 
@@ -6437,16 +6467,30 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
  */
 void UDPTransport::ArdpSendToSGHook(ArdpHandle* handle, ArdpConnRecord* conn, TesthookSource source, qcc::ScatterGatherList& msgSG)
 {
+    QCC_UNUSED(handle);
+    QCC_UNUSED(conn);
+    QCC_UNUSED(source);
+    QCC_UNUSED(msgSG);
     QCC_DbgTrace(("UDPTransport::ArdpSendToSGHook(handle=%p, conn=%p, source=%d., msgSG=%p)", handle, conn, source, &msgSG));
 }
 
 void UDPTransport::ArdpSendToHook(ArdpHandle* handle, ArdpConnRecord* conn, TesthookSource source, void* buf, uint32_t len)
 {
+    QCC_UNUSED(handle);
+    QCC_UNUSED(conn);
+    QCC_UNUSED(source);
+    QCC_UNUSED(buf);
+    QCC_UNUSED(len);
     QCC_DbgTrace(("UDPTransport::ArdpSendToHook(handle=%p, conn=%p, source=%d., buf=%p, len=%d.)", handle, conn, buf, len));
 }
 
 void UDPTransport::ArdpRecvFromHook(ArdpHandle* handle, ArdpConnRecord* conn, TesthookSource source, void* buf, uint32_t len)
 {
+    QCC_UNUSED(handle);
+    QCC_UNUSED(conn);
+    QCC_UNUSED(source);
+    QCC_UNUSED(buf);
+    QCC_UNUSED(len);
     QCC_DbgTrace(("UDPTransport::ArdpSendToSGHook(handle=%p, conn=%p, source=%d., buf=%p, len=%d.)", handle, conn, buf, len));
 }
 
@@ -8137,6 +8181,11 @@ void UDPTransport::SendCb(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf
  */
 void UDPTransport::SendWindowCb(ArdpHandle* handle, ArdpConnRecord* conn, uint16_t window, QStatus status)
 {
+    QCC_UNUSED(handle);
+    QCC_UNUSED(conn);
+    QCC_UNUSED(window);
+    QCC_UNUSED(status);
+
     IncrementAndFetch(&m_refCount);
     QCC_DbgTrace(("UDPTransport::SendWindowCb(handle=%p, conn=%p, window=%d.)", handle, conn, window));
     QCC_DbgPrintf(("UDPTransport::SendWindowCb(): callback from conn ID == %d", ARDP_GetConnId(handle, conn)));
@@ -8164,6 +8213,8 @@ struct WriteEntry {
  */
 void* UDPTransport::Run(void* arg)
 {
+    QCC_UNUSED(arg);
+
     QCC_DbgTrace(("UDPTransport::Run()"));
 
     /*
@@ -8231,7 +8282,7 @@ void* UDPTransport::Run(void* arg)
      * corresponding to endpoints on sundry networks for becoming ready; and
      * (3) drive/whip the ARDP protocol to do our bidding.
      */
-    while (true) {
+    for (;;) {
         bool passive = m_preList.empty() && m_authList.empty() && m_endpointList.empty();
 
         if (IsStopping() && passive) {
@@ -9171,6 +9222,8 @@ bool UDPTransport::DisableRouterAdvertisement() {
 
 void UDPTransport::UpdateDynamicScoreInstance(ListenRequest& listenRequest)
 {
+    QCC_UNUSED(listenRequest);
+
     uint32_t availConn = m_maxConn -  m_currConn;
     uint32_t availRemoteClientsUdp = m_maxRemoteClientsUdp - m_numUntrustedClients;
     availRemoteClientsUdp = std::min(availRemoteClientsUdp, availConn);
@@ -11472,6 +11525,7 @@ void UDPTransport::CheckEndpointLocalMachine(UDPEndpoint endpoint)
 }
 
 ThreadReturn STDCALL UDPTransport::DynamicScoreUpdater::Run(void* arg) {
+    QCC_UNUSED(arg);
     while (!IsStopping()) {
         Event::Wait(Event::neverSet);
         GetStopEvent().ResetEvent();

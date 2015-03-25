@@ -98,7 +98,7 @@ void AJ_CALL name_owner_changed(const void* context, const char* busName, const 
 
 /** Main entry point */
 /** TODO: Make this C89 compatible. */
-int main(int argc, char** argv, char** envArg)
+int CDECL_CALL main(int argc, char** argv, char** envArg)
 {
     QStatus status = ER_OK;
     char* connectArgs = NULL;

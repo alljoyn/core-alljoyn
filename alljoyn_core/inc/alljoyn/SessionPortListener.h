@@ -54,7 +54,12 @@ class SessionPortListener {
      * @param opts           Session options requested by the joiner.
      * @return   Return true if JoinSession request is accepted. false if rejected.
      */
-    virtual bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) { return false; }
+    virtual bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) {
+        QCC_UNUSED(sessionPort);
+        QCC_UNUSED(joiner);
+        QCC_UNUSED(opts);
+        return false;
+    }
 
     /**
      * Called by the bus when a session has been successfully joined. The session is now fully up.
@@ -66,7 +71,11 @@ class SessionPortListener {
      * @param id             Id of session.
      * @param joiner         Unique name of the joiner.
      */
-    virtual void SessionJoined(SessionPort sessionPort, SessionId id, const char* joiner) {  }
+    virtual void SessionJoined(SessionPort sessionPort, SessionId id, const char* joiner) {
+        QCC_UNUSED(sessionPort);
+        QCC_UNUSED(id);
+        QCC_UNUSED(joiner);
+    }
 };
 
 }

@@ -58,13 +58,11 @@ class Crypto_Hash::Context {
     DWORD hashObjLen;
   private:
     /**
-     * Copy constructor
+     * Private copy constructor to prevent copying
      *
      * @param src Context to be copied.
      */
-    Context(const Context& src) {
-        /* private copy constructor to prevent copying */
-    }
+    Context(const Context&);
     /**
      * Assignment operator
      *
@@ -72,9 +70,7 @@ class Crypto_Hash::Context {
      *
      * @return copy of Context
      */
-    Context& operator=(const Context& src) {
-        return *this;
-    }
+    Context& operator=(const Context&);
 };
 
 QStatus Crypto_Hash::Init(Algorithm alg, const uint8_t* hmacKey, size_t keyLen)

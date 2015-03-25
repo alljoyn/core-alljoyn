@@ -97,6 +97,11 @@
  */
 #define QCC_UNUSED(x) (void)(x)
 
+#if defined(_MSC_VER)
+//disable 'conditional expression is constant' warning to use do{}while(0)
+#pragma warning( disable: 4127 )
+#endif
+
 /** Boolean type for C */
 typedef int32_t QCC_BOOL;
 /** Boolean logic true for QCC_BOOL type*/

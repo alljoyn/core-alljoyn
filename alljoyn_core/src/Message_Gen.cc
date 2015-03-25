@@ -461,7 +461,7 @@ QStatus _Message::Deliver(RemoteEndpoint& endpoint)
     Sink& sink = endpoint->GetSink();
     uint8_t* buf = reinterpret_cast<uint8_t*>(msgBuf);
     size_t len = bufEOD - buf;
-    size_t pushed;
+    size_t pushed = 0;
 
     QCC_DbgPrintf(("Deliver %s", this->Description().c_str()));
 

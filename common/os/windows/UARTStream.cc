@@ -34,9 +34,15 @@ QStatus UART(const qcc::String& devName, uint32_t baud, qcc::UARTFd& fd)
 }
 QStatus UART(const qcc::String& devName, uint32_t baud, uint8_t databits, const qcc::String& parity, uint8_t stopbits, qcc::UARTFd& fd)
 {
+    QCC_UNUSED(devName);
+    QCC_UNUSED(baud);
+    QCC_UNUSED(databits);
+    QCC_UNUSED(parity);
+    QCC_UNUSED(stopbits);
+
     QCC_DbgTrace(("UART(devName=%s,baud=%d,databits=%d,parity=%s,stopbits=%d)",
                   devName.c_str(), baud, databits, parity.c_str(), stopbits));
-    fd = -1;
+    fd = (qcc::UARTFd)-1;
 
     return ER_NOT_IMPLEMENTED;
 }
@@ -57,12 +63,19 @@ UARTStream::~UARTStream()
 #define RX_BUFSIZE  640
 static uint8_t RxBuffer[RX_BUFSIZE];
 QStatus UARTStream::PullBytes(void* buf, size_t numBytes, size_t& actualBytes, uint32_t timeout) {
+    QCC_UNUSED(buf);
+    QCC_UNUSED(numBytes);
+    QCC_UNUSED(actualBytes);
+    QCC_UNUSED(timeout);
     return ER_NOT_IMPLEMENTED;
 }
 void UARTStream::Close() {
 
 }
 QStatus UARTStream::PushBytes(const void* buf, size_t numBytes, size_t& actualBytes) {
+    QCC_UNUSED(buf);
+    QCC_UNUSED(numBytes);
+    QCC_UNUSED(actualBytes);
     return ER_NOT_IMPLEMENTED;
 }
 
@@ -88,8 +101,9 @@ QStatus UARTController::Join()
 
 QStatus UARTController::ReadCallback(Source& source, bool isTimedOut)
 {
+    QCC_UNUSED(source);
+    QCC_UNUSED(isTimedOut);
     return ER_NOT_IMPLEMENTED;
-
 }
 
 void UARTController::ExitCallback()

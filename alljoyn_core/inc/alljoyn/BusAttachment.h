@@ -1832,12 +1832,12 @@ class BusAttachment : public MessageReceiver {
     /**
      * Assignment operator is private.
      */
-    BusAttachment& operator=(const BusAttachment& other) { return *this; }
+    BusAttachment& operator=(const BusAttachment&);
 
     /**
      * Copy constructor is private.
      */
-    BusAttachment(const BusAttachment& other) : joinObj(this) { }
+    BusAttachment(const BusAttachment&);
 
     /**
      * Stop the bus, optionally blocking until all of the threads join
