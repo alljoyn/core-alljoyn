@@ -133,6 +133,8 @@ QStatus ClientTransport::NormalizeTransportSpec(const char* inSpec, qcc::String&
 
 QStatus ClientTransport::Connect(const char* connectSpec, const SessionOpts& opts, BusEndpoint& newep)
 {
+    QCC_UNUSED(opts);
+
     QCC_DbgHLPrintf(("ClientTransport::Connect(): %s", connectSpec));
 
     if (!m_running) {

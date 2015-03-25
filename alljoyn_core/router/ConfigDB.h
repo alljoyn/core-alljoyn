@@ -302,7 +302,9 @@ class ConfigDB {
          */
         void Finalize(Bus* bus)
         {
-#ifdef ENABLE_POLICYDB
+#ifndef ENABLE_POLICYDB
+            QCC_UNUSED(bus);
+#else
             policyDB->Finalize(bus);
 #endif
         }

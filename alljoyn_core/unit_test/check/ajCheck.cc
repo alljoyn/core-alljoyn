@@ -18,6 +18,7 @@
 #include <gtest/gtest.h>
 
 #include <alljoyn/Init.h>
+#include <alljoyn/Status.h>
 
 #include <qcc/Debug.h>
 
@@ -25,6 +26,10 @@
 
 static void DebugOut(DbgMsgType type, const char* module, const char* msg, void* context)
 {
+    QCC_UNUSED(type);
+    QCC_UNUSED(module);
+    QCC_UNUSED(msg);
+    QCC_UNUSED(context);
     // Do nothing to suppress AJ errors and debug prints.
 }
 
@@ -41,7 +46,7 @@ static bool IsDebugOn(char** env)
 
 
 /** Main entry point */
-int main(int argc, char** argv, char** envArg)
+int CDECL_CALL main(int argc, char** argv, char** envArg)
 {
     if (AllJoynInit() != ER_OK) {
         return 1;

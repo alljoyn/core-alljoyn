@@ -56,6 +56,7 @@ static volatile sig_atomic_t s_interrupt = false;
 
 static void CDECL_CALL SigIntHandler(int sig)
 {
+    QCC_UNUSED(sig);
     s_interrupt = true;
 }
 
@@ -213,8 +214,12 @@ QStatus MakeMethodCall(void)
 }
 
 /** Main entry point */
-int main(int argc, char** argv, char** envArg)
+int CDECL_CALL main(int argc, char** argv, char** envArg)
 {
+    QCC_UNUSED(argc);
+    QCC_UNUSED(argv);
+    QCC_UNUSED(envArg);
+
     if (AllJoynInit() != ER_OK) {
         return 1;
     }

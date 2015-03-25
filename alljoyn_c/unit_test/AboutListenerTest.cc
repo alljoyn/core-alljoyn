@@ -38,6 +38,10 @@ QCC_BOOL my_sessionportlistener_acceptsessionjoiner(const void* context,
                                                     const char* joiner,
                                                     const alljoyn_sessionopts opts)
 {
+    QCC_UNUSED(context);
+    QCC_UNUSED(sessionPort);
+    QCC_UNUSED(joiner);
+    QCC_UNUSED(opts);
     return QCC_TRUE;
 }
 

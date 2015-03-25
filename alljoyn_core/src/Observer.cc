@@ -80,6 +80,8 @@ bool ObjectId::IsValid() const {
 
 class Observer::Internal : public CoreObserver {
   private:
+    /* Private assigment operator - does nothing */
+    Observer::Internal operator=(const Observer::Internal&);
     BusAttachment& bus;
     Observer* observer;
 

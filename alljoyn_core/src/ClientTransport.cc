@@ -77,6 +77,7 @@ QStatus ClientTransport::Join(void)
 
 void ClientTransport::EndpointExit(RemoteEndpoint& ep)
 {
+    QCC_UNUSED(ep);
     assert(ep == m_endpoint);
     QCC_DbgTrace(("ClientTransport::EndpointExit()"));
     m_endpoint->Invalidate();

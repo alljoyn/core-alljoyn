@@ -194,7 +194,9 @@ struct IODispatchEntry {
         mainAddingRead(false),
         mainAddingWrite(false),
         stopping_state(IO_RUNNING)
-    { }
+    {
+        QCC_UNUSED(stream);
+    }
 };
 
 class IODispatch : public Thread, public AlarmListener {

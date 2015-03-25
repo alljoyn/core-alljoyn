@@ -293,7 +293,7 @@ void AJ_CALL ping_response_handler(alljoyn_message message, void* context)
     }
 }
 
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
     QStatus status = ER_OK;
     QCC_BOOL useIntrospection = QCC_FALSE;

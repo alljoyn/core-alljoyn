@@ -14,9 +14,12 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 #include <alljoyn/Init.h>
+#include <alljoyn/Status.h>
 
-int main(int argc, char* argv[])
+int CDECL_CALL main(int argc, char* argv[])
 {
+    QCC_UNUSED(argc);
+    QCC_UNUSED(argv);
     if (AllJoynInit() != ER_OK) {
         return 1;
     }

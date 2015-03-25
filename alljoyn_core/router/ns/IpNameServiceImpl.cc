@@ -1551,6 +1551,7 @@ QStatus IpNameServiceImpl::Enable(TransportMask transportMask,
                                   bool enableReliableIPv4, bool enableReliableIPv6,
                                   bool enableUnreliableIPv4, bool enableUnreliableIPv6)
 {
+    QCC_UNUSED(unreliableIPv6Port);
     QCC_DbgHLPrintf(("IpNameServiceImpl::Enable(0x%x, %d., %d., %d., %d., %d, %d, %d, %d )", transportMask,
                      reliableIPv4PortMap.size(), reliableIPv6Port, unreliableIPv4PortMap.size(), unreliableIPv6Port,
                      enableReliableIPv4, enableReliableIPv6, enableUnreliableIPv4, enableUnreliableIPv6));
@@ -1929,6 +1930,8 @@ void IpNameServiceImpl::TriggerTransmission(Packet packet)
 
 QStatus IpNameServiceImpl::FindAdvertisement(TransportMask transportMask, const qcc::String& matchingStr, LocatePolicy policy, TransportMask completeTransportMask)
 {
+    QCC_UNUSED(policy);
+
     QCC_DbgHLPrintf(("IpNameServiceImpl::FindAdvertisement(0x%x, \"%s\", %d)", transportMask, matchingStr.c_str(), policy));
 
     //
@@ -2110,6 +2113,9 @@ QStatus IpNameServiceImpl::FindAdvertisement(TransportMask transportMask, const 
 
 QStatus IpNameServiceImpl::CancelFindAdvertisement(TransportMask transportMask, const qcc::String& matchingStr, LocatePolicy policy, TransportMask completeTransportMask)
 {
+    QCC_UNUSED(policy);
+    QCC_UNUSED(completeTransportMask);
+
     if (CountOnes(transportMask) != 1) {
         QCC_LogError(ER_BAD_TRANSPORT_MASK, ("IpNameServiceImpl::CancelFindAdvertisement(): Bad transport mask"));
         return ER_BAD_TRANSPORT_MASK;
@@ -2147,6 +2153,8 @@ const uint32_t MIN_THRESHOLD_CACHE_REFRESH_MS = 1000;
 // for 3 Cache refresh cycles i.e. 3 * 120 seconds.
 const uint32_t PEER_INFO_MAP_PURGE_TIMEOUT = 3 * 120 * 1000;
 QStatus IpNameServiceImpl::RefreshCache(TransportMask transportMask, const qcc::String& guid, const qcc::String& matchingStr, LocatePolicy policy, bool ping) {
+    QCC_UNUSED(policy);
+
     QCC_DbgHLPrintf(("IpNameServiceImpl::RefreshCache(0x%x, \"%s\", %d)", transportMask, matchingStr.c_str(), policy));
     QCC_DbgPrintf(("IpNameServiceImpl::RefreshCache %s", matchingStr.c_str()));
     String longGuid;
@@ -3743,6 +3751,8 @@ void IpNameServiceImpl::RewriteVersionSpecific(
     uint16_t unicastIpv4Port, const qcc::String& interface,
     uint16_t const reliableTransportPort, const uint16_t unreliableTransportPort)
 {
+    QCC_UNUSED(interface);
+
     QCC_DbgPrintf(("IpNameServiceImpl::RewriteVersionSpecific()"));
 
     //
@@ -5164,6 +5174,8 @@ void IpNameServiceImpl::SendOutboundMessages(void)
 
 void* IpNameServiceImpl::Run(void* arg)
 {
+    QCC_UNUSED(arg);
+
     QCC_DbgPrintf(("IpNameServiceImpl::Run()"));
 
     //
@@ -7832,6 +7844,8 @@ bool IpNameServiceImpl::HandleAdvertiseResponse(MDNSPacket mdnsPacket, uint16_t 
                                                 const qcc::String& guid, const qcc::IPEndpoint& ns4,
                                                 const qcc::IPEndpoint& r4, const qcc::IPEndpoint& r6, const qcc::IPEndpoint& u4, const qcc::IPEndpoint& u6)
 {
+    QCC_UNUSED(recvPort);
+
     uint32_t numMatches = mdnsPacket->GetNumMatches("advertise.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS);
     for (uint32_t match = 0; match < numMatches; match++) {
         MDNSResourceRecord* advRecord;
@@ -7962,6 +7976,8 @@ bool IpNameServiceImpl::HandleAdvertiseResponse(MDNSPacket mdnsPacket, uint16_t 
 
 void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, IPEndpoint endpoint, uint16_t recvPort)
 {
+    QCC_UNUSED(endpoint);
+
     bool isAllJoynQuery = true;
     // Check if someone is asking about an alljoyn service.
     MDNSQuestion* questionTcp;
@@ -8034,6 +8050,9 @@ void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, IPEndpoint en
 bool IpNameServiceImpl::HandleSearchQuery(TransportMask completeTransportMask, MDNSPacket mdnsPacket, uint16_t recvPort,
                                           const qcc::String& guid, const qcc::IPEndpoint& ns4)
 {
+    QCC_UNUSED(guid);
+    QCC_UNUSED(recvPort);
+
     QCC_DbgPrintf(("IpNameServiceImpl::HandleSearchQuery"));
     MDNSResourceRecord* searchRecord;
     if (!mdnsPacket->GetAdditionalRecord("search.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &searchRecord)) {
@@ -8151,6 +8170,8 @@ bool IpNameServiceImpl::HandleSearchQuery(TransportMask completeTransportMask, M
 
 QStatus IpNameServiceImpl::Start(void* arg, qcc::ThreadListener* listener)
 {
+    QCC_UNUSED(arg);
+
     QCC_DbgPrintf(("IpNameServiceImpl::Start()"));
     m_mutex.Lock();
     assert(IsRunning() == false);
@@ -8476,12 +8497,13 @@ bool IpNameServiceImpl::PurgeAndUpdatePacket(MDNSPacket mdnspacket, bool updateS
     return false;
 }
 ThreadReturn STDCALL IpNameServiceImpl::PacketScheduler::Run(void* arg) {
+    QCC_UNUSED(arg);
 
     m_impl.m_mutex.Lock();
     while (!IsStopping()) {
         Timespec now;
         GetTimeNow(&now);
-        uint32_t timeToSleep = -1;
+        uint32_t timeToSleep = (uint32_t)-1;
         //Step 1: Collect all packets
         std::list<Packet> subsequentBurstpackets;
         std::list<Packet> initialBurstPackets;

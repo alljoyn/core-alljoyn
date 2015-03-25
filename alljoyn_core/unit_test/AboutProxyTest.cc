@@ -84,7 +84,12 @@ static map<const char*, const char*> FixedSpanishData(SPANISH_DATA,
                                                       SPANISH_DATA + sizeof(SPANISH_DATA) / sizeof(SPANISH_DATA[0]));
 
 class AboutProxyTestSessionPortListener : public SessionPortListener {
-    virtual bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) { return true; }
+    virtual bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) {
+        QCC_UNUSED(sessionPort);
+        QCC_UNUSED(joiner);
+        QCC_UNUSED(opts);
+        return true;
+    }
 };
 
 
@@ -236,6 +241,9 @@ class AboutProxyTestAboutListener : public AboutListener {
 
     void Announced(const char* busName, uint16_t version, SessionPort port,
                    const MsgArg& objectDescription, const MsgArg& aboutData) {
+        QCC_UNUSED(objectDescription);
+        QCC_UNUSED(aboutData);
+
         EXPECT_FALSE(announceListenerFlag) << "We don't expect the flag to already be true when an AnnouceSignal is received.";
         this->busName = qcc::String(busName);
         this->version = version;

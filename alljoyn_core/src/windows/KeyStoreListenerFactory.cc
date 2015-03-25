@@ -89,7 +89,7 @@ class DefaultKeyStoreListener : public KeyStoreListener {
                     status = source.PullBytes(dataIn.pbData, dataIn.cbData, pulled);
                 }
 
-                if ((status == ER_OK) && (pulled != fileSize)) {
+                if ((status == ER_OK) && ((int64_t)pulled != fileSize)) {
                     status = ER_BUS_CORRUPT_KEYSTORE;
                 }
 

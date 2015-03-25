@@ -415,13 +415,11 @@ class PBKD {
     BCRYPT_ALG_HANDLE algHandle;
 
     /**
-     * Copy constructor
+     * Private copy constructor to prevent copying
      *
      * @param src PBKD to be copied.
      */
-    PBKD(const PBKD& src) {
-        /* private copy constructor to prevent copying */
-    }
+    PBKD(const PBKD&);
     /**
      * Assignment operator
      *
@@ -429,9 +427,7 @@ class PBKD {
      *
      * @return copy of PBKD
      */
-    PBKD& operator=(const PBKD& src) {
-        return *this;
-    }
+    PBKD& operator=(const PBKD&);
 };
 
 static QStatus DecryptPriv(BCRYPT_KEY_HANDLE kdKey, qcc::String& ivec, const uint8_t* blob, size_t blobLen, BCRYPT_KEY_HANDLE& privKey, bool legacy)
@@ -813,10 +809,11 @@ size_t Crypto_RSA::GetSize()
         DWORD got;
         DWORD len;
         NTSTATUS ntStatus = BCryptGetProperty((BCRYPT_KEY_HANDLE)key, BCRYPT_KEY_STRENGTH, (PBYTE)&len, sizeof(len), &got, 0);
+        QCC_UNUSED(ntStatus);
         assert(BCRYPT_SUCCESS(ntStatus));
         if (!BCRYPT_SUCCESS(ntStatus)) {
             QCC_LogError(ER_CRYPTO_ERROR, ("Failed to get key strength property"));
-            len = -1;
+            len = (DWORD)-1;
         }
         size = len;
     }

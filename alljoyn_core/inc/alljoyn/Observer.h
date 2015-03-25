@@ -159,7 +159,7 @@ class Observer {
          *
          * @param object a proxy bus object supporting announced in the About signal
          */
-        virtual void ObjectDiscovered(ManagedProxyBusObject& object) { };
+        virtual void ObjectDiscovered(ManagedProxyBusObject& object) { QCC_UNUSED(object); };
 
         /**
          * A previously discovered object has been lost.
@@ -171,7 +171,7 @@ class Observer {
          * this proxy object. If the object reappears, a new proxy object will
          * be created.
          */
-        virtual void ObjectLost(ManagedProxyBusObject& object) { };
+        virtual void ObjectLost(ManagedProxyBusObject& object) { QCC_UNUSED(object); };
     };
 
     /**

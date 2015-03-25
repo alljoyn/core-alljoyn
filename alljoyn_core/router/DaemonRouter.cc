@@ -494,6 +494,8 @@ QStatus DaemonRouter::RegisterEndpoint(BusEndpoint& endpoint)
 
 void DaemonRouter::UnregisterEndpoint(const qcc::String& epName, EndpointType epType)
 {
+    QCC_UNUSED(epType);
+
     QCC_DbgTrace(("DaemonRouter::UnregisterEndpoint: %s", epName.c_str()));
 
     /* Attempt to get the endpoint */
