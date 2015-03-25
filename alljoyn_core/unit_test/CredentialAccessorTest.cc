@@ -31,9 +31,18 @@ using namespace std;
 
 class LocalAuthListener : public AuthListener {
     bool RequestCredentials(const char* authMechanism, const char* authPeer, uint16_t authCount, const char* userId, uint16_t credMask, Credentials& creds) {
+        QCC_UNUSED(authMechanism);
+        QCC_UNUSED(authPeer);
+        QCC_UNUSED(authCount);
+        QCC_UNUSED(userId);
+        QCC_UNUSED(credMask);
+        QCC_UNUSED(creds);
         return true;
     }
     void AuthenticationComplete(const char* authMechanism, const char* authPeer, bool success) {
+        QCC_UNUSED(authMechanism);
+        QCC_UNUSED(authPeer);
+        QCC_UNUSED(success);
     }
 };
 

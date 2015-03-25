@@ -54,6 +54,7 @@ QStatus StreamPump::Start(void* arg, ThreadListener* listener)
 
 ThreadReturn STDCALL StreamPump::Run(void* args)
 {
+    QCC_UNUSED(args);
     // TODO: Make sure streams are non-blocking
 
     Event& streamASrcEv = streamA->GetSourceEvent();

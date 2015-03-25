@@ -123,7 +123,8 @@ class EndpointAuth : public SASLEngine::ExtensionHandler {
 
     SessionOpts::NameTransferType GetNameTransfer() const { return nameTransfer; }
   private:
-
+    /* Private assigment operator - does nothing */
+    EndpointAuth operator=(const EndpointAuth&);
     /**
      * Handle SASL extension commands during establishment.
      *

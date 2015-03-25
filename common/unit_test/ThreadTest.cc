@@ -41,7 +41,7 @@ TEST(ThreadTest, CleanExternalThread) {
     ASSERT_EQ(0, pthread_join(tid, NULL));
 #elif defined(QCC_OS_GROUP_WINDOWS)
     uintptr_t handle = _beginthreadex(NULL, 0, ExternalThread, NULL, 0, NULL);
-    ASSERT_NE(0, handle);
+    ASSERT_NE((uintptr_t)0, handle);
     ASSERT_EQ(WAIT_OBJECT_0, WaitForSingleObject(reinterpret_cast<HANDLE>(handle), INFINITE));
     ASSERT_NE(0, CloseHandle(reinterpret_cast<HANDLE>(handle)));
 #endif

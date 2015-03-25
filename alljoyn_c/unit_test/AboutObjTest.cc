@@ -53,6 +53,10 @@ static QCC_BOOL my_sessionportlistener_acceptsessionjoiner(const void* context,
                                                            const char* joiner,
                                                            const alljoyn_sessionopts opts)
 {
+    QCC_UNUSED(context);
+    QCC_UNUSED(sessionPort);
+    QCC_UNUSED(joiner);
+    QCC_UNUSED(opts);
     return QCC_TRUE;
 }
 
@@ -60,6 +64,7 @@ static void echo_aboutobject(alljoyn_busobject object,
                              const alljoyn_interfacedescription_member* member,
                              alljoyn_message message)
 {
+    QCC_UNUSED(member);
     alljoyn_msgarg arg = alljoyn_message_getarg(message, 0);
     QStatus status = alljoyn_busobject_methodreply_args(object, message, arg, 1);
     EXPECT_EQ(ER_OK, status) << "Echo: Error sending reply,  Actual Status: " << QCC_StatusText(status);
@@ -118,6 +123,7 @@ static void about_obj_test_about_listener_announced_cb(const void* context,
                                                        const alljoyn_msgarg objectDescriptionArg,
                                                        const alljoyn_msgarg aboutDataArg)
 {
+    QCC_UNUSED(aboutDataArg);
     about_obj_test_about_listener_2* listener = (about_obj_test_about_listener_2*)(context);
     EXPECT_FALSE(listener->announceListenerFlag == 1)
         << "We don't expect the flag to already be true when an AnnouceSignal is received.";

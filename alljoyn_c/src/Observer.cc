@@ -101,6 +101,8 @@ namespace ajn {
 
 class ObserverC : public CoreObserver {
   private:
+    /* Private assigment operator - does nothing */
+    ObserverC operator=(const ObserverC&);
     BusAttachment& bus;
     alljoyn_busattachment cbus;
 

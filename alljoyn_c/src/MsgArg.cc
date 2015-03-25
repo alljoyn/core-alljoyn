@@ -664,6 +664,7 @@ void AJ_CALL alljoyn_msgarg_get_array_element(const alljoyn_msgarg arg, size_t i
 
 const char* AJ_CALL alljoyn_msgarg_get_array_elementsignature(const alljoyn_msgarg arg, size_t index)
 {
+    QCC_UNUSED(index);
     QCC_DbgTrace(("%s", __FUNCTION__));
     assert(ALLJOYN_ARRAY == (alljoyn_typeid)((ajn::MsgArgC*)arg)->typeId);
     return ((ajn::MsgArgC*)arg)->v_array.GetElemSig();

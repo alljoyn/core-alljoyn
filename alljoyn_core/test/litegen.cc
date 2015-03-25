@@ -62,8 +62,11 @@ qcc::String ToUpper(const qcc::String& str)
 }
 
 
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
+    QCC_UNUSED(argc);
+    QCC_UNUSED(argv);
+
     String xml;
     ParseFile(argv[1], xml);
     StringSource source(xml);

@@ -71,6 +71,8 @@ class ScopedMutexLock {
     }
 
   private:
+    /* Private assigment operator - does nothing */
+    ScopedMutexLock& operator=(const ScopedMutexLock&);
     Mutex& lock;
     const char* file;
     const uint32_t line;

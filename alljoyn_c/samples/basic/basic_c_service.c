@@ -127,7 +127,7 @@ void AJ_CALL cat_method(alljoyn_busobject bus, const alljoyn_interfacedescriptio
 }
 
 /** Main entry point */
-int main(int argc, char** argv, char** envArg)
+int CDECL_CALL main(int argc, char** argv, char** envArg)
 {
     QStatus status = ER_OK;
     char* connectArgs = NULL;

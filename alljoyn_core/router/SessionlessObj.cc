@@ -591,6 +591,9 @@ void SessionlessObj::NameOwnerChanged(const String& name,
                                       const String* oldOwner, SessionOpts::NameTransferType oldOwnerNameTransfer,
                                       const String* newOwner, SessionOpts::NameTransferType newOwnerNameTransfer)
 {
+    QCC_UNUSED(oldOwnerNameTransfer);
+    QCC_UNUSED(newOwnerNameTransfer);
+
     QCC_DbgTrace(("SessionlessObj::NameOwnerChanged(%s, %s, %s)", name.c_str(), oldOwner ? oldOwner->c_str() : "(null)", newOwner ? newOwner->c_str() : "(null)"));
 
     /* When newOwner and oldOwner are the same, only the name transfer changed. */
@@ -638,6 +641,8 @@ void SessionlessObj::FoundAdvertisedNameSignalHandler(const InterfaceDescription
                                                       const char* sourcePath,
                                                       Message& msg)
 {
+    QCC_UNUSED(member);
+    QCC_UNUSED(sourcePath);
     /* Parse the args */
     const char* name;
     TransportMask transport;
@@ -653,6 +658,7 @@ void SessionlessObj::FoundAdvertisedNameSignalHandler(const InterfaceDescription
 
 void SessionlessObj::FoundAdvertisedNameHandler(const char* name, TransportMask transport, const char* prefix, bool doInitialBackoff)
 {
+    QCC_UNUSED(prefix);
     /* Examine found name to see if we need to connect to it */
     if ((transport & sessionOpts.transports) == 0) {
         QCC_DbgPrintf(("FoundAdvertisedName(name=%s,transport=0x%x,...): Transport not preferred", name, transport));
@@ -694,6 +700,10 @@ bool SessionlessObj::AcceptSessionJoiner(SessionPort port,
                                          const char* joiner,
                                          const SessionOpts& opts)
 {
+    QCC_UNUSED(port);
+    QCC_UNUSED(joiner);
+    QCC_UNUSED(opts);
+
     QCC_DbgPrintf(("AcceptSessionJoiner(port=%d,joiner=%s,...)", port, joiner));
     return true;
 }
@@ -702,6 +712,9 @@ void SessionlessObj::SessionJoined(SessionPort port,
                                    SessionId sid,
                                    const char* joiner)
 {
+    QCC_UNUSED(port);
+    QCC_UNUSED(sid);
+    QCC_UNUSED(joiner);
     QCC_DbgPrintf(("SessionJoined(port=%d,sid=%u,joiner=%s)", port, sid, joiner));
 }
 
@@ -709,6 +722,9 @@ void SessionlessObj::SessionLostSignalHandler(const InterfaceDescription::Member
                                               const char* sourcePath,
                                               Message& msg)
 {
+    QCC_UNUSED(member);
+    QCC_UNUSED(sourcePath);
+
     uint32_t sid = 0;
     uint32_t reason = 0;
     msg->GetArgs("uu", &sid, &reason);
@@ -759,6 +775,8 @@ void SessionlessObj::RequestSignalsSignalHandler(const InterfaceDescription::Mem
                                                  const char* sourcePath,
                                                  Message& msg)
 {
+    QCC_UNUSED(member);
+    QCC_UNUSED(sourcePath);
     uint32_t fromId;
     QStatus status = msg->GetArgs("u", &fromId);
     if (status == ER_OK) {
@@ -775,6 +793,8 @@ void SessionlessObj::RequestRangeSignalHandler(const InterfaceDescription::Membe
                                                const char* sourcePath,
                                                Message& msg)
 {
+    QCC_UNUSED(member);
+    QCC_UNUSED(sourcePath);
     uint32_t fromId, toId;
     QStatus status = msg->GetArgs("uu", &fromId, &toId);
     if (status == ER_OK) {
@@ -790,6 +810,8 @@ void SessionlessObj::RequestRangeMatchSignalHandler(const InterfaceDescription::
                                                     const char* sourcePath,
                                                     Message& msg)
 {
+    QCC_UNUSED(member);
+    QCC_UNUSED(sourcePath);
     uint32_t fromId, toId;
     size_t numMatchRuleArgs;
     const MsgArg* matchRuleArgs;
@@ -999,6 +1021,8 @@ void SessionlessObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
 
 void SessionlessObj::JoinSessionCB(QStatus status, SessionId sid, const SessionOpts& opts, void* context)
 {
+    QCC_UNUSED(opts);
+
     RemoteCacheSnapshot* ctx = reinterpret_cast<RemoteCacheSnapshot*>(context);
 
     QCC_DbgPrintf(("JoinSessionCB(status=%s,sid=%u) name=%s", QCC_StatusText(status), sid, ctx->name.c_str()));
@@ -1490,6 +1514,8 @@ bool SessionlessObj::IsMatch(RemoteCache& cache, uint32_t fromRulesId, uint32_t 
 bool SessionlessObj::QueryHandler(TransportMask transport, MDNSPacket query, uint16_t recvPort,
                                   const qcc::IPEndpoint& ns4)
 {
+    QCC_UNUSED(recvPort);
+
     MDNSResourceRecord* searchRecord;
     if (!query->GetAdditionalRecord("search.*", MDNSResourceRecord::TXT, &searchRecord)) {
         return false;

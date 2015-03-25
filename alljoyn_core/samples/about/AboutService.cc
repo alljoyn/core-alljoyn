@@ -28,6 +28,7 @@ using namespace ajn;
 static volatile sig_atomic_t s_interrupt = false;
 
 static void CDECL_CALL SigIntHandler(int sig) {
+    QCC_UNUSED(sig);
     s_interrupt = true;
 }
 
@@ -37,6 +38,9 @@ static const char* INTERFACE_NAME = "com.example.about.feature.interface.sample"
 class MySessionPortListener : public SessionPortListener {
     bool AcceptSessionJoiner(ajn::SessionPort sessionPort, const char* joiner, const ajn::SessionOpts& opts)
     {
+        QCC_UNUSED(joiner);
+        QCC_UNUSED(opts);
+
         if (sessionPort != ASSIGNED_SESSION_PORT) {
             printf("Rejecting join attempt on unexpected session port %d\n", sessionPort);
             return false;
@@ -45,6 +49,9 @@ class MySessionPortListener : public SessionPortListener {
     }
     void SessionJoined(SessionPort sessionPort, SessionId id, const char* joiner)
     {
+        QCC_UNUSED(sessionPort);
+        QCC_UNUSED(joiner);
+
         printf("Session Joined SessionId = %u\n", id);
     }
 };
@@ -74,6 +81,8 @@ class MyBusObject : public BusObject {
     // Respond to remote method call `Echo` by returning the string back to the
     // sender.
     void Echo(const InterfaceDescription::Member* member, Message& msg) {
+        QCC_UNUSED(member);
+
         printf("Echo method called: %s", msg->GetArg(0)->v_string.str);
         const MsgArg* arg((msg->GetArg(0)));
         QStatus status = MethodReply(msg, arg, 1);
@@ -84,8 +93,11 @@ class MyBusObject : public BusObject {
 };
 
 /** Main entry point */
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
+    QCC_UNUSED(argc);
+    QCC_UNUSED(argv);
+
     if (AllJoynInit() != ER_OK) {
         return 1;
     }
