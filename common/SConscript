@@ -17,9 +17,6 @@ import os
 Import('env')
 from os.path import basename
 
-#default crypto for most platforms is openssl
-env['CRYPTO'] = 'openssl'
-
 # Bullseye code coverage for 'debug' builds.
 if env['VARIANT'] == 'debug':
     if not env.has_key('BULLSEYE_BIN'):
@@ -46,46 +43,58 @@ if env['OS_GROUP'] == 'windows':
     vars.Update(env)
     Help(vars.GenerateHelpText(env))
     env.AppendUnique(LIBS = ['setupapi', 'user32', 'winmm', 'ws2_32', 'iphlpapi', 'secur32', 'Advapi32'])
-    # Key of presence of OPENSSL_BASE to decide if to use openssl or window CNG crypto
-    if '' == env.subst('$OPENSSL_BASE'):
+
+    if env['CRYPTO'] == 'cng':
         if env['OS'] == 'winxp':
-            # Must specify OPENSSL_BASE for winXP
-            print 'Must specify OPENSSL_BASE when building for WindowsXP'
+            print 'Must specify CRYPTO=openssl and OPENSSL_BASE when building for WindowsXP'
             if not GetOption('help'):
                 Exit(1)
         else:
             env.AppendUnique(LIBS = ['bcrypt', 'ncrypt', 'crypt32'])
-            env['CRYPTO'] = 'cng'
             env.Append(CPPDEFINES=['CRYPTO_CNG'])
             print 'Using CNG crypto libraries'
     else:
         env.Append(CPPPATH = ['$OPENSSL_BASE/include'])
         env.Append(LIBPATH = ['$OPENSSL_BASE/lib'])
         env.AppendUnique(LIBS = ['libeay32'])
-        print 'Using OPENSSL crypto libraries'
+        print 'Using OpenSSL crypto libraries'
 
 elif env['OS'] in ['linux', 'openwrt']:
-    env.AppendUnique(LIBS =['rt', 'stdc++', 'pthread', 'crypto', 'm'])
+    env.AppendUnique(LIBS =['rt', 'stdc++', 'pthread', 'm'])
+    if env['CRYPTO'] == 'openssl':
+        env.AppendUnique(LIBS =['crypto', 'ssl'])
+        print 'Using OpenSSL crypto'
+    else:
+        print 'Using builtin crypto'
 
 elif env['OS'] == 'darwin':
     env.Append(CPPDEFINES=['MECHANISM_PIPE'])
-    env.AppendUnique(LIBS =['stdc++', 'pthread', 'crypto'])
-    if env['CPU'] in ['arm', 'armv7', 'armv7s', 'arm64']:
-        vars = Variables()
-        vars.Add(PathVariable('OPENSSL_ROOT', 'Base OpenSSL directory (darwin only)', os.environ.get('OPENSSL_ROOT')))
-        vars.Update(env)
-        Help(vars.GenerateHelpText(env))
-        if '' == env.subst('$OPENSSL_ROOT'):
-            # Must specify OPENSSL_ROOT for darwin, arm
-            print 'Must specify OPENSSL_ROOT when building for OS=darwin, CPU=arm'
-            if not GetOption('help'):
-                Exit(1)
-        env.Append(CPPPATH = ['$OPENSSL_ROOT/include'])
-        env.Append(LIBPATH = ['$OPENSSL_ROOT/build/' + os.environ.get('CONFIGURATION') + '-' + os.environ.get('PLATFORM_NAME')])
+    env.AppendUnique(LIBS =['stdc++', 'pthread'])
+    if env['CRYPTO'] == 'openssl':
+        env.AppendUnique(LIBS =['crypto', 'ssl'])
+        if env['CPU'] in ['arm', 'armv7', 'armv7s', 'arm64']:
+            vars = Variables()
+            vars.Add(PathVariable('OPENSSL_ROOT', 'Base OpenSSL directory (darwin only)', os.environ.get('OPENSSL_ROOT')))
+            vars.Update(env)
+            Help(vars.GenerateHelpText(env))
+            if '' == env.subst('$OPENSSL_ROOT'):
+                # Must specify OPENSSL_ROOT for darwin, arm
+                print 'Must specify OPENSSL_ROOT when building for OS=darwin, CPU=arm'
+                if not GetOption('help'):
+                    Exit(1)
+            env.Append(CPPPATH = ['$OPENSSL_ROOT/include'])
+            env.Append(LIBPATH = ['$OPENSSL_ROOT/build/' + os.environ.get('CONFIGURATION') + '-' + os.environ.get('PLATFORM_NAME')])
+        print 'Using OpenSSL crypto'
+    else:
+        print 'Using builtin crypto'
 
 elif env['OS'] == 'android':
-    env.AppendUnique(LIBS = ['m', 'c', 'stdc++', 'crypto', 'log', 'gcc', '$ANDROID_STL'])
-
+    env.AppendUnique(LIBS = ['m', 'c', 'stdc++', 'log', 'gcc', '$ANDROID_STL'])
+    if env['CRYPTO'] == 'openssl':
+        env.AppendUnique(LIBS =['crypto'])
+        print 'Using OpenSSL crypto'
+    else:
+        print 'Using builtin crypto'
 
 commonenv = env.Clone()
 
@@ -132,20 +141,27 @@ else:
     # allow common to "#include <alljoyn/Status.h>" when building all of AllJoyn
     commonenv.Append(CPPPATH = ['$DISTDIR/cpp/inc'])
 
+if commonenv['CRYPTO'] == 'builtin':
+    commonenv.Append(CPPPATH = [env.Dir('../external/sha2'), env.Dir('../external/sha1')])
 
 # Build the sources
 status_src = ['Status.cc']
 
 
-srcs = commonenv.Glob('$OBJDIR_COMMON/*.cc') + commonenv.Glob('$OBJDIR_COMMON/os/*.cc') + commonenv.Glob('$OBJDIR_COMMON/crypto/*.cc') + commonenv.Glob('$OBJDIR_COMMON/crypto/ECC/*.cc')
+srcs = commonenv.Glob('$OBJDIR_COMMON/*.cc') + commonenv.Glob('$OBJDIR_COMMON/os/*.cc') + commonenv.Glob('$OBJDIR_COMMON/crypto/*.cc') + commonenv.Glob('$OBJDIR_COMMON/crypto/*.c') + commonenv.Glob('$OBJDIR_COMMON/crypto/ECC/*.cc')
 
 # Make sure Status never gets included from common for contained projects
 srcs = [ f for f in srcs if basename(str(f)) not in status_src ]
 
 static_objs = commonenv.Object(srcs)
 
+# Treat externals as part of common
+external_static_objs, external_shared_objs = env.SConscript(['../external/SConscript'])
+static_objs += external_static_objs
+
 if commonenv['LIBTYPE'] != 'static':
     shared_objs = commonenv.SharedObject(srcs)
+    shared_objs += external_shared_objs
 else:
     shared_objs = []
 
