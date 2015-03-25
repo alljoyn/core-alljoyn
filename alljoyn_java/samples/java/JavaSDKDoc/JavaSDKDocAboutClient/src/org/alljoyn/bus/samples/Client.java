@@ -154,9 +154,6 @@ public class Client {
     public static void main(String[] args) {
         mBus = new BusAttachment("Basic About Client Sample", BusAttachment.RemoteMessage.Receive);
 
-        mBus.useOSLogging(true);
-        mBus.setDebugLevel("ALLJOYN_JAVA", 7);
-
         Status status = mBus.connect();
         if (status != Status.OK) {
             return;
