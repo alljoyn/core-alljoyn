@@ -72,6 +72,9 @@ class InternalAnnounceHandler : public ajn::MessageReceiver {
      */
     void RemoveAllHandlers();
   private:
+    /* Private assigment operator - does nothing */
+    InternalAnnounceHandler operator=(const InternalAnnounceHandler&);
+
     /**
      * AnnounceHandler is a callback registered to receive AllJoyn Signal.
      * @param[in] member

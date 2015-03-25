@@ -62,7 +62,7 @@ class Crypto_Hash::Context {
      *
      * @param src Context to be copied.
      */
-    Context(const Context& src) {
+    Context(const Context&) {
         /* private copy constructor to prevent copying */
     }
     /**
@@ -72,7 +72,7 @@ class Crypto_Hash::Context {
      *
      * @return copy of Context
      */
-    Context& operator=(const Context& src) {
+    Context& operator=(const Context&) {
         return *this;
     }
 };

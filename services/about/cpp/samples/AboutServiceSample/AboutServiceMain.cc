@@ -19,6 +19,7 @@
 #include <alljoyn/about/AboutPropertyStoreImpl.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/Init.h>
+#include <alljoyn/Status.h>
 
 #include <signal.h>
 #include "BusListenerImpl.h"
@@ -41,6 +42,7 @@ static BusListenerImpl s_busListener(SERVICE_PORT);
 static BusAttachment* s_msgBus = NULL;
 
 static void CDECL_CALL SigIntHandler(int sig) {
+    UNREFERENCED_PARAMETER(sig);
     s_interrupt = true;
 }
 
@@ -262,7 +264,9 @@ static void shutdown(AboutPropertyStoreImpl*& aboutPropertyStore, AboutIconServi
     s_msgBus = NULL;
 }
 
-int main(int argc, char**argv, char**envArg) {
+int CDECL_CALL main(int argc, char**argv, char** envArg) {
+    UNREFERENCED_PARAMETER(envArg);
+
     if (AllJoynInit() != ER_OK) {
         return 1;
     }

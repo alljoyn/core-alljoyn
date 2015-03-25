@@ -258,7 +258,7 @@ class Event {
      * Protected copy constructor.
      * Events cannot be safely copied because they contain events handles.
      */
-    Event& operator=(const Event& evt) { return *this; }
+    Event& operator=(const Event&) { return *this; }
 
     /**
      * Helper method used to calculate mask for WSAEventSelect

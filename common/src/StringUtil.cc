@@ -487,7 +487,7 @@ qcc::String qcc::StringVectorToString(const vector<qcc::String>* list, const cha
     if (list) {
         std::vector<qcc::String>::const_iterator it = list->begin();
         if (it != list->end()) {
-            while (true) {
+            for (;;) {
                 out += *it++;
                 if (it == list->end()) {
                     break;

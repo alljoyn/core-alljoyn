@@ -59,6 +59,7 @@ static volatile sig_atomic_t s_interrupt = false;
  */
 static void CDECL_CALL SigIntHandler(int sig)
 {
+    UNREFERENCED_PARAMETER(sig);
     s_interrupt = true;
 }
 
@@ -98,6 +99,8 @@ class BasicSampleObject : public BusObject {
 
     void Ping(const InterfaceDescription::Member* member, Message& msg)
     {
+        UNREFERENCED_PARAMETER(member);
+
         qcc::String outStr = msg->GetArg(0)->v_string.str;
         printf("Ping : %s\n", outStr.c_str());
         printf("Reply : %s\n", outStr.c_str());
@@ -150,6 +153,8 @@ class ECDHEKeyXListener : public AuthListener {
 
     bool RequestCredentials(const char* authMechanism, const char* authPeer, uint16_t authCount, const char* userId, uint16_t credMask, Credentials& creds)
     {
+        UNREFERENCED_PARAMETER(userId);
+
         printf("RequestCredentials for authenticating %s using mechanism %s authCount %d\n", authPeer, authMechanism, authCount);
 
         if (strcmp(authMechanism, KEYX_ECDHE_NULL) == 0) {
@@ -211,6 +216,7 @@ class ECDHEKeyXListener : public AuthListener {
 
     bool VerifyCredentials(const char* authMechanism, const char* authPeer, const Credentials& creds)
     {
+        UNREFERENCED_PARAMETER(authPeer);
         /* only the ECDHE_ECDSA calls for peer credential verification */
         if (strcmp(authMechanism, KEYX_ECDHE_ECDSA) == 0) {
             if (creds.IsSet(AuthListener::CRED_CERT_CHAIN)) {
@@ -226,6 +232,7 @@ class ECDHEKeyXListener : public AuthListener {
     }
 
     void AuthenticationComplete(const char* authMechanism, const char* authPeer, bool success) {
+        UNREFERENCED_PARAMETER(authPeer);
         printf("SampleServiceECDHE::AuthenticationComplete Authentication %s %s\n", authMechanism, success ? "successful" : "failed");
     }
 
@@ -372,8 +379,12 @@ void WaitForSigInt(void)
 }
 
 /** Main entry point */
-int main(int argc, char** argv, char** envArg)
+int CDECL_CALL main(int argc, char** argv, char** envArg)
 {
+    UNREFERENCED_PARAMETER(argc);
+    UNREFERENCED_PARAMETER(argv);
+    UNREFERENCED_PARAMETER(envArg);
+
     if (AllJoynInit() != ER_OK) {
         return 1;
     }

@@ -81,6 +81,7 @@ static bool g_useAboutFeatureDiscovery = false;
 
 static void CDECL_CALL SigIntHandler(int sig)
 {
+    UNREFERENCED_PARAMETER(sig);
     g_interrupt = true;
 }
 
@@ -90,11 +91,18 @@ class MyBusListener : public BusListener, public SessionPortListener, public Ses
 
     bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts)
     {
+        UNREFERENCED_PARAMETER(sessionPort);
+        UNREFERENCED_PARAMETER(joiner);
+        UNREFERENCED_PARAMETER(opts);
         return g_acceptSession;
     }
 
     void SessionJoined(SessionPort sessionPort, SessionId sessionId, const char* joiner)
     {
+        UNREFERENCED_PARAMETER(sessionPort);
+        UNREFERENCED_PARAMETER(sessionId);
+        UNREFERENCED_PARAMETER(joiner);
+
         printf("=============> Session Established: joiner=%s, sessionId=%u\n", joiner, sessionId);
         QStatus status = g_msgBus->SetSessionListener(sessionId, this);
         if (ER_OK != status) {
@@ -234,6 +242,10 @@ class MyAboutListener : public AboutListener {
     MyAboutListener(MyBusListener& myBusListener) : busListener(&myBusListener), sessionId(0) { }
     void Announced(const char* busName, uint16_t version, SessionPort port,
                    const MsgArg& objectDescriptionArg, const MsgArg& aboutDataArg) {
+        UNREFERENCED_PARAMETER(version);
+        UNREFERENCED_PARAMETER(port);
+        UNREFERENCED_PARAMETER(objectDescriptionArg);
+
         printf("Received Announce signal: BusName=%s\n", busName);
         MyAboutData ad;
         ad.CreatefromMsgArg(aboutDataArg);
@@ -308,7 +320,7 @@ static void usage(void)
 }
 
 /** Main entry point */
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
     if (AllJoynInit() != ER_OK) {
         return 1;

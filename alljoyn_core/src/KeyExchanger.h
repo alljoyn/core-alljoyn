@@ -79,6 +79,9 @@ class KeyExchangerCB {
 
     ~KeyExchangerCB() { }
   private:
+    /* Private assigment operator - does nothing */
+    KeyExchangerCB operator=(const KeyExchangerCB&);
+
     ProxyBusObject& remoteObj;
     const InterfaceDescription* ifc;
     uint32_t timeout;
@@ -98,29 +101,46 @@ class KeyExchanger {
     bool IsInitiator() { return initiator; }
 
     virtual QStatus GenerateLocalVerifier(uint8_t* verifier, size_t verifierLen) {
+        UNREFERENCED_PARAMETER(verifier);
+        UNREFERENCED_PARAMETER(verifierLen);
         return ER_NOT_IMPLEMENTED;
     }
     virtual QStatus GenerateRemoteVerifier(uint8_t* verifier, size_t verifierLen) {
+        UNREFERENCED_PARAMETER(verifier);
+        UNREFERENCED_PARAMETER(verifierLen);
         return ER_NOT_IMPLEMENTED;
     }
 
     virtual QStatus StoreMasterSecret(const qcc::GUID128& guid, const uint8_t accessRights[4]) {
+        UNREFERENCED_PARAMETER(guid);
+        UNREFERENCED_PARAMETER(accessRights);
         return ER_NOT_IMPLEMENTED;
     }
 
     virtual QStatus ReplyWithVerifier(Message& msg);
 
     virtual QStatus RespondToKeyExchange(Message& msg, MsgArg* variant, uint32_t remoteAuthMask, uint32_t authMask) {
+        UNREFERENCED_PARAMETER(msg);
+        UNREFERENCED_PARAMETER(variant);
+        UNREFERENCED_PARAMETER(remoteAuthMask);
+        UNREFERENCED_PARAMETER(authMask);
         return ER_NOT_IMPLEMENTED;
     }
     virtual QStatus ExecKeyExchange(uint32_t authMask, KeyExchangerCB& callback, uint32_t* remoteAuthMask) {
+        UNREFERENCED_PARAMETER(authMask);
+        UNREFERENCED_PARAMETER(callback);
+        UNREFERENCED_PARAMETER(remoteAuthMask);
         return ER_NOT_IMPLEMENTED;
     }
     virtual QStatus KeyAuthentication(KeyExchangerCB& callback, const char* peerName, uint8_t* authorized) {
+        UNREFERENCED_PARAMETER(callback);
+        UNREFERENCED_PARAMETER(peerName);
+        UNREFERENCED_PARAMETER(authorized);
         return ER_NOT_IMPLEMENTED;
     }
 
     virtual QStatus ValidateRemoteVerifierVariant(const char* peerName, MsgArg* variant, uint8_t* authorized);
+
     virtual const uint32_t GetSuite() {
         return 0;
     }
@@ -130,6 +150,7 @@ class KeyExchanger {
 
     void SetSecretExpiration(uint32_t expiresInSeconds) { secretExpiration = expiresInSeconds; }
     virtual QStatus RequestCredentialsCB(const char* peerName) {
+        UNREFERENCED_PARAMETER(peerName);
         return ER_NOT_IMPLEMENTED;
     }
 
@@ -212,6 +233,9 @@ class KeyExchangerECDHE : public KeyExchanger {
     virtual QStatus KeyExchangeReadKey(MsgArg& variant);
 
     virtual QStatus KeyAuthentication(KeyExchangerCB& callback, const char* peerName, uint8_t* authorized) {
+        UNREFERENCED_PARAMETER(callback);
+        UNREFERENCED_PARAMETER(peerName);
+        UNREFERENCED_PARAMETER(authorized);
         return ER_OK;
     }
 

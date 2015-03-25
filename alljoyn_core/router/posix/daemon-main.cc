@@ -648,7 +648,7 @@ int daemon(OptParse& opts) {
 #if defined(ROUTER_LIB)
 int DaemonMain(int argc, char** argv, char* serviceConfig)
 #else
-int main(int argc, char** argv, char** env)
+int CDECL_CALL main(int argc, char** argv, char** env)
 #endif
 {
     if (AllJoynInit() != ER_OK) {

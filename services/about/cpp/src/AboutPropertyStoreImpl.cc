@@ -108,7 +108,7 @@ QStatus AboutPropertyStoreImpl::ReadAll(const char* languageTag, Filter filter, 
         MsgArg* argsAnnounceData = new MsgArg[m_Properties.size()];
         uint32_t announceArgCount = 0;
 
-        do {
+        for (;;) {
             for (PropertyMap::const_iterator it = m_Properties.begin(); it != m_Properties.end(); ++it) {
                 const PropertyStoreProperty& property = it->second;
 
@@ -131,11 +131,11 @@ QStatus AboutPropertyStoreImpl::ReadAll(const char* languageTag, Filter filter, 
             }
 
             status = all.Set("a{sv}", announceArgCount, argsAnnounceData);
-            if (status != ER_OK) {
-                break;
+            if (status == ER_OK) {
+                all.SetOwnershipFlags(MsgArg::OwnsArgs, true);
             }
-            all.SetOwnershipFlags(MsgArg::OwnsArgs, true);
-        } while (0);
+            break;
+        }
         if (status != ER_OK) {
             delete[] argsAnnounceData;
             return status;
@@ -173,7 +173,7 @@ QStatus AboutPropertyStoreImpl::ReadAll(const char* languageTag, Filter filter, 
 
         MsgArg* argsReadData = new MsgArg[m_Properties.size()];
         uint32_t readArgCount = 0;
-        do {
+        for (;;) {
             for (PropertyMap::const_iterator it = m_Properties.begin(); it != m_Properties.end(); ++it) {
                 const PropertyStoreProperty& property = it->second;
 
@@ -196,11 +196,11 @@ QStatus AboutPropertyStoreImpl::ReadAll(const char* languageTag, Filter filter, 
             }
 
             status = all.Set("a{sv}", readArgCount, argsReadData);
-            if (status != ER_OK) {
-                break;
+            if (status == ER_OK) {
+                all.SetOwnershipFlags(MsgArg::OwnsArgs, true);
             }
-            all.SetOwnershipFlags(MsgArg::OwnsArgs, true);
-        } while (0);
+            break;
+        }
         if (status != ER_OK) {
             delete[] argsReadData;
             return status;
@@ -213,11 +213,16 @@ QStatus AboutPropertyStoreImpl::ReadAll(const char* languageTag, Filter filter, 
 
 QStatus AboutPropertyStoreImpl::Update(const char* name, const char* languageTag, const ajn::MsgArg* value)
 {
+    UNREFERENCED_PARAMETER(name);
+    UNREFERENCED_PARAMETER(languageTag);
+    UNREFERENCED_PARAMETER(value);
     return ER_NOT_IMPLEMENTED;
 }
 
 QStatus AboutPropertyStoreImpl::Delete(const char* name, const char* languageTag)
 {
+    UNREFERENCED_PARAMETER(name);
+    UNREFERENCED_PARAMETER(languageTag);
     return ER_NOT_IMPLEMENTED;
 }
 
@@ -426,6 +431,8 @@ QStatus AboutPropertyStoreImpl::setSupportUrl(const qcc::String& supportUrl, qcc
 
 QStatus AboutPropertyStoreImpl::validateValue(PropertyStoreKey propertyKey, ajn::MsgArg const& value, qcc::String const& languageTag)
 {
+    UNREFERENCED_PARAMETER(languageTag);
+
     QStatus status = ER_OK;
 
     switch (propertyKey) {

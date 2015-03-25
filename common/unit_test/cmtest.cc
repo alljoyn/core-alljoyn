@@ -16,10 +16,12 @@
 
 #include <gtest/gtest.h>
 
+#include <alljoyn/Status.h>
+
 #include <qcc/StaticGlobals.h>
 
 /** Main entry point */
-int main(int argc, char**argv, char**envArg)
+int CDECL_CALL main(int argc, char**argv, char**)
 {
     if (qcc::Init() != ER_OK) {
         return -1;

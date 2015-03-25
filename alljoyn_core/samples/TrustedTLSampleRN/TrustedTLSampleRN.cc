@@ -57,6 +57,7 @@ const char* ThinClientDefaultBusPwd = "";
 static volatile sig_atomic_t g_interrupted = false;
 static void CDECL_CALL SigIntHandler(int sig)
 {
+    UNREFERENCED_PARAMETER(sig);
     g_interrupted = true;
 }
 
@@ -69,7 +70,7 @@ static void usage(void)
     printf("\n");
 }
 
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
     if (AllJoynInit() != ER_OK) {
         return 1;

@@ -21,7 +21,7 @@
 
 #include "DaemonLib.h"
 
-int main(int argc, char* argv[])
+int CDECL_CALL main(int argc, char* argv[])
 {
     return LoadDaemon(argc, argv);
 }
