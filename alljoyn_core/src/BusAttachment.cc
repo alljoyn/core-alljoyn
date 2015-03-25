@@ -43,7 +43,6 @@
 
 #include "AuthMechanism.h"
 #include "AuthMechAnonymous.h"
-#include "AuthMechDBusCookieSHA1.h"
 #include "AuthMechExternal.h"
 #include "AuthMechSRP.h"
 #include "AuthMechRSA.h"
