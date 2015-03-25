@@ -109,7 +109,7 @@ static void list_doors(alljoyn_busattachment bus, alljoyn_observer observer)
             fprintf(stderr, "Could not get Location property for object %s:%s.\n", alljoyn_proxybusobject_getuniquename(proxy), alljoyn_proxybusobject_getpath(proxy));
             continue;
         }
-        printf("Door location: %s open: %s\n", location, isOpen ? "yes" : "no");
+        printf("Door location: %s open: %s\n", (location != NULL) ? location : "<unknown>", isOpen ? "yes" : "no");
         free(location);
     }
 }
@@ -126,7 +126,7 @@ static alljoyn_proxybusobject_ref get_door_at_location(alljoyn_busattachment bus
             fprintf(stderr, "Could not get Location property for object %s:%s.\n", alljoyn_proxybusobject_getuniquename(proxy), alljoyn_proxybusobject_getpath(proxy));
             continue;
         }
-        if (!strcmp(find_location, location)) {
+        if (location != NULL && !strcmp(find_location, location)) {
             free(location);
             return proxyref;
         }
@@ -152,10 +152,12 @@ static void open_door(alljoyn_busattachment bus, alljoyn_observer observer, cons
             char errmsg[200] = { 0 };
             size_t size = sizeof(errmsg);
             const char* errname = alljoyn_message_geterrorname(reply, errmsg, &size);
-            printf("Opening of door @ location %s returned an error: %s (%s).\n", location, errname, errmsg);
+            printf("Opening of door @ location %s returned an error: %s (%s).\n",
+                   (location != NULL) ? location : "<unknown>",
+                   (errname != NULL) ? errname : "<unknown>", errmsg);
         } else {
             /* Framework error or MethodReply error code */
-            printf("Opening of door @ location %s returned an error: %s.\n", location, QCC_StatusText(status));
+            printf("Opening of door @ location %s returned an error: %s.\n", (location != NULL) ? location : "<unknown>", QCC_StatusText(status));
         }
 
         alljoyn_message_destroy(reply);
@@ -328,7 +330,7 @@ static void properties_changed(alljoyn_proxybusobject proxy, const char* intf, c
     char* location = NULL;
     status = proxy_get_location(proxy, &location);
     if (status == ER_OK) {
-        printf("\tThat's actually the door at location %s.\n", location);
+        printf("\tThat's actually the door at location %s.\n", (location != NULL) ? location : "<unknown>");
         free(location);
     }
 
@@ -412,7 +414,7 @@ static void object_discovered(const void* context, alljoyn_proxybusobject_ref pr
     }
 
     if (status == ER_OK) {
-        printf("  location: %s\n", location);
+        printf("  location: %s\n", (location != NULL) ? location : "<unknown>");
         printf("   is open: %s\n", isopen ? "yes" : "no");
         printf("   keycode: %u\n", (unsigned)keycode);
     } else {
@@ -456,7 +458,7 @@ static void person_passed_through(const alljoyn_interfacedescription_member* mem
             status = alljoyn_message_parseargs(message, "s", &who);
         }
         if (status == ER_OK) {
-            printf("[listener] %s passed through the door at location %s\n", who, location);
+            printf("[listener] %s passed through the door at location %s\n", who, (location != NULL) ? location : "<unknown>");
         } else {
             fprintf(stderr, "Something went wrong while parsing the received signal: %s\n", QCC_StatusText(status));
         }
