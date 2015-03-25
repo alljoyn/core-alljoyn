@@ -198,10 +198,11 @@ struct ECCSignature {
         memset(s, 0, ECC_COORDINATE_SZ);
     }
 
-    void operator=(const ECCSignature& k)
+    ECCSignature& operator=(const ECCSignature& k)
     {
         memcpy(r, k.r, ECC_COORDINATE_SZ);
         memcpy(s, k.s, ECC_COORDINATE_SZ);
+        return *this;
     }
 };
 
