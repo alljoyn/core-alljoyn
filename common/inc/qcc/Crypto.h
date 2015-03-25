@@ -1105,6 +1105,41 @@ class Crypto_ASN1 {
  */
 QStatus Crypto_GetRandomBytes(uint8_t* data, size_t len);
 
+/**
+ *  Class for random number generator.
+ */
+class Crypto_Rand {
+  public:
+    Crypto_Rand() { };
+    virtual QStatus Seed(uint8_t* seed, size_t size) = 0;
+    virtual QStatus Generate(uint8_t* rand, size_t size) = 0;
+    virtual ~Crypto_Rand() { };
+};
+
+class Crypto_DRBG : public Crypto_Rand {
+  public:
+    static const size_t KEYLEN = Crypto_AES::AES128_SIZE;
+    static const size_t OUTLEN = sizeof (Crypto_AES::Block);
+    static const size_t SEEDLEN = KEYLEN + OUTLEN;
+    Crypto_DRBG();
+    virtual QStatus Seed(uint8_t* seed, size_t size);
+    virtual QStatus Generate(uint8_t* rand, size_t size);
+    virtual ~Crypto_DRBG();
+
+  private:
+    void Update(uint8_t* data, size_t size);
+
+    /**
+     * Opaque type for the internal context
+     */
+    struct Context;
+
+    /**
+     * Private internal context
+     */
+    Context* ctx;
+};
+
 }
 
 #endif
