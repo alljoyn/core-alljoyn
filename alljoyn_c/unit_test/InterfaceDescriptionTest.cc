@@ -964,6 +964,8 @@ TEST(InterfaceDescriptionTest, multiple_annotations)
         alljoyn_interfacedescription_member_getannotationatindex(method_member, i, NULL, &name_size, NULL, &value_size);
         char* name = (char*)malloc(sizeof(char) * name_size);
         char* value = (char*)malloc(sizeof(char) * value_size);
+        ASSERT_TRUE(name != NULL);
+        ASSERT_TRUE(value != NULL);
 
         alljoyn_interfacedescription_member_getannotationatindex(method_member, i, name, &name_size, value, &value_size);
 

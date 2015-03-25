@@ -249,6 +249,10 @@ public class ProxyBusObject {
                             return System.identityHashCode(proxy);
                         }
                     } catch (NoSuchMethodException e) {
+                        /*
+                         * If NoSuchMethodException is encountered the code will
+                         * drop through and throw a BusException.
+                         */
                     }
                     throw new BusException("No such method: " + method);
                 }
