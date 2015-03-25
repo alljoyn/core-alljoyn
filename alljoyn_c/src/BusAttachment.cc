@@ -302,6 +302,7 @@ QCC_BOOL AJ_CALL alljoyn_busattachment_isconnected(const alljoyn_busattachment b
 
 QStatus AJ_CALL alljoyn_busattachment_disconnect(alljoyn_busattachment bus, const char* unused)
 {
+    QCC_UNUSED(unused);
     QCC_DbgTrace(("%s", __FUNCTION__));
     return ((ajn::BusAttachmentC*)bus)->Disconnect();
 }

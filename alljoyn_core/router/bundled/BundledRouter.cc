@@ -108,6 +108,8 @@ ClientAuthListener::ClientAuthListener()
 
 bool ClientAuthListener::RequestCredentials(const char* authMechanism, const char* authPeer, uint16_t authCount, const char* userId, uint16_t credMask, Credentials& creds)
 {
+    QCC_UNUSED(userId);
+
     if (authCount > maxAuth) {
         return false;
     }
@@ -125,15 +127,22 @@ bool ClientAuthListener::RequestCredentials(const char* authMechanism, const cha
 
 void ClientAuthListener::AuthenticationComplete(const char* authMechanism, const char* authPeer, bool success)
 {
+    QCC_UNUSED(authMechanism);
+    QCC_UNUSED(authPeer);
+    QCC_UNUSED(success);
+
     QCC_DbgPrintf(("Authentication %s %s\n", authMechanism, success ? "succesful" : "failed"));
 }
 
 bool ExistFile(const char* fileName) {
-    FILE* file = NULL;
-    if (fileName && (file = fopen(fileName, "r"))) {
-        fclose(file);
-        return true;
+    if (fileName) {
+        FILE* file = fopen(fileName, "r");
+        if (file) {
+            fclose(file);
+            return true;
+        }
     }
+
     return false;
 }
 

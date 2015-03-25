@@ -77,6 +77,7 @@ static volatile sig_atomic_t g_interrupt = false;
 
 static void CDECL_CALL SigIntHandler(int sig)
 {
+    QCC_UNUSED(sig);
     g_interrupt = true;
 }
 
@@ -86,6 +87,7 @@ class PingObject : public BusObject {
 
     void TimedPing(const InterfaceDescription::Member* member, Message& msg)
     {
+        QCC_UNUSED(member);
         MsgArg replyArg = *msg->GetArg();
         MethodReply(msg, &replyArg, 1);
     }
@@ -133,6 +135,8 @@ class PingThread : public qcc::Thread, BusObject {
 
     qcc::ThreadReturn STDCALL Run(void* arg)
     {
+        QCC_UNUSED(arg);
+
         if (iterations == 0) {
             return (qcc::ThreadReturn)0;
         }
@@ -225,11 +229,16 @@ class MyBusListener : public BusListener, public SessionPortListener, public Ses
 
     bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts)
     {
+        QCC_UNUSED(sessionPort);
+        QCC_UNUSED(joiner);
+        QCC_UNUSED(opts);
         return true;
     }
 
     void SessionJoined(SessionPort sessionPort, SessionId sessionId, const char* joiner)
     {
+        QCC_UNUSED(sessionPort);
+
         QCC_SyncPrintf("Session Established: joiner=%s, sessionId=%u\n", joiner, sessionId);
         QStatus status = g_msgBus->SetSessionListener(sessionId, this);
         if (ER_OK == status) {
@@ -257,6 +266,8 @@ class MyBusListener : public BusListener, public SessionPortListener, public Ses
 
     void JoinSessionCB(QStatus status, SessionId sessionId, const SessionOpts& opts, void* context)
     {
+        QCC_UNUSED(opts);
+
         if (status == ER_OK) {
             QCC_SyncPrintf("JoinSessionAsync succeeded. SessionId=%u\n", sessionId);
         } else {
@@ -321,7 +332,7 @@ static void usage(void)
 }
 
 /** Main entry point */
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
     if (AllJoynInit() != ER_OK) {
         return 1;
@@ -359,7 +370,7 @@ int main(int argc, char** argv)
             }
         } else if (0 == strcmp("-c", argv[i])) {
             if (++i == argc) {
-                iterations = -1;
+                iterations = (uint32_t)-1;
             } else {
                 iterations = strtoul(argv[i], NULL, 0);
             }
@@ -370,7 +381,7 @@ int main(int argc, char** argv)
             }
         } else if (0 == strcmp("-d", argv[i])) {
             if (++i == argc) {
-                delay = -1;
+                delay = (uint32_t)-1;
             } else {
                 delay = strtoul(argv[i], NULL, 0);
             }

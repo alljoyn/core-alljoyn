@@ -644,7 +644,10 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
         SessionlessObj& slObj;
         Work(SessionlessObj& slObj) : slObj(slObj) { }
         virtual ~Work() { }
+
         virtual void Run() = 0;
+      private:
+        virtual void operator=(const Work&) { }
     };
 
     class SendResponseWork : public Work {

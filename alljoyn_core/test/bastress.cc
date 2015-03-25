@@ -57,6 +57,7 @@ class ThreadClass : public Thread {
 
   protected:
     qcc::ThreadReturn STDCALL Run(void* arg) {
+        QCC_UNUSED(arg);
 
         BusAttachment*b1 = new BusAttachment(name.c_str(), true);
         QStatus status =  b1->Start();
@@ -107,7 +108,7 @@ static void usage(void)
 }
 
 /** Main entry point */
-int main(int argc, char**argv)
+int CDECL_CALL main(int argc, char**argv)
 {
     if (AllJoynInit() != ER_OK) {
         return 1;

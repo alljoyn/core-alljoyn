@@ -39,6 +39,7 @@ static const char* INTERFACE_NAME = "com.example.about.feature.interface.sample"
 
 static void CDECL_CALL sig_int_handler(int sig)
 {
+    QCC_UNUSED(sig);
     s_interrupt = QCC_TRUE;
 }
 
@@ -104,6 +105,7 @@ static void alljoyn_sessionlistener_connect_lost_cb(const void* context,
                                                     alljoyn_sessionid sessionId,
                                                     alljoyn_sessionlostreason reason)
 {
+    QCC_UNUSED(context);
     printf("SessionLost sessionId = %u, Reason = %d\n", sessionId, reason);
 }
 
@@ -338,8 +340,10 @@ static void destroy_my_alljoyn_aboutlistener(my_about_listener* listener)
     }
 }
 
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
+    QCC_UNUSED(argc);
+    QCC_UNUSED(argv);
     /* Install SIGINT handler so Ctrl + C deallocates memory properly */
     signal(SIGINT, sig_int_handler);
     QStatus status = ER_FAIL;

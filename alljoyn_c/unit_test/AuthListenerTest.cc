@@ -45,6 +45,10 @@ static QCC_BOOL securityviolation_client_flag = QCC_TRUE;
 /* NameOwnerChanged callback */
 static void AJ_CALL name_owner_changed(const void* context, const char* busName, const char* previousOwner, const char* newOwner)
 {
+    QCC_UNUSED(context);
+    QCC_UNUSED(previousOwner);
+    QCC_UNUSED(newOwner);
+
     if (strcmp(busName, OBJECT_NAME) == 0) {
         name_owner_changed_flag = QCC_TRUE;
     }
@@ -53,6 +57,8 @@ static void AJ_CALL name_owner_changed(const void* context, const char* busName,
 /* Exposed methods */
 static void AJ_CALL ping_method(alljoyn_busobject bus, const alljoyn_interfacedescription_member* member, alljoyn_message msg)
 {
+    QCC_UNUSED(member);
+
     alljoyn_msgarg outArg = alljoyn_msgarg_create();
     alljoyn_msgarg inArg = alljoyn_message_getarg(msg, 0);
     const char* str;
@@ -226,6 +232,10 @@ static QCC_BOOL AJ_CALL authlistener_requestcredentials_service_srp_keyx(const v
                                                                          const char* peerName, uint16_t authCount,
                                                                          const char* userName, uint16_t credMask,
                                                                          alljoyn_credentials credentials) {
+    QCC_UNUSED(peerName);
+    QCC_UNUSED(authCount);
+    QCC_UNUSED(userName);
+
     EXPECT_STREQ("context test string", (const char*)context);
     EXPECT_STREQ("ALLJOYN_SRP_KEYX", authMechanism);
     if (credMask & ALLJOYN_CRED_PASSWORD) {
@@ -237,6 +247,9 @@ static QCC_BOOL AJ_CALL authlistener_requestcredentials_service_srp_keyx(const v
 
 static void AJ_CALL alljoyn_authlistener_authenticationcomplete_service_srp_keyx(const void* context, const char* authMechanism,
                                                                                  const char* peerName, QCC_BOOL success) {
+    QCC_UNUSED(authMechanism);
+    QCC_UNUSED(peerName);
+
     EXPECT_STREQ("context test string", (const char*)context);
     EXPECT_TRUE(success);
     authenticationcomplete_service_flag = QCC_TRUE;
@@ -247,6 +260,10 @@ static QCC_BOOL AJ_CALL authlistener_requestcredentials_client_srp_keyx(const vo
                                                                         const char* peerName, uint16_t authCount,
                                                                         const char* userName, uint16_t credMask,
                                                                         alljoyn_credentials credentials) {
+    QCC_UNUSED(peerName);
+    QCC_UNUSED(authCount);
+    QCC_UNUSED(userName);
+
     EXPECT_STREQ("context test string", (const char*)context);
     EXPECT_STREQ("ALLJOYN_SRP_KEYX", authMechanism);
     if (credMask & ALLJOYN_CRED_PASSWORD) {
@@ -258,6 +275,9 @@ static QCC_BOOL AJ_CALL authlistener_requestcredentials_client_srp_keyx(const vo
 
 static void AJ_CALL alljoyn_authlistener_authenticationcomplete_client_srp_keyx(const void* context, const char* authMechanism,
                                                                                 const char* peerName, QCC_BOOL success) {
+    QCC_UNUSED(authMechanism);
+    QCC_UNUSED(peerName);
+
     EXPECT_STREQ("context test string", (const char*)context);
     EXPECT_TRUE(success);
     authenticationcomplete_client_flag = QCC_TRUE;
@@ -317,6 +337,10 @@ static QCC_BOOL AJ_CALL authlistener_requestcredentials_service_srp_logon(const 
                                                                           const char* peerName, uint16_t authCount,
                                                                           const char* userName, uint16_t credMask,
                                                                           alljoyn_credentials credentials) {
+    QCC_UNUSED(context);
+    QCC_UNUSED(peerName);
+    QCC_UNUSED(authCount);
+
     EXPECT_STREQ("ALLJOYN_SRP_LOGON", authMechanism);
     if (!userName) {
         return QCC_FALSE;
@@ -336,6 +360,10 @@ static QCC_BOOL AJ_CALL authlistener_requestcredentials_service_srp_logon(const 
 
 static void AJ_CALL alljoyn_authlistener_authenticationcomplete_service_srp_logon(const void* context, const char* authMechanism,
                                                                                   const char* peerName, QCC_BOOL success) {
+    QCC_UNUSED(context);
+    QCC_UNUSED(authMechanism);
+    QCC_UNUSED(peerName);
+
     EXPECT_TRUE(success);
     authenticationcomplete_service_flag = QCC_TRUE;
 }
@@ -345,6 +373,11 @@ static QCC_BOOL AJ_CALL authlistener_requestcredentials_client_srp_logon(const v
                                                                          const char* peerName, uint16_t authCount,
                                                                          const char* userName, uint16_t credMask,
                                                                          alljoyn_credentials credentials) {
+    QCC_UNUSED(context);
+    QCC_UNUSED(peerName);
+    QCC_UNUSED(authCount);
+    QCC_UNUSED(userName);
+
     EXPECT_STREQ("ALLJOYN_SRP_LOGON", authMechanism);
     if (credMask & ALLJOYN_CRED_USER_NAME) {
         alljoyn_credentials_setusername(credentials, "Mr. Cuddles");
@@ -359,6 +392,10 @@ static QCC_BOOL AJ_CALL authlistener_requestcredentials_client_srp_logon(const v
 
 static void AJ_CALL alljoyn_authlistener_authenticationcomplete_client_srp_logon(const void* context, const char* authMechanism,
                                                                                  const char* peerName, QCC_BOOL success) {
+    QCC_UNUSED(context);
+    QCC_UNUSED(authMechanism);
+    QCC_UNUSED(peerName);
+
     EXPECT_TRUE(success);
     authenticationcomplete_client_flag = QCC_TRUE;
 }
@@ -514,6 +551,11 @@ static QCC_BOOL AJ_CALL authlistener_requestcredentials_service_rsa_keyx(const v
                                                                          const char* peerName, uint16_t authCount,
                                                                          const char* userName, uint16_t credMask,
                                                                          alljoyn_credentials credentials) {
+    QCC_UNUSED(context);
+    QCC_UNUSED(peerName);
+    QCC_UNUSED(authCount);
+    QCC_UNUSED(userName);
+
     EXPECT_STREQ("ALLJOYN_RSA_KEYX", authMechanism);
     if (credMask & ALLJOYN_CRED_CERT_CHAIN) {
         alljoyn_credentials_setcertchain(credentials, service_x509certChain);
@@ -530,6 +572,10 @@ static QCC_BOOL AJ_CALL authlistener_requestcredentials_service_rsa_keyx(const v
 
 static QCC_BOOL AJ_CALL authlistener_verifycredentials_service_rsa_keyx(const void* context, const char* authMechanism,
                                                                         const char* peerName, const alljoyn_credentials credentials) {
+    QCC_UNUSED(context);
+    QCC_UNUSED(authMechanism);
+    QCC_UNUSED(peerName);
+    QCC_UNUSED(credentials);
     // TODO add code that actually verifies the alljoyn_credentials.
     verifycredentials_service_flag = QCC_TRUE;
     return QCC_TRUE;
@@ -537,6 +583,10 @@ static QCC_BOOL AJ_CALL authlistener_verifycredentials_service_rsa_keyx(const vo
 
 static void AJ_CALL alljoyn_authlistener_authenticationcomplete_service_rsa_keyx(const void* context, const char* authMechanism,
                                                                                  const char* peerName, QCC_BOOL success) {
+    QCC_UNUSED(context);
+    QCC_UNUSED(authMechanism);
+    QCC_UNUSED(peerName);
+
     EXPECT_TRUE(success);
     authenticationcomplete_service_flag = QCC_TRUE;
 }
@@ -546,6 +596,11 @@ static QCC_BOOL AJ_CALL authlistener_requestcredentials_client_rsa_keyx(const vo
                                                                         const char* peerName, uint16_t authCount,
                                                                         const char* userName, uint16_t credMask,
                                                                         alljoyn_credentials credentials) {
+    QCC_UNUSED(context);
+    QCC_UNUSED(peerName);
+    QCC_UNUSED(authCount);
+    QCC_UNUSED(userName);
+
     EXPECT_STREQ("ALLJOYN_RSA_KEYX", authMechanism);
     if (credMask & ALLJOYN_CRED_CERT_CHAIN) {
         alljoyn_credentials_setcertchain(credentials, client_x509cert);
@@ -562,6 +617,11 @@ static QCC_BOOL AJ_CALL authlistener_requestcredentials_client_rsa_keyx(const vo
 
 static QCC_BOOL AJ_CALL authlistener_verifycredentials_client_rsa_keyx(const void* context, const char* authMechanism,
                                                                        const char* peerName, const alljoyn_credentials credentials) {
+    QCC_UNUSED(context);
+    QCC_UNUSED(authMechanism);
+    QCC_UNUSED(peerName);
+    QCC_UNUSED(credentials);
+
     // TODO add code that actually verifies the alljoyn_credentials.
     verifycredentials_client_flag = QCC_TRUE;
     return QCC_TRUE;
@@ -569,6 +629,10 @@ static QCC_BOOL AJ_CALL authlistener_verifycredentials_client_rsa_keyx(const voi
 
 static void AJ_CALL alljoyn_authlistener_authenticationcomplete_client_rsa_keyx(const void* context, const char* authMechanism,
                                                                                 const char* peerName, QCC_BOOL success) {
+    QCC_UNUSED(context);
+    QCC_UNUSED(authMechanism);
+    QCC_UNUSED(peerName);
+
     EXPECT_TRUE(success);
     authenticationcomplete_client_flag = QCC_TRUE;
 }
@@ -630,6 +694,13 @@ static QCC_BOOL AJ_CALL authlistener_requestcredentials_service_srp_keyx2(const 
                                                                           const char* peerName, uint16_t authCount,
                                                                           const char* userName, uint16_t credMask,
                                                                           alljoyn_credentials credentials) {
+    QCC_UNUSED(context);
+    QCC_UNUSED(peerName);
+    QCC_UNUSED(authCount);
+    QCC_UNUSED(userName);
+    QCC_UNUSED(credMask);
+    QCC_UNUSED(credentials);
+
     EXPECT_STREQ("ALLJOYN_SRP_KEYX", authMechanism);
     requestcredentials_service_flag = QCC_TRUE;
     return QCC_FALSE;
@@ -637,6 +708,10 @@ static QCC_BOOL AJ_CALL authlistener_requestcredentials_service_srp_keyx2(const 
 
 static void AJ_CALL alljoyn_authlistener_authenticationcomplete_service_srp_keyx2(const void* context, const char* authMechanism,
                                                                                   const char* peerName, QCC_BOOL success) {
+    QCC_UNUSED(context);
+    QCC_UNUSED(authMechanism);
+    QCC_UNUSED(peerName);
+
     EXPECT_FALSE(success);
     authenticationcomplete_service_flag = QCC_TRUE;
 }
@@ -646,12 +721,22 @@ static QCC_BOOL AJ_CALL authlistener_requestcredentials_client_srp_keyx2(const v
                                                                          const char* peerName, uint16_t authCount,
                                                                          const char* userName, uint16_t credMask,
                                                                          alljoyn_credentials credentials) {
+    QCC_UNUSED(context);
+    QCC_UNUSED(peerName);
+    QCC_UNUSED(authCount);
+    QCC_UNUSED(userName);
+    QCC_UNUSED(credMask);
+    QCC_UNUSED(credentials);
+
     EXPECT_STREQ("ALLJOYN_SRP_KEYX", authMechanism);
     requestcredentials_client_flag = QCC_TRUE;
     return QCC_FALSE;
 }
 
 static void AJ_CALL authlistener_securityviolation_client_srp_keyx2(const void* context, QStatus status, const alljoyn_message msg) {
+    QCC_UNUSED(context);
+    QCC_UNUSED(status);
+    QCC_UNUSED(msg);
     securityviolation_client_flag = QCC_TRUE;
 }
 
@@ -661,6 +746,10 @@ static void AJ_CALL authlistener_securityviolation_client_srp_keyx2(const void* 
  */
 static void AJ_CALL alljoyn_authlistener_authenticationcomplete_client_srp_keyx2(const void* context, const char* authMechanism,
                                                                                  const char* peerName, QCC_BOOL success) {
+    QCC_UNUSED(context);
+    QCC_UNUSED(authMechanism);
+    QCC_UNUSED(peerName);
+
     EXPECT_FALSE(success);
     authenticationcomplete_client_flag = QCC_TRUE;
 }

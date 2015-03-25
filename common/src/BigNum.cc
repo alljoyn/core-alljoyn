@@ -380,6 +380,7 @@ exit:
 // Set value from a decimal string
 bool BigNum::set_dec(const qcc::String& number)
 {
+    QCC_UNUSED(number);
     return false;
 }
 
