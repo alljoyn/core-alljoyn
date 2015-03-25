@@ -40,28 +40,43 @@ class TestTransport : public Transport {
     virtual bool IsRunning() { return true; }
     virtual TransportMask GetTransportMask() const { return mask; }
     virtual const char* GetTransportName() const { return name.c_str(); }
-    virtual QStatus NormalizeTransportSpec(const char* inSpec, String& outSpec, map<String, String>& argMap) const { return ER_OK; }
+    virtual QStatus NormalizeTransportSpec(const char* inSpec, String& outSpec, map<String, String>& argMap) const {
+        UNREFERENCED_PARAMETER(inSpec);
+        UNREFERENCED_PARAMETER(outSpec);
+        UNREFERENCED_PARAMETER(argMap);
+        return ER_OK;
+    }
     virtual bool IsBusToBus() const { return true; }
     bool tried;
   protected:
     BusAttachment& bus;
     TransportMask mask;
     String name;
+  private:
+    /* Private assigment operator - does nothing */
+    TestTransport operator=(const TestTransport&);
 };
 
 class ConnectFailTransport : public TestTransport {
   public:
     ConnectFailTransport(BusAttachment& bus, TransportMask mask, const char* name) : TestTransport(bus, mask, name) { }
     virtual QStatus Connect(const char* connectSpec, const SessionOpts& opts, BusEndpoint& newEp) {
+        UNREFERENCED_PARAMETER(connectSpec);
+        UNREFERENCED_PARAMETER(opts);
+        UNREFERENCED_PARAMETER(newEp);
         tried = true;
         return ER_FAIL;
     }
+  private:
+    /* Private Copy-constructor - does nothing */
+    ConnectFailTransport operator=(const ConnectFailTransport&);
 };
 
 class ConnectPassTransport : public TestTransport {
   public:
     ConnectPassTransport(BusAttachment& bus, TransportMask mask, const char* name) : TestTransport(bus, mask, name) { }
     virtual QStatus Connect(const char* connectSpec, const SessionOpts& opts, BusEndpoint& newEp) {
+        UNREFERENCED_PARAMETER(opts);
         tried = true;
         bool incoming = false;
         Stream* stream = NULL;
@@ -69,12 +84,18 @@ class ConnectPassTransport : public TestTransport {
         newEp = BusEndpoint::cast(ep);
         return ER_OK;
     }
+  private:
+    /* Private assigment operator - does nothing */
+    ConnectPassTransport operator=(const ConnectPassTransport&);
 };
 
 class _TestVirtualEndpoint : public _VirtualEndpoint {
   public:
     _TestVirtualEndpoint(const String& uniqueName, RemoteEndpoint& b2bEp) : _VirtualEndpoint(uniqueName, b2bEp) { }
-    virtual bool CanUseRoute(const RemoteEndpoint& b2bEndpoint) const { return true; }
+    virtual bool CanUseRoute(const RemoteEndpoint& b2bEndpoint) const {
+        UNREFERENCED_PARAMETER(b2bEndpoint);
+        return true;
+    }
 };
 typedef ManagedObj<_TestVirtualEndpoint> TestVirtualEndpoint;
 
@@ -157,11 +178,31 @@ class TestAllJoynObj : public AllJoynObj {
                                       const char* busAddr, SessionOpts::NameTransferType nameTransfer,
                                       CallerType type, const SessionOpts& optsIn, uint32_t& replyCode, SessionId& sessionId,
                                       SessionOpts& optsOut, MsgArg& members) {
+        UNREFERENCED_PARAMETER(sessionPort);
+        UNREFERENCED_PARAMETER(src);
+        UNREFERENCED_PARAMETER(sessionHost);
+        UNREFERENCED_PARAMETER(dest);
+        UNREFERENCED_PARAMETER(b2bEp);
+        UNREFERENCED_PARAMETER(remoteControllerName);
+        UNREFERENCED_PARAMETER(outgoingSessionId);
+        UNREFERENCED_PARAMETER(busAddr);
+        UNREFERENCED_PARAMETER(nameTransfer);
+        UNREFERENCED_PARAMETER(type);
+        UNREFERENCED_PARAMETER(replyCode);
+        UNREFERENCED_PARAMETER(sessionId);
+        UNREFERENCED_PARAMETER(members);
+
         optsOut.transports = optsIn.transports;
         return ER_OK;
     }
     virtual QStatus AddSessionRoute(SessionId id, BusEndpoint& srcEp, RemoteEndpoint* srcB2bEp, BusEndpoint& destEp,
                                     RemoteEndpoint& destB2bEp) {
+        UNREFERENCED_PARAMETER(id);
+        UNREFERENCED_PARAMETER(srcEp);
+        UNREFERENCED_PARAMETER(srcB2bEp);
+        UNREFERENCED_PARAMETER(destEp);
+        UNREFERENCED_PARAMETER(destB2bEp);
+
         return ER_OK;
     }
 
@@ -170,6 +211,7 @@ class TestAllJoynObj : public AllJoynObj {
         TestJoinSessionThread(TestAllJoynObj& ajObj, const Message& msg, bool isJoin)
             : JoinSessionThread(ajObj, msg, isJoin), ajObj(ajObj) { }
         virtual QStatus Reply(uint32_t replyCode, SessionId id, SessionOpts optsOut) {
+            UNREFERENCED_PARAMETER(id);
             ajObj.replyCode = replyCode;
             ajObj.connectedTransport = optsOut.transports;
             for (vector<TestTransport*>::iterator it = ajObj.transportList.begin(); it != ajObj.transportList.end(); ++it) {
@@ -288,6 +330,19 @@ class TestAllJoynObjBadSessionOpts : public TestAllJoynObj {
                                       const char* busAddr, SessionOpts::NameTransferType nameTransfer,
                                       CallerType type, const SessionOpts& optsIn, uint32_t& replyCode, SessionId& sessionId,
                                       SessionOpts& optsOut, MsgArg& members) {
+        UNREFERENCED_PARAMETER(sessionPort);
+        UNREFERENCED_PARAMETER(src);
+        UNREFERENCED_PARAMETER(sessionHost);
+        UNREFERENCED_PARAMETER(dest);
+        UNREFERENCED_PARAMETER(b2bEp);
+        UNREFERENCED_PARAMETER(remoteControllerName);
+        UNREFERENCED_PARAMETER(outgoingSessionId);
+        UNREFERENCED_PARAMETER(busAddr);
+        UNREFERENCED_PARAMETER(nameTransfer);
+        UNREFERENCED_PARAMETER(type);
+        UNREFERENCED_PARAMETER(sessionId);
+        UNREFERENCED_PARAMETER(members);
+
         if (optsIn.transports == TRANSPORT_UDP) {
             replyCode = ALLJOYN_JOINSESSION_REPLY_BAD_SESSION_OPTS;
         } else if (optsIn.transports == TRANSPORT_TCP) {

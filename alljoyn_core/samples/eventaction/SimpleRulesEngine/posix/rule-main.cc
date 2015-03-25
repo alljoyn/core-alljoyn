@@ -30,6 +30,7 @@ static volatile sig_atomic_t s_interrupt = false;
 
 static void SigIntHandler(int sig)
 {
+    UNREFERENCED_PARAMETER(sig);
     s_interrupt = true;
 }
 
@@ -45,7 +46,7 @@ void WaitForSigInt(void)
     }
 }
 
-int main(int argc, char** argv, char** envArg)
+int CDECL_CALL main(int argc, char** argv, char** envArg)
 {
     if (AllJoynInit() != ER_OK) {
         return 1;

@@ -29,5 +29,6 @@ AboutClientSessionListener::~AboutClientSessionListener()
 
 void AboutClientSessionListener::SessionLost(ajn::SessionId sessionId)
 {
+    UNREFERENCED_PARAMETER(sessionId);
     std::cout << "AboutClient session has been lost for " << serviceName.c_str() << std::endl;
 }

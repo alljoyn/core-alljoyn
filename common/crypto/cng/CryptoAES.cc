@@ -69,7 +69,7 @@ struct Crypto_AES::KeyState {
      *
      * @param src KeyState to be copied.
      */
-    KeyState(const KeyState& src) {
+    KeyState(const KeyState&) {
         /* private copy constructor to prevent copying */
     }
     /**
@@ -79,7 +79,7 @@ struct Crypto_AES::KeyState {
      *
      * @return copy of KeyState
      */
-    KeyState& operator=(const KeyState& src) {
+    KeyState& operator=(const KeyState&) {
         return *this;
     }
 };

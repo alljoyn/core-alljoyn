@@ -34,6 +34,9 @@ using namespace qcc;
 class DoorProxy {
     ManagedProxyBusObject proxy;
     BusAttachment& bus;
+  private:
+    /* Private assigment operator - does nothing */
+    DoorProxy operator=(const DoorProxy&);
   public:
     DoorProxy(ManagedProxyBusObject proxy, BusAttachment& bus) : proxy(proxy), bus(bus) { }
 
@@ -346,6 +349,8 @@ class DoorListener :
                                    const MsgArg& changed,
                                    const MsgArg& invalidated,
                                    void* context) {
+        UNREFERENCED_PARAMETER(ifaceName);
+        UNREFERENCED_PARAMETER(context);
         QStatus status = ER_OK;
         bus->EnableConcurrentCallbacks();
         DoorProxy door(observer->Get(ObjectId(obj)), *bus);
@@ -361,8 +366,8 @@ class DoorListener :
             cout << "Door @location " << location << " has updated state:" << endl;
         }
 
-        size_t nelem;
-        MsgArg* elems;
+        size_t nelem = 0;
+        MsgArg* elems = NULL;
         if (ER_OK == status) {
             status = changed.Get("a{sv}", &nelem, &elems);
         }
@@ -410,6 +415,8 @@ class DoorListener :
     }
 
     void PersonPassedThrough(const InterfaceDescription::Member* member, const char* path, Message& message) {
+        UNREFERENCED_PARAMETER(member);
+
         char* name;
         string location;
         QStatus status = message->GetArgs("s", &name);
@@ -436,8 +443,11 @@ const char* DoorListener::props[] = {
     "IsOpen", "Location", "KeyCode"
 };
 
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
+    UNREFERENCED_PARAMETER(argc);
+    UNREFERENCED_PARAMETER(argv);
+
     if (AllJoynInit() != ER_OK) {
         return 1;
     }

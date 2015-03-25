@@ -206,6 +206,8 @@ class _VirtualEndpoint : public _BusEndpoint {
      */
     qcc::String GetRemoteGUIDShortString();
   private:
+    /* Private assigment operator - does nothing */
+    _VirtualEndpoint operator=(const _VirtualEndpoint&);
 
     const qcc::String m_uniqueName;                             /**< The unique name for this endpoint */
     std::multimap<SessionId, RemoteEndpoint> m_b2bEndpoints;    /**< Set of b2bs that can route for this virtual ep */

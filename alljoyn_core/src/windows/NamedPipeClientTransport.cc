@@ -93,6 +93,7 @@ QStatus NamedPipeClientTransport::IsConnectSpecValid(const char* connectSpec)
         return ER_OK;
     }
 #else
+    UNREFERENCED_PARAMETER(connectSpec);
     return ER_FAIL;
 #endif
 }
@@ -103,6 +104,9 @@ QStatus NamedPipeClientTransport::NormalizeTransportSpec(const char* inSpec, qcc
     outSpec = inSpec;
     return ER_OK;
 #else
+    UNREFERENCED_PARAMETER(inSpec);
+    UNREFERENCED_PARAMETER(outSpec);
+    UNREFERENCED_PARAMETER(argMap);
     return ER_FAIL;
 #endif
 }
@@ -226,6 +230,9 @@ QStatus NamedPipeClientTransport::Connect(const char* connectSpec, const Session
     }
     return status;
 #else
+    UNREFERENCED_PARAMETER(connectSpec);
+    UNREFERENCED_PARAMETER(opts);
+    UNREFERENCED_PARAMETER(newep);
     return ER_FAIL;
 #endif
 }

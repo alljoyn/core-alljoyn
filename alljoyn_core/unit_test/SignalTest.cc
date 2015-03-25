@@ -153,12 +153,18 @@ class Participant : public SessionPortListener, public SessionListener {
         return std::make_pair(participant, multipoint);
     }
 
-    virtual bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) { return true; }
+    virtual bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) {
+        UNREFERENCED_PARAMETER(sessionPort);
+        UNREFERENCED_PARAMETER(joiner);
+        UNREFERENCED_PARAMETER(opts);
+        return true;
+    }
     virtual void SessionJoined(SessionPort sessionPort, SessionId id, const char* joiner) {
         hostedSessionMap[SessionMapKey(joiner, (sessionPort == mpport))] = id;
         bus.SetHostedSessionListener(id, this);
     }
     virtual void SessionLost(SessionId sessionId, SessionLostReason reason) {
+        UNREFERENCED_PARAMETER(reason);
         /* we only set a session listener on the hosted sessions */
         SessionMap::iterator iter = hostedSessionMap.begin();
         while (iter != hostedSessionMap.end()) {
@@ -234,9 +240,11 @@ class Participant : public SessionPortListener, public SessionListener {
     bool inited;
   private:
     //Private copy constructor to prevent copying the class and double freeing of memory
-    Participant(const Participant& rhs) : bus("Participant") { }
+    Participant(const Participant& rhs) : bus("Participant") {
+        UNREFERENCED_PARAMETER(rhs);
+    }
     //Private assignment operator to prevent copying the class and double freeing of memory
-    Participant& operator=(const Participant& rhs) { return *this; }
+    Participant& operator=(const Participant&) { return *this; }
 };
 
 class SignalReceiver : public MessageReceiver {
@@ -274,6 +282,10 @@ class SignalReceiver : public MessageReceiver {
     }
 
     void SignalHandler(const InterfaceDescription::Member* member, const char* sourcePath, Message& msg) {
+        UNREFERENCED_PARAMETER(member);
+        UNREFERENCED_PARAMETER(sourcePath);
+        UNREFERENCED_PARAMETER(msg);
+
         if (blocking) {
             blocking = false;
             qcc::Sleep(SLEEP_TIME);

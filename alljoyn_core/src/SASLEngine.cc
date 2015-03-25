@@ -93,12 +93,13 @@ static const char* StateText[] = {
 #endif
 
 #define SetState(s) \
-    do { \
+    for (;;) { \
         if (authState != (s)) { \
             QCC_DbgPrintf(("New %s state %s\n", (authRole == AuthMechanism::CHALLENGER) ? "Challenger" : "Responder", StateText[s])); \
             authState = (s); \
         } \
-    } while (0)
+        break; \
+    }
 
 
 
@@ -212,7 +213,7 @@ QStatus SASLEngine::NewAuthRequest(qcc::String& authCmd)
     /*
      * Use current or get next auth mechanism
      */
-    while (true) {
+    for (;;) {
         if (authMechanism) {
             status = authMechanism->Init(authRole, authPeer);
             if (status == ER_OK) {
