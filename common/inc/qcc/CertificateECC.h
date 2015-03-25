@@ -161,6 +161,12 @@ class CertificateX509 {
     QStatus Verify(const ECCPublicKey* key);
 
     /**
+     * Verify the vadility period of the certificate.
+     * @return ER_OK for success; otherwise, error code.
+     */
+    QStatus VerifyValidity();
+
+    /**
      * Set the serial number field
      * @param serial the serial number
      */
@@ -443,7 +449,6 @@ class CertificateX509 {
     QStatus DecodeCertificateSig(const qcc::String& sig);
     QStatus EncodeCertificateSig(qcc::String& sig);
     QStatus GenEncoded();
-    QStatus VerifyValidity();
 
     qcc::String tbs;
     size_t encodedLen;
