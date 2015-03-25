@@ -110,7 +110,7 @@ static const bool PAD = true;
 static bool IsValidPrimeGroup(BigNum& N, BigNum& g)
 {
     bool ok = true;
-    uint32_t group;
+    uint32_t group = 0;
     BigNum prime;
 
     switch (N.bit_len()) {

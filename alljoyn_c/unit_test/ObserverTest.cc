@@ -85,6 +85,8 @@ class TestObject : public BusObject {
     virtual ~TestObject() { }
 
     void HandleIdentify(const InterfaceDescription::Member* member, Message& message) {
+        QCC_UNUSED(member);
+
         MsgArg args[2] = { MsgArg("s", busname.c_str()), MsgArg("s", path.c_str()) };
         EXPECT_EQ(ER_OK, MethodReply(message, args, 2)) << "Method reply failed";
     }
@@ -220,10 +222,15 @@ class Participant : public SessionPortListener, public SessionListener {
     }
 
     virtual bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) {
+        QCC_UNUSED(sessionPort);
+        QCC_UNUSED(joiner);
+        QCC_UNUSED(opts);
         return acceptSessions;
     }
 
     virtual void SessionJoined(SessionPort sessionPort, SessionId id, const char* joiner) {
+        QCC_UNUSED(sessionPort);
+
         hsmLock.Lock(MUTEX_CONTEXT);
         hostedSessionMap[joiner] = id;
         bus.SetHostedSessionListener(id, this);
@@ -231,6 +238,7 @@ class Participant : public SessionPortListener, public SessionListener {
     }
 
     virtual void SessionLost(SessionId sessionId, SessionLostReason reason) {
+        QCC_UNUSED(reason);
         /* we only set a session listener on the hosted sessions */
         hsmLock.Lock(MUTEX_CONTEXT);
         SessionMap::iterator iter = hostedSessionMap.begin();

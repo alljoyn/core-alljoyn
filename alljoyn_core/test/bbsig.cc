@@ -150,6 +150,9 @@ class MyAboutListener : public AboutListener {
     MyAboutListener() : sessionId(0) { }
     void Announced(const char* busName, uint16_t version, SessionPort port,
                    const MsgArg& objectDescriptionArg, const MsgArg& aboutDataArg) {
+        QCC_UNUSED(version);
+        QCC_UNUSED(port);
+        QCC_UNUSED(objectDescriptionArg);
         AboutData ad;
         ad.CreatefromMsgArg(aboutDataArg);
 
@@ -194,6 +197,7 @@ static volatile sig_atomic_t g_interrupt = false;
 
 static void CDECL_CALL SigIntHandler(int sig)
 {
+    QCC_UNUSED(sig);
     g_interrupt = true;
 }
 
@@ -280,6 +284,8 @@ class LocalTestObject : public BusObject {
                        const char* sourcePath,
                        Message& msg)
     {
+        QCC_UNUSED(member);
+
         if ((++rxCounts[sourcePath] % reportInterval) == 0) {
             QCC_SyncPrintf("RxSignal: %s - %u\n", sourcePath, rxCounts[sourcePath]);
             if (msg->IsEncrypted()) {
@@ -322,6 +328,8 @@ class LocalTestObject : public BusObject {
 
     void NameAcquiredCB(Message& msg, void* context)
     {
+        QCC_UNUSED(context);
+
         assert(bus);
         /* Check name acquired result */
         size_t numArgs;
@@ -351,6 +359,7 @@ class LocalTestObject : public BusObject {
 
     void AdvertiseRequestCB(Message& msg, void* context)
     {
+        QCC_UNUSED(context);
         /* Make sure request was processed */
         size_t numArgs;
         const MsgArg* args;
@@ -365,6 +374,7 @@ class LocalTestObject : public BusObject {
 
     void Ping(const InterfaceDescription::Member* member, Message& msg)
     {
+        QCC_UNUSED(member);
         /* Reply with same string that was sent to us */
         MsgArg arg(*(msg->GetArg(0)));
         printf("Pinged with: %s\n", msg->GetArg(0)->ToString().c_str());
@@ -428,6 +438,8 @@ class MyAuthListener : public AuthListener {
   private:
 
     bool RequestCredentials(const char* authMechanism, const char* authPeer, uint16_t authCount, const char* userId, uint16_t credMask, Credentials& creds) {
+        QCC_UNUSED(authPeer);
+        QCC_UNUSED(userId);
 
         if (authCount > maxAuth) {
             return false;
@@ -468,6 +480,8 @@ class MyAuthListener : public AuthListener {
     }
 
     bool VerifyCredentials(const char* authMechanism, const char* authPeer, const Credentials& creds) {
+        QCC_UNUSED(authPeer);
+
         if (strcmp(authMechanism, "ALLJOYN_RSA_KEYX") == 0) {
             if (creds.IsSet(AuthListener::CRED_CERT_CHAIN)) {
                 printf("Verify\n%s\n", creds.GetCertChain().c_str());
@@ -478,10 +492,12 @@ class MyAuthListener : public AuthListener {
     }
 
     void AuthenticationComplete(const char* authMechanism, const char* authPeer, bool success) {
+        QCC_UNUSED(authPeer);
         printf("Authentication %s %s\n", authMechanism, success ? "succesful" : "failed");
     }
 
     void SecurityViolation(QStatus status, const Message& msg) {
+        QCC_UNUSED(msg);
         printf("Security violation %s\n", QCC_StatusText(status));
     }
 
@@ -496,8 +512,17 @@ class MySessionPortListener : public SessionPortListener {
     ~MySessionPortListener() { }
   private:
 
-    bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) { return true; }
-    void SessionJoined(SessionPort sessionPort, SessionId id, const char* joiner) {  }
+    bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) {
+        QCC_UNUSED(sessionPort);
+        QCC_UNUSED(joiner);
+        QCC_UNUSED(opts);
+        return true;
+    }
+    void SessionJoined(SessionPort sessionPort, SessionId id, const char* joiner) {
+        QCC_UNUSED(sessionPort);
+        QCC_UNUSED(id);
+        QCC_UNUSED(joiner);
+    }
 };
 
 static MySessionPortListener g_portListener;
@@ -529,7 +554,7 @@ static void usage(void)
 }
 
 /** Main entry point */
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
     if (AllJoynInit() != ER_OK) {
         return 1;

@@ -654,7 +654,7 @@ void usage(void)
     printf("   -p                    = Respond to an incoming signal by pinging back to the sender\n");
 }
 
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
     QStatus status = ER_OK;
     const char* keyStore = NULL;

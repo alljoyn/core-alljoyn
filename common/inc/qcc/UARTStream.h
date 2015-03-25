@@ -124,7 +124,7 @@ class UARTStream : public NonBlockingStream {
      *
      * @param other  UARTStream to assign from.
      */
-    UARTStream operator=(const UARTStream& other) { return *this; };
+    UARTStream operator=(const UARTStream&);
 
     int fd;             /**< File descriptor associated with the device */
     Event* sourceEvent; /**< Event signaled when data is available */
@@ -161,6 +161,10 @@ class UARTController : public IOReadListener, public IOExitListener {
     IODispatch& m_iodispatch;           /**< The IODispatch used to trigger read callbacks */
     UARTReadListener* m_readListener;   /**< The Read listener to call back after reading data */
     int exitCount;                      /**< Count indicating whether the uart stream has exited successfully. */
+
+  private:
+    /* Private assigment operator - does nothing */
+    UARTController operator=(const UARTController&);
 };
 }
 #endif

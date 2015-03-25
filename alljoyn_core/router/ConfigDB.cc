@@ -226,6 +226,8 @@ bool ConfigDB::DB::ParseFile(const String& fileName, bool ignoreMissing)
 
 bool ConfigDB::DB::ProcessAuth(const String& fileName, const XmlElement& auth)
 {
+    QCC_UNUSED(fileName);
+
     static const char wspace[] = " \t\v\r\n";
     bool success = true;
     String mechanisms(auth.GetContent());
@@ -303,6 +305,9 @@ bool ConfigDB::DB::ProcessBusconfig(const String& fileName, const XmlElement& bu
 
 bool ConfigDB::DB::ProcessFork(const String& fileName, const XmlElement& fork)
 {
+    QCC_UNUSED(fileName);
+    QCC_UNUSED(fork);
+
     bool success = true;
 
     this->fork = true;
@@ -401,6 +406,9 @@ exit:
 
 bool ConfigDB::DB::ProcessKeepUmask(const String& fileName, const XmlElement& keepUmask)
 {
+    QCC_UNUSED(fileName);
+    QCC_UNUSED(keepUmask);
+
     bool success = true;
 
     this->keepUmask = true;
@@ -570,6 +578,9 @@ bool ConfigDB::DB::ProcessPolicy(const String& fileName, const XmlElement& polic
 
 bool ConfigDB::DB::ProcessSyslog(const String& fileName, const XmlElement& syslog)
 {
+    QCC_UNUSED(fileName);
+    QCC_UNUSED(syslog);
+
     bool success = true;
 
     this->syslog = true;

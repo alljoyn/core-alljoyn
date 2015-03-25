@@ -419,7 +419,7 @@ class PBKD {
      *
      * @param src PBKD to be copied.
      */
-    PBKD(const PBKD& src) {
+    PBKD(const PBKD&) {
         /* private copy constructor to prevent copying */
     }
     /**
@@ -429,7 +429,7 @@ class PBKD {
      *
      * @return copy of PBKD
      */
-    PBKD& operator=(const PBKD& src) {
+    PBKD& operator=(const PBKD&) {
         return *this;
     }
 };
@@ -813,10 +813,11 @@ size_t Crypto_RSA::GetSize()
         DWORD got;
         DWORD len;
         NTSTATUS ntStatus = BCryptGetProperty((BCRYPT_KEY_HANDLE)key, BCRYPT_KEY_STRENGTH, (PBYTE)&len, sizeof(len), &got, 0);
+        QCC_UNUSED(ntStatus);
         assert(BCRYPT_SUCCESS(ntStatus));
         if (!BCRYPT_SUCCESS(ntStatus)) {
             QCC_LogError(ER_CRYPTO_ERROR, ("Failed to get key strength property"));
-            len = -1;
+            len = (DWORD)-1;
         }
         size = len;
     }

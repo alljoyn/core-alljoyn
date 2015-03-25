@@ -93,7 +93,7 @@ static MyBusListener g_busListener;
 
 
 /** Main entry point */
-int main(int argc, char** argv, char** envArg)
+int CDECL_CALL main(int argc, char** argv, char** envArg)
 {
     QStatus status = ER_OK;
 

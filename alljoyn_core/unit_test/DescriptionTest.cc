@@ -237,6 +237,7 @@ class MyTranslator : public Translator {
     }
 
     virtual const char* Translate(const char* sourceLanguage, const char* targetLanguage, const char* source) {
+        QCC_UNUSED(sourceLanguage);
         const char* tag = (*targetLanguage == '\0') ? "en" : targetLanguage;
         size_t i = 0;
 

@@ -24,6 +24,7 @@
 #include <arpa/inet.h>
 
 #include <alljoyn/Init.h>
+#include <alljoyn/Status.h>
 
 #define HELLO_PORT 9956
 #define HELLO_GROUP "239.255.37.41"
@@ -32,7 +33,7 @@
 #define IPV4 1
 #define IPV6 0
 
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
     if (AllJoynInit() != ER_OK) {
         return 1;

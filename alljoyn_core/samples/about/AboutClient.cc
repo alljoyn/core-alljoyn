@@ -40,6 +40,7 @@ static volatile sig_atomic_t s_interrupt = false;
 static const char* INTERFACE_NAME = "com.example.about.feature.interface.sample";
 
 static void CDECL_CALL SigIntHandler(int sig) {
+    QCC_UNUSED(sig);
     s_interrupt = true;
 }
 
@@ -221,8 +222,11 @@ class MyAboutListener : public AboutListener {
     MySessionListener sessionListener;
 };
 
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
+    QCC_UNUSED(argc);
+    QCC_UNUSED(argv);
+
     if (AllJoynInit() != ER_OK) {
         return 1;
     }
