@@ -2286,7 +2286,9 @@ size_t MDNSTextRData::Deserialize(uint8_t const* buffer, uint32_t bufsize, std::
             QCC_DbgPrintf(("MDNSTextRecord::Deserialize(): Insufficient bufsize %d", bufsize));
             return 0;
         }
-        str.assign(reinterpret_cast<const char*>(p), sz);
+        if (sz) {
+            str.assign(reinterpret_cast<const char*>(p), sz);
+        }
         size_t eqPos = str.find_first_of('=', 0);
         if (eqPos != String::npos) {
             m_fields[str.substr(0, eqPos)] = str.substr(eqPos + 1);

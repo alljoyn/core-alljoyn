@@ -138,11 +138,15 @@ QStatus EndpointAuth::Hello(qcc::String& redirection)
         }
     } else {
         status = response->UnmarshalArgs("s");
-        uniqueName = response->GetArg(0)->v_string.str;
-        QCC_DbgPrintf(("Connection id: %s\n", response->GetArg(0)->v_string.str));
         if (status != ER_OK) {
             return status;
         }
+        const ajn::MsgArg* arg = response->GetArg(0);
+        if (arg == NULL) {
+            return ER_FAIL;
+        }
+        uniqueName = arg->v_string.str;
+        QCC_DbgPrintf(("Connection id: %s\n", response->GetArg(0)->v_string.str));
     }
     /*
      * Validate the unique name
