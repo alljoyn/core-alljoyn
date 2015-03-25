@@ -57,6 +57,7 @@ static volatile sig_atomic_t s_interrupt = false;
 
 static void CDECL_CALL SigIntHandler(int sig)
 {
+    QCC_UNUSED(sig);
     s_interrupt = true;
 }
 
@@ -89,6 +90,7 @@ class BasicSampleObject : public BusObject {
 
     void Cat(const InterfaceDescription::Member* member, Message& msg)
     {
+        QCC_UNUSED(member);
         /* Concatenate the two input strings and reply with the result. */
         qcc::String inStr1 = msg->GetArg(0)->v_string.str;
         qcc::String inStr2 = msg->GetArg(1)->v_string.str;
@@ -248,8 +250,12 @@ void WaitForSigInt(void)
 }
 
 /** Main entry point */
-int main(int argc, char** argv, char** envArg)
+int CDECL_CALL main(int argc, char** argv, char** envArg)
 {
+    QCC_UNUSED(argc);
+    QCC_UNUSED(argv);
+    QCC_UNUSED(envArg);
+
     if (AllJoynInit() != ER_OK) {
         return 1;
     }

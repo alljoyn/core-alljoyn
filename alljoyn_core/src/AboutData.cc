@@ -277,7 +277,7 @@ bool AboutData::IsValid(const char* language)
 QStatus AboutData::CreatefromMsgArg(const MsgArg& arg, const char* language)
 {
     QStatus status = ER_OK;
-    char* defaultLanguage;
+    char* defaultLanguage = NULL;
     MsgArg* fields;
     size_t numFields;
     status = arg.Get("a{sv}", &numFields, &fields);
@@ -285,15 +285,15 @@ QStatus AboutData::CreatefromMsgArg(const MsgArg& arg, const char* language)
         return status;
     }
     if (language == NULL) {
-        MsgArg* argDefualtLang;
-        status = arg.GetElement("{sv}", DEFAULT_LANGUAGE, &argDefualtLang);
+        MsgArg* argDefaultLang;
+        status = arg.GetElement("{sv}", DEFAULT_LANGUAGE, &argDefaultLang);
         if (status != ER_OK) {
             //printf("GetElement Failed");
             return status;
         }
-        status = argDefualtLang->Get("s", &defaultLanguage);
+        status = argDefaultLang->Get("s", &defaultLanguage);
         if (status != ER_OK) {
-            //printf("Get default language failed: \n%s\n %s\n", argDefualtLang->ToString().c_str());
+            //printf("Get default language failed: \n%s\n %s\n", argDefaultLang->ToString().c_str());
             return status;
         }
     }

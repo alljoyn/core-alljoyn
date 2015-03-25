@@ -223,7 +223,7 @@ class DaemonSLAPTransport : public Transport, public _RemoteEndpoint::EndpointLi
         qcc::UARTFd listenFd;
         bool endpointStarted;
 
-        ListenEntry(qcc::String normSpec, std::map<qcc::String, qcc::String> args) : normSpec(normSpec), args(args), listenFd(-1), endpointStarted(false) { }
+        ListenEntry(qcc::String normSpec, std::map<qcc::String, qcc::String> args) : normSpec(normSpec), args(args), listenFd((qcc::UARTFd)-1), endpointStarted(false) { }
         bool operator<(const ListenEntry& other) const {
             return (normSpec < other.normSpec) || ((normSpec == other.normSpec) && ((args < other.args) || ((args == other.args) && ((listenFd < other.listenFd) || ((listenFd == other.listenFd) && (endpointStarted < other.endpointStarted))))));
 

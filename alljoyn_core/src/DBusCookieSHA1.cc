@@ -48,6 +48,8 @@ namespace ajn {
 
 static FileSource* OpenCookieFile(const char* cookieContext, const qcc::String& userName)
 {
+    QCC_UNUSED(userName);
+
     FileSource* cookieSrc = NULL;
     Environ* env = Environ::GetAppEnviron();
     qcc::String sep = ER_DIR_SEPARATOR;

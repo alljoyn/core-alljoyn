@@ -872,6 +872,8 @@ static jobject GetObjectArrayElement(JNIEnv* env, jobjectArray array, jsize inde
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm,
                                   void* reserved)
 {
+    QCC_UNUSED(reserved);
+
     if (AllJoynInit() != ER_OK) {
         return JNI_ERR;
     }
@@ -1021,6 +1023,8 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm,
 JNIEXPORT void JNI_OnUnload(JavaVM* vm,
                             void* reserved)
 {
+    QCC_UNUSED(vm);
+    QCC_UNUSED(reserved);
 #ifdef ROUTER
     AllJoynRouterShutdown();
 #endif
@@ -1241,6 +1245,7 @@ static void SetHandle(jobject jobj, void* handle)
 template <typename T>
 T GetNativeListener(JNIEnv* env, jobject jlistener)
 {
+    QCC_UNUSED(env);
     return GetHandle<T>(jlistener);
 }
 
@@ -1285,6 +1290,7 @@ class JAboutObject : public AboutObj, public AboutDataListener {
     }
 
     QStatus announce(JNIEnv* env, jobject thiz, jshort sessionPort, jobject jaboutDataListener) {
+        QCC_UNUSED(thiz);
         // Make sure the jaboutDataListener is the latest version of the Java AboutDataListener
         if (env->IsInstanceOf(jaboutDataListener, CLS_AboutDataListener)) {
             JLocalRef<jclass> clazz = env->GetObjectClass(jaboutDataListener);
@@ -2452,6 +2458,8 @@ class JProxyBusObject : public ProxyBusObject {
         const String ifaceName;
         jobject jlistener;
         Listener(const String& ifaceName, jobject jlistener) : ifaceName(ifaceName), jlistener(jlistener) { }
+      private:
+        Listener& operator =(const Listener& other);
     };
     list<Listener> propertiesChangedListeners;
 };
@@ -2956,6 +2964,7 @@ void JBusListener::Setup(jobject jbusAttachment)
 
 void JBusListener::ListenerRegistered(BusAttachment* bus)
 {
+    QCC_UNUSED(bus);
     QCC_DbgPrintf(("JBusListener::ListenerRegistered()"));
 
     /*
@@ -7688,7 +7697,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_getSessionFd(JNIEnv
     /*
      * Make the AllJoyn call.
      */
-    qcc::SocketFd sockfd = -1;
+    qcc::SocketFd sockfd = qcc::INVALID_SOCKET_FD;
 
     QCC_DbgPrintf(("BusAttachment_getSessionFd(): Call GetSessionFd(%d, %d)", jsessionId, sockfd));
 
@@ -8351,6 +8360,8 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_setDaemonDebug(JNIE
 
 JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusAttachment_setLogLevels(JNIEnv*env, jobject thiz, jstring jlogEnv)
 {
+    QCC_UNUSED(thiz);
+
     QCC_DbgPrintf(("BusAttachment_setLogLevels()"));
 
     /*
@@ -8371,6 +8382,8 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusAttachment_setLogLevels(JNIEnv*en
 
 JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusAttachment_setDebugLevel(JNIEnv*env, jobject thiz, jstring jmodule, jint jlevel)
 {
+    QCC_UNUSED(thiz);
+
     QCC_DbgPrintf(("BusAttachment_setDebugLevel()"));
 
     /*
@@ -8391,6 +8404,9 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusAttachment_setDebugLevel(JNIEnv*e
 
 JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusAttachment_useOSLogging(JNIEnv*env, jobject thiz, jboolean juseOSLog)
 {
+    QCC_UNUSED(env);
+    QCC_UNUSED(thiz);
+
     QCC_DbgPrintf(("BusAttachment_useOSLogging()"));
 
     /*
@@ -9577,6 +9593,8 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_registerBusObject(J
 
 JNIEXPORT jboolean JNICALL Java_org_alljoyn_bus_BusAttachment_isSecureBusObject(JNIEnv* env, jobject thiz, jobject jbusObject)
 {
+    QCC_UNUSED(thiz);
+
     QCC_DbgPrintf(("BusAttachment_isSecureBusObjectt()"));
     gBusObjectMapLock.Lock();
     JBusObject* busObject = GetBackingObject(jbusObject);
@@ -9674,6 +9692,8 @@ void JSignalHandler::SignalHandler(const InterfaceDescription::Member* member,
                                    const char* sourcePath,
                                    Message& msg)
 {
+    QCC_UNUSED(member);
+    QCC_UNUSED(sourcePath);
     /*
      * JScopedEnv will automagically attach the JVM to the current native
      * thread.
@@ -10234,6 +10254,8 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_reloadKeyStore(JNIE
 
 JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_getMessageContext(JNIEnv* env, jobject thiz)
 {
+    QCC_UNUSED(thiz);
+
     QCC_DbgPrintf(("BusAttachment_getMessageContext()"));
 
     Message msg = MessageContext::GetMessage();
@@ -11088,6 +11110,8 @@ JPropertiesChangedListener::~JPropertiesChangedListener()
 
 void JPropertiesChangedListener::PropertiesChanged(ProxyBusObject& obj, const char* ifaceName, const MsgArg& changed, const MsgArg& invalidated, void* context)
 {
+    QCC_UNUSED(context);
+
     QCC_DbgPrintf(("JPropertiesChangedListener::PropertiesChanged()"));
 
     /*
@@ -11205,6 +11229,8 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_ProxyBusObject_create(JNIEnv* env, j
 
 JNIEXPORT void JNICALL Java_org_alljoyn_bus_ProxyBusObject_destroy(JNIEnv* env, jobject thiz)
 {
+    QCC_UNUSED(env);
+
     QCC_DbgPrintf(("ProxyBusObject_destroy()"));
 
     JProxyBusObject* proxyBusObj = GetHandle<JProxyBusObject*>(thiz);
@@ -11827,6 +11853,8 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_SignalEmitter_signal(JNIEnv* env, jo
                                                                  jstring jinputSig, jobjectArray jargs, jint timeToLive, jint flags,
                                                                  jobject jmsgContext)
 {
+    QCC_UNUSED(thiz);
+
     QCC_DbgPrintf(("SignalEmitter_signal()"));
 
     JString destination(jdestination);
@@ -11924,6 +11952,8 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_SignalEmitter_signal(JNIEnv* env, jo
 
 JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_SignalEmitter_cancelSessionlessSignal(JNIEnv* env, jobject thiz, jobject jbusObject, jint serialNum)
 {
+    QCC_UNUSED(thiz);
+
     QCC_DbgPrintf(("SignalEmitter_cancelSessionlessSignal()"));
 
     gBusObjectMapLock.Lock();
@@ -11944,6 +11974,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_SignalEmitter_cancelSessionlessSi
 
 JNIEXPORT jobjectArray JNICALL Java_org_alljoyn_bus_Signature_split(JNIEnv* env, jclass clazz, jstring jsignature)
 {
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("Signature_split()"));
 
     JString signature(jsignature);
@@ -12020,6 +12051,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_Variant_setMsgArg(JNIEnv* env, jobje
 
 JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusException_logln(JNIEnv* env, jclass clazz, jstring jline)
 {
+    QCC_UNUSED(clazz);
     JString line(jline);
     if (env->ExceptionCheck()) {
         return;
@@ -12029,6 +12061,8 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusException_logln(JNIEnv* env, jcla
 
 JNIEXPORT jint JNICALL Java_org_alljoyn_bus_MsgArg_getNumElements(JNIEnv* env, jclass clazz, jlong jmsgArg)
 {
+    QCC_UNUSED(env);
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_getNumElements()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
@@ -12038,6 +12072,8 @@ JNIEXPORT jint JNICALL Java_org_alljoyn_bus_MsgArg_getNumElements(JNIEnv* env, j
 
 JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_getElement(JNIEnv* env, jclass clazz, jlong jmsgArg, jint index)
 {
+    QCC_UNUSED(env);
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_getElement()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
@@ -12048,6 +12084,7 @@ JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_getElement(JNIEnv* env, jcla
 
 JNIEXPORT jstring JNICALL Java_org_alljoyn_bus_MsgArg_getElemSig(JNIEnv* env, jclass clazz, jlong jmsgArg)
 {
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_getElementSig()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
@@ -12057,6 +12094,8 @@ JNIEXPORT jstring JNICALL Java_org_alljoyn_bus_MsgArg_getElemSig(JNIEnv* env, jc
 
 JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_getVal(JNIEnv* env, jclass clazz, jlong jmsgArg)
 {
+    QCC_UNUSED(env);
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_getVal()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
@@ -12075,6 +12114,8 @@ JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_getVal(JNIEnv* env, jclass c
 
 JNIEXPORT jint JNICALL Java_org_alljoyn_bus_MsgArg_getNumMembers(JNIEnv* env, jclass clazz, jlong jmsgArg)
 {
+    QCC_UNUSED(env);
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_getNumMembers()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
@@ -12084,6 +12125,8 @@ JNIEXPORT jint JNICALL Java_org_alljoyn_bus_MsgArg_getNumMembers(JNIEnv* env, jc
 
 JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_getMember(JNIEnv* env, jclass clazz, jlong jmsgArg, jint index)
 {
+    QCC_UNUSED(env);
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_getMember()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
@@ -12094,6 +12137,8 @@ JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_getMember(JNIEnv* env, jclas
 
 JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_getKey(JNIEnv* env, jclass clazz, jlong jmsgArg)
 {
+    QCC_UNUSED(env);
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_getKey()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
@@ -12103,6 +12148,7 @@ JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_getKey(JNIEnv* env, jclass c
 
 JNIEXPORT jbyteArray JNICALL Java_org_alljoyn_bus_MsgArg_getByteArray(JNIEnv* env, jclass clazz, jlong jmsgArg)
 {
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_getKey()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
@@ -12121,6 +12167,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_alljoyn_bus_MsgArg_getByteArray(JNIEnv* en
 
 JNIEXPORT jshortArray JNICALL Java_org_alljoyn_bus_MsgArg_getInt16Array(JNIEnv* env, jclass clazz, jlong jmsgArg)
 {
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_getInt16Array()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
@@ -12142,6 +12189,7 @@ JNIEXPORT jshortArray JNICALL Java_org_alljoyn_bus_MsgArg_getInt16Array(JNIEnv* 
 
 JNIEXPORT jshortArray JNICALL Java_org_alljoyn_bus_MsgArg_getUint16Array(JNIEnv* env, jclass clazz, jlong jmsgArg)
 {
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_getUint16Array()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
@@ -12163,6 +12211,7 @@ JNIEXPORT jshortArray JNICALL Java_org_alljoyn_bus_MsgArg_getUint16Array(JNIEnv*
 
 JNIEXPORT jbooleanArray JNICALL Java_org_alljoyn_bus_MsgArg_getBoolArray(JNIEnv* env, jclass clazz, jlong jmsgArg)
 {
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_getBoolArray()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
@@ -12184,6 +12233,7 @@ JNIEXPORT jbooleanArray JNICALL Java_org_alljoyn_bus_MsgArg_getBoolArray(JNIEnv*
 
 JNIEXPORT jintArray JNICALL Java_org_alljoyn_bus_MsgArg_getUint32Array(JNIEnv* env, jclass clazz, jlong jmsgArg)
 {
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_getUint32Array()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
@@ -12205,6 +12255,7 @@ JNIEXPORT jintArray JNICALL Java_org_alljoyn_bus_MsgArg_getUint32Array(JNIEnv* e
 
 JNIEXPORT jintArray JNICALL Java_org_alljoyn_bus_MsgArg_getInt32Array(JNIEnv* env, jclass clazz, jlong jmsgArg)
 {
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_getUint32Array()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
@@ -12226,6 +12277,7 @@ JNIEXPORT jintArray JNICALL Java_org_alljoyn_bus_MsgArg_getInt32Array(JNIEnv* en
 
 JNIEXPORT jlongArray JNICALL Java_org_alljoyn_bus_MsgArg_getInt64Array(JNIEnv* env, jclass clazz, jlong jmsgArg)
 {
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_getInt64Array()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
@@ -12247,6 +12299,7 @@ JNIEXPORT jlongArray JNICALL Java_org_alljoyn_bus_MsgArg_getInt64Array(JNIEnv* e
 
 JNIEXPORT jlongArray JNICALL Java_org_alljoyn_bus_MsgArg_getUint64Array(JNIEnv* env, jclass clazz, jlong jmsgArg)
 {
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_getUint64Array()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
@@ -12268,6 +12321,7 @@ JNIEXPORT jlongArray JNICALL Java_org_alljoyn_bus_MsgArg_getUint64Array(JNIEnv* 
 
 JNIEXPORT jdoubleArray JNICALL Java_org_alljoyn_bus_MsgArg_getDoubleArray(JNIEnv* env, jclass clazz, jlong jmsgArg)
 {
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_getDoubleArray()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
@@ -12289,6 +12343,8 @@ JNIEXPORT jdoubleArray JNICALL Java_org_alljoyn_bus_MsgArg_getDoubleArray(JNIEnv
 
 JNIEXPORT jint JNICALL Java_org_alljoyn_bus_MsgArg_getTypeId(JNIEnv* env, jclass clazz, jlong jmsgArg)
 {
+    QCC_UNUSED(env);
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_getTypeId()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
@@ -12297,6 +12353,8 @@ JNIEXPORT jint JNICALL Java_org_alljoyn_bus_MsgArg_getTypeId(JNIEnv* env, jclass
 
 JNIEXPORT jbyte JNICALL Java_org_alljoyn_bus_MsgArg_getByte(JNIEnv* env, jclass clazz, jlong jmsgArg)
 {
+    QCC_UNUSED(env);
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_getByte()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
@@ -12306,6 +12364,8 @@ JNIEXPORT jbyte JNICALL Java_org_alljoyn_bus_MsgArg_getByte(JNIEnv* env, jclass 
 
 JNIEXPORT jshort JNICALL Java_org_alljoyn_bus_MsgArg_getInt16(JNIEnv* env, jclass clazz, jlong jmsgArg)
 {
+    QCC_UNUSED(env);
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_getInt16()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
@@ -12315,6 +12375,8 @@ JNIEXPORT jshort JNICALL Java_org_alljoyn_bus_MsgArg_getInt16(JNIEnv* env, jclas
 
 JNIEXPORT jshort JNICALL Java_org_alljoyn_bus_MsgArg_getUint16(JNIEnv* env, jclass clazz, jlong jmsgArg)
 {
+    QCC_UNUSED(env);
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_getUint16()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
@@ -12324,6 +12386,8 @@ JNIEXPORT jshort JNICALL Java_org_alljoyn_bus_MsgArg_getUint16(JNIEnv* env, jcla
 
 JNIEXPORT jboolean JNICALL Java_org_alljoyn_bus_MsgArg_getBool(JNIEnv* env, jclass clazz, jlong jmsgArg)
 {
+    QCC_UNUSED(env);
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_getBool()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
@@ -12333,6 +12397,8 @@ JNIEXPORT jboolean JNICALL Java_org_alljoyn_bus_MsgArg_getBool(JNIEnv* env, jcla
 
 JNIEXPORT jint JNICALL Java_org_alljoyn_bus_MsgArg_getUint32(JNIEnv* env, jclass clazz, jlong jmsgArg)
 {
+    QCC_UNUSED(env);
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_getUint32()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
@@ -12342,6 +12408,8 @@ JNIEXPORT jint JNICALL Java_org_alljoyn_bus_MsgArg_getUint32(JNIEnv* env, jclass
 
 JNIEXPORT jint JNICALL Java_org_alljoyn_bus_MsgArg_getInt32(JNIEnv* env, jclass clazz, jlong jmsgArg)
 {
+    QCC_UNUSED(env);
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_getInt32()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
@@ -12351,6 +12419,8 @@ JNIEXPORT jint JNICALL Java_org_alljoyn_bus_MsgArg_getInt32(JNIEnv* env, jclass 
 
 JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_getInt64(JNIEnv* env, jclass clazz, jlong jmsgArg)
 {
+    QCC_UNUSED(env);
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_getInt64()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
@@ -12360,6 +12430,8 @@ JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_getInt64(JNIEnv* env, jclass
 
 JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_getUint64(JNIEnv* env, jclass clazz, jlong jmsgArg)
 {
+    QCC_UNUSED(env);
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_getUint64()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
@@ -12369,6 +12441,8 @@ JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_getUint64(JNIEnv* env, jclas
 
 JNIEXPORT jdouble JNICALL Java_org_alljoyn_bus_MsgArg_getDouble(JNIEnv* env, jclass clazz, jlong jmsgArg)
 {
+    QCC_UNUSED(env);
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_getDouble()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
@@ -12378,6 +12452,7 @@ JNIEXPORT jdouble JNICALL Java_org_alljoyn_bus_MsgArg_getDouble(JNIEnv* env, jcl
 
 JNIEXPORT jstring JNICALL Java_org_alljoyn_bus_MsgArg_getString(JNIEnv* env, jclass clazz, jlong jmsgArg)
 {
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_getString()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
@@ -12399,6 +12474,7 @@ JNIEXPORT jstring JNICALL Java_org_alljoyn_bus_MsgArg_getString(JNIEnv* env, jcl
 
 JNIEXPORT jstring JNICALL Java_org_alljoyn_bus_MsgArg_getObjPath(JNIEnv* env, jclass clazz, jlong jmsgArg)
 {
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_getObjPath()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
@@ -12420,6 +12496,7 @@ JNIEXPORT jstring JNICALL Java_org_alljoyn_bus_MsgArg_getObjPath(JNIEnv* env, jc
 
 JNIEXPORT jstring JNICALL Java_org_alljoyn_bus_MsgArg_getSignature__J(JNIEnv* env, jclass clazz, jlong jmsgArg)
 {
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_getsignature__J()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
@@ -12441,6 +12518,7 @@ JNIEXPORT jstring JNICALL Java_org_alljoyn_bus_MsgArg_getSignature__J(JNIEnv* en
 
 JNIEXPORT jstring JNICALL Java_org_alljoyn_bus_MsgArg_getSignature___3J(JNIEnv* env, jclass clazz, jlongArray jarray)
 {
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_getsignature___3J()"));
 
     MsgArg* values = NULL;
@@ -12496,42 +12574,49 @@ static MsgArg* Set(JNIEnv* env, MsgArg* arg, jstring jsignature, ...)
 
 JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_set__JLjava_lang_String_2B(JNIEnv* env, jclass clazz, jlong jmsgArg, jstring jsignature, jbyte value)
 {
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_set__JLjava_lang_String_2B()"));
     return (jlong)Set(env, (MsgArg*)jmsgArg, jsignature, value);
 }
 
 JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_set__JLjava_lang_String_2Z(JNIEnv* env, jclass clazz, jlong jmsgArg, jstring jsignature, jboolean value)
 {
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_set__JLjava_lang_String_2Z()"));
     return (jlong)Set(env, (MsgArg*)jmsgArg, jsignature, value);
 }
 
 JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_set__JLjava_lang_String_2S(JNIEnv* env, jclass clazz, jlong jmsgArg, jstring jsignature, jshort value)
 {
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_set__JLjava_lang_String_2S()"));
     return (jlong)Set(env, (MsgArg*)jmsgArg, jsignature, value);
 }
 
 JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_set__JLjava_lang_String_2I(JNIEnv* env, jclass clazz, jlong jmsgArg, jstring jsignature, jint value)
 {
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_set__JLjava_lang_String_2I()"));
     return (jlong)Set(env, (MsgArg*)jmsgArg, jsignature, value);
 }
 
 JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_set__JLjava_lang_String_2J(JNIEnv* env, jclass clazz, jlong jmsgArg, jstring jsignature, jlong value)
 {
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_set__JLjava_lang_String_2J()"));
     return (jlong)Set(env, (MsgArg*)jmsgArg, jsignature, value);
 }
 
 JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_set__JLjava_lang_String_2D(JNIEnv* env, jclass clazz, jlong jmsgArg, jstring jsignature, jdouble value)
 {
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_set__JLjava_lang_String_2D()"));
     return (jlong)Set(env, (MsgArg*)jmsgArg, jsignature, value);
 }
 
 JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_set__JLjava_lang_String_2Ljava_lang_String_2(JNIEnv* env, jclass clazz, jlong jmsgArg, jstring jsignature, jstring jvalue)
 {
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_set__JLjava_lang_String_2Ljava_lang_String_2"));
 
     JString value(jvalue);
@@ -12549,6 +12634,7 @@ JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_set__JLjava_lang_String_2Lja
 
 JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_set__JLjava_lang_String_2_3B(JNIEnv* env, jclass clazz, jlong jmsgArg, jstring jsignature, jbyteArray jarray)
 {
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_set__JLjava_lang_String_2_3B"));
 
     jbyte* jelements = env->GetByteArrayElements(jarray, NULL);
@@ -12564,6 +12650,7 @@ JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_set__JLjava_lang_String_2_3B
 
 JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_set__JLjava_lang_String_2_3Z(JNIEnv* env, jclass clazz, jlong jmsgArg, jstring jsignature, jbooleanArray jarray)
 {
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_set__JLjava_lang_String_2_3Z"));
 
     /* Booleans are different sizes in Java and MsgArg, so can't just do a straight copy. */
@@ -12592,6 +12679,7 @@ JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_set__JLjava_lang_String_2_3Z
 
 JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_set__JLjava_lang_String_2_3S(JNIEnv* env, jclass clazz, jlong jmsgArg, jstring jsignature, jshortArray jarray)
 {
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_set__JLjava_lang_String_2_3S"));
 
     jshort* jelements = env->GetShortArrayElements(jarray, NULL);
@@ -12607,6 +12695,7 @@ JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_set__JLjava_lang_String_2_3S
 
 JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_set__JLjava_lang_String_2_3I(JNIEnv* env, jclass clazz, jlong jmsgArg, jstring jsignature, jintArray jarray)
 {
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_set__JLjava_lang_String_2_3I"));
 
     jint* jelements = env->GetIntArrayElements(jarray, NULL);
@@ -12622,6 +12711,7 @@ JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_set__JLjava_lang_String_2_3I
 
 JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_set__JLjava_lang_String_2_3J(JNIEnv* env, jclass clazz, jlong jmsgArg, jstring jsignature, jlongArray jarray)
 {
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_set__JLjava_lang_String_2_3J"));
 
     jlong* jelements = env->GetLongArrayElements(jarray, NULL);
@@ -12637,6 +12727,7 @@ JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_set__JLjava_lang_String_2_3J
 
 JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_set__JLjava_lang_String_2_3D(JNIEnv* env, jclass clazz, jlong jmsgArg, jstring jsignature, jdoubleArray jarray)
 {
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_set__JLjava_lang_String_2_3D"));
 
     jdouble* jelements = env->GetDoubleArrayElements(jarray, NULL);
@@ -12652,6 +12743,7 @@ JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_set__JLjava_lang_String_2_3D
 
 JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_setArray(JNIEnv* env, jclass clazz, jlong jmsgArg, jstring jelemSig, jint numElements)
 {
+    QCC_UNUSED(clazz);
     QCC_DbgPrintf(("MsgArg_setArray"));
 
     JString elemSig(jelemSig);
@@ -12683,6 +12775,8 @@ JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_setArray(JNIEnv* env, jclass
 
 JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_setStruct(JNIEnv* env, jclass clazz, jlong jmsgArg, jint numMembers)
 {
+    QCC_UNUSED(env);
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_setStruct"));
 
     MsgArg* arg = (MsgArg*)jmsgArg;
@@ -12702,6 +12796,8 @@ JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_setStruct(JNIEnv* env, jclas
 
 JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_setDictEntry(JNIEnv* env, jclass clazz, jlong jmsgArg)
 {
+    QCC_UNUSED(env);
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_setDictEntry"));
 
     MsgArg* arg = (MsgArg*)jmsgArg;
@@ -12722,6 +12818,7 @@ JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_setDictEntry(JNIEnv* env, jc
 
 JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_setVariant__JLjava_lang_String_2J(JNIEnv* env, jclass clazz, jlong jmsgArg, jstring jsignature, jlong jvalue)
 {
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_setVariant__JLjava_lang_String_2J"));
 
     MsgArg* value = new MsgArg(*(MsgArg*)jvalue);
@@ -12740,6 +12837,8 @@ JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_setVariant__JLjava_lang_Stri
 
 JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_setVariant__J(JNIEnv* env, jclass clazz, jlong jmsgArg)
 {
+    QCC_UNUSED(env);
+    QCC_UNUSED(clazz);
     // QCC_DbgPrintf(("MsgArg_setVariant__J"));
 
     MsgArg* arg = (MsgArg*)jmsgArg;
@@ -12925,15 +13024,18 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_AboutObj_unannounce(JNIEnv* env, 
 }
 
 JNIEXPORT jstring JNICALL Java_org_alljoyn_bus_Version_get(JNIEnv* env, jclass clazz) {
-
+    QCC_UNUSED(clazz);
     return env->NewStringUTF(ajn::GetVersion());
 }
 
 JNIEXPORT jstring JNICALL Java_org_alljoyn_bus_Version_getBuildInfo(JNIEnv* env, jclass clazz) {
+    QCC_UNUSED(clazz);
     return env->NewStringUTF(ajn::GetBuildInfo());
 }
 
 JNIEXPORT jint JNICALL Java_org_alljoyn_bus_Version_getNumeric(JNIEnv* env, jclass clazz) {
+    QCC_UNUSED(env);
+    QCC_UNUSED(clazz);
     return ajn::GetNumericVersion();
 }
 

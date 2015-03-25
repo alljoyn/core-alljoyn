@@ -45,7 +45,7 @@ template <>
 struct less<ajn::ProxyBusObjectPropertiesChangedListenerC*> {
     bool operator()(const ajn::ProxyBusObjectPropertiesChangedListenerC* lhs, const ajn::ProxyBusObjectPropertiesChangedListenerC* rhs) const
     {
-        return (intptr_t)lhs->GetSignalHandler() < (intptr_t)lhs->GetSignalHandler();
+        return (intptr_t)lhs->GetSignalHandler() < (intptr_t)rhs->GetSignalHandler();
     }
 };
 }

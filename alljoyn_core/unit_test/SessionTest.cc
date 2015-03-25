@@ -172,7 +172,12 @@ class DISABLED_SessionTest : public testing::Test {
 class TwoMultipointSessionsSessionPortListener : public SessionPortListener {
   public:
     virtual ~TwoMultipointSessionsSessionPortListener() { }
-    virtual bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) { return true; }
+    virtual bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) {
+        QCC_UNUSED(sessionPort);
+        QCC_UNUSED(joiner);
+        QCC_UNUSED(opts);
+        return true;
+    }
 };
 
 TEST_F(DISABLED_SessionTest, TwoMultipointSessions)
@@ -218,12 +223,18 @@ SessionId bindMemberSessionId = 0;
 class BindMemberSessionListenerA : public SessionListener {
   public:
     virtual void SessionLost(SessionId sessionId, SessionLostReason reason) {
+        QCC_UNUSED(sessionId);
+        QCC_UNUSED(reason);
         sessionLostFlag = true;
     }
     virtual void SessionMemberAdded(SessionId sessionId, const char* uniqueName) {
+        QCC_UNUSED(sessionId);
+        QCC_UNUSED(uniqueName);
         sessionMemberAddedFlagA = true;
     }
     virtual void SessionMemberRemoved(SessionId sessionId, const char* uniqueName) {
+        QCC_UNUSED(sessionId);
+        QCC_UNUSED(uniqueName);
         sessionMemberRemovedFlagA = true;
     }
 };
@@ -232,9 +243,13 @@ class BindMemberSessionListenerB : public SessionListener {
   public:
     //virtual void SessionLost(SessionId sessionId, SessionLostReason reason) { }
     virtual void SessionMemberAdded(SessionId sessionId, const char* uniqueName) {
+        QCC_UNUSED(sessionId);
+        QCC_UNUSED(uniqueName);
         sessionMemberAddedFlagB = true;
     }
     virtual void SessionMemberRemoved(SessionId sessionId, const char* uniqueName) {
+        QCC_UNUSED(sessionId);
+        QCC_UNUSED(uniqueName);
         sessionMemberRemovedFlagB = true;
     }
 };
@@ -243,9 +258,13 @@ class BindMemberSessionListenerC : public SessionListener {
   public:
     //virtual void SessionLost(SessionId sessionId, SessionLostReason reason) { }
     virtual void SessionMemberAdded(SessionId sessionId, const char* uniqueName) {
+        QCC_UNUSED(sessionId);
+        QCC_UNUSED(uniqueName);
         sessionMemberAddedFlagC = true;
     }
     virtual void SessionMemberRemoved(SessionId sessionId, const char* uniqueName) {
+        QCC_UNUSED(sessionId);
+        QCC_UNUSED(uniqueName);
         sessionMemberRemovedFlagC = true;
     }
 };
@@ -256,10 +275,17 @@ class BindMemberSessionPortListener : public SessionPortListener {
         bus(bus),
         sessionListener(bindMemberSessionListener) { }
     virtual bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) {
+        QCC_UNUSED(sessionPort);
+        QCC_UNUSED(joiner);
+        QCC_UNUSED(opts);
+
         sessionJoinerAcceptedFlag = true;
         return true;
     }
     virtual void SessionJoined(SessionPort sessionPort, SessionId id, const char* joiner) {
+        QCC_UNUSED(sessionPort);
+        QCC_UNUSED(joiner);
+
         bindMemberSessionId = id;
         sessionJoinedFlag = true;
         QStatus status = bus->SetSessionListener(id, sessionListener);
@@ -272,6 +298,10 @@ class BindMemberSessionPortListener : public SessionPortListener {
 class BindMemberJoinSessionAsyncCB : public ajn::BusAttachment::JoinSessionAsyncCB {
   public:
     virtual void JoinSessionCB(QStatus status, SessionId sessionId, const SessionOpts& opts, void* context) {
+        QCC_UNUSED(sessionId);
+        QCC_UNUSED(opts);
+        QCC_UNUSED(context);
+
         EXPECT_EQ(ER_OK, status);
         sessionJoinedCBFlag = true;
     }
@@ -420,16 +450,25 @@ static int sessionJoinedCounter;
 class SessionJoinedSessionPortListener : public SessionPortListener {
 
   private:
+    SessionJoinedSessionPortListener& operator=(const SessionJoinedSessionPortListener&) { return *this; }
+
     BusAttachment& bus;
     SessionListener*sl;
 
 
 
     virtual bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) {
+        QCC_UNUSED(sessionPort);
+        QCC_UNUSED(joiner);
+        QCC_UNUSED(opts);
+
         sessionJoinerAcceptedFlag = true;
         return true;
     }
     virtual void SessionJoined(SessionPort sessionPort, SessionId id, const char* joiner) {
+        QCC_UNUSED(sessionPort);
+        QCC_UNUSED(joiner);
+
         bindMemberSessionId = id;
         sessionJoinedTestJoiner = joiner;
         sessionJoinedFlag = true;
@@ -717,10 +756,15 @@ class RemoveSessionMemberBusAListener : public SessionPortListener, public Sessi
     }
 
     virtual bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) {
+        QCC_UNUSED(sessionPort);
+        QCC_UNUSED(joiner);
+        QCC_UNUSED(opts);
         sessionJoinerAcceptedFlag = true;
         return true;
     }
     virtual void SessionJoined(SessionPort sessionPort, SessionId id, const char* joiner) {
+        QCC_UNUSED(sessionPort);
+
         bindMemberSessionId = id;
         sessionJoinedTestJoiner = joiner;
         sessionJoinedFlag = true;
@@ -728,14 +772,23 @@ class RemoveSessionMemberBusAListener : public SessionPortListener, public Sessi
         EXPECT_EQ(ER_OK, bus->SetHostedSessionListener(id, this));
     }
     virtual void SessionLost(SessionId sessionId, SessionLostReason reason) {
+        QCC_UNUSED(sessionId);
+        QCC_UNUSED(reason);
+
         sessionLostFlagA = true;
         ++sessionLostCounter;
     }
     virtual void SessionMemberAdded(SessionId sessionId, const char* uniqueName) {
+        QCC_UNUSED(sessionId);
+        QCC_UNUSED(uniqueName);
+
         sessionMemberAddedFlagA = true;
         ++sessionMemberAddedCounter;
     }
     virtual void SessionMemberRemoved(SessionId sessionId, const char* uniqueName) {
+        QCC_UNUSED(sessionId);
+        QCC_UNUSED(uniqueName);
+
         sessionMemberRemovedFlagA = true;
         ++sessionMemberRemovedCounter;
     }
@@ -745,12 +798,17 @@ class RemoveSessionMemberBusAListener : public SessionPortListener, public Sessi
 class RemoveSessionMemberBusBListener : public SessionListener {
 
     virtual void SessionLost(SessionId sessionId) {
+        QCC_UNUSED(sessionId);
         sessionLostFlagB = true;
     }
     virtual void SessionMemberAdded(SessionId sessionId, const char* uniqueName) {
+        QCC_UNUSED(sessionId);
+        QCC_UNUSED(uniqueName);
         sessionMemberAddedFlagB = true;
     }
     virtual void SessionMemberRemoved(SessionId sessionId, const char* uniqueName) {
+        QCC_UNUSED(sessionId);
+        QCC_UNUSED(uniqueName);
         sessionMemberRemovedFlagB = true;
     }
 };
@@ -832,11 +890,12 @@ typedef enum {
     STOP
 } SessionAction;
 
-#define CHECK(x)    do { \
+#define CHECK(x)    for (;;) { \
         if (!(x)) { \
             return ::testing::AssertionFailure() << "Check '" << # x << "' on line " << __LINE__ << " failed."; \
         } \
-} while (0)
+        break; \
+}
 
 static::testing::AssertionResult MPJoinAllNotificationsDone(SessionJoinTestSessionListener* host, set<SessionJoinTestSessionListener*>& existingJoiners, SessionJoinTestSessionListener* joiner)
 {
