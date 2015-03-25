@@ -4287,6 +4287,7 @@ void AllJoynObj::NameChangedSignalHandler(const InterfaceDescription::Member* me
             return;
         }
     }
+    SessionId sessionId = (bit != b2bEndpoints.end()) ? bit->second->GetSessionId() : 0;
     ReleaseLocks();
 
     if (alias[0] == ':') {
@@ -4360,7 +4361,7 @@ void AllJoynObj::NameChangedSignalHandler(const InterfaceDescription::Member* me
 
             bool sendInfo = ((it->second->GetFeatures().nameTransfer == SessionOpts::ALL_NAMES) ||
                              ((it->second->GetFeatures().nameTransfer == SessionOpts::MP_NAMES) &&
-                              it->second->GetSessionId() == bit->second->GetSessionId()));
+                              it->second->GetSessionId() == sessionId));
 
 
             if (sendInfo && ((bit == b2bEndpoints.end()) || (bit->second->GetRemoteGUID() != it->second->GetRemoteGUID()))) {
