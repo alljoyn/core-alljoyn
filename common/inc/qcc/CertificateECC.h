@@ -434,6 +434,11 @@ class CertificateX509 {
             delete [] ou;
             delete [] cn;
         }
+      private:
+        /* private copy constructor to prevent double freeing of dynamic memory */
+        DistinguishedName(const DistinguishedName&);
+        /* private assign operator to prevent double freeing of dynamic memory */
+        DistinguishedName& operator=(const DistinguishedName&);
     };
 
     QStatus DecodeCertificateTBS();
