@@ -43,20 +43,18 @@ static void CDECL_CALL sig_int_handler(int sig)
 static alljoyn_sessionport ASSIGNED_SESSION_PORT = 900;
 static const char INTERFACE_NAME[] = "com.example.about.feature.interface.sample";
 
-static void
-sessionportlistener_sessionjoined_cb(const void* context,
-                                     alljoyn_sessionport sessionPort,
-                                     alljoyn_sessionid id,
-                                     const char* joiner)
+static void sessionportlistener_sessionjoined_cb(const void* context,
+                                                 alljoyn_sessionport sessionPort,
+                                                 alljoyn_sessionid id,
+                                                 const char* joiner)
 {
     printf("Session Joined SessionId = %u\n", id);
 }
 
-static QCC_BOOL
-sessionportlistener_acceptsessionjoiner_cb(const void* context,
-                                           alljoyn_sessionport sessionPort,
-                                           const char* joiner,
-                                           const alljoyn_sessionopts opts)
+static QCC_BOOL sessionportlistener_acceptsessionjoiner_cb(const void* context,
+                                                           alljoyn_sessionport sessionPort,
+                                                           const char* joiner,
+                                                           const alljoyn_sessionopts opts)
 {
     if (sessionPort != ASSIGNED_SESSION_PORT) {
         printf("Rejecting join attempt on unexpected session port %d\n", sessionPort);
