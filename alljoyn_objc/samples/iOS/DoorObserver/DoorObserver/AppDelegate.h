@@ -14,34 +14,16 @@
 //    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 
-#import "AJNInit.h"
-#import <alljoyn/Init.h>
+#import <UIKit/UIKit.h>
+#import "AJNBusAttachment.h"
 
-@implementation AJNInit
+@interface AppDelegate : UIResponder <UIApplicationDelegate>
 
-+ (QStatus)alljoynInit
-{
-    return AllJoynInit();
-}
+@property (strong, nonatomic) UIWindow *window;
+@property (nonatomic,strong) AJNBusAttachment *bus;
 
-+ (QStatus)alljoynShutdown
-{
-    return AllJoynShutdown();
-}
+- (void)produceDoorAtLocation:(NSString *)location;
 
-+ (QStatus)alljoynRouterInit
-{
-    if (ER_OK != AllJoynRouterInit()) {
-        AllJoynShutdown();
-        return ER_FAIL;
-    }
-    return ER_OK;
-}
-
-+ (QStatus)alljoynRouterShutdown
-{
-    return AllJoynRouterShutdown();
-}
 
 @end
 
