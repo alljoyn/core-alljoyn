@@ -72,6 +72,7 @@ static volatile sig_atomic_t g_session_joined = false;
 
 static void CDECL_CALL SigIntHandler(int sig)
 {
+    UNREFERENCED_PARAMETER(sig);
     g_interrupt = true;
 }
 
@@ -80,11 +81,16 @@ class MyBusListener : public SessionPortListener, public SessionListener {
   public:
     bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts)
     {
+        UNREFERENCED_PARAMETER(sessionPort);
+        UNREFERENCED_PARAMETER(joiner);
+        UNREFERENCED_PARAMETER(opts);
         return true;
     }
 
     void SessionJoined(SessionPort sessionPort, SessionId sessionId, const char* joiner)
     {
+        UNREFERENCED_PARAMETER(sessionPort);
+
         QCC_SyncPrintf("Session Established: joiner=%s, sessionId=%08x\n", joiner, sessionId);
         g_session_joined = true;
         /* Enable concurrent callbacks since some of the calls below could block */
@@ -153,6 +159,9 @@ class LocalTestObject : public BusObject {
     }
 
     void SignalHandler(const InterfaceDescription::Member* member, const char* sourcePath, Message& msg) {
+        UNREFERENCED_PARAMETER(member);
+        UNREFERENCED_PARAMETER(sourcePath);
+
         uint32_t u(msg->GetArg(0)->v_uint32);
         uint32_t length = msg->GetArg(1)->v_scalarArray.numElements;
         uint8_t firstByte = msg->GetArg(1)->v_scalarArray.v_byte[0];
@@ -199,7 +208,7 @@ static void usage(void)
               << "\t-h/-? display usage \n";
 }
 
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
     if (AllJoynInit() != ER_OK) {
         return 1;

@@ -47,8 +47,11 @@ using namespace ajn;
 
 static const char testData[] = "This is the message that we are going to encrypt and then decrypt and verify";
 
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
+    UNREFERENCED_PARAMETER(argc);
+    UNREFERENCED_PARAMETER(argv);
+
     if (AllJoynInit() != ER_OK) {
         return 1;
     }

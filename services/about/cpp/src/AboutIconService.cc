@@ -63,6 +63,8 @@ QStatus AboutIconService::Register() {
 }
 
 void AboutIconService::GetUrl(const ajn::InterfaceDescription::Member* member, ajn::Message& msg) {
+    UNREFERENCED_PARAMETER(member);
+
     QCC_DbgTrace(("AboutIconService::%s", __FUNCTION__));
     const ajn::MsgArg* args;
     size_t numArgs;
@@ -81,6 +83,8 @@ void AboutIconService::GetUrl(const ajn::InterfaceDescription::Member* member, a
 }
 
 void AboutIconService::GetContent(const ajn::InterfaceDescription::Member* member, ajn::Message& msg) {
+    UNREFERENCED_PARAMETER(member);
+
     QCC_DbgTrace(("AboutIconService::%s", __FUNCTION__));
     const ajn::MsgArg* args;
     size_t numArgs;

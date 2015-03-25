@@ -159,6 +159,8 @@ QStatus AboutObj::Unannounce() {
 }
 
 void AboutObj::GetAboutData(const ajn::InterfaceDescription::Member* member, ajn::Message& msg) {
+    UNREFERENCED_PARAMETER(member);
+
     QCC_DbgTrace(("AboutService::%s", __FUNCTION__));
     QStatus status = ER_OK;
     const ajn::MsgArg* args = NULL;
@@ -187,6 +189,8 @@ void AboutObj::GetAboutData(const ajn::InterfaceDescription::Member* member, ajn
 }
 
 void AboutObj::GetObjectDescription(const ajn::InterfaceDescription::Member* member, ajn::Message& msg) {
+    UNREFERENCED_PARAMETER(member);
+
     QCC_DbgTrace(("About::%s", __FUNCTION__));
     const ajn::MsgArg* args = 0;
     size_t numArgs = 0;

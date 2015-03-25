@@ -33,6 +33,8 @@ static QCC_BOOL name_owner_changed_flag = QCC_FALSE;
 /* Exposed methods */
 static void AJ_CALL ping_method(alljoyn_busobject bus, const alljoyn_interfacedescription_member* member, alljoyn_message msg)
 {
+    UNREFERENCED_PARAMETER(member);
+
     alljoyn_msgarg outArg = alljoyn_msgarg_create();
     alljoyn_msgarg inArg = alljoyn_message_getarg(msg, 0);
     const char* str;
@@ -46,6 +48,10 @@ static void AJ_CALL ping_method(alljoyn_busobject bus, const alljoyn_interfacede
 /* NameOwnerChanged callback */
 static void AJ_CALL name_owner_changed(const void* context, const char* busName, const char* previousOwner, const char* newOwner)
 {
+    UNREFERENCED_PARAMETER(context);
+    UNREFERENCED_PARAMETER(previousOwner);
+    UNREFERENCED_PARAMETER(newOwner);
+
     if (strcmp(busName, OBJECT_NAME) == 0) {
         name_owner_changed_flag = QCC_TRUE;
     }

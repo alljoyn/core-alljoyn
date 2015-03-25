@@ -77,12 +77,12 @@ class RWLock {
     /**
      * Rwlock copy constructor creates a new rwlock.
      */
-    RWLock(const RWLock& other) { Init(); }
+    RWLock(const RWLock&) { Init(); }
 
     /**
      * Rwlock assignment operator.
      */
-    RWLock& operator=(const RWLock& other) { Init(); return *this; }
+    RWLock& operator=(const RWLock&) { Init(); return *this; }
 
   private:
     SRWLOCK rwlock;         ///< The Windows "slim reader/writer" (SRW) lock object.

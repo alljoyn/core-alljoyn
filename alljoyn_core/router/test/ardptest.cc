@@ -81,6 +81,7 @@ static volatile sig_atomic_t g_interrupt = false;
 
 static void CDECL_CALL SigIntHandler(int sig)
 {
+    UNREFERENCED_PARAMETER(sig);
     g_interrupt = true;
 }
 
@@ -151,6 +152,9 @@ void GetData(ArdpRcvBuf* rcv) {
 
 bool AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t ipPort, ArdpConnRecord* conn, uint8_t* buf, uint16_t len, QStatus status)
 {
+    UNREFERENCED_PARAMETER(handle);
+    UNREFERENCED_PARAMETER(len);
+
     printf("Inside Accept callback, we received a SYN from %s:%d, the message is \"%s\", status %s \n", ipAddr.ToString().c_str(), ipPort, (char*)buf, QCC_StatusText(status));
     printf("Connection no is  %d, conn pointer is   %p \n", g_conn, conn);
     connList[g_conn] = conn;
@@ -170,6 +174,8 @@ bool AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t ipPort, ArdpCo
 
 void ConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool passive, uint8_t* buf, uint16_t len, QStatus status)
 {
+    UNREFERENCED_PARAMETER(handle);
+
     printf("Looks like I have connected... conn=%p is passive=%s , the message(len = %d) is \"%s\", status is %s \n", conn, (passive) ? "true" : "false", len, (char*)buf, QCC_StatusText(status));
     if (!passive) {
         printf("Connection no is  %d, conn pointer is   %p \n", g_conn, conn);
@@ -180,6 +186,8 @@ void ConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool passive, uint8_t* 
 
 void DisconnectCb(ArdpHandle* handle, ArdpConnRecord* conn, QStatus status)
 {
+    UNREFERENCED_PARAMETER(handle);
+
     printf("Looks like I have disconnected conn = %p, reason = %s\n", conn, QCC_StatusText(status));
     RecvMapQueue.erase(conn);
     RemoveConn(conn);
@@ -187,6 +195,9 @@ void DisconnectCb(ArdpHandle* handle, ArdpConnRecord* conn, QStatus status)
 
 void RecvCb(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf* rcv, QStatus status)
 {
+    UNREFERENCED_PARAMETER(handle);
+    UNREFERENCED_PARAMETER(status);
+
     printf("RECV- %u conn = %p \n", rcv->seq, conn);
 
     RecvMapQueue[conn].push(rcv);
@@ -194,11 +205,17 @@ void RecvCb(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf* rcv, QStatus s
 
 void SendCb(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint32_t len, QStatus status)
 {
+    UNREFERENCED_PARAMETER(handle);
+    UNREFERENCED_PARAMETER(buf);
+    UNREFERENCED_PARAMETER(status);
+
     printf("SENT- %u, conn = %p \n", len, conn);
 }
 
 void SendWindowCb(ArdpHandle* handle, ArdpConnRecord* conn, uint16_t window, QStatus status)
 {
+    UNREFERENCED_PARAMETER(handle);
+    UNREFERENCED_PARAMETER(status);
     printf("WINDOW RECEIVED-  %u, conn = %p \n", window, conn);
 }
 
@@ -212,6 +229,7 @@ class ThreadClass : public Thread {
 
   protected:
     qcc::ThreadReturn STDCALL Run(void* arg) {
+        UNREFERENCED_PARAMETER(arg);
 
         while ((!g_interrupt) && (IsRunning())) {
             uint32_t ms;
@@ -250,7 +268,7 @@ static void usage() {
     printf("list \n");
 }
 
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
     if (AllJoynInit() != ER_OK) {
         return 1;
@@ -488,7 +506,7 @@ int main(int argc, char** argv)
                 uint32_t t_connno = StringToU32(connno, 0, 0);
                 if (FindConn(t_connno)) {
 
-                    while (true) {
+                    for (;;) {
                         uint32_t length = random() % (135000);
                         uint8_t* buffer = new uint8_t[length];
                         status = ARDP_Send(handle, connList[t_connno], buffer, length, 0);

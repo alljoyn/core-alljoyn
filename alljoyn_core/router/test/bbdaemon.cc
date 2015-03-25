@@ -75,6 +75,7 @@ static volatile sig_atomic_t g_interrupt = false;
 
 static void CDECL_CALL SigIntHandler(int sig)
 {
+    UNREFERENCED_PARAMETER(sig);
     g_interrupt = true;
 }
 
@@ -155,6 +156,8 @@ class LocalTestObject : public BusObject {
 
     void NameAcquiredCB(Message& msg, void* context)
     {
+        UNREFERENCED_PARAMETER(msg);
+        UNREFERENCED_PARAMETER(context);
         /* Advertise the new name */
 
     }
@@ -163,6 +166,9 @@ class LocalTestObject : public BusObject {
                        const char* sourcePath,
                        Message& msg)
     {
+        UNREFERENCED_PARAMETER(member);
+        UNREFERENCED_PARAMETER(msg);
+
         map<qcc::String, size_t>::const_iterator it;
 
         ++rxCounts[sourcePath];
@@ -176,6 +182,7 @@ class LocalTestObject : public BusObject {
 
     void Ping(const InterfaceDescription::Member* member, Message& msg)
     {
+        UNREFERENCED_PARAMETER(member);
         /* Reply with same string that was sent to us */
         MsgArg arg(*(msg->GetArg(0)));
         printf("Pinged with: %s\n", msg->GetArg(0)->ToString().c_str());
@@ -187,6 +194,8 @@ class LocalTestObject : public BusObject {
 
     QStatus Get(const char* ifcName, const char* propName, MsgArg& val)
     {
+        UNREFERENCED_PARAMETER(ifcName);
+
         QStatus status = ER_OK;
         if (0 == strcmp("int_val", propName)) {
             // val.Set("i", prop_int_val);
@@ -210,6 +219,8 @@ class LocalTestObject : public BusObject {
 
     QStatus Set(const char* ifcName, const char* propName, MsgArg& val)
     {
+        UNREFERENCED_PARAMETER(ifcName);
+
         QStatus status = ER_OK;
         if ((0 == strcmp("int_val", propName)) && (val.typeId == ALLJOYN_INT32)) {
             prop_int_val = val.v_int32;
@@ -267,6 +278,8 @@ static const char privKey[] = {
 
 class MyAuthListener : public AuthListener {
     bool RequestCredentials(const char* authMechanism, const char* authPeer, uint16_t authCount, const char* userId, uint16_t credMask, Credentials& creds) {
+        UNREFERENCED_PARAMETER(authPeer);
+        UNREFERENCED_PARAMETER(authCount);
 
         if (strcmp(authMechanism, "ALLJOYN_SRP_KEYX") == 0) {
             if (credMask & AuthListener::CRED_PASSWORD) {
@@ -317,6 +330,7 @@ class MyAuthListener : public AuthListener {
     }
 
     bool VerifyCredentials(const char* authMechanism, const char* authPeer, const Credentials& creds) {
+        UNREFERENCED_PARAMETER(authPeer);
         if (strcmp(authMechanism, "ALLJOYN_RSA_KEYX") == 0) {
             if (creds.IsSet(AuthListener::CRED_CERT_CHAIN)) {
                 printf("Verify\n%s\n", creds.GetCertChain().c_str());
@@ -327,6 +341,7 @@ class MyAuthListener : public AuthListener {
     }
 
     void AuthenticationComplete(const char* authMechanism, const char* authPeer, bool success) {
+        UNREFERENCED_PARAMETER(authPeer);
         printf("Authentication %s %s\n", authMechanism, success ? "succesful" : "failed");
     }
 
@@ -355,7 +370,7 @@ static void usage(void)
 #if defined(ROUTER_LIB)
 extern "C" int DaemonMain(int argc, char** argv)
 #else
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 #endif
 {
     if (AllJoynInit() != ER_OK) {

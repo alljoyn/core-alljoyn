@@ -32,6 +32,7 @@ using namespace qcc;
 static volatile sig_atomic_t s_interrupt = false;
 
 static void CDECL_CALL SigIntHandler(int sig) {
+    UNREFERENCED_PARAMETER(sig);
     s_interrupt = true;
 }
 
@@ -110,6 +111,7 @@ class AboutThread : public Thread, public ThreadListener {
 
     ThreadReturn STDCALL Run(void* args)
     {
+        UNREFERENCED_PARAMETER(args);
         QStatus status = ER_OK;
 
         SessionListener sessionListener;
@@ -246,8 +248,11 @@ class MyAboutListener : public AboutListener {
     }
 };
 
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
+    UNREFERENCED_PARAMETER(argc);
+    UNREFERENCED_PARAMETER(argv);
+
     if (AllJoynInit() != ER_OK) {
         return 1;
     }

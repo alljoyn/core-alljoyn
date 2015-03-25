@@ -114,6 +114,8 @@ void MakeSockAddr(const IPAddress& addr,
 QStatus GetSockAddr(const SOCKADDR_STORAGE* addrBuf, socklen_t addrSize,
                     IPAddress& addr, uint16_t& port)
 {
+    UNREFERENCED_PARAMETER(addrSize);
+
     QStatus status = ER_OK;
     char hostname[NI_MAXHOST];
     char servInfo[NI_MAXSERV];
@@ -215,6 +217,8 @@ QStatus Connect(SocketFd sockfd, const IPAddress& remoteAddr, uint16_t remotePor
 
 QStatus Connect(SocketFd sockfd, const char* pathName)
 {
+    UNREFERENCED_PARAMETER(sockfd);
+    UNREFERENCED_PARAMETER(pathName);
     return ER_NOT_IMPLEMENTED;
 }
 
@@ -241,6 +245,8 @@ QStatus Bind(SocketFd sockfd, const IPAddress& localAddr, uint16_t localPort)
 
 QStatus Bind(SocketFd sockfd, const char* pathName)
 {
+    UNREFERENCED_PARAMETER(sockfd);
+    UNREFERENCED_PARAMETER(pathName);
     return ER_NOT_IMPLEMENTED;
 }
 

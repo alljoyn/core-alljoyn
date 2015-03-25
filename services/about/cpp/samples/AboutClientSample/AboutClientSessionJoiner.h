@@ -42,6 +42,8 @@ class AboutClientSessionJoiner : public ajn::BusAttachment::JoinSessionAsyncCB {
     void JoinSessionCB(QStatus status, ajn::SessionId id, const ajn::SessionOpts& opts, void* context);
 
   private:
+    /* Private assigment operator - does nothing */
+    AboutClientSessionJoiner operator=(const AboutClientSessionJoiner&);
 
     ajn::BusAttachment& bus;
 

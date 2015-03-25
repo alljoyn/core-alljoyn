@@ -624,6 +624,7 @@ QStatus BusAttachment::Disconnect()
 
 QStatus BusAttachment::Disconnect(const char* connectSpec)
 {
+    UNREFERENCED_PARAMETER(connectSpec);
     return Disconnect();
 }
 
@@ -1827,6 +1828,7 @@ void BusAttachment::Internal::JoinSessionCB(QStatus status, SessionId sessionId,
 }
 
 void BusAttachment::ClearSessionSet(SessionId sessionId, SessionSideMask bitset) {
+    UNREFERENCED_PARAMETER(bitset);
 
     for (size_t i = 0; i < sizeof(busInternal->sessionSet) / sizeof(busInternal->sessionSet[0]); ++i) {
         busInternal->sessionSetLock[i].Lock(MUTEX_CONTEXT);
@@ -2211,6 +2213,8 @@ void BusAttachment::Internal::AllJoynSignalHandler(const InterfaceDescription::M
                                                    const char* srcPath,
                                                    Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
+    UNREFERENCED_PARAMETER(srcPath);
     /* Dispatch thread for BusListener callbacks */
     size_t numArgs;
     const MsgArg* args;

@@ -73,6 +73,8 @@ class SvcTestObject : public BusObject {
 
     void Ping(const InterfaceDescription::Member* member, Message& msg)
     {
+        UNREFERENCED_PARAMETER(member);
+
         char* value = NULL;
         const MsgArg* arg((msg->GetArg(0)));
         QStatus status = arg->Get("s", &value);
@@ -86,6 +88,8 @@ class SvcTestObject : public BusObject {
 
     void GetProp(const InterfaceDescription::Member* member, Message& msg)
     {
+        UNREFERENCED_PARAMETER(member);
+
         QStatus status = ER_OK;
         const InterfaceDescription* Intf2 = bus.GetInterface(interface2);
         EXPECT_TRUE(Intf2 != NULL);
@@ -109,6 +113,8 @@ class SvcTestObject : public BusObject {
 
     void SetProp(const InterfaceDescription::Member* member, Message& msg)
     {
+        UNREFERENCED_PARAMETER(member);
+
         QStatus status = ER_OK;
         const InterfaceDescription* Intf2 = bus.GetInterface(interface2);
         EXPECT_TRUE(Intf2 != NULL);
@@ -196,6 +202,10 @@ class ObjectSecurityTest : public testing::Test, public AuthListener {
   private:
 
     bool RequestCredentials(const char* authMechanism, const char* authPeer, uint16_t authCount, const char* userId, uint16_t credMask, Credentials& creds) {
+        UNREFERENCED_PARAMETER(authPeer);
+        UNREFERENCED_PARAMETER(authCount);
+        UNREFERENCED_PARAMETER(userId);
+
         EXPECT_STREQ("ALLJOYN_SRP_KEYX", authMechanism);
         if (credMask & AuthListener::CRED_PASSWORD) {
             creds.SetPassword("123456");
@@ -204,6 +214,8 @@ class ObjectSecurityTest : public testing::Test, public AuthListener {
     }
 
     void AuthenticationComplete(const char* authMechanism, const char* authPeer, bool success) {
+        UNREFERENCED_PARAMETER(authPeer);
+
         EXPECT_STREQ("ALLJOYN_SRP_KEYX", authMechanism);
         EXPECT_TRUE(success);
         authComplete = true;
@@ -1787,6 +1799,9 @@ class ObjectSecurityTestSignalReceiver : public MessageReceiver {
     }
 
     void SignalHandler(const InterfaceDescription::Member* member, const char* sourcePath, Message& msg) {
+        UNREFERENCED_PARAMETER(member);
+        UNREFERENCED_PARAMETER(sourcePath);
+
         if (msg->IsEncrypted()) {
             msgEncrypted = true;;
         }
@@ -2265,6 +2280,8 @@ class GrandParentTestObject : public BusObject {
 
     void GrandParentPing(const InterfaceDescription::Member* member, Message& msg)
     {
+        UNREFERENCED_PARAMETER(member);
+
         char* value = NULL;
         const MsgArg* arg((msg->GetArg(0)));
         QStatus status = arg->Get("s", &value);
@@ -2317,6 +2334,8 @@ class ParentTestObject : public BusObject {
 
     void ParentPing(const InterfaceDescription::Member* member, Message& msg)
     {
+        UNREFERENCED_PARAMETER(member);
+
         char* value = NULL;
         const MsgArg* arg((msg->GetArg(0)));
         QStatus status = arg->Get("s", &value);
@@ -2368,6 +2387,8 @@ class ChildTestObject : public BusObject {
 
     void ChildPing(const InterfaceDescription::Member* member, Message& msg)
     {
+        UNREFERENCED_PARAMETER(member);
+
         char* value = NULL;
         const MsgArg* arg((msg->GetArg(0)));
         QStatus status = arg->Get("s", &value);

@@ -53,11 +53,14 @@ using namespace std;
 namespace ajn {
 
 /** Type definition for a METHOD message handler */
+//Pack option to resolve "alignment of a member was sensitive to packing" warning
+#pragma pack(push, MethodContext, 4)
 typedef struct {
     const InterfaceDescription::Member* member;   /**< Pointer to method's member */
     MessageReceiver::MethodHandler handler;       /**< Method implementation */
     void* context;
 } MethodContext;
+#pragma pack(pop, MethodContext)
 
 struct BusObject::Components {
     /** The interfaces this object implements */
@@ -186,6 +189,8 @@ qcc::String BusObject::GenerateIntrospection(const char* languageTag, bool deep,
 
 void BusObject::GetProp(const InterfaceDescription::Member* member, Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
+
     QStatus status;
     const MsgArg* iface = msg->GetArg(0);
     const MsgArg* property = msg->GetArg(1);
@@ -335,6 +340,8 @@ QStatus BusObject::EmitPropChanged(const char* ifcName, const char** propNames, 
 
 void BusObject::SetProp(const InterfaceDescription::Member* member, Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
+
     QStatus status = ER_BUS_NO_SUCH_PROPERTY;
     const MsgArg* iface = msg->GetArg(0);
     const MsgArg* property = msg->GetArg(1);
@@ -374,6 +381,8 @@ void BusObject::SetProp(const InterfaceDescription::Member* member, Message& msg
 
 void BusObject::GetAllProps(const InterfaceDescription::Member* member, Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
+
     QStatus status = ER_OK;
     const MsgArg* iface = msg->GetArg(0);
     MsgArg vals;
@@ -432,6 +441,8 @@ void BusObject::GetAllProps(const InterfaceDescription::Member* member, Message&
 
 void BusObject::Introspect(const InterfaceDescription::Member* member, Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
+
     qcc::String xml = org::freedesktop::DBus::Introspectable::IntrospectDocType;
     xml += "<node>\n";
     if (isSecure) {
@@ -920,6 +931,8 @@ const char* BusObject::GetDescription(const char* toLanguage, qcc::String& buffe
 
 void BusObject::IntrospectWithDescription(const InterfaceDescription::Member* member, Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
+
     qcc::String buffer;
     char* langTag;
     msg->GetArgs("s", &langTag);
@@ -956,6 +969,8 @@ void mergeTranslationLanguages(Translator* t, std::set<qcc::String>& langs)
 
 void BusObject::GetDescriptionLanguages(const InterfaceDescription::Member* member, Message& msg)
 {
+    UNREFERENCED_PARAMETER(member);
+
     std::set<qcc::String> langs;
     bool hasDescription = false;
     bool someoneHasNoTranslator = false;

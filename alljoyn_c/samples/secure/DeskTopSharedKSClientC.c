@@ -161,7 +161,7 @@ void AJ_CALL authentication_complete(const void* context, const char* authMechan
 }
 
 /** Main entry point */
-int main(int argc, char** argv, char** envArg)
+int CDECL_CALL main(int argc, char** argv, char** envArg)
 {
     QStatus status = ER_OK;
     alljoyn_interfacedescription testIntf = NULL;
