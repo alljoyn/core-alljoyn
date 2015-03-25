@@ -162,6 +162,11 @@ struct ObserverManager::UnregisterObserverWork : public ObserverManager::WorkIte
     void Execute() {
         mgr->ProcessUnregisterObserver(observer);
     }
+  private:
+    /* Private copy constructor and assign operator to prevent double free */
+    UnregisterObserverWork(const UnregisterObserverWork&);
+    UnregisterObserverWork& operator=(const UnregisterObserverWork&);
+
 };
 
 struct ObserverManager::EnablePendingListenersWork : public ObserverManager::WorkItem {
