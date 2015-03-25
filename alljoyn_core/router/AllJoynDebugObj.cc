@@ -153,6 +153,8 @@ QStatus AllJoynDebugObj::Get(const char* ifcName, const char* propName, MsgArg& 
 
 QStatus AllJoynDebugObj::Set(const char* ifcName, const char* propName, MsgArg& val)
 {
+    QCC_UNUSED(ifcName);
+
     PropertyStore::const_iterator it = properties.find(propName);
     if (it == properties.end()) {
         return ER_BUS_NO_SUCH_PROPERTY;
@@ -203,6 +205,8 @@ void AllJoynDebugObj::ObjectRegistered() {
  */
 void AllJoynDebugObj::SetDebugLevel(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
+
     const qcc::String guid(busController->GetBus().GetInternal().GetGlobalGUID().ToShortString());
     qcc::String sender(msg->GetSender());
     // Only allow local connections to set the debug level

@@ -42,7 +42,7 @@ AboutIconClient::AboutIconClient(ajn::BusAttachment& bus)
         InterfaceDescription* p_InterfaceDescription = NULL;
         status = m_BusAttachment->CreateInterface(ABOUT_ICON_INTERFACE_NAME, p_InterfaceDescription, false);
         if (p_InterfaceDescription && status == ER_OK) {
-            do {
+            for (;;) {
                 status  = p_InterfaceDescription->AddMethod("GetUrl", NULL, "s", "url");
                 if (status != ER_OK) {
                     break;
@@ -65,7 +65,7 @@ AboutIconClient::AboutIconClient(ajn::BusAttachment& bus)
                 }
                 p_InterfaceDescription->Activate();
                 return;
-            } while (0);
+            }
         }
         QCC_DbgPrintf(("AboutIconClient::AboutIconClient - interface=[%s] could not be created. status=[%s]",
                        ABOUT_ICON_INTERFACE_NAME, QCC_StatusText(status)));

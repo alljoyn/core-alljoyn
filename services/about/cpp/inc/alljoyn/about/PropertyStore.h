@@ -105,6 +105,9 @@ class PropertyStore {
      * @return status
      */
     QCC_DEPRECATED(virtual QStatus Update(const char* name, const char* languageTag, const ajn::MsgArg * value)) {
+        QCC_UNUSED(name);
+        QCC_UNUSED(languageTag);
+        QCC_UNUSED(value);
         return ER_NOT_IMPLEMENTED;
     }
     /**
@@ -119,6 +122,8 @@ class PropertyStore {
      * @return[in] status
      */
     QCC_DEPRECATED(virtual QStatus Delete(const char* name, const char* languageTag)) {
+        QCC_UNUSED(name);
+        QCC_UNUSED(languageTag);
         return ER_NOT_IMPLEMENTED;
     }
     /**

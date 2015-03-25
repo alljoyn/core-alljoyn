@@ -63,6 +63,7 @@ static TransportMask s_transports = TRANSPORT_ANY;
 
 static void CDECL_CALL SigIntHandler(int sig)
 {
+    QCC_UNUSED(sig);
     g_interrupt = true;
 }
 
@@ -102,6 +103,7 @@ class BasicSampleObject : public BusObject {
 
     void Cat(const InterfaceDescription::Member* member, Message& msg)
     {
+        QCC_UNUSED(member);
         /* Concatenate the two input strings and reply with the result. */
         qcc::String inStr1 = msg->GetArg(0)->v_string.str;
         qcc::String inStr2 = msg->GetArg(1)->v_string.str;
@@ -239,6 +241,8 @@ class ClientAboutListener : public AboutListener {
 
     void Announced(const char* busName, uint16_t version, SessionPort port,
                    const MsgArg& objectDescriptionArg, const MsgArg& aboutDataArg) {
+        QCC_UNUSED(version);
+        QCC_UNUSED(objectDescriptionArg);
 
         MyAboutData ad;
         ad.CreatefromMsgArg(aboutDataArg);
@@ -291,6 +295,7 @@ class ServiceBusListener : public BusListener, public SessionPortListener {
 
     bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts)
     {
+        QCC_UNUSED(sessionPort);
         cout << "Accepting join session request from " << joiner << " (opts.transports=" << opts.transports << ")" << endl;
         return true;
     }
@@ -627,7 +632,7 @@ static void usage(void)
 }
 
 /** Main entry point */
-int main(int argc, char**argv)
+int CDECL_CALL main(int argc, char**argv)
 {
     if (AllJoynInit() != ER_OK) {
         return 1;

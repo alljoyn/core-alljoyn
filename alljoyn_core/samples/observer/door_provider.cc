@@ -38,6 +38,9 @@ SessionPort port = 123;
 
 class SPL : public SessionPortListener {
     virtual bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) {
+        QCC_UNUSED(sessionPort);
+        QCC_UNUSED(joiner);
+        QCC_UNUSED(opts);
         return true;
     }
 };
@@ -173,6 +176,8 @@ class Door : public BusObject {
 
     void Open(const InterfaceDescription::Member* member, Message& msg)
     {
+        QCC_UNUSED(member);
+
         cout << "Door @ " << location.c_str() << " was requested to open." << endl;
         if (open) {
             cout << "\t... but it was already open." << endl;
@@ -191,6 +196,8 @@ class Door : public BusObject {
 
     void Close(const InterfaceDescription::Member* member, Message& msg)
     {
+        QCC_UNUSED(member);
+
         cout << "Door @ " << location.c_str() << " was requested to close." << endl;
         if (open) {
             cout << "\t... and it was open, so we can comply." << endl;
@@ -209,6 +216,9 @@ class Door : public BusObject {
 
     void KnockAndRun(const InterfaceDescription::Member* member, Message& msg)
     {
+        QCC_UNUSED(member);
+        QCC_UNUSED(msg);
+
         if (!open) {
             // see who's there
             cout << "Someone knocked on door @ " << location.c_str() << endl;
@@ -271,9 +281,8 @@ static void help()
     cout << "h         show this help message" << endl;
 }
 
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
-
     /* parse command line arguments */
     if (argc == 1) {
         cerr << "Usage: " << argv[0] << " location1 [location2 [... [locationN] ...]]" << endl;

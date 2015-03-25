@@ -118,7 +118,7 @@ if env['VARIANT'] == 'debug':
    # (/MDd') to prevent build errors. 
    env.Append(CPPDEFINES=['_DEBUG', ('_ITERATOR_DEBUG_LEVEL', 2)])
    env.Append(CFLAGS=['/MDd', '/Od'])
-   env.Append(CXXFLAGS=['/MDd', '/Od', '/Ob1', '/W2', '/WX'])
+   env.Append(CXXFLAGS=['/MDd', '/Od', '/Ob1', '/W4', '/WX'])
    env.Append(LINKFLAGS=['/debug'])
    env.Append(JAVACFLAGS='-g -Xlint -Xlint:-serial')
 else:
@@ -126,7 +126,7 @@ else:
    if env['MSVC_VERSION'] >= '10.0':
        env.Append(CPPDEFINES=[('_ITERATOR_DEBUG_LEVEL', 0)])
    env.Append(CFLAGS=['/MD', '/Gy', '/O1', '/Ob2'])
-   env.Append(CXXFLAGS=['/MD', '/Gy', '/O1', '/Ob2', '/W2', '/WX'])
+   env.Append(CXXFLAGS=['/MD', '/Gy', '/O1', '/Ob2', '/W4', '/WX'])
    env.Append(LINKFLAGS=['/opt:ref'])
    env.Append(JAVACFLAGS='-Xlint -Xlint:-serial')
 

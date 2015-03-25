@@ -94,6 +94,7 @@ struct _PropertiesChangedCB {
     void* context;
     set<StringMapKey> properties;  // Properties to monitor - empty set == all properties.
     bool isRegistered;
+    _PropertiesChangedCB& operator=(const _PropertiesChangedCB&) { return *this; }
 };
 
 typedef ManagedObj<_PropertiesChangedCB> PropertiesChangedCB;
@@ -685,7 +686,11 @@ QStatus ProxyBusObject::UnregisterPropertiesChangedListener(const char* iface,
 
 void ProxyBusObject::PropertiesChangedHandler(const InterfaceDescription::Member* member, const char* srcPath, Message& message)
 {
+    QCC_UNUSED(member);
+    QCC_UNUSED(srcPath);
+
     QCC_DbgTrace(("ProxyBusObject::PropertiesChangedHandler(member = %s, srcPath = %s, message = <>)", member->name.c_str(), srcPath));
+
     const char* ifaceName;
     MsgArg* changedProps;
     size_t numChangedProps;

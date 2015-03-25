@@ -203,6 +203,9 @@ void Bus::NameOwnerChanged(const qcc::String& alias,
                            const qcc::String* oldOwner, SessionOpts::NameTransferType oldOwnerNameTransfer,
                            const qcc::String* newOwner, SessionOpts::NameTransferType newOwnerNameTransfer)
 {
+    QCC_UNUSED(oldOwnerNameTransfer);
+    QCC_UNUSED(newOwnerNameTransfer);
+
     listenersLock.Lock(MUTEX_CONTEXT);
     set<ProtectedBusListener>::iterator it = busListeners.begin();
     while (it != busListeners.end()) {
