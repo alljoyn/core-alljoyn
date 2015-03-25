@@ -18,6 +18,7 @@
 #include <string.h>
 #include <qcc/BigNum.h>
 #include <alljoyn/Init.h>
+#include <alljoyn/Status.h>
 
 using namespace qcc;
 
@@ -88,7 +89,7 @@ static const char Prime50[] = "BC5A136B0D466A89DEB3128C9EC165E3185E1CD887944721F
 
 static const uint8_t zeroes[256] = { 0 };
 
-int main()
+int CDECL_CALL main()
 {
     if (AllJoynInit() != ER_OK) {
         return 1;

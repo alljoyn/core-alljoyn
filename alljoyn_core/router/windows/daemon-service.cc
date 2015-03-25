@@ -30,6 +30,9 @@ BOOL APIENTRY DllMain(HMODULE hModule,
                       LPVOID lpReserved
                       )
 {
+    QCC_UNUSED(hModule);
+    QCC_UNUSED(lpReserved);
+
     switch (ul_reason_for_call) {
     case DLL_PROCESS_ATTACH:
     case DLL_THREAD_ATTACH:

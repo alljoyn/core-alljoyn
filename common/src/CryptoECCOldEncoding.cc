@@ -43,6 +43,12 @@ namespace qcc {
 #ifdef ECC_TEST
 #define COND_STATIC
 #else /* ECC_TEST not defined */
+
+//disable warning : nonstandard extension used : redefined extern to static
+#pragma warning( disable: 4211 )
+//disable warning : unreferenced local function has been removed
+#pragma warning( disable: 4505 )
+
 #define COND_STATIC static
 #endif /* ECC_TEST not defined */
 

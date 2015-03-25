@@ -61,14 +61,14 @@ class _BusEndpoint : public MessageSink {
     /**
      * Default constructor initializes an invalid endpoint
      */
-    _BusEndpoint() : endpointType(ENDPOINT_TYPE_INVALID), isValid(false), disconnectStatus(ER_OK), userId(-1), groupId(-1) { }
+    _BusEndpoint() : endpointType(ENDPOINT_TYPE_INVALID), isValid(false), disconnectStatus(ER_OK), userId((uint32_t)-1), groupId((uint32_t)-1) { }
 
     /**
      * Constructor.
      *
      * @param type    BusEndpoint type.
      */
-    _BusEndpoint(EndpointType type) : endpointType(type), isValid(type != ENDPOINT_TYPE_INVALID), disconnectStatus(ER_OK), userId(-1), groupId(-1) { }
+    _BusEndpoint(EndpointType type) : endpointType(type), isValid(type != ENDPOINT_TYPE_INVALID), disconnectStatus(ER_OK), userId((uint32_t)-1), groupId((uint32_t)-1) { }
 
     /**
      * Virtual destructor for derivable class.
@@ -92,7 +92,10 @@ class _BusEndpoint : public MessageSink {
      *
      * @return ER_OK if successful
      */
-    virtual QStatus PushMessage(Message& msg) { return ER_NOT_IMPLEMENTED; }
+    virtual QStatus PushMessage(Message& msg) {
+        QCC_UNUSED(msg);
+        return ER_NOT_IMPLEMENTED;
+    }
 
     /**
      * Get the endpoint's unique name.
@@ -149,7 +152,7 @@ class _BusEndpoint : public MessageSink {
      *
      * @return  Process ID number.
      */
-    virtual uint32_t GetProcessId() const { return -1; }
+    virtual uint32_t GetProcessId() const { return (uint32_t)-1; }
 
     /**
      * Indicates if the endpoint supports reporting UNIX style user, group, and process IDs.

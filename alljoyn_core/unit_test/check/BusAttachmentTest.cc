@@ -54,6 +54,14 @@ class TestDBusObj : public ProxyBusObject {
   public:
     virtual QStatus MethodCall(const char* ifaceName, const char* methodName, const MsgArg* args, size_t numArgs,
                                Message& replyMsg, uint32_t timeout = DefaultCallTimeout, uint8_t flags = 0) const {
+        QCC_UNUSED(ifaceName);
+        QCC_UNUSED(methodName);
+        QCC_UNUSED(args);
+        QCC_UNUSED(numArgs);
+        QCC_UNUSED(replyMsg);
+        QCC_UNUSED(timeout);
+        QCC_UNUSED(flags);
+
         return ER_OK;
     }
 };
@@ -71,10 +79,17 @@ class TestBusAttachment : public BusAttachment {
             actualConnectSpec = requestedConnectSpec;
             return ER_OK;
         }
-        virtual QStatus TransportDisconnect(const char* connectSpec) { return ER_OK; }
+        virtual QStatus TransportDisconnect(const char* connectSpec) {
+            QCC_UNUSED(connectSpec);
+            return ER_OK;
+        }
         virtual const ProxyBusObject& GetDBusProxyObj() const { return dbusObj; }
         virtual QStatus RegisterSignalHandler(MessageReceiver* receiver, MessageReceiver::SignalHandler signalHandler,
                                               const InterfaceDescription::Member* member, const char* matchRule) {
+            QCC_UNUSED(receiver);
+            QCC_UNUSED(signalHandler);
+            QCC_UNUSED(matchRule);
+
             if (member->name == "NameOwnerChanged") {
                 ++bus.nameOwnerChangedHandlerRegistered;
             }
@@ -82,6 +97,9 @@ class TestBusAttachment : public BusAttachment {
         }
         virtual QStatus UnregisterSignalHandler(MessageReceiver* receiver, MessageReceiver::SignalHandler signalHandler,
                                                 const InterfaceDescription::Member* member, const char* matchRule) {
+            QCC_UNUSED(receiver);
+            QCC_UNUSED(signalHandler);
+            QCC_UNUSED(matchRule);
             if (member->name == "NameOwnerChanged") {
                 --bus.nameOwnerChangedHandlerRegistered;
             }

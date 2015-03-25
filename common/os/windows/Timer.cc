@@ -89,6 +89,8 @@ class TimerImpl {
     Mutex reentrantLock;                /* This must not be acquired while timersLock is held (deadlock) */
     mutable Mutex timersLock;           /* Declared mutable because HasAlarm is const */
     std::list<TimerContext> timers;
+    /* Private assigment operator - does nothing */
+    TimerImpl& operator=(const TimerImpl&);
 };
 
 }

@@ -66,7 +66,7 @@ class _RemoteEndpoint::Internal {
         listener(NULL),
         connSpec(connectSpec),
         incoming(incoming),
-        processId(-1),
+        processId((uint32_t)-1),
         alljoynVersion(0),
         refCount(0),
         isSocket(isSocket),
@@ -142,6 +142,8 @@ class _RemoteEndpoint::Internal {
                                                   - used on Routing nodes only */
     size_t numControlMessages;               /**< Number of control messages in txQueue - used on Routing nodes only */
     size_t numDataMessages;                  /**< Number of data messages in txQueue - used on Routing nodes only */
+  private:
+    Internal& operator=(const Internal&);
 };
 
 
@@ -299,6 +301,7 @@ QStatus _RemoteEndpoint::Establish(const qcc::String& authMechanisms, qcc::Strin
 
 QStatus _RemoteEndpoint::SetLinkTimeout(uint32_t& idleTimeout)
 {
+    QCC_UNUSED(idleTimeout);
     if (internal) {
         internal->idleTimeout = 0;
     }
@@ -365,6 +368,8 @@ QStatus _RemoteEndpoint::SetLinkTimeout(uint32_t idleTimeout, uint32_t probeTime
 }
 QStatus _RemoteEndpoint::SetIdleTimeouts(uint32_t& idleTimeout, uint32_t& probeTimeout)
 {
+    QCC_UNUSED(idleTimeout);
+    QCC_UNUSED(probeTimeout);
     if (internal) {
         internal->idleTimeout = 0;
         internal->probeTimeout = 0;
@@ -534,7 +539,7 @@ QStatus _RemoteEndpoint::StopAfterTxEmpty(uint32_t maxWaitMs)
 
     /* Wait for txqueue to empty before triggering stop */
     internal->lock.Lock(MUTEX_CONTEXT);
-    while (true) {
+    for (;;) {
         if (internal->txQueue.empty() || (maxWaitMs && (qcc::GetTimestamp() > (startTime + maxWaitMs)))) {
             status = Stop();
             break;
@@ -680,6 +685,7 @@ void _RemoteEndpoint::ExitCallback()
 
 QStatus _RemoteEndpoint::ReadCallback(qcc::Source& source, bool isTimedOut)
 {
+    QCC_UNUSED(source);
     assert(minimalEndpoint == false && "_RemoteEndpoint::ReadCallback(): Where did a callback come from if no thread?");
     /* Remote endpoints can be invalid if they were created with the default
      * constructor or being torn down. Return ER_BUS_NO_ENDPOINT only if the
@@ -886,6 +892,7 @@ QStatus _RemoteEndpoint::ReadCallback(qcc::Source& source, bool isTimedOut)
  */
 QStatus _RemoteEndpoint::WriteCallback(qcc::Sink& sink, bool isTimedOut)
 {
+    QCC_UNUSED(sink);
     assert(minimalEndpoint == false && "_RemoteEndpoint::WriteCallback(): Where did a callback come from if no thread?");
 
     /* Remote endpoints can be invalid if they were created with the default
@@ -1028,7 +1035,7 @@ QStatus _RemoteEndpoint::PushMessageRouter(Message& msg, size_t& count)
             thread->AddAuxListener(this);
             internal->txWaitQueue.push_front(thread);
 
-            while (true) {
+            for (;;) {
                 /* Remove a queue entry whose TTLs is expired.
                  * Only threads that are the head of the txWaitqueue will purge this deque
                  * and enqueue new messages to the txQueue.
@@ -1141,7 +1148,7 @@ QStatus _RemoteEndpoint::PushMessageLeaf(Message& msg, size_t& count)
         thread->AddAuxListener(this);
         internal->txWaitQueue.push_front(thread);
 
-        while (true) {
+        for (;;) {
             /* Remove a queue entry whose TTLs is expired.
              * Only threads that are the head of the txWaitqueue will purge this deque
              * and enqueue new messages to the txQueue.
@@ -1282,7 +1289,7 @@ void _RemoteEndpoint::DecrementRef()
         }
 
         Thread* curThread = Thread::GetThread();
-        if (strcmp(curThread->GetThreadName(), "iodisp") == 0) {
+        if (curThread && strcmp(curThread->GetThreadName(), "iodisp") == 0) {
             Stop();
         } else {
             StopAfterTxEmpty(500);

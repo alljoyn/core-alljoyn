@@ -34,21 +34,27 @@ const char* DaemonTransport::TransportName = "";
 
 void* DaemonTransport::Run(void* arg)
 {
+    QCC_UNUSED(arg);
     return NULL;
 }
 
 QStatus DaemonTransport::NormalizeTransportSpec(const char* inSpec, qcc::String& outSpec, map<qcc::String, qcc::String>& argMap) const
 {
+    QCC_UNUSED(inSpec);
+    QCC_UNUSED(outSpec);
+    QCC_UNUSED(argMap);
     return ER_OK;
 }
 
 QStatus DaemonTransport::StartListen(const char* listenSpec)
 {
+    QCC_UNUSED(listenSpec);
     return ER_OK;
 }
 
 QStatus DaemonTransport::StopListen(const char* listenSpec)
 {
+    QCC_UNUSED(listenSpec);
     return ER_OK;
 }
 

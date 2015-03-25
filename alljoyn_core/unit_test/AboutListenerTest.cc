@@ -49,7 +49,12 @@ using namespace qcc;
 using namespace std;
 
 class AnnounceListenerTestSessionPortListener : public SessionPortListener {
-    virtual bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) { return true; }
+    virtual bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) {
+        QCC_UNUSED(sessionPort);
+        QCC_UNUSED(joiner);
+        QCC_UNUSED(opts);
+        return true;
+    }
 };
 
 
@@ -119,6 +124,11 @@ static bool announceListenerFlag = false;
 class AboutTestAboutListener : public AboutListener {
     void Announced(const char* busName, uint16_t version, SessionPort port,
                    const MsgArg& objectDescription, const MsgArg& aboutData) {
+        QCC_UNUSED(busName);
+        QCC_UNUSED(version);
+        QCC_UNUSED(port);
+        QCC_UNUSED(objectDescription);
+        QCC_UNUSED(aboutData);
         announceListenerFlag = true;
     }
 };
@@ -146,6 +156,7 @@ class AboutListenerTestObject : public BusObject {
     }
 
     void Foo(const InterfaceDescription::Member* member, Message& msg) {
+        QCC_UNUSED(member);
         MethodReply(msg, (const MsgArg*)NULL, (size_t)0);
     }
 };
@@ -431,6 +442,11 @@ static bool announceListenerFlag3 = false;
 class AboutTestAboutListener1 : public AboutListener {
     void Announced(const char* busName, uint16_t version, SessionPort port,
                    const MsgArg& objectDescription, const MsgArg& aboutData) {
+        QCC_UNUSED(busName);
+        QCC_UNUSED(version);
+        QCC_UNUSED(port);
+        QCC_UNUSED(objectDescription);
+        QCC_UNUSED(aboutData);
         announceListenerFlag1 = true;
     }
 };
@@ -438,6 +454,11 @@ class AboutTestAboutListener1 : public AboutListener {
 class AboutTestAboutListener2 : public AboutListener {
     void Announced(const char* busName, uint16_t version, SessionPort port,
                    const MsgArg& objectDescription, const MsgArg& aboutData) {
+        QCC_UNUSED(busName);
+        QCC_UNUSED(version);
+        QCC_UNUSED(port);
+        QCC_UNUSED(objectDescription);
+        QCC_UNUSED(aboutData);
         announceListenerFlag2 = true;
     }
 };
@@ -445,6 +466,11 @@ class AboutTestAboutListener2 : public AboutListener {
 class AboutTestAboutListener3 : public AboutListener {
     void Announced(const char* busName, uint16_t version, SessionPort port,
                    const MsgArg& objectDescription, const MsgArg& aboutData) {
+        QCC_UNUSED(busName);
+        QCC_UNUSED(version);
+        QCC_UNUSED(port);
+        QCC_UNUSED(objectDescription);
+        QCC_UNUSED(aboutData);
         announceListenerFlag3 = true;
     }
 };
@@ -747,6 +773,7 @@ class AboutListenerTestObject2 : public BusObject {
     }
 
     void Foo(const InterfaceDescription::Member* member, Message& msg) {
+        QCC_UNUSED(member);
         MethodReply(msg, (const MsgArg*)NULL, (size_t)0);
     }
 };
@@ -1019,6 +1046,11 @@ class AboutTestWildCardAboutListener : public AboutListener {
     AboutTestWildCardAboutListener() : announceListenerCount(0) { }
     void Announced(const char* busName, uint16_t version, SessionPort port,
                    const MsgArg& objectDescription, const MsgArg& aboutData) {
+        QCC_UNUSED(busName);
+        QCC_UNUSED(version);
+        QCC_UNUSED(port);
+        QCC_UNUSED(objectDescription);
+        QCC_UNUSED(aboutData);
         announceListenerCount++;
     }
     uint32_t announceListenerCount;
@@ -1325,6 +1357,11 @@ class AboutTestRemoveObjectDescriptionAboutListener : public AboutListener {
     AboutTestRemoveObjectDescriptionAboutListener() : announceListenerCount(0) { }
     void Announced(const char* busName, uint16_t version, SessionPort port,
                    const MsgArg& objectDescriptionArg, const MsgArg& aboutDataArg) {
+        QCC_UNUSED(busName);
+        QCC_UNUSED(version);
+        QCC_UNUSED(port);
+        QCC_UNUSED(aboutDataArg);
+
         AboutObjectDescription objectDescription;
         objectDescription.CreateFromMsgArg(objectDescriptionArg);
         if (announceListenerCount == 0) {
@@ -1539,6 +1576,11 @@ class FilteredAboutListener : public AboutListener {
     void Announced(const char* busName, uint16_t version, SessionPort port,
                    const MsgArg& objectDescription, const MsgArg& aboutData)
     {
+        QCC_UNUSED(busName);
+        QCC_UNUSED(version);
+        QCC_UNUSED(port);
+        QCC_UNUSED(aboutData);
+
         QStatus status = ER_OK;
         AboutObjectDescription aod;
 
@@ -1692,6 +1734,11 @@ class AnnounceAppIdWithNon128BitLengthAboutListener : public AboutListener {
   public:
     void Announced(const char* busName, uint16_t version, SessionPort port,
                    const MsgArg& objectDescriptionArg, const MsgArg& aboutDataArg) {
+        QCC_UNUSED(busName);
+        QCC_UNUSED(version);
+        QCC_UNUSED(port);
+        QCC_UNUSED(objectDescriptionArg);
+
         aboutData = aboutDataArg;
         aboutData.Stabilize();
         announceListenerFlag = true;
