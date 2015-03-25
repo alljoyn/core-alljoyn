@@ -75,7 +75,7 @@ class _LocalEndpoint : public _BusEndpoint, public qcc::AlarmListener, public Me
     /**
      * Default constructor initializes an invalid endpoint. This allows for the declaration of uninitialized LocalEndpoint variables.
      */
-    _LocalEndpoint() : dispatcher(NULL), deferredCallbacks(NULL), observerCallbacks(NULL), cachedPropertyCallbacks(NULL), bus(NULL), replyTimer("replyTimer", true) { }
+    _LocalEndpoint() : dispatcher(NULL), bus(NULL), replyTimer("replyTimer", true) { }
 
     /**
      * Constructor
@@ -391,11 +391,6 @@ class _LocalEndpoint : public _BusEndpoint, public qcc::AlarmListener, public Me
     void TriggerObserverWork();
 
     /**
-     * Cancel any outstanding TriggerObserverWork alarms (during ObserverManager shutdown).
-     */
-    void DiscardObserverWork();
-
-    /**
      * Schedule a GetPropertyAsync reply for a cached property.
      */
     void ScheduleCachedGetPropertyReply(ProxyBusObject* proxy,
@@ -411,26 +406,6 @@ class _LocalEndpoint : public _BusEndpoint, public qcc::AlarmListener, public Me
      */
     class Dispatcher;
     Dispatcher* dispatcher;
-
-    /**
-     * Performs operations that were deferred until the bus is connected such
-     * as object registration callbacks
-     */
-    class DeferredCallbacks;
-    DeferredCallbacks* deferredCallbacks;
-
-    /**
-     * Trigger the ObserverManager to process pending work on its work queue.
-     */
-    class ObserverCallbacks;
-    ObserverCallbacks* observerCallbacks;
-
-    /**
-     * Perform a GetPropertyAsync reply callback for a cached property.
-     */
-    class CachedPropertyCallbacks;
-    friend class CachedPropertyCallbacks;
-    CachedPropertyCallbacks* cachedPropertyCallbacks;
 
     /**
      * PushMessage worker.

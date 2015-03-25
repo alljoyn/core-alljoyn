@@ -281,9 +281,6 @@ void ObserverManager::Stop() {
     }
     wqLock.Unlock(MUTEX_CONTEXT);
 
-    /* cancel any remaining TriggerObserverWork alarms on the local endpoints */
-    bus.GetInternal().GetLocalEndpoint()->DiscardObserverWork();
-
     /* stop the AutoPinger */
     if (pinger) {
         pinger->RemovePingGroup(PING_GROUP);
