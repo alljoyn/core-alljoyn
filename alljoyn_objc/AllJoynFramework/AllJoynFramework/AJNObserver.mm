@@ -228,14 +228,14 @@ namespace ajn {
             [weakSelf.listeners addObject:listener];
              
             if (YES == triggerOnExisting) {
-                // Invoke callback on main queue
-                dispatch_async(dispatch_get_main_queue(), ^{
-                    [weakSelf.proxyCacheLock lock];
-                    for (AJNObjectId* key in weakSelf.proxyCache) {
+                [weakSelf.proxyCacheLock lock];
+                for (AJNObjectId* key in weakSelf.proxyCache) {
+                    // Invoke callback on main queue
+                    dispatch_async(dispatch_get_main_queue(), ^{
                         [listener didDiscoverObject:[weakSelf.proxyCache objectForKey:key] forObserver:weakSelf];
-                    }
-                    [weakSelf.proxyCacheLock unlock];
-                });
+                    });
+                }
+                [weakSelf.proxyCacheLock unlock];
             }
         }];
         [self.listenersTaskQueue addOperation:blockOperation];
@@ -408,15 +408,6 @@ namespace ajn {
         return;
     }
 
-    // Remove from local cache
-    [self.proxyCacheLock lock];
-    if (nil == [self.proxyCache objectForKey:objId]) {
-        [self.proxyCacheLock unlock];
-        return;
-    }
-    [self.proxyCache removeObjectForKey:objId];
-    [self.proxyCacheLock unlock];
-
     NSBlockOperation* blockOperation = [[NSBlockOperation alloc] init];
     __weak NSBlockOperation* weakblockOperation = blockOperation;
     __weak AJNObserver* weakSelf = self;
@@ -426,6 +417,15 @@ namespace ajn {
         if ((YES == [weakblockOperation isCancelled]) || (nil == weakSelf)) {
             return;
         }
+        // Remove from local cache
+        [self.proxyCacheLock lock];
+        if (nil == [self.proxyCache objectForKey:objId]) {
+            [self.proxyCacheLock unlock];
+            return;
+        }
+        [self.proxyCache removeObjectForKey:objId];
+        [self.proxyCacheLock unlock];
+
         for (id<AJNObserverListener> listener in weakSelf.listeners) {
             if ([weakblockOperation isCancelled]) {
                 break;

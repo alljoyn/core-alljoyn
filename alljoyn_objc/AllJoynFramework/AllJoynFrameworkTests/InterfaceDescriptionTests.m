@@ -17,6 +17,7 @@
 #import "InterfaceDescriptionTests.h"
 #import "AJNBusAttachment.h"
 #import "AJNInterfaceDescription.h"
+#import "AJNInit.h"
 
 static NSString * const kInterfaceName = @"org.alljoyn.bus.objc.tests.NNNNNNEEEEEEEERRRRRRRRRRDDDDDDDSSSSSSSS";
 static NSString * const kInterfaceMethod = @"LaughObnoxiously";
@@ -49,6 +50,18 @@ static NSString * const kInterfaceXML = @"<interface name=\"org.alljoyn.bus.objc
 @implementation InterfaceDescriptionTests
 
 @synthesize bus = _bus;
+
++(void)setUp
+{
+    [AJNInit alljoynInit];
+    [AJNInit alljoynRouterInit];
+}
+
++(void)tearDown
+{
+    [AJNInit alljoynRouterShutdown];
+    [AJNInit alljoynShutdown];
+}
 
 - (void)setUp
 {

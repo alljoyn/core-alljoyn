@@ -14,34 +14,34 @@
 //    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 
-#import "AJNInit.h"
-#import <alljoyn/Init.h>
+#import "AddDoorViewController.h"
+#import "AppDelegate.h"
 
-@implementation AJNInit
+static NSString * const kDoorPathPrefix = @"/org/alljoyn/sample/door/";
 
-+ (QStatus)alljoynInit
-{
-    return AllJoynInit();
+@interface AddDoorViewController ()
+@property (weak, nonatomic) IBOutlet UITextField *locationTextField;
+@property (weak, nonatomic) IBOutlet UIBarButtonItem *saveButton;
+@end
+
+@implementation AddDoorViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    // Do any additional setup after loading the view.
 }
 
-+ (QStatus)alljoynShutdown
-{
-    return AllJoynShutdown();
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
 }
 
-+ (QStatus)alljoynRouterInit
-{
-    if (ER_OK != AllJoynRouterInit()) {
-        AllJoynShutdown();
-        return ER_FAIL;
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    if (sender != self.saveButton) return;
+    if (self.locationTextField.text.length > 0) {
+        AppDelegate* appDelegate = [[UIApplication sharedApplication] delegate];
+        [appDelegate produceDoorAtLocation:_locationTextField.text];
     }
-    return ER_OK;
-}
-
-+ (QStatus)alljoynRouterShutdown
-{
-    return AllJoynRouterShutdown();
 }
 
 @end
-
