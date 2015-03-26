@@ -36,48 +36,56 @@
 
 static QStatus proxy_get_location(alljoyn_proxybusobject proxy, char** location_ret)
 {
-    *location_ret = NULL;
-    char* location;
+    QStatus status;
     alljoyn_msgarg value = alljoyn_msgarg_create();
-    QStatus status = alljoyn_proxybusobject_getproperty(proxy, INTF_NAME, "Location", value);
+
+    *location_ret = NULL;
+    status = alljoyn_proxybusobject_getproperty(proxy, INTF_NAME, "Location", value);
+
     if (ER_OK == status) {
+        char* location;
         status = alljoyn_msgarg_get_string(value, &location);
         if (ER_OK == status) {
             *location_ret = malloc(strlen(location) + 1);
             if (*location_ret != NULL) {
                 strcpy(*location_ret, location);
+            } else {
+                status = ER_OUT_OF_MEMORY;
             }
         }
     }
 
     alljoyn_msgarg_destroy(value);
-
     return status;
 }
 
 static QStatus proxy_get_isopen(alljoyn_proxybusobject proxy, QCC_BOOL* isopen_ret)
 {
-    *isopen_ret = QCC_FALSE;
+    QStatus status;
     alljoyn_msgarg value = alljoyn_msgarg_create();
-    QStatus status = alljoyn_proxybusobject_getproperty(proxy, INTF_NAME, "IsOpen", value);
+
+    *isopen_ret = QCC_FALSE;
+    status = alljoyn_proxybusobject_getproperty(proxy, INTF_NAME, "IsOpen", value);
     if (ER_OK == status) {
         status = alljoyn_msgarg_get_bool(value, isopen_ret);
     }
-    alljoyn_msgarg_destroy(value);
 
+    alljoyn_msgarg_destroy(value);
     return status;
 }
 
 static QStatus proxy_get_keycode(alljoyn_proxybusobject proxy, uint32_t* keycode_ret)
 {
-    *keycode_ret = 0;
+    QStatus status;
     alljoyn_msgarg value = alljoyn_msgarg_create();
-    QStatus status = alljoyn_proxybusobject_getproperty(proxy, INTF_NAME, "KeyCode", value);
+
+    *keycode_ret = 0;
+    status = alljoyn_proxybusobject_getproperty(proxy, INTF_NAME, "KeyCode", value);
     if (ER_OK == status) {
         status = alljoyn_msgarg_get_uint32(value, keycode_ret);
     }
-    alljoyn_msgarg_destroy(value);
 
+    alljoyn_msgarg_destroy(value);
     return status;
 }
 
@@ -95,9 +103,9 @@ static void list_doors(alljoyn_busattachment bus, alljoyn_observer observer)
 {
     alljoyn_proxybusobject_ref proxyref;
     for (proxyref = alljoyn_observer_getfirst(observer); proxyref; proxyref = alljoyn_observer_getnext(observer, proxyref)) {
-        alljoyn_proxybusobject proxy = alljoyn_proxybusobject_ref_get(proxyref);
         char* location;
         QCC_BOOL isOpen;
+        alljoyn_proxybusobject proxy = alljoyn_proxybusobject_ref_get(proxyref);
 
         QStatus status = proxy_get_isopen(proxy, &isOpen);
         if (ER_OK != status) {
@@ -119,8 +127,8 @@ static alljoyn_proxybusobject_ref get_door_at_location(alljoyn_busattachment bus
 {
     alljoyn_proxybusobject_ref proxyref;
     for (proxyref = alljoyn_observer_getfirst(observer); proxyref; proxyref = alljoyn_observer_getnext(observer, proxyref)) {
-        alljoyn_proxybusobject proxy = alljoyn_proxybusobject_ref_get(proxyref);
         char* location;
+        alljoyn_proxybusobject proxy = alljoyn_proxybusobject_ref_get(proxyref);
         QStatus status = proxy_get_location(proxy, &location);
         if (ER_OK != status) {
             fprintf(stderr, "Could not get Location property for object %s:%s.\n", alljoyn_proxybusobject_getuniquename(proxy), alljoyn_proxybusobject_getpath(proxy));
@@ -320,22 +328,22 @@ static const char* door_intf_props[] = {
 
 static void properties_changed(alljoyn_proxybusobject proxy, const char* intf, const alljoyn_msgarg changed, const alljoyn_msgarg invalidated, void* context)
 {
+    QStatus status;
+    size_t nelem;
+    alljoyn_msgarg elems;
+    char* location = NULL;
     struct _listener_ctx* ctx = (struct _listener_ctx*) context;
+
     printf("[listener] Door %s:%s has changed some properties.\n",
            alljoyn_proxybusobject_getuniquename(proxy), alljoyn_proxybusobject_getpath(proxy));
 
-
     alljoyn_busattachment_enableconcurrentcallbacks(ctx->bus);
-    QStatus status;
-    char* location = NULL;
     status = proxy_get_location(proxy, &location);
     if (status == ER_OK) {
         printf("\tThat's actually the door at location %s.\n", (location != NULL) ? location : "<unknown>");
         free(location);
     }
 
-    size_t nelem;
-    alljoyn_msgarg elems;
     if (ER_OK == status) {
         status = alljoyn_msgarg_get(changed, "a{sv}", &nelem, &elems);
     }
@@ -385,13 +393,17 @@ static void properties_changed(alljoyn_proxybusobject proxy, const char* intf, c
 
 static void object_discovered(const void* context, alljoyn_proxybusobject_ref proxyref)
 {
+    QStatus status;
+    QCC_BOOL isopen;
+    uint32_t keycode;
+    char* location = NULL;
     struct _listener_ctx* ctx = (struct _listener_ctx*) context;
     alljoyn_proxybusobject proxy = alljoyn_proxybusobject_ref_get(proxyref);
+
     printf("[listener] Door %s:%s has just been discovered.\n",
            alljoyn_proxybusobject_getuniquename(proxy), alljoyn_proxybusobject_getpath(proxy));
 
     alljoyn_busattachment_enableconcurrentcallbacks(ctx->bus);
-    QStatus status;
 
     status = alljoyn_proxybusobject_registerpropertieschangedlistener(proxy, INTF_NAME,
                                                                       door_intf_props, 3,
@@ -402,9 +414,6 @@ static void object_discovered(const void* context, alljoyn_proxybusobject_ref pr
     }
 
     /* get properties */
-    char* location = NULL;
-    QCC_BOOL isopen;
-    uint32_t keycode;
     status = proxy_get_location(proxy, &location);
     if (status == ER_OK) {
         status = proxy_get_isopen(proxy, &isopen);
@@ -446,13 +455,13 @@ static void person_passed_through(const alljoyn_interfacedescription_member* mem
     struct _listener_ctx* ctx = &listener_ctx; //alljoyn_c caveat: no way to pass a cookie into signal handlers.
     alljoyn_proxybusobject_ref proxyref = alljoyn_observer_get(ctx->observer, alljoyn_message_getsender(message), path);
     if (proxyref) {
-        alljoyn_proxybusobject proxy = alljoyn_proxybusobject_ref_get(proxyref);
         QStatus status;
+        char* location = NULL;
+        const char* who = NULL;
+        alljoyn_proxybusobject proxy = alljoyn_proxybusobject_ref_get(proxyref);
 
         alljoyn_busattachment_enableconcurrentcallbacks(ctx->bus);
 
-        char* location = NULL;
-        const char* who = NULL;
         status = proxy_get_location(proxy, &location);
         if (status == ER_OK) {
             status = alljoyn_message_parseargs(message, "s", &who);
@@ -477,6 +486,14 @@ static void person_passed_through(const alljoyn_interfacedescription_member* mem
 
 int main(int argc, char** argv)
 {
+    alljoyn_busattachment bus;
+    alljoyn_observer obs;
+    alljoyn_observerlistener listener;
+    alljoyn_interfacedescription intf;
+    alljoyn_interfacedescription_member member;
+    QCC_BOOL done;
+    const char* intfname = INTF_NAME;
+
     if (alljoyn_init() != ER_OK) {
         return 1;
     }
@@ -487,26 +504,26 @@ int main(int argc, char** argv)
     }
 #endif
 
-    alljoyn_busattachment bus = alljoyn_busattachment_create("door_consumer_c", QCC_TRUE);
+    bus = alljoyn_busattachment_create("door_consumer_c", QCC_TRUE);
     SetupBusAttachment(bus);
 
-    const char* intfname = INTF_NAME;
-    alljoyn_observer obs = alljoyn_observer_create(bus, &intfname, 1);
+    obs = alljoyn_observer_create(bus, &intfname, 1);
     listener_ctx.observer = obs;
     listener_ctx.bus = bus;
-    alljoyn_observerlistener listener = alljoyn_observerlistener_create(&listener_cbs, &listener_ctx);
+    listener = alljoyn_observerlistener_create(&listener_cbs, &listener_ctx);
     alljoyn_observer_registerlistener(obs, listener, QCC_TRUE);
 
-    alljoyn_interfacedescription intf = alljoyn_busattachment_getinterface(bus, INTF_NAME);
-    alljoyn_interfacedescription_member member;
+    intf = alljoyn_busattachment_getinterface(bus, INTF_NAME);
     alljoyn_interfacedescription_getmember(intf, "PersonPassedThrough", &member);
     alljoyn_busattachment_registersignalhandler(bus, person_passed_through, member, NULL);
 
-    QCC_BOOL done = QCC_FALSE;
+    done = QCC_FALSE;
     while (!done) {
         char input[200];
+        char* str;
+
         printf("> "); fflush(stdout);
-        char* str = fgets(input, sizeof(input), stdin);
+        str = fgets(input, sizeof(input), stdin);
         if (str == NULL) {
             break;
         }
