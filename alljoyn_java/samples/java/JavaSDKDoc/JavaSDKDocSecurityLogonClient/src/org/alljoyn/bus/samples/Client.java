@@ -118,8 +118,12 @@ public class Client {
                     password = "password1";
                 }
 
-                userNameRequest.setUserName(user);
-                passwordRequest.setPassword(password.toCharArray());
+                if(userNameRequest != null) {
+                    userNameRequest.setUserName(user);
+                }
+                if(passwordRequest != null) {
+                    passwordRequest.setPassword(password.toCharArray());
+                }
                 return true;
             }
             return false;
