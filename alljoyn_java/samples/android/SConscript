@@ -28,6 +28,7 @@ returnValue = []
 for sample in ['simple/client', 
                'simple/service', 
                'chat', 
+               'observer', 
                'raw/client', 
                'raw/service', 
                'secure/logonclient', 
