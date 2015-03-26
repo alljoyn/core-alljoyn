@@ -157,10 +157,12 @@ Observer::Internal::Internal(BusAttachment& bus,
 
 Observer::Internal::~Internal()
 {
+    QCC_DbgTrace(("Observer::Internal::~Internal(this = %p)", this));
 }
 
 void Observer::Internal::Detach()
 {
+    QCC_DbgTrace(("Observer::Internal::Detach(this = %p)", this));
     UnregisterAllListeners();
     observer = NULL;
 
@@ -258,6 +260,7 @@ void Observer::Internal::EnablePendingListeners()
 void Observer::Internal::UnregisterAllListeners()
 {
     listenersLock.Lock(MUTEX_CONTEXT);
+    QCC_DbgTrace(("Observer::Internal::UnregisterAllListeners(this = %p)", this));
 
     /* Look for listener on ListenerSet */
     ObserverListenerSet::iterator it = listeners.begin();
@@ -364,6 +367,7 @@ void Observer::Internal::ObjectDiscovered(const ObjectId& oid,
 
 void Observer::Internal::ObjectLost(const ObjectId& oid)
 {
+    QCC_DbgTrace(("Observer::Internal::ObjectLost(this = %p)", this));
     /* remove from proxy map */
     bool found = false;
     ManagedProxyBusObject proxy;

@@ -278,12 +278,6 @@ void ObserverManager::Stop() {
         return;
     }
     stopping = true;
-
-    /* clear the work queue */
-    while (!work.empty()) {
-        delete work.front();
-        work.pop();
-    }
     wqLock.Unlock(MUTEX_CONTEXT);
 
     /* stop the AutoPinger */
@@ -297,14 +291,21 @@ void ObserverManager::Stop() {
 
 void ObserverManager::Join()
 {
-    /* wait for any in-flight work item to land */
     wqLock.Lock(MUTEX_CONTEXT);
     if (!started || !stopping) {
         wqLock.Unlock(MUTEX_CONTEXT);
         return;
     }
+
+    /* wait for any in-flight work item to land */
     while (processingWork) {
         processingDone.Wait(wqLock);
+    }
+
+    /* clear the work queue */
+    while (!work.empty()) {
+        delete work.front();
+        work.pop();
     }
     wqLock.Unlock(MUTEX_CONTEXT);
 
