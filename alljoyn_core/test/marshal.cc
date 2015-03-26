@@ -21,7 +21,7 @@
  ******************************************************************************/
 
 #include <ctype.h>
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 #include <queue>
 #include <algorithm>
 

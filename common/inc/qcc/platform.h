@@ -28,12 +28,6 @@
 #elif defined(QCC_OS_GROUP_WINDOWS)
 #include <qcc/windows/platform_types.h>
 #include <qcc/windows/mapping.h>
-
-/*
- * This pragma prevents Microsoft compiler warning C4407: cast between different pointer to member representations, compiler may generate incorrect code.
- * This is equivalent to /vmm and /vmg compiler options but without the burden of requiring all apps to specify these non-default options.
- */
-#pragma pointers_to_members(full_generality, virtual_inheritance)
 #else
 #error No OS GROUP defined.
 #endif

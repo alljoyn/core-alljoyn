@@ -31,7 +31,7 @@
 #include <queue>
 #include <alljoyn/Status.h>
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 #include <qcc/atomic.h>
 #include <qcc/String.h>
 #include <qcc/Mutex.h>

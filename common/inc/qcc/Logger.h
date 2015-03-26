@@ -23,7 +23,7 @@
 #ifndef _LOGGER_H
 #define _LOGGER_H
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 #include <stdio.h>
 #if !defined(QCC_OS_GROUP_WINDOWS)

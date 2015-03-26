@@ -25,7 +25,7 @@
 #ifndef _STLCONTAINER_H
 #define _STLCONTAINER_H
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 /***************************
  * STANDARD C++11

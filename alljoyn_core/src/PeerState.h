@@ -25,7 +25,7 @@
 #error Only include PeerState.h in C++ code.
 #endif
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 #include <map>
 #include <limits>

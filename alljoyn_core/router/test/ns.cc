@@ -26,7 +26,7 @@
 #include <stdio.h>
 #include <time.h>
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 #include <qcc/Debug.h>
 #include <qcc/String.h>
 #include <qcc/StringUtil.h>

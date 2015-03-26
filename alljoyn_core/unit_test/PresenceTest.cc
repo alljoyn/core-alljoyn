@@ -21,7 +21,7 @@
 
 #include <qcc/Thread.h>
 #include <qcc/Util.h>
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 #include <qcc/String.h>
 
 #include <assert.h>

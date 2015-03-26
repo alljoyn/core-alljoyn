@@ -22,7 +22,7 @@
 #ifndef _ALLJOYN_NAMETABLE_H
 #define _ALLJOYN_NAMETABLE_H
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 #include <deque>
 #include <vector>

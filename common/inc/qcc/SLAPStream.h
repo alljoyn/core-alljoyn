@@ -26,7 +26,7 @@
 #ifndef _QCC_SLAPSTREAM_H
 #define _QCC_SLAPSTREAM_H
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 #include <qcc/Stream.h>
 #include <qcc/UARTStream.h>
 #include <qcc/Timer.h>

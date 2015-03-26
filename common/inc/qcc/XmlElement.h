@@ -25,7 +25,7 @@
 #ifndef _XMLELEMENT_H
 #define _XMLELEMENT_H
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 #include <map>
 #include <vector>

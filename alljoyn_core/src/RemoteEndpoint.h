@@ -21,7 +21,7 @@
 #ifndef _ALLJOYN_REMOTEENDPOINT_H
 #define _ALLJOYN_REMOTEENDPOINT_H
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 #include <deque>
 

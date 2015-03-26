@@ -22,7 +22,7 @@
 #ifndef _ALLJOYN_DAEMONROUTER_H
 #define _ALLJOYN_DAEMONROUTER_H
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 #include <qcc/Thread.h>
 

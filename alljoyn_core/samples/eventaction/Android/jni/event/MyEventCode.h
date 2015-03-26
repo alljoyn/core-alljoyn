@@ -25,7 +25,7 @@
 #include <qcc/String.h>
 #include <stdio.h>
 #include <map>
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 #include "../Constants.h"
 #include "EventInfo.h"
 #include "ActionInfo.h"

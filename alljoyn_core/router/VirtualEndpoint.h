@@ -22,7 +22,7 @@
 #ifndef _ALLJOYN_VIRTUALENDPOINT_H
 #define _ALLJOYN_VIRTUALENDPOINT_H
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 #include <qcc/ManagedObj.h>
 #include <qcc/String.h>
 

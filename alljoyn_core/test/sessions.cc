@@ -14,7 +14,7 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 #include <alljoyn/AllJoynStd.h>
 #include <alljoyn/BusAttachment.h>

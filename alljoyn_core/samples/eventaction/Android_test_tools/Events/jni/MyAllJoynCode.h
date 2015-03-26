@@ -24,7 +24,7 @@
 #include <alljoyn/Session.h>
 #include <qcc/String.h>
 #include <stdio.h>
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 #include "Constants.h"
 #include "EventInfo.h"
 

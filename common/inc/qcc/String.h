@@ -22,7 +22,7 @@
 #ifndef _QCC_STRING_H
 #define _QCC_STRING_H
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 #include <stdlib.h>
 #include <string.h>
 #include <iostream>

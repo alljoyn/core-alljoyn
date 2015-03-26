@@ -25,7 +25,7 @@
 #include <netinet/in.h>
 #endif
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 #include <algorithm>
 #include <arpa/inet.h>

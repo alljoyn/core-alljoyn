@@ -22,7 +22,7 @@
 
 #include <errno.h>
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 #include <qcc/Socket.h>
 #include <qcc/SocketStream.h>
 #include <qcc/String.h>

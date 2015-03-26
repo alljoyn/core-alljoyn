@@ -22,7 +22,7 @@
 #ifndef _QCC_SOCKET_H
 #define _QCC_SOCKET_H
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 #include <qcc/IPAddress.h>
 #include <qcc/SocketTypes.h>

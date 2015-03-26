@@ -24,7 +24,7 @@
 #ifndef _QCC_STREAMPUMP_H
 #define _QCC_STREAMPUMP_H
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 #include <qcc/Stream.h>
 #include <qcc/Thread.h>
 #include <Status.h>

@@ -25,7 +25,7 @@
 
 #ifdef __cplusplus
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 #include <alljoyn/DBusStdDefines.h>
 #include <alljoyn/Status.h>

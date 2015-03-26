@@ -23,7 +23,7 @@
 #error mouseclient.cc can only be built for Windows
 #endif
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 #include <qcc/Debug.h>
 #include <qcc/Thread.h>
 

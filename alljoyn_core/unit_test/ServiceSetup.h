@@ -27,7 +27,7 @@
 #include <alljoyn/MsgArg.h>
 #include <alljoyn/BusObject.h>
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 #include <qcc/Environ.h>
 #include <qcc/Util.h>
 #include <qcc/Debug.h>

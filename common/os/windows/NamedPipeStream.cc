@@ -25,7 +25,7 @@
  */
  #if (_WIN32_WINNT > 0x0603)
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 #include <qcc/Debug.h>
 #include <qcc/String.h>
 #include <qcc/StringUtil.h>

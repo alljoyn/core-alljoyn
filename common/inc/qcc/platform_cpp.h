@@ -1,7 +1,9 @@
+#ifndef _QCC_PLATFORMCPP_H
+#define _QCC_PLATFORMCPP_H
 /**
  * @file
  *
- * Sink/Source wrapper FILE operations
+ * This file contains common definitions for C++ binding.
  */
 
 /******************************************************************************
@@ -19,17 +21,14 @@
  *    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
-#ifndef _QCC_FILESTREAM_H
-#define _QCC_FILESTREAM_H
 
-#include <qcc/platform_cpp.h>
+#include <qcc/platform.h>
 
-#if defined(QCC_OS_GROUP_POSIX)
-#include <qcc/posix/FileStream.h>
-#elif defined(QCC_OS_GROUP_WINDOWS)
-#include <qcc/windows/FileStream.h>
-#else
-#error No OS GROUP defined.
-#endif
-
-#endif
+#if defined(QCC_OS_GROUP_WINDOWS)
+/*
+ * This pragma prevents Microsoft compiler warning C4407: cast between different pointer to member representations, compiler may generate incorrect code.
+ * This is equivalent to /vmm and /vmg compiler options but without the burden of requiring all apps to specify these non-default options.
+ */
+#pragma pointers_to_members(full_generality, virtual_inheritance)
+#endif /* Compiler type */
+#endif /* _QCC_PLATFORMCPP_H */

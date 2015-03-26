@@ -24,7 +24,7 @@
 #include <windows.h>
 #include <bcrypt.h>
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 #include <qcc/Debug.h>
 #include <qcc/Crypto.h>
 #include <qcc/Util.h>

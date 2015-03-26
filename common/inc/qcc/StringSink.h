@@ -25,7 +25,7 @@
 #ifndef _QCC_STRINGSINK_H
 #define _QCC_STRINGSINK_H
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 #include <qcc/String.h>
 #include <qcc/Stream.h>
 

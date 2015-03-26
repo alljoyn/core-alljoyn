@@ -31,7 +31,7 @@
 
 #include <vector>
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 #include <qcc/Debug.h>
 #include <qcc/Event.h>
 #include <qcc/Socket.h>

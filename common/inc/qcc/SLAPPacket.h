@@ -23,7 +23,7 @@
  ******************************************************************************/
 #ifndef _QCC_SLAPPACKET_H
 #define _QCC_SLAPPACKET_H
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 #include <qcc/Stream.h>
 #include <Status.h>
 

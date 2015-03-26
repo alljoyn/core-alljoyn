@@ -18,7 +18,7 @@
 #include <stdio.h>
 #include <algorithm>
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 #include <qcc/String.h>
 #include <qcc/BigNum.h>
 #include <qcc/Crypto.h>

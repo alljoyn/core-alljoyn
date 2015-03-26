@@ -24,7 +24,7 @@
 #ifndef _QCC_CONFIG_H
 #define _QCC_CONFIG_H
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 #include <map>
 
 #include <qcc/Mutex.h>

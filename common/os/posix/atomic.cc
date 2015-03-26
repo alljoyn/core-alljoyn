@@ -16,7 +16,7 @@
  ******************************************************************************/
 #if defined(QCC_MAEMO) and defined(QCC_X86)
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 #include <pthread.h>
 

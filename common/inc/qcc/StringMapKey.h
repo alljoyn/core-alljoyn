@@ -21,7 +21,7 @@
 #ifndef _QCC_STRINGMAPKEY_H
 #define _QCC_STRINGMAPKEY_H
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 #include <qcc/Util.h>
 #include <qcc/String.h>

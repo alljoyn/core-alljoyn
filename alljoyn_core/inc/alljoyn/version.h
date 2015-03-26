@@ -21,7 +21,7 @@
 #ifndef _ALLJOYN_VERSION_H
 #define _ALLJOYN_VERSION_H
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 /** Macro to compute the version number into a single value. */
 #define GenerateNumericVersionValue(_year, _month, _feature, _bugfix) (((_year) << 24) | ((_month) << 16) | ((_feature) << 8) | (_bugfix))

@@ -25,7 +25,7 @@
 #error Only include SignalTable.h in C++ code.
 #endif
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 #include <qcc/StringMapKey.h>
 
 #include <vector>
