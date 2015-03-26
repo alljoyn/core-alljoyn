@@ -126,7 +126,7 @@ static void usage(void)
     printf("   -k <key store name>       = The key store file name\n");
     printf("   -c <count>                = Number of pings to send to the server\n");
     printf("   -i                        = Use introspection to discover remote interfaces\n");
-    printf("   -e[k] [RSA|SRP|LOGON]     = Encrypt the test interface using specified auth mechanism, -ek means clear keys\n");
+    printf("   -e[k] [SRP|LOGON]         = Encrypt the test interface using specified auth mechanism, -ek means clear keys\n");
     printf("   -a #                      = Max authentication attempts\n");
     printf("   -kx #                     = Authentication key expiration (seconds)\n");
     printf("   -r #                      = AllJoyn attachment restart count\n");
@@ -144,42 +144,6 @@ static void usage(void)
     printf("   -m <trans_mask>           = Transports allowed to connect to service\n");
     printf("\n");
 }
-
-static const char x509cert[] = {
-    "-----BEGIN CERTIFICATE-----\n"
-    "MIIBszCCARwCCQDuCh+BWVBk2DANBgkqhkiG9w0BAQUFADAeMQ0wCwYDVQQKDARN\n"
-    "QnVzMQ0wCwYDVQQDDARHcmVnMB4XDTEwMDUxNzE1MTg1N1oXDTExMDUxNzE1MTg1\n"
-    "N1owHjENMAsGA1UECgwETUJ1czENMAsGA1UEAwwER3JlZzCBnzANBgkqhkiG9w0B\n"
-    "AQEFAAOBjQAwgYkCgYEArSd4r62mdaIRG9xZPDAXfImt8e7GTIyXeM8z49Ie1mrQ\n"
-    "h7roHbn931Znzn20QQwFD6pPC7WxStXJVH0iAoYgzzPsXV8kZdbkLGUMPl2GoZY3\n"
-    "xDSD+DA3m6krcXcN7dpHv9OlN0D9Trc288GYuFEENpikZvQhMKPDUAEkucQ95Z8C\n"
-    "AwEAATANBgkqhkiG9w0BAQUFAAOBgQBkYY6zzf92LRfMtjkKs2am9qvjbqXyDJLS\n"
-    "viKmYe1tGmNBUzucDC5w6qpPCTSe23H2qup27///fhUUuJ/ssUnJ+Y77jM/u1O9q\n"
-    "PIn+u89hRmqY5GKHnUSZZkbLB/yrcFEchHli3vLo4FOhVVHwpnwLtWSpfBF9fWcA\n"
-    "7THIAV79Lg==\n"
-    "-----END CERTIFICATE-----"
-};
-
-static const char privKey[] = {
-    "-----BEGIN RSA PRIVATE KEY-----\n"
-    "Proc-Type: 4,ENCRYPTED\n"
-    "DEK-Info: AES-128-CBC,0AE4BAB94CEAA7829273DD861B067DBA\n"
-    "\n"
-    "LSJOp+hEzNDDpIrh2UJ+3CauxWRKvmAoGB3r2hZfGJDrCeawJFqH0iSYEX0n0QEX\n"
-    "jfQlV4LHSCoGMiw6uItTof5kHKlbp5aXv4XgQb74nw+2LkftLaTchNs0bW0TiGfQ\n"
-    "XIuDNsmnZ5+CiAVYIKzsPeXPT4ZZSAwHsjM7LFmosStnyg4Ep8vko+Qh9TpCdFX8\n"
-    "w3tH7qRhfHtpo9yOmp4hV9Mlvx8bf99lXSsFJeD99C5GQV2lAMvpfmM8Vqiq9CQN\n"
-    "9OY6VNevKbAgLG4Z43l0SnbXhS+mSzOYLxl8G728C6HYpnn+qICLe9xOIfn2zLjm\n"
-    "YaPlQR4MSjHEouObXj1F4MQUS5irZCKgp4oM3G5Ovzt82pqzIW0ZHKvi1sqz/KjB\n"
-    "wYAjnEGaJnD9B8lRsgM2iLXkqDmndYuQkQB8fhr+zzcFmqKZ1gLRnGQVXNcSPgjU\n"
-    "Y0fmpokQPHH/52u+IgdiKiNYuSYkCfHX1Y3nftHGvWR3OWmw0k7c6+DfDU2fDthv\n"
-    "3MUSm4f2quuiWpf+XJuMB11px1TDkTfY85m1aEb5j4clPGELeV+196OECcMm4qOw\n"
-    "AYxO0J/1siXcA5o6yAqPwPFYcs/14O16FeXu+yG0RPeeZizrdlv49j6yQR3JLa2E\n"
-    "pWiGR6hmnkixzOj43IPJOYXySuFSi7lTMYud4ZH2+KYeK23C2sfQSsKcLZAFATbq\n"
-    "DY0TZHA5lbUiOSUF5kgd12maHAMidq9nIrUpJDzafgK9JrnvZr+dVYM6CiPhiuqJ\n"
-    "bXvt08wtKt68Ymfcx+l64mwzNLS+OFznEeIjLoaHU4c=\n"
-    "-----END RSA PRIVATE KEY-----"
-};
 
 
 QCC_BOOL AJ_CALL request_credentials(const void* context, const char* authMechanism, const char* authPeer, uint16_t authCount, const char* userId, uint16_t credMask, alljoyn_credentials credentials)
@@ -216,25 +180,6 @@ QCC_BOOL AJ_CALL request_credentials(const void* context, const char* authMechan
         return QCC_TRUE;
     }
 
-    if (strcmp(authMechanism, "ALLJOYN_RSA_KEYX") == 0) {
-
-        if (credMask & ALLJOYN_CRED_CERT_CHAIN) {
-            alljoyn_credentials_setcertchain(credentials, x509cert);
-        }
-
-        if (credMask & ALLJOYN_CRED_PRIVATE_KEY) {
-            alljoyn_credentials_setprivatekey(credentials, privKey);
-        }
-
-        if (credMask & ALLJOYN_CRED_PASSWORD) {
-            alljoyn_credentials_setpassword(credentials, "123456");
-        }
-
-        printf("AuthListener returning fixed pin \"%s\" for %s\n", alljoyn_credentials_getpassword(credentials), authMechanism);
-        return QCC_TRUE;
-    }
-
-
     if (strcmp(authMechanism, "ALLJOYN_SRP_LOGON") == 0) {
         if (credMask & ALLJOYN_CRED_USER_NAME) {
             if (authCount == 1) {
@@ -255,12 +200,7 @@ QCC_BOOL AJ_CALL request_credentials(const void* context, const char* authMechan
 
 QCC_BOOL AJ_CALL verify_credentials(const void*context, const char* authMechanism, const char* authPeer, const alljoyn_credentials credentials) {
 
-    if (strcmp(authMechanism, "ALLJOYN_RSA_KEYX") == 0) {
-        if (alljoyn_credentials_isset(credentials, ALLJOYN_CRED_CERT_CHAIN)) {
-            printf("Verify\n%s\n", alljoyn_credentials_getcertchain(credentials));
-            return QCC_TRUE;
-        }
-    }
+    /* Not used with the SRP auth mechanisms. */
     return QCC_FALSE;
 }
 
@@ -392,10 +332,7 @@ int main(int argc, char** argv)
             clearKeys |= (argv[i][2] == 'k');
             ++i;
             if (i != argc) {
-                if (strcmp(argv[i], "RSA") == 0) {
-                    strcat(authMechs, "ALLJOYN_RSA_KEYX");
-                    ok = QCC_TRUE;
-                } else if (strcmp(argv[i], "SRP") == 0) {
+                if (strcmp(argv[i], "SRP") == 0) {
                     strcat(authMechs, "ALLJOYN_SRP_KEYX");
                     ok = QCC_TRUE;
                 } else if (strcmp(argv[i], "LOGON") == 0) {
