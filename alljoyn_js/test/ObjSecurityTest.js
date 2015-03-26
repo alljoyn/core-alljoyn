@@ -181,84 +181,13 @@ AsyncTestCase("ObjSecurityTest", {
         });
     },
 
-    testRsaKeyxPass: function(queue) {
-        queue.call(function(callbacks) {
-            var enablePeerSecurity = function(err) {
-                bus.enablePeerSecurity("ALLJOYN_RSA_KEYX", {
-                    onRequest: callbacks.add(function(authMechanism, peerName, authCount,
-                                                      userName, credMask, credentials) {
-                        assertEquals("ALLJOYN_RSA_KEYX", authMechanism);
-                        assertEquals(otherBus.uniqueName, peerName);
-                        if (credentials.NEW_PASSWORD & credMask) {
-                            credentials.password = "654321";
-                        }
-                        return true;
-                    }, 2),
-                    onVerify: callbacks.add(function(authMechanism, peerName, credentials) {
-                        return true;
-                    }),
-                    onComplete: callbacks.add(function(authMechanism, peerName, success) {
-                        assertEquals("ALLJOYN_RSA_KEYX", authMechanism);
-                        assertEquals(otherBus.uniqueName, peerName);
-                        assertTrue(success);
-                    })
-                }, callbacks.add(clearKeyStore));
-            };
-            var clearKeyStore = function(err) {
-                assertFalsy(err);
-                bus.clearKeyStore(callbacks.add(connect));
-            };
-            var connect = function(err) {
-                assertFalsy(err);
-                bus.connect(callbacks.add(otherBusEnablePeerSecurity));
-            };
-            var otherBusEnablePeerSecurity = function(err) {
-                assertFalsy(err);
-                otherBus.enablePeerSecurity("ALLJOYN_RSA_KEYX", {
-                    onRequest: callbacks.add(function(authMechanism, peerName, authCount,
-                                                      userName, credMask, credentials) {
-                        assertEquals("ALLJOYN_RSA_KEYX", authMechanism);
-                        assertEquals(bus.uniqueName, peerName);
-                        if (credentials.NEW_PASSWORD & credMask) {
-                            credentials.password = "123456";
-                        }
-                        return true;
-                    }, 2),
-                    onVerify: callbacks.add(function(authMechanism, peerName, credentials) {
-                        return true;
-                    }),
-                    onComplete: callbacks.add(function(authMechanism, peerName, success) {
-                        assertEquals("ALLJOYN_RSA_KEYX", authMechanism);
-                        assertEquals(bus.uniqueName, peerName);
-                        assertTrue(success);
-                    })
-                }, callbacks.add(otherBusClearKeyStore));
-            };
-            var otherBusClearKeyStore = function(err) {
-                assertFalsy(err);
-                otherBus.clearKeyStore(callbacks.add(otherBusConnect));
-            };
-            var otherBusConnect = function(err) {
-                assertFalsy(err);
-                otherBus.connect(callbacks.add(getProxyObj));
-            };
-            var getProxyObj = function(err) {
-                assertFalsy(err);
-                otherBus.getProxyBusObject(bus.uniqueName + "/test", callbacks.add(ping));
-            };
-            var ping = function(err, proxyObj) {
-                assertFalsy(err);
-                proxyObj.methodCall("test.SecureInterface", "Ping", "pong", callbacks.add(function(){}));
-            };
-            this._setUp(callbacks.add(enablePeerSecurity));
-        });
-    },
-
+   
+    // This used to test with the RSA authentication mechanism as well, before it was depreceated in 15.04
     testMultipleAuthMechanisms: function(queue) {
         queue.call(function(callbacks) {
             var enablePeerSecurity = function(err) {
                 assertFalsy(err);
-                bus.enablePeerSecurity("ALLJOYN_RSA_KEYX ALLJOYN_SRP_KEYX", {
+                bus.enablePeerSecurity("ALLJOYN_SRP_KEYX", {
                     onRequest: callbacks.add(function(authMechanism, peerName, authCount,
                                                       userName, credMask, credentials) {
                         assertEquals("ALLJOYN_SRP_KEYX", authMechanism);

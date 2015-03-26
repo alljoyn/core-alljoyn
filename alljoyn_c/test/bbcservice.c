@@ -61,66 +61,6 @@ static void CDECL_CALL SigIntHandler(int sig)
     g_interrupt = QCC_TRUE;
 }
 
-static const char x509certChain[] = {
-    // User certificate
-    "-----BEGIN CERTIFICATE-----\n"
-    "MIICxzCCAjCgAwIBAgIJALZkSW0TWinQMA0GCSqGSIb3DQEBBQUAME8xCzAJBgNV\n"
-    "BAYTAlVTMRMwEQYDVQQIEwpXYXNoaW5ndG9uMQ0wCwYDVQQKEwRRdUlDMQ0wCwYD\n"
-    "VQQLEwRNQnVzMQ0wCwYDVQQDEwRHcmVnMB4XDTEwMDgyNTIzMTYwNVoXDTExMDgy\n"
-    "NTIzMTYwNVowfzELMAkGA1UEBhMCVVMxEzARBgNVBAgTCldhc2hpbmd0b24xEDAO\n"
-    "BgNVBAcTB1NlYXR0bGUxIzAhBgNVBAoTGlF1YWxjb21tIElubm92YXRpb24gQ2Vu\n"
-    "dGVyMREwDwYDVQQLEwhNQnVzIGRldjERMA8GA1UEAxMIU2VhIEtpbmcwgZ8wDQYJ\n"
-    "KoZIhvcNAQEBBQADgY0AMIGJAoGBALz+YZcH0DZn91sjOA5vaTwjQVBnbR9ZRpCA\n"
-    "kGD2am0F91juEPFvj/PAlvVLPd5nwGKSPiycN3l3ECxNerTrwIG2XxzBWantFn5n\n"
-    "7dDzlRm3aerFr78EJmcCiImwgqsuhUT4eo5/jn457vANO9B5k/1ddc6zJ67Jvuh6\n"
-    "0p4YAW4NAgMBAAGjezB5MAkGA1UdEwQCMAAwLAYJYIZIAYb4QgENBB8WHU9wZW5T\n"
-    "U0wgR2VuZXJhdGVkIENlcnRpZmljYXRlMB0GA1UdDgQWBBTXau+rH64d658efvkF\n"
-    "jkaEZJ+5BTAfBgNVHSMEGDAWgBTu5FqZL5ShsNq4KJjOo8IPZ70MBTANBgkqhkiG\n"
-    "9w0BAQUFAAOBgQBNBt7+/IaqGUSOpYAgHun87c86J+R38P2dmOm+wk8CNvKExdzx\n"
-    "Hp08aA51d5YtGrkDJdKXfC+Ly0CuE2SCiMU4RbK9Pc2H/MRQdmn7ZOygisrJNgRK\n"
-    "Gerh1OQGuc1/USAFpfD2rd+xqndp1WZz7iJh+ezF44VMUlo2fTKjYr5jMQ==\n"
-    "-----END CERTIFICATE-----\n"
-    // Root certificate
-    "-----BEGIN CERTIFICATE-----\n"
-    "MIICzjCCAjegAwIBAgIJALZkSW0TWinPMA0GCSqGSIb3DQEBBQUAME8xCzAJBgNV\n"
-    "BAYTAlVTMRMwEQYDVQQIEwpXYXNoaW5ndG9uMQ0wCwYDVQQKEwRRdUlDMQ0wCwYD\n"
-    "VQQLEwRNQnVzMQ0wCwYDVQQDEwRHcmVnMB4XDTEwMDgyNTIzMTQwNloXDTEzMDgy\n"
-    "NDIzMTQwNlowTzELMAkGA1UEBhMCVVMxEzARBgNVBAgTCldhc2hpbmd0b24xDTAL\n"
-    "BgNVBAoTBFF1SUMxDTALBgNVBAsTBE1CdXMxDTALBgNVBAMTBEdyZWcwgZ8wDQYJ\n"
-    "KoZIhvcNAQEBBQADgY0AMIGJAoGBANc1GTPfvD347zk1NlZbDhTf5txn3AcSG//I\n"
-    "gdgdZOY7ubXkNMGEVBMyZDXe7K36MEmj5hfXRiqfZwpZjjzJeJBoPJvXkETzatjX\n"
-    "vs4d5k1m0UjzANXp01T7EK1ZdIP7AjLg4QMk+uj8y7x3nElmSpNvPf3tBe3JUe6t\n"
-    "Io22NI/VAgMBAAGjgbEwga4wHQYDVR0OBBYEFO7kWpkvlKGw2rgomM6jwg9nvQwF\n"
-    "MH8GA1UdIwR4MHaAFO7kWpkvlKGw2rgomM6jwg9nvQwFoVOkUTBPMQswCQYDVQQG\n"
-    "EwJVUzETMBEGA1UECBMKV2FzaGluZ3RvbjENMAsGA1UEChMEUXVJQzENMAsGA1UE\n"
-    "CxMETUJ1czENMAsGA1UEAxMER3JlZ4IJALZkSW0TWinPMAwGA1UdEwQFMAMBAf8w\n"
-    "DQYJKoZIhvcNAQEFBQADgYEAg3pDFX0270jUTf8mFJHJ1P+CeultB+w4EMByTBfA\n"
-    "ZPNOKzFeoZiGe2AcMg41VXvaKJA0rNH+5z8zvVAY98x1lLKsJ4fb4aIFGQ46UZ35\n"
-    "DMrqZYmULjjSXWMxiphVRf1svKGU4WHR+VSvtUNLXzQyvg2yUb6PKDPUQwGi9kDx\n"
-    "tCI=\n"
-    "-----END CERTIFICATE-----\n"
-};
-
-static const char privKey[] = {
-    "-----BEGIN RSA PRIVATE KEY-----\n"
-    "Proc-Type: 4,ENCRYPTED\n"
-    "DEK-Info: DES-EDE3-CBC,86B9DBED35AEBAB3\n"
-    "\n"
-    "f28sibgVCkDz3VNoC/MzazG2tFj+KGf6xm9LQki/GsxpMhJsEEvT9dUluT1T4Ypr\n"
-    "NjG+nBleLcfdHxOl5XHnusn8r/JVaQQGVSnDaeP/27KiirtB472p+8Wc2wfXexRz\n"
-    "uSUv0DJT+Fb52zYGiGzwgaOinQEBskeO9AwRyG34sFKqyyapyJtSZDjh+wUAIMZb\n"
-    "wKifvl1KHSCbXEhjDVlxBw4Rt7I36uKzTY5oax2L6W6gzxfHuOtzfVelAaM46j+n\n"
-    "KANZgx6KGW2DKk27aad2HEZUYeDwznpwU5Duw9b0DeMTkez6CuayiZHb5qEod+0m\n"
-    "pCCMwpqxFCJ/vg1VJjmxM7wpCQTc5z5cjX8saV5jMUJXp09NuoU/v8TvhOcXOE1T\n"
-    "ENukIWYBT1HC9MJArroLwl+fMezKCu+F/JC3M0RfI0dlQqS4UWH+Uv+Ujqa2yr9y\n"
-    "20zYS52Z4kyq2WnqwBk1//PLBl/bH/awWXPUI2yMnIILbuCisRYLyK52Ge/rS51P\n"
-    "vUgUCZ7uoEJGTX6EGh0yQhp+5jGYVdHHZB840AyxzBQx7pW4MtTwqkw1NZuQcdSN\n"
-    "IU9y/PferHhMKZeGfVRVEkAOcjeXOqvSi6NKDvYn7osCkvj9h7K388o37VMPSacR\n"
-    "jDwDTT0HH/UcM+5v/74NgE/OebaK3YfxBVyMmBzi0WVFXgxHJir4xpj9c20YQVw9\n"
-    "hE3kYepW8gGz/JPQmRszwLQpwQNEP60CgQveqtH7tZVXzDkElvSyveOdjJf1lw4B\n"
-    "uCz54678UNNeIe7YB4yV1dMVhhcoitn7G/+jC9Qk3FTnuP+Ws5c/0g==\n"
-    "-----END RSA PRIVATE KEY-----"
-};
 
 QStatus AJ_CALL request_credentials_async(const void* context, alljoyn_authlistener listener, const char* authMechanism,
                                           const char* authPeer, uint16_t authCount, const char* userId,
@@ -154,26 +94,6 @@ QStatus AJ_CALL request_credentials_async(const void* context, alljoyn_authliste
             printf("AuthListener returning fixed pin \"%s\" for %s\n", alljoyn_credentials_getpassword(creds), authMechanism);
         }
         status =  alljoyn_authlistener_requestcredentialsresponse(listener, authContext, QCC_TRUE, creds);
-        alljoyn_credentials_destroy(creds);
-        return status;
-    }
-
-    if (strcmp(authMechanism, "ALLJOYN_RSA_KEYX") == 0) {
-        if (credMask & ALLJOYN_CRED_CERT_CHAIN) {
-            alljoyn_credentials_setcertchain(creds, x509certChain);
-        }
-        if (credMask & ALLJOYN_CRED_PRIVATE_KEY) {
-            alljoyn_credentials_setprivatekey(creds, privKey);
-        }
-        if (credMask & ALLJOYN_CRED_PASSWORD) {
-            if (authCount == 2) {
-                alljoyn_credentials_setpassword(creds, "12345X");
-            }
-            if (authCount == 3) {
-                alljoyn_credentials_setpassword(creds, "123456");
-            }
-        }
-        status = alljoyn_authlistener_requestcredentialsresponse(listener, authContext, QCC_TRUE, creds);
         alljoyn_credentials_destroy(creds);
         return status;
     }
@@ -221,14 +141,6 @@ QStatus AJ_CALL verify_credentials_async(const void*context, alljoyn_authlistene
 
     QStatus status = ER_OK;
 
-
-    if (strcmp(authMechanism, "ALLJOYN_RSA_KEYX") == 0) {
-        if (alljoyn_credentials_isset(creds, ALLJOYN_CRED_CERT_CHAIN)) {
-            printf("Verify\n%s\n", alljoyn_credentials_getcertchain(creds));
-            status = alljoyn_authlistener_verifycredentialsresponse(listener, authContext, QCC_TRUE);
-            return status;
-        }
-    }
     status = alljoyn_authlistener_verifycredentialsresponse(listener, authContext, QCC_FALSE);
     return status;
 }
@@ -889,7 +801,7 @@ int main(int argc, char** argv)
     /* Auth listener callbacks. */
     authListener = alljoyn_authlistenerasync_create(&authcbs, NULL);
 
-    status = alljoyn_busattachment_enablepeersecurity(g_msgBus, "ALLJOYN_SRP_KEYX ALLJOYN_RSA_KEYX ALLJOYN_SRP_LOGON", authListener, keyStore, keyStore != NULL);
+    status = alljoyn_busattachment_enablepeersecurity(g_msgBus, "ALLJOYN_SRP_KEYX ALLJOYN_SRP_LOGON", authListener, keyStore, keyStore != NULL);
     if (ER_OK != status) {
         printf("enablePeerSecurity failed (%s)\n", QCC_StatusText(status));
         return status;
