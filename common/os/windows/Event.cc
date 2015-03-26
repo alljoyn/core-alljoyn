@@ -768,13 +768,9 @@ QStatus Event::Wait(const vector<Event*>& checkEvents, vector<Event*>& signaledE
             }
             if ((ER_OK != status) && (!timedOut)) {
                 /* Restore thread counts if we did not block */
-                for (;;) {
+                for (it = checkEvents.begin(); it != checkEvents.end(); ++it) {
                     Event* evt = *it;
                     evt->DecrementNumThreads();
-                    if (it == checkEvents.begin()) {
-                        break;
-                    }
-                    --it;
                 }
                 QCC_LogError(status, ("SuperWaiter::WaitForMultipleObjects: failed."));
                 return ER_FAIL;
