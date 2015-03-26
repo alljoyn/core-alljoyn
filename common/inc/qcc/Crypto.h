@@ -718,19 +718,6 @@ class Crypto_SHA256 : public Crypto_Hash {
 QStatus Crypto_PseudorandomFunction(const KeyBlob& secret, const char* label, const qcc::String& seed, uint8_t* out, size_t outLen);
 
 /**
- * This is an alternative implementation of Crypto_PseudorandomFunction() that uses AES-CCM to
- * generate key matter rather than SHA-256 to generate key matter. This is for interoperating with
- * implementations that do not support SHA-256.
- *
- * @param secret  A keyblob containing the secret being expanded.
- * @param label   An ASCII string that is hashed in with the other data.
- * @param seed    Some random data
- * @param out     Output data
- * @param outLen  The required length of the output data.
- */
-QStatus Crypto_PseudorandomFunctionCCM(const KeyBlob& secret, const char* label, const qcc::String& seed, uint8_t* out, size_t outLen);
-
-/**
  *  Secure Remote Password (SRP6) class. This implements the core algorithm for Secure Remote
  *  Password authentication protocol as defined in RFC 5054.
  */
