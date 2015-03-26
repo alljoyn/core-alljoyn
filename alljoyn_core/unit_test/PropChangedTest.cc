@@ -1836,10 +1836,13 @@ TEST_F(PropChangedTest, PropertyCache_nolistener)
     EXPECT_EQ(1, intval);
     /* send update signal, see if the cache got updated */
     obj->EmitSignals(tpService);
-    qcc::Sleep(400); /* we deliberately did not install a signal handler, so we
-                        have little choice but to wait a fixed time here */
-    EXPECT_EQ(ER_OK, proxy->GetProperty(INTERFACE_NAME "1", "P1", value));
-    EXPECT_EQ(ER_OK, value.Get("i", &intval));
+    /* busy-wait for max 5 seconds */
+    int count = 0;
+    while (intval != 101 && count < 500) {
+        qcc::Sleep(10);
+        EXPECT_EQ(ER_OK, proxy->GetProperty(INTERFACE_NAME "1", "P1", value));
+        EXPECT_EQ(ER_OK, value.Get("i", &intval));
+    }
     EXPECT_EQ(101, intval);
 }
 
