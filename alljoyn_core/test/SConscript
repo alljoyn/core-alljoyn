@@ -51,6 +51,9 @@ progs = [
     test_env.Program('init',          ['init.cc'])
     ]
 
+if test_env['OS'] == 'linux':
+   progs.extend(test_env.Program('observer-multipeer',     ['observer-multipeer.cc']))
+
 if test_env['OS'] == 'linux' or test_env['OS'] == 'android':
     progs.extend(test_env.Program('mc-rcv',     ['mc-rcv.cc']))
     progs.extend(test_env.Program('mc-snd',     ['mc-snd.cc']))
