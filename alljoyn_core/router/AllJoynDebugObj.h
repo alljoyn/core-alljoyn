@@ -25,7 +25,7 @@
 // Include contents in debug builds only.
 #ifndef NDEBUG
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 #include <assert.h>
 

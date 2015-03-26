@@ -22,7 +22,7 @@
 #ifndef _QCC_TIME_H
 #define _QCC_TIME_H
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 #include <qcc/String.h>
 
 namespace qcc {

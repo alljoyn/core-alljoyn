@@ -21,7 +21,7 @@
 #ifndef _ENDPOINT_HELPER_H
 #define _ENDPOINT_HELPER_H
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 #include "BusEndpoint.h"
 #include "RemoteEndpoint.h"

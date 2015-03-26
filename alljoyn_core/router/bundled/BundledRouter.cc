@@ -21,7 +21,7 @@
 
 #include <stdio.h>
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 #include <qcc/Debug.h>
 #include <qcc/Logger.h>
 #include <qcc/Log.h>

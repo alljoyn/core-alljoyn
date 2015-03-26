@@ -28,7 +28,7 @@
 #include <map>
 #include <set>
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 #include <qcc/GUID.h>
 #include <qcc/String.h>

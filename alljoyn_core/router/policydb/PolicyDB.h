@@ -21,7 +21,7 @@
 #ifndef _POLICYDB_H
 #define _POLICYDB_H
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 #include <qcc/Logger.h>
 #include <qcc/ManagedObj.h>
 #include <qcc/RWLock.h>

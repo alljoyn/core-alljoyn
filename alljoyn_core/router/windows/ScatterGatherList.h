@@ -24,7 +24,7 @@
 #ifndef _QCC_SCATTERGATHERLIST_H
 #define _QCC_SCATTERGATHERLIST_H
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 #include <algorithm>
 #include <assert.h>

@@ -22,7 +22,7 @@
 #ifndef _ALLJOYN_ENDPOINTAUTH_H
 #define _ALLJOYN_ENDPOINTAUTH_H
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 #include <qcc/String.h>
 #include <qcc/GUID.h>

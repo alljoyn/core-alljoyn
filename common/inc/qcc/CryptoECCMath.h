@@ -23,7 +23,7 @@
  ******************************************************************************/
 
 #include <Status.h>
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 namespace qcc {
 

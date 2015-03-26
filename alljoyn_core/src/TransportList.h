@@ -21,7 +21,7 @@
 #ifndef _ALLJOYN_TRANSPORTLIST_H
 #define _ALLJOYN_TRANSPORTLIST_H
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 #include <qcc/String.h>
 #include <qcc/IODispatch.h>
 

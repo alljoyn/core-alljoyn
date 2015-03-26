@@ -22,7 +22,7 @@
  *
  *****************************************************************************/
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 #include <stdio.h>
 

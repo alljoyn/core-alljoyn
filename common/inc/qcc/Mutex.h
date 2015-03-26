@@ -22,7 +22,7 @@
 #ifndef _QCC_MUTEX_H
 #define _QCC_MUTEX_H
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 #if defined(QCC_OS_GROUP_POSIX)
 #include <qcc/posix/Mutex.h>

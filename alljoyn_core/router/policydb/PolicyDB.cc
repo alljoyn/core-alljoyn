@@ -19,7 +19,7 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 #include <qcc/Debug.h>
 #include <qcc/Logger.h>

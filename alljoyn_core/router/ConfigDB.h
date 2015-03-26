@@ -21,7 +21,7 @@
 #ifndef _CONFIGDB_H
 #define _CONFIGDB_H
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 #include <assert.h>
 #include <set>

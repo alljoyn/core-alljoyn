@@ -23,7 +23,7 @@
  ******************************************************************************/
 
 #include <assert.h>
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 #include <qcc/CryptoECC.h>
 
 namespace qcc {

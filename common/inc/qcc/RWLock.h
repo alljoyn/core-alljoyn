@@ -22,7 +22,7 @@
 #ifndef _QCC_RWLOCK_H
 #define _QCC_RWLOCK_H
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 /*
  * Note: The Android NDK does not include support for pThread's rwlock

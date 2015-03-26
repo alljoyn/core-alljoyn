@@ -29,7 +29,7 @@
 
 #include <alljoyn/Status.h>
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 #include <qcc/String.h>
 #include <qcc/Mutex.h>
 #include <qcc/Thread.h>

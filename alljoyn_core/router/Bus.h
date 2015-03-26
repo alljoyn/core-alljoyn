@@ -25,7 +25,7 @@
 #error Only include Bus.h in C++ code.
 #endif
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 #include <list>
 #include <set>

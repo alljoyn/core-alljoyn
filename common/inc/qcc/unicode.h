@@ -25,7 +25,7 @@
 #ifndef _QCC_UNICODE_H
 #define _QCC_UNICODE_H
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 #if defined(QCC_OS_GROUP_POSIX)
 #include <qcc/posix/unicode.h>

@@ -26,7 +26,7 @@
 #error Only include MessageSink.h in C++ code.
 #endif
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 #include <alljoyn/Message.h>
 

@@ -20,7 +20,7 @@
  ******************************************************************************/
 
 #include <algorithm>
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 #include <qcc/IPAddress.h>
 #include <qcc/Socket.h>
 #include <qcc/Thread.h>

@@ -26,7 +26,7 @@
 #include <alljoyn/SessionListener.h>
 #include <qcc/String.h>
 #include <stdio.h>
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 #include "../SimpleRuleEngine.h"
 #include "OptParser.h"

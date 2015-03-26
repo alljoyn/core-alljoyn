@@ -22,7 +22,7 @@
 #ifndef _QCC_CONDITION_H
 #define _QCC_CONDITION_H
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 #if defined(QCC_OS_GROUP_POSIX)
 #include <qcc/posix/Condition.h>

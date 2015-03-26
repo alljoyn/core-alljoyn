@@ -23,7 +23,7 @@
 #ifndef _QCC_MANAGEDOBJ_H
 #define _QCC_MANAGEDOBJ_H
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 #if defined(QCC_OS_ANDROID)
 // This must be included before #include <new> for building on Froyo with

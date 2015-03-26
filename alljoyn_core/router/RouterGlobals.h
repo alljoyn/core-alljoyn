@@ -21,7 +21,7 @@
 #ifndef _ALLJOYN_ROUTERGLOBALS_H
 #define _ALLJOYN_ROUTERGLOBALS_H
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 namespace ajn {
 

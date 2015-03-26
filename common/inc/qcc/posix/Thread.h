@@ -25,7 +25,7 @@
 #ifndef _OS_QCC_THREAD_H
 #define _OS_QCC_THREAD_H
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 #include <pthread.h>
 #include <sys/select.h>

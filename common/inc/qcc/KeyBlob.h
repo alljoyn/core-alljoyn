@@ -24,7 +24,7 @@
 
 #include <algorithm>
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 #include <assert.h>
 #include <qcc/String.h>

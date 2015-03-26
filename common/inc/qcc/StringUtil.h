@@ -27,7 +27,7 @@
 
 #include <vector>
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 #include <qcc/String.h>
 
 namespace qcc {

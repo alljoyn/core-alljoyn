@@ -25,7 +25,7 @@
 #error Only include BusAttachment.h in C++ code.
 #endif
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 #include <qcc/String.h>
 #include <alljoyn/KeyStoreListener.h>

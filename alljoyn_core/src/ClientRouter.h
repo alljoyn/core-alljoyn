@@ -22,7 +22,7 @@
 #ifndef _ALLJOYN_CLIENTROUTER_H
 #define _ALLJOYN_CLIENTROUTER_H
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 #include <qcc/Thread.h>
 #include <qcc/String.h>

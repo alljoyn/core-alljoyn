@@ -22,7 +22,7 @@
 
 #include <stdlib.h>
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 #include <qcc/String.h>
 #include <qcc/StringUtil.h>

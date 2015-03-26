@@ -22,7 +22,7 @@
 #ifndef _OS_QCC_UTILITY_H
 #define _OS_QCC_UTILITY_H
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 #include <windows.h>
 
 void strerror_r(uint32_t errCode, char* ansiBuf, uint16_t ansiBufSize);

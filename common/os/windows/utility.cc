@@ -22,7 +22,7 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 // Do not change the order of these includes; they are order dependent.
 #include <Winsock2.h>

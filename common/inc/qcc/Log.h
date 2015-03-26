@@ -22,7 +22,7 @@
 #ifndef _QCC_LOG_H
 #define _QCC_LOG_H
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 /**
  * Set AllJoyn debug levels.

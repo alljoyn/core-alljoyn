@@ -22,7 +22,7 @@
 #ifndef _ALLJOYN_SMARTPOINTER_H_
 #define _ALLJOYN_SMARTPOINTER_H_
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 #include <qcc/atomic.h>
 
 namespace qcc {

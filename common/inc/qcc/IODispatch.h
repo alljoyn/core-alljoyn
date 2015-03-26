@@ -22,7 +22,7 @@
 #ifndef _QCC_IODISPATCH_H
 #define _QCC_IODISPATCH_H
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 #include <qcc/Stream.h>
 #include <qcc/Thread.h>

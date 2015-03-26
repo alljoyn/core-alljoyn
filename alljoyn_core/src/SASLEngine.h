@@ -21,7 +21,7 @@
 #ifndef _ALLJOYN_SASLENGINE_H
 #define _ALLJOYN_SASLENGINE_H
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 #include <set>
 

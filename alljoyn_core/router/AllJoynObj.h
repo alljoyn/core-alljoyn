@@ -22,7 +22,7 @@
 #ifndef _ALLJOYN_ALLJOYNOBJ_H
 #define _ALLJOYN_ALLJOYNOBJ_H
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 #include <vector>
 #include <map>
 

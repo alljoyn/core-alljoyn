@@ -22,7 +22,7 @@
 
 #include <map>
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 #include <qcc/Debug.h>
 #include <qcc/String.h>
 #include <qcc/Crypto.h>

@@ -26,7 +26,7 @@
 #ifndef _ALLJOYN_BUSCONTROLLER_H
 #define _ALLJOYN_BUSCONTROLLER_H
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 #include <alljoyn/MsgArg.h>
 

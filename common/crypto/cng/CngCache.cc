@@ -25,7 +25,7 @@
 #include <bcrypt.h>
 #include <capi.h>
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 #include <qcc/Debug.h>
 #include <qcc/Util.h>
 #include <qcc/Crypto.h>

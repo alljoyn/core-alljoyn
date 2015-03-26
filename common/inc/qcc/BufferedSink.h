@@ -23,7 +23,7 @@
 #ifndef _QCC_BUFFEREDSINK_H
 #define _QCC_BUFFEREDSINK_H
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 #include <qcc/String.h>
 #include <qcc/Event.h>
 #include <qcc/Stream.h>

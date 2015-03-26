@@ -25,7 +25,7 @@
 #ifndef _QCC_UARTSTREAM_H
 #define _QCC_UARTSTREAM_H
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 #include <qcc/Stream.h>
 #include <qcc/IODispatch.h>
 #include <qcc/Thread.h>

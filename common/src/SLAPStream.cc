@@ -23,7 +23,7 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 #include <qcc/SLAPStream.h>
 
 #define QCC_MODULE "SLAP"

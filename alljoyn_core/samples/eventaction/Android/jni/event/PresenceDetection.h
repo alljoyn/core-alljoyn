@@ -23,7 +23,7 @@
 #include <alljoyn/SessionListener.h>
 #include <alljoyn/Session.h>
 #include <qcc/String.h>
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 #include "../Constants.h"
 #include <pthread.h>
 #include <vector>

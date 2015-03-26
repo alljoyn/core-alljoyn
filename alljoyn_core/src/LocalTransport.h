@@ -23,7 +23,7 @@
 #ifndef _ALLJOYN_LOCALTRANSPORT_H
 #define _ALLJOYN_LOCALTRANSPORT_H
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 #include <map>
 

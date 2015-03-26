@@ -22,7 +22,7 @@
 #ifndef _QCC_OS_LOGGER_H
 #define _QCC_OS_LOGGER_H
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 #include <qcc/Debug.h>
 
 /**

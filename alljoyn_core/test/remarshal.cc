@@ -21,7 +21,7 @@
  ******************************************************************************/
 
 #include <ctype.h>
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 #include <qcc/Util.h>
 #include <qcc/Debug.h>

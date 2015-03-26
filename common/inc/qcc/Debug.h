@@ -24,7 +24,7 @@
 #ifndef _QCC_DEBUG_H
 #define _QCC_DEBUG_H
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 #include <stdio.h>
 

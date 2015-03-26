@@ -21,7 +21,7 @@
 #ifndef _QCC_STATICGLOBALS_H
 #define _QCC_STATICGLOBALS_H
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 #include <Status.h>
 
 namespace qcc {

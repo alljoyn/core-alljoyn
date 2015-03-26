@@ -24,7 +24,7 @@
 #ifndef _POSIX_QCC_ATOMIC_H
 #define _POSIX_QCC_ATOMIC_H
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 
 #ifdef QCC_OS_ANDROID
 #include <sys/atomics.h>

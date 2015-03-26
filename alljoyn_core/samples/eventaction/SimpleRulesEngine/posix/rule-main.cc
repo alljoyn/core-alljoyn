@@ -15,7 +15,7 @@
  ******************************************************************************/
 #include <alljoyn/version.h>
 #include <qcc/Log.h>
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 #include <signal.h>
 #include <stdio.h>
 #include <alljoyn/Init.h>

@@ -26,7 +26,7 @@
 #ifndef _QCC_BYTESTREAMPAIR_H
 #define _QCC_BYTESTREAMPAIR_H
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 #include <qcc/String.h>
 #include <qcc/Pipe.h>
 #include <qcc/Stream.h>

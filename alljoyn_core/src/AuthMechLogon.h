@@ -27,7 +27,7 @@
 #error Only include AuthMechLogon.h in C++ code.
 #endif
 
-#include <qcc/platform.h>
+#include <qcc/platform_cpp.h>
 #include <qcc/String.h>
 #include <qcc/Crypto.h>
 
