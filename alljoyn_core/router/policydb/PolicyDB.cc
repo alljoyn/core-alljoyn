@@ -141,7 +141,7 @@ StringID _PolicyDB::LookupStringID(const char* key) const
 {
     StringID id = ID_NOT_FOUND;
 
-    if (key) {
+    if (key && (key[0] != '\0')) {
         lock.RDLock();
         StringIDMap::const_iterator it = dictionary.find(key);
 
@@ -616,7 +616,7 @@ void _PolicyDB::NameOwnerChanged(const String& alias,
             assert(alias != *newOwner);
             bnids = it->second;
         }
-        if (aliasID != ID_NOT_FOUND) {
+        if ((aliasID != ID_NOT_FOUND) && (aliasID != WILDCARD)) {
             QCC_DbgPrintf(("Add %s{%d} to table for %s", alias.c_str(), aliasID, newOwner->c_str()));
             bnids->insert(aliasID);
         }
