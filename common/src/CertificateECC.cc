@@ -113,6 +113,7 @@ QStatus CertificateX509::EncodePrivateKeyPEM(const uint8_t* privateKey, size_t l
 
     status = Crypto_ASN1::Encode(der, "(ixc(o))", 1, &prv, 0, &oid);
     if (ER_OK != status) {
+        QCC_LogError(status, ("Error encoding private key in PEM format"));
         return status;
     }
     status = Crypto_ASN1::EncodeBase64(der, pem);
@@ -131,6 +132,7 @@ QStatus CertificateX509::DecodePrivateKeyPEM(const String& encoded, uint8_t* pri
 
     status = StripTags(pem, EC_PRIVATE_KEY_PEM_BEGIN_TAG, EC_PRIVATE_KEY_PEM_END_TAG);
     if (ER_OK != status) {
+        QCC_LogError(status, ("Error decoding private key from PEM. Only support tag -----BEGIN EC PRIVATE KEY-----, tag -----END EC PRIVATE KEY-----, and key"));
         return status;
     }
     qcc::String der;
@@ -205,6 +207,7 @@ QStatus CertificateX509::DecodePublicKeyPEM(const String& encoded, uint8_t* publ
 
     status = StripTags(pem, PUBLIC_KEY_PEM_BEGIN_TAG, PUBLIC_KEY_PEM_END_TAG);
     if (ER_OK != status) {
+        QCC_LogError(status, ("Error decoding private key from PEM. Only support tag -----BEGIN PUBLIC KEY-----, tag -----END PUBLIC KEY-----, and key"));
         return status;
     }
     qcc::String der;
@@ -250,6 +253,7 @@ QStatus CertificateX509::DecodeCertificateName(const qcc::String& dn, Certificat
         qcc::String rem;
         status = Crypto_ASN1::Decode(tmp, "{(ou)}.", &oid, &str, &rem);
         if (ER_OK != status) {
+            QCC_LogError(status, ("Error decoding distinguished name"));
             return status;
         }
         if (OID_DN_OU == oid) {
@@ -529,6 +533,7 @@ QStatus CertificateX509::EncodeCertificateExt(qcc::String& ext)
     oid = OID_BASIC_CONSTRAINTS;
     status = Crypto_ASN1::Encode(raw, "(ox)", &oid, &tmp);
     if (ER_OK != status) {
+        QCC_LogError(status, ("Error decoding certificate basic constraint"));
         return status;
     }
     status = Crypto_ASN1::Encode(ext, "c((R))", 3, &raw);
@@ -550,31 +555,41 @@ QStatus CertificateX509::DecodeCertificateTBS()
     status = Crypto_ASN1::Decode(tbs, "(c(i)l(o)(.)(.)(.)(.).)",
                                  0, &x509Version, &serial, &oid, &iss, &time, &sub, &pub, &ext);
     if (ER_OK != status) {
+        QCC_LogError(status, ("Error decoding certificate"));
         return status;
     }
     if (X509_VERSION_3 != x509Version) {
+        QCC_LogError(status, ("Certificate not X.509v3"));
         return ER_FAIL;
     }
     if (OID_SIG_ECDSA_SHA256 != oid) {
+        QCC_LogError(status, ("Certificate signature must be SHA-256"));
         return ER_FAIL;
     }
     status = DecodeCertificateName(iss, issuer);
     if (ER_OK != status) {
+        QCC_LogError(status, ("Error decoding certificate issuer"));
         return status;
     }
     status = DecodeCertificateTime(time);
     if (ER_OK != status) {
+        QCC_LogError(status, ("Error decoding certificate validity period"));
         return status;
     }
     status = DecodeCertificateName(sub, subject);
     if (ER_OK != status) {
+        QCC_LogError(status, ("Error decoding certificate subject"));
         return status;
     }
     status = DecodeCertificatePub(pub);
     if (ER_OK != status) {
+        QCC_LogError(status, ("Error decoding certificate subject public key"));
         return status;
     }
     status = DecodeCertificateExt(ext);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Error decoding certificate extensions"));
+    }
 
     return status;
 }
@@ -685,6 +700,9 @@ QStatus CertificateX509::DecodeCertificateDER(const qcc::String& der)
         return status;
     }
     status = DecodeCertificateSig(sig);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Error decoding certificate signature"));
+    }
 
     return status;
 }
@@ -718,12 +736,14 @@ QStatus CertificateX509::DecodeCertificatePEM(const qcc::String& pem)
 
     pos = pem.find(tag1);
     if (pos == qcc::String::npos) {
+        QCC_LogError(ER_INVALID_DATA, ("Error decoding certificate data from PEM. Only support tag -----BEGIN CERTIFICATE-----, tag -----END CERTIFICATE-----, and data"));
         return ER_INVALID_DATA;
     }
     rem = pem.substr(pos + tag1.size());
 
     pos = rem.find(tag2);
     if (pos == qcc::String::npos) {
+        QCC_LogError(ER_INVALID_DATA, ("Error decoding certificate data from PEM. Only support tag -----BEGIN CERTIFICATE-----, tag -----END CERTIFICATE-----, and data"));
         return ER_INVALID_DATA;
     }
     rem = rem.substr(0, pos);
