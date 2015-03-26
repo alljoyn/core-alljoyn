@@ -4917,6 +4917,7 @@ QStatus JBusAttachment::RegisterBusObject(const char* objPath, jobject jbusObjec
          * If AllJoyn doesn't have a hold on the Java Bus Object, we shouldn't
          * correspondingly have a hold on it.
          */
+        ForgetLocalBusObject(jglobalref);
         QCC_DbgPrintf(("JBusAttachment::RegisterBusObject(): Forgetting jglobalref"));
         env->DeleteGlobalRef(jglobalref);
     }
@@ -4931,7 +4932,7 @@ QStatus JBusAttachment::RegisterBusObject(const char* objPath, jobject jbusObjec
 
     QCC_DbgPrintf(("JBusAttachment::RegisterBusObject(): Releasing global Bus Object map lock"));
     gBusObjectMapLock.Unlock();
-    return ER_OK;
+    return status;
 }
 
 void JBusAttachment::UnregisterBusObject(jobject jbusObject)
