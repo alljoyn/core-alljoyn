@@ -68,14 +68,16 @@ FileSource::FileSource(const FileSource& other) :
 
 FileSource FileSource::operator=(const FileSource& other)
 {
-    if (ownsFd && (0 <= fd)) {
-        close(fd);
+    if (&other != this) {
+        if (ownsFd && (0 <= fd)) {
+            close(fd);
+        }
+        fd = dup(other.fd);
+        delete event;
+        event = new Event(fd, Event::IO_READ);
+        ownsFd = true;
+        locked = other.locked;
     }
-    fd = dup(other.fd);
-    delete event;
-    event = new Event(fd, Event::IO_READ);
-    ownsFd = true;
-    locked = other.locked;
     return *this;
 }
 
@@ -203,14 +205,16 @@ FileSink::FileSink(const FileSink& other) :
 
 FileSink FileSink::operator=(const FileSink& other)
 {
-    if (ownsFd && (0 <= fd)) {
-        close(fd);
+    if (&other != this) {
+        if (ownsFd && (0 <= fd)) {
+            close(fd);
+        }
+        fd = dup(other.fd);
+        delete event;
+        event = new Event(fd, Event::IO_WRITE);
+        ownsFd = true;
+        locked = other.locked;
     }
-    fd = dup(other.fd);
-    delete event;
-    event = new Event(fd, Event::IO_WRITE);
-    ownsFd = true;
-    locked = other.locked;
     return *this;
 }
 
