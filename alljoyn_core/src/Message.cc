@@ -36,6 +36,7 @@
 
 #include <alljoyn/Message.h>
 #include <alljoyn/BusAttachment.h>
+#include <AllJoynCrypto.h>
 
 #include "BusInternal.h"
 #include "BusUtil.h"
@@ -90,6 +91,7 @@ const AllJoynTypeId HeaderFields::FieldType[] = {
     ALLJOYN_UINT16,      /* ALLJOYN_HDR_FIELD_TIME_TO_LIVE           */
     ALLJOYN_UINT32,      /* ALLJOYN_HDR_FIELD_COMPRESSION_TOKEN      */
     ALLJOYN_UINT32,      /* ALLJOYN_HDR_FIELD_SESSION_ID             */
+    ALLJOYN_UINT64,      /* ALLJOYN_HDR_FIELD_CRYPTO_VALUE           */
     ALLJOYN_INVALID      /* ALLJOYN_HDR_FIELD_UNKNOWN                */
 };
 
@@ -108,6 +110,7 @@ const bool HeaderFields::Compressible[] = {
     true,             /* ALLJOYN_HDR_FIELD_TIME_TO_LIVE      */
     false,            /* ALLJOYN_HDR_FIELD_COMPRESSION_TOKEN */
     true,             /* ALLJOYN_HDR_FIELD_SESSION_ID        */
+    false,            /* ALLJOYN_HDR_FIELD_CRYPTO_VALUE      */
     false             /* ALLJOYN_HDR_FIELD_UNKNOWN           */
 };
 
@@ -134,7 +137,8 @@ static const char* HdrId[] = {
     "TIMESTAMP",
     "TIME_TO_LIVE",
     "COMPRESSION_TOKEN",
-    "SESSION_ID"
+    "SESSION_ID",
+    "CRYPTO_VALUE"
 };
 #endif
 
@@ -154,6 +158,10 @@ qcc::String HeaderFields::ToString(size_t indent) const
 #endif
     return str;
 }
+
+const uint32_t _Message::MIN_AUTH_VERSION_MACLEN16 = 3;
+const uint32_t _Message::MIN_AUTH_VERSION_FULLNONCELEN = 3;
+const uint32_t _Message::MIN_AUTH_VERSION_USE_CRYPTO_VALUE = 3;
 
 /*
  * A brief description of the message
@@ -329,6 +337,7 @@ void _Message::Init(BusAttachment& bus)
     handles = NULL;
     numHandles = 0;
     encrypt = false;
+    authVersion = -1;
     readState = MESSAGE_NEW;
     countRead = 0;
     writeState = MESSAGE_NEW;
@@ -453,7 +462,7 @@ QStatus _Message::ReMarshal(const char* senderName)
     /*
      * Copy in the body if there was one
      */
-    if (msgHeader.bodyLen != 0) {
+    if ((msgHeader.bodyLen != 0) && (NULL != bodyPtr)) {
         memcpy(bufPos, bodyPtr, msgHeader.bodyLen);
     }
     bodyPtr = bufPos;
