@@ -273,8 +273,6 @@ QStatus ECCSecret::DerivePreMasterSecret(
 
 Exit:
 
-    memset((void*)&sha, 0, sizeof(Crypto_SHA256)); // may get optimized out, need a secure zero memory here.
-
     return status;
 
 }
