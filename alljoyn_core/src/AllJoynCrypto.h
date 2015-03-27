@@ -88,10 +88,32 @@ class Crypto {
     static QStatus HashHeaderFields(const HeaderFields& hdrFields, qcc::KeyBlob& keyBlob);
 
     /**
+     * Returns the length of the MAC that will be computed for the given message.
+     *
+     * @param message   the message that will have a MAC computed.
+     * @return Length of the MAC value that will be used for this message.
+     */
+    static size_t GetMACLength(const _Message& message);
+
+    /**
+     * Returns the length of the nonce that will be used for the given message.
+     *
+     * @param message   the message that the nonce will be used for.
+     */
+    static size_t GetNonceLength(const _Message& message);
+
+  private:
+
+    /**
      * The length of the message authentication field that will be appended to the encrypted data.
      */
     static const size_t MACLength;
+    static const size_t PreviousMACLength;
 
+    static const size_t NonceLength;
+    static const size_t PreviousNonceLength;
+
+    static const size_t MaxNonceLength;
 };
 
 

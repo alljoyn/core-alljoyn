@@ -36,6 +36,7 @@
 
 #include <alljoyn/Message.h>
 #include <alljoyn/BusAttachment.h>
+#include <AllJoynCrypto.h>
 
 #include "BusInternal.h"
 #include "BusUtil.h"
@@ -90,6 +91,7 @@ const AllJoynTypeId HeaderFields::FieldType[] = {
     ALLJOYN_UINT16,      /* ALLJOYN_HDR_FIELD_TIME_TO_LIVE           */
     ALLJOYN_UINT32,      /* ALLJOYN_HDR_FIELD_COMPRESSION_TOKEN      */
     ALLJOYN_UINT32,      /* ALLJOYN_HDR_FIELD_SESSION_ID             */
+    ALLJOYN_UINT64,      /* ALLJOYN_HDR_FIELD_CRYPTO_VALUE           */
     ALLJOYN_INVALID      /* ALLJOYN_HDR_FIELD_UNKNOWN                */
 };
 
@@ -108,6 +110,7 @@ const bool HeaderFields::Compressible[] = {
     true,             /* ALLJOYN_HDR_FIELD_TIME_TO_LIVE      */
     false,            /* ALLJOYN_HDR_FIELD_COMPRESSION_TOKEN */
     true,             /* ALLJOYN_HDR_FIELD_SESSION_ID        */
+    false,            /* ALLJOYN_HDR_FIELD_CRYPTO_VALUE      */
     false             /* ALLJOYN_HDR_FIELD_UNKNOWN           */
 };
 
@@ -154,6 +157,10 @@ qcc::String HeaderFields::ToString(size_t indent) const
 #endif
     return str;
 }
+
+const uint32_t _Message::MIN_AUTH_VERSION_MACLEN16 = 3;
+const uint32_t _Message::MIN_AUTH_VERSION_FULLNONCELEN = 3;
+const uint32_t _Message::MIN_AUTH_VERSION_USE_CRYPTO_VALUE = 3;
 
 /*
  * A brief description of the message
@@ -518,6 +525,10 @@ void _Message::ClearHeader()
         encrypt = false;
         authMechanism.clear();
     }
+}
+
+uint32_t _Message::GetAuthVersion() const {
+    return (bus->GetInternal().GetPeerStateTable()->GetPeerState(GetDestination())->GetAuthVersion() >> 16);
 }
 
 }

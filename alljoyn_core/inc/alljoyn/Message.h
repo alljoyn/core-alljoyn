@@ -103,6 +103,7 @@ typedef enum {
     ALLJOYN_HDR_FIELD_TIME_TO_LIVE,             ///< messages time-to-live header field type
     ALLJOYN_HDR_FIELD_COMPRESSION_TOKEN,        ///< message compression token header field type @deprecated
     ALLJOYN_HDR_FIELD_SESSION_ID,               ///< Session id field type
+    ALLJOYN_HDR_FIELD_CRYPTO_VALUE,             ///< Crypto Random value to be used in nonce
     ALLJOYN_HDR_FIELD_UNKNOWN                   ///< unknown header field type also used as maximum number of header field types.
 } AllJoynFieldType;
 
@@ -201,6 +202,11 @@ class _Message {
     friend struct Rule;
 
   public:
+
+    static const uint32_t MIN_AUTH_VERSION_MACLEN16;
+    static const uint32_t MIN_AUTH_VERSION_FULLNONCELEN;
+    static const uint32_t MIN_AUTH_VERSION_USE_CRYPTO_VALUE;
+
     /**
      * Constructor for a message
      *
@@ -470,6 +476,30 @@ class _Message {
     }
 
     /**
+     * Accessor function to get the crypto random value for the message.
+     *
+     * @return
+     *      - 64 bit crypto Number for the message
+     *      - 0 'zero' if Extended Serial Number has not been set
+     */
+    uint64_t GetCryptoValue() const {
+        if (hdrFields.field[ALLJOYN_HDR_FIELD_CRYPTO_VALUE].typeId == ALLJOYN_UINT64) {
+            return hdrFields.field[ALLJOYN_HDR_FIELD_CRYPTO_VALUE].v_uint64;
+        } else {
+            return 0;
+        }
+    }
+
+    /**
+     * Accessor function to determine if this Message requires a crypto random value.
+     *
+     * @return
+     *      - true if the 64 bit crypto Number for the message has been set
+     *      - false if otherwise.
+     */
+    bool RequiresCryptoValue() const { return (MIN_AUTH_VERSION_USE_CRYPTO_VALUE <= (GetAuthVersion() >> 16)); }
+
+    /**
      * If the message is an error message returns the error name and optionally the error message string
      * @param[out] errorMessage
      *                      - Return the error message string stored
@@ -544,6 +574,13 @@ class _Message {
             outEndian = myEndian;
         }
     }
+
+    /**
+     * Get the Authentication Version of the associated peer state object.
+     *
+     * @return the Authentication Version of the associated peer state object.
+     */
+    uint32_t GetAuthVersion() const;
 
     /**
      * Copy constructor.
