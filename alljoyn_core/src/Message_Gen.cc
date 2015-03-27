@@ -625,7 +625,8 @@ static const uint8_t FieldTypeMapping[] = {
     16, /* ALLJOYN_HDR_FIELD_TIMESTAMP         */
     17, /* ALLJOYN_HDR_FIELD_TIME_TO_LIVE      */
     18, /* ALLJOYN_HDR_FIELD_COMPRESSION_TOKEN */
-    19  /* ALLJOYN_HDR_FIELD_SESSION_ID        */
+    19, /* ALLJOYN_HDR_FIELD_SESSION_ID        */
+    20  /* ALLJOYN_HDR_FIELD_CRYPTO_VALUE      */
 };
 
 /*
@@ -753,7 +754,7 @@ QStatus _Message::EncryptMessage()
         }
     }
     if (status == ER_OK) {
-        size_t argsLen = msgHeader.bodyLen - ajn::Crypto::MACLength;
+        size_t argsLen = msgHeader.bodyLen - ajn::Crypto::GetMACLength(*this);
         size_t hdrLen = ROUNDUP8(sizeof(msgHeader) + msgHeader.headerLen);
         status = ajn::Crypto::Encrypt(*this, key, (uint8_t*)msgBuf, hdrLen, argsLen);
         if (status == ER_OK) {
@@ -817,7 +818,7 @@ QStatus _Message::MarshalMessage(const qcc::String& expectedSignature,
      * algorithm appends a MAC block to the end of the encrypted data.
      */
     if (encrypt) {
-        msgHeader.bodyLen = static_cast<uint32_t>(argsLen + ajn::Crypto::MACLength);
+        msgHeader.bodyLen = static_cast<uint32_t>(argsLen + ajn::Crypto::GetMACLength(*this));
     } else {
         msgHeader.bodyLen = static_cast<uint32_t>(argsLen);
     }
@@ -891,6 +892,15 @@ QStatus _Message::MarshalMessage(const qcc::String& expectedSignature,
     if (sessionId != 0) {
         hdrFields.field[ALLJOYN_HDR_FIELD_SESSION_ID].v_uint32 = sessionId;
         hdrFields.field[ALLJOYN_HDR_FIELD_SESSION_ID].typeId = ALLJOYN_UINT32;
+    }
+    /* Check if we are adding a Crypto Random for the nonce*/
+    hdrFields.field[ALLJOYN_HDR_FIELD_CRYPTO_VALUE].Clear();
+    if (RequiresCryptoValue()) {
+        uint64_t cryptoValue;
+        Crypto_GetRandomBytes((uint8_t*)&cryptoValue, sizeof(uint64_t));
+        hdrFields.field[ALLJOYN_HDR_FIELD_CRYPTO_VALUE].v_uint64 = cryptoValue;
+        hdrFields.field[ALLJOYN_HDR_FIELD_CRYPTO_VALUE].typeId = ALLJOYN_UINT64;
+        cryptoValue = 0;
     }
     /*
      * Calculate space required for the header fields

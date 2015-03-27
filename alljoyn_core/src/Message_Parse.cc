@@ -785,7 +785,8 @@ static const AllJoynFieldType FieldTypeMapping[] = {
     ALLJOYN_HDR_FIELD_TIME_TO_LIVE,      /* 17 */
     ALLJOYN_HDR_FIELD_COMPRESSION_TOKEN, /* 18 */
     ALLJOYN_HDR_FIELD_SESSION_ID,        /* 19 */
-    ALLJOYN_HDR_FIELD_UNKNOWN            /* 20 */
+    ALLJOYN_HDR_FIELD_CRYPTO_VALUE,      /* 20 */
+    ALLJOYN_HDR_FIELD_UNKNOWN            /* 21 */
 };
 
 
