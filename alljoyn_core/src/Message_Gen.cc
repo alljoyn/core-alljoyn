@@ -625,7 +625,8 @@ static const uint8_t FieldTypeMapping[] = {
     16, /* ALLJOYN_HDR_FIELD_TIMESTAMP         */
     17, /* ALLJOYN_HDR_FIELD_TIME_TO_LIVE      */
     18, /* ALLJOYN_HDR_FIELD_COMPRESSION_TOKEN */
-    19  /* ALLJOYN_HDR_FIELD_SESSION_ID        */
+    19, /* ALLJOYN_HDR_FIELD_SESSION_ID        */
+    20  /* ALLJOYN_HDR_FIELD_CRYPTO_VALUE      */
 };
 
 /*
@@ -753,7 +754,36 @@ QStatus _Message::EncryptMessage()
         }
     }
     if (status == ER_OK) {
-        size_t argsLen = msgHeader.bodyLen - ajn::Crypto::MACLength;
+        /*
+         * If we have gotten here, but the auth version wasn't set, it means that the bus did
+         * not have the peer name in it when MarshalMessage was called.  So we have to fix up
+         * the message with the encrypt parameters now and remarshal.
+         */
+        if (GetAuthVersion() < 0) {
+            if (peerState->IsSecure()) {
+                authVersion = (int32_t)(peerState->GetAuthVersion() >> 16);
+            }
+
+            assert(0 <= GetAuthVersion());
+
+            if (0 == msgHeader.bodyLen) {
+                bodyPtr = NULL; // in the case that we are extending the ciphertext by a MAC block.
+            }
+            msgHeader.bodyLen = static_cast<uint32_t>((size_t)msgHeader.bodyLen + ajn::Crypto::GetMACLength(*this));
+
+            if (RequiresCryptoValue()) {
+                uint64_t cryptoValue;
+                Crypto_GetRandomBytes((uint8_t*)&cryptoValue, sizeof(uint64_t));
+                hdrFields.field[ALLJOYN_HDR_FIELD_CRYPTO_VALUE].Clear();
+                hdrFields.field[ALLJOYN_HDR_FIELD_CRYPTO_VALUE].v_uint64 = cryptoValue;
+                hdrFields.field[ALLJOYN_HDR_FIELD_CRYPTO_VALUE].typeId = ALLJOYN_UINT64;
+                cryptoValue = 0;
+            }
+
+            ReMarshal(NULL);
+        }
+
+        size_t argsLen = msgHeader.bodyLen - ajn::Crypto::GetMACLength(*this);
         size_t hdrLen = ROUNDUP8(sizeof(msgHeader) + msgHeader.headerLen);
         status = ajn::Crypto::Encrypt(*this, key, (uint8_t*)msgBuf, hdrLen, argsLen);
         if (status == ER_OK) {
@@ -812,12 +842,26 @@ QStatus _Message::MarshalMessage(const qcc::String& expectedSignature,
     msgHeader.flags = flags;
     msgHeader.msgType = (uint8_t)msgType;
     msgHeader.majorVersion = ALLJOYN_MAJOR_PROTOCOL_VERSION;
+
+    /*
+     * If the encrypt flag is set and the peerState is secure, then the AuthVersion will be available.
+     */
+    PeerStateTable*peerStateTable = bus->GetInternal().GetPeerStateTable();
+    if (peerStateTable->IsKnownPeer(destination)) {
+        PeerState peerState = peerStateTable->GetPeerState(destination);
+        if (encrypt && peerState->IsSecure()) {
+            authVersion = (int32_t)(peerState->GetAuthVersion() >> 16);
+            QCC_DbgHLPrintf(("Before Encrypt: set authVersion = 0x%08x", authVersion));
+        }
+    }
     /*
      * Encryption will typically make the body length slightly larger because the encryption
      * algorithm appends a MAC block to the end of the encrypted data.
+     * If we are encrypting, but the AuthVersion hasn't been set (like if we're talking to a proxy,
+     * and we do not have the destination in our bus yet) hold off on fixing up the length.
      */
-    if (encrypt) {
-        msgHeader.bodyLen = static_cast<uint32_t>(argsLen + ajn::Crypto::MACLength);
+    if (encrypt && (0 <= GetAuthVersion())) {
+        msgHeader.bodyLen = static_cast<uint32_t>(argsLen + ajn::Crypto::GetMACLength(*this));
     } else {
         msgHeader.bodyLen = static_cast<uint32_t>(argsLen);
     }
@@ -891,6 +935,15 @@ QStatus _Message::MarshalMessage(const qcc::String& expectedSignature,
     if (sessionId != 0) {
         hdrFields.field[ALLJOYN_HDR_FIELD_SESSION_ID].v_uint32 = sessionId;
         hdrFields.field[ALLJOYN_HDR_FIELD_SESSION_ID].typeId = ALLJOYN_UINT32;
+    }
+    /* Check if we are adding a Crypto Random for the nonce*/
+    hdrFields.field[ALLJOYN_HDR_FIELD_CRYPTO_VALUE].Clear();
+    if (encrypt && RequiresCryptoValue()) {
+        uint64_t cryptoValue;
+        Crypto_GetRandomBytes((uint8_t*)&cryptoValue, sizeof(uint64_t));
+        hdrFields.field[ALLJOYN_HDR_FIELD_CRYPTO_VALUE].v_uint64 = cryptoValue;
+        hdrFields.field[ALLJOYN_HDR_FIELD_CRYPTO_VALUE].typeId = ALLJOYN_UINT64;
+        cryptoValue = 0;
     }
     /*
      * Calculate space required for the header fields
@@ -1409,6 +1462,7 @@ void _Message::ErrorMsg(const char* errorName, uint32_t replySerial)
 
 QStatus _Message::ErrorMsg(const qcc::String& sender, const char* errorName, uint32_t replySerial)
 {
+
     /*
      * Clear any stale header fields
      */

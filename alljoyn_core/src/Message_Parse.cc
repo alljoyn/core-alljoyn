@@ -612,7 +612,12 @@ QStatus _Message::UnmarshalArgs(PeerStateTable* peerStateTable,
             status = ER_BUS_NOT_AUTHORIZED;
             goto ExitUnmarshalArgs;
         }
-        QCC_DbgHLPrintf(("Decrypting messge from %s", GetSender()));
+        /*
+         * Auth Version will have been set if we have an encrypted message and we've gotten here
+         * (i.e get key succeeded and is authorized for secure receive.)
+         */
+        authVersion = (int32_t)(peerState->GetAuthVersion() >> 16);
+
         /*
          * Decryption will typically make the body length slightly smaller because the encryption
          * algorithm adds appends a MAC block to the end of the encrypted data.
@@ -785,7 +790,8 @@ static const AllJoynFieldType FieldTypeMapping[] = {
     ALLJOYN_HDR_FIELD_TIME_TO_LIVE,      /* 17 */
     ALLJOYN_HDR_FIELD_COMPRESSION_TOKEN, /* 18 */
     ALLJOYN_HDR_FIELD_SESSION_ID,        /* 19 */
-    ALLJOYN_HDR_FIELD_UNKNOWN            /* 20 */
+    ALLJOYN_HDR_FIELD_CRYPTO_VALUE,      /* 20 */
+    ALLJOYN_HDR_FIELD_UNKNOWN            /* 21 */
 };
 
 
