@@ -32,7 +32,7 @@
 #define _CRT_SECURE_NO_WARNINGS 1
 #endif
 
-#include <qcc/platform.h>
+#include <alljoyn_c/AjAPI.h>
 
 #include <assert.h>
 #include <signal.h>

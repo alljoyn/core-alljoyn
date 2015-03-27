@@ -21,7 +21,6 @@
 #ifndef _ALLJOYN_C_MESSAGE_H
 #define _ALLJOYN_C_MESSAGE_H
 
-#include <qcc/platform.h>
 #include <alljoyn_c/AjAPI.h>
 #include <alljoyn_c/MsgArg.h>
 #include <alljoyn_c/Session.h>

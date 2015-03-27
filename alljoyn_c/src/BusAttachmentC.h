@@ -22,7 +22,7 @@
 #ifndef _ALLJOYN_C_BUSATTACHMENTC_H
 #define _ALLJOYN_C_BUSATTACHMENTC_H
 
-#include <qcc/platform.h>
+#include <alljoyn_c/AjAPI.h>
 #include <qcc/Mutex.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn_c/AjAPI.h>
