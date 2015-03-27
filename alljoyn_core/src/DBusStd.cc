@@ -56,7 +56,7 @@ const char* org::freedesktop::DBus::Introspectable::IntrospectDocType =
     ">\n";
 
 
-QStatus org::freedesktop::DBus::CreateInterfaces(BusAttachment& bus) {
+QStatus AJ_CALL org::freedesktop::DBus::CreateInterfaces(BusAttachment& bus) {
 
     InterfaceDescription* intf = NULL;
     QStatus status = bus.CreateInterface(org::freedesktop::DBus::InterfaceName, intf);
