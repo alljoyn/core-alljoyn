@@ -23,7 +23,6 @@
 #ifndef _ALLJOYN_C_REMOTEBUSOBJECT_H
 #define _ALLJOYN_C_REMOTEBUSOBJECT_H
 
-#include <qcc/platform.h>
 #include <alljoyn_c/AjAPI.h>
 #include <alljoyn_c/InterfaceDescription.h>
 #include <alljoyn_c/MessageReceiver.h>

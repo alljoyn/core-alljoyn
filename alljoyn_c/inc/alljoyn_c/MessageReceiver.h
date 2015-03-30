@@ -22,7 +22,6 @@
 #ifndef _ALLJOYN_C_MESSAGERECEIVER_H
 #define _ALLJOYN_C_MESSAGERECEIVER_H
 
-#include <qcc/platform.h>
 #include <alljoyn_c/AjAPI.h>
 #include <alljoyn_c/Message.h>
 

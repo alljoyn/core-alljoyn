@@ -23,7 +23,7 @@
 #ifndef _WIN32
 #define _BSD_SOURCE /* usleep */
 #endif
-#include <qcc/platform.h>
+#include <alljoyn_c/AjAPI.h>
 
 #include <assert.h>
 #include <signal.h>
