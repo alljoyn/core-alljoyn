@@ -1899,6 +1899,23 @@ public class BusAttachmentTest extends TestCase {
         this.wait(5 * 1000);
         assertEquals(true, onPinged);
     }
+
+    public void testBadObjectPaths() throws Exception {
+        bus = new BusAttachment(getClass().getName(),
+                BusAttachment.RemoteMessage.Receive);
+        assertEquals(Status.OK, bus.connect());
+
+        Emitter emitter = new Emitter();
+
+        assertEquals(Status.BUS_BAD_OBJ_PATH,
+                bus.registerBusObject(emitter, "badPath"));
+        assertEquals(Status.BUS_BAD_OBJ_PATH,
+                bus.registerBusObject(emitter, "/bad.path"));
+        assertEquals(Status.BUS_BAD_OBJ_PATH,
+                bus.registerBusObject(emitter, "/bad path"));
+
+        assertEquals(Status.OK, bus.registerBusObject(emitter, "/goodpath"));
+    }
     /*
      *  TODO
      *  Verify that all of the BusAttachment methods are tested
