@@ -1359,6 +1359,7 @@ Crypto_ECC::~Crypto_ECC()
     }
 
     SecureZeroMemory(&eccState, sizeof(eccState));
+    delete eccState;
 }
 
 const qcc::String ECCPublicKey::ToString() const
