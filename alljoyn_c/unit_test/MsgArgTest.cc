@@ -681,7 +681,7 @@ TEST(MsgArgTest, stabilize) {
     alljoyn_msgarg arg;
     arg = alljoyn_msgarg_create();
 
-    if (true) {
+    {
         char str_pointer[16] = "GoodBye";
         status = alljoyn_msgarg_set(arg, "s", str_pointer);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);

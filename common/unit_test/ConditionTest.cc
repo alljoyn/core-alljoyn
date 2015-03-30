@@ -191,6 +191,8 @@ class ConsumerThread : public qcc::Thread {
   protected:
     qcc::ThreadReturn STDCALL Run(void* arg)
     {
+        QCC_UNUSED(arg);
+
         m_state = RUN_ENTERED;
         do {
             m_state = IN_LOOP;
@@ -590,6 +592,8 @@ class ProducerThread : public qcc::Thread {
   protected:
     qcc::ThreadReturn STDCALL Run(void* arg)
     {
+        QCC_UNUSED(arg);
+
         m_state = RUN_ENTERED;
         for (uint32_t i = 0; i < m_count; ++i) {
             m_state = IN_LOOP;
@@ -831,7 +835,7 @@ uint32_t allocateLoops = 0;
  */
 uint32_t Allocate(qcc::Condition& c, qcc::Mutex& m, uint32_t n) {
     m.Lock();
-    while (true) {
+    for (;;) {
         for (std::list<uint32_t>::iterator i = freeList.begin(); i != freeList.end(); ++i) {
             if (*i == n) {
                 freeList.erase(i);
@@ -844,8 +848,6 @@ uint32_t Allocate(qcc::Condition& c, qcc::Mutex& m, uint32_t n) {
         ++allocateLoops;
         tl.Unlock();
     }
-    assert(false && "Allocator(): This can't happen\n");
-    return 0;
 }
 
 /*
@@ -889,6 +891,8 @@ class AllocatorThread : public qcc::Thread {
   protected:
     qcc::ThreadReturn STDCALL Run(void* arg)
     {
+        QCC_UNUSED(arg);
+
         m_state = RUN_ENTERED;
         do {
             m_state = IN_LOOP;

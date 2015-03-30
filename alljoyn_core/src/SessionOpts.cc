@@ -64,7 +64,6 @@ bool SessionOpts::IsCompatible(const SessionOpts& other) const
 
 qcc::String SessionOpts::ToString() const
 {
-    QCC_DbgTrace(("UDPTransport::Join()"));
     qcc::String str = "traffic=";
     switch (traffic) {
     case TRAFFIC_MESSAGES:
@@ -106,6 +105,30 @@ qcc::String SessionOpts::ToString() const
         break;
     }
 
+    str.append(", nameTransfer=");
+    switch (nameTransfer) {
+    case ALL_NAMES:
+        str.append("ALL_NAMES");
+        break;
+
+    case SLS_NAMES:
+        str.append("SLS_NAMES");
+        break;
+
+    case P2P_NAMES:
+        str.append("P2P_NAMES");
+        break;
+
+    case MP_NAMES:
+        str.append("MP_NAMES");
+        break;
+
+    default:
+        str.append("unknown");
+        break;
+    }
+
+    str.append(", transports=%X", transports);
     return str;
 }
 void SessionOpts::SetAllNames()
@@ -118,12 +141,12 @@ void SessionOpts::SetSessionNames()
     nameTransfer = (isMultipoint ? MP_NAMES : P2P_NAMES);
 }
 
-bool SessionOpts::IsAllNames()
+bool SessionOpts::IsAllNames() const
 {
     return nameTransfer == ALL_NAMES;
 }
 
-bool SessionOpts::IsSessionNames()
+bool SessionOpts::IsSessionNames() const
 {
     return (nameTransfer == P2P_NAMES) || (nameTransfer == MP_NAMES);
 }

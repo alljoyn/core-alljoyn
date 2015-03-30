@@ -88,6 +88,7 @@ static String IDSet2String(const _PolicyDB::IDSet& idset)
     }
     return ids;
 }
+
 #endif
 
 static bool MsgTypeStrToEnum(const String& str, AllJoynMessageType& type)
@@ -543,9 +544,19 @@ void _PolicyDB::Finalize(Bus* bus)
         QCC_DbgPrintf(("    \"%s\" = {%s}", it->first.c_str(), IDSet2String(it->second).c_str()));
     }
 #endif
+#if defined(QCC_OS_GROUP_WINDOWS)
+    // hack to work around windows build error C4505 in release mode.
+    _PolicyDB::IDSet dummy;
+    IDSet2String(dummy);
+#endif
+
 }
 
-
+#if defined(QCC_OS_GROUP_WINDOWS)
+/* Disabling warning C 4100. Function doesnt use all passed in parameters */
+#pragma warning(push)
+#pragma warning(disable: 4100)
+#endif
 void _PolicyDB::NameOwnerChanged(const String& alias,
                                  const qcc::String* oldOwner, SessionOpts::NameTransferType oldOwnerNameTransfer,
                                  const qcc::String* newOwner, SessionOpts::NameTransferType newOwnerNameTransfer)
@@ -615,7 +626,9 @@ void _PolicyDB::NameOwnerChanged(const String& alias,
 
     lock.Unlock();
 }
-
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(pop)
+#endif
 
 /**
  * Rule check macros.  The rule check functions all operate in the same way
@@ -635,7 +648,7 @@ void _PolicyDB::NameOwnerChanged(const String& alias,
 #define RULE_CHECKS(_allow, _rl, _it, _checks)                          \
     PolicyRuleList::const_reverse_iterator _it;                         \
     bool ruleMatch = false;                                             \
-    policydb::PolicyPermission permission;                              \
+    policydb::PolicyPermission permission = policydb::POLICY_DENY;      \
     size_t rc = 0;                                                      \
     for (_it = _rl.rbegin(); !ruleMatch && (_it != _rl.rend()); ++_it) { \
         ruleMatch = _checks;                                            \
@@ -654,7 +667,7 @@ void _PolicyDB::NameOwnerChanged(const String& alias,
 #define RULE_CHECKS(_allow, _rl, _it, _checks)                          \
     PolicyRuleList::const_reverse_iterator _it;                         \
     bool ruleMatch = false;                                             \
-    policydb::PolicyPermission permission;                              \
+    policydb::PolicyPermission permission = policydb::POLICY_DENY;      \
     for (_it = _rl.rbegin(); !ruleMatch && (_it != _rl.rend()); ++_it) { \
         ruleMatch = _checks;                                            \
         permission = _it->permission;                                   \
@@ -851,15 +864,13 @@ bool _PolicyDB::OKToSend(const NormalizedMsgHdr& nmh, BusEndpoint& dest, const I
     if (!destIDSet) {
         destIDSet = &nmh.destIDSet;
     }
-
     QCC_DbgPrintf(("Check if OK for endpoint %s to send %s to destination %s (%s{%s} --> %s{%s})",
                    nmh.sender->GetUniqueName().c_str(), nmh.msg->Description().c_str(),
                    (dest->IsValid() ? dest->GetUniqueName().c_str() : ""),
                    nmh.msg->GetSender(), IDSet2String(nmh.senderIDSet).c_str(),
                    nmh.msg->GetDestination(), IDSet2String(*destIDSet).c_str()));
-
-    uint32_t destUid = -1;
-    uint32_t destGid = -1;
+    uint32_t destUid = ((uint32_t)-1);
+    uint32_t destGid = ((uint32_t)-1);
     if (dest->IsValid()) {
         destUid = dest->GetUserId();
         destGid = dest->GetGroupId();

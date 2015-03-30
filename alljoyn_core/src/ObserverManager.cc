@@ -278,12 +278,6 @@ void ObserverManager::Stop() {
         return;
     }
     stopping = true;
-
-    /* clear the work queue */
-    while (!work.empty()) {
-        delete work.front();
-        work.pop();
-    }
     wqLock.Unlock(MUTEX_CONTEXT);
 
     /* stop the AutoPinger */
@@ -297,14 +291,21 @@ void ObserverManager::Stop() {
 
 void ObserverManager::Join()
 {
-    /* wait for any in-flight work item to land */
     wqLock.Lock(MUTEX_CONTEXT);
     if (!started || !stopping) {
         wqLock.Unlock(MUTEX_CONTEXT);
         return;
     }
+
+    /* wait for any in-flight work item to land */
     while (processingWork) {
         processingDone.Wait(wqLock);
+    }
+
+    /* clear the work queue */
+    while (!work.empty()) {
+        delete work.front();
+        work.pop();
     }
     wqLock.Unlock(MUTEX_CONTEXT);
 
@@ -559,7 +560,7 @@ void ObserverManager::DoWork()
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
 
-    while (true) {
+    for (;;) {
         WorkItem* workitem = NULL;
         wqLock.Lock(MUTEX_CONTEXT);
         if (!processingWork && !work.empty() && started && !stopping) {
@@ -594,6 +595,8 @@ void ObserverManager::Announced(const char* busName, uint16_t version,
                                 SessionPort port, const MsgArg& objectDescriptionArg,
                                 const MsgArg& aboutDataArg)
 {
+    QCC_UNUSED(version);
+    QCC_UNUSED(aboutDataArg);
     QCC_DbgPrintf(("Received announcement from '%s'", busName));
 
     ObjectSet announced = ParseObjectDescriptionArg(busName, objectDescriptionArg);
@@ -633,6 +636,7 @@ void ObserverManager::ProcessAnnouncement(const Peer& peer, const ObjectSet& ann
 
 void ObserverManager::JoinSessionCB(QStatus status, SessionId sessionId, const SessionOpts& opts, void*ctx)
 {
+    QCC_UNUSED(opts);
     QCC_DbgTrace(("%s", __FUNCTION__));
     Peer* peer = reinterpret_cast<Peer*>(ctx);
     WorkItem* workitem;
@@ -692,6 +696,7 @@ void ObserverManager::ProcessSessionEstablishmentFailed(const ObserverManager::P
 
 void ObserverManager::SessionLost(SessionId sessionId, SessionLostReason reason)
 {
+    QCC_UNUSED(reason);
     QCC_DbgPrintf(("Session lost for '%u'", (unsigned) sessionId));
     WorkItem* workitem = new SessionLostWork(sessionId);
     ScheduleWork(workitem);
@@ -723,11 +728,14 @@ void ObserverManager::ProcessSessionLost(SessionId sessionid)
 
 void ObserverManager::LeaveSessionCB(QStatus status, void* context)
 {
+    QCC_UNUSED(status);
+    QCC_UNUSED(context);
     QCC_DbgTrace(("%s", __FUNCTION__));
 }
 
 void ObserverManager::DestinationLost(const qcc::String& group, const qcc::String& destination)
 {
+    QCC_UNUSED(group);
     QCC_DbgPrintf(("Destination lost for '%s'", destination.c_str()));
     WorkItem* workitem = new DestinationLostWork(destination);
     ScheduleWork(workitem);

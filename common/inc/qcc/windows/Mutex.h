@@ -127,12 +127,12 @@ class Mutex {
     /**
      * Mutex copy constructor creates a new mutex.
      */
-    Mutex(const Mutex& other) { Init(); }
+    Mutex(const Mutex&) { Init(); }
 
     /**
      * Mutex assignment operator.
      */
-    Mutex& operator=(const Mutex& other) { Init(); return *this; }
+    Mutex& operator=(const Mutex&) { Init(); return *this; }
 
   private:
     bool initialized;

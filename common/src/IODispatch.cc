@@ -225,6 +225,8 @@ QStatus IODispatch::JoinStream(Stream* stream) {
 }
 void IODispatch::AlarmTriggered(const Alarm& alarm, QStatus reason)
 {
+    QCC_UNUSED(reason);
+
     lock.Lock();
     /* Find the stream associated with this alarm */
     CallbackContext* ctxt = static_cast<CallbackContext*>(alarm->GetContext());
@@ -386,6 +388,7 @@ void IODispatch::AlarmTriggered(const Alarm& alarm, QStatus reason)
 }
 
 ThreadReturn STDCALL IODispatch::Run(void* arg) {
+    QCC_UNUSED(arg);
 
     vector<qcc::Event*> checkEvents, signaledEvents;
     int32_t when =  0;

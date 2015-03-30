@@ -63,7 +63,7 @@ extern const char* IntrospectDocType;                     /**< Type of introspec
 }
 
 /** Create the org.freedesktop.DBus interfaces and sub-interfaces */
-QStatus CreateInterfaces(BusAttachment& bus);
+QStatus AJ_CALL CreateInterfaces(BusAttachment& bus);
 
 }
 }

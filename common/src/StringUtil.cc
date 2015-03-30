@@ -42,7 +42,7 @@ static const unsigned long __qcc_nan = 0x7fffffff;
 static const char* hexCharsUC = "0123456789ABCDEF";
 static const char* hexCharsLC = "0123456789abcdef";
 
-qcc::String qcc::BytesToHexString(const uint8_t* bytes, size_t len, bool toLower, char separator)
+qcc::String AJ_CALL qcc::BytesToHexString(const uint8_t* bytes, size_t len, bool toLower, char separator)
 {
     qcc::String outBuf;
     const char* hexChars = toLower ? hexCharsLC : hexCharsUC;
@@ -57,7 +57,7 @@ qcc::String qcc::BytesToHexString(const uint8_t* bytes, size_t len, bool toLower
 }
 
 
-size_t qcc::HexStringToBytes(const qcc::String& hex, uint8_t* outBytes, size_t len, char separator)
+size_t AJ_CALL qcc::HexStringToBytes(const qcc::String& hex, uint8_t* outBytes, size_t len, char separator)
 {
     if (separator) {
         len = min((1 + hex.length()) / 3, len);
@@ -84,7 +84,7 @@ size_t qcc::HexStringToBytes(const qcc::String& hex, uint8_t* outBytes, size_t l
 }
 
 
-qcc::String qcc::HexStringToByteString(const qcc::String& hex, char separator)
+qcc::String AJ_CALL qcc::HexStringToByteString(const qcc::String& hex, char separator)
 {
     size_t len;
     if (separator) {
@@ -111,7 +111,7 @@ qcc::String qcc::HexStringToByteString(const qcc::String& hex, char separator)
 }
 
 
-qcc::String qcc::U32ToString(uint32_t num, unsigned int base, size_t width, char fill)
+qcc::String AJ_CALL qcc::U32ToString(uint32_t num, unsigned int base, size_t width, char fill)
 {
     qcc::String outStr;
     uint32_t tmp = num;
@@ -144,7 +144,7 @@ qcc::String qcc::U32ToString(uint32_t num, unsigned int base, size_t width, char
 }
 
 
-qcc::String qcc::I32ToString(int32_t num, unsigned int base, size_t width, char fill)
+qcc::String AJ_CALL qcc::I32ToString(int32_t num, unsigned int base, size_t width, char fill)
 {
     const char* sign;
     uint32_t unum;
@@ -168,7 +168,7 @@ qcc::String qcc::I32ToString(int32_t num, unsigned int base, size_t width, char 
 }
 
 
-qcc::String qcc::U64ToString(uint64_t num, unsigned int base, size_t width, char fill)
+qcc::String AJ_CALL qcc::U64ToString(uint64_t num, unsigned int base, size_t width, char fill)
 {
     qcc::String outStr;
     uint64_t tmp = num;
@@ -201,7 +201,7 @@ qcc::String qcc::U64ToString(uint64_t num, unsigned int base, size_t width, char
 }
 
 
-qcc::String qcc::I64ToString(int64_t num, unsigned int base, size_t width, char fill)
+qcc::String AJ_CALL qcc::I64ToString(int64_t num, unsigned int base, size_t width, char fill)
 {
     const char* sign;
     uint64_t unum;
@@ -225,7 +225,7 @@ qcc::String qcc::I64ToString(int64_t num, unsigned int base, size_t width, char 
 }
 
 
-uint32_t qcc::StringToU32(const qcc::String& inStr, unsigned int base, uint32_t badValue)
+uint32_t AJ_CALL qcc::StringToU32(const qcc::String& inStr, unsigned int base, uint32_t badValue)
 {
     uint32_t val = 0;
 
@@ -277,7 +277,7 @@ uint32_t qcc::StringToU32(const qcc::String& inStr, unsigned int base, uint32_t 
 }
 
 
-int32_t qcc::StringToI32(const qcc::String& inStr, unsigned int base, int32_t badValue)
+int32_t AJ_CALL qcc::StringToI32(const qcc::String& inStr, unsigned int base, int32_t badValue)
 {
     if (!inStr.empty()) {
         if (inStr[0] == '-') {
@@ -296,7 +296,7 @@ int32_t qcc::StringToI32(const qcc::String& inStr, unsigned int base, int32_t ba
 }
 
 
-uint64_t qcc::StringToU64(const qcc::String& inStr, unsigned int base, uint64_t badValue)
+uint64_t AJ_CALL qcc::StringToU64(const qcc::String& inStr, unsigned int base, uint64_t badValue)
 {
     uint64_t val = 0;
 
@@ -348,7 +348,7 @@ uint64_t qcc::StringToU64(const qcc::String& inStr, unsigned int base, uint64_t 
 }
 
 
-int64_t qcc::StringToI64(const qcc::String& inStr, unsigned int base, int64_t badValue)
+int64_t AJ_CALL qcc::StringToI64(const qcc::String& inStr, unsigned int base, int64_t badValue)
 {
     if (!inStr.empty()) {
         if (inStr[0] == '-') {
@@ -366,7 +366,7 @@ int64_t qcc::StringToI64(const qcc::String& inStr, unsigned int base, int64_t ba
     return badValue;
 }
 
-double qcc::StringToDouble(const qcc::String& inStr)
+double AJ_CALL qcc::StringToDouble(const qcc::String& inStr)
 {
     const double decimal_base = 10.0;
     if (!inStr.empty()) {
@@ -437,7 +437,7 @@ double qcc::StringToDouble(const qcc::String& inStr)
 }
 
 
-qcc::String qcc::LineBreak(const qcc::String& inStr, size_t maxLen, size_t indent)
+qcc::String AJ_CALL qcc::LineBreak(const qcc::String& inStr, size_t maxLen, size_t indent)
 {
     qcc::String indentStr(' ', indent);
     qcc::String outStr;
@@ -452,7 +452,7 @@ qcc::String qcc::LineBreak(const qcc::String& inStr, size_t maxLen, size_t inden
 
 }
 
-qcc::String qcc::Trim(const qcc::String& str)
+qcc::String AJ_CALL qcc::Trim(const qcc::String& str)
 {
     size_t start = str.find_first_not_of(" \t\n\r\v");
     size_t end = str.find_last_not_of(" \t\n\r\v");
@@ -469,7 +469,7 @@ qcc::String qcc::Trim(const qcc::String& str)
     }
 }
 
-bool qcc::IsWhite(char c, const char* whiteChars) {
+bool AJ_CALL qcc::IsWhite(char c, const char* whiteChars) {
     if (!whiteChars) {
         whiteChars = " \t\n\r\v";
     }
@@ -481,7 +481,7 @@ bool qcc::IsWhite(char c, const char* whiteChars) {
     return false;
 }
 
-qcc::String qcc::StringVectorToString(const vector<qcc::String>* list, const char* sep)
+qcc::String AJ_CALL qcc::StringVectorToString(const vector<qcc::String>* list, const char* sep)
 {
     qcc::String out;
     if (list) {
@@ -499,7 +499,7 @@ qcc::String qcc::StringVectorToString(const vector<qcc::String>* list, const cha
     return out;
 }
 
-bool qcc::IsDecimalDigit(char c)
+bool AJ_CALL qcc::IsDecimalDigit(char c)
 {
     if (c >= '0' && c <= '9') {
         return true;
@@ -507,7 +507,7 @@ bool qcc::IsDecimalDigit(char c)
     return false;
 }
 
-bool qcc::IsAlpha(char c)
+bool AJ_CALL qcc::IsAlpha(char c)
 {
     if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')) {
         return true;
@@ -515,12 +515,12 @@ bool qcc::IsAlpha(char c)
     return false;
 }
 
-bool qcc::IsAlphaNumeric(char c)
+bool AJ_CALL qcc::IsAlphaNumeric(char c)
 {
     return IsAlpha(c) || IsDecimalDigit(c);
 }
 
-bool qcc::IsOctalDigit(char c)
+bool AJ_CALL qcc::IsOctalDigit(char c)
 {
     if (c >= '0' && c <= '7') {
         return true;
@@ -528,7 +528,7 @@ bool qcc::IsOctalDigit(char c)
     return false;
 }
 
-bool qcc::IsHexDigit(char c)
+bool AJ_CALL qcc::IsHexDigit(char c)
 {
     if (c >= '0' && c <= '9') {
         return true;
@@ -540,7 +540,7 @@ bool qcc::IsHexDigit(char c)
     return false;
 }
 
-uint8_t qcc::CharToU8(const char c)
+uint8_t AJ_CALL qcc::CharToU8(const char c)
 {
     if (c >= '0' && c <= '9') {
         return (uint8_t)(c - '0');
@@ -554,7 +554,7 @@ uint8_t qcc::CharToU8(const char c)
     return 255;
 }
 
-char qcc::U8ToChar(uint8_t d)
+char AJ_CALL qcc::U8ToChar(uint8_t d)
 {
     if (d >= 0 && d <= 9) {
         return (char)(d + '0');

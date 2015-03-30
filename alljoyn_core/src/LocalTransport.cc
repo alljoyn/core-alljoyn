@@ -126,6 +126,7 @@ bool LocalTransport::IsRunning()
     return !isStoppedEvent.IsSet();
 }
 
+#pragma pack(push, ReplyContext, 4)
 class _LocalEndpoint::ReplyContext {
   public:
     ReplyContext(LocalEndpoint ep,
@@ -166,6 +167,7 @@ class _LocalEndpoint::ReplyContext {
     ReplyContext(const ReplyContext& other);
     ReplyContext operator=(const ReplyContext& other);
 };
+#pragma pack(pop, ReplyContext)
 
 class _LocalEndpoint::CachedGetPropertyReplyContext {
   public:
@@ -628,8 +630,7 @@ QStatus _LocalEndpoint::PushMessage(Message& message)
     if (running) {
         BusEndpoint ep = bus->GetInternal().GetRouter().FindEndpoint(message->GetSender());
         /* Determine if the source of this message is local to the process */
-        Thread* curThread = Thread::GetThread();
-        if (ep->GetEndpointType() == ENDPOINT_TYPE_LOCAL && (strncmp(curThread->GetThreadName(), "lepDisp", 7) == 0)) {
+        if (ep->GetEndpointType() == ENDPOINT_TYPE_LOCAL && (strncmp(Thread::GetThread()->GetThreadName(), "lepDisp", 7) == 0)) {
             ret = DoPushMessage(message);
         } else {
             ret = dispatcher->DispatchMessage(message);
@@ -799,7 +800,7 @@ void _LocalEndpoint::UnregisterBusObject(BusObject& object)
     }
 
     /* If object has children, unregister them as well */
-    while (true) {
+    for (;;) {
         BusObject* child = object.RemoveChild();
         if (!child) {
             break;

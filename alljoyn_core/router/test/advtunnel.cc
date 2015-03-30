@@ -69,6 +69,8 @@ const uint16_t TUNNEL_PORT = 9973;
 /** Signal handler */
 static void CDECL_CALL SigIntHandler(int sig)
 {
+    QCC_UNUSED(sig);
+
     if (g_ns) {
         IpNameServiceImpl* ns = g_ns;
         g_ns = NULL;
@@ -118,7 +120,7 @@ class AdvTunnel {
         qcc::String val;
         QStatus status = PullString(val);
         if (status == ER_OK) {
-            num = qcc::StringToU32(val, 10, -1);
+            num = qcc::StringToU32(val, 10, (uint32_t)-1);
             if (num == (uint32_t)-1) {
                 status = ER_INVALID_DATA;
             }
@@ -409,7 +411,7 @@ static void usage(void)
     printf("   -c <addr>             = Connect mode and address to connect to\n");
 }
 
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
     if (AllJoynInit() != ER_OK) {
         return 1;

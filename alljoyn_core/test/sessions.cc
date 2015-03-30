@@ -84,7 +84,9 @@ struct SessionInfo {
     SessionPortInfo portInfo;
     vector<String> peerNames;
     SessionInfo() : id(0) { }
-    SessionInfo(SessionId id, const SessionPortInfo& portInfo) : id(0), portInfo(portInfo) { }
+    SessionInfo(SessionId id, const SessionPortInfo& portInfo) : id(0), portInfo(portInfo) {
+        QCC_UNUSED(id);
+    }
 };
 
 
@@ -108,6 +110,7 @@ static volatile sig_atomic_t g_interrupt = false;
 
 static void CDECL_CALL SigIntHandler(int sig)
 {
+    QCC_UNUSED(sig);
     g_interrupt = true;
 }
 
@@ -191,6 +194,9 @@ class SessionTestObject : public BusObject {
     /** Receive a signal from another Chat client */
     void ChatSignalHandler(const InterfaceDescription::Member* member, const char* srcPath, Message& msg)
     {
+        QCC_UNUSED(member);
+        QCC_UNUSED(srcPath);
+
         if (s_chatEcho) {
             printf("RX chat from %s[%u]: %s\n", msg->GetSender(), msg->GetSessionId(), msg->GetArg(0)->v_string.str);
         }
@@ -323,6 +329,8 @@ class AutoChatThread : public Thread, public ThreadListener {
   protected:
     ThreadReturn STDCALL Run(void* args)
     {
+        QCC_UNUSED(args);
+
         char* buf = new char[maxSize + 1];
         for (size_t i = 0; i <= maxSize; ++i) {
             buf[i] = 'a' + (i % 26);
@@ -578,6 +586,8 @@ class JoinCB : public BusAttachment::JoinSessionAsyncCB {
 
     void JoinSessionCB(QStatus status, SessionId id, const SessionOpts& opts, void* context)
     {
+        QCC_UNUSED(context);
+
         if (status == ER_OK) {
             s_lock.Lock(MUTEX_CONTEXT);
             s_sessionMap.insert(pair<SessionId, SessionInfo>(id, SessionInfo(id, SessionPortInfo(port, name, opts))));
@@ -589,6 +599,9 @@ class JoinCB : public BusAttachment::JoinSessionAsyncCB {
 
         delete this;
     }
+  private:
+    /* Private assigment operator - does nothing */
+    JoinCB operator=(const JoinCB&);
 };
 
 
@@ -721,6 +734,8 @@ struct AsyncTimeoutHandler : public BusAttachment::SetLinkTimeoutAsyncCB {
 
     void SetLinkTimeoutCB(QStatus status, uint32_t timeout, void* context)
     {
+        QCC_UNUSED(context);
+
         if (status != ER_OK) {
             printf("SetLinkTimeout(%u, %u) failed with %s\n", id, timeout, QCC_StatusText(status));
         } else {
@@ -729,6 +744,9 @@ struct AsyncTimeoutHandler : public BusAttachment::SetLinkTimeoutAsyncCB {
 
         delete this;
     }
+  private:
+    /* Private assigment operator - does nothing */
+    AsyncTimeoutHandler operator=(const AsyncTimeoutHandler&);
 };
 
 static void DoSetLinkTimeoutAsync(SessionId id, uint32_t timeout)
@@ -761,6 +779,8 @@ struct AsyncPingHandler : public BusAttachment::PingAsyncCB {
 
     void PingCB(QStatus status, void* context)
     {
+        QCC_UNUSED(context);
+
         if (status != ER_OK) {
             printf("PingAsync(%s) failed with %s (%u)\n", name.c_str(), QCC_StatusText(status), status);
         } else {
@@ -769,6 +789,9 @@ struct AsyncPingHandler : public BusAttachment::PingAsyncCB {
 
         delete this;
     }
+  private:
+    /* Private assigment operator - does nothing */
+    AsyncPingHandler operator=(const AsyncPingHandler&);
 };
 
 static void DoPingAsync(String name, uint32_t timeout)
@@ -800,7 +823,7 @@ static QStatus DoConnect()
     return status;
 }
 
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
     if (AllJoynInit() != ER_OK) {
         return 1;

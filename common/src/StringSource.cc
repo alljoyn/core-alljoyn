@@ -38,6 +38,8 @@ using namespace qcc;
 
 QStatus StringSource::PullBytes(void* buf, size_t reqBytes, size_t& actualBytes, uint32_t timeout)
 {
+    QCC_UNUSED(timeout);
+
     QStatus status = ER_OK;
     actualBytes = (std::min)(reqBytes, str.size() - outIdx);
     if (0 < actualBytes) {

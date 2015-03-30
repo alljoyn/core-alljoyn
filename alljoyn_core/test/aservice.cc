@@ -29,6 +29,7 @@ using namespace ajn;
 static volatile sig_atomic_t s_interrupt = false;
 
 static void CDECL_CALL SigIntHandler(int sig) {
+    QCC_UNUSED(sig);
     s_interrupt = true;
 }
 
@@ -37,6 +38,9 @@ static SessionPort ASSIGNED_SESSION_PORT = 900;
 class MySessionPortListener : public SessionPortListener {
     bool AcceptSessionJoiner(ajn::SessionPort sessionPort, const char* joiner, const ajn::SessionOpts& opts)
     {
+        QCC_UNUSED(joiner);
+        QCC_UNUSED(opts);
+
         if (sessionPort != ASSIGNED_SESSION_PORT) {
             printf("Rejecting join attempt on unexpected session port %d\n", sessionPort);
             return false;
@@ -48,6 +52,8 @@ class MySessionPortListener : public SessionPortListener {
     }
     void SessionJoined(SessionPort sessionPort, SessionId id, const char* joiner)
     {
+        QCC_UNUSED(sessionPort);
+        QCC_UNUSED(joiner);
         printf("Session Joined SessionId = %u\n", id);
     }
 };
@@ -87,13 +93,17 @@ class AboutServiceSampleBusObject : public BusObject {
 
     }
     void Foo(const InterfaceDescription::Member* member, Message& msg) {
+        QCC_UNUSED(member);
         MethodReply(msg, (const MsgArg*)NULL, (size_t)0);
     }
 };
 
 /** Main entry point */
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
+    QCC_UNUSED(argc);
+    QCC_UNUSED(argv);
+
     if (AllJoynInit() != ER_OK) {
         return 1;
     }

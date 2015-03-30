@@ -97,11 +97,25 @@
  */
 #define QCC_UNUSED(x) (void)(x)
 
+#if defined(_MSC_VER)
+//disable 'conditional expression is constant' warning to use do{ ... }while(0)
+#pragma warning( disable: 4127 )
+#endif
+
 /** Boolean type for C */
 typedef int32_t QCC_BOOL;
 /** Boolean logic true for QCC_BOOL type*/
 #define QCC_TRUE 1
 /** Boolean logic false for QCC_BOOL type*/
 #define QCC_FALSE 0
+
+/** This @#define allows for calling convention redefinition on relevant platforms */
+#ifndef AJ_CALL
+#  if defined(QCC_OS_GROUP_WINDOWS)
+#    define AJ_CALL __stdcall
+#  else
+#    define AJ_CALL
+#  endif
+#endif
 
 #endif // _QCC_PLATFORM_H

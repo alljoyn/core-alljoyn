@@ -112,6 +112,8 @@ class MyMessage : public _Message {
  */
 static QStatus TestRemarshal(const MsgArg* argList, size_t numArgs, const char* exception = NULL)
 {
+    QCC_UNUSED(exception);
+
     QStatus status;
     Pipe stream;
     Pipe* pStream = &stream;
@@ -174,8 +176,11 @@ static QStatus TestRemarshal(const MsgArg* argList, size_t numArgs, const char* 
     return status;
 }
 
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
+    QCC_UNUSED(argc);
+    QCC_UNUSED(argv);
+
     if (AllJoynInit() != ER_OK) {
         return 1;
     }

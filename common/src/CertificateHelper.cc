@@ -42,7 +42,7 @@ static QStatus CountNumOfChunksFromEncoded(const String& encoded, const char* be
 
     *count = 0;
     qcc::String remainder = encoded;
-    while (true) {
+    for (;;) {
         pos = remainder.find(beginToken);
         if (pos == qcc::String::npos) {
             /* no more */

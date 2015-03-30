@@ -421,6 +421,8 @@ class TestBusObject : public BusObject {
 
     void Pasta(const InterfaceDescription::Member* member, Message& msg)
     {
+        QCC_UNUSED(member);
+
         const MsgArg* arg((msg->GetArg(0)));
         QStatus status = MethodReply(msg, arg, 1);
         EXPECT_EQ(ER_OK, status) << "Pasta: Error sending reply";
@@ -539,6 +541,8 @@ class PropsTestBusObject : public BusObject {
   protected:
     QStatus Get(const char* ifcName, const char* propName, MsgArg& val)
     {
+        QCC_UNUSED(ifcName);
+
         if (strcmp(propName, "arrayStruct") == 0) {
             // Returning a local, non-new'd MsgArg array will trigger
             // the ASACORE-1009 bug with an attempt to free an invalid

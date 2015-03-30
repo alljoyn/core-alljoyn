@@ -245,10 +245,10 @@ class _PolicyDB {
             userAny(false),
             usersEqualSet(false),
             usersEqual(false),
-            user(-1),
+            user(((uint32_t)-1)),
             groupSet(false),
             groupAny(false),
-            group(-1)
+            group(((uint32_t)-1))
         { }
 
         /**
@@ -528,6 +528,10 @@ class NormalizedMsgHdr {
 
   private:
     friend class _PolicyDB;  /**< Give PolicyDB access to the internals */
+    /* private copy constructor */
+    NormalizedMsgHdr(const NormalizedMsgHdr&);
+    /* private assignment operator */
+    NormalizedMsgHdr operator=(const NormalizedMsgHdr&);
 
 #if !defined(NDEBUG) || defined(QCC_OS_GROUP_WINDOWS)
     const Message msg;                      /**< Reference to original message for debug purposes */
