@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
             return 1;
         }
         if ([AJNInit alljoynRouterInit] != ER_OK) {
-            [AJNInit alljoynShutdown]
+            [AJNInit alljoynShutdown];
             return 1;
         }
         int ret = UIApplicationMain(argc, argv, nil, NSStringFromClass([AJNCAppDelegate class]));
