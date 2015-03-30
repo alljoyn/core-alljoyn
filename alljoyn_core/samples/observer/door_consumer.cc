@@ -20,9 +20,11 @@
 #include <cassert>
 #include <string>
 
+#include <alljoyn/Status.h>
 #include <alljoyn/BusAttachment.h>
-#include <alljoyn/Init.h>
 #include <alljoyn/Observer.h>
+#include <alljoyn/Init.h>
+
 
 #define INTF_NAME "com.example.Door"
 
@@ -297,7 +299,10 @@ static QStatus SetupBusAttachment(BusAttachment& bus)
     status = bus.Start();
     assert(ER_OK == status);
     status = bus.Connect();
-    assert(ER_OK == status);
+
+    if (ER_OK != status) {
+        return status;
+    }
 
     status = BuildInterface(bus);
     assert(ER_OK == status);
@@ -449,17 +454,20 @@ int CDECL_CALL main(int argc, char** argv)
     QCC_UNUSED(argv);
 
     if (AllJoynInit() != ER_OK) {
-        return 1;
+        return EXIT_FAILURE;
     }
 #ifdef ROUTER
     if (AllJoynRouterInit() != ER_OK) {
         AllJoynShutdown();
-        return 1;
+        return EXIT_FAILURE;
     }
 #endif
 
     BusAttachment* bus = new BusAttachment("door_consumer", true);
-    SetupBusAttachment(*bus);
+
+    if (ER_OK != SetupBusAttachment(*bus)) {
+        return EXIT_FAILURE;
+    }
 
     const char* intfname = INTF_NAME;
     Observer* obs = new Observer(*bus, &intfname, 1);
@@ -479,15 +487,15 @@ int CDECL_CALL main(int argc, char** argv)
 
     // Cleanup
     obs->UnregisterAllListeners();
-    bus->Stop();
-    bus->Join();
-    delete bus;
-    delete obs;
+    delete obs; // Must happen before deleting the original bus
     delete listener;
+    delete bus;
+    bus = NULL;
 
 #ifdef ROUTER
     AllJoynRouterShutdown();
 #endif
     AllJoynShutdown();
-    return 0;
+    return EXIT_SUCCESS;
+
 }

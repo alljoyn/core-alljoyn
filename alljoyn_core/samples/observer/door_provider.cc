@@ -22,6 +22,7 @@
 #include <errno.h>
 #include <string>
 
+#include <alljoyn/Status.h>
 #include <alljoyn/AboutObj.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/Init.h>
@@ -89,7 +90,9 @@ static QStatus SetupBusAttachment(BusAttachment& bus, AboutData& aboutData)
     status = bus.Start();
     assert(ER_OK == status);
     status = bus.Connect();
-    assert(ER_OK == status);
+    if (status != ER_OK) {
+        return status;
+    }
 
     status = BuildInterface(bus);
     assert(ER_OK == status);
@@ -115,6 +118,10 @@ static QStatus SetupBusAttachment(BusAttachment& bus, AboutData& aboutData)
     aboutData.SetSoftwareVersion("0.1.2");
     aboutData.SetHardwareVersion("0.0.1");
     aboutData.SetSupportUrl("http://www.example.org");
+    if (!aboutData.IsValid()) {
+        cerr << "Invalid about data." << endl;
+        return ER_FAIL;
+    }
     return status;
 }
 
@@ -147,7 +154,7 @@ class Door : public BusObject {
         };
         QStatus status = AddMethodHandlers(methodEntries, sizeof(methodEntries) / sizeof(methodEntries[0]));
         if (ER_OK != status) {
-            printf("Failed to register method handlers for Door.\n");
+            cerr << "Failed to register method handlers for Door." << endl;
         }
     }
 
@@ -267,8 +274,8 @@ class Door : public BusObject {
         cout << who.c_str() << " will pass through door @ " << location.c_str() << "." << endl;
         const InterfaceDescription* intf = bus.GetInterface(INTF_NAME);
         if (intf == NULL) {
-            printf("Failed to obtain the %s interface. Unable to invoke the 'PersonPassedThrough' signal for %s.\n",
-                   INTF_NAME, who.c_str());
+            cerr << "Failed to obtain the " << INTF_NAME <<  "interface. Unable to invoke the 'PersonPassedThrough' signal for"
+                 << who.c_str() << "." << endl;
             return;
         }
         MsgArg arg("s", who.c_str());
@@ -287,17 +294,16 @@ static void help()
     cout << "h         show this help message" << endl;
 }
 
+QStatus shutdown() {
+
+#ifdef ROUTER
+    return AllJoynRouterShutdown();
+#endif
+    return AllJoynShutdown();
+}
+
 int CDECL_CALL main(int argc, char** argv)
 {
-    if (AllJoynInit() != ER_OK) {
-        return 1;
-    }
-#ifdef ROUTER
-    if (AllJoynRouterInit() != ER_OK) {
-        AllJoynShutdown();
-        return 1;
-    }
-#endif
 
     /* parse command line arguments */
     if (argc == 1) {
@@ -305,23 +311,42 @@ int CDECL_CALL main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-    BusAttachment* bus = new BusAttachment("door_provider", true);
-    AboutData* aboutData = new AboutData("en");
-    AboutObj* aboutObj = new AboutObj(*bus);
+    if (AllJoynInit() != ER_OK) {
+        return EXIT_FAILURE;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return EXIT_FAILURE;
+    }
+#endif
 
-    SetupBusAttachment(*bus, *aboutData);
-    aboutObj->Announce(port, *aboutData);
+    BusAttachment* bus = NULL;
+    bus = new BusAttachment("door_provider", true);
+    assert(bus != NULL);
+    AboutData aboutData("en");
+    AboutObj* aboutObj = new AboutObj(*bus);
+    assert(aboutObj != NULL);
+
+    if (ER_OK != SetupBusAttachment(*bus, aboutData)) {
+        return EXIT_FAILURE;
+    }
+
+    aboutObj->Announce(port, aboutData);
 
     for (int i = 1; i < argc; ++i) {
         Door* door = new Door(*bus, argv[i]);
         bus->RegisterBusObject(*door);
         g_doors.push_back(door);
         g_doors_registered.push_back(true);
-        aboutObj->Announce(port, *aboutData);
+        aboutObj->Announce(port, aboutData);
     }
 
     if (g_doors.empty()) {
         cerr << "No doors available" << endl;
+        delete bus;
+        bus = NULL;
+        shutdown();
         return EXIT_FAILURE;
     }
 
@@ -370,7 +395,7 @@ int CDECL_CALL main(int argc, char** argv)
                     bus->RegisterBusObject(d);
                 }
                 g_doors_registered[g_turn] = !g_doors_registered[g_turn];
-                aboutObj->Announce(port, *aboutData);
+                aboutObj->Announce(port, aboutData);
                 break;
             }
 
@@ -392,12 +417,10 @@ int CDECL_CALL main(int argc, char** argv)
     }
 
     delete aboutObj;
-    delete aboutData;
+    aboutObj = NULL;
     delete bus;
-#ifdef ROUTER
-    AllJoynRouterShutdown();
-#endif
-    AllJoynShutdown();
+    bus = NULL;
 
+    shutdown();
     return EXIT_SUCCESS;
 }
