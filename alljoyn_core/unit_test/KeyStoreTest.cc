@@ -25,7 +25,6 @@
 
 #include <qcc/platform.h>
 
-#include <qcc/Crypto.h>
 #include <qcc/Debug.h>
 #include <qcc/FileStream.h>
 #include <qcc/KeyBlob.h>
@@ -47,34 +46,23 @@ using namespace qcc;
 using namespace std;
 using namespace ajn;
 
-static const char testData[] = "This is the message that we are going to encrypt and then decrypt and verify";
+static const char testData[] = "This is the message that we are going to store and then load and verify";
 
 
 
-TEST(KeyStoreTest, basic_encryption_decryption) {
+TEST(KeyStoreTest, basic_store_load) {
     QStatus status = ER_OK;
     KeyBlob key;
 
-    Crypto_AES::Block* encrypted = new Crypto_AES::Block[Crypto_AES::NumBlocks(sizeof(testData))];
-    char* out = NULL;
     /*
      *  Testing basic key encryption/decryption
      */
-    /* Encryption step */
+    /* Store step */
     {
         FileSink sink("keystore_test");
 
-        /*
-         * Generate a random key
-         */
-        key.Rand(Crypto_AES::AES128_SIZE, KeyBlob::AES);
+        key.Set((const uint8_t*)testData, sizeof(testData), KeyBlob::GENERIC);
         //printf("Key %d in  %s\n", key.GetType(), BytesToHexString(key.GetData(), key.GetSize()).c_str());
-        /*
-         * Encrypt our test string
-         */
-        Crypto_AES aes(key, Crypto_AES::ECB_ENCRYPT);
-        status = aes.Encrypt(testData, sizeof(testData), encrypted, Crypto_AES::NumBlocks(sizeof(testData)));
-        ASSERT_EQ(ER_OK, status) << " Encrypt failed";
 
         /*
          * Write the key to a stream
@@ -100,7 +88,7 @@ TEST(KeyStoreTest, basic_encryption_decryption) {
         key.Erase();
     }
 
-    /* Decryption step */
+    /* Load step */
     {
         FileSource source("keystore_test");
 
@@ -112,19 +100,7 @@ TEST(KeyStoreTest, basic_encryption_decryption) {
         ASSERT_EQ(ER_OK, status) << " Failed to load key";
 
         //printf("Key %d out %s\n", inKey.GetType(), BytesToHexString(inKey.GetData(), inKey.GetSize()).c_str());
-        /*
-         * Decrypt and verify the test string
-         */
-        {
-            out = new char[sizeof(testData)];
-            Crypto_AES aes(inKey, Crypto_AES::ECB_DECRYPT);
-            status = aes.Decrypt(encrypted, Crypto_AES::NumBlocks(sizeof(testData)), out, sizeof(testData));
-            ASSERT_EQ(ER_OK, status) << " Encrypt failed";
 
-            ASSERT_STREQ(testData, out) << "Encryt/decrypt of test data failed";
-            delete [] out;
-            out = NULL;
-        }
         /*
          * Read the key with expiration
          */
@@ -138,9 +114,10 @@ TEST(KeyStoreTest, basic_encryption_decryption) {
         ASSERT_EQ(ER_OK, status) << " Failed to load key with tag";
 
         ASSERT_STREQ("My Favorite Key", inKey.GetTag().c_str()) << "Tag was incorrect";
+
+        ASSERT_STREQ(testData, (const char*)inKey.GetData()) << "Key data was incorrect";
     }
     DeleteFile("keystore_test");
-    delete [] encrypted;
 }
 
 TEST(KeyStoreTest, keystore_store_load_merge) {
@@ -160,7 +137,7 @@ TEST(KeyStoreTest, keystore_store_load_merge) {
         keyStore.Init(NULL, true);
         keyStore.Clear();
 
-        key.Rand(Crypto_AES::AES128_SIZE, KeyBlob::AES);
+        key.Rand(620, KeyBlob::GENERIC);
         keyStore.AddKey(guid1, key);
         key.Rand(620, KeyBlob::GENERIC);
         keyStore.AddKey(guid2, key);
@@ -190,7 +167,7 @@ TEST(KeyStoreTest, keystore_store_load_merge) {
         KeyStore keyStore("keystore_test");
         keyStore.Init(NULL, true);
 
-        key.Rand(Crypto_AES::AES128_SIZE, KeyBlob::AES);
+        key.Rand(620, KeyBlob::GENERIC);
         keyStore.AddKey(guid4, key);
 
         {
@@ -198,11 +175,11 @@ TEST(KeyStoreTest, keystore_store_load_merge) {
             keyStore.Init(NULL, true);
 
             /* Replace a key */
-            key.Rand(Crypto_AES::AES128_SIZE, KeyBlob::AES);
+            key.Rand(620, KeyBlob::GENERIC);
             keyStore.AddKey(guid1, key);
 
             /* Add a key */
-            key.Rand(Crypto_AES::AES128_SIZE, KeyBlob::AES);
+            key.Rand(620, KeyBlob::GENERIC);
             keyStore.AddKey(guid3, key);
 
             /* Delete a key */

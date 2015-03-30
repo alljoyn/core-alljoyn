@@ -357,57 +357,6 @@ QStatus Crypto_AES::Encrypt(const void* in, size_t len, Block* out, uint32_t num
     return status;
 }
 
-QStatus Crypto_AES::Decrypt(const Block* in, Block* out, uint32_t numBlocks)
-{
-    if (!in || !out) {
-        return in ? ER_BAD_ARG_1 : ER_BAD_ARG_2;
-    }
-    /*
-     * Check we are initialized for decryption
-     */
-    if (mode != ECB_DECRYPT) {
-        return ER_CRYPTO_ERROR;
-    }
-    while (numBlocks--) {
-        assert(false); // TODO - is this called anywhere? I think KeyStore calls it
-        ++in;
-        ++out;
-    }
-    return ER_OK;
-}
-
-QStatus Crypto_AES::Decrypt(const Block* in, uint32_t numBlocks, void* out, size_t len)
-{
-    QStatus status;
-
-    if (!in || !out) {
-        return in ? ER_BAD_ARG_1 : ER_BAD_ARG_2;
-    }
-    /*
-     * Check the lengths make sense
-     */
-    if (numBlocks != NumBlocks(len)) {
-        return ER_CRYPTO_ERROR;
-    }
-    /*
-     * Check for a partial final block
-     */
-    size_t partial = len % sizeof(Block);
-    if (partial) {
-        numBlocks--;
-        status = Decrypt(in, (Block*)out, numBlocks);
-        if (status == ER_OK) {
-            Block padBlock;
-            status = Decrypt(in + numBlocks, &padBlock, 1);
-            memcpy(((uint8_t*)out) + sizeof(Block) * numBlocks, &padBlock, partial);
-        }
-    } else {
-        status = Decrypt(in, (Block*)out, numBlocks);
-    }
-    return status;
-}
-
-
 static void Compute_CCM_AuthField(const uint32_t* fkey, Crypto_AES::Block& T, uint8_t M, uint8_t L, const KeyBlob& nonce, const uint8_t* mData, size_t mLen, const uint8_t* addData, size_t addLen)
 {
     uint8_t flags = ((addLen) ? 0x40 : 0) | (((M - 2) / 2) << 3) | (L - 1);

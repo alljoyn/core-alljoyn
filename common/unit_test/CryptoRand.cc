@@ -72,7 +72,7 @@ static TEST_CASE const test_nodf[] = {
     },
 };
 
-TEST(DRBG_Test, DRBG_Test_Vecter) {
+TEST(DRBG_Test, DRBG_Test_Vector) {
     QStatus status = ER_OK;
     size_t i;
     size_t size;
@@ -101,8 +101,7 @@ TEST(DRBG_Test, DRBG_Test_Vecter) {
     }
 
     status = Crypto_GetRandomBytes(NULL, 0);
-    EXPECT_EQ(ER_OK, status) << "  Seed error " << QCC_StatusText(status);
+    EXPECT_EQ(ER_CRYPTO_ERROR, status) << "  Output buffer check failed " << QCC_StatusText(status);
     status = Crypto_GetRandomBytes(data, sizeof(data));
     EXPECT_EQ(ER_OK, status) << "  Generate error " << QCC_StatusText(status);
-    printf("%s\n", BytesToHexString(data, sizeof(data), false).c_str());
 }
