@@ -21,7 +21,6 @@
 #ifndef _ALLJOYN_C_MSGARG_H
 #define _ALLJOYN_C_MSGARG_H
 
-#include <qcc/platform.h>
 #include <alljoyn_c/AjAPI.h>
 #include <stdarg.h>
 #include <alljoyn_c/Status.h>

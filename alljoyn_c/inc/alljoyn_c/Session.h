@@ -21,7 +21,6 @@
 #ifndef _ALLJOYN_C_SESSION_H
 #define _ALLJOYN_C_SESSION_H
 
-#include <qcc/platform.h>
 #include <alljoyn_c/AjAPI.h>
 #include <alljoyn_c/TransportMask.h>
 

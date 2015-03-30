@@ -23,7 +23,7 @@
 #include <alljoyn_c/AuthListener.h>
 #include <alljoyn_c/Status.h>
 
-#include <qcc/platform.h>
+#include <alljoyn_c/AjAPI.h>
 #include <qcc/Thread.h>
 
 static const char* INTERFACE_NAME = "org.alljoyn.test.c.authlistener";
