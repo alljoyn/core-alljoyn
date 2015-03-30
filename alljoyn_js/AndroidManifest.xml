@@ -2,7 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
           package="org.alljoyn.bus.plugin"
           android:versionCode="15040000"
-          android:versionName="15.04.00">
+          android:versionName="15.04">
 
     <uses-permission android:name="android.webkit.permission.PLUGIN" />
     <uses-permission android:name="android.permission.INTERNET" />
