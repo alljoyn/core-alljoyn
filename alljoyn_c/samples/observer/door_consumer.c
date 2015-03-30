@@ -537,9 +537,13 @@ int main(int argc, char** argv)
     // Cleanup
     alljoyn_observer_destroy(obs);
     alljoyn_observerlistener_destroy(listener);
-    alljoyn_busattachment_stop(bus);
-    alljoyn_busattachment_join(bus);
-    alljoyn_busattachment_destroy(bus);
+
+    /* Deallocate bus */
+    if (bus) {
+        alljoyn_busattachment deleteMe = bus;
+        bus = NULL;
+        alljoyn_busattachment_destroy(deleteMe);
+    }
 
 #ifdef ROUTER
     alljoyn_routershutdown();
