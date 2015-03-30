@@ -45,7 +45,6 @@
 #include "AuthMechAnonymous.h"
 #include "AuthMechExternal.h"
 #include "AuthMechSRP.h"
-#include "AuthMechRSA.h"
 #include "AuthMechLogon.h"
 #include "SessionInternal.h"
 #include "Transport.h"
@@ -965,7 +964,6 @@ QStatus BusAttachment::EnablePeerSecurity(const char* authMechanisms,
         if (status == ER_OK) {
             /* Register peer-to-peer authentication mechanisms */
             busInternal->authManager.RegisterMechanism(AuthMechSRP::Factory, AuthMechSRP::AuthName());
-            busInternal->authManager.RegisterMechanism(AuthMechRSA::Factory, AuthMechRSA::AuthName());
             busInternal->authManager.RegisterMechanism(AuthMechLogon::Factory, AuthMechLogon::AuthName());
             /* Validate the list of auth mechanisms */
             status =  busInternal->authManager.CheckNames(authMechanisms);
@@ -973,7 +971,6 @@ QStatus BusAttachment::EnablePeerSecurity(const char* authMechanisms,
     } else {
         status = busInternal->keyStore.Reset();
         busInternal->authManager.UnregisterMechanism(AuthMechSRP::AuthName());
-        busInternal->authManager.UnregisterMechanism(AuthMechRSA::AuthName());
         busInternal->authManager.UnregisterMechanism(AuthMechLogon::AuthName());
     }
 
