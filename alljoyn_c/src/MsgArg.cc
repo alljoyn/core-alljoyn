@@ -20,7 +20,7 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#include <qcc/platform.h>
+#include <alljoyn_c/AjAPI.h>
 
 #include <cstdarg>
 #include <assert.h>

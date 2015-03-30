@@ -382,8 +382,8 @@ void AllJoynObj::BindSessionPort(const InterfaceDescription::Member* member, Mes
         QCC_DbgTrace(("AllJoynObj::BindSessionPort(<bad args>) from %s", sender.c_str()));
         replyCode = ALLJOYN_BINDSESSIONPORT_REPLY_FAILED;
     } else {
-        QCC_DbgTrace(("AllJoynObj::BindSession(%s, %d, %s, <%x, %x, %x>)", sender.c_str(), sessionPort,
-                      opts.isMultipoint ? "true" : "false", opts.traffic, opts.proximity, opts.transports));
+        QCC_DbgTrace(("AllJoynObj::BindSession(%s, %d, %s)", sender.c_str(), sessionPort,
+                      opts.ToString().c_str()));
 
         /* Validate some Session options */
         if ((opts.traffic == SessionOpts::TRAFFIC_RAW_UNRELIABLE) ||
@@ -1919,8 +1919,8 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
         status = GetSessionOpts(args[6], optsIn);
         const char* methodType = msg->GetMemberName();
 
-        QCC_DbgPrintf(("AllJoynObj::RunAttach(): optsIn.traffic=0x%x, optisIn.proximity=0x%x, optsIn.transports=0x%x methodType %s",
-                       optsIn.traffic, optsIn.proximity, optsIn.transports, methodType));
+        QCC_DbgPrintf(("AllJoynObj::RunAttach(): optsIn=%s methodType=%s",
+                       optsIn.ToString().c_str(), methodType));
         if (strncmp(methodType, "AttachSessionWithNames", 22) == 0) {
             attachSessionWithNames = true;
         }
@@ -4169,11 +4169,16 @@ QStatus AllJoynObj::GetNames(MsgArg& argArray, RemoteEndpoint& endpoint, Session
                 /* The name of the local routing node and locally connected sessionless
                  * signal emitters need to be sent out in the case of an incoming connection i.e.
                  * another routing node is trying to fetch sessionless signals from this routing node.
+                 * Note: The check (it->first == joinerName) or (it->first == hostEp->GetUniqueName())
+                 * is applied only so that test programs testing sessionless sessions work.
+                 * In the normal case, i.e. when SessionlessObj joins the session,
+                 * the joinerName/hostEp->GetUniqueName() will be same as the local routing node name,
+                 * so the check is redundant.
                  */
                 if (type == JOINER) {
-                    sendInfo = isLocalRNInfo;
+                    sendInfo = isLocalRNInfo || (it->first == joinerName);
                 } else if (type == HOST) {
-                    sendInfo = isLocalRNInfo || busController->GetSessionlessObj().IsSessionlessEmitter(it->first);
+                    sendInfo = isLocalRNInfo ||  (it->first == hostEp->GetUniqueName()) || busController->GetSessionlessObj().IsSessionlessEmitter(it->first);
                 }
                 break;
 

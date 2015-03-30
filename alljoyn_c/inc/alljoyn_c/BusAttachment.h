@@ -21,8 +21,6 @@
 #ifndef _ALLJOYN_C_BUSATTACHMENT_H
 #define _ALLJOYN_C_BUSATTACHMENT_H
 
-#include <qcc/platform.h>
-
 #include <alljoyn_c/AjAPI.h>
 #include <alljoyn_c/KeyStoreListener.h>
 #include <alljoyn_c/AuthListener.h>
@@ -663,14 +661,22 @@ extern AJ_API QStatus AJ_CALL alljoyn_busattachment_unbindsessionport(alljoyn_bu
  * is providing its own key store implementation it must have already called
  * alljoyn_busattachment_registerkeystorelistener() before calling this function.
  *
+ * Once peer security has been enabled it is not possible to change the authMechanism set without
+ * clearing it first (setting authMechanism to NULL). This is true regardless of whether the BusAttachment
+ * has been disconnected or not.
+ *
  * @param bus              The bus on which to enable security.
+ *
  * @param authMechanisms   The authentication mechanism(s) to use for peer-to-peer authentication.
- *                         If this parameter is NULL peer-to-peer authentication is disabled.
+ *                         If this parameter is NULL peer-to-peer authentication is disabled.  This is a
+ *                         space separated list of any of the following values: ALLJOYN_PIN_KEYX,
+ *                         ALLJOYN_SRP_LOGON, ALLJOYN_RSA_KEYX, ALLJOYN_SRP_KEYX, ALLJOYN_ECDHE_NULL,
+ *                         ALLJOYN_ECDHE_PSK, ALLJOYN_ECDHE_ECDSA, GSSAPI.
  *
  * @param listener         Passes password and other authentication related requests to the application.
  *
  * @param keyStoreFileName Optional parameter to specify the filename of the default key store. The
- *                         default value is the applicationName parameter of alljoyn_busattachment_create().
+ *                         default value is the applicationName parameter of BusAttachment().
  *                         Note that this parameter is only meaningful when using the default
  *                         key store implementation.
  *
@@ -681,7 +687,7 @@ extern AJ_API QStatus AJ_CALL alljoyn_busattachment_unbindsessionport(alljoyn_bu
  *
  * @return
  *      - #ER_OK if peer security was enabled.
- *      - #ER_BUS_BUS_NOT_STARTED alljoyn_busattachment_start has not been called
+ *      - #ER_BUS_BUS_NOT_STARTED BusAttachment::Start has not be called
  */
 extern AJ_API QStatus AJ_CALL alljoyn_busattachment_enablepeersecurity(alljoyn_busattachment bus, const char* authMechanisms,
                                                                        alljoyn_authlistener listener, const char* keyStoreFileName,

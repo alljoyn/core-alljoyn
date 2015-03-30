@@ -23,7 +23,6 @@
 #ifndef _ALLJOYN_C_REMOTEBUSOBJECT_H
 #define _ALLJOYN_C_REMOTEBUSOBJECT_H
 
-#include <qcc/platform.h>
 #include <alljoyn_c/AjAPI.h>
 #include <alljoyn_c/InterfaceDescription.h>
 #include <alljoyn_c/MessageReceiver.h>
@@ -412,18 +411,18 @@ extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_registerpropertieschangedli
 /**
  * Function to unregister a handler for property change events.
  *
- * @param iface     Remote object's interface on which the property is defined.
- * @param property  The name of the property to stop monitoring.
+ * @param proxyObj  The proxy bus object that will register the property changed listener.
+ * @param iface     Remote object's interface on which the properties are defined.
  * @param callback  Method on listener that used to be called.
  *
  * @return
- *      - #ER_OK if the handler was registered successfully
+ *      - #ER_OK if the handler was unregistered successfully
  *      - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
- *      - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
  */
-extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_unregisterpropertieschangedlistener(const char* iface,
-                                                                                         const char* property,
+extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_unregisterpropertieschangedlistener(alljoyn_proxybusobject proxyObj,
+                                                                                         const char* iface,
                                                                                          alljoyn_proxybusobject_listener_propertieschanged_ptr callback);
+
 
 /**
  * Make an asynchronous request to set a property on an interface on the remote object.

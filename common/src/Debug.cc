@@ -520,7 +520,7 @@ void _QCC_DbgDumpHex(DbgMsgType type, const char* module, const char* filename, 
     }
 }
 
-void QCC_SetDebugLevel(const char* module, uint32_t level)
+void AJ_CALL QCC_SetDebugLevel(const char* module, uint32_t level)
 {
     // strcmp can not take a NULL pointer its undefined behavior
     if (module == NULL) {
@@ -534,7 +534,7 @@ void QCC_SetDebugLevel(const char* module, uint32_t level)
     }
 }
 
-void QCC_SetLogLevels(const char* logEnv)
+void AJ_CALL QCC_SetLogLevels(const char* logEnv)
 {
     size_t pos = 0;
     qcc::String s = logEnv;
@@ -551,7 +551,7 @@ void QCC_SetLogLevels(const char* logEnv)
     }
 }
 
-void QCC_UseOSLogging(bool useOSLog)
+void AJ_CALL QCC_UseOSLogging(bool useOSLog)
 {
     void* context = stderr;
     QCC_DbgMsgCallback cb = QCC_GetOSLogger(useOSLog);
