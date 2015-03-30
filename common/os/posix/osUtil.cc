@@ -23,6 +23,7 @@
 #include <qcc/platform.h>
 
 #include <dirent.h>
+#include <errno.h>
 #include <grp.h>
 #include <pwd.h>
 #include <string.h>
@@ -151,6 +152,17 @@ QStatus qcc::Exec(const char* exec, const ExecArgs& args, const Environ& envs)
         env[index] = NULL;
 
         execve(exec, argv, env); // will never return if successful.
+
+        // free resource if execve() failed.
+        QCC_LogError(ER_FAIL, ("Failed to run \"%s\": %s", exec, strerror(errno)));
+        for (char** p = env; p; ++p) {
+            free(*p);
+        }
+        delete env;
+        for (char** p = argv; p; ++p) {
+            free(*p);
+        }
+        delete argv;
     } else if (pid == -1) {
         return ER_OS_ERROR;
 #ifndef NDEBUG
@@ -204,6 +216,17 @@ QStatus qcc::ExecAs(const char* user, const char* exec, const ExecArgs& args, co
         }
 
         execve(exec, argv, env); // will never return if successful.
+
+        // free resource if execve() failed.
+        QCC_LogError(ER_FAIL, ("Failed to run \"%s\": %s", exec, strerror(errno)));
+        for (char** p = env; p; ++p) {
+            free(*p);
+        }
+        delete env;
+        for (char** p = argv; p; ++p) {
+            free(*p);
+        }
+        delete argv;
     } else if (pid == -1) {
         return ER_OS_ERROR;
 #ifndef NDEBUG
