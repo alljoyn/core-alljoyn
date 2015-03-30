@@ -938,6 +938,12 @@ QStatus Crypto_ECC::GenerateSharedSecret(const ECCPublicKey* peerPublicKey, ECCS
 
     pEccPeerPublicKey = new Crypto_ECC;
 
+    if (NULL == pEccPeerPublicKey) {
+        status = ER_OUT_OF_MEMORY;
+        QCC_LogError(status, ("Failed to create a new Elliptic Curve Cryptography object."));
+        goto Exit;
+    }
+
     pEccPeerPublicKey->SetDHPublicKey(peerPublicKey);
 
     ntStatus = BCryptSecretAgreement(eccState->ecdhPrivateKey,
@@ -969,7 +975,7 @@ Exit:
     }
 
     if (NULL != hSecret) {
-        BCryptDestroySecret(hSecret);
+        ntStatus = BCryptDestroySecret(hSecret);
         if (!BCRYPT_SUCCESS(ntStatus)) {
             // non fatal logging of destroy secret failing on error path.
             QCC_LogError(ER_CRYPTO_ERROR, ("Failed to destroy secret on error path, ntStatus=%X", ntStatus));
