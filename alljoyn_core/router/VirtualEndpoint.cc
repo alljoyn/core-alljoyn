@@ -72,14 +72,35 @@ QStatus _VirtualEndpoint::PushMessage(Message& msg, SessionId id)
      * them until we either succeed or run out of options.
      */
     m_b2bEndpointsLock.Lock(MUTEX_CONTEXT);
-
-    multimap<SessionId, RemoteEndpoint>::iterator it = (id == 0) ? m_b2bEndpoints.begin() : m_b2bEndpoints.lower_bound(id);
-    while ((it != m_b2bEndpoints.end()) && (id == it->first)) {
-        RemoteEndpoint ep = it->second;
-        tryEndpoints.push_back(ep);
-        ++it;
+    if (id != 0) {
+        for (multimap<SessionId, RemoteEndpoint>::iterator it = m_b2bEndpoints.lower_bound(id); (it != m_b2bEndpoints.end()) && (id == it->first); ++it) {
+            RemoteEndpoint ep = it->second;
+            tryEndpoints.push_back(ep);
+        }
+    } else {
+        /*
+         * When the session ID is 0, any b2bEp is a valid choice.  Prefer the
+         * ones that are directly connected, which we can tell by comparing the
+         * GUIDs.
+         */
+        String thisShortGuid = GetRemoteGUIDShortString();
+        for (multimap<SessionId, RemoteEndpoint>::iterator it = m_b2bEndpoints.begin(); (it != m_b2bEndpoints.end()) && (id == it->first); ++it) {
+            RemoteEndpoint ep = it->second;
+            String epShortGuid = ep->GetRemoteName().substr(1, ep->GetRemoteName().find_last_of('.') - 1);
+            if (thisShortGuid == epShortGuid) {
+                tryEndpoints.push_back(ep);
+            }
+        }
+        for (multimap<SessionId, RemoteEndpoint>::iterator it = m_b2bEndpoints.begin(); (it != m_b2bEndpoints.end()) && (id == it->first); ++it) {
+            RemoteEndpoint ep = it->second;
+            String epShortGuid = ep->GetRemoteName().substr(1, ep->GetRemoteName().find_last_of('.') - 1);
+            if (thisShortGuid != epShortGuid) {
+                tryEndpoints.push_back(ep);
+            }
+        }
     }
     m_b2bEndpointsLock.Unlock(MUTEX_CONTEXT);
+
     /*
      * We got the candidates so now try them all.
      */
