@@ -1126,7 +1126,14 @@ void <xsl:value-of select="../../annotation[@name='org.alljoyn.lang.objc']/@valu
 </xsl:template>
 
 <xsl:template match="arg" mode="cpp-msg-arg-for-method-reply">
+    <xsl:choose>
+        <xsl:when test="@type='s' or @type='o' or @type='y' or @type='d' or @type='b' or @type='n' or @type='q' or @type='i' or @type='u' or @type='x' or @type='t'">
     outArgs[<xsl:value-of select="position()-1"/>].Set("<xsl:value-of select="@type"/>", <xsl:if test="@type!='b'">[</xsl:if>outArg<xsl:value-of select="position()-1"/><xsl:text> </xsl:text><xsl:if test="@type!='b'"><xsl:call-template name="objcArgTypeConversionToCpp"/>]</xsl:if>);
+        </xsl:when>
+        <xsl:otherwise>
+    outArgs[<xsl:value-of select="position()-1"/>] = *[outArg<xsl:value-of select="position()-1"/> msgArg];
+        </xsl:otherwise>
+    </xsl:choose>
 </xsl:template>
 
 <xsl:template match="arg" mode="cpp-msg-arg-for-method-call">
