@@ -178,6 +178,11 @@ class ECCSecret {
     ~ECCSecret();
 
   private:
+    /* private copy constructor to prevent double delete of eccSecretState */
+    ECCSecret(const ECCSecret&);
+    /* private assignment operator to prevent double delete of eccSecretState */
+    ECCSecret& operator=(const ECCSecret&);
+
     /**
      * Private internal state
      */
