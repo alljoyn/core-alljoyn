@@ -561,6 +561,16 @@ QStatus ProxyBusObject::SetProperty(const char* iface, const char* property, Msg
                                 reply,
                                 timeout,
                                 flags);
+            if ((status == ER_BUS_REPLY_IS_ERROR_MESSAGE) &&
+                (reply->GetErrorName() != NULL) &&
+                (::strcmp(reply->GetErrorName(), org::alljoyn::Bus::ErrorName) == 0)) {
+                const char* err;
+                uint16_t rawStatus;
+                if (reply->GetArgs("sq", &err, &rawStatus) == ER_OK) {
+                    status = static_cast<QStatus>(rawStatus);
+                    QCC_DbgPrintf(("SetProperty call returned %s", err));
+                }
+            }
         }
     }
     return status;
