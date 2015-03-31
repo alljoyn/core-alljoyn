@@ -142,7 +142,7 @@ QStatus Crypto_Hash::Init(Algorithm alg, const uint8_t* hmacKey, size_t keyLen)
 
             SHA256_Init(&ctx->sha256);
             SHA256_Update(&ctx->sha256, ipad, SHA256_BLOCK_LENGTH);
-            memset(ipad, 0, SHA256_BLOCK_LENGTH);
+            ClearMemory(ipad, SHA256_BLOCK_LENGTH);
         } else {
             SHA256_Init(&ctx->sha256);
         }
@@ -166,7 +166,7 @@ Crypto_Hash::~Crypto_Hash(void)
 {
     if (ctx) {
         /* Zero out keys and other state that are stored in the hash context. */
-        memset(&ctx, 0, sizeof(ctx));
+        ClearMemory(&ctx, sizeof(ctx));
         delete ctx;
     }
 }
@@ -258,7 +258,7 @@ QStatus Crypto_Hash::GetDigest(uint8_t* digest, bool keepAlive)
             SHA256_Update(&ctx->sha256, ctx->opad, SHA256_BLOCK_LENGTH);
             SHA256_Update(&ctx->sha256, digest, SHA256_DIGEST_LENGTH);
             SHA256_Final(digest, &ctx->sha256);
-            memset(ctx->opad, 0, SHA256_BLOCK_LENGTH);
+            ClearMemory(ctx->opad, SHA256_BLOCK_LENGTH);
             initialized = false;
         } else {
             if (keepAlive) {

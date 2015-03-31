@@ -43,6 +43,10 @@
 
 #define QCC_MODULE  "UTIL"
 
+void qcc::ClearMemory(void* s, size_t n)
+{
+    SecureZeroMemory(s, n);
+}
 
 uint32_t qcc::GetPid()
 {
