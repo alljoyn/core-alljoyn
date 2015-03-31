@@ -64,14 +64,14 @@ class DaemonTransport : public Transport, public _RemoteEndpoint::EndpointListen
      *
      * @return ER_OK if successful.
      */
-    QStatus Start();
+    virtual QStatus Start();
 
     /**
      * Stop the transport.
      *
      * @return ER_OK if successful.
      */
-    QStatus Stop();
+    virtual QStatus Stop();
 
     /**
      * Determine if this transport is stopping.

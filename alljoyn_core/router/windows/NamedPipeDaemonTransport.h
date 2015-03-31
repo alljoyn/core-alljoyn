@@ -125,6 +125,13 @@ class NamedPipeDaemonTransport : public DaemonTransport {
     QStatus StopListen(_In_z_ const char* listenSpec);
 
     /**
+     * Stop the transport.
+     *
+     * @return ER_OK if successful.
+     */
+    QStatus Stop();
+
+    /**
      * Pend the caller until the transport stops.
      * @return ER_OK if successful.
      */
