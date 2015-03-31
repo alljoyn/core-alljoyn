@@ -1479,12 +1479,17 @@ void IpNameServiceImpl::LazyUpdateInterfaces(const qcc::NetworkEventSet& network
 
         live.m_multicastPort = MULTICAST_PORT;
         live.m_multicastMDNSPort = MULTICAST_MDNS_PORT;
+        live.m_unicastPort = 0;
 
         if (multicastsockFd != qcc::INVALID_SOCKET_FD) {
             live.m_multicastevent = new qcc::Event(multicastsockFd, qcc::Event::IO_READ);
+        } else {
+            live.m_multicastevent = NULL;
         }
         if (multicastMDNSsockFd != qcc::INVALID_SOCKET_FD) {
             live.m_multicastMDNSevent = new qcc::Event(multicastMDNSsockFd, qcc::Event::IO_READ);
+        } else {
+            live.m_multicastMDNSevent = NULL;
         }
 
         QCC_DbgPrintf(("Pushing back interface %s addr %s", live.m_interfaceName.c_str(), entries[i].m_addr.c_str()));
