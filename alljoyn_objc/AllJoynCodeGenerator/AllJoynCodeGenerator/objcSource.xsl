@@ -478,7 +478,8 @@ void <xsl:value-of select="../annotation[@name='org.alljoyn.lang.objc']/@value"/
         <xsl:when test="@type='y' or @type='b' or @type='n' or @type='q' or @type='i' or @type='u' or @type='x' or @type='t' or @type='d' or @type='s' or @type='o' or @type='g'">
     MsgArg arg;
 
-    QStatus status = arg.Set("<xsl:value-of select="@type"/>", [propertyValue <xsl:call-template name="objcArgTypeConversionToCpp"/>]);    
+    QStatus status = arg.Set("<xsl:value-of select="@type"/>", <xsl:if test="@type!='b'">[</xsl:if>propertyValue<xsl:if test="@type!='b'"> <xsl:call-template name="objcArgTypeConversionToCpp"/>]</xsl:if>);    
+    
     if (status != ER_OK) {
         NSLog(@"ERROR: Failed to set property <xsl:value-of select="@name"/> on interface <xsl:value-of select="../@name"/>. %@", [AJNStatus descriptionForStatusCode:status]);
     }
@@ -536,7 +537,7 @@ void <xsl:value-of select="../annotation[@name='org.alljoyn.lang.objc']/@value"/
         <xsl:when test="@type='y' or @type='b' or @type='n' or @type='q' or @type='i' or @type='u' or @type='x' or @type='t' or @type='d' or @type='s' or @type='o' or @type='g'">
     MsgArg arg;
 
-    QStatus status = arg.Set("<xsl:value-of select="@type"/>", [propertyValue <xsl:call-template name="objcArgTypeConversionToCpp"/>]);    
+    QStatus status = arg.Set("<xsl:value-of select="@type"/>", <xsl:if test="@type!='b'">[</xsl:if>propertyValue<xsl:if test="@type!='b'"> <xsl:call-template name="objcArgTypeConversionToCpp"/>]</xsl:if>);    
     if (status != ER_OK) {
         NSLog(@"ERROR: Failed to set property <xsl:value-of select="@name"/> on interface <xsl:value-of select="../@name"/>. %@", [AJNStatus descriptionForStatusCode:status]);
     }
@@ -982,7 +983,7 @@ void <xsl:value-of select="../annotation[@name='org.alljoyn.lang.objc']/@value"/
         <xsl:when test="@type='s' or @type='o'">[NSString stringWithCString:propValue encoding:NSUTF8StringEncoding]</xsl:when>
         <xsl:when test="@type='y'">[NSNumber numberWithUnsignedChar:propValue]</xsl:when>
         <xsl:when test="@type='d'">[NSNumber numberWithDouble:propValue]</xsl:when>
-        <xsl:when test="@type='b'">[NSNumber numberWithBool:propValue]</xsl:when>
+        <xsl:when test="@type='b'">propValue</xsl:when>
         <xsl:when test="@type='n'">[NSNumber numberWithShort:propValue>]</xsl:when>                
         <xsl:when test="@type='q'">[NSNumber numberWithUnsignedShort:propValue]</xsl:when>                                
         <xsl:when test="@type='i'">[NSNumber numberWithInt:propValue]</xsl:when>                                                
