@@ -21,7 +21,6 @@
 #ifndef _ALLJOYN_C_TRANPORTMASK_H
 #define _ALLJOYN_C_TRANPORTMASK_H
 
-#include <qcc/platform.h>
 #include <alljoyn_c/AjAPI.h>
 
 /** Bitmask of all transport types */

@@ -17,6 +17,7 @@
 		7DCBEE101A254D2600A53A83 /* AJNAboutListenerImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCBEE041A254D2600A53A83 /* AJNAboutListenerImpl.mm */; };
 		7DCBEE111A254D2600A53A83 /* AJNAboutProxy.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCBEE071A254D2600A53A83 /* AJNAboutProxy.mm */; };
 		7DCBEE121A254D2600A53A83 /* AJNPasswordManager.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCBEE091A254D2600A53A83 /* AJNPasswordManager.mm */; };
+		7DEA2F521AC47087007ECE82 /* libc++.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 7DEA2F511AC47087007ECE82 /* libc++.dylib */; };
 		83B85380193B13660088DD20 /* AJNTranslatorImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 83B8537F193B13660088DD20 /* AJNTranslatorImpl.mm */; };
 		AC88104F1649DB10006CD25A /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC88104E1649DB10006CD25A /* UIKit.framework */; };
 		AC8810511649DB10006CD25A /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC8810501649DB10006CD25A /* Foundation.framework */; };
@@ -86,6 +87,7 @@
 		7DCBEE071A254D2600A53A83 /* AJNAboutProxy.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNAboutProxy.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNAboutProxy.mm; sourceTree = "<group>"; };
 		7DCBEE081A254D2600A53A83 /* AJNPasswordManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNPasswordManager.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNPasswordManager.h; sourceTree = "<group>"; };
 		7DCBEE091A254D2600A53A83 /* AJNPasswordManager.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNPasswordManager.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNPasswordManager.mm; sourceTree = "<group>"; };
+		7DEA2F511AC47087007ECE82 /* libc++.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libc++.dylib"; path = "usr/lib/libc++.dylib"; sourceTree = SDKROOT; };
 		83B8537D193B13660088DD20 /* AJNTranslator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNTranslator.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTranslator.h; sourceTree = "<group>"; };
 		83B8537E193B13660088DD20 /* AJNTranslatorImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNTranslatorImpl.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTranslatorImpl.h; sourceTree = "<group>"; };
 		83B8537F193B13660088DD20 /* AJNTranslatorImpl.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNTranslatorImpl.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTranslatorImpl.mm; sourceTree = "<group>"; };
@@ -183,6 +185,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7DEA2F521AC47087007ECE82 /* libc++.dylib in Frameworks */,
 				AC8810771649DC6D006CD25A /* libstdc++.6.0.9.dylib in Frameworks */,
 				AC8810751649DC66006CD25A /* SystemConfiguration.framework in Frameworks */,
 				AC88104F1649DB10006CD25A /* UIKit.framework in Frameworks */,
@@ -214,6 +217,7 @@
 		AC88104D1649DB10006CD25A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				7DEA2F511AC47087007ECE82 /* libc++.dylib */,
 				AC8810761649DC6D006CD25A /* libstdc++.6.0.9.dylib */,
 				AC8810741649DC66006CD25A /* SystemConfiguration.framework */,
 				AC88104E1649DB10006CD25A /* UIKit.framework */,
@@ -550,10 +554,7 @@
 		AC8810721649DB10006CD25A /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = (
-					"$(ARCHS_STANDARD_32_BIT)",
-					armv7,
-				);
+				ARCHS = "$(ARCHS_STANDARD)";
 				GCC_ENABLE_CPP_EXCEPTIONS = NO;
 				GCC_ENABLE_CPP_RTTI = NO;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
@@ -577,7 +578,6 @@
 				OTHER_LDFLAGS = (
 					"-lalljoyn",
 					"-lajrouter",
-					"-lBundledRouter.o",
 					"-lssl",
 					"-lcrypto",
 				);
@@ -589,10 +589,7 @@
 		AC8810731649DB10006CD25A /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = (
-					"$(ARCHS_STANDARD_32_BIT)",
-					armv7,
-				);
+				ARCHS = "$(ARCHS_STANDARD)";
 				GCC_ENABLE_CPP_EXCEPTIONS = NO;
 				GCC_ENABLE_CPP_RTTI = NO;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
@@ -617,7 +614,6 @@
 				OTHER_LDFLAGS = (
 					"-lalljoyn",
 					"-lajrouter",
-					"-lBundledRouter.o",
 					"-lssl",
 					"-lcrypto",
 				);

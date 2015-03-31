@@ -51,7 +51,6 @@ clibenv.VariantDir('$OBJDIR_ALLJOYN_C/samples', 'samples', duplicate = 0)
 # C bindings use the following headers from alljoyn_core
 alljoyn_core_headers = clibenv.Install('inc/alljoyn_c', '$DISTDIR/cpp/inc/alljoyn/DBusStdDefines.h')
 alljoyn_core_headers += clibenv.Install('inc/alljoyn_c', '$DISTDIR/cpp/inc/alljoyn/Status.h')
-alljoyn_core_headers += clibenv.Install('inc/qcc', '$DISTDIR/cpp/inc/qcc/platform.h')
 alljoyn_core_headers += clibenv.Install('inc/qcc/${OS_GROUP}', '$DISTDIR/cpp/inc/qcc/${OS_GROUP}/platform_types.h')
 
 if clibenv['OS_GROUP'] == 'windows':

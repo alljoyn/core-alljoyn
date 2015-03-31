@@ -21,8 +21,6 @@
 #ifndef _ALLJOYN_C_PASSWORDMANAGER_H
 #define _ALLJOYN_C_PASSWORDMANAGER_H
 
-#include <qcc/platform.h>
-
 #include <alljoyn_c/AjAPI.h>
 #include <alljoyn_c/Status.h>
 

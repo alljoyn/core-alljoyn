@@ -4858,7 +4858,6 @@ QStatus JBusAttachment::RegisterBusObject(const char* objPath, jobject jbusObjec
      * release it if we destruct without the user calling UnregisterBusObject
      */
     QCC_DbgPrintf(("JBusAttachment::RegisterBusObject(): Remembering strong global reference to BusObject %p", jglobalref));
-    busObjects.push_back(jglobalref);
 
     /*
      * It is a programming error to register the same Java Bus Object with
@@ -4895,6 +4894,7 @@ QStatus JBusAttachment::RegisterBusObject(const char* objPath, jobject jbusObjec
 
             QCC_DbgPrintf(("JBusAttachment::RegisterBusObject(): Releasing global Bus Object map lock"));
             gBusObjectMapLock.Unlock();
+            env->DeleteGlobalRef(jglobalref);
             return ER_FAIL;
         }
 
@@ -4928,19 +4928,24 @@ QStatus JBusAttachment::RegisterBusObject(const char* objPath, jobject jbusObjec
          */
         QCC_DbgPrintf(("JBusAttachment::RegisterBusObject(): Forgetting jglobalref"));
         env->DeleteGlobalRef(jglobalref);
+    } else {
+        /*
+         * The registration is successful. Put the global ref in the internal
+         * list of busobjects registered to this the busattachment.
+         */
+        busObjects.push_back(jglobalref);
     }
 
     /*
-     * We've successfully arranged for our AllJoyn Bus Attachment to use the
-     * provided Bus Object.  Release our hold on the shared resources,
-     * remembering to reverse the lock order.
+     * We've completed the registration process of the bus object to the Bus Attachment.
+     * Release our hold on the shared resources, remembering to reverse the lock order.
      */
     QCC_DbgPrintf(("JBusAttachment::RegisterBusObject(): Releasing Bus Attachment common lock"));
     baCommonLock.Unlock();
 
     QCC_DbgPrintf(("JBusAttachment::RegisterBusObject(): Releasing global Bus Object map lock"));
     gBusObjectMapLock.Unlock();
-    return ER_OK;
+    return status;
 }
 
 void JBusAttachment::UnregisterBusObject(jobject jbusObject)
