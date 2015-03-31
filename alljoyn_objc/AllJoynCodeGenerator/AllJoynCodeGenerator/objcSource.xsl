@@ -727,6 +727,9 @@ void <xsl:value-of select="../annotation[@name='org.alljoyn.lang.objc']/@value"/
         <xsl:when test="@type='o'">
     return [NSString stringWithCString:reply-&gt;GetArg()-&gt;v_objPath.str encoding:NSUTF8StringEncoding];
         </xsl:when>
+        <xsl:otherwise>
+    return [[AJNMessageArgument alloc] initWithHandle:(AJNHandle)new MsgArg(*(reply-&gt;GetArg(0))) shouldDeleteHandleOnDealloc:YES];
+        </xsl:otherwise>
     </xsl:choose>
 </xsl:template>
 
