@@ -44,6 +44,12 @@
 
 using namespace std;
 
+void qcc::ClearMemory(void* s, size_t n)
+{
+    volatile unsigned char* p = (volatile unsigned char*) s;
+    while (n--) *p++ = 0;
+}
+
 uint32_t qcc::GetPid()
 {
     return static_cast<uint32_t>(getpid());

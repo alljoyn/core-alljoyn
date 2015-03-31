@@ -180,11 +180,11 @@ void HMAC_SHA1_EndMessage(unsigned char *out, HMAC_SHA1_CTX *ctx) {
 
 void HMAC_SHA1_Done(HMAC_SHA1_CTX *ctx) {
 	/* Just to be safe, toast all context data */
-	memset(&(ctx->ipad[0]), ZERO_BYTE, HMAC_SHA1_BLOCK_LENGTH);
-	memset(&(ctx->opad[0]), ZERO_BYTE, HMAC_SHA1_BLOCK_LENGTH);
-	memset(&(ctx->key[0]), ZERO_BYTE, HMAC_SHA1_BLOCK_LENGTH);
-	ctx->keylen = 0;
-	ctx->hashkey = 0;
+	SHA1_force_memset(&(ctx->ipad[0]), ZERO_BYTE, HMAC_SHA1_BLOCK_LENGTH);
+	SHA1_force_memset(&(ctx->opad[0]), ZERO_BYTE, HMAC_SHA1_BLOCK_LENGTH);
+	SHA1_force_memset(&(ctx->key[0]), ZERO_BYTE, HMAC_SHA1_BLOCK_LENGTH);
+	SHA1_force_memset(&ctx->keylen, ZERO_BYTE, sizeof(ctx->keylen));
+	SHA1_force_memset(&ctx->hashkey, ZERO_BYTE, sizeof(ctx->hashkey));
 } 
 
 #ifdef  __cplusplus
