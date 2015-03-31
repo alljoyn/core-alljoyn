@@ -251,16 +251,29 @@ QStatus CertificateX509::DecodeCertificateName(const qcc::String& dn, Certificat
         qcc::String oid;
         qcc::String str;
         qcc::String rem;
-        status = Crypto_ASN1::Decode(tmp, "{(ou)}.", &oid, &str, &rem);
+        status = Crypto_ASN1::Decode(tmp, "{(o.)}.", &oid, &str, &rem);
         if (ER_OK != status) {
             QCC_LogError(status, ("Error decoding distinguished name"));
             return status;
         }
         if (OID_DN_OU == oid) {
-            name.SetOU((const uint8_t*) str.data(), str.length());
+            qcc::String val;
+            status = Crypto_ASN1::Decode(str, "u", &val);
+            if (ER_OK != status) {
+                QCC_LogError(status, ("Error decoding OU field of the distinguished name"));
+                return status;
+            }
+            name.SetOU((const uint8_t*) val.data(), val.length());
         } else if (OID_DN_CN == oid) {
-            name.SetCN((const uint8_t*) str.data(), str.length());
+            qcc::String val;
+            status = Crypto_ASN1::Decode(str, "u", &val);
+            if (ER_OK != status) {
+                QCC_LogError(status, ("Error decoding CN field of the distinguished name"));
+                return status;
+            }
+            name.SetCN((const uint8_t*) val.data(), val.length());
         }
+        /* do not parse the other fields of the distinguished name */
         tmp = rem;
     }
 
@@ -269,23 +282,25 @@ QStatus CertificateX509::DecodeCertificateName(const qcc::String& dn, Certificat
 
 QStatus CertificateX509::EncodeCertificateName(qcc::String& dn, CertificateX509::DistinguishedName& name)
 {
+    qcc::String ouOID;
+    qcc::String cnOID;
+    qcc::String ou;
+    qcc::String cn;
     if (name.ouLen > 0) {
-        qcc::String oid = OID_DN_OU;
-        qcc::String tmp((const char*) name.ou, name.ouLen);
-        QStatus status = Crypto_ASN1::Encode(dn, "{(ou)}", &oid, &tmp);
-        if (ER_OK != status) {
-            return status;
-        }
+        ouOID = OID_DN_OU;
+        ou.assign((const char*) name.ou, name.ouLen);
     }
     if (name.cnLen > 0) {
-        qcc::String oid = OID_DN_CN;
-        qcc::String tmp((const char*) name.cn, name.cnLen);
-        QStatus status = Crypto_ASN1::Encode(dn, "{(ou)}", &oid, &tmp);
-        if (ER_OK != status) {
-            return status;
-        }
+        cnOID = OID_DN_CN;
+        cn.assign((const char*) name.cn, name.cnLen);
     }
-
+    if ((name.ouLen > 0) && (name.cnLen > 0)) {
+        return Crypto_ASN1::Encode(dn, "{(ou)(ou)}", &ouOID, &ou, &cnOID, &cn);
+    } else if (name.ouLen > 0) {
+        return Crypto_ASN1::Encode(dn, "{(ou)}", &ouOID, &ou);
+    } else if (name.cnLen > 0) {
+        return Crypto_ASN1::Encode(dn, "{(ou)}", &cnOID, &cn);
+    }
     return ER_OK;
 }
 
@@ -823,13 +838,40 @@ String CertificateX509::ToString() const
 {
     qcc::String str("Certificate:\n");
     str += "serial:    " + serial + " (0x" + BytesToHexString((const uint8_t*) serial.data(), serial.length()) + ")\n";
-    if (GetIssuerCNLength() > 0) {
-        str += "issuer:    " + qcc::String((const char*) GetIssuerCN(), GetIssuerCNLength()) +
-               " (0x" + BytesToHexString(GetIssuerCN(), GetIssuerCNLength()) + ")\n";
+    if ((GetIssuerOULength() > 0) || (GetIssuerCNLength() > 0)) {
+        str += "issuer: ";
+        bool addComma = false;
+        if (GetIssuerOULength() > 0) {
+            str += "OU= " + qcc::String((const char*) GetIssuerOU(), GetIssuerOULength()) +
+                   " (0x" + BytesToHexString(GetIssuerOU(), GetIssuerOULength()) + ")";
+            addComma = true;
+        }
+        if (GetIssuerCNLength() > 0) {
+            if (addComma) {
+                str += ", ";
+            }
+            str += "CN= " + qcc::String((const char*) GetIssuerCN(), GetIssuerCNLength()) +
+                   " (0x" + BytesToHexString(GetIssuerCN(), GetIssuerCNLength()) + ")";
+        }
+        str += "\n";
     }
-    if (GetSubjectCNLength() > 0) {
-        str += "subject:    " + qcc::String((const char*) GetSubjectCN(), GetSubjectCNLength()) +
-               " (0x" + BytesToHexString(GetSubjectCN(), GetSubjectCNLength()) + ")\n";
+
+    if ((GetSubjectOULength() > 0) || (GetSubjectCNLength() > 0)) {
+        str += "subject: ";
+        bool addComma = false;
+        if (GetSubjectOULength() > 0) {
+            str += "OU= " + qcc::String((const char*) GetSubjectOU(), GetSubjectOULength()) +
+                   " (0x" + BytesToHexString(GetSubjectOU(), GetSubjectOULength()) + ")";
+            addComma = true;
+        }
+        if (GetSubjectCNLength() > 0) {
+            if (addComma) {
+                str += ", ";
+            }
+            str += "CN= " + qcc::String((const char*) GetSubjectCN(), GetSubjectCNLength()) +
+                   " (0x" + BytesToHexString(GetSubjectCN(), GetSubjectCNLength()) + ")";
+        }
+        str += "\n";
     }
     str += "publickey: " + BytesToHexString((const uint8_t*) &publickey, sizeof(publickey)) + "\n";
     str += "ca:        " + BytesToHexString((const uint8_t*) &ca, sizeof(uint8_t)) + "\n";
