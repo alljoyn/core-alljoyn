@@ -360,6 +360,10 @@ class Crypto_ECC {
     ~Crypto_ECC();
 
   private:
+    /* private copy constructor to prevent double freeing of eccState */
+    Crypto_ECC(const Crypto_ECC&);
+    /* private assignment operator to prevent double freeing of eccState */
+    Crypto_ECC& operator=(const Crypto_ECC&);
 
     /**
      * Opaque type for the internal state.
