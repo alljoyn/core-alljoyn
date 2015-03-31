@@ -592,6 +592,12 @@ QStatus NamedPipeDaemonTransport::StartListen(_In_z_ const char* listenSpec)
 QStatus NamedPipeDaemonTransport::StopListen(_In_z_ const char* listenSpec)
 {
     QCC_DbgTrace(("StopListen"));
+    return Stop();
+}
+
+QStatus NamedPipeDaemonTransport::Stop()
+{
+    QCC_DbgTrace(("NamedPipeDaemonTransport::Stop"));
     m_acceptThread.Stop();
 
     /*
@@ -601,13 +607,12 @@ QStatus NamedPipeDaemonTransport::StopListen(_In_z_ const char* listenSpec)
     for (list<NamedPipeDaemonEndpoint>::iterator i = authenticatingEndpointList.begin(); i != authenticatingEndpointList.end(); ++i) {
         (*i)->Stop();
     }
-    authenticatingEndpointList.clear();
     endpointListLock.Unlock(MUTEX_CONTEXT);
 
     /*
      * Base class Stop() will stop the endpointList.
      */
-    return Stop();
+    return DaemonTransport::Stop();
 }
 
 QStatus NamedPipeDaemonTransport::Join()
