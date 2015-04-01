@@ -29,6 +29,10 @@
 extern "C" {
 #endif
 
+/**
+ * alljoyn_aboutdata is responsible for holding the org.alljoyn.about interface
+ * Data fields
+ */
 typedef struct _alljoyn_aboutdata_handle* alljoyn_aboutdata;
 
 /**
@@ -58,7 +62,7 @@ extern AJ_API alljoyn_aboutdata AJ_CALL alljoyn_aboutdata_create_empty();
  */
 extern AJ_API alljoyn_aboutdata AJ_CALL alljoyn_aboutdata_create(const char* defaultLanguage);
 
-/*
+/**
  * Allocate a new alljoyn_aboutdata object filling in the fields of the About data
  * using an alljoyn_msgarg. The provided alljoyn_msgarg must contain a dictionary
  * with signature a{sv} with About data fields.
@@ -86,13 +90,14 @@ extern AJ_API void AJ_CALL alljoyn_aboutdata_destroy(alljoyn_aboutdata data);
 /**
  * Initialize the About data held by the specified alljoyn_aboutdata object
  * from a character string containing the XML representation of the About data
- * specified as an <About data> element containing <AppId>, <DeviceName>, etc.
+ * specified as an \<About data\> element containing \<AppId\>, \<DeviceName\>, etc.
  *
  * The AllJoyn software version (AJSoftwareVersion) is automatically set to
  * the version of Alljoyn that is being used. The SupportedLanguages tag is
  * automatically implied from the DefaultLanguage tag and the lang annotation
  * from tags that are localizable.
  *
+ * @param[in] data         alljoyn_aboutdata object this call is made for
  * @param[in] aboutDataXml a string that contains an XML representation of
  *                         the About data fields.
  * @return ER_OK on success
@@ -163,6 +168,7 @@ extern AJ_API QStatus AJ_CALL alljoyn_aboutdata_setappid(alljoyn_aboutdata data,
  * AppId IS part of the Announce signal
  * AppId CAN NOT be localized for other languages
  *
+ * @param[in] data  alljoyn_aboutdata object this call is made for
  * @param[in] appId the a globally unique string of characters used as an Id for the application
  *
  * @return
@@ -437,7 +443,7 @@ extern AJ_API size_t AJ_CALL alljoyn_aboutdata_getsupportedlanguages(alljoyn_abo
  * Description CAN BE localized for other languages
  *
  * @param[in] data         alljoyn_aboutdata object this call is made for
- * @param[in] descritption the Description (alljoyn_aboutdata data, UTF-8 encoded string)
+ * @param[in] description  the Description (alljoyn_aboutdata data, UTF-8 encoded string)
  * @param[in] language     the IETF language tag specified by RFC 5646
  *                         If language is NULL the Description will be set for the default language.
  *
