@@ -266,7 +266,7 @@ static QCC_BOOL parse(alljoyn_busattachment bus, alljoyn_observer observer, char
     return QCC_TRUE;
 }
 
-static QStatus BuildInterface(alljoyn_busattachment bus)
+static QStatus build_interface(alljoyn_busattachment bus)
 {
     QStatus status;
 
@@ -301,7 +301,7 @@ static QStatus BuildInterface(alljoyn_busattachment bus)
     return status;
 }
 
-static QStatus SetupBusAttachment(alljoyn_busattachment bus)
+static QStatus setup_busattachment(alljoyn_busattachment bus)
 {
     QStatus status;
     status = alljoyn_busattachment_start(bus);
@@ -309,7 +309,7 @@ static QStatus SetupBusAttachment(alljoyn_busattachment bus)
     status = alljoyn_busattachment_connect(bus, NULL);
     assert(ER_OK == status);
 
-    status = BuildInterface(bus);
+    status = build_interface(bus);
     assert(ER_OK == status);
 
     return status;
@@ -391,12 +391,41 @@ static void properties_changed(alljoyn_proxybusobject proxy, const char* intf, c
     fflush(stdout);
 }
 
-static void object_discovered(const void* context, alljoyn_proxybusobject_ref proxyref)
-{
+static void print_door_state(const alljoyn_proxybusobject proxy) {
+
     QStatus status;
     QCC_BOOL isopen;
     uint32_t keycode;
     char* location = NULL;
+
+    /* get properties */
+    status = proxy_get_location(proxy, &location);
+    if (status == ER_OK) {
+        status = proxy_get_isopen(proxy, &isopen);
+    }
+    if (status == ER_OK) {
+        status = proxy_get_keycode(proxy, &keycode);
+    }
+
+    if (status == ER_OK) {
+        printf("\tlocation: %s\n", (location != NULL) ? location : "<unknown>");
+        printf("\tis open : %s\n", isopen ? "yes" : "no");
+        printf("\tkeycode : %u\n", (unsigned) keycode);
+    } else {
+        fprintf(stderr, "Could not retrieve door properties.\n");
+    }
+
+    if (location) {
+        free(location);
+    }
+    printf("> ");
+    fflush(stdout);
+}
+
+static void object_discovered(const void* context, alljoyn_proxybusobject_ref proxyref)
+{
+    QStatus status;
+
     struct _listener_ctx* ctx = (struct _listener_ctx*) context;
     alljoyn_proxybusobject proxy = alljoyn_proxybusobject_ref_get(proxyref);
 
@@ -413,38 +442,17 @@ static void object_discovered(const void* context, alljoyn_proxybusobject_ref pr
         fprintf(stderr, "Could not register properties changed listener\n");
     }
 
-    /* get properties */
-    status = proxy_get_location(proxy, &location);
-    if (status == ER_OK) {
-        status = proxy_get_isopen(proxy, &isopen);
-    }
-    if (status == ER_OK) {
-        status = proxy_get_keycode(proxy, &keycode);
-    }
+    alljoyn_proxybusobject_enablepropertycaching(proxy);
 
-    if (status == ER_OK) {
-        printf("  location: %s\n", (location != NULL) ? location : "<unknown>");
-        printf("   is open: %s\n", isopen ? "yes" : "no");
-        printf("   keycode: %u\n", (unsigned)keycode);
-    } else {
-        fprintf(stderr, "Could not retrieve door properties.\n");
-    }
-
-    if (location) {
-        free(location);
-    }
-    printf("> ");
-    fflush(stdout);
+    print_door_state(proxy);
 }
-
 
 static void object_lost(const void* context, alljoyn_proxybusobject_ref proxyref)
 {
     alljoyn_proxybusobject proxy = alljoyn_proxybusobject_ref_get(proxyref);
-    printf("[listener] Door %s:%s no longer exists.\n",
+    printf("[listener] Door %s:%s no longer exists.\n\tLast known state for lost object:\n",
            alljoyn_proxybusobject_getuniquename(proxy), alljoyn_proxybusobject_getpath(proxy));
-    printf("> ");
-    fflush(stdout);
+    print_door_state(proxy);
 }
 
 static alljoyn_observerlistener_callback listener_cbs = { object_discovered, object_lost };
@@ -505,7 +513,7 @@ int main(int argc, char** argv)
 #endif
 
     bus = alljoyn_busattachment_create("door_consumer_c", QCC_TRUE);
-    SetupBusAttachment(bus);
+    setup_busattachment(bus);
 
     obs = alljoyn_observer_create(bus, &intfname, 1);
     listener_ctx.observer = obs;
