@@ -19,6 +19,7 @@
 #import "AJNInterfaceDescription.h"
 #import "AJNBasicObject.h"
 #import "BasicObject.h"
+#import "AJNInit.h"
 
 static NSString * const kBusObjectTestsAdvertisedName = @"org.alljoyn.bus.sample.strings";
 static NSString * const kBusObjectTestsInterfaceName = @"org.alljoyn.bus.sample.strings";
@@ -73,10 +74,21 @@ const NSInteger kBusObjectTestsServicePort = 999;
 @synthesize didReceiveSignal = _didReceiveSignal;
 @synthesize handle = _handle;
 
++(void)setUp
+{
+    [AJNInit alljoynInit];
+    [AJNInit alljoynRouterInit];
+}
+
++(void)tearDown
+{
+    [AJNInit alljoynRouterShutdown];
+    [AJNInit alljoynShutdown];
+}
+
 - (void)setUp
 {
     [super setUp];
-    
     // Set-up code here. Executed before each test case is run.
     //
     self.bus = [[AJNBusAttachment alloc] initWithApplicationName:@"testApp" allowRemoteMessages:YES];
@@ -127,7 +139,7 @@ const NSInteger kBusObjectTestsServicePort = 999;
     self.didReceiveSignal = NO;
     self.testSessionId = -1;
     self.testSessionJoiner = nil;
-    
+
     [super tearDown];
 }
 

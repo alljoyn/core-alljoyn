@@ -20,9 +20,11 @@
 #include <cassert>
 #include <string>
 
+#include <alljoyn/Status.h>
 #include <alljoyn/BusAttachment.h>
-#include <alljoyn/Init.h>
 #include <alljoyn/Observer.h>
+#include <alljoyn/Init.h>
+
 
 #define INTF_NAME "com.example.Door"
 
@@ -104,7 +106,7 @@ class DoorProxy {
     }
 };
 
-static void help()
+static void Help()
 {
     cout << "q             quit" << endl;
     cout << "l             list all discovered doors" << endl;
@@ -114,7 +116,7 @@ static void help()
     cout << "h             display this help message" << endl;
 }
 
-static void list_doors(BusAttachment& bus, Observer* observer)
+static void ListDoors(BusAttachment& bus, Observer* observer)
 {
     ManagedProxyBusObject proxy = observer->GetFirst();
     for (; proxy->IsValid(); proxy = observer->GetNext(proxy)) {
@@ -155,7 +157,7 @@ static DoorProxy get_door_at_location(BusAttachment& bus, Observer* observer, co
     return DoorProxy(proxy, bus);
 }
 
-static void open_door(BusAttachment& bus, Observer* observer, const string& location)
+static void OpenDoor(BusAttachment& bus, Observer* observer, const string& location)
 {
     DoorProxy door = get_door_at_location(bus, observer, location);
 
@@ -177,7 +179,7 @@ static void open_door(BusAttachment& bus, Observer* observer, const string& loca
     }
 }
 
-static void close_door(BusAttachment& bus, Observer* observer, const string& location)
+static void CloseDoor(BusAttachment& bus, Observer* observer, const string& location)
 {
     DoorProxy door = get_door_at_location(bus, observer, location);
 
@@ -199,7 +201,7 @@ static void close_door(BusAttachment& bus, Observer* observer, const string& loc
     }
 }
 
-static void knock_and_run(BusAttachment& bus, Observer* observer, const string& location)
+static void KnockAndRun(BusAttachment& bus, Observer* observer, const string& location)
 {
     DoorProxy door = get_door_at_location(bus, observer, location);
 
@@ -211,7 +213,7 @@ static void knock_and_run(BusAttachment& bus, Observer* observer, const string& 
     }
 }
 
-static bool parse(BusAttachment& bus, Observer* observer, const string& input)
+static bool Parse(BusAttachment& bus, Observer* observer, const string& input)
 {
     char cmd;
     size_t argpos;
@@ -232,24 +234,24 @@ static bool parse(BusAttachment& bus, Observer* observer, const string& input)
         return false;
 
     case 'l':
-        list_doors(bus, observer);
+        ListDoors(bus, observer);
         break;
 
     case 'o':
-        open_door(bus, observer, arg);
+        OpenDoor(bus, observer, arg);
         break;
 
     case 'c':
-        close_door(bus, observer, arg);
+        CloseDoor(bus, observer, arg);
         break;
 
     case 'k':
-        knock_and_run(bus, observer, arg);
+        KnockAndRun(bus, observer, arg);
         break;
 
     case 'h':
     default:
-        help();
+        Help();
         break;
     }
 
@@ -297,7 +299,10 @@ static QStatus SetupBusAttachment(BusAttachment& bus)
     status = bus.Start();
     assert(ER_OK == status);
     status = bus.Connect();
-    assert(ER_OK == status);
+
+    if (ER_OK != status) {
+        return status;
+    }
 
     status = BuildInterface(bus);
     assert(ER_OK == status);
@@ -449,17 +454,20 @@ int CDECL_CALL main(int argc, char** argv)
     QCC_UNUSED(argv);
 
     if (AllJoynInit() != ER_OK) {
-        return 1;
+        return EXIT_FAILURE;
     }
 #ifdef ROUTER
     if (AllJoynRouterInit() != ER_OK) {
         AllJoynShutdown();
-        return 1;
+        return EXIT_FAILURE;
     }
 #endif
 
     BusAttachment* bus = new BusAttachment("door_consumer", true);
-    SetupBusAttachment(*bus);
+
+    if (ER_OK != SetupBusAttachment(*bus)) {
+        return EXIT_FAILURE;
+    }
 
     const char* intfname = INTF_NAME;
     Observer* obs = new Observer(*bus, &intfname, 1);
@@ -474,20 +482,20 @@ int CDECL_CALL main(int argc, char** argv)
         string input;
         cout << "> ";
         getline(cin, input);
-        done = !parse(*bus, obs, input);
+        done = !Parse(*bus, obs, input);
     }
 
     // Cleanup
     obs->UnregisterAllListeners();
-    bus->Stop();
-    bus->Join();
-    delete bus;
-    delete obs;
+    delete obs; // Must happen before deleting the original bus
     delete listener;
+    delete bus;
+    bus = NULL;
 
 #ifdef ROUTER
     AllJoynRouterShutdown();
 #endif
     AllJoynShutdown();
-    return 0;
+    return EXIT_SUCCESS;
+
 }

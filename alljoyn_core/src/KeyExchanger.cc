@@ -590,7 +590,7 @@ QStatus KeyExchangerECDHE_PSK::RequestCredentialsCB(const char* peerName)
     if (creds.IsSet(AuthListener::CRED_PASSWORD)) {
         pskValue = creds.GetPassword();
     } else {
-        QCC_LogError(ER_AUTH_FAIL, ("KeyExchangerECDHE_PSK::RequestCredentialsCB PSK value not provided"));
+        QCC_DbgPrintf(("KeyExchangerECDHE_PSK::RequestCredentialsCB PSK value not provided"));
         return ER_AUTH_FAIL;
     }
     return ER_OK;
@@ -737,12 +737,12 @@ QStatus KeyExchangerECDHE_ECDSA::RequestCredentialsCB(const char* peerName)
     }
     /* private key is required */
     if (!creds.IsSet(AuthListener::CRED_PRIVATE_KEY)) {
-        QCC_DbgHLPrintf(("listener::RequestCredentials does not provide private key"));
+        QCC_DbgPrintf(("listener::RequestCredentials does not provide private key"));
         return ER_AUTH_FAIL;
     }
     /* cert chain is required */
     if (!creds.IsSet(AuthListener::CRED_CERT_CHAIN)) {
-        QCC_DbgHLPrintf(("listener::RequestCredentials does not provide certificate chain"));
+        QCC_DbgPrintf(("listener::RequestCredentials does not provide certificate chain"));
         return ER_AUTH_FAIL;
     }
     if (creds.IsSet(AuthListener::CRED_EXPIRATION)) {
@@ -753,16 +753,16 @@ QStatus KeyExchangerECDHE_ECDSA::RequestCredentialsCB(const char* peerName)
     qcc::String pemCertChain = creds.GetCertChain();
     QStatus status = CertificateX509::DecodePrivateKeyPEM(creds.GetPrivateKey(), (uint8_t*) &issuerPrivateKey, sizeof(ECCPrivateKey));
     if (status != ER_OK) {
-        QCC_DbgHLPrintf(("KeyExchangerECDHE_ECDSA::RequestCredentialsCB failed to parse the private key PEM"));
+        QCC_DbgPrintf(("RequestCredentialsCB failed to parse the private key PEM"));
         return status;
     }
     status = ParseCertChainPEM((qcc::String&)creds.GetCertChain());
     if (status != ER_OK) {
-        QCC_DbgHLPrintf(("KeyExchangerECDHE_ECDSA::RequestCredentialsCB failed to parse the certificate chain"));
+        QCC_DbgPrintf(("RequestCredentialsCB failed to parse the certificate chain"));
         return status;
     }
     if (certChainLen == 0) {
-        QCC_DbgHLPrintf(("KeyExchangerECDHE_ECDSA::RequestCredentialsCB receives empty the certificate chain"));
+        QCC_DbgPrintf(("RequestCredentialsCB receives empty the certificate chain"));
         return ER_AUTH_FAIL; /* need both private key and public key */
     }
     issuerPublicKey = *certChain[0].GetSubjectPublicKey();
@@ -784,7 +784,7 @@ static qcc::String EncodePEMCertChain(CertificateX509* certs, size_t numCerts)
 QStatus KeyExchangerECDHE_ECDSA::VerifyCredentialsCB(const char* peerName, CertificateX509* certs, size_t numCerts)
 {
     if (numCerts == 0) {
-        QCC_DbgHLPrintf(("KeyExchangerECDHE_ECDSA::VerifyCredentialsCB failed because of no certificate"));
+        QCC_DbgPrintf(("VerifyCredentialsCB failed because of no certificate"));
         return ER_AUTH_FAIL;
     }
     AuthListener::Credentials creds;
@@ -792,7 +792,7 @@ QStatus KeyExchangerECDHE_ECDSA::VerifyCredentialsCB(const char* peerName, Certi
     /* check with listener to validate the cert chain */
     bool ok = listener.VerifyCredentials(GetSuiteName(), peerName, creds);
     if (!ok) {
-        QCC_DbgHLPrintf(("KeyExchangerECDHE_ECDSA::VerifyCredentialsCB listener::VerifyCredentials failed"));
+        QCC_DbgPrintf(("KeyExchangerECDHE_ECDSA::VerifyCredentialsCB listener::VerifyCredentials failed"));
         return ER_AUTH_FAIL;
     }
     return ER_OK;
@@ -804,10 +804,12 @@ QStatus KeyExchangerECDHE_ECDSA::VerifyCredentialsCB(const char* peerName, Certi
 static bool IsCertChainStructureValid(CertificateX509* certs, size_t numCerts)
 {
     if ((numCerts == 0) || !certs) {
+        QCC_DbgPrintf(("Empty certificate chain"));
         return false;
     }
     for (size_t cnt = 0; cnt < numCerts; cnt++) {
         if (ER_OK != certs[cnt].VerifyValidity()) {
+            QCC_DbgPrintf(("Invalid certificate date validity period"));
             return false;
         }
     }
@@ -816,9 +818,11 @@ static bool IsCertChainStructureValid(CertificateX509* certs, size_t numCerts)
     }
     for (size_t cnt = 0; cnt < (numCerts - 1); cnt++) {
         if (!certs[cnt + 1].IsCA()) {
+            QCC_DbgPrintf(("Certificate basic extension CA is false"));
             return false;
         }
         if (certs[cnt].Verify(certs[cnt + 1].GetSubjectPublicKey()) != ER_OK) {
+            QCC_DbgPrintf(("Certificate chain signature verification failed"));
             return false;
         }
     }
@@ -831,6 +835,7 @@ QStatus KeyExchangerECDHE_ECDSA::ValidateRemoteVerifierVariant(const char* peerN
     if (!IsInitiator()) {
         status = RequestCredentialsCB(peerName);
         if (status != ER_OK) {
+            QCC_DbgPrintf(("Error requesting credentials from listener"));
             return status;
         }
     }
@@ -841,10 +846,12 @@ QStatus KeyExchangerECDHE_ECDSA::ValidateRemoteVerifierVariant(const char* peerN
     MsgArg* certChainVariant;
     status = variant->Get("(vyv)", &sigInfoVariant, &certChainEncoding, &certChainVariant);
     if (status != ER_OK) {
+        QCC_LogError(status, ("Invalid parameters for remote verifier"));
         return status;
     }
     if ((certChainEncoding != CertificateX509::ENCODING_X509_DER) &&
         (certChainEncoding != CertificateX509::ENCODING_X509_DER_PEM)) {
+        QCC_LogError(ER_INVALID_DATA, ("Certificate data must be in DER or PEM format"));
         return ER_INVALID_DATA;
     }
 
@@ -856,6 +863,7 @@ QStatus KeyExchangerECDHE_ECDSA::ValidateRemoteVerifierVariant(const char* peerN
         return status;
     }
     if (sigAlgorithm != SigInfo::ALGORITHM_ECDSA_SHA_256) {
+        QCC_LogError(ER_INVALID_DATA, ("Verifier signature algorithm must be SHA256"));
         return ER_INVALID_DATA;
     }
     size_t rCoordLen;
@@ -864,18 +872,22 @@ QStatus KeyExchangerECDHE_ECDSA::ValidateRemoteVerifierVariant(const char* peerN
     uint8_t* sCoord;
     status = sigVariant->Get("(ayay)", &rCoordLen, &rCoord, &sCoordLen, &sCoord);
     if (status != ER_OK) {
+        QCC_LogError(status, ("Invalid verifier signature data"));
         return status;
     }
     if (rCoordLen != ECC_COORDINATE_SZ) {
+        QCC_LogError(ER_INVALID_DATA, ("Invalid verifier signature data size (r)"));
         return ER_INVALID_DATA;
     }
     if (sCoordLen != ECC_COORDINATE_SZ) {
+        QCC_LogError(ER_INVALID_DATA, ("Invalid verifier signature data size (s)"));
         return ER_INVALID_DATA;
     }
     /* compute the remote verifier */
     uint8_t computedRemoteVerifier[AUTH_VERIFIER_LEN];
     status = GenerateRemoteVerifier(computedRemoteVerifier, sizeof(computedRemoteVerifier));
     if (status != ER_OK) {
+        QCC_LogError(status, ("Error computing remote verifier"));
         return status;
     }
 
@@ -887,11 +899,13 @@ QStatus KeyExchangerECDHE_ECDSA::ValidateRemoteVerifierVariant(const char* peerN
     size_t numCerts;
     status = certChainVariant->Get("a(ay)", &numCerts, &chainArg);
     if (status != ER_OK) {
+        QCC_LogError(status, ("Error retrieving peer's certificate chain"));
         return status;
     }
     hashUtil.Update(&certChainEncoding, 1);
     if (numCerts == 0) {
         /* no cert chain to validate.  So it's not authorized */
+        QCC_DbgPrintf(("Peer's certificate chain is empty.  Not authorized"));
         return ER_OK;
     }
 
@@ -902,6 +916,7 @@ QStatus KeyExchangerECDHE_ECDSA::ValidateRemoteVerifierVariant(const char* peerN
         status = chainArg[cnt].Get("(ay)", &encodedLen, &encoded);
         if (status != ER_OK) {
             delete [] certs;
+            QCC_LogError(status, ("Error retrieving peer's certificate chain"));
             return status;
         }
         if (certChainEncoding == CertificateX509::ENCODING_X509_DER) {
@@ -910,10 +925,11 @@ QStatus KeyExchangerECDHE_ECDSA::ValidateRemoteVerifierVariant(const char* peerN
             status = certs[cnt].LoadPEM(String((const char*) encoded, encodedLen));
         } else {
             delete [] certs;
+            QCC_LogError(status, ("Peer's certificate chain data are not in DER or PEM format"));
             return ER_INVALID_DATA;
         }
         if (status != ER_OK) {
-            QCC_DbgHLPrintf(("KeyExchangerECDHE_ECDSA::ValidateRemoteVerifierVariant error loading peer cert encoded data"));
+            QCC_LogError(status, ("Error parsing peer's certificate chain"));
             delete [] certs;
             return status;
         }
@@ -930,6 +946,7 @@ QStatus KeyExchangerECDHE_ECDSA::ValidateRemoteVerifierVariant(const char* peerN
 
     if (!*authorized) {
         delete [] certs;
+        QCC_LogError(ER_OK, ("Verifier mismatched"));
         return ER_OK;  /* not authorized */
     }
     if (!IsCertChainStructureValid(certs, numCerts)) {
@@ -939,6 +956,9 @@ QStatus KeyExchangerECDHE_ECDSA::ValidateRemoteVerifierVariant(const char* peerN
     }
     status = VerifyCredentialsCB(peerName, certs, numCerts);
     *authorized = (ER_OK == status);
+    if (!*authorized) {
+        QCC_DbgPrintf(("Not authorized by VerifyCredential callback"));
+    }
     delete [] certs;
     return ER_OK;
 }
@@ -1011,11 +1031,13 @@ QStatus KeyExchangerECDHE_ECDSA::KeyAuthentication(KeyExchangerCB& callback, con
     *authorized = false;
     QStatus status = GenerateMasterSecret(&peerPubKey);
     if (status != ER_OK) {
+        QCC_LogError(status, ("Error generating master secret"));
         return status;
     }
     /* check the Auth listener */
     status = RequestCredentialsCB(peerName);
     if (status != ER_OK) {
+        QCC_DbgPrintf(("Error requesting credentials from listener"));
         return status;
     }
 
@@ -1023,6 +1045,7 @@ QStatus KeyExchangerECDHE_ECDSA::KeyAuthentication(KeyExchangerCB& callback, con
     MsgArg variant;
     status = GenVerifierSigInfoArg(variant, true);
     if (status != ER_OK) {
+        QCC_LogError(status, ("Error generating verifier"));
         return status;
     }
     variant.SetOwnershipFlags(MsgArg::OwnsArgs, true);
