@@ -177,7 +177,7 @@ public class Observer implements Closeable {
      */
     public synchronized void unregisterListener(Listener listener) {
         for (int i = 0; i < listeners.size(); ++i) {
-            if (listeners.get(i).listener == listener) {
+            if (listeners.get(i).listener.equals(listener)) {
                 listeners.remove(i);
                 break;
             }
@@ -483,7 +483,7 @@ public class Observer implements Closeable {
             throw new IllegalArgumentException(intf + " is not an interface.");
         }
         BusInterface annotation = intf.getAnnotation(BusInterface.class);
-        if (annotation != null && !annotation.name().equals("")) {
+        if (annotation != null && annotation.name().length() != 0) {
             return annotation.name();
         }
         return intf.getCanonicalName();
