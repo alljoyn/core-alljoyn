@@ -1741,9 +1741,9 @@ public class BusAttachment {
      *                         for peer-to-peer authentication. This
      *                         is a space separated list of any of the
      *                         following values: ALLJOYN_SRP_LOGON,
-     *                         ALLJOYN_RSA_KEYX, ALLJOYN_SRP_KEYX,
-     *                         ALLJOYN_ECDHE_NULL, ALLJOYN_ECDHE_PSK,
-     *                         ALLJOYN_ECDHE_ECDSA, GSSAPI.
+     *                         ALLJOYN_SRP_KEYX, ALLJOYN_ECDHE_NULL,
+     *                         ALLJOYN_ECDHE_PSK, ALLJOYN_ECDHE_ECDSA,
+     *                         GSSAPI.
      * @param listener the authentication listener
      * @param keyStoreFileName the name of the default key store.
      *                         Under Android, the recommended value of
@@ -1791,9 +1791,9 @@ public class BusAttachment {
      *                         for peer-to-peer authentication.  This
      *                         is a space separated list of any of the
      *                         following values: ALLJOYN_SRP_LOGON,
-     *                         ALLJOYN_RSA_KEYX, ALLJOYN_SRP_KEYX,
-     *                         ALLJOYN_ECDHE_NULL, ALLJOYN_ECDHE_PSK,
-     *                         ALLJOYN_ECDHE_ECDSA, GSSAPI.
+     *                         ALLJOYN_SRP_KEYX, ALLJOYN_ECDHE_NULL,
+     *                         ALLJOYN_ECDHE_PSK, ALLJOYN_ECDHE_ECDSA,
+     *                         GSSAPI.
      * @param listener the authentication listener
      * @param keyStoreFileName the name of the default key store.
      *                         Under Android, the recommended value of
@@ -1819,9 +1819,9 @@ public class BusAttachment {
      *                       for peer-to-peer authentication.  This is
      *                       a space separated list of any of the
      *                       following values: ALLJOYN_SRP_LOGON,
-     *                       ALLJOYN_RSA_KEYX, ALLJOYN_SRP_KEYX,
-     *                       ALLJOYN_ECDHE_NULL, ALLJOYN_ECDHE_PSK,
-     *                       ALLJOYN_ECDHE_ECDSA, GSSAPI.
+     *                       ALLJOYN_SRP_KEYX, ALLJOYN_ECDHE_NULL,
+     *                       ALLJOYN_ECDHE_PSK, ALLJOYN_ECDHE_ECDSA,
+     *                       GSSAPI.
      * @param listener the authentication listener
      * @return OK if successful
      */
