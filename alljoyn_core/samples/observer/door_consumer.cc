@@ -20,9 +20,11 @@
 #include <cassert>
 #include <string>
 
+#include <alljoyn/Status.h>
 #include <alljoyn/BusAttachment.h>
-#include <alljoyn/Init.h>
 #include <alljoyn/Observer.h>
+#include <alljoyn/Init.h>
+
 
 #define INTF_NAME "com.example.Door"
 
@@ -38,7 +40,9 @@ class DoorProxy {
     /* Private assigment operator - does nothing */
     DoorProxy operator=(const DoorProxy&);
   public:
-    DoorProxy(ManagedProxyBusObject proxy, BusAttachment& bus) : proxy(proxy), bus(bus) { }
+    DoorProxy(ManagedProxyBusObject _proxy, BusAttachment& bus) : proxy(_proxy), bus(bus) {
+        proxy->EnablePropertyCaching();
+    }
 
     bool IsValid() {
         return proxy->IsValid();
@@ -104,7 +108,7 @@ class DoorProxy {
     }
 };
 
-static void help()
+static void Help()
 {
     cout << "q             quit" << endl;
     cout << "l             list all discovered doors" << endl;
@@ -114,7 +118,7 @@ static void help()
     cout << "h             display this help message" << endl;
 }
 
-static void list_doors(BusAttachment& bus, Observer* observer)
+static void ListDoors(BusAttachment& bus, Observer* observer)
 {
     ManagedProxyBusObject proxy = observer->GetFirst();
     for (; proxy->IsValid(); proxy = observer->GetNext(proxy)) {
@@ -135,7 +139,7 @@ static void list_doors(BusAttachment& bus, Observer* observer)
     }
 }
 
-static DoorProxy get_door_at_location(BusAttachment& bus, Observer* observer, const string& find_location)
+static DoorProxy GetDoorAtLocation(BusAttachment& bus, Observer* observer, const string& find_location)
 {
     ManagedProxyBusObject proxy = observer->GetFirst();
     for (; proxy->IsValid(); proxy = observer->GetNext(proxy)) {
@@ -155,9 +159,9 @@ static DoorProxy get_door_at_location(BusAttachment& bus, Observer* observer, co
     return DoorProxy(proxy, bus);
 }
 
-static void open_door(BusAttachment& bus, Observer* observer, const string& location)
+static void OpenDoor(BusAttachment& bus, Observer* observer, const string& location)
 {
-    DoorProxy door = get_door_at_location(bus, observer, location);
+    DoorProxy door = GetDoorAtLocation(bus, observer, location);
 
     if (door.IsValid()) {
         QStatus status = door.Open();
@@ -177,9 +181,9 @@ static void open_door(BusAttachment& bus, Observer* observer, const string& loca
     }
 }
 
-static void close_door(BusAttachment& bus, Observer* observer, const string& location)
+static void CloseDoor(BusAttachment& bus, Observer* observer, const string& location)
 {
-    DoorProxy door = get_door_at_location(bus, observer, location);
+    DoorProxy door = GetDoorAtLocation(bus, observer, location);
 
     if (door.IsValid()) {
         QStatus status = door.Close();
@@ -199,9 +203,9 @@ static void close_door(BusAttachment& bus, Observer* observer, const string& loc
     }
 }
 
-static void knock_and_run(BusAttachment& bus, Observer* observer, const string& location)
+static void KnockAndRun(BusAttachment& bus, Observer* observer, const string& location)
 {
-    DoorProxy door = get_door_at_location(bus, observer, location);
+    DoorProxy door = GetDoorAtLocation(bus, observer, location);
 
     if (door.IsValid()) {
         if (ER_OK != door.KnockAndRun()) {
@@ -211,7 +215,7 @@ static void knock_and_run(BusAttachment& bus, Observer* observer, const string& 
     }
 }
 
-static bool parse(BusAttachment& bus, Observer* observer, const string& input)
+static bool Parse(BusAttachment& bus, Observer* observer, const string& input)
 {
     char cmd;
     size_t argpos;
@@ -232,24 +236,24 @@ static bool parse(BusAttachment& bus, Observer* observer, const string& input)
         return false;
 
     case 'l':
-        list_doors(bus, observer);
+        ListDoors(bus, observer);
         break;
 
     case 'o':
-        open_door(bus, observer, arg);
+        OpenDoor(bus, observer, arg);
         break;
 
     case 'c':
-        close_door(bus, observer, arg);
+        CloseDoor(bus, observer, arg);
         break;
 
     case 'k':
-        knock_and_run(bus, observer, arg);
+        KnockAndRun(bus, observer, arg);
         break;
 
     case 'h':
     default:
-        help();
+        Help();
         break;
     }
 
@@ -297,7 +301,10 @@ static QStatus SetupBusAttachment(BusAttachment& bus)
     status = bus.Start();
     assert(ER_OK == status);
     status = bus.Connect();
-    assert(ER_OK == status);
+
+    if (ER_OK != status) {
+        return status;
+    }
 
     status = BuildInterface(bus);
     assert(ER_OK == status);
@@ -314,6 +321,22 @@ class DoorListener :
     Observer* observer;
     BusAttachment* bus;
 
+    static void PrintDoorState(DoorProxy& proxy) {
+        string location;
+        bool isopen;
+        uint32_t keycode;
+        if (ER_OK != proxy.GetAllProperties(isopen, location, keycode)) {
+            cerr << "Could not retrieve door properties." << endl;
+        } else {
+            cout << "\tlocation: " << location << endl;
+            cout << "\tis open: " << isopen << endl;
+            cout << "\tkeycode: " << keycode << endl;
+        }
+
+        cout << "> ";
+        cout.flush();
+    }
+
     virtual void ObjectDiscovered(ManagedProxyBusObject& proxy) {
         cout << "[listener] Door " << proxy->GetUniqueName() << ":"
              << proxy->GetPath() << " has just been discovered." << endl;
@@ -322,26 +345,16 @@ class DoorListener :
         proxy->RegisterPropertiesChangedListener(INTF_NAME, props, 3, *this, NULL);
 
         DoorProxy door(proxy, *bus);
-        string location;
-        bool isopen;
-        uint32_t keycode;
-        if (ER_OK != door.GetAllProperties(isopen, location, keycode)) {
-            cerr << "Could not retrieve door properties." << endl;
-        } else {
-            cout << "  location: " << location << endl;
-            cout << "   is open: " << isopen << endl;
-            cout << "   keycode: " << keycode << endl;
-        }
-
-        cout << "> ";
-        cout.flush();
+        PrintDoorState(door);
     }
 
     virtual void ObjectLost(ManagedProxyBusObject& proxy) {
         cout << "[listener] Door " << proxy->GetUniqueName() << ":"
              << proxy->GetPath() << " no longer exists." << endl;
-        cout << "> ";
-        cout.flush();
+
+        cout << "\tLast known state for lost object:" << endl;
+        DoorProxy door(proxy, *bus);
+        PrintDoorState(door);
     }
 
     virtual void PropertiesChanged(ProxyBusObject& obj,
@@ -449,17 +462,20 @@ int CDECL_CALL main(int argc, char** argv)
     QCC_UNUSED(argv);
 
     if (AllJoynInit() != ER_OK) {
-        return 1;
+        return EXIT_FAILURE;
     }
 #ifdef ROUTER
     if (AllJoynRouterInit() != ER_OK) {
         AllJoynShutdown();
-        return 1;
+        return EXIT_FAILURE;
     }
 #endif
 
     BusAttachment* bus = new BusAttachment("door_consumer", true);
-    SetupBusAttachment(*bus);
+
+    if (ER_OK != SetupBusAttachment(*bus)) {
+        return EXIT_FAILURE;
+    }
 
     const char* intfname = INTF_NAME;
     Observer* obs = new Observer(*bus, &intfname, 1);
@@ -474,20 +490,20 @@ int CDECL_CALL main(int argc, char** argv)
         string input;
         cout << "> ";
         getline(cin, input);
-        done = !parse(*bus, obs, input);
+        done = !Parse(*bus, obs, input);
     }
 
     // Cleanup
     obs->UnregisterAllListeners();
-    bus->Stop();
-    bus->Join();
-    delete bus;
-    delete obs;
+    delete obs; // Must happen before deleting the original bus
     delete listener;
+    delete bus;
+    bus = NULL;
 
 #ifdef ROUTER
     AllJoynRouterShutdown();
 #endif
     AllJoynShutdown();
-    return 0;
+    return EXIT_SUCCESS;
+
 }

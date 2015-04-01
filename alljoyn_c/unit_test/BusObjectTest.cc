@@ -373,7 +373,7 @@ TEST_F(BusObjectTest, set_property_handler)
     /* should fail to write a read only property*/
     alljoyn_msgarg value = alljoyn_msgarg_create_and_set("s", "This should not work.");
     status = alljoyn_proxybusobject_setproperty(proxyObj, INTERFACE_NAME, "prop1", value);
-    EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_BUS_PROPERTY_ACCESS_DENIED, status) << "  Actual Status: " << QCC_StatusText(status);
     alljoyn_msgarg_destroy(value);
 
     value = alljoyn_msgarg_create_and_set("i", -888);

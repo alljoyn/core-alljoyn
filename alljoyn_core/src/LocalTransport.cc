@@ -669,6 +669,10 @@ QStatus _LocalEndpoint::DoPushMessage(Message& message)
             status = ER_FAIL;
             break;
         }
+
+        handlerThreadsLock.Lock();
+        handlerThreadsDone.Broadcast();
+        handlerThreadsLock.Unlock();
     }
     return status;
 }
@@ -779,6 +783,21 @@ void _LocalEndpoint::UnregisterBusObject(BusObject& object)
 {
     QCC_DbgPrintf(("UnregisterBusObject %s", object.GetPath()));
 
+    /* Can't unregister while handlers are in flight. */
+    handlerThreadsLock.Lock(MUTEX_CONTEXT);
+    ActiveHandlers::const_iterator ahit = activeHandlers.find(&object);
+    if ((ahit != activeHandlers.end()) && (ahit->second.find(Thread::GetThread()) != ahit->second.end())) {
+        QCC_LogError(ER_DEADLOCK, ("Attempt to unregister BusObject from said BusObject's message handler -- BusObject not unregistered!"));
+        handlerThreadsLock.Unlock(MUTEX_CONTEXT);
+        return;
+    }
+    unregisteringObjects.insert(&object);
+    while (ahit != activeHandlers.end()) {
+        handlerThreadsDone.Wait(handlerThreadsLock);
+        ahit = activeHandlers.find(&object);
+    }
+    handlerThreadsLock.Unlock(MUTEX_CONTEXT);
+
     /* Remove members */
     methodTable.RemoveAll(&object);
 
@@ -823,6 +842,11 @@ void _LocalEndpoint::UnregisterBusObject(BusObject& object)
         }
     }
     objectsLock.Unlock(MUTEX_CONTEXT);
+
+    handlerThreadsLock.Lock(MUTEX_CONTEXT);
+    /* Yes object is deleted, but we never actually reference it from unregisteringObjects, so we are safe. */
+    unregisteringObjects.erase(&object);
+    handlerThreadsLock.Unlock(MUTEX_CONTEXT);
 }
 
 BusObject* _LocalEndpoint::FindLocalObject(const char* objectPath) {
@@ -1169,7 +1193,19 @@ QStatus _LocalEndpoint::HandleMethodCall(Message& message)
     if (status == ER_OK) {
         /* Call the method handler */
         if (entry) {
-            entry->object->CallMethodHandler(entry->handler, entry->member, message, entry->context);
+            handlerThreadsLock.Lock();
+            bool unregistering = unregisteringObjects.find(entry->object) != unregisteringObjects.end();
+            if (!unregistering) {
+                activeHandlers[entry->object].insert(Thread::GetThread());
+                handlerThreadsLock.Unlock();
+                entry->object->CallMethodHandler(entry->handler, entry->member, message, entry->context);
+                handlerThreadsLock.Lock();
+                activeHandlers[entry->object].erase(Thread::GetThread());
+                if (activeHandlers[entry->object].empty()) {
+                    activeHandlers.erase(entry->object);
+                }
+            }
+            handlerThreadsLock.Unlock();
         }
     } else if (message->GetType() == MESSAGE_METHOD_CALL && !(message->GetFlags() & ALLJOYN_FLAG_NO_REPLY_EXPECTED)) {
         /* We are rejecting a method call that expects a response so reply with an error message. */
@@ -1271,7 +1307,20 @@ QStatus _LocalEndpoint::HandleSignal(Message& message)
     } else {
         list<SignalTable::Entry>::const_iterator callit;
         for (callit = callList.begin(); callit != callList.end(); ++callit) {
-            (callit->object->*callit->handler)(callit->member, message->GetObjectPath(), message);
+            MessageReceiver* object = callit->object;
+            handlerThreadsLock.Lock();
+            bool unregistering = unregisteringObjects.find(object) != unregisteringObjects.end();
+            if (!unregistering) {
+                activeHandlers[object].insert(Thread::GetThread());
+                handlerThreadsLock.Unlock();
+                (object->*callit->handler)(callit->member, message->GetObjectPath(), message);
+                handlerThreadsLock.Lock();
+                activeHandlers[object].erase(Thread::GetThread());
+                if (activeHandlers[object].empty()) {
+                    activeHandlers.erase(object);
+                }
+            }
+            handlerThreadsLock.Unlock();
         }
     }
     return status;
@@ -1321,7 +1370,21 @@ QStatus _LocalEndpoint::HandleMethodReply(Message& message)
             QCC_LogError(status, ("Reply message replaced with an internally generated error"));
             status = ER_OK;
         }
-        ((rc->receiver)->*(rc->handler))(message, rc->context);
+
+        handlerThreadsLock.Lock();
+        bool unregistering = unregisteringObjects.find(rc->receiver) != unregisteringObjects.end();
+        if (!unregistering) {
+            activeHandlers[rc->receiver].insert(Thread::GetThread());
+            handlerThreadsLock.Unlock();
+            ((rc->receiver)->*(rc->handler))(message, rc->context);
+            handlerThreadsLock.Lock();
+            activeHandlers[rc->receiver].erase(Thread::GetThread());
+            if (activeHandlers[rc->receiver].empty()) {
+                activeHandlers.erase(rc->receiver);
+            }
+        }
+        handlerThreadsLock.Unlock();
+
         delete rc;
     } else {
         status = ER_BUS_UNMATCHED_REPLY_SERIAL;

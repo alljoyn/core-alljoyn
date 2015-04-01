@@ -236,23 +236,20 @@ public class ObserverTest extends TestCase {
             Map<String, Variant> aboutData = new HashMap<String, Variant>();
             // nonlocalized values
             aboutData.put("AppId", new Variant(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}));
-            aboutData.put("DefaultLanguage", new Variant(new String("en")));
-            aboutData.put("DeviceId", new Variant(new String(
-                    "93c06771-c725-48c2-b1ff-6a2a59d445b8")));
-            aboutData.put("ModelNumber", new Variant(new String("A1B2C3")));
+            aboutData.put("DefaultLanguage", new Variant("en"));
+            aboutData.put("DeviceId", new Variant("93c06771-c725-48c2-b1ff-6a2a59d445b8"));
+            aboutData.put("ModelNumber", new Variant("A1B2C3"));
             aboutData.put("SupportedLanguages", new Variant(new String[] { "en" }));
-            aboutData.put("DateOfManufacture", new Variant(new String("2014-09-23")));
-            aboutData.put("SoftwareVersion", new Variant(new String("1.0")));
+            aboutData.put("DateOfManufacture", new Variant("2014-09-23"));
+            aboutData.put("SoftwareVersion", new Variant("1.0"));
             aboutData.put("AJSoftwareVersion", new Variant(Version.get()));
-            aboutData.put("HardwareVersion", new Variant(new String("0.1alpha")));
-            aboutData.put("SupportUrl", new Variant(new String(
-                    "http://www.example.com/support")));
-            aboutData.put("DeviceName", new Variant(new String("A device name")));
-            aboutData.put("AppName", new Variant(new String("An application name")));
-            aboutData.put("Manufacturer", new Variant(new String(
-                    "A mighty manufacturing company")));
+            aboutData.put("HardwareVersion", new Variant("0.1alpha"));
+            aboutData.put("SupportUrl", new Variant("http://www.example.com/support"));
+            aboutData.put("DeviceName", new Variant("A device name"));
+            aboutData.put("AppName", new Variant("An application name"));
+            aboutData.put("Manufacturer", new Variant("A mighty manufacturing company"));
             aboutData.put("Description",
-                    new Variant( new String("Sample showing the about feature in a service application")));
+                          new Variant("Sample showing the about feature in a service application"));
             return aboutData;
         }
 
@@ -260,12 +257,12 @@ public class ObserverTest extends TestCase {
         public Map<String, Variant> getAnnouncedAboutData() throws ErrorReplyBusException {
             Map<String, Variant> aboutData = new HashMap<String, Variant>();
             aboutData.put("AppId", new Variant(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}));
-            aboutData.put("DefaultLanguage", new Variant(new String("en")));
-            aboutData.put("DeviceName", new Variant(new String("A device name")));
-            aboutData.put("DeviceId", new Variant(new String("93c06771-c725-48c2-b1ff-6a2a59d445b8")));
-            aboutData.put("AppName", new Variant( new String("An application name")));
-            aboutData.put("Manufacturer", new Variant(new String("A mighty manufacturing company")));
-            aboutData.put("ModelNumber", new Variant(new String("A1B2C3")));
+            aboutData.put("DefaultLanguage", new Variant("en"));
+            aboutData.put("DeviceName", new Variant("A device name"));
+            aboutData.put("DeviceId", new Variant("93c06771-c725-48c2-b1ff-6a2a59d445b8"));
+            aboutData.put("AppName", new Variant("An application name"));
+            aboutData.put("Manufacturer", new Variant("A mighty manufacturing company"));
+            aboutData.put("ModelNumber", new Variant("A1B2C3"));
             return aboutData;
         }
 
@@ -374,6 +371,10 @@ public class ObserverTest extends TestCase {
                     assertEquals(proxy.getBusName() + "@" + proxy.getObjPath(), id);
                 } catch (BusException e) {
                     // OK we might get ER_BUS_BLOCKING_CALL_NOT_ALLOWED here
+                    if (!e.getMessage().equals("ER_BUS_BLOCKING_CALL_NOT_ALLOWED")) {
+                        e.printStackTrace();
+                        fail("recieved an unexpected BusException.");
+                    }
                 }
                 bus.enableConcurrentCallbacks();
                 try {
@@ -390,6 +391,10 @@ public class ObserverTest extends TestCase {
                     assertEquals(proxy.getBusName() + "@" + proxy.getObjPath(), id);
                 } catch (BusException e) {
                     // OK we might get ER_BUS_BLOCKING_CALL_NOT_ALLOWED here
+                    if (!e.getMessage().equals("ER_BUS_BLOCKING_CALL_NOT_ALLOWED")) {
+                        e.printStackTrace();
+                        fail("recieved an unexpected BusException.");
+                    }
                 }
                 bus.enableConcurrentCallbacks();
                 try {
@@ -581,7 +586,7 @@ public class ObserverTest extends TestCase {
         simpleScenario(both, both);
     }
 
-    public void testRejection() {
+    public void testRejection() throws Exception {
         Participant willing = new Participant("willing");
         Participant doubtful = new Participant("doubtful");
         Participant unwilling = new Participant("unwilling");
@@ -606,12 +611,13 @@ public class ObserverTest extends TestCase {
         assertTrue(waitForLambda(3000, ok));
 
         /* now let doubtful kill the connection */
-        try {
-            Thread.sleep(100); // This sleep is necessary to make sure the provider knows it has a session.
-        } catch (InterruptedException iex) {
-        }
+        Thread.sleep(100); // This sleep is necessary to make sure the provider knows it has a session.
         listener.expectInvocations(1);
-        doubtful.bus.leaveHostedSession(doubtful.accepter.sessions.get(consumer.bus.getUniqueName()));
+
+        Integer sessionid = doubtful.accepter.sessions.get(consumer.bus.getUniqueName());
+        assertNotNull(sessionid);
+        doubtful.bus.leaveHostedSession(sessionid);
+
         assertTrue(waitForLambda(3000, ok));
 
         /* there should only be one object left */
@@ -630,37 +636,49 @@ public class ObserverTest extends TestCase {
     public void testInvalidArgs() throws Exception {
         Participant test = new Participant("invArgs");
         Observer obs = null;
+        /* null bus pointer is invalid expect a NullPointerException */
         try {
             obs = newObserver(null, InterfaceA.class);
             fail("bus can't be null");
         } catch (NullPointerException rt) { /* OK */
+            assertNull(obs);
         }
+        /* must pass in a valid interface Class<?>[] array */
         try {
             obs = new Observer(test.bus, null);
+            fail("null array value is not allowed");
         } catch (NullPointerException rt) { /* OK */
+            assertNull(obs);
         }
+        /* array can not contain a null value. */
         try {
             obs = newObserver(test, new Class<?>[] { null });
+            fail("Array with null value is not allowed");
         } catch (NullPointerException rt) { /* OK */
+            assertNull(obs);
         }
-
+        /* empty array is not allowed */
         try {
             obs = newObserver(test);
             fail("Empty array is not allowed");
         } catch (IllegalArgumentException iae) { /* OK */
+            assertNull(obs);
         }
-
+        /* class must be a BusInterface */
         try {
             obs = newObserver(test, String.class);
             fail("Class is not allowed");
         } catch (IllegalArgumentException iae) { /* OK */
+            assertNull(obs);
         }
 
+        /* all classes must be BusInterfaces */
         try {
             obs = new Observer(test.bus, new Class<?>[] { InterfaceA.class },
                     new Class<?>[] { String.class });
             fail("Class is not allowed");
         } catch (IllegalArgumentException iae) { /* OK */
+            assertNull(obs);
         }
         assertNull(obs);
         obs = new Observer(test.bus, new Class<?>[] { InterfaceA.class }, null); // null
@@ -670,6 +688,7 @@ public class ObserverTest extends TestCase {
             obs.registerListener(null);
             fail("null not allowed");
         } catch (IllegalArgumentException rt) { /* OK */
+            assertNotNull(obs);
         }
 
         final ObserverListener listener = new ObserverListener(test);
@@ -681,14 +700,16 @@ public class ObserverTest extends TestCase {
 
         // null values are harmless for the object.
         try {
-            assertNull(obs.get(null, A));
-        } catch (NullPointerException npe) {
-            // ok
+            obs.get(null, A);
+            fail("Expected Observer.get(null, path) to throw a NullPointerException.");
+        } catch (NullPointerException npe) { /* OK */
+            assertNotNull(obs);
         }
         try {
-            assertNull(obs.get(test.bus.getUniqueName(), null));
-        } catch (NullPointerException npe) {
-            // ok
+            obs.get(test.bus.getUniqueName(), null);
+            fail("Expected Observer.get(bus, null) to throw a NullPointerException.");
+        } catch (NullPointerException npe) { /* OK */
+            assertNotNull(obs);
         }
         assertNull(obs.get(test.bus.getUniqueName(), AB));
         assertNull(obs.get(A, A));
@@ -873,23 +894,23 @@ public class ObserverTest extends TestCase {
         final Participant consumer = new Participant("one");
         final Observer obs = newObserver(consumer, InterfaceA.class);
         Method create = obs.getClass().getDeclaredMethod("create",
-                BusAttachment.class, String[].class);
+                                                         BusAttachment.class, String[].class);
         create.setAccessible(true);
         try {
             create.invoke(obs, null, new String[0]);
-            fail();
+            fail("Expected call to throw InvocationTargetException.");
         } catch (InvocationTargetException npe) {
             assertTrue(npe.getCause() instanceof NullPointerException);
         }
         try {
             create.invoke(obs, consumer.bus, null);
-            fail();
+            fail("Expected call to throw InvocationTargetException.");
         } catch (InvocationTargetException npe) {
             assertTrue(npe.getCause() instanceof NullPointerException);
         }
         try {
             create.invoke(obs, consumer.bus, new String[1]);
-            fail();
+            fail("Expected call to throw InvocationTargetException.");
         } catch (InvocationTargetException npe) {
             assertTrue(npe.getCause() instanceof NullPointerException);
         }
@@ -913,7 +934,7 @@ public class ObserverTest extends TestCase {
             waitForEvent(listener, provider, names[i]);
             objects = checkObjects(++i, obs);
         }
-
+        assertNotNull(objects);
         ProxyBusObject obj = objects.get(1);
         unregisterObject(provider, obj, listener);
         assertSame(objects.get(2), obs.getNext(obj));

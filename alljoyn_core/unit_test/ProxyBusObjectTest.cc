@@ -508,6 +508,8 @@ TEST_F(ProxyBusObjectTest, AddPropertyInterfaceError) {
     EXPECT_EQ(ER_OK, status);
 }
 
+#define QCC_MODULE "PBO_TEST"
+
 // ASACORE-1521
 class ChangeListener : public ProxyBusObject::PropertiesChangedListener {
   public:
@@ -662,8 +664,9 @@ TEST_F(ProxyBusObjectTest, UnregisterPropertiesChangedListenerRaceTest1) {
      */
     Mutex lock;
     Condition cond;
+    String path = String(OBJECT_PATH) + "Race1";
 
-    BusObject testObj(OBJECT_PATH);
+    BusObject testObj(path.c_str());
     bus.RegisterBusObject(testObj);
 
     InterfaceDescription* testIntf1 = NULL;
@@ -675,7 +678,7 @@ TEST_F(ProxyBusObjectTest, UnregisterPropertiesChangedListenerRaceTest1) {
     testIntf1->AddPropertyAnnotation("stringProp1", org::freedesktop::DBus::AnnotateEmitsChanged, "true");
     testIntf1->Activate();
 
-    ProxyBusObject proxyObj(bus, bus.GetUniqueName().c_str(), OBJECT_PATH, 0);
+    ProxyBusObject proxyObj(bus, bus.GetUniqueName().c_str(), path.c_str(), 0);
     MsgArg arg("s", "foo");
 
     status = proxyObj.AddInterface(*testIntf1);
@@ -751,8 +754,9 @@ TEST_F(ProxyBusObjectTest, UnregisterPropertiesChangedListenerRaceTest2) {
      */
     Mutex lock;
     Condition cond;
+    String path = String(OBJECT_PATH) + "Race2";
 
-    BusObject testObj(OBJECT_PATH);
+    BusObject testObj(path.c_str());
     bus.RegisterBusObject(testObj);
 
     InterfaceDescription* testIntf1 = NULL;
@@ -764,7 +768,7 @@ TEST_F(ProxyBusObjectTest, UnregisterPropertiesChangedListenerRaceTest2) {
     testIntf1->AddPropertyAnnotation("stringProp1", org::freedesktop::DBus::AnnotateEmitsChanged, "true");
     testIntf1->Activate();
 
-    ProxyBusObject proxyObj(bus, bus.GetUniqueName().c_str(), OBJECT_PATH, 0);
+    ProxyBusObject proxyObj(bus, bus.GetUniqueName().c_str(), path.c_str(), 0);
     MsgArg arg("s", "foo");
 
     status = proxyObj.AddInterface(*testIntf1);
@@ -832,8 +836,9 @@ TEST_F(ProxyBusObjectTest, UnregisterPropertiesChangedListenerRaceTest3) {
      */
     Mutex lock;
     Condition cond;
+    String path = String(OBJECT_PATH) + "Race3";
 
-    BusObject testObj(OBJECT_PATH);
+    BusObject testObj(path.c_str());
     bus.RegisterBusObject(testObj);
 
     InterfaceDescription* testIntf1 = NULL;
@@ -845,7 +850,7 @@ TEST_F(ProxyBusObjectTest, UnregisterPropertiesChangedListenerRaceTest3) {
     testIntf1->AddPropertyAnnotation("stringProp1", org::freedesktop::DBus::AnnotateEmitsChanged, "true");
     testIntf1->Activate();
 
-    ProxyBusObject proxyObj(bus, bus.GetUniqueName().c_str(), OBJECT_PATH, 0);
+    ProxyBusObject proxyObj(bus, bus.GetUniqueName().c_str(), path.c_str(), 0);
     MsgArg arg("s", "foo");
 
     status = proxyObj.AddInterface(*testIntf1);
@@ -887,8 +892,9 @@ TEST_F(ProxyBusObjectTest, UnregisterPropertiesChangedListenerRaceTest4) {
      */
     Mutex lock;
     Condition cond;
+    String path = String(OBJECT_PATH) + "Race4";
 
-    BusObject testObj(OBJECT_PATH);
+    BusObject testObj(path.c_str());
     bus.RegisterBusObject(testObj);
 
     InterfaceDescription* testIntf1 = NULL;
@@ -900,7 +906,7 @@ TEST_F(ProxyBusObjectTest, UnregisterPropertiesChangedListenerRaceTest4) {
     testIntf1->AddPropertyAnnotation("stringProp1", org::freedesktop::DBus::AnnotateEmitsChanged, "true");
     testIntf1->Activate();
 
-    ProxyBusObject* proxyObj = new ProxyBusObject(bus, bus.GetUniqueName().c_str(), OBJECT_PATH, 0);
+    ProxyBusObject* proxyObj = new ProxyBusObject(bus, bus.GetUniqueName().c_str(), path.c_str(), 0);
     MsgArg arg("s", "foo");
 
     status = proxyObj->AddInterface(*testIntf1);
