@@ -40,7 +40,9 @@ class DoorProxy {
     /* Private assigment operator - does nothing */
     DoorProxy operator=(const DoorProxy&);
   public:
-    DoorProxy(ManagedProxyBusObject proxy, BusAttachment& bus) : proxy(proxy), bus(bus) { }
+    DoorProxy(ManagedProxyBusObject _proxy, BusAttachment& bus) : proxy(_proxy), bus(bus) {
+        proxy->EnablePropertyCaching();
+    }
 
     bool IsValid() {
         return proxy->IsValid();
@@ -137,7 +139,7 @@ static void ListDoors(BusAttachment& bus, Observer* observer)
     }
 }
 
-static DoorProxy get_door_at_location(BusAttachment& bus, Observer* observer, const string& find_location)
+static DoorProxy GetDoorAtLocation(BusAttachment& bus, Observer* observer, const string& find_location)
 {
     ManagedProxyBusObject proxy = observer->GetFirst();
     for (; proxy->IsValid(); proxy = observer->GetNext(proxy)) {
@@ -159,7 +161,7 @@ static DoorProxy get_door_at_location(BusAttachment& bus, Observer* observer, co
 
 static void OpenDoor(BusAttachment& bus, Observer* observer, const string& location)
 {
-    DoorProxy door = get_door_at_location(bus, observer, location);
+    DoorProxy door = GetDoorAtLocation(bus, observer, location);
 
     if (door.IsValid()) {
         QStatus status = door.Open();
@@ -181,7 +183,7 @@ static void OpenDoor(BusAttachment& bus, Observer* observer, const string& locat
 
 static void CloseDoor(BusAttachment& bus, Observer* observer, const string& location)
 {
-    DoorProxy door = get_door_at_location(bus, observer, location);
+    DoorProxy door = GetDoorAtLocation(bus, observer, location);
 
     if (door.IsValid()) {
         QStatus status = door.Close();
@@ -203,7 +205,7 @@ static void CloseDoor(BusAttachment& bus, Observer* observer, const string& loca
 
 static void KnockAndRun(BusAttachment& bus, Observer* observer, const string& location)
 {
-    DoorProxy door = get_door_at_location(bus, observer, location);
+    DoorProxy door = GetDoorAtLocation(bus, observer, location);
 
     if (door.IsValid()) {
         if (ER_OK != door.KnockAndRun()) {
@@ -319,6 +321,22 @@ class DoorListener :
     Observer* observer;
     BusAttachment* bus;
 
+    static void PrintDoorState(DoorProxy& proxy) {
+        string location;
+        bool isopen;
+        uint32_t keycode;
+        if (ER_OK != proxy.GetAllProperties(isopen, location, keycode)) {
+            cerr << "Could not retrieve door properties." << endl;
+        } else {
+            cout << "\tlocation: " << location << endl;
+            cout << "\tis open: " << isopen << endl;
+            cout << "\tkeycode: " << keycode << endl;
+        }
+
+        cout << "> ";
+        cout.flush();
+    }
+
     virtual void ObjectDiscovered(ManagedProxyBusObject& proxy) {
         cout << "[listener] Door " << proxy->GetUniqueName() << ":"
              << proxy->GetPath() << " has just been discovered." << endl;
@@ -327,26 +345,16 @@ class DoorListener :
         proxy->RegisterPropertiesChangedListener(INTF_NAME, props, 3, *this, NULL);
 
         DoorProxy door(proxy, *bus);
-        string location;
-        bool isopen;
-        uint32_t keycode;
-        if (ER_OK != door.GetAllProperties(isopen, location, keycode)) {
-            cerr << "Could not retrieve door properties." << endl;
-        } else {
-            cout << "  location: " << location << endl;
-            cout << "   is open: " << isopen << endl;
-            cout << "   keycode: " << keycode << endl;
-        }
-
-        cout << "> ";
-        cout.flush();
+        PrintDoorState(door);
     }
 
     virtual void ObjectLost(ManagedProxyBusObject& proxy) {
         cout << "[listener] Door " << proxy->GetUniqueName() << ":"
              << proxy->GetPath() << " no longer exists." << endl;
-        cout << "> ";
-        cout.flush();
+
+        cout << "\tLast known state for lost object:" << endl;
+        DoorProxy door(proxy, *bus);
+        PrintDoorState(door);
     }
 
     virtual void PropertiesChanged(ProxyBusObject& obj,
