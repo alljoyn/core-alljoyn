@@ -132,7 +132,7 @@ void HMAC_SHA1_UpdateKey(HMAC_SHA1_CTX *ctx, unsigned char *key, unsigned int ke
 
 void HMAC_SHA1_EndKey(HMAC_SHA1_CTX *ctx) {
 	unsigned char	*ipad, *opad, *key;
-	int		i;
+	unsigned int	i;
 
 	/* Did we end up hashing the key? */
 	if (ctx->hashkey) {
