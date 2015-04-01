@@ -132,11 +132,16 @@ void Crypto_DRBG::Update(uint8_t* data, size_t size)
     uint8_t* t = tmp;
     Crypto_AES::Block block;
 
+    QCC_UNUSED(size);
+
     KeyBlob key(ctx->k, KEYLEN, KeyBlob::AES);
     Crypto_AES aes(key, Crypto_AES::ECB_ENCRYPT);
     for (i = 0; i < SEEDLEN; i += OUTLEN) {
         Increment(ctx->v, OUTLEN);
         status = aes.Encrypt(ctx->v, OUTLEN, &block, 1);
+        if (status != ER_OK) {
+            QCC_LogError(status, ("Encryption failed"));
+        }
         assert(ER_OK == status);
         memcpy(t, block.data, OUTLEN);
         t += OUTLEN;
