@@ -66,7 +66,7 @@ static alljoyn_busobject my_alljoyn_busobject_create(alljoyn_busattachment bus, 
     const alljoyn_interfacedescription mediaplayer_iface =
         alljoyn_busattachment_getinterface(bus, "org.alljoyn.mediaplayer");
     EXPECT_TRUE(mediaplayer_iface != NULL)
-        << "NULL InterfaceDescription* for org.alljoyn.mediaplayer";
+    << "NULL InterfaceDescription* for org.alljoyn.mediaplayer";
     if (mediaplayer_iface == NULL) {
         printf("The interfaceDescription pointer for org.alljoyn.mediaplayer was NULL \
                 when it should not have been.\n");
@@ -400,15 +400,15 @@ TEST(AboutObjectDescriptionTest, GetInterfaces) {
     EXPECT_TRUE(strcmp(interfaces[0], "org.alljoyn.test") == 0 ||
                 strcmp(interfaces[0], "org.alljoyn.game") == 0 ||
                 strcmp(interfaces[0], "org.alljoyn.mediaplayer") == 0)
-        << interfaces[0];
+    << interfaces[0];
     EXPECT_TRUE(strcmp(interfaces[1], "org.alljoyn.test") == 0 ||
                 strcmp(interfaces[1], "org.alljoyn.game") == 0 ||
                 strcmp(interfaces[1], "org.alljoyn.mediaplayer") == 0)
-        << interfaces[1];
+    << interfaces[1];
     EXPECT_TRUE(strcmp(interfaces[2], "org.alljoyn.test") == 0 ||
                 strcmp(interfaces[2], "org.alljoyn.game") == 0 ||
                 strcmp(interfaces[2], "org.alljoyn.mediaplayer") == 0)
-        << interfaces[2];
+    << interfaces[2];
     free(interfaces);
     alljoyn_abouticon_destroy(aicon);
     alljoyn_abouticonobj_destroy(aboutIconObj);

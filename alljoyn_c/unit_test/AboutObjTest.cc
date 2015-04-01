@@ -126,7 +126,7 @@ static void about_obj_test_about_listener_announced_cb(const void* context,
     QCC_UNUSED(aboutDataArg);
     about_obj_test_about_listener_2* listener = (about_obj_test_about_listener_2*)(context);
     EXPECT_FALSE(listener->announceListenerFlag == 1)
-        << "We don't expect the flag to already be true when an AnnouceSignal is received.";
+    << "We don't expect the flag to already be true when an AnnouceSignal is received.";
     size_t busNameLen = strlen(busName);
     if (listener->busName) {
         free(listener->busName);
@@ -264,7 +264,7 @@ TEST_F(AboutObjTest, AnnounceSessionPortNotBound) {
     /* The SessionPort 5154 is not bound so should return ER_ABOUT_SESSIONPORT_NOT_BOUND error */
     status = alljoyn_aboutobj_announce(aboutObj, (alljoyn_sessionport)(5154), aboutData);
     EXPECT_EQ(ER_ABOUT_SESSIONPORT_NOT_BOUND, status)
-        << "  Actual Status: " << QCC_StatusText(status);
+    << "  Actual Status: " << QCC_StatusText(status);
     alljoyn_aboutobj_destroy(aboutObj);
 }
 
@@ -276,14 +276,14 @@ TEST_F(AboutObjTest, AnnounceMissingRequiredField) {
     /* DefaultLanguage and other required fields are missing */
     status = alljoyn_aboutobj_announce(aboutObj, port, badAboutData);
     EXPECT_EQ(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, status)
-        << "  Actual Status: " << QCC_StatusText(status);
+    << "  Actual Status: " << QCC_StatusText(status);
 
     status = alljoyn_aboutdata_setdefaultlanguage(badAboutData, "en");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     status = alljoyn_aboutobj_announce(aboutObj, port, badAboutData);
     EXPECT_EQ(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, status)
-        << "  Actual Status: " << QCC_StatusText(status);
+    << "  Actual Status: " << QCC_StatusText(status);
 
     uint8_t originalAppId[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
     status = alljoyn_aboutdata_setappid(badAboutData, originalAppId, 16);
@@ -291,35 +291,35 @@ TEST_F(AboutObjTest, AnnounceMissingRequiredField) {
     /* DeviceId and other required fields are missing */
     status = alljoyn_aboutobj_announce(aboutObj, port, badAboutData);
     EXPECT_EQ(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, status)
-        << "  Actual Status: " << QCC_StatusText(status);
+    << "  Actual Status: " << QCC_StatusText(status);
 
     status = alljoyn_aboutdata_setdeviceid(badAboutData, "fakeID");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     /* AppName and other required fields are missing */
     status = alljoyn_aboutobj_announce(aboutObj, port, badAboutData);
     EXPECT_EQ(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, status)
-        << "  Actual Status: " << QCC_StatusText(status);
+    << "  Actual Status: " << QCC_StatusText(status);
 
     status = alljoyn_aboutdata_setappname(badAboutData, "Application", "en");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     /* Manufacturer and other required fields are missing */
     status = alljoyn_aboutobj_announce(aboutObj, port, badAboutData);
     EXPECT_EQ(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, status)
-        << "  Actual Status: " << QCC_StatusText(status);
+    << "  Actual Status: " << QCC_StatusText(status);
 
     status = alljoyn_aboutdata_setmanufacturer(badAboutData, "Manufacturer", "en");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     /* ModelNumber and other required fields are missing */
     status = alljoyn_aboutobj_announce(aboutObj, port, badAboutData);
     EXPECT_EQ(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, status)
-        << "  Actual Status: " << QCC_StatusText(status);
+    << "  Actual Status: " << QCC_StatusText(status);
 
     status = alljoyn_aboutdata_setmodelnumber(badAboutData, "123456");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     /* Description and other required fields are missing */
     status = alljoyn_aboutobj_announce(aboutObj, port, badAboutData);
     EXPECT_EQ(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, status)
-        << "  Actual Status: " << QCC_StatusText(status);
+    << "  Actual Status: " << QCC_StatusText(status);
 
     status = alljoyn_aboutdata_setdescription(badAboutData,
                                               "A poetic description of this application",
@@ -328,7 +328,7 @@ TEST_F(AboutObjTest, AnnounceMissingRequiredField) {
     /* SoftwareVersion missing */
     status = alljoyn_aboutobj_announce(aboutObj, port, badAboutData);
     EXPECT_EQ(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, status)
-        << "  Actual Status: " << QCC_StatusText(status);
+    << "  Actual Status: " << QCC_StatusText(status);
 
     status = alljoyn_aboutdata_setsoftwareversion(badAboutData, "0.1.2");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -372,7 +372,7 @@ TEST_F(AboutObjTest, SetAnnounceFlag) {
                                            org::freedesktop::DBus::InterfaceName);
     status = alljoyn_busobject_setannounceflag(busObj, dbusIface, ANNOUNCED);
     EXPECT_EQ(ER_BUS_OBJECT_NO_SUCH_INTERFACE, status)
-        << "  Actual Status: " << QCC_StatusText(status);
+    << "  Actual Status: " << QCC_StatusText(status);
 
     status = alljoyn_busobject_setannounceflag(busObj, iface, UNANNOUNCED);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -409,9 +409,9 @@ TEST_F(AboutObjTest, CancelAnnouncement) {
         qcc::Sleep(WAIT_TIME);
     }
     EXPECT_TRUE(listener->announceListenerFlag)
-        << "The announceListenerFlag must be true to continue this test.";
+    << "The announceListenerFlag must be true to continue this test.";
     EXPECT_TRUE(listener->aboutObjectPartOfAnnouncement)
-        << "The org.alljoyn.About interface was not part of the announced object description.";
+    << "The org.alljoyn.About interface was not part of the announced object description.";
     const char* serviceBusUniqueName = alljoyn_busattachment_getuniquename(serviceBus);
     EXPECT_STREQ(serviceBusUniqueName, listener->busName);
     EXPECT_EQ(port, listener->port);
@@ -515,7 +515,7 @@ TEST_F(AboutObjTest, Announce) {
     }
 
     ASSERT_TRUE(aboutListener->announceListenerFlag)
-        << "The announceListenerFlag must be true to continue this test.";
+    << "The announceListenerFlag must be true to continue this test.";
     EXPECT_STREQ(alljoyn_busattachment_getuniquename(serviceBus), aboutListener->busName);
     EXPECT_EQ(port, aboutListener->port);
 
@@ -613,7 +613,7 @@ TEST_F(AboutObjTest, ProxyAccessToAboutObj) {
     }
 
     ASSERT_TRUE(aboutListener->announceListenerFlag)
-        << "The announceListenerFlag must be true to continue this test.";
+    << "The announceListenerFlag must be true to continue this test.";
     EXPECT_STREQ(alljoyn_busattachment_getuniquename(serviceBus), aboutListener->busName);
     EXPECT_EQ(port, aboutListener->port);
 
@@ -693,12 +693,12 @@ TEST_F(AboutObjTest, ProxyAccessToAboutObj) {
     alljoyn_msgarg aboutArg_fr = alljoyn_msgarg_create();
     status = alljoyn_aboutproxy_getaboutdata(aProxy, "fr", aboutArg_fr);
     EXPECT_EQ(ER_LANGUAGE_NOT_SUPPORTED, status)
-        << "  Actual Status: " << QCC_StatusText(status);
+    << "  Actual Status: " << QCC_StatusText(status);
 
     alljoyn_msgarg objDesc = alljoyn_msgarg_create();
     alljoyn_aboutproxy_getobjectdescription(aProxy, objDesc);
     EXPECT_EQ(ER_LANGUAGE_NOT_SUPPORTED, status)
-        << "  Actual Status: " << QCC_StatusText(status);
+    << "  Actual Status: " << QCC_StatusText(status);
 
     alljoyn_aboutobjectdescription aObjDesc =
         alljoyn_aboutobjectdescription_create_full(objDesc);

@@ -1449,23 +1449,23 @@ boolean_t ECDH_derive_pt(affine_point_t* tgt, bigval_t const* k, affine_point_t 
 char*ECC_feature_list(void)
 {
     return (
-        "ECC_P256"
+               "ECC_P256"
 #ifdef ECDSA
-        " ECDSA"
+               " ECDSA"
 #endif
 #ifdef SPECIAL_SQUARE
-        " SPECIAL_SQUARE"
+               " SPECIAL_SQUARE"
 #endif
 #ifdef SMALL_CODE
-        " SMALL_CODE"
+               " SMALL_CODE"
 #endif
 #ifdef MPY2BITS
-        " MPY2BITS"
+               " MPY2BITS"
 #endif
 #ifdef ARM7_ASM
-        " ARM7_ASM"
+               " ARM7_ASM"
 #endif
-        );
+               );
 }
 #endif /* ECC_TEST */
 

@@ -1554,11 +1554,11 @@ TEST_F(AboutListenerTest, AnnounceAppIdWithNon128BitLength) {
     uint8_t appid_64[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
     status = alljoyn_aboutdata_setappid(aboutData, appid_64, 8);
     EXPECT_EQ(ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE, status)
-        << "  Actual Status: " << QCC_StatusText(status);
+    << "  Actual Status: " << QCC_StatusText(status);
 
     status = alljoyn_aboutobj_announce(aboutObj, port, aboutData);
     EXPECT_EQ(ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE, status)
-        << "  Actual Status: " << QCC_StatusText(status);
+    << "  Actual Status: " << QCC_StatusText(status);
 
     /*
      * Wait for a maximum of 10 sec for the Announce Signal. Even if we get an
@@ -1591,11 +1591,11 @@ TEST_F(AboutListenerTest, AnnounceAppIdWithNon128BitLength) {
     uint8_t appid_192[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23 };
     status = alljoyn_aboutdata_setappid(aboutData, appid_192, 24);
     EXPECT_EQ(ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE, status)
-        << "  Actual Status: " << QCC_StatusText(status);
+    << "  Actual Status: " << QCC_StatusText(status);
 
     status = alljoyn_aboutobj_announce(aboutObj, port, aboutData);
     EXPECT_EQ(ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE, status)
-        << "  Actual Status: " << QCC_StatusText(status);
+    << "  Actual Status: " << QCC_StatusText(status);
 
     /*
      * Wait for a maximum of 10 sec for the Announce Signal. Even if we get an

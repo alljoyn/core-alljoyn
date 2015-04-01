@@ -174,7 +174,7 @@ static void about_obj_test_about_listener_announced_cb(const void* context,
     about_obj_test_about_listener_2* listener =
         (about_obj_test_about_listener_2*)(context);
     EXPECT_FALSE(listener->announceListenerFlag == 1)
-        << "We don't expect the flag to already be  \
+    << "We don't expect the flag to already be  \
             true when an AnnouceSignal is received.";
     size_t busNameLen = strlen(busName);
     if (listener->busName) {
@@ -421,7 +421,7 @@ TEST_F(AboutProxyTest, GetObjectDescription) {
     }
 
     ASSERT_TRUE(aboutListener->announceListenerFlag)
-        << "The announceListenerFlag must be true to continue this test.";
+    << "The announceListenerFlag must be true to continue this test.";
     EXPECT_STREQ(alljoyn_busattachment_getuniquename(serviceBus),
                  aboutListener->busName);
     EXPECT_EQ(port, aboutListener->port);
@@ -535,7 +535,7 @@ TEST_F(AboutProxyTest, GetAboutdata_English) {
         qcc::Sleep(WAIT_TIME);
     }
     ASSERT_TRUE(aboutListener->announceListenerFlag)
-        << "The announceListenerFlag must be true to continue this test.";
+    << "The announceListenerFlag must be true to continue this test.";
     EXPECT_STREQ(alljoyn_busattachment_getuniquename(serviceBus), aboutListener->busName);
     EXPECT_EQ(port, aboutListener->port);
 
@@ -663,7 +663,7 @@ TEST_F(AboutProxyTest, GetAboutdata_Spanish) {
         qcc::Sleep(WAIT_TIME);
     }
     ASSERT_TRUE(aboutListener->announceListenerFlag)
-        << "The announceListenerFlag must be true to continue this test.";
+    << "The announceListenerFlag must be true to continue this test.";
     EXPECT_STREQ(alljoyn_busattachment_getuniquename(serviceBus), aboutListener->busName);
     EXPECT_EQ(port, aboutListener->port);
 
@@ -776,7 +776,7 @@ TEST_F(AboutProxyTest, GetAboutdata_Unsupported) {
         qcc::Sleep(WAIT_TIME);
     }
     ASSERT_TRUE(aboutListener->announceListenerFlag)
-        << "The announceListenerFlag must be true to continue this test.";
+    << "The announceListenerFlag must be true to continue this test.";
     EXPECT_STREQ(alljoyn_busattachment_getuniquename(serviceBus), aboutListener->busName);
     EXPECT_EQ(port, aboutListener->port);
 
@@ -800,7 +800,7 @@ TEST_F(AboutProxyTest, GetAboutdata_Unsupported) {
     alljoyn_msgarg dataArg = alljoyn_msgarg_create();
     status = alljoyn_aboutproxy_getaboutdata(proxy, FRENCH_TAG, dataArg);
     EXPECT_EQ(ER_LANGUAGE_NOT_SUPPORTED, status)
-        << "  GetAboutData Status: " << QCC_StatusText(status);
+    << "  GetAboutData Status: " << QCC_StatusText(status);
     status = alljoyn_busattachment_cancelwhoimplements_interface(clientBus, ifaceName);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
