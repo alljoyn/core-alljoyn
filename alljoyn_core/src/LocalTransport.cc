@@ -630,9 +630,10 @@ QStatus _LocalEndpoint::PushMessage(Message& message)
     if (running) {
         BusEndpoint ep = bus->GetInternal().GetRouter().FindEndpoint(message->GetSender());
         /* Determine if the source of this message is local to the process */
-        if (ep->GetEndpointType() == ENDPOINT_TYPE_LOCAL && (strncmp(Thread::GetThread()->GetThreadName(), "lepDisp", 7) == 0)) {
+        if ((ep->GetEndpointType() == ENDPOINT_TYPE_LOCAL) && (dispatcher->IsTimerCallbackThread())) {
             ret = DoPushMessage(message);
         } else {
+            assert(!dispatcher->IsTimerCallbackThread());
             ret = dispatcher->DispatchMessage(message);
         }
     } else {
