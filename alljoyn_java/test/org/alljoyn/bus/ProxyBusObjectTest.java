@@ -16,13 +16,15 @@
 
 package org.alljoyn.bus;
 
-import org.alljoyn.bus.BusAttachment;
-import org.alljoyn.bus.BusException;
-import org.alljoyn.bus.BusObject;
-import org.alljoyn.bus.Status;
-import org.alljoyn.bus.ifaces.DBusProxyObj;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import junit.framework.TestCase;
+
+import org.alljoyn.bus.annotation.BusInterface;
+import org.alljoyn.bus.annotation.BusProperty;
+import org.alljoyn.bus.ifaces.DBusProxyObj;
 
 public class ProxyBusObjectTest extends TestCase {
     public ProxyBusObjectTest(String name) {
@@ -234,6 +236,83 @@ public class ProxyBusObjectTest extends TestCase {
 
         assertEquals(System.identityHashCode(intfObject), intfObject.hashCode());
 
+        proxyObj.release();
+    }
+
+    @BusInterface(name = BasicProperty.PROP_INTF_NAME)
+    static interface BasicProperty {
+        String PROP_INTF_NAME = "my.property.test";
+        @BusProperty(annotation = BusProperty.ANNOTATE_EMIT_CHANGED_SIGNAL)
+        String getName();
+    }
+
+    class PropertyObject implements BasicProperty, BusObject {
+        private String name = "MyName";
+        final AtomicInteger callCount = new AtomicInteger(0);
+	@Override
+        public String getName() {
+            callCount.incrementAndGet();
+            return name;
+        }
+    }
+
+    public void testPropertyCache() throws Exception {
+        final String propertyServicePath = "/myProperties";
+        PropertyObject ps = new PropertyObject();
+
+        assertEquals(Status.OK, otherBus.registerBusObject(ps, propertyServicePath));
+        proxyObj = bus.getProxyBusObject(name, propertyServicePath,
+                BusAttachment.SESSION_ID_ANY,
+                new Class<?>[] { BasicProperty.class });
+        assertNotNull(proxyObj);
+        final BasicProperty pp = proxyObj.getInterface(BasicProperty.class);
+        assertNotNull(pp);
+        assertEquals(ps.name, pp.getName());
+        assertEquals(1, ps.callCount.get());
+        proxyObj.enablePropertyCaching();
+        assertEquals(ps.name, pp.getName());
+        assertEquals(2, ps.callCount.get());
+        assertEquals(ps.name, pp.getName());
+        assertEquals(2, ps.callCount.get());
+        proxyObj.enablePropertyCaching();
+        proxyObj.enablePropertyCaching();
+        proxyObj.enablePropertyCaching();
+        assertEquals(ps.name, pp.getName());
+        assertEquals(2, ps.callCount.get());
+
+        String oldName = ps.name;
+        ps.name = "newName";
+        assertEquals(oldName, pp.getName());
+
+        /* updates to the property should be reflected in the cache.
+         * The update must be available during the property change callback. */
+        synchronized (this) {
+            final ArrayList<String> values = new ArrayList<String>();
+            proxyObj.registerPropertiesChangedListener(BasicProperty.PROP_INTF_NAME, new String[]{"Name"}, new PropertiesChangedListener() {
+                @Override
+                public void propertiesChanged(ProxyBusObject pObj, String ifaceName,
+                    Map<String, Variant> changed, String[] invalidated) {
+
+                    values.add(pp.getName());
+                    synchronized (ProxyBusObjectTest.this) {
+                        ProxyBusObjectTest.this.notifyAll();
+                    }
+                }
+            });
+            PropertyChangedEmitter pce = new PropertyChangedEmitter(ps);
+            pce.PropertyChanged(BasicProperty.PROP_INTF_NAME, "Name", new Variant(ps.name));
+            wait(1500);
+            assertEquals(1, values.size());
+            assertEquals(ps.name, values.get(0));
+            assertEquals(ps.name, pp.getName());
+            assertEquals(2, ps.callCount.get());
+        }
+        otherBus.unregisterBusObject(ps);
+        /* The property cache should still provide the last known value
+         * even after the remote objects is unregistered. */
+        assertEquals(ps.name, pp.getName());
+        assertEquals(ps.name, pp.getName());
+        assertEquals(ps.name, pp.getName());
         proxyObj.release();
     }
 }
