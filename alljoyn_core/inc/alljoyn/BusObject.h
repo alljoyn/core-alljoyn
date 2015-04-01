@@ -126,7 +126,11 @@ class BusObject : public MessageReceiver {
      *
      * @return   ER_OK if successful.
      */
-    QStatus EmitPropChanged(const char* ifcName, const char** propNames, size_t numProps, SessionId id, uint8_t flags = 0);
+    QStatus EmitPropChanged(const char* ifcName,
+                            const char** propNames,
+                            size_t numProps,
+                            SessionId id,
+                            uint8_t flags = 0);
 
     /**
      * Get a reference to the underlying BusAttachment
@@ -142,23 +146,29 @@ class BusObject : public MessageReceiver {
     /**
      * Send a signal.
      *
-     * @param destination      The unique or well-known bus name or the signal recipient (NULL for broadcast signals)
-     * @param sessionId        A unique SessionId for this AllJoyn session instance. The session this message is for.
-     *                         Use SESSION_ID_ALL_HOSTED to emit on all sessions hosted by this BusObject's BusAttachment.
-     *                         For broadcast or sessionless signals, the sessionId must be 0.
-     * @param signal           Interface member of signal being emitted.
-     * @param args             The arguments for the signal (can be NULL)
-     * @param numArgs          The number of arguments
-     * @param timeToLive       If non-zero this specifies the useful lifetime for this signal.
-     *                         For sessionless signals the units are seconds.
-     *                         For all other signals the units are milliseconds.
-     *                         If delivery of the signal is delayed beyond the timeToLive due to
-     *                         network congestion or other factors the signal may be discarded. There is
-     *                         no guarantee that expired signals will not still be delivered.
-     * @param flags            Logical OR of the message flags for this signals. The following flags apply to signals:
-     *                         - If ::ALLJOYN_FLAG_GLOBAL_BROADCAST is set broadcast signal (null destination) will be forwarded across bus-to-bus connections.
-     *                         - If ::ALLJOYN_FLAG_ENCRYPTED is set the message is authenticated and the payload if any is encrypted.
-     * @param msg              [OUT] If non-null, the sent signal message is returned to the caller.
+     * @param destination  The unique or well-known bus name or the signal recipient (NULL for broadcast signals)
+     * @param sessionId    A unique SessionId for this AllJoyn session instance. The session this message is for.
+     *                     Use SESSION_ID_ALL_HOSTED to emit on all sessions hosted by this BusObject's BusAttachment.
+     *                     For broadcast or sessionless signals, the sessionId must be 0.
+     * @param signal       Interface member of signal being emitted.
+     * @param args         The arguments for the signal (can be NULL)
+     * @param numArgs      The number of arguments
+     * @param timeToLive   If non-zero this specifies the useful lifetime for this signal.
+     *                     For sessionless signals the units are seconds.
+     *                     For all other signals the units are milliseconds.
+     *                     If delivery of the signal is delayed beyond the timeToLive due to
+     *                     network congestion or other factors the signal may be discarded. There is
+     *                     no guarantee that expired signals will not still be delivered.
+     * @param flags        Logical OR of the message flags for this signals. The following flags apply to signals:
+     *                     - If ::ALLJOYN_FLAG_GLOBAL_BROADCAST is set broadcast signal (null destination) will be
+     *                       forwarded to all Routing Nodes in the system.
+     *                     - If ::ALLJOYN_FLAG_ENCRYPTED is set the message is authenticated and the payload if any is
+     *                       encrypted.
+     *                     - If ::ALLJOYN_FLAG_SESSIONLESS is set the signal will be sent as a Sessionless Signal. NOTE:
+     *                       if this flag and the GLOBAL_BROADCAST flags are set it could result in the same signal
+     *                       being received twice.
+     *
+     * @param msg          [OUT] If non-null, the sent signal message is returned to the caller.
      * @return
      *      - #ER_OK if successful
      *      - #ER_BUS_OBJECT_NOT_REGISTERED if bus object has not yet been registered
@@ -352,7 +362,9 @@ class BusObject : public MessageReceiver {
      *      - #ER_OK if the method handler was added.
      *      - An error status otherwise
      */
-    QStatus AddMethodHandler(const InterfaceDescription::Member* member, MessageReceiver::MethodHandler handler, void* context = NULL);
+    QStatus AddMethodHandler(const InterfaceDescription::Member* member,
+                             MessageReceiver::MethodHandler handler,
+                             void* context = NULL);
 
     /**
      * Convenience method used to add a set of method handers at once.
@@ -517,7 +529,10 @@ class BusObject : public MessageReceiver {
      * @param message The message containing the method call arguments.
      * @param context NULL or a private context passed in when the method handler was registered.
      */
-    virtual void CallMethodHandler(MessageReceiver::MethodHandler handler, const InterfaceDescription::Member* member, Message& message, void* context) {
+    virtual void CallMethodHandler(MessageReceiver::MethodHandler handler,
+                                   const InterfaceDescription::Member* member,
+                                   Message& message,
+                                   void* context) {
         QCC_UNUSED(context);
         (this->*handler)(member, message);
     }
