@@ -27,7 +27,7 @@
 #import "BasicObject.h"
 #import "AJNMessageArgument.h"
 #import "AJNMessage.h"
-
+#import "AJNInit.h"
 
 
 static NSString * const kBusAttachmentTestsAdvertisedName = @"org.alljoyn.bus.objc.tests.AReallyNiftyNameThatNoOneWillUse";
@@ -124,6 +124,18 @@ static const uint8_t ICON_BYTE = 0x11;
 @synthesize testAboutObjectDescriptionArg = _testAboutObjectDescriptionArg;
 @synthesize testAboutDataArg = _testAboutDataArg;
 @synthesize testAboutObjectDescription = _testAboutObjectDescription;
+
++(void)setUp
+{
+    [AJNInit alljoynInit];
+    [AJNInit alljoynRouterInit];
+}
+
++(void)tearDown
+{
+    [AJNInit alljoynRouterShutdown];
+    [AJNInit alljoynShutdown];
+}
 
 - (void)setUp
 {

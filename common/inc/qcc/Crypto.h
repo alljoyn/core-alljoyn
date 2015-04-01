@@ -344,7 +344,6 @@ class Crypto_AES {
      */
     typedef enum {
         ECB_ENCRYPT, ///< Flag to constructor indicating key is being used for ECB encryption
-        ECB_DECRYPT, ///< Flag to constructor indicating key is being used for ECB decryption
         CCM          ///< Flag to constructor indicating key is being used CCM mode
     } Mode;
 
@@ -412,28 +411,6 @@ class Crypto_AES {
      * @return ER_OK if the data was encrypted.
      */
     QStatus Encrypt(const void* in, size_t len, Block* out, uint32_t numBlocks);
-
-    /**
-     * Decrypt some data blocks.
-     *
-     * @param in          An array of data blocks to decrypt
-     * @param out         The decrypted data blocks
-     * @param numBlocks   The number of blocks to decrypt.
-     * @return ER_OK if the data was decrypted.
-     */
-    QStatus Decrypt(const Block* in, Block* out, uint32_t numBlocks);
-
-    /**
-     * Decrypt some data. The decrypted data is truncated at len
-     *
-     * @param in          An array of data blocks to decrypt.
-     * @param len         The number of blocks of input data.
-     * @param out         The decrypted data.
-     * @param numBlocks   The number of blocks for the decrypted data, compute this using NumEncryptedBlocks(len)
-     *
-     * @return ER_OK if the data was encrypted.
-     */
-    QStatus Decrypt(const Block* in, uint32_t numBlocks, void* out, size_t len);
 
     /**
      * Encrypt some data using CCM mode.

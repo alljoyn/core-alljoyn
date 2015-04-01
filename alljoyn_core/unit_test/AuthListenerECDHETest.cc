@@ -55,6 +55,7 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
             psk("123456"),
             server(server)
         {
+            QCC_UseOSLogging(true);
         }
 
         bool RequestCredentials(const char* authMechanism, const char* authPeer, uint16_t authCount, const char* userId, uint16_t credMask, Credentials& creds)
@@ -445,7 +446,6 @@ TEST_F(AuthListenerECDHETest, ECDHE_NULL_Success)
 {
     EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_NULL"));
     EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_NULL"));
-    QCC_SetDebugLevel("AUTH_KEY_EXCHANGER", 3);
     EXPECT_EQ(ER_OK, ExerciseOn());
     EXPECT_TRUE(clientAuthListener.authComplete);
     EXPECT_TRUE(serverAuthListener.authComplete);
