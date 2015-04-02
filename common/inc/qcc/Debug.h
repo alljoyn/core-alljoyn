@@ -112,7 +112,6 @@
  */
 #define QCC_DbgRemoteError(_msg) _QCC_DbgPrint(DBG_REMOTE_ERROR, _msg)
 
-
 /**
  * Macro to make conditional compilation of simple lines of code dependent on
  * debug vs. release easier to read (and thus maintain).  This should be used
@@ -125,6 +124,21 @@
 #define QCC_DEBUG_ONLY(_cmd) do { } while (0)
 #else
 #define QCC_DEBUG_ONLY(_cmd) do { _cmd; } while (0)
+#endif
+
+/**
+ * Macro used to avoid the need for a local variable just for an assert. Using a local
+ * variable just for assert, instead of this macro, can cause compiler warnings on
+ * NDEBUG builds.
+ * Example: QCC_VERIFY(foo() == 0); instead of {int local = foo(); assert(local == 0);}
+ *
+ * @param _cmd  Statement to be executed on both types of builds, and asserted just
+ *              on non-NDEBUG builds.
+ */
+#if defined(NDEBUG)
+#define QCC_VERIFY(_cmd) ((void)(_cmd))
+#else
+#define QCC_VERIFY(_cmd) assert(_cmd)
 #endif
 
 /**
