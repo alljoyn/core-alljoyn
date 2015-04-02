@@ -158,11 +158,11 @@ QStatus qcc::Exec(const char* exec, const ExecArgs& args, const Environ& envs)
         for (char** p = env; p; ++p) {
             free(*p);
         }
-        delete env;
+        delete [] env;
         for (char** p = argv; p; ++p) {
             free(*p);
         }
-        delete argv;
+        delete [] argv;
     } else if (pid == -1) {
         return ER_OS_ERROR;
 #ifndef NDEBUG
@@ -222,11 +222,11 @@ QStatus qcc::ExecAs(const char* user, const char* exec, const ExecArgs& args, co
         for (char** p = env; p; ++p) {
             free(*p);
         }
-        delete env;
+        delete [] env;
         for (char** p = argv; p; ++p) {
             free(*p);
         }
-        delete argv;
+        delete [] argv;
     } else if (pid == -1) {
         return ER_OS_ERROR;
 #ifndef NDEBUG
