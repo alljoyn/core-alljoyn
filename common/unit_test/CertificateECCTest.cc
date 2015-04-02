@@ -30,8 +30,8 @@ using namespace std;
 
 #define AUTH_VERIFIER_LEN  Crypto_SHA256::DIGEST_SIZE
 
-/* The key and certificate are generated using openssl */
-static const char eccPrivateKeyPEM[] = {
+/* Test certificates and key generated using OpenSSL. */
+static const char eccPrivateKeyPEMOpenSSL[] = {
     "-----BEGIN EC PRIVATE KEY-----\n"
     "MHcCAQEEICkeoQeosiS380hFJYo9zL1ziyTbea1mYqqqgHvGKZ6qoAoGCCqGSM49\n"
     "AwEHoUQDQgAE9jiMexU/7Z55ZQQU67Rn/MpXzAkYx5m6nQt2lWWUvWXYbOOLUBx0\n"
@@ -39,7 +39,7 @@ static const char eccPrivateKeyPEM[] = {
     "-----END EC PRIVATE KEY-----"
 };
 
-static const char eccSelfSignCertX509PEM[] = {
+static const char eccSelfSignCertX509PEMOpenSSL[] = {
     "-----BEGIN CERTIFICATE-----\n"
     "MIIBsDCCAVagAwIBAgIJAJVJ9/7bbQcWMAoGCCqGSM49BAMCMFYxKTAnBgNVBAsM\n"
     "IDZkODVjMjkyMjYxM2IzNmUyZWVlZjUyNzgwNDJjYzU2MSkwJwYDVQQDDCA2ZDg1\n"
@@ -54,7 +54,7 @@ static const char eccSelfSignCertX509PEM[] = {
     "-----END CERTIFICATE-----"
 };
 
-static const char eccCertChainX509PEM[] = {
+static const char eccCertChainX509PEMOpenSSL[] = {
     "-----BEGIN CERTIFICATE-----\n"
     "MIIBtDCCAVmgAwIBAgIJAMlyFqk69v+OMAoGCCqGSM49BAMCMFYxKTAnBgNVBAsM\n"
     "IDdhNDhhYTI2YmM0MzQyZjZhNjYyMDBmNzdhODlkZDAyMSkwJwYDVQQDDCA3YTQ4\n"
@@ -179,6 +179,54 @@ static const char eccSelfSignCertX509PEMWithExtraDNFields[] = {
     "-----END CERTIFICATE-----"
 };
 
+/**
+ * Test certificates and key generated using Windows Crypto APIs
+ * (CNG and CAPI2).
+ */
+static const char eccSelfSignCertX509PEMCAPI[] = {
+    "-----BEGIN CERTIFICATE-----\n"
+    "MIIBUzCB+aADAgECAhDZ3jYhefXsu0VtIVMGHiOiMAoGCCqGSM49BAMCMCQxIjAg\n"
+    "BgNVBAMMGUFsbEpveW5UZXN0U2VsZlNpZ25lZE5hbWUwHhcNMTUwMzMxMTg1NDQy\n"
+    "WhcNMTYwMzMwMTg1NDQyWjAkMSIwIAYDVQQDDBlBbGxKb3luVGVzdFNlbGZTaWdu\n"
+    "ZWROYW1lMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAESOnRO0dXA7FFv4vJJXH8\n"
+    "8JBgvSvd1fg9NKosmkvAGYm5CLDBeLIhOycMVCcS2n0Q7mv+kUK+UXQbbg92exQ2\n"
+    "PqMNMAswCQYDVR0TBAIwADAKBggqhkjOPQQDAgNJADBGAiEAoV1uqzHvTVkOYLYl\n"
+    "QzRSg597ybtDqGoy5L6FgI7Qw5ECIQCrO+fxzcX2mMkYOX+g5gDmHurNKWKkSBnJ\n"
+    "wUq30brBfQ==\n"
+    "-----END CERTIFICATE-----\n"
+};
+
+static const char eccPrivateKeyPEMCAPI[] = {
+    "-----BEGIN EC PRIVATE KEY-----\n"
+    "MHcCAQEEIGjHhBsf1tL/qT2pVToR9SIJt6xKshX2N+svfXtDeCCooAoGCCqGSM49\n"
+    "AwEHoUQDQgAESOnRO0dXA7FFv4vJJXH88JBgvSvd1fg9NKosmkvAGYm5CLDBeLIh\n"
+    "OycMVCcS2n0Q7mv+kUK+UXQbbg92exQ2Pg==\n"
+    "-----END EC PRIVATE KEY-----\n"
+};
+
+/* Certificate chains in AllJoyn must start with the EE cert. */
+static const char eccCertChainX509PEMCAPI[] = {
+    "-----BEGIN CERTIFICATE-----\n"
+    "MIIBRjCB7qADAgECAhA4NHiS/771skQq7enlPEsyMAoGCCqGSM49BAMCMB4xHDAa\n"
+    "BgNVBAMME0FsbEpveW5UZXN0Um9vdE5hbWUwHhcNMTUwMzMxMjI0NjE1WhcNMTYw\n"
+    "MzMwMjI0NjE1WjAcMRowGAYDVQQDDBFDZXJ0U2lnbkxpYkNsaWVudDBZMBMGByqG\n"
+    "SM49AgEGCCqGSM49AwEHA0IABALDpAM6f0USoGm2vEaBBKr3dJdO9dIRukEUnTUV\n"
+    "0fKWN7N0hyIx/ZdANrtVJn8ZrzWnHuEkECEnYZy6hz1QC4ejEDAOMAwGA1UdEwQF\n"
+    "MAMBAf8wCgYIKoZIzj0EAwIDRwAwRAIgZT+K9SH5KnZEqvXUf/mOnJ8y0cvCaxzQ\n"
+    "9L+/V/1L/o0CIFGqG58zW7QealLNE7Z4dUjZgu0brTvRJDTJKAz7QreR\n"
+    "-----END CERTIFICATE-----\n"
+    "\n"
+    "-----BEGIN CERTIFICATE-----\n"
+    "MIIBRzCB7aADAgECAhDPaRHibuWiokAyJhlS20g+MAoGCCqGSM49BAMCMB4xHDAa\n"
+    "BgNVBAMME0FsbEpveW5UZXN0Um9vdE5hbWUwHhcNMTUwMzMxMjI0NjE1WhcNMTYw\n"
+    "MzMwMjI0NjE1WjAeMRwwGgYDVQQDDBNBbGxKb3luVGVzdFJvb3ROYW1lMFkwEwYH\n"
+    "KoZIzj0CAQYIKoZIzj0DAQcDQgAETXyIMsSx5xmNQE+fPtUa8NjqtP3h/c+kXjpo\n"
+    "XpApKcBocQ0tzXinzDWzg/GsJS9WCC+QHgJOL3BIiFFv4l1pHaMNMAswCQYDVR0T\n"
+    "BAIwADAKBggqhkjOPQQDAgNJADBGAiEA4NZuQGv/Je51gfuNq1M+EnvVnUq0XocV\n"
+    "C9rrhWhxSroCIQD6Sam3NVqhHis9ZsK7LwAzI9a7YOj5BqlDPW03adBdgg==\n"
+    "-----END CERTIFICATE-----\n"
+};
+
 class CertificateECCTest : public testing::Test {
   public:
     Crypto_ECC ecc;
@@ -264,7 +312,10 @@ TEST_F(CertificateECCTest, EncodePrivateKey)
 
 }
 
-TEST_F(CertificateECCTest, DecodePrivateKey)
+/**
+ * Test decoding a private key created externally (in PKCS#8 DER format).
+ */
+static void DecodePrivateKeyHelper(const char* eccPrivateKeyPEM)
 {
     QStatus status;
 
@@ -275,6 +326,11 @@ TEST_F(CertificateECCTest, DecodePrivateKey)
     ASSERT_EQ(ER_OK, status) << " CertificateX509::DecodePrivateKeyPEM failed with actual status: " << QCC_StatusText(status);
     printf("Decoded private key %s\n", BytesToHexString((uint8_t*) &pk, sizeof(pk)).c_str());
 }
+TEST_F(CertificateECCTest, DecodePrivateKey)
+{
+    DecodePrivateKeyHelper(eccPrivateKeyPEMOpenSSL);
+    DecodePrivateKeyHelper(eccPrivateKeyPEMCAPI);
+}
 
 TEST_F(CertificateECCTest, DecodeUnsupportedFormatPrivateKeyPEM)
 {
@@ -283,6 +339,9 @@ TEST_F(CertificateECCTest, DecodeUnsupportedFormatPrivateKeyPEM)
     ASSERT_NE(ER_OK, CertificateX509::DecodePrivateKeyPEM(encoded, (uint8_t*) &pk, sizeof(pk))) << " CertificateX509::DecodePrivateKeyPEM did not fail";
 }
 
+/**
+ * Test encoding and decoding of public keys.
+ */
 TEST_F(CertificateECCTest, EncodePublicKey)
 {
     QStatus status;
@@ -391,9 +450,9 @@ TEST_F(CertificateECCTest, X509CertExpiresBeyond2050)
 }
 
 /**
- * Verify a X509 self signed certificate generated by external tool.
+ * Verify X509 self signed certificates generated by an external tool.
  */
-TEST_F(CertificateECCTest, VerifyX509SelfSignExternalCert)
+static void VerifyX509SelfSignExternalCertHelper(const char* eccSelfSignCertX509PEM)
 {
     CertificateX509 cert;
     String pem(eccSelfSignCertX509PEM);
@@ -403,12 +462,17 @@ TEST_F(CertificateECCTest, VerifyX509SelfSignExternalCert)
     ASSERT_EQ(ER_OK, status) << " verify cert failed with actual status: " << QCC_StatusText(status);
 }
 
+TEST_F(CertificateECCTest, VerifyX509SelfSignExternalCert)
+{
+    VerifyX509SelfSignExternalCertHelper(eccSelfSignCertX509PEMOpenSSL);
+    VerifyX509SelfSignExternalCertHelper(eccSelfSignCertX509PEMCAPI);
+}
+
 /**
- * Verify a X509 self signed certificate generated by external tool.
- * Add check that it does not verify with a different public key.
- *
+ * Verify X509 self signed certificates generated by external tools.
+ * Add check that they do not verify with a different public key.
  */
-TEST_F(CertificateECCTest, VerifyX509SelfSignCertPlusDoNotVerifyWithOtherKey)
+static void VerifyX509SelfSignCertPlusDoNotVerifyWithOtherKeyHelper(const char* eccSelfSignCertX509PEM, const ECCPublicKey* otherPublic)
 {
     CertificateX509 cert;
     String pem(eccSelfSignCertX509PEM);
@@ -417,14 +481,20 @@ TEST_F(CertificateECCTest, VerifyX509SelfSignCertPlusDoNotVerifyWithOtherKey)
     status = cert.Verify();
     ASSERT_EQ(ER_OK, status) << " verify cert failed with actual status: " << QCC_StatusText(status);
     /* now verify with a different public key.  It is expected to fail */
-    status = cert.Verify(ecc.GetDSAPublicKey());
+    status = cert.Verify(otherPublic);
     ASSERT_NE(ER_OK, status) << " verify cert did not fail";
 }
 
+TEST_F(CertificateECCTest, VerifyX509SelfSignCertPlusDoNotVerifyWithOtherKey)
+{
+    VerifyX509SelfSignCertPlusDoNotVerifyWithOtherKeyHelper(eccSelfSignCertX509PEMOpenSSL, ecc.GetDSAPublicKey());
+    VerifyX509SelfSignCertPlusDoNotVerifyWithOtherKeyHelper(eccSelfSignCertX509PEMCAPI, ecc.GetDSAPublicKey());
+}
+
 /**
- * Verify a X509 self signed certificate generated by external tool.
+ * Verify X509 self signed certificates generated by external tools.
  */
-TEST_F(CertificateECCTest, VerifyX509ExternalCertChain)
+static void VerifyX509ExternalCertChainHelper(const char* eccCertChainX509PEM)
 {
     String pem(eccCertChainX509PEM);
     /* count how many certs in the chain */
@@ -441,6 +511,12 @@ TEST_F(CertificateECCTest, VerifyX509ExternalCertChain)
     }
     status = certs[0].Verify(certs[1].GetSubjectPublicKey());
     ASSERT_EQ(ER_OK, status) << " verify leaf cert failed with actual status: " << QCC_StatusText(status);
+}
+
+TEST_F(CertificateECCTest, VerifyX509ExternalCertChain)
+{
+    VerifyX509ExternalCertChainHelper(eccCertChainX509PEMOpenSSL);
+    VerifyX509ExternalCertChainHelper(eccCertChainX509PEMCAPI);
 }
 
 /**
@@ -522,4 +598,3 @@ TEST_F(CertificateECCTest, VerifyX509SelfSignExternalCertWithExtraDNFields)
     status = cert.Verify();
     ASSERT_EQ(ER_OK, status) << " verify cert failed with actual status: " << QCC_StatusText(status);
 }
-
