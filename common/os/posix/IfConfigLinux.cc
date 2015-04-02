@@ -418,6 +418,7 @@ static std::list<IfEntry> NetlinkGetInterfaces(void)
                 struct ifinfomsg* ifi = (struct ifinfomsg*)NLMSG_DATA(nh);
                 entry.m_index = ifi->ifi_index;
                 entry.m_flags = ifi->ifi_flags;
+                entry.m_mtu = 0;
 
                 struct rtattr* rta = IFLA_RTA(ifi);
                 uint32_t rtalen = IFLA_PAYLOAD(nh);
@@ -666,6 +667,7 @@ QStatus IfConfig(std::vector<IfConfigEntry>& entries)
 
             entry.m_addr = qcc::String();
             entry.m_family = QCC_AF_UNSPEC;
+            entry.m_prefixlen = 0;
 
             entries.push_back(entry);
         }
