@@ -29,7 +29,6 @@
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
 #include <openssl/pem.h>
-#include <openssl/rsa.h>
 #include <openssl/sha.h>
 #include <openssl/ssl.h>
 #include <openssl/x509.h>

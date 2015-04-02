@@ -161,7 +161,8 @@ var AuthListener = Class.create(
      * The authentication mechanism requests verification of credentials from a
      * remote peer.
      *
-     * This operation is mandatory for the ALLJOYN_RSA_KEYX auth mechanism, optional for others.
+     * This operation is mandatory for the ALLJOYN_ECDHE_ECDSA auth mechanism, optional 
+	 * for others.
      *
      * @param {String} authMechanism the name of the authentication mechanism issuing the request
      * @param {String} peerName the name of the remote peer being authenticated.  On the
