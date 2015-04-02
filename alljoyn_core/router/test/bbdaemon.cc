@@ -244,38 +244,6 @@ class LocalTestObject : public BusObject {
     int32_t prop_int_val;
 };
 
-
-static const char x509cert[] = {
-    "-----BEGIN CERTIFICATE-----\n"
-    "MIIB7TCCAZegAwIBAgIJAKSCIxJABMPWMA0GCSqGSIb3DQEBBQUAMFIxCzAJBgNV\n"
-    "BAYTAlVTMRMwEQYDVQQIDApXYXNoaW5ndG9uMRAwDgYDVQQHDAdTZWF0dGxlMQ0w\n"
-    "CwYDVQQKDARRdUlDMQ0wCwYDVQQDDARHcmVnMB4XDTEwMDgwMzIzNTYzOVoXDTEx\n"
-    "MDgwMzIzNTYzOVowUjELMAkGA1UEBhMCVVMxEzARBgNVBAgMCldhc2hpbmd0b24x\n"
-    "EDAOBgNVBAcMB1NlYXR0bGUxDTALBgNVBAoMBFF1SUMxDTALBgNVBAMMBEdyZWcw\n"
-    "XDANBgkqhkiG9w0BAQEFAANLADBIAkEA3b+TpTkJD03LlgKKA9phSeA+5owwM/jj\n"
-    "PrRFcrH0mrFrHRujyPCuWRwOZojXgxVFU/jaTOyQ5sA5df7nEMgf/wIDAQABo1Aw\n"
-    "TjAdBgNVHQ4EFgQUr6/4jRv/8qYIAtu/x9wSHllToxgwHwYDVR0jBBgwFoAUr6/4\n"
-    "jRv/8qYIAtu/x9wSHllToxgwDAYDVR0TBAUwAwEB/zANBgkqhkiG9w0BAQUFAANB\n"
-    "ABJSIipYXtLymiidV3J6cOlurPvEM/mXey9FMjvAjrNrrhuOBP1SFrcW+ubWsmWi\n"
-    "EeP1srLyLDXtE5AogwPcaVc=\n"
-    "-----END CERTIFICATE-----"
-};
-
-static const char privKey[] = {
-    "-----BEGIN RSA PRIVATE KEY-----\n"
-    "Proc-Type: 4,ENCRYPTED\n"
-    "DEK-Info: AES-128-CBC,1B43B2A4AE39BF6CECCA363FC9D02237\n"
-    "\n"
-    "zEMSBXr4Up+C5ZeWVZw5LPZHColZ8+ZhgkNHdqSfgyjri7Ij6nb1ABcbWeJBeqtF\n"
-    "9fsijcTqUACVOhrAFi3d+F9HYP6taqDDwCJj638cTnYGM9j+WAspNOm05FlFmgvs\n"
-    "guwpqc98RAj29C72zYb3GWoW0xIOhPF84OWKppweMSV6UFpLqnpFmo0zGT4ItMhV\n"
-    "/tOdXyrTzhyjwFWhOBM1GZSKl1AtmIgDW88fFfGyPxIQSS/30ur0/dgUinVODBLP\n"
-    "kNP73tpiBCeSHWqLlHV/bTer7TE5dsbyvvbFKftns/wP4Eri3V4SsldkURUJTrG7\n"
-    "oGvwY4hwV0iZjSUcX1aBrfXE6oc8LAaJrZzNDUvNLjM2jHzIvMTwWIa3R1z9yjWl\n"
-    "Rk5RScL4+i2JPll9SzrkhIGvh0ElYRdzbfkrUIY2anGwxM5Ihcv8Z3kpYJyvhdJu\n"
-    "-----END RSA PRIVATE KEY-----\n"
-};
-
 class MyAuthListener : public AuthListener {
     bool RequestCredentials(const char* authMechanism, const char* authPeer, uint16_t authCount, const char* userId, uint16_t credMask, Credentials& creds) {
         QCC_UNUSED(authPeer);
@@ -285,19 +253,6 @@ class MyAuthListener : public AuthListener {
             if (credMask & AuthListener::CRED_PASSWORD) {
                 creds.SetPassword("123456");
                 printf("AuthListener returning fixed pin \"%s\" for %s\n", creds.GetPassword().c_str(), authMechanism);
-            }
-            return true;
-        }
-
-        if (strcmp(authMechanism, "ALLJOYN_RSA_KEYX") == 0) {
-            if (credMask & AuthListener::CRED_CERT_CHAIN) {
-                creds.SetCertChain(x509cert);
-            }
-            if (credMask & AuthListener::CRED_PRIVATE_KEY) {
-                creds.SetPrivateKey(privKey);
-            }
-            if (credMask & AuthListener::CRED_PASSWORD) {
-                creds.SetPassword("123456");
             }
             return true;
         }
@@ -330,13 +285,12 @@ class MyAuthListener : public AuthListener {
     }
 
     bool VerifyCredentials(const char* authMechanism, const char* authPeer, const Credentials& creds) {
+        QCC_UNUSED(authMechanism);
         QCC_UNUSED(authPeer);
-        if (strcmp(authMechanism, "ALLJOYN_RSA_KEYX") == 0) {
-            if (creds.IsSet(AuthListener::CRED_CERT_CHAIN)) {
-                printf("Verify\n%s\n", creds.GetCertChain().c_str());
-                return true;
-            }
-        }
+        QCC_UNUSED(creds);
+
+        /* Not used with the SRP auth mechanism. */
+
         return false;
     }
 
@@ -543,7 +497,7 @@ int CDECL_CALL main(int argc, char** argv)
             LocalTestObject* testObj = NULL;
 
             if (mimicBbservice) {
-                bus->EnablePeerSecurity("ALLJOYN_RSA_KEYX ALLJOYN_SRP_KEYX ALLJOYN_SRP_LOGON", new MyAuthListener());
+                bus->EnablePeerSecurity("ALLJOYN_SRP_KEYX ALLJOYN_SRP_LOGON", new MyAuthListener());
                 testObj = new LocalTestObject(*bus, ::org::alljoyn::alljoyn_test::ObjectPath, 10);
                 bus->RegisterBusObject(*testObj);
             }

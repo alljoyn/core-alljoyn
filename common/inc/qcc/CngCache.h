@@ -60,7 +60,6 @@ struct CngCache {
     BCRYPT_ALG_HANDLE algHandles[ALGORITHM_COUNT][2];
     BCRYPT_ALG_HANDLE ccmHandle;
     BCRYPT_ALG_HANDLE ecbHandle;
-    BCRYPT_ALG_HANDLE rsaHandle;
     BCRYPT_ALG_HANDLE ecdsaHandles[ECDSA_ALGORITHM_COUNT];
     BCRYPT_ALG_HANDLE ecdhHandles[ECDH_ALGORITHM_COUNT];
 };
