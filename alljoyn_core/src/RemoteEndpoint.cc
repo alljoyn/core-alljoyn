@@ -1292,7 +1292,7 @@ void _RemoteEndpoint::DecrementRef()
         }
 
         Thread* curThread = Thread::GetThread();
-        if (curThread && strcmp(curThread->GetThreadName(), "iodisp") == 0) {
+        if (curThread && (internal->bus.GetInternal().GetIODispatch().IsTimerCallbackThread())) {
             Stop();
         } else {
             StopAfterTxEmpty(500);
