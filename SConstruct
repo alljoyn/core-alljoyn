@@ -16,6 +16,7 @@
 import os
 
 # Get the global environment
+# modified by Seongho Kim just for Gerrit Test
 env = SConscript(['build_core/SConscript'])
 
 vars = Variables()
