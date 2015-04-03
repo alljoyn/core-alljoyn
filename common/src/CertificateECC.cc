@@ -506,10 +506,15 @@ QStatus CertificateX509::DecodeCertificateExt(const qcc::String& ext)
     while ((ER_OK == status) && (tmp.size())) {
         qcc::String oid;
         qcc::String str;
+        qcc::String critical;
         qcc::String rem;
-        status = Crypto_ASN1::Decode(tmp, "(ox).", &oid, &str, &rem);
+        status = Crypto_ASN1::Decode(tmp, "(ozx).", &oid, &critical, &str, &rem);
         if (ER_OK != status) {
-            return status;
+            /* the critical boolean flag is not present */
+            status = Crypto_ASN1::Decode(tmp, "(ox).", &oid, &str, &rem);
+            if (ER_OK != status) {
+                return status;
+            }
         }
         if (OID_BASIC_CONSTRAINTS == oid) {
             qcc::String opt;

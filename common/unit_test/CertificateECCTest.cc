@@ -620,3 +620,17 @@ TEST_F(CertificateECCTest, GenerateAndLoadSelfSignedCert)
     ASSERT_EQ(ER_OK, cert2.Verify(&dsaPublicKey)) << " verify cert failed";
 }
 
+/**
+ * Test a self signed certificate with the basic constraints field marked as
+ * critical.
+ */
+TEST_F(CertificateECCTest, TestSelfSignedCertWithCritialBasicConstraint)
+{
+    static const char eccSelfSignCertX509PEM[] = {
+        "-----BEGIN CERTIFICATE-----\n"
+        "MIIBVDCB/KADAgECAhC+Ci4hDqaWuEWj2eDd0zrfMAoGCCqGSM49BAMCMCQxIjAgBgNVBAMMGUFsbEpveW5UZXN0U2VsZlNpZ25lZE5hbWUwHhcNMTUwMzMxMTc0MTQwWhcNMTYwMzMwMTc0MTQwWjAkMSIwIAYDVQQDDBlBbGxKb3luVGVzdFNlbGZTaWduZWROYW1lMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE5nmP2qHqZ6N67jdoVxSA64U+Y+rThK+oAwgR6DNezFKMSgVMA1Snn4qsc1Q+KbaYAMj7hWs6xDUIbz6XTOJBvaMQMA4wDAYDVR0TAQH/BAIwADAKBggqhkjOPQQDAgNHADBEAiBJpmVQof40vG9qjWgBTMkETUT0d1kGADBjQK162bUCygIgAtHmpfRztbtr5hgXYdjx4W3Kw0elmnuIfsvrY86ONZs=\n"
+        "-----END CERTIFICATE-----\n"
+    };
+
+    VerifyX509SelfSignExternalCertHelper(eccSelfSignCertX509PEM);
+}
