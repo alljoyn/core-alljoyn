@@ -522,7 +522,8 @@ QStatus CertificateX509::DecodeCertificateExt(const qcc::String& ext)
             if (ER_OK != status) {
                 status = ER_OK;  /* The sequence can be empty since CA is false by default */
             } else if (opt.size()) {
-                status = Crypto_ASN1::Decode(opt, "z", &ca);
+                /* do not parse the path len field */
+                status = Crypto_ASN1::Decode(opt, "z*", &ca);
                 if (ER_OK != status) {
                     return status;
                 }
