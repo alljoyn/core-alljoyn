@@ -107,18 +107,18 @@ class CachedProps {
     const InterfaceDescription* description;
     bool isFullyCacheable;
     size_t numProperties;
-
+    uint32_t currentMessageSerial;
     bool IsCacheable(const char* propname);
 
   public:
     CachedProps() :
         lock(), values(), description(NULL),
         isFullyCacheable(false),
-        numProperties(0) { }
+        numProperties(0), currentMessageSerial(0) { }
 
     CachedProps(const InterfaceDescription*intf) :
         lock(), values(), description(intf),
-        isFullyCacheable(false) {
+        isFullyCacheable(false), currentMessageSerial(0) {
         numProperties = description->GetProperties();
         if (numProperties > 0) {
             isFullyCacheable = true;
@@ -137,7 +137,7 @@ class CachedProps {
     CachedProps(const CachedProps& other) :
         lock(), values(other.values), description(other.description),
         isFullyCacheable(other.isFullyCacheable),
-        numProperties(other.numProperties) { }
+        numProperties(other.numProperties), currentMessageSerial(other.currentMessageSerial) { }
 
     CachedProps& operator=(const CachedProps& other) {
         if (&other != this) {
@@ -153,9 +153,9 @@ class CachedProps {
 
     bool Get(const char* propname, MsgArg& val);
     bool GetAll(MsgArg& val);
-    void Set(const char* propname, const MsgArg& val);
-    void SetAll(const MsgArg& allValues);
-    void PropertiesChanged(MsgArg* changed, size_t numChanged, MsgArg* invalidated, size_t numInvalidated);
+    void Set(const char* propname, const MsgArg& val, const uint32_t messageSerial);
+    void SetAll(const MsgArg& allValues, const uint32_t messageSerial);
+    void PropertiesChanged(MsgArg* changed, size_t numChanged, MsgArg* invalidated, size_t numInvalidated, const uint32_t messageSerial);
 };
 
 
@@ -405,7 +405,7 @@ QStatus ProxyBusObject::GetAllProperties(const char* iface, MsgArg& value, uint3
                 if (internal->cacheProperties) {
                     map<qcc::StringMapKey, CachedProps>::iterator it = internal->caches.find(iface);
                     if (it != internal->caches.end()) {
-                        it->second.SetAll(value);
+                        it->second.SetAll(value, reply->GetCallSerial());
                     }
                 }
                 internal->lock.Unlock(MUTEX_CONTEXT);
@@ -428,7 +428,7 @@ void ProxyBusObject::GetAllPropsMethodCB(Message& message, void* context)
         if (internal->cacheProperties) {
             map<qcc::StringMapKey, CachedProps>::iterator it = internal->caches.find(iface);
             if (it != internal->caches.end()) {
-                it->second.SetAll(*message->GetArg(0));
+                it->second.SetAll(*message->GetArg(0), message->GetCallSerial());
             }
         }
         internal->lock.Unlock(MUTEX_CONTEXT);
@@ -561,7 +561,7 @@ QStatus ProxyBusObject::GetProperty(const char* iface, const char* property, Msg
                 if (internal->cacheProperties) {
                     map<qcc::StringMapKey, CachedProps>::iterator it = internal->caches.find(iface);
                     if (it != internal->caches.end()) {
-                        it->second.Set(property, value);
+                        it->second.Set(property, value, reply->GetCallSerial());
                     }
                 }
                 internal->lock.Unlock(MUTEX_CONTEXT);
@@ -585,7 +585,7 @@ void ProxyBusObject::GetPropMethodCB(Message& message, void* context)
         if (internal->cacheProperties) {
             map<qcc::StringMapKey, CachedProps>::iterator it = internal->caches.find(iface);
             if (it != internal->caches.end()) {
-                it->second.Set(property, *message->GetArg(0));
+                it->second.Set(property, *message->GetArg(0), message->GetCallSerial());
             }
         }
         internal->lock.Unlock(MUTEX_CONTEXT);
@@ -863,7 +863,7 @@ void ProxyBusObject::Internal::PropertiesChangedHandler(const InterfaceDescripti
     if (cacheProperties) {
         map<StringMapKey, CachedProps>::iterator it = caches.find(ifaceName);
         if (it != caches.end()) {
-            it->second.PropertiesChanged(changedProps, numChangedProps, invalidProps, numInvalidProps);
+            it->second.PropertiesChanged(changedProps, numChangedProps, invalidProps, numInvalidProps, message->GetCallSerial());
         }
     }
 
@@ -1895,17 +1895,23 @@ bool CachedProps::IsCacheable(const char* propname)
     return (prop != NULL && prop->cacheable);
 }
 
-void CachedProps::Set(const char* propname, const MsgArg& val)
+void CachedProps::Set(const char* propname, const MsgArg& val, const uint32_t messageSerial)
 {
     if (!IsCacheable(propname)) {
         return;
     }
+
     lock.Lock(MUTEX_CONTEXT);
-    values[qcc::String(propname)] = val;
+    if (messageSerial <= currentMessageSerial) {
+        values.clear();
+    } else {
+        values[qcc::String(propname)] = val;
+        currentMessageSerial = messageSerial;
+    }
     lock.Unlock(MUTEX_CONTEXT);
 }
 
-void CachedProps::SetAll(const MsgArg& allValues)
+void CachedProps::SetAll(const MsgArg& allValues, const uint32_t messageSerial)
 {
     lock.Lock(MUTEX_CONTEXT);
 
@@ -1913,6 +1919,11 @@ void CachedProps::SetAll(const MsgArg& allValues)
     MsgArg* elems;
     QStatus status = allValues.Get("a{sv}", &nelem, &elems);
     if (status != ER_OK) {
+        goto error;
+    }
+
+    if (messageSerial <= currentMessageSerial) {
+        status = ER_FAIL;
         goto error;
     }
 
@@ -1929,22 +1940,30 @@ void CachedProps::SetAll(const MsgArg& allValues)
         }
     }
 
+    currentMessageSerial = messageSerial;
+
     lock.Unlock(MUTEX_CONTEXT);
     return;
 
 error:
     /* We can't make sense of the property values for some reason.
      * Play it safe and invalidate all properties */
-    QCC_LogError(status, ("Failed to parse GetAll return value. Invalidating property cache."));
+    QCC_LogError(status, ("Failed to parse GetAll return value or inconsistent message serial number. Invalidating property cache."));
     values.clear();
     lock.Unlock(MUTEX_CONTEXT);
 }
 
-void CachedProps::PropertiesChanged(MsgArg* changed, size_t numChanged, MsgArg* invalidated, size_t numInvalidated)
+void CachedProps::PropertiesChanged(MsgArg* changed, size_t numChanged, MsgArg* invalidated, size_t numInvalidated, const uint32_t messageSerial)
 {
     lock.Lock(MUTEX_CONTEXT);
 
     QStatus status;
+
+    if (messageSerial <= currentMessageSerial) {
+        status = ER_FAIL;
+        goto error;
+    }
+
     for (size_t i = 0; i < numChanged; ++i) {
         const char* prop;
         MsgArg* val;
@@ -1967,14 +1986,17 @@ void CachedProps::PropertiesChanged(MsgArg* changed, size_t numChanged, MsgArg* 
         values.erase(prop);
     }
 
+    currentMessageSerial = messageSerial;
+
     lock.Unlock(MUTEX_CONTEXT);
     return;
 
 error:
     /* We can't make sense of the property update signal for some reason.
      * Play it safe and invalidate all properties */
-    QCC_LogError(status, ("Failed to parse PropertiesChanged signal. Invalidating property cache."));
+    QCC_LogError(status, ("Failed to parse PropertiesChanged signal or inconsistent message serial number. Invalidating property cache."));
     values.clear();
     lock.Unlock(MUTEX_CONTEXT);
 }
+
 }
