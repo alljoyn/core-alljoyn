@@ -19,9 +19,14 @@
 
 using namespace ajn;
 
+AJNBusObjectImpl::AJNBusObjectImpl(const char* path, id<AJNBusObject> aDelegate) : BusObject(path), delegate(aDelegate)
+{
+
+}
+
 AJNBusObjectImpl::AJNBusObjectImpl(BusAttachment& bus, const char* path, id<AJNBusObject> aDelegate) : BusObject(path), delegate(aDelegate)
 {
-    
+
 }
 
 QStatus AJNBusObjectImpl::RegisterSignalHandlers(ajn::BusAttachment &bus)
