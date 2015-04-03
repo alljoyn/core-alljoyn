@@ -128,6 +128,8 @@ typedef enum AJNAnnounceFlag{
 
 - (id)initWithBusAttachment:(AJNBusAttachment *)busAttachment onPath:(NSString *)path;
 
+- (QStatus)registerInterfacesWithBus:(AJNBusAttachment *)busAttachment;
+
 - (void)objectWasRegistered;
 
 - (void)setDescription:(NSString*)description inLanguage:(NSString*)language;
