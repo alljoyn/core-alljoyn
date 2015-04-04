@@ -509,6 +509,12 @@ void <xsl:value-of select="../annotation[@name='org.alljoyn.lang.objc']/@value"/
 
     if (status != ER_OK) {
         NSLog(@"ERROR: Failed to get property <xsl:value-of select="@name"/> on interface <xsl:value-of select="../@name"/>. %@", [AJNStatus descriptionForStatusCode:status]);
+        <xsl:if test="@type='b'">
+        return NO;
+        </xsl:if>
+        <xsl:if test="not(@type='b')">
+        return nil;
+        </xsl:if>
     }
 
     <xsl:apply-templates select="." mode="objc-prop-accessor-return"/>
@@ -520,6 +526,8 @@ void <xsl:value-of select="../annotation[@name='org.alljoyn.lang.objc']/@value"/
 
     if (status != ER_OK) {
         NSLog(@"ERROR: Failed to get property <xsl:value-of select="@name"/> on interface <xsl:value-of select="../@name"/>. %@", [AJNStatus descriptionForStatusCode:status]);
+
+        return nil;
     }
     
     return [[AJNMessageArgument alloc] initWithHandle:propValue shouldDeleteHandleOnDealloc:YES];
@@ -1373,7 +1381,7 @@ QStatus <xsl:value-of select="../../annotation[@name='org.alljoyn.lang.objc']/@v
             <xsl:text>NSString*</xsl:text>
         </xsl:when>
         <xsl:when test="@type='o'">
-            <xsl:text>NString*</xsl:text>
+            <xsl:text>NSString*</xsl:text>
         </xsl:when>
         <xsl:when test="@type='a'">
             <xsl:text>NSArray*</xsl:text>
