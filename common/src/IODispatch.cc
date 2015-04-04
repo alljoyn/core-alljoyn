@@ -877,6 +877,11 @@ QStatus IODispatch::DisableWriteCallback(const Sink* sink)
     return ER_OK;
 }
 
+bool IODispatch::IsTimerCallbackThread() const
+{
+    return timer.IsTimerCallbackThread();
+}
+
 void IODispatch::UpdateIdleInformation(bool isStarting)
 {
     if (isStarting) {
