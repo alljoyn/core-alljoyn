@@ -1097,8 +1097,9 @@ void <xsl:value-of select="../../annotation[@name='org.alljoyn.lang.objc']/@valu
             <xsl:text>&#13;&#10;&#09;</xsl:text>[(id&lt;<xsl:value-of select="../annotation[@name='org.alljoyn.lang.objc']/@value"/>&gt;)delegate <xsl:choose><xsl:when test="count(arg[@direction='in']) > 0"><xsl:apply-templates select="arg[@direction='in']" mode="objc-messageCall"/>  message:[[AJNMessage alloc] initWithHandle:&#38;msg]</xsl:when><xsl:otherwise><xsl:call-template name="uncapitalizeFirstLetterOfNameAttr"/>:[[AJNMessage alloc] initWithHandle:&#38;msg]</xsl:otherwise></xsl:choose>];            
         </xsl:when>
     </xsl:choose>
-
-    <xsl:if test="count(arg[@direction='out']) > 0">
+    
+    <xsl:choose>
+        <xsl:when test="count(arg[@direction='out']) > 0">
     // formulate the reply
     //
     MsgArg outArgs[<xsl:value-of select="count(arg[@direction='out'])"/>];
@@ -1106,8 +1107,18 @@ void <xsl:value-of select="../../annotation[@name='org.alljoyn.lang.objc']/@valu
     QStatus status = MethodReply(msg, outArgs, <xsl:value-of select="count(arg[@direction='out'])"/>);
     if (ER_OK != status) {
         NSLog(@"ERROR: An error occurred when attempting to send a method reply for <xsl:value-of select="@name"/>. %@", [AJNStatus descriptionForStatusCode:status]);
-    }        
-    </xsl:if>
+    }  
+        </xsl:when>
+        <xsl:otherwise>
+    // formulate the reply
+    //
+    MsgArg outArgs[0];
+    QStatus status = MethodReply(msg, outArgs, 0);
+    if (ER_OK != status) {
+        NSLog(@"ERROR: An error occurred when attempting to send a method reply for <xsl:value-of select="@name"/>. %@", [AJNStatus descriptionForStatusCode:status]);
+    }  
+        </xsl:otherwise>
+    </xsl:choose>
     
     }
 }
