@@ -1616,8 +1616,6 @@ void AllJoynPeerObj::SetupPeerAuthentication(const qcc::String& authMechanisms, 
             count++;
         } else if (mech == "ALLJOYN_SRP_LOGON") {
             count++;
-        } else if (mech == "ALLJOYN_RSA_KEYX") {
-            count++;
         } else if (mech == "ALLJOYN_ECDHE_NULL") {
             count++;
         } else if (mech == "ALLJOYN_ECDHE_PSK") {
@@ -1654,8 +1652,6 @@ void AllJoynPeerObj::SetupPeerAuthentication(const qcc::String& authMechanisms, 
             supportedAuthSuites[idx++] = AUTH_SUITE_SRP_KEYX;
         } else if (mech == "ALLJOYN_SRP_LOGON") {
             supportedAuthSuites[idx++] = AUTH_SUITE_SRP_LOGON;
-        } else if (mech == "ALLJOYN_RSA_KEYX") {
-            supportedAuthSuites[idx++] = AUTH_SUITE_RSA_KEYX;
         } else if (mech == "ALLJOYN_ECDHE_NULL") {
             supportedAuthSuites[idx++] = AUTH_SUITE_ECDHE_NULL;
         } else if (mech == "ALLJOYN_ECDHE_PSK") {
