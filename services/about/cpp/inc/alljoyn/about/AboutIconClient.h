@@ -99,14 +99,17 @@ class AboutIconClient {
          */
         MsgArg m_arg;
     };
+
     /**
      * Construct an AboutIconClient.
      *
      * @deprecated The AboutIconClient class has been deprecated please see the
      * AboutIconProxy class for similar functionality.
+     *
      * @param bus reference to BusAttachment
      */
     QCC_DEPRECATED(AboutIconClient(ajn::BusAttachment& bus));
+
     /**
      * Destruct AboutIconClient.
      *

@@ -34,8 +34,10 @@ extern "C" {
  * alljoyn_message for parsing and generating message bus messages
  */
 typedef struct _alljoyn_message_handle*                     alljoyn_message;
+/// @cond ALLJOYN_DEV
 #ifndef _ALLJOYN_OPAQUE_BUSATTACHMENT_
 #define _ALLJOYN_OPAQUE_BUSATTACHMENT_
+/// @endcond
 /**
  * alljoyn_busattachment is the top level object responsible for connecting to and
  * managing an AllJoyn message bus
@@ -427,5 +429,4 @@ extern AJ_API void AJ_CALL alljoyn_message_setendianess(const char endian);
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
-
-#endif
+#endif //_ALLJOYN_C_MESSAGE_H

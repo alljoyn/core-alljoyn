@@ -1,5 +1,6 @@
 /**
- * @file Functions required to startup and cleanup AllJoyn.
+ * @file
+ * Functions required to startup and cleanup AllJoyn.
  */
 
 /******************************************************************************
@@ -32,6 +33,10 @@ extern "C" {
  * functionality.
  *
  * This function is not thread-safe.
+ *
+ * @return
+ *  - #ER_OK on success
+ *  - error code indicating failure otherwise
  */
 extern AJ_API QStatus AJ_CALL AllJoynInit(void);
 
@@ -40,6 +45,9 @@ extern AJ_API QStatus AJ_CALL AllJoynInit(void);
  * functionality may be used after calling this.
  *
  * This function is not thread-safe.
+ * @return
+ *  - #ER_OK on success
+ *  - error code indicating failure otherwise
  */
 extern AJ_API QStatus AJ_CALL AllJoynShutdown(void);
 
@@ -54,6 +62,10 @@ extern AJ_API QStatus AJ_CALL AllJoynShutdown(void);
  * @endcode
  *
  * This function is not thread-safe.
+ *
+ * @return
+ *  - #ER_OK on success
+ *  - error code indicating failure otherwise
  */
 extern AJ_API QStatus AJ_CALL AllJoynRouterInit(void);
 
@@ -68,6 +80,10 @@ extern AJ_API QStatus AJ_CALL AllJoynRouterInit(void);
  * @endcode
  *
  * This function is not thread-safe.
+ *
+ * @return
+ *  - #ER_OK on success
+ *  - error code indicating failure otherwise
  */
 extern AJ_API QStatus AJ_CALL AllJoynRouterShutdown(void);
 

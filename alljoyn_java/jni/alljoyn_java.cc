@@ -2166,7 +2166,7 @@ class JBusObject : public BusObject {
   public:
     JBusObject(JBusAttachment* jbap, const char* path, jobject jobj);
     ~JBusObject();
-    QStatus AddInterfaces(jobjectArray jbusInterfaces);
+    QStatus AddInterfaces(const jobjectArray jbusInterfaces);
     void MethodHandler(const InterfaceDescription::Member* member, Message& msg);
     QStatus MethodReply(const InterfaceDescription::Member* member, Message& msg, QStatus status);
     QStatus MethodReply(const InterfaceDescription::Member* member, const Message& msg, const char* error, const char* errorMessage = NULL);
@@ -8724,7 +8724,7 @@ JBusObject::~JBusObject()
     busPtr = NULL;
 }
 
-QStatus JBusObject::AddInterfaces(jobjectArray jbusInterfaces)
+QStatus JBusObject::AddInterfaces(const jobjectArray jbusInterfaces)
 {
     QCC_DbgPrintf(("JBusObject::AddInterfaces()"));
 

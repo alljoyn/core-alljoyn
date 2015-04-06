@@ -32,6 +32,11 @@
 extern "C" {
 #endif
 
+/**
+ * alljoyn_abouticonobj is an AllJoyn BusObject that implements the
+ * org.alljoyn.Icon standard interface. Applications that provide AllJoyn IoE
+ * services to receive info about the Icon of the service.
+ */
 typedef struct _alljoyn_abouticonobj_handle* alljoyn_abouticonobj;
 
 /**
@@ -48,7 +53,7 @@ extern AJ_API alljoyn_abouticonobj AJ_CALL alljoyn_abouticonobj_create(alljoyn_b
 /**
  * Free an alljoyn_abouticonobj object.
  *
- * @param data the alljoyn_abouticonobj to be freed.
+ * @param icon the alljoyn_abouticonobj to be freed.
  */
 extern AJ_API void AJ_CALL alljoyn_abouticonobj_destroy(alljoyn_abouticonobj icon);
 

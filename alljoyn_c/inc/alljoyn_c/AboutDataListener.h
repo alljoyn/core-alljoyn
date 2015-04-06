@@ -112,7 +112,13 @@ typedef QStatus (AJ_CALL * alljoyn_aboutdatalistener_getannouncedaboutdata_ptr)(
  * Struct containing callbacks used for creation of an alljoyn_aboutdatalistener.
  */
 typedef struct {
+    /**
+     * Handler to get the complete alljoyn_aboutdata for a given language
+     */
     alljoyn_aboutdatalistener_getaboutdata_ptr about_datalistener_getaboutdata;
+    /**
+     * Handler to get the announced alljoyn_aboutdata for the default language
+     */
     alljoyn_aboutdatalistener_getannouncedaboutdata_ptr about_datalistener_getannouncedaboutdata;
 } alljoyn_aboutdatalistener_callbacks;
 
