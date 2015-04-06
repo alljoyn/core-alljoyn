@@ -393,43 +393,6 @@ class LocalTestObject : public BusObject {
     const InterfaceDescription::Member* my_signal_member;
 };
 
-
-static const char x509cert[] = {
-    "-----BEGIN CERTIFICATE-----\n"
-    "MIIBszCCARwCCQDuCh+BWVBk2DANBgkqhkiG9w0BAQUFADAeMQ0wCwYDVQQKDARN\n"
-    "QnVzMQ0wCwYDVQQDDARHcmVnMB4XDTEwMDUxNzE1MTg1N1oXDTExMDUxNzE1MTg1\n"
-    "N1owHjENMAsGA1UECgwETUJ1czENMAsGA1UEAwwER3JlZzCBnzANBgkqhkiG9w0B\n"
-    "AQEFAAOBjQAwgYkCgYEArSd4r62mdaIRG9xZPDAXfImt8e7GTIyXeM8z49Ie1mrQ\n"
-    "h7roHbn931Znzn20QQwFD6pPC7WxStXJVH0iAoYgzzPsXV8kZdbkLGUMPl2GoZY3\n"
-    "xDSD+DA3m6krcXcN7dpHv9OlN0D9Trc288GYuFEENpikZvQhMKPDUAEkucQ95Z8C\n"
-    "AwEAATANBgkqhkiG9w0BAQUFAAOBgQBkYY6zzf92LRfMtjkKs2am9qvjbqXyDJLS\n"
-    "viKmYe1tGmNBUzucDC5w6qpPCTSe23H2qup27///fhUUuJ/ssUnJ+Y77jM/u1O9q\n"
-    "PIn+u89hRmqY5GKHnUSZZkbLB/yrcFEchHli3vLo4FOhVVHwpnwLtWSpfBF9fWcA\n"
-    "7THIAV79Lg==\n"
-    "-----END CERTIFICATE-----"
-};
-
-static const char privKey[] = {
-    "-----BEGIN RSA PRIVATE KEY-----\n"
-    "Proc-Type: 4,ENCRYPTED\n"
-    "DEK-Info: AES-128-CBC,0AE4BAB94CEAA7829273DD861B067DBA\n"
-    "\n"
-    "LSJOp+hEzNDDpIrh2UJ+3CauxWRKvmAoGB3r2hZfGJDrCeawJFqH0iSYEX0n0QEX\n"
-    "jfQlV4LHSCoGMiw6uItTof5kHKlbp5aXv4XgQb74nw+2LkftLaTchNs0bW0TiGfQ\n"
-    "XIuDNsmnZ5+CiAVYIKzsPeXPT4ZZSAwHsjM7LFmosStnyg4Ep8vko+Qh9TpCdFX8\n"
-    "w3tH7qRhfHtpo9yOmp4hV9Mlvx8bf99lXSsFJeD99C5GQV2lAMvpfmM8Vqiq9CQN\n"
-    "9OY6VNevKbAgLG4Z43l0SnbXhS+mSzOYLxl8G728C6HYpnn+qICLe9xOIfn2zLjm\n"
-    "YaPlQR4MSjHEouObXj1F4MQUS5irZCKgp4oM3G5Ovzt82pqzIW0ZHKvi1sqz/KjB\n"
-    "wYAjnEGaJnD9B8lRsgM2iLXkqDmndYuQkQB8fhr+zzcFmqKZ1gLRnGQVXNcSPgjU\n"
-    "Y0fmpokQPHH/52u+IgdiKiNYuSYkCfHX1Y3nftHGvWR3OWmw0k7c6+DfDU2fDthv\n"
-    "3MUSm4f2quuiWpf+XJuMB11px1TDkTfY85m1aEb5j4clPGELeV+196OECcMm4qOw\n"
-    "AYxO0J/1siXcA5o6yAqPwPFYcs/14O16FeXu+yG0RPeeZizrdlv49j6yQR3JLa2E\n"
-    "pWiGR6hmnkixzOj43IPJOYXySuFSi7lTMYud4ZH2+KYeK23C2sfQSsKcLZAFATbq\n"
-    "DY0TZHA5lbUiOSUF5kgd12maHAMidq9nIrUpJDzafgK9JrnvZr+dVYM6CiPhiuqJ\n"
-    "bXvt08wtKt68Ymfcx+l64mwzNLS+OFznEeIjLoaHU4c=\n"
-    "-----END RSA PRIVATE KEY-----"
-};
-
 class MyAuthListener : public AuthListener {
   public:
 
@@ -453,19 +416,6 @@ class MyAuthListener : public AuthListener {
             return true;
         }
 
-        if (strcmp(authMechanism, "ALLJOYN_RSA_KEYX") == 0) {
-            if (credMask & AuthListener::CRED_CERT_CHAIN) {
-                creds.SetCertChain(x509cert);
-            }
-            if (credMask & AuthListener::CRED_PRIVATE_KEY) {
-                creds.SetPrivateKey(privKey);
-            }
-            if (credMask & AuthListener::CRED_PASSWORD) {
-                creds.SetPassword("123456");
-            }
-            return true;
-        }
-
         if (strcmp(authMechanism, "ALLJOYN_SRP_LOGON") == 0) {
             if (credMask & AuthListener::CRED_USER_NAME) {
                 creds.SetUserName(userName);
@@ -480,14 +430,10 @@ class MyAuthListener : public AuthListener {
     }
 
     bool VerifyCredentials(const char* authMechanism, const char* authPeer, const Credentials& creds) {
+        QCC_UNUSED(authMechanism);
         QCC_UNUSED(authPeer);
-
-        if (strcmp(authMechanism, "ALLJOYN_RSA_KEYX") == 0) {
-            if (creds.IsSet(AuthListener::CRED_CERT_CHAIN)) {
-                printf("Verify\n%s\n", creds.GetCertChain().c_str());
-                return true;
-            }
-        }
+        QCC_UNUSED(creds);
+        /* Not used with SRP*/
         return false;
     }
 
@@ -544,7 +490,7 @@ static void usage(void)
     printf("   -t #                        = TTL for the signals\n");
     printf("   --tcp                       = Advertise and discover using the TCP transport\n");
     printf("   --udp                       = Advertise and discover using the UDP transport\n");
-    printf("   -e[k] [RSA|SRP|LOGON]       = Encrypt the test interface using specified auth mechanism, -ek means clear keys\n");
+    printf("   -e[k] [SRP|LOGON]       = Encrypt the test interface using specified auth mechanism, -ek means clear keys\n");
     printf("   -d                          = discover remote bus with test service\n");
     printf("   -b                          = Signal is broadcast rather than multicast\n");
     printf("   --ls                        = Call LeaveSession before tearing down the Bus Attachment\n");
@@ -684,10 +630,7 @@ int CDECL_CALL main(int argc, char** argv)
             clearKeys |= (argv[i][2] == 'k');
             ++i;
             if (i != argc) {
-                if (strcmp(argv[i], "RSA") == 0) {
-                    authMechs += "ALLJOYN_RSA_KEYX";
-                    ok = true;
-                } else if (strcmp(argv[i], "SRP") == 0) {
+                if (strcmp(argv[i], "SRP") == 0) {
                     authMechs += "ALLJOYN_SRP_KEYX";
                     ok = true;
                 } else if (strcmp(argv[i], "LOGON") == 0) {

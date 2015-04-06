@@ -66,7 +66,8 @@ class IfConfigEntry {
 typedef enum {
     QCC_RTM_IGNORED = -1,
     QCC_RTM_DELADDR = 0,
-    QCC_RTM_NEWADDR = 1
+    QCC_RTM_NEWADDR = 1,
+    QCC_RTM_SUSPEND = 2
 } NetworkEventType;
 
 const uint32_t QCC_AF_UNSPEC_INDEX = 0x0;

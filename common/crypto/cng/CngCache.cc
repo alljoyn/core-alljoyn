@@ -36,7 +36,7 @@
 
 namespace qcc {
 
-CngCache::CngCache() : ccmHandle(NULL), ecbHandle(NULL), rsaHandle(NULL)
+CngCache::CngCache() : ccmHandle(NULL), ecbHandle(NULL)
 {
     assert(sizeof(algHandles) == (sizeof(BCRYPT_ALG_HANDLE) * ALGORITHM_COUNT * 2));
     memset(&algHandles, 0, sizeof(algHandles));
@@ -77,7 +77,6 @@ void CngCache::Cleanup()
     }
     CloseAlgorithmProvider(&ccmHandle);
     CloseAlgorithmProvider(&ecbHandle);
-    CloseAlgorithmProvider(&rsaHandle);
     for (int i = 0; i < ECDSA_ALGORITHM_COUNT; ++i) {
         CloseAlgorithmProvider(&ecdsaHandles[i]);
     }

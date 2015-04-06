@@ -384,6 +384,13 @@ void _NamedPipeDaemonEndpoint::AuthenticationWorker(_Inout_ PTP_CALLBACK_INSTANC
                 }
             }
 
+            if (sidAndAttributes != nullptr) {
+                for (uint32_t i = 0; i < numAppContainers; i++) {
+                    HeapFree(GetProcessHeap(), 0, sidAndAttributes[i].Sid);
+                }
+                HeapFree(GetProcessHeap(), 0, sidAndAttributes);
+            }
+
             /*
              * Universal Windows apps will have a unique user ID constructed for each application. This ID will be
              * based on the app container SID and the user SID to ensure that multiple users running the same
