@@ -222,6 +222,13 @@ class TimerImpl : public ThreadListener {
     const qcc::String& GetName() const;
 
     /**
+     * Check whether or not the current thread belongs to this timer instance.
+     *
+     * @return true if the current thread is a timer thread from this instance
+     */
+    bool IsTimerCallbackThread() const;
+
+    /**
      * Check whether the current TimerThread is holding the lock
      *
      * @return true if the current thread is a timer thread that holds the reentrancy lock
@@ -1095,6 +1102,20 @@ void TimerImpl::EnableReentrancy()
     }
 }
 
+bool TimerImpl::IsTimerCallbackThread() const
+{
+    bool result = false;
+    lock.Lock();
+    for (size_t i = 0; i < timerThreads.size(); ++i) {
+        if ((timerThreads[i] != NULL) && (timerThreads[i] == Thread::GetThread())) {
+            result = true;
+            break;
+        }
+    }
+    lock.Unlock();
+    return result;
+}
+
 bool TimerImpl::ThreadHoldsLock() const
 {
     Thread* thread = Thread::GetThread();
@@ -1189,5 +1210,10 @@ void Timer::EnableReentrancy()
 bool Timer::IsHoldingReentrantLock() const
 {
     return timerImpl->ThreadHoldsLock();
+}
+
+bool Timer::IsTimerCallbackThread() const
+{
+    return timerImpl->IsTimerCallbackThread();
 }
 

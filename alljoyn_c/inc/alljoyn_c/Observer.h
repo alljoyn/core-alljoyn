@@ -120,7 +120,13 @@ typedef void (AJ_CALL * alljoyn_observer_object_lost_ptr)(const void* context,
  * The callbacks used for creation of an alljoyn_observerlistener.
  */
 typedef struct {
+    /**
+     * A new object has been discovered.
+     */
     alljoyn_observer_object_discovered_ptr object_discovered;
+    /**
+     * A previously discovered object has been lost.
+     */
     alljoyn_observer_object_lost_ptr object_lost;
 } alljoyn_observerlistener_callback;
 

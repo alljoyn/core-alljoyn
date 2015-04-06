@@ -33,6 +33,16 @@
 extern "C" {
 #endif
 
+/**
+ * alljoyn_aboutproxy give proxy access to the org.alljoyn.About interface
+ * alljoyn_aboutproxy object enables the user to interact with the remote
+ * alljoyn_aboutobj instances.
+ *
+ * This exposes the following org.alljoyn.About methods:
+ * - GetObjectDescriptions
+ * - GetAboutData
+ * - GetVersion
+ */
 typedef struct _alljoyn_aboutproxy_handle* alljoyn_aboutproxy;
 
 /**
@@ -51,14 +61,15 @@ extern AJ_API alljoyn_aboutproxy AJ_CALL alljoyn_aboutproxy_create(alljoyn_busat
 /**
  * Free an alljoyn_aboutproxy object.
  *
- * @param proxy The alljoyn_aboutproxy to be freed.
+ * @param proxy The alljoyn_aboutproxy to be freed
  */
 extern AJ_API void AJ_CALL alljoyn_aboutproxy_destroy(alljoyn_aboutproxy proxy);
 
 /**
  * Get the ObjectDescription array for specified bus name.
  *
- * @param[out] objectDescs Description of busName's remote objects.
+ * @param[in]  proxy       The alljoyn_aboutproxy object to get object description from
+ * @param[out] objectDesc  Description of busName's remote objects.
  *
  * @return
  *   - ER_OK if successful.
@@ -70,6 +81,7 @@ extern AJ_API QStatus AJ_CALL alljoyn_aboutproxy_getobjectdescription(alljoyn_ab
 /**
  * Get the About data for specified bus name.
  *
+ * @param[in]  proxy   The alljoyn_aboutproxy object to get the about data from
  * @param[in] language the language used to request the About data.
  * @param[out] data    reference of About data that is filled by the function
  *
@@ -85,6 +97,7 @@ extern AJ_API QStatus AJ_CALL alljoyn_aboutproxy_getaboutdata(alljoyn_aboutproxy
 /**
  * GetVersion get the About version
  *
+ * @param[in]  proxy   The alljoyn_aboutproxy object to get the version from
  * @param[out] version of the service.
  *
  * @return ER_OK on success

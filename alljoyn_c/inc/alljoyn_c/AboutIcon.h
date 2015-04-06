@@ -29,6 +29,9 @@
 extern "C" {
 #endif
 
+/**
+ * container to hold information about the Icon
+ */
 typedef struct _alljoyn_abouticon_handle* alljoyn_abouticon;
 
 /**
@@ -40,7 +43,7 @@ extern AJ_API alljoyn_abouticon AJ_CALL alljoyn_abouticon_create();
 /**
  * Free an alljoyn_abouticon object.
  *
- * @param data the alljoyn_abouticon to be freed.
+ * @param icon the alljoyn_abouticon to be freed.
  */
 extern AJ_API void AJ_CALL alljoyn_abouticon_destroy(alljoyn_abouticon icon);
 
@@ -84,6 +87,9 @@ extern AJ_API QStatus AJ_CALL alljoyn_abouticon_setcontent(alljoyn_abouticon ico
  *                     value will be `image/jpeg` or `image/png`
  * @param[in] url      a URL that contain the location of the icon hosted in
  *                     the cloud.
+ * @return
+ *  - #ER_OK on success
+ *  - other status indicating failure
  */
 extern AJ_API QStatus AJ_CALL alljoyn_abouticon_seturl(alljoyn_abouticon icon,
                                                        const char* type,

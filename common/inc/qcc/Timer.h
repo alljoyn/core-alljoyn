@@ -181,6 +181,13 @@ class Timer {
     bool IsHoldingReentrantLock() const;
 
     /**
+     * Check whether or not the current thread belongs to this timer instance.
+     *
+     * @return true if the current thread is a timer thread from this instance
+     */
+    bool IsTimerCallbackThread() const;
+
+    /**
      * Get the name of the Timer thread pool
      *
      * @return the name of the timer thread(s)

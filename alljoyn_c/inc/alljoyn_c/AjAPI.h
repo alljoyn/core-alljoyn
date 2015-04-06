@@ -136,6 +136,9 @@ typedef int32_t QCC_BOOL;
 extern "C" {
 #endif
 
+/**
+ * Used to specify if an interface is part of an About announcement or not.
+ */
 typedef enum {
     UNANNOUNCED, ///< The interface is not announced
     ANNOUNCED    ///< The interface is announced

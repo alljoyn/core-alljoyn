@@ -29,16 +29,43 @@
 namespace qcc {
 
 /**
- * The X.509 OIDs
+ * @defgroup 509_oids X.509 OIDs
+ *
+ * The X.509 object identifiers OIDs
+ * @{
+ */
+/**
+ * The sha256ECDSA Hash Algorithm OID (1.2.840.10045.4.3.2)
  */
 extern const qcc::String OID_SIG_ECDSA_SHA256;
+/**
+ * The ECC Public Key OID (1.2.840.10045.4.3.2)
+ */
 extern const qcc::String OID_KEY_ECC;
+/**
+ * ECDSA_P256 Public Key OID (1.2.840.10045.3.1.7)
+ */
 extern const qcc::String OID_CRV_PRIME256V1;
+/**
+ * Organization Unit Name OID (2.5.4.11)
+ */
 extern const qcc::String OID_DN_OU;
+/**
+ * Common Name OID (2.5.4.3)
+ */
 extern const qcc::String OID_DN_CN;
+/**
+ * Basic Contraints OID (2.5.29.19)
+ */
 extern const qcc::String OID_BASIC_CONSTRAINTS;
+/**
+ * The sha256NoSign Hash Algorithm OID (2.16.840.1.101.3.4.2.1)
+ */
 extern const qcc::String OID_DIG_SHA256;
-
+/** @} */
+/**
+ * X.509 Certificate
+ */
 class CertificateX509 {
 
   public:
@@ -47,9 +74,9 @@ class CertificateX509 {
      * The validity period
      */
     struct ValidPeriod {
-        uint64_t validFrom; /* the date time when the cert becomes valid
+        uint64_t validFrom; /**< the date time when the cert becomes valid
                                 expressed in the number of seconds in EPOCH Jan 1, 1970 */
-        uint64_t validTo;  /* the date time after which the cert becomes invalid
+        uint64_t validTo;  /**< the date time after which the cert becomes invalid
                                 expressed in the number of seconds in EPOCH Jan 1, 1970 */
     };
 

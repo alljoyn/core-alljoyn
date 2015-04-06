@@ -36,7 +36,7 @@ namespace qcc {
 
 static const size_t ECC_COORDINATE_SZ = 8 * sizeof(uint32_t);
 
-/*
+/**
  * Empty ECC coordinate
  */
 static const uint8_t ECC_COORDINATE_EMPTY[ECC_COORDINATE_SZ] = { 0 };
@@ -44,18 +44,36 @@ static const uint8_t ECC_COORDINATE_EMPTY[ECC_COORDINATE_SZ] = { 0 };
 /**
  * The ECC private key big endian byte array
  */
-
 struct ECCPrivateKey {
+    /**
+     * The ECCPrivateKey data
+     */
     uint8_t d[ECC_COORDINATE_SZ];
+
+    /**
+     * ECCPrivateKey constructor
+     */
     ECCPrivateKey() {
         memset(d, 0, ECC_COORDINATE_SZ);
     }
 
+    /**
+     * the assign operator for the ECCPrivateKey
+     *
+     * @param[in] k the ECCPrivate key to assign
+     */
     void operator=(const ECCPrivateKey& k)
     {
         memcpy(d, k.d, ECC_COORDINATE_SZ);
     }
 
+    /**
+     * Equals operator for the ECCPrivateKey.
+     *
+     * @param[in] k the ECCPrivateKey to compare
+     *
+     * @return true if the ECCPrivateKeys are equal
+     */
     bool operator==(const ECCPrivateKey& k) const
     {
         return memcmp(d, k.d, ECC_COORDINATE_SZ) == 0;
@@ -66,7 +84,13 @@ struct ECCPrivateKey {
  * The ECC public key big endian byte array
  */
 struct ECCPublicKey {
+    /**
+     * The x coordinate of the elliptic curve
+     */
     uint8_t x[ECC_COORDINATE_SZ];
+    /**
+     * The y coordinate of the elliptic curve
+     */
     uint8_t y[ECC_COORDINATE_SZ];
 
     ECCPublicKey() {
@@ -74,23 +98,53 @@ struct ECCPublicKey {
         memset(y, 0, ECC_COORDINATE_SZ);
     }
 
+    /**
+     * Check to see if the ECCPublicKey is empty.
+     *
+     * @return true if the ECCPublicKey is empty
+     */
     bool empty() const
     {
         return (memcmp(x, ECC_COORDINATE_EMPTY, ECC_COORDINATE_SZ) == 0) &&
                (memcmp(y, ECC_COORDINATE_EMPTY, ECC_COORDINATE_SZ) == 0);
     }
 
+    /**
+     * Equals operator
+     *
+     * @param[in] k the ECCPublic key to compare
+     *
+     * @return true if the compared ECCPublicKeys are equal to each other
+     */
     bool operator==(const ECCPublicKey& k) const
     {
         int n = memcmp(x, k.x, ECC_COORDINATE_SZ);
         return (n == 0) && (0 == memcmp(y, k.y, ECC_COORDINATE_SZ));
     }
 
+    /**
+     * Not equals operator
+     *
+     * @param[in] k the ECCPublicKey to compare
+     *
+     * @return true if the compared ECCPublicKeys are not equal to each other
+     */
     bool operator!=(const ECCPublicKey& k) const
     {
         return !(*this == k);
     }
 
+    /**
+     * The less than operator for the ECCPublicKey
+     *
+     * The x coordinate are compared first. If the x coordinates match then
+     * the y coordinate is compared.
+     *
+     * @param[in] k the ECCPublicKey to compare
+     *
+     * @return True if the left ECCPublicKey is less than the right ECCPublicKey
+     * false otherwise.
+     */
     bool operator<(const ECCPublicKey& k) const
     {
         int n = memcmp(x, k.x, ECC_COORDINATE_SZ);
@@ -104,6 +158,11 @@ struct ECCPublicKey {
         }
     }
 
+    /**
+     * Assign operator for ECCPublicKey
+     *
+     * @param[in] k the ECCPublic key to assign
+     */
     void operator=(const ECCPublicKey& k)
     {
         memcpy(x, k.x, ECC_COORDINATE_SZ);
@@ -113,7 +172,7 @@ struct ECCPublicKey {
     /**
      * Exports the key to a byte array.
      * @param[in] data the array to store the data in
-     * @param[in, out] size provides the size of the passed buffer as input. On a  successfull return it
+     * @param[in,out] size provides the size of the passed buffer as input. On a  successfull return it
      *   will contain the actual amount of data stored
      *
      * @return ER_OK on success others on failure
@@ -128,6 +187,11 @@ struct ECCPublicKey {
      * @return ER_OK  on success others on failure
      */
     QStatus Import(const uint8_t* data, size_t size);
+    /**
+     * Return the ECCPublicKey to a string.
+     * @return
+     * the ECCPublicKey to a string.
+     */
     const qcc::String ToString() const;
 
 };
@@ -195,15 +259,29 @@ class ECCSecret {
  */
 
 struct ECCSignature {
+    /**
+     * The r value for the Elliptic Curve Digital Signature (r,s) signature pair
+     */
     uint8_t r[ECC_COORDINATE_SZ];
+    /**
+     * The s value for the Elliptic Curve Digital Signature (r,s) signature pair
+     */
     uint8_t s[ECC_COORDINATE_SZ];
 
+    /**
+     * ECCSignature constructor
+     *
+     * The Elliptic Curve Digital Signature (r,s) signature initialized to zero.
+     */
     ECCSignature() {
         memset(r, 0, ECC_COORDINATE_SZ);
         memset(s, 0, ECC_COORDINATE_SZ);
     }
 
-    ECCSignature& operator=(const ECCSignature& k)
+    /**
+     * The ECCSignature assign operator
+     */
+    void operator=(const ECCSignature& k)
     {
         memcpy(r, k.r, ECC_COORDINATE_SZ);
         memcpy(s, k.s, ECC_COORDINATE_SZ);

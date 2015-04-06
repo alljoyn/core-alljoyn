@@ -33,6 +33,10 @@ extern "C" {
  * functionality.
  *
  * This function is not thread-safe.
+ *
+ * @return
+ *  - #ER_OK on success
+ *  - error code indicating failure otherwise
  */
 extern AJ_API QStatus AJ_CALL alljoyn_init(void);
 
@@ -41,6 +45,10 @@ extern AJ_API QStatus AJ_CALL alljoyn_init(void);
  * functionality may be used after calling this.
  *
  * This function is not thread-safe.
+ *
+ * @return
+ *  - #ER_OK on success
+ *  - error code indicating failure otherwise
  */
 extern AJ_API QStatus AJ_CALL alljoyn_shutdown(void);
 
@@ -57,6 +65,10 @@ extern AJ_API QStatus AJ_CALL alljoyn_shutdown(void);
  * @endcode
  *
  * This function is not thread-safe.
+ *
+ * @return
+ *  - #ER_OK on success
+ *  - error code indicating failure otherwise
  */
 extern AJ_API QStatus AJ_CALL alljoyn_routerinit(void);
 
@@ -71,6 +83,10 @@ extern AJ_API QStatus AJ_CALL alljoyn_routerinit(void);
  * @endcode
  *
  * This function is not thread-safe.
+ *
+ * @return
+ *  - #ER_OK on success
+ *  - error code indicating failure otherwise
  */
 extern AJ_API QStatus AJ_CALL alljoyn_routershutdown(void);
 

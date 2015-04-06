@@ -295,7 +295,7 @@ QStatus CertificateX509::EncodeCertificateName(qcc::String& dn, CertificateX509:
         cn.assign((const char*) name.cn, name.cnLen);
     }
     if ((name.ouLen > 0) && (name.cnLen > 0)) {
-        return Crypto_ASN1::Encode(dn, "{(ou)(ou)}", &ouOID, &ou, &cnOID, &cn);
+        return Crypto_ASN1::Encode(dn, "{(ou)}{(ou)}", &ouOID, &ou, &cnOID, &cn);
     } else if (name.ouLen > 0) {
         return Crypto_ASN1::Encode(dn, "{(ou)}", &ouOID, &ou);
     } else if (name.cnLen > 0) {

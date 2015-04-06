@@ -27,8 +27,6 @@
 #include <qcc/Debug.h>
 #include <qcc/Crypto.h>
 #include <qcc/Util.h>
-#include <hmac_sha1.h>
-#include <sha2.h>
 
 #include <Status.h>
 
@@ -38,6 +36,22 @@ using namespace qcc;
 #define QCC_MODULE "CRYPTO"
 
 namespace qcc {
+
+/* External SHA code is only used in this file.
+ * Some of the function names are known to conflict with popular open source
+ * libraries, so it is best to not pollute the global namespace by including
+ * the code within this namespace block.
+ *
+ * __cplusplus is manipulated to skip 'extern "C"' in the included files.
+ */
+#undef __cplusplus
+#include "sha1.c"
+#include "hmac_sha1.c"
+#include "sha2.c"
+/* Note that __cplusplus cannot be used to detect the supported version of
+ * C++ in the remainder of this file.
+ */
+#define __cplusplus
 
 class Crypto_Hash::Context {
   public:
