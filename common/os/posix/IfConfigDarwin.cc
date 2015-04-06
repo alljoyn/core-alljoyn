@@ -410,6 +410,16 @@ static NetworkEventType NetworkEventRecv(qcc::SocketFd sockFd, char* buffer, int
                 uint32_t indexFamily = 0;
                 indexFamily |= (networkEvent->ifam_index << 2);
                 networkEvents.insert(indexFamily);
+            }
+            //
+            // If an app is suspended on darwin the network event type we get back has value 0
+            // Since 0 does not have an associated type constant with it we will use 0 directly in here
+            // If the event type has a value 0 it means that we need to inform the event about it.
+            // Using QCC_RTM_SUSPEND effectively means we are deleting and reseting the event whereever it
+            // is used
+            //
+            else if (networkEvent->ifam_type == 0) {
+                newEventType = QCC_RTM_SUSPEND;
             } else {
                 newEventType = QCC_RTM_IGNORED;
             }
