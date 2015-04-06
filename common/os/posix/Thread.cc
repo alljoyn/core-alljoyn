@@ -351,6 +351,7 @@ QStatus Thread::Start(void* arg, ThreadListener* listener)
             status = ER_OS_ERROR;
             QCC_LogError(status, ("Creating thread %s: %s", funcName, strerror(ret)));
         }
+        pthread_attr_destroy(&attr);
     }
     return status;
 }

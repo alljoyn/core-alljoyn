@@ -5221,9 +5221,9 @@ void* IpNameServiceImpl::Run(void* arg)
     qcc::SocketFd networkEventFd = qcc::INVALID_SOCKET_FD;
 #ifndef QCC_OS_GROUP_WINDOWS
     networkEventFd = qcc::NetworkEventSocket();
-    qcc::Event networkEvent(networkEventFd, qcc::Event::IO_READ);
+    qcc::Event* networkEvent = new Event(networkEventFd, qcc::Event::IO_READ);
 #else
-    qcc::Event networkEvent(true);
+    qcc::Event* networkEvent = new Event(true);
 #endif
 
     qcc::Timespec tNow, tLastLazyUpdate;
@@ -5327,7 +5327,7 @@ void* IpNameServiceImpl::Run(void* arg)
             checkEvents.push_back(&timerEvent);
         }
         checkEvents.push_back(&m_wakeEvent);
-        checkEvents.push_back(&networkEvent);
+        checkEvents.push_back(networkEvent);
         if (m_unicastEvent) {
             checkEvents.push_back(m_unicastEvent);
         }
@@ -5427,7 +5427,7 @@ void* IpNameServiceImpl::Run(void* arg)
                 // it.
                 //
                 m_wakeEvent.ResetEvent();
-            } else if (*i == &networkEvent) {
+            } else if (*i == networkEvent) {
                 QCC_DbgPrintf(("IpNameServiceImpl::Run(): Network event fired"));
 #ifndef QCC_OS_GROUP_WINDOWS
                 NetworkEventType eventType = qcc::NetworkEventReceive(networkEventFd, networkEvents);
@@ -5438,8 +5438,16 @@ void* IpNameServiceImpl::Run(void* arg)
                     m_forceLazyUpdate = true;
                     m_refreshAdvertisements = true;
                 }
+                if (eventType == QCC_RTM_SUSPEND) {
+                    qcc::Close(networkEventFd);
+                    networkEventFd = qcc::NetworkEventSocket();
+                    delete networkEvent;
+                    networkEvent = NULL;
+                    networkEvent = new Event(networkEventFd, qcc::Event::IO_READ);
+                    m_forceLazyUpdate = true;
+                }
 #else
-                networkEvent.ResetEvent();
+                networkEvent->ResetEvent();
                 m_forceLazyUpdate = true;
                 m_refreshAdvertisements = true;
 #endif
@@ -5478,7 +5486,19 @@ void* IpNameServiceImpl::Run(void* arg)
                     // On Windows ER_WOULBLOCK can be expected because it takes
                     // an initial call to recv to determine if the socket is readable.
                     //
-                    if (status != ER_WOULDBLOCK) {
+                    if (status == ER_OS_ERROR) {
+                        if (sockFd == m_ipv4UnicastSockFd) {
+                            if (m_unicastEvent) {
+                                delete m_unicastEvent;
+                                m_unicastEvent = NULL;
+                            }
+                            qcc::Close(m_ipv4UnicastSockFd);
+                            m_ipv4UnicastSockFd = INVALID_SOCKET_FD;
+                        }
+                        m_forceLazyUpdate = true;
+                        QCC_LogError(status, ("IpNameServiceImpl::Run(): qcc::RecvFrom(%d, ...): Failed", sockFd));
+                        continue;
+                    } else if (status != ER_WOULDBLOCK) {
                         QCC_LogError(status, ("IpNameServiceImpl::Run(): qcc::RecvFrom(%d, ...): Failed", sockFd));
                         qcc::Sleep(1);
                     }
