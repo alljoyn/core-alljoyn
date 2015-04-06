@@ -399,16 +399,17 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
             status = ifc->AddMember(MESSAGE_METHOD_CALL, "Off", NULL, NULL, NULL);
             EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
             ifc->Activate();
+
+            if (!addService) {
+                return;  /* done */
+            }
+            status = AddInterface(*ifc);
+            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+            AddMethodHandler(ifc->GetMember("On"), static_cast<MessageReceiver::MethodHandler>(&AuthListenerECDHETest::OnOffOn));
+            AddMethodHandler(ifc->GetMember("Off"), static_cast<MessageReceiver::MethodHandler>(&AuthListenerECDHETest::OnOffOff));
+            status = bus.RegisterBusObject(*this);
+            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         }
-        if (!addService) {
-            return;  /* done */
-        }
-        status = AddInterface(*ifc);
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-        AddMethodHandler(ifc->GetMember("On"), static_cast<MessageReceiver::MethodHandler>(&AuthListenerECDHETest::OnOffOn));
-        AddMethodHandler(ifc->GetMember("Off"), static_cast<MessageReceiver::MethodHandler>(&AuthListenerECDHETest::OnOffOff));
-        status = bus.RegisterBusObject(*this);
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     }
 
     BusAttachment clientBus;
