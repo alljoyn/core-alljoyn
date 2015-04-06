@@ -148,20 +148,15 @@ if commonenv['CRYPTO'] == 'builtin':
 status_src = ['Status.cc']
 
 
-srcs = commonenv.Glob('$OBJDIR_COMMON/*.cc') + commonenv.Glob('$OBJDIR_COMMON/os/*.cc') + commonenv.Glob('$OBJDIR_COMMON/crypto/*.cc') + commonenv.Glob('$OBJDIR_COMMON/crypto/*.c') + commonenv.Glob('$OBJDIR_COMMON/crypto/ECC/*.cc')
+srcs = commonenv.Glob('$OBJDIR_COMMON/*.cc') + commonenv.Glob('$OBJDIR_COMMON/os/*.cc') + commonenv.Glob('$OBJDIR_COMMON/crypto/*.cc') + commonenv.Glob('$OBJDIR_COMMON/crypto/ECC/*.cc')
 
 # Make sure Status never gets included from common for contained projects
 srcs = [ f for f in srcs if basename(str(f)) not in status_src ]
 
 static_objs = commonenv.Object(srcs)
 
-# Treat externals as part of common
-external_static_objs, external_shared_objs = env.SConscript(['../external/SConscript'])
-static_objs += external_static_objs
-
 if commonenv['LIBTYPE'] != 'static':
     shared_objs = commonenv.SharedObject(srcs)
-    shared_objs += external_shared_objs
 else:
     shared_objs = []
 

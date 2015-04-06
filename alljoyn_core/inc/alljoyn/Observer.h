@@ -31,11 +31,13 @@
 
 namespace ajn {
 
-/* The ProxyBusObjects created by the Observer need to be managed
-   by the Observer as well to avoid nasty issues with dangling pointers.
-   The easiest way out here is to work with a shared pointer of some sorts.
-   _ProxyBusObject fits the bill, but it's not a very friendly name so we
-   rename it here. */
+/**
+ *  The ProxyBusObjects created by the Observer need to be managed
+ *  by the Observer as well to avoid nasty issues with dangling pointers.
+ *  The easiest way out here is to work with a shared pointer of some sorts.
+ *  _ProxyBusObject fits the bill, but it's not a very friendly name so we
+ *  rename it here.
+ */
 typedef _ProxyBusObject ManagedProxyBusObject;
 
 /**
@@ -92,12 +94,36 @@ struct ObjectId {
 
     /**
      * Copy Constructor.
+     *
+     * @param other the ObjectId to copy
      */
     ObjectId(const ObjectId& other);
 
+    /**
+     * The assign operator for ObjectId
+     *
+     * @param other the ObjectId to assign to this ObjectId
+     *
+     * @return a reference to this ObjectId.
+     */
     ObjectId& operator=(const ObjectId& other);
 
+    /**
+     * Equals operator for the ObjectId
+     *
+     * @param other the ObjectId to check for equality
+     *
+     * @return true it the two objects are equal
+     */
     bool operator==(const ObjectId& other) const;
+
+    /**
+     * less than operator for the ObjectId
+     *
+     * @param other the ObjectId to check it this object is less than
+     *
+     * @returns true if this object is less than other
+     */
     bool operator<(const ObjectId& other) const;
 
     /**
@@ -208,26 +234,30 @@ class Observer {
     /**
      * Get a proxy object.
      *
+     * @param oid The object id of the object you want to retrieve.
+     *
+     * @return the proxy object with the requested ObjectId
+     *
      * This call will always return a ManagedProxyBusObject, even if the Observer
      * has not discovered the object you're looking for. In that case, an invalid
      * ManagedProxyBusObject will be returned. You can check this condition with
      * the ProxyBusObject::IsValid() method.
-     *
-     * @param oid The object id of the object you want to retrieve.
      */
     ManagedProxyBusObject Get(const ObjectId& oid);
 
     /**
      * Get a proxy object.
      *
+     * @param uniqueBusName The unique bus name of the peer hosting the object
+     *                      you want to retrieve.
+     * @param objectPath    The path of the object you want to retrieve.
+     *
+     * @return The discovered proxy object.
+     *
      * This call will always return a ManagedProxyBusObject, even if the Observer
      * has not discovered the object you're looking for. In that case, an invalid
      * ManagedProxyBusObject will be returned. You can check this condition with
      * the ProxyBusObject::IsValid() method.
-     *
-     * @param uniqueBusName The unique bus name of the peer hosting the object
-     *                      you want to retrieve.
-     * @param objectPath    The path of the object you want to retrieve.
      */
     ManagedProxyBusObject Get(const qcc::String& uniqueBusName, const qcc::String& objectPath) {
         return Get(ObjectId(uniqueBusName, objectPath));
@@ -239,6 +269,8 @@ class Observer {
      * The GetFirst/GetNext pair of methods is useful for iterating over all discovered
      * objects. The iteration is over when the proxy object returned by either call is
      * not valid (see ProxyBusObject::IsValid).
+     *
+     * @return the first proxy object found in the observer
      */
     ManagedProxyBusObject GetFirst();
 
@@ -251,6 +283,7 @@ class Observer {
      *
      * @param oid This method will return the proxy object immediately following the one
      *            with this object id.
+     * @return the proxy object immediately following the one identified by the oid object id
      */
     ManagedProxyBusObject GetNext(const ObjectId& oid);
 
@@ -262,6 +295,8 @@ class Observer {
      * not valid (see ProxyBusObject::IsValid).
      *
      * @param mpbo This method will return the proxy object immediately following this one
+     *
+     * @return the proxy object immediately following the mpbo proxy object
      */
     ManagedProxyBusObject GetNext(const ManagedProxyBusObject& mpbo) {
         return GetNext(ObjectId(mpbo));

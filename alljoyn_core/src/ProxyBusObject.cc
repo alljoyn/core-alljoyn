@@ -115,7 +115,9 @@ class CachedProps {
         isFullyCacheable(false),
         numProperties(0) { }
 
-    CachedProps(const InterfaceDescription*intf) : lock(), values(), description(intf) {
+    CachedProps(const InterfaceDescription*intf) :
+        lock(), values(), description(intf),
+        isFullyCacheable(false) {
         numProperties = description->GetProperties();
         if (numProperties > 0) {
             isFullyCacheable = true;

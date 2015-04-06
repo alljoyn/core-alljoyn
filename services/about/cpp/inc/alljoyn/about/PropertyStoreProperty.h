@@ -35,15 +35,14 @@ namespace services {
  * AboutData class.
  */
 class PropertyStoreProperty {
-
   public:
-
     /**
      * Constructor for PropertyStoreProperty
      *
      * @deprecated The PropertyStoreProperty class has been deprecated please see the
      * AboutData class.
-     * @param keyName
+     *
+     * @param keyName the name of the property
      */
     QCC_DEPRECATED(PropertyStoreProperty(qcc::String const& keyName));
 
@@ -53,8 +52,8 @@ class PropertyStoreProperty {
      * @deprecated The PropertyStoreProperty class has been deprecated please see the
      * AboutData class.
      *
-     * @param keyName
-     * @param value
+     * @param keyName the name of the property
+     * @param value   MsgArg containing the property value
      */
     QCC_DEPRECATED(PropertyStoreProperty(qcc::String const& keyName, ajn::MsgArg const& value));
 
@@ -63,11 +62,12 @@ class PropertyStoreProperty {
      *
      * @deprecated The PropertyStoreProperty class has been deprecated please see the
      * AboutData class.
-     * @param keyName
-     * @param value
-     * @param isPublic
-     * @param isWritable
-     * @param isAnnouncable
+     *
+     * @param keyName        the name of the property
+     * @param value          MsgArg containing the value stored in the property
+     * @param isPublic       Is the property public
+     * @param isWritable     Is the property writable
+     * @param isAnnouncable  Is the property announced
      */
     QCC_DEPRECATED(PropertyStoreProperty(qcc::String const& keyName, ajn::MsgArg const& value,
                                          bool isPublic, bool isWritable, bool isAnnouncable));
@@ -78,12 +78,12 @@ class PropertyStoreProperty {
      * @deprecated The PropertyStoreProperty class has been deprecated please see the
      * AboutData class.
      *
-     * @param keyName
-     * @param value
-     * @param language
-     * @param isPublic
-     * @param isWritable
-     * @param isAnnouncable
+     * @param keyName        the name of the property
+     * @param value          MsgArg containing the value stored in the property
+     * @param language       The language tag identifying the localization language for the property
+     * @param isPublic       Is the property public
+     * @param isWritable     Is the property writable
+     * @param isAnnouncable  Is the property announced
      */
     QCC_DEPRECATED(PropertyStoreProperty(qcc::String const& keyName, ajn::MsgArg const& value, qcc::String const& language,
                                          bool isPublic, bool isWritable, bool isAnnouncable));
@@ -103,9 +103,9 @@ class PropertyStoreProperty {
      * @deprecated The PropertyStoreProperty class has been deprecated please see the
      * AboutData class.
      *
-     * @param isPublic
-     * @param isWritable
-     * @param isAnnouncable
+     * @param isPublic      Is the property public
+     * @param isWritable    Is the property writable
+     * @param isAnnouncable Is the property announced
      */
     QCC_DEPRECATED(void setFlags(bool isPublic, bool isWritable, bool isAnnouncable));
 
@@ -115,7 +115,7 @@ class PropertyStoreProperty {
      * @deprecated The PropertyStoreProperty class has been deprecated please see the
      * AboutData class.
      *
-     * @param language
+     * @param language The language tag identifying the localization language for the property
      */
     QCC_DEPRECATED(void setLanguage(qcc::String const & language));
 
@@ -185,7 +185,7 @@ class PropertyStoreProperty {
      * @deprecated The PropertyStoreProperty class has been deprecated please see the
      * AboutData class.
      *
-     * @param value
+     * @param value Is the property public
      */
     QCC_DEPRECATED(void setIsPublic(bool value));
 
@@ -195,7 +195,7 @@ class PropertyStoreProperty {
      * @deprecated The PropertyStoreProperty class has been deprecated please see the
      * AboutData class.
      *
-     * @param value
+     * @param value Is the property writable
      */
     QCC_DEPRECATED(void setIsWritable(bool value));
 
@@ -205,7 +205,7 @@ class PropertyStoreProperty {
      * @deprecated The PropertyStoreProperty class has been deprecated please see the
      * AboutData class.
      *
-     * @param value
+     * @param value is the property announced
      */
     QCC_DEPRECATED(void setIsAnnouncable(bool value));
 

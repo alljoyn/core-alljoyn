@@ -742,6 +742,8 @@ extern AJ_API const char* AJ_CALL alljoyn_proxybusobject_getservicename(alljoyn_
 /**
  * Return the remote unique name for this object.
  *
+ * @param proxyObj  the proxy bus object to read the unique name (Bus Name) path from.
+ *
  * @return Unique name
  */
 extern AJ_API const char* AJ_CALL alljoyn_proxybusobject_getuniquename(alljoyn_proxybusobject proxyObj);

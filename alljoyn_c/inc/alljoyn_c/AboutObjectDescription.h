@@ -29,6 +29,12 @@
 extern "C" {
 #endif
 
+/**
+ * alljoyn_aboutobjectdescription is a helper for accessing the ObjectDescription
+ * alljoyn_msgarg that is sent as part of an announce signal. It contains helper
+ * functions for quickly determining if an alljoyn_aboutobjectdescription
+ * contains a specified path or interface.
+ */
 typedef struct _alljoyn_aboutobjectdescription_handle* alljoyn_aboutobjectdescription;
 
 /**
@@ -39,7 +45,7 @@ typedef struct _alljoyn_aboutobjectdescription_handle* alljoyn_aboutobjectdescri
  */
 extern AJ_API alljoyn_aboutobjectdescription AJ_CALL alljoyn_aboutobjectdescription_create();
 
-/*
+/**
  * Allocate a new alljoyn_aboutdata object filling in the fields of the About data
  * using an alljoyn_msgarg. The provided alljoyn_msgarg must contain a dictionary
  * with signature a{sv} with About data fields.

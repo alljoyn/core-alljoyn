@@ -378,6 +378,7 @@ extern AJ_API QCC_BOOL AJ_CALL alljoyn_busobject_issecure(alljoyn_busobject bus)
  * This function is experimental, and as such has not been fully tested.
  * Please help make it more robust by contributing fixes if you find problems.
  *
+ * @param[in] bus           The bus which contains the interfaces
  * @param[in] interfaces    the array of interface names
  * @param[in] numInterfaces the number of interface names
  *
@@ -399,6 +400,7 @@ extern AJ_API size_t AJ_CALL alljoyn_busobject_getannouncedinterfacenames(alljoy
  *
  * @see alljoyn_aboutobj_announce()
  *
+ * @param[in] bus         The bus which contains the interface
  * @param[in] iface       alljoyn_interfacedescription for the interface to set
  *                        the announce flag for
  * @param[in] isAnnounced This interface should be part of the Announce signal

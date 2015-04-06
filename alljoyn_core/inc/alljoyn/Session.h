@@ -209,24 +209,24 @@ class SessionOpts {
      * The NameTransferType specifies what information is exchanged.
      */
     typedef enum {
-        ALL_NAMES = 0x00,       /** < ExchangeNames and NameChanged to be forwarded to this session,
-                                      AttachSessionWithNames to be converted into an ExchangeNames and
-                                      sent over this session,
-                                      all NameChanged to be sent, all names to be sent as a part of
-                                      initial AttachSessionWithNames */
-        SLS_NAMES = 0x01,      /** < No ExchangeNames and NameChanged forwarding,
-                                      no NameChanged to be sent, only router names and
-                                      sessionless emitter names(if host routing node)
-                                      to be sent as a part of initial AttachSessionWithNames */
-        MP_NAMES = 0x02,        /** < ExchangeNames and NameChanged to be forwarded only over endpoints that
-                                      match the session id of the endpoint that it was received on,
-                                      NameChanged to be sent to routing nodes if a session to this leaf existed,
-                                      only routing node and joiner or host and existing session member names
-                                      to be sent as a part of initial AttachSessionWithNames */
-        P2P_NAMES = 0x03,       /** < No ExchangeNames and NameChanged forwarding,
-                                      NameChanged to be sent only if a session to this leaf existed,
-                                      only routing node and joiner/host names to be sent as a part of initial
-                                      AttachSessionWithNames */
+        ALL_NAMES = 0x00,       /**< ExchangeNames and NameChanged to be forwarded to this session,
+                                     AttachSessionWithNames to be converted into an ExchangeNames and
+                                     sent over this session,
+                                     all NameChanged to be sent, all names to be sent as a part of
+                                     initial AttachSessionWithNames */
+        SLS_NAMES = 0x01,      /**< No ExchangeNames and NameChanged forwarding,
+                                     no NameChanged to be sent, only router names and
+                                     sessionless emitter names(if host routing node)
+                                     to be sent as a part of initial AttachSessionWithNames */
+        MP_NAMES = 0x02,        /**< ExchangeNames and NameChanged to be forwarded only over endpoints that
+                                     match the session id of the endpoint that it was received on,
+                                     NameChanged to be sent to routing nodes if a session to this leaf existed,
+                                     only routing node and joiner or host and existing session member names
+                                     to be sent as a part of initial AttachSessionWithNames */
+        P2P_NAMES = 0x03,       /**< No ExchangeNames and NameChanged forwarding,
+                                     NameChanged to be sent only if a session to this leaf existed,
+                                     only routing node and joiner/host names to be sent as a part of initial
+                                     AttachSessionWithNames */
     } NameTransferType;
 
   protected:

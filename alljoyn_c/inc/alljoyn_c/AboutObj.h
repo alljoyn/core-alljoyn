@@ -34,6 +34,12 @@
 extern "C" {
 #endif
 
+/**
+ * An AllJoyn BusObject that implements the org.alljoyn.About interface.
+ *
+ * This BusObject is used to announce the capabilities and other identifying
+ * details of the application or device.
+ */
 typedef struct _alljoyn_aboutobj_handle* alljoyn_aboutobj;
 
 /**
@@ -56,6 +62,8 @@ typedef struct _alljoyn_aboutobj_handle* alljoyn_aboutobj;
  *
  * @param[in] bus         the alljoyn_busattachment that will contain the about information
  * @param[in] isAnnounced will the org.alljoyn.About interface be part of the announced interfaces.
+ *
+ * @return allocated alljoyn_aboutobj
  */
 extern AJ_API alljoyn_aboutobj AJ_CALL alljoyn_aboutobj_create(alljoyn_busattachment bus,
                                                                alljoyn_about_announceflag isAnnounced);

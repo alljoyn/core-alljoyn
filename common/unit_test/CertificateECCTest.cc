@@ -598,3 +598,25 @@ TEST_F(CertificateECCTest, VerifyX509SelfSignExternalCertWithExtraDNFields)
     status = cert.Verify();
     ASSERT_EQ(ER_OK, status) << " verify cert failed with actual status: " << QCC_StatusText(status);
 }
+
+/**
+ * Create a self signed cert and reload its PEM
+ */
+TEST_F(CertificateECCTest, GenerateAndLoadSelfSignedCert)
+{
+    qcc::GUID128 issuer;
+    ECCPrivateKey dsaPrivateKey;
+    ECCPublicKey dsaPublicKey;
+    ECCPrivateKey subjectPrivateKey;
+    ECCPublicKey subjectPublicKey;
+    CertificateX509 cert;
+
+    /* cert expires in one year */
+    ASSERT_EQ(ER_OK, CreateIdentityCert(issuer, "1010101", "organization", &dsaPrivateKey, &dsaPublicKey, &subjectPrivateKey, &subjectPublicKey, true, 365 * 24 * 3600, cert)) << " CreateIdentityCert failed";
+
+    ASSERT_EQ(ER_OK, cert.Verify(&dsaPublicKey)) << " verify cert failed";
+    CertificateX509 cert2;
+    ASSERT_EQ(ER_OK, cert2.LoadPEM(cert.GetPEM())) << " Error reload cert from PEM";
+    ASSERT_EQ(ER_OK, cert2.Verify(&dsaPublicKey)) << " verify cert failed";
+}
+

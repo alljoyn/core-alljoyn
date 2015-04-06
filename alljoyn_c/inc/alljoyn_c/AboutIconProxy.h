@@ -32,6 +32,10 @@
 extern "C" {
 #endif
 
+/**
+ * alljoyn_abouticonproxy enables the user to interact with the remote AboutIcon
+ * BusObject.
+ */
 typedef struct _alljoyn_abouticonproxy_handle* alljoyn_abouticonproxy;
 
 /**
@@ -69,8 +73,8 @@ extern AJ_API QStatus AJ_CALL alljoyn_abouticonproxy_geticon(alljoyn_abouticonpr
                                                              alljoyn_abouticon icon);
 
 /**
- * @param[in]  proxy alljoyn_abouticonproxy object
- * @param[out] the version of the remote AboutIcon BusObject
+ * @param[in]  proxy   alljoyn_abouticonproxy object
+ * @param[out] version the version of the remote AboutIcon BusObject
  *
  * @return
  * - #ER_OK if successful
