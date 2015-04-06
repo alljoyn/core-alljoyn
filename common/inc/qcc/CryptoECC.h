@@ -60,11 +60,14 @@ struct ECCPrivateKey {
     /**
      * the assign operator for the ECCPrivateKey
      *
-     * @param[in] k the ECCPrivate key to assign
+     * @param[in] other the ECCPrivate key to assign
      */
-    void operator=(const ECCPrivateKey& k)
+    ECCPrivateKey& operator=(const ECCPrivateKey& other)
     {
-        memcpy(d, k.d, ECC_COORDINATE_SZ);
+        if (this != &other) {
+            memcpy(d, other.d, ECC_COORDINATE_SZ);
+        }
+        return *this;
     }
 
     /**
@@ -161,12 +164,15 @@ struct ECCPublicKey {
     /**
      * Assign operator for ECCPublicKey
      *
-     * @param[in] k the ECCPublic key to assign
+     * @param[in] other the ECCPublic key to assign
      */
-    void operator=(const ECCPublicKey& k)
+    ECCPublicKey& operator=(const ECCPublicKey& other)
     {
-        memcpy(x, k.x, ECC_COORDINATE_SZ);
-        memcpy(y, k.y, ECC_COORDINATE_SZ);
+        if (this != &other) {
+            memcpy(x, other.x, ECC_COORDINATE_SZ);
+            memcpy(y, other.y, ECC_COORDINATE_SZ);
+        }
+        return *this;
     }
 
     /**
@@ -280,11 +286,15 @@ struct ECCSignature {
 
     /**
      * The ECCSignature assign operator
+     * @param[in] other the ECC signature to assign
      */
-    void operator=(const ECCSignature& k)
+    ECCSignature& operator=(const ECCSignature& other)
     {
-        memcpy(r, k.r, ECC_COORDINATE_SZ);
-        memcpy(s, k.s, ECC_COORDINATE_SZ);
+        if (this != &other) {
+            memcpy(r, other.r, ECC_COORDINATE_SZ);
+            memcpy(s, other.s, ECC_COORDINATE_SZ);
+        }
+        return *this;
     }
 };
 
