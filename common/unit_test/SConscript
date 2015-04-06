@@ -21,7 +21,7 @@ Import('libcommon')
 if not commonenv.has_key('GTEST_DIR'):
     print('GTEST_DIR not specified skipping common unit test build')
 
-elif commonenv['OS'] == 'darwin' and commonenv['CPU'] in ['arm', 'armv7', 'armv7s']:
+elif commonenv['OS'] == 'darwin' and commonenv['CPU'] in ['arm', 'armv7', 'armv7s', 'arm64',]:
     # do not even try Google test if darwin and arm
     print 'GTEST_DIR ignored when building for OS=darwin CPU=arm, skipping common unit test build'
 
