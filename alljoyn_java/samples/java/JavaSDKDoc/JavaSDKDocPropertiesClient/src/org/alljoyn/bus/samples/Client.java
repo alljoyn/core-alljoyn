@@ -113,9 +113,11 @@ public class Client {
             System.out.println("TextSize = " + mPropertiesInterface.getTextSize());
 
             Map<String, Variant> map = mProperties.GetAll("org.samples.properties");
-            System.out.println("TextSize = " + map.get("TextSize").getObject(Integer.class));
+            Variant textSizeArg = map.get("TextSize");
+            if (textSizeArg != null) {
+                System.out.println("TextSize = " + textSizeArg.getObject(Integer.class));
+            }
         } catch (BusException e1) {
-            // TODO Auto-generated catch block
             e1.printStackTrace();
         }
     }
