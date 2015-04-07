@@ -334,7 +334,7 @@ int CDECL_CALL main(int argc, char** argv)
     const uint64_t startTime = GetTimestamp64(); // timestamp in milliseconds
     QStatus status = ER_OK;
     TransportMask transportOpts = TRANSPORT_TCP;
-
+    AboutObj* aboutObj = NULL;
     // echo command line to provide distinguishing information within multipoint session
     for (int i = 0; i < argc; i++) {
         printf("%s ", argv[i]);
@@ -491,9 +491,8 @@ int CDECL_CALL main(int argc, char** argv)
                 // software version of bbservice is the same as the AllJoyn version
                 g_aboutData.SetSoftwareVersion(ajn::GetVersion());
                 g_aboutData.SetTransportOpts(transportOpts);
-
-                AboutObj aboutObj(*g_msgBus);
-                aboutObj.Announce(SESSION_PORT, g_aboutData);
+                aboutObj = new AboutObj(*g_msgBus);
+                aboutObj->Announce(SESSION_PORT, g_aboutData);
             } else {
                 /* Request a well-known name */
                 QStatus status = g_msgBus->RequestName(g_wellKnownName.c_str(), DBUS_NAME_FLAG_REPLACE_EXISTING | DBUS_NAME_FLAG_DO_NOT_QUEUE);
@@ -525,6 +524,7 @@ int CDECL_CALL main(int argc, char** argv)
         g_msgBus->Stop();
         g_msgBus->Join();
         delete testObj;
+        delete aboutObj;
         delete g_msgBus;
     }
 
