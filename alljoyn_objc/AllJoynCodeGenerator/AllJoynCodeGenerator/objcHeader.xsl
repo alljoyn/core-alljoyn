@@ -338,7 +338,7 @@
             <xsl:text>NSString*</xsl:text>
         </xsl:when>
         <xsl:when test="@type='o'">
-            <xsl:text>NString*</xsl:text>
+            <xsl:text>NSString*</xsl:text>
         </xsl:when>
         <xsl:when test="@type='a'">
             <xsl:text>NSArray*</xsl:text>
