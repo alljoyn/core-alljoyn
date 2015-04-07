@@ -61,7 +61,7 @@ lib = router_env.StaticLibrary('ajrouter', brobj + router_objs);
 
 # AllJoyn Daemon test programs
 if router_env['OS'] == 'darwin':
-    if router_env['CPU'] in ['arm', 'armv7', 'armv7s']:
+    if router_env['CPU'] in ['arm', 'armv7', 'armv7s', 'arm64',]:
         print 'Not building unit tests for iOS...'    
         tests = []
     else:

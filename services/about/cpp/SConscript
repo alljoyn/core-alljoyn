@@ -34,6 +34,6 @@ about_env.Install('$ABOUT_DISTDIR/bin/samples', about_env.SConscript('samples/SC
 
 # only include command line samples, unit test, test programs if we are not 
 # building for iOS. No support on iOS for command line applications.
-if not (about_env['OS'] == 'darwin' and about_env['CPU'] in ['arm', 'armv7', 'armv7s']):
+if not (about_env['OS'] == 'darwin' and about_env['CPU'] in ['arm', 'armv7', 'armv7s', 'arm64',]):
     # Build unit Tests
     about_env.SConscript('unit_test/SConscript', exports = ['about_env'], variant_dir='$OBJDIR_ABOUT/unittest', duplicate = 0)

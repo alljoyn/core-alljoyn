@@ -1073,7 +1073,7 @@ void SessionlessObj::JoinSessionCB(QStatus status, SessionId sid, const SessionO
                 }
             }
         } else {
-            QCC_LogError(status, ("JoinSessionAsync to %s failed", cache.name.c_str()));
+            QCC_DbgPrintf(("JoinSessionAsync to %s failed - %s", cache.name.c_str(), QCC_StatusText(status)));
 
             /* Clear in progress */
             cache.state = RemoteCache::IDLE;

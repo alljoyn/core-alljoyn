@@ -74,11 +74,12 @@ int CDECL_CALL main(int argc, char** argv, char** envArg)
     //QCC_SetLogLevels("ALLJOYN=7;ALL=1");
     //QCC_UseOSLogging(true);
 
-    MyAllJoynCode myAllJoynCode;
-    myAllJoynCode.initialize(argv[2]);
+    MyAllJoynCode* myAllJoynCode = new MyAllJoynCode();
+    myAllJoynCode->initialize(argv[2]);
 
     WaitForSigInt();
 
+    delete myAllJoynCode;
 #ifdef ROUTER
     AllJoynRouterShutdown();
 #endif

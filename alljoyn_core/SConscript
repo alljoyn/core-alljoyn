@@ -102,7 +102,7 @@ about_env.SConscript('$OBJDIR_ABOUT/cpp/SConscript', exports = ['about_env'])
 
 # only include command line samples, unit test, test programs if we are not 
 # building for iOS. No support on iOS for command line applications.
-if env['OS'] == 'darwin' and env['CPU'] in ['arm', 'armv7', 'armv7s']:
+if env['OS'] == 'darwin' and env['CPU'] in ['arm', 'armv7', 'armv7s', 'arm64',]:
     progs = []
 else:
     # Test programs
@@ -126,7 +126,7 @@ elif ajenv['OS_CONF'] == 'android':
 else:  # linux based platforms
     ajenv.InstallAs('$DISTDIR/README.txt', 'docs/README.linux.txt')
 
-if not (ajenv['OS'] == 'darwin' and ajenv['CPU'] in ['arm', 'armv7', 'armv7s']):
+if not (ajenv['OS'] == 'darwin' and ajenv['CPU'] in ['arm', 'armv7', 'armv7s', 'arm64',]):
     ajenv.Install('$DISTDIR', 'docs/ReleaseNotes.txt')
 
 # Build docs

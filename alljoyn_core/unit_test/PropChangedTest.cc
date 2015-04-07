@@ -1849,7 +1849,7 @@ TEST_F(PropChangedTest, PropertyCache_nolistener)
     obj->EmitSignals(tpService);
     /* busy-wait for max 5 seconds */
     int count = 0;
-    while (intval != 101 && count < 500) {
+    while (intval != 101 && count++ < 500) {
         qcc::Sleep(10);
         EXPECT_EQ(ER_OK, proxy->GetProperty(INTERFACE_NAME "1", "P1", value));
         EXPECT_EQ(ER_OK, value.Get("i", &intval));
