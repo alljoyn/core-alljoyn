@@ -16,6 +16,7 @@
 
 #include <alljoyn/about/AboutClient.h>
 #include <alljoyn/about/AnnouncementRegistrar.h>
+#include <alljoyn/Init.h>
 
 #include <stdio.h>
 #include <signal.h>
@@ -35,6 +36,7 @@ static volatile sig_atomic_t s_interrupt = false;
 
 static void CDECL_CALL SigIntHandler(int sig)
 {
+    QCC_UNUSED(sig);
     s_interrupt = true;
 }
 
@@ -172,12 +174,12 @@ void ViewAboutServiceData(qcc::String const& busName, SessionId id) {
         std::cout << std::endl << busName.c_str() << " AboutClient GetVersion" << std::endl;
         std::cout << "-----------------------------------" << std::endl;
 
-        int ver;
+        int ver = 0;
         status = aboutClient->GetVersion(busName.c_str(), ver, id);
-        if (status != ER_OK) {
-            std::cout << "Call to to getVersion failed " << QCC_StatusText(status) << std::endl;
-        } else {
+        if (status == ER_OK) {
             std::cout << "Version = " << ver << std::endl;
+        } else {
+            std::cout << "Call to to getVersion failed " << QCC_StatusText(status) << std::endl;
         }
     } //if (aboutClient)
 
@@ -390,8 +392,22 @@ void WaitForSigInt(void)
  *      - 0 if successful.
  *      - 1 if error.
  */
-int main(int argc, char**argv, char**envArg)
+int CDECL_CALL main(int argc, char** argv, char** envArg)
 {
+    QCC_UNUSED(argc);
+    QCC_UNUSED(argv);
+    QCC_UNUSED(envArg);
+
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+#endif
+
     QStatus status = ER_OK;
     std::cout << "AllJoyn Library version: " << ajn::GetVersion() << std::endl;
     std::cout << "AllJoyn Library build info: " << ajn::GetBuildInfo() << std::endl;
@@ -401,11 +417,6 @@ int main(int argc, char**argv, char**envArg)
     //QCC_SetLogLevels("ALLJOYN_ABOUT_ICON_CLIENT=7");
     //QCC_SetLogLevels("ALLJOYN_ABOUT_ANNOUNCE_HANDLER=7");
     //QCC_SetLogLevels("ALLJOYN_ABOUT_ANNOUNCEMENT_REGISTRAR=7");
-
-    //set Daemon password only for bundled app
-    #ifdef QCC_USING_BD
-    PasswordManager::SetCredentials("ALLJOYN_PIN_KEYX", "000000");
-    #endif
 
     // Install SIGINT handler
     signal(SIGINT, SigIntHandler);
@@ -446,6 +457,10 @@ int main(int argc, char**argv, char**envArg)
     busAttachment->Join();
     delete busAttachment;
 
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return 0;
 
 } /* main() */

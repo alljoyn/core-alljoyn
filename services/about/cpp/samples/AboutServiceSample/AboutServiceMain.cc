@@ -14,10 +14,12 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#include <alljoyn/BusAttachment.h>
 #include <alljoyn/about/AboutIconService.h>
 #include <alljoyn/about/AboutServiceApi.h>
 #include <alljoyn/about/AboutPropertyStoreImpl.h>
+#include <alljoyn/BusAttachment.h>
+#include <alljoyn/Init.h>
+#include <alljoyn/Status.h>
 
 #include <signal.h>
 #include "BusListenerImpl.h"
@@ -40,6 +42,7 @@ static BusListenerImpl s_busListener(SERVICE_PORT);
 static BusAttachment* s_msgBus = NULL;
 
 static void CDECL_CALL SigIntHandler(int sig) {
+    QCC_UNUSED(sig);
     s_interrupt = true;
 }
 
@@ -261,7 +264,19 @@ static void shutdown(AboutPropertyStoreImpl*& aboutPropertyStore, AboutIconServi
     s_msgBus = NULL;
 }
 
-int main(int argc, char**argv, char**envArg) {
+int CDECL_CALL main(int argc, char**argv, char** envArg) {
+    QCC_UNUSED(envArg);
+
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+#endif
+
     QStatus status = ER_OK;
     std::cout << "AllJoyn Library version: " << ajn::GetVersion() << std::endl;
     std::cout << "AllJoyn Library build info: " << ajn::GetBuildInfo() << std::endl;
@@ -292,11 +307,6 @@ int main(int argc, char**argv, char**envArg) {
 
     /* Install SIGINT handler so Ctrl + C deallocates memory properly */
     signal(SIGINT, SigIntHandler);
-
-    //set Daemon password only for bundled app
-    #ifdef QCC_USING_BD
-    PasswordManager::SetCredentials("ALLJOYN_PIN_KEYX", "000000");
-    #endif
 
     /* Create message bus */
     s_msgBus = new BusAttachment("AboutServiceName", true);
@@ -383,6 +393,10 @@ int main(int argc, char**argv, char**envArg) {
 
     shutdown(aboutPropertyStore, aboutIconService);
 
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return 0;
 } /* main() */
 

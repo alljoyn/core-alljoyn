@@ -38,7 +38,7 @@
 #include <qcc/FileStream.h>
 
 #include <alljoyn/version.h>
-
+#include <alljoyn/Init.h>
 #include <alljoyn/Status.h>
 
 #include "Transport.h"
@@ -72,9 +72,43 @@ static const char defaultConfig[] =
     "  <limit name=\"auth_timeout\">20000</limit>"
     "  <limit name=\"max_incomplete_connections\">16</limit>"
     "  <limit name=\"max_completed_connections\">64</limit>"
-    "  <limit name=\"max_untrusted_clients\">48</limit>"
+    "  <limit name=\"max_remote_clients_tcp\">48</limit>"
+    "  <limit name=\"max_remote_clients_udp\">0</limit>"
+    "  <property name=\"router_power_source\">Battery powered and chargeable</property>"
+    "  <property name=\"router_mobility\">Intermediate mobility</property>"
+    "  <property name=\"router_availability\">3-6 hr</property>"
+    "  <property name=\"router_node_connection\">Wireless</property>"
     "  <flag name=\"restrict_untrusted_clients\">false</flag>"
     "</busconfig>";
+
+/*
+ * Router Power Source
+ *  Always AC powered
+ *  Battery powered and chargeable
+ *  Battery powered and not chargeable
+ *
+ * Router Mobility
+ *  Always Stationary
+ *  Low mobility
+ *  Intermediate mobility
+ *  High mobility
+ *
+ * Router Availability
+ *  0-3 hr
+ *  3-6 hr
+ *  6-9 hr
+ *  9-12 hr
+ *  12-15 hr
+ *  15-18 hr
+ *  18-21 hr
+ *  21-24 hr
+ *
+ * Router Node Connection
+ *  Access Point
+ *  Wired
+ *  Wireless
+ *
+ */
 
 static const char internalConfig[] =
     "<busconfig>"
@@ -87,6 +121,7 @@ static volatile sig_atomic_t g_interrupt = false;
 
 static void CDECL_CALL SignalHandler(int sig)
 {
+    QCC_UNUSED(sig);
     g_interrupt = true;
 }
 
@@ -317,6 +352,14 @@ int daemon(OptParse& opts)
 
 DAEMONLIBRARY_API int LoadDaemon(int argc, char** argv)
 {
+    if (AllJoynInit() != ER_OK) {
+        return DAEMON_EXIT_STARTUP_ERROR;
+    }
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return DAEMON_EXIT_STARTUP_ERROR;
+    }
+
     LoggerSetting* loggerSettings(LoggerSetting::GetLoggerSetting(argv[0], LOG_WARNING));
     loggerSettings->SetSyslog(false);
     if (g_isManaged) {
@@ -362,7 +405,11 @@ DAEMONLIBRARY_API int LoadDaemon(int argc, char** argv)
         return DAEMON_EXIT_CONFIG_ERROR;
     }
 
-    return daemon(opts);
+    int ret = daemon(opts);
+
+    AllJoynRouterShutdown();
+    AllJoynShutdown();
+    return ret;
 }
 
 DAEMONLIBRARY_API void UnloadDaemon() {

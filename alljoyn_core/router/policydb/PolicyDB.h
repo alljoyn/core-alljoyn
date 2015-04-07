@@ -245,10 +245,10 @@ class _PolicyDB {
             userAny(false),
             usersEqualSet(false),
             usersEqual(false),
-            user(-1),
+            user(((uint32_t)-1)),
             groupSet(false),
             groupAny(false),
-            group(-1)
+            group(((uint32_t)-1))
         { }
 
         /**
@@ -325,8 +325,8 @@ class _PolicyDB {
          */
         inline bool CheckPath(StringID other, const _PolicyDB::IDSet& prefixes) const
         {
-            return (((path == WILDCARD) && (pathPrefix == WILDCARD)) ||
-                    (path == other) || (prefixes->find(pathPrefix) != prefixes->end()));
+            return (((path == WILDCARD) || (path == other)) &&
+                    ((pathPrefix == WILDCARD) || (prefixes->find(pathPrefix) != prefixes->end())));
         }
 
         /**
@@ -339,8 +339,8 @@ class _PolicyDB {
          */
         inline bool CheckOwn(StringID other, const _PolicyDB::IDSet& prefixes) const
         {
-            return (((own == WILDCARD) && (ownPrefix == WILDCARD)) ||
-                    (own == other) || (prefixes->find(ownPrefix) != prefixes->end()));
+            return (((own == WILDCARD) || (own == other)) &&
+                    ((ownPrefix == WILDCARD) || (prefixes->find(ownPrefix) != prefixes->end())));
         }
 
         /**
@@ -528,6 +528,10 @@ class NormalizedMsgHdr {
 
   private:
     friend class _PolicyDB;  /**< Give PolicyDB access to the internals */
+    /* private copy constructor */
+    NormalizedMsgHdr(const NormalizedMsgHdr&);
+    /* private assignment operator */
+    NormalizedMsgHdr operator=(const NormalizedMsgHdr&);
 
 #if !defined(NDEBUG) || defined(QCC_OS_GROUP_WINDOWS)
     const Message msg;                      /**< Reference to original message for debug purposes */

@@ -99,6 +99,7 @@ LoggerSetting* LoggerSetting::singleton = NULL;
 
 void LoggerSetting::SetSyslog(bool enable)
 {
+
 #if !defined(QCC_OS_GROUP_WINDOWS)
     lock.Lock();
 #if !defined(QCC_OS_ANDROID)
@@ -115,9 +116,13 @@ void LoggerSetting::SetSyslog(bool enable)
             closelog();
         }
     }
+#else
+    QCC_UNUSED(enable);
 #endif
     useSyslog = enable;
     lock.Unlock();
+#else
+    QCC_UNUSED(enable);
 #endif
 }
 
@@ -193,36 +198,13 @@ LoggerSetting* LoggerSetting::GetLoggerSetting(const char* name, int level,
     }
     return singleton;
 }
-int loggerInitCounter = 0;
-bool LoggerInit::cleanedup = false;
-LoggerInit::LoggerInit()
+
+void LoggerSetting::Init()
 {
-    loggerInitCounter++;
-    //Do nothing. singleton will be initialized in the first call to GetLoggerSetting
 }
 
-LoggerInit::~LoggerInit()
+void LoggerSetting::Shutdown()
 {
-
-    if (--loggerInitCounter == 0 && !cleanedup) {
-        //Cleanup singleton
-        if (LoggerSetting::singleton) {
-            delete LoggerSetting::singleton;
-            LoggerSetting::singleton = NULL;
-        }
-        cleanedup = true;
-    }
+    delete singleton;
+    singleton = NULL;
 }
-void LoggerInit::Cleanup()
-{
-    if (!cleanedup) {
-        //Cleanup singleton
-        if (LoggerSetting::singleton) {
-            delete LoggerSetting::singleton;
-            LoggerSetting::singleton = NULL;
-        }
-        cleanedup = true;
-
-    }
-}
-

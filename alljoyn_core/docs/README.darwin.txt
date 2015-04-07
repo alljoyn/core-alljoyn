@@ -6,7 +6,7 @@ This subtree contains one complete copy of the AllJoyn SDK for OS X and iOS.
 
 This SDK includes all supported combinations of
     target type (OS X, iphone OS, iphone OS simulator)
-    CPU         (x86, arm, armv7, armv7s)
+    CPU         (x86, arm, armv7, armv7s, arm64)
     VARIANT     (Debug or Release)
 
 Please see alljoyn_objc/README-INSTALLING.txt for instructions on how to
@@ -41,8 +41,6 @@ alljoyn_objc/       Objective-C language binding for core AllJoyn functionality
     alljoyn_darwin.xcodeproj/               Xcode support
 
     AllJoynCodeGenerator/                   Development aid
-
-    Unity/                                  Unity language binding
 
     samples/OSX/                            sample apps
     samples/iOS/

@@ -40,15 +40,11 @@
 #include <alljoyn/AllJoynStd.h>
 #include <alljoyn/InterfaceDescription.h>
 #include <alljoyn/AutoPinger.h>
-#include <alljoyn/PasswordManager.h>
 
 #include "AuthMechanism.h"
 #include "AuthMechAnonymous.h"
-#include "AuthMechDBusCookieSHA1.h"
 #include "AuthMechExternal.h"
 #include "AuthMechSRP.h"
-#include "AuthMechRSA.h"
-#include "AuthMechPIN.h"
 #include "AuthMechLogon.h"
 #include "SessionInternal.h"
 #include "Transport.h"
@@ -66,7 +62,6 @@
 #include "NamedPipeClientTransport.h"
 
 #define QCC_MODULE "ALLJOYN"
-
 
 using namespace std;
 using namespace qcc;
@@ -159,7 +154,8 @@ BusAttachment::Internal::Internal(const char* appName,
     permissionManager(),
     permissionConfigurator(bus),
     hostedSessions(),
-    hostedSessionsLock()
+    hostedSessionsLock(),
+    observerManager(NULL)
 {
     /*
      * Bus needs a pointer to this internal object.
@@ -178,7 +174,6 @@ BusAttachment::Internal::Internal(const char* appName,
         QCC_LogError(status, ("Cannot create %s interface", org::alljoyn::Bus::InterfaceName));
     }
     /* Register bus client authentication mechanisms */
-    authManager.RegisterMechanism(AuthMechPIN::Factory, AuthMechPIN::AuthName());
     authManager.RegisterMechanism(AuthMechExternal::Factory, AuthMechExternal::AuthName());
     authManager.RegisterMechanism(AuthMechAnonymous::Factory, AuthMechAnonymous::AuthName());
 
@@ -186,6 +181,12 @@ BusAttachment::Internal::Internal(const char* appName,
 
 BusAttachment::Internal::~Internal()
 {
+    if (observerManager) {
+        observerManager->Stop();
+        observerManager->Join();
+        delete observerManager;
+        observerManager = NULL;
+    }
     /*
      * Make sure that all threads that might possibly access this object have been joined.
      */
@@ -197,7 +198,7 @@ BusAttachment::Internal::~Internal()
 /*
  * Transport factory container for transports this bus attachment uses to communicate with the daemon.
  */
-static class ClientTransportFactoryContainer : public TransportFactoryContainer {
+class ClientTransportFactoryContainer : public TransportFactoryContainer {
   public:
 
     ClientTransportFactoryContainer() : isInitialized(false) { }
@@ -227,18 +228,19 @@ static class ClientTransportFactoryContainer : public TransportFactoryContainer 
     bool isInitialized;
     qcc::Mutex lock;
 
-} clientTransportsContainer;
+};
 
+static ClientTransportFactoryContainer* clientTransportsContainer = NULL;
 
 BusAttachment::BusAttachment(const char* applicationName, bool allowRemoteMessages, uint32_t concurrency) :
     isStarted(false),
     isStopping(false),
     concurrency(concurrency),
-    busInternal(new Internal(applicationName, *this, clientTransportsContainer, NULL, allowRemoteMessages, NULL, concurrency)),
+    busInternal(new Internal(applicationName, *this, *clientTransportsContainer, NULL, allowRemoteMessages, NULL, concurrency)),
     translator(NULL),
     joinObj(this)
 {
-    clientTransportsContainer.Init();
+    clientTransportsContainer->Init();
     QCC_DbgTrace(("BusAttachment client constructor (%p)", this));
 }
 
@@ -250,7 +252,7 @@ BusAttachment::BusAttachment(Internal* busInternal, uint32_t concurrency) :
     translator(NULL),
     joinObj(this)
 {
-    clientTransportsContainer.Init();
+    clientTransportsContainer->Init();
     QCC_DbgTrace(("BusAttachment daemon constructor"));
 }
 
@@ -612,6 +614,14 @@ QStatus BusAttachment::Disconnect()
         status = ER_BUS_STOPPING;
         QCC_LogError(status, ("BusAttachment::Disconnect cannot disconnect while bus is stopping"));
     } else {
+        /*
+         * Shut down the ObserverManager
+         */
+        if (busInternal->observerManager) {
+            busInternal->observerManager->Stop();
+            busInternal->observerManager->Join();
+        }
+
         status = busInternal->TransportDisconnect(this->connectSpec.c_str());
         if (ER_OK == status) {
             UnregisterSignalHandlers();
@@ -626,6 +636,7 @@ QStatus BusAttachment::Disconnect()
 
 QStatus BusAttachment::Disconnect(const char* connectSpec)
 {
+    QCC_UNUSED(connectSpec);
     return Disconnect();
 }
 
@@ -971,8 +982,6 @@ QStatus BusAttachment::EnablePeerSecurity(const char* authMechanisms,
         if (status == ER_OK) {
             /* Register peer-to-peer authentication mechanisms */
             busInternal->authManager.RegisterMechanism(AuthMechSRP::Factory, AuthMechSRP::AuthName());
-            busInternal->authManager.RegisterMechanism(AuthMechPIN::Factory, AuthMechPIN::AuthName());
-            busInternal->authManager.RegisterMechanism(AuthMechRSA::Factory, AuthMechRSA::AuthName());
             busInternal->authManager.RegisterMechanism(AuthMechLogon::Factory, AuthMechLogon::AuthName());
             /* Validate the list of auth mechanisms */
             status =  busInternal->authManager.CheckNames(authMechanisms);
@@ -982,8 +991,6 @@ QStatus BusAttachment::EnablePeerSecurity(const char* authMechanisms,
     } else {
         status = busInternal->keyStore.Reset();
         busInternal->authManager.UnregisterMechanism(AuthMechSRP::AuthName());
-        busInternal->authManager.UnregisterMechanism(AuthMechPIN::AuthName());
-        busInternal->authManager.UnregisterMechanism(AuthMechRSA::AuthName());
         busInternal->authManager.UnregisterMechanism(AuthMechLogon::AuthName());
     }
 
@@ -1836,6 +1843,7 @@ void BusAttachment::Internal::JoinSessionCB(QStatus status, SessionId sessionId,
 }
 
 void BusAttachment::ClearSessionSet(SessionId sessionId, SessionSideMask bitset) {
+    QCC_UNUSED(bitset);
 
     for (size_t i = 0; i < sizeof(busInternal->sessionSet) / sizeof(busInternal->sessionSet[0]); ++i) {
         busInternal->sessionSetLock[i].Lock(MUTEX_CONTEXT);
@@ -2220,6 +2228,8 @@ void BusAttachment::Internal::AllJoynSignalHandler(const InterfaceDescription::M
                                                    const char* srcPath,
                                                    Message& msg)
 {
+    QCC_UNUSED(member);
+    QCC_UNUSED(srcPath);
     /* Dispatch thread for BusListener callbacks */
     size_t numArgs;
     const MsgArg* args;
@@ -3147,31 +3157,21 @@ Translator* BusAttachment::GetDescriptionTranslator()
 {
     return translator;
 }
-typedef void (*RouterCleanupFunction)();
-void RegisterRouterCleanup(RouterCleanupFunction r);
 
 PermissionConfigurator& BusAttachment::GetPermissionConfigurator()
 {
     return busInternal->permissionConfigurator;
 }
 
-RouterCleanupFunction routerCleanup = NULL;
-void RegisterRouterCleanup(RouterCleanupFunction r)
+void BusAttachment::Internal::Init()
 {
-    routerCleanup = r;
+    clientTransportsContainer = new ClientTransportFactoryContainer();
 }
-void AJCleanup()
+
+void BusAttachment::Internal::Shutdown()
 {
-    //Cleanup router Globals
-    if (routerCleanup) {
-        routerCleanup();
-    }
-
-    //Cleanup alljoyn_core/src Globals
-    AutoPingerInit::Cleanup();
-    PasswordManagerInit::Cleanup();
-
-    //Cleanup common globals
-    StaticGlobalsInit::Cleanup();
+    delete clientTransportsContainer;
+    clientTransportsContainer = NULL;
 }
+
 }

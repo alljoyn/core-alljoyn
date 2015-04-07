@@ -31,8 +31,11 @@
 #include <qcc/time.h>
 
 #include <alljoyn/AboutObj.h>
+#include <alljoyn/AllJoynStd.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/BusObject.h>
+#include <alljoyn/DBusStd.h>
+#include <alljoyn/Init.h>
 #include <alljoyn/MsgArg.h>
 #include <alljoyn/version.h>
 #include <alljoyn/Status.h>
@@ -60,6 +63,7 @@ static TransportMask s_transports = TRANSPORT_ANY;
 
 static void CDECL_CALL SigIntHandler(int sig)
 {
+    QCC_UNUSED(sig);
     g_interrupt = true;
 }
 
@@ -99,6 +103,7 @@ class BasicSampleObject : public BusObject {
 
     void Cat(const InterfaceDescription::Member* member, Message& msg)
     {
+        QCC_UNUSED(member);
         /* Concatenate the two input strings and reply with the result. */
         qcc::String inStr1 = msg->GetArg(0)->v_string.str;
         qcc::String inStr2 = msg->GetArg(1)->v_string.str;
@@ -111,6 +116,46 @@ class BasicSampleObject : public BusObject {
         }
     }
 };
+
+class MyAboutData : public AboutData {
+  public:
+    static const char* TRANSPORT_OPTS;
+
+    MyAboutData() : AboutData() {
+        // TRANSPORT_OPTS field is required, is announced, not localized
+        SetNewFieldDetails(TRANSPORT_OPTS, REQUIRED | ANNOUNCED, "q");
+    }
+
+    MyAboutData(const char* defaultLanguage) : AboutData(defaultLanguage) {
+        SetNewFieldDetails(TRANSPORT_OPTS, REQUIRED | ANNOUNCED, "q");
+    }
+
+    QStatus SetTransportOpts(TransportMask transportOpts)
+    {
+        QStatus status = ER_OK;
+        MsgArg arg;
+        status = arg.Set(GetFieldSignature(TRANSPORT_OPTS), transportOpts);
+        if (status != ER_OK) {
+            return status;
+        }
+        status = SetField(TRANSPORT_OPTS, arg);
+        return status;
+    }
+
+    QStatus GetTransportOpts(TransportMask* transportOpts)
+    {
+        QStatus status;
+        MsgArg* arg;
+        status = GetField(TRANSPORT_OPTS, arg);
+        if (status != ER_OK) {
+            return status;
+        }
+        status = arg->Get(GetFieldSignature(TRANSPORT_OPTS), transportOpts);
+        return status;
+    }
+};
+
+const char* MyAboutData::TRANSPORT_OPTS = "TransportOpts";
 
 class ThreadClass : public Thread {
 
@@ -130,6 +175,7 @@ class ThreadClass : public Thread {
     BusObject* busObject;
     SessionId sessionId;
     qcc::String discoveredServiceName;
+    MyAboutData aboutData;
 
     void ClientRun();
     void ServiceRun();
@@ -188,47 +234,6 @@ class ClientBusListener : public BusListener, public SessionListener {
     bool wasNameFoundAlready;
 };
 
-class MyAboutData : public AboutData {
-  public:
-    static const char* TRANSPORT_OPTS;
-
-    MyAboutData() : AboutData() {
-        // TRANSPORT_OPTS field is required, is announced, not localized
-        SetNewFieldDetails(TRANSPORT_OPTS, REQUIRED | ANNOUNCED, "q");
-    }
-
-    MyAboutData(const char* defaultLanguage) : AboutData(defaultLanguage) {
-        SetNewFieldDetails(TRANSPORT_OPTS, REQUIRED | ANNOUNCED, "q");
-    }
-
-    QStatus SetTransportOpts(TransportMask transportOpts)
-    {
-        QStatus status = ER_OK;
-        MsgArg arg;
-        status = arg.Set(GetFieldSignature(TRANSPORT_OPTS), transportOpts);
-        if (status != ER_OK) {
-            return status;
-        }
-        status = SetField(TRANSPORT_OPTS, arg);
-        return status;
-    }
-
-    QStatus GetTransportOpts(TransportMask* transportOpts)
-    {
-        QStatus status;
-        MsgArg* arg;
-        status = GetField(TRANSPORT_OPTS, arg);
-        if (status != ER_OK) {
-            return status;
-        }
-        status = arg->Get(GetFieldSignature(TRANSPORT_OPTS), transportOpts);
-        return status;
-    }
-};
-
-const char* MyAboutData::TRANSPORT_OPTS = "TransportOpts";
-
-static MyAboutData g_aboutData("en");
 
 class ClientAboutListener : public AboutListener {
   public:
@@ -236,6 +241,8 @@ class ClientAboutListener : public AboutListener {
 
     void Announced(const char* busName, uint16_t version, SessionPort port,
                    const MsgArg& objectDescriptionArg, const MsgArg& aboutDataArg) {
+        QCC_UNUSED(version);
+        QCC_UNUSED(objectDescriptionArg);
 
         MyAboutData ad;
         ad.CreatefromMsgArg(aboutDataArg);
@@ -288,6 +295,7 @@ class ServiceBusListener : public BusListener, public SessionPortListener {
 
     bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts)
     {
+        QCC_UNUSED(sessionPort);
         cout << "Accepting join session request from " << joiner << " (opts.transports=" << opts.transports << ")" << endl;
         return true;
     }
@@ -464,19 +472,19 @@ inline void ThreadClass::ServiceRun() {
                             0x1E, 0x82, 0x11, 0xE4,
                             0x86, 0x51, 0xD1, 0x56,
                             0x1D, 0x5D, 0x46, 0xB0 };
-        g_aboutData.SetAppId(appId, 16);
-        g_aboutData.SetDeviceName("DeviceName");
+        aboutData.SetAppId(appId, 16);
+        aboutData.SetDeviceName("DeviceName");
         //DeviceId is a string encoded 128bit UUID
-        g_aboutData.SetDeviceId("1273b650-49bc-11e4-916c-0800200c9a66");
-        g_aboutData.SetAppName(g_testAboutApplicationName.c_str());
-        g_aboutData.SetManufacturer("AllSeen Alliance");
-        g_aboutData.SetModelNumber("");
-        g_aboutData.SetDescription("bastress2 is a test application used to verify AllJoyn functionality");
+        aboutData.SetDeviceId("1273b650-49bc-11e4-916c-0800200c9a66");
+        aboutData.SetAppName(g_testAboutApplicationName.c_str());
+        aboutData.SetManufacturer("AllSeen Alliance");
+        aboutData.SetModelNumber("");
+        aboutData.SetDescription("bastress2 is a test application used to verify AllJoyn functionality");
         // software version of bbservice is the same as the AllJoyn version
-        g_aboutData.SetSoftwareVersion(ajn::GetVersion());
-        g_aboutData.SetTransportOpts(s_transports);
+        aboutData.SetSoftwareVersion(ajn::GetVersion());
+        aboutData.SetTransportOpts(s_transports);
 
-        aboutObj->Announce(SERVICE_PORT, g_aboutData);
+        aboutObj->Announce(SERVICE_PORT, aboutData);
     } else {
 
         /* Request name */
@@ -624,8 +632,17 @@ static void usage(void)
 }
 
 /** Main entry point */
-int main(int argc, char**argv)
+int CDECL_CALL main(int argc, char**argv)
 {
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+#endif
     QStatus status = ER_OK;
     uint32_t sleepTime = 600000;
     uint32_t threads = 5;
@@ -743,5 +760,10 @@ int main(int argc, char**argv)
             cout << "FAILED" << endl;
         }
     }
+
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return (int) status;
 }

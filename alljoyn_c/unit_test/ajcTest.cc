@@ -18,10 +18,24 @@
 
 #include <gtest/gtest.h>
 
+#include <alljoyn_c/Init.h>
+#include <alljoyn/Status.h>
+
 /** Main entry point */
-int main(int argc, char**argv, char**envArg)
+int CDECL_CALL main(int argc, char**argv, char**)
 {
     int status = 0;
+
+    if (alljoyn_init() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (alljoyn_routerinit() != ER_OK) {
+        alljoyn_shutdown();
+        return 1;
+    }
+#endif
+
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stderr, NULL, _IONBF, 0);
 
@@ -31,5 +45,9 @@ int main(int argc, char**argv, char**envArg)
 
     printf("%s exiting with status %d \n", argv[0], status);
 
+#ifdef ROUTER
+    alljoyn_routershutdown();
+#endif
+    alljoyn_shutdown();
     return (int) status;
 }

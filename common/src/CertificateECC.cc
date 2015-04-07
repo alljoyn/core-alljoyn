@@ -117,6 +117,7 @@ QStatus CertificateX509::EncodePrivateKeyPEM(const uint8_t* privateKey, size_t l
 
     status = Crypto_ASN1::Encode(der, "(ixc(o))", 1, &prv, 0, &oid);
     if (ER_OK != status) {
+        QCC_LogError(status, ("Error encoding private key in PEM format"));
         return status;
     }
     status = Crypto_ASN1::EncodeBase64(der, pem);
@@ -135,6 +136,7 @@ QStatus CertificateX509::DecodePrivateKeyPEM(const String& encoded, uint8_t* pri
 
     status = StripTags(pem, EC_PRIVATE_KEY_PEM_BEGIN_TAG, EC_PRIVATE_KEY_PEM_END_TAG);
     if (ER_OK != status) {
+        QCC_LogError(status, ("Error decoding private key from PEM. Only support tag -----BEGIN EC PRIVATE KEY-----, tag -----END EC PRIVATE KEY-----, and key"));
         return status;
     }
     qcc::String der;
@@ -209,6 +211,7 @@ QStatus CertificateX509::DecodePublicKeyPEM(const String& encoded, uint8_t* publ
 
     status = StripTags(pem, PUBLIC_KEY_PEM_BEGIN_TAG, PUBLIC_KEY_PEM_END_TAG);
     if (ER_OK != status) {
+        QCC_LogError(status, ("Error decoding private key from PEM. Only support tag -----BEGIN PUBLIC KEY-----, tag -----END PUBLIC KEY-----, and key"));
         return status;
     }
     qcc::String der;
@@ -252,15 +255,29 @@ QStatus CertificateX509::DecodeCertificateName(const qcc::String& dn, Certificat
         qcc::String oid;
         qcc::String str;
         qcc::String rem;
-        status = Crypto_ASN1::Decode(tmp, "{(ou)}.", &oid, &str, &rem);
+        status = Crypto_ASN1::Decode(tmp, "{(o.)}.", &oid, &str, &rem);
         if (ER_OK != status) {
+            QCC_LogError(status, ("Error decoding distinguished name"));
             return status;
         }
         if (OID_DN_OU == oid) {
-            name.SetOU((const uint8_t*) str.data(), str.length());
+            qcc::String val;
+            status = Crypto_ASN1::Decode(str, "u", &val);
+            if (ER_OK != status) {
+                QCC_LogError(status, ("Error decoding OU field of the distinguished name"));
+                return status;
+            }
+            name.SetOU((const uint8_t*) val.data(), val.length());
         } else if (OID_DN_CN == oid) {
-            name.SetCN((const uint8_t*) str.data(), str.length());
+            qcc::String val;
+            status = Crypto_ASN1::Decode(str, "u", &val);
+            if (ER_OK != status) {
+                QCC_LogError(status, ("Error decoding CN field of the distinguished name"));
+                return status;
+            }
+            name.SetCN((const uint8_t*) val.data(), val.length());
         }
+        /* do not parse the other fields of the distinguished name */
         tmp = rem;
     }
 
@@ -269,23 +286,25 @@ QStatus CertificateX509::DecodeCertificateName(const qcc::String& dn, Certificat
 
 QStatus CertificateX509::EncodeCertificateName(qcc::String& dn, CertificateX509::DistinguishedName& name)
 {
+    qcc::String ouOID;
+    qcc::String cnOID;
+    qcc::String ou;
+    qcc::String cn;
     if (name.ouLen > 0) {
-        qcc::String oid = OID_DN_OU;
-        qcc::String tmp((const char*) name.ou, name.ouLen);
-        QStatus status = Crypto_ASN1::Encode(dn, "{(ou)}", &oid, &tmp);
-        if (ER_OK != status) {
-            return status;
-        }
+        ouOID = OID_DN_OU;
+        ou.assign((const char*) name.ou, name.ouLen);
     }
     if (name.cnLen > 0) {
-        qcc::String oid = OID_DN_CN;
-        qcc::String tmp((const char*) name.cn, name.cnLen);
-        QStatus status = Crypto_ASN1::Encode(dn, "{(ou)}", &oid, &tmp);
-        if (ER_OK != status) {
-            return status;
-        }
+        cnOID = OID_DN_CN;
+        cn.assign((const char*) name.cn, name.cnLen);
     }
-
+    if ((name.ouLen > 0) && (name.cnLen > 0)) {
+        return Crypto_ASN1::Encode(dn, "{(ou)}{(ou)}", &ouOID, &ou, &cnOID, &cn);
+    } else if (name.ouLen > 0) {
+        return Crypto_ASN1::Encode(dn, "{(ou)}", &ouOID, &ou);
+    } else if (name.cnLen > 0) {
+        return Crypto_ASN1::Encode(dn, "{(ou)}", &cnOID, &cn);
+    }
     return ER_OK;
 }
 
@@ -497,10 +516,15 @@ QStatus CertificateX509::DecodeCertificateExt(const qcc::String& ext)
     while ((ER_OK == status) && (tmp.size())) {
         qcc::String oid;
         qcc::String str;
+        qcc::String critical;
         qcc::String rem;
-        status = Crypto_ASN1::Decode(tmp, "(ox).", &oid, &str, &rem);
+        status = Crypto_ASN1::Decode(tmp, "(ozx).", &oid, &critical, &str, &rem);
         if (ER_OK != status) {
-            return status;
+            /* the critical boolean flag is not present */
+            status = Crypto_ASN1::Decode(tmp, "(ox).", &oid, &str, &rem);
+            if (ER_OK != status) {
+                return status;
+            }
         }
         if (OID_BASIC_CONSTRAINTS == oid) {
             qcc::String opt;
@@ -508,7 +532,8 @@ QStatus CertificateX509::DecodeCertificateExt(const qcc::String& ext)
             if (ER_OK != status) {
                 status = ER_OK;  /* The sequence can be empty since CA is false by default */
             } else if (opt.size()) {
-                status = Crypto_ASN1::Decode(opt, "z", &ca);
+                /* do not parse the path len field */
+                status = Crypto_ASN1::Decode(opt, "z*", &ca);
                 if (ER_OK != status) {
                     return status;
                 }
@@ -557,6 +582,7 @@ QStatus CertificateX509::EncodeCertificateExt(qcc::String& ext)
     oid = OID_BASIC_CONSTRAINTS;
     status = Crypto_ASN1::Encode(raw, "(ox)", &oid, &tmp);
     if (ER_OK != status) {
+        QCC_LogError(status, ("Error decoding certificate basic constraint"));
         return status;
     }
     tmp.clear();
@@ -608,16 +634,20 @@ QStatus CertificateX509::DecodeCertificateTBS()
     status = Crypto_ASN1::Decode(tbs, "(c(i)l(o)(.)(.)(.)(.).)",
                                  0, &x509Version, &serial, &oid, &iss, &time, &sub, &pub, &ext);
     if (ER_OK != status) {
+        QCC_LogError(status, ("Error decoding certificate"));
         return status;
     }
     if (X509_VERSION_3 != x509Version) {
+        QCC_LogError(status, ("Certificate not X.509v3"));
         return ER_FAIL;
     }
     if (OID_SIG_ECDSA_SHA256 != oid) {
+        QCC_LogError(status, ("Certificate signature must be SHA-256"));
         return ER_FAIL;
     }
     status = DecodeCertificateName(iss, issuer);
     if (ER_OK != status) {
+        QCC_LogError(status, ("Error decoding certificate issuer"));
         return status;
     }
     if (GetIssuerCNLength() == qcc::GUID128::SIZE) {
@@ -625,10 +655,12 @@ QStatus CertificateX509::DecodeCertificateTBS()
     }
     status = DecodeCertificateTime(time);
     if (ER_OK != status) {
+        QCC_LogError(status, ("Error decoding certificate validity period"));
         return status;
     }
     status = DecodeCertificateName(sub, subject);
     if (ER_OK != status) {
+        QCC_LogError(status, ("Error decoding certificate subject"));
         return status;
     }
     if (GetSubjectCNLength() == qcc::GUID128::SIZE) {
@@ -636,9 +668,13 @@ QStatus CertificateX509::DecodeCertificateTBS()
     }
     status = DecodeCertificatePub(pub);
     if (ER_OK != status) {
+        QCC_LogError(status, ("Error decoding certificate subject public key"));
         return status;
     }
     status = DecodeCertificateExt(ext);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Error decoding certificate extensions"));
+    }
 
     return status;
 }
@@ -749,6 +785,9 @@ QStatus CertificateX509::DecodeCertificateDER(const qcc::String& der)
         return status;
     }
     status = DecodeCertificateSig(sig);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Error decoding certificate signature"));
+    }
 
     return status;
 }
@@ -782,12 +821,14 @@ QStatus CertificateX509::DecodeCertificatePEM(const qcc::String& pem)
 
     pos = pem.find(tag1);
     if (pos == qcc::String::npos) {
+        QCC_LogError(ER_INVALID_DATA, ("Error decoding certificate data from PEM. Only support tag -----BEGIN CERTIFICATE-----, tag -----END CERTIFICATE-----, and data"));
         return ER_INVALID_DATA;
     }
     rem = pem.substr(pos + tag1.size());
 
     pos = rem.find(tag2);
     if (pos == qcc::String::npos) {
+        QCC_LogError(ER_INVALID_DATA, ("Error decoding certificate data from PEM. Only support tag -----BEGIN CERTIFICATE-----, tag -----END CERTIFICATE-----, and data"));
         return ER_INVALID_DATA;
     }
     rem = rem.substr(0, pos);
@@ -845,12 +886,6 @@ QStatus CertificateX509::Verify()
 
 QStatus CertificateX509::Verify(const ECCPublicKey* key)
 {
-    QStatus status;
-    status = VerifyValidity();
-    if (ER_OK != status) {
-        QCC_DbgPrintf(("Invalid validity period"));
-        return status;
-    }
     Crypto_ECC ecc;
     ecc.SetDSAPublicKey(key);
     return ecc.DSAVerify((const uint8_t*) tbs.data(), tbs.size(), &signature);
@@ -891,17 +926,40 @@ String CertificateX509::ToString() const
 {
     qcc::String str("Certificate:\n");
     str += "serial:    " + serial + " (0x" + BytesToHexString((const uint8_t*) serial.data(), serial.length()) + ")\n";
-    if (GetIssuerCNLength() > 0) {
-        str += "issuer:    " + qcc::String((const char*) GetIssuerCN(), GetIssuerCNLength()) +
-               " (0x" + BytesToHexString(GetIssuerCN(), GetIssuerCNLength()) + ")\n";
+    if ((GetIssuerOULength() > 0) || (GetIssuerCNLength() > 0)) {
+        str += "issuer: ";
+        bool addComma = false;
+        if (GetIssuerOULength() > 0) {
+            str += "OU= " + qcc::String((const char*) GetIssuerOU(), GetIssuerOULength()) +
+                   " (0x" + BytesToHexString(GetIssuerOU(), GetIssuerOULength()) + ")";
+            addComma = true;
+        }
+        if (GetIssuerCNLength() > 0) {
+            if (addComma) {
+                str += ", ";
+            }
+            str += "CN= " + qcc::String((const char*) GetIssuerCN(), GetIssuerCNLength()) +
+                   " (0x" + BytesToHexString(GetIssuerCN(), GetIssuerCNLength()) + ")";
+        }
+        str += "\n";
     }
-    if (GetSubjectOULength() > 0) {
-        str += "guild:    " + qcc::String((const char*) GetSubjectOU(), GetSubjectOULength()) +
-               " (0x" + BytesToHexString(GetSubjectOU(), GetSubjectOULength()) + ")\n";
-    }
-    if (GetSubjectCNLength() > 0) {
-        str += "subject:    " + qcc::String((const char*) GetSubjectCN(), GetSubjectCNLength()) +
-               " (0x" + BytesToHexString(GetSubjectCN(), GetSubjectCNLength()) + ")\n";
+
+    if ((GetSubjectOULength() > 0) || (GetSubjectCNLength() > 0)) {
+        str += "subject: ";
+        bool addComma = false;
+        if (GetSubjectOULength() > 0) {
+            str += "OU= " + qcc::String((const char*) GetSubjectOU(), GetSubjectOULength()) +
+                   " (0x" + BytesToHexString(GetSubjectOU(), GetSubjectOULength()) + ")";
+            addComma = true;
+        }
+        if (GetSubjectCNLength() > 0) {
+            if (addComma) {
+                str += ", ";
+            }
+            str += "CN= " + qcc::String((const char*) GetSubjectCN(), GetSubjectCNLength()) +
+                   " (0x" + BytesToHexString(GetSubjectCN(), GetSubjectCNLength()) + ")";
+        }
+        str += "\n";
     }
     str += "publickey: " + BytesToHexString((const uint8_t*) &publickey, sizeof(publickey)) + "\n";
     str += "ca:        " + BytesToHexString((const uint8_t*) &ca, sizeof(uint8_t)) + "\n";

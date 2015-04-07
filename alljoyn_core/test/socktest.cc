@@ -36,9 +36,10 @@
 #include <qcc/Util.h>
 #include <qcc/time.h>
 
+#include <alljoyn/AllJoynStd.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/DBusStd.h>
-#include <alljoyn/AllJoynStd.h>
+#include <alljoyn/Init.h>
 #include <alljoyn/version.h>
 
 #include <alljoyn/Status.h>
@@ -68,6 +69,7 @@ static volatile sig_atomic_t g_interrupt = false;
 
 static void CDECL_CALL SigIntHandler(int sig)
 {
+    QCC_UNUSED(sig);
     g_interrupt = true;
 }
 
@@ -131,6 +133,8 @@ class SockService : public BusObject {
 
     void PutSock(const InterfaceDescription::Member* member, Message& msg)
     {
+        QCC_UNUSED(member);
+
         QStatus status;
         SocketFd handle;
 
@@ -158,10 +162,13 @@ class SockService : public BusObject {
 
     void GetSock(const InterfaceDescription::Member* member, Message& msg)
     {
+        QCC_UNUSED(member);
+        QCC_UNUSED(msg);
     }
 
     void NameAcquiredCB(Message& msg, void* context)
     {
+        QCC_UNUSED(context);
         uint32_t ownership = 0;
         QStatus status = msg->GetArgs("u", &ownership);
         if ((status != ER_OK) || (ownership != DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER)) {
@@ -245,8 +252,18 @@ Exit:
     return status;
 }
 
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+#endif
+
     qcc::SocketFd handles[2] = { 0, 0 };
     QStatus status = ER_OK;
     BusAttachment bus("sock_test");
@@ -367,7 +384,7 @@ int main(int argc, char** argv)
                     uint8_t buf[256];
                     size_t recvd;
                     /* Read from the socket */
-                    while (true) {
+                    for (;;) {
                         status = qcc::Recv(handles[1], buf, sizeof(buf), recvd);
                         /* This is just a test program so try again if the read blocks */
                         if (status == ER_WOULDBLOCK) {
@@ -414,5 +431,9 @@ Exit:
         qcc::Close(handles[1]);
     }
     printf("sock_test exiting with status %d (%s)\n", status, QCC_StatusText(status));
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return (int) status;
 }

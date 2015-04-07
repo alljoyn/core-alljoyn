@@ -29,17 +29,21 @@
 #include <qcc/Debug.h>
 #include <qcc/Util.h>
 #include <qcc/Crypto.h>
-
 #include <qcc/CngCache.h>
+#include "Crypto.h"
 
 #define QCC_MODULE "CRYPTO"
 
 namespace qcc {
 
-CngCache::CngCache() : ccmHandle(NULL), ecbHandle(NULL), rsaHandle(NULL)
+CngCache::CngCache() : ccmHandle(NULL), ecbHandle(NULL)
 {
     assert(sizeof(algHandles) == (sizeof(BCRYPT_ALG_HANDLE) * ALGORITHM_COUNT * 2));
     memset(&algHandles, 0, sizeof(algHandles));
+    assert(sizeof(ecdsaHandles) == (sizeof(BCRYPT_ALG_HANDLE) * ECDSA_ALGORITHM_COUNT));
+    memset(&ecdsaHandles, 0, sizeof(ecdsaHandles));
+    assert(sizeof(ecdhHandles) == (sizeof(BCRYPT_ALG_HANDLE) * ECDH_ALGORITHM_COUNT));
+    memset(&ecdhHandles, 0, sizeof(ecdhHandles));
 }
 
 CngCache::~CngCache()
@@ -73,43 +77,37 @@ void CngCache::Cleanup()
     }
     CloseAlgorithmProvider(&ccmHandle);
     CloseAlgorithmProvider(&ecbHandle);
-    CloseAlgorithmProvider(&rsaHandle);
+    for (int i = 0; i < ECDSA_ALGORITHM_COUNT; ++i) {
+        CloseAlgorithmProvider(&ecdsaHandles[i]);
+    }
+    for (int i = 0; i < ECDH_ALGORITHM_COUNT; ++i) {
+        CloseAlgorithmProvider(&ecdhHandles[i]);
+    }
 }
 
 /**
  * The one and only CNG cache instance.
  */
-uint64_t cngCacheDummy[RequiredArrayLength(sizeof(CngCache), uint64_t)];
+static uint64_t _cngCache[RequiredArrayLength(sizeof(CngCache), uint64_t)];
+static bool initialized = false;
 
-CngCache& cngCache = (CngCache&)cngCacheDummy;
+CngCache& cngCache = (CngCache&)_cngCache;
 
-static int cngCacheCounter = 0;
-bool CngCacheInit::cleanedup = false;
-CngCacheInit::CngCacheInit()
+void Crypto::Init()
 {
-    if (cngCacheCounter++ == 0) {
-        //placement new
+    if (!initialized) {
         new (&cngCache)CngCache();
+        initialized = true;
     }
 }
 
-CngCacheInit::~CngCacheInit()
+void Crypto::Shutdown()
 {
-    if (--cngCacheCounter == 0 && !cleanedup) {
-        //placement delete
+    if (!initialized) {
         cngCache.~CngCache();
-        cleanedup = true;
-    }
-
-}
-
-void CngCacheInit::Cleanup()
-{
-    if (!cleanedup) {
-        //placement delete
-        cngCache.~CngCache();
-        cleanedup = true;
+        initialized = false;
     }
 }
+
 }         // qcc
 

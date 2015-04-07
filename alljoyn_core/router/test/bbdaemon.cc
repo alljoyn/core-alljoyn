@@ -32,6 +32,7 @@
 #include <qcc/Util.h>
 
 #include <alljoyn/DBusStd.h>
+#include <alljoyn/Init.h>
 #include <alljoyn/version.h>
 
 #include <alljoyn/Status.h>
@@ -74,6 +75,7 @@ static volatile sig_atomic_t g_interrupt = false;
 
 static void CDECL_CALL SigIntHandler(int sig)
 {
+    QCC_UNUSED(sig);
     g_interrupt = true;
 }
 
@@ -154,6 +156,8 @@ class LocalTestObject : public BusObject {
 
     void NameAcquiredCB(Message& msg, void* context)
     {
+        QCC_UNUSED(msg);
+        QCC_UNUSED(context);
         /* Advertise the new name */
 
     }
@@ -162,6 +166,9 @@ class LocalTestObject : public BusObject {
                        const char* sourcePath,
                        Message& msg)
     {
+        QCC_UNUSED(member);
+        QCC_UNUSED(msg);
+
         map<qcc::String, size_t>::const_iterator it;
 
         ++rxCounts[sourcePath];
@@ -175,6 +182,7 @@ class LocalTestObject : public BusObject {
 
     void Ping(const InterfaceDescription::Member* member, Message& msg)
     {
+        QCC_UNUSED(member);
         /* Reply with same string that was sent to us */
         MsgArg arg(*(msg->GetArg(0)));
         printf("Pinged with: %s\n", msg->GetArg(0)->ToString().c_str());
@@ -186,6 +194,8 @@ class LocalTestObject : public BusObject {
 
     QStatus Get(const char* ifcName, const char* propName, MsgArg& val)
     {
+        QCC_UNUSED(ifcName);
+
         QStatus status = ER_OK;
         if (0 == strcmp("int_val", propName)) {
             // val.Set("i", prop_int_val);
@@ -209,6 +219,8 @@ class LocalTestObject : public BusObject {
 
     QStatus Set(const char* ifcName, const char* propName, MsgArg& val)
     {
+        QCC_UNUSED(ifcName);
+
         QStatus status = ER_OK;
         if ((0 == strcmp("int_val", propName)) && (val.typeId == ALLJOYN_INT32)) {
             prop_int_val = val.v_int32;
@@ -232,58 +244,15 @@ class LocalTestObject : public BusObject {
     int32_t prop_int_val;
 };
 
-
-static const char x509cert[] = {
-    "-----BEGIN CERTIFICATE-----\n"
-    "MIIB7TCCAZegAwIBAgIJAKSCIxJABMPWMA0GCSqGSIb3DQEBBQUAMFIxCzAJBgNV\n"
-    "BAYTAlVTMRMwEQYDVQQIDApXYXNoaW5ndG9uMRAwDgYDVQQHDAdTZWF0dGxlMQ0w\n"
-    "CwYDVQQKDARRdUlDMQ0wCwYDVQQDDARHcmVnMB4XDTEwMDgwMzIzNTYzOVoXDTEx\n"
-    "MDgwMzIzNTYzOVowUjELMAkGA1UEBhMCVVMxEzARBgNVBAgMCldhc2hpbmd0b24x\n"
-    "EDAOBgNVBAcMB1NlYXR0bGUxDTALBgNVBAoMBFF1SUMxDTALBgNVBAMMBEdyZWcw\n"
-    "XDANBgkqhkiG9w0BAQEFAANLADBIAkEA3b+TpTkJD03LlgKKA9phSeA+5owwM/jj\n"
-    "PrRFcrH0mrFrHRujyPCuWRwOZojXgxVFU/jaTOyQ5sA5df7nEMgf/wIDAQABo1Aw\n"
-    "TjAdBgNVHQ4EFgQUr6/4jRv/8qYIAtu/x9wSHllToxgwHwYDVR0jBBgwFoAUr6/4\n"
-    "jRv/8qYIAtu/x9wSHllToxgwDAYDVR0TBAUwAwEB/zANBgkqhkiG9w0BAQUFAANB\n"
-    "ABJSIipYXtLymiidV3J6cOlurPvEM/mXey9FMjvAjrNrrhuOBP1SFrcW+ubWsmWi\n"
-    "EeP1srLyLDXtE5AogwPcaVc=\n"
-    "-----END CERTIFICATE-----"
-};
-
-static const char privKey[] = {
-    "-----BEGIN RSA PRIVATE KEY-----\n"
-    "Proc-Type: 4,ENCRYPTED\n"
-    "DEK-Info: AES-128-CBC,1B43B2A4AE39BF6CECCA363FC9D02237\n"
-    "\n"
-    "zEMSBXr4Up+C5ZeWVZw5LPZHColZ8+ZhgkNHdqSfgyjri7Ij6nb1ABcbWeJBeqtF\n"
-    "9fsijcTqUACVOhrAFi3d+F9HYP6taqDDwCJj638cTnYGM9j+WAspNOm05FlFmgvs\n"
-    "guwpqc98RAj29C72zYb3GWoW0xIOhPF84OWKppweMSV6UFpLqnpFmo0zGT4ItMhV\n"
-    "/tOdXyrTzhyjwFWhOBM1GZSKl1AtmIgDW88fFfGyPxIQSS/30ur0/dgUinVODBLP\n"
-    "kNP73tpiBCeSHWqLlHV/bTer7TE5dsbyvvbFKftns/wP4Eri3V4SsldkURUJTrG7\n"
-    "oGvwY4hwV0iZjSUcX1aBrfXE6oc8LAaJrZzNDUvNLjM2jHzIvMTwWIa3R1z9yjWl\n"
-    "Rk5RScL4+i2JPll9SzrkhIGvh0ElYRdzbfkrUIY2anGwxM5Ihcv8Z3kpYJyvhdJu\n"
-    "-----END RSA PRIVATE KEY-----\n"
-};
-
 class MyAuthListener : public AuthListener {
     bool RequestCredentials(const char* authMechanism, const char* authPeer, uint16_t authCount, const char* userId, uint16_t credMask, Credentials& creds) {
+        QCC_UNUSED(authPeer);
+        QCC_UNUSED(authCount);
 
         if (strcmp(authMechanism, "ALLJOYN_SRP_KEYX") == 0) {
             if (credMask & AuthListener::CRED_PASSWORD) {
                 creds.SetPassword("123456");
                 printf("AuthListener returning fixed pin \"%s\" for %s\n", creds.GetPassword().c_str(), authMechanism);
-            }
-            return true;
-        }
-
-        if (strcmp(authMechanism, "ALLJOYN_RSA_KEYX") == 0) {
-            if (credMask & AuthListener::CRED_CERT_CHAIN) {
-                creds.SetCertChain(x509cert);
-            }
-            if (credMask & AuthListener::CRED_PRIVATE_KEY) {
-                creds.SetPrivateKey(privKey);
-            }
-            if (credMask & AuthListener::CRED_PASSWORD) {
-                creds.SetPassword("123456");
             }
             return true;
         }
@@ -315,17 +284,8 @@ class MyAuthListener : public AuthListener {
         return false;
     }
 
-    bool VerifyCredentials(const char* authMechanism, const char* authPeer, const Credentials& creds) {
-        if (strcmp(authMechanism, "ALLJOYN_RSA_KEYX") == 0) {
-            if (creds.IsSet(AuthListener::CRED_CERT_CHAIN)) {
-                printf("Verify\n%s\n", creds.GetCertChain().c_str());
-                return true;
-            }
-        }
-        return false;
-    }
-
     void AuthenticationComplete(const char* authMechanism, const char* authPeer, bool success) {
+        QCC_UNUSED(authPeer);
         printf("Authentication %s %s\n", authMechanism, success ? "succesful" : "failed");
     }
 
@@ -354,9 +314,17 @@ static void usage(void)
 #if defined(ROUTER_LIB)
 extern "C" int DaemonMain(int argc, char** argv)
 #else
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 #endif
 {
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+
 #if defined(NDEBUG) && defined(QCC_OS_ANDROID)
     LoggerSetting::GetLoggerSetting("bbdaemon", LOG_ERR, true, NULL);
 #else
@@ -366,12 +334,12 @@ int main(int argc, char** argv)
     QStatus status = ER_OK;
     qcc::GUID128 guid;
     bool mimicBbservice = false;
-    ConfigDB config(daemonConfig);
+    ConfigDB* config = new ConfigDB(daemonConfig);
 
     printf("AllJoyn Library version: %s\n", ajn::GetVersion());
     printf("AllJoyn Library build info: %s\n", ajn::GetBuildInfo());
 
-    if (!config.LoadConfig()) {
+    if (!config->LoadConfig()) {
         printf("Failed to load the internal config.\n");
         exit(1);
     }
@@ -482,13 +450,13 @@ int main(int argc, char** argv)
     cntr.Add(new TransportFactory<UDPTransport>(UDPTransport::TransportName, false));
 
     /* Create message bus with support for alternate transports */
-    Bus bus("bbdaemon", cntr, serverArgs.c_str());
-    BusController controller(bus);
+    Bus* bus = new Bus("bbdaemon", cntr, serverArgs.c_str());
+    BusController* controller = new BusController(*bus);
 
     if (mimicBbservice) {
         /* Add org.alljoyn.alljoyn_test interface */
         InterfaceDescription* testIntf = NULL;
-        status = bus.CreateInterface(::org::alljoyn::alljoyn_test::InterfaceName, testIntf);
+        status = bus->CreateInterface(::org::alljoyn::alljoyn_test::InterfaceName, testIntf);
         if (ER_OK == status) {
             testIntf->AddSignal("my_signal", NULL, NULL, 0);
             testIntf->AddMethod("my_ping", "s", "s", "outStr,inStr", 0);
@@ -500,7 +468,7 @@ int main(int argc, char** argv)
         /* Add org.alljoyn.alljoyn_test.values interface */
         if (ER_OK == status) {
             InterfaceDescription* valuesIntf = NULL;
-            status = bus.CreateInterface(::org::alljoyn::alljoyn_test::values::InterfaceName, valuesIntf);
+            status = bus->CreateInterface(::org::alljoyn::alljoyn_test::values::InterfaceName, valuesIntf);
             if (ER_OK == status) {
                 valuesIntf->AddProperty("int_val", "i", PROP_ACCESS_RW);
                 valuesIntf->AddProperty("str_val", "s", PROP_ACCESS_RW);
@@ -514,14 +482,14 @@ int main(int argc, char** argv)
 
     if (ER_OK == status) {
         /* Start the bus controller */
-        status = controller.Init(serverArgs);
+        status = controller->Init(serverArgs);
         if (ER_OK == status) {
             LocalTestObject* testObj = NULL;
 
             if (mimicBbservice) {
-                bus.EnablePeerSecurity("ALLJOYN_RSA_KEYX ALLJOYN_SRP_KEYX ALLJOYN_SRP_LOGON", new MyAuthListener());
-                testObj = new LocalTestObject(bus, ::org::alljoyn::alljoyn_test::ObjectPath, 10);
-                bus.RegisterBusObject(*testObj);
+                bus->EnablePeerSecurity("ALLJOYN_SRP_KEYX ALLJOYN_SRP_LOGON", new MyAuthListener());
+                testObj = new LocalTestObject(*bus, ::org::alljoyn::alljoyn_test::ObjectPath, 10);
+                bus->RegisterBusObject(*testObj);
             }
 
             printf("AllJoyn Daemon PID = %d\n", GetPid());
@@ -531,11 +499,11 @@ int main(int argc, char** argv)
                 while (g_interrupt == false) {
                     qcc::Sleep(100);
                 }
-                bus.StopListen(serverArgs.c_str());
+                bus->StopListen(serverArgs.c_str());
             }
 
             if (mimicBbservice) {
-                bus.UnregisterBusObject(*testObj);
+                bus->UnregisterBusObject(*testObj);
                 delete testObj;
             }
         } else {
@@ -545,5 +513,10 @@ int main(int argc, char** argv)
         QCC_LogError(status, ("BusController initialization failed"));
     }
 
+    delete controller;
+    delete bus;
+    delete config;
+    AllJoynRouterShutdown();
+    AllJoynShutdown();
     return (int) status;
 }

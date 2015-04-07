@@ -40,12 +40,14 @@ class ProxyBusObjectTestMethodHandlers {
   public:
     static void Ping(const InterfaceDescription::Member* member, Message& msg)
     {
-
+        QCC_UNUSED(member);
+        QCC_UNUSED(msg);
     }
 
     static void Chirp(const InterfaceDescription::Member* member, Message& msg)
     {
-
+        QCC_UNUSED(member);
+        QCC_UNUSED(msg);
     }
 };
 
@@ -55,6 +57,10 @@ class ProxyBusObjectTestAuthListenerOne : public AuthListener {
 
     QStatus RequestCredentialsAsync(const char* authMechanism, const char* authPeer, uint16_t authCount, const char* userId, uint16_t credMask, void* context)
     {
+        QCC_UNUSED(authPeer);
+        QCC_UNUSED(authCount);
+        QCC_UNUSED(userId);
+
         Credentials creds;
         EXPECT_STREQ("ALLJOYN_SRP_KEYX", authMechanism);
         if (strcmp(authMechanism, "ALLJOYN_SRP_KEYX") == 0) {
@@ -67,6 +73,8 @@ class ProxyBusObjectTestAuthListenerOne : public AuthListener {
     }
 
     void AuthenticationComplete(const char* authMechanism, const char* authPeer, bool success) {
+        QCC_UNUSED(authPeer);
+
         EXPECT_STREQ("ALLJOYN_SRP_KEYX", authMechanism);
         EXPECT_TRUE(success);
         auth_complete_listener1_flag = true;
@@ -77,12 +85,19 @@ class ProxyBusObjectTestAuthListenerTwo : public AuthListener {
 
     QStatus RequestCredentialsAsync(const char* authMechanism, const char* authPeer, uint16_t authCount, const char* userId, uint16_t credMask, void* context)
     {
+        QCC_UNUSED(authMechanism);
+        QCC_UNUSED(authPeer);
+        QCC_UNUSED(authCount);
+        QCC_UNUSED(userId);
+        QCC_UNUSED(credMask);
+
         Credentials creds;
         creds.SetPassword("123456");
         return RequestCredentialsResponse(context, true, creds);
     }
 
     void AuthenticationComplete(const char* authMechanism, const char* authPeer, bool success) {
+        QCC_UNUSED(authPeer);
 
         EXPECT_STREQ("ALLJOYN_SRP_KEYX", authMechanism);
         EXPECT_TRUE(success);
@@ -170,7 +185,10 @@ class ProxyBusObjectTest : public testing::Test {
     class ProxyBusObjectTestBusListener : public BusListener {
       public:
         ProxyBusObjectTestBusListener() : name_owner_changed_flag(false) { };
-        void    NameOwnerChanged(const char*busName, const char*previousOwner, const char*newOwner) {
+        void NameOwnerChanged(const char*busName, const char*previousOwner, const char*newOwner) {
+            QCC_UNUSED(previousOwner);
+            QCC_UNUSED(newOwner);
+
             if (strcmp(busName, OBJECT_NAME) == 0) {
                 name_owner_changed_flag = true;
             }
@@ -211,12 +229,14 @@ class ProxyBusObjectTest : public testing::Test {
 
         void Ping(const InterfaceDescription::Member* member, Message& msg)
         {
-
+            QCC_UNUSED(member);
+            QCC_UNUSED(msg);
         }
 
         void Chirp(const InterfaceDescription::Member* member, Message& msg)
         {
-
+            QCC_UNUSED(member);
+            QCC_UNUSED(msg);
         }
     };
 
@@ -488,6 +508,8 @@ TEST_F(ProxyBusObjectTest, AddPropertyInterfaceError) {
     EXPECT_EQ(ER_OK, status);
 }
 
+#define QCC_MODULE "PBO_TEST"
+
 // ASACORE-1521
 class ChangeListener : public ProxyBusObject::PropertiesChangedListener {
   public:
@@ -536,6 +558,11 @@ class ChangeListener : public ProxyBusObject::PropertiesChangedListener {
                            const MsgArg& invalidated,
                            void* context)
     {
+        QCC_UNUSED(obj);
+        QCC_UNUSED(ifaceName);
+        QCC_UNUSED(changed);
+        QCC_UNUSED(invalidated);
+        QCC_UNUSED(context);
         testLock.Lock();
         running = true;
         testCond.Signal();
@@ -597,6 +624,7 @@ class UnregisterThread : public Thread {
 
     ThreadReturn STDCALL Run(void* arg)
     {
+        QCC_UNUSED(arg);
         QStatus status = ER_OK;
         ChangeListener* l = NULL;
         bool wait = true;
@@ -636,8 +664,9 @@ TEST_F(ProxyBusObjectTest, UnregisterPropertiesChangedListenerRaceTest1) {
      */
     Mutex lock;
     Condition cond;
+    String path = String(OBJECT_PATH) + "Race1";
 
-    BusObject testObj(OBJECT_PATH);
+    BusObject testObj(path.c_str());
     bus.RegisterBusObject(testObj);
 
     InterfaceDescription* testIntf1 = NULL;
@@ -649,7 +678,7 @@ TEST_F(ProxyBusObjectTest, UnregisterPropertiesChangedListenerRaceTest1) {
     testIntf1->AddPropertyAnnotation("stringProp1", org::freedesktop::DBus::AnnotateEmitsChanged, "true");
     testIntf1->Activate();
 
-    ProxyBusObject proxyObj(bus, bus.GetUniqueName().c_str(), OBJECT_PATH, 0);
+    ProxyBusObject proxyObj(bus, bus.GetUniqueName().c_str(), path.c_str(), 0);
     MsgArg arg("s", "foo");
 
     status = proxyObj.AddInterface(*testIntf1);
@@ -725,8 +754,9 @@ TEST_F(ProxyBusObjectTest, UnregisterPropertiesChangedListenerRaceTest2) {
      */
     Mutex lock;
     Condition cond;
+    String path = String(OBJECT_PATH) + "Race2";
 
-    BusObject testObj(OBJECT_PATH);
+    BusObject testObj(path.c_str());
     bus.RegisterBusObject(testObj);
 
     InterfaceDescription* testIntf1 = NULL;
@@ -738,7 +768,7 @@ TEST_F(ProxyBusObjectTest, UnregisterPropertiesChangedListenerRaceTest2) {
     testIntf1->AddPropertyAnnotation("stringProp1", org::freedesktop::DBus::AnnotateEmitsChanged, "true");
     testIntf1->Activate();
 
-    ProxyBusObject proxyObj(bus, bus.GetUniqueName().c_str(), OBJECT_PATH, 0);
+    ProxyBusObject proxyObj(bus, bus.GetUniqueName().c_str(), path.c_str(), 0);
     MsgArg arg("s", "foo");
 
     status = proxyObj.AddInterface(*testIntf1);
@@ -806,8 +836,9 @@ TEST_F(ProxyBusObjectTest, UnregisterPropertiesChangedListenerRaceTest3) {
      */
     Mutex lock;
     Condition cond;
+    String path = String(OBJECT_PATH) + "Race3";
 
-    BusObject testObj(OBJECT_PATH);
+    BusObject testObj(path.c_str());
     bus.RegisterBusObject(testObj);
 
     InterfaceDescription* testIntf1 = NULL;
@@ -819,7 +850,7 @@ TEST_F(ProxyBusObjectTest, UnregisterPropertiesChangedListenerRaceTest3) {
     testIntf1->AddPropertyAnnotation("stringProp1", org::freedesktop::DBus::AnnotateEmitsChanged, "true");
     testIntf1->Activate();
 
-    ProxyBusObject proxyObj(bus, bus.GetUniqueName().c_str(), OBJECT_PATH, 0);
+    ProxyBusObject proxyObj(bus, bus.GetUniqueName().c_str(), path.c_str(), 0);
     MsgArg arg("s", "foo");
 
     status = proxyObj.AddInterface(*testIntf1);
@@ -861,8 +892,9 @@ TEST_F(ProxyBusObjectTest, UnregisterPropertiesChangedListenerRaceTest4) {
      */
     Mutex lock;
     Condition cond;
+    String path = String(OBJECT_PATH) + "Race4";
 
-    BusObject testObj(OBJECT_PATH);
+    BusObject testObj(path.c_str());
     bus.RegisterBusObject(testObj);
 
     InterfaceDescription* testIntf1 = NULL;
@@ -874,7 +906,7 @@ TEST_F(ProxyBusObjectTest, UnregisterPropertiesChangedListenerRaceTest4) {
     testIntf1->AddPropertyAnnotation("stringProp1", org::freedesktop::DBus::AnnotateEmitsChanged, "true");
     testIntf1->Activate();
 
-    ProxyBusObject* proxyObj = new ProxyBusObject(bus, bus.GetUniqueName().c_str(), OBJECT_PATH, 0);
+    ProxyBusObject* proxyObj = new ProxyBusObject(bus, bus.GetUniqueName().c_str(), path.c_str(), 0);
     MsgArg arg("s", "foo");
 
     status = proxyObj->AddInterface(*testIntf1);

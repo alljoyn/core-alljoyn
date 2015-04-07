@@ -1734,17 +1734,30 @@ public class BusAttachment {
     public native Status reloadKeyStore();
 
     /**
-     * Registers a user-defined authentication listener class with a specific default key store.
+     * Registers a user-defined authentication listener class with a specific
+     * default key store.
      *
-     * @param authMechanisms the authentication mechanism(s) to use for peer-to-peer authentication. This is a space separated list of any of the following values: ALLJOYN_PIN_KEYX, ALLJOYN_SRP_LOGON, ALLJOYN_RSA_KEYX, ALLJOYN_SRP_KEYX, ALLJOYN_ECDHE_NULL, ALLJOYN_ECDHE_PSK, ALLJOYN_ECDHE_ECDSA, GSSAPI.
+     * @param authMechanisms the authentication mechanism(s) to use
+     *                         for peer-to-peer authentication. This
+     *                         is a space separated list of any of the
+     *                         following values: ALLJOYN_SRP_LOGON,
+     *                         ALLJOYN_SRP_KEYX, ALLJOYN_ECDHE_NULL,
+     *                         ALLJOYN_ECDHE_PSK, ALLJOYN_ECDHE_ECDSA,
+     *                         GSSAPI.
      * @param listener the authentication listener
-     * @param keyStoreFileName the name of the default key store.  Under Android, the recommended
-     *                         value of this parameter is {@code
-     *                         Context.getFileStreamPath("alljoyn_keystore").getAbsolutePath()}.  Note
-     *                         that the default key store implementation may be overrided with
-     *                         {@link #registerKeyStoreListener(KeyStoreListener)}.
-     * @param isShared Set to true if the default keystore will be shared between multiple programs.
-     *                 all programs must have read/write permissions to the keyStoreFileName file.
+     * @param keyStoreFileName the name of the default key store.
+     *                         Under Android, the recommended value of
+     *                         this parameter is {@code
+     *                         Context.getFileStreamPath("alljoyn_keystore").getAbsolutePath()}.
+     *                         Note that the default key store
+     *                         implementation may be overrided with
+     *                         {@link
+     *                         #registerKeyStoreListener(KeyStoreListener)}.
+     * @param isShared Set to true if the default keystore will be
+     *                         shared between multiple programs. All
+     *                         programs must have read/write
+     *                         permissions to the keyStoreFileName
+     *                         file.
      * @return OK if successful
      */
     public Status registerAuthListener(String authMechanisms, AuthListener listener,
@@ -1774,13 +1787,22 @@ public class BusAttachment {
     /**
      * Registers a user-defined authentication listener class with a specific default key store.
      *
-     * @param authMechanisms the authentication mechanism(s) to use for peer-to-peer authentication.  This is a space separated list of any of the following values: ALLJOYN_PIN_KEYX, ALLJOYN_SRP_LOGON, ALLJOYN_RSA_KEYX, ALLJOYN_SRP_KEYX, ALLJOYN_ECDHE_NULL, ALLJOYN_ECDHE_PSK, ALLJOYN_ECDHE_ECDSA, GSSAPI.
+     * @param authMechanisms the authentication mechanism(s) to use
+     *                         for peer-to-peer authentication.  This
+     *                         is a space separated list of any of the
+     *                         following values: ALLJOYN_SRP_LOGON,
+     *                         ALLJOYN_SRP_KEYX, ALLJOYN_ECDHE_NULL,
+     *                         ALLJOYN_ECDHE_PSK, ALLJOYN_ECDHE_ECDSA,
+     *                         GSSAPI.
      * @param listener the authentication listener
-     * @param keyStoreFileName the name of the default key store.  Under Android, the recommended
-     *                         value of this parameter is {@code
-     *                         Context.getFileStreamPath("alljoyn_keystore").getAbsolutePath()}.  Note
-     *                         that the default key store implementation may be overrided with
-     *                         {@link #registerKeyStoreListener(KeyStoreListener)}.
+     * @param keyStoreFileName the name of the default key store.
+     *                         Under Android, the recommended value of
+     *                         this parameter is {@code
+     *                         Context.getFileStreamPath("alljoyn_keystore").getAbsolutePath()}.
+     *                         Note that the default key store
+     *                         implementation may be overrided with
+     *                         {@link
+     *                         #registerKeyStoreListener(KeyStoreListener)}.
      * @return OK if successful
      */
     public Status registerAuthListener(String authMechanisms, AuthListener listener,
@@ -1793,7 +1815,13 @@ public class BusAttachment {
      * use {@link #registerAuthListener(String, AuthListener, String)} instead to specify the path
      * of the default key store.
      *
-     * @param authMechanisms the authentication mechanism(s) to use for peer-to-peer authentication.  This is a space separated list of any of the following values: ALLJOYN_PIN_KEYX, ALLJOYN_SRP_LOGON, ALLJOYN_RSA_KEYX, ALLJOYN_SRP_KEYX, ALLJOYN_ECDHE_NULL, ALLJOYN_ECDHE_PSK, ALLJOYN_ECDHE_ECDSA, GSSAPI.
+     * @param authMechanisms the authentication mechanism(s) to use
+     *                       for peer-to-peer authentication.  This is
+     *                       a space separated list of any of the
+     *                       following values: ALLJOYN_SRP_LOGON,
+     *                       ALLJOYN_SRP_KEYX, ALLJOYN_ECDHE_NULL,
+     *                       ALLJOYN_ECDHE_PSK, ALLJOYN_ECDHE_ECDSA,
+     *                       GSSAPI.
      * @param listener the authentication listener
      * @return OK if successful
      */

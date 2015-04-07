@@ -110,7 +110,7 @@ static const bool PAD = true;
 static bool IsValidPrimeGroup(BigNum& N, BigNum& g)
 {
     bool ok = true;
-    uint32_t group;
+    uint32_t group = 0;
     BigNum prime;
 
     switch (N.bit_len()) {
@@ -369,15 +369,18 @@ QStatus Crypto_SRP::ServerInit(const qcc::String& id, const qcc::String& pwd, qc
     Crypto_SHA1 sha1;
     uint8_t digest[Crypto_SHA1::DIGEST_SIZE];
 
-    /* Prime and generator */
-    bn->N.set_bytes(Prime1024, sizeof(Prime1024));
-    bn->g = 2;
-
-    /* Generate the salt */
+    /*
+     * Generate the salt and choose the parameter set. Use 1024-bit parameters for known-answer
+     * tests since RFC 5054 does not have 1536-bit test vectors.
+     */
     if (test) {
         bn->s.set_bytes(test_s, sizeof(test_s));
+        bn->N.set_bytes(Prime1024, sizeof(Prime1024));
+        bn->g = 2;
     } else {
         bn->s.gen_rand(SALT_LEN);
+        bn->N.set_bytes(Prime1536, sizeof(Prime1536));
+        bn->g = 2;
     }
 
     /* Compute x = SHA1(s | (SHA1(I | ":" | P)) */

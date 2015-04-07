@@ -178,6 +178,14 @@ class _VirtualEndpoint : public _BusEndpoint {
      */
     bool AllowRemoteMessages() { return true; }
 
+    /**
+     * Return true if this Virtual endpoint is a member of the specified session.
+     * @param sessionId  The session id.
+     *
+     * @return true if this endpoint is a member of the session Id passed in.
+     */
+    bool HasSession(SessionId sessionId);
+
     enum EndpointState {
         EP_ILLEGAL = 0,      /**< This is an invalid endpoint. i.e. constructed with the default constructor. */
         EP_STARTED,          /**< The endpoint has at least one bus-to-bus endpoint */
@@ -190,7 +198,16 @@ class _VirtualEndpoint : public _BusEndpoint {
      * @return true iff the endpoint is in the process of being stopped.
      */
     bool IsStopping(void) { return m_epState == EP_STOPPING; }
+
+    /**
+     * Returns the remote GUID short string of the virtual endpoint
+     *
+     * @return remote short string of Virtual endpoint's guid.
+     */
+    qcc::String GetRemoteGUIDShortString();
   private:
+    /* Private assigment operator - does nothing */
+    _VirtualEndpoint operator=(const _VirtualEndpoint&);
 
     const qcc::String m_uniqueName;                             /**< The unique name for this endpoint */
     std::multimap<SessionId, RemoteEndpoint> m_b2bEndpoints;    /**< Set of b2bs that can route for this virtual ep */

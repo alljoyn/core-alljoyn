@@ -16,22 +16,20 @@
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.allseen.sample.eventaction"
-    android:versionCode="2"
-    android:versionName="2.0">
+    android:versionCode="1"
+    android:versionName="00.00.01">
 
-    <uses-sdk
-        android:minSdkVersion="17"
-        android:targetSdkVersion="17" />
-        
+    <uses-sdk android:minSdkVersion="16" />
+
     <!--  Required for AllJoyn -->
     <uses-permission android:name="android.permission.INTERNET"></uses-permission>
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE"></uses-permission>
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"></uses-permission>
-    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE"></uses-permission> 
-    <uses-permission android:name="android.permission.WAKE_LOCK"/> 
-	<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/> 
-	<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/> 
-          
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE"></uses-permission>
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
+	<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+	<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+
     <application
         android:allowBackup="true"
         android:icon="@drawable/ic_launcher"
@@ -49,7 +47,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        
+
          <service android:name=".BackgroundService"
 		  android:label="BackgroundService"></service>
     </application>

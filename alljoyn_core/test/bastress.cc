@@ -31,10 +31,11 @@
 #include <qcc/Util.h>
 #include <qcc/Thread.h>
 
+#include <alljoyn/AllJoynStd.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/DBusStd.h>
 #include <alljoyn/BusObject.h>
-#include <alljoyn/AllJoynStd.h>
+#include <alljoyn/Init.h>
 #include <alljoyn/MsgArg.h>
 #include <alljoyn/version.h>
 
@@ -56,6 +57,7 @@ class ThreadClass : public Thread {
 
   protected:
     qcc::ThreadReturn STDCALL Run(void* arg) {
+        QCC_UNUSED(arg);
 
         BusAttachment*b1 = new BusAttachment(name.c_str(), true);
         QStatus status =  b1->Start();
@@ -106,8 +108,18 @@ static void usage(void)
 }
 
 /** Main entry point */
-int main(int argc, char**argv)
+int CDECL_CALL main(int argc, char**argv)
 {
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+#endif
+
     QStatus status = ER_OK;
     uint32_t iterations = 1000;
     uint32_t threads = 5;
@@ -178,5 +190,9 @@ int main(int argc, char**argv)
 
     }
 
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return (int) status;
 }

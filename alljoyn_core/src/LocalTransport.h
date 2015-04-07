@@ -27,6 +27,7 @@
 
 #include <map>
 
+#include <qcc/Condition.h>
 #include <qcc/String.h>
 #include <qcc/GUID.h>
 #include <qcc/Event.h>
@@ -44,7 +45,6 @@
 #include <alljoyn/Status.h>
 
 #include "BusEndpoint.h"
-#include "CompressionRules.h"
 #include "MethodTable.h"
 #include "SignalTable.h"
 #include "Transport.h"
@@ -76,7 +76,7 @@ class _LocalEndpoint : public _BusEndpoint, public qcc::AlarmListener, public Me
     /**
      * Default constructor initializes an invalid endpoint. This allows for the declaration of uninitialized LocalEndpoint variables.
      */
-    _LocalEndpoint() : dispatcher(NULL), deferredCallbacks(NULL), cachedPropertyCallbacks(NULL), bus(NULL), replyTimer("replyTimer", true) { }
+    _LocalEndpoint() : dispatcher(NULL), bus(NULL), replyTimer("replyTimer", true) { }
 
     /**
      * Constructor
@@ -387,6 +387,11 @@ class _LocalEndpoint : public _BusEndpoint, public qcc::AlarmListener, public Me
     bool IsReentrantCall();
 
     /**
+     * Notify ObserverManager that there is some work to do.
+     */
+    void TriggerObserverWork();
+
+    /**
      * Schedule a GetPropertyAsync reply for a cached property.
      */
     void ScheduleCachedGetPropertyReply(ProxyBusObject* proxy,
@@ -402,20 +407,6 @@ class _LocalEndpoint : public _BusEndpoint, public qcc::AlarmListener, public Me
      */
     class Dispatcher;
     Dispatcher* dispatcher;
-
-    /**
-     * Performs operations that were deferred until the bus is connected such
-     * as object registration callbacks
-     */
-    class DeferredCallbacks;
-    DeferredCallbacks* deferredCallbacks;
-
-    /**
-     * Perform a GetPropertyAsync reply callback for a cached property.
-     */
-    class CachedPropertyCallbacks;
-    friend class CachedPropertyCallbacks;
-    CachedPropertyCallbacks* cachedPropertyCallbacks;
 
     /**
      * PushMessage worker.
@@ -521,6 +512,12 @@ class _LocalEndpoint : public _BusEndpoint, public qcc::AlarmListener, public Me
      */
     AllJoynPeerObj* peerObj;
 
+    typedef std::map<MessageReceiver*, std::set<qcc::Thread*> > ActiveHandlers;
+    ActiveHandlers activeHandlers;                       /**< Tracking for currently active handlers */
+    std::set<MessageReceiver*> unregisteringObjects;     /**< Tracking for objects being unregistered */
+    qcc::Mutex handlerThreadsLock;                       /**< Mutex to protect the tracking containers */
+    qcc::Condition handlerThreadsDone;                   /**< Condition variable for signaling when a handler is done */
+
     /** Helper to diagnose misses in the methodTable */
     QStatus Diagnose(Message& msg);
 
@@ -591,7 +588,12 @@ class LocalTransport : public Transport {
      */
     QStatus NormalizeTransportSpec(const char* inSpec,
                                    qcc::String& outSpec,
-                                   std::map<qcc::String, qcc::String>& argMap) const { return ER_NOT_IMPLEMENTED; }
+                                   std::map<qcc::String, qcc::String>& argMap) const {
+        QCC_UNUSED(inSpec);
+        QCC_UNUSED(outSpec);
+        QCC_UNUSED(argMap);
+        return ER_NOT_IMPLEMENTED;
+    }
 
     /**
      * Start the transport and associate it with a router.
@@ -633,7 +635,12 @@ class LocalTransport : public Transport {
      * @param newep           [OUT] Endpoint created as a result of successful connect.
      * @return  ER_NOT_IMPLEMENTED.
      */
-    QStatus Connect(const char* connectSpec, const SessionOpts& opts, BusEndpoint& newep) { return ER_NOT_IMPLEMENTED; }
+    QStatus Connect(const char* connectSpec, const SessionOpts& opts, BusEndpoint& newep) {
+        QCC_UNUSED(connectSpec);
+        QCC_UNUSED(opts);
+        QCC_UNUSED(newep);
+        return ER_NOT_IMPLEMENTED;
+    }
 
     /**
      * Disconnect a local endpoint. (Not used for local transports)
@@ -641,7 +648,10 @@ class LocalTransport : public Transport {
      * @param args   Connect args used to create connection that is now being disconnected.
      * @return  ER_NOT_IMPLEMENTED.
      */
-    QStatus Disconnect(const char* args) { return ER_NOT_IMPLEMENTED; }
+    QStatus Disconnect(const char* args) {
+        QCC_UNUSED(args);
+        return ER_NOT_IMPLEMENTED;
+    }
 
     /**
      * Start listening for incomming connections  (Not used for local transports)
@@ -649,7 +659,10 @@ class LocalTransport : public Transport {
      * @param listenSpec      Unused parameter.
      * @return  ER_NOT_IMPLEMENTED.
      */
-    QStatus StartListen(const char* listenSpec) { return ER_NOT_IMPLEMENTED; }
+    QStatus StartListen(const char* listenSpec) {
+        QCC_UNUSED(listenSpec);
+        return ER_NOT_IMPLEMENTED;
+    }
 
     /**
      * Stop listening for incoming connections.  (Not used for local transports)
@@ -657,7 +670,10 @@ class LocalTransport : public Transport {
      * @param listenSpec      Unused parameter.
      * @return  ER_NOT_IMPLEMENTED.
      */
-    QStatus StopListen(const char* listenSpec) { return ER_NOT_IMPLEMENTED; }
+    QStatus StopListen(const char* listenSpec) {
+        QCC_UNUSED(listenSpec);
+        return ER_NOT_IMPLEMENTED;
+    }
 
     /**
      * Register a BusLocalObject.
@@ -699,24 +715,37 @@ class LocalTransport : public Transport {
      *
      * @param listener  Listener for transport related events.
      */
-    void SetListener(TransportListener* listener) { };
+    void SetListener(TransportListener* listener) {
+        QCC_UNUSED(listener);
+    };
 
     /**
      * Start discovering busses.
      */
-    void EnableDiscovery(const char* namePrefix, TransportMask transports) { }
+    void EnableDiscovery(const char* namePrefix, TransportMask transports) {
+        QCC_UNUSED(namePrefix);
+        QCC_UNUSED(transports);
+    }
 
     /**
      * Stop discovering busses to connect to
      */
-    void DisableDiscovery(const char* namePrefix, TransportMask transports) { }
+    void DisableDiscovery(const char* namePrefix, TransportMask transports) {
+        QCC_UNUSED(namePrefix);
+        QCC_UNUSED(transports);
+    }
 
     /**
      * Start advertising a well-known name with a given quality of service.
      *
      * @param advertiseName   Well-known name to add to list of advertised names.
      */
-    QStatus EnableAdvertisement(const qcc::String& advertiseName, bool quietly, TransportMask transports) { return ER_FAIL; }
+    QStatus EnableAdvertisement(const qcc::String& advertiseName, bool quietly, TransportMask transports) {
+        QCC_UNUSED(advertiseName);
+        QCC_UNUSED(quietly);
+        QCC_UNUSED(transports);
+        return ER_FAIL;
+    }
 
     /**
      * Stop advertising a well-known name with a given quality of service.
@@ -724,7 +753,10 @@ class LocalTransport : public Transport {
      * @param advertiseName   Well-known name to remove from list of advertised names.
      * @param nameListEmpty   Indicates whether advertise name list is completely empty (safe to disable OTA advertising).
      */
-    void DisableAdvertisement(const qcc::String& advertiseName, TransportMask transports) { }
+    void DisableAdvertisement(const qcc::String& advertiseName, TransportMask transports) {
+        QCC_UNUSED(advertiseName);
+        QCC_UNUSED(transports);
+    }
 
     /**
      * Returns the name of this transport
@@ -744,7 +776,11 @@ class LocalTransport : public Transport {
      * @param[OUT]   busAddrs  Set of listen addresses. Always empty for this transport.
      * @return ER_OK if successful.
      */
-    QStatus GetListenAddresses(const SessionOpts& opts, std::vector<qcc::String>& busAddrs) const { return ER_OK; }
+    QStatus GetListenAddresses(const SessionOpts& opts, std::vector<qcc::String>& busAddrs) const {
+        QCC_UNUSED(opts);
+        QCC_UNUSED(busAddrs);
+        return ER_OK;
+    }
 
     /**
      * Does this transport support connections as described by the provided

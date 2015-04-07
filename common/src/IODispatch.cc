@@ -160,6 +160,7 @@ QStatus IODispatch::StopStream(Stream* stream) {
     IODispatchEntry dispatchEntry = it->second;
 
     /* Disable further read and writes on this stream */
+    StoppingState previousState = it->second.stopping_state;
     it->second.stopping_state = IO_STOPPING;
 
     /* Set reload to false and alert the IODispatch::Run thread */
@@ -202,7 +203,9 @@ QStatus IODispatch::StopStream(Stream* stream) {
         }
     }
 
-    UpdateIdleInformation(false);
+    if (previousState == IO_RUNNING) {
+        UpdateIdleInformation(false);
+    }
 
     return ER_OK;
 }
@@ -225,6 +228,8 @@ QStatus IODispatch::JoinStream(Stream* stream) {
 }
 void IODispatch::AlarmTriggered(const Alarm& alarm, QStatus reason)
 {
+    QCC_UNUSED(reason);
+
     lock.Lock();
     /* Find the stream associated with this alarm */
     CallbackContext* ctxt = static_cast<CallbackContext*>(alarm->GetContext());
@@ -386,6 +391,7 @@ void IODispatch::AlarmTriggered(const Alarm& alarm, QStatus reason)
 }
 
 ThreadReturn STDCALL IODispatch::Run(void* arg) {
+    QCC_UNUSED(arg);
 
     vector<qcc::Event*> checkEvents, signaledEvents;
     int32_t when =  0;
@@ -871,13 +877,18 @@ QStatus IODispatch::DisableWriteCallback(const Sink* sink)
     return ER_OK;
 }
 
+bool IODispatch::IsTimerCallbackThread() const
+{
+    return timer.IsTimerCallbackThread();
+}
+
 void IODispatch::UpdateIdleInformation(bool isStarting)
 {
     if (isStarting) {
-        IncrementAndFetch(&activeStreamsCnt);
+        QCC_VERIFY(IncrementAndFetch(&activeStreamsCnt) > 0);
     } else {
         stopStreamTimestamp = GetTimestamp64();
-        DecrementAndFetch(&activeStreamsCnt);
+        QCC_VERIFY(DecrementAndFetch(&activeStreamsCnt) >= 0);
     }
 }
 

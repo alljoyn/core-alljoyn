@@ -31,9 +31,18 @@ using namespace std;
 
 class LocalAuthListener : public AuthListener {
     bool RequestCredentials(const char* authMechanism, const char* authPeer, uint16_t authCount, const char* userId, uint16_t credMask, Credentials& creds) {
+        QCC_UNUSED(authMechanism);
+        QCC_UNUSED(authPeer);
+        QCC_UNUSED(authCount);
+        QCC_UNUSED(userId);
+        QCC_UNUSED(credMask);
+        QCC_UNUSED(creds);
         return true;
     }
     void AuthenticationComplete(const char* authMechanism, const char* authPeer, bool success) {
+        QCC_UNUSED(authMechanism);
+        QCC_UNUSED(authPeer);
+        QCC_UNUSED(success);
     }
 };
 
@@ -66,46 +75,6 @@ class CredentialAccessorTest : public testing::Test {
     }
 
 };
-
-TEST_F(CredentialAccessorTest, GetLocalGuid)
-{
-
-    CredentialAccessor ca(*g_msgBus);
-    qcc::GUID128 localGuid;
-    QStatus status = ca.GetGuid(localGuid);
-    ASSERT_EQ(ER_OK, status) << " ca.GetGuid failed";
-
-    cout << "Local GUID: " << localGuid.ToString().c_str() << endl;
-}
-
-TEST_F(CredentialAccessorTest, StoreDSAKey)
-{
-
-    CredentialAccessor ca(*g_msgBus);
-
-    qcc::GUID128 localGuid;
-    QStatus status = ca.GetGuid(localGuid);
-    ASSERT_EQ(ER_OK, status) << " ca.GetGuid failed";
-
-    cout << "Local GUID: " << localGuid.ToString().c_str() << endl;
-
-    KeyBlob kb("This is the DSA Key", KeyBlob::GENERIC);
-
-    kb.SetExpiration(100);
-
-    GUID128 dsaGuid;
-    status = ca.GetLocalGUID(KeyBlob::DSA_PRIVATE, dsaGuid);
-    ASSERT_EQ(ER_OK, status) << " ca.GetLocalGUID failed";
-
-    status = ca.StoreKey(dsaGuid, kb);
-    ASSERT_EQ(ER_OK, status) << " ca.StoreKey failed";
-
-    KeyBlob readBackKb;
-    status = ca.GetKey(dsaGuid, readBackKb);
-    ASSERT_EQ(ER_OK, status) << " ca.GetKey failed";
-
-    ASSERT_TRUE(memcmp(kb.GetData(), readBackKb.GetData(), kb.GetSize()) == 0) << " the read back KB does not match original";
-}
 
 TEST_F(CredentialAccessorTest, StoreCustomKey)
 {

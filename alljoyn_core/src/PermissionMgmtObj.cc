@@ -514,6 +514,7 @@ QStatus PermissionMgmtObj::StoreDSAKeys(CredentialAccessor* ca, const ECCPrivate
 
 void PermissionMgmtObj::GetPublicKey(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
     KeyInfoNISTP256 replyKeyInfo;
     QStatus status = RetrieveAndGenDSAPublicKey(ca, replyKeyInfo);
     if (status != ER_OK) {
@@ -577,6 +578,7 @@ void PermissionMgmtObj::Claim(const InterfaceDescription::Member* member, Messag
 
 void PermissionMgmtObj::InstallPolicy(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
     QStatus status;
     uint8_t version;
     MsgArg* variant;
@@ -616,6 +618,7 @@ void PermissionMgmtObj::InstallPolicy(const InterfaceDescription::Member* member
 
 void PermissionMgmtObj::RemovePolicy(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
     GUID128 guid;
     GetACLGUID(ENTRY_POLICY, guid);
     QStatus status = ca->DeleteKey(guid);
@@ -629,6 +632,7 @@ void PermissionMgmtObj::RemovePolicy(const InterfaceDescription::Member* member,
 
 void PermissionMgmtObj::GetPolicy(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
     PermissionPolicy policy;
     QStatus status = RetrievePolicy(policy);
     if (ER_OK != status) {
@@ -749,6 +753,10 @@ QStatus PermissionMgmtObj::NotifyConfig()
 
 static QStatus ValidateCertificate(CertificateX509& cert, PermissionMgmtObj::TrustAnchorList* taList)
 {
+    /* check validity period */
+    if (ER_OK != cert.VerifyValidity()) {
+        return ER_INVALID_CERTIFICATE;
+    }
     for (PermissionMgmtObj::TrustAnchorList::iterator it = taList->begin(); it != taList->end(); it++) {
         if (cert.Verify((*it)->keyInfo.GetPublicKey()) == ER_OK) {
             return ER_OK;  /* cert is verified */
@@ -759,6 +767,10 @@ static QStatus ValidateCertificate(CertificateX509& cert, PermissionMgmtObj::Tru
 
 static QStatus ValidateMembershipCertificate(MembershipCertificate& cert, PermissionMgmtObj::TrustAnchorList* taList)
 {
+    /* check validity period */
+    if (ER_OK != cert.VerifyValidity()) {
+        return ER_INVALID_CERTIFICATE;
+    }
     for (PermissionMgmtObj::TrustAnchorList::iterator it = taList->begin(); it != taList->end(); it++) {
         PermissionMgmtObj::TrustAnchor* ta = *it;
         if (ta->use != PermissionMgmtObj::TRUST_ANCHOR_MEMBERSHIP) {
@@ -889,6 +901,7 @@ QStatus PermissionMgmtObj::StoreIdentityCertificate(MsgArg& certArg)
 
 void PermissionMgmtObj::InstallIdentity(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
     MethodReply(msg, StoreIdentityCertificate((MsgArg&) *msg->GetArg(0)));
 }
 
@@ -910,6 +923,7 @@ QStatus PermissionMgmtObj::GetIdentityBlob(KeyBlob& kb)
 
 void PermissionMgmtObj::GetIdentity(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
     KeyBlob kb;
     QStatus status = GetIdentityBlob(kb);
     if (ER_OK != status) {
@@ -1045,6 +1059,7 @@ static QStatus LoadX509CertFromMsgArg(const MsgArg& arg, CertificateX509& cert)
 
 void PermissionMgmtObj::InstallMembership(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
     size_t certChainCount;
     MsgArg* certChain;
     QStatus status = msg->GetArg(0)->Get("a(yay)", &certChainCount, &certChain);
@@ -1182,6 +1197,7 @@ QStatus PermissionMgmtObj::LoadAndValidateAuthData(const String& serial, const G
 
 void PermissionMgmtObj::InstallMembershipAuthData(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
     QStatus status;
     const char* serial;
     status = msg->GetArg(0)->Get("s", &serial);
@@ -1236,6 +1252,7 @@ void PermissionMgmtObj::InstallMembershipAuthData(const InterfaceDescription::Me
 
 void PermissionMgmtObj::RemoveMembership(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
     QStatus status;
     const char* serial;
     status = msg->GetArg(0)->Get("s", &serial);
@@ -1749,6 +1766,7 @@ QStatus PermissionMgmtObj::ParseSendMemberships(Message& msg, bool& done)
 
 void PermissionMgmtObj::InstallGuildEquivalence(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
     uint8_t encoding;
     uint8_t* encoded;
     size_t encodedLen;
@@ -1906,6 +1924,7 @@ QStatus PermissionMgmtObj::Reset()
 
 void PermissionMgmtObj::Reset(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
     MethodReply(msg, Reset());
 }
 
@@ -1959,6 +1978,7 @@ QStatus PermissionMgmtObj::SetManifest(PermissionPolicy::Rule* rules, size_t cou
 
 void PermissionMgmtObj::GetManifest(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
     KeyBlob kb;
     GUID128 guid(0);
     GetACLGUID(ENTRY_MANIFEST, guid);
@@ -2121,6 +2141,7 @@ QStatus PermissionMgmtObj::BindPort()
 
 void PermissionMgmtObj::InstallCredential(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
     uint8_t credentialType;
     MsgArg variant;
     QStatus status = msg->GetArg(0)->Get("y", &credentialType);
@@ -2164,6 +2185,7 @@ void PermissionMgmtObj::InstallCredential(const InterfaceDescription::Member* me
 
 void PermissionMgmtObj::RemoveCredential(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
     uint8_t credentialType;
     MsgArg variant;
     QStatus status = msg->GetArg(0)->Get("y", &credentialType);
@@ -2207,6 +2229,7 @@ void PermissionMgmtObj::RemoveCredential(const InterfaceDescription::Member* mem
 
 QStatus PermissionMgmtObj::Get(const char* ifcName, const char* propName, MsgArg& val)
 {
+    QCC_UNUSED(ifcName);
     if (0 == strcmp("Version", propName)) {
         val.typeId = ALLJOYN_UINT16;
         val.v_uint16 = VERSION_NUM;

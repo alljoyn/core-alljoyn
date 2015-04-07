@@ -36,297 +36,6 @@
 namespace qcc {
 
 /**
- * RSA public-key encryption and decryption class
- */
-class Crypto_RSA {
-
-  public:
-
-    /**
-     *  Default bitlength for RSA key generation.  Used when generating self-signed certificates.
-     *  Currently set to 2048 bits to match guidance in NIST Special Publication 800-57,
-     *  Recommendation for Key Management -- Part 1: General (Revision 3).  SP 800-57 states that
-     *  1024-bit RSA is disallowed after 2014, and that 2048-bit RSA is acceptable for use between
-     *  2014 and 2030.  This default should be updated to match guidance in future revisions of
-     *  SP 800-57.
-     */
-    static const size_t RSA_DEFAULT_BITLEN = 2048;
-
-    /**
-     * Class for calling back to get a passphrase for encrypting or decrypting a private key.
-     */
-    class PassphraseListener {
-      public:
-        /**
-         * Virtual destructor for derivable class.
-         */
-        virtual ~PassphraseListener() { }
-
-        /**
-         * Callback to request a passphrase.
-         *
-         * @param passphrase  Returns the passphrase.
-         * @param toWrite     If true indicates the passphrase is being used to write a private key,
-         *                    if false indicates the passphrase is for reading a private key.
-         *
-         * @return  Returns false if the passphrase request has been rejected.
-         */
-        virtual bool GetPassphrase(qcc::String& passphrase, bool toWrite) = 0;
-    };
-
-    /**
-     * Constructor to generate a new key pair
-     *
-     * @param modLen    The length of the key in bits. This must be a multiple of 64 and >= 512
-     */
-    Crypto_RSA(uint32_t keyLen) : size(keyLen / 8), cert(NULL), key(NULL) { Generate(keyLen); }
-
-    /**
-     * Default constructor.
-     */
-    Crypto_RSA();
-
-    /**
-     * Import a private key from a PKCS#8 encoded string.
-     *
-     * @param pkcs8        The PKCS#8 encoded string
-     * @param passphrase   The passphrase required to decode the private key
-     * @return  - ER_OK if the key was successfully imported.
-     *          - ER_AUTH_FAIL if the passphrase was incorrect or the PKCS string was invalid.
-     *          - Other error status.
-     */
-    QStatus ImportPKCS8(const qcc::String& pkcs8, const qcc::String& passphrase);
-
-    /**
-     * Import a private key from a PKCS#8 encoded string.
-     *
-     * @param pkcs8      The PKCS#8 encoded string
-     * @param listener   The listener to call if a passphrase is required to decrypt a private key.
-     * @return  - ER_OK if the key was successfully imported.
-     *          - ER_AUTH_FAIL if the passphrase was incorrect or the PKCS string was invalid.
-     *          - ER_AUTH_REJECT if the listener rejected the authentication request.
-     *          - Other error status.
-     */
-    QStatus ImportPKCS8(const qcc::String& pkcs8, PassphraseListener* listener);
-
-    /**
-     * Import a public key from a PEM-encoded public key.
-     *
-     * @param pem   The PEM encoded key.
-     */
-    QStatus ImportPEM(const qcc::String& pem);
-
-    /**
-     * Import a private key from an encrypted keyblob
-     *
-     * @param keyblob      The encrypted keyblob
-     * @param passphrase   The passphrase required to decode the private key
-     * @return  - ER_OK if the key was successfully imported.
-     *          - ER_AUTH_FAIL if the passphrase was incorrect or the keyblob was invalid.
-     *          - Other error status.
-     */
-    QStatus ImportPrivateKey(const qcc::KeyBlob& keyBlob, const qcc::String& passphrase);
-
-    /**
-     * Import a private key from an encrypted keyblob
-     *
-     * @param keyblob    The encrypted keyblob
-     * @param listener   The listener to call if a passphrase is required to decrypt a private key.
-     * @return  - ER_OK if the key was successfully imported.
-     *          - ER_AUTH_FAIL if the passphrase was incorrect or the keyblob was invalid.
-     *          - ER_AUTH_REJECT if the listener rejected the authentication request.
-     *          - Other error status.
-     */
-    QStatus ImportPrivateKey(const qcc::KeyBlob& keyBlob, PassphraseListener* listener);
-
-    /**
-     * Returns a platform-specific encrypted key blob for a private key. It should be assumed that
-     * the keyblob is not transportable off device since the content may be no more than a reference
-     * to a key held in a internal platform key store.
-     *
-     * @param keyBlob      Returns the key blob with encrypted private key.
-     * @param passphrase   The passphrase to encrypt the private key
-     * @return  - ER_OK if the key was exported.
-     *          - Other error status.
-     */
-    QStatus ExportPrivateKey(qcc::KeyBlob& keyBlob, const qcc::String& passphrase);
-
-    /**
-     * Returns a platform-specific encrypted key blob for a private key. It should be assumed that
-     * the keyblob is not transportable off device since the content may be no more than a reference
-     * to a key held in a internal platform key store.
-     *
-     * @param keyBlob      Returns the key blob with encrypted private key.
-     * @param listener     The listener to call to obtain a passphrase to encrypt the private key.
-     * @return  - ER_OK if the key was exported.
-     *          - ER_AUTH_REJECT if the listener rejected the authentication request.
-     *          - Other error status.
-     */
-    QStatus ExportPrivateKey(qcc::KeyBlob& keyBlob, PassphraseListener* listener);
-
-    /**
-     * Exports the PEM encoded string for a public key.
-     *
-     * @param pem   Returns the PEM encoded public key.
-     * @return  - ER_OK if the key was encoded.
-     *          - Other error status.
-     */
-    QStatus ExportPEM(qcc::String& pem);
-
-    /**
-     * Returns the RSA modulus size in bytes. The size can be used to determine the buffer size that
-     * must must allocated to receive an encrypted value.
-     *
-     * @return The modulus size in bytes.
-     */
-    size_t GetSize();
-
-    /**
-     * Returns the maximum size of the message digest (or other data) that can be encrypted. This is
-     * also the minimum size of the buffer that must be provided when decrypting.
-     *
-     * @return The maximum digest size in bytes.
-     */
-    size_t MaxDigestSize() { return (GetSize() - 12); }
-
-    /**
-     * Encrypt data using the public key.
-     *
-     * @param inData   The data to be encrypted
-     * @param inLen    The length of the data to be encrypted
-     * @param outData  The buffer to receive the encrypted data, must be <= GetSize()
-     * @param outLen   On input the length of outData, this must be >= GetSize(), on return the
-     *                 number of bytes on inData encrypted.
-     *
-     * @return  ER_OK if the data was encrypted.
-     */
-    QStatus PublicEncrypt(const uint8_t* inData, size_t inLen, uint8_t* outData, size_t& outLen);
-
-    /**
-     * Decrypt data using the private key.
-     *
-     * @param inData   The data to be decrypted
-     * @param inLen    The length of the data to be decrypted
-     * @param outData  The buffer to receive the decrypted data, must be <= GetSize()
-     * @param outLen   On input the length of outData, this must be >= GetSize(), on return the
-     *                 number of bytes on inData decrypted.
-     *
-     * @return  ER_OK if the data was encrypted.
-     */
-    QStatus PrivateDecrypt(const uint8_t* inData, size_t inLen, uint8_t* outData, size_t& outLen);
-
-    /**
-     * Generate a self-issued X509 certificate for this RSA key.
-     *
-     * @param name  The common name for this certificate.
-     * @param app   The application that is requesting this certificate.
-     */
-    QStatus MakeSelfCertificate(const qcc::String& name, const qcc::String& app);
-
-    /**
-     * Use this private key to sign a message digest and return the digital signature.
-     *
-     * @param digest    The digest to sign.
-     * @param digLen    The length of the digest to sign.
-     * @param signature Returns the digital signature.
-     * @param sigLen    On input the length of signature, this must be >= GetSize(), on return the
-     *                  number of bytes in the signature.
-     *
-     * @return     - ER_OK if the signature was generated.
-     *             - An error status indicating the error.
-     */
-    QStatus SignDigest(const uint8_t* digest, size_t digLen, uint8_t* signature, size_t& sigLen);
-
-    /**
-     * Use this private key to verify a message digest and return success or failure
-     *
-     * @param digest    The digest to sign.
-     * @param digLen    The length of the digest to sign.
-     * @param signature The digital signature to verify
-     * @param sigLen    The length of the signature.
-     *
-     * @return     - ER_OK if the signature was verified.
-     *             - ER_AUTH_FAIL if the verification was unsuccessful
-     *             - An error status indicating the error.
-     */
-    QStatus VerifyDigest(const uint8_t* digest, size_t digLen, const uint8_t* signature, size_t sigLen);
-
-    /**
-     * Use this private key to sign a document and return the digital signature.
-     *
-     * @param doc       The document to sign.
-     * @param docLen    The length of the document to sign.
-     * @param signature Returns the digital signature.
-     * @param sigLen    On input the length of signature, this must be >= GetSize(), on return the
-     *                  number of bytes in the signature.
-     *
-     * @return     - ER_OK if the signature was generated.
-     *             - An error status indicating the error.
-     */
-    QStatus Sign(const uint8_t* data, size_t len, uint8_t* signature, size_t& sigLen);
-
-    /**
-     * Use this public key to verify the digital signature on a document.
-     *
-     * @param doc       The document to sign.
-     * @param docLen    The length of the document to sign.
-     * @param signature Returns the digital signature.
-     * @param sigLen    On input the length of signature, this must be >= GetSize(), on return the
-     *                  number of bytes in the signature.
-     *
-     * @return     - ER_OK if the signature was verified.
-     *             - ER_AUTH_FAIL if the verfication failed.
-     *             - Other status codes indicating an error.
-     */
-    QStatus Verify(const uint8_t* data, size_t len, const uint8_t* signature, size_t sigLen);
-
-    /**
-     * Returns a human readable string for a cert if there is one associated with this key.
-     *
-     * @return A string for the cert or and empty string if there is no cert.
-     */
-    qcc::String CertToString();
-
-    /**
-     * Destructor
-     */
-    ~Crypto_RSA();
-
-  private:
-
-    /**
-     * Generate a public/private key pair
-     */
-    void Generate(uint32_t keyLen);
-
-    /**
-     * Assignment operator is private
-     */
-    Crypto_RSA& operator=(const Crypto_RSA& other);
-
-    /**
-     * Copy constructor is private
-     */
-    Crypto_RSA(const Crypto_RSA& other);
-
-    size_t size;
-    void* cert;
-    void* key;
-
-    bool RSA_Init();
-
-    /**
-     * Opaque type for the internal state
-     */
-    struct CertContext;
-
-    /**
-     * Private internal key state
-     */
-    CertContext* certContext;
-};
-
-/**
  * AES block encryption/decryption class
  */
 class Crypto_AES {
@@ -343,7 +52,6 @@ class Crypto_AES {
      */
     typedef enum {
         ECB_ENCRYPT, ///< Flag to constructor indicating key is being used for ECB encryption
-        ECB_DECRYPT, ///< Flag to constructor indicating key is being used for ECB decryption
         CCM          ///< Flag to constructor indicating key is being used CCM mode
     } Mode;
 
@@ -411,28 +119,6 @@ class Crypto_AES {
      * @return ER_OK if the data was encrypted.
      */
     QStatus Encrypt(const void* in, size_t len, Block* out, uint32_t numBlocks);
-
-    /**
-     * Decrypt some data blocks.
-     *
-     * @param in          An array of data blocks to decrypt
-     * @param out         The decrypted data blocks
-     * @param numBlocks   The number of blocks to decrypt.
-     * @return ER_OK if the data was decrypted.
-     */
-    QStatus Decrypt(const Block* in, Block* out, uint32_t numBlocks);
-
-    /**
-     * Decrypt some data. The decrypted data is truncated at len
-     *
-     * @param in          An array of data blocks to decrypt.
-     * @param len         The number of blocks of input data.
-     * @param out         The decrypted data.
-     * @param numBlocks   The number of blocks for the decrypted data, compute this using NumEncryptedBlocks(len)
-     *
-     * @return ER_OK if the data was encrypted.
-     */
-    QStatus Decrypt(const Block* in, uint32_t numBlocks, void* out, size_t len);
 
     /**
      * Encrypt some data using CCM mode.
@@ -715,19 +401,6 @@ class Crypto_SHA256 : public Crypto_Hash {
  * @param outLen  The required length of the output data.
  */
 QStatus Crypto_PseudorandomFunction(const KeyBlob& secret, const char* label, const qcc::String& seed, uint8_t* out, size_t outLen);
-
-/**
- * This is an alternative implementation of Crypto_PseudorandomFunction() that uses AES-CCM to
- * generate key matter rather than SHA-256 to generate key matter. This is for interoperating with
- * implementations that do not support SHA-256.
- *
- * @param secret  A keyblob containing the secret being expanded.
- * @param label   An ASCII string that is hashed in with the other data.
- * @param seed    Some random data
- * @param out     Output data
- * @param outLen  The required length of the output data.
- */
-QStatus Crypto_PseudorandomFunctionCCM(const KeyBlob& secret, const char* label, const qcc::String& seed, uint8_t* out, size_t outLen);
 
 /**
  *  Secure Remote Password (SRP6) class. This implements the core algorithm for Secure Remote
@@ -1103,6 +776,41 @@ class Crypto_ASN1 {
  * @return ER_OK if a random number was succesfully generated.
  */
 QStatus Crypto_GetRandomBytes(uint8_t* data, size_t len);
+
+/**
+ *  Class for random number generator.
+ */
+class Crypto_Rand {
+  public:
+    Crypto_Rand() { };
+    virtual QStatus Seed(uint8_t* seed, size_t size) = 0;
+    virtual QStatus Generate(uint8_t* rand, size_t size) = 0;
+    virtual ~Crypto_Rand() { };
+};
+
+class Crypto_DRBG : public Crypto_Rand {
+  public:
+    static const size_t KEYLEN = Crypto_AES::AES128_SIZE;
+    static const size_t OUTLEN = sizeof (Crypto_AES::Block);
+    static const size_t SEEDLEN = KEYLEN + OUTLEN;
+    Crypto_DRBG();
+    virtual QStatus Seed(uint8_t* seed, size_t size);
+    virtual QStatus Generate(uint8_t* rand, size_t size);
+    virtual ~Crypto_DRBG();
+
+  private:
+    void Update(uint8_t* data, size_t size);
+
+    /**
+     * Opaque type for the internal context
+     */
+    struct Context;
+
+    /**
+     * Private internal context
+     */
+    Context* ctx;
+};
 
 }
 

@@ -44,8 +44,17 @@ class IpNameServiceListener {
   public:
     virtual ~IpNameServiceListener() { }
     virtual bool QueryHandler(TransportMask transport, MDNSPacket query, uint16_t recvPort,
-                              const qcc::IPEndpoint& ns4) { return false; }
-    virtual bool ResponseHandler(TransportMask transport, MDNSPacket response, uint16_t recvPort) { return false; }
+                              const qcc::IPEndpoint& ns4) {
+        QCC_UNUSED(transport);
+        QCC_UNUSED(recvPort);
+        QCC_UNUSED(ns4);
+        return false;
+    }
+    virtual bool ResponseHandler(TransportMask transport, MDNSPacket response, uint16_t recvPort) {
+        QCC_UNUSED(transport);
+        QCC_UNUSED(recvPort);
+        return false;
+    }
 };
 
 /**
@@ -82,7 +91,6 @@ class IpNameServiceListener {
  * only be done in the transport's Join() method.
  */
 class IpNameService {
-    friend class IpNameServiceInit;
   public:
 
     /**
@@ -356,6 +364,9 @@ class IpNameService {
                    bool enableReliableIPv4, bool enableReliableIPv6,
                    bool enableUnreliableIPv4, bool enableUnreliableIPv6);
 
+    QStatus UpdateDynamicScore(TransportMask transportMask, uint32_t availableTransportConnections, uint32_t maximumTransportConnections,
+                               uint32_t availableTransportRemoteClients, uint32_t maximumTransportRemoteClients);
+
     /**
      * @brief Ask the name service whether or not it thinks there is or is not a
      *     listener on the specified ports for the given transport.
@@ -440,6 +451,11 @@ class IpNameService {
     bool RemoveFromPeerInfoMap(const qcc::String& guid);
 
   private:
+
+    static void Init();
+    static void Shutdown();
+    friend class RouterGlobals;
+
     /**
      * This is a singleton so the constructor is marked private to prevent
      * construction of an IpNameService instance in any other sneaky way than
@@ -532,17 +548,6 @@ class IpNameService {
     int32_t m_refCount;          /**< The number of transports that have registered as users of the singleton */
     IpNameServiceImpl* m_pimpl;  /**< A pointer to the private implementation of the name service */
 };
-
-static class IpNameServiceInit {
-  public:
-    IpNameServiceInit();
-    ~IpNameServiceInit();
-    static void Cleanup();
-
-  private:
-    static bool cleanedup;
-
-} ipNameServiceInit;
 
 } // namespace ajn
 

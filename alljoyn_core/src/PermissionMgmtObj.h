@@ -299,6 +299,8 @@ class PermissionMgmtObj : public BusObject {
 
         bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts)
         {
+            QCC_UNUSED(joiner);
+            QCC_UNUSED(opts);
             return (ALLJOYN_SESSIONPORT_PERMISSION_MGMT == sessionPort);
         }
     };

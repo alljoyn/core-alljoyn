@@ -31,6 +31,7 @@
 
 #include <alljoyn/version.h>
 
+#include <alljoyn/Init.h>
 #include <alljoyn/Status.h>
 
 using namespace qcc;
@@ -323,8 +324,21 @@ static TEST_CASE testVector[] = {
 
 
 
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
+    QCC_UNUSED(argc);
+    QCC_UNUSED(argv);
+
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+#endif
+
     QStatus status = ER_OK;
 
     printf("AllJoyn Library version: %s\n", ajn::GetVersion());
@@ -370,28 +384,19 @@ int main(int argc, char** argv)
 
     printf("AES CCM unit test PASSED\n");
 
-    {
-        static const char expect[] = "F1 97 87 71 64 04 91 8C A2 0F 17 4C FF 2E 16 5F 21 B1 7A 70 C4 72 48 0A E9 18 91 B5 BB 8D D2 61 CB D4 27 36 12 D4 1B C6";
-        const char secret[] = "1234ABCDE";
-        qcc::String seed = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234";
-        uint8_t out[40];
-        status = Crypto_PseudorandomFunctionCCM(KeyBlob((uint8_t*)secret, 9, KeyBlob::GENERIC), "prf test", seed, out, sizeof(out));
-        if (status != ER_OK) {
-            printf("Crypto_PseudorandomFunctionCCM %s\n", QCC_StatusText(status));
-            goto ErrorExit;
-        }
-        String result = BytesToHexString(out, sizeof(out), false, ' ');
-        if (result != expect) {
-            printf("Crypto_PseudorandomFunctionCCM test FAILED\n");
-        }
-        printf("Crypto_PseudorandomFunctionCCM test PASSED\n");
-    }
-
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return 0;
 
 ErrorExit:
 
     printf("AES CCM unit test FAILED\n");
 
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return -1;
 }

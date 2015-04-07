@@ -191,6 +191,15 @@
 - (id)initWithBusAttachment:(AJNBusAttachment *)busAttachment serviceName:(NSString *)serviceName objectPath:(NSString *)path sessionId:(AJNSessionId)sessionId enableSecurity:(BOOL)shouldEnableSecurity;
 
 /**
+ * Create an empty proxy object that refers to an managed proxy bus object.
+ * The created proxy object will get the interfaces from the managed proxy bus object.
+ *
+ * @param busAttachment  The bus.
+ * @param proxyBusObject Managed proxy bus object
+ */
+- (id)initWithBusAttachment:(AJNBusAttachment *)busAttachment managedProxyBusObject:(AJNHandle)proxyBusObject;
+
+/**
  * Add an existing interface to this object using the interface's name.
  *
  * @param interfaceName   Name of existing interface to add to this object.
@@ -298,7 +307,6 @@
  * @param timeout      Timeout specified in milliseconds to wait for a reply
  * @param flags        Logical OR of the message flags for this method call. The following flags apply to method calls:
  *                     - If ALLJOYN_FLAG_ENCRYPTED is set the message is authenticated and the payload if any is encrypted.
- *                     - If ALLJOYN_FLAG_COMPRESSED is set the header is compressed for destinations that can handle header compression.
  *                     - If ALLJOYN_FLAG_AUTO_START is set the bus will attempt to start a service if it is not running.
  *
  *
@@ -317,7 +325,6 @@
  * @param timeout       Timeout specified in milliseconds to wait for a reply
  * @param flags         Logical OR of the message flags for this method call. The following flags apply to method calls:
  *                     - If ALLJOYN_FLAG_ENCRYPTED is set the message is authenticated and the payload if any is encrypted.
- *                     - If ALLJOYN_FLAG_COMPRESSED is set the header is compressed for destinations that can handle header compression.
  *                     - If ALLJOYN_FLAG_AUTO_START is set the bus will attempt to start a service if it is not running.
  * @return  - ER_OK if successful
  *          - An error status otherwise
@@ -347,7 +354,6 @@
  * @param timeout       Timeout specified in milliseconds to wait for a reply
  * @param flags         Logical OR of the message flags for this method call. The following flags apply to method calls:
  *                     - If ALLJOYN_FLAG_ENCRYPTED is set the message is authenticated and the payload if any is encrypted.
- *                     - If ALLJOYN_FLAG_COMPRESSED is set the header is compressed for destinations that can handle header compression.
  *                     - If ALLJOYN_FLAG_AUTO_START is set the bus will attempt to start a service if it is not running.
  *
  * @return  - ER_OK if the method call succeeded and the reply message type is MESSAGE_METHOD_RET
@@ -366,7 +372,6 @@
  * @param timeout       Timeout specified in milliseconds to wait for a reply
  * @param flags         Logical OR of the message flags for this method call. The following flags apply to method calls:
  *                     - If ALLJOYN_FLAG_ENCRYPTED is set the message is authenticated and the payload if any is encrypted.
- *                     - If ALLJOYN_FLAG_COMPRESSED is set the header is compressed for destinations that can handle header compression.
  *                     - If ALLJOYN_FLAG_AUTO_START is set the bus will attempt to start a service if it is not running.
  * @return  - ER_OK if successful
  *          - An error status otherwise

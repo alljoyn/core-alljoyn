@@ -30,10 +30,11 @@
 #include <qcc/time.h>
 #include <qcc/Util.h>
 
+#include <alljoyn/AllJoynStd.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/BusObject.h>
 #include <alljoyn/DBusStd.h>
-#include <alljoyn/AllJoynStd.h>
+#include <alljoyn/Init.h>
 #include <alljoyn/MsgArg.h>
 #include <alljoyn/version.h>
 
@@ -68,7 +69,6 @@ static const char ifcXML[] =
 
 /** Static top level message bus object */
 static BusAttachment* g_msgBus = NULL;
-static Event g_discoverEvent;
 static String g_wellKnownName;
 static String g_findPrefix("org.alljoyn.jitter");
 SessionPort SESSION_PORT_MESSAGES_MP1 = 26;
@@ -77,6 +77,7 @@ static volatile sig_atomic_t g_interrupt = false;
 
 static void CDECL_CALL SigIntHandler(int sig)
 {
+    QCC_UNUSED(sig);
     g_interrupt = true;
 }
 
@@ -86,6 +87,7 @@ class PingObject : public BusObject {
 
     void TimedPing(const InterfaceDescription::Member* member, Message& msg)
     {
+        QCC_UNUSED(member);
         MsgArg replyArg = *msg->GetArg();
         MethodReply(msg, &replyArg, 1);
     }
@@ -133,6 +135,8 @@ class PingThread : public qcc::Thread, BusObject {
 
     qcc::ThreadReturn STDCALL Run(void* arg)
     {
+        QCC_UNUSED(arg);
+
         if (iterations == 0) {
             return (qcc::ThreadReturn)0;
         }
@@ -225,11 +229,16 @@ class MyBusListener : public BusListener, public SessionPortListener, public Ses
 
     bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts)
     {
+        QCC_UNUSED(sessionPort);
+        QCC_UNUSED(joiner);
+        QCC_UNUSED(opts);
         return true;
     }
 
     void SessionJoined(SessionPort sessionPort, SessionId sessionId, const char* joiner)
     {
+        QCC_UNUSED(sessionPort);
+
         QCC_SyncPrintf("Session Established: joiner=%s, sessionId=%u\n", joiner, sessionId);
         QStatus status = g_msgBus->SetSessionListener(sessionId, this);
         if (ER_OK == status) {
@@ -257,6 +266,8 @@ class MyBusListener : public BusListener, public SessionPortListener, public Ses
 
     void JoinSessionCB(QStatus status, SessionId sessionId, const SessionOpts& opts, void* context)
     {
+        QCC_UNUSED(opts);
+
         if (status == ER_OK) {
             QCC_SyncPrintf("JoinSessionAsync succeeded. SessionId=%u\n", sessionId);
         } else {
@@ -321,8 +332,18 @@ static void usage(void)
 }
 
 /** Main entry point */
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+#endif
+
     QStatus status = ER_OK;
     uint32_t transportOpts = 0;
     uint32_t iterations = 500;
@@ -349,7 +370,7 @@ int main(int argc, char** argv)
             }
         } else if (0 == strcmp("-c", argv[i])) {
             if (++i == argc) {
-                iterations = -1;
+                iterations = (uint32_t)-1;
             } else {
                 iterations = strtoul(argv[i], NULL, 0);
             }
@@ -360,7 +381,7 @@ int main(int argc, char** argv)
             }
         } else if (0 == strcmp("-d", argv[i])) {
             if (++i == argc) {
-                delay = -1;
+                delay = (uint32_t)-1;
             } else {
                 delay = strtoul(argv[i], NULL, 0);
             }
@@ -406,13 +427,13 @@ int main(int argc, char** argv)
 
 
     /* Create an initialize the ping bus object */
-    PingObject pingObj;
-    status = pingObj.Init();
+    PingObject* pingObj = new PingObject();
+    status = pingObj->Init();
     if (ER_OK != status) {
         QCC_LogError(status, ("Failed to initialize ping object"));
         exit(0);
     }
-    g_msgBus->RegisterBusObject(pingObj);
+    g_msgBus->RegisterBusObject(*pingObj);
 
     /* Connect to the daemon */
     if (clientArgs.empty()) {
@@ -466,8 +487,10 @@ int main(int argc, char** argv)
         qcc::Sleep(100);
     }
 
-    g_msgBus->UnregisterBusListener(*myBusListener);
+    g_msgBus->UnregisterBusObject(*pingObj);
+    delete pingObj;
 
+    g_msgBus->UnregisterBusListener(*myBusListener);
     delete myBusListener;
 
     /* Clean up msg bus */
@@ -478,5 +501,9 @@ int main(int argc, char** argv)
 
     printf("\n %s exiting with status %d (%s)\n", argv[0], status, QCC_StatusText(status));
 
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return (int) status;
 }

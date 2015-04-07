@@ -35,9 +35,10 @@
 #include <qcc/time.h>
 #include <qcc/Util.h>
 
+#include <alljoyn/AllJoynStd.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/DBusStd.h>
-#include <alljoyn/AllJoynStd.h>
+#include <alljoyn/Init.h>
 #include <alljoyn/MsgArg.h>
 #include <alljoyn/version.h>
 
@@ -61,6 +62,7 @@ static volatile sig_atomic_t g_interrupt = false;
 
 static void CDECL_CALL SigIntHandler(int sig)
 {
+    QCC_UNUSED(sig);
     g_interrupt = true;
 }
 
@@ -83,6 +85,7 @@ class MySessionPortListener : public SessionPortListener {
 
     void SessionJoined(SessionPort sessionPort, SessionId sessionId, const char* joiner)
     {
+        QCC_UNUSED(sessionPort);
         printf("SessionJoined with %s (id=%u)\n", joiner, sessionId);
         this->sessionId = sessionId;
     }
@@ -103,8 +106,18 @@ static void usage(void)
 }
 
 /** Main entry point */
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+#endif
+
     QStatus status = ER_OK;
     TransportMask transportMask = TRANSPORT_ANY;
 
@@ -254,5 +267,9 @@ int main(int argc, char** argv)
 
     printf("%s exiting with status %x (%s)\n", argv[0], status, QCC_StatusText(status));
 
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return (int) status;
 }

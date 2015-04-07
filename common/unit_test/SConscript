@@ -13,6 +13,7 @@
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 import os
+from os.path import basename
 
 Import('commonenv')
 Import('libcommon')
@@ -20,7 +21,7 @@ Import('libcommon')
 if not commonenv.has_key('GTEST_DIR'):
     print('GTEST_DIR not specified skipping common unit test build')
 
-elif commonenv['OS'] == 'darwin' and commonenv['CPU'] in ['arm', 'armv7', 'armv7s']:
+elif commonenv['OS'] == 'darwin' and commonenv['CPU'] in ['arm', 'armv7', 'armv7s', 'arm64',]:
     # do not even try Google test if darwin and arm
     print 'GTEST_DIR ignored when building for OS=darwin CPU=arm, skipping common unit test build'
 
@@ -74,6 +75,9 @@ else:
     gtest_env.StaticLibrary(target = 'gtest', source = gtest_obj)
 
     test_src = gtest_env.Glob('*.cc')
+    if gtest_env['CRYPTO'] != 'builtin':
+        # Some unit tests are only valid for builtin crypto
+        test_src = [ f for f in test_src if basename(str(f)) != 'CryptoRand.cc' ]
 
     unittest_env = gtest_env.Clone()
 

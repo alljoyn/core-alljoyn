@@ -735,9 +735,9 @@ class BusAttachment : public MessageReceiver {
      *
      * @param authMechanisms   The authentication mechanism(s) to use for peer-to-peer authentication.
      *                         If this parameter is NULL peer-to-peer authentication is disabled.  This is a
-     *                         space separated list of any of the following values: ALLJOYN_PIN_KEYX,
-     *                         ALLJOYN_SRP_LOGON, ALLJOYN_RSA_KEYX, ALLJOYN_SRP_KEYX, ALLJOYN_ECDHE_NULL,
-     *                         ALLJOYN_ECDHE_PSK, ALLJOYN_ECDHE_ECDSA, GSSAPI.
+     *                         space separated list of any of the following values:
+     *                         ALLJOYN_SRP_LOGON, ALLJOYN_SRP_KEYX, ALLJOYN_ECDHE_NULL, ALLJOYN_ECDHE_PSK,
+     *                         ALLJOYN_ECDHE_ECDSA, GSSAPI.
      *
      * @param listener         Passes password and other authentication related requests to the application.
      *
@@ -1885,12 +1885,12 @@ class BusAttachment : public MessageReceiver {
     /**
      * Assignment operator is private.
      */
-    BusAttachment& operator=(const BusAttachment& other) { return *this; }
+    BusAttachment& operator=(const BusAttachment&);
 
     /**
      * Copy constructor is private.
      */
-    BusAttachment(const BusAttachment& other) : joinObj(this) { }
+    BusAttachment(const BusAttachment&);
 
     /**
      * Stop the bus, optionally blocking until all of the threads join
@@ -1993,7 +1993,7 @@ class BusAttachment : public MessageReceiver {
     JoinObj joinObj;          /**< MUST BE LAST MEMBER. Ensure all threads are joined before BusAttachment destruction */
 
 };
-void AJCleanup();
+
 }
 
 #endif

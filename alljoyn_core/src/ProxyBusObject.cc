@@ -94,6 +94,7 @@ struct _PropertiesChangedCB {
     void* context;
     set<StringMapKey> properties;  // Properties to monitor - empty set == all properties.
     bool isRegistered;
+    _PropertiesChangedCB& operator=(const _PropertiesChangedCB&) { return *this; }
 };
 
 typedef ManagedObj<_PropertiesChangedCB> PropertiesChangedCB;
@@ -114,7 +115,9 @@ class CachedProps {
         isFullyCacheable(false),
         numProperties(0) { }
 
-    CachedProps(const InterfaceDescription*intf) : lock(), values(), description(intf) {
+    CachedProps(const InterfaceDescription*intf) :
+        lock(), values(), description(intf),
+        isFullyCacheable(false) {
         numProperties = description->GetProperties();
         if (numProperties > 0) {
             isFullyCacheable = true;
@@ -560,6 +563,16 @@ QStatus ProxyBusObject::SetProperty(const char* iface, const char* property, Msg
                                 reply,
                                 timeout,
                                 flags);
+            if ((status == ER_BUS_REPLY_IS_ERROR_MESSAGE) &&
+                (reply->GetErrorName() != NULL) &&
+                (::strcmp(reply->GetErrorName(), org::alljoyn::Bus::ErrorName) == 0)) {
+                const char* err;
+                uint16_t rawStatus;
+                if (reply->GetArgs("sq", &err, &rawStatus) == ER_OK) {
+                    status = static_cast<QStatus>(rawStatus);
+                    QCC_DbgPrintf(("SetProperty call returned %s", err));
+                }
+            }
         }
     }
     return status;
@@ -685,7 +698,11 @@ QStatus ProxyBusObject::UnregisterPropertiesChangedListener(const char* iface,
 
 void ProxyBusObject::PropertiesChangedHandler(const InterfaceDescription::Member* member, const char* srcPath, Message& message)
 {
+    QCC_UNUSED(member);
+    QCC_UNUSED(srcPath);
+
     QCC_DbgTrace(("ProxyBusObject::PropertiesChangedHandler(member = %s, srcPath = %s, message = <>)", member->name.c_str(), srcPath));
+
     const char* ifaceName;
     MsgArg* changedProps;
     size_t numChangedProps;
@@ -806,8 +823,8 @@ void ProxyBusObject::PropertiesChangedHandler(const InterfaceDescription::Member
 
     lock->Lock(MUTEX_CONTEXT);
     handlerThread = NULL;
+    listenerDone->Broadcast();
     lock->Unlock(MUTEX_CONTEXT);
-
 }
 
 QStatus ProxyBusObject::SetPropertyAsync(const char* iface,
@@ -1680,12 +1697,12 @@ void ProxyBusObject::DestructComponents()
         }
 
         /* Clean up properties changed listeners */
-        while (activeListener) {
-            if (handlerThread && (handlerThread == Thread::GetThread())) {
-                QCC_LogError(ER_DEADLOCK, ("Deleting ProxyBusObject from PropertiesChangedListener registered with said ProxyBusObject - deadlocking!"));
-                lock->Unlock(MUTEX_CONTEXT);
+        while (handlerThread) {
+            if (handlerThread == Thread::GetThread()) {
+                QCC_LogError(ER_DEADLOCK, ("Deleting ProxyBusObject from PropertiesChangedListener registered with said ProxyBusObject - crash likely!"));
+                assert(false);
+                break;
             }
-            assert(!handlerThread || (handlerThread != Thread::GetThread()));
             /*
              * Some thread is trying to remove listeners while the listeners are
              * being called.  Wait until the listener callbacks are done first.

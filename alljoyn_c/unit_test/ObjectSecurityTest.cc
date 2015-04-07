@@ -23,7 +23,7 @@
 #include <alljoyn_c/AuthListener.h>
 #include <alljoyn_c/Status.h>
 
-#include <qcc/platform.h>
+#include <alljoyn_c/AjAPI.h>
 #include <qcc/Thread.h>
 
 static const char* INTERFACE_NAME = "org.alljoyn.test.c.authlistener";
@@ -35,6 +35,10 @@ static QCC_BOOL name_owner_changed_flag = QCC_FALSE;
 /* NameOwnerChanged callback */
 static void AJ_CALL name_owner_changed(const void* context, const char* busName, const char* previousOwner, const char* newOwner)
 {
+    QCC_UNUSED(context);
+    QCC_UNUSED(previousOwner);
+    QCC_UNUSED(newOwner);
+
     if (strcmp(busName, OBJECT_NAME) == 0) {
         name_owner_changed_flag = QCC_TRUE;
     }
@@ -43,6 +47,8 @@ static void AJ_CALL name_owner_changed(const void* context, const char* busName,
 /* Exposed methods */
 static void AJ_CALL ping_method(alljoyn_busobject bus, const alljoyn_interfacedescription_member* member, alljoyn_message msg)
 {
+    QCC_UNUSED(member);
+
     alljoyn_msgarg outArg = alljoyn_msgarg_create();
     alljoyn_msgarg inArg = alljoyn_message_getarg(msg, 0);
     const char* str;
@@ -199,6 +205,11 @@ static QCC_BOOL AJ_CALL authlistener_requestcredentials_service_srp_keyx(const v
                                                                          const char* peerName, uint16_t authCount,
                                                                          const char* userName, uint16_t credMask,
                                                                          alljoyn_credentials credentials) {
+    QCC_UNUSED(context);
+    QCC_UNUSED(peerName);
+    QCC_UNUSED(authCount);
+    QCC_UNUSED(userName);
+
     EXPECT_STREQ("ALLJOYN_SRP_KEYX", authMechanism);
     if (credMask & ALLJOYN_CRED_PASSWORD) {
         alljoyn_credentials_setpassword(credentials, "ABCDEFGH");
@@ -209,6 +220,10 @@ static QCC_BOOL AJ_CALL authlistener_requestcredentials_service_srp_keyx(const v
 
 static void AJ_CALL alljoyn_authlistener_authenticationcomplete_service_srp_keyx(const void* context, const char* authMechanism,
                                                                                  const char* peerName, QCC_BOOL success) {
+    QCC_UNUSED(context);
+    QCC_UNUSED(authMechanism);
+    QCC_UNUSED(peerName);
+
     EXPECT_TRUE(success);
     authenticationcomplete_service_flag = QCC_TRUE;
 }
@@ -218,6 +233,11 @@ static QCC_BOOL AJ_CALL authlistener_requestcredentials_client_srp_keyx(const vo
                                                                         const char* peerName, uint16_t authCount,
                                                                         const char* userName, uint16_t credMask,
                                                                         alljoyn_credentials credentials) {
+    QCC_UNUSED(context);
+    QCC_UNUSED(peerName);
+    QCC_UNUSED(authCount);
+    QCC_UNUSED(userName);
+
     EXPECT_STREQ("ALLJOYN_SRP_KEYX", authMechanism);
     if (credMask & ALLJOYN_CRED_PASSWORD) {
         alljoyn_credentials_setpassword(credentials, "ABCDEFGH");
@@ -228,6 +248,10 @@ static QCC_BOOL AJ_CALL authlistener_requestcredentials_client_srp_keyx(const vo
 
 static void AJ_CALL alljoyn_authlistener_authenticationcomplete_client_srp_keyx(const void* context, const char* authMechanism,
                                                                                 const char* peerName, QCC_BOOL success) {
+    QCC_UNUSED(context);
+    QCC_UNUSED(authMechanism);
+    QCC_UNUSED(peerName);
+
     EXPECT_TRUE(success);
     authenticationcomplete_client_flag = QCC_TRUE;
 }

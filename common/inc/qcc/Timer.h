@@ -181,6 +181,13 @@ class Timer {
     bool IsHoldingReentrantLock() const;
 
     /**
+     * Check whether or not the current thread belongs to this timer instance.
+     *
+     * @return true if the current thread is a timer thread from this instance
+     */
+    bool IsTimerCallbackThread() const;
+
+    /**
      * Get the name of the Timer thread pool
      *
      * @return the name of the timer thread(s)
@@ -188,6 +195,15 @@ class Timer {
     const qcc::String& GetName() const;
 
   private:
+    /*
+     * private copy constructor
+     */
+    Timer(const Timer&);
+
+    /*
+     * private assignment operator
+     */
+    Timer& operator=(const Timer& src);
 
     TimerImpl* timerImpl;
 };

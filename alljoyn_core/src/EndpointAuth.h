@@ -75,14 +75,15 @@ class EndpointAuth : public SASLEngine::ExtensionHandler {
      * @param authUsed        Returns the name of the authentication method that was used to establish the connection.
      * @param redirection     Returns a redirection address for the endpoint. This value is only meaninful if the
      *                        return status is ER_BUS_ENDPOINT_REDIRECTED.
-     * @param listener        Authentication credentials listener
+     * @param listener        Authentication credentials listener.
+     * @param timeout         Timeout for each enpoint GetLine() call, used to detect deniers of service.
      *
      * @return
      *      - ER_OK if successful
      *      = ER_BUS_ENDPOINT_REDIRECTED if the endpoint is being redirected.
      *      - An error status otherwise
      */
-    QStatus Establish(const qcc::String& authMechanisms, qcc::String& authUsed, qcc::String& redirection, AuthListener* listener = NULL);
+    QStatus Establish(const qcc::String& authMechanisms, qcc::String& authUsed, qcc::String& redirection, AuthListener* listener = NULL, uint32_t timeout = qcc::Event::WAIT_FOREVER);
 
     /**
      * Get the unique bus name assigned by the bus for this endpoint.
@@ -122,7 +123,8 @@ class EndpointAuth : public SASLEngine::ExtensionHandler {
 
     SessionOpts::NameTransferType GetNameTransfer() const { return nameTransfer; }
   private:
-
+    /* Private assigment operator - does nothing */
+    EndpointAuth operator=(const EndpointAuth&);
     /**
      * Handle SASL extension commands during establishment.
      *

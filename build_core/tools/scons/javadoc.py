@@ -83,7 +83,7 @@ def javadoc_generator(source, target, env, for_signature):
    try:
       copyright = env['PROJECT_COPYRIGHT']
    except KeyError:
-      copyright = "Copyright AllSeen Alliance.<br/><p>AllJoyn is a trademark of Qualcomm Innovation Center, Inc. AllJoyn is used here with permission to identify unmodified materials originating in the AllJoyn project.<br/>The AllJoyn open source project is hosted by the AllSeen Alliance.</p><b>THIS DOCUMENT AND ALL INFORMATION CONTAIN HEREIN ARE PROVIDED ON AN \"AS-IS\" BASIS WITHOUT WARRANTY OF ANY KIND</b>.<br/><b>MAY CONTAIN U.S. AND INTERNATIONAL EXPORT CONTROLLED INFORMATION</b>"
+      copyright = "Copyright AllSeen Alliance, Inc. All Rights Reserved.<br/><p>AllSeen, AllSeen Alliance, and AllJoyn are trademarks of the AllSeen Alliance, Inc in the United States and other jurisdictions.<br/></p><b>THIS DOCUMENT AND ALL INFORMATION CONTAIN HEREIN ARE PROVIDED ON AN \"AS-IS\" BASIS WITHOUT WARRANTY OF ANY KIND</b>.<br/><b>MAY CONTAIN U.S. AND INTERNATIONAL EXPORT CONTROLLED INFORMATION</b>"
    javadoc_bottom = '-bottom \"' + "<small>%s %s ($(%s$))<br/>%s<br/></small>" % (env['PROJECT_LONG_NAME'], env['PROJECT_NUMBER'], datetime.now().strftime('%a %b %d %H:%M:%S %Y'), copyright) + '\"'
    javadoc_overview = ''
    for s in source:

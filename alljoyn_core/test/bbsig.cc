@@ -32,10 +32,11 @@
 #include <qcc/Util.h>
 #include <qcc/Thread.h>
 
+#include <alljoyn/AllJoynStd.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/BusObject.h>
 #include <alljoyn/DBusStd.h>
-#include <alljoyn/AllJoynStd.h>
+#include <alljoyn/Init.h>
 #include <alljoyn/version.h>
 
 #include <alljoyn/Status.h>
@@ -69,12 +70,11 @@ const SessionPort SessionPort = 24;   /**< Well-known session port value for bbs
 static BusAttachment* g_msgBus = NULL;
 static String g_wellKnownName = ::org::alljoyn::alljoyn_test::DefaultWellKnownName;
 static String g_advertiseName = ::org::alljoyn::alljoyn_test::DefaultAdvertiseName;
-static Event g_discoverEvent;
+static Event* g_discoverEvent = NULL;
 static bool g_selfjoin;
 
 static TransportMask g_preferredTransport = 0;
 
-static bool compress = false;
 static bool encryption = false;
 static bool broacast = false;
 static unsigned long timeToLive = 0;
@@ -109,7 +109,7 @@ class MyBusListener : public BusListener, public SessionListener {
                     }
                 }
                 /* Release main thread */
-                g_discoverEvent.SetEvent();
+                g_discoverEvent->SetEvent();
             } else {
                 QCC_LogError(status, ("JoinSession failed (status=%s)", QCC_StatusText(status)));
             }
@@ -120,7 +120,7 @@ class MyBusListener : public BusListener, public SessionListener {
     {
         QCC_SyncPrintf("LostAdvertisedName(name=%s, transport=0x%x, prefix=%s)\n", name, transport, namePrefix);
         if (0 == strcmp(name, g_wellKnownName.c_str())) {
-            g_discoverEvent.ResetEvent();
+            g_discoverEvent->ResetEvent();
         }
     }
 
@@ -150,6 +150,9 @@ class MyAboutListener : public AboutListener {
     MyAboutListener() : sessionId(0) { }
     void Announced(const char* busName, uint16_t version, SessionPort port,
                    const MsgArg& objectDescriptionArg, const MsgArg& aboutDataArg) {
+        QCC_UNUSED(version);
+        QCC_UNUSED(port);
+        QCC_UNUSED(objectDescriptionArg);
         AboutData ad;
         ad.CreatefromMsgArg(aboutDataArg);
 
@@ -175,7 +178,7 @@ class MyAboutListener : public AboutListener {
                     }
                 }
                 /* Release main thread */
-                g_discoverEvent.SetEvent();
+                g_discoverEvent->SetEvent();
             } else {
                 QCC_LogError(status, ("JoinSession failed (status=%s)", QCC_StatusText(status)));
             }
@@ -194,6 +197,7 @@ static volatile sig_atomic_t g_interrupt = false;
 
 static void CDECL_CALL SigIntHandler(int sig)
 {
+    QCC_UNUSED(sig);
     g_interrupt = true;
 }
 
@@ -262,9 +266,6 @@ class LocalTestObject : public BusObject {
         uint8_t flags = ALLJOYN_FLAG_GLOBAL_BROADCAST;
         assert(my_signal_member);
         MsgArg arg("a{ys}", 0, NULL);
-        if (compress) {
-            flags |= ALLJOYN_FLAG_COMPRESSED;
-        }
         if (encryption) {
             flags |= ALLJOYN_FLAG_ENCRYPTED;
         }
@@ -283,6 +284,8 @@ class LocalTestObject : public BusObject {
                        const char* sourcePath,
                        Message& msg)
     {
+        QCC_UNUSED(member);
+
         if ((++rxCounts[sourcePath] % reportInterval) == 0) {
             QCC_SyncPrintf("RxSignal: %s - %u\n", sourcePath, rxCounts[sourcePath]);
             if (msg->IsEncrypted()) {
@@ -325,6 +328,8 @@ class LocalTestObject : public BusObject {
 
     void NameAcquiredCB(Message& msg, void* context)
     {
+        QCC_UNUSED(context);
+
         assert(bus);
         /* Check name acquired result */
         size_t numArgs;
@@ -354,6 +359,7 @@ class LocalTestObject : public BusObject {
 
     void AdvertiseRequestCB(Message& msg, void* context)
     {
+        QCC_UNUSED(context);
         /* Make sure request was processed */
         size_t numArgs;
         const MsgArg* args;
@@ -368,6 +374,7 @@ class LocalTestObject : public BusObject {
 
     void Ping(const InterfaceDescription::Member* member, Message& msg)
     {
+        QCC_UNUSED(member);
         /* Reply with same string that was sent to us */
         MsgArg arg(*(msg->GetArg(0)));
         printf("Pinged with: %s\n", msg->GetArg(0)->ToString().c_str());
@@ -386,43 +393,6 @@ class LocalTestObject : public BusObject {
     const InterfaceDescription::Member* my_signal_member;
 };
 
-
-static const char x509cert[] = {
-    "-----BEGIN CERTIFICATE-----\n"
-    "MIIBszCCARwCCQDuCh+BWVBk2DANBgkqhkiG9w0BAQUFADAeMQ0wCwYDVQQKDARN\n"
-    "QnVzMQ0wCwYDVQQDDARHcmVnMB4XDTEwMDUxNzE1MTg1N1oXDTExMDUxNzE1MTg1\n"
-    "N1owHjENMAsGA1UECgwETUJ1czENMAsGA1UEAwwER3JlZzCBnzANBgkqhkiG9w0B\n"
-    "AQEFAAOBjQAwgYkCgYEArSd4r62mdaIRG9xZPDAXfImt8e7GTIyXeM8z49Ie1mrQ\n"
-    "h7roHbn931Znzn20QQwFD6pPC7WxStXJVH0iAoYgzzPsXV8kZdbkLGUMPl2GoZY3\n"
-    "xDSD+DA3m6krcXcN7dpHv9OlN0D9Trc288GYuFEENpikZvQhMKPDUAEkucQ95Z8C\n"
-    "AwEAATANBgkqhkiG9w0BAQUFAAOBgQBkYY6zzf92LRfMtjkKs2am9qvjbqXyDJLS\n"
-    "viKmYe1tGmNBUzucDC5w6qpPCTSe23H2qup27///fhUUuJ/ssUnJ+Y77jM/u1O9q\n"
-    "PIn+u89hRmqY5GKHnUSZZkbLB/yrcFEchHli3vLo4FOhVVHwpnwLtWSpfBF9fWcA\n"
-    "7THIAV79Lg==\n"
-    "-----END CERTIFICATE-----"
-};
-
-static const char privKey[] = {
-    "-----BEGIN RSA PRIVATE KEY-----\n"
-    "Proc-Type: 4,ENCRYPTED\n"
-    "DEK-Info: AES-128-CBC,0AE4BAB94CEAA7829273DD861B067DBA\n"
-    "\n"
-    "LSJOp+hEzNDDpIrh2UJ+3CauxWRKvmAoGB3r2hZfGJDrCeawJFqH0iSYEX0n0QEX\n"
-    "jfQlV4LHSCoGMiw6uItTof5kHKlbp5aXv4XgQb74nw+2LkftLaTchNs0bW0TiGfQ\n"
-    "XIuDNsmnZ5+CiAVYIKzsPeXPT4ZZSAwHsjM7LFmosStnyg4Ep8vko+Qh9TpCdFX8\n"
-    "w3tH7qRhfHtpo9yOmp4hV9Mlvx8bf99lXSsFJeD99C5GQV2lAMvpfmM8Vqiq9CQN\n"
-    "9OY6VNevKbAgLG4Z43l0SnbXhS+mSzOYLxl8G728C6HYpnn+qICLe9xOIfn2zLjm\n"
-    "YaPlQR4MSjHEouObXj1F4MQUS5irZCKgp4oM3G5Ovzt82pqzIW0ZHKvi1sqz/KjB\n"
-    "wYAjnEGaJnD9B8lRsgM2iLXkqDmndYuQkQB8fhr+zzcFmqKZ1gLRnGQVXNcSPgjU\n"
-    "Y0fmpokQPHH/52u+IgdiKiNYuSYkCfHX1Y3nftHGvWR3OWmw0k7c6+DfDU2fDthv\n"
-    "3MUSm4f2quuiWpf+XJuMB11px1TDkTfY85m1aEb5j4clPGELeV+196OECcMm4qOw\n"
-    "AYxO0J/1siXcA5o6yAqPwPFYcs/14O16FeXu+yG0RPeeZizrdlv49j6yQR3JLa2E\n"
-    "pWiGR6hmnkixzOj43IPJOYXySuFSi7lTMYud4ZH2+KYeK23C2sfQSsKcLZAFATbq\n"
-    "DY0TZHA5lbUiOSUF5kgd12maHAMidq9nIrUpJDzafgK9JrnvZr+dVYM6CiPhiuqJ\n"
-    "bXvt08wtKt68Ymfcx+l64mwzNLS+OFznEeIjLoaHU4c=\n"
-    "-----END RSA PRIVATE KEY-----"
-};
-
 class MyAuthListener : public AuthListener {
   public:
 
@@ -431,35 +401,17 @@ class MyAuthListener : public AuthListener {
   private:
 
     bool RequestCredentials(const char* authMechanism, const char* authPeer, uint16_t authCount, const char* userId, uint16_t credMask, Credentials& creds) {
+        QCC_UNUSED(authPeer);
+        QCC_UNUSED(userId);
 
         if (authCount > maxAuth) {
             return false;
-        }
-
-        if (strcmp(authMechanism, "ALLJOYN_PIN_KEYX") == 0) {
-            if (credMask & AuthListener::CRED_PASSWORD) {
-                creds.SetPassword("ABCDEFGH");
-            }
-            return true;
         }
 
         if (strcmp(authMechanism, "ALLJOYN_SRP_KEYX") == 0) {
             if (credMask & AuthListener::CRED_PASSWORD) {
                 creds.SetPassword("123456");
                 printf("AuthListener returning fixed pin \"%s\" for %s\n", creds.GetPassword().c_str(), authMechanism);
-            }
-            return true;
-        }
-
-        if (strcmp(authMechanism, "ALLJOYN_RSA_KEYX") == 0) {
-            if (credMask & AuthListener::CRED_CERT_CHAIN) {
-                creds.SetCertChain(x509cert);
-            }
-            if (credMask & AuthListener::CRED_PRIVATE_KEY) {
-                creds.SetPrivateKey(privKey);
-            }
-            if (credMask & AuthListener::CRED_PASSWORD) {
-                creds.SetPassword("123456");
             }
             return true;
         }
@@ -478,20 +430,20 @@ class MyAuthListener : public AuthListener {
     }
 
     bool VerifyCredentials(const char* authMechanism, const char* authPeer, const Credentials& creds) {
-        if (strcmp(authMechanism, "ALLJOYN_RSA_KEYX") == 0) {
-            if (creds.IsSet(AuthListener::CRED_CERT_CHAIN)) {
-                printf("Verify\n%s\n", creds.GetCertChain().c_str());
-                return true;
-            }
-        }
+        QCC_UNUSED(authMechanism);
+        QCC_UNUSED(authPeer);
+        QCC_UNUSED(creds);
+        /* Not used with SRP*/
         return false;
     }
 
     void AuthenticationComplete(const char* authMechanism, const char* authPeer, bool success) {
+        QCC_UNUSED(authPeer);
         printf("Authentication %s %s\n", authMechanism, success ? "succesful" : "failed");
     }
 
     void SecurityViolation(QStatus status, const Message& msg) {
+        QCC_UNUSED(msg);
         printf("Security violation %s\n", QCC_StatusText(status));
     }
 
@@ -506,15 +458,24 @@ class MySessionPortListener : public SessionPortListener {
     ~MySessionPortListener() { }
   private:
 
-    bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) { return true; }
-    void SessionJoined(SessionPort sessionPort, SessionId id, const char* joiner) {  }
+    bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) {
+        QCC_UNUSED(sessionPort);
+        QCC_UNUSED(joiner);
+        QCC_UNUSED(opts);
+        return true;
+    }
+    void SessionJoined(SessionPort sessionPort, SessionId id, const char* joiner) {
+        QCC_UNUSED(sessionPort);
+        QCC_UNUSED(id);
+        QCC_UNUSED(joiner);
+    }
 };
 
 static MySessionPortListener g_portListener;
 
 static void usage(void)
 {
-    printf("Usage: bbsig [-n <name> ] [-a <name> ] [-h] [-l] [-s] [-r #] [-i #] [-c #] [-t #] [-x] [--tcp] [--udp] [-e[k] <mech>]\n\n");
+    printf("Usage: bbsig [-n <name> ] [-a <name> ] [-h] [-l] [-s] [-r #] [-i #] [-c #] [-t #] [--tcp] [--udp] [-e[k] <mech>]\n\n");
     printf("Options:\n");
     printf("   -h                          = Print this help message\n");
     printf("   -?                          = Print this help message\n");
@@ -529,8 +490,7 @@ static void usage(void)
     printf("   -t #                        = TTL for the signals\n");
     printf("   --tcp                       = Advertise and discover using the TCP transport\n");
     printf("   --udp                       = Advertise and discover using the UDP transport\n");
-    printf("   -x                          = Compress headers\n");
-    printf("   -e[k] [RSA|SRP|LOGON|PINX]   = Encrypt the test interface using specified auth mechanism, -ek means clear keys\n");
+    printf("   -e[k] [SRP|LOGON]       = Encrypt the test interface using specified auth mechanism, -ek means clear keys\n");
     printf("   -d                          = discover remote bus with test service\n");
     printf("   -b                          = Signal is broadcast rather than multicast\n");
     printf("   --ls                        = Call LeaveSession before tearing down the Bus Attachment\n");
@@ -540,8 +500,17 @@ static void usage(void)
 }
 
 /** Main entry point */
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+#endif
     QStatus status = ER_OK;
 
     bool clearKeys = false;
@@ -650,8 +619,6 @@ int main(int argc, char** argv)
             } else {
                 timeToLive = strtoul(argv[i], NULL, 10);
             }
-        } else if (0 == strcmp("-x", argv[i])) {
-            compress = true;
         } else if (0 == strcmp("-b", argv[i])) {
             broacast = true;
         } else if ((0 == strcmp("-e", argv[i])) || (0 == strcmp("-ek", argv[i]))) {
@@ -663,14 +630,8 @@ int main(int argc, char** argv)
             clearKeys |= (argv[i][2] == 'k');
             ++i;
             if (i != argc) {
-                if (strcmp(argv[i], "RSA") == 0) {
-                    authMechs += "ALLJOYN_RSA_KEYX";
-                    ok = true;
-                } else if (strcmp(argv[i], "SRP") == 0) {
+                if (strcmp(argv[i], "SRP") == 0) {
                     authMechs += "ALLJOYN_SRP_KEYX";
-                    ok = true;
-                } else if (strcmp(argv[i], "PINX") == 0) {
-                    authMechs += "ALLJOYN_PIN_KEYX";
                     ok = true;
                 } else if (strcmp(argv[i], "LOGON") == 0) {
                     if (++i == argc) {
@@ -713,6 +674,8 @@ int main(int argc, char** argv)
     }
 
     do {
+        g_discoverEvent = new Event();
+
         /* Create message bus */
         g_msgBus = new BusAttachment("bbsig", true);
 
@@ -774,7 +737,7 @@ int main(int argc, char** argv)
              * Make sure the event is cleared so we don't pick up a stale event from the previous
              * iteration when running the stress test.
              */
-            g_discoverEvent.ResetEvent();
+            g_discoverEvent->ResetEvent();
 
             /* Begin discovery on the well-known name of the service to be called */
             Message reply(*g_msgBus);
@@ -795,7 +758,7 @@ int main(int argc, char** argv)
              * Make sure the event is cleared so we don't pick up a stale event from the previous
              * iteration when running the stress test.
              */
-            g_discoverEvent.ResetEvent();
+            g_discoverEvent->ResetEvent();
             const char* interfaces[] = { ::org::alljoyn::alljoyn_test::InterfaceName };
             status = g_msgBus->WhoImplements(interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
         }
@@ -816,7 +779,7 @@ int main(int argc, char** argv)
                  */
                 qcc::Event timerEvent(100, 100);
                 vector<qcc::Event*> checkEvents, signaledEvents;
-                checkEvents.push_back(&g_discoverEvent);
+                checkEvents.push_back(g_discoverEvent);
                 checkEvents.push_back(&timerEvent);
                 status = qcc::Event::Wait(checkEvents, signaledEvents);
                 if (status != ER_OK && status != ER_TIMEOUT) {
@@ -827,7 +790,7 @@ int main(int argc, char** argv)
                  * If it was the discover event that popped, we're done.
                  */
                 for (vector<qcc::Event*>::iterator i = signaledEvents.begin(); i != signaledEvents.end(); ++i) {
-                    if (*i == &g_discoverEvent) {
+                    if (*i == g_discoverEvent) {
                         discovered = true;
                         break;
                     }
@@ -898,8 +861,16 @@ int main(int argc, char** argv)
         delete g_msgBus;
         g_msgBus = NULL;
     }
+    if (g_discoverEvent) {
+        delete g_discoverEvent;
+        g_discoverEvent = NULL;
+    }
 
     QCC_SyncPrintf("bbsig exiting with %d (%s)\n", status, QCC_StatusText(status));
 
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return (int) status;
 }

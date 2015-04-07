@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		7D07EAFD1A9B7F1800DF281E /* AJNInit.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7D07EAFC1A9B7F1800DF281E /* AJNInit.mm */; };
 		7DCBEE271A254D4800A53A83 /* AJNAboutObjectDescription.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCBEE131A254D4800A53A83 /* AJNAboutObjectDescription.mm */; };
 		7DCBEE281A254D4800A53A83 /* AJNAboutObject.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCBEE151A254D4800A53A83 /* AJNAboutObject.mm */; };
 		7DCBEE291A254D4800A53A83 /* AJNAboutDataListenerImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCBEE181A254D4800A53A83 /* AJNAboutDataListenerImpl.mm */; };
@@ -62,6 +63,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		7D07EAFB1A9B7F1800DF281E /* AJNInit.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNInit.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNInit.h; sourceTree = "<group>"; };
+		7D07EAFC1A9B7F1800DF281E /* AJNInit.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNInit.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNInit.mm; sourceTree = "<group>"; };
 		7DCBEE131A254D4800A53A83 /* AJNAboutObjectDescription.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNAboutObjectDescription.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNAboutObjectDescription.mm; sourceTree = "<group>"; };
 		7DCBEE141A254D4800A53A83 /* AJNAboutObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNAboutObject.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNAboutObject.h; sourceTree = "<group>"; };
 		7DCBEE151A254D4800A53A83 /* AJNAboutObject.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNAboutObject.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNAboutObject.mm; sourceTree = "<group>"; };
@@ -199,6 +202,8 @@
 		ACB3B79616691ABF0082721B /* AllJoyn Framework */ = {
 			isa = PBXGroup;
 			children = (
+				7D07EAFB1A9B7F1800DF281E /* AJNInit.h */,
+				7D07EAFC1A9B7F1800DF281E /* AJNInit.mm */,
 				7DCBEE131A254D4800A53A83 /* AJNAboutObjectDescription.mm */,
 				7DCBEE141A254D4800A53A83 /* AJNAboutObject.h */,
 				7DCBEE151A254D4800A53A83 /* AJNAboutObject.mm */,
@@ -440,6 +445,7 @@
 				ACB3B7D916691AD10082721B /* AJNBusObjectImpl.mm in Sources */,
 				ACB3B7DA16691AD10082721B /* AJNClientController.m in Sources */,
 				83332F46193B139C00F32C59 /* AJNTranslatorImpl.mm in Sources */,
+				7D07EAFD1A9B7F1800DF281E /* AJNInit.mm in Sources */,
 				ACB3B7DB16691AD10082721B /* AJNInterfaceDescription.mm in Sources */,
 				ACB3B7DC16691AD10082721B /* AJNInterfaceMember.mm in Sources */,
 				7DCBEE281A254D4800A53A83 /* AJNAboutObject.mm in Sources */,
@@ -576,7 +582,6 @@
 				OTHER_LDFLAGS = (
 					"-lalljoyn",
 					"-lajrouter",
-					"-lBundledRouter.o",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
@@ -607,7 +612,6 @@
 				OTHER_LDFLAGS = (
 					"-lalljoyn",
 					"-lajrouter",
-					"-lBundledRouter.o",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;

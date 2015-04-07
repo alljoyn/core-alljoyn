@@ -21,7 +21,6 @@
 #ifndef _ALLJOYN_C_MESSAGE_H
 #define _ALLJOYN_C_MESSAGE_H
 
-#include <qcc/platform.h>
 #include <alljoyn_c/AjAPI.h>
 #include <alljoyn_c/MsgArg.h>
 #include <alljoyn_c/Session.h>
@@ -35,8 +34,10 @@ extern "C" {
  * alljoyn_message for parsing and generating message bus messages
  */
 typedef struct _alljoyn_message_handle*                     alljoyn_message;
+/// @cond ALLJOYN_DEV
 #ifndef _ALLJOYN_OPAQUE_BUSATTACHMENT_
 #define _ALLJOYN_OPAQUE_BUSATTACHMENT_
+/// @endcond
 /**
  * alljoyn_busattachment is the top level object responsible for connecting to and
  * managing an AllJoyn message bus
@@ -55,19 +56,23 @@ static const uint8_t ALLJOYN_BIG_ENDIAN    = 'B';
 /** @name Flag types */
 /* @{ */
 /** No reply is expected */
-static const uint8_t ALLJOYN_MESSAGE_FLAG_NO_REPLY_EXPECTED  = 0x01;
+#define ALLJOYN_MESSAGE_FLAG_NO_REPLY_EXPECTED  0x01
 /** Auto start the service */
-static const uint8_t ALLJOYN_MESSAGE_FLAG_AUTO_START         = 0x02;
+#define ALLJOYN_MESSAGE_FLAG_AUTO_START         0x02
 /** Allow messages from remote hosts (valid only in Hello message) */
-static const uint8_t ALLJOYN_MESSAGE_FLAG_ALLOW_REMOTE_MSG   = 0x04;
+#define ALLJOYN_MESSAGE_FLAG_ALLOW_REMOTE_MSG   0x04
 /** Sessionless message */
-static const uint8_t ALLJOYN_MESSAGE_FLAG_SESSIONLESS        = 0x10;
+#define ALLJOYN_MESSAGE_FLAG_SESSIONLESS        0x10
 /** Global (bus-to-bus) broadcast */
-static const uint8_t ALLJOYN_MESSAGE_FLAG_GLOBAL_BROADCAST   = 0x20;
-/** Header is compressed */
-static const uint8_t ALLJOYN_MESSAGE_FLAG_COMPRESSED         = 0x40;
+#define ALLJOYN_MESSAGE_FLAG_GLOBAL_BROADCAST   0x20
+/**
+ * Header is compressed
+ *
+ * @deprecated March 2015 for 15.04 release
+ */
+#define ALLJOYN_MESSAGE_FLAG_COMPRESSED         (attempted_use_of_deprecated_definition = 0x40)
 /** Body is encrypted */
-static const uint8_t ALLJOYN_MESSAGE_FLAG_ENCRYPTED          = 0x80;
+#define ALLJOYN_MESSAGE_FLAG_ENCRYPTED          0x80
 /* @} */
 
 /**
@@ -323,10 +328,12 @@ extern AJ_API const char* AJ_CALL alljoyn_message_getdestination(alljoyn_message
  * @param[in] msg  The alljoyn_message from which to extract the compression token information.
  *
  * @return
- *      - Compression token for the message stored in the AllJoyn header field
  *      - 0 'zero' if there is no compression token.
+ *
+ * @deprecated Header compression was deprecated in March 2015 for 15.04
+ * release
  */
-extern AJ_API uint32_t AJ_CALL alljoyn_message_getcompressiontoken(alljoyn_message msg);
+QCC_DEPRECATED(extern AJ_API uint32_t AJ_CALL alljoyn_message_getcompressiontoken(alljoyn_message msg));
 
 /**
  * Accessor function to get the session id for the message.
@@ -422,5 +429,4 @@ extern AJ_API void AJ_CALL alljoyn_message_setendianess(const char endian);
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
-
-#endif
+#endif //_ALLJOYN_C_MESSAGE_H

@@ -35,6 +35,8 @@ char sourcePath3[256];
 void AJ_CALL registersignalHandler_Handler(const alljoyn_interfacedescription_member* member,
                                            const char* srcPath,
                                            alljoyn_message message) {
+    QCC_UNUSED(member);
+
     QStatus status = ER_FAIL;
     EXPECT_STREQ(sourcePath1, srcPath);
     char* str;
@@ -47,6 +49,8 @@ void AJ_CALL registersignalHandler_Handler(const alljoyn_interfacedescription_me
 void AJ_CALL registersignalHandler_Handler2(const alljoyn_interfacedescription_member* member,
                                             const char* srcPath,
                                             alljoyn_message message) {
+    QCC_UNUSED(member);
+
     QStatus status = ER_FAIL;
     EXPECT_STREQ(sourcePath2, srcPath);
     char* str;
@@ -59,6 +63,8 @@ void AJ_CALL registersignalHandler_Handler2(const alljoyn_interfacedescription_m
 void AJ_CALL registersignalHandler_Handler3(const alljoyn_interfacedescription_member* member,
                                             const char* srcPath,
                                             alljoyn_message message) {
+    QCC_UNUSED(member);
+
     QStatus status = ER_FAIL;
     EXPECT_STREQ(sourcePath3, srcPath);
     char* str;
@@ -71,11 +77,19 @@ void AJ_CALL registersignalHandler_Handler3(const alljoyn_interfacedescription_m
 static QCC_BOOL AJ_CALL accept_session_joiner(const void* context, alljoyn_sessionport sessionPort,
                                               const char* joiner,  const alljoyn_sessionopts opts)
 {
+    QCC_UNUSED(context);
+    QCC_UNUSED(sessionPort);
+    QCC_UNUSED(joiner);
+    QCC_UNUSED(opts);
     return QCC_TRUE;
 }
 
 static void AJ_CALL session_joined(const void* context, alljoyn_sessionport sessionPort, alljoyn_sessionid id, const char* joiner)
 {
+    QCC_UNUSED(context);
+    QCC_UNUSED(sessionPort);
+    QCC_UNUSED(id);
+    QCC_UNUSED(joiner);
     //printf("session_joined\n");
 }
 

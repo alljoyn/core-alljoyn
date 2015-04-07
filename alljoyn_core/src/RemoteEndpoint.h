@@ -62,7 +62,8 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
 
       public:
 
-        Features() : isBusToBus(false), allowRemote(false), handlePassing(false), ajVersion(0), protocolVersion(0), processId(0), trusted(false)
+        Features() : isBusToBus(false), allowRemote(false), handlePassing(false), ajVersion(0), protocolVersion(0),
+            processId(0), trusted(false), nameTransfer(SessionOpts::P2P_NAMES)
         { }
 
         bool isBusToBus;       /**< When initiating connection this is an input value indicating if this is a bus-to-bus connection.
@@ -82,7 +83,8 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
         uint32_t processId;        /**< Process id optionally obtained from the remote peer */
 
         bool trusted;              /**< Indicated if the remote client was trusted */
-        SessionOpts::NameTransferType nameTransfer;
+
+        SessionOpts::NameTransferType nameTransfer; /**< The name transfer type set up for this endpoint */
 
     };
 
@@ -297,13 +299,14 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
      * @param[out] redirection Returns a redirection address for the endpoint. This value
      *                         is only meaninful if the return status is ER_BUS_ENDPOINT_REDIRECT.
      * @param[in] listener     Optional authentication listener
+     * @param[in] timeout      Optional timeout in milliseconds, used to detect deniers of service.
      *
      * @return
      *      - ER_OK if successful.
      *      = ER_BUS_ENDPOINT_REDIRECT if the endpoint is being redirected.
      *      - An error status otherwise
      */
-    QStatus Establish(const qcc::String& authMechanisms, qcc::String& authUsed, qcc::String& redirection, AuthListener* listener = NULL);
+    QStatus Establish(const qcc::String& authMechanisms, qcc::String& authUsed, qcc::String& redirection, AuthListener* listener = NULL, uint32_t timeout = qcc::Event::WAIT_FOREVER);
 
     /**
      * Get the GUID of the remote side of a bus-to-bus endpoint.
@@ -446,7 +449,7 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
      * Get SessionId for endpoint.
      * This is used for BusToBus endpoints only.
      */
-    uint32_t GetSessionId();
+    uint32_t GetSessionId() const;
 
     /**
      * Set SessionId for endpoint.
@@ -464,14 +467,20 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
      * @param[out] ipAddr The IP address of the remote end.
      * @return status ER_OK if the IP address is valid, or error.
      */
-    virtual QStatus GetRemoteIp(qcc::String& ipAddr) { return ER_NOT_IMPLEMENTED; };
+    virtual QStatus GetRemoteIp(qcc::String& ipAddr) {
+        QCC_UNUSED(ipAddr);
+        return ER_NOT_IMPLEMENTED;
+    };
 
     /**
      * Get the IP address of the local end.
      * @param[out] ipAddr The IP address of the local end.
      * @return status ER_OK if the IP address is valid, or error.
      */
-    virtual QStatus GetLocalIp(qcc::String& ipAddr) { return ER_NOT_IMPLEMENTED; };
+    virtual QStatus GetLocalIp(qcc::String& ipAddr) {
+        QCC_UNUSED(ipAddr);
+        return ER_NOT_IMPLEMENTED;
+    };
 
   protected:
 

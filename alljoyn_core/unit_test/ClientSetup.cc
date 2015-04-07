@@ -271,6 +271,8 @@ QStatus ClientSetup::AsyncMethodCall(int noOfCalls, int type)
  */
 void ClientSetup::AsyncCallReplyHandler(Message& msg, void* context)
 {
+    QCC_UNUSED(msg);
+    QCC_UNUSED(context);
     //static int count = 0;
     //printf("Reply no %d Received : %s\n", count++, msg->GetArg(0)->v_string.str);
     g_Signal_flag++;
@@ -281,6 +283,8 @@ void ClientSetup::AsyncCallReplyHandler(Message& msg, void* context)
  */
 QStatus ClientSetup::SignalHandler(int noOfCalls, int type)
 {
+    QCC_UNUSED(noOfCalls);
+
     QStatus status = ER_OK;
     const InterfaceDescription* intf = NULL;
     const InterfaceDescription::Member* mysignal = NULL;
@@ -347,6 +351,9 @@ void ClientSetup::MySignalHandler(
     const char* sourcePath,
     Message& msg)
 {
+    QCC_UNUSED(member);
+    QCC_UNUSED(sourcePath);
+    QCC_UNUSED(msg);
     printf("\n Inside the signal handler ");
 }
 
@@ -355,6 +362,8 @@ void ClientSetup::MySignalHandler2(
     const char* sourcePath,
     Message& msg)
 {
+    QCC_UNUSED(member);
+    QCC_UNUSED(sourcePath);
     //printf("\n Inside the signal handler 2");
     const MsgArg*replyArgs[2];
     size_t numArgs;

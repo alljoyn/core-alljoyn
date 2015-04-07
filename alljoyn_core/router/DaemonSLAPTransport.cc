@@ -267,6 +267,8 @@ QStatus _DaemonSLAPEndpoint::Join(void)
 
 void* _DaemonSLAPEndpoint::AuthThread::Run(void* arg)
 {
+    QCC_UNUSED(arg);
+
     QCC_DbgPrintf(("DaemonSLAPEndpoint::AuthThread::Run()"));
 
     m_endpoint->m_authState = AUTH_AUTHENTICATING;
@@ -328,13 +330,10 @@ void* _DaemonSLAPEndpoint::AuthThread::Run(void* arg)
      * As a part of Establish, the endpoint can call the Transport's UntrustedClientStart method if
      * it is an untrusted client, so the transport MUST call m_endpoint->SetListener before calling Establish
      * Note: This is only required on the accepting end i.e. for incoming endpoints.
+     * Thin Client 14.06 or higher uses ANONYMOUS to connect to routing nodes.
      */
     m_endpoint->SetListener(m_endpoint->m_transport);
-    if (authListener) {
-        status = m_endpoint->Establish("ALLJOYN_PIN_KEYX ANONYMOUS", authName, redirection, authListener);
-    } else {
-        status = m_endpoint->Establish("ANONYMOUS", authName, redirection, authListener);
-    }
+    status = m_endpoint->Establish("ANONYMOUS", authName, redirection, authListener);
     if (status != ER_OK) {
         QCC_LogError(status, ("Failed to establish SLAP endpoint"));
 
@@ -590,6 +589,7 @@ QStatus DaemonSLAPTransport::StartListen(const char* listenSpec)
 
 QStatus DaemonSLAPTransport::StopListen(const char* listenSpec)
 {
+    QCC_UNUSED(listenSpec);
     return ER_OK;
 }
 
@@ -614,6 +614,7 @@ void DaemonSLAPTransport::EndpointExit(RemoteEndpoint& ep)
 
 void* DaemonSLAPTransport::Run(void* arg)
 {
+    QCC_UNUSED(arg);
 
     QStatus status = ER_OK;
     m_lock.Lock(MUTEX_CONTEXT);
@@ -629,10 +630,10 @@ void* DaemonSLAPTransport::Run(void* arg)
          */
         QCC_DbgPrintf(("DaemonSLAPTransport::Run()"));
 
-        UARTFd uartFd = -1;
+        UARTFd uartFd = (UARTFd) - 1;
         set<DaemonSLAPEndpoint>::iterator i = m_authList.begin();
         while (i != m_authList.end()) {
-            uartFd = -1;
+            uartFd = (UARTFd) - 1;
             DaemonSLAPEndpoint ep = *i;
             _DaemonSLAPEndpoint::AuthState authState = ep->GetAuthState();
 
@@ -655,7 +656,7 @@ void* DaemonSLAPTransport::Run(void* arg)
 
                     if (it->listenFd == uartFd) {
                         QCC_DbgPrintf(("DaemonSLAPTransport::Run(): Reenabling %s in the listenEvents", it->args["port"].c_str()));
-                        it->listenFd = -1;
+                        it->listenFd = (UARTFd) - 1;
                         it->endpointStarted = false;
                         Thread::Alert();
                     }
@@ -666,7 +667,7 @@ void* DaemonSLAPTransport::Run(void* arg)
         }
         i = m_endpointList.begin();
         while (i != m_endpointList.end()) {
-            uartFd = -1;
+            uartFd = (UARTFd) - 1;
             DaemonSLAPEndpoint ep = *i;
 
             _DaemonSLAPEndpoint::EndpointState endpointState = ep->GetEpState();
@@ -710,7 +711,7 @@ void* DaemonSLAPTransport::Run(void* arg)
 
                     if (it->listenFd == uartFd) {
                         QCC_DbgPrintf(("DaemonSLAPTransport::Run(): Reenabling back %s in the listenEvents", it->args["port"].c_str()));
-                        it->listenFd = -1;
+                        it->listenFd = (UARTFd) - 1;
                         it->endpointStarted = false;
                         break;
                     }
@@ -777,7 +778,6 @@ void* DaemonSLAPTransport::Run(void* arg)
                         break;
                     }
                 }
-                delete e;
             }
         }
         for (vector<qcc::Event*>::iterator i = checkEvents.begin(); i != checkEvents.end(); ++i) {

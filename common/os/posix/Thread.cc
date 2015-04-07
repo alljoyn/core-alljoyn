@@ -53,8 +53,8 @@ static uint32_t joined = 0;
 Mutex* Thread::threadListLock = NULL;
 map<ThreadHandle, Thread*>* Thread::threadList = NULL;
 
-static int threadListCounter = 0;
 static pthread_key_t cleanExternalThreadKey;
+static bool initialized = false;
 
 void Thread::CleanExternalThread(void* t)
 {
@@ -75,22 +75,26 @@ void Thread::CleanExternalThread(void* t)
     threadListLock->Unlock();
 }
 
-ThreadListInit::ThreadListInit()
+QStatus Thread::Init()
 {
-    if (0 == threadListCounter++) {
+    if (!initialized) {
         Thread::threadListLock = new Mutex();
         Thread::threadList = new map<ThreadHandle, Thread*>();
         int ret = pthread_key_create(&cleanExternalThreadKey, Thread::CleanExternalThread);
         if (ret != 0) {
             QCC_LogError(ER_OS_ERROR, ("Creating TLS key: %s", strerror(ret)));
+            delete threadList;
+            delete threadListLock;
+            return ER_OS_ERROR;
         }
-        assert(ret == 0);
+        initialized = true;
     }
+    return ER_OK;
 }
 
-ThreadListInit::~ThreadListInit()
+QStatus Thread::Shutdown()
 {
-    if (0 == --threadListCounter) {
+    if (initialized) {
         void* thread = pthread_getspecific(cleanExternalThreadKey);
         // pthread_key_delete will not call CleanExternalThread for this thread,
         // so we manually call it here.
@@ -101,7 +105,9 @@ ThreadListInit::~ThreadListInit()
         }
         delete Thread::threadList;
         delete Thread::threadListLock;
+        initialized = false;
     }
+    return ER_OK;
 }
 
 QStatus Sleep(uint32_t ms) {
@@ -345,6 +351,7 @@ QStatus Thread::Start(void* arg, ThreadListener* listener)
             status = ER_OS_ERROR;
             QCC_LogError(status, ("Creating thread %s: %s", funcName, strerror(ret)));
         }
+        pthread_attr_destroy(&attr);
     }
     return status;
 }

@@ -254,7 +254,6 @@ public class Service extends Activity {
             mAuthListeners = new HashMap<String, AuthListener>();
             mAuthListeners.put("ALLJOYN_SRP_KEYX", new SrpKeyXListener());
             mAuthListeners.put("ALLJOYN_SRP_LOGON", new SrpLogonListener());
-            mAuthListeners.put("ALLJOYN_RSA_KEYX", new RsaKeyXListener());
         }
 
         /* Returns the list of supported mechanisms. */
@@ -375,70 +374,6 @@ public class Service extends Activity {
                 }
             }
             return true;
-        }
-
-        public void completed(String mechanism, String peer, boolean authenticated) {
-        }
-    }
-
-    /* The RSA Key eXchange listener uses X.509 certificates to authenticate. */
-    class RsaKeyXListener implements AuthListener {
-
-        public boolean requested(String mechanism, String peer, int count, String userName,
-                AuthRequest[] requests) {
-            /* Collect the requests we're interested in to simplify processing below. */
-            PasswordRequest passwordRequest = null;
-            CertificateRequest certificateRequest = null;
-            VerifyRequest verifyRequest = null;
-            for (AuthRequest request : requests) {
-                if (request instanceof PasswordRequest) {
-                    passwordRequest = (PasswordRequest) request;
-                } else if (request instanceof CertificateRequest) {
-                    certificateRequest = (CertificateRequest) request;
-                } else if (request instanceof VerifyRequest) {
-                    verifyRequest = (VerifyRequest) request;
-                }
-            }
-
-            if (verifyRequest != null) {
-                /* Verify a certificate chain supplied by the peer. */
-                return true;
-            } else if (certificateRequest != null) {
-                /*
-                 * The engine is asking us for our certificate chain.
-                 *
-                 * If we return true and do not supply the certificate chain, then the engine will
-                 * create a self-signed certificate for us.  It will ask for the passphrase to use
-                 * for the private key via a PasswordRequest.
-                 */
-                return true;
-            } else if (passwordRequest != null) {
-                /*
-                 * A password request under the ALLJOYN_RSA_KEYX mechanism is for the passphrase of the
-                 * private key.
-                 *
-                 * PasswordRequest.isNewPassword() indicates if the engine has created a private key
-                 * for us (as part of creating a self-signed certificate).  Otherwise it is
-                 * expecting the passphrase for the existing private key.
-                 */
-                try {
-                    if (count <= 3) {
-                        /*
-                         * Request the passphrase of our private key via the UI.  We need to wait
-                         * here for the user to enter the passphrase before we can return.  The
-                         * latch takes care of the synchronization for us.
-                         */
-                        mLatch = new CountDownLatch(1);
-                        sendUiMessage(MESSAGE_SHOW_PASSPHRASE_DIALOG, passwordRequest);
-                        mLatch.await();
-                        passwordRequest.setPassword(mPassword.toCharArray());
-                        return true;
-                    }
-                } catch (InterruptedException ex) {
-                    Log.e(TAG, "Error waiting for password", ex);
-                }
-            }
-            return false;
         }
 
         public void completed(String mechanism, String peer, boolean authenticated) {

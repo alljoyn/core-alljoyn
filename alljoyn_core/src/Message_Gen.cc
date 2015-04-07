@@ -37,7 +37,6 @@
 #include "LocalTransport.h"
 #include "PeerState.h"
 #include "KeyStore.h"
-#include "CompressionRules.h"
 #include "BusUtil.h"
 #include "AllJoynCrypto.h"
 #include "AllJoynPeerObj.h"
@@ -462,7 +461,7 @@ QStatus _Message::Deliver(RemoteEndpoint& endpoint)
     Sink& sink = endpoint->GetSink();
     uint8_t* buf = reinterpret_cast<uint8_t*>(msgBuf);
     size_t len = bufEOD - buf;
-    size_t pushed;
+    size_t pushed = 0;
 
     QCC_DbgPrintf(("Deliver %s", this->Description().c_str()));
 
@@ -640,13 +639,6 @@ void _Message::MarshalHeaderFields()
     for (uint32_t fieldId = ALLJOYN_HDR_FIELD_PATH; fieldId < ArraySize(hdrFields.field); fieldId++) {
         MsgArg* field = &hdrFields.field[fieldId];
         if (field->typeId != ALLJOYN_INVALID) {
-            if ((msgHeader.flags & ALLJOYN_FLAG_COMPRESSED) && HeaderFields::Compressible[fieldId]) {
-                /*
-                 * Stabilize the field to ensure that any strings etc, are copied into the message.
-                 */
-                field->Stabilize();
-                continue;
-            }
             /*
              * Header fields align on an 8 byte boundary
              */
@@ -736,9 +728,6 @@ size_t _Message::ComputeHeaderLen()
 {
     size_t hdrLen = 0;
     for (uint32_t fieldId = ALLJOYN_HDR_FIELD_PATH; fieldId < ArraySize(hdrFields.field); fieldId++) {
-        if ((msgHeader.flags & ALLJOYN_FLAG_COMPRESSED) && HeaderFields::Compressible[fieldId]) {
-            continue;
-        }
         MsgArg* field = &hdrFields.field[fieldId];
         if (field->typeId != ALLJOYN_INVALID) {
             hdrLen = ROUNDUP8(hdrLen) + SignatureUtils::GetSize(field, 1, 4);
@@ -805,8 +794,7 @@ QStatus _Message::MarshalMessage(const qcc::String& expectedSignature,
                                  const MsgArg* args,
                                  uint8_t numArgs,
                                  uint8_t flags,
-                                 uint32_t sessionId,
-                                 CompressionRules& compressionRules)
+                                 uint32_t sessionId)
 {
     char signature[256];
     QStatus status = ER_OK;
@@ -908,15 +896,6 @@ QStatus _Message::MarshalMessage(const qcc::String& expectedSignature,
     if (sessionId != 0) {
         hdrFields.field[ALLJOYN_HDR_FIELD_SESSION_ID].v_uint32 = sessionId;
         hdrFields.field[ALLJOYN_HDR_FIELD_SESSION_ID].typeId = ALLJOYN_UINT32;
-    }
-    /*
-     * Check if we are to do header compression. We must do this last after all the other fields
-     * have been initialized.
-     */
-    hdrFields.field[ALLJOYN_HDR_FIELD_COMPRESSION_TOKEN].Clear();
-    if ((msgHeader.flags & ALLJOYN_FLAG_COMPRESSED)) {
-        hdrFields.field[ALLJOYN_HDR_FIELD_COMPRESSION_TOKEN].v_uint32 = compressionRules->GetToken(hdrFields);
-        hdrFields.field[ALLJOYN_HDR_FIELD_COMPRESSION_TOKEN].typeId = ALLJOYN_UINT32;
     }
     /*
      * Calculate space required for the header fields
@@ -1036,7 +1015,7 @@ ExitMarshalMessage:
     return status;
 }
 
-QStatus _Message::HelloMessage(bool isBusToBus, bool allowRemote, SessionOpts::NameTransferType nameType)
+QStatus _Message::HelloMessage(bool isBusToBus, bool allowRemote, int nameType)
 {
     if (!bus->IsStarted()) {
         return ER_BUS_BUS_NOT_STARTED;
@@ -1046,10 +1025,9 @@ QStatus _Message::HelloMessage(bool isBusToBus, bool allowRemote, SessionOpts::N
 }
 
 QStatus _Message::HelloMessage(bool isBusToBus, const qcc::String& sender, bool allowRemote,
-                               const qcc::String& guid, SessionOpts::NameTransferType nameType)
+                               const qcc::String& guid, int nameType)
 {
     QStatus status;
-    CompressionRules unused; /* Only needed if flags includes ALLJOYN_FLAG_COMPRESSED */
 
     /*
      * Clear any stale header fields
@@ -1071,8 +1049,7 @@ QStatus _Message::HelloMessage(bool isBusToBus, const qcc::String& sender, bool 
                                 args,
                                 ArraySize(args),
                                 ALLJOYN_FLAG_AUTO_START | (allowRemote ? ALLJOYN_FLAG_ALLOW_REMOTE_MSG : 0),
-                                0,
-                                unused);
+                                0);
     } else {
         /* Standard org.freedesktop.DBus.Hello */
         hdrFields.field[ALLJOYN_HDR_FIELD_PATH].Set("o", org::freedesktop::DBus::ObjectPath);
@@ -1086,13 +1063,12 @@ QStatus _Message::HelloMessage(bool isBusToBus, const qcc::String& sender, bool 
                                 NULL,
                                 0,
                                 ALLJOYN_FLAG_AUTO_START | (allowRemote ? ALLJOYN_FLAG_ALLOW_REMOTE_MSG : 0),
-                                0,
-                                unused);
+                                0);
     }
     return status;
 }
 
-QStatus _Message::HelloReply(bool isBusToBus, const qcc::String& uniqueName, SessionOpts::NameTransferType nameType)
+QStatus _Message::HelloReply(bool isBusToBus, const qcc::String& uniqueName, int nameType)
 {
     if (!bus->IsStarted()) {
         return ER_BUS_BUS_NOT_STARTED;
@@ -1101,10 +1077,9 @@ QStatus _Message::HelloReply(bool isBusToBus, const qcc::String& uniqueName, Ses
                       bus->GetInternal().GetGlobalGUID().ToString(), nameType);
 }
 
-QStatus _Message::HelloReply(bool isBusToBus, const qcc::String& sender, const qcc::String& uniqueName, const qcc::String& guid, SessionOpts::NameTransferType nameType)
+QStatus _Message::HelloReply(bool isBusToBus, const qcc::String& sender, const qcc::String& uniqueName, const qcc::String& guid, int nameType)
 {
     QStatus status;
-    CompressionRules unused; /* Only needed if flags includes ALLJOYN_FLAG_COMPRESSED */
 
     assert(msgHeader.msgType == MESSAGE_METHOD_CALL);
     /*
@@ -1121,12 +1096,12 @@ QStatus _Message::HelloReply(bool isBusToBus, const qcc::String& sender, const q
         args[0].Set("s", uniqueName.c_str());
         args[1].Set("s", guid.c_str());
         args[2].Set("u", nameType << 30 | ALLJOYN_PROTOCOL_VERSION);
-        status = MarshalMessage("ssu", sender, uniqueName, MESSAGE_METHOD_RET, args, ArraySize(args), 0, 0, unused);
+        status = MarshalMessage("ssu", sender, uniqueName, MESSAGE_METHOD_RET, args, ArraySize(args), 0, 0);
         QCC_DbgPrintf(("\n%s", ToString(args, 2).c_str()));
     } else {
         /* Destination and argument are both the unique name passed in. */
         MsgArg arg("s", uniqueName.c_str());
-        status = MarshalMessage("s", sender, uniqueName, MESSAGE_METHOD_RET, &arg, 1, 0, 0, unused);
+        status = MarshalMessage("s", sender, uniqueName, MESSAGE_METHOD_RET, &arg, 1, 0, 0);
         QCC_DbgPrintf(("\n%s", ToString(&arg, 1).c_str()));
     }
     return status;
@@ -1146,8 +1121,7 @@ QStatus _Message::CallMsg(const qcc::String& signature,
         return ER_BUS_BUS_NOT_STARTED;
     }
     return CallMsg(signature, bus->GetInternal().GetLocalEndpoint()->GetUniqueName(), destination,
-                   sessionId, objPath, iface, methodName, args, numArgs, flags,
-                   bus->GetInternal().GetCompressionRules());
+                   sessionId, objPath, iface, methodName, args, numArgs, flags);
 }
 
 QStatus _Message::CallMsg(const qcc::String& signature,
@@ -1159,15 +1133,18 @@ QStatus _Message::CallMsg(const qcc::String& signature,
                           const qcc::String& methodName,
                           const MsgArg* args,
                           size_t numArgs,
-                          uint8_t flags,
-                          CompressionRules& compressionRules)
+                          uint8_t flags)
 {
     QStatus status;
 
     /*
      * Validate flags
+     *
+     * Note: ALLJOYN_FLAG_COMPRESSED is deprecated so we cannot use it here
+     * without triggering a compiler warning/error.  However, it should still be
+     * part of validation so it is hard-coded.
      */
-    if (flags & ~(ALLJOYN_FLAG_NO_REPLY_EXPECTED | ALLJOYN_FLAG_AUTO_START | ALLJOYN_FLAG_ENCRYPTED | ALLJOYN_FLAG_COMPRESSED | ALLJOYN_FLAG_SESSIONLESS)) {
+    if (flags & ~(ALLJOYN_FLAG_NO_REPLY_EXPECTED | ALLJOYN_FLAG_AUTO_START | ALLJOYN_FLAG_ENCRYPTED | 0x40 /* ALLJOYN_FLAG_COMPRESSED */ | ALLJOYN_FLAG_SESSIONLESS)) {
         return ER_BUS_BAD_HDR_FLAGS;
     }
     /*
@@ -1213,7 +1190,7 @@ QStatus _Message::CallMsg(const qcc::String& signature,
      * Build method call message
      */
     status = MarshalMessage(signature, sender, destination, MESSAGE_METHOD_CALL,
-                            args, numArgs, flags, sessionId, compressionRules);
+                            args, numArgs, flags, sessionId);
 
 ExitCallMsg:
     return status;
@@ -1235,7 +1212,7 @@ QStatus _Message::SignalMsg(const qcc::String& signature,
     }
     return SignalMsg(signature, bus->GetInternal().GetLocalEndpoint()->GetUniqueName(), destination,
                      sessionId, objPath, iface, signalName, args, numArgs,
-                     flags, timeToLive, bus->GetInternal().GetCompressionRules());
+                     flags, timeToLive);
 }
 
 QStatus _Message::SignalMsg(const qcc::String& signature,
@@ -1248,15 +1225,18 @@ QStatus _Message::SignalMsg(const qcc::String& signature,
                             const MsgArg* args,
                             size_t numArgs,
                             uint8_t flags,
-                            uint16_t timeToLive,
-                            CompressionRules& compressionRules)
+                            uint16_t timeToLive)
 {
     QStatus status;
 
     /*
-     * Validate flags - ENCRYPTED, COMPRESSED, ALLJOYN_FLAG_GLOBAL_BROADCAST and ALLJOYN_FLAG_SESSIONLESS are the flags applicable to signals
+     * Validate flags - ENCRYPTED, ALLJOYN_FLAG_GLOBAL_BROADCAST and ALLJOYN_FLAG_SESSIONLESS are the flags applicable to signals
+     *
+     * Note: ALLJOYN_FLAG_COMPRESSED is deprecated so we cannot use it here
+     * without triggering a compiler warning/error.  However, it should still be
+     * part of validation so it is hard-coded.
      */
-    if (flags & ~(ALLJOYN_FLAG_ENCRYPTED | ALLJOYN_FLAG_COMPRESSED | ALLJOYN_FLAG_GLOBAL_BROADCAST | ALLJOYN_FLAG_SESSIONLESS)) {
+    if (flags & ~(ALLJOYN_FLAG_ENCRYPTED | 0x40 /* ALLJOYN_FLAG_COMPRESSED */ | ALLJOYN_FLAG_GLOBAL_BROADCAST | ALLJOYN_FLAG_SESSIONLESS)) {
         return ER_BUS_BAD_HDR_FLAGS;
     }
     /*
@@ -1309,7 +1289,7 @@ QStatus _Message::SignalMsg(const qcc::String& signature,
      * Build signal message
      */
     status = MarshalMessage(signature, sender, destination, MESSAGE_SIGNAL,
-                            args, numArgs, flags, sessionId, compressionRules);
+                            args, numArgs, flags, sessionId);
 
 ExitSignalMsg:
     return status;
@@ -1326,7 +1306,6 @@ QStatus _Message::ReplyMsg(const Message& call, const MsgArg* args, size_t numAr
 QStatus _Message::ReplyMsg(const Message& call, const qcc::String& sender, const MsgArg* args, size_t numArgs)
 {
     QStatus status;
-    CompressionRules unused; /* Only needed if flags includes ALLJOYN_FLAG_COMPRESSED */
     SessionId sessionId = call->GetSessionId();
 
     /*
@@ -1350,9 +1329,7 @@ QStatus _Message::ReplyMsg(const Message& call, const qcc::String& sender, const
      * Build method return message (encrypted if the method call was encrypted)
      */
     status = MarshalMessage(call->replySignature, sender, destination, MESSAGE_METHOD_RET,
-                            args, numArgs, call->msgHeader.flags & ALLJOYN_FLAG_ENCRYPTED, sessionId,
-                            unused);
-
+                            args, numArgs, call->msgHeader.flags & ALLJOYN_FLAG_ENCRYPTED, sessionId);
     return status;
 }
 
@@ -1367,7 +1344,6 @@ QStatus _Message::ErrorMsg(const Message& call, const char* errorName, const cha
 QStatus _Message::ErrorMsg(const Message& call, const qcc::String& sender, const char* errorName, const char* description)
 {
     QStatus status;
-    CompressionRules unused; /* Only needed if flags includes ALLJOYN_FLAG_COMPRESSED */
     qcc::String destination = call->hdrFields.field[ALLJOYN_HDR_FIELD_SENDER].v_string.str;
     SessionId sessionId = call->GetSessionId();
 
@@ -1394,11 +1370,11 @@ QStatus _Message::ErrorMsg(const Message& call, const qcc::String& sender, const
      */
     if ('\0' == description[0]) {
         status = MarshalMessage("", sender, destination, MESSAGE_ERROR, NULL, 0,
-                                call->msgHeader.flags & ALLJOYN_FLAG_ENCRYPTED, sessionId, unused);
+                                call->msgHeader.flags & ALLJOYN_FLAG_ENCRYPTED, sessionId);
     } else {
         MsgArg arg("s", description);
         status = MarshalMessage("s", sender, destination, MESSAGE_ERROR, &arg, 1,
-                                call->msgHeader.flags & ALLJOYN_FLAG_ENCRYPTED, sessionId, unused);
+                                call->msgHeader.flags & ALLJOYN_FLAG_ENCRYPTED, sessionId);
     }
 
 ExitErrorMsg:
@@ -1415,7 +1391,6 @@ QStatus _Message::ErrorMsg(const Message& call, QStatus status)
 
 QStatus _Message::ErrorMsg(const Message& call, const qcc::String& sender, QStatus status)
 {
-    CompressionRules unused; /* Only needed if flags includes ALLJOYN_FLAG_COMPRESSED */
     qcc::String destination = call->hdrFields.field[ALLJOYN_HDR_FIELD_SENDER].v_string.str;
     qcc::String msg = QCC_StatusText(status);
     uint16_t msgStatus = status;
@@ -1440,7 +1415,7 @@ QStatus _Message::ErrorMsg(const Message& call, const qcc::String& sender, QStat
     size_t numArgs = 2;
     MsgArg::Set(args, numArgs, "sq", msg.c_str(), msgStatus);
     return MarshalMessage("sq", sender, destination, MESSAGE_ERROR, args, numArgs,
-                          call->msgHeader.flags & ALLJOYN_FLAG_ENCRYPTED, GetSessionId(), unused);
+                          call->msgHeader.flags & ALLJOYN_FLAG_ENCRYPTED, GetSessionId());
 }
 
 void _Message::ErrorMsg(const char* errorName, uint32_t replySerial)
@@ -1471,8 +1446,7 @@ QStatus _Message::ErrorMsg(const qcc::String& sender, const char* errorName, uin
     /*
      * Build error message
      */
-    CompressionRules unused; /* Only needed if flags includes ALLJOYN_FLAG_COMPRESSED */
-    return MarshalMessage("", sender, "", MESSAGE_ERROR, NULL, 0, 0 /* flags */, 0, unused);
+    return MarshalMessage("", sender, "", MESSAGE_ERROR, NULL, 0, 0 /* flags */, 0);
 }
 
 void _Message::ErrorMsg(QStatus status, uint32_t replySerial)
@@ -1499,60 +1473,7 @@ QStatus _Message::ErrorMsg(const qcc::String& sender, QStatus status, uint32_t r
     MsgArg args[2];
     size_t numArgs = 2;
     MsgArg::Set(args, numArgs, "sq", msg.c_str(), msgStatus);
-    CompressionRules unused; /* Only needed if flags includes ALLJOYN_FLAG_COMPRESSED */
-    return MarshalMessage("sq", sender, "", MESSAGE_ERROR, args, numArgs, 0 /* flags */, 0, unused);
-}
-
-QStatus _Message::GetExpansion(uint32_t token, MsgArg& replyArg)
-{
-    QStatus status = ER_OK;
-    const HeaderFields* expFields = bus->GetInternal().GetCompressionRules()->GetExpansion(token);
-    if (expFields) {
-        MsgArg* hdrArray = new MsgArg[ALLJOYN_HDR_FIELD_UNKNOWN];
-        size_t numElements = 0;
-        /*
-         * Reply arg is an array of structs with signature "(yv)"
-         */
-        for (uint32_t fieldId = ALLJOYN_HDR_FIELD_PATH; fieldId < ArraySize(expFields->field); fieldId++) {
-            MsgArg* val = NULL;
-            const MsgArg* exp = &expFields->field[fieldId];
-            switch (exp->typeId) {
-            case ALLJOYN_OBJECT_PATH:
-                val = new MsgArg("o", exp->v_string.str);
-                break;
-
-            case ALLJOYN_STRING:
-                val = new MsgArg("s", exp->v_string.str);
-                break;
-
-            case  ALLJOYN_SIGNATURE:
-                val = new MsgArg("g", exp->v_signature.sig);
-                break;
-
-            case  ALLJOYN_UINT32:
-                val = new MsgArg("u", exp->v_uint32);
-                break;
-
-            case  ALLJOYN_UINT16:
-                val = new MsgArg("q", exp->v_uint16);
-                break;
-
-            default:
-                break;
-            }
-            if (val) {
-                uint8_t id = FieldTypeMapping[fieldId];
-                hdrArray[numElements].Set("(yv)", id, val);
-                hdrArray[numElements].SetOwnershipFlags(MsgArg::OwnsArgs);
-                numElements++;
-            }
-        }
-        replyArg.Set("a(yv)", numElements, hdrArray);
-    } else {
-        status = ER_BUS_CANNOT_EXPAND_MESSAGE;
-        QCC_LogError(status, ("No expansion rule for token %u", token));
-    }
-    return status;
+    return MarshalMessage("sq", sender, "", MESSAGE_ERROR, args, numArgs, 0 /* flags */, 0);
 }
 
 void _Message::SetSerialNumber()

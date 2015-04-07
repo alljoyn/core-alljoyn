@@ -205,16 +205,19 @@ static int NetlinkRouteSocket(uint32_t bufsize)
 
     if ((sockFd = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE)) < 0) {
         QCC_LogError(ER_FAIL, ("NetlinkRouteSocket: Error obtaining socket: %s", strerror(errno)));
+        qcc::Close(sockFd);
         return -1;
     }
 
     if (setsockopt(sockFd, SOL_SOCKET, SO_SNDBUF, &bufsize, sizeof(bufsize)) < 0) {
         QCC_LogError(ER_FAIL, ("NetlinkRouteSocket: Can't setsockopt SO_SNDBUF: %s", strerror(errno)));
+        qcc::Close(sockFd);
         return -1;
     }
 
     if (setsockopt(sockFd, SOL_SOCKET, SO_RCVBUF, &bufsize, sizeof(bufsize)) < 0) {
         QCC_LogError(ER_FAIL, ("NetlinkRouteSocket: Can't setsockopt SO_RCVBUF: %s", strerror(errno)));
+        qcc::Close(sockFd);
         return -1;
     }
 
@@ -225,6 +228,7 @@ static int NetlinkRouteSocket(uint32_t bufsize)
 
     if (bind(sockFd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
         QCC_LogError(ER_FAIL, ("NetlinkRouteSocket: Can't bind to NETLINK_ROUTE socket: %s", strerror(errno)));
+        qcc::Close(sockFd);
         return -1;
     }
 
@@ -414,6 +418,7 @@ static std::list<IfEntry> NetlinkGetInterfaces(void)
                 struct ifinfomsg* ifi = (struct ifinfomsg*)NLMSG_DATA(nh);
                 entry.m_index = ifi->ifi_index;
                 entry.m_flags = ifi->ifi_flags;
+                entry.m_mtu = 0;
 
                 struct rtattr* rta = IFLA_RTA(ifi);
                 uint32_t rtalen = IFLA_PAYLOAD(nh);
@@ -662,6 +667,7 @@ QStatus IfConfig(std::vector<IfConfigEntry>& entries)
 
             entry.m_addr = qcc::String();
             entry.m_family = QCC_AF_UNSPEC;
+            entry.m_prefixlen = 0;
 
             entries.push_back(entry);
         }
@@ -738,6 +744,7 @@ static SocketFd NetworkChangeEventSocket()
 
     if (bind(sockFd, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)) < 0) {
         QCC_LogError(ER_FAIL, ("NetworkChangeEventSocket(): Error binding to NETLINK_ROUTE socket: %s", strerror(errno)));
+        qcc::Close(sockFd);
         return -1;
     }
 

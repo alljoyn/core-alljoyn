@@ -13,18 +13,18 @@
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-Import('router_env', 'router_objs')
+Import('router_env', 'router_objs', 'srobj')
 from os.path import basename
 
 # Test Programs
 progs = [
-    router_env.Program('advtunnel', ['advtunnel.cc'] + router_objs),
-    router_env.Program('ns', ['ns.cc'] + router_objs)
+    router_env.Program('advtunnel', ['advtunnel.cc'] + srobj + router_objs),
+    router_env.Program('ns', ['ns.cc'] + srobj + router_objs)
    ]
 
 if router_env['OS'] in ['android', 'linux', 'win7']:
-   progs.append(router_env.Program('bbdaemon', ['bbdaemon.cc'] + router_objs))
-   progs.append(router_env.Program('ardp',     ['ardp.cc'] +     router_objs))
-   progs.append(router_env.Program('ardptest', ['ardptest.cc'] + router_objs))
+   progs.append(router_env.Program('bbdaemon', ['bbdaemon.cc'] + srobj + router_objs))
+   progs.append(router_env.Program('ardp',     ['ardp.cc'] +     srobj + router_objs))
+   progs.append(router_env.Program('ardptest', ['ardptest.cc'] + srobj + router_objs))
 
 Return('progs')

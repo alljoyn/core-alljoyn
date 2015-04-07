@@ -38,6 +38,7 @@
 #include <qcc/SocketTypes.h>
 #include <qcc/Thread.h>
 
+#include <alljoyn/Init.h>
 #include <alljoyn/Status.h>
 
 #include <ArdpProtocol.h>
@@ -73,11 +74,18 @@ static volatile sig_atomic_t g_interrupt = false;
 
 static void CDECL_CALL SigIntHandler(int sig)
 {
+    QCC_UNUSED(sig);
+
     g_interrupt = true;
 }
 
 bool AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t ipPort, ArdpConnRecord* conn, uint8_t* buf, uint16_t len, QStatus status)
 {
+    QCC_UNUSED(ipAddr);
+    QCC_UNUSED(ipPort);
+    QCC_UNUSED(buf);
+    QCC_UNUSED(len);
+
     QCC_DbgTrace(("AcceptCb(handle=%p, ipAddr=\"%s\", foreign=%d, conn=%p, buf=%p(\"%s\"), len=%d, status=%s)",
                   handle, ipAddr.ToString().c_str(), ipPort, conn, buf, (char*) buf, len, QCC_StatusText(status)));
 
@@ -92,6 +100,8 @@ bool AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t ipPort, ArdpCo
 
 void ConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool passive, uint8_t* buf, uint16_t len, QStatus status)
 {
+    QCC_UNUSED(buf);
+    QCC_UNUSED(len);
     QCC_DbgTrace(("ConnectCb(handle=%p, conn=%p, passive=%s, buf=%p, len=%d, status=%s)",
                   handle, conn, (passive) ? "true" : "false", buf, len, QCC_StatusText(status)));
     if (status == ER_OK) {
@@ -114,11 +124,16 @@ void ConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool passive, uint8_t* 
 
 void DisconnectCb(ArdpHandle* handle, ArdpConnRecord* conn, QStatus status)
 {
+    QCC_UNUSED(handle);
+    QCC_UNUSED(conn);
+    QCC_UNUSED(status);
     QCC_DbgTrace(("DisconnectCb(handle=%p, conn=%p, status=%s)", handle, conn, QCC_StatusText(status)));
 }
 
 void RecvCb(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf* rcv, QStatus status)
 {
+    QCC_UNUSED(status);
+
     ArdpRcvBuf* buf = rcv;
     uint32_t len = 0;
     uint16_t cnt = rcv->fcnt;
@@ -152,6 +167,10 @@ void SendCb(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint32_t len
 
 void SendWindowCb(ArdpHandle* handle, ArdpConnRecord* conn, uint16_t window, QStatus status)
 {
+    QCC_UNUSED(handle);
+    QCC_UNUSED(conn);
+    QCC_UNUSED(window);
+    QCC_UNUSED(status);
     QCC_DbgTrace(("SendWindowCb(handle=%p, conn=%p, window=%d, status=%s)",
                   handle, conn, window, QCC_StatusText(status)));
 }
@@ -170,6 +189,8 @@ QStatus Test::TestStart()
 
 void* Test::Run(void* arg)
 {
+    QCC_UNUSED(arg);
+
     qcc::SocketFd sock;
 
     QStatus status = qcc::Socket(qcc::QCC_AF_INET, qcc::QCC_SOCK_DGRAM, sock);
@@ -258,8 +279,16 @@ void* Test::Run(void* arg)
     return 0;
 }
 
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+
     printf("%s main()\n", argv[0]);
 
     for (int i = 1; i < argc; ++i) {
@@ -287,15 +316,18 @@ int main(int argc, char** argv)
 
     signal(SIGINT, SigIntHandler);
 
-    Test test;
-    test.TestStart();
+    Test* test = new Test();
+    test->TestStart();
 
     while (g_interrupt == false) {
         qcc::Sleep(100);
     }
 
-    test.Stop();
-    test.Join();
+    test->Stop();
+    test->Join();
+    delete test;
 
+    AllJoynRouterShutdown();
+    AllJoynShutdown();
     exit(0);
 }

@@ -2,8 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
       package="org.alljoyn.bus.samples.secureservice"
       android:versionCode="1"
-      android:versionName="1.0">
-    <uses-sdk android:minSdkVersion="10" />
+      android:versionName="00.00.01">
+    <uses-sdk android:minSdkVersion="16" />
     <!-- Permission required to use the TCP transport -->
     <uses-permission android:name="android.permission.INTERNET"></uses-permission>
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE"></uses-permission>
@@ -23,4 +23,4 @@
     </application>
 
 
-</manifest> 
+</manifest>

@@ -251,6 +251,7 @@ class KeyInfoECC : public KeyInfo {
 
     virtual void SetPublicKey(const ECCPublicKey* key)
     {
+        QCC_UNUSED(key);
     }
 
     /**

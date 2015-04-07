@@ -55,6 +55,9 @@ struct MessageHolder {
             mbrType = PermissionPolicy::Rule::Member::SIGNAL;
         }
     }
+
+  private:
+    MessageHolder& operator=(const MessageHolder& other);
 };
 
 struct Right {
@@ -420,7 +423,7 @@ static void GenRight(const MessageHolder& msgHolder, Right& right)
  * 3. ANY-USER terms
  */
 
-static bool IsAuthorized(const MessageHolder& msgHolder, const PermissionPolicy* policy, const _PeerState::GuildMap& localMembershipMap, PeerState& peerState, PermissionMgmtObj* permissionMgmtObj)
+static bool IsAuthorized(const MessageHolder& msgHolder, const PermissionPolicy* policy, PeerState& peerState, PermissionMgmtObj* permissionMgmtObj)
 {
     Right right;
     GenRight(msgHolder, right);
@@ -685,7 +688,7 @@ QStatus PermissionManager::AuthorizeMessage(bool outgoing, Message& msg, PeerSta
     }
 
     QCC_DbgPrintf(("PermissionManager::AuthorizeMessage with outgoing: %d msg %s\nLocal policy %s", outgoing, msg->ToString().c_str(), GetPolicy() ? GetPolicy()->ToString().c_str() : "NULL"));
-    authorized = IsAuthorized(holder, GetPolicy(), permissionMgmtObj->GetGuildMap(), peerState, permissionMgmtObj);
+    authorized = IsAuthorized(holder, GetPolicy(), peerState, permissionMgmtObj);
     if (!authorized) {
         QCC_DbgPrintf(("PermissionManager::AuthorizeMessage IsAuthorized returns ER_PERMISSION_DENIED\n"));
         return ER_PERMISSION_DENIED;

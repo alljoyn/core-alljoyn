@@ -151,6 +151,8 @@ class AuthManager {
 
 
   private:
+    /* Private assigment operator - does nothing */
+    AuthManager operator=(const AuthManager&);
 
     /**
      * Reference to the keyStore

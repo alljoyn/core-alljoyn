@@ -28,6 +28,9 @@ if platform.system() == 'Linux':
 
     default_msvc_version = None
 
+    default_crypto = 'openssl'
+    allowed_crypto = ('openssl', 'builtin')
+
 elif platform.system() == 'Windows':
     default_target_os = 'win7'
     allowed_target_oss = ('winxp', 'win7', 'android')
@@ -40,6 +43,9 @@ elif platform.system() == 'Windows':
 
     default_msvc_version = '12.0'
 
+    default_crypto = 'cng'
+    allowed_crypto = ('cng', 'openssl')
+
 elif platform.system() == 'Darwin':
     default_target_os = 'darwin'
     allowed_target_oss = ('darwin', 'android', 'openwrt')
@@ -50,12 +56,16 @@ elif platform.system() == 'Darwin':
 
     default_msvc_version = None
 
+    default_crypto = 'openssl'
+    allowed_crypto = ('openssl', 'builtin')
+
 vars = Variables()
 
 # Common build variables
 vars.Add('V', 'Build verbosity', '0')
 vars.Add(EnumVariable('OS', 'Target OS', default_target_os, allowed_values = allowed_target_oss))
 vars.Add(EnumVariable('CPU', 'Target CPU', default_target_cpu, allowed_values = allowed_target_cpus))
+vars.Add(EnumVariable('CRYPTO', 'Crypto implementation', default_crypto, allowed_values = allowed_crypto))
 vars.Add(EnumVariable('VARIANT', 'Build variant', 'debug', allowed_values=('debug', 'release'), ignorecase=2))
 vars.Add(EnumVariable('BR', 'Have bundled router built-in for C++ test samples', 'on', allowed_values=('on', 'off')))
 vars.Add(EnumVariable('DOCS', '''Output doc type. Setting the doc type to "dev" will produce HTML 
@@ -164,6 +174,9 @@ else:
 
 if env['VARIANT'] == 'release' and env['NDEBUG'] == 'defined':
     env.Append(CPPDEFINES = 'NDEBUG')
+
+if env['BR'] == 'on':
+    env.Append(CPPDEFINES = 'ROUTER')
 
 env.Append(CPPDEFINES = ['QCC_OS_GROUP_%s' % env['OS_GROUP'].upper()])
 

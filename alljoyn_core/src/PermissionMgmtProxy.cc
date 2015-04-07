@@ -76,6 +76,7 @@ QStatus PermissionMgmtProxy::InstallPolicy(PermissionPolicy& authorization) {
 }
 
 QStatus PermissionMgmtProxy::InstallEncryptedPolicy(const MsgArg& encryptedAuthorizationArg) {
+    QCC_UNUSED(encryptedAuthorizationArg);
     return ER_FAIL;
 }
 
@@ -227,6 +228,10 @@ QStatus PermissionMgmtProxy::InstallGuildEquivalence(const MsgArg& certArg) {
 }
 
 QStatus PermissionMgmtProxy::RemoveGuildEquivalence(uint8_t* guildSerialNum, size_t guildSerialNumSize, uint8_t* issuer, size_t issuerSize) {
+    QCC_UNUSED(guildSerialNum);
+    QCC_UNUSED(guildSerialNumSize);
+    QCC_UNUSED(issuer);
+    QCC_UNUSED(issuerSize);
     return ER_FAIL;
 }
 

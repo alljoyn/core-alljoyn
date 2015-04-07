@@ -30,10 +30,11 @@
 
 #include <qcc/String.h>
 
-#include <alljoyn/BusAttachment.h>
-#include <alljoyn/version.h>
 #include <alljoyn/AllJoynStd.h>
+#include <alljoyn/BusAttachment.h>
+#include <alljoyn/Init.h>
 #include <alljoyn/Status.h>
+#include <alljoyn/version.h>
 
 using namespace std;
 using namespace qcc;
@@ -55,6 +56,7 @@ static volatile sig_atomic_t s_interrupt = false;
 
 static void CDECL_CALL SigIntHandler(int sig)
 {
+    QCC_UNUSED(sig);
     s_interrupt = true;
 }
 
@@ -197,8 +199,20 @@ QStatus DoNameChange(char* newName)
 }
 
 /** Main entry point */
-int main(int argc, char** argv, char** envArg)
+int CDECL_CALL main(int argc, char** argv, char** envArg)
 {
+    QCC_UNUSED(envArg);
+
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+#endif
+
     printf("AllJoyn Library version: %s.\n", ajn::GetVersion());
     printf("AllJoyn Library build info: %s.\n", ajn::GetBuildInfo());
 
@@ -244,5 +258,9 @@ int main(int argc, char** argv, char** envArg)
 
     printf("Name change client exiting with status 0x%04x (%s).\n", status, QCC_StatusText(status));
 
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return (int) status;
 }

@@ -116,6 +116,15 @@ class PermissionConfiguratorImpl : public PermissionConfigurator {
     QStatus GetConnectedPeerPublicKey(const qcc::GUID128& guid, qcc::ECCPublicKey* publicKey);
 
   private:
+    /**
+     * Assignment operator is private
+     */
+    PermissionConfiguratorImpl& operator=(const PermissionConfiguratorImpl& other);
+
+    /**
+     * Copy constructor is private
+     */
+    PermissionConfiguratorImpl(const PermissionConfiguratorImpl& other);
     BusAttachment& bus;
 };
 

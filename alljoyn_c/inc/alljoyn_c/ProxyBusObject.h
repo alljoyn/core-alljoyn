@@ -23,7 +23,6 @@
 #ifndef _ALLJOYN_C_REMOTEBUSOBJECT_H
 #define _ALLJOYN_C_REMOTEBUSOBJECT_H
 
-#include <qcc/platform.h>
 #include <alljoyn_c/AjAPI.h>
 #include <alljoyn_c/InterfaceDescription.h>
 #include <alljoyn_c/MessageReceiver.h>
@@ -412,18 +411,18 @@ extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_registerpropertieschangedli
 /**
  * Function to unregister a handler for property change events.
  *
- * @param iface     Remote object's interface on which the property is defined.
- * @param property  The name of the property to stop monitoring.
+ * @param proxyObj  The proxy bus object that will register the property changed listener.
+ * @param iface     Remote object's interface on which the properties are defined.
  * @param callback  Method on listener that used to be called.
  *
  * @return
- *      - #ER_OK if the handler was registered successfully
+ *      - #ER_OK if the handler was unregistered successfully
  *      - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
- *      - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
  */
-extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_unregisterpropertieschangedlistener(const char* iface,
-                                                                                         const char* property,
+extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_unregisterpropertieschangedlistener(alljoyn_proxybusobject proxyObj,
+                                                                                         const char* iface,
                                                                                          alljoyn_proxybusobject_listener_propertieschanged_ptr callback);
+
 
 /**
  * Make an asynchronous request to set a property on an interface on the remote object.
@@ -464,7 +463,6 @@ extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_setpropertyasync(alljoyn_pr
  * @param timeout      Timeout specified in milliseconds to wait for a reply
  * @param flags        Logical OR of the message flags for this method call. The following flags apply to method calls:
  *                     - If #ALLJOYN_MESSAGE_FLAG_ENCRYPTED is set the message is authenticated and the payload if any is encrypted.
- *                     - If #ALLJOYN_MESSAGE_FLAG_COMPRESSED is set the header is compressed for destinations that can handle header compression.
  *                     - If #ALLJOYN_MESSAGE_FLAG_AUTO_START is set the bus will attempt to start a service if it is not running.
  *
  * @return
@@ -492,7 +490,6 @@ extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_methodcall(alljoyn_proxybus
  *                     Recommended default #ALLJOYN_MESSAGE_DEFAULT_TIMEOUT which is 25000 ms.
  * @param flags        Logical OR of the message flags for this method call. The following flags apply to method calls:
  *                     - If #ALLJOYN_MESSAGE_FLAG_ENCRYPTED is set the message is authenticated and the payload if any is encrypted.
- *                     - If #ALLJOYN_MESSAGE_FLAG_COMPRESSED is set the header is compressed for destinations that can handle header compression.
  *                     - If #ALLJOYN_MESSAGE_FLAG_AUTO_START is set the bus will attempt to start a service if it is not running.
  *                     Set value to '0' for no flags.
  *
@@ -522,7 +519,6 @@ extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_methodcall_member(alljoyn_p
  * @param numArgs      The number of arguments
  * @param flags        Logical OR of the message flags for this method call. The following flags apply to method calls:
  *                     - If #ALLJOYN_MESSAGE_FLAG_ENCRYPTED is set the message is authenticated and the payload if any is encrypted.
- *                     - If #ALLJOYN_MESSAGE_FLAG_COMPRESSED is set the header is compressed for destinations that can handle header compression.
  *                     - If #ALLJOYN_MESSAGE_FLAG_AUTO_START is set the bus will attempt to start a service if it is not running.
  *                     Set value to '0' for no flags.
  *
@@ -548,7 +544,6 @@ extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_methodcall_noreply(alljoyn_
  * @param numArgs      The number of arguments
  * @param flags        Logical OR of the message flags for this method call. The following flags apply to method calls:
  *                     - If #ALLJOYN_MESSAGE_FLAG_ENCRYPTED is set the message is authenticated and the payload if any is encrypted.
- *                     - If #ALLJOYN_MESSAGE_FLAG_COMPRESSED is set the header is compressed for destinations that can handle header compression.
  *                     - If #ALLJOYN_MESSAGE_FLAG_AUTO_START is set the bus will attempt to start a service if it is not running.
  *                     Set value to '0' for no flags.
  *
@@ -576,7 +571,6 @@ extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_methodcall_member_noreply(a
  *                     Recommended default #ALLJOYN_MESSAGE_DEFAULT_TIMEOUT which is 25000 ms
  * @param flags        Logical OR of the message flags for this method call. The following flags apply to method calls:
  *                     - If #ALLJOYN_MESSAGE_FLAG_ENCRYPTED is set the message is authenticated and the payload if any is encrypted.
- *                     - If #ALLJOYN_MESSAGE_FLAG_COMPRESSED is set the header is compressed for destinations that can handle header compression.
  *                     - If #ALLJOYN_MESSAGE_FLAG_AUTO_START is set the bus will attempt to start a service if it is not running.
  *                     Set value to '0' for no flags.
  * @return
@@ -607,7 +601,6 @@ extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_methodcallasync(alljoyn_pro
  *                     Recommended default #ALLJOYN_MESSAGE_DEFAULT_TIMEOUT which is 25000 ms
  * @param flags        Logical OR of the message flags for this method call. The following flags apply to method calls:
  *                     - If #ALLJOYN_MESSAGE_FLAG_ENCRYPTED is set the message is authenticated and the payload if any is encrypted.
- *                     - If #ALLJOYN_MESSAGE_FLAG_COMPRESSED is set the header is compressed for destinations that can handle header compression.
  *                     - If #ALLJOYN_MESSAGE_FLAG_AUTO_START is set the bus will attempt to start a service if it is not running.
  *                     Set value to '0' for no flags.
  * @return
@@ -745,6 +738,15 @@ extern AJ_API const char* AJ_CALL alljoyn_proxybusobject_getpath(alljoyn_proxybu
  * @return Service name (typically a well-known service name but may be a unique name)
  */
 extern AJ_API const char* AJ_CALL alljoyn_proxybusobject_getservicename(alljoyn_proxybusobject proxyObj);
+
+/**
+ * Return the remote unique name for this object.
+ *
+ * @param proxyObj  the proxy bus object to read the unique name (Bus Name) path from.
+ *
+ * @return Unique name
+ */
+extern AJ_API const char* AJ_CALL alljoyn_proxybusobject_getuniquename(alljoyn_proxybusobject proxyObj);
 
 /**
  * Return the session Id for this object.

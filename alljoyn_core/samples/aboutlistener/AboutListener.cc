@@ -19,6 +19,7 @@
 #include <alljoyn/AboutObjectDescription.h>
 #include <alljoyn/AboutProxy.h>
 #include <alljoyn/BusAttachment.h>
+#include <alljoyn/Init.h>
 #include <alljoyn/Session.h>
 #include <alljoyn/SessionListener.h>
 
@@ -36,10 +37,11 @@ static volatile sig_atomic_t s_interrupt = false;
 
 static void CDECL_CALL SigIntHandler(int sig)
 {
+    QCC_UNUSED(sig);
     s_interrupt = true;
 }
 
-BusAttachment* g_bus;
+BusAttachment* g_bus = NULL;
 
 class MySessionListener : public SessionListener {
     void SessionLost(SessionId sessionId, SessionLostReason reason)
@@ -201,18 +203,29 @@ class MyAboutListener : public AboutListener {
     MySessionListener sessionListener;
 };
 
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
+    QCC_UNUSED(argc);
+    QCC_UNUSED(argv);
+
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+#endif
+
     /* Install SIGINT handler so Ctrl + C deallocates memory properly */
     signal(SIGINT, SigIntHandler);
 
     QStatus status;
 
-    BusAttachment bus("AboutListener", true);
+    g_bus = new BusAttachment("AboutListener", true);
 
-    g_bus = &bus;
-
-    status = bus.Start();
+    status = g_bus->Start();
     if (ER_OK == status) {
         printf("BusAttachment started.\n");
     } else {
@@ -220,7 +233,7 @@ int main(int argc, char** argv)
         exit(1);
     }
 
-    status = bus.Connect();
+    status = g_bus->Connect();
     if (ER_OK == status) {
         printf("BusAttachment connect succeeded.\n");
     } else {
@@ -228,11 +241,11 @@ int main(int argc, char** argv)
         exit(1);
     }
 
-    MyAboutListener aboutListener;
-    bus.RegisterAboutListener(aboutListener);
+    MyAboutListener* aboutListener = new MyAboutListener();
+    g_bus->RegisterAboutListener(*aboutListener);
 
     /* Passing NULL into WhoImplements will listen for all About announcements */
-    status = bus.WhoImplements(NULL);
+    status = g_bus->WhoImplements(NULL);
     if (ER_OK == status) {
         printf("WhoImplements NULL called.\n");
     } else {
@@ -251,5 +264,12 @@ int main(int argc, char** argv)
         }
     }
 
+    g_bus->UnregisterAboutListener(*aboutListener);
+    delete aboutListener;
+    delete g_bus;
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return 0;
 }

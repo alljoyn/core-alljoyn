@@ -57,6 +57,9 @@ void TestPermissionMgmtListener::NotifyConfig(const char* busName,
                                               MsgArg trustAnchorsArg,
                                               uint32_t serialNumber,
                                               MsgArg membershipsArg) {
+    QCC_UNUSED(serialNumber);
+    QCC_UNUSED(claimableSt);
+    QCC_UNUSED(busName);
     QStatus status = ER_FAIL;
     EXPECT_EQ(1, version);
 
@@ -344,6 +347,8 @@ void BasePermissionMgmtTest::CreateAppInterfaces(BusAttachment& bus, bool addSer
 void BasePermissionMgmtTest::ChannelChangedSignalHandler(const InterfaceDescription::Member* member,
                                                          const char* sourcePath, Message& msg)
 {
+    QCC_UNUSED(sourcePath);
+    QCC_UNUSED(member);
     uint32_t channel;
     QStatus status = msg->GetArg(0)->Get("u", &channel);
     EXPECT_EQ(ER_OK, status) << "  Retrieve the TV channel failed.  Actual Status: " << QCC_StatusText(status);
@@ -372,16 +377,19 @@ const bool BasePermissionMgmtTest::GetChannelChangedSignalReceived()
 
 void BasePermissionMgmtTest::OnOffOn(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
     MethodReply(msg, ER_OK);
 }
 
 void BasePermissionMgmtTest::OnOffOff(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
     MethodReply(msg, ER_OK);
 }
 
 void BasePermissionMgmtTest::TVUp(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
     currentTVChannel++;
     MethodReply(msg, ER_OK);
     TVChannelChanged(member, msg);
@@ -389,6 +397,7 @@ void BasePermissionMgmtTest::TVUp(const InterfaceDescription::Member* member, Me
 
 void BasePermissionMgmtTest::TVDown(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
     if (currentTVChannel > 1) {
         currentTVChannel--;
     }
@@ -398,6 +407,7 @@ void BasePermissionMgmtTest::TVDown(const InterfaceDescription::Member* member, 
 
 void BasePermissionMgmtTest::TVChannel(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
     MethodReply(msg, ER_OK);
     /* emit a signal */
     TVChannelChanged(member, msg);
@@ -405,6 +415,8 @@ void BasePermissionMgmtTest::TVChannel(const InterfaceDescription::Member* membe
 
 void BasePermissionMgmtTest::TVChannelChanged(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
+    QCC_UNUSED(msg);
     /* emit a signal */
     MsgArg args[1];
     args[0].Set("u", currentTVChannel);
@@ -414,11 +426,13 @@ void BasePermissionMgmtTest::TVChannelChanged(const InterfaceDescription::Member
 
 void BasePermissionMgmtTest::TVMute(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
     MethodReply(msg, ER_OK);
 }
 
 void BasePermissionMgmtTest::TVInputSource(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
     MethodReply(msg, ER_OK);
 }
 
@@ -819,6 +833,7 @@ QStatus PermissionMgmtTestHelper::GetPeerGUID(BusAttachment& bus, qcc::String& p
 
 QStatus BasePermissionMgmtTest::Get(const char* ifcName, const char* propName, MsgArg& val)
 {
+    QCC_UNUSED(ifcName);
     if (0 == strcmp("Volume", propName)) {
         val.typeId = ALLJOYN_UINT32;
         val.v_uint32 = volume;
@@ -829,6 +844,7 @@ QStatus BasePermissionMgmtTest::Get(const char* ifcName, const char* propName, M
 
 void BasePermissionMgmtTest::GetAllProps(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
     MsgArg vals;
     vals.Set("a{sv}", 0, NULL);
     MethodReply(msg, &vals, 1);
@@ -836,6 +852,7 @@ void BasePermissionMgmtTest::GetAllProps(const InterfaceDescription::Member* mem
 
 QStatus BasePermissionMgmtTest::Set(const char* ifcName, const char* propName, MsgArg& val)
 {
+    QCC_UNUSED(ifcName);
     if ((0 == strcmp("Volume", propName)) && (val.typeId == ALLJOYN_UINT32)) {
         volume = val.v_uint32;
         return ER_OK;

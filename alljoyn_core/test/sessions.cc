@@ -16,10 +16,13 @@
 
 #include <qcc/platform.h>
 
+#include <alljoyn/AllJoynStd.h>
 #include <alljoyn/BusAttachment.h>
-#include <alljoyn/ProxyBusObject.h>
 #include <alljoyn/BusObject.h>
+#include <alljoyn/DBusStd.h>
+#include <alljoyn/Init.h>
 #include <alljoyn/InterfaceDescription.h>
+#include <alljoyn/ProxyBusObject.h>
 #include <alljoyn/Session.h>
 #include <alljoyn/DBusStd.h>
 #include <alljoyn/AllJoynStd.h>
@@ -81,7 +84,9 @@ struct SessionInfo {
     SessionPortInfo portInfo;
     vector<String> peerNames;
     SessionInfo() : id(0) { }
-    SessionInfo(SessionId id, const SessionPortInfo& portInfo) : id(0), portInfo(portInfo) { }
+    SessionInfo(SessionId id, const SessionPortInfo& portInfo) : id(0), portInfo(portInfo) {
+        QCC_UNUSED(id);
+    }
 };
 
 
@@ -105,6 +110,7 @@ static volatile sig_atomic_t g_interrupt = false;
 
 static void CDECL_CALL SigIntHandler(int sig)
 {
+    QCC_UNUSED(sig);
     g_interrupt = true;
 }
 
@@ -188,6 +194,9 @@ class SessionTestObject : public BusObject {
     /** Receive a signal from another Chat client */
     void ChatSignalHandler(const InterfaceDescription::Member* member, const char* srcPath, Message& msg)
     {
+        QCC_UNUSED(member);
+        QCC_UNUSED(srcPath);
+
         if (s_chatEcho) {
             printf("RX chat from %s[%u]: %s\n", msg->GetSender(), msg->GetSessionId(), msg->GetArg(0)->v_string.str);
         }
@@ -320,6 +329,8 @@ class AutoChatThread : public Thread, public ThreadListener {
   protected:
     ThreadReturn STDCALL Run(void* args)
     {
+        QCC_UNUSED(args);
+
         char* buf = new char[maxSize + 1];
         for (size_t i = 0; i <= maxSize; ++i) {
             buf[i] = 'a' + (i % 26);
@@ -575,6 +586,8 @@ class JoinCB : public BusAttachment::JoinSessionAsyncCB {
 
     void JoinSessionCB(QStatus status, SessionId id, const SessionOpts& opts, void* context)
     {
+        QCC_UNUSED(context);
+
         if (status == ER_OK) {
             s_lock.Lock(MUTEX_CONTEXT);
             s_sessionMap.insert(pair<SessionId, SessionInfo>(id, SessionInfo(id, SessionPortInfo(port, name, opts))));
@@ -586,6 +599,9 @@ class JoinCB : public BusAttachment::JoinSessionAsyncCB {
 
         delete this;
     }
+  private:
+    /* Private assigment operator - does nothing */
+    JoinCB operator=(const JoinCB&);
 };
 
 
@@ -718,6 +734,8 @@ struct AsyncTimeoutHandler : public BusAttachment::SetLinkTimeoutAsyncCB {
 
     void SetLinkTimeoutCB(QStatus status, uint32_t timeout, void* context)
     {
+        QCC_UNUSED(context);
+
         if (status != ER_OK) {
             printf("SetLinkTimeout(%u, %u) failed with %s\n", id, timeout, QCC_StatusText(status));
         } else {
@@ -726,6 +744,9 @@ struct AsyncTimeoutHandler : public BusAttachment::SetLinkTimeoutAsyncCB {
 
         delete this;
     }
+  private:
+    /* Private assigment operator - does nothing */
+    AsyncTimeoutHandler operator=(const AsyncTimeoutHandler&);
 };
 
 static void DoSetLinkTimeoutAsync(SessionId id, uint32_t timeout)
@@ -758,6 +779,8 @@ struct AsyncPingHandler : public BusAttachment::PingAsyncCB {
 
     void PingCB(QStatus status, void* context)
     {
+        QCC_UNUSED(context);
+
         if (status != ER_OK) {
             printf("PingAsync(%s) failed with %s (%u)\n", name.c_str(), QCC_StatusText(status), status);
         } else {
@@ -766,6 +789,9 @@ struct AsyncPingHandler : public BusAttachment::PingAsyncCB {
 
         delete this;
     }
+  private:
+    /* Private assigment operator - does nothing */
+    AsyncPingHandler operator=(const AsyncPingHandler&);
 };
 
 static void DoPingAsync(String name, uint32_t timeout)
@@ -797,8 +823,18 @@ static QStatus DoConnect()
     return status;
 }
 
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+#endif
+
     QStatus status = ER_OK;
 
     printf("AllJoyn Library version: %s\n", ajn::GetVersion());
@@ -834,8 +870,8 @@ int main(int argc, char** argv)
     }
 
     /* Create and register the bus object that will be used to send and receive signals */
-    SessionTestObject sessionTestObj(*bus, TEST_SERVICE_OBJECT_PATH);
-    bus->RegisterBusObject(sessionTestObj);
+    SessionTestObject* sessionTestObj = new SessionTestObject(*bus, TEST_SERVICE_OBJECT_PATH);
+    bus->RegisterBusObject(*sessionTestObj);
 
     /* Start the msg bus */
     if (ER_OK == status) {
@@ -921,9 +957,9 @@ int main(int argc, char** argv)
             SessionOpts opts;
             SessionPort port = static_cast<SessionPort>(StringToU32(NextTok(line), 0, 0));
             if (port == 0) {
-                printf("Usage: bind <port> [isMultipoint (false)] [traffic (TRAFFIC_MESSAGES)] [proximity (PROXIMITY_ANY)] [transports (TRANSPORT_TCP)]\n");
-                printf("Example:    bind 1 true TRAFFIC_MESSAGES PROXIMITY_ANY TRANSPORT_UDP\n");
-                printf("Equivalent: bind 1 true 1 255 256\n");
+                printf("Usage: bind <port> [isMultipoint (false)] [traffic (TRAFFIC_MESSAGES)] [proximity (PROXIMITY_ANY)] [transports (TRANSPORT_TCP)] [nametransfer (SESSION_NAMES)]\n");
+                printf("Example:    bind 1 true TRAFFIC_MESSAGES PROXIMITY_ANY TRANSPORT_UDP ALL_NAMES\n");
+                printf("Equivalent: bind 1 true 1 255 256 0\n");
                 continue;
             }
 
@@ -961,6 +997,19 @@ int main(int argc, char** argv)
                 opts.transports = static_cast<TransportMask>(StringToU32(tok, 0, TRANSPORT_ANY));
             }
 
+            tok = NextTok(line);
+            if (tok == "ALL_NAMES") {
+                opts.SetAllNames();
+            } else if (tok == "SESSION_NAMES") {
+                opts.SetSessionNames();
+            } else {
+                uint32_t nameTransfer = StringToU32(tok, 0, 1);
+                if (nameTransfer) {
+                    opts.SetSessionNames();
+                } else {
+                    opts.SetAllNames();
+                }
+            }
             DoBind(port, opts);
         } else if (cmd == "unbind") {
             SessionPort port = static_cast<SessionPort>(StringToU32(NextTok(line), 0, 0));
@@ -1017,9 +1066,9 @@ int main(int argc, char** argv)
             String name = NextTok(line);
             SessionPort port = static_cast<SessionPort>(StringToU32(NextTok(line), 0, 0));
             if (name.empty() || (port == 0)) {
-                printf("Usage:      join <name> <port> [isMultipoint] [traffic] [proximity] [transports]\n");
-                printf("Example:    join com.yadda 1 true TRAFFIC_MESSAGES PROXIMITY_ANY TRANSPORT_UDP\n");
-                printf("Equivalent: join com.yadda 1 true 1 255 256\n");
+                printf("Usage:      join <name> <port> [isMultipoint] [traffic] [proximity] [transports] [nameTransfer]\n");
+                printf("Example:    join com.yadda 1 true TRAFFIC_MESSAGES PROXIMITY_ANY TRANSPORT_UDP ALL_NAMES\n");
+                printf("Equivalent: join com.yadda 1 true 1 255 256 0\n");
                 continue;
             }
 
@@ -1058,12 +1107,23 @@ int main(int argc, char** argv)
                 opts.transports = static_cast<TransportMask>(StringToU32(tok, 0, TRANSPORT_ANY));
             }
 
+            tok = NextTok(line);
+            if (tok == "ALL_NAMES") {
+                opts.SetAllNames();
+            } else if (tok == "SESSION_NAMES") {
+                opts.SetSessionNames();
+            } else {
+                uint32_t nameTransfer = StringToU32(tok, 0, 1);
+                if (!nameTransfer) {
+                    opts.SetAllNames();
+                }
+            }
             DoJoin(name, port, opts);
         } else if (cmd == "asyncjoin") {
             String name = NextTok(line);
             SessionPort port = static_cast<SessionPort>(StringToU32(NextTok(line), 0, 0));
             if (name.empty() || (port == 0)) {
-                printf("Usage: asyncjoin <name> <port> [isMultipoint] [traffic] [proximity] [transports]\n");
+                printf("Usage: asyncjoin <name> <port> [isMultipoint] [traffic] [proximity] [transports] [nameTransfer]\n");
                 continue;
             }
             SessionOpts opts;
@@ -1071,6 +1131,11 @@ int main(int argc, char** argv)
             opts.traffic = static_cast<SessionOpts::TrafficType>(StringToU32(NextTok(line), 0, 0x1));
             opts.proximity = static_cast<SessionOpts::Proximity>(StringToU32(NextTok(line), 0, 0xFF));
             opts.transports = static_cast<TransportMask>(StringToU32(NextTok(line), 0, TRANSPORT_ANY));
+            uint32_t nameTransfer = StringToU32(NextTok(line), 0, 1);
+            if (!nameTransfer) {
+                opts.SetAllNames();
+            }
+
             DoJoinAsync(name, port, opts);
         } else if (cmd == "leave") {
             SessionId id = NextTokAsSessionId(line);
@@ -1125,16 +1190,7 @@ int main(int argc, char** argv)
                 printf("Usage: chat <sessionId> <msg>\n");
                 continue;
             }
-            sessionTestObj.SendChatSignal(id, chatMsg.c_str(), flags);
-        } else if (cmd == "cchat") {
-            uint8_t flags = ALLJOYN_FLAG_COMPRESSED;
-            SessionId id = NextTokAsSessionId(line);
-            String chatMsg = Trim(line);
-            if ((id == 0) || chatMsg.empty()) {
-                printf("Usage: cchat <sessionId> <msg>\n");
-                continue;
-            }
-            sessionTestObj.SendChatSignal(id, chatMsg.c_str(), flags);
+            sessionTestObj->SendChatSignal(id, chatMsg.c_str(), flags);
         } else if (cmd == "anychat") {
             uint8_t flags = 0;
             String chatMsg = Trim(line);
@@ -1142,7 +1198,7 @@ int main(int argc, char** argv)
                 printf("Usage: anychat <msg>\n");
                 continue;
             }
-            sessionTestObj.SendChatSignal(ajn::SESSION_ID_ALL_HOSTED, chatMsg.c_str(), flags);
+            sessionTestObj->SendChatSignal(ajn::SESSION_ID_ALL_HOSTED, chatMsg.c_str(), flags);
         } else if (cmd == "autochat") {
             SessionId id = NextTokAsSessionId(line);
             uint32_t count = StringToU32(NextTok(line), 0, 0);
@@ -1153,7 +1209,7 @@ int main(int argc, char** argv)
                 printf("Usage: autochat <sessionId> [count] [delay] [minSize] [maxSize]\n");
                 continue;
             }
-            AutoChatThread::Launch(sessionTestObj, id, count, delay, minSize, maxSize);
+            AutoChatThread::Launch(*sessionTestObj, id, count, delay, minSize, maxSize);
         } else if (cmd == "chatecho") {
             String arg = NextTok(line);
             if (arg == "on") {
@@ -1170,7 +1226,7 @@ int main(int argc, char** argv)
                 printf("Usage: schat <msg>\n");
                 continue;
             }
-            sessionTestObj.SendChatSignal(0, chatMsg.c_str(), flags);
+            sessionTestObj->SendChatSignal(0, chatMsg.c_str(), flags);
         } else if (cmd == "cancelsessionless") {
             uint32_t serial = StringToU32(NextTok(line), 0, 0);
             if (serial == 0) {
@@ -1178,7 +1234,7 @@ int main(int argc, char** argv)
                 printf("Usage: cancelsessionless <serialNum>\n");
                 continue;
             }
-            sessionTestObj.CancelSessionless(serial);
+            sessionTestObj->CancelSessionless(serial);
         } else if (cmd == "addmatch") {
             String rule = Trim(line);
             if (rule.empty()) {
@@ -1199,7 +1255,7 @@ int main(int argc, char** argv)
                 printf("Usage: sendttl <ttl>\n");
                 continue;
             }
-            sessionTestObj.SetTtl(ttl);
+            sessionTestObj->SetTtl(ttl);
         } else if (cmd == "wait") {
             String name = NextTok(line);
             DoWait(name);
@@ -1219,21 +1275,20 @@ int main(int argc, char** argv)
             printf("debug <module_name> <level>                                   - Set debug level for a module\n");
             printf("requestname <name>                                            - Request a well-known name\n");
             printf("releasename <name>                                            - Release a well-known name\n");
-            printf("bind <port> [isMultipoint] [traffic] [proximity] [transports] - Bind a session port\n");
+            printf("bind <port> [isMultipoint] [traffic] [proximity] [transports] [nameTransfer] - Bind a session port\n");
             printf("unbind <port>                                                 - Unbind a session port\n");
             printf("advertise <name> [transports]                                 - Advertise a name\n");
             printf("canceladvertise <name> [transports]                           - Cancel an advertisement\n");
             printf("find <name_prefix>                                            - Discover names that begin with prefix\n");
             printf("cancelfind <name_prefix>                                      - Cancel discovering names that begins with prefix\n");
             printf("list                                                          - List port bindings, discovered names and active sessions\n");
-            printf("join <name> <port> [isMultipoint] [traffic] [proximity] [transports] - Join a session\n");
-            printf("asyncjoin <name> <port> [isMultipoint] [traffic] [proximity] [transports] - Join a session asynchronously\n");
+            printf("join <name> <port> [isMultipoint] [traffic] [proximity] [transports] [nameTransfer] - Join a session\n");
+            printf("asyncjoin <name> <port> [isMultipoint] [traffic] [proximity] [transports] [nameTransfer] - Join a session asynchronously\n");
             printf("removemember <sessionId> <memberName>                         - Remove a session member\n");
             printf("leave <sessionId>                                             - Leave a session\n");
             printf("leavehosted <sessionId>                                       - Leave a session as host\n");
             printf("leavejoiner <sessionId>                                       - Leave a session as joiner\n");
             printf("chat <sessionId> <msg>                                        - Send a message over a given session\n");
-            printf("cchat <sessionId> <msg>                                       - Send a message over a given session with compression\n");
             printf("schat <msg>                                                   - Send a sessionless message\n");
             printf("anychat <msg>                                                 - Send a message on all hosted sessions\n");
             printf("cancelsessionless <serialNum>                                 - Cancel a sessionless message\n");
@@ -1261,11 +1316,18 @@ int main(int argc, char** argv)
     bus = NULL;
     s_bus = NULL;
 
+    delete sessionTestObj;
+    sessionTestObj = NULL;
+
     if (NULL != s_busListener) {
         delete s_busListener;
         s_busListener = NULL;
     }
 
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return (int) status;
 }
 

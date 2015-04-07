@@ -35,11 +35,12 @@
 #include <qcc/Util.h>
 #include <qcc/time.h>
 
+#include <alljoyn/AllJoynStd.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/DBusStd.h>
-#include <alljoyn/AllJoynStd.h>
-#include <alljoyn/version.h>
+#include <alljoyn/Init.h>
 #include <alljoyn/TransportMask.h>
+#include <alljoyn/version.h>
 
 #include <alljoyn/Status.h>
 
@@ -54,7 +55,7 @@ static const SessionPort SESSION_PORT = 33;
 
 /** Static data */
 static BusAttachment* g_msgBus = NULL;
-static Event g_discoverEvent;
+static Event* g_discoverEvent = NULL;
 static String g_wellKnownName = "org.alljoyn.raw_test";
 
 /** AllJoynListener receives discovery events from AllJoyn */
@@ -82,7 +83,7 @@ class MyBusListener : public BusListener {
             } else {
                 /* Release the main thread */
                 QCC_SyncPrintf("Session Joined with session id = %u\n", sessionId);
-                g_discoverEvent.SetEvent();
+                g_discoverEvent->SetEvent();
             }
         }
     }
@@ -114,6 +115,7 @@ static volatile sig_atomic_t g_interrupt = false;
 
 static void CDECL_CALL SigIntHandler(int sig)
 {
+    QCC_UNUSED(sig);
     g_interrupt = true;
 }
 
@@ -128,8 +130,18 @@ static void usage(void)
 }
 
 /** Main entry point */
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+#endif
+
     QStatus status = ER_OK;
     Environ* env;
 
@@ -182,6 +194,7 @@ int main(int argc, char** argv)
     qcc::String connectArgs = env->Find("BUS_ADDRESS");
 
     /* Create message bus */
+    g_discoverEvent = new Event();
     g_msgBus = new BusAttachment("rawclient", true);
 
     /* Register a bus listener in order to get discovery indications */
@@ -226,7 +239,7 @@ int main(int argc, char** argv)
              */
             qcc::Event timerEvent(100, 100);
             vector<qcc::Event*> checkEvents, signaledEvents;
-            checkEvents.push_back(&g_discoverEvent);
+            checkEvents.push_back(g_discoverEvent);
             checkEvents.push_back(&timerEvent);
             status = qcc::Event::Wait(checkEvents, signaledEvents);
             if (status != ER_OK && status != ER_TIMEOUT) {
@@ -237,7 +250,7 @@ int main(int argc, char** argv)
              * If it was the discover event that popped, we're done.
              */
             for (vector<qcc::Event*>::iterator i = signaledEvents.begin(); i != signaledEvents.end(); ++i) {
-                if (*i == &g_discoverEvent) {
+                if (*i == g_discoverEvent) {
                     discovered = true;
                     break;
                 }
@@ -286,8 +299,13 @@ int main(int argc, char** argv)
 
     /* Stop the bus */
     delete g_msgBus;
+    delete g_discoverEvent;
 
     printf("rawclient exiting with status 0x%x (%s)\n", status, QCC_StatusText(status));
 
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return (int) status;
 }

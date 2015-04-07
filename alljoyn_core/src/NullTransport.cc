@@ -121,6 +121,10 @@ class _NullEndpoint : public _BusEndpoint {
             }
         }
     }
+
+  private:
+    /* Private assigment operator - does nothing */
+    _NullEndpoint operator=(const _NullEndpoint&);
 };
 
 _NullEndpoint::_NullEndpoint(BusAttachment& clientBus, BusAttachment& routerBus) :
@@ -209,7 +213,7 @@ QStatus _NullEndpoint::PushMessage(Message& msg)
         CheckRegisterEndpoint();
         /*
          * We need to clone broadcast signals because each receiving bus attachment must be
-         * able to unmarshal the arg list including decrypting and doing header expansion.
+         * able to unmarshal the arg list including decryption.
          */
         if (msg->IsBroadcastSignal()) {
             Message clone(msg, true /*deep copy*/);
@@ -260,6 +264,8 @@ QStatus NullTransport::Join(void)
 
 QStatus NullTransport::NormalizeTransportSpec(const char* inSpec, qcc::String& outSpec, std::map<qcc::String, qcc::String>& argMap) const
 {
+    QCC_UNUSED(argMap);
+
     outSpec = inSpec;
     return ER_OK;
 }
@@ -274,10 +280,6 @@ QStatus NullTransport::LinkBus(BusAttachment* otherBus)
      * Initialize the null endpoint
      */
     NullEndpoint ep(bus, *otherBus);
-    /*
-     * The compression rules are shared between the client bus and the routing node bus
-     */
-    bus.GetInternal().OverrideCompressionRules(otherBus->GetInternal().GetCompressionRules());
     /*
      * Register the null endpoint with the daemon router. The endpoint is registered with the client
      * router either below or in PushMessage if a message is received before the call to register
@@ -300,6 +302,9 @@ QStatus NullTransport::LinkBus(BusAttachment* otherBus)
 
 QStatus NullTransport::Connect(const char* connectSpec, const SessionOpts& opts, BusEndpoint& newep)
 {
+    QCC_UNUSED(connectSpec);
+    QCC_UNUSED(opts);
+
     QStatus status = ER_OK;
 
     if (!running) {
@@ -318,6 +323,8 @@ QStatus NullTransport::Connect(const char* connectSpec, const SessionOpts& opts,
 
 QStatus NullTransport::Disconnect(const char* connectSpec)
 {
+    QCC_UNUSED(connectSpec);
+
     if (endpoint->IsValid()) {
         NullEndpoint ep = NullEndpoint::cast(endpoint);
         assert(routerLauncher);

@@ -28,6 +28,12 @@
 #elif defined(QCC_OS_GROUP_WINDOWS)
 #include <qcc/windows/platform_types.h>
 #include <qcc/windows/mapping.h>
+
+/*
+ * This pragma prevents Microsoft compiler warning C4407: cast between different pointer to member representations, compiler may generate incorrect code.
+ * This is equivalent to /vmm and /vmg compiler options but without the burden of requiring all apps to specify these non-default options.
+ */
+#pragma pointers_to_members(full_generality, virtual_inheritance)
 #else
 #error No OS GROUP defined.
 #endif
@@ -91,11 +97,25 @@
  */
 #define QCC_UNUSED(x) (void)(x)
 
+#if defined(_MSC_VER)
+//disable 'conditional expression is constant' warning to use do{ ... }while(0)
+#pragma warning( disable: 4127 )
+#endif
+
 /** Boolean type for C */
 typedef int32_t QCC_BOOL;
 /** Boolean logic true for QCC_BOOL type*/
 #define QCC_TRUE 1
 /** Boolean logic false for QCC_BOOL type*/
 #define QCC_FALSE 0
+
+/** This @#define allows for calling convention redefinition on relevant platforms */
+#ifndef AJ_CALL
+#  if defined(QCC_OS_GROUP_WINDOWS)
+#    define AJ_CALL __stdcall
+#  else
+#    define AJ_CALL
+#  endif
+#endif
 
 #endif // _QCC_PLATFORM_H

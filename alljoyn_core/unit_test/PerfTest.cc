@@ -28,24 +28,32 @@
 /* Header files included for Google Test Framework */
 #include <gtest/gtest.h>
 
-/* client waits for this event during findAdvertisedName */
-static Event g_discoverEvent;
-
 /** Client Listener to receive advertisements  */
 class ClientBusListener : public BusListener {
   public:
-    ClientBusListener() : BusListener() { }
+    ClientBusListener(Event& discoverEvent) : BusListener(), discoverEvent(discoverEvent) { }
 
     void FoundAdvertisedName(const char* name, TransportMask transport, const char* namePrefix)
     {
+        QCC_UNUSED(name);
+        QCC_UNUSED(transport);
+        QCC_UNUSED(namePrefix);
         //QCC_SyncPrintf("FoundAdvertisedName(name=%s, transport=0x%x, prefix=%s)\n", name, transport, namePrefix);
-        g_discoverEvent.SetEvent();
+        discoverEvent.SetEvent();
     }
 
     void LostAdvertisedName(const char* name, TransportMask transport, const char* namePrefix)
     {
+        QCC_UNUSED(name);
+        QCC_UNUSED(transport);
+        QCC_UNUSED(namePrefix);
         //QCC_SyncPrintf("LostAdvertisedName(name=%s, transport=0x%x, namePrefix=%s)\n", name, transport, namePrefix);
     }
+
+    Event& discoverEvent;
+  private:
+    /* Private assigment operator - does nothing */
+    ClientBusListener operator=(const ClientBusListener&);
 };
 
 class PerfTest : public::testing::Test {
@@ -212,6 +220,7 @@ class PerfTest : public::testing::Test {
     ServiceTestObject* serviceTestObject;
     MyBusListener* myBusListener;
     ClientBusListener* clientListener;
+    Event discoverEvent;
 };
 
 //BusAttachment* PerfTest::serviceBus = NULL;
@@ -606,17 +615,17 @@ TEST_F(PerfTest, FindAdvertisedName_MatchAll_Success)
 
     BusAttachment* client_msgBus = testclient.getClientMsgBus();
 
-    g_discoverEvent.ResetEvent();
+    discoverEvent.ResetEvent();
 
     /* Initializing the bus listener */
-    clientListener = new ClientBusListener();
+    clientListener = new ClientBusListener(discoverEvent);
     client_msgBus->RegisterBusListener(*clientListener);
 
     /* find every name */
     status = client_msgBus->FindAdvertisedName("");
     ASSERT_EQ(ER_OK, status);
 
-    status = Event::Wait(g_discoverEvent, 5000);
+    status = Event::Wait(discoverEvent, 5000);
     ASSERT_EQ(ER_OK, status);
 }
 
@@ -631,10 +640,10 @@ TEST_F(PerfTest, FindAdvertisedName_MatchExactName_Success)
 
     BusAttachment* client_msgBus = testclient.getClientMsgBus();
 
-    g_discoverEvent.ResetEvent();
+    discoverEvent.ResetEvent();
 
     /* Initializing the bus listener */
-    clientListener = new ClientBusListener();
+    clientListener = new ClientBusListener(discoverEvent);
     client_msgBus->RegisterBusListener(*clientListener);
 
     /* find every name */
@@ -642,7 +651,7 @@ TEST_F(PerfTest, FindAdvertisedName_MatchExactName_Success)
     status = client_msgBus->FindAdvertisedName(myService->getAlljoynWellKnownName());
     ASSERT_EQ(ER_OK, status);
 
-    status = Event::Wait(g_discoverEvent, 5000);
+    status = Event::Wait(discoverEvent, 5000);
     ASSERT_EQ(ER_OK, status);
 
     //GetTimeNow(&endTime);
@@ -657,10 +666,10 @@ TEST_F(PerfTest, FindAdvertisedName_InvalidName_Fail)
 
     BusAttachment* client_msgBus = testclient.getClientMsgBus();
 
-    g_discoverEvent.ResetEvent();
+    discoverEvent.ResetEvent();
 
     /* Initializing the bus listener */
-    clientListener = new ClientBusListener();
+    clientListener = new ClientBusListener(discoverEvent);
     client_msgBus->RegisterBusListener(*clientListener);
 
     /* invalid name find */
@@ -668,7 +677,7 @@ TEST_F(PerfTest, FindAdvertisedName_InvalidName_Fail)
     ASSERT_EQ(ER_OK, status);
 
     QCC_SyncPrintf("Waiting FoundAdvertisedName 3 seconds...\n");
-    status = Event::Wait(g_discoverEvent, 3000);
+    status = Event::Wait(discoverEvent, 3000);
     ASSERT_EQ(ER_TIMEOUT, status);
 }
 
@@ -747,10 +756,10 @@ TEST_F(PerfTest, ClientTest_BasicDiscovery) {
 
     BusAttachment* client_msgBus = testclient.getClientMsgBus();
 
-    g_discoverEvent.ResetEvent();
+    discoverEvent.ResetEvent();
 
     /* Initializing the bus listener */
-    clientListener = new ClientBusListener();
+    clientListener = new ClientBusListener(discoverEvent);
     client_msgBus->RegisterBusListener(*clientListener);
 
     //QCC_SyncPrintf("Finding AdvertisedName\n");
@@ -758,7 +767,7 @@ TEST_F(PerfTest, ClientTest_BasicDiscovery) {
     status = client_msgBus->FindAdvertisedName(myService->getAlljoynWellKnownName());
     ASSERT_EQ(ER_OK, status);
 
-    status = Event::Wait(g_discoverEvent, 5000);
+    status = Event::Wait(discoverEvent, 5000);
     ASSERT_EQ(ER_OK, status);
 
     /* Join the session */

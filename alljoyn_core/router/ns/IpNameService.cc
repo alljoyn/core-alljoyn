@@ -26,6 +26,7 @@
 
 #include <qcc/Debug.h>
 
+#include "BusInternal.h"
 #include "IpNameService.h"
 #include "IpNameServiceImpl.h"
 
@@ -36,35 +37,16 @@ namespace ajn {
 const uint16_t IpNameService::MULTICAST_MDNS_PORT = 5353;
 
 static IpNameService* singletonIpNameService = NULL;
-static int ipNsCounter = 0;
-bool IpNameServiceInit::cleanedup = false;
-typedef void (*RouterCleanupFunction)();
 
-extern void RegisterRouterCleanup(RouterCleanupFunction r);
-
-IpNameServiceInit::IpNameServiceInit()
+void IpNameService::Init()
 {
-    if (0 == ipNsCounter++) {
-        singletonIpNameService = new IpNameService();
-        RegisterRouterCleanup(&IpNameServiceInit::Cleanup);
-
-    }
+    singletonIpNameService = new IpNameService();
 }
 
-IpNameServiceInit::~IpNameServiceInit()
+void IpNameService::Shutdown()
 {
-    if (0 == --ipNsCounter) {
-        Cleanup();
-    }
-}
-
-void IpNameServiceInit::Cleanup()
-{
-    if (!cleanedup) {
-        delete singletonIpNameService;
-        singletonIpNameService = NULL;
-        cleanedup = true;
-    }
+    delete singletonIpNameService;
+    singletonIpNameService = NULL;
 }
 
 IpNameService& IpNameService::Instance()
@@ -462,6 +444,14 @@ QStatus IpNameService::Enable(TransportMask transportMask,
     ASSERT_STATE("Enable");
     m_pimpl->Enable(transportMask, reliableIPv4PortMap, reliableIPv6Port, unreliableIPv4PortMap, unreliableIPv6Port,
                     enableReliableIPv4, enableReliableIPv6, enableUnreliableIPv4, enableUnreliableIPv6);
+    return ER_OK;
+}
+
+QStatus IpNameService::UpdateDynamicScore(TransportMask transportMask, uint32_t availableTransportConnections, uint32_t maximumTransportConnections,
+                                          uint32_t availableTransportRemoteClients, uint32_t maximumTransportRemoteClients)
+{
+    ASSERT_STATE("UpdateDynamicScore");
+    m_pimpl->UpdateDynamicScore(transportMask, availableTransportConnections, maximumTransportConnections, availableTransportRemoteClients, maximumTransportRemoteClients);
     return ER_OK;
 }
 

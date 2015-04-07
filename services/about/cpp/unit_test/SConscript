@@ -19,7 +19,7 @@ Import('about_env')
 if not about_env.has_key('GTEST_DIR'):
     print('GTEST_DIR not specified skipping About Service unit test build')
 
-elif about_env['OS'] == 'darwin' and about_env['CPU'] in ['arm', 'armv7', 'armv7s']:
+elif about_env['OS'] == 'darwin' and about_env['CPU'] in ['arm', 'armv7', 'armv7s', 'arm64',]:
     # do not even try Google test if darwin and arm
     print 'GTEST_DIR ignored when building for OS=darwin CPU=arm, skipping alljoyn_core unit test build'
 
@@ -81,7 +81,7 @@ else:
 
     if unittest_env['BR'] == 'on':
         # Build apps with bundled daemon support
-        unittest_env.Prepend(LIBS = [unittest_env['brobj'], unittest_env['ajrlib']])
+        unittest_env.Prepend(LIBS = [unittest_env['ajrlib']])
 
     unittest_env.Append(CPPPATH = unittest_env.Dir('..').srcnode())
 

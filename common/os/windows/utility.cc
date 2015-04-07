@@ -60,41 +60,7 @@ void strerror_r(uint32_t errCode, char* ansiBuf, uint16_t ansiBufSize)
 void WinsockCheck()
 {
 }
-static int winsockInitCounter = 0;
-bool WinsockInit::cleanedup = false;
-WinsockInit::WinsockInit()
-{
-    if (winsockInitCounter++ == 0) {
-        WSADATA wsaData;
-        WORD version = MAKEWORD(2, 0);
-        int error = WSAStartup(version, &wsaData);
-        if (error) {
-            printf("WSAStartup failed with error: %d\n", error);
-        } else {
-            winsockInitialized = true;
-        }
-    }
-}
-WinsockInit::~WinsockInit()
-{
-    if (--winsockInitCounter == 0 && !cleanedup) {
-        int error = WSACleanup();
-        if (SOCKET_ERROR == error) {
-            printf("WSACleanup failed with error: %d\n", WSAGetLastError());
-        }
-        cleanedup = true;
-    }
-}
-void WinsockInit::Cleanup()
-{
-    if (!cleanedup) {
-        int error = WSACleanup();
-        if (SOCKET_ERROR == error) {
-            printf("WSACleanup failed with error: %d\n", WSAGetLastError());
-        }
-        cleanedup = true;
-    }
-}
+
 wchar_t* MultibyteToWideString(const char* str)
 {
     wchar_t* buffer = NULL;

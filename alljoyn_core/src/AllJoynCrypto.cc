@@ -42,47 +42,6 @@ namespace ajn {
 
 const size_t Crypto::MACLength = 8;
 
-static qcc::String ConcatenateCompressedFields(uint8_t* hdr, size_t hdrLen, const HeaderFields& hdrFields)
-{
-    qcc::String result((char*)hdr, hdrLen, 256);
-
-    for (uint32_t fieldId = ALLJOYN_HDR_FIELD_PATH; fieldId < ArraySize(hdrFields.field); fieldId++) {
-        if (!HeaderFields::Compressible[fieldId]) {
-            continue;
-        }
-        const MsgArg* field = &hdrFields.field[fieldId];
-        char buf[8];
-        size_t pos = 0;
-        buf[pos++] = (char)fieldId;
-        buf[pos++] = (char)field->typeId;
-        switch (field->typeId) {
-        case ALLJOYN_SIGNATURE:
-            result.append(buf, pos);
-            result.append(field->v_signature.sig, field->v_signature.len);
-            break;
-
-        case ALLJOYN_OBJECT_PATH:
-        case ALLJOYN_STRING:
-            result.append(buf, pos);
-            result.append(field->v_string.str, field->v_string.len);
-            break;
-
-        case ALLJOYN_UINT32:
-            /* Write integer as little endian */
-            buf[pos++] = (char)(field->v_uint32 >> 0);
-            buf[pos++] = (char)(field->v_uint32 >> 8);
-            buf[pos++] = (char)(field->v_uint32 >> 16);
-            buf[pos++] = (char)(field->v_uint32 >> 24);
-            result.append(buf, pos);
-            break;
-
-        default:
-            break;
-        }
-    }
-    return result;
-}
-
 QStatus Crypto::Encrypt(const _Message& message, const KeyBlob& keyBlob, uint8_t* msgBuf, size_t hdrLen, size_t& bodyLen)
 {
     QStatus status;
@@ -104,16 +63,7 @@ QStatus Crypto::Encrypt(const _Message& message, const KeyBlob& keyBlob, uint8_t
             QCC_DbgHLPrintf(("        nonce: %s", BytesToHexString(nonce.GetData(), nonce.GetSize()).c_str()));
 
             Crypto_AES aes(keyBlob, Crypto_AES::CCM);
-            if (message.GetFlags() & ALLJOYN_FLAG_COMPRESSED) {
-                /*
-                 * To prevent an attack where the attacker sends a bogus expansion rule we
-                 * authenticate the compressed headers even though we won't be sending them.
-                 */
-                qcc::String extHdr = ConcatenateCompressedFields(msgBuf, hdrLen, message.GetHeaderFields());
-                status = aes.Encrypt_CCM(body, body, bodyLen, nonce, extHdr.data(), extHdr.size(), MACLength);
-            } else {
-                status = aes.Encrypt_CCM(body, body, bodyLen, nonce, msgBuf, hdrLen, MACLength);
-            }
+            status = aes.Encrypt_CCM(body, body, bodyLen, nonce, msgBuf, hdrLen, MACLength);
         }
         break;
 
@@ -146,16 +96,7 @@ QStatus Crypto::Decrypt(const _Message& message, const KeyBlob& keyBlob, uint8_t
             QCC_DbgHLPrintf(("        nonce: %s", BytesToHexString(nonce.GetData(), nonce.GetSize()).c_str()));
 
             Crypto_AES aes(keyBlob, Crypto_AES::CCM);
-            if (message.GetFlags() & ALLJOYN_FLAG_COMPRESSED) {
-                /*
-                 * To prevent an attack where the attacker sends a bogus expansion rule we
-                 * authenticate the compressed headers even though we won't be sending them.
-                 */
-                qcc::String extHdr = ConcatenateCompressedFields(msgBuf, hdrLen, message.GetHeaderFields());
-                status = aes.Decrypt_CCM(body, body, bodyLen, nonce, extHdr.data(), extHdr.size(), MACLength);
-            } else {
-                status = aes.Decrypt_CCM(body, body, bodyLen, nonce, msgBuf, hdrLen, MACLength);
-            }
+            status = aes.Decrypt_CCM(body, body, bodyLen, nonce, msgBuf, hdrLen, MACLength);
         }
         break;
 

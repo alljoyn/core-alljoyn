@@ -106,10 +106,10 @@ public class MultipleAuthListenersTest extends TestCase {
         serviceBus = null;
     }
 
-    public void testSrpAndRsaAuthListeners() throws Exception {
-        assertEquals(Status.OK, serviceBus.registerAuthListener("ALLJOYN_SRP_KEYX ALLJOYN_RSA_KEYX",
+    public void testSrpAndEcdheAuthListeners() throws Exception {
+        assertEquals(Status.OK, serviceBus.registerAuthListener("ALLJOYN_SRP_KEYX ALLJOYN_ECDHE_NULL",
                                                                 serviceAuthListener));
-        assertEquals(Status.OK, clientBus.registerAuthListener("ALLJOYN_SRP_KEYX ALLJOYN_RSA_KEYX",
+        assertEquals(Status.OK, clientBus.registerAuthListener("ALLJOYN_SRP_KEYX ALLJOYN_ECDHE_NULL",
                                                                clientAuthListener));
         proxy.ping("hello");
         assertEquals(serviceAuthListener.getAuthMechanismRequested(),
@@ -117,7 +117,7 @@ public class MultipleAuthListenersTest extends TestCase {
     }
 
     public void testNoCommonAuthMechanism() throws Exception {
-        assertEquals(Status.OK, serviceBus.registerAuthListener("ALLJOYN_RSA_KEYX", serviceAuthListener));
+        assertEquals(Status.OK, serviceBus.registerAuthListener("ALLJOYN_ECDHE_NULL", serviceAuthListener));
         assertEquals(Status.OK, clientBus.registerAuthListener("ALLJOYN_SRP_KEYX", clientAuthListener));
         boolean thrown = false;
         try {

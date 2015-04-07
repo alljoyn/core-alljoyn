@@ -63,7 +63,12 @@ QStatus EndpointAuth::Hello(qcc::String& redirection)
     Message hello(bus);
     Message response(bus);
     nameTransfer = endpoint->GetFeatures().nameTransfer;
-    status = hello->HelloMessage(endpoint->GetFeatures().isBusToBus, endpoint->GetFeatures().allowRemote, endpoint->GetFeatures().nameTransfer);
+    /* Send value SLS_NAMES(also value of older DAEMON_NAMES) for SLS_NAMES,
+     * ALL_NAMES for other types.
+     * These are the older values of nameTransfer to be sent in BusHello.
+     */
+    status = hello->HelloMessage(endpoint->GetFeatures().isBusToBus, endpoint->GetFeatures().allowRemote,
+                                 (endpoint->GetFeatures().nameTransfer == SessionOpts::SLS_NAMES) ? SessionOpts::SLS_NAMES : SessionOpts::ALL_NAMES);
     if (status != ER_OK) {
         return status;
     }
@@ -111,7 +116,6 @@ QStatus EndpointAuth::Hello(qcc::String& redirection)
      */
     remoteName = response->GetSender();
     QCC_DbgHLPrintf(("EP remote %sname %s", endpoint->GetFeatures().isBusToBus ? "(bus-to-bus) " : "", remoteName.c_str()));
-
     /*
      * bus-to-bus establishment uses an extended "hello" method.
      */
@@ -120,7 +124,9 @@ QStatus EndpointAuth::Hello(qcc::String& redirection)
         if (ER_OK == status) {
             uniqueName = response->GetArg(0)->v_string.str;
             remoteGUID = qcc::GUID128(response->GetArg(1)->v_string.str);
-            remoteProtocolVersion = response->GetArg(2)->v_uint32;
+            uint32_t temp = response->GetArg(2)->v_uint32;
+            remoteProtocolVersion = temp & 0x3FFFFFFF;
+            nameTransfer = static_cast<SessionOpts::NameTransferType>(temp >> 30);
             if (remoteGUID == bus.GetInternal().GetGlobalGUID()) {
                 QCC_DbgPrintf(("BusHello was sent to self"));
                 return ER_BUS_SELF_CONNECT;
@@ -132,11 +138,15 @@ QStatus EndpointAuth::Hello(qcc::String& redirection)
         }
     } else {
         status = response->UnmarshalArgs("s");
-        uniqueName = response->GetArg(0)->v_string.str;
-        QCC_DbgPrintf(("Connection id: %s\n", response->GetArg(0)->v_string.str));
         if (status != ER_OK) {
             return status;
         }
+        const ajn::MsgArg* arg = response->GetArg(0);
+        if (arg == NULL) {
+            return ER_FAIL;
+        }
+        uniqueName = arg->v_string.str;
+        QCC_DbgPrintf(("Connection id: %s\n", response->GetArg(0)->v_string.str));
     }
     /*
      * Validate the unique name
@@ -245,6 +255,7 @@ QStatus EndpointAuth::WaitHello(qcc::String& authUsed)
                 QCC_DbgPrintf(("BusHello expected 2 args with signature \"su\""));
                 return ER_BUS_ESTABLISH_FAILED;
             }
+
             endpoint->GetFeatures().isBusToBus = true;
             endpoint->GetFeatures().allowRemote = true;
 
@@ -319,7 +330,7 @@ qcc::String EndpointAuth::SASLCallout(SASLEngine& sasl, const qcc::String& extCm
         } else if (extCmd.find(AgreeUnixFd) == 0) {
             // step 3: client receives "AGREE_UNIX_FD [<pid>]" and sets options
             endpoint->GetFeatures().handlePassing = true;
-            endpoint->GetFeatures().processId = (qcc::StringToU32(extCmd.substr(sizeof(AgreeUnixFd) - 1), 0, -1));
+            endpoint->GetFeatures().processId = (qcc::StringToU32(extCmd.substr(sizeof(AgreeUnixFd) - 1), 0, (uint32_t)-1));
 
             // step 4: client sends "EXTENSION_NEGOTIATE_VERSION <version>"
             rsp = NegotiateVersion;
@@ -327,7 +338,7 @@ qcc::String EndpointAuth::SASLCallout(SASLEngine& sasl, const qcc::String& extCm
         } else if (extCmd.find(AgreeVersion) == 0) {
             // step 7: client receives negotiated version from the client
             // pre-2.5 daemons will not send this message, leaving endpoint->alljoynVersion with default value of 0
-            const uint32_t version = qcc::StringToU32(extCmd.substr(sizeof(AgreeVersion) - 1), 0, -1);
+            const uint32_t version = qcc::StringToU32(extCmd.substr(sizeof(AgreeVersion) - 1), 0, (uint32_t)-1);
             endpoint->GetFeatures().ajVersion = version;
 
             // step 8: Send the protocol version
@@ -346,11 +357,11 @@ qcc::String EndpointAuth::SASLCallout(SASLEngine& sasl, const qcc::String& extCm
             rsp += " " + qcc::U32ToString(qcc::GetPid());
 #endif
             endpoint->GetFeatures().handlePassing = true;
-            endpoint->GetFeatures().processId = qcc::StringToU32(extCmd.substr(sizeof(NegotiateUnixFd) - 1), 0, -1);
+            endpoint->GetFeatures().processId = qcc::StringToU32(extCmd.substr(sizeof(NegotiateUnixFd) - 1), 0, (uint32_t)-1);
         } else if (extCmd.find(NegotiateVersion) == 0) {
             // step 5: daemon receives "EXTENSION_NEGOTIATE_VERSION <version>", negotiates lowest common version
             rsp = AgreeVersion;
-            const uint32_t clientVersion = qcc::StringToU32(extCmd.substr(sizeof(NegotiateVersion) - 1), 0, -1);
+            const uint32_t clientVersion = qcc::StringToU32(extCmd.substr(sizeof(NegotiateVersion) - 1), 0, (uint32_t)-1);
 
             // step 6: daemon responds with "EXTENSION_AGREE_VERSION <min ver>"
             const uint32_t negotiatedVersion = std::min(clientVersion, ajn::GetNumericVersion());
@@ -369,7 +380,8 @@ qcc::String EndpointAuth::SASLCallout(SASLEngine& sasl, const qcc::String& extCm
 QStatus EndpointAuth::Establish(const qcc::String& authMechanisms,
                                 qcc::String& authUsed,
                                 qcc::String& redirection,
-                                AuthListener* listener)
+                                AuthListener* listener,
+                                uint32_t timeout)
 {
     QCC_DbgTrace(("EndpointAuth::Establish(authMechanism=\"%s\", authUsed=\"%s\", redirection=\"%s\", listener=0x%p)",
                   authMechanisms.c_str(), authUsed.c_str(), redirection.c_str(), listener));
@@ -396,12 +408,12 @@ QStatus EndpointAuth::Establish(const qcc::String& authMechanisms,
          */
         String guidStr = bus.GetInternal().GetGlobalGUID().ToString();
         sasl.SetLocalId(guidStr);
-        while (true) {
+        for (;;) {
             /*
              * Get the challenge
              */
             inStr.clear();
-            status = endpoint->GetSource().GetLine(inStr);
+            status = endpoint->GetSource().GetLine(inStr, timeout);
             if (status != ER_OK) {
                 QCC_LogError(status, ("Failed to read from stream"));
                 goto ExitEstablish;
@@ -441,7 +453,7 @@ QStatus EndpointAuth::Establish(const qcc::String& authMechanisms,
     } else {
         QCC_DbgPrintf(("EndpointAuth::Establish(): Not accepting"));
         SASLEngine sasl(bus, AuthMechanism::RESPONDER, authMechanisms, NULL, authListener, endpoint->GetFeatures().isBusToBus ? NULL : this);
-        while (true) {
+        for (;;) {
             QCC_DbgPrintf(("EndpointAuth::Establish(): Advance()"));
             status = sasl.Advance(inStr, outStr, state);
             if (status != ER_OK) {
@@ -480,7 +492,7 @@ QStatus EndpointAuth::Establish(const qcc::String& authMechanisms,
              * Get the challenge
              */
             inStr.clear();
-            status = endpoint->GetSource().GetLine(inStr);
+            status = endpoint->GetSource().GetLine(inStr, timeout);
             if (status != ER_OK) {
                 QCC_LogError(status, ("Failed to read from stream"));
                 goto ExitEstablish;

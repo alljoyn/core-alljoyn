@@ -31,10 +31,11 @@
 #include <qcc/Util.h>
 
 #include <alljoyn/AboutObj.h>
+#include <alljoyn/AllJoynStd.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/BusObject.h>
 #include <alljoyn/DBusStd.h>
-#include <alljoyn/AllJoynStd.h>
+#include <alljoyn/Init.h>
 #include <alljoyn/MsgArg.h>
 #include <alljoyn/version.h>
 
@@ -80,6 +81,7 @@ static bool g_useAboutFeatureDiscovery = false;
 
 static void CDECL_CALL SigIntHandler(int sig)
 {
+    QCC_UNUSED(sig);
     g_interrupt = true;
 }
 
@@ -89,11 +91,18 @@ class MyBusListener : public BusListener, public SessionPortListener, public Ses
 
     bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts)
     {
+        QCC_UNUSED(sessionPort);
+        QCC_UNUSED(joiner);
+        QCC_UNUSED(opts);
         return g_acceptSession;
     }
 
     void SessionJoined(SessionPort sessionPort, SessionId sessionId, const char* joiner)
     {
+        QCC_UNUSED(sessionPort);
+        QCC_UNUSED(sessionId);
+        QCC_UNUSED(joiner);
+
         printf("=============> Session Established: joiner=%s, sessionId=%u\n", joiner, sessionId);
         QStatus status = g_msgBus->SetSessionListener(sessionId, this);
         if (ER_OK != status) {
@@ -233,6 +242,10 @@ class MyAboutListener : public AboutListener {
     MyAboutListener(MyBusListener& myBusListener) : busListener(&myBusListener), sessionId(0) { }
     void Announced(const char* busName, uint16_t version, SessionPort port,
                    const MsgArg& objectDescriptionArg, const MsgArg& aboutDataArg) {
+        QCC_UNUSED(version);
+        QCC_UNUSED(port);
+        QCC_UNUSED(objectDescriptionArg);
+
         printf("Received Announce signal: BusName=%s\n", busName);
         MyAboutData ad;
         ad.CreatefromMsgArg(aboutDataArg);
@@ -307,8 +320,17 @@ static void usage(void)
 }
 
 /** Main entry point */
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+#endif
     const uint64_t startTime = GetTimestamp64(); // timestamp in milliseconds
     QStatus status = ER_OK;
     TransportMask transportOpts = TRANSPORT_TCP;
@@ -508,5 +530,9 @@ int main(int argc, char** argv)
 
     printf("Elapsed time is %" PRIi64 " seconds\n", (GetTimestamp64() - startTime) / 1000);
 
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return (int) status;
 }

@@ -51,7 +51,6 @@ clibenv.VariantDir('$OBJDIR_ALLJOYN_C/samples', 'samples', duplicate = 0)
 # C bindings use the following headers from alljoyn_core
 alljoyn_core_headers = clibenv.Install('inc/alljoyn_c', '$DISTDIR/cpp/inc/alljoyn/DBusStdDefines.h')
 alljoyn_core_headers += clibenv.Install('inc/alljoyn_c', '$DISTDIR/cpp/inc/alljoyn/Status.h')
-alljoyn_core_headers += clibenv.Install('inc/qcc', '$DISTDIR/cpp/inc/qcc/platform.h')
 alljoyn_core_headers += clibenv.Install('inc/qcc/${OS_GROUP}', '$DISTDIR/cpp/inc/qcc/${OS_GROUP}/platform_types.h')
 
 if clibenv['OS_GROUP'] == 'windows':
@@ -64,8 +63,7 @@ c_headers += clibenv.Install('$C_DISTDIR/inc/qcc/${OS_GROUP}', clibenv.Glob('inc
 # make sure the headers from alljoyn_core have been copied into the alljoyn_c headers 
 clibenv.Depends(c_headers, alljoyn_core_headers)
 
-# AllJoyn Libraries, and shared object files.  The shared object files are exported into the environment
-# so that they can be used when building the alljoyn_unity_native library 
+# AllJoyn Libraries, and shared object files.
 static_lib, shared_lib, env['AJ_C_OBJS'] = clibenv.SConscript('$OBJDIR_ALLJOYN_C/SConscript', exports = {'env':clibenv})
 libs = [static_lib, shared_lib]
 dlibs = clibenv.Install('$C_DISTDIR/lib', libs)

@@ -23,6 +23,9 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include <alljoyn/Init.h>
+#include <alljoyn/Status.h>
+
 #define HELLO_PORT 9956
 #define HELLO_GROUP "239.255.37.41"
 #define HELLO_GROUP_IPV6 "ff03::239.255.37.41"
@@ -30,8 +33,17 @@
 #define IPV4 1
 #define IPV6 0
 
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+#endif
     printf("%s main()\n", argv[0]);
 
     uint32_t ms = 999;
@@ -196,6 +208,10 @@ int main(int argc, char** argv)
         nanosleep(&ts, NULL);
     }
 
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return 0;
 }
 

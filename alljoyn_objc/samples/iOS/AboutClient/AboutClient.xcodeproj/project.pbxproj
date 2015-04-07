@@ -15,6 +15,8 @@
 		7D1C935C1A12CA450075A018 /* AJNAboutObject.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7D1C93521A12CA450075A018 /* AJNAboutObject.mm */; };
 		7D1C935D1A12CA450075A018 /* AJNAboutObjectDescription.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7D1C93541A12CA450075A018 /* AJNAboutObjectDescription.mm */; };
 		7D1C935E1A12CA450075A018 /* AJNAboutProxy.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7D1C93561A12CA450075A018 /* AJNAboutProxy.mm */; };
+		7DCEFD4B1A97ED6B00A09710 /* AJNInit.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCEFD4A1A97ED6B00A09710 /* AJNInit.mm */; };
+		7DEA2F461AC46E69007ECE82 /* libc++.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 7DEA2F451AC46E69007ECE82 /* libc++.dylib */; };
 		83672413193B123B0008070C /* AJNTranslatorImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 83672412193B123B0008070C /* AJNTranslatorImpl.mm */; };
 		ACB2C6B9160B7CF200D7E3A6 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ACB2C6B8160B7CF200D7E3A6 /* UIKit.framework */; };
 		ACB2C6BB160B7CF200D7E3A6 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ACB2C6BA160B7CF200D7E3A6 /* Foundation.framework */; };
@@ -77,6 +79,9 @@
 		7D1C93541A12CA450075A018 /* AJNAboutObjectDescription.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNAboutObjectDescription.mm; path = ../../../AllJoynFramework/AllJoynFramework/AJNAboutObjectDescription.mm; sourceTree = "<group>"; };
 		7D1C93551A12CA450075A018 /* AJNAboutProxy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNAboutProxy.h; path = ../../../AllJoynFramework/AllJoynFramework/AJNAboutProxy.h; sourceTree = "<group>"; };
 		7D1C93561A12CA450075A018 /* AJNAboutProxy.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNAboutProxy.mm; path = ../../../AllJoynFramework/AllJoynFramework/AJNAboutProxy.mm; sourceTree = "<group>"; };
+		7DCEFD491A97ED6B00A09710 /* AJNInit.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNInit.h; path = ../../../AllJoynFramework/AllJoynFramework/AJNInit.h; sourceTree = "<group>"; };
+		7DCEFD4A1A97ED6B00A09710 /* AJNInit.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNInit.mm; path = ../../../AllJoynFramework/AllJoynFramework/AJNInit.mm; sourceTree = "<group>"; };
+		7DEA2F451AC46E69007ECE82 /* libc++.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libc++.dylib"; path = "usr/lib/libc++.dylib"; sourceTree = SDKROOT; };
 		83672410193B123B0008070C /* AJNTranslator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNTranslator.h; path = ../../../AllJoynFramework/AllJoynFramework/AJNTranslator.h; sourceTree = "<group>"; };
 		83672411193B123B0008070C /* AJNTranslatorImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNTranslatorImpl.h; path = ../../../AllJoynFramework/AllJoynFramework/AJNTranslatorImpl.h; sourceTree = "<group>"; };
 		83672412193B123B0008070C /* AJNTranslatorImpl.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNTranslatorImpl.mm; path = ../../../AllJoynFramework/AllJoynFramework/AJNTranslatorImpl.mm; sourceTree = "<group>"; };
@@ -168,6 +173,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7DEA2F461AC46E69007ECE82 /* libc++.dylib in Frameworks */,
 				ACB2C754160B8FE800D7E3A6 /* SystemConfiguration.framework in Frameworks */,
 				ACB2C752160B8FDC00D7E3A6 /* libstdc++.6.dylib in Frameworks */,
 				ACB2C6B9160B7CF200D7E3A6 /* UIKit.framework in Frameworks */,
@@ -200,6 +206,7 @@
 		ACB2C6B7160B7CF200D7E3A6 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				7DEA2F451AC46E69007ECE82 /* libc++.dylib */,
 				ACB2C751160B8FDC00D7E3A6 /* libstdc++.6.dylib */,
 				ACB2C74F160B8FAB00D7E3A6 /* libstdc++.dylib */,
 				ACB2C753160B8FE800D7E3A6 /* SystemConfiguration.framework */,
@@ -248,6 +255,8 @@
 		ACB2C6ED160B7FA500D7E3A6 /* AllJoynFramework */ = {
 			isa = PBXGroup;
 			children = (
+				7DCEFD491A97ED6B00A09710 /* AJNInit.h */,
+				7DCEFD4A1A97ED6B00A09710 /* AJNInit.mm */,
 				7D1C93451A12CA450075A018 /* AJNAboutDataListener.h */,
 				7D1C93461A12CA450075A018 /* AJNAboutDataListenerImpl.h */,
 				7D1C93471A12CA450075A018 /* AJNAboutDataListenerImpl.mm */,
@@ -410,6 +419,7 @@
 				ACB2C729160B7FB700D7E3A6 /* AJNBusObject.mm in Sources */,
 				ACB2C72A160B7FB700D7E3A6 /* AJNBusObjectImpl.mm in Sources */,
 				ACB2C72B160B7FB700D7E3A6 /* AJNInterfaceDescription.mm in Sources */,
+				7DCEFD4B1A97ED6B00A09710 /* AJNInit.mm in Sources */,
 				7D1C93571A12CA450075A018 /* AJNAboutDataListenerImpl.mm in Sources */,
 				ACB2C72C160B7FB700D7E3A6 /* AJNInterfaceMember.mm in Sources */,
 				ACB2C72D160B7FB700D7E3A6 /* AJNInterfaceProperty.mm in Sources */,
@@ -537,6 +547,7 @@
 				HEADER_SEARCH_PATHS = (
 					"\"$(SRCROOT)/../../../../build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/inc/alljoyn\"",
 					"\"$(SRCROOT)/../../../../build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/inc\"",
+					"\"$(SRCROOT)/../../../../build/darwin/$(CURRENT_ARCH)/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/inc\"",
 				);
 				INFOPLIST_FILE = "BasicClient/AboutClient-Info.plist";
 				LIBRARY_SEARCH_PATHS = (
@@ -552,7 +563,6 @@
 				OTHER_LDFLAGS = (
 					"-lalljoyn",
 					"-lajrouter",
-					"-lBundledRouter.o",
 					"-lssl",
 					"-lcrypto",
 				);
@@ -587,7 +597,6 @@
 				OTHER_LDFLAGS = (
 					"-lalljoyn",
 					"-lajrouter",
-					"-lBundledRouter.o",
 					"-lssl",
 					"-lcrypto",
 				);

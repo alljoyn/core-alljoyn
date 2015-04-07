@@ -34,10 +34,11 @@
 #include <qcc/time.h>
 #include <qcc/Util.h>
 
+#include <alljoyn/AllJoynStd.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/BusObject.h>
 #include <alljoyn/DBusStd.h>
-#include <alljoyn/AllJoynStd.h>
+#include <alljoyn/Init.h>
 #include <alljoyn/MsgArg.h>
 #include <alljoyn/version.h>
 
@@ -71,6 +72,7 @@ static volatile sig_atomic_t g_session_joined = false;
 
 static void CDECL_CALL SigIntHandler(int sig)
 {
+    QCC_UNUSED(sig);
     g_interrupt = true;
 }
 
@@ -79,11 +81,16 @@ class MyBusListener : public SessionPortListener, public SessionListener {
   public:
     bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts)
     {
+        QCC_UNUSED(sessionPort);
+        QCC_UNUSED(joiner);
+        QCC_UNUSED(opts);
         return true;
     }
 
     void SessionJoined(SessionPort sessionPort, SessionId sessionId, const char* joiner)
     {
+        QCC_UNUSED(sessionPort);
+
         QCC_SyncPrintf("Session Established: joiner=%s, sessionId=%08x\n", joiner, sessionId);
         g_session_joined = true;
         /* Enable concurrent callbacks since some of the calls below could block */
@@ -152,6 +159,9 @@ class LocalTestObject : public BusObject {
     }
 
     void SignalHandler(const InterfaceDescription::Member* member, const char* sourcePath, Message& msg) {
+        QCC_UNUSED(member);
+        QCC_UNUSED(sourcePath);
+
         uint32_t u(msg->GetArg(0)->v_uint32);
         uint32_t length = msg->GetArg(1)->v_scalarArray.numElements;
         uint8_t firstByte = msg->GetArg(1)->v_scalarArray.v_byte[0];
@@ -198,8 +208,17 @@ static void usage(void)
               << "\t-h/-? display usage \n";
 }
 
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+#endif
     QStatus status = ER_OK;
     SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
     uint32_t signalCount = 1000;
@@ -350,5 +369,9 @@ int main(int argc, char** argv)
 
     std::cout << argv[0] << " exiting with status " << QCC_StatusText(status) << std::endl;
 
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return (int) status;
 }

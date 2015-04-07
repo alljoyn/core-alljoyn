@@ -23,6 +23,7 @@
 
 #include <qcc/platform.h>
 #include <qcc/String.h>
+#include <alljoyn/Status.h>
 #include <alljoyn/TransportMask.h>
 
 namespace ajn {
@@ -45,11 +46,14 @@ typedef uint32_t SessionId;
 /** Invalid session id value used to indicate that a signal should be emitted on all hosted sessions */
 const SessionId SESSION_ID_ALL_HOSTED = ((SessionId) - 1);
 
+/* Forward declaration */
+class MsgArg;
+
 /**
  * SessionOpts contains a set of parameters that define a Session's characteristics.
  */
 class SessionOpts {
-    friend class SessionlessObj;
+
   public:
     /** Traffic type */
     typedef enum {
@@ -80,45 +84,34 @@ class SessionOpts {
     TransportMask transports;
 
     /**
-     * NameTransferType when a session is established list of names are exchanged.
-     * The NameTransferType specifies what information is exchanged.
-     */
-    typedef enum {
-        ALL_NAMES = 0x00,       /** < ExchangeNames and NameChanged to be propagated to this session,
-                                      all NameChanged to be sent, all names to be sent as a part of
-                                      initial ExchangeNames */
-        DAEMON_NAMES = 0x01     /** < No ExchangeNames and NameChanged propagation,
-                                      no NameChanged to be sent, only router names to be sent as a part of
-                                      initial ExchangeNames */
-    } NameTransferType;
-
-    /**
-     * NameTransferType used for specifying the name propagation during initial
-     * ExchangeNames
-     */
-    NameTransferType nameTransfer;
-
-    /**
      * Construct a SessionOpts with specific parameters.
      *
-     * @param traffic       Type of traffic.
-     * @param isMultipoint  true iff session supports multipoint (greater than two endpoints).
-     * @param proximity     Proximity constraint bitmask.
-     * @param transports    Allowed transport types bitmask.
+     * @param traffic           Type of traffic.
+     * @param isMultipoint      true iff session supports multipoint (greater than two endpoints).
+     * @param proximity         Proximity constraint bitmask.
+     * @param transports        Allowed transport types bitmask.
+     * @param exchangeAllNames  true if all names need to be exchanged.
+     *                          false if only session related names need to be exchanged.
+     *                          (Default, used for optimal performance)
      *
      */
-    SessionOpts(SessionOpts::TrafficType traffic, bool isMultipoint, SessionOpts::Proximity proximity, TransportMask transports) :
+    SessionOpts(SessionOpts::TrafficType traffic, bool isMultipoint, SessionOpts::Proximity proximity, TransportMask transports, bool exchangeAllNames = false) :
         traffic(traffic),
         isMultipoint(isMultipoint),
         proximity(proximity),
         transports(transports),
-        nameTransfer(ALL_NAMES)
+        nameTransfer(exchangeAllNames ? ALL_NAMES : (isMultipoint ? MP_NAMES : P2P_NAMES))
     { }
 
     /**
      * Construct a default SessionOpts
      */
-    SessionOpts() : traffic(TRAFFIC_MESSAGES), isMultipoint(false), proximity(PROXIMITY_ANY), transports(TRANSPORT_ANY), nameTransfer(ALL_NAMES) { }
+    SessionOpts() : traffic(TRAFFIC_MESSAGES), isMultipoint(false), proximity(PROXIMITY_ANY), transports(TRANSPORT_ANY), nameTransfer(P2P_NAMES) { }
+
+    /**
+     * Destructor
+     */
+    virtual ~SessionOpts() { }
 
     /**
      * Determine whether this SessionOpts is compatible with the SessionOpts offered by other
@@ -185,7 +178,58 @@ class SessionOpts {
         return false;
     }
 
-  private:
+    /**
+     * Set up this session to exchange all names not just session related names.
+     *
+     */
+    void SetAllNames();
+
+    /**
+     * Set up this session to exchange only session related names not all names.
+     *
+     */
+    void SetSessionNames();
+
+    /**
+     * Is this session set up to exchange all names
+     * @return true if session is set up to exchange all names.
+     */
+    bool IsAllNames() const;
+
+    /**
+     * Is this session set up to exchange only session related names
+     * @return true if session is set up to exchange only session related names.
+     */
+    bool IsSessionNames() const;
+
+
+    /** Internal
+     *
+     * NameTransferType when a session is established list of names are exchanged.
+     * The NameTransferType specifies what information is exchanged.
+     */
+    typedef enum {
+        ALL_NAMES = 0x00,       /**< ExchangeNames and NameChanged to be forwarded to this session,
+                                     AttachSessionWithNames to be converted into an ExchangeNames and
+                                     sent over this session,
+                                     all NameChanged to be sent, all names to be sent as a part of
+                                     initial AttachSessionWithNames */
+        SLS_NAMES = 0x01,      /**< No ExchangeNames and NameChanged forwarding,
+                                     no NameChanged to be sent, only router names and
+                                     sessionless emitter names(if host routing node)
+                                     to be sent as a part of initial AttachSessionWithNames */
+        MP_NAMES = 0x02,        /**< ExchangeNames and NameChanged to be forwarded only over endpoints that
+                                     match the session id of the endpoint that it was received on,
+                                     NameChanged to be sent to routing nodes if a session to this leaf existed,
+                                     only routing node and joiner or host and existing session member names
+                                     to be sent as a part of initial AttachSessionWithNames */
+        P2P_NAMES = 0x03,       /**< No ExchangeNames and NameChanged forwarding,
+                                     NameChanged to be sent only if a session to this leaf existed,
+                                     only routing node and joiner/host names to be sent as a part of initial
+                                     AttachSessionWithNames */
+    } NameTransferType;
+
+  protected:
     /**
      * Construct a SessionOpts with specific parameters.
      *
@@ -194,7 +238,7 @@ class SessionOpts {
      * @param proximity     Proximity constraint bitmask.
      * @param transports    Allowed transport types bitmask.
      * @param nameType      The NameTransferType specifies what information is exchanged
-     *                      values #ALL_NAMES, #DAEMON_NAMES
+     *                      values #ALL_NAMES, #SLS_NAMES
      */
     SessionOpts(SessionOpts::TrafficType traffic, bool isMultipoint, SessionOpts::Proximity proximity, TransportMask transports, NameTransferType nameType) :
         traffic(traffic),
@@ -203,6 +247,22 @@ class SessionOpts {
         transports(transports),
         nameTransfer(nameType)
     { }
+
+  private:
+    friend class SessionlessObj;
+    friend class AllJoynObj;
+    friend class TCPTransport;
+    friend class UDPTransport;
+    friend class Features;
+    friend void SetSessionOpts(const SessionOpts& opts, MsgArg& msgArg);
+    friend QStatus GetSessionOpts(const MsgArg& msgArg, SessionOpts& opts);
+
+    /**
+     * NameTransferType used for specifying the name propagation during initial
+     * ExchangeNames
+     */
+    NameTransferType nameTransfer;
+
 };
 
 

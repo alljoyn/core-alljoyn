@@ -94,6 +94,7 @@ class PermissionConfigurator {
      */
     virtual QStatus SetClaimable(bool claimable)
     {
+        QCC_UNUSED(claimable);
         return ER_NOT_IMPLEMENTED;
     }
 
@@ -113,6 +114,7 @@ class PermissionConfigurator {
      */
     virtual QStatus GetSigningPublicKey(qcc::KeyInfoECC& keyInfo)
     {
+        QCC_UNUSED(keyInfo);
         return ER_NOT_IMPLEMENTED;
     }
 
@@ -123,6 +125,7 @@ class PermissionConfigurator {
      */
     virtual QStatus SignCertificate(qcc::CertificateX509& cert)
     {
+        QCC_UNUSED(cert);
         return ER_NOT_IMPLEMENTED;
     }
 
@@ -147,6 +150,8 @@ class PermissionConfigurator {
      */
     virtual QStatus GetConnectedPeerPublicKey(const qcc::GUID128& guid, qcc::ECCPublicKey* publicKey)
     {
+        QCC_UNUSED(guid);
+        QCC_UNUSED(publicKey);
         return ER_NOT_IMPLEMENTED;
     }
 

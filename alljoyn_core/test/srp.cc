@@ -32,8 +32,9 @@
 #include <qcc/BigNum.h>
 
 #include <alljoyn/version.h>
-#include <alljoyn/BusAttachment.h>
 #include <alljoyn/AuthListener.h>
+#include <alljoyn/BusAttachment.h>
+#include <alljoyn/Init.h>
 
 #include <alljoyn/Status.h>
 
@@ -48,16 +49,36 @@ using namespace ajn;
 
 class MyAuthListener : public AuthListener {
     bool RequestCredentials(const char* authMechanism, const char* authPeer, uint16_t authCount, const char* userId, uint16_t credMask, Credentials& creds) {
+        QCC_UNUSED(authMechanism);
+        QCC_UNUSED(authPeer);
+        QCC_UNUSED(authCount);
+        QCC_UNUSED(userId);
+        QCC_UNUSED(credMask);
+
         creds.SetPassword("123456");
         return true;
     }
     void AuthenticationComplete(const char* authMechanism, const char* authPeer, bool success) {
+        QCC_UNUSED(authPeer);
         printf("Authentication %s %s\n", authMechanism, success ? "succesful" : "failed");
     }
 };
 
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
+    QCC_UNUSED(argc);
+    QCC_UNUSED(argv);
+
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+#endif
+
     String toClient;
     String toServer;
     String verifier;
@@ -227,10 +248,18 @@ int main(int argc, char** argv)
     }
 
     printf("Passed\n");
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return 0;
 
 TestFail:
 
     printf("Failed\n");
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return -1;
 }

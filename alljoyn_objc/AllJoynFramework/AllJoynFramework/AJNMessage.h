@@ -32,8 +32,13 @@ extern const AJNMessageFlag kAJNMessageFlagAllowRemoteMessages;
 extern const AJNMessageFlag kAJNMessageFlagSessionless;
 /** Global (bus-to-bus) broadcast */
 extern const AJNMessageFlag kAJNMessageFlagGlobalBroadcast;
-/** Header is compressed */
-extern const AJNMessageFlag kAJNMessageFlagCompressed;
+/** 
+ * Header is compressed
+ *
+ * @deprecated Header compression was deprecated in March 2015 for 15.04
+ * release
+ */
+extern const AJNMessageFlag kAJNMessageFlagCompressed DEPRECATED_ATTRIBUTE;
 /** Body is encrypted */
 extern const AJNMessageFlag kAJNMessageFlagEncrypted;
 // @}
@@ -188,10 +193,12 @@ extern const AJNMessageFlag kAJNMessageFlagEncrypted;
 /**
  * Accessor function to get the compression token for the message.
  *
- * @return  - Compression token for the message stored in the AllJoyn header field
- *          - 0 'zero' if there is no compression token.
+ * @return  - 0 'zero' if there is no compression token.
+ *
+ * @deprecated Header compression was deprecated in March 2015 for 15.04
+ * release
  */
-@property (nonatomic, readonly) uint32_t compressionToken;
+@property (nonatomic, readonly) uint32_t compressionToken DEPRECATED_ATTRIBUTE;
 
 /**
  * Accessor function to get the session id for the message.

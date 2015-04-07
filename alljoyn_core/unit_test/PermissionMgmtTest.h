@@ -81,6 +81,10 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
 
         bool RequestCredentials(const char* authMechanism, const char* authPeer, uint16_t authCount, const char* userId, uint16_t credMask, Credentials& creds)
         {
+            QCC_UNUSED(credMask);
+            QCC_UNUSED(userId);
+            QCC_UNUSED(authCount);
+            QCC_UNUSED(authPeer);
             if (strcmp(authMechanism, "ALLJOYN_ECDHE_NULL") == 0) {
                 // creds.SetExpiration(100);  /* set the master secret expiry time to 100 seconds */
                 return true;
@@ -103,6 +107,7 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
 
         bool VerifyCredentials(const char* authMechanism, const char* authPeer, const Credentials& creds)
         {
+            QCC_UNUSED(authPeer);
             /* only the ECDHE_ECDSA calls for peer credential verification */
             if (strcmp(authMechanism, "ALLJOYN_ECDHE_ECDSA") == 0) {
                 if (creds.IsSet(AuthListener::CRED_CERT_CHAIN)) {
@@ -119,6 +124,7 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
         }
 
         void AuthenticationComplete(const char* authMechanism, const char* authPeer, bool success) {
+            QCC_UNUSED(authPeer);
             qcc::String msg;
             if (agentType == RUN_AS_ADMIN) {
                 msg += "Admin: ";

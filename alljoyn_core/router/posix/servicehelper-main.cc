@@ -141,7 +141,7 @@ OptParse::ParseResultCode OptParse::ParseResult()
 }
 
 
-int main(int argc, char** argv, char** env)
+int CDECL_CALL main(int argc, char** argv, char** env)
 {
 #ifdef QCC_OS_ANDROID
     // Initialize the environment for Andriod

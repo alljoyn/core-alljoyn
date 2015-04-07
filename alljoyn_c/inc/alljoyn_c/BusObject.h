@@ -24,7 +24,6 @@
 #ifndef _ALLJOYN_C_LOCALBUSOBJECT_H
 #define _ALLJOYN_C_LOCALBUSOBJECT_H
 
-#include <qcc/platform.h>
 #include <alljoyn_c/AjAPI.h>
 #include <alljoyn_c/InterfaceDescription.h>
 #include <alljoyn_c/MsgArg.h>
@@ -327,7 +326,6 @@ extern AJ_API const alljoyn_busattachment AJ_CALL alljoyn_busobject_getbusattach
  *                         no guarantee that expired signals will not still be delivered.
  * @param flags            Logical OR of the message flags for this signals. The following flags apply to signals:
  *                         - If #ALLJOYN_MESSAGE_FLAG_GLOBAL_BROADCAST is set broadcast signal (null destination) will be forwarded across bus-to-bus connections.
- *                         - If #ALLJOYN_MESSAGE_FLAG_COMPRESSED is set the header is compressed for destinations that can handle header compression.
  *                         - If #ALLJOYN_MESSAGE_FLAG_ENCRYPTED is set the message is authenticated and the payload if any is encrypted.
  *                         - IF #ALLJOYN_MESSAGE_FLAG_SESSIONLESS is set the message will be sent using the sessionless signal mechanism.
  * @param[out] msg         If non-null, the sent signal message is returned to the caller.
@@ -380,6 +378,7 @@ extern AJ_API QCC_BOOL AJ_CALL alljoyn_busobject_issecure(alljoyn_busobject bus)
  * This function is experimental, and as such has not been fully tested.
  * Please help make it more robust by contributing fixes if you find problems.
  *
+ * @param[in] bus           The bus which contains the interfaces
  * @param[in] interfaces    the array of interface names
  * @param[in] numInterfaces the number of interface names
  *
@@ -401,6 +400,7 @@ extern AJ_API size_t AJ_CALL alljoyn_busobject_getannouncedinterfacenames(alljoy
  *
  * @see alljoyn_aboutobj_announce()
  *
+ * @param[in] bus         The bus which contains the interface
  * @param[in] iface       alljoyn_interfacedescription for the interface to set
  *                        the announce flag for
  * @param[in] isAnnounced This interface should be part of the Announce signal

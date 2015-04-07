@@ -30,120 +30,184 @@ namespace services {
 
 /**
  * Property of Property Store Impl class
+ *
+ * @deprecated The PropertyStoreProperty class has been deprecated please see the
+ * AboutData class.
  */
 class PropertyStoreProperty {
-
   public:
+    /**
+     * Constructor for PropertyStoreProperty
+     *
+     * @deprecated The PropertyStoreProperty class has been deprecated please see the
+     * AboutData class.
+     *
+     * @param keyName the name of the property
+     */
+    QCC_DEPRECATED(PropertyStoreProperty(qcc::String const& keyName));
 
     /**
      * Constructor for PropertyStoreProperty
-     * @param keyName
+     *
+     * @deprecated The PropertyStoreProperty class has been deprecated please see the
+     * AboutData class.
+     *
+     * @param keyName the name of the property
+     * @param value   MsgArg containing the property value
      */
-    PropertyStoreProperty(qcc::String const& keyName);
+    QCC_DEPRECATED(PropertyStoreProperty(qcc::String const& keyName, ajn::MsgArg const& value));
 
     /**
      * Constructor for PropertyStoreProperty
-     * @param keyName
-     * @param value
+     *
+     * @deprecated The PropertyStoreProperty class has been deprecated please see the
+     * AboutData class.
+     *
+     * @param keyName        the name of the property
+     * @param value          MsgArg containing the value stored in the property
+     * @param isPublic       Is the property public
+     * @param isWritable     Is the property writable
+     * @param isAnnouncable  Is the property announced
      */
-    PropertyStoreProperty(qcc::String const& keyName, ajn::MsgArg const& value);
+    QCC_DEPRECATED(PropertyStoreProperty(qcc::String const& keyName, ajn::MsgArg const& value,
+                                         bool isPublic, bool isWritable, bool isAnnouncable));
 
     /**
      * Constructor for PropertyStoreProperty
-     * @param keyName
-     * @param value
-     * @param isPublic
-     * @param isWritable
-     * @param isAnnouncable
+     *
+     * @deprecated The PropertyStoreProperty class has been deprecated please see the
+     * AboutData class.
+     *
+     * @param keyName        the name of the property
+     * @param value          MsgArg containing the value stored in the property
+     * @param language       The language tag identifying the localization language for the property
+     * @param isPublic       Is the property public
+     * @param isWritable     Is the property writable
+     * @param isAnnouncable  Is the property announced
      */
-    PropertyStoreProperty(qcc::String const& keyName, ajn::MsgArg const& value,
-                          bool isPublic, bool isWritable, bool isAnnouncable);
-
-    /**
-     * Constructor for PropertyStoreProperty
-     * @param keyName
-     * @param value
-     * @param language
-     * @param isPublic
-     * @param isWritable
-     * @param isAnnouncable
-     */
-    PropertyStoreProperty(qcc::String const& keyName, ajn::MsgArg const& value, qcc::String const& language,
-                          bool isPublic, bool isWritable, bool isAnnouncable);
+    QCC_DEPRECATED(PropertyStoreProperty(qcc::String const& keyName, ajn::MsgArg const& value, qcc::String const& language,
+                                         bool isPublic, bool isWritable, bool isAnnouncable));
 
 
     /**
      * Destructor for PropertyStoreProperty
+     *
+     * @deprecated The PropertyStoreProperty class has been deprecated please see the
+     * AboutData class.
      */
-    virtual ~PropertyStoreProperty();
+    QCC_DEPRECATED(virtual ~PropertyStoreProperty());
 
     /**
      * Set the flags for the property
-     * @param isPublic
-     * @param isWritable
-     * @param isAnnouncable
+     *
+     * @deprecated The PropertyStoreProperty class has been deprecated please see the
+     * AboutData class.
+     *
+     * @param isPublic      Is the property public
+     * @param isWritable    Is the property writable
+     * @param isAnnouncable Is the property announced
      */
-    void setFlags(bool isPublic, bool isWritable, bool isAnnouncable);
+    QCC_DEPRECATED(void setFlags(bool isPublic, bool isWritable, bool isAnnouncable));
 
     /**
      * Set the language of the property
-     * @param language
+     *
+     * @deprecated The PropertyStoreProperty class has been deprecated please see the
+     * AboutData class.
+     *
+     * @param language The language tag identifying the localization language for the property
      */
-    void setLanguage(qcc::String const& language);
+    QCC_DEPRECATED(void setLanguage(qcc::String const & language));
 
     /**
      * Get the KeyName of the property
+     *
+     * @deprecated The PropertyStoreProperty class has been deprecated please see the
+     * AboutData class.
+     *
      * @return keyname
      */
-    const qcc::String& getPropertyName() const;
+    QCC_DEPRECATED(const qcc::String & getPropertyName() const);
 
     /**
      * Get the Value of the Property
+     *
+     * @deprecated The PropertyStoreProperty class has been deprecated please see the
+     * AboutData class.
+     *
      * @return value
      */
-    const ajn::MsgArg& getPropertyValue() const;
+    QCC_DEPRECATED(const ajn::MsgArg & getPropertyValue() const);
 
     /**
      * Get the Language of the Property
+     *
+     * @deprecated The PropertyStoreProperty class has been deprecated please see the
+     * AboutData class.
+     *
      * @return Language
      */
-    const qcc::String& getLanguage() const;
+    QCC_DEPRECATED(const qcc::String & getLanguage() const);
 
     /**
      * Get the isPublic boolean of the property
+     *
+     * @deprecated The PropertyStoreProperty class has been deprecated please see the
+     * AboutData class.
+     *
      * @return isPublic
      */
-    bool getIsPublic() const;
+    QCC_DEPRECATED(bool getIsPublic() const);
 
     /**
      * Get the isWritable boolean of the Property
+     *
+     * @deprecated The PropertyStoreProperty class has been deprecated please see the
+     * AboutData class.
+     *
      * @return isWritable
      */
-    bool getIsWritable() const;
+    QCC_DEPRECATED(bool getIsWritable() const);
 
     /**
      * Get the isAnnounceable boolean of the Property
+     *
+     * @deprecated The PropertyStoreProperty class has been deprecated please see the
+     * AboutData class.
+     *
      * @return isAnnounceable
      */
-    bool getIsAnnouncable() const;
+    QCC_DEPRECATED(bool getIsAnnouncable() const);
 
     /**
      * Set the isPublic boolean of the Property
-     * @param value
+     *
+     * @deprecated The PropertyStoreProperty class has been deprecated please see the
+     * AboutData class.
+     *
+     * @param value Is the property public
      */
-    void setIsPublic(bool value);
+    QCC_DEPRECATED(void setIsPublic(bool value));
 
     /**
      * set the IsWritable boolean of the Property
-     * @param value
+     *
+     * @deprecated The PropertyStoreProperty class has been deprecated please see the
+     * AboutData class.
+     *
+     * @param value Is the property writable
      */
-    void setIsWritable(bool value);
+    QCC_DEPRECATED(void setIsWritable(bool value));
 
     /**
      * set the isAnnounce of the Property
-     * @param value
+     *
+     * @deprecated The PropertyStoreProperty class has been deprecated please see the
+     * AboutData class.
+     *
+     * @param value is the property announced
      */
-    void setIsAnnouncable(bool value);
+    QCC_DEPRECATED(void setIsAnnouncable(bool value));
 
   private:
 

@@ -40,28 +40,43 @@ class TestTransport : public Transport {
     virtual bool IsRunning() { return true; }
     virtual TransportMask GetTransportMask() const { return mask; }
     virtual const char* GetTransportName() const { return name.c_str(); }
-    virtual QStatus NormalizeTransportSpec(const char* inSpec, String& outSpec, map<String, String>& argMap) const { return ER_OK; }
+    virtual QStatus NormalizeTransportSpec(const char* inSpec, String& outSpec, map<String, String>& argMap) const {
+        QCC_UNUSED(inSpec);
+        QCC_UNUSED(outSpec);
+        QCC_UNUSED(argMap);
+        return ER_OK;
+    }
     virtual bool IsBusToBus() const { return true; }
     bool tried;
   protected:
     BusAttachment& bus;
     TransportMask mask;
     String name;
+  private:
+    /* Private assigment operator - does nothing */
+    TestTransport operator=(const TestTransport&);
 };
 
 class ConnectFailTransport : public TestTransport {
   public:
     ConnectFailTransport(BusAttachment& bus, TransportMask mask, const char* name) : TestTransport(bus, mask, name) { }
     virtual QStatus Connect(const char* connectSpec, const SessionOpts& opts, BusEndpoint& newEp) {
+        QCC_UNUSED(connectSpec);
+        QCC_UNUSED(opts);
+        QCC_UNUSED(newEp);
         tried = true;
         return ER_FAIL;
     }
+  private:
+    /* Private Copy-constructor - does nothing */
+    ConnectFailTransport operator=(const ConnectFailTransport&);
 };
 
 class ConnectPassTransport : public TestTransport {
   public:
     ConnectPassTransport(BusAttachment& bus, TransportMask mask, const char* name) : TestTransport(bus, mask, name) { }
     virtual QStatus Connect(const char* connectSpec, const SessionOpts& opts, BusEndpoint& newEp) {
+        QCC_UNUSED(opts);
         tried = true;
         bool incoming = false;
         Stream* stream = NULL;
@@ -69,12 +84,18 @@ class ConnectPassTransport : public TestTransport {
         newEp = BusEndpoint::cast(ep);
         return ER_OK;
     }
+  private:
+    /* Private assigment operator - does nothing */
+    ConnectPassTransport operator=(const ConnectPassTransport&);
 };
 
 class _TestVirtualEndpoint : public _VirtualEndpoint {
   public:
     _TestVirtualEndpoint(const String& uniqueName, RemoteEndpoint& b2bEp) : _VirtualEndpoint(uniqueName, b2bEp) { }
-    virtual bool CanUseRoute(const RemoteEndpoint& b2bEndpoint) const { return true; }
+    virtual bool CanUseRoute(const RemoteEndpoint& b2bEndpoint) const {
+        QCC_UNUSED(b2bEndpoint);
+        return true;
+    }
 };
 typedef ManagedObj<_TestVirtualEndpoint> TestVirtualEndpoint;
 
@@ -86,11 +107,10 @@ class _JoinSessionMethodCall : public _Message {
         EXPECT_EQ(ER_OK, args[0].Set("s", host));
         EXPECT_EQ(ER_OK, args[1].Set("q", port));
         SetSessionOpts(opts, args[2]);
-        CompressionRules compressionRules;
         EXPECT_EQ(ER_OK, CallMsg(signature, joiner, org::alljoyn::Bus::WellKnownName, id,
                                  org::alljoyn::Bus::ObjectPath, org::alljoyn::Bus::InterfaceName, "JoinSession",
                                  args, 3,
-                                 0, compressionRules));
+                                 0));
         PeerStateTable peerStateTable;
         EXPECT_EQ(ER_OK, UnmarshalArgs(&peerStateTable, signature));
     }
@@ -155,13 +175,34 @@ class TestAllJoynObj : public AllJoynObj {
     }
     virtual QStatus SendAttachSession(SessionPort sessionPort, const char* src, const char* sessionHost, const char* dest,
                                       RemoteEndpoint& b2bEp, const char* remoteControllerName, SessionId outgoingSessionId,
-                                      const char* busAddr, const SessionOpts& optsIn, uint32_t& replyCode, SessionId& sessionId,
+                                      const char* busAddr, SessionOpts::NameTransferType nameTransfer,
+                                      CallerType type, const SessionOpts& optsIn, uint32_t& replyCode, SessionId& sessionId,
                                       SessionOpts& optsOut, MsgArg& members) {
+        QCC_UNUSED(sessionPort);
+        QCC_UNUSED(src);
+        QCC_UNUSED(sessionHost);
+        QCC_UNUSED(dest);
+        QCC_UNUSED(b2bEp);
+        QCC_UNUSED(remoteControllerName);
+        QCC_UNUSED(outgoingSessionId);
+        QCC_UNUSED(busAddr);
+        QCC_UNUSED(nameTransfer);
+        QCC_UNUSED(type);
+        QCC_UNUSED(replyCode);
+        QCC_UNUSED(sessionId);
+        QCC_UNUSED(members);
+
         optsOut.transports = optsIn.transports;
         return ER_OK;
     }
     virtual QStatus AddSessionRoute(SessionId id, BusEndpoint& srcEp, RemoteEndpoint* srcB2bEp, BusEndpoint& destEp,
                                     RemoteEndpoint& destB2bEp) {
+        QCC_UNUSED(id);
+        QCC_UNUSED(srcEp);
+        QCC_UNUSED(srcB2bEp);
+        QCC_UNUSED(destEp);
+        QCC_UNUSED(destB2bEp);
+
         return ER_OK;
     }
 
@@ -170,6 +211,7 @@ class TestAllJoynObj : public AllJoynObj {
         TestJoinSessionThread(TestAllJoynObj& ajObj, const Message& msg, bool isJoin)
             : JoinSessionThread(ajObj, msg, isJoin), ajObj(ajObj) { }
         virtual QStatus Reply(uint32_t replyCode, SessionId id, SessionOpts optsOut) {
+            QCC_UNUSED(id);
             ajObj.replyCode = replyCode;
             ajObj.connectedTransport = optsOut.transports;
             for (vector<TestTransport*>::iterator it = ajObj.transportList.begin(); it != ajObj.transportList.end(); ++it) {
@@ -285,8 +327,22 @@ class TestAllJoynObjBadSessionOpts : public TestAllJoynObj {
     }
     virtual QStatus SendAttachSession(SessionPort sessionPort, const char* src, const char* sessionHost, const char* dest,
                                       RemoteEndpoint& b2bEp, const char* remoteControllerName, SessionId outgoingSessionId,
-                                      const char* busAddr, const SessionOpts& optsIn, uint32_t& replyCode, SessionId& sessionId,
+                                      const char* busAddr, SessionOpts::NameTransferType nameTransfer,
+                                      CallerType type, const SessionOpts& optsIn, uint32_t& replyCode, SessionId& sessionId,
                                       SessionOpts& optsOut, MsgArg& members) {
+        QCC_UNUSED(sessionPort);
+        QCC_UNUSED(src);
+        QCC_UNUSED(sessionHost);
+        QCC_UNUSED(dest);
+        QCC_UNUSED(b2bEp);
+        QCC_UNUSED(remoteControllerName);
+        QCC_UNUSED(outgoingSessionId);
+        QCC_UNUSED(busAddr);
+        QCC_UNUSED(nameTransfer);
+        QCC_UNUSED(type);
+        QCC_UNUSED(sessionId);
+        QCC_UNUSED(members);
+
         if (optsIn.transports == TRANSPORT_UDP) {
             replyCode = ALLJOYN_JOINSESSION_REPLY_BAD_SESSION_OPTS;
         } else if (optsIn.transports == TRANSPORT_TCP) {

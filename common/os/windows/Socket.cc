@@ -52,7 +52,14 @@ namespace qcc {
 const SocketFd INVALID_SOCKET_FD = INVALID_SOCKET;
 const int MAX_LISTEN_CONNECTIONS = SOMAXCONN;
 
-qcc::String StrError()
+uint32_t GetLastError()
+{
+    WinsockCheck();
+    return WSAGetLastError();
+}
+
+
+qcc::String GetLastErrorString()
 {
     WinsockCheck();
     int errnum = WSAGetLastError();
@@ -69,6 +76,7 @@ qcc::String StrError()
     }
     return U32ToString(errnum) + " - " + msgbuf;
 }
+
 
 void MakeSockAddr(const IPAddress& addr,
                   uint16_t port,
@@ -94,6 +102,7 @@ void MakeSockAddr(const IPAddress& addr,
     }
 }
 
+
 void MakeSockAddr(const IPAddress& addr,
                   uint16_t port,
                   SOCKADDR_STORAGE* addrBuf,
@@ -105,6 +114,8 @@ void MakeSockAddr(const IPAddress& addr,
 QStatus GetSockAddr(const SOCKADDR_STORAGE* addrBuf, socklen_t addrSize,
                     IPAddress& addr, uint16_t& port)
 {
+    QCC_UNUSED(addrSize);
+
     QStatus status = ER_OK;
     char hostname[NI_MAXHOST];
     char servInfo[NI_MAXSERV];
@@ -117,7 +128,7 @@ QStatus GetSockAddr(const SOCKADDR_STORAGE* addrBuf, socklen_t addrSize,
 
     if (dwRetval != 0) {
         status = ER_OS_ERROR;
-        QCC_LogError(status, ("GetSockAddr: %s", StrError().c_str()));
+        QCC_LogError(status, ("GetSockAddr: %s", GetLastErrorString().c_str()));
     } else {
         /*
          * In the case of IPv6, the hostname will have the interface number
@@ -136,16 +147,6 @@ QStatus GetSockAddr(const SOCKADDR_STORAGE* addrBuf, socklen_t addrSize,
     return status;
 }
 
-uint32_t GetLastError()
-{
-    WinsockCheck();
-    return WSAGetLastError();
-}
-
-qcc::String GetLastErrorString()
-{
-    return StrError();
-}
 
 QStatus Socket(AddressFamily addrFamily, SocketType type, SocketFd& sockfd)
 {
@@ -162,7 +163,7 @@ QStatus Socket(AddressFamily addrFamily, SocketType type, SocketFd& sockfd)
     ret = socket(static_cast<int>(addrFamily), static_cast<int>(type), 0);
     if (ret == INVALID_SOCKET) {
         status = ER_OS_ERROR;
-        QCC_LogError(status, ("Opening socket: %s", StrError().c_str()));
+        QCC_LogError(status, ("Opening socket: %s", GetLastErrorString().c_str()));
     } else {
         sockfd = static_cast<SocketFd>(ret);
     }
@@ -199,7 +200,7 @@ QStatus Connect(SocketFd sockfd, const IPAddress& remoteAddr, uint16_t remotePor
 
         default:
             status = ER_OS_ERROR;
-            QCC_LogError(status, ("Connecting to %s %d: %s", remoteAddr.ToString().c_str(), remotePort, StrError().c_str()));
+            QCC_LogError(status, ("Connecting to %s %d: %s", remoteAddr.ToString().c_str(), remotePort, GetLastErrorString().c_str()));
             break;
         }
     } else {
@@ -207,7 +208,7 @@ QStatus Connect(SocketFd sockfd, const IPAddress& remoteAddr, uint16_t remotePor
         ret = ioctlsocket(sockfd, FIONBIO, &mode);
         if (ret == SOCKET_ERROR) {
             status = ER_OS_ERROR;
-            QCC_LogError(status, ("Failed to set socket non-blocking ", StrError().c_str()));
+            QCC_LogError(status, ("Failed to set socket non-blocking %s", GetLastErrorString().c_str()));
         }
     }
     return status;
@@ -216,9 +217,10 @@ QStatus Connect(SocketFd sockfd, const IPAddress& remoteAddr, uint16_t remotePor
 
 QStatus Connect(SocketFd sockfd, const char* pathName)
 {
+    QCC_UNUSED(sockfd);
+    QCC_UNUSED(pathName);
     return ER_NOT_IMPLEMENTED;
 }
-
 
 
 QStatus Bind(SocketFd sockfd, const IPAddress& localAddr, uint16_t localPort)
@@ -235,7 +237,7 @@ QStatus Bind(SocketFd sockfd, const IPAddress& localAddr, uint16_t localPort)
     ret = bind(static_cast<SOCKET>(sockfd), reinterpret_cast<struct sockaddr*>(&addr), addrLen);
     if (ret == SOCKET_ERROR) {
         status = (WSAGetLastError() == WSAEADDRNOTAVAIL) ? ER_SOCKET_BIND_ERROR : ER_OS_ERROR;
-        QCC_DbgPrintf(("Binding to %s %d failed: %s", localAddr.ToString().c_str(), localPort, StrError().c_str()));
+        QCC_DbgPrintf(("Binding to %s %d failed: %s", localAddr.ToString().c_str(), localPort, GetLastErrorString().c_str()));
     }
     return status;
 }
@@ -243,6 +245,8 @@ QStatus Bind(SocketFd sockfd, const IPAddress& localAddr, uint16_t localPort)
 
 QStatus Bind(SocketFd sockfd, const char* pathName)
 {
+    QCC_UNUSED(sockfd);
+    QCC_UNUSED(pathName);
     return ER_NOT_IMPLEMENTED;
 }
 
@@ -257,7 +261,7 @@ QStatus Listen(SocketFd sockfd, int backlog)
     ret = listen(static_cast<SOCKET>(sockfd), backlog);
     if (ret == SOCKET_ERROR) {
         status = ER_OS_ERROR;
-        QCC_LogError(status, ("Listening: %s", StrError().c_str()));
+        QCC_LogError(status, ("Listening: %s", GetLastErrorString().c_str()));
     }
     return status;
 }
@@ -279,7 +283,7 @@ QStatus Accept(SocketFd sockfd, IPAddress& remoteAddr, uint16_t& remotePort, Soc
             status = ER_WOULDBLOCK;
         } else {
             status = ER_OS_ERROR;
-            QCC_LogError(status, ("Listening: %s", StrError().c_str()));
+            QCC_LogError(status, ("Listening: %s", GetLastErrorString().c_str()));
         }
         newSockfd = qcc::INVALID_SOCKET_FD;
     } else {
@@ -303,7 +307,7 @@ QStatus Accept(SocketFd sockfd, IPAddress& remoteAddr, uint16_t& remotePort, Soc
         ret = ioctlsocket(newSockfd, FIONBIO, &mode);
         if (ret == SOCKET_ERROR) {
             status = ER_OS_ERROR;
-            QCC_LogError(status, ("Failed to set socket non-blocking %s", StrError().c_str()));
+            QCC_LogError(status, ("Failed to set socket non-blocking %s", GetLastErrorString().c_str()));
             closesocket(newSockfd);
             newSockfd = qcc::INVALID_SOCKET_FD;
         } else {
@@ -354,7 +358,7 @@ void Close(SocketFd sockfd)
     QCC_DbgTrace(("Close (sockfd = %d)", sockfd));
     ret = closesocket(static_cast<SOCKET>(sockfd));
     if (ret == SOCKET_ERROR) {
-        QCC_LogError(ER_OS_ERROR, ("Close: (sockfd = %d) %s", sockfd, StrError().c_str()));
+        QCC_LogError(ER_OS_ERROR, ("Close: (sockfd = %d) %s", sockfd, GetLastErrorString().c_str()));
     }
 }
 
@@ -365,7 +369,7 @@ QStatus SocketDup(SocketFd sockfd, SocketFd& dupSock)
 
     int ret = WSADuplicateSocket(sockfd, qcc::GetPid(), &protocolInfo);
     if (ret == SOCKET_ERROR) {
-        QCC_LogError(ER_OS_ERROR, ("SocketDup: %s", StrError().c_str()));
+        QCC_LogError(ER_OS_ERROR, ("SocketDup: %s", GetLastErrorString().c_str()));
         status = ER_OS_ERROR;
     } else {
         dupSock = WSASocket(protocolInfo.iAddressFamily,
@@ -376,7 +380,7 @@ QStatus SocketDup(SocketFd sockfd, SocketFd& dupSock)
                             WSA_FLAG_OVERLAPPED);
         if (dupSock == INVALID_SOCKET) {
             status = ER_OS_ERROR;
-            QCC_LogError(status, ("SocketDup WSASocket: %s", StrError().c_str()));
+            QCC_LogError(status, ("SocketDup WSASocket: %s", GetLastErrorString().c_str()));
         }
     }
     return status;
@@ -397,7 +401,7 @@ QStatus GetLocalAddress(SocketFd sockfd, IPAddress& addr, uint16_t& port)
 
     if (ret == SOCKET_ERROR) {
         status = ER_OS_ERROR;
-        QCC_LogError(status, ("Geting Local Address: %s", StrError().c_str()));
+        QCC_LogError(status, ("Geting Local Address: %s", GetLastErrorString().c_str()));
     } else {
         QCC_DbgPrintf(("ret = %d  addrBuf.ss_family = %d  addrLen = %d", ret, addrBuf.ss_family, addrLen));
         if (addrBuf.ss_family == AF_INET) {
@@ -437,7 +441,7 @@ QStatus Send(SocketFd sockfd, const void* buf, size_t len, size_t& sent)
             status = ER_WOULDBLOCK;
         } else {
             status = ER_OS_ERROR;
-            QCC_LogError(status, ("Send: %s", StrError().c_str()));
+            QCC_LogError(status, ("Send: %s", GetLastErrorString().c_str()));
         }
     } else {
         sent = static_cast<size_t>(ret);
@@ -470,7 +474,7 @@ QStatus SendTo(SocketFd sockfd, IPAddress& remoteAddr, uint16_t remotePort, uint
             status = ER_WOULDBLOCK;
         } else {
             status = ER_OS_ERROR;
-            QCC_LogError(status, ("Send: %s", StrError().c_str()));
+            QCC_LogError(status, ("Send: %s", GetLastErrorString().c_str()));
         }
     } else {
         sent = static_cast<size_t>(ret);
@@ -567,7 +571,7 @@ QStatus RecvWithAncillaryData(SocketFd sockfd, IPAddress& remoteAddr, uint16_t& 
                        &recv, NULL, NULL);
         if (ret == SOCKET_ERROR) {
             status = ER_OS_ERROR;
-            QCC_LogError(status, ("RecvWithAncillaryData (sockfd = %u): %s", sockfd, StrError().c_str()));
+            QCC_LogError(status, ("RecvWithAncillaryData (sockfd = %u): %s", sockfd, GetLastErrorString().c_str()));
             return status;
         }
     }
@@ -578,7 +582,7 @@ QStatus RecvWithAncillaryData(SocketFd sockfd, IPAddress& remoteAddr, uint16_t& 
 
     if (ret == SOCKET_ERROR) {
         status = ER_OS_ERROR;
-        QCC_LogError(status, ("RecvWithAncillaryData (sockfd = %u): %s", sockfd, errno, StrError().c_str()));
+        QCC_LogError(status, ("RecvWithAncillaryData (sockfd = %u): %s", sockfd, GetLastErrorString().c_str()));
         return status;
     }
     received = recv;
@@ -634,7 +638,7 @@ QStatus RecvFrom(SocketFd sockfd, IPAddress& remoteAddr, uint16_t& remotePort,
             status = ER_WOULDBLOCK;
         } else {
             status = ER_OS_ERROR;
-            QCC_LogError(status, ("Receive: %d", StrError().c_str()));
+            QCC_LogError(status, ("Receive: %s", GetLastErrorString().c_str()));
         }
         received = 0;
     } else {
@@ -720,14 +724,14 @@ QStatus RecvWithFds(SocketFd sockfd, void* buf, size_t len, size_t& received, So
     int ret = ioctlsocket(sockfd, SIOCATMARK, &marked);
     if (ret == SOCKET_ERROR) {
         status = ER_OS_ERROR;
-        QCC_LogError(status, ("RecvWithFds ioctlsocket: %s", StrError().c_str()));
+        QCC_LogError(status, ("RecvWithFds ioctlsocket: %s", GetLastErrorString().c_str()));
     }
     if ((status == ER_OK) && !marked) {
         char fdCount;
         ret = recv(sockfd, &fdCount, 1, MSG_OOB);
         if (ret == SOCKET_ERROR) {
             status = ER_OS_ERROR;
-            QCC_LogError(status, ("RecvWithFds recv (MSG_OOB): %s", StrError().c_str()));
+            QCC_LogError(status, ("RecvWithFds recv (MSG_OOB): %s", GetLastErrorString().c_str()));
         } else {
             recvdFds = fdCount;
             QCC_DbgHLPrintf(("RecvWithFds OOB %d handles", recvdFds));
@@ -774,7 +778,7 @@ QStatus RecvWithFds(SocketFd sockfd, void* buf, size_t len, size_t& received, So
                                         WSA_FLAG_OVERLAPPED);
                 if (fd == INVALID_SOCKET) {
                     status = ER_OS_ERROR;
-                    QCC_LogError(status, ("RecvWithFds WSASocket: %s", StrError().c_str()));
+                    QCC_LogError(status, ("RecvWithFds WSASocket: %s", GetLastErrorString().c_str()));
                 } else {
                     QCC_DbgHLPrintf(("RecvWithFds got handle %u", fd));
                     *fdList++ = fd;
@@ -808,7 +812,7 @@ QStatus SendWithFds(SocketFd sockfd, const void* buf, size_t len, size_t& sent, 
     int ret = send(sockfd, &oob, 1, MSG_OOB);
     if (ret == SOCKET_ERROR) {
         status = ER_OS_ERROR;
-        QCC_LogError(status, ("RecvWithFds recv (MSG_OOB): %s", StrError().c_str()));
+        QCC_LogError(status, ("RecvWithFds recv (MSG_OOB): %s", GetLastErrorString().c_str()));
     } else {
         QCC_DbgHLPrintf(("SendWithFds OOB %d handles", oob));
     }
@@ -817,7 +821,7 @@ QStatus SendWithFds(SocketFd sockfd, const void* buf, size_t len, size_t& sent, 
         ret = WSADuplicateSocket(*fdList++, pid, &protocolInfo);
         if (ret) {
             status = ER_OS_ERROR;
-            QCC_LogError(status, ("SendFd WSADuplicateSocket: %s", StrError().c_str()));
+            QCC_LogError(status, ("SendFd WSADuplicateSocket: %s", GetLastErrorString().c_str()));
         } else {
             uint8_t* buf = reinterpret_cast<uint8_t*>(&protocolInfo);
             size_t sz = sizeof(protocolInfo);
@@ -886,7 +890,7 @@ QStatus SocketPair(SocketFd(&sockets)[2])
     int ret = getsockname(sockets[0], reinterpret_cast<sockaddr*>(&addrInfo), &len);
     if (ret == SOCKET_ERROR) {
         status = ER_OS_ERROR;
-        QCC_LogError(status, ("getsockopt failed: %s", StrError().c_str()));
+        QCC_LogError(status, ("getsockopt failed: %s", GetLastErrorString().c_str()));
         goto socketPairCleanup;
     }
 
@@ -931,7 +935,7 @@ QStatus SetBlocking(SocketFd sockfd, bool blocking)
     int ret = ioctlsocket(sockfd, FIONBIO, &mode);
     if (ret == SOCKET_ERROR) {
         status = ER_OS_ERROR;
-        QCC_LogError(status, ("Failed to set socket non-blocking %s", StrError().c_str()));
+        QCC_LogError(status, ("Failed to set socket non-blocking %s", GetLastErrorString().c_str()));
     }
     return status;
 }
@@ -943,7 +947,7 @@ QStatus SetSndBuf(SocketFd sockfd, size_t bufSize)
     int r = setsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, (const char*)&arg, sizeof(arg));
     if (r != 0) {
         status = ER_OS_ERROR;
-        QCC_LogError(status, ("Setting SO_SNDBUF failed: (%d) %s", errno, strerror(errno)));
+        QCC_LogError(status, ("Setting SO_SNDBUF failed: %s", GetLastErrorString().c_str()));
     }
     return status;
 }
@@ -956,7 +960,7 @@ QStatus GetSndBuf(SocketFd sockfd, size_t& bufSize)
     int r = getsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, (char*)&arg, &len);
     if (r != 0) {
         status = ER_OS_ERROR;
-        QCC_LogError(status, ("Getting SO_SNDBUF failed: (%d) %s", errno, strerror(errno)));
+        QCC_LogError(status, ("Getting SO_SNDBUF failed: %s", GetLastErrorString().c_str()));
     }
     bufSize = arg;
     return status;
@@ -969,7 +973,7 @@ QStatus SetRcvBuf(SocketFd sockfd, size_t bufSize)
     int r = setsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, (const char*)&arg, sizeof(arg));
     if (r != 0) {
         status = ER_OS_ERROR;
-        QCC_LogError(status, ("Setting SO_RCVBUF failed: (%d) %s", errno, strerror(errno)));
+        QCC_LogError(status, ("Setting SO_RCVBUF failed: %s", GetLastErrorString().c_str()));
     }
     return status;
 }
@@ -982,7 +986,7 @@ QStatus GetRcvBuf(SocketFd sockfd, size_t& bufSize)
     int r = getsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, (char*)&arg, &len);
     if (r != 0) {
         status = ER_OS_ERROR;
-        QCC_LogError(status, ("Getting SO_RCVBUF failed: (%d) %s", errno, strerror(errno)));
+        QCC_LogError(status, ("Getting SO_RCVBUF failed: %s", GetLastErrorString().c_str()));
     }
     bufSize = arg;
     return status;
@@ -998,7 +1002,7 @@ QStatus SetLinger(SocketFd sockfd, bool onoff, uint32_t linger)
     int r = setsockopt(sockfd, SOL_SOCKET, SO_LINGER, (char*)&l, sizeof(l));
     if (r != 0) {
         status = ER_OS_ERROR;
-        QCC_LogError(status, ("Setting SO_LINGER failed: (%d) %s", errno, strerror(errno)));
+        QCC_LogError(status, ("Setting SO_LINGER failed: %s", GetLastErrorString().c_str()));
     }
     return status;
 }
@@ -1010,7 +1014,7 @@ QStatus SetNagle(SocketFd sockfd, bool useNagle)
     int r = setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, (char*)&arg, sizeof(int));
     if (r != 0) {
         status = ER_OS_ERROR;
-        QCC_LogError(status, ("Setting TCP_NODELAY failed: (%d) %s", GetLastError(), GetLastErrorString().c_str()));
+        QCC_LogError(status, ("Setting TCP_NODELAY failed: %s", GetLastErrorString().c_str()));
     }
     return status;
 }
@@ -1027,7 +1031,7 @@ QStatus SetReuseAddress(SocketFd sockfd, bool reuse)
         int arg = reuse ? 1 : -0;
         int r = setsockopt(sockfd, SOL_SOCKET, SO_EXCLUSIVEADDRUSE, (const char*)&arg, sizeof(arg));
         if (r != 0) {
-            QCC_LogError(ER_OS_ERROR, ("Setting SO_EXCLUSIVEADDRUSE failed: (%d) %s", GetLastError(), GetLastErrorString().c_str()));
+            QCC_LogError(ER_OS_ERROR, ("Setting SO_EXCLUSIVEADDRUSE failed: %s", GetLastErrorString().c_str()));
         }
     }
     return status;
@@ -1040,7 +1044,7 @@ QStatus SetReusePort(SocketFd sockfd, bool reuse)
     int r = setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (const char*)&arg, sizeof(arg));
     if (r != 0) {
         status = ER_OS_ERROR;
-        QCC_LogError(status, ("Setting SO_REUSEADDR failed: (%d) %s", GetLastError(), GetLastErrorString().c_str()));
+        QCC_LogError(status, ("Setting SO_REUSEADDR failed: %s", GetLastErrorString().c_str()));
     }
     return status;
 }
@@ -1102,14 +1106,14 @@ QStatus MulticastGroupOpInternal(SocketFd sockFd, AddressFamily family, String m
 
         int rc = InetPtoN(AF_INET, multicastGroup.c_str(), &mreq.imr_multiaddr);
         if (rc != 1) {
-            QCC_LogError(ER_OS_ERROR, ("InetPtoN() failed: %d - %s", GetLastError(), GetLastErrorString().c_str()));
+            QCC_LogError(ER_OS_ERROR, ("InetPtoN() failed: %s", GetLastErrorString().c_str()));
             return ER_OS_ERROR;
         }
 
         int opt = op == JOIN ? IP_ADD_MEMBERSHIP : IP_DROP_MEMBERSHIP;
         rc = setsockopt(sockFd, IPPROTO_IP, opt, reinterpret_cast<const char*>(&mreq), sizeof(mreq));
         if (rc == -1) {
-            QCC_LogError(ER_OS_ERROR, ("setsockopt(%s) failed: %d - %s", op == JOIN ? "IP_ADD_MEMBERSHIP" : "IP_DROP_MEMBERSHIP", GetLastError(), GetLastErrorString().c_str()));
+            QCC_LogError(ER_OS_ERROR, ("setsockopt(%s) failed: %s", op == JOIN ? "IP_ADD_MEMBERSHIP" : "IP_DROP_MEMBERSHIP", GetLastErrorString().c_str()));
             return ER_OS_ERROR;
         }
     } else if (family == QCC_AF_INET6) {
@@ -1142,14 +1146,14 @@ QStatus MulticastGroupOpInternal(SocketFd sockFd, AddressFamily family, String m
 
         int rc = InetPtoN(AF_INET6, multicastGroup.c_str(), &mreq.ipv6mr_multiaddr);
         if (rc != 1) {
-            QCC_LogError(ER_OS_ERROR, ("InetPtoN() failed: %d - %s", GetLastError(), GetLastErrorString().c_str()));
+            QCC_LogError(ER_OS_ERROR, ("InetPtoN() failed: %s", GetLastErrorString().c_str()));
             return ER_OS_ERROR;
         }
 
         int opt = op == JOIN ? IPV6_ADD_MEMBERSHIP : IPV6_DROP_MEMBERSHIP;
         rc = setsockopt(sockFd, IPPROTO_IPV6, opt, reinterpret_cast<const char*>(&mreq), sizeof(mreq));
         if (rc == -1) {
-            QCC_LogError(ER_OS_ERROR, ("setsockopt(IP_ADD_MEMBERSHIP) failed: %d - %s", GetLastError(), GetLastErrorString().c_str()));
+            QCC_LogError(ER_OS_ERROR, ("setsockopt(IP_ADD_MEMBERSHIP) failed: %s", GetLastErrorString().c_str()));
             return ER_OS_ERROR;
         }
     }
@@ -1214,7 +1218,7 @@ QStatus SetMulticastInterface(SocketFd sockFd, AddressFamily family, qcc::String
 
         int rc = setsockopt(sockFd, IPPROTO_IP, IP_MULTICAST_IF, reinterpret_cast<const char*>(&addr), sizeof(addr));
         if (rc == -1) {
-            QCC_LogError(ER_OS_ERROR, ("setsockopt(IP_MULTICAST_IF) failed: %d - %s", GetLastError(), GetLastErrorString().c_str()));
+            QCC_LogError(ER_OS_ERROR, ("setsockopt(IP_MULTICAST_IF) failed: %s", GetLastErrorString().c_str()));
             return ER_OS_ERROR;
         }
     } else if (family == QCC_AF_INET6) {
@@ -1246,7 +1250,7 @@ QStatus SetMulticastInterface(SocketFd sockFd, AddressFamily family, qcc::String
 
         int rc = setsockopt(sockFd, IPPROTO_IPV6, IP_MULTICAST_IF, reinterpret_cast<const char*>(&index), sizeof(index));
         if (rc == -1) {
-            QCC_LogError(ER_OS_ERROR, ("setsockopt(IP_MULTICAST_IF) failed: %d - %s", GetLastError(), GetLastErrorString().c_str()));
+            QCC_LogError(ER_OS_ERROR, ("setsockopt(IP_MULTICAST_IF) failed: %s", GetLastErrorString().c_str()));
             return ER_OS_ERROR;
         }
     }
@@ -1268,13 +1272,13 @@ QStatus SetMulticastHops(SocketFd sockFd, AddressFamily family, uint32_t hops)
     if (family == QCC_AF_INET) {
         int rc = setsockopt(sockFd, IPPROTO_IP, IP_MULTICAST_TTL, reinterpret_cast<const char*>(&hops), sizeof(hops));
         if (rc == -1) {
-            QCC_LogError(ER_OS_ERROR, ("setsockopt(IP_MULTICAST_TTL) failed: %d - %s", GetLastError(), GetLastErrorString().c_str()));
+            QCC_LogError(ER_OS_ERROR, ("setsockopt(IP_MULTICAST_TTL) failed: %s", GetLastErrorString().c_str()));
             return ER_OS_ERROR;
         }
     } else if (family == QCC_AF_INET6) {
         int rc = setsockopt(sockFd, IPPROTO_IPV6, IPV6_MULTICAST_HOPS, reinterpret_cast<const char*>(&hops), sizeof(hops));
         if (rc == -1) {
-            QCC_LogError(ER_OS_ERROR, ("setsockopt(IP_MULTICAST_HOPS) failed: %d - %s", GetLastError(), GetLastErrorString().c_str()));
+            QCC_LogError(ER_OS_ERROR, ("setsockopt(IP_MULTICAST_HOPS) failed: %s", GetLastErrorString().c_str()));
             return ER_OS_ERROR;
         }
     }
@@ -1288,7 +1292,7 @@ QStatus SetBroadcast(SocketFd sockfd, bool broadcast)
     int r = setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, (const char*)&arg, sizeof(arg));
     if (r != 0) {
         status = ER_OS_ERROR;
-        QCC_LogError(status, ("Setting SO_BROADCAST failed: (%d) %s", GetLastError(), GetLastErrorString().c_str()));
+        QCC_LogError(status, ("Setting SO_BROADCAST failed: %s", GetLastErrorString().c_str()));
     }
     return status;
 }
@@ -1308,13 +1312,13 @@ QStatus SetRecvPktAncillaryData(SocketFd sockfd, AddressFamily addrFamily, bool 
         int r = setsockopt(sockfd, IPPROTO_IP, IP_PKTINFO, (char*)&arg, sizeof(arg));
         if (r != 0) {
             status = ER_OS_ERROR;
-            QCC_LogError(status, ("Setting IP_PKTINFO failed: (%d) %s", errno, strerror(errno)));
+            QCC_LogError(status, ("Setting IP_PKTINFO failed: %s", GetLastErrorString().c_str()));
         }
     } else if (addrFamily == QCC_AF_INET6) {
         int r = setsockopt(sockfd, IPPROTO_IPV6, IPV6_PKTINFO, (char*)&arg, sizeof(arg));
         if (r != 0) {
             status = ER_OS_ERROR;
-            QCC_LogError(status, ("Setting IPV6_PKTINFO failed: (%d) %s", errno, strerror(errno)));
+            QCC_LogError(status, ("Setting IPV6_PKTINFO failed: %s", GetLastErrorString().c_str()));
         }
     }
     return status;
@@ -1327,7 +1331,7 @@ QStatus SetRecvIPv6Only(SocketFd sockfd, bool recv)
     int r = setsockopt(sockfd, IPPROTO_IPV6, IPV6_V6ONLY, (char*)&arg, sizeof(arg));
     if (r != 0) {
         status = ER_OS_ERROR;
-        QCC_LogError(status, ("Setting IPV6_V6ONLY failed: (%d) %s", errno, strerror(errno)));
+        QCC_LogError(status, ("Setting IPV6_V6ONLY failed: %s", GetLastErrorString().c_str()));
     }
     return status;
 }

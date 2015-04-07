@@ -14,10 +14,11 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
+#include <alljoyn/AboutObj.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/BusListener.h>
 #include <alljoyn/BusObject.h>
-#include <alljoyn/AboutObj.h>
+#include <alljoyn/Init.h>
 
 #include <signal.h>
 #include <stdio.h>
@@ -27,6 +28,7 @@ using namespace ajn;
 static volatile sig_atomic_t s_interrupt = false;
 
 static void CDECL_CALL SigIntHandler(int sig) {
+    QCC_UNUSED(sig);
     s_interrupt = true;
 }
 
@@ -36,6 +38,9 @@ static const char* INTERFACE_NAME = "com.example.about.feature.interface.sample"
 class MySessionPortListener : public SessionPortListener {
     bool AcceptSessionJoiner(ajn::SessionPort sessionPort, const char* joiner, const ajn::SessionOpts& opts)
     {
+        QCC_UNUSED(joiner);
+        QCC_UNUSED(opts);
+
         if (sessionPort != ASSIGNED_SESSION_PORT) {
             printf("Rejecting join attempt on unexpected session port %d\n", sessionPort);
             return false;
@@ -44,6 +49,9 @@ class MySessionPortListener : public SessionPortListener {
     }
     void SessionJoined(SessionPort sessionPort, SessionId id, const char* joiner)
     {
+        QCC_UNUSED(sessionPort);
+        QCC_UNUSED(joiner);
+
         printf("Session Joined SessionId = %u\n", id);
     }
 };
@@ -73,6 +81,8 @@ class MyBusObject : public BusObject {
     // Respond to remote method call `Echo` by returning the string back to the
     // sender.
     void Echo(const InterfaceDescription::Member* member, Message& msg) {
+        QCC_UNUSED(member);
+
         printf("Echo method called: %s", msg->GetArg(0)->v_string.str);
         const MsgArg* arg((msg->GetArg(0)));
         QStatus status = MethodReply(msg, arg, 1);
@@ -83,15 +93,28 @@ class MyBusObject : public BusObject {
 };
 
 /** Main entry point */
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
+    QCC_UNUSED(argc);
+    QCC_UNUSED(argv);
+
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+#endif
+
     /* Install SIGINT handler so Ctrl + C deallocates memory properly */
     signal(SIGINT, SigIntHandler);
 
     QStatus status;
 
-    BusAttachment bus("About Service Example", true);
-    status = bus.Start();
+    BusAttachment* bus = new BusAttachment("About Service Example", true);
+    status = bus->Start();
     if (ER_OK == status) {
         printf("BusAttachment started.\n");
     } else {
@@ -99,9 +122,9 @@ int main(int argc, char** argv)
         exit(1);
     }
 
-    status = bus.Connect();
+    status = bus->Connect();
     if (ER_OK == status) {
-        printf("BusAttachment connect succeeded. BusName %s\n", bus.GetUniqueName().c_str());
+        printf("BusAttachment connect succeeded. BusName %s\n", bus->GetUniqueName().c_str());
     } else {
         printf("FAILED to connect to router node (%s)\n", QCC_StatusText(status));
         exit(1);
@@ -110,7 +133,7 @@ int main(int argc, char** argv)
     SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
     SessionPort sessionPort = ASSIGNED_SESSION_PORT;
     MySessionPortListener sessionPortListener;
-    status = bus.BindSessionPort(sessionPort, opts, sessionPortListener);
+    status = bus->BindSessionPort(sessionPort, opts, sessionPortListener);
     if (ER_OK != status) {
         printf("Failed to BindSessionPort (%s)", QCC_StatusText(status));
         exit(1);
@@ -163,26 +186,26 @@ int main(int argc, char** argv)
                         "</interface>"
                         "</node>";
 
-    status = bus.CreateInterfacesFromXml(iface.c_str());
+    status = bus->CreateInterfacesFromXml(iface.c_str());
     if (ER_OK != status) {
         printf("Failed to parse the xml interface definition (%s)", QCC_StatusText(status));
         exit(1);
     }
 
-    MyBusObject busObject(bus, "/example/path");
+    MyBusObject* busObject = new MyBusObject(*bus, "/example/path");
 
-    status = bus.RegisterBusObject(busObject);
+    status = bus->RegisterBusObject(*busObject);
     if (ER_OK != status) {
         printf("Failed to register BusObject (%s)", QCC_StatusText(status));
         exit(1);
     }
 
     // Announce about signal
-    AboutObj aboutObj(bus);
+    AboutObj* aboutObj = new AboutObj(*bus);
     // Note the ObjectDescription that is part of the Announce signal is found
     // automatically by introspecting the BusObjects registered with the bus
     // attachment.
-    status = aboutObj.Announce(sessionPort, aboutData);
+    status = aboutObj->Announce(sessionPort, aboutData);
     if (ER_OK == status) {
         printf("AboutObj Announce Succeeded.\n");
     } else {
@@ -201,5 +224,12 @@ int main(int argc, char** argv)
         }
     }
 
+    delete aboutObj;
+    delete busObject;
+    delete bus;
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return 0;
 }

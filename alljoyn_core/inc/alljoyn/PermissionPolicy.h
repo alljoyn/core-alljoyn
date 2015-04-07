@@ -593,6 +593,9 @@ class PermissionPolicy {
          */
         virtual QStatus Marshal(PermissionPolicy& policy, uint8_t** buf, size_t* size)
         {
+            QCC_UNUSED(policy);
+            QCC_UNUSED(buf);
+            QCC_UNUSED(size);
             return ER_NOT_IMPLEMENTED;
         }
 
@@ -606,6 +609,9 @@ class PermissionPolicy {
          */
         virtual QStatus Unmarshal(PermissionPolicy& policy, const uint8_t* buf, size_t size)
         {
+            QCC_UNUSED(policy);
+            QCC_UNUSED(buf);
+            QCC_UNUSED(size);
             return ER_NOT_IMPLEMENTED;
         }
 
@@ -619,6 +625,9 @@ class PermissionPolicy {
          */
         virtual QStatus Digest(PermissionPolicy& policy, uint8_t* digest, size_t len)
         {
+            QCC_UNUSED(policy);
+            QCC_UNUSED(digest);
+            QCC_UNUSED(len);
             return ER_NOT_IMPLEMENTED;
         }
 
@@ -850,6 +859,16 @@ class DefaultPolicyMarshaller : public PermissionPolicy::Marshaller {
     QStatus Digest(PermissionPolicy& policy, uint8_t* digest, size_t len);
 
   private:
+    /**
+     * Assignment operator is private
+     */
+    DefaultPolicyMarshaller& operator=(const DefaultPolicyMarshaller& other);
+
+    /**
+     * Copy constructor is private
+     */
+    DefaultPolicyMarshaller(const DefaultPolicyMarshaller& other);
+
     QStatus MarshalPrep(PermissionPolicy& policy);
     Message& msg;
 };

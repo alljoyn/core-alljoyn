@@ -36,7 +36,7 @@ namespace qcc {
 
 static const size_t ECC_COORDINATE_SZ = 8 * sizeof(uint32_t);
 
-/*
+/**
  * Empty ECC coordinate
  */
 static const uint8_t ECC_COORDINATE_EMPTY[ECC_COORDINATE_SZ] = { 0 };
@@ -44,18 +44,36 @@ static const uint8_t ECC_COORDINATE_EMPTY[ECC_COORDINATE_SZ] = { 0 };
 /**
  * The ECC private key big endian byte array
  */
-
 struct ECCPrivateKey {
+    /**
+     * The ECCPrivateKey data
+     */
     uint8_t d[ECC_COORDINATE_SZ];
+
+    /**
+     * ECCPrivateKey constructor
+     */
     ECCPrivateKey() {
         memset(d, 0, ECC_COORDINATE_SZ);
     }
 
+    /**
+     * the assign operator for the ECCPrivateKey
+     *
+     * @param[in] k the ECCPrivate key to assign
+     */
     void operator=(const ECCPrivateKey& k)
     {
         memcpy(d, k.d, ECC_COORDINATE_SZ);
     }
 
+    /**
+     * Equals operator for the ECCPrivateKey.
+     *
+     * @param[in] k the ECCPrivateKey to compare
+     *
+     * @return true if the ECCPrivateKeys are equal
+     */
     bool operator==(const ECCPrivateKey& k) const
     {
         return memcmp(d, k.d, ECC_COORDINATE_SZ) == 0;
@@ -66,7 +84,13 @@ struct ECCPrivateKey {
  * The ECC public key big endian byte array
  */
 struct ECCPublicKey {
+    /**
+     * The x coordinate of the elliptic curve
+     */
     uint8_t x[ECC_COORDINATE_SZ];
+    /**
+     * The y coordinate of the elliptic curve
+     */
     uint8_t y[ECC_COORDINATE_SZ];
 
     ECCPublicKey() {
@@ -74,23 +98,53 @@ struct ECCPublicKey {
         memset(y, 0, ECC_COORDINATE_SZ);
     }
 
+    /**
+     * Check to see if the ECCPublicKey is empty.
+     *
+     * @return true if the ECCPublicKey is empty
+     */
     bool empty() const
     {
         return (memcmp(x, ECC_COORDINATE_EMPTY, ECC_COORDINATE_SZ) == 0) &&
                (memcmp(y, ECC_COORDINATE_EMPTY, ECC_COORDINATE_SZ) == 0);
     }
 
+    /**
+     * Equals operator
+     *
+     * @param[in] k the ECCPublic key to compare
+     *
+     * @return true if the compared ECCPublicKeys are equal to each other
+     */
     bool operator==(const ECCPublicKey& k) const
     {
         int n = memcmp(x, k.x, ECC_COORDINATE_SZ);
         return (n == 0) && (0 == memcmp(y, k.y, ECC_COORDINATE_SZ));
     }
 
+    /**
+     * Not equals operator
+     *
+     * @param[in] k the ECCPublicKey to compare
+     *
+     * @return true if the compared ECCPublicKeys are not equal to each other
+     */
     bool operator!=(const ECCPublicKey& k) const
     {
         return !(*this == k);
     }
 
+    /**
+     * The less than operator for the ECCPublicKey
+     *
+     * The x coordinate are compared first. If the x coordinates match then
+     * the y coordinate is compared.
+     *
+     * @param[in] k the ECCPublicKey to compare
+     *
+     * @return True if the left ECCPublicKey is less than the right ECCPublicKey
+     * false otherwise.
+     */
     bool operator<(const ECCPublicKey& k) const
     {
         int n = memcmp(x, k.x, ECC_COORDINATE_SZ);
@@ -104,6 +158,11 @@ struct ECCPublicKey {
         }
     }
 
+    /**
+     * Assign operator for ECCPublicKey
+     *
+     * @param[in] k the ECCPublic key to assign
+     */
     void operator=(const ECCPublicKey& k)
     {
         memcpy(x, k.x, ECC_COORDINATE_SZ);
@@ -113,7 +172,7 @@ struct ECCPublicKey {
     /**
      * Exports the key to a byte array.
      * @param[in] data the array to store the data in
-     * @param[in, out] size provides the size of the passed buffer as input. On a  successfull return it
+     * @param[in,out] size provides the size of the passed buffer as input. On a  successfull return it
      *   will contain the actual amount of data stored
      *
      * @return ER_OK on success others on failure
@@ -128,6 +187,11 @@ struct ECCPublicKey {
      * @return ER_OK  on success others on failure
      */
     QStatus Import(const uint8_t* data, size_t size);
+    /**
+     * Return the ECCPublicKey to a string.
+     * @return
+     * the ECCPublicKey to a string.
+     */
     const qcc::String ToString() const;
 
 };
@@ -135,20 +199,59 @@ struct ECCPublicKey {
 /**
  * The ECC secret
  */
-struct ECCSecret {
-    uint8_t z[ECC_COORDINATE_SZ];
 
-    ECCSecret() {
-        memset(z, 0, ECC_COORDINATE_SZ);
-    }
-    void operator=(const ECCSecret& k)
-    {
-        memcpy(z, k.z, ECC_COORDINATE_SZ);
-    }
-    bool operator==(const ECCSecret& k) const
-    {
-        return memcmp(z, k.z, ECC_COORDINATE_SZ) == 0;
-    }
+class ECCSecret {
+  public:
+
+    /**
+     * Opaque type for the internal state.
+     */
+    struct ECCSecretState;
+
+    /**
+     * Default Constructor;
+     */
+    ECCSecret();
+
+    /**
+     * Set the opaque secret state for this object
+     * @param   pEccSecretState the internal secret state to set.
+     * @return
+     *      ER_OK if the secret is successfully set.
+     *      ER_FAIL otherwise.
+     *      Other error status.
+     */
+    QStatus SetSecretState(const ECCSecretState* pEccSecretState);
+
+    /**
+     * Derives the PreMasterSecret.
+     * Current implementaiton uses SHA256 HASH KDF.
+     * @param   pbPreMasterSecret buffer to receive premaster secret.
+     * @param   cbPreMasterSecret count of buffer to receive premaster secret.
+     * @return
+     *      ER_OK if the pre-master secret is successfully computed and put in pbPreMasterSecret.
+     *      ER_FAIL otherwise.
+     *      Other error status.
+     */
+    QStatus DerivePreMasterSecret(uint8_t* pbPreMasterSecret, size_t cbPreMasterSecret);
+
+    /**
+     * Default Destructor
+     */
+
+    ~ECCSecret();
+
+  private:
+    /* private copy constructor to prevent double delete of eccSecretState */
+    ECCSecret(const ECCSecret&);
+    /* private assignment operator to prevent double delete of eccSecretState */
+    ECCSecret& operator=(const ECCSecret&);
+
+    /**
+     * Private internal state
+     */
+    ECCSecretState* eccSecretState;
+
 };
 
 /**
@@ -156,18 +259,33 @@ struct ECCSecret {
  */
 
 struct ECCSignature {
+    /**
+     * The r value for the Elliptic Curve Digital Signature (r,s) signature pair
+     */
     uint8_t r[ECC_COORDINATE_SZ];
+    /**
+     * The s value for the Elliptic Curve Digital Signature (r,s) signature pair
+     */
     uint8_t s[ECC_COORDINATE_SZ];
 
+    /**
+     * ECCSignature constructor
+     *
+     * The Elliptic Curve Digital Signature (r,s) signature initialized to zero.
+     */
     ECCSignature() {
         memset(r, 0, ECC_COORDINATE_SZ);
         memset(s, 0, ECC_COORDINATE_SZ);
     }
 
-    void operator=(const ECCSignature& k)
+    /**
+     * The ECCSignature assign operator
+     */
+    ECCSignature& operator=(const ECCSignature& k)
     {
         memcpy(r, k.r, ECC_COORDINATE_SZ);
         memcpy(s, k.s, ECC_COORDINATE_SZ);
+        return *this;
     }
 };
 
@@ -186,9 +304,7 @@ class Crypto_ECC {
     /**
      * Default constructor.
      */
-    Crypto_ECC()
-    {
-    }
+    Crypto_ECC();
 
     /**
      * Generates the Ephemeral Diffie-Hellman key pair.
@@ -215,73 +331,49 @@ class Crypto_ECC {
      * Retrieve the DH public key
      * @return  the DH public key.  It's a pointer to an internal buffer. Its lifetime is the same as the object's lifetime.
      */
-    const ECCPublicKey* GetDHPublicKey() const
-    {
-        return &dhPublicKey;
-    }
+    const ECCPublicKey* GetDHPublicKey() const;
 
     /**
      * Assign the DH public key
      * @param pubKey the public key to copy
      */
-    void SetDHPublicKey(const ECCPublicKey* pubKey)
-    {
-        dhPublicKey = *pubKey;
-    }
+    void SetDHPublicKey(const ECCPublicKey* pubKey);
 
     /**
      * Retrieve the DH private key
      * @return  the DH private key.  Same lifetime as the object.
      */
-    const ECCPrivateKey* GetDHPrivateKey() const
-    {
-        return &dhPrivateKey;
-    }
+    const ECCPrivateKey* GetDHPrivateKey() const;
 
     /**
      * Assign the DH private key
      * @param privateKey the private key to copy
      */
-    void SetDHPrivateKey(const ECCPrivateKey* privateKey)
-    {
-        dhPrivateKey = *privateKey;
-    }
+    void SetDHPrivateKey(const ECCPrivateKey* privateKey);
 
     /**
      * Retrieve the DSA public key
      * @return  the DSA public key.  Same lifetime as the object.
      */
-    const ECCPublicKey* GetDSAPublicKey() const
-    {
-        return &dsaPublicKey;
-    }
+    const ECCPublicKey* GetDSAPublicKey() const;
 
     /**
      * Assign the DSA public key
      * @param pubKey the public key to copy
      */
-    void SetDSAPublicKey(const ECCPublicKey* pubKey)
-    {
-        dsaPublicKey = *pubKey;
-    }
+    void SetDSAPublicKey(const ECCPublicKey* pubKey);
 
     /**
      * Retrieve the DSA private key
      * @return  the DSA private key.  Same lifetime as the object.
      */
-    const ECCPrivateKey* GetDSAPrivateKey() const
-    {
-        return &dsaPrivateKey;
-    }
+    const ECCPrivateKey* GetDSAPrivateKey() const;
 
     /**
      * Assign the DSA private key
      * @param privateKey the private key to copy
      */
-    void SetDSAPrivateKey(const ECCPrivateKey* privateKey)
-    {
-        dsaPrivateKey = *privateKey;
-    }
+    void SetDSAPrivateKey(const ECCPrivateKey* privateKey);
 
     /**
      * Generates the DSA key pair.
@@ -352,12 +444,20 @@ class Crypto_ECC {
     ~Crypto_ECC();
 
   private:
+    /* private copy constructor to prevent double freeing of eccState */
+    Crypto_ECC(const Crypto_ECC&);
+    /* private assignment operator to prevent double freeing of eccState */
+    Crypto_ECC& operator=(const Crypto_ECC&);
 
-    ECCPrivateKey dhPrivateKey;
-    ECCPublicKey dhPublicKey;
-    ECCPrivateKey dsaPrivateKey;
-    ECCPublicKey dsaPublicKey;
+    /**
+     * Opaque type for the internal state.
+     */
+    struct ECCState;
 
+    /**
+     * Private internal state
+     */
+    ECCState* eccState;
 };
 
 } /* namespace qcc */

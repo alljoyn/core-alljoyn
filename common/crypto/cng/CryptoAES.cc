@@ -65,13 +65,11 @@ struct Crypto_AES::KeyState {
     uint8_t* keyObj;
   private:
     /**
-     * Copy constructor
+     * Private copy constructor to prevent copying
      *
      * @param src KeyState to be copied.
      */
-    KeyState(const KeyState& src) {
-        /* private copy constructor to prevent copying */
-    }
+    KeyState(const KeyState&);
     /**
      * Assignment operator
      *
@@ -79,9 +77,7 @@ struct Crypto_AES::KeyState {
      *
      * @return copy of KeyState
      */
-    KeyState& operator=(const KeyState& src) {
-        return *this;
-    }
+    KeyState& operator=(const KeyState&);
 };
 
 Crypto_AES::Crypto_AES(const KeyBlob& key, Mode mode) : mode(mode), keyState(NULL)
@@ -203,57 +199,6 @@ QStatus Crypto_AES::Encrypt(const void* in, size_t len, Block* out, uint32_t num
         }
     } else {
         status = Encrypt((const Block*)in, out, numBlocks);
-    }
-    return status;
-}
-
-QStatus Crypto_AES::Decrypt(const Block* in, Block* out, uint32_t numBlocks)
-{
-    if (!in || !out) {
-        return in ? ER_BAD_ARG_1 : ER_BAD_ARG_2;
-    }
-    /*
-     * Check we are initialized for decryption
-     */
-    if (mode != ECB_DECRYPT) {
-        return ER_CRYPTO_ERROR;
-    }
-    ULONG len = numBlocks * sizeof(Block);
-    ULONG clen;
-    if (!BCRYPT_SUCCESS(BCryptDecrypt(keyState->handle, (PUCHAR)in, len, NULL, NULL, 0, (PUCHAR)out, len, &clen, 0))) {
-        return ER_CRYPTO_ERROR;
-    } else {
-        return ER_OK;
-    }
-}
-
-QStatus Crypto_AES::Decrypt(const Block* in, uint32_t numBlocks, void* out, size_t len)
-{
-    QStatus status;
-
-    if (!in || !out) {
-        return in ? ER_BAD_ARG_1 : ER_BAD_ARG_2;
-    }
-    /*
-     * Check the lengths make sense
-     */
-    if (numBlocks != NumBlocks(len)) {
-        return ER_CRYPTO_ERROR;
-    }
-    /*
-     * Check for a partial final block
-     */
-    size_t partial = len % sizeof(Block);
-    if (partial) {
-        numBlocks--;
-        status = Decrypt(in, (Block*)out, numBlocks);
-        if (status == ER_OK) {
-            Block padBlock;
-            status = Decrypt(in + numBlocks, &padBlock, 1);
-            memcpy(((uint8_t*)out) + sizeof(Block) * numBlocks, &padBlock, partial);
-        }
-    } else {
-        status = Decrypt(in, (Block*)out, numBlocks);
     }
     return status;
 }

@@ -29,11 +29,13 @@
 #include <qcc/platform.h>
 #include <qcc/Debug.h>
 #include <qcc/String.h>
+#include <qcc/StringUtil.h>
 #include <qcc/IfConfig.h>
 #include <qcc/GUID.h>
 #include <qcc/Thread.h>  // For qcc::Sleep()
 
 #include <alljoyn/Status.h>
+#include <alljoyn/Init.h>
 #include <ns/IpNameService.h>
 #include <ns/IpNameServiceImpl.h>
 #include <ConfigDB.h>
@@ -204,8 +206,16 @@ static void PrintFlags(uint32_t flags)
 
 #define ERROR_EXIT exit(1)
 
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+
     QStatus status;
     uint16_t port = 0;
 
@@ -377,6 +387,39 @@ int main(int argc, char** argv)
         }
     }
 
+    uint32_t suffix = rand();
+    qcc::String wknStr = "org.alljoyn.BusNode.abc" + qcc::U32ToString(suffix, 16);
+
+    // ComputeStaticScore using power_source, mobility, availability and node_type values
+    uint32_t powerSource = 3;
+    uint32_t mobility = 4;
+    uint32_t availability = 8;
+    uint32_t nodeType = 1;
+    uint16_t staticScore = IpNameServiceImpl::ComputeStaticScore(powerSource, mobility, availability, nodeType);
+    printf("Static score computed from power source=%d mobility=%d availability=%d nodeType=%d is %d\n", powerSource, mobility, availability, nodeType, staticScore);
+
+    // ComputeDynamicScore using tcpAvail, tcpMax, udpAvail, udpMax, tclAvail and tclMax values
+    uint32_t tcpAvail = 5;
+    uint32_t tcpMax = 100;
+    uint32_t udpAvail = 16;
+    uint32_t udpMax = 16;
+    uint32_t tclAvail = 10;
+    uint32_t tclMax = 50;
+    uint16_t dynamicScore = IpNameServiceImpl::ComputeDynamicScore(tcpAvail, tcpMax, udpAvail, udpMax, tclAvail, tclMax);
+    printf("Dynamic score computed from tcpAvail=%d tcpMax=%d udpAvail=%d udpMax=%d tclAvail=%d tclMax=%d is %d\n", tcpAvail, tcpMax, udpAvail, udpMax, tclAvail, tclMax, dynamicScore);
+
+    // ComputePriority using staticRank and dynamicRank values
+    uint16_t priorityValue = IpNameServiceImpl::ComputePriority(staticScore, dynamicScore);
+    printf("Priority computed from static score=%d and dynamic score=%d is %d\n", staticScore, dynamicScore, priorityValue);
+
+    // Update the dynamic parameters
+    ns.UpdateDynamicScore(TRANSPORT_TCP, 5, 100, 10, 50);
+
+    // Get the current priority value
+    uint16_t priority = ns.GetCurrentPriority();
+    printf("Current value for priority is %d\n", priority);
+
+    ns.AdvertiseName(TRANSPORT_TCP, wknStr.c_str(), true, TRANSPORT_TCP);
     //
     // Hang around and mess with advertisements for a while.
     //
@@ -413,5 +456,7 @@ int main(int argc, char** argv)
         }
     }
 
+    AllJoynRouterShutdown();
+    AllJoynShutdown();
     return 0;
 }

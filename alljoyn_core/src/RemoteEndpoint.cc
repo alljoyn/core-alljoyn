@@ -66,7 +66,7 @@ class _RemoteEndpoint::Internal {
         listener(NULL),
         connSpec(connectSpec),
         incoming(incoming),
-        processId(-1),
+        processId((uint32_t)-1),
         alljoynVersion(0),
         refCount(0),
         isSocket(isSocket),
@@ -142,6 +142,8 @@ class _RemoteEndpoint::Internal {
                                                   - used on Routing nodes only */
     size_t numControlMessages;               /**< Number of control messages in txQueue - used on Routing nodes only */
     size_t numDataMessages;                  /**< Number of data messages in txQueue - used on Routing nodes only */
+  private:
+    Internal& operator=(const Internal&);
 };
 
 
@@ -273,7 +275,7 @@ const _RemoteEndpoint::Features&  _RemoteEndpoint::GetFeatures() const
     }
 }
 
-QStatus _RemoteEndpoint::Establish(const qcc::String& authMechanisms, qcc::String& authUsed, qcc::String& redirection, AuthListener* listener)
+QStatus _RemoteEndpoint::Establish(const qcc::String& authMechanisms, qcc::String& authUsed, qcc::String& redirection, AuthListener* listener, uint32_t timeout)
 {
     QStatus status = ER_OK;
 
@@ -283,7 +285,7 @@ QStatus _RemoteEndpoint::Establish(const qcc::String& authMechanisms, qcc::Strin
         RemoteEndpoint rep = RemoteEndpoint::wrap(this);
         EndpointAuth auth(internal->bus, rep, internal->incoming);
 
-        status = auth.Establish(authMechanisms, authUsed, redirection, listener);
+        status = auth.Establish(authMechanisms, authUsed, redirection, listener, timeout);
         if (status == ER_OK) {
             internal->uniqueName = auth.GetUniqueName();
             internal->remoteName = auth.GetRemoteName();
@@ -299,6 +301,7 @@ QStatus _RemoteEndpoint::Establish(const qcc::String& authMechanisms, qcc::Strin
 
 QStatus _RemoteEndpoint::SetLinkTimeout(uint32_t& idleTimeout)
 {
+    QCC_UNUSED(idleTimeout);
     if (internal) {
         internal->idleTimeout = 0;
     }
@@ -365,6 +368,8 @@ QStatus _RemoteEndpoint::SetLinkTimeout(uint32_t idleTimeout, uint32_t probeTime
 }
 QStatus _RemoteEndpoint::SetIdleTimeouts(uint32_t& idleTimeout, uint32_t& probeTimeout)
 {
+    QCC_UNUSED(idleTimeout);
+    QCC_UNUSED(probeTimeout);
     if (internal) {
         internal->idleTimeout = 0;
         internal->probeTimeout = 0;
@@ -534,7 +539,7 @@ QStatus _RemoteEndpoint::StopAfterTxEmpty(uint32_t maxWaitMs)
 
     /* Wait for txqueue to empty before triggering stop */
     internal->lock.Lock(MUTEX_CONTEXT);
-    while (true) {
+    for (;;) {
         if (internal->txQueue.empty() || (maxWaitMs && (qcc::GetTimestamp() > (startTime + maxWaitMs)))) {
             status = Stop();
             break;
@@ -680,6 +685,7 @@ void _RemoteEndpoint::ExitCallback()
 
 QStatus _RemoteEndpoint::ReadCallback(qcc::Source& source, bool isTimedOut)
 {
+    QCC_UNUSED(source);
     assert(minimalEndpoint == false && "_RemoteEndpoint::ReadCallback(): Where did a callback come from if no thread?");
     /* Remote endpoints can be invalid if they were created with the default
      * constructor or being torn down. Return ER_BUS_NO_ENDPOINT only if the
@@ -760,12 +766,7 @@ QStatus _RemoteEndpoint::ReadCallback(qcc::Source& source, bool isTimedOut)
 
                 case ER_BUS_CANNOT_EXPAND_MESSAGE:
                     internal->idleTimeoutCount = 0;
-                    /*
-                     * The message could not be expanded so pass it the peer object to request the expansion
-                     * rule from the endpoint that sent it.
-                     */
-                    status = internal->bus.GetInternal().GetLocalEndpoint()->GetPeerObj()->RequestHeaderExpansion(msg, rep);
-                    if ((status != ER_OK) && router.IsDaemon()) {
+                    if (router.IsDaemon()) {
                         QCC_LogError(status, ("%s: Discarding %s", GetUniqueName().c_str(), msg->Description().c_str()));
                         status = ER_OK;
                     }
@@ -891,6 +892,7 @@ QStatus _RemoteEndpoint::ReadCallback(qcc::Source& source, bool isTimedOut)
  */
 QStatus _RemoteEndpoint::WriteCallback(qcc::Sink& sink, bool isTimedOut)
 {
+    QCC_UNUSED(sink);
     assert(minimalEndpoint == false && "_RemoteEndpoint::WriteCallback(): Where did a callback come from if no thread?");
 
     /* Remote endpoints can be invalid if they were created with the default
@@ -914,6 +916,9 @@ QStatus _RemoteEndpoint::WriteCallback(qcc::Sink& sink, bool isTimedOut)
     }
     QStatus status = ER_OK;
     while (status == ER_OK) {
+        if (!IsValid()) {
+            return ER_BUS_NO_ENDPOINT;
+        }
         if (internal->getNextMsg) {
             internal->lock.Lock(MUTEX_CONTEXT);
             if (!internal->txQueue.empty()) {
@@ -1033,7 +1038,7 @@ QStatus _RemoteEndpoint::PushMessageRouter(Message& msg, size_t& count)
             thread->AddAuxListener(this);
             internal->txWaitQueue.push_front(thread);
 
-            while (true) {
+            for (;;) {
                 /* Remove a queue entry whose TTLs is expired.
                  * Only threads that are the head of the txWaitqueue will purge this deque
                  * and enqueue new messages to the txQueue.
@@ -1146,7 +1151,7 @@ QStatus _RemoteEndpoint::PushMessageLeaf(Message& msg, size_t& count)
         thread->AddAuxListener(this);
         internal->txWaitQueue.push_front(thread);
 
-        while (true) {
+        for (;;) {
             /* Remove a queue entry whose TTLs is expired.
              * Only threads that are the head of the txWaitqueue will purge this deque
              * and enqueue new messages to the txQueue.
@@ -1287,7 +1292,7 @@ void _RemoteEndpoint::DecrementRef()
         }
 
         Thread* curThread = Thread::GetThread();
-        if (strcmp(curThread->GetThreadName(), "iodisp") == 0) {
+        if (curThread && (internal->bus.GetInternal().GetIODispatch().IsTimerCallbackThread())) {
             Stop();
         } else {
             StopAfterTxEmpty(500);
@@ -1321,7 +1326,7 @@ void _RemoteEndpoint::SetSessionId(uint32_t sessionId) {
     }
 }
 
-uint32_t _RemoteEndpoint::GetSessionId() {
+uint32_t _RemoteEndpoint::GetSessionId() const {
     if (internal) {
         return internal->sessionId;
     } else {

@@ -37,6 +37,7 @@
 #include <qcc/Stream.h>
 #include <qcc/Thread.h>
 #include <qcc/time.h>
+#include <qcc/Util.h>
 
 #if (_WIN32_WINNT > 0x0603)
 #include <MSAJTransport.h>
@@ -66,6 +67,9 @@ VOID CALLBACK IoEventCallback(PVOID arg, BOOLEAN TimerOrWaitFired);
 
 void WINAPI IpInterfaceChangeCallback(PVOID arg, PMIB_IPINTERFACE_ROW row, MIB_NOTIFICATION_TYPE notificationType)
 {
+    QCC_UNUSED(row);
+    QCC_UNUSED(notificationType);
+
     Event* event = (Event*) arg;
     QCC_DbgHLPrintf(("Received network interface event type %u", notificationType));
     if (!::SetEvent(event->GetHandle())) {
@@ -197,11 +201,14 @@ class SuperWaiter {
         const size_t m_numHandles;
         const size_t m_groupIndex;
         const size_t m_timeoutMsec;
+      private:
+        /* Private assigment operator - does nothing */
+        WaitGroup operator=(const WaitGroup&);
     };
 
     static VOID CALLBACK s_WaitThread(_Inout_ PTP_CALLBACK_INSTANCE instance, _Inout_opt_ PVOID context, _Inout_ PTP_WORK work)
     {
-        UNREFERENCED_PARAMETER(work);
+        QCC_UNUSED(work);
 
         WaitGroup* group = reinterpret_cast<WaitGroup*>(context);
 
@@ -413,6 +420,8 @@ class IoEventMonitor {
             AllJoynEventSelect(pipe, eventList->ioEvent, fdSet);
         }
         lock.Unlock();
+#else
+        QCC_UNUSED(event);
 #endif
     }
 
@@ -456,31 +465,46 @@ class IoEventMonitor {
             QCC_LogError(ER_OS_ERROR, ("eventList for fd %d missing from event map", event->GetFD()));
         }
         lock.Unlock();
+#else
+        QCC_UNUSED(event);
 #endif
     }
 
 };
 
+static uint64_t _alwaysSet[RequiredArrayLength(sizeof(Event), uint64_t)];
+static uint64_t _neverSet[RequiredArrayLength(sizeof(Event), uint64_t)];
 static IoEventMonitor* IoMonitor = NULL;
+static bool initialized = false;
 
-static int eventCounter = 0;
+Event& Event::alwaysSet = (Event&)_alwaysSet;
+Event& Event::neverSet = (Event&)_neverSet;
 
-Event::Init::Init()
+void Event::Init()
 {
-    if (0 == eventCounter++) {
+    if (!initialized) {
+        new (&alwaysSet)Event(0, 0);
+        new (&neverSet)Event(Event::WAIT_FOREVER, 0);
         IoMonitor = new IoEventMonitor;
+        initialized = true;
     }
 }
 
-Event::Init::~Init()
+void Event::Shutdown()
 {
-    if (0 == --eventCounter) {
+    if (initialized) {
         delete IoMonitor;
+        IoMonitor = NULL;
+        neverSet.~Event();
+        alwaysSet.~Event();
+        initialized = false;
     }
 }
 
 VOID CALLBACK IoEventCallback(PVOID arg, BOOLEAN TimerOrWaitFired)
 {
+    QCC_UNUSED(TimerOrWaitFired);
+
     SocketFd sock = (SocketFd)arg;
     IoMonitor->lock.Lock();
     std::map<SocketFd, IoEventMonitor::EventList*>::iterator iter = IoMonitor->eventMap.find(sock);
@@ -704,6 +728,7 @@ QStatus Event::Wait(const vector<Event*>& checkEvents, vector<Event*>& signaledE
         }
     }
 
+
     bool somethingSet = true;
     bool timedOut = false;
 
@@ -743,13 +768,9 @@ QStatus Event::Wait(const vector<Event*>& checkEvents, vector<Event*>& signaledE
             }
             if ((ER_OK != status) && (!timedOut)) {
                 /* Restore thread counts if we did not block */
-                while (true) {
+                for (it = checkEvents.begin(); it != checkEvents.end(); ++it) {
                     Event* evt = *it;
                     evt->DecrementNumThreads();
-                    if (it == checkEvents.begin()) {
-                        break;
-                    }
-                    --it;
                 }
                 QCC_LogError(status, ("SuperWaiter::WaitForMultipleObjects: failed."));
                 return ER_FAIL;

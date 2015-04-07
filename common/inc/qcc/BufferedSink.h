@@ -97,7 +97,7 @@ class BufferedSink : public Sink {
     /**
      * Assigment operator is private and does nothing
      */
-    BufferedSink& operator=(const BufferedSink& other) { return *this; }
+    BufferedSink& operator=(const BufferedSink&);
 
     Sink& sink;                 /**< Underlying raw sink */
     Event& event;               /**< IO event for this buffered source */

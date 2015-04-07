@@ -140,6 +140,7 @@ static const char* HdrId[] = {
 
 qcc::String HeaderFields::ToString(size_t indent) const
 {
+    QCC_UNUSED(indent);
     qcc::String str;
 #ifndef NDEBUG
     qcc::String in = qcc::String(indent, ' ');
@@ -226,6 +227,9 @@ static qcc::String FlagBits(uint8_t flags)
 
 qcc::String _Message::ToString(const MsgArg* args, size_t numArgs) const
 {
+    QCC_UNUSED(args);
+    QCC_UNUSED(numArgs);
+
     qcc::String outStr;
 #ifndef NDEBUG
     size_t indent = 2;

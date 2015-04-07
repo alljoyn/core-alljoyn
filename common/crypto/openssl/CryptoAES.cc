@@ -63,11 +63,7 @@ Crypto_AES::Crypto_AES(const KeyBlob& key, Mode mode) : mode(mode), keyState(new
      */
     OpenSsl_ScopedLock lock;
 
-    if ((mode == ECB_ENCRYPT) || (mode == CCM)) {
-        AES_set_encrypt_key((unsigned char*)key.GetData(), key.GetSize() * 8, &keyState->key);
-    } else {
-        AES_set_decrypt_key((unsigned char*)key.GetData(), key.GetSize() * 8, &keyState->key);
-    }
+    AES_set_encrypt_key((unsigned char*)key.GetData(), key.GetSize() * 8, &keyState->key);
 }
 
 Crypto_AES::~Crypto_AES()
@@ -132,65 +128,6 @@ QStatus Crypto_AES::Encrypt(const void* in, size_t len, Block* out, uint32_t num
     }
     return status;
 }
-
-QStatus Crypto_AES::Decrypt(const Block* in, Block* out, uint32_t numBlocks)
-{
-    /*
-     * Protect the open ssl APIs.
-     */
-    OpenSsl_ScopedLock lock;
-    if (!in || !out) {
-        return in ? ER_BAD_ARG_1 : ER_BAD_ARG_2;
-    }
-    /*
-     * Check we are initialized for decryption
-     */
-    if (mode != ECB_DECRYPT) {
-        return ER_CRYPTO_ERROR;
-    }
-    while (numBlocks--) {
-        AES_decrypt(in->data, out->data, &keyState->key);
-        ++in;
-        ++out;
-    }
-    return ER_OK;
-}
-
-QStatus Crypto_AES::Decrypt(const Block* in, uint32_t numBlocks, void* out, size_t len)
-{
-    /*
-     * Protect the open ssl APIs.
-     */
-    OpenSsl_ScopedLock lock;
-    QStatus status;
-
-    if (!in || !out) {
-        return in ? ER_BAD_ARG_1 : ER_BAD_ARG_2;
-    }
-    /*
-     * Check the lengths make sense
-     */
-    if (numBlocks != NumBlocks(len)) {
-        return ER_CRYPTO_ERROR;
-    }
-    /*
-     * Check for a partial final block
-     */
-    size_t partial = len % sizeof(Block);
-    if (partial) {
-        numBlocks--;
-        status = Decrypt(in, (Block*)out, numBlocks);
-        if (status == ER_OK) {
-            Block padBlock;
-            status = Decrypt(in + numBlocks, &padBlock, 1);
-            memcpy(((uint8_t*)out) + sizeof(Block) * numBlocks, &padBlock, partial);
-        }
-    } else {
-        status = Decrypt(in, (Block*)out, numBlocks);
-    }
-    return status;
-}
-
 
 static void Compute_CCM_AuthField(AES_KEY* key, Crypto_AES::Block& T, uint8_t M, uint8_t L, const KeyBlob& nonce, const uint8_t* mData, size_t mLen, const uint8_t* addData, size_t addLen)
 {

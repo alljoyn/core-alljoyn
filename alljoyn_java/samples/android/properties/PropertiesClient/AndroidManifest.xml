@@ -2,16 +2,16 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
       package="org.alljoyn.bus.samples.properties_client"
       android:versionCode="1"
-      android:versionName="1.0">
+      android:versionName="00.00.01">
     <!-- Permission required to use the TCP transport -->
     <uses-permission android:name="android.permission.INTERNET"></uses-permission>
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE"></uses-permission>
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"></uses-permission>
-    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE"></uses-permission> 
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE"></uses-permission>
     <application android:icon="@drawable/icon" android:label="@string/app_name">
         <activity android:name=".PropertiesClient"
                   android:label="@string/app_name"
-                  android:screenOrientation="portrait"	
+                  android:screenOrientation="portrait"
                   android:configChanges="keyboardHidden|orientation">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -20,6 +20,6 @@
         </activity>
 
     </application>
-    <uses-sdk android:minSdkVersion="10" />
+    <uses-sdk android:minSdkVersion="16" />
 
-</manifest> 
+</manifest>

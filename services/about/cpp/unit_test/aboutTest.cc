@@ -14,10 +14,22 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 #include <gtest/gtest.h>
+#include <alljoyn/Init.h>
+#include <alljoyn/Status.h>
 
 /** Main entry point */
-int main(int argc, char**argv, char**envArg)
+int CDECL_CALL main(int argc, char**argv, char**)
 {
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+#endif
+
     int status = 0;
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stderr, NULL, _IONBF, 0);
@@ -30,5 +42,9 @@ int main(int argc, char**argv, char**envArg)
 
     printf("%s exiting with status %d \n", argv[0], status);
 
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return (int) status;
 }

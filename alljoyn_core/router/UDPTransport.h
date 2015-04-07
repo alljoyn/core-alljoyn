@@ -73,6 +73,14 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     friend class ArdpStream;
 
   public:
+    class DynamicScoreUpdater : public qcc::Thread {
+      public:
+        DynamicScoreUpdater(UDPTransport& transport) : m_transport(transport) { };
+        virtual qcc::ThreadReturn STDCALL Run(void* arg);
+      private:
+        UDPTransport& m_transport;
+    };
+    friend class DynamicScoreUpdater;
     /**
      * Create a UDP based transport for use by daemons.
      *
@@ -219,6 +227,12 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
      */
     void DisableAdvertisement(const qcc::String& advertiseName, TransportMask transports);
 
+    bool EnableRouterAdvertisement();
+
+    bool DisableRouterAdvertisement();
+
+    void UpdateRouterAdvertisementAndDynamicScore();
+
     /**
      * Returns the name of this transport
      */
@@ -328,6 +342,7 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     BusAttachment& m_bus;                                          /**< The message bus for this transport */
     mutable volatile int32_t m_refCount;                           /**< Incremented if a thread is doing something somewhere */
     bool m_stopping;                                               /**< True if Stop() has been called but endpoints still exist */
+    bool m_routerNameAdvertised;                                   /**< True if routerName is advertised */
     TransportListener* m_listener;                                 /**< Registered TransportListener */
     std::set<UDPEndpoint> m_preList;                               /**< "Pre" list of authenticating endpoints (see AcceptCb comments) */
     qcc::Mutex m_preListLock;                                      /**< Mutex that protects the endpoint and auth lists */
@@ -360,7 +375,8 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
         DISABLE_ADVERTISEMENT_INSTANCE,  /**< A DisableAdvertisement() has happened */
         ENABLE_DISCOVERY_INSTANCE,       /**< An EnableDiscovery() has happened */
         DISABLE_DISCOVERY_INSTANCE,      /**< A DisableDiscovery() has happened */
-        HANDLE_NETWORK_EVENT             /**< A network event has happened */
+        HANDLE_NETWORK_EVENT,            /**< A network event has happened */
+        UPDATE_DYNAMIC_SCORE_INSTANCE    /**< A change to the dynamic score has happened */
     };
 
     /**
@@ -522,6 +538,8 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
         FoundCallback(TransportListener*& listener) : m_listener(listener) { }
         void Found(const qcc::String& busAddr, const qcc::String& guid, std::vector<qcc::String>& nameList, uint32_t timer);
       private:
+        /* Private assigment operator - does nothing */
+        FoundCallback operator=(const FoundCallback&);
         TransportListener*& m_listener;
     };
 
@@ -532,6 +550,8 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
         NetworkEventCallback(UDPTransport& transport) : m_transport(transport) { }
         void Handler(const std::map<qcc::String, qcc::IPAddress>&);
       private:
+        /* Private assigment operator - does nothing */
+        NetworkEventCallback operator=(const NetworkEventCallback&);
         UDPTransport& m_transport;
     };
 
@@ -594,15 +614,15 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     static const uint32_t ALLJOYN_MAX_COMPLETED_CONNECTIONS_UDP_DEFAULT = 50;
 
     /**
-     * @brief The default value for the maximum number of untrusted clients
+     * @brief The default value for the maximum number of remote clients over udp.
      *
-     * This corresponds to the configuration item "max_untrusted_clients"
-     * To override this value, change the limit, "max_untrusted_clients".
+     * This corresponds to the configuration item "max_remote_clients_udp"
+     * To override this value, change the limit, "max_remote_clients_udp".
      *
-     * @warning This maximum is enforced on incoming connections from untrusted clients only.
-     * This is to limit the amount of resources being used by untrusted clients.
+     * @warning This maximum is enforced on incoming connections from untrusted clients over udp.
+     * This is to limit the amount of resources being used by untrusted clients over udp.
      */
-    static const uint32_t ALLJOYN_MAX_UNTRUSTED_CLIENTS_DEFAULT = 0;
+    static const uint32_t ALLJOYN_MAX_REMOTE_CLIENTS_UDP_DEFAULT = 0;
 
     /**
      * @brief The default value for the router advertisement prefix that untrusted thin clients
@@ -706,6 +726,7 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     void QueueDisableDiscovery(const char* namePrefix, TransportMask transports);
     void QueueEnableAdvertisement(const qcc::String& advertiseName, bool quietly, TransportMask transports);
     void QueueDisableAdvertisement(const qcc::String& advertiseName, TransportMask transports);
+    void QueueUpdateRouterAdvertisementAndDynamicScore();
 
     void RunListenMachine(ListenRequest& listenRequest);
 
@@ -716,6 +737,8 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     void EnableDiscoveryInstance(ListenRequest& listenRequest);
     void DisableDiscoveryInstance(ListenRequest& listenRequest);
     void HandleNetworkEventInstance(ListenRequest& listenRequest);
+    void UpdateDynamicScoreInstance(ListenRequest& listenRequest);
+
     void UntrustedClientExit();
     QStatus UntrustedClientStart();
     bool m_isAdvertising;
@@ -759,7 +782,7 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     /**< The router advertisement prefix set in the configuration file appended with the BusController's unique name */
     qcc::String m_routerName;
 
-    int32_t m_maxUntrustedClients; /**< the maximum number of untrusted clients allowed at any point of time */
+    int32_t m_maxRemoteClientsUdp; /**< the maximum number of untrusted clients allowed at any point of time */
 
     int32_t m_numUntrustedClients; /**< Number of untrusted clients currently registered with the daemon */
 
@@ -806,6 +829,8 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     volatile int32_t m_currConn;
 
     qcc::Mutex m_connLock;  /**< m_currAuth and m_currConn must be changed atomically, so need to be mutex protected */
+
+    DynamicScoreUpdater m_dynamicScoreUpdater;
 
     /**
      * arcpConfig are the limits from the daemon configuration database relating

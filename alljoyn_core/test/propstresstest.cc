@@ -57,6 +57,7 @@
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/BusListener.h>
 #include <alljoyn/BusObject.h>
+#include <alljoyn/Init.h>
 #include <alljoyn/ProxyBusObject.h>
 
 
@@ -217,6 +218,8 @@ void _PropTesterProxyObject::PropertiesChanged(ProxyBusObject& obj,
                                                const MsgArg& invalidated,
                                                void* context)
 {
+    QCC_UNUSED(context);
+
     MsgArg* entries;
     const char** propNames;
     size_t numEntries;
@@ -270,11 +273,18 @@ class Service : public App, private SessionPortListener, private SessionListener
     void Add(SessionId id, uint32_t number);
 
     // SessionPortListener methods
-    bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) { return true; }
+    bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) {
+        QCC_UNUSED(sessionPort);
+        QCC_UNUSED(joiner);
+        QCC_UNUSED(opts);
+        return true;
+    }
     void SessionJoined(SessionPort sessionPort, SessionId id, const char* joiner);
 
     // SessionListener methods
     void SessionLost(SessionId sessionId);
+    /* Private assigment operator - does nothing */
+    Service& operator=(const Service&);
 };
 
 Service::Service(BusAttachment& bus, int nbrOfObjects) :
@@ -311,6 +321,9 @@ void Service::Add(SessionId id, uint32_t number)
 
 void Service::SessionJoined(SessionPort sessionPort, SessionId id, const char* joiner)
 {
+    QCC_UNUSED(sessionPort);
+    QCC_UNUSED(joiner);
+
     bus.SetSessionListener(id, this);
     for (int i = 0; i < nbrOfObjects; i++) {
         Add(id, i);
@@ -372,6 +385,8 @@ class Client : public App, private BusListener, private BusAttachment::JoinSessi
 
     //BusAttachment::JoinsessionAsyncCB methods
     void JoinSessionCB(QStatus status, SessionId sessionId, const SessionOpts& opts, void* context);
+    /* Private assigment operator - does nothing */
+    Client& operator=(const Client&);
 };
 
 Client::Client(BusAttachment& bus, int nbrOfObjects) :
@@ -401,6 +416,9 @@ void Client::Add(const String& name, SessionId id, uint32_t number)
 
 void Client::FoundAdvertisedName(const char* name, TransportMask transport, const char* namePrefix)
 {
+    QCC_UNUSED(transport);
+    QCC_UNUSED(namePrefix);
+
     QCC_SyncPrintf("FoundAdvertisedName: \"%s\"\n", name);
     String nameStr = name;
     lock.Lock();
@@ -416,6 +434,9 @@ void Client::FoundAdvertisedName(const char* name, TransportMask transport, cons
 
 void Client::LostAdvertisedName(const char* name, TransportMask transport, const char* namePrefix)
 {
+    QCC_UNUSED(transport);
+    QCC_UNUSED(namePrefix);
+
     QCC_SyncPrintf("LostAdvertisedName: \"%s\"\n", name);
     String nameStr = name;
     lock.Lock();
@@ -428,6 +449,8 @@ void Client::LostAdvertisedName(const char* name, TransportMask transport, const
 
 void Client::JoinSessionCB(QStatus status, SessionId sessionId, const SessionOpts& opts, void* context)
 {
+    QCC_UNUSED(opts);
+
     String* nameStr = reinterpret_cast<String*>(context);
     QCC_SyncPrintf("JoinSessionCB: name = %s   status = %s\n", nameStr->c_str(), QCC_StatusText(status));
     if (status == ER_OK) {
@@ -487,8 +510,18 @@ void Usage()
            "    -o <NBR>      Create <NBR> objects.\n");
 }
 
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+#endif
+
     String serviceName = "org.alljoyn.Testing.PropertyStressTest";
     bool client = false;
     uint64_t timeToRun = 3600;
@@ -541,7 +574,7 @@ int main(int argc, char** argv)
 
     QStatus status;
     int ret = 0;
-    BusAttachment bus("PropertyStressTest", true);
+    BusAttachment* bus = new BusAttachment("PropertyStressTest", true);
     Environ* env = Environ::GetAppEnviron();
     String connSpec = env->Find("DBUS_STARTER_ADDRESS");
 
@@ -557,13 +590,13 @@ int main(int argc, char** argv)
 #endif
     }
 
-    status = bus.Start();
+    status = bus->Start();
     if (status != ER_OK) {
         printf("Failed to start bus attachment: %s\n", QCC_StatusText(status));
         exit(1);
     }
 
-    status = bus.Connect(connSpec.c_str());
+    status = bus->Connect(connSpec.c_str());
     if (status != ER_OK) {
         printf("Failed to connect to \"%s\": %s\n", connSpec.c_str(), QCC_StatusText(status));
         exit(1);
@@ -572,23 +605,23 @@ int main(int argc, char** argv)
     App* app;
 
     if (client) {
-        app = new Client(bus, nbrOfObjects);
-        status = bus.FindAdvertisedName(serviceName.c_str());
+        app = new Client(*bus, nbrOfObjects);
+        status = bus->FindAdvertisedName(serviceName.c_str());
         if (status != ER_OK) {
             printf("Failed to find name to \"%s\": %s\n", serviceName.c_str(), QCC_StatusText(status));
             ret = 2;
             goto exit;
         }
     } else {
-        serviceName += ".A" + bus.GetGlobalGUIDString();
-        app = new Service(bus, nbrOfObjects);
-        status = bus.RequestName(serviceName.c_str(), DBUS_NAME_FLAG_REPLACE_EXISTING | DBUS_NAME_FLAG_DO_NOT_QUEUE);
+        serviceName += ".A" + bus->GetGlobalGUIDString();
+        app = new Service(*bus, nbrOfObjects);
+        status = bus->RequestName(serviceName.c_str(), DBUS_NAME_FLAG_REPLACE_EXISTING | DBUS_NAME_FLAG_DO_NOT_QUEUE);
         if (status != ER_OK) {
             printf("Failed to request name to \"%s\": %s\n", serviceName.c_str(), QCC_StatusText(status));
             ret = 2;
             goto exit;
         }
-        status = bus.AdvertiseName(serviceName.c_str(), TRANSPORT_ANY);
+        status = bus->AdvertiseName(serviceName.c_str(), TRANSPORT_ANY);
         if (status != ER_OK) {
             printf("Failed to request name to \"%s\": %s\n", serviceName.c_str(), QCC_StatusText(status));
             ret = 2;
@@ -601,17 +634,22 @@ int main(int argc, char** argv)
 
 exit:
     if (client) {
-        bus.CancelFindAdvertisedName(serviceName.c_str());
-        bus.Disconnect();
+        bus->CancelFindAdvertisedName(serviceName.c_str());
+        bus->Disconnect();
     } else {
-        bus.CancelAdvertiseName(serviceName.c_str(), TRANSPORT_ANY);
-        bus.ReleaseName(serviceName.c_str());
+        bus->CancelAdvertiseName(serviceName.c_str(), TRANSPORT_ANY);
+        bus->ReleaseName(serviceName.c_str());
     }
 
     delete app;
 
-    bus.Stop();
-    bus.Join();
+    bus->Stop();
+    bus->Join();
+    delete bus;
 
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return ret;
 }

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		7D07EB061A9B800F00DF281E /* AJNInit.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7D07EB051A9B800F00DF281E /* AJNInit.mm */; };
 		7DCBEF0D1A254ED300A53A83 /* AJNAboutObjectDescription.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCBEEFB1A254ED300A53A83 /* AJNAboutObjectDescription.mm */; };
 		7DCBEF0E1A254ED300A53A83 /* AJNAboutObject.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCBEEFD1A254ED300A53A83 /* AJNAboutObject.mm */; };
 		7DCBEF0F1A254ED300A53A83 /* AJNAboutDataListenerImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCBEF001A254ED300A53A83 /* AJNAboutDataListenerImpl.mm */; };
@@ -16,6 +17,7 @@
 		7DCBEF131A254ED300A53A83 /* AJNAboutListenerImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCBEF091A254ED300A53A83 /* AJNAboutListenerImpl.mm */; };
 		7DCBEF141A254ED300A53A83 /* AJNAboutProxy.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCBEF0C1A254ED300A53A83 /* AJNAboutProxy.mm */; };
 		7DCBEF171A254EED00A53A83 /* AJNPasswordManager.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCBEF161A254EED00A53A83 /* AJNPasswordManager.mm */; };
+		7DEA2F3C1AC403B5007ECE82 /* libc++.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 7DEA2F3B1AC403B5007ECE82 /* libc++.dylib */; };
 		8314CA60193B14FF0070DF4F /* AJNTranslatorImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 8314CA5F193B14FF0070DF4F /* AJNTranslatorImpl.mm */; };
 		ACCF73D716681C0E001CB5E9 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ACCF73D616681C0E001CB5E9 /* Cocoa.framework */; };
 		ACCF73E116681C0E001CB5E9 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = ACCF73DF16681C0E001CB5E9 /* InfoPlist.strings */; };
@@ -59,6 +61,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		7D07EB041A9B800F00DF281E /* AJNInit.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNInit.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNInit.h; sourceTree = "<group>"; };
+		7D07EB051A9B800F00DF281E /* AJNInit.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNInit.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNInit.mm; sourceTree = "<group>"; };
 		7DCBEEFB1A254ED300A53A83 /* AJNAboutObjectDescription.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNAboutObjectDescription.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNAboutObjectDescription.mm; sourceTree = "<group>"; };
 		7DCBEEFC1A254ED300A53A83 /* AJNAboutObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNAboutObject.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNAboutObject.h; sourceTree = "<group>"; };
 		7DCBEEFD1A254ED300A53A83 /* AJNAboutObject.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNAboutObject.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNAboutObject.mm; sourceTree = "<group>"; };
@@ -79,6 +83,7 @@
 		7DCBEF0C1A254ED300A53A83 /* AJNAboutProxy.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNAboutProxy.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNAboutProxy.mm; sourceTree = "<group>"; };
 		7DCBEF151A254EED00A53A83 /* AJNPasswordManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNPasswordManager.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNPasswordManager.h; sourceTree = "<group>"; };
 		7DCBEF161A254EED00A53A83 /* AJNPasswordManager.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNPasswordManager.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNPasswordManager.mm; sourceTree = "<group>"; };
+		7DEA2F3B1AC403B5007ECE82 /* libc++.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libc++.dylib"; path = "usr/lib/libc++.dylib"; sourceTree = SDKROOT; };
 		8314CA5D193B14FF0070DF4F /* AJNTranslator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNTranslator.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTranslator.h; sourceTree = "<group>"; };
 		8314CA5E193B14FF0070DF4F /* AJNTranslatorImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNTranslatorImpl.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTranslatorImpl.h; sourceTree = "<group>"; };
 		8314CA5F193B14FF0070DF4F /* AJNTranslatorImpl.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNTranslatorImpl.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTranslatorImpl.mm; sourceTree = "<group>"; };
@@ -175,6 +180,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7DEA2F3C1AC403B5007ECE82 /* libc++.dylib in Frameworks */,
 				ACCF745F16681E33001CB5E9 /* libssl.0.9.8.dylib in Frameworks */,
 				ACCF745D16681E2E001CB5E9 /* libcrypto.0.9.8.dylib in Frameworks */,
 				ACCF745B16681E28001CB5E9 /* libstdc++.6.0.9.dylib in Frameworks */,
@@ -206,6 +212,7 @@
 		ACCF73D516681C0E001CB5E9 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				7DEA2F3B1AC403B5007ECE82 /* libc++.dylib */,
 				ACCF745E16681E33001CB5E9 /* libssl.0.9.8.dylib */,
 				ACCF745C16681E2E001CB5E9 /* libcrypto.0.9.8.dylib */,
 				ACCF745A16681E28001CB5E9 /* libstdc++.6.0.9.dylib */,
@@ -262,6 +269,8 @@
 		ACCF73F316681C40001CB5E9 /* AllJoyn Framework */ = {
 			isa = PBXGroup;
 			children = (
+				7D07EB041A9B800F00DF281E /* AJNInit.h */,
+				7D07EB051A9B800F00DF281E /* AJNInit.mm */,
 				7DCBEF151A254EED00A53A83 /* AJNPasswordManager.h */,
 				7DCBEF161A254EED00A53A83 /* AJNPasswordManager.mm */,
 				7DCBEEFB1A254ED300A53A83 /* AJNAboutObjectDescription.mm */,
@@ -413,6 +422,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				ACCF73E316681C0E001CB5E9 /* main.m in Sources */,
+				7D07EB061A9B800F00DF281E /* AJNInit.mm in Sources */,
 				7DCBEF0F1A254ED300A53A83 /* AJNAboutDataListenerImpl.mm in Sources */,
 				ACCF73EA16681C0E001CB5E9 /* AppDelegate.m in Sources */,
 				7DCBEF131A254ED300A53A83 /* AJNAboutListenerImpl.mm in Sources */,
@@ -556,7 +566,6 @@
 				OTHER_LDFLAGS = (
 					"-lalljoyn",
 					"-lajrouter",
-					"-lBundledRouter.o",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
@@ -587,7 +596,6 @@
 				OTHER_LDFLAGS = (
 					"-lalljoyn",
 					"-lajrouter",
-					"-lBundledRouter.o",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;

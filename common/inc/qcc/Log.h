@@ -23,7 +23,6 @@
 #define _QCC_LOG_H
 
 #include <qcc/platform.h>
-#include <qcc/StaticGlobalsInit.h>
 
 /**
  * Set AllJoyn debug levels.
@@ -31,7 +30,7 @@
  * @param module    name of the module to generate debug output
  * @param level     debug level to set for the module
  */
-void QCC_SetDebugLevel(const char* module, uint32_t level);
+void AJ_CALL QCC_SetDebugLevel(const char* module, uint32_t level);
 
 /**
  * Set AllJoyn logging levels.
@@ -40,14 +39,14 @@ void QCC_SetDebugLevel(const char* module, uint32_t level);
  *                  to set the log levels for internal AllJoyn modules.
  *                  (i.e. ALLJOYN=7;ALL=1)
  */
-void QCC_SetLogLevels(const char* logEnv);
+void AJ_CALL QCC_SetLogLevels(const char* logEnv);
 
 /**
  * Indicate whether AllJoyn logging goes to OS logger or stdout
  *
  * @param  useOSLog   true iff OS specific logging should be used rather than print for AllJoyn debug messages.
  */
-void QCC_UseOSLogging(bool useOSLog);
+void AJ_CALL QCC_UseOSLogging(bool useOSLog);
 
 
 #endif

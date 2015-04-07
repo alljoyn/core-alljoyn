@@ -28,7 +28,6 @@
 #include <alljoyn/PermissionPolicy.h>
 #include <alljoyn/BusAttachment.h>
 #include "KeyInfoHelper.h"
-#include "CompressionRules.h"
 
 #define QCC_MODULE "PERMISSION_MGMT"
 
@@ -707,8 +706,7 @@ QStatus DefaultPolicyMarshaller::MarshalPrep(PermissionPolicy& policy)
      * The ALLJOYN_FLAG_SESSIONLESS is set in order to skip the serial number
      * check since the data can be stored for a long time*/
     msg->ErrorMsg("/", 0);
-    CompressionRules unused; /* Only needed if flags includes ALLJOYN_FLAG_COMPRESSED */
-    return msg->MarshalMessage("(yv)", "", "", MESSAGE_ERROR, &args, 1, ALLJOYN_FLAG_SESSIONLESS, 0, unused);
+    return msg->MarshalMessage("(yv)", "", "", MESSAGE_ERROR, &args, 1, ALLJOYN_FLAG_SESSIONLESS, 0);
 }
 
 QStatus DefaultPolicyMarshaller::Marshal(PermissionPolicy& policy, uint8_t** buf, size_t* size)

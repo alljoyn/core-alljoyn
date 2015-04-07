@@ -19,6 +19,7 @@
 #include <alljoyn/AboutObjectDescription.h>
 #include <alljoyn/AboutProxy.h>
 #include <alljoyn/BusAttachment.h>
+#include <alljoyn/Init.h>
 #include <alljoyn/Session.h>
 #include <alljoyn/SessionListener.h>
 
@@ -31,6 +32,7 @@ using namespace qcc;
 static volatile sig_atomic_t s_interrupt = false;
 
 static void CDECL_CALL SigIntHandler(int sig) {
+    QCC_UNUSED(sig);
     s_interrupt = true;
 }
 
@@ -109,6 +111,7 @@ class AboutThread : public Thread, public ThreadListener {
 
     ThreadReturn STDCALL Run(void* args)
     {
+        QCC_UNUSED(args);
         QStatus status = ER_OK;
 
         SessionListener sessionListener;
@@ -245,19 +248,29 @@ class MyAboutListener : public AboutListener {
     }
 };
 
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
+    QCC_UNUSED(argc);
+    QCC_UNUSED(argv);
+
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+#endif
+
     /* Install SIGINT handler so Ctrl + C deallocates memory properly */
     signal(SIGINT, SigIntHandler);
 
-
     QStatus status;
 
-    BusAttachment bus("AboutServiceTest", true);
+    g_bus = new BusAttachment("AboutServiceTest", true);
 
-    g_bus = &bus;
-
-    status = bus.Start();
+    status = g_bus->Start();
     if (ER_OK == status) {
         printf("BusAttachment started.\n");
     } else {
@@ -265,19 +278,19 @@ int main(int argc, char** argv)
         exit(1);
     }
 
-    status = bus.Connect();
+    status = g_bus->Connect();
     if (ER_OK == status) {
-        printf("BusAttachment connect succeeded. BusAttachment Unique name is %s\n", bus.GetUniqueName().c_str());
+        printf("BusAttachment connect succeeded. BusAttachment Unique name is %s\n", g_bus->GetUniqueName().c_str());
     } else {
         printf("FAILED to connect to router node (%s)\n", QCC_StatusText(status));
         exit(1);
     }
 
     MyAboutListener aboutListener;
-    bus.RegisterAboutListener(aboutListener);
+    g_bus->RegisterAboutListener(aboutListener);
 
     const char* interfaces[] = { "org.alljoyn.About", "org.alljoyn.Icon" };
-    status = bus.WhoImplements(interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
+    status = g_bus->WhoImplements(interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
     if (ER_OK == status) {
         printf("WhoImplements called.\n");
     } else {
@@ -291,5 +304,11 @@ int main(int argc, char** argv)
         }
     }
 
+    g_bus->UnregisterAboutListener(aboutListener);
+    delete g_bus;
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return 0;
 }

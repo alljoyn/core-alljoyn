@@ -30,10 +30,11 @@
 
 #include <qcc/String.h>
 
-#include <alljoyn/BusAttachment.h>
-#include <alljoyn/version.h>
 #include <alljoyn/AllJoynStd.h>
+#include <alljoyn/BusAttachment.h>
+#include <alljoyn/Init.h>
 #include <alljoyn/Status.h>
+#include <alljoyn/version.h>
 
 using namespace std;
 using namespace qcc;
@@ -56,6 +57,7 @@ static volatile sig_atomic_t s_interrupt = false;
 
 static void CDECL_CALL SigIntHandler(int sig)
 {
+    QCC_UNUSED(sig);
     s_interrupt = true;
 }
 
@@ -133,6 +135,8 @@ class MyBusListener : public BusListener, public SessionListener {
  */
 class SrpKeyXListener : public AuthListener {
     bool RequestCredentials(const char* authMechanism, const char* authPeer, uint16_t authCount, const char* userId, uint16_t credMask, Credentials& creds) {
+        QCC_UNUSED(userId);
+
         printf("RequestCredentials for authenticating %s using mechanism %s\n", authPeer, authMechanism);
         if (strcmp(authMechanism, "ALLJOYN_SRP_KEYX") == 0) {
             if (credMask & AuthListener::CRED_PASSWORD) {
@@ -153,6 +157,8 @@ class SrpKeyXListener : public AuthListener {
     }
 
     void AuthenticationComplete(const char* authMechanism, const char* authPeer, bool success) {
+        QCC_UNUSED(authPeer);
+
         printf("Authentication %s %s\n", authMechanism, success ? "successful" : "failed");
     }
 };
@@ -328,8 +334,22 @@ QStatus MakeMethodCall(void)
 }
 
 /** Main entry point */
-int main(int argc, char** argv, char** envArg)
+int CDECL_CALL main(int argc, char** argv, char** envArg)
 {
+    QCC_UNUSED(argc);
+    QCC_UNUSED(argv);
+    QCC_UNUSED(envArg);
+
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+#endif
+
     printf("AllJoyn Library version: %s.\n", ajn::GetVersion());
     printf("AllJoyn Library build info: %s.\n", ajn::GetBuildInfo());
 
@@ -390,5 +410,9 @@ int main(int argc, char** argv, char** envArg)
 
     printf("Basic client exiting with status 0x%04x (%s).\n", status, QCC_StatusText(status));
 
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return (int) status;
 }

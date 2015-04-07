@@ -32,6 +32,10 @@
 extern "C" {
 #endif
 
+/**
+ * alljoyn_aboutlistener is called by AllJoyn to inform users of About interface
+ * related events.
+ */
 typedef struct _alljoyn_aboutlistener_handle* alljoyn_aboutlistener;
 
 /**
@@ -75,12 +79,18 @@ typedef void (AJ_CALL * alljoyn_about_announced_ptr)(const void* context,
  * The callback used for creation of an alljoyn_aboutlistener.
  */
 typedef struct {
+    /**
+     * handler for the org.alljoyn.About.Anounce sessionless signal
+     */
     alljoyn_about_announced_ptr about_listener_announced;
 } alljoyn_aboutlistener_callback;
 
 
 /**
  * Allocate a new alljoyn_aboutlistener.
+ * @param callback Callback to trigger for About interface associated events.
+ * @param context  Context to pass along to callback functions.
+ * @return allocated alljoyn_aboutlistener
  */
 extern AJ_API alljoyn_aboutlistener AJ_CALL alljoyn_aboutlistener_create(const alljoyn_aboutlistener_callback* callback,
                                                                          const void* context);

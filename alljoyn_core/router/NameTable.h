@@ -285,9 +285,11 @@ class NameTable {
      *
      * @param alias Well-known bus name now owned by listener.
      * @param oldOwner Unique name of old owner of alias or NULL if none existed.
-     * @param oldOwnerNameTransfer Whether the old owner should be propagated (ALL_NAMES) or not (DAEMON_NAMES).
+     * @param oldOwnerNameTransfer Whether the old owner should be propagated (ALL_NAMES, P2P_NAMES or MP_NAMES)
+     *                             or not (SLS_NAMES).
      * @param newOwner Unique name of new owner of alias or NULL if none (now) exists.
-     * @param newOwnerNameTransfer Whether the new owner should be propagated (ALL_NAMES) or not (DAEMON_NAMES).
+     * @param newOwnerNameTransfer Whether the new owner should be propagated (ALL_NAMES, P2P_NAMES or MP_NAMES)
+     *                             or not (SLS_NAMES).
      */
     void CallListeners(const qcc::String& aliasName,
                        const qcc::String* oldOwner, SessionOpts::NameTransferType oldOwnerNameTransfer,
@@ -310,9 +312,11 @@ class NameListener {
      *
      * @param alias Well-known bus name now owned by listener.
      * @param oldOwner Unique name of old owner of alias or NULL if none existed.
-     * @param oldOwnerNameTransfer Whether the old owner should be propagated (ALL_NAMES) or not (DAEMON_NAMES).
+     * @param oldOwnerNameTransfer Whether the old owner should be propagated (ALL_NAMES, P2P_NAMES or MP_NAMES)
+     *                             or not (SLS_NAMES).
      * @param newOwner Unique name of new owner of alias or NULL if none (now) exists.
-     * @param newOwnerNameTransfer Whether the new owner should be propagated (ALL_NAMES) or not (DAEMON_NAMES).
+     * @param newOwnerNameTransfer Whether the new owner should be propagated (ALL_NAMES, P2P_NAMES or MP_NAMES)
+     *                             or not (SLS_NAMES).
      */
     virtual void NameOwnerChanged(const qcc::String& alias,
                                   const qcc::String* oldOwner, SessionOpts::NameTransferType oldOwnerNameTransfer,
@@ -329,7 +333,11 @@ class NameListener {
      */
     virtual void AddAliasComplete(const qcc::String& aliasName,
                                   uint32_t disposition,
-                                  void* context) { }
+                                  void* context) {
+        QCC_UNUSED(aliasName);
+        QCC_UNUSED(disposition);
+        QCC_UNUSED(context);
+    }
 
     /**
      * Called upon completion of RemoveAlias call.
@@ -342,7 +350,11 @@ class NameListener {
      */
     virtual void RemoveAliasComplete(const qcc::String& aliasName,
                                      uint32_t disposition,
-                                     void* context) { }
+                                     void* context) {
+        QCC_UNUSED(aliasName);
+        QCC_UNUSED(disposition);
+        QCC_UNUSED(context);
+    }
 };
 
 }

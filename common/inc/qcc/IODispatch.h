@@ -194,7 +194,9 @@ struct IODispatchEntry {
         mainAddingRead(false),
         mainAddingWrite(false),
         stopping_state(IO_RUNNING)
-    { }
+    {
+        QCC_UNUSED(stream);
+    }
 };
 
 class IODispatch : public Thread, public AlarmListener {
@@ -312,6 +314,13 @@ class IODispatch : public Thread, public AlarmListener {
      * @return ER_OK if successful.
      */
     QStatus EnableTimeoutCallback(const Source* source, uint32_t linkTimeout = 0);
+
+    /**
+     * Check whether or not the current thread belongs to this timer instance.
+     *
+     * @return true if the current thread is a timer thread from this instance
+     */
+    bool IsTimerCallbackThread() const;
 
     /**
      * Process a read/write/timeout/exit callback.

@@ -37,12 +37,12 @@
 #include <alljoyn/InterfaceDescription.h>
 
 #include "AuthManager.h"
+#include "ObserverManager.h"
 #include "ClientRouter.h"
 #include "KeyStore.h"
 #include "PeerState.h"
 #include "Transport.h"
 #include "TransportList.h"
-#include "CompressionRules.h"
 #include "PermissionManager.h"
 #include "PermissionConfiguratorImpl.h"
 
@@ -83,6 +83,19 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
      * @return A pointer to the bus's authentication manager
      */
     AuthManager& GetAuthManager() { return authManager; }
+
+    /**
+     * Get a reference to the observer manager object.
+     *
+     * @return A pointer to the bus's observer manager
+     */
+    ObserverManager& GetObserverManager() {
+        if (!observerManager) {
+            observerManager = new ObserverManager(bus);
+            observerManager->Start();
+        }
+        return *observerManager;
+    }
 
     /**
      * Get a reference to the internal transport list.
@@ -132,17 +145,6 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
      * @return  The iodispatch
      */
     qcc::IODispatch& GetIODispatch(void) { return m_ioDispatch; }
-    /**
-     * Get the header compression rules
-     *
-     * @return The header compression rules.
-     */
-    CompressionRules& GetCompressionRules() { return compressionRules; };
-
-    /**
-     * Override the compressions rules for this bus attachment.
-     */
-    void OverrideCompressionRules(CompressionRules& newRules) { compressionRules = newRules; }
 
     /**
      * Get the Announced Object Description for the BusObjects registered on
@@ -414,6 +416,10 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
 
   private:
 
+    static void Init();
+    static void Shutdown();
+    friend class StaticGlobals;
+
     /**
      * Copy constructor.
      * Internal may not be copy constructed.
@@ -466,7 +472,6 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
     Router* router;                       /* Message bus router */
     PeerStateTable peerStateTable;        /* Table that maintains state information about remote peers */
     LocalEndpoint localEndpoint;          /* The local endpoint */
-    CompressionRules compressionRules;    /* Rules for compresssing and decompressing headers */
 
     bool allowRemoteMessages;             /* true iff endpoints of this attachment can receive messages from remote devices */
     qcc::String listenAddresses;          /* The set of bus addresses that this bus can listen on. (empty for clients) */
@@ -513,7 +518,9 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
     PermissionMgmtListenerSet permissionMgmtListeners; /* NotifyConfig Signals are recieved out side Sessions so a set container is all that is needed */
 
     qcc::Mutex permissionMgmtListenersLock;   /* Lock protecting the aboutListeners set */
+    ObserverManager* observerManager;      /* The observer manager for the bus attachment */
 };
+
 }
 
 #endif

@@ -244,6 +244,15 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
     static QStatus GetNextJoinTime(const BackoffLimits& backoff, bool doInitialBackoff,
                                    uint32_t retries, qcc::Timespec& firstJoinTime, qcc::Timespec& nextJoinTime);
 
+    /**
+     * Is this endpoint a sessionless emitter.
+     *
+     * @param name Name of endpoint to check.
+     *
+     * @return true if this endpoint is emitting a sessionless signal.
+     */
+    bool IsSessionlessEmitter(qcc::String name);
+
   private:
     friend struct RemoteCacheSnapshot;
 
@@ -296,7 +305,7 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
     /* The version implemented. */
     static const uint32_t version;
 
-    static const Rule legacyRule;
+    const Rule legacyRule;
 
     const InterfaceDescription* sessionlessIface;  /**< org.alljoyn.sl interface */
 
@@ -635,7 +644,10 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
         SessionlessObj& slObj;
         Work(SessionlessObj& slObj) : slObj(slObj) { }
         virtual ~Work() { }
+
         virtual void Run() = 0;
+      private:
+        virtual void operator=(const Work&) { }
     };
 
     class SendResponseWork : public Work {
@@ -692,6 +704,7 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      *                 will be deleted after execution.
      */
     void ScheduleWork(Work* work);
+
 };
 
 }

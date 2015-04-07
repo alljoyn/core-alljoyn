@@ -38,13 +38,16 @@ using namespace qcc;
 
 namespace ajn {
 
-/* the key exchange is in the 16 MSB */
+/* the key exchange is in the 16 MSB.
+   The PIN-based key exchange mechanism was removed in 15.04:
+        AUTH_KEYX_PIN           0x00040000
+   The RSA-based auth mechanism was removed in 15.04:
+        AUTH_KEYX_RSA           0x00200000
+ */
 #define AUTH_KEYX_ANONYMOUS     0x00010000
 #define AUTH_KEYX_EXTERNAL      0x00020000
-#define AUTH_KEYX_PIN           0x00040000
 #define AUTH_KEYX_SRP           0x00080000
 #define AUTH_KEYX_SRP_LOGON     0x00100000
-#define AUTH_KEYX_RSA           0x00200000
 #define AUTH_KEYX_ECDHE         0x00400000
 #define AUTH_KEYX_GSSAPI        0x00800000
 
@@ -52,10 +55,8 @@ namespace ajn {
 
 #define AUTH_SUITE_ANONYMOUS    AUTH_KEYX_ANONYMOUS
 #define AUTH_SUITE_EXTERNAL     AUTH_KEYX_EXTERNAL
-#define AUTH_SUITE_PIN_KEYX     AUTH_KEYX_PIN
 #define AUTH_SUITE_SRP_KEYX     AUTH_KEYX_SRP
 #define AUTH_SUITE_SRP_LOGON    AUTH_KEYX_SRP_LOGON
-#define AUTH_SUITE_RSA_KEYX     AUTH_KEYX_RSA
 
 #define AUTH_SUITE_ECDHE_NULL   (AUTH_KEYX_ECDHE | 0x0001)
 #define AUTH_SUITE_ECDHE_PSK    (AUTH_KEYX_ECDHE | 0x0002)
@@ -80,6 +81,9 @@ class KeyExchangerCB {
 
     ~KeyExchangerCB() { }
   private:
+    /* Private assigment operator - does nothing */
+    KeyExchangerCB operator=(const KeyExchangerCB&);
+
     ProxyBusObject& remoteObj;
     const InterfaceDescription* ifc;
     uint32_t timeout;
@@ -99,29 +103,46 @@ class KeyExchanger {
     bool IsInitiator() { return initiator; }
 
     virtual QStatus GenerateLocalVerifier(uint8_t* verifier, size_t verifierLen) {
+        QCC_UNUSED(verifier);
+        QCC_UNUSED(verifierLen);
         return ER_NOT_IMPLEMENTED;
     }
     virtual QStatus GenerateRemoteVerifier(uint8_t* verifier, size_t verifierLen) {
+        QCC_UNUSED(verifier);
+        QCC_UNUSED(verifierLen);
         return ER_NOT_IMPLEMENTED;
     }
 
     virtual QStatus StoreMasterSecret(const qcc::GUID128& guid, const uint8_t accessRights[4]) {
+        QCC_UNUSED(guid);
+        QCC_UNUSED(accessRights);
         return ER_NOT_IMPLEMENTED;
     }
 
     virtual QStatus ReplyWithVerifier(Message& msg);
 
     virtual QStatus RespondToKeyExchange(Message& msg, MsgArg* variant, uint32_t remoteAuthMask, uint32_t authMask) {
+        QCC_UNUSED(msg);
+        QCC_UNUSED(variant);
+        QCC_UNUSED(remoteAuthMask);
+        QCC_UNUSED(authMask);
         return ER_NOT_IMPLEMENTED;
     }
     virtual QStatus ExecKeyExchange(uint32_t authMask, KeyExchangerCB& callback, uint32_t* remoteAuthMask) {
+        QCC_UNUSED(authMask);
+        QCC_UNUSED(callback);
+        QCC_UNUSED(remoteAuthMask);
         return ER_NOT_IMPLEMENTED;
     }
     virtual QStatus KeyAuthentication(KeyExchangerCB& callback, const char* peerName, uint8_t* authorized) {
+        QCC_UNUSED(callback);
+        QCC_UNUSED(peerName);
+        QCC_UNUSED(authorized);
         return ER_NOT_IMPLEMENTED;
     }
 
     virtual QStatus ValidateRemoteVerifierVariant(const char* peerName, MsgArg* variant, uint8_t* authorized);
+
     virtual const uint32_t GetSuite() {
         return 0;
     }
@@ -131,6 +152,7 @@ class KeyExchanger {
 
     void SetSecretExpiration(uint32_t expiresInSeconds) { secretExpiration = expiresInSeconds; }
     virtual QStatus RequestCredentialsCB(const char* peerName) {
+        QCC_UNUSED(peerName);
         return ER_NOT_IMPLEMENTED;
     }
 
@@ -233,6 +255,9 @@ class KeyExchangerECDHE : public KeyExchanger {
     virtual QStatus KeyExchangeReadKey(MsgArg& variant);
 
     virtual QStatus KeyAuthentication(KeyExchangerCB& callback, const char* peerName, uint8_t* authorized) {
+        QCC_UNUSED(callback);
+        QCC_UNUSED(peerName);
+        QCC_UNUSED(authorized);
         return ER_OK;
     }
 

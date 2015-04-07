@@ -42,7 +42,6 @@
 #include "KeyStore.h"
 #include "BusEndpoint.h"
 #include "PeerState.h"
-#include "CompressionRules.h"
 #include "AllJoynPeerObj.h"
 #include "SASLEngine.h"
 #include "AllJoynCrypto.h"
@@ -184,14 +183,6 @@ AllJoynPeerObj::AllJoynPeerObj(BusAttachment& bus) :
     AlarmListener(),
     dispatcher("PeerObjDispatcher", true, 3), supportedAuthSuitesCount(0), supportedAuthSuites(NULL), permissionMgmtObj(bus)
 {
-    /* Add org.alljoyn.Bus.Peer.HeaderCompression interface */
-    {
-        const InterfaceDescription* ifc = bus.GetInterface(org::alljoyn::Bus::Peer::HeaderCompression::InterfaceName);
-        if (ifc) {
-            AddInterface(*ifc);
-            AddMethodHandler(ifc->GetMember("GetExpansion"), static_cast<MessageReceiver::MethodHandler>(&AllJoynPeerObj::GetExpansion));
-        }
-    }
     /* Add org.alljoyn.Bus.Peer.Authentication interface */
     {
         const InterfaceDescription* ifc = bus.GetInterface(org::alljoyn::Bus::Peer::Authentication::InterfaceName);
@@ -279,153 +270,9 @@ void AllJoynPeerObj::ObjectRegistered(void)
 
 }
 
-void AllJoynPeerObj::GetExpansion(const InterfaceDescription::Member* member, Message& msg)
-{
-    uint32_t token = msg->GetArg(0)->v_uint32;
-    MsgArg replyArg;
-    QStatus status = msg->GetExpansion(token, replyArg);
-    if (status == ER_OK) {
-        status = MethodReply(msg, &replyArg, 1);
-        if (ER_OK != status) {
-            QCC_LogError(status, ("Failed to send GetExpansion reply"));
-        }
-    } else {
-        MethodReply(msg, status);
-    }
-}
-
-QStatus AllJoynPeerObj::RequestHeaderExpansion(Message& msg, RemoteEndpoint& sender)
-{
-    bool expansionPending = false;
-    uint32_t token = msg->GetCompressionToken();
-
-    assert(bus);
-    //assert(sender == bus.GetInternal().GetRouter().FindEndpoint(msg->GetRcvEndpointName()));
-
-    lock.Lock(MUTEX_CONTEXT);
-    /*
-     * First check if there are any other messages waiting for the same expansion rule.
-     */
-    for (std::deque<Message>::iterator iter = msgsPendingExpansion.begin(); iter != msgsPendingExpansion.end(); ++iter) {
-        if ((*iter)->GetCompressionToken() == token) {
-            expansionPending = true;
-            break;
-        }
-    }
-    msgsPendingExpansion.push_back(msg);
-    lock.Unlock(MUTEX_CONTEXT);
-    /*
-     * If there is already an expansion request for this message we don't need another one.
-     */
-    if (expansionPending) {
-        return ER_OK;
-    } else {
-        return DispatchRequest(msg, EXPAND_HEADER, sender->GetRemoteName());
-    }
-}
-
 QStatus AllJoynPeerObj::RequestAuthentication(Message& msg)
 {
     return DispatchRequest(msg, AUTHENTICATE_PEER);
-}
-
-bool AllJoynPeerObj::RemoveCompressedMessage(Message& msg, uint32_t token)
-{
-    lock.Lock(MUTEX_CONTEXT);
-    for (std::deque<Message>::iterator iter = msgsPendingExpansion.begin(); iter != msgsPendingExpansion.end(); ++iter) {
-        if ((*iter)->GetCompressionToken() == token) {
-            msg = *iter;
-            msgsPendingExpansion.erase(iter);
-            lock.Unlock(MUTEX_CONTEXT);
-            return true;
-        }
-    }
-    lock.Unlock(MUTEX_CONTEXT);
-    return false;
-}
-
-/**
- * We keep the timeout for the expansion request small to bound the number of unexpanded messages
- * that we have to queue while we wait for the response. This neutralizes a DOS attack where a remote device
- * that is sending compressed messages never responds to the request for the expansion rule.
- */
-#define EXPANSION_TIMEOUT   1000
-
-void AllJoynPeerObj::ExpandHeader(Message& msg, const qcc::String& receivedFrom)
-{
-    assert(bus);
-    QStatus status = ER_OK;
-    uint32_t token = msg->GetCompressionToken();
-
-    const HeaderFields* expFields = bus->GetInternal().GetCompressionRules()->GetExpansion(token);
-    if (!expFields) {
-        Message replyMsg(*bus);
-        MsgArg arg("u", token);
-        /*
-         * The endpoint the message was received on knows the expansion rule for the token we just received.
-         */
-        ProxyBusObject remotePeerObj(*bus, receivedFrom.c_str(), org::alljoyn::Bus::Peer::ObjectPath, 0);
-        const InterfaceDescription* ifc = bus->GetInterface(org::alljoyn::Bus::Peer::HeaderCompression::InterfaceName);
-        if (ifc == NULL) {
-            status = ER_BUS_NO_SUCH_INTERFACE;
-        }
-        if (status == ER_OK) {
-            remotePeerObj.AddInterface(*ifc);
-            const InterfaceDescription::Member* getExpansionMember = ifc->GetMember("GetExpansion");
-            assert(getExpansionMember);
-            status = remotePeerObj.MethodCall(*getExpansionMember, &arg, 1, replyMsg, EXPANSION_TIMEOUT);
-        }
-        if (status == ER_OK) {
-            status = replyMsg->AddExpansionRule(token, replyMsg->GetArg(0));
-            if (status == ER_OK) {
-                expFields = bus->GetInternal().GetCompressionRules()->GetExpansion(token);
-                if (!expFields) {
-                    status = ER_BUS_HDR_EXPANSION_INVALID;
-                }
-            }
-        }
-    }
-    /*
-     * Clean up if we can't expand the messages.
-     */
-    if (status != ER_OK) {
-        while (RemoveCompressedMessage(msg, token)) {
-            QCC_LogError(status, ("Failed to expand message %s", msg->Description().c_str()));
-        }
-        return;
-    }
-    /*
-     * Calling RemoveCompressedMessage() in a loop may look innefficient but it is highly unlikely
-     * we will be expanding different headers at the same time so we are really just removing the
-     * front message from the list.
-     */
-    while (RemoveCompressedMessage(msg, token)) {
-        Router& router = bus->GetInternal().GetRouter();
-        BusEndpoint sender = router.FindEndpoint(msg->GetRcvEndpointName());
-        if (sender->IsValid()) {
-            /*
-             * Expand the compressed fields. Don't overwrite headers we received.
-             */
-            for (size_t id = 0; id < ArraySize(msg->hdrFields.field); id++) {
-                if (HeaderFields::Compressible[id] && (msg->hdrFields.field[id].typeId == ALLJOYN_INVALID)) {
-                    msg->hdrFields.field[id] = expFields->field[id];
-                }
-            }
-            /*
-             * Initialize ttl from the message header.
-             */
-            if (msg->hdrFields.field[ALLJOYN_HDR_FIELD_TIME_TO_LIVE].typeId != ALLJOYN_INVALID) {
-                msg->ttl = msg->hdrFields.field[ALLJOYN_HDR_FIELD_TIME_TO_LIVE].v_uint16;
-            } else {
-                msg->ttl = 0;
-            }
-            msg->hdrFields.field[ALLJOYN_HDR_FIELD_COMPRESSION_TOKEN].Clear();
-            /*
-             * we have succesfully expanded the message so now it can be routed.
-             */
-            router.PushMessage(msg, sender);
-        }
-    }
 }
 
 /*
@@ -448,6 +295,7 @@ QStatus AllJoynPeerObj::Get(const char* ifcName, const char* propName, MsgArg& v
 
 void AllJoynPeerObj::ExchangeGroupKeys(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
     assert(bus);
 
     QStatus status;
@@ -504,7 +352,9 @@ void AllJoynPeerObj::ExchangeGroupKeys(const InterfaceDescription::Member* membe
 
 void AllJoynPeerObj::ExchangeGuids(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
     assert(bus);
+
     qcc::GUID128 remotePeerGuid(msg->GetArg(0)->v_string.str);
     uint32_t authVersion = msg->GetArg(1)->v_uint32;
 
@@ -587,11 +437,7 @@ QStatus AllJoynPeerObj::KeyGen(PeerState& peerState, String seed, qcc::String& v
              */
             status = Crypto_PseudorandomFunction(masterSecret, "session key", seed, keymatter, keylen);
         } else {
-            assert(keyGenVersion == 1);
-            /*
-             * Session key is generated using AES-CCM key gen procedure
-             */
-            status = Crypto_PseudorandomFunctionCCM(masterSecret, "session key", seed, keymatter, keylen);
+            status = ER_CRYPTO_ILLEGAL_PARAMETERS;
         }
         if (status == ER_OK) {
             KeyBlob sessionKey(keymatter, Crypto_AES::AES128_SIZE, KeyBlob::AES);
@@ -620,7 +466,9 @@ QStatus AllJoynPeerObj::KeyGen(PeerState& peerState, String seed, qcc::String& v
 
 void AllJoynPeerObj::GenSessionKey(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
     assert(bus);
+
     QStatus status;
     PeerState peerState = bus->GetInternal().GetPeerStateTable()->GetPeerState(msg->GetSender());
     qcc::GUID128 remotePeerGuid(msg->GetArg(0)->v_string.str);
@@ -651,7 +499,7 @@ void AllJoynPeerObj::AuthAdvance(Message& msg)
     assert(bus);
     QStatus status = ER_OK;
     ajn::SASLEngine* sasl = NULL;
-    ajn::SASLEngine::AuthState authState;
+    ajn::SASLEngine::AuthState authState = SASLEngine::ALLJOYN_AUTH_FAILED;
     qcc::String outStr;
     qcc::String sender = msg->GetSender();
     qcc::String mech;
@@ -864,6 +712,7 @@ void AllJoynPeerObj::DoKeyAuthentication(Message& msg)
 
 void AllJoynPeerObj::AuthChallenge(const ajn::InterfaceDescription::Member* member, ajn::Message& msg)
 {
+    QCC_UNUSED(member);
     /*
      * Cannot authenticate if we don't have any authentication mechanisms
      */
@@ -883,6 +732,8 @@ void AllJoynPeerObj::AuthChallenge(const ajn::InterfaceDescription::Member* memb
 
 void AllJoynPeerObj::ExchangeSuites(const ajn::InterfaceDescription::Member* member, ajn::Message& msg)
 {
+    QCC_UNUSED(member);
+
     uint32_t*remoteSuites;
     size_t remoteSuitesLen;
 
@@ -939,6 +790,7 @@ void AllJoynPeerObj::ExchangeSuites(const ajn::InterfaceDescription::Member* mem
 
 void AllJoynPeerObj::KeyExchange(const ajn::InterfaceDescription::Member* member, ajn::Message& msg)
 {
+    QCC_UNUSED(member);
     /*
      * Cannot authenticate if we don't have any authentication mechanisms
      */
@@ -958,6 +810,7 @@ void AllJoynPeerObj::KeyExchange(const ajn::InterfaceDescription::Member* member
 
 void AllJoynPeerObj::KeyAuthentication(const ajn::InterfaceDescription::Member* member, ajn::Message& msg)
 {
+    QCC_UNUSED(member);
     /*
      * Cannot authenticate if we don't have any authentication mechanisms
      */
@@ -1493,6 +1346,8 @@ QStatus AllJoynPeerObj::DispatchRequest(Message& msg, RequestType reqType, const
 
 void AllJoynPeerObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
 {
+    QCC_UNUSED(reason);
+
     QStatus status;
 
     assert(bus);
@@ -1577,10 +1432,6 @@ void AllJoynPeerObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
         DoKeyAuthentication(req->msg);
         break;
 
-    case EXPAND_HEADER:
-        ExpandHeader(req->msg, req->data);
-        break;
-
     case SECURE_CONNECTION:
         status = AuthenticatePeer(MESSAGE_METHOD_CALL, req->data, true);
         if (status != ER_OK) {
@@ -1632,6 +1483,7 @@ void AllJoynPeerObj::HandleSecurityViolation(Message& msg, QStatus status)
 
 void AllJoynPeerObj::NameOwnerChanged(const char* busName, const char* previousOwner, const char* newOwner)
 {
+    QCC_UNUSED(previousOwner);
     assert(bus);
 
     /*
@@ -1657,6 +1509,8 @@ void AllJoynPeerObj::NameOwnerChanged(const char* busName, const char* previousO
 
 void AllJoynPeerObj::AcceptSession(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
+
     QStatus status;
     size_t numArgs;
     const MsgArg* args;
@@ -1708,6 +1562,8 @@ void AllJoynPeerObj::AcceptSession(const InterfaceDescription::Member* member, M
 
 void AllJoynPeerObj::SessionJoined(const InterfaceDescription::Member* member, const char* srcPath, Message& msg)
 {
+    QCC_UNUSED(member);
+    QCC_UNUSED(srcPath);
     assert(bus);
 
     // dispatch to the dispatcher thread
@@ -1794,6 +1650,7 @@ class SortableAuthSuite {
  */
 void AllJoynPeerObj::SetupPeerAuthentication(const qcc::String& authMechanisms, AuthListener* listener, BusAttachment& bus)
 {
+    QCC_UNUSED(bus);
     /* clean up first */
     delete [] supportedAuthSuites;
     supportedAuthSuites = NULL;
@@ -1823,22 +1680,18 @@ void AllJoynPeerObj::SetupPeerAuthentication(const qcc::String& authMechanisms, 
             suiteList.push_back(SortableAuthSuite(1, AUTH_SUITE_ANONYMOUS));
         } else if (mech == "EXTERNAL") {
             suiteList.push_back(SortableAuthSuite(2, AUTH_SUITE_EXTERNAL));
-        } else if (mech == "ALLJOYN_PIN_KEYX") {
-            suiteList.push_back(SortableAuthSuite(3, AUTH_SUITE_PIN_KEYX));
         } else if (mech == "ALLJOYN_ECDHE_NULL") {
-            suiteList.push_back(SortableAuthSuite(4, AUTH_SUITE_ECDHE_NULL));
+            suiteList.push_back(SortableAuthSuite(3, AUTH_SUITE_ECDHE_NULL));
         } else if (mech == "ALLJOYN_SRP_KEYX") {
-            suiteList.push_back(SortableAuthSuite(5, AUTH_SUITE_SRP_KEYX));
+            suiteList.push_back(SortableAuthSuite(4, AUTH_SUITE_SRP_KEYX));
         } else if (mech == "ALLJOYN_SRP_LOGON") {
-            suiteList.push_back(SortableAuthSuite(6, AUTH_SUITE_SRP_LOGON));
+            suiteList.push_back(SortableAuthSuite(5, AUTH_SUITE_SRP_LOGON));
         } else if (mech == "ALLJOYN_ECDHE_PSK") {
-            suiteList.push_back(SortableAuthSuite(7, AUTH_SUITE_ECDHE_PSK));
-        } else if (mech == "ALLJOYN_RSA_KEYX") {
-            suiteList.push_back(SortableAuthSuite(8, AUTH_SUITE_RSA_KEYX));
+            suiteList.push_back(SortableAuthSuite(6, AUTH_SUITE_ECDHE_PSK));
         } else if (mech == "GSSAPI") {
-            suiteList.push_back(SortableAuthSuite(9, AUTH_SUITE_GSSAPI));
+            suiteList.push_back(SortableAuthSuite(7, AUTH_SUITE_GSSAPI));
         } else if (mech == "ALLJOYN_ECDHE_ECDSA") {
-            suiteList.push_back(SortableAuthSuite(10, AUTH_SUITE_ECDHE_ECDSA));
+            suiteList.push_back(SortableAuthSuite(8, AUTH_SUITE_ECDHE_ECDSA));
         }
     }
     if (suiteList.size() == 0) {
@@ -1910,6 +1763,7 @@ QStatus AllJoynPeerObj::SendMembershipData(ProxyBusObject& remotePeerObj, const 
 
 void AllJoynPeerObj::SendMemberships(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
     bool gotAllFromPeer = false;
     QStatus status = permissionMgmtObj.ParseSendMemberships(msg, gotAllFromPeer);
     if (ER_OK != status) {
