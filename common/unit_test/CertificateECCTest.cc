@@ -620,3 +620,48 @@ TEST_F(CertificateECCTest, GenerateAndLoadSelfSignedCert)
     ASSERT_EQ(ER_OK, cert2.Verify(&dsaPublicKey)) << " verify cert failed";
 }
 
+/**
+ * Test a self signed certificate with the basic constraints field marked as
+ * critical.
+ */
+TEST_F(CertificateECCTest, TestSelfSignedCertWithCritialBasicConstraint)
+{
+    static const char eccSelfSignCertX509PEM[] = {
+        "-----BEGIN CERTIFICATE-----\n"
+        "MIIBVDCB/KADAgECAhC+Ci4hDqaWuEWj2eDd0zrfMAoGCCqGSM49BAMCMCQxIjAgBgNVBAMMGUFsbEpveW5UZXN0U2VsZlNpZ25lZE5hbWUwHhcNMTUwMzMxMTc0MTQwWhcNMTYwMzMwMTc0MTQwWjAkMSIwIAYDVQQDDBlBbGxKb3luVGVzdFNlbGZTaWduZWROYW1lMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE5nmP2qHqZ6N67jdoVxSA64U+Y+rThK+oAwgR6DNezFKMSgVMA1Snn4qsc1Q+KbaYAMj7hWs6xDUIbz6XTOJBvaMQMA4wDAYDVR0TAQH/BAIwADAKBggqhkjOPQQDAgNHADBEAiBJpmVQof40vG9qjWgBTMkETUT0d1kGADBjQK162bUCygIgAtHmpfRztbtr5hgXYdjx4W3Kw0elmnuIfsvrY86ONZs=\n"
+        "-----END CERTIFICATE-----\n"
+    };
+
+    VerifyX509SelfSignExternalCertHelper(eccSelfSignCertX509PEM);
+}
+
+/**
+ * Test a certificate chain with leaf cert containing no CA field and
+ * signing cert has pathlen = 0
+ */
+TEST_F(CertificateECCTest, TestCertChainWithNoCAFieldInBasicContraints)
+{
+    /* the leaf cert does not contain the CA field */
+    static const char eccCertChainX509PEM[] = {
+        "-----BEGIN CERTIFICATE-----\n"
+        "MIIBRTCB66ADAgECAhAIrQyeRPmaj0tCzYi1kc1LMAoGCCqGSM49BAMCMB4xHDAaBgNVBAMME0FsbEpveW5UZXN0Um9vdE5hbWUwHhcNMTUwMzMxMjMyODU2WhcNMTYwMzMwMjMyODU2WjAcMRowGAYDVQQDDBFDZXJ0U2lnbkxpYkNsaWVudDBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABDrQE+EUBFzwtXq/vlG6IYYEpVxEndizIvaysExCBML5uYovNVLfWEqFmEDGLvv3rJkZ0I0xhzSyzLD+Zo4xzU+jDTALMAkGA1UdEwQCMAAwCgYIKoZIzj0EAwIDSQAwRgIhAJ++iDjgYeje0kmJ3cdYTwen1V92Ldz4m0NInbpPX3BOAiEAvUTLYd83T4uXNh6P+JL4Phj3zxVBo2mSvwnuFSyeSOg=\n"
+        "-----END CERTIFICATE-----\n"
+        "\n"
+        "-----BEGIN CERTIFICATE-----\n"
+        "MIIBTDCB86ADAgECAhDNAwko47UUmUcr+HFVMJj1MAoGCCqGSM49BAMCMB4xHDAaBgNVBAMME0FsbEpveW5UZXN0Um9vdE5hbWUwHhcNMTUwMzMxMjMyODU2WhcNMTYwMzMwMjMyODU2WjAeMRwwGgYDVQQDDBNBbGxKb3luVGVzdFJvb3ROYW1lMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEwmq2CF9Q1Lh/RfE9ejHMGb+AkgKljRgh3D2uOVCGCvxpMtH4AR+QzAPKwYOHvKewsZIBtC41N5Fb4wFbR3kaSaMTMBEwDwYDVR0TBAgwBgEB/wIBADAKBggqhkjOPQQDAgNIADBFAiAyIj1kEli20k2jRuhmSqyjHJ1rlv0oyLOXpgI5f5P0nAIhALIV4i9VG6+DiL7VgNQ1LQswZMgjEUMuPWL6UyuBDe3z\n"
+        "-----END CERTIFICATE-----\n"
+    };
+
+    String pem(eccCertChainX509PEM);
+    /* count how many certs in the chain */
+    size_t count = 0;
+    QStatus status = CertificateHelper::GetCertCount(pem, &count);
+    ASSERT_EQ(ER_OK, status) << " count the number of certs in the chain failed with actual status: " << QCC_StatusText(status);
+    ASSERT_EQ((size_t) 2, count) << " expecting two certs in the cert chain";
+
+    CertificateX509 certs[2];
+    status = CertificateX509::DecodeCertChainPEM(pem, certs, count);
+    ASSERT_EQ(ER_OK, status) << " decode the cert chain failed with actual status: " << QCC_StatusText(status);
+    status = certs[0].Verify(certs[1].GetSubjectPublicKey());
+    ASSERT_EQ(ER_OK, status) << " verify leaf cert failed with actual status: " << QCC_StatusText(status);
+}
