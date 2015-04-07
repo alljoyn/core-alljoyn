@@ -1313,11 +1313,9 @@ void AllJoynObj::JoinSessionThread::GetBusAddrsFromSession(const char* sessionHo
             for (size_t i = numBusAddrs; i > 0; --i) {
                 busAddrs.push_back(busAddrArgs[i - 1].v_string.str);
             }
+        } else {
+            QCC_LogError(status, ("GetSessionInfo failed"));
         }
-    }
-
-    if (status != ER_OK) {
-        QCC_LogError(status, ("GetSessionInfo failed"));
     }
 }
 
