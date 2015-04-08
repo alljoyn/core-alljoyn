@@ -493,16 +493,18 @@ void SessionlessObj::RouteSessionlessMessage(SessionId sid, Message& msg)
 
 void SessionlessObj::SendMatchingThroughEndpoint(SessionId sid, Message msg, uint32_t fromRulesId, uint32_t toRulesId)
 {
+    bool isAnnounce = (0 == strcmp(msg->GetInterface(), "org.alljoyn.About")) && (0 == strcmp(msg->GetMemberName(), "Announce"));
     uint32_t rulesRangeLen = toRulesId - fromRulesId;
     RuleIterator rit = rules.begin();
-    bool isAnnounce = (0 == strcmp(msg->GetInterface(), "org.alljoyn.About")) && (0 == strcmp(msg->GetMemberName(), "Announce"));
     while (rit != rules.end()) {
         bool isExplicitMatch = false;
         String epName = rit->first;
         BusEndpoint ep = router.FindEndpoint(epName);
+        bool epTypeIsLeaf = (ep->GetEndpointType() == ENDPOINT_TYPE_NULL || ep->GetEndpointType() == ENDPOINT_TYPE_REMOTE);
+        bool epCanReceive = ep->IsValid() && (ep->AllowRemoteMessages() || epTypeIsLeaf);
         RuleIterator end = rules.upper_bound(epName);
         for (; rit != end; ++rit) {
-            if (IN_WINDOW(uint32_t, fromRulesId, rulesRangeLen, rit->second.id) && ep->IsValid() && ep->AllowRemoteMessages()) {
+            if (IN_WINDOW(uint32_t, fromRulesId, rulesRangeLen, rit->second.id) && epCanReceive) {
                 if (rit->second.IsMatch(msg)) {
                     isExplicitMatch = true;
                     if (isAnnounce && !rit->second.implements.empty()) {
@@ -534,7 +536,7 @@ void SessionlessObj::SendMatchingThroughEndpoint(SessionId sid, Message msg, uin
         }
 
         bool isImplicitMatch = false;
-        if (isAnnounce && !isExplicitMatch && ep->IsValid() && ep->AllowRemoteMessages()) {
+        if (isAnnounce && !isExplicitMatch && epCanReceive) {
             /* The message did not match any rules for this endpoint.
              * Check if it matches (only) an implicit rule. */
             isImplicitMatch = IsOnlyImplicitMatch(epName, msg);
