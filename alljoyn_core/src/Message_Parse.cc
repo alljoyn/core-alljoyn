@@ -897,6 +897,7 @@ QStatus _Message::InterpretHeader()
      * message reducing the places where we need to check for bufEOD when unmarshaling the body.
      */
     bufSize = sizeof(msgHeader) + ((pktSize + 7) & ~7) + sizeof(uint64_t);
+    assert(_msgBuf == nullptr);
     _msgBuf = new uint8_t[bufSize + 7];
     msgBuf = (uint64_t*)((uintptr_t)(_msgBuf + 7) & ~7); /* Align to 8 byte boundary */
     /*
@@ -1009,6 +1010,10 @@ QStatus _Message::LoadBytes(uint8_t* buf, size_t buflen)
 {
     QStatus status;
 
+    if (sizeof(msgHeader) > buflen) {
+        QCC_LogError(ER_BUS_BAD_BODY_LEN, ("Message buffer length %d is invalid", buflen));
+        return ER_BUS_BAD_BODY_LEN;
+    }
     /*
      * Copy in the message header.
      */
@@ -1026,6 +1031,10 @@ QStatus _Message::LoadBytes(uint8_t* buf, size_t buflen)
         return status;
     }
 
+    if (bufSize < buflen) {
+        QCC_LogError(ER_BUS_BAD_BODY_LEN, ("Message buffer length %d is invalid", buflen));
+        return ER_BUS_BAD_BODY_LEN;
+    }
     /*
      * Copy the bits into the newly allocated buffer
      */
