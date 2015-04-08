@@ -53,7 +53,18 @@ QStatus Transport::ParseArguments(const char* transportName,
         size_t eqPos = argStr.find_first_of('=', pos);
         endPos = (eqPos == qcc::String::npos) ? qcc::String::npos : argStr.find_first_of(",;", eqPos);
         if (qcc::String::npos != eqPos) {
-            argMap[argStr.substr(pos, eqPos - pos)] = (qcc::String::npos == endPos) ? argStr.substr(eqPos + 1) : argStr.substr(eqPos + 1, endPos - eqPos - 1);
+            qcc::String keyStr = argStr.substr(pos, eqPos - pos);
+            qcc::String valStr;
+            if (qcc::String::npos == endPos) {
+                if ((eqPos + 1) < argStr.size()) {
+                    valStr = argStr.substr(eqPos + 1);
+                }
+            } else {
+                if (endPos > (eqPos + 1)) {
+                    valStr = argStr.substr(eqPos + 1, endPos - eqPos - 1);
+                }
+            }
+            argMap[keyStr] = valStr;
         }
         pos = endPos + 1;
     }
