@@ -569,7 +569,7 @@
 			isa = PBXProject;
 			attributes = {
 				LastUpgradeCheck = 0430;
-				ORGANIZATIONNAME = "2012-2015 AllSeen Alliance.";
+				ORGANIZATIONNAME = "AllSeen Alliance.";
 			};
 			buildConfigurationList = AC1030A2156EC82300D2853A /* Build configuration list for PBXProject "AllJoynFramework_iOS" */;
 			compatibilityVersion = "Xcode 3.2";
