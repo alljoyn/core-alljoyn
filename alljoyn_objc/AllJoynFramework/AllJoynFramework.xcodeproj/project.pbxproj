@@ -582,7 +582,7 @@
 			attributes = {
 				LastTestingUpgradeCheck = 0510;
 				LastUpgradeCheck = 0440;
-				ORGANIZATIONNAME = "2012-2015 AllSeen Alliance.";
+				ORGANIZATIONNAME = "AllSeen Alliance.";
 			};
 			buildConfigurationList = ACB44E4C15485F3E00FF7DBC /* Build configuration list for PBXProject "AllJoynFramework" */;
 			compatibilityVersion = "Xcode 3.2";
