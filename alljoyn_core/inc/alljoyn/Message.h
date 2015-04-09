@@ -442,6 +442,19 @@ class _Message {
     }
 
     /**
+     * Accessor function to determine if a non empty destination has been set.
+     *
+     * @return
+     *      - True if and only if a non empty destination has been set for this message.
+     *
+     */
+    bool HasDestination() const {
+        return ((hdrFields.field[ALLJOYN_HDR_FIELD_DESTINATION].typeId == ALLJOYN_STRING) &&
+                (NULL != hdrFields.field[ALLJOYN_HDR_FIELD_DESTINATION].v_string.str) &&
+                (0 != hdrFields.field[ALLJOYN_HDR_FIELD_DESTINATION].v_string.len));
+    }
+
+    /**
      * Accessor function to get the compression token for the message.
      *
      * @return
@@ -544,6 +557,15 @@ class _Message {
             outEndian = myEndian;
         }
     }
+
+    /**
+     * Get the Authentication Version of the message.
+     *
+     * @return
+     *      - If the Authentication Version has been set, the value is returned.
+     *      - Otherwise -1.
+     */
+    int32_t GetAuthVersion() const { return authVersion; }
 
     /**
      * Copy constructor.
@@ -1056,6 +1078,7 @@ class _Message {
     uint8_t* bufEOD;             ///< End of data currently in buffer.
     uint8_t* bufPos;             ///< Pointer to the position in buffer.
     uint8_t* bodyPtr;            ///< Pointer to start of message body.
+    size_t cryptoValsLen;        ///< the length allocated for the crypto values (MAC and Nonce).
 
     uint16_t ttl;                ///< Time to live (units of seconds for sessionless. MS for everything else)
     uint32_t timestamp;          ///< Timestamp (local time) for messages with a ttl (time to live).
@@ -1069,6 +1092,7 @@ class _Message {
     qcc::SocketFd* handles;      ///< Array of file/socket descriptors.
     size_t numHandles;           ///< Number of handles in the handles array
     bool encrypt;                ///< True if the message is to be encrypted
+    int32_t authVersion;         ///< signed int representing the authVersion of this message.  -1 indicates not yet set.
 
     AllJoynMessageState readState;  ///< The current state of the message during read.
     size_t pktSize;                 ///< Packet size for this message.
@@ -1355,6 +1379,15 @@ class _Message {
 
     /// @}
     // end internal_methods_message_read
+
+    /*
+     * This is the authentication version that we will fall back to,
+     * if we are unable to determine the auth version of the destination
+     * of the message (in the case of broadcast and multicast.)
+     */
+    static const uint32_t AUTH_FALLBACK_VERSION;
+
+
 };
 
 }
