@@ -134,7 +134,7 @@ void SHA1_Update(SHA_CTX *context, sha1_byte *data, unsigned int len) {
 }
 
 void* SHA1_force_memset(void* s, int v, size_t n) {
-	volatile unsigned char* p = s;
+	volatile unsigned char* p = (volatile unsigned char*) s;
 	while (n--) *p++ = v;
 	return s;
 }

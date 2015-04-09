@@ -610,7 +610,7 @@ void SHA256_Update(SHA256_CTX* context, const sha2_byte *data, size_t len) {
 }
 
 static void* force_memset(void* s, int v, size_t n) {
-	volatile unsigned char* p = s;
+	volatile unsigned char* p = (volatile unsigned char*) s;
 	while (n--) *p++ = v;
 	return s;
 }
