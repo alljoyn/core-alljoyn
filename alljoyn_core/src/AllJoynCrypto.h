@@ -87,11 +87,54 @@ class Crypto {
      */
     static QStatus HashHeaderFields(const HeaderFields& hdrFields, qcc::KeyBlob& keyBlob);
 
+    static const size_t MaxMACLength;
+    static const size_t MaxNonceLength;
+    static const size_t MaxExtraNonceLength;
+
+    /**
+     * Returns the length of the MAC that will be computed for a given message.
+     *
+     * @param message   A message to have a MAC computed for it.
+     *
+     * @return
+     *      - The MAC length of this message.  This depends on the auth version.
+     */
+    static size_t GetMACLength(const _Message& message);
+
+    /**
+     * Returns the length of the Nonce that will be used for a given message.
+     *
+     * @param message   A message to have a Nonce computed for it.
+     *
+     * @return
+     *      - The nonce length of this message.  This depends on the auth version.
+     */
+    static size_t GetNonceLength(const _Message& message);
+
+    /**
+     * Returns the length of the extra nonce appended to the authenticated encrypted blob.
+     *
+     * @param message   A message that may or may not require extra nonce.
+     *
+     * @return
+     *      - The extra nonce length of this message.  This depends on the auth version.
+     */
+    static size_t GetExtraNonceLength(const _Message& message);
+
+  private:
+
     /**
      * The length of the message authentication field that will be appended to the encrypted data.
      */
     static const size_t MACLength;
+    static const size_t PreviousMACLength;
 
+    static const size_t NonceLength;
+    static const size_t PreviousNonceLength;
+
+    static const int32_t MIN_AUTH_VERSION_MACLEN16;
+    static const int32_t MIN_AUTH_VERSION_FULLNONCELEN;
+    static const int32_t MIN_AUTH_VERSION_USE_CRYPTO_VALUE;
 };
 
 

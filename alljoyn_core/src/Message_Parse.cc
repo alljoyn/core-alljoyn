@@ -612,6 +612,19 @@ QStatus _Message::UnmarshalArgs(PeerStateTable* peerStateTable,
             status = ER_BUS_NOT_AUTHORIZED;
             goto ExitUnmarshalArgs;
         }
+
+        /*
+         * Auth Version will have been set if we have an encrypted message and we've gotten here
+         * (i.e get key succeeded and is authorized for secure receive.)
+         */
+
+        if (HasDestination()) {
+            authVersion = (int32_t)(peerState->GetAuthVersion() >> 16);
+        } else {
+            authVersion = (int32_t)AUTH_FALLBACK_VERSION;
+        }
+        assert(0 <= authVersion);
+
         QCC_DbgHLPrintf(("Decrypting messge from %s", GetSender()));
         /*
          * Decryption will typically make the body length slightly smaller because the encryption
