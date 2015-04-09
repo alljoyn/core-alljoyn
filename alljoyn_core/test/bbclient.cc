@@ -349,7 +349,12 @@ class MyAuthListener : public AuthListener {
             if ((credMask& AuthListener::CRED_USER_NAME) == AuthListener::CRED_USER_NAME) {
                 printf("AuthListener::RequestCredentials for key exchange %s received psk ID %s\n", authMechanism, creds.GetUserName().c_str());
             }
-            String psk("123456");
+            /*
+             * In this example, the pre shared secret is a hard coded string.
+             * Pre-shared keys should be 128 bits long, and generated with a
+             * cryptographically secure random number generator.
+             */
+            String psk("faaa0af3dd3f1e0379da046a3ab6ca44");
             creds.SetPassword(psk);
             return true;
         }

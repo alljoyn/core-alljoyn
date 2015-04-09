@@ -166,7 +166,12 @@ public class AuthListenerECDHETest extends TestCase {
             /* the keys can be stored in a key store */
             this.sendBackKeys = sendBackKeys;
             setMechanisms(authList);
-            setPsk("679812");
+            /*
+             * In this example, the pre shared secret is a hard coded string. 
+             * Pre-shared keys should be 128 bits long, and generated with a
+             * cryptographically secure random number generator.
+             */
+            setPsk("faaa0af3dd3f1e0379da046a3ab6ca44");
         }
         /* Set the mechanisms */
         public void setMechanisms(String list) {
@@ -437,9 +442,9 @@ public class AuthListenerECDHETest extends TestCase {
     }
     public void testECDHEFailPSK_DifferentSendKeys() throws Exception {
         ECDHEKeyXListener serviceAuthListener = new ServerECDHEKeyXListener(true, "ALLJOYN_ECDHE_PSK");
-        serviceAuthListener.setPsk("123456");
+        serviceAuthListener.setPsk("faaa0af3dd3f1e0379da046a3ab6ca44");
         ECDHEKeyXListener clientAuthListener = new ClientECDHEKeyXListener(true, "ALLJOYN_ECDHE_PSK");
-        clientAuthListener.setPsk("654321");
+        clientAuthListener.setPsk("faaa0af3dd3f1e0379da046a3ab6ca45");
         try {
             doPing(serviceAuthListener, clientAuthListener);
         }

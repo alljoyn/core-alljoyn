@@ -52,7 +52,12 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
             failVerifyCertChain(false),
             authComplete(false),
             pskName("<anonymous>"),
-            psk("123456"),
+            /*
+             * In this example, the pre shared secret is a hard coded string.
+             * Pre-shared keys should be 128 bits long, and generated with a
+             * cryptographically secure random number generator.
+             */
+            psk("faaa0af3dd3f1e0379da046a3ab6ca44"),
             server(server)
         {
             QCC_UseOSLogging(true);
@@ -527,8 +532,8 @@ TEST_F(AuthListenerECDHETest, ECDHE_PSK_Fail_DifferentPSK)
 {
     EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_PSK"));
     EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_PSK"));
-    clientAuthListener.psk = "123456789";
-    serverAuthListener.psk = "nada";
+    clientAuthListener.psk = "faaa0af3dd3f1e0379da046a3ab6ca44";
+    serverAuthListener.psk = "faaa0af3dd3f1e0379da046a3ab6ca45";
     EXPECT_NE(ER_OK, ExerciseOn());
     EXPECT_FALSE(clientAuthListener.authComplete);
     EXPECT_FALSE(serverAuthListener.authComplete);
