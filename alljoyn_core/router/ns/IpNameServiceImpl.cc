@@ -374,14 +374,14 @@ IpNameServiceImpl::IpNameServiceImpl()
     : Thread("IpNameServiceImpl"), m_state(IMPL_SHUTDOWN), m_isProcSuspending(false),
     m_terminal(false), m_protect_callback(false), m_protect_net_callback(false), m_timer(0),
     m_tDuration(DEFAULT_DURATION), m_tRetransmit(RETRANSMIT_TIME), m_tQuestion(QUESTION_TIME),
-    m_modulus(QUESTION_MODULUS), m_retries(sizeof(RETRY_INTERVALS) / sizeof(RETRY_INTERVALS[0])),
+    m_modulus(QUESTION_MODULUS), m_retries(ArraySize(RETRY_INTERVALS)),
     m_loopback(false), m_broadcast(false), m_enableIPv4(false), m_enableIPv6(false), m_enableV1(false),
     m_wakeEvent(), m_forceLazyUpdate(false), m_refreshAdvertisements(false),
     m_enabled(false), m_doEnable(false), m_doDisable(false),
     m_ipv4QuietSockFd(qcc::INVALID_SOCKET_FD), m_ipv6QuietSockFd(qcc::INVALID_SOCKET_FD),
     m_ipv4UnicastSockFd(qcc::INVALID_SOCKET_FD), m_unicastEvent(NULL),
     m_protectListeners(false), m_packetScheduler(*this),
-    m_networkChangeScheduleCount(m_retries + 1), m_staticScore(0), m_dynamicScore(0), m_priority(0),
+    m_networkChangeScheduleCount(ArraySize(RETRY_INTERVALS)), m_staticScore(0), m_dynamicScore(0), m_priority(0),
     m_powerSource(0), m_mobility(0), m_availability(0), m_nodeConnection(0)
 {
     QCC_DbgHLPrintf(("IpNameServiceImpl::IpNameServiceImpl()"));
@@ -462,7 +462,7 @@ QStatus IpNameServiceImpl::Init(const qcc::String& guid, bool loopback)
     m_loopback = loopback;
     m_terminal = false;
 
-    m_networkChangeScheduleCount = m_retries + 1;
+    m_networkChangeScheduleCount = ArraySize(RETRY_INTERVALS);
     return ER_OK;
 }
 
@@ -2263,7 +2263,7 @@ void IpNameServiceImpl::SetCriticalParameters(
     m_tRetransmit = tRetransmit;
     m_tQuestion = tQuestion;
     m_modulus = modulus;
-    m_retries = retries;
+    m_retries = (retries < ArraySize(RETRY_INTERVALS)) ? retries : ArraySize(RETRY_INTERVALS);
 }
 
 QStatus IpNameServiceImpl::SetCallback(TransportMask transportMask,
@@ -8680,25 +8680,24 @@ ThreadReturn STDCALL IpNameServiceImpl::PacketScheduler::Run(void* arg) {
                         }
                     }
                 }
-            } else {
+            } else if (m_impl.m_networkChangeScheduleCount < m_impl.m_retries) {
                 //adjust m_networkChangeTimeStamp
+                assert(m_impl.m_networkChangeScheduleCount < ArraySize(RETRY_INTERVALS));
                 m_impl.m_networkChangeTimeStamp += RETRY_INTERVALS[m_impl.m_networkChangeScheduleCount] * 1000 + (BURST_RESPONSE_RETRIES) *BURST_RESPONSE_INTERVAL;
+            } else {
+                m_impl.m_networkEvents.clear();
             }
+
             if (now < m_impl.m_networkChangeTimeStamp) {
                 uint32_t delay = m_impl.m_networkChangeTimeStamp - now;
                 if (timeToSleep > delay) {
                     timeToSleep = delay;
                 }
-
             } else {
                 timeToSleep = 0;
             }
 
-            //adjust m_networkChangeScheduleCount
             m_impl.m_networkChangeScheduleCount++;
-            if (m_impl.m_networkChangeScheduleCount > m_impl.m_retries) {
-                m_impl.m_networkEvents.clear();
-            }
         }
 
         //Collect unsolicited Advertise/CancelAdvertise/FindAdvertisement burst packets
@@ -8721,25 +8720,21 @@ ThreadReturn STDCALL IpNameServiceImpl::PacketScheduler::Run(void* arg) {
                     }
                 }
 
-
                 if ((*it).scheduleCount == 0) {
                     initialBurstPackets.push_back((*it).packet);
                     (*it).nextScheduleTime += RETRY_INTERVALS[(*it).scheduleCount] * 1000 - BURST_RESPONSE_INTERVAL;
+                } else if ((*it).scheduleCount < m_impl.m_retries) {
+                    subsequentBurstpackets.push_back((*it).packet);
+                    assert((*it).scheduleCount < ArraySize(RETRY_INTERVALS));
+                    (*it).nextScheduleTime += RETRY_INTERVALS[(*it).scheduleCount] * 1000 + (BURST_RESPONSE_RETRIES) *BURST_RESPONSE_INTERVAL;
                 } else {
                     subsequentBurstpackets.push_back((*it).packet);
-                    (*it).nextScheduleTime += RETRY_INTERVALS[(*it).scheduleCount] * 1000 + (BURST_RESPONSE_RETRIES) *BURST_RESPONSE_INTERVAL;
-
-                }
-
-
-                //if scheduleCount has reached max_retries, get rid of entry and advance iterator.
-                if ((*it).scheduleCount == m_impl.m_retries) {
+                    // scheduleCount has reached max_retries, get rid of entry and advance iterator.
                     m_impl.m_burstQueue.erase(it++);
                     continue;
                 }
 
                 (*it).scheduleCount++;
-
             }
 
             if (now < (*it).nextScheduleTime) {
