@@ -413,7 +413,8 @@ class LocalTestObject : public BusObject {
         prop_str_val("hello world"),
         prop_ro_str("I cannot be written"),
         prop_int_val(100),
-        opts(opts)
+        opts(opts),
+        aboutObj(bus)
     {
         QStatus status = ER_OK;
 
@@ -502,7 +503,6 @@ class LocalTestObject : public BusObject {
             // software version of bbservice is the same as the AllJoyn version
             g_aboutData.SetSoftwareVersion(ajn::GetVersion());
 
-            AboutObj aboutObj(*g_msgBus);
             aboutObj.Announce(sessionPort, g_aboutData);
         } else {
             /* Request a well-known name */
@@ -690,6 +690,7 @@ class LocalTestObject : public BusObject {
     qcc::String prop_ro_str;
     int32_t prop_int_val;
     SessionOpts opts;
+    AboutObj aboutObj;
 };
 
 

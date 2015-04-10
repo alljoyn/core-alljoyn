@@ -351,7 +351,7 @@ class ObserverListener : public Observer::Listener {
   public:
     BusAttachment& bus;
 
-    typedef vector<ManagedProxyBusObject> ProxyVector;
+    typedef vector<ProxyBusObject> ProxyVector;
     ProxyVector proxies;
 
     int counter;
@@ -368,7 +368,7 @@ class ObserverListener : public Observer::Listener {
         counter = newCounter;
     }
 
-    ProxyVector::iterator FindProxy(ManagedProxyBusObject proxy) {
+    ProxyVector::iterator FindProxy(ProxyBusObject proxy) {
         ProxyVector::iterator it;
         for (it = proxies.begin(); it != proxies.end(); ++it) {
             if (it->iden(proxy)) {
@@ -378,33 +378,33 @@ class ObserverListener : public Observer::Listener {
         return it;
     }
 
-    void CheckReentrancy(ManagedProxyBusObject& proxy) {
+    void CheckReentrancy(ProxyBusObject& proxy) {
         Message reply(bus);
         QStatus status;
 
         /* proxy object must implement at least one of A or B */
         const char* intfname = INTF_A;
-        if (!proxy->ImplementsInterface(INTF_A)) {
+        if (!proxy.ImplementsInterface(INTF_A)) {
             intfname = INTF_B;
-            EXPECT_TRUE(proxy->ImplementsInterface(INTF_B));
+            EXPECT_TRUE(proxy.ImplementsInterface(INTF_B));
         }
 
-        status = proxy->MethodCall(intfname, METHOD, NULL, 0, reply);
+        status = proxy.MethodCall(intfname, METHOD, NULL, 0, reply);
         EXPECT_TRUE((status == ER_OK) || (status == ER_BUS_BLOCKING_CALL_NOT_ALLOWED));
 
         bus.EnableConcurrentCallbacks();
-        status = proxy->MethodCall(intfname, METHOD, NULL, 0, reply);
+        status = proxy.MethodCall(intfname, METHOD, NULL, 0, reply);
         EXPECT_EQ(ER_OK, status);
         if (ER_OK == status) {
             String ubn(reply->GetArg(0)->v_string.str), path(reply->GetArg(1)->v_string.str);
             if (strict) {
-                EXPECT_EQ(proxy->GetUniqueName(), ubn);
+                EXPECT_EQ(proxy.GetUniqueName(), ubn);
             }
-            EXPECT_EQ(proxy->GetPath(), path);
+            EXPECT_EQ(proxy.GetPath(), path);
         }
     }
 
-    virtual void ObjectDiscovered(ManagedProxyBusObject& proxy) {
+    virtual void ObjectDiscovered(ProxyBusObject& proxy) {
         ProxyVector::iterator it = FindProxy(proxy);
         if (strict) {
             EXPECT_EQ(it, proxies.end()) << "Discovering an already-discovered object";
@@ -417,7 +417,7 @@ class ObserverListener : public Observer::Listener {
 
     }
 
-    virtual void ObjectLost(ManagedProxyBusObject& proxy) {
+    virtual void ObjectLost(ProxyBusObject& proxy) {
         ProxyVector::iterator it = FindProxy(proxy);
         EXPECT_NE(it, proxies.end()) << "Lost a not-discovered object";
         proxies.erase(it);
@@ -462,8 +462,8 @@ static bool WaitForAll(vector<Event*>& events, uint32_t wait_ms = MAX_WAIT_MS)
 static int CountProxies(Observer& obs)
 {
     int count;
-    ManagedProxyBusObject iter;
-    for (count = 0, iter = obs.GetFirst(); iter->IsValid(); iter = obs.GetNext(iter)) {
+    ProxyBusObject iter;
+    for (count = 0, iter = obs.GetFirst(); iter.IsValid(); iter = obs.GetNext(iter)) {
         ++count;
     }
     return count;
@@ -594,19 +594,19 @@ void ObserverTest::SimpleScenario(Participant& provider, Participant& consumer)
     EXPECT_TRUE(WaitForAll(events));
 
     /* test Observer::Get() and the proxy creation functionality */
-    ManagedProxyBusObject proxy;
+    ProxyBusObject proxy;
     ObjectId oid(provider.uniqueBusName, PATH_PREFIX "justA");
     proxy = obsA.Get(oid);
-    EXPECT_TRUE(proxy->IsValid());
-    EXPECT_EQ((size_t)2, proxy->GetInterfaces()); // always one more than expected because of org.freedesktop.DBus.Peer
+    EXPECT_TRUE(proxy.IsValid());
+    EXPECT_EQ((size_t)2, proxy.GetInterfaces()); // always one more than expected because of org.freedesktop.DBus.Peer
     oid.objectPath = PATH_PREFIX "both";
     proxy = obsA.Get(oid);
-    EXPECT_TRUE(proxy->IsValid());
-    EXPECT_EQ((size_t)3, proxy->GetInterfaces());
+    EXPECT_TRUE(proxy.IsValid());
+    EXPECT_EQ((size_t)3, proxy.GetInterfaces());
 
     /* verify that we can indeed perform method calls */
     Message reply(consumer.bus);
-    EXPECT_EQ(ER_OK, proxy->MethodCall(INTF_A, METHOD, NULL, 0, reply));
+    EXPECT_EQ(ER_OK, proxy.MethodCall(INTF_A, METHOD, NULL, 0, reply));
     String ubn(reply->GetArg(0)->v_string.str), path(reply->GetArg(1)->v_string.str);
     EXPECT_EQ(provider.uniqueBusName, ubn);
     EXPECT_EQ(qcc::String(PATH_PREFIX "both"), path);
@@ -871,17 +871,12 @@ TEST_F(ObserverTest, ObjectIdSanity) {
     EXPECT_EQ(cpObjId.uniqueBusName, objId.uniqueBusName);
     EXPECT_TRUE(cpObjId == objId);
 
-    //Construction with ManagedProxyBusObject
-    ManagedProxyBusObject mgdProxyBusObj;
-    ObjectId emptyObj1(mgdProxyBusObj);
-    EXPECT_FALSE(emptyObj1.IsValid()); // Empty unique busname and object path
-
     //Construction with ProxyBusObject* and ProxyBusObject
     ProxyBusObject proxyBusObj;
-    ObjectId emptyObjId2(&proxyBusObj);
+    ObjectId emptyObjId1(&proxyBusObj);
+    EXPECT_FALSE(emptyObjId1.IsValid()); // Empty unique busname and object path
+    ObjectId emptyObjId2(proxyBusObj);
     EXPECT_FALSE(emptyObjId2.IsValid()); // Empty unique busname and object path
-    ObjectId emptyObjId3(proxyBusObj);
-    EXPECT_FALSE(emptyObjId3.IsValid()); // Empty unique busname and object path
 
     //Construction with dummy ProxyBusObject
     BusAttachment bus("Dummy");
@@ -1099,18 +1094,18 @@ TEST_F(ObserverTest, GetFirstGetNext) {
     EXPECT_TRUE(WaitForAll(events));
 
     // basic iterator access
-    ManagedProxyBusObject proxy = obsA.GetFirst();
-    EXPECT_TRUE(proxy->IsValid());
+    ProxyBusObject proxy = obsA.GetFirst();
+    EXPECT_TRUE(proxy.IsValid());
     proxy = obsA.GetNext(proxy);
-    EXPECT_TRUE(proxy->IsValid());
+    EXPECT_TRUE(proxy.IsValid());
     proxy = obsA.GetNext(proxy);
-    EXPECT_FALSE(proxy->IsValid());
+    EXPECT_FALSE(proxy.IsValid());
 
     // start iterating
     proxy = obsA.GetFirst();
-    EXPECT_TRUE(proxy->IsValid());
-    ManagedProxyBusObject proxy2 = obsA.GetFirst();
-    EXPECT_TRUE(proxy2->IsValid());
+    EXPECT_TRUE(proxy.IsValid());
+    ProxyBusObject proxy2 = obsA.GetFirst();
+    EXPECT_TRUE(proxy2.IsValid());
 
     // unregister objects
     lisA.ExpectInvocations(2);
@@ -1119,16 +1114,16 @@ TEST_F(ObserverTest, GetFirstGetNext) {
 
     // don't wait for the listener notification; should not crash either way.
     proxy2 = obsA.GetNext(proxy2);
-    if (proxy2->IsValid()) {
+    if (proxy2.IsValid()) {
         Message reply(obs.bus);
         // the object is no longer on the bus so the method call must not succeed
-        EXPECT_NE(ER_OK, proxy2->MethodCall(INTF_A, METHOD, NULL, 0, reply));
+        EXPECT_NE(ER_OK, proxy2.MethodCall(INTF_A, METHOD, NULL, 0, reply));
     }
 
     // wait for events and check iterator
     EXPECT_TRUE(WaitForAll(events));
     proxy = obsA.GetNext(proxy);
-    EXPECT_FALSE(proxy->IsValid());
+    EXPECT_FALSE(proxy.IsValid());
 }
 
 TEST_F(ObserverTest, RestartObserver) {
@@ -1194,6 +1189,10 @@ TEST_F(ObserverTest, DiscoverWhileRunning) {
     one.UnregisterObject("a");
     two.UnregisterObject("a");
     EXPECT_TRUE(WaitForAll(events));
+
+    // clean up observer
+    obsA->UnregisterAllListeners();
+    delete obsA;
 }
 
 TEST_F(ObserverTest, StopBus) {

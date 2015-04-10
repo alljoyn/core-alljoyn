@@ -17,6 +17,7 @@
 #include <alljoyn/Status.h>
 #include <alljoyn/AboutData.h>
 #include <alljoyn/AboutListener.h>
+#include <alljoyn/AboutObj.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/ProxyBusObject.h>
 #include <alljoyn/BusObject.h>
@@ -47,7 +48,7 @@ class MyAllJoynCode :
      *
      */
     MyAllJoynCode()
-        : aboutData(), mBusAttachment(NULL), ruleEngine(), ruleBusObject(NULL)
+        : aboutData(), aboutObj(NULL), mBusAttachment(NULL), ruleEngine(), ruleBusObject(NULL)
     { };
 
     /**
@@ -95,6 +96,7 @@ class MyAllJoynCode :
     std::map<qcc::String, qcc::String> mBusFriendlyMap;
 
     ajn::AboutData aboutData;
+    ajn::AboutObj* aboutObj;
     ajn::BusAttachment* mBusAttachment;
 
     SimpleRuleEngine ruleEngine;

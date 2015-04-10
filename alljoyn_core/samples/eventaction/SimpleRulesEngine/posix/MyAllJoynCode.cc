@@ -13,9 +13,6 @@
  *    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
-#include <alljoyn/AboutData.h>
-#include <alljoyn/AboutObj.h>
-
 #include "MyAllJoynCode.h"
 
 using namespace std;
@@ -85,7 +82,7 @@ void MyAllJoynCode::initialize(const char* packageName) {
         aboutData.SetHardwareVersion("Stuffing01");
         aboutData.SetSupportUrl("http://www.allseenalliance.org");
 
-        AboutObj aboutObj(*mBusAttachment);
+        aboutObj = new AboutObj(*mBusAttachment);
 
         ruleBusObject = new RuleBusObject(mBusAttachment, "/ruleengine", &ruleEngine);
         status = mBusAttachment->RegisterBusObject(*ruleBusObject);
@@ -115,7 +112,12 @@ void MyAllJoynCode::initialize(const char* packageName) {
             LOGTHIS("Advertisement was successfully advertised");
         }
 
-        aboutObj.Announce(sp, aboutData);
+        status = aboutObj->Announce(sp, aboutData);
+        if (status != ER_OK) {
+            LOGTHIS("Failed to Announce: %s", QCC_StatusText(status));
+        } else {
+            LOGTHIS("Announce signal was successful.");
+        }
 
     }
 }
@@ -193,11 +195,13 @@ void MyAllJoynCode::shutdown()
     /* Cancel the advertisement */
     /* Unregister the Bus Listener */
     mBusAttachment->UnregisterBusListener(*((BusListener*)this));
+
+    delete aboutObj;
+    aboutObj = NULL;
+
     /* Deallocate the BusAttachment */
-    if (mBusAttachment) {
-        delete mBusAttachment;
-        mBusAttachment = NULL;
-    }
+    delete mBusAttachment;
+    mBusAttachment = NULL;
 }
 
 /* From SessionPortListener */

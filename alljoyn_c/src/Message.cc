@@ -210,9 +210,8 @@ const char* AJ_CALL alljoyn_message_geterrorname(alljoyn_message msg, char* erro
     qcc::String* str = new qcc::String("");
     const char* ret = msg->msg->GetErrorName(str);
 
-    if (errorMessage != NULL && errorMessage_size > 0) {
+    if ((errorMessage != nullptr) && (*errorMessage_size >= 1)) {
         strncpy(errorMessage, str->c_str(), *errorMessage_size);
-        //Make sure the string is always nul terminated.
         errorMessage[*errorMessage_size - 1] = '\0';
     }
     //string plus nul character
@@ -224,7 +223,7 @@ const char* AJ_CALL alljoyn_message_geterrorname(alljoyn_message msg, char* erro
 size_t AJ_CALL alljoyn_message_tostring(alljoyn_message msg, char* str, size_t buf)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
-    if (!msg) {
+    if (msg == nullptr) {
         return (size_t)0;
     }
     qcc::String s = msg->msg->ToString();
@@ -232,9 +231,9 @@ size_t AJ_CALL alljoyn_message_tostring(alljoyn_message msg, char* str, size_t b
      * it is ok to send in NULL for str when the user is only interested in the
      * size of the resulting string.
      */
-    if (str) {
+    if ((str != nullptr) && (buf >= 1)) {
         strncpy(str, s.c_str(), buf);
-        str[buf - 1] = '\0'; //prevent sting not being null terminated.
+        str[buf - 1] = '\0';
     }
     //string plus nul character
     return s.size() + 1;
@@ -243,7 +242,7 @@ size_t AJ_CALL alljoyn_message_tostring(alljoyn_message msg, char* str, size_t b
 size_t AJ_CALL alljoyn_message_description(alljoyn_message msg, char* str, size_t buf)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
-    if (!msg) {
+    if (msg == nullptr) {
         return (size_t)0;
     }
     qcc::String s = msg->msg->Description();
@@ -251,9 +250,9 @@ size_t AJ_CALL alljoyn_message_description(alljoyn_message msg, char* str, size_
      * it is ok to send in NULL for str when the user is only interested in the
      * size of the resulting string.
      */
-    if (str) {
+    if ((str != nullptr) && (buf >= 1)) {
         strncpy(str, s.c_str(), buf);
-        str[buf - 1] = '\0'; //prevent sting not being null terminated.
+        str[buf - 1] = '\0';
     }
     //string plus nul character
     return s.size() + 1;

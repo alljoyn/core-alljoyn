@@ -5439,10 +5439,10 @@ void* IpNameServiceImpl::Run(void* arg)
                     m_refreshAdvertisements = true;
                 }
                 if (eventType == QCC_RTM_SUSPEND) {
-                    qcc::Close(networkEventFd);
-                    networkEventFd = qcc::NetworkEventSocket();
                     delete networkEvent;
                     networkEvent = NULL;
+                    qcc::Close(networkEventFd);
+                    networkEventFd = qcc::NetworkEventSocket();
                     networkEvent = new Event(networkEventFd, qcc::Event::IO_READ);
                     m_forceLazyUpdate = true;
                 }
@@ -5568,6 +5568,7 @@ void* IpNameServiceImpl::Run(void* arg)
     // Clear live interfaces and exit.
     ClearLiveInterfaces();
 
+    delete networkEvent;
     if (networkEventFd != qcc::INVALID_SOCKET_FD) {
         qcc::Close(networkEventFd);
     }

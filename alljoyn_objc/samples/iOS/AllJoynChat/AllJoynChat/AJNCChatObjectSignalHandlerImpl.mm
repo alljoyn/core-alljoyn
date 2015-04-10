@@ -83,7 +83,7 @@ void AJNCChatObjectSignalHandlerImpl::ChatSignalHandler(const ajn::InterfaceDesc
         NSString *objectPath = [NSString stringWithCString:msg->GetObjectPath() encoding:NSUTF8StringEncoding];
         ajn:SessionId sessionId = msg->GetSessionId();
         
-        NSLog(@"Received signal [%@] from %@ on path %@ for session id %u [%s > %s] this=%u", message, from, objectPath, msg->GetSessionId(), msg->GetRcvEndpointName(), msg->GetDestination() ? msg->GetDestination() : "broadcast", (uint)this);
+        NSLog(@"Received signal [%@] from %@ on path %@ for session id %u [%s > %s] this=0x%016" PRIxPTR, message, from, objectPath, msg->GetSessionId(), msg->GetRcvEndpointName(), msg->GetDestination() ? msg->GetDestination() : "broadcast", (uintptr_t)this);
         
         dispatch_async(dispatch_get_main_queue(), ^{
             [(id<AJNChatReceiver>)m_delegate chatMessageReceived:message from:from onObjectPath:objectPath forSession:sessionId];
