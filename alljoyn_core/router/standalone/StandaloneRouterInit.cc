@@ -19,28 +19,47 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
+#include <qcc/platform.h>
+#include <qcc/mutex.h>
+#include <qcc/StaticGlobals.h>
 #include <alljoyn/Init.h>
 #include "RouterGlobals.h"
 
 extern "C" {
 
-static bool initialized = false;
+static uint32_t allJoynRouterInitCount = 0;
+static qcc::Mutex allJoynRouterInitLock;
 
 QStatus AJ_CALL AllJoynRouterInit(void)
 {
-    if (!initialized) {
+    allJoynRouterInitLock.Lock(MUTEX_CONTEXT);
+
+    if (allJoynRouterInitCount == 0) {
         ajn::RouterGlobals::Init();
-        initialized = true;
+        allJoynRouterInitCount = 1;
+    } else if (allJoynRouterInitCount < 0xFFFFFFFF) {
+        allJoynRouterInitCount++;
     }
+
+    allJoynRouterInitLock.Unlock(MUTEX_CONTEXT);
+
     return ER_OK;
 }
 
 QStatus AJ_CALL AllJoynRouterShutdown(void)
 {
-    if (initialized) {
-        ajn::RouterGlobals::Shutdown();
-        initialized = false;
+    allJoynRouterInitLock.Lock(MUTEX_CONTEXT);
+
+    if (allJoynRouterInitCount > 0) {
+        allJoynRouterInitCount--;
+
+        if (allJoynRouterInitCount == 0) {
+            ajn::RouterGlobals::Shutdown();
+        }
     }
+
+    allJoynRouterInitLock.Unlock(MUTEX_CONTEXT);
+
     return ER_OK;
 }
 

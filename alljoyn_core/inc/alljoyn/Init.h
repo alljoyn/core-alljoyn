@@ -32,7 +32,7 @@ extern "C" {
  * This must be called prior to instantiating or using any AllJoyn
  * functionality.
  *
- * This function is not thread-safe.
+ * AllJoynShutdown must be called for each invocation of AllJoynInit.
  *
  * @return
  *  - #ER_OK on success
@@ -44,7 +44,9 @@ extern AJ_API QStatus AJ_CALL AllJoynInit(void);
  * Call this to release any resources acquired in AllJoynInit().  No AllJoyn
  * functionality may be used after calling this.
  *
- * This function is not thread-safe.
+ * AllJoynShutdown must be called for each invocation of AllJoynInit.
+ * AllJoynShutdown must not be called without a prior AllJoynInit call.
+ *
  * @return
  *  - #ER_OK on success
  *  - error code indicating failure otherwise
@@ -61,7 +63,7 @@ extern AJ_API QStatus AJ_CALL AllJoynShutdown(void);
  * AllJoynRouterInit();
  * @endcode
  *
- * This function is not thread-safe.
+ * AllJoynRouterShutdown must be called for each invocation of AllJoynRouterInit.
  *
  * @return
  *  - #ER_OK on success
@@ -79,7 +81,8 @@ extern AJ_API QStatus AJ_CALL AllJoynRouterInit(void);
  * AllJoynShutdown();
  * @endcode
  *
- * This function is not thread-safe.
+ * AllJoynRouterShutdown must be called for each invocation of AllJoynRouterInit.
+ * AllJoynRouterShutdown must not be called without a prior AllJoynRouterInit call.
  *
  * @return
  *  - #ER_OK on success
