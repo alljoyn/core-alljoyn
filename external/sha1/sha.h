@@ -53,6 +53,8 @@ typedef struct _SHA_CTX {
 	sha1_byte	buffer[SHA1_BLOCK_LENGTH];
 } SHA_CTX;
 
+void* SHA1_force_memset(void* s, int v, size_t n);
+
 #ifndef NOPROTO
 void SHA1_Init(SHA_CTX *context);
 void SHA1_Update(SHA_CTX *context, sha1_byte *data, unsigned int len);
