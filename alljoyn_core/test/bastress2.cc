@@ -473,6 +473,7 @@ inline void ThreadClass::ServiceRun() {
                             0x86, 0x51, 0xD1, 0x56,
                             0x1D, 0x5D, 0x46, 0xB0 };
         aboutData.SetAppId(appId, 16);
+        aboutData.SetDefaultLanguage("en");
         aboutData.SetDeviceName("DeviceName");
         //DeviceId is a string encoded 128bit UUID
         aboutData.SetDeviceId("1273b650-49bc-11e4-916c-0800200c9a66");
@@ -484,7 +485,10 @@ inline void ThreadClass::ServiceRun() {
         aboutData.SetSoftwareVersion(ajn::GetVersion());
         aboutData.SetTransportOpts(s_transports);
 
-        aboutObj->Announce(SERVICE_PORT, aboutData);
+        status = aboutObj->Announce(SERVICE_PORT, aboutData);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("AboutObj.Announce failed."));
+        }
     } else {
 
         /* Request name */
