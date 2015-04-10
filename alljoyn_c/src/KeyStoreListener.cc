@@ -97,9 +97,9 @@ QStatus AJ_CALL alljoyn_keystorelistener_getkeys(alljoyn_keystorelistener listen
     qcc::String sinkStr;
     ajn::KeyStore& ks = *((ajn::KeyStore*)keyStore);
     QStatus ret = ((ajn::KeyStoreListener*)listener)->GetKeys(ks, sinkStr);
-    if (sink) {
+
+    if ((sink != nullptr) && (*sink_sz >= 1)) {
         strncpy(sink, sinkStr.c_str(), *sink_sz);
-        //prevent sting not being nul terminated.
         sink[*sink_sz - 1] = '\0';
     }
     if (*sink_sz < sinkStr.length() + 1) {
