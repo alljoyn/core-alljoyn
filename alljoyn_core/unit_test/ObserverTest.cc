@@ -1194,6 +1194,10 @@ TEST_F(ObserverTest, DiscoverWhileRunning) {
     one.UnregisterObject("a");
     two.UnregisterObject("a");
     EXPECT_TRUE(WaitForAll(events));
+
+    // clean up observer
+    obsA->UnregisterAllListeners();
+    delete obsA;
 }
 
 TEST_F(ObserverTest, StopBus) {
