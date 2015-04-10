@@ -48,16 +48,14 @@ void AJ_CALL alljoyn_interfacedescription_member_getannotationatindex(alljoyn_in
 
     ((ajn::InterfaceDescription::Member*)member.internal_member)->GetAnnotations(inner_names, inner_values, annotation_size);
 
-    if (name != NULL && value != NULL) {
-        if (name_size > 0) {
+    if ((name != nullptr) && (value != nullptr)) {
+        if (*name_size >= 1) {
             strncpy(name, inner_names[index].c_str(), *name_size);
-            //make sure the string always ends in nul
             name[*name_size - 1] = '\0';
         }
 
-        if (value_size > 0) {
+        if (*value_size >= 1) {
             strncpy(value, inner_values[index].c_str(), *value_size);
-            //make sure the string always ends in nul
             value[*value_size - 1] = '\0';
         }
     }
@@ -73,27 +71,22 @@ void AJ_CALL alljoyn_interfacedescription_member_getannotationatindex(alljoyn_in
 QCC_BOOL AJ_CALL alljoyn_interfacedescription_member_getannotation(alljoyn_interfacedescription_member member, const char* name, char* value, size_t* value_size)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
+    QCC_BOOL return_value = QCC_FALSE;
     qcc::String out_val;
     bool b = ((ajn::InterfaceDescription::Member*)member.internal_member)->GetAnnotation(name, out_val);
 
-    if (value != NULL && value_size > 0) {
+    if ((value != nullptr) && (*value_size >= 1)) {
         if (b) {
             ::strncpy(value, out_val.c_str(), *value_size);
-            //make sure string always ends in a nul character.
             value[*value_size - 1] = '\0';
-            *value_size = out_val.size() + 1;
-            return QCC_TRUE;
+            return_value = QCC_TRUE;
         } else {
             //return empty string
-            if (*value_size > 0) {
-                *value = '\0';
-            }
-            *value_size = out_val.size() + 1;
-            return QCC_FALSE;
+            *value = '\0';
         }
     }
     *value_size = out_val.size() + 1;
-    return QCC_FALSE;
+    return return_value;
 }
 
 size_t AJ_CALL alljoyn_interfacedescription_property_getannotationscount(alljoyn_interfacedescription_property property)
@@ -114,16 +107,14 @@ void AJ_CALL alljoyn_interfacedescription_property_getannotationatindex(alljoyn_
 
     ((ajn::InterfaceDescription::Property*)property.internal_property)->GetAnnotations(inner_names, inner_values, annotation_size);
 
-    if (name != NULL && value != NULL) {
-        if (name_size > 0) {
+    if ((name != nullptr) && (value != nullptr)) {
+        if (*name_size >= 1) {
             strncpy(name, inner_names[index].c_str(), *name_size);
-            //make sure the string always ends in nul
             name[*name_size - 1] = '\0';
         }
 
-        if (value_size > 0) {
+        if (*value_size >= 1) {
             strncpy(value, inner_values[index].c_str(), *value_size);
-            //make sure the string always ends in nul
             value[*value_size - 1] = '\0';
         }
     }
@@ -142,27 +133,22 @@ QCC_BOOL AJ_CALL alljoyn_interfacedescription_property_getannotation(alljoyn_int
                                                                      size_t* value_size)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
+    QCC_BOOL return_value = QCC_FALSE;
     qcc::String out_val;
     bool b = ((ajn::InterfaceDescription::Property*)property.internal_property)->GetAnnotation(name, out_val);
 
-    if (value != NULL && value_size > 0) {
+    if ((value != nullptr) && (*value_size >= 1)) {
         if (b) {
             ::strncpy(value, out_val.c_str(), *value_size);
-            //make sure string always ends in a nul character.
             value[*value_size - 1] = '\0';
-            *value_size = out_val.size() + 1;
-            return QCC_TRUE;
+            return_value = QCC_TRUE;
         } else {
             //return empty string
-            if (*value_size > 0) {
-                *value = '\0';
-            }
-            *value_size = out_val.size() + 1;
-            return QCC_FALSE;
+            *value = '\0';
         }
     }
     *value_size = out_val.size() + 1;
-    return QCC_FALSE;
+    return return_value;
 }
 
 void AJ_CALL alljoyn_interfacedescription_activate(alljoyn_interfacedescription iface)
@@ -198,27 +184,22 @@ QStatus AJ_CALL alljoyn_interfacedescription_addannotation(alljoyn_interfacedesc
 QCC_BOOL AJ_CALL alljoyn_interfacedescription_getannotation(alljoyn_interfacedescription iface, const char* name, char* value, size_t* value_size)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
+    QCC_BOOL return_value = QCC_FALSE;
     qcc::String out_val;
     const bool b = ((ajn::InterfaceDescription*)iface)->GetAnnotation(name, out_val);
 
-    if (value != NULL && value_size > 0) {
+    if ((value != nullptr) && (*value_size >= 1)) {
         if (b) {
             ::strncpy(value, out_val.c_str(), *value_size);
-            //make sure string always ends in a nul character.
             value[*value_size - 1] = '\0';
-            *value_size = out_val.size() + 1;
-            return QCC_TRUE;
+            return_value = QCC_TRUE;
         } else {
             //return empty string
-            if (*value_size > 0) {
-                *value = '\0';
-            }
-            *value_size = out_val.size() + 1;
-            return QCC_FALSE;
+            *value = '\0';
         }
     }
     *value_size = out_val.size() + 1;
-    return QCC_FALSE;
+    return return_value;
 }
 
 size_t AJ_CALL alljoyn_interfacedescription_getannotationscount(alljoyn_interfacedescription iface)
@@ -239,16 +220,14 @@ void AJ_CALL alljoyn_interfacedescription_getannotationatindex(alljoyn_interface
 
     ((ajn::InterfaceDescription*)iface)->GetAnnotations(inner_names, inner_values, annotation_size);
 
-    if (name != NULL && value != NULL) {
-        if (name_size > 0) {
+    if ((name != nullptr) && (value != nullptr)) {
+        if (*name_size >= 1) {
             strncpy(name, inner_names[index].c_str(), *name_size);
-            //make sure the string always ends in nul
             name[*name_size - 1] = '\0';
         }
 
-        if (value_size > 0) {
+        if (*value_size >= 1) {
             strncpy(value, inner_values[index].c_str(), *value_size);
-            //make sure the string always ends in nul
             value[*value_size - 1] = '\0';
         }
     }
@@ -286,27 +265,22 @@ QCC_BOOL AJ_CALL alljoyn_interfacedescription_getmemberannotation(alljoyn_interf
                                                                   size_t* value_size)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
+    QCC_BOOL return_value = QCC_FALSE;
     qcc::String out_val;
     const bool b = ((ajn::InterfaceDescription*)iface)->GetMemberAnnotation(member, name, out_val);
 
-    if (value != NULL && value_size > 0) {
+    if ((value != nullptr) && (*value_size >= 1)) {
         if (b) {
             ::strncpy(value, out_val.c_str(), *value_size);
-            //make sure string always ends in a nul character.
             value[*value_size - 1] = '\0';
-            *value_size = out_val.size() + 1;
-            return QCC_TRUE;
+            return_value = QCC_TRUE;
         } else {
             //return empty string
-            if (*value_size > 0) {
-                *value = '\0';
-            }
-            *value_size = out_val.size() + 1;
-            return QCC_FALSE;
+            *value = '\0';
         }
     }
     *value_size = out_val.size() + 1;
-    return QCC_FALSE;
+    return return_value;
 }
 
 size_t AJ_CALL alljoyn_interfacedescription_getmembers(const alljoyn_interfacedescription iface,
@@ -504,29 +478,23 @@ QCC_BOOL AJ_CALL alljoyn_interfacedescription_getpropertyannotation(alljoyn_inte
         return QCC_FALSE;
     }
 
-
+    QCC_BOOL return_value = QCC_FALSE;
     qcc::String out_val;
     const bool b = ((ajn::InterfaceDescription*)iface)->GetPropertyAnnotation(property, name, out_val);
 
     //Return the size of the string so memory can be allocated for the string
-    if (value != NULL && value_size > 0) {
+    if ((value != nullptr) && (*value_size >= 1)) {
         if (b) {
             ::strncpy(value, out_val.c_str(), *value_size);
-            //make sure string always ends in a nul character.
             value[*value_size - 1] = '\0';
-            *value_size = out_val.size() + 1;
-            return QCC_TRUE;
+            return_value = QCC_TRUE;
         } else {
             //return empty string
-            if (*value_size > 0) {
-                *value = '\0';
-            }
-            *value_size = out_val.size() + 1;
-            return QCC_FALSE;
+            *value = '\0';
         }
     }
     *value_size = out_val.size() + 1;
-    return QCC_FALSE;
+    return return_value;
 }
 
 const char* AJ_CALL alljoyn_interfacedescription_getname(const alljoyn_interfacedescription iface)
@@ -538,7 +506,7 @@ const char* AJ_CALL alljoyn_interfacedescription_getname(const alljoyn_interface
 size_t AJ_CALL alljoyn_interfacedescription_introspect(const alljoyn_interfacedescription iface, char* str, size_t buf, size_t indent)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
-    if (!iface) {
+    if (iface == nullptr) {
         return (size_t)0;
     }
     qcc::String s = ((const ajn::InterfaceDescription*)iface)->Introspect(indent);
@@ -546,9 +514,9 @@ size_t AJ_CALL alljoyn_interfacedescription_introspect(const alljoyn_interfacede
      * it is ok to send in NULL for str when the user is only interested in the
      * size of the resulting string.
      */
-    if (str) {
+    if ((str != nullptr) && (buf >= 1)) {
         strncpy(str, s.c_str(), buf);
-        str[buf - 1] = '\0'; //prevent string not being null terminated.
+        str[buf - 1] = '\0';
     }
     //size of the string plus the nul character
     return s.size() + 1;

@@ -133,6 +133,11 @@ void SHA1_Update(SHA_CTX *context, sha1_byte *data, unsigned int len) {
 	memcpy(&context->buffer[j], &data[i], len - i);
 }
 
+void* SHA1_force_memset(void* s, int v, size_t n) {
+	volatile unsigned char* p = (volatile unsigned char*) s;
+	while (n--) *p++ = v;
+	return s;
+}
 
 /* Add padding and return the message digest. */
 void SHA1_Final(sha1_byte digest[SHA1_DIGEST_LENGTH], SHA_CTX *context) {
@@ -154,10 +159,11 @@ void SHA1_Final(sha1_byte digest[SHA1_DIGEST_LENGTH], SHA_CTX *context) {
 	     ((context->state[i>>2] >> ((3-(i & 3)) * 8) ) & 255);
 	}
 	/* Wipe variables */
-	i = j = 0;
-	memset(context->buffer, 0, SHA1_BLOCK_LENGTH);
-	memset(context->state, 0, SHA1_DIGEST_LENGTH);
-	memset(context->count, 0, 8);
-	memset(&finalcount, 0, 8);
+	SHA1_force_memset(&i, 0, sizeof(i));
+	SHA1_force_memset(&j, 0, sizeof(j));
+	SHA1_force_memset(context->buffer, 0, SHA1_BLOCK_LENGTH);
+	SHA1_force_memset(context->state, 0, SHA1_DIGEST_LENGTH);
+	SHA1_force_memset(context->count, 0, 8);
+	SHA1_force_memset(&finalcount, 0, 8);
 }
 

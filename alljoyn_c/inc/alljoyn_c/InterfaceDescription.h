@@ -535,9 +535,9 @@ extern AJ_API const char* AJ_CALL alljoyn_interfacedescription_getname(const all
  *                   representation of the interface
  * @param[in]  buf   The size of the char* array that will hold the string
  * @param indent     Number of space chars to use in XML indentation.
- * @return  The number of characters (excluding the terminating null byte) which
+ * @return  The number of characters (including the terminating null byte) which
  *          would have been written to the final string if enough space is
- *          available.  Thus returning a value of buf or larger means the output
+ *          available.  Thus returning a value larger than buf means the output
  *          was truncated.
  */
 extern AJ_API size_t AJ_CALL alljoyn_interfacedescription_introspect(const alljoyn_interfacedescription iface, char* str, size_t buf, size_t indent);

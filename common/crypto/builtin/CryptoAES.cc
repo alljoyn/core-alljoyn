@@ -31,6 +31,7 @@
 #include <qcc/StringUtil.h>
 #include <qcc/Crypto.h>
 #include <qcc/KeyBlob.h>
+#include <qcc/Util.h>
 
 #include <Status.h>
 
@@ -305,7 +306,7 @@ Crypto_AES::Crypto_AES(const KeyBlob& key, Mode mode) : mode(mode), keyState(new
 
 Crypto_AES::~Crypto_AES()
 {
-    memset(keyState, 0, sizeof(*keyState));
+    ClearMemory(keyState, sizeof(*keyState));
     delete keyState;
 }
 
@@ -562,7 +563,7 @@ QStatus Crypto_AES::Decrypt_CCM(const void* in, void* out, size_t& len, const Ke
         return ER_OK;
     } else {
         /* Clear the decrypted data */
-        memset(out, 0, len + authLen);
+        ClearMemory(out, len + authLen);
         len = 0;
         return ER_AUTH_FAIL;
     }
