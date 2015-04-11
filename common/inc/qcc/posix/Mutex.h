@@ -83,6 +83,8 @@ class Mutex {
      * then this function will block until the other thread has released its
      * lock.
      *
+     * It is not safe to use static global data from within this function.
+     *
      * @return
      * - #ER_OK if the lock was acquired.
      * - #ER_OS_ERROR if the underlying OS reports an error.
@@ -111,6 +113,8 @@ class Mutex {
      * Releases a lock on the mutex.  This will only release a lock for the
      * current thread if that thread was the one that aquired the lock in the
      * first place.
+     *
+     * It is not safe to use static global data from within this function.
      *
      * @return
      * - #ER_OK if the lock was acquired.
