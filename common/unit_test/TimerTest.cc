@@ -488,3 +488,56 @@ TEST(TimerTest, TestMaxAlarms) {
     ASSERT_EQ(triggeredAlarms.size(), (size_t)3);
     triggeredAlarmsLock.Unlock();
 }
+
+/*
+ * This test verifies that alarms are triggered in the order they were added.
+ */
+TEST(TimerTest, TestInOrderDelivery) {
+    /* Number of alarms at play; the number 96 is picked from IODispatch's concurrency limit */
+    const uint32_t MaxAlarms = 96;
+    const uint32_t NumAlarms = MaxAlarms * 3;
+    const uint32_t t0 = 0;
+    const uint32_t t1 = 2000;
+
+    /* Reset the triggered alarms */
+    triggeredAlarmsLock.Lock();
+    triggeredAlarms.clear();
+    triggeredAlarmsLock.Unlock();
+
+    QStatus status;
+    Timer timer("testTimer", false, MaxAlarms, true);
+    status = timer.Start();
+    ASSERT_EQ(ER_OK, status) << "Status: " << QCC_StatusText(status);
+
+    MyAlarmListener listener(t0, &timer);
+    AlarmListener* al = &listener;
+
+    std::vector<Alarm> alarms;
+
+    /* Create multiple alarms that expire at the same time */
+    for (uint32_t i = 0; i < NumAlarms; ++i) {
+        alarms.push_back(Alarm(t0, al));
+    }
+
+    /* Schedule the alarms; this is split from the above loop to increase the chance of catching issues */
+    for (std::vector<Alarm>::const_iterator it = alarms.begin(); it != alarms.end(); it++) {
+        ASSERT_EQ(ER_OK, timer.AddAlarmNonBlocking(*it));
+    }
+
+    /* Wait for (t1) to pass */
+    qcc::Sleep(t1 - t0);
+
+    /* Ensure alarms are triggered in the order they were added */
+    triggeredAlarmsLock.Lock();
+    ASSERT_EQ(NumAlarms, triggeredAlarms.size());
+    pair<QStatus, Alarm> prev = triggeredAlarms.front();
+    triggeredAlarms.pop_front();
+    while (!triggeredAlarms.empty()) {
+        pair<QStatus, Alarm> front = triggeredAlarms.front();
+        triggeredAlarms.pop_front();
+        ASSERT_EQ(ER_OK, front.first);
+        ASSERT_LT(prev.second, front.second);
+    }
+    triggeredAlarmsLock.Unlock();
+}
+

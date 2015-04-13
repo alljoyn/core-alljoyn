@@ -60,18 +60,28 @@ class TimerImpl {
       public:
         _TimerContext();
         bool operator==(const _TimerContext& other) const;
-        void StartTimer(PTP_TIMER newTimer, const Alarm& newAlarm);
+        bool operator<(const _TimerContext& other) const;
+        void StartTimer();
+
       private:
+        bool active;
         PTP_TIMER ptpTimer;
         Alarm alarm;
         DWORD threadId;     /* Thread ID currently servicing this timer context; 0 for scheduled timers */
     };
     typedef ManagedObj<_TimerContext> TimerContext;
 
-    static void CALLBACK OnTimeout(PTP_CALLBACK_INSTANCE instance, PVOID context, PTP_TIMER ptpTimer);
+    static void CALLBACK s_OnTimeout(PTP_CALLBACK_INSTANCE instance, PVOID context, PTP_TIMER ptpTimer);
+    void OnTimeout(PTP_CALLBACK_INSTANCE instance, PTP_TIMER ptpTimer);
 
-    void AddTimerInternal(TimerContext timer);
-    void RemoveTimerInternal(TimerContext timer);
+    /* Use these lock and unlock functions to serialize access to the lists */
+    void Lock() const;
+    void Unlock(bool validateStates = true) const;  /* Note: 'validateStates' parameter is used by debug build only */
+
+    /* Assume timerLock is held on entrance and exit */
+    bool RemoveTimerByAlarm(const Alarm& alarm, bool releaseSemaphore);
+    /* Assume timerLock is held on entrance and exit */
+    QStatus WaitForAvailableAlarm(bool canBlock);
 
     String nameStr;
     const bool expireOnExit;
@@ -87,64 +97,79 @@ class TimerImpl {
     PTP_POOL ptpPool;
     PTP_CLEANUP_GROUP ptpCleanupGroup;
 
-    Mutex reentrantLock;                    /* This must not be acquired while timersLock is held (deadlock) */
-    DWORD threadHoldingReentrantLock;       /* Thread ID currently holding the reentrant lock; 0 if the lock is not currently held */
+    Mutex reentrantLock;                                        /* This must not be acquired while timerLock is held (or deadlock) */
+    DWORD threadHoldingReentrantLock;                           /* Thread ID currently holding the reentrant lock; 0 if the lock is not currently held */
 
-    Mutex joinLock;                         /* Make sure that Join is thread safe */
-    volatile LONG joinCount;                /* Number of threads waiting in Join() */
+    Mutex joinLock;                                             /* Make sure that Join is thread safe */
+    volatile LONG joinCount;                                    /* Number of threads waiting in Join() */
 
-    /* Private assigment operator - does nothing */
+    /* Private assignment operator - does nothing */
     TimerImpl& operator=(const TimerImpl&);
 
-    mutable Mutex timersLock;               /* Lock for timers and inFlightTimers; declared mutable because HasAlarm is const */
-    std::list<TimerContext> timers;         /* Active timers */
-    std::list<TimerContext> inFlightTimers; /* Timers that are currently servicing an alarm */
+    mutable Mutex timerLock;                                    /* Lock for timers and inFlightTimers; declared mutable because HasAlarm is const */
+    std::set<TimerContext> timers;                              /* Active timers (ordered) */
+    std::list<TimerContext> inFlightTimers;                     /* Timers that are currently servicing an alarm */
+
+#ifndef NDEBUG
+    mutable DWORD debugThreadHoldingTimerLock;
+    int32_t debugSemaphore;
+    size_t debugNumExitsExpected;
+    TimerContext debugTimerInprogress;
+#endif
 };
 
-}
+} /* namespace qcc */
 
-TimerImpl::_TimerContext::_TimerContext() : ptpTimer(NULL), threadId(0)
+TimerImpl::_TimerContext::_TimerContext() : active(true), ptpTimer(nullptr), threadId(0)
 {
 }
 
-void TimerImpl::_TimerContext::StartTimer(PTP_TIMER newTimer, const Alarm& newAlarm)
+void TimerImpl::_TimerContext::StartTimer()
 {
-    if (ptpTimer != NULL) {
-        /* Cancel the old timer */
-        SetThreadpoolTimer(ptpTimer, NULL, 0, 0);
-        ptpTimer = NULL;
+    assert(ptpTimer != nullptr);
+    /* Calculate the delay */
+    Timespec now;
+    GetTimeNow(&now);
+    FILETIME fileTime = { 0 };
+    int64_t delay = alarm->alarmTime.GetAbsoluteMillis() - now.GetAbsoluteMillis();
+    if (delay > 0) {
+        LARGE_INTEGER howLongToWait;
+        howLongToWait.QuadPart = -10000i64 * delay;
+        fileTime.dwLowDateTime = howLongToWait.LowPart;
+        fileTime.dwHighDateTime = howLongToWait.HighPart;
     }
-
-    ptpTimer = newTimer;
-    alarm = newAlarm;
-
-    if (ptpTimer != NULL) {
-        /* Calculate the delay */
-        Timespec now;
-        GetTimeNow(&now);
-        FILETIME fileTime = { 0 };
-        int64_t delay = alarm->alarmTime.GetAbsoluteMillis() - now.GetAbsoluteMillis();
-        if (delay > 0) {
-            LARGE_INTEGER howLongToWait;
-            howLongToWait.QuadPart = -10000i64 * delay;
-            fileTime.dwLowDateTime = howLongToWait.LowPart;
-            fileTime.dwHighDateTime = howLongToWait.HighPart;
-        }
-
-        /* Schedule the timer */
-        SetThreadpoolTimer(newTimer, &fileTime, alarm->periodMs, 0);
-    }
+    /* Schedule the timer */
+    SetThreadpoolTimer(ptpTimer, &fileTime, 0, 0);
 }
 
 bool TimerImpl::_TimerContext::operator==(const TimerImpl::_TimerContext& other) const
 {
-    return (ptpTimer == other.ptpTimer);
+    return (alarm == other.alarm);
+}
+
+bool TimerImpl::_TimerContext::operator<(const TimerImpl::_TimerContext& other) const
+{
+    return (alarm < other.alarm);
 }
 
 TimerImpl::TimerImpl(qcc::String name, bool expireOnExit, uint32_t concurrency, bool preventReentrancy, uint32_t maxAlarms) :
-    nameStr(name), expireOnExit(expireOnExit), maxThreads(concurrency), ptpPool(NULL), ptpCleanupGroup(NULL),
-    preventReentrancy(preventReentrancy), maxAlarms(maxAlarms), running(false),
-    timerStoppedEvent(NULL), alarmSemaphore(NULL), threadHoldingReentrantLock(0), joinCount(0)
+    nameStr(name)
+    , expireOnExit(expireOnExit)
+    , maxThreads(concurrency)
+    , ptpPool(nullptr)
+    , ptpCleanupGroup(nullptr)
+    , preventReentrancy(preventReentrancy)
+    , maxAlarms(maxAlarms)
+    , running(false)
+    , timerStoppedEvent(nullptr)
+    , alarmSemaphore(nullptr)
+    , threadHoldingReentrantLock(0)
+    , joinCount(0)
+#ifndef NDEBUG
+    , debugThreadHoldingTimerLock(0)
+    , debugSemaphore(0)
+    , debugNumExitsExpected(0)
+#endif
 {
     InitializeThreadpoolEnvironment(&environment);
 }
@@ -169,25 +194,70 @@ TimerImpl::~TimerImpl()
         while (joinCount > 0) {
             Sleep(1);
         }
-
+        if (alarmSemaphore != nullptr) {
+            CloseHandle(alarmSemaphore);
+        }
+        if (timerStoppedEvent != nullptr) {
+            CloseHandle(timerStoppedEvent);
+        }
         DestroyThreadpoolEnvironment(&environment);
     }
 }
 
-/* This function requires lock held by caller */
-void TimerImpl::AddTimerInternal(TimerContext timer) {
-    timers.push_back(timer);
-    /* This assert is to ensure maxAlarms is never exceeded (if it's specified) */
-    assert((maxAlarms == 0) || (timers.size() <= maxAlarms));
+void TimerImpl::Lock() const
+{
+    timerLock.Lock();
+#ifndef NDEBUG
+    debugThreadHoldingTimerLock = GetCurrentThreadId();
+#endif
 }
 
-/* This function requires lock held by caller */
-void TimerImpl::RemoveTimerInternal(TimerContext timer)
+void TimerImpl::Unlock(bool validateStates) const
 {
-    timers.remove(timer);
-    if (alarmSemaphore != NULL) {
-        ReleaseSemaphore(alarmSemaphore, 1, nullptr);
+#ifndef NDEBUG
+    if (validateStates) {
+        /* Make sure that the scheduled timer is the first one */
+        if (running && !timers.empty()) {
+            TimerContext first = *(timers.begin());
+            if (debugTimerInprogress->ptpTimer != first->ptpTimer) {
+                bool found = false;
+                for (auto& timer : inFlightTimers) {
+                    if (debugTimerInprogress->ptpTimer == timer->ptpTimer) {
+                        found = true;
+                        break;
+                    }
+                }
+                assert(found);
+            }
+        }
     }
+    debugThreadHoldingTimerLock = 0;
+#else
+    UNREFERENCED_PARAMETER(validateStates);
+#endif
+    timerLock.Unlock();
+}
+
+/* Assume timerLock is held on entrance and exit */
+bool TimerImpl::RemoveTimerByAlarm(const Alarm& alarm, bool releaseSemaphore)
+{
+    assert(debugThreadHoldingTimerLock == GetCurrentThreadId());
+
+    bool found = false;
+    for (auto it = timers.begin(); it != timers.end(); it++) {
+        if ((*it)->alarm == alarm) {
+            found = true;
+            timers.erase(it);
+            break;
+        }
+    }
+    if (releaseSemaphore && (alarmSemaphore != nullptr) && found) {
+        assert(--debugSemaphore >= 0);
+        QCC_VERIFY(ReleaseSemaphore(alarmSemaphore, 1, nullptr));
+    }
+
+    assert(debugThreadHoldingTimerLock == GetCurrentThreadId());
+    return found;
 }
 
 QStatus TimerImpl::Start()
@@ -196,35 +266,35 @@ QStatus TimerImpl::Start()
         return ER_OK;
     }
 
-    assert(timerStoppedEvent == NULL);
-    timerStoppedEvent = CreateEvent(nullptr, TRUE, TRUE, nullptr);
-    if (timerStoppedEvent == NULL) {
-        QCC_LogError(ER_OS_ERROR, ("CreateEvent failed with OS error %d", GetLastError()));
-        return ER_OS_ERROR;
+    if (timerStoppedEvent == nullptr) {
+        timerStoppedEvent = CreateEvent(nullptr, TRUE, TRUE, nullptr);
+        if (timerStoppedEvent == nullptr) {
+            QCC_LogError(ER_OS_ERROR, ("CreateEvent failed with OS error %d", GetLastError()));
+            return ER_OS_ERROR;
+        }
     }
-    if (maxAlarms > 0) {
-        assert(alarmSemaphore == NULL);
+    if ((maxAlarms > 0) && (alarmSemaphore == nullptr)) {
         alarmSemaphore = CreateSemaphore(nullptr, maxAlarms, maxAlarms, nullptr);
-        if (alarmSemaphore == NULL) {
+        if (alarmSemaphore == nullptr) {
             QCC_LogError(ER_OS_ERROR, ("CreateSemaphore failed with OS error %d", GetLastError()));
             return ER_OS_ERROR;
         }
     }
 
-    PTP_POOL ptpPoolLocal = CreateThreadpool(NULL);
-    if (ptpPoolLocal == NULL) {
+    PTP_POOL ptpPoolLocal = CreateThreadpool(nullptr);
+    if (ptpPoolLocal == nullptr) {
         QCC_LogError(ER_OS_ERROR, ("CreateThreadpool failed with OS error %d", GetLastError()));
         return ER_OS_ERROR;
     }
     PTP_CLEANUP_GROUP ptpCleanupGroupLocal = CreateThreadpoolCleanupGroup();
-    if (ptpCleanupGroupLocal == NULL) {
+    if (ptpCleanupGroupLocal == nullptr) {
         QCC_LogError(ER_OS_ERROR, ("CreateThreadpoolCleanupGroup failed with OS error %d", GetLastError()));
         CloseThreadpool(ptpPoolLocal);
         return ER_OS_ERROR;
     }
     SetThreadpoolThreadMaximum(ptpPoolLocal, maxThreads);
     SetThreadpoolCallbackPool(&environment, ptpPoolLocal);
-    SetThreadpoolCallbackCleanupGroup(&environment, ptpCleanupGroupLocal, NULL);
+    SetThreadpoolCallbackCleanupGroup(&environment, ptpCleanupGroupLocal, nullptr);
     ptpPool = ptpPoolLocal;
     ptpCleanupGroup = ptpCleanupGroupLocal;
 
@@ -235,27 +305,35 @@ QStatus TimerImpl::Start()
 
 QStatus TimerImpl::Stop()
 {
-    timersLock.Lock();
+    Lock();
     running = false;
-    if (timerStoppedEvent != NULL) {
+    if (timerStoppedEvent != nullptr) {
         SetEvent(timerStoppedEvent);
     }
-    if (expireOnExit) {
-        /* Reschedule the alarms to fire immediately */
-        FILETIME fileTime = { 0 };
-        for (auto& timer : timers) {
-            SetThreadpoolTimer(timer->ptpTimer, &fileTime, 0, 0);
+#ifndef NDEBUG
+    debugNumExitsExpected = timers.size();
+#endif
+    if (!timers.empty()) {
+        if (expireOnExit) {
+            TimerContext first = *(timers.begin());
+            /* Fire immediately */
+            FILETIME immediate = { 0 };
+            SetThreadpoolTimer(first->ptpTimer, &immediate, 0, 0);
+        } else {
+            for (auto timer : timers) {
+                /* Cancel */
+                SetThreadpoolTimer(timer->ptpTimer, nullptr, 0, 0);
+            }
         }
     }
-    timersLock.Unlock();
+    Unlock(false);
     return ER_OK;
 }
 
 QStatus TimerImpl::Join()
 {
     InterlockedIncrement(&joinCount);
-
-    if (timerStoppedEvent != NULL) {
+    if (timerStoppedEvent != nullptr) {
         /* Block forever until Stop is called */
         DWORD waitResult = WaitForSingleObject(timerStoppedEvent, INFINITE);
         if (waitResult != WAIT_OBJECT_0) {
@@ -267,36 +345,31 @@ QStatus TimerImpl::Join()
     }
 
     joinLock.Lock();
-    if (ptpCleanupGroup != NULL) {
+    if (ptpCleanupGroup != nullptr) {
         if (expireOnExit) {
-            /* Wait for all timers to complete; timersLock can be acquired here because it is never held when the timer is triggerred */
+            /* Wait for all timers to complete; timerLock can be acquired here because it is never held when the timer is triggered */
             for (bool done = false; !done;) {
-                timersLock.Lock();
+                Lock();
                 done = (timers.size() == 0);
-                timersLock.Unlock();
+                Unlock(false);
                 if (!done) {
                     Sleep(2);
                 }
             }
+            assert(debugNumExitsExpected == 0);
         }
-        CloseThreadpoolCleanupGroupMembers(ptpCleanupGroup, FALSE, NULL);
+        CloseThreadpoolCleanupGroupMembers(ptpCleanupGroup, TRUE, nullptr);
         CloseThreadpoolCleanupGroup(ptpCleanupGroup);
-        ptpCleanupGroup = NULL;
+        ptpCleanupGroup = nullptr;
     }
-    /* There shouldn't be any timers in flight */
-    assert(inFlightTimers.size() == 0);
+#ifndef NDEBUG
+    debugTimerInprogress = TimerContext();
+#endif
+    inFlightTimers.clear();
     timers.clear();
-    if (ptpPool != NULL) {
+    if (ptpPool != nullptr) {
         CloseThreadpool(ptpPool);
-        ptpPool = NULL;
-    }
-    if (alarmSemaphore != NULL) {
-        CloseHandle(alarmSemaphore);
-        alarmSemaphore = NULL;
-    }
-    if (timerStoppedEvent != NULL) {
-        CloseHandle(timerStoppedEvent);
-        timerStoppedEvent = NULL;
+        ptpPool = nullptr;
     }
 
     joinLock.Unlock();
@@ -304,158 +377,302 @@ QStatus TimerImpl::Join()
     return ER_OK;
 }
 
-QStatus TimerImpl::AddAlarm(const Alarm& alarm, bool canBlock)
+/* Assume timerLock is held on entrance and exit */
+QStatus TimerImpl::WaitForAvailableAlarm(bool canBlock)
 {
-    if (!IsRunning()) {
-        return ER_TIMER_EXITING;
-    }
+    assert(debugThreadHoldingTimerLock == GetCurrentThreadId());
 
-    /* Create a new timer */
-    PTP_TIMER ptpTimerLocal = CreateThreadpoolTimer(OnTimeout, this, &environment);
-    if (ptpTimerLocal == NULL) {
-        QCC_LogError(ER_OS_ERROR, ("CreateThreadpoolTimer failed with OS error %d", GetLastError()));
-        return ER_OS_ERROR;
-    }
+    QStatus status;
+    assert(maxAlarms > 0);
 
-    TimerContext timerToAdd;
-    bool timerAdded = false;
-    if (canBlock && (alarmSemaphore != NULL)) {
-        assert(maxAlarms > 0);
-        /* Block until we can add a new timer (when the alarm count is lower than maxAlarms) */
-        HANDLE handles[] = { timerStoppedEvent, alarmSemaphore };
-        DWORD waitResult = WaitForMultipleObjects(_countof(handles), handles, FALSE, INFINITE);
-        switch (waitResult) {
-        case WAIT_OBJECT_0:
-            /* Timer stopped */
-            return ER_TIMER_EXITING;
+    Unlock();
+    HANDLE handles[] = { timerStoppedEvent, alarmSemaphore };
+    DWORD timeout = canBlock ? INFINITE : 0;
+    /* Block until we can add a new timer (when the alarm count is lower than maxAlarms) */
+    DWORD waitResult = WaitForMultipleObjects(_countof(handles), handles, FALSE, timeout);
+    Lock();
+    switch (waitResult) {
+    case WAIT_OBJECT_0:
+        /* Timer stopped */
+        status = ER_TIMER_EXITING;
+        break;
 
-        case WAIT_OBJECT_0 + 1:
-            /* Got the signal that it's OK to add another alarm */
-            timersLock.Lock();
-            if (running) {
-                AddTimerInternal(timerToAdd);
-                timerAdded = true;
-            }
-            timersLock.Unlock();
-            if (timerAdded) {
-                timerToAdd->StartTimer(ptpTimerLocal, alarm);
-            }
-            break;
-
-        case WAIT_FAILED:
-            QCC_LogError(ER_OS_ERROR, ("WaitForMultipleObjects failed with OS error %d", GetLastError()));
-            return ER_OS_ERROR;
-
-        default:
-            QCC_LogError(ER_OS_ERROR, ("WaitForMultipleObjects failed with waitResult %d", waitResult));
-            return ER_OS_ERROR;
-        }
-    } else {
-        /* Cannot block */
-        timersLock.Lock();
-        if (running && (maxAlarms == 0) || (timers.size() < maxAlarms)) {
-            AddTimerInternal(timerToAdd);
-            timerAdded = true;
-        }
-        timersLock.Unlock();
-        if (timerAdded) {
-            timerToAdd->StartTimer(ptpTimerLocal, alarm);
+    case WAIT_OBJECT_0 + 1:
+        assert(++debugSemaphore > 0);
+        if (running) {
+            assert(timers.size() < maxAlarms);
+            status = ER_OK;
         } else {
-            return ER_TIMER_FULL;
+            assert(--debugSemaphore >= 0);
+            QCC_VERIFY(ReleaseSemaphore(alarmSemaphore, 1, nullptr));
+            status = ER_TIMER_EXITING;
         }
+        break;
+
+    case WAIT_TIMEOUT:
+        assert(!canBlock);
+        status = ER_TIMER_FULL;
+        break;
+
+    case WAIT_FAILED:
+        QCC_LogError(ER_OS_ERROR, ("WaitForMultipleObjects failed with OS error %d", GetLastError()));
+        status = ER_OS_ERROR;
+        break;
+
+    default:
+        QCC_LogError(ER_OS_ERROR, ("WaitForMultipleObjects failed with waitResult %d", waitResult));
+        status = ER_OS_ERROR;
+        break;
     }
-    return ER_OK;
+
+    assert(debugThreadHoldingTimerLock == GetCurrentThreadId());
+    return status;
 }
 
-void TimerImpl::OnTimeout(PTP_CALLBACK_INSTANCE instance, PVOID context, PTP_TIMER ptpTimerLocal)
+QStatus TimerImpl::AddAlarm(const Alarm& alarm, bool canBlock)
+{
+    bool releaseSemaphore = false;
+    Lock();
+    QStatus status = ER_OK;
+    if (!running) {
+        status = ER_TIMER_EXITING;
+    }
+    /* Ensure the number of outstanding timers is lower than maxAlarm */
+    if ((status == ER_OK) && (alarmSemaphore != nullptr)) {
+        status = WaitForAvailableAlarm(canBlock);
+        if (status == ER_OK) {
+            releaseSemaphore = true;
+        }
+    }
+    /* Prevent adding a new alarm if there's a limit imposed and we've reached it */
+    if ((status == ER_OK) && (maxAlarms > 0) && (timers.size() >= maxAlarms)) {
+        /* ER_TIMER_FULL should never be returned if the caller says the API can be blocked */
+        assert(!canBlock);
+        assert((alarmSemaphore == nullptr) || releaseSemaphore);
+        status = ER_TIMER_FULL;
+    }
+    /* Create a new OS timer */
+    PTP_TIMER ptpTimerLocal = nullptr;
+    if (status == ER_OK) {
+        ptpTimerLocal = CreateThreadpoolTimer(s_OnTimeout, this, &environment);
+        if (ptpTimerLocal == nullptr) {
+            QCC_LogError(ER_OS_ERROR, ("CreateThreadpoolTimer failed with OS error %d", GetLastError()));
+            assert((alarmSemaphore == nullptr) || releaseSemaphore);
+            status = ER_OS_ERROR;
+        }
+    }
+    /* Insert the new timer into the list */
+    if (status == ER_OK) {
+        assert((maxAlarms == 0) || (timers.size() < maxAlarms));
+        TimerContext newTimer;
+        newTimer->alarm = alarm;
+        newTimer->ptpTimer = ptpTimerLocal;
+        ptpTimerLocal = nullptr;
+
+        TimerContext previous;
+        if (!timers.empty()) {
+            previous = *(timers.begin());
+        }
+        size_t sizeBefore = timers.size();
+        timers.insert(newTimer);
+        if (sizeBefore == timers.size()) {
+            /* Failed to insert (duplicate), ensure semaphore is released */
+            assert((alarmSemaphore == nullptr) || releaseSemaphore);
+            status = ER_FAIL;
+        } else {
+            /* The new timer added successfully */
+            releaseSemaphore = false;
+            /* See if the timer just added is in the first slot */
+            TimerContext first = *(timers.begin());
+            if (first->alarm == newTimer->alarm) {
+                /* Invalidate & cancel the previous timer */
+                if (previous->ptpTimer != nullptr) {
+                    previous->active = false;
+                    SetThreadpoolTimer(previous->ptpTimer, nullptr, 0, 0);
+                }
+                /* Schedule the new timer */
+#ifndef NDEBUG
+                debugTimerInprogress = newTimer;
+#endif
+                newTimer->StartTimer();
+                /* Sanity check */
+                assert(first->alarm == newTimer->alarm);
+                assert(first->alarm != previous->alarm);
+            }
+        }
+    }
+    Unlock();
+    if (releaseSemaphore) {
+        assert(--debugSemaphore >= 0);
+        QCC_VERIFY(ReleaseSemaphore(alarmSemaphore, 1, nullptr));
+    }
+    return status;
+}
+
+void TimerImpl::s_OnTimeout(PTP_CALLBACK_INSTANCE instance, PVOID context, PTP_TIMER ptpTimerLocal)
 {
     TimerImpl* timerImpl = reinterpret_cast<TimerImpl*>(context);
+    timerImpl->OnTimeout(instance, ptpTimerLocal);
+}
 
-    TimerContext timerLocal;
-    bool found = false;
-    bool periodic = false;
-    timerImpl->timersLock.Lock();
-    for (auto& timer : timerImpl->timers) {
-        if (timer->ptpTimer == ptpTimerLocal) {
-            found = true;
-            timerLocal = timer;
-            timerLocal->threadId = GetCurrentThreadId();
-            periodic = (timer->alarm->periodMs != 0);
-            /* Move the timer into the in-flight list, this is needed to guarantee no cyclic timer callbacks */
-            timerImpl->timers.remove(timer);
-            timerImpl->inFlightTimers.push_back(timerLocal);
+void TimerImpl::OnTimeout(PTP_CALLBACK_INSTANCE instance, PTP_TIMER ptpTimerLocal)
+{
+    Timespec now;
+    GetTimeNow(&now);
+
+    /* The first thing to do is to look for the timer to trigger and take it out from the list */
+    TimerContext trigger;
+    bool releaseSemaphoreOnExit = false;
+    Lock();
+    if (!timers.empty()) {
+        TimerContext first = *(timers.begin());
+        if (first->ptpTimer == ptpTimerLocal) {
+            /* Prepare to fire the alarm by moving it into the in-flight list */
+            assert(first->ptpTimer != nullptr);
+            trigger = first;
+            inFlightTimers.push_back(trigger);
+            QCC_VERIFY(RemoveTimerByAlarm(trigger->alarm, false));
+            releaseSemaphoreOnExit = true;
+        } else {
+            /*
+             * Here we make sure that we're indeed dealing with the first timer as it is possible that the
+             * previous (first) timer started just before it was pushed out to another slot. For example,
+             * 1. Timer1 fires but has not taken the lock yet.
+             * 2. AddAlarm is called, takes the lock, cancels Timer1 and inserts Timer0 to the front.
+             * 3. Timer1 is now in the second slot but is already in transit, thus this else clause does nothing.
+             */
+            assert(trigger->ptpTimer == nullptr);
+            assert(!releaseSemaphoreOnExit);
+        }
+    }
+#ifndef NDEBUG
+    if (timers.empty()) {
+        debugTimerInprogress = TimerContext();
+    }
+    if (!IsRunning() && (trigger->ptpTimer != nullptr)) {
+        debugNumExitsExpected--;
+    }
+#endif
+    Unlock(false);
+
+    /* If we did not find the timer to trigger, there's nothing else to do */
+    if (trigger->ptpTimer == nullptr) {
+        assert(!releaseSemaphoreOnExit);
+        return;
+    }
+
+    /* Ensure there's at least one idle thread in the pool to pick up the next alarm immediately */
+    CallbackMayRunLong(instance);
+
+    /* User wants callback made serially; block this thread until other callback is complete */
+    if (IsRunning() && preventReentrancy) {
+        reentrantLock.Lock();
+        threadHoldingReentrantLock = GetCurrentThreadId();
+    }
+
+    /* Schedule the next timer under reentrancy lock to ensure in-order delivery */
+    Lock();
+    if (!timers.empty()) {
+        TimerContext nextTimer = *(timers.begin());
+        assert(nextTimer->ptpTimer != nullptr);
+        assert(nextTimer->ptpTimer != trigger->ptpTimer);
+        nextTimer->active = true;
+#ifndef NDEBUG
+        debugTimerInprogress = nextTimer;
+#endif
+        if (!IsRunning()) {
+            nextTimer->alarm->alarmTime = now;
+        }
+        nextTimer->StartTimer();
+    }
+    Unlock();
+
+    /* Trigger the alarm under reentrancy lock but outside timers lock */
+    assert(trigger->alarm->listener != nullptr);
+    if (IsRunning()) {
+        (trigger->alarm->listener->AlarmTriggered)(trigger->alarm, ER_OK);
+    } else if (expireOnExit) {
+        (trigger->alarm->listener->AlarmTriggered)(trigger->alarm, ER_TIMER_EXITING);
+    }
+
+    /*
+     * Release the reentrant lock if acquired.
+     * NOTE: The AlarmTriggered callback above could have released the reentrant lock already
+     * by calling EnableReentrancy, but the thread ID check below should take care of that.
+     */
+    if ((preventReentrancy) && (GetCurrentThreadId() == threadHoldingReentrantLock)) {
+        threadHoldingReentrantLock = 0;
+        reentrantLock.Unlock();
+    }
+
+    Lock();
+    /* Add the triggered timer back if it is periodic (move it back from the in-flight list) */
+    bool closeTimerOnExit = IsRunning();
+    bool removed = false;
+    for (auto& timer : inFlightTimers) {
+        if (timer->ptpTimer == trigger->ptpTimer) {
+            inFlightTimers.remove(timer);
+            removed = true;
             break;
         }
     }
-    timerImpl->timersLock.Unlock();
-    if (found) {
-        bool closeTimerOnExit = true;
-        bool releaseSemaphoreOnExit = true;
-        bool preventReentrancy = timerImpl->preventReentrancy;
-        /* Ensure there's at least one idle thread in the pool to pick up the next alarm immediately */
-        CallbackMayRunLong(instance);
-        if (preventReentrancy) {
-            /* User wants callback made serially; block this thread until other callback is complete */
-            timerImpl->reentrantLock.Lock();
-            timerImpl->threadHoldingReentrantLock = GetCurrentThreadId();
-        }
-        if (timerLocal->alarm->listener != NULL) {
-            /* Trigger the alarm if the timer is still running or expireOnExit is set */
-            if (timerImpl->IsRunning()) {
-                (timerLocal->alarm->listener->AlarmTriggered)(timerLocal->alarm, ER_OK);
-            } else if (timerImpl->expireOnExit) {
-                (timerLocal->alarm->listener->AlarmTriggered)(timerLocal->alarm, ER_TIMER_EXITING);
-            }
-        }
-
-        /*
-         * Release the reentrant lock if acquired.
-         * NOTE: The AlarmTriggered callback above could have released the reentrant lock already
-         * by calling EnableReentrancy, but the thread ID check below should take care of that.
-         */
-        if (preventReentrancy && (GetCurrentThreadId() == timerImpl->threadHoldingReentrantLock)) {
-            timerImpl->threadHoldingReentrantLock = 0;
-            timerImpl->reentrantLock.Unlock();
-        }
-
-        /*
-         * Add the timer back if this is a periodic timer.
-         * Because we left the lock during the callback, we need to iterate the list again.
-         * Here we're trying to move periodic timer back from the in-flight list.
-         */
-        timerImpl->timersLock.Lock();
-        for (auto& timer : timerImpl->inFlightTimers) {
-            if (timer->alarm == timerLocal->alarm) {
-                /*
-                 * Add back periodic timer context, but only if it has not been invalidated
-                 * (by RemoveAlarm, for example).
-                 */
-                if (timer->ptpTimer == NULL) {
-                    /* Timer has been invalidated; it cannot be closed as someone could be waiting for it */
-                    closeTimerOnExit = false;
+    if (IsRunning() && removed) {
+        if (!trigger->active || (trigger->ptpTimer == nullptr)) {
+            /* Timer has been invalidated (eg. by RemoveAlarm); it cannot be closed as someone could be waiting for it */
+            closeTimerOnExit = false;
+        } else {
+            uint32_t periodMs = trigger->alarm->periodMs;
+            if (periodMs > 0) {
+                if (!IsRunning()) {
+                    trigger->alarm->alarmTime = now;
                 } else {
-                    if (periodic) {
-                        /* We are adding back the periodic timer, so keep both semaphore and timer */
-                        closeTimerOnExit = false;
-                        releaseSemaphoreOnExit = false;
-                        timerImpl->timers.push_back(timerLocal);
+                    trigger->alarm->alarmTime += periodMs;
+                    if (trigger->alarm->alarmTime < now) {
+                        trigger->alarm->alarmTime = now;
                     }
                 }
-                timerImpl->inFlightTimers.remove(timer);
-                break;
+                /* We are adding back the periodic timer, so keep the semaphore */
+                closeTimerOnExit = false;
+                releaseSemaphoreOnExit = false;
+                bool isFirst;
+                if (timers.empty()) {
+                    isFirst = true;
+                } else {
+                    isFirst = false;
+                    TimerContext first = *(timers.begin());
+                    assert(first->ptpTimer != nullptr);
+                    if (trigger->alarm < first->alarm) {
+                        isFirst = true;
+                        /* Invalidate and cancel the previous timer */
+                        first->active = false;
+                        SetThreadpoolTimer(first->ptpTimer, nullptr, 0, 0);
+                    }
+                }
+                timers.insert(trigger);
+                if (isFirst) {
+#ifndef NDEBUG
+                    debugTimerInprogress = trigger;
+#endif
+                    trigger->StartTimer();
+                    /* The rest is sanity check */
+                    TimerContext first = *(timers.begin());
+                    assert(first->ptpTimer == trigger->ptpTimer);
+                    assert(first->alarm == trigger->alarm);
+                }
             }
         }
-        timerLocal->threadId = 0;
-        timerImpl->timersLock.Unlock();
+    }
+    trigger->threadId = 0;
+    Unlock();
 
-        /* Release the semaphore in the event that this function removed the timer context from the list. */
-        if (releaseSemaphoreOnExit && (timerImpl->alarmSemaphore != NULL)) {
-            ReleaseSemaphore(timerImpl->alarmSemaphore, 1, nullptr);
-        }
-        /* Clean up thread resources now since there nobody is referencing it anymore */
-        if (closeTimerOnExit) {
-            CloseThreadpoolTimer(ptpTimerLocal);
-        }
+    /* Release the semaphore in the event that this function removed the timer context from the list. */
+    if (releaseSemaphoreOnExit && (alarmSemaphore != nullptr)) {
+        assert(--debugSemaphore >= 0);
+        QCC_VERIFY(ReleaseSemaphore(alarmSemaphore, 1, nullptr));
+    }
+    /* Clean up thread resources now since there nobody is referencing it anymore */
+    if (closeTimerOnExit) {
+        CloseThreadpoolTimer(ptpTimerLocal);
     }
 }
 
@@ -464,50 +681,66 @@ QStatus TimerImpl::ReplaceAlarm(const Alarm& origAlarm, const Alarm& newAlarm, b
     if (!IsRunning()) {
         return ER_TIMER_EXITING;
     }
+
     /* Create a new timer */
-    PTP_TIMER ptpTimerLocal = CreateThreadpoolTimer(OnTimeout, this, &environment);
-    if (ptpTimerLocal == NULL) {
+    PTP_TIMER ptpTimerLocal = CreateThreadpoolTimer(s_OnTimeout, this, &environment);
+    if (ptpTimerLocal == nullptr) {
         QCC_LogError(ER_OS_ERROR, ("CreateThreadpoolTimer failed with OS error %d", GetLastError()));
         return ER_OS_ERROR;
     }
-    timersLock.Lock();
-    /* Find the matching alarm in order to replace it */
+
     bool found = false;
-    for (auto& timer : timers) {
-        if (timer->alarm == origAlarm) {
+    Lock();
+    if (running && !timers.empty()) {
+        TimerContext first = *(timers.begin());
+        if (first->alarm == origAlarm) {
+            /* This is the first alarm schedule to fire, replace the OS timer */
             found = true;
-            /* Replace the old timer with the new one under lock */
-            timer->StartTimer(ptpTimerLocal, newAlarm);
-            break;
+            assert(first->ptpTimer != nullptr);
+            SetThreadpoolTimer(first->ptpTimer, nullptr, 0, 0);
+            first->ptpTimer = ptpTimerLocal;
+            first->alarm = newAlarm;
+#ifndef NDEBUG
+            debugTimerInprogress = first;
+#endif
+            first->StartTimer();
+        } else {
+            for (auto timer : timers) {
+                if (timer->alarm == origAlarm) {
+                    found = true;
+                    timer->alarm = newAlarm;
+                    break;
+                }
+            }
         }
     }
-
     /*
      * The alarm may be in-flight (and not in the main 'timers' list); if this is the case, we'll need to block this thread
      * if it isn't the thread that executing the alarm (as the alarm handler itself can call this function).
      * Here we'll invalidate the timer context in the in-flight list and wait on it outside the lock.
      */
-    PTP_TIMER wait = NULL;
+    PTP_TIMER wait = nullptr;
     if (blockIfTriggered && !found) {
         for (auto timer : inFlightTimers) {
             if (timer->alarm == origAlarm) {
                 if (timer->threadId != GetCurrentThreadId()) {
                     wait = timer->ptpTimer;
                     /* Invalidate this timer context */
-                    timer->ptpTimer = NULL;
+                    timer->active = false;
                 }
                 break;
             }
         }
     }
-    timersLock.Unlock();
+    Unlock();
     if (!found) {
         return ER_NO_SUCH_ALARM;
     }
-    if (wait != NULL) {
-        /* Block the execution until the alarm completes. */
-        WaitForThreadpoolTimerCallbacks(wait, FALSE);
+    /* Block the execution until the alarm completes. */
+    if (wait != nullptr) {
+        SetThreadpoolTimer(wait, nullptr, 0, 0);
         if (!IsTimerCallbackThread()) {
+            WaitForThreadpoolTimerCallbacks(wait, TRUE);
             /* Timer is no longer referenced, close it now */
             CloseThreadpoolTimer(wait);
         }
@@ -520,44 +753,57 @@ bool TimerImpl::RemoveAlarm(const Alarm& alarm, bool blockIfTriggered)
     if (!IsRunning()) {
         return false;
     }
-
     bool found = false;
-    timersLock.Lock();
-    TimerContext timerLocal;
-    for (auto& timer : timers) {
-        if (timer->alarm == alarm) {
-            found = true;
-            timerLocal = timer;
-            RemoveTimerInternal(timer);
-            /* Cancel the timer while still inside the lock */
-            SetThreadpoolTimer(timerLocal->ptpTimer, NULL, 0, 0);
-            break;
+    Lock();
+    if (running && !timers.empty()) {
+        TimerContext first = *(timers.begin());
+        if (first->alarm == alarm) {
+            /* Cancel the timer */
+            assert(first->ptpTimer != nullptr);
+            first->active = false;
+            SetThreadpoolTimer(first->ptpTimer, nullptr, 0, 0);
+            found = RemoveTimerByAlarm(alarm, true);
+            assert(found);
+            /* Start the next one */
+            if (!timers.empty()) {
+                first = *(timers.begin());
+                assert(first->ptpTimer != nullptr);
+                first->active = true;
+#ifndef NDEBUG
+                debugTimerInprogress = first;
+#endif
+                first->StartTimer();
+            }
+        }
+
+        if (!found) {
+            found = RemoveTimerByAlarm(alarm, true);
         }
     }
-
     /*
      * The alarm may be in-flight (and not in the main 'timers' list); if this is the case, we'll need to block this thread
      * if it isn't the thread that executing the alarm (as the alarm handler itself can call this function).
      * Here we'll invalidate the timer context in the in-flight list and wait on it outside the lock.
      */
-    PTP_TIMER wait = NULL;
+    PTP_TIMER wait = nullptr;
     if (blockIfTriggered && !found) {
         for (auto& timer : inFlightTimers) {
             if (timer->alarm == alarm) {
                 if (timer->threadId != GetCurrentThreadId()) {
                     wait = timer->ptpTimer;
                     /* Invalidate this timer context */
-                    timer->ptpTimer = NULL;
+                    timer->active = false;
                 }
                 break;
             }
         }
     }
-    timersLock.Unlock();
-    if (wait != NULL) {
-        /* Block the execution until the alarm completes. */
-        WaitForThreadpoolTimerCallbacks(wait, FALSE);
+    Unlock();
+    /* Block the execution until the alarm completes. */
+    if (wait != nullptr) {
+        SetThreadpoolTimer(wait, nullptr, 0, 0);
         if (!IsTimerCallbackThread()) {
+            WaitForThreadpoolTimerCallbacks(wait, TRUE);
             /* Timer is no longer referenced, close it now */
             CloseThreadpoolTimer(wait);
         }
@@ -567,47 +813,52 @@ bool TimerImpl::RemoveAlarm(const Alarm& alarm, bool blockIfTriggered)
 
 void TimerImpl::RemoveAlarmsWithListener(const AlarmListener& listener)
 {
-    if (IsRunning() || expireOnExit) {
-        TimerContext timerLocal;
-        timersLock.Lock();
-        for (auto& timer : timers) {
+    Lock();
+    if (running || expireOnExit) {
+        int i = 0;
+        for (auto timer : timers) {
             if (timer->alarm->listener == &listener) {
-                timerLocal = timer;
-                RemoveTimerInternal(timer);
-                /* Cancel the timer */
-                SetThreadpoolTimer(timerLocal->ptpTimer, NULL, 0, 0);
+                /* Invalidate and cancel the timer */
+                timer->active = false;
+                SetThreadpoolTimer(timer->ptpTimer, nullptr, 0, 0);
+                QCC_VERIFY(RemoveTimerByAlarm(timer->alarm, true));
+                /* Start the next one if we've removed the first entry */
+                if ((i == 0) && (!timers.empty())) {
+                    TimerContext first = *(timers.begin());
+                    assert(first->ptpTimer != nullptr);
+                    first->active = true;
+#ifndef NDEBUG
+                    debugTimerInprogress = first;
+#endif
+                    first->StartTimer();
+                }
                 break;
             }
+            i++;
         }
-        timersLock.Unlock();
     }
+    Unlock();
 }
 
 bool TimerImpl::HasAlarm(const Alarm& alarm) const
 {
     bool found = false;
-    if (IsRunning()) {
-        timersLock.Lock();
+    Lock();
+    if (running) {
         for (auto& timer : timers) {
             if (timer->alarm == alarm) {
                 found = true;
                 break;
             }
         }
-        timersLock.Unlock();
     }
+    Unlock();
     return found;
 }
 
 bool TimerImpl::IsRunning() const
 {
-    if (!running) {
-        return false;
-    }
-    if (timerStoppedEvent == NULL) {
-        return false;
-    }
-    return true;
+    return running;
 }
 
 void TimerImpl::EnableReentrancy()
@@ -631,14 +882,14 @@ bool TimerImpl::IsTimerCallbackThread() const
 {
     bool result = false;
     DWORD currentThreadId = GetCurrentThreadId();
-    timersLock.Lock();
+    Lock();
     for (auto timer : inFlightTimers) {
         if (timer->threadId == currentThreadId) {
             result = true;
             break;
         }
     }
-    timersLock.Unlock();
+    Unlock();
     return result;
 }
 
