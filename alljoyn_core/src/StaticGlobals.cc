@@ -49,28 +49,45 @@ class StaticGlobals {
 
 extern "C" {
 
-static bool initialized = false;
+static uint32_t allJoynInitCount = 0;
+static qcc::Mutex allJoynInitLock;
 
 QStatus AJ_CALL AllJoynInit(void)
 {
-    if (!initialized) {
-        QStatus status = qcc::Init();
-        if (status != ER_OK) {
-            return status;
+    QStatus status = ER_OK;
+
+    allJoynInitLock.Lock();
+
+    if (allJoynInitCount == 0) {
+        status = qcc::Init();
+        if (status == ER_OK) {
+            ajn::StaticGlobals::Init();
+            allJoynInitCount = 1;
         }
-        ajn::StaticGlobals::Init();
-        initialized = true;
+    } else if (allJoynInitCount < 0xFFFFFFFF) {
+        allJoynInitCount++;
     }
-    return ER_OK;
+
+    allJoynInitLock.Unlock();
+
+    return status;
 }
 
 QStatus AJ_CALL AllJoynShutdown(void)
 {
-    if (initialized) {
-        ajn::StaticGlobals::Shutdown();
-        qcc::Shutdown();
-        initialized = false;
+    allJoynInitLock.Lock();
+
+    if (allJoynInitCount > 0) {
+        allJoynInitCount--;
+
+        if (allJoynInitCount == 0) {
+            ajn::StaticGlobals::Shutdown();
+            qcc::Shutdown();
+        }
     }
+
+    allJoynInitLock.Unlock();
+
     return ER_OK;
 }
 
