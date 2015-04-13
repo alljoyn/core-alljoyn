@@ -47,7 +47,8 @@ progs = [
     test_env.Program('rawservice',    ['rawservice.cc']),
     test_env.Program('sessions',      ['sessions.cc']),
     test_env.Program('bbsigtest',     ['bbsigtest.cc']),
-    test_env.Program('init',          ['init.cc'])
+    test_env.Program('init',          ['init.cc']),
+    test_env.Program('eventsactionservice', ['eventsactionservice.cc'])
     ]
 
 if test_env['OS'] == 'linux':
