@@ -108,6 +108,8 @@ ASACORE-1600  iOS AboutService sample can not inter-operate with Java
 ASACORE-1603  Invoking AboutData::CreateFromXml() results in a seg fault
               when a required About field is missing in the XML data that
 	      is passed in
+ASACORE-1853 NGNS query responses for openly advertised names are sent as
+             multicast
 
 For a complete list of open issues:
 https://jira.allseenalliance.org/issues/?jql=project%3D%22Core%20SW%22%20and%20status%20not%20in%20%28closed%2C%20resolved%29%20and%20type%20not%20in%20%28task%2C%20%22New%20Feature%22%29%20%20and%20component%20not%20in%20%28%22Thin%20Core%20Library%22%2C%20%22About%20TC%22%29%20order%20by%20priority%20DESC%2C%20id%20ASC
