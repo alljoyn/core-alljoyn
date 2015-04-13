@@ -388,7 +388,7 @@ class PropChangedTestBusObject :
 
     void EmitSignal(const TestParameters& tp,
                     const InterfaceParameters& ip,
-                    SessionId id = 0)
+                    SessionId id = SESSION_ID_ALL_HOSTED)
     {
         if (tp.newEmit) {
             // use new emit
