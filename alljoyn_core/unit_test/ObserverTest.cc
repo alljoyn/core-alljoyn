@@ -250,10 +250,7 @@ class Participant : public SessionPortListener, public SessionListener {
     void CloseSession(Participant& joiner) {
         hsmLock.Lock(MUTEX_CONTEXT);
         SessionMap::iterator iter = hostedSessionMap.find(joiner.uniqueBusName);
-        bool foundOngoingSession = true;
-        if (hostedSessionMap.end() == iter) {
-            foundOngoingSession = false;
-        }
+        bool foundOngoingSession = (hostedSessionMap.end() != iter);
         if (!foundOngoingSession) {
             hsmLock.Unlock(MUTEX_CONTEXT);
             ASSERT_TRUE(foundOngoingSession) << "Could not find ongoing session.";
