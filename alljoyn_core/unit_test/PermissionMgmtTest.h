@@ -33,6 +33,7 @@
 #include <alljoyn/BusObject.h>
 #include <alljoyn/ProxyBusObject.h>
 #include <alljoyn/InterfaceDescription.h>
+#include <alljoyn/Init.h>
 #include <qcc/CryptoECC.h>
 #include <qcc/CertificateECC.h>
 #include <qcc/Log.h>
@@ -160,6 +161,9 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
         serviceBus("PermissionMgmtTestService", false),
         consumerBus("PermissionMgmtTestConsumer", false),
         remoteControlBus("PermissionMgmtTestRemoteControl", false),
+        serviceGUID(),
+        consumerGUID(),
+        remoteControlGUID(),
         status(ER_OK),
         serviceKeyListener(NULL),
         adminKeyListener(NULL),
@@ -170,6 +174,7 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
         channelChangedSignalReceived(false),
         testPML()
     {
+        AllJoynInit();
     }
 
     virtual void SetUp();
