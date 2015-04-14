@@ -21,12 +21,12 @@
 using namespace ajn;
 using namespace qcc;
 
-static GUID128 membershipGUID1;
+static GUID128 membershipGUID1(1);
 static const char* membershipSerial0 = "10000";
 static const char* membershipSerial1 = "10001";
-static GUID128 membershipGUID2;
-static GUID128 membershipGUID3;
-static GUID128 membershipGUID4;
+static GUID128 membershipGUID2(2);
+static GUID128 membershipGUID3(3);
+static GUID128 membershipGUID4(4);
 static const char* membershipSerial2 = "20002";
 static const char* membershipSerial3 = "30003";
 static const char* membershipSerial4 = "40004";
