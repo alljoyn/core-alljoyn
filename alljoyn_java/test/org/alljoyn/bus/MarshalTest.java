@@ -1140,7 +1140,7 @@ public class MarshalTest extends TestCase {
         InferredTypesInterface.InnerStruct[] ar = new InferredTypesInterface.InnerStruct[] {
             new InferredTypesInterface.InnerStruct(12), new InferredTypesInterface.InnerStruct(13) };
         assertArrayEquals(ar, proxy.inferredStructArray(ar));
-        Variant[] av = new Variant[] { new Variant(new String("three")) };
+        Variant[] av = new Variant[] { new Variant("three") };
         assertArrayEquals(av, proxy.variantArray(av));
         @SuppressWarnings(value="unchecked")
         TreeMap<String, String>[] aaess = (TreeMap<String, String>[]) new TreeMap<?, ?>[2];
@@ -1161,7 +1161,7 @@ public class MarshalTest extends TestCase {
                                               new int[] { 8 }, new long[] { 10 }, new double[] { 10.1 },
                                               new String[] { "eleven" },
                                               new InferredTypesInterface.InnerStruct(12),
-                                              new Variant(new String("thirteen")), ae);
+                                              new Variant("thirteen"), ae);
         assertEquals(r, proxy.inferredStruct(r));
 
         /* Variant types */
@@ -1214,7 +1214,7 @@ public class MarshalTest extends TestCase {
         assertEquals(v.getObject(InferredTypesInterface.InnerStruct.class),
                      proxy.variant(v).getObject(InferredTypesInterface.InnerStruct.class));
         assertEquals("(i)", proxy.variant(v).getSignature());
-        v = new Variant(new Variant(new String("thirteen")));
+        v = new Variant(new Variant("thirteen"));
         assertEquals(v.getObject(Variant.class), proxy.variant(v).getObject(Variant.class));
         assertEquals("v", proxy.variant(v).getSignature());
 
@@ -1253,7 +1253,7 @@ public class MarshalTest extends TestCase {
         aeyr.put((byte)1, new InferredTypesInterface.InnerStruct(8));
         assertEquals(aeyr, proxy.inferredDictionaryYR(aeyr));
         TreeMap<Byte, Variant> aeyv = new TreeMap<Byte, Variant>();
-        aeyv.put((byte)1, new Variant(new String("nine")));
+        aeyv.put((byte)1, new Variant("nine"));
         assertEquals(aeyv, proxy.dictionaryYV(aeyv));
         TreeMap<Byte, Map<String, String>> aeyaess = new TreeMap<Byte, Map<String, String>>();
         aeyaess.put((byte)1, ae);
@@ -1292,7 +1292,7 @@ public class MarshalTest extends TestCase {
         aebr.put(true, new InferredTypesInterface.InnerStruct(8));
         assertEquals(aebr, proxy.inferredDictionaryBR(aebr));
         TreeMap<Boolean, Variant> aebv = new TreeMap<Boolean, Variant>();
-        aebv.put(true, new Variant(new String("nine")));
+        aebv.put(true, new Variant("nine"));
         assertEquals(aebv, proxy.dictionaryBV(aebv));
         TreeMap<Boolean, Map<String, String>> aebaess = new TreeMap<Boolean, Map<String, String>>();
         aebaess.put(true, ae);
@@ -1331,7 +1331,7 @@ public class MarshalTest extends TestCase {
         aenr.put((short)2, new InferredTypesInterface.InnerStruct(8));
         assertEquals(aenr, proxy.inferredDictionaryNR(aenr));
         TreeMap<Short, Variant> aenv = new TreeMap<Short, Variant>();
-        aenv.put((short)2, new Variant(new String("nine")));
+        aenv.put((short)2, new Variant("nine"));
         assertEquals(aenv, proxy.dictionaryNV(aenv));
         TreeMap<Short, Map<String, String>> aenaess = new TreeMap<Short, Map<String, String>>();
         aenaess.put((short)2, ae);
@@ -1370,7 +1370,7 @@ public class MarshalTest extends TestCase {
         aeir.put(3, new InferredTypesInterface.InnerStruct(8));
         assertEquals(aeir, proxy.inferredDictionaryIR(aeir));
         TreeMap<Integer, Variant> aeiv = new TreeMap<Integer, Variant>();
-        aeiv.put(3, new Variant(new String("nine")));
+        aeiv.put(3, new Variant("nine"));
         assertEquals(aeiv, proxy.dictionaryIV(aeiv));
         TreeMap<Integer, Map<String, String>> aeiaess = new TreeMap<Integer, Map<String, String>>();
         aeiaess.put(3, ae);
@@ -1409,7 +1409,7 @@ public class MarshalTest extends TestCase {
         aexr.put((long)4, new InferredTypesInterface.InnerStruct(8));
         assertEquals(aexr, proxy.inferredDictionaryXR(aexr));
         TreeMap<Long, Variant> aexv = new TreeMap<Long, Variant>();
-        aexv.put((long)4, new Variant(new String("nine")));
+        aexv.put((long)4, new Variant("nine"));
         assertEquals(aexv, proxy.dictionaryXV(aexv));
         TreeMap<Long, Map<String, String>> aexaess = new TreeMap<Long, Map<String, String>>();
         aexaess.put((long)4, ae);
@@ -1448,7 +1448,7 @@ public class MarshalTest extends TestCase {
         aedr.put(5.1, new InferredTypesInterface.InnerStruct(8));
         assertEquals(aedr, proxy.inferredDictionaryDR(aedr));
         TreeMap<Double, Variant> aedv = new TreeMap<Double, Variant>();
-        aedv.put(5.1, new Variant(new String("nine")));
+        aedv.put(5.1, new Variant("nine"));
         assertEquals(aedv, proxy.dictionaryDV(aedv));
         TreeMap<Double, Map<String, String>> aedaess = new TreeMap<Double, Map<String, String>>();
         aedaess.put(5.1, ae);
@@ -1487,7 +1487,7 @@ public class MarshalTest extends TestCase {
         aesr.put("six", new InferredTypesInterface.InnerStruct(8));
         assertEquals(aesr, proxy.inferredDictionarySR(aesr));
         TreeMap<String, Variant> aesv = new TreeMap<String, Variant>();
-        aesv.put("six", new Variant(new String("nine")));
+        aesv.put("six", new Variant("nine"));
         assertEquals(aesv, proxy.dictionarySV(aesv));
         TreeMap<String, Map<String, String>> aesaess = new TreeMap<String, Map<String, String>>();
         aesaess.put("six", ae);
@@ -1572,7 +1572,7 @@ public class MarshalTest extends TestCase {
         assertArrayEquals(at, proxy.uint64Array(at));
         short[] an = new short[] { (short)3, (short)4 };
         assertArrayEquals(an, proxy.int16Array(an));
-        Variant[] av = new Variant[] { new Variant(new String("twentyfour")), new Variant(new String("twentyfive")) };
+        Variant[] av = new Variant[] { new Variant("twentyfour"), new Variant("twentyfive") };
         assertArrayEquals(av, proxy.variantArray(av));
         String[] as = new String[] { "sixteen", "seventeen" };
         assertArrayEquals(as, proxy.stringArray(as));
@@ -1605,7 +1605,7 @@ public class MarshalTest extends TestCase {
                                                new long[] { 16 }, new long[] { 17 }, new double[] { 18.1 },
                                                new String[] { "nineteen" }, new String[] { "/twenty" },
                                                new String[] { "t" }, new AnnotatedTypesInterface.InnerStruct(12),
-                                               new Variant(new String("thirteen")), ae);
+                                               new Variant("thirteen"), ae);
         assertEquals(r, proxy.annotatedStruct(r));
 
         /* Variant types */
@@ -1663,7 +1663,7 @@ public class MarshalTest extends TestCase {
         v = new Variant(new AnnotatedTypesInterface.InnerStruct(12), "r");
         assertEquals(v.getObject(AnnotatedTypesInterface.InnerStruct.class),
                      proxy.variant(v).getObject(AnnotatedTypesInterface.InnerStruct.class));
-        v = new Variant(new Variant(new String("thirteen")), "v");
+        v = new Variant(new Variant("thirteen"), "v");
         assertEquals(v.getObject(Variant.class), proxy.variant(v).getObject(Variant.class));
 
     }
@@ -1707,7 +1707,7 @@ public class MarshalTest extends TestCase {
         aenn.put((short)2, (short)2);
         assertEquals(aenn, proxy.dictionaryNN(aenn));
         TreeMap<Short, Variant> aenv = new TreeMap<Short, Variant>();
-        aenv.put((short)2, new Variant(new String("nine")));
+        aenv.put((short)2, new Variant("nine"));
         assertEquals(aenv, proxy.dictionaryNV(aenv));
         TreeMap<Short, String> aens = new TreeMap<Short, String>();
         aens.put((short)2, "six");
@@ -1761,7 +1761,7 @@ public class MarshalTest extends TestCase {
         aedn.put(5.1, (short)2);
         assertEquals(aedn, proxy.dictionaryDN(aedn));
         TreeMap<Double, Variant> aedv = new TreeMap<Double, Variant>();
-        aedv.put(5.1, new Variant(new String("nine")));
+        aedv.put(5.1, new Variant("nine"));
         assertEquals(aedv, proxy.dictionaryDV(aedv));
         TreeMap<Double, String> aeds = new TreeMap<Double, String>();
         aeds.put(5.1, "six");
@@ -1815,7 +1815,7 @@ public class MarshalTest extends TestCase {
         aexn.put((long)4, (short)2);
         assertEquals(aexn, proxy.dictionaryXN(aexn));
         TreeMap<Long, Variant> aexv = new TreeMap<Long, Variant>();
-        aexv.put((long)4, new Variant(new String("nine")));
+        aexv.put((long)4, new Variant("nine"));
         assertEquals(aexv, proxy.dictionaryXV(aexv));
         TreeMap<Long, String> aexs = new TreeMap<Long, String>();
         aexs.put((long)4, "six");
@@ -1869,7 +1869,7 @@ public class MarshalTest extends TestCase {
         aesn.put("six", (short)2);
         assertEquals(aesn, proxy.dictionarySN(aesn));
         TreeMap<String, Variant> aesv = new TreeMap<String, Variant>();
-        aesv.put("six", new Variant(new String("nine")));
+        aesv.put("six", new Variant("nine"));
         assertEquals(aesv, proxy.dictionarySV(aesv));
         TreeMap<String, String> aess = new TreeMap<String, String>();
         aess.put("six", "six");
@@ -1923,7 +1923,7 @@ public class MarshalTest extends TestCase {
         aeyn.put((byte)1, (short)2);
         assertEquals(aeyn, proxy.dictionaryYN(aeyn));
         TreeMap<Byte, Variant> aeyv = new TreeMap<Byte, Variant>();
-        aeyv.put((byte)1, new Variant(new String("nine")));
+        aeyv.put((byte)1, new Variant("nine"));
         assertEquals(aeyv, proxy.dictionaryYV(aeyv));
         TreeMap<Byte, String> aeys = new TreeMap<Byte, String>();
         aeys.put((byte)1, "six");
@@ -1977,7 +1977,7 @@ public class MarshalTest extends TestCase {
         aeun.put(4, (short)2);
         assertEquals(aeun, proxy.dictionaryUN(aeun));
         TreeMap<Integer, Variant> aeuv = new TreeMap<Integer, Variant>();
-        aeuv.put(4, new Variant(new String("nine")));
+        aeuv.put(4, new Variant("nine"));
         assertEquals(aeuv, proxy.dictionaryUV(aeuv));
         TreeMap<Integer, String> aeus = new TreeMap<Integer, String>();
         aeus.put(4, "six");
@@ -2031,7 +2031,7 @@ public class MarshalTest extends TestCase {
         aegn.put("g", (short)2);
         assertEquals(aegn, proxy.dictionaryGN(aegn));
         TreeMap<String, Variant> aegv = new TreeMap<String, Variant>();
-        aegv.put("g", new Variant(new String("nine")));
+        aegv.put("g", new Variant("nine"));
         assertEquals(aegv, proxy.dictionaryGV(aegv));
         TreeMap<String, String> aegs = new TreeMap<String, String>();
         aegs.put("g", "six");
@@ -2085,7 +2085,7 @@ public class MarshalTest extends TestCase {
         aebn.put(true, (short)2);
         assertEquals(aebn, proxy.dictionaryBN(aebn));
         TreeMap<Boolean, Variant> aebv = new TreeMap<Boolean, Variant>();
-        aebv.put(true, new Variant(new String("nine")));
+        aebv.put(true, new Variant("nine"));
         assertEquals(aebv, proxy.dictionaryBV(aebv));
         TreeMap<Boolean, String> aebs = new TreeMap<Boolean, String>();
         aebs.put(true, "six");
@@ -2139,7 +2139,7 @@ public class MarshalTest extends TestCase {
         aeqn.put((short)3, (short)2);
         assertEquals(aeqn, proxy.dictionaryQN(aeqn));
         TreeMap<Short, Variant> aeqv = new TreeMap<Short, Variant>();
-        aeqv.put((short)3, new Variant(new String("nine")));
+        aeqv.put((short)3, new Variant("nine"));
         assertEquals(aeqv, proxy.dictionaryQV(aeqv));
         TreeMap<Short, String> aeqs = new TreeMap<Short, String>();
         aeqs.put((short)3, "six");
@@ -2193,7 +2193,7 @@ public class MarshalTest extends TestCase {
         aeon.put("/seven", (short)2);
         assertEquals(aeon, proxy.dictionaryON(aeon));
         TreeMap<String, Variant> aeov = new TreeMap<String, Variant>();
-        aeov.put("/seven", new Variant(new String("nine")));
+        aeov.put("/seven", new Variant("nine"));
         assertEquals(aeov, proxy.dictionaryOV(aeov));
         TreeMap<String, String> aeos = new TreeMap<String, String>();
         aeos.put("/seven", "six");
@@ -2247,7 +2247,7 @@ public class MarshalTest extends TestCase {
         aein.put(3, (short)2);
         assertEquals(aein, proxy.dictionaryIN(aein));
         TreeMap<Integer, Variant> aeiv = new TreeMap<Integer, Variant>();
-        aeiv.put(3, new Variant(new String("nine")));
+        aeiv.put(3, new Variant("nine"));
         assertEquals(aeiv, proxy.dictionaryIV(aeiv));
         TreeMap<Integer, String> aeis = new TreeMap<Integer, String>();
         aeis.put(3, "six");
@@ -2301,7 +2301,7 @@ public class MarshalTest extends TestCase {
         aetn.put((long)5, (short)2);
         assertEquals(aetn, proxy.dictionaryTN(aetn));
         TreeMap<Long, Variant> aetv = new TreeMap<Long, Variant>();
-        aetv.put((long)5, new Variant(new String("nine")));
+        aetv.put((long)5, new Variant("nine"));
         assertEquals(aetv, proxy.dictionaryTV(aetv));
         TreeMap<Long, String> aets = new TreeMap<Long, String>();
         aets.put((long)5, "six");
@@ -3169,7 +3169,7 @@ public class MarshalTest extends TestCase {
         assertEquals(true, thrown);
         thrown = false;
         try {
-            Variant[] av = new Variant[] { new Variant(new String("three")) };
+            Variant[] av = new Variant[] { new Variant("three") };
             proxy.variantArray(av);
         } catch (BusException ex) {
             thrown = true;
@@ -3202,7 +3202,7 @@ public class MarshalTest extends TestCase {
                                                   new int[] { 8 }, new long[] { 10 }, new double[] { 10.1 },
                                                   new String[] { "eleven" },
                                                   new InferredTypesInterface.InnerStruct(12),
-                                                  new Variant(new String("thirteen")), ae);
+                                                  new Variant("thirteen"), ae);
             proxy.inferredStruct(r);
         } catch (BusException ex) {
             thrown = true;
@@ -3337,7 +3337,7 @@ public class MarshalTest extends TestCase {
         assertEquals(true, thrown);
         thrown = false;
         try {
-            v = new Variant(new Variant(new String("thirteen")));
+            v = new Variant(new Variant("thirteen"));
         proxy.variant(v);
         } catch (BusException ex) {
             thrown = true;
@@ -3429,7 +3429,7 @@ public class MarshalTest extends TestCase {
         thrown = false;
         try {
             TreeMap<Byte, Variant> aeyv = new TreeMap<Byte, Variant>();
-            aeyv.put((byte)1, new Variant(new String("nine")));
+            aeyv.put((byte)1, new Variant("nine"));
             proxy.dictionaryYV(aeyv);
         } catch (BusException ex) {
             thrown = true;
@@ -3528,7 +3528,7 @@ public class MarshalTest extends TestCase {
         thrown = false;
         try {
             TreeMap<Boolean, Variant> aebv = new TreeMap<Boolean, Variant>();
-            aebv.put(true, new Variant(new String("nine")));
+            aebv.put(true, new Variant("nine"));
             proxy.dictionaryBV(aebv);
         } catch (BusException ex) {
             thrown = true;
@@ -3627,7 +3627,7 @@ public class MarshalTest extends TestCase {
         thrown = false;
         try {
             TreeMap<Short, Variant> aenv = new TreeMap<Short, Variant>();
-            aenv.put((short)2, new Variant(new String("nine")));
+            aenv.put((short)2, new Variant("nine"));
             proxy.dictionaryNV(aenv);
         } catch (BusException ex) {
             thrown = true;
@@ -3726,7 +3726,7 @@ public class MarshalTest extends TestCase {
         thrown = false;
         try {
             TreeMap<Integer, Variant> aeiv = new TreeMap<Integer, Variant>();
-            aeiv.put(3, new Variant(new String("nine")));
+            aeiv.put(3, new Variant("nine"));
             proxy.dictionaryIV(aeiv);
         } catch (BusException ex) {
             thrown = true;
@@ -3825,7 +3825,7 @@ public class MarshalTest extends TestCase {
         thrown = false;
         try {
             TreeMap<Long, Variant> aexv = new TreeMap<Long, Variant>();
-            aexv.put((long)4, new Variant(new String("nine")));
+            aexv.put((long)4, new Variant("nine"));
             proxy.dictionaryXV(aexv);
         } catch (BusException ex) {
             thrown = true;
@@ -3924,7 +3924,7 @@ public class MarshalTest extends TestCase {
         thrown = false;
         try {
             TreeMap<Double, Variant> aedv = new TreeMap<Double, Variant>();
-            aedv.put(5.1, new Variant(new String("nine")));
+            aedv.put(5.1, new Variant("nine"));
             proxy.dictionaryDV(aedv);
         } catch (BusException ex) {
             thrown = true;
@@ -4023,7 +4023,7 @@ public class MarshalTest extends TestCase {
         thrown = false;
         try {
             TreeMap<String, Variant> aesv = new TreeMap<String, Variant>();
-            aesv.put("six", new Variant(new String("nine")));
+            aesv.put("six", new Variant("nine"));
             proxy.dictionarySV(aesv);
         } catch (BusException ex) {
             thrown = true;

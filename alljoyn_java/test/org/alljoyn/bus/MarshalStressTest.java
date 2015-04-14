@@ -123,9 +123,9 @@ public class MarshalStressTest extends TestCase {
         public void methodaessay(Map<String, String> m) throws BusException {}
         public Struct[] getPropar() throws BusException { return new Struct[] { new Struct() }; }
         public Struct getPropr() throws BusException { return new Struct(); }
-        public Variant methodv() throws BusException { return new Variant(new String("vs")); }
+        public Variant methodv() throws BusException { return new Variant("vs"); }
         public Structr methodStructr() throws BusException { Structr s = new Structr(); s.m = new Struct(); return s; }
-        public Structv methodStructv() throws BusException { Structv s = new Structv(); s.m = new Variant(new String("hello")); return s; }
+        public Structv methodStructv() throws BusException { Structv s = new Structv(); s.m = new Variant("hello"); return s; }
         public Structaess methodStructaess() throws BusException { Structaess s = new Structaess(); s.m = new TreeMap<String, String>(); return s; }
     }
 
