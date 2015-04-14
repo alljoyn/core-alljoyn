@@ -27,6 +27,7 @@
 #include <qcc/String.h>
 #include <qcc/Thread.h>
 #include <qcc/Util.h>
+#include <qcc/Time.h>
 #ifdef QCC_OS_GROUP_WINDOWS
 #include <qcc/windows/utility.h>
 #endif
@@ -50,6 +51,7 @@ class StaticGlobals {
             return ER_OS_ERROR;
         }
 #endif
+        qcc::TimestampInit();
         Event::Init();
         Environ::Init();
         String::Init();
@@ -66,6 +68,14 @@ class StaticGlobals {
 
     static QStatus Shutdown()
     {
+        Crypto::Shutdown();
+        Thread::Shutdown();
+        LoggerSetting::Shutdown();
+        DebugControl::Shutdown();
+        String::Shutdown();
+        Environ::Shutdown();
+        Event::Shutdown();
+        qcc::TimestampShutdown();
 #if defined(QCC_OS_GROUP_WINDOWS)
         int error = WSACleanup();
         if (SOCKET_ERROR == error) {
@@ -76,13 +86,6 @@ class StaticGlobals {
              */
         }
 #endif
-        Crypto::Shutdown();
-        Thread::Shutdown();
-        LoggerSetting::Shutdown();
-        DebugControl::Shutdown();
-        String::Shutdown();
-        Environ::Shutdown();
-        Event::Shutdown();
         return ER_OK;
     }
 };

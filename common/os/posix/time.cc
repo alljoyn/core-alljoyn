@@ -40,6 +40,14 @@ const qcc::Timespec qcc::Timespec::Zero;
 
 using namespace qcc;
 
+void qcc::TimestampInit(void)
+{
+}
+
+void qcc::TimestampShutdown(void)
+{
+}
+
 static void platform_gettime(struct timespec* ts, bool useMonotonic)
 {
 #if defined(QCC_OS_DARWIN)

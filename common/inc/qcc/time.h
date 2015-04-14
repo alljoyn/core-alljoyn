@@ -27,6 +27,15 @@
 
 namespace qcc {
 
+/**
+ * Initialize support for GetTimestamp, GetTimestamp64 and GetTimeNow.
+ */
+void TimestampInit(void);
+
+/**
+ * Shut down support for GetTimestamp, GetTimestamp64 and GetTimeNow.
+ */
+void TimestampShutdown(void);
 
 /**
  * Actually more than 500 million years from now but who's counting.
