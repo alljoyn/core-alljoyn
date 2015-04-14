@@ -746,9 +746,8 @@ TEST_F(SignalTest, BackPressure) {
         }
         uint64_t elapsed = qcc::GetTimestamp64() - start_time;
 
-        EXPECT_TRUE(elapsed >= SLEEP_TIME);
+        EXPECT_GE(elapsed, SLEEP_TIME);
         wait_for_signal();
         recvBy.verify_recv(BACKPRESSURE_TEST_NUM_SIGNALS);
     }
 }
-
