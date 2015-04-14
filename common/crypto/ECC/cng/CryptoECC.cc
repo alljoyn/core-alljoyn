@@ -99,9 +99,12 @@ struct ECCSecret::ECCSecretState {
         hSecret = NULL;
     }
 
-    void operator=(const ECCSecretState& k)
+    ECCSecretState& operator=(const ECCSecretState& other)
     {
-        hSecret = k.hSecret;
+        if (this != &other) {
+            hSecret = other.hSecret;
+        }
+        return *this;
     }
 
     bool operator==(const ECCSecretState& k) const
