@@ -6791,7 +6791,17 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
                     //
                     QCC_DbgPrintf(("IpNameServiceImpl::Retransmit(): Sending partial list"));
 
-                    if (quietly) {
+                    // Use "exiting" to find out whether to send the response by unicast
+                    // or multicast.
+                    // For TRANSMIT_V2, there are 2 calls into Retransmit().
+                    // 1. HandleSearchQuery will call into Retransmit with
+                    //    exiting = false and respondQuietly=true or false depending on whether
+                    //    a quiet name matches or not. Irrespective of whether respondQuietly is
+                    //    true or false, we need to send the response over unicast.
+                    // 2. IpNameServiceImpl::Run will call into Retransmit with exiting = true
+                    //    and respondQuietly = false when the thread is shut down. In this case,
+                    //    we need to send only the actively advertised names over multicast.
+                    if (!exiting) {
                         mdnsPacket->SetDestination(destination);
                         SendOutboundMessageQuietly(Packet::cast(mdnsPacket));
                     } else {
@@ -6881,7 +6891,17 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
 
         QCC_DbgPrintf(("IpNameServiceImpl::Retransmit(): Sending final message "));
 
-        if (quietly) {
+        // Use "exiting" to find out whether to send the response by unicast
+        // or multicast.
+        // For TRANSMIT_V2, there are 2 calls into Retransmit().
+        // 1. HandleSearchQuery will call into Retransmit with
+        //    exiting = false and respondQuietly=true or false depending on whether
+        //    a quiet name matches or not. Irrespective of whether respondQuietly is
+        //    true or false, we need to send the response over unicast.
+        // 2. IpNameServiceImpl::Run will call into Retransmit with exiting = true
+        //    and respondQuietly = false when the thread is shut down. In this case,
+        //    we need to send only the actively advertised names over multicast.
+        if (!exiting) {
             mdnsPacket->SetDestination(destination);
             SendOutboundMessageQuietly(Packet::cast(mdnsPacket));
         } else {
