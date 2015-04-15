@@ -66,7 +66,10 @@ private:
 
     
 public:
+    BasicObjectImpl(const char *path, id<BasicStringsDelegate, BasicChatDelegate> aDelegate);
     BasicObjectImpl(BusAttachment &bus, const char *path, id<BasicStringsDelegate, BasicChatDelegate> aDelegate);
+
+    virtual QStatus AddInterfacesAndHandlers(BusAttachment &bus);
 
     
     // properties
@@ -101,8 +104,19 @@ public:
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-BasicObjectImpl::BasicObjectImpl(BusAttachment &bus, const char *path, id<BasicStringsDelegate, BasicChatDelegate> aDelegate) : 
+BasicObjectImpl::BasicObjectImpl(const char *path, id<BasicStringsDelegate, BasicChatDelegate> aDelegate) :
+    AJNBusObjectImpl(path,aDelegate)
+{
+    // Intentionally empty
+}
+
+BasicObjectImpl::BasicObjectImpl(BusAttachment &bus, const char *path, id<BasicStringsDelegate, BasicChatDelegate> aDelegate) :
     AJNBusObjectImpl(bus,path,aDelegate)
+{
+    AddInterfacesAndHandlers(bus);
+}
+
+QStatus BasicObjectImpl::AddInterfacesAndHandlers(BusAttachment &bus)
 {
     const InterfaceDescription* interfaceDescription = NULL;
     QStatus status;
@@ -113,8 +127,10 @@ BasicObjectImpl::BasicObjectImpl(BusAttachment &bus, const char *path, id<BasicS
     //
     interfaceDescription = bus.GetInterface("org.alljoyn.bus.sample.strings");
     assert(interfaceDescription);
-    AddInterface(*interfaceDescription);
-
+    status = AddInterface(*interfaceDescription);
+    if (ER_OK != status) {
+        NSLog(@"ERROR: An error occurred while adding the interface org.alljoyn.bus.sample.strings.%@", [AJNStatus descriptionForStatusCode:status]);
+    }
     
     // Register the method handlers for interface BasicStringsDelegate with the object
     //
@@ -164,15 +180,17 @@ TestSignalWithNoArgsSignalMember = interfaceDescription->GetMember("TestSignalWi
     //
     interfaceDescription = bus.GetInterface("org.alljoyn.bus.samples.chat");
     assert(interfaceDescription);
-    AddInterface(*interfaceDescription);
-
+    status = AddInterface(*interfaceDescription);
+    if (ER_OK != status) {
+        NSLog(@"ERROR: An error occurred while adding the interface org.alljoyn.bus.samples.chat.%@", [AJNStatus descriptionForStatusCode:status]);
+    }
     
     // save off signal members for later
     //
     ChatSignalMember = interfaceDescription->GetMember("Chat");
     assert(ChatSignalMember);    
 
-
+    return status;
 }
 
 
@@ -295,7 +313,6 @@ void BasicObjectImpl::Concatentate(const InterfaceDescription::Member *member, M
     }
 }
 
-
 void BasicObjectImpl::MethodWithMultipleOutArgs(const InterfaceDescription::Member *member, Message& msg)
 {
     @autoreleasepool {
@@ -340,7 +357,6 @@ void BasicObjectImpl::MethodWithMultipleOutArgs(const InterfaceDescription::Memb
     }
 }
 
-
 void BasicObjectImpl::MethodWithOnlyOutArgs(const InterfaceDescription::Member *member, Message& msg)
 {
     @autoreleasepool {
@@ -377,7 +393,6 @@ void BasicObjectImpl::MethodWithOnlyOutArgs(const InterfaceDescription::Member *
     }
 }
 
-
 void BasicObjectImpl::MethodWithNoReturnAndNoArgs(const InterfaceDescription::Member *member, Message& msg)
 {
     @autoreleasepool {
@@ -388,12 +403,11 @@ void BasicObjectImpl::MethodWithNoReturnAndNoArgs(const InterfaceDescription::Me
     // call the Objective-C delegate method
     //
     
-	[(id<BasicStringsDelegate>)delegate methodWithNoReturnAndNoArgs:[[AJNMessage alloc] initWithHandle:&msg]];            
+	[(id<BasicStringsDelegate>)delegate methodWithNoReturnAndNoArgs:[[AJNMessage alloc] initWithHandle:&msg]];
         
     
     }
 }
-
 
 void BasicObjectImpl::MethodWithReturnAndNoInArgs(const InterfaceDescription::Member *member, Message& msg)
 {
@@ -427,7 +441,6 @@ void BasicObjectImpl::MethodWithReturnAndNoInArgs(const InterfaceDescription::Me
     
     }
 }
-
 
 void BasicObjectImpl::MethodWithComplexTypesForArgs(const InterfaceDescription::Member *member, Message& msg)
 {
@@ -469,7 +482,6 @@ void BasicObjectImpl::MethodWithComplexTypesForArgs(const InterfaceDescription::
     
     }
 }
-
 
 QStatus BasicObjectImpl::SendTestStringPropertyChanged(const char * oldString,const char * newString, const char* destination, SessionId sessionId, uint16_t timeToLive, uint8_t flags)
 {
@@ -521,7 +533,6 @@ QStatus BasicObjectImpl::SendChat(const char * message, const char* destination,
 }
 
 
-
 ////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -535,7 +546,10 @@ private:
     
     
 public:
+    PingObjectImpl(const char *path, id<PingObjectDelegate> aDelegate);
     PingObjectImpl(BusAttachment &bus, const char *path, id<PingObjectDelegate> aDelegate);
+
+    virtual QStatus AddInterfacesAndHandlers(BusAttachment &bus);
 
     
     
@@ -556,8 +570,19 @@ public:
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-PingObjectImpl::PingObjectImpl(BusAttachment &bus, const char *path, id<PingObjectDelegate> aDelegate) : 
+PingObjectImpl::PingObjectImpl(const char *path, id<PingObjectDelegate> aDelegate) :
+    AJNBusObjectImpl(path,aDelegate)
+{
+    // Intentionally empty
+}
+
+PingObjectImpl::PingObjectImpl(BusAttachment &bus, const char *path, id<PingObjectDelegate> aDelegate) :
     AJNBusObjectImpl(bus,path,aDelegate)
+{
+    AddInterfacesAndHandlers(bus);
+}
+
+QStatus PingObjectImpl::AddInterfacesAndHandlers(BusAttachment &bus)
 {
     const InterfaceDescription* interfaceDescription = NULL;
     QStatus status;
@@ -568,8 +593,10 @@ PingObjectImpl::PingObjectImpl(BusAttachment &bus, const char *path, id<PingObje
     //
     interfaceDescription = bus.GetInterface("org.alljoyn.bus.samples.ping");
     assert(interfaceDescription);
-    AddInterface(*interfaceDescription);
-
+    status = AddInterface(*interfaceDescription);
+    if (ER_OK != status) {
+        NSLog(@"ERROR: An error occurred while adding the interface org.alljoyn.bus.samples.ping.%@", [AJNStatus descriptionForStatusCode:status]);
+    }
     
     // Register the method handlers for interface PingObjectDelegate with the object
     //
@@ -586,7 +613,7 @@ PingObjectImpl::PingObjectImpl(BusAttachment &bus, const char *path, id<PingObje
         NSLog(@"ERROR: An error occurred while adding method handlers for interface org.alljoyn.bus.samples.ping to the interface description. %@", [AJNStatus descriptionForStatusCode:status]);
     }
     
-
+    return status;
 }
 
 
@@ -606,13 +633,11 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
     // call the Objective-C delegate method
     //
     
-	[(id<PingObjectDelegate>)delegate pingWithValue:[NSNumber numberWithUnsignedChar:inArg0]  message:[[AJNMessage alloc] initWithHandle:&msg]];            
+	[(id<PingObjectDelegate>)delegate pingWithValue:[NSNumber numberWithUnsignedChar:inArg0]  message:[[AJNMessage alloc] initWithHandle:&msg]];
         
     
     }
 }
-
-
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -622,9 +647,18 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
 //
 ////////////////////////////////////////////////////////////////////////////////
 
+@interface AJNBasicObject()
+/**
+* The bus attachment this object is associated with.
+*/
+@property (nonatomic, weak) AJNBusAttachment *bus;
+
+@end
+
 @implementation AJNBasicObject
 
 @dynamic handle;
+@synthesize bus = _bus;
 
 @synthesize testArrayProperty = _testArrayProperty;
 @synthesize testStringProperty = _testStringProperty;
@@ -636,16 +670,25 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
     return static_cast<BasicObjectImpl*>(self.handle);
 }
 
-- (id)initWithBusAttachment:(AJNBusAttachment *)busAttachment onPath:(NSString *)path
+- (QStatus)registerInterfacesWithBus:(AJNBusAttachment *)busAttachment
 {
-    self = [super initWithBusAttachment:busAttachment onPath:path];
-    if (self) {
-        QStatus status;
+    QStatus status;
 
-        status = ER_OK;
-        
-        AJNInterfaceDescription *interfaceDescription;
-        
+    status = [self activateInterfacesWithBus: busAttachment];
+
+    self.busObject->AddInterfacesAndHandlers(*((ajn::BusAttachment*)busAttachment.handle));
+
+    return status;
+}
+
+- (QStatus)activateInterfacesWithBus:(AJNBusAttachment *)busAttachment
+{
+    QStatus status;
+
+    status = ER_OK;
+
+    AJNInterfaceDescription *interfaceDescription;
+
     
         //
         // BasicStringsDelegate interface (org.alljoyn.bus.sample.strings)
@@ -653,7 +696,7 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
         // create an interface description, or if that fails, get the interface as it was already created
         //
         interfaceDescription = [busAttachment createInterfaceWithName:@"org.alljoyn.bus.sample.strings"];
-        
+
     
         // add the properties to the interface description
         //
@@ -663,13 +706,13 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
         if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
             @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add property to interface:  testArrayProperty" userInfo:nil];
         }
-
+    
         status = [interfaceDescription addPropertyWithName:@"testStringProperty" signature:@"s"];
         
         if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
             @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add property to interface:  testStringProperty" userInfo:nil];
         }
-
+    
         // add the methods to the interface description
         //
     
@@ -678,37 +721,37 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
         if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
             @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add method to interface: Concatentate" userInfo:nil];
         }
-
+    
         status = [interfaceDescription addMethodWithName:@"MethodWithMultipleOutArgs" inputSignature:@"ss" outputSignature:@"ss" argumentNames:[NSArray arrayWithObjects:@"str1",@"str2",@"outStr1",@"outStr2", nil]];
         
         if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
             @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add method to interface: MethodWithMultipleOutArgs" userInfo:nil];
         }
-
+    
         status = [interfaceDescription addMethodWithName:@"MethodWithOnlyOutArgs" inputSignature:@"" outputSignature:@"ss" argumentNames:[NSArray arrayWithObjects:@"outStr1",@"outStr2", nil]];
         
         if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
             @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add method to interface: MethodWithOnlyOutArgs" userInfo:nil];
         }
-
+    
         status = [interfaceDescription addMethodWithName:@"MethodWithNoReturnAndNoArgs" inputSignature:@"" outputSignature:@"" argumentNames:[NSArray arrayWithObjects: nil]];
         
         if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
             @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add method to interface: MethodWithNoReturnAndNoArgs" userInfo:nil];
         }
-
+    
         status = [interfaceDescription addMethodWithName:@"MethodWithReturnAndNoInArgs" inputSignature:@"" outputSignature:@"s" argumentNames:[NSArray arrayWithObjects:@"outStr", nil]];
         
         if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
             @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add method to interface: MethodWithReturnAndNoInArgs" userInfo:nil];
         }
-
+    
         status = [interfaceDescription addMethodWithName:@"MethodWithComplexTypesForArgs" inputSignature:@"as(si)" outputSignature:@"s" argumentNames:[NSArray arrayWithObjects:@"stringArray",@"aStruct",@"outStr", nil]];
         
         if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
             @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add method to interface: MethodWithComplexTypesForArgs" userInfo:nil];
         }
-
+    
         // add the signals to the interface description
         //
     
@@ -717,18 +760,20 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
         if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
             @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add signal to interface:  TestStringPropertyChanged" userInfo:nil];
         }
-
+    
         status = [interfaceDescription addSignalWithName:@"TestSignalWithComplexArgs" inputSignature:@"as" argumentNames:[NSArray arrayWithObjects:@"oldString", nil]];
         
         if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
             @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add signal to interface:  TestSignalWithComplexArgs" userInfo:nil];
         }
-
+    
         status = [interfaceDescription addSignalWithName:@"TestSignalWithNoArgs" inputSignature:@"" argumentNames:[NSArray arrayWithObjects: nil]];
         
         if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
             @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add signal to interface:  TestSignalWithNoArgs" userInfo:nil];
         }
+    
+    
 
     
         [interfaceDescription activate];
@@ -739,7 +784,7 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
         // create an interface description, or if that fails, get the interface as it was already created
         //
         interfaceDescription = [busAttachment createInterfaceWithName:@"org.alljoyn.bus.samples.chat"];
-        
+
     
         // add the properties to the interface description
         //
@@ -749,7 +794,7 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
         if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
             @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add property to interface:  name" userInfo:nil];
         }
-
+    
         // add the signals to the interface description
         //
     
@@ -758,16 +803,43 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
         if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
             @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add signal to interface:  Chat" userInfo:nil];
         }
+    
+    
 
     
         [interfaceDescription activate];
 
+
+    self.bus = busAttachment;
+
+    return status;
+}
+
+- (id)initWithPath:(NSString *)path
+{
+    self = [super initWithPath:path];
+    if (self) {
+    // create the internal C++ bus object
+    //
+        BasicObjectImpl *busObject = new BasicObjectImpl([path UTF8String],(id<BasicStringsDelegate, BasicChatDelegate>)self);
+        self.handle = busObject;
+    }
+    return self;
+}
+
+- (id)initWithBusAttachment:(AJNBusAttachment *)busAttachment onPath:(NSString *)path
+{
+    self = [super initWithBusAttachment:busAttachment onPath:path];
+    if (self) {
+        [self activateInterfacesWithBus:busAttachment];
 
         // create the internal C++ bus object
         //
         BasicObjectImpl *busObject = new BasicObjectImpl(*((ajn::BusAttachment*)busAttachment.handle), [path UTF8String], (id<BasicStringsDelegate, BasicChatDelegate>)self);
         
         self.handle = busObject;
+        
+      
     }
     return self;
 }
@@ -1030,9 +1102,9 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
     //
     
         
-    *outStr1 = [NSString stringWithCString:reply->GetArg()->v_string.str encoding:NSUTF8StringEncoding];
+    *outStr1 = [NSString stringWithCString:reply->GetArg(0)->v_string.str encoding:NSUTF8StringEncoding];
         
-    *outStr2 = [NSString stringWithCString:reply->GetArg()->v_string.str encoding:NSUTF8StringEncoding];
+    *outStr2 = [NSString stringWithCString:reply->GetArg(1)->v_string.str encoding:NSUTF8StringEncoding];
         
 
 }
@@ -1064,9 +1136,9 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
     //
     
         
-    *outStr1 = [NSString stringWithCString:reply->GetArg()->v_string.str encoding:NSUTF8StringEncoding];
+    *outStr1 = [NSString stringWithCString:reply->GetArg(0)->v_string.str encoding:NSUTF8StringEncoding];
         
-    *outStr2 = [NSString stringWithCString:reply->GetArg()->v_string.str encoding:NSUTF8StringEncoding];
+    *outStr2 = [NSString stringWithCString:reply->GetArg(1)->v_string.str encoding:NSUTF8StringEncoding];
         
 
 }
@@ -1175,9 +1247,18 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
 //
 ////////////////////////////////////////////////////////////////////////////////
 
+@interface AJNPingObject()
+/**
+* The bus attachment this object is associated with.
+*/
+@property (nonatomic, weak) AJNBusAttachment *bus;
+
+@end
+
 @implementation AJNPingObject
 
 @dynamic handle;
+@synthesize bus = _bus;
 
 
 
@@ -1186,16 +1267,25 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
     return static_cast<PingObjectImpl*>(self.handle);
 }
 
-- (id)initWithBusAttachment:(AJNBusAttachment *)busAttachment onPath:(NSString *)path
+- (QStatus)registerInterfacesWithBus:(AJNBusAttachment *)busAttachment
 {
-    self = [super initWithBusAttachment:busAttachment onPath:path];
-    if (self) {
-        QStatus status;
+    QStatus status;
 
-        status = ER_OK;
-        
-        AJNInterfaceDescription *interfaceDescription;
-        
+    status = [self activateInterfacesWithBus: busAttachment];
+
+    self.busObject->AddInterfacesAndHandlers(*((ajn::BusAttachment*)busAttachment.handle));
+
+    return status;
+}
+
+- (QStatus)activateInterfacesWithBus:(AJNBusAttachment *)busAttachment
+{
+    QStatus status;
+
+    status = ER_OK;
+
+    AJNInterfaceDescription *interfaceDescription;
+
     
         //
         // PingObjectDelegate interface (org.alljoyn.bus.samples.ping)
@@ -1203,7 +1293,7 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
         // create an interface description, or if that fails, get the interface as it was already created
         //
         interfaceDescription = [busAttachment createInterfaceWithName:@"org.alljoyn.bus.samples.ping"];
-        
+
     
         // add the methods to the interface description
         //
@@ -1213,16 +1303,43 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
         if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
             @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add method to interface: Ping" userInfo:nil];
         }
+    
+    
 
     
         [interfaceDescription activate];
 
+
+    self.bus = busAttachment;
+
+    return status;
+}
+
+- (id)initWithPath:(NSString *)path
+{
+    self = [super initWithPath:path];
+    if (self) {
+    // create the internal C++ bus object
+    //
+        PingObjectImpl *busObject = new PingObjectImpl([path UTF8String],(id<PingObjectDelegate>)self);
+        self.handle = busObject;
+    }
+    return self;
+}
+
+- (id)initWithBusAttachment:(AJNBusAttachment *)busAttachment onPath:(NSString *)path
+{
+    self = [super initWithBusAttachment:busAttachment onPath:path];
+    if (self) {
+        [self activateInterfacesWithBus:busAttachment];
 
         // create the internal C++ bus object
         //
         PingObjectImpl *busObject = new PingObjectImpl(*((ajn::BusAttachment*)busAttachment.handle), [path UTF8String], (id<PingObjectDelegate>)self);
         
         self.handle = busObject;
+        
+      
     }
     return self;
 }
