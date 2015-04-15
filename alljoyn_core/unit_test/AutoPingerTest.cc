@@ -48,7 +48,7 @@ class AutoPingerTest : public testing::Test {
 
 };
 
-#define MAX_RETRIES 100
+#define MAX_RETRIES 1000
 
 class TestPingListener : public PingListener {
 
