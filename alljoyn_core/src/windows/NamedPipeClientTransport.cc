@@ -27,6 +27,7 @@
 #include <qcc/String.h>
 #include <qcc/StringUtil.h>
 #include <qcc/Windows/NamedPipeStream.h>
+#include <qcc/windows/utility.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/AllJoynStd.h>
 
