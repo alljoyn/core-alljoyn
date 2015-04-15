@@ -517,17 +517,50 @@ class CertificateX509 {
      */
     static QStatus DecodeCertChainPEM(const String& encoded, CertificateX509* certChain, size_t count);
 
+    /**
+     * Copy Constructor for CertificateX509
+     *
+     * @param[in] c        CertificateX509 to copy
+     */
+    CertificateX509(const CertificateX509& c) :
+        type(c.type), tbs(c.tbs), encodedLen(c.encodedLen), serial(c.serial),
+        issuer(c.issuer), issuerGUID(c.issuerGUID), subject(c.subject),
+        subjectGUID(c.subjectGUID), validity(c.validity), publickey(c.publickey),
+        signature(c.signature), ca(c.ca), digest(c.digest), alias(c.alias)
+    {
+        encoded = new uint8_t[encodedLen];
+        memcpy(encoded, c.encoded, encodedLen);
+    }
+
+    /**
+     * Assign operator for CertificateX509
+     *
+     * @param[in] c        CertificateX509 to assign from
+     */
+    CertificateX509& operator=(const CertificateX509& c) {
+        type = c.type;
+        tbs = c.tbs;
+        encodedLen = c.encodedLen;
+        encoded = new uint8_t[encodedLen];
+        memcpy(encoded, c.encoded, encodedLen);
+
+        serial = c.serial;
+        issuer = c.issuer;
+        issuerGUID = c.issuerGUID;
+        subject = c.subject;
+        subjectGUID = c.subjectGUID;
+        validity = c.validity;
+        publickey = c.publickey;
+        signature = c.signature;
+
+        ca = c.ca;
+        digest = c.digest;
+        alias = c.alias;
+
+        return *this;
+    }
+
   private:
-
-    /**
-     * Assignment operator is private
-     */
-    CertificateX509& operator=(const CertificateX509& other);
-
-    /**
-     * Copy constructor is private
-     */
-    CertificateX509(const CertificateX509& other);
 
     struct DistinguishedName {
         uint8_t* ou;
@@ -558,11 +591,25 @@ class CertificateX509 {
             delete [] ou;
             delete [] cn;
         }
-      private:
-        /* private copy constructor to prevent double freeing of dynamic memory */
-        DistinguishedName(const DistinguishedName&);
-        /* private assign operator to prevent double freeing of dynamic memory */
-        DistinguishedName& operator=(const DistinguishedName&);
+
+        DistinguishedName(const DistinguishedName& dn) :
+            ouLen(dn.ouLen), cnLen(dn.cnLen)
+        {
+            ou = new uint8_t[ouLen];
+            memcpy(ou, dn.ou, ouLen);
+            cn = new uint8_t[cnLen];
+            memcpy(cn, dn.cn, cnLen);
+        }
+        DistinguishedName& operator=(const DistinguishedName& dn)
+        {
+            ouLen = dn.ouLen;
+            cnLen = dn.cnLen;
+            ou = new uint8_t[ouLen];
+            memcpy(ou, dn.ou, ouLen);
+            cn = new uint8_t[cnLen];
+            memcpy(cn, dn.cn, cnLen);
+            return *this;
+        }
     };
 
     QStatus DecodeCertificateTBS();

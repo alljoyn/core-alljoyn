@@ -159,6 +159,17 @@ struct ECCPublicKey {
     }
 
     /**
+     * Copy constructor for ECCPublicKey
+     *
+     * @param[in] k   the ECCPublicKey to copy
+     */
+    ECCPublicKey(const ECCPublicKey& k)
+    {
+        memcpy(x, k.x, ECC_COORDINATE_SZ);
+        memcpy(y, k.y, ECC_COORDINATE_SZ);
+    }
+
+    /**
      * Assign operator for ECCPublicKey
      *
      * @param[in] k the ECCPublic key to assign
@@ -279,7 +290,21 @@ struct ECCSignature {
     }
 
     /**
+     * The ECCSignature copy operator
+     *
+     * @param[in] k the ECCSignature to copy
+     */
+
+    ECCSignature(const ECCSignature& k)
+    {
+        memcpy(r, k.r, ECC_COORDINATE_SZ);
+        memcpy(s, k.s, ECC_COORDINATE_SZ);
+    }
+
+    /**
      * The ECCSignature assign operator
+     *
+     * @param[in] k the ECCSignature to assign
      */
     ECCSignature& operator=(const ECCSignature& k)
     {
