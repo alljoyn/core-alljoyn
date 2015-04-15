@@ -21,7 +21,7 @@ env = SConscript(['build_core/SConscript'])
 vars = Variables()
 
 vars.Add('BINDINGS', 'Bindings to build (comma separated list): cpp, c, java, js', 'cpp,c,java,js')
-vars.Add('SERVICES', 'AllJoyn services libraries to build (comma separated list): config,controlpanel,notification,onboarding,audio', '')
+vars.Add('SERVICES', 'AllJoyn services libraries to build (comma separated list): config,controlpanel,notification,onboarding,time,audio', '')
 vars.Add(EnumVariable('BUILD_SERVICES_SAMPLES', 'Build the services samples that require libxml2 and json libraries.', 'on', allowed_values = ['on', 'off']))
 vars.Add(BoolVariable('BUILD_DDAPI', 'Flag to indicate if data-driven API has to be built or not', 0))
 vars.Update(env)
@@ -55,7 +55,7 @@ if 'js' in bindings:
 # Always build AboutService.
 env.SConscript(['services/about/SConscript'])
 
-if services.intersection(['config', 'controlpanel', 'notification', 'onboarding', 'audio']):
+if services.intersection(['config', 'controlpanel', 'notification', 'onboarding', 'time', 'audio']):
     env['APP_COMMON_DIR'] = env.Dir('../../services/base/sample_apps')
 
     if services.intersection(['config', 'onboarding']):
@@ -71,6 +71,9 @@ if services.intersection(['config', 'controlpanel', 'notification', 'onboarding'
 
         if 'controlpanel' in services:
             env.SConscript(['../../services/base/controlpanel/SConscript'])
+
+    if 'time' in services:
+        env.SConscript(['../../services/base/time/SConscript'])
 
     if 'audio' in services:
         env.SConscript(['../../services/audio/SConscript'])
