@@ -190,7 +190,7 @@ static void close_door(alljoyn_busattachment bus, alljoyn_observer observer, con
             char errmsg[200] = { 0 };
             size_t size = sizeof(errmsg);
             const char* errname = alljoyn_message_geterrorname(reply, errmsg, &size);
-            printf("Closing of door @ location %s returned an error: %s (%s).\n", location, errname, errmsg);
+            printf("Closing of door @ location %s returned an error: %s (%s).\n", location, (errname != NULL) ? errname : "<null>", errmsg);
         } else {
             /* Framework error or MethodReply error code */
             printf("Closing of door @ location %s returned an error: %s.\n", location, QCC_StatusText(status));

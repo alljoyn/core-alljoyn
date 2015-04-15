@@ -373,7 +373,18 @@ static void DumpBitMask(ArdpConnRecord* conn, uint32_t* msk, uint16_t sz, bool c
 }
 #endif // NDEBUG
 
-#if !defined(NDEBUG)
+/**
+ * The Windows AllJoyn code uses tracing even in release builds to enable retail
+ * debugging, so State2Text needs to be defined in release builds as well as
+ * debug builds. However, this tracing code is internal to Microsoft so a compiler
+ * warning is triggered in Windows release builds due to the unreferenced function.
+ * Suppressing warning 4505 prevents this error.
+ */
+#if defined(QCC_OS_GROUP_WINDOWS)
+    #pragma warning( disable: 4505 )
+#endif
+
+#if !defined(NDEBUG) || defined(QCC_OS_GROUP_WINDOWS)
 static const char* State2Text(ArdpState state)
 {
     switch (state) {
