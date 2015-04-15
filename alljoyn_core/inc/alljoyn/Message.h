@@ -198,6 +198,7 @@ class _Message {
     friend class AllJoynObj;
     friend class DeferredMsg;
     friend class AllJoynPeerObj;
+    friend class Crypto;
     friend struct Rule;
 
   public:
@@ -1078,7 +1079,6 @@ class _Message {
     uint8_t* bufEOD;             ///< End of data currently in buffer.
     uint8_t* bufPos;             ///< Pointer to the position in buffer.
     uint8_t* bodyPtr;            ///< Pointer to start of message body.
-    size_t cryptoValsLen;        ///< the length allocated for the crypto values (MAC and Nonce).
 
     uint16_t ttl;                ///< Time to live (units of seconds for sessionless. MS for everything else)
     uint32_t timestamp;          ///< Timestamp (local time) for messages with a ttl (time to live).

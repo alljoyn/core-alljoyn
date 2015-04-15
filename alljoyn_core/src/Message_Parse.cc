@@ -627,8 +627,8 @@ QStatus _Message::UnmarshalArgs(PeerStateTable* peerStateTable,
 
         QCC_DbgHLPrintf(("Decrypting messge from %s", GetSender()));
         /*
-         * Decryption will typically make the body length slightly smaller because the encryption
-         * algorithm adds appends a MAC block to the end of the encrypted data.
+         * Decryption will  make the body length  smaller because the encryption
+         * algorithm appends data to the end of the encrypted data.
          */
         size_t bodyLen = msgHeader.bodyLen;
         status = ajn::Crypto::Decrypt(*this, key, (uint8_t*)msgBuf, hdrLen, bodyLen);

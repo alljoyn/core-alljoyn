@@ -567,6 +567,10 @@ QStatus _Message::DeliverNonBlocking(RemoteEndpoint& endpoint)
             if (status == ER_BUS_AUTHENTICATION_PENDING) {
                 return ER_OK;
             }
+            /*
+             * Recompute because encryption increases the packet length
+             */
+            countWrite = bufEOD - writePtr;
         }
         writeState = MESSAGE_HEADERFIELDS;
     /* no break  FALLTHROUGH*/
@@ -773,16 +777,10 @@ QStatus _Message::EncryptMessage()
 
         assert(0 <= GetAuthVersion());
 
-        size_t argsLen = msgHeader.bodyLen - cryptoValsLen;
-        size_t macLen = ajn::Crypto::GetMACLength(*this);
-        size_t extraNonceLen = ajn::Crypto::GetExtraNonceLength(*this);
         size_t hdrLen = ROUNDUP8(sizeof(msgHeader) + msgHeader.headerLen);
-        assert((macLen + extraNonceLen) <= cryptoValsLen);
-        if ((macLen + extraNonceLen) <= cryptoValsLen) {
-            status = ajn::Crypto::Encrypt(*this, key, (uint8_t*)msgBuf, hdrLen, argsLen);
-        } else {
-            status = ER_CRYPTO_ILLEGAL_PARAMETERS;
-        }
+        size_t bodyLen = msgHeader.bodyLen;
+
+        status = ajn::Crypto::Encrypt(*this, key, (uint8_t*)msgBuf, hdrLen, bodyLen);
         if (status == ER_OK) {
             QCC_DbgHLPrintf(("EncryptMessage: %s", Description().c_str()));
             /*
@@ -790,9 +788,12 @@ QStatus _Message::EncryptMessage()
              */
             authMechanism = key.GetTag();
             encrypt = false;
-            assert(argsLen <= msgHeader.bodyLen);
-            msgHeader.bodyLen = argsLen;
-            bufEOD = bodyPtr + argsLen;
+            msgHeader.bodyLen = bodyLen;
+            /*
+             * Need to fix up these pointers
+             */
+            bodyPtr = reinterpret_cast<uint8_t*>(msgBuf) + hdrLen;
+            bufEOD = bodyPtr + msgHeader.bodyLen;
         }
     }
     /*
@@ -828,6 +829,7 @@ QStatus _Message::MarshalMessage(const qcc::String& expectedSignature,
     }
     size_t argsLen = (numArgs == 0) ? 0 : SignatureUtils::GetSize(args, numArgs);
     size_t hdrLen = 0;
+    size_t maxCryptoValsLen = 0;
 
     /*
      * Check if endianess needs to be swapped.
@@ -855,15 +857,12 @@ QStatus _Message::MarshalMessage(const qcc::String& expectedSignature,
     }
 
     /*
-     * Encryption will typically make the body length slightly larger because the encryption
-     * algorithm appends a MAC block to the end of the encrypted data.
+     * Encryption will appends data to the message so we need to allocate more space in the buffer.
      */
     if (encrypt) {
-        cryptoValsLen = ajn::Crypto::MaxMACLength + ajn::Crypto::MaxExtraNonceLength;
-    } else {
-        cryptoValsLen = 0;
+        maxCryptoValsLen = ajn::Crypto::MaxMACLength + ajn::Crypto::MaxExtraNonceLength;
     }
-    msgHeader.bodyLen = static_cast<uint32_t>(argsLen + cryptoValsLen);
+    msgHeader.bodyLen = static_cast<uint32_t>(argsLen);
 
     /*
      * Keep the old message buffer around until we are done because some of the strings we are
@@ -951,8 +950,8 @@ QStatus _Message::MarshalMessage(const qcc::String& expectedSignature,
     /*
      * Allocate buffer for entire message.
      */
-    bufSize = (hdrLen + msgHeader.bodyLen + 7);
-    _msgBuf = new uint8_t[bufSize + 7];
+    bufSize = (hdrLen + msgHeader.bodyLen + maxCryptoValsLen + 16);
+    _msgBuf = new uint8_t[bufSize];
     msgBuf = (uint64_t*)((uintptr_t)(_msgBuf + 7) & ~7); /* Align to 8 byte boundary */
     /*
      * Initialize the buffer and copy in the message header

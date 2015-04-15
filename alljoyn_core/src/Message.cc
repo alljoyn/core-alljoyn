@@ -356,7 +356,6 @@ _Message::_Message(const _Message& other) :
     msgHeader(other.msgHeader),
     numMsgArgs(other.numMsgArgs),
     bufSize(other.bufSize),
-    cryptoValsLen(other.cryptoValsLen),
     ttl(other.ttl),
     timestamp(other.timestamp),
     replySignature(other.replySignature),

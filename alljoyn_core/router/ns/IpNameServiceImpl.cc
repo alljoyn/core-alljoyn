@@ -7640,15 +7640,10 @@ bool IpNameServiceImpl::UpdateMDNSPacketTracker(qcc::String guid, IPEndpoint end
             return false;
         }
         // Update the last seen burst id from this guid
-        else {
-            it->second = burstId;
-            return true;
-        }
-    }
-    // GUID is not present in the Map so we add the entry
-    else {
+        it->second = burstId;
+    } else {
+        // GUID is not present in the Map so we add the entry
         m_mdnsPacketTracker[key] = burstId;
-        return true;
     }
     return true;
 }
