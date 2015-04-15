@@ -266,6 +266,10 @@ class PermissionMgmtObj : public BusObject {
      */
     QStatus Get(const char* ifcName, const char* propName, MsgArg& val);
 
+    QStatus InstallTrustAnchor(TrustAnchor* trustAnchor);
+    QStatus StoreIdentityCertificate(MsgArg& certArg);
+    QStatus StorePolicy(PermissionPolicy& policy);
+
   private:
 
     typedef enum {
@@ -309,9 +313,6 @@ class PermissionMgmtObj : public BusObject {
     void Claim(const InterfaceDescription::Member* member, Message& msg);
     void InstallPolicy(const InterfaceDescription::Member* member, Message& msg);
     QStatus GetACLGUID(ACLEntryType aclEntryType, qcc::GUID128& guid);
-    QStatus StorePolicy(PermissionPolicy& policy);
-    QStatus InstallTrustAnchor(TrustAnchor* trustAnchor);
-    QStatus StoreIdentityCertificate(MsgArg& certArg);
     QStatus StoreTrustAnchors();
     QStatus LoadTrustAnchors();
     QStatus RemoveTrustAnchor(TrustAnchor* trustAnchor);
