@@ -23,11 +23,6 @@ using namespace qcc;
 
 void RunEventTest(uint32_t instances, uint32_t signalIndex, uint32_t delayMs, uint32_t timeoutMs)
 {
-    if (signalIndex < instances) {
-        /* Because timed event doesn't have a real OS event handle underneath, add 1 to account for it in our test */
-        instances++;
-    }
-
     Timespec ts1;
     GetTimeNow(&ts1);
 
@@ -54,13 +49,13 @@ void RunEventTest(uint32_t instances, uint32_t signalIndex, uint32_t delayMs, ui
         /* Expecting timeout */
         ASSERT_EQ(ER_TIMEOUT, status);
         ASSERT_EQ(0U, signalEvents.size());
-        ASSERT_LE(timeoutMs, waitReturnTimeMs);
+        ASSERT_LE(timeoutMs, waitReturnTimeMs - TIMESTAMP_GRANULARITY);
     } else {
         /* Expecting an event */
         ASSERT_EQ(ER_OK, status);
         ASSERT_EQ(1U, signalEvents.size());
         ASSERT_EQ(checkEvents[signalIndex], signalEvents[0]);
-        ASSERT_LE(delayMs, waitReturnTimeMs);
+        ASSERT_LE(delayMs, waitReturnTimeMs - TIMESTAMP_GRANULARITY);
         ASSERT_GT(timeoutMs, waitReturnTimeMs);
     }
 
@@ -72,6 +67,7 @@ void RunEventTest(uint32_t instances, uint32_t signalIndex, uint32_t delayMs, ui
 
 const uint32_t T1 = 1000;
 const uint32_t T2 = 2000;
+
 /*
  * On darwin platform the number of instances above 256 will cause "Too many open files" error
  * due to number of file descriptors being limited to 256
@@ -94,6 +90,13 @@ TEST(EventTest, Exactly64Handles)
 
 TEST(EventTest, Above64Handles)
 {
+    RunEventTest(65, 64, T1, T2);
+    RunEventTest(65, 63, T1, T2);
+    RunEventTest(65, 62, T1, T2);
+    RunEventTest(65, 61, T1, T2);
+
+    RunEventTest(66, 65, T1, T2);
+
 #if __MACH__
     RunEventTest(INSTANCES_DARWIN, SIGNAL_INDEX, T1, T2);
 #else

@@ -83,7 +83,8 @@ class SuperWaiter {
     SuperWaiter() :
         m_shutdown(INVALID_HANDLE_VALUE),
         m_cleanupGroup(nullptr),
-        m_indexSignaled(-1)
+        m_signaled(false),
+        m_indexSignaled(0xFFFFFFFF)
     {
     }
 
@@ -129,7 +130,7 @@ class SuperWaiter {
         SetEvent(m_shutdown);
     }
 
-    QStatus WaitForMultipleObjects(_In_ size_t totalHandles, _In_reads_(totalHandles) const HANDLE* handles, _In_ size_t timeoutMsec, _Out_ int32_t* indexSignaled)
+    QStatus WaitForMultipleObjects(_In_ size_t totalHandles, _In_reads_(totalHandles) const HANDLE* handles, _In_ uint32_t timeoutMsec, _Out_ uint32_t* indexSignaled)
     {
         assert(0 != totalHandles);
         assert(nullptr != handles);
@@ -137,23 +138,25 @@ class SuperWaiter {
         assert(nullptr != m_cleanupGroup);
         assert(INVALID_HANDLE_VALUE != m_shutdown);
 
-        *indexSignaled = -1;
+        *indexSignaled = 0xFFFFFFFF;
+        size_t currentIndex = 0;
 
-        for (size_t i = 0; i < totalHandles; ++i) {
+        while (currentIndex < totalHandles) {
+            size_t numHandles = totalHandles - currentIndex;
+
             /* Subtract 1 from MAXIMUM_WAIT_OBJECTS to accomodate the shutdown event */
-            size_t numHandles = totalHandles - i;
             if (MAXIMUM_WAIT_OBJECTS - 1 < numHandles) {
                 numHandles = MAXIMUM_WAIT_OBJECTS - 1;
             }
 
-            if (i == 0) {
+            if (currentIndex == 0) {
                 /* Only the first group gets the true timeout to avoid unnecessary race */
             } else {
                 timeoutMsec = INFINITE;
             }
 
-            WaitGroup* group = new WaitGroup(this, &handles[i], numHandles, i, timeoutMsec);
-            i += numHandles;
+            WaitGroup* group = new WaitGroup(this, &handles[currentIndex], numHandles, currentIndex, timeoutMsec);
+            currentIndex += numHandles;
 
             PTP_WORK work = CreateThreadpoolWork(s_WaitThread, group, &m_environment);
             if (nullptr == work) {
@@ -169,12 +172,11 @@ class SuperWaiter {
 
         WaitForSingleObject(m_shutdown, INFINITE);
 
-        LONG result = InterlockedCompareExchange(&m_indexSignaled, -1, -1);
-        if (result < 0) {
+        if (!m_signaled) {
             return ER_TIMEOUT;
         }
 
-        *indexSignaled = static_cast<int32_t>(result);
+        *indexSignaled = m_indexSignaled;
         return ER_OK;
     }
 
@@ -182,7 +184,8 @@ class SuperWaiter {
     HANDLE m_shutdown;
     TP_CALLBACK_ENVIRON m_environment;
     PTP_CLEANUP_GROUP m_cleanupGroup;
-    volatile LONG m_indexSignaled;
+    bool m_signaled;
+    uint32_t m_indexSignaled;
 
     struct WaitGroup {
         WaitGroup(_In_ SuperWaiter* waiter, _In_reads_(numHandles) const HANDLE* handles, _In_ size_t numHandles, _In_ size_t groupIndex, _In_ size_t timeoutMsec) :
@@ -239,14 +242,14 @@ class SuperWaiter {
             break;
 
         case WAIT_OBJECT_0:
-            /* Shutdown requested, nothing report */
+            /* Shutdown requested, nothing to report */
             break;
 
         default:
             {
                 /* Calculate the true wait result, subtract 1 because the first index is for shutdown purpose */
-                LONG indexSignaled = group->m_groupIndex + ((waitResult - WAIT_OBJECT_0) - 1);
-                InterlockedExchange(&(group->m_waiter->m_indexSignaled), indexSignaled);
+                group->m_waiter->m_indexSignaled = group->m_groupIndex + ((waitResult - WAIT_OBJECT_0) - 1);
+                group->m_waiter->m_signaled = true;
                 group->m_waiter->Shutdown();
             }
             break;
@@ -624,19 +627,6 @@ QStatus Event::Wait(Event& evt, uint32_t maxWaitMs)
     Thread* thread = Thread::GetThread();
     Event* stopEvent = &thread->GetStopEvent();
     handles[numHandles++] = stopEvent->handle;
-
-    if (TIMED == evt.eventType) {
-        uint32_t now = GetTimestamp();
-        if (evt.timestamp <= now) {
-            if (0 < evt.period) {
-                evt.timestamp += (((now - evt.timestamp) / evt.period) + 1) * evt.period;
-            }
-            return ER_OK;
-        } else if (WAIT_FOREVER == maxWaitMs || ((evt.timestamp - now) < maxWaitMs)) {
-            maxWaitMs = evt.timestamp - now;
-        }
-    }
-
     QStatus status = ER_OK;
 
     evt.IncrementNumThreads();
@@ -657,19 +647,8 @@ QStatus Event::Wait(Event& evt, uint32_t maxWaitMs)
             }
         }
     } else if (WAIT_TIMEOUT == ret) {
-        if (TIMED == evt.eventType) {
-            uint32_t now = GetTimestamp();
-            if (now >= evt.timestamp) {
-                if (0 < evt.period) {
-                    evt.timestamp += (((now - evt.timestamp) / evt.period) + 1) * evt.period;
-                }
-            } else {
-                status = ER_TIMEOUT;
-            }
-        } else {
-            QCC_DbgPrintf(("WaitForMultipleObjectsEx timeout %d", maxWaitMs));
-            status = ER_TIMEOUT;
-        }
+        QCC_DbgPrintf(("WaitForMultipleObjectsEx timeout %u", maxWaitMs));
+        status = ER_TIMEOUT;
     } else {
         status = ER_OS_ERROR;
         QCC_LogError(status, ("WaitForMultipleObjectsEx returned 0x%x.", ret));
@@ -688,29 +667,26 @@ QStatus Event::Wait(Event& evt, uint32_t maxWaitMs)
 QStatus Event::Wait(const vector<Event*>& checkEvents, vector<Event*>& signaledEvents, uint32_t maxWaitMs)
 {
     QStatus status = ER_OK;
-    int numHandles = 0;
+    uint32_t numHandles = 0;
     vector<HANDLE> handles;
     vector<Event*>::const_iterator it;
 
     for (it = checkEvents.begin(); it != checkEvents.end(); ++it) {
         Event* evt = *it;
         evt->IncrementNumThreads();
-        if (INVALID_HANDLE_VALUE != evt->handle) {
+        if (evt->handle != INVALID_HANDLE_VALUE) {
             handles.push_back(evt->handle);
             numHandles++;
         }
-        if (INVALID_HANDLE_VALUE != evt->ioHandle) {
+        if (evt->ioHandle != INVALID_HANDLE_VALUE) {
             handles.push_back(evt->ioHandle);
             numHandles++;
         }
         if (evt->eventType == TIMED) {
-            uint32_t now = GetTimestamp();
-            if (evt->timestamp <= now) {
-                maxWaitMs = 0;
-            } else if ((WAIT_FOREVER == maxWaitMs) || ((evt->timestamp - now) < maxWaitMs)) {
-                maxWaitMs = evt->timestamp - now;
-            }
+            handles.push_back(evt->timerHandle);
+            numHandles++;
         }
+
         if ((evt->eventType == IO_READ) || (evt->eventType == IO_WRITE)) {
             if (evt->IsNetworkEventSet()) {
                 ::SetEvent(evt->ioHandle);
@@ -728,69 +704,71 @@ QStatus Event::Wait(const vector<Event*>& checkEvents, vector<Event*>& signaledE
         }
     }
 
+    if (numHandles == 0) {
+        status = ER_FAIL;
+        QCC_LogError(status, ("Wait: incorrect checkEvents values."));
+        return status;
+    }
 
     bool somethingSet = true;
     bool timedOut = false;
 
-    while (signaledEvents.empty() && somethingSet) {
+    while ((status == ER_OK) && signaledEvents.empty() && somethingSet) {
+        HANDLE signaledHandle = NULL;
         uint32_t orig = GetTimestamp();
 
         if (numHandles <= MAXIMUM_WAIT_OBJECTS) {
-            assert(numHandles > 0);
             DWORD ret = WaitForMultipleObjectsEx(numHandles, handles.data(), FALSE, maxWaitMs, FALSE);
 
-            /*
-             * somethingSet will be true if the return value is between WAIT_OBJECT_0 and WAIT_OBJECT_0 + numHandles.
-             * i.e. ret indicates that one of the handles passed in the array "handles" to WaitForMultipleObjectsEx
-             * caused the function to return.
-             */
-            somethingSet = (ret >= WAIT_OBJECT_0) && (ret < (WAIT_OBJECT_0 + numHandles));
-            timedOut = (WAIT_TIMEOUT == ret);
+            if ((ret >= WAIT_OBJECT_0) && (ret < WAIT_OBJECT_0 + numHandles)) {
+                somethingSet = true;
+                uint32_t signaledIndex = ret - WAIT_OBJECT_0;
+                signaledHandle = handles[signaledIndex];
+            } else {
+                somethingSet = false;
 
-            if (WAIT_FAILED == ret) {
-                QCC_LogError(ER_FAIL, ("WaitForMultipleObjectsEx(2) returned 0x%x, error=%d.", ret, GetLastError()));
-            } else if (WAIT_ABANDONED == ret) {
-                QCC_LogError(ER_FAIL, ("WaitForMultipleObjectsEx(2) returned WAIT_ABANDONED."));
+                if (ret == WAIT_TIMEOUT) {
+                    timedOut = true;
+                } else {
+                    status = ER_OS_ERROR;
+                    if (ret == WAIT_FAILED) {
+                        QCC_LogError(status, ("WaitForMultipleObjectsEx(2) returned 0x%x, error=%d.", ret, GetLastError()));
+                    } else if (ret == WAIT_ABANDONED) {
+                        QCC_LogError(status, ("WaitForMultipleObjectsEx(2) returned WAIT_ABANDONED."));
+                    }
+                }
             }
         } else {
-            int32_t indexSignaled = -1;
             SuperWaiter waiter;
             status = waiter.Initialize();
-            if (ER_OK == status) {
-                status = waiter.WaitForMultipleObjects(numHandles, handles.data(), maxWaitMs, &indexSignaled);
-                if (ER_OK == status) {
+            if (status == ER_OK) {
+                uint32_t signaledIndex;
+                status = waiter.WaitForMultipleObjects(numHandles, handles.data(), maxWaitMs, &signaledIndex);
+                if (status == ER_OK) {
                     somethingSet = true;
                     timedOut = false;
-                } else if (ER_TIMEOUT == status) {
+                    signaledHandle = handles[signaledIndex];
+                } else {
                     somethingSet = false;
-                    timedOut = true;
+                    timedOut = (status == ER_TIMEOUT);
                 }
-            }
-            if ((ER_OK != status) && (!timedOut)) {
-                /* Restore thread counts if we did not block */
-                for (it = checkEvents.begin(); it != checkEvents.end(); ++it) {
-                    Event* evt = *it;
-                    evt->DecrementNumThreads();
-                }
-                QCC_LogError(status, ("SuperWaiter::WaitForMultipleObjects: failed."));
-                return ER_FAIL;
             }
         }
 
         for (it = checkEvents.begin(); it != checkEvents.end(); ++it) {
             Event* evt = *it;
             evt->DecrementNumThreads();
-            if (TIMED == evt->eventType) {
-                uint32_t now = GetTimestamp();
-                if (now >= evt->timestamp) {
-                    if (0 < evt->period) {
-                        evt->timestamp += (((now - evt->timestamp) / evt->period) + 1) * evt->period;
+
+            if (status == ER_OK) {
+                if (TIMED == evt->eventType) {
+                    /* IsSet() doesn't work for TIMED events */
+                    if ((signaledHandle != NULL) && (signaledHandle == evt->timerHandle)) {
+                        signaledEvents.push_back(evt);
                     }
-                    signaledEvents.push_back(evt);
-                }
-            } else {
-                if (somethingSet && evt->IsSet()) {
-                    signaledEvents.push_back(evt);
+                } else {
+                    if (somethingSet && evt->IsSet()) {
+                        signaledEvents.push_back(evt);
+                    }
                 }
             }
         }
@@ -799,21 +777,21 @@ QStatus Event::Wait(const vector<Event*>& checkEvents, vector<Event*>& signaledE
         /* Adjust the maxWaitMs by the time elapsed, in case we loop back up and call WaitForMultipleObjectsEx again. */
         maxWaitMs -= now - orig;
         /* If somethingSet is true, signaledEvents must not be empty here. But there are situations when WaitForMultipleObjectsEx
-           can return even though the event is not set. So, if somethingSet is true, but signaledEvents is empty,
-           we call WaitForMultipleObjectsEx again.
+         * can return even though the event is not set. So, if somethingSet is true, but signaledEvents is empty,
+         * we call WaitForMultipleObjectsEx again.
          */
     }
 
-    if (somethingSet || timedOut) {
-        status = signaledEvents.empty() ? ER_TIMEOUT : ER_OK;
+    if ((status == ER_OK) && signaledEvents.empty()) {
+        status = ER_TIMEOUT;
     }
 
     /* Log everything but OK or TIME_OUT before returning a generic error */
     if ((ER_OK != status) && (ER_TIMEOUT != status)) {
-        QCC_LogError(status, ("WaitForMultipleObjects(2) failed, numHandles=%d, maxWaitMs=%d", numHandles, maxWaitMs));
-        QCC_DbgHLPrintf(("WaitForMultipleObjects(2) failed, Handles: "));
-        for (int i = 0; i < numHandles; ++i) {
-            QCC_DbgHLPrintf(("  0x%x", handles[i]));
+        QCC_LogError(status, ("Wait failed, numHandles=%u, maxWaitMs=%u", numHandles, maxWaitMs));
+        QCC_DbgHLPrintf(("Wait failed, handles:"));
+        for (uint32_t i = 0; i < numHandles; ++i) {
+            QCC_DbgHLPrintf(("  0x%p", handles[i]));
         }
         status = ER_FAIL;
     }
@@ -824,8 +802,8 @@ Event::Event() :
     handle(CreateEvent(NULL, TRUE, FALSE, NULL)),
     ioHandle(INVALID_HANDLE_VALUE),
     eventType(GEN_PURPOSE),
-    timestamp(0),
     period(0),
+    timerHandle(NULL),
     ioFd(INVALID_SOCKET_FD),
     numThreads(0),
     networkIfaceEvent(false),
@@ -838,8 +816,8 @@ Event::Event(bool networkIfaceEvent) :
     handle(CreateEvent(NULL, TRUE, FALSE, NULL)),
     ioHandle(INVALID_HANDLE_VALUE),
     eventType(GEN_PURPOSE),
-    timestamp(0),
     period(0),
+    timerHandle(NULL),
     ioFd(INVALID_SOCKET_FD),
     numThreads(0),
     networkIfaceEvent(networkIfaceEvent),
@@ -855,8 +833,8 @@ Event::Event(Event& event, EventType eventType, bool genPurpose) :
     handle(INVALID_HANDLE_VALUE),
     ioHandle(INVALID_HANDLE_VALUE),
     eventType(eventType),
-    timestamp(0),
     period(0),
+    timerHandle(NULL),
     ioFd(event.ioFd),
     numThreads(0),
     networkIfaceEvent(false),
@@ -878,8 +856,8 @@ Event::Event(SocketFd ioFd, EventType eventType) :
     handle(INVALID_HANDLE_VALUE),
     ioHandle(INVALID_HANDLE_VALUE),
     eventType(eventType),
-    timestamp(0),
     period(0),
+    timerHandle(NULL),
     ioFd(ioFd),
     numThreads(0),
     networkIfaceEvent(false),
@@ -894,26 +872,34 @@ Event::Event(SocketFd ioFd, EventType eventType) :
     }
 }
 
-Event::Event(uint32_t timestamp, uint32_t period) :
+Event::Event(uint32_t delay, uint32_t period) :
     handle(INVALID_HANDLE_VALUE),
     ioHandle(INVALID_HANDLE_VALUE),
     eventType(TIMED),
-    timestamp(WAIT_FOREVER == timestamp ? WAIT_FOREVER : GetTimestamp() + timestamp),
     period(period),
+    timerHandle(NULL),
     ioFd(INVALID_SOCKET_FD),
     numThreads(0),
     networkIfaceEvent(false),
     networkIfaceHandle(INVALID_HANDLE_VALUE),
     isSocket(false)
 {
+    timerHandle = CreateWaitableTimerW(NULL, FALSE, NULL);
+
+    if (timerHandle != NULL && delay != WAIT_FOREVER) {
+        LARGE_INTEGER timerDelay = { 0 };
+        timerDelay.QuadPart -= (int64_t)delay;
+        timerDelay.QuadPart *= 10000i64;
+        ::SetWaitableTimer(this->timerHandle, &timerDelay, (int32_t) this->period, NULL, NULL, FALSE);
+    }
 }
 
 Event::Event(HANDLE busHandle, EventType eventType) :
     handle(INVALID_HANDLE_VALUE),
     ioHandle(INVALID_HANDLE_VALUE),
     eventType(eventType),
-    timestamp(0),
     period(0),
+    timerHandle(NULL),
     ioFd(PtrToInt(busHandle)),
     numThreads(0),
     networkIfaceEvent(false),
@@ -931,9 +917,6 @@ Event::~Event()
     if ((handle != INVALID_HANDLE_VALUE) && !::SetEvent(handle)) {
         QCC_LogError(ER_FAIL, ("SetEvent failed with %d (%s)", GetLastError()));
     }
-    if (TIMED == eventType) {
-        timestamp = 0;
-    }
 
     /* No longer monitoring I/O for this event */
     if (ioHandle != INVALID_HANDLE_VALUE) {
@@ -950,6 +933,13 @@ Event::~Event()
     if (networkIfaceEvent && networkIfaceHandle != INVALID_HANDLE_VALUE) {
         CancelMibChangeNotify2(networkIfaceHandle);
     }
+
+    if (timerHandle != NULL) {
+        assert(eventType == TIMED);
+        ::CancelWaitableTimer(timerHandle);
+        ::CloseHandle(timerHandle);
+        timerHandle = NULL;
+    }
 }
 
 QStatus Event::SetEvent()
@@ -962,15 +952,8 @@ QStatus Event::SetEvent()
             QCC_LogError(status, ("SetEvent failed with %d", GetLastError()));
         }
     } else if (TIMED == eventType) {
-        uint32_t now = GetTimestamp();
-        if (now < timestamp) {
-            if (0 < period) {
-                timestamp -= (((now - timestamp) / period) + 1) * period;
-            } else {
-                timestamp = now;
-            }
-        }
-        status = ER_OK;
+        LARGE_INTEGER timerDelay = { 0 };
+        ::SetWaitableTimer(timerHandle, &timerDelay, period, NULL, NULL, FALSE);
     } else {
         /* Not a general purpose or timed event */
         status = ER_FAIL;
@@ -990,10 +973,12 @@ QStatus Event::ResetEvent()
         }
     } else if (TIMED == eventType) {
         if (0 < period) {
-            uint32_t now = GetTimestamp();
-            timestamp += (((now - timestamp) / period) + 1) * period;
+            LARGE_INTEGER timerDelay = { 0 };
+            timerDelay.QuadPart -= (int64_t)period;
+            timerDelay.QuadPart *= 10000i64;
+            ::SetWaitableTimer(timerHandle, &timerDelay, (int32_t)period, NULL, NULL, FALSE);
         } else {
-            timestamp = static_cast<uint32_t>(-1);
+            ::CancelWaitableTimer(timerHandle);
         }
     } else {
         /* Not a general purpose or timed event */
@@ -1018,9 +1003,12 @@ bool Event::IsSet()
 void Event::ResetTime(uint32_t delay, uint32_t period)
 {
     if (delay == WAIT_FOREVER) {
-        this->timestamp = WAIT_FOREVER;
+        ::CancelWaitableTimer(timerHandle);
     } else {
-        this->timestamp = GetTimestamp() + delay;
+        LARGE_INTEGER timerDelay = { 0 };
+        timerDelay.QuadPart -= (int64_t)delay;
+        timerDelay.QuadPart *= 10000i64;
+        ::SetWaitableTimer(timerHandle, &timerDelay, (int32_t)period, NULL, NULL, FALSE);
     }
     this->period = period;
 }

@@ -44,6 +44,19 @@ typedef enum {
 struct Timespec;
 
 /**
+ * Granularity of GetTimestamp64(), GetTimestamp() and GetTimeNow.
+ *
+ * GetTimestamp64() is based on GetTickCount64() on Windows. GetTickCount64()
+ * typically has a 10-16 milliseconds granularity, so the result of GetTimestamp64()
+ * on Windows can be up to ~15 milliseconds smaller than expected at any given time.
+ */
+#if defined(QCC_OS_GROUP_WINDOWS)
+    #define TIMESTAMP_GRANULARITY 0
+#else
+    #define TIMESTAMP_GRANULARITY 15
+#endif
+
+/**
  * Get the current time.
  * @param ts  [OUT] Timespec filled with current time.
  */
