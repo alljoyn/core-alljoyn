@@ -52,7 +52,7 @@ static bool testNextAlarm(const Timespec& expectedTime, void* context)
         GetTimeNow(&ts);
         uint64_t alarmTime = ts.GetAbsoluteMillis();
         uint64_t expectedTimeMs = expectedTime.GetAbsoluteMillis();
-        ret = (p.first == ER_OK) && (context == p.second->GetContext()) && (alarmTime >= expectedTimeMs) && (alarmTime < (expectedTimeMs + jitter));
+        ret = (p.first == ER_OK) && (context == p.second->GetContext()) && (alarmTime >= expectedTimeMs - TIMESTAMP_GRANULARITY) && (alarmTime < (expectedTimeMs + jitter));
         if (!ret) {
             printf("Failed Triggered Alarm: status=%s, \na.alarmTime=\t%" PRIu64 "\nexpectedTimeMs=\t%" PRIu64 "\ndiff=\t\t%" PRIu64 "\n",
                    QCC_StatusText(p.first), alarmTime, expectedTimeMs, (expectedTimeMs - alarmTime));
@@ -258,7 +258,7 @@ TEST(TimerTest, TestBackPressure) {
     ASSERT_EQ(ER_OK, status) << "Status: " << QCC_StatusText(status);
     uint64_t elapsed = qcc::GetTimestamp64() - start_time;
 
-    EXPECT_TRUE(elapsed >= delay);
+    EXPECT_GE(elapsed + TIMESTAMP_GRANULARITY, delay);
     t3.Stop();
     t3.Join();
 
@@ -452,7 +452,7 @@ TEST(TimerTest, TestMaxAlarms) {
     uint32_t delta2;
     GetTimeNow(&ts2);
     delta2 = ts2.GetAbsoluteMillis() - baseTimespec.GetAbsoluteMillis();
-    ASSERT_GE(delta2, t2);
+    ASSERT_GE(delta2, t2 - TIMESTAMP_GRANULARITY);
     ASSERT_LE(delta2, (t2 + jitter));
 
     /* Wait a tad bit for alarms to complete fully */

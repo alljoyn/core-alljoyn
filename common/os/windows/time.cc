@@ -33,65 +33,34 @@ const qcc::Timespec qcc::Timespec::Zero;
 
 uint32_t qcc::GetTimestamp(void)
 {
-    static uint32_t base = 0;
-    struct _timeb timebuffer;
-    uint32_t ret_val;
-
-    _ftime(&timebuffer);
-
-    ret_val = ((uint32_t)timebuffer.time) * 1000;
-    ret_val += timebuffer.millitm;
-
-#ifdef RANDOM_TIMESTAMPS
-    /*
-     * Randomize time base
-     */
-    while (!base) {
-        srand(ret_val);
-        base = rand() | (rand() << 16);
-    }
-#endif
-
-    return ret_val + base;
+    return (uint32_t)GetTimestamp64();
 }
 
 uint64_t qcc::GetTimestamp64(void)
 {
-    static uint32_t base = 0;
-    struct _timeb timebuffer;
-    uint64_t ret_val;
-
-    _ftime(&timebuffer);
-
-    ret_val = ((uint64_t)timebuffer.time) * 1000;
-    ret_val += timebuffer.millitm;
-
-#ifdef RANDOM_TIMESTAMPS
-    /*
-     * Randomize time base
-     */
-    while (!base) {
-        srand(ret_val);
-        base = rand() | (rand() << 16);
-    }
-#endif
-
-    return ret_val + base;
+    /* Start timestamp values from zero, to match the Posix implementation */
+    static const uint64_t base_count = ::GetTickCount64();
+    uint64_t current_count = ::GetTickCount64();
+    return (current_count - base_count);
 }
 
 uint64_t qcc::GetEpochTimestamp(void)
 {
-    return GetTimestamp64();
+    struct __timeb64 time_buffer;
+    _ftime64(&time_buffer);
+
+    uint64_t ret_val = time_buffer.time * (uint64_t)1000;
+    ret_val += time_buffer.millitm;
+
+    return ret_val;
 }
 
 void qcc::GetTimeNow(Timespec* ts)
 {
-    struct _timeb timebuffer;
-
-    _ftime(&timebuffer);
-
-    ts->seconds = timebuffer.time;
-    ts->mseconds = timebuffer.millitm;
+    /* Don't start from zero, and return values relative to an unspecified base, to match the Posix implementation */
+    uint64_t current_count = ::GetTickCount64();
+    ts->seconds = current_count / (uint64_t)1000;
+    ts->mseconds = (uint16_t)(current_count % 1000);
 }
 
 qcc::String qcc::UTCTime()
