@@ -329,6 +329,10 @@ int CDECL_CALL main(int argc, char** argv)
     assert(aboutObj != NULL);
 
     if (ER_OK != SetupBusAttachment(*bus, aboutData)) {
+        delete aboutObj;
+        aboutObj = NULL;
+        delete bus;
+        bus = NULL;
         return EXIT_FAILURE;
     }
 
@@ -336,7 +340,11 @@ int CDECL_CALL main(int argc, char** argv)
 
     for (int i = 1; i < argc; ++i) {
         Door* door = new Door(*bus, argv[i]);
-        bus->RegisterBusObject(*door);
+        if (ER_OK != bus->RegisterBusObject(*door)) {
+            cerr << "Door (probably with duplicate) name - " << argv[i] << " - could not be registered on bus! Skipping it..." << endl;
+            delete door;
+            continue;
+        }
         g_doors.push_back(door);
         g_doors_registered.push_back(true);
         aboutObj->Announce(port, aboutData);
