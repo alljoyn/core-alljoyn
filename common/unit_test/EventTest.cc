@@ -21,9 +21,11 @@
 using namespace std;
 using namespace qcc;
 
-void RunEventTest(uint32_t instances, uint32_t signalIndex, uint32_t delayMs, uint32_t timeoutMs)
+void RunEventTest(uint32_t instances, uint32_t signalIndex, uint32_t delayMs, uint32_t timeoutMs, bool useTimedEvent = true)
 {
-    if (signalIndex < instances) {
+    const uint32_t jitter = 500;
+
+    if (useTimedEvent && (signalIndex < instances)) {
         /* Because timed event doesn't have a real OS event handle underneath, add 1 to account for it in our test */
         instances++;
     }
@@ -35,8 +37,14 @@ void RunEventTest(uint32_t instances, uint32_t signalIndex, uint32_t delayMs, ui
     for (uint32_t i = 0; i < instances; ++i) {
         Event* event = nullptr;
         if (i == signalIndex) {
-            /* Timed event */
-            event = new Event(delayMs);
+            if (useTimedEvent) {
+                /* Timed event */
+                event = new Event(delayMs);
+            } else {
+                /* General purpose event */
+                event = new Event();
+                event->SetEvent();
+            }
         } else {
             event = new Event();
         }
@@ -61,7 +69,10 @@ void RunEventTest(uint32_t instances, uint32_t signalIndex, uint32_t delayMs, ui
         ASSERT_EQ(1U, signalEvents.size());
         ASSERT_EQ(checkEvents[signalIndex], signalEvents[0]);
         ASSERT_LE(delayMs, waitReturnTimeMs);
-        ASSERT_GT(timeoutMs, waitReturnTimeMs);
+
+        if ((timeoutMs > jitter) && (timeoutMs - jitter > delayMs)) {
+            ASSERT_GT(timeoutMs, waitReturnTimeMs);
+        }
     }
 
     /* Clean up */
@@ -81,6 +92,11 @@ const uint32_t INSTANCES_DARWIN = 100;
 const uint32_t SIGNAL_INDEX = 99;
 #endif
 
+/*
+ * 64, 63 and similar number of events are significant for the Windows implementation.
+ * When waiting for more than 64 events, the Windows implementation makes multiple
+ * WaitForMultipleObject() calls, for up to 63 events at a time.
+ */
 TEST(EventTest, Below64Handles)
 {
     RunEventTest(1, 0, T1, T2);
@@ -94,6 +110,14 @@ TEST(EventTest, Exactly64Handles)
 
 TEST(EventTest, Above64Handles)
 {
+    RunEventTest(65, 64, T1, T2, true);
+    RunEventTest(65, 64, 0, 0, false);
+    RunEventTest(65, 64, 0, T1, false);
+
+    RunEventTest(65, 63, T1, T2, true);
+    RunEventTest(65, 63, 0, 0, false);
+    RunEventTest(65, 63, 0, T1, false);
+
 #if __MACH__
     RunEventTest(INSTANCES_DARWIN, SIGNAL_INDEX, T1, T2);
 #else
