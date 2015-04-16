@@ -462,7 +462,12 @@ QStatus AJ_CALL alljoyn_msgarg_get_uint8(const alljoyn_msgarg arg, uint8_t* y)
 QStatus AJ_CALL alljoyn_msgarg_get_bool(const alljoyn_msgarg arg, QCC_BOOL* b)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
-    return alljoyn_msgarg_get(arg, "b", b);
+    bool _b = false;
+    QStatus status = alljoyn_msgarg_get(arg, "b", &_b);
+    if (status == ER_OK) {
+        *b = (_b == true) ? QCC_TRUE : QCC_FALSE;
+    }
+    return status;
 }
 QStatus AJ_CALL alljoyn_msgarg_get_int16(const alljoyn_msgarg arg, int16_t* n)
 {
