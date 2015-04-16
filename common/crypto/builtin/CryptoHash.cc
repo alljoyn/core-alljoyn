@@ -166,7 +166,7 @@ Crypto_Hash::~Crypto_Hash(void)
 {
     if (ctx) {
         /* Zero out keys and other state that are stored in the hash context. */
-        ClearMemory(&ctx, sizeof(ctx));
+        ClearMemory(ctx, sizeof(*ctx));
         delete ctx;
     }
 }
