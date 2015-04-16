@@ -102,6 +102,17 @@ class DaemonTransport : public Transport, public _RemoteEndpoint::EndpointListen
     TransportMask GetTransportMask() const { return TRANSPORT_LOCAL; }
 
     /**
+     * Does this transport support connections as described by the provided
+     * session options.
+     *
+     * @param opts  Proposed session options.
+     * @return
+     *      - true if the SessionOpts specifies a supported option set.
+     *      - false otherwise.
+     */
+    virtual bool SupportsOptions(const SessionOpts& opts) const;
+
+    /**
      * @internal
      * @brief Normalize a transport specification.
      *

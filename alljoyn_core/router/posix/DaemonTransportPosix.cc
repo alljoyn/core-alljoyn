@@ -286,6 +286,27 @@ void* DaemonTransport::Run(void* arg)
     return (void*) status;
 }
 
+bool DaemonTransport::SupportsOptions(const SessionOpts& opts) const
+{
+    QCC_DbgTrace(("DaemonTransport::SupportsOptions()"));
+    bool rc = true;
+
+    /* QCC_AF_UNIX socket is reliable. */
+    if (opts.traffic != SessionOpts::TRAFFIC_MESSAGES && opts.traffic != SessionOpts::TRAFFIC_RAW_RELIABLE) {
+        QCC_DbgPrintf(("DaemonTransport::SupportsOptions(): traffic type mismatch"));
+        rc = false;
+    }
+
+    /* QCC_AF_UNIX socket is local-only by definition. */
+    if (!(opts.transports & TRANSPORT_LOCAL)) {
+        QCC_DbgPrintf(("DaemonTransport::SupportsOptions(): transport mismatch"));
+        rc = false;
+    }
+
+    QCC_DbgPrintf(("DaemonTransport::SupportsOptions(): returns \"%s\"", rc == true ? "true" : "false"));
+    return rc;
+}
+
 QStatus DaemonTransport::NormalizeTransportSpec(const char* inSpec, qcc::String& outSpec, map<qcc::String, qcc::String>& argMap) const
 {
     QStatus status = ParseArguments(DaemonTransport::TransportName, inSpec, argMap);

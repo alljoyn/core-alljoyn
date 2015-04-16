@@ -38,6 +38,12 @@ void* DaemonTransport::Run(void* arg)
     return NULL;
 }
 
+bool DaemonTransport::SupportsOptions(const SessionOpts& opts) const
+{
+    QCC_UNUSED(opts);
+    return false;
+}
+
 QStatus DaemonTransport::NormalizeTransportSpec(const char* inSpec, qcc::String& outSpec, map<qcc::String, qcc::String>& argMap) const
 {
     QCC_UNUSED(inSpec);
