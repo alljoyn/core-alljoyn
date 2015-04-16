@@ -1332,7 +1332,7 @@ typedef void (^ AJNPingPeerBlock)(QStatus status, void *context);
  * The handler is only called if a call to WhoImplements has been has been
  * called.
  *
- * Important the AboutListener should be registered before calling WhoImplments
+ * Important: the AboutListener should be registered before calling WhoImplements
  *
  * @param[in] aboutListener reference to AboutListener
  */
