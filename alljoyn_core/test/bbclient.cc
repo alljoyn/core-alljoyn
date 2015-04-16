@@ -82,6 +82,9 @@ static uint32_t keyExpiration = 0xFFFFFFFF;
 static String g_testAboutApplicationName = "bbservice";
 static bool g_useAboutFeatureDiscovery = false;
 
+static const char* g_alternatePSK = NULL;
+static const char* g_defaultPSK = "faaa0af3dd3f1e0379da046a3ab6ca44";
+
 /** AllJoynListener receives discovery events from AllJoyn */
 class MyBusListener : public BusListener, public SessionListener {
   public:
@@ -253,6 +256,8 @@ static void usage(void)
     printf("   -le                       = Send messages as little endian\n");
     printf("   -m <trans_mask>           = Transports allowed to connect to service\n");
     printf("   -about [name]             = use the about feature for discovery (optional application name to join).\n");
+    printf("   -psk [psk]                = Use the supplied pre-shared key instead of the built in one.\n");
+    printf("                               For interop with tests in version <= 14.12 pass '123456'.\n");
     printf("\n");
 }
 
@@ -353,8 +358,16 @@ class MyAuthListener : public AuthListener {
              * In this example, the pre shared secret is a hard coded string.
              * Pre-shared keys should be 128 bits long, and generated with a
              * cryptographically secure random number generator.
+             * However, if a psk was supplied on the commandline,
+             * this is used instead of the default PSK.
              */
-            String psk("faaa0af3dd3f1e0379da046a3ab6ca44");
+            const char* csPSK;
+            if (NULL != g_alternatePSK) {
+                csPSK = g_alternatePSK;
+            } else {
+                csPSK = g_defaultPSK;
+            }
+            String psk(csPSK);
             creds.SetPassword(psk);
             return true;
         }
@@ -623,6 +636,15 @@ int CDECL_CALL main(int argc, char** argv)
                 g_testAboutApplicationName = argv[i];
             } else {
                 g_testAboutApplicationName = "bbservice";
+            }
+        } else if (0 == strcmp("-psk", argv[i])) {
+            ++i;
+            if (i == argc) {
+                printf("option %s requires a parameter\n", argv[i - 1]);
+                usage();
+                exit(1);
+            } else {
+                g_alternatePSK = argv[i];
             }
         } else {
             status = ER_FAIL;
