@@ -55,6 +55,20 @@ qcc::String genUniqueName(const BusAttachment& bus);
  */
 qcc::String getUniqueNamePrefix(const BusAttachment& bus);
 
+/**
+ * Granularity of GetTimestamp64().
+ *
+ * GetTimestamp64() uses GetTickCount64 as source of time on Windows.
+ * GetTickCount64 typically has a 10-16 milliseconds granularity, so
+ * the result of on GetTimestamp64() on Windows can be up to 15 milliseconds
+ * smaller than expected for a given test case.
+ */
+#if defined(QCC_OS_GROUP_WINDOWS)
+    #define TIMESTAMP_GRANULARITY 0
+#else
+    #define TIMESTAMP_GRANULARITY 0
+#endif
+
 }
 
 /*
