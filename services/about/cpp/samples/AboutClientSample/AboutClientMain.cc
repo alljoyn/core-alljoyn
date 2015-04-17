@@ -16,7 +16,6 @@
 
 #include <alljoyn/about/AboutClient.h>
 #include <alljoyn/about/AnnouncementRegistrar.h>
-#include <alljoyn/Init.h>
 
 #include <stdio.h>
 #include <signal.h>
@@ -26,11 +25,19 @@
 #include "AboutClientSessionListener.h"
 #include "AboutClientAnnounceHandler.h"
 #include "AboutClientSessionJoiner.h"
+#include <qcc/Thread.h>
+#include <qcc/time.h>
+#include <qcc/StringUtil.h>
+#include <alljoyn/Init.h>
 
 using namespace ajn;
 using namespace services;
 
 static BusAttachment* busAttachment;
+uint32_t g_start_timestamp = 0;
+uint32_t g_count_ninety_five_percentile = 0;
+uint32_t g_count_fifty_percentile = 0;
+uint32_t g_count_remaining = 0;
 
 static volatile sig_atomic_t s_interrupt = false;
 
@@ -176,10 +183,10 @@ void ViewAboutServiceData(qcc::String const& busName, SessionId id) {
 
         int ver = 0;
         status = aboutClient->GetVersion(busName.c_str(), ver, id);
-        if (status == ER_OK) {
-            std::cout << "Version = " << ver << std::endl;
-        } else {
+        if (status != ER_OK) {
             std::cout << "Call to to getVersion failed " << QCC_StatusText(status) << std::endl;
+        } else {
+            std::cout << "Version = " << ver << std::endl;
         }
     } //if (aboutClient)
 
@@ -395,9 +402,9 @@ void WaitForSigInt(void)
 int CDECL_CALL main(int argc, char** argv, char** envArg)
 {
     QCC_UNUSED(argc);
-    QCC_UNUSED(argv);
     QCC_UNUSED(envArg);
 
+    QStatus status = ER_OK;
     if (AllJoynInit() != ER_OK) {
         return 1;
     }
@@ -408,7 +415,6 @@ int CDECL_CALL main(int argc, char** argv, char** envArg)
     }
 #endif
 
-    QStatus status = ER_OK;
     std::cout << "AllJoyn Library version: " << ajn::GetVersion() << std::endl;
     std::cout << "AllJoyn Library build info: " << ajn::GetBuildInfo() << std::endl;
 
@@ -441,16 +447,41 @@ int CDECL_CALL main(int argc, char** argv, char** envArg)
     }
 
     AboutClientAnnounceHandler* announceHandler = new AboutClientAnnounceHandler(announceHandlerCallback);
-    const char* interfaces[] = { "org.alljoyn.About", "org.alljoyn.Icon" };
-    AnnouncementRegistrar::RegisterAnnounceHandler(*busAttachment, *announceHandler,
-                                                   interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
+    //const char* interfaces[] = { "org.alljoyn.About", "org.alljoyn.Icon" };
+    //AnnouncementRegistrar::RegisterAnnounceHandler(*busAttachment, *announceHandler,
+    //                                               interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
 
+    g_start_timestamp = qcc::GetTimestamp();
+    std::cout << "start time = " << g_start_timestamp << std::endl;
+
+    const char* interfaces1[] = { "org.alljoyn.About", "org.alljoyn.Icon", argv[1] };
+    const char* interfaces[] = { "org.alljoyn.About", "org.alljoyn.Icon" };
+    if (argv[1]) {
+        AnnouncementRegistrar::RegisterAnnounceHandler(*busAttachment, *announceHandler,
+                                                       interfaces1, 3);
+    } else {
+        AnnouncementRegistrar::RegisterAnnounceHandler(*busAttachment, *announceHandler,
+                                                       interfaces, 2);
+    }
+
+
+    if (argv[2]) {
+        std::cout << "Sleeping for " << argv[2] << " time" << std::endl;
+        uint32_t sleepTime = qcc::StringToU32(argv[2], 0, 60000);
+        qcc::Sleep(sleepTime);
+    }
     // Perform the service asynchronously until the user signals for an exit.
-    if (ER_OK == status) {
+    else if (ER_OK == status) {
         WaitForSigInt();
     }
 
-    AnnouncementRegistrar::UnRegisterAnnounceHandler(*busAttachment, *announceHandler, interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
+    std::cout << "Completed waiting for " << argv[2] << "ms" << std::endl;
+    if (argv[1]) {
+        AnnouncementRegistrar::UnRegisterAnnounceHandler(*busAttachment, *announceHandler, interfaces1, 3);
+    } else {
+        AnnouncementRegistrar::UnRegisterAnnounceHandler(*busAttachment, *announceHandler, interfaces, 2);
+    }
+
     delete announceHandler;
 
     busAttachment->Stop();
@@ -461,6 +492,13 @@ int CDECL_CALL main(int argc, char** argv, char** envArg)
     AllJoynRouterShutdown();
 #endif
     AllJoynShutdown();
+
+    printf("No of signals received within 1.25s = %u \n", g_count_fifty_percentile);
+    printf("No of signals received within 10.25s = %u \n", g_count_ninety_five_percentile);
+    printf("No of signals received after  10.25s = %u \n", g_count_remaining);
+
+    std::cout << std::endl;
+
     return 0;
 
 } /* main() */

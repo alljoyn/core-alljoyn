@@ -14,16 +14,16 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
+#include <alljoyn/BusAttachment.h>
 #include <alljoyn/about/AboutIconService.h>
 #include <alljoyn/about/AboutServiceApi.h>
 #include <alljoyn/about/AboutPropertyStoreImpl.h>
-#include <alljoyn/BusAttachment.h>
-#include <alljoyn/Init.h>
-#include <alljoyn/Status.h>
-
+#include <qcc/StringUtil.h>
+#include <qcc/Thread.h>
 #include <signal.h>
 #include "BusListenerImpl.h"
 #include "OptParser.h"
+#include <alljoyn/Init.h>
 
 using namespace ajn;
 using namespace services;
@@ -265,8 +265,8 @@ static void shutdown(AboutPropertyStoreImpl*& aboutPropertyStore, AboutIconServi
 }
 
 int CDECL_CALL main(int argc, char**argv, char** envArg) {
-    QCC_UNUSED(envArg);
 
+    QCC_UNUSED(envArg);
     if (AllJoynInit() != ER_OK) {
         return 1;
     }
@@ -364,6 +364,13 @@ int CDECL_CALL main(int argc, char**argv, char** envArg) {
         interfaces.push_back("org.alljoyn.Icon");
         status = AboutServiceApi::getInstance()->AddObjectDescription("/About/DeviceIcon", interfaces);
 
+        std::vector<qcc::String> intfs;
+        if (argv[1]) {
+            intfs.push_back(argv[1]);
+            status = AboutServiceApi::getInstance()->AddObjectDescription("/testobject", intfs);
+        }
+
+
         aboutIconService = new AboutIconService(*s_msgBus, mimeType, url, aboutIconContent,
                                                 sizeof(aboutIconContent) / sizeof(*aboutIconContent));
         aboutIconService->Register();
@@ -386,8 +393,13 @@ int CDECL_CALL main(int argc, char**argv, char** envArg) {
 
     }
 
+    if (argv[2]) {
+        printf("Sleeping for %s time  \n", argv[2]);
+        uint32_t sleepTime = qcc::StringToU32(argv[2], 0, 60000);
+        qcc::Sleep(sleepTime);
+    }
     /* Perform the service asynchronously until the user signals for an exit. */
-    if (ER_OK == status) {
+    else if (ER_OK == status) {
         WaitForSigInt();
     }
 
@@ -397,9 +409,7 @@ int CDECL_CALL main(int argc, char**argv, char** envArg) {
     AllJoynRouterShutdown();
 #endif
     AllJoynShutdown();
+
     return 0;
 } /* main() */
-
-
-
 
