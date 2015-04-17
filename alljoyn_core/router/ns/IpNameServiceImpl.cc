@@ -2752,17 +2752,17 @@ QStatus IpNameServiceImpl::AdvertiseName(TransportMask transportMask, vector<qcc
     return ER_OK;
 }
 
-QStatus IpNameServiceImpl::CancelAdvertiseName(TransportMask transportMask, const qcc::String& wkn, TransportMask completeTransportMask)
+QStatus IpNameServiceImpl::CancelAdvertiseName(TransportMask transportMask, const qcc::String& wkn, bool quietly, TransportMask completeTransportMask)
 {
     QCC_DbgPrintf(("IpNameServiceImpl::CancelAdvertiseName(0x%x, \"%s\")", transportMask, wkn.c_str()));
 
     vector<qcc::String> wknVector;
     wknVector.push_back(wkn);
 
-    return CancelAdvertiseName(transportMask, wknVector, completeTransportMask);
+    return CancelAdvertiseName(transportMask, wknVector, quietly, completeTransportMask);
 }
 
-QStatus IpNameServiceImpl::CancelAdvertiseName(TransportMask transportMask, vector<qcc::String>& wkn, TransportMask completeTransportMask)
+QStatus IpNameServiceImpl::CancelAdvertiseName(TransportMask transportMask, vector<qcc::String>& wkn, bool quietly, TransportMask completeTransportMask)
 {
     QCC_DbgPrintf(("IpNameServiceImpl::CancelAdvertiseName(0x%x, 0x%p)", transportMask, &wkn));
 
@@ -2795,29 +2795,37 @@ QStatus IpNameServiceImpl::CancelAdvertiseName(TransportMask transportMask, vect
     m_mutex.Lock();
 
     //
-    // Remove the given services from our list of services we are advertising.
-    //
-    bool changed = false;
-
-    //
     // We cancel advertisements in either the quietly or actively advertised
     // lists through this method.  Note that it is only actively advertised
-    // names that have changes in status reflected out on the network.  The
-    // variable <changed> drives this network operation and so <changed> is not
-    // set in the quietly advertised list even though the list was changed.
-    //
-    for (uint32_t i = 0; i < wkn.size(); ++i) {
-        set<qcc::String>::iterator j = find(m_advertised[transportIndex].begin(), m_advertised[transportIndex].end(), wkn[i]);
-        if (j != m_advertised[transportIndex].end()) {
-            m_advertised[transportIndex].erase(j);
-            changed = true;
+    // names that have changes in status reflected out on the network.
+    if (quietly) {
+        for (uint32_t i = 0; i < wkn.size(); ++i) {
+            set<qcc::String>::iterator k = find(m_advertised_quietly[transportIndex].begin(), m_advertised_quietly[transportIndex].end(), wkn[i]);
+            if (k != m_advertised_quietly[transportIndex].end()) {
+                m_advertised_quietly[transportIndex].erase(k);
+            }
         }
-
-        set<qcc::String>::iterator k = find(m_advertised_quietly[transportIndex].begin(), m_advertised_quietly[transportIndex].end(), wkn[i]);
-        if (k != m_advertised_quietly[transportIndex].end()) {
-            m_advertised_quietly[transportIndex].erase(k);
+        //
+        // Since this is a quiet name, nothing needs to be sent out on the
+        // network, just return.
+        //
+        m_mutex.Unlock();
+        return ER_OK;
+    } else {
+        bool changed = false;
+        for (uint32_t i = 0; i < wkn.size(); ++i) {
+            set<qcc::String>::iterator j = find(m_advertised[transportIndex].begin(), m_advertised[transportIndex].end(), wkn[i]);
+            if (j != m_advertised[transportIndex].end()) {
+                m_advertised[transportIndex].erase(j);
+                changed = true;
+            }
+        }
+        if (changed == false) {
+            m_mutex.Unlock();
+            return ER_OK;
         }
     }
+
 
     //
     // If we have no more advertisements, there is no need to repeatedly state
@@ -2838,10 +2846,7 @@ QStatus IpNameServiceImpl::CancelAdvertiseName(TransportMask transportMask, vect
 
     m_mutex.Unlock();
 
-    //
-    // Even though changed may be false, we may still need to send out the packet
-    // since TCP is enabled.
-    //
+
 
     //
     // Do it once for version two.
@@ -2873,14 +2878,6 @@ QStatus IpNameServiceImpl::CancelAdvertiseName(TransportMask transportMask, vect
         mdnsPacket->SetVersion(2, 2);
         Response(completeTransportMask, 0, mdnsPacket);
         delete advRData;
-    }
-
-    //
-    // If we didn't actually make a change that needs to be sent out on the
-    // network, just return.
-    //
-    if (changed == false) {
-        return ER_OK;
     }
 
     //

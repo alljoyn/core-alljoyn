@@ -5120,8 +5120,8 @@ QStatus UDPTransport::Stop(void)
      */
     m_listenRequestsLock.Lock(MUTEX_CONTEXT);
     QCC_DbgPrintf(("UDPTransport::Stop(): Gratuitously clean out advertisements."));
-    for (list<qcc::String>::iterator i = m_advertising.begin(); i != m_advertising.end(); ++i) {
-        IpNameService::Instance().CancelAdvertiseName(TRANSPORT_UDP, *i, TRANSPORT_UDP);
+    for (list<AdvEntry>::iterator i = m_advertising.begin(); i != m_advertising.end(); ++i) {
+        IpNameService::Instance().CancelAdvertiseName(TRANSPORT_UDP, (*i).name, (*i).quietly, TRANSPORT_UDP);
     }
     m_advertising.clear();
     m_routerNameAdvertised = false;
@@ -8916,8 +8916,8 @@ void UDPTransport::StopListenInstance(ListenRequest& listenRequest)
      */
     if (empty && m_isAdvertising) {
         QCC_LogError(ER_UDP_NO_LISTENER, ("UDPTransport::StopListenInstance(): No listeners with outstanding advertisements"));
-        for (list<qcc::String>::iterator i = m_advertising.begin(); i != m_advertising.end(); ++i) {
-            IpNameService::Instance().CancelAdvertiseName(TRANSPORT_UDP, *i, TRANSPORT_UDP);
+        for (list<AdvEntry>::iterator i = m_advertising.begin(); i != m_advertising.end(); ++i) {
+            IpNameService::Instance().CancelAdvertiseName(TRANSPORT_UDP, (*i).name, (*i).quietly,  TRANSPORT_UDP);
         }
     }
 
@@ -8939,8 +8939,7 @@ void UDPTransport::EnableAdvertisementInstance(ListenRequest& listenRequest)
      * order of business is to save the well-known name away for
      * use later.
      */
-    bool isFirst;
-    NewAdvertiseOp(ENABLE_ADVERTISEMENT, listenRequest.m_requestParam, isFirst);
+    bool isFirst = NewAdvertiseOp(listenRequest.m_requestParam, listenRequest.m_requestParamOpt);
 
     m_listenFdsLock.Lock(MUTEX_CONTEXT);
 
@@ -9014,14 +9013,15 @@ void UDPTransport::DisableAdvertisementInstance(ListenRequest& listenRequest)
      * We have a new disable advertisement request to deal with.  The first
      * order of business is to remove the well-known name from our saved list.
      */
-    bool isFirst;
-    bool isEmpty = NewAdvertiseOp(DISABLE_ADVERTISEMENT, listenRequest.m_requestParam, isFirst);
+    bool quietly;
+    bool isEmpty = CancelAdvertiseOp(listenRequest.m_requestParam, quietly);
 
     /*
      * We always cancel any advertisement to allow the name service to
      * send out its lost advertisement message.
      */
-    QStatus status = IpNameService::Instance().CancelAdvertiseName(TRANSPORT_UDP, listenRequest.m_requestParam, listenRequest.m_requestTransportMask);
+    QStatus status = IpNameService::Instance().CancelAdvertiseName(TRANSPORT_UDP, listenRequest.m_requestParam,
+                                                                   quietly, listenRequest.m_requestTransportMask);
     if (status != ER_OK) {
         QCC_LogError(status, ("UDPTransport::DisableAdvertisementInstance(): Failed to Cancel \"%s\"", listenRequest.m_requestParam.c_str()));
     }
@@ -10766,30 +10766,51 @@ bool UDPTransport::NewDiscoveryOp(DiscoveryOp op, qcc::String namePrefix, bool& 
     return rc;
 }
 
-bool UDPTransport::NewAdvertiseOp(AdvertiseOp op, qcc::String name, bool& isFirst)
+bool UDPTransport::NewAdvertiseOp(qcc::String name,  bool quietly)
 {
     IncrementAndFetch(&m_refCount);
     QCC_DbgTrace(("UDPTransport::NewAdvertiseOp()"));
 
     bool first = false;
 
-    if (op == ENABLE_ADVERTISEMENT) {
-        QCC_DbgPrintf(("UDPTransport::NewAdvertiseOp(): Registering advertisement of namePrefix \"%s\"", name.c_str()));
-        first = m_advertising.empty();
-        if (find(m_advertising.begin(), m_advertising.end(), name) == m_advertising.end()) {
-            m_advertising.push_back(name);
-        }
-    } else {
-        list<qcc::String>::iterator i = find(m_advertising.begin(), m_advertising.end(), name);
-        if (i == m_advertising.end()) {
-            QCC_DbgPrintf(("UDPTransport::NewAdvertiseOp(): Cancel of non-existent name \"%s\"", name.c_str()));
-        } else {
-            QCC_DbgPrintf(("UDPTransport::NewAdvertiseOp(): Unregistering advertisement of namePrefix \"%s\"", name.c_str()));
-            m_advertising.erase(i);
+    QCC_DbgPrintf(("UDPTransport::NewAdvertiseOp(): Registering advertisement of namePrefix \"%s\"", name.c_str()));
+    first = m_advertising.empty();
+    bool found = false;
+    for (list<AdvEntry>::iterator i = m_advertising.begin(); i != m_advertising.end(); ++i) {
+        if ((*i).name == name) {
+            found = true;
+            break;
         }
     }
+    if (!found) {
+        m_advertising.push_back(AdvEntry(name, quietly));
+    }
+    DecrementAndFetch(&m_refCount);
+    return first;
+}
 
-    isFirst = first;
+bool UDPTransport::CancelAdvertiseOp(qcc::String name,  bool& quietly)
+{
+    IncrementAndFetch(&m_refCount);
+    QCC_DbgTrace(("UDPTransport::CancelAdvertiseOp()"));
+
+    list<AdvEntry>::iterator i = m_advertising.begin();
+    while (i != m_advertising.end()) {
+        if ((*i).name == name) {
+            break;
+        }
+        i++;
+    }
+
+    if (i == m_advertising.end()) {
+        QCC_DbgPrintf(("UDPTransport::CancelAdvertiseOp(): Cancel of non-existent name \"%s\"", name.c_str()));
+    } else {
+        quietly = (*i).quietly;
+        QCC_DbgPrintf(("UDPTransport::CancelAdvertiseOp(): Unregistering advertisement of namePrefix \"%s\"", name.c_str()));
+        m_advertising.erase(i);
+    }
+
+
     bool rc = m_advertising.empty();
     DecrementAndFetch(&m_refCount);
     return rc;
@@ -10806,9 +10827,9 @@ bool UDPTransport::NewListenOp(ListenOp op, qcc::String normSpec)
     } else {
         list<qcc::String>::iterator i = find(m_listening.begin(), m_listening.end(), normSpec);
         if (i == m_listening.end()) {
-            QCC_DbgPrintf(("UDPTransport::NewAdvertiseOp(): StopListen of non-existent spec \"%s\"", normSpec.c_str()));
+            QCC_DbgPrintf(("UDPTransport::NewListenOp(): StopListen of non-existent spec \"%s\"", normSpec.c_str()));
         } else {
-            QCC_DbgPrintf(("UDPTransport::NewAdvertiseOp(): StopListen of normSpec \"%s\"", normSpec.c_str()));
+            QCC_DbgPrintf(("UDPTransport::NewListenOp(): StopListen of normSpec \"%s\"", normSpec.c_str()));
             m_listening.erase(i);
         }
     }
@@ -11507,8 +11528,8 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
          */
         if (EnableRouterAdvertisement()) {
             QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Advertise m_routerName=\"%s\"", m_routerName.c_str()));
-            bool isFirst;
-            NewAdvertiseOp(ENABLE_ADVERTISEMENT, m_routerName, isFirst);
+            bool quietly = true;
+            NewAdvertiseOp(m_routerName, quietly);
             uint32_t availConn = m_maxConn -  m_currConn;
             uint32_t availRemoteClientsUdp = m_maxRemoteClientsUdp - m_numUntrustedClients;
             availRemoteClientsUdp = std::min(availRemoteClientsUdp, availConn);
