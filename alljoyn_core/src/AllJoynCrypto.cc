@@ -141,9 +141,19 @@ QStatus Crypto::Encrypt(const _Message& message, const KeyBlob& keyBlob, uint8_t
 
             assert(0 <= message.GetAuthVersion());
 
+            // Patch up the body length in header before encrypting
+            _Message::MessageHeader* msgHdr = (_Message::MessageHeader*)msgBuf;
+            msgHdr->bodyLen = bodyLen + extraNonceLen + macLen;
+
+            QCC_DbgHLPrintf(("bodyLen in %d", bodyLen));
+
+            if (message.endianSwap) {
+                msgHdr->bodyLen = EndianSwap32(msgHdr->bodyLen);
+            }
+
+            QCC_DbgHLPrintf(("     Header: %s", BytesToHexString(msgBuf, sizeof(_Message::MessageHeader)).c_str()));
             QCC_DbgHLPrintf(("Encrypt key: %s", BytesToHexString(keyBlob.GetData(), keyBlob.GetSize()).c_str()));
             QCC_DbgHLPrintf(("      nonce: %s", BytesToHexString(nonce.GetData(), nonce.GetSize()).c_str()));
-
             Crypto_AES aes(keyBlob, Crypto_AES::CCM);
             status = aes.Encrypt_CCM(body, body, bodyLen, nonce, msgBuf, hdrLen, macLen);
 
@@ -152,6 +162,7 @@ QStatus Crypto::Encrypt(const _Message& message, const KeyBlob& keyBlob, uint8_t
             QCC_DbgHLPrintf(("        MAC: %s", BytesToHexString(body + bodyLen - macLen - extraNonceLen, macLen).c_str()));
             QCC_DbgHLPrintf(("extra nonce: %s", BytesToHexString(body + bodyLen - extraNonceLen, extraNonceLen).c_str()));
 
+            QCC_DbgHLPrintf(("bodyLen out %d", bodyLen));
         }
         break;
 
@@ -192,10 +203,12 @@ QStatus Crypto::Decrypt(const _Message& message, const KeyBlob& keyBlob, uint8_t
                 memcpy(&nd[PreviousNonceLength], body + bodyLen - extraNonceLen, extraNonceLen);
             }
 
-            bodyLen -= extraNonceLen;
-
             KeyBlob nonce(nd, min(sizeof(nd), GetNonceLength(message)), KeyBlob::GENERIC);
 
+            QCC_DbgHLPrintf(("bodyLen in %d", bodyLen));
+            bodyLen -= extraNonceLen;
+
+            QCC_DbgHLPrintf(("     Header: %s", BytesToHexString(msgBuf, sizeof(_Message::MessageHeader)).c_str()));
             QCC_DbgHLPrintf(("Decrypt key: %s", BytesToHexString(keyBlob.GetData(), keyBlob.GetSize()).c_str()));
             QCC_DbgHLPrintf(("      nonce: %s", BytesToHexString(nonce.GetData(), nonce.GetSize()).c_str()));
             QCC_DbgHLPrintf(("        MAC: %s", BytesToHexString(body + bodyLen - macLen, macLen).c_str()));
@@ -203,6 +216,7 @@ QStatus Crypto::Decrypt(const _Message& message, const KeyBlob& keyBlob, uint8_t
 
             Crypto_AES aes(keyBlob, Crypto_AES::CCM);
             status = aes.Decrypt_CCM(body, body, bodyLen, nonce, msgBuf, hdrLen, macLen);
+            QCC_DbgHLPrintf(("bodyLen out %d", bodyLen));
         }
         break;
 

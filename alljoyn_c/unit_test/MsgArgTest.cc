@@ -53,6 +53,7 @@ TEST(MsgArgTest, Basic) {
     uint8_t yout;
     /* BOOLEAN */
     bool bout;
+    QCC_BOOL qccbout;
     /* INT16 */
     int16_t nout;
     /* UINT16 */
@@ -98,6 +99,18 @@ TEST(MsgArgTest, Basic) {
     status = alljoyn_msgarg_get(arg, "s", &str);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     ASSERT_STREQ("hello", str);
+
+    status = alljoyn_msgarg_set(arg, "b", true);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = alljoyn_msgarg_get_bool(arg, &qccbout);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(QCC_TRUE, qccbout);
+
+    status = alljoyn_msgarg_set(arg, "b", false);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = alljoyn_msgarg_get_bool(arg, &qccbout);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(QCC_FALSE, qccbout);
 
     alljoyn_msgarg_destroy(arg);
 
