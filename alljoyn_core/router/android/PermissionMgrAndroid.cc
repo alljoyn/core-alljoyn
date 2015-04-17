@@ -38,10 +38,10 @@ QStatus TransportPermission::FilterTransports(BusEndpoint& srcEp, const qcc::Str
     QCC_DbgPrintf(("TransportPermission::FilterTransports() callerName(%s)", callerName));
     QStatus status = ER_OK;
     if (srcEp->IsValid()) {
-        if (transports & TRANSPORT_WLAN) {
+        if (transports & TRANSPORT_IP) {
             bool allowed = PermissionDB::GetDB().IsWifiAllowed(srcEp->GetUserId());
             if (!allowed) {
-                transports ^= TRANSPORT_WLAN;
+                transports &= ~TRANSPORT_IP;
                 QCC_LogError(ER_ALLJOYN_ACCESS_PERMISSION_WARNING, ("AllJoynObj::%s() WARNING: No permission to use Wifi", ((callerName == NULL) ? "" : callerName)));
             }
         }
