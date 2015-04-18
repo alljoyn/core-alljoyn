@@ -62,13 +62,13 @@ void RunEventTest(uint32_t instances, uint32_t signalIndex, uint32_t delayMs, ui
         /* Expecting timeout */
         ASSERT_EQ(ER_TIMEOUT, status);
         ASSERT_EQ(0U, signalEvents.size());
-        ASSERT_LE(timeoutMs, waitReturnTimeMs);
+        ASSERT_LE(timeoutMs, waitReturnTimeMs + TIMESTAMP_GRANULARITY);
     } else {
         /* Expecting an event */
         ASSERT_EQ(ER_OK, status);
         ASSERT_EQ(1U, signalEvents.size());
         ASSERT_EQ(checkEvents[signalIndex], signalEvents[0]);
-        ASSERT_LE(delayMs, waitReturnTimeMs);
+        ASSERT_LE(delayMs, waitReturnTimeMs + TIMESTAMP_GRANULARITY);
 
         if ((timeoutMs > jitter) && (timeoutMs - jitter > delayMs)) {
             ASSERT_GT(timeoutMs, waitReturnTimeMs);
@@ -97,9 +97,13 @@ const uint32_t SIGNAL_INDEX = 99;
  * When waiting for more than 64 events, the Windows implementation makes multiple
  * WaitForMultipleObject() calls, for up to 63 events at a time.
  */
-TEST(EventTest, Below64Handles)
+TEST(EventTest, Below64Handles1)
 {
     RunEventTest(1, 0, T1, T2);
+}
+
+TEST(EventTest, Below64Handles2)
+{
     RunEventTest(63, 62, T1, T2);
 }
 
@@ -108,16 +112,38 @@ TEST(EventTest, Exactly64Handles)
     RunEventTest(64, 63, T1, T2);
 }
 
-TEST(EventTest, Above64Handles)
+TEST(EventTest, Above64Handles1)
 {
     RunEventTest(65, 64, T1, T2, true);
+}
+
+TEST(EventTest, Above64Handles2)
+{
     RunEventTest(65, 64, 0, 0, false);
+}
+
+TEST(EventTest, Above64Handles3)
+{
     RunEventTest(65, 64, 0, T1, false);
+}
 
+TEST(EventTest, Above64Handles4)
+{
     RunEventTest(65, 63, T1, T2, true);
-    RunEventTest(65, 63, 0, 0, false);
-    RunEventTest(65, 63, 0, T1, false);
+}
 
+TEST(EventTest, Above64Handles5)
+{
+    RunEventTest(65, 63, 0, 0, false);
+}
+
+TEST(EventTest, Above64Handles6)
+{
+    RunEventTest(65, 63, 0, T1, false);
+}
+
+TEST(EventTest, Above64Handles7)
+{
 #if __MACH__
     RunEventTest(INSTANCES_DARWIN, SIGNAL_INDEX, T1, T2);
 #else
