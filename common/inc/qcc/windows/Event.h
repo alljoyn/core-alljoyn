@@ -246,8 +246,10 @@ class Event {
     HANDLE handle;          /**< General purpose event handle */
     HANDLE ioHandle;        /**< I/O event handle */
     EventType eventType;    /**< Type of event */
-    uint32_t timestamp;     /**< time for next triggering of TIMED Event */
+
     uint32_t period;        /**< Number of milliseconds between periodic timed events */
+    HANDLE timerHandle;     /**< Waitable timer used to implement a TIMED event */
+
     SocketFd ioFd;          /**< Socket descriptor or INVALID_SOCKET_FD if not socket based IO */
     int32_t numThreads;     /**< Number of threads currently waiting on this event */
     bool networkIfaceEvent;
