@@ -38,7 +38,7 @@ using namespace std;
 
 namespace qcc {
 
-qcc::String XmlElement::EscapeXml(const qcc::String& str) {
+qcc::String AJ_CALL XmlElement::EscapeXml(const qcc::String& str) {
     qcc::String outStr;
     qcc::String::const_iterator it = str.begin();
     int multi = 0;
@@ -114,7 +114,7 @@ qcc::String XmlElement::EscapeXml(const qcc::String& str) {
     return outStr;
 }
 
-qcc::String XmlElement::UnescapeXml(const qcc::String& str) {
+qcc::String AJ_CALL XmlElement::UnescapeXml(const qcc::String& str) {
     bool inEsc = false;
     qcc::String outStr;
     qcc::String escName;
@@ -194,7 +194,7 @@ void XmlElement::FinalizeElement(XmlParseContext& ctx)
     ctx.curElem = ctx.curElem->GetParent();
 }
 
-QStatus XmlElement::Parse(XmlParseContext& ctx)
+QStatus AJ_CALL XmlElement::Parse(XmlParseContext& ctx)
 {
     bool done = false;
     QStatus status = ER_OK;

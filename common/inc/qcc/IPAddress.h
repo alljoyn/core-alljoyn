@@ -200,7 +200,7 @@ class IPAddress {
      *
      * @return  The string representation of the IPv4 address.
      */
-    static qcc::String IPv4ToString(const uint8_t addrBuf[]);
+    static qcc::String AJ_CALL IPv4ToString(const uint8_t addrBuf[]);
 
     /**
      * Helper function to convert an IPv6 address in a buffer to a string.
@@ -209,7 +209,7 @@ class IPAddress {
      *
      * @return  The string representation of the IPv6 address.
      */
-    static qcc::String IPv6ToString(const uint8_t addrBuf[]);
+    static qcc::String AJ_CALL IPv6ToString(const uint8_t addrBuf[]);
 
     /**
      * Helper function to convert an IPv6 address string to its byte packed equivalent.
@@ -220,7 +220,7 @@ class IPAddress {
      *
      * @return  ER_OK iff conversion was successful.
      */
-    static QStatus StringToIPv6(const qcc::String& address, uint8_t addrBuf[], size_t addrBufSize);
+    static QStatus AJ_CALL StringToIPv6(const qcc::String& address, uint8_t addrBuf[], size_t addrBufSize);
 
     /**
      * Helper function to convert an IPv6 address string to its byte packed equivalent.
@@ -231,7 +231,7 @@ class IPAddress {
      *
      * @return  ER_OK iff conversion was successful.
      */
-    static QStatus StringToIPv4(const qcc::String& address, uint8_t addrBuf[], size_t addrBufSize);
+    static QStatus AJ_CALL StringToIPv4(const qcc::String& address, uint8_t addrBuf[], size_t addrBufSize);
 
     /**
      * Renders the IPv4 address in binary format into a buffer.

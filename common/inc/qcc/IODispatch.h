@@ -338,7 +338,7 @@ class IODispatch : public Thread, public AlarmListener {
      * @param minTime          Minimum idle time in milliseconds.
      * @return true if the dispatcher has been idle for at least that time, otherwise false.
      */
-    static bool IsIdle(uint64_t minTime);
+    static bool AJ_CALL IsIdle(uint64_t minTime);
 
   private:
 

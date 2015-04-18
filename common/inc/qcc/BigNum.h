@@ -254,10 +254,10 @@ class BigNum {
     BigNum& reset(size_t len, bool neg = false, bool clear = true);
 
     // compare two BigNums. Returns -1, 0, or 1
-    static int compare(const BigNum& a, const BigNum& b);
+    static int AJ_CALL compare(const BigNum& a, const BigNum& b);
 
     // Remove leading zeroes
-    static BigNum& strip_lz(BigNum& n) {
+    static BigNum& AJ_CALL strip_lz(BigNum& n) {
         while (n.msdigit() == 0) {
             if (n.length == 1) {
                 n.neg = false;
@@ -270,13 +270,13 @@ class BigNum {
     }
 
     // Right shift
-    static BigNum& right_shift(BigNum& result, const BigNum& n, uint32_t shift);
+    static BigNum& AJ_CALL right_shift(BigNum& result, const BigNum& n, uint32_t shift);
 
     // Multiplication by an integer putting result into an existing BigNum
-    static BigNum& mul(BigNum& result, const BigNum& a, uint32_t b, bool neg);
+    static BigNum& AJ_CALL mul(BigNum& result, const BigNum& a, uint32_t b, bool neg);
 
     // Multiplication putting result into an existing BigNum
-    static BigNum& mul(BigNum& result, const BigNum& a, const BigNum& b);
+    static BigNum& AJ_CALL mul(BigNum& result, const BigNum& a, const BigNum& b);
 
     // Division with remainder
     BigNum div(const BigNum& y, BigNum& rem) const;

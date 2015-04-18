@@ -60,7 +60,7 @@ static inline void LineBreak(size_t& n, size_t lim, qcc::String& str)
     }
 }
 
-QStatus Crypto_ASN1::EncodeBase64(const qcc::String& bin, qcc::String& b64)
+QStatus AJ_CALL Crypto_ASN1::EncodeBase64(const qcc::String& bin, qcc::String& b64)
 {
     size_t count = bin.size() / 3;
     size_t final = bin.size() % 3;
@@ -104,7 +104,7 @@ QStatus Crypto_ASN1::EncodeBase64(const qcc::String& bin, qcc::String& b64)
     return ER_OK;
 }
 
-QStatus Crypto_ASN1::DecodeBase64(const qcc::String& b64in, qcc::String& bin)
+QStatus AJ_CALL Crypto_ASN1::DecodeBase64(const qcc::String& b64in, qcc::String& bin)
 {
     QStatus status = ER_OK;
 
@@ -733,7 +733,7 @@ qcc::String Crypto_ASN1::DecodeOID(const uint8_t* p, size_t len)
     return oid;
 }
 
-qcc::String Crypto_ASN1::ToString(const uint8_t* asn, size_t len, size_t indent)
+qcc::String AJ_CALL Crypto_ASN1::ToString(const uint8_t* asn, size_t len, size_t indent)
 {
     qcc::String dump;
     QStatus status = ER_OK;
