@@ -282,7 +282,7 @@ class AuthListener {
      * @return   Returns ER_OK if the credential verification response was expected. Returns an error status if
      *           the credentials verification response was not expected.
      */
-    static QStatus RequestCredentialsResponse(void* authContext, bool accept, Credentials& credentials);
+    static QStatus AJ_CALL RequestCredentialsResponse(void* authContext, bool accept, Credentials& credentials);
 
     /**
      * Authentication mechanism requests verification of credentials from a remote peer.
@@ -332,7 +332,7 @@ class AuthListener {
      * @return   Returns ER_OK if the credential verification response was expected. Returns an error status if
      *           the credentials verification response was not expected.
      */
-    static QStatus VerifyCredentialsResponse(void* authContext, bool accept);
+    static QStatus AJ_CALL VerifyCredentialsResponse(void* authContext, bool accept);
 
     /**
      * Optional method that if implemented allows an application to monitor security violations. This

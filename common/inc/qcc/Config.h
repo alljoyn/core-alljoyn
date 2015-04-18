@@ -48,7 +48,7 @@ class Config {
      *
      * @return  Pointer to the config variable singleton.
      */
-    static Config* GetConfig(void)
+    static Config * AJ_CALL GetConfig(void)
     {
         static Mutex singletonLock;
         static Config* config = NULL;                                  ///< Config variable singleton.

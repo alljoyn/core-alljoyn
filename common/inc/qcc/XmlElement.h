@@ -56,7 +56,7 @@ class XmlElement {
      *            ER_WOULDBLOCK if parse is partially completed pending more I/O,
      *            Otherwise error
      */
-    static QStatus Parse(XmlParseContext& ctx);
+    static QStatus AJ_CALL Parse(XmlParseContext& ctx);
 
     /**
      * Construct an XmlElement with a given name and parent.
@@ -208,7 +208,7 @@ class XmlElement {
      * @param str The unescaped string
      * @return The escaped string
      */
-    static qcc::String EscapeXml(const qcc::String& str);
+    static qcc::String AJ_CALL EscapeXml(const qcc::String& str);
 
     /**
      * Utility function to unescape text from XML
@@ -216,7 +216,7 @@ class XmlElement {
      * @param str The escaped string
      * @return The unescaped string
      */
-    static qcc::String UnescapeXml(const qcc::String& str);
+    static qcc::String AJ_CALL UnescapeXml(const qcc::String& str);
 
   private:
     qcc::String name;                                /**< Element name */
