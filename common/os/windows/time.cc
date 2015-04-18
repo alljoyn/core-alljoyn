@@ -81,3 +81,21 @@ qcc::String qcc::UTCTime()
 
     return buf;
 }
+
+int64_t qcc::ConvertStructureToTime(struct tm* timeptr)
+{
+    return _mktime64(timeptr);
+}
+
+struct tm* qcc::ConvertTimeToStructure(const int64_t* timer) {
+    return _gmtime64((__time64_t*)timer);
+}
+
+struct tm* qcc::ConvertToLocalTime(const int64_t* timer) {
+    return _localtime64((__time64_t*)timer);
+}
+
+size_t qcc::FormatTime(char* strDest, size_t maxSize, const char* format, const struct tm* timeptr)
+{
+    return strftime(strDest, maxSize, format, timeptr);
+}

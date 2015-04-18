@@ -149,6 +149,30 @@ uint64_t GetEpochTimestamp(void);
  */
 qcc::String UTCTime();
 
+/**
+ * Wrapper for mktime
+ * @return  timestamp in seconds
+ */
+int64_t ConvertStructureToTime(struct tm* timeptr);
+
+/**
+ * Wrapper for gmtime
+ * @return  Time in a tm structure
+ */
+struct tm* ConvertTimeToStructure(const int64_t* timer);
+
+/**
+ * Wrapper for localtime
+ * @return  Time in a tm structure
+ */
+struct tm* ConvertToLocalTime(const int64_t* timer);
+
+/**
+ * Wrapper for strftime
+ * @return  Number of characters placed in dest
+ */
+size_t FormatTime(char* dest, size_t destSize, const char* format, const struct tm* timeptr);
+
 }
 
 inline qcc::Timespec operator+(const qcc::Timespec& tsa, const qcc::Timespec& tsb)

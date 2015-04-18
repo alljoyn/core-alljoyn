@@ -29,7 +29,6 @@
 #include <iphlpapi.h>
 #include <windows.h>
 #include <errno.h>
-#include <time.h>
 
 #include <qcc/Debug.h>
 #include <qcc/Event.h>
