@@ -2341,7 +2341,7 @@ void BusAttachment::Internal::AllJoynSignalHandler(const InterfaceDescription::M
     }
 }
 
-uint32_t BusAttachment::GetTimestamp()
+uint32_t AJ_CALL BusAttachment::GetTimestamp()
 {
     return qcc::GetTimestamp();
 }

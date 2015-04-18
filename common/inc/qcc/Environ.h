@@ -52,7 +52,7 @@ class Environ {
      *
      * @return  Pointer to the environment variable singleton.
      */
-    static Environ* GetAppEnviron(void);
+    static Environ * AJ_CALL GetAppEnviron(void);
 
     /**
      * Return a specific environment variable

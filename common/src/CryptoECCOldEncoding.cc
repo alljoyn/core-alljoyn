@@ -52,12 +52,12 @@ namespace qcc {
 #define COND_STATIC static
 #endif /* ECC_TEST not defined */
 
-QStatus Crypto_ECC_OldEncoding::GenerateSharedSecret(Crypto_ECC& ecc, const ECCPublicKey* peerPublicKey, ECCSecretOldEncoding* secret)
+QStatus AJ_CALL Crypto_ECC_OldEncoding::GenerateSharedSecret(Crypto_ECC& ecc, const ECCPublicKey* peerPublicKey, ECCSecretOldEncoding* secret)
 {
     return Crypto_ECC_GenerateSharedSecret(peerPublicKey, ecc.GetDHPrivateKey(), secret);
 }
 
-QStatus Crypto_ECC_OldEncoding::ReEncode(const ECCPublicKey* newenc, ECCPublicKeyOldEncoding* oldenc)
+QStatus AJ_CALL Crypto_ECC_OldEncoding::ReEncode(const ECCPublicKey* newenc, ECCPublicKeyOldEncoding* oldenc)
 {
     affine_point_t ap;
     ap.infinity = 0;
@@ -67,7 +67,7 @@ QStatus Crypto_ECC_OldEncoding::ReEncode(const ECCPublicKey* newenc, ECCPublicKe
     return ER_OK;
 }
 
-QStatus Crypto_ECC_OldEncoding::ReEncode(const ECCPublicKeyOldEncoding* oldenc, ECCPublicKey* newenc)
+QStatus AJ_CALL Crypto_ECC_OldEncoding::ReEncode(const ECCPublicKeyOldEncoding* oldenc, ECCPublicKey* newenc)
 {
     affine_point_t ap;
     ap.infinity = 0;
