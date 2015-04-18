@@ -215,14 +215,20 @@ class Event {
     SocketFd GetFD() const { return ioFd; }
 
     /**
-     * Get the underlying Windows' event handle.  Use of this function is not
+     * Get the underlying Windows' event or waitable timer handle.  Use of this function is not
      * portable and should only be used in platform specific code.
      *
-     * @return  The underlying event handle.
+     * @return  The underlying event or waitable timer handle.
      */
     HANDLE GetHandle() const
     {
-        return ((eventType == GEN_PURPOSE) ? handle : (eventType != TIMED) ? ioHandle : INVALID_HANDLE_VALUE);
+        switch (eventType) {
+        case GEN_PURPOSE: return handle;
+
+        case TIMED: return timerHandle;
+
+        default: return ioHandle;
+        }
     }
 
     /**
@@ -246,8 +252,10 @@ class Event {
     HANDLE handle;          /**< General purpose event handle */
     HANDLE ioHandle;        /**< I/O event handle */
     EventType eventType;    /**< Type of event */
-    uint32_t timestamp;     /**< time for next triggering of TIMED Event */
+
     uint32_t period;        /**< Number of milliseconds between periodic timed events */
+    HANDLE timerHandle;     /**< Waitable timer used to implement a TIMED event */
+
     SocketFd ioFd;          /**< Socket descriptor or INVALID_SOCKET_FD if not socket based IO */
     int32_t numThreads;     /**< Number of threads currently waiting on this event */
     bool networkIfaceEvent;
