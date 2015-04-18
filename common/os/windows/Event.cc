@@ -584,7 +584,7 @@ VOID CALLBACK NamedPipeIoEventCallback(PVOID arg, BOOLEAN TimerOrWaitFired)
 }
 #endif
 
-QStatus Event::Wait(Event& evt, uint32_t maxWaitMs)
+QStatus AJ_CALL Event::Wait(Event& evt, uint32_t maxWaitMs)
 {
     HANDLE handles[3];
     uint32_t numHandles = 0;
@@ -676,7 +676,7 @@ QStatus Event::Wait(Event& evt, uint32_t maxWaitMs)
 }
 
 
-QStatus Event::Wait(const vector<Event*>& checkEvents, vector<Event*>& signaledEvents, uint32_t maxWaitMs)
+QStatus AJ_CALL Event::Wait(const vector<Event*>& checkEvents, vector<Event*>& signaledEvents, uint32_t maxWaitMs)
 {
     QStatus status = ER_OK;
     int numHandles = 0;
