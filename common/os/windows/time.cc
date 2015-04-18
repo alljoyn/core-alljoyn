@@ -61,7 +61,7 @@ uint64_t qcc::GetTimestamp64(void)
     struct _timeb timebuffer;
     uint64_t ret_val;
 
-    _ftime(&timebuffer);
+    _ftime64(&timebuffer);
 
     ret_val = ((uint64_t)timebuffer.time) * 1000;
     ret_val += timebuffer.millitm;
@@ -86,9 +86,9 @@ uint64_t qcc::GetEpochTimestamp(void)
 
 void qcc::GetTimeNow(Timespec* ts)
 {
-    struct _timeb timebuffer;
+    struct __timeb64 timebuffer;
 
-    _ftime(&timebuffer);
+    _ftime64(&timebuffer);
 
     ts->seconds = timebuffer.time;
     ts->mseconds = timebuffer.millitm;
@@ -111,4 +111,22 @@ qcc::String qcc::UTCTime()
              systime.wSecond);
 
     return buf;
+}
+
+int64_t qcc::ConvertStructureToTime(struct tm* timeptr)
+{
+    return _mktime64(timeptr);
+}
+
+struct tm* qcc::ConvertTimeToStructure(const int64_t* timer) {
+    return _gmtime64((__time64_t*)timer);
+}
+
+struct tm* qcc::ConvertToLocalTime(const int64_t* timer) {
+    return _localtime64((__time64_t*)timer);
+}
+
+size_t qcc::FormatTime(char* strDest, size_t maxSize, const char* format, const struct tm* timeptr)
+{
+    return strftime(strDest, maxSize, format, timeptr);
 }
