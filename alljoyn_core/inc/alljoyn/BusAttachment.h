@@ -1482,7 +1482,7 @@ class BusAttachment : public MessageReceiver {
      *
      * @return  The current timestamp in milliseconds.
      */
-    static uint32_t GetTimestamp();
+    static uint32_t AJ_CALL GetTimestamp();
 
     /**
      * Determine if you are able to find a remote connection based on its BusName.
