@@ -276,7 +276,7 @@ void ProtectedAuthListener::AuthenticationComplete(const char* authMechanism, co
 /*
  * Static handler for auth credential response
  */
-QStatus AuthListener::RequestCredentialsResponse(void* context, bool accept, Credentials& credentials)
+QStatus AJ_CALL AuthListener::RequestCredentialsResponse(void* context, bool accept, Credentials& credentials)
 {
     return AsyncTracker::Trigger((AuthContext*)context, accept, &credentials) ? ER_OK : ER_TIMEOUT;
 }
@@ -284,7 +284,7 @@ QStatus AuthListener::RequestCredentialsResponse(void* context, bool accept, Cre
 /*
  * Static handler for auth credential verification
  */
-QStatus AuthListener::VerifyCredentialsResponse(void* context, bool accept)
+QStatus AJ_CALL AuthListener::VerifyCredentialsResponse(void* context, bool accept)
 {
     return AsyncTracker::Trigger((AuthContext*)context, accept, NULL) ? ER_OK : ER_TIMEOUT;
 }

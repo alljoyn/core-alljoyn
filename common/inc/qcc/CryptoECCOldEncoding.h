@@ -60,7 +60,7 @@ class Crypto_ECC_OldEncoding {
      *      ER_OK if the process succeeds
      *      ER_FAIL otherwise
      */
-    static QStatus ReEncode(const ECCPublicKey* newenc, ECCPublicKeyOldEncoding* oldenc);
+    static QStatus AJ_CALL ReEncode(const ECCPublicKey* newenc, ECCPublicKeyOldEncoding* oldenc);
     /**
      * Re encode old encoding public key to current encoding
      * @param oldenc public key in old encoding
@@ -69,7 +69,7 @@ class Crypto_ECC_OldEncoding {
      *      ER_OK if the process succeeds
      *      ER_FAIL otherwise
      */
-    static QStatus ReEncode(const ECCPublicKeyOldEncoding* oldenc, ECCPublicKey* newenc);
+    static QStatus AJ_CALL ReEncode(const ECCPublicKeyOldEncoding* oldenc, ECCPublicKey* newenc);
 
 
     /**
@@ -82,7 +82,7 @@ class Crypto_ECC_OldEncoding {
      *      ER_FAIL otherwise
      *      Other error status.
      */
-    static QStatus GenerateSharedSecret(Crypto_ECC& ecc, const ECCPublicKey* peerPublicKey, ECCSecretOldEncoding* secret);
+    static QStatus AJ_CALL GenerateSharedSecret(Crypto_ECC& ecc, const ECCPublicKey* peerPublicKey, ECCSecretOldEncoding* secret);
 
 };
 

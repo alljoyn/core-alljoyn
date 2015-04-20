@@ -138,10 +138,10 @@ class LoggerSetting {
      *
      * @return  Pointer to most recently instantiated LoggerSetting object.
      */
-    static LoggerSetting* GetLoggerSetting(const char* name = LOGGERSETTING_DEFAULT_NAME,
-                                           int level = LOG_DEBUG,
-                                           bool useSyslog = LOGGERSETTING_DEFAULT_SYSLOG,
-                                           FILE* file = LOGGERSETTING_DEFAULT_FILE);
+    static LoggerSetting * AJ_CALL GetLoggerSetting(const char* name = LOGGERSETTING_DEFAULT_NAME,
+                                                    int level = LOG_DEBUG,
+                                                    bool useSyslog = LOGGERSETTING_DEFAULT_SYSLOG,
+                                                    FILE* file = LOGGERSETTING_DEFAULT_FILE);
 
   private:
     static void Init();
