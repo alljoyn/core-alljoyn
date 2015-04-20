@@ -39,14 +39,6 @@
 
 #define QCC_MODULE "NETWORK"
 
-/* Scatter gather only support on Vista and later */
-#if !defined (NTDDI_VERSION) || !defined (NTDDI_VISTA) || (NTDDI_VERSION < NTDDI_VISTA)
-#define QCC_USE_SCATTER_GATHER 0
-#else
-#define QCC_USE_SCATTER_GATHER 1
-#endif
-
-
 namespace qcc {
 
 const SocketFd INVALID_SOCKET_FD = INVALID_SOCKET;
@@ -57,7 +49,6 @@ uint32_t GetLastError()
     WinsockCheck();
     return WSAGetLastError();
 }
-
 
 qcc::String GetLastErrorString()
 {
@@ -76,7 +67,6 @@ qcc::String GetLastErrorString()
     }
     return U32ToString(errnum) + " - " + msgbuf;
 }
-
 
 void MakeSockAddr(const IPAddress& addr,
                   uint16_t port,
@@ -131,10 +121,10 @@ QStatus GetSockAddr(const SOCKADDR_STORAGE* addrBuf, socklen_t addrSize,
         QCC_LogError(status, ("GetSockAddr: %s", GetLastErrorString().c_str()));
     } else {
         /*
-         * In the case of IPv6, the hostname will have the interface number
-         * tacked on the end, as in "fe80::20c:29ff:fe7b:6f10%1".  We
-         * need to chop that off since nobody expects either the Spanish
-         * Inquisition or the interface.
+         * In the case of IPv6, the hostname might have the scope id
+         * tacked on the end, as in "fe80::20c:29ff:fe7b:6f10%1".  AllJoyn
+         * currently ignores the scope id (which can result in using the wrong
+         * interface), so until that problem is fixed we ignore the scope id.
          */
         char* p = strchr(hostname, '%');
         if (p) {
@@ -146,7 +136,6 @@ QStatus GetSockAddr(const SOCKADDR_STORAGE* addrBuf, socklen_t addrSize,
 
     return status;
 }
-
 
 QStatus Socket(AddressFamily addrFamily, SocketType type, SocketFd& sockfd)
 {
@@ -169,7 +158,6 @@ QStatus Socket(AddressFamily addrFamily, SocketType type, SocketFd& sockfd)
     }
     return status;
 }
-
 
 QStatus Connect(SocketFd sockfd, const IPAddress& remoteAddr, uint16_t remotePort)
 {
@@ -213,7 +201,6 @@ QStatus Connect(SocketFd sockfd, const IPAddress& remoteAddr, uint16_t remotePor
     }
     return status;
 }
-
 
 QStatus Connect(SocketFd sockfd, const char* pathName)
 {
@@ -450,7 +437,6 @@ QStatus Send(SocketFd sockfd, const void* buf, size_t len, size_t& sent)
     return status;
 }
 
-
 QStatus SendTo(SocketFd sockfd, IPAddress& remoteAddr, uint16_t remotePort, uint32_t scopeId,
                const void* buf, size_t len, size_t& sent, SendMsgFlags flags)
 {
@@ -601,7 +587,7 @@ QStatus RecvWithAncillaryData(SocketFd sockfd, IPAddress& remoteAddr, uint16_t& 
             }
             break;
         }
-        if (cmsg->cmsg_level == IPPROTO_IPV6  &&  cmsg->cmsg_type == IPV6_PKTINFO) {
+        if ((cmsg->cmsg_level == IPPROTO_IPV6) && (cmsg->cmsg_type == IPV6_PKTINFO)) {
             struct in6_pktinfo* i = reinterpret_cast<struct in6_pktinfo*>(WSA_CMSG_DATA(cmsg));
             reinterpret_cast<struct sockaddr_in6*>(&dst)->sin6_addr = i->ipi6_addr;
             reinterpret_cast<struct sockaddr_in6*>(&dst)->sin6_family = AF_INET6;
@@ -718,7 +704,7 @@ QStatus RecvWithFds(SocketFd sockfd, void* buf, size_t len, size_t& received, So
     maxFds = std::min(maxFds, SOCKET_MAX_FILE_DESCRIPTORS);
 
     /*
-     * Check if the next read will return OOB data
+     * Check if the next read will return OOB data.
      */
     u_long marked = 0;
     int ret = ioctlsocket(sockfd, SIOCATMARK, &marked);
@@ -1023,9 +1009,9 @@ QStatus SetReuseAddress(SocketFd sockfd, bool reuse)
 {
     QStatus status = ER_OK;
     /*
-     * On Windows SO_REUSEADDR allows an application to bind an steal a port that is already in use.
-     * This is different than the posix behavior and definitely not the expected behavior. Setting
-     * SO_EXCLUSIVEADDRUSE prevents other applications from stealing the port from underneath us.
+     * On Windows SO_REUSEADDR allows an application to bind and steal a port that is already in use.
+     * This is different than the posix behavior. Setting SO_EXCLUSIVEADDRUSE prevents other applications
+     * from stealing the port from underneath us.
      */
     if (status == ER_OK) {
         int arg = reuse ? 1 : -0;
@@ -1036,6 +1022,8 @@ QStatus SetReuseAddress(SocketFd sockfd, bool reuse)
     }
     return status;
 }
+
+
 
 QStatus SetReusePort(SocketFd sockfd, bool reuse)
 {
@@ -1054,14 +1042,14 @@ void IfConfigByFamily(uint32_t family, std::vector<IfConfigEntry>& entries);
 /*
  * Getting set to do a multicast join or drop is straightforward but not
  * completely trivial, and the process is identical for both socket options, so
- * we only do the work in one place and select one of the followin oeprations.
+ * we only do the work in one place and select one of the following operations.
  */
 enum GroupOp {JOIN, LEAVE};
 
 QStatus MulticastGroupOpInternal(SocketFd sockFd, AddressFamily family, String multicastGroup, String iface, GroupOp op)
 {
     /*
-     * We assume that No external API will be trying to call here and so asserts
+     * We assume that no external API will be trying to call here and so asserts
      * are appropriate when checking for completely bogus parameters.
      */
     assert(sockFd != INVALID_SOCKET);
@@ -1071,8 +1059,8 @@ QStatus MulticastGroupOpInternal(SocketFd sockFd, AddressFamily family, String m
     assert(op == JOIN || op == LEAVE);
     /*
      * Joining a multicast group requires a different approach based on the
-     * address family of the socket.  There's no way to get this information
-     * from an unbound socket, and it is not unreasonable to join a multicast
+     * address family of the socket.  There's no way to get the address family
+     * from an unbound socket, and it is not unreasonable to want to join a multicast
      * group before binding; so to avoid an inscrutable initialization order
      * requirement we force the caller to provide this tidbit.
      */
@@ -1080,10 +1068,10 @@ QStatus MulticastGroupOpInternal(SocketFd sockFd, AddressFamily family, String m
         /*
          * Group memberships are associated with both the multicast group itself
          * and also an interface.  In the IPv4 version, we need to provide an
-         * interface address.  There is no convenient socket ioctl in Windows to
-         * do what we need (SIOCGIFADDR) so we call into IfConfig since it
-         * already does the surprising amount of dirty work required to get this
-         * done across the various incarnations of Windows.
+         * interface address or an interface index in network byte order. The
+         * best mechanism would be to use an interface index like IPv6 does. However,
+         * that capability and if_nametoindex() did not exist prior to Windows Vista,
+         * but we can still support older Windows versions via the IfConfig API.
          */
         std::vector<IfConfigEntry> entries;
         IfConfigByFamily(AF_INET, entries);
@@ -1120,15 +1108,12 @@ QStatus MulticastGroupOpInternal(SocketFd sockFd, AddressFamily family, String m
         /*
          * Group memberships are associated with both the multicast group itself
          * and also an interface.  In the IPv6 version, we need to provide an
-         * interface index instead of an IP address associated with the
-         * interface.  There is no convenient call in Windows to do what we need
-         * (cf. if_nametoindex) so we call into IfConfig since it already does
-         * the surprising amount of dirty work required to get this done across
-         * the various incarnations of Windows.
+         * interface index instead of an IP address associated with the interface.
+         * if_nametoindex() did not exist prior to Windows Vista, but we can still
+         * support older Windows versions via the IfConfig API.
          */
         std::vector<IfConfigEntry> entries;
         IfConfigByFamily(AF_INET6, entries);
-
         bool found = false;
         struct ipv6_mreq mreq;
 
@@ -1173,7 +1158,7 @@ QStatus LeaveMulticastGroup(SocketFd sockFd, AddressFamily family, String multic
 QStatus SetMulticastInterface(SocketFd sockFd, AddressFamily family, qcc::String iface)
 {
     /*
-     * We assume that No external API will be trying to call here and so asserts
+     * We assume that no external API will be trying to call here and so asserts
      * are appropriate when checking for completely bogus parameters.
      */
     assert(sockFd != INVALID_SOCKET);
@@ -1183,19 +1168,18 @@ QStatus SetMulticastInterface(SocketFd sockFd, AddressFamily family, qcc::String
     /*
      * Associating the multicast interface with a socket requires a different
      * approach based on the address family of the socket.  There's no way to
-     * get this information from an unbound socket, and it is not unreasonable
-     * to set the interface before binding; so to avoid an inscrutable
+     * get the address family from an unbound socket, and it is not unreasonable
+     * to want to set the interface before binding; so to avoid an inscrutable
      * initialization order requirement we force the caller to provide this
      * tidbit.
      */
     if (family == QCC_AF_INET) {
         /*
-         * In the IPv4 version, we need to provide an interface address.  We
-         * borrow the socket passed in to do the required call to find the
-         * address from the interface name.  There is no convenient socket ioctl
-         * in Windows to do what we need (SIOCGIFADDR) so we call into IfConfig
-         * since it already does the surprising amount of dirty work required to
-         * get this done across the various incarnations of Windows.
+         * In the IPv4 version, we need to provide an interface address
+         * or an interface index in network byte order. The best mechanism
+         * would be to use an interface index like IPv6 does. However, that capability
+         * and if_nametoindex() did not exist prior to Windows Vista, but we can still
+         * support older Windows versions via the IfConfig API.
          */
         std::vector<IfConfigEntry> entries;
         IfConfigByFamily(AF_INET, entries);
@@ -1224,11 +1208,9 @@ QStatus SetMulticastInterface(SocketFd sockFd, AddressFamily family, qcc::String
     } else if (family == QCC_AF_INET6) {
         /*
          * In the IPv6 version, we need to provide an interface index instead of
-         * an IP address associated with the interface.  There is no convenient
-         * call in Windows to do what we need (cf. if_nametoindex) so we call
-         * into IfConfig since it already does the surprising amount of dirty
-         * work required to get this done across the various incarnations of
-         * Windows.
+         * an IP address associated with the interface.
+         * if_nametoindex() did not exist prior to Windows Vista, but we can still
+         * support older Windows versions via the IfConfig API.
          */
         std::vector<IfConfigEntry> entries;
         IfConfigByFamily(AF_INET6, entries);
@@ -1260,7 +1242,7 @@ QStatus SetMulticastInterface(SocketFd sockFd, AddressFamily family, qcc::String
 QStatus SetMulticastHops(SocketFd sockFd, AddressFamily family, uint32_t hops)
 {
     /*
-     * We assume that No external API will be trying to call here and so asserts
+     * We assume that no external API will be trying to call here and so asserts
      * are appropriate when checking for completely bogus parameters.
      */
     assert(sockFd != INVALID_SOCKET);
@@ -1300,7 +1282,7 @@ QStatus SetBroadcast(SocketFd sockfd, bool broadcast)
 QStatus SetRecvPktAncillaryData(SocketFd sockfd, AddressFamily addrFamily, bool recv)
 {
     /*
-     * We assume that No external API will be trying to call here and so asserts
+     * We assume that no external API will be trying to call here and so asserts
      * are appropriate when checking for completely bogus parameters.
      */
     assert(sockfd != INVALID_SOCKET);
@@ -1336,4 +1318,4 @@ QStatus SetRecvIPv6Only(SocketFd sockfd, bool recv)
     return status;
 }
 
-}   /* namespace */
+} // namespace qcc
