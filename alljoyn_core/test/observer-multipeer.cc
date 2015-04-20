@@ -267,9 +267,8 @@ class ObserverListener : public Observer::Listener {
     }
 
     virtual void ObjectDiscovered(ProxyBusObject& proxy) {
-        ProxyVector::iterator it = FindProxy(proxy);
         if (strict) {
-            assert(it == proxies.end());
+            assert(FindProxy(proxy) == proxies.end());
         }
         proxies.push_back(proxy);
 
