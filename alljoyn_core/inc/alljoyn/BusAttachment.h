@@ -1482,7 +1482,7 @@ class BusAttachment : public MessageReceiver {
      *
      * @return  The current timestamp in milliseconds.
      */
-    static uint32_t GetTimestamp();
+    static uint32_t AJ_CALL GetTimestamp();
 
     /**
      * Determine if you are able to find a remote connection based on its BusName.
@@ -1555,7 +1555,7 @@ class BusAttachment : public MessageReceiver {
      * The handler is only called if a call to WhoImplements has been has been
      * called.
      *
-     * Important the AboutListener should be registered before calling WhoImplments
+     * Important: the AboutListener should be registered before calling WhoImplements
      *
      * @param[in] aboutListener reference to AboutListener
      */
@@ -1575,7 +1575,7 @@ class BusAttachment : public MessageReceiver {
 
     /**
      * List the interfaces your application is interested in.  If a remote device
-     * is announcing that interface then the all Registered AboutListeners will
+     * is announcing that interface then all Registered AboutListeners will
      * be called.
      *
      * For example, if you need both "com.example.Audio" <em>and</em>

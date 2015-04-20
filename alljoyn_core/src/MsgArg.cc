@@ -512,7 +512,7 @@ bool MsgArg::operator==(const MsgArg& other)
     }
 }
 
-void MsgArg::Clone(MsgArg& dest, const MsgArg& src)
+void AJ_CALL MsgArg::Clone(MsgArg& dest, const MsgArg& src)
 {
     dest.Clear();
     dest.typeId = src.typeId;
@@ -731,7 +731,7 @@ void MsgArg::Clear()
     typeId = ALLJOYN_INVALID;
 }
 
-qcc::String MsgArg::ToString(const MsgArg* args, size_t numArgs, size_t indent)
+qcc::String AJ_CALL MsgArg::ToString(const MsgArg* args, size_t numArgs, size_t indent)
 {
     QCC_UNUSED(args);
     QCC_UNUSED(numArgs);
@@ -746,7 +746,7 @@ qcc::String MsgArg::ToString(const MsgArg* args, size_t numArgs, size_t indent)
     return outStr;
 }
 
-qcc::String MsgArg::Signature(const MsgArg* values, size_t numValues)
+qcc::String AJ_CALL MsgArg::Signature(const MsgArg* values, size_t numValues)
 {
     char sig[256];
     size_t len = 0;
@@ -1238,7 +1238,7 @@ QStatus MsgArgUtils::SetV(MsgArg* args, size_t& numArgs, const char* signature, 
     return status;
 }
 
-QStatus MsgArg::Set(MsgArg* args, size_t& numArgs, const char* signature, ...)
+QStatus AJ_CALL MsgArg::Set(MsgArg* args, size_t& numArgs, const char* signature, ...)
 {
     va_list argp;
     va_start(argp, signature);
@@ -1247,7 +1247,7 @@ QStatus MsgArg::Set(MsgArg* args, size_t& numArgs, const char* signature, ...)
     return status;
 }
 
-QStatus MsgArg::Get(const MsgArg* args, size_t numArgs, const char* signature, ...)
+QStatus AJ_CALL MsgArg::Get(const MsgArg* args, size_t numArgs, const char* signature, ...)
 {
     if (!args) {
         return ER_BAD_ARG_1;

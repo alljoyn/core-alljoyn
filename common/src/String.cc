@@ -615,13 +615,13 @@ void String::DecRef(ManagedCtx* ctx)
 }
 
 /* Global function (not part of qcc namespace) */
-qcc::String operator+(const qcc::String& s1, const qcc::String& s2)
+qcc::String AJ_CALL operator+(const qcc::String& s1, const qcc::String& s2)
 {
     qcc::String ret(s1);
     return ret.append(s2);
 }
 
-std::ostream& operator<<(std::ostream& os, const qcc::String& str)
+std::ostream& AJ_CALL operator<<(std::ostream& os, const qcc::String& str)
 {
     return os << str.c_str();
 }

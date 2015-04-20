@@ -894,11 +894,21 @@ TEST(SignalsTest, register_unregister_sessionlesssignals) {
     status = alljoyn_busobject_signal(testObj, NULL, 0, my_signal_member, arg, 1, 0, ALLJOYN_MESSAGE_FLAG_SESSIONLESS, msg);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
+    /*
+     * Short sleep to allow the router to process the sessionless signal
+     */
+    qcc::Sleep(50);
+
     status = alljoyn_busobject_cancelsessionlessmessage_serial(testObj, alljoyn_message_getcallserial(msg));
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     status = alljoyn_busobject_signal(testObj, NULL, 0, my_signal_member, arg, 1, 0, ALLJOYN_MESSAGE_FLAG_SESSIONLESS, msg);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    /*
+     * Short sleep to allow the router to process the sessionless signal
+     */
+    qcc::Sleep(50);
 
     status = alljoyn_busobject_cancelsessionlessmessage(testObj, msg);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);

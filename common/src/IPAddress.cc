@@ -77,7 +77,7 @@ IPAddress::IPAddress(const qcc::String& addrString)
     }
 }
 
-qcc::String IPAddress::IPv4ToString(const uint8_t addr[])
+qcc::String AJ_CALL IPAddress::IPv4ToString(const uint8_t addr[])
 {
     qcc::String result = "";
 
@@ -122,7 +122,7 @@ qcc::String IPAddress::IPv4ToString(const uint8_t addr[])
     return result;
 }
 
-qcc::String IPAddress::IPv6ToString(const uint8_t addr[])
+qcc::String AJ_CALL IPAddress::IPv6ToString(const uint8_t addr[])
 {
     qcc::String result = "";
 
@@ -311,7 +311,7 @@ inline int64_t AccumulateDigits(char digits[], int32_t startIndex, int32_t lastI
     return -1;
 }
 
-QStatus IPAddress::StringToIPv6(const qcc::String& address, uint8_t addrBuf[], size_t addrBufSize)
+QStatus AJ_CALL IPAddress::StringToIPv6(const qcc::String& address, uint8_t addrBuf[], size_t addrBufSize)
 {
     QStatus result = ER_OK;
 
@@ -690,7 +690,7 @@ QStatus IPAddress::StringToIPv6(const qcc::String& address, uint8_t addrBuf[], s
 // 1.1.1, two octets, last is 16 bit,
 // 1.1, one octet, second is 24 bits
 // 1, value is 32 bits
-QStatus IPAddress::StringToIPv4(const qcc::String& address, uint8_t addrBuf[], size_t addrBufSize)
+QStatus AJ_CALL IPAddress::StringToIPv4(const qcc::String& address, uint8_t addrBuf[], size_t addrBufSize)
 {
     QStatus result = ER_OK;
 
