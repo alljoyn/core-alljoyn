@@ -992,14 +992,14 @@ QStatus SetReusePort(SocketFd sockfd, bool reuse)
 /*
  * Getting set to do a multicast join or drop is straightforward but not
  * completely trivial, and the process is identical for both socket options, so
- * we only do the work in one place and select one of the followin oeprations.
+ * we only do the work in one place and select one of the following operations.
  */
 enum GroupOp {JOIN, LEAVE};
 
 QStatus MulticastGroupOpInternal(SocketFd sockFd, AddressFamily family, String multicastGroup, String iface, GroupOp op)
 {
     /*
-     * We assume that No external API will be trying to call here and so asserts
+     * We assume that no external API will be trying to call here and so asserts
      * are appropriate when checking for completely bogus parameters.
      */
     assert(sockFd >= 0);
@@ -1009,7 +1009,7 @@ QStatus MulticastGroupOpInternal(SocketFd sockFd, AddressFamily family, String m
     assert(op == JOIN || op == LEAVE);
     /*
      * Joining a multicast group requires a different approach based on the
-     * address family of the socket.  There's no way to get this information
+     * address family of the socket.  There's no way to get the address family
      * from an unbound socket, and it is not unreasonable to join a multicast
      * group before binding; so to avoid an inscrutable initialization order
      * requirement we force the caller to provide this tidbit.
@@ -1090,7 +1090,7 @@ QStatus LeaveMulticastGroup(SocketFd sockFd, AddressFamily family, String multic
 QStatus SetMulticastInterface(SocketFd sockFd, AddressFamily family, qcc::String iface)
 {
     /*
-     * We assume that No external API will be trying to call here and so asserts
+     * We assume that no external API will be trying to call here and so asserts
      * are appropriate when checking for completely bogus parameters.
      */
     assert(sockFd >= 0);
@@ -1100,7 +1100,7 @@ QStatus SetMulticastInterface(SocketFd sockFd, AddressFamily family, qcc::String
     /*
      * Associating the multicast interface with a socket requires a different
      * approach based on the address family of the socket.  There's no way to
-     * get this information from an unbound socket, and it is not unreasonable
+     * get the address family from an unbound socket, and it is not unreasonable
      * to set the interface before binding; so to avoid an inscrutable
      * initialization order requirement we force the caller to provide this
      * tidbit.
@@ -1149,7 +1149,7 @@ QStatus SetMulticastInterface(SocketFd sockFd, AddressFamily family, qcc::String
 QStatus SetMulticastHops(SocketFd sockFd, AddressFamily family, uint32_t hops)
 {
     /*
-     * We assume that No external API will be trying to call here and so asserts
+     * We assume that no external API will be trying to call here and so asserts
      * are appropriate when checking for completely bogus parameters.
      */
     assert(sockFd >= 0);
@@ -1189,7 +1189,7 @@ QStatus SetBroadcast(SocketFd sockfd, bool broadcast)
 QStatus SetRecvPktAncillaryData(SocketFd sockfd, AddressFamily addrFamily, bool recv)
 {
     /*
-     * We assume that No external API will be trying to call here and so asserts
+     * We assume that no external API will be trying to call here and so asserts
      * are appropriate when checking for completely bogus parameters.
      */
     assert(sockfd >= 0);

@@ -40,7 +40,7 @@
 
 #define QCC_MODULE "NETWORK"
 
-/* Scatter gather only support on Vista and later */
+/* Scatter gather is only supported on Vista and later */
 #if !defined (NTDDI_VERSION) || !defined (NTDDI_VISTA) || (NTDDI_VERSION < NTDDI_VISTA)
 #define QCC_USE_SCATTER_GATHER 0
 #else

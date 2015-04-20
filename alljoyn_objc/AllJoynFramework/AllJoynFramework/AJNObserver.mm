@@ -356,7 +356,7 @@ namespace ajn {
 - (void)discoveredObject:(AJNHandle)proxyObject
 {
     // Create OjbC counterpart
-    AJNProxyBusObject *proxyObj = [[AJNProxyBusObject alloc] initWithBusAttachment:self.busAttachment usingProxyBusObject:proxyObject];
+    AJNProxyBusObject *proxyObj = [[self.proxyType alloc] initWithBusAttachment:self.busAttachment usingProxyBusObject:proxyObject];
 
     // Create Key
     AJNObjectId *objId =[[AJNObjectId alloc]initWithObjectPath:[NSString stringWithUTF8String:(((ProxyBusObject*)proxyObject))->GetPath().c_str()]

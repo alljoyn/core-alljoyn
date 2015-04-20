@@ -77,11 +77,11 @@ void WINAPI IpInterfaceChangeCallback(PVOID arg, PMIB_IPINTERFACE_ROW row, MIB_N
     }
 }
 
-/* This class allows thread to wait more than 64 handles at a time. */
+/* This class allows a thread to wait for more than 64 handles at a time. */
 class SuperWaiter {
   public:
     SuperWaiter() :
-        m_shutdown(INVALID_HANDLE_VALUE),
+        m_shutdownEvent(nullptr),
         m_cleanupGroup(nullptr),
         m_indexSignaled(-1)
     {
@@ -89,20 +89,21 @@ class SuperWaiter {
 
     ~SuperWaiter()
     {
-        /* This blocks until all threads exit */
+        /* Wait until all thread pool workers exit */
         CloseThreadpoolCleanupGroupMembers(m_cleanupGroup, FALSE, nullptr);
         CloseThreadpoolCleanupGroup(m_cleanupGroup);
         m_cleanupGroup = nullptr;
 
         DestroyThreadpoolEnvironment(&m_environment);
 
-        if (m_shutdown) {
-            CloseHandle(m_shutdown);
+        if (m_shutdownEvent != nullptr) {
+            CloseHandle(m_shutdownEvent);
         }
     }
 
     QStatus Initialize()
     {
+        /* Use a manual-reset event to abort the wait for all groups */
         HANDLE shutdown = CreateEvent(nullptr, true, false, nullptr);
         if (NULL == shutdown) {
             QCC_LogError(ER_OUT_OF_MEMORY, ("CreateEvent failed."));
@@ -116,7 +117,7 @@ class SuperWaiter {
             return ER_OS_ERROR;
         }
 
-        m_shutdown = shutdown;
+        m_shutdownEvent = shutdown;
         m_cleanupGroup = cleanupGroup;
 
         InitializeThreadpoolEnvironment(&m_environment);
@@ -126,34 +127,26 @@ class SuperWaiter {
 
     void Shutdown()
     {
-        SetEvent(m_shutdown);
+        SetEvent(m_shutdownEvent);
     }
 
-    QStatus WaitForMultipleObjects(_In_ size_t totalHandles, _In_reads_(totalHandles) const HANDLE* handles, _In_ size_t timeoutMsec, _Out_ int32_t* indexSignaled)
+    QStatus WaitForMultipleObjects(_In_ uint32_t totalHandles, _In_reads_(totalHandles) const HANDLE* handles, _In_ uint32_t timeoutMsec, _Out_ int32_t* indexSignaled)
     {
-        assert(0 != totalHandles);
-        assert(nullptr != handles);
-        assert(nullptr != indexSignaled);
-        assert(nullptr != m_cleanupGroup);
-        assert(INVALID_HANDLE_VALUE != m_shutdown);
-
+        assert(totalHandles != 0);
         *indexSignaled = -1;
 
-        for (size_t i = 0; i < totalHandles; ++i) {
-            /* Subtract 1 from MAXIMUM_WAIT_OBJECTS to accomodate the shutdown event */
-            size_t numHandles = totalHandles - i;
-            if (MAXIMUM_WAIT_OBJECTS - 1 < numHandles) {
-                numHandles = MAXIMUM_WAIT_OBJECTS - 1;
+        /* Subtract 1 from MAXIMUM_WAIT_OBJECTS to accomodate the shutdown event */
+        static const uint32_t maximumGroupHandles = MAXIMUM_WAIT_OBJECTS - 1;
+        uint32_t startIndex = 0;
+
+        while (startIndex < totalHandles) {
+            uint32_t numHandles = totalHandles - startIndex;
+            if (numHandles > maximumGroupHandles) {
+                numHandles = maximumGroupHandles;
             }
 
-            if (i == 0) {
-                /* Only the first group gets the true timeout to avoid unnecessary race */
-            } else {
-                timeoutMsec = INFINITE;
-            }
-
-            WaitGroup* group = new WaitGroup(this, &handles[i], numHandles, i, timeoutMsec);
-            i += numHandles;
+            WaitGroup* group = new WaitGroup(this, &handles[startIndex], numHandles, startIndex, timeoutMsec);
+            startIndex += numHandles;
 
             PTP_WORK work = CreateThreadpoolWork(s_WaitThread, group, &m_environment);
             if (nullptr == work) {
@@ -167,25 +160,25 @@ class SuperWaiter {
             SubmitThreadpoolWork(work);
         }
 
-        WaitForSingleObject(m_shutdown, INFINITE);
+        /* Wait until all thread pool workers exit */
+        CloseThreadpoolCleanupGroupMembers(m_cleanupGroup, FALSE, nullptr);
 
-        LONG result = InterlockedCompareExchange(&m_indexSignaled, -1, -1);
-        if (result < 0) {
+        if (m_indexSignaled < 0) {
             return ER_TIMEOUT;
         }
 
-        *indexSignaled = static_cast<int32_t>(result);
+        *indexSignaled = m_indexSignaled;
         return ER_OK;
     }
 
   private:
-    HANDLE m_shutdown;
+    HANDLE m_shutdownEvent;
     TP_CALLBACK_ENVIRON m_environment;
     PTP_CLEANUP_GROUP m_cleanupGroup;
     volatile LONG m_indexSignaled;
 
     struct WaitGroup {
-        WaitGroup(_In_ SuperWaiter* waiter, _In_reads_(numHandles) const HANDLE* handles, _In_ size_t numHandles, _In_ size_t groupIndex, _In_ size_t timeoutMsec) :
+        WaitGroup(_In_ SuperWaiter* waiter, _In_reads_(numHandles) const HANDLE* handles, _In_ uint32_t numHandles, _In_ uint32_t groupIndex, _In_ uint32_t timeoutMsec) :
             m_waiter(waiter),
             m_handles(handles),
             m_numHandles(numHandles),
@@ -198,9 +191,9 @@ class SuperWaiter {
 
         SuperWaiter* m_waiter;
         const HANDLE* m_handles;
-        const size_t m_numHandles;
-        const size_t m_groupIndex;
-        const size_t m_timeoutMsec;
+        const uint32_t m_numHandles;
+        const uint32_t m_groupIndex;
+        const uint32_t m_timeoutMsec;
       private:
         /* Private assigment operator - does nothing */
         WaitGroup operator=(const WaitGroup&);
@@ -209,15 +202,14 @@ class SuperWaiter {
     static VOID CALLBACK s_WaitThread(_Inout_ PTP_CALLBACK_INSTANCE instance, _Inout_opt_ PVOID context, _Inout_ PTP_WORK work)
     {
         QCC_UNUSED(work);
-
         WaitGroup* group = reinterpret_cast<WaitGroup*>(context);
 
         /* Make sure we have another thread available for the next wait group */
         CallbackMayRunLong(instance);
 
-        size_t numHandles = group->m_numHandles + 1;
+        uint32_t numHandles = group->m_numHandles + 1;
         HANDLE* handles = new HANDLE[numHandles];
-        handles[0] = group->m_waiter->m_shutdown;
+        handles[0] = group->m_waiter->m_shutdownEvent;
         if (memcpy_s(&handles[1], (sizeof(HANDLE) * group->m_numHandles), group->m_handles, (sizeof(HANDLE) * group->m_numHandles))) {
             assert(!"memcpy_s failed");
             delete [] handles;
@@ -225,30 +217,29 @@ class SuperWaiter {
             return;
         }
 
-        DWORD waitResult = WaitForMultipleObjectsEx(numHandles, handles, false, group->m_timeoutMsec, false);
+        DWORD waitResult = ::WaitForMultipleObjectsEx(numHandles, handles, false, group->m_timeoutMsec, false);
         delete[] handles;
 
         switch (waitResult) {
         case WAIT_FAILED:
         case WAIT_ABANDONED:
             assert(false);
+            break;
 
-        /* Fallthrough */
         case WAIT_TIMEOUT:
-            group->m_waiter->Shutdown();
             break;
 
         case WAIT_OBJECT_0:
-            /* Shutdown requested, nothing report */
+            /* One of the other groups has found a signaled event already */
             break;
 
         default:
-            {
-                /* Calculate the true wait result, subtract 1 because the first index is for shutdown purpose */
-                LONG indexSignaled = group->m_groupIndex + ((waitResult - WAIT_OBJECT_0) - 1);
-                InterlockedExchange(&(group->m_waiter->m_indexSignaled), indexSignaled);
-                group->m_waiter->Shutdown();
-            }
+            /* Calculate the true wait result, subtract 1 because the first index is for shutdown purpose */
+            LONG indexSignaled = group->m_groupIndex + ((waitResult - WAIT_OBJECT_0) - 1);
+            group->m_waiter->m_indexSignaled = indexSignaled;
+
+            /* Ask the other groups to finish waiting */
+            group->m_waiter->Shutdown();
             break;
         }
 
@@ -596,7 +587,7 @@ VOID CALLBACK NamedPipeIoEventCallback(PVOID arg, BOOLEAN TimerOrWaitFired)
 QStatus Event::Wait(Event& evt, uint32_t maxWaitMs)
 {
     HANDLE handles[3];
-    int numHandles = 0;
+    uint32_t numHandles = 0;
 
     /*
      * The IO event is necessarily an auto-reset event. Calling select with a zero timeout to check
@@ -675,9 +666,9 @@ QStatus Event::Wait(Event& evt, uint32_t maxWaitMs)
         QCC_LogError(status, ("WaitForMultipleObjectsEx returned 0x%x.", ret));
         if (WAIT_FAILED == ret) {
             QCC_LogError(status, ("GetLastError=%d", GetLastError()));
-            QCC_LogError(status, ("numHandles=%d, maxWaitMs=%d, Handles: ", numHandles, maxWaitMs));
-            for (int i = 0; i < numHandles; ++i) {
-                QCC_LogError(status, ("  0x%x", handles[i]));
+            QCC_LogError(status, ("numHandles=%u, maxWaitMs=%u, Handles: ", numHandles, maxWaitMs));
+            for (uint32_t i = 0; i < numHandles; ++i) {
+                QCC_LogError(status, ("  0x%p", handles[i]));
             }
         }
     }
