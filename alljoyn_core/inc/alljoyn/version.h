@@ -76,9 +76,9 @@
 #define GetVersionRelease(_ver) ((_ver) & 0xffff)
 
 namespace ajn {
-const char* GetVersion();        /**< Gives the version of AllJoyn Library */
-const char* GetBuildInfo();      /**< Gives build information of AllJoyn Library */
-uint32_t GetNumericVersion();  /**< Gives the version of AllJoyn Library as a single number */
+const char* AJ_CALL GetVersion();        /**< Gives the version of AllJoyn Library */
+const char* AJ_CALL GetBuildInfo();      /**< Gives build information of AllJoyn Library */
+uint32_t AJ_CALL GetNumericVersion();  /**< Gives the version of AllJoyn Library as a single number */
 }
 
 #endif

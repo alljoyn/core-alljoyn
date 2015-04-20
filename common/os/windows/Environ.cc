@@ -60,7 +60,7 @@ void Environ::Shutdown()
     }
 }
 
-Environ* Environ::GetAppEnviron(void)
+Environ* AJ_CALL Environ::GetAppEnviron(void)
 {
     return &environSingleton;
 }

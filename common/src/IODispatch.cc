@@ -892,7 +892,7 @@ void IODispatch::UpdateIdleInformation(bool isStarting)
     }
 }
 
-bool IODispatch::IsIdle(uint64_t minTime)
+bool AJ_CALL IODispatch::IsIdle(uint64_t minTime)
 {
     /* The dispatcher is considered idle if there are no connected leaf nodes
      * and no leaf node has disconnected during the minTime period.

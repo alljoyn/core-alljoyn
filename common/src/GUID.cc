@@ -54,7 +54,7 @@ bool GUID128::Compare(const qcc::String& other)
     }
 }
 
-bool GUID128::IsGUID(const qcc::String& str, bool exactLen)
+bool AJ_CALL GUID128::IsGUID(const qcc::String& str, bool exactLen)
 {
     if (exactLen && str.length() != (2 * SIZE)) {
         return false;
