@@ -540,7 +540,10 @@
 					"\"$(SRCROOT)/../../../../../services/services_common/cpp/inc/alljoyn/services_common/\"",
 					"\"$(SRCROOT)/../../../../../services/about/cpp/inc/\"",
 					"\"$(SRCROOT)/../../../../../services/about/ios/inc/\"",
+					"$(SRCROOT)/../../../../../build/darwin/$(CURRENT_ARCH)/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/inc",
+					"$(SRCROOT)/../../../../../build/darwin/$(CURRENT_ARCH)/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/inc/alljoyn",
 				);
+				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(USER_LIBRARY_DIR)/Developer/Xcode/DerivedData/AboutServiceWorkspace-diiswixxecsgjablfhnnpcwwvocf/Build/Products/Debug-iphoneos",
@@ -554,7 +557,7 @@
 				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_NAME = alljoyn_about_objc;
 				SKIP_INSTALL = YES;
-				VALID_ARCHS = "arm64 armv7 armv7s";
+				VALID_ARCHS = "arm64 armv7";
 			};
 			name = Debug;
 		};
@@ -579,7 +582,10 @@
 					"\"$(SRCROOT)/../../../../../services/services_common/cpp/inc/alljoyn/services_common/\"",
 					"\"$(SRCROOT)/../../../../../services/about/cpp/inc/\"",
 					"\"$(SRCROOT)/../../../../../services/about/ios/inc/\"",
+					"$(SRCROOT)/../../../../../build/darwin/$(CURRENT_ARCH)/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/inc",
+					"$(SRCROOT)/../../../../../build/darwin/$(CURRENT_ARCH)/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/inc/alljoyn",
 				);
+				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(USER_LIBRARY_DIR)/Developer/Xcode/DerivedData/AboutServiceWorkspace-diiswixxecsgjablfhnnpcwwvocf/Build/Products/Debug-iphoneos",
@@ -593,7 +599,7 @@
 				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_NAME = alljoyn_about_objc;
 				SKIP_INSTALL = YES;
-				VALID_ARCHS = "arm64 armv7 armv7s";
+				VALID_ARCHS = "arm64 armv7";
 			};
 			name = Release;
 		};
