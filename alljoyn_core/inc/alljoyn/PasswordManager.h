@@ -51,7 +51,7 @@ class PasswordManager {
      *
      * @return   Returns ER_OK if the credentials was successfully set.
      */
-    static QStatus SetCredentials(qcc::String authMechanism, qcc::String password) {
+    static QStatus AJ_CALL SetCredentials(qcc::String authMechanism, qcc::String password) {
         *PasswordManager::authMechanism = authMechanism;
         *PasswordManager::password = password;
         return ER_OK;
@@ -64,7 +64,7 @@ class PasswordManager {
      *
      * @return Returns the password set by the user/app.
      */
-    static qcc::String GetPassword() { return *password; }
+    static qcc::String AJ_CALL GetPassword() { return *password; }
 
     /**
      * @internal
@@ -72,7 +72,7 @@ class PasswordManager {
      *
      * @return Returns the authMechanism set by the user/app.
      */
-    static qcc::String GetAuthMechanism() { return *authMechanism; }
+    static qcc::String AJ_CALL GetAuthMechanism() { return *authMechanism; }
     /// @endcond
   private:
     static void Init();

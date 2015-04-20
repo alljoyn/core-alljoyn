@@ -115,7 +115,7 @@ class CertificateX509 {
      * @param[out] pem the encoded certificate.
      * @return ER_OK for success; otherwise, error code.
      */
-    static QStatus EncodeCertificatePEM(qcc::String& der, qcc::String& pem);
+    static QStatus AJ_CALL EncodeCertificatePEM(qcc::String& der, qcc::String& pem);
 
     /**
      * Decode a DER encoded certificate.
@@ -138,7 +138,7 @@ class CertificateX509 {
      * @param[out] encoded the output string holding the resulting PEM string
      * @return ER_OK for sucess; otherwise, error code.
      */
-    static QStatus EncodePrivateKeyPEM(const uint8_t* privateKey, size_t len, String& encoded);
+    static QStatus AJ_CALL EncodePrivateKeyPEM(const uint8_t* privateKey, size_t len, String& encoded);
 
     /**
      * Decode the private from a PEM string.
@@ -147,7 +147,7 @@ class CertificateX509 {
      * @param len the private key length
      * @return ER_OK for sucess; otherwise, error code.
      */
-    static QStatus DecodePrivateKeyPEM(const String& encoded, uint8_t* privateKey, size_t len);
+    static QStatus AJ_CALL DecodePrivateKeyPEM(const String& encoded, uint8_t* privateKey, size_t len);
 
     /**
      * Encode the public key in a PEM string.
@@ -156,7 +156,7 @@ class CertificateX509 {
      * @param[out] encoded the output string holding the resulting PEM string
      * @return ER_OK for sucess; otherwise, error code.
      */
-    static QStatus EncodePublicKeyPEM(const uint8_t* publicKey, size_t len, String& encoded);
+    static QStatus AJ_CALL EncodePublicKeyPEM(const uint8_t* publicKey, size_t len, String& encoded);
 
     /**
      * Decode the public from a PEM string.
@@ -165,7 +165,7 @@ class CertificateX509 {
      * @param len the public key length
      * @return ER_OK for sucess; otherwise, error code.
      */
-    static QStatus DecodePublicKeyPEM(const String& encoded, uint8_t* publicKey, size_t len);
+    static QStatus AJ_CALL DecodePublicKeyPEM(const String& encoded, uint8_t* publicKey, size_t len);
 
     /**
      * Sign the certificate.
@@ -418,7 +418,7 @@ class CertificateX509 {
      * @param[in] count the expected number of certs
      * @return ER_OK for sucess; otherwise, error code.
      */
-    static QStatus DecodeCertChainPEM(const String& encoded, CertificateX509* certChain, size_t count);
+    static QStatus AJ_CALL DecodeCertChainPEM(const String& encoded, CertificateX509* certChain, size_t count);
 
   private:
 

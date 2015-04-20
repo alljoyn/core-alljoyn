@@ -606,7 +606,7 @@ BigNum& BigNum::operator-=(uint32_t i)
 }
 
 // multiple-precision multiplication by an integer
-BigNum& BigNum::mul(BigNum& result, const BigNum& a, uint32_t b, bool bneg)
+BigNum & AJ_CALL BigNum::mul(BigNum& result, const BigNum& a, uint32_t b, bool bneg)
 {
     assert(!result.storage || (result.storage != a.storage));
     if (b > 2) {
@@ -857,7 +857,7 @@ BigNum BigNum::operator%(const BigNum& mod) const
     return rem;
 }
 
-BigNum& BigNum::right_shift(BigNum& result, const BigNum& n, uint32_t shift)
+BigNum & AJ_CALL BigNum::right_shift(BigNum& result, const BigNum& n, uint32_t shift)
 {
     if (shift == 0) {
         result = n;
@@ -999,7 +999,7 @@ BigNum BigNum::mod_exp(const BigNum& e, const BigNum& m) const
 }
 
 
-int BigNum::compare(const BigNum& a, const BigNum& b)
+int AJ_CALL BigNum::compare(const BigNum& a, const BigNum& b)
 {
     // strip leading zeroes
     size_t aLen = a.length;

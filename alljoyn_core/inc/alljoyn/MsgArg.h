@@ -296,7 +296,7 @@ class MsgArg {
      *
      * @return The signature string for the message args.
      */
-    static qcc::String Signature(const MsgArg* values, size_t numValues);
+    static qcc::String AJ_CALL Signature(const MsgArg* values, size_t numValues);
 
     /**
      * Returns an XML string representation of this type
@@ -316,7 +316,7 @@ class MsgArg {
      *
      * @return The XML string representation of the message args.
      */
-    static qcc::String ToString(const MsgArg* args, size_t numArgs, size_t indent = 0);
+    static qcc::String AJ_CALL ToString(const MsgArg* args, size_t numArgs, size_t indent = 0);
 
     /**
      * Checks the signature of this arg.
@@ -464,7 +464,7 @@ class MsgArg {
      *       - #ER_BUS_TRUNCATED if the signature was longer than expected.
      *       - Other error status codes indicating a failure.
      */
-    static QStatus Set(MsgArg* args, size_t& numArgs, const char* signature, ...);
+    static QStatus AJ_CALL Set(MsgArg* args, size_t& numArgs, const char* signature, ...);
 
     /**
      * Matches a signature to the MsArg and if the signature matches unpacks the component values of a MsgArg. Note that the values
@@ -575,7 +575,7 @@ class MsgArg {
      *      - #ER_BUS_SIGNATURE_MISMATCH if the signature did not match.
      *      - Other error status codes indicating a failure.
      */
-    static QStatus Get(const MsgArg* args, size_t numArgs, const char* signature, ...);
+    static QStatus AJ_CALL Get(const MsgArg* args, size_t numArgs, const char* signature, ...);
 
     /**
      * Helper function for accessing dictionary elements. The MsgArg must be an array of dictionary
@@ -712,6 +712,12 @@ class MsgArg {
     /**
      * Clone one MsgArg into Another MsgArg
      *
+     * On 32bit Windows the export convention for Scons and Visual Studio builds is __stdcall
+     * while for Visual Studio alone is __cdecl. This requires the explicit __stdcall (via
+     * the AJ_CALL macro) applied to the public C++ API methods. This method is not public,
+     * but it is invoked from two public methods which are inline (the copy constructor
+     * and the assignment operator of this class) thus it also needs the decoration.
+     *
      * @see operator=
      * @see MsgArg(const MsgArg&)
      *
@@ -719,7 +725,7 @@ class MsgArg {
      * @param src the MsgArg that will be cloned
      *
      */
-    static void Clone(MsgArg& dest, const MsgArg& src);
+    static void AJ_CALL Clone(MsgArg& dest, const MsgArg& src);
 
     /**
      * Used to help build an alljoyn array

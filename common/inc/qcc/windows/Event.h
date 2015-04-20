@@ -136,7 +136,7 @@ class Event {
      * @param maxMs          Max number of milliseconds to wait or WAIT_FOREVER to wait forever.
      * @return ER_OK if successful, ER_TIMEOUT if one if the checkEvents times out.
      */
-    static QStatus Wait(const std::vector<Event*>& checkEvents, std::vector<Event*>& signaledEvents, uint32_t maxMs = WAIT_FOREVER);
+    static QStatus AJ_CALL Wait(const std::vector<Event*>& checkEvents, std::vector<Event*>& signaledEvents, uint32_t maxMs = WAIT_FOREVER);
 
     /**
      * Wait on a single event.
@@ -146,7 +146,7 @@ class Event {
      * @param maxMs   Max number of milliseconds to wait or WAIT_FOREVER to wait forever.
      * @return ER_OK if successful.
      */
-    static QStatus Wait(Event& event, uint32_t maxMs = WAIT_FOREVER);
+    static QStatus AJ_CALL Wait(Event& event, uint32_t maxMs = WAIT_FOREVER);
 
     /**
      * Release a lock and then wait on a single event.
@@ -157,7 +157,7 @@ class Event {
      * @param maxMs   Max number of milliseconds to wait or WAIT_FOREVER to wait forever.
      * @return ER_OK if successful.
      */
-    static QStatus Wait(Event& event, qcc::Mutex& lock, uint32_t maxMs = WAIT_FOREVER)
+    static QStatus AJ_CALL Wait(Event& event, qcc::Mutex& lock, uint32_t maxMs = WAIT_FOREVER)
     {
         event.IncrementNumThreads();
         lock.Unlock();

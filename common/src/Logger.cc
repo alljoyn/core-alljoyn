@@ -183,8 +183,8 @@ LoggerSetting::~LoggerSetting()
 }
 
 
-LoggerSetting* LoggerSetting::GetLoggerSetting(const char* name, int level,
-                                               bool useSyslog, FILE* file)
+LoggerSetting* AJ_CALL LoggerSetting::GetLoggerSetting(const char* name, int level,
+                                                       bool useSyslog, FILE* file)
 {
     if (!singleton) {
         singleton = new LoggerSetting(name, level, useSyslog, file);
