@@ -168,7 +168,7 @@ class MyAboutListener : public AboutListener {
             /* We found a remote bus that is advertising bbservice's well-known name so connect to it */
             SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
 
-            QStatus status = g_msgBus->JoinSession(busName, ::org::alljoyn::alljoyn_test::SessionPort, &g_busListener, sessionId, opts);
+            QStatus status = g_msgBus->JoinSession(busName, port, &g_busListener, sessionId, opts);
             if (ER_OK == status) {
                 if (encryption) {
                     ProxyBusObject remotePeerObj(*g_msgBus, busName, "/", 0);
