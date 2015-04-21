@@ -224,6 +224,7 @@ QStatus AuthMechLogon::AddLogonEntry(KeyStore& keyStore, const char* userName, c
     Crypto_SRP srp;
     qcc::String tmp;
     qcc::GUID128 userGuid(0);
+    KeyStore::Key key(KeyStore::Key::REMOTE, userGuid);
 
     UserNameToGuid(userGuid, userName);
 
@@ -235,11 +236,11 @@ QStatus AuthMechLogon::AddLogonEntry(KeyStore& keyStore, const char* userName, c
                 status = ER_CRYPTO_ERROR;
             } else {
                 KeyBlob userBlob((const uint8_t*)logonEntry.data(), logonEntry.size(), KeyBlob::GENERIC);
-                status = keyStore.AddKey(userGuid, userBlob);
+                status = keyStore.AddKey(key, userBlob);
             }
         }
     } else {
-        status = keyStore.DelKey(userGuid);
+        status = keyStore.DelKey(key);
     }
     QCC_DbgHLPrintf(("AddLogonEntry for user %s %s", userName, QCC_StatusText(status)));
     return status;
@@ -253,6 +254,7 @@ qcc::String AuthMechLogon::Challenge(const qcc::String& response,
     qcc::String challenge;
     qcc::String userName;
     qcc::GUID128 userGuid(0);
+    KeyStore::Key key(KeyStore::Key::REMOTE, userGuid);
     KeyBlob userBlob;
     size_t pos;
 
@@ -277,7 +279,7 @@ qcc::String AuthMechLogon::Challenge(const qcc::String& response,
         /*
          * Check if there is already an SRP user logon entry for this user name.
          */
-        if (keyStore.GetKey(userGuid, userBlob) == ER_OK) {
+        if (keyStore.GetKey(key, userBlob) == ER_OK) {
             QCC_DbgHLPrintf(("Using precomputed SRP logon entry string for %s", userName.c_str()));
             qcc::String logonEntry((const char*)userBlob.GetData(), userBlob.GetSize());
             status = srp.ServerInit(logonEntry, challenge);
@@ -301,7 +303,7 @@ qcc::String AuthMechLogon::Challenge(const qcc::String& response,
             if ((result == ALLJOYN_AUTH_CONTINUE) && (status == ER_OK)) {
                 qcc::String logonEntry = srp.ServerGetVerifier();
                 userBlob.Set((const uint8_t*)logonEntry.data(), logonEntry.size(), KeyBlob::GENERIC);
-                keyStore.AddKey(userGuid, userBlob);
+                keyStore.AddKey(key, userBlob);
             }
         } else {
             challenge = "Logon denied for user " + userName;

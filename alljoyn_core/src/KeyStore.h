@@ -57,6 +57,106 @@ class KeyStore {
   public:
 
     /**
+     * the key store index.
+     */
+    class Key {
+      public:
+        /**
+         *  the key type
+         */
+        typedef enum {
+            REMOTE,  /**< remote source */
+            LOCAL    /**< local source */
+        } KeyType;
+
+        /* constructor */
+        Key() : type(Key::LOCAL), guid(0)
+        {
+        }
+
+        /* constructor */
+        Key(const KeyType type) : type(type), guid(0)
+        {
+        }
+        /* constructor */
+        Key(const KeyType type, const qcc::GUID128& guid) : type(type), guid(guid)
+        {
+        }
+
+        /**
+         * Equals operator for the key
+         *
+         * @param[in] other the other key to compare
+         *
+         * @return true if both keys are equal
+         */
+        bool operator==(const Key& other) const
+        {
+            if (type != other.type) {
+                return false;
+            }
+            return guid == other.guid;
+        }
+
+        /**
+         * Less than operator for the key
+         *
+         * @param[in] other the other key to compare
+         *
+         * @return true if this key is less than the other key
+         */
+        bool operator<(const Key& other) const
+        {
+            if (guid < other.guid) {
+                return true;
+            } else if (guid == other.guid) {
+                return (type < other.type);
+            }
+            return false;
+        }
+
+        void SetType(const KeyType type)
+        {
+            this->type = type;
+        }
+
+        const KeyType& GetType() const
+        {
+            return type;
+        }
+
+        void SetGUID(const qcc::GUID128& guid)
+        {
+            this->guid = guid;
+        }
+
+        const qcc::GUID128& GetGUID() const
+        {
+            return guid;
+        }
+
+        /**
+         * ToString
+         */
+
+        qcc::String ToString() const
+        {
+            qcc::String str;
+            if (type == LOCAL) {
+                str = "L:";
+            } else if (type == REMOTE) {
+                str = "R:";
+            }
+            str += guid.ToString();
+            return str;
+        }
+
+      private:
+        KeyType type;
+        qcc::GUID128 guid;
+    };
+
+    /**
      * KeyStore constructor
      */
     KeyStore(const qcc::String& application);
@@ -96,86 +196,88 @@ class KeyStore {
     /**
      * Get a key blob from the key store
      *
-     * @param guid         The unique identifier for the key
-     * @param key          The key blob to get
+     * @param key         The unique identifier for the key
+     * @param keyBlob          The key blob to get
      * @param accessRights The access rights associated with the key
      * @return
      *      - ER_OK if successful
      *      - ER_BUS_KEY_UNAVAILABLE if key is unavailable
      *      - ER_BUS_KEY_EXPIRED if the requested key has expired
      */
-    QStatus GetKey(const qcc::GUID128 & guid, qcc::KeyBlob & key, uint8_t accessRights[4]);
+    QStatus GetKey(const Key &key, qcc::KeyBlob & keyBlob, uint8_t accessRights[4]);
 
     /**
      * Get a key blob from the key store
      *
-     * @param guid     The unique identifier for the key
-     * @param key      The key blob to get
+     * @param key         The unique identifier for the key
+     * @param keyBlob     The key blob to get
      * @return
      *      - ER_OK if successful
      *      - ER_BUS_KEY_UNAVAILABLE if key is unavailable
      *      - ER_BUS_KEY_EXPIRED if the requested key has expired
      */
-    QStatus GetKey(const qcc::GUID128& guid, qcc::KeyBlob& key) {
+    QStatus GetKey(const Key& key, qcc::KeyBlob& keyBlob)
+    {
         uint8_t accessRights[4];
-        return GetKey(guid, key, accessRights);
+        return GetKey(key, keyBlob, accessRights);
     }
 
     /**
      * Add a key blob to the key store
      *
-     * @param guid         The unique identifier for the key
-     * @param key          The key blob to add
+     * @param key         The unique identifier for the key
+     * @param keyBlob     The key blob to add
      * @param accessRights The access rights associated with the key
      * @return ER_OK
      */
-    QStatus AddKey(const qcc::GUID128& guid, const qcc::KeyBlob& key, const uint8_t accessRights[4]);
+    QStatus AddKey(const Key& key, const qcc::KeyBlob& keyBlob, const uint8_t accessRights[4]);
 
     /**
      * Add a key blob to the key store
      *
-     * @param guid     The unique identifier for the key
-     * @param key      The key blob to add
+     * @param key         The unique identifier for the key
+     * @param keyBlob     The key blob to add
      * @return ER_OK
      */
-    QStatus AddKey(const qcc::GUID128& guid, const qcc::KeyBlob& key) {
+    QStatus AddKey(const Key& key, const qcc::KeyBlob& keyBlob)
+    {
         const uint8_t accessRights[4] = { 0, 0, 0, 0 };
-        return AddKey(guid, key, accessRights);
+        return AddKey(key, keyBlob, accessRights);
     }
 
     /**
      * Remove a key blob from the key store
      *
-     * @param guid  The unique identifier for the key
+     * @param key  The unique identifier for the key
      * return ER_OK
      */
-    QStatus DelKey(const qcc::GUID128& guid);
+    QStatus DelKey(const Key& key);
 
     /**
      * Set expiration time on a key blob from the key store
      *
-     * @param guid        The unique identifier for the key
+     * @param key        The unique identifier for the key
      * @param expiration  Time to expire the key
      * return ER_OK
      */
-    QStatus SetKeyExpiration(const qcc::GUID128& guid, const qcc::Timespec& expiration);
+    QStatus SetKeyExpiration(const Key& key, const qcc::Timespec& expiration);
 
     /**
      * Get expiration time on a key blob from the key store
      *
-     * @param guid        The unique identifier for the key
+     * @param key        The unique identifier for the key
      * @param expiration  Time the key will expire
      * return ER_OK
      */
-    QStatus GetKeyExpiration(const qcc::GUID128& guid, qcc::Timespec& expiration);
+    QStatus GetKeyExpiration(const Key& key, qcc::Timespec& expiration);
 
     /**
      * Test is there is a requested key blob in the key store
      *
-     * @param guid  The unique identifier for the key
+     * @param key  The unique identifier for the key
      * @return      Returns true if the requested key is in the key store.
      */
-    bool HasKey(const qcc::GUID128& guid);
+    bool HasKey(const Key& key);
 
     /**
      * Return the GUID for this key store
@@ -257,17 +359,6 @@ class KeyStore {
     QStatus Reset();
 
     /**
-     * reset the master GUID. The whole key store will be cleared.
-     * @param newMasterGUID the new master GUID
-     * @return
-     *      - ER_OK if successful
-     *      - An error status otherwise
-     *
-     */
-
-    QStatus ResetMasterGUID(const qcc::GUID128& newMasterGUID);
-
-    /**
      * Pull keys into the key store from a source.
      *
      * @param source    The source to read the keys from.
@@ -298,15 +389,15 @@ class KeyStore {
     bool IsShared() { return shared; }
 
     /**
-     * Search for associated keys with the given guid
-     * @param guid  The header guid
-     * @param list  The output list of associated guids.  This list must be deallocated after used.
+     * Search for associated keys with the given key
+     * @param key  The header key
+     * @param list  The output list of associated keys.  This list must be deallocated after used.
      * @param numItems The output size of the list
      * @return
      *      - ER_OK if successful
      *      - An error status otherwise
      */
-    QStatus SearchAssociatedKeys(const qcc::GUID128& guid, qcc::GUID128** list, size_t* numItems);
+    QStatus SearchAssociatedKeys(const Key& key, Key** list, size_t* numItems);
 
   private:
 
@@ -429,14 +520,14 @@ class KeyStore {
       public:
         KeyRecord() : revision(0) { }
         uint32_t revision;       ///< Revision number when this key was added
-        qcc::KeyBlob key;        ///< The key blob for the key
+        qcc::KeyBlob keyBlob;        ///< The key blob for the key
         uint8_t accessRights[4]; ///< Access rights associated with this record (see PeerState)
     };
 
     /**
      * Type for a key map
      */
-    typedef std::map<qcc::GUID128, KeyRecord> KeyMap;
+    typedef std::map<Key, KeyRecord> KeyMap;
 
     /**
      * In memory copy of the key store
@@ -446,7 +537,7 @@ class KeyStore {
     /**
      * GUID for keys that have been deleted
      */
-    std::set<qcc::GUID128> deletions;
+    std::set<Key> deletions;
 
     /**
      * Default listener for handling load/store requests
@@ -527,6 +618,7 @@ class KeyStore {
      * guidSet ref count
      */
     uint8_t guidSetRefCount;
+
 };
 
 class KeyStoreKeyEventListener {
@@ -537,11 +629,11 @@ class KeyStoreKeyEventListener {
     /**
      * When the keystore auto delete a key because of expiration, this listener will be notified.
      * @param holder the keystore
-     * @param guid the effected guid
+     * @param key the effected key
      * @return true if there are other guids affected; false, if only this guid is effected.
      */
 
-    virtual bool NotifyAutoDelete(KeyStore* holder, const qcc::GUID128& guid);
+    virtual bool NotifyAutoDelete(KeyStore* holder, const KeyStore::Key& key);
 };
 
 class KeyStoreListenerFactory {

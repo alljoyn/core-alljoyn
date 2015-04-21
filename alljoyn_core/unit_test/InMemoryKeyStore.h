@@ -37,12 +37,19 @@ class InMemoryKeyStoreListener : public KeyStoreListener {
 
     InMemoryKeyStoreListener() : KeyStoreListener()
     {
+        qcc::GUID128 guid;
+        pwd = guid.ToString();
+    }
+
+    InMemoryKeyStoreListener(qcc::String& source, qcc::String& pwd) : KeyStoreListener(), pwd(pwd)
+    {
+        CopySink(source);
     }
 
     QStatus LoadRequest(KeyStore& keyStore) {
         lock.Lock(MUTEX_CONTEXT);
         qcc::StringSource source(sink.GetString());
-        QStatus status = keyStore.Pull(source, pwd.ToString());
+        QStatus status = keyStore.Pull(source, pwd);
         lock.Unlock(MUTEX_CONTEXT);
         return status;
     }
@@ -55,13 +62,19 @@ class InMemoryKeyStoreListener : public KeyStoreListener {
         }
         lock.Lock(MUTEX_CONTEXT);
         sink.Clear();
-        size_t numSent = 0;
-        status = sink.PushBytes(newSink.GetString().data(), newSink.GetString().length(), numSent);
+        status = CopySink(newSink.GetString());
         lock.Unlock(MUTEX_CONTEXT);
         return status;
     }
 
   private:
+
+    QStatus CopySink(qcc::String& other)
+    {
+        size_t numSent = 0;
+        return sink.PushBytes(other.data(), other.length(), numSent);
+    }
+
     /**
      * Assignment operator is private
      */
@@ -74,7 +87,7 @@ class InMemoryKeyStoreListener : public KeyStoreListener {
 
     qcc::Mutex lock;
     qcc::StringSink sink;
-    qcc::GUID128 pwd;
+    qcc::String pwd;
 };
 
 }

@@ -694,7 +694,8 @@ static QStatus DoStoreMasterSecret(BusAttachment& bus, const qcc::GUID128& guid,
     if (status == ER_OK) {
         qcc::String tagStr((const char*) tag, tagLen);
         secretBlob.SetTag(tagStr, initiator ? KeyBlob::INITIATOR : KeyBlob::RESPONDER);
-        status = keyStore.AddKey(guid, secretBlob, accessRights);
+        KeyStore::Key key(KeyStore::Key::REMOTE, guid);
+        status = keyStore.AddKey(key, secretBlob, accessRights);
     }
     return status;
 }

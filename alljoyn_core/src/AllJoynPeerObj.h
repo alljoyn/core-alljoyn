@@ -406,12 +406,12 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
     /**
      * Authenticate Peer using SASL protocol
      */
-    QStatus AuthenticatePeerUsingSASL(const qcc::String& busName, PeerState peerState, qcc::String& localGuidStr, ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc, qcc::GUID128& remotePeerGuid, qcc::String& mech);
+    QStatus AuthenticatePeerUsingSASL(const qcc::String& busName, PeerState peerState, qcc::String& localGuidStr, ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc, KeyStore::Key& remotePeerKey, qcc::String& mech);
 
     /**
      * Authenticate Peer using new Key Exchanger protocol for ECDHE auths
      */
-    QStatus AuthenticatePeerUsingKeyExchange(const uint32_t* requestingAuthList, size_t requestingAuthCount, const qcc::String& busName, PeerState peerState, qcc::String& localGuidStr, ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc, qcc::GUID128& remotePeerGuid, qcc::String& mech);
+    QStatus AuthenticatePeerUsingKeyExchange(const uint32_t* requestingAuthList, size_t requestingAuthCount, const qcc::String& busName, PeerState peerState, qcc::String& localGuidStr, ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc, qcc::String& mech);
 
     /**
      * Send an SendMembership to the peer

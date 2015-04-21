@@ -58,10 +58,10 @@ QStatus CredentialAccessor::GetPeerGuid(qcc::String& peerName, qcc::GUID128& gui
 
 QStatus CredentialAccessor::GetDSAPublicKey(qcc::ECCPublicKey& publicKey)
 {
-    qcc::GUID128 guid;
+    KeyStore::Key key;
     qcc::KeyBlob kb;
-    GetLocalGUID(qcc::KeyBlob::DSA_PUBLIC, guid);
-    QStatus status = GetKey(guid, kb);
+    GetLocalKey(qcc::KeyBlob::DSA_PUBLIC, key);
+    QStatus status = GetKey(key, kb);
     if (status != ER_OK) {
         return status;
     }
@@ -71,10 +71,10 @@ QStatus CredentialAccessor::GetDSAPublicKey(qcc::ECCPublicKey& publicKey)
 
 QStatus CredentialAccessor::GetDSAPrivateKey(qcc::ECCPrivateKey& privateKey)
 {
-    qcc::GUID128 guid;
+    KeyStore::Key key;
     qcc::KeyBlob kb;
-    GetLocalGUID(qcc::KeyBlob::DSA_PRIVATE, guid);
-    QStatus status = GetKey(guid, kb);
+    GetLocalKey(qcc::KeyBlob::DSA_PRIVATE, key);
+    QStatus status = GetKey(key, kb);
     if (status != ER_OK) {
         return status;
     }
@@ -84,56 +84,58 @@ QStatus CredentialAccessor::GetDSAPrivateKey(qcc::ECCPrivateKey& privateKey)
 
 
 
-QStatus CredentialAccessor::GetLocalGUID(qcc::KeyBlob::Type keyType, qcc::GUID128& guid)
+QStatus CredentialAccessor::GetLocalKey(qcc::KeyBlob::Type keyType, KeyStore::Key& key)
 {
+    key.SetType(KeyStore::Key::LOCAL);
     /* each local key will be indexed by an hardcode randomly generated GUID.
        This method is similar to that used by the RSA Key exchange to store
        the private key and cert chain */
     if (keyType == KeyBlob::PRIVATE) {
-        guid = GUID128(qcc::String("a62655061e8295e2462794065f2a1c95"));
+        key.SetGUID(GUID128(qcc::String("a62655061e8295e2462794065f2a1c95")));
         return ER_OK;
     }
     if (keyType == KeyBlob::AES) {
-        guid = GUID128(qcc::String("b4dc47954ce6e94f6669f31b343b91d8"));
+        key.SetGUID(GUID128(qcc::String("b4dc47954ce6e94f6669f31b343b91d8")));
         return ER_OK;
     }
     if (keyType == KeyBlob::PEM) {
-        guid = GUID128(qcc::String("29ebe36c0ac308c8eb808cfdf1f36953"));
+        key.SetGUID(GUID128(qcc::String("29ebe36c0ac308c8eb808cfdf1f36953")));
         return ER_OK;
     }
     if (keyType == KeyBlob::PUBLIC) {
-        guid = GUID128(qcc::String("48b020fc3a65c6bc5ac22b949a869dab"));
+        key.SetGUID(GUID128(qcc::String("48b020fc3a65c6bc5ac22b949a869dab")));
         return ER_OK;
     }
     if (keyType == KeyBlob::SPKI_CERT) {
-        guid = GUID128(qcc::String("9ddf8d784fef4b57d5103e3bef656067"));
+        key.SetGUID(GUID128(qcc::String("9ddf8d784fef4b57d5103e3bef656067")));
         return ER_OK;
     }
     if (keyType == KeyBlob::DSA_PRIVATE) {
-        guid = GUID128(qcc::String("d1b60ce37ba71ea4b870d73b6cd676f5"));
+        key.SetGUID(GUID128(qcc::String("d1b60ce37ba71ea4b870d73b6cd676f5")));
         return ER_OK;
     }
     if (keyType == KeyBlob::DSA_PUBLIC) {
-        guid = GUID128(qcc::String("19409269762da560d7812cb8a542f024"));
+        key.SetGUID(GUID128(qcc::String("19409269762da560d7812cb8a542f024")));
         return ER_OK;
     }
     return ER_CRYPTO_KEY_UNAVAILABLE;      /* not available */
 }
 
-QStatus CredentialAccessor::GetKey(const qcc::GUID128& guid, qcc::KeyBlob& key) {
-    return bus.GetInternal().GetKeyStore().GetKey(guid, key);
+QStatus CredentialAccessor::GetKey(const KeyStore::Key& key, qcc::KeyBlob& keyBlob)
+{
+    return bus.GetInternal().GetKeyStore().GetKey(key, keyBlob);
 }
 
-QStatus CredentialAccessor::DeleteKey(const qcc::GUID128& guid)
+QStatus CredentialAccessor::DeleteKey(const KeyStore::Key& key)
 {
     KeyBlob kb;
-    QStatus status = bus.GetInternal().GetKeyStore().GetKey(guid, kb);
+    QStatus status = bus.GetInternal().GetKeyStore().GetKey(key, kb);
     if (status == ER_BUS_KEY_UNAVAILABLE) {
         return ER_OK;     /* not found */
     } else if (status != ER_OK) {
         return status;
     }
-    status = bus.GetInternal().GetKeyStore().DelKey(guid);
+    status = bus.GetInternal().GetKeyStore().DelKey(key);
     if ((status != ER_OK) && (status != ER_BUS_KEY_UNAVAILABLE)) {
         return status;
     }
@@ -145,9 +147,9 @@ QStatus CredentialAccessor::DeleteKey(const qcc::GUID128& guid)
     if (!deleteAssociates) {
         return ER_OK;
     }
-    qcc::GUID128* list;
+    KeyStore::Key* list;
     size_t numItems;
-    status = bus.GetInternal().GetKeyStore().SearchAssociatedKeys(guid, &list, &numItems);
+    status = bus.GetInternal().GetKeyStore().SearchAssociatedKeys(key, &list, &numItems);
     if (status != ER_OK) {
         return ER_OK;
     }
@@ -161,10 +163,10 @@ QStatus CredentialAccessor::DeleteKey(const qcc::GUID128& guid)
     return ER_OK;
 }
 
-QStatus CredentialAccessor::StoreKey(qcc::GUID128& guid, qcc::KeyBlob& key)
+QStatus CredentialAccessor::StoreKey(KeyStore::Key& key, qcc::KeyBlob& keyBlob)
 {
     KeyStore& ks = bus.GetInternal().GetKeyStore();
-    QStatus status = ks.AddKey(guid, key);
+    QStatus status = ks.AddKey(key, keyBlob);
     if (status != ER_OK) {
         return status;
     }
@@ -172,23 +174,23 @@ QStatus CredentialAccessor::StoreKey(qcc::GUID128& guid, qcc::KeyBlob& key)
     return ks.Store();
 }
 
-QStatus CredentialAccessor::GetKeys(qcc::GUID128& headerGuid, qcc::GUID128** list, size_t* numItems)
+QStatus CredentialAccessor::GetKeys(const KeyStore::Key& headerKey, KeyStore::Key** list, size_t* numItems)
 {
     KeyBlob headerKb;
-    QStatus status = GetKey(headerGuid, headerKb);
+    QStatus status = GetKey(headerKey, headerKb);
     if (status != ER_OK) {
         return status;
     }
-    return bus.GetInternal().GetKeyStore().SearchAssociatedKeys(headerGuid, list, numItems);
+    return bus.GetInternal().GetKeyStore().SearchAssociatedKeys(headerKey, list, numItems);
 }
 
-QStatus CredentialAccessor::AddAssociatedKey(qcc::GUID128& headerGuid, qcc::GUID128& guid, qcc::KeyBlob& key)
+QStatus CredentialAccessor::AddAssociatedKey(KeyStore::Key& headerKey, KeyStore::Key& key, qcc::KeyBlob& keyBlob)
 {
-    if (headerGuid == guid) {
-        return StoreKey(headerGuid, key);
+    if (headerKey == key) {
+        return StoreKey(headerKey, keyBlob);
     }
     KeyBlob headerKb;
-    QStatus status = GetKey(headerGuid, headerKb);
+    QStatus status = GetKey(headerKey, headerKb);
     if (status != ER_OK) {
         return status;
     }
@@ -201,12 +203,12 @@ QStatus CredentialAccessor::AddAssociatedKey(qcc::GUID128& headerGuid, qcc::GUID
         dirty = true;
     }
     if (dirty) {
-        status = StoreKey(headerGuid, headerKb);
+        status = StoreKey(headerKey, headerKb);
         if (status != ER_OK) {
             return status;
         }
     }
-    key.SetAssociation(headerGuid);
-    return StoreKey(guid, key);
+    keyBlob.SetAssociation(headerKey.GetGUID());
+    return StoreKey(key, keyBlob);
 }
 }

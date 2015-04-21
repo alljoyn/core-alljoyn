@@ -409,7 +409,8 @@ QStatus AllJoynPeerObj::KeyGen(PeerState& peerState, String seed, qcc::String& v
     KeyBlob peerSecret;
     uint8_t keyGenVersion = peerState->GetAuthVersion() & 0xFF;
 
-    status = keyStore.GetKey(peerState->GetGuid(), peerSecret, peerState->authorizations);
+    KeyStore::Key key(KeyStore::Key::REMOTE, peerState->GetGuid());
+    status = keyStore.GetKey(key, peerSecret, peerState->authorizations);
     if ((status == ER_OK) && peerSecret.HasExpired()) {
         status = ER_BUS_KEY_EXPIRED;
     }
@@ -419,7 +420,7 @@ QStatus AllJoynPeerObj::KeyGen(PeerState& peerState, String seed, qcc::String& v
             /* expires the ECDHE_NULL after first use */
             Timespec now;
             GetTimeNow(&now);
-            keyStore.SetKeyExpiration(peerState->GetGuid(), now);
+            keyStore.SetKeyExpiration(key, now);
         }
     }
     KeyBlob masterSecret;
@@ -544,7 +545,8 @@ void AllJoynPeerObj::AuthAdvance(Message& msg)
             qcc::GUID128 remotePeerGuid(sasl->GetRemoteId());
             /* Tag the master secret with the auth mechanism used to generate it */
             masterSecret.SetTag(mech, KeyBlob::RESPONDER);
-            status = keyStore.AddKey(remotePeerGuid, masterSecret, peerState->authorizations);
+            KeyStore::Key key(KeyStore::Key::REMOTE, remotePeerGuid);
+            status = keyStore.AddKey(key, masterSecret, peerState->authorizations);
         }
         /*
          * Report the succesful authentication to allow application to clear UI etc.
@@ -925,6 +927,7 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
      * Extract the remote guid from the message
      */
     qcc::GUID128 remotePeerGuid(replyMsg->GetArg(0)->v_string.str);
+    KeyStore::Key remotePeerKey(KeyStore::Key::REMOTE, remotePeerGuid);
     uint32_t authVersion = replyMsg->GetArg(1)->v_uint32;
     qcc::String remoteGuidStr = remotePeerGuid.ToString();
     /*
@@ -1020,14 +1023,14 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
          * master secret.
          */
 
-        if (!keyStore.HasKey(remotePeerGuid)) {
+        if (!keyStore.HasKey(remotePeerKey)) {
             /*
              * If the key store is shared try reloading in case another application has already
              * authenticated this peer.
              */
             if (keyStore.IsShared()) {
                 keyStore.Reload();
-                if (!keyStore.HasKey(remotePeerGuid)) {
+                if (!keyStore.HasKey(remotePeerKey)) {
                     status = ER_AUTH_FAIL;
                 }
             } else {
@@ -1069,13 +1072,13 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
             size_t remoteAuthSuitesCount = 0;
             status = AskForAuthSuites(authVersion, remotePeerObj, ifc, &remoteAuthSuites, &remoteAuthSuitesCount);
             if (status == ER_OK) {
-                status = AuthenticatePeerUsingKeyExchange(remoteAuthSuites, remoteAuthSuitesCount, busName, peerState, localGuidStr, remotePeerObj, ifc, remotePeerGuid, mech);
+                status = AuthenticatePeerUsingKeyExchange(remoteAuthSuites, remoteAuthSuitesCount, busName, peerState, localGuidStr, remotePeerObj, ifc, mech);
                 if (remoteAuthSuites) {
                     delete [] remoteAuthSuites;
                 }
             }
         } else {
-            status = AuthenticatePeerUsingSASL(busName, peerState, localGuidStr, remotePeerObj, ifc, remotePeerGuid, mech);
+            status = AuthenticatePeerUsingSASL(busName, peerState, localGuidStr, remotePeerObj, ifc, remotePeerKey, mech);
         }
         authTried = true;
         firstPass = false;
@@ -1156,7 +1159,7 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
     return status;
 }
 
-QStatus AllJoynPeerObj::AuthenticatePeerUsingSASL(const qcc::String& busName, PeerState peerState, qcc::String& localGuidStr, ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc, qcc::GUID128& remotePeerGuid, qcc::String& mech)
+QStatus AllJoynPeerObj::AuthenticatePeerUsingSASL(const qcc::String& busName, PeerState peerState, qcc::String& localGuidStr, ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc, KeyStore::Key& remotePeerKey, qcc::String& mech)
 {
     QStatus status;
     ajn::SASLEngine::AuthState authState;
@@ -1197,7 +1200,7 @@ QStatus AllJoynPeerObj::AuthenticatePeerUsingSASL(const qcc::String& busName, Pe
                     SetRights(peerState, sasl.AuthenticationIsMutual(), false /*responder*/);
                     /* Tag the master secret with the auth mechanism used to generate it */
                     masterSecret.SetTag(mech, KeyBlob::INITIATOR);
-                    status = bus->GetInternal().GetKeyStore().AddKey(remotePeerGuid, masterSecret, peerState->authorizations);
+                    status = bus->GetInternal().GetKeyStore().AddKey(remotePeerKey, masterSecret, peerState->authorizations);
                 }
             }
         } else {
@@ -1262,7 +1265,7 @@ QStatus AllJoynPeerObj::AskForAuthSuites(uint32_t peerAuthVersion, ProxyBusObjec
     return ER_OK;
 }
 
-QStatus AllJoynPeerObj::AuthenticatePeerUsingKeyExchange(const uint32_t* requestingAuthList, size_t requestingAuthCount, const qcc::String& busName, PeerState peerState, qcc::String& localGuidStr, ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc, qcc::GUID128& remotePeerGuid, qcc::String& mech)
+QStatus AllJoynPeerObj::AuthenticatePeerUsingKeyExchange(const uint32_t* requestingAuthList, size_t requestingAuthCount, const qcc::String& busName, PeerState peerState, qcc::String& localGuidStr, ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc, qcc::String& mech)
 {
     QStatus status;
 
@@ -1313,7 +1316,7 @@ QStatus AllJoynPeerObj::AuthenticatePeerUsingKeyExchange(const uint32_t* request
             smallerSuites[idx++] = requestingAuthList[cnt];
         }
     }
-    status = AuthenticatePeerUsingKeyExchange(smallerSuites, smallerCount, busName, peerState, localGuidStr, remotePeerObj, ifc, remotePeerGuid, mech);
+    status = AuthenticatePeerUsingKeyExchange(smallerSuites, smallerCount, busName, peerState, localGuidStr, remotePeerObj, ifc, mech);
     delete [] smallerSuites;
     return status;
 }

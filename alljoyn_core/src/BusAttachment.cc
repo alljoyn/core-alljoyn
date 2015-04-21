@@ -2766,8 +2766,9 @@ QStatus BusAttachment::ClearKeys(const qcc::String& guid)
         return ER_INVALID_GUID;
     } else {
         qcc::GUID128 g(guid);
-        if (busInternal->keyStore.HasKey(g)) {
-            return busInternal->keyStore.DelKey(g);
+        KeyStore::Key key(KeyStore::Key::REMOTE, g);
+        if (busInternal->keyStore.HasKey(key)) {
+            return busInternal->keyStore.DelKey(key);
         } else {
             return ER_BUS_KEY_UNAVAILABLE;
         }
@@ -2783,9 +2784,10 @@ QStatus BusAttachment::SetKeyExpiration(const qcc::String& guid, uint32_t timeou
         return ER_INVALID_GUID;
     } else {
         qcc::GUID128 g(guid);
+        KeyStore::Key key(KeyStore::Key::REMOTE, g);
         uint64_t millis = 1000ull * timeout;
         Timespec expiration(millis, TIME_RELATIVE);
-        return busInternal->keyStore.SetKeyExpiration(g, expiration);
+        return busInternal->keyStore.SetKeyExpiration(key, expiration);
     }
 }
 
@@ -2795,8 +2797,9 @@ QStatus BusAttachment::GetKeyExpiration(const qcc::String& guid, uint32_t& timeo
         return ER_INVALID_GUID;
     } else {
         qcc::GUID128 g(guid);
+        KeyStore::Key key(KeyStore::Key::REMOTE, g);
         Timespec expiration;
-        QStatus status = busInternal->keyStore.GetKeyExpiration(g, expiration);
+        QStatus status = busInternal->keyStore.GetKeyExpiration(key, expiration);
         if (status == ER_OK) {
             int64_t deltaMillis = expiration - Timespec(0, TIME_RELATIVE);
             if (deltaMillis < 0) {
@@ -3121,10 +3124,10 @@ void BusAttachment::Internal::GetNameOwnerAsyncCB(Message& reply, void* context)
     delete ctx;
 }
 
-bool KeyStoreKeyEventListener::NotifyAutoDelete(KeyStore* holder, const qcc::GUID128& guid)
+bool KeyStoreKeyEventListener::NotifyAutoDelete(KeyStore* holder, const KeyStore::Key& key)
 {
     KeyBlob kb;
-    QStatus status = holder->GetKey(guid, kb);
+    QStatus status = holder->GetKey(key, kb);
     if (status != ER_OK) {
         return false;
     }
@@ -3132,9 +3135,9 @@ bool KeyStoreKeyEventListener::NotifyAutoDelete(KeyStore* holder, const qcc::GUI
         (kb.GetAssociationMode() != KeyBlob::ASSOCIATE_BOTH)) {
         return false;
     }
-    qcc::GUID128* list;
+    KeyStore::Key* list;
     size_t numItems;
-    status = holder->SearchAssociatedKeys(guid, &list, &numItems);
+    status = holder->SearchAssociatedKeys(key, &list, &numItems);
     if (status != ER_OK) {
         return false;
     }

@@ -37,6 +37,7 @@
 #include "CredentialAccessor.h"
 #include "ProtectedAuthListener.h"
 #include "PeerState.h"
+#include "KeyStore.h"
 
 namespace ajn {
 
@@ -291,7 +292,7 @@ class PermissionMgmtObj : public BusObject {
         }
     };
 
-    typedef std::map<qcc::GUID128, qcc::MembershipCertificate*> MembershipCertMap;
+    typedef std::map<KeyStore::Key, qcc::MembershipCertificate*> MembershipCertMap;
 
     class PortListener : public SessionPortListener {
 
@@ -312,7 +313,7 @@ class PermissionMgmtObj : public BusObject {
     void GetPublicKey(const InterfaceDescription::Member* member, Message& msg);
     void Claim(const InterfaceDescription::Member* member, Message& msg);
     void InstallPolicy(const InterfaceDescription::Member* member, Message& msg);
-    QStatus GetACLGUID(ACLEntryType aclEntryType, qcc::GUID128& guid);
+    QStatus GetACLKey(ACLEntryType aclEntryType, KeyStore::Key& guid);
     QStatus StoreTrustAnchors();
     QStatus LoadTrustAnchors();
     QStatus RemoveTrustAnchor(TrustAnchor* trustAnchor);
@@ -333,9 +334,9 @@ class PermissionMgmtObj : public BusObject {
     void InstallGuildEquivalence(const InterfaceDescription::Member* member, Message& msg);
     void GetManifest(const InterfaceDescription::Member* member, Message& msg);
     bool ValidateCertChain(const qcc::String& certChainPEM, bool& authorized);
-    QStatus LocateMembershipEntry(const qcc::String& serialNum, const qcc::GUID128& issuer, qcc::GUID128& membershipGuid, bool searchLeafCertOnly);
-    QStatus LocateMembershipEntry(const qcc::String& serialNum, const qcc::GUID128& issuer, qcc::GUID128& membershipGuid);
-    QStatus LoadAndValidateAuthData(const qcc::String& serial, const qcc::GUID128& issuer, MsgArg& authDataArg, PermissionPolicy& authorization, qcc::GUID128& membershipGuid);
+    QStatus LocateMembershipEntry(const qcc::String& serialNum, const qcc::GUID128& issuer, KeyStore::Key& membershipKey, bool searchLeafCertOnly);
+    QStatus LocateMembershipEntry(const qcc::String& serialNum, const qcc::GUID128& issuer, KeyStore::Key& membershipKey);
+    QStatus LoadAndValidateAuthData(const qcc::String& serial, const qcc::GUID128& issuer, MsgArg& authDataArg, PermissionPolicy& authorization, KeyStore::Key& membershipKey);
     void ClearMembershipCertMap(MembershipCertMap& certMap);
     QStatus GetAllMembershipCerts(MembershipCertMap& certMap, bool loadCert);
     QStatus GetAllMembershipCerts(MembershipCertMap& certMap);

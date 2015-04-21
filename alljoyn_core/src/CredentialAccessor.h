@@ -32,6 +32,7 @@
 #include <qcc/KeyBlob.h>
 #include <alljoyn/Status.h>
 #include <alljoyn/BusAttachment.h>
+#include "KeyStore.h"
 
 namespace ajn {
 
@@ -42,7 +43,6 @@ namespace ajn {
 
 class CredentialAccessor {
   public:
-
 
     /**
      * Constructor
@@ -76,26 +76,26 @@ class CredentialAccessor {
     QStatus GetPeerGuid(qcc::String& peerName, qcc::GUID128& guid);
 
     /**
-     * Get the guid to index a local key blob.
+     * Get the key store key to index a local key blob.
      *
      * @param keyType     The key blob type
-     * @param[out] guid   The matching guid
+     * @param[out] key   The matching key
      * @return
      *      - ER_OK if successful
      *      - ER_CRYPTO_KEY_UNAVAILABLE if key is unavailable
      */
-    QStatus GetLocalGUID(qcc::KeyBlob::Type keyType, qcc::GUID128& guid);
+    QStatus GetLocalKey(qcc::KeyBlob::Type keyType, KeyStore::Key& key);
 
     /**
      * Get a key blob
      *
-     * @param guid  The unique identifier for the key
-     * @param[out] key   The key blob to get
+     * @param key  The unique identifier for the key
+     * @param[out] keyBlob   The key blob to get
      * @return
      *      - ER_OK if successful
      *      - ER_CRYPTO_KEY_UNAVAILABLE if key is unavailable
      */
-    QStatus GetKey(const qcc::GUID128& guid, qcc::KeyBlob& key);
+    QStatus GetKey(const KeyStore::Key& key, qcc::KeyBlob& keyBlob);
 
     /**
      * Get DSA Public key linked with the CredentialAccessor
@@ -120,47 +120,48 @@ class CredentialAccessor {
     /**
      * Delete a key blob
      *
-     * @param guid  The unique identifier for the key
+     * @param key  The unique identifier for the key
      * @return
      *      - ER_OK if successful if the key is deleted or not found
      *      - ER_FAIL if the operation fails
      */
-    QStatus DeleteKey(const qcc::GUID128& guid);
+    QStatus DeleteKey(const KeyStore::Key& key);
 
     /**
      * Add an associated key.
      *
-     * @param headerGuid   The header guid to associate with
-     * @param guid         The guid to store the key
-     * @param key          The key blob to store
+     * @param headerKey   The header key to associate with
+     * @param key         The key to store
+     * @param keyBlob     The key blob to store
      * @return
      *      - ER_OK if successful
        m range
      *      - ER_FAIL if operation fails
      */
-    QStatus AddAssociatedKey(qcc::GUID128& headerGuid, qcc::GUID128& guid, qcc::KeyBlob& key);
+    QStatus AddAssociatedKey(KeyStore::Key& headerKey, KeyStore::Key& key, qcc::KeyBlob& keyBlob);
 
     /**
-     * Get the list of keys associated with the given header GUID.
-     * @param headerGuid  The header guid where the keys are associated with
-     * @param[out] list  The output list of guids.  This list must be deallocated after used.
+     * Get the list of keys associated with the given header key.
+     * @param headerKey  The header key where the keys are associated with
+     * @param[out] list  The output list of key.  This list must be delete[]'d
+     *                   after used.
      * @param[out] numItems The output size of the list
      * @return
      *      - ER_OK if successful
      *      - ER_FAIL if operation fails
      */
-    QStatus GetKeys(qcc::GUID128& headerGuid, qcc::GUID128** list, size_t* numItems);
+    QStatus GetKeys(const KeyStore::Key& headerKey, KeyStore::Key** list, size_t* numItems);
 
     /**
      * store a key blob.
-     * @param guid         The guid to index
-     * @param key          The key blob to store
+     * @param key         The index
+     * @param keyBlob     The key blob to store
      * @return
      *      - ER_OK if successful
        m range
      *      - ER_FAIL if operation fails
      */
-    QStatus StoreKey(qcc::GUID128& guid, qcc::KeyBlob& key);
+    QStatus StoreKey(KeyStore::Key& key, qcc::KeyBlob& keyBlob);
 
   private:
     /* Private assigment operator - does nothing */

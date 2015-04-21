@@ -63,6 +63,12 @@ static const uint16_t LowStoreVersion = 0x0102;
  */
 static const uint16_t MixupGuidKeyStoreVersion = 0x0103;
 
+/**
+ * the key store version where the key is a composite key instead of just
+ * the GUID.
+ */
+static const uint16_t CompositeKeyKeyStoreVersion = 0x0104;
+
 /*
  * Current key store version we will write
  */
@@ -312,7 +318,7 @@ size_t KeyStore::EraseExpiredKeys()
         KeyMap::iterator it = keys->begin();
         while (it != keys->end()) {
             KeyMap::iterator current = it++;
-            if (current->second.key.HasExpired()) {
+            if (current->second.keyBlob.HasExpired()) {
                 QCC_DbgPrintf(("Deleting expired key for GUID %s", current->first.ToString().c_str()));
                 bool affected = false;
                 if (keyEventListener) {
@@ -443,15 +449,20 @@ QStatus KeyStore::Pull(Source& source, const qcc::String& password)
             while (status == ER_OK) {
                 uint32_t rev;
                 status = strSource.PullBytes(&rev, sizeof(rev), pulled);
+                Key::KeyType keyType = Key::REMOTE;
+                if ((status == ER_OK) && (version >= CompositeKeyKeyStoreVersion)) {
+                    status = strSource.PullBytes(&keyType, sizeof(keyType), pulled);
+                }
                 if (status == ER_OK) {
                     status = strSource.PullBytes(guidBuf, qcc::GUID128::SIZE, pulled);
                 }
                 if (status == ER_OK) {
-                    qcc::GUID128 guid;
+                    qcc::GUID128 guid(0);
                     guid.SetBytes(guidBuf);
-                    KeyRecord& keyRec = (*keys)[guid];
+                    Key key(keyType, guid);
+                    KeyRecord& keyRec = (*keys)[key];
                     keyRec.revision = rev;
-                    status = keyRec.key.Load(strSource);
+                    status = keyRec.keyBlob.Load(strSource);
                     if (status == ER_OK) {
                         if (version > LowStoreVersion) {
                             status = strSource.PullBytes(&keyRec.accessRights, sizeof(keyRec.accessRights), pulled);
@@ -527,10 +538,10 @@ QStatus KeyStore::Clear(const qcc::String& tagPrefixPattern)
     while (dirty) {
         dirty = false;
         for (KeyMap::iterator it = keys->begin(); it != keys->end(); it++) {
-            if (it->second.key.GetTag().empty()) {
+            if (it->second.keyBlob.GetTag().empty()) {
                 continue;  /* skip the untag */
             }
-            if (MatchesPrefix(it->second.key.GetTag(), tagPrefixPattern)) {
+            if (MatchesPrefix(it->second.keyBlob.GetTag(), tagPrefixPattern)) {
                 DelKey(it->first);
                 dirty = true;
                 break;  /* redo the loop since the iterator is out-of-sync */
@@ -539,19 +550,6 @@ QStatus KeyStore::Clear(const qcc::String& tagPrefixPattern)
     }
     lock.Unlock(MUTEX_CONTEXT);
     return ER_OK;
-}
-
-QStatus KeyStore::ResetMasterGUID(const GUID128& newMasterGUID)
-{
-    lock.Lock(MUTEX_CONTEXT);
-    thisGuid = newMasterGUID;
-    MarkGuidSet();
-    storeState = MODIFIED;
-    /* rebuild the key store encryption key since the guid has changed */
-    keyStoreKey->SetGuidString(thisGuid.ToString());
-    keyStoreKey->Build();
-    lock.Unlock(MUTEX_CONTEXT);
-    return Store();
 }
 
 QStatus KeyStore::Reload()
@@ -595,7 +593,7 @@ QStatus KeyStore::Reload()
         /*
          * Handle deletions
          */
-        std::set<qcc::GUID128>::iterator itDel;
+        std::set<Key>::iterator itDel;
         for (itDel = deletions.begin(); itDel != deletions.end(); ++itDel) {
             it = keys->find(*itDel);
             if ((it != keys->end()) && (it->second.revision <= currentRevision)) {
@@ -651,10 +649,13 @@ QStatus KeyStore::Push(Sink& sink)
     KeyMap::iterator it;
     for (it = keys->begin(); it != keys->end(); ++it) {
         strSink.PushBytes(&it->second.revision, sizeof(revision), pushed);
-        strSink.PushBytes(it->first.GetBytes(), qcc::GUID128::SIZE, pushed);
-        it->second.key.Store(strSink);
+        Key::KeyType keyType = it->first.GetType();
+        strSink.PushBytes(&keyType, sizeof(keyType), pushed);
+        strSink.PushBytes(it->first.GetGUID().GetBytes(), qcc::GUID128::SIZE, pushed);
+        it->second.keyBlob.Store(strSink);
+
         strSink.PushBytes(&it->second.accessRights, sizeof(it->second.accessRights), pushed);
-        QCC_DbgPrintf(("KeyStore::Push rev:%d GUID %s", it->second.revision, it->first.ToString().c_str()));
+        QCC_DbgPrintf(("KeyStore::Push rev:%d key %s", it->second.revision, it->first.ToString().c_str()));
     }
     size_t keysLen = strSink.GetString().size();
     /*
@@ -718,7 +719,7 @@ ExitPush:
     return status;
 }
 
-QStatus KeyStore::GetKey(const qcc::GUID128& guid, KeyBlob& key, uint8_t accessRights[4])
+QStatus KeyStore::GetKey(const Key& key, KeyBlob& keyBlob, uint8_t accessRights[4])
 {
     lock.Lock(MUTEX_CONTEXT);
     if (storeState == UNAVAILABLE) {
@@ -726,10 +727,10 @@ QStatus KeyStore::GetKey(const qcc::GUID128& guid, KeyBlob& key, uint8_t accessR
         return ER_BUS_KEYSTORE_NOT_LOADED;
     }
     QStatus status;
-    QCC_DbgPrintf(("KeyStore::GetKey %s", guid.ToString().c_str()));
-    if (keys->find(guid) != keys->end()) {
-        KeyRecord& keyRec = (*keys)[guid];
-        key = keyRec.key;
+    QCC_DbgPrintf(("KeyStore::GetKey %s", key.ToString().c_str()));
+    if (keys->find(key) != keys->end()) {
+        KeyRecord& keyRec = (*keys)[key];
+        keyBlob = keyRec.keyBlob;
         memcpy(accessRights, &keyRec.accessRights, sizeof(uint8_t) * 4);
         QCC_DbgPrintf(("AccessRights %1x%1x%1x%1x", accessRights[0], accessRights[1], accessRights[2], accessRights[3]));
         status = ER_OK;
@@ -740,54 +741,54 @@ QStatus KeyStore::GetKey(const qcc::GUID128& guid, KeyBlob& key, uint8_t accessR
     return status;
 }
 
-bool KeyStore::HasKey(const qcc::GUID128& guid)
+bool KeyStore::HasKey(const Key& key)
 {
     lock.Lock(MUTEX_CONTEXT);
     if (storeState == UNAVAILABLE) {
         lock.Unlock(MUTEX_CONTEXT);
         return false;
     }
-    bool hasKey = keys->count(guid) != 0;
+    bool hasKey = keys->count(key) != 0;
     lock.Unlock(MUTEX_CONTEXT);
     return hasKey;
 }
 
-QStatus KeyStore::AddKey(const qcc::GUID128& guid, const KeyBlob& key, const uint8_t accessRights[4])
+QStatus KeyStore::AddKey(const Key& key, const KeyBlob& keyBlob, const uint8_t accessRights[4])
 {
     lock.Lock(MUTEX_CONTEXT);
     if (storeState == UNAVAILABLE) {
         lock.Unlock(MUTEX_CONTEXT);
         return ER_BUS_KEYSTORE_NOT_LOADED;
     }
-    QCC_DbgPrintf(("KeyStore::AddKey %s", guid.ToString().c_str()));
-    KeyRecord& keyRec = (*keys)[guid];
+    QCC_DbgPrintf(("KeyStore::AddKey %s", key.ToString().c_str()));
+    KeyRecord& keyRec = (*keys)[key];
     keyRec.revision = revision + 1;
-    keyRec.key = key;
+    keyRec.keyBlob = keyBlob;
     QCC_DbgPrintf(("AccessRights %1x%1x%1x%1x", accessRights[0], accessRights[1], accessRights[2], accessRights[3]));
     memcpy(&keyRec.accessRights, accessRights, sizeof(uint8_t) * 4);
     storeState = MODIFIED;
-    deletions.erase(guid);
+    deletions.erase(key);
     lock.Unlock(MUTEX_CONTEXT);
     return ER_OK;
 }
 
-QStatus KeyStore::DelKey(const qcc::GUID128& guid)
+QStatus KeyStore::DelKey(const Key& key)
 {
     lock.Lock(MUTEX_CONTEXT);
     if (storeState == UNAVAILABLE) {
         lock.Unlock(MUTEX_CONTEXT);
         return ER_BUS_KEYSTORE_NOT_LOADED;
     }
-    QCC_DbgPrintf(("KeyStore::DelKey %s", guid.ToString().c_str()));
-    keys->erase(guid);
+    QCC_DbgPrintf(("KeyStore::DelKey %s", key.ToString().c_str()));
+    keys->erase(key);
     storeState = MODIFIED;
-    deletions.insert(guid);
+    deletions.insert(key);
     lock.Unlock(MUTEX_CONTEXT);
     listener->StoreRequest(*this);
     return ER_OK;
 }
 
-QStatus KeyStore::SetKeyExpiration(const qcc::GUID128& guid, const Timespec& expiration)
+QStatus KeyStore::SetKeyExpiration(const Key& key, const Timespec& expiration)
 {
     lock.Lock(MUTEX_CONTEXT);
     if (storeState == UNAVAILABLE) {
@@ -795,9 +796,9 @@ QStatus KeyStore::SetKeyExpiration(const qcc::GUID128& guid, const Timespec& exp
         return ER_BUS_KEYSTORE_NOT_LOADED;
     }
     QStatus status = ER_OK;
-    QCC_DbgPrintf(("KeyStore::SetExpiration %s", guid.ToString().c_str()));
-    if (keys->count(guid) != 0) {
-        (*keys)[guid].key.SetExpiration(expiration);
+    QCC_DbgPrintf(("KeyStore::SetExpiration %s", key.ToString().c_str()));
+    if (keys->count(key) != 0) {
+        (*keys)[key].keyBlob.SetExpiration(expiration);
         storeState = MODIFIED;
     } else {
         status = ER_BUS_KEY_UNAVAILABLE;
@@ -809,7 +810,7 @@ QStatus KeyStore::SetKeyExpiration(const qcc::GUID128& guid, const Timespec& exp
     return status;
 }
 
-QStatus KeyStore::GetKeyExpiration(const qcc::GUID128& guid, Timespec& expiration)
+QStatus KeyStore::GetKeyExpiration(const Key& key, Timespec& expiration)
 {
     lock.Lock(MUTEX_CONTEXT);
     if (storeState == UNAVAILABLE) {
@@ -823,9 +824,9 @@ QStatus KeyStore::GetKeyExpiration(const qcc::GUID128& guid, Timespec& expiratio
     QStatus status = Reload();
     if (status == ER_OK) {
         lock.Lock(MUTEX_CONTEXT);
-        QCC_DbgPrintf(("KeyStore::GetExpiration %s", guid.ToString().c_str()));
-        if (keys->count(guid) != 0) {
-            (*keys)[guid].key.GetExpiration(expiration);
+        QCC_DbgPrintf(("KeyStore::GetExpiration %s", key.ToString().c_str()));
+        if (keys->count(key) != 0) {
+            (*keys)[key].keyBlob.GetExpiration(expiration);
         } else {
             status = ER_BUS_KEY_UNAVAILABLE;
         }
@@ -834,15 +835,16 @@ QStatus KeyStore::GetKeyExpiration(const qcc::GUID128& guid, Timespec& expiratio
     return status;
 }
 
-QStatus KeyStore::SearchAssociatedKeys(const qcc::GUID128& guid, qcc::GUID128** list, size_t* numItems) {
+QStatus KeyStore::SearchAssociatedKeys(const Key& key, Key** list, size_t* numItems)
+{
     size_t count = 0;
     lock.Lock(MUTEX_CONTEXT);
     for (KeyMap::iterator it = keys->begin(); it != keys->end(); ++it) {
-        if ((it->second.key.GetAssociationMode() != KeyBlob::ASSOCIATE_MEMBER)
-            && (it->second.key.GetAssociationMode() != KeyBlob::ASSOCIATE_BOTH)) {
+        if ((it->second.keyBlob.GetAssociationMode() != KeyBlob::ASSOCIATE_MEMBER)
+            && (it->second.keyBlob.GetAssociationMode() != KeyBlob::ASSOCIATE_BOTH)) {
             continue;
         }
-        if (it->second.key.GetAssociation() == guid) {
+        if (it->second.keyBlob.GetAssociation() == key.GetGUID()) {
             count++;
         }
     }
@@ -852,24 +854,24 @@ QStatus KeyStore::SearchAssociatedKeys(const qcc::GUID128& guid, qcc::GUID128** 
         return ER_OK;
     }
 
-    qcc::GUID128*guids = new qcc::GUID128[count];
+    Key* keyList = new Key[count];
     size_t idx = 0;
     for (KeyMap::iterator it = keys->begin(); it != keys->end(); ++it) {
-        if ((it->second.key.GetAssociationMode() != KeyBlob::ASSOCIATE_MEMBER)
-            && (it->second.key.GetAssociationMode() != KeyBlob::ASSOCIATE_BOTH)) {
+        if ((it->second.keyBlob.GetAssociationMode() != KeyBlob::ASSOCIATE_MEMBER)
+            && (it->second.keyBlob.GetAssociationMode() != KeyBlob::ASSOCIATE_BOTH)) {
             continue;
         }
-        if (it->second.key.GetAssociation() == guid) {
+        if (it->second.keyBlob.GetAssociation() == key.GetGUID()) {
             if (idx >= count) { /* bound check */
-                delete [] guids;
+                delete [] keyList;
                 lock.Unlock(MUTEX_CONTEXT);
                 return ER_FAIL;
             }
-            guids[idx++] = it->first;
+            keyList[idx++] = it->first;
         }
     }
     *numItems = count;
-    *list = guids;
+    *list = keyList;
     lock.Unlock(MUTEX_CONTEXT);
     return ER_OK;
 }
