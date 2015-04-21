@@ -127,9 +127,11 @@ class ECDHEKeyXListener : public AuthListener {
             /*
              * Based on the pre shared secret id, the application can retrieve
              * the pre shared secret from storage or from the end user.
-             * In this example, the pre shared secret is a hard coded string
+             * In this example, the pre shared secret is a hard coded string.
+             * Pre-shared keys should be 128 bits long, and generated with a
+             * cryptographically secure random number generator.
              */
-            String psk("123456");
+            String psk("faaa0af3dd3f1e0379da046a3ab6ca44");
             creds.SetPassword(psk);
             creds.SetExpiration(100);  /* set the master secret expiry time to 100 seconds */
             return true;

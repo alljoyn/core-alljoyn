@@ -567,6 +567,10 @@ QStatus _Message::DeliverNonBlocking(RemoteEndpoint& endpoint)
             if (status == ER_BUS_AUTHENTICATION_PENDING) {
                 return ER_OK;
             }
+            /*
+             * Recompute because encryption increases the packet length
+             */
+            countWrite = bufEOD - writePtr;
         }
         writeState = MESSAGE_HEADERFIELDS;
     /* no break  FALLTHROUGH*/
@@ -758,9 +762,30 @@ QStatus _Message::EncryptMessage()
         }
     }
     if (status == ER_OK) {
-        size_t argsLen = msgHeader.bodyLen - ajn::Crypto::MACLength;
+        /**
+         * If we have gotten here, but the auth version wasn't set, it means that the bus did
+         * not have the peer name in it when MarshalMessage was called.  So we have to fix up
+         * the message with the encrypt parameters.
+         **/
+        if (GetAuthVersion() < 0) {
+            /**
+             * If the destination is empty it means we are in broadcast or multicast.
+             * And we must default to the minimum Auth Version.
+             * Unless there is no destination, and then we fall back to the old version.
+             */
+            if (HasDestination() && peerState->IsSecure()) {
+                authVersion = (int32_t)(peerState->GetAuthVersion() >> 16);
+            } else {
+                authVersion = (int32_t)AUTH_FALLBACK_VERSION;
+            }
+        }
+
+        assert(0 <= GetAuthVersion());
+
         size_t hdrLen = ROUNDUP8(sizeof(msgHeader) + msgHeader.headerLen);
-        status = ajn::Crypto::Encrypt(*this, key, (uint8_t*)msgBuf, hdrLen, argsLen);
+        size_t bodyLen = msgHeader.bodyLen;
+
+        status = ajn::Crypto::Encrypt(*this, key, (uint8_t*)msgBuf, hdrLen, bodyLen);
         if (status == ER_OK) {
             QCC_DbgHLPrintf(("EncryptMessage: %s", Description().c_str()));
             /*
@@ -768,7 +793,12 @@ QStatus _Message::EncryptMessage()
              */
             authMechanism = key.GetTag();
             encrypt = false;
-            assert(msgHeader.bodyLen == argsLen);
+            msgHeader.bodyLen = bodyLen;
+            /*
+             * Need to fix up these pointers
+             */
+            bodyPtr = reinterpret_cast<uint8_t*>(msgBuf) + hdrLen;
+            bufEOD = bodyPtr + msgHeader.bodyLen;
         }
     }
     /*
@@ -804,6 +834,7 @@ QStatus _Message::MarshalMessage(const qcc::String& expectedSignature,
     }
     size_t argsLen = (numArgs == 0) ? 0 : SignatureUtils::GetSize(args, numArgs);
     size_t hdrLen = 0;
+    size_t maxCryptoValsLen = 0;
 
     /*
      * Check if endianess needs to be swapped.
@@ -817,15 +848,27 @@ QStatus _Message::MarshalMessage(const qcc::String& expectedSignature,
     msgHeader.flags = flags;
     msgHeader.msgType = (uint8_t)msgType;
     msgHeader.majorVersion = ALLJOYN_MAJOR_PROTOCOL_VERSION;
+
     /*
-     * Encryption will typically make the body length slightly larger because the encryption
-     * algorithm appends a MAC block to the end of the encrypted data.
+     * If the encrypt flag is set and the peerState is secure, then the AuthVersion will be available.
+     */
+    PeerStateTable*peerStateTable = bus->GetInternal().GetPeerStateTable();
+    if (peerStateTable->IsKnownPeer(destination)) {
+        PeerState peerState = peerStateTable->GetPeerState(destination);
+        if (encrypt && peerState->IsSecure() && !destination.empty()) {
+            authVersion = (int32_t)(peerState->GetAuthVersion() >> 16);
+            assert(0 <= authVersion);
+        }
+    }
+
+    /*
+     * Encryption will appends data to the message so we need to allocate more space in the buffer.
      */
     if (encrypt) {
-        msgHeader.bodyLen = static_cast<uint32_t>(argsLen + ajn::Crypto::MACLength);
-    } else {
-        msgHeader.bodyLen = static_cast<uint32_t>(argsLen);
+        maxCryptoValsLen = ajn::Crypto::MaxMACLength + ajn::Crypto::MaxExtraNonceLength;
     }
+    msgHeader.bodyLen = static_cast<uint32_t>(argsLen);
+
     /*
      * Keep the old message buffer around until we are done because some of the strings we are
      * marshaling may point into the old message.
@@ -912,8 +955,8 @@ QStatus _Message::MarshalMessage(const qcc::String& expectedSignature,
     /*
      * Allocate buffer for entire message.
      */
-    bufSize = (hdrLen + msgHeader.bodyLen + 7);
-    _msgBuf = new uint8_t[bufSize + 7];
+    bufSize = (hdrLen + msgHeader.bodyLen + maxCryptoValsLen + 16);
+    _msgBuf = new uint8_t[bufSize];
     msgBuf = (uint64_t*)((uintptr_t)(_msgBuf + 7) & ~7); /* Align to 8 byte boundary */
     /*
      * Initialize the buffer and copy in the message header

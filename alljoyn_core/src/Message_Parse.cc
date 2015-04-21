@@ -628,10 +628,23 @@ QStatus _Message::UnmarshalArgs(PeerStateTable* peerStateTable,
                 goto ExitUnmarshalArgs;
             }
         }
-        QCC_DbgHLPrintf(("Decrypting message from %s", GetSender()));
+
         /*
-         * Decryption will typically make the body length slightly smaller because the encryption
-         * algorithm adds appends a MAC block to the end of the encrypted data.
+         * Auth Version will have been set if we have an encrypted message and we've gotten here
+         * (i.e get key succeeded and is authorized for secure receive.)
+         */
+
+        if (HasDestination()) {
+            authVersion = (int32_t)(peerState->GetAuthVersion() >> 16);
+        } else {
+            authVersion = (int32_t)AUTH_FALLBACK_VERSION;
+        }
+        assert(0 <= authVersion);
+
+        QCC_DbgHLPrintf(("Decrypting messge from %s", GetSender()));
+        /*
+         * Decryption will  make the body length  smaller because the encryption
+         * algorithm appends data to the end of the encrypted data.
          */
         size_t bodyLen = msgHeader.bodyLen;
         status = ajn::Crypto::Decrypt(*this, key, (uint8_t*)msgBuf, hdrLen, bodyLen);
@@ -921,6 +934,7 @@ QStatus _Message::InterpretHeader()
      * message reducing the places where we need to check for bufEOD when unmarshaling the body.
      */
     bufSize = sizeof(msgHeader) + ((pktSize + 7) & ~7) + sizeof(uint64_t);
+    assert(_msgBuf == nullptr);
     _msgBuf = new uint8_t[bufSize + 7];
     msgBuf = (uint64_t*)((uintptr_t)(_msgBuf + 7) & ~7); /* Align to 8 byte boundary */
     /*
@@ -1036,6 +1050,10 @@ QStatus _Message::LoadBytes(uint8_t* buf, size_t buflen)
 {
     QStatus status;
 
+    if (sizeof(msgHeader) > buflen) {
+        QCC_LogError(ER_BUS_BAD_BODY_LEN, ("Message buffer length %d is invalid", buflen));
+        return ER_BUS_BAD_BODY_LEN;
+    }
     /*
      * Copy in the message header.
      */
@@ -1053,6 +1071,10 @@ QStatus _Message::LoadBytes(uint8_t* buf, size_t buflen)
         return status;
     }
 
+    if (bufSize < buflen) {
+        QCC_LogError(ER_BUS_BAD_BODY_LEN, ("Message buffer length %d is invalid", buflen));
+        return ER_BUS_BAD_BODY_LEN;
+    }
     /*
      * Copy the bits into the newly allocated buffer
      */

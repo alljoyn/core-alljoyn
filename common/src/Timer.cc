@@ -255,6 +255,9 @@ class TimerImpl : public ThreadListener {
 
   private:
 
+    /* Private assignment operator - does nothing */
+    TimerImpl& operator=(const TimerImpl&);
+
     mutable Mutex lock;
     std::set<Alarm, std::less<Alarm> >  alarms;
     Alarm* currentAlarm;
@@ -657,14 +660,17 @@ QStatus TimerThread::Start(void* arg, ThreadListener* listener)
 
 void TimerImpl::TimerCallback(void* context)
 {
+    QCC_UNUSED(context);
 }
 
 void TimerImpl::TimerCleanupCallback(void* context)
 {
+    QCC_UNUSED(context);
 }
 
 ThreadReturn STDCALL TimerThread::Run(void* arg)
 {
+    QCC_UNUSED(arg);
     QCC_DbgPrintf(("TimerThread::Run()"));
 
     /*

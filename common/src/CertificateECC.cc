@@ -105,7 +105,7 @@ static QStatus StripTags(String& pem, const char* beg, const char* end)
     return ER_OK;
 }
 
-QStatus CertificateX509::EncodePrivateKeyPEM(const uint8_t* privateKey, size_t len, String& encoded)
+QStatus AJ_CALL CertificateX509::EncodePrivateKeyPEM(const uint8_t* privateKey, size_t len, String& encoded)
 {
     QStatus status;
     qcc::String beg = EC_PRIVATE_KEY_PEM_BEGIN_TAG;
@@ -129,7 +129,7 @@ QStatus CertificateX509::EncodePrivateKeyPEM(const uint8_t* privateKey, size_t l
     return ER_OK;
 }
 
-QStatus CertificateX509::DecodePrivateKeyPEM(const String& encoded, uint8_t* privateKey, size_t len)
+QStatus AJ_CALL CertificateX509::DecodePrivateKeyPEM(const String& encoded, uint8_t* privateKey, size_t len)
 {
     QStatus status;
     qcc::String pem = encoded;
@@ -178,7 +178,7 @@ QStatus CertificateX509::DecodePrivateKeyPEM(const String& encoded, uint8_t* pri
     return ER_OK;
 }
 
-QStatus CertificateX509::EncodePublicKeyPEM(const uint8_t* publicKey, size_t len, String& encoded)
+QStatus AJ_CALL CertificateX509::EncodePublicKeyPEM(const uint8_t* publicKey, size_t len, String& encoded)
 {
     QStatus status;
     qcc::String beg = PUBLIC_KEY_PEM_BEGIN_TAG;
@@ -204,7 +204,7 @@ QStatus CertificateX509::EncodePublicKeyPEM(const uint8_t* publicKey, size_t len
     return ER_OK;
 }
 
-QStatus CertificateX509::DecodePublicKeyPEM(const String& encoded, uint8_t* publicKey, size_t len)
+QStatus AJ_CALL CertificateX509::DecodePublicKeyPEM(const String& encoded, uint8_t* publicKey, size_t len)
 {
     QStatus status;
     qcc::String pem = encoded;
@@ -541,7 +541,10 @@ QStatus CertificateX509::DecodeCertificateExt(const qcc::String& ext)
         } else if (OID_CUSTOM_CERT_TYPE == oid) {
             status = Crypto_ASN1::Decode(str, "(i)", (uint32_t*) &type);
             if (ER_OK != status) {
-                return status;
+                status = Crypto_ASN1::Decode(str, "i", (uint32_t*) &type);
+                if (ER_OK != status) {
+                    return status;
+                }
             }
         } else if (OID_SUB_ALTNAME == oid) {
             alias = str;
@@ -842,7 +845,7 @@ QStatus CertificateX509::DecodeCertificatePEM(const qcc::String& pem)
     return status;
 }
 
-QStatus CertificateX509::EncodeCertificatePEM(qcc::String& der, qcc::String& pem)
+QStatus AJ_CALL CertificateX509::EncodeCertificatePEM(qcc::String& der, qcc::String& pem)
 {
     QStatus status;
     qcc::String rem;
@@ -1036,7 +1039,7 @@ QStatus CertificateX509::LoadPEM(const String& pem)
     return DecodeCertificatePEM(pem);
 }
 
-QStatus CertificateX509::DecodeCertChainPEM(const String& encoded, CertificateX509* certs, size_t count)
+QStatus AJ_CALL CertificateX509::DecodeCertChainPEM(const String& encoded, CertificateX509* certs, size_t count)
 {
     qcc::String* chunks = new  qcc::String[count];
 

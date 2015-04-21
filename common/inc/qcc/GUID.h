@@ -80,7 +80,7 @@ class GUID128 {
      *
      * @return  true if the string is a guid
      */
-    static bool IsGUID(const qcc::String& str, bool exactLen = true);
+    static bool AJ_CALL IsGUID(const qcc::String& str, bool exactLen = true);
 
     /**
      * Returns string representation of a GUID128

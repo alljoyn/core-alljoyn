@@ -604,7 +604,7 @@ class Crypto_ASN1 {
      *         An error status otherwise.
      *
      */
-    static QStatus Decode(const uint8_t* asn, size_t asnLen, const char* syntax, ...)
+    static QStatus AJ_CALL Decode(const uint8_t* asn, size_t asnLen, const char* syntax, ...)
     {
         if (!syntax) {
             return ER_BAD_ARG_1;
@@ -631,7 +631,7 @@ class Crypto_ASN1 {
      *         An error status otherwise.
      *
      */
-    static QStatus Decode(const qcc::String& asn, const char* syntax, ...)
+    static QStatus AJ_CALL Decode(const qcc::String& asn, const char* syntax, ...)
     {
         if (!syntax) {
             return ER_BAD_ARG_1;
@@ -698,7 +698,7 @@ class Crypto_ASN1 {
      * @return ER_OK if the encode succeeded.
      *         An error status otherwise.
      */
-    static QStatus Encode(qcc::String& asn, const char* syntax, ...)
+    static QStatus AJ_CALL Encode(qcc::String& asn, const char* syntax, ...)
     {
         if (!syntax) {
             return ER_FAIL;
@@ -719,7 +719,7 @@ class Crypto_ASN1 {
      * @return ER_OK if the decode succeeded.
      *         An error status otherwise.
      */
-    static QStatus DecodeBase64(const qcc::String& b64, qcc::String& bin);
+    static QStatus AJ_CALL DecodeBase64(const qcc::String& b64, qcc::String& bin);
 
     /**
      * Encode a binary string as a PEM base-64 ANSI string.
@@ -730,12 +730,12 @@ class Crypto_ASN1 {
      * @return ER_OK if the encode succeeded.
      *         An error status otherwise.
      */
-    static QStatus EncodeBase64(const qcc::String& bin, qcc::String& b64);
+    static QStatus AJ_CALL EncodeBase64(const qcc::String& bin, qcc::String& b64);
 
     /*
      * Render ASN.1 as a "human" readable string
      */
-    static qcc::String ToString(const uint8_t* asn, size_t len, size_t indent = 0);
+    static qcc::String AJ_CALL ToString(const uint8_t* asn, size_t len, size_t indent = 0);
 
   private:
 

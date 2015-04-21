@@ -1268,6 +1268,23 @@ QStatus KeyExchangerECDHE_ECDSA::GenVerifierSigInfoArg(MsgArg& msgArg, bool upda
         QCC_LogError(status, ("KeyExchangerECDHE_ECDSA::GenVerifierSigInfoArg failed to generate local verifier sig info"));
         return status;
     }
+    QCC_DEBUG_ONLY(
+        /*
+         * In debug builds, test that the signature we just created verifies properly with
+         * our public key, before sending it.  If this check fails, the likely cause is
+         * that the signer's private key is not consistent with their certificate (i.e.,
+         * issuerPrivateKey*NistP256BasePoint != issuerPublicKey). Since this check adds
+         * considerable cost to the authentication protocol and is not security critical,
+         * it should not be done for release builds.
+         */
+        ecc.SetDSAPublicKey(&issuerPublicKey);
+        status = ecc.DSAVerifyDigest(verifier, sizeof(verifier), &sig);
+        if (status != ER_OK) {
+            QCC_DbgPrintf(("KeyExchangerECDHE_ECDSA::GenVerifierSigInfoArg failed to verify the signature just created, the key exchange protocol will fail."));
+            assert(false);
+        }
+        );
+
     sigInfo.SetSignature(&sig);
     if (updateHash) {
         hashUtil.Update((const uint8_t*) sigInfo.GetSignature(), sizeof(ECCSignature));

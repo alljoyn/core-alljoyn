@@ -332,6 +332,7 @@ class PropChangedTestBusObject :
     BusAttachment& bus;
     const vector<InterfaceParameters> intfParams;
     map<String, int> propvalOffsets;
+    map<String, int> getsPerPropName;
 
     PropChangedTestBusObject(BusAttachment& bus,
                              const vector<InterfaceParameters> ip,
@@ -371,6 +372,9 @@ class PropChangedTestBusObject :
         val.typeId = ALLJOYN_INT32;
         val.v_int32 = propvalOffsets[ifcName] + num;
         //QCC_SyncPrintf("PropChangedTestBusObject::Get(%s, %s) -> %d\n", ifcName, propName, val.v_int32);
+
+        getsPerPropName[propName] += 1;
+
         return ER_OK;
     }
 
@@ -388,7 +392,7 @@ class PropChangedTestBusObject :
 
     void EmitSignal(const TestParameters& tp,
                     const InterfaceParameters& ip,
-                    SessionId id = 0)
+                    SessionId id = SESSION_ID_ALL_HOSTED)
     {
         if (tp.newEmit) {
             // use new emit
@@ -431,7 +435,7 @@ class SampleStore {
   public:
     Mutex mutex;
     Semaphore signalSema;
-    vector<const ProxyBusObject*> proxySamples;
+    vector<ProxyBusObject> proxySamples;
     map<String, vector<MsgArg> > changedSamples;
     map<String, vector<MsgArg> > invalidatedSamples;
 
@@ -441,7 +445,7 @@ class SampleStore {
                    const MsgArg& invalidated)
     {
         mutex.Lock();
-        proxySamples.push_back(&proxy);
+        proxySamples.push_back(proxy);
         changedSamples[ifaceName].push_back(changed);
         invalidatedSamples[ifaceName].push_back(invalidated);
         signalSema.Post();
@@ -471,6 +475,7 @@ class PropChangedTestListener :
     public ProxyBusObject::PropertiesChangedListener {
   public:
     SampleStore& store;
+    multimap<String, ProxyBusObject> registeredInterfaces;
 
     PropChangedTestListener(SampleStore& store) :
         store(store)
@@ -490,7 +495,8 @@ class PropChangedTestListener :
         //QCC_SyncPrintf("PropChangedTestListener::PropertiesChanged called (changed:%d,invalidated:%d) for %s\n", changed.v_array.GetNumElements(), invalidated.v_array.GetNumElements(), (context ? (const char*)context : "?"));
         store.AddSample(obj, ifaceName, changed, invalidated);
     }
-    /* Private assigment operator - does nothing */
+  private:
+    /* Private assignment operator - does nothing */
     PropChangedTestListener& operator=(const PropChangedTestListener&);
 };
 
@@ -676,11 +682,20 @@ class PropChangedTestProxyBusObject :
     ~PropChangedTestProxyBusObject()
     {
         for (size_t i = 0; i < listeners.size(); i++) {
+            // Need to unregister listeners before deleting them.
+            while (!listeners[i]->registeredInterfaces.empty()) {
+                multimap<String, ProxyBusObject>::const_iterator it = listeners[i]->registeredInterfaces.begin();
+                String name = it->first;
+                ProxyBusObject pbo = it->second;
+                pbo.UnregisterPropertiesChangedListener(name.c_str(), *listeners[i]);
+                listeners[i]->registeredInterfaces.erase(it);
+            }
+
             delete listeners[i];
         }
     }
 
-    void RegisterListener(PropChangedTestListener* listener,
+    void RegisterListener(ProxyBusObject::PropertiesChangedListener* listener,
                           String ifaceName,
                           const Range& props,
                           const char* who = NULL)
@@ -704,6 +719,9 @@ class PropChangedTestProxyBusObject :
                                                        NULL, 0, *listener, (void*)who);
         }
         EXPECT_EQ(ER_OK, status);
+        if (status == ER_OK) {
+            ((PropChangedTestListener*)listener)->registeredInterfaces.insert(pair<String, ProxyBusObject>(ifaceName, *this));
+        }
     }
 
     /* By default we do not expect a time-out when waiting for the signals.  If
@@ -1158,7 +1176,7 @@ TEST_F(PropChangedTest, MultiSession)
     // status = store.TimedWait(TIMEOUT); // wait for property changed signal
     // EXPECT_EQ(ER_OK, status);
     EXPECT_EQ((size_t)1, store.proxySamples.size());
-    EXPECT_EQ(dynamic_cast<ProxyBusObject*>(&pb1), store.proxySamples[0]);
+    EXPECT_TRUE(pb1.iden(store.proxySamples[0]));
 
     // test for pb2 (both l and l2)
     store.Clear();
@@ -1170,8 +1188,8 @@ TEST_F(PropChangedTest, MultiSession)
     // status = store.TimedWait(TIMEOUT); // wait for property changed signal
     // EXPECT_EQ(ER_OK, status);
     EXPECT_EQ((size_t)2, store.proxySamples.size());
-    EXPECT_EQ(dynamic_cast<ProxyBusObject*>(&pb2), store.proxySamples[0]);
-    EXPECT_EQ(dynamic_cast<ProxyBusObject*>(&pb2), store.proxySamples[1]);
+    EXPECT_TRUE(pb2.iden(store.proxySamples[0]));
+    EXPECT_TRUE(pb2.iden(store.proxySamples[1]));
 
     // test for pb3 (only l)
     store.Clear();
@@ -1181,13 +1199,15 @@ TEST_F(PropChangedTest, MultiSession)
     // status = store.TimedWait(TIMEOUT); // wait for property changed signal
     // EXPECT_EQ(ER_OK, status);
     EXPECT_EQ((size_t)1, store.proxySamples.size());
-    EXPECT_EQ(dynamic_cast<ProxyBusObject*>(&pb3), store.proxySamples[0]);
+    EXPECT_TRUE(pb3.iden(store.proxySamples[0]));
 
     // clean up
     pb2.UnregisterPropertiesChangedListener(tp.intfParams[0].name.c_str(), l2);
     pb3.UnregisterPropertiesChangedListener(tp.intfParams[0].name.c_str(), l);
     pb2.UnregisterPropertiesChangedListener(tp.intfParams[0].name.c_str(), l);
     pb1.UnregisterPropertiesChangedListener(tp.intfParams[0].name.c_str(), l);
+    l.registeredInterfaces.erase(tp.intfParams[0].name);
+    l2.registeredInterfaces.erase(tp.intfParams[0].name);
 }
 
 /*
@@ -1323,6 +1343,7 @@ TEST_F(PropChangedTest, ListenerNotCalled_AfterUnregister)
     // fire signal again and expect no callback to be called
     obj->EmitSignals(tp);
     EXPECT_EQ(ER_TIMEOUT, proxy->signalSema.TimedWait(TIMEOUT_EXPECTED));
+    proxy->listeners[0]->registeredInterfaces.erase(tp.intfParams[0].name);
 }
 
 /*
@@ -1361,6 +1382,7 @@ TEST_F(PropChangedTest, ListenerNotCalled_InterfaceNotListening)
     // fire signal for I2 and expect time-out
     obj->EmitSignal(tp, tp.intfParams[1]);
     EXPECT_EQ(ER_TIMEOUT, proxy->signalSema.TimedWait(TIMEOUT_EXPECTED));
+    proxy->listeners[1]->registeredInterfaces.erase(String(INTERFACE_NAME "2"));
 }
 
 /*
@@ -1480,9 +1502,8 @@ TEST_F(PropChangedTest, ListenerNotCalled_PartialProxy)
 
 /*
  * Copy proxy bus object, check if PropertiesChanged listeners function as expected
- * disabled because of ASACORE-1522
  */
-TEST_F(PropChangedTest, DISABLED_Copy)
+TEST_F(PropChangedTest, Copy)
 {
     TestParameters tpClient(true, P1, P1, PCM_INTROSPECT);
     tpClient.AddInterfaceParameters(InterfaceParameters(P1, "true", false, INTERFACE_NAME "1"));
@@ -1730,9 +1751,10 @@ TEST_F(PropChangedTest, PropertyCache_notupdating)
 }
 
 /*
- * When the PBO is copied, the EnablePropertyCaching setting is copied along, but
- * not the cache itself. This approach is taken to balance code robustness with
- * code complexity.
+ * When the PBO is copied, the new PBO keeps a reference to the underlying state
+ * of the original PBO and the reference count for that internal state is
+ * incremented.  This allows for both copies to have access to the same cached
+ * values.
  */
 TEST_F(PropChangedTest, PropertyCache_copy)
 {
@@ -1761,14 +1783,14 @@ TEST_F(PropChangedTest, PropertyCache_copy)
     obj->ChangePropertyValues(tpService, 100);
     /* object did not send property update signal:
      * - the original proxy should still see the original value (1)
-     * - the copy (which has an empty caches) should fetch the new value (101)
+     * - the copy should see the original value too since it shares the same underlying state
      */
     EXPECT_EQ(ER_OK, proxy->GetProperty(INTERFACE_NAME "1", "P1", value));
     EXPECT_EQ(ER_OK, value.Get("i", &intval));
     EXPECT_EQ(1, intval);
     EXPECT_EQ(ER_OK, copy.GetProperty(INTERFACE_NAME "1", "P1", value));
     EXPECT_EQ(ER_OK, value.Get("i", &intval));
-    EXPECT_EQ(101, intval);
+    EXPECT_EQ(1, intval);
 
     /* emit the signal and verify that the original proxy has its cache updated */
     obj->EmitSignals(tpService);
@@ -1971,4 +1993,333 @@ TEST_F(PropChangedTest, PropertyCache_async)
     EXPECT_STREQ("P1", propname);
     EXPECT_EQ(ER_OK, propval->Get("i", &intval));
     EXPECT_EQ(201, intval);
+}
+
+
+class PropCacheUpdatedTestListener :
+    public PropChangedTestListener  {
+
+  private:
+
+    String propName;
+    int32_t expectInCache; // expected cached value for propName
+    SampleStore store;
+  public:
+    PropCacheUpdatedTestListener(String _propName, int32_t _expectInCache) : PropChangedTestListener(store), propName(_propName), expectInCache(_expectInCache), strict(false)
+    {
+    }
+
+    virtual ~PropCacheUpdatedTestListener() { }
+
+    virtual void PropertiesChanged(ProxyBusObject& obj,
+                                   const char* ifaceName,
+                                   const MsgArg& changed,
+                                   const MsgArg& invalidated,
+                                   void* context)
+    {
+        QCC_UNUSED(context);
+        QCC_UNUSED(invalidated);
+        QCC_UNUSED(ifaceName);
+        ASSERT_EQ(ALLJOYN_ARRAY, changed.typeId);
+
+        //QCC_SyncPrintf("Prop changed MsgArg : %s", changed.ToString().c_str());
+
+        if (strict) {
+            MsgArg value;
+            MsgArg* changedMsgArg;
+            MsgArg* props;
+            size_t numprops;
+            const char* receivedPropName;
+            int cachedVal;
+            int changedVal;
+
+            EXPECT_EQ(ER_OK, obj.GetProperty(INTERFACE_NAME "1", propName.c_str(), value));
+            EXPECT_EQ(ER_OK, value.Get("i", &cachedVal));
+
+            EXPECT_EQ(ER_OK, changed.Get("a{sv}", &numprops, &props));
+            EXPECT_EQ(1, (int)numprops);
+            EXPECT_EQ(ER_OK, props[0].Get("{sv}", &receivedPropName, &changedMsgArg));
+            EXPECT_STREQ(propName.c_str(), receivedPropName);
+            EXPECT_EQ(ER_OK, changedMsgArg->Get("i", &changedVal));
+
+            EXPECT_EQ(cachedVal, changedVal);
+            EXPECT_EQ(cachedVal, expectInCache);
+
+        }
+    }
+
+    bool strict;
+
+  private:
+    /* Private assignment operator - does nothing */
+    PropCacheUpdatedTestListener& operator=(const PropCacheUpdatedTestListener&);
+};
+
+/* only logically usable for maximum 2 proxies */
+class PropCacheUpdatedConcurrentCallbackTestListener :
+    public PropChangedTestListener  {
+
+  private:
+    BusAttachment& clientBus;
+    PropChangedTestBusObject* busObj;
+    Semaphore* events;
+    TestParameters* tpService;
+    bool first;
+    int32_t expectedNewPropValue;
+    int32_t unblockMainAfterNCallbacks;
+    int32_t propChangedCallbackCount;
+    int32_t unblockFirstAfterNCallbacks;
+    Mutex mutex;
+    SampleStore store;
+  public:
+    PropCacheUpdatedConcurrentCallbackTestListener(BusAttachment& _clientBus,
+                                                   PropChangedTestBusObject* _busObj, Semaphore* _events,
+                                                   TestParameters* _tpService) : PropChangedTestListener(store),
+        clientBus(_clientBus), busObj(_busObj), events(_events), tpService(_tpService), first(true), expectedNewPropValue(0), unblockMainAfterNCallbacks(0), propChangedCallbackCount(0), unblockFirstAfterNCallbacks(0) {
+
+    }
+
+    virtual ~PropCacheUpdatedConcurrentCallbackTestListener() { }
+
+    virtual void PropertiesChanged(ProxyBusObject& obj,
+                                   const char* ifaceName,
+                                   const MsgArg& changed,
+                                   const MsgArg& invalidated,
+                                   void* context)
+    {
+        QCC_UNUSED(context);
+        QCC_UNUSED(invalidated);
+        QCC_UNUSED(ifaceName);
+        ASSERT_EQ(ALLJOYN_ARRAY, changed.typeId);
+        //QCC_SyncPrintf("Prop changed MsgArg : %s", changed.ToString().c_str());
+
+        mutex.Lock();
+        propChangedCallbackCount++;
+        mutex.Unlock();
+
+        if (first) {
+
+            ASSERT_TRUE(busObj != NULL);
+            ASSERT_TRUE(events != NULL);
+            ASSERT_TRUE(tpService != NULL);
+
+            first = false;
+            clientBus.EnableConcurrentCallbacks();
+            CheckCachedVal(obj, changed);
+            busObj->ChangePropertyValues(*tpService, expectedNewPropValue - 1); // second parameter is an offset
+            busObj->EmitSignals(*tpService);
+
+            for (int i = 0; i < (TIMEOUT - 1000) / 10; ++i) {
+                if (propChangedCallbackCount >= unblockFirstAfterNCallbacks) {
+                    break;
+                }
+                qcc::Sleep(10);
+            }
+
+            EXPECT_TRUE(propChangedCallbackCount >= unblockFirstAfterNCallbacks);
+
+        } else {
+
+            clientBus.EnableConcurrentCallbacks();
+            CheckCachedVal(obj, changed);
+
+            if (propChangedCallbackCount >= unblockMainAfterNCallbacks) {
+                EXPECT_EQ(ER_OK, events->Post());
+            }
+
+        }
+
+    }
+
+    void SetExpectedNewPropValue(int32_t val) {
+        expectedNewPropValue = val;
+    }
+    void SetUnblockMainAfterNCallbacks(int32_t num) {
+        unblockMainAfterNCallbacks = num;
+        unblockFirstAfterNCallbacks = (num / 2) + 1;
+    }
+
+  private:
+
+    void CheckCachedVal(ProxyBusObject& obj, const MsgArg& changed) {
+        MsgArg value;
+        MsgArg* changedMsgArg;
+        MsgArg* props;
+        size_t numprops;
+        const char* receivedPropName;
+        int cachedVal;
+        int changedVal;
+
+        EXPECT_EQ(ER_OK, obj.GetProperty(INTERFACE_NAME "1", "P1", value));
+        EXPECT_EQ(ER_OK, value.Get("i", &cachedVal));
+
+        EXPECT_EQ(ER_OK, changed.Get("a{sv}", &numprops, &props));
+        EXPECT_EQ(1, (int )numprops);
+        EXPECT_EQ(ER_OK, props[0].Get("{sv}", &receivedPropName, &changedMsgArg));
+        EXPECT_STREQ("P1", receivedPropName);
+        EXPECT_EQ(ER_OK, changedMsgArg->Get("i", &changedVal));
+
+        EXPECT_TRUE(cachedVal >= changedVal); // cached value should reflect the present or the future and never the past
+
+    }
+
+    /* Private assignment operator - does nothing */
+    PropCacheUpdatedConcurrentCallbackTestListener& operator=(const PropCacheUpdatedConcurrentCallbackTestListener&);
+};
+
+/*
+ * Test that makes sure the cache is already updated upon PropertyChanged callback
+ * and that the round-trip was done only once; one remote get call.
+ */
+
+TEST_F(PropChangedTest, PropertyCache_updatedUponPropChangedCallback)
+{
+    TestParameters tpClient(true, P1, P1, PCM_INTROSPECT);
+    tpClient.AddInterfaceParameters(InterfaceParameters(P1, "true", false, INTERFACE_NAME "1"));
+    TestParameters tpService = tpClient;
+
+    SetupPropChanged(tpService, tpClient);
+    proxy->EnablePropertyCaching();
+
+    MsgArg value;
+    int32_t val = 0;
+    int32_t expectedVal = 101;
+
+    // set-up client's listener
+    PropCacheUpdatedTestListener* l = new PropCacheUpdatedTestListener("P1", expectedVal);
+    l->strict = true;
+    proxy->RegisterListener(l, tpClient.intfParams[0].name, P1);
+
+    /* initial value is 1 */
+    ASSERT_TRUE(obj->getsPerPropName.end() == obj->getsPerPropName.find("P1"));
+    EXPECT_EQ(ER_OK, proxy->GetProperty(INTERFACE_NAME "1", "P1", value));
+    EXPECT_EQ(ER_OK, value.Get("i", &val));
+    EXPECT_EQ(1, val); // still, the signal of prop value changed was not emitted
+
+    EXPECT_TRUE(obj->getsPerPropName.end() != obj->getsPerPropName.find("P1"));
+    EXPECT_EQ(1, obj->getsPerPropName.at("P1"));
+
+    /* change the value in the object */
+    obj->ChangePropertyValues(tpService, expectedVal - 1); // second argument is the offset
+    // this would internally cause another Get call on the BusObject so that should be taken into account
+    obj->EmitSignals(tpService);
+    proxy->WaitForSignals(tpClient);
+
+    // cached value was used - comparing to "2" just to take into account the Get called once from EmitSignals internals
+    EXPECT_EQ(2, obj->getsPerPropName.at("P1"));
+
+}
+
+/*
+ * Test that makes sure the cache holds only future (most recent) values in
+ * the case where concurrent callbacks is enabled on the client's bus.
+ * A single ProxyBusObject is foreseen.
+ */
+
+TEST_F(PropChangedTest, PropertyCache_consistentWithConcurrentCallback)
+{
+    TestParameters tpClient(true, P1, P1, PCM_INTROSPECT);
+    tpClient.AddInterfaceParameters(InterfaceParameters(P1, "true", false, INTERFACE_NAME "1"));
+    TestParameters tpService = tpClient;
+
+    SetupPropChanged(tpService, tpClient);
+    proxy->EnablePropertyCaching();
+
+    MsgArg value;
+    int32_t val = 0;
+
+    // set-up client's listener
+    Semaphore events;
+    PropCacheUpdatedConcurrentCallbackTestListener* l = new PropCacheUpdatedConcurrentCallbackTestListener(clientBus, obj, &events, &tpService);
+    int32_t expectedNewPropValue = 201;
+    l->SetExpectedNewPropValue(expectedNewPropValue); // will be emitted in the listener
+    l->SetUnblockMainAfterNCallbacks(2); // another signal emission also occurs in the listener
+    proxy->RegisterListener(l, tpClient.intfParams[0].name, P1);
+
+    /* initial value is 1 */
+    EXPECT_EQ(ER_OK, proxy->GetProperty(INTERFACE_NAME "1", "P1", value));
+    EXPECT_EQ(ER_OK, value.Get("i", &val));
+    EXPECT_EQ(1, val); // still, the signal of prop value changed was not emitted
+
+    /* change the value in the object */
+    obj->ChangePropertyValues(tpService, 100); // second argument is the offset - now we have 101
+    obj->EmitSignals(tpService);
+
+    EXPECT_EQ(ER_OK, events.TimedWait(TIMEOUT));
+
+    /* expected value is expectedNewPropValue */
+    EXPECT_EQ(ER_OK, proxy->GetProperty(INTERFACE_NAME "1", "P1", value));
+    EXPECT_EQ(ER_OK, value.Get("i", &val));
+    EXPECT_EQ(expectedNewPropValue, val);
+    proxy->UnregisterPropertiesChangedListener(INTERFACE_NAME "1", *l);
+}
+
+/*
+ * Test that makes sure the cache holds only future (most recent) values in
+ * the case where concurrent callbacks is enabled on the client's bus.
+ * Two ProxyBusObjects are foreseen with the same property change listener.
+ *
+ * Scenario:
+ *  proxy.changed(value = 101) -> change value to 201, enable concurrency, emit signals and block
+ *  proxy.changed(value = 201)
+ *  otherProxy.changed(value = 201) -> at this moment, first proxy property changed callback will unblock
+ *  otherProxy.changed(value = 101) -> unblock main test thread
+ *
+ *  Cached value for both proxies should be 201
+ */
+
+TEST_F(PropChangedTest, PropertyCache_consistentWithConcurrentCallbackMultiProxy)
+{
+    TestParameters tpClient(true, P1, P1, PCM_INTROSPECT);
+    tpClient.AddInterfaceParameters(InterfaceParameters(P1, "true", false, INTERFACE_NAME "1"));
+    TestParameters tpService = tpClient;
+
+    SetupPropChanged(tpService, tpClient); // this results in original proxy and obj
+    proxy->EnablePropertyCaching();
+
+    // create more ProxyBusObjects using the same busattachment; clientBus
+    Semaphore events;
+
+    PropChangedTestProxyBusObject* anotherProxy;
+    PropCacheUpdatedConcurrentCallbackTestListener* l = new PropCacheUpdatedConcurrentCallbackTestListener(clientBus, obj, &events, &tpService);
+    int32_t expectedNewPropValue = 201;
+    l->SetExpectedNewPropValue(expectedNewPropValue); // will be emitted in the listener
+    l->SetUnblockMainAfterNCallbacks(4);  // another signal emission also occurs in the listener
+    proxy->RegisterListener(l, tpClient.intfParams[0].name, P1);
+    anotherProxy = new PropChangedTestProxyBusObject(clientBus, serviceName, tpClient);
+    anotherProxy->RegisterListener(l, tpClient.intfParams[0].name, P1);
+
+    MsgArg value;
+    int32_t val = 0;
+
+    /* initial value is 1 */
+    EXPECT_EQ(ER_OK, proxy->GetProperty(INTERFACE_NAME "1", "P1", value));
+    EXPECT_EQ(ER_OK, value.Get("i", &val));
+    EXPECT_EQ(1, val); // still, the signal of prop value changed was not emitted
+    val = 0;
+    EXPECT_EQ(ER_OK, anotherProxy->GetProperty(INTERFACE_NAME "1", "P1", value));
+    EXPECT_EQ(ER_OK, value.Get("i", &val));
+    EXPECT_EQ(1, val); // still, the signal of prop value changed was not emitted
+
+    /* change the value in the object */
+    obj->ChangePropertyValues(tpService, 100); // second argument is the offset - now we have 101
+    obj->EmitSignals(tpService);
+
+    EXPECT_EQ(ER_OK, events.TimedWait(TIMEOUT));
+
+    /* expected value is expectedNewPropValue */
+    val = 0;
+    EXPECT_EQ(ER_OK, proxy->GetProperty(INTERFACE_NAME "1", "P1", value));
+    EXPECT_EQ(ER_OK, value.Get("i", &val));
+    EXPECT_EQ(expectedNewPropValue, val);
+
+    val = 0;
+    EXPECT_EQ(ER_OK, anotherProxy->GetProperty(INTERFACE_NAME "1", "P1", value));
+    EXPECT_EQ(ER_OK, value.Get("i", &val));
+    EXPECT_EQ(expectedNewPropValue, val);
+
+    anotherProxy->UnregisterPropertiesChangedListener(INTERFACE_NAME "1", *l);
+    proxy->UnregisterPropertiesChangedListener(INTERFACE_NAME "1", *l);
+    delete anotherProxy;
+    delete l;
 }

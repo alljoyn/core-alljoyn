@@ -83,6 +83,9 @@ static String g_testAboutApplicationName = "bbservice";
 static bool g_useAboutFeatureDiscovery = false;
 static AboutData g_aboutData("en");
 
+static const char* g_alternatePSK = NULL;
+static const char* g_defaultPSK = "faaa0af3dd3f1e0379da046a3ab6ca44";
+
 static volatile sig_atomic_t g_interrupt = false;
 
 static void CDECL_CALL SigIntHandler(int sig)
@@ -177,7 +180,20 @@ class MyAuthListener : public AuthListener {
             if ((credMask& AuthListener::CRED_USER_NAME) == AuthListener::CRED_USER_NAME) {
                 printf("AuthListener::RequestCredentials for key exchange %s received psk ID %s\n", authMechanism, creds.GetUserName().c_str());
             }
-            String psk("123456");
+            /*
+             * In this example, the pre shared secret is a hard coded string.
+             * Pre-shared keys should be 128 bits long, and generated with a
+             * cryptographically secure random number generator.
+             * However, if a psk was supplied on the commandline,
+             * this is used instead of the default PSK.
+             */
+            const char* csPSK;
+            if (NULL != g_alternatePSK) {
+                csPSK = g_alternatePSK;
+            } else {
+                csPSK = g_defaultPSK;
+            }
+            String psk(csPSK);
             creds.SetPassword(psk);
             return RequestCredentialsResponse(context, true, creds);
         }
@@ -413,7 +429,8 @@ class LocalTestObject : public BusObject {
         prop_str_val("hello world"),
         prop_ro_str("I cannot be written"),
         prop_int_val(100),
-        opts(opts)
+        opts(opts),
+        aboutObj(bus)
     {
         QStatus status = ER_OK;
 
@@ -502,7 +519,6 @@ class LocalTestObject : public BusObject {
             // software version of bbservice is the same as the AllJoyn version
             g_aboutData.SetSoftwareVersion(ajn::GetVersion());
 
-            AboutObj aboutObj(*g_msgBus);
             aboutObj.Announce(sessionPort, g_aboutData);
         } else {
             /* Request a well-known name */
@@ -690,6 +706,7 @@ class LocalTestObject : public BusObject {
     qcc::String prop_ro_str;
     int32_t prop_int_val;
     SessionOpts opts;
+    AboutObj aboutObj;
 };
 
 
@@ -725,6 +742,8 @@ static void usage(void)
     printf("   -dpws                 = Use DelayedPingWithSleep as methodhandler instead of DelayedPing\n");
     printf("   -about [name]         = use the about feature for discovery. (optional override default application name.)\n");
     printf("   -runtime #            = runtime of the program in ms. After this time has passed, the application will exit automatically. \n");
+    printf("   -psk <psk>            = Use the supplied pre-shared key instead of the built in one.\n");
+    printf("                           For interop with tests in version <= 14.12 pass '123456'.\n");
     printf("\n");
 }
 
@@ -856,7 +875,16 @@ int CDECL_CALL main(int argc, char** argv)
             } else {
                 run_time = ::strtoul(argv[i], NULL, 10);
             }
-        }  else {
+        } else if (0 == strcmp("-psk", argv[i])) {
+            ++i;
+            if (i == argc) {
+                printf("option %s requires a parameter\n", argv[i - 1]);
+                usage();
+                exit(1);
+            } else {
+                g_alternatePSK = argv[i];
+            }
+        } else {
             status = ER_FAIL;
             printf("Unknown option %s\n", argv[i]);
             usage();

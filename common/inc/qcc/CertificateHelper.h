@@ -35,7 +35,7 @@ class CertificateHelper {
      * @param[out] count the number of certs
      * @return ER_OK for sucess; otherwise, error code.
      */
-    static QStatus GetCertCount(const String& encoded, size_t* count);
+    static QStatus AJ_CALL GetCertCount(const String& encoded, size_t* count);
 
 };
 

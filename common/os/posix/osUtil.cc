@@ -45,6 +45,12 @@
 
 using namespace std;
 
+void qcc::ClearMemory(void* s, size_t n)
+{
+    volatile unsigned char* p = (volatile unsigned char*) s;
+    while (n--) *p++ = 0;
+}
+
 uint32_t qcc::GetPid()
 {
     return static_cast<uint32_t>(getpid());
@@ -129,7 +135,7 @@ QStatus qcc::Exec(const char* exec, const ExecArgs& args, const Environ& envs)
         pid_t sid = setsid();
         if (sid < 0) {
             QCC_LogError(ER_OS_ERROR, ("Failed to set session ID for new process"));
-            return ER_OS_ERROR;
+            exit(1); // We're in a child thread -- exit rather than return.
         }
         char** argv(new char*[args.size() + 2]);    // Need extra entry for executable name
         char** env(new char*[envs.Size() + 1]);
@@ -163,6 +169,8 @@ QStatus qcc::Exec(const char* exec, const ExecArgs& args, const Environ& envs)
             free(*p);
         }
         delete [] argv;
+        exit(1); // We're in a child thread -- exit rather than return.
+
     } else if (pid == -1) {
         return ER_OS_ERROR;
 #ifndef NDEBUG
@@ -184,7 +192,7 @@ QStatus qcc::ExecAs(const char* user, const char* exec, const ExecArgs& args, co
         pid_t sid = setsid();
         if (sid < 0) {
             QCC_LogError(ER_OS_ERROR, ("Failed to set session ID for new process"));
-            return ER_OS_ERROR;
+            exit(1); // We're in a child thread -- exit rather than return.
         }
         char** argv(new char*[args.size() + 2]);    // Need extra entry for executable name
         char** env(new char*[envs.Size() + 1]);
@@ -207,18 +215,12 @@ QStatus qcc::ExecAs(const char* user, const char* exec, const ExecArgs& args, co
         env[index] = NULL;
 
         struct passwd* pwent = getpwnam(user);
-        if (!pwent) {
-            return ER_FAIL;
+        if (pwent && (setuid(pwent->pw_uid) >= 0)) {
+            execve(exec, argv, env); // will never return if successful.
         }
 
-        if (setuid(pwent->pw_uid) == -1) {
-            return ER_OS_ERROR;
-        }
-
-        execve(exec, argv, env); // will never return if successful.
-
-        // free resource if execve() failed.
-        QCC_LogError(ER_FAIL, ("Failed to run \"%s\": %s", exec, strerror(errno)));
+        // free resources in the event of failure
+        QCC_LogError(ER_FAIL, ("Failed to run \"%s\": %s", exec, pwent ? strerror(errno) : "failed to get pwent"));
         for (char** p = env; p; ++p) {
             free(*p);
         }
@@ -227,6 +229,8 @@ QStatus qcc::ExecAs(const char* user, const char* exec, const ExecArgs& args, co
             free(*p);
         }
         delete [] argv;
+        exit(1); // We're in a child thread -- exit rather than return.
+
     } else if (pid == -1) {
         return ER_OS_ERROR;
 #ifndef NDEBUG

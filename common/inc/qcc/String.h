@@ -534,7 +534,7 @@ class String {
  * @param   s2  String to be concatenated.
  * @return  Concatenated s1 + s2.
  */
-qcc::String operator+(const qcc::String& s1, const qcc::String& s2);
+qcc::String AJ_CALL operator+(const qcc::String& s1, const qcc::String& s2);
 
 /**
  * Global "<<" operator for qcc::String
@@ -543,5 +543,5 @@ qcc::String operator+(const qcc::String& s1, const qcc::String& s2);
  * @param   str  String to be printed.
  * @return  Output stream
  */
-std::ostream& operator<<(std::ostream& os, const qcc::String& str);
+std::ostream& AJ_CALL operator<<(std::ostream& os, const qcc::String& str);
 #endif

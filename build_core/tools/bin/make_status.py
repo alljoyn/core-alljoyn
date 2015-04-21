@@ -268,7 +268,7 @@ def writeFooters():
 """)
     if None != codeOut:
         codeOut.write("""    default:
-        static char code[20];
+        static char code[22];
 #ifdef _WIN32
         _snprintf(code, sizeof(code), "<unknown>: 0x%04x", status);
 #else

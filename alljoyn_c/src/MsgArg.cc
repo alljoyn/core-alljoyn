@@ -201,7 +201,7 @@ QStatus AJ_CALL alljoyn_msgarg_array_get(const alljoyn_msgarg args, size_t numAr
 size_t AJ_CALL alljoyn_msgarg_tostring(alljoyn_msgarg arg, char* str, size_t buf, size_t indent)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
-    if (!arg) {
+    if (arg == nullptr) {
         return (size_t)0;
     }
     qcc::String s = ((ajn::MsgArgC*)arg)->ToString(indent);
@@ -209,7 +209,7 @@ size_t AJ_CALL alljoyn_msgarg_tostring(alljoyn_msgarg arg, char* str, size_t buf
      * it is ok to send in NULL for str when the user is only interested in the
      * size of the resulting string.
      */
-    if (str) {
+    if ((str != nullptr) && (buf >= 1)) {
         strncpy(str, s.c_str(), buf);
         str[buf - 1] = '\0'; //prevent sting not being null terminated.
     }
@@ -219,7 +219,7 @@ size_t AJ_CALL alljoyn_msgarg_tostring(alljoyn_msgarg arg, char* str, size_t buf
 size_t AJ_CALL alljoyn_msgarg_array_tostring(const alljoyn_msgarg args, size_t numArgs, char* str, size_t buf, size_t indent)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
-    if (!args) {
+    if (args == nullptr) {
         return (size_t)0;
     }
     qcc::String s = ((ajn::MsgArgC*)args)->ToString((ajn::MsgArgC*)args, numArgs, indent);
@@ -227,9 +227,9 @@ size_t AJ_CALL alljoyn_msgarg_array_tostring(const alljoyn_msgarg args, size_t n
      * it is ok to send in NULL for str when the user is only interested in the
      * size of the resulting string.
      */
-    if (str) {
+    if ((str != nullptr) && (buf >= 1)) {
         strncpy(str, s.c_str(), buf);
-        str[buf - 1] = '\0'; //prevent sting not being null terminated.
+        str[buf - 1] = '\0';
     }
     return s.size() + 1;
 }
@@ -237,7 +237,7 @@ size_t AJ_CALL alljoyn_msgarg_array_tostring(const alljoyn_msgarg args, size_t n
 size_t AJ_CALL alljoyn_msgarg_signature(alljoyn_msgarg arg, char* str, size_t buf)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
-    if (!arg) {
+    if (arg == nullptr) {
         return (size_t)0;
     }
     qcc::String s = ((ajn::MsgArgC*)arg)->Signature();
@@ -245,7 +245,7 @@ size_t AJ_CALL alljoyn_msgarg_signature(alljoyn_msgarg arg, char* str, size_t bu
      * it is ok to send in NULL for str when the user is only interested in the
      * size of the resulting string.
      */
-    if (str) {
+    if ((str != nullptr) && (buf >= 1)) {
         strncpy(str, s.c_str(), buf);
         str[buf - 1] = '\0'; //prevent sting not being null terminated.
     }
@@ -255,7 +255,7 @@ size_t AJ_CALL alljoyn_msgarg_signature(alljoyn_msgarg arg, char* str, size_t bu
 size_t AJ_CALL alljoyn_msgarg_array_signature(alljoyn_msgarg values, size_t numValues, char* str, size_t buf)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
-    if (!values) {
+    if (values == nullptr) {
         return (size_t)0;
     }
     qcc::String s = ((ajn::MsgArgC*)values)->Signature((ajn::MsgArgC*)values, numValues).c_str();
@@ -263,9 +263,9 @@ size_t AJ_CALL alljoyn_msgarg_array_signature(alljoyn_msgarg values, size_t numV
      * it is ok to send in NULL for str when the user is only interested in the
      * size of the resulting string.
      */
-    if (str) {
+    if ((str != nullptr) && (buf >= 1)) {
         strncpy(str, s.c_str(), buf);
-        str[buf - 1] = '\0'; //prevent sting not being null terminated.
+        str[buf - 1] = '\0';
     }
     return s.size() + 1;
 
@@ -462,7 +462,12 @@ QStatus AJ_CALL alljoyn_msgarg_get_uint8(const alljoyn_msgarg arg, uint8_t* y)
 QStatus AJ_CALL alljoyn_msgarg_get_bool(const alljoyn_msgarg arg, QCC_BOOL* b)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
-    return alljoyn_msgarg_get(arg, "b", b);
+    bool _b = false;
+    QStatus status = alljoyn_msgarg_get(arg, "b", &_b);
+    if (status == ER_OK) {
+        *b = (_b == true) ? QCC_TRUE : QCC_FALSE;
+    }
+    return status;
 }
 QStatus AJ_CALL alljoyn_msgarg_get_int16(const alljoyn_msgarg arg, int16_t* n)
 {

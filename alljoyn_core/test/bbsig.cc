@@ -854,6 +854,8 @@ int CDECL_CALL main(int argc, char** argv)
         delete testObj;
         testObj = NULL;
 
+        delete g_discoverEvent;
+        g_discoverEvent = NULL;
     } while ((ER_OK == status) && doStress && !g_interrupt);
 
 

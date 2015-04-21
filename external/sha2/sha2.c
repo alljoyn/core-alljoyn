@@ -609,6 +609,12 @@ void SHA256_Update(SHA256_CTX* context, const sha2_byte *data, size_t len) {
 	usedspace = freespace = 0;
 }
 
+static void* force_memset(void* s, int v, size_t n) {
+	volatile unsigned char* p = (volatile unsigned char*) s;
+	while (n--) *p++ = v;
+	return s;
+}
+
 void SHA256_Final(sha2_byte digest[], SHA256_CTX* context) {
 	sha2_word32	*d = (sha2_word32*)digest;
 	unsigned int	usedspace;
@@ -668,7 +674,7 @@ void SHA256_Final(sha2_byte digest[], SHA256_CTX* context) {
 	}
 
 	/* Clean up state data: */
-	MEMSET_BZERO(context, sizeof(SHA256_CTX));
+	force_memset(context, 0, sizeof(SHA256_CTX));
 	usedspace = 0;
 }
 
@@ -689,9 +695,9 @@ char *SHA256_End(SHA256_CTX* context, char buffer[]) {
 		}
 		*buffer = (char)0;
 	} else {
-		MEMSET_BZERO(context, sizeof(SHA256_CTX));
+		force_memset(context, 0, sizeof(SHA256_CTX));
 	}
-	MEMSET_BZERO(digest, SHA256_DIGEST_LENGTH);
+	force_memset(digest, 0, SHA256_DIGEST_LENGTH);
 	return buffer;
 }
 

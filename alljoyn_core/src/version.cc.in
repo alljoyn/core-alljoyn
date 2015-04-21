@@ -29,17 +29,17 @@ static const unsigned int bugfix = ' ';
 static const char version[] = "##VERSION_STRING##";
 static const char build[] = "AllJoyn Library ##BUILD_STRING##";
 
-const char* ajn::GetVersion()
+const char* AJ_CALL ajn::GetVersion()
 {
     return version;
 }
 
-const char* ajn::GetBuildInfo()
+const char* AJ_CALL ajn::GetBuildInfo()
 {
     return build;
 }
 
-uint32_t ajn::GetNumericVersion()
+uint32_t AJ_CALL ajn::GetNumericVersion()
 {
     return GenerateNumericVersionValue(year, month, feature, bugfix);
 }

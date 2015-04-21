@@ -304,7 +304,7 @@ QStatus XmlHelper::ParseNode(const XmlElement* root, ProxyBusObject* obj)
 
     if (GetSecureAnnotation(root) == "true") {
         if (obj) {
-            obj->isSecure = true;
+            obj->SetSecure(true);
         }
     }
     /* Iterate over <interface> and <node> elements */
@@ -329,7 +329,7 @@ QStatus XmlHelper::ParseNode(const XmlElement* root, ProxyBusObject* obj)
                     if (childObj) {
                         status = ParseNode(elem, childObj);
                     } else {
-                        ProxyBusObject newChild(*bus, obj->GetServiceName().c_str(), obj->GetUniqueName().c_str(), childObjPath.c_str(), obj->sessionId, obj->isSecure);
+                        ProxyBusObject newChild(*bus, obj->GetServiceName().c_str(), obj->GetUniqueName().c_str(), childObjPath.c_str(), obj->GetSessionId(), obj->IsSecure());
                         status = ParseNode(elem, &newChild);
                         if (ER_OK == status) {
                             obj->AddChild(newChild);

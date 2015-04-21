@@ -114,6 +114,13 @@
 @property (nonatomic, readonly) NSString *serviceName;
 
 /**
+ * Return the remote unique name for this object.
+ *
+ * @return Unique name
+ */
+@property (nonatomic, readonly) NSString *uniqueName;
+
+/**
  * Return the session Id for this object.
  *
  * @return Session Id
@@ -191,13 +198,13 @@
 - (id)initWithBusAttachment:(AJNBusAttachment *)busAttachment serviceName:(NSString *)serviceName objectPath:(NSString *)path sessionId:(AJNSessionId)sessionId enableSecurity:(BOOL)shouldEnableSecurity;
 
 /**
- * Create an empty proxy object that refers to an managed proxy bus object.
- * The created proxy object will get the interfaces from the managed proxy bus object.
+ * Copy Constructor
+ * The created proxy object will get the interfaces from the proxy object being passed in
  *
- * @param busAttachment  The bus.
- * @param proxyBusObject Managed proxy bus object
+ * @param busAttachment  The bus
+ * @param proxyBusObject Proxy bus object
  */
-- (id)initWithBusAttachment:(AJNBusAttachment *)busAttachment managedProxyBusObject:(AJNHandle)proxyBusObject;
+- (id)initWithBusAttachment:(AJNBusAttachment *)busAttachment usingProxyBusObject:(AJNHandle)proxyBusObject;
 
 /**
  * Add an existing interface to this object using the interface's name.

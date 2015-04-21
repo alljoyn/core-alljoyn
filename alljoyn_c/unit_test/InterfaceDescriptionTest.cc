@@ -18,6 +18,30 @@
 #include <alljoyn_c/InterfaceDescription.h>
 #include <alljoyn_c/Message.h>
 
+/* Add canary values before and after output string buffers, to detect typical overruns/underruns */
+#define CANARY_SIZE (sizeof(void*))
+
+/* Using a macro rather than of a function allows EXPECT_EQ to print the correct source code line number of the VERIFY_CANARY_VALUES caller */
+#define VERIFY_CANARY_VALUES(buffer, stringSize, canaryByte)            \
+    {                                                                   \
+        uint32_t byteIndex;                                             \
+        char* localBuffer = (buffer);                                   \
+                                                                        \
+        /* Check for underruns */                                       \
+        for (byteIndex = 0; byteIndex < CANARY_SIZE; byteIndex += 1) {  \
+            EXPECT_EQ((canaryByte), *localBuffer);                      \
+            localBuffer += 1;                                           \
+        }                                                               \
+                                                                        \
+        /* Check for overruns */                                        \
+        localBuffer += (stringSize);                                    \
+                                                                        \
+        for (byteIndex = 0; byteIndex < CANARY_SIZE; byteIndex += 1) {  \
+            EXPECT_EQ((canaryByte), *localBuffer);                      \
+            localBuffer += 1;                                           \
+        }                                                               \
+    }
+
 TEST(InterfaceDescriptionTest, addmember) {
     QStatus status = ER_OK;
     alljoyn_busattachment bus = NULL;
@@ -192,10 +216,13 @@ TEST(InterfaceDescriptionTest, introspect) {
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     char* introspect;
-    size_t buf  = alljoyn_interfacedescription_introspect(testIntf, NULL, 0, 0);
-    buf++;
-    introspect = (char*)malloc(sizeof(char) * buf);
-    alljoyn_interfacedescription_introspect(testIntf, introspect, buf, 0);
+    size_t bufSize  = alljoyn_interfacedescription_introspect(testIntf, NULL, 0, 0);
+    introspect = (char*)malloc((sizeof(char) * bufSize) + (2 * CANARY_SIZE));
+
+    memset(introspect, 'A', bufSize + (2 * CANARY_SIZE));
+    size_t bufSize2 = alljoyn_interfacedescription_introspect(testIntf, introspect + CANARY_SIZE, bufSize, 0);
+    EXPECT_EQ(bufSize, bufSize2);
+
     /*
      * NOTE there is nothing that specifies the order the members are organized
      * when they are added to the interface.  As can be seen here even though
@@ -212,7 +239,29 @@ TEST(InterfaceDescriptionTest, introspect) {
         "    <arg name=\"out\" type=\"s\" direction=\"out\"/>\n"
         "  </method>\n"
         "</interface>\n";
-    EXPECT_STREQ(expectedIntrospect, introspect);
+    EXPECT_STREQ(expectedIntrospect, introspect + CANARY_SIZE);
+    VERIFY_CANARY_VALUES(introspect, bufSize, 'A');
+
+    memset(introspect, 'B', bufSize + (2 * CANARY_SIZE));
+    size_t badBufSize = 0;
+    bufSize2 = alljoyn_interfacedescription_introspect(testIntf, introspect + CANARY_SIZE, badBufSize, 0);
+    EXPECT_EQ(bufSize, bufSize2);
+    VERIFY_CANARY_VALUES(introspect, bufSize, 'B');
+
+    memset(introspect, 'C', bufSize + (2 * CANARY_SIZE));
+    size_t tooSmallSize = 1;
+    bufSize2 = alljoyn_interfacedescription_introspect(testIntf, introspect + CANARY_SIZE, tooSmallSize, 0);
+    EXPECT_EQ(bufSize, bufSize2);
+    EXPECT_STREQ("", introspect + CANARY_SIZE); //empty string instead of expectedIntrospect
+    VERIFY_CANARY_VALUES(introspect, bufSize, 'C');
+
+    memset(introspect, 'D', bufSize + (2 * CANARY_SIZE));
+    tooSmallSize = 2;
+    bufSize2 = alljoyn_interfacedescription_introspect(testIntf, introspect + CANARY_SIZE, tooSmallSize, 0);
+    EXPECT_EQ(bufSize, bufSize2);
+    EXPECT_STREQ("<", introspect + CANARY_SIZE); //first character of expectedIntrospect
+    VERIFY_CANARY_VALUES(introspect, bufSize, 'D');
+
     free(introspect);
     alljoyn_busattachment_destroy(bus);
 }
@@ -635,32 +684,114 @@ TEST(InterfaceDescriptionTest, interface_annotations)
 
     size_t annotation_count = alljoyn_interfacedescription_getannotationscount(testIntf);
     EXPECT_EQ((size_t)1, annotation_count);
+
     size_t name_size;
     size_t value_size;
     alljoyn_interfacedescription_getannotationatindex(testIntf, 0, NULL, &name_size, NULL, &value_size);
     EXPECT_EQ((size_t)28, name_size); //the size of 'org.alljoyn.test.annotation' + nul
     EXPECT_EQ((size_t)4, value_size); //the size of 'foo' + nul {'f', 'o', 'o', '\0'}
 
-    char* name = (char*)malloc(sizeof(char) * name_size);
-    char* value = (char*)malloc(sizeof(char) * value_size);
+    char* name = (char*)malloc((sizeof(char) * name_size) + (2 * CANARY_SIZE));
+    char* value = (char*)malloc((sizeof(char) * value_size) + (2 * CANARY_SIZE));
 
-    alljoyn_interfacedescription_getannotationatindex(testIntf, 0, name, &name_size, value, &value_size);
+    memset(name, '9', name_size + (2 * CANARY_SIZE));
+    memset(value, '8', value_size + (2 * CANARY_SIZE));
+    alljoyn_interfacedescription_getannotationatindex(testIntf, 0, name + CANARY_SIZE, &name_size, value + CANARY_SIZE, &value_size);
+    EXPECT_EQ((size_t)28, name_size); //the size of 'org.alljoyn.test.annotation' + nul
+    EXPECT_EQ((size_t)4, value_size); //the size of 'foo' + nul {'f', 'o', 'o', '\0'}
+    EXPECT_STREQ("org.alljoyn.test.annotation", name + CANARY_SIZE);
+    EXPECT_STREQ("foo", value + CANARY_SIZE);
+    VERIFY_CANARY_VALUES(name, name_size, '9');
+    VERIFY_CANARY_VALUES(value, value_size, '8');
 
+    memset(name, '7', name_size + (2 * CANARY_SIZE));
+    memset(value, '6', value_size + (2 * CANARY_SIZE));
+    size_t badNameSize = 0;
+    alljoyn_interfacedescription_getannotationatindex(testIntf, 0, name + CANARY_SIZE, &badNameSize, value + CANARY_SIZE, &value_size);
+    EXPECT_EQ((size_t)28, badNameSize); //the size of 'org.alljoyn.test.annotation' + nul
+    EXPECT_EQ((size_t)4, value_size); //the size of 'foo' + nul {'f', 'o', 'o', '\0'}
+    VERIFY_CANARY_VALUES(name, name_size, '7');
+    VERIFY_CANARY_VALUES(value, value_size, '6');
 
-    EXPECT_STREQ("org.alljoyn.test.annotation", name);
-    EXPECT_STREQ("foo", value);
+    memset(name, '5', name_size + (2 * CANARY_SIZE));
+    memset(value, '4', value_size + (2 * CANARY_SIZE));
+    size_t badValueSize = 0;
+    alljoyn_interfacedescription_getannotationatindex(testIntf, 0, name + CANARY_SIZE, &name_size, value + CANARY_SIZE, &badValueSize);
+    EXPECT_EQ((size_t)28, name_size); //the size of 'org.alljoyn.test.annotation' + nul
+    EXPECT_EQ((size_t)4, badValueSize); //the size of 'foo' + nul {'f', 'o', 'o', '\0'}
+    VERIFY_CANARY_VALUES(name, name_size, '5');
+    VERIFY_CANARY_VALUES(value, value_size, '4');
+
+    memset(name, '3', name_size + (2 * CANARY_SIZE));
+    memset(value, '2', value_size + (2 * CANARY_SIZE));
+    badNameSize = 0;
+    badValueSize = 0;
+    alljoyn_interfacedescription_getannotationatindex(testIntf, 0, name + CANARY_SIZE, &badNameSize, value + CANARY_SIZE, &badValueSize);
+    EXPECT_EQ((size_t)28, badNameSize); //the size of 'org.alljoyn.test.annotation' + nul
+    EXPECT_EQ((size_t)4, badValueSize); //the size of 'foo' + nul {'f', 'o', 'o', '\0'}
+    VERIFY_CANARY_VALUES(name, name_size, '3');
+    VERIFY_CANARY_VALUES(value, value_size, '2');
+
+    memset(name, '1', name_size + (2 * CANARY_SIZE));
+    memset(value, '0', value_size + (2 * CANARY_SIZE));
+    size_t tooSmallSize = 1;
+    alljoyn_interfacedescription_getannotationatindex(testIntf, 0, name + CANARY_SIZE, &tooSmallSize, value + CANARY_SIZE, &value_size);
+    EXPECT_EQ((size_t)28, tooSmallSize); //the size of 'org.alljoyn.test.annotation' + nul
+    EXPECT_EQ((size_t)4, value_size); //the size of 'foo' + nul {'f', 'o', 'o', '\0'}
+    EXPECT_STREQ("", name + CANARY_SIZE); //empty string instead of 'org.alljoyn.test.annotation'
+    EXPECT_STREQ("foo", value + CANARY_SIZE);
+    VERIFY_CANARY_VALUES(name, name_size, '1');
+    VERIFY_CANARY_VALUES(value, value_size, '0');
+
+    memset(name, 'a', name_size + (2 * CANARY_SIZE));
+    memset(value, 'b', value_size + (2 * CANARY_SIZE));
+    tooSmallSize = 2;
+    alljoyn_interfacedescription_getannotationatindex(testIntf, 0, name + CANARY_SIZE, &name_size, value + CANARY_SIZE, &tooSmallSize);
+    EXPECT_EQ((size_t)28, name_size); //the size of 'org.alljoyn.test.annotation' + nul
+    EXPECT_EQ((size_t)4, tooSmallSize); //the size of 'foo' + nul {'f', 'o', 'o', '\0'}
+    EXPECT_STREQ("org.alljoyn.test.annotation", name + CANARY_SIZE); //empty string instead of 'org.alljoyn.test.annotation'
+    EXPECT_STREQ("f", value + CANARY_SIZE); //first character of 'foo'
+    VERIFY_CANARY_VALUES(name, name_size, 'a');
+    VERIFY_CANARY_VALUES(value, value_size, 'b');
 
     free(name);
     free(value);
 
-    alljoyn_interfacedescription_getannotation(testIntf, "org.alljoyn.test.annotation", NULL, &value_size);
-    EXPECT_LT((size_t)0, value_size);
+    QCC_BOOL success = alljoyn_interfacedescription_getannotation(testIntf, "org.alljoyn.test.annotation", NULL, &value_size);
+    EXPECT_FALSE(success);
+    EXPECT_EQ((size_t)4, value_size); //the size of 'foo' + nul {'f', 'o', 'o', '\0'}
 
-    value = (char*)malloc(sizeof(char) * value_size);
-    QCC_BOOL success = alljoyn_interfacedescription_getannotation(testIntf, "org.alljoyn.test.annotation", value, &value_size);
+    value = (char*)malloc((sizeof(char) * value_size) + (2 * CANARY_SIZE));
+
+    memset(value, 'c', value_size + (2 * CANARY_SIZE));
+    success = alljoyn_interfacedescription_getannotation(testIntf, "org.alljoyn.test.annotation", value + CANARY_SIZE, &value_size);
     EXPECT_TRUE(success);
+    EXPECT_EQ((size_t)4, value_size); //the size of 'foo' + nul {'f', 'o', 'o', '\0'}
+    EXPECT_STREQ("foo", value + CANARY_SIZE);
+    VERIFY_CANARY_VALUES(value, value_size, 'c');
 
-    EXPECT_STREQ("foo", value);
+    memset(value, 'd', value_size + (2 * CANARY_SIZE));
+    size_t badSize = 0;
+    success = alljoyn_interfacedescription_getannotation(testIntf, "org.alljoyn.test.annotation", value + CANARY_SIZE, &badSize);
+    EXPECT_FALSE(success);
+    EXPECT_EQ((size_t)4, badSize); //the size of 'foo' + nul {'f', 'o', 'o', '\0'}
+    VERIFY_CANARY_VALUES(value, value_size, 'd');
+
+    memset(value, 'e', value_size + (2 * CANARY_SIZE));
+    tooSmallSize = 1;
+    success = alljoyn_interfacedescription_getannotation(testIntf, "org.alljoyn.test.annotation", value + CANARY_SIZE, &tooSmallSize);
+    EXPECT_TRUE(success);
+    EXPECT_EQ((size_t)4, tooSmallSize); //the size of 'foo' + nul {'f', 'o', 'o', '\0'}
+    EXPECT_STREQ("", value + CANARY_SIZE); //empty string instead of 'foo'
+    VERIFY_CANARY_VALUES(value, value_size, 'e');
+
+    memset(value, 'f', value_size + (2 * CANARY_SIZE));
+    tooSmallSize = 2;
+    success = alljoyn_interfacedescription_getannotation(testIntf, "org.alljoyn.test.annotation", value + CANARY_SIZE, &tooSmallSize);
+    EXPECT_TRUE(success);
+    EXPECT_EQ((size_t)4, tooSmallSize); //the size of 'foo' + nul {'f', 'o', 'o', '\0'}
+    EXPECT_STREQ("f", value + CANARY_SIZE); //first character of 'foo'
+    VERIFY_CANARY_VALUES(value, value_size, 'f');
 
     free(value);
 
@@ -690,42 +821,171 @@ TEST(InterfaceDescriptionTest, method_annotations)
     EXPECT_EQ((size_t)1, annotation_count);
     size_t name_size;
     size_t value_size;
+
     alljoyn_interfacedescription_member_getannotationatindex(method_member, 0, NULL, &name_size, NULL, &value_size);
     EXPECT_EQ((size_t)4, name_size); //the size of 'one' {'o', 'n', 'e', '\0'}
     EXPECT_EQ((size_t)10, value_size); //the size of black_cat + nul
 
-    char* name = (char*)malloc(sizeof(char) * name_size);
-    char* value = (char*)malloc(sizeof(char) * value_size);
+    char* name = (char*)malloc((sizeof(char) * name_size) + (2 * CANARY_SIZE));
+    char* value = (char*)malloc((sizeof(char) * value_size) + (2 * CANARY_SIZE));
 
-    alljoyn_interfacedescription_member_getannotationatindex(method_member, 0, name, &name_size, value, &value_size);
+    memset(name, 'A', name_size + (2 * CANARY_SIZE));
+    memset(value, 'B', value_size + (2 * CANARY_SIZE));
+    alljoyn_interfacedescription_member_getannotationatindex(method_member, 0, name + CANARY_SIZE, &name_size, value + CANARY_SIZE, &value_size);
+    EXPECT_EQ((size_t)4, name_size); //the size of 'one' {'o', 'n', 'e', '\0'}
+    EXPECT_EQ((size_t)10, value_size); //the size of black_cat + nul
+    EXPECT_STREQ("one", name + CANARY_SIZE);
+    EXPECT_STREQ("black_cat", value + CANARY_SIZE);
+    VERIFY_CANARY_VALUES(name, name_size, 'A');
+    VERIFY_CANARY_VALUES(value, value_size, 'B');
 
+    memset(name, 'C', name_size + (2 * CANARY_SIZE));
+    memset(value, 'D', value_size + (2 * CANARY_SIZE));
+    size_t badNameSize = 0;
+    alljoyn_interfacedescription_member_getannotationatindex(method_member, 0, name + CANARY_SIZE, &badNameSize, value + CANARY_SIZE, &value_size);
+    EXPECT_EQ((size_t)4, badNameSize); //the size of 'one' {'o', 'n', 'e', '\0'}
+    EXPECT_EQ((size_t)10, value_size); //the size of black_cat + nul
+    VERIFY_CANARY_VALUES(name, name_size, 'C');
+    VERIFY_CANARY_VALUES(value, value_size, 'D');
 
-    EXPECT_STREQ("one", name);
-    EXPECT_STREQ("black_cat", value);
+    memset(name, 'E', name_size + (2 * CANARY_SIZE));
+    memset(value, 'F', value_size + (2 * CANARY_SIZE));
+    size_t badValueSize = 0;
+    alljoyn_interfacedescription_member_getannotationatindex(method_member, 0, name + CANARY_SIZE, &name_size, value + CANARY_SIZE, &badValueSize);
+    EXPECT_EQ((size_t)4, name_size); //the size of 'one' {'o', 'n', 'e', '\0'}
+    EXPECT_EQ((size_t)10, badValueSize); //the size of black_cat + nul
+    VERIFY_CANARY_VALUES(name, name_size, 'E');
+    VERIFY_CANARY_VALUES(value, value_size, 'F');
+
+    memset(name, 'G', name_size + (2 * CANARY_SIZE));
+    memset(value, 'H', value_size + (2 * CANARY_SIZE));
+    badNameSize = 0;
+    badValueSize = 0;
+    alljoyn_interfacedescription_member_getannotationatindex(method_member, 0, name + CANARY_SIZE, &badNameSize, value + CANARY_SIZE, &badValueSize);
+    EXPECT_EQ((size_t)4, badNameSize); //the size of 'one' {'o', 'n', 'e', '\0'}
+    EXPECT_EQ((size_t)10, badValueSize); //the size of black_cat + nul
+    VERIFY_CANARY_VALUES(name, name_size, 'G');
+    VERIFY_CANARY_VALUES(value, value_size, 'H');
+
+    memset(name, 'I', name_size + (2 * CANARY_SIZE));
+    memset(value, 'J', value_size + (2 * CANARY_SIZE));
+    size_t tooSmallSize = 1;
+    alljoyn_interfacedescription_member_getannotationatindex(method_member, 0, name + CANARY_SIZE, &tooSmallSize, value + CANARY_SIZE, &value_size);
+    EXPECT_EQ((size_t)4, tooSmallSize); //the size of 'one' {'o', 'n', 'e', '\0'}
+    EXPECT_EQ((size_t)10, value_size); //the size of black_cat + nul
+    EXPECT_STREQ("", name + CANARY_SIZE); //empty string instead of 'one'
+    EXPECT_STREQ("black_cat", value + CANARY_SIZE);
+    VERIFY_CANARY_VALUES(name, name_size, 'I');
+    VERIFY_CANARY_VALUES(value, value_size, 'J');
+
+    memset(name, 'L', name_size + (2 * CANARY_SIZE));
+    memset(value, 'M', value_size + (2 * CANARY_SIZE));
+    tooSmallSize = 1;
+    alljoyn_interfacedescription_member_getannotationatindex(method_member, 0, name + CANARY_SIZE, &name_size, value + CANARY_SIZE, &tooSmallSize);
+    EXPECT_EQ((size_t)4, name_size); //the size of 'one' {'o', 'n', 'e', '\0'}
+    EXPECT_EQ((size_t)10, tooSmallSize); //the size of black_cat + nul
+    EXPECT_STREQ("one", name + CANARY_SIZE);
+    EXPECT_STREQ("", value + CANARY_SIZE); //empty string instead of 'black_cat'
+    VERIFY_CANARY_VALUES(name, name_size, 'L');
+    VERIFY_CANARY_VALUES(value, value_size, 'M');
+
+    memset(name, 'N', name_size + (2 * CANARY_SIZE));
+    memset(value, 'O', value_size + (2 * CANARY_SIZE));
+    tooSmallSize = 2;
+    alljoyn_interfacedescription_member_getannotationatindex(method_member, 0, name + CANARY_SIZE, &tooSmallSize, value + CANARY_SIZE, &value_size);
+    EXPECT_EQ((size_t)4, tooSmallSize); //the size of 'one' {'o', 'n', 'e', '\0'}
+    EXPECT_EQ((size_t)10, value_size); //the size of black_cat + nul
+    EXPECT_STREQ("o", name + CANARY_SIZE); //first character of 'one'
+    EXPECT_STREQ("black_cat", value + CANARY_SIZE);
+    VERIFY_CANARY_VALUES(name, name_size, 'N');
+    VERIFY_CANARY_VALUES(value, value_size, 'O');
+
+    memset(name, 'P', name_size + (2 * CANARY_SIZE));
+    memset(value, 'R', value_size + (2 * CANARY_SIZE));
+    tooSmallSize = 3;
+    alljoyn_interfacedescription_member_getannotationatindex(method_member, 0, name + CANARY_SIZE, &name_size, value + CANARY_SIZE, &tooSmallSize);
+    EXPECT_EQ((size_t)4, name_size); //the size of 'one' {'o', 'n', 'e', '\0'}
+    EXPECT_EQ((size_t)10, tooSmallSize); //the size of black_cat + nul
+    EXPECT_STREQ("one", name + CANARY_SIZE);
+    EXPECT_STREQ("bl", value + CANARY_SIZE); //first two characters of 'black_cat'
+    VERIFY_CANARY_VALUES(name, name_size, 'P');
+    VERIFY_CANARY_VALUES(value, value_size, 'R');
 
     free(name);
     free(value);
 
-    alljoyn_interfacedescription_member_getannotation(method_member, "one", NULL, &value_size);
-    EXPECT_LT((size_t)0, value_size);
+    QCC_BOOL success = alljoyn_interfacedescription_member_getannotation(method_member, "one", NULL, &value_size);
+    EXPECT_FALSE(success);
+    EXPECT_EQ((size_t)10, value_size); //the size of black_cat + nul
+    value = (char*)malloc((sizeof(char) * value_size) + (2 * CANARY_SIZE));
 
-    value = (char*)malloc(sizeof(char) * value_size);
-    QCC_BOOL success = alljoyn_interfacedescription_member_getannotation(method_member, "one", value, &value_size);
+    memset(value, 'K', value_size + (2 * CANARY_SIZE));
+    success = alljoyn_interfacedescription_member_getannotation(method_member, "one", value + CANARY_SIZE, &value_size);
     EXPECT_TRUE(success);
+    EXPECT_EQ((size_t)10, value_size); //the size of black_cat + nul
+    EXPECT_STREQ("black_cat", value + CANARY_SIZE);
+    VERIFY_CANARY_VALUES(value, value_size, 'K');
 
-    EXPECT_STREQ("black_cat", value);
+    memset(value, 'L', value_size + (2 * CANARY_SIZE));
+    badValueSize = 0;
+    success = alljoyn_interfacedescription_member_getannotation(method_member, "one", value + CANARY_SIZE, &badValueSize);
+    EXPECT_FALSE(success);
+    EXPECT_EQ((size_t)10, badValueSize); //the size of black_cat + nul
+    VERIFY_CANARY_VALUES(value, value_size, 'L');
+
+    memset(value, 'M', value_size + (2 * CANARY_SIZE));
+    tooSmallSize = 1;
+    success = alljoyn_interfacedescription_member_getannotation(method_member, "one", value + CANARY_SIZE, &tooSmallSize);
+    EXPECT_TRUE(success);
+    EXPECT_EQ((size_t)10, tooSmallSize); //the size of black_cat + nul
+    EXPECT_STREQ("", value + CANARY_SIZE); //empty string instead of black_cat
+    VERIFY_CANARY_VALUES(value, value_size, 'M');
+
+    memset(value, 'N', value_size + (2 * CANARY_SIZE));
+    tooSmallSize = 2;
+    success = alljoyn_interfacedescription_member_getannotation(method_member, "one", value + CANARY_SIZE, &tooSmallSize);
+    EXPECT_TRUE(success);
+    EXPECT_EQ((size_t)10, tooSmallSize); //the size of black_cat + nul
+    EXPECT_STREQ("b", value + CANARY_SIZE); //first character of black_cat
+    VERIFY_CANARY_VALUES(value, value_size, 'N');
 
     free(value);
 
-    alljoyn_interfacedescription_getmemberannotation(testIntf, "ping", "one", NULL, &value_size);
-    EXPECT_LT((size_t)0, value_size);
+    success = alljoyn_interfacedescription_getmemberannotation(testIntf, "ping", "one", NULL, &value_size);
+    EXPECT_FALSE(success);
+    EXPECT_EQ((size_t)10, value_size); //the size of black_cat + nul
 
-    value = (char*)malloc(sizeof(char) * value_size);
+    value = (char*)malloc((sizeof(char) * value_size) + (2 * CANARY_SIZE));
 
-    success = alljoyn_interfacedescription_getmemberannotation(testIntf, "ping", "one", value, &value_size);
+    memset(value, 'O', value_size + (2 * CANARY_SIZE));
+    success = alljoyn_interfacedescription_getmemberannotation(testIntf, "ping", "one", value + CANARY_SIZE, &value_size);
     EXPECT_TRUE(success);
+    EXPECT_EQ((size_t)10, value_size); //the size of black_cat + nul
+    EXPECT_STREQ("black_cat", value + CANARY_SIZE);
+    VERIFY_CANARY_VALUES(value, value_size, 'O');
 
-    EXPECT_STREQ("black_cat", value);
+    memset(value, 'P', value_size + (2 * CANARY_SIZE));
+    badValueSize = 0;
+    success = alljoyn_interfacedescription_getmemberannotation(testIntf, "ping", "one", value + CANARY_SIZE, &badValueSize);
+    EXPECT_FALSE(success);
+    EXPECT_EQ((size_t)10, badValueSize); //the size of black_cat + nul
+    VERIFY_CANARY_VALUES(value, value_size, 'P');
+
+    memset(value, 'Q', value_size + (2 * CANARY_SIZE));
+    tooSmallSize = 1;
+    success = alljoyn_interfacedescription_getmemberannotation(testIntf, "ping", "one", value + CANARY_SIZE, &tooSmallSize);
+    EXPECT_TRUE(success);
+    EXPECT_EQ((size_t)10, tooSmallSize); //the size of black_cat + nul
+    EXPECT_STREQ("", value + CANARY_SIZE); //empty string instead of black_cat
+    VERIFY_CANARY_VALUES(value, value_size, 'Q');
+
+    memset(value, 'R', value_size + (2 * CANARY_SIZE));
+    tooSmallSize = 2;
+    success = alljoyn_interfacedescription_getmemberannotation(testIntf, "ping", "one", value + CANARY_SIZE, &tooSmallSize);
+    EXPECT_TRUE(success);
+    EXPECT_EQ((size_t)10, tooSmallSize); //the size of black_cat + nul
+    EXPECT_STREQ("b", value + CANARY_SIZE); //first character of black_cat
+    VERIFY_CANARY_VALUES(value, value_size, 'R');
 
     free(value);
 
@@ -819,44 +1079,164 @@ TEST(InterfaceDescriptionTest, property_annotations)
 
     size_t annotation_count = alljoyn_interfacedescription_property_getannotationscount(property);
     EXPECT_EQ((size_t)1, annotation_count);
+
     size_t name_size;
     size_t value_size;
     alljoyn_interfacedescription_property_getannotationatindex(property, 0, NULL, &name_size, NULL, &value_size);
     EXPECT_EQ((size_t)6, name_size); //the size of 'three' {'t', 'h', 'r', 'e', 'e', '\0'}
     EXPECT_EQ((size_t)7, value_size); //the size of 'people' + nul
 
-    char* name = (char*)malloc(sizeof(char) * name_size);
-    char* value = (char*)malloc(sizeof(char) * value_size);
+    char* name = (char*)malloc((sizeof(char) * name_size) + (2 * CANARY_SIZE));
+    char* value = (char*)malloc((sizeof(char) * value_size) + (2 * CANARY_SIZE));
 
-    alljoyn_interfacedescription_property_getannotationatindex(property, 0, name, &name_size, value, &value_size);
+    memset(name, 'a', name_size + (2 * CANARY_SIZE));
+    memset(value, 'b', value_size + (2 * CANARY_SIZE));
+    alljoyn_interfacedescription_property_getannotationatindex(property, 0, name + CANARY_SIZE, &name_size, value + CANARY_SIZE, &value_size);
+    EXPECT_EQ((size_t)6, name_size); //the size of 'three' {'t', 'h', 'r', 'e', 'e', '\0'}
+    EXPECT_EQ((size_t)7, value_size); //the size of 'people' + nul
+    EXPECT_STREQ("three", name + CANARY_SIZE);
+    EXPECT_STREQ("people", value + CANARY_SIZE);
+    VERIFY_CANARY_VALUES(name, name_size, 'a');
+    VERIFY_CANARY_VALUES(value, value_size, 'b');
 
+    memset(name, 'c', name_size + (2 * CANARY_SIZE));
+    memset(value, 'd', value_size + (2 * CANARY_SIZE));
+    size_t badNameSize = 0;
+    alljoyn_interfacedescription_property_getannotationatindex(property, 0, name + CANARY_SIZE, &badNameSize, value + CANARY_SIZE, &value_size);
+    EXPECT_EQ((size_t)6, badNameSize); //the size of 'three' {'t', 'h', 'r', 'e', 'e', '\0'}
+    EXPECT_EQ((size_t)7, value_size); //the size of 'people' + nul
+    VERIFY_CANARY_VALUES(name, name_size, 'c');
+    VERIFY_CANARY_VALUES(value, value_size, 'd');
 
-    EXPECT_STREQ("three", name);
-    EXPECT_STREQ("people", value);
+    memset(name, 'e', name_size + (2 * CANARY_SIZE));
+    memset(value, 'f', value_size + (2 * CANARY_SIZE));
+    size_t badValueSize = 0;
+    alljoyn_interfacedescription_property_getannotationatindex(property, 0, name + CANARY_SIZE, &name_size, value + CANARY_SIZE, &badValueSize);
+    EXPECT_EQ((size_t)6, name_size); //the size of 'three' {'t', 'h', 'r', 'e', 'e', '\0'}
+    EXPECT_EQ((size_t)7, badValueSize); //the size of 'people' + nul
+    VERIFY_CANARY_VALUES(name, name_size, 'e');
+    VERIFY_CANARY_VALUES(value, value_size, 'f');
+
+    memset(name, 'g', name_size + (2 * CANARY_SIZE));
+    memset(value, 'h', value_size + (2 * CANARY_SIZE));
+    badNameSize = 0;
+    badValueSize = 0;
+    alljoyn_interfacedescription_property_getannotationatindex(property, 0, name + CANARY_SIZE, &badNameSize, value + CANARY_SIZE, &badValueSize);
+    EXPECT_EQ((size_t)6, badNameSize); //the size of 'three' {'t', 'h', 'r', 'e', 'e', '\0'}
+    EXPECT_EQ((size_t)7, badValueSize); //the size of 'people' + nul
+    VERIFY_CANARY_VALUES(name, name_size, 'g');
+    VERIFY_CANARY_VALUES(value, value_size, 'h');
+
+    memset(name, 'i', name_size + (2 * CANARY_SIZE));
+    memset(value, 'j', value_size + (2 * CANARY_SIZE));
+    size_t tooSmallSize = 1;
+    alljoyn_interfacedescription_property_getannotationatindex(property, 0, name + CANARY_SIZE, &tooSmallSize, value + CANARY_SIZE, &value_size);
+    EXPECT_EQ((size_t)6, tooSmallSize); //the size of 'three' {'t', 'h', 'r', 'e', 'e', '\0'}
+    EXPECT_EQ((size_t)7, value_size); //the size of 'people' + nul
+    EXPECT_STREQ("", name + CANARY_SIZE); //empty string instead of 'three'
+    EXPECT_STREQ("people", value + CANARY_SIZE);
+    VERIFY_CANARY_VALUES(name, name_size, 'i');
+    VERIFY_CANARY_VALUES(value, value_size, 'j');
+
+    memset(name, 'k', name_size + (2 * CANARY_SIZE));
+    memset(value, 'l', value_size + (2 * CANARY_SIZE));
+    tooSmallSize = 1;
+    alljoyn_interfacedescription_property_getannotationatindex(property, 0, name + CANARY_SIZE, &name_size, value + CANARY_SIZE, &tooSmallSize);
+    EXPECT_EQ((size_t)6, name_size); //the size of 'three' {'t', 'h', 'r', 'e', 'e', '\0'}
+    EXPECT_EQ((size_t)7, tooSmallSize); //the size of 'people' + nul
+    EXPECT_STREQ("three", name + CANARY_SIZE);
+    EXPECT_STREQ("", value + CANARY_SIZE); //empty string instead of 'people'
+    VERIFY_CANARY_VALUES(name, name_size, 'k');
+    VERIFY_CANARY_VALUES(value, value_size, 'l');
+
+    memset(name, 'm', name_size + (2 * CANARY_SIZE));
+    memset(value, 'n', value_size + (2 * CANARY_SIZE));
+    tooSmallSize = 3;
+    size_t tooSmallSize2 = 2;
+    alljoyn_interfacedescription_property_getannotationatindex(property, 0, name + CANARY_SIZE, &tooSmallSize, value + CANARY_SIZE, &tooSmallSize2);
+    EXPECT_EQ((size_t)6, tooSmallSize); //the size of 'three' {'t', 'h', 'r', 'e', 'e', '\0'}
+    EXPECT_EQ((size_t)7, tooSmallSize2); //the size of 'people' + nul
+    EXPECT_STREQ("th", name + CANARY_SIZE); //first two characters of 'three'
+    EXPECT_STREQ("p", value + CANARY_SIZE); //first character of 'people'
+    VERIFY_CANARY_VALUES(name, name_size, 'm');
+    VERIFY_CANARY_VALUES(value, value_size, 'n');
 
     free(name);
     free(value);
 
-    alljoyn_interfacedescription_property_getannotation(property, "three", NULL, &value_size);
-    EXPECT_LT((size_t)0, value_size);
+    QCC_BOOL success = alljoyn_interfacedescription_property_getannotation(property, "three", NULL, &value_size);
+    EXPECT_FALSE(success);
+    EXPECT_EQ((size_t)7, value_size); //the size of 'people' + nul
 
-    value = (char*)malloc(sizeof(char) * value_size);
-    QCC_BOOL success = alljoyn_interfacedescription_property_getannotation(property, "three", value, &value_size);
+    value = (char*)malloc((sizeof(char) * value_size) + (2 * CANARY_SIZE));
+
+    memset(value, 'o', value_size + (2 * CANARY_SIZE));
+    success = alljoyn_interfacedescription_property_getannotation(property, "three", value + CANARY_SIZE, &value_size);
     EXPECT_TRUE(success);
+    EXPECT_EQ((size_t)7, value_size); //the size of 'people' + nul
+    EXPECT_STREQ("people", value + CANARY_SIZE);
+    VERIFY_CANARY_VALUES(value, value_size, 'o');
 
-    EXPECT_STREQ("people", value);
+    memset(value, 'p', value_size + (2 * CANARY_SIZE));
+    badValueSize = 0;
+    success = alljoyn_interfacedescription_property_getannotation(property, "three", value + CANARY_SIZE, &badValueSize);
+    EXPECT_FALSE(success);
+    EXPECT_EQ((size_t)7, badValueSize); //the size of 'people' + nul
+    VERIFY_CANARY_VALUES(value, value_size, 'p');
+
+    memset(value, 'q', value_size + (2 * CANARY_SIZE));
+    tooSmallSize = 1;
+    success = alljoyn_interfacedescription_property_getannotation(property, "three", value + CANARY_SIZE, &tooSmallSize);
+    EXPECT_TRUE(success);
+    EXPECT_EQ((size_t)7, tooSmallSize); //the size of 'people' + nul
+    EXPECT_STREQ("", value + CANARY_SIZE); //empty string instead of 'people'
+    VERIFY_CANARY_VALUES(value, value_size, 'q');
+
+    memset(value, 'r', value_size + (2 * CANARY_SIZE));
+    tooSmallSize = 2;
+    success = alljoyn_interfacedescription_property_getannotation(property, "three", value + CANARY_SIZE, &tooSmallSize);
+    EXPECT_TRUE(success);
+    EXPECT_EQ((size_t)7, tooSmallSize); //the size of 'people' + nul
+    EXPECT_STREQ("p", value + CANARY_SIZE); //first character of 'people'
+    VERIFY_CANARY_VALUES(value, value_size, 'r');
 
     free(value);
 
-    alljoyn_interfacedescription_getpropertyannotation(testIntf, "prop", "three", NULL, &value_size);
-    EXPECT_LT((size_t)0, value_size);
+    success = alljoyn_interfacedescription_getpropertyannotation(testIntf, "prop", "three", NULL, &value_size);
+    EXPECT_FALSE(success);
+    EXPECT_EQ((size_t)7, value_size); //the size of 'people' + nul
 
-    value = (char*)malloc(sizeof(char) * value_size);
+    value = (char*)malloc((sizeof(char) * value_size) + (2 * CANARY_SIZE));
 
-    success = alljoyn_interfacedescription_getpropertyannotation(testIntf, "prop", "three", value, &value_size);
+    memset(value, 's', value_size + (2 * CANARY_SIZE));
+    success = alljoyn_interfacedescription_getpropertyannotation(testIntf, "prop", "three", value + CANARY_SIZE, &value_size);
     EXPECT_TRUE(success);
+    EXPECT_EQ((size_t)7, value_size); //the size of 'people' + nul
+    EXPECT_STREQ("people", value + CANARY_SIZE);
+    VERIFY_CANARY_VALUES(value, value_size, 's');
 
-    EXPECT_STREQ("people", value);
+    memset(value, 't', value_size + (2 * CANARY_SIZE));
+    badValueSize = 0;
+    success = alljoyn_interfacedescription_getpropertyannotation(testIntf, "prop", "three", value + CANARY_SIZE, &badValueSize);
+    EXPECT_FALSE(success);
+    EXPECT_EQ((size_t)7, badValueSize); //the size of 'people' + nul
+    VERIFY_CANARY_VALUES(value, value_size, 't');
+
+    memset(value, 'u', value_size + (2 * CANARY_SIZE));
+    tooSmallSize = 1;
+    success = alljoyn_interfacedescription_getpropertyannotation(testIntf, "prop", "three", value + CANARY_SIZE, &tooSmallSize);
+    EXPECT_TRUE(success);
+    EXPECT_EQ((size_t)7, tooSmallSize); //the size of 'people' + nul
+    EXPECT_STREQ("", value + CANARY_SIZE); //empty string instead of 'people'
+    VERIFY_CANARY_VALUES(value, value_size, 'u');
+
+    memset(value, 'u', value_size + (2 * CANARY_SIZE));
+    tooSmallSize = 2;
+    success = alljoyn_interfacedescription_getpropertyannotation(testIntf, "prop", "three", value + CANARY_SIZE, &tooSmallSize);
+    EXPECT_TRUE(success);
+    EXPECT_EQ((size_t)7, tooSmallSize); //the size of 'people' + nul
+    EXPECT_STREQ("p", value + CANARY_SIZE); //first character of 'people'
+    VERIFY_CANARY_VALUES(value, value_size, 'u');
 
     free(value);
 

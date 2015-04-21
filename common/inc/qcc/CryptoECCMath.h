@@ -24,6 +24,7 @@
 
 #include <Status.h>
 #include <qcc/platform.h>
+#include <qcc/CryptoECCOldEncoding.h>
 
 namespace qcc {
 

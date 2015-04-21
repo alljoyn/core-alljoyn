@@ -53,6 +53,8 @@ namespace ajn {
 
 char _Message::outEndian = _Message::myEndian;
 
+const uint32_t _Message::AUTH_FALLBACK_VERSION = 2;
+
 qcc::String _Message::ToString() const
 {
     return ToString(msgArgs, numMsgArgs);
@@ -331,6 +333,7 @@ void _Message::Init(BusAttachment& bus)
     handles = NULL;
     numHandles = 0;
     encrypt = false;
+    authVersion = -1;
     readState = MESSAGE_NEW;
     countRead = 0;
     writeState = MESSAGE_NEW;
@@ -364,6 +367,7 @@ _Message::_Message(const _Message& other) :
     rcvEndpointName(other.rcvEndpointName),
     numHandles(other.numHandles),
     encrypt(other.encrypt),
+    authVersion(other.authVersion),
     readState(other.readState),
     countRead(other.countRead),
     writeState(other.writeState),

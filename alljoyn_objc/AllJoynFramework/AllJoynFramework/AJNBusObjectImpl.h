@@ -25,6 +25,8 @@ class AJNBusObjectImpl : public ajn::BusObject {
     __weak id<AJNBusObject> delegate;
 
   public:
+    AJNBusObjectImpl(const char* path, id<AJNBusObject> aDelegate);
+
     AJNBusObjectImpl(ajn::BusAttachment& bus, const char* path, id<AJNBusObject> aDelegate);
 
     virtual QStatus RegisterSignalHandlers(ajn::BusAttachment& bus);

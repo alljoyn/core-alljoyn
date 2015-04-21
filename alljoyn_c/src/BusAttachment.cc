@@ -453,9 +453,8 @@ QStatus AJ_CALL alljoyn_busattachment_getpeerguid(alljoyn_busattachment bus, con
     QCC_DbgTrace(("%s", __FUNCTION__));
     qcc::String guidStr;
     QStatus ret = ((ajn::BusAttachmentC*)bus)->GetPeerGUID(name, guidStr);
-    if (guid != NULL) {
+    if ((guid != nullptr) && (*guidSz >= 1)) {
         strncpy(guid, guidStr.c_str(), *guidSz);
-        //prevent sting not being null terminated.
         guid[*guidSz - 1] = '\0';
     }
     //size of the string plus the nul character

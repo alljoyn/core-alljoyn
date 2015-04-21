@@ -23,17 +23,25 @@
 /**
  * This must be called prior to instantiating or using any AllJoyn
  * functionality.
+ *
+ * alljoynShutdown must be called for each invocation of alljoynInit.
  */
 + (QStatus)alljoynInit;
 
 /**
  * Call this to release any resources acquired in AllJoynInit().  No AllJoyn
  * functionality may be used after calling this.
+ *
+ * alljoynShutdown must be called for each invocation of alljoynInit.
+ * alljoynShutdown must not be called without a prior alljoynInit call.
+ *
  */
 + (QStatus)alljoynShutdown;
 
 /**
  * This must be called before using any AllJoyn router functionality.
+ *
+ * alljoynRouterShutdown must be called for each invocation of alljoynRouterInit.
  *
  * For an application that is a routing node (either standalone or bundled), the
  * complete initialization sequence is:
@@ -45,7 +53,10 @@
 + (QStatus)alljoynRouterInit;
 
 /**
- * Call this to release any resources acquired in AllJoynRouterInit().
+ * Call this to release any resources acquired in AllJoynRouterInit().  \
+ *
+ * alljoynRouterShutdown must be called for each invocation of alljoynRouterInit.
+ * alljoynRouterShutdown must not be called without a prior alljoynRouterInit call.
  *
  * For an application that is a routing node (either standalone or bundled), the
  * complete shutdown sequence is:

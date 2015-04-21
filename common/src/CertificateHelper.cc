@@ -56,10 +56,10 @@ static QStatus CountNumOfChunksFromEncoded(const String& encoded, const char* be
         *count += 1;
         remainder = remainder.substr(pos + strlen(endToken));
     }
-    return ER_OK;
+    // Unreachable
 }
 
-QStatus CertificateHelper::GetCertCount(const String& encoded, size_t* count)
+QStatus AJ_CALL CertificateHelper::GetCertCount(const String& encoded, size_t* count)
 {
     *count = 0;
     return CountNumOfChunksFromEncoded(encoded,

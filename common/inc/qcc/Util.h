@@ -157,6 +157,11 @@ uint32_t Rand32();
 uint64_t Rand64();
 
 /**
+ * Clear memory even with compiler optimizations
+ */
+void ClearMemory(void* s, size_t n);
+
+/**
  * Return the Process ID as an unsigned 32 bit integer.
  *
  * @return The 32 bit Process ID
