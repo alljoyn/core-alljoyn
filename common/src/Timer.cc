@@ -390,8 +390,10 @@ QStatus TimerImpl::AddAlarm(const Alarm& alarm)
             }
             /* Reset alert status */
             if (ER_ALERTED_THREAD == status1) {
+                uint32_t alertCode = thread->GetAlertCode();
+                thread->ResetAlertCode();
                 thread->GetStopEvent().ResetEvent();
-                if (thread->GetAlertCode() == FORCEREMOVEALARM_ALERTCODE) {
+                if (alertCode == FORCEREMOVEALARM_ALERTCODE) {
                     lock.Unlock(MUTEX_CONTEXT);
                     return ER_TIMER_EXITING;
                 }
