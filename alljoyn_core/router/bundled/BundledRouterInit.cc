@@ -40,6 +40,7 @@ QStatus AJ_CALL AllJoynRouterInit(void)
     if (allJoynRouterInitCount == 0) {
         ajn::RouterGlobals::Init();
         bundledRouter = new ajn::BundledRouter();
+        allJoynRouterInitCount = 1;
     } else if (allJoynRouterInitCount < 0xFFFFFFFF) {
         allJoynRouterInitCount++;
     }
