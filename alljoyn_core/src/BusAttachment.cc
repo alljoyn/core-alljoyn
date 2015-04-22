@@ -1774,6 +1774,7 @@ QStatus BusAttachment::Internal::JoinSession(const char* sessionHost, SessionPor
 
         /* Clear alerted state */
         if (status == ER_ALERTED_THREAD) {
+            thisThread->ResetAlertCode();
             thisThread->GetStopEvent().ResetEvent();
             status = ER_OK;
         }
