@@ -82,7 +82,7 @@ struct _PropertiesChangedCB {
                          const char** properties,
                          size_t numProps,
                          void* context) :
-        listener(listener), context(context), isRegistered(true)
+        listener(listener), context(context), isRegistered(true), numRunning(0)
     {
         if (properties) {
             for (size_t i = 0; i < numProps; ++i) {
@@ -95,6 +95,7 @@ struct _PropertiesChangedCB {
     void* context;
     set<StringMapKey> properties;  // Properties to monitor - empty set == all properties.
     bool isRegistered;
+    int32_t numRunning;
     _PropertiesChangedCB& operator=(const _PropertiesChangedCB&) { return *this; }
 };
 
@@ -182,8 +183,7 @@ class ProxyBusObject::Internal : public MessageReceiver {
         isSecure(false),
         cacheProperties(false),
         registeredPropChangedHandler(false),
-        handlerThread(nullptr),
-        activeListener(nullptr)
+        handlerThreads()
     {
         QCC_DbgPrintf(("Creating empty PBO internal: %p", this));
     }
@@ -201,8 +201,7 @@ class ProxyBusObject::Internal : public MessageReceiver {
         isSecure(isSecure),
         cacheProperties(false),
         registeredPropChangedHandler(false),
-        handlerThread(nullptr),
-        activeListener(nullptr)
+        handlerThreads()
     {
         QCC_DbgPrintf(("Creating PBO internal: %p   path=%s   serviceName=%s   uniqueName=%s", this, path.c_str(), serviceName.c_str(), uniqueName.c_str()));
     }
@@ -221,8 +220,7 @@ class ProxyBusObject::Internal : public MessageReceiver {
         isSecure(isSecure),
         cacheProperties(false),
         registeredPropChangedHandler(false),
-        handlerThread(nullptr),
-        activeListener(nullptr)
+        handlerThreads()
     {
         QCC_DbgPrintf(("Creating PBO internal: %p   path=%s   serviceName=%s   uniqueName=%s", this, path.c_str(), serviceName.c_str(), uniqueName.c_str()));
     }
@@ -283,8 +281,7 @@ class ProxyBusObject::Internal : public MessageReceiver {
     Condition listenerDone;             /**< Signals that the properties changed listener is done */
     Condition handlerDone;              /**< Signals that the properties changed signal handler is done */
     bool registeredPropChangedHandler;  /**< true if our PropertiesChangedHandler is registered */
-    qcc::Thread* handlerThread;         /**< Thread actively calling PropertiesChangedListeners */
-    PropertiesChangedListener* activeListener; /**< Currently running PropertiesChangedListener */
+    map<qcc::Thread*, _PropertiesChangedCB*> handlerThreads;   /**< Thread actively calling PropertiesChangedListeners */
 
     /** The interfaces this object implements */
     map<qcc::StringMapKey, const InterfaceDescription*> ifaces;
@@ -335,7 +332,7 @@ ProxyBusObject::Internal::~Internal()
     RemoveAllPropertiesChangedRules();
 
     /* Clean up properties changed listeners */
-    while (handlerThread) {
+    while (!handlerThreads.empty()) {
         /*
          * The Properties Changed signal handler is still running.
          * Wait for it to complete.
@@ -792,7 +789,7 @@ QStatus ProxyBusObject::RegisterPropertiesChangedListener(const char* iface,
 QStatus ProxyBusObject::UnregisterPropertiesChangedListener(const char* iface,
                                                             ProxyBusObject::PropertiesChangedListener& listener)
 {
-    QCC_DbgTrace(("ProxyBusObject::UnregisterPropertiesChangedListener(iface = %s, listener = %p", iface, &listener));
+    QCC_DbgTrace(("ProxyBusObject::UnregisterPropertiesChangedListener(iface = %s, listener = %p)", iface, &listener));
     if (!internal->bus->GetInterface(iface)) {
         return ER_BUS_OBJECT_NO_SUCH_INTERFACE;
     }
@@ -801,17 +798,11 @@ QStatus ProxyBusObject::UnregisterPropertiesChangedListener(const char* iface,
     bool removed = false;
 
     internal->lock.Lock(MUTEX_CONTEXT);
-    while (internal->activeListener && (internal->activeListener == &listener)) {
-        if (internal->handlerThread && (internal->handlerThread == Thread::GetThread())) {
-            QCC_LogError(ER_DEADLOCK, ("Attempt to unregister listener from said listener would cause deadlock"));
-            internal->lock.Unlock(MUTEX_CONTEXT);
-            return ER_DEADLOCK;
-        }
-        /*
-         * Some thread is trying to remove listeners while the listeners are
-         * being called.  Wait until the listener callbacks are done first.
-         */
-        internal->listenerDone.Wait(internal->lock);
+    map<qcc::Thread*, _PropertiesChangedCB*>::iterator thread = internal->handlerThreads.find(Thread::GetThread());
+    if (thread != internal->handlerThreads.end() && (&thread->second->listener == &listener)) {
+        QCC_LogError(ER_DEADLOCK, ("Attempt to unregister listener from said listener would cause deadlock"));
+        internal->lock.Unlock(MUTEX_CONTEXT);
+        return ER_DEADLOCK;
     }
 
     multimap<StringMapKey, PropertiesChangedCB>::iterator it = internal->propertiesChangedCBs.lower_bound(iface);
@@ -822,6 +813,15 @@ QStatus ProxyBusObject::UnregisterPropertiesChangedListener(const char* iface,
             ctx->isRegistered = false;
             internal->propertiesChangedCBs.erase(it);
             removed = true;
+
+            while (ctx->numRunning > 0) {
+                /*
+                 * Some thread is trying to remove listeners while the listeners are
+                 * being called.  Wait until the listener callbacks are done first.
+                 */
+                internal->listenerDone.Wait(internal->lock);
+            }
+
             break;
         }
         ++it;
@@ -870,7 +870,7 @@ void ProxyBusObject::Internal::PropertiesChangedHandler(const InterfaceDescripti
     }
 
     /* then, alert listeners */
-    handlerThread = Thread::GetThread();
+    handlerThreads[Thread::GetThread()] = nullptr;
     multimap<StringMapKey, PropertiesChangedCB>::iterator it = propertiesChangedCBs.lower_bound(ifaceName);
     multimap<StringMapKey, PropertiesChangedCB>::iterator end = propertiesChangedCBs.upper_bound(ifaceName);
     list<PropertiesChangedCB> handlers;
@@ -892,69 +892,68 @@ void ProxyBusObject::Internal::PropertiesChangedHandler(const InterfaceDescripti
 
     while (handlers.begin() != handlers.end()) {
         PropertiesChangedCB ctx = *handlers.begin();
+
         lock.Lock(MUTEX_CONTEXT);
-        if (!ctx->isRegistered) {
-            // Skip invalidated handlers.
-            handlers.pop_front();
-            lock.Unlock(MUTEX_CONTEXT);
-            continue;
-        } else {
-            activeListener = &ctx->listener;
-            lock.Unlock(MUTEX_CONTEXT);
-        }
+        bool isRegistered = ctx->isRegistered;
+        handlerThreads[Thread::GetThread()] = ctx.unwrap();
+        ++ctx->numRunning;
+        lock.Unlock(MUTEX_CONTEXT);
 
-        changedOutDictSize = 0;
-        invalidOutArraySize = 0;
+        if (isRegistered) {
+            changedOutDictSize = 0;
+            invalidOutArraySize = 0;
 
-        if (ctx->properties.empty()) {
-            // handler wants all changed/invalid properties in signal
-            changedOut.Set("a{sv}", numChangedProps, changedProps);
-            changedOutDictSize = numChangedProps;
-            for (i = 0; i < numInvalidProps; ++i) {
-                const char* propName;
-                invalidProps[i].Get("s", &propName);
-                invalidOutArray[invalidOutArraySize++] = propName;
-
-            }
-            invalidOut.Set("as", numInvalidProps, invalidOutArray);
-        } else {
-            for (i = 0; i < numChangedProps; ++i) {
-                const char* propName;
-                MsgArg* propValue;
-                changedProps[i].Get("{sv}", &propName, &propValue);
-                if (ctx->properties.find(propName) != ctx->properties.end()) {
-                    changedOutDict[changedOutDictSize++].Set("{sv}", propName, propValue);
-                }
-            }
-            if (changedOutDictSize > 0) {
-                changedOut.Set("a{sv}", changedOutDictSize, changedOutDict);
-            } else {
-                changedOut.Set("a{sv}", 0, NULL);
-            }
-
-            for (i = 0; i < numInvalidProps; ++i) {
-                const char* propName;
-                invalidProps[i].Get("s", &propName);
-                if (ctx->properties.find(propName) != ctx->properties.end()) {
+            if (ctx->properties.empty()) {
+                // handler wants all changed/invalid properties in signal
+                changedOut.Set("a{sv}", numChangedProps, changedProps);
+                changedOutDictSize = numChangedProps;
+                for (i = 0; i < numInvalidProps; ++i) {
+                    const char* propName;
+                    invalidProps[i].Get("s", &propName);
                     invalidOutArray[invalidOutArraySize++] = propName;
+
+                }
+                invalidOut.Set("as", numInvalidProps, invalidOutArray);
+            } else {
+                for (i = 0; i < numChangedProps; ++i) {
+                    const char* propName;
+                    MsgArg* propValue;
+                    changedProps[i].Get("{sv}", &propName, &propValue);
+                    if (ctx->properties.find(propName) != ctx->properties.end()) {
+                        changedOutDict[changedOutDictSize++].Set("{sv}", propName, propValue);
+                    }
+                }
+                if (changedOutDictSize > 0) {
+                    changedOut.Set("a{sv}", changedOutDictSize, changedOutDict);
+                } else {
+                    changedOut.Set("a{sv}", 0, NULL);
+                }
+
+                for (i = 0; i < numInvalidProps; ++i) {
+                    const char* propName;
+                    invalidProps[i].Get("s", &propName);
+                    if (ctx->properties.find(propName) != ctx->properties.end()) {
+                        invalidOutArray[invalidOutArraySize++] = propName;
+                    }
+                }
+                if (invalidOutArraySize > 0) {
+                    invalidOut.Set("as", invalidOutArraySize, invalidOutArray);
+                } else {
+                    invalidOut.Set("as", 0, NULL);
                 }
             }
-            if (invalidOutArraySize > 0) {
-                invalidOut.Set("as", invalidOutArraySize, invalidOutArray);
-            } else {
-                invalidOut.Set("as", 0, NULL);
-            }
-        }
 
-        // only call listener if anything to report
-        if ((changedOutDictSize > 0) || (invalidOutArraySize > 0)) {
-            ProxyBusObject pbo(ManagedObj<ProxyBusObject::Internal>::wrap(this));
-            ctx->listener.PropertiesChanged(pbo, ifaceName, changedOut, invalidOut, ctx->context);
+            // only call listener if anything to report
+            if ((changedOutDictSize > 0) || (invalidOutArraySize > 0)) {
+                ProxyBusObject pbo(ManagedObj<ProxyBusObject::Internal>::wrap(this));
+                ctx->listener.PropertiesChanged(pbo, ifaceName, changedOut, invalidOut, ctx->context);
+            }
         }
         handlers.pop_front();
 
         lock.Lock(MUTEX_CONTEXT);
-        activeListener = nullptr;
+        --ctx->numRunning;
+        handlerThreads[Thread::GetThread()] = nullptr;
         listenerDone.Broadcast();
         lock.Unlock(MUTEX_CONTEXT);
     }
@@ -963,7 +962,7 @@ void ProxyBusObject::Internal::PropertiesChangedHandler(const InterfaceDescripti
     delete [] invalidOutArray;
 
     lock.Lock(MUTEX_CONTEXT);
-    handlerThread = nullptr;
+    handlerThreads.erase(Thread::GetThread());;
     handlerDone.Signal();
     lock.Unlock(MUTEX_CONTEXT);
 }
