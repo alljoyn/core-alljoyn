@@ -64,8 +64,18 @@ extern const qcc::String OID_BASIC_CONSTRAINTS;
  * The sha256NoSign Hash Algorithm OID (2.16.840.1.101.3.4.2.1)
  */
 extern const qcc::String OID_DIG_SHA256;
+/**
+ * custom OID for the digest of external data (1.3.6.1.4.1.44924.1.2)
+ */
 extern const qcc::String OID_CUSTOM_DIGEST;
+/**
+ * custom OID for the Allseen certificate type (1.3.6.1.4.1.44924.1.1)
+ */
 extern const qcc::String OID_CUSTOM_CERT_TYPE;
+/**
+ * Authority Key Identifier OID (2.5.29.35)
+ */
+extern const qcc::String OID_AUTHORITY_KEY_IDENTIFIER;
 
 /** @} */
 /**
@@ -74,6 +84,11 @@ extern const qcc::String OID_CUSTOM_CERT_TYPE;
 class CertificateX509 {
 
   public:
+
+    /**
+     * The Authority key identifier size in bytes
+     */
+    static const size_t AUTHORITY_KEY_ID_SZ = 8;
 
     /**
      * The validity period
@@ -102,7 +117,7 @@ class CertificateX509 {
     /**
      * Default Constructor
      */
-    CertificateX509() : type(UNKNOWN_CERTIFICATE), encodedLen(0), encoded(NULL), issuerGUID(0), subjectGUID(0), ca(0)
+    CertificateX509() : type(UNKNOWN_CERTIFICATE), encodedLen(0), encoded(NULL), ca(0)
     {
     }
 
@@ -110,7 +125,7 @@ class CertificateX509 {
      * Constructor
      * @param type the certificate type.
      */
-    CertificateX509(CertificateType type) : type(type), encodedLen(0), encoded(NULL), issuerGUID(0), subjectGUID(0), ca(0)
+    CertificateX509(CertificateType type) : type(type), encodedLen(0), encoded(NULL), ca(0)
     {
     }
 
@@ -192,6 +207,15 @@ class CertificateX509 {
      * @return ER_OK for success; otherwise, error code.
      */
     QStatus Sign(const ECCPrivateKey* key);
+
+    /**
+     * Sign the certificate and generate the authority key identifier.
+     * @param privateKey the ECDSA private key.
+     * @param publicKey the ECDSA public key to generate the authority key
+     *                  identifier.
+     * @return ER_OK for success; otherwise, error code.
+     */
+    QStatus SignAndGenerateAuthorityKeyId(const ECCPrivateKey* privateKey, const ECCPublicKey* publicKey);
 
     /**
      * Verify a self-signed certificate.
@@ -340,31 +364,41 @@ class CertificateX509 {
         return subject.cn;
     }
 
-    void SetIssuer(const qcc::GUID128& guid)
+    /**
+     * Set the subject alt name field
+     * @param subjectAltName the subject alt name
+     */
+    void SetSubjectAltName(const qcc::String& subjectAltName)
     {
-        issuerGUID = guid;
-        SetIssuerCN(guid.GetBytes(), guid.SIZE);
+        this->subjectAltName = subjectAltName;
     }
-    const qcc::GUID128& GetIssuer() const
+    /**
+     * Get the subject alt name field
+     * @return the subject alt name
+     */
+    const qcc::String& GetSubjectAltName() const
     {
-        return issuerGUID;
+        return subjectAltName;
     }
-    void SetSubject(const qcc::GUID128& guid)
+
+    /**
+     * Generate the authority key identifier.
+     * @param issuerPubKey the issuer's public key
+     * @param[out] authorityKeyId the authority key identifier
+     * @return ER_OK for success; otherwise, error code.
+     */
+    static QStatus AJ_CALL GenerateAuthorityKeyId(const qcc::ECCPublicKey* issuerPubKey, qcc::String& authorityKeyId);
+
+    /**
+     * Generate the issuer authority key identifier for the certificate.
+     * @param issuerPubKey the issuer's public key
+     * @return ER_OK for success; otherwise, error code.
+     */
+    QStatus GenerateAuthorityKeyId(const qcc::ECCPublicKey* issuerPubKey);
+
+    const qcc::String& GetAuthorityKeyId() const
     {
-        subjectGUID = guid;
-        SetSubjectCN(guid.GetBytes(), guid.SIZE);
-    }
-    const qcc::GUID128& GetSubject() const
-    {
-        return subjectGUID;
-    }
-    void SetAlias(const qcc::String& alias)
-    {
-        this->alias = alias;
-    }
-    const qcc::String& GetAlias() const
-    {
-        return alias;
+        return aki;
     }
 
     /**
@@ -586,9 +620,7 @@ class CertificateX509 {
 
     qcc::String serial;
     DistinguishedName issuer;
-    qcc::GUID128 issuerGUID;
     DistinguishedName subject;
-    qcc::GUID128 subjectGUID;
     ValidPeriod validity;
     ECCPublicKey publickey;
     ECCSignature signature;
@@ -597,13 +629,14 @@ class CertificateX509 {
      */
     uint32_t ca;
     qcc::String digest;
-    qcc::String alias;
+    qcc::String subjectAltName;
+    qcc::String aki;
 };
 
 class MembershipCertificate : public CertificateX509 {
 
   public:
-    MembershipCertificate() : CertificateX509(MEMBERSHIP_CERTIFICATE), guildGUID(0)
+    MembershipCertificate() : CertificateX509(MEMBERSHIP_CERTIFICATE), guildGUID(0), guildSet(false)
     {
     }
     /**
@@ -614,33 +647,36 @@ class MembershipCertificate : public CertificateX509 {
     }
 
     /**
-     * Decode a DER encoded certificate.
-     * @param der the encoded certificate.
-     * @return ER_OK for success; otherwise, error code.
-     */
-    virtual QStatus DecodeCertificateDER(const qcc::String& der);
-
-    /**
      * Set the guild GUID
      * @param guid the guild GUID
      */
     void SetGuild(const qcc::GUID128& guid)
     {
         guildGUID = guid;
-        SetSubjectOU(guid.GetBytes(), guid.SIZE);
+        qcc::String sgId((const char*) guid.GetBytes(), guid.SIZE);
+        SetSubjectAltName(sgId);
+        guildSet = true;
     }
 
     /**
      * Get the guild GUID
      * @return the guild GUID
      */
-    const qcc::GUID128& GetGuild() const
+    const qcc::GUID128& GetGuild()
     {
+        if (!guildSet) {
+            qcc::String sgId = GetSubjectAltName();
+            if (sgId.size() > 0) {
+                guildGUID.SetBytes((const uint8_t*) sgId.data());
+                guildSet = true;
+            }
+        }
         return guildGUID;
     }
 
   private:
     qcc::GUID128 guildGUID;
+    bool guildSet;
 };
 
 class IdentityCertificate : public CertificateX509 {
@@ -654,6 +690,24 @@ class IdentityCertificate : public CertificateX509 {
      */
     virtual ~IdentityCertificate()
     {
+    }
+
+    /**
+     * Set the alias field
+     * @param alias the alias
+     */
+    void SetAlias(const qcc::String& alias)
+    {
+        SetSubjectAltName(alias);
+    }
+
+    /**
+     * Get the alias field
+     * @return the alias
+     */
+    const qcc::String& GetAlias() const
+    {
+        return GetSubjectAltName();
     }
 
 };

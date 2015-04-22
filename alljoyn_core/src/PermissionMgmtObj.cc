@@ -238,20 +238,14 @@ QStatus PermissionMgmtObj::GetACLKey(ACLEntryType aclEntryType, KeyStore::Key& k
     return ER_CRYPTO_KEY_UNAVAILABLE;      /* not available */
 }
 
-bool PermissionMgmtObj::IsTrustAnchor(bool specificMatch, TrustAnchorType taType, const qcc::GUID128& peerGuid)
+const ECCPublicKey* PermissionMgmtObj::LocateTrustAnchor(const qcc::String& aki) const
 {
-    for (TrustAnchorList::iterator it = trustAnchors.begin(); it != trustAnchors.end(); it++) {
-        if (specificMatch && (taType != (*it)->use) && ((*it)->use != TRUST_ANCHOR_ANY)) {
-            continue;  /* no match */
-        }
-        /* check against trust anchor */
-        GUID128 taGuid(0);
-        taGuid.SetBytes((*it)->keyInfo.GetKeyId());
-        if (taGuid == peerGuid) {
-            return true;
+    for (TrustAnchorList::const_iterator it = trustAnchors.begin(); it != trustAnchors.end(); it++) {
+        if ((*it)->aki == aki) {
+            return (*it)->keyInfo.GetPublicKey();
         }
     }
-    return false;
+    return NULL;
 }
 
 bool PermissionMgmtObj::IsTrustAnchor(bool specificMatch, TrustAnchorType taType, const ECCPublicKey* publicKey)
@@ -268,16 +262,10 @@ bool PermissionMgmtObj::IsTrustAnchor(bool specificMatch, TrustAnchorType taType
     return false;
 }
 
-bool PermissionMgmtObj::IsTrustAnchor(const qcc::GUID128& peerGuid)
-{
-    return IsTrustAnchor(false, TRUST_ANCHOR_ANY, peerGuid);
-}
-
 bool PermissionMgmtObj::IsAdmin(const ECCPublicKey* publicKey)
 {
     return IsTrustAnchor(true, TRUST_ANCHOR_ANY, publicKey);
 }
-
 
 void PermissionMgmtObj::ClearTrustAnchorList(TrustAnchorList& list)
 {
@@ -312,7 +300,7 @@ static void LoadGuildAuthorities(const PermissionPolicy& policy, PermissionMgmtO
 
             if ((peers[idx].GetType() == PermissionPolicy::Peer::PEER_GUILD) && peers[idx].GetKeyInfo()) {
                 if (KeyInfoHelper::InstanceOfKeyInfoNISTP256(*peers[idx].GetKeyInfo())) {
-                    PermissionMgmtObj::TrustAnchor* ta = new PermissionMgmtObj::TrustAnchor(PermissionMgmtObj::TRUST_ANCHOR_MEMBERSHIP, peers[idx].GetGuildId(), *(KeyInfoNISTP256*) peers[idx].GetKeyInfo());
+                    PermissionMgmtObj::TrustAnchor* ta = new PermissionMgmtObj::TrustAnchor(PermissionMgmtObj::TRUST_ANCHOR_MEMBERSHIP, *(KeyInfoNISTP256*) peers[idx].GetKeyInfo());
                     guildAuthoritiesList.push_back(ta);
                 }
             }
@@ -334,13 +322,17 @@ static bool AddToTrustAnchorList(PermissionMgmtObj::TrustAnchor* trustAnchor, bo
             return false;  /* duplicate */
         }
     }
+    /* set the authority key identifier if it not already set */
+    if (trustAnchor->aki.empty()) {
+        CertificateX509::GenerateAuthorityKeyId(trustAnchor->keyInfo.GetPublicKey(), trustAnchor->aki);
+    }
     list.push_back(trustAnchor);
     return true;
 }
 
-static void ClearAnchorMap(std::map<qcc::GUID128, PermissionMgmtObj::TrustAnchor*>& map)
+static void ClearAnchorMap(std::map<qcc::String, PermissionMgmtObj::TrustAnchor*>& map)
 {
-    for (std::map<qcc::GUID128, PermissionMgmtObj::TrustAnchor*>::iterator it = map.begin(); it != map.end(); it++) {
+    for (std::map<qcc::String, PermissionMgmtObj::TrustAnchor*>::iterator it = map.begin(); it != map.end(); it++) {
         delete it->second;
     }
     map.clear();
@@ -362,6 +354,10 @@ QStatus PermissionMgmtObj::InstallTrustAnchor(TrustAnchor* trustAnchor)
         if (memcmp((*it)->keyInfo.GetPublicKey(), trustAnchor->keyInfo.GetPublicKey(), sizeof(ECCPublicKey)) == 0) {
             return ER_DUPLICATE_KEY;  /* duplicate */
         }
+    }
+    /* set the authority key identifier if it not already set */
+    if (trustAnchor->aki.empty()) {
+        CertificateX509::GenerateAuthorityKeyId(trustAnchor->keyInfo.GetPublicKey(), trustAnchor->aki);
     }
     trustAnchors.push_back(trustAnchor);
     return StoreTrustAnchors();
@@ -460,6 +456,8 @@ QStatus PermissionMgmtObj::LoadTrustAnchors()
         pBuf++;
         itemSize--;
         ta->keyInfo.Import(pBuf, itemSize);
+        /* calculate the authority key id */
+        CertificateX509::GenerateAuthorityKeyId(ta->keyInfo.GetPublicKey(), ta->aki);
         trustAnchors.push_back(ta);
         pBuf += itemSize;
     }
@@ -777,10 +775,6 @@ static QStatus ValidateMembershipCertificate(MembershipCertificate& cert, Permis
         if (ta->use != PermissionMgmtObj::TRUST_ANCHOR_MEMBERSHIP) {
             continue;
         }
-        if (ta->guildId != cert.GetGuild()) {
-            continue;
-        }
-
         if (cert.Verify(ta->keyInfo.GetPublicKey()) == ER_OK) {
             return ER_OK;  /* cert is verified */
         }
@@ -949,7 +943,7 @@ static QStatus GetMembershipCert(CredentialAccessor* ca, KeyStore::Key& key, Mem
 /**
  * Get the keystore key of the membeship cert in the chain of membership certificate
  */
-static QStatus GetMembershipChainKey(CredentialAccessor* ca, KeyStore::Key& leafMembershipKey, const String& serialNum, const GUID128& issuer, KeyStore::Key& membershipChainKey)
+static QStatus GetMembershipChainKey(CredentialAccessor* ca, KeyStore::Key& leafMembershipKey, const String& serialNum, const String& issuerAki, KeyStore::Key& membershipChainKey)
 {
     KeyStore::Key* keys = NULL;
     size_t numOfKeys;
@@ -971,7 +965,7 @@ static QStatus GetMembershipChainKey(CredentialAccessor* ca, KeyStore::Key& leaf
             /* check both serial number and issuer */
             MembershipCertificate cert;
             LoadCertificate(CertificateX509::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), cert);
-            if ((cert.GetSerial() == serialNum) && (cert.GetIssuer() == issuer)) {
+            if ((cert.GetSerial() == serialNum) && (cert.GetAuthorityKeyId() == issuerAki)) {
                 membershipChainKey = keys[cnt];
                 found = true;
                 break;
@@ -988,7 +982,7 @@ static QStatus GetMembershipChainKey(CredentialAccessor* ca, KeyStore::Key& leaf
     return ER_BUS_KEY_UNAVAILABLE;  /* not found */
 }
 
-static QStatus GetMembershipKey(CredentialAccessor* ca, KeyStore::Key& membershipHead, const String& serialNum, const GUID128& issuer, bool searchLeafCertOnly, KeyStore::Key& membershipKey)
+static QStatus GetMembershipKey(CredentialAccessor* ca, KeyStore::Key& membershipHead, const String& serialNum, const String& issuerAki, bool searchLeafCertOnly, KeyStore::Key& membershipKey)
 {
     KeyStore::Key* keys = NULL;
     size_t numOfKeys;
@@ -1011,7 +1005,7 @@ static QStatus GetMembershipKey(CredentialAccessor* ca, KeyStore::Key& membershi
             /* maybe a match, check both serial number and issuer */
             MembershipCertificate cert;
             LoadCertificate(CertificateX509::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), cert);
-            if ((cert.GetSerial() == serialNum) && (cert.GetIssuer() == issuer)) {
+            if ((cert.GetSerial() == serialNum) && (cert.GetAuthorityKeyId() == issuerAki)) {
                 membershipKey = keys[cnt];
                 found = true;
                 break;
@@ -1022,7 +1016,7 @@ static QStatus GetMembershipKey(CredentialAccessor* ca, KeyStore::Key& membershi
         }
         /* may be its cert chain is a match */
         KeyStore::Key tmpKey;
-        status = GetMembershipChainKey(ca, keys[cnt], serialNum, issuer, tmpKey);
+        status = GetMembershipChainKey(ca, keys[cnt], serialNum, issuerAki, tmpKey);
         if (ER_OK == status) {
             membershipKey = tmpKey;
             found = true;
@@ -1102,7 +1096,7 @@ void PermissionMgmtObj::InstallMembership(const InterfaceDescription::Member* me
             /* check for duplicate */
             if (checkDup) {
                 KeyStore::Key tmpKey;
-                status = GetMembershipKey(ca, membershipHead, cert.GetSerial(), cert.GetIssuer(), true, tmpKey);
+                status = GetMembershipKey(ca, membershipHead, cert.GetSerial(), cert.GetAuthorityKeyId(), true, tmpKey);
                 if (ER_OK == status) {
                     /* found a duplicate */
                     MethodReply(msg, ER_DUPLICATE_CERTIFICATE);
@@ -1127,7 +1121,7 @@ void PermissionMgmtObj::InstallMembership(const InterfaceDescription::Member* me
     MethodReply(msg, status);
 }
 
-QStatus PermissionMgmtObj::LocateMembershipEntry(const String& serialNum, const GUID128& issuer, KeyStore::Key& membershipKey, bool searchLeafCertOnly)
+QStatus PermissionMgmtObj::LocateMembershipEntry(const String& serialNum, const String& issuerAki, KeyStore::Key& membershipKey, bool searchLeafCertOnly)
 {
     /* look for memberships head in the key store */
     KeyStore::Key membershipHead;
@@ -1138,12 +1132,12 @@ QStatus PermissionMgmtObj::LocateMembershipEntry(const String& serialNum, const 
     if (status == ER_BUS_KEY_UNAVAILABLE) {
         return status;
     }
-    return GetMembershipKey(ca, membershipHead, serialNum, issuer, searchLeafCertOnly, membershipKey);
+    return GetMembershipKey(ca, membershipHead, serialNum, issuerAki, searchLeafCertOnly, membershipKey);
 }
 
-QStatus PermissionMgmtObj::LocateMembershipEntry(const String& serialNum, const GUID128& issuer, KeyStore::Key& membershipKey)
+QStatus PermissionMgmtObj::LocateMembershipEntry(const String& serialNum, const String& issuerAki, KeyStore::Key& membershipKey)
 {
-    return LocateMembershipEntry(serialNum, issuer, membershipKey, true);
+    return LocateMembershipEntry(serialNum, issuerAki, membershipKey, true);
 }
 
 static QStatus LoadPolicyFromMsgArg(MsgArg& arg, PermissionPolicy& policy)
@@ -1182,10 +1176,10 @@ static QStatus LoadAndValidateAuthDataUsingCert(BusAttachment& bus, MsgArg& auth
     return ER_OK;
 }
 
-QStatus PermissionMgmtObj::LoadAndValidateAuthData(const String& serial, const GUID128& issuer, MsgArg& authDataArg, PermissionPolicy& authorization, KeyStore::Key& membershipKey)
+QStatus PermissionMgmtObj::LoadAndValidateAuthData(const String& serial, const String& issuerAki, MsgArg& authDataArg, PermissionPolicy& authorization, KeyStore::Key& membershipKey)
 {
     QStatus status;
-    status = LocateMembershipEntry(serial, issuer, membershipKey, false);
+    status = LocateMembershipEntry(serial, issuerAki, membershipKey, false);
     if (ER_OK != status) {
         return status;
     }
@@ -1217,16 +1211,11 @@ void PermissionMgmtObj::InstallMembershipAuthData(const InterfaceDescription::Me
         MethodReply(msg, status);
         return;
     }
-    if (issuerLen != GUID128::SIZE) {
-        MethodReply(msg, ER_INVALID_DATA);
-        return;
-    }
     String serialNum(serial);
-    GUID128 issuerGUID(0);
-    issuerGUID.SetBytes(issuer);
+    String issuerAki((const char*) issuer, issuerLen);
     KeyStore::Key membershipKey;
     PermissionPolicy authorization;
-    status = LoadAndValidateAuthData(serialNum, issuerGUID, (MsgArg&) *(msg->GetArg(2)), authorization, membershipKey);
+    status = LoadAndValidateAuthData(serialNum, issuerAki, (MsgArg&) *(msg->GetArg(2)), authorization, membershipKey);
     if (ER_OK != status) {
         MethodReply(msg, status);
         return;
@@ -1273,15 +1262,10 @@ void PermissionMgmtObj::RemoveMembership(const InterfaceDescription::Member* mem
         MethodReply(msg, status);
         return;
     }
-    if (issuerLen != GUID128::SIZE) {
-        MethodReply(msg, ER_INVALID_DATA);
-        return;
-    }
     String serialNum(serial);
-    GUID128 issuerGUID(0);
-    issuerGUID.SetBytes(issuer);
+    String issuerAki((const char*) issuer, issuerLen);
     KeyStore::Key membershipKey;
-    status = LocateMembershipEntry(serialNum, issuerGUID, membershipKey);
+    status = LocateMembershipEntry(serialNum, issuerAki, membershipKey);
     if (ER_OK == status) {
         /* found it so delete it */
         status = ca->DeleteKey(membershipKey);
@@ -1516,13 +1500,13 @@ static QStatus GenerateSendMembershipForCertEntry(BusAttachment& bus, Credential
                 return status;
             }
 
-            MsgArg toBeCopied("(ayay(v))", cert.GetSerial().size(), cert.GetSerial().data(), GUID128::SIZE, cert.GetIssuer().GetBytes(), &authDataArg);
+            MsgArg toBeCopied("(ayay(v))", cert.GetSerial().size(), cert.GetSerial().data(), cert.GetAuthorityKeyId().size(), (const uint8_t*) cert.GetAuthorityKeyId().data(), &authDataArg);
             MsgArg* msgArg = new MsgArg("(yv)", SEND_AUTH_DATA, new MsgArg(toBeCopied));
             msgArg->SetOwnershipFlags(MsgArg::OwnsArgs, true);
             argList.push_back(msgArg);
         } else if (kb.GetTag() == CERT_CHAIN_TAG_NAME) {
             MsgArg chainCertArg("(yay)", CertificateX509::ENCODING_X509_DER,  kb.GetSize(), kb.GetData());
-            MsgArg toBeCopied("(ayay(v))", cert.GetSerial().size(), cert.GetSerial().data(), GUID128::SIZE, cert.GetIssuer().GetBytes(), &chainCertArg);
+            MsgArg toBeCopied("(ayay(v))", cert.GetSerial().size(), cert.GetSerial().data(), cert.GetAuthorityKeyId().size(), (const uint8_t*) cert.GetAuthorityKeyId().data(), &chainCertArg);
             MsgArg* msgArg = new MsgArg("(yv)", SEND_CERT_CHAIN, new MsgArg(toBeCopied));
             msgArg->SetOwnershipFlags(MsgArg::OwnsArgs, true);
             argList.push_back(msgArg);
@@ -1637,7 +1621,7 @@ QStatus PermissionMgmtObj::ParseSendMemberships(Message& msg, bool& done)
                     delete meta;
                     return status;
                 }
-                peerState->SetGuildMetadata(meta->cert.GetSerial(), meta->cert.GetIssuer(), meta);
+                peerState->SetGuildMetadata(meta->cert.GetSerial(), meta->cert.GetAuthorityKeyId(), meta);
             }
             break;
 
@@ -1653,15 +1637,11 @@ QStatus PermissionMgmtObj::ParseSendMemberships(Message& msg, bool& done)
                 if (ER_OK != status) {
                     return status;
                 }
-                if (issuerLen != GUID128::SIZE) {
-                    return ER_INVALID_DATA;
-                }
 
                 String serialNum((const char*) serial, serialLen);
-                GUID128 issuerGUID(0);
-                issuerGUID.SetBytes(issuer);
+                String issuerAki((const char*) issuer, issuerLen);
                 /* look for the membership cert in peer state */
-                meta = peerState->GetGuildMetadata(serialNum, issuerGUID);
+                meta = peerState->GetGuildMetadata(serialNum, issuerAki);
                 if (!meta) {
                     return ER_CERTIFICATE_NOT_FOUND;
                 }
@@ -1678,12 +1658,12 @@ QStatus PermissionMgmtObj::ParseSendMemberships(Message& msg, bool& done)
                 } else if (type == SEND_AUTH_DATA) {
                     MembershipCertificate* targetCert = NULL;
                     PermissionPolicy* targetAuthData = NULL;
-                    if ((meta->cert.GetSerial() == serialNum) && (meta->cert.GetIssuer() == issuerGUID)) {
+                    if ((meta->cert.GetSerial() == serialNum) && (meta->cert.GetAuthorityKeyId() == issuerAki)) {
                         targetCert = &meta->cert;
                         targetAuthData = &meta->authData;
                     } else {
                         for (std::vector<_PeerState::MembershipMetaPair*>::iterator ccit = meta->certChain.begin(); ccit != meta->certChain.end(); ccit++) {
-                            if (((*ccit)->cert.GetSerial() == serialNum) && ((*ccit)->cert.GetIssuer() == issuerGUID)) {
+                            if (((*ccit)->cert.GetSerial() == serialNum) && ((*ccit)->cert.GetAuthorityKeyId() == issuerAki)) {
                                 targetCert = &(*ccit)->cert;
                                 targetAuthData = &(*ccit)->authData;
                                 break;
@@ -2050,20 +2030,54 @@ bool PermissionMgmtObj::ValidateCertChain(const qcc::String& certChainPEM, bool&
         return handled;
     }
     /* go through the cert chain to see whether any of the issuer is the trust anchor */
-    for (size_t cnt = 0; cnt < count; cnt++) {
-        if (IsTrustAnchor(certChain[cnt].GetIssuer())) {
-            authorized = true;
-            break;
+    if (count == 1) {
+        /* single cert is exchanged */
+        /* locate the issuer */
+        const ECCPublicKey* pubKey = NULL;
+        if (certChain[0].GetAuthorityKeyId().empty()) {
+            if (IsTrustAnchor(true, TRUST_ANCHOR_ANY, certChain[0].GetSubjectPublicKey())) {
+                pubKey = certChain[0].GetSubjectPublicKey();
+            }
+        } else {
+            pubKey = LocateTrustAnchor(certChain[0].GetAuthorityKeyId());
+            if (!pubKey) {
+                if (IsTrustAnchor(true, TRUST_ANCHOR_ANY, certChain[0].GetSubjectPublicKey())) {
+                    /* the peer is my trust anchor */
+                    pubKey = certChain[0].GetSubjectPublicKey();
+                } else {
+                    /* check to see whether this app signed this cert */
+                    KeyInfoNISTP256 keyInfo;
+                    String aki;
+                    if ((ER_OK == RetrieveAndGenDSAPublicKey(ca, keyInfo)) &&
+                        (ER_OK == CertificateX509::GenerateAuthorityKeyId(keyInfo.GetPublicKey(), aki))) {
+                        if (aki == certChain[0].GetAuthorityKeyId()) {
+                            pubKey = keyInfo.GetPublicKey();
+                        }
+                    }
+                }
+            }
         }
-    }
-    if (!authorized) {
-        /* may be this app signed one of the cert in the peer's cert chain */
-        qcc::GUID128 localGUID(0);
-        ca->GetGuid(localGUID);
-        for (size_t cnt = 0; cnt < count; cnt++) {
-            if (certChain[cnt].GetIssuer() == localGUID) {
+        if (pubKey) {
+            authorized = (ER_OK == certChain[0].Verify(pubKey));
+        }
+    } else {
+        /* the cert chain signature validation is already done by the KeyExchanger code.  Now just need to check issuers */
+        for (size_t cnt = 1; cnt < count; cnt++) {
+            if (IsTrustAnchor(true, TRUST_ANCHOR_ANY, certChain[cnt].GetSubjectPublicKey())) {
                 authorized = true;
                 break;
+            }
+        }
+        if (!authorized) {
+            /* may be this app signed one of the cert in the peer's cert chain */
+            KeyInfoNISTP256 keyInfo;
+            if (ER_OK == RetrieveAndGenDSAPublicKey(ca, keyInfo)) {
+                for (size_t cnt = 1; cnt < count; cnt++) {
+                    if (*certChain[cnt].GetSubjectPublicKey() == *keyInfo.GetPublicKey()) {
+                        authorized = true;
+                        break;
+                    }
+                }
             }
         }
     }
@@ -2281,14 +2295,10 @@ QStatus PermissionMgmtObj::GetTrustAnchorsFromAllMemberships(TrustAnchorList& ta
             delete [] keys;
             return status;
         }
-        if (cert.GetIssuer() == localGUID) {
-            continue;  /* skip the self signed cert */
-        }
-        std::map<qcc::GUID128, TrustAnchor*> chain;
+        std::map<qcc::String, TrustAnchor*> chain;
         TrustAnchor* ta = new TrustAnchor(TRUST_ANCHOR_MEMBERSHIP);
-        ta->guildId = cert.GetGuild();
-        ta->keyInfo.SetKeyId(cert.GetIssuer().GetBytes(), GUID128::SIZE);
-        chain[cert.GetIssuer()] = ta;
+        ta->keyInfo.SetKeyId((const uint8_t*) cert.GetAuthorityKeyId().data(), cert.GetAuthorityKeyId().size());
+        chain[cert.GetAuthorityKeyId()] = ta;
         /* go through into its associated nodes */
         KeyStore::Key* associateKeys = NULL;
         size_t numOfAssociateKeys = 0;
@@ -2318,16 +2328,17 @@ QStatus PermissionMgmtObj::GetTrustAnchorsFromAllMemberships(TrustAnchorList& ta
                     delete [] keys;
                     return status;
                 }
-                std::map<qcc::GUID128, TrustAnchor*>::iterator tcit = chain.find(cert.GetIssuer());
+                std::map<qcc::String, TrustAnchor*>::iterator tcit = chain.find(cert.GetAuthorityKeyId());
                 if (tcit != chain.end()) {
                     continue;  /* skip since already got the same issuer */
                 }
                 TrustAnchor* ta = new TrustAnchor(TRUST_ANCHOR_MEMBERSHIP);
-                ta->guildId = cert.GetGuild();
-                ta->keyInfo.SetKeyId(cert.GetIssuer().GetBytes(), GUID128::SIZE);
-                chain[cert.GetIssuer()] = ta;
+                ta->keyInfo.SetKeyId((const uint8_t*) cert.GetAuthorityKeyId().data(), cert.GetAuthorityKeyId().size());
+                chain[cert.GetAuthorityKeyId()] = ta;
                 /* update the previous issuer for its public key */
-                std::map<qcc::GUID128, TrustAnchor*>::iterator cit = chain.find(cert.GetSubject());
+                String aki;
+                CertificateX509::GenerateAuthorityKeyId(cert.GetSubjectPublicKey(), aki);
+                std::map<qcc::String, TrustAnchor*>::iterator cit = chain.find(aki);
                 if (cit != chain.end()) {
                     cit->second->keyInfo.SetPublicKey(cert.GetSubjectPublicKey());
                 }
@@ -2335,9 +2346,9 @@ QStatus PermissionMgmtObj::GetTrustAnchorsFromAllMemberships(TrustAnchorList& ta
         }
         delete [] associateKeys;
         /* add the trust anchors to the list without duplicate base on issuer */
-        std::map<qcc::GUID128, TrustAnchor*>::iterator it = chain.begin();
+        std::map<qcc::String, TrustAnchor*>::iterator it = chain.begin();
         while (it != chain.end()) {
-            std::map<qcc::GUID128, TrustAnchor*>::iterator current = it++;
+            std::map<qcc::String, TrustAnchor*>::iterator current = it++;
             if (AddToTrustAnchorList(current->second, true, taList)) {
                 chain.erase(current);
             }

@@ -335,7 +335,7 @@ QStatus Crypto_ASN1::EncodeV(const char*& syntax, qcc::String& asn, va_list* arg
                     if (*syntax++ != ')') {
                         status = ER_FAIL;
                     } else if (status == ER_OK) {
-                        asn.push_back((char) (ASN_CONTEXT_SPECIFIC | v));
+                        asn.push_back((char) (ASN_CONTEXT_SPECIFIC_CONSTRUCTED | v));
                         EncodeLen(asn, seq.size());
                         asn += seq;
                     }
@@ -529,15 +529,29 @@ QStatus Crypto_ASN1::DecodeV(const char*& syntax, const uint8_t* asn, size_t asn
                     status = ER_FAIL;
                     continue;
                 }
-                if ((tag != (ASN_CONTEXT_SPECIFIC | v)) || !DecodeLen(asn, eod, len)) {
+                if ((ASN_CONTEXT_SPECIFIC != (tag & ASN_CONTEXT_SPECIFIC)) ||
+                    ((uint8_t) (tag & 0x1F) != v) || !DecodeLen(asn, eod, len)) {
                     status = ER_FAIL;
-                } else {
+                } else if (ASN_CONSTRUCTED_ENCODING == (tag & ASN_CONSTRUCTED_ENCODING)) {
                     qcc::String seq;
                     status = DecodeV(syntax, asn, len, &argp);
                     if (*syntax++ != ')') {
                         status = ER_FAIL;
                     } else if (status == ER_OK) {
                         asn += len;
+                    }
+                } else {
+                    /* primitive content */
+                    while (*syntax && (*syntax != ')')) {
+                        syntax++;
+                    }
+                    if (*syntax == ')') {
+                        /* skip to the end of the c(...) block */
+                        status = ER_OK;
+                        syntax++;
+                        break; /* no more parsing */
+                    } else {
+                        status = ER_FAIL;
                     }
                 }
             }

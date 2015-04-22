@@ -200,14 +200,14 @@ PeerStateTable::~PeerStateTable()
     lock.Unlock(MUTEX_CONTEXT);
 }
 
-static String GenGuildMetadataKey(const qcc::String& serial, const qcc::GUID128& issuer)
+static String GenGuildMetadataKey(const qcc::String& serial, const qcc::String& issuerAki)
 {
-    return serial + "::" + issuer.ToString();
+    return serial + "::" + issuerAki;
 }
 
-void _PeerState::SetGuildMetadata(const qcc::String& serial, const qcc::GUID128& issuer, GuildMetadata* guild)
+void _PeerState::SetGuildMetadata(const qcc::String& serial, const qcc::String& issuerAki, GuildMetadata* guild)
 {
-    String key = GenGuildMetadataKey(serial, issuer);
+    String key = GenGuildMetadataKey(serial, issuerAki);
     GuildMap::iterator iter = guildMap.find(key);
     if (iter != guildMap.end()) {
         /* found existing one */
@@ -217,9 +217,9 @@ void _PeerState::SetGuildMetadata(const qcc::String& serial, const qcc::GUID128&
     guildMap[key] = guild;
 }
 
-_PeerState::GuildMetadata* _PeerState::GetGuildMetadata(const qcc::String& serial, const qcc::GUID128& issuer)
+_PeerState::GuildMetadata* _PeerState::GetGuildMetadata(const qcc::String& serial, const String& issuerAki)
 {
-    String key = GenGuildMetadataKey(serial, issuer);
+    String key = GenGuildMetadataKey(serial, issuerAki);
     GuildMap::iterator iter = guildMap.find(key);
     if (iter != guildMap.end()) {
         return iter->second;  /* direct hit at the leaf cert */
@@ -229,7 +229,8 @@ _PeerState::GuildMetadata* _PeerState::GetGuildMetadata(const qcc::String& seria
     for (GuildMap::iterator it = guildMap.begin(); it != guildMap.end(); it++) {
         GuildMetadata* meta = it->second;
         for (std::vector<MembershipMetaPair*>::iterator ccit = meta->certChain.begin(); ccit != meta->certChain.end(); ccit++) {
-            if (((*ccit)->cert.GetSerial() == serial) && ((*ccit)->cert.GetIssuer() == issuer)) {
+            if (((*ccit)->cert.GetSerial() == serial) &&
+                ((*ccit)->cert.GetAuthorityKeyId() == issuerAki)) {
                 return meta;
             }
         }

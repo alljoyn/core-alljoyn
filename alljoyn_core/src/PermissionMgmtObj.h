@@ -79,26 +79,24 @@ class PermissionMgmtObj : public BusObject {
 
     struct TrustAnchor {
         TrustAnchorType use;
-        qcc::GUID128 guildId;
         qcc::KeyInfoNISTP256 keyInfo;
+        qcc::String aki;
 
-        TrustAnchor() : use(TRUST_ANCHOR_ANY), guildId(0)
+        TrustAnchor() : use(TRUST_ANCHOR_ANY)
         {
             qcc::ECCPublicKey pubKey;
             memset(&pubKey, 0, sizeof(qcc::ECCPublicKey));
             keyInfo.SetPublicKey(&pubKey);
         }
-        TrustAnchor(TrustAnchorType use) : use(use), guildId(0)
+        TrustAnchor(TrustAnchorType use) : use(use)
         {
             qcc::ECCPublicKey pubKey;
             memset(&pubKey, 0, sizeof(qcc::ECCPublicKey));
             keyInfo.SetPublicKey(&pubKey);
         }
-        TrustAnchor(TrustAnchorType use, qcc::KeyInfoNISTP256 keyInfo) : use(use), guildId(0), keyInfo(keyInfo)
+        TrustAnchor(TrustAnchorType use, qcc::KeyInfoNISTP256 keyInfo) : use(use), keyInfo(keyInfo)
         {
-        }
-        TrustAnchor(TrustAnchorType use, qcc::GUID128 guildId, qcc::KeyInfoNISTP256 keyInfo) : use(use), guildId(guildId), keyInfo(keyInfo)
-        {
+            qcc::CertificateX509::GenerateAuthorityKeyId(keyInfo.GetPublicKey(), aki);
         }
     };
 
@@ -118,12 +116,13 @@ class PermissionMgmtObj : public BusObject {
      */
     virtual ~PermissionMgmtObj();
 
+
     /**
-     * check whether the peer GUID is a trust anchor.
-     * @param peerGuid the peer's GUID
-     * return true if the peer GUID is a trust anchor; false, otherwise.
+     * Look for the trust anchor public key using the authority key id
+     * @param aki   the authority key id
+     * @return the trust anchor public key
      */
-    bool IsTrustAnchor(const qcc::GUID128& peerGuid);
+    const qcc::ECCPublicKey* LocateTrustAnchor(const qcc::String& aki) const;
 
     /**
      * check whether the peer public key is an admin
@@ -334,9 +333,9 @@ class PermissionMgmtObj : public BusObject {
     void InstallGuildEquivalence(const InterfaceDescription::Member* member, Message& msg);
     void GetManifest(const InterfaceDescription::Member* member, Message& msg);
     bool ValidateCertChain(const qcc::String& certChainPEM, bool& authorized);
-    QStatus LocateMembershipEntry(const qcc::String& serialNum, const qcc::GUID128& issuer, KeyStore::Key& membershipKey, bool searchLeafCertOnly);
-    QStatus LocateMembershipEntry(const qcc::String& serialNum, const qcc::GUID128& issuer, KeyStore::Key& membershipKey);
-    QStatus LoadAndValidateAuthData(const qcc::String& serial, const qcc::GUID128& issuer, MsgArg& authDataArg, PermissionPolicy& authorization, KeyStore::Key& membershipKey);
+    QStatus LocateMembershipEntry(const qcc::String& serialNum, const qcc::String& issuerAki, KeyStore::Key& membershipKey, bool searchLeafCertOnly);
+    QStatus LocateMembershipEntry(const qcc::String& serialNum, const qcc::String& issuerAki, KeyStore::Key& membershipKey);
+    QStatus LoadAndValidateAuthData(const qcc::String& serial, const qcc::String& issuerAki, MsgArg& authDataArg, PermissionPolicy& authorization, KeyStore::Key& membershipKey);
     void ClearMembershipCertMap(MembershipCertMap& certMap);
     QStatus GetAllMembershipCerts(MembershipCertMap& certMap, bool loadCert);
     QStatus GetAllMembershipCerts(MembershipCertMap& certMap);
@@ -350,7 +349,6 @@ class PermissionMgmtObj : public BusObject {
     QStatus LocalMembershipsChanged();
     void InstallCredential(const InterfaceDescription::Member* member, Message& msg);
     void RemoveCredential(const InterfaceDescription::Member* member, Message& msg);
-    bool IsTrustAnchor(bool specificMatch, TrustAnchorType taType, const qcc::GUID128& peerGuid);
     bool IsTrustAnchor(bool specificMatch, TrustAnchorType taType, const qcc::ECCPublicKey* publicKey);
     QStatus GetTrustAnchorsFromAllMemberships(TrustAnchorList& taList);
     QStatus ManageMembershipTrustAnchors(PermissionPolicy* policy);

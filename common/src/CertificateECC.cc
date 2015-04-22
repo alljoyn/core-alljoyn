@@ -55,6 +55,7 @@ const qcc::String OID_DIG_SHA256 = "2.16.840.1.101.3.4.2.1";
 const qcc::String OID_SUB_ALTNAME = "2.5.29.17";
 const qcc::String OID_CUSTOM_CERT_TYPE = "1.3.6.1.4.1.44924.1.1";
 const qcc::String OID_CUSTOM_DIGEST = "1.3.6.1.4.1.44924.1.2";
+const qcc::String OID_AUTHORITY_KEY_IDENTIFIER = "2.5.29.35";
 
 
 static const char* EC_PRIVATE_KEY_PEM_BEGIN_TAG = "-----BEGIN EC PRIVATE KEY-----";
@@ -547,7 +548,7 @@ QStatus CertificateX509::DecodeCertificateExt(const qcc::String& ext)
                 }
             }
         } else if (OID_SUB_ALTNAME == oid) {
-            alias = str;
+            subjectAltName = str;
         } else if (OID_CUSTOM_DIGEST == oid) {
             qcc::String dig;
             oid.clear();
@@ -559,6 +560,11 @@ QStatus CertificateX509::DecodeCertificateExt(const qcc::String& ext)
                 return ER_INVALID_DATA;
             }
             digest = dig;
+        } else if (OID_AUTHORITY_KEY_IDENTIFIER == oid) {
+            status = Crypto_ASN1::Decode(str, "(c(x))", 0, &aki);
+            if (ER_OK != status) {
+                return status;
+            }
         }
         tmp = rem;
     }
@@ -598,9 +604,21 @@ QStatus CertificateX509::EncodeCertificateExt(qcc::String& ext)
     if (ER_OK != status) {
         return status;
     }
-    if (alias.size()) {
+    if (subjectAltName.size()) {
         oid = OID_SUB_ALTNAME;
-        status = Crypto_ASN1::Encode(raw, "(ox)", &oid, &alias);
+        status = Crypto_ASN1::Encode(raw, "(ox)", &oid, &subjectAltName);
+        if (ER_OK != status) {
+            return status;
+        }
+    }
+    if (aki.size()) {
+        String akiOctet;
+        status = Crypto_ASN1::Encode(akiOctet, "(c(x))", 0, &aki);
+        if (ER_OK != status) {
+            return status;
+        }
+        oid = OID_AUTHORITY_KEY_IDENTIFIER;
+        status = Crypto_ASN1::Encode(raw, "(ox)", &oid, &akiOctet);
         if (ER_OK != status) {
             return status;
         }
@@ -653,9 +671,6 @@ QStatus CertificateX509::DecodeCertificateTBS()
         QCC_LogError(status, ("Error decoding certificate issuer"));
         return status;
     }
-    if (GetIssuerCNLength() == qcc::GUID128::SIZE) {
-        issuerGUID.SetBytes(GetIssuerCN());
-    }
     status = DecodeCertificateTime(time);
     if (ER_OK != status) {
         QCC_LogError(status, ("Error decoding certificate validity period"));
@@ -665,9 +680,6 @@ QStatus CertificateX509::DecodeCertificateTBS()
     if (ER_OK != status) {
         QCC_LogError(status, ("Error decoding certificate subject"));
         return status;
-    }
-    if (GetSubjectCNLength() == qcc::GUID128::SIZE) {
-        subjectGUID.SetBytes(GetSubjectCN());
     }
     status = DecodeCertificatePub(pub);
     if (ER_OK != status) {
@@ -903,12 +915,6 @@ QStatus CertificateX509::Verify(const KeyInfoNISTP256& ta)
         return status;
     }
     Crypto_ECC ecc;
-    if (qcc::GUID128::SIZE != ta.GetKeyIdLen()) {
-        return ER_FAIL;
-    }
-    if (0 != memcmp(issuerGUID.GetBytes(), ta.GetKeyId(), qcc::GUID128::SIZE)) {
-        return ER_FAIL;
-    }
     ecc.SetDSAPublicKey(ta.GetPublicKey());
     return ecc.DSAVerify((const uint8_t*) tbs.data(), tbs.size(), &signature);
 }
@@ -923,6 +929,38 @@ QStatus CertificateX509::Sign(const ECCPrivateKey* key)
         return status;
     }
     return ecc.DSASign((const uint8_t*) tbs.data(), tbs.size(), &signature);
+}
+
+QStatus AJ_CALL CertificateX509::GenerateAuthorityKeyId(const ECCPublicKey* issuerPubKey, String& authorityKeyId)
+{
+    Crypto_SHA256 sha;
+    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+    sha.Init();
+    sha.Update((const uint8_t*) issuerPubKey, sizeof(ECCPublicKey));
+    sha.GetDigest(digest);
+    uint8_t keyId[AUTHORITY_KEY_ID_SZ];
+    /* the format of the authority key identifier is 64 bits:
+     * first 4 bits is 0100
+     * the next 60 bits is the least significant 60 bits of the digest
+     */
+    memcpy(keyId, &digest[Crypto_SHA256::DIGEST_SIZE - AUTHORITY_KEY_ID_SZ], AUTHORITY_KEY_ID_SZ);
+    keyId[0] = 0x40 | (keyId[0] & 0xF);
+    authorityKeyId.assign((const char*) keyId, sizeof(keyId));
+    return ER_OK;
+}
+
+QStatus CertificateX509::GenerateAuthorityKeyId(const ECCPublicKey* issuerPubKey)
+{
+    return GenerateAuthorityKeyId(issuerPubKey, aki);
+}
+
+QStatus CertificateX509::SignAndGenerateAuthorityKeyId(const ECCPrivateKey* privateKey, const ECCPublicKey* publicKey)
+{
+    QStatus status = GenerateAuthorityKeyId(publicKey);
+    if (ER_OK != status) {
+        return status;
+    }
+    return Sign(privateKey);
 }
 
 String CertificateX509::ToString() const
@@ -979,8 +1017,18 @@ String CertificateX509::ToString() const
     if (digest.size()) {
         str += "digest:    " + BytesToHexString((const uint8_t*) digest.c_str(), digest.size()) + "\n";
     }
-    if (alias.size()) {
-        str += "alias:     " + alias + "\n";
+    if (subjectAltName.size()) {
+        if (GetType() == IDENTITY_CERTIFICATE) {
+            str += "alias:     ";
+        } else if (GetType() == MEMBERSHIP_CERTIFICATE) {
+            str += "security group Id:     ";
+        } else {
+            str += "subject alt name:     ";
+        }
+        str += subjectAltName + "\n";
+    }
+    if (aki.size()) {
+        str += "aki:     " + BytesToHexString((const uint8_t*) aki.data(), aki.size()) + "\n";
     }
     str += "signature: " + BytesToHexString((const uint8_t*) &signature, sizeof(signature)) + "\n";
     return str;
@@ -1057,18 +1105,6 @@ QStatus AJ_CALL CertificateX509::DecodeCertChainPEM(const String& encoded, Certi
     }
     delete [] chunks;
 
-    return status;
-}
-
-QStatus MembershipCertificate::DecodeCertificateDER(const qcc::String& der)
-{
-    QStatus status = CertificateX509::DecodeCertificateDER(der);
-    if (ER_OK != status) {
-        return status;
-    }
-    if (GetSubjectOULength() == GUID128::SIZE) {
-        guildGUID.SetBytes(GetSubjectOU());
-    }
     return status;
 }
 

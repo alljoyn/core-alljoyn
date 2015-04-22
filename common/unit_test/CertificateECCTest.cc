@@ -82,6 +82,22 @@ static const char eccCertChainX509PEMOpenSSL[] = {
     "-----END CERTIFICATE-----"
 };
 
+static const char eccSelfSignCertX509OpenSSLWithAKI[] = {
+    "-----BEGIN CERTIFICATE-----"
+    "MIIB8jCCAZmgAwIBAgIJAOqx8nlKVPYhMAoGCCqGSM49BAMCMFYxKTAnBgNVBAsM"
+    "IDZkODVjMjkyMjYxM2IzNmUyZWVlZjUyNzgwNDJjYzU2MSkwJwYDVQQDDCA2ZDg1"
+    "YzI5MjI2MTNiMzZlMmVlZWY1Mjc4MDQyY2M1NjAeFw0xNTA0MTMxODQwMTlaFw0x"
+    "NjA0MTIxODQwMTlaMFYxKTAnBgNVBAsMIDZkODVjMjkyMjYxM2IzNmUyZWVlZjUy"
+    "NzgwNDJjYzU2MSkwJwYDVQQDDCA2ZDg1YzI5MjI2MTNiMzZlMmVlZWY1Mjc4MDQy"
+    "Y2M1NjBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABKW5toeTLEDeljEq75+gKfsV"
+    "KpE85OQRVqo0du3RJ0cnL4CLr1HtP/aTWh2RhsJNmoqcpfEoQFI89kOl7BrYW+Oj"
+    "UDBOMAwGA1UdEwQFMAMBAf8wHQYDVR0OBBYEFCLQgYCl00ixece0y65rCxZ/BojH"
+    "MB8GA1UdIwQYMBaAFCLQgYCl00ixece0y65rCxZ/BojHMAoGCCqGSM49BAMCA0cA"
+    "MEQCIAS2B9w8zUQnx8TLGKsA8+m9jw27aU6XGBE0+YHVas9GAiB1gJ37urQfquk3"
+    "JIQIok1Np4BGxPZznDmFjvZbG3Hc4Q=="
+    "-----END CERTIFICATE-----"
+};
+
 static const char eccUnsupportedFormatPrivateKeyPEM[] = {
     "-----BEGIN PRIVATE KEY-----\n"
     "MHcCAQEEICkeoQeosiS380hFJYo9zL1ziyTbea1mYqqqgHvGKZ6qoAoGCCqGSM49\n"
@@ -245,7 +261,7 @@ class CertificateECCTest : public testing::Test {
 
 };
 
-static QStatus CreateCert(const qcc::String& serial, const qcc::GUID128& issuer, const qcc::String& organization, const ECCPrivateKey* issuerPrivateKey, const qcc::GUID128& subject, const ECCPublicKey* subjectPubKey, CertificateX509::ValidPeriod& validity, CertificateX509& x509)
+static QStatus CreateCert(const qcc::String& serial, const qcc::GUID128& issuer, const qcc::String& organization, const ECCPrivateKey* issuerPrivateKey, const ECCPublicKey* issuerPublicKey, const qcc::GUID128& subject, const ECCPublicKey* subjectPubKey, CertificateX509::ValidPeriod& validity, CertificateX509& x509)
 {
     QStatus status = ER_CRYPTO_ERROR;
 
@@ -261,7 +277,7 @@ static QStatus CreateCert(const qcc::String& serial, const qcc::GUID128& issuer,
     x509.SetSubjectPublicKey(subjectPubKey);
     x509.SetCA(true);
     x509.SetValidity(&validity);
-    status = x509.Sign(issuerPrivateKey);
+    status = x509.SignAndGenerateAuthorityKeyId(issuerPrivateKey, issuerPublicKey);
     return status;
 }
 
@@ -277,7 +293,7 @@ static QStatus CreateIdentityCert(qcc::GUID128& issuer, const qcc::String& seria
     *subjectPrivateKey = *ecc.GetDSAPrivateKey();
     *subjectPublicKey = *ecc.GetDSAPublicKey();
     qcc::GUID128 userGuid;
-    return CreateCert(serial, issuer, organization, dsaPrivateKey, userGuid, subjectPublicKey, validity, x509);
+    return CreateCert(serial, issuer, organization, dsaPrivateKey, dsaPublicKey, userGuid, subjectPublicKey, validity, x509);
 }
 
 static QStatus CreateIdentityCert(qcc::GUID128& issuer, const qcc::String& serial, const qcc::String& organization, ECCPrivateKey* dsaPrivateKey, ECCPublicKey* dsaPublicKey, ECCPrivateKey* subjectPrivateKey, ECCPublicKey* subjectPublicKey, bool selfSign, uint32_t expiredInSeconds, CertificateX509& x509)
@@ -399,6 +415,7 @@ TEST_F(CertificateECCTest, GenSelfSignECCX509CertForBBservice)
     std::cout << "The encoded cert PEM for ECC X.509 cert:" << endl << pem.c_str() << endl;
 
     std::cout << "The ECC X.509 cert: " << endl << x509.ToString().c_str() << endl;
+
 }
 
 
@@ -460,12 +477,14 @@ static void VerifyX509SelfSignExternalCertHelper(const char* eccSelfSignCertX509
     ASSERT_EQ(ER_OK, status) << " load external cert PEM failed with actual status: " << QCC_StatusText(status);
     status = cert.Verify();
     ASSERT_EQ(ER_OK, status) << " verify cert failed with actual status: " << QCC_StatusText(status);
+    printf("cert: %s\n", cert.ToString().c_str());
 }
 
 TEST_F(CertificateECCTest, VerifyX509SelfSignExternalCert)
 {
     VerifyX509SelfSignExternalCertHelper(eccSelfSignCertX509PEMOpenSSL);
     VerifyX509SelfSignExternalCertHelper(eccSelfSignCertX509PEMCAPI);
+    VerifyX509SelfSignExternalCertHelper(eccSelfSignCertX509OpenSSLWithAKI);
 }
 
 /**

@@ -24,8 +24,6 @@
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/PermissionPolicy.h>
 #include <qcc/CertificateECC.h>
-#include <qcc/GUID.h>
-
 
 namespace ajn {
 
@@ -148,14 +146,14 @@ class PermissionMgmtProxy : public ProxyBusObject {
      *
      * @param[in] serialNum     a string representing the serial number of the
      *                          membership certificate
-     * @param[in] issuer        the issuer GUID
+     * @param[in] issuerAki        the issuer authority key id
      * @param[in] authorization authorization data
      *
      * @return
      *  - #ER_OK if successful
      *  - an error status indicating failure
      */
-    QStatus InstallMembershipAuthData(const char* serialNum, const qcc::GUID128& issuer, PermissionPolicy& authorization);
+    QStatus InstallMembershipAuthData(const char* serialNum, const qcc::String& issuerAki, PermissionPolicy& authorization);
 
     /**
      * Remove a membership certificate from the app. Any corresponding
@@ -166,13 +164,13 @@ class PermissionMgmtProxy : public ProxyBusObject {
      *
      * @param[in] serialNum a string representing the serial number of the
      *                      membership certificate.
-     * @param[in] issuer    the issuer GUID
+     * @param[in] issuerAki    the issuer authority key id
      *
      * @return
      *  - #ER_OK if successful
      *  - an error status indicating failure
      */
-    QStatus RemoveMembership(const char* serialNum, const qcc::GUID128& issuer);
+    QStatus RemoveMembership(const char* serialNum, const qcc::String& issuerAki);
 
     /**
      * Install an identity cert to the app.

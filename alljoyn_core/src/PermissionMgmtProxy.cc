@@ -132,15 +132,14 @@ QStatus PermissionMgmtProxy::InstallMembership(const MsgArg& certChainArg) {
     return status;
 }
 
-QStatus PermissionMgmtProxy::InstallMembershipAuthData(const char* serialNum, const qcc::GUID128& issuer, PermissionPolicy& authorization) {
+QStatus PermissionMgmtProxy::InstallMembershipAuthData(const char* serialNum, const qcc::String& issuerAki, PermissionPolicy& authorization) {
     QCC_DbgTrace(("PermissionMgmtProxy::%s", __FUNCTION__));
     QStatus status = ER_OK;
     Message reply(*bus);
 
     MsgArg inputs[3];
     inputs[0].Set("s", serialNum);
-    // TODO should the uint8_t issuer be changed to a GUID128?
-    inputs[1].Set("ay", qcc::GUID128::SIZE, issuer.GetBytes());
+    inputs[1].Set("ay", issuerAki.size(), issuerAki.data());
     authorization.Export(inputs[2]);
     status = MethodCall(org::allseen::Security::PermissionMgmt::InterfaceName, "InstallMembershipAuthData", inputs, 3, reply);
     if (ER_BUS_REPLY_IS_ERROR_MESSAGE == status) {
@@ -151,14 +150,14 @@ QStatus PermissionMgmtProxy::InstallMembershipAuthData(const char* serialNum, co
     return status;
 }
 
-QStatus PermissionMgmtProxy::RemoveMembership(const char* serialNum, const qcc::GUID128& issuer) {
+QStatus PermissionMgmtProxy::RemoveMembership(const char* serialNum, const qcc::String& issuerAki) {
     QCC_DbgTrace(("PermissionMgmtProxy::%s", __FUNCTION__));
     QStatus status = ER_OK;
     Message reply(*bus);
 
     MsgArg inputs[2];
     inputs[0].Set("s", serialNum);
-    inputs[1].Set("ay", qcc::GUID128::SIZE, issuer.GetBytes());
+    inputs[1].Set("ay", issuerAki.size(), issuerAki.data());
     status = MethodCall(org::allseen::Security::PermissionMgmt::InterfaceName, "RemoveMembership", inputs, 2, reply);
     if (ER_BUS_REPLY_IS_ERROR_MESSAGE == status) {
         if (IsPermissionDeniedError(reply)) {

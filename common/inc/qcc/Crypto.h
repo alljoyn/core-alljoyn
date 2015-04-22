@@ -752,7 +752,9 @@ class Crypto_ASN1 {
     static const uint8_t ASN_ASCII     = 0x16;
     static const uint8_t ASN_UTC_TIME  = 0x17;
     static const uint8_t ASN_GEN_TIME  = 0x18;
-    static const uint8_t ASN_CONTEXT_SPECIFIC = 0xA0;
+    static const uint8_t ASN_CONTEXT_SPECIFIC = 0x80;
+    static const uint8_t ASN_CONTEXT_SPECIFIC_CONSTRUCTED = 0xA0;
+    static const uint8_t ASN_CONSTRUCTED_ENCODING = 0x20;
 
     static QStatus DecodeV(const char*& syntax, const uint8_t* asn, size_t asnLen, va_list* argpIn);
 

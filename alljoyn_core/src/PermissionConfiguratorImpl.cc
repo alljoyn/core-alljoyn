@@ -117,7 +117,12 @@ QStatus PermissionConfiguratorImpl::SignCertificate(CertificateX509& cert)
     if (status != ER_OK) {
         return status;
     }
-    return cert.Sign(&privateKey);
+    ECCPublicKey publicKey;
+    status = ca.GetDSAPublicKey(publicKey);
+    if (status != ER_OK) {
+        return status;
+    }
+    return cert.SignAndGenerateAuthorityKeyId(&privateKey, &publicKey);
 }
 
 QStatus PermissionConfiguratorImpl::GetConnectedPeerPublicKey(const GUID128& guid, qcc::ECCPublicKey* publicKey)

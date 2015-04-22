@@ -1054,7 +1054,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         PermissionMgmtTestHelper::GetGUID(adminBus, issuerGUID);
 
         qcc::String der;
-        status = PermissionMgmtTestHelper::CreateIdentityCert(adminBus, "1010101", issuerGUID, &issuerPubKey, "Admin User", der);
+        status = PermissionMgmtTestHelper::CreateIdentityCert(adminBus, "1010101", issuerGUID.ToString(), &issuerPubKey, "Admin User", der);
         EXPECT_EQ(ER_OK, status) << "  CreateIdentityCert failed.  Actual Status: " << QCC_StatusText(status);
 
         /* setup publicKey and identity certificate to pass into Claim */
@@ -1075,7 +1075,6 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         status = newCert.EncodeCertificateDER(retIdentity);
         EXPECT_EQ(ER_OK, status) << "  newCert.EncodeCertificateDER failed.  Actual Status: " << QCC_StatusText(status);
         EXPECT_STREQ(der.c_str(), retIdentity.c_str()) << "  GetIdentity failed.  Return value does not equal original";
-
         /* reload the shared key store because of change on one bus */
         adminProxyBus.ReloadKeyStore();
         adminBus.ReloadKeyStore();
@@ -1127,7 +1126,8 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         EXPECT_EQ(ER_OK, pmProxy.GetPublicKey(&claimedPubKey)) << "GetPeerPublicKey failed.";
         /* create identity cert for the claimed app */
         qcc::String der;
-        status = PermissionMgmtTestHelper::CreateIdentityCert(adminBus, "2020202", subjectGUID, &claimedPubKey, "Service Provider", der);
+        qcc::String subjectCN((const char*) subjectGUID.GetBytes(), subjectGUID.SIZE);
+        status = PermissionMgmtTestHelper::CreateIdentityCert(adminBus, "2020202", subjectCN, &claimedPubKey, "Service Provider", der);
         EXPECT_EQ(ER_OK, status) << "  CreateIdentityCert failed.  Actual Status: " << QCC_StatusText(status);
 
         /* try claiming with state unclaimable.  Exptect to fail */
@@ -1193,7 +1193,8 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         EXPECT_EQ(ER_OK, pmProxy.GetPublicKey(&claimedPubKey)) << "GetPeerPublicKey failed.";
         /* create identity cert for the claimed app */
         qcc::String der;
-        status = PermissionMgmtTestHelper::CreateIdentityCert(adminBus, "3030303", subjectGUID, &claimedPubKey, "Consumer", der);
+        qcc::String subjectCN((const char*) subjectGUID.GetBytes(), subjectGUID.SIZE);
+        status = PermissionMgmtTestHelper::CreateIdentityCert(adminBus, "3030303", subjectCN, &claimedPubKey, "Consumer", der);
         EXPECT_EQ(ER_OK, status) << "  CreateIdentityCert failed.  Actual Status: " << QCC_StatusText(status);
         SetNotifyConfigSignalReceived(false);
 
@@ -1243,7 +1244,8 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         EXPECT_EQ(ER_OK, pmProxy.GetPublicKey(&claimedPubKey)) << "GetPeerPublicKey failed.";
         /* create identity cert for the claimed app */
         qcc::String der;
-        status = PermissionMgmtTestHelper::CreateIdentityCert(consumerBus, "6060606", remoteControlGUID, &claimedPubKey, "remote control", der);
+        qcc::String remoteControlCN((const char*) remoteControlGUID.GetBytes(), remoteControlGUID.SIZE);
+        status = PermissionMgmtTestHelper::CreateIdentityCert(consumerBus, "6060606", remoteControlCN, &claimedPubKey, "remote control", der);
         EXPECT_EQ(ER_OK, status) << "  CreateIdentityCert failed.  Actual Status: " << QCC_StatusText(status);
         SetNotifyConfigSignalReceived(false);
 
@@ -1378,7 +1380,8 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
 
         /* create a new identity cert */
         qcc::String der;
-        status = PermissionMgmtTestHelper::CreateIdentityCert(adminBus, "4040404", cert.GetSubject(), cert.GetSubjectPublicKey(), "Service Provider", der);
+        qcc::String subject((const char*) cert.GetSubjectCN(), cert.GetSubjectCNLength());
+        status = PermissionMgmtTestHelper::CreateIdentityCert(adminBus, "4040404", subject, cert.GetSubjectPublicKey(), "Service Provider", der);
         EXPECT_EQ(ER_OK, status) << "  CreateIdentityCert failed.  Actual Status: " << QCC_StatusText(status);
 
         /* test install identity using PEM format */
@@ -1405,10 +1408,9 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         IdentityCertificate cert;
         EXPECT_EQ(ER_OK, pmProxy.GetIdentity(&cert)) << "GetIdentity failed.";
         /* create a new identity cert */
-        qcc::GUID128 guid;
         qcc::ECCPublicKey randomKey;
         qcc::String der;
-        status = PermissionMgmtTestHelper::CreateIdentityCert(adminBus, "5050505", guid, &randomKey, "Service Provider", der);
+        status = PermissionMgmtTestHelper::CreateIdentityCert(adminBus, "5050505", "random subject", &randomKey, "Service Provider", der);
         EXPECT_EQ(ER_OK, status) << "  CreateIdentityCert failed.  Actual Status: " << QCC_StatusText(status);
 
         MsgArg certArg("(yay)", CertificateX509::ENCODING_X509_DER, der.size(), der.data());
@@ -1424,7 +1426,8 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         EXPECT_EQ(ER_OK, pmProxy.GetIdentity(&cert)) << "GetIdentity failed.";
         /* create a new identity cert that will expire in 1 second */
         qcc::String der;
-        status = PermissionMgmtTestHelper::CreateIdentityCert(installerBus, "5050505", cert.GetSubject(), cert.GetSubjectPublicKey(), "Service Provider", 1, der);
+        qcc::String subject((const char*) cert.GetSubjectCN(), cert.GetSubjectCNLength());
+        status = PermissionMgmtTestHelper::CreateIdentityCert(installerBus, "5050505", subject, cert.GetSubjectPublicKey(), "Service Provider", 1, der);
         EXPECT_EQ(ER_OK, status) << "  CreateIdentityCert failed.  Actual Status: " << QCC_StatusText(status);
 
         /* sleep 2 seconds to get the cert to expire */
@@ -1498,9 +1501,10 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         ECCPublicKey claimedPubKey;
         status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(serviceBus, &claimedPubKey);
         EXPECT_EQ(ER_OK, status) << "  InstallMembership RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
-        status = PermissionMgmtTestHelper::InstallMembership(serial, adminBus, serviceBus.GetUniqueName(), adminBus, serviceGUID, &claimedPubKey, guildID, membershipAuthData);
+        qcc::String subjectCN((const char*) serviceGUID.GetBytes(), serviceGUID.SIZE);
+        status = PermissionMgmtTestHelper::InstallMembership(serial, adminBus, serviceBus.GetUniqueName(), adminBus, subjectCN, &claimedPubKey, guildID, membershipAuthData);
         EXPECT_EQ(ER_OK, status) << "  InstallMembership cert1 failed.  Actual Status: " << QCC_StatusText(status);
-        status = PermissionMgmtTestHelper::InstallMembership(serial, adminBus, serviceBus.GetUniqueName(), adminBus, serviceGUID, &claimedPubKey, guildID, membershipAuthData);
+        status = PermissionMgmtTestHelper::InstallMembership(serial, adminBus, serviceBus.GetUniqueName(), adminBus, subjectCN, &claimedPubKey, guildID, membershipAuthData);
         EXPECT_NE(ER_OK, status) << "  InstallMembership cert1 again is supposed to fail.  Actual Status: " << QCC_StatusText(status);
     }
 
@@ -1515,13 +1519,13 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     void RemoveMembershipFromServiceProvider()
     {
         PermissionMgmtProxy pmProxy(adminBus, serviceBus.GetUniqueName().c_str());
-        qcc::GUID128 issuerGUID;
-        PermissionMgmtTestHelper::GetGUID(adminBus, issuerGUID);
-        EXPECT_EQ(ER_OK, status) << "  GetGuid failed.  Actual Status: " << QCC_StatusText(status);
-
-        EXPECT_EQ(ER_OK, pmProxy.RemoveMembership(membershipSerial3, issuerGUID)) << "RemoveMembershipFromServiceProvider failed.";
+        KeyInfoNISTP256 keyInfo;
+        adminBus.GetPermissionConfigurator().GetSigningPublicKey(keyInfo);
+        String aki;
+        CertificateX509::GenerateAuthorityKeyId(keyInfo.GetPublicKey(), aki);
+        EXPECT_EQ(ER_OK, pmProxy.RemoveMembership(membershipSerial3, aki)) << "RemoveMembershipFromServiceProvider failed.";
         /* removing it again */
-        EXPECT_NE(ER_OK, pmProxy.RemoveMembership(membershipSerial3, issuerGUID)) << "RemoveMembershipFromServiceProvider succeeded.  Expect it to fail.";
+        EXPECT_NE(ER_OK, pmProxy.RemoveMembership(membershipSerial3, aki)) << "RemoveMembershipFromServiceProvider succeeded.  Expect it to fail.";
 
     }
 
@@ -1533,7 +1537,8 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         ECCPublicKey claimedPubKey;
         status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(consumerBus, &claimedPubKey);
         EXPECT_EQ(ER_OK, status) << "  InstallMembershipToConsumer RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
-        status = PermissionMgmtTestHelper::InstallMembership(serial, adminBus, consumerBus.GetUniqueName(), adminBus, consumerGUID, &claimedPubKey, guildID, membershipAuthData);
+        qcc::String subjectCN((const char*) consumerGUID.GetBytes(), consumerGUID.SIZE);
+        status = PermissionMgmtTestHelper::InstallMembership(serial, adminBus, consumerBus.GetUniqueName(), adminBus, subjectCN, &claimedPubKey, guildID, membershipAuthData);
         EXPECT_EQ(ER_OK, status) << "  InstallMembershipToConsumer cert1 failed.  Actual Status: " << QCC_StatusText(status);
     }
 
@@ -1562,7 +1567,9 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         CredentialAccessor tca(targetBus);
         qcc::GUID128 targetGUID;
         status = tca.GetGuid(targetGUID);
-        status = PermissionMgmtTestHelper::InstallMembershipChain(topBus, middleBus, serial0, serial1, targetBus.GetUniqueName().c_str(), middleGUID, &secondPubKey, targetGUID, &targetPubKey, guildID, authDataArray);
+        qcc::String middleCN((const char*) middleGUID.GetBytes(), middleGUID.SIZE);
+        qcc::String targetCN((const char*) targetGUID.GetBytes(), targetGUID.SIZE);
+        status = PermissionMgmtTestHelper::InstallMembershipChain(topBus, middleBus, serial0, serial1, targetBus.GetUniqueName().c_str(), middleCN, &secondPubKey, targetCN, &targetPubKey, guildID, authDataArray);
         EXPECT_EQ(ER_OK, status) << "  InstallMembershipChainToTarget failed.  Actual Status: " << QCC_StatusText(status);
     }
 
@@ -1574,7 +1581,9 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         ECCPublicKey claimedPubKey;
         status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(adminBus, &claimedPubKey);
         EXPECT_EQ(ER_OK, status) << "  InstallOthersMembershipToConsumer RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
-        status = PermissionMgmtTestHelper::InstallMembership(membershipSerial1, adminBus, serviceBus.GetUniqueName(), adminBus, consumerGUID, &claimedPubKey, membershipGUID1, membershipAuthData);
+        qcc::String subjectCN((const char*) consumerGUID.GetBytes(), consumerGUID.SIZE);
+        status = PermissionMgmtTestHelper::InstallMembership(membershipSerial1, adminBus, serviceBus.GetUniqueName(), adminBus, subjectCN, &claimedPubKey, membershipGUID1, membershipAuthData);
+
         EXPECT_EQ(ER_OK, status) << "  InstallOthersMembershipToConsumer InstallMembership failed.  Actual Status: " << QCC_StatusText(status);
     }
 
@@ -1586,7 +1595,9 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         ECCPublicKey claimedPubKey;
         status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(adminBus, &claimedPubKey);
         EXPECT_EQ(ER_OK, status) << "  InstallMembershipToAdmin RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
-        status = PermissionMgmtTestHelper::InstallMembership(membershipSerial1, adminProxyBus, adminBus.GetUniqueName(), adminBus, consumerGUID, &claimedPubKey, membershipGUID1, membershipAuthData);
+        qcc::String subjectCN((const char*) consumerGUID.GetBytes(), consumerGUID.SIZE);
+        status = PermissionMgmtTestHelper::InstallMembership(membershipSerial1, adminProxyBus, adminBus.GetUniqueName(), adminBus, subjectCN, &claimedPubKey, membershipGUID1, membershipAuthData);
+
         EXPECT_EQ(ER_OK, status) << "  InstallMembershipToAdmin cert1 failed.  Actual Status: " << QCC_StatusText(status);
     }
 
@@ -1871,10 +1882,14 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         PermissionMgmtProxy pmProxy(adminBus, consumerBus.GetUniqueName().c_str());
         qcc::GUID128 issuerGUID;
         PermissionMgmtTestHelper::GetGUID(adminBus, issuerGUID);
+        KeyInfoNISTP256 keyInfo;
+        adminBus.GetPermissionConfigurator().GetSigningPublicKey(keyInfo);
+        String aki;
+        CertificateX509::GenerateAuthorityKeyId(keyInfo.GetPublicKey(), aki);
 
-        EXPECT_EQ(ER_OK, pmProxy.RemoveMembership(membershipSerial1, issuerGUID)) << "RemoveMembershipFromConsumer failed.";
+        EXPECT_EQ(ER_OK, pmProxy.RemoveMembership(membershipSerial1, aki)) << "RemoveMembershipFromConsumer failed.";
         /* removing it again */
-        EXPECT_NE(ER_OK, pmProxy.RemoveMembership(membershipSerial1, issuerGUID)) << "RemoveMembershipFromConsumer succeeded.  Expect it to fail.";
+        EXPECT_NE(ER_OK, pmProxy.RemoveMembership(membershipSerial1, aki)) << "RemoveMembershipFromConsumer succeeded.  Expect it to fail.";
 
     }
 
@@ -2560,9 +2575,10 @@ TEST_F(PermissionMgmtUseCaseTest, TwoTrustAnchors)
         delete authDataArray[cnt];
     }
     delete [] authDataArray;
-    /* install additional crentials on service so the service provider trust
-       the remote control */
+    /* install additional credentials on service and remote control so they
+        can trust each other */
     InstallAdditionalIdentityTrustAnchor(adminBus, consumerBus, serviceBus);
+    InstallAdditionalIdentityTrustAnchor(consumerBus, adminBus, remoteControlBus);
 
     /* setup the application interfaces for access tests */
     CreateAppInterfaces(serviceBus, true);

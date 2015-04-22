@@ -72,7 +72,8 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
         typedef enum {
             RUN_AS_ADMIN = 0,
             RUN_AS_SERVICE = 1,
-            RUN_AS_CONSUMER = 2
+            RUN_AS_CONSUMER = 2,
+            RUN_AS_CONSUMER_DELEGATE = 3
         } AgentType;
 
         ECDHEKeyXListener(AgentType agentType) : agentType(agentType), authComplete(false)
@@ -130,8 +131,10 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
                 msg += "Admin: ";
             } else if (agentType == RUN_AS_SERVICE) {
                 msg += "Service: ";
-            } else {
+            } else if (agentType == RUN_AS_CONSUMER) {
                 msg += "Consumer: ";
+            } else {
+                msg += "Consumer Delegate: ";
             }
             msg += "AuthenticationComplete auth mechanism ";
             msg += authMechanism;
@@ -238,13 +241,13 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
 
 class PermissionMgmtTestHelper {
   public:
-    static QStatus CreateIdentityCert(BusAttachment& issuerBus, const qcc::String& serial, const qcc::GUID128& subject, const qcc::ECCPublicKey* subjectPubKey, const qcc::String& alias, uint32_t expiredInSecs, qcc::String& der);
+    static QStatus CreateIdentityCert(BusAttachment& issuerBus, const qcc::String& serial, const qcc::String& subject, const qcc::ECCPublicKey* subjectPubKey, const qcc::String& alias, uint32_t expiredInSecs, qcc::String& der);
 
-    static QStatus CreateIdentityCert(BusAttachment& issuerBus, const qcc::String& serial, const qcc::GUID128& subject, const qcc::ECCPublicKey* subjectPubKey, const qcc::String& alias, qcc::String& der);
+    static QStatus CreateIdentityCert(BusAttachment& issuerBus, const qcc::String& serial, const qcc::String& subject, const qcc::ECCPublicKey* subjectPubKey, const qcc::String& alias, qcc::String& der);
 
-    static QStatus CreateMembershipCert(const qcc::String& serial, const uint8_t* authDataHash, BusAttachment& signingBus, const qcc::GUID128& subject, const qcc::ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, bool delegate, uint32_t expiredInSecs, qcc::String& der);
-    static QStatus CreateMembershipCert(const qcc::String& serial, const uint8_t* authDataHash, BusAttachment& signingBus, const qcc::GUID128& subject, const qcc::ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, bool delegate, qcc::String& der);
-    static QStatus CreateMembershipCert(const qcc::String& serial, const uint8_t* authDataHash, BusAttachment& signingBus, const qcc::GUID128& subject, const qcc::ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, qcc::String& der);
+    static QStatus CreateMembershipCert(const qcc::String& serial, const uint8_t* authDataHash, BusAttachment& signingBus, const qcc::String& subject, const qcc::ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, bool delegate, uint32_t expiredInSecs, qcc::String& der);
+    static QStatus CreateMembershipCert(const qcc::String& serial, const uint8_t* authDataHash, BusAttachment& signingBus, const qcc::String& subject, const qcc::ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, bool delegate, qcc::String& der);
+    static QStatus CreateMembershipCert(const qcc::String& serial, const uint8_t* authDataHash, BusAttachment& signingBus, const qcc::String& subject, const qcc::ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, qcc::String& der);
     static bool IsPermissionDeniedError(QStatus status, Message& msg);
     static QStatus ReadClaimResponse(Message& msg, qcc::ECCPublicKey* pubKey);
     static QStatus GenerateManifest(PermissionPolicy::Rule** retRules, size_t* count);
@@ -252,8 +255,8 @@ class PermissionMgmtTestHelper {
     static QStatus RetrieveDSAPublicKeyFromKeyStore(BusAttachment& bus, qcc::ECCPublicKey* publicKey);
 
     static QStatus LoadCertificateBytes(Message& msg, qcc::CertificateX509& cert);
-    static QStatus InstallMembership(const qcc::String& serial, BusAttachment& bus, const qcc::String& remoteObjName, BusAttachment& signingBus, const qcc::GUID128& subjectGUID, const qcc::ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, PermissionPolicy* membershipAuthData);
-    static QStatus InstallMembershipChain(BusAttachment& topBus, BusAttachment& secondBus, const qcc::String& serial0, const qcc::String& serial1, const qcc::String& remoteObjName, const qcc::GUID128& secondGUID, const qcc::ECCPublicKey* secondPubKey, const qcc::GUID128& targetGUID, const qcc::ECCPublicKey* targetPubKey, const qcc::GUID128& guild, PermissionPolicy** authDataArray);
+    static QStatus InstallMembership(const qcc::String& serial, BusAttachment& bus, const qcc::String& remoteObjName, BusAttachment& signingBus, const qcc::String& subject, const qcc::ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, PermissionPolicy* membershipAuthData);
+    static QStatus InstallMembershipChain(BusAttachment& topBus, BusAttachment& secondBus, const qcc::String& serial0, const qcc::String& serial1, const qcc::String& remoteObjName, const qcc::String& secondSubject, const qcc::ECCPublicKey* secondPubKey, const qcc::String& targetSubject, const qcc::ECCPublicKey* targetPubKey, const qcc::GUID128& guild, PermissionPolicy** authDataArray);
 
     static QStatus RetrievePublicKeyFromMsgArg(MsgArg& arg, qcc::ECCPublicKey* pubKey);
     static QStatus GetPeerPublicKey(BusAttachment& bus, ProxyBusObject& remoteObj, qcc::ECCPublicKey* pubKey);

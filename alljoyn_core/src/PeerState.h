@@ -293,18 +293,18 @@ class _PeerState {
     /**
      * Set the guild metadata indexed by the serial number and the issuer.
      * @param serial the membership certificate serial number
-     * @param issuer the membership certificate issuer GUID
+     * @param issuerAki the membership certificate issuer authority key id
      * @param guild the guild metadata
      */
-    void SetGuildMetadata(const qcc::String& serial, const qcc::GUID128& issuer,        GuildMetadata* guild);
+    void SetGuildMetadata(const qcc::String& serial, const qcc::String& issuerAki,        GuildMetadata* guild);
 
     /**
      * Retrieve the guild metadata indexed by the serial number and the issuer.
      * @param serial the membership certificate serial number
-     * @param issuer the membership certificate issuer GUID
+     * @param issuerAki the membership certificate issuer authority key id
      * @return the guild metadata
      */
-    GuildMetadata* GetGuildMetadata(const qcc::String& serial, const qcc::GUID128& issuer);
+    GuildMetadata* GetGuildMetadata(const qcc::String& serial, const qcc::String& issuerAki);
 
     /**
      * Mapping table for guild memberships
