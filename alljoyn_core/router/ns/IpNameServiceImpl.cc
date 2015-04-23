@@ -4485,8 +4485,26 @@ void IpNameServiceImpl::SendOutboundMessageQuietly(Packet packet)
             //
             QCC_DbgPrintf(("IpNameServiceImpl::SendOutboundMessageQuietly(): SendProtocolMessage()"));
             if (msgVersion == 2) {
-                SendProtocolMessage(m_liveInterfaces[i].m_multicastMDNSsockFd, ipv4address, interfaceAddressPrefixLen,
-                                    flags, interfaceIsIPv4, packet, i);
+                bool sendMessage = true;
+
+                //
+                // Link-local multicast send is directed through an interface index. If the current interface index
+                // is the same as a previously-seen interface index, there is no need to send again here.
+                //
+                for (uint32_t previousIndex = 0; previousIndex < i; ++previousIndex) {
+                    if ((m_liveInterfaces[previousIndex].m_index == m_liveInterfaces[i].m_index) &&
+                        (m_liveInterfaces[previousIndex].m_address.IsIPv6() == m_liveInterfaces[i].m_address.IsIPv6())) {
+                        sendMessage = false;
+                        break;
+                    }
+                }
+
+                if (sendMessage) {
+                    SendProtocolMessage(m_liveInterfaces[i].m_multicastMDNSsockFd, ipv4address, interfaceAddressPrefixLen,
+                                        flags, interfaceIsIPv4, packet, i);
+                } else {
+                    QCC_DbgPrintf(("IpNameServiceImpl::SendOutboundMessageQuietly(): skipping already-handled iface index %u\n", m_liveInterfaces[i].m_index));
+                }
             } else if (m_liveInterfaces[i].m_multicastsockFd != qcc::INVALID_SOCKET_FD) {
                 SendProtocolMessage(m_liveInterfaces[i].m_multicastsockFd, ipv4address, interfaceAddressPrefixLen,
                                     flags, interfaceIsIPv4, packet, i);
@@ -5064,8 +5082,26 @@ void IpNameServiceImpl::SendOutboundMessageActively(Packet packet, const qcc::IP
         // live interface we approved for sending.
         //
         if (msgVersion == 2) {
-            SendProtocolMessage(m_liveInterfaces[i].m_multicastMDNSsockFd, ipv4address, interfaceAddressPrefixLen,
-                                flags, interfaceIsIPv4, packet, i, localAddress);
+            bool sendMessage = true;
+
+            //
+            // Link-local multicast send is directed through an interface index. If the current interface index
+            // is the same as a previously-seen interface index, there is no need to send again here.
+            //
+            for (uint32_t previousIndex = 0; previousIndex < i; ++previousIndex) {
+                if ((m_liveInterfaces[previousIndex].m_index == m_liveInterfaces[i].m_index) &&
+                    (m_liveInterfaces[previousIndex].m_address.IsIPv6() == m_liveInterfaces[i].m_address.IsIPv6())) {
+                    sendMessage = false;
+                    break;
+                }
+            }
+
+            if (sendMessage) {
+                SendProtocolMessage(m_liveInterfaces[i].m_multicastMDNSsockFd, ipv4address, interfaceAddressPrefixLen,
+                                    flags, interfaceIsIPv4, packet, i, localAddress);
+            } else {
+                QCC_DbgPrintf(("IpNameServiceImpl::SendOutboundMessageActively(): skipping already-handled iface index %u\n", m_liveInterfaces[i].m_index));
+            }
         } else if (m_liveInterfaces[i].m_multicastsockFd != qcc::INVALID_SOCKET_FD) {
             SendProtocolMessage(m_liveInterfaces[i].m_multicastsockFd, ipv4address, interfaceAddressPrefixLen,
                                 flags, interfaceIsIPv4, packet, i, localAddress);
