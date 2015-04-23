@@ -4525,6 +4525,7 @@ void JBusAttachment::Disconnect()
         if (env->ExceptionCheck()) {
             QCC_LogError(ER_FAIL, ("JBusAttachment::Disconnect(): Exception"));
             baCommonLock.Unlock();
+            gBusObjectMapLock.Unlock();
             return;
         }
         QCC_DbgPrintf(("JBusAttachment::Disconnect(): Call UnregisterBusListener()"));

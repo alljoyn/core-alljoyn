@@ -1090,6 +1090,7 @@ QStatus _RemoteEndpoint::PushMessageRouter(Message& msg, size_t& count)
                     if (thread->GetAlertCode() == ENDPOINT_IS_DEAD_ALERTCODE) {
                         status = ER_BUS_ENDPOINT_CLOSING;
                     }
+                    thread->ResetAlertCode();
                     thread->GetStopEvent().ResetEvent();
                 }
 
@@ -1195,6 +1196,7 @@ QStatus _RemoteEndpoint::PushMessageLeaf(Message& msg, size_t& count)
                 if (thread->GetAlertCode() == ENDPOINT_IS_DEAD_ALERTCODE) {
                     status = ER_BUS_ENDPOINT_CLOSING;
                 }
+                thread->ResetAlertCode();
                 thread->GetStopEvent().ResetEvent();
             }
 

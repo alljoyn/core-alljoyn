@@ -1537,6 +1537,7 @@ QStatus ProxyBusObject::MethodCall(const InterfaceDescription::Member& method,
         if (status == ER_OK) {
             replyMsg = ctxt->replyMsg;
         } else if ((status == ER_ALERTED_THREAD) && (SYNC_METHOD_ALERTCODE_ABORT == thisThread->GetAlertCode())) {
+            thisThread->ResetAlertCode();
             /*
              * We can't touch anything in this case since the external thread that was waiting
              * can't know whether this object still exists.
@@ -1547,6 +1548,9 @@ QStatus ProxyBusObject::MethodCall(const InterfaceDescription::Member& method,
              * The handler was deregistered so we need to delete the context here.
              */
             delete heapCtx;
+        }
+        if (status == ER_ALERTED_THREAD) {
+            thisThread->ResetAlertCode();
         }
     }
 
