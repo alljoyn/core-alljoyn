@@ -50,7 +50,7 @@ if env.get('ANDROID_NDK', '') == '':
    if not GetOption('help'):
       Exit(1)
 
-if env.get('ANDROID_SRC', '') == '':
+if env.get('ANDROID_SRC', '') == '' and env['CRYPTO'] == 'openssl':
    print 'ANDROID_SRC variable is required'
    if not GetOption('help'):
       Exit(1)
@@ -176,9 +176,10 @@ if not GetOption('help') and env.has_key('ANDROID_NDK'):
    env.Append(LINKFLAGS = [ '--sysroot=' + settings['SYSROOT'],
                             '-Wl,-rpath-link=' + settings['SYSROOT'] + '/usr/lib' ])
 
-   # Get OpenSSL from Android source.
-   env.Append(CPPPATH = '$ANDROID_SRC/external/openssl/include')
-   env.Append(LIBPATH = '$ANDROID_SRC/out/target/product/$ANDROID_TARGET/system/lib')
+   if env['CRYPTO'] == 'openssl':
+      # Get OpenSSL from Android source.
+      env.Append(CPPPATH = '$ANDROID_SRC/external/openssl/include')
+      env.Append(LIBPATH = '$ANDROID_SRC/out/target/product/$ANDROID_TARGET/system/lib')
 
    env.Append(CPPDEFINES = 'QCC_OS_ANDROID')
    env.Append(CFLAGS = ['-Wall',
