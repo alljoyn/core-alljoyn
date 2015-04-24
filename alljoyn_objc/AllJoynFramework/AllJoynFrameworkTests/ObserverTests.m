@@ -360,7 +360,7 @@ static NSString * const kPathPrefix = @"/test/";
 - (void)didJoin:(NSString *)joiner inSessionWithId:(AJNSessionId)sessionId onSessionPort:(AJNSessionPort)sessionPort
 {
     NSLog(@"AJNSessionPortListener::didJoin:%@ inSessionWithId:%u onSessionPort:%u withSessionOptions:", joiner, sessionId, sessionPort);
-    
+
     [self.hostedSessionMapLock lock];
     [self.hostedSessionMap setObject:[NSNumber numberWithUnsignedInt:sessionId] forKey:joiner];
     [self.bus bindHostedSessionListener:self toSession:sessionId];
@@ -398,6 +398,7 @@ static NSString * const kPathPrefix = @"/test/";
 -(instancetype)initWithBusAttachment:(AJNBusAttachment *)bus;
 -(void)expectInvocations:(NSUInteger)newCounter;
 -(void)checkReentrancyForProxy:(AJNProxyBusObject *)proxy;
+-(void)reset;
 @end
 
 @implementation ObserverListener
@@ -419,9 +420,15 @@ static NSString * const kPathPrefix = @"/test/";
     self.proxies = nil;
 }
 
+-(void) reset
+{
+    self.counter = 0;
+    [self.proxies removeAllObjects];
+}
+
 -(void)expectInvocations:(NSUInteger)newCounter
 {
-    NSAssert(0 == self.counter,@"In the previous test case, the listener was triggered an invalid number of times.");
+    NSAssert(0 == self.counter, @"In the previous test case, the listener was triggered an invalid number of times.");
     self.counter = newCounter;
 }
 
@@ -453,17 +460,16 @@ static NSString * const kPathPrefix = @"/test/";
 {
     NSAssert(nil != obj, @"Discovered object: Invalid Proxy");
     if (NO == self.tolerateAlreadyDiscoveredObjects) {
-        // AJNProxyBusObject does not support hash and isEqual: => we need to iterate ourselfs
-        NSUInteger idx = 0;
-        for (;idx<[self.proxies count];++idx){
-            NSString *objBusName = [NSString stringWithString:((AJNBusAttachment *)[obj valueForKey:@"bus"]).uniqueName];
-            NSString *itemBusName = [NSString stringWithString:((AJNBusAttachment *)[[self.proxies objectAtIndex:idx] valueForKey:@"bus"]).uniqueName];
-            if ([obj.path isEqualToString:((AJNProxyBusObject *)[self.proxies objectAtIndex:idx]).path] &&
-                [objBusName isEqualToString:itemBusName]){
-                NSAssert([self.proxies count] > idx, @"Discovering an already-discovered object.");
+        BOOL found = NO;
+        // AJNProxyBusObject does not support hash and isEqual: => we need to iterate ourselves
+        for (NSUInteger idx = 0; idx < [self.proxies count]; ++idx) {
+            AJNProxyBusObject* pproxy = [self.proxies objectAtIndex:idx];
+            if ([obj.path isEqualToString:pproxy.path] && [obj.uniqueName isEqualToString:pproxy.uniqueName]) {
+                found = YES;
                 break;
             }
         }
+        NSAssert(!found, @"Discovering an already-discovered object.");
     }
     [self.proxies addObject:obj];
     [self checkReentrancyForProxy:obj];
@@ -474,18 +480,17 @@ static NSString * const kPathPrefix = @"/test/";
 {
     NSAssert(nil != obj, @"Lost object: Invalid Proxy");
     // AJNProxyBusObject does not support hash and isEqual:
-    NSUInteger idx = 0;
-    for (;idx<[self.proxies count];++idx){
-        NSString *objBusName = [NSString stringWithString:((AJNBusAttachment *)[obj valueForKey:@"bus"]).uniqueName];
-        NSString *itemBusName = [NSString stringWithString:((AJNBusAttachment *)[[self.proxies objectAtIndex:idx] valueForKey:@"bus"]).uniqueName];
-        if ([obj.path isEqualToString:((AJNProxyBusObject *)[self.proxies objectAtIndex:idx]).path] &&
-            [objBusName isEqualToString:itemBusName]){
-            [self.proxies removeObject:obj];
+    BOOL found = NO;
+    for (NSUInteger idx = 0; idx < [self.proxies count]; ++idx) {
+        AJNProxyBusObject* pproxy = [self.proxies objectAtIndex:idx];
+        if ([obj.path isEqualToString:pproxy.path] && [obj.uniqueName isEqualToString:pproxy.uniqueName]) {
+            [self.proxies removeObjectAtIndex:idx];
+            found = YES;
             --self.counter;
             break;
         }
     }
-    NSAssert([self.proxies count] > idx, @"Lost a not-discovered object.");
+    NSAssert(found, @"Lost a not-discovered object.");
 }
 
 @end
@@ -621,7 +626,7 @@ typedef BOOL (^verifyObjects)();
     STAssertNotNil(proxy, @"Proxy object for both not found");
     interfaces = [proxy interfaces];
     STAssertTrue(3 == [interfaces count], @"Not getting correct number of interfaces from proxy both");
-    
+
     // Verify that we can indeed perform method calls
     AJNMessage *reply;
 
@@ -693,8 +698,11 @@ typedef BOOL (^verifyObjects)();
     STAssertTrue(YES == [self waitForBlock:numberOfProxies msToWait:1000], @"incorrect number of proxies detected");
 
     // Reinstate listeners & test triggerOnExisting functionality
+    [listenerA reset];
     [listenerA expectInvocations:2];
+    [listenerB reset];
     [listenerB expectInvocations:1];
+    [listenerAB reset];
     [listenerAB expectInvocations:1];
 
     [obsA registerObserverListener:listenerA triggerOnExisting:YES];
@@ -731,6 +739,7 @@ typedef BOOL (^verifyObjects)();
                                                  busAttachment:consumer.bus
                                            mandatoryInterfaces:[NSArray arrayWithObject:kObserverTestsInterfaceNameB]];
     [obsB unregisterObserverListener:listenerB2];
+    [listenerB2 reset];
 
     [listenerA expectInvocations:0];
     [listenerB expectInvocations:0];
@@ -923,33 +932,31 @@ typedef BOOL (^verifyObjects)();
     [provider createObjectWithName:kObserverTestsObjectBoth2];
 
     ObserverListener *listener = [[ObserverListener alloc]initWithBusAttachment:consumer.bus];
+    // We're going to attach this listener to two identical observers, so we expect to get discoveredObject twice for each bus object.
+    listener.tolerateAlreadyDiscoveredObjects = YES;
+    verifyObjects verifylistener = ^BOOL() {
+        return (0 == listener.counter);
+    };
+
     AJNObserver *obs = [[AJNObserver alloc]initWithProxyType:[TestJustAProxy class]
                                                busAttachment:consumer.bus
                                          mandatoryInterfaces:[NSArray arrayWithObject:kObserverTestsInterfaceNameA]];
     [obs registerObserverListener:listener triggerOnExisting:YES];
 
-    // Get the object counts of the listener
-    verifyObjects verifylistener = ^BOOL() {
-        return (0 == listener.counter);
-    };
+    AJNObserver *obs2 = [[AJNObserver alloc]initWithProxyType:[TestJustAProxy class]
+                                                busAttachment:consumer.bus
+                                          mandatoryInterfaces:[NSArray arrayWithObject:kObserverTestsInterfaceNameA]];
+    [obs2 registerObserverListener:listener triggerOnExisting:YES];
 
-    {
-        // use listener for 2 observers, so we expect to see all events twice
-        AJNObserver *obs2 = [[AJNObserver alloc]initWithProxyType:[TestJustAProxy class]
-                                                   busAttachment:consumer.bus
-                                             mandatoryInterfaces:[NSArray arrayWithObject:kObserverTestsInterfaceNameA]];
-        [obs2 registerObserverListener:listener triggerOnExisting:YES];
+    [listener expectInvocations:6]; // 3 events, times 2 observers feeding the listener with callbacks
+    [provider registerObjectWithName:kObserverTestsObjectA];
+    [provider registerObjectWithName:kObserverTestsObjectBoth];
+    [provider registerObjectWithName:kObserverTestsObjectBoth2];
 
-        [listener expectInvocations:6];
-        [provider registerObjectWithName:kObserverTestsObjectA];
-        [provider registerObjectWithName:kObserverTestsObjectBoth];
-        [provider registerObjectWithName:kObserverTestsObjectBoth2];
+    STAssertTrue(YES == [self waitForBlock:verifylistener msToWait:MAX_WAIT_MS], @"Objects were not discovered correctly");
 
-        STAssertTrue(YES == [self waitForBlock:verifylistener msToWait:MAX_WAIT_MS], @"Objects were not discovered correctly");
-
-        [obs2 unregisterObserverListener:listener];
-        obs2 = nil;
-    }
+    [obs2 unregisterObserverListener:listener];
+    obs2 = nil;
 
     // one observer is gone, so we expect to see every event just once.
     [listener expectInvocations:3];
@@ -957,7 +964,7 @@ typedef BOOL (^verifyObjects)();
     [provider unregisterObjectWithName:kObserverTestsObjectBoth];
     [provider unregisterObjectWithName:kObserverTestsObjectBoth2];
 
-    STAssertTrue(YES == [self waitForBlock:verifylistener msToWait:MAX_WAIT_MS], @"Objects were not discovered correctly");
+    STAssertTrue(YES == [self waitForBlock:verifylistener msToWait:MAX_WAIT_MS], @"Objects were not lost as expected");
 
     [obs unregisterObserverListener:listener];
     obs = nil;
@@ -1253,6 +1260,7 @@ typedef BOOL (^verifyObjects)();
                                                     busAttachment:consumer.bus
                                               mandatoryInterfaces:[NSArray arrayWithObject:kObserverTestsInterfaceNameA]];
         // Object with intfA was at least discovered
+        [listenerA reset];
         [listenerA expectInvocations:1];
         [obsA registerObserverListener:listenerA triggerOnExisting:YES];
 
@@ -1271,6 +1279,7 @@ typedef BOOL (^verifyObjects)();
                                           mandatoryInterfaces:[NSArray arrayWithObject:kObserverTestsInterfaceNameB]];
 
     // Object with intfB was at least discovered
+    [listenerB reset];
     [listenerB expectInvocations:1];
     [obsB registerObserverListener:listenerB triggerOnExisting:YES];
 
