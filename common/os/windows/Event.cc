@@ -589,7 +589,7 @@ VOID CALLBACK NamedPipeIoEventCallback(PVOID arg, BOOLEAN TimerOrWaitFired)
 
 QStatus AJ_CALL Event::Wait(Event& evt, uint32_t maxWaitMs)
 {
-    HANDLE handles[3];
+    HANDLE handles[2];
     uint32_t numHandles = 0;
 
     /*
@@ -610,11 +610,9 @@ QStatus AJ_CALL Event::Wait(Event& evt, uint32_t maxWaitMs)
      */
     if (nullptr != evt.ioHandle) {
         handles[numHandles++] = evt.ioHandle;
-    }
-    if (nullptr != evt.handle) {
+    } else if (nullptr != evt.handle) {
         handles[numHandles++] = evt.handle;
-    }
-    if (nullptr != evt.timerHandle) {
+    } else if (nullptr != evt.timerHandle) {
         assert(TIMED == evt.eventType);
         handles[numHandles++] = evt.timerHandle;
     }
@@ -623,6 +621,7 @@ QStatus AJ_CALL Event::Wait(Event& evt, uint32_t maxWaitMs)
     Event* stopEvent = &thread->GetStopEvent();
     handles[numHandles++] = stopEvent->handle;
     QStatus status = ER_OK;
+    assert(numHandles <= ARRAYSIZE(handles));
 
     evt.IncrementNumThreads();
     DWORD ret = WaitForMultipleObjectsEx(numHandles, handles, FALSE, maxWaitMs, FALSE);
@@ -672,12 +671,10 @@ QStatus AJ_CALL Event::Wait(const vector<Event*>& checkEvents, vector<Event*>& s
         if (evt->handle != nullptr) {
             handles.push_back(evt->handle);
             numHandles++;
-        }
-        if (evt->ioHandle != nullptr) {
+        } else if (evt->ioHandle != nullptr) {
             handles.push_back(evt->ioHandle);
             numHandles++;
-        }
-        if (evt->timerHandle != nullptr) {
+        } else if (evt->timerHandle != nullptr) {
             assert(evt->eventType == TIMED);
             handles.push_back(evt->timerHandle);
             numHandles++;
