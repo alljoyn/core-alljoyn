@@ -32,8 +32,8 @@ using namespace ajn;
 /** This object represents a key used by the cache to identify an associated managed proxy object
  *
  * The cache is a plain NSMutableDictionary, which requires the keys to implement NSCopying protocol.
- * The NSCache is not used here for the cache, because NSCache has automated revocation. 
- * (automated revocation is what whe want to avoid)
+ * The NSCache is not used here for the cache, because NSCache has automated revocation.
+ * (automated revocation is what we want to avoid)
  */
 @interface AJNObjectId : NSObject <NSCopying>
 @property (nonatomic,strong) NSString* objectPath;
@@ -183,16 +183,6 @@ namespace ajn {
 
 - (void)dealloc
 {
-    // Remove first the Native Listener to stop new callbacks
-    Observer* pObserver = static_cast<Observer*>(self.handle);
-    if (NULL != pObserver) {
-        ajn::Observer::Listener* pListener = static_cast<ajn::Observer::Listener*>(observerListener);
-        if (NULL != pListener) {
-            pObserver->UnregisterListener(*pListener);
-            delete pListener;
-        }
-    }
-
     // Stop all pending listener tasks
     [self.listenersTaskQueue cancelAllOperations];
 
@@ -204,11 +194,28 @@ namespace ajn {
     [self.listeners removeAllObjects];
     [self.proxyCacheLock unlock];
 
-    if (NULL != pObserver) {
-        delete pObserver;
-    }
+    // Move the actual destruction of the Observer out of this context, because there is a
+    // potential deadlock lurking here:
+    // ARC may find that the last valid reference to an AJNObserver exists in its NativeListener
+    // (the timing needs to be exactly right, but we've seen this happen with the CreateDelete
+    // unit test). That would cause this dealloc to be called from the closing brace of
+    // NativeListener::ObjectDiscovered, which leads to a deadlock as you're trying to unregister
+    // the listener from within that listener itself.
+    Observer* pObserver = static_cast<Observer*>(self.handle);
+    NativeListener* blockListener = observerListener;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (pObserver) {
+            pObserver->UnregisterAllListeners();
+            delete pObserver;
+        }
+        if (blockListener) {
+            delete blockListener;
+        }
+    });
+
     self.handle = NULL;
     self.busAttachment = nil;
+    observerListener = NULL;
 }
 
 #pragma mark - Public interfaces
@@ -222,20 +229,32 @@ namespace ajn {
 
         // Register given listener
         [blockOperation addExecutionBlock: ^{
-            if ((YES == [weakblockOperation isCancelled]) || (nil == weakSelf)) {
+            /* Take a strong reference to the AJNObserver to make sure it
+             * doesn't get ARCed between taking and releasing the proxyCacheLock.
+             */
+            AJNObserver* strongSelf = weakSelf;
+            if ((YES == [weakblockOperation isCancelled]) || (nil == strongSelf)) {
                 return;
             }
-            [weakSelf.listeners addObject:listener];
-             
+            [strongSelf.listeners addObject:listener];
+
             if (YES == triggerOnExisting) {
-                [weakSelf.proxyCacheLock lock];
+                [strongSelf.proxyCacheLock lock];
                 for (AJNObjectId* key in weakSelf.proxyCache) {
                     // Invoke callback on main queue
+                    __weak id<AJNObserverListener> weakListener = listener;
+                    AJNProxyBusObject* proxy = [strongSelf.proxyCache objectForKey:key];
                     dispatch_async(dispatch_get_main_queue(), ^{
-                        [listener didDiscoverObject:[weakSelf.proxyCache objectForKey:key] forObserver:weakSelf];
+                        /* Only invoke the callback if the observer and listener still exist.
+                         * Take strong references to avoid parallel reclamation by ARC.
+                         */
+                        AJNObserver* observer = weakSelf;
+                        if (nil != observer) {
+                            [weakListener didDiscoverObject:proxy forObserver:observer];
+                        }
                     });
                 }
-                [weakSelf.proxyCacheLock unlock];
+                [strongSelf.proxyCacheLock unlock];
             }
         }];
         [self.listenersTaskQueue addOperation:blockOperation];
@@ -357,6 +376,7 @@ namespace ajn {
 {
     // Create OjbC counterpart
     AJNProxyBusObject *proxyObj = [[self.proxyType alloc] initWithBusAttachment:self.busAttachment usingProxyBusObject:proxyObject];
+    NSAssert(nil != proxyObj, @"proxyObj allocation failed");
 
     // Create Key
     AJNObjectId *objId =[[AJNObjectId alloc]initWithObjectPath:[NSString stringWithUTF8String:(((ProxyBusObject*)proxyObject))->GetPath().c_str()]
@@ -372,23 +392,30 @@ namespace ajn {
 
     // Inform all listeners about newly discovered object
     [blockOperation addExecutionBlock: ^{
-        if ((YES == [weakblockOperation isCancelled]) || (nil == weakSelf)) {
+        AJNObserver* strongSelf = weakSelf;
+        if ((YES == [weakblockOperation isCancelled]) || (nil == strongSelf)) {
             return;
         }
 
         // Add to local cache
-        [self.proxyCacheLock lock];
-        [self.proxyCache setObject:proxyObj forKey:objId];
-        [self.proxyCacheLock unlock];
+        [strongSelf.proxyCacheLock lock];
+        [strongSelf.proxyCache setObject:proxyObj forKey:objId];
+        [strongSelf.proxyCacheLock unlock];
 
-        for (id<AJNObserverListener> listener in weakSelf.listeners) {
+        for (id<AJNObserverListener> listener in strongSelf.listeners) {
             if ([weakblockOperation isCancelled]) {
                 break;
             }
 
             // Invoke callback on main queue
+            __weak id<AJNObserverListener> weakListener = listener;
             dispatch_async(dispatch_get_main_queue(), ^{
-                [listener didDiscoverObject:proxyObj forObserver:weakSelf];
+                /* Only invoke the callback if the observer and listener still exist.
+                 * Take strong references to avoid parallel reclamation by ARC. */
+                AJNObserver* observer = weakSelf;
+                if (nil != observer) {
+                    [weakListener didDiscoverObject:proxyObj forObserver:observer];
+                }
             });
         }
     }];
@@ -411,26 +438,35 @@ namespace ajn {
 
     // Inform all listeners about object removal
     [blockOperation addExecutionBlock: ^{
-        if ((YES == [weakblockOperation isCancelled]) || (nil == weakSelf)) {
+        AJNObserver* strongSelf = weakSelf;
+        if ((YES == [weakblockOperation isCancelled]) || (nil == strongSelf)) {
             return;
         }
-        // Remove from local cache
-        [self.proxyCacheLock lock];
-        AJNProxyBusObject* proxyObj = [self.proxyCache objectForKey:objId];
-        if (nil == proxyObj) {
-            [self.proxyCacheLock unlock];
-            return;
-        }
-        [self.proxyCache removeObjectForKey:objId];
-        [self.proxyCacheLock unlock];
 
-        for (id<AJNObserverListener> listener in weakSelf.listeners) {
+        // Remove from local cache
+        [strongSelf.proxyCacheLock lock];
+        AJNProxyBusObject* proxyObj = [strongSelf.proxyCache objectForKey:objId];
+        [strongSelf.proxyCache removeObjectForKey:objId];
+        [strongSelf.proxyCacheLock unlock];
+
+        if (nil == proxyObj) {
+            return;
+        }
+
+        for (id<AJNObserverListener> listener in strongSelf.listeners) {
             if ([weakblockOperation isCancelled]) {
                 break;
             }
+
             // Invoke callback on main queue
+            __weak id<AJNObserverListener> weakListener = listener;
             dispatch_async(dispatch_get_main_queue(), ^{
-                [listener didLoseObject:proxyObj forObserver:weakSelf];
+                /* Only invoke the callback if the observer and listener still exist.
+                 * Take strong references to avoid parallel reclamation by ARC. */
+                AJNObserver* observer = weakSelf;
+                if (nil != observer) {
+                    [weakListener didLoseObject:proxyObj forObserver:observer];
+                }
             });
         }
     }];
