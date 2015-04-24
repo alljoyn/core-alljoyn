@@ -154,20 +154,26 @@ class Crypto_SRP::BN {
     BigNum N;
     BigNum pms;
 
-    void Dump(const char* label) {
-        printf("**** %s ****\n", label);
-        printf("s = %s\n", s.get_hex().c_str());
-        printf("N = %s\n", N.get_hex().c_str());
-        printf("g = %s\n", g.get_hex().c_str());
-        printf("k = %s\n", k.get_hex().c_str());
-        printf("x = %s\n", x.get_hex().c_str());
-        printf("v = %s\n", v.get_hex().c_str());
-        printf("a = %s\n", a.get_hex().c_str());
-        printf("b = %s\n", b.get_hex().c_str());
-        printf("A = %s\n", A.get_hex().c_str());
-        printf("B = %s\n", B.get_hex().c_str());
-        printf("u = %s\n", u.get_hex().c_str());
-        printf("premaster secret = %s\n", pms.get_hex().c_str());
+    void Dump() {
+        QCC_DEBUG_ONLY(
+            /*
+             * On some platforms QCC_DbgPrintf() is used for logging in release builds,
+             * so these calls are wrapped with QCC_DEBUG_ONLY.
+             */
+            QCC_DbgPrintf(("**** SRP state ****\n"));
+            QCC_DbgPrintf(("s = %s\n", s.get_hex().c_str()));
+            QCC_DbgPrintf(("N = %s\n", N.get_hex().c_str()));
+            QCC_DbgPrintf(("g = %s\n", g.get_hex().c_str()));
+            QCC_DbgPrintf(("k = %s\n", k.get_hex().c_str()));
+            QCC_DbgPrintf(("x = %s\n", x.get_hex().c_str()));
+            QCC_DbgPrintf(("v = %s\n", v.get_hex().c_str()));
+            QCC_DbgPrintf(("a = %s\n", a.get_hex().c_str()));
+            QCC_DbgPrintf(("b = %s\n", b.get_hex().c_str()));
+            QCC_DbgPrintf(("A = %s\n", A.get_hex().c_str()));
+            QCC_DbgPrintf(("B = %s\n", B.get_hex().c_str()));
+            QCC_DbgPrintf(("u = %s\n", u.get_hex().c_str()));
+            QCC_DbgPrintf(("premaster secret = %s\n", pms.get_hex().c_str()));
+            );
     }
 };
 
@@ -202,7 +208,7 @@ Crypto_SRP::Crypto_SRP() : bn(new BN) {
 Crypto_SRP::~Crypto_SRP()
 {
     if (test) {
-        bn->Dump("");
+        bn->Dump();
     }
     delete bn;
 }
