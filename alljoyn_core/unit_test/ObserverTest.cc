@@ -607,6 +607,11 @@ void ObserverTest::SimpleScenario(Participant& provider, Participant& consumer)
     String ubn(reply->GetArg(0)->v_string.str), path(reply->GetArg(1)->v_string.str);
     EXPECT_EQ(provider.uniqueBusName, ubn);
     EXPECT_EQ(qcc::String(PATH_PREFIX "both"), path);
+
+    obsB2.UnregisterAllListeners();
+    obsAB.UnregisterAllListeners();
+    obsB.UnregisterAllListeners();
+    obsA.UnregisterAllListeners();
 }
 
 TEST_F(ObserverTest, Simple)
@@ -665,6 +670,8 @@ TEST_F(ObserverTest, Rejection)
 
     /* now there should only be two objects */
     EXPECT_EQ(2, CountProxies(obs));
+
+    obs.UnregisterAllListeners();
 }
 
 TEST_F(ObserverTest, CreateDelete)
@@ -718,6 +725,7 @@ TEST_F(ObserverTest, CreateDelete)
     provider.UnregisterObject("ab2");
 
     EXPECT_TRUE(WaitForAll(events));
+    obs.UnregisterAllListeners();
 }
 
 TEST_F(ObserverTest, ListenTwice)
@@ -747,6 +755,7 @@ TEST_F(ObserverTest, ListenTwice)
         provider.RegisterObject("ab2");
 
         EXPECT_TRUE(WaitForAll(events));
+        obs2.UnregisterAllListeners();
     }
 
     /* one observer is gone, so we expect to see
@@ -757,6 +766,7 @@ TEST_F(ObserverTest, ListenTwice)
     provider.UnregisterObject("ab2");
 
     EXPECT_TRUE(WaitForAll(events));
+    obs.UnregisterAllListeners();
 }
 
 TEST_F(ObserverTest, Multi)
@@ -843,6 +853,13 @@ TEST_F(ObserverTest, Multi)
     EXPECT_EQ(0, CountProxies(obsAtwo));
     EXPECT_EQ(0, CountProxies(obsBtwo));
     EXPECT_EQ(0, CountProxies(obsABtwo));
+
+    obsABtwo.UnregisterAllListeners();
+    obsBtwo.UnregisterAllListeners();
+    obsAtwo.UnregisterAllListeners();
+    obsABone.UnregisterAllListeners();
+    obsBone.UnregisterAllListeners();
+    obsAone.UnregisterAllListeners();
 }
 
 TEST_F(ObserverTest, ObjectIdSanity) {
@@ -1038,7 +1055,8 @@ TEST_F(ObserverTest, AnnounceLogicSanity) {
         obsB.RegisterListener(listenerB);
 
         EXPECT_TRUE(WaitForAll(events));
-
+        obsB.UnregisterAllListeners();
+        obsA.UnregisterAllListeners();
     }
 
     events.clear();
@@ -1121,6 +1139,8 @@ TEST_F(ObserverTest, GetFirstGetNext) {
     EXPECT_TRUE(WaitForAll(events));
     proxy = obsA.GetNext(proxy);
     EXPECT_FALSE(proxy.IsValid());
+
+    obsA.UnregisterAllListeners();
 }
 
 TEST_F(ObserverTest, RestartObserver) {
@@ -1228,7 +1248,10 @@ TEST_F(ObserverTest, StopBus) {
     one.PublishAbout();
     two.PublishAbout();
     EXPECT_TRUE(WaitForAll(events));
+
+    obsA.UnregisterAllListeners();
 }
+
 TEST_F(ObserverTest, StressNumPartObjects) {
 
     // Stress the number of participants, observers and consumers
@@ -1314,6 +1337,7 @@ TEST_F(ObserverTest, PendingStateObjectLost) {
     EXPECT_TRUE(provider.hostedSessionMap.size() == 0);
     EXPECT_TRUE(partObs.hostedSessionMap.size() == 0);
 
+    obs.UnregisterAllListeners();
 }
 
 TEST_F(ObserverTest, PendingStateNewObjectAnnounced) {
@@ -1331,13 +1355,13 @@ TEST_F(ObserverTest, PendingStateNewObjectAnnounced) {
 
     provider.newObjectToAnnounce = "b";
     provider.objInterfaces = intfAB;
-
     provider.CreateObject("a", intfAB); // Initial object to trigger the accept session callback
-    provider.RegisterObject("a");
 
     listener.ExpectInvocations(2);
+    provider.RegisterObject("a");
     EXPECT_TRUE(WaitForAll(events));
 
+    obs.UnregisterAllListeners();
 }
 
 }
