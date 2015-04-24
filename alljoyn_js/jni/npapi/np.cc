@@ -43,6 +43,16 @@ extern NPNetscapeFuncs* npn;
  */
 static void InitializeDebug()
 {
+    if (AllJoynInit() != ER_OK) {
+        return;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return;
+    }
+#endif
+
     QCC_UseOSLogging(true);
     QCC_SetLogLevels("ALLJOYN_JS=15");
 }
