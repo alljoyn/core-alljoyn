@@ -78,6 +78,8 @@ if services.intersection(['config', 'controlpanel', 'notification', 'onboarding'
     if 'audio' in services:
         env.SConscript(['../../services/audio/SConscript'])
 
+    if env['BUILD_SERVICES_SAMPLES'] == 'on':
+        env.SConscript(['../../services/base/sample_apps/SConscript'])
 
 #Build Win7 SDK installer
 if env.has_key('WIN7_MSI') and env['WIN7_MSI'] == 'true':
