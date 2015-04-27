@@ -19,6 +19,7 @@ import os
 # Linux specific vars
 vars = Variables()
 vars.Add(BoolVariable('GCOV', 'Compile with gcov support', 'no'))
+vars.Add(BoolVariable('ASAN', 'Enable Address Sanitizer runtime checks', 'no'))
 vars.Update(env)
 
 Help(vars.GenerateHelpText(env))
@@ -54,6 +55,12 @@ env.Append(CXXFLAGS = ['-Wall',
 
 env.Append(JAVACFLAGS = ['-Xlint', '-Xlint:-serial'])
 
+# Address sanitizer control
+if env['ASAN']:
+   env.Append(CFLAGS = ['-fno-omit-frame-pointer', '-fsanitize=address'])
+   env.Append(CXXFLAGS = ['-fno-omit-frame-pointer', '-fsanitize=address'])
+   env.Append(LINKFLAGS = '-fsanitize=address')
+
 # Debug/Release Variants
 if env['VARIANT'] == 'debug':
    env.Append(CFLAGS = '-g')
@@ -64,10 +71,8 @@ else:
    env.Append(CXXFLAGS = '-Os')
    env.Append(LINKFLAGS = ['-s', '-Wl,--gc-sections'])
 
-
 if env['GCOV']:
     env.Append(CCFLAGS = ['-fprofile-arcs', '-ftest-coverage'])
     env.Append(LIBS = ['gcov'])
-
 
 env.SConscript('${CPU}/SConscript')
