@@ -533,7 +533,7 @@ void <xsl:value-of select="../annotation[@name='org.alljoyn.lang.objc']/@value"/
         <xsl:when test="@type='y' or @type='b' or @type='n' or @type='q' or @type='i' or @type='u' or @type='x' or @type='t' or @type='d' or @type='s' or @type='o' or @type='g'">
     MsgArg arg;
 
-    QStatus status = arg.Set("<xsl:value-of select="@type"/>", <xsl:if test="@type!='b'">[</xsl:if>propertyValue<xsl:if test="@type!='b'"> <xsl:call-template name="objcArgTypeConversionToCpp"/>]</xsl:if>);    
+    QStatus status = arg.Set("<xsl:value-of select="@type"/>", <xsl:if test="@type!='b'">[</xsl:if>propertyValue<xsl:if test="@type!='b'"><xsl:text> </xsl:text><xsl:call-template name="objcArgTypeConversionToCpp"/>]</xsl:if>);    
     
     if (status != ER_OK) {
         NSLog(@"ERROR: Failed to set property <xsl:value-of select="@name"/> on interface <xsl:value-of select="../@name"/>. %@", [AJNStatus descriptionForStatusCode:status]);
@@ -600,7 +600,7 @@ void <xsl:value-of select="../annotation[@name='org.alljoyn.lang.objc']/@value"/
         <xsl:when test="@type='y' or @type='b' or @type='n' or @type='q' or @type='i' or @type='u' or @type='x' or @type='t' or @type='d' or @type='s' or @type='o' or @type='g'">
     MsgArg arg;
 
-    QStatus status = arg.Set("<xsl:value-of select="@type"/>", <xsl:if test="@type!='b'">[</xsl:if>propertyValue<xsl:if test="@type!='b'"> <xsl:call-template name="objcArgTypeConversionToCpp"/>]</xsl:if>);    
+    QStatus status = arg.Set("<xsl:value-of select="@type"/>", <xsl:if test="@type!='b'">[</xsl:if>propertyValue<xsl:if test="@type!='b'"><xsl:text> </xsl:text><xsl:call-template name="objcArgTypeConversionToCpp"/>]</xsl:if>);    
     if (status != ER_OK) {
         NSLog(@"ERROR: Failed to set property <xsl:value-of select="@name"/> on interface <xsl:value-of select="../@name"/>. %@", [AJNStatus descriptionForStatusCode:status]);
     }
