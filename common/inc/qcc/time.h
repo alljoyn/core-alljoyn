@@ -44,6 +44,19 @@ typedef enum {
 struct Timespec;
 
 /**
+ * Granularity of GetTimestamp64(), GetTimestamp() and GetTimeNow().
+ *
+ * GetTimestamp64() is based on ::GetTickCount64() on Windows. ::GetTickCount64()
+ * typically has a 10-16 milliseconds granularity, so the result of GetTimestamp64()
+ * on Windows can be up to ~15 milliseconds smaller than expected at any given time.
+ */
+#if defined(QCC_OS_GROUP_WINDOWS)
+    #define QCC_TIMESTAMP_GRANULARITY 15
+#else
+    #define QCC_TIMESTAMP_GRANULARITY 0
+#endif
+
+/**
  * Get the current time.
  * @param ts  [OUT] Timespec filled with current time.
  */
@@ -135,6 +148,30 @@ uint64_t GetEpochTimestamp(void);
  * @return  The formatted date/time string.
  */
 qcc::String UTCTime();
+
+/**
+ * Wrapper for mktime
+ * @return  timestamp in seconds
+ */
+int64_t ConvertStructureToTime(struct tm* timeptr);
+
+/**
+ * Wrapper for gmtime
+ * @return  Time in a tm structure
+ */
+struct tm* ConvertTimeToStructure(const int64_t* timer);
+
+/**
+ * Wrapper for localtime
+ * @return  Time in a tm structure
+ */
+struct tm* ConvertToLocalTime(const int64_t* timer);
+
+/**
+ * Wrapper for strftime
+ * @return  Number of characters placed in dest
+ */
+size_t FormatTime(char* dest, size_t destSize, const char* format, const struct tm* timeptr);
 
 }
 

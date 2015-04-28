@@ -684,3 +684,43 @@ TEST_F(CertificateECCTest, TestCertChainWithNoCAFieldInBasicContraints)
     status = certs[0].Verify(certs[1].GetSubjectPublicKey());
     ASSERT_EQ(ER_OK, status) << " verify leaf cert failed with actual status: " << QCC_StatusText(status);
 }
+
+/**
+ * Helper to test validity period.
+ */
+static void TestValidityPeriod(CertificateX509::ValidPeriod& validity)
+{
+    qcc::GUID128 issuer;
+    ECCPrivateKey dsaPrivateKey;
+    ECCPublicKey dsaPublicKey;
+    ECCPrivateKey subjectPrivateKey;
+    ECCPublicKey subjectPublicKey;
+    CertificateX509 cert;
+
+
+    QStatus status = CreateIdentityCert(issuer, "1010101", "organization", &dsaPrivateKey, &dsaPublicKey, &subjectPrivateKey, &subjectPublicKey, true, validity, cert);
+    EXPECT_EQ(ER_OK, status) << " CreateIdentityCert failed with actual status: " << QCC_StatusText(status);
+    status = cert.Verify(&dsaPublicKey);
+    EXPECT_EQ(ER_OK, status) << " verify cert failed with actual status: " << QCC_StatusText(status);
+    String pem = cert.GetPEM();
+    CertificateX509 cert2;
+    EXPECT_EQ(ER_OK, cert2.LoadPEM(pem)) << " load PEM failed";
+    EXPECT_EQ(validity.validFrom, cert2.GetValidity()->validFrom) << "validFrom not the same";
+    EXPECT_EQ(validity.validTo, cert2.GetValidity()->validTo) << "validTo not the same";
+}
+
+/**
+ * Test validity date generation
+ */
+TEST_F(CertificateECCTest, validityPeriodGeneration)
+{
+    CertificateX509::ValidPeriod validity;
+    validity.validFrom = 1427404154;   /* 150326210914Z a date with day light savings */
+    validity.validTo = 1427404154 + 630720000;   /* 350321210914Z */
+    TestValidityPeriod(validity);
+
+    validity.validFrom = 1423177645;   /* 150205230725Z a date with no day light savings */
+    validity.validTo = validity.validFrom + 630720000;   /* 350131230725Z */
+    TestValidityPeriod(validity);
+}
+

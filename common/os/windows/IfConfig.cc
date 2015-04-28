@@ -86,7 +86,7 @@ static AddressFamily TranslateFamily(uint32_t family)
 //
 // One of the fundamental reasons that we need to do this complicated work is so
 // that we can provide a list of interfaces (links) on the system irrespective
-// of whether or not they are up or down or what kind of address they may have
+// of whether or not they are up or down or what kind of addresses they may have
 // assigned *IPv4 or IPv6).
 //
 // Linux systems specifically arrange for separating out link layer and network
@@ -104,10 +104,6 @@ void IfConfigByFamily(uint32_t family, std::vector<IfConfigEntry>& entries)
 {
     QCC_DbgPrintf(("IfConfigByFamily()"));
 
-    //
-    // Windows is from another planet, but we can't blame multiple calls to get
-    // interface info on them.  It's a legacy of *nix sockets since BSD 4.2
-    //
     IP_ADAPTER_ADDRESSES info, * parray = 0, * pinfo = 0;
     ULONG infoLen = sizeof(info);
 
@@ -125,7 +121,7 @@ void IfConfigByFamily(uint32_t family, std::vector<IfConfigEntry>& entries)
     parray = pinfo = reinterpret_cast<IP_ADAPTER_ADDRESSES*>(new uint8_t[infoLen]);
 
     //
-    // Now, get the interesting information about the net devices with IPv4 addresses
+    // Now, get the interesting information about the net devices with addresses
     //
     if (GetAdaptersAddresses(family,
                              GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_DNS_SERVER | GAA_FLAG_SKIP_FRIENDLY_NAME,
@@ -146,20 +142,19 @@ void IfConfigByFamily(uint32_t family, std::vector<IfConfigEntry>& entries)
                 IfConfigEntry entry;
 
                 //
-                // Get the adapter name.  This will be a GUID, but the
+                // Get the adapter name.  We don't want to use the
                 // friendly name which would look something like
                 // "Wireless Network Connection 3" in an English
                 // localization can also be Unicode Chinese characters
-                // which AllJoyn may not deal with well.  We choose
-                // the better part of valor and just go with the GUID.
+                // which AllJoyn may not deal with well, and the user
+                // could change it at any time.  So we choose
+                // the better part of valor and just go with the adapter name.
                 //
                 entry.m_name = qcc::String(pinfo->AdapterName);
 
                 //
                 // Fill in the rest of the entry, translating the Windows constants into our
-                // more platform-independent constants.  Note that we just assume that a
-                // Windows interface supports broadcast.  We should really
-                //
+                // more platform-independent constants.
                 //
                 entry.m_flags = pinfo->OperStatus == IfOperStatusUp ? IfConfigEntry::UP : 0;
                 entry.m_flags |= pinfo->Flags & IP_ADAPTER_NO_MULTICAST ? 0 : IfConfigEntry::MULTICAST;
@@ -186,10 +181,9 @@ void IfConfigByFamily(uint32_t family, std::vector<IfConfigEntry>& entries)
                 }
 
                 //
-                // Windows appends the IPv6 link scope (after a
-                // percent character) to the end of the IPv6 address
-                // which we can't deal with.  We chop it off if it
-                // is there.
+                // Other AllJoyn code currently can't deal with the IPv6 scope id (after a
+                // percent character) at the end of the IPv6 address, so until
+                // the rest of AllJoyn is fixed, we chop it off if it is there.
                 //
                 char* p = strchr(buffer, '%');
                 if (p) {
@@ -240,7 +234,7 @@ void IfConfigByFamily(uint32_t family, std::vector<IfConfigEntry>& entries)
                         // it holds a long flags and three sockaddr_gen structures
                         // (two shorts, two longs and sixteen btyes).  We're then
                         // looking at allocating 13,200 bytes on the stack which
-                        // doesn't see too terribly outrageous.
+                        // doesn't seem too terribly outrageous.
                         //
                         INTERFACE_INFO interfaces[150];
                         uint32_t nBytes;
@@ -276,19 +270,18 @@ void IfConfigByFamily(uint32_t family, std::vector<IfConfigEntry>& entries)
                             for (uint32_t i = 0; i < nInterfaces; ++i) {
                                 struct in_addr* addr = &interfaces[i].iiAddress.AddressIn.sin_addr;
                                 //
-                                // XP doesn't have inet_ntop, so we fall back to inet_ntoa
+                                // XP doesn't have inet_ntop, so we fall back to inet_ntoa.
+                                // Note that this code has a bug where it won't work for IPv6-only interfaces.
                                 //
                                 char* buffer = inet_ntoa(*addr);
 
                                 if (entry.m_addr == qcc::String(buffer)) {
                                     //
                                     // This is the address we want modulo the corner
-                                    // case discussed above.  Grown-up systems
-                                    // recognize that CIDR is the way to go and give
-                                    // us a prefix length, but XP is going to give
+                                    // case discussed above.  All later versions of Windows
+                                    // give us a prefix length, but XP only provided
                                     // us a netmask.  We have to convert the mask to
-                                    // a prefix since we consider ourselves all
-                                    // grown-up.
+                                    // a prefix.
                                     //
                                     // So get the 32-bits of netmask returned by
                                     // Windows (remembering endianness issues) and

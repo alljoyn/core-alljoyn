@@ -52,7 +52,7 @@ static std::map<BusAttachment*, BusObjectTestSignalReceiver*> signalobjects;
 
 static const char* OBJECT_PATH =   "/org/alljoyn/test/BusObjectTest";
 
-class DISABLED_SessionTest : public testing::Test {
+class SessionTest : public testing::Test {
   public:
     BusAttachment busA;
     BusAttachment busB;
@@ -159,12 +159,12 @@ class DISABLED_SessionTest : public testing::Test {
         wkns.clear();
     }
 
-    DISABLED_SessionTest() : busA("busA", true), busB("busB", true), busC("busC", true) {
+    SessionTest() : busA("busA", true), busB("busB", true), busC("busC", true) {
 
 
     }
 
-    ~DISABLED_SessionTest() { }
+    ~SessionTest() { }
 
 
 };
@@ -180,7 +180,7 @@ class TwoMultipointSessionsSessionPortListener : public SessionPortListener {
     }
 };
 
-TEST_F(DISABLED_SessionTest, TwoMultipointSessions)
+TEST_F(SessionTest, TwoMultipointSessions)
 {
     SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, true, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
     SessionPort portA = 27;
@@ -306,7 +306,7 @@ class BindMemberJoinSessionAsyncCB : public ajn::BusAttachment::JoinSessionAsync
         sessionJoinedCBFlag = true;
     }
 };
-TEST_F(DISABLED_SessionTest, BindMemberAddedRemoved) {
+TEST_F(SessionTest, BindMemberAddedRemoved) {
     QStatus status = ER_FAIL;
     /* make sure global flags are initialized */
     sessionMemberAddedFlagA = false;
@@ -442,7 +442,7 @@ TEST_F(DISABLED_SessionTest, BindMemberAddedRemoved) {
         }
         qcc::Sleep(10);
     }
-
+    qcc::Sleep(10);
 }
 
 static int sessionJoinedCounter;
@@ -697,50 +697,50 @@ static bool SessionJoinLeaveTest(BusAttachment& busHost, BusAttachment& busJoine
     return true;
 }
 
-TEST_F(DISABLED_SessionTest, SessionJoined_OtherJoin_PP_JoinerLeaves) {
+TEST_F(SessionTest, SessionJoined_OtherJoin_PP_JoinerLeaves) {
 
     EXPECT_TRUE(SessionJoinLeaveTest(busA, busB, true, false));
 
 }
 
-TEST_F(DISABLED_SessionTest, SessionJoined_OtherJoin_PP_HostLeaves) {
+TEST_F(SessionTest, SessionJoined_OtherJoin_PP_HostLeaves) {
 
     EXPECT_TRUE(SessionJoinLeaveTest(busA, busB, false, false));
 
 }
 
-TEST_F(DISABLED_SessionTest, SessionJoined_OtherJoin_MP_JoinerLeaves) {
+TEST_F(SessionTest, SessionJoined_OtherJoin_MP_JoinerLeaves) {
 
     EXPECT_TRUE(SessionJoinLeaveTest(busA, busB, true, true));
 
 }
 
-TEST_F(DISABLED_SessionTest, SessionJoined_OtherJoin_MP_HostLeaves) {
+TEST_F(SessionTest, SessionJoined_OtherJoin_MP_HostLeaves) {
 
     EXPECT_TRUE(SessionJoinLeaveTest(busA, busB, false, true));
 
 }
 
 
-TEST_F(DISABLED_SessionTest, SessionJoined_SelfJoin_PP_JoinerLeaves) {
+TEST_F(SessionTest, SessionJoined_SelfJoin_PP_JoinerLeaves) {
 
     EXPECT_TRUE(SessionJoinLeaveTest(busA, busA, true, false));
 
 }
 
-TEST_F(DISABLED_SessionTest, SessionJoined_SelfJoin_PP_HostLeaves) {
+TEST_F(SessionTest, SessionJoined_SelfJoin_PP_HostLeaves) {
 
     EXPECT_TRUE(SessionJoinLeaveTest(busA, busA, false, false));
 
 }
 
-TEST_F(DISABLED_SessionTest, SessionJoined_SelfJoin_MP_JoinerLeaves) {
+TEST_F(SessionTest, SessionJoined_SelfJoin_MP_JoinerLeaves) {
 
     EXPECT_TRUE(SessionJoinLeaveTest(busA, busA, true, true));
 
 }
 
-TEST_F(DISABLED_SessionTest, SessionJoined_SelfJoin_MP_HostLeaves) {
+TEST_F(SessionTest, SessionJoined_SelfJoin_MP_HostLeaves) {
 
     EXPECT_TRUE(SessionJoinLeaveTest(busA, busA, false, true));
 }
@@ -814,7 +814,7 @@ class RemoveSessionMemberBusBListener : public SessionListener {
     }
 };
 
-TEST_F(DISABLED_SessionTest, RemoveSessionMember) {
+TEST_F(SessionTest, RemoveSessionMember) {
     QStatus status = ER_FAIL;
     /* make sure global flags are initialized */
     sessionJoinedFlag = false;
@@ -1356,7 +1356,7 @@ static void MultipointMultipeerTest(BusAttachment& busHost, BusAttachment& busJo
     qcc::Sleep(100);         /* let all callbacks finish */
 }
 
-TEST_F(DISABLED_SessionTest, MultipointSelfJoinRemoveMember) {
+TEST_F(SessionTest, MultipointSelfJoinRemoveMember) {
 
     QStatus status = ER_FAIL;
     /* make sure global flags are initialized */
@@ -1416,63 +1416,63 @@ TEST_F(DISABLED_SessionTest, MultipointSelfJoinRemoveMember) {
 
 }
 
-TEST_F(DISABLED_SessionTest, MultipointExtended_AB_C_2ndJoiner_B_leaves_C_leaves) {
+TEST_F(SessionTest, MultipointExtended_AB_C_2ndJoiner_B_leaves_C_leaves) {
     SessionAction actions[] = { SIGNAL, JOINER_LEAVES, SIGNAL, JOINER2_LEAVES, STOP };
     MultipointMultipeerTest(busA, busB, busC, actions);
 }
 
-TEST_F(DISABLED_SessionTest, MultipointExtended_AB_C_2ndJoiner_B_leaves_C_removed) {
+TEST_F(SessionTest, MultipointExtended_AB_C_2ndJoiner_B_leaves_C_removed) {
     SessionAction actions[] = { SIGNAL, JOINER_LEAVES, SIGNAL, HOST_REMOVES_JOINER2, STOP };
     MultipointMultipeerTest(busA, busB, busC, actions);
 }
 
 
-TEST_F(DISABLED_SessionTest, MultipointExtended_AB_C_2ndJoiner_B_removed_C_leaves) {
+TEST_F(SessionTest, MultipointExtended_AB_C_2ndJoiner_B_removed_C_leaves) {
     SessionAction actions[] = { SIGNAL, HOST_REMOVES_JOINER, SIGNAL, JOINER2_LEAVES, STOP };
     MultipointMultipeerTest(busA, busB, busC, actions);
 }
 
-TEST_F(DISABLED_SessionTest, MultipointExtended_AB_C_2ndJoiner_B_removed_C_removed) {
+TEST_F(SessionTest, MultipointExtended_AB_C_2ndJoiner_B_removed_C_removed) {
     SessionAction actions[] = { SIGNAL, HOST_REMOVES_JOINER, SIGNAL, HOST_REMOVES_JOINER2, STOP };
     MultipointMultipeerTest(busA, busB, busC, actions);
 }
 
 
-TEST_F(DISABLED_SessionTest, MultipointExtended_AB_C_2ndJoiner_A_leaves_B_leaves) {
+TEST_F(SessionTest, MultipointExtended_AB_C_2ndJoiner_A_leaves_B_leaves) {
     SessionAction actions[] = { SIGNAL, HOST_LEAVES, SIGNAL, JOINER_LEAVES, STOP };
     MultipointMultipeerTest(busA, busB, busC, actions);
 }
 
 
-TEST_F(DISABLED_SessionTest, MultipointExtended_AB_A_2ndJoiner_B_leaves_Ajoiner_leaves) {
+TEST_F(SessionTest, MultipointExtended_AB_A_2ndJoiner_B_leaves_Ajoiner_leaves) {
     SessionAction actions[] = { SIGNAL, JOINER_LEAVES, SIGNAL, JOINER2_LEAVES, STOP };
     MultipointMultipeerTest(busA, busB, busA, actions);
 }
 
-TEST_F(DISABLED_SessionTest, MultipointExtended_AB_A_2ndJoiner_B_leaves_Ajoiner_removed) {
+TEST_F(SessionTest, MultipointExtended_AB_A_2ndJoiner_B_leaves_Ajoiner_removed) {
     SessionAction actions[] = { SIGNAL, JOINER_LEAVES, SIGNAL, HOST_REMOVES_JOINER2, STOP };
     MultipointMultipeerTest(busA, busB, busA, actions);
 }
 
 
-TEST_F(DISABLED_SessionTest, MultipointExtended_AB_A_2ndJoiner_B_removed_Ajoiner_leaves) {
+TEST_F(SessionTest, MultipointExtended_AB_A_2ndJoiner_B_removed_Ajoiner_leaves) {
     SessionAction actions[] = { SIGNAL, HOST_REMOVES_JOINER, SIGNAL, JOINER2_LEAVES, STOP };
     MultipointMultipeerTest(busA, busB, busA, actions);
 }
 
-TEST_F(DISABLED_SessionTest, MultipointExtended_AB_A_2ndJoiner_B_removed_Ajoiner_removed) {
+TEST_F(SessionTest, MultipointExtended_AB_A_2ndJoiner_B_removed_Ajoiner_removed) {
     SessionAction actions[] = { SIGNAL, HOST_REMOVES_JOINER, SIGNAL, HOST_REMOVES_JOINER2, STOP };
     MultipointMultipeerTest(busA, busB, busA, actions);
 }
 
 
-TEST_F(DISABLED_SessionTest, MultipointExtended_AA_B_2ndJoiner_Ajoiner_leaves_Ahost_leaves) {
+TEST_F(SessionTest, MultipointExtended_AA_B_2ndJoiner_Ajoiner_leaves_Ahost_leaves) {
     SessionAction actions[] = { SIGNAL, JOINER_LEAVES, SIGNAL, HOST_LEAVES, STOP };
     MultipointMultipeerTest(busA, busA, busB, actions);
 }
 
 
-TEST_F(DISABLED_SessionTest, MultipointExtended_AA_B_2ndJoiner_A_removes_A_as_joiner_Ahost_leaves) {
+TEST_F(SessionTest, MultipointExtended_AA_B_2ndJoiner_A_removes_A_as_joiner_Ahost_leaves) {
     SessionAction actions[] = { SIGNAL, HOST_REMOVES_JOINER, SIGNAL, HOST_LEAVES, STOP };
     MultipointMultipeerTest(busA, busA, busB, actions);
 }
@@ -1633,12 +1633,12 @@ TEST(SessionSystemTest, DISABLED_MultipointExtended_AA_B_2ndJoiner_A_removes_A_a
 }
 #endif
 
-TEST_F(DISABLED_SessionTest, MultipointExtended_AA_B_2ndJoiner_Ahost_leaves_Ajoiner_leaves) {
+TEST_F(SessionTest, MultipointExtended_AA_B_2ndJoiner_Ahost_leaves_Ajoiner_leaves) {
     SessionAction actions[] = { SIGNAL, HOST_LEAVES, SIGNAL, JOINER_LEAVES, STOP };
     MultipointMultipeerTest(busA, busA, busB, actions);
 }
 
-TEST_F(DISABLED_SessionTest, MultipointExtended_AA_B_2ndJoiner_Ahost_leaves_B_leaves) {
+TEST_F(SessionTest, MultipointExtended_AA_B_2ndJoiner_Ahost_leaves_B_leaves) {
     SessionAction actions[] = { SIGNAL, HOST_LEAVES, SIGNAL, JOINER2_LEAVES, STOP };
     MultipointMultipeerTest(busA, busA, busB, actions);
 }

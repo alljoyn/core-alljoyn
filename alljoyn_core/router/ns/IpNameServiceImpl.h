@@ -1604,6 +1604,12 @@ class IpNameServiceImpl : public qcc::Thread {
         }
     };
 
+    struct MDNSPacketTrackerEntry {
+        uint16_t burstId;
+        qcc::Timespec timeStamp;
+        MDNSPacketTrackerEntry(uint16_t burstId = 0) : burstId(burstId) { GetTimeNow(&timeStamp); };
+    };
+
     /**
      * Hash functor for PacketTracker Key
      */
@@ -1619,7 +1625,7 @@ class IpNameServiceImpl : public qcc::Thread {
             return (s1.first == s2.first) && (s1.second == s2.second);
         }
     };
-    std::unordered_map<std::pair<qcc::String, qcc::IPEndpoint>, uint16_t, HashPacketTracker, EqualPacketTracker> m_mdnsPacketTracker;
+    std::unordered_map<std::pair<qcc::String, qcc::IPEndpoint>, MDNSPacketTrackerEntry, HashPacketTracker, EqualPacketTracker> m_mdnsPacketTracker;
 
     /*
      * PeerInfo holds the information about a peer for which we know the unicast address
@@ -1679,6 +1685,8 @@ class IpNameServiceImpl : public qcc::Thread {
     };
     DynamicParams m_dynamicParams[N_TRANSPORTS];
     bool PurgeAndUpdatePacket(MDNSPacket mdnspacket, bool updateSid);
+    void PurgeMDNSPacketTracker();
+    bool IsMDNSPacketTrackerEmpty();
 };
 
 } // namespace ajn

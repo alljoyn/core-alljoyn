@@ -7625,7 +7625,7 @@ bool IpNameServiceImpl::RemoveFromPeerInfoMap(const qcc::String& guid)
         }
         QCC_DbgHLPrintf(("Erase from peer info map: guid=%s", guid.c_str()));
         m_peerInfoMap.erase(guid);
-        unordered_map<pair<String, IPEndpoint>, uint16_t, HashPacketTracker, EqualPacketTracker>::iterator it1 = m_mdnsPacketTracker.begin();
+        unordered_map<pair<String, IPEndpoint>, MDNSPacketTrackerEntry, HashPacketTracker, EqualPacketTracker>::iterator it1 = m_mdnsPacketTracker.begin();
         while (it1 != m_mdnsPacketTracker.end()) {
             if (it1->first.first == guid) {
                 m_mdnsPacketTracker.erase(it1++);
@@ -7640,6 +7640,31 @@ bool IpNameServiceImpl::RemoveFromPeerInfoMap(const qcc::String& guid)
     return false;
 }
 
+const uint32_t MDNS_PACKET_TRACKER_PURGE_TIMEOUT = 5 * 1000; /* 5 seconds */
+void IpNameServiceImpl::PurgeMDNSPacketTracker()
+{
+    Timespec now;
+    GetTimeNow(&now);
+    m_mutex.Lock();
+    unordered_map<pair<String, IPEndpoint>, MDNSPacketTrackerEntry, HashPacketTracker, EqualPacketTracker>::iterator it = m_mdnsPacketTracker.begin();
+    while (it != m_mdnsPacketTracker.end()) {
+        if ((now - it->second.timeStamp)  >= MDNS_PACKET_TRACKER_PURGE_TIMEOUT) {
+            m_mdnsPacketTracker.erase(it++);
+        } else {
+            it++;
+        }
+    }
+    m_mutex.Unlock();
+}
+
+bool IpNameServiceImpl::IsMDNSPacketTrackerEmpty()
+{
+    m_mutex.Lock();
+    bool isEmpty = m_mdnsPacketTracker.empty();
+    m_mutex.Unlock();
+    return isEmpty;
+}
+
 bool IpNameServiceImpl::UpdateMDNSPacketTracker(qcc::String guid, IPEndpoint endpoint, uint16_t burstId)
 {
     //QCC_DbgPrintf(("IpNameServiceImpl::UpdateMDNSPacketTracker(%s, %s,%d)", guid.c_str(), endpoint.ToString().c_str(), burstId));
@@ -7650,20 +7675,28 @@ bool IpNameServiceImpl::UpdateMDNSPacketTracker(qcc::String guid, IPEndpoint end
     // If we do not find it we return true that implies that we have not seen a packet from this burst.
     //     We add/update the guid with this burst id
     //
+
     pair<String, IPEndpoint> key(guid, endpoint);
-    unordered_map<pair<String, IPEndpoint>, uint16_t, HashPacketTracker, EqualPacketTracker>::iterator it = m_mdnsPacketTracker.find(key);
+    unordered_map<pair<String, IPEndpoint>, MDNSPacketTrackerEntry, HashPacketTracker, EqualPacketTracker>::iterator it = m_mdnsPacketTracker.find(key);
     // Check if the GUID is present in the Map
     // If Yes check if the incoming burst id is same or lower
     if (it != m_mdnsPacketTracker.end()) {
         // Drop the packet if burst id is lower or same
-        if (it->second >= burstId) {
+        if (it->second.burstId >= burstId) {
             return false;
         }
         // Update the last seen burst id from this guid
-        it->second = burstId;
+        MDNSPacketTrackerEntry entry(burstId);
+        it->second = entry;
     } else {
+        MDNSPacketTrackerEntry entry(burstId);
+        bool wasEmpty = m_mdnsPacketTracker.empty();
         // GUID is not present in the Map so we add the entry
-        m_mdnsPacketTracker[key] = burstId;
+        m_mdnsPacketTracker[key] = entry;
+
+        if (wasEmpty) {
+            m_packetScheduler.Alert();
+        }
     }
     return true;
 }
@@ -8544,7 +8577,7 @@ ThreadReturn STDCALL IpNameServiceImpl::PacketScheduler::Run(void* arg) {
     while (!IsStopping()) {
         Timespec now;
         GetTimeNow(&now);
-        uint32_t timeToSleep = (uint32_t)-1;
+        uint32_t timeToSleep = (uint32_t)Event::WAIT_FOREVER;
         //Step 1: Collect all packets
         std::list<Packet> subsequentBurstpackets;
         std::list<Packet> initialBurstPackets;
@@ -8802,8 +8835,12 @@ ThreadReturn STDCALL IpNameServiceImpl::PacketScheduler::Run(void* arg) {
         m_impl.m_mutex.Lock();
         //Step 3: Wait for a specific amount of time
         if (!IsStopping()) {
+            if ((timeToSleep == Event::WAIT_FOREVER) && !m_impl.IsMDNSPacketTrackerEmpty()) {
+                timeToSleep = MDNS_PACKET_TRACKER_PURGE_TIMEOUT;
+            }
             m_impl.m_mutex.Unlock();
             Event::Wait(Event::neverSet, timeToSleep);
+            m_impl.PurgeMDNSPacketTracker();
             GetStopEvent().ResetEvent();
             m_impl.m_mutex.Lock();
 

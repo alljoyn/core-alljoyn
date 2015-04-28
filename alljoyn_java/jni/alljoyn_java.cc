@@ -1443,7 +1443,6 @@ class JAboutObject : public AboutObj, public AboutDataListener {
     jmethodID MID_getAboutData;
     jmethodID MID_getAnnouncedAboutData;
     jobject jaboutDataListenerRef;
-    Mutex jaboutObjGlobalRefLock;
     jobject jaboutObjGlobalRef;
 };
 
@@ -4525,6 +4524,7 @@ void JBusAttachment::Disconnect()
         if (env->ExceptionCheck()) {
             QCC_LogError(ER_FAIL, ("JBusAttachment::Disconnect(): Exception"));
             baCommonLock.Unlock();
+            gBusObjectMapLock.Unlock();
             return;
         }
         QCC_DbgPrintf(("JBusAttachment::Disconnect(): Call UnregisterBusListener()"));
@@ -4637,12 +4637,10 @@ void JBusAttachment::Disconnect()
     env->DeleteGlobalRef(jkeyStoreListenerRef);
 
     if (aboutObj != NULL) {
-        aboutObj->jaboutObjGlobalRefLock.Lock();
         if (aboutObj->jaboutObjGlobalRef != NULL) {
             env->DeleteGlobalRef(aboutObj->jaboutObjGlobalRef);
             aboutObj->jaboutObjGlobalRef = NULL;
         }
-        aboutObj->jaboutObjGlobalRefLock.Unlock();
     }
 
     QCC_DbgPrintf(("JBusAttachment::Disconnect(): Releasing Bus Attachment common lock"));
@@ -12982,7 +12980,10 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_AboutObj_destroy(JNIEnv* env, jobjec
     JBusAttachment* busPtr = aboutObj->busPtr;
 
     //Remove the BusAttachments pointer to the JAboutObject
+    aboutObj->busPtr->baCommonLock.Lock();
     busPtr->aboutObj = NULL;
+    aboutObj->busPtr->baCommonLock.Unlock();
+
 
     delete aboutObj;
     aboutObj = NULL;
@@ -13004,11 +13005,11 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_AboutObj_announce(JNIEnv* env, jo
         return JStatus(status);
     }
     // if we don't already have a GlobalRef obtain a GlobalRef
-    aboutObj->jaboutObjGlobalRefLock.Lock();
+    aboutObj->busPtr->baCommonLock.Lock();
     if (aboutObj->jaboutObjGlobalRef == NULL) {
         aboutObj->jaboutObjGlobalRef = env->NewGlobalRef(thiz);
     }
-    aboutObj->jaboutObjGlobalRefLock.Unlock();
+    aboutObj->busPtr->baCommonLock.Unlock();
     return JStatus(aboutObj->announce(env, thiz, sessionPort, jaboutDataListener));
 }
 
@@ -13022,12 +13023,12 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_AboutObj_unannounce(JNIEnv* env, 
         return JStatus(ER_FAIL);
     }
     // Release the GlobalRef it will be re-obtained if announce is called again
-    aboutObj->jaboutObjGlobalRefLock.Lock();
+    aboutObj->busPtr->baCommonLock.Lock();
     if (aboutObj->jaboutObjGlobalRef != NULL) {
         env->DeleteGlobalRef(aboutObj->jaboutObjGlobalRef);
         aboutObj->jaboutObjGlobalRef = NULL;
     }
-    aboutObj->jaboutObjGlobalRefLock.Unlock();
+    aboutObj->busPtr->baCommonLock.Unlock();
     return JStatus(aboutObj->Unannounce());
 }
 

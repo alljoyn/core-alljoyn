@@ -110,14 +110,13 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
 
                 if (useCAPICerts == false) {
                     /* the server key and certificate are generated the unit test common/unit_test/CertificateECCTest::GenSelfSignECCX509CertForBBservice */
-                    serverPrivateKeyPEM = {
+                    serverPrivateKeyPEM =
                         "-----BEGIN EC PRIVATE KEY-----\n"
                         "MDECAQEEIICSqj3zTadctmGnwyC/SXLioO39pB1MlCbNEX04hjeioAoGCCqGSM49\n"
                         "AwEH\n"
-                        "-----END EC PRIVATE KEY-----"
-                    };
+                        "-----END EC PRIVATE KEY-----";
 
-                    serverCertChainX509PEM = {
+                    serverCertChainX509PEM =
                         "-----BEGIN CERTIFICATE-----\n"
                         "MIIBWjCCAQGgAwIBAgIHMTAxMDEwMTAKBggqhkjOPQQDAjArMSkwJwYDVQQDDCAw\n"
                         "ZTE5YWZhNzlhMjliMjMwNDcyMGJkNGY2ZDVlMWIxOTAeFw0xNTAyMjYyMTU1MjVa\n"
@@ -127,19 +126,18 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
                         "IdHzyBmKP6MQMA4wDAYDVR0TBAUwAwEB/zAKBggqhkjOPQQDAgNHADBEAiAZmNVA\n"
                         "m/H5EtJl/O9x0P4zt/UdrqiPg+gA+wm0yRY6KgIgetWANAE2otcrsj3ARZTY/aTI\n"
                         "0GOQizWlQm8mpKaQ3uE=\n"
-                        "-----END CERTIFICATE-----"
-                    };
+                        "-----END CERTIFICATE-----";
+
                     /* the client key and certificate are generated using openssl */
 
-                    clientPrivateKeyPEM = {
+                    clientPrivateKeyPEM =
                         "-----BEGIN EC PRIVATE KEY-----\n"
                         "MHcCAQEEIAqN6AtyOAPxY5k7eFNXAwzkbsGMl4uqvPrYkIj0LNZBoAoGCCqGSM49\n"
                         "AwEHoUQDQgAEvnRd4fX9opwgXX4Em2UiCMsBbfaqhB1U5PJCDZacz9HumDEzYdrS\n"
                         "MymSxR34lL0GJVgEECvBTvpaHP2bpTIl6g==\n"
-                        "-----END EC PRIVATE KEY-----"
-                    };
+                        "-----END EC PRIVATE KEY-----";
 
-                    clientCertChainX509PEM = {
+                    clientCertChainX509PEM =
                         "-----BEGIN CERTIFICATE-----\n"
                         "MIIBtDCCAVmgAwIBAgIJAMlyFqk69v+OMAoGCCqGSM49BAMCMFYxKTAnBgNVBAsM\n"
                         "IDdhNDhhYTI2YmM0MzQyZjZhNjYyMDBmNzdhODlkZDAyMSkwJwYDVQQDDCA3YTQ4\n"
@@ -164,22 +162,20 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
                         "EDAOMAwGA1UdEwQFMAMBAf8wCgYIKoZIzj0EAwIDSAAwRQIgKit5yeq1uxTvdFmW\n"
                         "LDeoxerqC1VqBrmyEvbp4oJfamsCIQDvMTmulW/Br/gY7GOP9H/4/BIEoR7UeAYS\n"
                         "4xLyu+7OEA==\n"
-                        "-----END CERTIFICATE-----"
-                    };
+                        "-----END CERTIFICATE-----";
                 } else {
                     /*
                      * Use server and client certificates generated with the Windows
                      * Cryptography APIs (CAPI2 and CNG).
                      */
-                    serverPrivateKeyPEM = {
+                    serverPrivateKeyPEM =
                         "-----BEGIN EC PRIVATE KEY-----\n"
                         "MHcCAQEEINNeGvnMwhw8hFogzdIPbGtD1GJmuEMVmYrI02kqUUGjoAoGCCqGSM49\n"
                         "AwEHoUQDQgAE6bkGScqtqAK8qhibGWY+5tZ0hyTMFYiye3XSKmSlz/AJnSF64HNu\n"
                         "zIyOUIeEtXm5MBin1j2zgvTJ3lNDYpORtQ==\n"
-                        "-----END EC PRIVATE KEY-----"
-                    };
+                        "-----END EC PRIVATE KEY-----";
 
-                    serverCertChainX509PEM = {
+                    serverCertChainX509PEM =
                         "-----BEGIN CERTIFICATE-----"
                         "MIIBszCCAVmgAwIBAgIQjFfnB+d1updAWus0q+x2czAKBggqhkjOPQQDAjAkMSIw\n"
                         "IAYDVQQDDBlBbGxKb3luVGVzdFNlbGZTaWduZWROYW1lMB4XDTE1MDQxMzIyMjkz\n"
@@ -191,18 +187,16 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
                         "A1UdEwEB/wQIMAYBAf8CAQAwCgYIKoZIzj0EAwIDSAAwRQIhALQ4HosrOh/jpOTj\n"
                         "VxsIlvXoXRgqRrUytDnNmdJymi98AiANuPPUIdPPJPPKC83T8OJXPUOE+983jXTV\n"
                         "yo85U6lLmw==\n"
-                        "-----END CERTIFICATE-----"
-                    };
+                        "-----END CERTIFICATE-----";
 
-                    clientPrivateKeyPEM = {
+                    clientPrivateKeyPEM =
                         "-----BEGIN EC PRIVATE KEY-----\n"
                         "MHcCAQEEIIeHXx2u1DCKPEXBU8k/Yq41EYPkOj943cRZo16U9M7GoAoGCCqGSM49\n"
                         "AwEHoUQDQgAE6P83dRC0bMiQhUmAj4HDqOIA5soojXcffYqwXg4+xcTxe8FDeAbi\n"
                         "8uutBucKWIasaqFGUeGsbtN9Ie0o88+39A==\n"
-                        "-----END EC PRIVATE KEY-----"
-                    };
+                        "-----END EC PRIVATE KEY-----";
 
-                    clientCertChainX509PEM = {
+                    clientCertChainX509PEM =
                         "-----BEGIN CERTIFICATE-----\n"
                         "MIIB5DCCAYqgAwIBAgIQhaPs10tyAqhJiplkfYYF4jAKBggqhkjOPQQDAjAeMRww\n"
                         "GgYDVQQDDBNBbGxKb3luVGVzdFJvb3ROYW1lMB4XDTE1MDQxNTAwNTc0OFoXDTE2\n"
@@ -227,19 +221,18 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
                         "dFJvb3ROYW1lghCf5k3hU9ZIlkAK9Gzzn2p2MBIGA1UdEwEB/wQIMAYBAf8CAQAw\n"
                         "CgYIKoZIzj0EAwIDRwAwRAIgRO+QlHzGaiu1s68L89WLDm2rKdYGM0/K7Fz+OJWE\n"
                         "VkcCIAzAliYZKzBSXkM5QTvMxMyn8TxIkF95BkJntrGsug5V\n"
-                        "-----END CERTIFICATE-----\n"
-                    };
+                        "-----END CERTIFICATE-----\n";
                 }
 
                 /* There is one set of invalid test certs, for both values of useCAPICerts */
-                static const char pkWithInvalidChain[] = {
+                static const char pkWithInvalidChain[] =
                     "-----BEGIN EC PRIVATE KEY-----\n"
                     "MHcCAQEEIJxWUY1L8fnEMZlo6uFoGxBm/uIOZV6rpOoXXg5Tv01EoAoGCCqGSM49\n"
                     "AwEHoUQDQgAE4bEJQIGst7py9SpK1R//hhPsm7BVHLuHptbxdhudE7bM9kI7y3Uh\n"
                     "XLBHSSxEW7soqXqtJcKFrOzWPRTlF3bFjA==\n"
-                    "-----END EC PRIVATE KEY-----"
-                };
-                static const char invalidChainCert2HasCA[] = {
+                    "-----END EC PRIVATE KEY-----";
+
+                static const char invalidChainCert2HasCA[] =
                     "-----BEGIN CERTIFICATE-----\n"
                     "MIIBsTCCAVagAwIBAgIJAIgT+FrlL1qVMAoGCCqGSM49BAMCMFYxKTAnBgNVBAsM\n"
                     "IDEyMEFGQTU2Q0MwNjZFRkM5QUNCOEVBRTcyNjgxRDI5MSkwJwYDVQQDDCAxMjBB\n"
@@ -264,9 +257,9 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
                     "EDAOMAwGA1UdEwQFMAMBAf8wCgYIKoZIzj0EAwIDSAAwRQIgPY25+ozlDxgXVJ6T\n"
                     "Uh/vcIUonFt3pqqKtIe99Sc8AdMCIQC8VrFHBFp38e6UkY+Azuikrqi8tXDz8cr3\n"
                     "noKTwIxMpw==\n"
-                    "-----END CERTIFICATE-----"
-                };
-                static const char invalidChainCert2HasNoCA[] = {
+                    "-----END CERTIFICATE-----";
+
+                static const char invalidChainCert2HasNoCA[] =
                     "-----BEGIN CERTIFICATE-----\n"
                     "MIIBsTCCAVagAwIBAgIJAIgT+FrlL1qVMAoGCCqGSM49BAMCMFYxKTAnBgNVBAsM\n"
                     "IDEyMEFGQTU2Q0MwNjZFRkM5QUNCOEVBRTcyNjgxRDI5MSkwJwYDVQQDDCAxMjBB\n"
@@ -291,16 +284,16 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
                     "DTALMAkGA1UdEwQCMAAwCgYIKoZIzj0EAwIDSAAwRQIhAIOU2n6o8QXXbbJVEQe+\n"
                     "n5VkU6DybD3lnsjXSH+1PQVZAiBPCpi8p5xwlBUcFZI1EMPHoLi9XHZtchiJHEo/\n"
                     "OkxLog==\n"
-                    "-----END CERTIFICATE-----"
-                };
-                static const char pkForExpiredChain[] = {
+                    "-----END CERTIFICATE-----";
+
+                static const char pkForExpiredChain[] =
                     "-----BEGIN EC PRIVATE KEY-----\n"
                     "MHcCAQEEICpnmYJ+rYZyCB2GEbg4waemxF1edz1qGaSnbDFZwwmeoAoGCCqGSM49\n"
                     "AwEHoUQDQgAEl3JuZdX4Pd7APz2FKlHnpgK7pTkuwXlNM2U7krA8uDFTcY0TNEHV\n"
                     "94RlsWApksy4DJrjmOI9SIrQawMemG4IRw==\n"
-                    "-----END EC PRIVATE KEY-----"
-                };
-                static const char expiredChain[] = {
+                    "-----END EC PRIVATE KEY-----";
+
+                static const char expiredChain[] =
                     "-----BEGIN CERTIFICATE-----\n"
                     "MIIBrzCCAVagAwIBAgIJAIfm4O/IwDXyMAoGCCqGSM49BAMCMFYxKTAnBgNVBAsM\n"
                     "IDdhNDhhYTI2YmM0MzQyZjZhNjYyMDBmNzdhODlkZDAyMSkwJwYDVQQDDCA3YTQ4\n"
@@ -325,8 +318,7 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
                     "EDAOMAwGA1UdEwQFMAMBAf8wCgYIKoZIzj0EAwIDSAAwRQIgL7NAi2iY0fHaFtIC\n"
                     "d58shzZcoR8IMN3uZ1r+9UFboP8CIQDca5XNPYXn+IezASVqdGfs6KodmVIFK2IO\n"
                     "vAx+KmwF4Q==\n"
-                    "-----END CERTIFICATE-----"
-                };
+                    "-----END CERTIFICATE-----";
 
                 if (!sendKeys) {
                     return false;

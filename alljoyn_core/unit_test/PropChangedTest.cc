@@ -2091,10 +2091,12 @@ class PropCacheUpdatedConcurrentCallbackTestListener :
         QCC_UNUSED(invalidated);
         QCC_UNUSED(ifaceName);
         ASSERT_EQ(ALLJOYN_ARRAY, changed.typeId);
-        //QCC_SyncPrintf("Prop changed MsgArg : %s", changed.ToString().c_str());
+        //QCC_SyncPrintf("Prop changed MsgArg : %s\n", changed.ToString().c_str());
 
         mutex.Lock();
         propChangedCallbackCount++;
+        bool first = this->first;
+        this->first = false;
         mutex.Unlock();
 
         if (first) {
@@ -2103,14 +2105,16 @@ class PropCacheUpdatedConcurrentCallbackTestListener :
             ASSERT_TRUE(events != NULL);
             ASSERT_TRUE(tpService != NULL);
 
-            first = false;
             clientBus.EnableConcurrentCallbacks();
             CheckCachedVal(obj, changed);
             busObj->ChangePropertyValues(*tpService, expectedNewPropValue - 1); // second parameter is an offset
             busObj->EmitSignals(*tpService);
 
             for (int i = 0; i < (TIMEOUT - 1000) / 10; ++i) {
-                if (propChangedCallbackCount >= unblockFirstAfterNCallbacks) {
+                mutex.Lock();
+                int32_t count = propChangedCallbackCount;
+                mutex.Unlock();
+                if (count >= unblockFirstAfterNCallbacks) {
                     break;
                 }
                 qcc::Sleep(10);
@@ -2123,7 +2127,10 @@ class PropCacheUpdatedConcurrentCallbackTestListener :
             clientBus.EnableConcurrentCallbacks();
             CheckCachedVal(obj, changed);
 
-            if (propChangedCallbackCount >= unblockMainAfterNCallbacks) {
+            mutex.Lock();
+            int32_t count = propChangedCallbackCount;
+            mutex.Unlock();
+            if (count >= unblockMainAfterNCallbacks) {
                 EXPECT_EQ(ER_OK, events->Post());
             }
 

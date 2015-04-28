@@ -467,7 +467,7 @@ inline void ThreadClass::ServiceRun() {
     AboutObj* aboutObj = new AboutObj(*bus);
 
     if (g_useAboutFeatureDiscovery) {
-        //AppId is a 128bit uuid
+        /* AppId is a 128bit uuid */
         uint8_t appId[] = { 0x01, 0xB3, 0xBA, 0x14,
                             0x1E, 0x82, 0x11, 0xE4,
                             0x86, 0x51, 0xD1, 0x56,
@@ -475,13 +475,13 @@ inline void ThreadClass::ServiceRun() {
         aboutData.SetAppId(appId, 16);
         aboutData.SetDefaultLanguage("en");
         aboutData.SetDeviceName("DeviceName");
-        //DeviceId is a string encoded 128bit UUID
+        /* DeviceId is a string encoded 128bit UUID */
         aboutData.SetDeviceId("1273b650-49bc-11e4-916c-0800200c9a66");
         aboutData.SetAppName(g_testAboutApplicationName.c_str());
         aboutData.SetManufacturer("AllSeen Alliance");
         aboutData.SetModelNumber("");
         aboutData.SetDescription("bastress2 is a test application used to verify AllJoyn functionality");
-        // software version of bbservice is the same as the AllJoyn version
+        /* Software version of bbservice is the same as the AllJoyn version */
         aboutData.SetSoftwareVersion(ajn::GetVersion());
         aboutData.SetTransportOpts(s_transports);
 
@@ -533,14 +533,14 @@ inline void ThreadClass::ServiceRun() {
         }
     }
 
-
-    //We need to unbind the session port so that the SessionPortListener is freed from the bus attachment.
-    //Thus we can safely delete the SessionPortListener before deleting the bus attachment.
-    status = bus->UnbindSessionPort(sp);
-    if (ER_OK != status) {
-        QCC_LogError(status, ("UnbindSessionPort failed"));
-    }
-
+    /*
+     * We need to unbind the session port so that the SessionPortListener is
+     * freed from the bus attachment.  However, UnbindSessionPort may fail in
+     * which case the SessionPortListener is not freed from the bus attachment,
+     * so ignore the return value here and delete the listener after we delete
+     * the bus attachment.
+     */
+    bus->UnbindSessionPort(sp);
 
     if (busObject) {
         bus->UnregisterBusObject(*busObject);
@@ -550,27 +550,21 @@ inline void ThreadClass::ServiceRun() {
         bus->UnregisterBusListener(*serviceBusListener);
     }
 
-    // If  a number is even,. do an explicit clean up of bus attachment, else just delete the bus attachment at the end.
+    /*
+     * If a number is even, do an explicit clean up of bus attachment, else just
+     * delete the bus attachment at the end.
+     */
     if ((qcc::Rand32() % 2) == 0) {
-        //Stop bus attachment, cleanup and delete bus attachment
+        /* Stop bus attachment, cleanup and delete bus attachment */
         bus->Disconnect();
         bus->Stop();
         bus->Join();
     }
 
-    if (busObject) {
-        delete busObject;
-    }
-
-    if (serviceBusListener) {
-        delete serviceBusListener;
-    }
-
-    if (aboutObj) {
-        delete aboutObj;
-    }
-
+    delete busObject;
+    delete aboutObj;
     delete bus;
+    delete serviceBusListener;
 }
 
 inline qcc::ThreadReturn STDCALL ThreadClass::Run(void* arg) {

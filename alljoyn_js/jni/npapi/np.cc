@@ -41,10 +41,28 @@ extern NPNetscapeFuncs* npn;
  * Different browsers call the exported functions in different orders, so the NP_ calls are littered
  * with this call.
  */
-static void InitializeDebug()
+static void Initialize()
 {
+    if (AllJoynInit() != ER_OK) {
+        return;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return;
+    }
+#endif
+
     QCC_UseOSLogging(true);
     QCC_SetLogLevels("ALLJOYN_JS=15");
+}
+
+static void Shutdown()
+{
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
 }
 
 static NPError InitializePluginFuncs(NPPluginFuncs* pFuncs)
@@ -97,14 +115,14 @@ extern "C" {
 
 NP_EXPORT(char*) NP_GetPluginVersion()
 {
-    InitializeDebug();
+    Initialize();
     QCC_DbgPrintf(("%s", __FUNCTION__));
     return const_cast<char*>("00.00.01");
 }
 
 NP_EXPORT(char*) NP_GetMIMEDescription()
 {
-    InitializeDebug();
+    Initialize();
     QCC_DbgPrintf(("%s", __FUNCTION__));
     /*
      * Be wary of changing this.  It appears that Android requires a non-empty description field.
@@ -114,7 +132,7 @@ NP_EXPORT(char*) NP_GetMIMEDescription()
 
 NP_EXPORT(NPError) OSCALL NP_GetEntryPoints(NPPluginFuncs* pFuncs)
 {
-    InitializeDebug();
+    Initialize();
     QCC_DbgPrintf(("%s", __FUNCTION__));
     return InitializePluginFuncs(pFuncs);
 }
@@ -128,37 +146,19 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 
 NP_EXPORT(NPError) OSCALL NP_Initialize(NPNetscapeFuncs* bFuncs)
 {
-    if (AllJoynInit() != ER_OK) {
-        return 1;
-    }
-#ifdef ROUTER
-    if (AllJoynRouterInit() != ER_OK) {
-        AllJoynShutdown();
-        return 1;
-    }
-#endif
+    Initialize();
     PluginData::InitializeStaticData();
     gPluginThread = qcc::Thread::GetThread();
-    InitializeDebug();
     QCC_DbgPrintf(("%s", __FUNCTION__));
     return InitializeNetscapeFuncs(bFuncs);
 }
 #else
 NP_EXPORT(NPError) OSCALL NP_Initialize(NPNetscapeFuncs* bFuncs, NPPluginFuncs* pFuncs)
 {
-    if (AllJoynInit() != ER_OK) {
-        return 1;
-    }
-#ifdef ROUTER
-    if (AllJoynRouterInit() != ER_OK) {
-        AllJoynShutdown();
-        return 1;
-    }
-#endif
+    Initialize();
     PluginData::InitializeStaticData();
     gPluginThread = qcc::Thread::GetThread();
 
-    InitializeDebug();
     QCC_DbgPrintf(("%s", __FUNCTION__));
 
     NPError ret;
@@ -180,16 +180,13 @@ NP_EXPORT(NPError) OSCALL NP_Shutdown()
     QCC_DbgPrintf(("%s", __FUNCTION__));
     qcc::Thread::CleanExternalThreads();
     PluginData::DumpNPObjects();
-#ifdef ROUTER
-    AllJoynRouterShutdown();
-#endif
-    AllJoynShutdown();
+    Shutdown();
     return NPERR_NO_ERROR;
 }
 
 NP_EXPORT(NPError) OSCALL NP_GetValue(void* future, NPPVariable variable, void* value)
 {
-    InitializeDebug();
+    Initialize();
     switch (variable) {
 #if !defined(NDEBUG)
     case NPPVpluginNameString:

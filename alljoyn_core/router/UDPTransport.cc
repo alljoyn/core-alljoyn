@@ -4391,6 +4391,7 @@ UDPTransport::UDPTransport(BusAttachment& bus) :
     m_bus(bus), m_stopping(false), m_routerNameAdvertised(false), m_listener(0), m_foundCallback(m_listener), m_networkEventCallback(*this),
     m_isAdvertising(false), m_isDiscovering(false), m_isListening(false),
     m_isNsEnabled(false),
+    m_connecting(0),
     m_reload(STATE_RELOADING),
     m_manage(STATE_MANAGE),
     m_nsReleaseCount(0), m_wildcardIfaceProcessed(false),
@@ -4860,7 +4861,8 @@ ThreadReturn STDCALL UDPTransport::DispatcherThread::Run(void* arg)
 }
 
 /*
- * A thread dedicated to dispatching endpoint exit functions to avoid deadlock.
+ * A thread dedicated to dispatching endpoint exit functions to avoid deadlock
+ * and as a handy place to dispatch endpoint deleted events.
  */
 ThreadReturn STDCALL UDPTransport::ExitDispatcherThread::Run(void* arg)
 {
@@ -4879,7 +4881,7 @@ ThreadReturn STDCALL UDPTransport::ExitDispatcherThread::Run(void* arg)
         /*
          * We should never have a status returned from Event::Wait other than
          * ER_OK since we don't set a timeout.  It is, however, the case that
-         * Windows Event implementations may return ER_TIEMOUT even though no
+         * Windows Event implementations may return ER_TIMEOUT even though no
          * timeout was set, and Posix systems may return ER_TIMER_NOT_ALLOWED.
          * If we were to exit in the face of such errors, the whole transport
          * would go down since the dispatcher thread would exit.  All we can do
@@ -4930,63 +4932,74 @@ ThreadReturn STDCALL UDPTransport::ExitDispatcherThread::Run(void* arg)
                               entry.m_command, entry.m_handle, entry.m_conn, entry.m_connId,
                               entry.m_rcv, entry.m_passive, entry.m_buf, entry.m_len, QCC_StatusText(entry.m_status)));
 
-                bool haveLock = true;
-                m_transport->m_endpointListLock.Lock(MUTEX_CONTEXT);
-                for (set<UDPEndpoint>::iterator i = m_transport->m_endpointList.begin(); i != m_transport->m_endpointList.end(); ++i) {
-                    UDPEndpoint ep = *i;
-                    if (entry.m_connId == ep->GetConnId()) {
-                        /*
-                         * We can't call out to some possibly windy code path
-                         * out through the daemon router with the
-                         * m_endpointListLock taken.  But since we are going to
-                         * call into the endpoint, we'll bump the reference
-                         * count to indicate a thread is coming.  If the ref
-                         * count bumped, the endpoint management code will not
-                         * kill the endpoint out from under us.
-                         */
-                        ep->IncrementRefs();
-                        m_transport->m_endpointListLock.Unlock(MUTEX_CONTEXT);
-                        haveLock = false;
-
-                        switch (entry.m_command) {
-                        case WorkerCommandQueueEntry::EXIT:
-                            {
-                                QCC_DbgPrintf(("UDPTransport::ExitDispatcherThread::Run(): Call ep->Exit().  connId == %d.", ep->GetConnId()));
-                                ep->Exit();
-                                break;
-                            }
-
-                        default:
-                            {
-                                assert(false && "UDPTransport::ExitDispatcherThread::Run(): Unexpected command");
-                                break;
-                            }
-                        }
-
-                        /*
-                         * At this point, we assume that we have given the
-                         * m_endpointListLock and decremented the thread count
-                         * in the endpoint; and our iterator can no longer be
-                         * trusted.
-                         */
-                        ep->DecrementRefs();
-                        assert(haveLock == false && "UDPTransport::ExitDispatcherThread::Run(): Should not have m_endpointListLock here");
-                        break;
-                    } // if (entry.m_connId == ep->GetConnId())
-                } // for (set<UDPEndpoint>::iterator i ...
-
                 /*
-                 * If we found an endpoint, we gave the lock, did the operation
-                 * and broke out of the iterator loop assuming the iterator was
-                 * no good any more.  If we did not find the endpoint, we still
-                 * have the lock and we need to give it up.
+                 * Two possibilities for commands: ENDPOINT_DELETED or EXIT.  If
+                 * ENDPOINT_DELETED just call the hook, otherwise we need to
+                 * correlate connection ID to endpoint which is a bit more
+                 * complicated.
                  */
-                if (haveLock) {
-                    m_transport->m_endpointListLock.Unlock(MUTEX_CONTEXT);
-                }
+                if (entry.m_command == WorkerCommandQueueEntry::ENDPOINT_DELETED) {
+                    QCC_DbgPrintf(("UDPTransport::ExitDispatcherThread::Run(): ENDPOINT_DELETED: EndpointDeletedHook()"));
+                    m_transport->EndpointDeletedHook();
+                } else {
+                    bool haveLock = true;
+                    m_transport->m_endpointListLock.Lock(MUTEX_CONTEXT);
+                    for (set<UDPEndpoint>::iterator i = m_transport->m_endpointList.begin(); i != m_transport->m_endpointList.end(); ++i) {
+                        UDPEndpoint ep = *i;
+                        if (entry.m_connId == ep->GetConnId()) {
+                            /*
+                             * We can't call out to some possibly windy code path
+                             * out through the daemon router with the
+                             * m_endpointListLock taken.  But since we are going to
+                             * call into the endpoint, we'll bump the reference
+                             * count to indicate a thread is coming.  If the ref
+                             * count bumped, the endpoint management code will not
+                             * kill the endpoint out from under us.
+                             */
+                            ep->IncrementRefs();
+                            m_transport->m_endpointListLock.Unlock(MUTEX_CONTEXT);
+                            haveLock = false;
+
+                            switch (entry.m_command) {
+                            case WorkerCommandQueueEntry::EXIT:
+                                {
+                                    QCC_DbgPrintf(("UDPTransport::ExitDispatcherThread::Run(): Call ep->Exit().  connId == %d.", ep->GetConnId()));
+                                    ep->Exit();
+                                    break;
+                                }
+
+                            default:
+                                {
+                                    assert(false && "UDPTransport::ExitDispatcherThread::Run(): Unexpected command");
+                                    break;
+                                }
+                            }
+
+                            /*
+                             * At this point, we assume that we have given the
+                             * m_endpointListLock and decremented the thread count
+                             * in the endpoint; and our iterator can no longer be
+                             * trusted.
+                             */
+                            ep->DecrementRefs();
+                            assert(haveLock == false && "UDPTransport::ExitDispatcherThread::Run(): Should not have m_endpointListLock here");
+                            break;
+                        } // if (entry.m_connId == ep->GetConnId())
+                    } // for (set<UDPEndpoint>::iterator i ...
+
+                    /*
+                     * If we found an endpoint, we gave the lock, did the operation
+                     * and broke out of the iterator loop assuming the iterator was
+                     * no good any more.  If we did not find the endpoint, we still
+                     * have the lock and we need to give it up.
+                     */
+                    if (haveLock) {
+                        m_transport->m_endpointListLock.Unlock(MUTEX_CONTEXT);
+                    }
+                } // else not ENDPOINT_DELETED
             } // if (drained == false)
         } while (drained == false);
-    }
+    } // while not stoppping
 
     QCC_DbgTrace(("UDPTransport::ExitDispatcherThread::Run(): Exiting"));
     DecrementAndFetch(&m_transport->m_refCount);
@@ -5782,6 +5795,68 @@ QStatus UDPTransport::GetListenAddresses(const SessionOpts& opts, std::vector<qc
     return ER_OK;
 }
 
+/**
+ * Whenever an endpoint is removed from the list of actively managed endpoints
+ * the endpoint manager arranges for this method to be called.  The intention is
+ * taht the removal of an endpoint signals that the corresponding connection is
+ * no longer used.  When the number of endpoints goes to zero, and there are no
+ * connections starting (before endpoints are allocated) it means that the
+ * listening sockets can be closed since no connections depend on them.
+ */
+void UDPTransport::EndpointDeletedHook()
+{
+    IncrementAndFetch(&m_refCount);
+    QCC_DbgTrace(("UDPTransport::EndpointDeletedHook()"));
+
+    /*
+     * We have an endpoint deleted indication.  Is this the last endpoint?  If
+     * so, the transport has gone idle and has no need for open sockets.
+     */
+    m_endpointListLock.Lock(MUTEX_CONTEXT);
+    m_preListLock.Lock(MUTEX_CONTEXT);
+    bool idle = m_preList.empty() && m_authList.empty() && m_endpointList.empty();
+    QCC_DbgPrintf(("UDPTransport::EndpointDeletedHook(): idle=\"%s\"", idle ? "true" : "false"));
+    m_preListLock.Unlock(MUTEX_CONTEXT);
+    m_endpointListLock.Unlock(MUTEX_CONTEXT);
+
+    /*
+     * If we have gone idle because the endpoint that is going away is the last
+     * one, we may want to shut down listen sockets.  Tell the run thread to
+     * reload its listen FDs and discard any that are no longer useful.
+     */
+    if (idle) {
+        m_reload = STATE_RELOADING;
+        Alert();
+    }
+}
+
+void UDPTransport::ScheduleEndpointDeletedHook()
+{
+    IncrementAndFetch(&m_refCount);
+    QCC_DbgPrintf(("UDPTransport::SheduleEndpointDeletedHook()"));
+
+    /*
+     * If m_exitDispatcher is NULL, it means we are shutting down and the
+     * dispatcher has gone away before the endpoint management thread has
+     * actually stopped running.  This is rare, but possible.
+     */
+    if (m_exitDispatcher == NULL) {
+        QCC_DbgPrintf(("UDPTransport::ScheduleEndpointDeletedHook(): m_exitDispatcher is NULL"));
+        DecrementAndFetch(&m_refCount);
+        return;
+    }
+
+    UDPTransport::WorkerCommandQueueEntry entry;
+    entry.m_command = UDPTransport::WorkerCommandQueueEntry::ENDPOINT_DELETED;
+
+    QCC_DbgPrintf(("UDPTransport::ExitEndpoint(): sending ENDPOINT_DELETED request to exit dispatcher"));
+    m_exitWorkerCommandQueueLock.Lock(MUTEX_CONTEXT);
+    m_exitWorkerCommandQueue.push(entry);
+    m_exitWorkerCommandQueueLock.Unlock(MUTEX_CONTEXT);
+    m_exitDispatcher->Alert();
+    DecrementAndFetch(&m_refCount);
+}
+
 void UDPTransport::EmitStallWarnings(UDPEndpoint& ep)
 {
     QCC_DbgTrace(("UDPTransport::EmitStallWarnings()"));
@@ -6441,6 +6516,20 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
                     --m_currConn;
                     m_connLock.Unlock(MUTEX_CONTEXT);
 
+                    /*
+                     * We have removed an endpoint, so schedule the endpoint
+                     * deleted function to be run.  This is the function that
+                     * will determine if it is safe to stop listeners which may
+                     * have been deferred in the case of existing connections.
+                     *
+                     * We don't want to run that function now for two reasons:
+                     * first, we have locks taken and are in the middle of
+                     * walking through the list of endpoints; and second,
+                     * removing listeners will require "this" thread to wake up
+                     * and update the list of events that have references to the
+                     * implied sockets.
+                     */
+                    ScheduleEndpointDeletedHook();
                     i = m_endpointList.upper_bound(ep);
                     managed = true;
                     continue;
@@ -8283,10 +8372,17 @@ void* UDPTransport::Run(void* arg)
      * (3) drive/whip the ARDP protocol to do our bidding.
      */
     for (;;) {
+        m_endpointListLock.Lock(MUTEX_CONTEXT);
+        m_preListLock.Lock(MUTEX_CONTEXT);
+        m_listenFdsLock.Lock(MUTEX_CONTEXT);
+
         bool passive = m_preList.empty() && m_authList.empty() && m_endpointList.empty();
 
         if (IsStopping() && passive) {
             QCC_DbgPrintf(("UDPTransport::Run(): IsStopping() && passive: exiting"));
+            m_listenFdsLock.Unlock(MUTEX_CONTEXT);
+            m_preListLock.Unlock(MUTEX_CONTEXT);
+            m_endpointListLock.Unlock(MUTEX_CONTEXT);
             break;
         }
 
@@ -8298,10 +8394,10 @@ void* UDPTransport::Run(void* arg)
          * redo the list if we notice the state changed from STATE_RELOADED.
          *
          * Instead of trying to figure out which of the socket FDs that may have
-         * changed between runs, we just reload the whole bunch.  Since this is
-         * rarely done, it is okay.
+         * changed between runs, we just reload the whole bunch if someone tells
+         * us that a change has been made.  Since this is rarely done, it is
+         * okay.
          */
-        m_listenFdsLock.Lock(MUTEX_CONTEXT);
         if (m_reload != STATE_RELOADED) {
             QCC_DbgPrintf(("UDPTransport::Run(): Not STATE_RELOADED.  Deleting events"));
             for (vector<Event*>::iterator i = checkEvents.begin(); i != checkEvents.end(); ++i) {
@@ -8322,21 +8418,57 @@ void* UDPTransport::Run(void* arg)
             checkEvents.push_back(&ardpTimerEvent);
             checkEvents.push_back(&maintenanceTimerEvent);
 
-            QCC_DbgPrintf(("UDPTransport::Run(): Not STATE_RELOADED. Creating socket events"));
-            for (list<pair<qcc::String, SocketFd> >::const_iterator i = m_listenFds.begin(); i != m_listenFds.end(); ++i) {
-                QCC_DbgPrintf(("UDPTransport::Run(): Not STATE_RELOADED. Creating event for socket %d", i->second));
+            bool listening = false;
 
-                qcc::Event* eventRd = new Event(i->second, Event::IO_READ);
+            QCC_DbgPrintf(("UDPTransport::Run(): Not STATE_RELOADED. Walking listen FDs"));
+            for (list<ListenFdEntry>::iterator i = m_listenFds.begin(); i != m_listenFds.end();) {
+                /*
+                 * If the listen spec has been marked for removal and there are
+                 * no existing endpoints then we can close the socket and remove
+                 * the listen spec.  This is a bit more of a blunt instrument
+                 * than it possibly could be since the socket in question could
+                 * be associated with an exited endpoint, while the live
+                 * endpoint could be associated with another.
+                 */
+                if (i->m_remove) {
+                    if (passive == true && m_connecting == 0) {
+                        QCC_DbgPrintf(("UDPTransport::Run(): Closing socket %d., Removing listen spec \"%s\"",
+                                       i->m_sockFd, i->m_normSpec.c_str()));
+                        qcc::Close(i->m_sockFd);
+                        i = m_listenFds.erase(i);
+                        continue;
+                    }
+                }
+
+                QCC_DbgPrintf(("UDPTransport::Run(): NOT STATE_RELOADED. Creating events for socket %d", i->m_sockFd));
+
+                listening = true;
+
+                qcc::Event* eventRd = new Event(i->m_sockFd, Event::IO_READ);
                 checkEvents.push_back(eventRd);
 
-                qcc::Event* eventWr = new Event(i->second, Event::IO_WRITE);
-                WriteEntry entry(false, i->second, eventWr);
+                qcc::Event* eventWr = new Event(i->m_sockFd, Event::IO_WRITE);
+                WriteEntry entry(false, i->m_sockFd, eventWr);
                 writeEvents.push_back(entry);
+                ++i;
+            }
+
+            /*
+             * Once we have create an event to look for inbound action on some
+             * socket, we can note that that we are m_listening or not.
+             */
+            if (listening) {
+                m_isListening = true;
+            } else {
+                m_isListening = false;
             }
 
             m_reload = STATE_RELOADED;
         }
+
         m_listenFdsLock.Unlock(MUTEX_CONTEXT);
+        m_preListLock.Unlock(MUTEX_CONTEXT);
+        m_endpointListLock.Unlock(MUTEX_CONTEXT);
 
         /*
          * In order to rationalize management of resources, we manage the
@@ -8541,8 +8673,9 @@ void* UDPTransport::Run(void* arg)
      * thread has exited.
      */
     m_listenFdsLock.Lock(MUTEX_CONTEXT);
-    for (list<pair<qcc::String, SocketFd> >::iterator i = m_listenFds.begin(); i != m_listenFds.end(); ++i) {
-        qcc::Close(i->second);
+    for (list<ListenFdEntry>::iterator i = m_listenFds.begin(); i != m_listenFds.end(); ++i) {
+        QCC_DbgPrintf(("UDPTransport::Run(): Closing socket %d., Removing listen spec \"%s\"", i->m_sockFd, i->m_normSpec.c_str()));
+        qcc::Close(i->m_sockFd);
     }
     m_listenFds.clear();
     m_reload = STATE_EXITED;
@@ -8667,86 +8800,18 @@ void* UDPTransport::Run(void* arg)
  *     it from listening.  We do so if this is the last discovery instance and
  *     there are no other advertisements.
  *
- * There are five member variables that reflect the state of the transport
- * and name service with respect to this code:
+ *   HANDLE_NETWORK_EVENT_INSTANCE: An instance of a Name Service network event
+ *     callback has happened.  This indicates when a network interface has come
+ *     up or gone down.
  *
- *   m_isListening:  The list of listeners is reflected by currently listening
- *     sockets.  We have network infrastructure in place to receive inbound
- *     connection requests.
- *
- *   m_isNsEnabled:  The name service is up and running and listening on its
- *     sockets for incoming requests.
- *
- *   m_isAdvertising: We are advertising at least one well-known name either actively or quietly .
- *     If we are m_isAdvertising then m_isNsEnabled must be true.
- *
- *   m_isDiscovering: The list of discovery requests has been sent to the name
- *     service.  If we are m_isDiscovering then m_isNsEnabled must be true.
+ *   UPDATE_DYNAMIC_SCORE_INSTANCE: Something related to the dynamic score of
+ *     the routing node that is advertised by the name service has changed.
  */
 void UDPTransport::RunListenMachine(ListenRequest& listenRequest)
 {
     IncrementAndFetch(&m_refCount);
     QCC_DbgTrace(("UDPTransport::RunListenMachine()"));
-    /*
-     * Do some consistency checks to make sure we're not confused about what
-     * is going on.
-     *
-     * First, if we are not listening, then we had better not think we're
-     * advertising(actively or quietly) or discovering.  If we are
-     * not listening, then the name service must not be enabled and sending
-     * or responding to external daemons.
-     */
-    if (m_isListening == false) {
-        assert(m_isAdvertising == false);
-        assert(m_isDiscovering == false);
-        assert(m_isNsEnabled == false);
-    }
 
-    /*
-     * If we think the name service is enabled, it had better think it is
-     * enabled.  It must be enabled either because we have requested it to
-     * start advertising (actively or quietly) or we are discovering.
-     * If there are listeners, then the m_listenPortMap (a map matching
-     * the different interfaces to the ports on which we are listening
-     * on those interfaces) must be non-empty.
-     */
-    if (m_isNsEnabled && !m_stopping) {
-        assert(m_isListening);
-        assert(!m_listenPortMap.empty());
-    }
-
-    /*
-     * If we think we are advertising, we'd better have an entry in
-     * the advertisements list to advertise, and there must be
-     * listeners waiting for inbound connections as a result of those
-     * advertisements.  If we are advertising the name service had
-     * better be enabled.
-     */
-    if (m_isAdvertising && !m_stopping) {
-        assert(!m_advertising.empty());
-        assert(m_isListening);
-        assert(!m_listenPortMap.empty());
-        assert(m_isNsEnabled);
-    }
-
-    /*
-     * If we are discovering, we'd better have an entry in the discovering
-     * list to make us discover, and there must be listeners waiting for
-     * inbound connections as a result of session operations driven by those
-     * discoveries.  If we are discovering the name service had better be
-     * enabled.
-     */
-    if (m_isDiscovering && !m_stopping) {
-        assert(!m_discovering.empty());
-        assert(m_isListening);
-        assert(!m_listenPortMap.empty());
-        assert(m_isNsEnabled);
-    }
-
-    /*
-     * Now that are sure we have a consistent view of the world, let's do
-     * what needs to be done.
-     */
     switch (listenRequest.m_requestOp) {
     case START_LISTEN_INSTANCE:
         StartListenInstance(listenRequest);
@@ -8856,9 +8921,7 @@ void UDPTransport::StopListenInstance(ListenRequest& listenRequest)
 
     /*
      * Execute the code that will actually tear down the specified
-     * listening endpoint.  Note that we always stop listening
-     * immediately since that is Good (TM) from a power and CTS point of
-     * view.  We only delay starting to listen.
+     * listening endpoint.
      */
     DoStopListen(listenRequest.m_requestParam);
     DecrementAndFetch(&m_refCount);
@@ -8877,6 +8940,8 @@ void UDPTransport::EnableAdvertisementInstance(ListenRequest& listenRequest)
     bool isFirst;
     NewAdvertiseOp(ENABLE_ADVERTISEMENT, listenRequest.m_requestParam, isFirst);
 
+    m_listenFdsLock.Lock(MUTEX_CONTEXT);
+
     /*
      * If it turned out that is the first advertisement on our list, we
      * need to prepare before actually doing the advertisement.
@@ -8884,8 +8949,7 @@ void UDPTransport::EnableAdvertisementInstance(ListenRequest& listenRequest)
     if (isFirst) {
         /*
          * If we don't have any listeners up and running, we need to get them
-         * up.  If this is a Windows box, the listeners will start running
-         * immediately and will never go down, so they may already be running.
+         * up.
          */
         if (!m_isListening) {
             for (list<qcc::String>::iterator i = m_listening.begin(); i != m_listening.end(); ++i) {
@@ -8895,45 +8959,36 @@ void UDPTransport::EnableAdvertisementInstance(ListenRequest& listenRequest)
                 }
             }
         }
-
-        /*
-         * We can only enable the requested advertisement if there is something
-         * listening inbound connections on.  Therefore, we should only enable
-         * the name service if there is a listener.  This catches the case where
-         * there was no StartListen() done before the first advertisement.
-         */
-        if (m_isListening) {
-            if (!m_isNsEnabled) {
-                IpNameService::Instance().Enable(TRANSPORT_UDP, std::map<qcc::String, uint16_t>(), 0, m_listenPortMap, 0, false, false, true, false);
-                m_isNsEnabled = true;
-            }
-        }
     }
 
-    /* If we encounter the situation where there are no listeners it is
-     * possible that we don't have any of the specified interfaces IFF_UP
-     * yet.  When those interfaces come up the backlog of advertisements
-     * that came in will be processed.
+    /*
+     * If we encounter the situation where the NS is not enabled it is possible
+     * that we don't have any of the specified interfaces IFF_UP yet.  When
+     * those interfaces come up the backlog of advertisements that came in will
+     * be processed.
      */
-    if (!m_isListening) {
+    if (!m_isNsEnabled) {
         QCC_DbgPrintf(("UDPTransport::EnableAdvertisementInstance(): Advertise with no UDP listeners"));
         if (!m_pendingAdvertisements.empty()) {
             for (std::list<ListenRequest>::iterator it = m_pendingAdvertisements.begin(); it != m_pendingAdvertisements.end(); it++) {
                 if (listenRequest.m_requestParam == it->m_requestParam) {
+                    m_listenFdsLock.Unlock(MUTEX_CONTEXT);
                     DecrementAndFetch(&m_refCount);
                     return;
                 }
             }
         }
         m_pendingAdvertisements.push_back(listenRequest);
+        m_listenFdsLock.Unlock(MUTEX_CONTEXT);
         DecrementAndFetch(&m_refCount);
         return;
     }
 
+    m_listenFdsLock.Unlock(MUTEX_CONTEXT);
+
     /*
      * We think we're ready to send the advertisement.  Are we really?
      */
-    assert(m_isListening);
     assert(!m_listenPortMap.empty());
     assert(m_isNsEnabled);
     assert(IpNameService::Instance().Started() && "UDPTransport::EnableAdvertisementInstance(): IpNameService not started");
@@ -8991,6 +9046,8 @@ void UDPTransport::DisableAdvertisementInstance(ListenRequest& listenRequest)
      * to think about disabling our listeners and turning off the name service.
      * We only to this if there are no discovery instances in progress.
      */
+    QCC_DbgPrintf(("UDPTransport::DisableAdvertisementInstance(): isEmpty=\"%s\", m_isDiscovering=\"%s\"",
+                   isEmpty ? "true" : "false", m_isDiscovering ? "true" : "false"));
     if (isEmpty && !m_isDiscovering) {
 
         /*
@@ -8998,6 +9055,7 @@ void UDPTransport::DisableAdvertisementInstance(ListenRequest& listenRequest)
          * name service.  We do this by telling it we don't want it to be
          * enabled on any of the possible ports.
          */
+        QCC_DbgPrintf(("UDPTransport::DisableAdvertisementInstance(): Disabling NS"));
         IpNameService::Instance().Enable(TRANSPORT_UDP, std::map<qcc::String, uint16_t>(), 0, m_listenPortMap, 0, false, false, false, false);
         m_isNsEnabled = false;
 
@@ -9020,8 +9078,10 @@ void UDPTransport::DisableAdvertisementInstance(ListenRequest& listenRequest)
             if (argMap.find("iface") != argMap.end()) {
                 qcc::String interface = argMap["iface"];
                 qcc::String normSpec = "udp:addr=" + m_requestedInterfaces[interface].GetAddress().ToString() + ",port=" + U32ToString(m_requestedInterfaces[interface].GetPort());
+                QCC_DbgPrintf(("UDPTransport::DisableAdvertisementInstance(): DoStopListen(\"%s\")", normSpec.c_str()));
                 DoStopListen(normSpec);
             } else if (argMap.find("addr") != argMap.end()) {
+                QCC_DbgPrintf(("UDPTransport::DisableAdvertisementInstance(): DoStopListen(\"%s\")", i->c_str()));
                 DoStopListen(*i);
             }
         }
@@ -9039,6 +9099,21 @@ void UDPTransport::DisableAdvertisementInstance(ListenRequest& listenRequest)
     DecrementAndFetch(&m_refCount);
 }
 
+void UDPTransport::EnableDiscoveryListen()
+{
+    QCC_DbgTrace(("UDPTransport::EnableDiscoveryListen()"));
+
+    /*
+     * If we don't have any listeners up and running, we need to get them up.
+     */
+    if (!m_isListening) {
+        for (list<qcc::String>::iterator i = m_listening.begin(); i != m_listening.end(); ++i) {
+            QCC_DbgTrace(("UDPTransport::EnableDiscoveryListen(): DoStartListen(\"%s\")", i->c_str()));
+            DoStartListen(*i);
+        }
+    }
+}
+
 void UDPTransport::EnableDiscoveryInstance(ListenRequest& listenRequest)
 {
     IncrementAndFetch(&m_refCount);
@@ -9052,76 +9127,52 @@ void UDPTransport::EnableDiscoveryInstance(ListenRequest& listenRequest)
     bool isFirst;
     NewDiscoveryOp(ENABLE_DISCOVERY, listenRequest.m_requestParam, isFirst);
 
-    /*
-     * If it turned out that is the first discovery request on our list, we need
-     * to prepare before actually doing the discovery.
-     */
+    m_listenFdsLock.Lock(MUTEX_CONTEXT);
+
     if (isFirst) {
-
-        /*
-         * If we don't have any listeners up and running, we need to get them
-         * up.  If this is a Windows box, the listeners will start running
-         * immediately and will never go down, so they may already be running.
-         * However, we only set up the m_listenPortMap (a map of the network
-         * interfaces to the corresponding ports on which we are listening)
-         * when we are sure that the specified network interfaces are IFF_UP.
-         */
-        if (!m_isListening) {
-            for (list<qcc::String>::iterator i = m_listening.begin(); i != m_listening.end(); ++i) {
-                QStatus status = DoStartListen(*i);
-                if (ER_OK != status) {
-                    continue;
-                }
-            }
-        }
-
-        /*
-         * We can only enable the requested advertisement if there is something
-         * listening inbound connections on.  Therefore, we should only enable
-         * the name service if there is a listener.  This catches the case where
-         * there was no StartListen() done before the first discover.
-         */
-        if (m_isListening) {
-            if (!m_isNsEnabled) {
-                IpNameService::Instance().Enable(TRANSPORT_UDP, std::map<qcc::String, uint16_t>(), 0, m_listenPortMap, 0, false, false, true, false);
-                m_isNsEnabled = true;
-            }
-        }
+        EnableDiscoveryListen();
     }
 
-    /* If we encounter the situation where there are no listeners it is
-     * possible that we don't have any of the specified interfaces IFF_UP
-     * yet, when those interfaces come up the backlog of discoveries
-     * that came in will be processed.
+    /*
+     * If the name service is not enabled yet it is possible that we don't have
+     * any of the specified interfaces IFF_UP yet, when those interfaces come up
+     * the backlog of discoveries that came in will be processed.
      */
-    if (!m_isListening) {
-        QCC_DbgPrintf(("UDPTransport::EnableDiscoveryInstance(): Discover with no UDP listeners"));
+    if (!m_isNsEnabled) {
+        QCC_DbgPrintf(("UDPTransport::EnableDiscoveryInstance(): Discover with NS not enabled"));
         if (!m_pendingDiscoveries.empty()) {
             for (std::list<ListenRequest>::iterator it = m_pendingDiscoveries.begin(); it != m_pendingDiscoveries.end(); it++) {
                 if (listenRequest.m_requestParam == it->m_requestParam) {
+                    QCC_DbgPrintf(("UDPTransport::EnableDiscoveryInstance(): Dup"));
+                    m_listenFdsLock.Unlock(MUTEX_CONTEXT);
                     DecrementAndFetch(&m_refCount);
                     return;
                 }
             }
         }
+        QCC_DbgPrintf(("UDPTransport::EnableDiscoveryInstance(): Pending discover"));
         m_pendingDiscoveries.push_back(listenRequest);
+        m_listenFdsLock.Unlock(MUTEX_CONTEXT);
         DecrementAndFetch(&m_refCount);
         return;
     }
 
+    m_listenFdsLock.Unlock(MUTEX_CONTEXT);
+
     /*
      * We think we're ready to send the FindAdvertisement.  Are we really?
      */
-    assert(m_isListening);
     assert(!m_listenPortMap.empty());
     assert(m_isNsEnabled);
     assert(IpNameService::Instance().Started() && "UDPTransport::EnableDiscoveryInstance(): IpNameService not started");
 
+    QCC_DbgPrintf(("UDPTransport::EnableDiscoveryInstance(): Explicit FindAdvertisement"));
     QStatus status = IpNameService::Instance().FindAdvertisement(TRANSPORT_UDP, listenRequest.m_requestParam, listenRequest.m_requestTransportMask);
     if (status != ER_OK) {
         QCC_LogError(status, ("UDPTransport::EnableDiscoveryInstance(): Failed to begin discovery with multicast NS \"%s\"", listenRequest.m_requestParam.c_str()));
     }
 
+    QCC_DbgPrintf(("UDPTransport::EnableDiscoveryInstance(): m_isDiscovering = true"));
     m_isDiscovering = true;
     DecrementAndFetch(&m_refCount);
 }
@@ -9160,8 +9211,10 @@ void UDPTransport::DisableDiscoveryInstance(ListenRequest& listenRequest)
      * the name service.  We only to this if there are no advertisements in
      * progress.
      */
+    QCC_DbgPrintf(("UDPTransport::DisableDiscoveryInstance(): isEmpty=\"%s\", m_isAdvertising=\"%s\"",
+                   isEmpty ? "true" : "false", m_isAdvertising ? "true" : "false"));
     if (isEmpty && !m_isAdvertising) {
-
+        QCC_DbgPrintf(("UDPTransport::DisableDiscoveryInstance(): Disabling NS"));
         IpNameService::Instance().Enable(TRANSPORT_UDP, std::map<qcc::String, uint16_t>(), 0, m_listenPortMap, 0, false, false, false, false);
         m_isNsEnabled = false;
 
@@ -9184,8 +9237,10 @@ void UDPTransport::DisableDiscoveryInstance(ListenRequest& listenRequest)
             if (argMap.find("iface") != argMap.end()) {
                 qcc::String interface = argMap["iface"];
                 qcc::String normSpec = "udp:addr=" + m_requestedInterfaces[interface].GetAddress().ToString() + ",port=" + U32ToString(m_requestedInterfaces[interface].GetPort());
+                QCC_DbgPrintf(("UDPTransport::DisableDiscoveryInstance(): DoStopListen(\"%s\")", normSpec.c_str()));
                 DoStopListen(normSpec);
             } else if (argMap.find("addr") != argMap.end()) {
+                QCC_DbgPrintf(("UDPTransport::DisableDiscoveryInstance(): DoStopListen(\"%s\")", i->c_str()));
                 DoStopListen(*i);
             }
         }
@@ -9586,6 +9641,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
         QCC_DbgPrintf(("UDPTransport::Connect(): \"%s\" is a loopback address", ipAddr.ToString().c_str()));
     }
 #endif
+
     /*
      * The semantics of the Connect method tell us that we want to connect to a
      * remote daemon.  UDP will happily allow us to connect to ourselves, but
@@ -9630,6 +9686,63 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
     }
 
     /*
+     * In order to do any connection using ARDP, there must be a socket up and
+     * running.  This is usually done as a result of an EnableAdvertisement()
+     * or an EnableDiscovery() call.  The first instance of an advertisement
+     * or discovery causes the so-called listen socket to be created.  When
+     * all discoveries and advertisements are canceled, the listen socket is
+     * destroyed.  One user idiom for discovery is that 1) discovery is started;
+     * 2) a well-known-name is found; 3) discovery is stopped; and 4) a connection
+     * is attempted.
+     *
+     * If the listen socket is destroyed after discovery is canceled at step 3,
+     * there will be no socket to use for the connect at step 4 -- which is
+     * where we are now.  To get the socket up, we need to call
+     * EnableDiscoveryListen() which will do the same thing as EnableDiscovery()
+     * except it will not tell the name service to do anything.
+     *
+     * When the sockets are set up and the run loop has started listening on
+     * those sockets, it will set m_reload to STATE_RELOADED.  Since we hold
+     * m_listenFDsLock when we set m_reload to STATE_RELOADING, we know that the
+     * run thread cannot be running and doing any reloading in parallel.  When
+     * we let go of the listenFDsLock, we are guaranteed that the run thread
+     * will pick up what we just did.
+     */
+    m_listenRequestsLock.Lock(MUTEX_CONTEXT);
+    m_listenFdsLock.Lock(MUTEX_CONTEXT);
+    if (m_isListening == false) {
+        QCC_DbgPrintf(("UDPTransport::Connect(): EnableDiscoveryListen()"));
+        IncrementAndFetch(&m_connecting);
+        EnableDiscoveryListen();
+        m_reload = STATE_RELOADING;
+
+        /*
+         * We are trying to connect, but we don't have an endpoint on any list
+         * yet.  The run loop will consider no endpoints existing as idle unless
+         * we tell it that something is coming up.  We atomically increment a
+         * count of in-process connections until we have an endpoint on a list
+         * and then we decrement it.
+         */
+        Alert();
+    }
+    m_listenFdsLock.Unlock(MUTEX_CONTEXT);
+    m_listenRequestsLock.Unlock(MUTEX_CONTEXT);
+
+    /*
+     * We now have to wait until the run thread picks up changes to the listen
+     * state.  We don't want to wait forever so we give the process a relatively
+     * arbitrary time to complete.  This is not terribly clean or efficient but
+     * is expedient.
+     */
+    QCC_DbgPrintf(("UDPTransport::Connect(): Waiting for STATE_RELOADED"));
+    int32_t timer = 1000;
+    while (m_isListening == false && m_reload == STATE_RELOADING && timer) {
+        qcc::Sleep(20);
+        timer -= 20;
+    }
+    QCC_DbgPrintf(("UDPTransport::Connect(): m_reload=%s, timer=%d.", m_reload == STATE_RELOADED ? "STATE_RELOADED" : "other", timer));
+
+    /*
      * Look to see if we are already listening on the provided connectSpec
      * explicitly.  If we see that we are listening on the INADDR_ANY address
      * make a note of it.  We sort that out in the next bit of code.
@@ -9637,16 +9750,17 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
     QCC_DbgPrintf(("UDPTransport::Connect(): Checking for connection to self (\"%s\"", normSpec.c_str()));
     m_listenFdsLock.Lock(MUTEX_CONTEXT);
     bool anyEncountered = false;
-    for (list<pair<qcc::String, SocketFd> >::iterator i = m_listenFds.begin(); i != m_listenFds.end(); ++i) {
-        QCC_DbgPrintf(("UDPTransport::Connect(): Checking listenSpec %s", i->first.c_str()));
+    for (list<ListenFdEntry>::iterator i = m_listenFds.begin(); i != m_listenFds.end(); ++i) {
+        QCC_DbgPrintf(("UDPTransport::Connect(): Checking listenSpec %s", i->m_normSpec.c_str()));
 
         /*
          * If the provided connectSpec is already explicitly listened to, it is
          * an error.
          */
-        if (i->first == normSpec) {
+        if (i->m_normSpec == normSpec) {
             m_listenFdsLock.Unlock(MUTEX_CONTEXT);
             QCC_DbgPrintf(("UDPTransport::Connect(): Explicit connection to self"));
+            DecrementAndFetch(&m_connecting);
             DecrementAndFetch(&m_refCount);
             return ER_BUS_ALREADY_LISTENING;
         }
@@ -9656,7 +9770,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
          * to take a closer look to decide if this call is bogus or not.  Set a
          * flag to remind us.
          */
-        if (i->first == normAnySpec) {
+        if (i->m_normSpec == normAnySpec) {
             QCC_DbgPrintf(("UDPTransport::Connect(): Possible implicit connection to self detected"));
             anyEncountered = true;
         }
@@ -9667,6 +9781,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
     status = qcc::IfConfig(entries);
     if (ER_OK != status) {
         QCC_LogError(status, ("UDPTransport::Connect(): Unable to read network interface configuration"));
+        DecrementAndFetch(&m_connecting);
         DecrementAndFetch(&m_refCount);
         return status;
     }
@@ -9686,6 +9801,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
 
         if (ipAddr.IsLoopback()) {
             QCC_DbgPrintf(("UDPTransport::Connect(): Attempted connection to self through loopback; exiting"));
+            DecrementAndFetch(&m_connecting);
             DecrementAndFetch(&m_refCount);
             return ER_BUS_ALREADY_LISTENING;
         }
@@ -9707,6 +9823,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
                 IPAddress foundAddr(entries[i].m_addr);
                 if (foundAddr == ipAddr) {
                     QCC_DbgPrintf(("UDPTransport::Connect(): Attempted connection to self; exiting"));
+                    DecrementAndFetch(&m_connecting);
                     DecrementAndFetch(&m_refCount);
                     return ER_BUS_ALREADY_LISTENING;
                 }
@@ -9751,13 +9868,13 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
 
     QCC_DbgPrintf(("UDPTransport::Connect(): Look for socket corresponding to destination network"));
     m_listenFdsLock.Lock(MUTEX_CONTEXT);
-    for (list<pair<qcc::String, SocketFd> >::iterator i = m_listenFds.begin(); i != m_listenFds.end(); ++i) {
+    for (list<ListenFdEntry>::iterator i = m_listenFds.begin(); i != m_listenFds.end(); ++i) {
         /*
          * Get the local address of the socket in question.
          */
         IPAddress listenAddr;
         uint16_t listenPort;
-        qcc::GetLocalAddress(i->second, listenAddr, listenPort);
+        qcc::GetLocalAddress(i->m_sockFd, listenAddr, listenPort);
         QCC_DbgPrintf(("UDPTransport::Connect(): Check out local address \"%s\"", listenAddr.ToString().c_str()));
 
         /*
@@ -9765,7 +9882,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
          * simple "rules" above.
          */
         if (listenAddr.ToString() == "0.0.0.0") {
-            sock = i->second;
+            sock = i->m_sockFd;
             foundSock = true;
             QCC_DbgPrintf(("UDPTransport::Connect(): Found socket (%d.) listening on INADDR_ANY", sock));
             break;
@@ -9824,7 +9941,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
              * order to be more generic.  We do the break there so that generic
              * choice other specific choices.
              */
-            sock = i->second;
+            sock = i->m_sockFd;
             foundSock = true;
         } else {
             QCC_DbgPrintf(("UDPTransport::Connect(): network \"%s\" does not match network \"%s\"",
@@ -9837,6 +9954,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
     if (foundSock == false) {
         status = ER_UDP_NO_NETWORK;
         QCC_LogError(status, ("UDPTransport::Connect(): Not listening on network implied by \"%s\"", ipAddr.ToString().c_str()));
+        DecrementAndFetch(&m_connecting);
         DecrementAndFetch(&m_refCount);
         return status;
     }
@@ -9858,6 +9976,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
         status = ER_CONNECTION_LIMIT_EXCEEDED;
         QCC_LogError(status, ("UDPTransport::Connect(): No slot for new connection"));
         m_connLock.Unlock(MUTEX_CONTEXT);
+        DecrementAndFetch(&m_connecting);
         DecrementAndFetch(&m_refCount);
         return status;
     }
@@ -9883,6 +10002,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
         --m_currConn;
         m_connLock.Unlock(MUTEX_CONTEXT);
 
+        DecrementAndFetch(&m_connecting);
         DecrementAndFetch(&m_refCount);
         return status;
     }
@@ -9965,6 +10085,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
         --m_currConn;
         m_connLock.Unlock(MUTEX_CONTEXT);
 
+        DecrementAndFetch(&m_connecting);
         DecrementAndFetch(&m_refCount);
         return status;
     }
@@ -10077,6 +10198,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
     if (status != ER_OK) {
         QCC_LogError(status, ("UDPTransport::Connect(): Event::Wait() failed"));
         m_endpointListLock.Unlock(MUTEX_CONTEXT);
+        DecrementAndFetch(&m_connecting);
         DecrementAndFetch(&m_refCount);
         return status;
     }
@@ -10152,6 +10274,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
 
     m_endpointListLock.Unlock(MUTEX_CONTEXT);
     m_dynamicScoreUpdater.Alert();
+    DecrementAndFetch(&m_connecting);
     DecrementAndFetch(&m_refCount);
     return status;
 }
@@ -10593,59 +10716,20 @@ void UDPTransport::DoStopListen(qcc::String& normSpec)
     assert(IpNameService::Instance().Started() && "UDPTransport::DoStopListen(): IpNameService not started");
 
     /*
-     * Find the (single) listen spec and remove it from the list of active FDs
-     * used by the maintenance thread.
+     * Find the (single) listen spec and mark it as should-be-removed
      */
     QCC_DbgPrintf(("UDPTransport::DoStopListen(): Looking for listen FD with normspec \"%s\"", normSpec.c_str()));
     m_listenFdsLock.Lock(MUTEX_CONTEXT);
-    qcc::SocketFd stopFd = qcc::INVALID_SOCKET_FD;
-    bool found = false;
-    for (list<pair<qcc::String, SocketFd> >::iterator i = m_listenFds.begin(); i != m_listenFds.end(); ++i) {
-        if (i->first == normSpec) {
-            QCC_DbgPrintf(("UDPTransport::DoStopListen(): Found normspec \"%s\"", normSpec.c_str()));
-            stopFd = i->second;
-            m_listenFds.erase(i);
-            found = true;
-            break;
+
+    for (list<ListenFdEntry>::iterator i = m_listenFds.begin(); i != m_listenFds.end(); ++i) {
+        if (i->m_normSpec == normSpec) {
+            QCC_DbgPrintf(("UDPTransport::DoStopListen(): Setting m_remove for normspec \"%s\"", normSpec.c_str()));
+            i->m_remove = true;
         }
     }
 
-    if (found) {
-        if (m_reload != STATE_EXITED) {
-            QCC_DbgPrintf(("UDPTransport::DoStopListen(): m_reload != STATE_EXITED"));
-
-            /*
-             * If the UDPTransport::Run thread is still running, set m_reload to
-             * STATE_RELOADING, unlock the mutex, alert the main Run thread that
-             * there is a change and wait for the Run thread to finish any
-             * connections it may be accepting and then reload the set of
-             * events.
-             */
-            m_reload = STATE_RELOADING;
-
-            QCC_DbgPrintf(("UDPTransport::DoStopListen(): Alert()"));
-            Alert();
-
-            /*
-             * Wait until UDPTransport::Run thread has reloaded the set of
-             * events or exited.
-             */
-            QCC_DbgPrintf(("UDPTransport::DoStopListen(): Wait for STATE_RELOADING()"));
-            while (m_reload == STATE_RELOADING) {
-                m_listenFdsLock.Unlock(MUTEX_CONTEXT);
-                qcc::Sleep(10);
-                m_listenFdsLock.Lock(MUTEX_CONTEXT);
-            }
-            QCC_DbgPrintf(("UDPTransport::DoStopListen(): Done waiting for STATE_RELOADING()"));
-        }
-
-        /*
-         * If we took a socketFD off of the list of active FDs, we need to tear it
-         * down.
-         */
-        QCC_DbgPrintf(("UDPTransport::DoStopListen(): Close socket %d.", stopFd));
-        qcc::Close(stopFd);
-    }
+    m_reload = STATE_RELOADING;
+    Alert();
 
     m_listenFdsLock.Unlock(MUTEX_CONTEXT);
     DecrementAndFetch(&m_refCount);
@@ -11088,6 +11172,7 @@ void UDPTransport::QueueHandleNetworkEvent(const std::map<qcc::String, qcc::IPAd
 void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
 {
     QCC_DbgTrace(("UDPTransport::HandleNetworkEventInstance()"));
+
     std::map<qcc::String, qcc::IPAddress>& ifMap = listenRequest.ifMap;
     QStatus status = ER_OK;
     IncrementAndFetch(&m_refCount);
@@ -11099,11 +11184,13 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
     /* If we don't have any interfaces or addresses that we are required to listen on then we return.
      * If a wildcard interface or wildcard address was specified, once we have processed the request
      * we no longer care about dynamic changes to the state of the network interfaces since we are
-     * listening on IN_ADDR_ANY at this point so we return.
+     * listening on INADDR_ANY at this point so we return.
      */
+    QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Check for no interfaces or addresses"));
     if ((m_requestedInterfaces.empty() && m_requestedAddresses.empty()) ||
         ((wildcardIfaceRequested && m_wildcardIfaceProcessed) ||
          (wildcardAddressRequested && m_wildcardAddressProcessed))) {
+        QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Listening on INADDR_ANY"));
         DecrementAndFetch(&m_refCount);
         return;
     }
@@ -11128,41 +11215,54 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
      * have a wildcard in the configuration database that we have not yet processed, we process it the first time
      * while walking the list of interfaces and return.
      */
+    QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Walk map"));
     for (std::map<qcc::String, qcc::IPAddress>::const_iterator it = ifMap.begin(); it != ifMap.end(); it++) {
         qcc::String interface = it->first;
         qcc::IPAddress address = it->second;
+
+        QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): interface=\"%s\", address=\"%s\"",
+                       interface.c_str(), address.ToString().c_str()));
+
         qcc::String addressStr = address.ToString();
         bool currentIfaceRequested = (m_requestedInterfaces.find(interface) != m_requestedInterfaces.end());
         bool currentAddressRequested = (m_requestedAddresses.find(addressStr) != m_requestedAddresses.end());
         if (!wildcardIfaceRequested && !wildcardAddressRequested &&
             !currentIfaceRequested && !currentAddressRequested) {
+            QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): not wildcard and not current"));
             continue;
         }
 
         if (!wildcardIfaceRequested && currentIfaceRequested &&
             m_requestedInterfaces[interface].GetAddress() == address) {
+            QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): not wildcard iface, not current iface but requested addr"));
             continue;
         }
 
         if (!wildcardAddressRequested && currentAddressRequested &&
             m_requestedAddresses[addressStr] == interface) {
+            QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): wildcard addr, not current addr but requested iface"));
             continue;
         }
 
         if (!wildcardIfaceRequested && currentIfaceRequested) {
+            QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Current iface requested"));
             if (m_requestedInterfaces[interface].GetAddress() != qcc::IPAddress("0.0.0.0")) {
+                QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Current iface addr not INADDR_ANY"));
                 qcc::String replacedSpec = "udp:addr=" + m_requestedInterfaces[interface].GetAddress().ToString() + ",port=" + U32ToString(m_requestedInterfaces[interface].GetPort());
                 if (m_requestedAddresses.find(m_requestedInterfaces[interface].GetAddress().ToString()) != m_requestedAddresses.end()) {
                     m_requestedAddresses.erase(m_requestedInterfaces[interface].GetAddress().ToString());
                 }
+                QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Replace \"%s\"", replacedSpec.c_str()));
                 replacedList.push_back(replacedSpec);
             }
             m_requestedInterfaces[interface] = qcc::IPEndpoint(address, m_requestedInterfaces[interface].GetPort());
         }
 
         if (!wildcardAddressRequested && currentAddressRequested) {
+            QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Current address requested"));
             if (!m_requestedAddresses[addressStr].empty()) {
                 m_requestedAddresses[addressStr] = interface;
+                QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): set interface \"%s\" for address", interface.c_str()));
                 continue;
             }
             m_requestedAddresses[addressStr] = interface;
@@ -11187,6 +11287,8 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
                 continue;
             }
         }
+        QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): listenAddr=\"%s\", listenPort=%d.",
+                       listenAddr.ToString().c_str(), listenPort));
         if (!listenAddr.Size() || !listenAddr.IsIPv4()) {
             continue;
         }
@@ -11197,13 +11299,14 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
          * to wait for four minutes to relaunch the daemon if it crashes.
          */
         QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Setting up socket"));
+
         SocketFd listenFd = INVALID_SOCKET_FD;
         status = Socket(QCC_AF_INET, QCC_SOCK_DGRAM, listenFd);
         if (status != ER_OK) {
             continue;
         }
 
-        QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): listenFd=%d.", listenFd));
+        QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Socket(): listenFd=%d.", listenFd));
 
         /*
          * ARDP expects us to use select and non-blocking sockets.
@@ -11325,14 +11428,14 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
                 }
             }
             qcc::String normSpec = "udp:addr=" + listenAddr.ToString() + ",port=" + U32ToString(listenPort);
-            QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): ephemeralPort.  New normSpec=\"%s\"", normSpec.c_str()));
+            QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): New normSpec=\"%s\"", normSpec.c_str()));
 
             /*
              * Okay, we're ready to receive datagrams on this socket now.  Tell the
              * maintenance thread that something happened here and it needs to reload
              * its FDs.
              */
-            QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): addeList.push_back(normSpec=\"%s\", listenFd=%d)", normSpec.c_str(), listenFd));
+            QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): addedList.push_back(normSpec=\"%s\", listenFd=%d)", normSpec.c_str(), listenFd));
 
             /* We make a list of the new listen specs on which we are listening so
              * that we can add those to the m_listenFds when we're done procesing
@@ -11349,13 +11452,19 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
          * after we call Bind() and are actually listening.
          */
         if (wildcardIfaceRequested) {
+            QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): set m_listenPortMap[\"*\"] to listenFd %d.", listenFd));
             m_listenPortMap["*"] = listenPort;
         } else if (wildcardAddressRequested) {
+            QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): set m_listenPortMap[\"0.0.0.0\"] to listenFd %d.", listenFd));
             m_listenPortMap["0.0.0.0"] = listenPort;
         } else {
             if (currentIfaceRequested) {
+                QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): set m_listenPortMap[\"%s\"] to listenFd %d.",
+                               interface.c_str(), listenFd));
                 m_listenPortMap[interface] = listenPort;
             } else if (currentAddressRequested) {
+                QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): set m_listenPortMap[\"%s\"] to listenFd %d.",
+                               addressStr.c_str(), listenFd));
                 m_listenPortMap[addressStr] = listenPort;
             }
         }
@@ -11376,6 +11485,7 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
          */
         QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): IpNameService::Instance().Enable()"));
         IpNameService::Instance().Enable(TRANSPORT_UDP, std::map<qcc::String, uint16_t>(), 0, m_listenPortMap, 0, false, false, true, false);
+        m_isNsEnabled = true;
 
         /*
          * There is a special case in which we respond to embedded AllJoyn bus
@@ -11408,8 +11518,6 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
             }
             m_isAdvertising = true;
         }
-        m_isListening = true;
-        m_isNsEnabled = true;
 
         /* If we have a wildcard specified in the configuration database, we want to stop
          * listening on all the non-wildcard addresses/ports we may have previously opened
@@ -11447,34 +11555,44 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
         }
     }
 
-    /* We add the listen specs to the m_listenFds at this point */
+    /*
+     * Add the newly minted listen specs to the m_listenFds.
+     */
     if (!addedList.empty()) {
         m_listenFdsLock.Lock(MUTEX_CONTEXT);
         for (list<pair<qcc::String, SocketFd> >::iterator it = addedList.begin(); it != addedList.end(); it++) {
-            m_listenFds.push_back(*it);
+            ListenFdEntry entry(it->first, it->second);
+            QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Adding normalized listen spec \"%s\", sockFd %d. to m_listenFds",
+                           it->first.c_str(), it->second));
+            m_listenFds.push_back(entry);
+            m_reload = STATE_RELOADING;
         }
-        m_reload = STATE_RELOADING;
+
+        /*
+         * Signal the (probably) waiting run thread so it will wake up and add
+         * the new socket(s) to its list of sockets it is waiting for
+         * connections on.
+         */
+        QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Alert()"));
+        Alert();
+
         m_listenFdsLock.Unlock(MUTEX_CONTEXT);
     }
 
     /*
-     * Signal the (probably) waiting run thread so it will wake up and add this
-     * new socket to its list of sockets it is waiting for connections on.
-     */
-    Alert();
-
-    DecrementAndFetch(&m_refCount);
-
-    /*
-     * We stop listening on all the listen specs that were replaced during the processing.
-     * These listen specs usually represent the old IP addresses that are no longer in use.
-     * In addition, if the last advertisement or discovery request was cancelled before
-     * the relevant network interfaces became IFF_UP, we also stop listening.
+     * We stop advertising and discovering on all the listen specs that were
+     * replaced during the processing.  These listen specs usually represent the
+     * old IP addresses that are no longer in use.  In addition, if the last
+     * advertisement or discovery request was cancelled before the relevant
+     * network interfaces became IFF_UP, we also stop listening.
      */
     if (m_advertising.empty() && m_discovering.empty()) {
+        QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Not advertising or discovering"));
         for (list<pair<qcc::String, SocketFd> >::iterator it = addedList.begin(); it != addedList.end(); it++) {
+            QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): send \"%s\" to replacedList", it->first.c_str()));
             replacedList.push_back(it->first);
         }
+        QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Disable NS"));
         IpNameService::Instance().Enable(TRANSPORT_UDP, std::map<qcc::String, uint16_t>(), 0, m_listenPortMap, 0, false, false, false, false);
         m_isListening = false;
         m_isNsEnabled = false;
@@ -11483,7 +11601,11 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
         m_pendingAdvertisements.clear();
         m_wildcardIfaceProcessed = false;
     }
+
+    QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): walk replacedList"));
     for (list<String>::iterator it = replacedList.begin(); it != replacedList.end(); it++) {
+        QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): DoStopListen() on \"%s\" from replacedList",
+                       it->c_str()));
         DoStopListen(*it);
     }
 
@@ -11491,6 +11613,7 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
      * If there were pending advertisements that came in before the network interfaces
      * became IFF_UP, we enable those pending advertisements.
      */
+    QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): walk pending advertisements list"));
     for (list<ListenRequest>::iterator it = m_pendingAdvertisements.begin(); it != m_pendingAdvertisements.end(); it++) {
         EnableAdvertisementInstance(*it);
     }
@@ -11500,10 +11623,13 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
      * If there were pending discoveries that came in before the network interfaces
      * became IFF_UP, we enable those pending discoveries.
      */
+    QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): walk pending discoveries list"));
     for (list<ListenRequest>::iterator it = m_pendingDiscoveries.begin(); it != m_pendingDiscoveries.end(); it++) {
         EnableDiscoveryInstance(*it);
     }
     m_pendingDiscoveries.clear();
+
+    DecrementAndFetch(&m_refCount);
 }
 
 void UDPTransport::CheckEndpointLocalMachine(UDPEndpoint endpoint)

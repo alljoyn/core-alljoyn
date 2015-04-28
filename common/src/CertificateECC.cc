@@ -26,7 +26,6 @@
 #include <qcc/StringUtil.h>
 #include <qcc/Util.h>
 #include <qcc/time.h>
-#include <time.h>
 
 #include <Status.h>
 
@@ -335,33 +334,32 @@ static QStatus DecodeTime(uint64_t& epoch, const qcc::String& t)
     tm.tm_mon--;  /* month's range is [0-11] */
     tm.tm_isdst = 0;
 
+    /* save the tm_hour value since mktime can modify that value if daylight
+     *  savings time is in effect
+     */
+    int originalTmHour = tm.tm_hour;
+
     /* Compute the GMT time from struct tm.
         Can't use timegm since it is not available in some platforms like Android and Windows */
 
-    time_t localTime = mktime(&tm);
+    int64_t localTime = ConvertStructureToTime(&tm);
     if (localTime < 0) {
         return ER_FAIL;
     }
-    struct tm* gtm = gmtime(&localTime);
+    struct tm* gtm = ConvertTimeToStructure(&localTime);
     if (!gtm) {
         return ER_FAIL;
     }
     /* figure the time zone offset */
-    int32_t tzDiff = gtm->tm_hour - tm.tm_hour;
-    if (tzDiff < 0) {
+    int32_t tzDiff = gtm->tm_hour - originalTmHour;
+    /* some time zones are at 30 minute or 45 minute boundary */
+    int32_t minuteDiff = gtm->tm_min - tm.tm_min;
+    if (tzDiff < -12) {
         tzDiff += 24;
     } else if (tzDiff > 12) {
         tzDiff = 24 - tzDiff;
     }
-    /* figure out the local daylight saving value */
-    struct tm* ltm = localtime(&localTime);
-    if (!ltm) {
-        return ER_FAIL;
-    }
-    if (ltm->tm_isdst > 0) {
-        tzDiff++;
-    }
-    epoch = localTime - (tzDiff * 3600);
+    epoch = localTime - (tzDiff * 3600) - (minuteDiff * 60);
     return ER_OK;
 }
 
@@ -416,8 +414,7 @@ QStatus CertificateX509::DecodeCertificateTime(const qcc::String& time)
 
 static QStatus EncodeTime(uint64_t epoch, qcc::String& t)
 {
-    time_t timer = (time_t) epoch;
-    struct tm* ptm = gmtime(&timer);
+    struct tm* ptm = ConvertTimeToStructure((int64_t*)&epoch);
     if (!ptm) {
         return ER_FAIL;
     }
@@ -430,7 +427,7 @@ static QStatus EncodeTime(uint64_t epoch, qcc::String& t)
     const char* format = (ptm->tm_year < 150) ? "%y%m%d%H%M%SZ" : "%Y%m%d%H%M%SZ";
     char buf[16];
     size_t ret;
-    ret = strftime(buf, sizeof (buf), format, ptm);
+    ret = FormatTime(buf, sizeof(buf), format, ptm);
     if (!ret) {
         return ER_FAIL;
     }
