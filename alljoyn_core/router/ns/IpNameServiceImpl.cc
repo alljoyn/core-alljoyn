@@ -4474,22 +4474,50 @@ void IpNameServiceImpl::SendOutboundMessageQuietly(Packet packet)
                     }
                 }
             }
-            QCC_DbgPrintf(("IpNameServiceImpl::SendOutboundMessageQuietly(): Rewrite NS/MDNS packet %p", &(*packet)));
-            RewriteVersionSpecific(msgVersion, packet, haveIPv4address, ipv4address, haveIPv6address, ipv6address,
-                                   unicastPortv4, m_liveInterfaces[i].m_interfaceName, reliableTransportPort, unreliableTransportPort);
 
             //
-            // Send the protocol message described by the header, with its contained
-            // rewritten is-at messages out on the socket that corresponds to the
-            // live interface we chose for sending.  Note that the actual destination
+            // Link-local multicast send is directed based on the interface index and the address family.
+            // If the current index and family are the same as those of a previously-seen interface, there
+            // is no need to send again here.
             //
-            QCC_DbgPrintf(("IpNameServiceImpl::SendOutboundMessageQuietly(): SendProtocolMessage()"));
-            if (msgVersion == 2) {
-                SendProtocolMessage(m_liveInterfaces[i].m_multicastMDNSsockFd, ipv4address, interfaceAddressPrefixLen,
-                                    flags, interfaceIsIPv4, packet, i);
-            } else if (m_liveInterfaces[i].m_multicastsockFd != qcc::INVALID_SOCKET_FD) {
-                SendProtocolMessage(m_liveInterfaces[i].m_multicastsockFd, ipv4address, interfaceAddressPrefixLen,
-                                    flags, interfaceIsIPv4, packet, i);
+            bool sendMessage = true;
+
+            for (uint32_t previousIndex = 0; previousIndex < i; ++previousIndex) {
+                if ((m_liveInterfaces[previousIndex].m_index == m_liveInterfaces[i].m_index) &&
+                    (m_liveInterfaces[previousIndex].m_address.IsIPv6() == m_liveInterfaces[i].m_address.IsIPv6())) {
+
+                    if (msgVersion == 2) {
+                        if (m_liveInterfaces[previousIndex].m_multicastMDNSsockFd != qcc::INVALID_SOCKET_FD) {
+                            sendMessage = false;
+                            break;
+                        }
+                    } else if (m_liveInterfaces[previousIndex].m_multicastsockFd != qcc::INVALID_SOCKET_FD) {
+                        sendMessage = false;
+                        break;
+                    }
+                }
+            }
+
+            if (!sendMessage) {
+                QCC_DbgPrintf(("IpNameServiceImpl::SendOutboundMessageQuietly(): skipping already-handled iface index = %u, IsIPv6 = %u\n",
+                               m_liveInterfaces[i].m_index, (uint32_t)m_liveInterfaces[i].m_address.IsIPv6()));
+            } else {
+                QCC_DbgPrintf(("IpNameServiceImpl::SendOutboundMessageQuietly(): Rewrite NS/MDNS packet %p", &(*packet)));
+                RewriteVersionSpecific(msgVersion, packet, haveIPv4address, ipv4address, haveIPv6address, ipv6address,
+                                       unicastPortv4, m_liveInterfaces[i].m_interfaceName, reliableTransportPort, unreliableTransportPort);
+
+                //
+                // Send the protocol message described by the header, containing rewritten is-at messages.
+                //
+                if (msgVersion == 2) {
+                    QCC_DbgPrintf(("IpNameServiceImpl::SendOutboundMessageQuietly(): SendProtocolMessage()"));
+                    SendProtocolMessage(m_liveInterfaces[i].m_multicastMDNSsockFd, ipv4address, interfaceAddressPrefixLen,
+                                        flags, interfaceIsIPv4, packet, i);
+                } else if (m_liveInterfaces[i].m_multicastsockFd != qcc::INVALID_SOCKET_FD) {
+                    QCC_DbgPrintf(("IpNameServiceImpl::SendOutboundMessageQuietly(): SendProtocolMessage()"));
+                    SendProtocolMessage(m_liveInterfaces[i].m_multicastsockFd, ipv4address, interfaceAddressPrefixLen,
+                                        flags, interfaceIsIPv4, packet, i);
+                }
             }
         }
     }
@@ -5055,21 +5083,53 @@ void IpNameServiceImpl::SendOutboundMessageActively(Packet packet, const qcc::IP
         //
         // Do the version-specific rewriting of the addresses/ports in this NS/MDNS packet.
         //
+        // Does RewriteVersionSpecific have to run even when (!sendMessage) below?
+        //
+        QCC_DbgPrintf(("IpNameServiceImpl::SendOutboundMessageActively(): Rewrite NS/MDNS packet %p", &(*packet)));
         RewriteVersionSpecific(msgVersion, packet, haveIPv4address, ipv4address, haveIPv6address, ipv6address, unicastPortv4,
                                m_liveInterfaces[i].m_interfaceName, reliableTransportPort, unreliableTransportPort);
 
         //
-        // Send the protocol message described by the header, with its contained
-        // rewritten is-at messages out on the socket that corresponds to the
-        // live interface we approved for sending.
+        // Link-local multicast send is directed based on the interface index and the address family.
+        // If the current index and family are the same as those of a previously-seen interface, there
+        // is no need to send again here.
         //
-        if (msgVersion == 2) {
-            SendProtocolMessage(m_liveInterfaces[i].m_multicastMDNSsockFd, ipv4address, interfaceAddressPrefixLen,
-                                flags, interfaceIsIPv4, packet, i, localAddress);
-        } else if (m_liveInterfaces[i].m_multicastsockFd != qcc::INVALID_SOCKET_FD) {
-            SendProtocolMessage(m_liveInterfaces[i].m_multicastsockFd, ipv4address, interfaceAddressPrefixLen,
-                                flags, interfaceIsIPv4, packet, i, localAddress);
+        bool sendMessage = true;
+
+        for (uint32_t previousIndex = 0; previousIndex < i; ++previousIndex) {
+            if ((m_liveInterfaces[previousIndex].m_index == m_liveInterfaces[i].m_index) &&
+                (m_liveInterfaces[previousIndex].m_address.IsIPv6() == m_liveInterfaces[i].m_address.IsIPv6())) {
+
+                if (msgVersion == 2) {
+                    if (m_liveInterfaces[previousIndex].m_multicastMDNSsockFd != qcc::INVALID_SOCKET_FD) {
+                        sendMessage = false;
+                        break;
+                    }
+                } else if (m_liveInterfaces[previousIndex].m_multicastsockFd != qcc::INVALID_SOCKET_FD) {
+                    sendMessage = false;
+                    break;
+                }
+            }
         }
+
+        if (!sendMessage) {
+            QCC_DbgPrintf(("IpNameServiceImpl::SendOutboundMessageActively(): skipping already-handled iface index = %u, IsIPv6 = %u\n",
+                           m_liveInterfaces[i].m_index, (uint32_t)m_liveInterfaces[i].m_address.IsIPv6()));
+        } else {
+            //
+            // Send the protocol message described by the header, containing rewritten is-at messages.
+            //
+            if (msgVersion == 2) {
+                QCC_DbgPrintf(("IpNameServiceImpl::SendOutboundMessageActively(): SendProtocolMessage()"));
+                SendProtocolMessage(m_liveInterfaces[i].m_multicastMDNSsockFd, ipv4address, interfaceAddressPrefixLen,
+                                    flags, interfaceIsIPv4, packet, i, localAddress);
+            } else if (m_liveInterfaces[i].m_multicastsockFd != qcc::INVALID_SOCKET_FD) {
+                QCC_DbgPrintf(("IpNameServiceImpl::SendOutboundMessageActively(): SendProtocolMessage()"));
+                SendProtocolMessage(m_liveInterfaces[i].m_multicastsockFd, ipv4address, interfaceAddressPrefixLen,
+                                    flags, interfaceIsIPv4, packet, i, localAddress);
+            }
+        }
+
         if (removedTcp) {
             MDNSPacket mdnsPacket = MDNSPacket::cast(packet);
             for (std::list<MDNSResourceRecord>::const_iterator it = removedTcpAnswers.begin(); it != removedTcpAnswers.end(); it++) {
