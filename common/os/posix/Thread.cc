@@ -45,9 +45,11 @@ using namespace std;
 
 namespace qcc {
 
-static uint32_t started = 0;
-static uint32_t running = 0;
-static uint32_t joined = 0;
+#ifndef NDEBUG
+static volatile int32_t started = 0;
+static volatile int32_t running = 0;
+static volatile int32_t joined = 0;
+#endif
 
 /** Global thread list */
 Mutex* Thread::threadListLock = NULL;
@@ -246,7 +248,7 @@ ThreadInternalReturn Thread::RunInternal(void* threadArg)
         return NULL;
     }
 
-    ++started;
+    QCC_DEBUG_ONLY(IncrementAndFetch(&started));
 
     QCC_DbgPrintf(("Thread::RunInternal: %s (pid=%x)", thread->funcName, (unsigned long) thread->handle));
 
@@ -260,9 +262,9 @@ ThreadInternalReturn Thread::RunInternal(void* threadArg)
     /* Start the thread if it hasn't been stopped */
     if (!thread->isStopping) {
         QCC_DbgPrintf(("Starting thread: %s", thread->funcName));
-        ++running;
+        QCC_DEBUG_ONLY(IncrementAndFetch(&running));
         thread->exitValue = thread->Run(thread->arg);
-        --running;
+        QCC_DEBUG_ONLY(DecrementAndFetch(&running));
         QCC_DbgPrintf(("Thread function exited: %s --> %p", thread->funcName, thread->exitValue));
     }
 
@@ -447,7 +449,7 @@ QStatus Thread::Join(void)
                 ret = pthread_detach(handle);
             }
             if (ret == 0) {
-                ++joined;
+                QCC_DEBUG_ONLY(IncrementAndFetch(&joined));
             } else {
                 status = ER_OS_ERROR;
                 QCC_LogError(status, ("Detaching thread: %d - %s", ret, strerror(ret)));
@@ -479,7 +481,7 @@ QStatus Thread::Join(void)
                 ret = pthread_join(handle, NULL);
             }
             handle = 0;
-            ++joined;
+            QCC_DEBUG_ONLY(IncrementAndFetch(&joined));
         } else {
             hbjMutex.Unlock();
 

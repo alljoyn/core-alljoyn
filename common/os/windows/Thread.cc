@@ -42,10 +42,11 @@ using namespace std;
 
 namespace qcc {
 
-static uint32_t started = 0;
-static uint32_t running = 0;
-static uint32_t stopped = 0;
-
+#ifndef NDEBUG
+static volatile int32_t started = 0;
+static volatile int32_t running = 0;
+static volatile int32_t stopped = 0;
+#endif
 
 /** Maximum number of milliseconds to wait between calls to select to check for thread death */
 static const uint32_t MAX_SELECT_WAIT_MS = 10000;
@@ -218,7 +219,7 @@ Thread::~Thread(void)
         } else if (handle) {
             CloseHandle(handle);
             handle = 0;
-            ++stopped;
+            QCC_DEBUG_ONLY(IncrementAndFetch(&stopped));
         }
     }
     QCC_DbgHLPrintf(("Thread::~Thread() [%s,%x] started:%d running:%d stopped:%d", GetName(), this, started, running, stopped));
@@ -233,7 +234,7 @@ ThreadInternalReturn STDCALL Thread::RunInternal(void* threadArg)
     assert(thread->state == STARTED);
     assert(!thread->isExternal);
 
-    ++started;
+    QCC_DEBUG_ONLY(IncrementAndFetch(&started));
 
     /* Add this Thread to list of running threads */
     threadListLock->Lock();
@@ -244,9 +245,9 @@ ThreadInternalReturn STDCALL Thread::RunInternal(void* threadArg)
     /* Start the thread if it hasn't been stopped */
     if (!thread->isStopping) {
         QCC_DbgPrintf(("Starting thread: %s", thread->funcName));
-        ++running;
+        QCC_DEBUG_ONLY(IncrementAndFetch(&running));
         thread->exitValue = thread->Run(thread->arg);
-        --running;
+        QCC_DEBUG_ONLY(DecrementAndFetch(&running));
         QCC_DbgPrintf(("Thread function exited: %s --> %p", thread->funcName, thread->exitValue));
     }
 
@@ -416,7 +417,7 @@ QStatus Thread::Join(void)
             QCC_LogError(status, ("Joining thread: %d", ret));
         }
         CloseHandle(goner);
-        ++stopped;
+        QCC_DEBUG_ONLY(IncrementAndFetch(&stopped));
     }
     isStopping = false;
     state = DEAD;
