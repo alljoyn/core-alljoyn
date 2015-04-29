@@ -33,10 +33,10 @@ public class MyAboutData implements AboutDataListener {
         Map<String, Variant> aboutData = new HashMap<String, Variant>();
         // nonlocalized values
         aboutData.put("AppId", new Variant(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}));
-        aboutData.put("DefaultLanguage", new Variant(new String("en")));
+        aboutData.put("DefaultLanguage", new Variant("en"));
         aboutData.put("DeviceId", new Variant(new String(
                 "93c06771-c725-48c2-b1ff-6a2a59d445b8")));
-        aboutData.put("ModelNumber", new Variant(new String("A1B2C3")));
+        aboutData.put("ModelNumber", new Variant("A1B2C3"));
         aboutData.put("SupportedLanguages", new Variant(new String[] { "en", "es" }));
         aboutData.put("DateOfManufacture", new Variant(new String("2014-09-23")));
         aboutData.put("SoftwareVersion", new Variant(new String("1.0")));
@@ -48,12 +48,12 @@ public class MyAboutData implements AboutDataListener {
         // If the language String is null or an empty string we return the default
         // language
         if ((language == null) || (language.length() == 0) || language.equalsIgnoreCase("en")) {
-            aboutData.put("DeviceName", new Variant(new String("A device name")));
-            aboutData.put("AppName", new Variant(new String("An application name")));
+            aboutData.put("DeviceName", new Variant("A device name"));
+            aboutData.put("AppName", new Variant("An application name"));
             aboutData.put("Manufacturer", new Variant(new String(
                     "A mighty manufacturing company")));
             aboutData.put("Description",
-                    new Variant( new String("Sample showing the about feature in a service application")));
+                    new Variant( "Sample showing the about feature in a service application"));
         } else if (language.equalsIgnoreCase("es")) { // Spanish
             aboutData.put("DeviceName", new Variant(new String(
                     "Un nombre de dispositivo")));
@@ -74,12 +74,12 @@ public class MyAboutData implements AboutDataListener {
         System.out.println("MyAboutData.getAnnouncedAboutData was called.");
         Map<String, Variant> aboutData = new HashMap<String, Variant>();
         aboutData.put("AppId", new Variant(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}));
-        aboutData.put("DefaultLanguage", new Variant(new String("en")));
-        aboutData.put("DeviceName", new Variant(new String("A device name")));
+        aboutData.put("DefaultLanguage", new Variant("en"));
+        aboutData.put("DeviceName", new Variant("A device name"));
         aboutData.put("DeviceId", new Variant(new String("93c06771-c725-48c2-b1ff-6a2a59d445b8")));
-        aboutData.put("AppName", new Variant( new String("An application name")));
-        aboutData.put("Manufacturer", new Variant(new String("A mighty manufacturing company")));
-        aboutData.put("ModelNumber", new Variant(new String("A1B2C3")));
+        aboutData.put("AppName", new Variant( "An application name"));
+        aboutData.put("Manufacturer", new Variant("A mighty manufacturing company"));
+        aboutData.put("ModelNumber", new Variant("A1B2C3"));
         return aboutData;
     }
 

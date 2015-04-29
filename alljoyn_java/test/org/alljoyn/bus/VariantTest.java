@@ -73,7 +73,7 @@ public class VariantTest extends TestCase {
          assertEquals("as", v.getSignature());
          v = new Variant(new InferredTypesInterface.InnerStruct(12));
          assertEquals("(i)", v.getSignature());
-         v = new Variant(new Variant(new String("thirteen")));
+         v = new Variant(new Variant("thirteen"));
          assertEquals("v", v.getSignature());
 
          v = new Variant();
