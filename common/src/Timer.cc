@@ -745,7 +745,7 @@ ThreadReturn STDCALL TimerThread::Run(void* arg)
                             if (status == ER_ALERTED_THREAD || status == ER_STOPPING_THREAD || !timer->isRunning || delay <= WORKER_IDLE_TIMEOUT_MS) {
                                 break;
                             }
-                            if (timer->timerThreads[i]->state == TimerThread::STOPPED && !timer->timerThreads[i]->IsRunning()) {
+                            if (timer->timerThreads[i]->state == TimerThread::STOPPED) {
                                 delete timer->timerThreads[i];
                                 timer->timerThreads[i] = NULL;
                                 QCC_DbgPrintf(("TimerThread::Run(): Deleted unused worker thread %d", i));
@@ -849,7 +849,7 @@ ThreadReturn STDCALL TimerThread::Run(void* arg)
                                     tt = timer->timerThreads[i];
                                     QCC_DbgPrintf(("TimerThread::Run(): Found idle worker at index %d", i));
                                     break;
-                                } else if (timer->timerThreads[i]->state == TimerThread::STOPPED && !timer->timerThreads[i]->IsRunning()) {
+                                } else if (timer->timerThreads[i]->state == TimerThread::STOPPED) {
                                     tt = timer->timerThreads[i];
                                     QCC_DbgPrintf(("TimerThread::Run(): Found stopped worker at index %d", i));
                                 }
@@ -897,6 +897,7 @@ ThreadReturn STDCALL TimerThread::Run(void* arg)
                                 }
                             } else if (tt->state == TimerThread::STOPPED) {
                                 QCC_DbgPrintf(("TimerThread::Run(): Start()ing stopped timer thread (tt)"));
+                                tt->Join();
                                 QStatus status = tt->Start(NULL, timer);
                                 if (status != ER_OK) {
                                     QCC_LogError(status, ("Error starting timer thread %s", tt->GetName()));
@@ -1011,7 +1012,7 @@ ThreadReturn STDCALL TimerThread::Run(void* arg)
                         if (status == ER_ALERTED_THREAD || status == ER_STOPPING_THREAD || !timer->isRunning) {
                             break;
                         }
-                        if (timer->timerThreads[i]->state == TimerThread::STOPPED && !timer->timerThreads[i]->IsRunning()) {
+                        if (timer->timerThreads[i]->state == TimerThread::STOPPED) {
                             delete timer->timerThreads[i];
                             timer->timerThreads[i] = NULL;
                             QCC_DbgPrintf(("TimerThread::Run(): Deleted unused worker thread %d", i));
@@ -1084,7 +1085,6 @@ void TimerImpl::ThreadExit(Thread* thread)
     }
     tt->state = TimerThread::STOPPED;
     lock.Unlock();
-    tt->Join();
 }
 
 void TimerImpl::EnableReentrancy()
