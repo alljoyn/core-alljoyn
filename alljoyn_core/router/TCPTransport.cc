@@ -1167,7 +1167,7 @@ QStatus TCPTransport::Join(void)
      * Since it is reference counted, we can't just call it willy-nilly.  We
      * have to be careful since our Join() can be called multiple times.
      */
-    int count = qcc::IncrementAndFetch(&m_nsReleaseCount);
+    int32_t count = qcc::IncrementAndFetch(&m_nsReleaseCount);
     if (count == 1) {
         IpNameService::Instance().Release();
     }

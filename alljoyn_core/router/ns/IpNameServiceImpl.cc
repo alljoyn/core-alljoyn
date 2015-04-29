@@ -54,7 +54,7 @@ using namespace std;
 using namespace qcc;
 
 namespace ajn {
-int32_t INCREMENTAL_PACKET_ID;
+volatile int32_t INCREMENTAL_PACKET_ID;
 #define RESET_SCHEDULE_ALERTCODE  1
 #define PACKET_TIME_ACCURACY_MS 20
 

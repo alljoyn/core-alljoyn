@@ -316,7 +316,7 @@ class Thread {
     Mutex auxListenersLock;
 
 #if defined(QCC_OS_GROUP_POSIX)
-    int32_t waitCount;
+    volatile int32_t waitCount;
     Mutex waitLock;
     bool hasBeenJoined;
     qcc::Mutex hbjMutex;

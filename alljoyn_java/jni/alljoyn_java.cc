@@ -1647,7 +1647,7 @@ class JBusAttachment : public BusAttachment {
 
     int32_t DecRef(void)
     {
-        uint32_t refs = DecrementAndFetch(&refCount);
+        int32_t refs = DecrementAndFetch(&refCount);
         if (refs == 0) {
             delete this;
         }
@@ -1666,7 +1666,7 @@ class JBusAttachment : public BusAttachment {
     /*
      * An intrusive reference count
      */
-    int32_t refCount;
+    volatile int32_t refCount;
 
     /*
      * Destructor is marked private since it should only be called from DecRef.

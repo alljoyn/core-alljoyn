@@ -666,7 +666,7 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
         qcc::ThreadReturn STDCALL Run(void* arg);
 
       private:
-        static int jstCount;
+        static volatile int32_t jstCount;
         qcc::ThreadReturn STDCALL RunAttach();
         /*
          * This must be called with the locks as it looks through the various advertisement maps.
