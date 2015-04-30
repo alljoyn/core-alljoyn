@@ -40,13 +40,6 @@
 
 #define QCC_MODULE "NETWORK"
 
-/* Scatter gather is only supported on Vista and later */
-#if !defined (NTDDI_VERSION) || !defined (NTDDI_VISTA) || (NTDDI_VERSION < NTDDI_VISTA)
-#define QCC_USE_SCATTER_GATHER 0
-#else
-#define QCC_USE_SCATTER_GATHER 1
-#endif
-
 namespace qcc {
 
 extern String GetLastErrorString();
@@ -58,8 +51,6 @@ extern void MakeSockAddr(const IPAddress& addr,
 
 extern QStatus GetSockAddr(const SOCKADDR_STORAGE* addrBuf, socklen_t addrSize,
                            IPAddress& addr, uint16_t& port);
-
-#if QCC_USE_SCATTER_GATHER
 
 static QStatus SendSGCommon(SocketFd sockfd,
                             SOCKADDR_STORAGE* addr,
@@ -131,35 +122,6 @@ QStatus SendToSG(SocketFd sockfd, IPAddress& remoteAddr, uint16_t remotePort,
     MakeSockAddr(remoteAddr, remotePort, &addr, addrLen);
     return SendSGCommon(sockfd, &addr, addrLen, sg, sent, flags);
 }
-
-#else
-
-QStatus SendSG(SocketFd sockfd, const ScatterGatherList& sg, size_t& sent, SendMsgFlags flags)
-{
-    QCC_UNUSED(flags);
-    QStatus status;
-    uint8_t* tmpBuf = new uint8_t[sg.MaxDataSize()];
-    sg.CopyToBuffer(tmpBuf, sg.MaxDataSize());
-    status = Send(sockfd, tmpBuf, sg.DataSize(), sent);
-    delete[] tmpBuf;
-    return status;
-}
-
-QStatus SendToSG(SocketFd sockfd, IPAddress& remoteAddr, uint16_t remotePort,
-                 const ScatterGatherList& sg, size_t& sent, SemdMsgFlags flags)
-{
-    QCC_UNUSED(flags);
-    QStatus status;
-    uint8_t* tmpBuf = new uint8_t[sg.MaxDataSize()];
-    sg.CopyToBuffer(tmpBuf, sg.MaxDataSize());
-    status = SendTo(sockfd, remoteAddr, remotePort, tmpBuf, sg.DataSize(), sent);
-    delete[] tmpBuf;
-    return status;
-}
-
-#endif
-
-#if QCC_USE_SCATTER_GATHER
 
 static QStatus RecvSGCommon(SocketFd sockfd, SOCKADDR_STORAGE* addr, socklen_t& addrLen,
                             ScatterGatherList& sg, size_t& received)
@@ -253,42 +215,5 @@ QStatus RecvFromSG(SocketFd sockfd, IPAddress& remoteAddr, uint16_t& remotePort,
     }
     return status;
 }
-
-#else
-
-QStatus RecvSG(SocketFd sockfd, ScatterGatherList& sg, size_t& received)
-{
-    QStatus status = ER_OK;
-    uint8_t* tmpBuf = new uint8_t[sg.MaxDataSize()];
-    QCC_DbgTrace(("RecvSG(sockfd = %d, sg = <>, received = <>)", sockfd));
-
-    status = Recv(sockfd, tmpBuf, sg.MaxDataSize(), received);
-    if (ER_OK == status) {
-        sg.CopyFromBuffer(tmpBuf, received);
-    }
-    QCC_DbgPrintf(("Received %u bytes", received));
-    delete[] tmpBuf;
-    return status;
-}
-
-
-QStatus RecvFromSG(SocketFd sockfd, IPAddress& remoteAddr, uint16_t& remotePort,
-                   ScatterGatherList& sg, size_t& received)
-{
-    QStatus status = ER_OK;
-    uint8_t* tmpBuf = new uint8_t[sg.MaxDataSize()];
-    QCC_DbgTrace(("RecvToSG(sockfd = %d, remoteAddr = %s, remotePort = %u, sg = <>, sent = <>)",
-                  sockfd, remoteAddr.ToString().c_str(), remotePort));
-
-    status = RecvFrom(sockfd, remoteAddr, remotePort, tmpBuf, sg.MaxDataSize(), received);
-    if (ER_OK == status) {
-        sg.CopyFromBuffer(tmpBuf, received);
-    }
-    QCC_DbgPrintf(("Received %u bytes", received));
-    delete[] tmpBuf;
-    return status;
-}
-
-#endif
 
 }

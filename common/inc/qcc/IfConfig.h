@@ -34,12 +34,16 @@
 
 namespace qcc {
 
+/* An entry for a usable IP address.  Note that there can be multiple IP addresses on the same interface,
+ * so the same interface can appear in multiple IfConfigEntry instances.
+ */
 class IfConfigEntry {
   public:
-    qcc::String m_name;     /**< The operating system-assigned name of this interface (e.g. "eth0" or "wlan0"). */
-    qcc::String m_addr;     /**< A string representation of the IP address of this interface. */
-    uint32_t m_prefixlen;   /**< The network prefix length, in the sense of CIDR, for the IP address of this interface. */
-    AddressFamily m_family; /**< The address family of the IP address of this interface (AF_UNSPEC, AF_INET or AF_INET6). */
+    qcc::String m_name;     /**< The operating system-assigned name of the interface (e.g., "eth0" or "wlan0"). */
+    qcc::String m_altname;  /**< An operating system-assigned alias for the interface (e.g., GUID on Windows). */
+    qcc::String m_addr;     /**< A string representation of an IP address on the interface. */
+    uint32_t m_prefixlen;   /**< The network prefix length, in the sense of CIDR, for the IP address. */
+    AddressFamily m_family; /**< The address family of the IP address (AF_UNSPEC, AF_INET or AF_INET6). */
 
     static const uint32_t UP = 1;               /**< The interface is running and routes are in place. */
     static const uint32_t BROADCAST = 2;        /**< The interface has a valid broadcast address (can broadcast). */
@@ -58,9 +62,9 @@ class IfConfigEntry {
     static const uint32_t AUTOMEDIA = 16384;    /**< The interface is capable of automatically choosing media type. */
     static const uint32_t DYNAMIC = 32768;      /**< This interface has an IP address that can change (currently unused). */
 
-    uint32_t m_flags;   /**< The combined interface flags for this interface. */
-    uint32_t m_mtu;     /**< The maximum transmission unit (MTU) for this interface. */
-    uint32_t m_index;   /**< The operating system generated interface index for this interface. */
+    uint32_t m_flags;   /**< The combined interface flags for the interface. */
+    uint32_t m_mtu;     /**< The maximum transmission unit (MTU) for the interface. */
+    uint32_t m_index;   /**< The operating system generated interface index for the interface. */
 };
 
 typedef enum {
