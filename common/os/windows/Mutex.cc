@@ -44,17 +44,10 @@ using namespace qcc;
 void Mutex::Init()
 {
     if (!initialized) {
-        // Starting with Vista this always returns non-zero so this test will be less and less important
-        // in the future (http://msdn.microsoft.com/en-us/library/windows/desktop/ms683476.aspx)
-        if (InitializeCriticalSectionAndSpinCount(&mutex, 100)) {
-            initialized = true;
-        } else {
-            char buf[80];
-            uint32_t ret = GetLastError();
-            strerror_r(ret, buf, sizeof(buf));
-            // Can't use ER_LogError() since it uses mutexs under the hood.
-            printf("**** Mutex initialization failure: %u - %s", ret, buf);
-        }
+        // On all supported versions of Windows, this always returns non-zero
+        // (http://msdn.microsoft.com/en-us/library/windows/desktop/ms683476.aspx).
+        InitializeCriticalSectionAndSpinCount(&mutex, 100);
+        initialized = true;
     }
 }
 

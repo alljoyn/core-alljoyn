@@ -1129,9 +1129,7 @@ QStatus CreateMulticastSocket(IfConfigEntry entry, const char* ipv4_multicast_gr
         // Android build -- i.e., we have to do it anyway.
         //
         if (entry.m_family == qcc::QCC_AF_INET) {
-#if 1
             status = qcc::JoinMulticastGroup(sockFd, qcc::QCC_AF_INET, ipv4_multicast_group, entry.m_name);
-#endif
         } else if (entry.m_family == qcc::QCC_AF_INET6) {
             status = qcc::JoinMulticastGroup(sockFd, qcc::QCC_AF_INET6, ipv6_multicast_group, entry.m_name);
         }
@@ -1359,9 +1357,10 @@ void IpNameServiceImpl::LazyUpdateInterfaces(const qcc::NetworkEventSet& network
                     // requestedInterface list, we will try to use it.
                     //
                     if (m_requestedInterfaces[j][k].m_interfaceName.size() != 0 &&
-                        m_requestedInterfaces[j][k].m_interfaceName == entries[i].m_name) {
+                        ((m_requestedInterfaces[j][k].m_interfaceName == entries[i].m_name) ||
+                         (m_requestedInterfaces[j][k].m_interfaceName == entries[i].m_altname))) {
                         QCC_DbgPrintf(("IpNameServiceImpl::LazyUpdateInterfaces(): Use because found requestedInterface name "
-                                       " \"%s\" for transport %d", entries[i].m_name.c_str(), j));
+                                       " \"%s\" for transport %d", m_requestedInterfaces[j][k].m_interfaceName, j));
                         useEntry = true;
                         break;
                     }
