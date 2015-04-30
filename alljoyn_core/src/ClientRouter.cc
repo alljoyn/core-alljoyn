@@ -45,14 +45,23 @@ QStatus ClientRouter::PushMessage(Message& msg, BusEndpoint& sender)
 {
     QStatus status = ER_OK;
 
-    if (!localEndpoint->IsValid() || !nonLocalEndpoint->IsValid() || !sender->IsValid()) {
+    /*
+     * Grab local copies of the local and non-local endpoints since the members
+     * may be overwritten by another thread wandering through ClientRouter.
+     * Specifically, this may occur if another thread calls UnregisterEndpoint
+     * while PushMessage is being called.
+     */
+    LocalEndpoint localEp = localEndpoint;
+    BusEndpoint nonLocalEp = nonLocalEndpoint;
+
+    if (!localEp->IsValid() || !nonLocalEp->IsValid() || !sender->IsValid()) {
         status = ER_BUS_NO_ENDPOINT;
     } else {
-        if (sender == BusEndpoint::cast(localEndpoint)) {
-            localEndpoint->UpdateSerialNumber(msg);
-            status = nonLocalEndpoint->PushMessage(msg);
+        if (sender == BusEndpoint::cast(localEp)) {
+            localEp->UpdateSerialNumber(msg);
+            status = nonLocalEp->PushMessage(msg);
         } else {
-            status = localEndpoint->PushMessage(msg);
+            status = localEp->PushMessage(msg);
         }
     }
 
