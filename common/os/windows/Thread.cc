@@ -418,9 +418,10 @@ QStatus Thread::Join(void)
         CloseHandle(goner);
         ++stopped;
     }
-    isStopping = false;
-    state = DEAD;
     QCC_DbgPrintf(("%s thread %s", self ? "Closed" : "Joined", funcName));
+    isStopping = false;
+    /* once the state is changed to DEAD, we must not touch any member of this class anymore */
+    state = DEAD;
     return status;
 }
 

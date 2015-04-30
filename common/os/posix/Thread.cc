@@ -493,8 +493,9 @@ QStatus Thread::Join(void)
         }
         isStopping = false;
     }
-    state = DEAD;
     QCC_DbgPrintf(("Joined thread %s", funcName));
+    /* once the state is changed to DEAD, we must not touch any member of this class anymore */
+    state = DEAD;
     return status;
 }
 
