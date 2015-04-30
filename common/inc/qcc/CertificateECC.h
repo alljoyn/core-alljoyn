@@ -467,16 +467,16 @@ class CertificateX509 {
      * Get the digest of the external data.
      * @param digest the digest of the external data
      */
-    const uint8_t* GetDigest()
+    const uint8_t* GetDigest() const
     {
-        return (const uint8_t*) digest.c_str();
+        return (const uint8_t*) digest.data();
     }
 
     /**
      * Get the size of the digest of the external data.
      * @return the size of the digest of the external data
      */
-    const size_t GetDigestSize()
+    const size_t GetDigestSize() const
     {
         return digest.size();
     }
