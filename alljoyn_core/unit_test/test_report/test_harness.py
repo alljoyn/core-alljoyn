@@ -180,6 +180,9 @@ def main(argv=None):
         print '[TestCases]\n\t%s' % filter
         command.append('--gtest_filter=' + filter)
 
+    print '\ncommand line: %s\n' % ( ' '.join( command ) )
+    sys.stdout.flush()
+
     # execute the gtestfile with filter argument, if any
     # exit status 0 if no errors, 1 if any tests failed, 2 if system error
 
