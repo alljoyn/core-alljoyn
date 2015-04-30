@@ -1360,7 +1360,7 @@ void IpNameServiceImpl::LazyUpdateInterfaces(const qcc::NetworkEventSet& network
                         ((m_requestedInterfaces[j][k].m_interfaceName == entries[i].m_name) ||
                          (m_requestedInterfaces[j][k].m_interfaceName == entries[i].m_altname))) {
                         QCC_DbgPrintf(("IpNameServiceImpl::LazyUpdateInterfaces(): Use because found requestedInterface name "
-                                       " \"%s\" for transport %d", m_requestedInterfaces[j][k].m_interfaceName, j));
+                                       " \"%s\" for transport %d", m_requestedInterfaces[j][k].m_interfaceName.c_str(), j));
                         useEntry = true;
                         break;
                     }
