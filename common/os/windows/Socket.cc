@@ -26,6 +26,7 @@
 #include <Winsock2.h>
 #include <Mswsock.h>
 #include <ws2tcpip.h>
+#include <iphlpapi.h>
 
 #include <qcc/IPAddress.h>
 #include <qcc/Socket.h>
@@ -639,55 +640,6 @@ QStatus RecvFrom(SocketFd sockfd, IPAddress& remoteAddr, uint16_t& remotePort,
     return status;
 }
 
-
-int InetPtoN(int af, const char* src, void* dst)
-{
-    WinsockCheck();
-    int err = -1;
-    if (af == AF_INET6) {
-        struct sockaddr_in6 sin6;
-        int sin6Len = sizeof(sin6);
-        memset(&sin6, 0, sin6Len);
-        sin6.sin6_family = AF_INET6;
-        err = WSAStringToAddressA((LPSTR)src, AF_INET6, NULL, (struct sockaddr*)&sin6, &sin6Len);
-        if (!err) {
-            memcpy(dst, &sin6.sin6_addr, sizeof(sin6.sin6_addr));
-        }
-    } else if (af == AF_INET) {
-        struct sockaddr_in sin;
-        int sinLen = sizeof(sin);
-        memset(&sin, 0, sinLen);
-        sin.sin_family = AF_INET;
-        err = WSAStringToAddressA((LPSTR)src, AF_INET, NULL, (struct sockaddr*)&sin, &sinLen);
-        if (!err) {
-            memcpy(dst, &sin.sin_addr, sizeof(sin.sin_addr));
-        }
-    }
-    return err ? -1 : 1;
-}
-
-const char* InetNtoP(int af, const void* src, char* dst, socklen_t size)
-{
-    WinsockCheck();
-    int err = -1;
-    DWORD sz = (DWORD)size;
-    if (af == AF_INET6) {
-        struct sockaddr_in6 sin6;
-        memset(&sin6, 0, sizeof(sin6));
-        sin6.sin6_family = AF_INET6;
-        sin6.sin6_flowinfo = 0;
-        memcpy(&sin6.sin6_addr, src, sizeof(sin6.sin6_addr));
-        err = WSAAddressToStringA((struct sockaddr*)&sin6, sizeof(sin6), NULL, dst, &sz);
-    } else if (af == AF_INET) {
-        struct sockaddr_in sin;
-        memset(&sin, 0, sizeof(sin));
-        sin.sin_family = AF_INET;
-        memcpy(&sin.sin_addr, src, sizeof(sin.sin_addr));
-        err = WSAAddressToStringA((struct sockaddr*)&sin, sizeof(sin), NULL, dst, &sz);
-    }
-    return err ? NULL : dst;
-}
-
 QStatus RecvWithFds(SocketFd sockfd, void* buf, size_t len, size_t& received, SocketFd* fdList, size_t maxFds, size_t& recvdFds)
 {
     QStatus status = ER_OK;
@@ -1037,8 +989,6 @@ QStatus SetReusePort(SocketFd sockfd, bool reuse)
     return status;
 }
 
-void IfConfigByFamily(uint32_t family, std::vector<IfConfigEntry>& entries);
-
 /*
  * Getting set to do a multicast join or drop is straightforward but not
  * completely trivial, and the process is identical for both socket options, so
@@ -1069,32 +1019,18 @@ QStatus MulticastGroupOpInternal(SocketFd sockFd, AddressFamily family, String m
          * Group memberships are associated with both the multicast group itself
          * and also an interface.  In the IPv4 version, we need to provide an
          * interface address or an interface index in network byte order. The
-         * best mechanism would be to use an interface index like IPv6 does. However,
-         * that capability and if_nametoindex() did not exist prior to Windows Vista,
-         * but we can still support older Windows versions via the IfConfig API.
+         * best mechanism is to use an interface index like IPv6 does.
          */
-        std::vector<IfConfigEntry> entries;
-        IfConfigByFamily(AF_INET, entries);
-
-        bool found = false;
         struct ip_mreq mreq;
-
-        for (uint32_t i = 0; i < entries.size(); ++i) {
-            if (entries[i].m_name == iface) {
-                IPAddress address(entries[i].m_addr);
-                mreq.imr_interface.s_addr = address.GetIPv4AddressNetOrder();
-                found = true;
-            }
-        }
-
-        if (!found) {
-            QCC_LogError(ER_OS_ERROR, ("can't find address for interface %s", iface.c_str()));
+        mreq.imr_interface.s_addr = htonl(if_nametoindex(iface.c_str()));
+        if (mreq.imr_interface.s_addr == 0) {
+            QCC_LogError(ER_OS_ERROR, ("if_nametoindex() failed: unknown interface"));
             return ER_OS_ERROR;
         }
 
-        int rc = InetPtoN(AF_INET, multicastGroup.c_str(), &mreq.imr_multiaddr);
+        int rc = inet_pton(AF_INET, multicastGroup.c_str(), &mreq.imr_multiaddr);
         if (rc != 1) {
-            QCC_LogError(ER_OS_ERROR, ("InetPtoN() failed: %s", GetLastErrorString().c_str()));
+            QCC_LogError(ER_OS_ERROR, ("inet_pton() failed: %s", GetLastErrorString().c_str()));
             return ER_OS_ERROR;
         }
 
@@ -1108,30 +1044,19 @@ QStatus MulticastGroupOpInternal(SocketFd sockFd, AddressFamily family, String m
         /*
          * Group memberships are associated with both the multicast group itself
          * and also an interface.  In the IPv6 version, we need to provide an
-         * interface index instead of an IP address associated with the interface.
-         * if_nametoindex() did not exist prior to Windows Vista, but we can still
-         * support older Windows versions via the IfConfig API.
+         * interface index instead of an IP address associated with the
+         * interface.
          */
-        std::vector<IfConfigEntry> entries;
-        IfConfigByFamily(AF_INET6, entries);
-        bool found = false;
         struct ipv6_mreq mreq;
-
-        for (uint32_t i = 0; i < entries.size(); ++i) {
-            if (entries[i].m_name == iface) {
-                mreq.ipv6mr_interface = entries[i].m_index;
-                found = true;
-            }
-        }
-
-        if (!found) {
-            QCC_LogError(ER_OS_ERROR, ("can't find interface index for interface %s", iface.c_str()));
+        mreq.ipv6mr_interface = if_nametoindex(iface.c_str());
+        if (mreq.ipv6mr_interface == 0) {
+            QCC_LogError(ER_OS_ERROR, ("if_nametoindex() failed: unknown interface"));
             return ER_OS_ERROR;
         }
 
-        int rc = InetPtoN(AF_INET6, multicastGroup.c_str(), &mreq.ipv6mr_multiaddr);
+        int rc = inet_pton(AF_INET6, multicastGroup.c_str(), &mreq.ipv6mr_multiaddr);
         if (rc != 1) {
-            QCC_LogError(ER_OS_ERROR, ("InetPtoN() failed: %s", GetLastErrorString().c_str()));
+            QCC_LogError(ER_OS_ERROR, ("inet_pton() failed: %s", GetLastErrorString().c_str()));
             return ER_OS_ERROR;
         }
 
@@ -1175,28 +1100,14 @@ QStatus SetMulticastInterface(SocketFd sockFd, AddressFamily family, qcc::String
      */
     if (family == QCC_AF_INET) {
         /*
-         * In the IPv4 version, we need to provide an interface address
-         * or an interface index in network byte order. The best mechanism
-         * would be to use an interface index like IPv6 does. However, that capability
-         * and if_nametoindex() did not exist prior to Windows Vista, but we can still
-         * support older Windows versions via the IfConfig API.
+         * In the IPv4 version, we need to provide an interface address or an
+         * interface index in network byte order. The best mechanism
+         * is to use an interface index like IPv6 does.
          */
-        std::vector<IfConfigEntry> entries;
-        IfConfigByFamily(AF_INET, entries);
-
-        bool found = false;
         struct in_addr addr;
-
-        for (uint32_t i = 0; i < entries.size(); ++i) {
-            if (entries[i].m_name == iface) {
-                IPAddress address(entries[i].m_addr);
-                addr.s_addr = address.GetIPv4AddressNetOrder();
-                found = true;
-            }
-        }
-
-        if (!found) {
-            QCC_LogError(ER_OS_ERROR, ("can't find address for interface %s", iface.c_str()));
+        addr.s_addr = htonl(if_nametoindex(iface.c_str()));
+        if (addr.s_addr == 0) {
+            QCC_LogError(ER_OS_ERROR, ("if_nametoindex() failed: unknown interface"));
             return ER_OS_ERROR;
         }
 
@@ -1209,24 +1120,10 @@ QStatus SetMulticastInterface(SocketFd sockFd, AddressFamily family, qcc::String
         /*
          * In the IPv6 version, we need to provide an interface index instead of
          * an IP address associated with the interface.
-         * if_nametoindex() did not exist prior to Windows Vista, but we can still
-         * support older Windows versions via the IfConfig API.
          */
-        std::vector<IfConfigEntry> entries;
-        IfConfigByFamily(AF_INET6, entries);
-
-        bool found = false;
-        uint32_t index = 0;
-
-        for (uint32_t i = 0; i < entries.size(); ++i) {
-            if (entries[i].m_name == iface) {
-                index = entries[i].m_index;
-                found = true;
-            }
-        }
-
-        if (!found) {
-            QCC_LogError(ER_OS_ERROR, ("can't find interface index for interface %s", iface.c_str()));
+        uint32_t index = if_nametoindex(iface.c_str());
+        if (index == 0) {
+            QCC_LogError(ER_OS_ERROR, ("if_nametoindex() failed: unknown interface"));
             return ER_OS_ERROR;
         }
 

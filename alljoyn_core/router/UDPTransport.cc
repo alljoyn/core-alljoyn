@@ -5713,7 +5713,9 @@ QStatus UDPTransport::GetListenAddresses(const SessionOpts& opts, std::vector<qc
 
             if ((entries[i].m_flags & mask) == state) {
                 QCC_DbgPrintf(("UDPTransport::GetListenAddresses(): %s has correct state", entries[i].m_name.c_str()));
-                if (haveWildcard || entries[i].m_name == currentInterface) {
+                if (haveWildcard ||
+                    (entries[i].m_name == currentInterface) ||
+                    (entries[i].m_altname == currentInterface)) {
                     QCC_DbgPrintf(("UDPTransport::GetListenAddresses(): %s has correct name", entries[i].m_name.c_str()));
                     /*
                      * This entry matches our search criteria, so we need to
