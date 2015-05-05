@@ -241,9 +241,8 @@ QStatus AllJoynPeerObj::Join()
 
 AllJoynPeerObj::~AllJoynPeerObj()
 {
-    if ((supportedAuthSuitesCount > 0) && supportedAuthSuites) {
-        delete [] supportedAuthSuites;
-    }
+    delete [] supportedAuthSuites;
+    supportedAuthSuites = NULL;
 }
 
 QStatus AllJoynPeerObj::Init(BusAttachment& bus)
@@ -539,6 +538,7 @@ void AllJoynPeerObj::AuthAdvance(Message& msg)
          */
         MethodReply(msg, status);
         delete sasl;
+        sasl = NULL;
     } else {
         /*
          * If we are not done put the SASL engine back
@@ -632,7 +632,7 @@ void AllJoynPeerObj::DoKeyAuthentication(Message& msg)
      * Check for existing conversation and allocate a new SASL engine if we need one
      */
     lock.Lock(MUTEX_CONTEXT);
-    KeyExchanger*keyExchanger = keyExConversations[sender];
+    KeyExchanger* keyExchanger = keyExConversations[sender];
     keyExConversations.erase(sender);
     lock.Unlock(MUTEX_CONTEXT);
 
@@ -721,7 +721,7 @@ void AllJoynPeerObj::ExchangeSuites(const ajn::InterfaceDescription::Member* mem
     } else {
         effectiveAuthSuitesCount = supportedAuthSuitesCount;
     }
-    uint32_t*effectiveAuthSuites = new uint32_t[supportedAuthSuitesCount];
+    uint32_t* effectiveAuthSuites = new uint32_t[supportedAuthSuitesCount];
 
     if (supportedAuthSuitesCount == 0) {
         effectiveAuthSuites[0] = 0;
@@ -1035,14 +1035,12 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
             break;
         }
         if (UseKeyExchanger(authVersion, supportedAuthSuites, supportedAuthSuitesCount)) {
-            uint32_t*remoteAuthSuites = NULL;
+            uint32_t* remoteAuthSuites = NULL;
             size_t remoteAuthSuitesCount = 0;
             status = AskForAuthSuites(authVersion, remotePeerObj, ifc, &remoteAuthSuites, &remoteAuthSuitesCount);
             if (status == ER_OK) {
                 status = AuthenticatePeerUsingKeyExchange(remoteAuthSuites, remoteAuthSuitesCount, busName, peerState, localGuidStr, remotePeerObj, ifc, remotePeerGuid, mech);
-                if (remoteAuthSuites) {
-                    delete [] remoteAuthSuites;
-                }
+                delete [] remoteAuthSuites;
             }
         } else {
             status = AuthenticatePeerUsingSASL(busName, peerState, localGuidStr, remotePeerObj, ifc, remotePeerGuid, mech);
@@ -1210,7 +1208,7 @@ QStatus AllJoynPeerObj::AskForAuthSuites(uint32_t peerAuthVersion, ProxyBusObjec
     if (status != ER_OK) {
         return status;
     }
-    uint32_t*remoteSuites;
+    uint32_t* remoteSuites;
     size_t remoteSuitesLen;
 
     status = replyMsg->GetArg(0)->Get("au", &remoteSuitesLen, &remoteSuites);
@@ -1218,7 +1216,7 @@ QStatus AllJoynPeerObj::AskForAuthSuites(uint32_t peerAuthVersion, ProxyBusObjec
         return status;
     }
     *remoteAuthCount = remoteSuitesLen;
-    uint32_t*effectiveAuthSuites = new uint32_t[remoteSuitesLen];
+    uint32_t* effectiveAuthSuites = new uint32_t[remoteSuitesLen];
     for (size_t cnt = 0; cnt < remoteSuitesLen; cnt++) {
         effectiveAuthSuites[cnt] = remoteSuites[cnt];
     }
@@ -1231,7 +1229,7 @@ QStatus AllJoynPeerObj::AuthenticatePeerUsingKeyExchange(const uint32_t* request
     QStatus status;
 
     QCC_DbgHLPrintf(("AuthenticatePeerUsingKeyExchange"));
-    KeyExchanger*keyExchanger = GetKeyExchangerInstance(peerState->GetAuthVersion() >> 16, true, requestingAuthList, requestingAuthCount);  /* initiator */
+    KeyExchanger* keyExchanger = GetKeyExchangerInstance(peerState->GetAuthVersion() >> 16, true, requestingAuthList, requestingAuthCount);  /* initiator */
     if (!keyExchanger) {
         return ER_AUTH_FAIL;
     }
@@ -1265,7 +1263,7 @@ QStatus AllJoynPeerObj::AuthenticatePeerUsingKeyExchange(const uint32_t* request
         return ER_AUTH_FAIL; /* done.  There is no more to try. */
     }
     size_t smallerCount = requestingAuthCount - 1;
-    uint32_t*smallerSuites = new uint32_t[smallerCount];
+    uint32_t* smallerSuites = new uint32_t[smallerCount];
     size_t idx = 0;
     for (size_t cnt = 0; cnt < requestingAuthCount; cnt++) {
         if ((requestingAuthList[cnt] & currentSuite) != currentSuite) {
@@ -1590,11 +1588,15 @@ void AllJoynPeerObj::SetupPeerAuthentication(const qcc::String& authMechanisms, 
 {
     peerAuthMechanisms = authMechanisms;
     peerAuthListener.Set(listener);
+
+    delete [] supportedAuthSuites;
+    supportedAuthSuites = NULL;
+    supportedAuthSuitesCount = 0;
+
     /* setup the peer auth mask */
     size_t pos;
     qcc::String remainder = authMechanisms;
     qcc::String mech;
-    supportedAuthSuitesCount = 0;
 
     bool done = false;
     int count = 0;
