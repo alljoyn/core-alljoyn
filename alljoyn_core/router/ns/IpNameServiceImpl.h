@@ -1023,6 +1023,8 @@ class IpNameServiceImpl : public qcc::Thread {
         uint32_t m_mtu;             /**< The MTU of the protocol/device we are using */
         uint32_t m_index;           /**< The interface index of the protocol/device we are using if IPv6 */
         uint32_t m_flags;           /**< The flags we found during the qcc::IfConfig() that originally discovered this iface */
+
+        bool m_messageSent;         /**< True if this interface has already been used to send a particular protocol message */
     };
 
     /**
