@@ -126,7 +126,14 @@ QStatus EndpointAuth::Hello(qcc::String& redirection)
             remoteGUID = qcc::GUID128(response->GetArg(1)->v_string.str);
             uint32_t temp = response->GetArg(2)->v_uint32;
             remoteProtocolVersion = temp & 0x3FFFFFFF;
-            nameTransfer = static_cast<SessionOpts::NameTransferType>(temp >> 30);
+            SessionOpts::NameTransferType tempNameTransfer = static_cast<SessionOpts::NameTransferType>(temp >> 30);
+            if (remoteProtocolVersion < 12 || (tempNameTransfer == SessionOpts::SLS_NAMES)) {
+                /* If protocol version is less than 12, set the name transfer requested.
+                 * If protocol version is 12 or above, ignore this value unless the request is for SLS_NAMES.
+                 * Version 12 and above routing nodes will send the name transfer as a part of AttachSessionWithNames.
+                 */
+                nameTransfer = tempNameTransfer;
+            }
             if (remoteGUID == bus.GetInternal().GetGlobalGUID()) {
                 QCC_DbgPrintf(("BusHello was sent to self"));
                 return ER_BUS_SELF_CONNECT;
@@ -246,7 +253,15 @@ QStatus EndpointAuth::WaitHello(qcc::String& authUsed)
                 remoteGUID = qcc::GUID128(args[0].v_string.str);
                 uint32_t temp = args[1].v_uint32;
                 remoteProtocolVersion = temp & 0x3FFFFFFF;
-                nameTransfer = static_cast<SessionOpts::NameTransferType>(temp >> 30);
+                SessionOpts::NameTransferType tempNameTransfer = static_cast<SessionOpts::NameTransferType>(temp >> 30);
+                if (remoteProtocolVersion < 12 || (tempNameTransfer == SessionOpts::SLS_NAMES)) {
+                    /* If protocol version is less than 12, set the name transfer requested.
+                     * If protocol version is 12 or above, ignore this value unless the request is for SLS_NAMES.
+                     * Version 12 and above routing nodes will send the name transfer as a part of AttachSessionWithNames.
+                     */
+                    nameTransfer = tempNameTransfer;
+                }
+
                 if (remoteGUID == bus.GetInternal().GetGlobalGUID()) {
                     QCC_DbgPrintf(("BusHello was sent by self"));
                     return ER_BUS_SELF_CONNECT;
