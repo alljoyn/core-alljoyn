@@ -15,6 +15,10 @@
 
 Import('env')
 
+vars = Variables()
+vars.Add(BoolVariable('TSAN', 'Enable Thread Sanitizer runtime checks', 'no'))
+vars.Update(env)
+
 # Linux specific flags
 env.Append(CPPDEFINES=['QCC_CPU_X86'])
 env.Append(CPPDEFINES=['QCC_CPU_X86_64'])
@@ -24,4 +28,10 @@ env.Append(CXXFLAGS=['-m64', '-fPIC'])
 env.Append(CFLAGS=['-m64', '-fPIC'])
 env.Append(LINKFLAGS=['-m64'])
 
-
+# Thread sanitizer control
+if env['TSAN']:
+   env.Append(CFLAGS = ['-fno-omit-frame-pointer', '-fsanitize=thread', '-fPIE'])
+   env.Append(CXXFLAGS = ['-fno-omit-frame-pointer', '-fsanitize=thread', '-fPIE'])
+   env.Append(LINKFLAGS = ['-fsanitize=thread', '-pie'])
+   if env['CXX'] != 'clang':
+      env.AppendUnique(LIBS = ['tsan'])
