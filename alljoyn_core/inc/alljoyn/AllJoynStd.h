@@ -61,25 +61,45 @@ extern const char* WellKnownName;     /**< Well known bus name */
 /** Interface definitions for org.alljoyn.Bus */
 namespace Bus {
 
-extern const char* ErrorName;                     /**< Standard AllJoyn error name */
-extern const char* ObjectPath;                    /**< Object path */
-extern const char* InterfaceName;                 /**< Interface name */
-extern const char* WellKnownName;                 /**< Well known bus name */
-extern const char* Secure;                        /**< Secure interface annotation */
+extern const char* ErrorName;     /**< Standard AllJoyn error name */
+extern const char* ObjectPath;    /**< Object path */
+extern const char* InterfaceName; /**< Interface name */
+extern const char* WellKnownName; /**< Well known bus name */
+extern const char* Secure;        /**< Secure interface annotation */
+
+/** Interface definitions for org.alljoyn.Bus.Application */
+namespace Application {
+extern const char* InterfaceName; /**< Interface name */
+}
 
 /** Interface definitions for org.alljoyn.Bus.Peer.* */
 namespace Peer {
-extern const char* ObjectPath;                         /**< Object path */
+extern const char* ObjectPath;    /**< Object path */
 namespace HeaderCompression {
-extern const char* InterfaceName;                      /**<Interface name */
+extern const char* InterfaceName; /**< Interface name */
 }
 namespace Authentication {
-extern const char* InterfaceName;                      /**<Interface name */
+extern const char* InterfaceName; /**< Interface name */
 }
 namespace Session {
-extern const char* InterfaceName;                      /**<Interface name */
+extern const char* InterfaceName; /**< Interface name */
 }
 }
+
+/** Interface definitions for org.alljoyn.Bus.Security */
+namespace Security {
+extern const char* ObjectPath; /**< Object path */
+namespace Application {
+extern const char* InterfaceName; /**< Interface name */
+}
+namespace ClaimableApplication {
+extern const char* InterfaceName; /**< Interface name */
+}
+namespace ManagedApplication {
+extern const char* InterfaceName; /**< Interface name */
+}
+}
+
 }
 
 /** Interface definitions for org.alljoyn.Daemon */
@@ -100,7 +120,6 @@ QStatus CreateInterfaces(BusAttachment& bus);          /**< Create the org.alljo
 }
 
 namespace allseen {
-
 /** Interface definitions for org.allseen.Introspectable */
 namespace Introspectable {
 
@@ -108,8 +127,8 @@ extern const char* IntrospectDocType;                 /**< Type of extended (wit
 extern const char* InterfaceName;                 /**< Interface name */
 
 }
-namespace Security {
 
+namespace Security {
 /** Interface definitions for org.allseen.Security.PermissionMgmt */
 namespace PermissionMgmt {
 extern const char* ObjectPath;                    /**< Object path */
