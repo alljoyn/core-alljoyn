@@ -14,8 +14,8 @@
 //    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 
-#import <SenTestingKit/SenTestingKit.h>
+#import <XCTest/XCTest.h>
 
-@interface AuthenticationTests : SenTestCase
+@interface AuthenticationTests : XCTestCase
 
 @end
