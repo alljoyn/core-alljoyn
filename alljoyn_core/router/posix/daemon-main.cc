@@ -59,6 +59,8 @@
 #include "BusController.h"
 #include "ConfigDB.h"
 
+#include "ConfigHelper.h"
+
 #if !defined(ROUTER_LIB)
 
 #if defined(QCC_OS_LINUX)
@@ -121,18 +123,18 @@ static const char defaultConfig[] =
 #endif
 
 /*
- * Router Power Source
+ * Options for router_power_source
  *  Always AC powered
  *  Battery powered and chargeable
  *  Battery powered and not chargeable
  *
- * Router Mobility
+ * Options for router_mobility
  *  Always Stationary
  *  Low mobility
  *  Intermediate mobility
  *  High mobility
  *
- * Router Availability
+ * Options for router_availability
  *  0-3 hr
  *  3-6 hr
  *  6-9 hr
@@ -142,11 +144,10 @@ static const char defaultConfig[] =
  *  18-21 hr
  *  21-24 hr
  *
- * Router Node Connection
+ * Options for router_node_connection
  *  Access Point
  *  Wired
  *  Wireless
- *
  */
 
 static const char internalConfig[] =
@@ -204,6 +205,7 @@ class OptParse {
         printAddressFd(-1), printPidFd(-1),
         internal(false),
         configService(false),
+        custom(false),
         verbosity(LOG_WARNING) {
     }
 
@@ -247,8 +249,20 @@ class OptParse {
     bool GetInternalConfig() const {
         return internal;
     }
+    bool GetCustomConfig() const {
+        return custom;
+    }
     bool GetServiceConfig() const {
         return configService;
+    }
+    qcc::String GetCustomConfigPrettyXml() {
+        configHelper.Pretty();
+        return configHelper.Generate();
+    }
+
+    qcc::String GetCustomConfigXml() {
+        configHelper.Normal();
+        return configHelper.Generate();
     }
 
   private:
@@ -269,6 +283,10 @@ class OptParse {
     int printPidFd;
     bool internal;
     bool configService;
+
+    bool custom;
+    ConfigHelper configHelper;
+
     int verbosity;
 
     void PrintUsage();
@@ -280,7 +298,7 @@ void OptParse::PrintUsage() {
 
     fprintf(
         stderr,
-        "%s [--session | --system | --internal | --config-file=FILE"
+        "%s [--session | --system | --internal | --config-file=FILE | --config"
 #if defined(QCC_OS_ANDROID) && defined(ROUTER_LIB)
         " | --config-service"
 #endif
@@ -298,6 +316,17 @@ void OptParse::PrintUsage() {
         "        Use the standard configuration for the system message bus.\n\n"
         "    --internal\n"
         "        Use a basic internally defined message bus for AllJoyn.\n\n"
+        "    --custom\n"
+        "        begin building your own custom configuration using\n"
+        "        --flag name value\n"
+        "        --limit name value\n"
+        "        --property name value\n"
+        "        --listen transport spec\n"
+        "        --listen transport DEL\n"
+        "        --clear\n"
+        "        --defaults\n"
+        "        --end\n\n"
+        "        as in \"--custom --listen tcp iface=*,port=9954 --end\n\n"
 #if defined(QCC_OS_ANDROID) && defined(ROUTER_LIB)
         "    --config-service\n"
         "        Use a configuration passed from the calling service.\n\n"
@@ -336,7 +365,6 @@ void OptParse::PrintUsage() {
         "");
 }
 
-
 OptParse::ParseResultCode OptParse::ParseResult()
 {
     ParseResultCode result = PR_OK;
@@ -354,25 +382,36 @@ OptParse::ParseResultCode OptParse::ParseResult()
             result = PR_EXIT_NO_ERROR;
             goto exit;
         } else if (arg.compare("--session") == 0) {
-            if (!configFile.empty() || internal) {
+            if (!configFile.empty() || internal || custom) {
                 result = PR_OPTION_CONFLICT;
                 goto exit;
             }
             configFile = "/etc/dbus-1/session.conf";
         } else if (arg.compare("--system") == 0) {
-            if (!configFile.empty() || internal) {
+            if (!configFile.empty() || internal || custom) {
                 result = PR_OPTION_CONFLICT;
                 goto exit;
             }
             configFile = "/etc/dbus-1/system.conf";
         } else if (arg.compare("--internal") == 0) {
-            if (!configFile.empty()) {
+            if (!configFile.empty() || custom) {
                 result = PR_OPTION_CONFLICT;
                 goto exit;
             }
             internal = true;
-        } else if (arg.compare("--config-file") == 0) {
+        } else if (arg.compare("--custom") == 0) {
             if (!configFile.empty() || internal) {
+                result = PR_OPTION_CONFLICT;
+                goto exit;
+            }
+            i = configHelper.ParseArgs(i, argc, argv);
+            if (0 == strcmp("--end", argv[i])) {
+                ++i;
+                printf("%s\n", GetCustomConfigPrettyXml().c_str());
+            }
+            custom = true;
+        } else if (arg.compare("--config-file") == 0) {
+            if (!configFile.empty() || internal || custom) {
                 result = PR_OPTION_CONFLICT;
                 goto exit;
             }
@@ -702,14 +741,18 @@ int CDECL_CALL main(int argc, char** argv, char** env)
         loggerSettings->SetFile(stderr);
     }
 
-    configStr = defaultConfig;
+    if (opts.GetCustomConfig()) {
+        configStr = opts.GetCustomConfigXml();
+    } else {
+        configStr = defaultConfig;
 #if defined(QCC_OS_ANDROID) && defined(ROUTER_LIB)
-    configStr.append(opts.GetServiceConfig() ? serviceConfig : internalConfig);
+        configStr.append(opts.GetServiceConfig() ? serviceConfig : internalConfig);
 #else
-    if (opts.GetInternalConfig()) {
-        configStr.append(internalConfig);
-    }
+        if (opts.GetInternalConfig()) {
+            configStr.append(internalConfig);
+        }
 #endif
+    }
 
     config = new ConfigDB(configStr, opts.GetConfigFile());
     if (!config->LoadConfig()) {
