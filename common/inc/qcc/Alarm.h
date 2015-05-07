@@ -138,7 +138,7 @@ class _Alarm {
 
   private:
 
-    static int32_t nextId;
+    static volatile int32_t nextId;
     Timespec alarmTime;
     AlarmListener* listener;
     uint32_t periodMs;

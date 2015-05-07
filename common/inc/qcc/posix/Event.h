@@ -218,7 +218,7 @@ class Event {
     EventType eventType;    /**< Indicates type of event */
     uint32_t timestamp;     /**< time for next triggering of TIMED Event */
     uint32_t period;        /**< Number of milliseconds between periodic timed events */
-    int32_t numThreads;     /**< Number of threads currently waiting on this event */
+    volatile int32_t numThreads; /**< Number of threads currently waiting on this event */
 
     /**
      * Protected copy constructor.

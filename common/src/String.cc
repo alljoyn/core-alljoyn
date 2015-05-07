@@ -600,7 +600,7 @@ void String::DecRef(ManagedCtx* ctx)
 {
     /* Decrement the ref count */
     if (ctx != &nullContext) {
-        uint32_t refs = DecrementAndFetch(&ctx->refCount);
+        int32_t refs = DecrementAndFetch(&ctx->refCount);
         if (0 == refs) {
 #if defined(QCC_OS_DARWIN) || defined(__clang__)
             ctx->~ManagedCtx();

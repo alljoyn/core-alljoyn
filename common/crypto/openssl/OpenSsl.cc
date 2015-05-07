@@ -67,7 +67,7 @@ void Crypto::Shutdown()
 #else /* !OPENSSL_THREADS */
 
 static Mutex* mutex = NULL;
-static int32_t refCount = 0;
+static volatile int32_t refCount = 0;
 
 OpenSsl_ScopedLock::OpenSsl_ScopedLock()
 {

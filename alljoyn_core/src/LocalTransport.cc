@@ -83,7 +83,7 @@ class _LocalEndpoint::Dispatcher : public qcc::Timer, public qcc::AlarmListener 
 
   private:
     _LocalEndpoint* endpoint;
-    static int32_t dispatcherCnt;
+    static volatile int32_t dispatcherCnt;
 
     Alarm pendingWork;
     bool needDeferredCallbacks;
@@ -92,7 +92,7 @@ class _LocalEndpoint::Dispatcher : public qcc::Timer, public qcc::AlarmListener 
     qcc::Mutex workLock;
 };
 
-int32_t _LocalEndpoint::Dispatcher::dispatcherCnt = 0;
+volatile int32_t _LocalEndpoint::Dispatcher::dispatcherCnt = 0;
 
 LocalTransport::~LocalTransport()
 {

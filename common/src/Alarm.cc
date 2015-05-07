@@ -29,7 +29,7 @@
 
 using namespace qcc;
 
-int32_t qcc::_Alarm::nextId = 0;
+volatile int32_t qcc::_Alarm::nextId = 0;
 
 _Alarm::_Alarm() : listener(NULL), periodMs(0), context(NULL), id(IncrementAndFetch(&nextId))
 {

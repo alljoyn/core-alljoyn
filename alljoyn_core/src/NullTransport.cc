@@ -99,7 +99,7 @@ class _NullEndpoint : public _BusEndpoint {
 
     bool AllowRemoteMessages() { return true; }
 
-    int32_t clientReady;
+    volatile int32_t clientReady;
     BusAttachment& clientBus;
     BusAttachment& routerBus;
 

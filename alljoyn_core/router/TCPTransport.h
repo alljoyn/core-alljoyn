@@ -768,7 +768,7 @@ class TCPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
 
     std::list<ListenRequest> m_pendingDiscoveries; /**< A list of discovery requests that came in while no interfaces were yet IFF_UP */
 
-    int32_t m_nsReleaseCount; /**< the number of times we have released the name service singleton */
+    volatile int32_t m_nsReleaseCount; /**< the number of times we have released the name service singleton */
 
     bool m_wildcardIfaceProcessed;
 

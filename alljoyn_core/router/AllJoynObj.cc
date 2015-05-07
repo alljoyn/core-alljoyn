@@ -70,7 +70,7 @@ using namespace qcc;
 namespace ajn {
 
 void* AllJoynObj::NameMapEntry::truthiness = reinterpret_cast<void*>(true);
-int AllJoynObj::JoinSessionThread::jstCount = 0;
+volatile int32_t AllJoynObj::JoinSessionThread::jstCount = 0;
 struct AllJoynObj::PingAlarmContext {
     enum Type {
         TRANSPORT_CONTEXT,

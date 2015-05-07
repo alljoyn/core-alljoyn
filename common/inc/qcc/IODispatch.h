@@ -354,14 +354,14 @@ class IODispatch : public Thread, public AlarmListener {
     std::map<Stream*, IODispatchEntry> dispatchEntries; /* map holding details of various streams registered with this IODispatch */
     bool reload;                                /* Flag used for synchronization of various methods with the Run thread */
     bool isRunning;                             /* Whether the run thread is still running. */
-    int32_t numAlarmsInProgress;                /* Number of alarms currently in progress. */
+    volatile int32_t numAlarmsInProgress;       /* Number of alarms currently in progress. */
     /* Whether the main loop is in an event wait.
      * This is used to ensure that a source/sink event is not deleted while the main thread
      * is waiting on it.
      */
     bool crit;
-    static int32_t iodispatchCnt;
-    static int32_t activeStreamsCnt;              /* Number of streams that have been started and not stopped yet */
+    static volatile int32_t iodispatchCnt;
+    static volatile int32_t activeStreamsCnt;     /* Number of streams that have been started and not stopped yet */
     static volatile uint64_t stopStreamTimestamp; /* Timestamp of the last stream stop, in milliseconds */
 };
 

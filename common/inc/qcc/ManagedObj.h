@@ -68,7 +68,7 @@ class ManagedObj {
 
     struct ManagedCtx {
         ManagedCtx(int32_t refCount) : refCount(refCount), magic(ManagedCtxMagic) { }
-        int32_t refCount;
+        volatile int32_t refCount;
         uint32_t magic;
     };
 
@@ -456,7 +456,7 @@ class ManagedObj {
     void IncRef()
     {
 #ifndef NDEBUG
-        uint32_t refs =
+        int32_t refs =
 #endif
         IncrementAndFetch(&context->refCount);
 
@@ -469,7 +469,7 @@ class ManagedObj {
     /** Decrement the ref count and deallocate if necessary. */
     void DecRef()
     {
-        uint32_t refs = DecrementAndFetch(&context->refCount);
+        int32_t refs = DecrementAndFetch(&context->refCount);
         if (0 == refs) {
             /* Call the overriden destructor */
             object->~T();

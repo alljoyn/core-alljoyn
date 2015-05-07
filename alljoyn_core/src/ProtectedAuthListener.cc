@@ -153,11 +153,11 @@ class AsyncTracker {
     std::list<AuthContext*> contexts;
     qcc::Mutex lock;
 
-    static int32_t refs;
+    static volatile int32_t refs;
     static AsyncTracker* self;
 };
 
-int32_t AsyncTracker::refs = 0;
+volatile int32_t AsyncTracker::refs = 0;
 AsyncTracker* AsyncTracker::self = NULL;
 
 void ProtectedAuthListener::Set(AuthListener* listener)
