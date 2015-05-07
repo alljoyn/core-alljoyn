@@ -534,7 +534,7 @@ QStatus Send(SocketFd sockfd, const void* buf, size_t len, size_t& sent)
     while (status == ER_OK) {
         ret = send(static_cast<int>(sockfd), buf, len, MSG_NOSIGNAL);
         if (ret == -1) {
-            if (errno == EAGAIN) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
                 status = ER_WOULDBLOCK;
             } else {
                 status = ER_OS_ERROR;
@@ -574,9 +574,13 @@ QStatus SendTo(SocketFd sockfd, IPAddress& remoteAddr, uint16_t remotePort, uint
     ret = sendto(static_cast<int>(sockfd), buf, len, flags | MSG_NOSIGNAL,
                  reinterpret_cast<struct sockaddr*>(&addr), addrLen);
     if (ret == -1) {
-        status = ER_OS_ERROR;
-        QCC_LogError(status, ("SendTo (sockfd = %u  addr = %s  port = %u): %d - %s",
-                              sockfd, remoteAddr.ToString().c_str(), remotePort, errno, strerror(errno)));
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            status = ER_WOULDBLOCK;
+        } else {
+            status = ER_OS_ERROR;
+            QCC_DbgHLPrintf(("SendTo (sockfd = %u, addr = %s, port = %u): %d - %s",
+                             sockfd, remoteAddr.ToString().c_str(), remotePort, errno, strerror(errno)));
+        }
     } else {
         sent = static_cast<size_t>(ret);
     }
@@ -826,10 +830,14 @@ QStatus SendWithFds(SocketFd sockfd, const void* buf, size_t len, size_t& sent, 
 
     memcpy(CMSG_DATA(cmsg), fdList, sz);
 
-    ssize_t ret = sendmsg(sockfd, &msg, 0);
+    ssize_t ret = sendmsg(static_cast<int>(sockfd), &msg, MSG_NOSIGNAL);
     if (ret == -1) {
-        status = ER_OS_ERROR;
-        QCC_DbgHLPrintf(("SendWithFds (sockfd = %u): %d - %s", sockfd, errno, strerror(errno)));
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            status = ER_WOULDBLOCK;
+        } else {
+            status = ER_OS_ERROR;
+            QCC_DbgHLPrintf(("SendWithFds (sockfd = %u): %d - %s", sockfd, errno, strerror(errno)));
+        }
     } else {
         sent = static_cast<size_t>(ret);
     }
@@ -841,8 +849,18 @@ QStatus SendWithFds(SocketFd sockfd, const void* buf, size_t len, size_t& sent, 
 
 QStatus SocketPair(SocketFd(&sockets)[2])
 {
+    QStatus status = ER_OK;
     int ret = socketpair(AF_UNIX, SOCK_STREAM, 0, sockets);
-    return (ret == 0) ? ER_OK : ER_FAIL;
+    if (ret == -1) {
+        status = ER_OS_ERROR;
+        QCC_LogError(status, ("SocketPair failed: %d - %s", errno, strerror(errno)));
+    } else {
+#if defined(QCC_OS_DARWIN)
+        DisableSigPipe(sockets[0]);
+        DisableSigPipe(sockets[1]);
+#endif
+    }
+    return status;
 }
 
 QStatus SetBlocking(SocketFd sockfd, bool blocking)

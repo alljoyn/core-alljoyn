@@ -15,171 +15,75 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 #include <gtest/gtest.h>
-
-#include <Status.h>
-#include <qcc/Util.h>
-#include <qcc/StringUtil.h>
+#include <utility>
 
 #include <qcc/Socket.h>
+#include <qcc/Thread.h>
+#include <qcc/Util.h>
 
 using namespace qcc;
-
-/*
- * Note: The test code shall NOT use any well-known or IANA registered ports.
- *       Hence, for test purposes, we shall restrict ourselves to
- *       'Dynamic Ports' range which have been specifically set aside for local
- *       and dynamic use.
- *
- *       Usually, a specific port number in dynamic ports range is not
- *       guaranteed to be available at all times and hence is not used as
- *       a service identifier. However, for the purposes of testing,
- *       ONLY dynamic ports are suitable.
- *
- *       For additional information see:
- *       http://tools.ietf.org/html/rfc6335#section-8.1.2
- */
-static uint16_t GetRandomPrivatePortNumber(void) {
-    const uint16_t priv_port_num_min = 49152;
-
-    /*
-     * The maximum private port number is 65535.
-     * The range (min, max) is visualized as a sequence of partitions,
-     * each of size 255 (max value of uint8_t returned by Rand8()).
-     * The number of partitions would be (65535 - 49152) / 255 = 64 (approx.)
-     * Two Rand8() numbers are generated to choose:
-     * i.  a particular partition among the 64, and
-     * ii. an offset into the partition
-     * respectively.
-     */
-
-    const uint8_t size_of_each_partition = 255;
-
-    uint8_t ith_partition = Rand8() >> 2;
-    uint8_t offset = Rand8();
-    return priv_port_num_min + ith_partition * size_of_each_partition + offset;
-}
+using namespace std;
 
 static void DeliverLine(AddressFamily addr_family, SocketType sock_type, String& line) {
-    String debug_string;
+    IPAddress hostAddr = (QCC_AF_INET6 == addr_family) ?
+                         IPAddress("::1") : IPAddress("127.0.0.1");
 
-    IPAddress this_host = (QCC_AF_INET6 == addr_family) ?
-                          IPAddress("::1") : IPAddress("127.0.0.1");
+    SocketFd clientFd = INVALID_SOCKET_FD;
+    uint16_t clientPort = 0;
+    EXPECT_EQ(ER_OK, Socket(addr_family, sock_type, clientFd));
+    EXPECT_EQ(ER_OK, Bind(clientFd, hostAddr, clientPort));
+    EXPECT_EQ(ER_OK, GetLocalAddress(clientFd, hostAddr, clientPort));
 
-    debug_string = (QCC_AF_INET6 == addr_family) ?
-                   debug_string.append("Sockets on IPv6 address = ") :
-                   debug_string.append("Sockets on IPv4 address = ");
-    debug_string += this_host.ToString();
-    debug_string = debug_string.append(". ");
+    SocketFd serverFd = INVALID_SOCKET_FD;
+    uint16_t serverPort = 0;
+    EXPECT_EQ(ER_OK, Socket(addr_family, sock_type, serverFd));
+    EXPECT_EQ(ER_OK, Bind(serverFd, hostAddr, serverPort));
+    EXPECT_EQ(ER_OK, GetLocalAddress(serverFd, hostAddr, serverPort));
 
-    QStatus talker_status = ER_FAIL;
-    SocketFd talker = INVALID_SOCKET_FD;
-    uint16_t talker_mouth = GetRandomPrivatePortNumber();
-
-    QStatus listener_status = ER_FAIL;
-    SocketFd listener = INVALID_SOCKET_FD;
-    uint16_t listener_ear = GetRandomPrivatePortNumber();
-
-    debug_string = debug_string.append("Talker socket on port: ");
-    debug_string += U32ToString(talker_mouth);
-    debug_string = debug_string.append(", Listener socket on port: ");
-    debug_string += U32ToString(listener_ear);
-
-    talker_status =
-        (ER_OK == Socket(addr_family, sock_type, talker)) &&
-        (ER_OK == Bind(talker, this_host, talker_mouth)) ?
-        ER_OK : talker_status;
-
-    listener_status =
-        (ER_OK == Socket(addr_family, sock_type, listener)) &&
-        (ER_OK == Bind(listener, this_host, listener_ear)) ?
-        ER_OK : listener_status;
-
-    QStatus connect_status = (ER_OK == talker_status && ER_OK == listener_status) ? ER_OK : ER_FAIL;
-
-    // For the new socketfd returned by Accept()
-    SocketFd listener_earpiece = INVALID_SOCKET_FD;
-
-    if (ER_OK == connect_status && QCC_SOCK_STREAM == sock_type) {
-        const int num_backlog_connections = 1;
-        connect_status = (ER_OK == Listen(listener, num_backlog_connections) &&
-                          ER_OK == Connect(talker, this_host, listener_ear) &&
-                          ER_OK == Accept(listener, this_host, talker_mouth, listener_earpiece)) ?
-                         ER_OK : ER_FAIL;
+    SocketFd acceptedFd = INVALID_SOCKET_FD;
+    if (QCC_SOCK_STREAM == sock_type) {
+        EXPECT_EQ(ER_OK, Listen(serverFd, 1));
+        EXPECT_EQ(ER_OK, Connect(clientFd, hostAddr, serverPort));
+        EXPECT_EQ(ER_OK, Accept(serverFd, hostAddr, clientPort, acceptedFd));
+        EXPECT_EQ(ER_OK, SetBlocking(clientFd, true));
+        EXPECT_EQ(ER_OK, SetBlocking(acceptedFd, true));
     }
 
-    debug_string = (QCC_SOCK_STREAM == sock_type) ?
-                   debug_string.append(", Type of sockets = TCP. ") :
-                   debug_string.append(", Type of sockets = UDP. ");
+    const char* sendBuf = line.c_str();
+    const size_t numBytes = line.length() + 1;
 
-    if (ER_OK == connect_status) {
-        QStatus said = ER_FAIL;
-        QStatus heard = ER_FAIL;
-
-        size_t amount_said = 0;
-        size_t amount_heard = 0;
-
-        const char* line_literal = line.c_str();
-        const size_t line_length = line.length();
-        uint8_t* scratch_pad = new uint8_t[line_length];
-
-        said = SendTo(talker, this_host, listener_ear,
-                      static_cast<const void*> (line_literal), line_length, amount_said);
-
-        if (ER_OK == said) {
-            heard = (QCC_SOCK_STREAM == sock_type) ?
-                    Recv(listener_earpiece,
-                         static_cast<void*> (scratch_pad), amount_said, amount_heard) :
-                    RecvFrom(listener, this_host, talker_mouth,
-                             static_cast<void*> (scratch_pad), amount_said, amount_heard);
-
-            if (ER_OK == heard) {
-                // Compare the number of said and heard octets
-                EXPECT_EQ(amount_said, amount_heard) << debug_string.c_str() <<
-                    "The number of octets transmitted by the talker: " <<
-                    amount_said << ", was not equal to the number of "
-                    "octets received by the listenener: " << amount_heard;
-
-                if (amount_said == amount_heard) {
-                    debug_string = debug_string.append("Talker's message: ");
-                    debug_string = debug_string.append(line_literal, amount_said);
-
-                    for (uint8_t i = 0; i < amount_heard; i++) {
-                        // Compare each said octet with respective heard octet
-                        EXPECT_EQ(static_cast<uint8_t> (line_literal[i]), scratch_pad[i]) <<
-                            debug_string.c_str() <<
-                            " The octet sent by the talker '" << line_literal[i] <<
-                            "' does not match the octet got by the listener '" <<
-                            scratch_pad[i] << "' at offset " << static_cast<unsigned int> (i) <<
-                            " out of " << amount_said << ".";
-                    }
-                }
-            }
-        }
-
-        // Clean-up
-        delete [] scratch_pad;
-        scratch_pad = NULL;
-
-        Close(talker);
-        if (QCC_SOCK_STREAM == sock_type) {
-            Close(listener_earpiece);
-        }
-        Close(listener);
+    size_t numSent = 0;
+    EXPECT_EQ(ER_OK, SendTo(clientFd, hostAddr, serverPort, static_cast<const void*> (sendBuf), numBytes, numSent));
+    uint8_t* recvBuf = new uint8_t[numBytes];
+    size_t numRecvd = 0;
+    if (QCC_SOCK_STREAM == sock_type) {
+        EXPECT_EQ(ER_OK, Recv(acceptedFd, static_cast<void*>(recvBuf), numSent, numRecvd));
     } else {
-        // Some OS-level error occurred
-        Close(talker);
-        printf("\n\tATTN: Test run cancelled possibly due to OS-level errors."
-               "\n\t      Talker status (socket creation & binding) was %s."
-               "\n\t      Listener status (socket creation & binding) was %s.",
-               QCC_StatusText(talker_status), QCC_StatusText(listener_status));
-        if (QCC_SOCK_STREAM == sock_type) {
-            printf("\n\t      Connect status (listen, connect, accept) was %s.",
-                   QCC_StatusText(connect_status));
+        EXPECT_EQ(ER_OK, RecvFrom(serverFd, hostAddr, clientPort, static_cast<void*>(recvBuf), numSent, numRecvd));
+    }
+
+    EXPECT_EQ(numSent, numRecvd);
+    if (numSent == numRecvd) {
+        for (uint8_t i = 0; i < numRecvd; i++) {
+            EXPECT_EQ(static_cast<uint8_t>(sendBuf[i]), recvBuf[i]);
         }
     }
+
+    delete [] recvBuf;
+    Close(clientFd);
+    if (QCC_SOCK_STREAM == sock_type) {
+        Close(acceptedFd);
+    }
+    Close(serverFd);
 }
 
-TEST(SocketTest, send_to_and_recv_from_test) {
+class SendToAndRecvFrom : public::testing::TestWithParam<pair<AddressFamily, SocketType> > {
+};
+
+TEST_P(SendToAndRecvFrom, SendAndReceive) {
+    AddressFamily addrFamily = GetParam().first;
+    SocketType sockType = GetParam().second;
+
     const char* wilson_lines[] = {
         "",
         "That smugness of yours really is an attractive quality.",
@@ -203,17 +107,17 @@ TEST(SocketTest, send_to_and_recv_from_test) {
         "It's a complete moron working with power tools. How much more suspenseful can you get?"
     };
 
-    String line;
-
     for (uint8_t i = 0; i < ArraySize(wilson_lines) + ArraySize(house_lines); i++) {
-        line = (0 == i % 2) ? String(wilson_lines[i / 2]) : String(house_lines[i / 2]);
-
-        AddressFamily af = (0 == Rand8() % 2) ? QCC_AF_INET6 : QCC_AF_INET;
-        SocketType st = (0 == Rand8() % 2) ? QCC_SOCK_DGRAM : QCC_SOCK_STREAM;
-
-        DeliverLine(af, st, line);
+        String line = (0 == i % 2) ? String(wilson_lines[i / 2]) : String(house_lines[i / 2]);
+        DeliverLine(addrFamily, sockType, line);
     }
 }
+
+INSTANTIATE_TEST_CASE_P(SocketTest, SendToAndRecvFrom,
+                        ::testing::Values(pair<AddressFamily, SocketType>(QCC_AF_INET6, QCC_SOCK_DGRAM),
+                                          pair<AddressFamily, SocketType>(QCC_AF_INET6, QCC_SOCK_STREAM),
+                                          pair<AddressFamily, SocketType>(QCC_AF_INET, QCC_SOCK_DGRAM),
+                                          pair<AddressFamily, SocketType>(QCC_AF_INET, QCC_SOCK_STREAM)));
 
 /*
  * File descriptors are local to a machine and are not meaningful beyond
@@ -236,142 +140,335 @@ TEST(SocketTest, send_to_and_recv_from_test) {
  * the other communication endpoint) that the socket is 'connected'.
  */
 
-TEST(SocketTest, send_and_receive_with_dummy_fds) {
-    String debug_string;
+class WithFdsTest : public::testing::TestWithParam<pair<AddressFamily, SocketType> > {
+};
+
+TEST_P(WithFdsTest, SendAndReceive) {
+    AddressFamily addrFamily = GetParam().first;
+    SocketType sockType = GetParam().second;
 
     SocketFd endpoint[2];
+    EXPECT_EQ(ER_OK, SocketPair(endpoint));
 
-    QStatus status = SocketPair(endpoint);
-
-    if (ER_OK == status) {
-        debug_string = debug_string.append("Successfully created a SocketPair. ");
-
-        String sender_message = String("Sending a list of some dummy fds.");
-        // dummy file descriptors
-        SocketFd original_list_of_fds[SOCKET_MAX_FILE_DESCRIPTORS];
-        for (uint8_t i = 0; i < ArraySize(original_list_of_fds); i++) {
-            original_list_of_fds[i] = INVALID_SOCKET_FD;
-        }
-
-        AddressFamily addr_family = (0 == Rand8() % 2) ? QCC_AF_INET6 : QCC_AF_INET;
-        IPAddress this_host = (QCC_AF_INET6 == addr_family) ? IPAddress("::1") : IPAddress("127.0.0.1");
-
-        // Initialize the dummy list of fds
-        for (uint8_t i = 0; i < ArraySize(original_list_of_fds); i++) {
-            if (ER_OK == Socket(addr_family, (0 == Rand8() % 2) ? QCC_SOCK_DGRAM : QCC_SOCK_STREAM, original_list_of_fds[i])) {
-                QStatus socket_bound = ER_FAIL;
-                while (ER_OK != socket_bound) {
-                    socket_bound = Bind(original_list_of_fds[i], this_host, GetRandomPrivatePortNumber());
-                }
-            }
-        }
-
-        QStatus sent = ER_FAIL;
-        QStatus received = ER_FAIL;
-
-        size_t amount_sent = 0;
-        size_t amount_received = 0;
-
-        const char* message_literal = sender_message.c_str();
-        const size_t message_length = sender_message.length();
-        uint8_t* scratch_pad = new uint8_t[message_length];
-
-        size_t num_of_total_fds = ArraySize(original_list_of_fds);
-        SocketFd* stash_of_fds = new SocketFd[num_of_total_fds];
-        size_t num_of_recvd_fds = 0;
-
-        sent =
-            SendWithFds(endpoint[0],
-                        static_cast<const void*> (message_literal), message_length,
-                        amount_sent,
-                        original_list_of_fds, num_of_total_fds, GetPid());
-
-        if (ER_OK == sent) {
-            received = RecvWithFds(endpoint[1],
-                                   static_cast<void*> (scratch_pad), amount_sent,
-                                   amount_received,
-                                   stash_of_fds, num_of_total_fds, num_of_recvd_fds);
-            if (ER_OK == received) {
-                // Compare the number of sent and received message octets
-                EXPECT_EQ(amount_sent, amount_received) << debug_string.c_str() <<
-                    "The number of octets sent by the sender: " << amount_sent <<
-                    ", was not equal to the number of octets received by the receiver: " << amount_received;
-
-                if (amount_sent == amount_received) {
-                    debug_string = debug_string.append("Sender's message: ");
-                    debug_string = debug_string.append(message_literal, amount_sent);
-
-                    for (uint8_t i = 0; i < amount_received; i++) {
-                        // Compare each sent octect with respective received octet
-                        EXPECT_EQ(static_cast<uint8_t> (message_literal[i]), scratch_pad[i]) <<
-                            debug_string.c_str() <<
-                            " The octet sent by the sender '" << message_literal[i] <<
-                            "' does not match the octet received by the receiver '" << scratch_pad[i] <<
-                            "' at offset " << static_cast<unsigned int> (i) <<
-                            " out of " << (amount_sent - 1) << ".";
-                    }
-                }
-
-                // Compare the number of fds sent and received
-                EXPECT_EQ(num_of_total_fds, num_of_recvd_fds) << debug_string.c_str() <<
-                    " The number of fds transmitted by the sender: " << num_of_total_fds <<
-                    ", was not equal to the number of fds received by the receiver: " << num_of_recvd_fds;
-
-                if (num_of_total_fds == num_of_recvd_fds) {
-                    debug_string = debug_string.append(" Sequence of port numbers (corresponding to sent fds): ");
-                    for (uint8_t i = 0; i < num_of_total_fds; i++) {
-                        uint16_t fd_port_number;
-                        if (ER_OK == GetLocalAddress(original_list_of_fds[i], this_host, fd_port_number)) {
-                            debug_string += U32ToString(fd_port_number);
-                            if (num_of_total_fds - 1 != i) {
-                                debug_string = debug_string.append(", ");
-                            }
-
-                        }
-                    }
-                    debug_string = debug_string.append(". ");
-
-                    for (uint8_t i = 0; i < num_of_total_fds; i++) {
-                        uint16_t local_addr_of_sent_fd;
-                        uint16_t local_addr_of_received_fd;
-
-                        // Compare each sent fd with respective received fd
-                        if (ER_OK == GetLocalAddress(original_list_of_fds[i], this_host, local_addr_of_sent_fd) &&
-                            ER_OK == GetLocalAddress(stash_of_fds[i], this_host, local_addr_of_received_fd)) {
-                            EXPECT_EQ(local_addr_of_sent_fd, local_addr_of_received_fd) <<
-                                debug_string.c_str() << "At index: " << static_cast<unsigned int> (i) <<
-                                ", the local address (port) of fd sent by the sender: " << local_addr_of_sent_fd <<
-                                " does not match the local address (port) of fd received by the receiver: " <<
-                                local_addr_of_received_fd;
-
-                        }
-                    }
-                }
-            }
-        }
-
-        // Clean-up
-        delete [] scratch_pad;
-        scratch_pad = NULL;
-        delete [] stash_of_fds;
-        stash_of_fds = NULL;
-
-        // Relinquish the dummy list of fds
-        for (uint8_t i = 0; i < ArraySize(original_list_of_fds); i++) {
-            // We only need to close those sockets that are valid. The invalid
-            // ones (i.e. SocketFd 0) cannot be bound in the first place.
-            if (INVALID_SOCKET_FD != original_list_of_fds[i]) {
-                Close(original_list_of_fds[i]);
-            }
-        }
-
-        Close(endpoint[0]);
-        Close(endpoint[1]);
-    } else {
-        // Some OS-level error occurred
-        Close(endpoint[0]);
-        Close(endpoint[1]);
-        printf("\n\tATTN: Test run cancelled possibly due to OS-level errors."
-               "\n\t      Status (socket pair creation) was %s.", QCC_StatusText(status));
+    String sender_message = String("Sending a list of some dummy fds.");
+    size_t numFds = SOCKET_MAX_FILE_DESCRIPTORS;
+    SocketFd* dummyFds = new SocketFd[numFds];
+    for (uint8_t i = 0; i < numFds; i++) {
+        dummyFds[i] = INVALID_SOCKET_FD;
     }
+
+    IPAddress hostAddr = (QCC_AF_INET6 == addrFamily) ? IPAddress("::1") : IPAddress("127.0.0.1");
+
+    /* Initialize the dummy list of fds */
+    for (uint8_t i = 0; i < numFds; i++) {
+        EXPECT_EQ(ER_OK, Socket(addrFamily, sockType, dummyFds[i]));
+        EXPECT_EQ(ER_OK, Bind(dummyFds[i], hostAddr, 0));
+    }
+
+    const char* sendBuf = sender_message.c_str();
+    const size_t numBytes = sender_message.length();
+    size_t actualBytesSent = 0;
+    EXPECT_EQ(ER_OK, SendWithFds(endpoint[0],
+                                 static_cast<const void*>(sendBuf), numBytes,
+                                 actualBytesSent,
+                                 dummyFds, numFds, GetPid()));
+
+    uint8_t* recvBuf = new uint8_t[numBytes];
+    size_t actualBytesRecvd = 0;
+    SocketFd* fds = new SocketFd[numFds];
+    size_t actualFdsRecvd = 0;
+    EXPECT_EQ(ER_OK, RecvWithFds(endpoint[1],
+                                 static_cast<void*>(recvBuf), numBytes,
+                                 actualBytesRecvd,
+                                 fds, numFds, actualFdsRecvd));
+
+    /* Compare sent and received message octets */
+    EXPECT_EQ(actualBytesSent, actualBytesRecvd);
+    for (uint8_t i = 0; i < actualBytesRecvd; i++) {
+        EXPECT_EQ(static_cast<uint8_t>(sendBuf[i]), recvBuf[i]);
+    }
+
+    /* Compare sent and received fds */
+    EXPECT_EQ(numFds, actualFdsRecvd);
+    for (uint8_t i = 0; i < actualFdsRecvd; i++) {
+        uint16_t dummyAddr, fdAddr;
+        EXPECT_EQ(ER_OK, GetLocalAddress(dummyFds[i], hostAddr, dummyAddr));
+        EXPECT_EQ(ER_OK, GetLocalAddress(fds[i], hostAddr, fdAddr));
+        EXPECT_EQ(dummyAddr, fdAddr);
+    }
+
+    for (uint8_t i = 0; i < actualFdsRecvd; i++) {
+        Close(fds[i]);
+    }
+    for (uint8_t i = 0; i < numFds; i++) {
+        Close(dummyFds[i]);
+    }
+    delete [] fds;
+    delete [] recvBuf;
+    delete [] dummyFds;
+    Close(endpoint[0]);
+    Close(endpoint[1]);
+}
+
+INSTANTIATE_TEST_CASE_P(SocketTest, WithFdsTest,
+                        ::testing::Values(pair<AddressFamily, SocketType>(QCC_AF_INET6, QCC_SOCK_DGRAM),
+                                          pair<AddressFamily, SocketType>(QCC_AF_INET6, QCC_SOCK_STREAM),
+                                          pair<AddressFamily, SocketType>(QCC_AF_INET, QCC_SOCK_DGRAM),
+                                          pair<AddressFamily, SocketType>(QCC_AF_INET, QCC_SOCK_STREAM)));
+
+class SocketTestErrors : public testing::Test {
+  public:
+    SocketFd serverFd;
+    IPAddress serverAddr;
+    uint16_t serverPort;
+    SocketFd clientFd;
+    SocketFd acceptedFd;
+    uint8_t buf[32768];
+    size_t numRecvd;
+    size_t numSent;
+    QStatus status;
+
+    static ThreadReturn STDCALL ServerAccept(void* arg)
+    {
+        SocketFd serverFd = reinterpret_cast<intptr_t>(arg);
+        IPAddress clientAddr;
+        uint16_t clientPort;
+        SocketFd clientFd = INVALID_SOCKET_FD;
+        EXPECT_EQ(ER_OK, Accept(serverFd, clientAddr, clientPort, clientFd));
+        EXPECT_EQ(ER_OK, SetBlocking(clientFd, true));
+        return reinterpret_cast<ThreadReturn>(clientFd);
+    }
+
+    virtual void SetUp()
+    {
+        serverFd = INVALID_SOCKET_FD;
+        clientFd = INVALID_SOCKET_FD;
+        acceptedFd = INVALID_SOCKET_FD;
+
+        /* Server SetUp */
+        EXPECT_EQ(ER_OK, Socket(QCC_AF_INET, QCC_SOCK_STREAM, serverFd));
+        serverAddr = Environ::GetAppEnviron()->Find("IP_ADDRESS", "127.0.0.1");
+        serverPort = 0;
+        EXPECT_EQ(ER_OK, Bind(serverFd, serverAddr, serverPort));
+        EXPECT_EQ(ER_OK, GetLocalAddress(serverFd, serverAddr, serverPort));
+        EXPECT_EQ(ER_OK, Listen(serverFd, 1));
+
+        /* Connect Server and Client */
+        Thread acceptThread("ServerAccept", ServerAccept);
+        EXPECT_EQ(ER_OK, acceptThread.Start(reinterpret_cast<void*>(serverFd)));
+        EXPECT_EQ(ER_OK, Socket(QCC_AF_INET, QCC_SOCK_STREAM, clientFd));
+        EXPECT_EQ(ER_OK, qcc::Connect(clientFd, serverAddr, serverPort));
+        EXPECT_EQ(ER_OK, SetBlocking(clientFd, true));
+        EXPECT_EQ(ER_OK, acceptThread.Join());
+        acceptedFd = reinterpret_cast<intptr_t>(acceptThread.GetExitValue());
+    }
+
+    virtual void TearDown()
+    {
+        Close(acceptedFd);
+        Close(clientFd);
+        Close(serverFd);
+    }
+
+    void Close(SocketFd& sockFd)
+    {
+        if (sockFd != INVALID_SOCKET_FD) {
+            qcc::Close(sockFd);
+            sockFd = INVALID_SOCKET_FD;
+        }
+    }
+};
+
+TEST_F(SocketTestErrors, RecvWhenNotConnected)
+{
+    SocketFd sockFd = INVALID_SOCKET_FD;
+    EXPECT_EQ(ER_OK, Socket(QCC_AF_INET, QCC_SOCK_STREAM, sockFd));
+    EXPECT_EQ(ER_OS_ERROR, Recv(sockFd, buf, 1, numRecvd));
+    Close(sockFd);
+}
+
+TEST_F(SocketTestErrors, RecvAfterOrderlyRelease)
+{
+    Close(clientFd);
+    EXPECT_EQ(ER_OK, Recv(acceptedFd, buf, 1, numRecvd));
+    EXPECT_EQ(0U, numRecvd);
+}
+
+TEST_F(SocketTestErrors, RecvAfterAbortiveRelease)
+{
+    SetLinger(clientFd, true, 0);
+    Close(clientFd);
+    EXPECT_EQ(ER_OS_ERROR, Recv(acceptedFd, buf, 1, numRecvd));
+}
+
+TEST_F(SocketTestErrors, RecvWouldBlock)
+{
+    EXPECT_EQ(ER_OK, SetBlocking(acceptedFd, false));
+    EXPECT_EQ(ER_WOULDBLOCK, Recv(acceptedFd, buf, 1, numRecvd));
+}
+
+TEST_F(SocketTestErrors, SendWhenConnected)
+{
+    EXPECT_EQ(ER_OK, Send(acceptedFd, buf, 1, numSent));
+}
+
+TEST_F(SocketTestErrors, SendWhenNotConnected)
+{
+    SocketFd sockFd = INVALID_SOCKET_FD;
+    EXPECT_EQ(ER_OK, Socket(QCC_AF_INET, QCC_SOCK_STREAM, sockFd));
+    EXPECT_EQ(ER_OS_ERROR, Send(sockFd, buf, 0, numSent));
+    EXPECT_EQ(ER_OS_ERROR, Send(sockFd, buf, 1, numSent));
+    Close(sockFd);
+}
+
+TEST_F(SocketTestErrors, SendAfterOrderlyRelease)
+{
+    Close(clientFd);
+    while ((status = Send(acceptedFd, buf, ArraySize(buf), numSent)) == ER_OK)
+        ;
+    EXPECT_EQ(ER_OS_ERROR, status);
+}
+
+TEST_F(SocketTestErrors, SendAfterAbortiveRelease)
+{
+    SetLinger(clientFd, true, 0);
+    Close(clientFd);
+    while ((status = Send(acceptedFd, buf, ArraySize(buf), numSent)) == ER_OK)
+        ;
+    EXPECT_EQ(ER_OS_ERROR, status);
+}
+
+TEST_F(SocketTestErrors, SendWouldBlock)
+{
+    EXPECT_EQ(ER_OK, SetBlocking(acceptedFd, false));
+    while ((status = Send(acceptedFd, buf, ArraySize(buf), numSent)) == ER_OK)
+        ;
+    EXPECT_EQ(ER_WOULDBLOCK, status);
+}
+
+class SocketTestWithFdsErrors : public testing::Test {
+  public:
+    SocketFd endpoint[2];
+    SocketFd clientFd;
+    SocketFd acceptedFd;
+    uint8_t buf[2048];
+    size_t numRecvd;
+    size_t numSent;
+    SocketFd fds[SOCKET_MAX_FILE_DESCRIPTORS + 1];
+    size_t numFds;
+    QStatus status;
+
+    virtual void SetUp()
+    {
+        EXPECT_EQ(ER_OK, SocketPair(endpoint));
+        clientFd = endpoint[0];
+        acceptedFd = endpoint[1];
+        for (size_t i = 0; i < ArraySize(fds); ++i) {
+            EXPECT_EQ(ER_OK, Socket(QCC_AF_INET, QCC_SOCK_STREAM, fds[i]));
+        }
+    }
+
+    virtual void TearDown()
+    {
+        for (size_t i = 0; i < ArraySize(fds); ++i) {
+            Close(fds[i]);
+        }
+        Close(acceptedFd);
+        Close(clientFd);
+    }
+
+    void Close(SocketFd& sockFd)
+    {
+        if (sockFd != INVALID_SOCKET_FD) {
+            qcc::Close(sockFd);
+            sockFd = INVALID_SOCKET_FD;
+        }
+    }
+};
+
+TEST_F(SocketTestWithFdsErrors, RecvWhenNotConnected)
+{
+    SocketFd sockFd = INVALID_SOCKET_FD;
+    EXPECT_EQ(ER_OK, Socket(QCC_AF_INET, QCC_SOCK_STREAM, sockFd));
+    EXPECT_EQ(ER_OS_ERROR, RecvWithFds(sockFd, buf, 0, numRecvd, fds, 1, numFds));
+    EXPECT_EQ(ER_OS_ERROR, RecvWithFds(sockFd, buf, 1, numRecvd, fds, 1, numFds));
+    Close(sockFd);
+}
+
+TEST_F(SocketTestWithFdsErrors, RecvArgs)
+{
+    EXPECT_EQ(ER_BAD_ARG_5, RecvWithFds(acceptedFd, buf, 0, numRecvd, NULL, 0, numFds));
+    EXPECT_EQ(ER_BAD_ARG_6, RecvWithFds(acceptedFd, buf, 0, numRecvd, fds, 0, numFds));
+}
+
+TEST_F(SocketTestWithFdsErrors, RecvAfterOrderlyRelease)
+{
+    Close(clientFd);
+    EXPECT_EQ(ER_OK, RecvWithFds(acceptedFd, buf, 1, numRecvd, fds, 1, numFds));
+    EXPECT_EQ(0U, numRecvd);
+}
+
+TEST_F(SocketTestWithFdsErrors, RecvAfterAbortiveRelease)
+{
+    SetLinger(clientFd, true, 0);
+    Close(clientFd);
+    while ((status = Send(acceptedFd, buf, ArraySize(buf), numSent)) == ER_OK)
+        ;
+    EXPECT_EQ(ER_OS_ERROR, status);
+}
+
+TEST_F(SocketTestWithFdsErrors, RecvWouldBlock)
+{
+    EXPECT_EQ(ER_OK, SetBlocking(acceptedFd, false));
+    EXPECT_EQ(ER_WOULDBLOCK, RecvWithFds(acceptedFd, buf, 1, numRecvd, fds, 1, numFds));
+}
+
+TEST_F(SocketTestWithFdsErrors, SendWhenConnected)
+{
+    EXPECT_EQ(ER_OK, SendWithFds(acceptedFd, buf, 1, numSent, fds, 1, GetPid()));
+}
+
+TEST_F(SocketTestWithFdsErrors, SendWhenNotConnected)
+{
+    SocketFd sockFd = INVALID_SOCKET_FD;
+    EXPECT_EQ(ER_OK, Socket(QCC_AF_INET, QCC_SOCK_STREAM, sockFd));
+    EXPECT_EQ(ER_OS_ERROR, SendWithFds(sockFd, buf, 0, numSent, fds, 1, GetPid()));
+    EXPECT_EQ(ER_OS_ERROR, SendWithFds(sockFd, buf, 1, numSent, fds, 1, GetPid()));
+    Close(sockFd);
+}
+
+TEST_F(SocketTestWithFdsErrors, SendArgs)
+{
+    EXPECT_EQ(ER_BAD_ARG_5, SendWithFds(acceptedFd, buf, 1, numSent, NULL, 1, GetPid()));
+    EXPECT_EQ(ER_BAD_ARG_6, SendWithFds(acceptedFd, buf, 1, numSent, fds, 0, GetPid()));
+    EXPECT_EQ(ER_BAD_ARG_6, SendWithFds(acceptedFd, buf, 1, numSent, fds, SOCKET_MAX_FILE_DESCRIPTORS + 1, GetPid()));
+}
+
+TEST_F(SocketTestWithFdsErrors, SendAfterOrderlyRelease)
+{
+    Close(clientFd);
+    while ((status = SendWithFds(acceptedFd, buf, 1, numSent, fds, 1, GetPid())) == ER_OK)
+        ;
+    EXPECT_EQ(ER_OS_ERROR, status);
+}
+
+TEST_F(SocketTestWithFdsErrors, SendAfterAbortiveRelease)
+{
+    SetLinger(clientFd, true, 0);
+    Close(clientFd);
+    EXPECT_EQ(ER_OS_ERROR, SendWithFds(acceptedFd, buf, 1, numSent, fds, 1, GetPid()));
+}
+
+TEST_F(SocketTestWithFdsErrors, SendWouldBlock)
+{
+    EXPECT_EQ(ER_OK, SetBlocking(acceptedFd, false));
+    /*
+     * Set this artificially low to force a blocking send.  Otherwise
+     * different behavior occurs depending on the TCP window size
+     * (either would block or connection reset).
+     */
+    EXPECT_EQ(ER_OK, SetSndBuf(acceptedFd, 8192));
+    while ((status = SendWithFds(acceptedFd, buf, ArraySize(buf), numSent, fds, 1, GetPid())) == ER_OK)
+        ;
+    EXPECT_EQ(ER_WOULDBLOCK, status);
 }

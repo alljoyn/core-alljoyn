@@ -189,7 +189,8 @@ QStatus Connect(SocketFd sockfd, const IPAddress& remoteAddr, uint16_t remotePor
 
         default:
             status = ER_OS_ERROR;
-            QCC_LogError(status, ("Connecting to %s %d: %s", remoteAddr.ToString().c_str(), remotePort, GetLastErrorString().c_str()));
+            QCC_DbgHLPrintf(("Connecting to %s %d: %s", remoteAddr.ToString().c_str(), remotePort,
+                             GetLastErrorString().c_str()));
             break;
         }
     } else {
@@ -429,7 +430,7 @@ QStatus Send(SocketFd sockfd, const void* buf, size_t len, size_t& sent)
             status = ER_WOULDBLOCK;
         } else {
             status = ER_OS_ERROR;
-            QCC_LogError(status, ("Send: %s", GetLastErrorString().c_str()));
+            QCC_DbgHLPrintf(("Send: %s", GetLastErrorString().c_str()));
         }
     } else {
         sent = static_cast<size_t>(ret);
@@ -461,7 +462,7 @@ QStatus SendTo(SocketFd sockfd, IPAddress& remoteAddr, uint16_t remotePort, uint
             status = ER_WOULDBLOCK;
         } else {
             status = ER_OS_ERROR;
-            QCC_LogError(status, ("Send: %s", GetLastErrorString().c_str()));
+            QCC_DbgHLPrintf(("Send: %s", GetLastErrorString().c_str()));
         }
     } else {
         sent = static_cast<size_t>(ret);
@@ -490,6 +491,7 @@ QStatus Recv(SocketFd sockfd, void* buf, size_t len, size_t& received)
             status = ER_WOULDBLOCK;
         } else {
             status = ER_OS_ERROR;
+            QCC_DbgHLPrintf(("Recv (sockfd = %d): %s", sockfd, GetLastErrorString().c_str()));
         }
         received = 0;
     } else {
@@ -625,7 +627,7 @@ QStatus RecvFrom(SocketFd sockfd, IPAddress& remoteAddr, uint16_t& remotePort,
             status = ER_WOULDBLOCK;
         } else {
             status = ER_OS_ERROR;
-            QCC_LogError(status, ("Receive: %s", GetLastErrorString().c_str()));
+            QCC_DbgHLPrintf(("RecvFrom: %s", GetLastErrorString().c_str()));
         }
         received = 0;
     } else {
@@ -669,7 +671,7 @@ QStatus RecvWithFds(SocketFd sockfd, void* buf, size_t len, size_t& received, So
         ret = recv(sockfd, &fdCount, 1, MSG_OOB);
         if (ret == SOCKET_ERROR) {
             status = ER_OS_ERROR;
-            QCC_LogError(status, ("RecvWithFds recv (MSG_OOB): %s", GetLastErrorString().c_str()));
+            QCC_DbgHLPrintf(("RecvWithFds recv (MSG_OOB): %s", GetLastErrorString().c_str()));
         } else {
             recvdFds = fdCount;
             QCC_DbgHLPrintf(("RecvWithFds OOB %d handles", recvdFds));
@@ -749,8 +751,13 @@ QStatus SendWithFds(SocketFd sockfd, const void* buf, size_t len, size_t& sent, 
     char oob = static_cast<char>(numFds);
     int ret = send(sockfd, &oob, 1, MSG_OOB);
     if (ret == SOCKET_ERROR) {
-        status = ER_OS_ERROR;
-        QCC_LogError(status, ("RecvWithFds recv (MSG_OOB): %s", GetLastErrorString().c_str()));
+        if (WSAGetLastError() == WSAEWOULDBLOCK) {
+            sent = 0;
+            status = ER_WOULDBLOCK;
+        } else {
+            status = ER_OS_ERROR;
+            QCC_DbgHLPrintf(("RecvWithFds recv (MSG_OOB): %s", GetLastErrorString().c_str()));
+        }
     } else {
         QCC_DbgHLPrintf(("SendWithFds OOB %d handles", oob));
     }
