@@ -20,6 +20,7 @@
 #include <alljoyn_c/AboutObjectDescription.h>
 #include <alljoyn_c/AboutProxy.h>
 #include <alljoyn_c/BusAttachment.h>
+#include <alljoyn_c/Init.h>
 
 #include <signal.h>
 #include <stdio.h>
@@ -346,7 +347,20 @@ int CDECL_CALL main(int argc, char** argv)
     QCC_UNUSED(argv);
     /* Install SIGINT handler so Ctrl + C deallocates memory properly */
     signal(SIGINT, sig_int_handler);
-    QStatus status = ER_FAIL;
+
+    QStatus status = alljoyn_init();
+    if (ER_OK != status) {
+        printf("alljoyn_init failed (%s)\n", QCC_StatusText(status));
+        return 1;
+    }
+#ifdef ROUTER
+    status = alljoyn_routerinit();
+    if (ER_OK != status) {
+        printf("alljoyn_routerinit failed (%s)\n", QCC_StatusText(status));
+        alljoyn_shutdown();
+        return 1;
+    }
+#endif
 
     g_bus = alljoyn_busattachment_create("AboutServiceTest", QCC_TRUE);
 
@@ -400,5 +414,10 @@ int CDECL_CALL main(int argc, char** argv)
     alljoyn_busattachment_join(g_bus);
 
     alljoyn_busattachment_destroy(g_bus);
+
+#ifdef ROUTER
+    alljoyn_routershutdown();
+#endif
+    alljoyn_shutdown();
     return 0;
 }
