@@ -55,9 +55,10 @@ public class UseActivity extends Activity implements Observer {
         hlv.setAdapter(mHistoryList);
 
         EditText messageBox = (EditText)findViewById(R.id.useMessage);
+        messageBox.setSingleLine();
         messageBox.setOnEditorActionListener(new TextView.OnEditorActionListener() {
             public boolean onEditorAction(TextView view, int actionId, KeyEvent event) {
-                if (actionId == EditorInfo.IME_NULL && event.getAction() == KeyEvent.ACTION_UP) {
+                if (actionId == EditorInfo.IME_ACTION_DONE) {
                     String message = view.getText().toString();
                     Log.i(TAG, "useMessage.onEditorAction(): got message " + message + ")");
                     mChatApplication.newLocalUserMessage(message);
