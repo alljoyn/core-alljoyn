@@ -93,7 +93,7 @@ const uint32_t SIGNAL_INDEX = 99;
  */
 TEST(EventTest, Below64Handles1)
 {
-    RunEventTest(1, 0, T1, T2);
+    RunEventTest(2, 0, T1, T2);
 }
 
 TEST(EventTest, Below64Handles2)

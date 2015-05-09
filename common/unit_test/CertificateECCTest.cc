@@ -243,6 +243,22 @@ static const char eccCertChainX509PEMCAPI[] = {
     "-----END CERTIFICATE-----\n"
 };
 
+/* Bad certificate had a signature len of zero. */
+static const char badCertX509PEMSignatureLenZero[] = {
+    "-----BEGIN CERTIFICATE-----\n"
+    "MIIBtDCCAVmgAwIBAgIJAMlyFqk69v+OMAoGCCqGSM49BAMCMFYxKTAnBgNVBAsM\n"
+    "IDdhNDhhYTI2YmM0MzQyZjZhNjYyMDBmNzdhODlkZDAyMSkwJwYDVQQDDCA3YTQ4\n"
+    "YWEyNmJjNDM0MmY2YTY2MjAwZjc3YTg5ZGQwMjAeFw0xNTAyMjYyMTUxMjVaFw0x\n"
+    "NjAyMjYyMTUxMjVaMFYxKTAnBgNVBAsMIDZkODVjMjkyMjYxM2IzNmUyZWVlZjUy\n"
+    "NzgwNDJjYzU2MSkwJwYDVQQDDCA2ZDg1YzI5MjI2MTNiMzZlMmVlZWY1Mjc4MDQy\n"
+    "Y2M1NjBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABL50XeH1/aKcIF1+BJtlIgjL\n"
+    "AW32qoQdVOTyQg2WnM/R7pgxM2Ha0jMpksUd+JS9BiVYBBArwU76Whz9m6UyJeqj\n"
+    "EDAOMAwGA1UdEwQFMAMBAf8wCgYIKoZIzj0EAwIDAAAwRgIhAKfmglMgl67L5ALF\n"
+    "Z63haubkItTMACY1k4ROC2q7cnVmAiEArvAmcVInOq/U5C1y2XrvJQnAdwSl/Ogr\n"
+    "IizUeK0oI5c=\n"
+    "-----END CERTIFICATE-----"
+};
+
 class CertificateECCTest : public testing::Test {
   public:
     Crypto_ECC ecc;
@@ -485,6 +501,16 @@ TEST_F(CertificateECCTest, VerifyX509SelfSignExternalCert)
     VerifyX509SelfSignExternalCertHelper(eccSelfSignCertX509PEMOpenSSL);
     VerifyX509SelfSignExternalCertHelper(eccSelfSignCertX509PEMCAPI);
     VerifyX509SelfSignExternalCertHelper(eccSelfSignCertX509OpenSSLWithAKI);
+}
+
+/**
+ * test a bad cert with zero length signature
+ */
+TEST_F(CertificateECCTest, BadCertDoesNotLoad)
+{
+    CertificateX509 cert;
+    String pem(badCertX509PEMSignatureLenZero);
+    ASSERT_NE(ER_OK, cert.LoadPEM(pem)) << " load external cert PEM did not fail";
 }
 
 /**

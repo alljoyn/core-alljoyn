@@ -111,7 +111,7 @@ class _RemoteEndpoint::Internal {
     Features features;                       /**< Requested and negotiated features of this endpoint */
     uint32_t processId;                      /**< Process id of the process at the remote end of this endpoint */
     uint32_t alljoynVersion;                 /**< AllJoyn version of the process at the remote end of this endpoint */
-    int32_t refCount;                        /**< Number of active users of this remote endpoint */
+    volatile int32_t refCount;               /**< Number of active users of this remote endpoint */
     bool isSocket;                           /**< True iff this endpoint contains a SockStream as its 'stream' member */
     bool armRxPause;                         /**< Pause Rx after receiving next METHOD_REPLY message */
 
@@ -947,6 +947,15 @@ QStatus _RemoteEndpoint::WriteCallback(qcc::Sink& sink, bool isTimedOut)
              */
             status = ER_OK;
         }
+        if (status == ER_PERMISSION_DENIED) {
+            /*
+             * Clear the error otherwise we will exit
+             * this thread which will shut down the endpoint.
+             * We can't deliver this message to the peer since the peer is not
+             * authorized to receive it.
+             */
+            status = ER_OK;
+        }
         if (status == ER_OK) {
 
             /* Message has been successfully delivered. i.e. PushBytes is complete
@@ -1278,14 +1287,14 @@ QStatus _RemoteEndpoint::PushMessage(Message& msg)
 
 void _RemoteEndpoint::IncrementRef()
 {
-    int refs = IncrementAndFetch(&internal->refCount);
+    int32_t refs = IncrementAndFetch(&internal->refCount);
     QCC_DbgPrintf(("_RemoteEndpoint::IncrementRef(%s) refs=%d\n", GetUniqueName().c_str(), refs));
     QCC_UNUSED(refs); /* avoid unused variable warning in release build */
 }
 
 void _RemoteEndpoint::DecrementRef()
 {
-    int refs = DecrementAndFetch(&internal->refCount);
+    int32_t refs = DecrementAndFetch(&internal->refCount);
     QCC_DbgPrintf(("_RemoteEndpoint::DecrementRef(%s) refs=%d\n", GetUniqueName().c_str(), refs));
     if (refs <= 0) {
         if (minimalEndpoint && refs == 0) {

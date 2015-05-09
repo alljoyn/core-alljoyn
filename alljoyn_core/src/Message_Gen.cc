@@ -496,6 +496,10 @@ QStatus _Message::Deliver(RemoteEndpoint& endpoint)
         if (status == ER_BUS_AUTHENTICATION_PENDING) {
             return ER_OK;
         }
+        if (ER_PERMISSION_DENIED == status) {
+            return status;
+        }
+
     }
     /*
      * Push the message to the endpoint sink (only push handles in the first chunk)
@@ -566,6 +570,9 @@ QStatus _Message::DeliverNonBlocking(RemoteEndpoint& endpoint)
              */
             if (status == ER_BUS_AUTHENTICATION_PENDING) {
                 return ER_OK;
+            }
+            if (ER_PERMISSION_DENIED == status) {
+                return status;
             }
             /*
              * Recompute because encryption increases the packet length

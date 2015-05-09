@@ -77,9 +77,9 @@ public class AboutListenerTest  extends TestCase {
             Map<String, Variant> arg = new HashMap<String, Variant>();
             //nonlocalized values
             arg.put("AppId",  new Variant(new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 }));
-            arg.put("DefaultLanguage",  new Variant(new String("en")));
+            arg.put("DefaultLanguage",  new Variant("en"));
             arg.put("DeviceId",  new Variant(new String("93c06771-c725-48c2-b1ff-6a2a59d445b8")));
-            arg.put("ModelNumber", new Variant(new String("A1B2C3")));
+            arg.put("ModelNumber", new Variant("A1B2C3"));
             arg.put("SupportedLanguages", new Variant(new String[] {"en", "es"}));
             arg.put("DateOfManufacture", new Variant(new String("2014-09-23")));
             arg.put("SoftwareVersion", new Variant(new String("1.0")));
@@ -88,12 +88,12 @@ public class AboutListenerTest  extends TestCase {
             arg.put("SupportUrl", new Variant(new String("http://www.example.com/support")));
             //localized values
             if ((language == null) || (language.length() == 0) || language.equalsIgnoreCase("en")) {
-                arg.put("DeviceName", new Variant(new String("A device name")));
-                arg.put("AppName", new Variant(new String("An application name")));
-                arg.put("Manufacturer", new Variant(new String("A mighty manufacturing company")));
-                arg.put("Description", new Variant(new String("Sample showing the about feature in a service application")));
+                arg.put("DeviceName", new Variant("A device name"));
+                arg.put("AppName", new Variant("An application name"));
+                arg.put("Manufacturer", new Variant("A mighty manufacturing company"));
+                arg.put("Description", new Variant("Sample showing the about feature in a service application"));
             } else if (language.equalsIgnoreCase("es")) { //Spanish
-                arg.put("DeviceName", new Variant(new String("Un nombre de dispositivo")));
+                arg.put("DeviceName", new Variant("Un nombre de dispositivo"));
                 arg.put("AppName", new Variant(new String("Un nombre de aplicación")));
                 arg.put("Manufacturer", new Variant(new String("Una empresa de fabricación de poderosos")));
                 arg.put("Description", new Variant(new String("Muestra que muestra la característica de sobre en una aplicación de servicio")));
@@ -107,12 +107,12 @@ public class AboutListenerTest  extends TestCase {
         public Map<String, Variant> getAnnouncedAboutData() throws ErrorReplyBusException {
             Map<String, Variant> announceArg = new HashMap<String, Variant>();
             announceArg.put("AppId",  new Variant(new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 }));
-            announceArg.put("DefaultLanguage",  new Variant(new String("en")));
-            announceArg.put("DeviceName", new Variant(new String("A device name")));
+            announceArg.put("DefaultLanguage",  new Variant("en"));
+            announceArg.put("DeviceName", new Variant("A device name"));
             announceArg.put("DeviceId",  new Variant(new String("93c06771-c725-48c2-b1ff-6a2a59d445b8")));
-            announceArg.put("AppName", new Variant(new String("An application name")));
-            announceArg.put("Manufacturer", new Variant(new String("A mighty manufacturing company")));
-            announceArg.put("ModelNumber", new Variant(new String("A1B2C3")));
+            announceArg.put("AppName", new Variant("An application name"));
+            announceArg.put("Manufacturer", new Variant("A mighty manufacturing company"));
+            announceArg.put("ModelNumber", new Variant("A1B2C3"));
             return announceArg;
         }
     }
@@ -763,7 +763,7 @@ public class AboutListenerTest  extends TestCase {
         assertEquals(Status.OK, aboutObj.announce(PORT_NUMBER, aboutData));
 
         for (int msec = 0; msec < 20000; msec += 5) {
-            if (aListener1.announcedFlag == true && 
+            if (aListener1.announcedFlag == true &&
                     aListener2.announcedFlag == true &&
                     aListener3.announcedFlag == true) {
                 break;
@@ -860,7 +860,7 @@ public class AboutListenerTest  extends TestCase {
         assertEquals(Status.OK, aboutObj.announce(PORT_NUMBER, aboutData));
 
         for (int msec = 0; msec < 20000; msec += 5) {
-            if (aListener1.announcedFlag == true && 
+            if (aListener1.announcedFlag == true &&
                     aListener2.announcedFlag == true &&
                     aListener3.announcedFlag == true) {
                 break;

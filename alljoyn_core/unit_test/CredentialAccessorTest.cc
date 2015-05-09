@@ -559,7 +559,7 @@ TEST_F(CredentialAccessorTest, TwoKeysWithTheSameGUID)
 
 }
 
-#if defined(QCC_OS_GROUP_POSIX)
+#if defined(QCC_OS_LINUX)
 
 /** a keystore compatibility test using old key store generated in a linux
  * application with keystore version 0x103.

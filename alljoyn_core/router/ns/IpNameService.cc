@@ -160,7 +160,7 @@ void IpNameService::Acquire(const qcc::String& guid, bool loopback)
     assert(m_constructed && "IpNameService::Acquire(): Singleton not constructed");
 
     ASSERT_STATE("Acquire");
-    int refs = qcc::IncrementAndFetch(&m_refCount);
+    int32_t refs = qcc::IncrementAndFetch(&m_refCount);
     if (refs == 1) {
         //
         // The first transport in gets to set the GUID and the loopback mode.

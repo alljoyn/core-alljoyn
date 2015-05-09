@@ -545,7 +545,7 @@ class IpNameService {
 
     bool m_constructed;          /**< State variable indicating the singleton has been constructed */
     bool m_destroyed;            /**< State variable indicating the singleton has been destroyed */
-    int32_t m_refCount;          /**< The number of transports that have registered as users of the singleton */
+    volatile int32_t m_refCount; /**< The number of transports that have registered as users of the singleton */
     IpNameServiceImpl* m_pimpl;  /**< A pointer to the private implementation of the name service */
 };
 

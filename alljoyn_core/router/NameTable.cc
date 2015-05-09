@@ -74,7 +74,7 @@ SessionOpts::NameTransferType NameTable::GetNameTransfer(BusEndpoint& ep)
 
 qcc::String NameTable::GenerateUniqueName(void)
 {
-    return uniquePrefix + U32ToString(IncrementAndFetch((int32_t*)&uniqueId));
+    return uniquePrefix + U32ToString(IncrementAndFetch((volatile int32_t*)&uniqueId));
 }
 
 void NameTable::SetGUID(const qcc::GUID128& guid)
