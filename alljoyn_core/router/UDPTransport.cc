@@ -6992,7 +6992,17 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
     udpEp->GetFeatures().allowRemote = true;
     udpEp->GetFeatures().protocolVersion = protocolVersion;
     udpEp->GetFeatures().trusted = isBusToBus ? false : true;
-    udpEp->GetFeatures().nameTransfer = isBusToBus ? static_cast<SessionOpts::NameTransferType>(nameTransfer) : SessionOpts::ALL_NAMES;
+    if (isBusToBus) {
+        if (protocolVersion < 12 || (nameTransfer == SessionOpts::SLS_NAMES)) {
+            /* If protocol version is less than 12, set the name transfer requested.
+             * If protocol version is 12 or above, ignore this value unless the request is for SLS_NAMES.
+             * Version 12 and above routing nodes will send the name transfer as a part of AttachSessionWithNames.
+             */
+            udpEp->GetFeatures().nameTransfer = static_cast<SessionOpts::NameTransferType>(nameTransfer);
+        }
+    } else {
+        udpEp->GetFeatures().nameTransfer = SessionOpts::ALL_NAMES;
+    }
     udpEp->SetRemoteGUID(remoteGUID);
     udpEp->SetPassive();
     udpEp->SetIpAddr(ipAddr);
@@ -7799,7 +7809,14 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
         udpEp->GetFeatures().allowRemote = true;
         udpEp->GetFeatures().protocolVersion = protocolVersion;
         udpEp->GetFeatures().trusted = false;
-        udpEp->GetFeatures().nameTransfer = static_cast<SessionOpts::NameTransferType>(nameTransfer);
+        if (protocolVersion < 12 || (nameTransfer == SessionOpts::SLS_NAMES)) {
+            /* If protocol version is less than 12, set the name transfer requested.
+             * If protocol version is 12 or above, ignore this value unless the request is for SLS_NAMES.
+             * Version 12 and above routing nodes will send the name transfer as a part of AttachSessionWithNames.
+             */
+            udpEp->GetFeatures().nameTransfer = static_cast<SessionOpts::NameTransferType>(nameTransfer);
+        }
+
         udpEp->SetRemoteGUID(remoteGUID);
         udpEp->SetActive();
         udpEp->SetIpAddr(ipAddr);
