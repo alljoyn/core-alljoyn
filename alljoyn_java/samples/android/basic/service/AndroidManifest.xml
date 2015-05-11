@@ -16,8 +16,8 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
       package="org.alljoyn.bus.samples.basicservice"
-      android:versionCode="15040000"
-      android:versionName="15.04">
+      android:versionCode="15040097"
+      android:versionName="15.04.00a">
     <uses-sdk android:minSdkVersion="16" />
     <!-- Permission required to use the TCP transport -->
 	<uses-permission android:name="android.permission.INTERNET"></uses-permission>
