@@ -790,7 +790,7 @@ class IpNameServiceImpl : public qcc::Thread {
      *
      * @return Status of the operation.  Returns ER_OK on success.
      */
-    QStatus CancelAdvertiseName(TransportMask transportMask, const qcc::String& wkn, TransportMask completeTransportMask);
+    QStatus CancelAdvertiseName(TransportMask transportMask, const qcc::String& wkn, bool quietly, TransportMask completeTransportMask);
 
     /**
      * @internal
@@ -827,7 +827,7 @@ class IpNameServiceImpl : public qcc::Thread {
      *
      * @return Status of the operation.  Returns ER_OK on success.
      */
-    QStatus CancelAdvertiseName(TransportMask transportMask, std::vector<qcc::String>& wkn, TransportMask completeTransportMask);
+    QStatus CancelAdvertiseName(TransportMask transportMask, std::vector<qcc::String>& wkn, bool quietly, TransportMask completeTransportMask);
 
     /**
      * @brief Returns a count of the number of names currently being advertised

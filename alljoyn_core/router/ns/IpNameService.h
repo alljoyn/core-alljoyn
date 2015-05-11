@@ -432,7 +432,7 @@ class IpNameService {
      *     advertisement be canceled.
      * @param wkn The well-known name to stop advertising.
      */
-    QStatus CancelAdvertiseName(TransportMask transportMask, const qcc::String& wkn, TransportMask completeTransportMask);
+    QStatus CancelAdvertiseName(TransportMask transportMask, const qcc::String& wkn, bool quietly, TransportMask completeTransportMask);
 
     /**
      * @brief Handle the suspending event of the process. Release exclusive socket file descriptor and port.
