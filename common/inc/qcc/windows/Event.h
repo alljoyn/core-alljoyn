@@ -257,7 +257,7 @@ class Event {
     HANDLE timerHandle;     /**< Waitable timer used to implement a TIMED event */
 
     SocketFd ioFd;          /**< Socket descriptor or INVALID_SOCKET_FD if not socket based IO */
-    int32_t numThreads;     /**< Number of threads currently waiting on this event */
+    volatile int32_t numThreads; /**< Number of threads currently waiting on this event */
     bool networkIfaceEvent;
     HANDLE networkIfaceHandle;
     bool isSocket;          /**< Is this event for socket or named pipe */

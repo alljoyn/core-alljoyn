@@ -405,6 +405,7 @@ QStatus Crypto_ASN1::DecodeV(const char*& syntax, const uint8_t* asn, size_t asn
         case 'l':
             if ((tag != ASN_INTEGER) || !DecodeLen(asn, eod, len) || (len < 1)) {
                 status = ER_FAIL;
+                break;
             }
             // Supress leading zero
             if (*asn == 0) {
@@ -433,6 +434,10 @@ QStatus Crypto_ASN1::DecodeV(const char*& syntax, const uint8_t* asn, size_t asn
             if ((tag != ASN_BITS) || !DecodeLen(asn, eod, len)) {
                 status = ER_FAIL;
             } else {
+                if (len == 0) {
+                    status = ER_FAIL;
+                    continue;
+                }
                 size_t unusedBits = *asn++;
                 if (unusedBits > 7) {
                     status = ER_FAIL;
@@ -603,7 +608,7 @@ QStatus Crypto_ASN1::DecodeV(const char*& syntax, const uint8_t* asn, size_t asn
                 if (val) {
                     val->assign((char*)start, len);
                 }
-                asn += len; // move asn forward
+                asn = eod; /* every thing is consumed */
                 continue;
             }
 

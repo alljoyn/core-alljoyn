@@ -22,10 +22,10 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#include <Status.h>
 #include <qcc/platform.h>
 
 #include <qcc/String.h>
+#include <Status.h>
 
 
 namespace qcc {

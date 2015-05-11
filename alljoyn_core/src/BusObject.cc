@@ -74,7 +74,7 @@ struct BusObject::Components {
     qcc::Mutex counterLock;
 
     /** counter to prevent this BusObject being deleted if it is being used by another thread. */
-    int32_t inUseCounter;
+    volatile int32_t inUseCounter;
 };
 
 

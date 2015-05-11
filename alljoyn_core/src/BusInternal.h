@@ -468,7 +468,7 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
     KeyStore keyStore;                    /* The key store for the bus attachment */
     AuthManager authManager;              /* The authentication manager for the bus attachment */
     qcc::GUID128 globalGuid;              /* Global GUID for this BusAttachment */
-    int32_t msgSerial;                    /* Serial number is updated for every message sent by this bus */
+    volatile int32_t msgSerial;           /* Serial number is updated for every message sent by this bus */
     Router* router;                       /* Message bus router */
     PeerStateTable peerStateTable;        /* Table that maintains state information about remote peers */
     LocalEndpoint localEndpoint;          /* The local endpoint */
@@ -476,7 +476,7 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
     bool allowRemoteMessages;             /* true iff endpoints of this attachment can receive messages from remote devices */
     qcc::String listenAddresses;          /* The set of bus addresses that this bus can listen on. (empty for clients) */
     qcc::Mutex stopLock;                  /* Protects BusAttachement::Stop from being reentered */
-    int32_t stopCount;                    /* Number of caller's blocked in BusAttachment::Stop() */
+    volatile int32_t stopCount;           /* Number of caller's blocked in BusAttachment::Stop() */
 
     typedef qcc::ManagedObj<SessionPortListener*> ProtectedSessionPortListener;
     typedef std::map<SessionPort, ProtectedSessionPortListener> SessionPortListenerMap;

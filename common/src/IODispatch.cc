@@ -26,8 +26,8 @@
 using namespace qcc;
 using namespace std;
 
-int32_t IODispatch::iodispatchCnt = 0;
-int32_t IODispatch::activeStreamsCnt = 0;
+volatile int32_t IODispatch::iodispatchCnt = 0;
+volatile int32_t IODispatch::activeStreamsCnt = 0;
 volatile uint64_t IODispatch::stopStreamTimestamp = 0;
 
 IODispatch::IODispatch(const char* name, uint32_t concurrency) :

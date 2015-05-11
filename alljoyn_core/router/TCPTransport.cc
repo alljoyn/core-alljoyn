@@ -1167,7 +1167,7 @@ QStatus TCPTransport::Join(void)
      * Since it is reference counted, we can't just call it willy-nilly.  We
      * have to be careful since our Join() can be called multiple times.
      */
-    int count = qcc::IncrementAndFetch(&m_nsReleaseCount);
+    int32_t count = qcc::IncrementAndFetch(&m_nsReleaseCount);
     if (count == 1) {
         IpNameService::Instance().Release();
     }
@@ -1402,7 +1402,9 @@ QStatus TCPTransport::GetListenAddresses(const SessionOpts& opts, std::vector<qc
 
             if ((entries[i].m_flags & mask) == state) {
                 QCC_DbgPrintf(("TCPTransport::GetListenAddresses(): %s has correct state", entries[i].m_name.c_str()));
-                if (haveWildcard || entries[i].m_name == currentInterface) {
+                if (haveWildcard ||
+                    (entries[i].m_name == currentInterface) ||
+                    (entries[i].m_altname == currentInterface)) {
                     QCC_DbgPrintf(("TCPTransport::GetListenAddresses(): %s has correct name", entries[i].m_name.c_str()));
                     /*
                      * This entry matches our search criteria, so we need to
