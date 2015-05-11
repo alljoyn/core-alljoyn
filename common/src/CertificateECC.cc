@@ -898,6 +898,9 @@ QStatus CertificateX509::Verify()
 
 QStatus CertificateX509::Verify(const ECCPublicKey* key)
 {
+    if (key->empty()) {
+        return ER_FAIL;
+    }
     Crypto_ECC ecc;
     ecc.SetDSAPublicKey(key);
     return ecc.DSAVerify((const uint8_t*) tbs.data(), tbs.size(), &signature);
@@ -911,9 +914,7 @@ QStatus CertificateX509::Verify(const KeyInfoNISTP256& ta)
         QCC_DbgPrintf(("Invalid validity period"));
         return status;
     }
-    Crypto_ECC ecc;
-    ecc.SetDSAPublicKey(ta.GetPublicKey());
-    return ecc.DSAVerify((const uint8_t*) tbs.data(), tbs.size(), &signature);
+    return Verify(ta.GetPublicKey());
 }
 
 QStatus CertificateX509::Sign(const ECCPrivateKey* key)
@@ -1012,17 +1013,17 @@ String CertificateX509::ToString() const
     str += " (" + tmpTime + ") ";
     str += "\n";
     if (digest.size()) {
-        str += "digest:    " + BytesToHexString((const uint8_t*) digest.c_str(), digest.size()) + "\n";
+        str += "digest:    " + BytesToHexString((const uint8_t*) digest.data(), digest.size()) + "\n";
     }
     if (subjectAltName.size()) {
         if (GetType() == IDENTITY_CERTIFICATE) {
-            str += "alias:     ";
+            str += "alias:     " + subjectAltName;
         } else if (GetType() == MEMBERSHIP_CERTIFICATE) {
-            str += "security group Id:     ";
+            str += "security group Id:     0x" + BytesToHexString((const uint8_t*) subjectAltName.data(), subjectAltName.size());
         } else {
-            str += "subject alt name:     ";
+            str += "subject alt name:     " + subjectAltName;
         }
-        str += subjectAltName + "\n";
+        str += "\n";
     }
     if (aki.size()) {
         str += "aki:     " + BytesToHexString((const uint8_t*) aki.data(), aki.size()) + "\n";

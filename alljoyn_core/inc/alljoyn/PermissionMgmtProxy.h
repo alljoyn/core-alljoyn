@@ -54,16 +54,23 @@ class PermissionMgmtProxy : public ProxyBusObject {
      * Access restriction: None if the app is not yet claimed. An error will be
      * raised if the app already has an admin and it is not the caller.
      *
-     * @param[in] publicKeyArg    a KeyInfo object representing the public key of
-     *                            the claimer
-     * @param[in] identityCertArg an identity certificate for the claimed app
-     * @param[out] returnKey      a KeyInfo object representing the public key of the
-     *                            device/app
+     * @param[in] certificateAuthority   a KeyInfo object representing the
+     *                                   public key of the certificate authority
+     * @param[in] adminGroupId           the admin group Id
+     * @param[in] adminGroup             a KeyInfo object representing the admin
+     *                                   security group authority
+     * @param[in] identityCertChain      the identity certificate chain for the
+     *                                   claimed app.  The leaf cert is listed first
+     * @param[in] identityCertChainSize  the size of the identity certificate
+     *                                   chain.
+     * @param[in] manifest               the manifest of the application
+     * @param[in] manifestSize           the number of rules in the manifest
      * @return
      *  - #ER_OK if successful
      *  - an error status indicating failure
      */
-    QStatus Claim(const MsgArg& publicKeyArg, const MsgArg& identityCertArg, qcc::ECCPublicKey* returnKey);
+    QStatus Claim(qcc::KeyInfoNISTP256& certificateAuthority, qcc::GUID128& adminGroupId, qcc::KeyInfoNISTP256& adminGroup, qcc::IdentityCertificate* identityCertChain, size_t identityCertChainSize, PermissionPolicy::Rule* manifest, size_t manifestSize);
+
 
     /**
      * Install the static policy to the app. It replaces any existing policy on

@@ -437,11 +437,22 @@ class KeyInfoNISTP256 : public KeyInfoECC {
         return KeyInfoECC::operator==(ki);
     }
 
-  private:
     /**
-     * Assignment operator is private
+     * Assign operator for KeyInfoNISTP256
+     *
+     * @param[in] other the KeyInfoNISTP256 to assign
      */
-    KeyInfoNISTP256& operator=(const KeyInfoNISTP256& other);
+
+    KeyInfoNISTP256& operator=(const KeyInfoNISTP256& other)
+    {
+        if (this != &other) {
+            SetKeyId(other.GetKeyId(), other.GetKeyIdLen());
+            SetPublicCtx(other.GetPublicCtx());
+        }
+        return *this;
+    }
+
+  private:
 
     struct {
         uint8_t form;

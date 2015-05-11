@@ -109,36 +109,108 @@ void TestPermissionMgmtListener::NotifyConfig(const char* busName,
     signalNotifyConfigReceived = true;
 }
 
-QStatus PermissionMgmtTestHelper::CreateIdentityCert(BusAttachment& issuerBus, const qcc::String& serial, const qcc::String& subject, const ECCPublicKey* subjectPubKey, const qcc::String& alias, uint32_t expiredInSecs, qcc::String& der)
+QStatus PermissionMgmtTestHelper::CreateIdentityCertChain(BusAttachment& caBus, BusAttachment& issuerBus, const qcc::String& serial, const qcc::String& subject, const ECCPublicKey* subjectPubKey, const qcc::String& alias, uint32_t expiredInSecs, qcc::IdentityCertificate* certChain, size_t chainCount, uint8_t* digest, size_t digestSize)
+{
+    if (chainCount > 2) {
+        return ER_INVALID_DATA;
+    }
+    QStatus status = ER_CRYPTO_ERROR;
+    /* generate the issuer cert first */
+    qcc::GUID128 ca(0);
+    GetGUID(caBus, ca);
+    qcc::GUID128 issuer(0);
+    GetGUID(issuerBus, issuer);
+    String caStr = ca.ToString();
+    String issuerStr = issuer.ToString();
+
+    certChain[1].SetSerial(serial);
+    certChain[1].SetIssuerCN((const uint8_t*) caStr.data(), caStr.size());
+    certChain[1].SetSubjectCN((const uint8_t*) issuerStr.data(), issuerStr.size());
+    CertificateX509::ValidPeriod validity;
+    BuildValidity(validity, expiredInSecs);
+    certChain[1].SetValidity(&validity);
+    certChain[1].SetCA(true);
+    PermissionConfigurator& caPC = caBus.GetPermissionConfigurator();
+    PermissionConfigurator& pc = issuerBus.GetPermissionConfigurator();
+    KeyInfoNISTP256 keyInfo;
+    pc.GetSigningPublicKey(keyInfo);
+    certChain[1].SetSubjectPublicKey(keyInfo.GetPublicKey());
+
+    status = caPC.SignCertificate(certChain[1]);
+    if (ER_OK != status) {
+        return status;
+    }
+
+    /* generate the leaf cert */
+    certChain[0].SetSerial(serial);
+    certChain[0].SetIssuerCN((const uint8_t*) issuerStr.data(), issuerStr.size());
+    certChain[0].SetSubjectCN((const uint8_t*) subject.data(), subject.size());
+    certChain[0].SetSubjectPublicKey(subjectPubKey);
+    certChain[0].SetAlias(alias);
+    if (digest) {
+        certChain[0].SetDigest(digest, digestSize);
+    }
+    certChain[0].SetValidity(&validity);
+
+    /* use the issuer bus to sign the cert */
+    status = pc.SignCertificate(certChain[0]);
+    if (ER_OK != status) {
+        return status;
+    }
+
+    status = certChain[0].Verify(certChain[1].GetSubjectPublicKey());
+    if (ER_OK != status) {
+        return status;
+    }
+
+    return ER_OK;
+}
+
+QStatus PermissionMgmtTestHelper::CreateIdentityCert(BusAttachment& issuerBus, const qcc::String& serial, const qcc::String& subject, const ECCPublicKey* subjectPubKey, const qcc::String& alias, uint32_t expiredInSecs, qcc::IdentityCertificate& cert, uint8_t* digest, size_t digestSize)
 {
     qcc::GUID128 issuer(0);
     GetGUID(issuerBus, issuer);
 
     QStatus status = ER_CRYPTO_ERROR;
-    IdentityCertificate x509;
 
-    x509.SetSerial(serial);
+    cert.SetSerial(serial);
     String issuerStr = issuer.ToString();
-    x509.SetIssuerCN((const uint8_t*) issuerStr.data(), issuerStr.size());
-    x509.SetSubjectCN((const uint8_t*) subject.data(), subject.size());
-    x509.SetSubjectPublicKey(subjectPubKey);
-    x509.SetAlias(alias);
+    cert.SetIssuerCN((const uint8_t*) issuerStr.data(), issuerStr.size());
+    cert.SetSubjectCN((const uint8_t*) subject.data(), subject.size());
+    cert.SetSubjectPublicKey(subjectPubKey);
+    cert.SetAlias(alias);
+    if (digest) {
+        cert.SetDigest(digest, digestSize);
+    }
     CertificateX509::ValidPeriod validity;
     BuildValidity(validity, expiredInSecs);
-    x509.SetValidity(&validity);
+    cert.SetValidity(&validity);
 
     /* use the issuer bus to sign the cert */
     PermissionConfigurator& pc = issuerBus.GetPermissionConfigurator();
-    status = pc.SignCertificate(x509);
+    status = pc.SignCertificate(cert);
     if (ER_OK != status) {
         return status;
     }
 
     KeyInfoNISTP256 keyInfo;
     pc.GetSigningPublicKey(keyInfo);
-    status = x509.Verify(keyInfo.GetPublicKey());
+    status = cert.Verify(keyInfo.GetPublicKey());
+    if (ER_OK != status) {
+        return status;
+    }
 
-    return x509.EncodeCertificateDER(der);
+    return ER_OK;
+}
+
+QStatus PermissionMgmtTestHelper::CreateIdentityCert(BusAttachment& issuerBus, const qcc::String& serial, const qcc::String& subject, const ECCPublicKey* subjectPubKey, const qcc::String& alias, uint32_t expiredInSecs, qcc::String& der)
+{
+    IdentityCertificate cert;
+    QStatus status = CreateIdentityCert(issuerBus, serial, subject, subjectPubKey, alias, expiredInSecs, cert, NULL, 0);
+    if (ER_OK != status) {
+        return status;
+    }
+    return cert.EncodeCertificateDER(der);
 }
 
 QStatus PermissionMgmtTestHelper::CreateIdentityCert(BusAttachment& issuerBus, const qcc::String& serial, const qcc::String& subject, const ECCPublicKey* subjectPubKey, const qcc::String& alias, qcc::String& der)
@@ -205,6 +277,12 @@ void BasePermissionMgmtTest::RegisterKeyStoreListeners()
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 }
 
+static void GenerateSecurityGroupKey(BusAttachment& bus, KeyInfoNISTP256& keyInfo)
+{
+    PermissionConfigurator& pc = bus.GetPermissionConfigurator();
+    pc.GetSigningPublicKey(keyInfo);
+}
+
 void BasePermissionMgmtTest::SetUp()
 {
     status = SetupBus(adminBus);
@@ -244,6 +322,20 @@ void BasePermissionMgmtTest::TearDown()
     consumerKeyListener = NULL;
     delete remoteControlKeyListener;
     remoteControlKeyListener = NULL;
+}
+
+void BasePermissionMgmtTest::GenerateCAKeys()
+{
+    KeyInfoNISTP256 keyInfo;
+    adminProxyBus.GetPermissionConfigurator().GetSigningPublicKey(keyInfo);
+    adminBus.GetPermissionConfigurator().GetSigningPublicKey(keyInfo);
+    consumerBus.GetPermissionConfigurator().GetSigningPublicKey(keyInfo);
+    serviceBus.GetPermissionConfigurator().GetSigningPublicKey(keyInfo);
+    remoteControlBus.GetPermissionConfigurator().GetSigningPublicKey(keyInfo);
+    adminProxyBus.ReloadKeyStore();
+    adminBus.ReloadKeyStore();
+    GenerateSecurityGroupKey(adminBus, adminAdminGroupAuthority);
+    GenerateSecurityGroupKey(consumerBus, consumerAdminGroupAuthority);
 }
 
 void BasePermissionMgmtTest::EnableSecurity(const char* keyExchange)
@@ -598,7 +690,7 @@ QStatus PermissionMgmtTestHelper::InstallMembership(const String& serial, BusAtt
 
     /* installing the auth data */
     KeyInfoNISTP256 keyInfo;
-    bus.GetPermissionConfigurator().GetSigningPublicKey(keyInfo);
+    signingBus.GetPermissionConfigurator().GetSigningPublicKey(keyInfo);
     String aki;
     CertificateX509::GenerateAuthorityKeyId(keyInfo.GetPublicKey(), aki);
     return pmProxy.InstallMembershipAuthData(serial.c_str(), aki, *membershipAuthData);

@@ -72,31 +72,30 @@ class PermissionMgmtObj : public BusObject {
     };
 
     typedef enum {
-        TRUST_ANCHOR_ANY = 0,   ///< Trust anchor for every thing.
-        TRUST_ANCHOR_IDENTITY = 1,   ///< Trust anchor for identity cert
-        TRUST_ANCHOR_MEMBERSHIP = 2   ///< Trust anchor for membership cert
+        TRUST_ANCHOR_CA = 0,           ///< certificate authority
+        TRUST_ANCHOR_ADMIN_GROUP = 1,  ///< admin group authority
+        TRUST_ANCHOR_MEMBERSHIP = 2    ///< Trust anchor for membership cert
     } TrustAnchorType;
 
     struct TrustAnchor {
         TrustAnchorType use;
         qcc::KeyInfoNISTP256 keyInfo;
-        qcc::String aki;
+        qcc::GUID128 securityGroupId;
 
-        TrustAnchor() : use(TRUST_ANCHOR_ANY)
+        TrustAnchor() : use(TRUST_ANCHOR_CA), securityGroupId(0)
         {
             qcc::ECCPublicKey pubKey;
             memset(&pubKey, 0, sizeof(qcc::ECCPublicKey));
             keyInfo.SetPublicKey(&pubKey);
         }
-        TrustAnchor(TrustAnchorType use) : use(use)
+        TrustAnchor(TrustAnchorType use) : use(use), securityGroupId(0)
         {
             qcc::ECCPublicKey pubKey;
             memset(&pubKey, 0, sizeof(qcc::ECCPublicKey));
             keyInfo.SetPublicKey(&pubKey);
         }
-        TrustAnchor(TrustAnchorType use, qcc::KeyInfoNISTP256 keyInfo) : use(use), keyInfo(keyInfo)
+        TrustAnchor(TrustAnchorType use, qcc::KeyInfoNISTP256& keyInfo) : use(use), keyInfo(keyInfo), securityGroupId(0)
         {
-            qcc::CertificateX509::GenerateAuthorityKeyId(keyInfo.GetPublicKey(), aki);
         }
     };
 
@@ -116,20 +115,19 @@ class PermissionMgmtObj : public BusObject {
      */
     virtual ~PermissionMgmtObj();
 
-
-    /**
-     * Look for the trust anchor public key using the authority key id
-     * @param aki   the authority key id
-     * @return the trust anchor public key
-     */
-    const qcc::ECCPublicKey* LocateTrustAnchor(const qcc::String& aki) const;
-
     /**
      * check whether the peer public key is an admin
      * @param publicKey the peer's public key
      * return true if the peer public key is an admin; false, otherwise.
      */
     bool IsAdmin(const qcc::ECCPublicKey* publicKey);
+
+    /**
+     * check whether the membership cert chain is for the admin security group
+     * @param certChain the membership cert chain
+     * return true if it is an admin security group; false, otherwise.
+     */
+    bool IsAdminGroup(const std::vector<qcc::MembershipCertificate*> certChain);
 
     /**
      * Called by the message bus when the object has been successfully registered. The object can
@@ -267,19 +265,31 @@ class PermissionMgmtObj : public BusObject {
     QStatus Get(const char* ifcName, const char* propName, MsgArg& val);
 
     QStatus InstallTrustAnchor(TrustAnchor* trustAnchor);
-    QStatus StoreIdentityCertificate(MsgArg& certArg);
+    QStatus StoreIdentityCertChain(MsgArg& certArg);
     QStatus StorePolicy(PermissionPolicy& policy);
+    /**
+     * Generate the SHA-256 digest for the manifest data.
+     * @param bus the bus attachment
+     * @param rules the rules for the manifest
+     * @param count the number of rules
+     * @param[out] digest the buffer to store the digest
+     * @param[out] digestSize the size of the buffer.  Expected to be Crypto_SHA256::DIGEST_SIZE
+     * @return ER_OK for success; error code otherwise.
+     */
+
+    static QStatus GenerateManifestDigest(BusAttachment& bus, const PermissionPolicy::Rule* rules, size_t count, uint8_t* digest, size_t digestSize);
 
   private:
 
     typedef enum {
-        ENTRY_TRUST_ANCHOR,   ///< Trust anchor.
-        ENTRY_POLICY,         ///< Local policy data
-        ENTRY_MEMBERSHIPS,  ///< the list of membership certificates and associated policies
-        ENTRY_IDENTITY,      ///< the identity cert
-        ENTRY_EQUIVALENCES,  ///< The equivalence certs
-        ENTRY_MANIFEST,      ///< The manifest data
-        ENTRY_CONFIGURATION  ///< The configuration data
+        ENTRY_TRUST_ANCHOR,        ///< Trust anchor.
+        ENTRY_POLICY,              ///< Local policy data
+        ENTRY_MEMBERSHIPS,         ///< the list of membership certificates and associated policies
+        ENTRY_IDENTITY,            ///< the identity cert
+        ENTRY_EQUIVALENCES,        ///< The equivalence certs
+        ENTRY_MANIFEST_TEMPLATE,   ///< The manifest template
+        ENTRY_MANIFEST,            ///< The manifest data
+        ENTRY_CONFIGURATION        ///< The configuration data
     } ACLEntryType;
 
     struct Configuration {
@@ -326,6 +336,7 @@ class PermissionMgmtObj : public BusObject {
 
     void InstallIdentity(const InterfaceDescription::Member* member, Message& msg);
     QStatus GetIdentityBlob(qcc::KeyBlob& kb);
+    QStatus GetIdentityLeafCert(qcc::IdentityCertificate& cert);
     void GetIdentity(const InterfaceDescription::Member* member, Message& msg);
     void InstallMembership(const InterfaceDescription::Member* member, Message& msg);
     void InstallMembershipAuthData(const InterfaceDescription::Member* member, Message& msg);
@@ -349,10 +360,11 @@ class PermissionMgmtObj : public BusObject {
     QStatus LocalMembershipsChanged();
     void InstallCredential(const InterfaceDescription::Member* member, Message& msg);
     void RemoveCredential(const InterfaceDescription::Member* member, Message& msg);
-    bool IsTrustAnchor(bool specificMatch, TrustAnchorType taType, const qcc::ECCPublicKey* publicKey);
+    bool IsTrustAnchor(TrustAnchorType taType, const qcc::ECCPublicKey* publicKey);
     QStatus GetTrustAnchorsFromAllMemberships(TrustAnchorList& taList);
     QStatus ManageMembershipTrustAnchors(PermissionPolicy* policy);
     QStatus GetDSAPrivateKey(qcc::ECCPrivateKey& privateKey);
+    QStatus StoreManifest(MsgArg& manifestArg);
 
     /**
      * Bind to an exclusive port for PermissionMgmt object.
