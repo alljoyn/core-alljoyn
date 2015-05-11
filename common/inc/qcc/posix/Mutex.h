@@ -133,12 +133,12 @@ class Mutex {
     /**
      * Mutex copy constructor creates a new mutex.
      */
-    Mutex(const Mutex& other) { Init(); }
+    Mutex(const Mutex& other) { QCC_UNUSED(other); Init(); }
 
     /**
      * Mutex assignment operator.
      */
-    Mutex& operator=(const Mutex& other) { Init(); return *this; }
+    Mutex& operator=(const Mutex& other) { QCC_UNUSED(other); Init(); return *this; }
 
   private:
     pthread_mutex_t mutex;  ///< The Linux mutex implementation uses pthread mutex's.

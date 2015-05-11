@@ -172,6 +172,7 @@ class BusListener : public ajn::BusListener {
     };
 
     virtual void ListenerRegistered(ajn::BusAttachment* bus) {
+        QCC_UNUSED(bus);
         /*
          * Capture the naked pointer into a ManagedObj.  This is safe to do here (and is necessary) since
          * this call will not occur without a valid BusAttachmentHost.  The same cannot be said of the
@@ -411,7 +412,11 @@ class SessionListener : public ajn::SessionListener {
         env(plugin, busAttachment, sessionLostListenerNative, sessionMemberAddedListenerNative, sessionMemberRemovedListenerNative)
     { }
 
-    SessionListener(Plugin& plugin, BusAttachment& busAttachment, Env& env) : env(env) { }
+    SessionListener(Plugin& plugin, BusAttachment& busAttachment, Env& env) : env(env) {
+        QCC_UNUSED(plugin);
+        QCC_UNUSED(busAttachment);
+        QCC_UNUSED(env);
+    }
 
     SessionListener(Plugin& plugin, BusAttachment& busAttachment) : env(plugin, busAttachment) { }
 

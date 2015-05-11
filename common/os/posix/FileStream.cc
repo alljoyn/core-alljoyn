@@ -119,6 +119,7 @@ QStatus FileSource::GetSize(int64_t& fileSize)
 
 QStatus FileSource::PullBytes(void* buf, size_t reqBytes, size_t& actualBytes, uint32_t timeout)
 {
+    QCC_UNUSED(timeout);
     QCC_DbgTrace(("FileSource::PullBytes(buf = %p, reqBytes = %u, actualBytes = <>)",
                   buf, reqBytes));
     if (0 > fd) {

@@ -276,6 +276,7 @@ static uint8_t RxBuffer[RX_BUFSIZE];
 
 QStatus UARTStream::PullBytes(void* buf, size_t numBytes, size_t& actualBytes, uint32_t timeout)
 {
+    QCC_UNUSED(timeout);
     QStatus status = ER_OK;
     int ret = read(fd, buf, numBytes);
     if (ret == -1) {
@@ -344,6 +345,8 @@ QStatus UARTController::Join()
 
 QStatus UARTController::ReadCallback(Source& source, bool isTimedOut)
 {
+    QCC_UNUSED(source);
+    QCC_UNUSED(isTimedOut);
     size_t actual;
     QStatus status = m_uartStream->PullBytes(RxBuffer, RX_BUFSIZE, actual);
     assert(status == ER_OK);

@@ -78,6 +78,8 @@ bool _HttpRequestHost::setStatusText(const NPVariant* value)
 
 bool _HttpRequestHost::getAllRequestHeaders(const NPVariant* args, uint32_t argCount, NPVariant* result)
 {
+    QCC_UNUSED(args);
+    QCC_UNUSED(argCount);
     QCC_DbgTrace(("%s", __FUNCTION__));
 
     qcc::String headers;
@@ -152,6 +154,9 @@ exit:
 
 bool _HttpRequestHost::send(const NPVariant* args, uint32_t argCount, NPVariant* result)
 {
+    QCC_UNUSED(args);
+    QCC_UNUSED(argCount);
+    QCC_UNUSED(result);
     QCC_DbgTrace(("%s", __FUNCTION__));
 
     httpServer->SendResponse(stream, status, statusText, responseHeaders, sessionFd);

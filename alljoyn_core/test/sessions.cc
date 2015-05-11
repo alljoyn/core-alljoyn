@@ -492,6 +492,7 @@ static void DoCancelAdvertise(String name, TransportMask transports)
 
 static void DoWait(String name)
 {
+    QCC_UNUSED(name);
     while (s_found == false) {
         qcc::Sleep(250);
         printf(".");

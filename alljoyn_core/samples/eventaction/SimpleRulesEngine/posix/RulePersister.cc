@@ -27,7 +27,7 @@ RulePersister::~RulePersister() {
 
 void RulePersister::saveRule(Rule* rule)
 {
-
+    QCC_UNUSED(rule);
 }
 
 void RulePersister::loadRules()

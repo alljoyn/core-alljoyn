@@ -797,6 +797,7 @@ QStatus RecvWithFds(SocketFd sockfd, void* buf, size_t len, size_t& received, So
 
 QStatus SendWithFds(SocketFd sockfd, const void* buf, size_t len, size_t& sent, SocketFd* fdList, size_t numFds, uint32_t pid)
 {
+    QCC_UNUSED(pid);
     QStatus status = ER_OK;
 
     if (!fdList) {

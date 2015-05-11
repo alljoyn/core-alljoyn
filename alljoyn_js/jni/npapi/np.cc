@@ -186,6 +186,7 @@ NP_EXPORT(NPError) OSCALL NP_Shutdown()
 
 NP_EXPORT(NPError) OSCALL NP_GetValue(void* future, NPPVariable variable, void* value)
 {
+    QCC_UNUSED(future);
     Initialize();
     switch (variable) {
 #if !defined(NDEBUG)

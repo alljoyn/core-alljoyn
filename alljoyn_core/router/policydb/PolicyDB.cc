@@ -561,6 +561,8 @@ void _PolicyDB::NameOwnerChanged(const String& alias,
                                  const qcc::String* oldOwner, SessionOpts::NameTransferType oldOwnerNameTransfer,
                                  const qcc::String* newOwner, SessionOpts::NameTransferType newOwnerNameTransfer)
 {
+    QCC_UNUSED(oldOwnerNameTransfer);
+    QCC_UNUSED(newOwnerNameTransfer);
     /* When newOwner and oldOwner are the same, only the name transfer changed. */
     if (newOwner == oldOwner) {
         return;

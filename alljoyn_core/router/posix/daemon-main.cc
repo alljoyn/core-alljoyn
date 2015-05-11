@@ -647,10 +647,13 @@ int daemon(OptParse& opts) {
 //
 #if defined(ROUTER_LIB)
 int DaemonMain(int argc, char** argv, char* serviceConfig)
+{
 #else
 int CDECL_CALL main(int argc, char** argv, char** env)
-#endif
 {
+    QCC_UNUSED(env);
+#endif
+
     if (AllJoynInit() != ER_OK) {
         return DAEMON_EXIT_STARTUP_ERROR;
     }

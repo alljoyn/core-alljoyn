@@ -224,7 +224,7 @@ class Event {
      * Protected copy constructor.
      * Events on some platforms (windows) cannot be safely copied because they contain events handles.
      */
-    Event& operator=(const Event& evt) { return *this; }
+    Event& operator=(const Event& evt) { QCC_UNUSED(evt); return *this; }
 
     /**
      * Increment the count of threads blocked on this event

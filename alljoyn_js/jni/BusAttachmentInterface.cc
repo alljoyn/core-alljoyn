@@ -51,6 +51,8 @@ _BusAttachmentInterface::~_BusAttachmentInterface()
 
 bool _BusAttachmentInterface::Construct(const NPVariant* args, uint32_t argCount, NPVariant* result)
 {
+    QCC_UNUSED(args);
+    QCC_UNUSED(argCount);
     QCC_DbgTrace(("%s", __FUNCTION__));
 
     QStatus status = ER_OK;

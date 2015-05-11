@@ -22,6 +22,8 @@ using namespace qcc;
 
 QStatus SimpleRuleEngine::initialize(const char* engineName, BusAttachment* bus)
 {
+    QCC_UNUSED(engineName);
+    QCC_UNUSED(bus);
     QStatus status = ER_OK;
     mRulePersister.loadRules();
     return status;
@@ -50,6 +52,7 @@ QStatus SimpleRuleEngine::addRule(Rule* rule, bool persist)
 
 QStatus SimpleRuleEngine::removeRule(Rule* rule)
 {
+    QCC_UNUSED(rule);
     QStatus status = ER_OK;
 
     return status;
@@ -69,6 +72,7 @@ QStatus SimpleRuleEngine::removeAllRules()
 
 Rule* SimpleRuleEngine::getRules(size_t& len)
 {
+    QCC_UNUSED(len);
     return NULL;
 }
 
@@ -83,6 +87,8 @@ void SimpleRuleEngine::Announce(const char* busName, uint16_t version,
                                 SessionPort port, const MsgArg& objectDescriptionArg,
                                 const MsgArg& aboutDataArg)
 {
+    QCC_UNUSED(version);
+    QCC_UNUSED(objectDescriptionArg);
     NearbyAppInfo* nearbyAppInfo = new NearbyAppInfo();
     AboutData aboutData(aboutDataArg);
     char* deviceName;
