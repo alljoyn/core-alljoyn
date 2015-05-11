@@ -11705,6 +11705,8 @@ void UDPTransport::CheckEndpointLocalMachine(UDPEndpoint endpoint)
             break;
         }
     }
+#else
+    QCC_UNUSED(endpoint);
 #endif
 }
 

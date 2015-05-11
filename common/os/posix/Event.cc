@@ -664,6 +664,7 @@ static void CreateMechanism(int* readFd, int* writeFd)
  */
 static void DestroyMechanism(int readFd, int writeFd)
 {
+    QCC_UNUSED(writeFd);
     QCC_DbgTrace(("DestroyMechanism()"));
     assert(readFd == writeFd && "destroyMechanism(): expect readFd == writeFd for eventfd mechanism");
     close(readFd);

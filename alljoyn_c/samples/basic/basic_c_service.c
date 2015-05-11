@@ -65,18 +65,21 @@ static volatile sig_atomic_t g_interrupt = QCC_FALSE;
 
 static void CDECL_CALL SigIntHandler(int sig)
 {
+    QCC_UNUSED(sig);
     g_interrupt = QCC_TRUE;
 }
 
 /* ObjectRegistered callback */
 void AJ_CALL busobject_object_registered(const void* context)
 {
+    QCC_UNUSED(context);
     printf("ObjectRegistered has been called\n");
 }
 
 /* NameOwnerChanged callback */
 void AJ_CALL name_owner_changed(const void* context, const char* busName, const char* previousOwner, const char* newOwner)
 {
+    QCC_UNUSED(context);
     if (newOwner && (0 == strcmp(busName, OBJECT_NAME))) {
         printf("name_owner_changed: name=%s, oldOwner=%s, newOwner=%s\n",
                busName,
@@ -90,6 +93,7 @@ QCC_BOOL AJ_CALL accept_session_joiner(const void* context, alljoyn_sessionport 
                                        const char* joiner,  const alljoyn_sessionopts opts)
 {
     QCC_BOOL ret = QCC_FALSE;
+    QCC_UNUSED(context);
     if (sessionPort != SERVICE_PORT) {
         printf("Rejecting join attempt on unexpected session port %d\n", sessionPort);
     } else {
@@ -109,6 +113,7 @@ void AJ_CALL cat_method(alljoyn_busobject bus, const alljoyn_interfacedescriptio
     char* str2;
     /* Concatenate the two input strings and reply with the result. */
     char result[256] = { 0 };
+    QCC_UNUSED(member);
     status = alljoyn_msgarg_get(alljoyn_message_getarg(msg, 0), "s", &str1);
     if (ER_OK != status) {
         printf("Ping: Error reading alljoyn_message\n");
@@ -127,7 +132,7 @@ void AJ_CALL cat_method(alljoyn_busobject bus, const alljoyn_interfacedescriptio
 }
 
 /** Main entry point */
-int CDECL_CALL main(int argc, char** argv, char** envArg)
+int CDECL_CALL main(void)
 {
     QStatus status = ER_OK;
     char* connectArgs = NULL;

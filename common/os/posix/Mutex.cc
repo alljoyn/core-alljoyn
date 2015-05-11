@@ -105,6 +105,8 @@ QStatus Mutex::Lock()
 QStatus Mutex::Lock(const char* file, uint32_t line)
 {
 #ifdef NDEBUG
+    QCC_UNUSED(file);
+    QCC_UNUSED(line);
     return Lock();
 #else
     if (!isInitialized) {
@@ -148,6 +150,8 @@ QStatus Mutex::Unlock()
 QStatus Mutex::Unlock(const char* file, uint32_t line)
 {
 #ifdef NDEBUG
+    QCC_UNUSED(file);
+    QCC_UNUSED(line);
     return Unlock();
 #else
     if (!isInitialized) {

@@ -84,6 +84,7 @@ class MultiPeerTestObject : public BusObject {
     virtual ~MultiPeerTestObject() { }
 
     void HandleIdentify(const InterfaceDescription::Member* member, Message& message) {
+        QCC_UNUSED(member);
         MsgArg args[2] = { MsgArg("s", busname.c_str()), MsgArg("s", path.c_str()) };
         QStatus status = MethodReply(message, args, 2);
         assert(ER_OK == status);
@@ -91,6 +92,7 @@ class MultiPeerTestObject : public BusObject {
     }
 
     void UpdateObservedSoFarBy(const InterfaceDescription::Member* member, Message& message) {
+        QCC_UNUSED(member);
         observedSoFarByLock.Lock(MUTEX_CONTEXT);
         const MsgArg* op = message->GetArg(0);
         const MsgArg* observerPID = message->GetArg(1);
@@ -224,6 +226,9 @@ class Participant : public SessionPortListener, public SessionListener {
     }
 
     virtual bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) {
+        QCC_UNUSED(sessionPort);
+        QCC_UNUSED(joiner);
+        QCC_UNUSED(opts);
         return true;
     }
 

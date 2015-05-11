@@ -103,6 +103,7 @@ static NPVariant ToPrimitive(Plugin& plugin, const NPVariant& value, Hint hint, 
 
 bool ToBoolean(Plugin& plugin, const NPVariant& value, bool& typeError)
 {
+    QCC_UNUSED(plugin);
     typeError = false;
     switch (value.type) {
     case NPVariantType_Void:
@@ -1229,6 +1230,7 @@ void ToAny(Plugin& plugin, const ajn::MsgArg& value, NPVariant& variant, QStatus
 
 void ToBoolean(Plugin& plugin, bool value, NPVariant& variant)
 {
+    QCC_UNUSED(plugin);
     BOOLEAN_TO_NPVARIANT(value, variant);
 }
 
@@ -1240,6 +1242,7 @@ uint8_t ToOctet(Plugin& plugin, const NPVariant& value, bool& typeError)
 
 void ToOctet(Plugin& plugin, uint8_t value, NPVariant& variant)
 {
+    QCC_UNUSED(plugin);
     INT32_TO_NPVARIANT(value, variant);
 }
 
@@ -1251,6 +1254,7 @@ int16_t ToShort(Plugin& plugin, const NPVariant& value, bool& typeError)
 
 void ToShort(Plugin& plugin, int16_t value, NPVariant& variant)
 {
+    QCC_UNUSED(plugin);
     INT32_TO_NPVARIANT(value, variant);
 }
 
@@ -1262,6 +1266,7 @@ uint16_t ToUnsignedShort(Plugin& plugin, const NPVariant& value, bool& typeError
 
 void ToUnsignedShort(Plugin& plugin, uint16_t value, NPVariant& variant)
 {
+    QCC_UNUSED(plugin);
     INT32_TO_NPVARIANT(value, variant);
 }
 
@@ -1273,6 +1278,7 @@ int32_t ToLong(Plugin& plugin, const NPVariant& value, bool& typeError)
 
 void ToLong(Plugin& plugin, int32_t value, NPVariant& variant)
 {
+    QCC_UNUSED(plugin);
     INT32_TO_NPVARIANT(value, variant);
 }
 
@@ -1284,6 +1290,7 @@ uint32_t ToUnsignedLong(Plugin& plugin, const NPVariant& value, bool& typeError)
 
 void ToUnsignedLong(Plugin& plugin, uint32_t value, NPVariant& variant)
 {
+    QCC_UNUSED(plugin);
     DOUBLE_TO_NPVARIANT(value, variant);
 }
 
@@ -1355,6 +1362,7 @@ double ToDouble(Plugin& plugin, const NPVariant& value, bool& typeError)
 
 void ToDouble(Plugin& plugin, double value, NPVariant& variant)
 {
+    QCC_UNUSED(plugin);
     DOUBLE_TO_NPVARIANT(value, variant);
 }
 
@@ -1374,6 +1382,7 @@ qcc::String ToDOMString(Plugin& plugin, const NPVariant& value, bool& typeError,
 void ToDOMString(Plugin& plugin, qcc::String value, NPVariant& variant,
                  TreatEmptyStringAs treatEmptyStringAs)
 {
+    QCC_UNUSED(plugin);
     if (value.empty()) {
         switch (treatEmptyStringAs) {
         case TreatEmptyStringAsNull:
@@ -1396,6 +1405,7 @@ void ToDOMString(Plugin& plugin, qcc::String value, NPVariant& variant,
 void ToDOMString(Plugin& plugin, const char* str, uint32_t len, NPVariant& variant,
                  TreatEmptyStringAs treatEmptyStringAs)
 {
+    QCC_UNUSED(plugin);
     if (!str || (0 == len)) {
         switch (treatEmptyStringAs) {
         case TreatEmptyStringAsNull:

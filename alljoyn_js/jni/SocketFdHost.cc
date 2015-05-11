@@ -66,6 +66,8 @@ bool _SocketFdHost::getFd(NPVariant* result)
 
 bool _SocketFdHost::close(const NPVariant* args, uint32_t argCount, NPVariant* result)
 {
+    QCC_UNUSED(args);
+    QCC_UNUSED(argCount);
     QCC_DbgTrace(("%s", __FUNCTION__));
 
     if (qcc::INVALID_SOCKET_FD != socketFd) {
@@ -78,6 +80,8 @@ bool _SocketFdHost::close(const NPVariant* args, uint32_t argCount, NPVariant* r
 
 bool _SocketFdHost::shutdown(const NPVariant* args, uint32_t argCount, NPVariant* result)
 {
+    QCC_UNUSED(args);
+    QCC_UNUSED(argCount);
     QCC_DbgTrace(("%s", __FUNCTION__));
     ToUnsignedShort(plugin, qcc::Shutdown(socketFd), *result);
     return true;

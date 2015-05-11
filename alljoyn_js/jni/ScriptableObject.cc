@@ -185,6 +185,9 @@ bool ScriptableObject::Enumerate(NPIdentifier** value, uint32_t* count)
 
 bool ScriptableObject::Construct(const NPVariant* args, uint32_t argCount, NPVariant* result)
 {
+    QCC_UNUSED(args);
+    QCC_UNUSED(argCount);
+    QCC_UNUSED(result);
     QCC_DbgTrace(("%s", __FUNCTION__));
     return false;
 }
