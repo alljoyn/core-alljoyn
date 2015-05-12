@@ -812,12 +812,12 @@ QStatus CertificateX509::VerifyValidity()
     return ER_OK;
 }
 
-QStatus CertificateX509::Verify()
+QStatus CertificateX509::Verify() const
 {
     return Verify(&publickey);
 }
 
-QStatus CertificateX509::Verify(const ECCPublicKey* key)
+QStatus CertificateX509::Verify(const ECCPublicKey* key) const
 {
     Crypto_ECC ecc;
     ecc.SetDSAPublicKey(key);
@@ -840,7 +840,9 @@ QStatus CertificateX509::Sign(const ECCPrivateKey* key)
 String CertificateX509::ToString() const
 {
     qcc::String str("Certificate:\n");
-    str += "serial:    " + serial + " (0x" + BytesToHexString((const uint8_t*) serial.data(), serial.length()) + ")\n";
+    /* Printing out the serial number as a string can produce control characters that cause output issues
+     * on Windows. Sometimes the rest of the output will not appear. Instead, we only print it as a hex string. */
+    str += "serial:     0x" + BytesToHexString((const uint8_t*) serial.data(), serial.length()) + "\n";
     if ((GetIssuerOULength() > 0) || (GetIssuerCNLength() > 0)) {
         str += "issuer: ";
         bool addComma = false;
@@ -965,5 +967,57 @@ QStatus AJ_CALL CertificateX509::DecodeCertChainPEM(const String& encoded, Certi
 
     return status;
 }
+
+bool CertificateX509::IsIssuerOf(const CertificateX509& issuedCertificate) const
+{
+    return ((this->IsDNEqual(issuedCertificate.GetIssuerCN(), issuedCertificate.GetIssuerCNLength(),
+                             issuedCertificate.GetIssuerOU(), issuedCertificate.GetIssuerOULength())) &&
+            (ER_OK == issuedCertificate.Verify(this->GetSubjectPublicKey())));
+}
+
+bool CertificateX509::IsDNEqual(const CertificateX509& other) const
+{
+    return (this->IsDNEqual(other.GetSubjectCN(), other.GetSubjectCNLength(), other.GetSubjectOU(), other.GetSubjectOULength()));
+}
+
+bool CertificateX509::IsDNEqual(const uint8_t* cn, const size_t cnLength, const uint8_t* ou, const size_t ouLength) const
+{
+    /* Check lengths are equal. */
+    if ((this->GetSubjectCNLength() != cnLength) || (this->GetSubjectOULength() != ouLength)) {
+        return false;
+    }
+
+    /* For CN and OU, if either is NULL, they must be equal (both NULL). */
+    if ((NULL == this->GetSubjectCN()) || (NULL == cn)) {
+        if (this->GetSubjectCN() != cn) {
+            return false;
+        }
+    }
+
+    if ((NULL == this->GetSubjectOU()) || (NULL == ou)) {
+        if (this->GetSubjectOU() != ou) {
+            return false;
+        }
+    }
+
+    /* At this point either both are NULL or neither is, for each pair of CNs and OUs. */
+    if ((NULL != this->GetSubjectCN()) &&
+        (0 != memcmp(this->GetSubjectCN(), cn, cnLength))) {
+        return false;
+    }
+
+    if ((NULL != this->GetSubjectOU()) &&
+        (0 != memcmp(this->GetSubjectOU(), ou, ouLength))) {
+        return false;
+    }
+
+    return true;
+}
+
+bool CertificateX509::IsSubjectPublicKeyEqual(const ECCPublicKey* publicKey) const
+{
+    return ((*(this->GetSubjectPublicKey())) == (*publicKey));
+}
+
 
 }

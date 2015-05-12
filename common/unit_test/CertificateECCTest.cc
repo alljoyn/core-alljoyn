@@ -731,3 +731,29 @@ TEST_F(CertificateECCTest, validityPeriodGeneration)
     TestValidityPeriod(validity);
 }
 
+TEST_F(CertificateECCTest, TestIsDNEqual)
+{
+    CertificateX509 cert1, cert2;
+
+    ASSERT_EQ(ER_OK, cert1.LoadPEM(eccSelfSignCertX509PEMOpenSSL));
+    ASSERT_EQ(ER_OK, cert2.LoadPEM(eccSelfSignCertX509PEMCAPI));
+
+    EXPECT_TRUE(cert1.IsDNEqual(cert1));
+    EXPECT_TRUE(cert1.IsDNEqual(cert1.GetSubjectCN(), cert1.GetSubjectCNLength(), cert1.GetSubjectOU(), cert1.GetSubjectOULength()));
+
+    EXPECT_FALSE(cert1.IsDNEqual(cert2));
+    EXPECT_FALSE(cert1.IsDNEqual(cert2.GetSubjectCN(), cert2.GetSubjectCNLength(), cert2.GetSubjectOU(), cert2.GetSubjectOULength()));
+}
+
+TEST_F(CertificateECCTest, TestIsIssuerOf)
+{
+    CertificateX509 cert1, cert2;
+
+    ASSERT_EQ(ER_OK, cert1.LoadPEM(eccSelfSignCertX509PEMOpenSSL));
+    ASSERT_EQ(ER_OK, cert2.LoadPEM(eccSelfSignCertX509PEMCAPI));
+
+    EXPECT_TRUE(cert1.IsIssuerOf(cert1));
+    EXPECT_TRUE(cert2.IsIssuerOf(cert2));
+    EXPECT_FALSE(cert1.IsIssuerOf(cert2));
+    EXPECT_FALSE(cert2.IsIssuerOf(cert1));
+}
