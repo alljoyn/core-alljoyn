@@ -44,6 +44,15 @@ QStatus qcc::DeleteFile(qcc::String fileName)
     }
 }
 
+QStatus qcc::FileExists(const qcc::String& fileName)
+{
+    if (INVALID_FILE_ATTRIBUTES == ::GetFileAttributesA(fileName.c_str())) {
+        return ER_FAIL;
+    } else {
+        return ER_OK;
+    }
+}
+
 static void ReSlash(qcc::String& inStr)
 {
     size_t pos = inStr.find_first_of("/");
