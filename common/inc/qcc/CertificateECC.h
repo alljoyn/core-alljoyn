@@ -178,14 +178,14 @@ class CertificateX509 {
      * Verify a self-signed certificate.
      * @return ER_OK for success; otherwise, error code.
      */
-    QStatus Verify();
+    QStatus Verify() const;
 
     /**
      * Verify the certificate.
      * @param key the ECDSA public key.
      * @return ER_OK for success; otherwise, error code.
      */
-    QStatus Verify(const ECCPublicKey* key);
+    QStatus Verify(const ECCPublicKey* key) const;
 
     /**
      * Verify the vadility period of the certificate.
@@ -402,6 +402,39 @@ class CertificateX509 {
      * @return A string for the cert or and empty string if there is no cert.
      */
     qcc::String ToString() const;
+
+
+    /**
+     * Determine if this certificate issued a given certificate by comparing the distinguished
+     * name and verifying the digital signature.
+     * @param issuedCertificate Certificate to check if it was issued by this certificate.
+     * @return true if so.
+     */
+    bool IsIssuerOf(const CertificateX509& issuedCertificate) const;
+
+    /**
+     * Is the subject DN of this certificate equal to a given DN?
+     * @param cn Common Name component of the DN to compare to.
+     * @param cnLength Length of the cn array. Zero if null.
+     * @param ou Organizational Unit component of the DN to compare to.
+     * @param ouLength Length of the ou array. Zero if null.
+     * @return true if so.
+     */
+    bool IsDNEqual(const uint8_t* cn, const size_t cnLength, const uint8_t* ou, const size_t ouLength) const;
+
+    /**
+     * Is the subject DN of this certificate equal to a given certificate's DN?
+     * @param other CertificateX509 to compare to.
+     * @return true if so.
+     */
+    bool IsDNEqual(const CertificateX509& other) const;
+
+    /**
+     * Is the subject public key of this certificate equal to a given key?
+     * @param publicKey Public key to compare to.
+     * @return true if so.
+     */
+    bool IsSubjectPublicKeyEqual(const ECCPublicKey* publicKey) const;
 
     /**
      * Destructor

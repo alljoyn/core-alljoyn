@@ -47,7 +47,16 @@ namespace qcc {
 QStatus DeleteFile(qcc::String fileName);
 
 /**
- * FileSoure is an implementation of Source used for reading from files.
+ * Platform abstraction for checking for the existence of a file
+ *
+ * @param fileName   The name of the file to check for existence
+ *
+ * @return ER_OK if the file exists; ER_FAIL if not.
+ */
+QStatus FileExists(const qcc::String& fileName);
+
+/**
+ * FileSource is an implementation of Source used for reading from files.
  */
 class FileSource : public Source {
   public:

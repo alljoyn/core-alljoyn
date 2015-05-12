@@ -41,9 +41,18 @@ namespace qcc {
  *
  * @param fileName  The name of the file to delete
  *
- * @eturn ER_OK if the file was deleted or an error status otherwise.
+ * @return ER_OK if the file was deleted or an error status otherwise.
  */
 QStatus DeleteFile(qcc::String fileName);
+
+/**
+ * Platform abstraction for checking for the existence of a file
+ *
+ * @param fileName   The name of the file to check
+ *
+ * @return ER_OK if the file exists; ER_FAIL if not.
+ */
+QStatus FileExists(const qcc::String& fileName);
 
 /**
  * FileSource is an implementation of Source used for reading from files.
@@ -80,6 +89,13 @@ class FileSource : public Source {
 
     /** Destructor */
     virtual ~FileSource();
+
+    /**
+     * Return the size of the file
+     *
+     * @param fileSize The size of the file in bytes
+     */
+    QStatus GetSize(int64_t& fileSize);
 
     /**
      * Pull bytes from the source.
