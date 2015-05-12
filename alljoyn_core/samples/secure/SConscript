@@ -27,8 +27,9 @@ progs = [
     env1.Program('DeskTopSharedKSClient1',  ['DeskTopSharedKSClient.cc']),
     env2.Program('DeskTopSharedKSClient2',  [obj]),
     env.Program('DeskTopSharedKSService', ['DeskTopSharedKSService.cc']),
-    env.Program('SampleServiceECDHE', ['SampleServiceECDHE.cc']),
-    env.Program('SampleClientECDHE', ['SampleClientECDHE.cc'])
+    env.Program('SampleServiceECDHE', ['SampleServiceECDHE.cc', 'SampleCertificateChainEngine.cc']),
+    env.Program('SampleClientECDHE', ['SampleClientECDHE.cc', 'SampleCertificateChainEngine.cc']),
+    env.Program('SampleCertificateUtility', ['SampleCertificateUtility.cc'])
     ]
 
 #if 'linux' == env['OS'] or 'darwin' == env['OS']:
