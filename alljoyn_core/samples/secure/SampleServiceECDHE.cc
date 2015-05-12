@@ -38,6 +38,8 @@
 
 #include <alljoyn/Status.h>
 
+#include "SampleCertificateChainEngine.h"
+
 using namespace std;
 using namespace qcc;
 using namespace ajn;
@@ -181,22 +183,40 @@ class ECDHEKeyXListener : public AuthListener {
         } else if (strcmp(authMechanism, KEYX_ECDHE_ECDSA) == 0) {
             static const char ecdsaPrivateKeyPEM[] = {
                 "-----BEGIN EC PRIVATE KEY-----\n"
-                "MDECAQEEIICSqj3zTadctmGnwyC/SXLioO39pB1MlCbNEX04hjeioAoGCCqGSM49\n"
+                "MDECAQEEIJizQZiJuDAfWpd7mGByiuyf89i/xvIJCFlOHoMQg1D4oAoGCCqGSM49\n"
                 "AwEH\n"
-                "-----END EC PRIVATE KEY-----"
+                "-----END EC PRIVATE KEY-----\n"
             };
 
+            /* This chain is the service's certificate first followed by the CA's certificate.
+             * This is not an array of strings; it is one single string with the certificates
+             * concatenated together.
+             *
+             * A common optimization is to omit the trusted root from the chain, and only send
+             * the end entity and any intermediate CAs, as presenting it to the remote peer is
+             * not necessary; if the remote peer trusts the root, it already has the root's
+             * certificate to check. It is included here for demonstrative purposes. */
             static const char ecdsaCertChainX509PEM[] = {
                 "-----BEGIN CERTIFICATE-----\n"
-                "MIIBWjCCAQGgAwIBAgIHMTAxMDEwMTAKBggqhkjOPQQDAjArMSkwJwYDVQQDDCAw\n"
-                "ZTE5YWZhNzlhMjliMjMwNDcyMGJkNGY2ZDVlMWIxOTAeFw0xNTAyMjYyMTU1MjVa\n"
-                "Fw0xNjAyMjYyMTU1MjVaMCsxKTAnBgNVBAMMIDZhYWM5MjQwNDNjYjc5NmQ2ZGIy\n"
-                "NmRlYmRkMGM5OWJkMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEP/HbYga30Afm\n"
-                "0fB6g7KaB5Vr5CDyEkgmlif/PTsgwM2KKCMiAfcfto0+L1N0kvyAUgff6sLtTHU3\n"
-                "IdHzyBmKP6MQMA4wDAYDVR0TBAUwAwEB/zAKBggqhkjOPQQDAgNHADBEAiAZmNVA\n"
-                "m/H5EtJl/O9x0P4zt/UdrqiPg+gA+wm0yRY6KgIgetWANAE2otcrsj3ARZTY/aTI\n"
-                "0GOQizWlQm8mpKaQ3uE=\n"
-                "-----END CERTIFICATE-----"
+                "MIIBazCCARGgAwIBAgIUc8XbK46MXC7nCM230CDYiHw756gwCgYIKoZIzj0EAwIw\n"
+                "NTEzMDEGA1UEAwwqQWxsSm95biBFQ0RIRSBTYW1wbGUgQ2VydGlmaWNhdGUgQXV0\n"
+                "aG9yaXR5MB4XDTE1MDUwNzIyMTY1OFoXDTIwMDUwNTIyMTY1OFowJzElMCMGA1UE\n"
+                "AwwcQWxsSm95biBFQ0RIRSBTYW1wbGUgU2VydmljZTBZMBMGByqGSM49AgEGCCqG\n"
+                "SM49AwEHA0IABC4onmzONqAWcdt9Z7cZMN9QFGQ3oLdxuDw/NAiWY3CCn7xK32tQ\n"
+                "A08D3Lp6o4g75CO7yFTSVnm8o43jbnfB6/SjDTALMAkGA1UdEwQCMAAwCgYIKoZI\n"
+                "zj0EAwIDSAAwRQIgX1fCAUg20I3e55CwguZ3qZc8Fjedqw9lhnMjNz2Br38CIQCq\n"
+                "h4W65dWkP2ksE+m/5PCtfgur/jYSYsK1X/wvs8TOeg==\n"
+                "-----END CERTIFICATE-----\n"
+                "-----BEGIN CERTIFICATE-----\n"
+                "MIIBezCCASKgAwIBAgIUDrFhHE80+zbEUOCNTxw219Nd1qwwCgYIKoZIzj0EAwIw\n"
+                "NTEzMDEGA1UEAwwqQWxsSm95biBFQ0RIRSBTYW1wbGUgQ2VydGlmaWNhdGUgQXV0\n"
+                "aG9yaXR5MB4XDTE1MDUwNzIyMTYzNloXDTI1MDUwNDIyMTYzNlowNTEzMDEGA1UE\n"
+                "AwwqQWxsSm95biBFQ0RIRSBTYW1wbGUgQ2VydGlmaWNhdGUgQXV0aG9yaXR5MFkw\n"
+                "EwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE6AsCTTviTBWX0Jw2e8Cs8DhwxfRd37Yp\n"
+                "IH5ALzBqwUN2sfG1odcthe6GKdE/9oVfy12SXOL3X2bi3yg1XFoWnaMQMA4wDAYD\n"
+                "VR0TBAUwAwEB/zAKBggqhkjOPQQDAgNHADBEAiASuD0OrpDM8ziC5GzMbZWKNE/X\n"
+                "eboedc0p6YsAZmry2AIgR23cKM4cKkc2bgUDbETNbDcOcwm+EWaK9E4CkOO/tBc=\n"
+                "-----END CERTIFICATE-----\n"
             };
             /*
              * The application may provide the DSA private key and public key in the certificate.
@@ -224,11 +244,10 @@ class ECDHEKeyXListener : public AuthListener {
             if (creds.IsSet(AuthListener::CRED_CERT_CHAIN)) {
                 /*
                  * AllJoyn sends back the certificate chain for the application to verify.
-                 * The application has to option to verify the certificate chain.  If the cert chain is validated and trusted then return true; otherwise, return false.
-                 */
+                 * The application has to option to verify the certificate chain.  If the cert chain is validated and trusted then return true; otherwise, return false. */
                 printf("VerifyCredentials receives cert chain %s\n", creds.GetCertChain().c_str());
             }
-            return true;
+            return VerifyCertificateChain(creds);
         }
         return false;
     }
