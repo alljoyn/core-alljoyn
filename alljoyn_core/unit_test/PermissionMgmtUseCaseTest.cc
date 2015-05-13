@@ -256,63 +256,6 @@ static PermissionPolicy* GeneratePolicy(const GUID128& groupGUID, const KeyInfoN
     return policy;
 }
 
-static PermissionPolicy* GenerateAnyUserPolicyWithLevel(const GUID128& groupGUID, const KeyInfoNISTP256& groupAuthority, BusAttachment& issuerBus)
-{
-    qcc::GUID128 issuerGUID;
-    PermissionMgmtTestHelper::GetGUID(issuerBus, issuerGUID);
-    ECCPublicKey issuerPubKey;
-    QStatus status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(issuerBus, &issuerPubKey);
-    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
-    PermissionPolicy* policy = new PermissionPolicy();
-
-    policy->SetSerialNum(726129);
-
-    /* add the admin section */
-    PermissionPolicy::Peer* admins = new PermissionPolicy::Peer[1];
-    admins[0].SetType(PermissionPolicy::Peer::PEER_GUID);
-    KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
-    keyInfo->SetKeyId(issuerGUID.GetBytes(), GUID128::SIZE);
-    keyInfo->SetPublicKey(&issuerPubKey);
-    admins[0].SetKeyInfo(keyInfo);
-    policy->SetAdmins(1, admins);
-
-    /* add the terms ection */
-
-    PermissionPolicy::Term* terms = new PermissionPolicy::Term[3];
-
-    /* terms record 0  ANY-USER encrypted level */
-    PermissionPolicy::Peer* peers = new PermissionPolicy::Peer[1];
-    peers[0].SetType(PermissionPolicy::Peer::PEER_ANY);
-    peers[0].SetLevel(PermissionPolicy::Peer::PEER_LEVEL_ENCRYPTED);
-    terms[0].SetPeers(1, peers);
-    PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[1];
-    rules[0].SetInterfaceName(BasePermissionMgmtTest::ONOFF_IFC_NAME);
-    PermissionPolicy::Rule::Member* prms = new PermissionPolicy::Rule::Member[1];
-    prms[0].SetMemberName("On");
-    prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
-    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    rules[0].SetMembers(1, prms);
-    terms[0].SetRules(1, rules);
-
-    /* terms record 1  ANY-USER authenticated level */
-    peers = new PermissionPolicy::Peer[1];
-    peers[0].SetType(PermissionPolicy::Peer::PEER_ANY);
-    peers[0].SetLevel(PermissionPolicy::Peer::PEER_LEVEL_AUTHENTICATED);
-    terms[1].SetPeers(1, peers);
-    rules = new PermissionPolicy::Rule[1];
-    rules[0].SetInterfaceName(BasePermissionMgmtTest::ONOFF_IFC_NAME);
-    prms = new PermissionPolicy::Rule::Member[2];
-    prms[0].SetMemberName("Off");
-    prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
-    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    rules[0].SetMembers(1, prms);
-    terms[1].SetRules(1, rules);
-
-    GenerateAdminGroupACL(groupGUID, groupAuthority, terms[2]);
-    policy->SetTerms(3, terms);
-    return policy;
-}
-
 static PermissionPolicy* GenerateSmallAnyUserPolicy(const GUID128& groupGUID, const KeyInfoNISTP256& groupAuthority, BusAttachment& issuerBus)
 {
     qcc::GUID128 issuerGUID;
@@ -1447,51 +1390,6 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         EXPECT_NE(ER_OK, pmProxy.InstallIdentity(certArg)) << "InstallIdentity did not fail.";
     }
 
-    void InstallAdditionalIdentityTrustAnchor(BusAttachment& installerBus, BusAttachment& sourceBus, BusAttachment& targetBus, bool testForDuplicates)
-    {
-        ECCPublicKey sourcePublicKey;
-        status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(sourceBus, &sourcePublicKey);
-
-        PermissionMgmtProxy pmProxy(installerBus, targetBus.GetUniqueName().c_str());
-
-        MsgArg keyInfoArg;
-        KeyInfoNISTP256 keyInfo;
-        keyInfo.SetPublicKey(&sourcePublicKey);
-        //KeyInfoHelper is not a public class how do we expect users to do this
-        // on there own.
-        KeyInfoHelper::GenerateKeyId(keyInfo);
-        KeyInfoHelper::KeyInfoNISTP256ToMsgArg(keyInfo, keyInfoArg);
-        MsgArg credentialArg("(yv)", PermissionMgmtObj::TRUST_ANCHOR_CA, &keyInfoArg);
-
-        // What is the magic number 0 for the credentialType
-        EXPECT_EQ(ER_OK, pmProxy.InstallCredential(0, credentialArg)) << "InstallCredential failed.";
-        if (testForDuplicates) {
-            EXPECT_NE(ER_OK, pmProxy.InstallCredential(0, credentialArg)) << "Test for duplicate: InstallCredential did not fail.";
-        }
-    }
-
-    void InstallAdditionalIdentityTrustAnchor(BusAttachment& installerBus, BusAttachment& sourceBus, BusAttachment& targetBus)
-    {
-        InstallAdditionalIdentityTrustAnchor(installerBus, sourceBus, targetBus, false);
-    }
-
-    void RemoveIdentityTrustAnchor(BusAttachment& installerBus, BusAttachment& sourceBus, BusAttachment& targetBus)
-    {
-        ECCPublicKey sourcePublicKey;
-        status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(sourceBus, &sourcePublicKey);
-
-        MsgArg keyInfoArg;
-        KeyInfoNISTP256 keyInfo;
-        keyInfo.SetPublicKey(&sourcePublicKey);
-        KeyInfoHelper::GenerateKeyId(keyInfo);
-        KeyInfoHelper::KeyInfoNISTP256ToMsgArg(keyInfo, keyInfoArg);
-        MsgArg credentialArg("(yv)", PermissionMgmtObj::TRUST_ANCHOR_CA, &keyInfoArg);
-
-        PermissionMgmtProxy pmProxy(installerBus, targetBus.GetUniqueName().c_str());
-        EXPECT_EQ(ER_OK, pmProxy.RemoveCredential(0, credentialArg)) << "RemoveCredential failed.";
-
-    }
-
     /**
      *  Install Membership to service provider
      */
@@ -1598,17 +1496,6 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         status = PermissionMgmtTestHelper::InstallMembership(membershipSerial1, adminProxyBus, adminBus.GetUniqueName(), adminBus, subjectCN, &claimedPubKey, membershipGUID, membershipAuthData);
 
         EXPECT_EQ(ER_OK, status) << "  InstallMembershipToAdmin cert1 failed.  Actual Status: " << QCC_StatusText(status);
-    }
-
-    /**
-     *  Test PermissionMgmt InstallGuildEquivalence method
-     */
-    void InstallGuildEquivalence()
-    {
-        PermissionMgmtProxy pmProxy(adminBus, serviceBus.GetUniqueName().c_str());
-        MsgArg arg("(yay)", CertificateX509::ENCODING_X509_DER_PEM, strlen(sampleCertificatePEM), sampleCertificatePEM);
-        EXPECT_EQ(ER_OK, pmProxy.InstallGuildEquivalence(arg)) << "InstallGuildEquivalence failed.";
-
     }
 
     /**
@@ -1978,7 +1865,6 @@ TEST_F(PermissionMgmtUseCaseTest, TestAllCalls)
     policy = GenerateMembershipAuthData();
     InstallMembershipToConsumer(policy);
     delete policy;
-    InstallGuildEquivalence();
 
     /* setup the application interfaces for access tests */
     CreateAppInterfaces(serviceBus, true);
@@ -2540,146 +2426,6 @@ TEST_F(PermissionMgmtUseCaseTest, AllowEverything)
     CreateAppInterfaces(consumerBus, false);
 
     ConsumerCanCallOnAndOff();
-}
-
-/*
- *  Case: multiple trust anchors in the local network
- */
-TEST_F(PermissionMgmtUseCaseTest, TwoTrustAnchors)
-{
-    Claims(true);
-    /* generate a policy */
-    PermissionPolicy* policy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, adminBus, consumerBus);
-    ASSERT_TRUE(policy) << "GeneratePolicy failed.";
-    InstallPolicyToService(*policy);
-    delete policy;
-
-    policy = GenerateFullAccessOutgoingPolicy(adminAdminGroupGUID, adminAdminGroupAuthority);
-    InstallPolicyToConsumer(*policy);
-    delete policy;
-
-    policy = GenerateMembershipAuthData(&membershipGUID1, &consumerBus);
-    InstallMembershipToConsumer(policy);
-    delete policy;
-
-    /* allow the remote control to trust the service provider */
-    policy = GenerateGuildSpecificAccessOutgoingPolicy(consumerAdminGroupGUID, consumerAdminGroupAuthority, membershipGUID1, adminBus);
-    InstallPolicyToClientBus(consumerBus, remoteControlBus, *policy);
-    delete policy;
-
-    PermissionPolicy** authDataArray = new PermissionPolicy* [2];
-    GenerateMembershipAuthChain(authDataArray, 2);
-    InstallMembershipChainToTarget(adminBus, consumerBus, remoteControlBus, membershipSerial0, membershipSerial1, membershipGUID1, authDataArray);
-    for (size_t cnt = 0; cnt < 2; cnt++) {
-        delete authDataArray[cnt];
-    }
-    delete [] authDataArray;
-    /* install additional credentials on service and remote control so they
-        can trust each other */
-    InstallAdditionalIdentityTrustAnchor(adminBus, consumerBus, serviceBus);
-    InstallAdditionalIdentityTrustAnchor(consumerBus, adminBus, remoteControlBus);
-
-    /* setup the application interfaces for access tests */
-    CreateAppInterfaces(serviceBus, true);
-    CreateAppInterfaces(consumerBus, false);
-    CreateAppInterfaces(remoteControlBus, false);
-
-    AnyUserCanCallOnAndNotOff(remoteControlBus);
-
-}
-
-/*
- *  Case: add and delete identity trust anchors
- */
-TEST_F(PermissionMgmtUseCaseTest, AddDeleteIdentityTrustAnchors)
-{
-    Claims(true);
-    /* generate a policy with adminBus as the guild authority */
-    PermissionPolicy* policy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, adminBus, adminBus);
-    ASSERT_TRUE(policy) << "GeneratePolicy failed.";
-    InstallPolicyToService(*policy);
-    delete policy;
-
-    policy = GenerateFullAccessOutgoingPolicy(adminAdminGroupGUID, adminAdminGroupAuthority);
-    InstallPolicyToConsumer(*policy);
-    delete policy;
-
-    policy = GenerateMembershipAuthData(&membershipGUID1, &adminBus);
-    InstallMembershipToConsumer(policy);
-    delete policy;
-
-    /* install additional crentials on service and remote control so they
-       can authenticate each other */
-    InstallAdditionalIdentityTrustAnchor(adminBus, consumerBus, serviceBus);
-    InstallAdditionalIdentityTrustAnchor(consumerBus, adminBus, remoteControlBus);
-
-    policy = GenerateFullAccessOutgoingPolicy(consumerAdminGroupGUID, consumerAdminGroupAuthority);
-    InstallPolicyToClientBus(consumerBus, remoteControlBus, *policy);
-    delete policy;
-
-    /* setup the application interfaces for access tests */
-    CreateAppInterfaces(serviceBus, true);
-    CreateAppInterfaces(consumerBus, false);
-    CreateAppInterfaces(remoteControlBus, false);
-
-    AnyUserCanCallOnAndNotOff(consumerBus);
-    AppCanCallOn(remoteControlBus, serviceBus);
-
-    /* remove the identity trust anchor from service */
-    RemoveIdentityTrustAnchor(adminBus, consumerBus, serviceBus);
-
-    /* now need to prove that the remote control bus can't access the service */
-    /* since the remote control already have the master secret with the service. it needs to be cleared first and re-enable ECDSA key exchange */
-    ClearPeerKeys(remoteControlBus, serviceBus);
-    EnableSecurity("ALLJOYN_ECDHE_ECDSA");
-    AppCannotCallTVOn(remoteControlBus, serviceBus);
-    ASSERT_FALSE(remoteControlKeyListener->IsAuthComplete()) << " remote control did not fail the secure ECDSA connection";
-}
-
-/*
- *  Case: different peer level in ANY-USER policy
- */
-TEST_F(PermissionMgmtUseCaseTest, DifferentPeerLevelsInAnyUserPolicy)
-{
-    /* claims the apps with the exception of the remote control app */
-    Claims(true, false);
-    EnableSecurity("ALLJOYN_ECDHE_NULL");
-
-    /* setup the application interfaces for access tests */
-    CreateAppInterfaces(serviceBus, true);
-    CreateAppInterfaces(remoteControlBus, false);
-
-    /* service has no policy so expect to fail */
-    AppCannotCallOn(remoteControlBus, serviceBus);
-
-    /* generate a policy for service */
-    EnableSecurity("ALLJOYN_ECDHE_ECDSA");
-    PermissionPolicy* policy = GenerateAnyUserPolicyWithLevel(adminAdminGroupGUID, adminAdminGroupAuthority, adminBus);
-    ASSERT_TRUE(policy) << "GeneratePolicy failed.";
-    InstallPolicyToService(*policy);
-    delete policy;
-
-    EnableSecurity("ALLJOYN_ECDHE_NULL");
-
-    /* the unauthenticated remote control can turn on the TV */
-    AppCanCallOn(remoteControlBus, serviceBus);
-
-    /* since the remote control is not authenticated, expect the Off call fails since it requires authenticated peer */
-    AppCannotCallTVOff(remoteControlBus, serviceBus);
-
-    /* Claims the remote so it can participate in privilege calls */
-    ConsumerClaimsRemoteControl();
-    EnableSecurity("ALLJOYN_ECDHE_ECDSA");
-
-    policy = GenerateFullAccessOutgoingPolicy(consumerAdminGroupGUID, consumerAdminGroupAuthority);
-    InstallPolicyToClientBus(consumerBus, remoteControlBus, *policy);
-    delete policy;
-
-    /* install additional crentials on service and remote control so they
-       can authenticate each other */
-    InstallAdditionalIdentityTrustAnchor(adminBus, consumerBus, serviceBus);
-    InstallAdditionalIdentityTrustAnchor(consumerBus, adminBus, remoteControlBus);
-    AppCanCallTVOff(remoteControlBus, serviceBus);
 }
 
 /*

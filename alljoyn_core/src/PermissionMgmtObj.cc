@@ -94,12 +94,9 @@ PermissionMgmtObj::PermissionMgmtObj(BusAttachment& bus) :
         AddMethodHandler(ifc->GetMember("InstallMembership"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::InstallMembership));
         AddMethodHandler(ifc->GetMember("InstallMembershipAuthData"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::InstallMembershipAuthData));
         AddMethodHandler(ifc->GetMember("RemoveMembership"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::RemoveMembership));
-        AddMethodHandler(ifc->GetMember("InstallGuildEquivalence"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::InstallGuildEquivalence));
         AddMethodHandler(ifc->GetMember("GetManifest"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::GetManifest));
         AddMethodHandler(ifc->GetMember("Reset"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::Reset));
         AddMethodHandler(ifc->GetMember("GetPublicKey"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::GetPublicKey));
-        AddMethodHandler(ifc->GetMember("InstallCredential"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::InstallCredential));
-        AddMethodHandler(ifc->GetMember("RemoveCredential"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::RemoveCredential));
     }
     /* Add org.allseen.Security.PermissionMgmt.Notification interface */
     const InterfaceDescription* notificationIfc = bus.GetInterface(org::allseen::Security::PermissionMgmt::Notification::InterfaceName);
@@ -221,10 +218,6 @@ QStatus PermissionMgmtObj::GetACLKey(ACLEntryType aclEntryType, KeyStore::Key& k
     }
     if (aclEntryType == ENTRY_IDENTITY) {
         key.SetGUID(GUID128(qcc::String("4D8B9E901D7BE0024A331609BBAA4B02")));
-        return ER_OK;
-    }
-    if (aclEntryType == ENTRY_EQUIVALENCES) {
-        key.SetGUID(GUID128(qcc::String("7EA4E59508DA5F3938EFF5F3CC5325CF")));
         return ER_OK;
     }
     if (aclEntryType == ENTRY_MANIFEST_TEMPLATE) {
@@ -2036,41 +2029,6 @@ QStatus PermissionMgmtObj::ParseSendMemberships(Message& msg, bool& done)
     return ER_OK;
 }
 
-void PermissionMgmtObj::InstallGuildEquivalence(const InterfaceDescription::Member* member, Message& msg)
-{
-    QCC_UNUSED(member);
-    uint8_t encoding;
-    uint8_t* encoded;
-    size_t encodedLen;
-    QStatus status = msg->GetArg(0)->Get("(yay)", &encoding, &encodedLen, &encoded);
-    if (ER_OK != status) {
-        QCC_DbgPrintf(("PermissionMgmtObj::InstallGuildEquivalence failed to retrieve PEM status 0x%x", status));
-        MethodReply(msg, status);
-        return;
-    }
-    if ((encoding != CertificateX509::ENCODING_X509_DER) && (encoding != CertificateX509::ENCODING_X509_DER_PEM)) {
-        QCC_DbgPrintf(("PermissionMgmtObj::InstallGuildEquivalence does not support encoding %d", encoding));
-        MethodReply(msg, ER_NOT_IMPLEMENTED);
-        return;
-    }
-    /* store the InstallGuildEquivalence PEM  into the key store */
-    KeyStore::Key headerKey;
-    GetACLKey(ENTRY_EQUIVALENCES, headerKey);
-    KeyBlob kb(encoded, encodedLen, KeyBlob::GENERIC);
-
-    KeyBlob headerBlob;
-    status = ca->GetKey(headerKey, headerBlob);
-    if (status == ER_BUS_KEY_UNAVAILABLE) {
-        /* make the header guid */
-        status = ca->AddAssociatedKey(headerKey, headerKey, kb);
-    } else {
-        /* add the new cert as an associate node of the Guild Equivalence header node */
-        KeyStore::Key associateKey;
-        status = ca->AddAssociatedKey(headerKey, associateKey, kb);
-    }
-    MethodReply(msg, status);
-}
-
 QStatus PermissionMgmtObj::StoreConfiguration(const Configuration& config)
 {
     /* store the message into the key store */
@@ -2164,11 +2122,6 @@ QStatus PermissionMgmtObj::PerformReset(bool keepForClaim)
     }
 
     GetACLKey(ENTRY_MEMBERSHIPS, key);
-    status = ca->DeleteKey(key);
-    if (ER_OK != status) {
-        return status;
-    }
-    GetACLKey(ENTRY_EQUIVALENCES, key);
     status = ca->DeleteKey(key);
     if (ER_OK != status) {
         return status;
@@ -2453,91 +2406,6 @@ QStatus PermissionMgmtObj::BindPort()
         portListener = NULL;
     }
     return status;
-}
-
-void PermissionMgmtObj::InstallCredential(const InterfaceDescription::Member* member, Message& msg)
-{
-    QCC_UNUSED(member);
-    uint8_t credentialType;
-    MsgArg variant;
-    QStatus status = msg->GetArg(0)->Get("y", &credentialType);
-    if (ER_OK != status) {
-        MethodReply(msg, status);
-        return;
-    }
-    if (credentialType != 0) {
-        MethodReply(msg, ER_INVALID_DATA);
-        return;
-    }
-    uint8_t trustAnchorUsage;
-    MsgArg* keyInfoArg;
-    status = msg->GetArg(1)->Get("(yv)", &trustAnchorUsage, &keyInfoArg);
-    if (ER_OK != status) {
-        MethodReply(msg, status);
-        return;
-    }
-    if (trustAnchorUsage > TRUST_ANCHOR_MEMBERSHIP) {
-        MethodReply(msg, ER_INVALID_DATA);
-        return;
-    }
-    TrustAnchor trustAnchor((TrustAnchorType) trustAnchorUsage);
-
-    status = KeyInfoHelper::MsgArgToKeyInfoNISTP256(*keyInfoArg, trustAnchor.keyInfo);
-    if (ER_OK != status) {
-        MethodReply(msg, status);
-        return;
-    }
-    /* install trust anchor */
-    status = InstallTrustAnchor(&trustAnchor);
-    if (ER_OK != status) {
-        QCC_DbgPrintf(("PermissionMgmtObj::InstallCredential failed to store trust anchor"));
-        status = ER_PERMISSION_DENIED;
-    }
-    MethodReply(msg, status);
-}
-
-void PermissionMgmtObj::RemoveCredential(const InterfaceDescription::Member* member, Message& msg)
-{
-    QCC_UNUSED(member);
-    uint8_t credentialType;
-    MsgArg variant;
-    QStatus status = msg->GetArg(0)->Get("y", &credentialType);
-    if (ER_OK != status) {
-        MethodReply(msg, status);
-        return;
-    }
-    if (credentialType != 0) {
-        MethodReply(msg, ER_INVALID_DATA);
-        return;
-    }
-    uint8_t trustAnchorUsage;
-    MsgArg* keyInfoArg;
-    status = msg->GetArg(1)->Get("(yv)", &trustAnchorUsage, &keyInfoArg);
-    if (ER_OK != status) {
-        MethodReply(msg, status);
-        return;
-    }
-    if (trustAnchorUsage > TRUST_ANCHOR_MEMBERSHIP) {
-        MethodReply(msg, ER_INVALID_DATA);
-        return;
-    }
-    TrustAnchor* trustAnchor = new TrustAnchor((TrustAnchorType) trustAnchorUsage);
-    trustAnchor->use = (TrustAnchorType) trustAnchorUsage;
-
-    status = KeyInfoHelper::MsgArgToKeyInfoNISTP256(*keyInfoArg, trustAnchor->keyInfo);
-    if (ER_OK != status) {
-        delete trustAnchor;
-        MethodReply(msg, status);
-        return;
-    }
-    /* remove trust anchor */
-    status = RemoveTrustAnchor(trustAnchor);
-    delete trustAnchor;
-    if (ER_OK != status) {
-        QCC_DbgPrintf(("PermissionMgmtObj::RemoveCredential failed to remove trust anchor"));
-        status = ER_PERMISSION_DENIED;
-    }
-    MethodReply(msg, ER_OK);
 }
 
 QStatus PermissionMgmtObj::Get(const char* ifcName, const char* propName, MsgArg& val)

@@ -286,7 +286,6 @@ class PermissionMgmtObj : public BusObject {
         ENTRY_POLICY,              ///< Local policy data
         ENTRY_MEMBERSHIPS,         ///< the list of membership certificates and associated policies
         ENTRY_IDENTITY,            ///< the identity cert
-        ENTRY_EQUIVALENCES,        ///< The equivalence certs
         ENTRY_MANIFEST_TEMPLATE,   ///< The manifest template
         ENTRY_MANIFEST,            ///< The manifest data
         ENTRY_CONFIGURATION        ///< The configuration data
@@ -341,7 +340,6 @@ class PermissionMgmtObj : public BusObject {
     void InstallMembership(const InterfaceDescription::Member* member, Message& msg);
     void InstallMembershipAuthData(const InterfaceDescription::Member* member, Message& msg);
     void RemoveMembership(const InterfaceDescription::Member* member, Message& msg);
-    void InstallGuildEquivalence(const InterfaceDescription::Member* member, Message& msg);
     void GetManifest(const InterfaceDescription::Member* member, Message& msg);
     bool ValidateCertChain(const qcc::String& certChainPEM, bool& authorized);
     QStatus LocateMembershipEntry(const qcc::String& serialNum, const qcc::String& issuerAki, KeyStore::Key& membershipKey, bool searchLeafCertOnly);
@@ -358,8 +356,6 @@ class PermissionMgmtObj : public BusObject {
     QStatus PerformReset(bool keepForClaim);
     QStatus SameSubjectPublicKey(qcc::CertificateX509& cert, bool& outcome);
     QStatus LocalMembershipsChanged();
-    void InstallCredential(const InterfaceDescription::Member* member, Message& msg);
-    void RemoveCredential(const InterfaceDescription::Member* member, Message& msg);
     bool IsTrustAnchor(TrustAnchorType taType, const qcc::ECCPublicKey* publicKey);
     QStatus GetTrustAnchorsFromAllMemberships(TrustAnchorList& taList);
     QStatus ManageMembershipTrustAnchors(PermissionPolicy* policy);

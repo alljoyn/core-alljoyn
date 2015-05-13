@@ -623,10 +623,6 @@ bool PermissionManager::AuthorizePermissionMgmt(bool outgoing, PeerState& peerSt
         (strncmp(mbrName, "InstallMembershipAuthData", 25) == 0) ||
         (strncmp(mbrName, "RemoveMembership", 16) == 0) ||
         (strncmp(mbrName, "InstallIdentity", 15) == 0) ||
-        (strncmp(mbrName, "InstallGuildEquivalence", 23) == 0) ||
-        (strncmp(mbrName, "RemoveGuildEquivalence", 22) == 0) ||
-        (strncmp(mbrName, "InstallCredential", 17) == 0) ||
-        (strncmp(mbrName, "RemoveCredential", 16) == 0) ||
         (strncmp(mbrName, "Reset", 5) == 0)
         ) {
         /* these actions require admin privilege */

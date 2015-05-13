@@ -255,28 +255,6 @@ QStatus PermissionMgmtProxy::GetIdentity(qcc::IdentityCertificate* cert) {
     return status;
 }
 
-QStatus PermissionMgmtProxy::InstallGuildEquivalence(const MsgArg& certArg) {
-    QCC_DbgTrace(("PermissionMgmtProxy::%s", __FUNCTION__));
-    QStatus status = ER_OK;
-    Message reply(*bus);
-
-    status = MethodCall(org::allseen::Security::PermissionMgmt::InterfaceName, "InstallGuildEquivalence", &certArg, 1, reply);
-    if (ER_BUS_REPLY_IS_ERROR_MESSAGE == status) {
-        if (IsPermissionDeniedError(reply)) {
-            status = ER_PERMISSION_DENIED;
-        }
-    }
-    return status;
-}
-
-QStatus PermissionMgmtProxy::RemoveGuildEquivalence(uint8_t* guildSerialNum, size_t guildSerialNumSize, uint8_t* issuer, size_t issuerSize) {
-    QCC_UNUSED(guildSerialNum);
-    QCC_UNUSED(guildSerialNumSize);
-    QCC_UNUSED(issuer);
-    QCC_UNUSED(issuerSize);
-    return ER_FAIL;
-}
-
 // TODO GetManifest function breaks the pattern used for most other methods.
 // It allocates memory for the user that they have to free. Figure out a way
 // to let the user allocate there own memory without making multiple remote
@@ -332,42 +310,6 @@ QStatus PermissionMgmtProxy::GetPublicKey(qcc::ECCPublicKey* pubKey) {
     }
     /* retrieve ECCPublicKey from MsgArg */
     return RetrieveECCPublicKeyFromMsgArg(*reply->GetArg(0), pubKey);
-}
-
-QStatus PermissionMgmtProxy::InstallCredential(const uint8_t credentialType, const MsgArg& credential) {
-    QCC_DbgTrace(("PermissionMgmtProxy::%s", __FUNCTION__));
-    QStatus status = ER_OK;
-    Message reply(*bus);
-
-    MsgArg input[2];
-    input[0].Set("y", credentialType);
-    input[1].Set("v", &credential);
-
-    status = MethodCall(org::allseen::Security::PermissionMgmt::InterfaceName, "InstallCredential", input, 2, reply);
-    if (ER_BUS_REPLY_IS_ERROR_MESSAGE == status) {
-        if (IsPermissionDeniedError(reply)) {
-            status = ER_PERMISSION_DENIED;
-        }
-    }
-    return status;
-}
-
-QStatus PermissionMgmtProxy::RemoveCredential(const uint8_t credentialType, const MsgArg& credentialID) {
-    QCC_DbgTrace(("PermissionMgmtProxy::%s", __FUNCTION__));
-    QStatus status = ER_OK;
-    Message reply(*bus);
-
-    MsgArg input[2];
-    input[0].Set("y", credentialType);
-    input[1].Set("v", &credentialID);
-
-    status = MethodCall(org::allseen::Security::PermissionMgmt::InterfaceName, "RemoveCredential", input, 2, reply);
-    if (ER_BUS_REPLY_IS_ERROR_MESSAGE == status) {
-        if (IsPermissionDeniedError(reply)) {
-            status = ER_PERMISSION_DENIED;
-        }
-    }
-    return status;
 }
 
 QStatus PermissionMgmtProxy::GetVersion(uint16_t& version) {

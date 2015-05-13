@@ -210,25 +210,6 @@ class PermissionMgmtProxy : public ProxyBusObject {
     QStatus GetIdentity(qcc::IdentityCertificate* cert);
 
     /**
-     * Install a guild equivalence to the app. The Certificate object
-     * description is shown below.
-     *
-     * Access restriction: Only an admin of the app is allowed to install a
-     * guild equivalence.
-     *
-     * Note: Only X.509 DER certificate format is currently supported.
-     *
-     * @param[in] cert the certificate of the guild equivalence certificate.
-     *
-     * @return
-     *  - #ER_OK if successful
-     *  - an error status indicating failure
-     */
-    QStatus InstallGuildEquivalence(const MsgArg& cert);
-
-    QStatus RemoveGuildEquivalence(uint8_t* guildSerialNum, size_t guildSerialNumSize, uint8_t* issuer, size_t issuerSize);
-
-    /**
      * Retrieve the manifest data installed by the application developer.
      *
      * Access restriction: unspecified in interface description
@@ -267,37 +248,6 @@ class PermissionMgmtProxy : public ProxyBusObject {
      *  - an error status indicating failure
      */
     QStatus GetPublicKey(qcc::ECCPublicKey* pubKey);
-
-    /**
-     * Install additional credential to the app. It can be an additional trust
-     * anchor.
-     *
-     * Access restriction: Only an admin of the app is allowed to install a
-     * credential.
-     *
-     * @param[in] credentialType the type of credential
-     * @param[in] credential     the credential
-     *
-     * @return
-     *  - #ER_OK if successful
-     *  - an error status indicating failure
-     */
-    QStatus InstallCredential(const uint8_t credentialType, const MsgArg& credential);
-
-    /**
-     * Remove a credential from the app.
-     *
-     * Access restriction: Only an admin of the app is allowed to remove a
-     * credential.
-     *
-     * @param[in] credentialType  the type of credential
-     * @param[in] credentialID    the credential Identifier
-     *
-     * @return
-     *  - #ER_OK if successful
-     *  - an error status indicating failure
-     */
-    QStatus RemoveCredential(const uint8_t credentialType, const MsgArg& credentialID);
 
     /**
      * GetVersion get the PermissionMgmt version

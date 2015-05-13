@@ -373,13 +373,9 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         ifc->AddMethod("RemoveMembership",     "say", NULL, "serialNum,issuer");
         ifc->AddMethod("InstallIdentity",     "a(yay)", NULL, "certChain");
         ifc->AddMethod("GetIdentity",     NULL, "(yay)", "cert");
-        ifc->AddMethod("InstallGuildEquivalence",     "(yay)", NULL, "cert");
-        ifc->AddMethod("RemoveGuildEquivalence",     "ayay", NULL, "serialNum,issuer");
         ifc->AddMethod("GetManifest",     NULL, "(yv)",  "manifest");
         ifc->AddMethod("Reset",     NULL, NULL, NULL);
         ifc->AddMethod("GetPublicKey", NULL, "(yv)", "publicKey");
-        ifc->AddMethod("InstallCredential",     "yv", NULL, "type,credential");
-        ifc->AddMethod("RemoveCredential",     "yv", NULL, "type,credential");
         ifc->Activate();
     }
     {
