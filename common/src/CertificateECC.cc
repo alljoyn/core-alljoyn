@@ -54,6 +54,8 @@ const qcc::String OID_DIG_SHA256 = "2.16.840.1.101.3.4.2.1";
 const qcc::String OID_SUB_ALTNAME = "2.5.29.17";
 const qcc::String OID_CUSTOM_CERT_TYPE = "1.3.6.1.4.1.44924.1.1";
 const qcc::String OID_CUSTOM_DIGEST = "1.3.6.1.4.1.44924.1.2";
+const qcc::String OID_CUSTOM_SECURITY_GROUP_ID = "1.3.6.1.4.1.44924.1.3";
+const qcc::String OID_CUSTOM_IDENTITY_ALIAS = "1.3.6.1.4.1.44924.1.4";
 const qcc::String OID_AUTHORITY_KEY_IDENTIFIER = "2.5.29.35";
 
 
@@ -545,7 +547,17 @@ QStatus CertificateX509::DecodeCertificateExt(const qcc::String& ext)
                 }
             }
         } else if (OID_SUB_ALTNAME == oid) {
-            subjectAltName = str;
+            qcc::String otherNameOid;
+            qcc::String otherName;
+            /* only interested in the otherName field [0] */
+            if (ER_OK == Crypto_ASN1::Decode(str, "(c(o.))", 0, &otherNameOid, &otherName)) {
+                if ((OID_CUSTOM_SECURITY_GROUP_ID == otherNameOid) || (OID_CUSTOM_IDENTITY_ALIAS == otherNameOid)) {
+                    status = Crypto_ASN1::Decode(otherName, "c(x)", 0, &subjectAltName);
+                    if (ER_OK != status) {
+                        return status;
+                    }
+                }
+            }
         } else if (OID_CUSTOM_DIGEST == oid) {
             qcc::String dig;
             oid.clear();
@@ -602,8 +614,23 @@ QStatus CertificateX509::EncodeCertificateExt(qcc::String& ext)
         return status;
     }
     if (subjectAltName.size()) {
+        qcc::String octet;
+        if ((type == IDENTITY_CERTIFICATE) || (type == MEMBERSHIP_CERTIFICATE)) {
+            qcc::String otherNameOid;
+            if (type == IDENTITY_CERTIFICATE) {
+                otherNameOid = OID_CUSTOM_IDENTITY_ALIAS;
+            } else {
+                otherNameOid = OID_CUSTOM_SECURITY_GROUP_ID;
+            }
+            status = Crypto_ASN1::Encode(octet, "(c(oc(x)))", 0, &otherNameOid, 0, &subjectAltName);
+            if (ER_OK != status) {
+                return status;
+            }
+        } else {
+            octet = subjectAltName;
+        }
         oid = OID_SUB_ALTNAME;
-        status = Crypto_ASN1::Encode(raw, "(ox)", &oid, &subjectAltName);
+        status = Crypto_ASN1::Encode(raw, "(ox)", &oid, &octet);
         if (ER_OK != status) {
             return status;
         }
@@ -964,7 +991,7 @@ QStatus CertificateX509::SignAndGenerateAuthorityKeyId(const ECCPrivateKey* priv
 String CertificateX509::ToString() const
 {
     qcc::String str("Certificate:\n");
-    str += "serial:    " + serial + " (0x" + BytesToHexString((const uint8_t*) serial.data(), serial.length()) + ")\n";
+    str += "serial:    0x" + BytesToHexString((const uint8_t*) serial.data(), serial.length()) + "\n";
     if ((GetIssuerOULength() > 0) || (GetIssuerCNLength() > 0)) {
         str += "issuer: ";
         bool addComma = false;
