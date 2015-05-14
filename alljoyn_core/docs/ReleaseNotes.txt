@@ -11,6 +11,10 @@ Fully Validated Platforms
  6) OSX 10.9 Lion
  7) OpenWRT Barrier Breaker and Chaos Calmer branches
 
+See the release review page for other platforms that have not been fully
+verified, but may work:
+wiki.allseenalliance.org/core/core_15.04_release_review?&#regression_test
+
 
 Features added in Version 15.04
 -------------------------------
@@ -93,6 +97,12 @@ ASACORE-1894 Race condition between alljoyn_busobject_signal and
              alljoyn_busobject_cancelsessionlessmessage
 ASACORE-1904 javascript NPAPI plug-in crashes Firefox.
 ASACORE-1907 Permission Functionality in Android does not work correctly
+ASACORE-1934 Race condition in Thread::Join can cause use-after-free
+ASACORE-1946 Windows Readme is inaccurate.
+ASACORE-1954 alljoyn_aboutdata_setappid_fromstring missing from Windows C API
+             DLL exports
+ASACORE-1959 Memory leak with EnablePeerSecurity
+ASACORE-1961 About samples for C Binding are broken (need alljoyn_init)
 
 For a complete list of open issues:
 https://jira.allseenalliance.org/issues/?jql=project%3D%22Core%20SW%22%20and%20status%20not%20in%20%28closed%2C%20resolved%29%20and%20type%20not%20in%20%28task%2C%20%22New%20Feature%22%29%20%20and%20component%20not%20in%20%28%22Thin%20Core%20Library%22%2C%20%22About%20TC%22%29%20order%20by%20priority%20DESC%2C%20id%20ASC
