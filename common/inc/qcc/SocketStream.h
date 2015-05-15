@@ -44,7 +44,14 @@ class SocketStream : public Stream {
     /**
      * Create a SocketStream from an existing socket.
      *
-     * @param sock      socket handle.
+     * Ownership of the underlying socket descriptor passes to this
+     * SocketStream: the SocketStream will shutdown the socket when
+     * Close() is called and close the socket when this SocketStream
+     * is destroyed.
+     *
+     * @see DetachSocketFd()
+     *
+     * @param sock      A connected socket handle.
      */
     SocketStream(SocketFd sock);
 
@@ -64,13 +71,17 @@ class SocketStream : public Stream {
     SocketStream(const SocketStream& other);
 
     /**
-     * Assignment operator.
+     * Assignment operator
      *
      * @param other  SocketStream to assign from.
      */
     SocketStream operator=(const SocketStream& other);
 
-    /** Destructor */
+    /**
+     * Destructor
+     *
+     * The destructor will close the underlying socket descriptor.
+     */
     virtual ~SocketStream();
 
     /**
@@ -78,6 +89,7 @@ class SocketStream : public Stream {
      *
      * @param host   Hostname or IP address of destination.
      * @param port   Destination port.
+     *
      * @return  ER_OK if successful.
      */
     QStatus Connect(qcc::String& host, uint16_t port);
@@ -86,6 +98,7 @@ class SocketStream : public Stream {
      * Connect the socket to a path destination.
      *
      * @param path   Path name of destination.
+     *
      * @return  ER_OK if successful.
      */
     QStatus Connect(qcc::String& path);
@@ -95,27 +108,41 @@ class SocketStream : public Stream {
 
     /**
      * Pull bytes from the socket.
-     * The source is exhausted when ER_EOF is returned.
      *
-     * @param buf          Buffer to store pulled bytes
-     * @param reqBytes     Number of bytes requested to be pulled from source.
-     * @param actualBytes  [OUT] Actual number of bytes retrieved from source.
-     * @param timeout      Timeout in milliseconds.
-     * @return   ER_OK if successful. ER_EOF if source is exhausted. Otherwise an error.
+     * @param buf              Buffer to store pulled bytes
+     * @param reqBytes         Number of bytes requested to be pulled from source.
+     * @param[out] actualBytes Actual number of bytes retrieved from source.
+     * @param timeout          Timeout in milliseconds.
+     *
+     * @return
+     * - #ER_OK if the pull succeeds.
+     * - #ER_OS_ERROR if the underlying socket request fails.
+     * - #ER_READ_ERROR if the socket is not connected.
+     * - #ER_SOCK_OTHER_END_CLOSED if the number of bytes requested is not zero
+     *   and the pull returns zero bytes.
+     * - #ER_TIMEOUT if the timeout is reached before pulling any bytes.
      */
     QStatus PullBytes(void* buf, size_t reqBytes, size_t& actualBytes, uint32_t timeout = Event::WAIT_FOREVER);
 
     /**
      * Pull bytes and any accompanying file/socket descriptors from the stream.
-     * The source is exhausted when ER_EOF is returned.
      *
-     * @param buf          Buffer to store pulled bytes
-     * @param reqBytes     Number of bytes requested to be pulled from source.
-     * @param actualBytes  [OUT] Actual number of bytes retrieved from source.
-     * @param fdList       Array to receive file descriptors.
-     * @param numFds       [IN,OUT] On IN the size of fdList on OUT number of files descriptors pulled.
-     * @param timeout      Timeout in milliseconds.
-     * @return   ER_OK if successful. ER_EOF if source is exhausted. Otherwise an error.
+     * @param buf              Buffer to store pulled bytes
+     * @param reqBytes         Number of bytes requested to be pulled from source.
+     * @param[out] actualBytes Actual number of bytes retrieved from source.
+     * @param fdList           Array to receive file descriptors.
+     * @param[in,out] numFds   On in the size of fdList, on out number of files descriptors pulled.
+     * @param timeout          Timeout in milliseconds.
+     *
+     * @return
+     * - #ER_OK if the pull succeeds.
+     * - #ER_BAD_ARG_4 if fdList is NULL.
+     * - #ER_BAD_ARG_5 if numFds is 0.
+     * - #ER_OS_ERROR if the underlying socket request fails or numFds is not
+     *   large enough to receive all the descriptors.
+     * - #ER_READ_ERROR if the socket is not connected.
+     * - #ER_SOCK_OTHER_END_CLOSED if the pull returns zero bytes.
+     * - #ER_TIMEOUT if the timeout is reached before pulling any bytes.
      */
     QStatus PullBytesAndFds(void* buf, size_t reqBytes, size_t& actualBytes, SocketFd* fdList, size_t& numFds, uint32_t timeout = Event::WAIT_FOREVER);
 
@@ -124,22 +151,33 @@ class SocketStream : public Stream {
      *
      * @param buf          Buffer containing bytes to push
      * @param numBytes     Number of bytes from buf to send to sink.
-     * @param numSent      [OUT] Number of bytes actually consumed by sink.
-     * @return   ER_OK if successful.
+     * @param[out] numSent Number of bytes actually consumed by sink.
+     *
+     * @return
+     * - #ER_OK if numBytes is 0 or the push succeeds.
+     * - #ER_WRITE_ERROR if the socket is not connected.
+     * - #ER_TIMEOUT if timeout is reached before pushing any bytes.
+     * - #ER_OS_ERROR if the underlying socket request fails.
      */
     QStatus PushBytes(const void* buf, size_t numBytes, size_t& numSent);
 
     /**
      * Push bytes accompanied by one or more file/socket descriptors to a sink.
      *
-     * @param buf       Buffer containing bytes to push
-     * @param numBytes  Number of bytes from buf to send to sink, must be at least 1.
-     * @param numSent   [OUT] Number of bytes actually consumed by sink.
-     * @param fdList    Array of file descriptors to push.
-     * @param numFds    Number of files descriptors, must be at least 1.
-     * @param pid       Process id required on some platforms.
+     * @param buf           Buffer containing bytes to push
+     * @param numBytes      Number of bytes from buf to send to sink, must be at least 1.
+     * @param[out] numSent  Number of bytes actually consumed by sink.
+     * @param fdList        Array of file descriptors to push.
+     * @param numFds        Number of files descriptors, must be at least 1.
+     * @param pid           Process id required on some platforms.
      *
-     * @return  ER_OK or an error.
+     * @return
+     * - #ER_OK if the push succeeds.
+     * - #ER_OS_ERROR if the underlying socket request fails.
+     * - #ER_BAD_ARG_2 if numBytes is 0.
+     * - #ER_BAD_ARG_4 if fdList is NULL.
+     * - #ER_BAD_ARG_5 if numFds is 0 or numFds is greater than #SOCKET_MAX_FILE_DESCRIPTORS.
+     * - #ER_WRITE_ERROR if the socket is not connected.
      */
     QStatus PushBytesAndFds(const void* buf, size_t numBytes, size_t& numSent, SocketFd* fdList, size_t numFds, uint32_t pid = -1);
 
@@ -159,6 +197,7 @@ class SocketStream : public Stream {
 
     /**
      * Indicate whether socket is connected.
+     *
      * @return true iff underlying socket is connected.
      */
     bool IsConnected() { return isConnected; }
@@ -172,8 +211,9 @@ class SocketStream : public Stream {
 
     /**
      * Detach this SocketStream from the underlying socket.
-     * Calling this method will cause the underlying socket descriptor to not be shutdown when
-     * the SocketStream is closed or destroyed. The socket descriptor will, however, be closed.
+     *
+     * Calling this method will cause the underlying socket descriptor
+     * to not be shutdown by this SocketStream.
      */
     void DetachSocketFd() { isDetached = true; }
 
@@ -193,16 +233,19 @@ class SocketStream : public Stream {
 
   private:
 
-    /** Private default constructor */
+    /*
+     * Private constructors and assignment operator that do nothing
+     */
     SocketStream();
 
     bool isConnected;                /**< true iff socket is connected */
+
   protected:
 
     SocketFd sock;                   /**< Socket file descriptor */
     Event* sourceEvent;              /**< Event signaled when data is available */
     Event* sinkEvent;                /**< Event signaled when sink can accept data */
-    bool isDetached;                 /**< Detached socket streams do not shutdown the underlying socket when closing */
+    bool isDetached;                 /**< Detached socket streams do not shutdown the underlying socket */
     uint32_t sendTimeout;            /**< Send timeout */
 };
 
