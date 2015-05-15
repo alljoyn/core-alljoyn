@@ -1024,7 +1024,7 @@ int CDECL_CALL main(int argc, char** argv)
 
     if (connSpec.empty()) {
 #ifdef _WIN32
-        connSpec = env->Find("BUS_ADDRESS", "tcp:addr=127.0.0.1,port=9956");
+        connSpec = env->Find("BUS_ADDRESS", "tcp:addr=127.0.0.1,port=9955");
 #else
         connSpec = env->Find("BUS_ADDRESS", "unix:abstract=alljoyn");
 #endif
