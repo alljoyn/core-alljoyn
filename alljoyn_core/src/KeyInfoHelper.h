@@ -36,7 +36,7 @@ class KeyInfoHelper {
     /**
      * Helper function to determine whether the keyInfo object is an instance of a KeyInfoNISTP256 object.
      * @param keyInfo the KeyInfoECC object
-     * @true if the keyInfo object is a KeyInfoNISTP256 object; false, otherwise.
+     * @return true if the keyInfo object is a KeyInfoNISTP256 object; false, otherwise.
      */
 
     static bool InstanceOfKeyInfoNISTP256(const qcc::KeyInfoECC& keyInfo);
@@ -44,7 +44,7 @@ class KeyInfoHelper {
     /**
      * Helper function to generate a MsgArg for KeyInfoNISTP256 object.
      * @param keyInfo the KeyInfoNISTP256 object
-     * @param variant[out] the output message arg.
+     * @param[out] variant the output message arg.
      */
 
     static void KeyInfoNISTP256ToMsgArg(const qcc::KeyInfoNISTP256& keyInfo, MsgArg& variant);
@@ -52,9 +52,50 @@ class KeyInfoHelper {
     /**
      * Helper function to load a KeyInfoNISTP256 object using data from the message arg.
      * @param variant the input message arg.
-     * @param keyInfo[out] the output KeyInfoNISTP256 object
+     * @param[out] keyInfo the output KeyInfoNISTP256 object
+     * @return ER_OK if successful; otherwise, error code.
      */
     static QStatus MsgArgToKeyInfoNISTP256(const MsgArg& variant, qcc::KeyInfoNISTP256& keyInfo);
+
+    /**
+     * Helper function to generate a MsgArg for KeyInfoNISTP256 public key.
+     * @param keyInfo the KeyInfoNISTP256 object
+     * @param[out] arg the output message arg.
+     */
+    static void KeyInfoNISTP256PubKeyToMsgArg(const qcc::KeyInfoNISTP256& keyInfo, MsgArg& msgArg);
+
+    /**
+     * Helper function to load a KeyInfoNISTP256 public key using data from the
+     * message arg.
+     * @param msgArg the input message arg.
+     * @param[out] keyInfo the output KeyInfoNISTP256 object
+     * @return ER_OK if successful; otherwise, error code.
+     */
+    static QStatus MsgArgToKeyInfoNISTP256PubKey(const MsgArg& msgArg, qcc::KeyInfoNISTP256& keyInfo);
+
+    /**
+     * Helper function to load an authority key id using data from the
+     * message arg.
+     * @param msgArg the input message arg.
+     * @param[in,out] keyInfo the keyInfo object
+     * @return ER_OK if successful; otherwise, error code.
+     */
+    static QStatus MsgArgToKeyInfoKeyId(const MsgArg& msgArg, qcc::KeyInfoNISTP256& keyInfo);
+
+    /**
+     * Helper function to generate a MsgArg for authority key id.
+     * @param keyInfo the keyInfo object
+     * @param[out] arg the output message arg.
+     */
+    static void KeyInfoKeyIdToMsgArg(const qcc::KeyInfoNISTP256& keyInfo, MsgArg& msgArg);
+
+    /**
+     * Helper function to generate the key id using the authority
+     * key id generation algorithm.
+     * @param[in,out] keyInfo the key info object
+     * @return ER_OK if successfull; otherwise, error code.
+     */
+    static QStatus GenerateKeyId(qcc::KeyInfoNISTP256& keyInfo);
 
 };
 

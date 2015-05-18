@@ -94,12 +94,9 @@ PermissionMgmtObj::PermissionMgmtObj(BusAttachment& bus) :
         AddMethodHandler(ifc->GetMember("InstallMembership"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::InstallMembership));
         AddMethodHandler(ifc->GetMember("InstallMembershipAuthData"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::InstallMembershipAuthData));
         AddMethodHandler(ifc->GetMember("RemoveMembership"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::RemoveMembership));
-        AddMethodHandler(ifc->GetMember("InstallGuildEquivalence"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::InstallGuildEquivalence));
         AddMethodHandler(ifc->GetMember("GetManifest"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::GetManifest));
         AddMethodHandler(ifc->GetMember("Reset"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::Reset));
         AddMethodHandler(ifc->GetMember("GetPublicKey"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::GetPublicKey));
-        AddMethodHandler(ifc->GetMember("InstallCredential"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::InstallCredential));
-        AddMethodHandler(ifc->GetMember("RemoveCredential"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::RemoveCredential));
     }
     /* Add org.allseen.Security.PermissionMgmt.Notification interface */
     const InterfaceDescription* notificationIfc = bus.GetInterface(org::allseen::Security::PermissionMgmt::Notification::InterfaceName);
@@ -223,12 +220,12 @@ QStatus PermissionMgmtObj::GetACLKey(ACLEntryType aclEntryType, KeyStore::Key& k
         key.SetGUID(GUID128(qcc::String("4D8B9E901D7BE0024A331609BBAA4B02")));
         return ER_OK;
     }
-    if (aclEntryType == ENTRY_EQUIVALENCES) {
-        key.SetGUID(GUID128(qcc::String("7EA4E59508DA5F3938EFF5F3CC5325CF")));
+    if (aclEntryType == ENTRY_MANIFEST_TEMPLATE) {
+        key.SetGUID(GUID128(qcc::String("2962ADEAE004074C8C0D598C5387FEB3")));
         return ER_OK;
     }
     if (aclEntryType == ENTRY_MANIFEST) {
-        key.SetGUID(GUID128(qcc::String("2962ADEAE004074C8C0D598C5387FEB3")));
+        key.SetGUID(GUID128(qcc::String("5FFFB6E33C19F27A8A5535D45382B9E8")));
         return ER_OK;
     }
     if (aclEntryType == ENTRY_CONFIGURATION) {
@@ -238,24 +235,26 @@ QStatus PermissionMgmtObj::GetACLKey(ACLEntryType aclEntryType, KeyStore::Key& k
     return ER_CRYPTO_KEY_UNAVAILABLE;      /* not available */
 }
 
-const ECCPublicKey* PermissionMgmtObj::LocateTrustAnchor(const qcc::String& aki) const
+static PermissionMgmtObj::TrustAnchorList LocateTrustAnchor(PermissionMgmtObj::TrustAnchorList& trustAnchors, const qcc::String& aki)
 {
-    for (TrustAnchorList::const_iterator it = trustAnchors.begin(); it != trustAnchors.end(); it++) {
-        if ((*it)->aki == aki) {
-            return (*it)->keyInfo.GetPublicKey();
+    PermissionMgmtObj::TrustAnchorList retList;
+    for (PermissionMgmtObj::TrustAnchorList::const_iterator it = trustAnchors.begin(); it != trustAnchors.end(); it++) {
+        if ((*it)->use != PermissionMgmtObj::TRUST_ANCHOR_CA) {
+            continue;
+        }
+        if ((aki.size() == (*it)->keyInfo.GetKeyIdLen()) &&
+            (memcmp(aki.data(), (*it)->keyInfo.GetKeyId(), aki.size()) == 0)) {
+            retList.push_back(*it);
         }
     }
-    return NULL;
+    return retList;
 }
 
-bool PermissionMgmtObj::IsTrustAnchor(bool specificMatch, TrustAnchorType taType, const ECCPublicKey* publicKey)
+bool PermissionMgmtObj::IsTrustAnchor(TrustAnchorType taType, const ECCPublicKey* publicKey)
 {
     for (TrustAnchorList::iterator it = trustAnchors.begin(); it != trustAnchors.end(); it++) {
-        if (specificMatch && (taType != (*it)->use) && ((*it)->use != TRUST_ANCHOR_ANY)) {
-            continue;  /* no match */
-        }
-        /* check against trust anchor */
-        if (memcmp((*it)->keyInfo.GetPublicKey(), publicKey, sizeof(ECCPublicKey)) == 0) {
+        if ((taType == (*it)->use) &&
+            (memcmp((*it)->keyInfo.GetPublicKey(), publicKey, sizeof(ECCPublicKey)) == 0)) {
             return true;
         }
     }
@@ -264,8 +263,32 @@ bool PermissionMgmtObj::IsTrustAnchor(bool specificMatch, TrustAnchorType taType
 
 bool PermissionMgmtObj::IsAdmin(const ECCPublicKey* publicKey)
 {
-    return IsTrustAnchor(true, TRUST_ANCHOR_ANY, publicKey);
+    return IsTrustAnchor(TRUST_ANCHOR_ADMIN_GROUP, publicKey);
 }
+
+bool PermissionMgmtObj::IsAdminGroup(const std::vector<MembershipCertificate*> certChain)
+{
+    for (std::vector<MembershipCertificate*>::const_iterator certIt = certChain.begin(); certIt != certChain.end(); certIt++) {
+        for (TrustAnchorList::iterator it = trustAnchors.begin(); it != trustAnchors.end(); it++) {
+            if (((*it)->use == TRUST_ANCHOR_ADMIN_GROUP) &&
+                ((*it)->securityGroupId == (*certIt)->GetGuild())) {
+                /* match security group ID */
+                if ((*certIt)->GetAuthorityKeyId().size() > 0) {
+                    /* cert has aki */
+                    if (((*it)->keyInfo.GetKeyIdLen() == (*certIt)->GetAuthorityKeyId().size()) &&
+                        (memcmp((*it)->keyInfo.GetKeyId(), (*certIt)->GetAuthorityKeyId().data(), (*it)->keyInfo.GetKeyIdLen()) == 0)) {
+                        /* same aki.  Verify the cert using trust anchor */
+                        if (ER_OK == (*certIt)->Verify((*it)->keyInfo.GetPublicKey())) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return false;
+}
+
 
 void PermissionMgmtObj::ClearTrustAnchorList(TrustAnchorList& list)
 {
@@ -308,23 +331,13 @@ static void LoadGuildAuthorities(const PermissionPolicy& policy, PermissionMgmtO
     }
 }
 
-static bool AddToTrustAnchorList(PermissionMgmtObj::TrustAnchor* trustAnchor, bool checkKeyId, PermissionMgmtObj::TrustAnchorList& list)
+static bool AddToTrustAnchorList(PermissionMgmtObj::TrustAnchor* trustAnchor, PermissionMgmtObj::TrustAnchorList& list)
 {
     /* check for duplicate trust anchor */
     for (PermissionMgmtObj::TrustAnchorList::iterator it = list.begin(); it != list.end(); it++) {
-        if (checkKeyId) {
-            if ((*it)->keyInfo.GetKeyIdLen() == trustAnchor->keyInfo.GetKeyIdLen()) {
-                if (memcmp((*it)->keyInfo.GetKeyId(), trustAnchor->keyInfo.GetKeyId(), trustAnchor->keyInfo.GetKeyIdLen()) == 0) {
-                    return false;  /* duplicate */
-                }
-            }
-        } else if (memcmp((*it)->keyInfo.GetPublicKey(), trustAnchor->keyInfo.GetPublicKey(), sizeof(ECCPublicKey)) == 0) {
+        if (memcmp((*it)->keyInfo.GetPublicKey(), trustAnchor->keyInfo.GetPublicKey(), sizeof(ECCPublicKey)) == 0) {
             return false;  /* duplicate */
         }
-    }
-    /* set the authority key identifier if it not already set */
-    if (trustAnchor->aki.empty()) {
-        CertificateX509::GenerateAuthorityKeyId(trustAnchor->keyInfo.GetPublicKey(), trustAnchor->aki);
     }
     list.push_back(trustAnchor);
     return true;
@@ -356,10 +369,11 @@ QStatus PermissionMgmtObj::InstallTrustAnchor(TrustAnchor* trustAnchor)
         }
     }
     /* set the authority key identifier if it not already set */
-    if (trustAnchor->aki.empty()) {
-        CertificateX509::GenerateAuthorityKeyId(trustAnchor->keyInfo.GetPublicKey(), trustAnchor->aki);
+    if (trustAnchor->keyInfo.GetKeyIdLen() == 0) {
+        KeyInfoHelper::GenerateKeyId(trustAnchor->keyInfo);
     }
-    trustAnchors.push_back(trustAnchor);
+    TrustAnchor* anchor = new TrustAnchor(*trustAnchor);
+    trustAnchors.push_back(anchor);
     return StoreTrustAnchors();
 }
 
@@ -456,8 +470,6 @@ QStatus PermissionMgmtObj::LoadTrustAnchors()
         pBuf++;
         itemSize--;
         ta->keyInfo.Import(pBuf, itemSize);
-        /* calculate the authority key id */
-        CertificateX509::GenerateAuthorityKeyId(ta->keyInfo.GetPublicKey(), ta->aki);
         trustAnchors.push_back(ta);
         pBuf += itemSize;
     }
@@ -526,53 +538,192 @@ void PermissionMgmtObj::GetPublicKey(const InterfaceDescription::Member* member,
     MethodReply(msg, replyArgs, ArraySize(replyArgs));
 }
 
+/**
+ * Generate the default policy.
+ * 1. Admin group has full access
+ * 2. Outgoing messages are authorized
+ * 3. Incoming messages are denied
+ * 4. Allow for self-installation of membership certificates
+ * @param adminGroupGUID the admin group GUID
+ * @param adminGroupAuthority the admin group authority
+ * @param localPublicKey the local public key
+ * @param[out] policy the permission policy
+ */
+
+static void GenerateDefaultPolicy(const GUID128& adminGroupGUID, const KeyInfoNISTP256& adminGroupAuthority, const ECCPublicKey* localPublicKey, PermissionPolicy& policy)
+{
+    policy.SetSerialNum(0);
+
+    /* add the terms section */
+    PermissionPolicy::Term* terms = new PermissionPolicy::Term[3];
+
+    /* terms record 0  ADMIN GROUP */
+    PermissionPolicy::Peer* peers = new PermissionPolicy::Peer[1];
+    peers[0].SetType(PermissionPolicy::Peer::PEER_GUILD);
+    peers[0].SetGuildId(adminGroupGUID);
+    KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
+    keyInfo->SetKeyId(adminGroupAuthority.GetKeyId(), adminGroupAuthority.GetKeyIdLen());
+    keyInfo->SetPublicKey(adminGroupAuthority.GetPublicKey());
+    peers[0].SetKeyInfo(keyInfo);
+    terms[0].SetPeers(1, peers);
+
+    PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[1];
+    rules[0].SetInterfaceName("*");
+    PermissionPolicy::Rule::Member* prms = new PermissionPolicy::Rule::Member[1];
+    prms[0].SetMemberName("*");
+    prms[0].SetActionMask(
+        PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+        PermissionPolicy::Rule::Member::ACTION_OBSERVE |
+        PermissionPolicy::Rule::Member::ACTION_MODIFY
+        );
+    rules[0].SetMembers(1, prms);
+    terms[0].SetRules(1, rules);
+
+    /* terms record 1  LOCAL PUBLIC KEY */
+    peers = new PermissionPolicy::Peer[1];
+    peers[0].SetType(PermissionPolicy::Peer::PEER_GUID);
+    keyInfo = new KeyInfoNISTP256();
+    keyInfo->SetPublicKey(localPublicKey);
+    KeyInfoHelper::GenerateKeyId(*keyInfo);
+    peers[0].SetKeyInfo(keyInfo);
+    terms[1].SetPeers(1, peers);
+
+    rules = new PermissionPolicy::Rule[1];
+    rules[0].SetInterfaceName("org.allseen.Security.PermissionMgmt");
+    prms = new PermissionPolicy::Rule::Member[2];
+    prms[0].SetMemberName("InstallMembership");
+    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+    prms[1].SetMemberName("InstallMembershipAuthData");
+    prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+    rules[0].SetMembers(2, prms);
+    terms[1].SetRules(1, rules);
+
+    /* terms record 2  ANY-USER */
+    peers = new PermissionPolicy::Peer[1];
+    peers[0].SetType(PermissionPolicy::Peer::PEER_ANY);
+    terms[2].SetPeers(1, peers);
+
+    rules = new PermissionPolicy::Rule[1];
+    rules[0].SetInterfaceName("*");
+    prms = new PermissionPolicy::Rule::Member[2];
+    prms[0].SetMemberName("*");
+    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+    prms[1].SetMemberType(PermissionPolicy::Rule::Member::SIGNAL);
+    prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+    rules[0].SetMembers(2, prms);
+    terms[2].SetRules(1, rules);
+
+    policy.SetTerms(3, terms);
+}
+
 void PermissionMgmtObj::Claim(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
     if (claimableState == PermissionConfigurator::STATE_UNCLAIMABLE) {
         MethodReply(msg, ER_PERMISSION_DENIED);
         return;
     }
-    TrustAnchor* trustAnchor = new TrustAnchor();
-    QStatus status = KeyInfoHelper::MsgArgToKeyInfoNISTP256((MsgArg&) *msg->GetArg(0), trustAnchor->keyInfo);
-    if (ER_OK != status) {
-        delete trustAnchor;
-        MethodReply(msg, status);
+    size_t numArgs;
+    MsgArg* args;
+    msg->GetArgs((size_t&) numArgs, (const MsgArg*&) args);
+    if (7 != numArgs) {
+        MethodReply(msg, ER_BAD_ARG_COUNT);
         return;
+    }
+
+    TrustAnchor* adminGroupAuthority = NULL;
+    TrustAnchor* certificateAuthority = new TrustAnchor(TRUST_ANCHOR_CA);
+    QStatus status = KeyInfoHelper::MsgArgToKeyInfoNISTP256PubKey(args[0], certificateAuthority->keyInfo);
+    if (ER_OK != status) {
+        goto DoneValidation;
+    }
+    status = KeyInfoHelper::MsgArgToKeyInfoKeyId(args[1], certificateAuthority->keyInfo);
+    if (ER_OK != status) {
+        goto DoneValidation;
+    }
+
+    adminGroupAuthority = new TrustAnchor(TRUST_ANCHOR_ADMIN_GROUP);
+    /* get the admin security group id */
+    uint8_t* buf;
+    size_t len;
+    status = args[2].Get("ay", &len, &buf);
+    if (ER_OK != status) {
+        goto DoneValidation;
+    }
+    if (len != GUID128::SIZE) {
+        status = ER_INVALID_DATA;
+        goto DoneValidation;
+    }
+    adminGroupAuthority->securityGroupId.SetBytes(buf);
+
+    /* get the group authority public key */
+    status = KeyInfoHelper::MsgArgToKeyInfoNISTP256PubKey(args[3], adminGroupAuthority->keyInfo);
+    if (ER_OK != status) {
+        goto DoneValidation;
+    }
+    status = KeyInfoHelper::MsgArgToKeyInfoKeyId(args[4], adminGroupAuthority->keyInfo);
+    if (ER_OK != status) {
+        goto DoneValidation;
     }
 
     /* clear most of the key entries with the exception of the DSA keys and manifest */
     PerformReset(true);
 
-    /* install trust anchor */
-    if (trustAnchor->keyInfo.GetKeyId() == NULL) {
-        /* the trust anchor guid is the calling peer's guid */
-        qcc::GUID128 peerGuid;
-        status = GetPeerGUID(msg, peerGuid);
-        if (ER_OK != status) {
-            delete trustAnchor;
-            MethodReply(msg, status);
-            return;
-        }
-        trustAnchor->keyInfo.SetKeyId(peerGuid.GetBytes(), qcc::GUID128::SIZE);
-    }
-    status = InstallTrustAnchor(trustAnchor);
+    /* install certificate authority */
+    status = InstallTrustAnchor(certificateAuthority);
     if (ER_OK != status) {
-        delete trustAnchor;
-        QCC_DbgPrintf(("PermissionMgmtObj::Claim failed to store trust anchor"));
-        MethodReply(msg, ER_PERMISSION_DENIED);
+        QCC_DbgPrintf(("PermissionMgmtObj::Claim failed to store certificate authority"));
+        status = ER_PERMISSION_DENIED;
+        goto DoneValidation;
+    }
+    /* install admin group authority */
+    status = InstallTrustAnchor(adminGroupAuthority);
+    if (ER_OK != status) {
+        QCC_DbgPrintf(("PermissionMgmtObj::Claim failed to store admin group authority"));
+        status = ER_PERMISSION_DENIED;
+        goto DoneValidation;
+    }
+
+    /* install the identity cert chain */
+    status = StoreIdentityCertChain(args[5]);
+    if (ER_OK != status) {
+        QCC_DbgPrintf(("PermissionMgmtObj::Claim failed to store identity certificate chain"));
+        goto DoneValidation;
+    }
+    /* install the manifest */
+    status = StoreManifest(args[6]);
+    if (ER_OK != status) {
+        QCC_DbgPrintf(("PermissionMgmtObj::Claim failed to store manifest"));
+        goto DoneValidation;
+    }
+
+DoneValidation:
+    delete certificateAuthority;
+    if (ER_OK != status) {
+        delete adminGroupAuthority;
+        MethodReply(msg, status);
         return;
     }
 
-    claimableState = PermissionConfigurator::STATE_CLAIMED;
-    status = StoreIdentityCertificate((MsgArg&) *msg->GetArg(1));
-    if (ER_OK != status) {
-        MethodReply(msg, status);
+    /* generate the default policy */
+    PermissionPolicy* defaultPolicy = new PermissionPolicy();
+    ECCPublicKey pubKey;
+    ca->GetDSAPublicKey(pubKey);
+    GenerateDefaultPolicy(adminGroupAuthority->securityGroupId, adminGroupAuthority->keyInfo, &pubKey, *defaultPolicy);
+    delete adminGroupAuthority;
+    status = StorePolicy(*defaultPolicy);
+    if (ER_OK == status) {
+        serialNum = defaultPolicy->GetSerialNum();
+        PolicyChanged(defaultPolicy);
     } else {
-        /* reply with the public key */
-        GetPublicKey(member, msg);
+        delete defaultPolicy;
     }
 
-    NotifyConfig();
+    MethodReply(msg, status);
+    if (ER_OK == status) {
+        claimableState = PermissionConfigurator::STATE_CLAIMED;
+        NotifyConfig();
+    }
 }
 
 void PermissionMgmtObj::InstallPolicy(const InterfaceDescription::Member* member, Message& msg)
@@ -772,11 +923,11 @@ static QStatus ValidateMembershipCertificate(MembershipCertificate& cert, Permis
     }
     for (PermissionMgmtObj::TrustAnchorList::iterator it = taList->begin(); it != taList->end(); it++) {
         PermissionMgmtObj::TrustAnchor* ta = *it;
-        if (ta->use != PermissionMgmtObj::TRUST_ANCHOR_MEMBERSHIP) {
-            continue;
-        }
-        if (cert.Verify(ta->keyInfo.GetPublicKey()) == ER_OK) {
-            return ER_OK;  /* cert is verified */
+        if ((ta->use == PermissionMgmtObj::TRUST_ANCHOR_MEMBERSHIP) ||
+            (ta->use == PermissionMgmtObj::TRUST_ANCHOR_ADMIN_GROUP)) {
+            if (cert.Verify(ta->keyInfo.GetPublicKey()) == ER_OK) {
+                return ER_OK;  /* cert is verified */
+            }
         }
     }
     return ER_UNKNOWN_CERTIFICATE;
@@ -857,47 +1008,90 @@ QStatus PermissionMgmtObj::GetDSAPrivateKey(qcc::ECCPrivateKey& privateKey)
     return ca->GetDSAPrivateKey(privateKey);
 }
 
-QStatus PermissionMgmtObj::StoreIdentityCertificate(MsgArg& certArg)
+QStatus PermissionMgmtObj::StoreIdentityCertChain(MsgArg& certArg)
 {
-    uint8_t encoding;
-    uint8_t* encoded;
-    size_t encodedLen;
-    QStatus status = certArg.Get("(yay)", &encoding, &encodedLen, &encoded);
+    size_t certChainCount;
+    MsgArg* certChain;
+    QStatus status = certArg.Get("a(yay)", &certChainCount, &certChain);
+    if (ER_OK != status) {
+        QCC_DbgPrintf(("PermissionMgmtObj::StoreIdentityCertChain failed to retrieve certificate chain status 0x%x", status));
+        return status;
+    }
+    if (certChainCount == 0) {
+        return ER_INVALID_DATA;
+    }
+    /* store the identity cert chain into the key store */
+    KeyStore::Key identityHead;
+    GetACLKey(ENTRY_IDENTITY, identityHead);
+    /* remove the existing identity cert chain */
+    status = ca->DeleteKey(identityHead);
     if (ER_OK != status) {
         return status;
     }
-    if ((encoding != CertificateX509::ENCODING_X509_DER) && (encoding != CertificateX509::ENCODING_X509_DER_PEM)) {
-        QCC_DbgPrintf(("PermissionMgmtObj::StoreIdentityCertificate does not support encoding %d", encoding));
-        return ER_NOT_IMPLEMENTED;
+    for (size_t cnt = 0; cnt < certChainCount; cnt++) {
+        uint8_t encoding;
+        uint8_t* encoded;
+        size_t encodedLen;
+        status = certChain[cnt].Get("(yay)", &encoding, &encodedLen, &encoded);
+        if (ER_OK != status) {
+            goto ExitStoreIdentity;
+        }
+        if ((encoding != CertificateX509::ENCODING_X509_DER) && (encoding != CertificateX509::ENCODING_X509_DER_PEM)) {
+            QCC_DbgPrintf(("PermissionMgmtObj::StoreIdentityCertChain does not support encoding %d", encoding));
+            status = ER_NOT_IMPLEMENTED;
+            goto ExitStoreIdentity;
+        }
+        IdentityCertificate cert;
+        status = LoadCertificate((CertificateX509::EncodingType) encoding, encoded, encodedLen, cert, &trustAnchors);
+        if (ER_OK != status) {
+            QCC_DbgPrintf(("PermissionMgmtObj::StoreIdentityCertChain failed to validate certificate status 0x%x", status));
+            goto ExitStoreIdentity;
+        }
+        if (cnt == 0) {
+            /* handle the leaf cert */
+            bool sameKey = false;
+            status = SameSubjectPublicKey(cert, sameKey);
+            if (ER_OK != status) {
+                QCC_DbgPrintf(("PermissionMgmtObj::StoreIdentityCertChain failed to validate certificate subject public key status 0x%x", status));
+                goto ExitStoreIdentity;
+            }
+            if (!sameKey) {
+                QCC_DbgPrintf(("PermissionMgmtObj::StoreIdentityCertChain failed since certificate subject public key is not the same as target public key"));
+                status = ER_UNKNOWN_CERTIFICATE;
+                goto ExitStoreIdentity;
+            }
+            KeyBlob kb(cert.GetEncoded(), cert.GetEncodedLen(), KeyBlob::GENERIC);
+            status = ca->StoreKey(identityHead, kb);
+            if (ER_OK != status) {
+                goto ExitStoreIdentity;
+            }
+        } else {
+            KeyBlob kb(cert.GetEncoded(), cert.GetEncodedLen(), KeyBlob::GENERIC);
+            /* other issuing cert in the chain */
+            kb.SetTag(CERT_CHAIN_TAG_NAME);
+            /* add the cert chain data as an associate of the identity entry */
+            GUID128 guid;
+            KeyStore::Key key(KeyStore::Key::LOCAL, guid);
+            status = ca->AddAssociatedKey(identityHead, key, kb);
+            if (ER_OK != status) {
+                goto ExitStoreIdentity;
+            }
+        }
     }
-    IdentityCertificate cert;
-    status = LoadCertificate((CertificateX509::EncodingType) encoding, encoded, encodedLen, cert, &trustAnchors);
-    if (ER_OK != status) {
-        QCC_DbgPrintf(("PermissionMgmtObj::StoreIdentityCertificate failed to validate certificate status 0x%x", status));
-        return status;
-    }
-    bool sameKey = false;
-    status = SameSubjectPublicKey(cert, sameKey);
-    if (ER_OK != status) {
-        QCC_DbgPrintf(("PermissionMgmtObj::StoreIdentityCertificate failed to validate certificate subject public key status 0x%x", status));
-        return status;
-    }
-    if (!sameKey) {
-        QCC_DbgPrintf(("PermissionMgmtObj::StoreIdentityCertificate failed since certificate subject public key is not the same as target public key"));
-        return ER_UNKNOWN_CERTIFICATE;
-    }
-    KeyStore::Key key;
-    /* store the Identity DER  into the key store */
-    GetACLKey(ENTRY_IDENTITY, key);
-    KeyBlob kb(cert.GetEncoded(), cert.GetEncodedLen(), KeyBlob::GENERIC);
 
-    return ca->StoreKey(key, kb);
+ExitStoreIdentity:
+
+    if (ER_OK != status) {
+        /* clear out the identity entry and all of its associated key */
+        ca->DeleteKey(identityHead);
+    }
+    return status;
 }
 
 void PermissionMgmtObj::InstallIdentity(const InterfaceDescription::Member* member, Message& msg)
 {
     QCC_UNUSED(member);
-    MethodReply(msg, StoreIdentityCertificate((MsgArg&) *msg->GetArg(0)));
+    MethodReply(msg, StoreIdentityCertChain((MsgArg&) *msg->GetArg(0)));
 }
 
 QStatus PermissionMgmtObj::GetIdentityBlob(KeyBlob& kb)
@@ -928,6 +1122,93 @@ void PermissionMgmtObj::GetIdentity(const InterfaceDescription::Member* member, 
     MsgArg replyArgs[1];
     replyArgs[0].Set("(yay)", CertificateX509::ENCODING_X509_DER, kb.GetSize(), kb.GetData());
     MethodReply(msg, replyArgs, ArraySize(replyArgs));
+}
+
+QStatus PermissionMgmtObj::GetIdentityLeafCert(IdentityCertificate& cert)
+{
+    KeyBlob kb;
+    QStatus status = GetIdentityBlob(kb);
+    if (ER_OK != status) {
+        return status;
+    }
+    return LoadCertificate(CertificateX509::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), cert);
+}
+
+QStatus PermissionMgmtObj::GenerateManifestDigest(BusAttachment& bus, const PermissionPolicy::Rule* rules, size_t count, uint8_t* digest, size_t digestSize)
+{
+    if (digestSize != Crypto_SHA256::DIGEST_SIZE) {
+        return ER_INVALID_DATA;
+    }
+    PermissionPolicy policy;
+    PermissionPolicy::Term* terms = new PermissionPolicy::Term[1];
+    terms[0].SetRules(count, (PermissionPolicy::Rule*) rules);
+    policy.SetTerms(1, terms);
+    Message tmpMsg(bus);
+    DefaultPolicyMarshaller marshaller(tmpMsg);
+    QStatus status = policy.Digest(marshaller, digest, Crypto_SHA256::DIGEST_SIZE);
+    terms[0].SetRules(0, NULL); /* does not manage the lifetime of the input rules */
+    return status;
+}
+
+QStatus PermissionMgmtObj::StoreManifest(MsgArg& manifestArg)
+{
+    size_t count = 0;
+    PermissionPolicy::Rule* rules = NULL;
+    IdentityCertificate cert;
+    QStatus status = PermissionPolicy::ParseRules(manifestArg, &rules, &count);
+    if (ER_OK != status) {
+        QCC_DbgPrintf(("PermissionMgmtObj::StoreManifest failed to retrieve rules from msgarg status 0x%x", status));
+        goto DoneValidation;
+    }
+    if (count == 0) {
+        status = ER_INVALID_DATA;
+        goto DoneValidation;
+    }
+    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+    status = GenerateManifestDigest(bus, rules, count, digest, Crypto_SHA256::DIGEST_SIZE);
+    if (ER_OK != status) {
+        QCC_DbgPrintf(("PermissionMgmtObj::StoreManifest failed to calculate the manifest digest status 0x%x\n"));
+        goto DoneValidation;
+    }
+    /* retrieve the identity leaf cert */
+    status = GetIdentityLeafCert(cert);
+    if (ER_OK != status) {
+        QCC_DbgPrintf(("PermissionMgmtObj::StoreManifest failed to retrieve identify cert status 0x%x\n"));
+        status = ER_CERTIFICATE_NOT_FOUND;
+        goto DoneValidation;
+    }
+    /* compare the digests */
+    if (memcmp(digest, cert.GetDigest(), Crypto_SHA256::DIGEST_SIZE)) {
+        status = ER_DIGEST_MISMATCH;
+        goto DoneValidation;
+    }
+
+DoneValidation:
+    if (ER_OK != status) {
+        delete [] rules;
+        return status;
+    }
+    /* store the manifest */
+    PermissionPolicy policy;
+    PermissionPolicy::Term* terms = new PermissionPolicy::Term[1];
+    terms[0].SetRules(count, rules);
+    policy.SetTerms(1, terms);
+    rules = NULL;  /* its memory is now controlled by policy object */
+
+    uint8_t* buf = NULL;
+    size_t size;
+    Message tmpMsg(bus);
+    DefaultPolicyMarshaller marshaller(tmpMsg);
+    status = policy.Export(marshaller, &buf, &size);
+    if (ER_OK != status) {
+        return status;
+    }
+    /* store the manifest into the key store */
+    KeyStore::Key key;
+    GetACLKey(ENTRY_MANIFEST, key);
+    KeyBlob kb((uint8_t*) buf, size, KeyBlob::GENERIC);
+    delete [] buf;
+    return ca->StoreKey(key, kb);
 }
 
 static QStatus GetMembershipCert(CredentialAccessor* ca, KeyStore::Key& key, MembershipCertificate& cert)
@@ -1748,41 +2029,6 @@ QStatus PermissionMgmtObj::ParseSendMemberships(Message& msg, bool& done)
     return ER_OK;
 }
 
-void PermissionMgmtObj::InstallGuildEquivalence(const InterfaceDescription::Member* member, Message& msg)
-{
-    QCC_UNUSED(member);
-    uint8_t encoding;
-    uint8_t* encoded;
-    size_t encodedLen;
-    QStatus status = msg->GetArg(0)->Get("(yay)", &encoding, &encodedLen, &encoded);
-    if (ER_OK != status) {
-        QCC_DbgPrintf(("PermissionMgmtObj::InstallGuildEquivalence failed to retrieve PEM status 0x%x", status));
-        MethodReply(msg, status);
-        return;
-    }
-    if ((encoding != CertificateX509::ENCODING_X509_DER) && (encoding != CertificateX509::ENCODING_X509_DER_PEM)) {
-        QCC_DbgPrintf(("PermissionMgmtObj::InstallGuildEquivalence does not support encoding %d", encoding));
-        MethodReply(msg, ER_NOT_IMPLEMENTED);
-        return;
-    }
-    /* store the InstallGuildEquivalence PEM  into the key store */
-    KeyStore::Key headerKey;
-    GetACLKey(ENTRY_EQUIVALENCES, headerKey);
-    KeyBlob kb(encoded, encodedLen, KeyBlob::GENERIC);
-
-    KeyBlob headerBlob;
-    status = ca->GetKey(headerKey, headerBlob);
-    if (status == ER_BUS_KEY_UNAVAILABLE) {
-        /* make the header guid */
-        status = ca->AddAssociatedKey(headerKey, headerKey, kb);
-    } else {
-        /* add the new cert as an associate node of the Guild Equivalence header node */
-        KeyStore::Key associateKey;
-        status = ca->AddAssociatedKey(headerKey, associateKey, kb);
-    }
-    MethodReply(msg, status);
-}
-
 QStatus PermissionMgmtObj::StoreConfiguration(const Configuration& config)
 {
     /* store the message into the key store */
@@ -1880,11 +2126,6 @@ QStatus PermissionMgmtObj::PerformReset(bool keepForClaim)
     if (ER_OK != status) {
         return status;
     }
-    GetACLKey(ENTRY_EQUIVALENCES, key);
-    status = ca->DeleteKey(key);
-    if (ER_OK != status) {
-        return status;
-    }
     GetACLKey(ENTRY_CONFIGURATION, key);
     status = ca->DeleteKey(key);
     if (ER_OK != status) {
@@ -1954,7 +2195,7 @@ QStatus PermissionMgmtObj::SetManifest(PermissionPolicy::Rule* rules, size_t cou
     }
     /* store the message into the key store */
     KeyStore::Key key;
-    GetACLKey(ENTRY_MANIFEST, key);
+    GetACLKey(ENTRY_MANIFEST_TEMPLATE, key);
     KeyBlob kb((uint8_t*) buf, size, KeyBlob::GENERIC);
     delete [] buf;
 
@@ -1966,7 +2207,7 @@ void PermissionMgmtObj::GetManifest(const InterfaceDescription::Member* member, 
     QCC_UNUSED(member);
     KeyBlob kb;
     KeyStore::Key key;
-    GetACLKey(ENTRY_MANIFEST, key);
+    GetACLKey(ENTRY_MANIFEST_TEMPLATE, key);
     QStatus status = ca->GetKey(key, kb);
     if (ER_OK != status) {
         if (ER_BUS_KEY_UNAVAILABLE == status) {
@@ -2033,15 +2274,16 @@ bool PermissionMgmtObj::ValidateCertChain(const qcc::String& certChainPEM, bool&
     if (count == 1) {
         /* single cert is exchanged */
         /* locate the issuer */
-        const ECCPublicKey* pubKey = NULL;
         if (certChain[0].GetAuthorityKeyId().empty()) {
-            if (IsTrustAnchor(true, TRUST_ANCHOR_ANY, certChain[0].GetSubjectPublicKey())) {
-                pubKey = certChain[0].GetSubjectPublicKey();
+            if (IsTrustAnchor(TRUST_ANCHOR_CA, certChain[0].GetSubjectPublicKey())) {
+                authorized = (ER_OK == certChain[0].Verify(certChain[0].GetSubjectPublicKey()));
             }
         } else {
-            pubKey = LocateTrustAnchor(certChain[0].GetAuthorityKeyId());
-            if (!pubKey) {
-                if (IsTrustAnchor(true, TRUST_ANCHOR_ANY, certChain[0].GetSubjectPublicKey())) {
+            TrustAnchorList anchors = LocateTrustAnchor(trustAnchors, certChain[0].GetAuthorityKeyId());
+            if (anchors.empty()) {
+                /* no trust anchor with the given authority key id */
+                const ECCPublicKey* pubKey = NULL;
+                if (IsTrustAnchor(TRUST_ANCHOR_CA, certChain[0].GetSubjectPublicKey())) {
                     /* the peer is my trust anchor */
                     pubKey = certChain[0].GetSubjectPublicKey();
                 } else {
@@ -2055,15 +2297,23 @@ bool PermissionMgmtObj::ValidateCertChain(const qcc::String& certChainPEM, bool&
                         }
                     }
                 }
-            }
-        }
-        if (pubKey) {
-            authorized = (ER_OK == certChain[0].Verify(pubKey));
+                if (pubKey) {
+                    authorized = (ER_OK == certChain[0].Verify(pubKey));
+                }
+            } else {
+                for (TrustAnchorList::const_iterator it = anchors.begin(); it != anchors.end(); it++) {
+                    authorized = (ER_OK == certChain[0].Verify((*it)->keyInfo.GetPublicKey()));
+                    if (authorized) {
+                        break;
+                    }
+                }
+                anchors.clear();
+            } /* there is a trust anchor with given authority key id */
         }
     } else {
         /* the cert chain signature validation is already done by the KeyExchanger code.  Now just need to check issuers */
         for (size_t cnt = 1; cnt < count; cnt++) {
-            if (IsTrustAnchor(true, TRUST_ANCHOR_ANY, certChain[cnt].GetSubjectPublicKey())) {
+            if (IsTrustAnchor(TRUST_ANCHOR_CA, certChain[cnt].GetSubjectPublicKey())) {
                 authorized = true;
                 break;
             }
@@ -2156,94 +2406,6 @@ QStatus PermissionMgmtObj::BindPort()
         portListener = NULL;
     }
     return status;
-}
-
-void PermissionMgmtObj::InstallCredential(const InterfaceDescription::Member* member, Message& msg)
-{
-    QCC_UNUSED(member);
-    uint8_t credentialType;
-    MsgArg variant;
-    QStatus status = msg->GetArg(0)->Get("y", &credentialType);
-    if (ER_OK != status) {
-        MethodReply(msg, status);
-        return;
-    }
-    if (credentialType != 0) {
-        MethodReply(msg, ER_INVALID_DATA);
-        return;
-    }
-    uint8_t trustAnchorUsage;
-    MsgArg* keyInfoArg;
-    status = msg->GetArg(1)->Get("(yv)", &trustAnchorUsage, &keyInfoArg);
-    if (ER_OK != status) {
-        MethodReply(msg, status);
-        return;
-    }
-    if (trustAnchorUsage > TRUST_ANCHOR_MEMBERSHIP) {
-        MethodReply(msg, ER_INVALID_DATA);
-        return;
-    }
-    TrustAnchor* trustAnchor = new TrustAnchor((TrustAnchorType) trustAnchorUsage);
-    trustAnchor->use = (TrustAnchorType) trustAnchorUsage;
-
-    status = KeyInfoHelper::MsgArgToKeyInfoNISTP256(*keyInfoArg, trustAnchor->keyInfo);
-    if (ER_OK != status) {
-        delete trustAnchor;
-        MethodReply(msg, status);
-        return;
-    }
-    /* install trust anchor */
-    status = InstallTrustAnchor(trustAnchor);
-    if (ER_OK != status) {
-        delete trustAnchor;
-        QCC_DbgPrintf(("PermissionMgmtObj::InstallCredential failed to store trust anchor"));
-        status = ER_PERMISSION_DENIED;
-    }
-    MethodReply(msg, status);
-}
-
-void PermissionMgmtObj::RemoveCredential(const InterfaceDescription::Member* member, Message& msg)
-{
-    QCC_UNUSED(member);
-    uint8_t credentialType;
-    MsgArg variant;
-    QStatus status = msg->GetArg(0)->Get("y", &credentialType);
-    if (ER_OK != status) {
-        MethodReply(msg, status);
-        return;
-    }
-    if (credentialType != 0) {
-        MethodReply(msg, ER_INVALID_DATA);
-        return;
-    }
-    uint8_t trustAnchorUsage;
-    MsgArg* keyInfoArg;
-    status = msg->GetArg(1)->Get("(yv)", &trustAnchorUsage, &keyInfoArg);
-    if (ER_OK != status) {
-        MethodReply(msg, status);
-        return;
-    }
-    if (trustAnchorUsage > TRUST_ANCHOR_MEMBERSHIP) {
-        MethodReply(msg, ER_INVALID_DATA);
-        return;
-    }
-    TrustAnchor* trustAnchor = new TrustAnchor((TrustAnchorType) trustAnchorUsage);
-    trustAnchor->use = (TrustAnchorType) trustAnchorUsage;
-
-    status = KeyInfoHelper::MsgArgToKeyInfoNISTP256(*keyInfoArg, trustAnchor->keyInfo);
-    if (ER_OK != status) {
-        delete trustAnchor;
-        MethodReply(msg, status);
-        return;
-    }
-    /* remove trust anchor */
-    status = RemoveTrustAnchor(trustAnchor);
-    delete trustAnchor;
-    if (ER_OK != status) {
-        QCC_DbgPrintf(("PermissionMgmtObj::RemoveCredential failed to remove trust anchor"));
-        status = ER_PERMISSION_DENIED;
-    }
-    MethodReply(msg, ER_OK);
 }
 
 QStatus PermissionMgmtObj::Get(const char* ifcName, const char* propName, MsgArg& val)
@@ -2349,7 +2511,7 @@ QStatus PermissionMgmtObj::GetTrustAnchorsFromAllMemberships(TrustAnchorList& ta
         std::map<qcc::String, TrustAnchor*>::iterator it = chain.begin();
         while (it != chain.end()) {
             std::map<qcc::String, TrustAnchor*>::iterator current = it++;
-            if (AddToTrustAnchorList(current->second, true, taList)) {
+            if (AddToTrustAnchorList(current->second, taList)) {
                 chain.erase(current);
             }
         }
@@ -2386,7 +2548,7 @@ QStatus PermissionMgmtObj::ManageMembershipTrustAnchors(PermissionPolicy* policy
     /* add the trust anchors to the list without duplicate base on issuer */
     TrustAnchorList::iterator it = addOns.begin();
     while (it != addOns.end()) {
-        if (AddToTrustAnchorList(*it, true, trustAnchors)) {
+        if (AddToTrustAnchorList(*it, trustAnchors)) {
             modified = true;
             it = addOns.erase(it);
         } else {

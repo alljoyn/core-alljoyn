@@ -245,253 +245,122 @@ static QStatus BuildPeersFromArg(MsgArg& arg, PermissionPolicy::Peer** peers, si
 
 static QStatus GenerateMemberArgs(MsgArg** retArgs, const PermissionPolicy::Rule::Member* rules, size_t count)
 {
-    MsgArg* variants = new MsgArg[count];
+    *retArgs = new MsgArg[count];
     for (size_t cnt = 0; cnt < count; cnt++) {
-        /* count the set fields */
-        PermissionPolicy::Rule::Member* aRule = (PermissionPolicy::Rule::Member*) &rules[cnt];
-        int fieldCnt = 0;
-        if (!aRule->GetMemberName().empty()) {
-            fieldCnt++;
+        QStatus status = (*retArgs)[cnt].Set("(syy)",
+                                             rules[cnt].GetMemberName().c_str(),
+                                             rules[cnt].GetMemberType(),
+                                             rules[cnt].GetActionMask());
+        if (ER_OK != status) {
+            delete [] *retArgs;
+            *retArgs = NULL;
+            return status;
         }
-        if (aRule->GetMemberType() != PermissionPolicy::Rule::Member::NOT_SPECIFIED) {
-            fieldCnt++;
-        }
-        /* account for action mask */
-        fieldCnt++;
-        /* default is true for mutual auth */
-        if (!aRule->GetMutualAuth()) {
-            fieldCnt++;
-        }
-        MsgArg* ruleArgs = NULL;
-        if (fieldCnt > 0) {
-            int idx = 0;
-            ruleArgs = new MsgArg[fieldCnt];
-            if (!aRule->GetMemberName().empty()) {
-                ruleArgs[idx++].Set("(yv)", PermissionPolicy::Rule::Member::TAG_MEMBER_NAME,
-                                    new MsgArg("s", aRule->GetMemberName().c_str()));
-            }
-            if (aRule->GetMemberType() != PermissionPolicy::Rule::Member::NOT_SPECIFIED) {
-                ruleArgs[idx++].Set("(yv)", PermissionPolicy::Rule::Member::TAG_MEMBER_TYPE,
-                                    new MsgArg("y", aRule->GetMemberType()));
-            }
-            ruleArgs[idx++].Set("(yv)", PermissionPolicy::Rule::Member::TAG_ACTION_MASK,
-                                new MsgArg("y", aRule->GetActionMask()));
-            if (!aRule->GetMutualAuth()) {
-                ruleArgs[idx++].Set("(yv)", PermissionPolicy::Rule::Member::TAG_MUTUAL_AUTH,
-                                    new MsgArg("b", aRule->GetMutualAuth()));
-            }
-        }
-        variants[cnt].Set("a(yv)", fieldCnt, ruleArgs);
-        variants[cnt].SetOwnershipFlags(MsgArg::OwnsArgs, true);
     }
-    *retArgs = variants;
     return ER_OK;
 }
 
 static QStatus GenerateRuleArgs(MsgArg** retArgs, PermissionPolicy::Rule* rules, size_t count)
 {
-    MsgArg* variants = new MsgArg[count];
+    QStatus status = ER_OK;
+    *retArgs = new MsgArg[count];
     for (size_t cnt = 0; cnt < count; cnt++) {
-        /* count the set fields */
         PermissionPolicy::Rule* aRule = &rules[cnt];
-        int fieldCnt = 0;
-        if (!aRule->GetObjPath().empty()) {
-            fieldCnt++;
-        }
-        if (aRule->GetInterfaceName().size() > 0) {
-            fieldCnt++;
-        }
+        MsgArg* ruleMembersArgs = NULL;
         if (aRule->GetMembersSize() > 0) {
-            fieldCnt++;
-        }
-        MsgArg* ruleArgs = NULL;
-        if (fieldCnt > 0) {
-            int idx = 0;
-            ruleArgs = new MsgArg[fieldCnt];
-            if (!aRule->GetObjPath().empty()) {
-                ruleArgs[idx++].Set("(yv)", PermissionPolicy::Rule::TAG_OBJPATH,
-                                    new MsgArg("s", aRule->GetObjPath().c_str()));
-            }
-            if (!aRule->GetInterfaceName().empty()) {
-                ruleArgs[idx++].Set("(yv)", PermissionPolicy::Rule::TAG_INTERFACE_NAME,
-                                    new MsgArg("s", aRule->GetInterfaceName().c_str()));
-            }
-            if (aRule->GetMembersSize() > 0) {
-                MsgArg* ruleMembersArgs = NULL;
-                GenerateMemberArgs(&ruleMembersArgs, aRule->GetMembers(), aRule->GetMembersSize());
-                ruleArgs[idx++].Set("(yv)", PermissionPolicy::Rule::TAG_INTERFACE_MEMBERS,
-                                    new MsgArg("aa(yv)", aRule->GetMembersSize(), ruleMembersArgs));
+            status = GenerateMemberArgs(&ruleMembersArgs, aRule->GetMembers(), aRule->GetMembersSize());
+            if (ER_OK != status) {
+                goto exit;
             }
         }
-        variants[cnt].Set("a(yv)", fieldCnt, ruleArgs);
-        variants[cnt].SetOwnershipFlags(MsgArg::OwnsArgs, true);
+        status = (*retArgs)[cnt].Set("(ssa(syy))",
+                                     aRule->GetObjPath().c_str(),
+                                     aRule->GetInterfaceName().c_str(),
+                                     aRule->GetMembersSize(), ruleMembersArgs);
+        if (ER_OK != status) {
+            goto exit;
+        }
+        (*retArgs)[cnt].SetOwnershipFlags(MsgArg::OwnsArgs, true);
     }
-    *retArgs = variants;
     return ER_OK;
+exit:
+    delete [] *retArgs;
+    *retArgs = NULL;
+    return status;
 }
 
-static QStatus BuildMembersFromArg(MsgArg& arg, PermissionPolicy::Rule::Member** rules, size_t* count)
+static QStatus BuildMembersFromArg(const MsgArg* arg, PermissionPolicy::Rule::Member** rules, size_t count)
 {
-    MsgArg* ruleListArgs = NULL;
-    size_t ruleCount = 0;
-    QStatus status = arg.Get("aa(yv)", &ruleCount, &ruleListArgs);
-    if (ER_OK != status) {
-        QCC_DbgPrintf(("BuildMembersFromArg #1 got status 0x%x\n", status));
-        return status;
-    }
-    if (ruleCount == 0) {
-        *count = ruleCount;
+    if (count == 0) {
+        *rules = NULL;
         return ER_OK;
     }
-    PermissionPolicy::Rule::Member* ruleArray = new PermissionPolicy::Rule::Member[ruleCount];
-    for (size_t cnt = 0; cnt < ruleCount; cnt++) {
-        MsgArg* fieldArgs;
-        size_t fieldCnt;
-        status = ruleListArgs[cnt].Get("a(yv)", &fieldCnt, &fieldArgs);
+    PermissionPolicy::Rule::Member* ruleArray = new PermissionPolicy::Rule::Member[count];
+    for (size_t cnt = 0; cnt < count; cnt++) {
+        char* str;
+        uint8_t memberType;
+        uint8_t actionMask;
+        QStatus status = arg[cnt].Get("(syy)", &str, &memberType, &actionMask);
         if (ER_OK != status) {
-            QCC_DbgPrintf(("BuildMembersFromArg #3 [%d] got status 0x%x\n", cnt, status));
+            QCC_DbgPrintf(("BuildMembersFromArg [%d] got status 0x%x\n", cnt, status));
             delete [] ruleArray;
             return status;
         }
         PermissionPolicy::Rule::Member* pr = &ruleArray[cnt];
-        for (size_t fld = 0; fld < fieldCnt; fld++) {
-            uint8_t fieldType;
-            MsgArg* field;
-            status = fieldArgs[fld].Get("(yv)", &fieldType, &field);
-            if (ER_OK != status) {
-                QCC_DbgPrintf(("BuildMembersFromArg #4 [%d][%d] got status 0x%x\n", cnt, fld, status));
-                delete [] ruleArray;
-                return status;
-            }
-            char* str;
-            bool boolVal;
-            uint8_t oneByte;
-            switch (fieldType) {
-            case PermissionPolicy::Rule::Member::TAG_MEMBER_NAME:
-                status = field->Get("s", &str);
-                if (ER_OK != status) {
-                    QCC_DbgPrintf(("BuildMembersFromArg #6 [%d][%d] got status 0x%x\n", cnt, fld, status));
-                    delete [] ruleArray;
-                    return status;
-                }
-                pr->SetMemberName(String(str));
-                break;
-
-            case PermissionPolicy::Rule::Member::TAG_MEMBER_TYPE:
-                status = field->Get("y", &oneByte);
-                if (ER_OK != status) {
-                    QCC_DbgPrintf(("BuildMembersFromArg #7 [%d][%d] got status 0x%x\n", cnt, fld, status));
-                    delete [] ruleArray;
-                    return status;
-                }
-                if ((oneByte >= PermissionPolicy::Rule::Member::METHOD_CALL) && (oneByte <= PermissionPolicy::Rule::Member::PROPERTY)) {
-                    pr->SetMemberType((PermissionPolicy::Rule::Member::MemberType) oneByte);
-                } else {
-                    QCC_DbgPrintf(("BuildMembersFromArg #8 [%d][%d] got invalid member type %d\n", cnt, fld, oneByte));
-                    delete [] ruleArray;
-                    return ER_INVALID_DATA;
-                }
-                break;
-
-            case PermissionPolicy::Rule::Member::TAG_ACTION_MASK:
-                status = field->Get("y", &oneByte);
-                if (ER_OK != status) {
-                    QCC_DbgPrintf(("BuildMembersFromArg #9 [%d][%d] got status 0x%x\n", cnt, fld, status));
-                    delete [] ruleArray;
-                    return status;
-                }
-                pr->SetActionMask(oneByte);
-                break;
-
-            case PermissionPolicy::Rule::Member::TAG_MUTUAL_AUTH:
-                status = field->Get("b", &boolVal);
-                if (ER_OK != status) {
-                    QCC_DbgPrintf(("BuildMembersFromArg #9 [%d][%d] got status 0x%x\n", cnt, fld, status));
-                    delete [] ruleArray;
-                    return status;
-                }
-                pr->SetMutualAuth(boolVal);
-                break;
-            }
+        pr->SetMemberName(String(str));
+        if ((memberType >= PermissionPolicy::Rule::Member::NOT_SPECIFIED) && (memberType <= PermissionPolicy::Rule::Member::PROPERTY)) {
+            pr->SetMemberType((PermissionPolicy::Rule::Member::MemberType) memberType);
+        } else {
+            QCC_DbgPrintf(("BuildMembersFromArg [%d] got invalid member type %d\n", cnt, memberType));
+            delete [] ruleArray;
+            return ER_INVALID_DATA;
         }
+        pr->SetActionMask(actionMask);
     }
-    *count = ruleCount;
     *rules = ruleArray;
     return ER_OK;
 }
 
-static QStatus BuildRulesFromArg(MsgArg& arg, PermissionPolicy::Rule** rules, size_t* count)
+static QStatus BuildRulesFromArg(const MsgArg& msgArg, PermissionPolicy::Rule** rules, size_t* count)
 {
-    MsgArg* ruleListArgs = NULL;
-    size_t ruleCount = 0;
-    QStatus status = arg.Get("aa(yv)", &ruleCount, &ruleListArgs);
+    MsgArg* args;
+    size_t argCount;
+    QStatus status = msgArg.Get("a(ssa(syy))", &argCount, &args);
     if (ER_OK != status) {
-        QCC_DbgPrintf(("BuildRulesFromArg #1 got status 0x%x\n", status));
         return status;
     }
-    if (ruleCount == 0) {
-        *count = ruleCount;
+    *count = argCount;
+    if (argCount == 0) {
+        *rules = NULL;
         return ER_OK;
     }
-    PermissionPolicy::Rule* ruleArray = new PermissionPolicy::Rule[ruleCount];
-    for (size_t cnt = 0; cnt < ruleCount; cnt++) {
-        MsgArg* fieldArgs;
-        size_t fieldCnt = 0;
-        status = ruleListArgs[cnt].Get("a(yv)", &fieldCnt, &fieldArgs);
+    PermissionPolicy::Rule* ruleArray = new PermissionPolicy::Rule[argCount];
+    for (size_t cnt = 0; cnt < argCount; cnt++) {
+        char* objPath;
+        char* interfaceName;
+        MsgArg* membersArgs = NULL;
+        size_t membersArgsCount = 0;
+        status = args[cnt].Get("(ssa(syy))", &objPath, &interfaceName, &membersArgsCount, &membersArgs);
         if (ER_OK != status) {
-            QCC_DbgPrintf(("BuildRulesFromArg #3 [%d] got status 0x%x\n", cnt, status));
+            QCC_DbgPrintf(("BuildRulesFromArg [%d] got status 0x%x\n", cnt, status));
             delete [] ruleArray;
             return status;
         }
         PermissionPolicy::Rule* pr = &ruleArray[cnt];
-        for (size_t fld = 0; fld < fieldCnt; fld++) {
-            uint8_t fieldType;
-            MsgArg* field;
-            status = fieldArgs[fld].Get("(yv)", &fieldType, &field);
+        pr->SetObjPath(String(objPath));
+        pr->SetInterfaceName(String(interfaceName));
+        if (membersArgsCount > 0) {
+            PermissionPolicy::Rule::Member* memberRules = NULL;
+            status = BuildMembersFromArg(membersArgs, &memberRules, membersArgsCount);
             if (ER_OK != status) {
-                QCC_DbgPrintf(("BuildRulesFromArg #4 [%d][%d] got status 0x%x\n", cnt, fld, status));
+                QCC_DbgPrintf(("BuildRulesFromArg [%d] got status 0x%x\n", cnt, status));
                 delete [] ruleArray;
                 return status;
             }
-            char* str;
-            switch (fieldType) {
-            case PermissionPolicy::Rule::TAG_OBJPATH:
-                status = field->Get("s", &str);
-                if (ER_OK != status) {
-                    QCC_DbgPrintf(("BuildRulesFromArg #5 [%d][%d] got status 0x%x\n", cnt, fld, status));
-                    delete [] ruleArray;
-                    return status;
-                }
-                pr->SetObjPath(String(str));
-                break;
-
-            case PermissionPolicy::Rule::TAG_INTERFACE_NAME:
-                status = field->Get("s", &str);
-                if (ER_OK != status) {
-                    QCC_DbgPrintf(("BuildRulesFromArg #6 [%d][%d] got status 0x%x\n", cnt, fld, status));
-                    delete [] ruleArray;
-                    return status;
-                }
-                pr->SetInterfaceName(String(str));
-                break;
-
-            case PermissionPolicy::Rule::TAG_INTERFACE_MEMBERS:
-                PermissionPolicy::Rule::Member* memberRules = NULL;
-                size_t ruleCount = 0;
-                status = BuildMembersFromArg(*field, &memberRules, &ruleCount);
-                if (ER_OK != status) {
-                    QCC_DbgPrintf(("BuildRulesFromArg #6 [%d][%d] got status 0x%x\n", cnt, fld, status));
-                    delete [] ruleArray;
-                    return status;
-                }
-                if (ruleCount > 0) {
-                    pr->SetMembers(ruleCount, memberRules);
-                }
-                break;
-            }
+            pr->SetMembers(membersArgsCount, memberRules);
         }
     }
-    *count = ruleCount;
+
     *rules = ruleArray;
     return ER_OK;
 }
@@ -621,7 +490,7 @@ QStatus PermissionPolicy::Export(MsgArg& msgArg)
                 MsgArg* rulesVariants = NULL;
                 GenerateRuleArgs(&rulesVariants, (PermissionPolicy::Rule*) aTerm->GetRules(), aTerm->GetRulesSize());
                 termItems[idx++].Set("(yv)", PermissionPolicy::Term::TAG_RULES,
-                                     new MsgArg("aa(yv)", aTerm->GetRulesSize(), rulesVariants));
+                                     new MsgArg("a(ssa(syy))", aTerm->GetRulesSize(), rulesVariants));
             }
             termsVariants[cnt].Set("a(yv)", termItemCount, termItems);
         }
@@ -796,7 +665,7 @@ QStatus PermissionPolicy::GenerateRules(const Rule* rules, size_t count, MsgArg&
     if (ER_OK != status) {
         return status;
     }
-    msgArg.Set("aa(yv)", count, rulesVariants);
+    msgArg.Set("a(ssa(syy))", count, rulesVariants);
     msgArg.SetOwnershipFlags(MsgArg::OwnsArgs, true);
     return status;
 }

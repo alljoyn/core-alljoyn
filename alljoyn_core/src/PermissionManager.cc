@@ -329,6 +329,7 @@ static bool IsAuthorizedByGuildsInCommonPolicies(const PermissionPolicy* policy,
     for (_PeerState::GuildMap::iterator it = peerState->guildMap.begin(); it != peerState->guildMap.end(); it++) {
         _PeerState::GuildMetadata* metadata = it->second;
         const PermissionPolicy::Term* terms = policy->GetTerms();
+
         for (size_t cnt = 0; cnt < policy->GetTermsSize(); cnt++) {
             /* look for peer entry with matching guild GUID */
             if (!TermHasMatchingGuild(terms[cnt], metadata->cert.GetGuild())) {
@@ -446,7 +447,7 @@ static bool IsAuthorized(const MessageHolder& msgHolder, const PermissionPolicy*
         if (ER_OK == status) {
             peerAuthLevel = PermissionPolicy::Peer::PEER_LEVEL_AUTHENTICATED;
             authorized = IsAuthorizedByPeerPublicKey(policy, peerPublicKey, msgHolder, right.authByPolicy, denied);
-            QCC_DbgPrintf(("authorized by peer specific policy terms: %d denied %d", authorized, denied));
+            QCC_DbgPrintf(("authorized by peer specific (pubKey: %s) policy terms: %d denied %d", peerPublicKey.ToString().c_str(), authorized, denied));
             if (denied) {
                 QCC_DbgPrintf(("Denied by peer specific policy"));
                 return false;
@@ -583,18 +584,27 @@ static QStatus ParsePropertiesMessage(MessageHolder& holder)
     return ER_OK;
 }
 
-bool PermissionManager::PeerHasAdminPriv(const GUID128& peerGuid)
+bool PermissionManager::PeerHasAdminPriv(PeerState& peerState)
 {
-    ECCPublicKey peerPublicKey;
-    QStatus status = permissionMgmtObj->GetConnectedPeerPublicKey(peerGuid, &peerPublicKey);
-    if (ER_OK != status) {
-        QCC_DbgPrintf(("PermissionManager::PeerHasAdminPriv failed to retrieve public key for peer %s", peerGuid.ToString().c_str()));
-        return false;
+    /* now check the admin security group membership */
+    for (_PeerState::GuildMap::iterator it = peerState->guildMap.begin(); it != peerState->guildMap.end(); it++) {
+        _PeerState::GuildMetadata* metadata = it->second;
+        /* build the membership cert chain */
+        std::vector<MembershipCertificate*> certChain;
+        certChain.push_back(&metadata->cert);
+        for (std::vector<_PeerState::MembershipMetaPair*>::iterator chainIt = metadata->certChain.begin(); chainIt != metadata->certChain.end(); chainIt++) {
+            certChain.push_back(&(*chainIt)->cert);
+        }
+        if (permissionMgmtObj->IsAdminGroup(certChain)) {
+            certChain.clear();
+            return true;
+        }
+        certChain.clear();
     }
-    return permissionMgmtObj->IsAdmin(&peerPublicKey);
+    return false;
 }
 
-bool PermissionManager::AuthorizePermissionMgmt(bool outgoing, const GUID128& peerGuid, const char* mbrName)
+bool PermissionManager::AuthorizePermissionMgmt(bool outgoing, PeerState& peerState, const char* mbrName)
 {
     if (outgoing) {
         return true;  /* always allow send action */
@@ -613,14 +623,10 @@ bool PermissionManager::AuthorizePermissionMgmt(bool outgoing, const GUID128& pe
         (strncmp(mbrName, "InstallMembershipAuthData", 25) == 0) ||
         (strncmp(mbrName, "RemoveMembership", 16) == 0) ||
         (strncmp(mbrName, "InstallIdentity", 15) == 0) ||
-        (strncmp(mbrName, "InstallGuildEquivalence", 23) == 0) ||
-        (strncmp(mbrName, "RemoveGuildEquivalence", 22) == 0) ||
-        (strncmp(mbrName, "InstallCredential", 17) == 0) ||
-        (strncmp(mbrName, "RemoveCredential", 16) == 0) ||
         (strncmp(mbrName, "Reset", 5) == 0)
         ) {
         /* these actions require admin privilege */
-        return PeerHasAdminPriv(peerGuid);
+        return PeerHasAdminPriv(peerState);
     } else if (
         (strncmp(mbrName, "NotifyConfig", 12) == 0) ||
         (strncmp(mbrName, "GetPublicKey", 12) == 0) ||
@@ -664,25 +670,20 @@ QStatus PermissionManager::AuthorizeMessage(bool outgoing, Message& msg, PeerSta
         holder.iName = msg->GetInterface();
         holder.mbrName = msg->GetMemberName();
     }
-    if (IsPermissionMgmtInterface(holder.iName)) {
-        if (!permissionMgmtObj) {
-            return ER_PERMISSION_DENIED;
-        }
-        if (AuthorizePermissionMgmt(outgoing, peerState->GetGuid(), holder.mbrName)) {
-            return ER_OK;
-        }
-        QCC_DbgPrintf(("PermissionManager::AuthorizeMessage on PermissionMgmt::%s returns ER_PERMISSION_DENIED\n", holder.mbrName));
-        return ER_PERMISSION_DENIED;
-    }
     if (!permissionMgmtObj) {
         return ER_PERMISSION_DENIED;
+    }
+    if (IsPermissionMgmtInterface(holder.iName)) {
+        if (AuthorizePermissionMgmt(outgoing, peerState, holder.mbrName)) {
+            return ER_OK;
+        }
     }
     /* is the app claimed? If not claimed, no enforcement */
     if (!permissionMgmtObj->HasTrustAnchors()) {
         return ER_OK;
     }
 
-    if (!outgoing && PeerHasAdminPriv(peerState->GetGuid())) {
+    if (!outgoing && PeerHasAdminPriv(peerState)) {
         QCC_DbgPrintf(("PermissionManager::AuthorizeMessage peer has admin prividege"));
         return ER_OK;  /* admin has full access */
     }

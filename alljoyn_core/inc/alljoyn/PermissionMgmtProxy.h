@@ -54,16 +54,23 @@ class PermissionMgmtProxy : public ProxyBusObject {
      * Access restriction: None if the app is not yet claimed. An error will be
      * raised if the app already has an admin and it is not the caller.
      *
-     * @param[in] publicKeyArg    a KeyInfo object representing the public key of
-     *                            the claimer
-     * @param[in] identityCertArg an identity certificate for the claimed app
-     * @param[out] returnKey      a KeyInfo object representing the public key of the
-     *                            device/app
+     * @param[in] certificateAuthority   a KeyInfo object representing the
+     *                                   public key of the certificate authority
+     * @param[in] adminGroupId           the admin group Id
+     * @param[in] adminGroup             a KeyInfo object representing the admin
+     *                                   security group authority
+     * @param[in] identityCertChain      the identity certificate chain for the
+     *                                   claimed app.  The leaf cert is listed first
+     * @param[in] identityCertChainSize  the size of the identity certificate
+     *                                   chain.
+     * @param[in] manifest               the manifest of the application
+     * @param[in] manifestSize           the number of rules in the manifest
      * @return
      *  - #ER_OK if successful
      *  - an error status indicating failure
      */
-    QStatus Claim(const MsgArg& publicKeyArg, const MsgArg& identityCertArg, qcc::ECCPublicKey* returnKey);
+    QStatus Claim(qcc::KeyInfoNISTP256& certificateAuthority, qcc::GUID128& adminGroupId, qcc::KeyInfoNISTP256& adminGroup, qcc::IdentityCertificate* identityCertChain, size_t identityCertChainSize, PermissionPolicy::Rule* manifest, size_t manifestSize);
+
 
     /**
      * Install the static policy to the app. It replaces any existing policy on
@@ -203,25 +210,6 @@ class PermissionMgmtProxy : public ProxyBusObject {
     QStatus GetIdentity(qcc::IdentityCertificate* cert);
 
     /**
-     * Install a guild equivalence to the app. The Certificate object
-     * description is shown below.
-     *
-     * Access restriction: Only an admin of the app is allowed to install a
-     * guild equivalence.
-     *
-     * Note: Only X.509 DER certificate format is currently supported.
-     *
-     * @param[in] cert the certificate of the guild equivalence certificate.
-     *
-     * @return
-     *  - #ER_OK if successful
-     *  - an error status indicating failure
-     */
-    QStatus InstallGuildEquivalence(const MsgArg& cert);
-
-    QStatus RemoveGuildEquivalence(uint8_t* guildSerialNum, size_t guildSerialNumSize, uint8_t* issuer, size_t issuerSize);
-
-    /**
      * Retrieve the manifest data installed by the application developer.
      *
      * Access restriction: unspecified in interface description
@@ -260,37 +248,6 @@ class PermissionMgmtProxy : public ProxyBusObject {
      *  - an error status indicating failure
      */
     QStatus GetPublicKey(qcc::ECCPublicKey* pubKey);
-
-    /**
-     * Install additional credential to the app. It can be an additional trust
-     * anchor.
-     *
-     * Access restriction: Only an admin of the app is allowed to install a
-     * credential.
-     *
-     * @param[in] credentialType the type of credential
-     * @param[in] credential     the credential
-     *
-     * @return
-     *  - #ER_OK if successful
-     *  - an error status indicating failure
-     */
-    QStatus InstallCredential(const uint8_t credentialType, const MsgArg& credential);
-
-    /**
-     * Remove a credential from the app.
-     *
-     * Access restriction: Only an admin of the app is allowed to remove a
-     * credential.
-     *
-     * @param[in] credentialType  the type of credential
-     * @param[in] credentialID    the credential Identifier
-     *
-     * @return
-     *  - #ER_OK if successful
-     *  - an error status indicating failure
-     */
-    QStatus RemoveCredential(const uint8_t credentialType, const MsgArg& credentialID);
 
     /**
      * GetVersion get the PermissionMgmt version

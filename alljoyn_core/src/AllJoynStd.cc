@@ -363,7 +363,7 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
             return status;
         }
         ifc->AddProperty("Version", "q", PROP_ACCESS_READ);
-        ifc->AddMethod("Claim",     "(yv)(yay)",  "(yv)", "adminPublicKey,identityCert,publicKey");
+        ifc->AddMethod("Claim",     "(yyayay)ayay(yyayay)aya(yay)a(ssa(syy))",  NULL, "certificateAuthority,caAuthorityKeyIdentifier,adminSecurityGroupId,adminSecurityGroupAuthority,securityGroupAuthorityKeyId,identityCertificateChain,manifest");
         ifc->AddMethod("InstallPolicy",     "(yv)",  NULL, "authorization");
         ifc->AddMethod("InstallEncryptedPolicy",     "ay",  NULL, "encryptedAuthorization");
         ifc->AddMethod("GetPolicy",     NULL, "(yv)",  "authorization");
@@ -371,15 +371,11 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         ifc->AddMethod("InstallMembership",     "a(yay)",  NULL, "certchain");
         ifc->AddMethod("InstallMembershipAuthData",     "say(yv)",  NULL, "serialNum,issuer,authorization");
         ifc->AddMethod("RemoveMembership",     "say", NULL, "serialNum,issuer");
-        ifc->AddMethod("InstallIdentity",     "(yay)", NULL, "cert");
+        ifc->AddMethod("InstallIdentity",     "a(yay)", NULL, "certChain");
         ifc->AddMethod("GetIdentity",     NULL, "(yay)", "cert");
-        ifc->AddMethod("InstallGuildEquivalence",     "(yay)", NULL, "cert");
-        ifc->AddMethod("RemoveGuildEquivalence",     "ayay", NULL, "serialNum,issuer");
         ifc->AddMethod("GetManifest",     NULL, "(yv)",  "manifest");
         ifc->AddMethod("Reset",     NULL, NULL, NULL);
         ifc->AddMethod("GetPublicKey", NULL, "(yv)", "publicKey");
-        ifc->AddMethod("InstallCredential",     "yv", NULL, "type,credential");
-        ifc->AddMethod("RemoveCredential",     "yv", NULL, "type,credential");
         ifc->Activate();
     }
     {

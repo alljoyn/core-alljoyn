@@ -163,6 +163,8 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
         serviceBus("PermissionMgmtTestService", false),
         consumerBus("PermissionMgmtTestConsumer", false),
         remoteControlBus("PermissionMgmtTestRemoteControl", false),
+        adminAdminGroupGUID("00112233445566778899AABBCCDDEEFF"),
+        consumerAdminGroupGUID("AABBCCDDEEFF00112233445566778899"),
         serviceGUID(),
         consumerGUID(),
         remoteControlGUID(),
@@ -186,15 +188,20 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
     void CreateOnOffAppInterface(BusAttachment& bus, bool addService);
     void CreateTVAppInterface(BusAttachment& bus, bool addService);
     void CreateAppInterfaces(BusAttachment& bus, bool addService);
+    void GenerateCAKeys();
 
     BusAttachment adminBus;
     BusAttachment adminProxyBus;
     BusAttachment serviceBus;
     BusAttachment consumerBus;
     BusAttachment remoteControlBus;
+    qcc::GUID128 adminAdminGroupGUID;
+    qcc::GUID128 consumerAdminGroupGUID;
     qcc::GUID128 serviceGUID;
     qcc::GUID128 consumerGUID;
     qcc::GUID128 remoteControlGUID;
+    qcc::KeyInfoNISTP256 adminAdminGroupAuthority;
+    qcc::KeyInfoNISTP256 consumerAdminGroupAuthority;
     QStatus status;
 
     QStatus InterestInChannelChangedSignal(BusAttachment* bus);
@@ -241,6 +248,8 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
 
 class PermissionMgmtTestHelper {
   public:
+    static QStatus CreateIdentityCertChain(BusAttachment& caBus, BusAttachment& issuerBus, const qcc::String& serial, const qcc::String& subject, const qcc::ECCPublicKey* subjectPubKey, const qcc::String& alias, uint32_t expiredInSecs, qcc::IdentityCertificate* certChain, size_t chainCount, uint8_t* digest, size_t digestSize);
+    static QStatus CreateIdentityCert(BusAttachment& issuerBus, const qcc::String& serial, const qcc::String& subject, const qcc::ECCPublicKey* subjectPubKey, const qcc::String& alias, uint32_t expiredInSecs, qcc::IdentityCertificate& cert, uint8_t* digest, size_t digestSize);
     static QStatus CreateIdentityCert(BusAttachment& issuerBus, const qcc::String& serial, const qcc::String& subject, const qcc::ECCPublicKey* subjectPubKey, const qcc::String& alias, uint32_t expiredInSecs, qcc::String& der);
 
     static QStatus CreateIdentityCert(BusAttachment& issuerBus, const qcc::String& serial, const qcc::String& subject, const qcc::ECCPublicKey* subjectPubKey, const qcc::String& alias, qcc::String& der);

@@ -26,6 +26,7 @@
 #include "PermissionMgmtObj.h"
 #include "BusInternal.h"
 #include "CredentialAccessor.h"
+#include "KeyInfoHelper.h"
 
 #define QCC_MODULE "PERMISSION_MGMT"
 
@@ -99,13 +100,8 @@ QStatus PermissionConfiguratorImpl::GetSigningPublicKey(KeyInfoECC& keyInfo)
         return status;
     }
     KeyInfoNISTP256* pKeyInfo = (KeyInfoNISTP256*) &keyInfo;
-    qcc::GUID128 localGUID;
-    status = ca.GetGuid(localGUID);
-    if (ER_OK != status) {
-        return status;
-    }
-    pKeyInfo->SetKeyId(localGUID.GetBytes(), GUID128::SIZE);
     pKeyInfo->SetPublicKey(&publicKey);
+    KeyInfoHelper::GenerateKeyId(*pKeyInfo);
     return ER_OK;
 }
 

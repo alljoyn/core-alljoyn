@@ -21,6 +21,8 @@
 
 #include "KeyInfoHelper.h"
 #include <qcc/CryptoECC.h>
+#include <qcc/CertificateECC.h>
+#include <qcc/Debug.h>
 
 #define QCC_MODULE "PERMISSION_MGMT"
 
@@ -42,6 +44,71 @@ void KeyInfoHelper::KeyInfoNISTP256ToMsgArg(const KeyInfoNISTP256& keyInfo, MsgA
                 new MsgArg("(ayyyv)", keyInfo.GetKeyIdLen(), keyInfo.GetKeyId(), KeyInfo::USAGE_SIGNING, KeyInfoECC::KEY_TYPE,
                            new MsgArg("(yyv)", keyInfo.GetAlgorithm(), keyInfo.GetCurve(), new MsgArg(coordArg))));
     variant.SetOwnershipFlags(MsgArg::OwnsArgs, true);
+}
+
+void KeyInfoHelper::KeyInfoNISTP256PubKeyToMsgArg(const KeyInfoNISTP256& keyInfo, MsgArg& msgArg)
+{
+    MsgArg localArg;
+    QStatus status = localArg.Set("(yyayay)", keyInfo.GetAlgorithm(),
+                                  keyInfo.GetCurve(), ECC_COORDINATE_SZ, keyInfo.GetXCoord(),
+                                  ECC_COORDINATE_SZ, keyInfo.GetYCoord());
+    if (ER_OK != status) {
+        QCC_LogError(status, ("KeyInfoHelper::KeyInfoNISTP256PubKeyToMsgArg failed"));
+        assert(false);
+    }
+    /* copy the message arg for a deep copy of the array arguments */
+    msgArg = localArg;
+}
+
+QStatus KeyInfoHelper::MsgArgToKeyInfoNISTP256PubKey(const MsgArg& msgArg, KeyInfoNISTP256& keyInfo)
+{
+    QStatus status;
+    uint8_t algorithm;
+    uint8_t curve;
+    uint8_t* xCoord;
+    size_t xLen;
+    uint8_t* yCoord;
+    size_t yLen;
+    status = msgArg.Get("(yyayay)", &algorithm, &curve, &xLen, &xCoord, &yLen, &yCoord);
+    if (ER_OK != status) {
+        return ER_INVALID_DATA;
+    }
+    if (algorithm != SigInfo::ALGORITHM_ECDSA_SHA_256) {
+        return ER_INVALID_DATA;
+    }
+    if (curve != Crypto_ECC::ECC_NIST_P256) {
+        return ER_INVALID_DATA;
+    }
+    if ((xLen != ECC_COORDINATE_SZ) || (yLen != ECC_COORDINATE_SZ)) {
+        return ER_INVALID_DATA;
+    }
+    keyInfo.SetXCoord(xCoord);
+    keyInfo.SetYCoord(yCoord);
+    return ER_OK;
+}
+
+QStatus KeyInfoHelper::MsgArgToKeyInfoKeyId(const MsgArg& msgArg, KeyInfoNISTP256& keyInfo)
+{
+    uint8_t* buf;
+    size_t len;
+    QStatus status = msgArg.Get("ay", &len, &buf);
+    if (ER_OK != status) {
+        return ER_INVALID_DATA;
+    }
+    keyInfo.SetKeyId(buf, len);
+    return ER_OK;
+}
+
+void KeyInfoHelper::KeyInfoKeyIdToMsgArg(const KeyInfoNISTP256& keyInfo, MsgArg& msgArg)
+{
+    MsgArg localArg;
+    QStatus status = localArg.Set("ay", keyInfo.GetKeyIdLen(), keyInfo.GetKeyId());
+    if (ER_OK != status) {
+        QCC_LogError(status, ("KeyInfoHelper::KeyInfoKeyIdToMsgArg failed"));
+        assert(false);
+    }
+    /* copy the message arg for a deep copy of the array arguments */
+    msgArg = localArg;
 }
 
 QStatus KeyInfoHelper::MsgArgToKeyInfoNISTP256(const MsgArg& variant, KeyInfoNISTP256& keyInfo)
@@ -96,6 +163,17 @@ QStatus KeyInfoHelper::MsgArgToKeyInfoNISTP256(const MsgArg& variant, KeyInfoNIS
     keyInfo.SetXCoord(xCoord);
     keyInfo.SetYCoord(yCoord);
     keyInfo.SetKeyId(kid, kidLen);
+    return ER_OK;
+}
+
+QStatus KeyInfoHelper::GenerateKeyId(KeyInfoNISTP256& keyInfo)
+{
+    String aki;
+    QStatus status = CertificateX509::GenerateAuthorityKeyId(keyInfo.GetPublicKey(), aki);
+    if (ER_OK != status) {
+        return status;
+    }
+    keyInfo.SetKeyId((const uint8_t*) aki.data(), aki.size());
     return ER_OK;
 }
 

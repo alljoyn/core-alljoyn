@@ -18,6 +18,8 @@
 #include <alljoyn/PermissionMgmtProxy.h>
 #include <qcc/Debug.h>
 #include <qcc/String.h>
+#include <qcc/CertificateECC.h>
+#include "KeyInfoHelper.h"
 
 #define QCC_MODULE "ALLJOYN_PERMISSION_MGMT"
 
@@ -35,24 +37,65 @@ PermissionMgmtProxy::~PermissionMgmtProxy()
 {
 }
 
-QStatus PermissionMgmtProxy::Claim(const MsgArg& publicKeyArg, const MsgArg& identityCertArg, qcc::ECCPublicKey* returnKeyArg) {
+QStatus PermissionMgmtProxy::Claim(qcc::KeyInfoNISTP256& certificateAuthority, qcc::GUID128& adminGroupId, qcc::KeyInfoNISTP256& adminGroup, qcc::IdentityCertificate* identityCertChain, size_t identityCertChainSize, PermissionPolicy::Rule* manifest, size_t manifestSize) {
     QCC_DbgTrace(("PermissionMgmtProxy::%s", __FUNCTION__));
     QStatus status = ER_OK;
     Message reply(*bus);
 
-    MsgArg inputs[2];
-    inputs[0] = publicKeyArg;
-    inputs[1] = identityCertArg;
+    if ((identityCertChain == NULL) || (manifest == NULL)) {
+        return ER_INVALID_DATA;
+    }
+    MsgArg inputs[7];
+    if (certificateAuthority.GetKeyIdLen() == 0) {
+        KeyInfoHelper::GenerateKeyId(certificateAuthority);
+    }
+    KeyInfoHelper::KeyInfoNISTP256PubKeyToMsgArg(certificateAuthority, inputs[0]);
+    KeyInfoHelper::KeyInfoKeyIdToMsgArg(certificateAuthority, inputs[1]);
 
-    status = MethodCall(org::allseen::Security::PermissionMgmt::InterfaceName, "Claim", inputs, 2, reply);
+    status = inputs[2].Set("ay", qcc::GUID128::SIZE, adminGroupId.GetBytes());
+    if (ER_OK != status) {
+        return status;
+    }
+    if (adminGroup.GetKeyIdLen() == 0) {
+        KeyInfoHelper::GenerateKeyId(adminGroup);
+    }
+    KeyInfoHelper::KeyInfoNISTP256PubKeyToMsgArg(adminGroup, inputs[3]);
+    KeyInfoHelper::KeyInfoKeyIdToMsgArg(adminGroup, inputs[4]);
+
+    MsgArg* identityArgs = NULL;
+    if (identityCertChainSize == 0) {
+        status = inputs[5].Set("a(yay)", 0, NULL);
+        if (ER_OK != status) {
+            return status;
+        }
+    } else {
+        identityArgs = new MsgArg[identityCertChainSize];
+        for (size_t cnt = 0; cnt < identityCertChainSize; cnt++) {
+            identityArgs[cnt].Set("(yay)", qcc::CertificateX509::ENCODING_X509_DER, identityCertChain[cnt].GetEncodedLen(), identityCertChain[cnt].GetEncoded());
+        }
+        status = inputs[5].Set("a(yay)", identityCertChainSize, identityArgs);
+        if (ER_OK != status) {
+            return status;
+        }
+    }
+    if (manifestSize == 0) {
+        status = inputs[6].Set("a(ssa(syy))", 0, NULL);
+        if (ER_OK != status) {
+            return status;
+        }
+    } else {
+        status = PermissionPolicy::GenerateRules(manifest, manifestSize, inputs[6]);
+        if (ER_OK != status) {
+            return status;
+        }
+    }
+    status = MethodCall(org::allseen::Security::PermissionMgmt::InterfaceName, "Claim", inputs, 7, reply);
     if (ER_BUS_REPLY_IS_ERROR_MESSAGE == status) {
         if (IsPermissionDeniedError(reply)) {
             status = ER_PERMISSION_DENIED;
         }
     }
-    if (ER_OK == status) {
-        status = RetrieveECCPublicKeyFromMsgArg(*reply->GetArg(0), returnKeyArg);
-    }
+    delete [] identityArgs;
     return status;
 }
 
@@ -212,28 +255,6 @@ QStatus PermissionMgmtProxy::GetIdentity(qcc::IdentityCertificate* cert) {
     return status;
 }
 
-QStatus PermissionMgmtProxy::InstallGuildEquivalence(const MsgArg& certArg) {
-    QCC_DbgTrace(("PermissionMgmtProxy::%s", __FUNCTION__));
-    QStatus status = ER_OK;
-    Message reply(*bus);
-
-    status = MethodCall(org::allseen::Security::PermissionMgmt::InterfaceName, "InstallGuildEquivalence", &certArg, 1, reply);
-    if (ER_BUS_REPLY_IS_ERROR_MESSAGE == status) {
-        if (IsPermissionDeniedError(reply)) {
-            status = ER_PERMISSION_DENIED;
-        }
-    }
-    return status;
-}
-
-QStatus PermissionMgmtProxy::RemoveGuildEquivalence(uint8_t* guildSerialNum, size_t guildSerialNumSize, uint8_t* issuer, size_t issuerSize) {
-    QCC_UNUSED(guildSerialNum);
-    QCC_UNUSED(guildSerialNumSize);
-    QCC_UNUSED(issuer);
-    QCC_UNUSED(issuerSize);
-    return ER_FAIL;
-}
-
 // TODO GetManifest function breaks the pattern used for most other methods.
 // It allocates memory for the user that they have to free. Figure out a way
 // to let the user allocate there own memory without making multiple remote
@@ -289,42 +310,6 @@ QStatus PermissionMgmtProxy::GetPublicKey(qcc::ECCPublicKey* pubKey) {
     }
     /* retrieve ECCPublicKey from MsgArg */
     return RetrieveECCPublicKeyFromMsgArg(*reply->GetArg(0), pubKey);
-}
-
-QStatus PermissionMgmtProxy::InstallCredential(const uint8_t credentialType, const MsgArg& credential) {
-    QCC_DbgTrace(("PermissionMgmtProxy::%s", __FUNCTION__));
-    QStatus status = ER_OK;
-    Message reply(*bus);
-
-    MsgArg input[2];
-    input[0].Set("y", credentialType);
-    input[1].Set("v", &credential);
-
-    status = MethodCall(org::allseen::Security::PermissionMgmt::InterfaceName, "InstallCredential", input, 2, reply);
-    if (ER_BUS_REPLY_IS_ERROR_MESSAGE == status) {
-        if (IsPermissionDeniedError(reply)) {
-            status = ER_PERMISSION_DENIED;
-        }
-    }
-    return status;
-}
-
-QStatus PermissionMgmtProxy::RemoveCredential(const uint8_t credentialType, const MsgArg& credentialID) {
-    QCC_DbgTrace(("PermissionMgmtProxy::%s", __FUNCTION__));
-    QStatus status = ER_OK;
-    Message reply(*bus);
-
-    MsgArg input[2];
-    input[0].Set("y", credentialType);
-    input[1].Set("v", &credentialID);
-
-    status = MethodCall(org::allseen::Security::PermissionMgmt::InterfaceName, "RemoveCredential", input, 2, reply);
-    if (ER_BUS_REPLY_IS_ERROR_MESSAGE == status) {
-        if (IsPermissionDeniedError(reply)) {
-            status = ER_PERMISSION_DENIED;
-        }
-    }
-    return status;
 }
 
 QStatus PermissionMgmtProxy::GetVersion(uint16_t& version) {

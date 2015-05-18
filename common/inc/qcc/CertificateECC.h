@@ -77,6 +77,16 @@ extern const qcc::String OID_CUSTOM_CERT_TYPE;
  */
 extern const qcc::String OID_AUTHORITY_KEY_IDENTIFIER;
 
+/**
+ * custom OID for the Allseen security group Id (1.3.6.1.4.1.44924.1.3)
+ */
+extern const qcc::String OID_CUSTOM_SECURITY_GROUP_ID;
+
+/**
+ * custom OID for the Allseen identity alias (1.3.6.1.4.1.44924.1.4)
+ */
+extern const qcc::String OID_CUSTOM_IDENTITY_ALIAS;
+
 /** @} */
 /**
  * X.509 Certificate
