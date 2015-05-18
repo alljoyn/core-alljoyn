@@ -569,9 +569,10 @@ QStatus CertificateX509::DecodeCertificateTBS()
     qcc::String time;
     qcc::String pub;
     qcc::String ext;
+    qcc::String serialStr;
 
     status = Crypto_ASN1::Decode(tbs, "(c(i)l(o)(.)(.)(.)(.).)",
-                                 0, &x509Version, &serial, &oid, &iss, &time, &sub, &pub, &ext);
+                                 0, &x509Version, &serialStr, &oid, &iss, &time, &sub, &pub, &ext);
     if (ER_OK != status) {
         QCC_LogError(status, ("Error decoding certificate"));
         return status;
@@ -580,6 +581,7 @@ QStatus CertificateX509::DecodeCertificateTBS()
         QCC_LogError(status, ("Certificate not X.509v3"));
         return ER_FAIL;
     }
+    this->SetSerial((const uint8_t*)serialStr.data(), serialStr.size());
     if (OID_SIG_ECDSA_SHA256 != oid) {
         QCC_LogError(status, ("Certificate signature must be SHA-256"));
         return ER_FAIL;
@@ -622,6 +624,7 @@ QStatus CertificateX509::EncodeCertificateTBS()
     qcc::String time;
     qcc::String pub;
     qcc::String ext;
+    qcc::String serialStr;
 
     status = EncodeCertificateName(iss, issuer);
     if (ER_OK != status) {
@@ -643,8 +646,9 @@ QStatus CertificateX509::EncodeCertificateTBS()
     if (ER_OK != status) {
         return status;
     }
+    serialStr.assign((const char*)serial, serialLen);
     status = Crypto_ASN1::Encode(tbs, "(c(i)l(o)(R)(R)(R)(R)R)",
-                                 0, x509Version, &serial, &oid, &iss, &time, &sub, &pub, &ext);
+                                 0, x509Version, &serialStr, &oid, &iss, &time, &sub, &pub, &ext);
 
     return status;
 }
@@ -842,7 +846,7 @@ String CertificateX509::ToString() const
     qcc::String str("Certificate:\n");
     /* Printing out the serial number as a string can produce control characters that cause output issues
      * on Windows. Sometimes the rest of the output will not appear. Instead, we only print it as a hex string. */
-    str += "serial:     0x" + BytesToHexString((const uint8_t*) serial.data(), serial.length()) + "\n";
+    str += "serial:     0x" + BytesToHexString(serial, serialLen) + "\n";
     if ((GetIssuerOULength() > 0) || (GetIssuerCNLength() > 0)) {
         str += "issuer: ";
         bool addComma = false;

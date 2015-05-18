@@ -265,7 +265,7 @@ static QStatus CreateCert(const qcc::String& serial, const qcc::GUID128& issuer,
 {
     QStatus status = ER_CRYPTO_ERROR;
 
-    x509.SetSerial(serial);
+    x509.SetSerial((const uint8_t*)serial.data(), serial.size());
     qcc::String issuerName = issuer.ToString();
     x509.SetIssuerCN((const uint8_t*) issuerName.c_str(), issuerName.length());
     qcc::String subjectName = subject.ToString();

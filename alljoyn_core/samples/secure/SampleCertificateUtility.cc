@@ -301,8 +301,7 @@ QStatus CreateAndSignCertificate(
     /* Clear the high order bit to avoid that leading zero when ASN.1-encoded. */
     serialNumber[0] &= 0x7F;
 
-    String serialNumberString(reinterpret_cast<const char*>(serialNumber), sizeof(serialNumber));
-    certificate.SetSerial(serialNumberString);
+    certificate.SetSerial(serialNumber, sizeof(serialNumber));
     certificate.SetCA(isCA);
     certificate.SetValidity(&validity);
 
