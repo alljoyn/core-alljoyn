@@ -72,6 +72,7 @@ struct PeerSecretRecord {
     uint8_t version;
     uint8_t secret[MASTER_SECRET_SIZE];
     ECCPublicKey publicKey;
+    uint8_t manifestDigest[Crypto_SHA256::DIGEST_SIZE];
 
     PeerSecretRecord() : version(1)
     {
@@ -705,7 +706,7 @@ QStatus KeyExchangerECDHE::StoreMasterSecret(const qcc::GUID128& guid, const uin
     return DoStoreMasterSecret(bus, guid, masterSecret, (const uint8_t*) GetSuiteName(), strlen(GetSuiteName()), secretExpiration, IsInitiator(), accessRights);
 }
 
-QStatus KeyExchanger::ParsePeerSecretRecord(const KeyBlob& rec, KeyBlob& masterSecret, ECCPublicKey* publicKey, bool& publicKeyAvailable)
+QStatus KeyExchanger::ParsePeerSecretRecord(const KeyBlob& rec, KeyBlob& masterSecret, ECCPublicKey* publicKey, uint8_t* manifestDigest, bool& publicKeyAvailable)
 {
     publicKeyAvailable = false;
     if ((rec.GetSize() == MASTER_SECRET_SIZE) || (rec.GetSize() == MASTER_SECRET_PINX_SIZE)) {
@@ -713,6 +714,9 @@ QStatus KeyExchanger::ParsePeerSecretRecord(const KeyBlob& rec, KeyBlob& masterS
         masterSecret = rec;
         if (publicKey) {
             memset(publicKey, 0, sizeof(ECCPublicKey));
+        }
+        if (manifestDigest) {
+            memset(manifestDigest, 0, Crypto_SHA256::DIGEST_SIZE);
         }
         return ER_OK;
     }
@@ -734,6 +738,9 @@ QStatus KeyExchanger::ParsePeerSecretRecord(const KeyBlob& rec, KeyBlob& masterS
     if (publicKey) {
         memcpy(publicKey, &peerRec->publicKey, sizeof(ECCPublicKey));
     }
+    if (manifestDigest) {
+        memcpy(manifestDigest, peerRec->manifestDigest, sizeof(peerRec->manifestDigest));
+    }
     publicKeyAvailable = true;
     return ER_OK;
 }
@@ -741,16 +748,17 @@ QStatus KeyExchanger::ParsePeerSecretRecord(const KeyBlob& rec, KeyBlob& masterS
 QStatus KeyExchanger::ParsePeerSecretRecord(const KeyBlob& rec, KeyBlob& masterSecret)
 {
     bool publicKeyAvail;
-    return ParsePeerSecretRecord(rec, masterSecret, NULL, publicKeyAvail);
+    return ParsePeerSecretRecord(rec, masterSecret, NULL, NULL, publicKeyAvail);
 }
 
 QStatus KeyExchangerECDHE_ECDSA::StoreMasterSecret(const qcc::GUID128& guid, const uint8_t accessRights[4])
 {
     if (peerDSAPubKey) {
-        /* build a new keyblob with master secret and peer DSA public key */
+        /* build a new keyblob with master secret, peer DSA public key, and manifest digest */
         PeerSecretRecord secretRecord;
         memcpy(secretRecord.secret, masterSecret.GetData(), sizeof(secretRecord.secret));
         memcpy(&secretRecord.publicKey, peerDSAPubKey, sizeof(ECCPublicKey));
+        memcpy(secretRecord.manifestDigest, peerManifestDigest, sizeof(peerManifestDigest));
         KeyBlob kb((const uint8_t*) &secretRecord, sizeof(secretRecord), KeyBlob::GENERIC);
 
         return DoStoreMasterSecret(bus, guid, kb, (const uint8_t*) GetSuiteName(), strlen(GetSuiteName()), secretExpiration, IsInitiator(), accessRights);
@@ -1232,6 +1240,9 @@ QStatus KeyExchangerECDHE_ECDSA::ValidateRemoteVerifierVariant(const char* peerN
     if (*authorized) {
         peerDSAPubKey = (ECCPublicKey*) new uint8_t[sizeof(ECCPublicKey)];
         memcpy(peerDSAPubKey, certs[0].GetSubjectPublicKey(), sizeof(ECCPublicKey));
+        if (certs[0].GetDigestSize() == Crypto_SHA256::DIGEST_SIZE) {
+            memcpy(peerManifestDigest, certs[0].GetDigest(), Crypto_SHA256::DIGEST_SIZE);
+        }
     } else {
         QCC_DbgPrintf(("Not authorized by VerifyCredential callback"));
     }

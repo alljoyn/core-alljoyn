@@ -275,50 +275,6 @@ static bool TermHasMatchingGuild(const PermissionPolicy::Term& term, const GUID1
     return false;
 }
 
-static bool IsAuthorizedByMembership(const GUID128& guildGUID, PermissionPolicy& authData, const MessageHolder& msgHolder, uint8_t requiredAuth, bool& denied)
-{
-    const PermissionPolicy::Term* terms = authData.GetTerms();
-    for (size_t cnt = 0; cnt < authData.GetTermsSize(); cnt++) {
-        bool qualified = false;
-        if (terms[cnt].GetPeersSize() == 0) {
-            qualified = true;  /* there is no peer restriction for this term */
-        } else {
-            /* look for peer entry with matching guild GUID */
-            qualified = TermHasMatchingGuild(terms[cnt], guildGUID);
-        }
-        if (qualified) {
-            if (IsPolicyTermMatched(terms[cnt], msgHolder, requiredAuth, denied)) {
-                return true;
-            } else if (denied) {
-                /* skip the remainder of the search */
-                return false;
-            }
-        }
-    }
-    return false;
-}
-
-static bool IsAuthorizedByMembershipChain(_PeerState::GuildMetadata& metadata, const MessageHolder& msgHolder, uint8_t requiredAuth, bool& denied)
-{
-    /* The message must be authorized by each of the auth data in the membership cert chain */
-
-    /* check the leaf cert first */
-    bool authorized = IsAuthorizedByMembership(metadata.cert.GetGuild(), metadata.authData, msgHolder, requiredAuth, denied);
-    if (!authorized) {
-        return false;
-    }
-
-    /* check the remaining certs in the cert chain */
-    for (std::vector<_PeerState::MembershipMetaPair*>::iterator ccit = metadata.certChain.begin(); ccit != metadata.certChain.end(); ccit++) {
-        authorized = IsAuthorizedByMembership((*ccit)->cert.GetGuild(), (*ccit)->authData, msgHolder, requiredAuth, denied);
-        if (!authorized) {
-            return false;
-        }
-    }
-
-    return authorized;
-}
-
 /**
  * Is the given message authorized by a guild policy that is common between the peer.
  * The consumer must be both authorized in its membership and in the provider's policy for any guild in common.
@@ -328,22 +284,20 @@ static bool IsAuthorizedByGuildsInCommonPolicies(const PermissionPolicy* policy,
     denied = false;
     for (_PeerState::GuildMap::iterator it = peerState->guildMap.begin(); it != peerState->guildMap.end(); it++) {
         _PeerState::GuildMetadata* metadata = it->second;
-        const PermissionPolicy::Term* terms = policy->GetTerms();
-
-        for (size_t cnt = 0; cnt < policy->GetTermsSize(); cnt++) {
-            /* look for peer entry with matching guild GUID */
-            if (!TermHasMatchingGuild(terms[cnt], metadata->cert.GetGuild())) {
-                continue;
-            }
-            if (IsPolicyTermMatched(terms[cnt], msgHolder, policyAuth, denied)) {
-                /* validate the peer auth data to make sure it was granted the same thing */
-                if (IsAuthorizedByMembershipChain(*metadata, msgHolder, policyAuth, denied)) {
+        if (metadata->certChain.size() > 0) {
+            const PermissionPolicy::Term* terms = policy->GetTerms();
+            for (size_t cnt = 0; cnt < policy->GetTermsSize(); cnt++) {
+                /* look for peer entry with matching guild GUID */
+                if (!TermHasMatchingGuild(terms[cnt], metadata->certChain[0]->GetGuild())) {
+                    continue;
+                }
+                if (IsPolicyTermMatched(terms[cnt], msgHolder, policyAuth, denied)) {
                     return true;
                 }
-            }
-            if (denied) {
-                /* skip the remainder */
-                return false;
+                if (denied) {
+                    /* skip the remainder */
+                    return false;
+                }
             }
         }
     }
@@ -418,6 +372,30 @@ static void GenRight(const MessageHolder& msgHolder, Right& right)
 }
 
 /**
+ * Enforce the peer's manifest
+ */
+
+static bool EnforcePeerManifest(const MessageHolder& msgHolder, const Right& right, PeerState& peerState)
+{
+    /* no manifest then default not allowed */
+    if ((peerState->manifest == NULL) || (peerState->manifestSize == 0)) {
+        return false;
+    }
+
+    for (size_t cnt = 0; cnt < peerState->manifestSize; cnt++) {
+        /* validate the peer manifest to make sure it was granted the same thing */
+        bool denied = false;
+        if (IsRuleMatched(peerState->manifest[cnt], msgHolder, right.authByPolicy, denied)) {
+            return true;
+        } else if (denied) {
+            /* skip the remainder of the search */
+            return false;
+        }
+    }
+    return false;
+}
+
+/**
  * The search order through the terms:
  * 1. Peer specific terms
  * 2. guild-in-common terms
@@ -443,7 +421,7 @@ static bool IsAuthorized(const MessageHolder& msgHolder, const PermissionPolicy*
         /* validate the remote peer auth data to make sure it was granted to perform such action */
         ECCPublicKey peerPublicKey;
         PermissionPolicy::Peer::PeerAuthLevel peerAuthLevel = PermissionPolicy::Peer::PEER_LEVEL_ENCRYPTED;
-        QStatus status = permissionMgmtObj->GetConnectedPeerPublicKey(peerState->GetGuid(), &peerPublicKey);
+        QStatus status = permissionMgmtObj->GetConnectedPeerPublicKey(peerState->GetGuid(), &peerPublicKey, NULL);
         if (ER_OK == status) {
             peerAuthLevel = PermissionPolicy::Peer::PEER_LEVEL_AUTHENTICATED;
             authorized = IsAuthorizedByPeerPublicKey(policy, peerPublicKey, msgHolder, right.authByPolicy, denied);
@@ -475,6 +453,9 @@ static bool IsAuthorized(const MessageHolder& msgHolder, const PermissionPolicy*
         }
     }
 
+    if (authorized) {
+        authorized = EnforcePeerManifest(msgHolder, right, peerState);
+    }
     return authorized;
 }
 
@@ -589,17 +570,9 @@ bool PermissionManager::PeerHasAdminPriv(PeerState& peerState)
     /* now check the admin security group membership */
     for (_PeerState::GuildMap::iterator it = peerState->guildMap.begin(); it != peerState->guildMap.end(); it++) {
         _PeerState::GuildMetadata* metadata = it->second;
-        /* build the membership cert chain */
-        std::vector<MembershipCertificate*> certChain;
-        certChain.push_back(&metadata->cert);
-        for (std::vector<_PeerState::MembershipMetaPair*>::iterator chainIt = metadata->certChain.begin(); chainIt != metadata->certChain.end(); chainIt++) {
-            certChain.push_back(&(*chainIt)->cert);
-        }
-        if (permissionMgmtObj->IsAdminGroup(certChain)) {
-            certChain.clear();
+        if (permissionMgmtObj->IsAdminGroup(metadata->certChain)) {
             return true;
         }
-        certChain.clear();
     }
     return false;
 }

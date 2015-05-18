@@ -175,24 +175,6 @@ QStatus PermissionMgmtProxy::InstallMembership(const MsgArg& certChainArg) {
     return status;
 }
 
-QStatus PermissionMgmtProxy::InstallMembershipAuthData(const char* serialNum, const qcc::String& issuerAki, PermissionPolicy& authorization) {
-    QCC_DbgTrace(("PermissionMgmtProxy::%s", __FUNCTION__));
-    QStatus status = ER_OK;
-    Message reply(*bus);
-
-    MsgArg inputs[3];
-    inputs[0].Set("s", serialNum);
-    inputs[1].Set("ay", issuerAki.size(), issuerAki.data());
-    authorization.Export(inputs[2]);
-    status = MethodCall(org::allseen::Security::PermissionMgmt::InterfaceName, "InstallMembershipAuthData", inputs, 3, reply);
-    if (ER_BUS_REPLY_IS_ERROR_MESSAGE == status) {
-        if (IsPermissionDeniedError(reply)) {
-            status = ER_PERMISSION_DENIED;
-        }
-    }
-    return status;
-}
-
 QStatus PermissionMgmtProxy::RemoveMembership(const char* serialNum, const qcc::String& issuerAki) {
     QCC_DbgTrace(("PermissionMgmtProxy::%s", __FUNCTION__));
     QStatus status = ER_OK;
@@ -210,26 +192,53 @@ QStatus PermissionMgmtProxy::RemoveMembership(const char* serialNum, const qcc::
     return status;
 }
 
-QStatus PermissionMgmtProxy::InstallIdentity(const MsgArg& certArg) {
+QStatus PermissionMgmtProxy::InstallIdentity(qcc::IdentityCertificate* certChain, size_t certChainSize, const PermissionPolicy::Rule* manifest, size_t manifestSize)
+{
     QCC_DbgTrace(("PermissionMgmtProxy::%s", __FUNCTION__));
+    if ((certChain == NULL) || (certChainSize == 0) || (manifest == NULL) || (manifestSize == 0)) {
+        return ER_INVALID_DATA;
+    }
     QStatus status = ER_OK;
     Message reply(*bus);
+    MsgArg inputs[2];
+    MsgArg* certArgs = new MsgArg[certChainSize];
+    for (size_t cnt = 0; cnt < certChainSize; cnt++) {
+        status = certArgs[cnt].Set("(yay)", qcc::CertificateX509::ENCODING_X509_DER, certChain[cnt].GetEncodedLen(), certChain[cnt].GetEncoded());
+        if (ER_OK != status) {
+            goto Exit;
+        }
+    }
+    status = inputs[0].Set("a(yay)", certChainSize, certArgs);
+    if (ER_OK != status) {
+        goto Exit;
+    }
+    status = PermissionPolicy::GenerateRules(manifest, manifestSize, inputs[1]);
+    if (ER_OK != status) {
+        goto Exit;
+    }
 
-    status = MethodCall(org::allseen::Security::PermissionMgmt::InterfaceName, "InstallIdentity", &certArg, 1, reply);
+    status = MethodCall(org::allseen::Security::PermissionMgmt::InterfaceName, "InstallIdentity", inputs, 2, reply);
     if (ER_BUS_REPLY_IS_ERROR_MESSAGE == status) {
         if (IsPermissionDeniedError(reply)) {
             status = ER_PERMISSION_DENIED;
         }
     }
+Exit:
+    delete [] certArgs;
     return status;
 }
 
-QStatus PermissionMgmtProxy::GetIdentity(qcc::IdentityCertificate* cert) {
+// TODO GetIdentity function breaks the pattern used for most other methods.
+// It allocates memory for the user that they have to free. Figure out a way
+// to let the user allocate there own memory without making multiple remote
+// method calls.
+QStatus PermissionMgmtProxy::GetIdentity(qcc::IdentityCertificate** certChain, size_t* certChainSize) {
     QCC_DbgTrace(("PermissionMgmtProxy::%s", __FUNCTION__));
-    QStatus status = ER_OK;
     Message reply(*bus);
+    *certChain = NULL;
+    *certChainSize = 0;
 
-    status = MethodCall(org::allseen::Security::PermissionMgmt::InterfaceName, "GetIdentity", NULL, 0, reply);
+    QStatus status = MethodCall(org::allseen::Security::PermissionMgmt::InterfaceName, "GetIdentity", NULL, 0, reply);
     if (ER_BUS_REPLY_IS_ERROR_MESSAGE == status) {
         if (IsPermissionDeniedError(reply)) {
             status = ER_PERMISSION_DENIED;
@@ -239,19 +248,36 @@ QStatus PermissionMgmtProxy::GetIdentity(qcc::IdentityCertificate* cert) {
         return status;
     }
 
-    uint8_t encoding;
-    uint8_t* encoded;
-    size_t encodedLen;
-    status = reply->GetArg(0)->Get("(yay)", &encoding, &encodedLen, &encoded);
+    MsgArg* certArgs;
+    status = reply->GetArg(0)->Get("a(yay)", certChainSize, &certArgs);
     if (ER_OK != status) {
         return status;
     }
-    status = ER_NOT_IMPLEMENTED;
-    if (encoding == qcc::CertificateX509::ENCODING_X509_DER) {
-        status = cert->DecodeCertificateDER(qcc::String((const char*) encoded, encodedLen));
-    } else if (encoding == qcc::CertificateX509::ENCODING_X509_DER_PEM) {
-        status = cert->DecodeCertificatePEM(qcc::String((const char*) encoded, encodedLen));
+    if (*certChainSize == 0) {
+        return ER_OK;
     }
+
+    qcc::IdentityCertificate* chain = new qcc::IdentityCertificate[*certChainSize];
+    for (size_t cnt = 0; cnt < *certChainSize; cnt++) {
+        uint8_t encoding;
+        uint8_t* encoded;
+        size_t encodedLen;
+        status = certArgs[cnt].Get("(yay)", &encoding, &encodedLen, &encoded);
+        if (ER_OK == status) {
+            status = ER_NOT_IMPLEMENTED;
+            if (encoding == qcc::CertificateX509::ENCODING_X509_DER) {
+                status = chain[cnt].DecodeCertificateDER(qcc::String((const char*) encoded, encodedLen));
+            } else if (encoding == qcc::CertificateX509::ENCODING_X509_DER_PEM) {
+                status = chain[cnt].DecodeCertificatePEM(qcc::String((const char*) encoded, encodedLen));
+            }
+            if (ER_OK != status) {
+                delete [] chain;
+                *certChainSize = 0;
+                return status;
+            }
+        }
+    }
+    *certChain = chain;
     return status;
 }
 

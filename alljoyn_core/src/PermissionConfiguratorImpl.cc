@@ -42,7 +42,7 @@ QStatus PermissionConfiguratorImpl::SetPermissionManifest(PermissionPolicy::Rule
         QCC_DbgPrintf(("PermissionConfiguratorImpl::SetPermissionManifest does not have PermissionMgmtObj initialized"));
         return ER_FEATURE_NOT_AVAILABLE;
     }
-    return permissionMgmtObj->SetManifest(rules, count);
+    return permissionMgmtObj->SetManifestTemplate(rules, count);
 }
 
 PermissionConfigurator::ClaimableState PermissionConfiguratorImpl::GetClaimableState()
@@ -127,7 +127,7 @@ QStatus PermissionConfiguratorImpl::GetConnectedPeerPublicKey(const GUID128& gui
     if (!permissionMgmtObj) {
         return ER_FEATURE_NOT_AVAILABLE;
     }
-    return permissionMgmtObj->GetConnectedPeerPublicKey(guid, publicKey);
+    return permissionMgmtObj->GetConnectedPeerPublicKey(guid, publicKey, NULL);
 }
 
 }

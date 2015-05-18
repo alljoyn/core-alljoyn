@@ -682,7 +682,7 @@ QStatus PermissionPolicy::GenerateRules(const Rule* rules, size_t count, MsgArg&
     return status;
 }
 
-QStatus PermissionPolicy::ParseRules(MsgArg& msgArg, Rule** rules, size_t* count)
+QStatus PermissionPolicy::ParseRules(const MsgArg& msgArg, Rule** rules, size_t* count)
 {
     return BuildRulesFromArg(msgArg, rules, count);
 }

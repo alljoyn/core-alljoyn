@@ -414,6 +414,23 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
     QStatus AuthenticatePeerUsingKeyExchange(const uint32_t* requestingAuthList, size_t requestingAuthCount, const qcc::String& busName, PeerState peerState, qcc::String& localGuidStr, ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc, qcc::String& mech);
 
     /**
+     * SendManifest method call handler
+     *
+     * @param member  The member that was called
+     * @param msg     The method call message
+     */
+    void HandleSendManifest(const InterfaceDescription::Member* member, Message& msg);
+
+    /**
+     * Send the manifest to the peer
+     * @param remotePeerObj  The remote peer
+     * @param ifc     The interface object
+     * @param peerState the peer state object
+     * @return ER_OK if successful; otherwise, an error code.
+     */
+    QStatus SendManifest(ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc, PeerState& peerState);
+
+    /**
      * Send an SendMembership to the peer
      * @param remotePeerObj  The remote peer
      * @param ifc     The interface object

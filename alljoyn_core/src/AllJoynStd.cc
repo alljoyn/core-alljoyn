@@ -247,7 +247,8 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         ifc->AddMethod("ExchangeSuites",     "au",   "au",  "localAuthList,remoteAuthList");
         ifc->AddMethod("KeyExchange",     "uv",   "uv",  "localAuthMask,localPublicKey, remoteAuthMask, remotePublicKey");
         ifc->AddMethod("KeyAuthentication",     "v",   "v",  "localVerifier,remoteVerifier");
-        ifc->AddMethod("SendMemberships",     "a(yv)",   "a(yv)", "memberships");
+        ifc->AddMethod("SendManifest",     "a(ssa(syy))",   "a(ssa(syy))", "manifest,manifest");
+        ifc->AddMethod("SendMemberships",     "ya(yay)",   "ya(yay)", "sendCode,memberships,sendCode,memberships");
         ifc->AddProperty("Mechanisms",  "s", PROP_ACCESS_READ);
         ifc->AddProperty("Version",     "u", PROP_ACCESS_READ);
         ifc->Activate();
@@ -369,10 +370,9 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         ifc->AddMethod("GetPolicy",     NULL, "(yv)",  "authorization");
         ifc->AddMethod("RemovePolicy",     NULL, NULL, NULL);
         ifc->AddMethod("InstallMembership",     "a(yay)",  NULL, "certchain");
-        ifc->AddMethod("InstallMembershipAuthData",     "say(yv)",  NULL, "serialNum,issuer,authorization");
         ifc->AddMethod("RemoveMembership",     "say", NULL, "serialNum,issuer");
-        ifc->AddMethod("InstallIdentity",     "a(yay)", NULL, "certChain");
-        ifc->AddMethod("GetIdentity",     NULL, "(yay)", "cert");
+        ifc->AddMethod("InstallIdentity",     "a(yay)a(ssa(syy))", NULL, "certChain,manifest");
+        ifc->AddMethod("GetIdentity",     NULL, "a(yay)", "certChain");
         ifc->AddMethod("GetManifest",     NULL, "(yv)",  "manifest");
         ifc->AddMethod("Reset",     NULL, NULL, NULL);
         ifc->AddMethod("GetPublicKey", NULL, "(yv)", "publicKey");

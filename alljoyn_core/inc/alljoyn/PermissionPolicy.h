@@ -773,7 +773,7 @@ class PermissionPolicy {
      *      - #ER_OK if creation was successful.
      *      - error code if fail
      */
-    static QStatus ParseRules(MsgArg& msgArg, Rule** rules, size_t* count);
+    static QStatus ParseRules(const MsgArg& msgArg, Rule** rules, size_t* count);
 
     /**
      * Build the policy object from the message arg object

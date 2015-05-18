@@ -47,6 +47,28 @@ class PermissionMgmtObj : public BusObject {
 
   public:
 
+    /**
+     * For the SendMemberships call, the app sends one cert chain at time since
+     * thin client peer may not be able to handle large amount of data.  The app
+     * reads back the membership cert chain from the peer.  It keeps looping until
+     * both sides exchanged all the membeship cert chains.
+     * A send code of
+     *     SEND_MEMBERSHIP_NONE indicates the peer does not have any membership
+     *          cert chain or already sent all of its membership cert chain in
+     *          previous replies.
+     */
+    static const uint8_t SEND_MEMBERSHIP_NONE = 0;
+    /**
+     *     SEND_MEMBERSHIP_MORE indicates the peer will send more membership
+     *          cert chains.
+     */
+    static const uint8_t SEND_MEMBERSHIP_MORE = 1;
+    /**
+     *     SEND_MEMBERSHIP_LAST indicates the peer sends the last membership
+     *          cert chain.
+     */
+    static const uint8_t SEND_MEMBERSHIP_LAST = 2;
+
     class KeyExchangeListener : public ProtectedAuthListener {
       public:
         KeyExchangeListener()
@@ -138,18 +160,17 @@ class PermissionMgmtObj : public BusObject {
 
     /**
      * Generates the message args to send the membership data to the peer.
-     * @param args[out] the output array of message args.  The caller must delete the array of message args after use.
-     * @param count[out] the size of the output array array of message args.
+     * @param args[out] the vector of the membership cert chain args.
      * @return
      *         - ER_OK if successful.
      *         - an error status otherwise.
      */
 
-    QStatus GenerateSendMemberships(MsgArg** args, size_t* count);
+    QStatus GenerateSendMemberships(std::vector<std::vector<MsgArg*> >& args);
 
     /**
      * Parse the message received from the PermissionMgmt's SendMembership method.
-     * @param args the message
+     * @param msg the message
      * @param[in,out] done output flag to indicate that process is complete
      * @return
      *         - ER_OK if successful.
@@ -161,6 +182,15 @@ class PermissionMgmtObj : public BusObject {
         bool done = false;
         return ParseSendMemberships(msg, done);
     }
+
+    /**
+     * Parse the message received from the org.alljoyn.bus.Peer.Authentication's
+     * SendManifest method.
+     * @param msg the message
+     * @param peerState the peer state
+     * @return ER_OK if successful; otherwise, an error code.
+     */
+    QStatus ParseSendManifest(Message& msg, PeerState& peerState);
 
     /**
      * Is there any trust anchor installed?
@@ -198,11 +228,11 @@ class PermissionMgmtObj : public BusObject {
     static QStatus StoreDSAKeys(CredentialAccessor* ca, const qcc::ECCPrivateKey* privateKey, const qcc::ECCPublicKey* publicKey);
 
     /**
-     * Set the permission manifest for the application.
+     * Set the permission manifest template for the application.
      * @params rules the permission rules.
      * @params count the number of permission rules
      */
-    QStatus SetManifest(PermissionPolicy::Rule* rules, size_t count);
+    QStatus SetManifestTemplate(PermissionPolicy::Rule* rules, size_t count);
 
     /**
      * Retrieve the claimable state of the application.
@@ -234,10 +264,11 @@ class PermissionMgmtObj : public BusObject {
      * Get the connected peer ECC public key if the connection uses the
      * ECDHE_ECDSA key exchange.
      * @param guid the peer guid
-     * @param[out] the buffer to hold the ECC public key.
+     * @param[out] the buffer to hold the ECC public key.  Pass NULL to skip.
+     * @param[out] the buffer to hold the manifest digest. Pass NULL to skip.
      * @return ER_OK if successful; otherwise, error code.
      */
-    QStatus GetConnectedPeerPublicKey(const qcc::GUID128& guid, qcc::ECCPublicKey* publicKey);
+    QStatus GetConnectedPeerPublicKey(const qcc::GUID128& guid, qcc::ECCPublicKey* publicKey, uint8_t* manifestDigest);
 
     /**
      * Retrieve the membership certificate map.
@@ -278,6 +309,14 @@ class PermissionMgmtObj : public BusObject {
      */
 
     static QStatus GenerateManifestDigest(BusAttachment& bus, const PermissionPolicy::Rule* rules, size_t count, uint8_t* digest, size_t digestSize);
+
+    /**
+     * Retrieve the manifest from persistence store.
+     * @param manifest[out] the variable to hold the manifest.  The caller must delete[] it.
+     * @param count[out] the variable to hold the number of rules in the manifest
+     * @return ER_OK for success; error code otherwise.
+     */
+    QStatus RetrieveManifest(PermissionPolicy::Rule** manifest, size_t* count);
 
   private:
 
@@ -338,13 +377,11 @@ class PermissionMgmtObj : public BusObject {
     QStatus GetIdentityLeafCert(qcc::IdentityCertificate& cert);
     void GetIdentity(const InterfaceDescription::Member* member, Message& msg);
     void InstallMembership(const InterfaceDescription::Member* member, Message& msg);
-    void InstallMembershipAuthData(const InterfaceDescription::Member* member, Message& msg);
     void RemoveMembership(const InterfaceDescription::Member* member, Message& msg);
-    void GetManifest(const InterfaceDescription::Member* member, Message& msg);
+    void GetManifestTemplate(const InterfaceDescription::Member* member, Message& msg);
     bool ValidateCertChain(const qcc::String& certChainPEM, bool& authorized);
     QStatus LocateMembershipEntry(const qcc::String& serialNum, const qcc::String& issuerAki, KeyStore::Key& membershipKey, bool searchLeafCertOnly);
     QStatus LocateMembershipEntry(const qcc::String& serialNum, const qcc::String& issuerAki, KeyStore::Key& membershipKey);
-    QStatus LoadAndValidateAuthData(const qcc::String& serial, const qcc::String& issuerAki, MsgArg& authDataArg, PermissionPolicy& authorization, KeyStore::Key& membershipKey);
     void ClearMembershipCertMap(MembershipCertMap& certMap);
     QStatus GetAllMembershipCerts(MembershipCertMap& certMap, bool loadCert);
     QStatus GetAllMembershipCerts(MembershipCertMap& certMap);
@@ -355,12 +392,11 @@ class PermissionMgmtObj : public BusObject {
     void Reset(const InterfaceDescription::Member* member, Message& msg);
     QStatus PerformReset(bool keepForClaim);
     QStatus SameSubjectPublicKey(qcc::CertificateX509& cert, bool& outcome);
-    QStatus LocalMembershipsChanged();
     bool IsTrustAnchor(TrustAnchorType taType, const qcc::ECCPublicKey* publicKey);
-    QStatus GetTrustAnchorsFromAllMemberships(TrustAnchorList& taList);
     QStatus ManageMembershipTrustAnchors(PermissionPolicy* policy);
     QStatus GetDSAPrivateKey(qcc::ECCPrivateKey& privateKey);
     QStatus StoreManifest(MsgArg& manifestArg);
+    QStatus RetrieveIdentityCertChain(MsgArg** certArgs, size_t* count);
 
     /**
      * Bind to an exclusive port for PermissionMgmt object.

@@ -143,26 +143,6 @@ class PermissionMgmtProxy : public ProxyBusObject {
     QStatus InstallMembership(const MsgArg& certChainArg);
 
     /**
-     * Install a membership authorization data to the app
-     *
-     * Access restriction: Only an admin of the app is allowed to install
-     * membership authorization data. Only membership authorization with a
-     * matching membership certificate is accepted. The hash digest of the
-     * authorization is verified against the digest listed in the membership
-     * certificate.
-     *
-     * @param[in] serialNum     a string representing the serial number of the
-     *                          membership certificate
-     * @param[in] issuerAki        the issuer authority key id
-     * @param[in] authorization authorization data
-     *
-     * @return
-     *  - #ER_OK if successful
-     *  - an error status indicating failure
-     */
-    QStatus InstallMembershipAuthData(const char* serialNum, const qcc::String& issuerAki, PermissionPolicy& authorization);
-
-    /**
      * Remove a membership certificate from the app. Any corresponding
      * membership authorization data will be also be removed.
      *
@@ -187,13 +167,16 @@ class PermissionMgmtProxy : public ProxyBusObject {
      *
      * Note: Only X.509 DER format certificate is currently supported.
      *
-     * @param[in] certArg The certificate of the identity.
+     * @param[in] certChain the identity certificate chain
+     * @param[in] certChainSize the identity certificate chain size
+     * @param[in] manifest the manifest
+     * @param[in] manifestSize the number of rules in the manifest
      *
      * @return
      *  - #ER_OK if successful
      *  - an error status indicating failure
      */
-    QStatus InstallIdentity(const MsgArg& certArg);
+    QStatus InstallIdentity(qcc::IdentityCertificate* certChain, size_t certChainSize, const PermissionPolicy::Rule* manifest, size_t manifestSize);
 
     /**
      * Retrieve the identity cert from the app.
@@ -201,13 +184,15 @@ class PermissionMgmtProxy : public ProxyBusObject {
      * Access restriction: none.
      * Note: Only X.509 DER format certificate is currently supported.
      *
-     * @param[out] cert identity certificate
+     * @param[out] certChain buffer holding the identity certificate chain.
+     *                       The caller must delete[] this object after use.
+     * @param[out] certChainSize identity certificate chain size
      *
      * @return
      *  - #ER_OK if successful
      *  - an error status indicating failure
      */
-    QStatus GetIdentity(qcc::IdentityCertificate* cert);
+    QStatus GetIdentity(qcc::IdentityCertificate** certChain, size_t* certChainSize);
 
     /**
      * Retrieve the manifest data installed by the application developer.

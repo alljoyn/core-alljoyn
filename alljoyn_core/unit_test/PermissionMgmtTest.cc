@@ -219,7 +219,7 @@ QStatus PermissionMgmtTestHelper::CreateIdentityCert(BusAttachment& issuerBus, c
     return CreateIdentityCert(issuerBus, serial, subject, subjectPubKey, alias, 24 * 3600, der);
 }
 
-QStatus PermissionMgmtTestHelper::CreateMembershipCert(const String& serial, const uint8_t* authDataHash, BusAttachment& signingBus, const qcc::String& subject, const ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, bool delegate, uint32_t expiredInSecs, qcc::String& der)
+QStatus PermissionMgmtTestHelper::CreateMembershipCert(const String& serial, BusAttachment& signingBus, const qcc::String& subject, const ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, bool delegate, uint32_t expiredInSecs, qcc::String& der)
 {
     qcc::GUID128 issuer(0);
     GetGUID(signingBus, issuer);
@@ -233,7 +233,6 @@ QStatus PermissionMgmtTestHelper::CreateMembershipCert(const String& serial, con
     x509.SetSubjectPublicKey(subjectPubKey);
     x509.SetGuild(guild);
     x509.SetCA(delegate);
-    x509.SetDigest(authDataHash, Crypto_SHA256::DIGEST_SIZE);
     CertificateX509::ValidPeriod validity;
     BuildValidity(validity, expiredInSecs);
     x509.SetValidity(&validity);
@@ -246,15 +245,15 @@ QStatus PermissionMgmtTestHelper::CreateMembershipCert(const String& serial, con
     return x509.EncodeCertificateDER(der);
 }
 
-QStatus PermissionMgmtTestHelper::CreateMembershipCert(const String& serial, const uint8_t* authDataHash, BusAttachment& signingBus, const qcc::String& subject, const ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, bool delegate, qcc::String& der)
+QStatus PermissionMgmtTestHelper::CreateMembershipCert(const String& serial, BusAttachment& signingBus, const qcc::String& subject, const ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, bool delegate, qcc::String& der)
 {
     /* expire the cert in 1 hour */
-    return CreateMembershipCert(serial, authDataHash, signingBus, subject, subjectPubKey, guild, delegate, 24 * 3600, der);
+    return CreateMembershipCert(serial, signingBus, subject, subjectPubKey, guild, delegate, 24 * 3600, der);
 }
 
-QStatus PermissionMgmtTestHelper::CreateMembershipCert(const String& serial, const uint8_t* authDataHash, BusAttachment& signingBus, const qcc::String& subject, const ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, qcc::String& der)
+QStatus PermissionMgmtTestHelper::CreateMembershipCert(const String& serial, BusAttachment& signingBus, const qcc::String& subject, const ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, qcc::String& der)
 {
-    return CreateMembershipCert(serial, authDataHash, signingBus, subject, subjectPubKey, guild, false, der);
+    return CreateMembershipCert(serial, signingBus, subject, subjectPubKey, guild, false, der);
 }
 
 QStatus BasePermissionMgmtTest::InterestInChannelChangedSignal(BusAttachment* bus)
@@ -662,18 +661,13 @@ QStatus PermissionMgmtTestHelper::LoadCertificateBytes(Message& msg, Certificate
     return status;
 }
 
-QStatus PermissionMgmtTestHelper::InstallMembership(const String& serial, BusAttachment& bus, const qcc::String& remoteObjName, BusAttachment& signingBus, const qcc::String& subject, const ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, PermissionPolicy* membershipAuthData)
+QStatus PermissionMgmtTestHelper::InstallMembership(const String& serial, BusAttachment& bus, const qcc::String& remoteObjName, BusAttachment& signingBus, const qcc::String& subject, const ECCPublicKey* subjectPubKey, const qcc::GUID128& guild)
 {
     PermissionMgmtProxy pmProxy(bus, remoteObjName.c_str());
     QStatus status;
 
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    Message tmpMsg(bus);
-    DefaultPolicyMarshaller marshaller(tmpMsg);
-    membershipAuthData->Digest(marshaller, digest, Crypto_SHA256::DIGEST_SIZE);
-
     qcc::String der[1];
-    status = CreateMembershipCert(serial, digest, signingBus, subject, subjectPubKey, guild, der[0]);
+    status = CreateMembershipCert(serial, signingBus, subject, subjectPubKey, guild, der[0]);
     if (status != ER_OK) {
         return status;
     }
@@ -683,38 +677,23 @@ QStatus PermissionMgmtTestHelper::InstallMembership(const String& serial, BusAtt
         certArgs[cnt].Set("(yay)", CertificateX509::ENCODING_X509_DER, der[cnt].length(), der[cnt].c_str());
     }
     MsgArg arg("a(yay)", 1, certArgs);
-    status = pmProxy.InstallMembership(arg);
-    if (ER_OK != status) {
-        return status;
-    }
-
-    /* installing the auth data */
-    KeyInfoNISTP256 keyInfo;
-    signingBus.GetPermissionConfigurator().GetSigningPublicKey(keyInfo);
-    String aki;
-    CertificateX509::GenerateAuthorityKeyId(keyInfo.GetPublicKey(), aki);
-    return pmProxy.InstallMembershipAuthData(serial.c_str(), aki, *membershipAuthData);
+    return pmProxy.InstallMembership(arg);
 }
 
-QStatus PermissionMgmtTestHelper::InstallMembershipChain(BusAttachment& topBus, BusAttachment& secondBus, const String& serial0, const String& serial1, const qcc::String& remoteObjName, const qcc::String& secondSubject, const ECCPublicKey* secondPubKey, const qcc::String& targetSubject, const ECCPublicKey* targetPubKey, const qcc::GUID128& guild, PermissionPolicy** authDataArray)
+QStatus PermissionMgmtTestHelper::InstallMembershipChain(BusAttachment& topBus, BusAttachment& secondBus, const String& serial0, const String& serial1, const qcc::String& remoteObjName, const qcc::String& secondSubject, const ECCPublicKey* secondPubKey, const qcc::String& targetSubject, const ECCPublicKey* targetPubKey, const qcc::GUID128& guild)
 {
     PermissionMgmtProxy pmTopProxy(topBus, remoteObjName.c_str());
     PermissionMgmtProxy pmSecondProxy(secondBus, remoteObjName.c_str());
 
     /* create the second cert first -- with delegate on  */
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    Message tmpMsg(topBus);
-    DefaultPolicyMarshaller marshaller(tmpMsg);
-    authDataArray[1]->Digest(marshaller, digest, Crypto_SHA256::DIGEST_SIZE);
     qcc::String derArray[2];
-    QStatus status = CreateMembershipCert(serial1, digest, topBus, secondSubject, secondPubKey, guild, true, derArray[1]);
+    QStatus status = CreateMembershipCert(serial1, topBus, secondSubject, secondPubKey, guild, true, derArray[1]);
     if (status != ER_OK) {
         return status;
     }
 
     /* create the leaf cert signed by the subject */
-    authDataArray[0]->Digest(marshaller, digest, Crypto_SHA256::DIGEST_SIZE);
-    status = CreateMembershipCert(serial0, digest, secondBus, targetSubject, targetPubKey, guild, false, derArray[0]);
+    status = CreateMembershipCert(serial0, secondBus, targetSubject, targetPubKey, guild, false, derArray[0]);
     if (status != ER_OK) {
         return status;
     }
@@ -725,30 +704,7 @@ QStatus PermissionMgmtTestHelper::InstallMembershipChain(BusAttachment& topBus, 
         certArgs[cnt].Set("(yay)", CertificateX509::ENCODING_X509_DER, derArray[cnt].length(), derArray[cnt].c_str());
     }
     MsgArg arg("a(yay)", 2, certArgs);
-    status = pmSecondProxy.InstallMembership(arg);
-    if (ER_OK != status) {
-        return status;
-    }
-
-    /* installing the auth data for leaf cert*/
-    KeyInfoNISTP256 keyInfo;
-    secondBus.GetPermissionConfigurator().GetSigningPublicKey(keyInfo);
-    String aki;
-    CertificateX509::GenerateAuthorityKeyId(keyInfo.GetPublicKey(), aki);
-    status = pmSecondProxy.InstallMembershipAuthData(serial0.c_str(), aki, *authDataArray[0]);
-    if (ER_OK != status) {
-        return status;
-    }
-
-    /* installing the auth data for second cert */
-    topBus.GetPermissionConfigurator().GetSigningPublicKey(keyInfo);
-    CertificateX509::GenerateAuthorityKeyId(keyInfo.GetPublicKey(), aki);
-    status = pmSecondProxy.InstallMembershipAuthData(serial1.c_str(), aki, *authDataArray[1]);
-    if (ER_OK != status) {
-        return status;
-    }
-
-    return status;
+    return pmSecondProxy.InstallMembership(arg);
 }
 
 QStatus PermissionMgmtTestHelper::ExcerciseOn(BusAttachment& bus, ProxyBusObject& remoteObj)

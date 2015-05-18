@@ -165,6 +165,7 @@ class KeyExchanger {
 
     /**
      * Is the peer a legacy peer that uses the old ECC encoding
+     * @return true if the peer is a legacy peer; false, otherwise.
      */
     bool IsLegacyPeer();
 
@@ -173,18 +174,22 @@ class KeyExchanger {
      * @param rec the peer secret record
      * @param[out] masterSecret the master secret
      * @param[out] publicKey the buffer holding the public key.
+     * @param[out] manifest digest the buffer holding the manifest digest.
      * @param[out] publicKeyAvailable flag indicating whether the public key is available
+     * @return ER_OK if successful; otherwise, an error code.
      */
-    static QStatus ParsePeerSecretRecord(const KeyBlob& rec, KeyBlob& masterSecret, ECCPublicKey* publicKey, bool& publicKeyAvailable);
+    static QStatus ParsePeerSecretRecord(const KeyBlob& rec, KeyBlob& masterSecret, ECCPublicKey* publicKey, uint8_t* manifestDigest, bool& publicKeyAvailable);
 
     /**
      * Helper function to parse the peer secret record to retrieve the master secret.
      * @param rec the peer secret record
      * @param[out] masterSecret the master secret
+     * @return ER_OK if successful; otherwise, an error code.
      */
     static QStatus ParsePeerSecretRecord(const KeyBlob& rec, KeyBlob& masterSecret);
     /**
      * Can peer provide a list of trust anchors
+     * @return true if the peer can provide the list of trust anchors; false, otherwise.
      */
     bool PeerSupportsTrustAnchors();
 
@@ -359,7 +364,9 @@ class KeyExchangerECDHE_PSK : public KeyExchangerECDHE {
 
 class KeyExchangerECDHE_ECDSA : public KeyExchangerECDHE {
   public:
-    KeyExchangerECDHE_ECDSA(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, uint16_t peerAuthVersion, PermissionMgmtObj::TrustAnchorList* trustAnchorList) : KeyExchangerECDHE(initiator, peerObj, bus, listener, peerAuthVersion), certChainLen(0), certChain(NULL), trustAnchorList(trustAnchorList), hasCommonTrustAnchors(false), peerDSAPubKey(NULL) {
+    KeyExchangerECDHE_ECDSA(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, uint16_t peerAuthVersion, PermissionMgmtObj::TrustAnchorList* trustAnchorList) : KeyExchangerECDHE(initiator, peerObj, bus, listener, peerAuthVersion), certChainLen(0), certChain(NULL), trustAnchorList(trustAnchorList), hasCommonTrustAnchors(false), peerDSAPubKey(NULL)
+    {
+        memset(peerManifestDigest, 0, sizeof(peerManifestDigest));
     }
 
     virtual ~KeyExchangerECDHE_ECDSA();
@@ -409,6 +416,7 @@ class KeyExchangerECDHE_ECDSA : public KeyExchangerECDHE {
     PermissionMgmtObj::TrustAnchorList peerTrustAnchorList;
     bool hasCommonTrustAnchors;
     ECCPublicKey* peerDSAPubKey;
+    uint8_t peerManifestDigest[Crypto_SHA256::DIGEST_SIZE];
 };
 
 } /* namespace ajn */

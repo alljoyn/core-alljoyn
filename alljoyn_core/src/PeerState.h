@@ -74,15 +74,11 @@ class _PeerState {
 
   public:
 
-    struct MembershipMetaPair {
-        qcc::MembershipCertificate cert;
-        PermissionPolicy authData;
-    };
+    PermissionPolicy::Rule* manifest;
+    size_t manifestSize;
 
     struct GuildMetadata {
-        qcc::MembershipCertificate cert;
-        PermissionPolicy authData;
-        std::vector<MembershipMetaPair*> certChain;
+        std::vector<qcc::MembershipCertificate*> certChain;
 
         GuildMetadata()
         {
@@ -90,7 +86,7 @@ class _PeerState {
 
         ~GuildMetadata()
         {
-            for (std::vector<MembershipMetaPair*>::iterator it = certChain.begin(); it != certChain.end(); it++) {
+            for (std::vector<qcc::MembershipCertificate*>::iterator it = certChain.begin(); it != certChain.end(); it++) {
                 delete *it;
             }
             certChain.clear();
@@ -104,8 +100,8 @@ class _PeerState {
      * Default constructor
      */
     _PeerState() :
-        guildArgs(NULL),
-        guildArgsCount(0),
+        manifest(NULL),
+        manifestSize(0),
         guildArgsSentCount(0),
         isLocalPeer(false),
         clockOffset((std::numeric_limits<int32_t>::max)()),
@@ -122,7 +118,8 @@ class _PeerState {
     ~_PeerState()
     {
         ClearGuildMap(guildMap);
-        delete [] guildArgs;
+        ClearGuildArgs(guildArgs);
+        delete [] manifest;
     }
 
     /**
@@ -323,9 +320,24 @@ class _PeerState {
     }
 
     /**
-     * The array of membership data msg args to reply to the peer
+     * Clear the list of guild message args
      */
-    MsgArg* guildArgs;
+
+    static void ClearGuildArgs(std::vector<std::vector<MsgArg*> >& args)
+    {
+        for (std::vector<std::vector<MsgArg*> >::iterator i = args.begin(); i != args.end(); i++) {
+            for (std::vector<MsgArg*>::iterator j = (*i).begin(); j != (*i).end(); j++) {
+                delete *j;
+            }
+            (*i).clear();
+        }
+        args.clear();
+    }
+
+    /**
+     * The list of membership data msg args to reply to the peer
+     */
+    std::vector<std::vector<MsgArg*> > guildArgs;
     /**
      * The size of the array of membership data msg args to reply to the peer
      */
