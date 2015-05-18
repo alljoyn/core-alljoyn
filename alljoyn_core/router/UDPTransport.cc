@@ -5112,8 +5112,9 @@ QStatus UDPTransport::Stop(void)
      * It is legal to call Stop() more than once, so it must be possible to
      * call Stop() on a stopped transport.
      */
+    m_preListLock.Lock(MUTEX_CONTEXT);
     m_stopping = true;
-
+    m_preListLock.Unlock(MUTEX_CONTEXT);
     /*
      * Tell the name service to disregard all our prior advertisements and
      * discoveries. The internal state will shortly be discarded as well.
@@ -5530,8 +5531,9 @@ QStatus UDPTransport::Join(void)
     m_endpointListLock.Unlock(MUTEX_CONTEXT);
 
     m_dynamicScoreUpdater.Join();
-
+    m_preListLock.Lock(MUTEX_CONTEXT);
     m_stopping = false;
+    m_preListLock.Unlock(MUTEX_CONTEXT);
     DecrementAndFetch(&m_refCount);
     return ER_OK;
 }
@@ -7162,9 +7164,25 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
     /*
      * Set the endpoint state to indicate that it is starting up becuase of a
      * passive (begun by a remote host) connection attempt.
+     * Check m_stopping to ensure that the transport has not been stopped.
      */
     udpEp->SetEpPassiveStarted();
-    m_preList.insert(udpEp);
+    if (!m_stopping) {
+        m_preList.insert(udpEp);
+    } else {
+        QCC_DbgPrintf(("UDPTransport::AcceptCb(): giving pre-auth list lock"));
+        m_preListLock.Unlock(MUTEX_CONTEXT);
+        udpEp->Stop();
+        QCC_LogError(status, ("UDPTransport::AcceptCb(): ARDP_Accept() failed"));
+
+        m_connLock.Lock(MUTEX_CONTEXT);
+        --m_currAuth;
+        --m_currConn;
+        m_connLock.Unlock(MUTEX_CONTEXT);
+
+        DecrementAndFetch(&m_refCount);
+        return false;
+    }
 
     QCC_DbgPrintf(("UDPTransport::AcceptCb(): giving pre-auth list lock"));
     m_preListLock.Unlock(MUTEX_CONTEXT);
