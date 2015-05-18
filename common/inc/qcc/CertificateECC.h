@@ -91,7 +91,7 @@ class CertificateX509 {
     /**
      * Default Constructor
      */
-    CertificateX509() : encodedLen(0), encoded(NULL), ca(0)
+    CertificateX509() : encodedLen(0), encoded(NULL), serialLen(0), serial(NULL), ca(0)
     {
     }
 
@@ -196,19 +196,32 @@ class CertificateX509 {
     /**
      * Set the serial number field
      * @param serial the serial number
+     * @param len length of the serial array
      */
-    void SetSerial(const qcc::String& serial)
+    void SetSerial(const uint8_t* serial, const size_t len)
     {
-        this->serial = serial;
+        serialLen = len;
+        delete[] this->serial;
+        this->serial = new uint8_t[serialLen];
+        memcpy(this->serial, serial, serialLen);
     }
 
     /**
      * Get the serial number
      * @return the serial number
      */
-    const qcc::String& GetSerial() const
+    const uint8_t* GetSerial() const
     {
         return serial;
+    }
+
+    /**
+     * Get the length of the serial number
+     * @return Length of the serial number
+     */
+    const size_t GetSerialLen() const
+    {
+        return serialLen;
     }
     /**
      * Set the issuer organization unit field
@@ -519,7 +532,8 @@ class CertificateX509 {
     size_t encodedLen;
     uint8_t* encoded;
 
-    qcc::String serial;
+    size_t serialLen;
+    uint8_t* serial;
     DistinguishedName issuer;
     DistinguishedName subject;
     ValidPeriod validity;
