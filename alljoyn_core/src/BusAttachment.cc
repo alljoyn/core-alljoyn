@@ -123,6 +123,26 @@ struct GetNameOwnerCBContext {
     { }
 };
 
+struct AddMatchCBContext {
+    BusAttachment::AddMatchAsyncCB* callback;
+    void* context;
+
+    AddMatchCBContext(BusAttachment::AddMatchAsyncCB* callback, void* context) :
+        callback(callback),
+        context(context)
+    { }
+};
+
+struct RemoveMatchCBContext {
+    BusAttachment::RemoveMatchAsyncCB* callback;
+    void* context;
+
+    RemoveMatchCBContext(BusAttachment::RemoveMatchAsyncCB* callback, void* context) :
+        callback(callback),
+        context(context)
+    { }
+};
+
 }
 
 namespace ajn {
@@ -1123,6 +1143,44 @@ QStatus BusAttachment::AddMatch(const char* rule)
     return status;
 }
 
+QStatus BusAttachment::AddMatchAsync(const char* rule, AddMatchAsyncCB* callback, void* context)
+{
+    if (!IsConnected()) {
+        return ER_BUS_NOT_CONNECTED;
+    }
+
+    MsgArg args[1];
+    size_t numArgs = ArraySize(args);
+
+    MsgArg::Set(args, numArgs, "s", rule);
+
+    const ProxyBusObject& dbusObj = GetDBusProxyObj();
+    AddMatchCBContext* cbCtx = new AddMatchCBContext(callback, context);
+    QStatus status = dbusObj.MethodCallAsync(org::freedesktop::DBus::InterfaceName, "AddMatch",
+                                             busInternal,
+                                             static_cast<MessageReceiver::ReplyHandler>(&BusAttachment::Internal::AddMatchAsyncCB),
+                                             args, numArgs, cbCtx);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Failed to call %s.AddMatch", org::freedesktop::DBus::InterfaceName));
+        delete cbCtx;
+    }
+    return status;
+}
+
+void BusAttachment::Internal::AddMatchAsyncCB(Message& reply, void* context)
+{
+    AddMatchCBContext* ctx = reinterpret_cast<AddMatchCBContext*>(context);
+    QStatus status = ER_OK;
+
+    if (reply->GetType() == MESSAGE_ERROR) {
+        status = ER_BUS_REPLY_IS_ERROR_MESSAGE;
+    }
+
+    /* Call the callback */
+    ctx->callback->AddMatchCB(status, ctx->context);
+    delete ctx;
+}
+
 QStatus BusAttachment::AddMatchNonBlocking(const char* rule)
 {
     if (!IsConnected()) {
@@ -1160,6 +1218,44 @@ QStatus BusAttachment::RemoveMatch(const char* rule)
         }
     }
     return status;
+}
+
+QStatus BusAttachment::RemoveMatchAsync(const char* rule, RemoveMatchAsyncCB* callback, void* context)
+{
+    if (!IsConnected()) {
+        return ER_BUS_NOT_CONNECTED;
+    }
+
+    MsgArg args[1];
+    size_t numArgs = ArraySize(args);
+
+    MsgArg::Set(args, numArgs, "s", rule);
+
+    const ProxyBusObject& dbusObj = this->GetDBusProxyObj();
+    RemoveMatchCBContext* cbCtx = new RemoveMatchCBContext(callback, context);
+    QStatus status = dbusObj.MethodCallAsync(org::freedesktop::DBus::InterfaceName, "RemoveMatch",
+                                             busInternal,
+                                             static_cast<MessageReceiver::ReplyHandler>(&BusAttachment::Internal::RemoveMatchAsyncCB),
+                                             args, numArgs, cbCtx);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Failed to call %s.RemoveMatch", org::freedesktop::DBus::InterfaceName));
+        delete cbCtx;
+    }
+    return status;
+}
+
+void BusAttachment::Internal::RemoveMatchAsyncCB(Message& reply, void* context)
+{
+    RemoveMatchCBContext* ctx = reinterpret_cast<RemoveMatchCBContext*>(context);
+    QStatus status = ER_OK;
+
+    if (reply->GetType() == MESSAGE_ERROR) {
+        status = ER_BUS_REPLY_IS_ERROR_MESSAGE;
+    }
+
+    /* Call the callback */
+    ctx->callback->RemoveMatchCB(status, ctx->context);
+    delete ctx;
 }
 
 QStatus BusAttachment::RemoveMatchNonBlocking(const char* rule)
