@@ -97,12 +97,23 @@ ASACORE-1894 Race condition between alljoyn_busobject_signal and
              alljoyn_busobject_cancelsessionlessmessage
 ASACORE-1904 javascript NPAPI plug-in crashes Firefox.
 ASACORE-1907 Permission Functionality in Android does not work correctly
+ASACORE-1917 Objective-C AJNObserver may deadlock upon dealloc
+ASACORE-1920 Potential Buffer Overflow error in windows Event::Wait code
+ASACORE-1921 NGNS sends duplicate mDNS packets
 ASACORE-1934 Race condition in Thread::Join can cause use-after-free
 ASACORE-1946 Windows Readme is inaccurate.
 ASACORE-1954 alljoyn_aboutdata_setappid_fromstring missing from Windows C API
              DLL exports
 ASACORE-1959 Memory leak with EnablePeerSecurity
+ASACORE-1960 Secure samples are missing from 15.04 SDKs
 ASACORE-1961 About samples for C Binding are broken (need alljoyn_init)
+ASACORE-1975 Unable to send message from chat sample
+ASACORE-1977 assertion error in IpNameServiceImpl::ComputeDynamicScore
+ASACORE-1978 AllJoyn returns the incorrect error if connecting to the named pipe
+             fails
+ASACORE-2000 Windows Daemon and SCL are using reserved TCP port 9956
+ASACORE-2018 NGNS unicast responses to ephemeral ports is problematic for
+             firewall settings
 
 For a complete list of open issues:
 https://jira.allseenalliance.org/issues/?jql=project%3D%22Core%20SW%22%20and%20status%20not%20in%20%28closed%2C%20resolved%29%20and%20type%20not%20in%20%28task%2C%20%22New%20Feature%22%29%20%20and%20component%20not%20in%20%28%22Thin%20Core%20Library%22%2C%20%22About%20TC%22%29%20order%20by%20priority%20DESC%2C%20id%20ASC
