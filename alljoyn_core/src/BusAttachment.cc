@@ -445,16 +445,22 @@ QStatus BusAttachment::Internal::TransportConnect(const char* requestedConnectSp
     }
 
     QStatus status = TransportConnect(requestedConnectSpec);
-    if (status != ER_OK && !router->IsDaemon() && (!requestedConnectSpec || strcmp(requestedConnectSpec, bundledConnectSpec))) {
+
+
+    if (status == ER_OK) {
+        actualConnectSpec = requestedConnectSpec;
+    } else if (!router->IsDaemon() && (!requestedConnectSpec || strcmp(requestedConnectSpec, bundledConnectSpec))) {
         /*
          * Try using the null transport to connect to a bundled daemon if there is one
          */
-        requestedConnectSpec = bundledConnectSpec;
-        status = TransportConnect(requestedConnectSpec);
+        QStatus bundledStatus = TransportConnect(bundledConnectSpec);
+
+        if (bundledStatus == ER_OK) {
+            actualConnectSpec = bundledConnectSpec;
+            status = bundledStatus;
+        }
     }
-    if (status == ER_OK) {
-        actualConnectSpec = requestedConnectSpec;
-    }
+
     return status;
 }
 
