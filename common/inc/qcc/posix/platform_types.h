@@ -41,4 +41,15 @@ typedef int qcc_SocketFd; /**< Socket file descriptor type. */
 typedef int qcc_UARTFd; /**< UART file descriptor type. */
 #endif
 
+#ifndef PRIuSIZET
+/**
+ * Platform pointer-sized unsigned integer (i.e., size_t)
+ */
+#define PRIuSIZET "zu"
+/**
+ * Platform pointer-sized signed integer (i.e., ssize_t)
+ */
+#define PRIiSIZE "zd"
+#endif
+
 #endif

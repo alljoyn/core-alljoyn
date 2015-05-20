@@ -162,7 +162,7 @@ QCC_BOOL AJ_CALL request_credentials(const void* context, const char* authMechan
     printf("RequestCredentials for authenticating %s using mechanism %s\n", authPeer, authMechanism);
 
     alljoyn_busattachment_getpeerguid(g_msgBus, authPeer, guid, &size_of_guid);
-    printf("Peer guid %s   %zu\n", guid, size_of_guid);
+    printf("Peer guid %s   %" PRIuSIZET "\n", guid, size_of_guid);
 
     if (g_keyExpiration != 0xFFFFFFFF) {
         alljoyn_busattachment_setkeyexpiration(g_msgBus, guid, g_keyExpiration);

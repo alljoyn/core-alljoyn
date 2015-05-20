@@ -44,15 +44,6 @@ using namespace std;
 using namespace qcc;
 using namespace ajn;
 
-/* Microsoft compilers use a different printf specifier for printing size_t. This will let
- * us use a token for the correct one depending on what platform we're on.
- */
-#if defined(QCC_OS_GROUP_WINDOWS)
-#define SIZE_T_PRINTF "%Iu"
-#else
-#define SIZE_T_PRINTF "%zu"
-#endif
-
 /* This is a list of PEM-encoded CA certificates which forms our trusted root list.
  * If one of these certificates is ever seen on a chain, the chain is considered trusted.
  */
@@ -146,7 +137,10 @@ bool VerifyCertificateChain(const AuthListener::Credentials& creds)
     for (size_t i = 0; (ER_OK == status) && (i < numberOfRoots); i++) {
         status = trustedRoots[i].DecodeCertificatePEM(TRUSTED_ROOTS_PEM[i]);
         if (ER_OK != status) {
-            printf("VerifyCertificateChain FAILED: Failed to decode trusted root at position " SIZE_T_PRINTF ". Status is %s.\n",
+            /* Note that PRIuSIZET is not a standards-defined constant, but is defined in AllJoyn to select the
+             * correct platform-dependent format specifier for type size_t.
+             */
+            printf("VerifyCertificateChain FAILED: Failed to decode trusted root at position %" PRIuSIZET ". Status is %s.\n",
                    i, QCC_StatusText(status));
         }
     }
@@ -216,9 +210,12 @@ bool VerifyCertificateChain(const AuthListener::Credentials& creds)
                  * the subject DN of the i+1'th certificate in the chain, and verifies the cryptographic signature
                  * was produced by the i+1'th certificate. */
                 if (!certChain[iCert + 1].IsIssuerOf(certChain[iCert])) {
-                    printf("VerifyCertificateChain FAILED: certificate at position " SIZE_T_PRINTF " did not issue certificate at position " SIZE_T_PRINTF "\n"
-                           "Certificate[" SIZE_T_PRINTF "]:\n%s\n"
-                           "Certificate[" SIZE_T_PRINTF "]:\n%s\n",
+                    /* Note that PRIuSIZET is not a standards-defined constant, but is defined in AllJoyn to select the
+                     * correct platform-dependent format specifier for type size_t.
+                     */
+                    printf("VerifyCertificateChain FAILED: certificate at position %" PRIuSIZET " did not issue certificate at position %" PRIuSIZET "\n"
+                           "Certificate[%" PRIuSIZET "]:\n%s\n"
+                           "Certificate[%" PRIuSIZET "]:\n%s\n",
                            iCert + 1,
                            iCert,
                            iCert + 1,
