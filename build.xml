@@ -14,10 +14,10 @@
   <condition property="org.alljoyn.bus.address" value="unix:abstract=alljoyn">
     <equals arg1="${OS}" arg2="linux" /> 
   </condition>
-  <condition property="org.alljoyn.bus.address" value="tcp:addr=127.0.0.1,port=9956">
+  <condition property="org.alljoyn.bus.address" value="tcp:addr=127.0.0.1,port=9955">
     <equals arg1="${OS}" arg2="win7" /> 
   </condition>
-  <condition property="org.alljoyn.bus.address" value="tcp:addr=127.0.0.1,port=9956">
+  <condition property="org.alljoyn.bus.address" value="tcp:addr=127.0.0.1,port=9955">
     <equals arg1="${OS}" arg2="winxp" /> 
   </condition>
   <!-- Default property value if none of the above conditions are met -->
