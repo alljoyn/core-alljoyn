@@ -78,7 +78,7 @@ QStatus AJ_CALL request_credentials_async(const void* context, alljoyn_authliste
     /* Random delay TODO*/
 
     alljoyn_busattachment_getpeerguid(g_msgBus, authPeer, guid, &size_of_guid);
-    printf("Peer guid %s   %zu\n", guid, size_of_guid);
+    printf("Peer guid %s   %" PRIuSIZET "\n", guid, size_of_guid);
 
     if (g_keyExpiration != 0xFFFFFFFF) {
         alljoyn_busattachment_setkeyexpiration(g_msgBus, guid, g_keyExpiration);
