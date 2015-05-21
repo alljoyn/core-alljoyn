@@ -583,7 +583,7 @@ int CDECL_CALL main(int argc, char** argv)
     #if (_WIN32_WINNT > 0x0603)
         connSpec = env->Find("BUS_ADDRESS", "npipe:");
     #else
-        connSpec = env->Find("BUS_ADDRESS", "tcp:addr=127.0.0.1,port=9956");
+        connSpec = env->Find("BUS_ADDRESS", "tcp:addr=127.0.0.1,port=9955");
     #endif
 #else
         connSpec = env->Find("BUS_ADDRESS", "unix:abstract=alljoyn");
