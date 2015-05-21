@@ -51,6 +51,18 @@ using namespace std;
 
 namespace ajn {
 
+/*
+ * On Windows, the default SCL bus connect spec points to the default TCP Transport port.
+ * That connect spec is intended for connecting to a Daemon Router, not a Bundled Router.
+ * Therefore avoid listening for connections on the default port of the TCP transport,
+ * when using the Bundled Router on Windows.
+ */
+#ifdef QCC_OS_GROUP_WINDOWS
+#define AJ_TCP_AVOID_DEFAULT_PORT   "<flag name=\"tcp_avoid_default_port\">true</flag>"
+#else
+#define AJ_TCP_AVOID_DEFAULT_PORT   ""
+#endif
+
 static const char bundledConfig[] =
     "<busconfig>"
     "  <type>alljoyn_bundled</type>"
@@ -70,6 +82,7 @@ static const char bundledConfig[] =
     "  <property name=\"router_availability\">3-6 hr</property>"
     "  <property name=\"router_node_connection\">Wireless</property>"
     "  <flag name=\"restrict_untrusted_clients\">false</flag>"
+    AJ_TCP_AVOID_DEFAULT_PORT
     "</busconfig>";
 
 /*

@@ -473,7 +473,7 @@ QStatus BusAttachment::Connect()
 #if (_WIN32_WINNT > 0x0603)
     const char* connectArgs = "npipe:";
 #else
-    const char* connectArgs = "tcp:addr=127.0.0.1,port=9956";
+    const char* connectArgs = "tcp:addr=127.0.0.1,port=9955";
 #endif
 #else
     const char* connectArgs = "unix:abstract=alljoyn";

@@ -4304,11 +4304,19 @@ void TCPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
          * connections on it.
          */
         if (ephemeralPort) {
-            /*
-             * First try binding to the default port
-             */
-            listenPort = PORT_DEFAULT;
-            status = Bind(listenFd, listenAddr, listenPort);
+            ConfigDB* config = ConfigDB::GetConfigDB();
+            bool avoidDefaultPort = config->GetFlag("tcp_avoid_default_port", false);
+
+            if (avoidDefaultPort) {
+                status = ER_BUS_CONNECT_FAILED;
+            } else {
+                /*
+                 * First try binding to the default port
+                 */
+                listenPort = PORT_DEFAULT;
+                status = Bind(listenFd, listenAddr, listenPort);
+            }
+
             if (status != ER_OK) {
                 listenPort = 0;
                 status = Bind(listenFd, listenAddr, listenPort);
