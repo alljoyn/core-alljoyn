@@ -4268,7 +4268,7 @@ void TCPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
         if (!listenAddr.Size() || !listenAddr.IsIPv4()) {
             continue;
         }
-        bool ephemeralPort = (listenPort == 0);
+
         /*
          * We have the name service work out of the way, so we can now create the
          * TCP listener sockets and set SO_REUSEADDR/SO_REUSEPORT so we don't have
@@ -4303,26 +4303,14 @@ void TCPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
          * Bind the socket to the listen address and start listening for incoming
          * connections on it.
          */
-        if (ephemeralPort) {
-            /*
-             * First try binding to the default port
-             */
-            listenPort = PORT_DEFAULT;
-            status = Bind(listenFd, listenAddr, listenPort);
-            if (status != ER_OK) {
-                listenPort = 0;
-                status = Bind(listenFd, listenAddr, listenPort);
-            }
-        } else {
-            status = Bind(listenFd, listenAddr, listenPort);
-        }
+        status = Bind(listenFd, listenAddr, listenPort);
 
         if (status == ER_OK) {
             /*
-             * If the port was not set (or set to zero) then we will have bound an ephemeral port. If
+             * If the port was set to zero then we will have bound an ephemeral port. If
              * so call GetLocalAddress() to update the connect spec with the port allocated by bind.
              */
-            if (ephemeralPort) {
+            if (listenPort == 0) {
                 qcc::GetLocalAddress(listenFd, listenAddr, listenPort);
             }
             if (wildcardIfaceRequested) {

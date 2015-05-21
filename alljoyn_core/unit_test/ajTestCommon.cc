@@ -27,7 +27,7 @@ qcc::String ajn::getConnectArg(const char* envvar) {
     /*
      * The test default is to prefer Named Pipe and fall back to bundled router (if Named Pipe is not supported by the OS).
      * Note that test execution can still override the preferred transport by setting BUS_ADDRESS.
-     * For example, you can issue a "set BUS_ADDRESS=tcp:addr=127.0.0.1,port=9956" before running the test.
+     * For example, you can issue a "set BUS_ADDRESS=tcp:addr=127.0.0.1,port=9955" before running the test.
      */
     return env->Find(envvar, "npipe:");
 #else

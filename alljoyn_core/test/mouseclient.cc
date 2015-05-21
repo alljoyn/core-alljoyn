@@ -42,6 +42,7 @@
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/DBusStd.h>
 #include <alljoyn/AllJoynStd.h>
+#include <alljoyn/Init.h>
 #include <alljoyn/version.h>
 
 #include <Status.h>
@@ -303,8 +304,17 @@ class LocalTestObject : public BusObject {
 /** Main entry point */
 int CDECL_CALL main(int argc, char** argv)
 {
-    QStatus status = ER_OK;
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+#endif
 
+    QStatus status = ER_OK;
 
     Environ* env;
     bool discoverRemote = false;
@@ -341,7 +351,7 @@ int CDECL_CALL main(int argc, char** argv)
 
     /* Get env vars */
     env = Environ::GetAppEnviron();
-    qcc::String connectArgs = env->Find("BUS_ADDRESS", "tcp:addr=127.0.0.1,port=9956");
+    qcc::String connectArgs = env->Find("BUS_ADDRESS", "tcp:addr=127.0.0.1,port=9955");
 
 
     /* Create message bus */
@@ -481,5 +491,11 @@ int CDECL_CALL main(int argc, char** argv)
 
 
     printf("mouseclient exiting with status %d (%s)\n", status, QCC_StatusText(status));
+
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
+
     return (int) status;
 }
