@@ -54,7 +54,6 @@ namespace ajn {
 static const char bundledConfig[] =
     "<busconfig>"
     "  <type>alljoyn_bundled</type>"
-    "  <listen>unix:abstract=alljoyn</listen>"
 #if defined(QCC_OS_DARWIN)
     "  <listen>launchd:env=DBUS_LAUNCHD_SESSION_BUS_SOCKET</listen>"
 #endif
