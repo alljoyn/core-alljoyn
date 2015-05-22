@@ -529,14 +529,14 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
      * @param endpoint  Bus-to-bus endpoint to add.
      * @param ER_OK if successful
      */
-    QStatus AddBusToBusEndpoint(RemoteEndpoint& endpoint);
+    virtual QStatus AddBusToBusEndpoint(RemoteEndpoint& endpoint);
 
     /**
      * Remove an existing Bus-to-bus endpoint.
      *
      * @param endpoint  Bus-to-bus endpoint to add.
      */
-    void RemoveBusToBusEndpoint(RemoteEndpoint& endpoint);
+    virtual void RemoveBusToBusEndpoint(RemoteEndpoint& endpoint);
 
     /**
      * Respond to a remote daemon request to attach a session through this daemon.
