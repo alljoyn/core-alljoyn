@@ -336,6 +336,15 @@ class _PeerState {
     uint8_t guildArgsSentCount;
 
   private:
+    /**
+     * private assignment operator to prevent double freeing of memory
+     */
+    _PeerState& operator=(const _PeerState& src);
+
+    /**
+     * private copy constructor to prevent double freeing of memory
+     */
+    _PeerState(const _PeerState& src);
 
     /**
      * True if this peer state is for the local peer.

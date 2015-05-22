@@ -1605,6 +1605,7 @@ QStatus PermissionMgmtObj::GetAllMembershipCerts(MembershipCertMap& certMap, boo
             status = LoadCertificate(CertificateX509::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), *cert);
             if (ER_OK != status) {
                 QCC_DbgPrintf(("PermissionMgmtObj::GetAllMembershipCerts error loading membership certificate"));
+                delete cert;
                 delete [] keys;
                 return status;
             }
@@ -2468,6 +2469,7 @@ QStatus PermissionMgmtObj::GetTrustAnchorsFromAllMemberships(TrustAnchorList& ta
         if ((ER_OK != status) && (ER_BUS_KEY_UNAVAILABLE != status)) {
             ClearAnchorMap(chain);
             delete [] associateKeys;
+            delete [] keys;
             return status;
         }
 

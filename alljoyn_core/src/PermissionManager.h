@@ -93,6 +93,10 @@ class PermissionManager {
     }
 
   private:
+    /* Private assigment operator to prevent double freeing of memory */
+    PermissionManager& operator=(const PermissionManager& src);
+    /* Private copy constructor to prevent double freeing of memory */
+    PermissionManager(const PermissionManager& src);
 
     bool PeerHasAdminPriv(PeerState& peerState);
     bool AuthorizePermissionMgmt(bool outgoing, PeerState& peerState, const char* mbrName);
