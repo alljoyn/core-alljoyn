@@ -919,7 +919,7 @@ static void ConnectTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, void* 
     QCC_UNUSED(context);
 
     QCC_DbgTrace(("ConnectTimerHandler: handle=%p conn=%p", handle, conn));
-    QStatus status = ER_FAIL;
+    QStatus status = ER_TIMEOUT;
     ArdpTimer* timer = &conn->connectTimer;
 
     QCC_DbgTrace(("ConnectTimerHandler: retries left %d", timer->retry));
@@ -940,7 +940,7 @@ static void ConnectTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, void* 
 #if ARDP_STATS
         ++handle->stats.connectCbs;
 #endif
-        handle->cb.ConnectCb(handle, conn, conn->passive, NULL, 0, ER_TIMEOUT);
+        handle->cb.ConnectCb(handle, conn, conn->passive, NULL, 0, status);
 #if ARDP_STATS
         ++handle->stats.rstSends;
 #endif
@@ -1939,6 +1939,11 @@ static QStatus SendSyn(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, u
     conn->synData.len = len;
     memcpy(conn->synData.buf, buf, len);
     status = DoSendSyn(handle, conn, buf, len);
+
+    if (status == ER_WOULDBLOCK) {
+        status = ER_OK;
+    }
+
     if (status == ER_OK) {
         InitTimer(handle, conn, &conn->connectTimer, ConnectTimerHandler, NULL, handle->config.connectTimeout, handle->config.connectRetries + 1);
         QCC_DbgPrintf(("SendSyn(): timer=%p, retries=%u", conn->connectTimer, conn->connectTimer.retry));
@@ -2718,19 +2723,18 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                 ++handle->stats.rstRecvs;
 #endif
                 status = ER_ARDP_REMOTE_CONNECTION_RESET;
-            } else if (seg->FLG & ARDP_FLAG_SYN) {
-                QCC_DbgPrintf(("ArdpMachine(): SYN_SENT: SYN received"));
+            } else if ((seg->FLG & ARDP_FLAG_SYN) && (seg->FLG & ARDP_FLAG_ACK)) {
+                QCC_DbgPrintf(("ArdpMachine(): SYN_SENT: SYN | ACK received"));
 #if ARDP_STATS
                 ++handle->stats.synRecvs;
 #endif
-
                 UnmarshalSynSegment(conn, buf, seg);
 
                 status = InitSnd(handle, conn);
 
                 assert(status == ER_OK && "ArdpMachine():SYN_SENT: Failed to initialize Send queue");
 
-                if (seg->FLG & ARDP_FLAG_ACK) {
+                if (status == ER_OK) {
 
                     conn->sndFlags = qcc::QCC_MSG_CONFIRM;
 
@@ -2746,7 +2750,6 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                         status = ER_ARDP_INVALID_RESPONSE;
 
                     } else {
-                        QCC_DbgPrintf(("ArdpMachine(): SYN_SENT: SYN | ACK received. state -> OPEN"));
 #if ARDP_STATS
                         ++handle->stats.synackRecvs;
 #endif
@@ -2790,19 +2793,6 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                                 conn->synData.buf = NULL;
                             }
                         }
-                    }
-
-                } else {
-                    QCC_DbgPrintf(("ArdpMachine(): SYN_SENT: SYN with no ACK implies simulateous connection attempt: state -> SYN_RCVD"));
-                    uint8_t* data = &buf[ARDP_SYN_HEADER_SIZE];
-                    if (handle->cb.AcceptCb != NULL) {
-                        status = ER_OK;
-#if ARDP_STATS
-                        ++handle->stats.acceptCbs;
-#endif
-                        handle->cb.AcceptCb(handle, conn->ipAddr, conn->ipPort, conn, data, seg->DLEN, ER_OK);
-                    } else {
-                        status = ER_ARDP_INVALID_STATE;
                     }
                 }
             }
@@ -3148,7 +3138,6 @@ QStatus ARDP_Connect(ArdpHandle* handle, qcc::SocketFd sock, qcc::IPAddress ipAd
         *pConn = conn;
     }
 
-
     return status;
 }
 
@@ -3199,10 +3188,21 @@ QStatus ARDP_Accept(ArdpHandle* handle, ArdpConnRecord* conn, uint16_t segmax, u
         return status;
     }
 
-    SetState(conn, SYN_RCVD);
     /* <SEQ=snd.ISS><ACK=RCV.CUR><MAX=RCV.SEGMAX><BUFMAX=RCV.SEGBMAX><ACK><SYN> */
-    SendSyn(handle, conn, buf, len);
-    return ER_OK;
+    status = SendSyn(handle, conn, buf, len);
+    if (status == ER_OK) {
+        SetState(conn, SYN_RCVD);
+    }
+
+    /*
+     * else {
+     *     Important!!! Current assumption is that ARDP_Accept() is being called from within AcceptCb()
+     *     in transport layer. If this is ever to change (i.e., ARDP_Accept() is moved outside AcceptCb(),
+     *     then connection state should be set to CLOSED and connection record is removed here.
+     * }
+     */
+
+    return status;
 }
 
 QStatus ARDP_Disconnect(ArdpHandle* handle, ArdpConnRecord* conn)
