@@ -43,11 +43,10 @@ class IpNameServiceImpl;
 class IpNameServiceListener {
   public:
     virtual ~IpNameServiceListener() { }
-    virtual bool QueryHandler(TransportMask transport, MDNSPacket query, uint16_t recvPort,
-                              const qcc::IPEndpoint& ns4) {
+    virtual bool QueryHandler(TransportMask transport, MDNSPacket query, const qcc::IPEndpoint& src, const qcc::IPEndpoint& dst) {
         QCC_UNUSED(transport);
-        QCC_UNUSED(recvPort);
-        QCC_UNUSED(ns4);
+        QCC_UNUSED(src);
+        QCC_UNUSED(dst);
         return false;
     }
     virtual bool ResponseHandler(TransportMask transport, MDNSPacket response, uint16_t recvPort) {

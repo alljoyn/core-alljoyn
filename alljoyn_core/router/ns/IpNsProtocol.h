@@ -1598,6 +1598,8 @@ class _Packet : public ProtocolElement {
      */
     void SetDestination(qcc::IPEndpoint destination) { m_destination = destination; m_destinationSet = true; }
 
+    void SetSource(qcc::IPEndpoint source) { m_source = source; }
+
     void SetInterfaceIndex(uint32_t interfaceIndex) { m_interfaceIndex = interfaceIndex; m_interfaceIndexSet = true; }
 
     void SetAddressFamily(qcc::AddressFamily addressFamily) { m_addressFamily = addressFamily; m_addressFamilySet = true; }
@@ -1613,6 +1615,8 @@ class _Packet : public ProtocolElement {
      * @return The destination IP address of the corresponding message.
      */
     qcc::IPEndpoint GetDestination(void) { return m_destination; }
+
+    qcc::IPEndpoint GetSource(void) { return m_source; }
 
     uint32_t GetInterfaceIndex(void) { return m_interfaceIndex; }
 
@@ -1811,6 +1815,7 @@ class _Packet : public ProtocolElement {
   private:
     uint8_t m_timer;
     qcc::IPEndpoint m_destination;
+    qcc::IPEndpoint m_source;
     bool m_destinationSet;
     uint32_t m_interfaceIndex;
     bool m_interfaceIndexSet;
