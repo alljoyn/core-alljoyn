@@ -160,17 +160,31 @@ class KeyInfo {
         return true;
     }
 
+    /**
+     * Assignment operator for KeyInfo
+     */
+    KeyInfo& operator=(const KeyInfo& other) {
+        if (&other != this) {
+            format = other.format;
+            keyIdLen = other.keyIdLen;
+            delete [] keyId;
+            keyId = new uint8_t[keyIdLen];
+            memcpy(keyId, other.keyId, keyIdLen);
+        }
+        return *this;
+    }
+
+    /**
+     * Copy constructor for KeyInfo
+     */
+    KeyInfo(const KeyInfo& other) :
+        format(other.format), keyIdLen(other.keyIdLen)
+    {
+        keyId = new uint8_t[keyIdLen];
+        memcpy(keyId, other.keyId, keyIdLen);
+    }
+
   private:
-    /**
-     * Assignment operator is private
-     */
-    KeyInfo& operator=(const KeyInfo& other);
-
-    /**
-     * Copy constructor is private
-     */
-    KeyInfo(const KeyInfo& other);
-
     FormatType format;
     size_t keyIdLen;
     uint8_t* keyId;
