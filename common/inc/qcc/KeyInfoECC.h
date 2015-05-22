@@ -289,16 +289,25 @@ class KeyInfoECC : public KeyInfo {
         return KeyInfo::operator==(ki);
     }
 
-  private:
     /**
-     * Assignment operator is private
+     * Assignment operator for KeyInfoECC
      */
-    KeyInfoECC& operator=(const KeyInfoECC& other);
+    KeyInfoECC& operator=(const KeyInfoECC& other) {
+        if (&other != this) {
+            KeyInfo::operator=(other);
+            curve = other.curve;
+        }
+        return *this;
+    }
 
     /**
-     * Copy constructor is private
+     * Copy constructor for KeyInfoECC
      */
-    KeyInfoECC(const KeyInfoECC& other);
+    KeyInfoECC(const KeyInfoECC& other) :
+        KeyInfo(other), curve(other.curve) {
+    }
+
+  private:
 
     uint8_t curve;
 };

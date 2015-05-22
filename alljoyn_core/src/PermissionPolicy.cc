@@ -687,5 +687,118 @@ QStatus PermissionPolicy::ParseRules(const MsgArg& msgArg, Rule** rules, size_t*
     return BuildRulesFromArg(msgArg, rules, count);
 }
 
+PermissionPolicy::Rule::Member& PermissionPolicy::Rule::Member::operator=(const PermissionPolicy::Rule::Member& other) {
+    if (&other != this) {
+        memberName = other.memberName;
+        memberType = other.memberType;
+        actionMask = other.actionMask;
+        mutualAuth = other.mutualAuth;
+    }
+    return *this;
+}
+
+PermissionPolicy::Rule::Member::Member(const PermissionPolicy::Rule::Member& other) :
+    memberName(other.memberName), memberType(other.memberType),
+    actionMask(other.actionMask), mutualAuth(other.mutualAuth) {
+}
+
+PermissionPolicy::Rule& PermissionPolicy::Rule::operator=(const PermissionPolicy::Rule& other) {
+    if (&other != this) {
+        objPath = other.objPath;
+        interfaceName = other.interfaceName;
+        membersSize = other.membersSize;
+        members = new Member[membersSize];
+        for (size_t i = 0; i < membersSize; i++) {
+            members[i] = other.members[i];
+        }
+    }
+    return *this;
+}
+
+PermissionPolicy::Rule::Rule(const PermissionPolicy::Rule& other) :
+    objPath(other.objPath), interfaceName(other.interfaceName),
+    membersSize(other.membersSize) {
+    members = new Member[membersSize];
+    for (size_t i = 0; i < membersSize; i++) {
+        members[i] = other.members[i];
+    }
+}
+
+PermissionPolicy::Term& PermissionPolicy::Term::operator=(const PermissionPolicy::Term& other) {
+    if (&other != this) {
+        peersSize = other.peersSize;
+        rulesSize = other.rulesSize;
+        peers = new Peer[peersSize];
+        for (size_t i = 0; i < peersSize; i++) {
+            peers[i] = other.peers[i];
+        }
+        rules = new Rule[rulesSize];
+        for (size_t i = 0; i < rulesSize; i++) {
+            rules[i] = other.rules[i];
+        }
+    }
+    return *this;
+}
+
+PermissionPolicy::Term::Term(const PermissionPolicy::Term& other) :
+    peersSize(other.peersSize), rulesSize(other.rulesSize) {
+    peers = new Peer[peersSize];
+    for (size_t i = 0; i < peersSize; i++) {
+        peers[i] = other.peers[i];
+    }
+    rules = new Rule[rulesSize];
+    for (size_t i = 0; i < rulesSize; i++) {
+        rules[i] = other.rules[i];
+    }
+}
+
+PermissionPolicy::Peer& PermissionPolicy::Peer::operator=(const PermissionPolicy::Peer& other) {
+    if (&other != this) {
+        level = other.level;
+        type = other.type;
+        guildId = other.guildId;
+        keyInfo = new qcc::KeyInfoECC(*other.keyInfo);
+    }
+    return *this;
+}
+
+PermissionPolicy::Peer::Peer(const PermissionPolicy::Peer& other) :
+    level(other.level), type(other.type),
+    guildId(other.guildId) {
+    keyInfo = new qcc::KeyInfoECC(*other.keyInfo);
+}
+
+
+PermissionPolicy& PermissionPolicy::operator=(const PermissionPolicy& other) {
+    if (&other != this) {
+        version = other.version;
+        serialNum = other.serialNum;
+        adminsSize = other.adminsSize;
+        termsSize = other.termsSize;
+        admins = new Peer[adminsSize];
+        for (size_t i = 0; i < adminsSize; i++) {
+            admins[i] = other.admins[i];
+        }
+        terms = new Term[termsSize];
+        for (size_t i = 0; i < termsSize; i++) {
+            terms[i] = other.terms[i];
+        }
+    }
+    return *this;
+}
+
+PermissionPolicy::PermissionPolicy(const PermissionPolicy& other) :
+    version(other.version), serialNum(other.serialNum),
+    adminsSize(other.adminsSize), termsSize(other.termsSize) {
+    admins = new Peer[adminsSize];
+    for (size_t i = 0; i < adminsSize; i++) {
+        admins[i] = other.admins[i];
+    }
+    terms = new Term[termsSize];
+    for (size_t i = 0; i < termsSize; i++) {
+        terms[i] = other.terms[i];
+    }
+}
+
 } /* namespace ajn */
 
