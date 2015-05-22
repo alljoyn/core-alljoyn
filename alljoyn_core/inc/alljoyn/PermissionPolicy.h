@@ -161,16 +161,17 @@ class PermissionPolicy {
                 return true;
             }
 
-          private:
             /**
-             * Assignment operator is private
+             * Assignment operator for Member
              */
             Member& operator=(const Member& other);
 
             /**
-             * Copy constructor is private
+             * Copy constructor for Member
              */
             Member(const Member& other);
+
+          private:
 
             qcc::String memberName;
             MemberType memberType;
@@ -274,16 +275,18 @@ class PermissionPolicy {
             return true;
         }
 
-      private:
         /**
-         * Assignment operator is private
+         * Assignment operator for Rule
          */
         Rule& operator=(const Rule& other);
 
         /**
-         * Copy constructor is private
+         * Copy constructor for Rule
          */
         Rule(const Rule& other);
+
+
+      private:
 
         qcc::String objPath;
         qcc::String interfaceName;
@@ -433,17 +436,17 @@ class PermissionPolicy {
             return true;
         }
 
-      private:
         /**
-         * Assignment operator is private
+         * Assignment operator for Peer
          */
         Peer& operator=(const Peer& other);
 
         /**
-         * Copy constructor is private
+         * Copy constructor for Peer
          */
         Peer(const Peer& other);
 
+      private:
         PeerAuthLevel level;
         PeerType type;
         qcc::GUID128 guildId;
@@ -552,18 +555,17 @@ class PermissionPolicy {
             return true;
         }
 
-      private:
-
         /**
-         * Assignment operator is private
+         * Assignment operator for Term
          */
         Term& operator=(const Term& other);
 
         /**
-         * Copy constructor is private
+         * Copy constructor for Term
          */
         Term(const Term& other);
 
+      private:
         size_t peersSize;
         Peer* peers;
         size_t rulesSize;
@@ -796,18 +798,17 @@ class PermissionPolicy {
      */
     QStatus Digest(Marshaller& marshaller, uint8_t* digest, size_t len);
 
-  private:
-
     /**
-     * Assignment operator is private
+     * Assignment operator for PermissionPolicy
      */
     PermissionPolicy& operator=(const PermissionPolicy& other);
 
     /**
-     * Copy constructor is private
+     * Copy constructor for PermissionPolicy
      */
     PermissionPolicy(const PermissionPolicy& other);
 
+  private:
     uint8_t version;
     uint32_t serialNum;
     size_t adminsSize;
