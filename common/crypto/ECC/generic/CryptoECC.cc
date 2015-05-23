@@ -299,10 +299,24 @@ static QStatus Crypto_ECC_GenerateKeyPair(ECCPublicKey* publicKey, ECCPrivateKey
     if (ECDH_generate(&ap, &k) != 0) {
         return ER_FAIL;
     }
-    bigval_to_binary(&ap.x, publicKey->x, sizeof(publicKey->x));
-    bigval_to_binary(&ap.y, publicKey->y, sizeof(publicKey->y));
-    bigval_to_binary(&k, privateKey->d, sizeof(privateKey->d));
-    return ER_OK;
+    const size_t coordinateSize = publicKey->GetCoordinateSize();
+    const size_t privateKeySize = privateKey->GetSize();
+    uint8_t* X = new uint8_t[coordinateSize];
+    uint8_t* Y = new uint8_t[coordinateSize];
+    uint8_t* D = new uint8_t[privateKeySize];
+    bigval_to_binary(&ap.x, X, coordinateSize);
+    bigval_to_binary(&ap.y, Y, coordinateSize);
+    bigval_to_binary(&k, D, privateKeySize);
+
+    QStatus status = publicKey->Import(X, coordinateSize, Y, coordinateSize);
+    if (ER_OK == status) {
+        status = privateKey->Import(D, privateKeySize);
+    }
+    delete[] X;
+    delete[] Y;
+    qcc::ClearMemory(D, privateKeySize);
+    delete[] D;
+    return status;
 }
 
 QStatus Crypto_ECC::GenerateDHKeyPair() {
@@ -320,9 +334,9 @@ QStatus Crypto_ECC::GenerateSharedSecret(const ECCPublicKey* peerPublicKey, ECCS
     QStatus status = ER_FAIL;
 
     pub.infinity = 0;
-    binary_to_bigval(peerPublicKey->x, &pub.x, sizeof(peerPublicKey->x));
-    binary_to_bigval(peerPublicKey->y, &pub.y, sizeof(peerPublicKey->y));
-    binary_to_bigval(eccState->dhPrivateKey.d, &prv, sizeof(eccState->dhPrivateKey.d));
+    binary_to_bigval(peerPublicKey->GetX(), &pub.x, peerPublicKey->GetCoordinateSize());
+    binary_to_bigval(peerPublicKey->GetY(), &pub.y, peerPublicKey->GetCoordinateSize());
+    binary_to_bigval(eccState->dhPrivateKey.GetD(), &prv, eccState->dhPrivateKey.GetDSize());
     if (!ECDH_derive(&sec, &prv, &pub)) {
         goto Exit;
     }
@@ -371,7 +385,7 @@ static QStatus Crypto_ECC_DSASignDigest(const uint8_t* digest, uint32_t len, con
     bigval_t privKey;
     ECDSA_sig_t localSig;
 
-    binary_to_bigval(signingPrivateKey->d, &privKey, sizeof(signingPrivateKey->d));
+    binary_to_bigval(signingPrivateKey->GetD(), &privKey, signingPrivateKey->GetDSize());
     if (ECDSA_sign(&source, &privKey, &localSig) != 0) {
         return ER_FAIL;
     }
@@ -433,8 +447,8 @@ static QStatus Crypto_ECC_DSAVerifyDigest(const uint8_t* digest, uint32_t len, c
     ECDSA_sig_t localSig;
 
     pub.infinity = 0;
-    binary_to_bigval(signingPubKey->x, &pub.x, sizeof(signingPubKey->x));
-    binary_to_bigval(signingPubKey->y, &pub.y, sizeof(signingPubKey->y));
+    binary_to_bigval(signingPubKey->GetX(), &pub.x, signingPubKey->GetCoordinateSize());
+    binary_to_bigval(signingPubKey->GetY(), &pub.y, signingPubKey->GetCoordinateSize());
     binary_to_bigval(sig->r, &localSig.r, sizeof(sig->r));
     binary_to_bigval(sig->s, &localSig.s, sizeof(sig->s));
 
@@ -527,38 +541,115 @@ Crypto_ECC::~Crypto_ECC()
     delete eccState;
 }
 
+/** ECCPublicKey **/
+
+/**
+ * Empty ECC coordinate
+ */
+static const uint8_t ECC_COORDINATE_EMPTY[ECC_COORDINATE_SZ] = { 0 };
+
+bool ECCPublicKey::empty() const
+{
+    return (memcmp(x, ECC_COORDINATE_EMPTY, GetCoordinateSize()) == 0) &&
+           (memcmp(y, ECC_COORDINATE_EMPTY, GetCoordinateSize()) == 0);
+}
+
 const qcc::String ECCPublicKey::ToString() const
 {
     qcc::String s = "x=[";
-    s.append(BytesToHexString(x, ECC_COORDINATE_SZ));
+    s.append(BytesToHexString(x, GetCoordinateSize()));
     s.append("], y=[");
-    s.append(BytesToHexString(y, ECC_COORDINATE_SZ));
+    s.append(BytesToHexString(y, GetCoordinateSize()));
     s.append("]");
     return s;
 }
 
 QStatus ECCPublicKey::Export(uint8_t* data, size_t* size) const
 {
-    if (data == NULL || size == NULL || *size < (ECC_COORDINATE_SZ + ECC_COORDINATE_SZ)) {
+    const size_t coordinateSize = GetCoordinateSize();
+
+    if (data == NULL || size == NULL || *size < (coordinateSize + coordinateSize)) {
         return ER_FAIL;
     }
 
-    memcpy(data, x, ECC_COORDINATE_SZ);
-    memcpy(data + ECC_COORDINATE_SZ, y, ECC_COORDINATE_SZ);
-    *size = ECC_COORDINATE_SZ + ECC_COORDINATE_SZ;
+    memcpy(data, x, coordinateSize);
+    memcpy(data + coordinateSize, y, coordinateSize);
+    *size = coordinateSize + coordinateSize;
     return ER_OK;
 }
 
 QStatus ECCPublicKey::Import(const uint8_t* data, size_t size)
 {
-    if ((size != (ECC_COORDINATE_SZ + ECC_COORDINATE_SZ)) || (!data)) {
-        return ER_FAIL;
+    if (NULL == data) {
+        return ER_BAD_ARG_1;
+    }
+    if (size != GetSize()) {
+        return ER_BAD_ARG_2;
     }
 
-    memcpy(x, data, ECC_COORDINATE_SZ);
-    memcpy(y, data + ECC_COORDINATE_SZ, ECC_COORDINATE_SZ);
+    const size_t coordinateSize = GetCoordinateSize();
+
+    memcpy(x, data, coordinateSize);
+    memcpy(y, data + coordinateSize, coordinateSize);
 
     return ER_OK;
 }
+
+QStatus ECCPublicKey::Import(const uint8_t* xData, const size_t xSize, const uint8_t* yData, const size_t ySize)
+{
+    if (NULL == xData) {
+        return ER_BAD_ARG_1;
+    }
+    if (this->GetCoordinateSize() != xSize) {
+        return ER_BAD_ARG_2;
+    }
+    if (NULL == yData) {
+        return ER_BAD_ARG_3;
+    }
+    if (this->GetCoordinateSize() != ySize) {
+        return ER_BAD_ARG_4;
+    }
+
+    memcpy(x, xData, xSize);
+    memcpy(y, yData, ySize);
+
+    return ER_OK;
+}
+
+/** ECCPrivateKey **/
+
+ECCPrivateKey::~ECCPrivateKey()
+{
+    /* This must be a secure clear that won't get optimized out by the compiler. */
+    ClearMemory(d, GetDSize());
+}
+
+QStatus ECCPrivateKey::Export(uint8_t* data, size_t* size) const
+{
+    if (NULL == data) {
+        return ER_BAD_ARG_1;
+    }
+    if (NULL == size) {
+        return ER_BAD_ARG_2;
+    }
+    if (this->GetSize() > *size) {
+        *size = this->GetSize();
+        return ER_BUFFER_TOO_SMALL;
+    }
+
+    *size = this->GetSize();
+    memcpy(data, d, *size);
+
+    return ER_OK;
+}
+
+const String ECCPrivateKey::ToString() const
+{
+    qcc::String s = "d=[";
+    s.append(BytesToHexString(d, GetSize()));
+    s.append("]");
+    return s;
+}
+
 
 } /* namespace qcc */

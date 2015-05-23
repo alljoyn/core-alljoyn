@@ -751,7 +751,7 @@ QStatus KeyExchangerECDHE_ECDSA::RequestCredentialsCB(const char* peerName)
         SetSecretExpiration(0xFFFFFFFF);      /* never expired */
     }
     qcc::String pemCertChain = creds.GetCertChain();
-    QStatus status = CertificateX509::DecodePrivateKeyPEM(creds.GetPrivateKey(), (uint8_t*) &issuerPrivateKey, sizeof(ECCPrivateKey));
+    QStatus status = CertificateX509::DecodePrivateKeyPEM(creds.GetPrivateKey(), &issuerPrivateKey);
     if (status != ER_OK) {
         QCC_DbgPrintf(("RequestCredentialsCB failed to parse the private key PEM"));
         return status;

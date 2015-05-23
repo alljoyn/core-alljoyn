@@ -963,7 +963,7 @@ TEST_F(SecurityX509Test, Test10) {
 
     //Encode the private key to PEM
     String clientecdsaPrivateKeyPEM;
-    status = CertificateX509::EncodePrivateKeyPEM((uint8_t*)dsaPrivateKey, sizeof(ECCPrivateKey), clientecdsaPrivateKeyPEM);
+    status = CertificateX509::EncodePrivateKeyPEM(dsaPrivateKey, clientecdsaPrivateKeyPEM);
     EXPECT_EQ(ER_OK, status) << "Failed to encode the private key to PEM";
 
     //Encode the certifcate to PEM
@@ -1060,10 +1060,10 @@ TEST_F(SecurityX509Test, Test10) {
 
     const ECCPublicKey* get_public_key = x509Validate.GetSubjectPublicKey();
     String get_public_key_PEM;
-    status = CertificateX509::EncodePublicKeyPEM((uint8_t*)get_public_key, sizeof(ECCPublicKey), get_public_key_PEM);
+    status = CertificateX509::EncodePublicKeyPEM(get_public_key, get_public_key_PEM);
     EXPECT_EQ(ER_OK, status) << "Failed to encode the public key to PEM";
     String dsa_public_key_PEM;
-    status = CertificateX509::EncodePublicKeyPEM((uint8_t*)dsaPublicKey, sizeof(ECCPublicKey), dsa_public_key_PEM);
+    status = CertificateX509::EncodePublicKeyPEM(dsaPublicKey, dsa_public_key_PEM);
     EXPECT_STREQ(get_public_key_PEM.c_str(), dsa_public_key_PEM.c_str());
 
     /* The service side generated the certificate using OpenSSL. The certificate is presented on the client side via Verify credentials callback.
@@ -1113,7 +1113,7 @@ TEST_F(SecurityX509Test, Test10) {
 
     const ECCPublicKey* client_get_public_key = x509ValidateOnClient.GetSubjectPublicKey();
     String client_get_public_key_PEM;
-    status = CertificateX509::EncodePublicKeyPEM((uint8_t*)client_get_public_key, sizeof(ECCPublicKey), client_get_public_key_PEM);
+    status = CertificateX509::EncodePublicKeyPEM(client_get_public_key, client_get_public_key_PEM);
     EXPECT_EQ(ER_OK, status) << "Failed to encode the public key to PEM";
     EXPECT_STREQ(client_get_public_key_PEM.c_str(), serviceecdsaPublicKeyPEM);
 
@@ -1236,7 +1236,7 @@ TEST_F(SecurityX509Test, Test11) {
     //Sign the certificate A using CA private key
     //Convert the CA private key in PEM to ECCPrivateKey format.
     ECCPrivateKey CAPrivateKey;
-    status = CertificateX509::DecodePrivateKeyPEM(CAPrivateKeyPEM, (uint8_t*)&CAPrivateKey, sizeof(ECCPrivateKey));
+    status = CertificateX509::DecodePrivateKeyPEM(CAPrivateKeyPEM, &CAPrivateKey);
     ASSERT_EQ(ER_OK, status) << " CertificateX509::DecodePrivateKeyPEM failed with actual status: " << QCC_StatusText(status);
     status = x509A.Sign(&CAPrivateKey);
     EXPECT_EQ(ER_OK, status) << "Failed to sign the certificate";
@@ -1277,7 +1277,7 @@ TEST_F(SecurityX509Test, Test11) {
 
     //Encode the private key to PEM
     String serviceecdsaPrivateKeyPEM;
-    status = CertificateX509::EncodePrivateKeyPEM((uint8_t*)dsaPrivateKeyBob, sizeof(ECCPrivateKey), serviceecdsaPrivateKeyPEM);
+    status = CertificateX509::EncodePrivateKeyPEM(dsaPrivateKeyBob, serviceecdsaPrivateKeyPEM);
     EXPECT_EQ(ER_OK, status) << "Failed to encode the private key to PEM";
 
     //Enable Peer security and reg. auth listener

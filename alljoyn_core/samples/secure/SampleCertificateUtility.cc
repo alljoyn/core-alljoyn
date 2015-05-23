@@ -152,8 +152,8 @@ static QStatus Crypto_GetRandomBytes(uint8_t* buf, const size_t count)
             return status;
         }
         const ECCPrivateKey* key = ecc.GetDSAPrivateKey();
-        memcpy(buf + i, key->d, min(count - i, sizeof(key->d)));
-        i += min(count - i, sizeof(key->d));
+        memcpy(buf + i, key->GetD(), min(count - i, key->GetDSize()));
+        i += min(count - i, key->GetDSize());
     }
 
     return status;
@@ -479,7 +479,7 @@ QStatus LoadCertificateAndPrivateKeyFromFile(
 
         if (ER_OK == status) {
             String keyPem(bytes, statBuf.st_size);
-            status = CertificateX509::DecodePrivateKeyPEM(keyPem, privateKey->d, sizeof(privateKey->d));
+            status = CertificateX509::DecodePrivateKeyPEM(keyPem, privateKey);
         }
 
         delete[] bytes;
@@ -520,7 +520,7 @@ QStatus SaveCertificateAndPrivateKeyToFile(
         return status;
     }
 
-    status = CertificateX509::EncodePrivateKeyPEM(privateKey->d, sizeof(privateKey->d), privateKeyPem);
+    status = CertificateX509::EncodePrivateKeyPEM(privateKey, privateKeyPem);
     if (ER_OK != status) {
         return status;
     }

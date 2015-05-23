@@ -49,8 +49,12 @@ static int ToggleRandomBit(void* buf, size_t len)
 }
 
 static void AffinePoint2PublicKey(affine_point_t& ap, ECCPublicKey& publicKey) {
-    bigval_to_binary(&ap.x, publicKey.x, sizeof(publicKey.x));
-    bigval_to_binary(&ap.y, publicKey.y, sizeof(publicKey.y));
+    uint8_t* X = new uint8_t[publicKey.GetCoordinateSize()];
+    uint8_t* Y = new uint8_t[publicKey.GetCoordinateSize()];
+    bigval_to_binary(&ap.x, X, publicKey.GetCoordinateSize());
+    bigval_to_binary(&ap.y, Y, publicKey.GetCoordinateSize());
+    delete[] X;
+    delete[] Y;
 }
 
 static void ECDHFullPointTest(int iteration, bool injectError)
@@ -124,13 +128,15 @@ static void ECDHHalfPointTestUsingHexKeys(const char* hexPrivateKey, const char*
     ECCPublicKey pubKey;
     ECCPublicKey peerPubKey;
     uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+    uint8_t privateKeyBytes[ECC_COORDINATE_SZ];
 
-    HexStringToBytes(hexPrivateKey, privateKey.d, sizeof(privateKey.d));
+    HexStringToBytes(hexPrivateKey, privateKeyBytes, sizeof(privateKeyBytes));
+    ASSERT_EQ(ER_OK, privateKey.Import(privateKeyBytes, sizeof(privateKeyBytes)));
     uint8_t* buf = new uint8_t[sizeof(ECCPublicKey)];
     HexStringToBytes(hexPublicKey, buf, sizeof(ECCPublicKey));
-    pubKey.Import(buf, sizeof(ECCPublicKey));
+    ASSERT_EQ(ER_OK, pubKey.Import(buf, sizeof(ECCPublicKey)));
     HexStringToBytes(hexPeerPublicKey, buf, sizeof(ECCPublicKey));
-    peerPubKey.Import(buf, sizeof(ECCPublicKey));
+    ASSERT_EQ(ER_OK, peerPubKey.Import(buf, sizeof(ECCPublicKey)));
     delete [] buf;
     HexStringToBytes(hexDigest, digest, sizeof(digest));
     ECDHHalfPointTestUsingKey(privateKey, pubKey, peerPubKey, digest);
