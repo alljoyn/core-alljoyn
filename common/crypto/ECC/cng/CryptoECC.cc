@@ -238,7 +238,6 @@ ECCPublicKey* Crypto_ECC_GetPublicKey(
 {
     QStatus status = ER_OK;
     NTSTATUS ntStatus;
-    errno_t err;
 
     QCC_DbgTrace(("Crypto_ECC_GetPublicKey"));
 
@@ -273,32 +272,7 @@ ECCPublicKey* Crypto_ECC_GetPublicKey(
     x = keyBlob + sizeof(BCRYPT_ECCKEY_BLOB);
     y = x + header->cbKey;
 
-    err = memcpy_s(pEcPubKey->x, sizeof(pEcPubKey->x), x, header->cbKey);
-    if (0 != err) {
-        status = ER_CRYPTO_ERROR;
-        QCC_LogError(status, ("Failed to copy x coordinate out, errno=%d", err));
-        goto Exit;
-    }
-
-    /* Interop key fields may be longer than CNG keys. Pad out the rest with zero. */
-    for (int i = (header->cbKey / sizeof(pEcPubKey->x[0]));
-         i < (sizeof(pEcPubKey->x) / sizeof(pEcPubKey->x[0]));
-         i++) {
-        pEcPubKey->x[i] = 0;
-    }
-
-    err = memcpy_s(pEcPubKey->y, sizeof(pEcPubKey->y), y, header->cbKey);
-    if (0 != err) {
-        status = ER_CRYPTO_ERROR;
-        QCC_LogError(status, ("Failed to copy y coordinate out, errno=%d", err));
-        goto Exit;
-    }
-
-    for (int i = (header->cbKey / sizeof(pEcPubKey->y[0]));
-         i < (sizeof(pEcPubKey->y) / sizeof(pEcPubKey->y[0]));
-         i++) {
-        pEcPubKey->y[i] = 0;
-    }
+    status = pEcPubKey->Import(x, header->cbKey, y, header->cbKey);
 
 Exit:
 
@@ -320,14 +294,13 @@ static QStatus Crypto_ECC_SetPublicKey(
     BCRYPT_ALG_HANDLE hAlg,
     BCRYPT_KEY_HANDLE*phPubKey)
 {
-    errno_t err;
     NTSTATUS ntStatus;
     QStatus status = ER_OK;
     PBYTE keyBlob = NULL;
     PBCRYPT_ECCKEY_BLOB header = NULL;
-    PBYTE x = NULL, y = NULL;
     ULONG keySize;
     ULONG blobSize;
+    size_t exportSize;
 
     BCRYPT_KEY_HANDLE hPubKey = NULL;
 
@@ -376,55 +349,11 @@ static QStatus Crypto_ECC_SetPublicKey(
     }
 
     header->cbKey = keySize;
-    x = keyBlob + sizeof(BCRYPT_ECCKEY_BLOB);
-    y = x + header->cbKey;
+    exportSize = 2 * header->cbKey;
 
-    /* Interop key fields may be larger than CNG's. Make sure the high
-     * order bytes are zero and copy the rest.
-     */
-    assert(header->cbKey <= sizeof(pubKey->x));
-    for (int i = (header->cbKey / sizeof(pubKey->x[0]));
-         i < (sizeof(pubKey->x) / sizeof(pubKey->x[0]));
-         i++) {
-        if (pubKey->x[i] != 0) {
-            status = ER_CRYPTO_ERROR;
-            QCC_LogError(status, ("High order bytes of x are not zero"));
-            goto Exit;
-        }
-    }
-    assert(header->cbKey <= sizeof(pubKey->y));
-    for (int i = (header->cbKey / sizeof(pubKey->y[0]));
-         i < (sizeof(pubKey->y) / sizeof(pubKey->y[0]));
-         i++) {
-        if (pubKey->y[i] != 0) {
-            status = ER_CRYPTO_ERROR;
-            QCC_LogError(status, ("High order bytes of y are not zero"));
-            goto Exit;
-        }
-    }
-
-    err = memcpy_s(x, header->cbKey, pubKey->x, header->cbKey);
-    if (0 != err) {
-        status = ER_CRYPTO_ERROR;
-        QCC_LogError(status, ("Failed to copy x coordinate, errno=%d", err));
+    status = pubKey->Export(keyBlob + sizeof(BCRYPT_ECCKEY_BLOB), &exportSize);
+    if (ER_OK != status) {
         goto Exit;
-    }
-
-    err = memcpy_s(y, header->cbKey, pubKey->y, header->cbKey);
-    if (0 != err) {
-        status = ER_CRYPTO_ERROR;
-        QCC_LogError(status, ("Failed to copy y coordinate, errno=%d", err));
-        goto Exit;
-    }
-
-    hPubKey = *phPubKey;
-
-    if (NULL != hPubKey) {
-        ntStatus = BCryptDestroyKey(hPubKey);
-        if (!BCRYPT_SUCCESS(ntStatus)) {
-            QCC_LogError(ER_CRYPTO_ERROR, ("Not fatal: Failed to destroy old public key, ntStatus=%X", ntStatus));
-            /* Try to carry on anyway. */
-        }
     }
 
     ntStatus = BCryptImportKeyPair(hAlg, NULL, BCRYPT_ECCPUBLIC_BLOB, &hPubKey, keyBlob, blobSize, 0);
@@ -432,6 +361,14 @@ static QStatus Crypto_ECC_SetPublicKey(
         status = ER_CRYPTO_ERROR;
         QCC_LogError(status, ("Failed to import key blob, ntStatus=%X", ntStatus));
         goto Exit;
+    }
+
+    if (NULL != *phPubKey) {
+        ntStatus = BCryptDestroyKey(*phPubKey);
+        if (!BCRYPT_SUCCESS(ntStatus)) {
+            QCC_LogError(ER_CRYPTO_ERROR, ("Not fatal: Failed to destroy old public key, ntStatus=%X", ntStatus));
+            /* Try to carry on anyway. */
+        }
     }
 
     *phPubKey = hPubKey;
@@ -460,7 +397,6 @@ static ECCPrivateKey* Crypto_ECC_GetPrivateKey(
 {
     QStatus status = ER_OK;
     NTSTATUS ntStatus;
-    errno_t err;
 
     PBYTE keyBlob = NULL;
     ULONG blobSize;
@@ -494,18 +430,10 @@ static ECCPrivateKey* Crypto_ECC_GetPrivateKey(
     header = reinterpret_cast<PBCRYPT_ECCKEY_BLOB>(keyBlob);
     d = keyBlob + sizeof(BCRYPT_ECCKEY_BLOB) + (2 * header->cbKey); /* Skip header, X and Y. */
 
-    err = memcpy_s(pEccPrivateKey->d, sizeof(pEccPrivateKey->d), d, header->cbKey);
-    if (0 != err) {
-        status = ER_CRYPTO_ERROR;
-        QCC_LogError(status, ("Failed to copy private key out, errno=%d", err));
+    status = pEccPrivateKey->Import(d, header->cbKey);
+    if (status != ER_OK) {
+        QCC_LogError(status, ("Failed to copy private key out"));
         goto Exit;
-    }
-
-    /* Fill out the extra high order bytes with zero. */
-    for (int i = (header->cbKey / sizeof(pEccPrivateKey->d[0]));
-         i < (sizeof(pEccPrivateKey->d) / sizeof(pEccPrivateKey->d[0]));
-         i++) {
-        pEccPrivateKey->d[i] = 0;
     }
 
 Exit:
@@ -529,7 +457,6 @@ static QStatus Crypto_ECC_SetPrivateKey(
     BCRYPT_KEY_HANDLE*phPrivateKey)
 {
     QStatus status = ER_OK;
-    errno_t err;
     NTSTATUS ntStatus;
     PBYTE keyBlob = NULL;
     PBCRYPT_ECCKEY_BLOB header = NULL;
@@ -593,23 +520,18 @@ static QStatus Crypto_ECC_SetPrivateKey(
      */
     memset(x, 0, header->cbKey);
     memset(y, 0, header->cbKey);
-    /* Interop private keys can have extra bytes. Make sure the high
-     * order bytes are zero and copy the rest.
-     */
-    assert(header->cbKey <= sizeof(privateKey->d));
-    for (int i = (header->cbKey / sizeof(privateKey->d[0]));
-         i < (sizeof(privateKey->d) / sizeof(privateKey->d[0]));
-         i++) {
-        if (privateKey->d[i] != 0) {
-            status = ER_CRYPTO_ERROR;
-            QCC_LogError(status, ("High order bytes of input private key are not zero"));
-            goto Exit;
-        }
-    }
-    err = memcpy_s(d, header->cbKey, privateKey->d, header->cbKey);
-    if (0 != err) {
+
+    size_t keySizeAsSizeT = header->cbKey;
+
+    status = privateKey->Export(d, &keySizeAsSizeT);
+    if (ER_OK != status) {
         status = ER_CRYPTO_ERROR;
-        QCC_LogError(status, ("Failed to copy private key bytes, errno=%d", err));
+        QCC_LogError(status, ("Failed to export private key bytes"));
+        goto Exit;
+    }
+    if (header->cbKey != keySizeAsSizeT) {
+        status = ER_CRYPTO_ERROR;
+        QCC_LogError(status, ("Change in size of key was unexpected after Export; expected %u, got %" PRIuSIZET, header->cbKey, keySize));
         goto Exit;
     }
 
@@ -1371,38 +1293,145 @@ Crypto_ECC::~Crypto_ECC()
     delete eccState;
 }
 
-const qcc::String ECCPublicKey::ToString() const
+/** ECCPublicKey **/
+
+/**
+ * Empty ECC coordinate
+ */
+static const uint8_t ECC_COORDINATE_EMPTY[ECC_COORDINATE_SZ] = { 0 };
+
+bool ECCPublicKey::empty() const
 {
-    qcc::String s = "x=[";
-    s.append(BytesToHexString(x, ECC_COORDINATE_SZ));
+    return (memcmp(x, ECC_COORDINATE_EMPTY, GetCoordinateSize()) == 0) &&
+           (memcmp(y, ECC_COORDINATE_EMPTY, GetCoordinateSize()) == 0);
+}
+
+const String ECCPublicKey::ToString() const
+{
+    String s = "x=[";
+    s.append(BytesToHexString(x, GetCoordinateSize()));
     s.append("], y=[");
-    s.append(BytesToHexString(y, ECC_COORDINATE_SZ));
+    s.append(BytesToHexString(y, GetCoordinateSize()));
     s.append("]");
     return s;
 }
 
 QStatus ECCPublicKey::Export(uint8_t* data, size_t* size) const
 {
-    if (data == NULL || size == NULL || *size < (ECC_COORDINATE_SZ + ECC_COORDINATE_SZ)) {
+    errno_t err;
+
+    const size_t coordinateSize = GetCoordinateSize();
+
+    if (data == NULL || size == NULL || *size < (coordinateSize + coordinateSize)) {
         return ER_FAIL;
     }
 
-    memcpy(data, x, ECC_COORDINATE_SZ);
-    memcpy(data + ECC_COORDINATE_SZ, y, ECC_COORDINATE_SZ);
-    *size = ECC_COORDINATE_SZ + ECC_COORDINATE_SZ;
+    err = memcpy_s(data, *size, x, coordinateSize);
+    if (0 != err) {
+        QCC_LogError(ER_FAIL, ("Failed to memcpy_s x; err is %d", err));
+        return ER_FAIL;
+    }
+    err = memcpy_s(data + coordinateSize, *size - coordinateSize, y, coordinateSize);
+    if (0 != err) {
+        QCC_LogError(ER_FAIL, ("Failed to memcpy_s y; err is %d", err));
+        return ER_FAIL;
+    }
+    *size = coordinateSize + coordinateSize;
     return ER_OK;
 }
 
-QStatus ECCPublicKey::Import(const uint8_t* data, size_t size)
+QStatus ECCPublicKey::Import(const uint8_t* data, const size_t size)
 {
-    if ((size != (ECC_COORDINATE_SZ + ECC_COORDINATE_SZ)) || (!data)) {
+    errno_t err;
+
+    if (NULL == data) {
+        return ER_BAD_ARG_1;
+    }
+    if (size != GetSize()) {
+        return ER_BAD_ARG_2;
+    }
+
+    const size_t coordinateSize = GetCoordinateSize();
+
+    err = memcpy_s(x, sizeof(x), data, coordinateSize);
+    if (0 != err) {
+        QCC_LogError(ER_FAIL, ("Failed to memcpy_s into x; err is %d", err));
         return ER_FAIL;
     }
 
-    memcpy(x, data, ECC_COORDINATE_SZ);
-    memcpy(y, data + ECC_COORDINATE_SZ, ECC_COORDINATE_SZ);
+    err = memcpy_s(y, sizeof(y), data + coordinateSize, coordinateSize);
+    if (0 != err) {
+        QCC_LogError(ER_FAIL, ("Failed to memcpy_s into y; err is %d", err));
+        return ER_FAIL;
+    }
 
     return ER_OK;
+}
+
+QStatus ECCPublicKey::Import(const uint8_t* xData, const size_t xSize, const uint8_t* yData, const size_t ySize)
+{
+    errno_t err;
+
+    if (NULL == xData) {
+        return ER_BAD_ARG_1;
+    }
+    if (GetCoordinateSize() != xSize) {
+        return ER_BAD_ARG_2;
+    }
+    if (NULL == yData) {
+        return ER_BAD_ARG_3;
+    }
+    if (GetCoordinateSize() != ySize) {
+        return ER_BAD_ARG_4;
+    }
+
+    err = memcpy_s(x, sizeof(x), xData, xSize);
+    if (0 != err) {
+        QCC_LogError(ER_FAIL, ("Failed to memcpy_s into x; err is %d", err));
+        return ER_FAIL;
+    }
+    err = memcpy_s(y, sizeof(y), yData, ySize);
+    if (0 != err) {
+        QCC_LogError(ER_FAIL, ("Failed to memcpy_s into y; err is %d", err));
+        return ER_FAIL;
+    }
+
+    return ER_OK;
+}
+
+/** ECCPrivateKey **/
+
+ECCPrivateKey::~ECCPrivateKey()
+{
+    /* This must be a secure clear that won't get optimized out by the compiler. */
+    ClearMemory(d, GetDSize());
+}
+
+QStatus ECCPrivateKey::Export(uint8_t* data, size_t* size) const
+{
+    if (NULL == data) {
+        return ER_BAD_ARG_1;
+    }
+    if (NULL == size) {
+        return ER_BAD_ARG_2;
+    }
+    if (this->GetSize() > *size) {
+        *size = this->GetSize();
+        return ER_BUFFER_TOO_SMALL;
+    }
+
+    *size = this->GetSize();
+    memcpy(data, d, *size);
+
+    return ER_OK;
+}
+
+const String ECCPrivateKey::ToString() const
+{
+    qcc::String s = "d=[";
+    s.append(BytesToHexString(d, GetSize()));
+    s.append("]");
+    return s;
 }
 
 } /* namespace qcc */
