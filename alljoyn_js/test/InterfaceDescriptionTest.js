@@ -78,21 +78,15 @@ AsyncTestCase("InterfaceDescriptionTest", {
             '      <arg name="data" type="s" direction="out"/>\n' +
             '    </method>\n' +
             '  </interface>\n' +
-            '  <interface name="org.freedesktop.DBus.Properties">\n' +
-            '    <method name="Get">\n' +
-            '      <arg name="interface" type="s" direction="in"/>\n' +
-            '      <arg name="propname" type="s" direction="in"/>\n' +
-            '      <arg name="value" type="v" direction="out"/>\n' +
+            '  <interface name="org.allseen.Introspectable">\n' +
+            '    <method name="GetDescriptionLanguages">\n' +
+            '      <arg name="languageTags" type="as" direction="out"/>\n' +
             '    </method>\n' +
-            '    <method name="GetAll">\n' +
-            '      <arg name="interface" type="s" direction="in"/>\n' +
-            '      <arg name="props" type="a{sv}" direction="out"/>\n' +
+            '    <method name="IntrospectWithDescription">\n' +
+            '      <arg name="languageTag" type="s" direction="in"/>\n' +
+            '      <arg name="data" type="s" direction="out"/>\n' +
             '    </method>\n' +
-            '    <method name="Set">\n' +
-            '      <arg name="interface" type="s" direction="in"/>\n' +
-            '      <arg name="propname" type="s" direction="in"/>\n' +
-            '      <arg name="value" type="v" direction="in"/>\n' +
-            '    </method>\n' +
+            '    <annotation name="org.alljoyn.Bus.Secure" value="off"/>\n' +
             '  </interface>\n' +
             '</node>\n';
         queue.call(function(callbacks) {
