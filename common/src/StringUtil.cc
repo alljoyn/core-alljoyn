@@ -411,7 +411,7 @@ double AJ_CALL qcc::StringToDouble(const qcc::String& inStr)
                 ++expStrIter;
             }
             while (expStrIter != exponentString.end()) {
-                if (0 > CharToU8(*expStrIter) || 9 < CharToU8(*expStrIter)) {
+                if (9 < CharToU8(*expStrIter)) {
                     return NAN;
                 }
                 ++expStrIter;
@@ -556,7 +556,7 @@ uint8_t AJ_CALL qcc::CharToU8(const char c)
 
 char AJ_CALL qcc::U8ToChar(uint8_t d)
 {
-    if (d >= 0 && d <= 9) {
+    if (d <= 9) {
         return (char)(d + '0');
     } else if (d >= 0xa && d <= 0xf) {
         return (char)(d - 0xa + 'a');
