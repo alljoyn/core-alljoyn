@@ -401,32 +401,38 @@ static QStatus BuildTermsFromArg(MsgArg& arg, PermissionPolicy::Term** terms, si
             switch (fieldType) {
             case PermissionPolicy::Term::TAG_PEERS:
                 {
-                    PermissionPolicy::Peer* peers;
+                    PermissionPolicy::Peer* peers = NULL;
                     size_t peerCount;
                     status = BuildPeersFromArg(*field, &peers, &peerCount);
                     if (ER_OK != status) {
                         QCC_DbgPrintf(("BuildProviderFromArg #5 [%d] got status 0x%x\n", cnt, status));
                         delete [] termArray;
+                        delete [] peers;
                         return status;
                     }
                     if (peerCount > 0) {
                         pt->SetPeers(peerCount, peers);
+                    } else {
+                        delete [] peers;
                     }
                 }
                 break;
 
             case PermissionPolicy::Term::TAG_RULES:
                 {
-                    PermissionPolicy::Rule* rules;
+                    PermissionPolicy::Rule* rules = NULL;
                     size_t ruleCount;
                     status = BuildRulesFromArg(*field, &rules, &ruleCount);
                     if (ER_OK != status) {
                         QCC_DbgPrintf(("BuildProviderFromArg #6 [%d] got status 0x%x\n", cnt, status));
                         delete [] termArray;
+                        delete [] rules;
                         return status;
                     }
                     if (ruleCount > 0) {
                         pt->SetRules(ruleCount, rules);
+                    } else {
+                        delete [] rules;
                     }
                 }
                 break;
@@ -535,10 +541,13 @@ QStatus PermissionPolicy::Import(uint8_t version, const MsgArg& msgArg)
                 status = BuildPeersFromArg(*section, &peers, &count);
                 if (ER_OK != status) {
                     QCC_DbgPrintf(("BuildPolicyFromArgs #3 got status 0x%x\n", status));
+                    delete [] peers;
                     return status;
                 }
                 if (count > 0) {
                     SetAdmins(count, peers);
+                } else {
+                    delete [] peers;
                 }
             }
             break;
@@ -550,10 +559,13 @@ QStatus PermissionPolicy::Import(uint8_t version, const MsgArg& msgArg)
                 status = BuildTermsFromArg(*section, &terms, &count);
                 if (ER_OK != status) {
                     QCC_DbgPrintf(("BuildPolicyFromArgs #4 got status 0x%x\n", status));
+                    delete [] terms;
                     return status;
                 }
                 if (count > 0) {
                     SetTerms(count, terms);
+                } else {
+                    delete [] terms;
                 }
             }
             break;
