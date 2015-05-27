@@ -214,11 +214,25 @@ QStatus PermissionMgmtObj::GetACLKey(ACLEntryType aclEntryType, KeyStore::Key& k
     return ER_CRYPTO_KEY_UNAVAILABLE;      /* not available */
 }
 
+static bool CanBeCAForIdentity(PermissionMgmtObj::TrustAnchorType taType)
+{
+    if (taType == PermissionMgmtObj::TRUST_ANCHOR_CA) {
+        return true;
+    }
+    if (taType == PermissionMgmtObj::TRUST_ANCHOR_SG_AUTHORITY) {
+        return true;
+    }
+    if (taType == PermissionMgmtObj::TRUST_ANCHOR_RESTRICTED_CA) {
+        return true;
+    }
+    return false;
+}
+
 static PermissionMgmtObj::TrustAnchorList LocateTrustAnchor(PermissionMgmtObj::TrustAnchorList& trustAnchors, const qcc::String& aki)
 {
     PermissionMgmtObj::TrustAnchorList retList;
     for (PermissionMgmtObj::TrustAnchorList::const_iterator it = trustAnchors.begin(); it != trustAnchors.end(); it++) {
-        if ((*it)->use != PermissionMgmtObj::TRUST_ANCHOR_CA) {
+        if (!CanBeCAForIdentity((*it)->use)) {
             continue;
         }
         if ((aki.size() == (*it)->keyInfo.GetKeyIdLen()) &&
@@ -227,6 +241,17 @@ static PermissionMgmtObj::TrustAnchorList LocateTrustAnchor(PermissionMgmtObj::T
         }
     }
     return retList;
+}
+
+bool PermissionMgmtObj::IsTrustAnchor(const ECCPublicKey* publicKey)
+{
+    for (TrustAnchorList::iterator it = trustAnchors.begin(); it != trustAnchors.end(); it++) {
+        if (CanBeCAForIdentity((*it)->use) &&
+            (memcmp((*it)->keyInfo.GetPublicKey(), publicKey, sizeof(ECCPublicKey)) == 0)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 bool PermissionMgmtObj::IsTrustAnchor(TrustAnchorType taType, const ECCPublicKey* publicKey)
@@ -293,21 +318,34 @@ static void ClearTrustAnchorListByUse(PermissionMgmtObj::TrustAnchorType use, Pe
     }
 }
 
-static void LoadGuildAuthorities(const PermissionPolicy& policy, PermissionMgmtObj::TrustAnchorList& guildAuthoritiesList)
+static void LoadSGAuthoritiesAndRestrictedCAs(bool getSGAuthoritiesOnly, const PermissionPolicy& policy, PermissionMgmtObj::TrustAnchorList& taList)
 {
-    const PermissionPolicy::Term* terms = policy.GetTerms();
-    for (size_t cnt = 0; cnt < policy.GetTermsSize(); cnt++) {
-        const PermissionPolicy::Peer* peers = terms[cnt].GetPeers();
-        for (size_t idx = 0; idx < terms[cnt].GetPeersSize(); idx++) {
-
-            if ((peers[idx].GetType() == PermissionPolicy::Peer::PEER_GUILD) && peers[idx].GetKeyInfo()) {
+    const PermissionPolicy::Acl* acls = policy.GetAcls();
+    for (size_t cnt = 0; cnt < policy.GetAclsSize(); cnt++) {
+        const PermissionPolicy::Peer* peers = acls[cnt].GetPeers();
+        for (size_t idx = 0; idx < acls[cnt].GetPeersSize(); idx++) {
+            bool typeMatched = false;
+            if (peers[idx].GetType() == PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP) {
+                typeMatched = true;
+            } else if (!getSGAuthoritiesOnly && (peers[idx].GetType() == PermissionPolicy::Peer::PEER_FROM_CERTIFICATE_AUTHORITY)) {
+                typeMatched = true;
+            }
+            if (typeMatched && peers[idx].GetKeyInfo()) {
                 if (KeyInfoHelper::InstanceOfKeyInfoNISTP256(*peers[idx].GetKeyInfo())) {
-                    PermissionMgmtObj::TrustAnchor* ta = new PermissionMgmtObj::TrustAnchor(PermissionMgmtObj::TRUST_ANCHOR_MEMBERSHIP, *(KeyInfoNISTP256*) peers[idx].GetKeyInfo());
-                    guildAuthoritiesList.push_back(ta);
+                    PermissionMgmtObj::TrustAnchor* ta = new PermissionMgmtObj::TrustAnchor((peers[idx].GetType() == PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP ? PermissionMgmtObj::TRUST_ANCHOR_SG_AUTHORITY : PermissionMgmtObj::TRUST_ANCHOR_RESTRICTED_CA), *(KeyInfoNISTP256*) peers[idx].GetKeyInfo());
+                    if (ta->keyInfo.GetKeyIdLen() == 0) {
+                        KeyInfoHelper::GenerateKeyId(ta->keyInfo);
+                    }
+                    taList.push_back(ta);
                 }
             }
         }
     }
+}
+
+static void LoadSecurityGroupAuthorities(const PermissionPolicy& policy, PermissionMgmtObj::TrustAnchorList& taList)
+{
+    LoadSGAuthoritiesAndRestrictedCAs(true, policy, taList);
 }
 
 void PermissionMgmtObj::ClearTrustAnchors()
@@ -513,18 +551,18 @@ static void GenerateDefaultPolicy(const GUID128& adminGroupGUID, const KeyInfoNI
 {
     policy.SetSerialNum(0);
 
-    /* add the terms section */
-    PermissionPolicy::Term* terms = new PermissionPolicy::Term[3];
+    /* add the acls section */
+    PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[3];
 
-    /* terms record 0  ADMIN GROUP */
+    /* acls record 0  ADMIN GROUP */
     PermissionPolicy::Peer* peers = new PermissionPolicy::Peer[1];
-    peers[0].SetType(PermissionPolicy::Peer::PEER_GUILD);
-    peers[0].SetGuildId(adminGroupGUID);
+    peers[0].SetType(PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP);
+    peers[0].SetSecurityGroupId(adminGroupGUID);
     KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
     keyInfo->SetKeyId(adminGroupAuthority.GetKeyId(), adminGroupAuthority.GetKeyIdLen());
     keyInfo->SetPublicKey(adminGroupAuthority.GetPublicKey());
     peers[0].SetKeyInfo(keyInfo);
-    terms[0].SetPeers(1, peers);
+    acls[0].SetPeers(1, peers);
 
     PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[1];
     rules[0].SetInterfaceName("*");
@@ -536,16 +574,16 @@ static void GenerateDefaultPolicy(const GUID128& adminGroupGUID, const KeyInfoNI
         PermissionPolicy::Rule::Member::ACTION_MODIFY
         );
     rules[0].SetMembers(1, prms);
-    terms[0].SetRules(1, rules);
+    acls[0].SetRules(1, rules);
 
-    /* terms record 1  LOCAL PUBLIC KEY */
+    /* acls record 1  LOCAL PUBLIC KEY */
     peers = new PermissionPolicy::Peer[1];
-    peers[0].SetType(PermissionPolicy::Peer::PEER_GUID);
+    peers[0].SetType(PermissionPolicy::Peer::PEER_WITH_PUBLIC_KEY);
     keyInfo = new KeyInfoNISTP256();
     keyInfo->SetPublicKey(localPublicKey);
     KeyInfoHelper::GenerateKeyId(*keyInfo);
     peers[0].SetKeyInfo(keyInfo);
-    terms[1].SetPeers(1, peers);
+    acls[1].SetPeers(1, peers);
 
     rules = new PermissionPolicy::Rule[1];
     rules[0].SetInterfaceName("org.allseen.Security.PermissionMgmt");
@@ -553,12 +591,12 @@ static void GenerateDefaultPolicy(const GUID128& adminGroupGUID, const KeyInfoNI
     prms[0].SetMemberName("InstallMembership");
     prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
     rules[0].SetMembers(1, prms);
-    terms[1].SetRules(1, rules);
+    acls[1].SetRules(1, rules);
 
-    /* terms record 2  ANY-USER */
+    /* acls record 2  any trusted user */
     peers = new PermissionPolicy::Peer[1];
-    peers[0].SetType(PermissionPolicy::Peer::PEER_ANY);
-    terms[2].SetPeers(1, peers);
+    peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
+    acls[2].SetPeers(1, peers);
 
     rules = new PermissionPolicy::Rule[1];
     rules[0].SetInterfaceName("*");
@@ -568,9 +606,9 @@ static void GenerateDefaultPolicy(const GUID128& adminGroupGUID, const KeyInfoNI
     prms[1].SetMemberType(PermissionPolicy::Rule::Member::SIGNAL);
     prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE);
     rules[0].SetMembers(2, prms);
-    terms[2].SetRules(1, rules);
+    acls[2].SetRules(1, rules);
 
-    policy.SetTerms(3, terms);
+    policy.SetAcls(3, acls);
 }
 
 void PermissionMgmtObj::Claim(const InterfaceDescription::Member* member, Message& msg)
@@ -686,13 +724,9 @@ DoneValidation:
 void PermissionMgmtObj::InstallPolicy(const InterfaceDescription::Member* member, Message& msg)
 {
     QCC_UNUSED(member);
-    QStatus status;
-    uint8_t version;
-    MsgArg* variant;
-    msg->GetArg(0)->Get("(yv)", &version, &variant);
 
     PermissionPolicy* policy = new PermissionPolicy();
-    status = policy->Import(version, *variant);
+    QStatus status = policy->Import(PermissionPolicy::SPEC_VERSION, *msg->GetArg(0));
     if (ER_OK != status) {
         delete policy;
         MethodReply(msg, status);
@@ -880,7 +914,7 @@ static QStatus ValidateMembershipCertificate(MembershipCertificate& cert, Permis
     }
     for (PermissionMgmtObj::TrustAnchorList::iterator it = taList->begin(); it != taList->end(); it++) {
         PermissionMgmtObj::TrustAnchor* ta = *it;
-        if ((ta->use == PermissionMgmtObj::TRUST_ANCHOR_MEMBERSHIP) ||
+        if ((ta->use == PermissionMgmtObj::TRUST_ANCHOR_SG_AUTHORITY) ||
             (ta->use == PermissionMgmtObj::TRUST_ANCHOR_ADMIN_GROUP)) {
             if (cert.Verify(ta->keyInfo.GetPublicKey()) == ER_OK) {
                 return ER_OK;  /* cert is verified */
@@ -890,14 +924,14 @@ static QStatus ValidateMembershipCertificate(MembershipCertificate& cert, Permis
     return ER_UNKNOWN_CERTIFICATE;
 }
 
-static QStatus ValidateMembershipCertificateChain(bool checkGuildID, std::vector<MembershipCertificate*>& certs, PermissionMgmtObj::TrustAnchorList* taList)
+static QStatus ValidateMembershipCertificateChain(bool checkSecurityGroupID, std::vector<MembershipCertificate*>& certs, PermissionMgmtObj::TrustAnchorList* taList)
 {
     size_t idx = 0;
     bool validated = false;
     for (std::vector<MembershipCertificate*>::iterator it = certs.begin(); it != certs.end(); it++) {
         idx++;
         QStatus status;
-        if (checkGuildID) {
+        if (checkSecurityGroupID) {
             status = ValidateMembershipCertificate(*((MembershipCertificate*) *it), taList);
         } else {
             status = ValidateCertificate(*(*it), taList);
@@ -1169,13 +1203,13 @@ QStatus PermissionMgmtObj::GenerateManifestDigest(BusAttachment& bus, const Perm
         return ER_INVALID_DATA;
     }
     PermissionPolicy policy;
-    PermissionPolicy::Term* terms = new PermissionPolicy::Term[1];
-    terms[0].SetRules(count, (PermissionPolicy::Rule*) rules);
-    policy.SetTerms(1, terms);
+    PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[1];
+    acls[0].SetRules(count, (PermissionPolicy::Rule*) rules);
+    policy.SetAcls(1, acls);
     Message tmpMsg(bus);
     DefaultPolicyMarshaller marshaller(tmpMsg);
     QStatus status = policy.Digest(marshaller, digest, Crypto_SHA256::DIGEST_SIZE);
-    terms[0].SetRules(0, NULL); /* does not manage the lifetime of the input rules */
+    acls[0].SetRules(0, NULL); /* does not manage the lifetime of the input rules */
     return status;
 }
 
@@ -1224,9 +1258,9 @@ DoneValidation:
     }
     /* store the manifest */
     PermissionPolicy policy;
-    PermissionPolicy::Term* terms = new PermissionPolicy::Term[1];
-    terms[0].SetRules(count, rules);
-    policy.SetTerms(1, terms);
+    PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[1];
+    acls[0].SetRules(count, rules);
+    policy.SetAcls(1, acls);
     rules = NULL;  /* its memory is now controlled by policy object */
 
     uint8_t* buf = NULL;
@@ -1656,6 +1690,7 @@ QStatus PermissionMgmtObj::ParseSendManifest(Message& msg, PeerState& peerState)
     size_t count = 0;
     PermissionPolicy::Rule* rules = NULL;
     uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+    std::vector<ECCPublicKey> issuerKeys;
     QStatus status = GetManifestFromMessageArg(bus, *(msg->GetArg(0)), &rules, &count, digest);
     if (ER_OK != status) {
         goto DoneValidation;
@@ -1666,7 +1701,7 @@ QStatus PermissionMgmtObj::ParseSendManifest(Message& msg, PeerState& peerState)
     }
     /* retrieve the peer's manifest digest from keystore */
     uint8_t storedDigest[Crypto_SHA256::DIGEST_SIZE];
-    status = GetConnectedPeerPublicKey(peerState->GetGuid(), NULL, storedDigest);
+    status = GetConnectedPeerPublicKey(peerState->GetGuid(), NULL, storedDigest, issuerKeys);
     if (ER_OK != status) {
         status = ER_MISSING_DIGEST_IN_CERTIFICATE;
         goto DoneValidation;
@@ -1740,7 +1775,7 @@ QStatus PermissionMgmtObj::ParseSendMemberships(Message& msg, bool& done)
     if (sendCode == SEND_MEMBERSHIP_LAST) {
         /* do the membership cert validation for the peer */
         ECCPublicKey peerPublicKey;
-        status = GetConnectedPeerPublicKey(peerState->GetGuid(), &peerPublicKey, NULL);
+        status = GetConnectedPeerPublicKey(peerState->GetGuid(), &peerPublicKey);
         if (ER_OK != status) {
             _PeerState::ClearGuildMap(peerState->guildMap);
             done = true;
@@ -1749,7 +1784,7 @@ QStatus PermissionMgmtObj::ParseSendMemberships(Message& msg, bool& done)
         TrustAnchorList guildAuthorities;
         const PermissionPolicy* policy = bus.GetInternal().GetPermissionManager().GetPolicy();
         if (policy) {
-            LoadGuildAuthorities(*policy, guildAuthorities);
+            LoadSecurityGroupAuthorities(*policy, guildAuthorities);
         }
 
         while (!peerState->guildMap.empty()) {
@@ -1924,7 +1959,7 @@ void PermissionMgmtObj::Reset(const InterfaceDescription::Member* member, Messag
     MethodReply(msg, Reset());
 }
 
-QStatus PermissionMgmtObj::GetConnectedPeerPublicKey(const GUID128& guid, qcc::ECCPublicKey* publicKey, uint8_t* manifestDigest)
+QStatus PermissionMgmtObj::GetConnectedPeerPublicKey(const GUID128& guid, qcc::ECCPublicKey* publicKey, uint8_t* manifestDigest, std::vector<ECCPublicKey>& issuerPublicKeys)
 {
     CredentialAccessor ca(bus);
     KeyBlob kb;
@@ -1935,7 +1970,7 @@ QStatus PermissionMgmtObj::GetConnectedPeerPublicKey(const GUID128& guid, qcc::E
     }
     KeyBlob msBlob;
     bool keyAvail = false;
-    status = KeyExchanger::ParsePeerSecretRecord(kb, msBlob, publicKey, manifestDigest, keyAvail);
+    status = KeyExchanger::ParsePeerSecretRecord(kb, msBlob, publicKey, manifestDigest, issuerPublicKeys, keyAvail);
     if (ER_OK != status) {
         return status;
     }
@@ -1945,22 +1980,29 @@ QStatus PermissionMgmtObj::GetConnectedPeerPublicKey(const GUID128& guid, qcc::E
     return status;
 }
 
+QStatus PermissionMgmtObj::GetConnectedPeerPublicKey(const GUID128& guid, qcc::ECCPublicKey* publicKey)
+{
+    std::vector<ECCPublicKey> issuerPublicKeys;
+    return GetConnectedPeerPublicKey(guid, publicKey, NULL, issuerPublicKeys);
+}
+
 QStatus PermissionMgmtObj::SetManifestTemplate(PermissionPolicy::Rule* rules, size_t count)
 {
     if (count == 0) {
         return ER_OK;
     }
     PermissionPolicy policy;
-    PermissionPolicy::Term* terms = new PermissionPolicy::Term[1];
-    terms[0].SetRules(count, rules);
-    policy.SetTerms(1, terms);
+    PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[1];
+    acls[0].SetRules(count, rules);
+    policy.SetAcls(1, acls);
+
 
     uint8_t* buf = NULL;
     size_t size;
     Message tmpMsg(bus);
     DefaultPolicyMarshaller marshaller(tmpMsg);
     QStatus status = policy.Export(marshaller, &buf, &size);
-    terms[0].SetRules(0, NULL); /* does not manage the lifetime of the input rules */
+    acls[0].SetRules(0, NULL); /* does not manage the lifetime of the input rules */
     if (ER_OK != status) {
         return status;
     }
@@ -1992,13 +2034,13 @@ QStatus PermissionMgmtObj::RetrieveManifest(PermissionPolicy::Rule** manifest, s
     if (ER_OK != status) {
         return status;
     }
-    if (policy.GetTermsSize() == 0) {
+    if (policy.GetAclsSize() == 0) {
         return ER_MANIFEST_NOT_FOUND;
     }
-    PermissionPolicy::Term* terms = (PermissionPolicy::Term*) policy.GetTerms();
-    *count = terms[0].GetRulesSize();
-    *manifest = (PermissionPolicy::Rule*) terms[0].GetRules();
-    terms[0].SetRules(0, NULL);  /* do not delete the rules since the rules are given to the manifest variable */
+    PermissionPolicy::Acl* acls = (PermissionPolicy::Acl*) policy.GetAcls();
+    *count = acls[0].GetRulesSize();
+    *manifest = (PermissionPolicy::Rule*) acls[0].GetRules();
+    acls[0].SetRules(0, NULL);  /* do not delete the rules since the rules are given to the manifest variable */
     return ER_OK;
 }
 
@@ -2024,13 +2066,13 @@ void PermissionMgmtObj::GetManifestTemplate(const InterfaceDescription::Member* 
         MethodReply(msg, status);
         return;
     }
-    if (policy.GetTermsSize() == 0) {
+    if (policy.GetAclsSize() == 0) {
         MethodReply(msg, ER_MANIFEST_NOT_FOUND);
         return;
     }
-    PermissionPolicy::Term* terms = (PermissionPolicy::Term*) policy.GetTerms();
+    PermissionPolicy::Acl* acls = (PermissionPolicy::Acl*) policy.GetAcls();
     MsgArg rulesArg;
-    status = PermissionPolicy::GenerateRules(terms[0].GetRules(), terms[0].GetRulesSize(), rulesArg);
+    status = PermissionPolicy::GenerateRules(acls[0].GetRules(), acls[0].GetRulesSize(), rulesArg);
     if (ER_OK != status) {
         MethodReply(msg, status);
         return;
@@ -2075,7 +2117,7 @@ bool PermissionMgmtObj::ValidateCertChain(const qcc::String& certChainPEM, bool&
         /* single cert is exchanged */
         /* locate the issuer */
         if (certChain[0].GetAuthorityKeyId().empty()) {
-            if (IsTrustAnchor(TRUST_ANCHOR_CA, certChain[0].GetSubjectPublicKey())) {
+            if (IsTrustAnchor(certChain[0].GetSubjectPublicKey())) {
                 authorized = (ER_OK == certChain[0].Verify(certChain[0].GetSubjectPublicKey()));
             }
         } else {
@@ -2083,7 +2125,7 @@ bool PermissionMgmtObj::ValidateCertChain(const qcc::String& certChainPEM, bool&
             if (anchors.empty()) {
                 /* no trust anchor with the given authority key id */
                 const ECCPublicKey* pubKey = NULL;
-                if (IsTrustAnchor(TRUST_ANCHOR_CA, certChain[0].GetSubjectPublicKey())) {
+                if (IsTrustAnchor(certChain[0].GetSubjectPublicKey())) {
                     /* the peer is my trust anchor */
                     pubKey = certChain[0].GetSubjectPublicKey();
                 } else {
@@ -2113,7 +2155,7 @@ bool PermissionMgmtObj::ValidateCertChain(const qcc::String& certChainPEM, bool&
     } else {
         /* the cert chain signature validation is already done by the KeyExchanger code.  Now just need to check issuers */
         for (size_t cnt = 1; cnt < count; cnt++) {
-            if (IsTrustAnchor(TRUST_ANCHOR_CA, certChain[cnt].GetSubjectPublicKey())) {
+            if (IsTrustAnchor(certChain[cnt].GetSubjectPublicKey())) {
                 authorized = true;
                 break;
             }
@@ -2225,10 +2267,11 @@ QStatus PermissionMgmtObj::ManageMembershipTrustAnchors(PermissionPolicy* policy
         return ER_OK;
     }
     TrustAnchorList addOns;
-    LoadGuildAuthorities(*policy, addOns);
+    LoadSGAuthoritiesAndRestrictedCAs(false, *policy, addOns);
     if (addOns.size() > 0) {
         /* remove all the membership trust anchors and re-add the new ones */
-        ClearTrustAnchorListByUse(TRUST_ANCHOR_MEMBERSHIP, trustAnchors);
+        ClearTrustAnchorListByUse(TRUST_ANCHOR_SG_AUTHORITY, trustAnchors);
+        ClearTrustAnchorListByUse(TRUST_ANCHOR_RESTRICTED_CA, trustAnchors);
         trustAnchors.reserve(trustAnchors.size() + addOns.size());
         trustAnchors.insert(trustAnchors.end(), addOns.begin(), addOns.end());
         addOns.clear();

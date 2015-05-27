@@ -139,13 +139,7 @@ QStatus PermissionMgmtProxy::GetPolicy(PermissionPolicy* authorization) {
         return status;
     }
 
-    uint8_t version;
-    MsgArg* variant;
-    status = reply->GetArg(0)->Get("(yv)", &version, &variant);
-    if (status != ER_OK) {
-        return status;
-    }
-    return authorization->Import(version, *variant);
+    return authorization->Import(PermissionPolicy::SPEC_VERSION, *reply->GetArg(0));
 }
 
 QStatus PermissionMgmtProxy::RemovePolicy() {

@@ -47,6 +47,11 @@ class PermissionPolicy {
      * Class to allow the application to specify a permission rule
      */
 
+    /**
+     * The current spec version.
+     */
+    static const uint16_t SPEC_VERSION = 1;
+
     class Rule {
       public:
         /**
@@ -68,26 +73,15 @@ class PermissionPolicy {
             /**
              * The permission action masks
              */
-            static const uint8_t ACTION_DENIED = 0x01;   /** < permission denied */
-            static const uint8_t ACTION_PROVIDE = 0x02;   /** < allow to provide */
-            static const uint8_t ACTION_OBSERVE = 0x04;   /** < allow to observe */
-            static const uint8_t ACTION_MODIFY = 0x08;   /** < allow to modify */
-
-            /**
-             * Enumeration for the different types of field id
-             */
-            typedef enum {
-                TAG_MEMBER_NAME = 1,  ///< tag for member field
-                TAG_MEMBER_TYPE = 2,  ///< tag for member type field
-                TAG_ACTION_MASK = 3,    ///< tag for action mask field
-                TAG_MUTUAL_AUTH = 4   ///< tag for mutual auth field
-            } TagType;
+            static const uint8_t ACTION_PROVIDE = 0x01;   /** < allow to provide */
+            static const uint8_t ACTION_OBSERVE = 0x02;   /** < allow to observe */
+            static const uint8_t ACTION_MODIFY = 0x04;   /** < allow to modify */
 
             /**
              * Constructor
              *
              */
-            Member() : memberName(), memberType(NOT_SPECIFIED), actionMask(0), mutualAuth(true)
+            Member() : memberName(), memberType(NOT_SPECIFIED), actionMask(0)
             {
             }
 
@@ -128,16 +122,6 @@ class PermissionPolicy {
                 return actionMask;
             }
 
-            void SetMutualAuth(bool flag)
-            {
-                mutualAuth = flag;
-            }
-
-            const bool GetMutualAuth() const
-            {
-                return mutualAuth;
-            }
-
             qcc::String ToString() const;
 
             bool operator==(const Member& m) const
@@ -151,10 +135,6 @@ class PermissionPolicy {
                 }
 
                 if (actionMask != m.actionMask) {
-                    return false;
-                }
-
-                if (mutualAuth != m.mutualAuth) {
                     return false;
                 }
 
@@ -176,17 +156,7 @@ class PermissionPolicy {
             qcc::String memberName;
             MemberType memberType;
             uint8_t actionMask;
-            bool mutualAuth;
         };
-
-        /**
-         * Enumeration for the different types of field id
-         */
-        typedef enum {
-            TAG_OBJPATH = 1,           ///< tag for object path field
-            TAG_INTERFACE_NAME = 2,    ///< tag for interface name field
-            TAG_INTERFACE_MEMBERS = 3  ///< tag for interface members field
-        } TagType;
 
         /**
          * Constructor
@@ -301,30 +271,23 @@ class PermissionPolicy {
 
     class Peer {
       public:
-        /**
-         * Enumeration for the different types of peer
-         */
-        typedef enum {
-            PEER_LEVEL_NONE = 0,            ///< No encryption
-            PEER_LEVEL_ENCRYPTED = 1,       ///< message are encrypted
-            PEER_LEVEL_AUTHENTICATED = 2,   ///< peer is authenticated
-            PEER_LEVEL_AUTHORIZED = 3       ///< peer is fully authorized
-        } PeerAuthLevel;
 
         /**
          * Enumeration for the different types of peer
          */
         typedef enum {
-            PEER_ANY = 0,   ///< any peer
-            PEER_GUID = 1,  ///< peer GUID
-            PEER_GUILD = 2  ///< peer is a guild
+            PEER_ALL = 0,          ///< all peers including anonymous peers
+            PEER_ANY_TRUSTED = 1,  ///< any peer trusted by the application
+            PEER_FROM_CERTIFICATE_AUTHORITY = 2,  ///< peers with identity certificates issued by the specified certificate authority
+            PEER_WITH_PUBLIC_KEY = 3,  ///< peer identified by specific public key
+            PEER_WITH_MEMBERSHIP = 4  ///< all members of a security group
         } PeerType;
 
         /**
          * Constructor
          *
          */
-        Peer() : level(PEER_LEVEL_AUTHENTICATED), type(PEER_ANY), guildId(0), keyInfo(NULL)
+        Peer() : type(PEER_ANY_TRUSTED), securityGroupId(0), keyInfo(NULL)
         {
         }
 
@@ -334,22 +297,6 @@ class PermissionPolicy {
         virtual ~Peer()
         {
             delete keyInfo;
-        }
-
-        /**
-         * Set the peer authentication level
-         */
-        void SetLevel(PeerAuthLevel peerLevel)
-        {
-            level = peerLevel;
-        }
-
-        /**
-         * Get the peer authentication level
-         */
-        const PeerAuthLevel GetLevel() const
-        {
-            return level;
         }
 
         /**
@@ -369,28 +316,33 @@ class PermissionPolicy {
         }
 
         /**
-         * Set the guild id
-         * @param guid the guild id
+         * Set the security group id
+         * @param guid the security group id
          */
-        void SetGuildId(const qcc::GUID128& guid)
+        void SetSecurityGroupId(const qcc::GUID128& guid)
         {
-            guildId = guid;
+            securityGroupId = guid;
         }
 
         /**
-         * Get the guild id
-         * @return the guild id
+         * Get the security group id
+         * @return the security group id
          */
-        const qcc::GUID128& GetGuildId() const
+        const qcc::GUID128& GetSecurityGroupId() const
         {
-            return guildId;
+            return securityGroupId;
         }
 
         /**
          * Set the keyInfo field.
-         * When peer type is PEER_ANY the keyInfo is not relevant.
-         * When peer type is PEER_GUID the only the public key in the keyInfo is relevant.
-         * When peer type is PEER_GUILD the keyInfo.keyId holds the ID of the guild authority and the keyInfo.PublicKey is the public key of the guild authority.
+         * When peer type is PEER_ALL the keyInfo is not relevant.
+         * When peer type is PEER_ANY_TRUSTED the keyInfo is not relevant.
+         * When peer type is PEER_FROM_CERTIFICATE_AUTHORITY the
+         *     keyInfo.PublicKey is the public key of the certificate authority.
+         * When peer type is PEER_WITH_PUBLIC_KEY the keyInfo.PublicKey is
+         *     the public key of the peer.
+         * When peer type is PEER_WITH_MEMBERSHIP the keyInfo.PublicKey is the
+         *     public key of the security group authority.
          * @param keyInfo the keyInfo. The keyInfo must be new'd by the caller. It will be deleted by this object.
          */
         void SetKeyInfo(qcc::KeyInfoECC* keyInfo)
@@ -412,16 +364,12 @@ class PermissionPolicy {
 
         bool operator==(const Peer& p) const
         {
-            if (level != p.level) {
-                return false;
-            }
-
             if (type != p.type) {
                 return false;
             }
 
-            if (type == PEER_GUILD) {
-                if (guildId != p.GetGuildId()) {
+            if (type == PEER_WITH_MEMBERSHIP) {
+                if (securityGroupId != p.GetSecurityGroupId()) {
                     return false;
                 }
             }
@@ -447,40 +395,31 @@ class PermissionPolicy {
         Peer(const Peer& other);
 
       private:
-        PeerAuthLevel level;
         PeerType type;
-        qcc::GUID128 guildId;
+        qcc::GUID128 securityGroupId;
         qcc::KeyInfoECC* keyInfo;
     };
 
     /**
-     * Class to allow the application to specify a permission term
+     * Class to allow the application to specify an access control list
      */
 
-    class Term {
+    class Acl {
 
       public:
-
-        /**
-         * Enumeration for the different types of field id
-         */
-        typedef enum {
-            TAG_PEERS = 1,            ///< tag for the peers field
-            TAG_RULES = 2           ///< tag for the rules field
-        } TagType;
 
         /**
          * Constructor
          *
          */
-        Term() : peersSize(0), peers(NULL), rulesSize(0), rules(NULL)
+        Acl() : peersSize(0), peers(NULL), rulesSize(0), rules(NULL)
         {
         }
 
         /**
          * virtual destructor
          */
-        virtual ~Term()
+        virtual ~Acl()
         {
             delete [] peers;
             delete [] rules;
@@ -530,7 +469,7 @@ class PermissionPolicy {
 
         qcc::String ToString() const;
 
-        bool operator==(const Term& t) const
+        bool operator==(const Acl& t) const
         {
             if (peersSize != t.peersSize) {
                 return false;
@@ -558,12 +497,12 @@ class PermissionPolicy {
         /**
          * Assignment operator for Term
          */
-        Term& operator=(const Term& other);
+        Acl& operator=(const Acl& other);
 
         /**
          * Copy constructor for Term
          */
-        Term(const Term& other);
+        Acl(const Acl& other);
 
       private:
         size_t peersSize;
@@ -636,19 +575,10 @@ class PermissionPolicy {
     };
 
     /**
-     * Enumeration for the different types of field id
-     */
-    typedef enum {
-        TAG_ADMINS = 1,     ///< tag for the admins field
-        TAG_TERMS = 2       ///< tag for the terms field
-    } TagType;
-
-
-    /**
      * Constructor
      *
      */
-    PermissionPolicy() : version(1), serialNum(0), adminsSize(0), admins(NULL), termsSize(0), terms(NULL)
+    PermissionPolicy() : version(SPEC_VERSION), serialNum(0), aclsSize(0), acls(NULL)
     {
     }
 
@@ -657,16 +587,15 @@ class PermissionPolicy {
      */
     virtual ~PermissionPolicy()
     {
-        delete [] admins;
-        delete [] terms;
+        delete [] acls;
     }
 
 
-    void SetVersion(uint8_t version)
+    void SetVersion(uint16_t version)
     {
         this->version = version;
     }
-    const uint8_t GetVersion() const
+    const uint16_t GetVersion() const
     {
         return version;
     }
@@ -681,45 +610,24 @@ class PermissionPolicy {
     }
 
     /**
-     * Set the array of admins
-     * @param count the number of admins
-     * @param admins the array of admins. The array must be new'd by the caller. It will be deleted byt this object.
+     * Set the array of permission acls
+     * @param count the number of permission acls
+     * @param provider the array of permission acls. The array must be new'd by the caller. It will be deleted by this object.
      */
-    void SetAdmins(size_t count, Peer* admins)
+    void SetAcls(size_t count, Acl* acls)
     {
-        this->admins = admins;
-        adminsSize = count;
+        aclsSize = count;
+        this->acls = acls;
     }
 
-    const size_t GetAdminsSize() const
+    const size_t GetAclsSize() const
     {
-        return adminsSize;
+        return aclsSize;
     }
 
-    const Peer* GetAdmins() const
+    const Acl* GetAcls() const
     {
-        return admins;
-    }
-
-    /**
-     * Set the array of permission terms
-     * @param count the number of permission terms
-     * @param provider the array of permission terms. The array must be new'd by the caller. It will be deleted by this object.
-     */
-    void SetTerms(size_t count, Term* terms)
-    {
-        termsSize = count;
-        this->terms = terms;
-    }
-
-    const size_t GetTermsSize() const
-    {
-        return termsSize;
-    }
-
-    const Term* GetTerms() const
-    {
-        return terms;
+        return acls;
     }
 
     qcc::String ToString() const;
@@ -785,7 +693,7 @@ class PermissionPolicy {
      *      - #ER_OK if creation was successful.
      *      - error code if fail
      */
-    QStatus Import(uint8_t version, const MsgArg& msgArg);
+    QStatus Import(uint16_t version, const MsgArg& msgArg);
 
     /**
      * Generate a hash digest for the policy data
@@ -809,12 +717,10 @@ class PermissionPolicy {
     PermissionPolicy(const PermissionPolicy& other);
 
   private:
-    uint8_t version;
+    uint16_t version;
     uint32_t serialNum;
-    size_t adminsSize;
-    Peer* admins;
-    size_t termsSize;
-    Term* terms;
+    size_t aclsSize;
+    Acl* acls;
 };
 
 class DefaultPolicyMarshaller : public PermissionPolicy::Marshaller {

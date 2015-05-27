@@ -231,27 +231,27 @@ class CertificateX509 {
      * Verify a self-signed certificate.
      * @return ER_OK for success; otherwise, error code.
      */
-    QStatus Verify();
+    QStatus Verify() const;
 
     /**
      * Verify the certificate.
      * @param key the ECDSA public key.
      * @return ER_OK for success; otherwise, error code.
      */
-    QStatus Verify(const ECCPublicKey* key);
+    QStatus Verify(const ECCPublicKey* key) const;
 
     /**
      * Verify the certificate against the trust anchor.
      * @param trustAnchor the trust anchor
      * @return ER_OK for success; otherwise, error code.
      */
-    QStatus Verify(const KeyInfoNISTP256& trustAnchor);
+    QStatus Verify(const KeyInfoNISTP256& trustAnchor) const;
 
     /**
      * Verify the vadility period of the certificate.
      * @return ER_OK for success; otherwise, error code.
      */
-    QStatus VerifyValidity();
+    QStatus VerifyValidity() const;
 
     /**
      * Set the serial number field
