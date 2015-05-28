@@ -29,8 +29,6 @@ namespace ajn {
 
 /**
  * Obtain the default connection arg for the OS the test is run on.
- * If running on on windows this should be "tcp:addr=127.0.0.1,port=9955"
- * If running on a unix variant this should be "unix:abstract=alljoyn"
  *
  * The environment variable BUS_ADDRESS is specified it will be used in place
  * of the default address

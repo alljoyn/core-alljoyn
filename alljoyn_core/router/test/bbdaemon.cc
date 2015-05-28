@@ -380,7 +380,7 @@ int CDECL_CALL main(int argc, char** argv)
      * transport with defaults.
      */
     serverArgs = env->Find("BUS_SERVER_ADDRESSES",
-                           "localhost:port=9956;tcp:;udp:u4addr=0.0.0.0,u4port=9955;");
+                           "tcp:;udp:u4addr=0.0.0.0,u4port=9955");
 
 #endif
 

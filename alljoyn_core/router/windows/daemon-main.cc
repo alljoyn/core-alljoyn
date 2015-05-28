@@ -113,7 +113,7 @@ static const char defaultConfig[] =
 static const char internalConfig[] =
     "<busconfig>"
     "  <type>alljoyn</type>"
-    "  <listen>tcp:iface=*,port=9956</listen>"
+    "  <listen>tcp:iface=*,port=9955</listen>"
     "  <listen>udp:iface=*,u4port=9955</listen>"
     "</busconfig>";
 
