@@ -133,12 +133,16 @@ class CertificateX509 {
 
     /**
      * Encode the private key in a PEM string.
+     *
+     * @deprecated This method has been deprecated. Please see
+     *             CertificateX509::EncodePrivateKeyPEM(const ECCPrivateKey* privateKey, String& encoded).
+     *
      * @param privateKey the private key to encode
      * @param len the private key length
      * @param[out] encoded the output string holding the resulting PEM string
      * @return ER_OK for success; otherwise, error code.
      */
-    static QStatus AJ_CALL EncodePrivateKeyPEM(const uint8_t* privateKey, size_t len, String& encoded);
+    QCC_DEPRECATED(static QStatus AJ_CALL EncodePrivateKeyPEM(const uint8_t * privateKey, size_t len, String & encoded));
 
     /**
      * Encode the private key in a PEM string.
@@ -150,12 +154,16 @@ class CertificateX509 {
 
     /**
      * Decode the private key from a PEM string.
+     *
+     * @deprecated This method has been deprecated. Please see
+     *             CertificateX509::DecodePrivateKeyPEM(const String& encode, ECCPrivateKey* privateKey).
+     *
      * @param encoded the input string holding the PEM string
      * @param[out] privateKey the output private key
      * @param len the private key length
      * @return ER_OK for success; otherwise, error code.
      */
-    static QStatus AJ_CALL DecodePrivateKeyPEM(const String& encoded, uint8_t* privateKey, size_t len);
+    QCC_DEPRECATED(static QStatus AJ_CALL DecodePrivateKeyPEM(const String &encoded, uint8_t * privateKey, size_t len));
 
     /**
      * Decode the private key from a PEM string.
@@ -167,12 +175,16 @@ class CertificateX509 {
 
     /**
      * Encode the public key in a PEM string.
+     *
+     * @deprecated This method has been deprecated. Please see
+     *             CertificateX509::EncodePublicKeyPEM(const ECCPublicKey* publicKey, String& encoded).
+     *
      * @param publicKey the public key to encode
      * @param len the public key length
      * @param[out] encoded the output string holding the resulting PEM string
      * @return ER_OK for success; otherwise, error code.
      */
-    static QStatus AJ_CALL EncodePublicKeyPEM(const uint8_t* publicKey, size_t len, String& encoded);
+    QCC_DEPRECATED(static QStatus AJ_CALL EncodePublicKeyPEM(const uint8_t * publicKey, size_t len, String & encoded));
 
     /**
      * Encode the public key in a PEM string.
@@ -184,12 +196,16 @@ class CertificateX509 {
 
     /**
      * Decode the public key from a PEM string.
+     *
+     * @deprecated This method has been deprecated. Please see
+     *             CertificateX509::DecodePublicKeyPEM(const String& encoded, ECCPublicKey* publicKey).
+     *
      * @param encoded the input string holding the PEM string
      * @param[out] publicKey the output public key
      * @param len the public key length
      * @return ER_OK for success; otherwise, error code.
      */
-    static QStatus AJ_CALL DecodePublicKeyPEM(const String& encoded, uint8_t* publicKey, size_t len);
+    QCC_DEPRECATED(static QStatus AJ_CALL DecodePublicKeyPEM(const String &encoded, uint8_t * publicKey, size_t len));
 
     /**
      * Decode the public key from a PEM string.
