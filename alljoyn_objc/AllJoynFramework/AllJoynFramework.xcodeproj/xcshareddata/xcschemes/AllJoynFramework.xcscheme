@@ -29,7 +29,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "ACB44E6515485F3E00FF7DBC"
-               BuildableName = "AllJoynFrameworkTests.octest"
+               BuildableName = "AllJoynFrameworkTests.xctest"
                BlueprintName = "AllJoynFrameworkTests"
                ReferencedContainer = "container:AllJoynFramework.xcodeproj">
             </BuildableReference>
@@ -47,10 +47,15 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "ACB44E6515485F3E00FF7DBC"
-               BuildableName = "AllJoynFrameworkTests.octest"
+               BuildableName = "AllJoynFrameworkTests.xctest"
                BlueprintName = "AllJoynFrameworkTests"
                ReferencedContainer = "container:AllJoynFramework.xcodeproj">
             </BuildableReference>
+            <SkippedTests>
+               <Test
+                  Identifier = "ObserverTests">
+               </Test>
+            </SkippedTests>
          </TestableReference>
       </Testables>
       <EnvironmentVariables>
@@ -75,6 +80,15 @@
       ignoresPersistentStateOnLaunch = "NO"
       debugDocumentVersioning = "YES"
       allowLocationSimulation = "YES">
+      <MacroExpansion>
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "ACB44E5115485F3E00FF7DBC"
+            BuildableName = "libAllJoynFramework.a"
+            BlueprintName = "AllJoynFramework"
+            ReferencedContainer = "container:AllJoynFramework.xcodeproj">
+         </BuildableReference>
+      </MacroExpansion>
       <AdditionalOptions>
          <AdditionalOption
             key = "DYLD_INSERT_LIBRARIES"

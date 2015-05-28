@@ -16,6 +16,6 @@
 
 #import <XCTest/XCTest.h>
 
-@interface InterfaceDescriptionTests : XCTestCase
+@interface EventsActionsTests : XCTestCase
 
 @end
