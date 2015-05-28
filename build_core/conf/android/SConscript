@@ -248,3 +248,13 @@ if not GetOption('help') and env.has_key('ANDROID_NDK'):
       env.Append(JAVACFLAGS='-Xlint -Xlint:-serial ' + java6Flags)
 
    env.SConscript('${CPU}/SConscript')
+
+env.AppendUnique(LIBS = ['m', 'c', 'stdc++', 'log', 'gcc', '$ANDROID_STL'])
+if env['CRYPTO'] == 'openssl':
+    env.AppendUnique(LIBS =['crypto'])
+    print 'Using OpenSSL crypto'
+elif env['CRYPTO'] == 'builtin':
+    print 'Using builtin crypto'
+else:
+    print 'Only CRYPTO=builtin or CRYPTO=openssl are supported for Android.'
+    Exit(1)
