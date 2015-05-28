@@ -130,6 +130,27 @@ else:
    env.Append(LINKFLAGS=['/opt:ref'])
    env.Append(JAVACFLAGS='-Xlint -Xlint:-serial')
 
+vars = Variables()
+vars.Add(PathVariable('OPENSSL_BASE', 'Base OpenSSL directory (windows only)', os.environ.get('OPENSSL_BASE')))
+vars.Update(env)
+Help(vars.GenerateHelpText(env))
+env.AppendUnique(LIBS = ['setupapi', 'user32', 'winmm', 'ws2_32', 'iphlpapi', 'secur32', 'Advapi32'])
+
+if env['CRYPTO'] == 'cng':
+    if env['OS'] == 'winxp':
+        print 'Must specify CRYPTO=openssl and OPENSSL_BASE when building for WindowsXP'
+        if not GetOption('help'):
+            Exit(1)
+    else:
+        env.AppendUnique(LIBS = ['bcrypt', 'ncrypt', 'crypt32'])
+        env.Append(CPPDEFINES=['CRYPTO_CNG'])
+        print 'Using CNG crypto libraries'
+else:
+    env.Append(CPPPATH = ['$OPENSSL_BASE/include'])
+    env.Append(LIBPATH = ['$OPENSSL_BASE/lib'])
+    env.AppendUnique(LIBS = ['libeay32'])
+    print 'Using OpenSSL crypto libraries'
+
 # Archive expander
 def archive_expand(target, source, env):
    # Copy sources to targets

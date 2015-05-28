@@ -79,3 +79,10 @@ if env['ASAN']:
    env.Append(LINKFLAGS = '-fsanitize=address')
 
 env.SConscript('${CPU}/SConscript')
+
+env.AppendUnique(LIBS =['rt', 'stdc++', 'pthread', 'm'])
+if env['CRYPTO'] == 'openssl':
+    env.AppendUnique(LIBS =['crypto', 'ssl'])
+    print 'Using OpenSSL crypto'
+else:
+    print 'Using builtin crypto'

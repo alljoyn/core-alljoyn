@@ -75,3 +75,10 @@ env.Append(CXXFLAGS=['-std=c++0x',
                      '-fno-exceptions'])
 env.Append(CPPDEFINES=['QCC_OS_LINUX'])
 env.Append(LIBS=['m'])  # STL needs libm on OpenWrt
+
+env.AppendUnique(LIBS =['rt', 'stdc++', 'pthread', 'm'])
+if env['CRYPTO'] == 'openssl':
+    env.AppendUnique(LIBS =['crypto', 'ssl'])
+    print 'Using OpenSSL crypto'
+else:
+    print 'Using builtin crypto'
