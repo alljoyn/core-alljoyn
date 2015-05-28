@@ -229,7 +229,10 @@ class _BusEndpoint : public MessageSink {
     /*
      * Less than operator to allow endpoints to be put in sorted containers
      */
-    bool operator <(const _BusEndpoint& other) const { return reinterpret_cast<ptrdiff_t>(this) < reinterpret_cast<ptrdiff_t>(&other); }
+    bool operator <(const _BusEndpoint& other) const
+    {
+        return reinterpret_cast<ptrdiff_t>(this) < reinterpret_cast<ptrdiff_t>(&other);
+    }
 
   protected:
 

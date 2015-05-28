@@ -35,6 +35,7 @@ namespace ajn {
 
 /** Rule iterator */
 typedef std::multimap<BusEndpoint, Rule>::iterator RuleIterator;
+typedef std::multimap<BusEndpoint, Rule>::const_iterator RuleConstIterator;
 
 /**
  * RuleTable is a thread-safe store used for storing
@@ -110,15 +111,6 @@ class RuleTable {
     }
 
     /**
-     * lower_bound algorithm for rule table.
-     *
-     * @param ep     BusEndpoint that rule applies to.
-     * @param rule   Rule
-     * @return       lower_bound itertor for ep, rule.
-     */
-    RuleIterator LowerBound(BusEndpoint endpoint, const Rule& rule);
-
-    /**
      * Advance iterator to next endpoint.
      *
      * @param endpoint   Endpoint before advance.
@@ -130,8 +122,18 @@ class RuleTable {
         return ret;
     }
 
+    /**
+     * Check if message matches a rule for the given endpoint.
+     *
+     * @param   msg         Message that may be delivered.
+     * @param   endpoint    Endpoint message may be delivered to.
+     *
+     * @return  true if endpoint has a match rule that matches the message, false otherwise.
+     */
+    bool OkToSend(const Message& msg, BusEndpoint& endpoint) const;
+
   private:
-    qcc::Mutex lock;                            /**< Lock protecting rule table */
+    mutable qcc::Mutex lock;                   /**< Lock protecting rule table */
     std::multimap<BusEndpoint, Rule> rules;    /**< Rule table */
 };
 
