@@ -1519,9 +1519,9 @@ QStatus Crypto_ECC_GenerateSharedSecret(const ECCPublicKey* peerPublicKey, const
     bigval_t pk;
 
     pub.infinity = 0;
-    binary_to_bigval(peerPublicKey->x, &pub.x, sizeof(peerPublicKey->x));
-    binary_to_bigval(peerPublicKey->y, &pub.y, sizeof(peerPublicKey->y));
-    binary_to_bigval(privateKey->d, &pk, sizeof(privateKey->d));
+    binary_to_bigval(peerPublicKey->GetX(), &pub.x, peerPublicKey->GetCoordinateSize());
+    binary_to_bigval(peerPublicKey->GetY(), &pub.y, peerPublicKey->GetCoordinateSize());
+    binary_to_bigval(privateKey->GetD(), &pk, privateKey->GetDSize());
     derive_rv = ECDH_derive_pt(&localSecret, &pk, &pub);
     if (!derive_rv) {
         return ER_FAIL;  /* bad */
