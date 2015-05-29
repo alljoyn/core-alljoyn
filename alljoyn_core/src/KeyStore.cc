@@ -278,8 +278,8 @@ QStatus KeyStore::Store()
         }
         /* Done tracking deletions */
         deletions.clear();
-        lock.Unlock(MUTEX_CONTEXT);
     }
+    lock.Unlock(MUTEX_CONTEXT);
     return status;
 }
 
