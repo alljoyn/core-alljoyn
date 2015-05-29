@@ -1,0 +1,61 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html lang="en">
+<meta name="HandheldFriendly" content="True" />
+<head>
+    <meta charset="utf-8">
+    <title>AllJoyn about client</title>
+    <link href="css/style_image.css" rel="stylesheet" type="text/css"></link>
+    <style>     
+    body {
+        height: 100%;
+        background: -webkit-linear-gradient(top, rgba(173,216,230,0.1), rgba(173,216,230,0.5)); /* For Safari 5.1 to 6.0 */
+        background: -o-linear-gradient(bottom, rgba(173,216,230,0.1), rgba(173,216,230,0.5)); /* For Opera 11.1 to 12.0 */
+        background: -moz-linear-gradient(bottom, rgba(173,216,230,0.1), rgba(173,216,230,0.5)); /* For Firefox 3.6 to 15 */
+        background: linear-gradient(to bottom, rgba(173,216,230,0.1), rgba(173,216,230,0.5)); /* Standard syntax (must be last) */
+    }
+    </style>
+
+
+<div id="selected_device"></div>
+</head>
+
+<body>
+    <script type="text/javascript" src="js/alljoyn_init.js"></script>
+    <script type="text/javascript" src="js/alljoyn.js"></script>
+    <script type="text/javascript">         
+        alljoyn.start();
+        
+        function cancelWhoImplButton() {
+            alljoyn.cancelWhoImplements();
+        }
+        
+        function unregisterAboutListenerButton() {
+            alljoyn.unregisterAboutListener();
+        }
+        
+        function unregisterAllAboutListenersButton() {
+            alljoyn.unregisterAllAboutListeners();
+        }       
+    </script>
+
+    <div id="wrapper">
+        <div id="container">
+            <H1>Nearby Devices</H1><br>
+            <section id="main_section"> 
+                <br><li>There are no AllJoyn devices nearby.</li>           
+            </section>
+            <aside id="main_aside">      
+                <H1>Device details</H1>                 
+            </aside>
+        </div>
+
+        <footer id="main_footer">
+            <button onclick="cancelWhoImplButton()">CancelWhoImplements</button>
+            <button onclick="unregisterAboutListenerButton()">UnregisterAboutListener</button>
+            <button onclick="unregisterAllAboutListenersButton()">UnregisterAllAboutListeners</button>          
+            <p>AllJoyn About client sample      
+        </footer>   
+    </div>      
+    
+</body>
+</html>
