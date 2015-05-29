@@ -17,6 +17,7 @@
 
 #include "AcceptSessionJoinerListenerNative.h"
 #include "AuthListenerNative.h"
+#include "AboutListenerNative.h"
 #include "BusListenerNative.h"
 #include "BusObject.h"
 #include "BusObjectNative.h"
@@ -119,6 +120,72 @@ class SignalReceiver : public ajn::MessageReceiver {
 
         context->message->GetArgs(numArgs, args);
         context->env->signalListener->onMessage(messageHost, args, numArgs);
+    }
+};
+
+class AboutListener : public ajn::AboutListener {
+  public:
+    class _Env {
+      public:
+        Plugin plugin;
+        _BusAttachmentHost* busAttachmentHost;
+        BusAttachment busAttachment;
+        AboutListenerNative* aboutListenerNative;
+
+        _Env(Plugin& plugin, _BusAttachmentHost* busAttachmentHost, BusAttachment& busAttachment,
+             AboutListenerNative* aboutListenerNative) :
+            plugin(plugin),
+            busAttachmentHost(busAttachmentHost),
+            busAttachment(busAttachment),
+            aboutListenerNative(aboutListenerNative) {
+        }
+        ~_Env() {
+            delete aboutListenerNative;
+        }
+    };
+
+    typedef qcc::ManagedObj<_Env> Env;
+    Env env;
+
+    AboutListener(Plugin& plugin, _BusAttachmentHost* busAttachmentHost, BusAttachment& busAttachment,
+                  AboutListenerNative* aboutListenerNative) :
+        env(plugin, busAttachmentHost, busAttachment, aboutListenerNative) {
+    }
+
+    virtual ~AboutListener() {
+    }
+
+    class AnnouncedContext : public PluginData::CallbackContext {
+      public:
+        Env env;
+        qcc::String busName;
+        uint16_t version;
+        ajn::SessionPort port;
+        ajn::MsgArg objectDescriptionArg;
+        ajn::MsgArg aboutDataArg;
+
+        AnnouncedContext(Env& env, const char* busName, uint16_t version, uint16_t port,
+                         ajn::MsgArg objectDescriptionArg, ajn::MsgArg aboutDataArg) :
+            env(env),
+            busName(busName),
+            version(version),
+            port(port),
+            objectDescriptionArg(objectDescriptionArg),
+            aboutDataArg(aboutDataArg) {
+        }
+    };
+
+    virtual void Announced(const char* busName, uint16_t version, ajn::SessionPort port,
+                           const ajn::MsgArg& objectDescriptionArg, const ajn::MsgArg& aboutDataArg) {
+        PluginData::Callback callback(env->plugin, _Announced);
+        callback->context = new AnnouncedContext(env, busName, version, port, objectDescriptionArg, aboutDataArg);
+        PluginData::DispatchCallback(callback);
+    }
+
+    static void _Announced(PluginData::CallbackContext* ctx) {
+        AnnouncedContext* context = static_cast<AnnouncedContext*>(ctx);
+        context->env->aboutListenerNative->onAnnounced(context->busName, context->version, context->port,
+                                                       context->objectDescriptionArg, context->aboutDataArg);
     }
 };
 
@@ -821,7 +888,7 @@ class BusObjectListener : public _BusObjectListener {
         env->busObject->SetBusObjectListener(0);
     }
 
-    QStatus AddInterfaceAndMethodHandlers()
+    QStatus AddInterfaceAndMethodHandlers(const ajn::BusObject::AnnounceFlag isAnnounced)
     {
         QStatus status = ER_OK;
         bool hasSignal = false;
@@ -850,7 +917,7 @@ class BusObjectListener : public _BusObjectListener {
                 }
 
                 QCC_DbgTrace(("Adding '%s'", interface->GetName()));
-                status = env->busObject->AddInterface(*interface);
+                status = env->busObject->AddInterface(*interface, isAnnounced);
                 if (ER_OK != status) {
                     QCC_LogError(status, ("AddInterface failed"));
                     break;
@@ -1326,7 +1393,8 @@ class AuthListener : public ajn::AuthListener {
 _BusAttachmentHost::_BusAttachmentHost(Plugin& plugin) :
     ScriptableObject(plugin, _BusAttachmentInterface::Constants()),
     busAttachment(0),
-    authListener(0)
+    authListener(0),
+    aboutObj(0)
 {
     QCC_DbgTrace(("%s %p", __FUNCTION__, this));
 
@@ -1469,6 +1537,7 @@ bool _BusAttachmentHost::create(const NPVariant* args, uint32_t argCount, NPVari
     OPERATION("cancelAdvertiseName", &_BusAttachmentHost::cancelAdvertiseName);
     OPERATION("cancelFindAdvertisedName", &_BusAttachmentHost::cancelFindAdvertisedName);
     OPERATION("cancelFindAdvertisedNameByTransport", &_BusAttachmentHost::cancelFindAdvertisedNameByTransport);
+    OPERATION("cancelWhoImplements", &_BusAttachmentHost::cancelWhoImplements);
     OPERATION("clearKeyStore", &_BusAttachmentHost::clearKeyStore);
     OPERATION("clearKeys", &_BusAttachmentHost::clearKeys);
     OPERATION("connect", &_BusAttachmentHost::connect);
@@ -1478,6 +1547,7 @@ bool _BusAttachmentHost::create(const NPVariant* args, uint32_t argCount, NPVari
     OPERATION("enablePeerSecurity", &_BusAttachmentHost::enablePeerSecurity);
     OPERATION("findAdvertisedName", &_BusAttachmentHost::findAdvertisedName);
     OPERATION("findAdvertisedNameByTransport", &_BusAttachmentHost::findAdvertisedNameByTransport);
+    OPERATION("getAboutObj", &_BusAttachmentHost::getAboutObj);
     OPERATION("getInterface", &_BusAttachmentHost::getInterface);
     OPERATION("getInterfaces", &_BusAttachmentHost::getInterfaces);
     OPERATION("getKeyExpiration", &_BusAttachmentHost::getKeyExpiration);
@@ -1490,6 +1560,7 @@ bool _BusAttachmentHost::create(const NPVariant* args, uint32_t argCount, NPVari
     OPERATION("removeSessionMember", &_BusAttachmentHost::removeSessionMember);
     OPERATION("getSessionFd", &_BusAttachmentHost::getSessionFd);
     OPERATION("nameHasOwner", &_BusAttachmentHost::nameHasOwner);
+    OPERATION("registerAboutListener", &_BusAttachmentHost::registerAboutListener);
     OPERATION("registerBusListener", &_BusAttachmentHost::registerBusListener);
     OPERATION("registerBusObject", &_BusAttachmentHost::registerBusObject);
     OPERATION("registerSignalHandler", &_BusAttachmentHost::registerSignalHandler);
@@ -1502,9 +1573,12 @@ bool _BusAttachmentHost::create(const NPVariant* args, uint32_t argCount, NPVari
     OPERATION("setLinkTimeout", &_BusAttachmentHost::setLinkTimeout);
     OPERATION("setSessionListener", &_BusAttachmentHost::setSessionListener);
     OPERATION("unbindSessionPort", &_BusAttachmentHost::unbindSessionPort);
+    OPERATION("unregisterAboutListener", &_BusAttachmentHost::unregisterAboutListener);
+    OPERATION("unregisterAllAboutListeners", &_BusAttachmentHost::unregisterAllAboutListeners);
     OPERATION("unregisterBusListener", &_BusAttachmentHost::unregisterBusListener);
     OPERATION("unregisterBusObject", &_BusAttachmentHost::unregisterBusObject);
     OPERATION("unregisterSignalHandler", &_BusAttachmentHost::unregisterSignalHandler);
+    OPERATION("whoImplements", &_BusAttachmentHost::whoImplements);
 
     CallbackNative::DispatchCallback(plugin, callbackNative, status);
     callbackNative = NULL;
@@ -1532,6 +1606,7 @@ bool _BusAttachmentHost::destroy(const NPVariant* args, uint32_t argCount, NPVar
     REMOVE_OPERATION("cancelAdvertiseName");
     REMOVE_OPERATION("cancelFindAdvertisedName");
     REMOVE_OPERATION("cancelFindAdvertisedNameByTransport");
+    REMOVE_OPERATION("cancelWhoImplements");
     REMOVE_OPERATION("clearKeyStore");
     REMOVE_OPERATION("clearKeys");
     REMOVE_OPERATION("connect");
@@ -1541,6 +1616,7 @@ bool _BusAttachmentHost::destroy(const NPVariant* args, uint32_t argCount, NPVar
     REMOVE_OPERATION("enablePeerSecurity");
     REMOVE_OPERATION("findAdvertisedName");
     REMOVE_OPERATION("findAdvertisedNameByTransport");
+    REMOVE_OPERATION("getAboutObj");
     REMOVE_OPERATION("getInterface");
     REMOVE_OPERATION("getInterfaces");
     REMOVE_OPERATION("getKeyExpiration");
@@ -1553,6 +1629,7 @@ bool _BusAttachmentHost::destroy(const NPVariant* args, uint32_t argCount, NPVar
     REMOVE_OPERATION("removeSessionMember");
     REMOVE_OPERATION("getSessionFd");
     REMOVE_OPERATION("nameHasOwner");
+    REMOVE_OPERATION("registerAboutListener");
     REMOVE_OPERATION("registerBusListener");
     REMOVE_OPERATION("registerBusObject");
     REMOVE_OPERATION("registerSignalHandler");
@@ -1565,9 +1642,12 @@ bool _BusAttachmentHost::destroy(const NPVariant* args, uint32_t argCount, NPVar
     REMOVE_OPERATION("setLinkTimeout");
     REMOVE_OPERATION("setSessionListener");
     REMOVE_OPERATION("unbindSessionPort");
+    REMOVE_OPERATION("unregisterAboutListener");
+    REMOVE_OPERATION("unregisterAllAboutListeners");
     REMOVE_OPERATION("unregisterBusListener");
     REMOVE_OPERATION("unregisterBusObject");
     REMOVE_OPERATION("unregisterSignalHandler");
+    REMOVE_OPERATION("whoImplements");
 
     if (argCount > 0) {
         callbackNative = ToNativeObject<CallbackNative>(plugin, args[0], typeError);
@@ -1912,11 +1992,14 @@ bool _BusAttachmentHost::registerBusObject(const NPVariant* args, uint32_t argCo
     QCC_DbgTrace(("%s", __FUNCTION__));
 
     /*
-     * This function actually works with 2 forms of the registerBusObject JS method:
+     * This function actually works with 3 forms of the registerBusObject JS method:
      *     registerBusObject(objPath, busObject, callback)
      *     registerBusObject(objPath, busObject, secure, callback)
+     *     registerBusObject(objPath, busObject, secure, announce, callback)
      *
      * Note that the 'secure' parameter is optional.  It defaults to false.
+     * The 'announce' parameter is optional, too. It defaults to false, which is UNANNOUNCE the interface.
+     * If true then it indicates ANNOUNCE the interface.
      */
 
     qcc::String name;
@@ -1926,6 +2009,8 @@ bool _BusAttachmentHost::registerBusObject(const NPVariant* args, uint32_t argCo
     const NPVariant* arg = args;
     bool secure = false;
     QStatus status = ER_OK;
+    bool announce = false;
+    ajn::BusObject::AnnounceFlag isAnnounced = ajn::BusObject::UNANNOUNCED;
 
     bool typeError = false;
     if (argCount < 3) {
@@ -1965,16 +2050,43 @@ bool _BusAttachmentHost::registerBusObject(const NPVariant* args, uint32_t argCo
         ++arg;
     }
 
+    /*
+     * This method now takes a boolean to indicate if
+     * the object description value should be announced.
+     * This new announce parameter should belong
+     * between the secure and callback parameters.  We'll use the
+     * argCount to determine if the announce parameter is specified or not.
+     */
+    if (argCount > 4) {
+        announce = ToBoolean(plugin, *arg, typeError);
+        if (typeError) {
+            plugin->RaiseTypeError("argument 3 is not a boolean");
+            goto exit;
+        }
+        ++arg;
+    }
+
     callbackNative = ToNativeObject<CallbackNative>(plugin, *arg, typeError);
     if (typeError || !callbackNative) {
         typeError = true;
-        plugin->RaiseTypeError((argCount > 3) ? "argument 3 is not an object" : "argument 2 is not an object");
+        if (argCount > 4) {
+            plugin->RaiseTypeError("argument 4 is not an object");
+        } else {
+            plugin->RaiseTypeError((argCount > 3) ? "argument 3 is not an object" : "argument 2 is not an object");
+        }
         goto exit;
+    }
+
+
+
+    if (announce) {
+        isAnnounced = ajn::BusObject::ANNOUNCED;
     }
 
     busObjectListener = new BusObjectListener(plugin, *busAttachment, name.c_str(), busObjectNative);
     busObjectNative = NULL; /* busObject now owns busObjectNative */
-    status = busObjectListener->AddInterfaceAndMethodHandlers();
+
+    status = busObjectListener->AddInterfaceAndMethodHandlers(isAnnounced);
     if (ER_OK != status) {
         goto exit;
     }
@@ -2089,6 +2201,62 @@ exit:
     return !typeError;
 }
 
+bool _BusAttachmentHost::registerAboutListener(const NPVariant* args, uint32_t argCount, NPVariant* result)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
+    AboutListenerNative* aboutListenerNative = NULL;
+    CallbackNative* callbackNative = NULL;
+    AboutListener* aboutListener = NULL;
+    std::list<AboutListener*>::iterator it;
+
+    bool typeError = false;
+    if (argCount < 2) {
+        typeError = true;
+        plugin->RaiseTypeError("not enough arguments");
+        goto exit;
+    }
+
+    aboutListenerNative = ToNativeObject<AboutListenerNative>(plugin, args[0], typeError);
+    if (typeError || !aboutListenerNative) {
+        typeError = true;
+        plugin->RaiseTypeError("argument 0 is not an object");
+        goto exit;
+    }
+
+    callbackNative = ToNativeObject<CallbackNative>(plugin, args[1], typeError);
+    if (typeError || !callbackNative) {
+        typeError = true;
+        plugin->RaiseTypeError("argument 1 is not an object");
+        goto exit;
+    }
+
+    for (it = aboutListeners.begin(); it != aboutListeners.end(); ++it) {
+        if (*((*it)->env->aboutListenerNative) == *aboutListenerNative) {
+            /* Identical listener registered, nothing to do. */
+            goto exit;
+        }
+    }
+
+    aboutListener = new AboutListener(plugin, this, *busAttachment, aboutListenerNative);
+    aboutListenerNative = NULL; /* aboutListener now owns aboutListenerNative */
+    (*busAttachment)->RegisterAboutListener(*aboutListener);
+    aboutListeners.push_back(aboutListener);
+    aboutListener = NULL; /* aboutListeners now owns aboutListener */
+
+exit:
+    if (!typeError && callbackNative) {
+        CallbackNative::DispatchCallback(plugin, callbackNative, ER_OK);
+        callbackNative = NULL;
+    }
+
+    delete aboutListener;
+    delete callbackNative;
+    delete aboutListenerNative;
+    VOID_TO_NPVARIANT(*result);
+    return !typeError;
+}
+
 bool _BusAttachmentHost::registerBusListener(const NPVariant* args, uint32_t argCount, NPVariant* result)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
@@ -2141,6 +2309,93 @@ exit:
     delete busListener;
     delete callbackNative;
     delete busListenerNative;
+    VOID_TO_NPVARIANT(*result);
+    return !typeError;
+}
+
+bool _BusAttachmentHost::unregisterAboutListener(const NPVariant* args, uint32_t argCount, NPVariant* result)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
+    AboutListenerNative* aboutListenerNative = NULL;
+    CallbackNative* callbackNative = NULL;
+    std::list<AboutListener*>::iterator it;
+
+    bool typeError = false;
+    if (argCount < 2) {
+        typeError = true;
+        plugin->RaiseTypeError("not enough arguments");
+        goto exit;
+    }
+
+    aboutListenerNative = ToNativeObject<AboutListenerNative>(plugin, args[0], typeError);
+    if (typeError || !aboutListenerNative) {
+        typeError = true;
+        plugin->RaiseTypeError("argument 0 is not an object");
+        goto exit;
+    }
+
+    callbackNative = ToNativeObject<CallbackNative>(plugin, args[1], typeError);
+    if (typeError || !callbackNative) {
+        typeError = true;
+        plugin->RaiseTypeError("argument 1 is not an object");
+        goto exit;
+    }
+
+    for (it = aboutListeners.begin(); it != aboutListeners.end(); ++it) {
+        if (*((*it)->env->aboutListenerNative) == *aboutListenerNative) {
+            break;
+        }
+    }
+
+    if (it != aboutListeners.end()) {
+        AboutListener* aboutListener = (*it);
+        (*busAttachment)->UnregisterAboutListener(*aboutListener);
+        aboutListeners.erase(it);
+        delete aboutListener;
+    }
+
+    CallbackNative::DispatchCallback(plugin, callbackNative, ER_OK);
+    callbackNative = NULL;
+
+exit:
+    delete callbackNative;
+    delete aboutListenerNative;
+    VOID_TO_NPVARIANT(*result);
+    return !typeError;
+}
+
+bool _BusAttachmentHost::unregisterAllAboutListeners(const NPVariant* args, uint32_t argCount, NPVariant* result)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    CallbackNative* callbackNative = NULL;
+    std::list<AboutListener*>::iterator it;
+
+    bool typeError = false;
+    if (argCount < 1) {
+        typeError = true;
+        plugin->RaiseTypeError("not enough arguments");
+        goto exit;
+    }
+
+    callbackNative = ToNativeObject<CallbackNative>(plugin, args[0], typeError);
+    if (typeError || !callbackNative) {
+        typeError = true;
+        plugin->RaiseTypeError("argument 0 is not an object");
+        goto exit;
+    }
+
+    (*busAttachment)->UnregisterAllAboutListeners();
+    for (it = aboutListeners.begin(); it != aboutListeners.end(); ++it) {
+        delete *it;
+    }
+    aboutListeners.clear();
+
+    CallbackNative::DispatchCallback(plugin, callbackNative, ER_OK);
+    callbackNative = NULL;
+
+exit:
+    delete callbackNative;
     VOID_TO_NPVARIANT(*result);
     return !typeError;
 }
@@ -2366,6 +2621,193 @@ bool _BusAttachmentHost::removeMatch(const NPVariant* args, uint32_t argCount, N
 
 exit:
     delete callbackNative;
+    VOID_TO_NPVARIANT(*result);
+    return !typeError;
+}
+
+bool _BusAttachmentHost::whoImplements(const NPVariant* args, uint32_t argCount, NPVariant* result)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
+    bool typeError = false;
+    CallbackNative* callbackNative = NULL;
+    NPObject* inObject;
+    NPVariant npvLength;
+    QStatus status = ER_OK;
+
+    if (argCount < 2) {
+        typeError = true;
+        plugin->RaiseTypeError("not enough arguments");
+        goto exit;
+    }
+
+    callbackNative = ToNativeObject<CallbackNative>(plugin, args[1], typeError);
+    if (typeError || !callbackNative) {
+        typeError = true;
+        plugin->RaiseTypeError("argument 1 is not an object");
+        goto exit;
+    }
+
+    switch (args[0].type) {
+    // string
+    case NPVariantType_String: {
+            uint32_t UTF8Length = NPVARIANT_TO_STRING(args[0]).UTF8Length;
+            const NPUTF8* UTF8Characters = NPVARIANT_TO_STRING(args[0]).UTF8Characters;
+            char* chars = reinterpret_cast<char*>(NPN_MemAlloc(UTF8Length + 1));
+            strncpy(chars, UTF8Characters, UTF8Length);
+            chars[UTF8Length] = 0;
+            status = (*busAttachment)->WhoImplements(chars);
+            break;
+        }
+
+    // array
+    case NPVariantType_Object: {
+            inObject = NPVARIANT_TO_OBJECT(args[0]);
+            if (NPN_GetProperty(plugin->npp, inObject, NPN_GetStringIdentifier("length"), &npvLength)) {
+                char** interfaces = NULL;
+                int numberInterfaces = 0;
+
+                numberInterfaces = npvLength.value.intValue;
+                if (numberInterfaces > 0) {
+                    interfaces = new char*[numberInterfaces];
+                    for (int32_t i = 0; i < numberInterfaces; ++i) {
+                        interfaces[i] = NULL;
+                        NPVariant curValue;
+                        NPN_GetProperty(plugin->npp, inObject, NPN_GetIntIdentifier(i), &curValue);
+                        if (!NPVARIANT_IS_VOID(curValue)) {
+                            int32_t utf8length = NPVARIANT_TO_STRING(curValue).UTF8Length;
+                            interfaces[i] = new char[utf8length + 1];
+                            strncpy(interfaces[i], NPVARIANT_TO_STRING(curValue).UTF8Characters, utf8length);
+                            interfaces[i][utf8length] = 0;
+                        }
+                        NPN_ReleaseVariantValue(&curValue);
+                    }
+                    status = (*busAttachment)->WhoImplements(const_cast<const char**>(interfaces), numberInterfaces);
+
+                    for (int32_t i = 0; i < numberInterfaces; ++i)
+                        delete[] interfaces[i];
+                    delete[] interfaces;
+                } else {
+                    status = (*busAttachment)->WhoImplements(NULL, 0);
+                }
+            } else {
+                status = (*busAttachment)->WhoImplements(NULL, 0);
+            }
+            break;
+        }
+
+    case NPVariantType_Null: {
+            status = (*busAttachment)->WhoImplements(NULL, 0);
+            break;
+        }
+
+    default: {
+            status = (*busAttachment)->WhoImplements(NULL, 0);
+            break;
+        }
+    }
+
+exit:
+    if (!typeError && callbackNative) {
+        CallbackNative::DispatchCallback(plugin, callbackNative, status);
+        callbackNative = NULL;
+    }
+
+    delete callbackNative;
+    VOID_TO_NPVARIANT(npvLength);
+    VOID_TO_NPVARIANT(*result);
+    return !typeError;
+}
+
+bool _BusAttachmentHost::cancelWhoImplements(const NPVariant* args, uint32_t argCount, NPVariant* result)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
+    bool typeError = false;
+    CallbackNative* callbackNative = NULL;
+    NPObject* inObject;
+    NPVariant npvLength;
+    QStatus status = ER_OK;
+
+    if (argCount < 2) {
+        typeError = true;
+        plugin->RaiseTypeError("not enough arguments");
+        goto exit;
+    }
+
+    callbackNative = ToNativeObject<CallbackNative>(plugin, args[1], typeError);
+    if (typeError || !callbackNative) {
+        typeError = true;
+        plugin->RaiseTypeError("argument 1 is not an object");
+        goto exit;
+    }
+
+    switch (args[0].type) {
+    // string
+    case NPVariantType_String: {
+            uint32_t UTF8Length = NPVARIANT_TO_STRING(args[0]).UTF8Length;
+            const NPUTF8* UTF8Characters = NPVARIANT_TO_STRING(args[0]).UTF8Characters;
+            char* chars = reinterpret_cast<char*>(NPN_MemAlloc(UTF8Length + 1));
+            strncpy(chars, UTF8Characters, UTF8Length);
+            chars[UTF8Length] = 0;
+            status = (*busAttachment)->CancelWhoImplements(chars);
+            break;
+        }
+
+    // array
+    case NPVariantType_Object: {
+            inObject = NPVARIANT_TO_OBJECT(args[0]);
+            if (NPN_GetProperty(plugin->npp, inObject, NPN_GetStringIdentifier("length"), &npvLength)) {
+                char** interfaces = NULL;
+                int numberInterfaces = 0;
+                numberInterfaces = npvLength.value.intValue;
+
+                if (numberInterfaces > 0) {
+                    interfaces = new char*[numberInterfaces];
+                    for (int32_t i = 0; i < numberInterfaces; ++i) {
+                        interfaces[i] = NULL;
+                        NPVariant curValue;
+                        NPN_GetProperty(plugin->npp, inObject, NPN_GetIntIdentifier(i), &curValue);
+                        if (!NPVARIANT_IS_VOID(curValue)) {
+                            int32_t utf8length = NPVARIANT_TO_STRING(curValue).UTF8Length;
+                            interfaces[i] = new char[utf8length + 1];
+                            strncpy(interfaces[i], NPVARIANT_TO_STRING(curValue).UTF8Characters, utf8length);
+                            interfaces[i][utf8length] = 0;
+                        }
+                        NPN_ReleaseVariantValue(&curValue);
+                    }
+                    status = (*busAttachment)->CancelWhoImplements(const_cast<const char**>(interfaces), numberInterfaces);
+
+                    for (int32_t i = 0; i < numberInterfaces; ++i)
+                        delete[] interfaces[i];
+                    delete[] interfaces;
+                } else {
+                    status = (*busAttachment)->CancelWhoImplements(NULL, 0);
+                }
+            } else {
+                status = (*busAttachment)->CancelWhoImplements(NULL, 0);
+            }
+            break;
+        }
+
+    case NPVariantType_Null: {
+            status = (*busAttachment)->CancelWhoImplements(NULL, 0);
+            break;
+        }
+
+    default: {
+            status = (*busAttachment)->CancelWhoImplements(NULL, 0);
+            break;
+        }
+    }
+
+exit:
+    if (!typeError && callbackNative) {
+        CallbackNative::DispatchCallback(plugin, callbackNative, status);
+        callbackNative = NULL;
+    }
+    delete callbackNative;
+    VOID_TO_NPVARIANT(npvLength);
     VOID_TO_NPVARIANT(*result);
     return !typeError;
 }
@@ -3946,6 +4388,39 @@ qcc::String _BusAttachmentHost::MatchRule(const ajn::InterfaceDescription::Membe
     return rule;
 }
 
+bool _BusAttachmentHost::getAboutObj(const NPVariant* args, uint32_t argCount, NPVariant* result)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    CallbackNative* callbackNative = NULL;
+    QStatus status = ER_OK;
+    bool typeError = false;
+
+    if (argCount < 1) {
+        typeError = true;
+        plugin->RaiseTypeError("not enough arguments");
+        goto exit;
+    }
+
+    callbackNative = ToNativeObject<CallbackNative>(plugin, args[0], typeError);
+    if (typeError || !callbackNative) {
+        typeError = true;
+        plugin->RaiseTypeError("argument 1 is not an object");
+        goto exit;
+    }
+
+    delete aboutObj;
+    aboutObj = 0;
+    aboutObj = new AboutObjHost(plugin, *busAttachment);
+
+    CallbackNative::DispatchCallback(plugin, callbackNative, status, *aboutObj);
+    callbackNative = NULL;
+
+exit:
+    delete callbackNative;
+    VOID_TO_NPVARIANT(*result);
+    return !typeError;
+}
+
 bool _BusAttachmentHost::getProxyBusObject(const NPVariant* args, uint32_t argCount, NPVariant* result)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
@@ -4100,6 +4575,12 @@ void _BusAttachmentHost::stopAndJoin() {
         delete busListener;
     }
 
+    for (std::list<AboutListener*>::iterator it = aboutListeners.begin(); it != aboutListeners.end(); ++it) {
+        AboutListener* aboutListener = (*it);
+        (*busAttachment)->UnregisterAboutListener(*aboutListener);
+        delete aboutListener;
+    }
+
     for (std::list<SignalReceiver*>::iterator it = signalReceivers.begin(); it != signalReceivers.end(); ++it) {
         SignalReceiver* signalReceiver = (*it);
         qcc::String rule = MatchRule(signalReceiver->env->signal, signalReceiver->env->sourcePath);
@@ -4114,6 +4595,11 @@ void _BusAttachmentHost::stopAndJoin() {
         (*busAttachment)->EnablePeerSecurity(0, 0, 0, true);
         delete authListener;
     }
+
+    if (aboutObj) {
+        delete aboutObj;
+    }
+    aboutObj = NULL;
 
     proxyBusObjects.clear();
     delete busAttachment;
