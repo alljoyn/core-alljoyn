@@ -19,8 +19,10 @@
 #include "BusAttachment.h"
 #include "ProxyBusObjectHost.h"
 #include "ScriptableObject.h"
+#include "AboutObjHost.h"
 #include <qcc/ManagedObj.h>
 #include <qcc/String.h>
+class AboutListener;
 class AuthListener;
 class BusListener;
 class BusObjectListener;
@@ -39,9 +41,11 @@ class _BusAttachmentHost : public ScriptableObject {
   private:
     BusAttachment* busAttachment;
     AuthListener* authListener;
+    AboutObjHost* aboutObj;
     qcc::String applicationName;
     std::list<SignalReceiver*> signalReceivers;
     std::list<BusListener*> busListeners;
+	std::list<AboutListener*> aboutListeners;
     std::map<ajn::SessionPort, SessionPortListener*> sessionPortListeners;
     std::map<ajn::SessionId, SessionListener*> sessionListeners;
     std::map<qcc::String, BusObjectListener*> busObjectListeners;
@@ -57,6 +61,7 @@ class _BusAttachmentHost : public ScriptableObject {
     bool cancelAdvertiseName(const NPVariant* args, uint32_t argCount, NPVariant* result);
     bool cancelFindAdvertisedName(const NPVariant* args, uint32_t argCount, NPVariant* result);
     bool cancelFindAdvertisedNameByTransport(const NPVariant* args, uint32_t argCount, NPVariant* result);
+    bool cancelWhoImplements(const NPVariant* args, uint32_t argCount, NPVariant* result);
     bool clearKeyStore(const NPVariant* args, uint32_t argCount, NPVariant* result);
     bool clearKeys(const NPVariant* args, uint32_t argCount, NPVariant* result);
     bool connect(const NPVariant* args, uint32_t argCount, NPVariant* result);
@@ -68,6 +73,7 @@ class _BusAttachmentHost : public ScriptableObject {
     bool enablePeerSecurity(const NPVariant* args, uint32_t argCount, NPVariant* result);
     bool findAdvertisedName(const NPVariant* args, uint32_t argCount, NPVariant* result);
     bool findAdvertisedNameByTransport(const NPVariant* args, uint32_t argCount, NPVariant* result);
+    bool getAboutObj(const NPVariant* args, uint32_t argCount, NPVariant* result);
     bool getInterface(const NPVariant* args, uint32_t argCount, NPVariant* result);
     bool getInterfaces(const NPVariant* args, uint32_t argCount, NPVariant* result);
     bool getKeyExpiration(const NPVariant* args, uint32_t argCount, NPVariant* result);
@@ -80,6 +86,7 @@ class _BusAttachmentHost : public ScriptableObject {
     bool removeSessionMember(const NPVariant* args, uint32_t argCount, NPVariant* result);
     bool getSessionFd(const NPVariant* args, uint32_t argCount, NPVariant* result);
     bool nameHasOwner(const NPVariant* args, uint32_t argCount, NPVariant* result);
+    bool registerAboutListener(const NPVariant* args, uint32_t argCount, NPVariant* result);
     bool registerBusListener(const NPVariant* args, uint32_t argCount, NPVariant* result);
     bool registerBusObject(const NPVariant* args, uint32_t argCount, NPVariant* result);
     bool registerSignalHandler(const NPVariant* args, uint32_t argCount, NPVariant* result);
@@ -92,9 +99,13 @@ class _BusAttachmentHost : public ScriptableObject {
     bool setKeyExpiration(const NPVariant* args, uint32_t argCount, NPVariant* result);
     bool setSessionListener(const NPVariant* args, uint32_t argCount, NPVariant* result);
     bool unbindSessionPort(const NPVariant* args, uint32_t argCount, NPVariant* result);
+    bool unregisterAboutListener(const NPVariant* args, uint32_t argCount, NPVariant* result);
+    bool unregisterAllAboutListeners(const NPVariant* args, uint32_t argCount, NPVariant* result);
     bool unregisterBusListener(const NPVariant* args, uint32_t argCount, NPVariant* result);
     bool unregisterBusObject(const NPVariant* args, uint32_t argCount, NPVariant* result);
     bool unregisterSignalHandler(const NPVariant* args, uint32_t argCount, NPVariant* result);
+    bool whoImplements(const NPVariant* args, uint32_t argCount, NPVariant* result);
+
 
     QStatus GetSignal(const qcc::String& signalName, const ajn::InterfaceDescription::Member*& signal);
     qcc::String MatchRule(const ajn::InterfaceDescription::Member* signal, const qcc::String& sourcePath);
