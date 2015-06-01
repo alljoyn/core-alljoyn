@@ -73,10 +73,10 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
     class IncomingPingInfo {
       public:
         TransportMask transport;
-        qcc::IPEndpoint ns4;
+        qcc::IPEndpoint dst;
 
-        IncomingPingInfo(TransportMask transport, qcc::IPEndpoint ns4) :
-            transport(transport), ns4(ns4)
+        IncomingPingInfo(TransportMask transport, qcc::IPEndpoint dst) :
+            transport(transport), dst(dst)
         { };
       private:
         IncomingPingInfo();
@@ -1241,10 +1241,9 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
     void PingReplyMethodHandlerUsingCode(Message& msg, uint32_t replyCode);
     void PingReplyTransportHandler(Message& reply, void* context);
 
-    bool QueryHandler(TransportMask transport, MDNSPacket query, uint16_t recvPort,
-                      const qcc::IPEndpoint& ns4);
+    bool QueryHandler(TransportMask transport, MDNSPacket query, const qcc::IPEndpoint& src, const qcc::IPEndpoint& dst);
     bool ResponseHandler(TransportMask transport, MDNSPacket response, uint16_t recvPort);
-    void PingResponse(TransportMask transport, const qcc::IPEndpoint& ns4, const qcc::String& name, uint32_t replyCode);
+    void PingResponse(TransportMask transport, const qcc::IPEndpoint& dst, const qcc::String& name, uint32_t replyCode);
 
     std::multimap<std::pair<qcc::String, qcc::String>, OutgoingPingInfo> outgoingPingMap;
     std::multimap<qcc::String, IncomingPingInfo> incomingPingMap;

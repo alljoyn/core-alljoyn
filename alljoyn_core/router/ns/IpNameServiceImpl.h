@@ -1211,38 +1211,38 @@ class IpNameServiceImpl : public qcc::Thread {
      * @internal
      * @brief Do something with a received protocol message.
      */
-    void HandleProtocolMessage(uint8_t const* const buffer, uint32_t nbytes, const qcc::IPEndpoint& endpoint, const uint16_t recv_port, int32_t interfaceIndex, const qcc::IPAddress& localAddress);
+    void HandleProtocolMessage(uint8_t const* const buffer, uint32_t nbytes, const qcc::IPEndpoint& remove, const qcc::IPEndpoint& local, int32_t interfaceIndex);
 
     /**
      * @internal
      * @brief Do something with a received protocol question.
      */
-    void HandleProtocolQuestion(WhoHas whoHas, const qcc::IPEndpoint& endpoint, int32_t interfaceIndex, const qcc::IPAddress& localAddress);
+    void HandleProtocolQuestion(WhoHas whoHas, const qcc::IPEndpoint& remote, int32_t interfaceIndex, const qcc::IPEndpoint& locals);
 
     /**
      * @internal
      * @brief Do something with a received protocol answer.
      */
-    void HandleProtocolAnswer(IsAt isAt, uint32_t timer, const qcc::IPEndpoint& address, int32_t interfaceIndex);
+    void HandleProtocolAnswer(IsAt isAt, uint32_t timer, const qcc::IPEndpoint& remote, int32_t interfaceIndex);
 
     /**
      * @internal
      * @brief Do something with a received MDNS protocol query.
      */
-    void HandleProtocolQuery(MDNSPacket packet, qcc::IPEndpoint endpoint, uint16_t recvPort);
+    void HandleProtocolQuery(MDNSPacket mdnsPacket, const qcc::IPEndpoint& remote, const qcc::IPEndpoint& local);
 
     /**
      * @internal
      * @brief Do something with a received MDNS protocol response.
      */
-    void HandleProtocolResponse(MDNSPacket mdnsPacket, qcc::IPEndpoint endpoint, uint16_t recvPort, int32_t interfaceIndex);
+    void HandleProtocolResponse(MDNSPacket mdnsPacket, const qcc::IPEndpoint& remote, const qcc::IPEndpoint& local, int32_t interfaceIndex);
 
     /**
      * @internal
      * @brief Update the MDNSPacketTracker which is useful for keep track of burst and
      *        not responding to each packet of a burst
      */
-    bool UpdateMDNSPacketTracker(qcc::String guid, qcc::IPEndpoint endpoint, uint16_t burstId);
+    bool UpdateMDNSPacketTracker(qcc::String guid, const qcc::IPEndpoint& endpoint, uint16_t burstId);
 
     /**
      * One possible callback for each of the corresponding transport masks in a
@@ -1398,7 +1398,7 @@ class IpNameServiceImpl : public qcc::Thread {
      * @internal
      * @brief Retransmit exported advertisements.
      */
-    void Retransmit(uint32_t index, bool exiting, bool quietly, const qcc::IPEndpoint& destination, uint8_t type, TransportMask transportMask, std::vector<qcc::String>& wkns, const int32_t interfaceIndex = -1, const qcc::AddressFamily family = qcc::QCC_AF_UNSPEC, const qcc::IPAddress& localAddress =  qcc::IPAddress("0.0.0.0"));
+    void Retransmit(uint32_t index, bool exiting, bool quietly, const qcc::IPEndpoint& destination, const qcc::IPEndpoint& source, uint8_t type, TransportMask transportMask, std::vector<qcc::String>& wkns, const int32_t interfaceIndex = -1, const qcc::AddressFamily family = qcc::QCC_AF_UNSPEC);
 
     void GetResponsePackets(std::list<Packet>& packets, bool quietly = false, const qcc::IPEndpoint destination = qcc::IPEndpoint("0.0.0.0", 0), uint8_t type = TRANSMIT_V2, TransportMask transportMask = (TRANSPORT_TCP | TRANSPORT_UDP), const int32_t interfaceIndex = -1, const qcc::AddressFamily family = qcc::QCC_AF_UNSPEC);
 
@@ -1584,7 +1584,6 @@ class IpNameServiceImpl : public qcc::Thread {
         qcc::Timespec nextScheduleTime;
     }BurstResponseHeader;
 
-    qcc::SocketFd m_ipv4QuietSockFd;
     qcc::SocketFd m_ipv6QuietSockFd;
 
     qcc::SocketFd m_ipv4UnicastSockFd;
@@ -1656,10 +1655,10 @@ class IpNameServiceImpl : public qcc::Thread {
     class BurstExpiryHandler;
     BurstExpiryHandler* burstExpiryHandler;
 
-    bool HandleSearchQuery(TransportMask transport, MDNSPacket mdnsPacket, uint16_t recvPort,
-                           const qcc::String& guid, const qcc::IPEndpoint& ns4);
+    bool HandleSearchQuery(TransportMask transport, MDNSPacket mdnsPacket, const qcc::IPEndpoint& src,
+                           const qcc::String& guid, const qcc::IPEndpoint& dst);
 
-    bool HandleAdvertiseResponse(MDNSPacket mdnsPacket, uint16_t recvPort,
+    bool HandleAdvertiseResponse(MDNSPacket mdnsPacket,
                                  const qcc::String& guid, const qcc::IPEndpoint& ns4,
                                  const qcc::IPEndpoint& r4, const qcc::IPEndpoint& r6, const qcc::IPEndpoint& u4, const qcc::IPEndpoint& u6);
     std::set<qcc::String> GetAdvertising(TransportMask transport);
