@@ -266,7 +266,12 @@ class PermissionMgmtObj : public BusObject {
 
     QStatus InstallTrustAnchor(TrustAnchor* trustAnchor);
     QStatus StoreIdentityCertChain(MsgArg& certArg);
+    QStatus StoreManifest(MsgArg& manifestArg);
     QStatus StorePolicy(PermissionPolicy& policy);
+    QStatus StoreMembership(const MsgArg& certArg);
+    void InstallMembership(const InterfaceDescription::Member* member, Message& msg);
+    QStatus StoreMembershipAuthData(const MsgArg* msgArg);
+    void InstallMembershipAuthData(const InterfaceDescription::Member* member, Message& msg);
     /**
      * Generate the SHA-256 digest for the manifest data.
      * @param bus the bus attachment
@@ -332,13 +337,10 @@ class PermissionMgmtObj : public BusObject {
     void RemovePolicy(const InterfaceDescription::Member* member, Message& msg);
     void GetPolicy(const InterfaceDescription::Member* member, Message& msg);
     QStatus NotifyConfig();
-
     void InstallIdentity(const InterfaceDescription::Member* member, Message& msg);
     QStatus GetIdentityBlob(qcc::KeyBlob& kb);
     QStatus GetIdentityLeafCert(qcc::IdentityCertificate& cert);
     void GetIdentity(const InterfaceDescription::Member* member, Message& msg);
-    void InstallMembership(const InterfaceDescription::Member* member, Message& msg);
-    void InstallMembershipAuthData(const InterfaceDescription::Member* member, Message& msg);
     void RemoveMembership(const InterfaceDescription::Member* member, Message& msg);
     void GetManifest(const InterfaceDescription::Member* member, Message& msg);
     bool ValidateCertChain(const qcc::String& certChainPEM, bool& authorized);
@@ -360,7 +362,6 @@ class PermissionMgmtObj : public BusObject {
     QStatus GetTrustAnchorsFromAllMemberships(TrustAnchorList& taList);
     QStatus ManageMembershipTrustAnchors(PermissionPolicy* policy);
     QStatus GetDSAPrivateKey(qcc::ECCPrivateKey& privateKey);
-    QStatus StoreManifest(MsgArg& manifestArg);
 
     /**
      * Bind to an exclusive port for PermissionMgmt object.

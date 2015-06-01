@@ -1336,13 +1336,18 @@ static QStatus LoadX509CertFromMsgArg(const MsgArg& arg, CertificateX509& cert)
 void PermissionMgmtObj::InstallMembership(const InterfaceDescription::Member* member, Message& msg)
 {
     QCC_UNUSED(member);
+    QStatus status = StoreMembership(*(msg->GetArg(0)));
+    MethodReply(msg, status);
+}
+
+QStatus PermissionMgmtObj::StoreMembership(const MsgArg& msgArg)
+{
     size_t certChainCount;
     MsgArg* certChain;
-    QStatus status = msg->GetArg(0)->Get("a(yay)", &certChainCount, &certChain);
+    QStatus status = msgArg.Get("a(yay)", &certChainCount, &certChain);
     if (ER_OK != status) {
         QCC_DbgPrintf(("PermissionMgmtObj::InstallMembership failed to retrieve certificate chain status 0x%x", status));
-        MethodReply(msg, status);
-        return;
+        return status;
     }
 
     GUID128 membershipGuid;
@@ -1352,8 +1357,7 @@ void PermissionMgmtObj::InstallMembership(const InterfaceDescription::Member* me
         QStatus status = LoadX509CertFromMsgArg(certChain[cnt], cert);
         if (ER_OK != status) {
             QCC_DbgPrintf(("PermissionMgmtObj::InstallMembership failed to retrieve certificate [%d] status 0x%x", (int) cnt, status));
-            MethodReply(msg, status);
-            return;
+            return status;
         }
         KeyBlob kb(cert.GetEncoded(), cert.GetEncodedLen(), KeyBlob::GENERIC);
         if (cnt == 0) {
@@ -1380,8 +1384,7 @@ void PermissionMgmtObj::InstallMembership(const InterfaceDescription::Member* me
                 status = GetMembershipKey(ca, membershipHead, cert.GetSerial(), cert.GetAuthorityKeyId(), true, tmpKey);
                 if (ER_OK == status) {
                     /* found a duplicate */
-                    MethodReply(msg, ER_DUPLICATE_CERTIFICATE);
-                    return;
+                    return ER_DUPLICATE_CERTIFICATE;
                 }
             }
 
@@ -1399,7 +1402,7 @@ void PermissionMgmtObj::InstallMembership(const InterfaceDescription::Member* me
     if (ER_OK == status) {
         LocalMembershipsChanged();
     }
-    MethodReply(msg, status);
+    return status;
 }
 
 QStatus PermissionMgmtObj::LocateMembershipEntry(const String& serialNum, const String& issuerAki, KeyStore::Key& membershipKey, bool searchLeafCertOnly)
@@ -1476,30 +1479,37 @@ QStatus PermissionMgmtObj::LoadAndValidateAuthData(const String& serial, const S
 void PermissionMgmtObj::InstallMembershipAuthData(const InterfaceDescription::Member* member, Message& msg)
 {
     QCC_UNUSED(member);
+    const MsgArg* msgArgs;
+    size_t nrArgs;
+    msg->GetArgs(nrArgs, msgArgs);
+    QStatus status = StoreMembershipAuthData(msgArgs);
+    MethodReply(msg, status);
+}
+
+
+QStatus PermissionMgmtObj::StoreMembershipAuthData(const MsgArg* msgArgs)
+{
     QStatus status;
     const char* serial;
-    status = msg->GetArg(0)->Get("s", &serial);
+    status = msgArgs[0].Get("s", &serial);
     if (ER_OK != status) {
         QCC_DbgPrintf(("PermissionMgmtObj::InstallMembershipAuthData failed to retrieve serial status 0x%x", status));
-        MethodReply(msg, status);
-        return;
+        return status;
     }
     uint8_t* issuer;
     size_t issuerLen;
-    status = msg->GetArg(1)->Get("ay", &issuerLen, &issuer);
+    status = msgArgs[1].Get("ay", &issuerLen, &issuer);
     if (ER_OK != status) {
         QCC_DbgPrintf(("PermissionMgmtObj::InstallMembershipAuthData failed to retrieve issuer status 0x%x", status));
-        MethodReply(msg, status);
-        return;
+        return status;
     }
     String serialNum(serial);
     String issuerAki((const char*) issuer, issuerLen);
     KeyStore::Key membershipKey;
     PermissionPolicy authorization;
-    status = LoadAndValidateAuthData(serialNum, issuerAki, (MsgArg&) *(msg->GetArg(2)), authorization, membershipKey);
+    status = LoadAndValidateAuthData(serialNum, issuerAki, (MsgArg&) (msgArgs[2]), authorization, membershipKey);
     if (ER_OK != status) {
-        MethodReply(msg, status);
-        return;
+        return status;
     }
 
     uint8_t* buf = NULL;
@@ -1508,8 +1518,7 @@ void PermissionMgmtObj::InstallMembershipAuthData(const InterfaceDescription::Me
     DefaultPolicyMarshaller marshaller(tmpMsg);
     status = authorization.Export(marshaller, &buf, &size);
     if (ER_OK != status) {
-        MethodReply(msg, status);
-        return;
+        return status;
     }
     KeyBlob kb((uint8_t*) buf, size, KeyBlob::GENERIC);
     kb.SetTag(AUTH_DATA_TAG_NAME);
@@ -1521,7 +1530,7 @@ void PermissionMgmtObj::InstallMembershipAuthData(const InterfaceDescription::Me
     if (ER_OK == status) {
         LocalMembershipsChanged();
     }
-    MethodReply(msg, status);
+    return status;
 }
 
 void PermissionMgmtObj::RemoveMembership(const InterfaceDescription::Member* member, Message& msg)
