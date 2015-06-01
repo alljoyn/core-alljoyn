@@ -15,6 +15,7 @@
 
 import os
 
+
 # Get the global environment
 env = SConscript(['build_core/SConscript'])
 
