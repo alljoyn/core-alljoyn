@@ -1154,9 +1154,13 @@ QStatus BusAttachment::RemoveMatch(const char* rule)
     const ProxyBusObject& dbusObj = this->GetDBusProxyObj();
     QStatus status = dbusObj.MethodCall(org::freedesktop::DBus::InterfaceName, "RemoveMatch", args, numArgs, reply);
     if (ER_OK != status) {
-        QCC_LogError(status, ("%s.RemoveMatch returned ERROR_MESSAGE (error=%s)", org::freedesktop::DBus::InterfaceName, reply->GetErrorDescription().c_str()));
         if (strcmp(reply->GetErrorName(), "org.freedesktop.DBus.Error.MatchRuleNotFound") == 0) {
             status = ER_BUS_MATCH_RULE_NOT_FOUND;
+            QCC_DbgTrace(("%s.RemoveMatch returned org.freedesktop.DBus.Error.MatchRuleNotFound",
+                          org::freedesktop::DBus::InterfaceName));
+        } else {
+            QCC_LogError(status, ("%s.RemoveMatch returned ERROR_MESSAGE (error=%s)",
+                                  org::freedesktop::DBus::InterfaceName, reply->GetErrorDescription().c_str()));
         }
     }
     return status;

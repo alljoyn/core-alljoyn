@@ -119,7 +119,7 @@ QStatus NamedPipeStream::PullBytes(void* buf, size_t reqBytes, size_t& actualByt
         success = AllJoynReceiveFromBus(busHandle, buf, reqBytes, &readBytes, nullptr);
 
         if (success == FALSE) {
-            QCC_LogError(ER_FAIL, ("AllJoynReceiveFromBus failed. The other end closed the pipe."));
+            QCC_DbgTrace(("AllJoynReceiveFromBus failed. The other end closed the pipe."));
             status = ER_SOCK_OTHER_END_CLOSED;
             isConnected = false;
         } else if (readBytes == 0) {
