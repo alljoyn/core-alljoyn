@@ -23,9 +23,10 @@
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/BusObject.h>
 #include <qcc/Debug.h>
+#include "PermissionMgmtObj.h"
 
 namespace ajn {
-class SecurityApplicationObj : public BusObject {
+class SecurityApplicationObj : public PermissionMgmtObj {
   public:
     /**
      * version of org.alljoyn.Bus.Application interface
@@ -49,18 +50,17 @@ class SecurityApplicationObj : public BusObject {
      *
      * Must call SecurityApplicationObj.Init() before using this BusObject.
      */
-    SecurityApplicationObj();
+    SecurityApplicationObj(BusAttachment& bus);
 
     /**
      * Initialize and Register this BusObject with to the BusAttachment.
      *
      * @return
      *  - #ER_OK on success
-     *  - #ER_BUS_OBJ_ALREADY_EXISTS if BusObject already exists
      *  - #ER_BUS_INTERFACE_MISSING if unable to find one of the interfaces implemented by this BusObject
      *  - An error status otherwise
      */
-    QStatus Init(BusAttachment* bus);
+    virtual QStatus Init();
 
     typedef enum {
         NOT_CLAIMABLE = 0,
@@ -177,8 +177,6 @@ class SecurityApplicationObj : public BusObject {
      * @return ER_OK if successful.
      */
     QStatus Get(const char* ifcName, const char* propName, MsgArg& val);
-
-    BusAttachment* m_bus;
 
     // org.alljoyn.Bus.Security.Application properties
     uint16_t applicationState;

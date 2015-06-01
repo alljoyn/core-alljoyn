@@ -181,7 +181,7 @@ static void SetRights(PeerState& peerState, bool mutual, bool challenger)
 AllJoynPeerObj::AllJoynPeerObj(BusAttachment& bus) :
     BusObject(org::alljoyn::Bus::Peer::ObjectPath, false),
     AlarmListener(),
-    dispatcher("PeerObjDispatcher", true, 3), supportedAuthSuitesCount(0), supportedAuthSuites(NULL), permissionMgmtObj(bus)
+    dispatcher("PeerObjDispatcher", true, 3), supportedAuthSuitesCount(0), supportedAuthSuites(NULL), securityApplicationObj(bus)
 {
     /* Add org.alljoyn.Bus.Peer.Authentication interface */
     {
@@ -260,7 +260,12 @@ AllJoynPeerObj::~AllJoynPeerObj()
 
 QStatus AllJoynPeerObj::Init(BusAttachment& bus)
 {
-    QStatus status = bus.RegisterBusObject(*this);
+    QStatus status = securityApplicationObj.Init();
+    if (ER_OK != status) {
+        QCC_LogError(status, ("PermissionMgmtObj Initialization failed"));
+        return status;
+    }
+    status = bus.RegisterBusObject(*this);
     return status;
 }
 
@@ -1137,7 +1142,7 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
                            Send manifest if the local peer already cached the
                            remote peer's public key */
                         ECCPublicKey pubKey;
-                        QStatus aStatus = permissionMgmtObj.GetConnectedPeerPublicKey(peerState->GetGuid(), &pubKey);
+                        QStatus aStatus = securityApplicationObj.GetConnectedPeerPublicKey(peerState->GetGuid(), &pubKey);
                         sendManifest = (ER_OK == aStatus);
                     }
                     if (sendManifest) {
@@ -1601,7 +1606,7 @@ KeyExchanger* AllJoynPeerObj::GetKeyExchangerInstance(uint16_t peerAuthVersion, 
     for (size_t cnt = 0; cnt < requestingAuthCount; cnt++) {
         uint32_t suite = requestingAuthList[cnt];
         if ((suite & AUTH_SUITE_ECDHE_ECDSA) == AUTH_SUITE_ECDHE_ECDSA) {
-            return new KeyExchangerECDHE_ECDSA(initiator, this, *bus, peerAuthListener, peerAuthVersion, (PermissionMgmtObj::TrustAnchorList*) &permissionMgmtObj.GetTrustAnchors());
+            return new KeyExchangerECDHE_ECDSA(initiator, this, *bus, peerAuthListener, peerAuthVersion, (PermissionMgmtObj::TrustAnchorList*) &securityApplicationObj.GetTrustAnchors());
         }
         if ((suite & AUTH_SUITE_ECDHE_PSK) == AUTH_SUITE_ECDHE_PSK) {
             return new KeyExchangerECDHE_PSK(initiator, this, *bus, peerAuthListener, peerAuthVersion);
@@ -1727,15 +1732,15 @@ void AllJoynPeerObj::SetupPeerAuthentication(const qcc::String& authMechanisms, 
     }
     suiteList.clear();
     /* reload the object to reflect possible keystore changes */
-    permissionMgmtObj.Load();
-    peerAuthListener.SetPermissionMgmtObj(&permissionMgmtObj);
+    securityApplicationObj.Load();
+    peerAuthListener.SetPermissionMgmtObj(&securityApplicationObj);
 }
 
 QStatus AllJoynPeerObj::SendManifest(ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc, PeerState& peerState)
 {
     PermissionPolicy::Rule* manifest = NULL;
     size_t count = 0;
-    QStatus status = permissionMgmtObj.RetrieveManifest(&manifest, &count);
+    QStatus status = securityApplicationObj.RetrieveManifest(&manifest, &count);
     if (ER_OK != status) {
         if (ER_MANIFEST_NOT_FOUND == status) {
             return ER_OK;  /* nothing to send */
@@ -1754,7 +1759,7 @@ QStatus AllJoynPeerObj::SendManifest(ProxyBusObject& remotePeerObj, const Interf
         return status;
     }
     /* process the reply */
-    return permissionMgmtObj.ParseSendManifest(replyMsg, peerState);
+    return securityApplicationObj.ParseSendManifest(replyMsg, peerState);
 }
 
 void AllJoynPeerObj::HandleSendManifest(const InterfaceDescription::Member* member, Message& msg)
@@ -1762,7 +1767,7 @@ void AllJoynPeerObj::HandleSendManifest(const InterfaceDescription::Member* memb
     QCC_UNUSED(member);
     PeerStateTable* peerStateTable = bus->GetInternal().GetPeerStateTable();
     PeerState peerState = peerStateTable->GetPeerState(msg->GetSender());
-    QStatus status = permissionMgmtObj.ParseSendManifest(msg, peerState);
+    QStatus status = securityApplicationObj.ParseSendManifest(msg, peerState);
     if (ER_OK != status) {
         MethodReply(msg, status);
         return;
@@ -1770,7 +1775,7 @@ void AllJoynPeerObj::HandleSendManifest(const InterfaceDescription::Member* memb
     /* send back manifest to calling peer */
     PermissionPolicy::Rule* manifest = NULL;
     size_t count = 0;
-    status = permissionMgmtObj.RetrieveManifest(&manifest, &count);
+    status = securityApplicationObj.RetrieveManifest(&manifest, &count);
     if ((ER_OK != status) && (ER_MANIFEST_NOT_FOUND != status)) {
         MethodReply(msg, status);
         return;
@@ -1839,7 +1844,7 @@ Exit:
 QStatus AllJoynPeerObj::SendMembershipData(ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc)
 {
     std::vector<std::vector<MsgArg*> > args;
-    QStatus status = permissionMgmtObj.GenerateSendMemberships(args);
+    QStatus status = securityApplicationObj.GenerateSendMemberships(args);
     if (ER_OK != status) {
         return status;
     }
@@ -1861,7 +1866,7 @@ QStatus AllJoynPeerObj::SendMembershipData(ProxyBusObject& remotePeerObj, const 
             goto Exit;
         }
         /* process the reply */
-        status = permissionMgmtObj.ParseSendMemberships(replyMsg, gotAllFromPeer);
+        status = securityApplicationObj.ParseSendMemberships(replyMsg, gotAllFromPeer);
         if (ER_OK != status) {
             goto Exit;
         }
@@ -1883,12 +1888,12 @@ void AllJoynPeerObj::SendMemberships(const InterfaceDescription::Member* member,
     MsgArg replyArgs[2];
     std::vector<MsgArg*> emptyArgs;
     bool gotAllFromPeer = false;
-    QStatus status = permissionMgmtObj.ParseSendMemberships(msg, gotAllFromPeer);
+    QStatus status = securityApplicationObj.ParseSendMemberships(msg, gotAllFromPeer);
     if (ER_OK != status) {
         goto Exit;
     }
     if (peerState->guildArgs.size() == 0) {
-        status = permissionMgmtObj.GenerateSendMemberships(peerState->guildArgs);
+        status = securityApplicationObj.GenerateSendMemberships(peerState->guildArgs);
         if (ER_OK != status) {
             goto Exit;
         }

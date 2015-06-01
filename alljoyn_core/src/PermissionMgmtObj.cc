@@ -55,17 +55,35 @@ using namespace qcc;
 
 namespace ajn {
 
+/* the error names */
+const char* PermissionMgmtObj::ERROR_PERMISSION_DENIED = "org.alljoyn.Bus.Security.Error.PermissionDenied";
+const char* PermissionMgmtObj::ERROR_INVALID_CERTIFICATE = "org.alljoyn.Bus.Security.Error.InvalidCertificate";
+const char* PermissionMgmtObj::ERROR_INVALID_CERTIFICATE_USAGE = "org.alljoyn.Bus.Security.Error.InvalidCertificateUsage";
+const char* PermissionMgmtObj::ERROR_DIGEST_MISMATCH = "org.alljoyn.Bus.Security.Error.DigestMismatch";
+
 static QStatus RetrieveAndGenDSAPublicKey(CredentialAccessor* ca, KeyInfoNISTP256& keyInfo);
+
+PermissionMgmtObj::PermissionMgmtObj(BusAttachment& bus, const char* objectPath) :
+    BusObject(objectPath),
+    bus(bus), notifySignalName(NULL), portListener(NULL)
+{
+}
 
 PermissionMgmtObj::PermissionMgmtObj(BusAttachment& bus) :
     BusObject(org::allseen::Security::PermissionMgmt::ObjectPath, false),
     bus(bus), notifySignalName(NULL), portListener(NULL)
 {
+}
+
+QStatus PermissionMgmtObj::Init()
+{
+    /** TODO: Removing the PermissionMgmt interface once the functions are
+     * migrated to the new Security interfaces.
+     */
     /* Add org.allseen.Security.PermissionMgmt interface */
     const InterfaceDescription* ifc = bus.GetInterface(org::allseen::Security::PermissionMgmt::InterfaceName);
     if (ifc) {
         AddInterface(*ifc);
-        AddMethodHandler(ifc->GetMember("Claim"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::Claim));
         AddMethodHandler(ifc->GetMember("InstallPolicy"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::InstallPolicy));
         AddMethodHandler(ifc->GetMember("GetPolicy"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::GetPolicy));
         AddMethodHandler(ifc->GetMember("RemovePolicy"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::RemovePolicy));
@@ -85,7 +103,7 @@ PermissionMgmtObj::PermissionMgmtObj(BusAttachment& bus) :
     }
     ca = new CredentialAccessor(bus);
     bus.GetInternal().GetPermissionManager().SetPermissionMgmtObj(this);
-    bus.RegisterBusObject(*this, true);
+    return bus.RegisterBusObject(*this, true);
 }
 
 void PermissionMgmtObj::Load()
@@ -212,6 +230,21 @@ QStatus PermissionMgmtObj::GetACLKey(ACLEntryType aclEntryType, KeyStore::Key& k
         return ER_OK;
     }
     return ER_CRYPTO_KEY_UNAVAILABLE;      /* not available */
+}
+
+QStatus PermissionMgmtObj::MethodReply(const Message& msg, QStatus status)
+{
+    if (ER_PERMISSION_DENIED == status) {
+        return BusObject::MethodReply(msg, ERROR_PERMISSION_DENIED);
+    } else if (ER_INVALID_CERTIFICATE == status) {
+        return BusObject::MethodReply(msg, ERROR_INVALID_CERTIFICATE);
+    } else if (ER_INVALID_CERTIFICATE_USAGE == status) {
+        return BusObject::MethodReply(msg, ERROR_INVALID_CERTIFICATE_USAGE);
+    } else if (ER_DIGEST_MISMATCH == status) {
+        return BusObject::MethodReply(msg, ERROR_DIGEST_MISMATCH);
+    } else {
+        return BusObject::MethodReply(msg, status);
+    }
 }
 
 static bool CanBeCAForIdentity(PermissionMgmtObj::TrustAnchorType taType)
@@ -532,7 +565,7 @@ void PermissionMgmtObj::GetPublicKey(const InterfaceDescription::Member* member,
 
     MsgArg replyArgs[1];
     KeyInfoHelper::KeyInfoNISTP256ToMsgArg(replyKeyInfo, replyArgs[0]);
-    MethodReply(msg, replyArgs, ArraySize(replyArgs));
+    BusObject::MethodReply(msg, replyArgs, ArraySize(replyArgs));
 }
 
 /**
@@ -613,9 +646,10 @@ static void GenerateDefaultPolicy(const GUID128& adminGroupGUID, const KeyInfoNI
 
 void PermissionMgmtObj::Claim(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_DbgTrace(("PermissionMgmtObj::%s", __FUNCTION__));
     QCC_UNUSED(member);
     if (claimableState == PermissionConfigurator::STATE_UNCLAIMABLE) {
-        MethodReply(msg, ER_PERMISSION_DENIED);
+        BusObject::MethodReply(msg, ERROR_PERMISSION_DENIED, "Unclaimable");
         return;
     }
     size_t numArgs;
@@ -715,6 +749,7 @@ DoneValidation:
     }
 
     MethodReply(msg, status);
+
     if (ER_OK == status) {
         claimableState = PermissionConfigurator::STATE_CLAIMED;
         NotifyConfig();
@@ -786,7 +821,7 @@ void PermissionMgmtObj::GetPolicy(const InterfaceDescription::Member* member, Me
         MethodReply(msg, ER_INVALID_DATA);
         return;
     }
-    MethodReply(msg, &msgArg, 1);
+    BusObject::MethodReply(msg, &msgArg, 1);
 }
 
 QStatus PermissionMgmtObj::StorePolicy(PermissionPolicy& policy)
@@ -1183,7 +1218,7 @@ void PermissionMgmtObj::GetIdentity(const InterfaceDescription::Member* member, 
     }
     MsgArg replyArgs[1];
     replyArgs[0].Set("a(yay)", count, certArgs);
-    MethodReply(msg, replyArgs, ArraySize(replyArgs));
+    BusObject::MethodReply(msg, replyArgs, ArraySize(replyArgs));
     delete [] certArgs;
 }
 
@@ -2080,7 +2115,7 @@ void PermissionMgmtObj::GetManifestTemplate(const InterfaceDescription::Member* 
 
     MsgArg replyArgs[1];
     replyArgs[0].Set("(yv)", MANIFEST_TYPE_ALLJOYN, &rulesArg);
-    MethodReply(msg, replyArgs, ArraySize(replyArgs));
+    BusObject::MethodReply(msg, replyArgs, ArraySize(replyArgs));
 }
 
 bool PermissionMgmtObj::ValidateCertChain(const qcc::String& certChainPEM, bool& authorized)
@@ -2248,17 +2283,6 @@ QStatus PermissionMgmtObj::BindPort()
         portListener = NULL;
     }
     return status;
-}
-
-QStatus PermissionMgmtObj::Get(const char* ifcName, const char* propName, MsgArg& val)
-{
-    QCC_UNUSED(ifcName);
-    if (0 == strcmp("Version", propName)) {
-        val.typeId = ALLJOYN_UINT16;
-        val.v_uint16 = VERSION_NUM;
-        return ER_OK;
-    }
-    return ER_BUS_NO_SUCH_PROPERTY;
 }
 
 QStatus PermissionMgmtObj::ManageMembershipTrustAnchors(PermissionPolicy* policy)

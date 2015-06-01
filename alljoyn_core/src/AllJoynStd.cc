@@ -268,7 +268,7 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
     {
         /* Create the org.alljoyn.Bus.Security.Application interface */
         InterfaceDescription* ifc = NULL;
-        status = bus.CreateInterface(org::alljoyn::Bus::Security::Application::InterfaceName, ifc);
+        status = bus.CreateInterface(org::alljoyn::Bus::Security::Application::InterfaceName, ifc, AJ_IFC_SECURITY_REQUIRED);
         if (ER_OK != status) {
             QCC_LogError(status, ("Failed to create interface \"%s\"", org::alljoyn::Bus::Security::Application::InterfaceName));
             return status;
@@ -296,7 +296,7 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
     {
         /* Create the org.alljoyn.Bus.Security.ClaimableApplication interface */
         InterfaceDescription* ifc = NULL;
-        status = bus.CreateInterface(org::alljoyn::Bus::Security::ClaimableApplication::InterfaceName, ifc);
+        status = bus.CreateInterface(org::alljoyn::Bus::Security::ClaimableApplication::InterfaceName, ifc, AJ_IFC_SECURITY_REQUIRED);
         if (ER_OK != status) {
             QCC_LogError(status, ("Failed to create interface \"%s\"", org::alljoyn::Bus::Security::ClaimableApplication::InterfaceName));
             return status;
@@ -312,7 +312,7 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
     {
         /* Create the org.alljoyn.Bus.Security.ManagedApplication interface */
         InterfaceDescription* ifc = NULL;
-        status = bus.CreateInterface(org::alljoyn::Bus::Security::ManagedApplication::InterfaceName, ifc);
+        status = bus.CreateInterface(org::alljoyn::Bus::Security::ManagedApplication::InterfaceName, ifc, AJ_IFC_SECURITY_REQUIRED);
         if (ER_OK != status) {
             QCC_LogError(status, ("Failed to create interface \"%s\"", org::alljoyn::Bus::Security::ManagedApplication::InterfaceName));
             return status;
@@ -356,6 +356,9 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         introspectIntf->Activate();
     }
     {
+        /* TODO: remove this interface once all the functions are exposed
+         * via the new Security interfaces
+         */
         /* Create the org.allseen.Security.PermissionMgmt interface */
         InterfaceDescription* ifc = NULL;
         status = bus.CreateInterface(org::allseen::Security::PermissionMgmt::InterfaceName, ifc, AJ_IFC_SECURITY_REQUIRED);
@@ -363,8 +366,6 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
             QCC_LogError(status, ("Failed to create %s interface", org::allseen::Security::PermissionMgmt::InterfaceName));
             return status;
         }
-        ifc->AddProperty("Version", "q", PROP_ACCESS_READ);
-        ifc->AddMethod("Claim",     "(yyayay)ayay(yyayay)aya(yay)a(ssa(syy))",  NULL, "certificateAuthority,caAuthorityKeyIdentifier,adminSecurityGroupId,adminSecurityGroupAuthority,securityGroupAuthorityKeyId,identityCertificateChain,manifest");
         ifc->AddMethod("InstallPolicy",     "(qua(a(ya(yyayay)ay)a(ssa(syy))))",  NULL, "authorization");
         ifc->AddMethod("InstallEncryptedPolicy",     "ay",  NULL, "encryptedAuthorization");
         ifc->AddMethod("GetPolicy",     NULL, "(qua(a(ya(yyayay)ay)a(ssa(syy))))",  "authorization");

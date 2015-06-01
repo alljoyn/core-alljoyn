@@ -294,4 +294,5 @@ Copyright AllSeen Alliance. All rights reserved.
   <status name="ER_KEY_STORE_ID_NOT_YET_SET" value="0x913a" comment="Key store ID is not yet set"/>
   <status name="ER_INSTALLING_OLDER_POLICY" value="0x913b" comment="Installing older permission policy"/>
   <status name="ER_MANIFEST_REJECTED" value="0x913c" comment="The manifest of the application was rejected."/>
+  <status name="ER_INVALID_CERTIFICATE_USAGE" value="0x913d" comment="The certificate extended key usage is not Alljoyn specific."/>
 </status_block>

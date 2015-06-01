@@ -564,7 +564,7 @@ bool PermissionMgmtTestHelper::IsPermissionDeniedError(QStatus status, Message& 
         if (errorName == NULL) {
             return false;
         }
-        if (strcmp(errorName, "org.alljoyn.Bus.ER_PERMISSION_DENIED") == 0) {
+        if (strcmp(errorName, "org.alljoyn.Bus.Security.Error.PermissionDenied") == 0) {
             return true;
         }
         if (strcmp(errorName, "org.alljoyn.Bus.ErStatus") != 0) {

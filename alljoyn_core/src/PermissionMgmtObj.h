@@ -48,6 +48,30 @@ class PermissionMgmtObj : public BusObject {
   public:
 
     /**
+     * Error name Permission Denied.  Error raised when the message is not
+     * authorized.
+     */
+    static const char* ERROR_PERMISSION_DENIED;
+
+    /**
+     * Error name Invalid Certificate.  Error raised when the certificate or
+     * cerficate chain is not valid.
+     */
+    static const char* ERROR_INVALID_CERTIFICATE;
+
+    /**
+     * Error name Invalid certificate usage.  Error raised when the extended
+     * key usage (EKU) is not AllJoyn specific.
+     */
+    static const char* ERROR_INVALID_CERTIFICATE_USAGE;
+
+    /**
+     * Error name Digest Mismatch.  Error raised when the digest of the
+     * manifest does not match the digest listed in the identity certificate.
+     */
+    static const char* ERROR_DIGEST_MISMATCH;
+
+    /**
      * For the SendMemberships call, the app sends one cert chain at time since
      * thin client peer may not be able to handle large amount of data.  The app
      * reads back the membership cert chain from the peer.  It keeps looping until
@@ -130,6 +154,14 @@ class PermissionMgmtObj : public BusObject {
     /**
      * Constructor
      *
+     * Must call Init() before using this BusObject.
+     */
+    PermissionMgmtObj(BusAttachment& bus, const char* objectPath);
+
+    /**
+     * Constructor
+     *
+     * Must call Init() before using this BusObject.
      */
     PermissionMgmtObj(BusAttachment& bus);
 
@@ -137,6 +169,15 @@ class PermissionMgmtObj : public BusObject {
      * virtual destructor
      */
     virtual ~PermissionMgmtObj();
+
+    /**
+     * Initialize and Register this BusObject with to the BusAttachment.
+     *
+     * @return
+     *  - #ER_OK on success
+     *  - An error status otherwise
+     */
+    virtual QStatus Init();
 
     /**
      * check whether the peer public key is an admin
@@ -297,17 +338,6 @@ class PermissionMgmtObj : public BusObject {
      */
     void Load();
 
-    /**
-     * Handle a bus request to read a property from this object.
-     *
-     * @param ifcName    Identifies the interface that the property is defined on
-     * @param propName  Identifies the the property to get
-     * @param[out] val        Returns the property value. The type of this value is the actual value
-     *                   type.
-     * @return ER_OK for success, error code otherwise.
-     */
-    QStatus Get(const char* ifcName, const char* propName, MsgArg& val);
-
     QStatus InstallTrustAnchor(TrustAnchor* trustAnchor);
     QStatus StoreIdentityCertChain(MsgArg& certArg);
     QStatus StorePolicy(PermissionPolicy& policy);
@@ -331,6 +361,21 @@ class PermissionMgmtObj : public BusObject {
      * @return ER_OK for success; error code otherwise.
      */
     QStatus RetrieveManifest(PermissionPolicy::Rule** manifest, size_t* count);
+    /**
+     * Reply to a method call with an error message.
+     *
+     * @param msg        The method call message
+     * @param status     The status code for the error
+     * @return
+     *      - #ER_OK if successful
+     *      - #ER_BUS_OBJECT_NOT_REGISTERED if bus object has not yet been registered
+     *      - An error status otherwise
+     */
+    QStatus MethodReply(const Message& msg, QStatus status);
+
+  protected:
+    void Claim(const InterfaceDescription::Member* member, Message& msg);
+    BusAttachment& bus;
 
   private:
 
@@ -372,7 +417,6 @@ class PermissionMgmtObj : public BusObject {
     };
 
     void GetPublicKey(const InterfaceDescription::Member* member, Message& msg);
-    void Claim(const InterfaceDescription::Member* member, Message& msg);
     void InstallPolicy(const InterfaceDescription::Member* member, Message& msg);
     QStatus GetACLKey(ACLEntryType aclEntryType, KeyStore::Key& guid);
     QStatus StoreTrustAnchors();
@@ -418,7 +462,6 @@ class PermissionMgmtObj : public BusObject {
      */
     QStatus BindPort();
 
-    BusAttachment& bus;
     CredentialAccessor* ca;
     const InterfaceDescription::Member* notifySignalName;
     PermissionConfigurator::ClaimableState claimableState;

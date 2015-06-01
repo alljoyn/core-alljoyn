@@ -803,6 +803,9 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
 
     QStatus InvokeClaim(bool useAdminCA, BusAttachment& claimerBus, BusAttachment& claimedBus, qcc::String serial, qcc::String alias, bool expectClaimToFail, BusAttachment* caBus)
     {
+        SecurityApplicationProxy saProxy(claimerBus, claimedBus.GetUniqueName().c_str());
+        /** TODO: remove pmProxy once the required information is refactored
+         * into the SecurityApplicationProxy */
         PermissionMgmtProxy pmProxy(claimerBus, claimedBus.GetUniqueName().c_str());
         /* retrieve public key from to-be-claimed app to create identity cert */
         ECCPublicKey claimedPubKey;
@@ -826,9 +829,9 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
 
         QStatus status;
         if (useAdminCA) {
-            status = pmProxy.Claim(adminAdminGroupAuthority, adminAdminGroupGUID, adminAdminGroupAuthority, identityCertChain, certChainCount, manifest, manifestSize);
+            status = saProxy.Claim(adminAdminGroupAuthority, adminAdminGroupGUID, adminAdminGroupAuthority, identityCertChain, certChainCount, manifest, manifestSize);
         } else {
-            status = pmProxy.Claim(consumerAdminGroupAuthority, consumerAdminGroupGUID, consumerAdminGroupAuthority, identityCertChain, certChainCount, manifest, manifestSize);
+            status = saProxy.Claim(consumerAdminGroupAuthority, consumerAdminGroupGUID, consumerAdminGroupAuthority, identityCertChain, certChainCount, manifest, manifestSize);
         }
         delete [] manifest;
         if (expectClaimToFail) {
@@ -1439,13 +1442,17 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     }
 
     /**
-     *  App gets the PermissionMgmt version number
+     *  App gets the Security interfaces' version number
      */
     void AppGetVersionNumber(BusAttachment& bus, BusAttachment& targetBus)
     {
         uint16_t versionNum = 0;
-        PermissionMgmtProxy pmProxy(bus, targetBus.GetUniqueName().c_str());
-        EXPECT_EQ(ER_OK, pmProxy.GetVersion(versionNum)) << "AppGetVersionNumber GetPermissionMgmtVersion failed.";
+        SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
+        EXPECT_EQ(ER_OK, saProxy.GetSecurityApplicationVersion(versionNum)) << "AppGetVersionNumber GetSecurityApplicationVersion failed.";
+        EXPECT_EQ(1, versionNum) << "AppGetVersionNumber received unexpected version number.";
+        EXPECT_EQ(ER_OK, saProxy.GetClaimableApplicationVersion(versionNum)) << "AppGetVersionNumber GetClaimableApplicationVersion failed.";
+        EXPECT_EQ(1, versionNum) << "AppGetVersionNumber received unexpected version number.";
+        EXPECT_EQ(ER_OK, saProxy.GetManagedApplicationVersion(versionNum)) << "AppGetVersionNumber GetClaimableApplicationVersion failed.";
         EXPECT_EQ(1, versionNum) << "AppGetVersionNumber received unexpected version number.";
     }
 
