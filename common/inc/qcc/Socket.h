@@ -392,7 +392,7 @@ QStatus SetRcvBuf(SocketFd sockfd, size_t bufSize);
 QStatus GetRcvBuf(SocketFd sockfd, size_t& bufSize);
 
 /**
- * Set TCP based socket to use or not use Nagle algorithm (TCP_NODELAY)
+ * Set TCP based socket to use or not use linger functionality
  *
  * @param sockfd  Socket descriptor.
  * @param onoff   Turn linger on if true.
