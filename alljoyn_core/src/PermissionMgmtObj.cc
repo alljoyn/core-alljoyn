@@ -1357,13 +1357,18 @@ static QStatus LoadX509CertFromMsgArg(const MsgArg& arg, CertificateX509& cert)
 void PermissionMgmtObj::InstallMembership(const InterfaceDescription::Member* member, Message& msg)
 {
     QCC_UNUSED(member);
+    QStatus status = StoreMembership(*(msg->GetArg(0)));
+    MethodReply(msg, status);
+}
+
+QStatus PermissionMgmtObj::StoreMembership(const MsgArg& msgArg)
+{
     size_t certChainCount;
     MsgArg* certChain;
-    QStatus status = msg->GetArg(0)->Get("a(yay)", &certChainCount, &certChain);
+    QStatus status = msgArg.Get("a(yay)", &certChainCount, &certChain);
     if (ER_OK != status) {
         QCC_DbgPrintf(("PermissionMgmtObj::InstallMembership failed to retrieve certificate chain status 0x%x", status));
-        MethodReply(msg, status);
-        return;
+        return status;
     }
 
     GUID128 membershipGuid;
@@ -1373,8 +1378,7 @@ void PermissionMgmtObj::InstallMembership(const InterfaceDescription::Member* me
         QStatus status = LoadX509CertFromMsgArg(certChain[cnt], cert);
         if (ER_OK != status) {
             QCC_DbgPrintf(("PermissionMgmtObj::InstallMembership failed to retrieve certificate [%d] status 0x%x", (int) cnt, status));
-            MethodReply(msg, status);
-            return;
+            return status;
         }
         KeyBlob kb(cert.GetEncoded(), cert.GetEncodedLen(), KeyBlob::GENERIC);
         if (cnt == 0) {
@@ -1401,8 +1405,7 @@ void PermissionMgmtObj::InstallMembership(const InterfaceDescription::Member* me
                 status = GetMembershipKey(ca, membershipHead, cert.GetSerial(), cert.GetAuthorityKeyId(), true, tmpKey);
                 if (ER_OK == status) {
                     /* found a duplicate */
-                    MethodReply(msg, ER_DUPLICATE_CERTIFICATE);
-                    return;
+                    return ER_DUPLICATE_CERTIFICATE;
                 }
             }
 
@@ -1415,7 +1418,7 @@ void PermissionMgmtObj::InstallMembership(const InterfaceDescription::Member* me
             status = ca->AddAssociatedKey(membershipKey, key, kb);
         }
     }
-    MethodReply(msg, status);
+    return status;
 }
 
 QStatus PermissionMgmtObj::LocateMembershipEntry(const String& serialNum, const String& issuerAki, KeyStore::Key& membershipKey, bool searchLeafCertOnly)

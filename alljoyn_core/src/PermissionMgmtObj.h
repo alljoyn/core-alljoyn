@@ -298,6 +298,7 @@ class PermissionMgmtObj : public BusObject {
     QStatus InstallTrustAnchor(TrustAnchor* trustAnchor);
     QStatus StoreIdentityCertChain(MsgArg& certArg);
     QStatus StorePolicy(PermissionPolicy& policy);
+    QStatus StoreMembership(const MsgArg& certArg);
     /**
      * Generate the SHA-256 digest for the manifest data.
      * @param bus the bus attachment
