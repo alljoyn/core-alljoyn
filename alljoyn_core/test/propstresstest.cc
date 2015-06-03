@@ -282,7 +282,7 @@ class Service : public App, private SessionPortListener, private SessionListener
     void SessionJoined(SessionPort sessionPort, SessionId id, const char* joiner);
 
     // SessionListener methods
-    void SessionLost(SessionId sessionId);
+    void SessionLost(SessionId sessionId, SessionLostReason reason);
     /* Private assigment operator - does nothing */
     Service& operator=(const Service&);
 };
@@ -330,8 +330,9 @@ void Service::SessionJoined(SessionPort sessionPort, SessionId id, const char* j
     }
 }
 
-void Service::SessionLost(SessionId sessionId)
+void Service::SessionLost(SessionId sessionId, ajn::SessionListener::SessionLostReason reason)
 {
+    QCC_UNUSED(reason);
     multimap<SessionId, PropTesterObject*>::iterator it;
     it = objects.find(sessionId);
     while (it != objects.end()) {

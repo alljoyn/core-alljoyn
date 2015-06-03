@@ -27,8 +27,9 @@ AboutClientSessionListener::~AboutClientSessionListener()
 {
 }
 
-void AboutClientSessionListener::SessionLost(ajn::SessionId sessionId)
+void AboutClientSessionListener::SessionLost(ajn::SessionId sessionId, ajn::SessionListener::SessionLostReason reason)
 {
     QCC_UNUSED(sessionId);
+    QCC_UNUSED(reason);
     std::cout << "AboutClient session has been lost for " << serviceName.c_str() << std::endl;
 }
