@@ -27,11 +27,17 @@ using namespace securitymgr;
 QStatus ApplicationUpdater::ResetApplication(const ApplicationInfo& appInfo,
                                              const SecurityInfo& secInfo)
 {
+    QCC_UNUSED(secInfo);
+
     QStatus status = ER_FAIL;
 
     QCC_DbgPrintf(("Resetting application"));
     status = applicationManager->Reset(appInfo);
-    QCC_DbgPrintf(("Resetting application returned %i", status));
+    if (ER_OK != status) {
+        SyncError* error = new SyncError(appInfo, status, SYNC_ER_RESET);
+        securityManagerImpl->NotifyApplicationListeners(error);
+    }
+    QCC_DbgPrintf(("Resetting application returned %s", QCC_StatusText(status)));
 
     return status;
 }
@@ -54,6 +60,8 @@ QStatus ApplicationUpdater::UpdatePolicy(const ApplicationInfo& appInfo,
         if (ER_OK !=
             (status =
                  localPolicy.Import(marshaller, (const uint8_t*)mgdAppInfo.policy.data(), mgdAppInfo.policy.size()))) {
+            SyncError* error = new SyncError(appInfo, status, SYNC_ER_STORAGE);
+            securityManagerImpl->NotifyApplicationListeners(error);
             return status;
         }
         localSerialNum = localPolicy.GetSerialNum();
@@ -63,13 +71,12 @@ QStatus ApplicationUpdater::UpdatePolicy(const ApplicationInfo& appInfo,
     if (localSerialNum == remoteSerialNum) {
         QCC_DbgPrintf(("Policy already up to date"));
         return ER_OK;
-    } else if (localSerialNum > remoteSerialNum) {
+    } else {
         status = applicationManager->InstallPolicy(appInfo, localPolicy);
         QCC_DbgPrintf(("Installing new policy returned %i", status));
+        SyncError* error = new SyncError(appInfo, status, localPolicy);
+        securityManagerImpl->NotifyApplicationListeners(error);
         return status;
-    } else {
-        QCC_DbgPrintf(("Unknown remote policy"));
-        return ER_FAIL;
     }
 }
 
@@ -83,43 +90,34 @@ QStatus ApplicationUpdater::UpdateMembershipCertificates(const ApplicationInfo& 
 
     qcc::ECCPublicKey eccAppPubKey(secInfo.publicKey);
 
-    qcc::X509MemberShipCertificate queryCert;
-    queryCert.SetSubject(&eccAppPubKey);
-    vector<qcc::X509MemberShipCertificate> localCerts;
+    qcc::MembershipCertificate queryCert;
+    queryCert.SetSubjectPublicKey(&eccAppPubKey);
+    vector<qcc::MembershipCertificate> localCerts;
 
-    storage->GetCertificates(queryCert, localCerts);
+    if (ER_OK != (status = storage->GetCertificates(queryCert, localCerts))) {
+        SyncError* error = new SyncError(appInfo, status, SYNC_ER_STORAGE);
+        securityManagerImpl->NotifyApplicationListeners(error);
+    }
+
     QCC_DbgPrintf(("Found %i local membership certificates", localCerts.size()));
-    std::vector<qcc::X509MemberShipCertificate>::iterator it;
+    std::vector<qcc::MembershipCertificate>::iterator it;
     for (it = localCerts.begin(); it != localCerts.end(); ++it) {
-        QCC_DbgPrintf(("Local membership certificate %s", it->GetSerialNumber().c_str()));
-        QStatus certStatus = ER_FAIL;
+        QCC_DbgPrintf(("Local membership certificate %s", it->GetSerial().c_str()));
 
-        qcc::GUID128 appID = mgdAppInfo.peerID;
-        it->SetApplicationID(appID);
+        it->SetSubjectCN((const uint8_t*)mgdAppInfo.peerID.data(), mgdAppInfo.peerID.size());
         certificateGenerator->GenerateMembershipCertificate(*it);
 
-        qcc::String data;
-        storage->GetAssociatedData(*it, data);
-        PermissionPolicy authData;
-        if (!data.empty()) {
-            Message tmpMsg(*busAttachment);
-            DefaultPolicyMarshaller marshaller(tmpMsg);
-            certStatus = authData.Import(marshaller, (const uint8_t*)data.data(), data.size());
-            if (ER_OK != certStatus) {
-                status = certStatus;
-                break;
-            }
+        status = applicationManager->InstallMembership(appInfo, *it);
+        QCC_DbgPrintf(("Install membership certificate %s returned %i", it->GetSerial().c_str(), status));
+
+        if (ER_DUPLICATE_CERTIFICATE == status) {
+            status = ER_OK;
         }
 
-        certStatus = applicationManager->InstallMembership(appInfo, *it, authData, securityManagerGUID);
-        QCC_DbgPrintf(("Install membership certificate %s returned %i", it->GetSerialNumber().c_str(), certStatus));
-
-        if (ER_DUPLICATE_CERTIFICATE == certStatus) {
-            certStatus = ER_OK;
-        }
-
-        if (ER_OK != certStatus) {
-            status = certStatus;
+        if (ER_OK != status) {
+            SyncError* error = new SyncError(appInfo, status, *it);
+            securityManagerImpl->NotifyApplicationListeners(error);
+            break;
         }
     }
 
@@ -135,20 +133,23 @@ QStatus ApplicationUpdater::UpdateIdentityCert(const ApplicationInfo& appInfo,
     QStatus status = ER_FAIL;
 
     qcc::IdentityCertificate remoteIdCert;
-    qcc::X509IdentityCertificate persistedIdCert;
+    qcc::IdentityCertificate persistedIdCert;
+    SyncError* error = NULL;
 
     do {
-        persistedIdCert.SetSubject(&(secInfo.publicKey));
+        persistedIdCert.SetSubjectPublicKey(&(secInfo.publicKey));
 
         if (ER_OK != (status = storage->GetCertificate(persistedIdCert))) {
+            error = new SyncError(appInfo, status, SYNC_ER_STORAGE);
             QCC_LogError(status, ("Could not get identity certificate from storage"));
             break;
         }
 
-        uint32_t localSerialNum = strtoul(persistedIdCert.GetSerialNumber().c_str(), NULL, 0);
+        uint32_t localSerialNum = strtoul(persistedIdCert.GetSerial().c_str(), NULL, 0);
         QCC_DbgPrintf(("Local identity certificate serial number is %u", localSerialNum));
 
         if (ER_OK != (status = applicationManager->GetIdentity(appInfo, remoteIdCert))) {
+            error = new SyncError(appInfo, status, persistedIdCert);
             QCC_LogError(status, ("Could not fetch identity certificate"));
             break;
         }
@@ -156,22 +157,36 @@ QStatus ApplicationUpdater::UpdateIdentityCert(const ApplicationInfo& appInfo,
         uint32_t remoteSerialNum = strtoul(remoteIdCert.GetSerial().c_str(), NULL, 0);
         QCC_DbgPrintf(("Remote identity certificate serial number is %u", remoteSerialNum));
 
-        persistedIdCert.SetApplicationID(mgdAppInfo.peerID);
-        if (ER_OK != (status = certificateGenerator->GetIdentityCertificate(persistedIdCert))) {
-            QCC_LogError(status, ("Could not generate identity certificate"));
-            break;
-        }
-
         if (localSerialNum == remoteSerialNum) {
             QCC_DbgPrintf(("Identity certificate is already up to date"));
             break;
         }
-        if (localSerialNum > remoteSerialNum) {
-            status = applicationManager->InstallIdentityCertificate(appInfo, persistedIdCert);
-        } else {
-            QCC_DbgPrintf(("Unknown remote identity certificate"));
+
+        const PermissionPolicy::Rule* manifest;
+        size_t manifestSize;
+        status = securityManagerImpl->DeserializeManifest(mgdAppInfo, &manifest, &manifestSize);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Could not retrieve persisted manifest"));
+            error = new SyncError(appInfo, status, persistedIdCert);
+            break;
+        }
+
+        persistedIdCert.SetSubjectCN((const uint8_t*)mgdAppInfo.peerID.data(), mgdAppInfo.peerID.size());
+        if (ER_OK != (status = certificateGenerator->GetIdentityCertificate(persistedIdCert))) {
+            error = new SyncError(appInfo, status, persistedIdCert);
+            QCC_LogError(status, ("Could not generate identity certificate"));
+            break;
+        }
+
+        status = applicationManager->InstallIdentity(appInfo, &persistedIdCert, 1, manifest, manifestSize);
+        if (ER_OK != status) {
+            error = new SyncError(appInfo, status, persistedIdCert);
         }
     } while (0);
+
+    if (NULL != error) {
+        securityManagerImpl->NotifyApplicationListeners(error);
+    }
 
     return status;
 }
@@ -193,22 +208,30 @@ QStatus ApplicationUpdater::UpdateApplication(const ApplicationInfo& appInfo,
     ManagedApplicationInfo managedAppInfo;
     managedAppInfo.publicKey = secInfo.publicKey;
     status = storage->GetManagedApplication(managedAppInfo);
-    QCC_DbgPrintf(("GetManagedApplication returned %i", status));
+    QCC_DbgPrintf(("GetManagedApplication returned %s", QCC_StatusText(status)));
 
     if (ER_END_OF_DATA == status) {
         status = ResetApplication(appInfo, secInfo);
-    } else if (ER_OK == status) {
-        QStatus policyUpdateStatus =
-            UpdatePolicy(appInfo, secInfo, managedAppInfo);
-        QStatus membershipUpdateStatus =
-            UpdateMembershipCertificates(appInfo, secInfo, managedAppInfo);
-        QStatus identityUpdateStatus = UpdateIdentityCert(appInfo, secInfo, managedAppInfo);
-        if ((policyUpdateStatus != ER_OK) || (membershipUpdateStatus != ER_OK) || (identityUpdateStatus != ER_OK)) {
-            status = ER_FAIL;
-        }
+    } else {
+        do {
+            if (ER_OK != (status = UpdatePolicy(appInfo, secInfo, managedAppInfo))) {
+                break;
+            }
+            if (ER_OK != (status = UpdateMembershipCertificates(appInfo, secInfo, managedAppInfo))) {
+                break;
+            }
+            status = UpdateIdentityCert(appInfo, secInfo, managedAppInfo);
+        } while (0);
     }
 
-    QCC_DbgPrintf(("Updating %s returned %i ", secInfo.busName.c_str(), status));
+    // This assumes no database changes have been made while updating an
+    // application.
+
+    if (ER_OK == status) {
+        status = securityManagerImpl->SetUpdatesPending(appInfo, false);
+    }
+
+    QCC_DbgPrintf(("Updating %s returned %s ", secInfo.busName.c_str(), QCC_StatusText(status)));
 
     return status;
 }
@@ -217,12 +240,20 @@ QStatus ApplicationUpdater::UpdateApplication(const SecurityInfo& secInfo)
 {
     ApplicationInfo appInfo;
     appInfo.busName = secInfo.busName;
+    appInfo.publicKey = secInfo.publicKey;
     return UpdateApplication(appInfo, secInfo);
 }
 
 QStatus ApplicationUpdater::UpdateApplication(const ApplicationInfo& appInfo)
 {
-    SecurityInfo secInfo(appInfo);
+    QStatus status = securityManagerImpl->SetUpdatesPending(appInfo, true);
+    SecurityInfo secInfo;
+    secInfo.busName = appInfo.busName;
+    status = securityManagerImpl->GetApplicationSecInfo(secInfo);
+    if (status != ER_OK) {
+        QCC_LogError(status, ("Failed to fetch security info !"));
+        return status;
+    }
     vector<qcc::ECCPublicKey> rots;
     rots.push_back(securityManagerPubkey);
     secInfo.rootsOfTrust = rots;

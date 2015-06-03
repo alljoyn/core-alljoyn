@@ -42,6 +42,8 @@ qcc::String PermissionMgmt::PubKeyToString(const qcc::ECCPublicKey* pubKey)
 
 void PermissionMgmt::Claim(const ajn::InterfaceDescription::Member* member, ajn::Message& msg)
 {
+    QCC_UNUSED(member);
+
     printf("========> CLAIM CALLED <=========\n");
     bool ok = false;
 
@@ -92,7 +94,7 @@ void PermissionMgmt::Claim(const ajn::InterfaceDescription::Member* member, ajn:
         //====================================================
         // Step 1b: Install new identity certificate
 
-        if (ER_OK != (status = InstallIdentityCertificate((MsgArg &) * msg->GetArg(1)))) {
+        if (ER_OK != (status = InstallIdentityCertificate((MsgArg&)*msg->GetArg(1)))) {
             printf("Failed to install identity certificate\n");
             break;
         }
@@ -143,7 +145,7 @@ QStatus PermissionMgmt::InstallIdentityCertificate(ajn::MsgArg& msgArg)
         printf("PermissionMgmtObj::InstallIdentity failed to retrieve PEM status 0x%x", status);
         return status;
     }
-    if ((encoding != Certificate::ENCODING_X509_DER) && (encoding != Certificate::ENCODING_X509_DER_PEM)) {
+    if ((encoding != CertificateX509::ENCODING_X509_DER) && (encoding != CertificateX509::ENCODING_X509_DER_PEM)) {
         printf("PermissionMgmtObj::InstallIdentity does not support encoding %d", encoding);
         status = ER_NOT_IMPLEMENTED;
         return status;
@@ -161,12 +163,16 @@ QStatus PermissionMgmt::InstallIdentityCertificate(ajn::MsgArg& msgArg)
 
 void PermissionMgmt::InstallIdentity(const ajn::InterfaceDescription::Member* member, ajn::Message& msg)
 {
-    QStatus status = InstallIdentityCertificate((MsgArg &) * msg->GetArg(0));
+    QCC_UNUSED(member);
+
+    QStatus status = InstallIdentityCertificate((MsgArg&)*msg->GetArg(0));
     MethodReply(msg, status);
 }
 
 void PermissionMgmt::InstallMembership(const ajn::InterfaceDescription::Member* member, ajn::Message& msg)
 {
+    QCC_UNUSED(member);
+
     size_t certChainCount;
     MsgArg* certChain;
     QStatus status = msg->GetArg(0)->Get("a(yay)", &certChainCount, &certChain);
@@ -179,7 +185,7 @@ void PermissionMgmt::InstallMembership(const ajn::InterfaceDescription::Member* 
     uint8_t* encoded;
     size_t encodedLen;
     status = certChain[0].Get("(yay)", &encoding, &encodedLen, &encoded);
-    if (status != ER_OK || encoding != Certificate::ENCODING_X509_DER_PEM) {
+    if (status != ER_OK || encoding != CertificateX509::ENCODING_X509_DER_PEM) {
         printf("Bad Cert in message status = %d,  encoding = %d\n", status, (int)encoding);
         MethodReply(msg, status);
         return;
@@ -202,6 +208,8 @@ void PermissionMgmt::InstallMembership(const ajn::InterfaceDescription::Member* 
 
 void PermissionMgmt::RemoveMembership(const ajn::InterfaceDescription::Member* member, ajn::Message& msg)
 {
+    QCC_UNUSED(member);
+
     QStatus status;
     const char* serial;
     status = msg->GetArg(0)->Get("s", &serial);
@@ -250,6 +258,8 @@ void PermissionMgmt::RemoveMembership(const ajn::InterfaceDescription::Member* m
 void PermissionMgmt::InstallMembershipAuthData(const ajn::InterfaceDescription::Member* member,
                                                ajn::Message& msg)
 {
+    QCC_UNUSED(member);
+
     printf("InstallMembershipAuthData\n");
 
     // serial number
@@ -302,6 +312,8 @@ void PermissionMgmt::InstallMembershipAuthData(const ajn::InterfaceDescription::
 
 void PermissionMgmt::GetManifest(const ajn::InterfaceDescription::Member* member, ajn::Message& msg)
 {
+    QCC_UNUSED(member);
+
     printf("Received GetManifest request\n");
     ajn::MsgArg outArg;
 
@@ -317,6 +329,8 @@ void PermissionMgmt::GetManifest(const ajn::InterfaceDescription::Member* member
 
 void PermissionMgmt::InstallPolicy(const ajn::InterfaceDescription::Member* member, ajn::Message& msg)
 {
+    QCC_UNUSED(member);
+
     QStatus status = ER_FAIL;
     uint8_t version;
     MsgArg* variant;
@@ -339,6 +353,8 @@ void PermissionMgmt::InstallPolicy(const ajn::InterfaceDescription::Member* memb
 
 void PermissionMgmt::GetPolicy(const ajn::InterfaceDescription::Member* member, ajn::Message& msg)
 {
+    QCC_UNUSED(member);
+
     MsgArg replyArg;
     policy.Export(replyArg);
 

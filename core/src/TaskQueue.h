@@ -88,6 +88,8 @@ class TaskQueue {
 
         virtual ThreadReturn STDCALL Run(void* arg)
         {
+            QCC_UNUSED(arg);
+
             queue->HandleTasks();
             return NULL;
         }

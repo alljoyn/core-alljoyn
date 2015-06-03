@@ -45,7 +45,8 @@ Storage* SQLStorageFactory::GetStorage()
 
     QCC_DbgPrintf(("Storage will be placed in (%s)", storageConfig.settings[STORAGE_FILEPATH_KEY].c_str()));
 
-    if (!(storage = new SQLStorage(storageConfig))) {
+    storage = new SQLStorage(storageConfig);
+    if (!storage) {
         return NULL;
     }
 

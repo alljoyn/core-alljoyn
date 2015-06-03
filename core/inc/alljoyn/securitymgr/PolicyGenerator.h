@@ -44,8 +44,7 @@ class PolicyGenerator {
                                  PermissionPolicy& policy);
 
   private:
-    static QStatus DefaultGuildPolicyTerm(const uint8_t* guildId,
-                                          const size_t guildIdLen,
+    static QStatus DefaultGuildPolicyTerm(const qcc::GUID128& guild,
                                           const qcc::ECCPublicKey& authority,
                                           PermissionPolicy::Term& term);
 

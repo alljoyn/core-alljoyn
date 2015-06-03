@@ -18,13 +18,13 @@
 #include <qcc/Crypto.h>
 #include <qcc/String.h>
 #include <qcc/Thread.h>
-#include <alljoyn/about/AnnouncementRegistrar.h>
+#include <alljoyn/Init.h>
+#include <alljoyn/AboutListener.h>
 
 #include <set>
 
 using namespace sample::securitymgr::door;
 using namespace ajn;
-using namespace services;
 
 class DoorSessionListener :
     public SessionListener {
@@ -35,6 +35,10 @@ class DoorMessageReceiver :
   public:
     void DoorEventHandler(const ajn::InterfaceDescription::Member* member, const char* srcPath, ajn::Message& msg)
     {
+        QCC_UNUSED(msg);
+        QCC_UNUSED(srcPath);
+        QCC_UNUSED(member);
+
         printf("received message ...\n");
         //TODO: parse message
     }
@@ -42,13 +46,19 @@ class DoorMessageReceiver :
 
 static DoorSessionListener theListener;
 
-class DoorAnnounceHandler :
-    public AnnounceHandler {
+class DoorAboutListener :
+    public AboutListener {
     std::set<qcc::String> doors;
 
-    virtual void Announce(uint16_t version, uint16_t port, const char* busName, const ObjectDescriptions& objectDescs,
-                          const AboutData& aboutData)
+    void Announced(const char* busName, uint16_t version,
+                   SessionPort port, const MsgArg& objectDescriptionArg,
+                   const MsgArg& aboutDataArg)
     {
+        QCC_UNUSED(aboutDataArg);
+        QCC_UNUSED(objectDescriptionArg);
+        QCC_UNUSED(port);
+        QCC_UNUSED(version);
+
         printf("Found door @%s\n", busName); //TODO take more data from about
         doors.insert(qcc::String(busName));
     }
@@ -85,10 +95,6 @@ QStatus PerformDoorAction(BusAttachment& ba, char cmd, qcc::String busName)
     case 'g':
         //getting property; we don't call the method
         break;
-
-    default:
-        printf("Internal error - Unknown command\n");
-        exit(7);
     }
     displayName = methodName == NULL ? "GetProperty" : methodName;
 
@@ -157,13 +163,37 @@ out:
     return status;
 }
 
+void printHelp()
+{
+    printf("Welcome to the door consumer - enter 'h' for this menu\n"
+           "Menu\n"
+           ">o : Open doors\n"
+           ">c : Close doors\n"
+           ">s : Doors state - using ProxyBusObject->MethodCall\n"
+           ">g : Get doors state - using ProxyBusObject->GetProperty\n"
+           ">q : Quit\n");
+}
+
 int main(int arg, char** argv)
 {
-    //Do the common set-up
-    DoorCommon common("DoorConsumer");     //TODO make name commandline param
-    QStatus status = common.init("/tmp/consdb.ks", false); //TODO allow keystore to be defined from cmdline
+    QCC_UNUSED(argv);
+    QCC_UNUSED(arg);
 
+    if (AllJoynInit() != ER_OK) {
+        return EXIT_FAILURE;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return EXIT_FAILURE;
+    }
+#endif
+
+    //Do the common set-up
+    DoorCommon common("DoorConsumer");  //TODO make the name a command-line argument
+    QStatus status = common.init("/tmp/consdb.ks", false); //TODO allow for a keystore path as a command-line argument
     printf("Common layer is initialized\n");
+
     if (status != ER_OK) {
         exit(1);
     }
@@ -184,45 +214,61 @@ int main(int arg, char** argv)
                                      DOOR_SIGNAL_MATCH_RULE);
 
     //Register About listener and look for doors...
-    DoorAnnounceHandler dah;
-    const char* intfs[] = { DOOR_INTERFACE };
-    status = ajn::services::AnnouncementRegistrar::RegisterAnnounceHandler(
-        ba, dah, intfs, 1);
-
-    if (status != ER_OK) {
-        exit(1);
-    }
-    //Execute commands
-    printf(
-        "Consumer is ready to execute commands; type command 'o', 'c' or 's'; 'g' for getting the property or 'q' to quit\n");
+    DoorAboutListener dal;
+    ba.RegisterAboutListener(dal);
 
     char cmd;
-    do {
-        cmd = std::cin.get();
-        switch (cmd) {
-        case 'q':
-        case '\r':
-        case '\n':
-        case ' ':
-            //No special action required for this characters.
-            break;
+    std::set<qcc::String> doors;
 
+    if (status != ER_OK) {
+        goto exit;
+    }
+    //Execute commands
+    printHelp();
+
+    while ((cmd = std::cin.get()) != 'q') {
+        doors.clear();
+        printf(">");
+
+        switch (cmd) {
         case 'o':
         case 's':
         case 'c':
-        case 'g':
-            //TODO do more advanced CLI features if needed.
-            std::set<qcc::String> doors = dah.GetDoorNames();
-            if (doors.size() == 0) {
-                printf("No doors found.\n");
-            }
-            for (std::set<qcc::String>::iterator it = doors.begin(); it != doors.end(); it++) {
-                if (ER_OK != PerformDoorAction(ba, cmd, *it)) {
-                    //TODO: don't always remove a failing door from the list.
-                    dah.RemoveDoorName(*it);
+        case 'g': {
+                doors = dal.GetDoorNames();
+                if (doors.size() == 0) {
+                    printf("No doors found.\n");
+                }
+                for (std::set<qcc::String>::iterator it = doors.begin();
+                     it != doors.end(); it++) {
+                    if (ER_OK != PerformDoorAction(ba, cmd, *it)) {
+                        //TODO: don't always remove a failing door from the list.
+                        dal.RemoveDoorName(*it);
+                    }
                 }
             }
             break;
+
+        case 'h':
+            printHelp();
+            break;
+
+        case '\n':
+            break;
+
+        case '\r':
+            break;
+
+        default: {
+                fprintf(stderr, "Unkown command!\n");
+                printHelp();
+            }
         }
-    } while (cmd != 'q');
+    }
+exit:
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
+    return (int)status;
 }

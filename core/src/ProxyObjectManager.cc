@@ -25,11 +25,8 @@ namespace securitymgr {
 ajn::AuthListener* ProxyObjectManager::listener = NULL;
 
 ProxyObjectManager::ProxyObjectManager(ajn::BusAttachment* ba) :
-    bus(ba), objectPath("/org/allseen/Security/PermissionMgmt"),
-    interfaceName("org.allseen.Security.PermissionMgmt")
+    bus(ba), interfaceName("org.allseen.Security.PermissionMgmt")
 {
-    methodToSessionType["Claim"] = ECDHE_NULL;
-    methodToSessionType["GetIdentity"] = ECDHE_NULL;
     methodToSessionType["GetManifest"] = ECDHE_NULL;
     methodToSessionType["GetPolicy"] = ECDHE_DSA;
     methodToSessionType["InstallIdentity"] = ECDHE_DSA;
@@ -45,8 +42,8 @@ ProxyObjectManager::~ProxyObjectManager()
 }
 
 QStatus ProxyObjectManager::GetProxyObject(const ApplicationInfo appInfo,
-                                           SessionType type,
-                                           ajn::ProxyBusObject** remoteObject)
+                                           SessionType sessionType,
+                                           ajn::PermissionMgmtProxy** remoteObject)
 {
     QStatus status = ER_FAIL;
     if (appInfo.busName == "") {
@@ -54,6 +51,15 @@ QStatus ProxyObjectManager::GetProxyObject(const ApplicationInfo appInfo,
         QCC_DbgRemoteError(("Application is offline"));
         return status;
     }
+
+    lock.Lock(__FILE__, __LINE__);
+
+    if (sessionType == ECDHE_NULL) {
+        bus->EnablePeerSecurity(KEYX_ECDHE_NULL, listener, AJNKEY_STORE, true);
+    } else if (sessionType == ECDHE_DSA) {
+        bus->EnablePeerSecurity(ECDHE_KEYX, listener, AJNKEY_STORE, true);
+    }
+
     const char* busName = appInfo.busName.c_str();
 
     ajn::SessionId sessionId;
@@ -63,28 +69,15 @@ QStatus ProxyObjectManager::GetProxyObject(const ApplicationInfo appInfo,
                               this, sessionId, opts);
     if (status != ER_OK) {
         QCC_DbgRemoteError(("Could not join session with %s", busName));
+        lock.Unlock(__FILE__, __LINE__);
         return status;
     }
 
-    const InterfaceDescription* remoteIntf = bus->GetInterface(interfaceName);
-    if (NULL == remoteIntf) {
-        status = ER_FAIL;
-        QCC_LogError(status, ("Could not find interface %s", interfaceName));
-        return status;
-    }
-
-    ajn::ProxyBusObject* remoteObj = new ajn::ProxyBusObject(*bus, busName,
-                                                             objectPath, sessionId);
+    ajn::PermissionMgmtProxy* remoteObj = new ajn::PermissionMgmtProxy(*bus, busName, sessionId);
     if (remoteObj == NULL) {
         status = ER_FAIL;
         QCC_LogError(status, ("Could not create ProxyBusObject for %s", busName));
-        return status;
-    }
-
-    status = remoteObj->AddInterface(*remoteIntf);
-    if (status != ER_OK) {
-        QCC_LogError(status, ("Failed to add interface %s to ProxyBusObject", interfaceName));
-        delete remoteObj;
+        lock.Unlock(__FILE__, __LINE__);
         return status;
     }
 
@@ -92,8 +85,10 @@ QStatus ProxyObjectManager::GetProxyObject(const ApplicationInfo appInfo,
     return status;
 }
 
-QStatus ProxyObjectManager::ReleaseProxyObject(ajn::ProxyBusObject* remoteObject)
+QStatus ProxyObjectManager::ReleaseProxyObject(ajn::PermissionMgmtProxy* remoteObject)
 {
+    lock.Unlock(__FILE__, __LINE__);
+
     SessionId sessionId = remoteObject->GetSessionId();
     delete remoteObject;
     return bus->LeaveSession(sessionId);
@@ -139,25 +134,14 @@ QStatus ProxyObjectManager::MethodCall(const ApplicationInfo app,
     }
     SessionType sessionType = it->second;
 
-    lock.Lock(__FILE__, __LINE__);
-
-    if (sessionType == ECDHE_NULL) {
-        bus->EnablePeerSecurity(KEYX_ECDHE_NULL, listener, AJNKEY_STORE, true);
-    } else if (sessionType == ECDHE_DSA) {
-        bus->EnablePeerSecurity(ECDHE_KEYX, listener, AJNKEY_STORE, true);
-    }
-
-    ProxyBusObject* remoteObj;
+    PermissionMgmtProxy* remoteObj;
     status = GetProxyObject(app, sessionType, &remoteObj);
     if (ER_OK != status) {
         // errors logged in GetProxyObject
-        lock.Unlock(__FILE__, __LINE__);
         return status;
     }
 
     status = remoteObj->MethodCall(interfaceName, method, args, numArgs, replyMsg, MSG_REPLY_TIMEOUT);
-
-    lock.Unlock(__FILE__, __LINE__);
 
     ReleaseProxyObject(remoteObj);
 
@@ -171,9 +155,83 @@ QStatus ProxyObjectManager::MethodCall(const ApplicationInfo app,
     return status;
 }
 
+QStatus ProxyObjectManager::Claim(const ApplicationInfo& app,
+                                  qcc::KeyInfoNISTP256& certificateAuthority,
+                                  qcc::GUID128& adminGroupId,
+                                  qcc::KeyInfoNISTP256& adminGroup,
+                                  qcc::IdentityCertificate* identityCertChain,
+                                  size_t identityCertChainSize,
+                                  PermissionPolicy::Rule* manifest,
+                                  size_t manifestSize)
+{
+    QStatus status;
+    SessionType sessionType = ECDHE_NULL;
+
+    PermissionMgmtProxy* remoteObj;
+    status = GetProxyObject(app, sessionType, &remoteObj);
+    if (ER_OK != status) {
+        // errors logged in GetProxyObject
+        return status;
+    }
+
+    status = remoteObj->Claim(certificateAuthority, adminGroupId, adminGroup,
+                              identityCertChain, identityCertChainSize,
+                              manifest, manifestSize);
+
+    ReleaseProxyObject(remoteObj);
+
+    return status;
+}
+
+QStatus ProxyObjectManager::GetIdentity(const ApplicationInfo& app,
+                                        qcc::IdentityCertificate** certChain,
+                                        size_t* certChainSize)
+{
+    QStatus status;
+    SessionType sessionType = ECDHE_DSA;
+
+    PermissionMgmtProxy* remoteObj;
+    status = GetProxyObject(app, sessionType, &remoteObj);
+    if (ER_OK != status) {
+        // errors logged in GetProxyObject
+        return status;
+    }
+
+    status = remoteObj->GetIdentity(certChain, certChainSize);
+
+    ReleaseProxyObject(remoteObj);
+
+    return status;
+}
+
+QStatus ProxyObjectManager::InstallIdentity(const ApplicationInfo& app,
+                                            qcc::IdentityCertificate* certChain,
+                                            size_t certChainSize,
+                                            const PermissionPolicy::Rule* manifest,
+                                            size_t manifestSize)
+{
+    QStatus status;
+    SessionType sessionType = ECDHE_DSA;
+
+    PermissionMgmtProxy* remoteObj;
+    status = GetProxyObject(app, sessionType, &remoteObj);
+    if (ER_OK != status) {
+        // errors logged in GetProxyObject
+        return status;
+    }
+
+    status = remoteObj->InstallIdentity(certChain, certChainSize, manifest, manifestSize);
+
+    ReleaseProxyObject(remoteObj);
+
+    return status;
+}
+
 void ProxyObjectManager::SessionLost(ajn::SessionId sessionId,
                                      SessionLostReason reason)
 {
+    QCC_UNUSED(reason);
+
     QCC_DbgPrintf(("Lost session %lu", (unsigned long)sessionId));
 }
 }

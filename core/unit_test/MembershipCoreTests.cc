@@ -15,6 +15,7 @@
  ******************************************************************************/
 
 #include "TestUtil.h"
+#include "qcc/Thread.h"
 
 namespace secmgrcoretest_unit_nominaltests {
 using namespace secmgrcoretest_unit_testutil;
@@ -56,14 +57,14 @@ TEST_F(MembershipCoreTests, SuccessfulInstallMembership) {
     ASSERT_EQ(ER_OK, secMgr->StoreGuild(guildInfo2));
 
     /* Start the stub */
-    Stub* stub = new Stub(&tcl);
+    stub = new Stub(&tcl);
 
     /* Wait for signals */
     ASSERT_TRUE(WaitForState(ajn::PermissionConfigurator::STATE_CLAIMABLE, ajn::securitymgr::STATE_RUNNING));
 
     /* Installing or removing membership before claiming should fail */
     ApplicationInfo appInfo = lastAppInfo;
-    ASSERT_EQ(ER_END_OF_DATA, secMgr->InstallMembership(appInfo, guildInfo2)); // fails due to manifest missing in persistency
+    ASSERT_NE(ER_OK, secMgr->InstallMembership(appInfo, guildInfo2)); // fails due to manifest missing in persistency
     ASSERT_NE(ER_OK, secMgr->RemoveMembership(appInfo, guildInfo2)); // fails due to certificate missing in persistency
 
     /* Create identity */
@@ -78,8 +79,16 @@ TEST_F(MembershipCoreTests, SuccessfulInstallMembership) {
     ASSERT_TRUE(WaitForState(ajn::PermissionConfigurator::STATE_CLAIMED, ajn::securitymgr::STATE_RUNNING));
 
     ASSERT_EQ(ER_OK, secMgr->InstallMembership(appInfo, guildInfo1));
-    ASSERT_EQ(ER_OK, secMgr->InstallMembership(appInfo, guildInfo2));
+    ApplicationInfo checkUpdatesPendingInfo;
+    checkUpdatesPendingInfo.publicKey = appInfo.publicKey;
+    ASSERT_EQ(ER_OK, secMgr->GetApplication(checkUpdatesPendingInfo));
+    ASSERT_FALSE(checkUpdatesPendingInfo.updatesPending);
 
+    ASSERT_EQ(ER_OK, secMgr->InstallMembership(appInfo, guildInfo2));
+    ASSERT_EQ(ER_OK, secMgr->GetApplication(checkUpdatesPendingInfo));
+    ASSERT_FALSE(checkUpdatesPendingInfo.updatesPending);
+
+    qcc::Sleep(250);
     ASSERT_EQ(ER_OK, secMgr->RemoveMembership(appInfo, guildInfo1));
     ASSERT_EQ(ER_OK, secMgr->RemoveMembership(appInfo, guildInfo2));
 
@@ -88,7 +97,7 @@ TEST_F(MembershipCoreTests, SuccessfulInstallMembership) {
 
     /* Stop the stub */
     delete stub;
-
+    stub = NULL;
     ASSERT_TRUE(WaitForState(ajn::PermissionConfigurator::STATE_CLAIMED, ajn::securitymgr::STATE_NOT_RUNNING));
 }
 } // namespace

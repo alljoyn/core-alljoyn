@@ -21,6 +21,7 @@
 
 #include <alljoyn/securitymgr/ApplicationInfo.h>
 #include <alljoyn/securitymgr/SecurityManagerFactory.h>
+#include <alljoyn/securitymgr/SyncError.h>
 #include <alljoyn/securitymgr/sqlstorage/SQLStorageFactory.h>
 
 #include <PermissionMgmt.h>
@@ -32,6 +33,31 @@
 using namespace ajn::securitymgr;
 using namespace std;
 namespace secmgrcoretest_unit_testutil {
+class TestSessionListener :
+    public SessionListener {
+    void SessionLost(SessionId sessionId, SessionLostReason reason)
+    {
+        printf("SessionLost sessionId = %u, Reason = %d\n", sessionId, reason);
+    }
+};
+
+class TestAboutListener :
+    public AboutListener {
+    virtual void Announced(const char* busName,
+                           uint16_t version,
+                           SessionPort port,
+                           const MsgArg& objectDescriptionArg,
+                           const MsgArg& aboutDataArg)
+    {
+        QCC_UNUSED(version);
+        QCC_UNUSED(port);
+        QCC_UNUSED(objectDescriptionArg);
+        QCC_UNUSED(aboutDataArg);
+
+        printf("Found About data @%s\n", busName);
+    }
+};
+
 class TestApplicationListener :
     public ApplicationListener {
   public:
@@ -47,6 +73,14 @@ class TestApplicationListener :
 
     void OnApplicationStateChange(const ApplicationInfo* old,
                                   const ApplicationInfo* updated);
+
+    void OnSyncError(const SyncError* syncError)
+    {
+        QCC_UNUSED(syncError);
+    }
+
+    /* To avoid compilation warning that the assignment operator can not be generated */
+    TestApplicationListener& operator=(const TestApplicationListener&);
 };
 
 class AutoAccepter :
@@ -55,6 +89,10 @@ class AutoAccepter :
                          const PermissionPolicy::Rule* manifestRules,
                          const size_t manifestRulesCount)
     {
+        QCC_UNUSED(appInfo);
+        QCC_UNUSED(manifestRules);
+        QCC_UNUSED(manifestRulesCount);
+
         return true;
     }
 };
@@ -68,7 +106,8 @@ class BasicTest :
     qcc::Condition sem;
     qcc::Mutex lock;
     TestApplicationListener* tal;
-
+    TestAboutListener testAboutListener;
+    Stub* stub;
     virtual void SetUp();
 
     virtual void TearDown();
@@ -83,8 +122,12 @@ class BasicTest :
 
     BasicTest();
 
+    /* When updatesPending is -1, we will just ignore checking the updatesPending flag,
+     * otherwise it acts as a bool that needs to be checked/waited-for akin to states.
+     * */
     bool WaitForState(ajn::PermissionConfigurator::ClaimableState newClaimState,
-                      ajn::securitymgr::ApplicationRunningState newRunningState);
+                      ajn::securitymgr::ApplicationRunningState newRunningState,
+                      const int updatesPending = -1);
 };
 
 class TestClaimListener :
@@ -100,13 +143,20 @@ class TestClaimListener :
 
     bool OnClaimRequest(const qcc::ECCPublicKey* pubKeyRot, void* ctx)
     {
+        QCC_UNUSED(pubKeyRot);
+        QCC_UNUSED(ctx);
+
         return claimAnswer;
     }
 
     /* This function is called when the claiming process has completed successfully */
     void OnClaimed(void* ctx)
     {
+        QCC_UNUSED(ctx);
     }
+
+    /* To avoid compilation warning that the assignment operator can not be generated */
+    TestClaimListener& operator=(const TestClaimListener&);
 };
 
 class ClaimedTest :

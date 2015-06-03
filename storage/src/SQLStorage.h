@@ -23,11 +23,9 @@
 #include <alljoyn/securitymgr/ManagedApplicationInfo.h>
 #include <alljoyn/securitymgr/GuildInfo.h>
 #include <alljoyn/securitymgr/IdentityInfo.h>
-#include <alljoyn/securitymgr/cert/X509Certificate.h>
 
 #include <alljoyn/Status.h>
 #include <qcc/String.h>
-#include <qcc/Certificate.h>
 #include <qcc/CertificateECC.h>
 #include <qcc/CryptoECC.h>
 #include <qcc/Mutex.h>
@@ -82,7 +80,7 @@ class SQLStorage :
                        const qcc::ECCPublicKey& authority,
                        const GUID128& guid);
 
-    QStatus BindCertForStorage(const qcc::Certificate& certificate,
+    QStatus BindCertForStorage(const qcc::CertificateX509& certificate,
                                const char* sqlStmtText,
                                sqlite3_stmt** statement);                                                                       //Could be generalized in the future for all cert types
 
@@ -96,14 +94,14 @@ class SQLStorage :
 
     qcc::String GetStoragePath() const;
 
-    QStatus PrepareCertificateQuery(const qcc::X509MemberShipCertificate& cert,
+    QStatus PrepareCertificateQuery(const qcc::MembershipCertificate& cert,
                                     sqlite3_stmt** statement) const;
 
     QStatus GetCertificateFromRow(sqlite3_stmt** statement,
-                                  qcc::X509MemberShipCertificate& cert) const;
+                                  qcc::MembershipCertificate& cert) const;
 
     QStatus GetCertificateFromRow(sqlite3_stmt** statement,
-                                  qcc::X509CertificateECC& cert,
+                                  qcc::CertificateX509& cert,
                                   const qcc::String tableName,
                                   Keys keys) const;
 
@@ -124,23 +122,23 @@ class SQLStorage :
 
     QStatus GetManagedApplication(ManagedApplicationInfo& managedApplicationInfo) const;
 
-    QStatus StoreCertificate(const qcc::Certificate& certificate,
+    QStatus StoreCertificate(const qcc::CertificateX509& certificate,
                              bool update = false);
 
-    QStatus StoreAssociatedData(const qcc::Certificate& certificate,
+    QStatus StoreAssociatedData(const qcc::CertificateX509& certificate,
                                 const qcc::String& data,
                                 bool update = false);
 
-    QStatus RemoveCertificate(qcc::Certificate& certificate);
+    QStatus RemoveCertificate(qcc::CertificateX509& certificate);
 
-    QStatus RemoveAssociatedData(const qcc::Certificate& certificate);
+    QStatus RemoveAssociatedData(const qcc::CertificateX509& certificate);
 
-    QStatus GetCertificate(qcc::Certificate& certificate);
+    QStatus GetCertificate(qcc::CertificateX509& certificate);
 
-    QStatus GetCertificates(const qcc::X509MemberShipCertificate& certificate,
-                            std::vector<qcc::X509MemberShipCertificate>& certificates) const;
+    QStatus GetCertificates(const qcc::MembershipCertificate& certificate,
+                            std::vector<qcc::MembershipCertificate>& certificates) const;
 
-    QStatus GetAssociatedData(const qcc::Certificate& certificate,
+    QStatus GetAssociatedData(const qcc::CertificateX509& certificate,
                               qcc::String& data) const;
 
     QStatus StoreGuild(const GuildInfo& guildInfo);

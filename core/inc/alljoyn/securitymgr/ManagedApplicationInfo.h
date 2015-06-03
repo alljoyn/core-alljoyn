@@ -35,6 +35,7 @@ struct ManagedApplicationInfo {
     qcc::String peerID;
     qcc::String manifest;
     qcc::String policy;
+    bool updatesPending;
 };
 }
 }

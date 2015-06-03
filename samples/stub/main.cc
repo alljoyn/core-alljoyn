@@ -16,6 +16,7 @@
 
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/BusObject.h>
+#include <alljoyn/Init.h>
 #include <iostream>
 #include <cstdlib>
 #include <ctime>
@@ -30,7 +31,6 @@
 #include "MyClaimListener.h"
 
 using namespace ajn;
-using namespace services;
 
 void printHelp()
 {
@@ -47,7 +47,18 @@ void printHelp()
 
 int main(int arg, char** argv)
 {
-    char c;
+    QCC_UNUSED(arg);
+    QCC_UNUSED(argv);
+
+    if (AllJoynInit() != ER_OK) {
+        return EXIT_FAILURE;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return EXIT_FAILURE;
+    }
+#endif
 
 #if defined(QCC_OS_GROUP_WINDOWS)
     srand(time(NULL) + (int)_getpid());
@@ -58,6 +69,8 @@ int main(int arg, char** argv)
     MyClaimListener mycl;
     Stub stub(&mycl);
     printHelp();
+    char c;
+    QStatus status = ER_OK;
 
     while ((c = std::cin.get()) != 'q') {
         switch (c) {
@@ -69,7 +82,7 @@ int main(int arg, char** argv)
 
         case 'o':
             {
-                QStatus status = stub.OpenClaimWindow();
+                status = stub.OpenClaimWindow();
                 if (status != ER_OK) {
                     std::cerr << "Could not open claim window " << QCC_StatusText(status) << std::endl;
                     break;
@@ -163,4 +176,10 @@ int main(int arg, char** argv)
             std::cerr << "Unknown option" << std::endl;
         }
     }
+
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
+    return (int)status;
 }

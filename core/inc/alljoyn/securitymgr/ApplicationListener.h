@@ -18,6 +18,7 @@
 #define APPLICATIONLISTENER_H_
 
 #include <alljoyn/securitymgr/ApplicationInfo.h>
+#include <alljoyn/securitymgr/SyncError.h>
 
 #include <qcc/Debug.h>
 #define QCC_MODULE "SEC_MGR"
@@ -36,6 +37,16 @@ class ApplicationListener {
      */
     virtual void OnApplicationStateChange(const ApplicationInfo* oldAppInfo,
                                           const ApplicationInfo* newAppInfo) = 0;
+
+    /**
+     * \brief Callback that is triggered when an application could not be
+     * synchronized with the state that was persisted in the security
+     * manager.
+     *
+     * \param[in] syncError  the error that occurred when synchronizing an
+     *                       application
+     */
+    virtual void OnSyncError(const SyncError* syncError) = 0;
 
     friend class SecurityManagerImpl;
 

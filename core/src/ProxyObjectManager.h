@@ -26,6 +26,7 @@
 #include <alljoyn/Status.h>
 #include <alljoyn/Session.h>
 #include <alljoyn/BusAttachment.h>
+#include <alljoyn/PermissionMgmtProxy.h>
 
 #define KEYX_ECDHE_NULL "ALLJOYN_ECDHE_NULL"
 #define ECDHE_KEYX "ALLJOYN_ECDHE_ECDSA"
@@ -52,6 +53,25 @@ class ProxyObjectManager :
                        const size_t numArgs,
                        Message& replyMsg);
 
+    QStatus Claim(const ApplicationInfo& app,
+                  qcc::KeyInfoNISTP256& certificateAuthority,
+                  qcc::GUID128& adminGroupId,
+                  qcc::KeyInfoNISTP256& adminGroup,
+                  qcc::IdentityCertificate* identityCertChain,
+                  size_t identityCertChainSize,
+                  PermissionPolicy::Rule* manifest,
+                  size_t manifestSize);
+
+    QStatus GetIdentity(const ApplicationInfo& app,
+                        qcc::IdentityCertificate** certChain,
+                        size_t* certChainSize);
+
+    QStatus InstallIdentity(const ApplicationInfo& app,
+                            qcc::IdentityCertificate* certChain,
+                            size_t certChainSize,
+                            const PermissionPolicy::Rule* manifest,
+                            size_t manifestSize);
+
     static ajn::AuthListener* listener;
 
   private:
@@ -59,7 +79,6 @@ class ProxyObjectManager :
     qcc::Mutex lock;
     ajn::BusAttachment* bus;
 
-    const char* objectPath;
     const char* interfaceName;
     std::map<qcc::String, SessionType> methodToSessionType;
 
@@ -82,13 +101,13 @@ class ProxyObjectManager :
      */
     QStatus GetProxyObject(const ApplicationInfo appInfo,
                            SessionType type,
-                           ajn::ProxyBusObject** remoteObject);
+                           ajn::PermissionMgmtProxy** remoteObject);
 
     /**
      * \brief releases the remoteObject.
      * \param[in] the object to be released.
      */
-    QStatus ReleaseProxyObject(ajn::ProxyBusObject* remoteObject);
+    QStatus ReleaseProxyObject(ajn::PermissionMgmtProxy* remoteObject);
 };
 }
 }

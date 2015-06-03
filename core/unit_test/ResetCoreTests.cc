@@ -37,7 +37,7 @@ TEST_F(ResetCoreTests, SuccessfulReset) {
     bool claimAnswer = true;
     TestClaimListener tcl(claimAnswer);
 
-    Stub* stub = new Stub(&tcl);
+    stub = new Stub(&tcl);
     ASSERT_TRUE(WaitForState(PermissionConfigurator::STATE_CLAIMABLE, STATE_RUNNING));
 
     IdentityInfo idInfo;
@@ -53,12 +53,18 @@ TEST_F(ResetCoreTests, SuccessfulReset) {
     ASSERT_EQ(ER_OK, secMgr->Reset(lastAppInfo));
     ASSERT_TRUE(WaitForState(PermissionConfigurator::STATE_CLAIMABLE, STATE_RUNNING));
 
+    ApplicationInfo checkUpdatesPendingInfo;
+    checkUpdatesPendingInfo.publicKey = lastAppInfo.publicKey;
+    ASSERT_EQ(ER_OK, secMgr->GetApplication(checkUpdatesPendingInfo));
+    ASSERT_FALSE(checkUpdatesPendingInfo.updatesPending);
+
     stub->SetDSASecurity(false);
 
     ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
     ASSERT_TRUE(WaitForState(PermissionConfigurator::STATE_CLAIMED, STATE_RUNNING));
 
     delete stub;
+    stub = NULL;
     ASSERT_TRUE(WaitForState(PermissionConfigurator::STATE_CLAIMED, STATE_NOT_RUNNING));
 }
 } // namespace

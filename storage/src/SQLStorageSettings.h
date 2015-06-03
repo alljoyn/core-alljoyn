@@ -22,7 +22,6 @@
 #define CLAIMED_APPS_TABLE_NAME "CLAIMED_APPLICATIONS"
 #define IDENTITY_CERTS_TABLE_NAME "IDENTITY_CERTS"
 #define MEMBERSHIP_CERTS_TABLE_NAME "MEMBERSHIP_CERTS"
-#define USER_EQ_CERTS_TABLE_NAME "USER_EQ_CERTS"
 #define CERTSDATA_TABLE_NAME "CERTS_DATA"
 #define SERIALNUMBER_TABLE_NAME "SERIALNUMBER"
 
@@ -54,7 +53,8 @@
         DEV_NAME   TEXT,    \
         USER_DEF_NAME   TEXT,\
         MANIFEST BLOB,\
-        POLICY BLOB\
+        POLICY BLOB,\
+        UPDATES_PENDING BOOLEAN\
 ); "
 
 #define IDENTITY_CERTS_TABLE_SCHEMA \
@@ -87,20 +87,6 @@
         DELEGATE BOOLEAN NOT NULL,\
         GUID TEXT NOT NULL,\
         PRIMARY KEY(SUBJECT, GUID),\
-        FOREIGN KEY(SUBJECT) REFERENCES " CLAIMED_APPS_TABLE_NAME                                                                                                                                                                                                                                                                                                                                                                                    \
-    " (APPLICATION_PUBKEY) ON DELETE CASCADE\
-); "
-
-#define USER_EQ_CERTS_TABLE_SCHEMA \
-    "CREATE TABLE IF NOT EXISTS " USER_EQ_CERTS_TABLE_NAME \
-    " (\
-        SUBJECT BLOB NOT NULL,\
-        VERSION TEXT NOT NULL,\
-        ISSUER BLOB NOT NULL,\
-        VALIDITYFROM UNSIGNED BIG INT NOT NULL,\
-        VALIDITYTO UNSIGNED BIG INT NOT NULL,\
-        SN BLOB NOT NULL,\
-        PRIMARY KEY(SUBJECT),\
         FOREIGN KEY(SUBJECT) REFERENCES " CLAIMED_APPS_TABLE_NAME                                                                                                                                                                                                                                                                                                                                                                                    \
     " (APPLICATION_PUBKEY) ON DELETE CASCADE\
 ); "

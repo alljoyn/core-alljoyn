@@ -25,12 +25,12 @@
 #include <alljoyn/securitymgr/IdentityInfo.h>
 #include <alljoyn/securitymgr/ApplicationListener.h>
 #include <alljoyn/securitymgr/Storage.h>
-#include <alljoyn/securitymgr/cert/X509Certificate.h>
 
 #include <memory>
 
 #include <qcc/String.h>
 #include <qcc/CryptoECC.h>
+#include <qcc/CertificateECC.h>
 
 #include <qcc/Debug.h>
 #define QCC_MODULE "SEC_MGR"
@@ -327,17 +327,12 @@ class SecurityManager {
      *                               guild
      * \param[in] guildInfo          the guild to which the application should
      *                               added
-     * \param[in] authorizationData  the permissions the application will have
-     *                               within that guild or NULL to use the
-     *                               manifest that was persisted during
-     *                               claiming
      *
      * \retval ER_OK  on successful persisting of the the certificate
      * \retval others on failure
      */
     QStatus InstallMembership(const ApplicationInfo& appInfo,
-                              const GuildInfo& guildInfo,
-                              const PermissionPolicy* authorizationData = NULL);
+                              const GuildInfo& guildInfo);
 
     /**
      * @brief Removes a membership certificate from persistent storage. If the remote

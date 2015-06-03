@@ -48,6 +48,7 @@ BasicTest::BasicTest()
     secMgr = NULL;
     tal = NULL;
     ba = NULL;
+    stub = NULL;
 }
 
 void BasicTest::SetUp()
@@ -71,6 +72,16 @@ void BasicTest::SetUp()
     ASSERT_EQ(ER_OK, ba->Start());
     ASSERT_EQ(ER_OK, ba->Connect());
 
+    ba->RegisterAboutListener(testAboutListener);
+
+    /* Passing NULL into WhoImplements will listen for all About announcements */
+
+    if (ER_OK == ba->WhoImplements(NULL)) {
+        printf("WhoImplements NULL called.\n");
+    } else {
+        printf("WhoImplements NULL failed.\n");
+    }
+
     storage = storageFac.GetStorage();
     secMgr = secFac.GetSecurityManager(storage, ba);
     ASSERT_TRUE(secMgr != NULL);
@@ -89,7 +100,7 @@ void BasicTest::UpdateLastAppInfo()
 }
 
 bool BasicTest::WaitForState(ajn::PermissionConfigurator::ClaimableState newState,
-                             ajn::securitymgr::ApplicationRunningState newRunningState)
+                             ajn::securitymgr::ApplicationRunningState newRunningState, const int updatesPending)
 {
     lock.Lock();
     printf("\nWaitForState: waiting for event(s) ...\n");
@@ -101,18 +112,19 @@ bool BasicTest::WaitForState(ajn::PermissionConfigurator::ClaimableState newStat
             UpdateLastAppInfo(); //update latest value.
             printf("WaitForState: Checking event ... ");
             if (lastAppInfo.claimState == newState && newRunningState == lastAppInfo.runningState &&
-                lastAppInfo.appName.size() != 0) {
+                lastAppInfo.appName.size() != 0 &&
+                ((updatesPending == -1 ? 1 : ((bool)updatesPending == lastAppInfo.updatesPending)))) {
                 printf("ok\n");
                 lock.Unlock();
                 return true;
             }
         }
-        QStatus status = sem.TimedWait(lock, 5000);
+        QStatus status = sem.TimedWait(lock, 10000);
         if (ER_OK != status) {
             printf("timeout- failing test - %i\n", status);
             break;
         }
-        assert(tal->event); // asume TimedWait returns != ER_OK in case of timeout
+        assert(tal->event); // assume TimedWait returns != ER_OK in case of timeout
         printf("not ok, waiting for next event\n");
     } while (true);
     printf("WaitForState failed.\n");
@@ -121,6 +133,11 @@ bool BasicTest::WaitForState(ajn::PermissionConfigurator::ClaimableState newStat
     printf("\tRunningState: expected = %s, got %s\n", ToString(
                newRunningState), ToString(lastAppInfo.runningState));
     printf("\tApplicationName = '%s' (size = %lu)\n", lastAppInfo.appName.c_str(), lastAppInfo.appName.size());
+    if (updatesPending != -1) {
+        printf("\tUpdatesPending : expected = %s, got %s\n", (updatesPending ? "True" : "False"),
+               (lastAppInfo.updatesPending ? "True" : "False"));
+    }
+
     lock.Unlock();
     return false;
 }
@@ -134,11 +151,8 @@ void BasicTest::TearDown()
     }
     delete secMgr;
 
-    if (ba) {
-        ba->Disconnect();
-        ba->Stop();
-        ba->Join();
-    }
+    ba->UnregisterAboutListener(testAboutListener);
+
     delete ba;
     storage->Reset();
     delete storage;
@@ -146,5 +160,7 @@ void BasicTest::TearDown()
     ba = NULL;
     secMgr = NULL;
     tal = NULL;
+    delete stub;
+    stub = NULL;
 }
 }

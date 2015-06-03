@@ -18,13 +18,13 @@
 #include <alljoyn/version.h>
 #include <alljoyn/Session.h>
 #include <alljoyn/AllJoynStd.h>
-#include <alljoyn/about/AboutClient.h>
-#include <alljoyn/about/AnnouncementRegistrar.h>
-#include <alljoyn/about/AboutPropertyStoreImpl.h>
+#include <alljoyn/AboutListener.h>
+#include <alljoyn/AboutObj.h>
 
 #include <qcc/Debug.h>
 #include <qcc/CertificateECC.h>
 #include <qcc/KeyInfoECC.h>
+#include <qcc/Crypto.h>
 #include <CredentialAccessor.h> // still in alljoyn_core/src!
 #include <PermissionMgmtObj.h> // still in alljoyn_core/src!
 #include "SecurityManagerImpl.h"
@@ -37,8 +37,6 @@
 #include <SecLibDef.h>
 
 #define QCC_MODULE "SEC_MGR"
-
-using namespace ajn::services;
 
 namespace ajn {
 namespace securitymgr {
@@ -53,6 +51,11 @@ class ECDHEKeyXListener :
                             uint16_t authCount, const char* userId, uint16_t credMask,
                             Credentials& creds)
     {
+        QCC_UNUSED(credMask);
+        QCC_UNUSED(userId);
+        QCC_UNUSED(authCount);
+        QCC_UNUSED(authPeer);
+
         QCC_DbgPrintf(("RequestCredentials %s", authMechanism));
         if (strcmp(authMechanism, KEYX_ECDHE_NULL) == 0) {
             creds.SetExpiration(100);             /* set the master secret expiry time to 100 seconds */
@@ -64,6 +67,9 @@ class ECDHEKeyXListener :
     bool VerifyCredentials(const char* authMechanism, const char* authPeer,
                            const Credentials& creds)
     {
+        QCC_UNUSED(creds);
+        QCC_UNUSED(authPeer);
+
         QCC_DbgPrintf(("SecMgr: VerifyCredentials %s", authMechanism));
         if (strcmp(authMechanism, "ALLJOYN_ECDHE_ECDSA") == 0) {
             return true;
@@ -74,13 +80,19 @@ class ECDHEKeyXListener :
     void AuthenticationComplete(const char* authMechanism, const char* authPeer,
                                 bool success)
     {
+        QCC_UNUSED(authPeer);
+
         QCC_DbgPrintf(("SecMgr: AuthenticationComplete '%s' success = %i", authMechanism, success));
     }
 };
 
 //No member method as we cannot include CredentialAccessor.h in SecurityMngrImpl.h
 static QStatus ClaimSelf(CredentialAccessor& ca,
-                         BusAttachment* ba)
+                         BusAttachment* ba,
+                         qcc::GUID128 adminGroupId,
+                         const qcc::ECCPublicKey* smPublicKey,
+                         const qcc::GUID128 smPeerId,
+                         X509CertificateGenerator* certGen)
 {
     qcc::GUID128 localGuid;
     qcc::ECCPublicKey subjectPubKey;
@@ -91,7 +103,7 @@ static QStatus ClaimSelf(CredentialAccessor& ca,
     keyInfo.SetPublicKey(&subjectPubKey);
     keyInfo.SetKeyId(localGuid.GetBytes(), qcc::GUID128::SIZE);
     ajn::PermissionMgmtObj::TrustAnchor* anchor = new ajn::PermissionMgmtObj::TrustAnchor(
-        ajn::PermissionMgmtObj::TRUST_ANCHOR_ANY,
+        ajn::PermissionMgmtObj::TRUST_ANCHOR_CA,
         keyInfo);
 
     if (anchor == NULL) {
@@ -100,29 +112,75 @@ static QStatus ClaimSelf(CredentialAccessor& ca,
     }
 
     ajn::PermissionMgmtObj pmo(*ba);
-    pmo.InstallTrustAnchor(anchor); //ownership is transferred
+    QStatus status = pmo.InstallTrustAnchor(anchor); //ownership is transferred
+    if (status != ER_OK) {
+        QCC_LogError(ER_FAIL, ("Failed to install TrustAnchor"));
+        return ER_FAIL;
+    }
 
+    // Manifest
+    size_t manifestSize = 1;
+    PermissionPolicy::Rule* manifest = new PermissionPolicy::Rule[1];
+    manifest[0].SetInterfaceName("*");
+    PermissionPolicy::Rule::Member* mfPrms = new PermissionPolicy::Rule::Member[1];
+    mfPrms[0].SetMemberName("*");
+    mfPrms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                            PermissionPolicy::Rule::Member::ACTION_MODIFY |
+                            PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+    manifest[0].SetMembers(1, mfPrms);
+
+    MsgArg manifestMsgArg;
+    status = PermissionPolicy::GenerateRules(manifest, manifestSize, manifestMsgArg);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Failed to marshall manifest"));
+        return status;
+    }
+
+    // Identity certificate
     PermissionConfigurator& pcf = ba->GetPermissionConfigurator();
-    CertificateX509 x509(CertificateX509::IDENTITY_CERTIFICATE);
-    x509.SetSerial("0");
-    x509.SetIssuer(localGuid);
-    x509.SetSubject(localGuid);
+    IdentityCertificate x509;
+    x509.SetSerial(qcc::String("0"));
+    x509.SetIssuerCN(localGuid.GetBytes(), qcc::GUID128::SIZE);
+    x509.SetSubjectCN(localGuid.GetBytes(), qcc::GUID128::SIZE);
     x509.SetSubjectPublicKey(&subjectPubKey);
+    qcc::CertificateX509::ValidPeriod period;
+    period.validFrom = time(NULL) - 3600;
+    period.validTo = period.validFrom + 3600 +  3153600;    // valid for 365 days
+    x509.SetValidity(&period);
     x509.SetAlias("Admin");
 
-    QStatus status =  pcf.SignCertificate(x509);
+    uint8_t mfDigest[Crypto_SHA256::DIGEST_SIZE];
+    PermissionMgmtObj::GenerateManifestDigest(*ba, manifest,
+                                              manifestSize, mfDigest,
+                                              Crypto_SHA256::DIGEST_SIZE);
+    x509.SetDigest(mfDigest, Crypto_SHA256::DIGEST_SIZE);
+
+    status =  pcf.SignCertificate(x509);
     if (ER_OK != status) {
         QCC_LogError(status, ("Failed to sign certificate"));
         return status;
     }
     qcc::String der;
-    x509.EncodeCertificateDER(der);
-    MsgArg cert;
-    cert.Set("(yay)", Certificate::ENCODING_X509_DER, der.size(), der.data());
-    status = pmo.StoreIdentityCertificate(cert);
+    status = x509.EncodeCertificateDER(der);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Failed to encode certificate"));
+        return status;
+    }
+    MsgArg certs[1];
+    certs[0].Set("(yay)", CertificateX509::ENCODING_X509_DER, der.size(), der.data());
+    MsgArg chain("a(yay)", 1, certs);
+    status = pmo.StoreIdentityCertChain(chain);
     if (ER_OK != status) {
         QCC_LogError(status, ("Failed to store own identity certificate"));
         return status;
+    }
+
+    status = pmo.StoreManifest(manifestMsgArg);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Failed to store local manifest"));
+        return status;
+    } else {
+        QCC_DbgHLPrintf(("Successfully stored local manifest"));
     }
 
     PermissionPolicy localPolicy;
@@ -141,6 +199,7 @@ static QStatus ClaimSelf(CredentialAccessor& ca,
         delete[] prms;
         return ER_FAIL;
     }
+
     peers[0].SetType(PermissionPolicy::Peer::PEER_ANY);
     terms[0].SetPeers(1, peers);
     rules[0].SetInterfaceName("*");
@@ -166,6 +225,35 @@ static QStatus ClaimSelf(CredentialAccessor& ca,
     if (ER_OK != status) {
         QCC_LogError(status, ("Failed to store local policy"));
     }
+
+    // Generate membership certificate
+    qcc::MembershipCertificate mCert;
+    mCert.SetGuild(adminGroupId);
+    mCert.SetSubjectPublicKey(smPublicKey);
+    mCert.SetCA(false);
+    mCert.SetSubjectCN(smPeerId.GetBytes(), qcc::GUID128::SIZE);
+    mCert.SetSerial("42");
+    qcc::CertificateX509::ValidPeriod mcPeriod;
+    mcPeriod.validFrom = time(NULL) - 3600;
+    mcPeriod.validTo = mcPeriod.validFrom + 3600 + 3153600;
+    mCert.SetValidity(&mcPeriod);
+    certGen->GenerateMembershipCertificate(mCert);
+
+    // Marshall
+    ajn::MsgArg mcArg[1];
+    qcc::String mcDER((const char*)mCert.GetEncoded(), mCert.GetEncodedLen());
+    mcArg[0].Set("(yay)", qcc::CertificateX509::ENCODING_X509_DER, mcDER.length(),
+                 mcDER.data());
+    ajn::MsgArg mChainArg("a(yay)", 1, mcArg);
+
+    // Add to local storage
+    pmo.StoreMembership(mChainArg);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Failed to store local membership certificate"));
+    } else {
+        QCC_DbgHLPrintf(("Successfully stored local membership certificate"));
+    }
+
     return status;
 }
 
@@ -176,18 +264,18 @@ SecurityManagerImpl::SecurityManagerImpl(ajn::BusAttachment* ba,
                                                          "org.allseen.Security.PermissionMgmt.Notification")),
     busAttachment(ba),
     storage((Storage*)_storage),
-    queue(TaskQueue<AppInfoEvent*, SecurityManagerImpl>(this)), mfListener(NULL)
+    queue(TaskQueue<AppListenerEvent*, SecurityManagerImpl>(this)), mfListener(NULL)
 {
     CertificateGen = NULL;
     remoteApplicationManager = NULL;
     proxyObjMgr = NULL;
     applicationUpdater = NULL;
+    adminGroupId = qcc::GUID128(0xab); // TODO: retrieve from storage
 }
 
 QStatus SecurityManagerImpl::Init()
 {
     SessionOpts opts;
-    InterfaceDescription* stubIntf;
     QStatus status = ER_OK;
 
     do {
@@ -226,7 +314,7 @@ QStatus SecurityManagerImpl::Init()
 
         ca.GetDSAPublicKey(pubKey);
 
-        CertificateGen = new X509CertificateGenerator(localGuid.ToString(), busAttachment);
+        CertificateGen = new X509CertificateGenerator(localGuid, busAttachment);
         proxyObjMgr = new ProxyObjectManager(busAttachment);
         remoteApplicationManager = new RemoteApplicationManager(proxyObjMgr, busAttachment);
 
@@ -247,10 +335,15 @@ QStatus SecurityManagerImpl::Init()
 
         if (PermissionConfigurator::STATE_CLAIMABLE ==
             busAttachment->GetPermissionConfigurator().GetClaimableState()) {
-            ClaimSelf(ca, busAttachment);
+            status = ClaimSelf(ca, busAttachment, adminGroupId, &pubKey, localGuid, CertificateGen);
+            if (status != ER_OK) {
+                QCC_LogError(status, ("Failed to claim self"));
+                break;
+            }
         }
 
-        applicationUpdater = new ApplicationUpdater(busAttachment, storage, remoteApplicationManager, localGuid, pubKey);
+        applicationUpdater =
+            new ApplicationUpdater(busAttachment, storage, remoteApplicationManager, this, pubKey);
         if (NULL == applicationUpdater) {
             status = ER_FAIL;
             QCC_LogError(status, ("Failed to initialize application updater."));
@@ -277,16 +370,10 @@ QStatus SecurityManagerImpl::Init()
             info.peerID = it->peerID;
             info.deviceName = it->deviceName;
             info.appName = it->appName;
-
+            info.updatesPending = it->updatesPending;
             appsMutex.Lock(__FILE__, __LINE__);
             applications[info.publicKey] = info;
             appsMutex.Unlock(__FILE__, __LINE__);
-        }
-
-        status = CreateStubInterface(busAttachment, stubIntf);
-        if (ER_OK != status) {
-            QCC_LogError(status, ("Failed to create security interface"));
-            break;
         }
 
         if (NULL == appMonitor) {
@@ -297,12 +384,7 @@ QStatus SecurityManagerImpl::Init()
         appMonitor->RegisterSecurityInfoListener(this);
         appMonitor->RegisterSecurityInfoListener(applicationUpdater);
 
-        status = ajn::services::AnnouncementRegistrar::RegisterAnnounceHandler(
-            *busAttachment, *this, NULL, 0);
-        if (ER_OK != status) {
-            QCC_LogError(status, ("Failed to register announce handler"));
-            break;
-        }
+        busAttachment->RegisterAboutListener(*this);
     } while (0);
 
     return status;
@@ -310,16 +392,10 @@ QStatus SecurityManagerImpl::Init()
 
 SecurityManagerImpl::~SecurityManagerImpl()
 {
-    // TO DO: only unregister announce handler registered by secmgr
-    ajn::services::AnnouncementRegistrar::UnRegisterAnnounceHandler(*busAttachment, *this, NULL,
-                                                                    0);
+    busAttachment->UnregisterAboutListener(*this);
+
     appMonitor->UnregisterSecurityInfoListener(applicationUpdater);
     appMonitor->UnregisterSecurityInfoListener(this);
-
-    std::map<qcc::String, PermissionPolicy*>::iterator itr = manifestCache.begin();
-    for (; itr != manifestCache.end(); itr++) {
-        delete itr->second;
-    }
 
     queue.Stop();
 
@@ -332,129 +408,108 @@ SecurityManagerImpl::~SecurityManagerImpl()
     ProxyObjectManager::listener = NULL;
 }
 
-QStatus SecurityManagerImpl::CreateStubInterface(ajn::BusAttachment* bus,
-                                                 ajn::InterfaceDescription*& intf)
-{
-    // TODO: remove stub specific code from production code
-    qcc::String stubIfn("org.allseen.Security.PermissionMgmt.Stub");
-    QStatus status = bus->CreateInterface(stubIfn.c_str(), intf,
-                                          AJ_IFC_SECURITY_REQUIRED);
-    if (ER_OK != status) {
-        QCC_LogError(status,
-                     ("Failed to create interface '%s' on security manager bus attachment",
-                      stubIfn.c_str()));
-        return status;
-    }
-    intf->AddMethod("Claim",     "(yv)(yay)",  "(yv)", "adminPublicKey,identityCert,publicKey");
-    intf->AddMethod("InstallIdentity", "(yay)", NULL, "cert,result", 0);
-    intf->AddMethod("GetIdentity",     NULL, "(yay)", "cert");
-    intf->AddMethod("InstallMembership", "a(yay)", NULL, "certChain", 0);
-    intf->AddMethod("RemoveMembership",     "say", NULL, "serialNum,issuer");
-    intf->AddMethod("GetManifest", NULL, "(yv)",  "manifest");
-    intf->AddMethod("InstallMembershipAuthData", "say(yv)", NULL, "serialNum,issuer,authorization", 0);
-    intf->AddMethod("InstallPolicy", "(yv)",  NULL, "authorization");
-    intf->AddMethod("GetPolicy", NULL, "(yv)", "authorization");
-    intf->Activate();
-
-    return ER_OK;
-}
-
 void SecurityManagerImpl::SetManifestListener(ManifestListener* mfl)
 {
     mfListener = mfl;
 }
 
-QStatus SecurityManagerImpl::Claim(const ApplicationInfo& appInfo, const IdentityInfo& identityInfo)
+QStatus SecurityManagerImpl::Claim(const ApplicationInfo& appInfo,
+                                   const IdentityInfo& identityInfo)
 {
-    QStatus status = ER_FAIL;
+    QStatus status;
+
+    // Check ManifestListener
     if (mfListener == NULL) {
-        QCC_LogError(status, ("No ManifestListener set."));
-        return ER_FAIL;
+        status = ER_FAIL;
+        QCC_LogError(status, ("No ManifestListener set"));
+        return status;
     }
 
-    do {
-        //Sanity check. Make sure we use our internal collected data. Don't trust what is passed to us.
-        ApplicationInfo app;
-        bool exist;
-        ApplicationInfoMap::iterator appItr = SafeAppExist(appInfo.publicKey, exist);
+    // Check appInfo
+    ApplicationInfo app;
+    bool exist;
+    ApplicationInfoMap::iterator appItr = SafeAppExist(appInfo.publicKey, exist);
+    if (!exist) {
+        status = ER_FAIL;
+        QCC_LogError(status, ("Unknown application"));
+        return status;
+    }
+    app = appItr->second;
 
-        if (!exist) {
-            QCC_LogError(ER_FAIL, ("App does not exist."));
-            break;
-        }
-        app = appItr->second;
+    // Check identityInfo
+    IdentityInfo idInfo = identityInfo;
+    status = storage->GetIdentity(idInfo);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Unknown identity"));
+        return status;
+    }
 
-        //Check Identity;
-        IdentityInfo idInfo = identityInfo;
+    /*===========================================================
+     * Step 1: Accept manifest
+     */
+    PermissionPolicy::Rule* manifest;
+    size_t manifestSize = 0;
+    status = remoteApplicationManager->GetManifest(app, &manifest, &manifestSize);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not retrieve manifest"));
+        return status;
+    }
 
-        status = storage->GetIdentity(idInfo);
+    if (!mfListener->ApproveManifest(app, manifest, manifestSize)) {
+        return ER_MANIFEST_REJECTED;
+    }
 
-        if (status != ER_OK) {
-            QCC_LogError(status, ("Identity Not found. guid = '%s'", identityInfo.guid.ToString().c_str()));
-            break;
-        }
+    /*===========================================================
+     * Step 2: Claim
+     */
 
-        /*===========================================================
-         * Step 1: Claim and install identity certificate
-         */
+    qcc::KeyInfoNISTP256 CAKeyInfo;
+    CAKeyInfo.SetPublicKey(&pubKey);
+    CAKeyInfo.SetKeyId(localGuid.GetBytes(), GUID128::SIZE);
 
-        if (ER_OK != (status = PartialClaim(app, identityInfo))) {
-            QCC_LogError(status, ("Could not claim application"));
-            break;
-        }
+    qcc::IdentityCertificate idCertificate;
+    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+    PermissionMgmtObj::GenerateManifestDigest(*busAttachment, manifest,
+                                              manifestSize, digest, Crypto_SHA256::DIGEST_SIZE);
+    idCertificate.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
 
-        QCC_DbgPrintf(("Application %s was claimed", app.appName.c_str()));
+    status = GenerateIdentityCertificate(idCertificate, idInfo, app);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Failed to create IdentityCertificate"));
+        return status;
+    }
 
-        /*===========================================================
-         * Step 2: Retrieve manifest and call accept manifest
-         *         callback.
-         */
+    status = remoteApplicationManager->Claim(app, CAKeyInfo, adminGroupId,
+                                             CAKeyInfo, &idCertificate, 1, manifest, manifestSize);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not claim application"));
+        return status;
+    }
 
-        PermissionPolicy::Rule* manifestRules;
-        size_t manifestRulesCount = 0;
-        if (ER_OK != (status = remoteApplicationManager->GetManifest(app, &manifestRules, &manifestRulesCount))) {
-            QCC_LogError(status, ("Could not retrieve manifest"));
-            break;
-        }
+    /*===========================================================
+     * Step 3: Persist
+     */
 
-        if (!mfListener->ApproveManifest(app, manifestRules, manifestRulesCount)) {
-            status = Reset(appInfo);
-            if (ER_OK == status) {
-                status = ER_MANIFEST_REJECTED;
-            }
-            break;
-        }
+    status = PersistApplicationInfo(app, false);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not persist application"));
+        return status;
+    }
 
-        /*===========================================================
-         * Step 3: Persist claimed app manifest
-         **/
+    status = PersistManifest(app, manifest, manifestSize);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not persist application's manifest"));
+        return status;
+    }
 
-        if (ER_OK != (status = PersistApplication(app, true, manifestRules, manifestRulesCount))) {
-            QCC_LogError(status, ("Could not persist application's manifest"));
-            break;
-        }
+    status = storage->StoreCertificate(idCertificate);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not persist identity certificate"));
+        return status;
+    }
+    ;
 
-        QCC_DbgPrintf(("Application %s was persisted", app.appName.c_str()));
-
-        appItr = SafeAppExist(appInfo.publicKey, exist);
-
-        if (!exist) {
-            QCC_LogError(ER_FAIL, ("App does not exist"));
-            break;
-        }
-
-        /* TODO: refactor the lines below */
-        ECCPublicKey pk = app.publicKey;
-        appsMutex.Lock(__FILE__, __LINE__);
-        app = appItr->second;
-        app.publicKey = pk;
-        applications[app.publicKey] =  app;
-        appsMutex.Unlock(__FILE__, __LINE__);
-
-        status = ER_OK;
-    } while (0);
-
-    return status;
+    return ER_OK;
 }
 
 // TODO: move to ECCPublicKey class
@@ -563,89 +618,8 @@ QStatus SecurityManagerImpl::UnmarshalPublicKey(const MsgArg* ma, ECCPublicKey& 
     return ER_OK;
 }
 
-QStatus SecurityManagerImpl::PartialClaim(const ApplicationInfo& appInfo, const IdentityInfo& identityInfo)
-{
-    QStatus status = ER_OK;
-
-    // Check application
-    ApplicationInfo app;
-    bool exist;
-    ApplicationInfoMap::iterator appItr = SafeAppExist(appInfo.publicKey, exist);
-    if (!exist) {
-        QCC_LogError(ER_FAIL, ("Unknown application"));
-        return ER_FAIL;
-    }
-    app = appItr->second;
-
-    // Check identity
-    IdentityInfo id = identityInfo;
-
-    status = storage->GetIdentity(id);
-
-    if (status != ER_OK) {
-        QCC_LogError(status, ("Unknown identity"));
-        return status;
-    }
-
-    MsgArg inputs[2];
-
-    if (ER_OK != (status = MarshalPublicKey(&pubKey, localGuid, inputs[0]))) {
-        QCC_LogError(status, ("Failed to marshal public key"));
-        return status;
-    }
-
-    qcc::X509IdentityCertificate idCertificate;
-    if (ER_OK != (status = GenerateIdentityCertificate(idCertificate, id, app))) {
-        QCC_LogError(status, ("Failed to create IdentityCertificate"));
-        return status;
-    }
-
-    qcc::String pem = idCertificate.GetDER();
-    inputs[1].Set("(yay)", Certificate::ENCODING_X509_DER, pem.size(), pem.data());
-    Message reply(*busAttachment);
-
-    fprintf(stderr, "Calling claim ...");
-    status = proxyObjMgr->MethodCall(app, "Claim", inputs, 2, reply);
-    if (ER_OK != status) {
-        // errors logged in MethodCall
-        return status;
-    }
-
-    ECCPublicKey appPubKey;
-    status = UnmarshalPublicKey(reply->GetArg(0), appPubKey);
-    if (ER_OK != status) {
-        QCC_LogError(status, ("Failed to unmarshal application public key"));
-    }
-    QCC_DbgPrintf(("appPubKey = %s...", appPubKey.ToString().substr(0, 20).c_str()));
-    if (app.publicKey != appPubKey) {
-        status = ER_FAIL;
-        QCC_LogError(status, ("Found wrong key in claim response!!!!"));
-        app.publicKey = appPubKey;
-        return status;
-    }
-
-    if (ER_OK == status) {
-        status = PersistApplication(app);
-        if (ER_OK != status) {
-            QCC_LogError(status, ("Could not persist application"));
-            return status;
-        }
-
-        status = storage->StoreCertificate(idCertificate);
-
-        if (ER_OK != status) {
-            QCC_LogError(status,
-                         ("Failed to persist identity certificate"));
-            return status;
-        }
-    }
-
-    return status;
-}
-
 QStatus SecurityManagerImpl::InstallMembership(const ApplicationInfo& appInfo,
-                                               const GuildInfo& guildInfo,
-                                               const PermissionPolicy* authorizationData)
+                                               const GuildInfo& guildInfo)
 {
     // Check application
     QStatus status = ER_FAIL;
@@ -669,67 +643,14 @@ QStatus SecurityManagerImpl::InstallMembership(const ApplicationInfo& appInfo,
         return status;
     }
 
-    qcc::X509MemberShipCertificate cert;
-    cert.SetGuildId(gi.guid.ToString());
-    cert.SetSubject(&app.publicKey);
-    PermissionPolicy* data = NULL;
-    uint8_t* permPolicyData = NULL;
-
-    // Create marshaller for policies
-    Message tmpMsg(*busAttachment);
-    DefaultPolicyMarshaller marshaller(tmpMsg);
+    qcc::MembershipCertificate cert;
+    cert.SetGuild(gi.guid);
+    cert.SetSubjectPublicKey(&app.publicKey);
 
     do {
-        // Check passed on authorizationData
-        if ((NULL == authorizationData)) {
-            QCC_DbgPrintf(("AuthorizationData is not provided"));
-            //Fetch persisted manifest
-            //Construct permission policy
-            ManagedApplicationInfo mgdApp;
-            mgdApp.publicKey = app.publicKey;
-            status = storage->GetManagedApplication(mgdApp);
-
-            if (ER_OK != status) {
-                QCC_LogError(status,
-                             ("Could not get application from storage"));
-                break;
-            }
-
-            QCC_DbgPrintf(
-                ("Retrieved Manifest is: %s", mgdApp.manifest.c_str()));
-
-            const PermissionPolicy::Rule* manifestRules;
-            size_t manifestRulesCount;
-
-            status = DeserializeManifest(mgdApp, &manifestRules,
-                                         &manifestRulesCount);
-            if (ER_OK != status) {
-                QCC_LogError(status, ("Could not get manifest !"));
-                break;
-            }
-
-            PermissionPolicy* manifest = new PermissionPolicy();
-            PermissionPolicy::Term* terms = new PermissionPolicy::Term[1];
-            terms[0].SetRules(manifestRulesCount,
-                              const_cast<PermissionPolicy::Rule*>(manifestRules));
-            manifest->SetTerms(1, terms);
-
-            data = manifest;
-        } else {         //Use passed on authorization data
-            data = const_cast<PermissionPolicy*>(authorizationData);
-        }
-
-        if (!data) {
-            QCC_LogError(ER_FAIL,
-                         ("Null authorization data and no persisted manifest"));
-            status = ER_FAIL;
-            break;
-        }
-
-        /***************************Generate a certificate*****************************/
-        cert.SetGuildId(guildInfo.guid.ToString());
-        cert.SetDelegate(false);
-        cert.SetApplicationID(app.peerID);
+        cert.SetGuild(guildInfo.guid);
+        cert.SetCA(false);
+        cert.SetSubjectCN(app.peerID.GetBytes(), qcc::GUID128::SIZE);
 
         qcc::String serialNumber;
 
@@ -740,25 +661,11 @@ QStatus SecurityManagerImpl::InstallMembership(const ApplicationInfo& appInfo,
             break;
         }
 
-        cert.SetSerialNumber(serialNumber);
-        qcc::Certificate::ValidPeriod period;
+        cert.SetSerial(serialNumber);
+        qcc::CertificateX509::ValidPeriod period;
         period.validFrom = time(NULL) - 3600;
         period.validTo = period.validFrom + 3600 +  3153600;    // valid for 365 days
         cert.SetValidity(&period);
-
-        // serialize data to string containing byte array
-        qcc::String authData;
-        size_t policySize;
-        if (ER_OK != (status = data->Export(marshaller, &permPolicyData, &policySize))) {
-            QCC_LogError(status, ("Could not export authorization data."));
-            break;
-        }
-        authData = qcc::String((const char*)permPolicyData, policySize);
-
-        // compute digest and set it in certificate
-        uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-        data->Digest(marshaller, digest, Crypto_SHA256::DIGEST_SIZE);
-        cert.SetDataDigest(qcc::String((const char*)digest, sizeof(digest)));
 
         status = CertificateGen->GenerateMembershipCertificate(cert);
 
@@ -775,16 +682,10 @@ QStatus SecurityManagerImpl::InstallMembership(const ApplicationInfo& appInfo,
             break;
         }
 
-        if (ER_OK != (status = storage->StoreAssociatedData(cert, authData, true))) {     //update if already exists.
-            QCC_LogError(ER_FAIL, ("Failed to store authorization data"));
-            break;
-        }
         /******************************************************************************/
 
         applicationUpdater->UpdateApplication(app);
     } while (0);
-
-    delete[] permPolicyData;
 
     return status;
 }
@@ -803,8 +704,8 @@ QStatus SecurityManagerImpl::RemoveMembership(const ApplicationInfo& appInfo,
     }
     app = appItr->second;
 
-    qcc::X509MemberShipCertificate cert;
-    cert.SetGuildId(guildInfo.guid.ToString());
+    qcc::MembershipCertificate cert;
+    cert.SetGuild(guildInfo.guid);
     qcc::ECCPublicKey eccAppPubKey;
 
     memcpy(eccAppPubKey.x, app.publicKey.x,
@@ -812,7 +713,7 @@ QStatus SecurityManagerImpl::RemoveMembership(const ApplicationInfo& appInfo,
     memcpy(eccAppPubKey.y, app.publicKey.y,
            sizeof(eccAppPubKey.y));
 
-    cert.SetSubject(&eccAppPubKey);
+    cert.SetSubjectPublicKey(&eccAppPubKey);
 
     QStatus status = storage->GetCertificate(cert);
 
@@ -829,8 +730,11 @@ QStatus SecurityManagerImpl::RemoveMembership(const ApplicationInfo& appInfo,
             ("Could not remove certificate %d", status));
         return status;
     }
-
-    status = remoteApplicationManager->RemoveMembership(app, cert.GetSerialNumber(), localGuid);
+    CredentialAccessor ca(*busAttachment);
+    ECCPublicKey key;
+    ca.GetDSAPublicKey(key);
+    cert.GenerateAuthorityKeyId(&key);
+    status = remoteApplicationManager->RemoveMembership(app, cert.GetSerial(), cert.GetAuthorityKeyId());
 
     return status;
 }
@@ -867,8 +771,6 @@ QStatus SecurityManagerImpl::UpdatePolicy(const ApplicationInfo& appInfo,
                                           PermissionPolicy& policy)
 {
     QStatus status = ER_FAIL;
-    uint8_t* policyData = NULL;
-    size_t policySize;
     bool exist;
     ApplicationInfoMap::iterator appItr = SafeAppExist(appInfo.publicKey, exist);
 
@@ -895,40 +797,10 @@ QStatus SecurityManagerImpl::UpdatePolicy(const ApplicationInfo& appInfo,
         }
     }
 
-    do {
-        ManagedApplicationInfo managedAppInfo;
-        managedAppInfo.publicKey = app.publicKey;
-        if (ER_OK
-            != (status = storage->GetManagedApplication(managedAppInfo))) {
-            QCC_LogError(status,
-                         ("Trying to persist a policy for an unmanaged application."));
-            break;
-        }
-        Message tmpMsg(*busAttachment);
-        DefaultPolicyMarshaller marshaller(tmpMsg);
-        if (ER_OK
-            != (status = policy.Export(marshaller, &policyData,
-                                       &policySize))) {
-            QCC_LogError(status, ("Could not export policy from origin."));
-            break;
-        }
-
-        managedAppInfo.policy = qcc::String((const char*)policyData,
-                                            policySize);
-
-        if (ER_OK
-            != (status = storage->StoreApplication(managedAppInfo, true))) {                     //update flag set
-            QCC_LogError(status, ("Could not persist policy !"));
-            break;
-        }
-        qcc::String print = "Persisted/Updated policy : \n";
-        print += policy.ToString();
-        QCC_DbgHLPrintf((print.c_str()));
-
+    status = PersistPolicy(app, policy);
+    if (ER_OK == status) {
         applicationUpdater->UpdateApplication(app);
-    } while (0);
-
-    delete[] policyData;
+    }
 
     return status;
 }
@@ -1049,7 +921,7 @@ void SecurityManagerImpl::OnSecurityStateChange(const SecurityInfo* oldSecInfo,
 
 QStatus SecurityManagerImpl::UpdateIdentity(const ApplicationInfo& appInfo, const IdentityInfo& id)
 {
-    qcc::X509IdentityCertificate idCertificate;
+    qcc::IdentityCertificate idCertificate;
     QStatus status = ER_FAIL;
     do {
         //Sanity check. Make sure we use our internal collected data. Don't trust what is passed to us.
@@ -1072,6 +944,27 @@ QStatus SecurityManagerImpl::UpdateIdentity(const ApplicationInfo& appInfo, cons
             QCC_LogError(status, ("Identity Not found. guid = '%s'", id.guid.ToString().c_str()));
             break;
         }
+
+        ManagedApplicationInfo mgdAppInfo;
+        mgdAppInfo.publicKey = app.publicKey;
+        if (ER_OK != (status = storage->GetManagedApplication(mgdAppInfo))) {
+            QCC_LogError(status, ("Could not find persisted application"));
+            return status;
+        }
+
+        const PermissionPolicy::Rule* manifest;
+        size_t manifestSize;
+        status = DeserializeManifest(mgdAppInfo, &manifest, &manifestSize);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Could not deserialize persisted manifest"));
+            return status;
+        }
+
+        uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+        PermissionMgmtObj::GenerateManifestDigest(*busAttachment, manifest,
+                                                  manifestSize, digest, Crypto_SHA256::DIGEST_SIZE);
+        idCertificate.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
+
         if (ER_OK != (status = GenerateIdentityCertificate(idCertificate, idInfo, app))) {
             QCC_LogError(status, ("Failed to get identity certificate"));
             break;
@@ -1175,15 +1068,8 @@ QStatus SecurityManagerImpl::SetApplicationName(ApplicationInfo& appInfo)
         return ER_FAIL;
     }
 
-    const PermissionPolicy::Rule* manifestRules;
-    size_t manifestRulesCount = 0;
-    if (ER_OK != (status = GetManifest(appItr->second, &manifestRules, &manifestRulesCount))) {
-        appsMutex.Unlock(__FILE__, __LINE__);
-        return status;
-    }
-
     appItr->second.userDefinedName = appInfo.userDefinedName;
-    status = PersistApplication(appItr->second, true, manifestRules, manifestRulesCount);
+    status = PersistApplicationInfo(appItr->second, true);
 
     appsMutex.Unlock(__FILE__, __LINE__);
     return status;
@@ -1269,34 +1155,24 @@ QStatus SecurityManagerImpl::GetIdentities(std::vector<IdentityInfo>& idInfos) c
     return status;
 }
 
-qcc::String SecurityManagerImpl::GetString(::ajn::services::PropertyStoreKey key,
-                                           const AboutData& aboutData) const
+void SecurityManagerImpl::Announced(const char* busName, uint16_t version,
+                                    SessionPort port, const MsgArg& objectDescriptionArg,
+                                    const MsgArg& aboutDataArg)
 {
-    const qcc::String& keyName =
-        ajn::services::AboutPropertyStoreImpl::getPropertyStoreName(key);
-    ::ajn::services::AnnounceHandler::AboutData::const_iterator it =
-        aboutData.find(keyName);
-    if (it == aboutData.end()) {
-        QCC_DbgTrace(
-            ("Received invalid About data, ignoring '%s", keyName.data()));
-        return "";
-    }
+    QCC_UNUSED(objectDescriptionArg);
+    QCC_UNUSED(port);
+    QCC_UNUSED(version);
 
-    const ajn::MsgArg& value = it->second;
-    const qcc::String& str = value.v_string.str;
+    AboutData aboutData(aboutDataArg);
+    char* appName;
+    aboutData.GetAppName(&appName);
+    char* deviceName;
+    aboutData.GetDeviceName(&deviceName);
 
-    return str;
-}
-
-void SecurityManagerImpl::Announce(unsigned short version, SessionPort port,
-                                   const char* busName, const ObjectDescriptions& objectDescs,
-                                   const AboutData& aboutData)
-{
     QCC_DbgPrintf(("Received About signal!!!"));
     QCC_DbgPrintf(("busName = %s", busName));
-    QCC_DbgPrintf(("appID = %s", GetAppId(aboutData).c_str()));
-    QCC_DbgPrintf(("appName = %s", GetString(APP_NAME, aboutData).c_str()));
-    QCC_DbgPrintf(("deviceName = %s", GetString(DEVICE_NAME, aboutData).c_str()));
+    QCC_DbgPrintf(("appName = %s", appName));
+    QCC_DbgPrintf(("deviceName = %s", deviceName));
 
     ApplicationInfoMap::iterator appItr;
 
@@ -1305,8 +1181,8 @@ void SecurityManagerImpl::Announce(unsigned short version, SessionPort port,
     for (appItr = applications.begin(); appItr != applications.end(); ++appItr) {
         if (appItr->second.busName == busName) {
             ApplicationInfo old = appItr->second;
-            appItr->second.appName = GetString(APP_NAME, aboutData);
-            appItr->second.deviceName = GetString(DEVICE_NAME, aboutData);
+            appItr->second.appName = qcc::String(appName);
+            appItr->second.deviceName = qcc::String(deviceName);
             NotifyApplicationListeners(&old, &appItr->second);
             appsMutex.Unlock(__FILE__, __LINE__);
             return;
@@ -1315,8 +1191,8 @@ void SecurityManagerImpl::Announce(unsigned short version, SessionPort port,
 
     ApplicationInfo info;
     info.busName = busName;
-    info.appName = GetString(APP_NAME, aboutData);
-    info.deviceName = GetString(DEVICE_NAME, aboutData);
+    info.appName = qcc::String(appName);
+    info.deviceName = qcc::String(deviceName);
     info.runningState = STATE_RUNNING;
     info.claimState = ajn::PermissionConfigurator::STATE_UNKNOWN;
     info.userDefinedName = "";
@@ -1326,25 +1202,6 @@ void SecurityManagerImpl::Announce(unsigned short version, SessionPort port,
     aboutCacheMutex.Lock(__FILE__, __LINE__);
     aboutCache[busName] = info;
     aboutCacheMutex.Unlock(__FILE__, __LINE__);
-}
-
-qcc::String SecurityManagerImpl::GetAppId(const AboutData& aboutData) const
-{
-    const qcc::String& keyName = AboutPropertyStoreImpl::getPropertyStoreName(
-        APP_ID);
-    ::ajn::services::AnnounceHandler::AboutData::const_iterator it =
-        aboutData.find(keyName);
-    if (it == aboutData.end()) {
-        QCC_DbgTrace(("Received invalid About data, ignoring"));
-        return "";
-    }
-
-    uint8_t* AppIdBuffer;
-    size_t numElements;
-    const ajn::MsgArg& value = it->second;
-    value.Get("ay", &numElements, &AppIdBuffer);
-
-    return ByteArrayToHex(AppIdBuffer, numElements);
 }
 
 SecurityManagerImpl::ApplicationInfoMap::iterator SecurityManagerImpl::SafeAppExist(const qcc::
@@ -1396,38 +1253,26 @@ QStatus SecurityManagerImpl::DeserializeManifest(const ManagedApplicationInfo ma
     // reconstruct policy containing manifest
     Message tmpMsg(*busAttachment);
     DefaultPolicyMarshaller marshaller(tmpMsg);
-    PermissionPolicy* policy;
+    PermissionPolicy* policy = NULL;
     PermissionPolicy::Term* terms = NULL;
     QStatus status = ER_FAIL;
-    bool useCache = false;
 
-    if (manifestCache.find(managedAppInfo.manifest) != manifestCache.end()) {
-        QCC_DbgPrintf(("Returning cached manifest"));
-        useCache = true;
-    } else {
-        policy = new PermissionPolicy();
+    policy = new PermissionPolicy();
 
-        status = policy->Import(marshaller, (const uint8_t*)managedAppInfo.manifest.data(),
-                                managedAppInfo.manifest.size());
+    status = policy->Import(marshaller, (const uint8_t*)managedAppInfo.manifest.data(),
+                            managedAppInfo.manifest.size());
 
-        if (ER_OK != status) {
-            QCC_LogError(status, ("Failed to reconstruct manifest from persistency"));
-            return status;
-        }
-
-        if (policy->GetTermsSize() == 0) {
-            QCC_LogError(ER_FAIL, ("Unexpected persisted manifest"));
-            return ER_FAIL;
-        }
-        manifestCache[managedAppInfo.manifest] = policy;
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Failed to reconstruct manifest from persistency"));
+        return status;
     }
 
-    // retrieve manifest from policy
-    if (!useCache) {
-        terms = (PermissionPolicy::Term*)policy->GetTerms();
-    } else {
-        terms = (PermissionPolicy::Term*)manifestCache[managedAppInfo.manifest]->GetTerms();
+    if (policy->GetTermsSize() == 0) {
+        QCC_LogError(ER_FAIL, ("Unexpected persisted manifest"));
+        return ER_FAIL;
     }
+
+    terms = (PermissionPolicy::Term*)policy->GetTerms();
 
     status = (terms != NULL ? ER_OK : ER_FAIL);
 
@@ -1474,12 +1319,12 @@ QStatus SecurityManagerImpl::GetManifest(const ApplicationInfo& appInfo,
     return status;
 }
 
-QStatus SecurityManagerImpl::GenerateIdentityCertificate(X509IdentityCertificate& idCert,
+QStatus SecurityManagerImpl::GenerateIdentityCertificate(IdentityCertificate& idCert,
                                                          const IdentityInfo& idInfo,
                                                          const ApplicationInfo& appInfo)
 {
     qcc::String serialNumber;
-    qcc::Certificate::ValidPeriod period;
+    qcc::CertificateX509::ValidPeriod period;
     QStatus status = ER_FAIL;
 
     status = storage->GetNewSerialNumber(serialNumber);
@@ -1489,78 +1334,179 @@ QStatus SecurityManagerImpl::GenerateIdentityCertificate(X509IdentityCertificate
         return status;
     }
 
-    idCert.SetAlias(idInfo.guid);
-    idCert.SetName(idInfo.name);
-    idCert.SetApplicationID(appInfo.peerID);
-    idCert.SetSerialNumber(serialNumber);
+    idCert.SetAlias(idInfo.name);
+    idCert.SetSubjectOU(idInfo.guid.GetBytes(), qcc::GUID128::SIZE);
+    idCert.SetSubjectCN(appInfo.peerID.GetBytes(), qcc::GUID128::SIZE);
+    idCert.SetSerial(serialNumber);
     period.validFrom = time(NULL) - 3600;
     period.validTo = period.validFrom + 3600 +  3153600;                        // valid for 365 days
     idCert.SetValidity(&period);
-    idCert.SetSubject(dynamic_cast<const ECCPublicKey*>(&(appInfo.publicKey)));
-    idCert.SetIssuer(dynamic_cast<const ECCPublicKey*>(&(appInfo.publicKey)));
+    idCert.SetSubjectPublicKey(&appInfo.publicKey);
+    //idCert.SetIssuer(&appInfo.publicKey);
     //TODO are all fields set properly?
     if (ER_OK != (status = CertificateGen->GetIdentityCertificate(idCert))) {
         QCC_LogError(status, ("Failed to get identity certificate"));
+    }
+    return status;
+}
+
+QStatus SecurityManagerImpl::PersistPolicy(const ApplicationInfo& appInfo,
+                                           PermissionPolicy& policy)
+{
+    QStatus status = ER_OK;
+
+    ManagedApplicationInfo managedAppInfo;
+    managedAppInfo.publicKey = appInfo.publicKey;
+    if (ER_OK != (status = storage->GetManagedApplication(managedAppInfo))) {
+        QCC_LogError(status,
+                     ("Trying to persist a policy for an unmanaged application"));
+        return status;
+    }
+
+    uint8_t* policyData = NULL;
+    size_t policySize;
+    Message tmpMsg(*busAttachment);
+    DefaultPolicyMarshaller marshaller(tmpMsg);
+    if (ER_OK != (status = policy.Export(marshaller, &policyData,
+                                         &policySize))) {
+        QCC_LogError(status, ("Could not export policy"));
+        return status;
+    }
+
+    managedAppInfo.policy = qcc::String((const char*)policyData, policySize);
+
+    if (ER_OK != (status = storage->StoreApplication(managedAppInfo, true))) {
+        QCC_LogError(status, ("Could not persist policy"));
+    }
+
+    delete[] policyData;
+    return status;
+}
+
+QStatus SecurityManagerImpl::PersistManifest(const ApplicationInfo& appInfo,
+                                             const PermissionPolicy::Rule* manifestRules,
+                                             size_t manifestRulesCount)
+{
+    QStatus status = ER_OK;
+
+    if ((manifestRulesCount > 0) && (NULL == manifestRules)) {
+        status = ER_FAIL;
+        QCC_LogError(status, ("Null manifestRules"));
+        return status;
+    }
+
+    ManagedApplicationInfo managedAppInfo;
+    managedAppInfo.publicKey = appInfo.publicKey;
+    if (ER_OK != (status = storage->GetManagedApplication(managedAppInfo))) {
+        QCC_LogError(status,
+                     ("Trying to persist a manifest for an unmanaged application"));
+        return status;
+    }
+
+    if (manifestRulesCount > 0) {
+        if (ER_OK != (status = SerializeManifest(managedAppInfo, manifestRules, manifestRulesCount))) {
+            QCC_LogError(status, ("Failed to serialize manifest"));
+            return status;
+        }
+    }
+
+    if (ER_OK != (status = storage->StoreApplication(managedAppInfo, true))) {
+        QCC_LogError(status, ("Could not persist manifest"));
+        return status;
     }
 
     return status;
 }
 
-QStatus SecurityManagerImpl::PersistApplication(const ApplicationInfo& appInfo,
-                                                bool update,
-                                                const PermissionPolicy::Rule* manifestRules,
-                                                size_t manifestRulesCount)
+QStatus SecurityManagerImpl::PersistApplicationInfo(const ApplicationInfo& appInfo,
+                                                    bool update)
 {
-    QCC_DbgPrintf(("Persisting ApplicationInfo"));
     QStatus status = ER_FAIL;
 
-    if ((manifestRulesCount > 0) && (NULL == manifestRules)) {
-        status = ER_FAIL;
-        QCC_LogError(status, ("Null manifestRules !"));
-        return status;
-    }
-
-    ManagedApplicationInfo managedApplicationInfo;
-
-    managedApplicationInfo.publicKey = appInfo.publicKey;
-    managedApplicationInfo.appName = appInfo.appName;
-    managedApplicationInfo.deviceName = appInfo.deviceName;
-    managedApplicationInfo.userDefinedName = appInfo.userDefinedName;
-
-    managedApplicationInfo.peerID = appInfo.peerID.ToString();
-
-    if (manifestRulesCount > 0) {
-        if (ER_OK != (status = SerializeManifest(managedApplicationInfo, manifestRules, manifestRulesCount))) {
-            QCC_LogError(status, ("Failed to SerializeManifest !"));
+    ManagedApplicationInfo managedAppInfo;
+    if (update) {
+        managedAppInfo.publicKey = appInfo.publicKey;
+        if (ER_OK != (status = storage->GetManagedApplication(managedAppInfo))) {
+            QCC_LogError(status,
+                         ("Trying to update application info for an unmanaged application"));
             return status;
         }
     }
 
-    status = storage->StoreApplication(managedApplicationInfo, update);
+    managedAppInfo.publicKey = appInfo.publicKey;
+    managedAppInfo.appName = appInfo.appName;
+    managedAppInfo.deviceName = appInfo.deviceName;
+    managedAppInfo.userDefinedName = appInfo.userDefinedName;
+    managedAppInfo.peerID = appInfo.peerID.ToString();
+    managedAppInfo.updatesPending = appInfo.updatesPending;
 
-    if (ER_OK != status) {
-        QCC_LogError(status, ("Failed to store claimed application info !"));
+    if (ER_OK != (status = storage->StoreApplication(managedAppInfo, update))) {
+        QCC_LogError(status, ("Could not persist application info"));
         return status;
     }
 
-    QCC_DbgPrintf(("ApplicationInfo is now persisted"));
     return status;
 }
 
 void SecurityManagerImpl::NotifyApplicationListeners(const ApplicationInfo* oldAppInfo,
                                                      const ApplicationInfo* newAppInfo)
 {
-    queue.AddTask(new AppInfoEvent(oldAppInfo ? new ApplicationInfo(*oldAppInfo) : NULL,
-                                   newAppInfo ? new ApplicationInfo(*newAppInfo) : NULL));
+    queue.AddTask(new AppListenerEvent(oldAppInfo ? new ApplicationInfo(*oldAppInfo) : NULL,
+                                       newAppInfo ? new ApplicationInfo(*newAppInfo) : NULL,
+                                       NULL));
 }
 
-void SecurityManagerImpl::HandleTask(AppInfoEvent* event)
+void SecurityManagerImpl::NotifyApplicationListeners(const SyncError* error)
+{
+    queue.AddTask(new AppListenerEvent(NULL, NULL, error));
+}
+
+void SecurityManagerImpl::HandleTask(AppListenerEvent* event)
 {
     applicationListenersMutex.Lock(__FILE__, __LINE__);
-    for (size_t i = 0; i < listeners.size(); ++i) {
-        listeners[i]->OnApplicationStateChange(event->oldAppInfo, event->newAppInfo);
+    if (event->syncError) {
+        for (size_t i = 0; i < listeners.size(); ++i) {
+            listeners[i]->OnSyncError(event->syncError);
+        }
+    } else {
+        for (size_t i = 0; i < listeners.size(); ++i) {
+            listeners[i]->OnApplicationStateChange(event->oldAppInfo, event->newAppInfo);
+        }
     }
     applicationListenersMutex.Unlock(__FILE__, __LINE__);
+}
+
+QStatus SecurityManagerImpl::SetUpdatesPending(const ApplicationInfo& appInfo, bool updatesPending)
+{
+    appsMutex.Lock(__FILE__, __LINE__);
+
+    bool exist;
+    ApplicationInfoMap::iterator it = SafeAppExist(appInfo.publicKey, exist);
+    if (!exist) {
+        appsMutex.Unlock(__FILE__, __LINE__);
+        QCC_LogError(ER_FAIL, ("Application does not exist !"));
+        return ER_FAIL;
+    }
+
+    QStatus status = ER_FAIL;
+    ApplicationInfo oldAppInfo = it->second;
+    if (oldAppInfo.updatesPending != updatesPending) {
+        it->second.updatesPending = updatesPending;
+
+        status = PersistApplicationInfo(it->second, true);
+        if (status != ER_OK) {
+            QCC_DbgPrintf(("Did not persist application info this time!"));
+        }
+        NotifyApplicationListeners(&oldAppInfo, &(it->second));
+    }
+
+    appsMutex.Unlock(__FILE__, __LINE__);
+    return ER_OK;
+}
+
+QStatus SecurityManagerImpl::GetApplicationSecInfo(SecurityInfo& secInfo) const
+{
+    return appMonitor->GetApplication(secInfo);
 }
 }
 }

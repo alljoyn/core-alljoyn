@@ -18,8 +18,6 @@
 #define SECURITYINFO_H_
 
 #include <vector>
-#include <alljoyn/about/AnnounceHandler.h>
-#include <alljoyn/about/AboutPropertyStoreImpl.h>
 #include <qcc/String.h>
 #include <qcc/GUID.h>
 #include <Common.h>
@@ -40,16 +38,6 @@ struct SecurityInfo {
     uint32_t policySerialNum;
     ApplicationRunningState runningState;
     std::vector<qcc::ECCPublicKey> rootsOfTrust;
-
-    SecurityInfo() { }
-
-    SecurityInfo(const ApplicationInfo& appInfo) :
-        busName(appInfo.busName),
-        publicKey(appInfo.publicKey),
-        claimState(appInfo.claimState),
-        runningState(appInfo.runningState)
-    {
-    }
 };
 }
 }

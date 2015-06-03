@@ -517,7 +517,7 @@ void Common::ToGUID(JNIEnv* env, jbyteArray jGuid, GUID128& guid)
     if (env->ExceptionCheck()) {
         return;
     }
-    if (length != ((jsize) GUID128::SIZE)) {
+    if (length != ((jsize)GUID128::SIZE)) {
         Throw(env, ILLEGALARGUMENTEXCEPTION_CLASS, "Wrong GUID size");
     }
     jbyte* bytes = env->GetByteArrayElements(jGuid, NULL);

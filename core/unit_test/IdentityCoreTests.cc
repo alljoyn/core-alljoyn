@@ -37,7 +37,7 @@ TEST_F(IdentityCoreTests, SuccessfulInstallIdentity) {
     TestClaimListener tcl(claimAnswer);
 
     /* Start the stub */
-    Stub* stub = new Stub(&tcl);
+    stub = new Stub(&tcl);
 
     /* Wait for signals */
     ASSERT_TRUE(WaitForState(ajn::PermissionConfigurator::STATE_CLAIMABLE, ajn::securitymgr::STATE_RUNNING));
@@ -52,12 +52,17 @@ TEST_F(IdentityCoreTests, SuccessfulInstallIdentity) {
 
     /* Try to install identity again */
     ASSERT_EQ(ER_OK, secMgr->UpdateIdentity(lastAppInfo, info));
+    ApplicationInfo checkUpdatesPendingInfo;
+    checkUpdatesPendingInfo.publicKey = lastAppInfo.publicKey;
+    ASSERT_EQ(ER_OK, secMgr->GetApplication(checkUpdatesPendingInfo));
+    ASSERT_FALSE(checkUpdatesPendingInfo.updatesPending);
 
     /* Clear the keystore of the stub */
     stub->Reset();
 
     /* Stop the stub */
     delete stub;
+    stub = NULL;
     ASSERT_TRUE(WaitForState(ajn::PermissionConfigurator::STATE_CLAIMED, ajn::securitymgr::STATE_NOT_RUNNING));
 }
 } // namespace

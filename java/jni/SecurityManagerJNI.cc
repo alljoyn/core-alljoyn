@@ -19,6 +19,7 @@
 #include <alljoyn/securitymgr/Storage.h>
 #include <alljoyn/securitymgr/sqlstorage/SQLStorageFactory.h>
 #include <alljoyn/Status.h>
+#include <alljoyn/Init.h>
 #include <qcc/Environ.h>
 #include "org_alljoyn_securitymgr_SecurityManagerJNI.h"
 #include "Common.h"
@@ -29,6 +30,35 @@
 /* Impl for class SecurityManagerJNI */
 
 using namespace ajn::securitymgr;
+
+JNIEXPORT void JNI_OnUnload(JavaVM* vm,
+                            void* reserved)
+{
+    QCC_UNUSED(vm);
+    QCC_UNUSED(reserved);
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
+}
+
+JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm,
+                                  void* reserved)
+{
+    QCC_UNUSED(reserved);
+    QCC_UNUSED(vm);
+
+    if (AllJoynInit() != ER_OK) {
+        return JNI_ERR;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return JNI_ERR;
+    }
+#endif
+    return JNI_VERSION_1_2;
+}
 
 static jmethodID GetAddMethodID(JNIEnv* env, jobject jList)
 {
@@ -469,12 +499,11 @@ JNIEXPORT jboolean JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_init(
     return secMgr ? JNI_TRUE : JNI_FALSE;
 }
 
-JNIEXPORT void JNICALL
-Java_org_alljoyn_securitymgr_SecurityManagerJNI_getApplications(JNIEnv* env,
-                                                                jobject
-                                                                thisObj,
-                                                                jobject
-                                                                jlist)
+JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_getApplications(JNIEnv* env,
+                                                                                       jobject
+                                                                                       thisObj,
+                                                                                       jobject
+                                                                                       jlist)
 {
     jmethodID addID = GetAddMethodID(env, jlist);
     if (addID == NULL) {
@@ -759,18 +788,17 @@ JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_installPo
     }
 }
 
-JNIEXPORT void JNICALL
-Java_org_alljoyn_securitymgr_SecurityManagerJNI_installMembership(JNIEnv* env,
-                                                                  jobject
-                                                                  thisObject,
-                                                                  jobject
-                                                                  jAppInfo,
-                                                                  jbyteArray
-                                                                  jGuildGuid,
-                                                                  jbyteArray
-                                                                  jKey,
-                                                                  jobjectArray
-                                                                  jTermArray)
+JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_installMembership(JNIEnv* env,
+                                                                                         jobject
+                                                                                         thisObject,
+                                                                                         jobject
+                                                                                         jAppInfo,
+                                                                                         jbyteArray
+                                                                                         jGuildGuid,
+                                                                                         jbyteArray
+                                                                                         jKey,
+                                                                                         jobjectArray
+                                                                                         jTermArray)
 {
     SecurityManager* smc = Common::GetSecurityManager(env, thisObject);
     if (smc) {
@@ -804,15 +832,14 @@ Java_org_alljoyn_securitymgr_SecurityManagerJNI_installMembership(JNIEnv* env,
     }
 }
 
-JNIEXPORT void JNICALL
-Java_org_alljoyn_securitymgr_SecurityManagerJNI_deleteMembership(JNIEnv* env,
-                                                                 jobject
-                                                                 thisObject,
-                                                                 jobject
-                                                                 jAppInfo,
-                                                                 jbyteArray
-                                                                 jGuildGuid,
-                                                                 jbyteArray jKey)
+JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_deleteMembership(JNIEnv* env,
+                                                                                        jobject
+                                                                                        thisObject,
+                                                                                        jobject
+                                                                                        jAppInfo,
+                                                                                        jbyteArray
+                                                                                        jGuildGuid,
+                                                                                        jbyteArray jKey)
 {
     SecurityManager* smc = Common::GetSecurityManager(env, thisObject);
     if (smc) {
@@ -833,12 +860,11 @@ Java_org_alljoyn_securitymgr_SecurityManagerJNI_deleteMembership(JNIEnv* env,
     }
 }
 
-JNIEXPORT void JNICALL
-Java_org_alljoyn_securitymgr_SecurityManagerJNI_unclaimApplication(JNIEnv* env,
-                                                                   jobject
-                                                                   thisObject,
-                                                                   jobject
-                                                                   applicationInfo)
+JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_unclaimApplication(JNIEnv* env,
+                                                                                          jobject
+                                                                                          thisObject,
+                                                                                          jobject
+                                                                                          applicationInfo)
 {
     SecurityManager* smc = Common::GetSecurityManager(env, thisObject);
     if (smc) {

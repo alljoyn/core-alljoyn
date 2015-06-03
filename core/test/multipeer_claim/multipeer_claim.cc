@@ -257,7 +257,7 @@ class TestApplicationListener :
         for (pair<qcc::String, ApplicationInfo> businfo : appInfo) {
             if (businfo.second.runningState != runningState || businfo.second.claimState != claimState) {
                 cout << "Wrong states for " << businfo.second.busName << businfo.second.runningState << " != " <<
-                runningState << ", " <<  businfo.second.claimState << " != " << claimState << endl;
+                    runningState << ", " <<  businfo.second.claimState << " != " << claimState << endl;
                 return false;
             }
         }
@@ -274,6 +274,11 @@ class TestApplicationListener :
         appInfo[updated->busName] = *info;
         cout << "[Boss] Event peer count = " << appInfo.size() << endl;
         cv.notify_one();
+    }
+
+    void OnSyncError(const SyncError* syncError)
+    {
+        QCC_UNUSED(syncError);
     }
 };
 
@@ -359,7 +364,7 @@ static int be_secmgr(size_t peers)
 
         if (secMgr->GetApplications(ajn::PermissionConfigurator::STATE_CLAIMED).size() != peers) {
             cerr << "Expected: " << peers << " claimed applications but only have " <<
-            secMgr->GetApplications().size() << endl;
+                secMgr->GetApplications().size() << endl;
             break;
         }
 

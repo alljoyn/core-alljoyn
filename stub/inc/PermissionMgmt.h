@@ -39,27 +39,35 @@ class ClaimListener {
   private:
     virtual bool OnClaimRequest(const qcc::ECCPublicKey* pubKeyRoT, void* ctx)
     {
+        QCC_UNUSED(pubKeyRoT);
+        QCC_UNUSED(ctx);
+
         return true;
     }
 
     virtual void OnClaimed(void* ctx)
     {
+        QCC_UNUSED(ctx);
     }
 
     virtual void OnIdentityInstalled(const qcc::String& pemIdentityCertificate)
     {
+        QCC_UNUSED(pemIdentityCertificate);
     }
 
     virtual void OnMembershipInstalled(const qcc::String& pemMembershipCertificate)
     {
+        QCC_UNUSED(pemMembershipCertificate);
     }
 
     virtual void OnAuthData(const PermissionPolicy* data)
     {
+        QCC_UNUSED(data);
     }
 
     virtual void OnPolicyInstalled(PermissionPolicy& policy)
     {
+        QCC_UNUSED(policy);
     }
 
     friend class PermissionMgmt;

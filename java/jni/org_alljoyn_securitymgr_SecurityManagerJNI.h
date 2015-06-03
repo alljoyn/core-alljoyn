@@ -13,7 +13,7 @@ extern "C" {
  * Signature: (Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;)V
  */
 JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_initJNI
-    (JNIEnv *, jclass, jclass, jclass, jclass);
+    (JNIEnv*, jclass, jclass, jclass, jclass);
 
 /*
  * Class:     org_alljoyn_securitymgr_SecurityManagerJNI
@@ -21,7 +21,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_initJNI
  * Signature: (Ljava/lang/String;)Z
  */
 JNIEXPORT jboolean JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_init
-    (JNIEnv *, jobject, jstring);
+    (JNIEnv*, jobject, jstring);
 
 /*
  * Class:     org_alljoyn_securitymgr_SecurityManagerJNI
@@ -29,7 +29,7 @@ JNIEXPORT jboolean JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_init
  * Signature: (Lorg/alljoyn/securitymgr/ApplicationInfo;)V
  */
 JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_unclaimApplication
-    (JNIEnv *, jobject, jobject);
+    (JNIEnv*, jobject, jobject);
 
 /*
  * Class:     org_alljoyn_securitymgr_SecurityManagerJNI
@@ -37,7 +37,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_unclaimAp
  * Signature: (Ljava/util/List;)V
  */
 JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_getApplications
-    (JNIEnv *, jobject, jobject);
+    (JNIEnv*, jobject, jobject);
 
 /*
  * Class:     org_alljoyn_securitymgr_SecurityManagerJNI
@@ -45,7 +45,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_getApplic
  * Signature: (Ljava/lang/String;Ljava/lang/String;[B[B)V
  */
 JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_createGuild
-    (JNIEnv *, jobject, jstring, jstring, jbyteArray, jbyteArray);
+    (JNIEnv*, jobject, jstring, jstring, jbyteArray, jbyteArray);
 
 /*
  * Class:     org_alljoyn_securitymgr_SecurityManagerJNI
@@ -53,7 +53,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_createGui
  * Signature: ([B)V
  */
 JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_deleteGuild
-    (JNIEnv *, jobject, jbyteArray);
+    (JNIEnv*, jobject, jbyteArray);
 
 /*
  * Class:     org_alljoyn_securitymgr_SecurityManagerJNI
@@ -61,7 +61,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_deleteGui
  * Signature: ([BLjava/lang/Class;)Lorg/alljoyn/securitymgr/Guild;
  */
 JNIEXPORT jobject JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_getGuild
-    (JNIEnv *, jobject, jbyteArray, jclass);
+    (JNIEnv*, jobject, jbyteArray, jclass);
 
 /*
  * Class:     org_alljoyn_securitymgr_SecurityManagerJNI
@@ -69,7 +69,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_getGui
  * Signature: (Ljava/util/List;Ljava/lang/Class;)V
  */
 JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_getGuilds
-    (JNIEnv *, jobject, jobject, jclass);
+    (JNIEnv*, jobject, jobject, jclass);
 
 /*
  * Class:     org_alljoyn_securitymgr_SecurityManagerJNI
@@ -77,7 +77,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_getGuilds
  * Signature: (Ljava/lang/String;[BZ)V
  */
 JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_createIdentity
-    (JNIEnv *, jobject, jstring, jbyteArray, jbyteArray);
+    (JNIEnv*, jobject, jstring, jbyteArray, jbyteArray);
 
 /*
  * Class:     org_alljoyn_securitymgr_SecurityManagerJNI
@@ -85,7 +85,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_createIde
  * Signature: ([B)V
  */
 JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_deleteIdentity
-    (JNIEnv *, jobject, jbyteArray);
+    (JNIEnv*, jobject, jbyteArray);
 
 /*
  * Class:     org_alljoyn_securitymgr_SecurityManagerJNI
@@ -93,7 +93,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_deleteIde
  * Signature: ([B)Ljava/lang/String;
  */
 JNIEXPORT jstring JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_getIdentity
-    (JNIEnv *, jobject, jbyteArray);
+    (JNIEnv*, jobject, jbyteArray);
 
 /*
  * Class:     org_alljoyn_securitymgr_SecurityManagerJNI
@@ -101,7 +101,7 @@ JNIEXPORT jstring JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_getIde
  * Signature: (Ljava/util/List;Ljava/lang/Class;)V
  */
 JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_getIdentities
-    (JNIEnv *, jobject, jobject, jclass);
+    (JNIEnv*, jobject, jobject, jclass);
 
 /*
  * Class:     org_alljoyn_securitymgr_SecurityManagerJNI
@@ -109,7 +109,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_getIdenti
  * Signature: (Lorg/alljoyn/securitymgr/ApplicationInfo;J[Lorg/alljoyn/securitymgr/access/Term;)V
  */
 JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_installPolicy
-    (JNIEnv *, jobject, jobject, jlong, jobjectArray);
+    (JNIEnv*, jobject, jobject, jlong, jobjectArray);
 
 /*
  * Class:     org_alljoyn_securitymgr_SecurityManagerJNI
@@ -117,7 +117,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_installPo
  * Signature: (Lorg/alljoyn/securitymgr/ApplicationInfo;[B[B[Lorg/alljoyn/securitymgr/access/Term;)V
  */
 JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_installMembership
-    (JNIEnv *, jobject, jobject, jbyteArray, jbyteArray, jobjectArray);
+    (JNIEnv*, jobject, jobject, jbyteArray, jbyteArray, jobjectArray);
 
 /*
  * Class:     org_alljoyn_securitymgr_SecurityManagerJNI
@@ -125,7 +125,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_installMe
  * Signature: (Lorg/alljoyn/securitymgr/ApplicationInfo;[B[B)V
  */
 JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_deleteMembership
-    (JNIEnv *, jobject, jobject, jbyteArray, jbyteArray);
+    (JNIEnv*, jobject, jobject, jbyteArray, jbyteArray);
 
 /*
  * Class:     org_alljoyn_securitymgr_SecurityManagerJNI
@@ -133,7 +133,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_deleteMem
  * Signature: (Lorg/alljoyn/securitymgr/ApplicationInfo;[B)V
  */
 JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_claimApplication
-    (JNIEnv *, jobject, jobject, jbyteArray, jbyteArray);
+    (JNIEnv*, jobject, jobject, jbyteArray, jbyteArray);
 
 /*
  * Class:     org_alljoyn_securitymgr_SecurityManagerJNI
@@ -141,7 +141,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_claimAppl
  * Signature: ()[B
  */
 JNIEXPORT jbyteArray JNICALL Java_org_alljoyn_securitymgr_SecurityManagerJNI_getPublicKey
-    (JNIEnv *, jobject);
+    (JNIEnv*, jobject);
 
 #ifdef __cplusplus
 }

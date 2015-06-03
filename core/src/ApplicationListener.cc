@@ -29,18 +29,19 @@ void ApplicationListener::PrintStateChangeEvent(const ApplicationInfo* old,
     const ApplicationInfo* info = updated ? updated : old;
     cout << "  Application updated:" << endl;
     cout << "  ====================" << endl;
-    cout << "  Application name : " << info->appName << endl;
+    cout << "  Application name  : " << info->appName << endl;
     cout << "  User-defined name : " << info->userDefinedName << endl;
-    cout << "  Hostname         : " << info->deviceName << endl;
-    cout << "  Busname          : " << info->busName << endl;
-    cout << "  - claim state    : " <<
-    ToString(old ? old->claimState : ajn::PermissionConfigurator::STATE_UNKNOWN) << " --> "
+    cout << "  Hostname          : " << info->deviceName << endl;
+    cout << "  Busname           : " << info->busName << endl;
+    cout << "  - claim state     : " <<
+        ToString(old ? old->claimState : ajn::PermissionConfigurator::STATE_UNKNOWN) << " --> "
          << ToString(updated ? updated->claimState : ajn::PermissionConfigurator::STATE_UNKNOWN)
          << endl;
-    cout << "  - running state  : "
+    cout << "  - running state   : "
          << ToString(old ? old->runningState : STATE_NOT_RUNNING) << " --> "
-         << ToString(updated ? updated->runningState : STATE_NOT_RUNNING) << endl
-         << "> " << flush;
+         << ToString(updated ? updated->runningState : STATE_NOT_RUNNING) << endl;
+    cout << "  Updates pending   : " << (info->updatesPending ? "true" : "false");
+    cout << endl << "> " << flush;
 }
 }
 }

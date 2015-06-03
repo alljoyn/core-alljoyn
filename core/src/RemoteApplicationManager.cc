@@ -21,48 +21,57 @@
 
 namespace ajn {
 namespace securitymgr {
+QStatus RemoteApplicationManager::Claim(const ApplicationInfo& app,
+                                        qcc::KeyInfoNISTP256& certificateAuthority,
+                                        qcc::GUID128& adminGroupId,
+                                        qcc::KeyInfoNISTP256& adminGroup,
+                                        qcc::IdentityCertificate* identityCertChain,
+                                        size_t identityCertChainSize,
+                                        PermissionPolicy::Rule* manifest,
+                                        size_t manifestSize)
+{
+    QStatus status;
+    status = proxyObjectManager->Claim(app, certificateAuthority, adminGroupId,
+                                       adminGroup, identityCertChain, identityCertChainSize, manifest,
+                                       manifestSize);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Failed to claim"));
+    }
+    return status;
+}
+
 QStatus RemoteApplicationManager::InstallMembership(const ApplicationInfo& app,
-                                                    qcc::X509MemberShipCertificate& cert,
-                                                    PermissionPolicy& authData, const qcc::GUID128& rotGuid)
+                                                    qcc::MembershipCertificate& cert)
 {
     QStatus status = ER_FAIL;
     qcc::String errorMsg;
     do {
         ajn::MsgArg inputs[1];
-        qcc::String pem = cert.GetDER();
-        inputs[0].Set("(yay)", qcc::Certificate::ENCODING_X509_DER, pem.length(),
+        qcc::String pem((const char*)cert.GetEncoded(), cert.GetEncodedLen());
+        inputs[0].Set("(yay)", qcc::CertificateX509::ENCODING_X509_DER, pem.length(),
                       pem.data());
         ajn::MsgArg arg("a(yay)", 1, inputs);
         Message replyMsg(*ba);
         status = proxyObjectManager->MethodCall(app, "InstallMembership", &arg, 1, replyMsg);
 
         if (ER_OK != status) {
+            QCC_LogError(status, ("Failed to install membership certificate"));
             break;
         }
-
-        MsgArg args[3];
-        args[0].Set("s", cert.GetSerialNumber().c_str());
-        args[1].Set("ay", qcc::GUID128::SIZE, rotGuid.GetBytes());
-        authData.Export(args[2]);
-        Message replyMsgAuthData(*ba);
-        status = proxyObjectManager->MethodCall(app, "InstallMembershipAuthData", args, 3, replyMsgAuthData);
-
-        // TODO: RemoveMembership when ER_OK != status
     } while (0);
     return status;
 }
 
-QStatus RemoteApplicationManager::InstallIdentityCertificate(const ApplicationInfo& app,
-                                                             qcc::X509IdentityCertificate& cert)
+QStatus RemoteApplicationManager::InstallIdentity(const ApplicationInfo& app,
+                                                  qcc::IdentityCertificate* certChain,
+                                                  size_t certChainSize,
+                                                  const PermissionPolicy::Rule* manifest,
+                                                  size_t manifestSize)
 {
     QStatus status = ER_FAIL;
 
-    qcc::String errorMsg;
-    Message replyMsg(*ba);
-    qcc::String der = cert.GetDER();
-    MsgArg arg("(yay)", qcc::Certificate::ENCODING_X509_DER, der.size(), der.data());
-
-    status = proxyObjectManager->MethodCall(app, "InstallIdentity", &arg, 1, replyMsg);
+    status = proxyObjectManager->InstallIdentity(app, certChain, certChainSize,
+                                                 manifest, manifestSize);
 
     return status;
 }
@@ -98,39 +107,32 @@ QStatus RemoteApplicationManager::Reset(const ApplicationInfo& app)
     return status;
 }
 
-QStatus RemoteApplicationManager::GetIdentity(const ApplicationInfo& app, qcc::IdentityCertificate& idCert)
+QStatus RemoteApplicationManager::GetIdentity(const ApplicationInfo& app,
+                                              qcc::IdentityCertificate& idCert)
 {
     QStatus status = ER_FAIL;
-    qcc::String errorMsg;
-    uint8_t encoding;
-    uint8_t* encoded;
-    size_t encodedLen;
+
+    qcc::IdentityCertificate* certChain;
+    size_t certChainSize;
+
+    status = proxyObjectManager->GetIdentity(app, &certChain, &certChainSize);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Failed to GetIdentity"));
+        return status;
+    }
 
     do {
-        Message replyMsg(*ba);
-        status = proxyObjectManager->MethodCall(app, "GetIdentity", NULL, 0, replyMsg);
-
-        if (ER_OK != status) {
-            break;
-        }
-
-        status = replyMsg->GetArg(0)->Get("(yay)", &encoding, &encodedLen, &encoded);
-        if (ER_OK != status) {
-            QCC_LogError(status, ("Failed to extract identity from reply"));
-            break;
-        }
-
-        if (encoding == qcc::Certificate::ENCODING_X509_DER_PEM) {
-            status = idCert.DecodeCertificatePEM(qcc::String((const char*)encoded, encodedLen));
-        } else if (encoding == qcc::Certificate::ENCODING_X509_DER) {
-            status = idCert.DecodeCertificateDER(qcc::String((const char*)encoded, encodedLen));
-        } else {
+        if (certChainSize != 1) {
             status = ER_FAIL;
+            QCC_LogError(status, ("Identity certificate chain longer than expected"));
+            break;
         }
-        if (ER_OK != status) {
-            QCC_LogError(status, ("Failed to load encoded identity data"));
-        }
+
+        idCert = certChain[0];
     } while (0);
+
+    delete[] certChain;
+    certChainSize = 0;
 
     return status;
 }
@@ -185,7 +187,7 @@ QStatus RemoteApplicationManager::GetManifest(const ApplicationInfo& app,
 
 QStatus RemoteApplicationManager::RemoveMembership(const ApplicationInfo& app,
                                                    const qcc::String& serialNum,
-                                                   const qcc::GUID128& GuidId)
+                                                   const qcc::String& issuerId)
 {
     QStatus status = ER_FAIL;
 
@@ -198,7 +200,7 @@ QStatus RemoteApplicationManager::RemoveMembership(const ApplicationInfo& app,
     Message replyMsg(*ba);
     const char* serial = serialNum.c_str();
     args[0].Set("s", serial);
-    args[1].Set("ay", qcc::GUID128::SIZE, GuidId.GetBytes());
+    args[1].Set("ay", issuerId.size(), (const uint8_t*)issuerId.data());
     QCC_DbgPrintf(("Removing membership certificate with serial number %s", serial));
     status = proxyObjectManager->MethodCall(app, "RemoveMembership", args, 2, replyMsg);
 

@@ -49,7 +49,10 @@ QStatus Stub::GenerateManifest(PermissionPolicy::Rule** retRules, size_t* count)
 
 Stub::Stub(ClaimListener* cl,
            bool dsa) :
-    ba("mystub", true)
+    ba("mystub", true), pm(NULL), aboutData("en"), aboutObj(ba), opts(SessionOpts::TRAFFIC_MESSAGES,
+                                                                      false,
+                                                                      SessionOpts::PROXIMITY_ANY,
+                                                                      TRANSPORT_ANY), port(APPLICATION_PORT)
 {
     do {
         /* Call static function to create the PermissionMgmt interface */
@@ -65,6 +68,19 @@ Stub::Stub(ClaimListener* cl,
 
         if (ba.Connect() != ER_OK) {
             std::cerr << "Could not connect" << std::endl;
+            break;
+        }
+
+        if (ba.BindSessionPort(port, opts, spl) != ER_OK) {
+            std::cout << "Could not bind session port" << std::endl;
+            break;
+        }
+
+        char guid[33];
+        snprintf(guid, sizeof(guid), "A0%X%026X", rand(), rand());         /* yes, I know this is not a real guid - good enough for a stub */
+
+        if (AdvertiseApplication(guid) != ER_OK) {
+            std::cerr << "Could not advertise" << std::endl;
             break;
         }
 
@@ -85,14 +101,6 @@ Stub::Stub(ClaimListener* cl,
         GenerateManifest(&manifestRules, &manifestRulesCount);
         this->SetUsedManifest(manifestRules, manifestRulesCount);
 
-        char guid[33];
-        snprintf(guid, sizeof(guid), "A0%X%026X", rand(), rand()); /* yes, i know this is not a real guid - good enough for a stub */
-
-        if (AdvertiseApplication(guid) != ER_OK) {
-            std::cerr << "Could not advertise" << std::endl;
-            break;
-        }
-
         ba.RegisterBusObject(*pm);
         pm->SendClaimDataSignal();
     } while (0);
@@ -100,13 +108,6 @@ Stub::Stub(ClaimListener* cl,
 
 Stub::~Stub()
 {
-    if (AboutServiceApi::getInstance() != NULL) {
-        AboutServiceApi::getInstance()->Unregister();
-        ba.UnregisterBusObject(*AboutServiceApi::getInstance());
-        AboutServiceApi::DestroyInstance();
-    }
-    ba.Disconnect();
-    ba.Stop();
     delete pm;
 }
 
@@ -142,107 +143,46 @@ QStatus Stub::CloseClaimWindow()
     return status;
 }
 
-QStatus Stub::FillAboutPropertyStoreImplData(AboutPropertyStoreImpl* propStore, const char* guid)
+QStatus Stub::SetAboutData(AboutData& aboutData, const char* guid)
 {
-    QStatus status = ER_OK;
-
-    status = propStore->setDeviceId("Linux");
-    if (status != ER_OK) {
-        return status;
-    }
-
-    qcc::String str(guid);
-    std::cout << str << std::endl;
-    status = propStore->setAppId(str, "en");
-    if (status != ER_OK) {
-        return status;
-    }
-
-    std::vector<qcc::String> languages(1);
-    languages[0] = "en";
-    status = propStore->setSupportedLangs(languages);
-    if (status != ER_OK) {
-        return status;
-    }
-    status = propStore->setDefaultLang("en");
-    if (status != ER_OK) {
-        return status;
-    }
-
-    status = propStore->setAppName("Security Stub", "en");
-    if (status != ER_OK) {
-        return status;
-    }
-
-    status = propStore->setModelNumber("1");
-    if (status != ER_OK) {
-        return status;
-    }
-
-    status = propStore->setSoftwareVersion("");
-    if (status != ER_OK) {
-        return status;
-    }
-
-    status = propStore->setAjSoftwareVersion(ajn::GetVersion());
-    if (status != ER_OK) {
-        return status;
-    }
+    aboutData.SetAppId(guid);
 
     char buf[64];
     gethostname(buf, sizeof(buf));
-    status = propStore->setDeviceName(buf, "en");
-    if (status != ER_OK) {
-        return status;
-    }
+    aboutData.SetDeviceName(buf);
 
-    status = propStore->setDescription("This is a Security stub", "en");
-    if (status != ER_OK) {
-        return status;
-    }
+    qcc::GUID128 deviceId;
+    aboutData.SetDeviceId(deviceId.ToString().c_str());
 
-    status = propStore->setManufacturer("QEO LLC", "en");
-    if (status != ER_OK) {
-        return status;
-    }
+    aboutData.SetAppName("Security Stub");
+    aboutData.SetManufacturer("QEO LLC");
+    aboutData.SetModelNumber("1");
+    aboutData.SetDescription("This is a Security stub");
+    aboutData.SetDateOfManufacture("2015-04-14");
+    aboutData.SetSoftwareVersion("");
+    aboutData.SetHardwareVersion("0.0.1");
+    aboutData.SetSupportUrl("http://www.alljoyn.org");
 
-    status = propStore->setSupportUrl("http://www.alljoyn.org");
-    if (status != ER_OK) {
-        return status;
+    if (!aboutData.IsValid()) {
+        std::cerr << "Invalid about data." << std::endl;
+        return ER_FAIL;
     }
-    return status;
+    return ER_OK;
 }
-
-static AboutPropertyStoreImpl aboutPropertyStore;
 
 QStatus Stub::AdvertiseApplication(const char* guid)
 {
-    QStatus status = FillAboutPropertyStoreImplData(&aboutPropertyStore, guid);
+    QStatus status = SetAboutData(aboutData, guid);
     if (status != ER_OK) {
-        std::cerr << "Could not fill propertystore" << std::endl;
+        std::cerr << "Could not set AboutData" << std::endl;
         return status;
     }
 
-    AboutServiceApi::Init(ba, aboutPropertyStore);
-    if (!AboutServiceApi::getInstance()) {
-        std::cerr << "Could not get instance" << std::endl;
-        return ER_FAIL;
-    }
-
-    AboutServiceApi::getInstance()->Register(APPLICATION_PORT);
-    status = ba.RegisterBusObject(*AboutServiceApi::getInstance());
+    status = aboutObj.Announce(APPLICATION_PORT, aboutData);
     if (status != ER_OK) {
-        std::cerr << "Could not register about bus object" << std::endl;
-        return status;
+        std::cerr << "Announcing stub failed with status = " << QCC_StatusText(status) << std::endl;
     }
-
-    status = AboutServiceApi::getInstance()->Announce();
-    if (status != ER_OK) {
-        std::cerr << "Could not announce" << std::endl;
-        return status;
-    }
-
-    return ER_OK;
+    return status;
 }
 
 std::map<GUID128, qcc::String> Stub::GetMembershipCertificates() const

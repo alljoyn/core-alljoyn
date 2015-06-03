@@ -20,9 +20,9 @@
 #include <qcc/String.h>
 #include <qcc/Crypto.h>
 #include <qcc/CryptoECC.h>
+#include <qcc/CertificateECC.h>
 
 #include <qcc/Debug.h>
-#include <alljoyn/securitymgr/cert/X509Certificate.h>
 
 #include <alljoyn/BusAttachment.h>
 
@@ -48,31 +48,20 @@ namespace ajn {
 namespace securitymgr {
 class X509CertificateGenerator {
   private:
-    qcc::String name;
+    qcc::GUID128 issuerGUID;
     qcc::Crypto_ECC* keys;
     ajn::BusAttachment* ba;
 
-    static QStatus Decoding(qcc::String der);
-
-    QStatus GetDerEncodedX509Certificate(qcc::String extensions,
-                                         qcc::String subjectGUID,
-                                         qcc::X509CertificateECC& certificate);
+    QStatus GenerateDerEncodeCertificate(qcc::CertificateX509& x509);
 
   public:
-    X509CertificateGenerator(qcc::String issuerCommonName,
+    X509CertificateGenerator(qcc::GUID128 issuerGUID,
                              ajn::BusAttachment* ba);
     ~X509CertificateGenerator();
 
-    QStatus GetIdentityCertificate(qcc::X509IdentityCertificate& certificate);
+    QStatus GetIdentityCertificate(qcc::IdentityCertificate& certificate);
 
-    QStatus GenerateMembershipCertificate(qcc::X509MemberShipCertificate& certificate);
-
-    /** public scope to facilitate testing. */
-    static qcc::String GetConstraints(bool ca,
-                                      qcc::CertificateType type);
-
-    /** public scope to facilitate testing. */
-    static qcc::String ToASN1TimeString(uint64_t time);
+    QStatus GenerateMembershipCertificate(qcc::MembershipCertificate& certificate);
 };
 }
 }

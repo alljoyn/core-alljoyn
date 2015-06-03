@@ -22,13 +22,33 @@
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/BusObject.h>
 #include <alljoyn/SessionPortListener.h>
-#include <alljoyn/about/AboutPropertyStoreImpl.h>
+#include <alljoyn/AboutObj.h>
+#include <alljoyn/Init.h>
 
 #include "PermissionMgmt.h"
 #include <memory>
 
 using namespace ajn;
-using namespace services;
+
+class SPListener :
+    public SessionPortListener {
+    bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts)
+    {
+        QCC_UNUSED(opts);
+        QCC_UNUSED(joiner);
+        QCC_UNUSED(sessionPort);
+        printf("%s wants to join..\n", joiner);
+        return true;
+    }
+
+    void SessionJoined(SessionPort sessionPort, SessionId id, const char* joiner)
+    {
+        QCC_UNUSED(sessionPort);
+        QCC_UNUSED(id);
+
+        printf("%s has joined..\n", joiner);
+    }
+};
 
 class Stub {
   public:
@@ -83,11 +103,16 @@ class Stub {
   private:
     BusAttachment ba;
     PermissionMgmt* pm;
+    AboutData aboutData;
+    AboutObj aboutObj;
+    SessionOpts opts;
+    SessionPort port;
+    SPListener spl;
 
     QStatus AdvertiseApplication(const char* guid);
 
-    QStatus FillAboutPropertyStoreImplData(AboutPropertyStoreImpl* propStore,
-                                           const char* guid);
+    QStatus SetAboutData(AboutData& aboutData,
+                         const char* guid);
 
     QStatus GenerateManifest(PermissionPolicy::Rule** retRules,
                              size_t* count);

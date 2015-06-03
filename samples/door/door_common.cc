@@ -16,8 +16,6 @@
 
 #include "door_common.h"
 
-#include <alljoyn/about/AboutPropertyStoreImpl.h>
-
 #include <alljoyn/PermissionPolicy.h>
 
 #if defined(QCC_OS_GROUP_WINDOWS)
@@ -36,6 +34,11 @@ bool DoorAuthListener::RequestCredentials(const char* authMechanism,
                                           uint16_t credMask,
                                           Credentials& creds)
 {
+    QCC_UNUSED(authPeer);
+    QCC_UNUSED(authCount);
+    QCC_UNUSED(userId);
+    QCC_UNUSED(credMask);
+
     printf("RequestCredentials %s\n", authMechanism);
 
     // allow ECDHE_NULL and  DSA sessions
@@ -48,12 +51,18 @@ bool DoorAuthListener::RequestCredentials(const char* authMechanism,
 
 bool DoorAuthListener::VerifyCredentials(const char* authMechanism, const char* authPeer, const Credentials& creds)
 {
+    QCC_UNUSED(authPeer);
+    QCC_UNUSED(creds);
+
     printf("VerifyCredentials %s\n", authMechanism);
     return false;
 }
 
 void DoorAuthListener::AuthenticationComplete(const char* authMechanism, const char* authPeer, bool success)
 {
+    QCC_UNUSED(authPeer);
+    QCC_UNUSED(success);
+
     printf("AuthenticationComplete %s\n", authMechanism);
 }
 
@@ -78,19 +87,9 @@ Door::Door(BusAttachment& ba) :
     stateSignal = secPermIntf->GetMember(DOOR_STATE_CHANGED);
 }
 
-QStatus Door::RegisterToAbout()
-{
-    std::vector<qcc::String> intfs;
-    intfs.push_back(DOOR_INTERFACE);
-    QStatus status =  ajn::services::AboutServiceApi::getInstance()->AddObjectDescription(DOOR_OBJECT_PATH, intfs);
-    if (status == ER_OK) {
-        status = ajn::services::AboutServiceApi::getInstance()->Announce();
-    }
-    return status;
-}
-
 void Door::SendDoorEvent(bool newState)
 {
+    QCC_UNUSED(newState);
 /*
     MsgArg outArg;
     outArg.Set("b", &newState);
@@ -110,6 +109,8 @@ void Door::ReplyWithBoolean(bool answer, Message& msg)
 
 void Door::Open(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
+
     printf("Door Open called\n");
     if (open == false) {
         open = true;
@@ -121,6 +122,8 @@ void Door::Open(const InterfaceDescription::Member* member, Message& msg)
 void Door::Close(const ajn::InterfaceDescription::Member* member,
                  ajn::Message& msg)
 {
+    QCC_UNUSED(member);
+
     printf("Door Close called\n");
     if (open) {
         open = false;
@@ -143,6 +146,8 @@ QStatus Door::Get(const char* ifcName, const char* propName, MsgArg& val)
 void Door::GetState(const ajn::InterfaceDescription::Member* member,
                     ajn::Message& msg)
 {
+    QCC_UNUSED(member);
+
     printf("Door GetState called\n");
     ReplyWithBoolean(open, msg);
 }
@@ -166,104 +171,37 @@ QStatus DoorCommon::CreateInterface()
     return status;
 }
 
-QStatus DoorCommon::FillAboutPropertyStore()
+QStatus DoorCommon::SetAboutData()
 {
-    QStatus status = ER_OK;
-
-    status = aboutPropertyStore.setDeviceId("Linux");
-    if (status != ER_OK) {
-        return status;
-    }
-
     qcc::GUID128 appId;
-    status = aboutPropertyStore.setAppId(appId.ToString(), "en");
-    if (status != ER_OK) {
-        return status;
-    }
-
-    std::vector<qcc::String> languages(1);
-    languages[0] = "en";
-    status = aboutPropertyStore.setSupportedLangs(languages);
-    if (status != ER_OK) {
-        return status;
-    }
-    status = aboutPropertyStore.setDefaultLang("en");
-    if (status != ER_OK) {
-        return status;
-    }
-
-    status = aboutPropertyStore.setAppName(appName, "en");
-    if (status != ER_OK) {
-        return status;
-    }
-
-    status = aboutPropertyStore.setModelNumber("1");
-    if (status != ER_OK) {
-        return status;
-    }
-
-    status = aboutPropertyStore.setSoftwareVersion("");
-    if (status != ER_OK) {
-        return status;
-    }
-
-    status = aboutPropertyStore.setAjSoftwareVersion(ajn::GetVersion());
-    if (status != ER_OK) {
-        return status;
-    }
+    aboutData.SetAppId(appId.ToString().c_str());
 
     char buf[64];
     gethostname(buf, sizeof(buf));
-    status = aboutPropertyStore.setDeviceName(buf, "en");
-    if (status != ER_OK) {
-        return status;
-    }
+    aboutData.SetDeviceName(buf);
 
-    status = aboutPropertyStore.setDescription(appName, "en");
-    if (status != ER_OK) {
-        return status;
-    }
+    qcc::GUID128 deviceId;
+    aboutData.SetDeviceId(deviceId.ToString().c_str());
 
-    status = aboutPropertyStore.setManufacturer("QEO LLC", "en");
-    if (status != ER_OK) {
-        return status;
-    }
+    aboutData.SetAppName(appName);
+    aboutData.SetManufacturer("QEO LLC");
+    aboutData.SetModelNumber("1");
+    aboutData.SetDescription(appName);
+    aboutData.SetDateOfManufacture("2015-04-14");
+    aboutData.SetSoftwareVersion("0.1");
+    aboutData.SetHardwareVersion("0.0.1");
+    aboutData.SetSupportUrl("http://www.alljoyn.org");
 
-    status = aboutPropertyStore.setSupportUrl("http://www.alljoyn.org");
-    if (status != ER_OK) {
-        return status;
-    }
-    return status;
-}
-
-QStatus DoorCommon::AdvertiseApplication()
-{
-    QStatus status = FillAboutPropertyStore();
-    if (status != ER_OK) {
-        std::cerr << "Could not fill propertystore" << std::endl;
-        return status;
-    }
-
-    AboutServiceApi::Init(ba, aboutPropertyStore);
-    if (!AboutServiceApi::getInstance()) {
-        std::cerr << "Could not get instance" << std::endl;
+    if (!aboutData.IsValid()) {
+        std::cerr << "Invalid about data." << std::endl;
         return ER_FAIL;
     }
-
-    AboutServiceApi::getInstance()->Register(DOOR_APPLICATION_PORT);
-    status = ba.RegisterBusObject(*AboutServiceApi::getInstance());
-    if (status != ER_OK) {
-        std::cerr << "Could not register about bus object" << std::endl;
-        return status;
-    }
-
-    status = AboutServiceApi::getInstance()->Announce();
-    if (status != ER_OK) {
-        std::cerr << "Could not announce" << std::endl;
-        return status;
-    }
-
     return ER_OK;
+}
+
+void DoorCommon::AnnounceAbout()
+{
+    aboutObj.Announce(DOOR_APPLICATION_PORT, aboutData);
 }
 
 QStatus DoorCommon::init(const char* keyStoreName, bool provider)
@@ -304,7 +242,12 @@ QStatus DoorCommon::init(const char* keyStoreName, bool provider)
         return status;
     }
 
-    status = AdvertiseApplication();
+    status = SetAboutData();
+    if (status != ER_OK) {
+        return status;
+    }
+
+    AnnounceAbout();
 
     return status;
 }

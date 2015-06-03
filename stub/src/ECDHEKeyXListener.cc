@@ -27,6 +27,11 @@ bool ECDHEKeyXListener::RequestCredentials(const char* authMechanism,
                                            uint16_t credMask,
                                            Credentials& creds)
 {
+    QCC_UNUSED(credMask);
+    QCC_UNUSED(userId);
+    QCC_UNUSED(authCount);
+    QCC_UNUSED(authPeer);
+
     printf("ECDHEKeyXListener::RequestCredentials %s\n", authMechanism);
 
     // only allow ECDHE_NULL sessions for now
@@ -39,6 +44,9 @@ bool ECDHEKeyXListener::RequestCredentials(const char* authMechanism,
 
 bool ECDHEKeyXListener::VerifyCredentials(const char* authMechanism, const char* authPeer, const Credentials& creds)
 {
+    QCC_UNUSED(creds);
+    QCC_UNUSED(authPeer);
+
     fprintf(stderr, "ECDHEKeyXListener::VerifyCredentials %s\n", authMechanism);
     if (strcmp(authMechanism, "ALLJOYN_ECDHE_ECDSA") == 0) {
         return true;
@@ -48,5 +56,7 @@ bool ECDHEKeyXListener::VerifyCredentials(const char* authMechanism, const char*
 
 void ECDHEKeyXListener::AuthenticationComplete(const char* authMechanism, const char* authPeer, bool success)
 {
+    QCC_UNUSED(authPeer);
+
     fprintf(stderr, "ECDHEKeyXListener::AuthenticationComplete %s success = %i\n", authMechanism, success);
 }

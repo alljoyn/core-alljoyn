@@ -15,9 +15,33 @@
  ******************************************************************************/
 
 #include "gtest/gtest.h"
+#include <alljoyn/Init.h>
 
 int main(int argc, char** argv)
 {
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
+    if (AllJoynInit() != ER_OK) {
+        return 1;
+    }
+  #ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return 1;
+    }
+  #endif
+
+    int status = 0;
+    setvbuf(stdout, NULL, _IONBF, 0);
+    setvbuf(stderr, NULL, _IONBF, 0);
+
+    printf("\n Running security manager core tests\n");
+    testing::InitGoogleTest(&argc, argv);
+    status = RUN_ALL_TESTS();
+
+    printf("%s exiting with status %d \n", argv[0], status);
+
+  #ifdef ROUTER
+    AllJoynRouterShutdown();
+  #endif
+    AllJoynShutdown();
+    return (int)status;
 }

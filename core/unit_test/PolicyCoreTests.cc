@@ -33,6 +33,7 @@ class PolicyCoreTests :
     {
         idInfo.guid = GUID128();
         idInfo.name = "TestIdentity";
+        guildGUID = qcc::GUID128(0xab);
     }
 
     IdentityInfo idInfo;
@@ -59,7 +60,7 @@ TEST_F(PolicyCoreTests, SuccessfulInstallPolicy) {
     PolicyGenerator::DefaultPolicy(policyGuilds, policy2);
 
     /* Start the stub */
-    Stub* stub = new Stub(&tcl);
+    stub = new Stub(&tcl);
 
     /* Wait for signals */
     ASSERT_TRUE(WaitForState(ajn::PermissionConfigurator::STATE_CLAIMABLE, ajn::securitymgr::STATE_RUNNING));
@@ -70,6 +71,11 @@ TEST_F(PolicyCoreTests, SuccessfulInstallPolicy) {
     ASSERT_NE(ER_OK, secMgr->UpdatePolicy(appInfo, policy));
     ASSERT_NE(ER_OK, secMgr->UpdatePolicy(appInfo, policy2));
     ASSERT_NE(ER_OK, secMgr->GetPolicy(appInfo, policyLocal));
+
+    ApplicationInfo checkUpdatesPendingInfo;
+    checkUpdatesPendingInfo.publicKey = appInfo.publicKey;
+    ASSERT_EQ(ER_OK, secMgr->GetApplication(checkUpdatesPendingInfo));
+    ASSERT_FALSE(checkUpdatesPendingInfo.updatesPending);
 
     /* Create identity */
     ASSERT_EQ(secMgr->StoreIdentity(idInfo), ER_OK);
@@ -88,17 +94,23 @@ TEST_F(PolicyCoreTests, SuccessfulInstallPolicy) {
     ASSERT_EQ(ER_OK, secMgr->GetPolicy(appInfo, policyLocal));
     ASSERT_EQ((size_t)1, policyLocal.GetTermsSize());
 
+    ASSERT_EQ(ER_OK, secMgr->GetApplication(checkUpdatesPendingInfo));
+    ASSERT_FALSE(checkUpdatesPendingInfo.updatesPending);
+
     /* Install another policy and check retrieved policy */
     ASSERT_EQ(ER_OK, secMgr->UpdatePolicy(appInfo, policy2));
     ASSERT_EQ(ER_OK, secMgr->GetPolicy(appInfo, policyLocal));
     ASSERT_EQ((size_t)2, policyLocal.GetTermsSize());
+
+    ASSERT_EQ(ER_OK, secMgr->GetApplication(checkUpdatesPendingInfo));
+    ASSERT_FALSE(checkUpdatesPendingInfo.updatesPending);
 
     /* Clear the keystore of the stub */
     stub->Reset();
 
     /* Stop the stub */
     delete stub;
-
+    stub = NULL;
     ASSERT_TRUE(WaitForState(ajn::PermissionConfigurator::STATE_CLAIMED, ajn::securitymgr::STATE_NOT_RUNNING));
 }
 } // namespace

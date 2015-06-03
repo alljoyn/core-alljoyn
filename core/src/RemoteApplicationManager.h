@@ -18,11 +18,10 @@
 #define REMOTEAPPLICATIONMANAGER_H_
 
 #include <alljoyn/securitymgr/ApplicationInfo.h>
-#include <alljoyn/securitymgr/cert/X509Certificate.h>
 
 #include "ProxyObjectManager.h"
 
-#include <qcc/Certificate.h>
+#include <qcc/CertificateECC.h>
 #include <alljoyn/PermissionPolicy.h>
 #include <qcc/String.h>
 #include <alljoyn/Status.h>
@@ -51,13 +50,23 @@ class RemoteApplicationManager {
         return (NULL != proxyObjectManager);
     }
 
-    QStatus InstallMembership(const ApplicationInfo& app,
-                              qcc::X509MemberShipCertificate& cert,
-                              PermissionPolicy& authData,
-                              const qcc::GUID128& rotGuid);
+    QStatus Claim(const ApplicationInfo& app,
+                  qcc::KeyInfoNISTP256& certificateAuthority,
+                  qcc::GUID128& adminGroupId,
+                  qcc::KeyInfoNISTP256& adminGroup,
+                  qcc::IdentityCertificate* identityCertChain,
+                  size_t identityCertChainSize,
+                  PermissionPolicy::Rule* manifest,
+                  size_t manifestSize);
 
-    QStatus InstallIdentityCertificate(const ApplicationInfo& app,
-                                       qcc::X509IdentityCertificate& cert);
+    QStatus InstallMembership(const ApplicationInfo& app,
+                              qcc::MembershipCertificate& cert);
+
+    QStatus InstallIdentity(const ApplicationInfo& app,
+                            qcc::IdentityCertificate* certChain,
+                            size_t certChainSize,
+                            const PermissionPolicy::Rule* manifest,
+                            size_t manifestSize);
 
     QStatus InstallPolicy(const ApplicationInfo& app,
                           PermissionPolicy& policy);
@@ -76,7 +85,7 @@ class RemoteApplicationManager {
 
     QStatus RemoveMembership(const ApplicationInfo& app,
                              const qcc::String& serialNum,
-                             const qcc::GUID128& GuidId);
+                             const qcc::String& issuerKeyId);
 };
 }
 }

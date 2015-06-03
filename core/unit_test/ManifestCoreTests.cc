@@ -62,7 +62,7 @@ TEST_F(ManifestCoreTests, SuccessfulGetManifest) {
     TestClaimListener tcl(claimAnswer);
 
     /* Start the stub */
-    Stub* stub = new Stub(&tcl);
+    stub = new Stub(&tcl);
 
     /* Wait for signals */
     ASSERT_TRUE(WaitForState(ajn::PermissionConfigurator::STATE_CLAIMABLE, ajn::securitymgr::STATE_RUNNING));
@@ -100,6 +100,7 @@ TEST_F(ManifestCoreTests, SuccessfulGetManifest) {
 
     /* Stop the stub */
     delete stub;
+    stub = NULL;
     ASSERT_TRUE(WaitForState(ajn::PermissionConfigurator::STATE_CLAIMED, ajn::securitymgr::STATE_NOT_RUNNING));
 }
 } // namespace

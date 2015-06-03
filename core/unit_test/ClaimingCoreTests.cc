@@ -27,6 +27,10 @@ class AutoRejector :
                          const PermissionPolicy::Rule* manifestRules,
                          const size_t manifestRulesCount)
     {
+        QCC_UNUSED(appInfo);
+        QCC_UNUSED(manifestRules);
+        QCC_UNUSED(manifestRulesCount);
+
         return false;
     }
 };
@@ -51,7 +55,7 @@ TEST_F(ClaimingCoreTests, SuccessfulClaim) {
     ASSERT_EQ(ER_END_OF_DATA, secMgr->GetApplication(lastAppInfo));
 
     /* Start the stub */
-    Stub* stub = new Stub(&tcl);
+    stub = new Stub(&tcl);
 
     /* Wait for signals */
     ASSERT_TRUE(WaitForState(ajn::PermissionConfigurator::STATE_CLAIMABLE, ajn::securitymgr::STATE_RUNNING));
@@ -72,7 +76,7 @@ TEST_F(ClaimingCoreTests, SuccessfulClaim) {
     ASSERT_TRUE(WaitForState(ajn::PermissionConfigurator::STATE_CLAIMED, ajn::securitymgr::STATE_RUNNING));
 
     /* Check root of trust */
-    ASSERT_EQ((size_t)1, lastAppInfo.rootsOfTrust.size());
+    ASSERT_EQ((size_t)3, lastAppInfo.rootsOfTrust.size());
     ECCPublicKey secMgrPubKey = secMgr->GetPublicKey();
     ASSERT_TRUE(secMgrPubKey == lastAppInfo.rootsOfTrust[0]);
 
@@ -84,6 +88,7 @@ TEST_F(ClaimingCoreTests, SuccessfulClaim) {
 
     /* Stop the stub */
     delete stub;
+    stub = NULL;
 
     ASSERT_TRUE(WaitForState(ajn::PermissionConfigurator::STATE_CLAIMED, ajn::securitymgr::STATE_NOT_RUNNING));
 }
@@ -112,8 +117,6 @@ TEST_F(ClaimingCoreTests, RejectManifest) {
     secMgr->SetManifestListener(&ar);
 
     ASSERT_EQ(ER_MANIFEST_REJECTED, secMgr->Claim(lastAppInfo, idInfo));
-
-    ASSERT_TRUE(WaitForState(ajn::PermissionConfigurator::STATE_CLAIMABLE, ajn::securitymgr::STATE_RUNNING));
     secMgr->SetManifestListener(NULL);
 }
 

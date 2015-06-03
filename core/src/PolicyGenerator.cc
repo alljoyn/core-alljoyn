@@ -32,8 +32,8 @@ QStatus PolicyGenerator::DefaultPolicy(const std::vector<GuildInfo>& guildInfos,
 
     for (size_t i = 0; i < numGuilds; i++) {
         if (ER_OK !=
-            (status = DefaultGuildPolicyTerm(guildInfos[i].guid.GetBytes(),
-                                             GUID128::SIZE, guildInfos[i].authority, terms[i]))) {
+            (status = DefaultGuildPolicyTerm(guildInfos[i].guid,
+                                             guildInfos[i].authority, terms[i]))) {
             break;
         }
     }
@@ -47,8 +47,7 @@ QStatus PolicyGenerator::DefaultPolicy(const std::vector<GuildInfo>& guildInfos,
     return status;
 }
 
-QStatus PolicyGenerator::DefaultGuildPolicyTerm(const uint8_t* guildId,
-                                                const size_t guildIdLen,
+QStatus PolicyGenerator::DefaultGuildPolicyTerm(const GUID128& guildId,
                                                 const ECCPublicKey& authority,
                                                 PermissionPolicy::Term& term)
 {
@@ -65,10 +64,11 @@ QStatus PolicyGenerator::DefaultGuildPolicyTerm(const uint8_t* guildId,
     // will be deleted by term
     PermissionPolicy::Peer* peers = new PermissionPolicy::Peer[1];
     peers[0].SetType(PermissionPolicy::Peer::PEER_GUILD);
+    peers[0].SetGuildId(guildId);
 
     // will be deleted by peer
     KeyInfoNISTP256* info = new KeyInfoNISTP256();
-    info->SetKeyId(guildId, guildIdLen);
+    // info->SetKeyId(guildId, guildIdLen);
     info->SetPublicKey(&authority);
     peers[0].SetKeyInfo(info);
     term.SetPeers(1, peers);

@@ -41,7 +41,6 @@ TEST(PolicyGeneratorTest, BasicTest) {
     PolicyGenerator::DefaultPolicy(guilds, pol);
     qcc::String policyString = pol.ToString();
     ASSERT_EQ((size_t)1, pol.GetTermsSize());
-    ASSERT_NE(string::npos, policyString.find(guildIDString));
 
     GUID128 guildID2;
     qcc::String guildID2String = BytesToHexString(guildID2.GetBytes(), GUID128::SIZE);
@@ -54,6 +53,4 @@ TEST(PolicyGeneratorTest, BasicTest) {
     policyString = pol.ToString();
 
     ASSERT_EQ((size_t)2, pol.GetTermsSize());
-    ASSERT_NE(string::npos, policyString.find(guildIDString));
-    ASSERT_NE(string::npos, policyString.find(guildID2String));
 }

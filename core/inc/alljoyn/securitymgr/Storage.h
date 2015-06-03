@@ -20,11 +20,10 @@
 #include <alljoyn/securitymgr/ManagedApplicationInfo.h>
 #include <alljoyn/securitymgr/IdentityInfo.h>
 #include <alljoyn/securitymgr/GuildInfo.h>
-#include <alljoyn/securitymgr/cert/X509Certificate.h>
 #include <alljoyn/Status.h>
 
 #include <qcc/String.h>
-#include <qcc/Certificate.h>
+#include <qcc/CertificateECC.h>
 #include <qcc/CryptoECC.h>
 
 #include <vector>
@@ -107,7 +106,7 @@ class Storage {
      * \retval ER_OK  on success
      * \retval others on failure
      */
-    virtual QStatus StoreCertificate(const qcc::Certificate& certificate,
+    virtual QStatus StoreCertificate(const qcc::CertificateX509& certificate,
                                      bool update = false) = 0;
 
     /**
@@ -120,7 +119,7 @@ class Storage {
      * \retval ER_OK  on success
      * \retval others on failure
      */
-    virtual QStatus StoreAssociatedData(const qcc::Certificate& certificate,
+    virtual QStatus StoreAssociatedData(const qcc::CertificateX509& certificate,
                                         const qcc::String& data,
                                         bool update = false) = 0;
 
@@ -132,7 +131,7 @@ class Storage {
      * \retval ER_OK  on success
      * \retval others on failure
      */
-    virtual QStatus RemoveCertificate(qcc::Certificate& certificate) = 0;
+    virtual QStatus RemoveCertificate(qcc::CertificateX509& certificate) = 0;
 
     /**
      * \brief Remove a given data that is associated with a given certificate.
@@ -142,7 +141,7 @@ class Storage {
      * \retval ER_OK  on success
      * \retval others on failure
      */
-    virtual QStatus RemoveAssociatedData(const qcc::Certificate& certificate) = 0;
+    virtual QStatus RemoveAssociatedData(const qcc::CertificateX509& certificate) = 0;
 
     /**
      * \brief Retrieve a certificate of a certain type.
@@ -153,7 +152,7 @@ class Storage {
      * \retval ER_END_OF_DATA if no data is found
      * \retval others on failure
      */
-    virtual QStatus GetCertificate(qcc::Certificate& certificate) = 0;
+    virtual QStatus GetCertificate(qcc::CertificateX509& certificate) = 0;
 
     /*
      * \brief Retrieve all matching membership certificates based on optional
@@ -166,8 +165,8 @@ class Storage {
      * \retval ER_OK  on success
      * \retval others on failure
      */
-    virtual QStatus GetCertificates(const qcc::X509MemberShipCertificate& certificate,
-                                    std::vector<qcc::X509MemberShipCertificate>& certificates) const = 0;
+    virtual QStatus GetCertificates(const qcc::MembershipCertificate& certificate,
+                                    std::vector<qcc::MembershipCertificate>& certificates) const = 0;
 
     /**
      * \brief Retrieve a given data that is associated with a given certificate.
@@ -179,7 +178,7 @@ class Storage {
      * \retval ER_END_OF_DATA if no data is found
      * \retval others on failure
      */
-    virtual QStatus GetAssociatedData(const qcc::Certificate& certificate,
+    virtual QStatus GetAssociatedData(const qcc::CertificateX509& certificate,
                                       qcc::String& data) const = 0;
 
     /**

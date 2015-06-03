@@ -29,6 +29,7 @@
 #include "RemoteApplicationManager.h"
 #include "SecurityInfoListener.h"
 #include "TaskQueue.h"
+#include "SecurityManagerImpl.h"
 
 namespace ajn {
 namespace securitymgr {
@@ -39,8 +40,8 @@ class SecurityEvent {
     SecurityEvent(const SecurityInfo* n,
                   const SecurityInfo* o) :
         newInfo(n == NULL ? NULL :
-                    new SecurityInfo(*n)), oldInfo(o == NULL ? NULL :
-                                                       new SecurityInfo(*o))
+                new SecurityInfo(*n)), oldInfo(o == NULL ? NULL :
+                                               new SecurityInfo(*o))
     {
     }
 
@@ -57,13 +58,14 @@ class ApplicationUpdater :
     ApplicationUpdater(BusAttachment* ba, // no ownership
                        Storage* s, // no ownership
                        RemoteApplicationManager* ram, // no ownership
-                       qcc::GUID128 guid,
+                       SecurityManagerImpl* smi, // no ownership
                        ECCPublicKey pubkey) :
         busAttachment(ba), storage(s), applicationManager(ram),
-        securityManagerGUID(guid), securityManagerPubkey(pubkey),
+        securityManagerImpl(smi), securityManagerPubkey(pubkey),
         queue(TaskQueue<SecurityEvent*, ApplicationUpdater>(this))
     {
-        certificateGenerator = new X509CertificateGenerator(guid.ToString(), ba);
+        CertificateX509::GenerateAuthorityKeyId(&pubkey, securityManagerKeyId);
+        certificateGenerator = new X509CertificateGenerator(securityManagerKeyId, ba);
     }
 
     ~ApplicationUpdater()
@@ -103,7 +105,8 @@ class ApplicationUpdater :
     ajn::BusAttachment* busAttachment;
     Storage* storage;
     RemoteApplicationManager* applicationManager;
-    qcc::GUID128 securityManagerGUID;
+    SecurityManagerImpl* securityManagerImpl;
+    qcc::String securityManagerKeyId;
     ECCPublicKey securityManagerPubkey;
     TaskQueue<SecurityEvent*, ApplicationUpdater> queue;
     X509CertificateGenerator* certificateGenerator;

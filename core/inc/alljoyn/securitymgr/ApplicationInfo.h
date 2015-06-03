@@ -80,11 +80,22 @@ struct ApplicationInfo {
      * security manager if it is is in the CLAIMED state.
      */
     ajn::PermissionConfigurator::ClaimableState claimState;
+
     /**
      * \brief The running state of an application. Both RUNNING and NOT_RUNNING
      * application can be managed by a security manager.
      */
     ApplicationRunningState runningState;
+
+    /**
+     * \brief Indicates whether there are still changes to the security
+     * configuration of the application that are known to the security manager
+     * but have not yet been applied to the remote application itself. It is
+     * set to true whenever an administrator changes the configuration of
+     * an application, and set to false when the configuration of the remote
+     * application matches the configuration known to the security manager.
+     */
+    bool updatesPending;
 
     bool operator==(const ApplicationInfo& ai) const
     {

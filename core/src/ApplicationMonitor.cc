@@ -39,7 +39,6 @@
 #define PM_STUB_NOTIF_IFN "org.allseen.Security.PermissionMgmt.Stub.Notification"
 
 using namespace ajn;
-using namespace ajn::services;
 using namespace ajn::securitymgr;
 
 ApplicationMonitor::ApplicationMonitor(ajn::BusAttachment* ba,
@@ -173,6 +172,9 @@ void ApplicationMonitor::StateChangedSignalHandler(const InterfaceDescription::M
                                                    const char* sourcePath,
                                                    Message& msg)
 {
+    QCC_UNUSED(sourcePath);
+    QCC_UNUSED(member);
+
     QCC_DbgPrintf(("Received NotifyConfig signal!!!"));
 
     QStatus status = ER_OK;
@@ -193,16 +195,19 @@ void ApplicationMonitor::StateChangedSignalHandler(const InterfaceDescription::M
         return;
     }
 
+    appsMutex.Lock(__FILE__, __LINE__);
+
     std::map<qcc::String, SecurityInfo>::iterator it = applications.find(info.busName);
     if (it != applications.end()) {
         // known bus name
         SecurityInfo oldInfo = it->second;
         it->second = info;
-
+        appsMutex.Unlock(__FILE__, __LINE__);
         NotifySecurityInfoListeners(&oldInfo, &info);
     } else {
         // new bus name
         applications[info.busName] = info;
+        appsMutex.Unlock(__FILE__, __LINE__);
 
         if (ER_OK != (status = pinger->AddDestination(AUTOPING_GROUPNAME, info.busName))) {
             QCC_LogError(status, ("Failed to add destination to AutoPinger."));
@@ -215,6 +220,8 @@ void ApplicationMonitor::StateChangedSignalHandler(const InterfaceDescription::M
 
 std::vector<SecurityInfo> ApplicationMonitor::GetApplications() const
 {
+    appsMutex.Lock(__FILE__, __LINE__);
+
     if (!applications.empty()) {
         std::vector<SecurityInfo> apps;
         std::map<qcc::String, SecurityInfo>::const_iterator it = applications.begin();
@@ -222,9 +229,24 @@ std::vector<SecurityInfo> ApplicationMonitor::GetApplications() const
             const SecurityInfo& appInfo = it->second;
             apps.push_back(appInfo);
         }
+        appsMutex.Unlock(__FILE__, __LINE__);
         return apps;
     }
+    appsMutex.Unlock(__FILE__, __LINE__);
     return std::vector<SecurityInfo>();
+}
+
+QStatus ApplicationMonitor::GetApplication(SecurityInfo& secInfo) const
+{
+    appsMutex.Lock(__FILE__, __LINE__);
+    std::map<qcc::String, SecurityInfo>::const_iterator it  = applications.find(secInfo.busName);
+    if (it != applications.end()) {
+        secInfo = it->second;
+        appsMutex.Unlock(__FILE__, __LINE__);
+        return ER_OK;
+    }
+    appsMutex.Unlock(__FILE__, __LINE__);
+    return ER_FAIL;
 }
 
 void ApplicationMonitor::RegisterSecurityInfoListener(SecurityInfoListener* al)
@@ -258,14 +280,21 @@ void ApplicationMonitor::NotifySecurityInfoListeners(const SecurityInfo* oldSecI
 
 void ApplicationMonitor::DestinationLost(const qcc::String& group, const qcc::String& destination)
 {
+    QCC_UNUSED(group);
+
     QCC_DbgPrintf(("DestinationLost %s\n", destination.data()));
+    appsMutex.Lock(__FILE__, __LINE__);
+
     std::map<qcc::String, SecurityInfo>::iterator it = applications.find(destination);
 
     if (it != applications.end()) {
         /* we already know this application */
-        NotifySecurityInfoListeners(&it->second, NULL);
+        SecurityInfo secInfo = it->second;
         applications.erase(it);
+        appsMutex.Unlock(__FILE__, __LINE__);
+        NotifySecurityInfoListeners(&secInfo, NULL);
     } else {
+        appsMutex.Unlock(__FILE__, __LINE__);
         /* We are monitoring an app not in the list. Remove it. */
         pinger->RemoveDestination(AUTOPING_GROUPNAME, destination);
     }
@@ -273,7 +302,11 @@ void ApplicationMonitor::DestinationLost(const qcc::String& group, const qcc::St
 
 void ApplicationMonitor::DestinationFound(const qcc::String& group, const qcc::String& destination)
 {
+    QCC_UNUSED(group);
+
     QCC_DbgPrintf(("DestinationFound %s\n", destination.data()));
+    appsMutex.Lock(__FILE__, __LINE__);
+
     std::map<qcc::String, SecurityInfo>::iterator it = applications.find(destination);
 
     if (it != applications.end()) {
@@ -281,9 +314,14 @@ void ApplicationMonitor::DestinationFound(const qcc::String& group, const qcc::S
         if (it->second.runningState != STATE_RUNNING) {
             SecurityInfo old = it->second;
             it->second.runningState = STATE_RUNNING;
-            NotifySecurityInfoListeners(&old, &it->second);
+            SecurityInfo newSecInfo = it->second;
+            appsMutex.Unlock(__FILE__, __LINE__);
+            NotifySecurityInfoListeners(&old, &newSecInfo);
+        } else {
+            appsMutex.Unlock(__FILE__, __LINE__);
         }
     } else {
+        appsMutex.Unlock(__FILE__, __LINE__);
         /* We are monitoring an app not in the list. Remove it. */
         pinger->RemoveDestination(AUTOPING_GROUPNAME, destination);
     }

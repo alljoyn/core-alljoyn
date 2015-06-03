@@ -25,6 +25,9 @@ MyClaimListener::~MyClaimListener()
  * and asks the user if he wants to be claimed by this ROT */
 bool MyClaimListener::OnClaimRequest(const qcc::ECCPublicKey* pubKeyRot, void* ctx)
 {
+    QCC_UNUSED(pubKeyRot);
+    QCC_UNUSED(ctx);
+
     printf("Auto-accepting claim request\r\n");
     return true;
 }

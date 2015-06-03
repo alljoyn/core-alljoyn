@@ -21,8 +21,6 @@
 #include <qcc/CryptoECC.h>
 #include <qcc/CryptoECC.h>
 #include <qcc/CertificateECC.h>
-#include <alljoyn/about/AnnouncementRegistrar.h>
-#include <alljoyn/about/AboutPropertyStoreImpl.h>
 
 #include <SecLibDef.h>
 
@@ -30,7 +28,6 @@
 
 #define QCC_MODULE "SEC_MGR"
 
-using namespace ajn::services;
 using namespace ajn;
 using namespace qcc;
 using namespace securitymgr;
@@ -121,10 +118,9 @@ QStatus SecurityManager::GetGuilds(std::vector<GuildInfo>& guildInfos) const
 }
 
 QStatus SecurityManager::InstallMembership(const ApplicationInfo& appInfo,
-                                           const GuildInfo& guildInfo,
-                                           const PermissionPolicy* authorizationData)
+                                           const GuildInfo& guildInfo)
 {
-    return securityManagerImpl->InstallMembership(appInfo, guildInfo, authorizationData);
+    return securityManagerImpl->InstallMembership(appInfo, guildInfo);
 }
 
 QStatus SecurityManager::RemoveMembership(const ApplicationInfo& appInfo,

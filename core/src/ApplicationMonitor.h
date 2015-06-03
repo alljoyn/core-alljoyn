@@ -44,6 +44,7 @@ class ApplicationMonitor :
     ajn::AutoPinger* pinger;
     ajn::BusAttachment* busAttachment;
     mutable qcc::Mutex securityListenersMutex;
+    mutable qcc::Mutex appsMutex;
 
     ApplicationMonitor();
     ApplicationMonitor(ajn::BusAttachment* ba,
@@ -77,6 +78,8 @@ class ApplicationMonitor :
 
     /* Get a list of all aboutOnlyApplications which currently have been discovered */
     std::vector<SecurityInfo> GetApplications() const;
+
+    QStatus GetApplication(SecurityInfo& secInfo) const;
 
     void RegisterSecurityInfoListener(SecurityInfoListener* al);
 

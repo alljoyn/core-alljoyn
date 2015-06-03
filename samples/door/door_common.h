@@ -23,7 +23,7 @@
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/BusObject.h>
 #include <alljoyn/AuthListener.h>
-#include <alljoyn/about/AboutPropertyStoreImpl.h>
+#include <alljoyn/AboutObj.h>
 
 #define DOOR_INTERFACE "sample.securitymgr.door.Door"
 #define DOOR_OPEN "Open"
@@ -40,7 +40,6 @@
 
 #define DOOR_APPLICATION_PORT 12345
 using namespace ajn;
-using namespace services;
 
 namespace sample {
 namespace securitymgr {
@@ -76,8 +75,6 @@ class Door :
   public:
     Door(BusAttachment& ba);
 
-    QStatus RegisterToAbout();
-
     ~Door() { }
 
   protected:
@@ -107,7 +104,7 @@ class Door :
 class DoorCommon {
   public:
     DoorCommon(const char* appName) :
-        ba(appName, true), appName(appName)
+        ba(appName, true), appName(appName), aboutData("en"), aboutObj(ba)
     {
     }
 
@@ -126,18 +123,19 @@ class DoorCommon {
         return ba;
     }
 
+    void AnnounceAbout();
+
   private:
     QStatus CreateInterface();
 
     QStatus AdvertiseApplication();
 
-    QStatus FillAboutPropertyStore();
-
-    AboutPropertyStoreImpl aboutPropertyStore;
+    QStatus SetAboutData();
 
     BusAttachment ba;
-
     const char* appName;
+    AboutData aboutData;
+    AboutObj aboutObj;
 };
 }
 }

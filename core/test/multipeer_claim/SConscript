@@ -23,7 +23,7 @@ app_env.Prepend(LIBS = ['ajsecmgr', 'ajsecstorage', 'stub'])
 
 if app_env['BR'] == 'on':
         # Build apps with bundled daemon support
-        app_env.Prepend(LIBS = [app_env['brobj'], app_env['ajrlib']])
+        app_env.Prepend(LIBS = [app_env['ajrlib']])
 
 # build app
 test_app = app_env.Program(target='multipeer_claim',
