@@ -133,6 +133,8 @@ class ReplyReceiver : public ajn::ProxyBusObject::Listener, public ajn::MessageR
         }
     };
     virtual void IntrospectCB(QStatus status, ajn::ProxyBusObject* obj, void* context) {
+        QCC_UNUSED(obj);
+        QCC_UNUSED(context);
         PluginData::Callback callback(env->plugin, _IntrospectCB);
         callback->context = new IntrospectCBContext(env, status);
         PluginData::DispatchCallback(callback);

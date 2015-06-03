@@ -69,6 +69,7 @@ QCC_DbgMsgCallback QCC_GetOSLogger(bool useOSLog)
 
 QCC_DbgMsgCallback QCC_GetOSLogger(bool useOSLog)
 {
+    QCC_UNUSED(useOSLog);
     return NULL;
 }
 

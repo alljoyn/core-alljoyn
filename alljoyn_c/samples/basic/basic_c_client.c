@@ -60,12 +60,15 @@ static volatile sig_atomic_t g_interrupt = QCC_FALSE;
 
 static void CDECL_CALL SigIntHandler(int sig)
 {
+    QCC_UNUSED(sig);
     g_interrupt = QCC_TRUE;
 }
 
 /* FoundAdvertisedName callback */
 void AJ_CALL found_advertised_name(const void* context, const char* name, alljoyn_transportmask transport, const char* namePrefix)
 {
+    QCC_UNUSED(context);
+    QCC_UNUSED(transport);
     printf("found_advertised_name(name=%s, prefix=%s)\n", name, namePrefix);
     if (0 == strcmp(name, OBJECT_NAME)) {
         /* We found a remote bus that is advertising basic service's  well-known name so connect to it */
@@ -88,6 +91,7 @@ void AJ_CALL found_advertised_name(const void* context, const char* name, alljoy
 /* NameOwnerChanged callback */
 void AJ_CALL name_owner_changed(const void* context, const char* busName, const char* previousOwner, const char* newOwner)
 {
+    QCC_UNUSED(context);
     if (newOwner && (0 == strcmp(busName, OBJECT_NAME))) {
         printf("name_owner_changed: name=%s, oldOwner=%s, newOwner=%s\n",
                busName,
@@ -97,8 +101,7 @@ void AJ_CALL name_owner_changed(const void* context, const char* busName, const 
 }
 
 /** Main entry point */
-/** TODO: Make this C89 compatible. */
-int CDECL_CALL main(int argc, char** argv, char** envArg)
+int CDECL_CALL main(void)
 {
     QStatus status = ER_OK;
     char* connectArgs = NULL;

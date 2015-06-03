@@ -43,16 +43,23 @@ const char* NamedPipeClientTransport::NamedPipeTransportName = NULL;
 
 QStatus NamedPipeClientTransport::IsConnectSpecValid(const char* connectSpec)
 {
+    QCC_UNUSED(connectSpec);
     return ER_FAIL;
 }
 
 QStatus NamedPipeClientTransport::NormalizeTransportSpec(const char* inSpec, qcc::String& outSpec, map<qcc::String, qcc::String>& argMap) const
 {
+    QCC_UNUSED(inSpec);
+    QCC_UNUSED(outSpec);
+    QCC_UNUSED(argMap);
     return ER_FAIL;
 }
 
 QStatus NamedPipeClientTransport::Connect(const char* connectSpec, const SessionOpts& opts, BusEndpoint& newep)
 {
+    QCC_UNUSED(connectSpec);
+    QCC_UNUSED(opts);
+    QCC_UNUSED(newep);
     return ER_FAIL;
 }
 

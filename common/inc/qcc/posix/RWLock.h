@@ -79,12 +79,12 @@ class RWLock {
     /**
      * Rwlock copy constructor creates a new rwlock.
      */
-    RWLock(const RWLock& other) { Init(); }
+    RWLock(const RWLock& other) { QCC_UNUSED(other); Init(); }
 
     /**
      * Rwlock assignment operator.
      */
-    RWLock& operator=(const RWLock& other) { Init(); return *this; }
+    RWLock& operator=(const RWLock& other) { QCC_UNUSED(other); Init(); return *this; }
 
   private:
     pthread_rwlock_t rwlock;  ///< The Linux rwlock implementation uses pthread rwlock's.

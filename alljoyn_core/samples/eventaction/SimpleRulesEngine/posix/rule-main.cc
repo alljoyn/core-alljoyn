@@ -48,6 +48,7 @@ void WaitForSigInt(void)
 
 int CDECL_CALL main(int argc, char** argv, char** envArg)
 {
+    QCC_UNUSED(envArg);
     if (AllJoynInit() != ER_OK) {
         return 1;
     }

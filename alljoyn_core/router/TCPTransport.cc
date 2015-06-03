@@ -4546,6 +4546,8 @@ void TCPTransport::CheckEndpointLocalMachine(TCPEndpoint endpoint)
             break;
         }
     }
+#else
+    QCC_UNUSED(endpoint);
 #endif
 }
 
