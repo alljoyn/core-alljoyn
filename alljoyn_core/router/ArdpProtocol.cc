@@ -2777,7 +2777,7 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                          */
                         status = Send(handle, conn, ARDP_FLAG_ACK | ARDP_FLAG_VER, conn->snd.NXT, conn->rcv.CUR);
 
-                        if (handle->cb.ConnectCb) {
+                        if ((handle->cb.ConnectCb) && (status == ER_OK)) {
                             QCC_DbgPrintf(("ArdpMachine(): SYN_SENT->OPEN: ConnectCb(handle=%p, conn=%p", handle, conn));
                             assert(!conn->passive);
                             uint8_t* data = &buf[ARDP_SYN_HEADER_SIZE];

@@ -55,7 +55,7 @@ static qcc::String getConnectArg(const char* envvar = "BUS_ADDRESS") {
     #if (_WIN32_WINNT > 0x0603)
     return env->Find(envvar, "npipe:");
     #else
-    return env->Find(envvar, "tcp:addr=127.0.0.1,port=9956");
+    return env->Find(envvar, "tcp:addr=127.0.0.1,port=9955");
     #endif
 #else
     return env->Find(envvar, "unix:abstract=alljoyn");

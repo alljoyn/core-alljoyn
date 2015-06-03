@@ -32,11 +32,6 @@ progs = [
     env.Program('SampleCertificateUtility', ['SampleCertificateUtility.cc'])
     ]
 
-#if 'linux' == env['OS'] or 'darwin' == env['OS']:
-#    env.Install('$CPP_DISTDIR/bin/samples', progs )
-#    env.Install(clientDistDir, env.Glob('*.cc'))
-#    env.Install(clientDistDir, env.Glob('Make*'))
-#    env.Install(clientDistDir, env.Glob('README*'))
-#elif env['OS_GROUP'] == 'windows':
-#    env.Install('$CPP_DISTDIR/bin/samples', progs )
-#    env.Install(clientDistDir, env.Glob('*.cc'))
+if env['OS'] != 'android':
+     env.Install('$CPP_DISTDIR/bin/samples', progs )
+     env.Install(clientDistDir, env.Glob('*.cc'))

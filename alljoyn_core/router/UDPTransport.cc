@@ -11350,7 +11350,7 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
         if (!listenAddr.Size() || !listenAddr.IsIPv4()) {
             continue;
         }
-        bool ephemeralPort = (listenPort == 0);
+
         /*
          * We have the name service work out of the way, so we can now create the
          * TCP listener sockets and set SO_REUSEADDR/SO_REUSEPORT so we don't have
@@ -11442,36 +11442,16 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
         QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): GetRcvBuf(listenFd=%d) <= %u. bytes)", listenFd, rcvSize));
 #endif
 
-        /*
-         * If ephemeralPort is set, it means that the listen spec did not provide a
-         * specific port and wants us to choose one.  In this case, we first try the
-         * default port; but it that port is already taken in the system, we let the
-         * system assign a new one from the ephemeral port range.
-         */
-        if (ephemeralPort) {
-            QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): ephemeralPort"));
-            listenPort = PORT_DEFAULT;
-            QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Bind(listenFd=%d., listenAddr=\"%s\", listenPort=%d.)",
-                           listenFd, listenAddr.ToString().c_str(), listenPort));
-            status = Bind(listenFd, listenAddr, listenPort);
-            if (status != ER_OK) {
-                listenPort = 0;
-                QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Bind() failed.  Bind(listenFd=%d., listenAddr=\"%s\", listenPort=%d.)",
-                               listenFd, listenAddr.ToString().c_str(), listenPort));
-                status = Bind(listenFd, listenAddr, listenPort);
-            }
-        } else {
-            QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Bind(listenFd=%d., listenAddr=\"%s\", listenPort=%d.)",
-                           listenFd, listenAddr.ToString().c_str(), listenPort));
-            status = Bind(listenFd, listenAddr, listenPort);
-        }
+        QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Bind(listenFd=%d., listenAddr=\"%s\", listenPort=%u.)",
+                       listenFd, listenAddr.ToString().c_str(), listenPort));
+        status = Bind(listenFd, listenAddr, listenPort);
 
         if (status == ER_OK) {
             /*
              * If the port was not set (or set to zero) then we will have bound an ephemeral port. If
              * so call GetLocalAddress() to update the connect spec with the port allocated by bind.
              */
-            if (ephemeralPort) {
+            if (listenPort == 0) {
                 qcc::GetLocalAddress(listenFd, listenAddr, listenPort);
             }
             if (wildcardIfaceRequested) {

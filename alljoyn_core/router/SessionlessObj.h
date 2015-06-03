@@ -623,9 +623,8 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      */
     QStatus ScheduleWork(RemoteCache& cache, bool addAlarm = true, bool doInitialBackoff = true);
 
-    bool QueryHandler(TransportMask transport, MDNSPacket query, uint16_t recvPort,
-                      const qcc::IPEndpoint& ns4);
-    bool SendResponseIfMatch(TransportMask transport, const qcc::IPEndpoint& ns4, const qcc::String& ruleStr);
+    bool QueryHandler(TransportMask transport, MDNSPacket query, const qcc::IPEndpoint& src, const qcc::IPEndpoint& dst);
+    bool SendResponseIfMatch(TransportMask transport, const qcc::IPEndpoint& src, const qcc::IPEndpoint& dst, const qcc::String& ruleStr);
     bool ResponseHandler(TransportMask transport, MDNSPacket response, uint16_t recvPort);
 
     void FoundAdvertisedNameHandler(const char* name, TransportMask transport, const char* prefix, bool doInitialBackoff = true);
@@ -654,8 +653,9 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
       public:
         TransportMask transport;
         qcc::String name;
-        qcc::IPEndpoint ns4;
-        SendResponseWork(SessionlessObj& slObj, TransportMask transport, const qcc::String& name, const qcc::IPEndpoint& ns4);
+        qcc::IPEndpoint src;
+        qcc::IPEndpoint dst;
+        SendResponseWork(SessionlessObj& slObj, TransportMask transport, const qcc::String& name, const qcc::IPEndpoint& src, const qcc::IPEndpoint& dst);
         virtual void Run();
     };
 

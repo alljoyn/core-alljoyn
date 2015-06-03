@@ -5168,7 +5168,7 @@ void AllJoynObj::SendIPNSResponse(String name, uint32_t replyCode) {
     ReleaseLocks();
     list<IncomingPingInfo>::iterator it1 = temp.begin();
     while (it1 != temp.end()) {
-        PingResponse((*it1).transport, (*it1).ns4, name, replyCode);
+        PingResponse((*it1).transport, (*it1).dst, name, replyCode);
         it1++;
     }
 
@@ -5678,11 +5678,11 @@ void AllJoynObj::PingReplyMethodHandlerUsingCode(Message& msg, uint32_t replyCod
 
 
 /* From IpNameServiceListener */
-bool AllJoynObj::QueryHandler(TransportMask transport, MDNSPacket query, uint16_t recvPort,
-                              const qcc::IPEndpoint& ns4)
+bool AllJoynObj::QueryHandler(TransportMask transport, MDNSPacket query,
+                              const qcc::IPEndpoint& src, const qcc::IPEndpoint& dst)
 {
     MDNSResourceRecord* pingRecord;
-    if ((recvPort == IpNameService::MULTICAST_MDNS_PORT) ||
+    if ((src.port == IpNameService::MULTICAST_MDNS_PORT) ||
         !query->GetAdditionalRecord("ping.*", MDNSResourceRecord::TXT, &pingRecord)) {
         return false;
     }
@@ -5699,7 +5699,7 @@ bool AllJoynObj::QueryHandler(TransportMask transport, MDNSPacket query, uint16_
     //in any case add it to incomingPingMap.
     AcquireLocks();
     bool alarmFound = (incomingPingMap.find(name) != incomingPingMap.end());
-    IncomingPingInfo ipi(transport, ns4);
+    IncomingPingInfo ipi(transport, dst);
 
     incomingPingMap.insert(pair<String, IncomingPingInfo>(name, ipi));
     if (!alarmFound) {
@@ -5734,10 +5734,10 @@ void AllJoynObj::PingReplyTransportHandler(Message& reply, void* context)
     delete ctx;
 }
 
-void AllJoynObj::PingResponse(TransportMask transport, const qcc::IPEndpoint& ns4, const qcc::String& name, uint32_t replyCode)
+void AllJoynObj::PingResponse(TransportMask transport, const qcc::IPEndpoint& dst, const qcc::String& name, uint32_t replyCode)
 {
     MDNSPacket response;
-    response->SetDestination(ns4);
+    response->SetDestination(dst);
 
     // Similar to advertise record with only one name
     MDNSPingReplyRData* pingReplyRData = new MDNSPingReplyRData();

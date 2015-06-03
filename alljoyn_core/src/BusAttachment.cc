@@ -473,7 +473,7 @@ QStatus BusAttachment::Connect()
 #if (_WIN32_WINNT > 0x0603)
     const char* connectArgs = "npipe:";
 #else
-    const char* connectArgs = "tcp:addr=127.0.0.1,port=9956";
+    const char* connectArgs = "tcp:addr=127.0.0.1,port=9955";
 #endif
 #else
     const char* connectArgs = "unix:abstract=alljoyn";
@@ -1154,9 +1154,13 @@ QStatus BusAttachment::RemoveMatch(const char* rule)
     const ProxyBusObject& dbusObj = this->GetDBusProxyObj();
     QStatus status = dbusObj.MethodCall(org::freedesktop::DBus::InterfaceName, "RemoveMatch", args, numArgs, reply);
     if (ER_OK != status) {
-        QCC_LogError(status, ("%s.RemoveMatch returned ERROR_MESSAGE (error=%s)", org::freedesktop::DBus::InterfaceName, reply->GetErrorDescription().c_str()));
         if (strcmp(reply->GetErrorName(), "org.freedesktop.DBus.Error.MatchRuleNotFound") == 0) {
             status = ER_BUS_MATCH_RULE_NOT_FOUND;
+            QCC_DbgTrace(("%s.RemoveMatch returned org.freedesktop.DBus.Error.MatchRuleNotFound",
+                          org::freedesktop::DBus::InterfaceName));
+        } else {
+            QCC_LogError(status, ("%s.RemoveMatch returned ERROR_MESSAGE (error=%s)",
+                                  org::freedesktop::DBus::InterfaceName, reply->GetErrorDescription().c_str()));
         }
     }
     return status;

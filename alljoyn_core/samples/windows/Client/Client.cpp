@@ -106,7 +106,7 @@ int CDECL_CALL main(int argc, char** argv, char** envArg)
     const char* connectArgs = getenv("BUS_ADDRESS");
     if (connectArgs == NULL) {
 #ifdef _WIN32
-        connectArgs = "tcp:addr=127.0.0.1,port=9956";
+        connectArgs = "tcp:addr=127.0.0.1,port=9955";
 #else
         connectArgs = "unix:abstract=alljoyn";
 #endif
