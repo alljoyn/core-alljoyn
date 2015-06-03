@@ -30,7 +30,7 @@
 #include <qcc/KeyInfoECC.h>
 #include <qcc/StringUtil.h>
 #include <alljoyn/PermissionPolicy.h>
-#include <alljoyn/PermissionMgmtListener.h>
+#include <alljoyn/ApplicationStateListener.h>
 #include "ajTestCommon.h"
 #include "KeyInfoHelper.h"
 #include "CredentialAccessor.h"
@@ -50,63 +50,12 @@ static void BuildValidity(CertificateX509::ValidPeriod& validity, uint32_t expir
     validity.validTo = validity.validFrom + expiredInSecs;
 }
 
-void TestPermissionMgmtListener::NotifyConfig(const char* busName,
-                                              uint16_t version,
-                                              MsgArg publicKeyArg,
-                                              PermissionConfigurator::ClaimableState claimableSt,
-                                              MsgArg trustAnchorsArg,
-                                              uint32_t serialNumber,
-                                              MsgArg membershipsArg) {
-    QCC_UNUSED(serialNumber);
-    QCC_UNUSED(claimableSt);
+void TestApplicationStateListener::State(const char* busName, const qcc::KeyInfoNISTP256& publicKeyInfo, PermissionConfigurator::ApplicationState state)
+{
     QCC_UNUSED(busName);
-    QStatus status = ER_FAIL;
-    EXPECT_EQ(1, version);
-
-    MsgArg* keyArrayArg;
-    size_t keyArrayLen = 0;
-    // Currently the serialNumber is unused
-    //uint32_t serialNum = serialNumber;
-    // Currently the ClaimableState is unused
-    //PermissionConfigurator::ClaimableState claimableState = claimableSt;
-    status = publicKeyArg.Get("a(yv)", &keyArrayLen, &keyArrayArg);
-    EXPECT_EQ(ER_OK, status) << "  Retrieve the key info  failed.  Actual Status: " << QCC_StatusText(status);
-    if (keyArrayLen > 0) {
-        KeyInfoNISTP256 keyInfo;
-        status = KeyInfoHelper::MsgArgToKeyInfoNISTP256(keyArrayArg[0], keyInfo);
-        EXPECT_EQ(ER_OK, status) << "  Parse the key info  failed.  Actual Status: " << QCC_StatusText(status);
-    }
-
-    MsgArg* taArrayArg;
-    size_t taArrayLen = 0;
-    status = trustAnchorsArg.Get("a(yv)", &taArrayLen, &taArrayArg);
-    EXPECT_EQ(ER_OK, status) << "  Retrieve the trust anchor list failed. Actual Status: " << QCC_StatusText(status);
-    if (taArrayLen > 0) {
-        for (size_t cnt = 0; cnt < taArrayLen; cnt++) {
-            uint8_t trustAnchorUsage;
-            MsgArg* keyInfoArg;
-            status = taArrayArg[cnt].Get("(yv)", &trustAnchorUsage, &keyInfoArg);
-            EXPECT_EQ(ER_OK, status) << "  Retrieve the trust anchor key info failed.  Actual Status: " << QCC_StatusText(status);
-            KeyInfoNISTP256 keyInfo;
-            status = KeyInfoHelper::MsgArgToKeyInfoNISTP256(*keyInfoArg, keyInfo);
-            EXPECT_EQ(ER_OK, status) << "  Parse the trust anchor key info  failed.  Actual Status: " << QCC_StatusText(status);
-        }
-    }
-    MsgArg* mbrshipArrayArg;
-    size_t mbrshipArrayLen = 0;
-    status = membershipsArg.Get("a(ayay)", &mbrshipArrayLen, &mbrshipArrayArg);
-    EXPECT_EQ(ER_OK, status) << "  Retrieve the membership list failed. Actual Status: " << QCC_StatusText(status);
-    if (mbrshipArrayLen > 0) {
-        for (size_t cnt = 0; cnt < mbrshipArrayLen; cnt++) {
-            uint8_t* guild;
-            size_t guildLen;
-            uint8_t* serial;
-            size_t serialLen;
-            status = mbrshipArrayArg[cnt].Get("(ayay)", &guildLen, &guild, &serialLen, &serial);
-            EXPECT_EQ(ER_OK, status) << "  Retrieve the membership data failed.  Actual Status: " << QCC_StatusText(status);
-        }
-    }
-    signalNotifyConfigReceived = true;
+    QCC_UNUSED(publicKeyInfo);
+    QCC_UNUSED(state);
+    signalApplicationStateReceived = true;
 }
 
 QStatus PermissionMgmtTestHelper::CreateIdentityCertChain(BusAttachment& caBus, BusAttachment& issuerBus, const qcc::String& serial, const qcc::String& subject, const ECCPublicKey* subjectPubKey, const qcc::String& alias, uint32_t expiredInSecs, qcc::IdentityCertificate* certChain, size_t chainCount, uint8_t* digest, size_t digestSize)
@@ -296,8 +245,8 @@ void BasePermissionMgmtTest::SetUp()
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     RegisterKeyStoreListeners();
 
-    adminBus.RegisterPermissionMgmtListener(testPML);
-    status = adminBus.AddPermissionMgmtNotificationRule();
+    adminBus.RegisterApplicationStateListener(testASL);
+    status = adminBus.AddApplicationStateRule();
     EXPECT_EQ(ER_OK, status) << "  Failed to show interest in session-less signal.  Actual Status: " << QCC_StatusText(status);
 }
 
@@ -448,14 +397,14 @@ void BasePermissionMgmtTest::ChannelChangedSignalHandler(const InterfaceDescript
     SetChannelChangedSignalReceived(true);
 }
 
-void BasePermissionMgmtTest::SetNotifyConfigSignalReceived(bool flag)
+void BasePermissionMgmtTest::SetApplicationStateSignalReceived(bool flag)
 {
-    testPML.signalNotifyConfigReceived = flag;
+    testASL.signalApplicationStateReceived = flag;
 }
 
-const bool BasePermissionMgmtTest::GetNotifyConfigSignalReceived()
+const bool BasePermissionMgmtTest::GetApplicationStateSignalReceived()
 {
-    return testPML.signalNotifyConfigReceived;
+    return testASL.signalApplicationStateReceived;
 }
 
 void BasePermissionMgmtTest::SetChannelChangedSignalReceived(bool flag)

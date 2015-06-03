@@ -288,7 +288,7 @@ Copyright AllSeen Alliance. All rights reserved.
   <status name="ER_MANIFEST_NOT_FOUND" value="0x9134" comment="Permission manifest not found"/>
   <status name="ER_INVALID_CERT_CHAIN" value="0x9135" comment="Invalid certificate chain"/>
   <status name="ER_NO_TRUST_ANCHOR" value="0x9136" comment="No trust anchor"/>
-  <status name="ER_INVALID_CLAIMABLE_STATE" value="0x9137" comment="Invalid claimable state"/>
+  <status name="ER_INVALID_APPLICATION_STATE" value="0x9137" comment="Invalid application state"/>
   <status name="ER_FEATURE_NOT_AVAILABLE" value="0x9138" comment="Feature is not available"/>
   <status name="ER_KEY_STORE_ALREADY_INITIALIZED" value="0x9139" comment="Key store is already initialized"/>
   <status name="ER_KEY_STORE_ID_NOT_YET_SET" value="0x913a" comment="Key store ID is not yet set"/>

@@ -45,17 +45,11 @@
 
 namespace ajn {
 
-class TestPermissionMgmtListener : public PermissionMgmtListener {
+class TestApplicationStateListener : public ApplicationStateListener {
   public:
-    TestPermissionMgmtListener() : signalNotifyConfigReceived(false) { }
-    void NotifyConfig(const char* busName,
-                      uint16_t version,
-                      MsgArg publicKeyArg,
-                      PermissionConfigurator::ClaimableState claimableState,
-                      MsgArg trustAnchorsArg,
-                      uint32_t serialNumber,
-                      MsgArg membershipsArg);
-    bool signalNotifyConfigReceived;
+    TestApplicationStateListener() : signalApplicationStateReceived(false) { }
+    void State(const char* busName, const qcc::KeyInfoNISTP256& publicKeyInfo, PermissionConfigurator::ApplicationState state);
+    bool signalApplicationStateReceived;
 };
 
 class BasePermissionMgmtTest : public testing::Test, public BusObject {
@@ -177,7 +171,7 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
         currentTVChannel(1),
         volume(1),
         channelChangedSignalReceived(false),
-        testPML()
+        testASL()
     {
     }
 
@@ -208,8 +202,8 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
     QStatus InterestInChannelChangedSignal(BusAttachment* bus);
     void ChannelChangedSignalHandler(const InterfaceDescription::Member* member,
                                      const char* sourcePath, Message& msg);
-    void SetNotifyConfigSignalReceived(bool flag);
-    const bool GetNotifyConfigSignalReceived();
+    void SetApplicationStateSignalReceived(bool flag);
+    const bool GetApplicationStateSignalReceived();
     void SetChannelChangedSignalReceived(bool flag);
     const bool GetChannelChangedSignalReceived();
 
@@ -244,7 +238,7 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
     uint32_t volume;
     bool channelChangedSignalReceived;
     qcc::String authMechanisms;
-    TestPermissionMgmtListener testPML;
+    TestApplicationStateListener testASL;
 };
 
 class PermissionMgmtTestHelper {

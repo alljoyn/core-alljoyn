@@ -670,7 +670,7 @@ bool PermissionManager::AuthorizePermissionMgmt(bool outgoing, PeerState& peerSt
         /* these actions require admin privilege */
         return PeerHasAdminPriv(peerState);
     } else if (
-        (strncmp(mbrName, "NotifyConfig", 12) == 0) ||
+        (strncmp(mbrName, "State", 5) == 0) ||
         (strncmp(mbrName, "GetPublicKey", 12) == 0) ||
         (strncmp(mbrName, "GetIdentity", 11) == 0) ||
         (strncmp(mbrName, "GetManifest", 11) == 0) ||

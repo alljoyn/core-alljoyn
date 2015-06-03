@@ -513,11 +513,11 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
     std::set<SessionId> hostedSessions;    /* session IDs for all sessions hosted by this bus attachment */
     qcc::Mutex hostedSessionsLock;         /* Mutex that protects hostedSessions */
 
-    typedef qcc::ManagedObj<PermissionMgmtListener*> ProtectedPermissionMgmtListener;
-    typedef std::set<ProtectedPermissionMgmtListener> PermissionMgmtListenerSet;
-    PermissionMgmtListenerSet permissionMgmtListeners; /* NotifyConfig Signals are recieved out side Sessions so a set container is all that is needed */
+    typedef qcc::ManagedObj<ApplicationStateListener*> ProtectedApplicationStateListener;
+    typedef std::set<ProtectedApplicationStateListener> ApplicationStateListenerSet;
+    ApplicationStateListenerSet applicationStateListeners; /* State Signals are recieved out side Sessions so a set container is all that is needed */
 
-    qcc::Mutex permissionMgmtListenersLock;   /* Lock protecting the aboutListeners set */
+    qcc::Mutex applicationStateListenersLock;   /* Lock protecting the aboutListeners set */
     ObserverManager* observerManager;      /* The observer manager for the bus attachment */
 };
 

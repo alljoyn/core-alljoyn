@@ -45,22 +45,23 @@ QStatus PermissionConfiguratorImpl::SetPermissionManifest(PermissionPolicy::Rule
     return permissionMgmtObj->SetManifestTemplate(rules, count);
 }
 
-PermissionConfigurator::ClaimableState PermissionConfiguratorImpl::GetClaimableState()
-{
-    PermissionMgmtObj* permissionMgmtObj = bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
-    if (!permissionMgmtObj) {
-        return STATE_UNKNOWN;
-    }
-    return permissionMgmtObj->GetClaimableState();
-}
-
-QStatus PermissionConfiguratorImpl::SetClaimable(bool claimable)
+QStatus PermissionConfiguratorImpl::GetApplicationState(ApplicationState& applicationState)
 {
     PermissionMgmtObj* permissionMgmtObj = bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
     if (!permissionMgmtObj) {
         return ER_FEATURE_NOT_AVAILABLE;
     }
-    return permissionMgmtObj->SetClaimable(claimable);
+    applicationState = permissionMgmtObj->GetApplicationState();
+    return ER_OK;
+}
+
+QStatus PermissionConfiguratorImpl::SetApplicationState(ApplicationState newState)
+{
+    PermissionMgmtObj* permissionMgmtObj = bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
+    if (!permissionMgmtObj) {
+        return ER_FEATURE_NOT_AVAILABLE;
+    }
+    return permissionMgmtObj->SetApplicationState(newState);
 }
 
 QStatus PermissionConfiguratorImpl::Reset()

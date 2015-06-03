@@ -280,20 +280,18 @@ class PermissionMgmtObj : public BusObject {
      * Retrieve the claimable state of the application.
      * @return the claimable state
      */
-    PermissionConfigurator::ClaimableState GetClaimableState();
+    PermissionConfigurator::ApplicationState GetApplicationState();
 
     /**
-     * Set the claimable state to be claimable or not.  The resulting claimable
-     * state would be either STATE_UNCLAIMABLE or STATE_CLAIMABLE depending on
-     * the value of the input flag.  This action is not allowed when the current
-     * state is STATE_CLAIMED.
-     * @param claimable flag
+     * Set the application state.  The state can't be changed from CLAIMED to
+     * CLAIMABLE.
+     * @param newState The new application state
      * @return
      *      - #ER_OK if action is allowed.
-     *      - #ER_INVALID_CLAIMABLE_STATE if current state is STATE_CLAIMED
+     *      - #ER_INVALID_APPLICATION_STATE if the state can't be changed
      *      - #ER_NOT_IMPLEMENTED if the method is not implemented
      */
-    QStatus SetClaimable(bool claimable);
+    QStatus SetApplicationState(PermissionConfigurator::ApplicationState state);
 
     /**
      * Reset the Permission module by removing all the trust anchors, DSA keys,
@@ -374,6 +372,41 @@ class PermissionMgmtObj : public BusObject {
      */
     QStatus MethodReply(const Message& msg, QStatus status);
 
+    /**
+     * The State signal is used to advertise the state of an application.  It is
+     * sessionless, because the signal is intended to discover applications.
+     * Discovery is not done by using 'About'.  Applications must add extra code
+     * to provide About.
+     *
+     * Not all applications will do this as pure consumer applications don't
+     * need to be discovered by other applications.  Still they need to be
+     * discovered by the framework to support certain some core framework
+     * features. Furthermore we want to avoid interference between core
+     * framework events and application events.
+     *
+     * The application state is an enumeration representing the current state of
+     * the application.
+     *
+     * The list of valid values:
+     * | Value | Description                                                       |
+     * |-------|-------------------------------------------------------------------|
+     * | 0     | NotClaimable.  The application is not claimed and not accepting   |
+     * |       | claim requests.                                                   |
+     * | 1     | Claimable.  The application is not claimed and is accepting claim |
+     * |       | requests.                                                         |
+     * | 2     | Claimed. The application is claimed and can be configured.        |
+     * | 3     | NeedUpdate. The application is claimed, but requires a            |
+     * |       | configuration update (after a software upgrade).                  |
+     *
+     * @param[in] publicKeyInfo the application public key
+     * @param[in] state the application state
+     *
+     * @return
+     *   - #ER_OK on success
+     *   - An error status otherwise.
+     */
+    virtual QStatus State(const qcc::KeyInfoNISTP256& publicKeyInfo, PermissionConfigurator::ApplicationState state) = 0;
+
   protected:
     void Claim(const InterfaceDescription::Member* member, Message& msg);
     BusAttachment& bus;
@@ -392,7 +425,7 @@ class PermissionMgmtObj : public BusObject {
 
     struct Configuration {
         uint8_t version;
-        uint8_t claimableState;
+        uint8_t applicationState;
 
         Configuration() : version(1)
         {
@@ -429,7 +462,7 @@ class PermissionMgmtObj : public BusObject {
     QStatus RetrievePolicy(PermissionPolicy& policy);
     void RemovePolicy(const InterfaceDescription::Member* member, Message& msg);
     void GetPolicy(const InterfaceDescription::Member* member, Message& msg);
-    QStatus NotifyConfig();
+    QStatus StateChanged();
 
     void InstallIdentity(const InterfaceDescription::Member* member, Message& msg);
     QStatus GetIdentityBlob(qcc::KeyBlob& kb);
@@ -456,6 +489,7 @@ class PermissionMgmtObj : public BusObject {
     QStatus ManageMembershipTrustAnchors(PermissionPolicy* policy);
     QStatus GetDSAPrivateKey(qcc::ECCPrivateKey& privateKey);
     QStatus RetrieveIdentityCertChain(MsgArg** certArgs, size_t* count);
+    QStatus StoreApplicationState();
 
     /**
      * Bind to an exclusive port for PermissionMgmt object.
@@ -463,8 +497,7 @@ class PermissionMgmtObj : public BusObject {
     QStatus BindPort();
 
     CredentialAccessor* ca;
-    const InterfaceDescription::Member* notifySignalName;
-    PermissionConfigurator::ClaimableState claimableState;
+    PermissionConfigurator::ApplicationState applicationState;
     uint32_t serialNum;
     TrustAnchorList trustAnchors;
     _PeerState::GuildMap guildMap;

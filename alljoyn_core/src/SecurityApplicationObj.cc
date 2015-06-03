@@ -20,6 +20,7 @@
 
 #include <alljoyn/Status.h>
 #include <alljoyn/AllJoynStd.h>
+#include "KeyInfoHelper.h"
 #include "SecurityApplicationObj.h"
 
 #define QCC_MODULE "ALLJOYN_SECURITY"
@@ -133,7 +134,7 @@ QStatus SecurityApplicationObj::Init()
     return status;
 }
 
-QStatus SecurityApplicationObj::State(qcc::ECCPublicKey publicKey, ApplicationState state)
+QStatus SecurityApplicationObj::State(const qcc::KeyInfoNISTP256& publicKeyInfo, PermissionConfigurator::ApplicationState state)
 {
     QCC_DbgTrace(("SecurityApplication::%s", __FUNCTION__));
     QStatus status = ER_OK;
@@ -147,17 +148,15 @@ QStatus SecurityApplicationObj::State(qcc::ECCPublicKey publicKey, ApplicationSt
 
     size_t stateArgsSize = 2;
     MsgArg stateArgs[2];
-    //TODO remove magic numbers should use algorithm, curveIdentifier, xCoordinate, yCoordinate
-    status = MsgArg::Set(stateArgs, stateArgsSize, "(yyayay)q", 0, 0, 32, publicKey.x, 32, publicKey.y, static_cast<uint16_t>(state));
-    status = ER_NOT_IMPLEMENTED; // TODO remove on implementation
+    KeyInfoHelper::KeyInfoNISTP256PubKeyToMsgArg(publicKeyInfo, stateArgs[0]);
+    status = stateArgs[1].Set("q", static_cast<uint16_t>(state));
     if (status != ER_OK) {
         QCC_DbgPrintf(("SecurityApplication::%s Failed to set state arguments %s", __FUNCTION__, QCC_StatusText(status)));
         return status;
     }
 
-    Message msg(bus);
-    status = Signal(NULL, 0, *stateSignalMember, stateArgs, stateArgsSize, 0, ALLJOYN_FLAG_SESSIONLESS, &msg);
-    QCC_DbgPrintf(("Sent org.alljoyn.Bus.Peer.Authentication.State signal from %s  = %s", bus.GetUniqueName().c_str(), QCC_StatusText(status)));
+    status = Signal(NULL, 0, *stateSignalMember, stateArgs, stateArgsSize, 0, ALLJOYN_FLAG_SESSIONLESS);
+    QCC_DbgPrintf(("Sent org.alljoyn.Bus.Application.State signal from %s  = %s", bus.GetUniqueName().c_str(), QCC_StatusText(status)));
 
     return status;
 }

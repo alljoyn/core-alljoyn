@@ -172,9 +172,9 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         ifc->Activate();
     }
     {
-        /* Create the org.alljoyn.Bus interface */
+        /* Create the org.alljoyn.Bus.Application interface */
         InterfaceDescription* ifc = NULL;
-        status = bus.CreateInterface(org::alljoyn::Bus::Application::InterfaceName, ifc);
+        status = bus.CreateInterface(org::alljoyn::Bus::Application::InterfaceName, ifc, AJ_IFC_SECURITY_OFF);
 
         if (ER_OK != status) {
             QCC_LogError(status, ("Failed to create interface \"%s\"", org::alljoyn::Bus::Application::InterfaceName));
@@ -377,17 +377,6 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         ifc->AddMethod("GetManifest",     NULL, "(yv)",  "manifest");
         ifc->AddMethod("Reset",     NULL, NULL, NULL);
         ifc->AddMethod("GetPublicKey", NULL, "(yv)", "publicKey");
-        ifc->Activate();
-    }
-    {
-        /* Create the org.allseen.Security.PermissionMgmt.Notification interface */
-        InterfaceDescription* ifc = NULL;
-        status = bus.CreateInterface(org::allseen::Security::PermissionMgmt::Notification::InterfaceName, ifc, AJ_IFC_SECURITY_OFF);
-        if (ER_OK != status) {
-            QCC_LogError(status, ("Failed to create %s interface", org::allseen::Security::PermissionMgmt::Notification::InterfaceName));
-            return status;
-        }
-        ifc->AddSignal("NotifyConfig", "qa(yv)ya(yv)ua(ayay)", "version,publicKeyInfo,claimableState,trustAnchors,serialNumber,memberships", 0);
         ifc->Activate();
     }
     return status;

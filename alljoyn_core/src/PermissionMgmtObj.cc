@@ -65,13 +65,13 @@ static QStatus RetrieveAndGenDSAPublicKey(CredentialAccessor* ca, KeyInfoNISTP25
 
 PermissionMgmtObj::PermissionMgmtObj(BusAttachment& bus, const char* objectPath) :
     BusObject(objectPath),
-    bus(bus), notifySignalName(NULL), portListener(NULL)
+    bus(bus), portListener(NULL)
 {
 }
 
 PermissionMgmtObj::PermissionMgmtObj(BusAttachment& bus) :
     BusObject(org::allseen::Security::PermissionMgmt::ObjectPath, false),
-    bus(bus), notifySignalName(NULL), portListener(NULL)
+    bus(bus), portListener(NULL)
 {
 }
 
@@ -95,12 +95,6 @@ QStatus PermissionMgmtObj::Init()
         AddMethodHandler(ifc->GetMember("Reset"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::Reset));
         AddMethodHandler(ifc->GetMember("GetPublicKey"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::GetPublicKey));
     }
-    /* Add org.allseen.Security.PermissionMgmt.Notification interface */
-    const InterfaceDescription* notificationIfc = bus.GetInterface(org::allseen::Security::PermissionMgmt::Notification::InterfaceName);
-    if (notificationIfc) {
-        AddInterface(*notificationIfc);
-        notifySignalName = notificationIfc->GetMember("NotifyConfig");
-    }
     ca = new CredentialAccessor(bus);
     bus.GetInternal().GetPermissionManager().SetPermissionMgmtObj(this);
     return bus.RegisterBusObject(*this, true);
@@ -111,18 +105,17 @@ void PermissionMgmtObj::Load()
     KeyInfoNISTP256 keyInfo;
     RetrieveAndGenDSAPublicKey(ca, keyInfo);
 
-    QStatus status = LoadTrustAnchors();
+    Configuration config;
+    QStatus status = GetConfiguration(config);
     if (ER_OK == status) {
-        claimableState = PermissionConfigurator::STATE_CLAIMED;
+        applicationState = static_cast<PermissionConfigurator::ApplicationState> (config.applicationState);
     } else {
-        claimableState = PermissionConfigurator::STATE_CLAIMABLE;
-        Configuration config;
-        status = GetConfiguration(config);
-        if (ER_OK == status) {
-            if (config.claimableState == PermissionConfigurator::STATE_UNCLAIMABLE) {
-                claimableState = PermissionConfigurator::STATE_UNCLAIMABLE;
-            }
+        if (ER_OK == LoadTrustAnchors()) {
+            applicationState = PermissionConfigurator::CLAIMED;
+        } else {
+            applicationState = PermissionConfigurator::CLAIMABLE;
         }
+        StoreApplicationState();
     }
     /* notify others */
     PermissionPolicy* policy = new PermissionPolicy();
@@ -158,7 +151,7 @@ void PermissionMgmtObj::PolicyChanged(PermissionPolicy* policy)
     ca->GetGuid(localGUID);
     bus.GetInternal().GetPermissionManager().SetPolicy(policy);
     ManageMembershipTrustAnchors(policy);
-    NotifyConfig();
+    StateChanged();
 }
 
 static QStatus RetrieveAndGenDSAPublicKey(CredentialAccessor* ca, KeyInfoNISTP256& keyInfo)
@@ -648,8 +641,13 @@ void PermissionMgmtObj::Claim(const InterfaceDescription::Member* member, Messag
 {
     QCC_DbgTrace(("PermissionMgmtObj::%s", __FUNCTION__));
     QCC_UNUSED(member);
-    if (claimableState == PermissionConfigurator::STATE_UNCLAIMABLE) {
+    if (applicationState == PermissionConfigurator::NOT_CLAIMABLE) {
         BusObject::MethodReply(msg, ERROR_PERMISSION_DENIED, "Unclaimable");
+        return;
+    }
+    if ((applicationState == PermissionConfigurator::CLAIMED) ||
+        (applicationState == PermissionConfigurator::NEED_UPDATE)) {
+        BusObject::MethodReply(msg, ERROR_PERMISSION_DENIED, "Already claimed");
         return;
     }
     size_t numArgs;
@@ -751,8 +749,9 @@ DoneValidation:
     MethodReply(msg, status);
 
     if (ER_OK == status) {
-        claimableState = PermissionConfigurator::STATE_CLAIMED;
-        NotifyConfig();
+        applicationState = PermissionConfigurator::CLAIMED;
+        StoreApplicationState();
+        StateChanged();
     }
 }
 
@@ -858,73 +857,20 @@ QStatus PermissionMgmtObj::RetrievePolicy(PermissionPolicy& policy)
     return policy.Import(marshaller, kb.GetData(), kb.GetSize());
 }
 
-QStatus PermissionMgmtObj::NotifyConfig()
+QStatus PermissionMgmtObj::StateChanged()
 {
-    uint8_t flags = ALLJOYN_FLAG_SESSIONLESS;
-
-    MsgArg args[6];
-    /* version number */
-    args[0].Set("q", VERSION_NUM);
-    /* public key */
-    MsgArg keyInfoArgs[1];
     ECCPublicKey pubKey;
     QStatus status = ca->GetDSAPublicKey(pubKey);
-    if (status == ER_OK) {
-        KeyInfoNISTP256 keyInfo;
-        qcc::GUID128 localGUID;
-        ca->GetGuid(localGUID);
-        keyInfo.SetKeyId(localGUID.GetBytes(), GUID128::SIZE);
-        keyInfo.SetPublicKey(&pubKey);
-        KeyInfoHelper::KeyInfoNISTP256ToMsgArg(keyInfo, keyInfoArgs[0]);
-        args[1].Set("a(yv)", 1, keyInfoArgs);
-    } else {
-        args[1].Set("a(yv)", 0, NULL);
-    }
-    /* claimable state */
-    args[2].Set("y", claimableState);
-    /* list of trust anchors */
-    MsgArg* trustAnchorArgs = NULL;
-    if (trustAnchors.size() == 0) {
-        args[3].Set("a(yv)", 0, NULL);
-    } else {
-        trustAnchorArgs = new MsgArg[trustAnchors.size()];
-        size_t cnt = 0;
-        for (TrustAnchorList::iterator it = trustAnchors.begin(); it != trustAnchors.end(); it++) {
-            MsgArg* keyInfoArgs = new MsgArg();
-            KeyInfoHelper::KeyInfoNISTP256ToMsgArg((*it)->keyInfo, *keyInfoArgs);
-            trustAnchorArgs[cnt].Set("(yv)", (*it)->use, keyInfoArgs);
-            trustAnchorArgs[cnt].SetOwnershipFlags(MsgArg::OwnsArgs, true);
-            cnt++;
-        }
-        args[3].Set("a(yv)", trustAnchors.size(), trustAnchorArgs);
-    }
-    /* serial number */
-    args[4].Set("u", serialNum);
-    /* memberships */
-    MembershipCertMap certMap;
-    status = GetAllMembershipCerts(certMap);
-    if (ER_OK != status) {
-        delete [] trustAnchorArgs;
+    if (status != ER_OK) {
         return status;
     }
-    MsgArg* membershipArgs = NULL;
-    if (certMap.size() == 0) {
-        args[5].Set("a(ayay)", 0, NULL);
-    } else {
-        membershipArgs = new MsgArg[certMap.size()];
-        size_t cnt = 0;
-        for (MembershipCertMap::iterator it = certMap.begin(); it != certMap.end(); it++) {
-            MembershipCertificate* cert = it->second;
-            membershipArgs[cnt].Set("(ayay)", GUID128::SIZE, cert->GetGuild().GetBytes(), cert->GetSerial().size(), cert->GetSerial().data());
-            cnt++;
-        }
-        args[5].Set("a(ayay)", certMap.size(), membershipArgs);
+    KeyInfoNISTP256 keyInfo;
+    keyInfo.SetPublicKey(&pubKey);
+    status = KeyInfoHelper::GenerateKeyId(keyInfo);
+    if (status != ER_OK) {
+        return status;
     }
-    status = Signal(NULL, 0, *notifySignalName, args, 6, 0, flags);
-    delete [] trustAnchorArgs;
-    delete [] membershipArgs;
-    ClearMembershipCertMap(certMap);
-    return status;
+    return State(keyInfo, applicationState);
 }
 
 static QStatus ValidateCertificate(CertificateX509& cert, PermissionMgmtObj::TrustAnchorList* taList)
@@ -1895,30 +1841,34 @@ QStatus PermissionMgmtObj::GetConfiguration(Configuration& config)
     return ER_OK;
 }
 
-PermissionConfigurator::ClaimableState PermissionMgmtObj::GetClaimableState()
+PermissionConfigurator::ApplicationState PermissionMgmtObj::GetApplicationState()
 {
-    return claimableState;
+    return applicationState;
 }
 
-QStatus PermissionMgmtObj::SetClaimable(bool claimable)
+QStatus PermissionMgmtObj::StoreApplicationState()
 {
-    if (claimableState == PermissionConfigurator::STATE_CLAIMED) {
-        return ER_INVALID_CLAIMABLE_STATE;
+    Configuration config;
+    config.applicationState = (uint8_t) applicationState;
+    return StoreConfiguration(config);
+}
+
+QStatus PermissionMgmtObj::SetApplicationState(PermissionConfigurator::ApplicationState newState)
+{
+    if ((newState == PermissionConfigurator::CLAIMABLE) && (applicationState == PermissionConfigurator::CLAIMED)) {
+        return ER_INVALID_APPLICATION_STATE;
     }
 
-    PermissionConfigurator::ClaimableState newState;
-    if (claimable) {
-        newState = PermissionConfigurator::STATE_CLAIMABLE;
-    } else {
-        newState = PermissionConfigurator::STATE_UNCLAIMABLE;
-    }
     /* save the configuration */
     Configuration config;
-    config.claimableState = (uint8_t) newState;
-    QStatus status = StoreConfiguration(config);
+    config.applicationState = (uint8_t) newState;
+    PermissionConfigurator::ApplicationState savedState = applicationState;
+    applicationState = newState;
+    QStatus status = StoreApplicationState();
     if (ER_OK == status) {
-        claimableState = newState;
-        NotifyConfig();
+        StateChanged();
+    } else {
+        applicationState = savedState;
     }
     return status;
 }
@@ -1976,7 +1926,7 @@ QStatus PermissionMgmtObj::PerformReset(bool keepForClaim)
     /* clear out all the peer entries for all ECDHE key exchanges */
     bus.GetInternal().GetKeyStore().Clear(String(ECDHE_NAME_PREFIX_PATTERN));
 
-    claimableState = PermissionConfigurator::STATE_CLAIMABLE;
+    applicationState = PermissionConfigurator::CLAIMABLE;
     serialNum = 0;
     PolicyChanged(NULL);
     return status;

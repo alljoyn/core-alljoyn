@@ -62,13 +62,6 @@ class SecurityApplicationObj : public PermissionMgmtObj {
      */
     virtual QStatus Init();
 
-    typedef enum {
-        NOT_CLAIMABLE = 0,
-        CLAIMABLE = 1,
-        CLAIMED = 2,
-        NEED_UPDATE = 3
-    } ApplicationState;
-
     /**
      * The State signal is used to advertise the state of an application.  It is
      * sessionless, because the signal is intended to discover applications.
@@ -95,14 +88,14 @@ class SecurityApplicationObj : public PermissionMgmtObj {
      * | 3     | NeedUpdate. The application is claimed, but requires a            |
      * |       | configuration update (after a software upgrade).                  |
      *
-     * @param[in] publicKey the application public key
+     * @param[in] publicKeyInfo the application public key
      * @param[in] state the application state
      *
      * @return
      *   - #ER_OK on success
      *   - An error status otherwise.
      */
-    QStatus State(qcc::ECCPublicKey publicKey, ApplicationState state);
+    virtual QStatus State(const qcc::KeyInfoNISTP256& publicKeyInfo, PermissionConfigurator::ApplicationState state);
 
   private:
     /**

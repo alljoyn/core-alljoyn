@@ -62,22 +62,25 @@ class PermissionConfiguratorImpl : public PermissionConfigurator {
     QStatus SetPermissionManifest(PermissionPolicy::Rule* rules, size_t count);
 
     /**
-     * Retrieve the claimable state of the application.
-     * @return the claimable state
+     * Retrieve the state of the application.
+     * @param[out] applicationState the application state
+     * @return
+     *      - #ER_OK if successful
+     *      - #ER_NOT_IMPLEMENTED if the method is not implemented
+     *      - #ER_FEATURE_NOT_AVAILABLE if the value is not known
      */
-    ClaimableState GetClaimableState();
+    QStatus GetApplicationState(ApplicationState& applicationState);
 
     /**
-     * Set the claimable state to be claimable or not.  The resulting claimable
-     * state would be either STATE_UNCLAIMABLE or STATE_CLAIMABLE depending on
-     * the value of the input flag.  This action is not allowed when the current
-     * state is STATE_CLAIMED.
-     * @param claimable flag
+     * Set the application state.  The state can't be changed from CLAIMED to
+     * CLAIMABLE.
+     * @param newState The new application state
      * @return
      *      - #ER_OK if action is allowed.
-     *      - #ER_INVALID_CLAIMABLE_STATE if current state is STATE_CLAIMED
+     *      - #ER_INVALID_APPLICATION_STATE if the state can't be changed
+     *      - #ER_NOT_IMPLEMENTED if the method is not implemented
      */
-    QStatus SetClaimable(bool claimable);
+    QStatus SetApplicationState(ApplicationState newState);
 
     /**
      * Generate the signing key pair and store it in the key store.

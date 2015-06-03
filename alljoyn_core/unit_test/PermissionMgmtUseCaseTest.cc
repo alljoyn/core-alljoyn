@@ -917,24 +917,26 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         ECCPublicKey claimedPubKey;
         EXPECT_EQ(ER_OK, pmProxy.GetPublicKey(&claimedPubKey)) << "GetPeerPublicKey failed.";
 
-        SetNotifyConfigSignalReceived(false);
+        SetApplicationStateSignalReceived(false);
 
         /* setup state unclaimable */
-        PermissionConfigurator::ClaimableState claimableState = pc.GetClaimableState();
-        EXPECT_EQ(PermissionConfigurator::STATE_CLAIMABLE, claimableState) << "  ClaimableState is not CLAIMABLE";
-        status = pc.SetClaimable(false);
-        EXPECT_EQ(ER_OK, status) << "  SetClaimable failed.  Actual Status: " << QCC_StatusText(status);
-        claimableState = pc.GetClaimableState();
-        EXPECT_EQ(PermissionConfigurator::STATE_UNCLAIMABLE, claimableState) << "  ClaimableState is not UNCLAIMABLE";
+        PermissionConfigurator::ApplicationState applicationState;
+        EXPECT_EQ(ER_OK, pc.GetApplicationState(applicationState));
+        EXPECT_EQ(PermissionConfigurator::CLAIMABLE, applicationState) << "  ApplicationState is not CLAIMABLE";
+        applicationState = PermissionConfigurator::NOT_CLAIMABLE;
+        EXPECT_EQ(ER_OK, pc.SetApplicationState(applicationState)) << "  SetApplicationState failed.";
+        EXPECT_EQ(ER_OK, pc.GetApplicationState(applicationState));
+        EXPECT_EQ(PermissionConfigurator::NOT_CLAIMABLE, applicationState) << "  ApplicationState is not UNCLAIMABLE";
 
         /* try claiming with state unclaimable.  Exptect to fail */
         EXPECT_EQ(ER_PERMISSION_DENIED, InvokeClaim(true, adminBus, serviceBus, "2020202", "Service Provider", true)) << " InvokeClaim is not supposed to succeed.";
 
         /* now switch it back to claimable */
-        status = pc.SetClaimable(true);
-        EXPECT_EQ(ER_OK, status) << "  SetClaimable failed.  Actual Status: " << QCC_StatusText(status);
-        claimableState = pc.GetClaimableState();
-        EXPECT_EQ(PermissionConfigurator::STATE_CLAIMABLE, claimableState) << "  ClaimableState is not CLAIMABLE";
+        applicationState = PermissionConfigurator::CLAIMABLE;
+        EXPECT_EQ(ER_OK, pc.SetApplicationState(applicationState)) << "  SetApplicationState failed.";
+        EXPECT_EQ(ER_OK, pc.GetApplicationState(applicationState));
+
+        EXPECT_EQ(PermissionConfigurator::CLAIMABLE, applicationState) << "  ApplicationState is not CLAIMABLE";
 
         /* try claiming with state claimable.  Expect to succeed */
         EXPECT_EQ(ER_OK, InvokeClaim(true, adminBus, serviceBus, "2020202", "Service Provider", false)) << " InvokeClaim failed.";
@@ -947,14 +949,14 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         EXPECT_EQ(ER_OK, pmProxy.GetPublicKey(&claimedPubKey2)) << "GetPeerPublicKey failed.";
         EXPECT_EQ(memcmp(&claimedPubKey2, &claimedPubKey, sizeof(ECCPublicKey)), 0) << "  The public key of the claimed app has changed.";
 
-        /* sleep a second to see whether the NotifyConfig signal is received */
+        /* sleep a second to see whether the ApplicationState signal is received */
         for (int cnt = 0; cnt < 100; cnt++) {
-            if (GetNotifyConfigSignalReceived()) {
+            if (GetApplicationStateSignalReceived()) {
                 break;
             }
             qcc::Sleep(10);
         }
-        EXPECT_TRUE(GetNotifyConfigSignalReceived()) << " Fail to receive expected NotifyConfig signal.";
+        EXPECT_TRUE(GetApplicationStateSignalReceived()) << " Fail to receive expected ApplicationState signal.";
 
     }
 
@@ -973,20 +975,20 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         status = PermissionMgmtTestHelper::JoinPeerSession(adminBus, consumerBus, sessionId);
         EXPECT_EQ(ER_OK, status) << "  JoinSession failed.  Actual Status: " << QCC_StatusText(status);
 
-        SetNotifyConfigSignalReceived(false);
+        SetApplicationStateSignalReceived(false);
         EXPECT_EQ(ER_OK, InvokeClaim(true, adminBus, consumerBus, "3030303", "Consumer", false)) << " InvokeClaim failed.";
 
         /* try to claim a second time */
         EXPECT_EQ(ER_PERMISSION_DENIED, InvokeClaim(true, adminBus, consumerBus, "3030303", "Consumer", true)) << "Claim is not supposed to succeed.";
 
-        /* sleep a second to see whether the NotifyConfig signal is received */
+        /* sleep a second to see whether the ApplicationState signal is received */
         for (int cnt = 0; cnt < 100; cnt++) {
-            if (GetNotifyConfigSignalReceived()) {
+            if (GetApplicationStateSignalReceived()) {
                 break;
             }
             qcc::Sleep(10);
         }
-        EXPECT_TRUE(GetNotifyConfigSignalReceived()) << " Fail to receive expected NotifyConfig signal.";
+        EXPECT_TRUE(GetApplicationStateSignalReceived()) << " Fail to receive expected ApplicationState signal.";
         /* add the consumer admin security group membership cert to consumer */
         qcc::String currentAuthMechanisms = GetAuthMechanisms();
         EnableSecurity("ALLJOYN_ECDHE_ECDSA");
@@ -1008,17 +1010,17 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
         status = PermissionMgmtTestHelper::JoinPeerSession(consumerBus, remoteControlBus, sessionId);
         EXPECT_EQ(ER_OK, status) << "  JoinSession failed.  Actual Status: " << QCC_StatusText(status);
-        SetNotifyConfigSignalReceived(false);
+        SetApplicationStateSignalReceived(false);
         EXPECT_EQ(ER_OK, InvokeClaim(false, consumerBus, remoteControlBus, "6060606", "remote control", false, &consumerBus)) << " InvokeClaim failed.";
 
-        /* sleep a second to see whether the NotifyConfig signal is received */
+        /* sleep a second to see whether the ApplicationState signal is received */
         for (int cnt = 0; cnt < 100; cnt++) {
-            if (GetNotifyConfigSignalReceived()) {
+            if (GetApplicationStateSignalReceived()) {
                 break;
             }
             qcc::Sleep(10);
         }
-        EXPECT_TRUE(GetNotifyConfigSignalReceived()) << " Fail to receive expected NotifyConfig signal.";
+        EXPECT_TRUE(GetApplicationStateSignalReceived()) << " Fail to receive expected ApplicationState signal.";
     }
 
     void Claims(bool usePSK, bool claimRemoteControl)
@@ -1071,7 +1073,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         PermissionMgmtProxy pmProxy(installerBus, bus.GetUniqueName().c_str());
 
         PermissionPolicy aPolicy;
-        SetNotifyConfigSignalReceived(false);
+        SetApplicationStateSignalReceived(false);
         EXPECT_EQ(ER_OK, pmProxy.InstallPolicy(policy)) << "InstallPolicy failed.";
 
         /* retrieve back the policy to compare */
@@ -1080,14 +1082,14 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
 
         EXPECT_EQ(policy.GetSerialNum(), retPolicy.GetSerialNum()) << " GetPolicy failed. Different serial number.";
         EXPECT_EQ(policy.GetAclsSize(), retPolicy.GetAclsSize()) << " GetPolicy failed. Different incoming acls size.";
-        /* sleep a second to see whether the NotifyConfig signal is received */
+        /* sleep a second to see whether the ApplicationState signal is received */
         for (int cnt = 0; cnt < 100; cnt++) {
-            if (GetNotifyConfigSignalReceived()) {
+            if (GetApplicationStateSignalReceived()) {
                 break;
             }
             qcc::Sleep(10);
         }
-        EXPECT_TRUE(GetNotifyConfigSignalReceived()) << " Fail to receive expected NotifyConfig signal.";
+        EXPECT_TRUE(GetApplicationStateSignalReceived()) << " Fail to receive expected ApplicationState signal.";
         /* install a policy with the same serial number.  Expect to fail. */
         EXPECT_NE(ER_OK, pmProxy.InstallPolicy(policy)) << "InstallPolicy again with same serial number expected to fail, but it did not.";
     }
@@ -1585,15 +1587,15 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         EXPECT_EQ(ER_OK, pmProxy.RemovePolicy()) << "RemovePolicy failed.";
         /* get policy again.  Expect it to fail */
         PermissionPolicy retPolicy;
-        /* sleep a second to see whether the NotifyConfig signal is received */
+        /* sleep a second to see whether the ApplicationState signal is received */
         EXPECT_NE(ER_OK, pmProxy.GetPolicy(&retPolicy)) << "GetPolicy did not fail.";
         for (int cnt = 0; cnt < 100; cnt++) {
-            if (GetNotifyConfigSignalReceived()) {
+            if (GetApplicationStateSignalReceived()) {
                 break;
             }
             qcc::Sleep(10);
         }
-        EXPECT_TRUE(GetNotifyConfigSignalReceived()) << " Fail to receive expected NotifyConfig signal.";
+        EXPECT_TRUE(GetApplicationStateSignalReceived()) << " Fail to receive expected ApplicationState signal.";
     }
 
     /*
@@ -1684,7 +1686,6 @@ TEST_F(PermissionMgmtUseCaseTest, TestAllCalls)
 {
     Claims(false);
     /* generate a policy */
-
     PermissionPolicy* policy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, consumerBus);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
     InstallPolicyToService(*policy);

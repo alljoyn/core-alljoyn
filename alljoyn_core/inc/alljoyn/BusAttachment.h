@@ -41,7 +41,7 @@
 #include <alljoyn/SessionPortListener.h>
 #include <alljoyn/Status.h>
 #include <alljoyn/Translator.h>
-#include <alljoyn/PermissionMgmtListener.h>
+#include <alljoyn/ApplicationStateListener.h>
 #include <alljoyn/PermissionPolicy.h>
 #include <alljoyn/PermissionConfigurator.h>
 
@@ -1756,49 +1756,48 @@ class BusAttachment : public MessageReceiver {
     QStatus CancelWhoImplementsNonBlocking(const char* iface);
 
     /**
-     * Registers a handler to receive the org.allseen.Security.PermissionMgmt.Notification
-     * NotifyConfig signal.
+     * Registers a handler to receive the org.alljoyn.Bus.Application
+     * State signal.
      *
-     * @param[in] permissionMgmtListener reference to a PermissionMgmtListener
+     * @param[in] applicationStateListener reference to an ApplicationStateListener
      */
-    void RegisterPermissionMgmtListener(PermissionMgmtListener& permissionMgmtListener);
+    void RegisterApplicationStateListener(ApplicationStateListener& applicationStateListener);
 
     /**
-     * Unregisters the PermissionMgmtListener from receiving the
-     * org.allseen.Security.PermissionMgmt.Notification NotifyConfig signal.
+     * Unregisters the ApplicationStateListener from receiving the
+     * org.alljoyn.Bus.Application State signal.
      *
-     * @param[in] permissionMgmtListener reference to PermissionMgmtListener to
-     *                                   unregister
+     * @param[in] applicationStateListener reference to an
+     *                                     ApplicationStateListener to
+     *                                     unregister
      */
-    void UnregisterPermissionMgmtListener(PermissionMgmtListener& permissionMgmtListener);
+    void UnregisterApplicationStateListener(ApplicationStateListener& applicationStateListener);
 
     /**
      * This is a helper function that will add the match rule responsible for
-     * receiving the org.allseen.Security.PermissionMgmt.Notification.NotifyConfig
-     * signal.
+     * receiving the org.alljoyn.Bus.Application State signal.
      *
-     * The PermissionMgmtListener should be registered before calling this method.
+     * The ApplicationStateListener should be registered before calling this method.
      *
-     * This will only call AddMatch for the NotifyConfig signal.
+     * This will only call AddMatch for the State signal.
      *
      * @return
      *    - #ER_OK on success
      *    - An error status otherwise
      */
-    QStatus AddPermissionMgmtNotificationRule();
+    QStatus AddApplicationStateRule();
 
     /**
      * This is a helper function that will remove the match rule responsible for
-     * receiving the org.allseen.Security.PermissionMgmt.Notification.NotifyConfig
-     * signal.
+     * receiving the org.alljoyn.Bus.Application State signal.
      *
-     * This will only call RemoveMatch for the NotifyConfig signal.
+     * This will only call RemoveMatch for the State signal.
      *
      * @return
      *    - #ER_OK on success
      *    - An error status otherwise
      */
-    QStatus RemovePermissionMgmtNotificationRule();
+    QStatus RemoveApplicationStateRule();
 
     /// @cond ALLJOYN_DEV
     /**

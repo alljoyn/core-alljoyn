@@ -43,11 +43,11 @@ class PermissionConfigurator {
   public:
 
     typedef enum {
-        STATE_UNKNOWN = 0,   ///< unknown
-        STATE_UNCLAIMABLE = 1,   ///< not claimable
-        STATE_CLAIMABLE = 2,         ///< claimable
-        STATE_CLAIMED = 3 ///< the app/device is already claimed
-    } ClaimableState;
+        NOT_CLAIMABLE = 0, ///< The application is not claimed and not accepting claim requests.
+        CLAIMABLE = 1,     ///< The application is not claimed and is accepting claim requests.
+        CLAIMED = 2,       ///< The application is claimed and can be configured.
+        NEED_UPDATE = 3    ///< The application is claimed, but requires a configuration update (after a software upgrade).
+    } ApplicationState;
 
     /**
      * Constructor
@@ -73,28 +73,31 @@ class PermissionConfigurator {
     virtual QStatus SetPermissionManifest(PermissionPolicy::Rule* rules, size_t count) = 0;
 
     /**
-     * Retrieve the claimable state of the application.
-     * @return the claimable state
+     * Retrieve the state of the application.
+     * @param[out] applicationState the application state
+     * @return
+     *      - #ER_OK if successful
+     *      - #ER_NOT_IMPLEMENTED if the method is not implemented
+     *      - #ER_FEATURE_NOT_AVAILABLE if the value is not known
      */
-    virtual ClaimableState GetClaimableState()
+    virtual QStatus GetApplicationState(ApplicationState& applicationState)
     {
-        return STATE_UNKNOWN;
+        QCC_UNUSED(applicationState);
+        return ER_NOT_IMPLEMENTED;
     }
 
     /**
-     * Set the claimable state to be claimable or not.  The resulting claimable
-     * state would be either STATE_UNCLAIMABLE or STATE_CLAIMABLE depending on
-     * the value of the input flag.  This action is not allowed when the current
-     * state is STATE_CLAIMED.
-     * @param claimable flag
+     * Set the application state.  The state can't be changed from CLAIMED to
+     * CLAIMABLE.
+     * @param newState The new application state
      * @return
      *      - #ER_OK if action is allowed.
-     *      - #ER_INVALID_CLAIMABLE_STATE if current state is STATE_CLAIMED
+     *      - #ER_INVALID_APPLICATION_STATE if the state can't be changed
      *      - #ER_NOT_IMPLEMENTED if the method is not implemented
      */
-    virtual QStatus SetClaimable(bool claimable)
+    virtual QStatus SetApplicationState(ApplicationState newState)
     {
-        QCC_UNUSED(claimable);
+        QCC_UNUSED(newState);
         return ER_NOT_IMPLEMENTED;
     }
 
