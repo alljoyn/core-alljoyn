@@ -456,7 +456,7 @@ public class Client extends Activity {
 
                 Status status = mBus.joinSession((String) msg.obj, contactPort, sessionId, sessionOpts, new SessionListener(){
                     @Override
-                    public void sessionLost(int sessionId) {
+                    public void sessionLost(int sessionId, int reason) {
                         mIsConnected = false;
                         logInfo(String.format("MyBusListener.sessionLost(%d)", sessionId));
                         mHandler.sendEmptyMessage(MESSAGE_START_PROGRESS_DIALOG);

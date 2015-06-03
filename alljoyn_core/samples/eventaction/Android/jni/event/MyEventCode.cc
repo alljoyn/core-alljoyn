@@ -363,7 +363,7 @@ void MyEventCode::AsyncCallReplyHandler(Message& msg, void* context) {
 }
 
 /* From SessionListener */
-void MyEventCode::SessionLost(ajn::SessionId sessionId)
+void MyEventCode::SessionLost(ajn::SessionId sessionId, ajn::SessionListener::SessionLostReason reason)
 {
 
 }
