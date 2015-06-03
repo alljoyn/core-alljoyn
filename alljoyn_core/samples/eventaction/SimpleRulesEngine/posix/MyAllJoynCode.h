@@ -82,7 +82,7 @@ class MyAllJoynCode :
     virtual void SessionJoined(ajn::SessionPort sessionPort, ajn::SessionId id, const char* joiner);
 
     /* From SessionListener */
-    virtual void SessionLost(ajn::SessionId sessionId);
+    virtual void SessionLost(ajn::SessionId sessionId, ajn::SessionListener::SessionLostReason reason);
 
     virtual void SessionMemberAdded(ajn::SessionId sessionId, const char*uniqueName);
 
