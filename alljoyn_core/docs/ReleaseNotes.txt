@@ -1,5 +1,5 @@
-AllJoyn Version 15.04 Release Notes
-====================================
+AllJoyn Version 15.04a Release Notes
+=====================================
 
 Fully Validated Platforms
 -------------------------
@@ -16,8 +16,8 @@ verified, but may work:
 wiki.allseenalliance.org/core/core_15.04_release_review?&#regression_test
 
 
-Features added in Version 15.04
--------------------------------
+Features added in Version 15.04a
+--------------------------------
 * Property cache feature which adds a simple, optional cache to ProxyBusObject
   that keeps track of property values as received in GetProperty,
   GetAllProperties calls and PropertiesChanged signals. (ASACORE-1569)
@@ -40,8 +40,8 @@ Features added in Version 15.04
 * Support for iOS 8.1 (ASACORE-936)
 
 
-Issues Addressed in Version 15.04
----------------------------------
+Issues Addressed in Version 15.04a
+----------------------------------
 ASACORE-370  AllJoyn does not build with Android 4.4 (KitKat) sources
 ASACORE-732  Duplicate About announcements received while running large number
              of About based applications
@@ -59,13 +59,35 @@ ASACORE-1603 Invoking AboutData::CreateFromXml() results in a seg fault when a
              required About field is missing in the XML data that is passed in
 ASACORE-1853 NGNS query responses for openly advertised names are sent as
              multicast
+ASACORE-1917 Objective-C AJNObserver may deadlock upon dealloc
+ASACORE-1920 Potential Buffer Overflow error in windows Event::Wait code
+ASACORE-1921 NGNS sends duplicate mDNS packets
+ASACORE-1929 ASN.1 parsing error cause core dump
+ASACORE-1934 Race condition in Thread::Join can cause use-after-free
+ASACORE-1946 Windows Readme is inaccurate.
+ASACORE-1954 alljoyn_aboutdata_setappid_fromstring missing from Windows C API
+             DLL exports
+ASACORE-1959 Memory leak with EnablePeerSecurity
+ASACORE-1960 Secure samples are missing from 15.04 SDKs
+ASACORE-1961 About samples for C Binding are broken (need alljoyn_init)
+ASACORE-1975 Unable to send message from chat sample
+ASACORE-1977 assertion error in IpNameServiceImpl::ComputeDynamicScore
+ASACORE-1978 AllJoyn returns the incorrect error if connecting to the named pipe
+             fails
+ASACORE-2000 Windows Daemon and SCL are using reserved TCP port 9956
+ASACORE-2018 NGNS unicast responses to ephemeral ports is problematic for
+             firewall settings
+ASACORE-2032 Reduce error traces in "happy" path
+ASACORE-2035 Fix memory leaks in AboutData and AboutObjectDescription
+ASACORE-2048 SessionLost callback cannot be used reliably for destroying
+             SessionListener object
 
 For a complete list of fixed issues:
-https://jira.allseenalliance.org/issues/?jql=project%20%3D%20%22Core%20SW%22%20AND%20resolution%20%3D%20Fixed%20AND%20type%20%3D%20Bug%20AND%20fixVersion%20in%20%28%2215.04%22%29%20AND%20component%20not%20in%20%28%22Thin%20Core%20Library%22%2C%20%22About%20TC%22%29%20ORDER%20BY%20id%20DESC%2C%20priority%20DESC
+https://jira.allseenalliance.org/issues/?jql=project%20%3D%20ASACORE%20AND%20fixVersion%20in%20%28%2215.04%22%2C%20%2215.04a%22%29%20AND%20component%20%3D%20%22Router%2FSCL%22%20ORDER%20BY%20key%20ASC
 
 
-Known Issues in Version 15.04
------------------------------
+Known Issues in Version 15.04a
+------------------------------
 ASACORE-49   Multipoint session lost on joiner side and not binder side
              prevents joiner from rejoining
 ASACORE-181  Memory leak on repeated registration/unregistration of the same
@@ -97,23 +119,6 @@ ASACORE-1894 Race condition between alljoyn_busobject_signal and
              alljoyn_busobject_cancelsessionlessmessage
 ASACORE-1904 javascript NPAPI plug-in crashes Firefox.
 ASACORE-1907 Permission Functionality in Android does not work correctly
-ASACORE-1917 Objective-C AJNObserver may deadlock upon dealloc
-ASACORE-1920 Potential Buffer Overflow error in windows Event::Wait code
-ASACORE-1921 NGNS sends duplicate mDNS packets
-ASACORE-1934 Race condition in Thread::Join can cause use-after-free
-ASACORE-1946 Windows Readme is inaccurate.
-ASACORE-1954 alljoyn_aboutdata_setappid_fromstring missing from Windows C API
-             DLL exports
-ASACORE-1959 Memory leak with EnablePeerSecurity
-ASACORE-1960 Secure samples are missing from 15.04 SDKs
-ASACORE-1961 About samples for C Binding are broken (need alljoyn_init)
-ASACORE-1975 Unable to send message from chat sample
-ASACORE-1977 assertion error in IpNameServiceImpl::ComputeDynamicScore
-ASACORE-1978 AllJoyn returns the incorrect error if connecting to the named pipe
-             fails
-ASACORE-2000 Windows Daemon and SCL are using reserved TCP port 9956
-ASACORE-2018 NGNS unicast responses to ephemeral ports is problematic for
-             firewall settings
 
 For a complete list of open issues:
 https://jira.allseenalliance.org/issues/?jql=project%3D%22Core%20SW%22%20and%20status%20not%20in%20%28closed%2C%20resolved%29%20and%20type%20not%20in%20%28task%2C%20%22New%20Feature%22%29%20%20and%20component%20not%20in%20%28%22Thin%20Core%20Library%22%2C%20%22About%20TC%22%29%20order%20by%20priority%20DESC%2C%20id%20ASC
@@ -167,6 +172,28 @@ Version 15.04:
   to be minimal.
 * Multipoint session member attach does not work in some backward compatibility
   scenarios (ASACORE-1738)
+* The default configuration of the Windows Routing Node (daemonlib.dll) has
+  changed to accept connections on TCP port 9955 instead of TCP port 9956
+  (ASACORE-2000); the default bus connect spec on Windows has been changed
+  accordingly. Older Windows apps (using the older default bus connect spec)
+  will no longer be able to connect to a 15.04a routing node. These apps should
+  be recompiled using the new default connect spec. They may also require
+  changes to your firewall settings.
+* Another impact of ASACORE-2000 is 15.04a Bundled Routers now only accept
+  connections on ephemeral ports and don’t accept any connections using other
+  transports. This means that applications using the default bus connect spec
+  can no longer connect to a 15.04a Bundled Router on the local machine that is
+  using the default bundledConfig settings.
+* The SessionListener::SessionLost(SessionId sessionId) callback (which has been
+  deprecated since before 14.02) has been removed (ASACORE-2048). Applications
+  should instead use:
+  SessionListener::SessionLost(SessionId sessionId, SessionLostReason reason)
+  By example the following sample source code has been updated with this change:
+  * alljoyn_core/samples/eventaction/SimpleRulesEngine/Rule.cc
+  * services/about/cpp/samples/AboutClientSample/AboutClientSessionListener.cc
+  Existing applications recompiled with this release will notice that their
+  SessionLost callback will no longer be called.
+
 
 More details on these changes can be found on the release plan page:
 https://wiki.allseenalliance.org/core/core_15.04_release_plan#compatibility_with_previous_releases
@@ -179,6 +206,10 @@ For details of previous releases/release families please see the release notes:
 
 Change history
 -------------
+15.04a - Bug fixes: ASACORE-1917, ASACORE-1920, ASACORE-1921, ASACORE-1929,
+         ASACORE-1934, ASACORE-1946, ASACORE-1954, ASACORE-1959, ASACORE-1960,
+         ASACORE-1961, ASACORE-1975, ASACORE-1977, ASACORE-1978, ASACORE-2000,
+         ASACORE-2018, ASACORE-2032, ASACORE-2035, ASACORE-2048
 15.04  - Bug fixes, further improvements to scalability and performance, new
          features.
 14.12b - Bug fixes: ASACORE-780, ASACORE-1143, ASACORE-1504, ASACORE-1549,
