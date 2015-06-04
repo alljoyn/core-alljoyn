@@ -561,17 +561,51 @@ class CertificateX509 {
      */
     static QStatus AJ_CALL DecodeCertChainPEM(const String& encoded, CertificateX509* certChain, size_t count);
 
+    /**
+     * Copy Constructor for CertificateX509
+     *
+     * @param[in] other    CertificateX509 to copy
+     */
+    CertificateX509(const CertificateX509& other) :
+        type(other.type), tbs(other.tbs), encodedLen(other.encodedLen),
+        serial(other.serial), issuer(other.issuer), subject(other.subject),
+        validity(other.validity), publickey(other.publickey),
+        signature(other.signature), ca(other.ca), digest(other.digest),
+        subjectAltName(other.subjectAltName), aki(other.aki) {
+        encoded = new uint8_t[encodedLen];
+        memcpy(encoded, other.encoded, encodedLen);
+    }
+
+    /**
+     * Assign operator for CertificateX509
+     *
+     * @param[in] other    CertificateX509 to assign from
+     */
+    CertificateX509& operator=(const CertificateX509& other) {
+        if (&other != this) {
+            type = other.type;
+            tbs = other.tbs;
+            encodedLen = other.encodedLen;
+            delete[] encoded;
+            encoded = new uint8_t[encodedLen];
+            memcpy(encoded, other.encoded, encodedLen);
+
+            serial = other.serial;
+            issuer = other.issuer;
+            subject = other.subject;
+            validity = other.validity;
+            publickey = other.publickey;
+            signature = other.signature;
+
+            ca = other.ca;
+            digest = other.digest;
+            subjectAltName = other.subjectAltName;
+            aki = other.aki;
+        }
+        return *this;
+    }
+
   private:
-
-    /**
-     * Assignment operator is private
-     */
-    CertificateX509& operator=(const CertificateX509& other);
-
-    /**
-     * Copy constructor is private
-     */
-    CertificateX509(const CertificateX509& other);
 
     struct DistinguishedName {
         uint8_t* ou;
@@ -602,11 +636,28 @@ class CertificateX509 {
             delete [] ou;
             delete [] cn;
         }
-      private:
-        /* private copy constructor to prevent double freeing of dynamic memory */
-        DistinguishedName(const DistinguishedName&);
-        /* private assign operator to prevent double freeing of dynamic memory */
-        DistinguishedName& operator=(const DistinguishedName&);
+
+        DistinguishedName(const DistinguishedName& other) :
+            ouLen(other.ouLen), cnLen(other.cnLen) {
+            ou = new uint8_t[ouLen];
+            memcpy(ou, other.ou, ouLen);
+            cn = new uint8_t[cnLen];
+            memcpy(cn, other.cn, cnLen);
+        }
+
+        DistinguishedName& operator=(const DistinguishedName& other) {
+            if (&other != this) {
+                ouLen = other.ouLen;
+                cnLen = other.cnLen;
+                delete[] ou;
+                ou = new uint8_t[ouLen];
+                memcpy(ou, other.ou, ouLen);
+                delete[] cn;
+                cn = new uint8_t[cnLen];
+                memcpy(cn, other.cn, cnLen);
+            }
+            return *this;
+        }
     };
 
     QStatus DecodeCertificateTBS();
