@@ -708,6 +708,16 @@ class MembershipCertificate : public CertificateX509 {
     }
 
     /**
+     * Check if a guild is set for this certificate.
+     *
+     * @return true if this certificate has a valid guild set, false otherwise
+     */
+    bool IsGuildSet() const
+    {
+        return guildSet;
+    }
+
+    /**
      * Set the guild GUID
      * @param guid the guild GUID
      */
