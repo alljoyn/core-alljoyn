@@ -342,6 +342,7 @@ class PermissionMgmtObj : public BusObject {
     QStatus StoreIdentityCertChain(MsgArg& certArg);
     QStatus StorePolicy(PermissionPolicy& policy);
     QStatus StoreMembership(const MsgArg& certArg);
+    QStatus StoreManifest(MsgArg& manifestArg);
     /**
      * Generate the SHA-256 digest for the manifest data.
      * @param bus the bus attachment
@@ -454,7 +455,6 @@ class PermissionMgmtObj : public BusObject {
     bool IsTrustAnchor(const qcc::ECCPublicKey* publicKey);
     QStatus ManageMembershipTrustAnchors(PermissionPolicy* policy);
     QStatus GetDSAPrivateKey(qcc::ECCPrivateKey& privateKey);
-    QStatus StoreManifest(MsgArg& manifestArg);
     QStatus RetrieveIdentityCertChain(MsgArg** certArgs, size_t* count);
 
     /**
