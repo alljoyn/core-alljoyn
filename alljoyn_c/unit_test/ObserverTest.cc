@@ -261,9 +261,10 @@ class Participant : public SessionPortListener, public SessionListener {
             hsmLock.Unlock(MUTEX_CONTEXT);
             ASSERT_TRUE(foundOngoingSession) << "Could not find ongoing session.";
         }
-        bus.LeaveHostedSession(iter->second);
+        SessionId sessionId = iter->second;
         hostedSessionMap.erase(iter);
         hsmLock.Unlock(MUTEX_CONTEXT);
+        bus.LeaveHostedSession(sessionId);
     }
 
   private:
