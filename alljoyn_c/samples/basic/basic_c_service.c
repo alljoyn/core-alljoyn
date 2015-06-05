@@ -35,6 +35,7 @@
 #include <alljoyn_c/AjAPI.h>
 
 #include <assert.h>
+#include <limits.h>
 #include <signal.h>
 #include <stdio.h>
 #include <string.h>
@@ -132,7 +133,7 @@ void AJ_CALL cat_method(alljoyn_busobject bus, const alljoyn_interfacedescriptio
 }
 
 /** Main entry point */
-int CDECL_CALL main(void)
+int CDECL_CALL main(int argc, char** argv)
 {
     QStatus status = ER_OK;
     char* connectArgs = NULL;
@@ -155,6 +156,21 @@ int CDECL_CALL main(void)
         NULL
     };
     alljoyn_sessionopts opts = NULL;
+    unsigned long timeoutMs = ULONG_MAX;
+    unsigned long timeMs = 0;
+
+    if (argc == 2) {
+        char* stopString = NULL;
+        /* Multiply by 1000 to convert seconds to milliseconds */
+        timeoutMs = strtol(argv[1], &stopString, 10) * 1000;
+        if ((timeoutMs == 0) || (stopString[0] != '\0')) {
+            printf("Parameter was not valid, please provide a valid integer timeout in seconds or do not provide a parameter to never time out.\n");
+            return ER_BAD_ARG_1;
+        }
+    } else if (argc > 2)   {
+        printf("This app only accepts a single parameter, an integer connection timeout in seconds. For an unlimited timeout, do not provide a parameter.\n");
+        return ER_BAD_ARG_COUNT;
+    }
 
     if (alljoyn_init() != ER_OK) {
         return 1;
@@ -173,7 +189,9 @@ int CDECL_CALL main(void)
     signal(SIGINT, SigIntHandler);
 
     /* Create message bus */
-    g_msgBus = alljoyn_busattachment_create("myApp", QCC_TRUE);
+    if (status == ER_OK) {
+        g_msgBus = alljoyn_busattachment_create("myApp", QCC_TRUE);
+    }
 
     if (g_msgBus != NULL) {
         /* Add org.alljoyn.Bus.method_sample interface */
@@ -278,16 +296,20 @@ int CDECL_CALL main(void)
             }
         }
 
-        if (ER_OK == status) {
-            while (g_interrupt == QCC_FALSE) {
-    #ifdef _WIN32
-                Sleep(100);
-    #else
-                usleep(100 * 1000);
-    #endif
-            }
+        while ((status == ER_OK) && (g_interrupt == QCC_FALSE) && (timeMs < timeoutMs)) {
+#ifdef _WIN32
+            Sleep(10);
+#else
+            usleep(10 * 1000);
+#endif
+            timeMs += 10;
+        }
+
+        if (timeMs >= timeoutMs) {
+            printf("Exiting as timeout has expired\n");
         }
     }
+
     /* Deallocate sessionopts */
     if (opts) {
         alljoyn_sessionopts_destroy(opts);
