@@ -151,7 +151,7 @@ class CertificateX509 {
      * @param[out] pem the encoded certificate.
      * @return ER_OK for success; otherwise, error code.
      */
-    QStatus EncodeCertificatePEM(qcc::String& pem);
+    QStatus EncodeCertificatePEM(qcc::String& pem) const;
 
     /**
      * Helper function to generate PEM encoded string using a DER encoded string.
@@ -173,7 +173,7 @@ class CertificateX509 {
      * @param[out] der the encoded certificate.
      * @return ER_OK for success; otherwise, error code.
      */
-    QStatus EncodeCertificateDER(qcc::String& der);
+    QStatus EncodeCertificateDER(qcc::String& der) const;
 
     /**
      * Encode the private key in a PEM string.
@@ -663,15 +663,15 @@ class CertificateX509 {
     QStatus DecodeCertificateTBS();
     QStatus EncodeCertificateTBS();
     QStatus DecodeCertificateName(const qcc::String& dn, CertificateX509::DistinguishedName& name);
-    QStatus EncodeCertificateName(qcc::String& dn, CertificateX509::DistinguishedName& name);
+    QStatus EncodeCertificateName(qcc::String& dn, const CertificateX509::DistinguishedName& name) const;
     QStatus DecodeCertificateTime(const qcc::String& time);
-    QStatus EncodeCertificateTime(qcc::String& time);
+    QStatus EncodeCertificateTime(qcc::String& time) const;
     QStatus DecodeCertificatePub(const qcc::String& pub);
-    QStatus EncodeCertificatePub(qcc::String& pub);
+    QStatus EncodeCertificatePub(qcc::String& pub) const;
     QStatus DecodeCertificateExt(const qcc::String& ext);
-    QStatus EncodeCertificateExt(qcc::String& ext);
+    QStatus EncodeCertificateExt(qcc::String& ext) const;
     QStatus DecodeCertificateSig(const qcc::String& sig);
-    QStatus EncodeCertificateSig(qcc::String& sig);
+    QStatus EncodeCertificateSig(qcc::String& sig) const;
     QStatus GenEncoded();
 
     CertificateType type;

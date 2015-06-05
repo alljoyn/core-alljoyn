@@ -25,7 +25,7 @@
 
 namespace ajn {
 PermissionMgmtProxy::PermissionMgmtProxy(BusAttachment& bus, const char* busName, SessionId sessionId) :
-    ProxyBusObject(bus, busName, org::allseen::Security::PermissionMgmt::ObjectPath, sessionId)
+    ProxyBusObject(bus, busName, org::alljoyn::Bus::Security::ObjectPath, sessionId)
 {
     QCC_DbgTrace(("PermissionMgmtProxy::%s", __FUNCTION__));
     const InterfaceDescription* intf = bus.GetInterface(org::allseen::Security::PermissionMgmt::InterfaceName);
@@ -353,7 +353,7 @@ bool PermissionMgmtProxy::IsPermissionDeniedError(const Message& msg)
     if (errorName == NULL) {
         return false;
     }
-    if (strcmp(errorName, "org.alljoyn.Bus.ER_PERMISSION_DENIED") == 0) {
+    if (strcmp(errorName, "org.alljoyn.Bus.Security.Error.PermissionDenied") == 0) {
         return true;
     }
     if (strcmp(errorName, "org.alljoyn.Bus.ErStatus") != 0) {

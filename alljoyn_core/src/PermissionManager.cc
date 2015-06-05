@@ -561,7 +561,19 @@ static bool IsPropertyInterface(const char* iName)
 
 static bool IsPermissionMgmtInterface(const char* iName)
 {
-    return (strcmp(iName, org::allseen::Security::PermissionMgmt::InterfaceName) == 0);
+    if (strcmp(iName, org::allseen::Security::PermissionMgmt::InterfaceName) == 0) {
+        return true;
+    }
+    if (strcmp(iName, org::alljoyn::Bus::Security::Application::InterfaceName) == 0) {
+        return true;
+    }
+    if (strcmp(iName, org::alljoyn::Bus::Security::ClaimableApplication::InterfaceName) == 0) {
+        return true;
+    }
+    if (strcmp(iName, org::alljoyn::Bus::Security::ManagedApplication::InterfaceName) == 0) {
+        return true;
+    }
+    return false;
 }
 
 static QStatus ParsePropertiesMessage(MessageHolder& holder)

@@ -286,7 +286,7 @@ QStatus CertificateX509::DecodeCertificateName(const qcc::String& dn, Certificat
     return status;
 }
 
-QStatus CertificateX509::EncodeCertificateName(qcc::String& dn, CertificateX509::DistinguishedName& name)
+QStatus CertificateX509::EncodeCertificateName(qcc::String& dn, const CertificateX509::DistinguishedName& name) const
 {
     qcc::String ouOID;
     qcc::String cnOID;
@@ -437,7 +437,7 @@ static QStatus EncodeTime(uint64_t epoch, qcc::String& t)
     return ER_OK;
 }
 
-QStatus CertificateX509::EncodeCertificateTime(qcc::String& time)
+QStatus CertificateX509::EncodeCertificateTime(qcc::String& time) const
 {
     QStatus status;
     qcc::String time1;
@@ -487,7 +487,7 @@ QStatus CertificateX509::DecodeCertificatePub(const qcc::String& pub)
     return status;
 }
 
-QStatus CertificateX509::EncodeCertificatePub(qcc::String& pub)
+QStatus CertificateX509::EncodeCertificatePub(qcc::String& pub) const
 {
     QStatus status = ER_OK;
     qcc::String oid1 = OID_KEY_ECC;
@@ -580,7 +580,7 @@ QStatus CertificateX509::DecodeCertificateExt(const qcc::String& ext)
     return status;
 }
 
-QStatus CertificateX509::EncodeCertificateExt(qcc::String& ext)
+QStatus CertificateX509::EncodeCertificateExt(qcc::String& ext) const
 {
     QStatus status = ER_OK;
     qcc::String oid;
@@ -785,7 +785,7 @@ QStatus CertificateX509::DecodeCertificateSig(const qcc::String& sig)
     return status;
 }
 
-QStatus CertificateX509::EncodeCertificateSig(qcc::String& sig)
+QStatus CertificateX509::EncodeCertificateSig(qcc::String& sig) const
 {
     QStatus status = ER_OK;
     qcc::String r((const char*) signature.r, sizeof (signature.r));
@@ -831,7 +831,7 @@ QStatus CertificateX509::DecodeCertificateDER(const qcc::String& der)
     return status;
 }
 
-QStatus CertificateX509::EncodeCertificateDER(qcc::String& der)
+QStatus CertificateX509::EncodeCertificateDER(qcc::String& der) const
 {
     QStatus status;
     qcc::String oid = OID_SIG_ECDSA_SHA256;
@@ -897,7 +897,7 @@ QStatus AJ_CALL CertificateX509::EncodeCertificatePEM(qcc::String& der, qcc::Str
     return status;
 }
 
-QStatus CertificateX509::EncodeCertificatePEM(qcc::String& pem)
+QStatus CertificateX509::EncodeCertificatePEM(qcc::String& pem) const
 {
     qcc::String der;
     QStatus status = EncodeCertificateDER(der);

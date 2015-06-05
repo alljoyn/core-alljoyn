@@ -33,18 +33,17 @@ const uint16_t SecurityApplicationObj::SECURITY_CLAIMABLE_APPLICATION_VERSION = 
 const uint16_t SecurityApplicationObj::SECURITY_MANAGED_APPLICATION_VERSION = 1;
 
 
-SecurityApplicationObj::SecurityApplicationObj() :
-    BusObject(org::alljoyn::Bus::Security::ObjectPath),
-    m_bus(NULL)
+SecurityApplicationObj::SecurityApplicationObj(BusAttachment& bus) :
+    PermissionMgmtObj(bus, org::alljoyn::Bus::Security::ObjectPath)
 {
 }
 
-QStatus SecurityApplicationObj::Init(BusAttachment* bus)
+QStatus SecurityApplicationObj::Init()
 {
     QStatus status = ER_OK;
     {
-        /* Add org.alljoyn.Bus.Peer.Authentication interface */
-        const InterfaceDescription* ifc = bus->GetInterface(org::alljoyn::Bus::Application::InterfaceName);
+        /* Add org.alljoyn.Bus.Application interface */
+        const InterfaceDescription* ifc = bus.GetInterface(org::alljoyn::Bus::Application::InterfaceName);
         if (ifc == NULL) {
             QCC_LogError(status, ("Failed to get the %s interface", org::alljoyn::Bus::Application::InterfaceName));
             return ER_BUS_INTERFACE_MISSING;
@@ -57,7 +56,7 @@ QStatus SecurityApplicationObj::Init(BusAttachment* bus)
     }
     {
         /* Add org.alljoyn.Bus.Security.Application interface */
-        const InterfaceDescription* ifc = bus->GetInterface(org::alljoyn::Bus::Security::Application::InterfaceName);
+        const InterfaceDescription* ifc = bus.GetInterface(org::alljoyn::Bus::Security::Application::InterfaceName);
         if (ifc == NULL) {
             QCC_LogError(status, ("Failed to get the %s interface", org::alljoyn::Bus::Security::Application::InterfaceName));
             return ER_BUS_INTERFACE_MISSING;
@@ -69,7 +68,7 @@ QStatus SecurityApplicationObj::Init(BusAttachment* bus)
     }
     {
         /* Add org.alljoyn.Bus.Security.ClaimableApplication interface */
-        const InterfaceDescription* ifc = bus->GetInterface(org::alljoyn::Bus::Security::ClaimableApplication::InterfaceName);
+        const InterfaceDescription* ifc = bus.GetInterface(org::alljoyn::Bus::Security::ClaimableApplication::InterfaceName);
         if (ifc == NULL) {
             QCC_LogError(status, ("Failed to get the %s interface", org::alljoyn::Bus::Security::ClaimableApplication::InterfaceName));
             return ER_BUS_INTERFACE_MISSING;
@@ -87,7 +86,7 @@ QStatus SecurityApplicationObj::Init(BusAttachment* bus)
     }
     {
         /* Add org.alljoyn.Bus.Security.ManagedApplication interface */
-        const InterfaceDescription* ifc = bus->GetInterface(org::alljoyn::Bus::Security::ManagedApplication::InterfaceName);
+        const InterfaceDescription* ifc = bus.GetInterface(org::alljoyn::Bus::Security::ManagedApplication::InterfaceName);
         if (ifc == NULL) {
             QCC_LogError(status, ("Failed to get the %s interface", org::alljoyn::Bus::Security::ManagedApplication::InterfaceName));
             return ER_BUS_INTERFACE_MISSING;
@@ -128,20 +127,17 @@ QStatus SecurityApplicationObj::Init(BusAttachment* bus)
             return status;
         }
     }
-    status = bus->RegisterBusObject(*this);
     if (ER_OK == status) {
-        m_bus = bus;
+        status = PermissionMgmtObj::Init();
     }
     return status;
 }
+
 QStatus SecurityApplicationObj::State(qcc::ECCPublicKey publicKey, ApplicationState state)
 {
     QCC_DbgTrace(("SecurityApplication::%s", __FUNCTION__));
     QStatus status = ER_OK;
-    if (m_bus == NULL) {
-        return ER_BUS_OBJECT_NOT_REGISTERED;
-    }
-    const InterfaceDescription* ifc = m_bus->GetInterface(org::alljoyn::Bus::Application::InterfaceName);
+    const InterfaceDescription* ifc = bus.GetInterface(org::alljoyn::Bus::Application::InterfaceName);
     if (!ifc) {
         return ER_BUS_INTERFACE_MISSING;
     }
@@ -159,20 +155,17 @@ QStatus SecurityApplicationObj::State(qcc::ECCPublicKey publicKey, ApplicationSt
         return status;
     }
 
-    Message msg(*m_bus);
+    Message msg(bus);
     status = Signal(NULL, 0, *stateSignalMember, stateArgs, stateArgsSize, 0, ALLJOYN_FLAG_SESSIONLESS, &msg);
-    QCC_DbgPrintf(("Sent org.alljoyn.Bus.Peer.Authentication.State signal from %s  = %s", m_bus->GetUniqueName().c_str(), QCC_StatusText(status)));
+    QCC_DbgPrintf(("Sent org.alljoyn.Bus.Peer.Authentication.State signal from %s  = %s", bus.GetUniqueName().c_str(), QCC_StatusText(status)));
 
     return status;
 }
 
 void SecurityApplicationObj::Claim(const ajn::InterfaceDescription::Member* member, ajn::Message& msg)
 {
-    QCC_UNUSED(member); //TODO remove on implementation
-    QCC_UNUSED(msg); //TODO remove on implementation
     QCC_DbgTrace(("SecurityApplicationObj::%s", __FUNCTION__));
-    //TODO
-    MethodReply(msg, ER_NOT_IMPLEMENTED);
+    PermissionMgmtObj::Claim(member, msg);
 }
 
 void SecurityApplicationObj::Reset(const ajn::InterfaceDescription::Member* member, ajn::Message& msg)

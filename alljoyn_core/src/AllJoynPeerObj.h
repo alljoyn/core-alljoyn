@@ -40,7 +40,7 @@
 #include "PeerState.h"
 #include "AuthMechanism.h"
 #include "KeyExchanger.h"
-#include "PermissionMgmtObj.h"
+#include "SecurityApplicationObj.h"
 
 namespace ajn {
 
@@ -477,7 +477,7 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
     uint32_t* supportedAuthSuites;
 
     /* PermissionMgmtObj to handle message permssion */
-    PermissionMgmtObj permissionMgmtObj;
+    SecurityApplicationObj securityApplicationObj;
 };
 
 

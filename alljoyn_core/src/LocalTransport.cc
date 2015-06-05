@@ -1238,6 +1238,11 @@ QStatus _LocalEndpoint::HandleMethodCall(Message& message)
             errMsg = QCC_StatusText(status);
             break;
 
+        case ER_PERMISSION_DENIED:
+            errStr = "org.alljoyn.Bus.Security.Error.PermissionDenied";
+            errMsg = message->Description();
+            break;
+
         default:
             errStr += "org.alljoyn.Bus.";
             errStr += QCC_StatusText(status);

@@ -18,6 +18,9 @@
 #include <alljoyn/SecurityApplicationProxy.h>
 #include <qcc/Debug.h>
 #include <qcc/String.h>
+#include <qcc/KeyInfoECC.h>
+#include "PermissionMgmtObj.h"
+#include "KeyInfoHelper.h"
 
 #define QCC_MODULE "ALLJOYN_SECURITY"
 
@@ -183,32 +186,81 @@ QStatus SecurityApplicationProxy::Claim(const qcc::KeyInfoNISTP256& certificateA
                                         const qcc::IdentityCertificate* identityCertChain, size_t identityCertChainSize,
                                         const PermissionPolicy::Rule* manifest, size_t manifestSize)
 {
-    QCC_UNUSED(certificateAuthority); //TODO remove on implementation
-    QCC_UNUSED(adminGroupId); //TODO remove on implementation
-    QCC_UNUSED(adminGroup); //TODO remove on implementation
-    QCC_UNUSED(identityCertChain); //TODO remove on implementation
-    QCC_UNUSED(identityCertChainSize); //TODO remove on implementation
-    QCC_UNUSED(manifest); //TODO remove on implementation
-    QCC_UNUSED(manifestSize); //TODO remove on implementation
     QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
     QStatus status = ER_OK;
 
     Message reply(*bus);
 
+    if ((identityCertChain == NULL) || (manifest == NULL)) {
+        return ER_INVALID_DATA;
+    }
     MsgArg inputs[7];
-    //TODO convert input params to MsgArgs
+    qcc::KeyInfoNISTP256 caKeyInfo(certificateAuthority);
+    if (caKeyInfo.GetKeyIdLen() == 0) {
+        KeyInfoHelper::GenerateKeyId(caKeyInfo);
+    }
+    KeyInfoHelper::KeyInfoNISTP256PubKeyToMsgArg(caKeyInfo, inputs[0]);
+    KeyInfoHelper::KeyInfoKeyIdToMsgArg(caKeyInfo, inputs[1]);
 
-    status = MethodCall(org::allseen::Security::PermissionMgmt::InterfaceName, "Claim", inputs, 7, reply);
+    status = inputs[2].Set("ay", qcc::GUID128::SIZE, adminGroupId.GetBytes());
+    if (ER_OK != status) {
+        return status;
+    }
+    qcc::KeyInfoNISTP256 adminGroupKeyInfo(adminGroup);
+    if (adminGroupKeyInfo.GetKeyIdLen() == 0) {
+        KeyInfoHelper::GenerateKeyId(adminGroupKeyInfo);
+    }
+    KeyInfoHelper::KeyInfoNISTP256PubKeyToMsgArg(adminGroupKeyInfo, inputs[3]);
+    KeyInfoHelper::KeyInfoKeyIdToMsgArg(adminGroupKeyInfo, inputs[4]);
+
+    MsgArg* identityArgs = NULL;
+    if (identityCertChainSize == 0) {
+        status = inputs[5].Set("a(yay)", 0, NULL);
+        if (ER_OK != status) {
+            return status;
+        }
+    } else {
+        identityArgs = new MsgArg[identityCertChainSize];
+        for (size_t cnt = 0; cnt < identityCertChainSize; cnt++) {
+            qcc::String der;
+            status = identityCertChain[cnt].EncodeCertificateDER(der);
+            if (ER_OK != status) {
+                return status;
+            }
+            status = identityArgs[cnt].Set("(yay)", qcc::CertificateX509::ENCODING_X509_DER, der.size(), der.data());
+            if (ER_OK != status) {
+                return status;
+            }
+            identityArgs[cnt].Stabilize();
+        }
+        status = inputs[5].Set("a(yay)", identityCertChainSize, identityArgs);
+        if (ER_OK != status) {
+            return status;
+        }
+    }
+    if (manifestSize == 0) {
+        status = inputs[6].Set("a(ssa(syy))", 0, NULL);
+        if (ER_OK != status) {
+            return status;
+        }
+    } else {
+        status = PermissionPolicy::GenerateRules(manifest, manifestSize, inputs[6]);
+        if (ER_OK != status) {
+            return status;
+        }
+    }
+
+    status = MethodCall(org::alljoyn::Bus::Security::ClaimableApplication::InterfaceName, "Claim", inputs, 7, reply);
+    delete [] identityArgs;
     if (ER_OK != status) {
         if (reply->GetErrorName() != NULL) {
-            if (strcmp(reply->GetErrorName(), "org.alljoyn.Bus.Error.PermissionDenied") == 0) {
+            if (strcmp(reply->GetErrorName(), PermissionMgmtObj::ERROR_PERMISSION_DENIED) == 0) {
                 status = ER_PERMISSION_DENIED;
-            } else if (strcmp(reply->GetErrorName(), "org.alljoyn.Bus.Error.InvalidCertificate") == 0) {
+            } else if (strcmp(reply->GetErrorName(), PermissionMgmtObj::ERROR_INVALID_CERTIFICATE) == 0) {
                 status = ER_INVALID_CERTIFICATE;
-            } else if (strcmp(reply->GetErrorName(), "org.alljoyn.Bus.Error.InvalidCertificateUsage") == 0) {
-                //status = ER_INVALID_CERTIFICATE_USAGE;
-                status = ER_NOT_IMPLEMENTED;  //TODO add ER_INVALID_CERTIFICATE_USAGE to status and delete this status
-            } else if (strcmp(reply->GetErrorName(), "org.alljoyn.Bus.Error.DigestMismatch") == 0) {
+            } else if (strcmp(reply->GetErrorName(), PermissionMgmtObj::ERROR_INVALID_CERTIFICATE_USAGE) == 0) {
+                status = ER_INVALID_CERTIFICATE_USAGE;
+            } else if (strcmp(reply->GetErrorName(), PermissionMgmtObj::ERROR_DIGEST_MISMATCH) == 0) {
                 status = ER_DIGEST_MISMATCH;
             } else if (strcmp(reply->GetErrorName(), org::alljoyn::Bus::ErrorName) == 0 && reply->GetArg(1)) {
                 status = static_cast<QStatus>(reply->GetArg(1)->v_uint16);
@@ -216,9 +268,7 @@ QStatus SecurityApplicationProxy::Claim(const qcc::KeyInfoNISTP256& certificateA
                 QCC_LogError(status, ("SecurityApplicationProxy::%s error %s", __FUNCTION__, reply->GetErrorDescription().c_str()));
             }
         }
-        return status;
     }
-
     return status;
 }
 
