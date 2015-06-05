@@ -1,0 +1,63 @@
+/* each device */
+.item {
+    width: 20vh;
+    height: 20vh;
+    text-align: center;
+    display: block;
+    background-color: #d0d0d0;
+    margin-right: 70px;
+    margin-bottom: 50px;
+    float: left;
+    border-radius: 50%;
+}
+/* mouse over */
+.item:hover {
+    background: #c0256c;
+    -webkit-transform: scale(1.2);
+    -moz-transform: scale(1.2);
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
+}
+
+/* device image */
+img {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 3vh;
+    margin-bottom: 2vh;
+    width: 10vh;
+    height: 10vh;
+}
+
+#wrapper {
+    margin-left: 20px;
+    text-align: left;
+}
+
+/* devices area */
+#main_section {
+    float: left;
+    width: 60%;
+    /*margin: 20px;*/
+}
+
+/* show announced data */
+#main_aside {
+    float: right;
+    width: 25%;
+    margin: 10px 50px;
+    padding: 20px;
+    font-size: small;
+    background: #bfbfbf;
+}
+
+#main_footer {
+    clear: both;
+    width: 70%;
+    text-align: center;
+    padding: 20px;
+    border-top: 2px solid #999999;
+    position: absolute;
+    bottom: 0;
+    margin-left: 10%;
+}
