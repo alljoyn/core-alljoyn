@@ -127,7 +127,7 @@ QStatus PermissionConfiguratorImpl::GetConnectedPeerPublicKey(const GUID128& gui
     if (!permissionMgmtObj) {
         return ER_FEATURE_NOT_AVAILABLE;
     }
-    return permissionMgmtObj->GetConnectedPeerPublicKey(guid, publicKey, NULL);
+    return permissionMgmtObj->GetConnectedPeerPublicKey(guid, publicKey);
 }
 
 }

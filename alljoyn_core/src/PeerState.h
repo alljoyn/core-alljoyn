@@ -339,10 +339,6 @@ class _PeerState {
      */
     std::vector<std::vector<MsgArg*> > guildArgs;
     /**
-     * The size of the array of membership data msg args to reply to the peer
-     */
-    uint8_t guildArgsCount;
-    /**
      * The number of membership data msg args already replied to the peer
      */
     uint8_t guildArgsSentCount;

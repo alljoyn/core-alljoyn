@@ -174,11 +174,14 @@ class KeyExchanger {
      * @param rec the peer secret record
      * @param[out] masterSecret the master secret
      * @param[out] publicKey the buffer holding the public key.
-     * @param[out] manifest digest the buffer holding the manifest digest.
-     * @param[out] publicKeyAvailable flag indicating whether the public key is available
+     * @param[out] manifestDigest the buffer holding the manifest digest.
+     * @param[out] issuerPublicKeys the vector holding the list of issuer
+     *              public keys
+     * @param[out] publicKeyAvailable flag indicating whether the public key
+     *              is available
      * @return ER_OK if successful; otherwise, an error code.
      */
-    static QStatus ParsePeerSecretRecord(const KeyBlob& rec, KeyBlob& masterSecret, ECCPublicKey* publicKey, uint8_t* manifestDigest, bool& publicKeyAvailable);
+    static QStatus ParsePeerSecretRecord(const KeyBlob& rec, KeyBlob& masterSecret, ECCPublicKey* publicKey, uint8_t* manifestDigest, std::vector<ECCPublicKey>& issuerPublicKeys, bool& publicKeyAvailable);
 
     /**
      * Helper function to parse the peer secret record to retrieve the master secret.
@@ -417,6 +420,7 @@ class KeyExchangerECDHE_ECDSA : public KeyExchangerECDHE {
     bool hasCommonTrustAnchors;
     ECCPublicKey* peerDSAPubKey;
     uint8_t peerManifestDigest[Crypto_SHA256::DIGEST_SIZE];
+    std::vector<ECCPublicKey> peerIssuerPubKeys;
 };
 
 } /* namespace ajn */

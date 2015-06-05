@@ -907,7 +907,7 @@ QStatus CertificateX509::EncodeCertificatePEM(qcc::String& pem)
     return EncodeCertificatePEM(der, pem);
 }
 
-QStatus CertificateX509::VerifyValidity()
+QStatus CertificateX509::VerifyValidity() const
 {
     uint64_t currentTime = GetEpochTimestamp() / 1000;
 
@@ -918,12 +918,12 @@ QStatus CertificateX509::VerifyValidity()
     return ER_OK;
 }
 
-QStatus CertificateX509::Verify()
+QStatus CertificateX509::Verify() const
 {
     return Verify(&publickey);
 }
 
-QStatus CertificateX509::Verify(const ECCPublicKey* key)
+QStatus CertificateX509::Verify(const ECCPublicKey* key) const
 {
     if (key->empty()) {
         return ER_FAIL;
@@ -933,7 +933,7 @@ QStatus CertificateX509::Verify(const ECCPublicKey* key)
     return ecc.DSAVerify((const uint8_t*) tbs.data(), tbs.size(), &signature);
 }
 
-QStatus CertificateX509::Verify(const KeyInfoNISTP256& ta)
+QStatus CertificateX509::Verify(const KeyInfoNISTP256& ta) const
 {
     QStatus status;
     status = VerifyValidity();

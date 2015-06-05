@@ -43,16 +43,16 @@ static const char sampleCertificatePEM[] = {
     "-----END CERTIFICATE-----"
 };
 
-static void GenerateAdminGroupACL(const GUID128& groupGUID, const KeyInfoNISTP256& groupAuthority, PermissionPolicy::Term& term)
+static void GenerateAdminGroupACL(const GUID128& groupGUID, const KeyInfoNISTP256& groupAuthority, PermissionPolicy::Acl& acl)
 {
     PermissionPolicy::Peer* peers = new PermissionPolicy::Peer[1];
-    peers[0].SetType(PermissionPolicy::Peer::PEER_GUILD);
-    peers[0].SetGuildId(groupGUID);
+    peers[0].SetType(PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP);
+    peers[0].SetSecurityGroupId(groupGUID);
     KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
     keyInfo->SetKeyId(groupAuthority.GetKeyId(), groupAuthority.GetKeyIdLen());
     keyInfo->SetPublicKey(groupAuthority.GetPublicKey());
     peers[0].SetKeyInfo(keyInfo);
-    term.SetPeers(1, peers);
+    acl.SetPeers(1, peers);
 
     PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[1];
     rules[0].SetInterfaceName("*");
@@ -64,36 +64,21 @@ static void GenerateAdminGroupACL(const GUID128& groupGUID, const KeyInfoNISTP25
         PermissionPolicy::Rule::Member::ACTION_MODIFY
         );
     rules[0].SetMembers(1, prms);
-    term.SetRules(1, rules);
+    acl.SetRules(1, rules);
 }
 
-static PermissionPolicy* GenerateWildCardPolicy(const GUID128& groupGUID, const KeyInfoNISTP256& groupAuthority, BusAttachment& issuerBus)
+static PermissionPolicy* GenerateWildCardPolicy(const GUID128& groupGUID, const KeyInfoNISTP256& groupAuthority)
 {
-    qcc::GUID128 issuerGUID;
-    PermissionMgmtTestHelper::GetGUID(issuerBus, issuerGUID);
-    ECCPublicKey issuerPubKey;
-    QStatus status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(issuerBus, &issuerPubKey);
-    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
-
     PermissionPolicy* policy = new PermissionPolicy();
 
     policy->SetSerialNum(52516);
 
-    /* add the admin section */
-    PermissionPolicy::Peer* admins = new PermissionPolicy::Peer[1];
-    admins[0].SetType(PermissionPolicy::Peer::PEER_GUID);
-    KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
-    keyInfo->SetKeyId(issuerGUID.GetBytes(), GUID128::SIZE);
-    keyInfo->SetPublicKey(&issuerPubKey);
-    admins[0].SetKeyInfo(keyInfo);
-    policy->SetAdmins(1, admins);
-
-    /* add the terms section */
-    PermissionPolicy::Term* terms = new PermissionPolicy::Term[2];
-    /* terms record 0  ANY-USER */
+    /* add the acls section */
+    PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[2];
+    /* acls record 0  ANY-USER */
     PermissionPolicy::Peer* peers = new PermissionPolicy::Peer[1];
-    peers[0].SetType(PermissionPolicy::Peer::PEER_ANY);
-    terms[0].SetPeers(1, peers);
+    peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
+    acls[0].SetPeers(1, peers);
     PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[1];
     rules[0].SetInterfaceName("org.allseenalliance.control.*");
     PermissionPolicy::Rule::Member* prms = new PermissionPolicy::Rule::Member[3];
@@ -106,46 +91,32 @@ static PermissionPolicy* GenerateWildCardPolicy(const GUID128& groupGUID, const 
     prms[2].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
     prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY);
     rules[0].SetMembers(3, prms);
-    terms[0].SetRules(1, rules);
+    acls[0].SetRules(1, rules);
 
-    GenerateAdminGroupACL(groupGUID, groupAuthority, terms[1]);
-    policy->SetTerms(2, terms);
+    GenerateAdminGroupACL(groupGUID, groupAuthority, acls[1]);
+    policy->SetAcls(2, acls);
 
     return policy;
 }
 
-static PermissionPolicy* GeneratePolicy(const GUID128& groupGUID, const KeyInfoNISTP256& groupAuthority, BusAttachment& issuerBus, BusAttachment& guildAuthorityBus)
+static PermissionPolicy* GeneratePolicy(const GUID128& groupGUID, const KeyInfoNISTP256& groupAuthority, BusAttachment& guildAuthorityBus)
 {
-    qcc::GUID128 issuerGUID;
-    PermissionMgmtTestHelper::GetGUID(issuerBus, issuerGUID);
-    ECCPublicKey issuerPubKey;
-    QStatus status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(issuerBus, &issuerPubKey);
-    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
     qcc::GUID128 guildAuthorityGUID;
     PermissionMgmtTestHelper::GetGUID(guildAuthorityBus, guildAuthorityGUID);
     ECCPublicKey guildAuthorityPubKey;
-    status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(guildAuthorityBus, &guildAuthorityPubKey);
+    QStatus status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(guildAuthorityBus, &guildAuthorityPubKey);
     EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
 
     PermissionPolicy* policy = new PermissionPolicy();
 
     policy->SetSerialNum(74892317);
 
-    /* add the admin section */
-    PermissionPolicy::Peer* admins = new PermissionPolicy::Peer[1];
-    admins[0].SetType(PermissionPolicy::Peer::PEER_GUID);
-    KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
-    keyInfo->SetKeyId(issuerGUID.GetBytes(), GUID128::SIZE);
-    keyInfo->SetPublicKey(&issuerPubKey);
-    admins[0].SetKeyInfo(keyInfo);
-    policy->SetAdmins(1, admins);
-
-    /* add the terms section */
-    PermissionPolicy::Term* terms = new PermissionPolicy::Term[5];
-    /* terms record 0  ANY-USER */
+    /* add the acls section */
+    PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[5];
+    /* acls record 0  ANY-USER */
     PermissionPolicy::Peer* peers = new PermissionPolicy::Peer[1];
-    peers[0].SetType(PermissionPolicy::Peer::PEER_ANY);
-    terms[0].SetPeers(1, peers);
+    peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
+    acls[0].SetPeers(1, peers);
     PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[3];
     rules[0].SetObjPath("/control/guide");
     rules[0].SetInterfaceName("allseenalliance.control.*");
@@ -157,7 +128,7 @@ static PermissionPolicy* GeneratePolicy(const GUID128& groupGUID, const KeyInfoN
     prms = new PermissionPolicy::Rule::Member[2];
     prms[0].SetMemberName("Off");
     prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
-    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_DENIED);
+    prms[0].SetActionMask(0);  /* action denied */
     prms[1].SetMemberName("*");
     prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
     rules[1].SetMembers(2, prms);
@@ -167,17 +138,17 @@ static PermissionPolicy* GeneratePolicy(const GUID128& groupGUID, const KeyInfoN
     prms[0].SetMemberType(PermissionPolicy::Rule::Member::SIGNAL);
     prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE);
     rules[2].SetMembers(1, prms);
-    terms[0].SetRules(3, rules);
+    acls[0].SetRules(3, rules);
 
-    /* terms record 1 GUILD membershipGUID1 */
+    /* acls record 1 GUILD membershipGUID1 */
     peers = new PermissionPolicy::Peer[1];
-    peers[0].SetType(PermissionPolicy::Peer::PEER_GUILD);
-    peers[0].SetGuildId(membershipGUID1);
-    keyInfo = new KeyInfoNISTP256();
+    peers[0].SetType(PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP);
+    peers[0].SetSecurityGroupId(membershipGUID1);
+    KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
     keyInfo->SetKeyId(guildAuthorityGUID.GetBytes(), qcc::GUID128::SIZE);
     keyInfo->SetPublicKey(&guildAuthorityPubKey);
     peers[0].SetKeyInfo(keyInfo);
-    terms[1].SetPeers(1, peers);
+    acls[1].SetPeers(1, peers);
     rules = new PermissionPolicy::Rule[2];
     rules[0].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
     prms = new PermissionPolicy::Rule::Member[5];
@@ -203,22 +174,22 @@ static PermissionPolicy* GeneratePolicy(const GUID128& groupGUID, const KeyInfoN
     prms[0].SetMemberName("*");
     prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
     rules[1].SetMembers(1, prms);
-    terms[1].SetRules(2, rules);
+    acls[1].SetRules(2, rules);
 
-    /* terms record 2 GUILD membershipGUID2 */
+    /* acls record 2 GUILD membershipGUID2 */
     peers = new PermissionPolicy::Peer[1];
-    peers[0].SetType(PermissionPolicy::Peer::PEER_GUILD);
-    peers[0].SetGuildId(membershipGUID2);
+    peers[0].SetType(PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP);
+    peers[0].SetSecurityGroupId(membershipGUID2);
     keyInfo = new KeyInfoNISTP256();
     keyInfo->SetKeyId(guildAuthorityGUID.GetBytes(), qcc::GUID128::SIZE);
     keyInfo->SetPublicKey(&guildAuthorityPubKey);
     peers[0].SetKeyInfo(keyInfo);
-    terms[2].SetPeers(1, peers);
+    acls[2].SetPeers(1, peers);
     rules = new PermissionPolicy::Rule[3];
     rules[0].SetObjPath("/control/settings");
     prms = new PermissionPolicy::Rule::Member[1];
     prms[0].SetMemberName("*");
-    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_DENIED);
+    prms[0].SetActionMask(0);  /* action denied */
     rules[0].SetMembers(1, prms);
     rules[1].SetObjPath("/control/guide");
     rules[1].SetInterfaceName("org.allseenalliance.control.*");
@@ -231,16 +202,16 @@ static PermissionPolicy* GeneratePolicy(const GUID128& groupGUID, const KeyInfoN
     prms[0].SetMemberName("*");
     prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
     rules[2].SetMembers(1, prms);
-    terms[2].SetRules(3, rules);
+    acls[2].SetRules(3, rules);
 
-    /* terms record 3 peer specific rule  */
+    /* acls record 3 peer specific rule  */
     peers = new PermissionPolicy::Peer[1];
-    peers[0].SetType(PermissionPolicy::Peer::PEER_GUID);
+    peers[0].SetType(PermissionPolicy::Peer::PEER_WITH_PUBLIC_KEY);
     keyInfo = new KeyInfoNISTP256();
     keyInfo->SetKeyId(guildAuthorityGUID.GetBytes(), qcc::GUID128::SIZE);
     keyInfo->SetPublicKey(&guildAuthorityPubKey);
     peers[0].SetKeyInfo(keyInfo);
-    terms[3].SetPeers(1, peers);
+    acls[3].SetPeers(1, peers);
     rules = new PermissionPolicy::Rule[1];
     rules[0].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
     prms = new PermissionPolicy::Rule::Member[1];
@@ -248,43 +219,102 @@ static PermissionPolicy* GeneratePolicy(const GUID128& groupGUID, const KeyInfoN
     prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
     prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
     rules[0].SetMembers(1, prms);
-    terms[3].SetRules(1, rules);
+    acls[3].SetRules(1, rules);
 
-    GenerateAdminGroupACL(groupGUID, groupAuthority, terms[4]);
-    policy->SetTerms(5, terms);
+    GenerateAdminGroupACL(groupGUID, groupAuthority, acls[4]);
+    policy->SetAcls(5, acls);
 
     return policy;
 }
 
-static PermissionPolicy* GenerateSmallAnyUserPolicy(const GUID128& groupGUID, const KeyInfoNISTP256& groupAuthority, BusAttachment& issuerBus)
+static PermissionPolicy* GeneratePolicyForSpecificCA(const GUID128& groupGUID, const KeyInfoNISTP256& groupAuthority, const KeyInfoNISTP256& restrictedCA)
 {
-    qcc::GUID128 issuerGUID;
-    PermissionMgmtTestHelper::GetGUID(issuerBus, issuerGUID);
-    ECCPublicKey issuerPubKey;
-    QStatus status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(issuerBus, &issuerPubKey);
-    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
-
     PermissionPolicy* policy = new PermissionPolicy();
 
-    policy->SetSerialNum(552317);
+    policy->SetSerialNum(25531);
 
-    /* add the admin section */
-    PermissionPolicy::Peer* admins = new PermissionPolicy::Peer[1];
-    admins[0].SetType(PermissionPolicy::Peer::PEER_GUID);
-    KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
-    keyInfo->SetKeyId(issuerGUID.GetBytes(), GUID128::SIZE);
-    keyInfo->SetPublicKey(&issuerPubKey);
-    admins[0].SetKeyInfo(keyInfo);
-    policy->SetAdmins(1, admins);
-
-    /* add the terms ection */
-
-    PermissionPolicy::Term* terms = new PermissionPolicy::Term[2];
-
-    /* terms record 0  ANY-USER */
+    /* add the acls section */
+    PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[3];
+    /* acls record 0  ANY-USER */
     PermissionPolicy::Peer* peers = new PermissionPolicy::Peer[1];
-    peers[0].SetType(PermissionPolicy::Peer::PEER_ANY);
-    terms[0].SetPeers(1, peers);
+    peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
+    acls[0].SetPeers(1, peers);
+    PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[3];
+    rules[0].SetObjPath("/control/guide");
+    rules[0].SetInterfaceName("allseenalliance.control.*");
+    PermissionPolicy::Rule::Member* prms = new PermissionPolicy::Rule::Member[1];
+    prms[0].SetMemberName("*");
+    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+    rules[0].SetMembers(1, prms);
+    rules[1].SetInterfaceName(BasePermissionMgmtTest::ONOFF_IFC_NAME);
+    prms = new PermissionPolicy::Rule::Member[2];
+    prms[0].SetMemberName("Off");
+    prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+    prms[0].SetActionMask(0);  /* action denied */
+    prms[1].SetMemberName("*");
+    prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+    rules[1].SetMembers(2, prms);
+    rules[2].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
+    prms = new PermissionPolicy::Rule::Member[1];
+    prms[0].SetMemberName("ChannelChanged");
+    prms[0].SetMemberType(PermissionPolicy::Rule::Member::SIGNAL);
+    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+    rules[2].SetMembers(1, prms);
+    acls[0].SetRules(3, rules);
+
+    /* acls record 1 FROM_CERTIFICATE_AUTHORITY */
+    peers = new PermissionPolicy::Peer[1];
+    peers[0].SetType(PermissionPolicy::Peer::PEER_FROM_CERTIFICATE_AUTHORITY);
+    KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256(restrictedCA);
+    peers[0].SetKeyInfo(keyInfo);
+    acls[1].SetPeers(1, peers);
+    rules = new PermissionPolicy::Rule[2];
+    rules[0].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
+    prms = new PermissionPolicy::Rule::Member[5];
+    prms[0].SetMemberName("Up");
+    prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+    prms[1].SetMemberName("Down");
+    prms[1].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+    prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+    prms[2].SetMemberName("Volume");
+    prms[2].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
+    prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+    prms[3].SetMemberName("InputSource");
+    prms[3].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+    prms[3].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+    prms[4].SetMemberName("Caption");
+    prms[4].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
+    prms[4].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+    rules[0].SetMembers(5, prms);
+
+    rules[1].SetInterfaceName("org.allseenalliance.control.Mouse*");
+    prms = new PermissionPolicy::Rule::Member[1];
+    prms[0].SetMemberName("*");
+    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+    rules[1].SetMembers(1, prms);
+    acls[1].SetRules(2, rules);
+
+    GenerateAdminGroupACL(groupGUID, groupAuthority, acls[2]);
+    policy->SetAcls(3, acls);
+
+    return policy;
+}
+
+static PermissionPolicy* GenerateSmallAnyUserPolicy(const GUID128& groupGUID, const KeyInfoNISTP256& groupAuthority)
+{
+    PermissionPolicy* policy = new PermissionPolicy();
+
+    policy->SetSerialNum(55);
+
+    /* add the acls ection */
+
+    PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[2];
+
+    /* acls record 0  ANY-USER */
+    PermissionPolicy::Peer* peers = new PermissionPolicy::Peer[1];
+    peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
+    acls[0].SetPeers(1, peers);
     PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[2];
     rules[0].SetInterfaceName(BasePermissionMgmtTest::ONOFF_IFC_NAME);
     PermissionPolicy::Rule::Member* prms = new PermissionPolicy::Rule::Member[2];
@@ -301,43 +331,28 @@ static PermissionPolicy* GenerateSmallAnyUserPolicy(const GUID128& groupGUID, co
     prms[0].SetMemberType(PermissionPolicy::Rule::Member::SIGNAL);
     prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE);
     rules[1].SetMembers(1, prms);
-    terms[0].SetRules(2, rules);
+    acls[0].SetRules(2, rules);
 
-    GenerateAdminGroupACL(groupGUID, groupAuthority, terms[1]);
-    policy->SetTerms(2, terms);
+    GenerateAdminGroupACL(groupGUID, groupAuthority, acls[1]);
+    policy->SetAcls(2, acls);
 
     return policy;
 }
 
-static PermissionPolicy* GenerateFullAccessAnyUserPolicy(const GUID128& groupGUID, const KeyInfoNISTP256& groupAuthority, BusAttachment& issuerBus, bool allowSignal)
+static PermissionPolicy* GenerateFullAccessAnyUserPolicy(const GUID128& groupGUID, const KeyInfoNISTP256& groupAuthority, bool allowSignal)
 {
-    qcc::GUID128 issuerGUID;
-    PermissionMgmtTestHelper::GetGUID(issuerBus, issuerGUID);
-    ECCPublicKey issuerPubKey;
-    QStatus status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(issuerBus, &issuerPubKey);
-    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
-
     PermissionPolicy* policy = new PermissionPolicy();
 
     policy->SetSerialNum(552317);
 
-    /* add the admin section */
-    PermissionPolicy::Peer* admins = new PermissionPolicy::Peer[1];
-    admins[0].SetType(PermissionPolicy::Peer::PEER_GUID);
-    KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
-    keyInfo->SetKeyId(issuerGUID.GetBytes(), GUID128::SIZE);
-    keyInfo->SetPublicKey(&issuerPubKey);
-    admins[0].SetKeyInfo(keyInfo);
-    policy->SetAdmins(1, admins);
+    /* add the acls ection */
 
-    /* add the terms ection */
+    PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[2];
 
-    PermissionPolicy::Term* terms = new PermissionPolicy::Term[2];
-
-    /* terms record 0  ANY-USER */
+    /* acls record 0  ANY-USER */
     PermissionPolicy::Peer* peers = new PermissionPolicy::Peer[1];
-    peers[0].SetType(PermissionPolicy::Peer::PEER_ANY);
-    terms[0].SetPeers(1, peers);
+    peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
+    acls[0].SetPeers(1, peers);
     PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[2];
     rules[0].SetInterfaceName(BasePermissionMgmtTest::ONOFF_IFC_NAME);
     PermissionPolicy::Rule::Member* prms = new PermissionPolicy::Rule::Member[2];
@@ -364,48 +379,33 @@ static PermissionPolicy* GenerateFullAccessAnyUserPolicy(const GUID128& groupGUI
     prms[count].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
     rules[1].SetMembers(count + 1, prms);
 
-    terms[0].SetRules(2, rules);
+    acls[0].SetRules(2, rules);
 
-    GenerateAdminGroupACL(groupGUID, groupAuthority, terms[1]);
-    policy->SetTerms(2, terms);
+    GenerateAdminGroupACL(groupGUID, groupAuthority, acls[1]);
+    policy->SetAcls(2, acls);
     return policy;
 }
 
-static PermissionPolicy* GenerateAnyUserDeniedPrefixPolicy(const GUID128& groupGUID, const KeyInfoNISTP256& groupAuthority, BusAttachment& issuerBus)
+static PermissionPolicy* GenerateAnyUserDeniedPrefixPolicy(const GUID128& groupGUID, const KeyInfoNISTP256& groupAuthority)
 {
-    qcc::GUID128 issuerGUID;
-    PermissionMgmtTestHelper::GetGUID(issuerBus, issuerGUID);
-    ECCPublicKey issuerPubKey;
-    QStatus status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(issuerBus, &issuerPubKey);
-    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
-
     PermissionPolicy* policy = new PermissionPolicy();
 
     policy->SetSerialNum(552317);
 
-    /* add the admin section */
-    PermissionPolicy::Peer* admins = new PermissionPolicy::Peer[1];
-    admins[0].SetType(PermissionPolicy::Peer::PEER_GUID);
-    KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
-    keyInfo->SetKeyId(issuerGUID.GetBytes(), GUID128::SIZE);
-    keyInfo->SetPublicKey(&issuerPubKey);
-    admins[0].SetKeyInfo(keyInfo);
-    policy->SetAdmins(1, admins);
-
     /* add the incoming section */
 
-    PermissionPolicy::Term* terms = new PermissionPolicy::Term[2];
+    PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[2];
 
-    /* terms record 0  ANY-USER */
+    /* acls record 0  ANY-USER */
     PermissionPolicy::Peer* peers = new PermissionPolicy::Peer[1];
-    peers[0].SetType(PermissionPolicy::Peer::PEER_ANY);
-    terms[0].SetPeers(1, peers);
+    peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
+    acls[0].SetPeers(1, peers);
     PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[2];
     rules[0].SetInterfaceName(BasePermissionMgmtTest::ONOFF_IFC_NAME);
     PermissionPolicy::Rule::Member* prms = new PermissionPolicy::Rule::Member[2];
     prms[0].SetMemberName("Of*");
     prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
-    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_DENIED);
+    prms[0].SetActionMask(0);  /* action denied */
     prms[1].SetMemberName("*");
     prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
     rules[0].SetMembers(2, prms);
@@ -415,11 +415,11 @@ static PermissionPolicy* GenerateAnyUserDeniedPrefixPolicy(const GUID128& groupG
     prms[0].SetMemberType(PermissionPolicy::Rule::Member::SIGNAL);
     prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE);
     rules[1].SetMembers(1, prms);
-    terms[0].SetRules(2, rules);
+    acls[0].SetRules(2, rules);
 
 
-    GenerateAdminGroupACL(groupGUID, groupAuthority, terms[1]);
-    policy->SetTerms(2, terms);
+    GenerateAdminGroupACL(groupGUID, groupAuthority, acls[1]);
+    policy->SetAcls(2, acls);
     return policy;
 }
 
@@ -427,14 +427,14 @@ static PermissionPolicy* GenerateFullAccessOutgoingPolicy(const GUID128& groupGU
 {
     PermissionPolicy* policy = new PermissionPolicy();
 
-    policy->SetSerialNum(3827326);
+    policy->SetSerialNum(38276);
 
-    PermissionPolicy::Term* terms = new PermissionPolicy::Term[2];
+    PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[2];
 
-    /* terms record 0  ANY-USER */
+    /* acls record 0  ANY-USER */
     PermissionPolicy::Peer* peers = new PermissionPolicy::Peer[1];
-    peers[0].SetType(PermissionPolicy::Peer::PEER_ANY);
-    terms[0].SetPeers(1, peers);
+    peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
+    acls[0].SetPeers(1, peers);
     PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[1];
     rules[0].SetInterfaceName("*");
     PermissionPolicy::Rule::Member* prms = NULL;
@@ -457,16 +457,71 @@ static PermissionPolicy* GenerateFullAccessOutgoingPolicy(const GUID128& groupGU
     prms[count].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
     count++;
     rules[0].SetMembers(count, prms);
-    terms[0].SetRules(1, rules);
+    acls[0].SetRules(1, rules);
 
-    GenerateAdminGroupACL(groupGUID, groupAuthority, terms[1]);
-    policy->SetTerms(2, terms);
+    GenerateAdminGroupACL(groupGUID, groupAuthority, acls[1]);
+    policy->SetAcls(2, acls);
     return policy;
 }
 
 static PermissionPolicy* GenerateFullAccessOutgoingPolicy(const GUID128& groupGUID, const KeyInfoNISTP256& groupAuthority)
 {
     return GenerateFullAccessOutgoingPolicy(groupGUID, groupAuthority, true);
+}
+
+static PermissionPolicy* GenerateFullAccessOutgoingPolicyWithGuestServices(const GUID128& groupGUID, const KeyInfoNISTP256& groupAuthority, bool allowIncomingSignal, const KeyInfoNISTP256& guestCA)
+{
+    PermissionPolicy* policy = new PermissionPolicy();
+
+    policy->SetSerialNum(2737834);
+
+    PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[3];
+
+    /* acls record 0  ANY-USER */
+    PermissionPolicy::Peer* peers = new PermissionPolicy::Peer[1];
+    peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
+    acls[0].SetPeers(1, peers);
+    PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[1];
+    rules[0].SetInterfaceName("*");
+    PermissionPolicy::Rule::Member* prms = NULL;
+    size_t count = 0;
+    if (allowIncomingSignal) {
+        prms = new PermissionPolicy::Rule::Member[3];
+        prms[count].SetMemberName("*");
+        prms[count].SetMemberType(PermissionPolicy::Rule::Member::SIGNAL);
+        prms[count].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+        count++;
+    } else {
+        prms = new PermissionPolicy::Rule::Member[2];
+    }
+    prms[count].SetMemberName("*");
+    prms[count].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+    prms[count].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+    count++;
+    prms[count].SetMemberName("*");
+    prms[count].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
+    prms[count].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+    count++;
+    rules[0].SetMembers(count, prms);
+    acls[0].SetRules(1, rules);
+
+    /* acls record 1 FROM_CERTIFICATE_AUTHORITY */
+    peers = new PermissionPolicy::Peer[1];
+    peers[0].SetType(PermissionPolicy::Peer::PEER_FROM_CERTIFICATE_AUTHORITY);
+    KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256(guestCA);
+    peers[0].SetKeyInfo(keyInfo);
+    acls[1].SetPeers(1, peers);
+    rules = new PermissionPolicy::Rule[1];
+    rules[0].SetInterfaceName("*");
+    prms = new PermissionPolicy::Rule::Member[1];
+    prms[0].SetMemberName("*");
+    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+    rules[0].SetMembers(1, prms);
+    acls[1].SetRules(1, rules);
+
+    GenerateAdminGroupACL(groupGUID, groupAuthority, acls[2]);
+    policy->SetAcls(3, acls);
+    return policy;
 }
 
 static PermissionPolicy* GenerateGuildSpecificAccessOutgoingPolicy(const GUID128& groupGUID, const KeyInfoNISTP256& groupAuthority, const GUID128& guildGUID, BusAttachment& guildAuthorityBus)
@@ -479,14 +534,14 @@ static PermissionPolicy* GenerateGuildSpecificAccessOutgoingPolicy(const GUID128
 
     PermissionPolicy* policy = new PermissionPolicy();
 
-    policy->SetSerialNum(3827326);
+    policy->SetSerialNum(827425);
 
-    PermissionPolicy::Term* terms = new PermissionPolicy::Term[3];
+    PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[3];
 
-    /* terms record 0  ANY-USER */
+    /* acls record 0  ANY-USER */
     PermissionPolicy::Peer* peers = new PermissionPolicy::Peer[1];
-    peers[0].SetType(PermissionPolicy::Peer::PEER_ANY);
-    terms[0].SetPeers(1, peers);
+    peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
+    acls[0].SetPeers(1, peers);
     PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[1];
     rules[0].SetInterfaceName(BasePermissionMgmtTest::ONOFF_IFC_NAME);
     PermissionPolicy::Rule::Member* prms = new PermissionPolicy::Rule::Member[3];
@@ -501,17 +556,17 @@ static PermissionPolicy* GenerateGuildSpecificAccessOutgoingPolicy(const GUID128
     prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
 
     rules[0].SetMembers(3, prms);
-    terms[0].SetRules(1, rules);
+    acls[0].SetRules(1, rules);
 
-    /* terms record 1 GUILD specific */
+    /* acls record 1 GUILD specific */
     peers = new PermissionPolicy::Peer[1];
-    peers[0].SetType(PermissionPolicy::Peer::PEER_GUILD);
-    peers[0].SetGuildId(guildGUID);
+    peers[0].SetType(PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP);
+    peers[0].SetSecurityGroupId(guildGUID);
     KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
     keyInfo->SetKeyId(guildAuthorityGUID.GetBytes(), qcc::GUID128::SIZE);
     keyInfo->SetPublicKey(&guildAuthorityPubKey);
     peers[0].SetKeyInfo(keyInfo);
-    terms[1].SetPeers(1, peers);
+    acls[1].SetPeers(1, peers);
     rules = new PermissionPolicy::Rule[1];
     rules[0].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
     prms = new PermissionPolicy::Rule::Member[3];
@@ -526,44 +581,30 @@ static PermissionPolicy* GenerateGuildSpecificAccessOutgoingPolicy(const GUID128
     prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
 
     rules[0].SetMembers(3, prms);
-    terms[1].SetRules(1, rules);
+    acls[1].SetRules(1, rules);
 
-    GenerateAdminGroupACL(groupGUID, groupAuthority, terms[2]);
-    policy->SetTerms(3, terms);
+    GenerateAdminGroupACL(groupGUID, groupAuthority, acls[2]);
+    policy->SetAcls(3, acls);
     return policy;
 }
 
-static PermissionPolicy* GeneratePolicyPeerPublicKey(const GUID128& groupGUID, const KeyInfoNISTP256& groupAuthority, BusAttachment& issuerBus, qcc::ECCPublicKey& peerPublicKey)
+static PermissionPolicy* GeneratePolicyPeerPublicKey(const GUID128& groupGUID, const KeyInfoNISTP256& groupAuthority, qcc::ECCPublicKey& peerPublicKey)
 {
-    qcc::GUID128 issuerGUID;
-    PermissionMgmtTestHelper::GetGUID(issuerBus, issuerGUID);
-    ECCPublicKey issuerPubKey;
-    QStatus status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(issuerBus, &issuerPubKey);
-    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
     PermissionPolicy* policy = new PermissionPolicy();
 
     policy->SetSerialNum(8742198);
 
-    /* add the admin section */
-    PermissionPolicy::Peer* admins = new PermissionPolicy::Peer[1];
-    admins[0].SetType(PermissionPolicy::Peer::PEER_GUID);
-    KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
-    keyInfo->SetKeyId(issuerGUID.GetBytes(), GUID128::SIZE);
-    keyInfo->SetPublicKey(&issuerPubKey);
-    admins[0].SetKeyInfo(keyInfo);
-    policy->SetAdmins(1, admins);
-
     /* add the provider section */
 
-    PermissionPolicy::Term* terms = new PermissionPolicy::Term[2];
+    PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[2];
 
-    /* terms record 0 peer */
+    /* acls record 0 peer */
     PermissionPolicy::Peer* peers = new PermissionPolicy::Peer[1];
-    peers[0].SetType(PermissionPolicy::Peer::PEER_GUID);
-    keyInfo = new KeyInfoNISTP256();
+    peers[0].SetType(PermissionPolicy::Peer::PEER_WITH_PUBLIC_KEY);
+    KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
     keyInfo->SetPublicKey(&peerPublicKey);
     peers[0].SetKeyInfo(keyInfo);
-    terms[0].SetPeers(1, peers);
+    acls[0].SetPeers(1, peers);
     PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[2];
     rules[0].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
     PermissionPolicy::Rule::Member* prms = new PermissionPolicy::Rule::Member[4];
@@ -587,44 +628,30 @@ static PermissionPolicy* GeneratePolicyPeerPublicKey(const GUID128& groupGUID, c
     prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
     rules[1].SetMembers(1, prms);
 
-    terms[0].SetRules(2, rules);
-    GenerateAdminGroupACL(groupGUID, groupAuthority, terms[1]);
-    policy->SetTerms(2, terms);
+    acls[0].SetRules(2, rules);
+    GenerateAdminGroupACL(groupGUID, groupAuthority, acls[1]);
+    policy->SetAcls(2, acls);
 
     return policy;
 }
 
-static PermissionPolicy* GeneratePolicyDenyPeerPublicKey(const GUID128& groupGUID, const KeyInfoNISTP256& groupAuthority, BusAttachment& issuerBus, qcc::ECCPublicKey& peerPublicKey)
+static PermissionPolicy* GeneratePolicyDenyPeerPublicKey(const GUID128& groupGUID, const KeyInfoNISTP256& groupAuthority, qcc::ECCPublicKey& peerPublicKey)
 {
-    qcc::GUID128 issuerGUID;
-    PermissionMgmtTestHelper::GetGUID(issuerBus, issuerGUID);
-    ECCPublicKey issuerPubKey;
-    QStatus status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(issuerBus, &issuerPubKey);
-    EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
     PermissionPolicy* policy = new PermissionPolicy();
 
     policy->SetSerialNum(32445);
 
-    /* add the admin section */
-    PermissionPolicy::Peer* admins = new PermissionPolicy::Peer[1];
-    admins[0].SetType(PermissionPolicy::Peer::PEER_GUID);
-    KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
-    keyInfo->SetKeyId(issuerGUID.GetBytes(), GUID128::SIZE);
-    keyInfo->SetPublicKey(&issuerPubKey);
-    admins[0].SetKeyInfo(keyInfo);
-    policy->SetAdmins(1, admins);
-
     /* add the provider section */
 
-    PermissionPolicy::Term* terms = new PermissionPolicy::Term[2];
+    PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[2];
 
-    /* terms record 0 peer */
+    /* acls record 0 peer */
     PermissionPolicy::Peer* peers = new PermissionPolicy::Peer[1];
-    peers[0].SetType(PermissionPolicy::Peer::PEER_GUID);
-    keyInfo = new KeyInfoNISTP256();
+    peers[0].SetType(PermissionPolicy::Peer::PEER_WITH_PUBLIC_KEY);
+    KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
     keyInfo->SetPublicKey(&peerPublicKey);
     peers[0].SetKeyInfo(keyInfo);
-    terms[0].SetPeers(1, peers);
+    acls[0].SetPeers(1, peers);
     PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[2];
     rules[0].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
     PermissionPolicy::Rule::Member* prms = new PermissionPolicy::Rule::Member[4];
@@ -633,7 +660,7 @@ static PermissionPolicy* GeneratePolicyDenyPeerPublicKey(const GUID128& groupGUI
     prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
     prms[1].SetMemberName("Down");
     prms[1].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
-    prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_DENIED);
+    prms[1].SetActionMask(0);  /* action denied */
     prms[2].SetMemberName("Volume");
     prms[2].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
     prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
@@ -648,9 +675,9 @@ static PermissionPolicy* GeneratePolicyDenyPeerPublicKey(const GUID128& groupGUI
     prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
     rules[1].SetMembers(1, prms);
 
-    terms[0].SetRules(2, rules);
-    GenerateAdminGroupACL(groupGUID, groupAuthority, terms[1]);
-    policy->SetTerms(2, terms);
+    acls[0].SetRules(2, rules);
+    GenerateAdminGroupACL(groupGUID, groupAuthority, acls[1]);
+    policy->SetAcls(2, acls);
 
     return policy;
 }
@@ -668,9 +695,6 @@ static QStatus GenerateAllowAllManifest(PermissionPolicy::Rule** retRules, size_
     return ER_OK;
 }
 
-/**
- * Generate a manifest that does not allow the app to call TV.InputSource method
- */
 static QStatus GenerateManifestNoInputSource(PermissionPolicy::Rule** retRules, size_t* count)
 {
     *count = 2;
@@ -711,7 +735,7 @@ static QStatus GenerateManifestDenied(bool denyTVUp, bool denyCaption, Permissio
     prms[0].SetMemberName("Up");
     prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
     if (denyTVUp) {
-        prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_DENIED);
+        prms[0].SetActionMask(0);  /* action denied */
     } else {
         prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
     }
@@ -727,7 +751,7 @@ static QStatus GenerateManifestDenied(bool denyTVUp, bool denyCaption, Permissio
     prms[4].SetMemberName("Caption");
     prms[4].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
     if (denyCaption) {
-        prms[4].SetActionMask(PermissionPolicy::Rule::Member::ACTION_DENIED);
+        prms[4].SetActionMask(0); /* action denied */
     } else {
         prms[4].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
     }
@@ -1033,8 +1057,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         EXPECT_EQ(ER_OK, pmProxy.GetPolicy(&retPolicy)) << "GetPolicy failed.";
 
         EXPECT_EQ(policy.GetSerialNum(), retPolicy.GetSerialNum()) << " GetPolicy failed. Different serial number.";
-        EXPECT_EQ(policy.GetAdminsSize(), retPolicy.GetAdminsSize()) << " GetPolicy failed. Different admin size.";
-        EXPECT_EQ(policy.GetTermsSize(), retPolicy.GetTermsSize()) << " GetPolicy failed. Different incoming terms size.";
+        EXPECT_EQ(policy.GetAclsSize(), retPolicy.GetAclsSize()) << " GetPolicy failed. Different incoming acls size.";
     }
 
     /**
@@ -1053,8 +1076,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         EXPECT_EQ(ER_OK, pmProxy.GetPolicy(&retPolicy)) << "GetPolicy failed.";
 
         EXPECT_EQ(policy.GetSerialNum(), retPolicy.GetSerialNum()) << " GetPolicy failed. Different serial number.";
-        EXPECT_EQ(policy.GetAdminsSize(), retPolicy.GetAdminsSize()) << " GetPolicy failed. Different admin size.";
-        EXPECT_EQ(policy.GetTermsSize(), retPolicy.GetTermsSize()) << " GetPolicy failed. Different incoming terms size.";
+        EXPECT_EQ(policy.GetAclsSize(), retPolicy.GetAclsSize()) << " GetPolicy failed. Different incoming acls size.";
         /* sleep a second to see whether the NotifyConfig signal is received */
         for (int cnt = 0; cnt < 100; cnt++) {
             if (GetNotifyConfigSignalReceived()) {
@@ -1288,6 +1310,20 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     }
 
     /**
+     *  Install Membership to the admin
+     */
+    void InstallAdminMembershipToBus(BusAttachment& issuerBus, BusAttachment& targetBus, const char* adminGroupSerial, const GUID128& adminGroupGUID)
+    {
+        ECCPublicKey targetPublicKey;
+        status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(targetBus, &targetPublicKey);
+        EXPECT_EQ(ER_OK, status) << "  InstallMembershipToAdmin RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
+        qcc::String subjectCN((const char*) consumerGUID.GetBytes(), consumerGUID.SIZE);
+        status = PermissionMgmtTestHelper::InstallMembership(adminGroupSerial, issuerBus, targetBus.GetUniqueName(), targetBus, subjectCN, &targetPublicKey, adminGroupGUID);
+
+        EXPECT_EQ(ER_OK, status) << "  InstallAdminMembershipToBus cert1 failed.  Actual Status: " << QCC_StatusText(status);
+    }
+
+    /**
      *  App can call On
      */
     void AppCanCallOn(BusAttachment& bus, BusAttachment& targetBus)
@@ -1346,9 +1382,6 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         EXPECT_NE(ER_OK, status) << "  AppCannotCallTVOn ExcerciseOn should have failed.  Actual Status: " << QCC_StatusText(status);
     }
 
-    /**
-     *  app can't call TV On
-     */
     void AppCannotCallTVDown(BusAttachment& bus, BusAttachment& targetBus)
     {
 
@@ -1357,9 +1390,6 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         EXPECT_NE(ER_OK, status) << "  AppCannotCallTVDown ExcerciseTVDown should have failed.  Actual Status: " << QCC_StatusText(status);
     }
 
-    /**
-     *  app can't call TV On
-     */
     void AppCanCallTVUp(BusAttachment& bus, BusAttachment& targetBus)
     {
 
@@ -1377,6 +1407,16 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         ProxyBusObject clientProxyObject(bus, targetBus.GetUniqueName().c_str(), GetPath(), 0, false);
         QStatus status = PermissionMgmtTestHelper::ExcerciseOff(bus, clientProxyObject);
         EXPECT_NE(ER_OK, status) << "  AppCannotCallTVOff ExcerciseOff should have failed.  Actual Status: " << QCC_StatusText(status);
+    }
+
+    void AppCanSetTVVolume(BusAttachment& bus, BusAttachment& targetBus, uint32_t tvVolume)
+    {
+
+        ProxyBusObject clientProxyObject(bus, targetBus.GetUniqueName().c_str(), GetPath(), 0, false);
+        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SetTVVolume(bus, clientProxyObject, tvVolume)) << "  AppCanSetTVVolume SetTVVolume failed.";
+        uint32_t newTvVolume = 0;
+        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::GetTVVolume(bus, clientProxyObject, newTvVolume)) << "  AppCanSetTVVolume failed.";
+        EXPECT_EQ(newTvVolume, tvVolume) << "  AppCanSetTVVolume GetTVVolume got wrong TV volume.";
     }
 
     /**
@@ -1638,7 +1678,7 @@ TEST_F(PermissionMgmtUseCaseTest, TestAllCalls)
     Claims(false);
     /* generate a policy */
 
-    PermissionPolicy* policy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, adminBus, consumerBus);
+    PermissionPolicy* policy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, consumerBus);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
     InstallPolicyToService(*policy);
     delete policy;
@@ -1686,7 +1726,7 @@ TEST_F(PermissionMgmtUseCaseTest, ClaimPolicyMembershipAccess)
 {
     Claims(true);
     /* generate a policy */
-    PermissionPolicy* policy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, adminBus, consumerBus);
+    PermissionPolicy* policy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, consumerBus);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
     InstallPolicyToService(*policy);
     delete policy;
@@ -1707,13 +1747,13 @@ TEST_F(PermissionMgmtUseCaseTest, ClaimPolicyMembershipAccess)
 }
 
 /*
- *  Case: outbound message allowed by guild based terms and peer's membership
+ *  Case: outbound message allowed by guild based acls and peer's membership
  */
 TEST_F(PathBasePermissionMgmtUseCaseTest, OutboundAllowedByMembership)
 {
     Claims(true);
     /* generate a policy */
-    PermissionPolicy* policy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, adminBus, consumerBus);
+    PermissionPolicy* policy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, consumerBus);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
     InstallPolicyToService(*policy);
     delete policy;
@@ -1733,14 +1773,14 @@ TEST_F(PathBasePermissionMgmtUseCaseTest, OutboundAllowedByMembership)
 }
 
 /*
- *  Case: outbound message not allowed by guild based terms since
+ *  Case: outbound message not allowed by guild based acls since
  *       peer does not have given guild membership.
  */
 TEST_F(PermissionMgmtUseCaseTest, OutboundNotAllowedByMissingPeerMembership)
 {
     Claims(true);
     /* generate a policy */
-    PermissionPolicy* policy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, adminBus, consumerBus);
+    PermissionPolicy* policy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, consumerBus);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
     InstallPolicyToService(*policy);
     delete policy;
@@ -1780,7 +1820,7 @@ TEST_F(PermissionMgmtUseCaseTest, AccessByPublicKey)
     ECCPublicKey consumerPublicKey;
     status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(consumerBus, &consumerPublicKey);
     EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
-    PermissionPolicy* policy = GeneratePolicyPeerPublicKey(adminAdminGroupGUID, adminAdminGroupAuthority, adminBus, consumerPublicKey);
+    PermissionPolicy* policy = GeneratePolicyPeerPublicKey(adminAdminGroupGUID, adminAdminGroupAuthority, consumerPublicKey);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
     InstallPolicyToService(*policy);
     delete policy;
@@ -1805,7 +1845,7 @@ TEST_F(PermissionMgmtUseCaseTest, AccessDeniedForPeerPublicKey)
     ECCPublicKey consumerPublicKey;
     status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(consumerBus, &consumerPublicKey);
     EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
-    PermissionPolicy* policy = GeneratePolicyDenyPeerPublicKey(adminAdminGroupGUID, adminAdminGroupAuthority, adminBus, consumerPublicKey);
+    PermissionPolicy* policy = GeneratePolicyDenyPeerPublicKey(adminAdminGroupGUID, adminAdminGroupAuthority, consumerPublicKey);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
     InstallPolicyToService(*policy);
     delete policy;
@@ -1867,7 +1907,7 @@ TEST_F(PermissionMgmtUseCaseTest, SendingOthersMembershipCert)
 {
     Claims(true);
     /* generate a policy */
-    PermissionPolicy* policy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, adminBus, consumerBus);
+    PermissionPolicy* policy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, consumerBus);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
     InstallPolicyToService(*policy);
     delete policy;
@@ -1884,7 +1924,7 @@ TEST_F(PermissionMgmtUseCaseTest, AccessNotAuthorizedBecauseOfWrongActionMask)
 {
     Claims(true);
     /* generate a limited policy */
-    PermissionPolicy* policy = GenerateSmallAnyUserPolicy(adminAdminGroupGUID, adminAdminGroupAuthority, adminBus);
+    PermissionPolicy* policy = GenerateSmallAnyUserPolicy(adminAdminGroupGUID, adminAdminGroupAuthority);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
     InstallPolicyToService(*policy);
     delete policy;
@@ -1905,7 +1945,7 @@ TEST_F(PermissionMgmtUseCaseTest, AccessNotAuthorizedBecauseOfDeniedOnPrefix)
 {
     Claims(true);
     /* generate a limited policy */
-    PermissionPolicy* policy = GenerateAnyUserDeniedPrefixPolicy(adminAdminGroupGUID, adminAdminGroupAuthority, adminBus);
+    PermissionPolicy* policy = GenerateAnyUserDeniedPrefixPolicy(adminAdminGroupGUID, adminAdminGroupAuthority);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
     InstallPolicyToService(*policy);
     delete policy;
@@ -1926,7 +1966,7 @@ TEST_F(PathBasePermissionMgmtUseCaseTest, ProviderHasNoMatchingGuildForConsumer)
 {
     Claims(false);
     /* generate a policy */
-    PermissionPolicy* policy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, adminBus, consumerBus);
+    PermissionPolicy* policy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, consumerBus);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
     InstallPolicyToService(*policy);
     delete policy;
@@ -1949,7 +1989,7 @@ TEST_F(PermissionMgmtUseCaseTest, ProviderHasMoreMembershipCertsThanConsumer)
 {
     Claims(false);
     /* generate a policy */
-    PermissionPolicy* policy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, adminBus, consumerBus);
+    PermissionPolicy* policy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, consumerBus);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
     InstallPolicyToService(*policy);
     delete policy;
@@ -1973,7 +2013,7 @@ TEST_F(PermissionMgmtUseCaseTest, ConsumerHasMoreMembershipCertsThanService)
 {
     Claims(false);
     /* generate a policy */
-    PermissionPolicy* policy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, adminBus, consumerBus);
+    PermissionPolicy* policy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, consumerBus);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
     InstallPolicyToService(*policy);
     delete policy;
@@ -1996,7 +2036,7 @@ TEST_F(PermissionMgmtUseCaseTest, ConsumerHasGoodMembershipCertChain)
 {
     Claims(false);
     /* generate a policy */
-    PermissionPolicy* policy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, adminBus, consumerBus);
+    PermissionPolicy* policy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, consumerBus);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
     InstallPolicyToService(*policy);
     delete policy;
@@ -2019,7 +2059,7 @@ TEST_F(PermissionMgmtUseCaseTest, ConsumerHasMoreRestrictiveManifest)
 {
     Claims(false);
     /* generate a policy */
-    PermissionPolicy* policy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, adminBus, consumerBus);
+    PermissionPolicy* policy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, consumerBus);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
     InstallPolicyToService(*policy);
     delete policy;
@@ -2049,7 +2089,7 @@ TEST_F(PathBasePermissionMgmtUseCaseTest, ConsumerHasLessAccessInManifestUsingDe
 {
     Claims(false);
     /* generate a policy */
-    PermissionPolicy* policy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, adminBus, consumerBus);
+    PermissionPolicy* policy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, consumerBus);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
     InstallPolicyToService(*policy);
     delete policy;
@@ -2079,7 +2119,7 @@ TEST_F(PermissionMgmtUseCaseTest, AllowEverything)
 {
     Claims(true);
     /* generate a limited policy */
-    PermissionPolicy* policy = GenerateWildCardPolicy(adminAdminGroupGUID, adminAdminGroupAuthority, adminBus);
+    PermissionPolicy* policy = GenerateWildCardPolicy(adminAdminGroupGUID, adminAdminGroupAuthority);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
     InstallPolicyToService(*policy);
     delete policy;
@@ -2100,7 +2140,7 @@ TEST_F(PermissionMgmtUseCaseTest, SignalAllowedFromAnyUser)
 {
     Claims(false);
     /* generate a policy to permit sending a signal */
-    PermissionPolicy* policy = GenerateFullAccessAnyUserPolicy(adminAdminGroupGUID, adminAdminGroupAuthority, adminBus, true);
+    PermissionPolicy* policy = GenerateFullAccessAnyUserPolicy(adminAdminGroupGUID, adminAdminGroupAuthority, true);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
     InstallPolicyToService(*policy);
     delete policy;
@@ -2128,7 +2168,7 @@ TEST_F(PermissionMgmtUseCaseTest, SignalNotAllowedToEmit)
 {
     Claims(false);
     /* generate a policy not permit sending a signal */
-    PermissionPolicy* policy = GenerateFullAccessAnyUserPolicy(adminAdminGroupGUID, adminAdminGroupAuthority, adminBus, false);
+    PermissionPolicy* policy = GenerateFullAccessAnyUserPolicy(adminAdminGroupGUID, adminAdminGroupAuthority, false);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
     InstallPolicyToService(*policy);
     delete policy;
@@ -2156,7 +2196,7 @@ TEST_F(PermissionMgmtUseCaseTest, SignalNotAllowedToReceive)
 {
     Claims(false);
     /* generate a policy to permit sending a signal */
-    PermissionPolicy* policy = GenerateFullAccessAnyUserPolicy(adminAdminGroupGUID, adminAdminGroupAuthority, adminBus, true);
+    PermissionPolicy* policy = GenerateFullAccessAnyUserPolicy(adminAdminGroupGUID, adminAdminGroupAuthority, true);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
     InstallPolicyToService(*policy);
     delete policy;
@@ -2180,3 +2220,50 @@ TEST_F(PermissionMgmtUseCaseTest, SignalNotAllowedToReceive)
     }
     EXPECT_FALSE(GetChannelChangedSignalReceived()) << " Unexpect to receive ChannelChanged signal.";
 }
+
+TEST_F(PermissionMgmtUseCaseTest, AccessGrantedForPeerFromSpecificCA)
+{
+    Claims(true);  /* also claim the remote control */
+
+    /* Setup so remote control is not trusted by service provider */
+    PermissionPolicy* policy = GenerateSmallAnyUserPolicy(adminAdminGroupGUID, adminAdminGroupAuthority);
+    ASSERT_TRUE(policy) << "GeneratePolicy failed.";
+    InstallPolicyToService(*policy);
+    delete policy;
+
+    policy = GenerateFullAccessOutgoingPolicy(consumerAdminGroupGUID, consumerAdminGroupAuthority);
+    InstallPolicyToClientBus(consumerBus, remoteControlBus, *policy);
+    delete policy;
+
+    CreateAppInterfaces(serviceBus, true);
+    CreateAppInterfaces(remoteControlBus, false);
+
+    /* access expected to fail because of lack of trust */
+    AppCannotCallOn(remoteControlBus, serviceBus);
+
+    /* Set up the service provider to trust the remote control via the peer
+     * type FROM_CERTIFICATE_AUTHORITY.
+     */
+    ClearPeerKeys(remoteControlBus, serviceBus);
+    ClearPeerKeys(serviceBus, remoteControlBus);
+    EnableSecurity("ALLJOYN_ECDHE_ECDSA");
+    KeyInfoNISTP256 consumerCA;
+    consumerBus.GetPermissionConfigurator().GetSigningPublicKey(consumerCA);
+    policy = GeneratePolicyForSpecificCA(adminAdminGroupGUID, adminAdminGroupAuthority, consumerCA);
+    ASSERT_TRUE(policy) << "GeneratePolicyForSpecificCA failed.";
+    InstallPolicyToService(*policy);
+    delete policy;
+    InstallMembershipToServiceProvider();
+
+    KeyInfoNISTP256 adminCA;
+    adminBus.GetPermissionConfigurator().GetSigningPublicKey(adminCA);
+    policy = GenerateFullAccessOutgoingPolicyWithGuestServices(consumerAdminGroupGUID, consumerAdminGroupAuthority, false, adminCA);
+    InstallPolicyToClientBus(consumerBus, remoteControlBus, *policy);
+    delete policy;
+
+    /* remote control can access the service provider */
+    AnyUserCanCallOnAndNotOff(remoteControlBus);
+    /* remote control can access specific right for the given CA */
+    AppCanSetTVVolume(remoteControlBus, serviceBus, 21);
+}
+

@@ -365,9 +365,9 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         }
         ifc->AddProperty("Version", "q", PROP_ACCESS_READ);
         ifc->AddMethod("Claim",     "(yyayay)ayay(yyayay)aya(yay)a(ssa(syy))",  NULL, "certificateAuthority,caAuthorityKeyIdentifier,adminSecurityGroupId,adminSecurityGroupAuthority,securityGroupAuthorityKeyId,identityCertificateChain,manifest");
-        ifc->AddMethod("InstallPolicy",     "(yv)",  NULL, "authorization");
+        ifc->AddMethod("InstallPolicy",     "(qua(a(ya(yyayay)ay)a(ssa(syy))))",  NULL, "authorization");
         ifc->AddMethod("InstallEncryptedPolicy",     "ay",  NULL, "encryptedAuthorization");
-        ifc->AddMethod("GetPolicy",     NULL, "(yv)",  "authorization");
+        ifc->AddMethod("GetPolicy",     NULL, "(qua(a(ya(yyayay)ay)a(ssa(syy))))",  "authorization");
         ifc->AddMethod("RemovePolicy",     NULL, NULL, NULL);
         ifc->AddMethod("InstallMembership",     "a(yay)",  NULL, "certchain");
         ifc->AddMethod("RemoveMembership",     "say", NULL, "serialNum,issuer");

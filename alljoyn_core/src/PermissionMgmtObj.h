@@ -94,9 +94,10 @@ class PermissionMgmtObj : public BusObject {
     };
 
     typedef enum {
-        TRUST_ANCHOR_CA = 0,           ///< certificate authority
-        TRUST_ANCHOR_ADMIN_GROUP = 1,  ///< admin group authority
-        TRUST_ANCHOR_MEMBERSHIP = 2    ///< Trust anchor for membership cert
+        TRUST_ANCHOR_CA = 0,            ///< certificate authority
+        TRUST_ANCHOR_ADMIN_GROUP = 1,   ///< admin group authority
+        TRUST_ANCHOR_SG_AUTHORITY = 2,  ///< security group authority
+        TRUST_ANCHOR_RESTRICTED_CA = 3  ///< restricted certificate authority
     } TrustAnchorType;
 
     struct TrustAnchor {
@@ -264,11 +265,23 @@ class PermissionMgmtObj : public BusObject {
      * Get the connected peer ECC public key if the connection uses the
      * ECDHE_ECDSA key exchange.
      * @param guid the peer guid
-     * @param[out] the buffer to hold the ECC public key.  Pass NULL to skip.
-     * @param[out] the buffer to hold the manifest digest. Pass NULL to skip.
+     * @param[out] publicKey the buffer to hold the ECC public key.  Pass NULL
+     *                       to skip.
+     * @param[out] manifestDigest the buffer to hold the manifest digest. Pass
+     *                            NULL to skip.
+     * @param[out] issuerPublicKeys the vector for the list of issuer public
+     *                               keys.
      * @return ER_OK if successful; otherwise, error code.
      */
-    QStatus GetConnectedPeerPublicKey(const qcc::GUID128& guid, qcc::ECCPublicKey* publicKey, uint8_t* manifestDigest);
+    QStatus GetConnectedPeerPublicKey(const qcc::GUID128& guid, qcc::ECCPublicKey* publicKey, uint8_t* manifestDigest, std::vector<qcc::ECCPublicKey>& issuerPublicKeys);
+
+    /**
+     * Get the connected peer ECC public key if the connection uses the
+     * ECDHE_ECDSA key exchange.
+     * @param guid the peer guid
+     * @param[out] publicKey the buffer to hold the ECC public key.
+     */
+    QStatus GetConnectedPeerPublicKey(const qcc::GUID128& guid, qcc::ECCPublicKey* publicKey);
 
     /**
      * Retrieve the membership certificate map.
@@ -394,6 +407,7 @@ class PermissionMgmtObj : public BusObject {
     QStatus PerformReset(bool keepForClaim);
     QStatus SameSubjectPublicKey(qcc::CertificateX509& cert, bool& outcome);
     bool IsTrustAnchor(TrustAnchorType taType, const qcc::ECCPublicKey* publicKey);
+    bool IsTrustAnchor(const qcc::ECCPublicKey* publicKey);
     QStatus ManageMembershipTrustAnchors(PermissionPolicy* policy);
     QStatus GetDSAPrivateKey(qcc::ECCPrivateKey& privateKey);
     QStatus StoreManifest(MsgArg& manifestArg);

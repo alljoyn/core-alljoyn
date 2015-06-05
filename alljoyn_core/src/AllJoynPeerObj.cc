@@ -1137,7 +1137,7 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
                            Send manifest if the local peer already cached the
                            remote peer's public key */
                         ECCPublicKey pubKey;
-                        QStatus aStatus = permissionMgmtObj.GetConnectedPeerPublicKey(peerState->GetGuid(), &pubKey, NULL);
+                        QStatus aStatus = permissionMgmtObj.GetConnectedPeerPublicKey(peerState->GetGuid(), &pubKey);
                         sendManifest = (ER_OK == aStatus);
                     }
                     if (sendManifest) {
@@ -1905,7 +1905,7 @@ void AllJoynPeerObj::SendMemberships(const InterfaceDescription::Member* member,
         goto Exit;
     }
     MethodReply(msg, replyArgs, ArraySize(replyArgs));
-    if (peerState->guildArgsSentCount >= peerState->guildArgsCount) {
+    if (peerState->guildArgsSentCount >= peerState->guildArgs.size()) {
         /* release this resource since it no longer used */
         _PeerState::ClearGuildArgs(peerState->guildArgs);
     }
