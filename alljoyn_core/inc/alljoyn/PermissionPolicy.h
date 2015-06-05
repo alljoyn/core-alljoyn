@@ -48,7 +48,7 @@ class PermissionPolicy {
      */
 
     /**
-     * The current spec version.
+     * The current specification version.
      */
     static const uint16_t SPEC_VERSION = 1;
 
@@ -578,7 +578,7 @@ class PermissionPolicy {
      * Constructor
      *
      */
-    PermissionPolicy() : version(SPEC_VERSION), serialNum(0), aclsSize(0), acls(NULL)
+    PermissionPolicy() : specificationVersion(SPEC_VERSION), version(0), aclsSize(0), acls(NULL)
     {
     }
 
@@ -591,22 +591,22 @@ class PermissionPolicy {
     }
 
 
-    void SetVersion(uint16_t version)
+    void SetSpecificationVersion(uint16_t specificationVersion)
+    {
+        this->specificationVersion = specificationVersion;
+    }
+    const uint16_t GetSpecificationVersion() const
+    {
+        return specificationVersion;
+    }
+
+    void SetVersion(uint32_t version)
     {
         this->version = version;
     }
-    const uint16_t GetVersion() const
+    const uint32_t GetVersion() const
     {
         return version;
-    }
-
-    void SetSerialNum(uint32_t serialNum)
-    {
-        this->serialNum = serialNum;
-    }
-    const uint32_t GetSerialNum() const
-    {
-        return serialNum;
     }
 
     /**
@@ -687,13 +687,13 @@ class PermissionPolicy {
 
     /**
      * Build the policy object from the message arg object
-     * @param version     the authorization data spec version
+     * @param specificationVersion  the specification version
      * @param msgArg      the message arg
      * @return
      *      - #ER_OK if creation was successful.
      *      - error code if fail
      */
-    QStatus Import(uint16_t version, const MsgArg& msgArg);
+    QStatus Import(uint16_t specificationVersion, const MsgArg& msgArg);
 
     /**
      * Generate a hash digest for the policy data
@@ -717,8 +717,8 @@ class PermissionPolicy {
     PermissionPolicy(const PermissionPolicy& other);
 
   private:
-    uint16_t version;
-    uint32_t serialNum;
+    uint16_t specificationVersion;
+    uint32_t version;
     size_t aclsSize;
     Acl* acls;
 };

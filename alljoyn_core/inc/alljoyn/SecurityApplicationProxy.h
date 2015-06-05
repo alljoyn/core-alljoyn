@@ -113,7 +113,7 @@ class SecurityApplicationProxy : public ProxyBusObject {
      *  - #ER_OK if successful
      *  - an error status indicating failure
      */
-    QStatus GetEccPublicKey(qcc::ECCPublicKey eccPublicKey);
+    QStatus GetEccPublicKey(qcc::ECCPublicKey& eccPublicKey);
 
     /**
      * The manufacturer certificate chain. The leaf cert is listed first. The signing
@@ -371,13 +371,14 @@ class SecurityApplicationProxy : public ProxyBusObject {
     /**
      * Get the serial number and issuer of the currently installed identity certificate.
      *
-     * @param[out] certificateId the IdentityCertificate
+     * @param[out] serial the identity certificate serial number
+     * @param[out] issuerKeyInfo the issuer key info including the AKI and public key
      *
      * @return
      *  - #ER_OK if successful
      *  - an error status indicating failure
      */
-    QStatus GetIdentityCertificateId(qcc::IdentityCertificate& certificateId);
+    QStatus GetIdentityCertificateId(qcc::String& serial, qcc::KeyInfoNISTP256& issuerKeyInfo);
 
     /**
      * Get the version number of the currently installed policy.
@@ -423,6 +424,17 @@ class SecurityApplicationProxy : public ProxyBusObject {
      *  - an error status indicating failure
      */
     QStatus GetMembershipSummaries(MsgArg& membershipSummaries);
+
+    /**
+     * Populate the array of identity certificates with data from the msg arg
+     * @param arg the message arg with signature a(yay)
+     * @param[in,out] certs the array of Identity certificates
+     * @param expectedSize the size of the certificate array
+     * @return
+     *  - #ER_OK if successful
+     *  - an error status indicating failure
+     */
+    static QStatus MsgArgToIdentityCertChain(const MsgArg& arg, qcc::IdentityCertificate* certs, size_t expectedSize);
 };
 }
 

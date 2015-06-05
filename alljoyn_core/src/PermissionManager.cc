@@ -646,37 +646,57 @@ bool PermissionManager::PeerHasAdminPriv(PeerState& peerState)
     return false;
 }
 
-bool PermissionManager::AuthorizePermissionMgmt(bool outgoing, PeerState& peerState, const char* mbrName)
+bool PermissionManager::AuthorizePermissionMgmt(bool outgoing, PeerState& peerState, const char* iName, const char* mbrName)
 {
     if (outgoing) {
         return true;  /* always allow send action */
     }
     bool authorized = false;
-
-    if (strncmp(mbrName, "Claim", 5) == 0) {
-        /* only allowed when there is no trust anchor */
-        return (!permissionMgmtObj->HasTrustAnchors());
-    } else if (
-        (strncmp(mbrName, "InstallPolicy", 14) == 0) ||
-        (strncmp(mbrName, "InstallEncryptedPolicy", 22) == 0) ||
-        (strncmp(mbrName, "GetPolicy", 9) == 0) ||
-        (strncmp(mbrName, "RemovePolicy", 12) == 0) ||
-        (strncmp(mbrName, "InstallMembership", 17) == 0) ||
-        (strncmp(mbrName, "InstallMembershipAuthData", 25) == 0) ||
-        (strncmp(mbrName, "RemoveMembership", 16) == 0) ||
-        (strncmp(mbrName, "InstallIdentity", 15) == 0) ||
-        (strncmp(mbrName, "Reset", 5) == 0)
-        ) {
-        /* these actions require admin privilege */
-        return PeerHasAdminPriv(peerState);
-    } else if (
-        (strncmp(mbrName, "State", 5) == 0) ||
-        (strncmp(mbrName, "GetPublicKey", 12) == 0) ||
-        (strncmp(mbrName, "GetIdentity", 11) == 0) ||
-        (strncmp(mbrName, "GetManifest", 11) == 0) ||
-        (strncmp(mbrName, "Version", 7) == 0)
-        ) {
+    if (strncmp(mbrName, "Version", 7) == 0) {
         return true;
+    }
+
+    if (strcmp(iName, org::alljoyn::Bus::Security::ClaimableApplication::InterfaceName) == 0) {
+        if (strncmp(mbrName, "Claim", 5) == 0) {
+            /* only allowed when there is no trust anchor */
+            return (!permissionMgmtObj->HasTrustAnchors());
+        }
+    } else if (strcmp(iName, org::alljoyn::Bus::Security::ManagedApplication::InterfaceName) == 0) {
+        if (strncmp(mbrName, "Identity", 8) == 0) {
+            return true;
+        } else if (
+            (strncmp(mbrName, "ReplaceIdentity", 15) == 0) ||
+            (strncmp(mbrName, "Reset", 5) == 0)
+            ) {
+            /* these actions require admin privilege */
+            return PeerHasAdminPriv(peerState);
+        }
+    } else if (strcmp(iName, org::alljoyn::Bus::Security::Application::InterfaceName) == 0) {
+        if (
+            (strncmp(mbrName, "ApplicationState", 16) == 0) ||
+            (strncmp(mbrName, "EccPublicKey", 12) == 0) ||
+            (strncmp(mbrName, "ManufacturerCertificate", 23) == 0)
+            ) {
+            return true;
+        }
+    } else if (strcmp(iName, org::alljoyn::Bus::Application::InterfaceName) == 0) {
+        if (strncmp(mbrName, "State", 5) == 0) {
+            return true;
+        }
+    } else if (strcmp(iName, org::allseen::Security::PermissionMgmt::InterfaceName) == 0) {
+        if (
+            (strncmp(mbrName, "InstallPolicy", 14) == 0) ||
+            (strncmp(mbrName, "InstallEncryptedPolicy", 22) == 0) ||
+            (strncmp(mbrName, "GetPolicy", 9) == 0) ||
+            (strncmp(mbrName, "RemovePolicy", 12) == 0) ||
+            (strncmp(mbrName, "InstallMembership", 17) == 0) ||
+            (strncmp(mbrName, "RemoveMembership", 16) == 0)
+            ) {
+            /* these actions require admin privilege */
+            return PeerHasAdminPriv(peerState);
+        } else if (strncmp(mbrName, "GetManifest", 11) == 0) {
+            return true;
+        }
     }
     return authorized;
 }
@@ -716,18 +736,13 @@ QStatus PermissionManager::AuthorizeMessage(bool outgoing, Message& msg, PeerSta
         return ER_PERMISSION_DENIED;
     }
     if (IsPermissionMgmtInterface(holder.iName)) {
-        if (AuthorizePermissionMgmt(outgoing, peerState, holder.mbrName)) {
+        if (AuthorizePermissionMgmt(outgoing, peerState, holder.iName, holder.mbrName)) {
             return ER_OK;
         }
     }
     /* is the app claimed? If not claimed, no enforcement */
     if (!permissionMgmtObj->HasTrustAnchors()) {
         return ER_OK;
-    }
-
-    if (!outgoing && PeerHasAdminPriv(peerState)) {
-        QCC_DbgPrintf(("PermissionManager::AuthorizeMessage peer has admin prividege"));
-        return ER_OK;  /* admin has full access */
     }
 
     QCC_DbgPrintf(("PermissionManager::AuthorizeMessage with outgoing: %d msg %s\nLocal policy %s", outgoing, msg->ToString().c_str(), GetPolicy() ? GetPolicy()->ToString().c_str() : "NULL"));

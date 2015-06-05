@@ -169,20 +169,14 @@ void SecurityApplicationObj::Claim(const ajn::InterfaceDescription::Member* memb
 
 void SecurityApplicationObj::Reset(const ajn::InterfaceDescription::Member* member, ajn::Message& msg)
 {
-    QCC_UNUSED(member); //TODO remove on implementation
-    QCC_UNUSED(msg); //TODO remove on implementation
     QCC_DbgTrace(("SecurityApplicationObj::%s", __FUNCTION__));
-    //TODO
-    MethodReply(msg, ER_NOT_IMPLEMENTED);
+    PermissionMgmtObj::Reset(member, msg);
 }
 
 void SecurityApplicationObj::UpdateIdentity(const ajn::InterfaceDescription::Member* member, ajn::Message& msg)
 {
-    QCC_UNUSED(member); //TODO remove on implementation
-    QCC_UNUSED(msg); //TODO remove on implementation
     QCC_DbgTrace(("SecurityApplicationObj::%s", __FUNCTION__));
-    //TODO
-    MethodReply(msg, ER_NOT_IMPLEMENTED);
+    InstallIdentity(member, msg);
 }
 
 void SecurityApplicationObj::UpdatePolicy(const ajn::InterfaceDescription::Member* member, ajn::Message& msg)
@@ -236,14 +230,14 @@ QStatus SecurityApplicationObj::Get(const char* ifcName, const char* propName, M
                      manifestTemplateDigest.digestData); */
             status = ER_NOT_IMPLEMENTED; // TODO remove on implementation
         } else if (0 == strcmp("EccPublicKey", propName)) {
-            /* status = val.Set("(yyayay)", eccPublicKey.algorithm,
-                    eccPublicKey.curveIdentifier,
-                    eccPublicKey.xCoordinateSize, eccPublicKey.xCoordinate,
-                    eccPublicKey.yCoordinateSize, eccPublicKey.yCoordinate); */
-            status = ER_NOT_IMPLEMENTED; // TODO remove on implementation
+            KeyInfoNISTP256 keyInfo;
+            status = GetPublicKey(keyInfo);
+            if (status == ER_OK) {
+                KeyInfoHelper::KeyInfoNISTP256PubKeyToMsgArg(keyInfo, val);
+            }
         } else if (0 == strcmp("ManufacturerCertificate", propName)) {
-            //status = val.Set("a(yay)", /*ManufacturerCertificate*/);
-            status = ER_NOT_IMPLEMENTED; // TODO remove on implementation
+            status = val.Set("a(yay)", 0, NULL); /* Currently there is no
+                                                    support for manufacturer certificate yet */
         } else if (0 == strcmp("ManifestTemplate", propName)) {
             //status = val.Set("a(ssa(syy))", /*ManifestTemplate*/);
             status = ER_NOT_IMPLEMENTED; // TODO remove on implementation
@@ -256,14 +250,36 @@ QStatus SecurityApplicationObj::Get(const char* ifcName, const char* propName, M
         if (0 == strcmp("Version", propName)) {
             status = val.Set("q", SecurityApplicationObj::SECURITY_MANAGED_APPLICATION_VERSION);
         } else if (0 == strcmp("Identity", propName)) {
-            //status = val.Set("a(yay)", /*Identity*/);
-            status = ER_NOT_IMPLEMENTED; // TODO remove on implementation
+            status = GetIdentity(val);
         } else if (0 == strcmp("Manifest", propName)) {
-            //status = val.Set("a(ssa(syy))", /*Manifest*/);
-            status = ER_NOT_IMPLEMENTED; // TODO remove on implementation
+            PermissionPolicy::Rule* manifest = NULL;
+            size_t manifestSize = 0;
+            status = RetrieveManifest(&manifest, &manifestSize);
+            if (ER_OK != status) {
+                delete [] manifest;
+                if (ER_MANIFEST_NOT_FOUND == status) {
+                    status = ER_BUS_NO_SUCH_PROPERTY;
+                }
+            } else {
+                status = PermissionPolicy::GenerateRules(manifest, manifestSize, val);
+                delete [] manifest;
+            }
         } else if (0 == strcmp("IdentityCertificateId", propName)) {
-            //status = val.Set("(ayyyayay)", /* IdentityCertificateId */);
-            status = ER_NOT_IMPLEMENTED; // TODO remove on implementation
+            qcc::String serial;
+            KeyInfoNISTP256 keyInfo;
+            status = RetrieveIdentityCertificateId(serial, keyInfo);
+            if (ER_CERTIFICATE_NOT_FOUND == status) {
+                status = ER_BUS_NO_SUCH_PROPERTY;
+            }
+            if (ER_OK == status) {
+                status = val.Set("(ayay(yyayay))",
+                                 serial.size(), serial.data(),
+                                 keyInfo.GetKeyIdLen(), keyInfo.GetKeyId(),
+                                 keyInfo.GetAlgorithm(), keyInfo.GetCurve(), ECC_COORDINATE_SZ, keyInfo.GetXCoord(), ECC_COORDINATE_SZ, keyInfo.GetYCoord());
+                if (ER_OK == status) {
+                    val.Stabilize();
+                }
+            }
         } else if (0 == strcmp("PolicyVersion", propName)) {
             status = val.Set("u", policyVersion);;
         } else if (0 == strcmp("Policy", propName)) {

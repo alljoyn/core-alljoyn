@@ -87,13 +87,9 @@ QStatus PermissionMgmtObj::Init()
         AddMethodHandler(ifc->GetMember("InstallPolicy"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::InstallPolicy));
         AddMethodHandler(ifc->GetMember("GetPolicy"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::GetPolicy));
         AddMethodHandler(ifc->GetMember("RemovePolicy"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::RemovePolicy));
-        AddMethodHandler(ifc->GetMember("InstallIdentity"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::InstallIdentity));
-        AddMethodHandler(ifc->GetMember("GetIdentity"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::GetIdentity));
         AddMethodHandler(ifc->GetMember("InstallMembership"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::InstallMembership));
         AddMethodHandler(ifc->GetMember("RemoveMembership"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::RemoveMembership));
         AddMethodHandler(ifc->GetMember("GetManifest"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::GetManifestTemplate));
-        AddMethodHandler(ifc->GetMember("Reset"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::Reset));
-        AddMethodHandler(ifc->GetMember("GetPublicKey"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::GetPublicKey));
     }
     ca = new CredentialAccessor(bus);
     bus.GetInternal().GetPermissionManager().SetPermissionMgmtObj(this);
@@ -121,9 +117,9 @@ void PermissionMgmtObj::Load()
     PermissionPolicy* policy = new PermissionPolicy();
     status = RetrievePolicy(*policy);
     if (ER_OK == status) {
-        serialNum = policy->GetSerialNum();
+        policyVersion = policy->GetVersion();
     } else {
-        serialNum = 0;
+        policyVersion = 0;
         delete policy;
         policy = NULL;
     }
@@ -546,19 +542,9 @@ QStatus PermissionMgmtObj::StoreDSAKeys(CredentialAccessor* ca, const ECCPrivate
     return ca->StoreKey(key, dsaPubKb);
 }
 
-void PermissionMgmtObj::GetPublicKey(const InterfaceDescription::Member* member, Message& msg)
+QStatus PermissionMgmtObj::GetPublicKey(KeyInfoNISTP256& publicKeyInfo)
 {
-    QCC_UNUSED(member);
-    KeyInfoNISTP256 replyKeyInfo;
-    QStatus status = RetrieveAndGenDSAPublicKey(ca, replyKeyInfo);
-    if (status != ER_OK) {
-        MethodReply(msg, status);
-        return;
-    }
-
-    MsgArg replyArgs[1];
-    KeyInfoHelper::KeyInfoNISTP256ToMsgArg(replyKeyInfo, replyArgs[0]);
-    BusObject::MethodReply(msg, replyArgs, ArraySize(replyArgs));
+    return RetrieveAndGenDSAPublicKey(ca, publicKeyInfo);
 }
 
 /**
@@ -575,7 +561,7 @@ void PermissionMgmtObj::GetPublicKey(const InterfaceDescription::Member* member,
 
 static void GenerateDefaultPolicy(const GUID128& adminGroupGUID, const KeyInfoNISTP256& adminGroupAuthority, const ECCPublicKey* localPublicKey, PermissionPolicy& policy)
 {
-    policy.SetSerialNum(0);
+    policy.SetVersion(0);
 
     /* add the acls section */
     PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[3];
@@ -740,7 +726,7 @@ DoneValidation:
     delete adminGroupAuthority;
     status = StorePolicy(*defaultPolicy);
     if (ER_OK == status) {
-        serialNum = defaultPolicy->GetSerialNum();
+        policyVersion = defaultPolicy->GetVersion();
         PolicyChanged(defaultPolicy);
     } else {
         delete defaultPolicy;
@@ -772,7 +758,7 @@ void PermissionMgmtObj::InstallPolicy(const InterfaceDescription::Member* member
     PermissionPolicy existingPolicy;
     status = RetrievePolicy(existingPolicy);
     if (ER_OK == status) {
-        if (policy->GetSerialNum() <= existingPolicy.GetSerialNum()) {
+        if (policy->GetVersion() <= existingPolicy.GetVersion()) {
             MethodReply(msg, ER_INSTALLING_OLDER_POLICY);
             delete policy;
             return;
@@ -781,7 +767,7 @@ void PermissionMgmtObj::InstallPolicy(const InterfaceDescription::Member* member
 
     status = StorePolicy(*policy);
     if (ER_OK == status) {
-        serialNum = policy->GetSerialNum();
+        policyVersion = policy->GetVersion();
     }
     MethodReply(msg, status);
     if (ER_OK == status) {
@@ -799,7 +785,7 @@ void PermissionMgmtObj::RemovePolicy(const InterfaceDescription::Member* member,
     QStatus status = ca->DeleteKey(key);
     MethodReply(msg, status);
     if (ER_OK == status) {
-        serialNum = 0;
+        policyVersion = 0;
         PolicyChanged(NULL);
     }
 }
@@ -1011,6 +997,7 @@ QStatus PermissionMgmtObj::StoreIdentityCertChain(MsgArg& certArg)
             goto ExitStoreIdentity;
         }
         IdentityCertificate cert;
+
         status = LoadCertificate((CertificateX509::EncodingType) encoding, encoded, encodedLen, cert, &trustAnchors);
         if (ER_OK != status) {
             QCC_DbgPrintf(("PermissionMgmtObj::StoreIdentityCertChain failed to validate certificate status 0x%x", status));
@@ -1108,6 +1095,66 @@ Exit:
     return status;
 }
 
+QStatus PermissionMgmtObj::RetrieveIdentityCertificateId(qcc::String& serial, qcc::KeyInfoNISTP256& issuerKeyInfo)
+{
+    KeyStore::Key identityHead;
+    GetACLKey(ENTRY_IDENTITY, identityHead);
+    KeyBlob kb;
+    QStatus status = ca->GetKey(identityHead, kb);
+    if (ER_OK != status) {
+        if (ER_BUS_KEY_UNAVAILABLE == status) {
+            status = ER_CERTIFICATE_NOT_FOUND;
+        }
+        return status;
+    }
+    IdentityCertificate leafCert;
+    status = LoadCertificate(CertificateX509::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), leafCert);
+    if (ER_OK != status) {
+        return status;
+    }
+    serial = leafCert.GetSerial();
+    issuerKeyInfo.SetKeyId((uint8_t*) leafCert.GetAuthorityKeyId().data(), leafCert.GetAuthorityKeyId().size());
+
+    /* locate the next cert in the identity cert chain for the issuer public key */
+    KeyStore::Key* keys = NULL;
+    size_t numOfKeys = 0;
+    status = ca->GetKeys(identityHead, &keys, &numOfKeys);
+    if (ER_OK != status) {
+        delete [] keys;
+        return status;
+    }
+    if (numOfKeys > 0) {
+        status = ca->GetKey(keys[0], kb);
+        if (ER_OK != status) {
+            goto Exit;
+        }
+        IdentityCertificate cert;
+        status = LoadCertificate(CertificateX509::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), cert);
+        if (ER_OK != status) {
+            goto Exit;
+        }
+        issuerKeyInfo.SetPublicKey(cert.GetSubjectPublicKey());
+    } else {
+        /* The identity cert is a single cert.  Locate the trust anchors that
+         * might sign this leaf cert */
+        TrustAnchorList anchors = LocateTrustAnchor(trustAnchors, leafCert.GetAuthorityKeyId());
+        if (anchors.empty()) {
+            status = ER_UNKNOWN_CERTIFICATE;
+            goto Exit;
+        }
+        for (TrustAnchorList::const_iterator it = anchors.begin(); it != anchors.end(); it++) {
+            if (ER_OK == leafCert.Verify((*it)->keyInfo.GetPublicKey())) {
+                issuerKeyInfo.SetPublicKey((*it)->keyInfo.GetPublicKey());
+                break;
+            }
+        }
+        anchors.clear();
+    }
+Exit:
+    delete [] keys;
+    return status;
+}
+
 void PermissionMgmtObj::InstallIdentity(const InterfaceDescription::Member* member, Message& msg)
 {
     QCC_UNUSED(member);
@@ -1152,20 +1199,22 @@ QStatus PermissionMgmtObj::GetIdentityBlob(KeyBlob& kb)
     return ER_OK;
 }
 
-void PermissionMgmtObj::GetIdentity(const InterfaceDescription::Member* member, Message& msg)
+QStatus PermissionMgmtObj::GetIdentity(MsgArg& arg)
 {
-    QCC_UNUSED(member);
     MsgArg* certArgs = NULL;
     size_t count = 0;
     QStatus status = RetrieveIdentityCertChain(&certArgs, &count);
     if (ER_OK != status) {
-        MethodReply(msg, status);
-        return;
+        delete [] certArgs;
+        return status;
     }
-    MsgArg replyArgs[1];
-    replyArgs[0].Set("a(yay)", count, certArgs);
-    BusObject::MethodReply(msg, replyArgs, ArraySize(replyArgs));
-    delete [] certArgs;
+    status = arg.Set("a(yay)", count, certArgs);
+    if (ER_OK != status) {
+        delete [] certArgs;
+        return status;
+    }
+    arg.SetOwnershipFlags(MsgArg::OwnsArgs, true);
+    return status;
 }
 
 QStatus PermissionMgmtObj::GetIdentityLeafCert(IdentityCertificate& cert)
@@ -1927,7 +1976,7 @@ QStatus PermissionMgmtObj::PerformReset(bool keepForClaim)
     bus.GetInternal().GetKeyStore().Clear(String(ECDHE_NAME_PREFIX_PATTERN));
 
     applicationState = PermissionConfigurator::CLAIMABLE;
-    serialNum = 0;
+    policyVersion = 0;
     PolicyChanged(NULL);
     return status;
 }

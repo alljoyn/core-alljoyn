@@ -190,7 +190,6 @@ class SecurityApplicationObj : public PermissionMgmtObj {
     //Rule* manifest;
     //size_t manifestSize;
     //IdentityCertificateId identityCertificateId;
-    uint32_t policyVersion;
     //Policy policy;
     //Policy defaultPolicy;
     //CertificateId* membershipSummaries;

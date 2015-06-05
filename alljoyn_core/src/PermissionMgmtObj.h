@@ -410,6 +410,13 @@ class PermissionMgmtObj : public BusObject {
   protected:
     void Claim(const InterfaceDescription::Member* member, Message& msg);
     BusAttachment& bus;
+    QStatus GetPublicKey(qcc::KeyInfoNISTP256& publicKeyInfo);
+    QStatus GetIdentity(MsgArg& arg);
+    QStatus GetIdentityLeafCert(qcc::IdentityCertificate& cert);
+    QStatus RetrieveIdentityCertificateId(qcc::String& serial, qcc::KeyInfoNISTP256& issuerKeyInfo);
+    void Reset(const InterfaceDescription::Member* member, Message& msg);
+    void InstallIdentity(const InterfaceDescription::Member* member, Message& msg);
+    uint32_t policyVersion;
 
   private:
 
@@ -464,10 +471,7 @@ class PermissionMgmtObj : public BusObject {
     void GetPolicy(const InterfaceDescription::Member* member, Message& msg);
     QStatus StateChanged();
 
-    void InstallIdentity(const InterfaceDescription::Member* member, Message& msg);
     QStatus GetIdentityBlob(qcc::KeyBlob& kb);
-    QStatus GetIdentityLeafCert(qcc::IdentityCertificate& cert);
-    void GetIdentity(const InterfaceDescription::Member* member, Message& msg);
     void InstallMembership(const InterfaceDescription::Member* member, Message& msg);
     void RemoveMembership(const InterfaceDescription::Member* member, Message& msg);
     void GetManifestTemplate(const InterfaceDescription::Member* member, Message& msg);
@@ -481,7 +485,6 @@ class PermissionMgmtObj : public BusObject {
     void PolicyChanged(PermissionPolicy* policy);
     QStatus StoreConfiguration(const Configuration& config);
     QStatus GetConfiguration(Configuration& config);
-    void Reset(const InterfaceDescription::Member* member, Message& msg);
     QStatus PerformReset(bool keepForClaim);
     QStatus SameSubjectPublicKey(qcc::CertificateX509& cert, bool& outcome);
     bool IsTrustAnchor(TrustAnchorType taType, const qcc::ECCPublicKey* publicKey);
@@ -498,7 +501,6 @@ class PermissionMgmtObj : public BusObject {
 
     CredentialAccessor* ca;
     PermissionConfigurator::ApplicationState applicationState;
-    uint32_t serialNum;
     TrustAnchorList trustAnchors;
     _PeerState::GuildMap guildMap;
     PortListener* portListener;

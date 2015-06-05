@@ -71,7 +71,7 @@ static PermissionPolicy* GenerateWildCardPolicy(const GUID128& groupGUID, const 
 {
     PermissionPolicy* policy = new PermissionPolicy();
 
-    policy->SetSerialNum(52516);
+    policy->SetVersion(52516);
 
     /* add the acls section */
     PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[2];
@@ -109,7 +109,7 @@ static PermissionPolicy* GeneratePolicy(const GUID128& groupGUID, const KeyInfoN
 
     PermissionPolicy* policy = new PermissionPolicy();
 
-    policy->SetSerialNum(74892317);
+    policy->SetVersion(74892317);
 
     /* add the acls section */
     PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[5];
@@ -231,7 +231,7 @@ static PermissionPolicy* GeneratePolicyForSpecificCA(const GUID128& groupGUID, c
 {
     PermissionPolicy* policy = new PermissionPolicy();
 
-    policy->SetSerialNum(25531);
+    policy->SetVersion(25531);
 
     /* add the acls section */
     PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[3];
@@ -305,7 +305,7 @@ static PermissionPolicy* GenerateSmallAnyUserPolicy(const GUID128& groupGUID, co
 {
     PermissionPolicy* policy = new PermissionPolicy();
 
-    policy->SetSerialNum(55);
+    policy->SetVersion(55);
 
     /* add the acls ection */
 
@@ -343,7 +343,7 @@ static PermissionPolicy* GenerateFullAccessAnyUserPolicy(const GUID128& groupGUI
 {
     PermissionPolicy* policy = new PermissionPolicy();
 
-    policy->SetSerialNum(552317);
+    policy->SetVersion(552317);
 
     /* add the acls ection */
 
@@ -390,7 +390,7 @@ static PermissionPolicy* GenerateAnyUserDeniedPrefixPolicy(const GUID128& groupG
 {
     PermissionPolicy* policy = new PermissionPolicy();
 
-    policy->SetSerialNum(552317);
+    policy->SetVersion(552317);
 
     /* add the incoming section */
 
@@ -427,7 +427,7 @@ static PermissionPolicy* GenerateFullAccessOutgoingPolicy(const GUID128& groupGU
 {
     PermissionPolicy* policy = new PermissionPolicy();
 
-    policy->SetSerialNum(38276);
+    policy->SetVersion(38276);
 
     PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[2];
 
@@ -473,7 +473,7 @@ static PermissionPolicy* GenerateFullAccessOutgoingPolicyWithGuestServices(const
 {
     PermissionPolicy* policy = new PermissionPolicy();
 
-    policy->SetSerialNum(2737834);
+    policy->SetVersion(2737834);
 
     PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[3];
 
@@ -534,7 +534,7 @@ static PermissionPolicy* GenerateGuildSpecificAccessOutgoingPolicy(const GUID128
 
     PermissionPolicy* policy = new PermissionPolicy();
 
-    policy->SetSerialNum(827425);
+    policy->SetVersion(827425);
 
     PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[3];
 
@@ -592,7 +592,7 @@ static PermissionPolicy* GeneratePolicyPeerPublicKey(const GUID128& groupGUID, c
 {
     PermissionPolicy* policy = new PermissionPolicy();
 
-    policy->SetSerialNum(8742198);
+    policy->SetVersion(8742198);
 
     /* add the provider section */
 
@@ -639,7 +639,7 @@ static PermissionPolicy* GeneratePolicyDenyPeerPublicKey(const GUID128& groupGUI
 {
     PermissionPolicy* policy = new PermissionPolicy();
 
-    policy->SetSerialNum(32445);
+    policy->SetVersion(32445);
 
     /* add the provider section */
 
@@ -801,15 +801,62 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     {
     }
 
+    QStatus VerifyIdentity(BusAttachment& bus, BusAttachment& targetBus, IdentityCertificate* identityCertChain, size_t certChainCount)
+    {
+        SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
+        /* retrieve the identity cert chain to compare */
+        MsgArg certChainArg;
+        EXPECT_EQ(ER_OK, saProxy.GetIdentity(certChainArg)) << "GetIdentity failed.";
+        size_t newCertChainCount = certChainArg.v_array.GetNumElements();
+        if (newCertChainCount == 0) {
+            return ER_FAIL;
+        }
+        EXPECT_EQ(newCertChainCount, certChainCount) << "GetIdentity returns back a cert chain in different length than the original.";
+        IdentityCertificate* newCertChain = new IdentityCertificate[newCertChainCount];
+        EXPECT_EQ(ER_OK, SecurityApplicationProxy::MsgArgToIdentityCertChain(certChainArg, newCertChain, newCertChainCount)) << "MsgArgToIdentityCertChain failed.";
+        for (size_t cnt = 0; cnt < newCertChainCount; cnt++) {
+            qcc::String retIdentity;
+            status = newCertChain[cnt].EncodeCertificateDER(retIdentity);
+            EXPECT_EQ(ER_OK, status) << "  newCert.EncodeCertificateDER failed.  Actual Status: " << QCC_StatusText(status);
+            qcc::String originalIdentity;
+            EXPECT_EQ(ER_OK, identityCertChain[cnt].EncodeCertificateDER(originalIdentity)) << "  original cert EncodeCertificateDER failed.";
+            EXPECT_EQ(0, memcmp(originalIdentity.data(), retIdentity.data(), originalIdentity.length())) << "  GetIdentity failed.  Return value does not equal original";
+        }
+        delete [] newCertChain;
+        return ER_OK;
+    }
+
+    QStatus VerifyIdentityManifestSize(BusAttachment& bus, BusAttachment& targetBus, size_t manifestSize)
+    {
+        SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
+        /* retrieve the manifest to compare */
+        MsgArg manifestArg;
+        EXPECT_EQ(ER_OK, saProxy.GetManifest(manifestArg)) << "GetManifest failed.";
+        size_t newManifestCount = manifestArg.v_array.GetNumElements();
+        if (newManifestCount == 0) {
+            return ER_FAIL;
+        }
+        EXPECT_EQ(newManifestCount, manifestSize) << "GetManifest returns back a cert chain in different length than the original.";
+        return ER_OK;
+    }
+
+    QStatus RetrieveIdentityCertificateId(BusAttachment& bus, BusAttachment& targetBus, qcc::String serial)
+    {
+        SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
+        /* retrieve the identity certificate id property */
+        qcc::String serialNum;
+        KeyInfoNISTP256 keyInfo;
+        EXPECT_EQ(ER_OK, saProxy.GetIdentityCertificateId(serialNum, keyInfo)) << "GetIdentityCertificateId failed.";
+        EXPECT_TRUE(serial == serialNum) << " The serial numbers don't match.";
+        return ER_OK;
+    }
+
     QStatus InvokeClaim(bool useAdminCA, BusAttachment& claimerBus, BusAttachment& claimedBus, qcc::String serial, qcc::String alias, bool expectClaimToFail, BusAttachment* caBus)
     {
         SecurityApplicationProxy saProxy(claimerBus, claimedBus.GetUniqueName().c_str());
-        /** TODO: remove pmProxy once the required information is refactored
-         * into the SecurityApplicationProxy */
-        PermissionMgmtProxy pmProxy(claimerBus, claimedBus.GetUniqueName().c_str());
         /* retrieve public key from to-be-claimed app to create identity cert */
         ECCPublicKey claimedPubKey;
-        EXPECT_EQ(ER_OK, pmProxy.GetPublicKey(&claimedPubKey)) << " Fail to retrieve to-be-claimed public key.";
+        EXPECT_EQ(ER_OK, saProxy.GetEccPublicKey(claimedPubKey)) << " Fail to retrieve to-be-claimed public key.";
         qcc::GUID128 guid;
         PermissionMgmtTestHelper::GetGUID(claimerBus, guid);
         IdentityCertificate identityCertChain[2];
@@ -838,26 +885,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
             return status;
         }
         EXPECT_EQ(ER_OK, status) << "Claim failed.";
-
-        /* retrieve back the identity cert to compare */
-        IdentityCertificate* newCertChain = NULL;
-        size_t newCertChainCount = 0;
-        status = pmProxy.GetIdentity(&newCertChain, &newCertChainCount);
-        EXPECT_EQ(ER_OK, status) << "GetIdentity failed.";
-        if ((ER_OK != status) || (newCertChainCount == 0)) {
-            return ER_FAIL;
-        }
-        EXPECT_EQ(newCertChainCount, certChainCount) << "GetIdentity returns back a cert chain in different length than the original.";
-        for (size_t cnt = 0; cnt < newCertChainCount; cnt++) {
-            qcc::String retIdentity;
-            status = newCertChain[cnt].EncodeCertificateDER(retIdentity);
-            EXPECT_EQ(ER_OK, status) << "  newCert.EncodeCertificateDER failed.  Actual Status: " << QCC_StatusText(status);
-            qcc::String originalIdentity;
-            EXPECT_EQ(ER_OK, identityCertChain[cnt].EncodeCertificateDER(originalIdentity)) << "  original cert EncodeCertificateDER failed.";
-            EXPECT_EQ(0, memcmp(originalIdentity.data(), retIdentity.data(), originalIdentity.length())) << "  GetIdentity failed.  Return value does not equal original";
-        }
-        delete [] newCertChain;
-        return ER_OK;
+        return VerifyIdentity(claimerBus, claimedBus, identityCertChain, certChainCount);
     }
 
     QStatus InvokeClaim(bool useAdminCA, BusAttachment& claimerBus, BusAttachment& claimedBus, qcc::String serial, qcc::String alias, bool expectClaimToFail)
@@ -913,9 +941,9 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         status = PermissionMgmtTestHelper::JoinPeerSession(adminBus, serviceBus, sessionId);
         EXPECT_EQ(ER_OK, status) << "  JoinSession failed.  Actual Status: " << QCC_StatusText(status);
 
-        PermissionMgmtProxy pmProxy(adminBus, serviceBus.GetUniqueName().c_str(), sessionId);
+        SecurityApplicationProxy saProxy(adminBus, serviceBus.GetUniqueName().c_str());
         ECCPublicKey claimedPubKey;
-        EXPECT_EQ(ER_OK, pmProxy.GetPublicKey(&claimedPubKey)) << "GetPeerPublicKey failed.";
+        EXPECT_EQ(ER_OK, saProxy.GetEccPublicKey(claimedPubKey)) << "GetPeerPublicKey failed.";
 
         SetApplicationStateSignalReceived(false);
 
@@ -946,7 +974,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
 
         ECCPublicKey claimedPubKey2;
         /* retrieve public key from claimed app to validate that it is not changed */
-        EXPECT_EQ(ER_OK, pmProxy.GetPublicKey(&claimedPubKey2)) << "GetPeerPublicKey failed.";
+        EXPECT_EQ(ER_OK, saProxy.GetEccPublicKey(claimedPubKey2)) << "GetPeerPublicKey failed.";
         EXPECT_EQ(memcmp(&claimedPubKey2, &claimedPubKey, sizeof(ECCPublicKey)), 0) << "  The public key of the claimed app has changed.";
 
         /* sleep a second to see whether the ApplicationState signal is received */
@@ -1049,6 +1077,15 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         Claims(usePSK, true);
     }
 
+    void AppHasAllowAllManifest(BusAttachment& bus, BusAttachment& targetBus)
+    {
+        PermissionPolicy::Rule* manifest = NULL;
+        size_t manifestSize = 0;
+        GenerateAllowAllManifest(&manifest, &manifestSize);
+        EXPECT_EQ(ER_OK, VerifyIdentityManifestSize(bus, targetBus, manifestSize)) << "VerifyIdentityManifestSize failed.";
+        delete [] manifest;
+    }
+
     /**
      *  Install policy to service app
      */
@@ -1061,7 +1098,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         PermissionPolicy retPolicy;
         EXPECT_EQ(ER_OK, pmProxy.GetPolicy(&retPolicy)) << "GetPolicy failed.";
 
-        EXPECT_EQ(policy.GetSerialNum(), retPolicy.GetSerialNum()) << " GetPolicy failed. Different serial number.";
+        EXPECT_EQ(policy.GetVersion(), retPolicy.GetVersion()) << " GetPolicy failed. Different policy version number.";
         EXPECT_EQ(policy.GetAclsSize(), retPolicy.GetAclsSize()) << " GetPolicy failed. Different incoming acls size.";
     }
 
@@ -1080,7 +1117,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         PermissionPolicy retPolicy;
         EXPECT_EQ(ER_OK, pmProxy.GetPolicy(&retPolicy)) << "GetPolicy failed.";
 
-        EXPECT_EQ(policy.GetSerialNum(), retPolicy.GetSerialNum()) << " GetPolicy failed. Different serial number.";
+        EXPECT_EQ(policy.GetVersion(), retPolicy.GetVersion()) << " GetPolicy failed. Different policy version number.";
         EXPECT_EQ(policy.GetAclsSize(), retPolicy.GetAclsSize()) << " GetPolicy failed. Different incoming acls size.";
         /* sleep a second to see whether the ApplicationState signal is received */
         for (int cnt = 0; cnt < 100; cnt++) {
@@ -1090,8 +1127,8 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
             qcc::Sleep(10);
         }
         EXPECT_TRUE(GetApplicationStateSignalReceived()) << " Fail to receive expected ApplicationState signal.";
-        /* install a policy with the same serial number.  Expect to fail. */
-        EXPECT_NE(ER_OK, pmProxy.InstallPolicy(policy)) << "InstallPolicy again with same serial number expected to fail, but it did not.";
+        /* install a policy with the same policy version number.  Expect to fail. */
+        EXPECT_NE(ER_OK, pmProxy.InstallPolicy(policy)) << "InstallPolicy again with same policy version number expected to fail, but it did not.";
     }
 
     /**
@@ -1123,13 +1160,17 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
      */
     void ReplaceIdentityCert(BusAttachment& bus, BusAttachment& targetBus, const PermissionPolicy::Rule* manifest, size_t manifestSize, bool generateRandomSubjectKey)
     {
-        PermissionMgmtProxy pmProxy(bus, targetBus.GetUniqueName().c_str());
-
+        SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
         /* retrieve the current identity cert */
-        IdentityCertificate* certs = NULL;
-        size_t count = 0;
-        EXPECT_EQ(ER_OK, pmProxy.GetIdentity(&certs, &count)) << "GetIdentity failed.";
+        MsgArg certChainArg;
+        EXPECT_EQ(ER_OK, saProxy.GetIdentity(certChainArg)) << "GetIdentity failed.";
+        size_t count = certChainArg.v_array.GetNumElements();
         ASSERT_GT(count, (size_t) 0) << "No identity cert found.";
+        if (count == 0) {
+            return;
+        }
+        IdentityCertificate* certs = new IdentityCertificate[count];
+        EXPECT_EQ(ER_OK, SecurityApplicationProxy::MsgArgToIdentityCertChain(certChainArg, certs, count)) << "MsgArgToIdentityCertChain failed.";
 
         /* create a new identity cert */
         qcc::String subject((const char*) certs[0].GetSubjectCN(), certs[0].GetSubjectCNLength());
@@ -1147,7 +1188,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         status = PermissionMgmtTestHelper::CreateIdentityCert(bus, "4040404", subject, subjectPublicKey, "Service Provider", 3600, identityCertChain[0], digest, Crypto_SHA256::DIGEST_SIZE);
         EXPECT_EQ(ER_OK, status) << "  CreateIdentityCert failed.";
 
-        status = pmProxy.InstallIdentity(identityCertChain, 1, manifest, manifestSize);
+        status = saProxy.UpdateIdentity(identityCertChain, 1, manifest, manifestSize);
         if (generateRandomSubjectKey) {
             EXPECT_NE(ER_OK, status) << "InstallIdentity did not fail.";
         } else {
@@ -1180,12 +1221,17 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
 
     void ReplaceIdentityCertWithExpiredCert(BusAttachment& bus, BusAttachment& targetBus)
     {
-        PermissionMgmtProxy pmProxy(bus, targetBus.GetUniqueName().c_str());
+        SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
         /* retrieve the current identity cert */
-        IdentityCertificate* certs = NULL;
-        size_t count = 0;
-        EXPECT_EQ(ER_OK, pmProxy.GetIdentity(&certs, &count)) << "GetIdentity failed.";
+        MsgArg certChainArg;
+        EXPECT_EQ(ER_OK, saProxy.GetIdentity(certChainArg)) << "GetIdentity failed.";
+        size_t count = certChainArg.v_array.GetNumElements();
         ASSERT_GT(count, (size_t) 0) << "No identity cert found.";
+        if (count == 0) {
+            return;
+        }
+        IdentityCertificate* certs = new IdentityCertificate[count];
+        EXPECT_EQ(ER_OK, SecurityApplicationProxy::MsgArgToIdentityCertChain(certChainArg, certs, count)) << "MsgArgToIdentityCertChain failed.";
 
         /* create a new identity cert */
         qcc::String subject((const char*) certs[0].GetSubjectCN(), certs[0].GetSubjectCNLength());
@@ -1201,7 +1247,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
 
         /* sleep 2 seconds to get the cert to expire */
         qcc::Sleep(2000);
-        EXPECT_NE(ER_OK, pmProxy.InstallIdentity(identityCertChain, 1, manifest, manifestSize)) << "InstallIdentity did not fail.";
+        EXPECT_NE(ER_OK, saProxy.UpdateIdentity(identityCertChain, 1, manifest, manifestSize)) << "InstallIdentity did not fail.";
         delete [] certs;
         delete [] manifest;
     }
@@ -1623,8 +1669,8 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
      */
     void FailResetServiceByConsumer()
     {
-        PermissionMgmtProxy pmProxy(consumerBus, serviceBus.GetUniqueName().c_str());
-        EXPECT_EQ(ER_PERMISSION_DENIED, pmProxy.Reset()) << "  Reset is not supposed to succeed.";
+        SecurityApplicationProxy saProxy(consumerBus, serviceBus.GetUniqueName().c_str());
+        EXPECT_EQ(ER_PERMISSION_DENIED, saProxy.Reset()) << "  Reset is not supposed to succeed.";
 
     }
 
@@ -1634,13 +1680,12 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
      */
     void SuccessfulResetServiceByAdmin()
     {
-        PermissionMgmtProxy pmProxy(adminBus, serviceBus.GetUniqueName().c_str());
-        EXPECT_EQ(ER_OK, pmProxy.Reset()) << "  Reset failed.";
+        SecurityApplicationProxy saProxy(adminBus, serviceBus.GetUniqueName().c_str());
+        EXPECT_EQ(ER_OK, saProxy.Reset()) << "  Reset failed.";
 
         /* retrieve the current identity cert */
-        IdentityCertificate* certs = NULL;
-        size_t count = 0;
-        EXPECT_NE(ER_OK, pmProxy.GetIdentity(&certs, &count)) << "GetIdentity is not supposed to succeed since it was removed by Reset.";
+        MsgArg certChainArg;
+        EXPECT_NE(ER_OK, saProxy.GetIdentity(certChainArg)) << "GetIdentity is not supposed to succeed since it was removed by Reset.";
     }
 
     /*
@@ -1690,6 +1735,10 @@ TEST_F(PermissionMgmtUseCaseTest, TestAllCalls)
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
     InstallPolicyToService(*policy);
     delete policy;
+
+    AppHasAllowAllManifest(adminBus, serviceBus);
+
+    RetrieveIdentityCertificateId(adminBus, serviceBus, "2020202");
 
     ReplaceIdentityCert(adminBus, serviceBus);
     InstallMembershipToServiceProvider();

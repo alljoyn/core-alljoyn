@@ -372,11 +372,7 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         ifc->AddMethod("RemovePolicy",     NULL, NULL, NULL);
         ifc->AddMethod("InstallMembership",     "a(yay)",  NULL, "certchain");
         ifc->AddMethod("RemoveMembership",     "say", NULL, "serialNum,issuer");
-        ifc->AddMethod("InstallIdentity",     "a(yay)a(ssa(syy))", NULL, "certChain,manifest");
-        ifc->AddMethod("GetIdentity",     NULL, "a(yay)", "certChain");
         ifc->AddMethod("GetManifest",     NULL, "(yv)",  "manifest");
-        ifc->AddMethod("Reset",     NULL, NULL, NULL);
-        ifc->AddMethod("GetPublicKey", NULL, "(yv)", "publicKey");
         ifc->Activate();
     }
     return status;

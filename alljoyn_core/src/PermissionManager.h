@@ -99,7 +99,7 @@ class PermissionManager {
     PermissionManager(const PermissionManager& src);
 
     bool PeerHasAdminPriv(PeerState& peerState);
-    bool AuthorizePermissionMgmt(bool outgoing, PeerState& peerState, const char* mbrName);
+    bool AuthorizePermissionMgmt(bool outgoing, PeerState& peerState, const char* iName, const char* mbrName);
 
     PermissionPolicy* policy;
     PermissionMgmtObj* permissionMgmtObj;
