@@ -859,7 +859,8 @@ void SessionlessObj::HandleRangeRequest(const char* sender, SessionId sid,
     while (it != localCache.end()) {
         if (IN_WINDOW(uint32_t, fromChangeId, rangeLen, it->second.first)) {
             SessionlessMessageKey key = it->first;
-            if (it->second.second->IsExpired()) {
+            Message msg = it->second.second;
+            if (msg->IsExpired()) {
                 /* Remove expired message without sending */
                 localCache.erase(it++);
                 messageErased = true;
@@ -868,15 +869,15 @@ void SessionlessObj::HandleRangeRequest(const char* sender, SessionId sid,
                 bool isMatch = remoteRules.empty();
                 for (vector<String>::iterator rit = remoteRules.begin(); !isMatch && (rit != remoteRules.end()); ++rit) {
                     Rule rule(rit->c_str());
-                    isMatch = rule.IsMatch(it->second.second) || (rule == legacyRule);
+                    isMatch = rule.IsMatch(msg) || (rule == legacyRule);
                 }
                 if (isMatch) {
                     BusEndpoint ep = router.FindEndpoint(sender);
                     if (ep->IsValid()) {
                         lock.Unlock();
                         router.UnlockNameTable();
-                        QCC_DbgPrintf(("Send cid=%u,serialNum=%u to sid=%u", it->second.first, it->second.second->GetCallSerial(), sid));
-                        SendThroughEndpoint(it->second.second, ep, sid);
+                        QCC_DbgPrintf(("Send cid=%u,serialNum=%u to sid=%u", it->second.first, msg->GetCallSerial(), sid));
+                        SendThroughEndpoint(msg, ep, sid);
                         router.LockNameTable();
                         lock.Lock();
                     }
@@ -884,7 +885,7 @@ void SessionlessObj::HandleRangeRequest(const char* sender, SessionId sid,
                 it = localCache.upper_bound(key);
             } else {
                 /* Send message to local destination */
-                SendMatchingThroughEndpoint(sid, it->second.second, fromLocalRulesId, toLocalRulesId);
+                SendMatchingThroughEndpoint(sid, msg, fromLocalRulesId, toLocalRulesId);
                 it = localCache.upper_bound(key);
             }
         } else {
