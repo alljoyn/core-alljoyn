@@ -450,14 +450,14 @@ QStatus Accept(SocketFd sockfd, SocketFd& newSockfd)
 }
 
 
-QStatus Shutdown(SocketFd sockfd)
+QStatus Shutdown(SocketFd sockfd, ShutdownHow how)
 {
     QStatus status = ER_OK;
     int ret;
 
-    QCC_DbgTrace(("Shutdown(sockfd = %d)", sockfd));
+    QCC_DbgTrace(("Shutdown(sockfd = %d, how = %d)", sockfd, how));
 
-    ret = shutdown(static_cast<int>(sockfd), SHUT_RDWR);
+    ret = shutdown(static_cast<int>(sockfd), static_cast<int>(how));
     if (ret != 0) {
         status = ER_OS_ERROR;
         QCC_LogError(status, ("Shutdown socket (sockfd = %u): %d - %s", sockfd, errno, strerror(errno)));
@@ -465,6 +465,10 @@ QStatus Shutdown(SocketFd sockfd)
     return status;
 }
 
+QStatus Shutdown(SocketFd sockfd)
+{
+    return Shutdown(sockfd, QCC_SHUTDOWN_RDWR);
+}
 
 void Close(SocketFd sockfd)
 {

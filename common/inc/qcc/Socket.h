@@ -159,6 +159,16 @@ QStatus Accept(SocketFd sockfd, SocketFd& newSockfd);
  * Shutdown a connection.
  *
  * @param sockfd        Socket descriptor.
+ * @param how           What parts of a full-duplex connection to shutdown.
+ *
+ * @return  Indication of success of failure.
+ */
+QStatus Shutdown(SocketFd sockfd, ShutdownHow how);
+
+/**
+ * Shutdown a connection.
+ *
+ * @param sockfd        Socket descriptor.
  *
  * @return  Indication of success of failure.
  */
