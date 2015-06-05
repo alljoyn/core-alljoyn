@@ -708,9 +708,13 @@ PermissionPolicy::Rule& PermissionPolicy::Rule::operator=(const PermissionPolicy
         interfaceName = other.interfaceName;
         membersSize = other.membersSize;
         delete [] members;
-        members = new Member[membersSize];
-        for (size_t i = 0; i < membersSize; i++) {
-            members[i] = other.members[i];
+        members = NULL;
+
+        if (membersSize > 0) {
+            members = new Member[membersSize];
+            for (size_t i = 0; i < membersSize; i++) {
+                members[i] = other.members[i];
+            }
         }
     }
     return *this;
@@ -719,9 +723,14 @@ PermissionPolicy::Rule& PermissionPolicy::Rule::operator=(const PermissionPolicy
 PermissionPolicy::Rule::Rule(const PermissionPolicy::Rule& other) :
     objPath(other.objPath), interfaceName(other.interfaceName),
     membersSize(other.membersSize) {
-    members = new Member[membersSize];
-    for (size_t i = 0; i < membersSize; i++) {
-        members[i] = other.members[i];
+
+    if (membersSize > 0) {
+        members = new Member[membersSize];
+        for (size_t i = 0; i < membersSize; i++) {
+            members[i] = other.members[i];
+        }
+    } else {
+        members = NULL;
     }
 }
 
@@ -730,13 +739,21 @@ PermissionPolicy::Term& PermissionPolicy::Term::operator=(const PermissionPolicy
         peersSize = other.peersSize;
         rulesSize = other.rulesSize;
         delete [] peers;
-        peers = new Peer[peersSize];
-        for (size_t i = 0; i < peersSize; i++) {
-            peers[i] = other.peers[i];
+        peers = NULL;
+
+        if (peersSize > 0) {
+            peers = new Peer[peersSize];
+            for (size_t i = 0; i < peersSize; i++) {
+                peers[i] = other.peers[i];
+            }
         }
-        rules = new Rule[rulesSize];
-        for (size_t i = 0; i < rulesSize; i++) {
-            rules[i] = other.rules[i];
+        delete [] rules;
+        rules = NULL;
+        if (rulesSize > 0) {
+            rules = new Rule[rulesSize];
+            for (size_t i = 0; i < rulesSize; i++) {
+                rules[i] = other.rules[i];
+            }
         }
     }
     return *this;
@@ -744,13 +761,23 @@ PermissionPolicy::Term& PermissionPolicy::Term::operator=(const PermissionPolicy
 
 PermissionPolicy::Term::Term(const PermissionPolicy::Term& other) :
     peersSize(other.peersSize), rulesSize(other.rulesSize) {
-    peers = new Peer[peersSize];
-    for (size_t i = 0; i < peersSize; i++) {
-        peers[i] = other.peers[i];
+
+    if (peersSize > 0) {
+        peers = new Peer[peersSize];
+        for (size_t i = 0; i < peersSize; i++) {
+            peers[i] = other.peers[i];
+        }
+    } else {
+        peers = NULL;
     }
-    rules = new Rule[rulesSize];
-    for (size_t i = 0; i < rulesSize; i++) {
-        rules[i] = other.rules[i];
+
+    if (rulesSize > 0) {
+        rules = new Rule[rulesSize];
+        for (size_t i = 0; i < rulesSize; i++) {
+            rules[i] = other.rules[i];
+        }
+    } else {
+        rules = NULL;
     }
 }
 
@@ -779,14 +806,21 @@ PermissionPolicy& PermissionPolicy::operator=(const PermissionPolicy& other) {
         adminsSize = other.adminsSize;
         termsSize = other.termsSize;
         delete [] admins;
-        admins = new Peer[adminsSize];
-        for (size_t i = 0; i < adminsSize; i++) {
-            admins[i] = other.admins[i];
+        admins = NULL;
+
+        if (adminsSize > 0) {
+            admins = new Peer[adminsSize];
+            for (size_t i = 0; i < adminsSize; i++) {
+                admins[i] = other.admins[i];
+            }
         }
         delete [] terms;
-        terms = new Term[termsSize];
-        for (size_t i = 0; i < termsSize; i++) {
-            terms[i] = other.terms[i];
+        terms = NULL;
+        if (termsSize > 0) {
+            terms = new Term[termsSize];
+            for (size_t i = 0; i < termsSize; i++) {
+                terms[i] = other.terms[i];
+            }
         }
     }
     return *this;
@@ -795,14 +829,25 @@ PermissionPolicy& PermissionPolicy::operator=(const PermissionPolicy& other) {
 PermissionPolicy::PermissionPolicy(const PermissionPolicy& other) :
     version(other.version), serialNum(other.serialNum),
     adminsSize(other.adminsSize), termsSize(other.termsSize) {
-    admins = new Peer[adminsSize];
-    for (size_t i = 0; i < adminsSize; i++) {
-        admins[i] = other.admins[i];
+
+    if (adminsSize > 0) {
+        admins = new Peer[adminsSize];
+        for (size_t i = 0; i < adminsSize; i++) {
+            admins[i] = other.admins[i];
+        }
+    } else {
+        admins = NULL;
     }
-    terms = new Term[termsSize];
-    for (size_t i = 0; i < termsSize; i++) {
-        terms[i] = other.terms[i];
+
+    if (termsSize) {
+        terms = new Term[termsSize];
+        for (size_t i = 0; i < termsSize; i++) {
+            terms[i] = other.terms[i];
+        }
+    } else {
+        terms = NULL;
     }
+
 }
 
 } /* namespace ajn */
