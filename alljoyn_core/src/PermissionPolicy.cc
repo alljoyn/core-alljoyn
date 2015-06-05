@@ -653,9 +653,13 @@ PermissionPolicy::Rule& PermissionPolicy::Rule::operator=(const PermissionPolicy
         interfaceName = other.interfaceName;
         membersSize = other.membersSize;
         delete [] members;
-        members = new Member[membersSize];
-        for (size_t i = 0; i < membersSize; i++) {
-            members[i] = other.members[i];
+        members = NULL;
+
+        if (membersSize > 0) {
+            members = new Member[membersSize];
+            for (size_t i = 0; i < membersSize; i++) {
+                members[i] = other.members[i];
+            }
         }
     }
     return *this;
@@ -664,9 +668,14 @@ PermissionPolicy::Rule& PermissionPolicy::Rule::operator=(const PermissionPolicy
 PermissionPolicy::Rule::Rule(const PermissionPolicy::Rule& other) :
     objPath(other.objPath), interfaceName(other.interfaceName),
     membersSize(other.membersSize) {
-    members = new Member[membersSize];
-    for (size_t i = 0; i < membersSize; i++) {
-        members[i] = other.members[i];
+
+    if (membersSize > 0) {
+        members = new Member[membersSize];
+        for (size_t i = 0; i < membersSize; i++) {
+            members[i] = other.members[i];
+        }
+    } else {
+        members = NULL;
     }
 }
 
@@ -675,13 +684,21 @@ PermissionPolicy::Acl& PermissionPolicy::Acl::operator=(const PermissionPolicy::
         peersSize = other.peersSize;
         rulesSize = other.rulesSize;
         delete [] peers;
-        peers = new Peer[peersSize];
-        for (size_t i = 0; i < peersSize; i++) {
-            peers[i] = other.peers[i];
+        peers = NULL;
+
+        if (peersSize > 0) {
+            peers = new Peer[peersSize];
+            for (size_t i = 0; i < peersSize; i++) {
+                peers[i] = other.peers[i];
+            }
         }
-        rules = new Rule[rulesSize];
-        for (size_t i = 0; i < rulesSize; i++) {
-            rules[i] = other.rules[i];
+        delete [] rules;
+        rules = NULL;
+        if (rulesSize > 0) {
+            rules = new Rule[rulesSize];
+            for (size_t i = 0; i < rulesSize; i++) {
+                rules[i] = other.rules[i];
+            }
         }
     }
     return *this;
@@ -689,13 +706,23 @@ PermissionPolicy::Acl& PermissionPolicy::Acl::operator=(const PermissionPolicy::
 
 PermissionPolicy::Acl::Acl(const PermissionPolicy::Acl& other) :
     peersSize(other.peersSize), rulesSize(other.rulesSize) {
-    peers = new Peer[peersSize];
-    for (size_t i = 0; i < peersSize; i++) {
-        peers[i] = other.peers[i];
+
+    if (peersSize > 0) {
+        peers = new Peer[peersSize];
+        for (size_t i = 0; i < peersSize; i++) {
+            peers[i] = other.peers[i];
+        }
+    } else {
+        peers = NULL;
     }
-    rules = new Rule[rulesSize];
-    for (size_t i = 0; i < rulesSize; i++) {
-        rules[i] = other.rules[i];
+
+    if (rulesSize > 0) {
+        rules = new Rule[rulesSize];
+        for (size_t i = 0; i < rulesSize; i++) {
+            rules[i] = other.rules[i];
+        }
+    } else {
+        rules = NULL;
     }
 }
 
@@ -722,9 +749,12 @@ PermissionPolicy& PermissionPolicy::operator=(const PermissionPolicy& other) {
         version = other.version;
         aclsSize = other.aclsSize;
         delete [] acls;
-        acls = new Acl[aclsSize];
-        for (size_t i = 0; i < aclsSize; i++) {
-            acls[i] = other.acls[i];
+        acls = NULL;
+        if (aclsSize > 0) {
+            acls = new Acl[aclsSize];
+            for (size_t i = 0; i < aclsSize; i++) {
+                acls[i] = other.acls[i];
+            }
         }
     }
     return *this;
@@ -733,9 +763,12 @@ PermissionPolicy& PermissionPolicy::operator=(const PermissionPolicy& other) {
 PermissionPolicy::PermissionPolicy(const PermissionPolicy& other) :
     specificationVersion(other.specificationVersion), version(other.version),
     aclsSize(other.aclsSize) {
-    acls = new Acl[aclsSize];
-    for (size_t i = 0; i < aclsSize; i++) {
-        acls[i] = other.acls[i];
+    acls = NULL;
+    if (aclsSize > 0) {
+        acls = new Acl[aclsSize];
+        for (size_t i = 0; i < aclsSize; i++) {
+            acls[i] = other.acls[i];
+        }
     }
 }
 
