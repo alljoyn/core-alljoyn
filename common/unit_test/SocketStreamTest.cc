@@ -111,7 +111,8 @@ TEST_F(SocketStreamTestErrors, PullBytesTimeout)
 
 TEST_F(SocketStreamTestErrors, PullBytesAfterOrderlyRelease)
 {
-    Close(clientFd);
+    SocketStream client(clientFd); clientFd = INVALID_SOCKET_FD;
+    client.Shutdown();
     SocketStream connected(acceptedFd); acceptedFd = INVALID_SOCKET_FD;
     EXPECT_EQ(ER_SOCK_OTHER_END_CLOSED, connected.PullBytes(buf, 1, numBytes));
     EXPECT_EQ(0U, numBytes);
@@ -119,8 +120,9 @@ TEST_F(SocketStreamTestErrors, PullBytesAfterOrderlyRelease)
 
 TEST_F(SocketStreamTestErrors, PullBytesAfterAbortiveRelease)
 {
-    SetLinger(clientFd, true, 0);
-    Close(clientFd);
+    SocketStream client(clientFd); clientFd = INVALID_SOCKET_FD;
+    client.Abort();
+    client.Close();
     SocketStream connected(acceptedFd); acceptedFd = INVALID_SOCKET_FD;
     EXPECT_EQ(ER_OS_ERROR, connected.PullBytes(buf, 1, numBytes));
 }
@@ -155,19 +157,11 @@ TEST_F(SocketStreamTestErrors, PushBytesTimeout)
     EXPECT_EQ(ER_TIMEOUT, status);
 }
 
-TEST_F(SocketStreamTestErrors, PushBytesAfterOrderlyRelease)
-{
-    Close(clientFd);
-    SocketStream connected(acceptedFd); acceptedFd = INVALID_SOCKET_FD;
-    while ((status = connected.PushBytes(buf, ArraySize(buf), numBytes)) == ER_OK)
-        ;
-    EXPECT_EQ(ER_OS_ERROR, status);
-}
-
 TEST_F(SocketStreamTestErrors, PushBytesAfterAbortiveRelease)
 {
-    SetLinger(clientFd, true, 0);
-    Close(clientFd);
+    SocketStream client(clientFd); clientFd = INVALID_SOCKET_FD;
+    client.Abort();
+    client.Close();
     SocketStream connected(acceptedFd); acceptedFd = INVALID_SOCKET_FD;
     while ((status = connected.PushBytes(buf, ArraySize(buf), numBytes)) == ER_OK)
         ;
@@ -237,7 +231,8 @@ TEST_F(SocketStreamTestAndFdsErrors, PullBytesAndFdsBadArgs)
 
 TEST_F(SocketStreamTestAndFdsErrors, PullBytesAndFdsAfterOrderlyRelease)
 {
-    Close(clientFd);
+    SocketStream client(clientFd); clientFd = INVALID_SOCKET_FD;
+    client.Shutdown();
     SocketStream connected(acceptedFd); acceptedFd = INVALID_SOCKET_FD;
     EXPECT_EQ(ER_SOCK_OTHER_END_CLOSED, connected.PullBytesAndFds(buf, 1, numBytes, fds, numFds));
     EXPECT_EQ(0U, numBytes);
@@ -245,8 +240,9 @@ TEST_F(SocketStreamTestAndFdsErrors, PullBytesAndFdsAfterOrderlyRelease)
 
 TEST_F(SocketStreamTestAndFdsErrors, PullBytesAndFdsAfterAbortiveRelease)
 {
-    SetLinger(clientFd, true, 0);
-    Close(clientFd);
+    SocketStream client(clientFd); clientFd = INVALID_SOCKET_FD;
+    client.Abort();
+    client.Close();
     SocketStream connected(acceptedFd); acceptedFd = INVALID_SOCKET_FD;
     status = connected.PullBytesAndFds(buf, 1, numBytes, fds, numFds);
     /* Status depends on platform implementation of SocketPair. */
@@ -283,19 +279,11 @@ TEST_F(SocketStreamTestAndFdsErrors, PushBytesAndFdsTimeout)
     EXPECT_EQ(ER_TIMEOUT, status);
 }
 
-TEST_F(SocketStreamTestAndFdsErrors, PushBytesAndFdsAfterOrderlyRelease)
-{
-    Close(clientFd);
-    SocketStream connected(acceptedFd); acceptedFd = INVALID_SOCKET_FD;
-    while ((status = connected.PushBytesAndFds(buf, ArraySize(buf), numBytes, fds, numFds, GetPid())) == ER_OK)
-        ;
-    EXPECT_EQ(ER_OS_ERROR, status);
-}
-
 TEST_F(SocketStreamTestAndFdsErrors, PushBytesAndFdsAfterAbortiveRelease)
 {
-    SetLinger(clientFd, true, 0);
-    Close(clientFd);
+    SocketStream client(clientFd); clientFd = INVALID_SOCKET_FD;
+    client.Abort();
+    client.Close();
     SocketStream connected(acceptedFd); acceptedFd = INVALID_SOCKET_FD;
     EXPECT_EQ(ER_OS_ERROR, connected.PushBytesAndFds(buf, 1, numBytes, fds, numFds, GetPid()));
 }
