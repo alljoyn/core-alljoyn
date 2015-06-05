@@ -103,7 +103,47 @@ class SocketStream : public Stream {
      */
     QStatus Connect(qcc::String& path);
 
-    /** Close and shutdown the socket.  */
+    /**
+     * Shuts down the transmit side of the socket descriptor.
+     *
+     * This is used to perform an 'orderly' release of the socket.  The orderly
+     * release is as follows:
+     * -# PushBytes() or PushBytesAndFds() to transmit all bytes.
+     * -# Shutdown()
+     * -# PullBytes() or PullBytesAndFds() until the receive side is drained
+     *    (until PullBytes() returns #ER_SOCK_OTHER_END_CLOSED or #ER_OS_ERROR).
+     * -# Close()
+     *
+     * @see DetachSocketFd()
+     *
+     * @return
+     * - #ER_OK if the underlying socket request succeeds.
+     * - #ER_OS_ERROR if the socket has been closed
+     * - #ER_FAIL if this SocketStream is detached from the underlying socket.
+     */
+    QStatus Shutdown();
+
+    /**
+     * Sets the socket to discard any queued data and immediately tear down
+     * the connection on Close().
+     *
+     * This is used to perform an 'abortive' release of the socket.  The
+     * abortive release is as follows:
+     * -# Abort()
+     * -# Close()
+     *
+     * @see DetachSocketFd()
+     *
+     * @return
+     * - #ER_OK if the underlying socket request succeeds.
+     * - #ER_OS_ERROR if the socket has been closed
+     * - #ER_FAIL if this SocketStream is detached from the underlying socket.
+     */
+    QStatus Abort();
+
+    /**
+     * Closes the socket descriptor.
+     */
     void Close();
 
     /**
