@@ -60,6 +60,9 @@ const char* PermissionMgmtObj::ERROR_PERMISSION_DENIED = "org.alljoyn.Bus.Securi
 const char* PermissionMgmtObj::ERROR_INVALID_CERTIFICATE = "org.alljoyn.Bus.Security.Error.InvalidCertificate";
 const char* PermissionMgmtObj::ERROR_INVALID_CERTIFICATE_USAGE = "org.alljoyn.Bus.Security.Error.InvalidCertificateUsage";
 const char* PermissionMgmtObj::ERROR_DIGEST_MISMATCH = "org.alljoyn.Bus.Security.Error.DigestMismatch";
+const char* PermissionMgmtObj::ERROR_POLICY_NOT_NEWER = "org.alljoyn.Bus.Security.Error.PolicyNotNewer";
+const char* PermissionMgmtObj::ERROR_DUPLICATE_CERTIFICATE = "org.alljoyn.Bus.Security.Error.DuplicateCertificate";
+const char* PermissionMgmtObj::ERROR_CERTIFICATE_NOT_FOUND = "org.alljoyn.Bus.Security.Error.CertificateNotFound";
 
 static QStatus RetrieveAndGenDSAPublicKey(CredentialAccessor* ca, KeyInfoNISTP256& keyInfo);
 
@@ -84,11 +87,6 @@ QStatus PermissionMgmtObj::Init()
     const InterfaceDescription* ifc = bus.GetInterface(org::allseen::Security::PermissionMgmt::InterfaceName);
     if (ifc) {
         AddInterface(*ifc);
-        AddMethodHandler(ifc->GetMember("InstallPolicy"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::InstallPolicy));
-        AddMethodHandler(ifc->GetMember("GetPolicy"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::GetPolicy));
-        AddMethodHandler(ifc->GetMember("RemovePolicy"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::RemovePolicy));
-        AddMethodHandler(ifc->GetMember("InstallMembership"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::InstallMembership));
-        AddMethodHandler(ifc->GetMember("RemoveMembership"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::RemoveMembership));
         AddMethodHandler(ifc->GetMember("GetManifest"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::GetManifestTemplate));
     }
     ca = new CredentialAccessor(bus);
@@ -229,8 +227,12 @@ QStatus PermissionMgmtObj::MethodReply(const Message& msg, QStatus status)
         return BusObject::MethodReply(msg, ERROR_INVALID_CERTIFICATE);
     } else if (ER_INVALID_CERTIFICATE_USAGE == status) {
         return BusObject::MethodReply(msg, ERROR_INVALID_CERTIFICATE_USAGE);
+    } else if (ER_DUPLICATE_CERTIFICATE == status) {
+        return BusObject::MethodReply(msg, ERROR_DUPLICATE_CERTIFICATE);
     } else if (ER_DIGEST_MISMATCH == status) {
         return BusObject::MethodReply(msg, ERROR_DIGEST_MISMATCH);
+    } else if (ER_POLICY_NOT_NEWER == status) {
+        return BusObject::MethodReply(msg, ERROR_POLICY_NOT_NEWER);
     } else {
         return BusObject::MethodReply(msg, status);
     }
@@ -250,6 +252,18 @@ static bool CanBeCAForIdentity(PermissionMgmtObj::TrustAnchorType taType)
     return false;
 }
 
+/* Get the admin group authority information from the list of trust anchors. */
+static QStatus GetAdminGroupAuthority(const PermissionMgmtObj::TrustAnchorList& trustAnchors, GUID128& adminGroupGUID, KeyInfoNISTP256& adminGroupAuthority)
+{
+    for (PermissionMgmtObj::TrustAnchorList::const_iterator it = trustAnchors.begin(); it != trustAnchors.end(); it++) {
+        if ((*it)->use == PermissionMgmtObj::TRUST_ANCHOR_ADMIN_GROUP) {
+            adminGroupGUID = (*it)->securityGroupId;
+            adminGroupAuthority = (*it)->keyInfo;
+            return ER_OK;
+        }
+    }
+    return ER_FAIL;
+}
 static PermissionMgmtObj::TrustAnchorList LocateTrustAnchor(PermissionMgmtObj::TrustAnchorList& trustAnchors, const qcc::String& aki)
 {
     PermissionMgmtObj::TrustAnchorList retList;
@@ -598,7 +612,7 @@ static void GenerateDefaultPolicy(const GUID128& adminGroupGUID, const KeyInfoNI
     acls[1].SetPeers(1, peers);
 
     rules = new PermissionPolicy::Rule[1];
-    rules[0].SetInterfaceName("org.allseen.Security.PermissionMgmt");
+    rules[0].SetInterfaceName("org.alljoyn.Bus.Security.ManagedApplication");
     prms = new PermissionPolicy::Rule::Member[1];
     prms[0].SetMemberName("InstallMembership");
     prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
@@ -759,7 +773,7 @@ void PermissionMgmtObj::InstallPolicy(const InterfaceDescription::Member* member
     status = RetrievePolicy(existingPolicy);
     if (ER_OK == status) {
         if (policy->GetVersion() <= existingPolicy.GetVersion()) {
-            MethodReply(msg, ER_INSTALLING_OLDER_POLICY);
+            MethodReply(msg, ER_POLICY_NOT_NEWER);
             delete policy;
             return;
         }
@@ -777,36 +791,72 @@ void PermissionMgmtObj::InstallPolicy(const InterfaceDescription::Member* member
     }
 }
 
-void PermissionMgmtObj::RemovePolicy(const InterfaceDescription::Member* member, Message& msg)
+void PermissionMgmtObj::ResetPolicy(const InterfaceDescription::Member* member, Message& msg)
 {
     QCC_UNUSED(member);
     KeyStore::Key key;
     GetACLKey(ENTRY_POLICY, key);
     QStatus status = ca->DeleteKey(key);
-    MethodReply(msg, status);
-    if (ER_OK == status) {
-        policyVersion = 0;
-        PolicyChanged(NULL);
-    }
-}
-
-
-void PermissionMgmtObj::GetPolicy(const InterfaceDescription::Member* member, Message& msg)
-{
-    QCC_UNUSED(member);
-    PermissionPolicy policy;
-    QStatus status = RetrievePolicy(policy);
     if (ER_OK != status) {
         MethodReply(msg, status);
         return;
     }
-    MsgArg msgArg;
-    status = policy.Export(msgArg);
+    /* restore the default policy */
+    PermissionPolicy* defaultPolicy = new PermissionPolicy();
+    status = RebuildDefaultPolicy(*defaultPolicy);
     if (ER_OK != status) {
-        MethodReply(msg, ER_INVALID_DATA);
-        return;
+        QCC_LogError(status, ("PermissionMgmtObj::ResetPolicy rebuild the default policy failed"));
+        goto Exit;
     }
-    BusObject::MethodReply(msg, &msgArg, 1);
+    status = StorePolicy(*defaultPolicy);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("PermissionMgmtObj::ResetPolicy storing the default policy failed"));
+        goto Exit;
+    }
+Exit:
+    MethodReply(msg, status);
+    if (ER_OK == status) {
+        policyVersion = defaultPolicy->GetVersion();
+        PolicyChanged(defaultPolicy);
+    } else {
+        delete defaultPolicy;
+    }
+}
+
+QStatus PermissionMgmtObj::GetPolicy(MsgArg& msgArg)
+{
+    PermissionPolicy policy;
+    QStatus status = RetrievePolicy(policy);
+    if (ER_OK != status) {
+        return status;
+    }
+    return policy.Export(msgArg);
+}
+
+QStatus PermissionMgmtObj::RebuildDefaultPolicy(PermissionPolicy& defaultPolicy)
+{
+    /* generate the default policy */
+    ECCPublicKey pubKey;
+    ca->GetDSAPublicKey(pubKey);
+    GUID128 adminGroupGUID;
+    KeyInfoNISTP256 adminGroupAuthority;
+    QStatus status = GetAdminGroupAuthority(trustAnchors, adminGroupGUID, adminGroupAuthority);
+    if (ER_OK != status) {
+        return status;
+    }
+    GenerateDefaultPolicy(adminGroupGUID, adminGroupAuthority, &pubKey, defaultPolicy);
+    return ER_OK;
+}
+
+QStatus PermissionMgmtObj::GetDefaultPolicy(MsgArg& msgArg)
+{
+    /* rebuild the default policy */
+    PermissionPolicy defaultPolicy;
+    QStatus status = RebuildDefaultPolicy(defaultPolicy);
+    if (ER_OK != status) {
+        return status;
+    }
+    return defaultPolicy.Export(msgArg);
 }
 
 QStatus PermissionMgmtObj::StorePolicy(PermissionPolicy& policy)
@@ -1234,13 +1284,18 @@ QStatus PermissionMgmtObj::GenerateManifestDigest(BusAttachment& bus, const Perm
     }
     PermissionPolicy policy;
     PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[1];
-    acls[0].SetRules(count, (PermissionPolicy::Rule*) rules);
+    PermissionPolicy::Rule* localRules = NULL;
+    if (count > 0) {
+        localRules = new PermissionPolicy::Rule[count];
+        for (size_t cnt = 0; cnt < count; cnt++) {
+            localRules[cnt] = rules[cnt];
+        }
+    }
+    acls[0].SetRules(count, localRules);
     policy.SetAcls(1, acls);
     Message tmpMsg(bus);
     DefaultPolicyMarshaller marshaller(tmpMsg);
-    QStatus status = policy.Digest(marshaller, digest, Crypto_SHA256::DIGEST_SIZE);
-    acls[0].SetRules(0, NULL); /* does not manage the lifetime of the input rules */
-    return status;
+    return policy.Digest(marshaller, digest, Crypto_SHA256::DIGEST_SIZE);
 }
 
 static QStatus GetManifestFromMessageArg(BusAttachment& bus, const MsgArg& manifestArg, PermissionPolicy::Rule** rules, size_t* count, uint8_t* digest)
@@ -1507,30 +1562,75 @@ QStatus PermissionMgmtObj::LocateMembershipEntry(const String& serialNum, const 
 void PermissionMgmtObj::RemoveMembership(const InterfaceDescription::Member* member, Message& msg)
 {
     QCC_UNUSED(member);
-    QStatus status;
-    const char* serial;
-    status = msg->GetArg(0)->Get("s", &serial);
+    uint8_t* serialVal;
+    size_t serialLen;
+    uint8_t* akiVal;
+    size_t akiLen;
+    uint8_t algorithm;
+    uint8_t curve;
+    uint8_t* xCoord;
+    size_t xLen;
+    uint8_t* yCoord;
+    size_t yLen;
+    QStatus status = msg->GetArg(0)->Get("(ayay(yyayay))", &serialLen, &serialVal, &akiLen, &akiVal, &algorithm, &curve, &xLen, &xCoord, &yLen, &yCoord);
     if (ER_OK != status) {
-        QCC_DbgPrintf(("PermissionMgmtObj::RemoveMembership failed to retrieve serial status 0x%x", status));
-        MethodReply(msg, status);
+        MethodReply(msg, ER_INVALID_DATA);
         return;
     }
-    uint8_t* issuer;
-    size_t issuerLen;
-    status = msg->GetArg(1)->Get("ay", &issuerLen, &issuer);
-    if (ER_OK != status) {
-        QCC_DbgPrintf(("PermissionMgmtObj::RemoveMembership failed to retrieve issuer status 0x%x", status));
-        MethodReply(msg, status);
+    if (algorithm != qcc::SigInfo::ALGORITHM_ECDSA_SHA_256) {
+        MethodReply(msg, ER_INVALID_DATA);
         return;
     }
-    String serialNum(serial);
-    String issuerAki((const char*) issuer, issuerLen);
+    if (curve != qcc::Crypto_ECC::ECC_NIST_P256) {
+        MethodReply(msg, ER_INVALID_DATA);
+        return;
+    }
+    if ((xLen != qcc::ECC_COORDINATE_SZ) || (yLen != qcc::ECC_COORDINATE_SZ)) {
+        MethodReply(msg, ER_INVALID_DATA);
+        return;
+    }
+    KeyInfoNISTP256 issuerKeyInfo;
+    issuerKeyInfo.SetXCoord(xCoord);
+    issuerKeyInfo.SetYCoord(yCoord);
+    String issuerAki;
+    if (akiLen == 0) {
+        /* calculate it */
+        if (ER_OK != CertificateX509::GenerateAuthorityKeyId(issuerKeyInfo.GetPublicKey(), issuerAki)) {
+            MethodReply(msg, status);
+            return;
+        }
+    } else {
+        issuerAki.assign((const char*) akiVal, akiLen);
+    }
+    issuerKeyInfo.SetKeyId((uint8_t*) issuerAki.data(), issuerAki.size());
+    String serial((const char*) serialVal, serialLen);
     KeyStore::Key membershipKey;
-    status = LocateMembershipEntry(serialNum, issuerAki, membershipKey);
-    if (ER_OK == status) {
-        /* found it so delete it */
-        status = ca->DeleteKey(membershipKey);
-    } else if (ER_BUS_KEY_UNAVAILABLE == status) {
+    MembershipCertificate cert;
+    KeyBlob kb;
+    status = LocateMembershipEntry(serial, issuerAki, membershipKey);
+    if (ER_OK != status) {
+        goto Exit;
+    }
+    /* retrieve the cert to validate before delete */
+    status = ca->GetKey(membershipKey, kb);
+    if (ER_OK != status) {
+        goto Exit;
+    }
+    status = LoadCertificate(CertificateX509::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), cert);
+    if (ER_OK != status) {
+        goto Exit;
+    }
+    /* verify the cert with issuer's public key */
+    status = cert.Verify(issuerKeyInfo.GetPublicKey());
+    if (ER_OK != status) {
+        status = ER_CERTIFICATE_NOT_FOUND;
+        goto Exit;
+    }
+
+    /* found it so delete it */
+    status = ca->DeleteKey(membershipKey);
+Exit:
+    if (ER_BUS_KEY_UNAVAILABLE == status) {
         /* could not find it.  */
         status = ER_CERTIFICATE_NOT_FOUND;
     }
@@ -1671,6 +1771,95 @@ Exit:
         ClearArgVector(addOns);
     }
     delete [] keys;
+    return status;
+}
+
+QStatus PermissionMgmtObj::GetMembershipSummaries(MsgArg& arg)
+{
+    MembershipCertMap certMap;
+    QStatus status = GetAllMembershipCerts(certMap);
+    if (ER_OK != status) {
+        return status;
+    }
+    if (certMap.size() == 0) {
+        arg.Set("a(ayay(yyayay))", 0, NULL);
+        return ER_OK;
+    }
+
+    MsgArg* membershipArgs = new MsgArg[certMap.size()];
+    size_t cnt = 0;
+    KeyStore::Key* issuerKeys = NULL;
+    for (MembershipCertMap::iterator it = certMap.begin(); it != certMap.end(); it++) {
+        KeyInfoNISTP256 issuerKeyInfo;
+        KeyStore::Key leafKey = it->first;
+        MembershipCertificate* leafCert = it->second;
+        issuerKeyInfo.SetKeyId((const uint8_t*) leafCert->GetAuthorityKeyId().data(), leafCert->GetAuthorityKeyId().size());
+        delete [] issuerKeys;
+        issuerKeys = NULL;
+        size_t numOfIssuerKeys = 0;
+        bool locateIssuer = false;
+        status = ca->GetKeys(leafKey, &issuerKeys, &numOfIssuerKeys);
+        if (ER_OK != status) {
+            if (ER_BUS_KEY_UNAVAILABLE == status) {
+                locateIssuer = true;
+            } else {
+                goto Exit;
+            }
+        } else {
+            if (numOfIssuerKeys > 0) {
+                KeyBlob kb;
+                status = ca->GetKey(issuerKeys[0], kb);
+                if (ER_OK != status) {
+                    goto Exit;
+                }
+                MembershipCertificate issuerCert;
+                status = LoadCertificate(CertificateX509::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), issuerCert);
+                if (ER_OK != status) {
+                    goto Exit;
+                }
+                issuerKeyInfo.SetPublicKey(issuerCert.GetSubjectPublicKey());
+                if (issuerKeyInfo.GetKeyIdLen() == 0) {
+                    String aki;
+                    if (ER_OK != CertificateX509::GenerateAuthorityKeyId(issuerKeyInfo.GetPublicKey(), aki)) {
+                        goto Exit;
+                    }
+                    issuerKeyInfo.SetKeyId((const uint8_t*) aki.data(), aki.size());
+                }
+            } else {
+                locateIssuer = true;
+            }
+        }
+        if (locateIssuer) {
+            /* membership cert is a single cert.  Need to locate the issuer from
+             * the list of trust anchors using the cert's aki.
+             */
+            TrustAnchorList anchors = LocateTrustAnchor(trustAnchors, leafCert->GetAuthorityKeyId());
+            for (TrustAnchorList::const_iterator it = anchors.begin(); it != anchors.end(); it++) {
+                if (ER_OK == leafCert->Verify((*it)->keyInfo.GetPublicKey())) {
+                    issuerKeyInfo.SetPublicKey((*it)->keyInfo.GetPublicKey());
+                    break;
+                }
+            }
+            anchors.clear();
+        }
+        status = membershipArgs[cnt].Set("(ayay(yyayay))",
+                                         leafCert->GetSerial().size(), (uint8_t*)  leafCert->GetSerial().data(),
+                                         issuerKeyInfo.GetKeyIdLen(), issuerKeyInfo.GetKeyId(),
+                                         issuerKeyInfo.GetAlgorithm(), issuerKeyInfo.GetCurve(),
+                                         qcc::ECC_COORDINATE_SZ, issuerKeyInfo.GetXCoord(),
+                                         qcc::ECC_COORDINATE_SZ, issuerKeyInfo.GetYCoord());
+        membershipArgs[cnt].Stabilize();
+        cnt++;
+    }
+Exit:
+    delete [] issuerKeys;
+    if (ER_OK == status) {
+        arg.Set("a(ayay(yyayay))", certMap.size(), membershipArgs);
+        arg.SetOwnershipFlags(MsgArg::OwnsArgs, true);
+    } else {
+        delete [] membershipArgs;
+    }
+    ClearMembershipCertMap(certMap);
     return status;
 }
 
@@ -2020,14 +2209,21 @@ QStatus PermissionMgmtObj::GetConnectedPeerPublicKey(const GUID128& guid, qcc::E
     return GetConnectedPeerPublicKey(guid, publicKey, NULL, issuerPublicKeys);
 }
 
-QStatus PermissionMgmtObj::SetManifestTemplate(PermissionPolicy::Rule* rules, size_t count)
+QStatus PermissionMgmtObj::SetManifestTemplate(const PermissionPolicy::Rule* rules, size_t count)
 {
     if (count == 0) {
         return ER_OK;
     }
     PermissionPolicy policy;
     PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[1];
-    acls[0].SetRules(count, rules);
+    PermissionPolicy::Rule* localRules = NULL;
+    if (count > 0) {
+        localRules = new PermissionPolicy::Rule[count];
+        for (size_t cnt = 0; cnt < count; cnt++) {
+            localRules[cnt] = rules[cnt];
+        }
+    }
+    acls[0].SetRules(count, localRules);
     policy.SetAcls(1, acls);
 
 
@@ -2036,7 +2232,6 @@ QStatus PermissionMgmtObj::SetManifestTemplate(PermissionPolicy::Rule* rules, si
     Message tmpMsg(bus);
     DefaultPolicyMarshaller marshaller(tmpMsg);
     QStatus status = policy.Export(marshaller, &buf, &size);
-    acls[0].SetRules(0, NULL); /* does not manage the lifetime of the input rules */
     if (ER_OK != status) {
         return status;
     }
@@ -2073,8 +2268,13 @@ QStatus PermissionMgmtObj::RetrieveManifest(PermissionPolicy::Rule** manifest, s
     }
     PermissionPolicy::Acl* acls = (PermissionPolicy::Acl*) policy.GetAcls();
     *count = acls[0].GetRulesSize();
-    *manifest = (PermissionPolicy::Rule*) acls[0].GetRules();
-    acls[0].SetRules(0, NULL);  /* do not delete the rules since the rules are given to the manifest variable */
+    *manifest = NULL;
+    if (*count > 0) {
+        *manifest = new PermissionPolicy::Rule[*count];
+        for (size_t cnt = 0; cnt < *count; cnt++) {
+            (*manifest)[cnt] = acls[0].GetRules()[cnt];
+        }
+    }
     return ER_OK;
 }
 

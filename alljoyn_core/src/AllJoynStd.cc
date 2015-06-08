@@ -326,7 +326,7 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         ifc->AddPropertyAnnotation("Identity", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
         ifc->AddProperty("Manifest", "a(ssa(syy))", PROP_ACCESS_READ);
         ifc->AddPropertyAnnotation("Manifest", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
-        ifc->AddProperty("IdentityCertificateId", "(ayyyayay)", PROP_ACCESS_READ);
+        ifc->AddProperty("IdentityCertificateId", "(ayay(yyayay))", PROP_ACCESS_READ);
         ifc->AddPropertyAnnotation("IdentityCertificateId", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
         ifc->AddProperty("PolicyVersion", "u", PROP_ACCESS_READ);
         ifc->AddPropertyAnnotation("PolicyVersion", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
@@ -337,8 +337,8 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         ifc->AddPropertyAnnotation("DefaultPolicy", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
         ifc->AddMethod("ResetPolicy", "", "", "");
         ifc->AddMethod("InstallMembership", "a(yay)", "", "certificateChain,");
-        ifc->AddMethod("RemoveMembership", "(ayyyayay)", "", "certificateId");
-        ifc->AddProperty("MembershipSummaries", "a(ayyyayay)", PROP_ACCESS_READ);
+        ifc->AddMethod("RemoveMembership", "(ayay(yyayay))", "", "certificateId");
+        ifc->AddProperty("MembershipSummaries", "a(ayay(yyayay))", PROP_ACCESS_READ);
         ifc->AddPropertyAnnotation("MembershipSummaries", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
 
         ifc->Activate();
@@ -366,12 +366,6 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
             QCC_LogError(status, ("Failed to create %s interface", org::allseen::Security::PermissionMgmt::InterfaceName));
             return status;
         }
-        ifc->AddMethod("InstallPolicy",     "(qua(a(ya(yyayay)ay)a(ssa(syy))))",  NULL, "authorization");
-        ifc->AddMethod("InstallEncryptedPolicy",     "ay",  NULL, "encryptedAuthorization");
-        ifc->AddMethod("GetPolicy",     NULL, "(qua(a(ya(yyayay)ay)a(ssa(syy))))",  "authorization");
-        ifc->AddMethod("RemovePolicy",     NULL, NULL, NULL);
-        ifc->AddMethod("InstallMembership",     "a(yay)",  NULL, "certchain");
-        ifc->AddMethod("RemoveMembership",     "say", NULL, "serialNum,issuer");
         ifc->AddMethod("GetManifest",     NULL, "(yv)",  "manifest");
         ifc->Activate();
     }

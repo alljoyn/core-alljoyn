@@ -181,38 +181,26 @@ void SecurityApplicationObj::UpdateIdentity(const ajn::InterfaceDescription::Mem
 
 void SecurityApplicationObj::UpdatePolicy(const ajn::InterfaceDescription::Member* member, ajn::Message& msg)
 {
-    QCC_UNUSED(member); //TODO remove on implementation
-    QCC_UNUSED(msg); //TODO remove on implementation
     QCC_DbgTrace(("SecurityApplicationObj::%s", __FUNCTION__));
-    //TODO
-    MethodReply(msg, ER_NOT_IMPLEMENTED);
+    InstallPolicy(member, msg);
 }
 
 void SecurityApplicationObj::ResetPolicy(const ajn::InterfaceDescription::Member* member, ajn::Message& msg)
 {
-    QCC_UNUSED(member); //TODO remove on implementation
-    QCC_UNUSED(msg); //TODO remove on implementation
     QCC_DbgTrace(("SecurityApplicationObj::%s", __FUNCTION__));
-    //TODO
-    MethodReply(msg, ER_NOT_IMPLEMENTED);
+    PermissionMgmtObj::ResetPolicy(member, msg);
 }
 
 void SecurityApplicationObj::InstallMembership(const ajn::InterfaceDescription::Member* member, ajn::Message& msg)
 {
-    QCC_UNUSED(member); //TODO remove on implementation
-    QCC_UNUSED(msg); //TODO remove on implementation
     QCC_DbgTrace(("SecurityApplicationObj::%s", __FUNCTION__));
-    //TODO
-    MethodReply(msg, ER_NOT_IMPLEMENTED);
+    PermissionMgmtObj::InstallMembership(member, msg);
 }
 
 void SecurityApplicationObj::RemoveMembership(const ajn::InterfaceDescription::Member* member, ajn::Message& msg)
 {
-    QCC_UNUSED(member); //TODO remove on implementation
-    QCC_UNUSED(msg); //TODO remove on implementation
     QCC_DbgTrace(("SecurityApplicationObj::%s", __FUNCTION__));
-    //TODO
-    MethodReply(msg, ER_NOT_IMPLEMENTED);
+    PermissionMgmtObj::RemoveMembership(member, msg);
 }
 
 QStatus SecurityApplicationObj::Get(const char* ifcName, const char* propName, MsgArg& val)
@@ -283,14 +271,11 @@ QStatus SecurityApplicationObj::Get(const char* ifcName, const char* propName, M
         } else if (0 == strcmp("PolicyVersion", propName)) {
             status = val.Set("u", policyVersion);;
         } else if (0 == strcmp("Policy", propName)) {
-            //status = val.Set("(qua(a(ya(yyayay)ay)a(ssa(syy))))", /*Policy*/);
-            status = ER_NOT_IMPLEMENTED; // TODO remove on implementation
+            status = GetPolicy(val);
         } else if (0 == strcmp("DefaultPolicy", propName)) {
-            //status = val.Set("(qua(a(ya(yyayay)ay)a(ssa(syy))))", /*DefaultPolicy*/);
-            status = ER_NOT_IMPLEMENTED; // TODO remove on implementation
+            status = GetDefaultPolicy(val);
         } else if (0 == strcmp("MembershipSummaries", propName)) {
-            //status = val.Set("a(ayyyayay)", /*MembershipSummaries*/);
-            status = ER_NOT_IMPLEMENTED; // TODO remove on implementation
+            status = GetMembershipSummaries(val);
         }
     } else if (0 == strcmp(org::alljoyn::Bus::Application::InterfaceName, ifcName)) {
         if (0 == strcmp("Version", propName)) {

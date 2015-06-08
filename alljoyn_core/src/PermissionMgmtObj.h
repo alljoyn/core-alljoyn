@@ -72,6 +72,24 @@ class PermissionMgmtObj : public BusObject {
     static const char* ERROR_DIGEST_MISMATCH;
 
     /**
+     * Error name Policy Not Newer.  Error raised when the new policy does not
+     * have a greater version number than the existing policy.
+     */
+    static const char* ERROR_POLICY_NOT_NEWER;
+
+    /**
+     * Error name Duplicate Certificate.  Error raised when the certificate
+     * is already installed.
+     */
+    static const char* ERROR_DUPLICATE_CERTIFICATE;
+
+    /**
+     * Error name Certificate Not Found.  Error raised when the certificate
+     * is not found.
+     */
+    static const char* ERROR_CERTIFICATE_NOT_FOUND;
+
+    /**
      * For the SendMemberships call, the app sends one cert chain at time since
      * thin client peer may not be able to handle large amount of data.  The app
      * reads back the membership cert chain from the peer.  It keeps looping until
@@ -274,7 +292,7 @@ class PermissionMgmtObj : public BusObject {
      * @params rules the permission rules.
      * @params count the number of permission rules
      */
-    QStatus SetManifestTemplate(PermissionPolicy::Rule* rules, size_t count);
+    QStatus SetManifestTemplate(const PermissionPolicy::Rule* rules, size_t count);
 
     /**
      * Retrieve the claimable state of the application.
@@ -416,6 +434,15 @@ class PermissionMgmtObj : public BusObject {
     QStatus RetrieveIdentityCertificateId(qcc::String& serial, qcc::KeyInfoNISTP256& issuerKeyInfo);
     void Reset(const InterfaceDescription::Member* member, Message& msg);
     void InstallIdentity(const InterfaceDescription::Member* member, Message& msg);
+    void InstallPolicy(const InterfaceDescription::Member* member, Message& msg);
+    QStatus RetrievePolicy(PermissionPolicy& policy);
+    QStatus GetPolicy(MsgArg& msgArg);
+    QStatus RebuildDefaultPolicy(PermissionPolicy& defaultPolicy);
+    QStatus GetDefaultPolicy(MsgArg& msgArg);
+    void ResetPolicy(const InterfaceDescription::Member* member, Message& msg);
+    void InstallMembership(const InterfaceDescription::Member* member, Message& msg);
+    void RemoveMembership(const InterfaceDescription::Member* member, Message& msg);
+    QStatus GetMembershipSummaries(MsgArg& arg);
     uint32_t policyVersion;
 
   private:
@@ -458,7 +485,6 @@ class PermissionMgmtObj : public BusObject {
     };
 
     void GetPublicKey(const InterfaceDescription::Member* member, Message& msg);
-    void InstallPolicy(const InterfaceDescription::Member* member, Message& msg);
     QStatus GetACLKey(ACLEntryType aclEntryType, KeyStore::Key& guid);
     QStatus StoreTrustAnchors();
     QStatus LoadTrustAnchors();
@@ -466,14 +492,9 @@ class PermissionMgmtObj : public BusObject {
 
     QStatus GetPeerGUID(Message& msg, qcc::GUID128& guid);
 
-    QStatus RetrievePolicy(PermissionPolicy& policy);
-    void RemovePolicy(const InterfaceDescription::Member* member, Message& msg);
-    void GetPolicy(const InterfaceDescription::Member* member, Message& msg);
     QStatus StateChanged();
 
     QStatus GetIdentityBlob(qcc::KeyBlob& kb);
-    void InstallMembership(const InterfaceDescription::Member* member, Message& msg);
-    void RemoveMembership(const InterfaceDescription::Member* member, Message& msg);
     void GetManifestTemplate(const InterfaceDescription::Member* member, Message& msg);
     bool ValidateCertChain(const qcc::String& certChainPEM, bool& authorized);
     QStatus LocateMembershipEntry(const qcc::String& serialNum, const qcc::String& issuerAki, KeyStore::Key& membershipKey, bool searchLeafCertOnly);

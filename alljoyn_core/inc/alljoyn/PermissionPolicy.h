@@ -202,6 +202,7 @@ class PermissionPolicy {
          */
         void SetMembers(size_t count, Member* members)
         {
+            delete [] this->members;
             this->members = members;
             membersSize = count;
         }
@@ -432,6 +433,7 @@ class PermissionPolicy {
          */
         void SetPeers(size_t count, Peer* peers)
         {
+            delete [] this->peers;
             this->peers = peers;
             peersSize = count;
         }
@@ -453,6 +455,7 @@ class PermissionPolicy {
          */
         void SetRules(size_t count, Rule* rules)
         {
+            delete [] this->rules;
             rulesSize = count;
             this->rules = rules;
         }
@@ -616,6 +619,7 @@ class PermissionPolicy {
      */
     void SetAcls(size_t count, Acl* acls)
     {
+        delete [] this->acls;
         aclsSize = count;
         this->acls = acls;
     }
@@ -661,7 +665,7 @@ class PermissionPolicy {
      *      - #ER_OK if creation was successful.
      *      - error code if fail
      */
-    QStatus Export(MsgArg& msgArg);
+    QStatus Export(MsgArg& msgArg) const;
 
     /**
      * Build a MsgArg object to represent the array of rules.

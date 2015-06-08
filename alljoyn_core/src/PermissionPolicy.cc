@@ -437,7 +437,7 @@ static QStatus BuildAclsFromArg(MsgArg* arg, PermissionPolicy::Acl** acls, size_
     return status;
 }
 
-QStatus PermissionPolicy::Export(MsgArg& msgArg)
+QStatus PermissionPolicy::Export(MsgArg& msgArg) const
 {
     QStatus status = ER_OK;
     MsgArg* aclsArgs = NULL;

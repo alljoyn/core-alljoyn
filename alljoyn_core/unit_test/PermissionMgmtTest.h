@@ -249,6 +249,7 @@ class PermissionMgmtTestHelper {
 
     static QStatus CreateIdentityCert(BusAttachment& issuerBus, const qcc::String& serial, const qcc::String& subject, const qcc::ECCPublicKey* subjectPubKey, const qcc::String& alias, qcc::String& der);
 
+    static QStatus CreateMembershipCert(const qcc::String& serial, BusAttachment& signingBus, const qcc::String& subject, const qcc::ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, bool delegate, uint32_t expiredInSecs, qcc::MembershipCertificate& cert);
     static QStatus CreateMembershipCert(const qcc::String& serial, BusAttachment& signingBus, const qcc::String& subject, const qcc::ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, bool delegate, uint32_t expiredInSecs, qcc::String& der);
     static QStatus CreateMembershipCert(const qcc::String& serial, BusAttachment& signingBus, const qcc::String& subject, const qcc::ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, bool delegate, qcc::String& der);
     static QStatus CreateMembershipCert(const qcc::String& serial, BusAttachment& signingBus, const qcc::String& subject, const qcc::ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, qcc::String& der);

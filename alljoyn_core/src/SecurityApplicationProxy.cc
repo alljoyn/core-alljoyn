@@ -63,6 +63,35 @@ SecurityApplicationProxy::~SecurityApplicationProxy()
 {
 }
 
+/**
+ * compute the status code base on the reply error name.
+ * @return true if it can figure it out; false otherwise.
+ */
+static bool GetStatusBasedOnErrorName(Message& reply, QStatus& status)
+{
+    if (reply->GetErrorName() == NULL) {
+        return false;
+    }
+    if (strcmp(reply->GetErrorName(), PermissionMgmtObj::ERROR_PERMISSION_DENIED) == 0) {
+        status = ER_PERMISSION_DENIED;
+    } else if (strcmp(reply->GetErrorName(), PermissionMgmtObj::ERROR_INVALID_CERTIFICATE) == 0) {
+        status = ER_INVALID_CERTIFICATE;
+    } else if (strcmp(reply->GetErrorName(), PermissionMgmtObj::ERROR_INVALID_CERTIFICATE_USAGE) == 0) {
+        status = ER_INVALID_CERTIFICATE_USAGE;
+    } else if (strcmp(reply->GetErrorName(), PermissionMgmtObj::ERROR_DIGEST_MISMATCH) == 0) {
+        status = ER_DIGEST_MISMATCH;
+    } else if (strcmp(reply->GetErrorName(), PermissionMgmtObj::ERROR_POLICY_NOT_NEWER) == 0) {
+        status = ER_POLICY_NOT_NEWER;
+    } else if (strcmp(reply->GetErrorName(), PermissionMgmtObj::ERROR_CERTIFICATE_NOT_FOUND) == 0) {
+        status = ER_CERTIFICATE_NOT_FOUND;
+    } else if (strcmp(reply->GetErrorName(), org::alljoyn::Bus::ErrorName) == 0 && reply->GetArg(1)) {
+        status = static_cast<QStatus>(reply->GetArg(1)->v_uint16);
+    } else {
+        return false;
+    }
+    return true;
+}
+
 QStatus SecurityApplicationProxy::GetSecurityApplicationVersion(uint16_t& version)
 {
     QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
@@ -220,7 +249,7 @@ QStatus SecurityApplicationProxy::Claim(const qcc::KeyInfoNISTP256& certificateA
     if (identityCertChainSize == 0) {
         status = inputs[5].Set("a(yay)", 0, NULL);
         if (ER_OK != status) {
-            return status;
+            goto Exit;
         }
     } else {
         identityArgs = new MsgArg[identityCertChainSize];
@@ -228,50 +257,40 @@ QStatus SecurityApplicationProxy::Claim(const qcc::KeyInfoNISTP256& certificateA
             qcc::String der;
             status = identityCertChain[cnt].EncodeCertificateDER(der);
             if (ER_OK != status) {
-                return status;
+                goto Exit;
             }
             status = identityArgs[cnt].Set("(yay)", qcc::CertificateX509::ENCODING_X509_DER, der.size(), der.data());
             if (ER_OK != status) {
-                return status;
+                goto Exit;
             }
             identityArgs[cnt].Stabilize();
         }
         status = inputs[5].Set("a(yay)", identityCertChainSize, identityArgs);
         if (ER_OK != status) {
-            return status;
+            goto Exit;
         }
     }
     if (manifestSize == 0) {
         status = inputs[6].Set("a(ssa(syy))", 0, NULL);
         if (ER_OK != status) {
-            return status;
+            goto Exit;
         }
     } else {
         status = PermissionPolicy::GenerateRules(manifest, manifestSize, inputs[6]);
         if (ER_OK != status) {
-            return status;
+            goto Exit;
         }
     }
 
     status = MethodCall(org::alljoyn::Bus::Security::ClaimableApplication::InterfaceName, "Claim", inputs, 7, reply);
-    delete [] identityArgs;
     if (ER_OK != status) {
-        if (reply->GetErrorName() != NULL) {
-            if (strcmp(reply->GetErrorName(), PermissionMgmtObj::ERROR_PERMISSION_DENIED) == 0) {
-                status = ER_PERMISSION_DENIED;
-            } else if (strcmp(reply->GetErrorName(), PermissionMgmtObj::ERROR_INVALID_CERTIFICATE) == 0) {
-                status = ER_INVALID_CERTIFICATE;
-            } else if (strcmp(reply->GetErrorName(), PermissionMgmtObj::ERROR_INVALID_CERTIFICATE_USAGE) == 0) {
-                status = ER_INVALID_CERTIFICATE_USAGE;
-            } else if (strcmp(reply->GetErrorName(), PermissionMgmtObj::ERROR_DIGEST_MISMATCH) == 0) {
-                status = ER_DIGEST_MISMATCH;
-            } else if (strcmp(reply->GetErrorName(), org::alljoyn::Bus::ErrorName) == 0 && reply->GetArg(1)) {
-                status = static_cast<QStatus>(reply->GetArg(1)->v_uint16);
-            } else {
-                QCC_LogError(status, ("SecurityApplicationProxy::%s error %s", __FUNCTION__, reply->GetErrorDescription().c_str()));
-            }
+        if (!GetStatusBasedOnErrorName(reply, status)) {
+            QCC_LogError(status, ("SecurityApplicationProxy::%s error %s", __FUNCTION__, reply->GetErrorDescription().c_str()));
         }
     }
+
+Exit:
+    delete [] identityArgs;
     return status;
 }
 
@@ -343,20 +362,8 @@ QStatus SecurityApplicationProxy::UpdateIdentity(const qcc::IdentityCertificate*
     status = MethodCall(org::alljoyn::Bus::Security::ManagedApplication::InterfaceName, "UpdateIdentity", inputs, 2, reply);
 
     if (ER_OK != status) {
-        if (reply->GetErrorName() != NULL) {
-            if (strcmp(reply->GetErrorName(), PermissionMgmtObj::ERROR_PERMISSION_DENIED) == 0) {
-                status = ER_PERMISSION_DENIED;
-            } else if (strcmp(reply->GetErrorName(), PermissionMgmtObj::ERROR_INVALID_CERTIFICATE) == 0) {
-                status = ER_INVALID_CERTIFICATE;
-            } else if (strcmp(reply->GetErrorName(), PermissionMgmtObj::ERROR_INVALID_CERTIFICATE_USAGE) == 0) {
-                status = ER_INVALID_CERTIFICATE_USAGE;
-            } else if (strcmp(reply->GetErrorName(), PermissionMgmtObj::ERROR_DIGEST_MISMATCH) == 0) {
-                status = ER_DIGEST_MISMATCH;
-            } else if (strcmp(reply->GetErrorName(), org::alljoyn::Bus::ErrorName) == 0 && reply->GetArg(1)) {
-                status = static_cast<QStatus>(reply->GetArg(1)->v_uint16);
-            } else {
-                QCC_LogError(status, ("SecurityApplicationProxy::%s error %s", __FUNCTION__, reply->GetErrorDescription().c_str()));
-            }
+        if (!GetStatusBasedOnErrorName(reply, status)) {
+            QCC_LogError(status, ("SecurityApplicationProxy::%s error %s", __FUNCTION__, reply->GetErrorDescription().c_str()));
         }
     }
 
@@ -367,29 +374,21 @@ Exit:
 
 QStatus SecurityApplicationProxy::UpdatePolicy(const PermissionPolicy& policy)
 {
-    QCC_UNUSED(policy); //TODO remove on implementation
     QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
     QStatus status = ER_OK;
     Message reply(*bus);
-
     MsgArg inputs[1];
-    //TODO convert input params to MsgArgs
+
+    status = policy.Export(inputs[0]);
+    if (ER_OK != status) {
+        return status;
+    }
 
     status = MethodCall(org::alljoyn::Bus::Security::ManagedApplication::InterfaceName, "UpdatePolicy", inputs, 1, reply);
     if (ER_OK != status) {
-        if (reply->GetErrorName() != NULL) {
-            if (strcmp(reply->GetErrorName(), "org.alljoyn.Bus.Error.PermissionDenied") == 0) {
-                status = ER_PERMISSION_DENIED;
-            } else if (strcmp(reply->GetErrorName(), "org.alljoyn.Bus.Error.PolicyNotNewer") == 0) {
-                //status = ER_POLICY_NOT_NEWER;
-                status = ER_NOT_IMPLEMENTED;  //TODO add ER_POLICY_NOT_NEWER to status and delete this status
-            } else if (strcmp(reply->GetErrorName(), org::alljoyn::Bus::ErrorName) == 0 && reply->GetArg(1)) {
-                status = static_cast<QStatus>(reply->GetArg(1)->v_uint16);
-            } else {
-                QCC_LogError(status, ("SecurityApplicationProxy::%s error %s", __FUNCTION__, reply->GetErrorDescription().c_str()));
-            }
+        if (!GetStatusBasedOnErrorName(reply, status)) {
+            QCC_LogError(status, ("SecurityApplicationProxy::%s error %s", __FUNCTION__, reply->GetErrorDescription().c_str()));
         }
-        return status;
     }
     return status;
 }
@@ -402,75 +401,73 @@ QStatus SecurityApplicationProxy::ResetPolicy()
 
     status = MethodCall(org::alljoyn::Bus::Security::ManagedApplication::InterfaceName, "ResetPolicy", NULL, 0, reply);
     if (ER_OK != status) {
-        if (reply->GetErrorName() != NULL) {
-            if (strcmp(reply->GetErrorName(), "org.alljoyn.Bus.Error.PermissionDenied") == 0) {
-                status = ER_PERMISSION_DENIED;
-            } else {
-                QCC_LogError(status, ("SecurityApplicationProxy::%s error %s", __FUNCTION__, reply->GetErrorDescription().c_str()));
-            }
+        if (!GetStatusBasedOnErrorName(reply, status)) {
+            QCC_LogError(status, ("SecurityApplicationProxy::%s error %s", __FUNCTION__, reply->GetErrorDescription().c_str()));
         }
-        return status;
     }
     return status;
 }
 
-QStatus SecurityApplicationProxy::InstallMembership(const qcc::CertificateX509* certificateChain, size_t certificateChainSize)
+QStatus SecurityApplicationProxy::InstallMembership(const qcc::MembershipCertificate* certificateChain, size_t certificateChainSize)
 {
-    QCC_UNUSED(certificateChain); //TODO remove on implementation
-    QCC_UNUSED(certificateChainSize); //TODO remove on implementation
-    QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
-    QStatus status = ER_OK;
-    Message reply(*bus);
-
-    MsgArg inputs[2];
-    //TODO convert input params to MsgArgs
-
-    status = MethodCall(org::alljoyn::Bus::Security::ManagedApplication::InterfaceName, "InstallMembership", inputs, 2, reply);
-    if (ER_OK != status) {
-        if (reply->GetErrorName() != NULL) {
-            if (strcmp(reply->GetErrorName(), "org.alljoyn.Bus.Error.PermissionDenied") == 0) {
-                status = ER_PERMISSION_DENIED;
-            } else if (strcmp(reply->GetErrorName(), "org.alljoyn.Bus.Error.DuplicateCertificate") == 0) {
-                //status = ER_DUPLICATE_CERTIFICATE;
-                status = ER_NOT_IMPLEMENTED;  //TODO add ER_DUPLICATE_CERTIFICATE to status and delete this status
-            } else if (strcmp(reply->GetErrorName(), "org.alljoyn.Bus.Error.InvalidCertificate") == 0) {
-                status = ER_DIGEST_MISMATCH;
-            } else if (strcmp(reply->GetErrorName(), org::alljoyn::Bus::ErrorName) == 0 && reply->GetArg(1)) {
-                status = static_cast<QStatus>(reply->GetArg(1)->v_uint16);
-            } else {
-                QCC_LogError(status, ("SecurityApplicationProxy::%s error %s", __FUNCTION__, reply->GetErrorDescription().c_str()));
-            }
-        }
-        return status;
-    }
-
-    return status;
-}
-
-QStatus SecurityApplicationProxy::RemoveMembership(const qcc::IdentityCertificate& certificateId)
-{
-    QCC_UNUSED(certificateId); //TODO remove upon implementation
     QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
     QStatus status = ER_OK;
     Message reply(*bus);
 
     MsgArg inputs[1];
-    //TODO convert input params to MsgArgs
+    MsgArg* certArgs = new MsgArg[certificateChainSize];
+    for (size_t cnt = 0; cnt < certificateChainSize; cnt++) {
+        qcc::String der;
+        status = certificateChain[cnt].EncodeCertificateDER(der);
+        if (ER_OK != status) {
+            goto Exit;
+        }
+        status = certArgs[cnt].Set("(yay)", qcc::CertificateX509::ENCODING_X509_DER, der.size(), der.data());
+        if (ER_OK != status) {
+            goto Exit;
+        }
+        certArgs[cnt].Stabilize();
+    }
+    status = inputs[0].Set("a(yay)", certificateChainSize, certArgs);
+    if (ER_OK != status) {
+        goto Exit;
+    }
+
+    status = MethodCall(org::alljoyn::Bus::Security::ManagedApplication::InterfaceName, "InstallMembership", inputs, 1, reply);
+    if (ER_OK != status) {
+        if (!GetStatusBasedOnErrorName(reply, status)) {
+            QCC_LogError(status, ("SecurityApplicationProxy::%s error %s", __FUNCTION__, reply->GetErrorDescription().c_str()));
+        }
+    }
+
+Exit:
+    delete [] certArgs;
+    return status;
+}
+
+QStatus SecurityApplicationProxy::RemoveMembership(const qcc::String& serial, const qcc::KeyInfoNISTP256& issuerKeyInfo)
+{
+    QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
+    QStatus status = ER_OK;
+    Message reply(*bus);
+
+    MsgArg inputs[1];
+
+    status = inputs[0].Set("(ayay(yyayay))",
+                           serial.size(), (uint8_t*) serial.data(),
+                           issuerKeyInfo.GetKeyIdLen(), issuerKeyInfo.GetKeyId(),
+                           issuerKeyInfo.GetAlgorithm(), issuerKeyInfo.GetCurve(),
+                           qcc::ECC_COORDINATE_SZ, issuerKeyInfo.GetXCoord(),
+                           qcc::ECC_COORDINATE_SZ, issuerKeyInfo.GetYCoord());
+    if (ER_OK != status) {
+        return status;
+    }
 
     status = MethodCall(org::alljoyn::Bus::Security::ManagedApplication::InterfaceName, "RemoveMembership", inputs, 1, reply);
     if (ER_OK != status) {
-        if (reply->GetErrorName() != NULL) {
-            if (strcmp(reply->GetErrorName(), "org.alljoyn.Bus.Error.PermissionDenied") == 0) {
-                status = ER_PERMISSION_DENIED;
-            } else if (strcmp(reply->GetErrorName(), "org.alljoyn.Bus.Error.CertificateNotFound") == 0) {
-                status = ER_CERTIFICATE_NOT_FOUND;
-            } else if (strcmp(reply->GetErrorName(), org::alljoyn::Bus::ErrorName) == 0 && reply->GetArg(1)) {
-                status = static_cast<QStatus>(reply->GetArg(1)->v_uint16);
-            } else {
-                QCC_LogError(status, ("SecurityApplicationProxy::%s error %s", __FUNCTION__, reply->GetErrorDescription().c_str()));
-            }
+        if (!GetStatusBasedOnErrorName(reply, status)) {
+            QCC_LogError(status, ("SecurityApplicationProxy::%s error %s", __FUNCTION__, reply->GetErrorDescription().c_str()));
         }
-        return status;
     }
     return status;
 }
@@ -517,6 +514,50 @@ QStatus SecurityApplicationProxy::MsgArgToIdentityCertChain(const MsgArg& arg, q
                 return status;
             }
         }
+    }
+    return status;
+}
+
+QStatus SecurityApplicationProxy::MsgArgToCertificateIds(const MsgArg& arg, qcc::String* serials, qcc::KeyInfoNISTP256* issuerKeyInfos, size_t expectedSize)
+{
+    MsgArg* membershipsArg;
+    size_t count;
+    QStatus status = arg.Get("a(ayay(yyayay))", &count, &membershipsArg);
+    if (ER_OK != status) {
+        return status;
+    }
+    if (count != expectedSize) {
+        return ER_BAD_ARG_4;
+    }
+
+    for (size_t cnt = 0; cnt < count; cnt++) {
+        uint8_t* serialVal;
+        size_t serialLen;
+        uint8_t* akiVal;
+        size_t akiLen;
+        uint8_t algorithm;
+        uint8_t curve;
+        uint8_t* xCoord;
+        size_t xLen;
+        uint8_t* yCoord;
+        size_t yLen;
+        status = membershipsArg[cnt].Get("(ayay(yyayay))", &serialLen, &serialVal, &akiLen, &akiVal, &algorithm, &curve, &xLen, &xCoord, &yLen, &yCoord);
+        if (ER_OK != status) {
+            return status;
+        }
+        if (algorithm != qcc::SigInfo::ALGORITHM_ECDSA_SHA_256) {
+            return ER_INVALID_DATA;
+        }
+        if (curve != qcc::Crypto_ECC::ECC_NIST_P256) {
+            return ER_INVALID_DATA;
+        }
+        if ((xLen != qcc::ECC_COORDINATE_SZ) || (yLen != qcc::ECC_COORDINATE_SZ)) {
+            return ER_INVALID_DATA;
+        }
+        issuerKeyInfos[cnt].SetXCoord(xCoord);
+        issuerKeyInfos[cnt].SetYCoord(yCoord);
+        issuerKeyInfos[cnt].SetKeyId(akiVal, akiLen);
+        serials[cnt].assign((const char*) serialVal, serialLen);
     }
     return status;
 }
@@ -622,14 +663,13 @@ QStatus SecurityApplicationProxy::GetPolicyVersion(uint32_t& policyVersion)
 
 QStatus SecurityApplicationProxy::GetPolicy(PermissionPolicy& policy)
 {
-    QCC_UNUSED(policy); //TODO remove on implementation
     QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
     QStatus status = ER_OK;
 
     MsgArg arg;
     status = GetProperty(org::alljoyn::Bus::Security::ManagedApplication::InterfaceName, "Policy", arg);
     if (ER_OK == status) {
-        //TODO pull the PermissionPolicy from the MsgArg
+        status = policy.Import(PermissionPolicy::SPEC_VERSION, arg);
     }
 
     return status;
@@ -644,7 +684,7 @@ QStatus SecurityApplicationProxy::GetDefaultPolicy(PermissionPolicy& defaultPoli
     MsgArg arg;
     status = GetProperty(org::alljoyn::Bus::Security::ManagedApplication::InterfaceName, "DefaultPolicy", arg);
     if (ER_OK == status) {
-        //TODO pull the PermissionPolicy from the MsgArg
+        status = defaultPolicy.Import(PermissionPolicy::SPEC_VERSION, arg);
     }
 
     return status;
@@ -658,7 +698,10 @@ QStatus SecurityApplicationProxy::GetMembershipSummaries(MsgArg& membershipSumma
     MsgArg arg;
     status = GetProperty(org::alljoyn::Bus::Security::ManagedApplication::InterfaceName, "MembershipSummaries", arg);
     if (ER_OK == status) {
-        membershipSummaries = arg;
+        /* GetProperty returns a variant wrapper */
+        MsgArg* resultArg;
+        status = arg.Get("v", &resultArg);
+        membershipSummaries = *resultArg;
         membershipSummaries.Stabilize();
     }
 

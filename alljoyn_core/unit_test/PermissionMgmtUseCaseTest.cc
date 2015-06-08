@@ -1091,12 +1091,12 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
      */
     void InstallPolicyToAdmin(PermissionPolicy& policy)
     {
-        PermissionMgmtProxy pmProxy(adminProxyBus, adminBus.GetUniqueName().c_str());
-        EXPECT_EQ(ER_OK, pmProxy.InstallPolicy(policy)) << "  InstallPolicy failed.";
+        SecurityApplicationProxy saProxy(adminProxyBus, adminBus.GetUniqueName().c_str());
+        EXPECT_EQ(ER_OK, saProxy.UpdatePolicy(policy)) << "  UpdatePolicy failed.";
 
         /* retrieve back the policy to compare */
         PermissionPolicy retPolicy;
-        EXPECT_EQ(ER_OK, pmProxy.GetPolicy(&retPolicy)) << "GetPolicy failed.";
+        EXPECT_EQ(ER_OK, saProxy.GetPolicy(retPolicy)) << "GetPolicy failed.";
 
         EXPECT_EQ(policy.GetVersion(), retPolicy.GetVersion()) << " GetPolicy failed. Different policy version number.";
         EXPECT_EQ(policy.GetAclsSize(), retPolicy.GetAclsSize()) << " GetPolicy failed. Different incoming acls size.";
@@ -1107,15 +1107,15 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
      */
     void InstallPolicyToNoAdmin(BusAttachment& installerBus, BusAttachment& bus, PermissionPolicy& policy)
     {
-        PermissionMgmtProxy pmProxy(installerBus, bus.GetUniqueName().c_str());
+        SecurityApplicationProxy saProxy(installerBus, bus.GetUniqueName().c_str());
 
         PermissionPolicy aPolicy;
         SetApplicationStateSignalReceived(false);
-        EXPECT_EQ(ER_OK, pmProxy.InstallPolicy(policy)) << "InstallPolicy failed.";
+        EXPECT_EQ(ER_OK, saProxy.UpdatePolicy(policy)) << "UpdatePolicy failed.";
 
         /* retrieve back the policy to compare */
         PermissionPolicy retPolicy;
-        EXPECT_EQ(ER_OK, pmProxy.GetPolicy(&retPolicy)) << "GetPolicy failed.";
+        EXPECT_EQ(ER_OK, saProxy.GetPolicy(retPolicy)) << "GetPolicy failed.";
 
         EXPECT_EQ(policy.GetVersion(), retPolicy.GetVersion()) << " GetPolicy failed. Different policy version number.";
         EXPECT_EQ(policy.GetAclsSize(), retPolicy.GetAclsSize()) << " GetPolicy failed. Different incoming acls size.";
@@ -1128,7 +1128,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         }
         EXPECT_TRUE(GetApplicationStateSignalReceived()) << " Fail to receive expected ApplicationState signal.";
         /* install a policy with the same policy version number.  Expect to fail. */
-        EXPECT_NE(ER_OK, pmProxy.InstallPolicy(policy)) << "InstallPolicy again with same policy version number expected to fail, but it did not.";
+        EXPECT_NE(ER_OK, saProxy.UpdatePolicy(policy)) << "UpdatePolicy again with same policy version number expected to fail, but it did not.";
     }
 
     /**
@@ -1153,6 +1153,16 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     void InstallPolicyToConsumer(PermissionPolicy& policy)
     {
         InstallPolicyToNoAdmin(adminBus, consumerBus, policy);
+    }
+
+    void RetrieveDefaultPolicy(BusAttachment& bus, BusAttachment& targetBus)
+    {
+        SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
+        /* retrieve the default policy */
+        PermissionPolicy policy;
+        EXPECT_EQ(ER_OK, saProxy.GetDefaultPolicy(policy)) << "GetDefaultPolicy failed.";
+
+        EXPECT_EQ(policy.GetVersion(), (uint32_t) 0) << " Default policy is supposed to have policy version 0.";
     }
 
     /*
@@ -1277,14 +1287,15 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
      */
     void RemoveMembershipFromServiceProvider()
     {
-        PermissionMgmtProxy pmProxy(adminBus, serviceBus.GetUniqueName().c_str());
+        SecurityApplicationProxy saProxy(adminBus, serviceBus.GetUniqueName().c_str());
         KeyInfoNISTP256 keyInfo;
         adminBus.GetPermissionConfigurator().GetSigningPublicKey(keyInfo);
         String aki;
         CertificateX509::GenerateAuthorityKeyId(keyInfo.GetPublicKey(), aki);
-        EXPECT_EQ(ER_OK, pmProxy.RemoveMembership(membershipSerial3, aki)) << "RemoveMembershipFromServiceProvider failed.";
+        keyInfo.SetKeyId((const uint8_t*) aki.data(), aki.size());
+        EXPECT_EQ(ER_OK, saProxy.RemoveMembership(membershipSerial3, keyInfo)) << "RemoveMembershipFromServiceProvider failed.";
         /* removing it again */
-        EXPECT_NE(ER_OK, pmProxy.RemoveMembership(membershipSerial3, aki)) << "RemoveMembershipFromServiceProvider succeeded.  Expect it to fail.";
+        EXPECT_NE(ER_OK, saProxy.RemoveMembership(membershipSerial3, keyInfo)) << "RemoveMembershipFromServiceProvider succeeded.  Expect it to fail.";
 
     }
 
@@ -1330,6 +1341,31 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         qcc::String targetCN((const char*) targetGUID.GetBytes(), targetGUID.SIZE);
         status = PermissionMgmtTestHelper::InstallMembershipChain(topBus, middleBus, serial0, serial1, targetBus.GetUniqueName().c_str(), middleCN, &secondPubKey, targetCN, &targetPubKey, guildID);
         EXPECT_EQ(ER_OK, status) << "  InstallMembershipChainToTarget failed.  Actual Status: " << QCC_StatusText(status);
+
+        /* retrieve the membership summaries to verify the issuer public key is provided */
+        SecurityApplicationProxy saProxy(middleBus, targetBus.GetUniqueName().c_str());
+        MsgArg arg;
+        EXPECT_EQ(ER_OK, saProxy.GetMembershipSummaries(arg)) << "GetMembershipSummaries failed.";
+        size_t count = arg.v_array.GetNumElements();
+
+        ASSERT_GT(count, (size_t) 0) << "No membership cert found.";
+        if (count == 0) {
+            return;
+        }
+        KeyInfoNISTP256* keyInfos = new KeyInfoNISTP256[count];
+        String* serials = new String[count];
+        EXPECT_EQ(ER_OK, SecurityApplicationProxy::MsgArgToCertificateIds(arg, serials, keyInfos, count)) << " MsgArgToCertificateIds failed.";
+
+        bool nonEmptyPublicKey = false;
+        for (size_t cnt = 0; cnt < count; cnt++) {
+            if (!keyInfos[cnt].GetPublicKey()->empty()) {
+                nonEmptyPublicKey = true;
+                break;
+            }
+        }
+        delete [] serials;
+        delete [] keyInfos;
+        EXPECT_TRUE(nonEmptyPublicKey) << " At least one issuer public key is not supposed to be empty.";
     }
 
     /**
@@ -1627,14 +1663,18 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     /*
      *  Remove Policy from service provider
      */
-    void RemovePolicyFromServiceProvider()
+    void ResetPolicyFromApp(BusAttachment& bus, BusAttachment& targetBus)
     {
-        PermissionMgmtProxy pmProxy(adminBus, serviceBus.GetUniqueName().c_str());
-        EXPECT_EQ(ER_OK, pmProxy.RemovePolicy()) << "RemovePolicy failed.";
-        /* get policy again.  Expect it to fail */
+        SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
         PermissionPolicy retPolicy;
+        EXPECT_EQ(ER_OK, saProxy.GetPolicy(retPolicy)) << "GetPolicy did not fail.";
+        uint32_t originalPolicyVersion = retPolicy.GetVersion();
+        EXPECT_EQ(ER_OK, saProxy.ResetPolicy()) << "ResetPolicy failed.";
+        /* get policy again.  Expect it to return a policy version 0 */
+        EXPECT_EQ(ER_OK, saProxy.GetPolicy(retPolicy)) << "GetPolicy did not fail.";
+        EXPECT_EQ(retPolicy.GetVersion(), (uint32_t) 0) << " Policy after reset is supposed to have policy version 0.";
+        EXPECT_NE(retPolicy.GetVersion(), originalPolicyVersion) << " Policy after reset is not supposed to have same version as the non-default policy.";
         /* sleep a second to see whether the ApplicationState signal is received */
-        EXPECT_NE(ER_OK, pmProxy.GetPolicy(&retPolicy)) << "GetPolicy did not fail.";
         for (int cnt = 0; cnt < 100; cnt++) {
             if (GetApplicationStateSignalReceived()) {
                 break;
@@ -1649,18 +1689,30 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
      */
     void RemoveMembershipFromConsumer()
     {
-        PermissionMgmtProxy pmProxy(adminBus, consumerBus.GetUniqueName().c_str());
-        qcc::GUID128 issuerGUID;
-        PermissionMgmtTestHelper::GetGUID(adminBus, issuerGUID);
-        KeyInfoNISTP256 keyInfo;
-        adminBus.GetPermissionConfigurator().GetSigningPublicKey(keyInfo);
-        String aki;
-        CertificateX509::GenerateAuthorityKeyId(keyInfo.GetPublicKey(), aki);
+        SecurityApplicationProxy saProxy(adminBus, consumerBus.GetUniqueName().c_str());
+        /* retrieve the membership summaries */
+        MsgArg arg;
+        EXPECT_EQ(ER_OK, saProxy.GetMembershipSummaries(arg)) << "GetMembershipSummaries failed.";
+        size_t count = arg.v_array.GetNumElements();
 
-        EXPECT_EQ(ER_OK, pmProxy.RemoveMembership(membershipSerial1, aki)) << "RemoveMembershipFromConsumer failed.";
+        ASSERT_GT(count, (size_t) 0) << "No membership cert found.";
+        if (count == 0) {
+            return;
+        }
+        /* will delete the first membership cert */
+        KeyInfoNISTP256* keyInfos = new KeyInfoNISTP256[count];
+        String* serials = new String[count];
+        EXPECT_EQ(ER_OK, SecurityApplicationProxy::MsgArgToCertificateIds(arg, serials, keyInfos, count)) << " MsgArgToCertificateIds failed.";
+
+        if (keyInfos[0].GetPublicKey()->empty()) {
+            keyInfos[0] = consumerAdminGroupAuthority;
+        }
+
+        EXPECT_EQ(ER_OK, saProxy.RemoveMembership(serials[0], keyInfos[0])) << "RemoveMembershipFromConsumer failed.";
         /* removing it again */
-        EXPECT_NE(ER_OK, pmProxy.RemoveMembership(membershipSerial1, aki)) << "RemoveMembershipFromConsumer succeeded.  Expect it to fail.";
-
+        EXPECT_NE(ER_OK, saProxy.RemoveMembership(serials[0], keyInfos[0])) << "RemoveMembershipFromConsumer succeeded.  Expect it to fail.";
+        delete [] serials;
+        delete [] keyInfos;
     }
 
     /**
@@ -1730,6 +1782,8 @@ class PathBasePermissionMgmtUseCaseTest : public PermissionMgmtUseCaseTest {
 TEST_F(PermissionMgmtUseCaseTest, TestAllCalls)
 {
     Claims(false);
+
+    RetrieveDefaultPolicy(adminBus, serviceBus);
     /* generate a policy */
     PermissionPolicy* policy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, consumerBus);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
@@ -2324,3 +2378,14 @@ TEST_F(PermissionMgmtUseCaseTest, AccessGrantedForPeerFromSpecificCA)
     AppCanSetTVVolume(remoteControlBus, serviceBus, 21);
 }
 
+TEST_F(PermissionMgmtUseCaseTest, TestResetPolicy)
+{
+    Claims(false);
+
+    /* generate a policy */
+    PermissionPolicy* policy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, consumerBus);
+    ASSERT_TRUE(policy) << "GeneratePolicy failed.";
+    InstallPolicyToService(*policy);
+    delete policy;
+    ResetPolicyFromApp(adminBus, serviceBus);
+}

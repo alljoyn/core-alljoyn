@@ -319,13 +319,14 @@ class SecurityApplicationProxy : public ProxyBusObject {
      *  - #ER_INVALID_CERTIFICATE Error raised when the membership certificate is not valid.
      *  - an error status indicating failure
      */
-    QStatus InstallMembership(const qcc::CertificateX509* certificateChain, size_t certificateChainSize);
+    QStatus InstallMembership(const qcc::MembershipCertificate* certificateChain, size_t certificateChainSize);
 
     /**
      * This method allows an admin to remove a membership certificate chain from the
      * application.
      *
-     * @param[in] certificateId the serial number and issuer of the membership leaf certificate
+     * @param[in] serial the serial number
+     * @param[in] issuerKeyInfo the issuer key information including aki and public key of the membership leaf certificate
      *
      * @return
      *  - #ER_OK if successful
@@ -333,7 +334,7 @@ class SecurityApplicationProxy : public ProxyBusObject {
      *  - #ER_CERTIFICATE_NOT_FOUND Error raised when the certificate is not found
      *  - an error status indicating failure
      */
-    QStatus RemoveMembership(const qcc::IdentityCertificate& certificateId);
+    QStatus RemoveMembership(const qcc::String& serial, const qcc::KeyInfoNISTP256& issuerKeyInfo);
 
     /**
      * Get the ManagedApplication version
@@ -415,7 +416,9 @@ class SecurityApplicationProxy : public ProxyBusObject {
 
     /**
      * The list of serial numbers and issuers of the currently installed membership
-     * certificates.
+     * certificates.  If the issuer's public key is not available in the case
+     * where the membership is a single cert, the issuer public key field is
+     * empty.
      *
      * @param[out] membershipSummaries the Membership Summaries
      *
@@ -435,6 +438,20 @@ class SecurityApplicationProxy : public ProxyBusObject {
      *  - an error status indicating failure
      */
     static QStatus MsgArgToIdentityCertChain(const MsgArg& arg, qcc::IdentityCertificate* certs, size_t expectedSize);
+
+    /**
+     * Populate the array of serial numbers and issuer key infos with data from
+     * the msg arg returned from GetMembershipSummaries.
+     * @param arg the message arg with signature a(ayay(yyayay))
+     * @param[in,out] serials the array of serial numbers
+     * @param[in,out] issuerKeyInfos the array of issuer key info objects
+     * @param expectedSize the size of the arrays
+     * @return
+     *  - #ER_OK if successful
+     *  - an error status indicating failure
+     */
+    static QStatus MsgArgToCertificateIds(const MsgArg& arg, qcc::String* serials, qcc::KeyInfoNISTP256* issuerKeyInfos, size_t expectedSize);
+
 };
 }
 
