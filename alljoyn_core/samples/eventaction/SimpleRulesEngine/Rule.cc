@@ -236,7 +236,7 @@ void Rule::modifyActionSessionName(const char*sessionName)
 
 
 /* From SessionListener */
-void Rule::SessionLost(ajn::SessionId sessionId)
+void Rule::SessionLost(ajn::SessionId sessionId, ajn::SessionListener::SessionLostReason reason)
 {
     QCC_UNUSED(sessionId);
     LOGTHIS("Unable to communicate with action device, lost the session.");

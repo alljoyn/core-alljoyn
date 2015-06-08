@@ -26,7 +26,7 @@ class AboutClientSessionListener : public ajn::SessionListener {
 
     virtual ~AboutClientSessionListener();
 
-    void SessionLost(ajn::SessionId sessionId);
+    void SessionLost(ajn::SessionId sessionId, ajn::SessionListener::SessionLostReason reason);
 
   private:
 

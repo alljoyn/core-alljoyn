@@ -267,7 +267,7 @@ void MyAllJoynCode::AsyncCallReplyHandler(Message& msg, void* context) {
 }
 
 /* From SessionListener */
-void MyAllJoynCode::SessionLost(ajn::SessionId sessionId)
+void MyAllJoynCode::SessionLost(ajn::SessionId sessionId, ajn::SessionListener::SessionLostReason reason)
 {
     JNIEnv* env;
     jint jret = vm->GetEnv((void**)&env, JNI_VERSION_1_2);

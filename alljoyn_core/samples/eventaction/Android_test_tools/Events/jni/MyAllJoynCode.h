@@ -110,7 +110,7 @@ class MyAllJoynCode :
     void AsyncCallReplyHandler(ajn::Message& msg, void* context);
 
     /* From SessionListener */
-    virtual void SessionLost(ajn::SessionId sessionId);
+    virtual void SessionLost(ajn::SessionId sessionId, ajn::SessionListener::SessionLostReason reason);
 
     /** JoinSessionAsync callback */
     virtual void JoinSessionCB(QStatus status, ajn::SessionId sessionId, const ajn::SessionOpts& opts, void* context);
