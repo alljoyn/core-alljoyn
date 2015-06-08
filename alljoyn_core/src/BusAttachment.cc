@@ -2286,8 +2286,6 @@ void BusAttachment::Internal::AllJoynSignalHandler(const InterfaceDescription::M
                         sessionListenersLock[i].Unlock(MUTEX_CONTEXT);
                         if (*pl) {
                             (*pl)->SessionLost(id, reason);
-                            /* For backward compatibility, call the older version of SessionLost too */
-                            (*pl)->SessionLost(id);
                         }
                         /* Automatically remove session listener upon sessionLost */
                         sessionListenersLock[i].Lock(MUTEX_CONTEXT);

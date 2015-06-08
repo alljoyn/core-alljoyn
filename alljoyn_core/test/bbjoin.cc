@@ -190,8 +190,9 @@ class MyBusListener : public BusListener, public SessionPortListener, public Ses
         }
     }
 
-    void SessionLost(SessionId sessid)
+    void SessionLost(SessionId sessid, SessionLostReason reason)
     {
+        QCC_UNUSED(reason);
         printf("Session Lost  %u\n", sessid);
     }
 };
