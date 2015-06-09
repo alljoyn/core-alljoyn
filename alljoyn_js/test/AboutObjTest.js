@@ -34,6 +34,7 @@ AsyncTestCase("AboutObjTest", {
 
         PORT = 25;
         var OBJECT_PATH = "/test/aboutObj";
+        WILD_CARD_CHAR = "*";
         var serviceBusCreate = function(err) {
             assertFalsy(err);
             serviceBus = new org.alljoyn.bus.BusAttachment();
@@ -43,23 +44,16 @@ AsyncTestCase("AboutObjTest", {
             var interface_str =
                 '<node>\n' +
                 '  <interface name="test.about.aboutObj">\n' +
-                '    <method name="Echo">\n' +
-                '      <arg name="inStr" type="s" direction="in"/>\n' +
-                '      <arg name="outStr" type="s" direction="out"/>\n' +
-                '      <annotation name="org.alljoyn.Foo" value="bar"/>\n' +
-                '    </method>\n' +
                 '  </interface>\n' +
                 '</node>\n';
             serviceBus.createInterfacesFromXML(interface_str, registerBusObject);
         };
         var testobject = {
-            "test.about.aboutObj": {
-                Echo: function(context, inStr) {  }
-            }
+            "test.about.aboutObj": { }
         };
 
         var registerBusObject = function(err) {
-            serviceBus.registerBusObject(OBJECT_PATH, testobject, connect);
+            serviceBus.registerBusObject(OBJECT_PATH, testobject, false, true, connect);
         };
 
         var connect = function(err) {
@@ -194,7 +188,10 @@ AsyncTestCase("AboutObjTest", {
                         assertNotEquals(-1, str.indexOf("/test/aboutObj"));
                         assertNotEquals(-1, str.indexOf("test.about.aboutObj"));
 
-                        bus.unregisterAboutListener(aboutListener, callbacks.add(function(err) { assertFalsy(err); }));
+                        bus.cancelWhoImplements(WILD_CARD_CHAR, callbacks.add(function(err) {
+                            assertFalsy(err);
+                            bus.unregisterAboutListener(aboutListener, callbacks.add(function(err) { assertFalsy(err); }));
+                        }));
                     }),
                 };
                 bus.registerAboutListener(aboutListener, callbacks.add(connect));
@@ -206,7 +203,7 @@ AsyncTestCase("AboutObjTest", {
 
             var whoImplements = function(err) {
                 assertFalsy(err);
-                bus.whoImplements(null, callbacks.add(aboutService));
+                bus.whoImplements(WILD_CARD_CHAR, callbacks.add(aboutService));
             };
 
             var done = function(err) {
