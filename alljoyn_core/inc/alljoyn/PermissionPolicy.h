@@ -575,6 +575,24 @@ class PermissionPolicy {
             return ER_NOT_IMPLEMENTED;
         }
 
+        /**
+         * Generate a hash digest for the manifest data.  Each marshaller can use its own digest algorithm.
+         * @param[in] rules the array of rules in the manifest
+         * @param[in] count the number of rules in the manifest
+         * @param[out] digest the buffer to hold the output digest.  It must be new[] by the caller and must have enough space to hold the digest
+         * @param len the length of the digest buffer.
+         * @return
+         *      - #ER_OK if digest was successful.
+         *      - error code if fail
+         */
+        virtual QStatus Digest(const PermissionPolicy::Rule* rules, size_t count, uint8_t* digest, size_t len)
+        {
+            QCC_UNUSED(rules);
+            QCC_UNUSED(count);
+            QCC_UNUSED(digest);
+            QCC_UNUSED(len);
+            return ER_NOT_IMPLEMENTED;
+        }
     };
 
     /**
@@ -769,6 +787,18 @@ class DefaultPolicyMarshaller : public PermissionPolicy::Marshaller {
      */
     QStatus Digest(PermissionPolicy& policy, uint8_t* digest, size_t len);
 
+    /**
+     * Generate a hash digest for the manifest data.  Each marshaller can use its own digest algorithm.
+     * @param[in] rules the array of rules in the manifest
+     * @param[in] count the number of rules in the manifest
+     * @param[out] digest the buffer to hold the output digest.  It must be new[] by the caller and must have enough space to hold the digest
+     * @param len the length of the digest buffer.
+     * @return
+     *      - #ER_OK if digest was successful.
+     *      - error code if fail
+     */
+    QStatus Digest(const PermissionPolicy::Rule* rules, size_t count, uint8_t* digest, size_t len);
+
   private:
     /**
      * Assignment operator is private
@@ -781,6 +811,7 @@ class DefaultPolicyMarshaller : public PermissionPolicy::Marshaller {
     DefaultPolicyMarshaller(const DefaultPolicyMarshaller& other);
 
     QStatus MarshalPrep(PermissionPolicy& policy);
+    QStatus MarshalPrep(const PermissionPolicy::Rule* rules, size_t count);
     Message& msg;
 };
 

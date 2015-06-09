@@ -1640,7 +1640,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     /*
      *  Set the manifest for the service provider
      */
-    void SetPermissionManifestOnServiceProvider()
+    void SetManifestTemplateOnServiceProvider()
     {
 
         PermissionPolicy::Rule* rules = NULL;
@@ -1651,13 +1651,24 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         status = pc.SetPermissionManifest(rules, count);
         EXPECT_EQ(ER_OK, status) << "  SetPermissionManifest SetPermissionManifest failed.  Actual Status: " << QCC_StatusText(status);
 
-        PermissionMgmtProxy pmProxy(adminBus, serviceBus.GetUniqueName().c_str());
-        PermissionPolicy::Rule* retrievedRules = NULL;
-        size_t retrievedCount = 0;
-        EXPECT_EQ(ER_OK, pmProxy.GetManifest(&retrievedRules, &retrievedCount)) << "SetPermissionManifest GetManifest failed.";
-        EXPECT_EQ(count, retrievedCount) << "  SetPermissionManifest GetManifest failed to retrieve the same count.";
+        SecurityApplicationProxy saProxy(adminBus, serviceBus.GetUniqueName().c_str());
+        MsgArg arg;
+        EXPECT_EQ(ER_OK, saProxy.GetManifestTemplate(arg)) << "SetPermissionManifest GetManifestTemplate failed.";
+        size_t retrievedCount = arg.v_array.GetNumElements();
+        ASSERT_EQ(count, retrievedCount) << "Install manifest template size is different than original.";
+        if (retrievedCount == 0) {
+            delete [] rules;
+            return;
+        }
+
+        PermissionPolicy::Rule* retrievedRules = new PermissionPolicy::Rule[count];
+        EXPECT_EQ(ER_OK, SecurityApplicationProxy::MsgArgToRules(arg, retrievedRules, count)) << "SecurityApplicationProxy::MsgArgToRules failed.";
         delete [] rules;
         delete [] retrievedRules;
+
+        /* retrieve the manifest template digest */
+        uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+        EXPECT_EQ(ER_OK, saProxy.GetManifestTemplateDigest(digest, Crypto_SHA256::DIGEST_SIZE)) << "SetPermissionManifest GetManifestTemplateDigest failed.";
     }
 
     /*
@@ -1820,7 +1831,7 @@ TEST_F(PermissionMgmtUseCaseTest, TestAllCalls)
     }
     EXPECT_TRUE(GetChannelChangedSignalReceived()) << " Fail to receive expected ChannelChanged signal.";
 
-    SetPermissionManifestOnServiceProvider();
+    SetManifestTemplateOnServiceProvider();
 
     RetrieveServicePublicKey();
     RemoveMembershipFromServiceProvider();
@@ -1853,7 +1864,7 @@ TEST_F(PermissionMgmtUseCaseTest, ClaimPolicyMembershipAccess)
 
     AnyUserCanCallOnAndNotOff(consumerBus);
     ConsumerCanTVUpAndDownAndNotChannel();
-    SetPermissionManifestOnServiceProvider();
+    SetManifestTemplateOnServiceProvider();
 
 }
 

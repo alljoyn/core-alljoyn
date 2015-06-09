@@ -120,19 +120,36 @@ QStatus SecurityApplicationProxy::GetApplicationState(ApplicationState& applicat
     return status;
 }
 
-QStatus SecurityApplicationProxy::GetManifestTemplateDigest(MsgArg& digest)
+QStatus SecurityApplicationProxy::GetManifestTemplateDigest(uint8_t* digest, size_t expectedSize)
 {
-    QCC_UNUSED(digest); //TODO remove on implementation
     QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
     QStatus status = ER_OK;
 
     MsgArg arg;
     status = GetProperty(org::alljoyn::Bus::Security::Application::InterfaceName, "ManifestTemplateDigest", arg);
-    if (ER_OK == status) {
-        //TODO pull the digest from the MsgArg;
+    if (ER_OK != status) {
+        return status;
     }
-
-    return status;
+    MsgArg* resultArg;
+    status = arg.Get("v", &resultArg);
+    if (ER_OK != status) {
+        return status;
+    }
+    uint8_t algo;
+    uint8_t* digestVal;
+    size_t len;
+    status = resultArg->Get("(yay)", &algo, &len, &digestVal);
+    if (ER_OK != status) {
+        return status;
+    }
+    if (algo != qcc::SigInfo::ALGORITHM_ECDSA_SHA_256) {
+        return ER_INVALID_DATA;
+    }
+    if (len != expectedSize) {
+        return ER_BAD_ARG_2;
+    }
+    memcpy(digest, digestVal, len);
+    return ER_OK;
 }
 
 QStatus SecurityApplicationProxy::GetEccPublicKey(qcc::ECCPublicKey& eccPublicKey)
@@ -177,7 +194,9 @@ QStatus SecurityApplicationProxy::GetManifestTemplate(MsgArg& rules)
     MsgArg arg;
     status = GetProperty(org::alljoyn::Bus::Security::Application::InterfaceName, "ManifestTemplate", arg);
     if (ER_OK == status) {
-        rules = arg;
+        MsgArg* resultArg;
+        status = arg.Get("v", &resultArg);
+        rules = *resultArg;
         rules.Stabilize();
     }
 
@@ -559,6 +578,26 @@ QStatus SecurityApplicationProxy::MsgArgToCertificateIds(const MsgArg& arg, qcc:
         issuerKeyInfos[cnt].SetKeyId(akiVal, akiLen);
         serials[cnt].assign((const char*) serialVal, serialLen);
     }
+    return status;
+}
+
+QStatus SecurityApplicationProxy::MsgArgToRules(const MsgArg& arg, PermissionPolicy::Rule* rules, size_t expectedSize)
+{
+    PermissionPolicy::Rule* localRules = NULL;
+    size_t count = 0;
+    QStatus status = PermissionPolicy::ParseRules(arg, &localRules, &count);
+    if (ER_OK != status) {
+        goto Exit;
+    }
+    if (count != expectedSize) {
+        status = ER_BAD_ARG_3;
+        goto Exit;
+    }
+    for (size_t cnt = 0; cnt < count; cnt++) {
+        rules[cnt] = localRules[cnt];
+    }
+Exit:
+    delete [] localRules;
     return status;
 }
 

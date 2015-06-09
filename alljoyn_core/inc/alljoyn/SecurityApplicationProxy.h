@@ -92,13 +92,17 @@ class SecurityApplicationProxy : public ProxyBusObject {
     /**
      * Get the SHA-256 digest of the manifest template.
      *
-     * @param[out] digest the SHA-256 digest of the manifest template.
+     * @param[out] digest the buffer to hold the SHA-256 digest of the
+     *                       manifest template.
+     * @param expectedSize the size of the buffer.  The expected size must be
+     *                     equal to qcc::Crypto_SHA256::DIGEST_SIZE or 32.
      *
      * @return
      *  - #ER_OK if successful
+     *  - #ER_BAD_ARG_2 if the expected size is not equal to qcc::Crypto_SHA256::DIGEST_SIZE
      *  - an error status indicating failure
      */
-    QStatus GetManifestTemplateDigest(MsgArg& digest);
+    QStatus GetManifestTemplateDigest(uint8_t* digest, size_t expectedSize);
 
     /**
      * The Elliptic Curve Cryptography public key used by the application's keystore
@@ -451,6 +455,17 @@ class SecurityApplicationProxy : public ProxyBusObject {
      *  - an error status indicating failure
      */
     static QStatus MsgArgToCertificateIds(const MsgArg& arg, qcc::String* serials, qcc::KeyInfoNISTP256* issuerKeyInfos, size_t expectedSize);
+
+    /**
+     * Populate the array of rules certificates with data from the msg arg
+     * @param arg the message arg with signature a(ssa(syy)
+     * @param[in,out] rules the array of rules
+     * @param expectedSize the size of the array of rules
+     * @return
+     *  - #ER_OK if successful
+     *  - an error status indicating failure
+     */
+    static QStatus MsgArgToRules(const MsgArg& arg, PermissionPolicy::Rule* rules, size_t expectedSize);
 
 };
 }

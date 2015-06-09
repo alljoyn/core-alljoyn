@@ -443,6 +443,8 @@ class PermissionMgmtObj : public BusObject {
     void InstallMembership(const InterfaceDescription::Member* member, Message& msg);
     void RemoveMembership(const InterfaceDescription::Member* member, Message& msg);
     QStatus GetMembershipSummaries(MsgArg& arg);
+    QStatus GetManifestTemplate(MsgArg& arg);
+    QStatus GetManifestTemplateDigest(MsgArg& arg);
     uint32_t policyVersion;
 
   private:
@@ -495,7 +497,6 @@ class PermissionMgmtObj : public BusObject {
     QStatus StateChanged();
 
     QStatus GetIdentityBlob(qcc::KeyBlob& kb);
-    void GetManifestTemplate(const InterfaceDescription::Member* member, Message& msg);
     bool ValidateCertChain(const qcc::String& certChainPEM, bool& authorized);
     QStatus LocateMembershipEntry(const qcc::String& serialNum, const qcc::String& issuerAki, KeyStore::Key& membershipKey, bool searchLeafCertOnly);
     QStatus LocateMembershipEntry(const qcc::String& serialNum, const qcc::String& issuerAki, KeyStore::Key& membershipKey);
@@ -514,6 +515,7 @@ class PermissionMgmtObj : public BusObject {
     QStatus GetDSAPrivateKey(qcc::ECCPrivateKey& privateKey);
     QStatus RetrieveIdentityCertChain(MsgArg** certArgs, size_t* count);
     QStatus StoreApplicationState();
+    QStatus LoadManifestTemplate(PermissionPolicy& policy);
 
     /**
      * Bind to an exclusive port for PermissionMgmt object.

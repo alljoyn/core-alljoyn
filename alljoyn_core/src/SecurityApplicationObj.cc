@@ -213,10 +213,10 @@ QStatus SecurityApplicationObj::Get(const char* ifcName, const char* propName, M
         } else if (0 == strcmp("ApplicationState", propName)) {
             status = val.Set("q", applicationState);
         } else if (0 == strcmp("ManifestTemplateDigest", propName)) {
-            /* status = val.Set("(yay)", manifestTemplateDigest.algorithm,
-                     manifestTemplateDigest.digestDataSize,
-                     manifestTemplateDigest.digestData); */
-            status = ER_NOT_IMPLEMENTED; // TODO remove on implementation
+            status = GetManifestTemplateDigest(val);
+            if (ER_MANIFEST_NOT_FOUND == status) {
+                status = ER_BUS_NO_SUCH_PROPERTY;
+            }
         } else if (0 == strcmp("EccPublicKey", propName)) {
             KeyInfoNISTP256 keyInfo;
             status = GetPublicKey(keyInfo);
@@ -227,8 +227,10 @@ QStatus SecurityApplicationObj::Get(const char* ifcName, const char* propName, M
             status = val.Set("a(yay)", 0, NULL); /* Currently there is no
                                                     support for manufacturer certificate yet */
         } else if (0 == strcmp("ManifestTemplate", propName)) {
-            //status = val.Set("a(ssa(syy))", /*ManifestTemplate*/);
-            status = ER_NOT_IMPLEMENTED; // TODO remove on implementation
+            status = GetManifestTemplate(val);
+            if (ER_MANIFEST_NOT_FOUND == status) {
+                status = ER_BUS_NO_SUCH_PROPERTY;
+            }
         } else if (0 == strcmp("ClaimCapabilities", propName)) {
             status = val.Set("q", claimCapabilities);
         } else if (0 == strcmp("ClaimCapabilityAdditionalInfo", propName)) {

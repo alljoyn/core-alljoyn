@@ -35,17 +35,6 @@
 #define QCC_MODULE "PERMISSION_MGMT"
 
 /**
- * PermissionMgmt interface version number
- */
-#define VERSION_NUM  1
-
-/**
- * The manifest type ID
- */
-
-#define MANIFEST_TYPE_ALLJOYN 1
-
-/**
  * The ALLJOYN ECDHE auth mechanism name prefix pattern
  */
 #define ECDHE_NAME_PREFIX_PATTERN "ALLJOYN_ECDHE*"
@@ -80,15 +69,6 @@ PermissionMgmtObj::PermissionMgmtObj(BusAttachment& bus) :
 
 QStatus PermissionMgmtObj::Init()
 {
-    /** TODO: Removing the PermissionMgmt interface once the functions are
-     * migrated to the new Security interfaces.
-     */
-    /* Add org.allseen.Security.PermissionMgmt interface */
-    const InterfaceDescription* ifc = bus.GetInterface(org::allseen::Security::PermissionMgmt::InterfaceName);
-    if (ifc) {
-        AddInterface(*ifc);
-        AddMethodHandler(ifc->GetMember("GetManifest"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmtObj::GetManifestTemplate));
-    }
     ca = new CredentialAccessor(bus);
     bus.GetInternal().GetPermissionManager().SetPermissionMgmtObj(this);
     return bus.RegisterBusObject(*this, true);
@@ -1282,20 +1262,9 @@ QStatus PermissionMgmtObj::GenerateManifestDigest(BusAttachment& bus, const Perm
     if (digestSize != Crypto_SHA256::DIGEST_SIZE) {
         return ER_INVALID_DATA;
     }
-    PermissionPolicy policy;
-    PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[1];
-    PermissionPolicy::Rule* localRules = NULL;
-    if (count > 0) {
-        localRules = new PermissionPolicy::Rule[count];
-        for (size_t cnt = 0; cnt < count; cnt++) {
-            localRules[cnt] = rules[cnt];
-        }
-    }
-    acls[0].SetRules(count, localRules);
-    policy.SetAcls(1, acls);
     Message tmpMsg(bus);
     DefaultPolicyMarshaller marshaller(tmpMsg);
-    return policy.Digest(marshaller, digest, Crypto_SHA256::DIGEST_SIZE);
+    return marshaller.Digest(rules, count, digest, Crypto_SHA256::DIGEST_SIZE);
 }
 
 static QStatus GetManifestFromMessageArg(BusAttachment& bus, const MsgArg& manifestArg, PermissionPolicy::Rule** rules, size_t* count, uint8_t* digest)
@@ -2278,43 +2247,60 @@ QStatus PermissionMgmtObj::RetrieveManifest(PermissionPolicy::Rule** manifest, s
     return ER_OK;
 }
 
-void PermissionMgmtObj::GetManifestTemplate(const InterfaceDescription::Member* member, Message& msg)
+QStatus PermissionMgmtObj::LoadManifestTemplate(PermissionPolicy& policy)
 {
-    QCC_UNUSED(member);
     KeyBlob kb;
     KeyStore::Key key;
     GetACLKey(ENTRY_MANIFEST_TEMPLATE, key);
     QStatus status = ca->GetKey(key, kb);
     if (ER_OK != status) {
         if (ER_BUS_KEY_UNAVAILABLE == status) {
-            status = ER_MANIFEST_NOT_FOUND;
+            return ER_MANIFEST_NOT_FOUND;
         }
-        MethodReply(msg, status);
-        return;
+        return status;
     }
     Message tmpMsg(bus);
     DefaultPolicyMarshaller marshaller(tmpMsg);
-    PermissionPolicy policy;
     status = policy.Import(marshaller, kb.GetData(), kb.GetSize());
     if (ER_OK != status) {
-        MethodReply(msg, status);
-        return;
+        return status;
     }
     if (policy.GetAclsSize() == 0) {
-        MethodReply(msg, ER_MANIFEST_NOT_FOUND);
-        return;
+        return ER_MANIFEST_NOT_FOUND;
+    }
+    return ER_OK;
+}
+
+QStatus PermissionMgmtObj::GetManifestTemplate(MsgArg& arg)
+{
+    PermissionPolicy policy;
+    QStatus status = LoadManifestTemplate(policy);
+    if (ER_OK != status) {
+        return status;
     }
     PermissionPolicy::Acl* acls = (PermissionPolicy::Acl*) policy.GetAcls();
-    MsgArg rulesArg;
-    status = PermissionPolicy::GenerateRules(acls[0].GetRules(), acls[0].GetRulesSize(), rulesArg);
-    if (ER_OK != status) {
-        MethodReply(msg, status);
-        return;
-    }
+    return PermissionPolicy::GenerateRules(acls[0].GetRules(), acls[0].GetRulesSize(), arg);
+}
 
-    MsgArg replyArgs[1];
-    replyArgs[0].Set("(yv)", MANIFEST_TYPE_ALLJOYN, &rulesArg);
-    BusObject::MethodReply(msg, replyArgs, ArraySize(replyArgs));
+QStatus PermissionMgmtObj::GetManifestTemplateDigest(MsgArg& arg)
+{
+    PermissionPolicy policy;
+    QStatus status = LoadManifestTemplate(policy);
+    if (ER_OK != status) {
+        return status;
+    }
+    PermissionPolicy::Acl* acls = (PermissionPolicy::Acl*) policy.GetAcls();
+    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+    status = GenerateManifestDigest(bus, acls[0].GetRules(), acls[0].GetRulesSize(), digest, Crypto_SHA256::DIGEST_SIZE);
+    if (ER_OK != status) {
+        return status;
+    }
+    status = arg.Set("(yay)", qcc::SigInfo::ALGORITHM_ECDSA_SHA_256, Crypto_SHA256::DIGEST_SIZE, digest);
+    if (ER_OK != status) {
+        return status;
+    }
+    arg.Stabilize();
+    return status;
 }
 
 bool PermissionMgmtObj::ValidateCertChain(const qcc::String& certChainPEM, bool& authorized)

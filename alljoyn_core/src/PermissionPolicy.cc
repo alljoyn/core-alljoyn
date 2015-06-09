@@ -534,6 +534,21 @@ QStatus DefaultPolicyMarshaller::MarshalPrep(PermissionPolicy& policy)
     return msg->MarshalMessage("v", "", "", MESSAGE_ERROR, &variant, 1, ALLJOYN_FLAG_SESSIONLESS, 0);
 }
 
+QStatus DefaultPolicyMarshaller::MarshalPrep(const PermissionPolicy::Rule* rules, size_t count)
+{
+    MsgArg msgArg;
+    QStatus status = PermissionPolicy::GenerateRules(rules, count, msgArg);
+    if (ER_OK != status) {
+        return status;
+    }
+    /**
+     * Use an error message as it is the simplest message without many validition rules.
+     * The ALLJOYN_FLAG_SESSIONLESS is set in order to skip the serial number
+     * check since the data can be stored for a long time*/
+    msg->ErrorMsg("/", 0);
+    return msg->MarshalMessage("a(ssa(syy))", "", "", MESSAGE_ERROR, &msgArg, 1, ALLJOYN_FLAG_SESSIONLESS, 0);
+}
+
 QStatus DefaultPolicyMarshaller::Marshal(PermissionPolicy& policy, uint8_t** buf, size_t* size)
 {
     *buf = NULL;
@@ -587,6 +602,27 @@ QStatus DefaultPolicyMarshaller::Digest(PermissionPolicy& policy, uint8_t* diges
     }
     Crypto_SHA256 hashUtil;
     QStatus status = MarshalPrep(policy);
+    if (ER_OK != status) {
+        return status;
+    }
+    status = hashUtil.Init();
+    if (ER_OK != status) {
+        return status;
+    }
+    status = hashUtil.Update(msg->GetBodyBuffer(), msg->GetBodyBufferSize());
+    if (ER_OK != status) {
+        return status;
+    }
+    return hashUtil.GetDigest(digest);
+}
+
+QStatus DefaultPolicyMarshaller::Digest(const PermissionPolicy::Rule* rules, size_t count, uint8_t* digest, size_t len)
+{
+    if (len != Crypto_SHA256::DIGEST_SIZE) {
+        return ER_INVALID_DATA;
+    }
+    Crypto_SHA256 hashUtil;
+    QStatus status = MarshalPrep(rules, count);
     if (ER_OK != status) {
         return status;
     }
