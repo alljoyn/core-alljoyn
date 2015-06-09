@@ -36,6 +36,7 @@ AsyncTestCase("AboutProxyTest", {
 
         PORT = 25;
         OBJECT_PATH = "/test/aboutObj";
+        WILD_CARD_CHAR = "*";
         var serviceBusCreate = function(err) {
             assertFalsy(err);
             serviceBus = new org.alljoyn.bus.BusAttachment();
@@ -65,7 +66,7 @@ AsyncTestCase("AboutProxyTest", {
         };
 
         var registerBusObject = function(err) {
-            serviceBus.registerBusObject(OBJECT_PATH, testobject, connect);
+            serviceBus.registerBusObject(OBJECT_PATH, testobject, false, true, connect);
         };
 
         var connect = function(err) {
@@ -169,7 +170,7 @@ AsyncTestCase("AboutProxyTest", {
 
             var whoImplements = function(err) {
                 assertFalsy(err);
-                bus.whoImplements(null, callbacks.add(aboutService));
+                bus.whoImplements(WILD_CARD_CHAR, callbacks.add(aboutService));
             };
 
             var done = function(err) {
@@ -250,7 +251,7 @@ AsyncTestCase("AboutProxyTest", {
 
             var whoImplements = function(err) {
                 assertFalsy(err);
-                bus.whoImplements(null, callbacks.add(aboutService));
+                bus.whoImplements(WILD_CARD_CHAR, callbacks.add(aboutService));
             };
 
             var done = function(err) {
