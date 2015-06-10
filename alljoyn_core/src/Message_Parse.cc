@@ -1065,8 +1065,6 @@ QStatus _Message::LoadBytes(uint8_t* buf, size_t buflen)
 
 QStatus _Message::ReadNonBlocking(RemoteEndpoint& endpoint, bool checkSender, bool pedantic)
 {
-
-
     QStatus status = ER_OK;
     while ((status == ER_OK) && (readState != MESSAGE_COMPLETE)) {
         status = PullBytes(endpoint, checkSender, pedantic, 0); /* timeout zero */

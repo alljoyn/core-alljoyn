@@ -1876,7 +1876,6 @@ void* TCPTransport::Run(void* arg)
                 } else {
                     m_endpointListLock.Unlock(MUTEX_CONTEXT);
                     qcc::SetLinger(newSock, true, 0);
-                    qcc::Shutdown(newSock);
                     qcc::Close(newSock);
                     status = ER_CONNECTION_LIMIT_EXCEEDED;
                     QCC_LogError(status, ("TCPTransport::Run(): No slot for new connection"));
@@ -1920,8 +1919,6 @@ void* TCPTransport::Run(void* arg)
      */
     m_listenFdsLock.Lock(MUTEX_CONTEXT);
     for (list<pair<qcc::String, SocketFd> >::iterator i = m_listenFds.begin(); i != m_listenFds.end(); ++i) {
-        qcc::SetLinger(i->second, true, 0);
-        qcc::Shutdown(i->second);
         qcc::Close(i->second);
     }
     m_listenFds.clear();
@@ -3727,8 +3724,6 @@ void TCPTransport::DoStopListen(qcc::String& normSpec)
          * If we took a socketFD off of the list of active FDs, we need to tear it
          * down.
          */
-        qcc::SetLinger(stopFd, true, 0);
-        qcc::Shutdown(stopFd);
         qcc::Close(stopFd);
     }
     m_listenFdsLock.Unlock(MUTEX_CONTEXT);
