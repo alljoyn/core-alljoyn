@@ -80,7 +80,7 @@ struct ECCSecret::ECCSecretState {
     }
     bool operator==(const ECCSecretState& k) const
     {
-        return memcmp(z, k.z, ECC_COORDINATE_SZ) == 0;
+        return Crypto_Compare(z, k.z, ECC_COORDINATE_SZ) == 0;
     }
 };
 
