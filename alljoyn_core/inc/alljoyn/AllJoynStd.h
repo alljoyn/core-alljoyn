@@ -128,17 +128,6 @@ extern const char* InterfaceName;                 /**< Interface name */
 
 }
 
-namespace Security {
-/** Interface definitions for org.allseen.Security.PermissionMgmt */
-namespace PermissionMgmt {
-extern const char* ObjectPath;                    /**< Object path */
-extern const char* InterfaceName;                 /**< Interface name */
-/** Interface definitions for org.allseen.Security.PermissionMgmt.Notification */
-namespace Notification {
-extern const char* InterfaceName;                 /**< Interface name */
-}
-}
-}
 
 }
 }

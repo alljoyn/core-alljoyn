@@ -100,13 +100,13 @@ QStatus SecurityApplicationProxy::GetSecurityApplicationVersion(uint16_t& versio
     MsgArg arg;
     status = GetProperty(org::alljoyn::Bus::Security::Application::InterfaceName, "Version", arg);
     if (ER_OK == status) {
-        version = arg.v_variant.val->v_int16;
+        version = arg.v_variant.val->v_uint16;
     }
 
     return status;
 }
 
-QStatus SecurityApplicationProxy::GetApplicationState(ApplicationState& applicationState)
+QStatus SecurityApplicationProxy::GetApplicationState(PermissionConfigurator::ApplicationState& applicationState)
 {
     QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
     QStatus status = ER_OK;
@@ -114,7 +114,7 @@ QStatus SecurityApplicationProxy::GetApplicationState(ApplicationState& applicat
     MsgArg arg;
     status = GetProperty(org::alljoyn::Bus::Security::Application::InterfaceName, "ApplicationState", arg);
     if (ER_OK == status) {
-        applicationState = static_cast<ApplicationState>(arg.v_variant.val->v_int16);
+        applicationState = static_cast<PermissionConfigurator::ApplicationState>(arg.v_variant.val->v_uint16);
     }
 
     return status;
@@ -203,7 +203,7 @@ QStatus SecurityApplicationProxy::GetManifestTemplate(MsgArg& rules)
     return status;
 }
 
-QStatus SecurityApplicationProxy::GetClaimCapabilities(ClaimCapabilities& claimCapabilities)
+QStatus SecurityApplicationProxy::GetClaimCapabilities(PermissionConfigurator::ClaimCapabilities& claimCapabilities)
 {
     QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
     QStatus status = ER_OK;
@@ -211,13 +211,13 @@ QStatus SecurityApplicationProxy::GetClaimCapabilities(ClaimCapabilities& claimC
     MsgArg arg;
     status = GetProperty(org::alljoyn::Bus::Security::Application::InterfaceName, "ClaimCapabilities", arg);
     if (ER_OK == status) {
-        claimCapabilities = static_cast<ClaimCapabilities>(arg.v_variant.val->v_int16);
+        claimCapabilities = static_cast<PermissionConfigurator::ClaimCapabilities>(arg.v_variant.val->v_uint16);
     }
 
     return status;
 }
 
-QStatus SecurityApplicationProxy::GetClaimCapabilityAdditionalInfo(uint16_t& claimCapabilitiesAdditionalInfo)
+QStatus SecurityApplicationProxy::GetClaimCapabilityAdditionalInfo(PermissionConfigurator::ClaimCapabilityAdditionalInfo& claimCapabilitiesAdditionalInfo)
 {
     QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
     QStatus status = ER_OK;
@@ -225,7 +225,7 @@ QStatus SecurityApplicationProxy::GetClaimCapabilityAdditionalInfo(uint16_t& cla
     MsgArg arg;
     status = GetProperty(org::alljoyn::Bus::Security::Application::InterfaceName, "ClaimCapabilityAdditionalInfo", arg);
     if (ER_OK == status) {
-        claimCapabilitiesAdditionalInfo = static_cast<ClaimCapabilityAdditionalInfo>(arg.v_variant.val->v_int16);
+        claimCapabilitiesAdditionalInfo = static_cast<PermissionConfigurator::ClaimCapabilityAdditionalInfo>(arg.v_variant.val->v_uint16);
     }
 
     return status;
@@ -321,7 +321,7 @@ QStatus SecurityApplicationProxy::GetClaimableApplicationVersion(uint16_t& versi
     MsgArg arg;
     status = GetProperty(org::alljoyn::Bus::Security::ClaimableApplication::InterfaceName, "Version", arg);
     if (ER_OK == status) {
-        version = arg.v_variant.val->v_int16;
+        version = arg.v_variant.val->v_uint16;
     }
     return status;
 }
@@ -499,7 +499,7 @@ QStatus SecurityApplicationProxy::GetManagedApplicationVersion(uint16_t& version
     MsgArg arg;
     status = GetProperty(org::alljoyn::Bus::Security::ManagedApplication::InterfaceName, "Version", arg);
     if (ER_OK == status) {
-        version = arg.v_variant.val->v_int16;
+        version = arg.v_variant.val->v_uint16;
     }
 
     return status;

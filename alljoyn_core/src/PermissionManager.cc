@@ -561,9 +561,6 @@ static bool IsPropertyInterface(const char* iName)
 
 static bool IsPermissionMgmtInterface(const char* iName)
 {
-    if (strcmp(iName, org::allseen::Security::PermissionMgmt::InterfaceName) == 0) {
-        return true;
-    }
     if (strcmp(iName, org::alljoyn::Bus::Security::Application::InterfaceName) == 0) {
         return true;
     }
@@ -662,11 +659,19 @@ bool PermissionManager::AuthorizePermissionMgmt(bool outgoing, PeerState& peerSt
             return (!permissionMgmtObj->HasTrustAnchors());
         }
     } else if (strcmp(iName, org::alljoyn::Bus::Security::ManagedApplication::InterfaceName) == 0) {
-        if (strncmp(mbrName, "Identity", 8) == 0) {
+        if (
+            (strncmp(mbrName, "Identity", 8) == 0) ||
+            (strncmp(mbrName, "Manifest", 8) == 0) ||
+            (strncmp(mbrName, "IdentityCertificateId", 8) == 0) ||
+            (strncmp(mbrName, "DefaultPolicy", 13) == 0)
+            ) {
             return true;
         } else if (
             (strncmp(mbrName, "ReplaceIdentity", 15) == 0) ||
-            (strncmp(mbrName, "Reset", 5) == 0)
+            (strncmp(mbrName, "Reset", 5) == 0) ||
+            (strncmp(mbrName, "PolicyVersion", 13) == 0) ||
+            (strncmp(mbrName, "Policy", 6) == 0) ||
+            (strncmp(mbrName, "MembershipSummaries", 19) == 0)
             ) {
             /* these actions require admin privilege */
             return PeerHasAdminPriv(peerState);
@@ -674,27 +679,17 @@ bool PermissionManager::AuthorizePermissionMgmt(bool outgoing, PeerState& peerSt
     } else if (strcmp(iName, org::alljoyn::Bus::Security::Application::InterfaceName) == 0) {
         if (
             (strncmp(mbrName, "ApplicationState", 16) == 0) ||
+            (strncmp(mbrName, "ManifestTemplateDigest", 22) == 0) ||
             (strncmp(mbrName, "EccPublicKey", 12) == 0) ||
-            (strncmp(mbrName, "ManufacturerCertificate", 23) == 0)
+            (strncmp(mbrName, "ManufacturerCertificate", 23) == 0) ||
+            (strncmp(mbrName, "ManifestTemplate", 16) == 0) ||
+            (strncmp(mbrName, "ClaimCapabilities", 17) == 0) ||
+            (strncmp(mbrName, "ClaimCapabilityAdditionalInfo", 29) == 0)
             ) {
             return true;
         }
     } else if (strcmp(iName, org::alljoyn::Bus::Application::InterfaceName) == 0) {
         if (strncmp(mbrName, "State", 5) == 0) {
-            return true;
-        }
-    } else if (strcmp(iName, org::allseen::Security::PermissionMgmt::InterfaceName) == 0) {
-        if (
-            (strncmp(mbrName, "InstallPolicy", 14) == 0) ||
-            (strncmp(mbrName, "InstallEncryptedPolicy", 22) == 0) ||
-            (strncmp(mbrName, "GetPolicy", 9) == 0) ||
-            (strncmp(mbrName, "RemovePolicy", 12) == 0) ||
-            (strncmp(mbrName, "InstallMembership", 17) == 0) ||
-            (strncmp(mbrName, "RemoveMembership", 16) == 0)
-            ) {
-            /* these actions require admin privilege */
-            return PeerHasAdminPriv(peerState);
-        } else if (strncmp(mbrName, "GetManifest", 11) == 0) {
             return true;
         }
     }

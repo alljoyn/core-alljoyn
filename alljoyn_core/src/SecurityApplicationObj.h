@@ -171,29 +171,6 @@ class SecurityApplicationObj : public PermissionMgmtObj {
      */
     QStatus Get(const char* ifcName, const char* propName, MsgArg& val);
 
-    // org.alljoyn.Bus.Security.Application properties
-    uint16_t applicationState;
-    // TODO add in actual property values here
-    //ManifestTemplateDigest manifestTemplateDigest;
-    //EccPublicKey eccPublicKey;
-    //ManufacturerCertificate* manufacturerCertificate;
-    //size_t manufacturerCertificateSize;
-    //ManifestTemplate* manifestTemplate;
-    //size_t manifestTemplateSize;
-    uint16_t claimCapabilities;
-    uint16_t claimCapabilityAdditionalInfo;
-
-    // org.alljoyn.Bus.Security.ManagedApplicationObj properties
-    // TODO add in actual property values here
-    //Certificate* identity;
-    //size_t identitySize;
-    //Rule* manifest;
-    //size_t manifestSize;
-    //IdentityCertificateId identityCertificateId;
-    //Policy policy;
-    //Policy defaultPolicy;
-    //CertificateId* membershipSummaries;
-    //size_t membershipSummariesSize;
 };
 } //END namepace ajn
 

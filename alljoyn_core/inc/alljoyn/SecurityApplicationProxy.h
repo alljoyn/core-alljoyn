@@ -23,6 +23,7 @@
 
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/PermissionPolicy.h>
+#include <alljoyn/PermissionConfigurator.h>
 #include <qcc/Crypto.h>
 #include <qcc/CertificateECC.h>
 
@@ -61,12 +62,6 @@ class SecurityApplicationProxy : public ProxyBusObject {
      */
     QStatus GetSecurityApplicationVersion(uint16_t& version);
 
-    typedef enum {
-        NOT_CLAIMABLE = 0,
-        CLAIMABLE = 1,
-        CLAIMED = 2,
-        NEED_UPDATE = 3
-    } ApplicationState;
     /**
      * GetApplicationState get An enumeration representing the current state of
      * the application.  The list of valid values:
@@ -87,7 +82,7 @@ class SecurityApplicationProxy : public ProxyBusObject {
      *  - #ER_OK if successful
      *  - an error status indicating failure
      */
-    QStatus GetApplicationState(ApplicationState& applicationState);
+    QStatus GetApplicationState(PermissionConfigurator::ApplicationState& applicationState);
 
     /**
      * Get the SHA-256 digest of the manifest template.
@@ -145,14 +140,6 @@ class SecurityApplicationProxy : public ProxyBusObject {
      */
     QStatus GetManifestTemplate(MsgArg& rules);
 
-    /**@name ClaimCapabilities */
-    // {@
-    typedef uint16_t ClaimCapabilities;
-    static const ClaimCapabilities CAPABLE_ECDHE_NULL      = 0x01;
-    static const ClaimCapabilities CAPABLE_ECDHE_PSK = 0x02;
-    static const ClaimCapabilities CAPABLE_ECDHE_ECDSA  = 0x04;
-    // @}
-
     /**
      * The authentication mechanisms the application supports for the claim process.
      * It is a bit mask.
@@ -169,14 +156,7 @@ class SecurityApplicationProxy : public ProxyBusObject {
      *  - #ER_OK if successful
      *  - an error status indicating failure
      */
-    QStatus GetClaimCapabilities(ClaimCapabilities& claimCapabilities);
-
-    /**@name ClaimCapabilities */
-    // {@
-    typedef uint16_t ClaimCapabilityAdditionalInfo;
-    static const ClaimCapabilityAdditionalInfo PSK_GENERATED_BY_SECURITY_MANAGER = 0x01;
-    static const ClaimCapabilityAdditionalInfo PSK_GENERATED_BY_APPLICATION = 0x02;
-    // @}
+    QStatus GetClaimCapabilities(PermissionConfigurator::ClaimCapabilities& claimCapabilities);
 
     /**
      * The additional information information on the claim capabilities.
@@ -193,7 +173,7 @@ class SecurityApplicationProxy : public ProxyBusObject {
      *  - #ER_OK if successful
      *  - an error status indicating failure
      */
-    QStatus GetClaimCapabilityAdditionalInfo(ClaimCapabilityAdditionalInfo& claimCapabilitiesAdditionalInfo);
+    QStatus GetClaimCapabilityAdditionalInfo(PermissionConfigurator::ClaimCapabilityAdditionalInfo& claimCapabilitiesAdditionalInfo);
 
     /**
      * Claim the app. This will make the claimer the admin and certificate

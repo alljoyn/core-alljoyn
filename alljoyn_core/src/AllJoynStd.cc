@@ -82,12 +82,6 @@ const char* org::allseen::Introspectable::IntrospectDocType =
     "\"http://www.allseen.org/alljoyn/introspect-1.0.dtd\""
     ">\n";
 
-/** org.allseen.Security.PermissionMgmt interface definitions */
-const char* org::allseen::Security::PermissionMgmt::InterfaceName = "org.allseen.Security.PermissionMgmt";
-const char* org::allseen::Security::PermissionMgmt::Notification::InterfaceName = "org.allseen.Security.PermissionMgmt.Notification";
-const char* org::allseen::Security::PermissionMgmt::ObjectPath = "/org/allseen/Security/PermissionMgmt";
-
-
 QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
 {
     QStatus status;
@@ -354,20 +348,6 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         introspectIntf->AddMethod("GetDescriptionLanguages",     "",   "as", "languageTags");
         introspectIntf->AddMethod("IntrospectWithDescription",   "s",  "s",  "languageTag,data");
         introspectIntf->Activate();
-    }
-    {
-        /* TODO: remove this interface once all the functions are exposed
-         * via the new Security interfaces
-         */
-        /* Create the org.allseen.Security.PermissionMgmt interface */
-        InterfaceDescription* ifc = NULL;
-        status = bus.CreateInterface(org::allseen::Security::PermissionMgmt::InterfaceName, ifc, AJ_IFC_SECURITY_REQUIRED);
-        if (ER_OK != status) {
-            QCC_LogError(status, ("Failed to create %s interface", org::allseen::Security::PermissionMgmt::InterfaceName));
-            return status;
-        }
-        ifc->AddMethod("GetManifest",     NULL, "(yv)",  "manifest");
-        ifc->Activate();
     }
     return status;
 }

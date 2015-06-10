@@ -36,7 +36,6 @@
 #include <qcc/CryptoECC.h>
 #include <qcc/CertificateECC.h>
 #include <qcc/Log.h>
-#include <alljoyn/PermissionMgmtProxy.h>
 #include <alljoyn/SecurityApplicationProxy.h>
 #include <alljoyn/PermissionPolicy.h>
 #include "KeyStore.h"

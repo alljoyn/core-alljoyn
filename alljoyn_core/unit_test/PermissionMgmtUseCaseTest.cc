@@ -1778,6 +1778,52 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         status = bus.ClearKeys(peerGUID.ToString());
         EXPECT_EQ(ER_OK, status) << "  BusAttachment::ClearKeys failed.  Actual Status: " << QCC_StatusText(status);
     }
+
+    void RetrievePropertyApplicationState(BusAttachment& bus, BusAttachment& targetBus, PermissionConfigurator::ApplicationState expectedValue)
+    {
+        SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
+        PermissionConfigurator::ApplicationState applicationState;
+        EXPECT_EQ(ER_OK, saProxy.GetApplicationState(applicationState)) << "  GetApplicationState failed.";
+
+        EXPECT_EQ(applicationState, expectedValue) << " The application state does not match.";
+    }
+
+    void RetrievePropertyClaimCapabilities(BusAttachment& bus, BusAttachment& targetBus, PermissionConfigurator::ClaimCapabilities expectedValue)
+    {
+        SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
+        PermissionConfigurator::ClaimCapabilities caps;
+        EXPECT_EQ(ER_OK, saProxy.GetClaimCapabilities(caps)) << "  GetClaimCapabilities failed.";
+
+        EXPECT_EQ(caps, expectedValue) << " The claim capabilities value does not match.";
+    }
+
+    void SetPropertyClaimCapabilities(BusAttachment& bus, PermissionConfigurator::ClaimCapabilities val)
+    {
+        EXPECT_EQ(ER_OK, bus.GetPermissionConfigurator().SetClaimCapabilities(val)) << "  SetClaimCapabilities failed.";
+
+        PermissionConfigurator::ClaimCapabilities caps;
+        EXPECT_EQ(ER_OK, bus.GetPermissionConfigurator().GetClaimCapabilities(caps)) << "  GetClaimCapabilities failed.";
+        EXPECT_EQ(caps, val) << " The claim capabilities value does not match.";
+    }
+
+    void RetrievePropertyClaimCapabilityAdditionalInfo(BusAttachment& bus, BusAttachment& targetBus, PermissionConfigurator::ClaimCapabilityAdditionalInfo expectedValue)
+    {
+        SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
+        PermissionConfigurator::ClaimCapabilityAdditionalInfo additionalInfo;
+        EXPECT_EQ(ER_OK, saProxy.GetClaimCapabilityAdditionalInfo(additionalInfo)) << "  RetrievePropertyClaimCapabilityAdditionalInfo failed.";
+
+        EXPECT_EQ(additionalInfo, expectedValue) << " The claim additional info does not match.";
+    }
+
+    void SetPropertyClaimCapabilityAdditionalInfo(BusAttachment& bus, PermissionConfigurator::ClaimCapabilityAdditionalInfo val)
+    {
+        EXPECT_EQ(ER_OK, bus.GetPermissionConfigurator().SetClaimCapabilityAdditionalInfo(val)) << "  SetClaimCapabilityAdditionalInfo failed.";
+
+        PermissionConfigurator::ClaimCapabilityAdditionalInfo additionalInfo;
+        EXPECT_EQ(ER_OK, bus.GetPermissionConfigurator().GetClaimCapabilityAdditionalInfo(additionalInfo)) << "  GetClaimCapabilityAdditionalInfo failed.";
+        EXPECT_EQ(additionalInfo, val) << " The claim capabilities value does not match.";
+    }
+
 };
 
 class PathBasePermissionMgmtUseCaseTest : public PermissionMgmtUseCaseTest {
@@ -2399,4 +2445,65 @@ TEST_F(PermissionMgmtUseCaseTest, TestResetPolicy)
     InstallPolicyToService(*policy);
     delete policy;
     ResetPolicyFromApp(adminBus, serviceBus);
+}
+
+
+TEST_F(PermissionMgmtUseCaseTest, RetrievePropertyApplicationState)
+{
+    Claims(false);
+    /* generate a policy */
+    PermissionPolicy* policy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, consumerBus);
+    ASSERT_TRUE(policy) << "GeneratePolicy failed.";
+    InstallPolicyToService(*policy);
+    delete policy;
+
+    AppHasAllowAllManifest(adminBus, serviceBus);
+
+    policy = GenerateFullAccessOutgoingPolicy(adminAdminGroupGUID, adminAdminGroupAuthority);
+    InstallPolicyToConsumer(*policy);
+    delete policy;
+
+    RetrievePropertyApplicationState(adminBus, serviceBus, PermissionConfigurator::CLAIMED);
+}
+
+TEST_F(PermissionMgmtUseCaseTest, RetrievePropertyClaimCapabilities)
+{
+    Claims(false);
+    /* generate a policy */
+    PermissionPolicy* policy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, consumerBus);
+    ASSERT_TRUE(policy) << "GeneratePolicy failed.";
+    InstallPolicyToService(*policy);
+    delete policy;
+
+    AppHasAllowAllManifest(adminBus, serviceBus);
+
+    policy = GenerateFullAccessOutgoingPolicy(adminAdminGroupGUID, adminAdminGroupAuthority);
+    InstallPolicyToConsumer(*policy);
+    delete policy;
+
+    RetrievePropertyClaimCapabilities(adminBus, serviceBus, PermissionConfigurator::CAPABLE_ECDHE_NULL);
+
+    SetPropertyClaimCapabilities(serviceBus, PermissionConfigurator::CAPABLE_ECDHE_PSK | PermissionConfigurator::CAPABLE_ECDHE_NULL);
+    RetrievePropertyClaimCapabilities(adminBus, serviceBus, PermissionConfigurator::CAPABLE_ECDHE_PSK | PermissionConfigurator::CAPABLE_ECDHE_NULL);
+
+}
+
+TEST_F(PermissionMgmtUseCaseTest, RetrievePropertyClaimCapabilityAdditionalInfo)
+{
+    Claims(false);
+    /* generate a policy */
+    PermissionPolicy* policy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, consumerBus);
+    ASSERT_TRUE(policy) << "GeneratePolicy failed.";
+    InstallPolicyToService(*policy);
+    delete policy;
+
+    AppHasAllowAllManifest(adminBus, serviceBus);
+
+    policy = GenerateFullAccessOutgoingPolicy(adminAdminGroupGUID, adminAdminGroupAuthority);
+    InstallPolicyToConsumer(*policy);
+    delete policy;
+
+    SetPropertyClaimCapabilityAdditionalInfo(serviceBus, PermissionConfigurator::PSK_GENERATED_BY_APPLICATION);
+    RetrievePropertyClaimCapabilityAdditionalInfo(adminBus, serviceBus, PermissionConfigurator::PSK_GENERATED_BY_APPLICATION);
+
 }

@@ -131,4 +131,40 @@ QStatus PermissionConfiguratorImpl::GetConnectedPeerPublicKey(const GUID128& gui
     return permissionMgmtObj->GetConnectedPeerPublicKey(guid, publicKey);
 }
 
+QStatus PermissionConfiguratorImpl::SetClaimCapabilities(PermissionConfigurator::ClaimCapabilities claimCapabilities)
+{
+    PermissionMgmtObj* permissionMgmtObj = bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
+    if (!permissionMgmtObj) {
+        return ER_FEATURE_NOT_AVAILABLE;
+    }
+    return permissionMgmtObj->SetClaimCapabilities(claimCapabilities);
+}
+
+QStatus PermissionConfiguratorImpl::SetClaimCapabilityAdditionalInfo(PermissionConfigurator::ClaimCapabilityAdditionalInfo additionalInfo)
+{
+    PermissionMgmtObj* permissionMgmtObj = bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
+    if (!permissionMgmtObj) {
+        return ER_FEATURE_NOT_AVAILABLE;
+    }
+    return permissionMgmtObj->SetClaimCapabilityAdditionalInfo(additionalInfo);
+}
+
+QStatus PermissionConfiguratorImpl::GetClaimCapabilities(PermissionConfigurator::ClaimCapabilities& claimCapabilities)
+{
+    PermissionMgmtObj* permissionMgmtObj = bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
+    if (!permissionMgmtObj) {
+        return ER_FEATURE_NOT_AVAILABLE;
+    }
+    return permissionMgmtObj->GetClaimCapabilities(claimCapabilities);
+}
+
+QStatus PermissionConfiguratorImpl::GetClaimCapabilityAdditionalInfo(PermissionConfigurator::ClaimCapabilityAdditionalInfo& additionalInfo)
+{
+    PermissionMgmtObj* permissionMgmtObj = bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
+    if (!permissionMgmtObj) {
+        return ER_FEATURE_NOT_AVAILABLE;
+    }
+    return permissionMgmtObj->GetClaimCapabilityAdditionalInfo(additionalInfo);
+}
+
 }

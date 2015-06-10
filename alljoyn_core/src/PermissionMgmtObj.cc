@@ -57,13 +57,7 @@ static QStatus RetrieveAndGenDSAPublicKey(CredentialAccessor* ca, KeyInfoNISTP25
 
 PermissionMgmtObj::PermissionMgmtObj(BusAttachment& bus, const char* objectPath) :
     BusObject(objectPath),
-    bus(bus), portListener(NULL)
-{
-}
-
-PermissionMgmtObj::PermissionMgmtObj(BusAttachment& bus) :
-    BusObject(org::allseen::Security::PermissionMgmt::ObjectPath, false),
-    bus(bus), portListener(NULL)
+    bus(bus), claimCapabilities(PermissionConfigurator::CAPABLE_ECDHE_NULL), claimCapabilityAdditionalInfo(0), portListener(NULL)
 {
 }
 
@@ -83,6 +77,8 @@ void PermissionMgmtObj::Load()
     QStatus status = GetConfiguration(config);
     if (ER_OK == status) {
         applicationState = static_cast<PermissionConfigurator::ApplicationState> (config.applicationState);
+        claimCapabilities = config.claimCapabilities;
+        claimCapabilityAdditionalInfo = config.claimCapabilityAdditionalInfo;
     } else {
         if (ER_OK == LoadTrustAnchors()) {
             applicationState = PermissionConfigurator::CLAIMED;
@@ -2056,6 +2052,11 @@ PermissionConfigurator::ApplicationState PermissionMgmtObj::GetApplicationState(
 QStatus PermissionMgmtObj::StoreApplicationState()
 {
     Configuration config;
+    QStatus status = GetConfiguration(config);
+    if (ER_OK != status) {
+        config.claimCapabilities = claimCapabilities;
+        config.claimCapabilityAdditionalInfo = claimCapabilityAdditionalInfo;
+    }
     config.applicationState = (uint8_t) applicationState;
     return StoreConfiguration(config);
 }
@@ -2066,9 +2067,7 @@ QStatus PermissionMgmtObj::SetApplicationState(PermissionConfigurator::Applicati
         return ER_INVALID_APPLICATION_STATE;
     }
 
-    /* save the configuration */
-    Configuration config;
-    config.applicationState = (uint8_t) newState;
+    /* save the existing state */
     PermissionConfigurator::ApplicationState savedState = applicationState;
     applicationState = newState;
     QStatus status = StoreApplicationState();
@@ -2486,6 +2485,52 @@ QStatus PermissionMgmtObj::ManageMembershipTrustAnchors(PermissionPolicy* policy
         addOns.clear();
         return StoreTrustAnchors();
     }
+    return ER_OK;
+}
+
+QStatus PermissionMgmtObj::SetClaimCapabilities(PermissionConfigurator::ClaimCapabilities caps)
+{
+    Configuration config;
+    QStatus status = GetConfiguration(config);
+    if (ER_OK != status) {
+        config.applicationState = (uint8_t) applicationState;
+        config.claimCapabilityAdditionalInfo = claimCapabilityAdditionalInfo;
+    }
+    config.claimCapabilities = caps;
+    status = StoreConfiguration(config);
+    if (ER_OK != status) {
+        return status;
+    }
+    claimCapabilities = config.claimCapabilities;
+    return ER_OK;
+}
+
+QStatus PermissionMgmtObj::SetClaimCapabilityAdditionalInfo(PermissionConfigurator::ClaimCapabilityAdditionalInfo& additionalInfo)
+{
+    Configuration config;
+    QStatus status = GetConfiguration(config);
+    if (ER_OK != status) {
+        config.applicationState = (uint8_t) applicationState;
+        config.claimCapabilities = claimCapabilities;
+    }
+    config.claimCapabilityAdditionalInfo = additionalInfo;
+    status = StoreConfiguration(config);
+    if (ER_OK != status) {
+        return status;
+    }
+    claimCapabilityAdditionalInfo = config.claimCapabilityAdditionalInfo;
+    return ER_OK;
+}
+
+QStatus PermissionMgmtObj::GetClaimCapabilities(PermissionConfigurator::ClaimCapabilities& caps)
+{
+    caps = claimCapabilities;
+    return ER_OK;
+}
+
+QStatus PermissionMgmtObj::GetClaimCapabilityAdditionalInfo(PermissionConfigurator::ClaimCapabilityAdditionalInfo& additionalInfo)
+{
+    additionalInfo = claimCapabilityAdditionalInfo;
     return ER_OK;
 }
 
