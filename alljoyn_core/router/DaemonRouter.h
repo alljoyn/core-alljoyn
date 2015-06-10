@@ -37,7 +37,7 @@
 #include "NameTable.h"
 #include "RuleTable.h"
 
-#define ENABLE_OLD_PUSHMESSAGE_COMPATABILITY
+#define ENABLE_OLD_PUSHMESSAGE_COMPATIBILITY
 
 namespace ajn {
 
@@ -457,7 +457,7 @@ class DaemonRouter : public Router {
     bool IsSessionDeliverable(SessionId id, BusEndpoint& src, BusEndpoint& dest);
 
 
-#ifdef ENABLE_OLD_PUSHMESSAGE_COMPATABILITY
+#ifdef ENABLE_OLD_PUSHMESSAGE_COMPATIBILITY
     /**
      * This function adapts the decision about which endpoints receive a given
      * message based on the behavior of the previous implementation of
@@ -479,7 +479,7 @@ class DaemonRouter : public Router {
      *
      * @return  New valued for add.
      */
-    bool AddCompatabilityOverride(bool add,
+    bool AddCompatibilityOverride(bool add,
                                   BusEndpoint& src,
                                   BusEndpoint& dest,
                                   const SessionId sessionId,
@@ -503,7 +503,7 @@ class DaemonRouter : public Router {
      *
      * @return  New return status value.
      */
-    QStatus StatusCompatabilityOverride(QStatus status,
+    QStatus StatusCompatibilityOverride(QStatus status,
                                         BusEndpoint& src,
                                         const bool isSessioncast,
                                         const bool isSessionless,
