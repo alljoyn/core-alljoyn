@@ -829,7 +829,7 @@ static QStatus Send(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t flags, uin
     ArdpHeader h;
     memset(&h, 0, sizeof (h));
 
-    QCC_DbgTrace(("Send(handle=%p, conn=%p, flags=0x%02x, seq=%u, ack=%u)", handle, conn, flags, seq, ack));
+    QCC_DbgTrace(("Send(handle=%p, conn=%p, flags=0x%02x, seq=%u, ack=%u, acknxt=%u)", handle, conn, flags, seq, ack, conn->snd.UNA));
 
     h.flags = flags;
     h.src = htons(conn->local);
@@ -1007,23 +1007,24 @@ static void ExpireMessageSnd(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBu
          * Notice that it is possible for UNA to catch up with NXT when the expired
          * message is the last one that has been sent out.
          */
+        QCC_DbgPrintf(("ExpireMessageSnd(): snd.UNA %u", conn->snd.UNA));
         conn->snd.UNA = som + fcnt;
+
+        QCC_DbgPrintf(("ExpireMessageSnd(): Update snd.UNA %u", conn->snd.UNA));
+#if ARDP_TC_SUPPORT
+        /* Advance NXT counter and window in simple mode */
+        if (conn->modeSimple && (SEQ32_LT(conn->snd.thinNXT, som + fcnt))) {
+            QCC_DbgPrintf(("ExpireMessageSnd(): thinNXT %u", conn->snd.thinNXT));
+            conn->snd.thinNXT = som + fcnt;
+            QCC_DbgPrintf(("ExpireMessageSnd(): Update thinNXT %u", conn->snd.thinNXT));
+        }
+#endif
+
         /* Schedule "unsolicited" ACK to allow the receiver to move on */
         if (conn->ackTimer.retry == 0) {
             UpdateTimer(handle, conn, &conn->ackTimer, ARDP_MIN_DELAYED_ACK_TIMEOUT, 1);
         }
     }
-
-#if ARDP_TC_SUPPORT
-    /* Advance NXT counter in simple mode */
-    if (conn->modeSimple) {
-        QCC_DbgPrintf(("ExpireMessageSnd(): thinNXT %u", conn->snd.thinNXT));
-        if (SEQ32_LET(som, conn->snd.thinNXT) && SEQ32_LT(conn->snd.thinNXT, som + fcnt)) {
-            conn->snd.thinNXT = som + fcnt;
-            QCC_DbgPrintf(("ExpireMessageSnd(): Update thinNXT %u", conn->snd.thinNXT));
-        }
-    }
-#endif
 }
 
 static QStatus SendMsgData(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf* sBuf, uint32_t ttl)
@@ -1047,7 +1048,7 @@ static QStatus SendMsgData(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf*
     h->flags = ARDP_FLAG_ACK | ARDP_FLAG_VER;
     h->ttl = htonl(ttl);
 
-    QCC_DbgPrintf(("SendMsgData(): seq = %u, ack=%u, lcs = %u, ttl=%u", ntohl(h->seq), conn->rcv.CUR, conn->rcv.LCS, ttl));
+    QCC_DbgPrintf(("SendMsgData(): seq = %u, ack=%u, lcs = %u, acknxt = %u, ttl=%u", ntohl(h->seq), conn->rcv.CUR, conn->rcv.LCS, conn->snd.UNA, ttl));
 
     if (conn->rcv.eack.sz == 0
 #if ARDP_TC_SUPPORT
@@ -1727,6 +1728,9 @@ static QStatus SendData(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, 
     ArdpSndBuf* sBuf = &conn->snd.buf[index];
     uint32_t now = TimeNow(handle->tbase);
     uint32_t ttlSend = ttl;
+#if ARDP_TC_SUPPORT
+    bool sendReady = true;
+#endif
 
     QCC_DbgTrace(("SendData(handle=%p, conn=%p, buf=%p, len=%u, ttl=%u)", handle, conn, buf, len, ttl));
     QCC_DbgPrintf(("SendData(): Sending %u bytes of data from src=0x%x to dst=0x%x", len, conn->local, conn->foreign));
@@ -1805,12 +1809,25 @@ static QStatus SendData(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, 
             QCC_DbgPrintf(("SendData(): destination = 0"));
         }
 
+#if ARDP_TC_SUPPORT
+        if ((conn->modeSimple) && ((conn->snd.thinWindow == 0) ||
+                                   ((conn->snd.thinNXT - conn->snd.UNA) >= conn->snd.thinSEGMAX) ||
+                                   (SEQ32_LT(conn->snd.thinNXT, conn->snd.NXT)))) {
+            sendReady = false;
+        }
+
+        if (conn->modeSimple) {
+            QCC_DbgPrintf(("SendData(): thinWindow %u, thinNXT %u UNA %u segmax %u sendReady=%s",
+                           conn->snd.thinWindow, conn->snd.thinNXT, conn->snd.UNA, conn->snd.thinSEGMAX, sendReady ? "TRUE" : "FALSE"));
+        }
+#endif
+
         if (!handle->trafficJam
 #if ARDP_TC_SUPPORT
-            && (conn->snd.thinWindow > 0)) {
-#else
-            ) {
+            && sendReady
 #endif
+            ) {
+
             status = SendMsgData(handle, conn, sBuf, ttlSend);
             if (conn->rttInit) {
                 timeout = GetRTO(handle, conn);
@@ -1825,7 +1842,7 @@ static QStatus SendData(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, 
          */
         if (handle->trafficJam
 #if ARDP_TC_SUPPORT
-            || (conn->modeSimple && (conn->snd.thinWindow == 0))
+            || !sendReady
 #endif
             ) {
             timeout = 0;
@@ -2050,10 +2067,21 @@ static QStatus UpdateSndSegments(ArdpHandle* handle, ArdpConnRecord* conn, uint3
     while (sBuf->inUse && (sBuf->ttl == ARDP_TTL_EXPIRED)) {
         ArdpHeader* h = (ArdpHeader*) sBuf->hdr;
         uint32_t seq = ntohl(h->seq);
+        QCC_DbgPrintf(("UpdateSndSegments(): snd.UNA %u", conn->snd.UNA));
         conn->snd.UNA = seq + 1;
+        QCC_DbgPrintf(("UpdateSndSegments(): update snd.UNA %u", conn->snd.UNA));
         sBuf = sBuf->next;
         needUpdate = true;
     }
+
+#if ARDP_TC_SUPPORT
+    /* Advance NXT counter and window in simple mode */
+    if (conn->modeSimple && (SEQ32_LT(conn->snd.thinNXT, conn->snd.UNA))) {
+        QCC_DbgPrintf(("UpdateSndSegments(): thinNXT %u", conn->snd.thinNXT));
+        conn->snd.thinNXT = conn->snd.UNA;
+        QCC_DbgPrintf(("UpdateSndSegments(): update thinNXT %u", conn->snd.thinNXT));
+    }
+#endif
 
     /* Schedule "unsolicited" ACK */
     if (needUpdate && (conn->ackTimer.retry == 0)) {
@@ -2984,7 +3012,9 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
 
                 if ((IN_RANGE(uint32_t, conn->snd.UNA, ((conn->snd.NXT - conn->snd.UNA) + 1), seg->ACK) == true) ||
                     (conn->snd.LCS != seg->LCS)) {
+                    QCC_DbgPrintf(("ArdpMachine(): OPEN: snd.UNA %u", conn->snd.UNA));
                     conn->snd.UNA = seg->ACK + 1;
+                    QCC_DbgPrintf(("ArdpMachine(): OPEN: update snd.UNA %u", conn->snd.UNA));
                     needUpdate = true;
                 }
 
