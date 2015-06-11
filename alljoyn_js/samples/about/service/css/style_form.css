@@ -1,0 +1,57 @@
+#announce_form fieldset {
+    width: 70%;
+}
+
+#announce_form li {
+    margin: 10px;
+    list-style: none;
+}
+
+.wideText {
+    width: 60%;
+    margin-left: : 25px;
+}
+
+.tableText {
+    width: 40%;
+    margin-left: : 25px;
+}
+
+#announce_form textarea {
+    margin-left: 10px;
+    text-align: left;
+    width: auto;
+}
+
+.bigText {
+    width: 200px;
+    height: 40px;
+    font-size: 20px;
+    font-style: italic;
+}
+
+label {
+    float: left;
+    width: 20%;
+    text-align: right;
+    margin-right: 0.5em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    -o-text-overflow: ellipsis;
+}
+
+.form-field-no-caption {
+    margin-left: 20%;
+    padding-left: 0.5em;
+}
+
+#main_footer {
+    clear: both;
+    width: 50%;
+    text-align: center;
+    padding: 20px;
+    position: absolute;
+    bottom: 0;
+    margin-left: 10%;
+}
