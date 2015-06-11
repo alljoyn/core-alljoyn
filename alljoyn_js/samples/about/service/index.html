@@ -1,0 +1,209 @@
+<!--
+ Copyright AllSeen Alliance. All rights reserved.
+
+    Permission to use, copy, modify, and/or distribute this software for any
+    purpose with or without fee is hereby granted, provided that the above
+    copyright notice and this permission notice appear in all copies.
+
+    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+-->
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html lang="en">
+<meta name="HandheldFriendly" content="True" />
+<head>
+<meta charset="utf-8">
+<title>AllJoyn about service</title>
+<link href="css/style_form.css" rel="stylesheet" type="text/css"></link>
+</head>
+
+<body>
+    <script type="text/javascript" src="js/alljoyn_init.js"></script>
+    <script type="text/javascript" src="js/alljoyn.js"></script>
+
+    <div id="wrapper">
+        <div id="container">
+            <section id="main_section">
+            <form id="announce_form">
+                <fieldset>
+                    <legend>About Data</legend>
+                    <ul>
+                        <li><label for="AppId">*AppId :</label>
+                        <input type="text" class="wideText"
+                            name="AppId" id="AppId"
+                            value="0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10" />
+                        </li>
+                        <li><label for="DefaultLanguage">*DefaultLanguage :</label>
+                        <input type="text" class="tableText" name="DefaultLanguage" id="DefaultLanguage" value="en" /></li>
+
+                        <li><label for="DeviceName">DeviceName :</label>
+                        <input type="text" class="tableText" name="DeviceName" id="DeviceName" value="" /></li>
+
+                        <li><label for="DeviceId">*DeviceId :</label>
+                        <input type="text" class="tableText" name="DeviceId" id="DeviceId" value="DeviceId" /></li>
+
+                        <li><label for="AppName">*AppName :</label>
+                        <input type="text" class="tableText" name="AppName" id="AppName" value="AppName" /></li>
+
+                        <li><label for="Manufacturer">*Manufacturer :</label>
+                        <input type="text" class="tableText" name="Manufacturer" id="Manufacturer" value="Manufacturer" /></li>
+
+                        <li><label for="ModelNumber">*ModelNumber :</label>
+                        <input type="text" class="tableText" name="ModelNumber" id="ModelNumber" value="ModelNumber" /></li>
+
+                        <li><label for="SupportedLanguages">*SupportedLanguages :</label>
+                        <input type="text" class="tableText" name="SupportedLanguages" id="SupportedLanguages" value="en" /></li>
+
+                        <li><label for="Description">*Description :</label>
+                        <input type="text" class="tableText" name="Description" id="Description" value="A Description of service" /></li>
+
+                        <li><label for="DateOfManufacture">DateOfManufacture :</label>
+                        <input type="text" class="tableText" name="DateOfManufacture" id="DateOfManufacture" value="" /></li>
+
+                        <li><label for="SoftwareVersion">*SoftwareVersion :</label>
+                        <input type="text" class="tableText" name="SoftwareVersion" id="SoftwareVersion" value="SoftwareVersion" /></li>
+
+                        <li><label for="HardwareVersion">HardwareVersion :</label>
+                        <input type="text" class="tableText" name="HardwareVersion" id="HardwareVersion" value="" /></li>
+
+                        <li><label for="SupportUrl">SupportUrl :</label>
+                        <input type="text" class="tableText" name="SupportUrl" id="SupportUrl" value="" /></li>
+
+
+                    </ul>
+                </fieldset>
+            </form>
+            <div>
+            <span class="form-field-no-caption" >
+                <input type="button" class="bigText" onclick="return announce_click()" value="Announce" size="5"/>
+                <input type="button" class="bigText" onclick="return unannounce_click()" value="Unannounce" size="5"/>
+            </span>
+            </div>
+
+            </section>
+            <aside id="main_aside"> </aside>
+        </div>
+
+        <footer id="main_footer">
+        <p>AllJoyn About service sample
+        </footer>
+    </div>
+
+    <script>
+
+        /*
+         * convert hex string to integer for user input AppId.
+         */
+        function stringToHex(tmp) {
+            var str = [];
+            var c;
+            var length = tmp.length;
+            for(var i=0; i<length; ++i) {
+                str.push(parseInt(tmp[i], 16));
+            }
+            return str;
+        }
+
+        /*
+         * Announce button click handler
+         */
+        function announce_click() {
+            var form = document.getElementById("announce_form");
+
+            // mandatory fields
+            if (form.AppId.value == "") {
+                alert("input AppId");
+                form.AppId.focus();
+                return;
+            }
+
+            if (form.DefaultLanguage.value == "") {
+                alert("input DefaultLanguage");
+                form.DefaultLanguage.focus();
+                return;
+            }
+
+            if (form.DeviceId.value == "") {
+                alert("input DeviceId");
+                form.DeviceId.focus();
+                return;
+            }
+
+            if (form.AppName.value == "") {
+                alert("input AppName");
+                form.AppName.focus();
+                return;
+            }
+
+            if (form.Manufacturer.value == "") {
+                alert("input Manufacturer");
+                form.Manufacturer.focus();
+                return;
+            }
+
+            if (form.ModelNumber.value == "") {
+                alert("input ModelNumber");
+                form.ModelNumber.focus();
+                return;
+            }
+
+            if (form.SupportedLanguages.value == "") {
+                alert("input SupportedLanguages");
+                form.SupportedLanguages.focus();
+                return;
+            }
+
+            if (form.Description.value == "") {
+                alert("input Description");
+                form.Description.focus();
+                return;
+            }
+
+            if (form.SoftwareVersion.value == "") {
+                alert("input SoftwareVersion");
+                form.SoftwareVersion.focus();
+                return;
+            }
+
+
+            var aboutData = {};
+            stringToHex(form.AppId.value.split(","));
+            aboutData["AppId"] = stringToHex(form.AppId.value.split(","));
+            aboutData["DefaultLanguage"] = form.DefaultLanguage.value;
+            aboutData["DeviceId"] = form.DeviceId.value;
+            aboutData["AppName"] = form.AppName.value;
+            aboutData["Manufacturer"] = form.Manufacturer.value;
+            aboutData["ModelNumber"] = form.ModelNumber.value;
+            aboutData["SupportedLanguages"] = form.SupportedLanguages.value.split(",");
+            aboutData["Description"] = form.Description.value;
+            aboutData["SoftwareVersion"] = form.SoftwareVersion.value;
+
+            // optional fields
+            if (form.DeviceName.value != "") {
+                aboutData["DeviceName"] = form.DeviceName.value;
+            }
+            if (form.DateOfManufacture.value != "") {
+                aboutData["DateOfManufacture"] = form.DateOfManufacture.value;
+            }
+            if (form.HardwareVersion.value != "") {
+                aboutData["HardwareVersion"] = form.HardwareVersion.value;
+            }
+            if (form.SupportUrl.value != "") {
+                aboutData["SupportUrl"] = form.SupportUrl.value;
+            }
+
+            alljoyn.setAboutData(aboutData);
+            alljoyn.start();
+        }
+
+        function unannounce_click() {
+            alljoyn.stop();
+        }
+    </script>
+</body>
+</html>
