@@ -922,3 +922,95 @@ TEST_F(AuthListenerECDHETest, ECDHE_NULL_PSK_ECDSA_AcceptableDowngradeByServer)
     EXPECT_STREQ(serverAuthListener.chosenMechanism.c_str(), "ALLJOYN_ECDHE_PSK");
 }
 
+TEST_F(AuthListenerECDHETest, ECDHE_NULL_PSK_ECDSA_Prioritized_To_ECDSA)
+{
+    EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_PSK ALLJOYN_ECDHE_ECDSA"));
+    EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_PSK ALLJOYN_ECDHE_ECDSA"));
+    EXPECT_EQ(ER_OK, ExerciseOn());
+    EXPECT_TRUE(clientAuthListener.authComplete);
+    EXPECT_TRUE(serverAuthListener.authComplete);
+    EXPECT_STREQ(clientAuthListener.chosenMechanism.c_str(), "ALLJOYN_ECDHE_ECDSA");
+    EXPECT_STREQ(serverAuthListener.chosenMechanism.c_str(), "ALLJOYN_ECDHE_ECDSA");
+}
+
+TEST_F(AuthListenerECDHETest, ECDHE_PSK_ECDSA_Prioritized_To_ECDSA)
+{
+    EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_PSK ALLJOYN_ECDHE_ECDSA"));
+    EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_PSK ALLJOYN_ECDHE_ECDSA"));
+    EXPECT_EQ(ER_OK, ExerciseOn());
+    EXPECT_TRUE(clientAuthListener.authComplete);
+    EXPECT_TRUE(serverAuthListener.authComplete);
+    EXPECT_STREQ(clientAuthListener.chosenMechanism.c_str(), "ALLJOYN_ECDHE_ECDSA");
+    EXPECT_STREQ(serverAuthListener.chosenMechanism.c_str(), "ALLJOYN_ECDHE_ECDSA");
+}
+
+TEST_F(AuthListenerECDHETest, ECDHE_NULL_PSK_Prioritized_To_PSK)
+{
+    EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_PSK"));
+    EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_PSK"));
+    EXPECT_EQ(ER_OK, ExerciseOn());
+    EXPECT_TRUE(clientAuthListener.authComplete);
+    EXPECT_TRUE(serverAuthListener.authComplete);
+    EXPECT_STREQ(clientAuthListener.chosenMechanism.c_str(), "ALLJOYN_ECDHE_PSK");
+    EXPECT_STREQ(serverAuthListener.chosenMechanism.c_str(), "ALLJOYN_ECDHE_PSK");
+}
+
+TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_PSK_NULL_Prioritized_To_ECDSA)
+{
+    EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_ECDSA ALLJOYN_ECDHE_PSK ALLJOYN_ECDHE_NULL"));
+    EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_ECDSA ALLJOYN_ECDHE_PSK ALLJOYN_ECDHE_NULL"));
+    EXPECT_EQ(ER_OK, ExerciseOn());
+    EXPECT_TRUE(clientAuthListener.authComplete);
+    EXPECT_TRUE(serverAuthListener.authComplete);
+    EXPECT_STREQ(clientAuthListener.chosenMechanism.c_str(), "ALLJOYN_ECDHE_ECDSA");
+    EXPECT_STREQ(serverAuthListener.chosenMechanism.c_str(), "ALLJOYN_ECDHE_ECDSA");
+}
+
+/**
+ * In this test, the ECDHE_ECDSA key exchange fails.  The key exchange
+ * downgrades to ECDHE_NULL and it should succeed.
+ */
+TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_Downgrade_To_ECDHE_NULL)
+{
+    EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_ECDSA ALLJOYN_ECDHE_NULL"));
+    EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_ECDSA ALLJOYN_ECDHE_NULL"));
+    serverAuthListener.failVerifyCertChain = true;
+    EXPECT_EQ(ER_OK, ExerciseOn());
+    EXPECT_TRUE(clientAuthListener.authComplete);
+    EXPECT_TRUE(serverAuthListener.authComplete);
+    EXPECT_STREQ(clientAuthListener.chosenMechanism.c_str(), "ALLJOYN_ECDHE_NULL");
+    EXPECT_STREQ(serverAuthListener.chosenMechanism.c_str(), "ALLJOYN_ECDHE_NULL");
+}
+
+/**
+ * In this test, the ECDHE_PSK key exchange fails.  The key exchange
+ * downgrades to ECDHE_NULL and it should succeed.
+ */
+TEST_F(AuthListenerECDHETest, ECDHE_PSK_Downgrade_To_ECDHE_NULL)
+{
+    EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_PSK ALLJOYN_ECDHE_NULL"));
+    EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_PSK ALLJOYN_ECDHE_NULL"));
+    serverAuthListener.psk = "03781075975973295739873982aabbcc";
+    EXPECT_EQ(ER_OK, ExerciseOn());
+    EXPECT_TRUE(clientAuthListener.authComplete);
+    EXPECT_TRUE(serverAuthListener.authComplete);
+    EXPECT_STREQ(clientAuthListener.chosenMechanism.c_str(), "ALLJOYN_ECDHE_NULL");
+    EXPECT_STREQ(serverAuthListener.chosenMechanism.c_str(), "ALLJOYN_ECDHE_NULL");
+}
+
+/**
+ * In this test, the ECDHE_ECDSA key exchange fails.  The key exchange
+ * downgrades to ECDHE_PSK and it should succeed.
+ */
+TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_Downgrade_To_ECDHE_PSK)
+{
+    EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_ECDSA ALLJOYN_ECDHE_PSK"));
+    EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_ECDSA ALLJOYN_ECDHE_PSK"));
+    serverAuthListener.failVerifyCertChain = true;
+    EXPECT_EQ(ER_OK, ExerciseOn());
+    EXPECT_TRUE(clientAuthListener.authComplete);
+    EXPECT_TRUE(serverAuthListener.authComplete);
+    EXPECT_STREQ(clientAuthListener.chosenMechanism.c_str(), "ALLJOYN_ECDHE_PSK");
+    EXPECT_STREQ(serverAuthListener.chosenMechanism.c_str(), "ALLJOYN_ECDHE_PSK");
+}
+
