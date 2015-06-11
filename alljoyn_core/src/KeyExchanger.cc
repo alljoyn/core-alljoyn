@@ -467,7 +467,7 @@ QStatus KeyExchanger::ValidateRemoteVerifierVariant(const char* peerName, MsgArg
     if (status != ER_OK) {
         return status;
     }
-    *authorized = (memcmp(remoteVerifier, computedRemoteVerifier, sizeof(computedRemoteVerifier)) == 0);
+    *authorized = (Crypto_Compare(remoteVerifier, computedRemoteVerifier, sizeof(computedRemoteVerifier)) == 0);
     if (!IsInitiator()) {
         hashUtil.Update(remoteVerifier, remoteVerifierLen);
     }
@@ -648,7 +648,7 @@ QStatus KeyExchangerECDHE_PSK::ValidateRemoteVerifierVariant(const char* peerNam
     if (status != ER_OK) {
         return status;
     }
-    *authorized = (memcmp(remoteVerifier, computedRemoteVerifier, sizeof(computedRemoteVerifier)) == 0);
+    *authorized = (Crypto_Compare(remoteVerifier, computedRemoteVerifier, sizeof(computedRemoteVerifier)) == 0);
     if (!IsInitiator()) {
         hashUtil.Update(remoteVerifier, remoteVerifierLen);
     }

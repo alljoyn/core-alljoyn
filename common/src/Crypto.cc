@@ -72,4 +72,19 @@ QStatus Crypto_PseudorandomFunction(const KeyBlob& secret, const char* label, co
     return ER_OK;
 }
 
+int Crypto_Compare(const void* buf1, const void* buf2, size_t count)
+{
+    uint8_t different = 0;
+
+    assert(buf1 != NULL);
+    assert(buf2 != NULL);
+
+    /* This loop uses the same number of cycles for any two buffers of size count. */
+    for (size_t i = 0; i < count; i++) {
+        different |= ((uint8_t*)buf1)[i] ^ ((uint8_t*)buf2)[i];
+    }
+
+    return (int)different;
+}
+
 }
