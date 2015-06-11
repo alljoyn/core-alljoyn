@@ -12,7 +12,7 @@
 #    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
-import os
+import subprocess
 
 Import('env')
 
@@ -33,7 +33,7 @@ def have_developer_license():
 
 def builder_check(target, source, env):
     check = str(source[0].abspath)
-    return os.spawnve(os.P_WAIT, check, [check], env['ENV'])
+    return subprocess.call(check)
 
 env.Append(BUILDERS = {'Check' : Builder(action = builder_check)})
 
@@ -84,10 +84,10 @@ else:
     if gtest_env['OS_CONF'] == 'windows' and (gtest_env['MSVC_VERSION'] == '11.0' or gtest_env['MSVC_VERSION'] == '11.0Exp'):
         gtest_env.Append(CPPDEFINES = ['_VARIADIC_MAX=10'])
 
-    # we compile with no rtti and we are not using exceptions. 
+    # we compile with no rtti and we are not using exceptions.
     gtest_env.Append(CPPDEFINES = ['GTEST_HAS_RTTI=0'])
 
-    # we replace AllJoyn's include CPPPATH options.  AllJoyn includes stlport that will cause the 
+    # we replace AllJoyn's include CPPPATH options.  AllJoyn includes stlport that will cause the
     # gTest code to not compile as expected at this time
     gtest_env.Append(CPPPATH = [ gtest_src_base ])
     if gtest_dir != '/usr':
@@ -95,7 +95,7 @@ else:
 
     gtest_obj = gtest_env.StaticObject(target = 'gtest-all', source = [ '%s/src/gtest-all.cc' % gtest_src_base ])
     gtest_env.StaticLibrary(target = 'gtest', source = gtest_obj)
-    
+
     unittest_env = env.Clone()
 
     if unittest_env['BR'] == 'on':
@@ -129,7 +129,7 @@ else:
         unittest_env.Append(CPPDEFINES = ['_VARIADIC_MAX=10'])
     # gtest library file is placed on folder above the the object files.
     unittest_env.Append(LIBPATH = ['./'])
-    
+
     unittest_env.Prepend(LIBS = ['gtest'])
 
     ajtest_src = unittest_env.Glob('*.cc')
