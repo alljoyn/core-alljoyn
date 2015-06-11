@@ -341,7 +341,7 @@ QStatus Crypto_AES::Decrypt_CCM(const void* in, void* out, size_t& len, const Ke
      */
     Block F;
     Compute_CCM_AuthField(&keyState->key, F, authLen, L, nonce, (uint8_t*)out, len, (uint8_t*)addData, addLen);
-    if (memcmp(F.data, T.data, authLen) == 0) {
+    if (Crypto_Compare(F.data, T.data, authLen) == 0) {
         return ER_OK;
     } else {
         /* Clear the decrypted data */
