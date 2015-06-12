@@ -222,7 +222,7 @@ void MyAllJoynCode::SessionJoined(SessionPort sessionPort, SessionId id, const c
 }
 
 /* From SessionListener */
-void MyAllJoynCode::SessionLost(ajn::SessionId sessionId)
+void MyAllJoynCode::SessionLost(ajn::SessionId sessionId, ajn::SessionListener::SessionLostReason reason)
 {
     QCC_UNUSED(sessionId);
 }
