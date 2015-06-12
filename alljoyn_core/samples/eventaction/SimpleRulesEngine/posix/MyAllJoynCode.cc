@@ -225,6 +225,7 @@ void MyAllJoynCode::SessionJoined(SessionPort sessionPort, SessionId id, const c
 void MyAllJoynCode::SessionLost(ajn::SessionId sessionId, ajn::SessionListener::SessionLostReason reason)
 {
     QCC_UNUSED(sessionId);
+    QCC_UNUSED(reason);
 }
 
 void MyAllJoynCode::SessionMemberAdded(ajn::SessionId sessionId, const char* uniqueName)
