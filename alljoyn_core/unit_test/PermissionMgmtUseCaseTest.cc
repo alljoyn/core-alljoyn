@@ -45,18 +45,18 @@ static const char sampleCertificatePEM[] = {
 
 static void GenerateAdminGroupACL(const GUID128& groupGUID, const KeyInfoNISTP256& groupAuthority, PermissionPolicy::Acl& acl)
 {
-    PermissionPolicy::Peer* peers = new PermissionPolicy::Peer[1];
+    PermissionPolicy::Peer peers[1];
     peers[0].SetType(PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP);
     peers[0].SetSecurityGroupId(groupGUID);
-    KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
-    keyInfo->SetKeyId(groupAuthority.GetKeyId(), groupAuthority.GetKeyIdLen());
-    keyInfo->SetPublicKey(groupAuthority.GetPublicKey());
-    peers[0].SetKeyInfo(keyInfo);
+    KeyInfoNISTP256 keyInfo;
+    keyInfo.SetKeyId(groupAuthority.GetKeyId(), groupAuthority.GetKeyIdLen());
+    keyInfo.SetPublicKey(groupAuthority.GetPublicKey());
+    peers[0].SetKeyInfo(&keyInfo);
     acl.SetPeers(1, peers);
 
-    PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[1];
+    PermissionPolicy::Rule rules[1];
     rules[0].SetInterfaceName("*");
-    PermissionPolicy::Rule::Member* prms = new PermissionPolicy::Rule::Member[1];
+    PermissionPolicy::Rule::Member prms[1];
     prms[0].SetMemberName("*");
     prms[0].SetActionMask(
         PermissionPolicy::Rule::Member::ACTION_PROVIDE |
@@ -74,14 +74,14 @@ static PermissionPolicy* GenerateWildCardPolicy(const GUID128& groupGUID, const 
     policy->SetVersion(52516);
 
     /* add the acls section */
-    PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[2];
+    PermissionPolicy::Acl acls[2];
     /* acls record 0  ANY-USER */
-    PermissionPolicy::Peer* peers = new PermissionPolicy::Peer[1];
+    PermissionPolicy::Peer peers[1];
     peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
     acls[0].SetPeers(1, peers);
-    PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[1];
+    PermissionPolicy::Rule rules[1];
     rules[0].SetInterfaceName("org.allseenalliance.control.*");
-    PermissionPolicy::Rule::Member* prms = new PermissionPolicy::Rule::Member[3];
+    PermissionPolicy::Rule::Member prms[3];
     prms[0].SetMemberName("*");
     prms[0].SetMemberType(PermissionPolicy::Rule::Member::SIGNAL);
     prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
@@ -112,115 +112,134 @@ static PermissionPolicy* GeneratePolicy(const GUID128& groupGUID, const KeyInfoN
     policy->SetVersion(74892317);
 
     /* add the acls section */
-    PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[5];
+    PermissionPolicy::Acl acls[5];
     /* acls record 0  ANY-USER */
-    PermissionPolicy::Peer* peers = new PermissionPolicy::Peer[1];
-    peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
-    acls[0].SetPeers(1, peers);
-    PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[3];
-    rules[0].SetObjPath("/control/guide");
-    rules[0].SetInterfaceName("allseenalliance.control.*");
-    PermissionPolicy::Rule::Member* prms = new PermissionPolicy::Rule::Member[1];
-    prms[0].SetMemberName("*");
-    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    rules[0].SetMembers(1, prms);
-    rules[1].SetInterfaceName(BasePermissionMgmtTest::ONOFF_IFC_NAME);
-    prms = new PermissionPolicy::Rule::Member[2];
-    prms[0].SetMemberName("Off");
-    prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
-    prms[0].SetActionMask(0);  /* action denied */
-    prms[1].SetMemberName("*");
-    prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    rules[1].SetMembers(2, prms);
-    rules[2].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
-    prms = new PermissionPolicy::Rule::Member[1];
-    prms[0].SetMemberName("ChannelChanged");
-    prms[0].SetMemberType(PermissionPolicy::Rule::Member::SIGNAL);
-    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-    rules[2].SetMembers(1, prms);
-    acls[0].SetRules(3, rules);
-
+    {
+        PermissionPolicy::Peer peers[1];
+        peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
+        acls[0].SetPeers(1, peers);
+        PermissionPolicy::Rule rules[3];
+        rules[0].SetObjPath("/control/guide");
+        rules[0].SetInterfaceName("allseenalliance.control.*");
+        {
+            PermissionPolicy::Rule::Member prms[1];
+            prms[0].SetMemberName("*");
+            prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+            rules[0].SetMembers(1, prms);
+        }
+        rules[1].SetInterfaceName(BasePermissionMgmtTest::ONOFF_IFC_NAME);
+        {
+            PermissionPolicy::Rule::Member prms[2];
+            prms[0].SetMemberName("Off");
+            prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+            prms[0].SetActionMask(0);  /* action denied */
+            prms[1].SetMemberName("*");
+            prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+            rules[1].SetMembers(2, prms);
+        }
+        rules[2].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
+        {
+            PermissionPolicy::Rule::Member prms[1];
+            prms[0].SetMemberName("ChannelChanged");
+            prms[0].SetMemberType(PermissionPolicy::Rule::Member::SIGNAL);
+            prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+            rules[2].SetMembers(1, prms);
+        }
+        acls[0].SetRules(3, rules);
+    }
     /* acls record 1 GUILD membershipGUID1 */
-    peers = new PermissionPolicy::Peer[1];
-    peers[0].SetType(PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP);
-    peers[0].SetSecurityGroupId(membershipGUID1);
-    KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
-    keyInfo->SetKeyId(guildAuthorityGUID.GetBytes(), qcc::GUID128::SIZE);
-    keyInfo->SetPublicKey(&guildAuthorityPubKey);
-    peers[0].SetKeyInfo(keyInfo);
-    acls[1].SetPeers(1, peers);
-    rules = new PermissionPolicy::Rule[2];
-    rules[0].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
-    prms = new PermissionPolicy::Rule::Member[5];
-    prms[0].SetMemberName("Up");
-    prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
-    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    prms[1].SetMemberName("Down");
-    prms[1].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
-    prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    prms[2].SetMemberName("Volume");
-    prms[2].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
-    prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    prms[3].SetMemberName("InputSource");
-    prms[3].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
-    prms[3].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    prms[4].SetMemberName("Caption");
-    prms[4].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
-    prms[4].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    rules[0].SetMembers(5, prms);
-
-    rules[1].SetInterfaceName("org.allseenalliance.control.Mouse*");
-    prms = new PermissionPolicy::Rule::Member[1];
-    prms[0].SetMemberName("*");
-    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    rules[1].SetMembers(1, prms);
-    acls[1].SetRules(2, rules);
-
+    {
+        PermissionPolicy::Peer peers[1];
+        peers[0].SetType(PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP);
+        peers[0].SetSecurityGroupId(membershipGUID1);
+        KeyInfoNISTP256 keyInfo;
+        keyInfo.SetKeyId(guildAuthorityGUID.GetBytes(), qcc::GUID128::SIZE);
+        keyInfo.SetPublicKey(&guildAuthorityPubKey);
+        peers[0].SetKeyInfo(&keyInfo);
+        acls[1].SetPeers(1, peers);
+        PermissionPolicy::Rule rules[2];
+        {
+            rules[0].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
+            PermissionPolicy::Rule::Member prms[5];
+            prms[0].SetMemberName("Up");
+            prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+            prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+            prms[1].SetMemberName("Down");
+            prms[1].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+            prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+            prms[2].SetMemberName("Volume");
+            prms[2].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
+            prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+            prms[3].SetMemberName("InputSource");
+            prms[3].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+            prms[3].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+            prms[4].SetMemberName("Caption");
+            prms[4].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
+            prms[4].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+            rules[0].SetMembers(5, prms);
+        }
+        {
+            rules[1].SetInterfaceName("org.allseenalliance.control.Mouse*");
+            PermissionPolicy::Rule::Member prms[1];
+            prms[0].SetMemberName("*");
+            prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+            rules[1].SetMembers(1, prms);
+        }
+        acls[1].SetRules(2, rules);
+    }
     /* acls record 2 GUILD membershipGUID2 */
-    peers = new PermissionPolicy::Peer[1];
-    peers[0].SetType(PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP);
-    peers[0].SetSecurityGroupId(membershipGUID2);
-    keyInfo = new KeyInfoNISTP256();
-    keyInfo->SetKeyId(guildAuthorityGUID.GetBytes(), qcc::GUID128::SIZE);
-    keyInfo->SetPublicKey(&guildAuthorityPubKey);
-    peers[0].SetKeyInfo(keyInfo);
-    acls[2].SetPeers(1, peers);
-    rules = new PermissionPolicy::Rule[3];
-    rules[0].SetObjPath("/control/settings");
-    prms = new PermissionPolicy::Rule::Member[1];
-    prms[0].SetMemberName("*");
-    prms[0].SetActionMask(0);  /* action denied */
-    rules[0].SetMembers(1, prms);
-    rules[1].SetObjPath("/control/guide");
-    rules[1].SetInterfaceName("org.allseenalliance.control.*");
-    prms = new PermissionPolicy::Rule::Member[1];
-    prms[0].SetMemberName("*");
-    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    rules[1].SetMembers(1, prms);
-    rules[2].SetObjPath("*");
-    prms = new PermissionPolicy::Rule::Member[1];
-    prms[0].SetMemberName("*");
-    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    rules[2].SetMembers(1, prms);
-    acls[2].SetRules(3, rules);
-
+    {
+        PermissionPolicy::Peer peers[1];
+        peers[0].SetType(PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP);
+        peers[0].SetSecurityGroupId(membershipGUID2);
+        KeyInfoNISTP256 keyInfo;
+        keyInfo.SetKeyId(guildAuthorityGUID.GetBytes(), qcc::GUID128::SIZE);
+        keyInfo.SetPublicKey(&guildAuthorityPubKey);
+        peers[0].SetKeyInfo(&keyInfo);
+        acls[2].SetPeers(1, peers);
+        PermissionPolicy::Rule rules[3];
+        {
+            rules[0].SetObjPath("/control/settings");
+            PermissionPolicy::Rule::Member prms[1];
+            prms[0].SetMemberName("*");
+            prms[0].SetActionMask(0);  /* action denied */
+            rules[0].SetMembers(1, prms);
+        }
+        {
+            rules[1].SetObjPath("/control/guide");
+            rules[1].SetInterfaceName("org.allseenalliance.control.*");
+            PermissionPolicy::Rule::Member prms[1];
+            prms[0].SetMemberName("*");
+            prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+            rules[1].SetMembers(1, prms);
+        }
+        {
+            rules[2].SetObjPath("*");
+            PermissionPolicy::Rule::Member prms[1];
+            prms[0].SetMemberName("*");
+            prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+            rules[2].SetMembers(1, prms);
+        }
+        acls[2].SetRules(3, rules);
+    }
     /* acls record 3 peer specific rule  */
-    peers = new PermissionPolicy::Peer[1];
-    peers[0].SetType(PermissionPolicy::Peer::PEER_WITH_PUBLIC_KEY);
-    keyInfo = new KeyInfoNISTP256();
-    keyInfo->SetKeyId(guildAuthorityGUID.GetBytes(), qcc::GUID128::SIZE);
-    keyInfo->SetPublicKey(&guildAuthorityPubKey);
-    peers[0].SetKeyInfo(keyInfo);
-    acls[3].SetPeers(1, peers);
-    rules = new PermissionPolicy::Rule[1];
-    rules[0].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
-    prms = new PermissionPolicy::Rule::Member[1];
-    prms[0].SetMemberName("Mute");
-    prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
-    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    rules[0].SetMembers(1, prms);
-    acls[3].SetRules(1, rules);
-
+    {
+        PermissionPolicy::Peer peers[1];
+        peers[0].SetType(PermissionPolicy::Peer::PEER_WITH_PUBLIC_KEY);
+        KeyInfoNISTP256 keyInfo;
+        keyInfo.SetKeyId(guildAuthorityGUID.GetBytes(), qcc::GUID128::SIZE);
+        keyInfo.SetPublicKey(&guildAuthorityPubKey);
+        peers[0].SetKeyInfo(&keyInfo);
+        acls[3].SetPeers(1, peers);
+        PermissionPolicy::Rule rules[1];
+        rules[0].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
+        PermissionPolicy::Rule::Member prms[1];
+        prms[0].SetMemberName("Mute");
+        prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+        prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        rules[0].SetMembers(1, prms);
+        acls[3].SetRules(1, rules);
+    }
     GenerateAdminGroupACL(groupGUID, groupAuthority, acls[4]);
     policy->SetAcls(5, acls);
 
@@ -234,67 +253,78 @@ static PermissionPolicy* GeneratePolicyForSpecificCA(const GUID128& groupGUID, c
     policy->SetVersion(25531);
 
     /* add the acls section */
-    PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[3];
+    PermissionPolicy::Acl acls[3];
     /* acls record 0  ANY-USER */
-    PermissionPolicy::Peer* peers = new PermissionPolicy::Peer[1];
-    peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
-    acls[0].SetPeers(1, peers);
-    PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[3];
-    rules[0].SetObjPath("/control/guide");
-    rules[0].SetInterfaceName("allseenalliance.control.*");
-    PermissionPolicy::Rule::Member* prms = new PermissionPolicy::Rule::Member[1];
-    prms[0].SetMemberName("*");
-    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    rules[0].SetMembers(1, prms);
-    rules[1].SetInterfaceName(BasePermissionMgmtTest::ONOFF_IFC_NAME);
-    prms = new PermissionPolicy::Rule::Member[2];
-    prms[0].SetMemberName("Off");
-    prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
-    prms[0].SetActionMask(0);  /* action denied */
-    prms[1].SetMemberName("*");
-    prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    rules[1].SetMembers(2, prms);
-    rules[2].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
-    prms = new PermissionPolicy::Rule::Member[1];
-    prms[0].SetMemberName("ChannelChanged");
-    prms[0].SetMemberType(PermissionPolicy::Rule::Member::SIGNAL);
-    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-    rules[2].SetMembers(1, prms);
-    acls[0].SetRules(3, rules);
-
+    {
+        PermissionPolicy::Peer peers[1];
+        peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
+        acls[0].SetPeers(1, peers);
+        PermissionPolicy::Rule rules[3];
+        rules[0].SetObjPath("/control/guide");
+        rules[0].SetInterfaceName("allseenalliance.control.*");
+        {
+            PermissionPolicy::Rule::Member prms[1];
+            prms[0].SetMemberName("*");
+            prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+            rules[0].SetMembers(1, prms);
+        }
+        {
+            rules[1].SetInterfaceName(BasePermissionMgmtTest::ONOFF_IFC_NAME);
+            PermissionPolicy::Rule::Member prms[2];
+            prms[0].SetMemberName("Off");
+            prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+            prms[0].SetActionMask(0);  /* action denied */
+            prms[1].SetMemberName("*");
+            prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+            rules[1].SetMembers(2, prms);
+        }
+        {
+            rules[2].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
+            PermissionPolicy::Rule::Member prms[1];
+            prms[0].SetMemberName("ChannelChanged");
+            prms[0].SetMemberType(PermissionPolicy::Rule::Member::SIGNAL);
+            prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+            rules[2].SetMembers(1, prms);
+        }
+        acls[0].SetRules(3, rules);
+    }
     /* acls record 1 FROM_CERTIFICATE_AUTHORITY */
-    peers = new PermissionPolicy::Peer[1];
-    peers[0].SetType(PermissionPolicy::Peer::PEER_FROM_CERTIFICATE_AUTHORITY);
-    KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256(restrictedCA);
-    peers[0].SetKeyInfo(keyInfo);
-    acls[1].SetPeers(1, peers);
-    rules = new PermissionPolicy::Rule[2];
-    rules[0].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
-    prms = new PermissionPolicy::Rule::Member[5];
-    prms[0].SetMemberName("Up");
-    prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
-    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    prms[1].SetMemberName("Down");
-    prms[1].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
-    prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    prms[2].SetMemberName("Volume");
-    prms[2].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
-    prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    prms[3].SetMemberName("InputSource");
-    prms[3].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
-    prms[3].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    prms[4].SetMemberName("Caption");
-    prms[4].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
-    prms[4].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    rules[0].SetMembers(5, prms);
-
-    rules[1].SetInterfaceName("org.allseenalliance.control.Mouse*");
-    prms = new PermissionPolicy::Rule::Member[1];
-    prms[0].SetMemberName("*");
-    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    rules[1].SetMembers(1, prms);
-    acls[1].SetRules(2, rules);
-
+    {
+        PermissionPolicy::Peer peers[1];
+        peers[0].SetType(PermissionPolicy::Peer::PEER_FROM_CERTIFICATE_AUTHORITY);
+        KeyInfoNISTP256 keyInfo(restrictedCA);
+        peers[0].SetKeyInfo(&keyInfo);
+        acls[1].SetPeers(1, peers);
+        PermissionPolicy::Rule rules[2];
+        {
+            rules[0].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
+            PermissionPolicy::Rule::Member prms[5];
+            prms[0].SetMemberName("Up");
+            prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+            prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+            prms[1].SetMemberName("Down");
+            prms[1].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+            prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+            prms[2].SetMemberName("Volume");
+            prms[2].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
+            prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+            prms[3].SetMemberName("InputSource");
+            prms[3].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+            prms[3].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+            prms[4].SetMemberName("Caption");
+            prms[4].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
+            prms[4].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+            rules[0].SetMembers(5, prms);
+        }
+        {
+            rules[1].SetInterfaceName("org.allseenalliance.control.Mouse*");
+            PermissionPolicy::Rule::Member prms[1];
+            prms[0].SetMemberName("*");
+            prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+            rules[1].SetMembers(1, prms);
+        }
+        acls[1].SetRules(2, rules);
+    }
     GenerateAdminGroupACL(groupGUID, groupAuthority, acls[2]);
     policy->SetAcls(3, acls);
 
@@ -309,31 +339,37 @@ static PermissionPolicy* GenerateSmallAnyUserPolicy(const GUID128& groupGUID, co
 
     /* add the acls ection */
 
-    PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[2];
+    PermissionPolicy::Acl acls[2];
 
     /* acls record 0  ANY-USER */
-    PermissionPolicy::Peer* peers = new PermissionPolicy::Peer[1];
-    peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
-    acls[0].SetPeers(1, peers);
-    PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[2];
-    rules[0].SetInterfaceName(BasePermissionMgmtTest::ONOFF_IFC_NAME);
-    PermissionPolicy::Rule::Member* prms = new PermissionPolicy::Rule::Member[2];
-    prms[0].SetMemberName("Off");
-    prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
-    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
-    prms[1].SetMemberName("On");
-    prms[1].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
-    prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    rules[0].SetMembers(2, prms);
-    rules[1].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
-    prms = new PermissionPolicy::Rule::Member[1];
-    prms[0].SetMemberName("ChannelChanged");
-    prms[0].SetMemberType(PermissionPolicy::Rule::Member::SIGNAL);
-    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-    rules[1].SetMembers(1, prms);
-    acls[0].SetRules(2, rules);
+    {
+        PermissionPolicy::Peer peers[1];
+        peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
+        acls[0].SetPeers(1, peers);
+        PermissionPolicy::Rule rules[2];
+        {
+            rules[0].SetInterfaceName(BasePermissionMgmtTest::ONOFF_IFC_NAME);
+            PermissionPolicy::Rule::Member prms[2];
+            prms[0].SetMemberName("Off");
+            prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+            prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+            prms[1].SetMemberName("On");
+            prms[1].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+            prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+            rules[0].SetMembers(2, prms);
+        }
+        {
+            rules[1].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
+            PermissionPolicy::Rule::Member prms[1];
+            prms[0].SetMemberName("ChannelChanged");
+            prms[0].SetMemberType(PermissionPolicy::Rule::Member::SIGNAL);
+            prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+            rules[1].SetMembers(1, prms);
+        }
+        acls[0].SetRules(2, rules);
 
-    GenerateAdminGroupACL(groupGUID, groupAuthority, acls[1]);
+        GenerateAdminGroupACL(groupGUID, groupAuthority, acls[1]);
+    }
     policy->SetAcls(2, acls);
 
     return policy;
@@ -347,38 +383,43 @@ static PermissionPolicy* GenerateFullAccessAnyUserPolicy(const GUID128& groupGUI
 
     /* add the acls ection */
 
-    PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[2];
+    PermissionPolicy::Acl acls[2];
 
     /* acls record 0  ANY-USER */
-    PermissionPolicy::Peer* peers = new PermissionPolicy::Peer[1];
+    PermissionPolicy::Peer peers[1];
     peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
     acls[0].SetPeers(1, peers);
-    PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[2];
-    rules[0].SetInterfaceName(BasePermissionMgmtTest::ONOFF_IFC_NAME);
-    PermissionPolicy::Rule::Member* prms = new PermissionPolicy::Rule::Member[2];
-    prms[0].SetMemberName("Off");
-    prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
-    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
-    prms[1].SetMemberName("On");
-    prms[1].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
-    prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    rules[0].SetMembers(2, prms);
-    rules[1].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
-    size_t count = 0;
-    if (allowSignal) {
-        prms = new PermissionPolicy::Rule::Member[2];
-        prms[count].SetMemberName("ChannelChanged");
-        prms[count].SetMemberType(PermissionPolicy::Rule::Member::SIGNAL);
-        prms[count].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-        count++;
-    } else {
-        prms = new PermissionPolicy::Rule::Member[1];
+    PermissionPolicy::Rule rules[2];
+    {
+        rules[0].SetInterfaceName(BasePermissionMgmtTest::ONOFF_IFC_NAME);
+        PermissionPolicy::Rule::Member prms[2];
+        prms[0].SetMemberName("Off");
+        prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+        prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+        prms[1].SetMemberName("On");
+        prms[1].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+        prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        rules[0].SetMembers(2, prms);
     }
-    prms[count].SetMemberName("*");
-    prms[count].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
-    prms[count].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    rules[1].SetMembers(count + 1, prms);
-
+    {
+        rules[1].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
+        size_t count = 0;
+        PermissionPolicy::Rule::Member* prms = NULL;
+        if (allowSignal) {
+            prms = new PermissionPolicy::Rule::Member[2];
+            prms[count].SetMemberName("ChannelChanged");
+            prms[count].SetMemberType(PermissionPolicy::Rule::Member::SIGNAL);
+            prms[count].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+            count++;
+        } else {
+            prms = new PermissionPolicy::Rule::Member[1];
+        }
+        prms[count].SetMemberName("*");
+        prms[count].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+        prms[count].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        rules[1].SetMembers(count + 1, prms);
+        delete [] prms;
+    }
     acls[0].SetRules(2, rules);
 
     GenerateAdminGroupACL(groupGUID, groupAuthority, acls[1]);
@@ -394,27 +435,31 @@ static PermissionPolicy* GenerateAnyUserDeniedPrefixPolicy(const GUID128& groupG
 
     /* add the incoming section */
 
-    PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[2];
+    PermissionPolicy::Acl acls[2];
 
     /* acls record 0  ANY-USER */
-    PermissionPolicy::Peer* peers = new PermissionPolicy::Peer[1];
+    PermissionPolicy::Peer peers[1];
     peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
     acls[0].SetPeers(1, peers);
-    PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[2];
-    rules[0].SetInterfaceName(BasePermissionMgmtTest::ONOFF_IFC_NAME);
-    PermissionPolicy::Rule::Member* prms = new PermissionPolicy::Rule::Member[2];
-    prms[0].SetMemberName("Of*");
-    prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
-    prms[0].SetActionMask(0);  /* action denied */
-    prms[1].SetMemberName("*");
-    prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    rules[0].SetMembers(2, prms);
-    rules[1].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
-    prms = new PermissionPolicy::Rule::Member[1];
-    prms[0].SetMemberName("ChannelChanged");
-    prms[0].SetMemberType(PermissionPolicy::Rule::Member::SIGNAL);
-    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-    rules[1].SetMembers(1, prms);
+    PermissionPolicy::Rule rules[2];
+    {
+        rules[0].SetInterfaceName(BasePermissionMgmtTest::ONOFF_IFC_NAME);
+        PermissionPolicy::Rule::Member prms[2];
+        prms[0].SetMemberName("Of*");
+        prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+        prms[0].SetActionMask(0);  /* action denied */
+        prms[1].SetMemberName("*");
+        prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        rules[0].SetMembers(2, prms);
+    }
+    {
+        rules[1].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
+        PermissionPolicy::Rule::Member prms[1];
+        prms[0].SetMemberName("ChannelChanged");
+        prms[0].SetMemberType(PermissionPolicy::Rule::Member::SIGNAL);
+        prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        rules[1].SetMembers(1, prms);
+    }
     acls[0].SetRules(2, rules);
 
 
@@ -429,13 +474,13 @@ static PermissionPolicy* GenerateFullAccessOutgoingPolicy(const GUID128& groupGU
 
     policy->SetVersion(38276);
 
-    PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[2];
+    PermissionPolicy::Acl acls[2];
 
     /* acls record 0  ANY-USER */
-    PermissionPolicy::Peer* peers = new PermissionPolicy::Peer[1];
+    PermissionPolicy::Peer peers[1];
     peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
     acls[0].SetPeers(1, peers);
-    PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[1];
+    PermissionPolicy::Rule rules[1];
     rules[0].SetInterfaceName("*");
     PermissionPolicy::Rule::Member* prms = NULL;
     size_t count = 0;
@@ -458,6 +503,7 @@ static PermissionPolicy* GenerateFullAccessOutgoingPolicy(const GUID128& groupGU
     count++;
     rules[0].SetMembers(count, prms);
     acls[0].SetRules(1, rules);
+    delete [] prms;
 
     GenerateAdminGroupACL(groupGUID, groupAuthority, acls[1]);
     policy->SetAcls(2, acls);
@@ -475,50 +521,53 @@ static PermissionPolicy* GenerateFullAccessOutgoingPolicyWithGuestServices(const
 
     policy->SetVersion(2737834);
 
-    PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[3];
+    PermissionPolicy::Acl acls[3];
 
     /* acls record 0  ANY-USER */
-    PermissionPolicy::Peer* peers = new PermissionPolicy::Peer[1];
-    peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
-    acls[0].SetPeers(1, peers);
-    PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[1];
-    rules[0].SetInterfaceName("*");
-    PermissionPolicy::Rule::Member* prms = NULL;
-    size_t count = 0;
-    if (allowIncomingSignal) {
-        prms = new PermissionPolicy::Rule::Member[3];
+    {
+        PermissionPolicy::Peer peers[1];
+        peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
+        acls[0].SetPeers(1, peers);
+        PermissionPolicy::Rule rules[1];
+        rules[0].SetInterfaceName("*");
+        PermissionPolicy::Rule::Member* prms = NULL;
+        size_t count = 0;
+        if (allowIncomingSignal) {
+            prms = new PermissionPolicy::Rule::Member[3];
+            prms[count].SetMemberName("*");
+            prms[count].SetMemberType(PermissionPolicy::Rule::Member::SIGNAL);
+            prms[count].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+            count++;
+        } else {
+            prms = new PermissionPolicy::Rule::Member[2];
+        }
         prms[count].SetMemberName("*");
-        prms[count].SetMemberType(PermissionPolicy::Rule::Member::SIGNAL);
+        prms[count].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
         prms[count].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
         count++;
-    } else {
-        prms = new PermissionPolicy::Rule::Member[2];
+        prms[count].SetMemberName("*");
+        prms[count].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
+        prms[count].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+        count++;
+        rules[0].SetMembers(count, prms);
+        acls[0].SetRules(1, rules);
+        delete [] prms;
     }
-    prms[count].SetMemberName("*");
-    prms[count].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
-    prms[count].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
-    count++;
-    prms[count].SetMemberName("*");
-    prms[count].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
-    prms[count].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
-    count++;
-    rules[0].SetMembers(count, prms);
-    acls[0].SetRules(1, rules);
-
     /* acls record 1 FROM_CERTIFICATE_AUTHORITY */
-    peers = new PermissionPolicy::Peer[1];
-    peers[0].SetType(PermissionPolicy::Peer::PEER_FROM_CERTIFICATE_AUTHORITY);
-    KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256(guestCA);
-    peers[0].SetKeyInfo(keyInfo);
-    acls[1].SetPeers(1, peers);
-    rules = new PermissionPolicy::Rule[1];
-    rules[0].SetInterfaceName("*");
-    prms = new PermissionPolicy::Rule::Member[1];
-    prms[0].SetMemberName("*");
-    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
-    rules[0].SetMembers(1, prms);
-    acls[1].SetRules(1, rules);
-
+    {
+        PermissionPolicy::Peer peers[1];
+        peers[0].SetType(PermissionPolicy::Peer::PEER_FROM_CERTIFICATE_AUTHORITY);
+        KeyInfoNISTP256 keyInfo(guestCA);
+        peers[0].SetKeyInfo(&keyInfo);
+        acls[1].SetPeers(1, peers);
+        PermissionPolicy::Rule rules[1];
+        rules[0].SetInterfaceName("*");
+        PermissionPolicy::Rule::Member prms[1];
+        prms[0].SetMemberName("*");
+        prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+        rules[0].SetMembers(1, prms);
+        acls[1].SetRules(1, rules);
+    }
     GenerateAdminGroupACL(groupGUID, groupAuthority, acls[2]);
     policy->SetAcls(3, acls);
     return policy;
@@ -536,52 +585,56 @@ static PermissionPolicy* GenerateGuildSpecificAccessOutgoingPolicy(const GUID128
 
     policy->SetVersion(827425);
 
-    PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[3];
+    PermissionPolicy::Acl acls[3];
 
     /* acls record 0  ANY-USER */
-    PermissionPolicy::Peer* peers = new PermissionPolicy::Peer[1];
-    peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
-    acls[0].SetPeers(1, peers);
-    PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[1];
-    rules[0].SetInterfaceName(BasePermissionMgmtTest::ONOFF_IFC_NAME);
-    PermissionPolicy::Rule::Member* prms = new PermissionPolicy::Rule::Member[3];
-    prms[0].SetMemberName("*");
-    prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
-    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
-    prms[1].SetMemberName("*");
-    prms[1].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
-    prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
-    prms[2].SetMemberName("*");
-    prms[2].SetMemberType(PermissionPolicy::Rule::Member::SIGNAL);
-    prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+    {
+        PermissionPolicy::Peer peers[1];
+        peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
+        acls[0].SetPeers(1, peers);
+        PermissionPolicy::Rule rules[1];
+        rules[0].SetInterfaceName(BasePermissionMgmtTest::ONOFF_IFC_NAME);
+        PermissionPolicy::Rule::Member prms[3];
+        prms[0].SetMemberName("*");
+        prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+        prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+        prms[1].SetMemberName("*");
+        prms[1].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
+        prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+        prms[2].SetMemberName("*");
+        prms[2].SetMemberType(PermissionPolicy::Rule::Member::SIGNAL);
+        prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
 
-    rules[0].SetMembers(3, prms);
-    acls[0].SetRules(1, rules);
+        rules[0].SetMembers(3, prms);
+        acls[0].SetRules(1, rules);
+    }
 
     /* acls record 1 GUILD specific */
-    peers = new PermissionPolicy::Peer[1];
-    peers[0].SetType(PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP);
-    peers[0].SetSecurityGroupId(guildGUID);
-    KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
-    keyInfo->SetKeyId(guildAuthorityGUID.GetBytes(), qcc::GUID128::SIZE);
-    keyInfo->SetPublicKey(&guildAuthorityPubKey);
-    peers[0].SetKeyInfo(keyInfo);
-    acls[1].SetPeers(1, peers);
-    rules = new PermissionPolicy::Rule[1];
-    rules[0].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
-    prms = new PermissionPolicy::Rule::Member[3];
-    prms[0].SetMemberName("*");
-    prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
-    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
-    prms[1].SetMemberName("*");
-    prms[1].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
-    prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
-    prms[2].SetMemberName("*");
-    prms[2].SetMemberType(PermissionPolicy::Rule::Member::SIGNAL);
-    prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+    {
+        PermissionPolicy::Peer peers[1];
+        peers[0].SetType(PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP);
+        peers[0].SetSecurityGroupId(guildGUID);
+        KeyInfoNISTP256 keyInfo;
+        keyInfo.SetKeyId(guildAuthorityGUID.GetBytes(), qcc::GUID128::SIZE);
+        keyInfo.SetPublicKey(&guildAuthorityPubKey);
+        peers[0].SetKeyInfo(&keyInfo);
+        acls[1].SetPeers(1, peers);
+        PermissionPolicy::Rule rules[1];
+        rules[0].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
+        PermissionPolicy::Rule::Member prms[3];
+        prms[0].SetMemberName("*");
+        prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+        prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+        prms[1].SetMemberName("*");
+        prms[1].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
+        prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+        prms[2].SetMemberName("*");
+        prms[2].SetMemberType(PermissionPolicy::Rule::Member::SIGNAL);
+        prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
 
-    rules[0].SetMembers(3, prms);
-    acls[1].SetRules(1, rules);
+        rules[0].SetMembers(3, prms);
+        acls[1].SetRules(1, rules);
+    }
 
     GenerateAdminGroupACL(groupGUID, groupAuthority, acls[2]);
     policy->SetAcls(3, acls);
@@ -596,38 +649,40 @@ static PermissionPolicy* GeneratePolicyPeerPublicKey(const GUID128& groupGUID, c
 
     /* add the provider section */
 
-    PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[2];
+    PermissionPolicy::Acl acls[2];
 
     /* acls record 0 peer */
-    PermissionPolicy::Peer* peers = new PermissionPolicy::Peer[1];
+    PermissionPolicy::Peer peers[1];
     peers[0].SetType(PermissionPolicy::Peer::PEER_WITH_PUBLIC_KEY);
-    KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
-    keyInfo->SetPublicKey(&peerPublicKey);
-    peers[0].SetKeyInfo(keyInfo);
+    KeyInfoNISTP256 keyInfo;
+    keyInfo.SetPublicKey(&peerPublicKey);
+    peers[0].SetKeyInfo(&keyInfo);
     acls[0].SetPeers(1, peers);
-    PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[2];
-    rules[0].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
-    PermissionPolicy::Rule::Member* prms = new PermissionPolicy::Rule::Member[4];
-    prms[0].SetMemberName("Up");
-    prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
-    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    prms[1].SetMemberName("Down");
-    prms[1].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
-    prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    prms[2].SetMemberName("Volume");
-    prms[2].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
-    prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    prms[3].SetMemberName("Caption");
-    prms[3].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
-    prms[3].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    rules[0].SetMembers(4, prms);
-
-    rules[1].SetInterfaceName("org.allseenalliance.control.Mouse*");
-    prms = new PermissionPolicy::Rule::Member[1];
-    prms[0].SetMemberName("*");
-    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    rules[1].SetMembers(1, prms);
-
+    PermissionPolicy::Rule rules[2];
+    {
+        rules[0].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
+        PermissionPolicy::Rule::Member prms[4];
+        prms[0].SetMemberName("Up");
+        prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+        prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        prms[1].SetMemberName("Down");
+        prms[1].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+        prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        prms[2].SetMemberName("Volume");
+        prms[2].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
+        prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        prms[3].SetMemberName("Caption");
+        prms[3].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
+        prms[3].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        rules[0].SetMembers(4, prms);
+    }
+    {
+        rules[1].SetInterfaceName("org.allseenalliance.control.Mouse*");
+        PermissionPolicy::Rule::Member prms[1];
+        prms[0].SetMemberName("*");
+        prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        rules[1].SetMembers(1, prms);
+    }
     acls[0].SetRules(2, rules);
     GenerateAdminGroupACL(groupGUID, groupAuthority, acls[1]);
     policy->SetAcls(2, acls);
@@ -643,39 +698,41 @@ static PermissionPolicy* GeneratePolicyDenyPeerPublicKey(const GUID128& groupGUI
 
     /* add the provider section */
 
-    PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[2];
+    PermissionPolicy::Acl acls[2];
 
     /* acls record 0 peer */
-    PermissionPolicy::Peer* peers = new PermissionPolicy::Peer[1];
+    PermissionPolicy::Peer peers[1];
     peers[0].SetType(PermissionPolicy::Peer::PEER_WITH_PUBLIC_KEY);
-    KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
-    keyInfo->SetPublicKey(&peerPublicKey);
-    peers[0].SetKeyInfo(keyInfo);
+    KeyInfoNISTP256 keyInfo;
+    keyInfo.SetPublicKey(&peerPublicKey);
+    peers[0].SetKeyInfo(&keyInfo);
     acls[0].SetPeers(1, peers);
-    PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[2];
-    rules[0].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
-    PermissionPolicy::Rule::Member* prms = new PermissionPolicy::Rule::Member[4];
-    prms[0].SetMemberName("Up");
-    prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
-    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    prms[1].SetMemberName("Down");
-    prms[1].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
-    prms[1].SetActionMask(0);  /* action denied */
-    prms[2].SetMemberName("Volume");
-    prms[2].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
-    prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    prms[3].SetMemberName("Caption");
-    prms[3].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
-    prms[3].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    rules[0].SetMembers(4, prms);
-
-    rules[1].SetInterfaceName("org.allseenalliance.control.Mouse*");
-    prms = new PermissionPolicy::Rule::Member[1];
-    prms[0].SetMemberName("*");
-    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    rules[1].SetMembers(1, prms);
-
-    acls[0].SetRules(2, rules);
+    PermissionPolicy::Rule rules[2];
+    {
+        rules[0].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
+        PermissionPolicy::Rule::Member prms[4];
+        prms[0].SetMemberName("Up");
+        prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+        prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        prms[1].SetMemberName("Down");
+        prms[1].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+        prms[1].SetActionMask(0);  /* action denied */
+        prms[2].SetMemberName("Volume");
+        prms[2].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
+        prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        prms[3].SetMemberName("Caption");
+        prms[3].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
+        prms[3].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        rules[0].SetMembers(4, prms);
+    }
+    {
+        rules[1].SetInterfaceName("org.allseenalliance.control.Mouse*");
+        PermissionPolicy::Rule::Member prms[1];
+        prms[0].SetMemberName("*");
+        prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        rules[1].SetMembers(1, prms);
+        acls[0].SetRules(2, rules);
+    }
     GenerateAdminGroupACL(groupGUID, groupAuthority, acls[1]);
     policy->SetAcls(2, acls);
 
@@ -687,7 +744,7 @@ static QStatus GenerateAllowAllManifest(PermissionPolicy::Rule** retRules, size_
     *count = 1;
     PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[*count];
     rules[0].SetInterfaceName("*");
-    PermissionPolicy::Rule::Member* prms = new PermissionPolicy::Rule::Member[1];
+    PermissionPolicy::Rule::Member prms[1];
     prms[0].SetMemberName("*");
     prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
     rules[0].SetMembers(1, prms);
@@ -699,29 +756,31 @@ static QStatus GenerateManifestNoInputSource(PermissionPolicy::Rule** retRules, 
 {
     *count = 2;
     PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[*count];
-    rules[0].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
-    PermissionPolicy::Rule::Member* prms = new PermissionPolicy::Rule::Member[4];
-    prms[0].SetMemberName("Up");
-    prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
-    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    prms[1].SetMemberName("Down");
-    prms[1].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
-    prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    prms[2].SetMemberName("ChannelChanged");
-    prms[2].SetMemberType(PermissionPolicy::Rule::Member::SIGNAL);
-    prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-    prms[3].SetMemberName("Volume");
-    prms[3].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
-    prms[3].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    rules[0].SetMembers(4, prms);
-
-    rules[1].SetInterfaceName(BasePermissionMgmtTest::ONOFF_IFC_NAME);
-    prms = new PermissionPolicy::Rule::Member[1];
-    prms[0].SetMemberName("*");
-    prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
-    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    rules[1].SetMembers(1, prms);
-
+    {
+        rules[0].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
+        PermissionPolicy::Rule::Member prms[4];
+        prms[0].SetMemberName("Up");
+        prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+        prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        prms[1].SetMemberName("Down");
+        prms[1].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+        prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        prms[2].SetMemberName("ChannelChanged");
+        prms[2].SetMemberType(PermissionPolicy::Rule::Member::SIGNAL);
+        prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        prms[3].SetMemberName("Volume");
+        prms[3].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
+        prms[3].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        rules[0].SetMembers(4, prms);
+    }
+    {
+        rules[1].SetInterfaceName(BasePermissionMgmtTest::ONOFF_IFC_NAME);
+        PermissionPolicy::Rule::Member prms[1];
+        prms[0].SetMemberName("*");
+        prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+        prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        rules[1].SetMembers(1, prms);
+    }
     *retRules = rules;
     return ER_OK;
 }
@@ -731,38 +790,41 @@ static QStatus GenerateManifestDenied(bool denyTVUp, bool denyCaption, Permissio
     *count = 2;
     PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[*count];
     rules[0].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
-    PermissionPolicy::Rule::Member* prms = new PermissionPolicy::Rule::Member[5];
-    prms[0].SetMemberName("Up");
-    prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
-    if (denyTVUp) {
-        prms[0].SetActionMask(0);  /* action denied */
-    } else {
+    {
+        PermissionPolicy::Rule::Member prms[5];
+        prms[0].SetMemberName("Up");
+        prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+        if (denyTVUp) {
+            prms[0].SetActionMask(0); /* action denied */
+        } else {
+            prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        }
+        prms[1].SetMemberName("Down");
+        prms[1].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+        prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        prms[2].SetMemberName("ChannelChanged");
+        prms[2].SetMemberType(PermissionPolicy::Rule::Member::SIGNAL);
+        prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        prms[3].SetMemberName("Volume");
+        prms[3].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
+        prms[3].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        prms[4].SetMemberName("Caption");
+        prms[4].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
+        if (denyCaption) {
+            prms[4].SetActionMask(0); /* action denied */
+        } else {
+            prms[4].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        }
+        rules[0].SetMembers(5, prms);
+    }
+    {
+        rules[1].SetInterfaceName(BasePermissionMgmtTest::ONOFF_IFC_NAME);
+        PermissionPolicy::Rule::Member prms[1];
+        prms[0].SetMemberName("*");
+        prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
         prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        rules[1].SetMembers(1, prms);
     }
-    prms[1].SetMemberName("Down");
-    prms[1].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
-    prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    prms[2].SetMemberName("ChannelChanged");
-    prms[2].SetMemberType(PermissionPolicy::Rule::Member::SIGNAL);
-    prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-    prms[3].SetMemberName("Volume");
-    prms[3].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
-    prms[3].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    prms[4].SetMemberName("Caption");
-    prms[4].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
-    if (denyCaption) {
-        prms[4].SetActionMask(0); /* action denied */
-    } else {
-        prms[4].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    }
-    rules[0].SetMembers(5, prms);
-
-    rules[1].SetInterfaceName(BasePermissionMgmtTest::ONOFF_IFC_NAME);
-    prms = new PermissionPolicy::Rule::Member[1];
-    prms[0].SetMemberName("*");
-    prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
-    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    rules[1].SetMembers(1, prms);
 
     *retRules = rules;
     return ER_OK;
@@ -771,21 +833,26 @@ static QStatus GenerateManifestTemplate(PermissionPolicy::Rule** retRules, size_
 {
     *count = 2;
     PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[*count];
-    rules[0].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
-    PermissionPolicy::Rule::Member* prms = new PermissionPolicy::Rule::Member[2];
-    prms[0].SetMemberName("Up");
-    prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
-    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    prms[1].SetMemberName("Down");
-    prms[1].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
-    prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    rules[0].SetMembers(2, prms);
-
-    rules[1].SetInterfaceName("org.allseenalliance.control.Mouse*");
-    prms = new PermissionPolicy::Rule::Member[1];
-    prms[0].SetMemberName("*");
-    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    rules[1].SetMembers(1, prms);
+    // Rule 1
+    {
+        rules[0].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
+        PermissionPolicy::Rule::Member prms[2];
+        prms[0].SetMemberName("Up");
+        prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+        prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        prms[1].SetMemberName("Down");
+        prms[1].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+        prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        rules[0].SetMembers(2, prms);
+    }
+    // Rule 2
+    {
+        rules[1].SetInterfaceName("org.allseenalliance.control.Mouse*");
+        PermissionPolicy::Rule::Member prms[1];
+        prms[0].SetMemberName("*");
+        prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        rules[1].SetMembers(1, prms);
+    }
 
     *retRules = rules;
     return ER_OK;

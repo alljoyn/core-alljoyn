@@ -280,31 +280,26 @@ class KeyInfoECC : public KeyInfo {
 
     virtual qcc::String ToString() const;
 
-    bool operator==(const KeyInfoECC& ki) const
+    /**
+     * Comparison operators equality
+     * @param[in] other right hand side KeyInfoECC
+     */
+    bool operator==(const KeyInfoECC& other) const
     {
-        if (curve != ki.curve) {
+        if (curve != other.curve) {
             return false;
         }
 
-        return KeyInfo::operator==(ki);
+        return KeyInfo::operator==(other);
     }
 
     /**
-     * Assignment operator for KeyInfoECC
+     * Comparison operators non-equality
+     * @param[in] other right hand side KeyInfoECC
      */
-    KeyInfoECC& operator=(const KeyInfoECC& other) {
-        if (&other != this) {
-            KeyInfo::operator=(other);
-            curve = other.curve;
-        }
-        return *this;
-    }
-
-    /**
-     * Copy constructor for KeyInfoECC
-     */
-    KeyInfoECC(const KeyInfoECC& other) :
-        KeyInfo(other), curve(other.curve) {
+    bool operator!=(const KeyInfoECC& other) const
+    {
+        return !(*this == other);
     }
 
   private:
@@ -433,17 +428,32 @@ class KeyInfoNISTP256 : public KeyInfoECC {
 
     virtual qcc::String ToString() const;
 
-    bool operator==(const KeyInfoNISTP256& ki) const
+    /**
+     * Comparison operators equality
+     * @param[in] other right hand side KeyInfoNISTP256
+     * @return true is keys are equal
+     */
+    bool operator==(const KeyInfoNISTP256& other) const
     {
-        if (pubkey.form != ki.pubkey.form) {
+        if (pubkey.form != other.pubkey.form) {
             return false;
         }
 
-        if (pubkey.key != ki.pubkey.key) {
+        if (pubkey.key != other.pubkey.key) {
             return false;
         }
 
-        return KeyInfoECC::operator==(ki);
+        return KeyInfoECC::operator==(other);
+    }
+
+    /**
+     * Comparison operators non-equality
+     * @param[in] other right hand side KeyInfoNISTP256
+     * @return true is keys are not equal
+     */
+    bool operator!=(const KeyInfoNISTP256& other) const
+    {
+        return !(*this == other);
     }
 
     /**

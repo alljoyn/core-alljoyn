@@ -554,62 +554,64 @@ static void GenerateDefaultPolicy(const GUID128& adminGroupGUID, const KeyInfoNI
     policy.SetVersion(0);
 
     /* add the acls section */
-    PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[3];
-
+    PermissionPolicy::Acl acls[3];
     /* acls record 0  ADMIN GROUP */
-    PermissionPolicy::Peer* peers = new PermissionPolicy::Peer[1];
-    peers[0].SetType(PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP);
-    peers[0].SetSecurityGroupId(adminGroupGUID);
-    KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
-    keyInfo->SetKeyId(adminGroupAuthority.GetKeyId(), adminGroupAuthority.GetKeyIdLen());
-    keyInfo->SetPublicKey(adminGroupAuthority.GetPublicKey());
-    peers[0].SetKeyInfo(keyInfo);
-    acls[0].SetPeers(1, peers);
+    {
+        PermissionPolicy::Peer peers[1];
+        peers[0].SetType(PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP);
+        peers[0].SetSecurityGroupId(adminGroupGUID);
+        KeyInfoNISTP256 keyInfo;
+        keyInfo.SetKeyId(adminGroupAuthority.GetKeyId(), adminGroupAuthority.GetKeyIdLen());
+        keyInfo.SetPublicKey(adminGroupAuthority.GetPublicKey());
+        peers[0].SetKeyInfo(&keyInfo);
+        acls[0].SetPeers(1, peers);
 
-    PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[1];
-    rules[0].SetInterfaceName("*");
-    PermissionPolicy::Rule::Member* prms = new PermissionPolicy::Rule::Member[1];
-    prms[0].SetMemberName("*");
-    prms[0].SetActionMask(
-        PermissionPolicy::Rule::Member::ACTION_PROVIDE |
-        PermissionPolicy::Rule::Member::ACTION_OBSERVE |
-        PermissionPolicy::Rule::Member::ACTION_MODIFY
-        );
-    rules[0].SetMembers(1, prms);
-    acls[0].SetRules(1, rules);
-
+        PermissionPolicy::Rule rules[1];
+        rules[0].SetInterfaceName("*");
+        PermissionPolicy::Rule::Member prms[1];
+        prms[0].SetMemberName("*");
+        prms[0].SetActionMask(
+            PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+            PermissionPolicy::Rule::Member::ACTION_OBSERVE |
+            PermissionPolicy::Rule::Member::ACTION_MODIFY
+            );
+        rules[0].SetMembers(1, prms);
+        acls[0].SetRules(1, rules);
+    }
     /* acls record 1  LOCAL PUBLIC KEY */
-    peers = new PermissionPolicy::Peer[1];
-    peers[0].SetType(PermissionPolicy::Peer::PEER_WITH_PUBLIC_KEY);
-    keyInfo = new KeyInfoNISTP256();
-    keyInfo->SetPublicKey(localPublicKey);
-    KeyInfoHelper::GenerateKeyId(*keyInfo);
-    peers[0].SetKeyInfo(keyInfo);
-    acls[1].SetPeers(1, peers);
+    {
+        PermissionPolicy::Peer peers[1];
+        peers[0].SetType(PermissionPolicy::Peer::PEER_WITH_PUBLIC_KEY);
+        KeyInfoNISTP256 keyInfo;
+        keyInfo.SetPublicKey(localPublicKey);
+        KeyInfoHelper::GenerateKeyId(keyInfo);
+        peers[0].SetKeyInfo(&keyInfo);
+        acls[1].SetPeers(1, peers);
 
-    rules = new PermissionPolicy::Rule[1];
-    rules[0].SetInterfaceName("org.alljoyn.Bus.Security.ManagedApplication");
-    prms = new PermissionPolicy::Rule::Member[1];
-    prms[0].SetMemberName("InstallMembership");
-    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
-    rules[0].SetMembers(1, prms);
-    acls[1].SetRules(1, rules);
-
+        PermissionPolicy::Rule rules[1];
+        rules[0].SetInterfaceName("org.alljoyn.Bus.Security.ManagedApplication");
+        PermissionPolicy::Rule::Member prms[1];
+        prms[0].SetMemberName("InstallMembership");
+        prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        rules[0].SetMembers(1, prms);
+        acls[1].SetRules(1, rules);
+    }
     /* acls record 2  any trusted user */
-    peers = new PermissionPolicy::Peer[1];
-    peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
-    acls[2].SetPeers(1, peers);
+    {
+        PermissionPolicy::Peer peers[1];
+        peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
+        acls[2].SetPeers(1, peers);
 
-    rules = new PermissionPolicy::Rule[1];
-    rules[0].SetInterfaceName("*");
-    prms = new PermissionPolicy::Rule::Member[2];
-    prms[0].SetMemberName("*");
-    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
-    prms[1].SetMemberType(PermissionPolicy::Rule::Member::SIGNAL);
-    prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-    rules[0].SetMembers(2, prms);
-    acls[2].SetRules(1, rules);
-
+        PermissionPolicy::Rule rules[1];
+        rules[0].SetInterfaceName("*");
+        PermissionPolicy::Rule::Member prms[2];
+        prms[0].SetMemberName("*");
+        prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+        prms[1].SetMemberType(PermissionPolicy::Rule::Member::SIGNAL);
+        prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        rules[0].SetMembers(2, prms);
+        acls[2].SetRules(1, rules);
+    }
     policy.SetAcls(3, acls);
 }
 
@@ -1308,10 +1310,11 @@ DoneValidation:
     }
     /* store the manifest */
     PermissionPolicy policy;
-    PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[1];
+    PermissionPolicy::Acl acls[1];
     acls[0].SetRules(count, rules);
     policy.SetAcls(1, acls);
-    rules = NULL;  /* its memory is now controlled by policy object */
+    delete [] rules;
+    rules = NULL;
 
     uint8_t* buf = NULL;
     size_t size;
@@ -2183,7 +2186,7 @@ QStatus PermissionMgmtObj::SetManifestTemplate(const PermissionPolicy::Rule* rul
         return ER_OK;
     }
     PermissionPolicy policy;
-    PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[1];
+    PermissionPolicy::Acl acls[1];
     PermissionPolicy::Rule* localRules = NULL;
     if (count > 0) {
         localRules = new PermissionPolicy::Rule[count];
@@ -2194,6 +2197,8 @@ QStatus PermissionMgmtObj::SetManifestTemplate(const PermissionPolicy::Rule* rul
     acls[0].SetRules(count, localRules);
     policy.SetAcls(1, acls);
 
+    delete [] localRules;
+    localRules = NULL;
 
     uint8_t* buf = NULL;
     size_t size;
@@ -2212,7 +2217,7 @@ QStatus PermissionMgmtObj::SetManifestTemplate(const PermissionPolicy::Rule* rul
     return status = ca->StoreKey(key, kb);
 }
 
-QStatus PermissionMgmtObj::RetrieveManifest(PermissionPolicy::Rule** manifest, size_t* count)
+QStatus PermissionMgmtObj::RetrieveManifest(PermissionPolicy::Rule* manifest, size_t* count)
 {
     KeyBlob kb;
     KeyStore::Key key;
@@ -2234,16 +2239,20 @@ QStatus PermissionMgmtObj::RetrieveManifest(PermissionPolicy::Rule** manifest, s
     if (policy.GetAclsSize() == 0) {
         return ER_MANIFEST_NOT_FOUND;
     }
-    PermissionPolicy::Acl* acls = (PermissionPolicy::Acl*) policy.GetAcls();
-    *count = acls[0].GetRulesSize();
-    *manifest = NULL;
-    if (*count > 0) {
-        *manifest = new PermissionPolicy::Rule[*count];
-        for (size_t cnt = 0; cnt < *count; cnt++) {
-            (*manifest)[cnt] = acls[0].GetRules()[cnt];
+    const PermissionPolicy::Acl* acls = policy.GetAcls();
+    if (manifest == NULL) {
+        *count = acls[0].GetRulesSize();
+    } else {
+        if (*count < acls[0].GetRulesSize()) {
+            status = ER_BUFFER_TOO_SMALL;
+        } else {
+            *count = acls[0].GetRulesSize();
+        }
+        for (size_t i = 0; i < *count; ++i) {
+            manifest[i] = acls[0].GetRules()[i];
         }
     }
-    return ER_OK;
+    return status;
 }
 
 QStatus PermissionMgmtObj::LoadManifestTemplate(PermissionPolicy& policy)

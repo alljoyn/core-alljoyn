@@ -1740,7 +1740,17 @@ QStatus AllJoynPeerObj::SendManifest(ProxyBusObject& remotePeerObj, const Interf
 {
     PermissionPolicy::Rule* manifest = NULL;
     size_t count = 0;
-    QStatus status = securityApplicationObj.RetrieveManifest(&manifest, &count);
+    QStatus status = securityApplicationObj.RetrieveManifest(NULL, &count);
+    if (ER_OK != status) {
+        if (ER_MANIFEST_NOT_FOUND == status) {
+            return ER_OK;  /* nothing to send */
+        }
+        return status;
+    }
+    if (count > 0) {
+        manifest = new PermissionPolicy::Rule[count];
+    }
+    status = securityApplicationObj.RetrieveManifest(manifest, &count);
     if (ER_OK != status) {
         if (ER_MANIFEST_NOT_FOUND == status) {
             return ER_OK;  /* nothing to send */
@@ -1775,7 +1785,15 @@ void AllJoynPeerObj::HandleSendManifest(const InterfaceDescription::Member* memb
     /* send back manifest to calling peer */
     PermissionPolicy::Rule* manifest = NULL;
     size_t count = 0;
-    status = securityApplicationObj.RetrieveManifest(&manifest, &count);
+    status = securityApplicationObj.RetrieveManifest(NULL, &count);
+    if (ER_OK != status && ER_MANIFEST_NOT_FOUND != status) {
+        MethodReply(msg, status);
+        return;
+    }
+    if (count > 0) {
+        manifest = new PermissionPolicy::Rule[count];
+    }
+    status = securityApplicationObj.RetrieveManifest(manifest, &count);
     if ((ER_OK != status) && (ER_MANIFEST_NOT_FOUND != status)) {
         MethodReply(msg, status);
         return;
