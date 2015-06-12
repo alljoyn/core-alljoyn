@@ -35,7 +35,6 @@
 #include <alljoyn/Init.h>
 #include <alljoyn/Status.h>
 #include <alljoyn/version.h>
-#include <qcc/time.h>
 #include <qcc/CryptoECC.h>
 #include <qcc/CertificateECC.h>
 #include <qcc/Log.h>
