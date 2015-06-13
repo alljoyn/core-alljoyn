@@ -137,15 +137,33 @@ InterfaceDescription::Member::Member(const InterfaceDescription* iface,
     accessPerms(accessPerms ? accessPerms : ""),
     description(),
     argumentDescriptions(new ArgumentDescriptions()),
-    isSessionlessSignal(false)
+    isSessioncastSignal(false),
+    isSessionlessSignal(false),
+    isUnicastSignal(false),
+    isGlobalBroadcastSignal(false)
 {
-
     if (annotation & MEMBER_ANNOTATE_DEPRECATED) {
         (*annotations)[org::freedesktop::DBus::AnnotateDeprecated] = "true";
     }
 
     if (annotation & MEMBER_ANNOTATE_NO_REPLY) {
         (*annotations)[org::freedesktop::DBus::AnnotateNoReply] = "true";
+    }
+
+    if (annotation & MEMBER_ANNOTATE_SESSIONCAST) {
+        isSessioncastSignal = true;
+    }
+
+    if (annotation & MEMBER_ANNOTATE_SESSIONLESS) {
+        isSessionlessSignal = true;
+    }
+
+    if (annotation & MEMBER_ANNOTATE_UNICAST) {
+        isUnicastSignal = true;
+    }
+
+    if (annotation & MEMBER_ANNOTATE_GLOBAL_BROADCAST) {
+        isGlobalBroadcastSignal = true;
     }
 }
 
@@ -160,7 +178,10 @@ InterfaceDescription::Member::Member(const Member& other)
     accessPerms(other.accessPerms),
     description(other.description),
     argumentDescriptions(new ArgumentDescriptions(*(other.argumentDescriptions))),
-    isSessionlessSignal(other.isSessionlessSignal)
+    isSessioncastSignal(other.isSessioncastSignal),
+    isSessionlessSignal(other.isSessionlessSignal),
+    isUnicastSignal(other.isUnicastSignal),
+    isGlobalBroadcastSignal(other.isGlobalBroadcastSignal)
 {
 }
 
@@ -178,7 +199,10 @@ InterfaceDescription::Member& InterfaceDescription::Member::operator=(const Memb
         accessPerms = other.accessPerms;
         description = other.description;
         *argumentDescriptions = *(other.argumentDescriptions);
+        isSessioncastSignal = other.isSessioncastSignal;
         isSessionlessSignal = other.isSessionlessSignal;
+        isUnicastSignal = other.isUnicastSignal;
+        isGlobalBroadcastSignal = other.isGlobalBroadcastSignal;
     }
     return *this;
 }
@@ -198,7 +222,10 @@ bool InterfaceDescription::Member::operator==(const Member& o) const {
     return ((memberType == o.memberType) && (name == o.name) && (signature == o.signature)
             && (returnSignature == o.returnSignature) && (*annotations == *(o.annotations))
             && (description == o.description) && (*argumentDescriptions == *(o.argumentDescriptions))
-            && (isSessionlessSignal == o.isSessionlessSignal));
+            && (isSessioncastSignal == o.isSessioncastSignal)
+            && (isSessionlessSignal == o.isSessionlessSignal)
+            && (isUnicastSignal == o.isUnicastSignal)
+            && (isGlobalBroadcastSignal == o.isGlobalBroadcastSignal));
 }
 
 
@@ -395,7 +422,20 @@ qcc::String InterfaceDescription::Introspect(size_t indent, const char* language
         qcc::String mtype = isMethod ? "method" : "signal";
         xml += in + "  <" + mtype + " name=\"" + member.name;
         if (withDescriptions && !isMethod) {
+            if (member.isSessioncastSignal) {
+                xml += "\" sessioncast=\"" + qcc::String("true");
+            }
+
+            // For backwards compatibility reasons, always output a sessionless
+            // attribute.
             xml += "\" sessionless=\"" + (member.isSessionlessSignal ? qcc::String("true") : qcc::String("false"));
+
+            if (member.isUnicastSignal) {
+                xml += "\" unicast=\"" + qcc::String("true");
+            }
+            if (member.isGlobalBroadcastSignal) {
+                xml += "\" globalbroadcast=\"" + qcc::String("true");
+            }
         }
         xml     += close;
 
@@ -705,7 +745,18 @@ QStatus InterfaceDescription::SetMemberDescription(const char* member, const cha
 
     Member& m = it->second;
     m.description.assign(desc);
-    m.isSessionlessSignal = isSessionlessSignal;
+
+    if (isSessionlessSignal && !m.isSessionlessSignal) {
+        if (m.isSessioncastSignal || m.isUnicastSignal || m.isGlobalBroadcastSignal) {
+            // The member was already set explicitly to not be sessionless,
+            // so the caller must have a bug.
+            QCC_LogError(ER_FAIL, ("Unexpected: SetMemberDescription tried to set isSessionlessSignal on a non-sessionless signal"));
+            return ER_FAIL;
+        } else {
+            // Nothing was set before so set the signal type to sessionless.
+            m.isSessionlessSignal = true;
+        }
+    }
     defs->hasDescription = true;
 
     return ER_OK;
