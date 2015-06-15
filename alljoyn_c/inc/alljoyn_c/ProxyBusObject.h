@@ -794,12 +794,38 @@ extern AJ_API QCC_BOOL AJ_CALL alljoyn_proxybusobject_isvalid(alljoyn_proxybusob
  */
 extern AJ_API QCC_BOOL AJ_CALL alljoyn_proxybusobject_issecure(alljoyn_proxybusobject proxyObj);
 
-/**
- * Enable property caching for this proxy bus object.
+/** Enable property caching for this proxy bus object.
  *
- * @param proxyObj  The alljoyn_proxybusobject for which caching must be enabled
+ * Property caching requires some setup per interface that is added to the
+ * ProxyBusObject. This setup (which requires interaction with the routing
+ * daemon) is performed asynchronously, to prevent
+ * alljoyn_proxybusobject_enablepropertycaching and
+ * alljoyn_proxybusobject_addinterface from being blocking calls.
+ *
+ * The upshot is that a property cache is not necessarily enabled by the time
+ * alljoyn_proxybusobject_enablepropertycaching returns. The behavior of
+ * subsequent alljoyn_proxybusobject_getproperty calls is guaranteed to be
+ * correct, but the returned values may not yet come from the cache.
+ *
+ * If you want to make sure that the cache is really enabled, for example
+ * because you want to do a alljoyn_proxybusobject_getallproperties call to
+ * prime the cache, you have to call
+ * alljoyn_proxybusobject_waituntilpropertycachingenabled first.
+ *
+ * @param proxyObj  The alljoyn_proxybusobject for which caching must be
+ * enabled
  */
+
 extern AJ_API void AJ_CALL alljoyn_proxybusobject_enablepropertycaching(alljoyn_proxybusobject proxyObj);
+
+/**
+ * Wait until the caches for all interfaces are enabled.
+ *
+ * As this is a blocking operation, make sure you call
+ * alljoyn_busattachment_enableconcurrentcallbacks if you want to invoke this
+ * from within a callback.
+ */
+extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_waituntilpropertycachingenabled(alljoyn_proxybusobject proxyObj);
 
 #ifdef __cplusplus
 } /* extern "C" */

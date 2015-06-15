@@ -897,6 +897,14 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_unregisterProperti
 JNIEXPORT void JNICALL Java_org_alljoyn_bus_ProxyBusObject_enablePropertyCaching
   (JNIEnv* env, jobject thiz);
 
+/*
+ * Class:     org_alljoyn_bus_ProxyBusObject
+ * Method:    waitUntilPropertyCachingEnabled
+ * Signature: ()Lorg/alljoyn/bus/Status;
+ */
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_waitUntilPropertyCachingEnabled
+  (JNIEnv* env, jobject thiz);
+
 #ifdef __cplusplus
 }
 #endif

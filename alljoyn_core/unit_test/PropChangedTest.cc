@@ -1544,6 +1544,7 @@ TEST_F(PropChangedTest, PropertyCache_updating)
 
     SetupPropChanged(tpService, tpClient);
     proxy->EnablePropertyCaching();
+    ASSERT_EQ(ER_OK, proxy->WaitUntilPropertyCachingEnabled());
 
     MsgArg value;
     int32_t intval = 0;
@@ -1619,6 +1620,7 @@ TEST_F(PropChangedTest, PropertyCache_invalidating)
 
     SetupPropChanged(tpService, tpClient);
     proxy->EnablePropertyCaching();
+    ASSERT_EQ(ER_OK, proxy->WaitUntilPropertyCachingEnabled());
 
     MsgArg value;
     int32_t intval = 0;
@@ -1692,6 +1694,7 @@ TEST_F(PropChangedTest, PropertyCache_notupdating)
 
     SetupPropChanged(tpService, tpClient);
     proxy->EnablePropertyCaching();
+    ASSERT_EQ(ER_OK, proxy->WaitUntilPropertyCachingEnabled());
 
     MsgArg value;
     int32_t intval = 0;
@@ -1764,6 +1767,7 @@ TEST_F(PropChangedTest, PropertyCache_copy)
 
     SetupPropChanged(tpService, tpClient);
     proxy->EnablePropertyCaching();
+    ASSERT_EQ(ER_OK, proxy->WaitUntilPropertyCachingEnabled());
 
     MsgArg value;
     int32_t intval = 0;
@@ -1851,6 +1855,7 @@ TEST_F(PropChangedTest, PropertyCache_nolistener)
 
     SetupPropChanged(tpService, tpClient);
     proxy->EnablePropertyCaching();
+    ASSERT_EQ(ER_OK, proxy->WaitUntilPropertyCachingEnabled());
 
     MsgArg value;
     int32_t intval = 0;
@@ -1907,6 +1912,7 @@ TEST_F(PropChangedTest, PropertyCache_async)
 
     SetupPropChanged(tpService, tpClient);
     proxy->EnablePropertyCaching();
+    ASSERT_EQ(ER_OK, proxy->WaitUntilPropertyCachingEnabled());
 
     int32_t intval = 0;
     GetPropertyListener gpl;
@@ -2187,6 +2193,7 @@ TEST_F(PropChangedTest, PropertyCache_updatedUponPropChangedCallback)
 
     SetupPropChanged(tpService, tpClient);
     proxy->EnablePropertyCaching();
+    ASSERT_EQ(ER_OK, proxy->WaitUntilPropertyCachingEnabled());
 
     MsgArg value;
     int32_t val = 0;
@@ -2231,6 +2238,7 @@ TEST_F(PropChangedTest, PropertyCache_consistentWithConcurrentCallback)
 
     SetupPropChanged(tpService, tpClient);
     proxy->EnablePropertyCaching();
+    ASSERT_EQ(ER_OK, proxy->WaitUntilPropertyCachingEnabled());
 
     MsgArg value;
     int32_t val = 0;
@@ -2283,6 +2291,7 @@ TEST_F(PropChangedTest, PropertyCache_consistentWithConcurrentCallbackMultiProxy
 
     SetupPropChanged(tpService, tpClient); // this results in original proxy and obj
     proxy->EnablePropertyCaching();
+    ASSERT_EQ(ER_OK, proxy->WaitUntilPropertyCachingEnabled());
 
     // create more ProxyBusObjects using the same busattachment; clientBus
     Semaphore events;
