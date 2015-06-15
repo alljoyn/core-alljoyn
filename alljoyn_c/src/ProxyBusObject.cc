@@ -481,3 +481,9 @@ void AJ_CALL alljoyn_proxybusobject_enablepropertycaching(alljoyn_proxybusobject
     QCC_DbgTrace(("%s", __FUNCTION__));
     ((ProxyBusObjectC*)proxyObj)->EnablePropertyCaching();
 }
+
+QStatus AJ_CALL alljoyn_proxybusobject_waituntilpropertycachingenabled(alljoyn_proxybusobject proxyObj)
+{
+    return ((ProxyBusObjectC*)proxyObj)->WaitUntilPropertyCachingEnabled();
+}
+

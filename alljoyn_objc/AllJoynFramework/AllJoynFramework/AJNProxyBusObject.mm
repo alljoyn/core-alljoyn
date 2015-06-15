@@ -493,4 +493,9 @@ using namespace ajn;
     self.proxyBusObject->EnablePropertyCaching();
 }
 
+- (QStatus)waitUntilPropertyCachingEnabled
+{
+    return self.proxyBusObject->WaitUntilPropertyCachingEnabled();
+}
+
 @end

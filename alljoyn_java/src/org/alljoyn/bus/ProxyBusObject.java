@@ -139,7 +139,33 @@ public class ProxyBusObject {
     private native boolean isProxyBusObjectSecure();
 
     /** Enable property caching for this proxy bus object. */
+
+    /**
+     * Enable property caching for this proxy bus object.
+     *
+     * Property caching requires some setup per interface that is added to the
+     * ProxyBusObject. This setup (which requires interaction with the routing
+     * daemon) is performed asynchronously, to prevent enablePropertyCaching
+     * from being a blocking call.
+     *
+     * The upshot is that a property cache is not necessarily enabled by the
+     * time enablePropertyCaching returns. The behavior of subsequent property
+     * getter calls is guaranteed to be correct, but the returned values may
+     * not yet come from the cache.
+     *
+     * If you want to make sure that the cache is really enabled,
+     * waitUntilPropertyCachingEnabled first.
+     */
     public native void enablePropertyCaching();
+
+    /**
+     * Wait until the caches for all interfaces are enabled.
+     *
+     * As this is a blocking operation, make sure you call
+     * BusAttachment::enableConcurrentCallbacks if you want to invoke this from
+     * within a callback.
+     */
+    public native Status waitUntilPropertyCachingEnabled();
 
     /** The invocation handler for the bus interfaces. */
     private class Handler implements InvocationHandler {

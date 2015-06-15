@@ -270,6 +270,7 @@ public class ProxyBusObjectTest extends TestCase {
         assertEquals(ps.name, pp.getName());
         assertEquals(1, ps.callCount.get());
         proxyObj.enablePropertyCaching();
+        proxyObj.waitUntilPropertyCachingEnabled();
         assertEquals(ps.name, pp.getName());
         assertEquals(2, ps.callCount.get());
         assertEquals(ps.name, pp.getName());
@@ -277,6 +278,7 @@ public class ProxyBusObjectTest extends TestCase {
         proxyObj.enablePropertyCaching();
         proxyObj.enablePropertyCaching();
         proxyObj.enablePropertyCaching();
+        proxyObj.waitUntilPropertyCachingEnabled();
         assertEquals(ps.name, pp.getName());
         assertEquals(2, ps.callCount.get());
 

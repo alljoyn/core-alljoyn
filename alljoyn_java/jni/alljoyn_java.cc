@@ -11845,11 +11845,30 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_ProxyBusObject_enablePropertyCaching
     }
 
     if (proxyBusObj == NULL) {
-        QCC_LogError(ER_FAIL, ("ProxyBusObject_enablePropertyCaching(): NULL bus pointer"));
+        QCC_LogError(ER_FAIL, ("ProxyBusObject_enablePropertyCaching(): NULL proxy bus object pointer"));
         env->ThrowNew(CLS_BusException, QCC_StatusText(ER_FAIL));
         return;
     }
     proxyBusObj->EnablePropertyCaching();
+}
+
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_waitUntilPropertyCachingEnabled(JNIEnv* env, jobject thiz)
+{
+    QCC_DbgPrintf(("ProxyBusObject_waitUntilPropertyCachingEnabled()"));
+    JProxyBusObject* proxyBusObj = GetHandle<JProxyBusObject*>(thiz);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("ProxyBusObject_waitUntilPropertyCachingEnabled(): Exception"));
+        return NULL;
+    }
+
+    if (proxyBusObj == NULL) {
+        QCC_LogError(ER_FAIL, ("ProxyBusObject_enablePropertyCaching(): NULL proxy bus object pointer"));
+        env->ThrowNew(CLS_BusException, QCC_StatusText(ER_FAIL));
+        return NULL;
+    }
+    QStatus status = proxyBusObj->WaitUntilPropertyCachingEnabled();
+
+    return JStatus(status);
 }
 
 JNIEXPORT void JNICALL Java_org_alljoyn_bus_SignalEmitter_signal(JNIEnv* env, jobject thiz, jobject jbusObject, jstring jdestination,

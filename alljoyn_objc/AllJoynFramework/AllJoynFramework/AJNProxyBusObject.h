@@ -591,7 +591,26 @@
 
 /**
  * Enable property caching.
+ *
+ * Property caching requires some setup per interface that is added to the
+ * AJNProxyBusObject. This setup (which requires interaction with the routing
+ * daemon) is performed asynchronously, to prevent enablePropertyCaching
+ * from being a blocking call.
+ *
+ * The upshot is that a property cache is not necessarily enabled by the
+ * time enablePropertyCaching returns. The behavior of subsequent
+ * propertyWithName calls is guaranteed to be correct, but the returned values
+ * may not yet come from the cache.
+ *
+ * If you want to make sure that the cache is really enabled, you
+ * have to call waitUntilPropertyCachingEnabled first.
  */
 - (void)enablePropertyCaching;
 
-@end
+/**
+ * Wait until the caches for all interfaces are enabled.
+ *
+ * As this is a blocking operation, make sure you call AJNBusAttachment's
+ * enableConcurrentCallbacks if you want to invoke this from within a callback.
+ */
+- (QStatus)waitUntilPropertyCachingEnabled; @end

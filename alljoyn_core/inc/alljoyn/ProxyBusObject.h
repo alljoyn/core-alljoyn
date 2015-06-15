@@ -921,8 +921,31 @@ class ProxyBusObject : public MessageReceiver {
 
     /**
      * Enable property caching for this proxy bus object.
+     *
+     * Property caching requires some setup per interface that is added to the
+     * ProxyBusObject. This setup (which requires interaction with the routing
+     * daemon) is performed asynchronously, to prevent EnablePropertyCaching
+     * and AddInterface from being blocking calls.
+     *
+     * The upshot is that a property cache is not necessarily enabled by the
+     * time EnablePropertyCaching returns. The behavior of subsequent
+     * GetProperty calls is guaranteed to be correct, but the returned values
+     * may not yet come from the cache.
+     *
+     * If you want to make sure that the cache is really enabled, for example
+     * because you want to do a GetAllProperties call to prime the cache, you
+     * have to call WaitUntilPropertyCachingEnabled first.
      */
     void EnablePropertyCaching();
+
+    /**
+     * Wait until the caches for all interfaces are enabled.
+     *
+     * As this is a blocking operation, make sure you call
+     * BusAttachment::EnableConcurrentCallbacks if you want to invoke this from
+     * within a callback.
+     */
+    QStatus WaitUntilPropertyCachingEnabled();
 
   private:
 
