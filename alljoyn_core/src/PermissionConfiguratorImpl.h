@@ -100,7 +100,7 @@ class PermissionConfiguratorImpl : public PermissionConfigurator {
      * @param[out] the certificate to be signed
      * @return ER_OK if successful; otherwise, an error code.
      */
-    QStatus SignCertificate(qcc::CertificateX509& cert);
+    QStatus SignCertificate(qcc::BaseCertificate& cert);
 
     /**
      * Reset the Permission module by removing all the trust anchors, DSA keys,

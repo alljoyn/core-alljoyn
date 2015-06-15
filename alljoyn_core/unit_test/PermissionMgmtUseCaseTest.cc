@@ -1183,7 +1183,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         EXPECT_EQ(ER_OK, SecurityApplicationProxy::MsgArgToIdentityCertChain(certChainArg, certs, count)) << "MsgArgToIdentityCertChain failed.";
 
         /* create a new identity cert */
-        qcc::String subject((const char*) certs[0].GetSubjectCN(), certs[0].GetSubjectCNLength());
+        qcc::String subject = certs[0].GetSubjectName();
         const qcc::ECCPublicKey* subjectPublicKey;
         if (generateRandomSubjectKey) {
             Crypto_ECC ecc;
@@ -1244,7 +1244,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         EXPECT_EQ(ER_OK, SecurityApplicationProxy::MsgArgToIdentityCertChain(certChainArg, certs, count)) << "MsgArgToIdentityCertChain failed.";
 
         /* create a new identity cert */
-        qcc::String subject((const char*) certs[0].GetSubjectCN(), certs[0].GetSubjectCNLength());
+        qcc::String subject(certs[0].GetSubjectName());
         IdentityCertificate identityCertChain[1];
         PermissionPolicy::Rule* manifest = NULL;
         size_t manifestSize = 0;

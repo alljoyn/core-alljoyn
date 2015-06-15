@@ -885,7 +885,7 @@ QStatus PermissionMgmtObj::StateChanged()
     return State(keyInfo, applicationState);
 }
 
-static QStatus ValidateCertificate(CertificateX509& cert, PermissionMgmtObj::TrustAnchorList* taList)
+static QStatus ValidateCertificate(BaseCertificate& cert, PermissionMgmtObj::TrustAnchorList* taList)
 {
     /* check validity period */
     if (ER_OK != cert.VerifyValidity()) {
@@ -945,16 +945,14 @@ static QStatus ValidateMembershipCertificateChain(bool checkSecurityGroupID, std
      * Now make sure the chain is a valid chain.
      */
     for (int cnt = (idx - 2); cnt >= 0; cnt--) {
-        KeyInfoNISTP256 keyInfo;
-        keyInfo.SetPublicKey(certs[cnt + 1]->GetSubjectPublicKey());
-        if (certs[cnt]->Verify(keyInfo) != ER_OK) {
+        if (certs[cnt]->Verify(certs[cnt + 1]->GetSubjectPublicKey()) != ER_OK) {
             return ER_INVALID_CERT_CHAIN;
         }
     }
     return ER_OK;
 }
 
-static QStatus LoadCertificate(CertificateX509::EncodingType encoding, const uint8_t* encoded, size_t encodedLen, CertificateX509& cert)
+static QStatus LoadCertificate(CertificateX509::EncodingType encoding, const uint8_t* encoded, size_t encodedLen, BaseCertificate& cert)
 {
     if (encoding == CertificateX509::ENCODING_X509_DER) {
         return cert.DecodeCertificateDER(String((const char*) encoded, encodedLen));
@@ -964,7 +962,7 @@ static QStatus LoadCertificate(CertificateX509::EncodingType encoding, const uin
     return ER_NOT_IMPLEMENTED;
 }
 
-static QStatus LoadCertificate(CertificateX509::EncodingType encoding, const uint8_t* encoded, size_t encodedLen, CertificateX509& cert, PermissionMgmtObj::TrustAnchorList* taList)
+static QStatus LoadCertificate(CertificateX509::EncodingType encoding, const uint8_t* encoded, size_t encodedLen, BaseCertificate& cert, PermissionMgmtObj::TrustAnchorList* taList)
 {
     QStatus status = LoadCertificate(encoding, encoded, encodedLen, cert);
     if (ER_OK != status) {
@@ -973,7 +971,7 @@ static QStatus LoadCertificate(CertificateX509::EncodingType encoding, const uin
     return ValidateCertificate(cert, taList);
 }
 
-QStatus PermissionMgmtObj::SameSubjectPublicKey(CertificateX509& cert, bool& outcome)
+QStatus PermissionMgmtObj::SameSubjectPublicKey(BaseCertificate& cert, bool& outcome)
 {
     ECCPublicKey pubKey;
     QStatus status = ca->GetDSAPublicKey(pubKey);
@@ -1042,13 +1040,25 @@ QStatus PermissionMgmtObj::StoreIdentityCertChain(MsgArg& certArg)
                 status = ER_UNKNOWN_CERTIFICATE;
                 goto ExitStoreIdentity;
             }
-            KeyBlob kb(cert.GetEncoded(), cert.GetEncodedLen(), KeyBlob::GENERIC);
+            size_t encodedSize = 0;
+            const uint8_t* encoded = cert.GetEncoded(encodedSize);
+            if (encoded == NULL) {
+                status = ER_FAIL;
+                goto ExitStoreIdentity;
+            }
+            KeyBlob kb(encoded, encodedSize, KeyBlob::GENERIC);
             status = ca->StoreKey(identityHead, kb);
             if (ER_OK != status) {
                 goto ExitStoreIdentity;
             }
         } else {
-            KeyBlob kb(cert.GetEncoded(), cert.GetEncodedLen(), KeyBlob::GENERIC);
+            size_t encodedSize = 0;
+            const uint8_t* encoded = cert.GetEncoded(encodedSize);
+            if (encoded == NULL) {
+                status = ER_FAIL;
+                goto ExitStoreIdentity;
+            }
+            KeyBlob kb(encoded, encodedSize, KeyBlob::GENERIC);
             /* add the cert chain data as an associate of the identity entry */
             GUID128 guid;
             KeyStore::Key key(KeyStore::Key::LOCAL, guid);
@@ -1279,6 +1289,8 @@ QStatus PermissionMgmtObj::StoreManifest(MsgArg& manifestArg)
     PermissionPolicy::Rule* rules = NULL;
     IdentityCertificate cert;
     uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+    const uint8_t* mfDigest = NULL;
+
     QStatus status = GetManifestFromMessageArg(bus, manifestArg, &rules, &count, digest);
     if (ER_OK != status) {
         QCC_DbgPrintf(("PermissionMgmtObj::StoreManifest failed to retrieve rules from msgarg status 0x%x", status));
@@ -1296,7 +1308,9 @@ QStatus PermissionMgmtObj::StoreManifest(MsgArg& manifestArg)
         goto DoneValidation;
     }
     /* compare the digests */
-    if (memcmp(digest, cert.GetDigest(), Crypto_SHA256::DIGEST_SIZE)) {
+    size_t digestSize;
+    mfDigest = cert.GetManifestDigest(digestSize);
+    if (mfDigest == NULL || memcmp(digest, mfDigest, digestSize)) {
         status = ER_DIGEST_MISMATCH;
         goto DoneValidation;
     }
@@ -1419,7 +1433,7 @@ static QStatus GetMembershipKey(CredentialAccessor* ca, KeyStore::Key& membershi
     return ER_BUS_KEY_UNAVAILABLE;  /* not found */
 }
 
-static QStatus LoadX509CertFromMsgArg(const MsgArg& arg, CertificateX509& cert)
+static QStatus LoadX509CertFromMsgArg(const MsgArg& arg, BaseCertificate& cert)
 {
     uint8_t encoding;
     uint8_t* encoded;
@@ -1464,7 +1478,9 @@ QStatus PermissionMgmtObj::StoreMembership(const MsgArg& msgArg)
             QCC_DbgPrintf(("PermissionMgmtObj::InstallMembership failed to retrieve certificate [%d] status 0x%x", (int) cnt, status));
             return status;
         }
-        KeyBlob kb(cert.GetEncoded(), cert.GetEncodedLen(), KeyBlob::GENERIC);
+        size_t encodedSize = 0;
+        const uint8_t* encoded = cert.GetEncoded(encodedSize);
+        KeyBlob kb(encoded, encodedSize, KeyBlob::GENERIC);
         if (cnt == 0) {
             /* handle the leaf cert */
             kb.SetTag(cert.GetSerial());

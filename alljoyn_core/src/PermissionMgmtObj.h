@@ -564,7 +564,7 @@ class PermissionMgmtObj : public BusObject {
     QStatus StoreConfiguration(const Configuration& config);
     QStatus GetConfiguration(Configuration& config);
     QStatus PerformReset(bool keepForClaim);
-    QStatus SameSubjectPublicKey(qcc::CertificateX509& cert, bool& outcome);
+    QStatus SameSubjectPublicKey(qcc::BaseCertificate& cert, bool& outcome);
     bool IsTrustAnchor(TrustAnchorType taType, const qcc::ECCPublicKey* publicKey);
     bool IsTrustAnchor(const qcc::ECCPublicKey* publicKey);
     QStatus ManageMembershipTrustAnchors(PermissionPolicy* policy);

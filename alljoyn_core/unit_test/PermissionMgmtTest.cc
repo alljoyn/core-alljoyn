@@ -73,12 +73,12 @@ QStatus PermissionMgmtTestHelper::CreateIdentityCertChain(BusAttachment& caBus, 
     String issuerStr = issuer.ToString();
 
     certChain[1].SetSerial(serial);
-    certChain[1].SetIssuerCN((const uint8_t*) caStr.data(), caStr.size());
-    certChain[1].SetSubjectCN((const uint8_t*) issuerStr.data(), issuerStr.size());
+    certChain[1].SetIssuerName(caStr);
+    certChain[1].SetSubjectName(issuerStr.data());
     CertificateX509::ValidPeriod validity;
     BuildValidity(validity, expiredInSecs);
     certChain[1].SetValidity(&validity);
-    certChain[1].SetCA(true);
+    certChain[1].SetDelegateRights(true);
     PermissionConfigurator& caPC = caBus.GetPermissionConfigurator();
     PermissionConfigurator& pc = issuerBus.GetPermissionConfigurator();
     KeyInfoNISTP256 keyInfo;
@@ -92,12 +92,12 @@ QStatus PermissionMgmtTestHelper::CreateIdentityCertChain(BusAttachment& caBus, 
 
     /* generate the leaf cert */
     certChain[0].SetSerial(serial);
-    certChain[0].SetIssuerCN((const uint8_t*) issuerStr.data(), issuerStr.size());
-    certChain[0].SetSubjectCN((const uint8_t*) subject.data(), subject.size());
+    certChain[0].SetIssuerName(issuerStr);
+    certChain[0].SetSubjectName(subject);
     certChain[0].SetSubjectPublicKey(subjectPubKey);
     certChain[0].SetAlias(alias);
     if (digest) {
-        certChain[0].SetDigest(digest, digestSize);
+        certChain[0].SetManifestDigest(digest, digestSize);
     }
     certChain[0].SetValidity(&validity);
 
@@ -124,12 +124,12 @@ QStatus PermissionMgmtTestHelper::CreateIdentityCert(BusAttachment& issuerBus, c
 
     cert.SetSerial(serial);
     String issuerStr = issuer.ToString();
-    cert.SetIssuerCN((const uint8_t*) issuerStr.data(), issuerStr.size());
-    cert.SetSubjectCN((const uint8_t*) subject.data(), subject.size());
+    cert.SetIssuerName(issuerStr);
+    cert.SetSubjectName(subject);
     cert.SetSubjectPublicKey(subjectPubKey);
     cert.SetAlias(alias);
     if (digest) {
-        cert.SetDigest(digest, digestSize);
+        cert.SetManifestDigest(digest, digestSize);
     }
     CertificateX509::ValidPeriod validity;
     BuildValidity(validity, expiredInSecs);
@@ -175,11 +175,11 @@ QStatus PermissionMgmtTestHelper::CreateMembershipCert(const String& serial, Bus
 
     cert.SetSerial(serial);
     String issuerStr = issuer.ToString();
-    cert.SetIssuerCN((const uint8_t*) issuerStr.data(), issuerStr.size());
-    cert.SetSubjectCN((const uint8_t*) subject.data(), subject.size());
+    cert.SetIssuerName(issuerStr);
+    cert.SetSubjectName(subject);
     cert.SetSubjectPublicKey(subjectPubKey);
     cert.SetGuild(guild);
-    cert.SetCA(delegate);
+    cert.SetDelegateRights(delegate);
     CertificateX509::ValidPeriod validity;
     BuildValidity(validity, expiredInSecs);
     cert.SetValidity(&validity);

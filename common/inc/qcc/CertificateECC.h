@@ -411,6 +411,10 @@ class CertificateX509 {
         return aki;
     }
 
+    void SetAuthorityKeyId(const qcc::String& authorityKeyId)
+    {
+        aki = authorityKeyId;
+    }
     /**
      * Set the validity field
      * @param validPeriod the validity period
@@ -693,11 +697,399 @@ class CertificateX509 {
     qcc::String subjectAltName;
     qcc::String aki;
 };
+#ifdef _WIN32
+#pragma warning(push)
+#pragma warning(disable: 4250)
+#endif
 
-class MembershipCertificate : public CertificateX509 {
-
+class BaseCertificateData {
   public:
-    MembershipCertificate() : CertificateX509(MEMBERSHIP_CERTIFICATE), guildGUID(0), guildSet(false)
+    virtual ~BaseCertificateData()
+    {
+    }
+
+    /**
+     * Set the name of the issuer of this certificate. This can be the key identifier of the subject public key
+     * @param name the issuer friendly name.
+     */
+    virtual void SetIssuerName(const qcc::String& name) = 0;
+    /**
+     * Get the name of the issuer of this certificate. This can be the key identifier of the subject public key
+     * @return the issuer name.
+     */
+    virtual const qcc::String GetIssuerName() const = 0;
+
+    /**
+     * Set the validity field
+     * @param validPeriod the validity period
+     */
+    virtual void SetValidity(const CertificateX509::ValidPeriod* validPeriod) = 0;
+    /**
+     * Get the validity period.
+     * @return the validity period
+     */
+    virtual const CertificateX509::ValidPeriod* GetValidity() const = 0;
+
+    /**
+     * Set the name of the subject of this certificate. This can be the key identifier of the subject public key
+     * @param name the user friendly name.
+     */
+    virtual void SetSubjectName(const qcc::String& name) = 0;
+    /**
+     * Set the name of the subject of this certificate. This can be the key identifier of the subject public key
+     * @return the subject name.
+     */
+    virtual const qcc::String GetSubjectName() const = 0;
+
+    /**
+     * Set the subject public key field
+     * @param key the subject public key
+     */
+    virtual void SetSubjectPublicKey(const ECCPublicKey* key) = 0;
+    /**
+     * Get the subject public key
+     * @return the subject public key
+     */
+    virtual const ECCPublicKey* GetSubjectPublicKey() const = 0;
+
+    /**
+     * Check if this certificate allows delegation
+     * @return true if the certificate has delegation rights.
+     */
+    virtual bool HasDelegateRights() const = 0;
+    /**
+     * Updates the delegation rights of this certificate
+     * @param canDelegate true to give this certificate delegation rights.
+     */
+    virtual void SetDelegateRights(bool canDelegate) = 0;
+    /**
+     * Get the serial number
+     * @return the serial number
+     */
+    virtual const qcc::String& GetSerial() const = 0;
+    /**
+     * Set the serial number field
+     * @param serial the serial number
+     */
+    virtual void SetSerial(const qcc::String& serial) = 0;
+
+    /**
+     * Get the Issuer Key identity. number field
+     * @return the key id of the issuer
+     */
+    virtual const qcc::String& GetAuthorityKeyId() const = 0;
+    /**
+     * Set the Issuer Key identity. number field
+     * @param authorityKeiId the new key id.
+     */
+    virtual void SetAuthorityKeyId(const qcc::String authorityKeiId) = 0;
+};
+
+class MembershipCertificateData : public virtual BaseCertificateData {
+  public:
+    /**
+     * Destructor
+     */
+    virtual ~MembershipCertificateData()
+    {
+    }
+
+    /**
+     * Check if a guild is set for this certificate.
+     *
+     * @return true if this certificate has a valid guild set, false otherwise
+     */
+    virtual bool IsGuildSet() const = 0;
+    /**
+     * Set the guild GUID
+     * @param guid the guild GUID
+     */
+    virtual void SetGuild(const qcc::GUID128& guid) = 0;
+
+    /**
+     * Get the guild GUID
+     * @return the guild GUID
+     */
+    virtual const qcc::GUID128& GetGuild() = 0;
+};
+
+class IdentityCertificateData : public virtual BaseCertificateData {
+  public:
+    virtual ~IdentityCertificateData()
+    {
+    }
+
+    /**
+     * Set the user friendly name of of this identity.
+     * @param name the user friendly name.
+     */
+    virtual void SetUserFriendlyName(const qcc::String& name) = 0;
+    /**
+     * Get the user friendly name of of this identity.
+     * @return the user friendly name.
+     */
+    virtual const qcc::String GetUserFriendlyName() const = 0;
+
+    /**
+     * Set the alias field
+     * @param alias the alias
+     */
+    virtual void SetAlias(const qcc::String& alias) = 0;
+    /**
+     * Get the alias field
+     * @return the alias
+     */
+    virtual const qcc::String& GetAlias() const = 0;
+
+    /**
+     * Sets the manifest data for this identity certificate.
+     * @param digest the digest data.
+     * @param digestSize the size of the digest.
+     */
+    virtual void SetManifestDigest(const uint8_t* digest, size_t digestSize) = 0;
+
+    /**
+     * Gets the manifest digest of this identity certificate.
+     * @param[out] digestSize stores the digest size on a successful return.
+     * @return the digest linked to this certificate or NULL if no digest is set
+     */
+    virtual const uint8_t* GetManifestDigest(size_t& digestSize) const = 0;
+
+
+};
+
+class BaseCertificate : public virtual BaseCertificateData {
+  public:
+    BaseCertificate() : x509(), encodedData(NULL), encodedDataSize(0)
+    {
+
+    }
+    BaseCertificate(CertificateX509::CertificateType type) : x509(type), encodedData(NULL), encodedDataSize(0)
+    {
+    }
+
+    ~BaseCertificate()
+    {
+        delete[] encodedData;
+    }
+
+    /**
+     * Returns a human readable string for a cert if there is one associated with this key.
+     *
+     * @return A string for the cert or and empty string if there is no cert.
+     */
+    qcc::String ToString() const {
+        return x509.ToString();
+    }
+
+    /**
+     * Gets a reference to the encapsulated X509 certificate. This should only be called if you need
+     * detailed access to the X509 layout of the certificate.
+     * @return a reference to the internal CertificateX509 certificate.
+     */
+    CertificateX509& GetCertificateX509() {
+        return x509;
+    }
+
+    /**
+     * Encodes this certificate in DER format.
+     *
+     * @param[out] der stores the DER encoded data.
+     * @return ER_OK for success; otherwise, error code.
+     */
+    QStatus EncodeCertificateDER(qcc::String& der) const;
+
+    /**
+     * Decode a PEM encoded certificate.
+     * @param pem the encoded certificate.
+     * @return ER_OK for success; otherwise, error code.
+     */
+    QStatus DecodeCertificatePEM(const qcc::String& pem) {
+        return x509.DecodeCertificatePEM(pem);
+    }
+
+    /**
+     * Decode a DER encoded certificate.
+     * @param der the encoded certificate.
+     * @return ER_OK for success; otherwise, error code.
+     */
+    QStatus DecodeCertificateDER(const qcc::String& der);
+
+    /**
+     * Gets the encoded certificate data (in DER).
+     * @param[out] encodedSize will on successful return store the length of the encoded data.
+     * @return A reference to the internal cached DER encoded value (this pointer remains owned
+     *    by the certificate) or NULL in case of an error.
+     */
+    const uint8_t* GetEncoded(size_t& encodedSize) const;
+
+    /**
+     * Verify the certificate.
+     * @param key the ECDSA public key.
+     * @return ER_OK for success; otherwise, error code.
+     */
+    QStatus Verify(const qcc::ECCPublicKey* key) const {
+        return x509.Verify(key);
+    }
+
+    /**
+     * Verify the vadility period of the certificate.
+     * @return ER_OK for success; otherwise, error code.
+     */
+    QStatus VerifyValidity() const {
+        return x509.VerifyValidity();
+    }
+
+    /**
+     * Sign the certificate. Make sure to call SetAuthorityKeyId if needed.
+     * @param key the ECDSA private key.
+     * @return ER_OK for success; otherwise, error code.
+     */
+    QStatus Sign(const ECCPrivateKey* key) {
+        return x509.Sign(key);
+    }
+
+    /**
+     * Sign the certificate and generate the authority key identifier.
+     * @param privateKey the ECDSA private key.
+     * @param publicKey the ECDSA public key to generate the authority key
+     *                  identifier.
+     * @return ER_OK for success; otherwise, error code.
+     */
+    QStatus SignAndGenerateAuthorityKeyId(const ECCPrivateKey* privateKey, const ECCPublicKey* publicKey) {
+        return x509.SignAndGenerateAuthorityKeyId(privateKey, publicKey);
+    }
+
+    /**
+     * Set the name of the issuer of this certificate. This can be the key identifier of the issuer public key
+     * @param name a user friendly name.
+     */
+    virtual void SetIssuerName(const qcc::String& name)
+    {
+        x509.SetIssuerCN((const uint8_t*) name.data(), name.size());
+    }
+    /**
+     * Gets the name of the issuer of this certificate. This can be the key identifier of the issuer public key
+     * @return the issuer name.
+     */
+    virtual const qcc::String GetIssuerName() const
+    {
+        size_t len = x509.GetIssuerCNLength();
+        if (len > 0) {
+            qcc::String name((const char*) x509.GetIssuerCN(), len);
+            return name;
+        }
+        return "";
+    }
+    /**
+     * Set the validity field
+     * @param validPeriod the validity period
+     */
+    void SetValidity(const CertificateX509::ValidPeriod* validPeriod)
+    {
+        x509.SetValidity(validPeriod);
+    }
+    /**
+     * Get the validity period.
+     * @return the validity period
+     */
+    virtual const CertificateX509::ValidPeriod* GetValidity() const
+    {
+        return x509.GetValidity();
+    }
+
+    /**
+     * Set the name of the subject of this identity. This can be the key identifier of the subject public key
+     * @param name the user friendly name.
+     */
+    virtual void SetSubjectName(const qcc::String& name)
+    {
+        x509.SetSubjectCN((const uint8_t*) name.data(), name.size());
+    }
+    /**
+     * Set the name of the subject of this identity. This can be the key identifier of the subject public key
+     * @return the subject name.
+     */
+    virtual const qcc::String GetSubjectName() const
+    {
+        return qcc::String((const char*) x509.GetSubjectCN(), x509.GetSubjectCNLength());
+    }
+
+    /**
+     * Set the subject public key field
+     * @param key the subject public key
+     */
+    virtual void SetSubjectPublicKey(const ECCPublicKey* key)
+    {
+        x509.SetSubjectPublicKey(key);
+    }
+    /**
+     * Get the subject public key
+     * @return the subject public key
+     */
+    virtual const ECCPublicKey* GetSubjectPublicKey() const
+    {
+        return x509.GetSubjectPublicKey();
+    }
+
+    /**
+     * Check if this certificate allows delegation
+     * @return true if the certificate has delegation rights.
+     */
+    virtual bool HasDelegateRights() const
+    {
+        return x509.IsCA();
+    }
+    /**
+     * Updates the delegation rights of this certificate
+     * @param canDelegate true to give this certificate delegation rights.
+     */
+    virtual void SetDelegateRights(bool canDelegate)
+    {
+        x509.SetCA(canDelegate);
+    }
+    /**
+     * Get the serial number
+     * @return the serial number
+     */
+    const qcc::String& GetSerial() const
+    {
+        return x509.GetSerial();
+    }
+    /**
+     * Set the serial number field
+     * @param serial the serial number
+     */
+    virtual void SetSerial(const qcc::String& serial)
+    {
+        x509.SetSerial(serial);
+    }
+
+    /**
+     * Get the Issuer Key identity. number field
+     * @return the key id of the issuer
+     */
+    virtual const qcc::String& GetAuthorityKeyId() const
+    {
+        return x509.GetAuthorityKeyId();
+    }
+    /**
+     * Set the Issuer Key identity. number field
+     * @param authorityKeiId the new key id.
+     */
+    virtual void SetAuthorityKeyId(const qcc::String authorityKeiId) {
+        x509.SetAuthorityKeyId(authorityKeiId);
+    }
+  protected:
+    CertificateX509 x509;
+  private:
+    mutable uint8_t* encodedData;
+    mutable size_t encodedDataSize;
+};
+
+class MembershipCertificate : public virtual MembershipCertificateData, public BaseCertificate {
+  public:
+    MembershipCertificate() : BaseCertificate(CertificateX509::MEMBERSHIP_CERTIFICATE), guildGUID(0), guildSet(false)
     {
     }
     /**
@@ -725,7 +1117,7 @@ class MembershipCertificate : public CertificateX509 {
     {
         guildGUID = guid;
         qcc::String sgId((const char*) guid.GetBytes(), guid.SIZE);
-        SetSubjectAltName(sgId);
+        x509.SetSubjectAltName(sgId);
         guildSet = true;
     }
 
@@ -736,7 +1128,7 @@ class MembershipCertificate : public CertificateX509 {
     const qcc::GUID128& GetGuild()
     {
         if (!guildSet) {
-            qcc::String sgId = GetSubjectAltName();
+            qcc::String sgId = x509.GetSubjectAltName();
             if (sgId.size() > 0) {
                 guildGUID.SetBytes((const uint8_t*) sgId.data());
                 guildSet = true;
@@ -750,10 +1142,9 @@ class MembershipCertificate : public CertificateX509 {
     bool guildSet;
 };
 
-class IdentityCertificate : public CertificateX509 {
-
+class IdentityCertificate : public virtual IdentityCertificateData, public BaseCertificate {
   public:
-    IdentityCertificate() : CertificateX509(IDENTITY_CERTIFICATE)
+    IdentityCertificate() : BaseCertificate(CertificateX509::IDENTITY_CERTIFICATE)
     {
     }
     /**
@@ -764,12 +1155,28 @@ class IdentityCertificate : public CertificateX509 {
     }
 
     /**
+     * Set the user friendly name of of this identity.
+     * @param name the user friendly name.
+     */
+    virtual void SetUserFriendlyName(const qcc::String& name)
+    {
+        x509.SetSubjectOU((const uint8_t*) name.data(), name.size());
+    }
+    /**
+     * Get the user friendly name of of this identity.
+     * @return the user friendly name.
+     */
+    virtual const qcc::String GetUserFriendlyName() const
+    {
+        return qcc::String((const char*) x509.GetSubjectOU(), x509.GetSubjectCNLength());
+    }
+    /**
      * Set the alias field
      * @param alias the alias
      */
     void SetAlias(const qcc::String& alias)
     {
-        SetSubjectAltName(alias);
+        x509.SetSubjectAltName(alias);
     }
 
     /**
@@ -778,11 +1185,23 @@ class IdentityCertificate : public CertificateX509 {
      */
     const qcc::String& GetAlias() const
     {
-        return GetSubjectAltName();
+        return x509.GetSubjectAltName();
     }
 
-};
+    virtual void SetManifestDigest(const uint8_t* digest, size_t digestSize)
+    {
+        x509.SetDigest(digest, digestSize);
+    }
 
+    virtual const uint8_t* GetManifestDigest(size_t& digestSize) const
+    {
+        digestSize = x509.GetDigestSize();
+        return x509.GetDigest();
+    }
+};
+#ifdef _WIN32
+#pragma warning(pop)
+#endif
 } /* namespace qcc */
 
 #endif

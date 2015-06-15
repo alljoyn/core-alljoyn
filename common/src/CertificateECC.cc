@@ -1133,4 +1133,56 @@ QStatus AJ_CALL CertificateX509::DecodeCertChainPEM(const String& encoded, Certi
     return status;
 }
 
+QStatus BaseCertificate::EncodeCertificateDER(qcc::String& der) const
+{
+    if (encodedData == NULL) {
+        QStatus status = x509.EncodeCertificateDER(der);
+        if (ER_OK != status) {
+            return status;
+        }
+        encodedDataSize = der.size();
+        if (encodedDataSize  == 0) {
+            return ER_FAIL;
+        }
+        encodedData = new uint8_t[encodedDataSize];
+        if (encodedData == NULL) {
+            encodedDataSize = 0;
+            return ER_OUT_OF_MEMORY;
+        }
+        memcpy(encodedData, der.data(), encodedDataSize);
+    } else {
+        der = qcc::String((const char*) encodedData, encodedDataSize);
+    }
+    return ER_OK;
+}
+
+QStatus BaseCertificate::DecodeCertificateDER(const qcc::String& der) {
+    QStatus status = x509.DecodeCertificateDER(der);
+    if (ER_OK == status) {
+        encodedDataSize = der.size();
+        if (encodedDataSize  == 0) {
+            return ER_FAIL;
+        }
+        delete[] encodedData;
+        encodedData = new uint8_t[encodedDataSize];
+        if (encodedData == NULL) {
+            encodedDataSize = 0;
+            return ER_OUT_OF_MEMORY;
+        }
+        memcpy(encodedData, der.data(), encodedDataSize);
+
+    }
+    return status;
+}
+
+const uint8_t* BaseCertificate::GetEncoded(size_t& size) const
+{
+    if (encodedData == NULL) {
+        qcc::String der;
+        EncodeCertificateDER(der);
+    }
+    size = encodedDataSize;
+    return encodedData;
+}
+
 }

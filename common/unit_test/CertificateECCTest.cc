@@ -277,27 +277,27 @@ class CertificateECCTest : public testing::Test {
 
 };
 
-static QStatus CreateCert(const qcc::String& serial, const qcc::GUID128& issuer, const qcc::String& organization, const ECCPrivateKey* issuerPrivateKey, const ECCPublicKey* issuerPublicKey, const qcc::GUID128& subject, const ECCPublicKey* subjectPubKey, CertificateX509::ValidPeriod& validity, CertificateX509& x509)
+static QStatus CreateCert(const qcc::String& serial, const qcc::GUID128& issuer, const qcc::String& organization, const ECCPrivateKey* issuerPrivateKey, const ECCPublicKey* issuerPublicKey, const qcc::GUID128& subject, const ECCPublicKey* subjectPubKey, CertificateX509::ValidPeriod& validity, BaseCertificate& x509)
 {
     QStatus status = ER_CRYPTO_ERROR;
 
     x509.SetSerial(serial);
     qcc::String issuerName = issuer.ToString();
-    x509.SetIssuerCN((const uint8_t*) issuerName.c_str(), issuerName.length());
+    x509.SetIssuerName(issuerName);
     qcc::String subjectName = subject.ToString();
-    x509.SetSubjectCN((const uint8_t*) subjectName.c_str(), subjectName.length());
+    x509.SetSubjectName(subjectName);
     if (!organization.empty()) {
-        x509.SetIssuerOU((const uint8_t*) organization.c_str(), organization.length());
-        x509.SetSubjectOU((const uint8_t*) organization.c_str(), organization.length());
+        x509.GetCertificateX509().SetIssuerOU((const uint8_t*) organization.c_str(), organization.length());
+        x509.GetCertificateX509().SetSubjectOU((const uint8_t*) organization.c_str(), organization.length());
     }
     x509.SetSubjectPublicKey(subjectPubKey);
-    x509.SetCA(true);
+    x509.SetDelegateRights(true);
     x509.SetValidity(&validity);
     status = x509.SignAndGenerateAuthorityKeyId(issuerPrivateKey, issuerPublicKey);
     return status;
 }
 
-static QStatus GenKeyAndCreateCert(qcc::GUID128& issuer, const qcc::String& serial, const qcc::String& organization, ECCPrivateKey* dsaPrivateKey, ECCPublicKey* dsaPublicKey, ECCPrivateKey* subjectPrivateKey, ECCPublicKey* subjectPublicKey, bool selfSign, CertificateX509::ValidPeriod& validity, CertificateX509& x509)
+static QStatus GenKeyAndCreateCert(qcc::GUID128& issuer, const qcc::String& serial, const qcc::String& organization, ECCPrivateKey* dsaPrivateKey, ECCPublicKey* dsaPublicKey, ECCPrivateKey* subjectPrivateKey, ECCPublicKey* subjectPublicKey, bool selfSign, CertificateX509::ValidPeriod& validity, BaseCertificate& x509)
 {
     Crypto_ECC ecc;
     ecc.GenerateDSAKeyPair();
@@ -312,7 +312,7 @@ static QStatus GenKeyAndCreateCert(qcc::GUID128& issuer, const qcc::String& seri
     return CreateCert(serial, issuer, organization, dsaPrivateKey, dsaPublicKey, userGuid, subjectPublicKey, validity, x509);
 }
 
-static QStatus GenKeyAndCreateCert(qcc::GUID128& issuer, const qcc::String& serial, const qcc::String& organization, ECCPrivateKey* dsaPrivateKey, ECCPublicKey* dsaPublicKey, ECCPrivateKey* subjectPrivateKey, ECCPublicKey* subjectPublicKey, bool selfSign, uint32_t expiredInSeconds, CertificateX509& x509)
+static QStatus GenKeyAndCreateCert(qcc::GUID128& issuer, const qcc::String& serial, const qcc::String& organization, ECCPrivateKey* dsaPrivateKey, ECCPublicKey* dsaPublicKey, ECCPrivateKey* subjectPrivateKey, ECCPublicKey* subjectPublicKey, bool selfSign, uint32_t expiredInSeconds, BaseCertificate& x509)
 {
     CertificateX509::ValidPeriod validity;
     validity.validFrom = qcc::GetEpochTimestamp() / 1000;
@@ -408,7 +408,7 @@ TEST_F(CertificateECCTest, GenSelfSignECCX509CertForBBservice)
     ECCPublicKey dsaPublicKey;
     ECCPrivateKey subjectPrivateKey;
     ECCPublicKey subjectPublicKey;
-    CertificateX509 x509;
+    BaseCertificate x509;
 
     /* cert expires in one year */
     QStatus status = GenKeyAndCreateCert(issuer, "1010101", "organization", &dsaPrivateKey, &dsaPublicKey, &subjectPrivateKey, &subjectPublicKey, true, 365 * 24 * 3600, x509);
@@ -427,7 +427,7 @@ TEST_F(CertificateECCTest, GenSelfSignECCX509CertForBBservice)
 
     status = x509.Verify(&dsaPublicKey);
     ASSERT_EQ(ER_OK, status) << " verify cert failed with actual status: " << QCC_StatusText(status);
-    String pem = x509.GetPEM();
+    String pem = x509.GetCertificateX509().GetPEM();
     std::cout << "The encoded cert PEM for ECC X.509 cert:" << endl << pem.c_str() << endl;
 
     std::cout << "The ECC X.509 cert: " << endl << x509.ToString().c_str() << endl;
@@ -445,7 +445,7 @@ TEST_F(CertificateECCTest, ExpiredX509Cert)
     ECCPublicKey dsaPublicKey;
     ECCPrivateKey subjectPrivateKey;
     ECCPublicKey subjectPublicKey;
-    CertificateX509 x509;
+    BaseCertificate x509;
     qcc::String noOrg;
 
     /* cert expires in two seconds */
@@ -472,7 +472,7 @@ TEST_F(CertificateECCTest, X509CertExpiresBeyond2050)
     ECCPublicKey dsaPublicKey;
     ECCPrivateKey subjectPrivateKey;
     ECCPublicKey subjectPublicKey;
-    CertificateX509 cert;
+    BaseCertificate cert;
 
     /* cert expires in about 36 years */
     uint32_t expiredInSecs = 36 * 365 * 24 * 60 * 60;
@@ -575,7 +575,7 @@ TEST_F(CertificateECCTest, X509CertWideRangeValidPeriod)
     ECCPublicKey dsaPublicKey;
     ECCPrivateKey subjectPrivateKey;
     ECCPublicKey subjectPublicKey;
-    CertificateX509 cert;
+    BaseCertificate cert;
 
     CertificateX509::ValidPeriod validity;
     /* cert valid from 1970 */
@@ -588,7 +588,7 @@ TEST_F(CertificateECCTest, X509CertWideRangeValidPeriod)
     ASSERT_EQ(ER_OK, status) << " GenKeyAndCreateCert failed with actual status: " << QCC_StatusText(status);
     status = cert.Verify(&dsaPublicKey);
     ASSERT_EQ(ER_OK, status) << " verify cert failed with actual status: " << QCC_StatusText(status);
-    String pem = cert.GetPEM();
+    String pem = cert.GetCertificateX509().GetPEM();
     std::cout << "The encoded cert PEM for ECC X.509 cert:" << endl << pem.c_str() << endl;
     std::cout << "The cert:" << endl << cert.ToString().c_str() << endl;
 }
@@ -654,14 +654,14 @@ TEST_F(CertificateECCTest, GenerateAndLoadSelfSignedCert)
     ECCPublicKey dsaPublicKey;
     ECCPrivateKey subjectPrivateKey;
     ECCPublicKey subjectPublicKey;
-    CertificateX509 cert;
+    BaseCertificate cert;
 
     /* cert expires in one year */
     ASSERT_EQ(ER_OK, GenKeyAndCreateCert(issuer, "1010101", "organization", &dsaPrivateKey, &dsaPublicKey, &subjectPrivateKey, &subjectPublicKey, true, 365 * 24 * 3600, cert)) << " GenKeyAndCreateCert failed";
 
     ASSERT_EQ(ER_OK, cert.Verify(&dsaPublicKey)) << " verify cert failed";
-    CertificateX509 cert2;
-    ASSERT_EQ(ER_OK, cert2.LoadPEM(cert.GetPEM())) << " Error reload cert from PEM";
+    BaseCertificate cert2;
+    ASSERT_EQ(ER_OK, cert2.DecodeCertificatePEM(cert.GetCertificateX509().GetPEM())) << " Error reload cert from PEM";
     ASSERT_EQ(ER_OK, cert2.Verify(&dsaPublicKey)) << " verify cert failed";
 }
 
@@ -721,16 +721,16 @@ static void TestValidityPeriod(CertificateX509::ValidPeriod& validity)
     ECCPublicKey dsaPublicKey;
     ECCPrivateKey subjectPrivateKey;
     ECCPublicKey subjectPublicKey;
-    CertificateX509 cert;
+    BaseCertificate cert;
 
 
     QStatus status = GenKeyAndCreateCert(issuer, "1010101", "organization", &dsaPrivateKey, &dsaPublicKey, &subjectPrivateKey, &subjectPublicKey, true, validity, cert);
     EXPECT_EQ(ER_OK, status) << " GenKeyAndCreateCert failed with actual status: " << QCC_StatusText(status);
     status = cert.Verify(&dsaPublicKey);
     EXPECT_EQ(ER_OK, status) << " verify cert failed with actual status: " << QCC_StatusText(status);
-    String pem = cert.GetPEM();
-    CertificateX509 cert2;
-    EXPECT_EQ(ER_OK, cert2.LoadPEM(pem)) << " load PEM failed";
+    String pem = cert.GetCertificateX509().GetPEM();
+    BaseCertificate cert2;
+    EXPECT_EQ(ER_OK, cert2.DecodeCertificatePEM(pem)) << " load PEM failed";
     EXPECT_EQ(validity.validFrom, cert2.GetValidity()->validFrom) << "validFrom not the same";
     EXPECT_EQ(validity.validTo, cert2.GetValidity()->validTo) << "validTo not the same";
 }
@@ -769,7 +769,7 @@ TEST_F(CertificateECCTest, SubjectAltNameInExternalGeneratedCert)
         "-----END CERTIFICATE-----"
     };
     String pem(CustomIdentityAliasCert);
-    EXPECT_EQ(ER_OK, cert.LoadPEM(pem)) << " load external cert PEM failed.";
+    EXPECT_EQ(ER_OK, cert.DecodeCertificatePEM(pem)) << " load external cert PEM failed.";
     EXPECT_EQ(0, memcmp("alias", cert.GetAlias().data(), cert.GetAlias().size())) << " expect to have alias as the subject alt name";
 
     /* Cert has the security group id field.  Cert was generated using openssl command line */
@@ -789,7 +789,7 @@ TEST_F(CertificateECCTest, SubjectAltNameInExternalGeneratedCert)
     };
     String pem2(CustomMembershipCert);
     MembershipCertificate cert2;
-    EXPECT_EQ(ER_OK, cert2.LoadPEM(pem2)) << " load external cert PEM failed.";
+    EXPECT_EQ(ER_OK, cert2.DecodeCertificatePEM(pem2)) << " load external cert PEM failed.";
     EXPECT_EQ(0, memcmp("A16ByteArrNotHex", cert2.GetGuild().GetBytes(), qcc::GUID128::SIZE)) << " expect to have A16ByteArrNotHex as the subject alt name";
 
     /* The subject alt name has an unknown otherName OID. Cert was generated
@@ -827,9 +827,9 @@ TEST_F(CertificateECCTest, SubjectAltNameInIdentityCert)
 
     EXPECT_EQ(ER_OK, GenKeyAndCreateCert(issuer, "1010101", "organization", &dsaPrivateKey, &dsaPublicKey, &subjectPrivateKey, &subjectPublicKey, true, 365 * 24 * 3600, cert)) << " GenKeyAndCreateCert failed.";
 
-    String pem = cert.GetPEM();
+    String pem = cert.GetCertificateX509().GetPEM();
     IdentityCertificate cert2;
-    EXPECT_EQ(ER_OK, cert2.LoadPEM(pem)) << " load cert PEM failed.";
+    EXPECT_EQ(ER_OK, cert2.DecodeCertificatePEM(pem)) << " load cert PEM failed.";
     EXPECT_EQ(0, memcmp("alias", cert2.GetAlias().data(), cert2.GetAlias().size())) << " expect to have alias as the subject alt name";
 }
 
@@ -846,9 +846,9 @@ TEST_F(CertificateECCTest, SubjectAltNameInMembershipCert)
 
     EXPECT_EQ(ER_OK, GenKeyAndCreateCert(issuer, "1010101", "organization", &dsaPrivateKey, &dsaPublicKey, &subjectPrivateKey, &subjectPublicKey, true, 365 * 24 * 3600, cert)) << " GenKeyAndCreateCert failed.";
 
-    String pem = cert.GetPEM();
+    String pem = cert.GetCertificateX509().GetPEM();
     MembershipCertificate cert2;
-    EXPECT_EQ(ER_OK, cert2.LoadPEM(pem)) << " load cert PEM failed.";
+    EXPECT_EQ(ER_OK, cert2.DecodeCertificatePEM(pem)) << " load cert PEM failed.";
     EXPECT_EQ(securityGroupId, cert2.GetGuild()) << " expect to have security group Id as the subject alt name";
 }
 

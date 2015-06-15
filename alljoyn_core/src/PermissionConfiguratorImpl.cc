@@ -106,7 +106,7 @@ QStatus PermissionConfiguratorImpl::GetSigningPublicKey(KeyInfoECC& keyInfo)
     return ER_OK;
 }
 
-QStatus PermissionConfiguratorImpl::SignCertificate(CertificateX509& cert)
+QStatus PermissionConfiguratorImpl::SignCertificate(BaseCertificate& cert)
 {
     CredentialAccessor ca(bus);
     ECCPrivateKey privateKey;

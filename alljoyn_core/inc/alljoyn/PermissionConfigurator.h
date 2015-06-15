@@ -140,7 +140,7 @@ class PermissionConfigurator {
      * @param[out] the certificate to be signed
      * @return ER_OK if successful; otherwise, an error code.
      */
-    virtual QStatus SignCertificate(qcc::CertificateX509& cert)
+    virtual QStatus SignCertificate(qcc::BaseCertificate& cert)
     {
         QCC_UNUSED(cert);
         return ER_NOT_IMPLEMENTED;
