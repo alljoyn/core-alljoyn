@@ -109,6 +109,8 @@ class CachedProps {
     bool isFullyCacheable;
     size_t numProperties;
     uint32_t lastMessageSerial;
+    bool enabled;
+
     bool IsCacheable(const char* propname);
     bool IsValidMessageSerial(uint32_t messageSerial);
 
@@ -116,11 +118,13 @@ class CachedProps {
     CachedProps() :
         lock(), values(), description(NULL),
         isFullyCacheable(false),
-        numProperties(0), lastMessageSerial(0) { }
+        numProperties(0), lastMessageSerial(0),
+        enabled(false) { }
 
     CachedProps(const InterfaceDescription*intf) :
         lock(), values(), description(intf),
-        isFullyCacheable(false), lastMessageSerial(0) {
+        isFullyCacheable(false), lastMessageSerial(0),
+        enabled(false) {
         numProperties = description->GetProperties();
         if (numProperties > 0) {
             isFullyCacheable = true;
@@ -139,7 +143,8 @@ class CachedProps {
     CachedProps(const CachedProps& other) :
         lock(), values(other.values), description(other.description),
         isFullyCacheable(other.isFullyCacheable),
-        numProperties(other.numProperties), lastMessageSerial(other.lastMessageSerial) { }
+        numProperties(other.numProperties), lastMessageSerial(other.lastMessageSerial),
+        enabled(other.enabled) { }
 
     CachedProps& operator=(const CachedProps& other) {
         if (&other != this) {
@@ -148,6 +153,7 @@ class CachedProps {
             isFullyCacheable = other.isFullyCacheable;
             numProperties = other.numProperties;
             lastMessageSerial = other.lastMessageSerial;
+            enabled = other.enabled;
         }
         return *this;
     }
@@ -159,6 +165,7 @@ class CachedProps {
     void Set(const char* propname, const MsgArg& val, const uint32_t messageSerial);
     void SetAll(const MsgArg& allValues, const uint32_t messageSerial);
     void PropertiesChanged(MsgArg* changed, size_t numChanged, MsgArg* invalidated, size_t numInvalidated, const uint32_t messageSerial);
+    void Enable();
 };
 
 
@@ -177,9 +184,9 @@ typedef ManagedObj<_SyncReplyContext> SyncReplyContext;
 class ProxyBusObject::Internal : public MessageReceiver, public BusAttachment::AddMatchAsyncCB {
     class AddMatchCBInfo {
       public:
-        bool enableCaching;
+        String ifaceName;
         bool& addingRef;
-        AddMatchCBInfo(bool enableCaching, bool& addingRef) : enableCaching(enableCaching), addingRef(addingRef) { }
+        AddMatchCBInfo(const String& iface, bool& addingRef) : ifaceName(iface), addingRef(addingRef) { }
       private:
         AddMatchCBInfo& operator=(const AddMatchCBInfo& other);
     };
@@ -1116,6 +1123,11 @@ void ProxyBusObject::Internal::AddMatchCB(QStatus status, void* context)
     AddMatchCBInfo* info = reinterpret_cast<AddMatchCBInfo*>(context);
     lock.Lock(MUTEX_CONTEXT);
     info->addingRef = false;
+    /* enable property caches */
+    map<StringMapKey, CachedProps>::iterator it = caches.find(info->ifaceName);
+    if (it != caches.end()) {
+        it->second.Enable();
+    }
     addMatchDone.Broadcast();
     lock.Unlock(MUTEX_CONTEXT);
     delete info;
@@ -1161,7 +1173,7 @@ void ProxyBusObject::Internal::AddPropertiesChangedRule(const char* intf, bool b
     if (callAddMatch) {
         addMatchCallStatus = ER_NONE;
         String rule = String("type='signal',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged',arg0='") + intf + "'";
-        AddMatchCBInfo* cbInfo = new AddMatchCBInfo(false, it->second.adding);
+        AddMatchCBInfo* cbInfo = new AddMatchCBInfo(intf, it->second.adding);
         QStatus status = bus->AddMatchAsync(rule.c_str(), this, cbInfo);
         if (status != ER_OK) {
             --it->second.refCount;
@@ -1171,6 +1183,18 @@ void ProxyBusObject::Internal::AddPropertiesChangedRule(const char* intf, bool b
     }
 
     lock.Lock(MUTEX_CONTEXT);
+
+    /* If we already have a match rule installed for this interface, enable the property
+     * cache. This is an idempotent operation, so we don't care if we did this before.
+     * If we don't have the match rule yet, PBO::Internal::AddMatchCB will enable the
+     * cache for us. */
+    if (!it->second.adding) {
+        map<StringMapKey, CachedProps>::iterator cit = caches.find(intf);
+        if (cit != caches.end()) {
+            cit->second.Enable();
+        }
+    }
+
     if (blocking) {
         while (it->second.adding) {
             addMatchDone.Wait(lock);
@@ -2016,6 +2040,11 @@ void CachedProps::Set(const char* propname, const MsgArg& val, const uint32_t me
     }
 
     lock.Lock(MUTEX_CONTEXT);
+    if (!enabled) {
+        lock.Unlock(MUTEX_CONTEXT);
+        return;
+    }
+
     if (!IsValidMessageSerial(messageSerial)) {
         values.clear();
     } else {
@@ -2028,6 +2057,10 @@ void CachedProps::Set(const char* propname, const MsgArg& val, const uint32_t me
 void CachedProps::SetAll(const MsgArg& allValues, const uint32_t messageSerial)
 {
     lock.Lock(MUTEX_CONTEXT);
+    if (!enabled) {
+        lock.Unlock(MUTEX_CONTEXT);
+        return;
+    }
 
     size_t nelem;
     MsgArg* elems;
@@ -2070,6 +2103,10 @@ error:
 void CachedProps::PropertiesChanged(MsgArg* changed, size_t numChanged, MsgArg* invalidated, size_t numInvalidated, const uint32_t messageSerial)
 {
     lock.Lock(MUTEX_CONTEXT);
+    if (!enabled) {
+        lock.Unlock(MUTEX_CONTEXT);
+        return;
+    }
 
     QStatus status;
 
@@ -2110,6 +2147,13 @@ error:
      * Play it safe and invalidate all properties */
     QCC_LogError(status, ("Failed to parse PropertiesChanged signal or inconsistent message serial number. Invalidating property cache."));
     values.clear();
+    lock.Unlock(MUTEX_CONTEXT);
+}
+
+void CachedProps::Enable()
+{
+    lock.Lock(MUTEX_CONTEXT);
+    enabled = true;
     lock.Unlock(MUTEX_CONTEXT);
 }
 
