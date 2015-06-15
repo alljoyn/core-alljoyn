@@ -290,20 +290,30 @@ void BasePermissionMgmtTest::GenerateCAKeys()
     GenerateSecurityGroupKey(consumerBus, consumerAdminGroupAuthority);
 }
 
+static AuthListener* GenAuthListener(const char* keyExchange) {
+    if (strstr(keyExchange, "ECDHE_PSK")) {
+        qcc::String psk("38347892FFBEF5B2442AEDE9E53C4B32");
+        return new DefaultECDHEAuthListener(reinterpret_cast<const uint8_t*>(psk.data()), psk.size());
+    }
+    return new DefaultECDHEAuthListener();
+}
+
 void BasePermissionMgmtTest::EnableSecurity(const char* keyExchange)
 {
+    if (strstr(keyExchange, "ECDHE_PSK")) {
+    }
     delete adminKeyListener;
-    adminKeyListener = new ECDHEKeyXListener(ECDHEKeyXListener::RUN_AS_ADMIN);
+    adminKeyListener = GenAuthListener(keyExchange);
     adminBus.EnablePeerSecurity(keyExchange, adminKeyListener, NULL, true);
     adminProxyBus.EnablePeerSecurity(keyExchange, adminKeyListener, NULL, true);
     delete serviceKeyListener;
-    serviceKeyListener = new ECDHEKeyXListener(ECDHEKeyXListener::RUN_AS_SERVICE);
+    serviceKeyListener = GenAuthListener(keyExchange);
     serviceBus.EnablePeerSecurity(keyExchange, serviceKeyListener, NULL, false);
     delete consumerKeyListener;
-    consumerKeyListener = new ECDHEKeyXListener(ECDHEKeyXListener::RUN_AS_CONSUMER);
+    consumerKeyListener = GenAuthListener(keyExchange);
     consumerBus.EnablePeerSecurity(keyExchange, consumerKeyListener, NULL, false);
     delete remoteControlKeyListener;
-    remoteControlKeyListener = new ECDHEKeyXListener(ECDHEKeyXListener::RUN_AS_CONSUMER_DELEGATE);
+    remoteControlKeyListener = GenAuthListener(keyExchange);
     remoteControlBus.EnablePeerSecurity(keyExchange, remoteControlKeyListener, NULL, false);
     authMechanisms = keyExchange;
 }
