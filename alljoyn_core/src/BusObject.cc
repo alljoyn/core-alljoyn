@@ -629,6 +629,29 @@ QStatus BusObject::Signal(const char* destination,
         return ER_BUS_SECURITY_NOT_ENABLED;
     }
 
+    if (signalMember.isSessioncastSignal ||
+        signalMember.isSessionlessSignal ||
+        signalMember.isUnicastSignal ||
+        signalMember.isGlobalBroadcastSignal) {
+        // Enforce signal type, since signal type was explicitly set.
+        if ((sessionId != 0) && !signalMember.isSessioncastSignal) {
+            QCC_LogError(ER_INVALID_SIGNAL_EMISSION_TYPE, ("Attempt to send a sessioncast signal when %s is not sessioncast", signalMember.name.c_str()));
+            return ER_INVALID_SIGNAL_EMISSION_TYPE;
+        }
+        if ((flags & ALLJOYN_FLAG_SESSIONLESS) && !signalMember.isSessionlessSignal) {
+            QCC_LogError(ER_INVALID_SIGNAL_EMISSION_TYPE, ("Attempt to send a sessionless signal when %s is not sessionless", signalMember.name.c_str()));
+            return ER_INVALID_SIGNAL_EMISSION_TYPE;
+        }
+        if ((destination != NULL) && !signalMember.isUnicastSignal) {
+            QCC_LogError(ER_INVALID_SIGNAL_EMISSION_TYPE, ("Attempt to send a unicast signal when %s is not unicast", signalMember.name.c_str()));
+            return ER_INVALID_SIGNAL_EMISSION_TYPE;
+        }
+        if ((flags & ALLJOYN_FLAG_GLOBAL_BROADCAST) && !signalMember.isGlobalBroadcastSignal) {
+            QCC_LogError(ER_INVALID_SIGNAL_EMISSION_TYPE, ("Attempt to send a global broadcast signal when %s is not global broadcast", signalMember.name.c_str()));
+            return ER_INVALID_SIGNAL_EMISSION_TYPE;
+        }
+    }
+
     std::set<SessionId> ids;
     if (sessionId != SESSION_ID_ALL_HOSTED) {
         ids.insert(sessionId);

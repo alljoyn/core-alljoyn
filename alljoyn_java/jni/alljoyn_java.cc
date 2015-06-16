@@ -10829,7 +10829,10 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_setMemberDes
         return NULL;
     }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic warning "-Wdeprecated-declarations"
     QStatus status = intf->SetMemberDescription(member.c_str(), desc.c_str(), isSessionless);
+#pragma clang diagnostic pop
     return JStatus(status);
 }
 
