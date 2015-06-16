@@ -106,6 +106,26 @@ typedef enum AJNAnnounceFlag{
  */
 - (QStatus)cancelSessionlessMessageWithMessage:(const AJNMessage *)message;
 
+/**
+ * Change the announce flag for an already added interface. Changes in the
+ * announce flag are not visible to other devices till Announce is called.
+ *
+ * @see AboutObj::Announce()
+ *
+ * @param[in] iface InterfaceDescription for the interface you wish to set
+ *                  the the announce flag.
+ * @param[in] isAnnounced This interface should be part of the Announce signal
+ *                        UNANNOUNCED - this interface will not be part of the Announce
+ *                                      signal
+ *                        ANNOUNCED - this interface will be part of the Announce
+ *                                    signal.
+ * @return
+ *  - #ER_OK if successful
+ *  - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the interface is not part of the
+ *                                     bus object.
+ */
+- (QStatus)setAnnounceFlagForInterface:(AJNInterfaceDescription *)iface value:(AJNAnnounceFlag)flag;
+
 @end
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -135,5 +155,7 @@ typedef enum AJNAnnounceFlag{
 - (void)setDescription:(NSString*)description inLanguage:(NSString*)language;
 
 - (void)setDescriptionTranslator:(id<AJNTranslator>)translator;
+
+- (QStatus)setAnnounceFlagForInterface:(AJNInterfaceDescription *)iface value:(AJNAnnounceFlag)flag;
 
 @end

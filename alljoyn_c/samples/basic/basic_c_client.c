@@ -26,6 +26,7 @@
 #include <alljoyn_c/AjAPI.h>
 
 #include <assert.h>
+#include <limits.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -54,18 +55,21 @@ static QCC_BOOL s_joinComplete = QCC_FALSE;
 static alljoyn_sessionid s_sessionId = 0;
 
 /* Static BusListener */
-static alljoyn_buslistener g_busListener;
+static alljoyn_buslistener g_busListener = NULL;
 
 static volatile sig_atomic_t g_interrupt = QCC_FALSE;
 
 static void CDECL_CALL SigIntHandler(int sig)
 {
+    QCC_UNUSED(sig);
     g_interrupt = QCC_TRUE;
 }
 
 /* FoundAdvertisedName callback */
 void AJ_CALL found_advertised_name(const void* context, const char* name, alljoyn_transportmask transport, const char* namePrefix)
 {
+    QCC_UNUSED(context);
+    QCC_UNUSED(transport);
     printf("found_advertised_name(name=%s, prefix=%s)\n", name, namePrefix);
     if (0 == strcmp(name, OBJECT_NAME)) {
         /* We found a remote bus that is advertising basic service's  well-known name so connect to it */
@@ -88,6 +92,7 @@ void AJ_CALL found_advertised_name(const void* context, const char* name, alljoy
 /* NameOwnerChanged callback */
 void AJ_CALL name_owner_changed(const void* context, const char* busName, const char* previousOwner, const char* newOwner)
 {
+    QCC_UNUSED(context);
     if (newOwner && (0 == strcmp(busName, OBJECT_NAME))) {
         printf("name_owner_changed: name=%s, oldOwner=%s, newOwner=%s\n",
                busName,
@@ -97,12 +102,14 @@ void AJ_CALL name_owner_changed(const void* context, const char* busName, const 
 }
 
 /** Main entry point */
-/** TODO: Make this C89 compatible. */
-int CDECL_CALL main(int argc, char** argv, char** envArg)
+int CDECL_CALL main(int argc, char** argv)
 {
     QStatus status = ER_OK;
     char* connectArgs = NULL;
     alljoyn_interfacedescription testIntf = NULL;
+    unsigned long timeoutMs = ULONG_MAX;
+    unsigned long timeMs = 0;
+
     /* Create a bus listener */
     alljoyn_buslistener_callbacks callbacks = {
         NULL,
@@ -114,6 +121,20 @@ int CDECL_CALL main(int argc, char** argv, char** envArg)
         NULL,
         NULL
     };
+
+    if (argc == 2) {
+        char* stopString = NULL;
+        /* Multiply by 1000 to convert seconds to milliseconds */
+        timeoutMs = strtol(argv[1], &stopString, 10) * 1000;
+        if ((timeoutMs == 0) || (stopString[0] != '\0')) {
+            printf("Parameter was not valid, please provide a valid integer timeout in seconds or do not provide a parameter to never time out.\n");
+            return ER_BAD_ARG_1;
+        }
+    } else if (argc > 2) {
+        printf("This app only accepts a single parameter, an integer connection timeout in seconds. For an unlimited timeout, do not provide a parameter.\n");
+        return ER_BAD_ARG_COUNT;
+    }
+
 
     if (alljoyn_init() != ER_OK) {
         return 1;
@@ -132,10 +153,15 @@ int CDECL_CALL main(int argc, char** argv, char** envArg)
     signal(SIGINT, SigIntHandler);
 
     /* Create message bus */
-    g_msgBus = alljoyn_busattachment_create("myApp", QCC_TRUE);
+    if (status == ER_OK) {
+        g_msgBus = alljoyn_busattachment_create("myApp", QCC_TRUE);
+    }
 
     /* Add org.alljoyn.Bus.method_sample interface */
-    status = alljoyn_busattachment_createinterface(g_msgBus, INTERFACE_NAME, &testIntf);
+    if (status == ER_OK) {
+        status = alljoyn_busattachment_createinterface(g_msgBus, INTERFACE_NAME, &testIntf);
+    }
+
     if (status == ER_OK) {
         printf("Interface Created.\n");
         alljoyn_interfacedescription_addmember(testIntf, ALLJOYN_MESSAGE_METHOD_CALL, "cat", "ss",  "s", "inStr1,inStr2,outStr", 0);
@@ -165,7 +191,9 @@ int CDECL_CALL main(int argc, char** argv, char** envArg)
         }
     }
 
-    g_busListener = alljoyn_buslistener_create(&callbacks, NULL);
+    if (status == ER_OK) {
+        g_busListener = alljoyn_buslistener_create(&callbacks, NULL);
+    }
 
     /* Register a bus listener in order to get discovery indications */
     if (ER_OK == status) {
@@ -182,15 +210,21 @@ int CDECL_CALL main(int argc, char** argv, char** envArg)
     }
 
     /* Wait for join session to complete */
-    while (s_joinComplete == QCC_FALSE && g_interrupt == QCC_FALSE) {
+    while ((status == ER_OK) && (s_joinComplete == QCC_FALSE) && (g_interrupt == QCC_FALSE) && (timeMs < timeoutMs)) {
 #ifdef _WIN32
         Sleep(10);
 #else
-        usleep(100 * 1000);
+        usleep(10 * 1000);
 #endif
+        timeMs += 10;
     }
 
-    if (status == ER_OK && g_interrupt == QCC_FALSE) {
+    if (timeMs >= timeoutMs) {
+        status = ER_BUS_ESTABLISH_FAILED;
+        printf("Failed to connect before timeout (%s)\n", QCC_StatusText(status));
+    }
+
+    if ((status == ER_OK) && (g_interrupt == QCC_FALSE)) {
         alljoyn_message reply;
         alljoyn_msgarg inputs;
         size_t numArgs;
@@ -229,7 +263,9 @@ int CDECL_CALL main(int argc, char** argv, char** envArg)
     }
 
     /* Deallocate bus listener */
-    alljoyn_buslistener_destroy(g_busListener);
+    if (g_busListener) {
+        alljoyn_buslistener_destroy(g_busListener);
+    }
 
     printf("basic client exiting with status %d (%s)\n", status, QCC_StatusText(status));
 

@@ -76,7 +76,7 @@ class Rule : public ajn::SessionListener, public ajn::MessageReceiver {
   private:
 
     /* From SessionListener */
-    virtual void SessionLost(ajn::SessionId sessionId);
+    virtual void SessionLost(ajn::SessionId sessionId, ajn::SessionListener::SessionLostReason reason);
 
     virtual void SessionMemberAdded(ajn::SessionId sessionId, const char*uniqueName);
 

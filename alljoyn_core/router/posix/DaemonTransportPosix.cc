@@ -380,6 +380,7 @@ QStatus DaemonTransport::StartListen(const char* listenSpec)
 
 QStatus DaemonTransport::StopListen(const char* listenSpec)
 {
+    QCC_UNUSED(listenSpec);
     return Thread::Stop();
 }
 

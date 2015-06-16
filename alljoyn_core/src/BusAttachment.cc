@@ -450,16 +450,22 @@ QStatus BusAttachment::Internal::TransportConnect(const char* requestedConnectSp
     }
 
     QStatus status = TransportConnect(requestedConnectSpec);
-    if (status != ER_OK && !router->IsDaemon() && (!requestedConnectSpec || strcmp(requestedConnectSpec, bundledConnectSpec))) {
+
+
+    if (status == ER_OK) {
+        actualConnectSpec = requestedConnectSpec;
+    } else if (!router->IsDaemon() && (!requestedConnectSpec || strcmp(requestedConnectSpec, bundledConnectSpec))) {
         /*
          * Try using the null transport to connect to a bundled daemon if there is one
          */
-        requestedConnectSpec = bundledConnectSpec;
-        status = TransportConnect(requestedConnectSpec);
+        QStatus bundledStatus = TransportConnect(bundledConnectSpec);
+
+        if (bundledStatus == ER_OK) {
+            actualConnectSpec = bundledConnectSpec;
+            status = bundledStatus;
+        }
     }
-    if (status == ER_OK) {
-        actualConnectSpec = requestedConnectSpec;
-    }
+
     return status;
 }
 
@@ -472,7 +478,7 @@ QStatus BusAttachment::Connect()
 #if (_WIN32_WINNT > 0x0603)
     const char* connectArgs = "npipe:";
 #else
-    const char* connectArgs = "tcp:addr=127.0.0.1,port=9956";
+    const char* connectArgs = "tcp:addr=127.0.0.1,port=9955";
 #endif
 #else
     const char* connectArgs = "unix:abstract=alljoyn";
@@ -1168,9 +1174,13 @@ QStatus BusAttachment::RemoveMatch(const char* rule)
     const ProxyBusObject& dbusObj = this->GetDBusProxyObj();
     QStatus status = dbusObj.MethodCall(org::freedesktop::DBus::InterfaceName, "RemoveMatch", args, numArgs, reply);
     if (ER_OK != status) {
-        QCC_LogError(status, ("%s.RemoveMatch returned ERROR_MESSAGE (error=%s)", org::freedesktop::DBus::InterfaceName, reply->GetErrorDescription().c_str()));
         if (strcmp(reply->GetErrorName(), "org.freedesktop.DBus.Error.MatchRuleNotFound") == 0) {
             status = ER_BUS_MATCH_RULE_NOT_FOUND;
+            QCC_DbgTrace(("%s.RemoveMatch returned org.freedesktop.DBus.Error.MatchRuleNotFound",
+                          org::freedesktop::DBus::InterfaceName));
+        } else {
+            QCC_LogError(status, ("%s.RemoveMatch returned ERROR_MESSAGE (error=%s)",
+                                  org::freedesktop::DBus::InterfaceName, reply->GetErrorDescription().c_str()));
         }
     }
     return status;
@@ -2296,8 +2306,6 @@ void BusAttachment::Internal::AllJoynSignalHandler(const InterfaceDescription::M
                         sessionListenersLock[i].Unlock(MUTEX_CONTEXT);
                         if (*pl) {
                             (*pl)->SessionLost(id, reason);
-                            /* For backward compatibility, call the older version of SessionLost too */
-                            (*pl)->SessionLost(id);
                         }
                         /* Automatically remove session listener upon sessionLost */
                         sessionListenersLock[i].Lock(MUTEX_CONTEXT);

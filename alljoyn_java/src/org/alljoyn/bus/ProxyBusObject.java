@@ -458,6 +458,7 @@ public class ProxyBusObject {
             map = getAllProperties(bus, returnType, InterfaceDescription.getName(iface));
         } catch (NoSuchMethodException e) {
             /* This will not happen */
+            System.err.println("Unexpected NoSuchMethodException for the GetAll method");
         }
         return map;
     }

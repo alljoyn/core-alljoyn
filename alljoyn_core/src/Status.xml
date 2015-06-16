@@ -277,6 +277,7 @@ Copyright AllSeen Alliance. All rights reserved.
   <status name="ER_INVALID_CONFIG" value="0x9129" comment="Invalid configuration item or combination of items detected"/>
   <status name="ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE" value="0x912a" comment="General error indicating the value given for an About Data field is invalid."/>
   <status name="ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE" value="0x912b" comment="Error indicating the AppId field is not a 128-bit bite array."/>
+  <status name="ER_BUS_TRANSPORT_ACCESS_DENIED" value="0x912c" comment="The transport denied the connection attempt because the application doesn't have the required permissions."/>
   <status name="ER_INVALID_CERTIFICATE" value="0x912c" comment="Invalid certificate"/>
   <status name="ER_CERTIFICATE_NOT_FOUND" value="0x912d" comment="Certificate not found"/>
   <status name="ER_DUPLICATE_CERTIFICATE" value="0x912e" comment="Duplicate Certificate found"/>
@@ -295,4 +296,5 @@ Copyright AllSeen Alliance. All rights reserved.
   <status name="ER_POLICY_NOT_NEWER" value="0x913b" comment="Installing permission policy not newer than existing policy"/>
   <status name="ER_MANIFEST_REJECTED" value="0x913c" comment="The manifest of the application was rejected."/>
   <status name="ER_INVALID_CERTIFICATE_USAGE" value="0x913d" comment="The certificate extended key usage is not Alljoyn specific."/>
+  <status name="ER_BUS_TRANSPORT_ACCESS_DENIED" value="0x912c" comment="The transport denied the connection attempt because the application doesn't have the required permissions."/>
 </status_block>

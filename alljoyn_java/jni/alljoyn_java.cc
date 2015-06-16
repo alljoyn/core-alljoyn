@@ -1768,8 +1768,6 @@ class JSessionListener : public SessionListener {
     JSessionListener(jobject jsessionListener);
     ~JSessionListener();
 
-    void SessionLost(SessionId sessionId);
-
     void SessionLost(SessionId sessionId, SessionListener::SessionLostReason reason);
 
     void SessionMemberAdded(SessionId sessionId, const char* uniqueName);
@@ -1781,7 +1779,6 @@ class JSessionListener : public SessionListener {
     JSessionListener& operator =(const JSessionListener& other);
 
     jweak jsessionListener;
-    jmethodID MID_sessionLost;
     jmethodID MID_sessionLostWithReason;
     jmethodID MID_sessionMemberAdded;
     jmethodID MID_sessionMemberRemoved;
@@ -3374,11 +3371,6 @@ JSessionListener::JSessionListener(jobject jlistener)
         return;
     }
 
-    MID_sessionLost = env->GetMethodID(clazz, "sessionLost", "(I)V");
-    if (!MID_sessionLost) {
-        QCC_LogError(ER_FAIL, ("JSessionListener::JSessionListener(): Can't find sessionLost(I) in SessionListener"));
-    }
-
     MID_sessionLostWithReason = env->GetMethodID(clazz, "sessionLost", "(II)V");
     if (!MID_sessionLostWithReason) {
         QCC_LogError(ER_FAIL, ("JSessionListener::JSessionListener(): Can't find sessionLost(II) in SessionListener"));
@@ -3412,57 +3404,6 @@ JSessionListener::~JSessionListener()
     }
 }
 
-/**
- * Handle the C++ SessionLost callback from the AllJoyn system.
- *
- * Called by the bus when an existing session becomes disconnected.
- *
- * This is a callback returning void, so we just need to translate the C++
- * formal parameters we got from AllJoyn into their Java counterparts; call the
- * corresponding Java method in the listener object using the helper method
- * env->CallVoidMethod().
- *
- * @param sessionId     Id of session that was lost.
- */
-void JSessionListener::SessionLost(SessionId sessionId)
-{
-    QCC_DbgPrintf(("JSessionListener::SessionLost(%u)", sessionId));
-
-    /*
-     * JScopedEnv will automagically attach the JVM to the current native
-     * thread.
-     */
-    JScopedEnv env;
-
-    /*
-     * Translate the C++ formal parameters into their JNI counterparts.
-     */
-    jint jsessionId = sessionId;
-
-    /*
-     * The weak global reference jsessionListener cannot be directly used.  We have to get
-     * a "hard" reference to it and then use that.  If you try to use a weak reference
-     * directly you will crash and burn.
-     */
-    jobject jo = env->NewLocalRef(jsessionListener);
-    if (!jo) {
-        QCC_LogError(ER_FAIL, ("JSessionListener::SessionLost(): Can't get new local reference to SessionListener"));
-        return;
-    }
-
-    /*
-     * This call out to the listener means that the sessionLost method must
-     * be MT-Safe.  This is implied by the definition of the listener.
-     */
-    QCC_DbgPrintf(("JSessionListener::SessionLost(): Call out to listener object and method"));
-    env->CallVoidMethod(jo, MID_sessionLost, jsessionId);
-    if (env->ExceptionCheck()) {
-        QCC_LogError(ER_FAIL, ("JSessionListener::SessionLost(): Exception"));
-        return;
-    }
-
-    QCC_DbgPrintf(("JSessionListener::SessionLost(): Return"));
-}
 /**
  * Handle the C++ SessionLost callback from the AllJoyn system.
  *

@@ -102,6 +102,7 @@ static void help()
 static void list_doors(alljoyn_busattachment bus, alljoyn_observer observer)
 {
     alljoyn_proxybusobject_ref proxyref;
+    QCC_UNUSED(bus);
     for (proxyref = alljoyn_observer_getfirst(observer); proxyref; proxyref = alljoyn_observer_getnext(observer, proxyref)) {
         char* location;
         QCC_BOOL isOpen;
@@ -126,6 +127,7 @@ static void list_doors(alljoyn_busattachment bus, alljoyn_observer observer)
 static alljoyn_proxybusobject_ref get_door_at_location(alljoyn_busattachment bus, alljoyn_observer observer, const char* find_location)
 {
     alljoyn_proxybusobject_ref proxyref;
+    QCC_UNUSED(bus);
     for (proxyref = alljoyn_observer_getfirst(observer); proxyref; proxyref = alljoyn_observer_getnext(observer, proxyref)) {
         char* location;
         alljoyn_proxybusobject proxy = alljoyn_proxybusobject_ref_get(proxyref);
@@ -333,7 +335,7 @@ static void properties_changed(alljoyn_proxybusobject proxy, const char* intf, c
     alljoyn_msgarg elems;
     char* location = NULL;
     struct _listener_ctx* ctx = (struct _listener_ctx*) context;
-
+    QCC_UNUSED(intf);
     printf("[listener] Door %s:%s has changed some properties.\n",
            alljoyn_proxybusobject_getuniquename(proxy), alljoyn_proxybusobject_getpath(proxy));
 
@@ -450,6 +452,7 @@ static void object_discovered(const void* context, alljoyn_proxybusobject_ref pr
 static void object_lost(const void* context, alljoyn_proxybusobject_ref proxyref)
 {
     alljoyn_proxybusobject proxy = alljoyn_proxybusobject_ref_get(proxyref);
+    QCC_UNUSED(context);
     printf("[listener] Door %s:%s no longer exists.\n\tLast known state for lost object:\n",
            alljoyn_proxybusobject_getuniquename(proxy), alljoyn_proxybusobject_getpath(proxy));
     print_door_state(proxy);
@@ -462,6 +465,7 @@ static void person_passed_through(const alljoyn_interfacedescription_member* mem
 {
     struct _listener_ctx* ctx = &listener_ctx; //alljoyn_c caveat: no way to pass a cookie into signal handlers.
     alljoyn_proxybusobject_ref proxyref = alljoyn_observer_get(ctx->observer, alljoyn_message_getsender(message), path);
+    QCC_UNUSED(member);
     if (proxyref) {
         QStatus status;
         char* location = NULL;
@@ -492,7 +496,7 @@ static void person_passed_through(const alljoyn_interfacedescription_member* mem
 }
 
 
-int main(int argc, char** argv)
+int CDECL_CALL main(void)
 {
     alljoyn_busattachment bus;
     alljoyn_observer obs;

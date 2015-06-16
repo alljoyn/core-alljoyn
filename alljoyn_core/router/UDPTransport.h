@@ -368,7 +368,13 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     qcc::Mutex m_listenSpecsLock;                                  /**< Mutex that protects m_listenSpecs */
 
     std::list<qcc::String> m_discovering;                          /**< Name prefixes the transport is looking for */
-    std::list<qcc::String> m_advertising;                          /**< Names the transport is advertising */
+
+    struct AdvEntry {
+        qcc::String name;                                          /** < The advertised name */
+        bool quietly;                                              /** < Whether the name is being advertised actively or quietly */
+        AdvEntry(qcc::String name, bool quietly) : name(name), quietly(quietly) { }
+    };
+    std::list<AdvEntry> m_advertising;                          /**< Names the transport is advertising */
     std::list<qcc::String> m_listening;                            /**< ListenSpecs on which the transport is listening */
     qcc::Mutex m_discoLock;                                        /**< Mutex that protects discovery and advertisement lists */
 
@@ -667,11 +673,6 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
         DISABLE_DISCOVERY  /**< A request to cancel a discovery has been received */
     };
 
-    enum AdvertiseOp {
-        ENABLE_ADVERTISEMENT,  /**< A request to start advertising has been received */
-        DISABLE_ADVERTISEMENT  /**< A request to cancel advertising has been received */
-    };
-
     enum ListenOp {
         START_LISTEN,  /**< A request to start listening has been received */
         STOP_LISTEN    /**< A request to stop listening has been received */
@@ -695,13 +696,30 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     bool NewDiscoveryOp(DiscoveryOp op, qcc::String namePrefix, bool& isFirst);
 
     /**
-     * @brief Add or remove an advertisement indication.
+     * @brief Add an advertisement indication.
      *
      * Called when the transport has received a new advertisement operation.
-     * This will either be an EnableAdvertisement() or DisbleAdvertisement()
-     * discriminated by the AdvertiseOp enum.
+     * This will be an EnableAdvertisement().
      *
-     * We want to keep a list of names that are currently being advertised.  The
+     * We want to keep a list of names and the type(quietly/actively)
+     * that are currently being advertised.  The
+     * presence of a non-zero size of this list indicates that at least one
+     * advertisement is in-process and the Name Service should be kept alive to
+     * respond to WHO_HAS queries.
+     *
+     * @return true if the list of advertisements was empty before the
+     *              operation.
+     */
+    bool NewAdvertiseOp(qcc::String name, bool quietly);
+
+    /**
+     * @brief Cancel an existing advertisement indication.
+     *
+     * Called when the transport has received a cancel advertisement operation.
+     * This will be an DisableAdvertisement().
+     *
+     * We want to keep a list of names and the type(quietly/actively)
+     * that are currently being advertised.  The
      * presence of a non-zero size of this list indicates that at least one
      * advertisement is in-process and the Name Service should be kept alive to
      * respond to WHO_HAS queries.
@@ -709,7 +727,9 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
      * @return true if the list of advertisements is empty as a result of the
      *              operation.
      */
-    bool NewAdvertiseOp(AdvertiseOp op, qcc::String name, bool& isFirst);
+    bool CancelAdvertiseOp(qcc::String name, bool& quietly);
+
+
 
     /**
      * @brief Add or remove a listen operation.

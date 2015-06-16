@@ -46,6 +46,17 @@ QStatus qcc::DeleteFile(qcc::String fileName)
     }
 }
 
+QStatus qcc::FileExists(const qcc::String& fileName)
+{
+    struct stat buf;
+
+    if (0 == stat(fileName.c_str(), &buf)) {
+        return ER_OK;
+    } else {
+        return ER_FAIL;
+    }
+}
+
 FileSource::FileSource(qcc::String fileName) :
     fd(open(fileName.c_str(), O_RDONLY)), event(new Event(fd, Event::IO_READ)), ownsFd(true), locked(false)
 {
@@ -89,8 +100,26 @@ FileSource::~FileSource()
     delete event;
 }
 
+QStatus FileSource::GetSize(int64_t& fileSize)
+{
+    if (0 > fd) {
+        return ER_INIT_FAILED;
+    }
+
+    struct stat buf = { };
+
+    if (0 > fstat(fd, &buf)) {
+        QCC_LogError(ER_FAIL, ("fstat returned error (%d)", errno));
+        return ER_FAIL;
+    }
+
+    fileSize = buf.st_size;
+    return ER_OK;
+}
+
 QStatus FileSource::PullBytes(void* buf, size_t reqBytes, size_t& actualBytes, uint32_t timeout)
 {
+    QCC_UNUSED(timeout);
     QCC_DbgTrace(("FileSource::PullBytes(buf = %p, reqBytes = %u, actualBytes = <>)",
                   buf, reqBytes));
     if (0 > fd) {

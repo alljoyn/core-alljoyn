@@ -52,6 +52,7 @@ RuleBusObject::RuleBusObject(BusAttachment* busAttachment, const char* path, Sim
 
 void RuleBusObject::addRule(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
     const ajn::MsgArg* args = 0;
     size_t numArgs = 0;
     msg->GetArgs(numArgs, args);
@@ -93,6 +94,7 @@ void RuleBusObject::addRule(const InterfaceDescription::Member* member, Message&
 
 void RuleBusObject::deleteAllRules(const InterfaceDescription::Member* member, Message& msg)
 {
+    QCC_UNUSED(member);
     LOGTHIS("Removing all rules");
     mBusAttachment->EnableConcurrentCallbacks();
     mRuleEngine->removeAllRules();

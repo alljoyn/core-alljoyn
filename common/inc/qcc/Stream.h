@@ -51,16 +51,6 @@ class Source {
     virtual ~Source() { }
 
     /**
-     * Reset a source.
-     *
-     * @param source   Source to be reset.
-     */
-    virtual void Reset(Source& source) {
-        QCC_UNUSED(source);
-        return;
-    }
-
-    /**
      * Pull bytes from the source.
      * The source is exhausted when ER_EOF is returned.
      *
@@ -188,23 +178,6 @@ class Sink {
     virtual Event& GetSinkEvent() { return Event::alwaysSet; }
 
     /**
-     * Enable write buffering
-     */
-    virtual QStatus EnableWriteBuffer() { return ER_NOT_IMPLEMENTED; }
-
-    /**
-     * Disable write buffering.
-     */
-    virtual QStatus DisableWriteBuffer() { return ER_OK; }
-
-    /**
-     * Flush any buffered write data to stream.
-     *
-     * @return ER_OK if successful.
-     */
-    virtual QStatus Flush() { return ER_OK; }
-
-    /**
      * Set the send timeout for this sink.
      *
      * @param sendTimeout   Send timeout in ms.
@@ -234,9 +207,10 @@ class NonBlockingStream : public Stream {
     /** Destructor */
     virtual ~NonBlockingStream() { }
 
-    /* Close the stream */
+    /** Close the stream */
     virtual void Close() { }
 };
+
 }  /* namespace */
 
 #endif

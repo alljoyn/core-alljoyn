@@ -19,6 +19,7 @@
 #include "ajTestCommon.h"
 
 #include <qcc/Environ.h>
+#include <qcc/String.h>
 #include <qcc/StringUtil.h>
 
 qcc::String ajn::getConnectArg(const char* envvar) {
@@ -27,7 +28,7 @@ qcc::String ajn::getConnectArg(const char* envvar) {
     /*
      * The test default is to prefer Named Pipe and fall back to bundled router (if Named Pipe is not supported by the OS).
      * Note that test execution can still override the preferred transport by setting BUS_ADDRESS.
-     * For example, you can issue a "set BUS_ADDRESS=tcp:addr=127.0.0.1,port=9956" before running the test.
+     * For example, you can issue a "set BUS_ADDRESS=tcp:addr=127.0.0.1,port=9955" before running the test.
      */
     return env->Find(envvar, "npipe:");
 #else
@@ -46,4 +47,35 @@ qcc::String ajn::getUniqueNamePrefix(const BusAttachment& bus) {
 
 void PrintTo(const QStatus& status, ::std::ostream* os) {
     *os << QCC_StatusText(status);
+}
+
+::std::ostream& operator<<(::std::ostream& os, const QStatus& status) {
+    return os << QCC_StatusText(status);
+}
+
+namespace qcc {
+void PrintTo(const String& s, ::std::ostream* os) {
+    *os << "\"" << s.c_str() << "\"";
+}
+}
+
+namespace ajn {
+::std::ostream& operator<<(::std::ostream& os, const BusEndpoint& ep) {
+    return os << "endpoint '" << ep->GetUniqueName().c_str() << "'";
+}
+::std::ostream& operator<<(::std::ostream& os, const AllJoynMessageType& type) {
+    // Extra WS courtesy of uncrustify
+    switch (type) {
+    case MESSAGE_INVALID:     return os << "INVALID";
+
+    case MESSAGE_METHOD_CALL: return os << "METHOD_CALL";
+
+    case MESSAGE_METHOD_RET:  return os << "METHOD_RET";
+
+    case MESSAGE_ERROR:       return os << "ERROR";
+
+    case MESSAGE_SIGNAL:      return os << "SIGNAL";
+    }
+    return os;
+}
 }

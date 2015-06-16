@@ -341,10 +341,8 @@ static void destroy_my_alljoyn_aboutlistener(my_about_listener* listener)
     }
 }
 
-int CDECL_CALL main(int argc, char** argv)
+int CDECL_CALL main(void)
 {
-    QCC_UNUSED(argc);
-    QCC_UNUSED(argv);
     /* Install SIGINT handler so Ctrl + C deallocates memory properly */
     signal(SIGINT, sig_int_handler);
 

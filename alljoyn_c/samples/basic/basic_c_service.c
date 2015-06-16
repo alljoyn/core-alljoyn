@@ -35,6 +35,7 @@
 #include <alljoyn_c/AjAPI.h>
 
 #include <assert.h>
+#include <limits.h>
 #include <signal.h>
 #include <stdio.h>
 #include <string.h>
@@ -65,18 +66,21 @@ static volatile sig_atomic_t g_interrupt = QCC_FALSE;
 
 static void CDECL_CALL SigIntHandler(int sig)
 {
+    QCC_UNUSED(sig);
     g_interrupt = QCC_TRUE;
 }
 
 /* ObjectRegistered callback */
 void AJ_CALL busobject_object_registered(const void* context)
 {
+    QCC_UNUSED(context);
     printf("ObjectRegistered has been called\n");
 }
 
 /* NameOwnerChanged callback */
 void AJ_CALL name_owner_changed(const void* context, const char* busName, const char* previousOwner, const char* newOwner)
 {
+    QCC_UNUSED(context);
     if (newOwner && (0 == strcmp(busName, OBJECT_NAME))) {
         printf("name_owner_changed: name=%s, oldOwner=%s, newOwner=%s\n",
                busName,
@@ -90,6 +94,7 @@ QCC_BOOL AJ_CALL accept_session_joiner(const void* context, alljoyn_sessionport 
                                        const char* joiner,  const alljoyn_sessionopts opts)
 {
     QCC_BOOL ret = QCC_FALSE;
+    QCC_UNUSED(context);
     if (sessionPort != SERVICE_PORT) {
         printf("Rejecting join attempt on unexpected session port %d\n", sessionPort);
     } else {
@@ -109,6 +114,7 @@ void AJ_CALL cat_method(alljoyn_busobject bus, const alljoyn_interfacedescriptio
     char* str2;
     /* Concatenate the two input strings and reply with the result. */
     char result[256] = { 0 };
+    QCC_UNUSED(member);
     status = alljoyn_msgarg_get(alljoyn_message_getarg(msg, 0), "s", &str1);
     if (ER_OK != status) {
         printf("Ping: Error reading alljoyn_message\n");
@@ -127,7 +133,7 @@ void AJ_CALL cat_method(alljoyn_busobject bus, const alljoyn_interfacedescriptio
 }
 
 /** Main entry point */
-int CDECL_CALL main(int argc, char** argv, char** envArg)
+int CDECL_CALL main(int argc, char** argv)
 {
     QStatus status = ER_OK;
     char* connectArgs = NULL;
@@ -150,6 +156,21 @@ int CDECL_CALL main(int argc, char** argv, char** envArg)
         NULL
     };
     alljoyn_sessionopts opts = NULL;
+    unsigned long timeoutMs = ULONG_MAX;
+    unsigned long timeMs = 0;
+
+    if (argc == 2) {
+        char* stopString = NULL;
+        /* Multiply by 1000 to convert seconds to milliseconds */
+        timeoutMs = strtol(argv[1], &stopString, 10) * 1000;
+        if ((timeoutMs == 0) || (stopString[0] != '\0')) {
+            printf("Parameter was not valid, please provide a valid integer timeout in seconds or do not provide a parameter to never time out.\n");
+            return ER_BAD_ARG_1;
+        }
+    } else if (argc > 2) {
+        printf("This app only accepts a single parameter, an integer connection timeout in seconds. For an unlimited timeout, do not provide a parameter.\n");
+        return ER_BAD_ARG_COUNT;
+    }
 
     if (alljoyn_init() != ER_OK) {
         return 1;
@@ -168,7 +189,9 @@ int CDECL_CALL main(int argc, char** argv, char** envArg)
     signal(SIGINT, SigIntHandler);
 
     /* Create message bus */
-    g_msgBus = alljoyn_busattachment_create("myApp", QCC_TRUE);
+    if (status == ER_OK) {
+        g_msgBus = alljoyn_busattachment_create("myApp", QCC_TRUE);
+    }
 
     if (g_msgBus != NULL) {
         /* Add org.alljoyn.Bus.method_sample interface */
@@ -273,16 +296,20 @@ int CDECL_CALL main(int argc, char** argv, char** envArg)
             }
         }
 
-        if (ER_OK == status) {
-            while (g_interrupt == QCC_FALSE) {
-    #ifdef _WIN32
-                Sleep(100);
-    #else
-                usleep(100 * 1000);
-    #endif
-            }
+        while ((status == ER_OK) && (g_interrupt == QCC_FALSE) && (timeMs < timeoutMs)) {
+#ifdef _WIN32
+            Sleep(10);
+#else
+            usleep(10 * 1000);
+#endif
+            timeMs += 10;
+        }
+
+        if (timeMs >= timeoutMs) {
+            printf("Exiting as timeout has expired\n");
         }
     }
+
     /* Deallocate sessionopts */
     if (opts) {
         alljoyn_sessionopts_destroy(opts);

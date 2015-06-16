@@ -61,8 +61,8 @@ QStatus AJ_CALL Crypto_ECC_OldEncoding::ReEncode(const ECCPublicKey* newenc, ECC
 {
     affine_point_t ap;
     ap.infinity = 0;
-    binary_to_bigval(newenc->x, &ap.x, sizeof(newenc->x));
-    binary_to_bigval(newenc->y, &ap.y, sizeof(newenc->y));
+    binary_to_bigval(newenc->GetX(), &ap.x, newenc->GetCoordinateSize());
+    binary_to_bigval(newenc->GetY(), &ap.y, newenc->GetCoordinateSize());
     U32ArrayToU8BeArray((const uint32_t*) &ap, U32_AFFINEPOINT_SZ, (uint8_t*) oldenc);
     return ER_OK;
 }
@@ -72,9 +72,15 @@ QStatus AJ_CALL Crypto_ECC_OldEncoding::ReEncode(const ECCPublicKeyOldEncoding* 
     affine_point_t ap;
     ap.infinity = 0;
     U8BeArrayToU32Array((const uint8_t*) oldenc, sizeof(ECCPublicKeyOldEncoding), (uint32_t*) &ap);
-    bigval_to_binary(&ap.x, newenc->x, sizeof(newenc->x));
-    bigval_to_binary(&ap.y, newenc->y, sizeof(newenc->y));
-    return ER_OK;
+    const size_t coordinateSize = newenc->GetCoordinateSize();
+    uint8_t* X = new uint8_t[coordinateSize];
+    uint8_t* Y = new uint8_t[coordinateSize];
+    bigval_to_binary(&ap.x, X, coordinateSize);
+    bigval_to_binary(&ap.y, Y, coordinateSize);
+    QStatus status = newenc->Import(X, coordinateSize, Y, coordinateSize);
+    delete[] X;
+    delete[] Y;
+    return status;
 }
 
 } /*namespace qcc*/

@@ -699,7 +699,7 @@ QStatus KeyExchanger::ValidateRemoteVerifierVariant(const char* peerName, MsgArg
     if (status != ER_OK) {
         return status;
     }
-    *authorized = (memcmp(remoteVerifier, computedRemoteVerifier, sizeof(computedRemoteVerifier)) == 0);
+    *authorized = (Crypto_Compare(remoteVerifier, computedRemoteVerifier, sizeof(computedRemoteVerifier)) == 0);
     if (!IsInitiator()) {
         hashUtil.Update(remoteVerifier, remoteVerifierLen);
     }
@@ -1008,7 +1008,7 @@ QStatus KeyExchangerECDHE_PSK::ValidateRemoteVerifierVariant(const char* peerNam
     if (status != ER_OK) {
         return status;
     }
-    *authorized = (memcmp(remoteVerifier, computedRemoteVerifier, sizeof(computedRemoteVerifier)) == 0);
+    *authorized = (Crypto_Compare(remoteVerifier, computedRemoteVerifier, sizeof(computedRemoteVerifier)) == 0);
     if (!IsInitiator()) {
         hashUtil.Update(remoteVerifier, remoteVerifierLen);
     }
@@ -1114,7 +1114,7 @@ QStatus KeyExchangerECDHE_ECDSA::RequestCredentialsCB(const char* peerName)
         SetSecretExpiration(0xFFFFFFFF);      /* never expired */
     }
     qcc::String pemCertChain = creds.GetCertChain();
-    QStatus status = CertificateX509::DecodePrivateKeyPEM(creds.GetPrivateKey(), (uint8_t*) &issuerPrivateKey, sizeof(ECCPrivateKey));
+    QStatus status = CertificateX509::DecodePrivateKeyPEM(creds.GetPrivateKey(), &issuerPrivateKey);
     if (status != ER_OK) {
         QCC_DbgPrintf(("RequestCredentialsCB failed to parse the private key PEM"));
         return status;

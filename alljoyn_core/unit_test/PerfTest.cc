@@ -311,8 +311,8 @@ TEST_F(PerfTest, ErrorMsg_does_not_exist_interface) {
 
     if (status == ER_BUS_REPLY_IS_ERROR_MESSAGE) {
         String errMsg;
-        reply->GetErrorName(&errMsg);
-        EXPECT_STREQ("Unknown bus name: org.alljoyn.alljoyn_test.Interface1", errMsg.c_str());
+        const char* errName = reply->GetErrorName(&errMsg);
+        EXPECT_STREQ("org.alljoyn.Bus.Blocked", errName);
     }
 }
 

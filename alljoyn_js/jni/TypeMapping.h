@@ -100,6 +100,7 @@ template <class T> T* ToNativeObject(Plugin& plugin, const NPVariant& value, boo
  */
 template <class T> void ToNativeObject(Plugin& plugin, T* value, NPVariant& variant)
 {
+    QCC_UNUSED(plugin);
     if (value && value->objectValue) {
         NPN_RetainObject(value->objectValue);
         OBJECT_TO_NPVARIANT(value->objectValue, variant);

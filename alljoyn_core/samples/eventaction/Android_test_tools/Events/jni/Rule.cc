@@ -234,7 +234,7 @@ void Rule::modifyActionSessionName(const char*sessionName)
 
 
 /* From SessionListener */
-void Rule::SessionLost(ajn::SessionId sessionId)
+void Rule::SessionLost(ajn::SessionId sessionId, ajn::SessionListener::SessionLostReason reason)
 {
     LOGTHIS("Unable to communicate with action device, lost the session.");
     mSessionId = 0;

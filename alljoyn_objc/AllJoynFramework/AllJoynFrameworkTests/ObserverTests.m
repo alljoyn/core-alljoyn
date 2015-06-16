@@ -613,19 +613,19 @@ typedef BOOL (^verifyObjects)();
     [provider registerObjectWithName:kObserverTestsObjectA];
     [provider registerObjectWithName:kObserverTestsObjectB];
     [provider registerObjectWithName:kObserverTestsObjectBoth];
-    STAssertTrue(YES == [self waitForBlock:allListeners msToWait:MAX_WAIT_MS], @"Not all objects were discovered correctly");
+    XCTAssertTrue(YES == [self waitForBlock:allListeners msToWait:MAX_WAIT_MS], @"Not all objects were discovered correctly");
 
     // 2. Test Observer::Get() and the proxy creation functionality
     AJNProxyBusObject *proxy = [obsA getProxyForUniqueName:provider.bus.uniqueName
                                                 objectPath:[NSString stringWithFormat:@"%@%@",kPathPrefix,kObserverTestsObjectA]];
-    STAssertNotNil(proxy, @"Proxy object for justA not found");
+    XCTAssertNotNil(proxy, @"Proxy object for justA not found");
     NSArray *interfaces = [proxy interfaces];
-    STAssertTrue(2 == [interfaces count], @"Not getting correct number of interfaces from proxy justA");
+    XCTAssertTrue(2 == [interfaces count], @"Not getting correct number of interfaces from proxy justA");
     proxy = [obsA getProxyForUniqueName:provider.bus.uniqueName
                              objectPath:[NSString stringWithFormat:@"%@%@",kPathPrefix,kObserverTestsObjectBoth]];
-    STAssertNotNil(proxy, @"Proxy object for both not found");
+    XCTAssertNotNil(proxy, @"Proxy object for both not found");
     interfaces = [proxy interfaces];
-    STAssertTrue(3 == [interfaces count], @"Not getting correct number of interfaces from proxy both");
+    XCTAssertTrue(3 == [interfaces count], @"Not getting correct number of interfaces from proxy both");
 
     // Verify that we can indeed perform method calls
     AJNMessage *reply;
@@ -634,24 +634,24 @@ typedef BOOL (^verifyObjects)();
                            onInterfaceWithName:kObserverTestsInterfaceNameA
                                  withArguments:nil
                                    methodReply:&reply];
-    STAssertTrue(ER_OK == status, @"Message call failed for interface A on proxy object both");
+    XCTAssertTrue(ER_OK == status, @"Message call failed for interface A on proxy object both");
     NSArray *arguments = reply.arguments;
-    STAssertTrue(2 == [arguments count], @"Method reply does not contain correct number of arguments");
+    XCTAssertTrue(2 == [arguments count], @"Method reply does not contain correct number of arguments");
 
     AJNMessageArgument *arg = [arguments objectAtIndex:0];
     AJNMessageArgument *arg2 = [arguments objectAtIndex:1];
     const char *objectPath;
     const char *busname;
     status = [arg value:@"s",&busname];
-    STAssertTrue(ER_OK == status, @"Could not extract unique bus name from argument ");
+    XCTAssertTrue(ER_OK == status, @"Could not extract unique bus name from argument ");
     NSString * uniqueBusName = [NSString stringWithUTF8String:busname];
     status = [arg2 value:@"s",&objectPath];
-    STAssertTrue(ER_OK == status, @"Could not extract object path from argument ");
+    XCTAssertTrue(ER_OK == status, @"Could not extract object path from argument ");
     NSString *objPath = [NSString stringWithUTF8String:objectPath];
-    STAssertTrue(YES == [provider.bus.uniqueName isEqualToString:uniqueBusName], @"Method reply does not contain correct unique bus name");
+    XCTAssertTrue(YES == [provider.bus.uniqueName isEqualToString:uniqueBusName], @"Method reply does not contain correct unique bus name");
 
     NSString *origObjPath = [NSString stringWithFormat:@"%@%@",kPathPrefix,kObserverTestsObjectBoth];
-    STAssertTrue(YES == [objPath isEqualToString:origObjPath] , @"Method reply does not contain correct path");
+    XCTAssertTrue(YES == [objPath isEqualToString:origObjPath] , @"Method reply does not contain correct path");
 
     // 3. Remove "justA" from the bus
     [listenerA expectInvocations:1];
@@ -659,7 +659,7 @@ typedef BOOL (^verifyObjects)();
     [listenerAB expectInvocations:0];
 
     [provider unregisterObjectWithName:kObserverTestsObjectA];
-    STAssertTrue(YES == [self waitForBlock:allListeners msToWait:MAX_WAIT_MS], @"justA not detected as lost correctly");
+    XCTAssertTrue(YES == [self waitForBlock:allListeners msToWait:MAX_WAIT_MS], @"justA not detected as lost correctly");
 
     // 4. Remove "both" from the bus
     [listenerA expectInvocations:1];
@@ -667,13 +667,13 @@ typedef BOOL (^verifyObjects)();
     [listenerAB expectInvocations:1];
 
     [provider unregisterObjectWithName:kObserverTestsObjectBoth];
-    STAssertTrue(YES == [self waitForBlock:allListeners msToWait:MAX_WAIT_MS], @"Object both not detected as lost correctly");
+    XCTAssertTrue(YES == [self waitForBlock:allListeners msToWait:MAX_WAIT_MS], @"Object both not detected as lost correctly");
 
     // Count the number of proxies left in the Observers
     // here should be 0 in A, 1 in B, 0 in AB
-    STAssertTrue(0 == [self countProxies:obsA], @"Observer A has still proxies in the cache");
-    STAssertTrue(1 == [self countProxies:obsB], @"Observer B schould have only 1 proxy in the cache");
-    STAssertTrue(0 == [self countProxies:obsAB], @"Observer AB has still proxies in the cache");
+    XCTAssertTrue(0 == [self countProxies:obsA], @"Observer A has still proxies in the cache");
+    XCTAssertTrue(1 == [self countProxies:obsB], @"Observer B schould have only 1 proxy in the cache");
+    XCTAssertTrue(0 == [self countProxies:obsAB], @"Observer AB has still proxies in the cache");
 
     // Remove All listeners
     [obsA unregisterAllObserverListeners];
@@ -695,7 +695,7 @@ typedef BOOL (^verifyObjects)();
                 (1 == [self countProxies:obsB]) &&
                 (1 == [self countProxies:obsAB]));
     };
-    STAssertTrue(YES == [self waitForBlock:numberOfProxies msToWait:1000], @"incorrect number of proxies detected");
+    XCTAssertTrue(YES == [self waitForBlock:numberOfProxies msToWait:1000], @"incorrect number of proxies detected");
 
     // Reinstate listeners & test triggerOnExisting functionality
     [listenerA reset];
@@ -708,7 +708,7 @@ typedef BOOL (^verifyObjects)();
     [obsA registerObserverListener:listenerA triggerOnExisting:YES];
     [obsB registerObserverListener:listenerB triggerOnExisting:YES];
     [obsAB registerObserverListener:listenerAB triggerOnExisting:YES];
-    STAssertTrue(YES == [self waitForBlock:allListeners msToWait:MAX_WAIT_MS], @"Not all objects where discovered correctly");
+    XCTAssertTrue(YES == [self waitForBlock:allListeners msToWait:MAX_WAIT_MS], @"Not all objects where discovered correctly");
 
     // 5. Test multiple listeners for same observer
     ObserverListener *listenerB2 = [[ObserverListener alloc]initWithBusAttachment:consumer.bus];
@@ -727,12 +727,12 @@ typedef BOOL (^verifyObjects)();
     [listenerB2 expectInvocations:1];
     [listenerAB expectInvocations:0];
     [provider registerObjectWithName:kObserverTestsObjectB];
-    STAssertTrue(YES == [self waitForBlock:allListeners2 msToWait:MAX_WAIT_MS], @"Not detected discovery correctly");
+    XCTAssertTrue(YES == [self waitForBlock:allListeners2 msToWait:MAX_WAIT_MS], @"Not detected discovery correctly");
 
     // Are all objects back where they belong?
-    STAssertTrue(2 == [self countProxies:obsA], @"Observer A has incorrect number of proxies");
-    STAssertTrue(2 == [self countProxies:obsB], @"Observer B has incorrect number of proxies");
-    STAssertTrue(1 == [self countProxies:obsAB], @"Observer AB has incorrect number of proxies");
+    XCTAssertTrue(2 == [self countProxies:obsA], @"Observer A has incorrect number of proxies");
+    XCTAssertTrue(2 == [self countProxies:obsB], @"Observer B has incorrect number of proxies");
+    XCTAssertTrue(1 == [self countProxies:obsAB], @"Observer AB has incorrect number of proxies");
 
     // 6. Test multiple observers for the same set of interfaces
     AJNObserver *obsB2 = [[AJNObserver alloc]initWithProxyType:[TestJustBProxy class]
@@ -746,7 +746,7 @@ typedef BOOL (^verifyObjects)();
     [listenerB2 expectInvocations:2];
     [listenerAB expectInvocations:0];
     [obsB2 registerObserverListener:listenerB2 triggerOnExisting:YES];
-    STAssertTrue(YES == [self waitForBlock:allListeners2 msToWait:MAX_WAIT_MS], @"Not detected discovery correctly");
+    XCTAssertTrue(YES == [self waitForBlock:allListeners2 msToWait:MAX_WAIT_MS], @"Not detected discovery correctly");
     [obsA unregisterAllObserverListeners];
     [obsB unregisterAllObserverListeners];
     [obsB2 unregisterAllObserverListeners];
@@ -808,36 +808,36 @@ typedef BOOL (^verifyObjects)();
         return (0 == listener.counter);
     };
 
-    STAssertTrue(YES == [self waitForBlock:verifylistener msToWait:MAX_WAIT_MS], @"Objects were not discovered correctly");
+    XCTAssertTrue(YES == [self waitForBlock:verifylistener msToWait:MAX_WAIT_MS], @"Objects were not discovered correctly");
 
     // Now let doubtful kill the connection
     // First make sure doubtful has a connection to begin with.
     verifyObjects verifySessions = ^BOOL() {
         return (YES == [doubtful hasSessionWith:consumer]);
     };
-    STAssertTrue(YES == [self waitForBlock:verifySessions msToWait:MAX_WAIT_MS], @"Session not closed properly");
+    XCTAssertTrue(YES == [self waitForBlock:verifySessions msToWait:MAX_WAIT_MS], @"Session not closed properly");
 
     [listener expectInvocations:1];
     [doubtful closeSessionForParticipant:consumer];
-    STAssertTrue(YES == [self waitForBlock:verifylistener msToWait:MAX_WAIT_MS], @"Objects were not discovered correctly");
+    XCTAssertTrue(YES == [self waitForBlock:verifylistener msToWait:MAX_WAIT_MS], @"Objects were not discovered correctly");
 
     verifyObjects verifyProxies = ^BOOL() {
         return (1 == [self countProxies:obs]);
     };
     // there should only be one object left
-    STAssertTrue(YES == [self waitForBlock:verifyProxies msToWait:MAX_WAIT_MS], @"Number of remaining proxies is not  correct");
+    XCTAssertTrue(YES == [self waitForBlock:verifyProxies msToWait:MAX_WAIT_MS], @"Number of remaining proxies is not  correct");
 
     // unannounce and reannounce, connection should be restored
     [listener expectInvocations:1];
     [doubtful unregisterObjectWithName:kObserverTestsObjectBoth];
     [doubtful registerObjectWithName:kObserverTestsObjectBoth];
-    STAssertTrue(YES == [self waitForBlock:verifylistener msToWait:MAX_WAIT_MS], @"Objects were not discovered correctly");
+    XCTAssertTrue(YES == [self waitForBlock:verifylistener msToWait:MAX_WAIT_MS], @"Objects were not discovered correctly");
 
     // now there should only be two objects
     verifyObjects verifyBothProxies = ^BOOL() {
         return (2 == [self countProxies:obs]);
     };
-    STAssertTrue(YES == [self waitForBlock:verifyBothProxies msToWait:MAX_WAIT_MS], @"Number of remaining proxies is not  correct");
+    XCTAssertTrue(YES == [self waitForBlock:verifyBothProxies msToWait:MAX_WAIT_MS], @"Number of remaining proxies is not  correct");
 
     [obs unregisterObserverListener:listener];
     obs = nil;
@@ -872,7 +872,7 @@ typedef BOOL (^verifyObjects)();
     [provider registerObjectWithName:kObserverTestsObjectBoth];
     [provider registerObjectWithName:kObserverTestsObjectBoth2];
 
-    STAssertTrue(YES == [self waitForBlock:verifylistener msToWait:MAX_WAIT_MS], @"Objects were not discovered correctly");
+    XCTAssertTrue(YES == [self waitForBlock:verifylistener msToWait:MAX_WAIT_MS], @"Objects were not discovered correctly");
 
     // Now create and destroy some observers
 
@@ -914,7 +914,7 @@ typedef BOOL (^verifyObjects)();
     [provider unregisterObjectWithName:kObserverTestsObjectBoth];
     [provider unregisterObjectWithName:kObserverTestsObjectBoth2];
 
-    STAssertTrue(YES == [self waitForBlock:verifylistener msToWait:MAX_WAIT_MS], @"Objects were not detected as lost correctly");
+    XCTAssertTrue(YES == [self waitForBlock:verifylistener msToWait:MAX_WAIT_MS], @"Objects were not detected as lost correctly");
 
     [obs unregisterObserverListener:listener];
     obs = nil;
@@ -953,7 +953,7 @@ typedef BOOL (^verifyObjects)();
     [provider registerObjectWithName:kObserverTestsObjectBoth];
     [provider registerObjectWithName:kObserverTestsObjectBoth2];
 
-    STAssertTrue(YES == [self waitForBlock:verifylistener msToWait:MAX_WAIT_MS], @"Objects were not discovered correctly");
+    XCTAssertTrue(YES == [self waitForBlock:verifylistener msToWait:MAX_WAIT_MS], @"Objects were not discovered correctly");
 
     [obs2 unregisterObserverListener:listener];
     obs2 = nil;
@@ -964,7 +964,7 @@ typedef BOOL (^verifyObjects)();
     [provider unregisterObjectWithName:kObserverTestsObjectBoth];
     [provider unregisterObjectWithName:kObserverTestsObjectBoth2];
 
-    STAssertTrue(YES == [self waitForBlock:verifylistener msToWait:MAX_WAIT_MS], @"Objects were not lost as expected");
+    XCTAssertTrue(YES == [self waitForBlock:verifylistener msToWait:MAX_WAIT_MS], @"Objects were not lost as expected");
 
     [obs unregisterObserverListener:listener];
     obs = nil;
@@ -1043,7 +1043,7 @@ typedef BOOL (^verifyObjects)();
                 (0 == listABtwo.counter));
     };
 
-    STAssertTrue(YES == [self waitForBlock:verifyAlllisteners msToWait:MAX_WAIT_MS], @"Objects were not detected correctly");
+    XCTAssertTrue(YES == [self waitForBlock:verifyAlllisteners msToWait:MAX_WAIT_MS], @"Objects were not detected correctly");
 
     verifyObjects verifyDiscoveredProxies = ^BOOL() {
         return ((4 == [self countProxies:obsAone])  &&
@@ -1053,7 +1053,7 @@ typedef BOOL (^verifyObjects)();
                 (4 == [self countProxies:obsBtwo])  &&
                 (2 == [self countProxies:obsABtwo]));
     };
-    STAssertTrue(YES == [self waitForBlock:verifyDiscoveredProxies msToWait:MAX_WAIT_MS], @"Number of proxies is not  correct");
+    XCTAssertTrue(YES == [self waitForBlock:verifyDiscoveredProxies msToWait:MAX_WAIT_MS], @"Number of proxies is not  correct");
 
     // Now drop all objects
     [listAone expectInvocations:4];
@@ -1070,7 +1070,7 @@ typedef BOOL (^verifyObjects)();
     [two unregisterObjectWithName:kObserverTestsObjectB];
     [two unregisterObjectWithName:kObserverTestsObjectBoth];
 
-    STAssertTrue(YES == [self waitForBlock:verifyAlllisteners msToWait:MAX_WAIT_MS], @"Objects were not detected as lost correctly");
+    XCTAssertTrue(YES == [self waitForBlock:verifyAlllisteners msToWait:MAX_WAIT_MS], @"Objects were not detected as lost correctly");
 
     verifyObjects verifyLostProxies = ^BOOL() {
         return ((0 == [self countProxies:obsAone])  &&
@@ -1080,7 +1080,7 @@ typedef BOOL (^verifyObjects)();
                 (0 == [self countProxies:obsBtwo])  &&
                 (0 == [self countProxies:obsABtwo]));
     };
-    STAssertTrue(YES == [self waitForBlock:verifyLostProxies msToWait:MAX_WAIT_MS], @"Number of proxies is not  correct");
+    XCTAssertTrue(YES == [self waitForBlock:verifyLostProxies msToWait:MAX_WAIT_MS], @"Number of proxies is not  correct");
 
     [obsAone unregisterObserverListener:listAone];
     [obsBone unregisterObserverListener:listBone];
@@ -1113,13 +1113,13 @@ typedef BOOL (^verifyObjects)();
     NSArray *mandIntf = [NSArray arrayWithObjects:[NSNull null], nil];
     NSArray *mandIntf2 = [NSArray arrayWithObjects:[NSNull null], [NSNull null], [NSNull null], [NSNull null], [NSNull null], [NSNull null], [NSNull null], [NSNull null], [NSNull null], [NSNull null],nil];
 
-    STAssertTrue(nil == [[AJNObserver alloc]initWithProxyType:[TestJustAProxy class]
+    XCTAssertTrue(nil == [[AJNObserver alloc]initWithProxyType:[TestJustAProxy class]
                                                 busAttachment:one.bus
                                           mandatoryInterfaces:mandIntf], @"Schould not be able to create observer for invalid interface");
-    STAssertTrue(nil == [[AJNObserver alloc]initWithProxyType:[TestJustAProxy class]
+    XCTAssertTrue(nil == [[AJNObserver alloc]initWithProxyType:[TestJustAProxy class]
                                                 busAttachment:one.bus
                                           mandatoryInterfaces:mandIntf2], @"Schould not be able to create observer with multiple invalid interfaces");
-    STAssertTrue(nil == [[AJNObserver alloc]initWithProxyType:[TestJustAProxy class]
+    XCTAssertTrue(nil == [[AJNObserver alloc]initWithProxyType:[TestJustAProxy class]
                                                 busAttachment:one.bus
                                           mandatoryInterfaces:nil], @"Schould not be able to create observer with missing interfaces");
 
@@ -1128,7 +1128,7 @@ typedef BOOL (^verifyObjects)();
     AJNObserver * obsA = [[AJNObserver alloc]initWithProxyType:[TestJustAProxy class]
                                                  busAttachment:one.bus
                                            mandatoryInterfaces:doubleIntfA];
-    STAssertTrue(nil != obsA, @"Schould be able to create observer with twice the same interface");
+    XCTAssertTrue(nil != obsA, @"Schould be able to create observer with twice the same interface");
 
     [one createObjectWithName:kObserverTestsObjectA];
     ObserverListener *listenerA = [[ObserverListener alloc]initWithBusAttachment:one.bus];
@@ -1143,18 +1143,18 @@ typedef BOOL (^verifyObjects)();
     [listenerA expectInvocations:1];
     [one registerObjectWithName:kObserverTestsObjectA];
 
-    STAssertTrue(YES == [self waitForBlock:checkListener msToWait:MAX_WAIT_MS], @"Object was not discovered correctly");
+    XCTAssertTrue(YES == [self waitForBlock:checkListener msToWait:MAX_WAIT_MS], @"Object was not discovered correctly");
 
     // Make sure we have only one proxy for the remote object implementing duplicate interfaces
     verifyObjects verifyProxies = ^BOOL() {
         return (1 == [self countProxies:obsA]);
     };
-    STAssertTrue(YES == [self waitForBlock:verifyProxies msToWait:MAX_WAIT_MS], @"Number of remaining proxies is not  correct");
+    XCTAssertTrue(YES == [self waitForBlock:verifyProxies msToWait:MAX_WAIT_MS], @"Number of remaining proxies is not  correct");
 
     // Should be triggered only once on object un-registration although we have duplicate interfaces
     [listenerA expectInvocations:1];
     [one unregisterObjectWithName:kObserverTestsObjectA];
-    STAssertTrue(YES == [self waitForBlock:checkListener msToWait:MAX_WAIT_MS], @"Object was not discovered as lost correctly");
+    XCTAssertTrue(YES == [self waitForBlock:checkListener msToWait:MAX_WAIT_MS], @"Object was not discovered as lost correctly");
     [obsA unregisterObserverListener:listenerA];
 
     obsA = nil;
@@ -1186,12 +1186,12 @@ typedef BOOL (^verifyObjects)();
         return (0 == listener.counter);
     };
 
-    STAssertTrue(YES == [self waitForBlock:verifylistener msToWait:MAX_WAIT_MS], @"Objects were not discovered correctly");
+    XCTAssertTrue(YES == [self waitForBlock:verifylistener msToWait:MAX_WAIT_MS], @"Objects were not discovered correctly");
 
     // Should be triggered twice on object un-registration as we registered the listener twice
     [listener expectInvocations:2];
     [provider unregisterObjectWithName:kObserverTestsObjectA];
-    STAssertTrue(YES == [self waitForBlock:verifylistener msToWait:MAX_WAIT_MS], @"Objects were not discovered as lost correctly");
+    XCTAssertTrue(YES == [self waitForBlock:verifylistener msToWait:MAX_WAIT_MS], @"Objects were not discovered as lost correctly");
 
     [obs unregisterObserverListener:listener];
 
@@ -1199,7 +1199,7 @@ typedef BOOL (^verifyObjects)();
     [listener expectInvocations:1];
     [provider registerObjectWithName:kObserverTestsObjectA];
 
-    STAssertTrue(YES == [self waitForBlock:verifylistener msToWait:MAX_WAIT_MS], @"Object was not re-discovered correctly");
+    XCTAssertTrue(YES == [self waitForBlock:verifylistener msToWait:MAX_WAIT_MS], @"Object was not re-discovered correctly");
 
     [obs unregisterObserverListener:listener];
     obs = nil;
@@ -1233,7 +1233,7 @@ typedef BOOL (^verifyObjects)();
         verifyObjects verifylistenerA = ^BOOL() {
             return (0 == listenerA.counter);
         };
-        STAssertTrue(YES == [self waitForBlock:verifylistenerA msToWait:MAX_WAIT_MS], @"Objects were not discovered correctly");
+        XCTAssertTrue(YES == [self waitForBlock:verifylistenerA msToWait:MAX_WAIT_MS], @"Objects were not discovered correctly");
         [obsA unregisterObserverListener:listenerA];
         obsA = nil;
 
@@ -1249,7 +1249,7 @@ typedef BOOL (^verifyObjects)();
         verifyObjects verifylistenerB = ^BOOL() {
             return (0 == listenerB.counter);
         };
-        STAssertTrue(YES == [self waitForBlock:verifylistenerB msToWait:MAX_WAIT_MS], @"Objects were not discovered correctly");
+        XCTAssertTrue(YES == [self waitForBlock:verifylistenerB msToWait:MAX_WAIT_MS], @"Objects were not discovered correctly");
         [obsB unregisterObserverListener:listenerB];
         obsB = nil;
     }
@@ -1269,7 +1269,7 @@ typedef BOOL (^verifyObjects)();
             return (0 == listenerA.counter);
         };
 
-        STAssertTrue(YES == [self waitForBlock:verifylistenerA msToWait:MAX_WAIT_MS], @"Objects were not discovered correctly");
+        XCTAssertTrue(YES == [self waitForBlock:verifylistenerA msToWait:MAX_WAIT_MS], @"Objects were not discovered correctly");
         [obsA unregisterObserverListener:listenerA];
         obsA = nil;
     }
@@ -1288,7 +1288,7 @@ typedef BOOL (^verifyObjects)();
         return (0 == listenerB.counter);
     };
 
-    STAssertTrue(YES == [self waitForBlock:verifylistenerB msToWait:MAX_WAIT_MS], @"Objects were not discovered correctly");
+    XCTAssertTrue(YES == [self waitForBlock:verifylistenerB msToWait:MAX_WAIT_MS], @"Objects were not discovered correctly");
     [obsB unregisterObserverListener:listenerB];
 
     [provider unregisterObjectWithName:kObserverTestsObjectA];

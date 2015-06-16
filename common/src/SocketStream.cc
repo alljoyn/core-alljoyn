@@ -34,7 +34,6 @@ using namespace qcc;
 
 #define QCC_MODULE "NETWORK"
 
-
 static int MakeSock(AddressFamily family, SocketType type)
 {
     SocketFd sock = qcc::INVALID_SOCKET_FD;
@@ -63,7 +62,6 @@ SocketStream::SocketStream(SocketFd sock) :
 {
 }
 
-
 SocketStream::SocketStream(AddressFamily family, SocketType type) :
     isConnected(false),
     sock(MakeSock(family, type)),
@@ -72,7 +70,6 @@ SocketStream::SocketStream(AddressFamily family, SocketType type) :
     isDetached(false),
     sendTimeout(Event::WAIT_FOREVER)
 {
-
 }
 
 SocketStream::SocketStream(const SocketStream& other) :
@@ -214,6 +211,12 @@ QStatus SocketStream::PullBytesAndFds(void* buf, size_t reqBytes, size_t& actual
             status = Recv(sock, buf, reqBytes, actualBytes);
         } else {
             status = RecvWithFds(sock, buf, reqBytes, actualBytes, fdList, numFds, recvdFds);
+            /* Massage ER_BAD_ARG errors since the callers arg 4 is RecvWithFds arg 5, etc. */
+            if (status == ER_BAD_ARG_5) {
+                status = ER_BAD_ARG_4;
+            } else if (status == ER_BAD_ARG_6) {
+                status = ER_BAD_ARG_5;
+            }
         }
         if (ER_WOULDBLOCK == status) {
             status = Event::Wait(*sourceEvent, timeout);
@@ -275,6 +278,12 @@ QStatus SocketStream::PushBytesAndFds(const void* buf, size_t numBytes, size_t& 
             return ER_WRITE_ERROR;
         }
         status = qcc::SendWithFds(sock, buf, numBytes, numSent, fdList, numFds, pid);
+        /* Massage ER_BAD_ARG errors since the callers arg 4 is SendWithFds arg 5, etc. */
+        if (status == ER_BAD_ARG_5) {
+            status = ER_BAD_ARG_4;
+        } else if (status == ER_BAD_ARG_6) {
+            status = ER_BAD_ARG_5;
+        }
         if (ER_WOULDBLOCK == status) {
             if (sendTimeout == Event::WAIT_FOREVER) {
                 status = Event::Wait(*sinkEvent);

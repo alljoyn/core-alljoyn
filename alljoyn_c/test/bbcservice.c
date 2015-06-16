@@ -58,6 +58,7 @@ static volatile sig_atomic_t g_interrupt = QCC_FALSE;
 
 static void CDECL_CALL SigIntHandler(int sig)
 {
+    QCC_UNUSED(sig);
     g_interrupt = QCC_TRUE;
 }
 
@@ -70,6 +71,7 @@ QStatus AJ_CALL request_credentials_async(const void* context, alljoyn_authliste
     size_t size_of_guid = 100;
     alljoyn_credentials creds;
     QStatus status = ER_OK;
+    QCC_UNUSED(context);
 
     creds = alljoyn_credentials_create();
 
@@ -78,7 +80,7 @@ QStatus AJ_CALL request_credentials_async(const void* context, alljoyn_authliste
     /* Random delay TODO*/
 
     alljoyn_busattachment_getpeerguid(g_msgBus, authPeer, guid, &size_of_guid);
-    printf("Peer guid %s   %zu\n", guid, size_of_guid);
+    printf("Peer guid %s   %" PRIuSIZET "\n", guid, size_of_guid);
 
     if (g_keyExpiration != 0xFFFFFFFF) {
         alljoyn_busattachment_setkeyexpiration(g_msgBus, guid, g_keyExpiration);
@@ -137,25 +139,33 @@ QStatus AJ_CALL request_credentials_async(const void* context, alljoyn_authliste
 
 }
 
-QStatus AJ_CALL verify_credentials_async(const void*context, alljoyn_authlistener listener, const char* authMechanism, const char* authPeer,  const alljoyn_credentials creds, void*authContext) {
-
+QStatus AJ_CALL verify_credentials_async(const void* context, alljoyn_authlistener listener, const char* authMechanism, const char* authPeer,  const alljoyn_credentials creds, void* authContext) {
     QStatus status = ER_OK;
+    QCC_UNUSED(context);
+    QCC_UNUSED(authMechanism);
+    QCC_UNUSED(authPeer);
+    QCC_UNUSED(creds);
 
     status = alljoyn_authlistener_verifycredentialsresponse(listener, authContext, QCC_FALSE);
     return status;
 }
 
-void AJ_CALL authentication_complete(const void*context, const char* authMechanism, const char* authPeer, QCC_BOOL success) {
+void AJ_CALL authentication_complete(const void* context, const char* authMechanism, const char* authPeer, QCC_BOOL success) {
+    QCC_UNUSED(context);
+    QCC_UNUSED(authPeer);
     printf("Authentication %s %s\n", authMechanism, success ? "succesful" : "failed");
 }
 
-void AJ_CALL security_violation(const void*context, QStatus status, const alljoyn_message msg) {
+void AJ_CALL security_violation(const void* context, QStatus status, const alljoyn_message msg) {
+    QCC_UNUSED(context);
+    QCC_UNUSED(msg);
     printf("Security violation %s\n", QCC_StatusText(status));
 }
 
 
 QCC_BOOL AJ_CALL accept_session_joiner(const void* context, alljoyn_sessionport sessionPort, const char* joiner,  const alljoyn_sessionopts opts)
 {
+    QCC_UNUSED(context);
     if (sessionPort != SESSION_PORT) {
         printf("Received JoinSession request for non-bound port. \n");
         return QCC_FALSE;
@@ -175,6 +185,8 @@ void AJ_CALL session_joined(const void* context, alljoyn_sessionport sessionPort
 {
     uint32_t timeout = 10;
     QStatus status = ER_OK;
+    QCC_UNUSED(context);
+    QCC_UNUSED(sessionPort);
 
     printf("Session Established: joiner=%s, sessionId=%08x\n", joiner, sessionId);
 
@@ -205,8 +217,9 @@ void AJ_CALL session_joined(const void* context, alljoyn_sessionport sessionPort
 }
 
 void AJ_CALL session_lost(const void* context, alljoyn_sessionid sessionId, alljoyn_sessionlostreason reason) {
-
     QStatus status = ER_OK;
+    QCC_UNUSED(context);
+    QCC_UNUSED(reason);
     printf("SessionLost(%08x) was called\n", sessionId);
 
     /* Enable concurrent callbacks since some of the calls below could block */
@@ -223,10 +236,10 @@ void AJ_CALL session_lost(const void* context, alljoyn_sessionid sessionId, allj
 
 void AJ_CALL ping(alljoyn_busobject busobject, const alljoyn_interfacedescription_member* member, alljoyn_message msg)
 {
-
     QStatus status = ER_OK;
     char*value = NULL;
     alljoyn_msgarg outArg;
+    QCC_UNUSED(member);
 
     status = alljoyn_msgarg_get(alljoyn_message_getarg(msg, 0), "s", &value);
     if (ER_OK != status) {
@@ -254,6 +267,7 @@ void AJ_CALL delayed_ping(alljoyn_busobject busobject, const alljoyn_interfacede
     char*value = NULL;
     alljoyn_msgarg outArg;
     uint32_t delay = 0;
+    QCC_UNUSED(member);
 
     /* Enable concurrent callbacks since some of the calls below could block */
     alljoyn_busattachment_enableconcurrentcallbacks(g_msgBus);
@@ -286,6 +300,7 @@ void AJ_CALL time_ping(alljoyn_busobject busobject, const alljoyn_interfacedescr
     QStatus status = ER_OK;
     size_t numArgs = 0;
     alljoyn_msgarg args[2];
+    QCC_UNUSED(member);
 
     /* Reply with same data that was sent to us */
     alljoyn_message_getargs(msg, &numArgs, args);
@@ -302,6 +317,7 @@ void AJ_CALL signal_handler(const alljoyn_interfacedescription_member* member, c
 {
     static uint32_t rxCounts = 0;
     QStatus status = ER_OK;
+    QCC_UNUSED(member);
 
     /* Enable concurrent callbacks since some of the calls below could block */
     alljoyn_busattachment_enableconcurrentcallbacks(g_msgBus);
@@ -384,6 +400,8 @@ void AJ_CALL signal_handler(const alljoyn_interfacedescription_member* member, c
 QStatus AJ_CALL property_get(const void* context, const char* ifcName, const char* propName, alljoyn_msgarg val)
 {
     QStatus status = ER_OK;
+    QCC_UNUSED(context);
+    QCC_UNUSED(ifcName);
     if (0 == strcmp("int_val", propName)) {
         status = alljoyn_msgarg_set_int32(val, g_prop_int_val);
     } else if (0 == strcmp("str_val", propName)) {
@@ -401,6 +419,8 @@ QStatus AJ_CALL property_set(const void* context, const char* ifcName, const cha
     QStatus status = ER_OK;
     int set_i;
     char*set_string;
+    QCC_UNUSED(context);
+    QCC_UNUSED(ifcName);
 
     if ((0 == strcmp("int_val", propName)) && (alljoyn_msgarg_gettype(val) == ALLJOYN_INT32)) {
         status = alljoyn_msgarg_get(val, "i", &set_i);
@@ -417,12 +437,12 @@ QStatus AJ_CALL property_set(const void* context, const char* ifcName, const cha
     } else {
         status = ER_BUS_NO_SUCH_PROPERTY;
     }
-
     return status;
 }
 
 void AJ_CALL busobject_object_unregistered(const void* context)
 {
+    QCC_UNUSED(context);
     printf("Bus object unregistered. \n");
 }
 
@@ -430,6 +450,7 @@ void AJ_CALL busobject_object_unregistered(const void* context)
 void AJ_CALL busobject_object_registered(const void* context)
 {
     QStatus status = ER_OK;
+    QCC_UNUSED(context);
 
     /* Enable concurrent callbacks since some of the calls below could block */
     alljoyn_busattachment_enableconcurrentcallbacks(g_msgBus);
@@ -458,7 +479,6 @@ void AJ_CALL busobject_object_registered(const void* context)
         printf("Advertise(%s) failed with %s", g_wellKnownName, QCC_StatusText(status));
         return;
     }
-
 }
 
 /* This is similar to calling BusObject constructor. */

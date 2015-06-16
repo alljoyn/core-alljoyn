@@ -40,6 +40,8 @@
 #include <qcc/CertificateECC.h>
 #include <qcc/Log.h>
 
+#include "SampleCertificateChainEngine.h"
+
 using namespace std;
 using namespace qcc;
 using namespace ajn;
@@ -62,6 +64,48 @@ static String s_sessionHost;
 static SessionId s_sessionId = 0;
 
 static volatile sig_atomic_t s_interrupt = false;
+
+/* Client's ECDSA certificate and private key. These were generated with the command:
+ *
+ *   SampleCertificateUtility -createEE 1825 AllJoyn ECDHE Sample Client
+ *
+ * SampleCertificateUtility is a sample located in the same directory as this.
+ */
+static const char CLIENT_CERTIFICATE_PEM[] =
+    "-----BEGIN CERTIFICATE-----\n"
+    "MIIBajCCARCgAwIBAgIUYB6roPAvFLNLCDrHmQB+pD8LjbkwCgYIKoZIzj0EAwIw\n"
+    "NTEzMDEGA1UEAwwqQWxsSm95biBFQ0RIRSBTYW1wbGUgQ2VydGlmaWNhdGUgQXV0\n"
+    "aG9yaXR5MB4XDTE1MDUwNzIyMTY0NVoXDTIwMDUwNTIyMTY0NVowJjEkMCIGA1UE\n"
+    "AwwbQWxsSm95biBFQ0RIRSBTYW1wbGUgQ2xpZW50MFkwEwYHKoZIzj0CAQYIKoZI\n"
+    "zj0DAQcDQgAEzE6Fox8LU/Cbi9+KI+6wQsFA8RhOv44JxTa1PY13xQGgzL0h+KKq\n"
+    "DrHleThtYqL8rFXFtuDMtYo1T/lOMIcz86MNMAswCQYDVR0TBAIwADAKBggqhkjO\n"
+    "PQQDAgNIADBFAiEA3KmONKSK9ebMUnBxDTYZMilW1QNqyR04KB3TUuI1MvcCIDTZ\n"
+    "MzxxFqMIDDaGUzqd4g1t/W9h+G+alwj3KemLkD3T\n"
+    "-----END CERTIFICATE-----\n";
+static const char CLIENT_KEY_PEM[] =
+    "-----BEGIN EC PRIVATE KEY-----\n"
+    "MDECAQEEINAmL3v0wNo5EfMqzB/GiVturVDGGefg9bPY/rZ5cM1GoAoGCCqGSM49\n"
+    "AwEH\n"
+    "-----END EC PRIVATE KEY-----\n";
+
+/* Certificate Authority's ECDSA certificate. This is used to verify the remote peer's
+ * certificate chain.
+ *
+ *    SampleCertificateUtility -createCA 3650 AllJoyn ECDHE Sample Certificate Authority
+ *
+ */
+static const char CA_CERTIFICATE_PEM[] =
+    "-----BEGIN CERTIFICATE-----\n"
+    "MIIBezCCASKgAwIBAgIUDrFhHE80+zbEUOCNTxw219Nd1qwwCgYIKoZIzj0EAwIw\n"
+    "NTEzMDEGA1UEAwwqQWxsSm95biBFQ0RIRSBTYW1wbGUgQ2VydGlmaWNhdGUgQXV0\n"
+    "aG9yaXR5MB4XDTE1MDUwNzIyMTYzNloXDTI1MDUwNDIyMTYzNlowNTEzMDEGA1UE\n"
+    "AwwqQWxsSm95biBFQ0RIRSBTYW1wbGUgQ2VydGlmaWNhdGUgQXV0aG9yaXR5MFkw\n"
+    "EwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE6AsCTTviTBWX0Jw2e8Cs8DhwxfRd37Yp\n"
+    "IH5ALzBqwUN2sfG1odcthe6GKdE/9oVfy12SXOL3X2bi3yg1XFoWnaMQMA4wDAYD\n"
+    "VR0TBAUwAwEB/zAKBggqhkjOPQQDAgNHADBEAiASuD0OrpDM8ziC5GzMbZWKNE/X\n"
+    "eboedc0p6YsAZmry2AIgR23cKM4cKkc2bgUDbETNbDcOcwm+EWaK9E4CkOO/tBc=\n"
+    "-----END CERTIFICATE-----\n";
+
 
 static void CDECL_CALL SigIntHandler(int sig)
 {
@@ -136,10 +180,20 @@ class ECDHEKeyXListener : public AuthListener {
             creds.SetExpiration(100);  /* set the master secret expiry time to 100 seconds */
             return true;
         } else if (strcmp(authMechanism, KEYX_ECDHE_ECDSA) == 0) {
-            /* generate the private key and certificate */
-            String privateKeyPEM;
+            /* Supply the private key and certificate. */
+            String privateKeyPEM(CLIENT_KEY_PEM);
             String certChainPEM;
-            GenKeyAndSelfSignCert(privateKeyPEM, certChainPEM);
+            /* In constructing the certificate chain, the node's certificate comes first,
+             * and then each Certificate Authority appears in order, with the last entry being the
+             * root certificate. In this sample, we only have a chain of length two. If there were
+             * additional intermediate CAs along the path, those would appear in order between the end
+             * entity certificate and the root.
+             *
+             * It's a common optimization to omit the root certificate since the remote peer should already
+             * have it, if it's a trusted root. Since this chain has no intermediates, we include the whole
+             * chain for demonstrative purposes. */
+            certChainPEM.assign(CLIENT_CERTIFICATE_PEM);
+            certChainPEM.append(CA_CERTIFICATE_PEM);
             if ((credMask& AuthListener::CRED_PRIVATE_KEY) == AuthListener::CRED_PRIVATE_KEY) {
                 creds.SetPrivateKey(privateKeyPEM);
             }
@@ -165,7 +219,7 @@ class ECDHEKeyXListener : public AuthListener {
                  */
                 return true;
             }
-            return true;
+            return VerifyCertificateChain(creds);
         }
         return false;
     }
@@ -173,39 +227,6 @@ class ECDHEKeyXListener : public AuthListener {
     void AuthenticationComplete(const char* authMechanism, const char* authPeer, bool success) {
         QCC_UNUSED(authPeer);
         printf("SampleClientECDHE::AuthenticationComplete Authentication %s %s\n", authMechanism, success ? "successful" : "failed");
-    }
-
-  private:
-
-    QStatus GenKeyAndSelfSignCert(String& privateKeyPEM, String& certPEM)
-    {
-        //Create a dsa key pair.
-        Crypto_ECC ecc;
-        ecc.GenerateDSAKeyPair();
-        //Encode the private key to PEM
-        QStatus status = CertificateX509::EncodePrivateKeyPEM((uint8_t*) ecc.GetDSAPrivateKey(), sizeof(ECCPrivateKey), privateKeyPEM);
-        if (ER_OK != status) {
-            return status;
-        }
-        //Generate a self-signed cert
-        CertificateX509 cert;
-        String issuerCN("Sample Code");
-
-        cert.SetSerial("10001000");
-        cert.SetIssuerCN((const uint8_t*) issuerCN.c_str(), issuerCN.size());
-        cert.SetSubjectCN((const uint8_t*) issuerCN.c_str(), issuerCN.size());
-        cert.SetSubjectPublicKey(ecc.GetDSAPublicKey());
-        cert.SetCA(false);
-        CertificateX509::ValidPeriod validity;
-        validity.validFrom = qcc::GetEpochTimestamp() / 1000;
-        validity.validTo = validity.validFrom + 7200;
-        cert.SetValidity(&validity);
-        status = cert.Sign(ecc.GetDSAPrivateKey());
-        if (ER_OK != status) {
-            return status;
-        }
-        certPEM = cert.GetPEM();
-        return ER_OK;
     }
 };
 

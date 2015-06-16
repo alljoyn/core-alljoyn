@@ -1044,6 +1044,8 @@ public class BusAttachment {
             lostAdvertisedName.setAccessible(true);
         } catch (NoSuchMethodException ex) {
             /* This will not happen */
+            System.err.println("Unexpected NoSuchMethodException for the "
+                    + "foundAdvertisedName or lostAdvertisedName methods");
         }
         create(applicationName, allowRemoteMessages, concurrency);
 

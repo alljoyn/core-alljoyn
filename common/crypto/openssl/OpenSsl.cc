@@ -42,6 +42,8 @@ static Mutex* locks = 0;
 
 static void LockingCb(int mode, int type, const char* file, int line)
 {
+    QCC_UNUSED(file);
+    QCC_UNUSED(line);
     if (mode & CRYPTO_LOCK) {
         locks[type].Lock();
     } else {

@@ -144,6 +144,8 @@ void PluginData::InsertNPObject(NPObject* npobj)
     lock.Lock();
     npobjects.push_back(npobj);
     lock.Unlock();
+#else
+    QCC_UNUSED(npobj);
 #endif
 }
 
@@ -153,6 +155,8 @@ void PluginData::RemoveNPObject(NPObject* npobj)
     lock.Lock();
     npobjects.remove(npobj);
     lock.Unlock();
+#else
+    QCC_UNUSED(npobj);
 #endif
 }
 

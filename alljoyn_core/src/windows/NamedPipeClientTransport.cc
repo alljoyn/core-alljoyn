@@ -159,6 +159,11 @@ QStatus NamedPipeClientTransport::Connect(const char* connectSpec, const Session
      * Break if the client handle is invalid.
      */
     if (clientHandle == INVALID_HANDLE_VALUE) {
+        if (lastError == ERROR_ACCESS_DENIED) {
+            status = ER_BUS_TRANSPORT_ACCESS_DENIED;
+            QCC_LogError(status, ("NamedPipeClientTransport::Connect(): Connection to named pipe failed because the application doesn't have the required permissions."));
+        }
+
         QCC_LogError(status, ("NamedPipeClientTransport::Connect(): could not create pipe connection. Invalid Handle Value (0x%08X)", lastError));
         return status;
     }

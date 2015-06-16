@@ -940,7 +940,8 @@ TEST_F(SecurityX509Test, Test10) {
 
     //Create a cert out of the public key. It is a self signed certificate where subject == issuer
     CertificateX509 x509;
-    x509.SetSerial("AllJoyn-serial");
+    String serial("AllJoyn-serial");
+    x509.SetSerial((const uint8_t*)serial.data(), serial.size());
     const char*issuer_cn = "client issuer cn";
     const char*subject_cn = "subject issuer cn";
     x509.SetIssuerCN((uint8_t*)issuer_cn, strlen(issuer_cn) + 1);
@@ -962,7 +963,7 @@ TEST_F(SecurityX509Test, Test10) {
 
     //Encode the private key to PEM
     String clientecdsaPrivateKeyPEM;
-    status = CertificateX509::EncodePrivateKeyPEM((uint8_t*)dsaPrivateKey, sizeof(ECCPrivateKey), clientecdsaPrivateKeyPEM);
+    status = CertificateX509::EncodePrivateKeyPEM(dsaPrivateKey, clientecdsaPrivateKeyPEM);
     EXPECT_EQ(ER_OK, status) << "Failed to encode the private key to PEM";
 
     //Encode the certifcate to PEM
@@ -1028,7 +1029,7 @@ TEST_F(SecurityX509Test, Test10) {
     CertificateX509 x509Validate;
     status = x509Validate.DecodeCertificatePEM(g_ecdsaAuthListenerForService.verifyCredentialsX509CertChain);
 
-    const String SerialNo = x509Validate.GetSerial();
+    const String SerialNo((const char*)x509Validate.GetSerial(), x509Validate.GetSerialLen());
     EXPECT_STREQ(SerialNo.c_str(), "AllJoyn-serial");
 
     const char* get_issuer_ou = (const char*)x509Validate.GetIssuerOU();
@@ -1059,10 +1060,10 @@ TEST_F(SecurityX509Test, Test10) {
 
     const ECCPublicKey* get_public_key = x509Validate.GetSubjectPublicKey();
     String get_public_key_PEM;
-    status = CertificateX509::EncodePublicKeyPEM((uint8_t*)get_public_key, sizeof(ECCPublicKey), get_public_key_PEM);
+    status = CertificateX509::EncodePublicKeyPEM(get_public_key, get_public_key_PEM);
     EXPECT_EQ(ER_OK, status) << "Failed to encode the public key to PEM";
     String dsa_public_key_PEM;
-    status = CertificateX509::EncodePublicKeyPEM((uint8_t*)dsaPublicKey, sizeof(ECCPublicKey), dsa_public_key_PEM);
+    status = CertificateX509::EncodePublicKeyPEM(dsaPublicKey, dsa_public_key_PEM);
     EXPECT_STREQ(get_public_key_PEM.c_str(), dsa_public_key_PEM.c_str());
 
     /* The service side generated the certificate using OpenSSL. The certificate is presented on the client side via Verify credentials callback.
@@ -1071,8 +1072,9 @@ TEST_F(SecurityX509Test, Test10) {
     CertificateX509 x509ValidateOnClient;
     status = x509ValidateOnClient.DecodeCertificatePEM(g_ecdsaAuthListenerForClient.verifyCredentialsX509CertChain);
 
-    const String Client_SerialNo = x509ValidateOnClient.GetSerial();
-    String S = BytesToHexString((const uint8_t*) Client_SerialNo.data(), Client_SerialNo.length());
+    const uint8_t* Client_SerialNo = x509ValidateOnClient.GetSerial();
+    const size_t Client_SerialNo_Len = x509ValidateOnClient.GetSerialLen();
+    String S = BytesToHexString(Client_SerialNo, Client_SerialNo_Len);
     EXPECT_STREQ(S.c_str(), service_cert_serial);
 
     uint8_t* client_get_issuer_ou_bytes = (uint8_t*)x509ValidateOnClient.GetIssuerOU();
@@ -1111,7 +1113,7 @@ TEST_F(SecurityX509Test, Test10) {
 
     const ECCPublicKey* client_get_public_key = x509ValidateOnClient.GetSubjectPublicKey();
     String client_get_public_key_PEM;
-    status = CertificateX509::EncodePublicKeyPEM((uint8_t*)client_get_public_key, sizeof(ECCPublicKey), client_get_public_key_PEM);
+    status = CertificateX509::EncodePublicKeyPEM(client_get_public_key, client_get_public_key_PEM);
     EXPECT_EQ(ER_OK, status) << "Failed to encode the public key to PEM";
     EXPECT_STREQ(client_get_public_key_PEM.c_str(), serviceecdsaPublicKeyPEM);
 
@@ -1213,11 +1215,12 @@ TEST_F(SecurityX509Test, Test11) {
 
     //Create a cert out of the public key. It is signed by CA
     CertificateX509 x509A;
-    x509A.SetSerial("AllJoyn-A");
+    const char*serial_a = "AllJoyn-A";
     const char*issuer_ou_a = "CertificateAuthorityOrg";
     const char*subject_ou_a = "Intermediate-A-OU-AJ";
     const char*issuer_cn_a = "CertificateAuthorityCN";
     const char*subject_cn_a = "Intermediate-A-CN-AJ";
+    x509A.SetSerial((uint8_t*)serial_a, strlen(serial_a));
     x509A.SetIssuerCN((uint8_t*)issuer_cn_a, strlen(issuer_cn_a));
     x509A.SetSubjectCN((uint8_t*) subject_cn_a, strlen(subject_cn_a));
     x509A.SetIssuerOU((uint8_t*)issuer_ou_a, strlen(issuer_ou_a));
@@ -1233,7 +1236,7 @@ TEST_F(SecurityX509Test, Test11) {
     //Sign the certificate A using CA private key
     //Convert the CA private key in PEM to ECCPrivateKey format.
     ECCPrivateKey CAPrivateKey;
-    status = CertificateX509::DecodePrivateKeyPEM(CAPrivateKeyPEM, (uint8_t*)&CAPrivateKey, sizeof(ECCPrivateKey));
+    status = CertificateX509::DecodePrivateKeyPEM(CAPrivateKeyPEM, &CAPrivateKey);
     ASSERT_EQ(ER_OK, status) << " CertificateX509::DecodePrivateKeyPEM failed with actual status: " << QCC_StatusText(status);
     status = x509A.Sign(&CAPrivateKey);
     EXPECT_EQ(ER_OK, status) << "Failed to sign the certificate";
@@ -1249,11 +1252,12 @@ TEST_F(SecurityX509Test, Test11) {
 
     //Create a cert out of the public key. It is signed by A
     CertificateX509 x509Bob;
-    x509Bob.SetSerial("AllJoyn-Bob");
+    const char*serial_bob = "AllJoyn-Bob";
     const char*issuer_ou_bob = "Intermediate-A-OU-AJ";
     const char*subject_ou_bob = "BobOU-AJ";
     const char*issuer_cn_bob = "Intermediate-A-CN-AJ";
     const char*subject_cn_bob = "BobCN-AJ";
+    x509Bob.SetSerial((uint8_t*)serial_bob, strlen(serial_bob));
     x509Bob.SetIssuerCN((uint8_t*)issuer_cn_bob, strlen(issuer_cn_bob));
     x509Bob.SetSubjectCN((uint8_t*) subject_cn_bob, strlen(subject_cn_bob));
     x509Bob.SetIssuerOU((uint8_t*)issuer_ou_bob, strlen(issuer_ou_bob));
@@ -1273,7 +1277,7 @@ TEST_F(SecurityX509Test, Test11) {
 
     //Encode the private key to PEM
     String serviceecdsaPrivateKeyPEM;
-    status = CertificateX509::EncodePrivateKeyPEM((uint8_t*)dsaPrivateKeyBob, sizeof(ECCPrivateKey), serviceecdsaPrivateKeyPEM);
+    status = CertificateX509::EncodePrivateKeyPEM(dsaPrivateKeyBob, serviceecdsaPrivateKeyPEM);
     EXPECT_EQ(ER_OK, status) << "Failed to encode the private key to PEM";
 
     //Enable Peer security and reg. auth listener

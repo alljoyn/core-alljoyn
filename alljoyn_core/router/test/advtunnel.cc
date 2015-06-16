@@ -337,7 +337,7 @@ QStatus AdvTunnel::RelayAdv()
             QCC_LogError(status, ("Failed to advertise relayed names"));
         }
     } else {
-        status = ns->CancelAdvertiseName(TRANSPORT_TCP, nameList, TRANSPORT_TCP);
+        status = ns->CancelAdvertiseName(TRANSPORT_TCP, nameList, false, TRANSPORT_TCP);
         if (status != ER_OK) {
             QCC_LogError(status, ("Failed to cancel relayed names"));
         }

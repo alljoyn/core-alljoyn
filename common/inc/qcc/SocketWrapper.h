@@ -67,15 +67,19 @@ QStatus SocketDup(SocketFd sockfd, SocketFd& dupSock);
 /**
  * Send a buffer of data over a socket.
  *
- * @param sockfd        Socket descriptor.
- * @param buf           Pointer to the buffer containing the data to send.
- * @param len           Number of octets in the buffer to be sent.
- * @param sent          OUT: Number of octets sent.
+ * Note that there are some unescapable platform differences when the local side
+ * calls Send() after the remote side has shutdown its receive side.  The Send()
+ * may succeed or fail with ER_OS_ERROR.
  *
- * @return  #ER_OK if the send succeeded
- *          #ER_WOULDBLOCK if the socket is non-blocking and data cannot be sent at this time.
- *          #ER_OS_ERROR if the send failed
- *          #Other errors indicating the operation failed.
+ * @param sockfd        Socket descriptor.
+ * @param buf           Pointer to the buffer containing the data to send.  This must not be NULL.
+ * @param len           Number of octets in the buffer to be sent.
+ * @param[out] sent     Number of octets sent.
+ *
+ * @return
+ * - #ER_OK the send succeeded.
+ * - #ER_OS_ERROR the underlying send failed.
+ * - #ER_WOULDBLOCK sockfd is non-blocking and the underlying send would block.
  */
 QStatus Send(SocketFd sockfd, const void* buf, size_t len, size_t& sent);
 
@@ -85,12 +89,12 @@ QStatus Send(SocketFd sockfd, const void* buf, size_t len, size_t& sent);
  * @param sockfd        Socket descriptor.
  * @param buf           Pointer to the buffer where received data will be stored.
  * @param len           Size of the buffer in octets.
- * @param received      OUT: Number of octets received.
+ * @param[out] received Number of octets received.
  *
- * @return  #ER_OK if the receive succeeded
- *          #ER_WOULDBLOCK if the socket is non-blocking and there is no data to receive at this time.
- *          #ER_OS_ERROR if the receive failed
- *          #Other errors indicating the operation failed.
+ * @return
+ * - #ER_OK the receive succeeded.
+ * - #ER_OS_ERROR the underlying receive failed.
+ * - #ER_WOULDBLOCK sockfd is non-blocking and the underlying receive would block.
  */
 QStatus Recv(SocketFd sockfd, void* buf, size_t len, size_t& received);
 

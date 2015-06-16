@@ -64,7 +64,7 @@ uint32_t GetLastError();
 qcc::String GetLastErrorString();
 
 /**
- * The maixmum number of files descriptors that can be sent or received by this implementations.
+ * The maximum number of files descriptors that can be sent or received by this implementations.
  * See SendWithFds() and RecvWithFds().
  */
 static const size_t SOCKET_MAX_FILE_DESCRIPTORS = 16;
@@ -74,14 +74,15 @@ static const size_t SOCKET_MAX_FILE_DESCRIPTORS = 16;
  *
  * @param addrFamily    Address family.
  * @param type          Socket type.
- * @param sockfd        OUT: Socket descriptor if successful.
+ * @param[out] sockfd   Socket descriptor if successful.
  *
  * @return  Indication of success of failure.
  */
 QStatus Socket(AddressFamily addrFamily, SocketType type, SocketFd& sockfd);
 
 /**
- * Connect a socket to a remote host on a specified port
+ * Connect a socket to a remote host on a specified port and set it
+ * non-blocking.
  *
  * @param sockfd        Socket descriptor.
  * @param remoteAddr    IP Address of remote host.
@@ -92,7 +93,7 @@ QStatus Socket(AddressFamily addrFamily, SocketType type, SocketFd& sockfd);
 QStatus Connect(SocketFd sockfd, const IPAddress& remoteAddr, uint16_t remotePort);
 
 /**
- * Connect a local socket
+ * Connect a local socket and set it non-blocking.
  *
  * @param sockfd        Socket descriptor.
  * @param pathName      Path for the socket
@@ -135,10 +136,10 @@ QStatus Listen(SocketFd sockfd, int backlog);
 /**
  * Accept an incoming connection from a remote host.
  *
- * @param sockfd        Socket descriptor.
- * @param remoteAddr    OUT: IP Address of remote host.
- * @param remotePort    OUT: IP Port on remote host.
- * @param newSockfd     OUT: New socket descriptor for the connection.
+ * @param sockfd          Socket descriptor.
+ * @param[out] remoteAddr IP Address of remote host.
+ * @param[out] remotePort IP Port on remote host.
+ * @param[out] newSockfd  New, non-blocking, socket descriptor for the connection.
  *
  * @return  Indication of success of failure.
  */
@@ -147,8 +148,8 @@ QStatus Accept(SocketFd sockfd, IPAddress& remoteAddr, uint16_t& remotePort, Soc
 /**
  * Accept an incoming connection from a remote host.
  *
- * @param sockfd        Socket descriptor.
- * @param newSockfd     OUT: New socket descriptor for the connection.
+ * @param sockfd         Socket descriptor.
+ * @param[out] newSockfd New, non-blocking, socket descriptor for the connection.
  *
  * @return  Indication of success of failure.
  */
@@ -173,8 +174,8 @@ void Close(SocketFd sockfd);
 /**
  * Duplicate a socket descriptor.
  *
- * @param sockfd   The socket descriptor to duplicate
- * @param dupSock  [OUT] The duplicated socket descriptor.
+ * @param sockfd The socket descriptor to duplicate
+ * @param[out] dupSock The duplicated socket descriptor.
  *
  * @return  Indication of success of failure.
  */
@@ -182,8 +183,12 @@ QStatus SocketDup(SocketFd sockfd, SocketFd& dupSock);
 
 /**
  * Create a connected pair of (local domain) sockets.
- * @param[out] sockets   Array of two sockects;
- * @return ER_OK if successful.
+ *
+ * @param[out] sockets Array of two sockets
+ *
+ * @return
+ * - #ER_OK creation succeeded.
+ * - #ER_OS_ERROR the underlying creation failed.
  */
 QStatus SocketPair(SocketFd(&sockets)[2]);
 
@@ -206,7 +211,7 @@ QStatus GetLocalAddress(SocketFd sockfd, IPAddress& addr, uint16_t& port);
  * @param remotePort    IP Port on remote host.
  * @param buf           Pointer to the buffer containing the data to send.
  * @param len           Number of octets in the buffer to be sent.
- * @param sent          OUT: Number of octets sent.
+ * @param[out] sent     Number of octets sent.
  * @param flags         SendMsgFlags to underlying sockets call (see sendmsg() in sockets API)
  *
  * @return  Indication of success of failure.
@@ -226,7 +231,7 @@ QStatus SendTo(SocketFd sockfd, IPAddress& remoteAddr, uint16_t remotePort,
  * @param scopeId       Scope ID of address.
  * @param buf           Pointer to the buffer containing the data to send.
  * @param len           Number of octets in the buffer to be sent.
- * @param sent          OUT: Number of octets sent.
+ * @param[out] sent     Number of octets sent.
  * @param flags         SendMsgFlags to underlying sockets call (see sendmsg() in sockets API)
  *
  * @return  Indication of success of failure.
@@ -243,8 +248,9 @@ QStatus SendTo(SocketFd sockfd, IPAddress& remoteAddr, uint16_t remotePort, uint
  *
  * @param sockfd        Socket descriptor.
  * @param buf           Pointer to the buffer where received data will be stored.
+ *                      This must not be NULL.
  * @param len           Size of the buffer in octets.
- * @param received      OUT: Number of octets received.
+ * @param[out] received Number of octets received.
  *
  * @return  Indication of success of failure.
  */
@@ -258,7 +264,7 @@ QStatus Recv(SocketFd sockfd, void* buf, size_t len, size_t& received);
  * @param remotePort    IP Port on remote host.
  * @param buf           Pointer to the buffer where received data will be stored.
  * @param len           Size of the buffer in octets.
- * @param received      OUT: Number of octets received.
+ * @param[out] received Number of octets received.
  *
  * @return  Indication of success of failure.
  */
@@ -268,13 +274,13 @@ QStatus RecvFrom(SocketFd sockfd, IPAddress& remoteAddr, uint16_t& remotePort,
 /**
  * Receive a buffer of data and ancillary data from a remote host on a socket.
  *
- * @param sockfd          Socket descriptor.
- * @param remoteAddr      IP Address of remote host.
- * @param remotePort      IP Port on remote host.
- * @param buf             Pointer to the buffer where received data will be stored.
- * @param len             Size of the buffer in octets.
- * @param received        OUT: Number of octets received.
- * @param interfaceIndex  OUT: Interface index.
+ * @param sockfd              Socket descriptor.
+ * @param remoteAddr          IP Address of remote host.
+ * @param remotePort          IP Port on remote host.
+ * @param buf                 Pointer to the buffer where received data will be stored.
+ * @param len                 Size of the buffer in octets.
+ * @param[out] received       Number of octets received.
+ * @param[out] interfaceIndex Interface index.
  *
  * @return  Indication of success of failure.
  */
@@ -285,15 +291,20 @@ QStatus RecvWithAncillaryData(SocketFd sockfd, IPAddress& remoteAddr, uint16_t& 
  * Receive a buffer of data from a remote host on a socket and any file descriptors accompanying the
  * data.  This call will block until data is available, the socket is closed.
  *
- * @param sockfd     Socket descriptor.
- * @param buf        Pointer to the buffer where received data will be stored.
- * @param len        Size of the buffer in octets.
- * @param received   OUT: Number of octets received.
- * @param fdList     The file descriptors received.
- * @param maxFds     The maximum number of file descriptors (size of fdList)
- * @param recvdFds   The number of file descriptors received.
+ * @param sockfd         Socket descriptor.
+ * @param buf            Pointer to the buffer where received data will be stored.
+ * @param len            Size of the buffer in octets.
+ * @param[out] received  Number of octets received.
+ * @param fdList         The file descriptors received.
+ * @param maxFds         The maximum number of file descriptors (size of fdList)
+ * @param[out] recvdFds  The number of file descriptors received.
  *
- * @return  Indication of success of failure.
+ * @return
+ * - #ER_BAD_ARG_5 fdList is NULL.
+ * - #ER_BAD_ARG_6 numFds is 0.
+ * - #ER_OK the receive succeeded.
+ * - #ER_OS_ERROR the underlying receive failed.
+ * - #ER_WOULDBLOCK sockfd is non-blocking and the underlying receive would block.
  */
 QStatus RecvWithFds(SocketFd sockfd, void* buf, size_t len, size_t& received, SocketFd* fdList, size_t maxFds, size_t& recvdFds);
 
@@ -304,12 +315,17 @@ QStatus RecvWithFds(SocketFd sockfd, void* buf, size_t len, size_t& received, So
  * @param sockfd    Socket descriptor.
  * @param buf       Pointer to the buffer containing the data to send.
  * @param len       Number of octets in the buffer to be sent.
- * @param sent      [OUT] Number of octets sent.
+ * @param[out] sent Number of octets sent.
  * @param fdList    Array of file descriptors to send.
  * @param numFds    Number of files descriptors.
-   @param pid       Process id required on some platforms.
+ * @param pid       Process ID required on some platforms.
  *
- * @return  Indication of success of failure.
+ * @return
+ * - #ER_BAD_ARG_5 fdList is NULL.
+ * - #ER_BAD_ARG_6 numFds is 0 or numFds is greater than #SOCKET_MAX_FILE_DESCRIPTORS.
+ * - #ER_OK the send succeeded.
+ * - #ER_OS_ERROR the underlying send failed.
+ * - #ER_WOULDBLOCK sockfd is non-blocking and the underlying send would block.
  */
 QStatus SendWithFds(SocketFd sockfd, const void* buf, size_t len, size_t& sent, SocketFd* fdList, size_t numFds, uint32_t pid);
 
@@ -376,7 +392,7 @@ QStatus SetRcvBuf(SocketFd sockfd, size_t bufSize);
 QStatus GetRcvBuf(SocketFd sockfd, size_t& bufSize);
 
 /**
- * Set TCP based socket to use or not use Nagle algorithm (TCP_NODELAY)
+ * Set TCP based socket to use or not use linger functionality
  *
  * @param sockfd  Socket descriptor.
  * @param onoff   Turn linger on if true.

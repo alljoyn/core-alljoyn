@@ -118,11 +118,10 @@ class _PolicyDB {
      *
      * @param nmh       Normalized message header
      * @param dest      BusEndpoint where the router intends to send the message
-     * @param destIDSet Alternate destination ID set (internal use only)
      *
      * @return true = send allowed, false = send denied.
      */
-    bool OKToSend(const NormalizedMsgHdr& nmh, BusEndpoint& dest, const IDSet* destIDSet = NULL) const;
+    bool OKToSend(const NormalizedMsgHdr& nmh, BusEndpoint& dest) const;
 
     /**
      * Convert a string to a normalized form.
@@ -499,7 +498,6 @@ class NormalizedMsgHdr {
         errorID(policy->LookupStringID(msg->GetErrorName())),
         pathID(policy->LookupStringID(msg->GetObjectPath())),
         pathIDSet(policy->LookupStringIDPrefix(msg->GetObjectPath(), '/')),
-        destIDSet(policy->LookupBusNameID(msg->GetDestination())),
         senderIDSet(policy->LookupBusNameID(msg->GetSender())),
         type(msg->GetType()),
         sender(sender)

@@ -281,7 +281,7 @@ static QStatus CreateCert(const qcc::String& serial, const qcc::GUID128& issuer,
 {
     QStatus status = ER_CRYPTO_ERROR;
 
-    x509.SetSerial(serial);
+    x509.SetSerial((const uint8_t*)serial.data(), serial.size());
     qcc::String issuerName = issuer.ToString();
     x509.SetIssuerCN((const uint8_t*) issuerName.c_str(), issuerName.length());
     qcc::String subjectName = subject.ToString();
@@ -325,23 +325,18 @@ TEST_F(CertificateECCTest, EncodePrivateKey)
     QStatus status;
 
     qcc::String encoded;
-    status = CertificateX509::EncodePrivateKeyPEM((uint8_t*) ecc.GetDSAPrivateKey(), sizeof(ECCPrivateKey), encoded);
+    status = CertificateX509::EncodePrivateKeyPEM(ecc.GetDSAPrivateKey(), encoded);
     ASSERT_EQ(ER_OK, status) << " CertificateX509::EncodePrivateKeyPEM failed with actual status: " << QCC_StatusText(status);
 
     printf("The encoded private key PEM %s\n", encoded.c_str());
 
     ECCPrivateKey pk;
-    status = CertificateX509::DecodePrivateKeyPEM(encoded, (uint8_t*) &pk, sizeof(pk));
+    status = CertificateX509::DecodePrivateKeyPEM(encoded, &pk);
     ASSERT_EQ(ER_OK, status) << " CertificateX509::DecodePrivateKeyPEM failed with actual status: " << QCC_StatusText(status);
 
-    printf("Original private key %s\n", BytesToHexString((uint8_t*) ecc.GetDSAPrivateKey(), sizeof(ECCPrivateKey)).c_str());
-    printf("Decoded private key %s\n", BytesToHexString((uint8_t*) &pk, sizeof(pk)).c_str());
+    printf("Original private key %s\n", ecc.GetDSAPrivateKey()->ToString().c_str());
+    printf("Decoded private key %s\n", pk.ToString().c_str());
     ASSERT_EQ(pk, *ecc.GetDSAPrivateKey()) << " decoded private key not equal to original";
-
-    /* test buffer len */
-    status = CertificateX509::DecodePrivateKeyPEM(encoded, (uint8_t*) &pk, 3);
-    ASSERT_NE(ER_OK, status) << " CertificateX509::DecodePrivateKeyPEM succeeded when expected to fail.  The actual actual status: " << QCC_StatusText(status);
-
 }
 
 /**
@@ -354,9 +349,9 @@ static void DecodePrivateKeyHelper(const char* eccPrivateKeyPEM)
     qcc::String encoded(eccPrivateKeyPEM);
 
     ECCPrivateKey pk;
-    status = CertificateX509::DecodePrivateKeyPEM(encoded, (uint8_t*) &pk, sizeof(pk));
+    status = CertificateX509::DecodePrivateKeyPEM(encoded, &pk);
     ASSERT_EQ(ER_OK, status) << " CertificateX509::DecodePrivateKeyPEM failed with actual status: " << QCC_StatusText(status);
-    printf("Decoded private key %s\n", BytesToHexString((uint8_t*) &pk, sizeof(pk)).c_str());
+    printf("Decoded private key %s\n", pk.ToString().c_str());
 }
 TEST_F(CertificateECCTest, DecodePrivateKey)
 {
@@ -368,7 +363,7 @@ TEST_F(CertificateECCTest, DecodeUnsupportedFormatPrivateKeyPEM)
 {
     qcc::String encoded(eccUnsupportedFormatPrivateKeyPEM);
     ECCPrivateKey pk;
-    ASSERT_NE(ER_OK, CertificateX509::DecodePrivateKeyPEM(encoded, (uint8_t*) &pk, sizeof(pk))) << " CertificateX509::DecodePrivateKeyPEM did not fail";
+    ASSERT_NE(ER_OK, CertificateX509::DecodePrivateKeyPEM(encoded, &pk)) << " CertificateX509::DecodePrivateKeyPEM did not fail";
 }
 
 /**
@@ -379,23 +374,18 @@ TEST_F(CertificateECCTest, EncodePublicKey)
     QStatus status;
 
     qcc::String encoded;
-    status = CertificateX509::EncodePublicKeyPEM((uint8_t*) ecc.GetDSAPublicKey(), sizeof(ECCPublicKey), encoded);
+    status = CertificateX509::EncodePublicKeyPEM(ecc.GetDSAPublicKey(), encoded);
     ASSERT_EQ(ER_OK, status) << " CertificateX509::EncodePublicKeyPEM failed with actual status: " << QCC_StatusText(status);
 
     printf("The encoded public key PEM %s\n", encoded.c_str());
 
     ECCPublicKey pk;
-    status = CertificateX509::DecodePublicKeyPEM(encoded, (uint8_t*) &pk, sizeof(pk));
+    status = CertificateX509::DecodePublicKeyPEM(encoded, &pk);
     ASSERT_EQ(ER_OK, status) << " CertificateX509::DecodePublicKeyPEM failed with actual status: " << QCC_StatusText(status);
 
-    printf("Original public key %s\n", BytesToHexString((uint8_t*) ecc.GetDSAPublicKey(), sizeof(ECCPublicKey)).c_str());
-    printf("Decoded public key %s\n", BytesToHexString((uint8_t*) &pk, sizeof(pk)).c_str());
+    printf("Original public key %s\n", ecc.GetDSAPublicKey()->ToString().c_str());
+    printf("Decoded public key %s\n", pk.ToString().c_str());
     ASSERT_EQ(pk, *ecc.GetDSAPublicKey()) << " decoded private key not equal to original";
-
-    /* test buffer len */
-    status = CertificateX509::DecodePublicKeyPEM(encoded, (uint8_t*) &pk, 3);
-    ASSERT_NE(ER_OK, status) << " CertificateX509::DecodePublicKeyPEM succeeded when expected to fail.  The actual actual status: " << QCC_StatusText(status);
-
 }
 
 /**
@@ -415,12 +405,12 @@ TEST_F(CertificateECCTest, GenSelfSignECCX509CertForBBservice)
     ASSERT_EQ(ER_OK, status) << " GenKeyAndCreateCert failed with actual status: " << QCC_StatusText(status);
 
     String encodedPK;
-    status = CertificateX509::EncodePrivateKeyPEM((uint8_t*) &subjectPrivateKey, sizeof(ECCPrivateKey), encodedPK);
+    status = CertificateX509::EncodePrivateKeyPEM(&subjectPrivateKey, encodedPK);
     ASSERT_EQ(ER_OK, status) << " CertificateX509::EncodePrivateKeyPEM failed with actual status: " << QCC_StatusText(status);
 
     std::cout << "The encoded subject private key PEM:" << endl << encodedPK.c_str() << endl;
 
-    status = CertificateX509::EncodePublicKeyPEM((uint8_t*) &subjectPublicKey, sizeof(ECCPublicKey), encodedPK);
+    status = CertificateX509::EncodePublicKeyPEM(&subjectPublicKey, encodedPK);
     ASSERT_EQ(ER_OK, status) << " CertificateX509::EncodePublicKeyPEM failed with actual status: " << QCC_StatusText(status);
 
     std::cout << "The encoded subject public key PEM:" << endl << encodedPK.c_str() << endl;
@@ -852,3 +842,29 @@ TEST_F(CertificateECCTest, SubjectAltNameInMembershipCert)
     EXPECT_EQ(securityGroupId, cert2.GetGuild()) << " expect to have security group Id as the subject alt name";
 }
 
+TEST_F(CertificateECCTest, TestIsDNEqual)
+{
+    CertificateX509 cert1, cert2;
+
+    ASSERT_EQ(ER_OK, cert1.LoadPEM(eccSelfSignCertX509PEMOpenSSL));
+    ASSERT_EQ(ER_OK, cert2.LoadPEM(eccSelfSignCertX509PEMCAPI));
+
+    EXPECT_TRUE(cert1.IsDNEqual(cert1));
+    EXPECT_TRUE(cert1.IsDNEqual(cert1.GetSubjectCN(), cert1.GetSubjectCNLength(), cert1.GetSubjectOU(), cert1.GetSubjectOULength()));
+
+    EXPECT_FALSE(cert1.IsDNEqual(cert2));
+    EXPECT_FALSE(cert1.IsDNEqual(cert2.GetSubjectCN(), cert2.GetSubjectCNLength(), cert2.GetSubjectOU(), cert2.GetSubjectOULength()));
+}
+
+TEST_F(CertificateECCTest, TestIsIssuerOf)
+{
+    CertificateX509 cert1, cert2;
+
+    ASSERT_EQ(ER_OK, cert1.LoadPEM(eccSelfSignCertX509PEMOpenSSL));
+    ASSERT_EQ(ER_OK, cert2.LoadPEM(eccSelfSignCertX509PEMCAPI));
+
+    EXPECT_TRUE(cert1.IsIssuerOf(cert1));
+    EXPECT_TRUE(cert2.IsIssuerOf(cert2));
+    EXPECT_FALSE(cert1.IsIssuerOf(cert2));
+    EXPECT_FALSE(cert2.IsIssuerOf(cert1));
+}

@@ -87,6 +87,7 @@ HostObject<T>* HostObject<T>::GetInstance(Plugin& plugin, T& impl)
 template <class T>
 T* HostObject<T>::GetImpl(Plugin& plugin, NPObject* npobj)
 {
+    QCC_UNUSED(plugin);
     assert(&HostObject<T>::Class == npobj->_class);
     HostObject<T>* obj = static_cast<HostObject<T>*>(npobj);
     return &obj->impl;
@@ -95,6 +96,7 @@ T* HostObject<T>::GetImpl(Plugin& plugin, NPObject* npobj)
 template <class T>
 NPObject* HostObject<T>::Allocate(NPP npp, NPClass* aClass)
 {
+    QCC_UNUSED(aClass); //aClass only used in debug build
     QCC_DbgTrace(("%s(npp=%p,aClass=%p)", __FUNCTION__, npp, aClass));
     PluginData* pluginData = reinterpret_cast<PluginData*>(npp->pdata);
     Plugin& plugin = pluginData->GetPlugin();

@@ -92,15 +92,16 @@ const uint32_t SessionlessObj::version = 1;
  * a separate thread than the Query callback to avoid deadlock.
  */
 SessionlessObj::SendResponseWork::SendResponseWork(SessionlessObj& slObj,
-                                                   TransportMask transport, const qcc::String& name, const qcc::IPEndpoint& ns4)
-    : Work(slObj), transport(transport), name(name), ns4(ns4)
+                                                   TransportMask transport, const qcc::String& name, const qcc::IPEndpoint& src, const qcc::IPEndpoint& dst)
+    : Work(slObj), transport(transport), name(name), src(src), dst(dst)
 {
 }
 
 void SessionlessObj::SendResponseWork::Run()
 {
     MDNSPacket response;
-    response->SetDestination(ns4);
+    response->SetSource(src);
+    response->SetDestination(dst);
     MDNSAdvertiseRData advRData;
     advRData.SetTransport(slObj.sessionOpts.transports & TRANSPORT_IP);
     advRData.SetValue("name", name);
@@ -858,7 +859,8 @@ void SessionlessObj::HandleRangeRequest(const char* sender, SessionId sid,
     while (it != localCache.end()) {
         if (IN_WINDOW(uint32_t, fromChangeId, rangeLen, it->second.first)) {
             SessionlessMessageKey key = it->first;
-            if (it->second.second->IsExpired()) {
+            Message msg = it->second.second;
+            if (msg->IsExpired()) {
                 /* Remove expired message without sending */
                 localCache.erase(it++);
                 messageErased = true;
@@ -867,15 +869,15 @@ void SessionlessObj::HandleRangeRequest(const char* sender, SessionId sid,
                 bool isMatch = remoteRules.empty();
                 for (vector<String>::iterator rit = remoteRules.begin(); !isMatch && (rit != remoteRules.end()); ++rit) {
                     Rule rule(rit->c_str());
-                    isMatch = rule.IsMatch(it->second.second) || (rule == legacyRule);
+                    isMatch = rule.IsMatch(msg) || (rule == legacyRule);
                 }
                 if (isMatch) {
                     BusEndpoint ep = router.FindEndpoint(sender);
                     if (ep->IsValid()) {
                         lock.Unlock();
                         router.UnlockNameTable();
-                        QCC_DbgPrintf(("Send cid=%u,serialNum=%u to sid=%u", it->second.first, it->second.second->GetCallSerial(), sid));
-                        SendThroughEndpoint(it->second.second, ep, sid);
+                        QCC_DbgPrintf(("Send cid=%u,serialNum=%u to sid=%u", it->second.first, msg->GetCallSerial(), sid));
+                        SendThroughEndpoint(msg, ep, sid);
                         router.LockNameTable();
                         lock.Lock();
                     }
@@ -883,7 +885,7 @@ void SessionlessObj::HandleRangeRequest(const char* sender, SessionId sid,
                 it = localCache.upper_bound(key);
             } else {
                 /* Send message to local destination */
-                SendMatchingThroughEndpoint(sid, it->second.second, fromLocalRulesId, toLocalRulesId);
+                SendMatchingThroughEndpoint(sid, msg, fromLocalRulesId, toLocalRulesId);
                 it = localCache.upper_bound(key);
             }
         } else {
@@ -1513,11 +1515,9 @@ bool SessionlessObj::IsMatch(RemoteCache& cache, uint32_t fromRulesId, uint32_t 
     return false;
 }
 
-bool SessionlessObj::QueryHandler(TransportMask transport, MDNSPacket query, uint16_t recvPort,
-                                  const qcc::IPEndpoint& ns4)
+bool SessionlessObj::QueryHandler(TransportMask transport, MDNSPacket query,
+                                  const qcc::IPEndpoint& src, const qcc::IPEndpoint& dst)
 {
-    QCC_UNUSED(recvPort);
-
     MDNSResourceRecord* searchRecord;
     if (!query->GetAdditionalRecord("search.*", MDNSResourceRecord::TXT, &searchRecord)) {
         return false;
@@ -1538,17 +1538,17 @@ bool SessionlessObj::QueryHandler(TransportMask transport, MDNSPacket query, uin
             }
             ruleStr += "implements='" + field.second + "'";
         } else if (field.first == ";") {
-            sentResponse = SendResponseIfMatch(transport, ns4, ruleStr);
+            sentResponse = SendResponseIfMatch(transport, src, dst, ruleStr);
             ruleStr.clear();
         }
     }
     if (!sentResponse) {
-        sentResponse = SendResponseIfMatch(transport, ns4, ruleStr);
+        sentResponse = SendResponseIfMatch(transport, src, dst, ruleStr);
     }
     return sentResponse;
 }
 
-bool SessionlessObj::SendResponseIfMatch(TransportMask transport, const qcc::IPEndpoint& ns4, const qcc::String& ruleStr)
+bool SessionlessObj::SendResponseIfMatch(TransportMask transport, const qcc::IPEndpoint& src, const qcc::IPEndpoint& dst, const qcc::String& ruleStr)
 {
     if (ruleStr.empty()) {
         return false;
@@ -1569,7 +1569,7 @@ bool SessionlessObj::SendResponseIfMatch(TransportMask transport, const qcc::IPE
     lock.Unlock();
 
     if (sendResponse) {
-        ScheduleWork(new SendResponseWork(*this, transport, name, ns4));
+        ScheduleWork(new SendResponseWork(*this, transport, name, src, dst));
     }
 
     return sendResponse;

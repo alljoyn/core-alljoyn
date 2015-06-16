@@ -127,7 +127,7 @@ Rule::Rule(const char* ruleSpec, QStatus* outStatus) : type(MESSAGE_INVALID), se
     }
 }
 
-bool Rule::IsMatch(Message& msg) const
+bool Rule::IsMatch(const Message& msg) const
 {
     /* The fields of a rule (if specified) are logically anded together */
     if ((type != MESSAGE_INVALID) && (type != msg->GetType())) {

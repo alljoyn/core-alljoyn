@@ -226,6 +226,7 @@ QStatus AboutObjectDescription::GetMsgArg(MsgArg* msgArg)
         announceObjectsArg[objIndex].Stabilize();
         delete [] interfaces;
         if (ER_OK != status) {
+            delete [] announceObjectsArg;
             return status;
         }
         objIndex++;

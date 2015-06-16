@@ -543,7 +543,7 @@ int CDECL_CALL main(int argc, char** argv)
         } else if (0 == strcmp("-s", argv[i])) {
             doStress = true;
         } else if (0 == strcmp("--tcp", argv[i])) {
-            g_preferredTransport = TRANSPORT_UDP;
+            g_preferredTransport = TRANSPORT_TCP;
             transportSpecific = true;
         } else if (0 == strcmp("--udp", argv[i])) {
             g_preferredTransport = TRANSPORT_UDP;

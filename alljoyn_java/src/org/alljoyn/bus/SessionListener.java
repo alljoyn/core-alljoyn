@@ -127,19 +127,6 @@ public class SessionListener {
      * Any implementation of this function must be multithread safe.  See the
      * class documentation for details.
      *
-     * @deprecated Use {@link #sessionLost(int,int)}.
-     *
-     * @param sessionId     Id of session that was lost.
-     */
-    @Deprecated
-    public void sessionLost(int sessionId) {}
-
-    /**
-     * Called by the bus when a session becomes disconnected.
-     *
-     * Any implementation of this function must be multithread safe.  See the
-     * class documentation for details.
-     *
      * @param sessionId     Id of session that was lost.
      * @param reason        Reason for the session being lost. One of:
      *                      ALLJOYN_SESSIONLOST_REMOTE_END_LEFT_SESSION

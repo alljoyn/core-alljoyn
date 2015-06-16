@@ -59,8 +59,10 @@ TEST(FileSinkTest, validFileSink) {
     // Cleanup files after test
     // This will not delete the directories
     for (const char** pathname = cleanup; *pathname; ++pathname) {
-        QStatus status = DeleteFile(*pathname);
-        EXPECT_EQ(ER_OK, status) << "Status: " << QCC_StatusText(status) << " File: " << *pathname;
+        QStatus status = FileExists(*pathname);
+        EXPECT_EQ(ER_OK, status) << "FileExists Status: " << QCC_StatusText(status) << " File: " << *pathname;
+        status = DeleteFile(*pathname);
+        EXPECT_EQ(ER_OK, status) << "DeleteFile Status: " << QCC_StatusText(status) << " File: " << *pathname;
     }
 }
 

@@ -207,28 +207,37 @@ void MyAllJoynCode::shutdown()
 /* From SessionPortListener */
 bool MyAllJoynCode::AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts)
 {
+    QCC_UNUSED(sessionPort);
+    QCC_UNUSED(joiner);
+    QCC_UNUSED(opts);
     return true;
 }
 
 void MyAllJoynCode::SessionJoined(SessionPort sessionPort, SessionId id, const char* joiner)
 {
+    QCC_UNUSED(sessionPort);
+    QCC_UNUSED(id);
+    QCC_UNUSED(joiner);
     LOGTHIS("SessionJoined!");
 }
 
 /* From SessionListener */
-void MyAllJoynCode::SessionLost(ajn::SessionId sessionId)
+void MyAllJoynCode::SessionLost(ajn::SessionId sessionId, ajn::SessionListener::SessionLostReason reason)
 {
-
+    QCC_UNUSED(sessionId);
+    QCC_UNUSED(reason);
 }
 
-void MyAllJoynCode::SessionMemberAdded(ajn::SessionId sessionId, const char*uniqueName)
+void MyAllJoynCode::SessionMemberAdded(ajn::SessionId sessionId, const char* uniqueName)
 {
-
+    QCC_UNUSED(sessionId);
+    QCC_UNUSED(uniqueName);
 }
 
-void MyAllJoynCode::SessionMemberRemoved(ajn::SessionId sessionId, const char*uniqueName)
+void MyAllJoynCode::SessionMemberRemoved(ajn::SessionId sessionId, const char* uniqueName)
 {
-
+    QCC_UNUSED(sessionId);
+    QCC_UNUSED(uniqueName);
 }
 
 char MyAllJoynCode::HexToChar(char c)

@@ -37,7 +37,8 @@ env.Append(CFLAGS = ['-Wall',
                      '-fno-unwind-tables',
                      '-ffunction-sections',
                      '-fdata-sections',
-                     '-Wno-long-long'])
+                     '-Wno-long-long',
+                     '-Wunused-parameter'])
 
 env.Append(CXXFLAGS = ['-Wall',
                        '-Werror',
@@ -51,7 +52,8 @@ env.Append(CXXFLAGS = ['-Wall',
                        '-fdata-sections',
                        '-Wno-long-long',
                        '-Wno-deprecated',
-                       '-Wno-unknown-pragmas'])
+                       '-Wno-unknown-pragmas',
+                       '-Wunused-parameter'])
 
 env.Append(JAVACFLAGS = ['-Xlint', '-Xlint:-serial'])
 

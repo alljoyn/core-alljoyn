@@ -814,6 +814,19 @@ class Crypto_DRBG : public Crypto_Rand {
     Context* ctx;
 };
 
+/**
+ * Compare two buffers in constant time. For any two inputs buf1 and buf2, and
+ * fixed count, the function will use the same number of cycles.
+ *
+ * @param buf1  The first buffer to compare.
+ * @param buf2  The second buffer to compare.
+ * @param count The number of bytes to compare.
+ *
+ * @return 0  if the first count bytes of buf1 and buf2 are equal, nonzero otherwise.
+ *
+ */
+int Crypto_Compare(const void* buf1, const void* buf2, size_t count);
+
 }
 
 #endif

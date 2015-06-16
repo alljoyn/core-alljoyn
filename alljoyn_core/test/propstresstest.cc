@@ -282,7 +282,7 @@ class Service : public App, private SessionPortListener, private SessionListener
     void SessionJoined(SessionPort sessionPort, SessionId id, const char* joiner);
 
     // SessionListener methods
-    void SessionLost(SessionId sessionId);
+    void SessionLost(SessionId sessionId, SessionLostReason reason);
     /* Private assigment operator - does nothing */
     Service& operator=(const Service&);
 };
@@ -330,8 +330,9 @@ void Service::SessionJoined(SessionPort sessionPort, SessionId id, const char* j
     }
 }
 
-void Service::SessionLost(SessionId sessionId)
+void Service::SessionLost(SessionId sessionId, ajn::SessionListener::SessionLostReason reason)
 {
+    QCC_UNUSED(reason);
     multimap<SessionId, PropTesterObject*>::iterator it;
     it = objects.find(sessionId);
     while (it != objects.end()) {
@@ -583,7 +584,7 @@ int CDECL_CALL main(int argc, char** argv)
     #if (_WIN32_WINNT > 0x0603)
         connSpec = env->Find("BUS_ADDRESS", "npipe:");
     #else
-        connSpec = env->Find("BUS_ADDRESS", "tcp:addr=127.0.0.1,port=9956");
+        connSpec = env->Find("BUS_ADDRESS", "tcp:addr=127.0.0.1,port=9955");
     #endif
 #else
         connSpec = env->Find("BUS_ADDRESS", "unix:abstract=alljoyn");

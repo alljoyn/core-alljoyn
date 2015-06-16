@@ -42,8 +42,8 @@ class _BusObject : public ajn::BusObject {
     }
     BusAttachment busAttachment;
 
-    QStatus AddInterface(const ajn::InterfaceDescription& iface) {
-        return ajn::BusObject::AddInterface(iface);
+    QStatus AddInterface(const ajn::InterfaceDescription& iface, const AnnounceFlag isAnnounced) {
+        return ajn::BusObject::AddInterface(iface, isAnnounced);
     }
     QStatus AddMethodHandler(const ajn::InterfaceDescription::Member* member) {
         return ajn::BusObject::AddMethodHandler(member, static_cast<ajn::MessageReceiver::MethodHandler>(&_BusObject::MethodHandler));
