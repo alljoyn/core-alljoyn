@@ -403,6 +403,15 @@ class KeyInfoNISTP256 : public KeyInfoECC {
     }
 
     /**
+     * Checks if this key is initialized properly.
+     * @return true if this key info is not initialized.
+     */
+    bool empty() const
+    {
+        return pubkey.key.empty();
+    }
+
+    /**
      * The required size of the exported byte array.
      * @return the required size of the exported byte array
      */
@@ -454,6 +463,19 @@ class KeyInfoNISTP256 : public KeyInfoECC {
     bool operator!=(const KeyInfoNISTP256& other) const
     {
         return !(*this == other);
+    }
+
+    /**
+     * Not equals operator
+     *
+     * @param[in] k the ECCPublicKey to compare
+     *
+     * @return true if the compared ECCPublicKeys are not equal to each other
+     */
+
+    bool operator!=(const KeyInfoNISTP256& ki) const
+    {
+        return !(*this == ki);
     }
 
     /**
