@@ -11,22 +11,8 @@
 #    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 #    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-#
+# 
 
-Import('router_env', 'router_objs', 'srobj')
-from os.path import basename
-
-# Test Programs
-progs = [
-    router_env.Program('advtunnel', ['advtunnel.cc'] + srobj + router_objs),
-    router_env.Program('ns', ['ns.cc'] + srobj + router_objs),
-    router_env.Program('transporttest', ['transporttest.cc'] + srobj + router_objs),
-    router_env.Program('transporttestclient', ['transporttestclient.cc'] + srobj + router_objs)
-   ]
-
-if router_env['OS'] in ['android', 'linux', 'win7']:
-   progs.append(router_env.Program('bbdaemon', ['bbdaemon.cc'] + srobj + router_objs))
-   progs.append(router_env.Program('ardp',     ['ardp.cc'] +     srobj + router_objs))
-   progs.append(router_env.Program('ardptest', ['ardptest.cc'] + srobj + router_objs))
-
-Return('progs')
+Import('router_env')
+objs = router_env.Object(router_env.Glob('*.cc'))
+Return('objs')

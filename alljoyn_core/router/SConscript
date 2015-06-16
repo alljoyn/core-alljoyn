@@ -48,6 +48,7 @@ if router_env['POLICYDB'] == 'on':
 router_objs = router_env.Object(srcs)
 
 router_objs.extend(router_env.SConscript('ns/SConscript', exports = ['router_env']))
+router_objs.extend(router_env.SConscript('nio/SConscript', exports = ['router_env']))
 
 if router_env['OS'] == "android":
     router_objs.extend(router_env.SConscript('android/SConscript', exports = ['router_env']))
