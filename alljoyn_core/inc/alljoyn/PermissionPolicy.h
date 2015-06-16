@@ -41,23 +41,21 @@ namespace ajn {
  */
 
 class PermissionPolicy {
-
   public:
-    /**
-     * Class to allow the application to specify a permission rule
-     */
-
     /**
      * The current specification version.
      */
     static const uint16_t SPEC_VERSION = 1;
 
+    /**
+     * Class to allow the application to specify a permission rule
+     */
     class Rule {
       public:
+
         /**
          * Class to allow the application to specify a permission rule at the interface member level
          */
-
         class Member {
           public:
             /**
@@ -92,67 +90,72 @@ class PermissionPolicy {
             {
             }
 
-            void SetMemberName(qcc::String memberName)
-            {
-                this->memberName = memberName;
-            }
+            /**
+             * Set the MemberName, MemberType and action mask
+             *
+             * @param[in] memberName the name of the interface member
+             * @param[in] memberType the type of member
+             * @param[in] actionMask the permission action mask
+             */
+            void Set(const qcc::String& memberName, MemberType memberType, uint8_t actionMask);
 
-            const qcc::String GetMemberName() const
-            {
-                return memberName;
-            }
+            /**
+             * Set the MemberName
+             * @param[in] memberName the name of the interface member
+             */
+            void SetMemberName(const qcc::String& memberName);
 
-            void SetMemberType(MemberType memberType)
-            {
-                this->memberType = memberType;
-            }
+            /**
+             * Get the MemberName
+             * @return the MemberName
+             */
+            const qcc::String GetMemberName() const;
 
-            const MemberType GetMemberType() const
-            {
-                return memberType;
-            }
+            /**
+             * Set the MemberType
+             * @param[in] memberType the type of the member
+             */
+            void SetMemberType(MemberType memberType);
 
-            void SetActionMask(uint8_t actionMask)
-            {
-                this->actionMask = actionMask;
-            }
+            /**
+             * Get the MemberType
+             * @return the MemberType
+             */
+            const MemberType GetMemberType() const;
 
-            const uint8_t GetActionMask() const
-            {
-                return actionMask;
-            }
+            /**
+             * Set the ActionMask
+             * param[in] actionMask Action mask value
+             */
+            void SetActionMask(uint8_t actionMask);
 
+            /**
+             * Get the ActionMask
+             * @return the ActionMask
+             */
+            const uint8_t GetActionMask() const;
+
+            /**
+             * A String representation of the Member
+             * @return A String representation of the Member
+             */
             qcc::String ToString() const;
 
-            bool operator==(const Member& m) const
-            {
-                if (memberName != m.memberName) {
-                    return false;
-                }
-
-                if (memberType != m.memberType) {
-                    return false;
-                }
-
-                if (actionMask != m.actionMask) {
-                    return false;
-                }
-
-                return true;
-            }
+            /**
+             * Comparison operators equality
+             * @param[in] other right hand side Member
+             * @return true if Members are equal
+             */
+            bool operator==(const Member& other) const;
 
             /**
-             * Assignment operator for Member
+             * Comparison operators non-equality
+             * @param[in] other right hand side Member
+             * @return true if Members are not equal
              */
-            Member& operator=(const Member& other);
-
-            /**
-             * Copy constructor for Member
-             */
-            Member(const Member& other);
+            bool operator!=(const Member& other) const;
 
           private:
-
             qcc::String memberName;
             MemberType memberType;
             uint8_t actionMask;
@@ -174,77 +177,68 @@ class PermissionPolicy {
             delete [] members;
         }
 
-        void SetObjPath(qcc::String objPath)
-        {
-            this->objPath = objPath;
-        }
+        /**
+         * Set the object path
+         * @param[in] objPath the object path
+         */
+        void SetObjPath(const qcc::String& objPath);
 
-        const qcc::String GetObjPath() const
-        {
-            return objPath;
-        }
+        /**
+         * Get the Object Path
+         * @return the Object Path
+         */
+        const qcc::String GetObjPath() const;
 
-        void SetInterfaceName(qcc::String interfaceName)
-        {
-            this->interfaceName = interfaceName;
-        }
+        /**
+         * Set the Interface Name
+         * @param[in] interfaceName the interface name.
+         */
+        void SetInterfaceName(const qcc::String& interfaceName);
 
-        const qcc::String GetInterfaceName() const
-        {
-            return interfaceName;
-        }
+        /**
+         * Get the InterfaceName
+         * @return the interface name
+         */
+        const qcc::String GetInterfaceName() const;
 
         /**
          * Set the array of members for the given interface.
-         * @param   count   the size of the array
-         * @param members  The array of member fields.  The memory for the array must be new'd by the caller and
-         *          will be deleted by this object.
+         * @param[in] count   the size of the array
+         * @param[in] members  The array of member fields.
          */
-        void SetMembers(size_t count, Member* members)
-        {
-            delete [] this->members;
-            this->members = members;
-            membersSize = count;
-        }
+        void SetMembers(size_t count, Member* members);
 
         /**
          * Get the array of inferface members.
          * @return the array of interface members.
          */
-        const Member* GetMembers() const
-        {
-            return members;
-        }
+        const Member* GetMembers() const;
 
-        const size_t GetMembersSize() const
-        {
-            return membersSize;
-        }
+        /**
+         * Get the number of Members in the Rule
+         * @return the number of Members in the rule.
+         */
+        const size_t GetMembersSize() const;
 
+        /**
+         * String representation of the Rule
+         * @return string representation of the rule
+         */
         qcc::String ToString() const;
 
-        bool operator==(const Rule& r) const
-        {
-            if (objPath != r.objPath) {
-                return false;
-            }
+        /**
+         * Comparison operators equality
+         * @param[in] other right hand side Rule
+         * @return true if Rules are equal
+         */
+        bool operator==(const Rule& other) const;
 
-            if (interfaceName != r.interfaceName) {
-                return false;
-            }
-
-            if (membersSize != r.membersSize) {
-                return false;
-            }
-
-            for (size_t i = 0; i < membersSize; i++) {
-                if (!(members[i] == r.members[i])) {
-                    return false;
-                }
-            }
-
-            return true;
-        }
+        /**
+         * Comparison operators non-equality
+         * @param[in] other right hand side Rule
+         * @return true if Rules are not equal
+         */
+        bool operator!=(const Rule& other) const;
 
         /**
          * Assignment operator for Rule
@@ -269,7 +263,6 @@ class PermissionPolicy {
     /**
      * Class to allow the application to specify a permission peer
      */
-
     class Peer {
       public:
 
@@ -303,36 +296,24 @@ class PermissionPolicy {
         /**
          * Set the peer type
          */
-        void SetType(PeerType peerType)
-        {
-            type = peerType;
-        }
+        void SetType(PeerType peerType);
 
         /**
          * Get the peer type
          */
-        const PeerType GetType() const
-        {
-            return type;
-        }
+        const PeerType GetType() const;
 
         /**
          * Set the security group id
          * @param guid the security group id
          */
-        void SetSecurityGroupId(const qcc::GUID128& guid)
-        {
-            securityGroupId = guid;
-        }
+        void SetSecurityGroupId(const qcc::GUID128& guid);
 
         /**
          * Get the security group id
          * @return the security group id
          */
-        const qcc::GUID128& GetSecurityGroupId() const
-        {
-            return securityGroupId;
-        }
+        const qcc::GUID128& GetSecurityGroupId() const;
 
         /**
          * Set the keyInfo field.
@@ -344,61 +325,48 @@ class PermissionPolicy {
          *     the public key of the peer.
          * When peer type is PEER_WITH_MEMBERSHIP the keyInfo.PublicKey is the
          *     public key of the security group authority.
-         * @param keyInfo the keyInfo. The keyInfo must be new'd by the caller. It will be deleted by this object.
+         * @param[in] keyInfo the keyInfo. Set to NULL to removed keyInfo.
          */
-        void SetKeyInfo(qcc::KeyInfoECC* keyInfo)
-        {
-            delete this->keyInfo;
-            this->keyInfo = keyInfo;
-        }
+        void SetKeyInfo(const qcc::KeyInfoNISTP256* keyInfo);
 
         /**
          * Get the keyInfo field.
          * @return keyInfo the keyInfo.
          */
-        const qcc::KeyInfoECC* GetKeyInfo() const
-        {
-            return keyInfo;
-        }
+        const qcc::KeyInfoNISTP256* GetKeyInfo() const;
 
         qcc::String ToString() const;
 
-        bool operator==(const Peer& p) const
-        {
-            if (type != p.type) {
-                return false;
-            }
+        /**
+         * Comparison operators equality
+         * @param[in] other right hand side Peer
+         * @return true is Peers are equal
+         */
+        bool operator==(const Peer& other) const;
 
-            if (type == PEER_WITH_MEMBERSHIP) {
-                if (securityGroupId != p.GetSecurityGroupId()) {
-                    return false;
-                }
-            }
-            if (keyInfo == NULL || p.keyInfo == NULL) {
-                return keyInfo == p.keyInfo;
-            }
-
-            if (!(*keyInfo == *p.keyInfo)) {
-                return false;
-            }
-
-            return true;
-        }
+        /**
+         * Comparison operators non-equality
+         * @param[in] other right hand side Peer
+         * @return true if Peers are not equal
+         */
+        bool operator!=(const Peer& other) const;
 
         /**
          * Assignment operator for Peer
+         * @param[in] other right hand side of the `=` operator
          */
         Peer& operator=(const Peer& other);
 
         /**
          * Copy constructor for Peer
+         * @param[in] other the Peer to copy
          */
         Peer(const Peer& other);
 
       private:
         PeerType type;
         qcc::GUID128 securityGroupId;
-        qcc::KeyInfoECC* keyInfo;
+        qcc::KeyInfoNISTP256* keyInfo;
     };
 
     /**
@@ -428,74 +396,59 @@ class PermissionPolicy {
 
         /**
          * Set the array of peers
-         * @param count the number of peers
-         * @param peer the array of peers. The array must be new'd by the caller. It will be deleted by this object.
+         * @param[in] count the number of peers
+         * @param[in] peer the array of peers.
          */
-        void SetPeers(size_t count, Peer* peers)
-        {
-            delete [] this->peers;
-            this->peers = peers;
-            peersSize = count;
-        }
+        void SetPeers(size_t count, const Peer* peers);
 
-        const size_t GetPeersSize() const
-        {
-            return peersSize;
-        }
+        /**
+         * Get the number of Peers in the Acl
+         * @return the number of Peers in the Acl
+         */
+        const size_t GetPeersSize() const;
 
-        const Peer* GetPeers() const
-        {
-            return peers;
-        }
+        /**
+         * Get a pointer to the Peers array stored in the Acl
+         */
+        const Peer* GetPeers() const;
 
         /**
          * Set the array of rules.
-         * @param count the number of rules
-         * @param rules the array of rules. The array must be new'd by the caller.  It will be deleted by this object.
+         * @param[in] count the number of rules
+         * @param[in] rules the array of rules.
          */
-        void SetRules(size_t count, Rule* rules)
-        {
-            delete [] this->rules;
-            rulesSize = count;
-            this->rules = rules;
-        }
+        void SetRules(size_t count, const Rule* rules);
 
-        const size_t GetRulesSize() const
-        {
-            return rulesSize;
-        }
+        /**
+         * Get the number of Rules in the Acl
+         * @return the number of Rules in the Acl
+         */
+        const size_t GetRulesSize() const;
 
-        const Rule* GetRules() const
-        {
-            return rules;
-        }
+        /**
+         * Get a pointer to the Rules array stored in the Acl
+         */
+        const Rule* GetRules() const;
 
+        /**
+         * Get a string representation of the Acl
+         * @return a string representation of the Acl
+         */
         qcc::String ToString() const;
 
-        bool operator==(const Acl& t) const
-        {
-            if (peersSize != t.peersSize) {
-                return false;
-            }
+        /**
+         * Comparison operators equality
+         * @param[in] other right hand side Acl
+         * @return true if Acls are equal
+         */
+        bool operator==(const Acl& other) const;
 
-            for (size_t i = 0; i < peersSize; i++) {
-                if (!(peers[i] == t.peers[i])) {
-                    return false;
-                }
-            }
-
-            if (rulesSize != t.rulesSize) {
-                return false;
-            }
-
-            for (size_t i = 0; i < rulesSize; i++) {
-                if (!(rules[i] == t.rules[i])) {
-                    return false;
-                }
-            }
-
-            return true;
-        }
+        /**
+         * Comparison operators non-equality
+         * @param[in] other right hand side Acl
+         * @return true if Acls are not equal
+         */
+        bool operator!=(const Acl& other) const;
 
         /**
          * Assignment operator for Term
@@ -632,15 +585,10 @@ class PermissionPolicy {
 
     /**
      * Set the array of permission acls
-     * @param count the number of permission acls
-     * @param provider the array of permission acls. The array must be new'd by the caller. It will be deleted by this object.
+     * @param[in] count the number of permission acls
+     * @param[in] provider the array of permission acls. The array must be new'd by the caller. It will be deleted by this object.
      */
-    void SetAcls(size_t count, Acl* acls)
-    {
-        delete [] this->acls;
-        aclsSize = count;
-        this->acls = acls;
-    }
+    void SetAcls(size_t count, const Acl* acls);
 
     const size_t GetAclsSize() const
     {

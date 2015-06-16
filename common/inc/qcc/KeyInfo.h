@@ -85,7 +85,7 @@ class KeyInfo {
             return;
         }
         keyIdLen = len;
-        memcpy(keyId, keyID, keyIdLen);
+        memcpy(keyId, keyID, keyIdLen * sizeof(uint8_t));
     }
 
     /**
@@ -139,21 +139,26 @@ class KeyInfo {
         return format;
     }
 
-    bool operator==(const KeyInfo& ki) const
+    /**
+     * Comparison operators equality
+     * @param[in] other right hand side KeyInfo
+     * @return true is keys are equal.
+     */
+    bool operator==(const KeyInfo& other) const
     {
-        if (format != ki.format) {
+        if (format != other.format) {
             return false;
         }
 
-        if (keyIdLen != ki.keyIdLen) {
+        if (keyIdLen != other.keyIdLen) {
             return false;
         }
 
-        if (keyId == NULL || ki.keyId == NULL) {
-            return keyId == ki.keyId;
+        if (keyId == NULL || other.keyId == NULL) {
+            return keyId == other.keyId;
         }
 
-        if (0 != memcmp(keyId, ki.keyId, keyIdLen)) {
+        if (0 != memcmp(keyId, other.keyId, keyIdLen)) {
             return false;
         }
 
@@ -161,10 +166,20 @@ class KeyInfo {
     }
 
     /**
-     * Assignment operator for KeyInfo
+     * Comparison operators non-equality
+     * @param[in] other right hand side KeyInfo
+     * @return true is keys are not equal
+     */
+    bool operator!=(const KeyInfo& other) const
+    {
+        return !(*this == other);
+    }
+
+    /**
+     * Assignment operator is private
      */
     KeyInfo& operator=(const KeyInfo& other) {
-        if (&other != this) {
+        if (this != &other) {
             format = other.format;
             keyIdLen = other.keyIdLen;
             delete [] keyId;
@@ -177,14 +192,15 @@ class KeyInfo {
     /**
      * Copy constructor for KeyInfo
      */
-    KeyInfo(const KeyInfo& other) :
-        format(other.format), keyIdLen(other.keyIdLen)
-    {
+    KeyInfo(const KeyInfo& other) {
+        format = other.format;
+        keyIdLen = other.keyIdLen;
         keyId = new uint8_t[keyIdLen];
         memcpy(keyId, other.keyId, keyIdLen);
     }
 
   private:
+
     FormatType format;
     size_t keyIdLen;
     uint8_t* keyId;

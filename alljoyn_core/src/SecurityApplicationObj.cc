@@ -244,7 +244,16 @@ QStatus SecurityApplicationObj::Get(const char* ifcName, const char* propName, M
         } else if (0 == strcmp("Manifest", propName)) {
             PermissionPolicy::Rule* manifest = NULL;
             size_t manifestSize = 0;
-            status = RetrieveManifest(&manifest, &manifestSize);
+            status = RetrieveManifest(NULL, &manifestSize);
+            if (ER_OK != status) {
+                if (ER_MANIFEST_NOT_FOUND == status) {
+                    status = ER_BUS_NO_SUCH_PROPERTY;
+                }
+            }
+            if (manifestSize > 0) {
+                manifest = new PermissionPolicy::Rule[manifestSize];
+            }
+            status = RetrieveManifest(manifest, &manifestSize);
             if (ER_OK != status) {
                 delete [] manifest;
                 if (ER_MANIFEST_NOT_FOUND == status) {

@@ -366,11 +366,18 @@ class PermissionMgmtObj : public BusObject {
 
     /**
      * Retrieve the manifest from persistence store.
-     * @param manifest[out] the variable to hold the manifest.  The caller must delete[] it.
-     * @param count[out] the variable to hold the number of rules in the manifest
+     * @param manifest[out] The variable to hold the manifest.
+     *                      Set to NULL to find out the size of the manifest.
+     * @param count[in,out] the number of rules in the manifest.
+     *                      If manifest is NULL count will be set to the number
+     *                      of rules in the manifest. If manifest is not NULL
+     *                      count will return the number of rule placed in the
+     *                      manifest. If count is smaller than the number of
+     *                      rules found in the manifest ER_BUFFER_TOO_SMALL will
+     *                      be returned.
      * @return ER_OK for success; error code otherwise.
      */
-    QStatus RetrieveManifest(PermissionPolicy::Rule** manifest, size_t* count);
+    QStatus RetrieveManifest(PermissionPolicy::Rule* manifest, size_t* count);
     /**
      * Reply to a method call with an error message.
      *

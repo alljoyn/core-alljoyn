@@ -36,6 +36,42 @@ using namespace qcc;
 
 namespace ajn {
 
+void PermissionPolicy::Rule::Member::Set(const qcc::String& memberName, PermissionPolicy::Rule::Member::MemberType memberType, uint8_t actionMask) {
+    SetMemberName(memberName);
+    SetMemberType(memberType);
+    SetActionMask(actionMask);
+}
+
+void PermissionPolicy::Rule::Member::SetMemberName(const qcc::String& memberName)
+{
+    this->memberName = memberName;
+}
+
+const qcc::String PermissionPolicy::Rule::Member::GetMemberName() const
+{
+    return memberName;
+}
+
+void PermissionPolicy::Rule::Member::SetMemberType(PermissionPolicy::Rule::Member::MemberType memberType)
+{
+    this->memberType = memberType;
+}
+
+const PermissionPolicy::Rule::Member::MemberType PermissionPolicy::Rule::Member::GetMemberType() const
+{
+    return memberType;
+}
+
+void PermissionPolicy::Rule::Member::SetActionMask(uint8_t actionMask)
+{
+    this->actionMask = actionMask;
+}
+
+const uint8_t PermissionPolicy::Rule::Member::GetActionMask() const
+{
+    return actionMask;
+}
+
 qcc::String PermissionPolicy::Rule::Member::ToString() const
 {
     qcc::String str;
@@ -64,6 +100,78 @@ qcc::String PermissionPolicy::Rule::Member::ToString() const
     return str;
 }
 
+bool PermissionPolicy::Rule::Member::operator==(const PermissionPolicy::Rule::Member& other) const
+{
+    if (memberName != other.memberName) {
+        return false;
+    }
+
+    if (memberType != other.memberType) {
+        return false;
+    }
+
+    if (actionMask != other.actionMask) {
+        return false;
+    }
+
+    return true;
+}
+
+bool PermissionPolicy::Rule::Member::operator!=(const PermissionPolicy::Rule::Member& other) const
+{
+    return !(*this == other);
+}
+
+
+void PermissionPolicy::Rule::SetObjPath(const qcc::String& objPath)
+{
+    this->objPath = objPath;
+}
+
+const qcc::String PermissionPolicy::Rule::GetObjPath() const
+{
+    return objPath;
+}
+
+void PermissionPolicy::Rule::SetInterfaceName(const qcc::String& interfaceName)
+{
+    this->interfaceName = interfaceName;
+}
+
+const qcc::String PermissionPolicy::Rule::GetInterfaceName() const
+{
+    return interfaceName;
+}
+
+void PermissionPolicy::Rule::SetMembers(size_t count, PermissionPolicy::Rule::Member* members)
+{
+    delete [] this->members;
+    this->members = NULL;
+    membersSize = 0;
+    if (count == 0) {
+        return;
+    }
+    this->members = new Member[count];
+    if (this->members == NULL) {
+        return;
+    }
+
+    for (size_t i = 0; i < count; ++i) {
+        this->members[i] = members[i];
+    }
+    membersSize = count;
+}
+
+const PermissionPolicy::Rule::Member* PermissionPolicy::Rule::GetMembers() const
+{
+    return members;
+}
+
+const size_t PermissionPolicy::Rule::GetMembersSize() const
+{
+    return membersSize;
+}
+
 qcc::String PermissionPolicy::Rule::ToString() const
 {
     qcc::String str;
@@ -78,6 +186,100 @@ qcc::String PermissionPolicy::Rule::ToString() const
         str += members[cnt].ToString();
     }
     return str;
+}
+
+bool PermissionPolicy::Rule::operator==(const PermissionPolicy::Rule& other) const
+{
+    if (objPath != other.objPath) {
+        return false;
+    }
+
+    if (interfaceName != other.interfaceName) {
+        return false;
+    }
+
+    if (membersSize != other.membersSize) {
+        return false;
+    }
+
+    for (size_t i = 0; i < membersSize; i++) {
+        if (!(members[i] == other.members[i])) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool PermissionPolicy::Rule::operator!=(const PermissionPolicy::Rule& other) const
+{
+    return !(*this == other);
+}
+
+PermissionPolicy::Rule& PermissionPolicy::Rule::operator=(const PermissionPolicy::Rule& other) {
+    if (&other != this) {
+        objPath = other.objPath;
+        interfaceName = other.interfaceName;
+        delete [] members;
+        members = NULL;
+        if (other.membersSize > 0) {
+            members = new Member[other.membersSize];
+            if (members == NULL) {
+                return *this;
+            }
+            for (size_t i = 0; i < other.membersSize; i++) {
+                members[i] = other.members[i];
+            }
+        }
+        membersSize = other.membersSize;
+    }
+    return *this;
+}
+
+PermissionPolicy::Rule::Rule(const PermissionPolicy::Rule& other) :
+    objPath(other.objPath), interfaceName(other.interfaceName),
+    membersSize(other.membersSize) {
+    members = new Member[membersSize];
+    if (members == NULL) {
+        return;
+    }
+    for (size_t i = 0; i < membersSize; i++) {
+        members[i] = other.members[i];
+    }
+}
+
+void PermissionPolicy::Peer::SetType(PermissionPolicy::Peer::PeerType peerType)
+{
+    type = peerType;
+}
+
+const PermissionPolicy::Peer::PeerType PermissionPolicy::Peer::GetType() const
+{
+    return type;
+}
+
+void PermissionPolicy::Peer::SetSecurityGroupId(const qcc::GUID128& guid)
+{
+    securityGroupId = guid;
+}
+
+const qcc::GUID128& PermissionPolicy::Peer::GetSecurityGroupId() const
+{
+    return securityGroupId;
+}
+
+void PermissionPolicy::Peer::SetKeyInfo(const qcc::KeyInfoNISTP256* keyInfo)
+{
+    delete this->keyInfo;
+    this->keyInfo = NULL;
+    if (keyInfo != NULL) {
+        this->keyInfo = new qcc::KeyInfoNISTP256(*keyInfo);
+    }
+}
+
+const qcc::KeyInfoNISTP256* PermissionPolicy::Peer::GetKeyInfo() const
+{
+    return keyInfo;
 }
 
 qcc::String PermissionPolicy::Peer::ToString() const
@@ -107,6 +309,111 @@ qcc::String PermissionPolicy::Peer::ToString() const
     return str;
 }
 
+bool PermissionPolicy::Peer::operator==(const Peer& other) const
+{
+    if (type != other.type) {
+        return false;
+    }
+
+    if (type == PEER_WITH_MEMBERSHIP) {
+        if (securityGroupId != other.GetSecurityGroupId()) {
+            return false;
+        }
+    }
+    if (keyInfo == NULL || other.keyInfo == NULL) {
+        return keyInfo == other.keyInfo;
+    }
+
+    if (!(*keyInfo == *other.keyInfo)) {
+        return false;
+    }
+
+    return true;
+}
+
+
+bool PermissionPolicy::Peer::operator!=(const Peer& other) const
+{
+    return !(*this == other);
+}
+
+PermissionPolicy::Peer& PermissionPolicy::Peer::operator=(const PermissionPolicy::Peer& other) {
+    if (&other != this) {
+        type = other.type;
+        securityGroupId = other.securityGroupId;
+        delete keyInfo;
+        keyInfo = NULL;
+        if (other.keyInfo != NULL) {
+            keyInfo = new qcc::KeyInfoNISTP256(*other.keyInfo);
+        }
+    }
+    return *this;
+}
+
+PermissionPolicy::Peer::Peer(const PermissionPolicy::Peer& other) :
+    type(other.type),
+    securityGroupId(other.securityGroupId) {
+    keyInfo = new qcc::KeyInfoNISTP256(*other.keyInfo);
+}
+
+void PermissionPolicy::Acl::SetPeers(size_t count, const PermissionPolicy::Peer* peers)
+{
+    delete [] this->peers;
+    this->peers = NULL;
+    peersSize = 0;
+    if (count == 0) {
+        return;
+    }
+    this->peers = new Peer[count];
+    if (this->peers == NULL) {
+        return;
+    }
+
+    for (size_t i = 0; i < count; ++i) {
+        this->peers[i] = peers[i];
+    }
+    peersSize = count;
+}
+
+const size_t PermissionPolicy::Acl::GetPeersSize() const
+{
+    return peersSize;
+}
+
+const PermissionPolicy::Peer* PermissionPolicy::Acl::GetPeers() const
+{
+    return peers;
+}
+
+void PermissionPolicy::Acl::SetRules(size_t count, const PermissionPolicy::Rule* rules)
+{
+    delete [] this->rules;
+    this->rules = NULL;
+    rulesSize = 0;
+    if (count == 0) {
+        return;
+    }
+    this->rules = new Rule[count];
+    if (this->rules == NULL) {
+        return;
+    }
+
+    for (size_t i = 0; i < count; ++i) {
+        this->rules[i] = rules[i];
+    }
+    rulesSize = count;
+}
+
+const size_t PermissionPolicy::Acl::GetRulesSize() const
+{
+    return rulesSize;
+}
+
+const PermissionPolicy::Rule* PermissionPolicy::Acl::GetRules() const
+{
+    return rules;
+}
+
 qcc::String PermissionPolicy::Acl::ToString() const
 {
     qcc::String str;
@@ -122,6 +429,66 @@ qcc::String PermissionPolicy::Acl::ToString() const
         }
     }
     return str;
+}
+
+bool PermissionPolicy::Acl::operator==(const PermissionPolicy::Acl& other) const
+{
+    if (peersSize != other.peersSize) {
+        return false;
+    }
+
+    for (size_t i = 0; i < peersSize; i++) {
+        if (!(peers[i] == other.peers[i])) {
+            return false;
+        }
+    }
+
+    if (rulesSize != other.rulesSize) {
+        return false;
+    }
+
+    for (size_t i = 0; i < rulesSize; i++) {
+        if (!(rules[i] == other.rules[i])) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool PermissionPolicy::Acl::operator!=(const PermissionPolicy::Acl& other) const
+{
+    return !(*this == other);
+}
+
+PermissionPolicy::Acl& PermissionPolicy::Acl::operator=(const PermissionPolicy::Acl& other) {
+    if (&other != this) {
+        peersSize = other.peersSize;
+        rulesSize = other.rulesSize;
+        delete [] peers;
+        peers = new Peer[peersSize];
+        for (size_t i = 0; i < peersSize; i++) {
+            peers[i] = other.peers[i];
+        }
+        delete [] rules;
+        rules = new Rule[rulesSize];
+        for (size_t i = 0; i < rulesSize; i++) {
+            rules[i] = other.rules[i];
+        }
+    }
+    return *this;
+}
+
+PermissionPolicy::Acl::Acl(const PermissionPolicy::Acl& other) :
+    peersSize(other.peersSize), rulesSize(other.rulesSize) {
+    peers = new Peer[peersSize];
+    for (size_t i = 0; i < peersSize; i++) {
+        peers[i] = other.peers[i];
+    }
+    rules = new Rule[rulesSize];
+    for (size_t i = 0; i < rulesSize; i++) {
+        rules[i] = other.rules[i];
+    }
 }
 
 qcc::String PermissionPolicy::ToString() const
@@ -152,7 +519,7 @@ static QStatus GeneratePeerArgs(MsgArg** retArgs, PermissionPolicy::Peer* peers,
         size_t keyInfoCount = 0;
         if ((peers[cnt].GetType() != PermissionPolicy::Peer::PEER_ALL) &&
             (peers[cnt].GetType() != PermissionPolicy::Peer::PEER_ANY_TRUSTED)) {
-            const KeyInfoECC* keyInfo = peers[cnt].GetKeyInfo();
+            const KeyInfoNISTP256* keyInfo = peers[cnt].GetKeyInfo();
             if (!keyInfo) {
                 status = ER_INVALID_DATA;
                 break;
@@ -225,13 +592,12 @@ static QStatus BuildPeersFromArg(MsgArg* arg, PermissionPolicy::Peer** peers, si
             status = ER_INVALID_DATA;
             break;
         }
-        KeyInfoNISTP256* keyInfo = new KeyInfoNISTP256();
-        status = KeyInfoHelper::MsgArgToKeyInfoNISTP256PubKey(pubKeys[0], *keyInfo);
+        KeyInfoNISTP256 keyInfo;
+        status = KeyInfoHelper::MsgArgToKeyInfoNISTP256PubKey(pubKeys[0], keyInfo);
         if (ER_OK != status) {
-            delete keyInfo;
             break;
         }
-        (*peers)[cnt].SetKeyInfo(keyInfo);
+        (*peers)[cnt].SetKeyInfo(&keyInfo);
 
         if (peerType == PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP) {
             GUID128 guid(0);
@@ -247,27 +613,23 @@ static QStatus BuildPeersFromArg(MsgArg* arg, PermissionPolicy::Peer** peers, si
     return status;
 }
 
-static QStatus GenerateMemberArgs(MsgArg** retArgs, const PermissionPolicy::Rule::Member* members, size_t count)
+static QStatus GenerateMemberArgs(MsgArg* retArgs, const PermissionPolicy::Rule::Member* members, size_t count)
 {
     if (count == 0) {
-        *retArgs = NULL;
         return ER_OK;
     }
-    *retArgs = new MsgArg[count];
     for (size_t cnt = 0; cnt < count; cnt++) {
-        QStatus status = (*retArgs)[cnt].Set("(syy)",
-                                             members[cnt].GetMemberName().c_str(), members[cnt].GetMemberType(),
-                                             members[cnt].GetActionMask());
+        QStatus status = retArgs[cnt].Set("(syy)",
+                                          members[cnt].GetMemberName().c_str(), members[cnt].GetMemberType(),
+                                          members[cnt].GetActionMask());
         if (ER_OK != status) {
-            delete [] *retArgs;
-            *retArgs = NULL;
             return status;
         }
     }
     return ER_OK;
 }
 
-static QStatus GenerateRuleArgs(MsgArg** retArgs, PermissionPolicy::Rule* rules, size_t count)
+static QStatus GenerateRuleArgs(MsgArg** retArgs, const PermissionPolicy::Rule* rules, size_t count)
 {
     QStatus status = ER_OK;
     if (count == 0) {
@@ -278,7 +640,8 @@ static QStatus GenerateRuleArgs(MsgArg** retArgs, PermissionPolicy::Rule* rules,
     for (size_t cnt = 0; cnt < count; cnt++) {
         MsgArg* ruleMembersArgs = NULL;
         if (rules[cnt].GetMembersSize() > 0) {
-            status = GenerateMemberArgs(&ruleMembersArgs, rules[cnt].GetMembers(), rules[cnt].GetMembersSize());
+            ruleMembersArgs = new MsgArg[rules[cnt].GetMembersSize()];
+            status = GenerateMemberArgs(ruleMembersArgs, rules[cnt].GetMembers(), rules[cnt].GetMembersSize());
             if (ER_OK != status) {
                 delete [] ruleMembersArgs;
                 goto exit;
@@ -369,6 +732,7 @@ static QStatus BuildRulesFromArgArray(const MsgArg* args, size_t argCount, Permi
                 break;
             }
             (*rules)[cnt].SetMembers(membersArgsCount, memberRules);
+            delete [] memberRules;
         }
     }
 
@@ -418,6 +782,7 @@ static QStatus BuildAclsFromArg(MsgArg* arg, PermissionPolicy::Acl** acls, size_
                 break;
             }
             (*acls)[cnt].SetPeers(peersArgsCount, peers);
+            delete [] peers;
         }
         if (rulesArgsCount > 0) {
             PermissionPolicy::Rule* rules = NULL;
@@ -428,6 +793,7 @@ static QStatus BuildAclsFromArg(MsgArg* arg, PermissionPolicy::Acl** acls, size_
                 break;
             }
             (*acls)[cnt].SetRules(rulesArgsCount, rules);
+            delete [] rules;
         }
     }
     if (ER_OK != status) {
@@ -513,6 +879,7 @@ QStatus PermissionPolicy::Import(uint16_t expectedVersion, const MsgArg& msgArg)
             return status;
         }
         SetAcls(aclsArgsCount, aclArray);
+        delete [] aclArray;
     }
 
     return ER_OK;
@@ -655,7 +1022,7 @@ QStatus PermissionPolicy::Import(Marshaller& marshaller, const uint8_t* buf, siz
 QStatus PermissionPolicy::GenerateRules(const Rule* rules, size_t count, MsgArg& msgArg)
 {
     MsgArg* rulesArgs = NULL;
-    QStatus status = GenerateRuleArgs(&rulesArgs, (Rule*) rules, count);
+    QStatus status = GenerateRuleArgs(&rulesArgs, rules, count);
     if (ER_OK != status) {
         return status;
     }
@@ -668,116 +1035,6 @@ QStatus PermissionPolicy::ParseRules(const MsgArg& msgArg, Rule** rules, size_t*
 {
     return BuildRulesFromArg(msgArg, rules, count);
 }
-
-PermissionPolicy::Rule::Member& PermissionPolicy::Rule::Member::operator=(const PermissionPolicy::Rule::Member& other) {
-    if (&other != this) {
-        memberName = other.memberName;
-        memberType = other.memberType;
-        actionMask = other.actionMask;
-    }
-    return *this;
-}
-
-PermissionPolicy::Rule::Member::Member(const PermissionPolicy::Rule::Member& other) :
-    memberName(other.memberName), memberType(other.memberType),
-    actionMask(other.actionMask) {
-}
-
-PermissionPolicy::Rule& PermissionPolicy::Rule::operator=(const PermissionPolicy::Rule& other) {
-    if (&other != this) {
-        objPath = other.objPath;
-        interfaceName = other.interfaceName;
-        membersSize = other.membersSize;
-        delete [] members;
-        members = NULL;
-
-        if (membersSize > 0) {
-            members = new Member[membersSize];
-            for (size_t i = 0; i < membersSize; i++) {
-                members[i] = other.members[i];
-            }
-        }
-    }
-    return *this;
-}
-
-PermissionPolicy::Rule::Rule(const PermissionPolicy::Rule& other) :
-    objPath(other.objPath), interfaceName(other.interfaceName),
-    membersSize(other.membersSize) {
-
-    if (membersSize > 0) {
-        members = new Member[membersSize];
-        for (size_t i = 0; i < membersSize; i++) {
-            members[i] = other.members[i];
-        }
-    } else {
-        members = NULL;
-    }
-}
-
-PermissionPolicy::Acl& PermissionPolicy::Acl::operator=(const PermissionPolicy::Acl& other) {
-    if (&other != this) {
-        peersSize = other.peersSize;
-        rulesSize = other.rulesSize;
-        delete [] peers;
-        peers = NULL;
-
-        if (peersSize > 0) {
-            peers = new Peer[peersSize];
-            for (size_t i = 0; i < peersSize; i++) {
-                peers[i] = other.peers[i];
-            }
-        }
-        delete [] rules;
-        rules = NULL;
-        if (rulesSize > 0) {
-            rules = new Rule[rulesSize];
-            for (size_t i = 0; i < rulesSize; i++) {
-                rules[i] = other.rules[i];
-            }
-        }
-    }
-    return *this;
-}
-
-PermissionPolicy::Acl::Acl(const PermissionPolicy::Acl& other) :
-    peersSize(other.peersSize), rulesSize(other.rulesSize) {
-
-    if (peersSize > 0) {
-        peers = new Peer[peersSize];
-        for (size_t i = 0; i < peersSize; i++) {
-            peers[i] = other.peers[i];
-        }
-    } else {
-        peers = NULL;
-    }
-
-    if (rulesSize > 0) {
-        rules = new Rule[rulesSize];
-        for (size_t i = 0; i < rulesSize; i++) {
-            rules[i] = other.rules[i];
-        }
-    } else {
-        rules = NULL;
-    }
-}
-
-PermissionPolicy::Peer& PermissionPolicy::Peer::operator=(const PermissionPolicy::Peer& other) {
-    if (&other != this) {
-        type = other.type;
-        securityGroupId = other.securityGroupId;
-        delete keyInfo;
-        keyInfo = new qcc::KeyInfoECC(*other.keyInfo);
-    }
-    return *this;
-}
-
-PermissionPolicy::Peer::Peer(const PermissionPolicy::Peer& other) :
-    type(other.type),
-    securityGroupId(other.securityGroupId) {
-    keyInfo = new qcc::KeyInfoECC(*other.keyInfo);
-}
-
 
 PermissionPolicy& PermissionPolicy::operator=(const PermissionPolicy& other) {
     if (&other != this) {
@@ -806,6 +1063,24 @@ PermissionPolicy::PermissionPolicy(const PermissionPolicy& other) :
             acls[i] = other.acls[i];
         }
     }
+}
+
+void PermissionPolicy::SetAcls(size_t count, const PermissionPolicy::Acl* acls) {
+    delete [] this->acls;
+    this->acls = NULL;
+    aclsSize = 0;
+    if (count == 0) {
+        return;
+    }
+    this->acls = new Acl[count];
+    if (this->acls == NULL) {
+        return;
+    }
+
+    for (size_t i = 0; i < count; ++i) {
+        this->acls[i] = acls[i];
+    }
+    aclsSize = count;
 }
 
 } /* namespace ajn */
