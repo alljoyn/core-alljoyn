@@ -97,6 +97,16 @@ class KeyInfoHelper {
      */
     static QStatus GenerateKeyId(qcc::KeyInfoNISTP256& keyInfo);
 
+    /**
+     * Helper function to export the ECC public key to coordinates.
+     * @param[in] publicKey the ECC public key
+     * @param[out] xData the buffer to hold the x coordinate
+     * @param[in] xSize the size of the x coordinate buffer
+     * @param[out] yData the buffer to hold the y coordinate
+     * @param[in] ySize the size of the y coordinate buffer
+     * @return ER_OK if successfull; otherwise, error code.
+     */
+    static QStatus ExportCoordinates(const qcc::ECCPublicKey& publicKey, uint8_t* xData, const size_t xSize, uint8_t* yData, const size_t ySize);
 };
 
 }

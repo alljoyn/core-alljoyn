@@ -72,7 +72,7 @@ QStatus PermissionMgmtTestHelper::CreateIdentityCertChain(BusAttachment& caBus, 
     String caStr = ca.ToString();
     String issuerStr = issuer.ToString();
 
-    certChain[1].SetSerial(serial);
+    certChain[1].SetSerial(reinterpret_cast<const uint8_t*>(serial.data()), serial.size());
     certChain[1].SetIssuerCN((const uint8_t*) caStr.data(), caStr.size());
     certChain[1].SetSubjectCN((const uint8_t*) issuerStr.data(), issuerStr.size());
     CertificateX509::ValidPeriod validity;
@@ -91,7 +91,7 @@ QStatus PermissionMgmtTestHelper::CreateIdentityCertChain(BusAttachment& caBus, 
     }
 
     /* generate the leaf cert */
-    certChain[0].SetSerial(serial);
+    certChain[0].SetSerial(reinterpret_cast<const uint8_t*>(serial.data()), serial.size());
     certChain[0].SetIssuerCN((const uint8_t*) issuerStr.data(), issuerStr.size());
     certChain[0].SetSubjectCN((const uint8_t*) subject.data(), subject.size());
     certChain[0].SetSubjectPublicKey(subjectPubKey);
@@ -122,7 +122,7 @@ QStatus PermissionMgmtTestHelper::CreateIdentityCert(BusAttachment& issuerBus, c
 
     QStatus status = ER_CRYPTO_ERROR;
 
-    cert.SetSerial(serial);
+    cert.SetSerial(reinterpret_cast<const uint8_t*>(serial.data()), serial.size());
     String issuerStr = issuer.ToString();
     cert.SetIssuerCN((const uint8_t*) issuerStr.data(), issuerStr.size());
     cert.SetSubjectCN((const uint8_t*) subject.data(), subject.size());
@@ -173,7 +173,7 @@ QStatus PermissionMgmtTestHelper::CreateMembershipCert(const String& serial, Bus
     qcc::GUID128 issuer(0);
     GetGUID(signingBus, issuer);
 
-    cert.SetSerial(serial);
+    cert.SetSerial(reinterpret_cast<const uint8_t*>(serial.data()), serial.size());
     String issuerStr = issuer.ToString();
     cert.SetIssuerCN((const uint8_t*) issuerStr.data(), issuerStr.size());
     cert.SetSubjectCN((const uint8_t*) subject.data(), subject.size());
@@ -578,11 +578,7 @@ QStatus PermissionMgmtTestHelper::RetrievePublicKeyFromMsgArg(MsgArg& arg, ECCPu
     if ((xLen != ECC_COORDINATE_SZ) || (yLen != ECC_COORDINATE_SZ)) {
         return status;
     }
-    KeyInfoNISTP256 keyInfo;
-    keyInfo.SetXCoord(xCoord);
-    keyInfo.SetYCoord(yCoord);
-    memcpy(pubKey, keyInfo.GetPublicKey(), sizeof(ECCPublicKey));
-    return ER_OK;
+    return pubKey->Import(xCoord, xLen, yCoord, yLen);
 }
 
 QStatus PermissionMgmtTestHelper::ReadClaimResponse(Message& msg, ECCPublicKey* pubKey)

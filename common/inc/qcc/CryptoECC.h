@@ -26,6 +26,7 @@
 
 #include <qcc/String.h>
 #include <alljoyn/Status.h>
+#include <assert.h>
 
 
 namespace qcc {
