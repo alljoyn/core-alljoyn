@@ -550,6 +550,23 @@ class _LocalEndpoint : public _BusEndpoint, public qcc::AlarmListener, public Me
      */
     QStatus DoRegisterBusObject(BusObject& object, BusObject* parent, bool isPlaceholder);
 
+    /**
+     * Check if message handler is currently being called.  Block until call is
+     * complete unless handler is trying to unregister itself.
+     *
+     * @param receiver  MessageReceiver being unregistered.
+     *
+     * @return  - true if it is safe to unregister the message handler
+     *          - false if a deadlock would occur
+     */
+    bool OkToUnregisterHandlerObj(MessageReceiver* receiver);
+
+    /**
+     * Final housekeeping when unregistering MessageReceivers.  This must be
+     * called just before the unregister method exits when
+     * OkToUnregisterHandlerObj() returned true.
+     */
+    void UnregisterComplete(MessageReceiver* receiver);
 };
 
 /**
