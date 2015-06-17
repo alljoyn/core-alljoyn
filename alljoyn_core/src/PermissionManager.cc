@@ -26,6 +26,9 @@
 #include <qcc/Debug.h>
 #include "PermissionManager.h"
 #include "BusUtil.h"
+#include "KeyExchanger.h"
+#include "AuthMechSRP.h"
+#include "AuthMechLogon.h"
 
 #define QCC_MODULE "PERMISSION_MGMT"
 
@@ -102,269 +105,116 @@ static bool IsActionAllowed(uint8_t allowedActions, uint8_t requestedAction)
 
 /**
  * Verify whether the given rule is a match for the given message.
- * If the rule has both object path and interface name, the message must prefix match both.
  * If the rule has object path, the message must prefix match the object path.
  * If the rule has interface name, the message must prefix match the interface name.
  * Find match in member name
- * Verify whether the requested right is allowed by the authorization at the member.
- *      When a member name has an exact match and is explicitly denied access then the rule is not a match.
- *      When a member name has an exact match and is authorized then the rule isa match
- *      When a member name has a prefix match and is authorized then the rule is a match
+ * Verify whether the requested right is allowed by the authorization at the
+ * member.
+ * The deny scan is only performed upon request.  In case of explicit deny, the
+ * object path, interface name, and member name must equal *
  *
  */
 
-static bool IsRuleMatched(const PermissionPolicy::Rule& rule, const MessageHolder& msgHolder, uint8_t requiredAuth, bool& denied)
+static bool IsRuleMatched(const PermissionPolicy::Rule& rule, const MessageHolder& msgHolder, uint8_t requiredAuth, bool scanForDenied, bool& denied)
 {
     if (rule.GetMembersSize() == 0) {
         return false;
     }
-    bool firstPartMatch = false;
     if (!rule.GetObjPath().empty()) {
         /* rule has an object path */
-        if ((rule.GetObjPath() == msgHolder.objPath) || MatchesPrefix(msgHolder.objPath, rule.GetObjPath())) {
-            if (!rule.GetInterfaceName().empty()) {
-                /* rule has a specific interface name */
-                firstPartMatch = (rule.GetInterfaceName() == msgHolder.iName) || MatchesPrefix(msgHolder.iName, rule.GetInterfaceName());
-            } else {
-                firstPartMatch = true;
-            }
+        if (!((rule.GetObjPath() == msgHolder.objPath) || MatchesPrefix(msgHolder.objPath, rule.GetObjPath()))) {
+            return false;  /* object path not matched */
         }
-    } else if (!rule.GetInterfaceName().empty()) {
-        if ((rule.GetInterfaceName() == msgHolder.iName) || MatchesPrefix(msgHolder.iName, rule.GetInterfaceName())) {
-            /* rule has a specific interface name */
-            firstPartMatch = true;
+    }
+    if (!rule.GetInterfaceName().empty()) {
+        if (!((rule.GetInterfaceName() == msgHolder.iName) || MatchesPrefix(msgHolder.iName, rule.GetInterfaceName()))) {
+            return false;  /* interface name not matched */
         }
     }
 
-    if (!firstPartMatch) {
-        return false;
+    /**
+     * Explicit deny rule must have object path = *, interface name = * and member name = *
+     */
+
+    if (scanForDenied) {
+        if (rule.GetObjPath() != "*") {
+            scanForDenied = false; /* not qualified for denied */
+        } else if (rule.GetInterfaceName() != "*") {
+            scanForDenied = false; /* not qualified for denied */
+        }
     }
 
-    bool msgMbrNameEmpty = !msgHolder.mbrName || (strlen(msgHolder.mbrName) == 0);
     const PermissionPolicy::Rule::Member* members = rule.GetMembers();
-    int8_t* buckets = new int8_t[rule.GetMembersSize()];
-    for (size_t cnt = 0; cnt < rule.GetMembersSize(); cnt++) {
-        buckets[cnt] = 0;
-        if (msgMbrNameEmpty) {
-            /* potential to match all members.  Additional check later */
-            buckets[cnt] = 1;
-        } else if (!members[cnt].GetMemberName().empty()) {
-            if (members[cnt].GetMemberName() == msgHolder.mbrName) {
-                /* rule has a specific member name match */
-                buckets[cnt] = 2;
-            } else if (MatchesPrefix(msgHolder.mbrName, members[cnt].GetMemberName())) {
-                /* rule has a prefix match member name */
-                buckets[cnt] = 1;
-            } else {
-                continue;  /* the names are different.  Skip it */
+    /* the member name is not specified when the caller wants to get all properties */
+    bool msgMbrNameEmpty = !msgHolder.mbrName || (strlen(msgHolder.mbrName) == 0);
+    if (!msgMbrNameEmpty) {
+        /* typical message with a member name */
+        /* scan all member entries to look for denied and one allowed */
+        bool allowed = false;
+        for (size_t cnt = 0; cnt < rule.GetMembersSize(); cnt++) {
+            /* match member name */
+            if (!members[cnt].GetMemberName().empty()) {
+                if (!((members[cnt].GetMemberName() == msgHolder.mbrName) || MatchesPrefix(msgHolder.mbrName, members[cnt].GetMemberName()))) {
+                    continue;  /* member name not matched */
+                }
+            }
+            /* match member type */
+            if (members[cnt].GetMemberType() != PermissionPolicy::Rule::Member::NOT_SPECIFIED) {
+                if (msgHolder.mbrType != members[cnt].GetMemberType()) {
+                    continue;  /* member type not matched */
+                }
+            }
+
+            /* now check the action mask for explicit deny if requested and
+             * when member name = *
+             */
+            if (scanForDenied && (members[cnt].GetMemberName() == "*") && IsActionDenied(members[cnt].GetActionMask())) {
+                denied = true;
+                return false;
+            }
+            /* now check the action mask for at least one allowed */
+            if (!allowed) {
+                allowed = IsActionAllowed(members[cnt].GetActionMask(), requiredAuth);
             }
         }
+        return allowed;
+    }
+    /* When the member name is not specified in the message, all rules for the
+       given member type must be satisfied. If any of the member fails to
+       authorize then the whole thing would fail authorization */
+    /* scan all member entries to look for denied and all allowed */
+    bool allowed = true;
+    for (size_t cnt = 0; cnt < rule.GetMembersSize(); cnt++) {
         /* match member type */
         if (members[cnt].GetMemberType() != PermissionPolicy::Rule::Member::NOT_SPECIFIED) {
             if (msgHolder.mbrType != members[cnt].GetMemberType()) {
-                buckets[cnt] = 0;  /* reset since it's not a match */
-                continue;  /* no matching type */
-            }
-            if (buckets[cnt] == 0) {
-                /* rule has no name but type matches */
-                buckets[cnt] = 1;
+                continue;  /* member type not matched */
             }
         }
 
-        if (buckets[cnt] > 0) {
-            /* now check the action mask */
-            if (IsActionDenied(members[cnt].GetActionMask())) {
-                denied = true;
-                buckets[cnt] = -buckets[cnt];
-            } else if (!IsActionAllowed(members[cnt].GetActionMask(), requiredAuth)) {
-                if (msgMbrNameEmpty) {
-                    /* When only the interface name is specified, all rules
-                       for the given member type must be satisfied. If any of the member fails to authorize then the whole thing would fail authorization */
-                    buckets[cnt] = -buckets[cnt];
-                } else {
-                    buckets[cnt] = 0;
-                }
-            }
+        if (allowed) {
+            allowed = IsActionAllowed(members[cnt].GetActionMask(), requiredAuth);
+        }
+        if (!allowed) {
+            break;  /* required all allowed */
         }
     }
-    /* now go through the findings */
-    for (size_t cnt = 0; cnt < rule.GetMembersSize(); cnt++) {
-        if (buckets[cnt] == -2) {
-            delete [] buckets;
-            return false; /* specifically denied by exact name */
-        }
-    }
-    for (size_t cnt = 0; cnt < rule.GetMembersSize(); cnt++) {
-        if (buckets[cnt] == 2) {
-            delete [] buckets;
-            return true;   /* there is an authorized match with exact name */
-        }
-    }
-    for (size_t cnt = 0; cnt < rule.GetMembersSize(); cnt++) {
-        if (buckets[cnt] < 0) {
-            delete [] buckets;
-            return false;   /* there is a denial based on prefix name match */
-        }
-    }
-    for (size_t cnt = 0; cnt < rule.GetMembersSize(); cnt++) {
-        if (buckets[cnt] > 0) {
-            delete [] buckets;
-            return true;   /* there is an authorized match */
-        }
-    }
-    delete [] buckets;
-    return false;
+    return allowed; /* done */
 }
 
-static bool IsPolicyAclMatched(const PermissionPolicy::Acl& term, const MessageHolder& msgHolder, uint8_t requiredAuth, bool& denied)
+static bool IsPolicyAclMatched(const PermissionPolicy::Acl& acl, const MessageHolder& msgHolder, uint8_t requiredAuth, bool scanForDenied, bool& denied)
 {
-    const PermissionPolicy::Rule* rules = term.GetRules();
-    for (size_t cnt = 0; cnt < term.GetRulesSize(); cnt++) {
-        if (IsRuleMatched(rules[cnt], msgHolder, requiredAuth, denied)) {
-            return true;
+    const PermissionPolicy::Rule* rules = acl.GetRules();
+    bool allowed = false;
+    for (size_t cnt = 0; cnt < acl.GetRulesSize(); cnt++) {
+        if (IsRuleMatched(rules[cnt], msgHolder, requiredAuth, scanForDenied, denied)) {
+            allowed = true; /* track it */
         } else if (denied) {
             /* skip the remainder of the search */
-            return false;
+            return allowed;
         }
     }
-    return false;
-}
-
-static bool IsAuthorizedForPeerType(PermissionPolicy::Peer::PeerType peerType, const PermissionPolicy* policy, const MessageHolder& msgHolder, uint8_t requiredAuth, bool& denied)
-{
-    denied = false;
-    const PermissionPolicy::Acl* terms = policy->GetAcls();
-    for (size_t cnt = 0; cnt < policy->GetAclsSize(); cnt++) {
-        const PermissionPolicy::Peer* peers = terms[cnt].GetPeers();
-        bool qualified = false;
-        for (size_t idx = 0; idx < terms[cnt].GetPeersSize(); idx++) {
-            if (peers[idx].GetType() == peerType) {
-                qualified = true;
-                break;
-            }
-        }
-        if (!qualified) {
-            continue;
-        }
-        if (IsPolicyAclMatched(terms[cnt], msgHolder, requiredAuth, denied)) {
-            return true;
-        } else if (denied) {
-            /* skip the remainder of the search */
-            return false;
-        }
-    }
-    return false;
-}
-
-static bool IsAuthorizedForAnyTrusted(const PermissionPolicy* policy, const MessageHolder& msgHolder, uint8_t requiredAuth, bool& denied)
-{
-    return IsAuthorizedForPeerType(PermissionPolicy::Peer::PEER_ANY_TRUSTED, policy, msgHolder, requiredAuth, denied);
-}
-
-static bool IsAuthorizedForAllUsers(const PermissionPolicy* policy, const MessageHolder& msgHolder, uint8_t requiredAuth, bool& denied)
-{
-    return IsAuthorizedForPeerType(PermissionPolicy::Peer::PEER_ALL, policy, msgHolder, requiredAuth, denied);
-}
-
-static bool AclHasMatchingSecurityGroup(const PermissionPolicy::Acl& term, const GUID128& sgGUID)
-{
-    /* is this peer entry has matching security group GUID */
-    const PermissionPolicy::Peer* peers = term.GetPeers();
-    for (size_t idx = 0; idx < term.GetPeersSize(); idx++) {
-        if (peers[idx].GetType() == PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP) {
-            if (peers[idx].GetSecurityGroupId() == sgGUID) {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-/**
- * Is the given message authorized by a guild policy that is common between the peer.
- * The consumer must be both authorized in its membership and in the provider's policy for any guild in common.
- */
-static bool IsAuthorizedWithMembership(const PermissionPolicy* policy, const MessageHolder& msgHolder, uint8_t policyAuth, PeerState& peerState, bool& denied)
-{
-    denied = false;
-    for (_PeerState::GuildMap::iterator it = peerState->guildMap.begin(); it != peerState->guildMap.end(); it++) {
-        _PeerState::GuildMetadata* metadata = it->second;
-        if (metadata->certChain.size() > 0) {
-            const PermissionPolicy::Acl* terms = policy->GetAcls();
-            for (size_t cnt = 0; cnt < policy->GetAclsSize(); cnt++) {
-                /* look for peer entry with matching security GUID */
-                if (!AclHasMatchingSecurityGroup(terms[cnt], metadata->certChain[0]->GetGuild())) {
-                    continue;
-                }
-                if (IsPolicyAclMatched(terms[cnt], msgHolder, policyAuth, denied)) {
-                    return true;
-                }
-                if (denied) {
-                    /* skip the remainder */
-                    return false;
-                }
-            }
-        }
-    }
-    return false;
-}
-
-static bool IsAuthorizedByPeerPublicKey(const PermissionPolicy* policy, const ECCPublicKey& peerPublicKey, const MessageHolder& msgHolder, uint8_t requiredAuth, bool& denied)
-{
-    denied = false;
-    const PermissionPolicy::Acl* terms = policy->GetAcls();
-    for (size_t cnt = 0; cnt < policy->GetAclsSize(); cnt++) {
-        const PermissionPolicy::Peer* peers = terms[cnt].GetPeers();
-        bool qualified = false;
-        for (size_t idx = 0; idx < terms[cnt].GetPeersSize(); idx++) {
-            if ((peers[idx].GetType() == PermissionPolicy::Peer::PEER_WITH_PUBLIC_KEY) && peers[idx].GetKeyInfo()) {
-                if (memcmp(peers[idx].GetKeyInfo()->GetPublicKey(), &peerPublicKey, sizeof(ECCPublicKey)) == 0) {
-                    qualified = true;
-                    break;
-                }
-            }
-        }
-        if (!qualified) {
-            continue;
-        }
-        if (IsPolicyAclMatched(terms[cnt], msgHolder, requiredAuth, denied)) {
-            return true;
-        } else if (denied) {
-            /* skip the remainder */
-            return false;
-        }
-    }
-    return false;
-}
-
-static bool IsAuthorizedFromCertAuthority(const PermissionPolicy* policy, const std::vector<ECCPublicKey>& issuerChain, const MessageHolder& msgHolder, uint8_t requiredAuth, bool& denied)
-{
-    denied = false;
-    const PermissionPolicy::Acl* terms = policy->GetAcls();
-    for (size_t cnt = 0; cnt < policy->GetAclsSize(); cnt++) {
-        const PermissionPolicy::Peer* peers = terms[cnt].GetPeers();
-        bool qualified = false;
-        for (size_t idx = 0; idx < terms[cnt].GetPeersSize(); idx++) {
-            if ((peers[idx].GetType() == PermissionPolicy::Peer::PEER_FROM_CERTIFICATE_AUTHORITY) && peers[idx].GetKeyInfo()) {
-                for (std::vector<ECCPublicKey>::const_iterator it = issuerChain.begin(); it != issuerChain.end(); it++) {
-                    if (memcmp(peers[idx].GetKeyInfo()->GetPublicKey(), &(*it), sizeof(ECCPublicKey)) == 0) {
-                        qualified = true;
-                        break;
-                    }
-                }
-            }
-        }
-        if (!qualified) {
-            continue;
-        }
-        if (IsPolicyAclMatched(terms[cnt], msgHolder, requiredAuth, denied)) {
-            return true;
-        } else if (denied) {
-            /* skip the remainder */
-            return false;
-        }
-    }
-    return false;
+    return allowed;
 }
 
 static void GenRight(const MessageHolder& msgHolder, Right& right)
@@ -420,7 +270,7 @@ static bool EnforcePeerManifest(const MessageHolder& msgHolder, const Right& rig
     for (size_t cnt = 0; cnt < peerState->manifestSize; cnt++) {
         /* validate the peer manifest to make sure it was granted the same thing */
         bool denied = false;
-        if (IsRuleMatched(peerState->manifest[cnt], msgHolder, right.authByPolicy, denied)) {
+        if (IsRuleMatched(peerState->manifest[cnt], msgHolder, right.authByPolicy, false, denied)) {
             return true;
         } else if (denied) {
             /* skip the remainder of the search */
@@ -428,6 +278,78 @@ static bool EnforcePeerManifest(const MessageHolder& msgHolder, const Right& rig
         }
     }
     return false;
+}
+
+static bool IsPeerQualifiedForAcl(const PermissionPolicy::Acl& acl, PeerState& peerState, bool trustedPeer, const qcc::ECCPublicKey* peerPublicKey, const std::vector<ECCPublicKey>& issuerChain, bool& qualifiedPeerWithPublicKey)
+{
+    qualifiedPeerWithPublicKey = false;
+    const PermissionPolicy::Peer* peers = acl.GetPeers();
+    for (size_t idx = 0; idx < acl.GetPeersSize(); idx++) {
+        if (peers[idx].GetType() == PermissionPolicy::Peer::PEER_ALL) {
+            return true;
+        }
+        if (!trustedPeer) {
+            continue;
+        }
+        if (peers[idx].GetType() == PermissionPolicy::Peer::PEER_ANY_TRUSTED) {
+            return true;
+        }
+        if (peerPublicKey == NULL) {
+            continue;
+        }
+        if ((peers[idx].GetType() == PermissionPolicy::Peer::PEER_WITH_PUBLIC_KEY) && peers[idx].GetKeyInfo()) {
+            if (*peers[idx].GetKeyInfo()->GetPublicKey() == *peerPublicKey) {
+                qualifiedPeerWithPublicKey = true;
+                return true;
+            }
+        }
+        if ((peers[idx].GetType() == PermissionPolicy::Peer::PEER_FROM_CERTIFICATE_AUTHORITY) && peers[idx].GetKeyInfo()) {
+            for (std::vector<ECCPublicKey>::const_iterator it = issuerChain.begin(); it != issuerChain.end(); it++) {
+                if (*peers[idx].GetKeyInfo()->GetPublicKey() == *it) {
+                    return true;
+                }
+            }
+        }
+        if (peers[idx].GetType() == PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP) {
+            for (_PeerState::GuildMap::iterator it = peerState->guildMap.begin(); it != peerState->guildMap.end(); it++) {
+                _PeerState::GuildMetadata* metadata = it->second;
+                if (metadata->certChain.size() > 0) {
+                    if (peers[idx].GetSecurityGroupId() == metadata->certChain[0]->GetGuild()) {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+    return false;
+}
+
+/**
+ * Is this peer authorized?
+ * Search all the applicable ACLs that the peer qualifies for a denied or
+ * at least one allow.
+ * The peer is authorized if there is no applicable deny and at least one allow.
+ */
+
+static bool IsPeerAuthorized(const MessageHolder& msgHolder, const PermissionPolicy* policy, PeerState& peerState, bool trustedPeer, const qcc::ECCPublicKey* peerPublicKey, const std::vector<ECCPublicKey>& issuerChain, uint8_t requiredAuth, bool& denied)
+{
+    bool allowed = false;
+    denied = false;
+    bool qualifiedPeerWithPublicKey = false;
+    const PermissionPolicy::Acl* acls = policy->GetAcls();
+    for (size_t cnt = 0; cnt < policy->GetAclsSize(); cnt++) {
+        if (!IsPeerQualifiedForAcl(acls[cnt], peerState, trustedPeer, peerPublicKey, issuerChain, qualifiedPeerWithPublicKey)) {
+            continue;
+        }
+        if (IsPolicyAclMatched(acls[cnt], msgHolder, requiredAuth, qualifiedPeerWithPublicKey, denied)) {
+            allowed = true;   /* track it */
+        }
+        if (denied) {
+            /* skip the remainder */
+            return allowed;
+        }
+    }
+    return allowed;
 }
 
 /**
@@ -446,8 +368,9 @@ static bool IsAuthorized(const MessageHolder& msgHolder, const PermissionPolicy*
 
     bool authorized = false;
     bool denied = false;
+    bool enforceManifest = true;
 
-    QCC_DbgPrintf(("IsAuthorized with required permission policy %d\n", right.authByPolicy));
+    QCC_DbgPrintf(("IsAuthorized with required permission %d\n", right.authByPolicy));
 
     if (right.authByPolicy) {
         if (policy == NULL) {
@@ -458,59 +381,33 @@ static bool IsAuthorized(const MessageHolder& msgHolder, const PermissionPolicy*
         /* validate the remote peer auth data to make sure it was granted to perform such action */
         ECCPublicKey peerPublicKey;
         std::vector<ECCPublicKey> issuerPublicKeys;
+        ECCPublicKey* trustedPeerPublicKey = NULL;
+        qcc::String authMechanism;
+        bool publicKeyFound = false;
+        QStatus status = permissionMgmtObj->GetConnectedPeerAuthMetadata(peerState->GetGuid(), authMechanism, publicKeyFound, &peerPublicKey, NULL, issuerPublicKeys);
         bool trustedPeer = false;
-        QStatus status = permissionMgmtObj->GetConnectedPeerPublicKey(peerState->GetGuid(), &peerPublicKey, NULL, issuerPublicKeys);
         if (ER_OK == status) {
-            trustedPeer = true;
-        }
-
-        if (trustedPeer) {
-            authorized = IsAuthorizedByPeerPublicKey(policy, peerPublicKey, msgHolder, right.authByPolicy, denied);
-            QCC_DbgPrintf(("Authorized by peer specific (pubKey: %s) ACL: %d", peerPublicKey.ToString().c_str(), authorized));
-            if (denied) {
-                QCC_DbgPrintf(("Denied by peer specific ACL"));
-                return false;
+            /* trusted peer */
+            if (publicKeyFound) {
+                trustedPeerPublicKey = &peerPublicKey;
+                trustedPeer = true;
+            } else if ((authMechanism == KeyExchangerECDHE_PSK::AuthName()) ||
+                       (authMechanism == AuthMechSRP::AuthName()) ||
+                       (authMechanism == AuthMechLogon::AuthName())) {
+                trustedPeer = true;
+                enforceManifest = false;
+            } else {
+                enforceManifest = false;
             }
         }
-        if (trustedPeer && !authorized) {
-            authorized = IsAuthorizedWithMembership(policy, msgHolder, right.authByPolicy, peerState, denied);
-            if (denied) {
-                QCC_DbgPrintf(("Denied by security group membership ACL"));
-                return false;
-            }
-            QCC_DbgPrintf(("Authorized by security group membership ACL: %d", authorized));
-        }
-        if (trustedPeer && !authorized) {
-            authorized = IsAuthorizedFromCertAuthority(policy, issuerPublicKeys, msgHolder, right.authByPolicy, denied);
-            QCC_DbgPrintf(("Authorized for specific certificate authority ACL: %d", authorized));
-            if (denied) {
-                QCC_DbgPrintf(("Denied by specific certificate authority ACL"));
-                return false;
-            }
-        }
-        if (trustedPeer && !authorized) {
-            authorized = IsAuthorizedForAnyTrusted(policy, msgHolder, right.authByPolicy, denied);
-            QCC_DbgPrintf(("Authorized for any trusted user ACL: %d", authorized));
-            if (denied) {
-                QCC_DbgPrintf(("Denied by any trusted user ACL"));
-                return false;
-            }
-        }
-        if (trustedPeer && !authorized) {
-            authorized = IsAuthorizedForAllUsers(policy, msgHolder, right.authByPolicy, denied);
-            QCC_DbgPrintf(("Authorized for all user ACL: %d", authorized));
-            if (denied) {
-                QCC_DbgPrintf(("Denied by all user ACL"));
-                return false;
-            }
-        }
-        if (!authorized) {
-            QCC_DbgPrintf(("Not authorized by policy"));
+        authorized = IsPeerAuthorized(msgHolder, policy, peerState, trustedPeer, trustedPeerPublicKey, issuerPublicKeys, right.authByPolicy, denied);
+        QCC_DbgPrintf(("Peer's public key: %s Authorized: %d Denied: %d", trustedPeerPublicKey ? trustedPeerPublicKey->ToString().c_str() : "N/A", authorized, denied));
+        if (denied || !authorized) {
             return false;
         }
     }
 
-    if (authorized) {
+    if (authorized && enforceManifest) {
         authorized = EnforcePeerManifest(msgHolder, right, peerState);
     }
     return authorized;
@@ -686,10 +583,6 @@ bool PermissionManager::AuthorizePermissionMgmt(bool outgoing, PeerState& peerSt
             (strncmp(mbrName, "ClaimCapabilities", 17) == 0) ||
             (strncmp(mbrName, "ClaimCapabilityAdditionalInfo", 29) == 0)
             ) {
-            return true;
-        }
-    } else if (strcmp(iName, org::alljoyn::Bus::Application::InterfaceName) == 0) {
-        if (strncmp(mbrName, "State", 5) == 0) {
             return true;
         }
     }

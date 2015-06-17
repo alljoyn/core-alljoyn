@@ -295,6 +295,12 @@ class KeyExchangerECDHE : public KeyExchanger {
 
 class KeyExchangerECDHE_NULL : public KeyExchangerECDHE {
   public:
+    /**
+     * Returns the static name for this authentication method
+     * @return string "ALLJOYN_ECDHE_NULL"
+     */
+    static const char* AuthName() { return "ALLJOYN_ECDHE_NULL"; }
+
     KeyExchangerECDHE_NULL(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, uint16_t peerAuthVersion) : KeyExchangerECDHE(initiator, peerObj, bus, listener, peerAuthVersion) {
     }
 
@@ -305,7 +311,7 @@ class KeyExchangerECDHE_NULL : public KeyExchangerECDHE {
         return AUTH_SUITE_ECDHE_NULL;
     }
     const char* GetSuiteName() {
-        return "ALLJOYN_ECDHE_NULL";
+        return AuthName();
     }
     QStatus KeyAuthentication(KeyExchangerCB& callback, const char* peerName, uint8_t* authorized);
 
@@ -326,6 +332,12 @@ class KeyExchangerECDHE_NULL : public KeyExchangerECDHE {
 
 class KeyExchangerECDHE_PSK : public KeyExchangerECDHE {
   public:
+    /**
+     * Returns the static name for this authentication method
+     * @return string "ALLJOYN_ECDHE_PSK"
+     */
+    static const char* AuthName() { return "ALLJOYN_ECDHE_PSK"; }
+
     KeyExchangerECDHE_PSK(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, uint16_t peerAuthVersion) : KeyExchangerECDHE(initiator, peerObj, bus, listener, peerAuthVersion) {
         pskName = "<anonymous>";
         pskValue = " ";
@@ -339,7 +351,7 @@ class KeyExchangerECDHE_PSK : public KeyExchangerECDHE {
         return AUTH_SUITE_ECDHE_PSK;
     }
     const char* GetSuiteName() {
-        return "ALLJOYN_ECDHE_PSK";
+        return AuthName();
     }
     QStatus ReplyWithVerifier(Message& msg);
     QStatus GenerateLocalVerifier(uint8_t* verifier, size_t verifierLen);
@@ -367,6 +379,12 @@ class KeyExchangerECDHE_PSK : public KeyExchangerECDHE {
 
 class KeyExchangerECDHE_ECDSA : public KeyExchangerECDHE {
   public:
+    /**
+     * Returns the static name for this authentication method
+     * @return string "ALLJOYN_ECDHE_ECDSA"
+     */
+    static const char* AuthName() { return "ALLJOYN_ECDHE_ECDSA"; }
+
     KeyExchangerECDHE_ECDSA(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, uint16_t peerAuthVersion, PermissionMgmtObj::TrustAnchorList* trustAnchorList) : KeyExchangerECDHE(initiator, peerObj, bus, listener, peerAuthVersion), certChainLen(0), certChain(NULL), trustAnchorList(trustAnchorList), hasCommonTrustAnchors(false), peerDSAPubKey(NULL)
     {
         memset(peerManifestDigest, 0, sizeof(peerManifestDigest));
@@ -378,7 +396,7 @@ class KeyExchangerECDHE_ECDSA : public KeyExchangerECDHE {
         return AUTH_SUITE_ECDHE_ECDSA;
     }
     const char* GetSuiteName() {
-        return "ALLJOYN_ECDHE_ECDSA";
+        return AuthName();
     }
 
     QStatus ReplyWithVerifier(Message& msg);

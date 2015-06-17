@@ -266,22 +266,6 @@ bool PermissionMgmtObj::IsTrustAnchor(const ECCPublicKey* publicKey)
     return false;
 }
 
-bool PermissionMgmtObj::IsTrustAnchor(TrustAnchorType taType, const ECCPublicKey* publicKey)
-{
-    for (TrustAnchorList::iterator it = trustAnchors.begin(); it != trustAnchors.end(); it++) {
-        if ((taType == (*it)->use) &&
-            (memcmp((*it)->keyInfo.GetPublicKey(), publicKey, sizeof(ECCPublicKey)) == 0)) {
-            return true;
-        }
-    }
-    return false;
-}
-
-bool PermissionMgmtObj::IsAdmin(const ECCPublicKey* publicKey)
-{
-    return IsTrustAnchor(TRUST_ANCHOR_ADMIN_GROUP, publicKey);
-}
-
 bool PermissionMgmtObj::IsAdminGroup(const std::vector<MembershipCertificate*> certChain)
 {
     for (std::vector<MembershipCertificate*>::const_iterator certIt = certChain.begin(); certIt != certChain.end(); certIt++) {
@@ -330,34 +314,27 @@ static void ClearTrustAnchorListByUse(PermissionMgmtObj::TrustAnchorType use, Pe
     }
 }
 
-static void LoadSGAuthoritiesAndRestrictedCAs(bool getSGAuthoritiesOnly, const PermissionPolicy& policy, PermissionMgmtObj::TrustAnchorList& taList)
+static void LoadSGAuthoritiesAndRestrictedCAs(const PermissionPolicy& policy, PermissionMgmtObj::TrustAnchorList& taList)
 {
     const PermissionPolicy::Acl* acls = policy.GetAcls();
     for (size_t cnt = 0; cnt < policy.GetAclsSize(); cnt++) {
         const PermissionPolicy::Peer* peers = acls[cnt].GetPeers();
         for (size_t idx = 0; idx < acls[cnt].GetPeersSize(); idx++) {
-            bool typeMatched = false;
-            if (peers[idx].GetType() == PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP) {
-                typeMatched = true;
-            } else if (!getSGAuthoritiesOnly && (peers[idx].GetType() == PermissionPolicy::Peer::PEER_FROM_CERTIFICATE_AUTHORITY)) {
-                typeMatched = true;
-            }
-            if (typeMatched && peers[idx].GetKeyInfo()) {
+            if (((peers[idx].GetType() == PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP) ||
+                 (peers[idx].GetType() == PermissionPolicy::Peer::PEER_FROM_CERTIFICATE_AUTHORITY)) && peers[idx].GetKeyInfo()) {
                 if (KeyInfoHelper::InstanceOfKeyInfoNISTP256(*peers[idx].GetKeyInfo())) {
                     PermissionMgmtObj::TrustAnchor* ta = new PermissionMgmtObj::TrustAnchor((peers[idx].GetType() == PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP ? PermissionMgmtObj::TRUST_ANCHOR_SG_AUTHORITY : PermissionMgmtObj::TRUST_ANCHOR_RESTRICTED_CA), *(KeyInfoNISTP256*) peers[idx].GetKeyInfo());
                     if (ta->keyInfo.GetKeyIdLen() == 0) {
                         KeyInfoHelper::GenerateKeyId(ta->keyInfo);
+                    }
+                    if (peers[idx].GetType() == PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP) {
+                        ta->securityGroupId = peers[idx].GetSecurityGroupId();
                     }
                     taList.push_back(ta);
                 }
             }
         }
     }
-}
-
-static void LoadSecurityGroupAuthorities(const PermissionPolicy& policy, PermissionMgmtObj::TrustAnchorList& taList)
-{
-    LoadSGAuthoritiesAndRestrictedCAs(true, policy, taList);
 }
 
 void PermissionMgmtObj::ClearTrustAnchors()
@@ -373,7 +350,7 @@ QStatus PermissionMgmtObj::InstallTrustAnchor(TrustAnchor* trustAnchor)
         if ((*it)->use != trustAnchor->use) {
             continue;
         }
-        if (memcmp((*it)->keyInfo.GetPublicKey(), trustAnchor->keyInfo.GetPublicKey(), sizeof(ECCPublicKey)) == 0) {
+        if (*(*it)->keyInfo.GetPublicKey() == *(trustAnchor->keyInfo.GetPublicKey())) {
             return ER_DUPLICATE_KEY;  /* duplicate */
         }
     }
@@ -483,37 +460,6 @@ QStatus PermissionMgmtObj::LoadTrustAnchors()
         pBuf += itemSize;
     }
     return ER_OK;
-}
-
-QStatus PermissionMgmtObj::RemoveTrustAnchor(TrustAnchor* trustAnchor)
-{
-    LoadTrustAnchors();
-    bool dirty = false;
-    for (TrustAnchorList::iterator it = trustAnchors.begin(); it != trustAnchors.end(); it++) {
-        if (((*it)->use == trustAnchor->use) && (memcmp((*it)->keyInfo.GetPublicKey(), trustAnchor->keyInfo.GetPublicKey(), sizeof(ECCPublicKey)) == 0)) {
-            delete *it;
-            trustAnchors.erase(it);
-            dirty = true;
-            break;
-        }
-    }
-    QStatus status = ER_OK;
-    if (dirty) {
-        status = StoreTrustAnchors();
-    }
-    return status;
-}
-
-QStatus PermissionMgmtObj::GetPeerGUID(Message& msg, qcc::GUID128& guid)
-{
-    PeerStateTable* peerTable = bus.GetInternal().GetPeerStateTable();
-    qcc::String peerName = msg->GetSender();
-    if (peerTable->IsKnownPeer(peerName)) {
-        guid = peerTable->GetPeerState(peerName)->GetGuid();
-        return ER_OK;
-    } else {
-        return ER_BUS_NO_PEER_GUID;
-    }
 }
 
 QStatus PermissionMgmtObj::StoreDSAKeys(CredentialAccessor* ca, const ECCPrivateKey* privateKey, const ECCPublicKey* publicKey)
@@ -909,8 +855,9 @@ static QStatus ValidateMembershipCertificate(MembershipCertificate& cert, Permis
     }
     for (PermissionMgmtObj::TrustAnchorList::iterator it = taList->begin(); it != taList->end(); it++) {
         PermissionMgmtObj::TrustAnchor* ta = *it;
-        if ((ta->use == PermissionMgmtObj::TRUST_ANCHOR_SG_AUTHORITY) ||
-            (ta->use == PermissionMgmtObj::TRUST_ANCHOR_ADMIN_GROUP)) {
+        if (((ta->use == PermissionMgmtObj::TRUST_ANCHOR_SG_AUTHORITY) ||
+             (ta->use == PermissionMgmtObj::TRUST_ANCHOR_ADMIN_GROUP)) &&
+            (ta->securityGroupId == cert.GetGuild())) {
             if (cert.Verify(ta->keyInfo.GetPublicKey()) == ER_OK) {
                 return ER_OK;  /* cert is verified */
             }
@@ -919,19 +866,13 @@ static QStatus ValidateMembershipCertificate(MembershipCertificate& cert, Permis
     return ER_UNKNOWN_CERTIFICATE;
 }
 
-static QStatus ValidateMembershipCertificateChain(bool checkSecurityGroupID, std::vector<MembershipCertificate*>& certs, PermissionMgmtObj::TrustAnchorList* taList)
+static QStatus ValidateMembershipCertificateChain(std::vector<MembershipCertificate*>& certs, PermissionMgmtObj::TrustAnchorList* taList)
 {
     size_t idx = 0;
     bool validated = false;
     for (std::vector<MembershipCertificate*>::iterator it = certs.begin(); it != certs.end(); it++) {
         idx++;
-        QStatus status;
-        if (checkSecurityGroupID) {
-            status = ValidateMembershipCertificate(*((MembershipCertificate*) *it), taList);
-        } else {
-            status = ValidateCertificate(*(*it), taList);
-        }
-        if (ER_OK == status) {
+        if (ER_OK == ValidateMembershipCertificate(*(*it), taList)) {
             validated = true;
             break;
         }
@@ -1334,48 +1275,7 @@ DoneValidation:
     return ca->StoreKey(key, kb);
 }
 
-/**
- * Get the keystore key of the membeship cert in the chain of membership certificate
- */
-static QStatus GetMembershipChainKey(CredentialAccessor* ca, KeyStore::Key& leafMembershipKey, const String& serialNum, const String& issuerAki, KeyStore::Key& membershipChainKey)
-{
-    KeyStore::Key* keys = NULL;
-    size_t numOfKeys;
-    QStatus status = ca->GetKeys(leafMembershipKey, &keys, &numOfKeys);
-    if (ER_OK != status) {
-        return status;
-    }
-    String tag = serialNum.substr(0, KeyBlob::MAX_TAG_LEN);
-    bool found = false;
-    status = ER_OK;
-    for (size_t cnt = 0; cnt < numOfKeys; cnt++) {
-        KeyBlob kb;
-        status = ca->GetKey(keys[cnt], kb);
-        if (ER_OK != status) {
-            break;
-        }
-        /* check both serial number and issuer */
-        MembershipCertificate cert;
-        LoadCertificate(CertificateX509::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), cert);
-        if ((cert.GetSerialLen() == serialNum.size()) &&
-            (memcmp(cert.GetSerial(), serialNum.data(), serialNum.size()) == 0) &&
-            (cert.GetAuthorityKeyId() == issuerAki)) {
-            membershipChainKey = keys[cnt];
-            found = true;
-            break;
-        }
-    }
-    delete [] keys;
-    if (ER_OK != status) {
-        return status;
-    }
-    if (found) {
-        return ER_OK;
-    }
-    return ER_BUS_KEY_UNAVAILABLE;  /* not found */
-}
-
-static QStatus GetMembershipKey(CredentialAccessor* ca, KeyStore::Key& membershipHead, const String& serialNum, const String& issuerAki, bool searchLeafCertOnly, KeyStore::Key& membershipKey)
+static QStatus GetMembershipKey(CredentialAccessor* ca, KeyStore::Key& membershipHead, const String& serialNum, const String& issuerAki, KeyStore::Key& membershipKey)
 {
     KeyStore::Key* keys = NULL;
     size_t numOfKeys;
@@ -1405,17 +1305,6 @@ static QStatus GetMembershipKey(CredentialAccessor* ca, KeyStore::Key& membershi
                 found = true;
                 break;
             }
-        }
-        if (searchLeafCertOnly) {
-            continue;
-        }
-        /* may be its cert chain is a match */
-        KeyStore::Key tmpKey;
-        status = GetMembershipChainKey(ca, keys[cnt], serialNum, issuerAki, tmpKey);
-        if (ER_OK == status) {
-            membershipKey = tmpKey;
-            found = true;
-            break;
         }
     }
     delete [] keys;
@@ -1499,7 +1388,7 @@ QStatus PermissionMgmtObj::StoreMembership(const MsgArg& msgArg)
             /* check for duplicate */
             if (checkDup) {
                 KeyStore::Key tmpKey;
-                status = GetMembershipKey(ca, membershipHead, serialTag, cert.GetAuthorityKeyId(), true, tmpKey);
+                status = GetMembershipKey(ca, membershipHead, serialTag, cert.GetAuthorityKeyId(), tmpKey);
                 if (ER_OK == status) {
                     /* found a duplicate */
                     return ER_DUPLICATE_CERTIFICATE;
@@ -1518,7 +1407,7 @@ QStatus PermissionMgmtObj::StoreMembership(const MsgArg& msgArg)
     return status;
 }
 
-QStatus PermissionMgmtObj::LocateMembershipEntry(const String& serialNum, const String& issuerAki, KeyStore::Key& membershipKey, bool searchLeafCertOnly)
+QStatus PermissionMgmtObj::LocateMembershipEntry(const String& serialNum, const String& issuerAki, KeyStore::Key& membershipKey)
 {
     /* look for memberships head in the key store */
     KeyStore::Key membershipHead;
@@ -1529,12 +1418,7 @@ QStatus PermissionMgmtObj::LocateMembershipEntry(const String& serialNum, const 
     if (status == ER_BUS_KEY_UNAVAILABLE) {
         return status;
     }
-    return GetMembershipKey(ca, membershipHead, serialNum, issuerAki, searchLeafCertOnly, membershipKey);
-}
-
-QStatus PermissionMgmtObj::LocateMembershipEntry(const String& serialNum, const String& issuerAki, KeyStore::Key& membershipKey)
-{
-    return LocateMembershipEntry(serialNum, issuerAki, membershipKey, true);
+    return GetMembershipKey(ca, membershipHead, serialNum, issuerAki, membershipKey);
 }
 
 void PermissionMgmtObj::RemoveMembership(const InterfaceDescription::Member* member, Message& msg)
@@ -1990,11 +1874,6 @@ QStatus PermissionMgmtObj::ParseSendMemberships(Message& msg, bool& done)
             done = true;
             return ER_OK;  /* could not validate */
         }
-        TrustAnchorList guildAuthorities;
-        const PermissionPolicy* policy = bus.GetInternal().GetPermissionManager().GetPolicy();
-        if (policy) {
-            LoadSecurityGroupAuthorities(*policy, guildAuthorities);
-        }
 
         while (!peerState->guildMap.empty()) {
             bool verified = true;
@@ -2018,13 +1897,8 @@ QStatus PermissionMgmtObj::ParseSendMemberships(Message& msg, bool& done)
                     break;
                 }
                 /* build the vector of certs to verify.  The membership cert is the leaf node -- first item on the vector */
-                /* check membership cert chain against the trust anchors */
-                status = ValidateMembershipCertificateChain(false, metadata->certChain, &trustAnchors);
-                if (ER_OK != status) {
-                    /* check against the guild authorities */
-                    status = ValidateMembershipCertificateChain(true, metadata->certChain, &guildAuthorities);
-                }
-
+                /* check membership cert chain against the security group trust anchors */
+                status = ValidateMembershipCertificateChain(metadata->certChain, &trustAnchors);
                 if (ER_OK != status) {
                     /* remove this membership cert since it is not valid */
                     QCC_DbgPrintf(("PermissionMgmtObj::ParseSendMemberships invalidated peer's membership guild thus removing it from peer's guild list"));
@@ -2038,7 +1912,6 @@ QStatus PermissionMgmtObj::ParseSendMemberships(Message& msg, bool& done)
                 break;  /* done */
             }
         }
-        ClearTrustAnchorList(guildAuthorities);
         done = true;
     }
     return ER_OK;
@@ -2175,7 +2048,7 @@ void PermissionMgmtObj::Reset(const InterfaceDescription::Member* member, Messag
     MethodReply(msg, Reset());
 }
 
-QStatus PermissionMgmtObj::GetConnectedPeerPublicKey(const GUID128& guid, qcc::ECCPublicKey* publicKey, uint8_t* manifestDigest, std::vector<ECCPublicKey>& issuerPublicKeys)
+QStatus PermissionMgmtObj::GetConnectedPeerAuthMetadata(const GUID128& guid, qcc::String& authMechanism, bool& publicKeyFound, qcc::ECCPublicKey* publicKey, uint8_t* manifestDigest, std::vector<ECCPublicKey>& issuerPublicKeys)
 {
     CredentialAccessor ca(bus);
     KeyBlob kb;
@@ -2185,13 +2058,25 @@ QStatus PermissionMgmtObj::GetConnectedPeerPublicKey(const GUID128& guid, qcc::E
         return status;
     }
     KeyBlob msBlob;
-    bool keyAvail = false;
-    status = KeyExchanger::ParsePeerSecretRecord(kb, msBlob, publicKey, manifestDigest, issuerPublicKeys, keyAvail);
+    publicKeyFound = false;
+    status = KeyExchanger::ParsePeerSecretRecord(kb, msBlob, publicKey, manifestDigest, issuerPublicKeys, publicKeyFound);
     if (ER_OK != status) {
         return status;
     }
-    if (!keyAvail) {
-        return ER_BUS_KEY_UNAVAILABLE;
+    authMechanism = msBlob.GetTag();
+    return status;
+}
+
+QStatus PermissionMgmtObj::GetConnectedPeerPublicKey(const GUID128& guid, qcc::ECCPublicKey* publicKey, uint8_t* manifestDigest, std::vector<ECCPublicKey>& issuerPublicKeys)
+{
+    bool publicKeyFound = false;
+    qcc::String authMechanism;
+    QStatus status = GetConnectedPeerAuthMetadata(guid, authMechanism, publicKeyFound, publicKey, manifestDigest, issuerPublicKeys);
+    if (ER_OK != status) {
+        return status;
+    }
+    if (!publicKeyFound) {
+        status = ER_BUS_KEY_UNAVAILABLE;
     }
     return status;
 }
@@ -2506,7 +2391,7 @@ QStatus PermissionMgmtObj::ManageMembershipTrustAnchors(PermissionPolicy* policy
         return ER_OK;
     }
     TrustAnchorList addOns;
-    LoadSGAuthoritiesAndRestrictedCAs(false, *policy, addOns);
+    LoadSGAuthoritiesAndRestrictedCAs(*policy, addOns);
     if (addOns.size() > 0) {
         /* remove all the membership trust anchors and re-add the new ones */
         ClearTrustAnchorListByUse(TRUST_ANCHOR_SG_AUTHORITY, trustAnchors);
