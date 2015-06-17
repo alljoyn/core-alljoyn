@@ -18,6 +18,8 @@
  *    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
+#ifndef _INMEMORYKEYSTORE_H
+#define _INMEMORYKEYSTORE_H
 
 #include <qcc/platform.h>
 #include <qcc/GUID.h>
@@ -91,3 +93,5 @@ class InMemoryKeyStoreListener : public KeyStoreListener {
 };
 
 }
+
+#endif // _INMEMORYKEYSTORE_H
