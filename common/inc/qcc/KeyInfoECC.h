@@ -367,6 +367,15 @@ class KeyInfoNISTP256 : public KeyInfoECC {
     }
 
     /**
+     * Checks if this key is initialized properly.
+     * @return true if this key info is not initialized.
+     */
+    bool empty() const
+    {
+        return pubkey.key.empty();
+    }
+
+    /**
      * The required size of the exported byte array.
      * @return the required size of the exported byte array
      */
