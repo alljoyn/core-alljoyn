@@ -63,8 +63,12 @@ static const uint8_t ALLJOYN_PROP_ACCESS_RW    = 3; /**< Read-Write Access type 
 // @}
 /** @name Anotation flags */
 // @{
-static const uint8_t ALLJOYN_MEMBER_ANNOTATE_NO_REPLY   = 1; /**< No reply annotate flag */
-static const uint8_t ALLJOYN_MEMBER_ANNOTATE_DEPRECATED = 2; /**< Deprecated annotate flag */
+static const uint8_t ALLJOYN_MEMBER_ANNOTATE_NO_REPLY         = 1; /**< No reply annotate flag */
+static const uint8_t ALLJOYN_MEMBER_ANNOTATE_DEPRECATED       = 2; /**< Deprecated annotate flag */
+static const uint8_t ALLJOYN_MEMBER_ANNOTATE_SESSIONCAST      = 4; /**< Sessioncast annotate flag */
+static const uint8_t ALLJOYN_MEMBER_ANNOTATE_SESSIONLESS      = 8; /**< Sessionless annotate flag */
+static const uint8_t ALLJOYN_MEMBER_ANNOTATE_UNICAST          = 16; /**< Unicast annotate flag */
+static const uint8_t ALLJOYN_MEMBER_ANNOTATE_GLOBAL_BROADCAST = 32; /**< Global broadcast annotate flag */
 // @}
 
 /**
