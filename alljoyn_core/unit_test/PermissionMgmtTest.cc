@@ -60,26 +60,47 @@ void TestApplicationStateListener::State(const char* busName, const qcc::KeyInfo
 
 QStatus PermissionMgmtTestHelper::CreateIdentityCertChain(BusAttachment& caBus, BusAttachment& issuerBus, const qcc::String& serial, const qcc::String& subject, const ECCPublicKey* subjectPubKey, const qcc::String& alias, uint32_t expiredInSecs, qcc::IdentityCertificate* certChain, size_t chainCount, uint8_t* digest, size_t digestSize)
 {
-    if (chainCount > 2) {
+    if (chainCount > 3) {
         return ER_INVALID_DATA;
     }
     QStatus status = ER_CRYPTO_ERROR;
-    /* generate the issuer cert first */
+
     qcc::GUID128 ca(0);
     GetGUID(caBus, ca);
+    String caStr = ca.ToString();
+    PermissionConfigurator& caPC = caBus.GetPermissionConfigurator();
+    if (chainCount == 3) {
+        /* generate the self signed CA cert */
+        String caSerial = serial + "02";
+        certChain[2].SetSerial(reinterpret_cast<const uint8_t*>(caSerial.data()), caSerial.size());
+        certChain[2].SetIssuerCN((const uint8_t*) caStr.data(), caStr.size());
+        certChain[2].SetSubjectCN((const uint8_t*) caStr.data(), caStr.size());
+        CertificateX509::ValidPeriod validity;
+        BuildValidity(validity, expiredInSecs);
+        certChain[2].SetValidity(&validity);
+        certChain[2].SetCA(true);
+        KeyInfoNISTP256 keyInfo;
+        caPC.GetSigningPublicKey(keyInfo);
+        certChain[2].SetSubjectPublicKey(keyInfo.GetPublicKey());
+        status = caPC.SignCertificate(certChain[2]);
+        if (ER_OK != status) {
+            return status;
+        }
+    }
+
+    /* generate the issuer cert */
     qcc::GUID128 issuer(0);
     GetGUID(issuerBus, issuer);
-    String caStr = ca.ToString();
     String issuerStr = issuer.ToString();
 
-    certChain[1].SetSerial(reinterpret_cast<const uint8_t*>(serial.data()), serial.size());
+    String issuerSerial = serial + "01";
+    certChain[1].SetSerial(reinterpret_cast<const uint8_t*>(issuerSerial.data()), issuerSerial.size());
     certChain[1].SetIssuerCN((const uint8_t*) caStr.data(), caStr.size());
     certChain[1].SetSubjectCN((const uint8_t*) issuerStr.data(), issuerStr.size());
     CertificateX509::ValidPeriod validity;
     BuildValidity(validity, expiredInSecs);
     certChain[1].SetValidity(&validity);
     certChain[1].SetCA(true);
-    PermissionConfigurator& caPC = caBus.GetPermissionConfigurator();
     PermissionConfigurator& pc = issuerBus.GetPermissionConfigurator();
     KeyInfoNISTP256 keyInfo;
     pc.GetSigningPublicKey(keyInfo);

@@ -1164,7 +1164,7 @@ QStatus KeyExchangerECDHE_ECDSA::VerifyCredentialsCB(const char* peerName, Certi
 /**
  * validate whether the certificate chain structure is a valid
  */
-static bool IsCertChainStructureValid(CertificateX509* certs, size_t numCerts)
+bool KeyExchangerECDHE_ECDSA::IsCertChainStructureValid(const CertificateX509* certs, size_t numCerts)
 {
     if ((numCerts == 0) || !certs) {
         QCC_DbgPrintf(("Empty certificate chain"));
@@ -1221,6 +1221,23 @@ static void ExtractIssuerPublicKeys(const CertificateX509* certs, size_t numCert
      */
     for (size_t cnt = 1; cnt < numCerts; cnt++) {
         issuerKeys.push_back(*certs[cnt].GetSubjectPublicKey());
+    }
+}
+
+/**
+ * Calculate the number of seconds before the secret expires based on the input
+ * expiry and the certificate validity period.  The secret can't outlast the
+ * certificate validity period.
+ * @param cert the certificate
+ * @param expiry[in,out] the number of seconds before the secret expires.
+ */
+static void CalculateSecretExpiration(const CertificateX509& cert, uint32_t& expiry)
+{
+    uint64_t currentTime = GetEpochTimestamp() / 1000;
+    if (cert.GetValidity()->validTo < currentTime) {
+        expiry = 0;
+    } else if ((cert.GetValidity()->validTo - currentTime) < expiry) {
+        expiry = cert.GetValidity()->validTo - currentTime;
     }
 }
 
@@ -1362,6 +1379,7 @@ QStatus KeyExchangerECDHE_ECDSA::ValidateRemoteVerifierVariant(const char* peerN
             memcpy(peerManifestDigest, certs[0].GetDigest(), Crypto_SHA256::DIGEST_SIZE);
         }
         ExtractIssuerPublicKeys(certs, numCerts, trustAnchorList, peerIssuerPubKeys);
+        CalculateSecretExpiration(certs[0], secretExpiration);
     } else {
         QCC_DbgPrintf(("Not authorized by VerifyCredential callback"));
     }
