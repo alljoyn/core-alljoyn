@@ -394,7 +394,7 @@ bool ConfigDB::DB::ProcessIncludedir(const String& fileName, const XmlElement& i
     }
 
     for (DirListing::const_iterator it = listing.begin(); it != listing.end(); ++it) {
-        if ((*it != ".") && (*it != "..")) {
+        if (((*it).size() > 5) && ((*it).find(".conf", (*it).size() - 5))) {
             success = ParseFile(includeDirectory + "/" + *it);
         }
     }
