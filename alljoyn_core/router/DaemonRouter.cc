@@ -140,7 +140,7 @@ bool DaemonRouter::AddCompatibilityOverride(bool add,
                 SessionEps::const_iterator dit = epSet.find(dest);
                 const bool srcInSession = (sit != epSet.end());
                 const bool destInSession = (dit != epSet.end());
-                const bool selfJoin = (sit->second & SESSION_SELF_JOIN) != 0;
+                const bool selfJoin = srcInSession && ((sit->second & SESSION_SELF_JOIN) != 0);
 
                 /* Add the endpoint back in. */
                 add = add || (srcInSession && destInSession && ((src != dest) || selfJoin));
@@ -213,7 +213,7 @@ bool DaemonRouter::IsSessionDeliverable(SessionId id, BusEndpoint& src, BusEndpo
          * connect to us that don't handle self join in the client
          * library.
          */
-        const bool selfJoin = (sit->second & SESSION_SELF_JOIN) != 0;
+        const bool selfJoin = srcInSession && ((sit->second & SESSION_SELF_JOIN) != 0);
         add = add && srcInSession && destInSession && ((src != dest) || selfJoin);
 
         /*
