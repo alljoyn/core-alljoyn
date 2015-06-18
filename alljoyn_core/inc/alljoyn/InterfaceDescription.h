@@ -51,8 +51,12 @@ static const uint8_t PROP_ANNOTATE_EMIT_CHANGED_SIGNAL_INVALIDATES = 2; /**< Emi
 // @}
 /** @name Method/Signal Annotation flags */
 // @{
-static const uint8_t MEMBER_ANNOTATE_NO_REPLY   = 1; /**< No reply annotate flag */
-static const uint8_t MEMBER_ANNOTATE_DEPRECATED = 2; /**< Deprecated annotate flag */
+static const uint8_t MEMBER_ANNOTATE_NO_REPLY         = 1; /**< No reply annotate flag */
+static const uint8_t MEMBER_ANNOTATE_DEPRECATED       = 2; /**< Deprecated annotate flag */
+static const uint8_t MEMBER_ANNOTATE_SESSIONCAST      = 4; /**< Sessioncast annotate flag */
+static const uint8_t MEMBER_ANNOTATE_SESSIONLESS      = 8; /**< Sessionless annotate flag */
+static const uint8_t MEMBER_ANNOTATE_UNICAST          = 16; /**< Unicast annotate flag */
+static const uint8_t MEMBER_ANNOTATE_GLOBAL_BROADCAST = 32; /**< Global broadcast annotate flag */
 // @}
 
 /**
@@ -117,7 +121,10 @@ class InterfaceDescription {
         qcc::String accessPerms;                    /**< Required permissions to invoke this call */
         qcc::String description;                    /**< Introspection description for this member */
         ArgumentDescriptions* argumentDescriptions; /**< Introspection descriptions for arguments to this member */
+        bool isSessioncastSignal;                   /**< True if this is described as a sessioncast signal */
         bool isSessionlessSignal;                   /**< True if this is described as a sessionless signal */
+        bool isUnicastSignal;                       /**< True if this is described as a unicast signal */
+        bool isGlobalBroadcastSignal;               /**< True if this is described as a global broadcast signal */
 
         /**
          * %Member constructor.
@@ -368,9 +375,27 @@ class InterfaceDescription {
      *      - #ER_OK if successful
      *      - #ER_BUS_MEMBER_ALREADY_EXISTS if member already exists
      */
-    QStatus AddSignal(const char* name, const char* sig, const char* argNames, uint8_t annotation = 0, const char* accessPerms = 0)
+    QStatus AddSignal(const char* name, const char* sig, const char* argNames, uint8_t annotation, const char* accessPerms = 0)
     {
         return AddMember(MESSAGE_SIGNAL, name, sig, NULL, argNames, annotation, accessPerms);
+    }
+
+    /**
+     * Add a signal member to the interface.
+     *
+     * @deprecated Use annotation flags to specify signal type.
+     *
+     * @param name        Name of method call member.
+     * @param sig         Signature of parameters or NULL for none.
+     * @param argNames    Comma separated list of arg names used in annotation XML.
+     *
+     * @return
+     *      - #ER_OK if successful
+     *      - #ER_BUS_MEMBER_ALREADY_EXISTS if member already exists
+     */
+    QCC_DEPRECATED(QStatus AddSignal(const char* name, const char* sig, const char* argNames))
+    {
+        return AddMember(MESSAGE_SIGNAL, name, sig, NULL, argNames, 0, 0);
     }
 
     /**
@@ -585,14 +610,30 @@ class InterfaceDescription {
      *
      * @param member The name of the member
      * @param description The introspection description
+     * @return
+     *      - #ER_OK if successful.
+     *      - #ER_BUS_INTERFACE_ACTIVATED If the interface has already been activated
+     *      - #ER_BUS_INTERFACE_NO_SUCH_MEMBER If the member was not found
+     */
+    QStatus SetMemberDescription(const char* member, const char* description);
+
+    /**
+     * Set the introspection description for "member" of this InterfaceDescription
+     *
+     * @deprecated The isSessionlessSignal argument is deprecated. Use annotation
+     * flags with AddSignal() instead.
+     *
+     * @param member The name of the member
+     * @param description The introspection description
      * @param isSessionlessSignal True to document this member as a sessionless signal
      * @return
      *      - #ER_OK if successful.
      *      - #ER_BUS_INTERFACE_ACTIVATED If the interface has already been activated
      *      - #ER_BUS_INTERFACE_NO_SUCH_MEMBER If the member was not found
      */
-    QStatus SetMemberDescription(const char* member,
-                                 const char* description, bool isSessionlessSignal = false);
+    QCC_DEPRECATED(QStatus SetMemberDescription(const char* member,
+                                                const char* description,
+                                                bool isSessionlessSignal));
 
     /**
      * Set the introspection description for the argument "arg of "member" of this InterfaceDescription
