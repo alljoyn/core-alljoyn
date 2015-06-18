@@ -84,6 +84,8 @@ static bool GetStatusBasedOnErrorName(Message& reply, QStatus& status)
         status = ER_POLICY_NOT_NEWER;
     } else if (strcmp(reply->GetErrorName(), PermissionMgmtObj::ERROR_CERTIFICATE_NOT_FOUND) == 0) {
         status = ER_CERTIFICATE_NOT_FOUND;
+    } else if (strcmp(reply->GetErrorName(), PermissionMgmtObj::ERROR_DUPLICATE_CERTIFICATE) == 0) {
+        status = ER_DUPLICATE_CERTIFICATE;
     } else if (strcmp(reply->GetErrorName(), org::alljoyn::Bus::ErrorName) == 0 && reply->GetArg(1)) {
         status = static_cast<QStatus>(reply->GetArg(1)->v_uint16);
     } else {
