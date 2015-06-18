@@ -184,7 +184,7 @@ class _VirtualEndpoint : public _BusEndpoint {
      *
      * @return true if this endpoint is a member of the session Id passed in.
      */
-    bool HasSession(SessionId sessionId);
+    bool IsInSession(SessionId sessionId);
 
     enum EndpointState {
         EP_ILLEGAL = 0,      /**< This is an invalid endpoint. i.e. constructed with the default constructor. */

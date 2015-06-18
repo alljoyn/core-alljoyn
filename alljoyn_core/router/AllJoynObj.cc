@@ -1516,12 +1516,8 @@ void AllJoynObj::LeaveSessionCommon(const InterfaceDescription::Member* member, 
         ReleaseLocks();
 
         /* Remove entries from sessionMap, but dont send a SessionLost back to the caller of this method */
-        if (RemoveSessionRefs(msg->GetSender(), id, false, lst) == false) {
-
-            /* Remove session routes */
-            router.RemoveSessionRoutes(msg->GetSender(), id);
-        } else {
-            router.RemoveSelfJoinSessionRoute(msg->GetSender(), id);
+        if (RemoveSessionRefs(msg->GetSender(), id, false, lst)) {
+            router.UnregisterSelfJoin(msg->GetSender(), id);
         }
     }
 
@@ -1629,11 +1625,8 @@ void AllJoynObj::RemoveSessionMember(const InterfaceDescription::Member* member,
         ReleaseLocks();
 
         /* Remove entries from sessionMap, send a SessionLost to the session member being removed. */
-        if (RemoveSessionRefs(sessionMemberName, id, true) == false) {
-            /* Remove session routes */
-            router.RemoveSessionRoutes(sessionMemberName, id);
-        } else {
-            router.RemoveSelfJoinSessionRoute(sessionMemberName, id);
+        if (RemoveSessionRefs(sessionMemberName, id, true)) {
+            router.UnregisterSelfJoin(sessionMemberName, id);
         }
 
     } else {
@@ -2189,7 +2182,6 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
                                                  msg->GetSessionId(), busAddr, SessionOpts::MP_NAMES, HOST_FORWARD, optsIn, replyCode, tempId, tempOpts, replyArgs[3]);
                 ajObj.AcquireLocks();
 
-                /* If successful, add bi-directional session routes */
                 if ((status == ER_OK) && (replyCode == ALLJOYN_JOINSESSION_REPLY_SUCCESS)) {
 
                     QCC_DbgPrintf(("AllJoynObj::RunAttach(): SendAttachSession() success"));
@@ -2198,16 +2190,10 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
                     VirtualEndpoint srcEp = VirtualEndpoint::cast(tempEp);
                     tempEp = ajObj.FindEndpoint(srcB2BStr);
                     srcB2BEp = RemoteEndpoint::cast(tempEp);
-                    /* Add bi-directional session routes */
+
                     if (srcB2BEp->IsValid() && srcEp->IsValid() && destEp->IsValid() && b2bEp->IsValid()) {
                         id = tempId;
                         optsOut = tempOpts;
-                        BusEndpoint busEndpointSrc = BusEndpoint::cast(srcEp);
-                        status = ajObj.AddSessionRoute(id, destEp, &b2bEp, busEndpointSrc, srcB2BEp);
-                        if (status != ER_OK) {
-                            QCC_LogError(status, ("AddSessionRoute(%u, %s, %s, %s) failed",
-                                                  id, dest, b2bEp->GetUniqueName().c_str(), srcEp->GetUniqueName().c_str(), srcB2BEp->GetUniqueName().c_str()));
-                        }
                     } else {
                         replyCode = ALLJOYN_JOINSESSION_REPLY_FAILED;
                     }
@@ -2405,6 +2391,7 @@ bool AllJoynObj::RemoveSessionRefs(const char* epName, SessionId id, bool sendSe
     String epNameStr = endpoint->GetUniqueName();
     vector<pair<String, SessionId> > changedSessionMembers;
     vector<SessionMapEntry> sessionsLost;
+    vector<SessionMapEntry> sessionsRemoved;    /* List of sessions that the leaving endpoint is the host of and has only 1 member. */
     vector<String> epChangedSessionMembers;
     SessionMapEntry smeRemoved;
     bool foundSME = false;
@@ -2415,10 +2402,14 @@ bool AllJoynObj::RemoveSessionRefs(const char* epName, SessionId id, bool sendSe
     /* Look through sessionMap for entries matching id */
     while (it != sessionMap.end()) {
         bool toRemove = false;
+        bool invalidated = false;
         if (it->first.second == id) {
             if (it->first.first == epNameStr) {
+
                 bool selfJoinEntry = false;
-                /* Exact key matches are removed */
+                /* Exact key matches are removed unless this is an MP session where the host leaves
+                 * but there are other members still in session.
+                 */
 
                 /* special logic in the case this exact match entry was about self-join
                  * This logic is largely the same as in non exact match branch
@@ -2452,7 +2443,6 @@ bool AllJoynObj::RemoveSessionRefs(const char* epName, SessionId id, bool sendSe
                             }
                         }
                     }
-
                     /* Session is lost when members + sessionHost together contain only one entry */
                     if ((it->second.fd == qcc::INVALID_SOCKET_FD) && (it->second.memberNames.empty() || ((it->second.memberNames.size() == 1) && it->second.sessionHost.empty()))) {
                         SessionMapEntry tsme = it->second;
@@ -2460,7 +2450,22 @@ bool AllJoynObj::RemoveSessionRefs(const char* epName, SessionId id, bool sendSe
                         toRemove = true;
                     }
                 } else {
-                    toRemove = true;
+                    int numMembers = it->second.memberNames.size();
+                    bool sessionHostLeaving = (epNameStr == it->second.sessionHost);
+
+                    /*
+                     * If the session host is leaving and there are still 2 or more
+                     * members in the session, only mark the session as inactive,
+                     * do not delete the SessionMapEntry.
+                     */
+                    if (sessionHostLeaving && (numMembers > 1)) {
+                        it->second.isActive = false;
+                        invalidated = true;
+                    } else {
+                        SessionMapEntry tsme = it->second;
+                        sessionsRemoved.push_back(tsme);
+                        toRemove = true;
+                    }
                 }
 
                 if (sendSessionLost) {
@@ -2485,7 +2490,6 @@ bool AllJoynObj::RemoveSessionRefs(const char* epName, SessionId id, bool sendSe
                 foundSME = true;
             } else {
                 bool endPointIsMember = false;
-
                 if ((lst == LEAVE_SESSION) ||
                     (lst == LEAVE_JOINED_SESSION)) {
                     /* Remove matching session members */
@@ -2522,13 +2526,17 @@ bool AllJoynObj::RemoveSessionRefs(const char* epName, SessionId id, bool sendSe
                     }
                 }
             }
-
-            if (!toRemove && !epPresentInAnyEntry &&
+            if (!toRemove && !invalidated && !epPresentInAnyEntry &&
                 ((endpoint == FindEndpoint(it->second.sessionHost)) ||
                  (find(it->second.memberNames.begin(), it->second.memberNames.end(), epNameStr) != it->second.memberNames.end()))) {
                 epPresentInAnyEntry = true;
             }
 
+        }
+        if (toRemove || invalidated) {
+            /* A locally connected leaf is leaving a session, unregister the session ID. */
+            BusEndpoint ep = router.FindEndpoint(it->first.first);
+            ep->UnregisterSessionId(id);
         }
         if (toRemove) {
             sessionMap.erase(it++);
@@ -2537,6 +2545,8 @@ bool AllJoynObj::RemoveSessionRefs(const char* epName, SessionId id, bool sendSe
         }
     }
     ReleaseLocks();
+
+    RemoveSessionRef(epName, id);
 
     /* Send MPSessionChanged for each changed session involving alias */
     vector<pair<String, SessionId> >::const_iterator csit = changedSessionMembers.begin();
@@ -2554,20 +2564,39 @@ bool AllJoynObj::RemoveSessionRefs(const char* epName, SessionId id, bool sendSe
         csitEp++;
     }
     /* Send session lost signals */
-    vector<SessionMapEntry>::iterator slit = sessionsLost.begin();
-    while (slit != sessionsLost.end()) {
-        router.RemoveSessionRoutes(slit->id);
+    for (vector<SessionMapEntry>::iterator slit = sessionsLost.begin();
+         slit != sessionsLost.end();
+         ++slit) {
         if (slit->memberNames.size() == 1) {
-            SendSessionLost(*slit++, ER_OK, ALLJOYN_SESSIONLOST_DISPOSITION_MEMBER);
+            SendSessionLost(*slit, ER_OK, ALLJOYN_SESSIONLOST_DISPOSITION_MEMBER);
         } else {
-            SendSessionLost(*slit++, ER_OK, ALLJOYN_SESSIONLOST_DISPOSITION_HOST);
+            SendSessionLost(*slit, ER_OK, ALLJOYN_SESSIONLOST_DISPOSITION_HOST);
         }
+        CleanupSessionEndpoints(*slit);
+    }
+    for (vector<SessionMapEntry>::iterator slit = sessionsRemoved.begin();
+         slit != sessionsRemoved.end();
+         ++slit) {
+        /* Note: We dont need to send SessionLost here.
+         * If a local member were a part of this session, it would be present in
+         * the sessionLost vector.
+         */
+        CleanupSessionEndpoints(*slit);
     }
     if (foundSME && sendSessionLost) {
         SendSessionLost(smeRemoved, sessionLostReason, ALLJOYN_SESSIONLOST_DISPOSITION_MEMBER);
     }
 
     return epPresentInAnyEntry;
+}
+
+void AllJoynObj::CleanupSessionEndpoints(SessionMapEntry sme)
+{
+    RemoveSessionRef(sme.sessionHost, sme.id);
+    vector<String>::iterator mit = sme.memberNames.begin();
+    while (mit != sme.memberNames.end()) {
+        RemoveSessionRef(*mit++, sme.id);
+    }
 }
 
 void AllJoynObj::RemoveSessionRefs(const String& vepName, const String& b2bEpName)
@@ -2589,12 +2618,11 @@ void AllJoynObj::RemoveSessionRefs(const String& vepName, const String& b2bEpNam
         ReleaseLocks();
         return;
     }
-
     QStatus disconnectReason = b2bEp->GetDisconnectStatus();
 
     vector<pair<String, SessionId> > changedSessionMembers;
     vector<SessionMapEntry> sessionsLost;
-    vector<SessionId> sessionsRemoved;
+    vector<SessionId> sessionsVep;      /*All Sessions that this Virtual endpoint was a part of. */
     SessionMapType::iterator it = sessionMap.begin();
     while (it != sessionMap.end()) {
         int count;
@@ -2606,46 +2634,43 @@ void AllJoynObj::RemoveSessionRefs(const String& vepName, const String& b2bEpNam
         /* Examine sessions with ids that are affected by removal of vep through b2bep */
         /* Only sessions that route through a single (matching) b2bEp are affected */
         if ((vep->GetBusToBusEndpoint(it->first.second, &count) == b2bEp) && (count == 1)) {
-            sessionsRemoved.push_back(it->first.second);
-            if (it->first.first == vepName) {
-                /* Key matches can be removed from sessionMap */
-                sessionMap.erase(it++);
+            if (BusEndpoint::cast(vep) == FindEndpoint(it->second.sessionHost)) {
+                /* If the session's sessionHost is vep, then clear it out of the session */
+                sessionsVep.push_back(it->first.second);
+                it->second.sessionHost.clear();
+                if (it->second.opts.isMultipoint) {
+                    changedSessionMembers.push_back(it->first);
+                }
 
             } else {
-                if (BusEndpoint::cast(vep) == FindEndpoint(it->second.sessionHost)) {
-                    /* If the session's sessionHost is vep, then clear it out of the session */
-                    it->second.sessionHost.clear();
-                    if (it->second.opts.isMultipoint) {
-                        changedSessionMembers.push_back(it->first);
-                    }
-                } else {
-                    /* Clear vep from any session members */
-                    vector<String>::iterator mit = it->second.memberNames.begin();
-                    while (mit != it->second.memberNames.end()) {
-                        if (vepName == *mit) {
-                            mit = it->second.memberNames.erase(mit);
-                            if (it->second.opts.isMultipoint) {
-                                changedSessionMembers.push_back(it->first);
-                            }
-                        } else {
-                            ++mit;
+                /* Clear vep from any session members */
+                vector<String>::iterator mit = it->second.memberNames.begin();
+                while (mit != it->second.memberNames.end()) {
+                    if (vepName == *mit) {
+                        sessionsVep.push_back(it->first.second);
+
+                        mit = it->second.memberNames.erase(mit);
+                        if (it->second.opts.isMultipoint) {
+                            changedSessionMembers.push_back(it->first);
                         }
+                    } else {
+                        ++mit;
                     }
                 }
-                /* A session with only one member and no sessionHost or only a sessionHost are "lost" */
-                if ((it->second.fd == qcc::INVALID_SOCKET_FD) && (it->second.memberNames.empty() || ((it->second.memberNames.size() == 1) && it->second.sessionHost.empty()))) {
-                    SessionMapEntry tsme = it->second;
-                    pair<String, SessionId> key = it->first;
-                    if (!it->second.isInitializing) {
-                        sessionMap.erase(it++);
-                        sessionsLost.push_back(tsme);
-                    } else {
-                        ++it;
-                    }
-
+            }
+            /* A session with only one member and no sessionHost or only a sessionHost are "lost" */
+            if ((it->second.fd == qcc::INVALID_SOCKET_FD) && (it->second.memberNames.empty() || ((it->second.memberNames.size() == 1) && it->second.sessionHost.empty()))) {
+                SessionMapEntry tsme = it->second;
+                pair<String, SessionId> key = it->first;
+                if (!it->second.isInitializing) {
+                    sessionMap.erase(it++);
+                    sessionsLost.push_back(tsme);
                 } else {
                     ++it;
                 }
+
+            } else {
+                ++it;
             }
         } else {
             ++it;
@@ -2654,27 +2679,30 @@ void AllJoynObj::RemoveSessionRefs(const String& vepName, const String& b2bEpNam
     ReleaseLocks();
 
     /* Send MPSessionChanged for each changed session involving alias */
-    vector<pair<String, SessionId> >::const_iterator csit = changedSessionMembers.begin();
-    while (csit != changedSessionMembers.end()) {
+    for (vector<pair<String, SessionId> >::const_iterator csit = changedSessionMembers.begin();
+         csit != changedSessionMembers.end();
+         ++csit) {
         SendMPSessionChanged(csit->second, vepName.c_str(), false, csit->first.c_str(), ALLJOYN_MPSESSIONCHANGED_REMOTE_MEMBER_REMOVED);
-        csit++;
     }
 
-    vector<SessionId>::iterator srit = sessionsRemoved.begin();
-    while (srit != sessionsRemoved.end()) {
-        router.RemoveSessionRoutes(vepName.c_str(), *srit);
-        srit++;
-    }
     /* Send session lost signals */
-    vector<SessionMapEntry>::iterator slit = sessionsLost.begin();
-    while (slit != sessionsLost.end()) {
-        router.RemoveSessionRoutes(slit->id);
+    for (vector<SessionMapEntry>::iterator slit = sessionsLost.begin();
+         slit != sessionsLost.end();
+         ++slit) {
         if (slit->memberNames.size() == 1) {
-            SendSessionLost(*slit++, disconnectReason, ALLJOYN_SESSIONLOST_DISPOSITION_MEMBER);
+            SendSessionLost(*slit, disconnectReason, ALLJOYN_SESSIONLOST_DISPOSITION_MEMBER);
         } else {
-            SendSessionLost(*slit++, disconnectReason, ALLJOYN_SESSIONLOST_DISPOSITION_HOST);
+            SendSessionLost(*slit, disconnectReason, ALLJOYN_SESSIONLOST_DISPOSITION_HOST);
         }
+        CleanupSessionEndpoints(*slit);
     }
+
+    for (vector<SessionId>::iterator vit = sessionsVep.begin();
+         vit != sessionsVep.end();
+         ++vit) {
+        RemoveSessionRef(vepName, *vit);
+    }
+
 }
 
 void AllJoynObj::GetSessionInfo(const InterfaceDescription::Member* member, Message& msg)
@@ -3065,10 +3093,7 @@ void AllJoynObj::DetachSessionSignalHandler(const InterfaceDescription::Member* 
     }
 
     /* Remove session info from sessionmapentry, send a SessionLost to the member being removed. */
-    if (RemoveSessionRefs(src, id, true) == false) {
-        /* Remove session info from router */
-        router.RemoveSessionRoutes(src, id);
-    }
+    RemoveSessionRefs(src, id, true);
 }
 
 void AllJoynObj::GetSessionFd(const InterfaceDescription::Member* member, Message& msg)
@@ -3123,11 +3148,14 @@ AllJoynObj::SessionMapEntry* AllJoynObj::SessionMapFind(const qcc::String& name,
 {
     pair<String, SessionId> key(name, session);
     AllJoynObj::SessionMapType::iterator it = sessionMap.find(key);
-    if (it == sessionMap.end()) {
-        return NULL;
-    } else {
-        return &(it->second);
+
+    while (it != sessionMap.end() && it->first.first == name && it->first.second == session) {
+        if (it->second.isActive) {
+            return &(it->second);
+        }
+        it++;
     }
+    return NULL;
 }
 
 AllJoynObj::SessionMapType::iterator AllJoynObj::SessionMapLowerBound(const qcc::String& name, SessionId session)
@@ -4132,12 +4160,7 @@ void AllJoynObj::RemoveBusToBusEndpoint(RemoteEndpoint& endpoint)
 bool AllJoynObj::IsMemberOfSession(BusEndpoint endpoint, uint32_t sessionId)
 {
     AcquireLocks();
-    bool ret = false;
-    if (endpoint->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL) {
-        ret = VirtualEndpoint::cast(endpoint)->HasSession(sessionId);
-    } else {
-        ret = SessionMapFind(endpoint->GetUniqueName(), sessionId) != NULL;
-    }
+    bool ret = endpoint->IsInSession(sessionId);
     ReleaseLocks();
     return ret;
 }
@@ -4501,6 +4524,8 @@ void AllJoynObj::AddVirtualEndpoint(const qcc::String& uniqueName, const String&
             vep = it->second;
             added = vep->AddBusToBusEndpoint(busToBusEndpoint);
             ReleaseLocks();
+            /* Need to hit NameTable here since name ownership of a vep alias may have changed */
+            router.UpdateVirtualAliases(uniqueName);
         }
     } else {
         ReleaseLocks();
@@ -4569,7 +4594,7 @@ void AllJoynObj::NameOwnerChanged(const qcc::String& alias,
     }
 
     set<SessionId> sessionsChanged;
-
+    vector<SessionMapEntry> sessionsLep;
     /* Remove unique names from sessionMap entries */
     if (!newOwner && (alias[0] == ':')) {
         AcquireLocks();
@@ -4580,13 +4605,31 @@ void AllJoynObj::NameOwnerChanged(const qcc::String& alias,
             if (it->first.first == alias) {
                 /* If endpoint has gone then just delete the session map entry */
                 sessionsChanged.insert(it->first.second);
-                sessionMap.erase(it++);
+                BusEndpoint bep = router.FindEndpoint(alias);
+                bep->UnregisterSessionId(it->first.second);
+
+                int numMembers = it->second.memberNames.size();
+                bool sessionHostLeaving = (alias == it->second.sessionHost);
+
+                /*
+                 * If the session host is leaving and there are still 2 or more
+                 * members in the session, only mark the session as inactive,
+                 * Do not delete the SessionMapEntry.
+                 */
+                if (sessionHostLeaving && (numMembers > 1)) {
+                    it->second.isActive = false;
+                    ++it;
+                } else {
+                    sessionsLep.push_back(it->second);
+                    sessionMap.erase(it++);
+                }
             } else if (it->first.second != 0) {
                 /* Remove member entries from existing sessions */
                 if (it->second.sessionHost == alias) {
                     if (it->second.opts.isMultipoint) {
                         changedSessionMembers.push_back(it->first);
                     }
+
                     it->second.sessionHost.clear();
 
                     /* Check for self-joined member */
@@ -4653,6 +4696,8 @@ void AllJoynObj::NameOwnerChanged(const qcc::String& alias,
         }
         ReleaseLocks();
 
+
+
         /* Send MPSessionChanged for each changed session involving alias */
         vector<pair<String, SessionId> >::const_iterator csit = changedSessionMembers.begin();
         while (csit != changedSessionMembers.end()) {
@@ -4660,15 +4705,28 @@ void AllJoynObj::NameOwnerChanged(const qcc::String& alias,
             csit++;
         }
         /* Send session lost signals */
-        vector<SessionMapEntry>::iterator slit = sessionsLost.begin();
-        while (slit != sessionsLost.end()) {
-            router.RemoveSessionRoutes(slit->id);
+
+
+        for (vector<SessionMapEntry>::iterator slit = sessionsLost.begin();
+             slit != sessionsLost.end();
+             ++slit) {
             if (slit->memberNames.size() == 1) {
-                SendSessionLost(*slit++, ER_BUS_ENDPOINT_CLOSING, ALLJOYN_SESSIONLOST_DISPOSITION_MEMBER);
+                SendSessionLost(*slit, ER_BUS_ENDPOINT_CLOSING, ALLJOYN_SESSIONLOST_DISPOSITION_MEMBER);
             } else {
-                SendSessionLost(*slit++, ER_BUS_ENDPOINT_CLOSING, ALLJOYN_SESSIONLOST_DISPOSITION_HOST);
+                SendSessionLost(*slit, ER_BUS_ENDPOINT_CLOSING, ALLJOYN_SESSIONLOST_DISPOSITION_HOST);
             }
+            CleanupSessionEndpoints(*slit);
+
         }
+
+        for (vector<SessionMapEntry>::iterator slit = sessionsLep.begin();
+             slit != sessionsLep.end();
+             ++slit) {
+            CleanupSessionEndpoints(*slit);
+        }
+
+
+
     }
 
     /* Only if local name */
@@ -4855,6 +4913,122 @@ void AllJoynObj::NameOwnerChanged(const qcc::String& alias,
             ReleaseLocks();
         }
     }
+}
+
+QStatus AllJoynObj::AddSessionRef(VirtualEndpoint vep, SessionId id, RemoteEndpoint b2bEp)
+{
+    QCC_DbgPrintf(("AllJoynObj::AddSessionRef(vep=%s, id=%u, b2bEp=%s)", vep->GetUniqueName().c_str(), id, b2bEp->GetUniqueName().c_str()));
+
+    assert(b2bEp->IsValid());
+    AcquireLocks();
+    QStatus status;
+    VirtualEndpoint rnEp;
+    String vepGuid = vep->GetRemoteGUIDShortString();
+
+    status = vep->AddSessionRef(id, b2bEp);
+
+    if (status == ER_OK) {
+        String memberRoutingNode = ":" + vepGuid + ".1";
+
+        /* AddSessionRef for the routing node. */
+        QCC_DbgPrintf(("AllJoynObj::AddSessionRef(): AddSessionRef routing node(id=%u, RN=%s, b2bEp=\"%s\")", id, memberRoutingNode.c_str(), b2bEp->GetUniqueName().c_str()));
+
+        if (FindEndpoint(memberRoutingNode, rnEp) && (rnEp->IsValid())) {
+            status = rnEp->AddSessionRef(id, b2bEp);
+        } else {
+            status = ER_BUS_NO_ENDPOINT;
+
+        }
+        if (status != ER_OK) {
+            vep->RemoveSessionRef(id);
+            QCC_LogError(status, ("AllJoynObj::AddSessionRef(): AddSessionRef routing node(id=%u, RN=%s, b2bEp=\"%s\")", id, memberRoutingNode.c_str(), b2bEp->GetUniqueName().c_str()));
+
+        }
+    } else {
+        QCC_LogError(status, ("AllJoynObj::AddSessionRef(): AddSessionRef failed(id=%u, vep=%s, b2bEp=\"%s\")", id, vep->GetUniqueName().c_str(), b2bEp->GetUniqueName().c_str()));
+    }
+
+    ReleaseLocks();
+    return status;
+}
+
+void AllJoynObj::RemoveSessionRef(String vepName, SessionId id)
+{
+    QCC_DbgPrintf(("AllJoynObj::RemoveSessionRef(vepName=%s, id=%u)", vepName.c_str(), id));
+
+    VirtualEndpoint vep;
+    AcquireLocks();
+    if (FindEndpoint(vepName, vep) && vep->IsValid()) {
+        vep->RemoveSessionRef(id);
+
+        String vepGuid = vep->GetRemoteGUIDShortString();
+        String memberRoutingNode = ":" + vepGuid + ".1";
+        VirtualEndpoint rnEp;
+        RemoteEndpoint b2bEp = vep->GetBusToBusEndpoint(id);
+        if (FindEndpoint(memberRoutingNode, rnEp) && (rnEp->IsValid())) {
+            rnEp->RemoveSessionRef(id);
+        }
+        ReleaseLocks();
+    } else {
+        ReleaseLocks();
+    }
+}
+
+QStatus AllJoynObj::AddSessionRoute(SessionId id,
+                                    BusEndpoint& srcEp, RemoteEndpoint* srcB2bEp,
+                                    BusEndpoint& destEp, RemoteEndpoint& destB2bEp)
+{
+    QCC_DbgPrintf(("AllJoynObj::AddSessionRoute(%u, %s, %s, %s, %s)", id,
+                   srcEp->GetUniqueName().c_str(), srcB2bEp ? (*srcB2bEp)->GetUniqueName().c_str() : "<none>",
+                   destEp->GetUniqueName().c_str(), destB2bEp->GetUniqueName().c_str()));
+    assert(id != 0);
+    QStatus status = ER_OK;
+
+    bool srcIsVirt = srcEp->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL;
+    bool destIsVirt = destEp->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL;
+
+    if (destIsVirt) {
+        if (destB2bEp->IsValid()) {
+            status = AddSessionRef(VirtualEndpoint::cast(destEp), id, destB2bEp);
+        } else {
+            status = ER_BUS_NO_SESSION;
+        }
+        if (status != ER_OK) {
+            return status;
+        }
+    }
+
+    if (srcB2bEp) {
+        assert(srcIsVirt);
+        if (srcIsVirt) {
+            status = AddSessionRef(VirtualEndpoint::cast(srcEp), id, *srcB2bEp);
+            if (status != ER_OK) {
+                if (destIsVirt) {
+                    RemoveSessionRef(destEp->GetUniqueName(), id);
+                }
+                return status;
+            }
+        }
+    }
+
+    if (destIsVirt) {
+        destB2bEp->RegisterSessionId(id);
+    } else {
+        destEp->RegisterSessionId(id);
+    }
+
+    if (srcIsVirt) {
+        (*srcB2bEp)->RegisterSessionId(id);
+    } else {
+        srcEp->RegisterSessionId(id);
+    }
+
+
+    if ((srcEp == destEp) && ((srcEp->GetEndpointType() == ENDPOINT_TYPE_REMOTE) || (srcEp->GetEndpointType() == ENDPOINT_TYPE_NULL))) {
+        router.RegisterSelfJoin(srcEp->GetUniqueName(), id);
+    }
+
+    return status;
 }
 
 struct FoundNameEntry {

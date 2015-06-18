@@ -791,9 +791,7 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
      * @return  ER_OK if successful.
      */
     virtual QStatus AddSessionRoute(SessionId id, BusEndpoint& srcEp, RemoteEndpoint* srcB2bEp, BusEndpoint& destEp,
-                                    RemoteEndpoint& destB2bEp) {
-        return router.AddSessionRoute(id, srcEp, srcB2bEp, destEp, destB2bEp);
-    }
+                                    RemoteEndpoint& destB2bEp);
 
     /// @endcond
 
@@ -864,6 +862,7 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
         std::vector<qcc::String> memberNames;
         bool isInitializing;
         bool isRawReady;
+        bool isActive;                   /* This is used to mark multipoint sessions as inactive once the session host leaves. */
         bool IsSelfJoin() const {
             return find(memberNames.begin(), memberNames.end(), sessionHost) != memberNames.end();
         }
@@ -894,7 +893,8 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
             opts(),
             fd(qcc::INVALID_SOCKET_FD),
             isInitializing(false),
-            isRawReady(false) { }
+            isRawReady(false),
+            isActive(true) { }
     };
 
     typedef std::multimap<std::pair<qcc::String, SessionId>, SessionMapEntry> SessionMapType;
@@ -1276,6 +1276,24 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
      */
     bool IsMemberOfSession(BusEndpoint endpoint, uint32_t sessionId);
 
+    /* Add a session ref to the VirtualEndpoint
+     * @param  vep Virtual endpoint to which a ref needs to be added.
+     * @param  id Id of the session
+     * @param  b2bEp B2b endpoint of the session
+     * @return ER_OK if successful
+     */
+    QStatus AddSessionRef(VirtualEndpoint vep, SessionId id, RemoteEndpoint b2bEp);
+
+    /* Remove a session ref to the virtualendpoint with the specified name
+     * @param  vepName Name of virtual endpoint to which a ref needs to be decremented.
+     * @param  id Id of the session
+     */
+    void RemoveSessionRef(qcc::String vepName, SessionId id);
+
+    /* Clean up session references from endpoints for a particular session.
+     * @param  sme: The session being torn down
+     */
+    void CleanupSessionEndpoints(SessionMapEntry sme);
 };
 
 }
