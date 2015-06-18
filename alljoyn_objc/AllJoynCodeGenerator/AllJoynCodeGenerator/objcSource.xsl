@@ -980,7 +980,7 @@ void <xsl:value-of select="../annotation[@name='org.alljoyn.lang.objc']/@value"/
             @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add signal to interface:  <xsl:value-of select="@name"/>" userInfo:nil];
         }
     <xsl:if test="./description">
-        [interfaceDescription setMemberDescription:@"<xsl:value-of select="./description"/>" forMemberWithName:@"<xsl:value-of select="@name"/>" sessionlessSignal:<xsl:if test="./description[@sessionless = 'true']">TRUE</xsl:if><xsl:if test="not(./description[@sessionless = 'true'])">FALSE</xsl:if>];
+        [interfaceDescription setMemberDescription:@"<xsl:value-of select="./description"/>" forMemberWithName:@"<xsl:value-of select="@name"/>" sessionlessSignal:<xsl:if test="@sessionless='true'">TRUE</xsl:if><xsl:if test="not(@sessionless = 'true')">FALSE</xsl:if>];
 
     </xsl:if>
     <xsl:for-each select="./arg/description">

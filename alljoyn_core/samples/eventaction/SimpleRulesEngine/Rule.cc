@@ -117,6 +117,8 @@ QStatus Rule::enable()
 
 void Rule::EventHandler(const ajn::InterfaceDescription::Member* member, const char* srcPath, ajn::Message& msg)
 {
+    QCC_UNUSED(member);
+    QCC_UNUSED(srcPath);
     QStatus status = ER_OK;
     if (!mAction || !mEvent) {
         return;
@@ -169,6 +171,7 @@ void Rule::callAction() {
 }
 
 void Rule::AsyncCallReplyHandler(Message& msg, void* context) {
+    QCC_UNUSED(context);
     size_t numArgs;
     const MsgArg* args;
     msg->GetArgs(numArgs, args);
@@ -233,18 +236,22 @@ void Rule::modifyActionSessionName(const char*sessionName)
 
 
 /* From SessionListener */
-void Rule::SessionLost(ajn::SessionId sessionId)
+void Rule::SessionLost(ajn::SessionId sessionId, ajn::SessionListener::SessionLostReason reason)
 {
+    QCC_UNUSED(sessionId);
+    QCC_UNUSED(reason);
     LOGTHIS("Unable to communicate with action device, lost the session.");
     mSessionId = 0;
 }
 
 void Rule::SessionMemberAdded(ajn::SessionId sessionId, const char*uniqueName)
 {
-
+    QCC_UNUSED(sessionId);
+    QCC_UNUSED(uniqueName);
 }
 
 void Rule::SessionMemberRemoved(ajn::SessionId sessionId, const char*uniqueName)
 {
-
+    QCC_UNUSED(sessionId);
+    QCC_UNUSED(uniqueName);
 }

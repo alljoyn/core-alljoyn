@@ -798,8 +798,9 @@ class RemoveSessionMemberBusAListener : public SessionPortListener, public Sessi
 };
 class RemoveSessionMemberBusBListener : public SessionListener {
 
-    virtual void SessionLost(SessionId sessionId) {
+    virtual void SessionLost(SessionId sessionId, SessionLostReason reason) {
         QCC_UNUSED(sessionId);
+        QCC_UNUSED(reason);
         sessionLostFlagB = true;
     }
     virtual void SessionMemberAdded(SessionId sessionId, const char* uniqueName) {

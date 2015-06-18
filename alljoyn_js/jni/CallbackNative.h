@@ -16,6 +16,7 @@
 #ifndef _CALLBACKNATIVE_H
 #define _CALLBACKNATIVE_H
 
+#include "AboutObjHost.h"
 #include "BusErrorHost.h"
 #include "InterfaceDescriptionNative.h"
 #include "MessageHost.h"
@@ -39,6 +40,7 @@ class CallbackNative : public NativeObject {
     void onCallback(QStatus status, ajn::SessionId id, SessionOptsHost& opts);
     void onCallback(QStatus status, ajn::SessionPort port);
     void onCallback(QStatus status, MessageHost& message, const ajn::MsgArg* args, size_t numArgs);
+    void onCallback(QStatus status, AboutObjHost& aboutObj);
     void onCallback(QStatus status, ProxyBusObjectHost& proxyBusObject);
     void onCallback(QStatus status, SocketFdHost& socketFd);
     void onCallback(QStatus status, InterfaceDescriptionNative* interfaceDescription);
@@ -51,6 +53,7 @@ class CallbackNative : public NativeObject {
     static void DispatchCallback(Plugin& plugin, CallbackNative* callbackNative, QStatus status, qcc::String& s);
     static void DispatchCallback(Plugin& plugin, CallbackNative* callbackNative, QStatus status, uint32_t u);
     static void DispatchCallback(Plugin& plugin, CallbackNative* callbackNative, QStatus status, ajn::SessionPort port);
+    static void DispatchCallback(Plugin& plugin, CallbackNative* callbackNative, QStatus status, AboutObjHost& aboutObj);
     static void DispatchCallback(Plugin& plugin, CallbackNative* callbackNative, QStatus status, ProxyBusObjectHost& proxyBusObject);
     static void DispatchCallback(Plugin& plugin, CallbackNative* callbackNative, QStatus status, SocketFdHost& socketFd);
     static void DispatchCallback(Plugin& plugin, CallbackNative* callbackNative, QStatus status, InterfaceDescriptionNative* interfaceDescription);
@@ -63,6 +66,7 @@ class CallbackNative : public NativeObject {
     static void _StringCallbackCB(PluginData::CallbackContext* ctx);
     static void _UnsignedLongCallbackCB(PluginData::CallbackContext* ctx);
     static void _BindSessionPortCallbackCB(PluginData::CallbackContext* ctx);
+    static void _GetAboutObjectCallbackCB(PluginData::CallbackContext* ctx);
     static void _GetProxyBusObjectCallbackCB(PluginData::CallbackContext* ctx);
     static void _GetSessionFdCallbackCB(PluginData::CallbackContext* ctx);
     static void _GetInterfaceCallbackCB(PluginData::CallbackContext* ctx);

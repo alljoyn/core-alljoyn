@@ -43,15 +43,16 @@ class IpNameServiceImpl;
 class IpNameServiceListener {
   public:
     virtual ~IpNameServiceListener() { }
-    virtual bool QueryHandler(TransportMask transport, MDNSPacket query, uint16_t recvPort,
-                              const qcc::IPEndpoint& ns4) {
+    virtual bool QueryHandler(TransportMask transport, MDNSPacket query, const qcc::IPEndpoint& src, const qcc::IPEndpoint& dst) {
         QCC_UNUSED(transport);
-        QCC_UNUSED(recvPort);
-        QCC_UNUSED(ns4);
+        QCC_UNUSED(query);
+        QCC_UNUSED(src);
+        QCC_UNUSED(dst);
         return false;
     }
     virtual bool ResponseHandler(TransportMask transport, MDNSPacket response, uint16_t recvPort) {
         QCC_UNUSED(transport);
+        QCC_UNUSED(response);
         QCC_UNUSED(recvPort);
         return false;
     }
@@ -432,7 +433,7 @@ class IpNameService {
      *     advertisement be canceled.
      * @param wkn The well-known name to stop advertising.
      */
-    QStatus CancelAdvertiseName(TransportMask transportMask, const qcc::String& wkn, TransportMask completeTransportMask);
+    QStatus CancelAdvertiseName(TransportMask transportMask, const qcc::String& wkn, bool quietly, TransportMask completeTransportMask);
 
     /**
      * @brief Handle the suspending event of the process. Release exclusive socket file descriptor and port.

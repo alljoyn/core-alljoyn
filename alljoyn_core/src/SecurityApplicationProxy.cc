@@ -472,14 +472,17 @@ QStatus SecurityApplicationProxy::RemoveMembership(const qcc::String& serial, co
 
     MsgArg inputs[1];
 
+    size_t coordSize = issuerKeyInfo.GetPublicKey()->GetCoordinateSize();
+    uint8_t* xData = new uint8_t[coordSize];
+    uint8_t* yData = new uint8_t[coordSize];
+    KeyInfoHelper::ExportCoordinates(*issuerKeyInfo.GetPublicKey(), xData, coordSize, yData, coordSize);
     status = inputs[0].Set("(ayay(yyayay))",
                            serial.size(), (uint8_t*) serial.data(),
                            issuerKeyInfo.GetKeyIdLen(), issuerKeyInfo.GetKeyId(),
                            issuerKeyInfo.GetAlgorithm(), issuerKeyInfo.GetCurve(),
-                           qcc::ECC_COORDINATE_SZ, issuerKeyInfo.GetXCoord(),
-                           qcc::ECC_COORDINATE_SZ, issuerKeyInfo.GetYCoord());
+                           coordSize, xData, coordSize, yData);
     if (ER_OK != status) {
-        return status;
+        goto Exit;
     }
 
     status = MethodCall(org::alljoyn::Bus::Security::ManagedApplication::InterfaceName, "RemoveMembership", inputs, 1, reply);
@@ -488,6 +491,9 @@ QStatus SecurityApplicationProxy::RemoveMembership(const qcc::String& serial, co
             QCC_LogError(status, ("SecurityApplicationProxy::%s error %s", __FUNCTION__, reply->GetErrorDescription().c_str()));
         }
     }
+Exit:
+    delete [] xData;
+    delete [] yData;
     return status;
 }
 
@@ -573,8 +579,9 @@ QStatus SecurityApplicationProxy::MsgArgToCertificateIds(const MsgArg& arg, qcc:
         if ((xLen != qcc::ECC_COORDINATE_SZ) || (yLen != qcc::ECC_COORDINATE_SZ)) {
             return ER_INVALID_DATA;
         }
-        issuerKeyInfos[cnt].SetXCoord(xCoord);
-        issuerKeyInfos[cnt].SetYCoord(yCoord);
+        qcc::ECCPublicKey publicKey;
+        publicKey.Import(xCoord, publicKey.GetCoordinateSize(), yCoord, publicKey.GetCoordinateSize());
+        issuerKeyInfos[cnt].SetPublicKey(&publicKey);
         issuerKeyInfos[cnt].SetKeyId(akiVal, akiLen);
         serials[cnt].assign((const char*) serialVal, serialLen);
     }
@@ -677,8 +684,9 @@ QStatus SecurityApplicationProxy::GetIdentityCertificateId(qcc::String& serial, 
         if ((xLen != qcc::ECC_COORDINATE_SZ) || (yLen != qcc::ECC_COORDINATE_SZ)) {
             return ER_INVALID_DATA;
         }
-        issuerKeyInfo.SetXCoord(xCoord);
-        issuerKeyInfo.SetYCoord(yCoord);
+        qcc::ECCPublicKey publicKey;
+        publicKey.Import(xCoord, publicKey.GetCoordinateSize(), yCoord, publicKey.GetCoordinateSize());
+        issuerKeyInfo.SetPublicKey(&publicKey);
         issuerKeyInfo.SetKeyId(akiVal, akiLen);
         serial.assign((const char*) serialVal, serialLen);
     }

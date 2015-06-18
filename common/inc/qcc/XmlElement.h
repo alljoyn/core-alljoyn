@@ -31,7 +31,6 @@
 #include <vector>
 
 #include <qcc/String.h>
-#include <qcc/BufferedSource.h>
 #include <qcc/Stream.h>
 
 namespace qcc {
@@ -243,7 +242,7 @@ struct XmlParseContext {
     /**
      * Create a parse context that uses a given XML source.
      *
-     * @param source  BufferedSource containing XML formatted data.
+     * @param source  Source containing XML formatted data.
      */
     XmlParseContext(Source& source) :
         source(source),

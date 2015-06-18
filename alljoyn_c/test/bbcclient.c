@@ -57,6 +57,7 @@ static volatile sig_atomic_t g_interrupt = QCC_FALSE;
 
 static void CDECL_CALL SigIntHandler(int sig)
 {
+    QCC_UNUSED(sig);
     g_interrupt = QCC_TRUE;
 }
 
@@ -105,15 +106,19 @@ void AJ_CALL found_advertised_name(const void* context, const char* name, alljoy
 
 void AJ_CALL lost_advertised_name(const void* context, const char* name, alljoyn_transportmask transport, const char* namePrefix)
 {
+    QCC_UNUSED(context);
     printf("LostAdvertisedName(name=%s, transport=0x%x, prefix=%s)\n", name, transport, namePrefix);
 }
 
 void AJ_CALL name_owner_changed(const void* context, const char* name, const char* previousOwner, const char* newOwner)
 {
+    QCC_UNUSED(context);
     printf("NameOwnerChanged(%s, %s, %s)\n", name,  (previousOwner ? previousOwner : "null"), (newOwner ? newOwner : "null"));
 }
 
 void AJ_CALL session_lost(const void* context, alljoyn_sessionid sessionId, alljoyn_sessionlostreason reason) {
+    QCC_UNUSED(context);
+    QCC_UNUSED(reason);
     printf("SessionLost(%u) was called\n", sessionId);
     _exit(1);
 }
@@ -162,7 +167,7 @@ QCC_BOOL AJ_CALL request_credentials(const void* context, const char* authMechan
     printf("RequestCredentials for authenticating %s using mechanism %s\n", authPeer, authMechanism);
 
     alljoyn_busattachment_getpeerguid(g_msgBus, authPeer, guid, &size_of_guid);
-    printf("Peer guid %s   %zu\n", guid, size_of_guid);
+    printf("Peer guid %s   %" PRIuSIZET "\n", guid, size_of_guid);
 
     if (g_keyExpiration != 0xFFFFFFFF) {
         alljoyn_busattachment_setkeyexpiration(g_msgBus, guid, g_keyExpiration);
@@ -198,17 +203,24 @@ QCC_BOOL AJ_CALL request_credentials(const void* context, const char* authMechan
     return QCC_FALSE;
 }
 
-QCC_BOOL AJ_CALL verify_credentials(const void*context, const char* authMechanism, const char* authPeer, const alljoyn_credentials credentials) {
-
+QCC_BOOL AJ_CALL verify_credentials(const void* context, const char* authMechanism, const char* authPeer, const alljoyn_credentials credentials) {
+    QCC_UNUSED(context);
+    QCC_UNUSED(authMechanism);
+    QCC_UNUSED(authPeer);
+    QCC_UNUSED(credentials);
     /* Not used with the SRP auth mechanisms. */
     return QCC_FALSE;
 }
 
-void AJ_CALL authentication_complete(const void*context, const char* authMechanism, const char* authPeer, QCC_BOOL success) {
+void AJ_CALL authentication_complete(const void* context, const char* authMechanism, const char* authPeer, QCC_BOOL success) {
+    QCC_UNUSED(context);
+    QCC_UNUSED(authPeer);
     printf("Authentication %s %s\n", authMechanism, success ? "succesful" : "failed");
 }
 
-void AJ_CALL security_violation(const void*context, QStatus status, const alljoyn_message msg) {
+void AJ_CALL security_violation(const void* context, QStatus status, const alljoyn_message msg) {
+    QCC_UNUSED(context);
+    QCC_UNUSED(msg);
     printf("Security violation %s\n", QCC_StatusText(status));
 }
 

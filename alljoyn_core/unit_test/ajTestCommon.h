@@ -20,7 +20,7 @@
 
 #include <qcc/String.h>
 #include <alljoyn/BusAttachment.h>
-
+#include "BusEndpoint.h"
 /*
  * this header file contains a functions that can be used to replace common
  * actions in the test code.
@@ -29,7 +29,7 @@ namespace ajn {
 
 /**
  * Obtain the default connection arg for the OS the test is run on.
- * If running on on windows this should be "tcp:addr=127.0.0.1,port=9956"
+ * If running on on windows this should be "tcp:addr=127.0.0.1,port=9955"
  * If running on a unix variant this should be "unix:abstract=alljoyn"
  *
  * The environment variable BUS_ADDRESS is specified it will be used in place
@@ -61,5 +61,14 @@ qcc::String getUniqueNamePrefix(const BusAttachment& bus);
  * gtest printers
  */
 void PrintTo(const QStatus& status, ::std::ostream* os);
+::std::ostream& operator<<(::std::ostream& os, const QStatus& status);
 
+namespace qcc {
+void PrintTo(const String& s, ::std::ostream* os);
+}
+
+namespace ajn {
+::std::ostream& operator<<(::std::ostream& os, const BusEndpoint& ep);
+::std::ostream& operator<<(::std::ostream& os, const AllJoynMessageType& type);
+}
 #endif //AJTESTCOMMON_H

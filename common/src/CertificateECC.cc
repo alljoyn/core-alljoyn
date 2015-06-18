@@ -107,31 +107,48 @@ static QStatus StripTags(String& pem, const char* beg, const char* end)
     return ER_OK;
 }
 
-QStatus AJ_CALL CertificateX509::EncodePrivateKeyPEM(const uint8_t* privateKey, size_t len, String& encoded)
+QStatus AJ_CALL CertificateX509::EncodePrivateKeyPEM(const ECCPrivateKey* privateKey, String& encoded)
 {
     QStatus status;
     qcc::String beg = EC_PRIVATE_KEY_PEM_BEGIN_TAG;
     qcc::String end = EC_PRIVATE_KEY_PEM_END_TAG;
     qcc::String der;
-    qcc::String prv((const char*) privateKey, len);
+    qcc::String prv;
     qcc::String oid = OID_CRV_PRIME256V1;
     qcc::String pem;
 
+    size_t privateKeyLength = privateKey->GetSize();
+    uint8_t* privateKeyBytes = new uint8_t[privateKeyLength];
+
+    status = privateKey->Export(privateKeyBytes, &privateKeyLength);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Error exporting private key"));
+        goto Exit;
+    }
+
+    prv.assign((const char*)privateKeyBytes, privateKeyLength);
     status = Crypto_ASN1::Encode(der, "(ixc(o))", 1, &prv, 0, &oid);
     if (ER_OK != status) {
         QCC_LogError(status, ("Error encoding private key in PEM format"));
-        return status;
+        goto Exit;
     }
     status = Crypto_ASN1::EncodeBase64(der, pem);
     if (ER_OK != status) {
-        return status;
+        goto Exit;
     }
     encoded = beg + "\n" + pem + end;
 
-    return ER_OK;
+Exit:
+
+    if (NULL != privateKeyBytes) {
+        qcc::ClearMemory(privateKeyBytes, privateKeyLength);
+        delete[] privateKeyBytes;
+    }
+
+    return status;
 }
 
-QStatus AJ_CALL CertificateX509::DecodePrivateKeyPEM(const String& encoded, uint8_t* privateKey, size_t len)
+QStatus AJ_CALL CertificateX509::DecodePrivateKeyPEM(const String& encoded, ECCPrivateKey* privateKey)
 {
     QStatus status;
     qcc::String pem = encoded;
@@ -172,15 +189,11 @@ QStatus AJ_CALL CertificateX509::DecodePrivateKeyPEM(const String& encoded, uint
             return ER_FAIL;
         }
     }
-    if (len != prv.size()) {
-        return ER_FAIL;
-    }
-    memcpy(privateKey, prv.data(), len);
 
-    return ER_OK;
+    return privateKey->Import((const uint8_t*) prv.data(), prv.size());
 }
 
-QStatus AJ_CALL CertificateX509::EncodePublicKeyPEM(const uint8_t* publicKey, size_t len, String& encoded)
+QStatus AJ_CALL CertificateX509::EncodePublicKeyPEM(const ECCPublicKey* publicKey, String& encoded)
 {
     QStatus status;
     qcc::String beg = PUBLIC_KEY_PEM_BEGIN_TAG;
@@ -190,9 +203,20 @@ QStatus AJ_CALL CertificateX509::EncodePublicKeyPEM(const uint8_t* publicKey, si
     qcc::String oid2 = OID_CRV_PRIME256V1;
     qcc::String pem;
 
+    size_t publicKeySize = publicKey->GetSize();
+    uint8_t* publicKeyBytes = new uint8_t[publicKeySize];
+
+    status = publicKey->Export(publicKeyBytes, &publicKeySize);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Failed to export public key bytes"));
+        delete[] publicKeyBytes;
+        return status;
+    }
+
     // Uncompressed points only
     qcc::String key(0x4);
-    key += qcc::String((const char*) publicKey, len);
+    key += qcc::String((const char*)publicKeyBytes, publicKeySize);
+    delete[] publicKeyBytes;
     status = Crypto_ASN1::Encode(der, "((oo)b)", &oid1, &oid2, &key, 8 * key.size());
     if (ER_OK != status) {
         return status;
@@ -206,7 +230,7 @@ QStatus AJ_CALL CertificateX509::EncodePublicKeyPEM(const uint8_t* publicKey, si
     return ER_OK;
 }
 
-QStatus AJ_CALL CertificateX509::DecodePublicKeyPEM(const String& encoded, uint8_t* publicKey, size_t len)
+QStatus AJ_CALL CertificateX509::DecodePublicKeyPEM(const String& encoded, ECCPublicKey* publicKey)
 {
     QStatus status;
     qcc::String pem = encoded;
@@ -231,22 +255,72 @@ QStatus AJ_CALL CertificateX509::DecodePublicKeyPEM(const String& encoded, uint8
         return status;
     }
     if (OID_KEY_ECC != oid1) {
+        QCC_LogError(ER_FAIL, ("First OID did not match ECC oid"));
         return ER_FAIL;
     }
     if (OID_CRV_PRIME256V1 != oid2) {
-        return ER_FAIL;
-    }
-    if (1 + len != key.size()) {
+        QCC_LogError(ER_FAIL, ("Second OID did not match P-256 OID"));
         return ER_FAIL;
     }
     // Uncompressed points only
     if (0x4 != *key.data()) {
+        QCC_LogError(ER_FAIL, ("Key data is not in uncompressed format; other formats are not supported"));
         return ER_FAIL;
     }
-    memcpy(publicKey, key.data() + 1, len);
 
-    return ER_OK;
+    return publicKey->Import((const uint8_t*)(key.data() + 1), key.size() - 1);
 }
+
+/* To be deprecated versions of {Encode|Decode}{Private|Public}KeyPEM */
+QStatus AJ_CALL CertificateX509::EncodePrivateKeyPEM(const uint8_t* privateKey, size_t len, String& encoded)
+{
+    ECCPrivateKey keyObject;
+
+    QStatus status = keyObject.Import(privateKey, len);
+    if (ER_OK != status) {
+        return status;
+    }
+    return CertificateX509::EncodePrivateKeyPEM(&keyObject, encoded);
+}
+
+QStatus AJ_CALL CertificateX509::DecodePrivateKeyPEM(const String& encoded, uint8_t* privateKey, size_t len)
+{
+    ECCPrivateKey keyObject;
+
+    QStatus status = CertificateX509::DecodePrivateKeyPEM(encoded, &keyObject);
+    if (ER_OK != status) {
+        return status;
+    }
+
+    return keyObject.Export(privateKey, &len);
+}
+
+QStatus AJ_CALL EncodePublicKeyPEM(const uint8_t* publicKey, size_t len, String& encoded)
+{
+    ECCPublicKey keyObject;
+
+    QStatus status = keyObject.Import(publicKey, len);
+    if (ER_OK != status) {
+        return status;
+    }
+
+    return CertificateX509::EncodePublicKeyPEM(&keyObject, encoded);
+}
+
+QStatus AJ_CALL DecodePublicKeyPEM(const String& encoded, uint8_t* publicKey, size_t len)
+{
+    ECCPublicKey keyObject;
+
+    QStatus status = CertificateX509::DecodePublicKeyPEM(encoded, &keyObject);
+    if (ER_OK != status) {
+        return status;
+    }
+
+    return keyObject.Export(publicKey, &len);
+}
+/* End of to-be-deprecated functions */
+
+
 
 QStatus CertificateX509::DecodeCertificateName(const qcc::String& dn, CertificateX509::DistinguishedName& name)
 {
@@ -475,14 +549,14 @@ QStatus CertificateX509::DecodeCertificatePub(const qcc::String& pub)
     if (OID_CRV_PRIME256V1 != oid2) {
         return ER_FAIL;
     }
-    if (1 + sizeof (publickey) != key.size()) {
+    if (1 + publickey.GetSize() != key.size()) {
         return ER_FAIL;
     }
     // Uncompressed points only
     if (0x4 != *key.data()) {
         return ER_FAIL;
     }
-    memcpy((uint8_t*) &publickey, key.data() + 1, key.size() - 1);
+    status = publickey.Import((const uint8_t*)(key.data() + 1), key.size() - 1);
 
     return status;
 }
@@ -493,14 +567,22 @@ QStatus CertificateX509::EncodeCertificatePub(qcc::String& pub) const
     qcc::String oid1 = OID_KEY_ECC;
     qcc::String oid2 = OID_CRV_PRIME256V1;
 
-    // Uncompressed points only
-    qcc::String key(0x4);
-    key += qcc::String((const char*) &publickey, sizeof (publickey));
-    status = Crypto_ASN1::Encode(pub, "(oo)b", &oid1, &oid2, &key, 8 * key.size());
+    size_t publicKeySize = publickey.GetSize();
+    uint8_t* publicKeyBytes = new uint8_t[publicKeySize];
+
+    status = publickey.Export(publicKeyBytes, &publicKeySize);
     if (ER_OK != status) {
+        QCC_LogError(status, ("Failed to export public key bytes"));
+        delete[] publicKeyBytes;
         return status;
     }
 
+    // Uncompressed points only
+    qcc::String key(0x4);
+    key += qcc::String((const char*) publicKeyBytes, publicKeySize);
+    status = Crypto_ASN1::Encode(pub, "(oo)b", &oid1, &oid2, &key, 8 * key.size());
+
+    delete[] publicKeyBytes;
     return status;
 }
 
@@ -675,9 +757,10 @@ QStatus CertificateX509::DecodeCertificateTBS()
     qcc::String time;
     qcc::String pub;
     qcc::String ext;
+    qcc::String serialStr;
 
     status = Crypto_ASN1::Decode(tbs, "(c(i)l(o)(.)(.)(.)(.).)",
-                                 0, &x509Version, &serial, &oid, &iss, &time, &sub, &pub, &ext);
+                                 0, &x509Version, &serialStr, &oid, &iss, &time, &sub, &pub, &ext);
     if (ER_OK != status) {
         QCC_LogError(status, ("Error decoding certificate"));
         return status;
@@ -686,6 +769,7 @@ QStatus CertificateX509::DecodeCertificateTBS()
         QCC_LogError(status, ("Certificate not X.509v3"));
         return ER_FAIL;
     }
+    this->SetSerial((const uint8_t*)serialStr.data(), serialStr.size());
     if (OID_SIG_ECDSA_SHA256 != oid) {
         QCC_LogError(status, ("Certificate signature must be SHA-256"));
         return ER_FAIL;
@@ -728,6 +812,7 @@ QStatus CertificateX509::EncodeCertificateTBS()
     qcc::String time;
     qcc::String pub;
     qcc::String ext;
+    qcc::String serialStr;
 
     status = EncodeCertificateName(iss, issuer);
     if (ER_OK != status) {
@@ -749,8 +834,9 @@ QStatus CertificateX509::EncodeCertificateTBS()
     if (ER_OK != status) {
         return status;
     }
+    serialStr.assign((const char*)serial, serialLen);
     status = Crypto_ASN1::Encode(tbs, "(c(i)l(o)(R)(R)(R)(R)R)",
-                                 0, x509Version, &serial, &oid, &iss, &time, &sub, &pub, &ext);
+                                 0, x509Version, &serialStr, &oid, &iss, &time, &sub, &pub, &ext);
 
     return status;
 }
@@ -991,7 +1077,9 @@ QStatus CertificateX509::SignAndGenerateAuthorityKeyId(const ECCPrivateKey* priv
 String CertificateX509::ToString() const
 {
     qcc::String str("Certificate:\n");
-    str += "serial:    0x" + BytesToHexString((const uint8_t*) serial.data(), serial.length()) + "\n";
+    /* Printing out the serial number as a string can produce control characters that cause output issues
+     * on Windows. Sometimes the rest of the output will not appear. Instead, we only print it as a hex string. */
+    str += "serial:     0x" + BytesToHexString(serial, serialLen) + "\n";
     if ((GetIssuerOULength() > 0) || (GetIssuerCNLength() > 0)) {
         str += "issuer: ";
         bool addComma = false;
@@ -1027,7 +1115,7 @@ String CertificateX509::ToString() const
         }
         str += "\n";
     }
-    str += "publickey: " + BytesToHexString((const uint8_t*) &publickey, sizeof(publickey)) + "\n";
+    str += "publickey: " + publickey.ToString() + "\n";
     str += "ca:        " + BytesToHexString((const uint8_t*) &ca, sizeof(uint8_t)) + "\n";
     str += "validity: not-before ";
     str += U64ToString(GetValidity()->validFrom);
@@ -1132,5 +1220,57 @@ QStatus AJ_CALL CertificateX509::DecodeCertChainPEM(const String& encoded, Certi
 
     return status;
 }
+
+bool CertificateX509::IsIssuerOf(const CertificateX509& issuedCertificate) const
+{
+    return ((this->IsDNEqual(issuedCertificate.GetIssuerCN(), issuedCertificate.GetIssuerCNLength(),
+                             issuedCertificate.GetIssuerOU(), issuedCertificate.GetIssuerOULength())) &&
+            (ER_OK == issuedCertificate.Verify(this->GetSubjectPublicKey())));
+}
+
+bool CertificateX509::IsDNEqual(const CertificateX509& other) const
+{
+    return (this->IsDNEqual(other.GetSubjectCN(), other.GetSubjectCNLength(), other.GetSubjectOU(), other.GetSubjectOULength()));
+}
+
+bool CertificateX509::IsDNEqual(const uint8_t* cn, const size_t cnLength, const uint8_t* ou, const size_t ouLength) const
+{
+    /* Check lengths are equal. */
+    if ((this->GetSubjectCNLength() != cnLength) || (this->GetSubjectOULength() != ouLength)) {
+        return false;
+    }
+
+    /* For CN and OU, if either is NULL, they must be equal (both NULL). */
+    if ((NULL == this->GetSubjectCN()) || (NULL == cn)) {
+        if (this->GetSubjectCN() != cn) {
+            return false;
+        }
+    }
+
+    if ((NULL == this->GetSubjectOU()) || (NULL == ou)) {
+        if (this->GetSubjectOU() != ou) {
+            return false;
+        }
+    }
+
+    /* At this point either both are NULL or neither is, for each pair of CNs and OUs. */
+    if ((NULL != this->GetSubjectCN()) &&
+        (0 != memcmp(this->GetSubjectCN(), cn, cnLength))) {
+        return false;
+    }
+
+    if ((NULL != this->GetSubjectOU()) &&
+        (0 != memcmp(this->GetSubjectOU(), ou, ouLength))) {
+        return false;
+    }
+
+    return true;
+}
+
+bool CertificateX509::IsSubjectPublicKeyEqual(const ECCPublicKey* publicKey) const
+{
+    return ((*(this->GetSubjectPublicKey())) == (*publicKey));
+}
+
 
 }

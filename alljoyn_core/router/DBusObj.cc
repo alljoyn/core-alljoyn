@@ -392,7 +392,7 @@ void DBusObj::RemoveMatch(const InterfaceDescription::Member* member, Message& m
     if (ER_OK == status) {
         status = MethodReply(msg, (const MsgArg*)NULL, 0);
     } else {
-        QCC_LogError(status, ("RemoveMatch failed"));
+        QCC_DbgTrace(("RemoveMatch failed with %s", QCC_StatusText(status)));
         status = MethodReply(msg, "org.freedesktop.DBus.Error.MatchRuleNotFound", QCC_StatusText(status));
     }
 }

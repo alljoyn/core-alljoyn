@@ -781,7 +781,11 @@ static QStatus SendMsgHeader(ArdpHandle* handle, ArdpConnRecord* conn, ArdpHeade
 
     msgSG.AddBuffer(&buf32[0], ARDP_FIXED_HEADER_LEN);
 
-    if (conn->rcv.eack.sz != 0) {
+    if (conn->rcv.eack.sz != 0
+#if ARDP_TC_SUPPORT
+        && !conn->modeSimple
+#endif
+        ) {
         QCC_DbgPrintf(("SendMsgHeader: have EACKs"));
         h->flags |= ARDP_FLAG_EACK;
         len = ARDP_FIXED_HEADER_LEN + conn->rcv.eack.fixedSz;
@@ -1045,7 +1049,11 @@ static QStatus SendMsgData(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf*
 
     QCC_DbgPrintf(("SendMsgData(): seq = %u, ack=%u, lcs = %u, ttl=%u", ntohl(h->seq), conn->rcv.CUR, conn->rcv.LCS, ttl));
 
-    if (conn->rcv.eack.sz == 0) {
+    if (conn->rcv.eack.sz == 0
+#if ARDP_TC_SUPPORT
+        || conn->modeSimple
+#endif
+        ) {
         len = ARDP_FIXED_HEADER_LEN;
     } else {
         QCC_DbgPrintf(("SendMsgData(): have EACKs"));
@@ -2769,7 +2777,7 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                          */
                         status = Send(handle, conn, ARDP_FLAG_ACK | ARDP_FLAG_VER, conn->snd.NXT, conn->rcv.CUR);
 
-                        if (handle->cb.ConnectCb) {
+                        if ((handle->cb.ConnectCb) && (status == ER_OK)) {
                             QCC_DbgPrintf(("ArdpMachine(): SYN_SENT->OPEN: ConnectCb(handle=%p, conn=%p", handle, conn));
                             assert(!conn->passive);
                             uint8_t* data = &buf[ARDP_SYN_HEADER_SIZE];

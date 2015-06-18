@@ -978,6 +978,7 @@ QStatus AboutData::GetAnnouncedAboutData(MsgArg* msgArg)
                 }
             }
             if (status != ER_OK) {
+                delete [] announceDictonary;
                 return status;
             }
         }

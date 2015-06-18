@@ -339,42 +339,6 @@ class KeyInfoNISTP256 : public KeyInfoECC {
     {
     }
 
-    /**
-     * Assign the X coordinate
-     * @param xCoord the X coordinate value to copy
-     */
-    void SetXCoord(const uint8_t* xCoord)
-    {
-        memcpy(pubkey.key.x, xCoord, ECC_COORDINATE_SZ);
-    }
-
-    /**
-     * Retrieve the X coordinate value
-     * @return the ECC X coordinate value.  It's a pointer to an internal buffer. Its lifetime is the same as the object's lifetime.
-     */
-    const uint8_t* GetXCoord() const
-    {
-        return pubkey.key.x;
-    }
-
-    /**
-     * Assign the Y coordinate
-     * @param yCoord the Y coordinate value to copy
-     */
-    void SetYCoord(const uint8_t* yCoord)
-    {
-        memcpy(pubkey.key.y, yCoord, ECC_COORDINATE_SZ);
-    }
-
-    /**
-     * Retrieve the Y coordinate value
-     * @return the ECC Y coordinate value.  It's a pointer to an internal buffer. Its lifetime is the same as the object's lifetime.
-     */
-    const uint8_t* GetYCoord() const
-    {
-        return pubkey.key.y;
-    }
-
     const uint8_t* GetPublicCtx() const
     {
         return (const uint8_t*) &pubkey;

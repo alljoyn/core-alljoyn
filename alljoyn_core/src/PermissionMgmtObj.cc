@@ -1140,7 +1140,9 @@ QStatus PermissionMgmtObj::RetrieveIdentityCertificateId(qcc::String& serial, qc
     if (ER_OK != status) {
         return status;
     }
-    serial = leafCert.GetSerial();
+    if (leafCert.GetSerialLen() > 0) {
+        serial.assign(reinterpret_cast<const char*>(leafCert.GetSerial()), leafCert.GetSerialLen());
+    }
     issuerKeyInfo.SetKeyId((uint8_t*) leafCert.GetAuthorityKeyId().data(), leafCert.GetAuthorityKeyId().size());
 
     /* locate the next cert in the identity cert chain for the issuer public key */
@@ -1355,7 +1357,9 @@ static QStatus GetMembershipChainKey(CredentialAccessor* ca, KeyStore::Key& leaf
         /* check both serial number and issuer */
         MembershipCertificate cert;
         LoadCertificate(CertificateX509::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), cert);
-        if ((cert.GetSerial() == serialNum) && (cert.GetAuthorityKeyId() == issuerAki)) {
+        if ((cert.GetSerialLen() == serialNum.size()) &&
+            (memcmp(cert.GetSerial(), serialNum.data(), serialNum.size()) == 0) &&
+            (cert.GetAuthorityKeyId() == issuerAki)) {
             membershipChainKey = keys[cnt];
             found = true;
             break;
@@ -1394,7 +1398,9 @@ static QStatus GetMembershipKey(CredentialAccessor* ca, KeyStore::Key& membershi
             /* maybe a match, check both serial number and issuer */
             MembershipCertificate cert;
             LoadCertificate(CertificateX509::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), cert);
-            if ((cert.GetSerial() == serialNum) && (cert.GetAuthorityKeyId() == issuerAki)) {
+            if ((cert.GetSerialLen() == serialNum.size()) &&
+                (memcmp(cert.GetSerial(), serialNum.data(), serialNum.size()) == 0) &&
+                (cert.GetAuthorityKeyId() == issuerAki)) {
                 membershipKey = keys[cnt];
                 found = true;
                 break;
@@ -1470,7 +1476,11 @@ QStatus PermissionMgmtObj::StoreMembership(const MsgArg& msgArg)
         KeyBlob kb(cert.GetEncoded(), cert.GetEncodedLen(), KeyBlob::GENERIC);
         if (cnt == 0) {
             /* handle the leaf cert */
-            kb.SetTag(cert.GetSerial());
+            String serialTag;
+            if (cert.GetSerialLen() > 0) {
+                serialTag.assign(reinterpret_cast<const char*>(cert.GetSerial()), cert.GetSerialLen());
+            }
+            kb.SetTag(serialTag);
 
             /* store the Membership DER  into the key store */
             KeyStore::Key membershipHead;
@@ -1489,7 +1499,7 @@ QStatus PermissionMgmtObj::StoreMembership(const MsgArg& msgArg)
             /* check for duplicate */
             if (checkDup) {
                 KeyStore::Key tmpKey;
-                status = GetMembershipKey(ca, membershipHead, cert.GetSerial(), cert.GetAuthorityKeyId(), true, tmpKey);
+                status = GetMembershipKey(ca, membershipHead, serialTag, cert.GetAuthorityKeyId(), true, tmpKey);
                 if (ER_OK == status) {
                     /* found a duplicate */
                     return ER_DUPLICATE_CERTIFICATE;
@@ -1557,9 +1567,10 @@ void PermissionMgmtObj::RemoveMembership(const InterfaceDescription::Member* mem
         MethodReply(msg, ER_INVALID_DATA);
         return;
     }
+    ECCPublicKey publicKey;
+    publicKey.Import(xCoord, xLen, yCoord, yLen);
     KeyInfoNISTP256 issuerKeyInfo;
-    issuerKeyInfo.SetXCoord(xCoord);
-    issuerKeyInfo.SetYCoord(yCoord);
+    issuerKeyInfo.SetPublicKey(&publicKey);
     String issuerAki;
     if (akiLen == 0) {
         /* calculate it */
@@ -1810,13 +1821,20 @@ QStatus PermissionMgmtObj::GetMembershipSummaries(MsgArg& arg)
             }
             anchors.clear();
         }
+        size_t coordSize = issuerKeyInfo.GetPublicKey()->GetCoordinateSize();
+        uint8_t* xData = new uint8_t[coordSize];
+        uint8_t* yData = new uint8_t[coordSize];
+        KeyInfoHelper::ExportCoordinates(*issuerKeyInfo.GetPublicKey(), xData, coordSize, yData, coordSize);
+
         status = membershipArgs[cnt].Set("(ayay(yyayay))",
-                                         leafCert->GetSerial().size(), (uint8_t*)  leafCert->GetSerial().data(),
+                                         leafCert->GetSerialLen(), leafCert->GetSerial(),
                                          issuerKeyInfo.GetKeyIdLen(), issuerKeyInfo.GetKeyId(),
                                          issuerKeyInfo.GetAlgorithm(), issuerKeyInfo.GetCurve(),
-                                         qcc::ECC_COORDINATE_SZ, issuerKeyInfo.GetXCoord(),
-                                         qcc::ECC_COORDINATE_SZ, issuerKeyInfo.GetYCoord());
+                                         coordSize, xData, coordSize, yData);
+
         membershipArgs[cnt].Stabilize();
+        delete [] xData;
+        delete [] yData;
         cnt++;
     }
 Exit:
@@ -1948,7 +1966,11 @@ QStatus PermissionMgmtObj::ParseSendMemberships(Message& msg, bool& done)
                 return status;
             }
             meta->certChain.push_back(cert);
-            peerState->SetGuildMetadata(cert->GetSerial(), cert->GetAuthorityKeyId(), meta);
+            String serialTag;
+            if (cert->GetSerialLen() > 0) {
+                serialTag.assign(reinterpret_cast<const char*>(cert->GetSerial()), cert->GetSerialLen());
+            }
+            peerState->SetGuildMetadata(serialTag, cert->GetAuthorityKeyId(), meta);
         } else {
             status = LoadX509CertFromMsgArg(certArgs[idx], *cert);
             if (ER_OK != status) {
@@ -2420,7 +2442,7 @@ bool PermissionMgmtObj::KeyExchangeListener::RequestCredentials(const char* auth
                     handled = false;
                 }
                 String pem;
-                CertificateX509::EncodePrivateKeyPEM((const uint8_t*) &pk, sizeof(qcc::ECCPrivateKey), pem);
+                CertificateX509::EncodePrivateKeyPEM(&pk, pem);
                 credentials.SetPrivateKey(pem);
             }
             /* build the cert chain based on the identity cert */

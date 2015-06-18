@@ -60,7 +60,7 @@ class EndpointAuth : public SASLEngine::ExtensionHandler {
         uniqueName(bus.GetInternal().GetRouter().GenerateUniqueName()),
         isAccepting(isAcceptor),
         remoteProtocolVersion(0),
-        nameTransfer(SessionOpts::ALL_NAMES)
+        nameTransfer(SessionOpts::P2P_NAMES)
     { }
 
     /**

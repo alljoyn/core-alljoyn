@@ -54,10 +54,6 @@ namespace ajn {
 static const char bundledConfig[] =
     "<busconfig>"
     "  <type>alljoyn_bundled</type>"
-    "  <listen>unix:abstract=alljoyn</listen>"
-#if defined(QCC_OS_DARWIN)
-    "  <listen>launchd:env=DBUS_LAUNCHD_SESSION_BUS_SOCKET</listen>"
-#endif
     "  <listen>tcp:iface=*,port=0</listen>"
     "  <listen>udp:iface=*,port=0</listen>"
     "  <limit name=\"auth_timeout\">20000</limit>"

@@ -21,5 +21,6 @@
 
 QStatus _BusAttachmentHost::Connect(Plugin& plugin, const char* connectSpec)
 {
+    QCC_UNUSED(plugin);
     return (*busAttachment)->Connect(connectSpec);
 }

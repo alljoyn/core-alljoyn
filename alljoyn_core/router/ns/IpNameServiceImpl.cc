@@ -73,37 +73,39 @@ volatile int32_t INCREMENTAL_PACKET_ID;
 // can find all of this written in one place.
 //
 // The first thing to grok is that all platforms are implemented differently.
-// Windows and Linux use IGMP to enable and disable multicast, and use other
-// multicast-related socket calls to do the fine-grained control.  Android
-// doesn't bother to compile its kernel with CONFIG_IP_MULTICAST set.  This
-// doesn't mean that there is no multicast code in the Android kernel, it means
-// there is no IGMP code in the kernel.  Since IGMP isn't implemented, Android
-// can't use it to enable and disable multicast at the driver level, so it uses
-// wpa_supplicant driver-private commands instead.  This means that you will
-// probably get three different answers if you ask how some piece of the
-// multicast puzzle works.
+// Windows and Linux use the Internet Group Management Protocol (IGMP) for IPv4
+// and Multicast Listener Discovery (MLD) for IPv6 to enable and disable
+// multicast, and use other multicast-related socket calls to do the fine-
+// grained control.  Android doesn't bother to compile its kernel with
+// CONFIG_IP_MULTICAST set.  This doesn't mean that there is no multicast code
+// in the Android kernel, it means there is no IGMP or MLD code in the kernel.
+// Since IGMP and MLD aren't implemented, Android can't use them to enable and
+// disable multicast at the driver level, so it uses wpa_supplicant
+// driver-private commands instead.  This means that you will probably get
+// three different answers if you ask how some piece of the multicast puzzle
+// works.
 //
 // On the send side, multicast is controlled by the IP_MULTICAST_IF (or for
-// IPv6 IPV6_MULTICAST_IF) socket.  In IPv4 you provide an IP address and in
-// IPv6 you provide an interface index.  These differences are abstracted in
+// IPv6 IPV6_MULTICAST_IF) socket.  In IPv4 you provide an IP address (or, on
+// some platforms, an IP address or an interface index) and in IPv6 you always
+// provide an interface index.  These differences are abstracted in
 // the qcc code and there you are asked to provide an interface name, which the
-// abstraction function uses to figure out the appropriate address or index
-// depending on the address family.  Unfortunately, you can't abstract away
-// the operating system differences in how they interpret the calls; so you
-// really need to understand what is happening at a low level in order to get
-// the high level multicast operations to do what you really want.
+// abstraction function uses to figure out the appropriate address or index.
+// Unfortunately, you can't abstract away the operating system differences in
+// how they interpret the calls; so you really need to understand what is
+// happening at a low level in order to get the high level multicast operations
+// to do what you really want.
 //
 // If you do nothing (leave the sockets as you find them), or set the interface
-// address to 0.0.0.0 for IPv4 or the interface index to 0 for IPv6 the
-// multicast output interface is essentially selected by the system routing
-// code.
+// address to 0.0.0.0 for IPv4 or the interface index to 0 for IPv4 or IPv6 the
+// multicast output interface is selected by the system routing code.
 //
 // In Linux (and Android), multicast packets are sent out the interface that is
 // used for the default route (the default interface).  You can see this if you
-// type "ip ro sh".  In Windows, however, the system chooses its default
-// interface by looking for the lowest value for the routing metric for a
-// destination IP address of 224.0.0.0 in its routing table.  You can see this
-// in the output of "route print".
+// type "ip ro sh".  In Windows, however, the system chooses the interface by
+// looking for the lowest value for the routing metric (breaking ties as
+// discussed in RFC 4311) for the destination IP multicast address in its
+// routing table.  You can see this in the output of "route print".
 //
 // We want all of our multicast code to work in the presence of IP addresses
 // changing when phones move from one Wifi access point to another, or when our
@@ -122,8 +124,8 @@ volatile int32_t INCREMENTAL_PACKET_ID;
 // again.
 //
 // In Windows, if you set the IP_MULTICAST_IF address to 0.0.0.0 and release the
-// ip address (e.g., "ipconfig /release") the sends may still appear to work at
-// the level of the program but nothing goes out the original interface.  The
+// IP addresses (e.g., "ipconfig /release") the sends may still appear to work
+// at the level of the program but nothing goes out the original interface.  The
 // sends fail silently.  This is because Windows will dynamically change the
 // default multicast route according to its internal multicast routing table.
 // It selects another interface based on a routing metric, and it could, for
@@ -146,23 +148,24 @@ volatile int32_t INCREMENTAL_PACKET_ID;
 // of interest, since they can change at any time because of normal access point
 // dis-associations, for example).
 //
-// Since we determined that we needed to use IP_MULTICAST_IF to control which
-// interfaces are used for discovery, we needed to understand exactly what
-// changing an IP address out from under a corresponding interface would do.
+// Since we determined that we needed to use IP_MULTICAST_IF/IPV6_MULTICAST_IF
+// to control which interfaces are used for discovery, we needed to understand
+// exactly what changing an IP address out from under a corresponding interface
+// would do.
 //
-// The first thing we observed is that IP_MULTICAST_IF takes an IP address in
-// the case of IPv4, but we wanted to specify an interface index as in IPv6 or
-// for mere mortal human beings, a name (e.g., "wlan0").  It may be the case
-// that the interface does not have an IP address assigned (is not up or
-// connected to an access point) at the time we want to start our name service,
-// so a call to set the IP_MULTICAST_IF (via the appropriate abstract qcc call)
-// would not be possible until an address is available, perhaps an arbitrary
-// unknowable time later.  If sendto() operations are attempted and the IP
-// address is not valid one will see "network unreachable" errors.  As we will
-// discuss shortly, joining a multicast group also requires an IP address in the
-// case of IPv4 (need to send IGMP Join messages), so it is not possible to
-// express interest in receiving multicast packets until an IP address is
-// available.
+// The first thing we observed is that on some platforms, IP_MULTICAST_IF only
+// takes an IP address in the case of IPv4, but we wanted to specify an
+// interface index as in IPv6 or for mere mortal human beings, a name (e.g.,
+// "wlan0").  It may be the case that the interface does not have an IPv4
+// address assigned (is not up or connected to an access point) at the time we
+// want to start our name service, so a call to set the IP_MULTICAST_IF (via
+// the appropriate abstract qcc call) would not be possible on such platforms
+// until an address is available, perhaps an arbitrary unknowable time later.
+// If sendto() operations are attempted and the IPv4 address is not valid, one
+// will see "network unreachable" errors.  As we will discuss shortly, joining
+// a multicast group also requires an IP address in the case of IPv4 (need to
+// send IGMP Join messages), so it is not possible to express interest in
+// receiving multicast packets until an IPv4 address is available.
 //
 // So we needed to provide an API that allows a user to specify a network
 // interface over which she is interested in advertising.  This explains the
@@ -180,92 +183,96 @@ volatile int32_t INCREMENTAL_PACKET_ID;
 // for those changes.  Since the event systems in our various target platforms
 // are wildly different, creating an abstract event system is non-trivial (for
 // example, a DBus-based network manager exists on Linux, but even though
-// Android is basically Linux and has DBus, it doesn't use it.  You'd need to
-// use Netlink sockets on most Posix systems, but Darwin doesn't have Netlink.
-// Windows is from another planet.
+// Android is basically Linux and has DBus, Android doesn't use DBus).  You'd
+// need to use Netlink sockets on most Posix systems, but Darwin doesn't have
+// Netlink.  Windows has its own "IP address changed" and "interface state
+// changed" APIs.
 //
-// Because of all of these complications, we just choose the better part of
-// valor and poll for changes using a maintenance thread that fires off every
+// Because of all of these complications, we just choose a less efficient means
+// and poll for changes using a maintenance thread that fires off every
 // second and looks for changes in the networking environment and adjusts
-// accordingly.
+// accordingly.  This has the downside of always having a timer running and
+// consuming resources even when there's nothing to do.
 //
 // We could check for IP address changes on the interfaces and re-evaluate and
 // open new sockets bound to the correct interfaces whenever an address change
 // happens.  It is possible, however, that we could miss the fact that we have
-// switched access points if DHCP gives us the same IP address.  Windows, for
-// example, could happily begin rerouting packets to other interfaces if one
-// goes down.  If the interface comes back up on a different access point, which
-// gives out the same IP address, Windows could bring us back up but leave the
-// multicast route pointing somewhere else and we would never notice.  Because
-// of these byzantine kinds of errors, we chose the better part of valor and
-// decided to close all of our multicast sockets down and restart them in a
-// known state periodically.
+// switched access points if DHCP gives us the same IP address.  If the
+// interface comes back up on a different access point, which gives out the
+// same IP address, but a different network, the best route for the multicast
+// address might even be out a different interface, but fortunately that would
+// not affect us unless we used INADDR_ANY.  Still, to reduce the chance of
+// unknown errors, we chose a less efficient mechanism and decided to close all
+// of our multicast sockets down and restart them in a known state periodically
+// even when not needed.
 //
 // The receive side has similar kinds of issues.
 //
 // In order to receive multicast datagrams sent to a particular port, it is
-// necessary to bind that local port leaving the local address unspecified
-// (i.e., INADDR_ANY or in6addr_any).  What you might think of as binding is
-// then actually handled by the Internet Group Management Protocol (IGMP) or its
-// ICMPv6 equivalent.  Recall that Android does not implement IGMP, so we have
-// yet another complication.
+// necessary on some platforms to bind that local port leaving the local
+// address unspecified (i.e., INADDR_ANY or in6addr_any).  What you might think
+// of as binding is then actually handled by IGMP for IPv4 or MLD for IPv6.
+// Recall that Android does not implement IGMP or MLD, so we have yet another
+// complication.
 //
-// Using IGMP, we join the socket to the multicast group instead of binding the
-// socket to a specific interface (address) and port.  Binding the socket to
-// INADDR_ANY or in6addr_any may look strange, but it is actually the right
-// thing to do.  Since joining a multicast group requires sending packets over
-// the IGMP protocol, we need a valid IP address in order to do the join.  As
-// mentioned above, an interface must be IFF_UP with an assigned IP address in
-// order to join a multicast group.
+// Using IGMP or MLD, we join the socket to the multicast group instead of
+// binding the socket to a specific interface (or address) and port.  Binding
+// the socket to INADDR_ANY or in6addr_any may look strange, but it is
+// necessary on some platforms.  Since joining a multicast group requires
+// sending packets over the IGMP or MLD protocol, we need a valid IP address in
+// order to do the join.  As mentioned above, an interface must be IFF_UP with
+// an assigned IP address in order to join a multicast group.
 //
-// The socket option for joining a multicast group, of course, works differently
+// The socket option for joining a multicast group works differently
 // for IPv4 and IPv6.  IP_ADD_MEMBERSHIP (for IPv4) has a provided IP address
-// that can be either INADDR_ANY or a specific address.  If INADDR_ANY is
-// provided, the interface of the default route is added to the group, and the
-// IGMP join is sent out that interface.  IPV6_ADD_MEMBERSHIP (for IPv6) has a
-// provided interface index that can be either 0 or a specific interface.  If 0
-// is provided, the interface of the default route is added to the group, and
-// the IGMP Join (actually an ICMPv6 equivalent) is sent out that interface.  If
-// a specific interface index is that interface is added to the group and the
-// IGMP join is sent out that interface.  Note that since an ICMP packet is sent,
-// the interface must be IFF_UP with an assigned IP address even though the
-// interface is specified by an index.
+// that can be either INADDR_ANY or a specific address.  Some platforms, such
+// as Windows, also support the ability to pass an interface index.  If
+// INADDR_ANY is provided, an interface is chosen by the platform as noted
+// earlier, and the IGMP join is sent out that interface.  IPV6_ADD_MEMBERSHIP
+// (for IPv6) has a provided interface index that can be either 0 or a specific
+// interface.  If 0 is provided, an interface is chosen by the platform as
+// noted earlier, and the MLD Join is sent out that interface.  If a specific
+// interface index is provided, the MLD join is sent out that interface.  Note
+// that since an IGMP or MLD packet is sent, the interface must be IFF_UP with
+// an assigned IP address even though the interface is specified by an index.
 //
-// A side effect of the IGMP join deep down in the kernel is to enable reception
-// of multicast MAC addresses in the device driver.  Since there is no IGMP in
-// Android, we must rely on a multicast (Java) lock being taken by some external
-// code on phones that do not leave multicast always enabled (HTC Desire, for
-// example).  When the Java multicast lock is taken, a private driver command is
-// sent to the wpa_supplicant which, in turn, calls into the appropriate network
-// device driver(s) to enable reception of multicast MAC packets.  This is
-// completely out of our control here.
+// A side effect of the IGMP or MLD join deep down in the kernel is to enable
+// reception of multicast MAC addresses in the device driver.  Since there is
+// no IGMP or MLD in Android, we must rely on a multicast (Java) lock being
+// taken by some external code on phones that do not leave multicast always
+// enabled (HTC Desire, for example).  When the Java multicast lock is taken, a
+// private driver command is sent to the wpa_supplicant which, in turn, calls
+// into the appropriate network device driver(s) to enable reception of
+// multicast MAC packets.  This is completely out of our control here.
 //
 // Similar to the situation on the send side, we most likely do not want to rely
 // on the system routing tables to configure which network interfaces our name
-// service receives over; so we really need to provide a specific address.
+// service receives over; so we really need to provide a specific interface.
 //
-// If a specific IP address is provided, then that address must be an address
-// assigned to a currently-UP interface.  This is the same catch-22 as we have
-// on the send side.  We need to lazily evaluate the interface in order to find
-// if an IP address has appeared on that interface and then join the multicast
-// group to enable multicast on the underlying network device.
+// If a specific interface index is provided, then that interface must be
+// a currently-UP interface.  Similarly, if a specific IP address is provided,
+// then that address must be an address assigned to a currently-UP interface.
+// This is the same catch-22 as we have on the send side.  We need to lazily
+// evaluate the interface in order to find if an IP address has appeared on
+// that interface and then join the multicast group to enable multicast on the
+// underlying network device.
 //
-// It turns out that in Linux, the IP address passed to the join multicast group
-// socket option call is actually not significant after the initial call.  It is
-// used to look up an interface and its associated net device and to then set
-// the PACKET_MULTICAST filter on the net device to receive packets destined for
-// the specified multicast address.  If the IP address associated with the
-// interface changes, multicast messages will continue to be received.
+// It turns out that in Linux and Windows, the IPv4 address passed to the join
+// multicast group socket option call is actually not significant after the
+// initial call.  It is used to look up an interface and its associated net
+// device and to then set the PACKET_MULTICAST filter on the net device to
+// receive packets destined for the specified multicast address.  If the IPv4
+// address associated with the interface changes, multicast messages will
+// continue to be received.
 //
-// Of course, Windows does it differently.  They look at the IP address passed
-// to the socket option as being significant, and so if the underlying IP
-// address changes on a Windows system, multicast packets will no longer be
-// delivered.  Because of this, the receive side of the multicast name service
-// has also got to look for changes to IP address configuration and re-set
-// itself whenever it finds a change.
+// Because this code was originally written for older platforms that are no
+// longer supported, the receive side of the multicast name service also looks
+// for changes to IP address configuration and resets itself whenever it finds
+// a change, even though this should no longer be needed.
 //
 // So the code you find below may look overly complicated, but (hopefully most
-// of it, anyway) needs to be that way.
+// of it, anyway) needs to be that way, or at least did at the time it was
+// written when older platforms were supported.
 //
 // As an aside, the daemon that owns us can be happy as a clam by simply binding
 // to INADDR_ANY since the semantics of this action, as interpreted by both
@@ -378,7 +385,7 @@ IpNameServiceImpl::IpNameServiceImpl()
     m_loopback(false), m_broadcast(false), m_enableIPv4(false), m_enableIPv6(false), m_enableV1(false),
     m_wakeEvent(), m_forceLazyUpdate(false), m_refreshAdvertisements(false),
     m_enabled(false), m_doEnable(false), m_doDisable(false),
-    m_ipv4QuietSockFd(qcc::INVALID_SOCKET_FD), m_ipv6QuietSockFd(qcc::INVALID_SOCKET_FD),
+    m_ipv6QuietSockFd(qcc::INVALID_SOCKET_FD),
     m_ipv4UnicastSockFd(qcc::INVALID_SOCKET_FD), m_unicastEvent(NULL),
     m_protectListeners(false), m_packetScheduler(*this),
     m_networkChangeScheduleCount(ArraySize(RETRY_INTERVALS)), m_staticScore(0), m_dynamicScore(0), m_priority(0),
@@ -526,11 +533,6 @@ IpNameServiceImpl::~IpNameServiceImpl()
     // If we opened a socket to send quiet responses (unicast, not over the
     // multicast channel) we need to close it.
     //
-    if (m_ipv4QuietSockFd != qcc::INVALID_SOCKET_FD) {
-        qcc::Close(m_ipv4QuietSockFd);
-        m_ipv4QuietSockFd = qcc::INVALID_SOCKET_FD;
-    }
-
     if (m_ipv6QuietSockFd != qcc::INVALID_SOCKET_FD) {
         qcc::Close(m_ipv6QuietSockFd);
         m_ipv6QuietSockFd = qcc::INVALID_SOCKET_FD;
@@ -1111,8 +1113,8 @@ QStatus CreateMulticastSocket(IfConfigEntry entry, const char* ipv4_multicast_gr
         }
     }
     //
-    // The IGMP join must be done after the bind for Windows XP.  Other
-    // OSes are fine with it, but XP balks.
+    // The IGMP join had to be done after the bind back when we supported
+    // Windows XP.  Currently supported platforms are fine with it either way.
     //
     if (entry.m_flags & qcc::IfConfigEntry::MULTICAST ||
         entry.m_flags & qcc::IfConfigEntry::LOOPBACK) {
@@ -1154,28 +1156,22 @@ void IpNameServiceImpl::LazyUpdateInterfaces(const qcc::NetworkEventSet& network
     //
     // However desirable it may be, the decision to simply use an existing
     // open socket exposes us to system-dependent behavior.  For example,
-    // In Linux and Windows, an IGMP join must be done on an interface that
+    // since sending an IGMP or MLD join requires an IP address to send it
+    // from, an IGMP or MLD join must be done on an interface that
     // is currently IFF_UP and IFF_MULTICAST with an assigned IP address.
-    // On Linux, that join remains in effect (net devices will continue to
-    // recieve multicast packets destined for our group) even if the net
-    // device goes down and comes back up with a different IP address.  On
-    // Windows, however, if the interface goes down, an IGMP drop is done
-    // and multicast receives will stop.  Since the socket never returns
-    // any status unless we actually send data, it is very possible that
-    // the state of the system can change out from underneath us without
-    // our knowledge, and we would simply stop receiving multicasts. This
-    // behavior is not specified anywhere that I am aware of, so Windows
-    // cannot really be said to be broken.  It is just different, like it
-    // is in so many other ways.  In Android, IGMP isn't even compiled into
-    // the kernel, and so an out-of-band mechanism is used (wpa_supplicant
-    // private driver commands called by the Java multicast lock).
+    // On Linux and Windows, that join remains in effect (net devices will
+    // continue to receive multicast packets destined for our group) even if
+    // the net device goes down and comes back up with a different IP address.
+    // In Android, IGMP and MLD aren't even compiled into the kernel, and so an
+    // out-of-band mechanism is used (wpa_supplicant private driver commands
+    // called by the Java multicast lock).
     //
     // It can be argued that since we are using Android phones (sort-of Linux)
-    // when mobility is a concern, and Windows boxes would be relatively static,
-    // we could get away with ignoring the possibility of missing interface
-    // state changes.  Since we are really talking an average of a couple of
-    // IGMP packets every 30 seconds we take the conservative approach and tear
-    // down all of our sockets and restart them every time through.
+    // when mobility is a concern, we could get away with ignoring the
+    // possibility of missing interface state changes.  Since we are really
+    // talking an average of a couple of IGMP/MLD packets every 30 seconds we
+    // take the conservative approach and tear down all of our sockets and
+    // restart them every time through.
     //
     ClearLiveInterfaces();
 
@@ -2752,17 +2748,17 @@ QStatus IpNameServiceImpl::AdvertiseName(TransportMask transportMask, vector<qcc
     return ER_OK;
 }
 
-QStatus IpNameServiceImpl::CancelAdvertiseName(TransportMask transportMask, const qcc::String& wkn, TransportMask completeTransportMask)
+QStatus IpNameServiceImpl::CancelAdvertiseName(TransportMask transportMask, const qcc::String& wkn, bool quietly, TransportMask completeTransportMask)
 {
     QCC_DbgPrintf(("IpNameServiceImpl::CancelAdvertiseName(0x%x, \"%s\")", transportMask, wkn.c_str()));
 
     vector<qcc::String> wknVector;
     wknVector.push_back(wkn);
 
-    return CancelAdvertiseName(transportMask, wknVector, completeTransportMask);
+    return CancelAdvertiseName(transportMask, wknVector, quietly, completeTransportMask);
 }
 
-QStatus IpNameServiceImpl::CancelAdvertiseName(TransportMask transportMask, vector<qcc::String>& wkn, TransportMask completeTransportMask)
+QStatus IpNameServiceImpl::CancelAdvertiseName(TransportMask transportMask, vector<qcc::String>& wkn, bool quietly, TransportMask completeTransportMask)
 {
     QCC_DbgPrintf(("IpNameServiceImpl::CancelAdvertiseName(0x%x, 0x%p)", transportMask, &wkn));
 
@@ -2795,29 +2791,37 @@ QStatus IpNameServiceImpl::CancelAdvertiseName(TransportMask transportMask, vect
     m_mutex.Lock();
 
     //
-    // Remove the given services from our list of services we are advertising.
-    //
-    bool changed = false;
-
-    //
     // We cancel advertisements in either the quietly or actively advertised
     // lists through this method.  Note that it is only actively advertised
-    // names that have changes in status reflected out on the network.  The
-    // variable <changed> drives this network operation and so <changed> is not
-    // set in the quietly advertised list even though the list was changed.
-    //
-    for (uint32_t i = 0; i < wkn.size(); ++i) {
-        set<qcc::String>::iterator j = find(m_advertised[transportIndex].begin(), m_advertised[transportIndex].end(), wkn[i]);
-        if (j != m_advertised[transportIndex].end()) {
-            m_advertised[transportIndex].erase(j);
-            changed = true;
+    // names that have changes in status reflected out on the network.
+    if (quietly) {
+        for (uint32_t i = 0; i < wkn.size(); ++i) {
+            set<qcc::String>::iterator k = find(m_advertised_quietly[transportIndex].begin(), m_advertised_quietly[transportIndex].end(), wkn[i]);
+            if (k != m_advertised_quietly[transportIndex].end()) {
+                m_advertised_quietly[transportIndex].erase(k);
+            }
         }
-
-        set<qcc::String>::iterator k = find(m_advertised_quietly[transportIndex].begin(), m_advertised_quietly[transportIndex].end(), wkn[i]);
-        if (k != m_advertised_quietly[transportIndex].end()) {
-            m_advertised_quietly[transportIndex].erase(k);
+        //
+        // Since this is a quiet name, nothing needs to be sent out on the
+        // network, just return.
+        //
+        m_mutex.Unlock();
+        return ER_OK;
+    } else {
+        bool changed = false;
+        for (uint32_t i = 0; i < wkn.size(); ++i) {
+            set<qcc::String>::iterator j = find(m_advertised[transportIndex].begin(), m_advertised[transportIndex].end(), wkn[i]);
+            if (j != m_advertised[transportIndex].end()) {
+                m_advertised[transportIndex].erase(j);
+                changed = true;
+            }
+        }
+        if (changed == false) {
+            m_mutex.Unlock();
+            return ER_OK;
         }
     }
+
 
     //
     // If we have no more advertisements, there is no need to repeatedly state
@@ -2838,10 +2842,7 @@ QStatus IpNameServiceImpl::CancelAdvertiseName(TransportMask transportMask, vect
 
     m_mutex.Unlock();
 
-    //
-    // Even though changed may be false, we may still need to send out the packet
-    // since TCP is enabled.
-    //
+
 
     //
     // Do it once for version two.
@@ -2873,14 +2874,6 @@ QStatus IpNameServiceImpl::CancelAdvertiseName(TransportMask transportMask, vect
         mdnsPacket->SetVersion(2, 2);
         Response(completeTransportMask, 0, mdnsPacket);
         delete advRData;
-    }
-
-    //
-    // If we didn't actually make a change that needs to be sent out on the
-    // network, just return.
-    //
-    if (changed == false) {
-        return ER_OK;
     }
 
     //
@@ -3522,10 +3515,6 @@ void IpNameServiceImpl::SendProtocolMessage(
         qcc::IPEndpoint destination = packet->GetDestination();
         qcc::AddressFamily family = destination.addr.IsIPv4() ? qcc::QCC_AF_INET : qcc::QCC_AF_INET6;
 
-        if (family == qcc::QCC_AF_INET && m_ipv4QuietSockFd == qcc::INVALID_SOCKET_FD) {
-            status = qcc::Socket(family, qcc::QCC_SOCK_DGRAM, m_ipv4QuietSockFd);
-        }
-
         if (family == qcc::QCC_AF_INET6 && m_ipv6QuietSockFd == qcc::INVALID_SOCKET_FD) {
             status = qcc::Socket(family, qcc::QCC_SOCK_DGRAM, m_ipv6QuietSockFd);
         }
@@ -3538,7 +3527,7 @@ void IpNameServiceImpl::SendProtocolMessage(
             QCC_DbgHLPrintf(("IpNameServiceImpl::SendProtocolMessage(): Sending quietly to \"%s\" over \"%s\"", destination.ToString().c_str(), m_liveInterfaces[interfaceIndex].m_interfaceName.c_str()));
 
             if (family == qcc::QCC_AF_INET) {
-                status = qcc::SendTo(m_ipv4QuietSockFd, destination.addr, destination.port, buffer, size, sent);
+                status = qcc::SendTo(sockFd, destination.addr, destination.port, buffer, size, sent);
             } else {
                 status = qcc::SendTo(m_ipv6QuietSockFd, destination.addr, destination.port, m_liveInterfaces[interfaceIndex].m_index,
                                      buffer, size, sent);
@@ -3587,10 +3576,22 @@ void IpNameServiceImpl::SendProtocolMessage(
                 qcc::IPAddress ipv4LocalMulticast(IPV4_MDNS_MULTICAST_GROUP);
                 QCC_DbgHLPrintf(("IpNameServiceImpl::SendProtocolMessage():  Sending actively to \"%s\" over \"%s\"",
                                  ipv4LocalMulticast.ToString().c_str(), m_liveInterfaces[interfaceIndex].m_interfaceName.c_str()));
-                QStatus status = qcc::SendTo(sockFd, ipv4LocalMulticast, MULTICAST_MDNS_PORT, buffer, size, sent);
+                /*
+                 * Send the message from the port we are expecting to receive
+                 * (unicast) replies on.  Explicitly specify the interface we
+                 * are sending on, otherwise the OS will pick for us.
+                 */
+                QStatus status = SetMulticastInterface(m_ipv4UnicastSockFd, qcc::QCC_AF_INET,
+                                                       m_liveInterfaces[interfaceIndex].m_interfaceName);
+                if (status != ER_OK) {
+                    QCC_LogError(status, ("IpNameServiceImpl::SendProtocolMessage():  Error setting multicast interface"));
+                }
+
+                status = qcc::SendTo(m_ipv4UnicastSockFd, ipv4LocalMulticast, MULTICAST_MDNS_PORT, buffer, size, sent);
                 if (status != ER_OK) {
                     QCC_LogError(status, ("IpNameServiceImpl::SendProtocolMessage():  Error sending to IPv4 Local Network Control Block multicast group"));
                 }
+
             } else if (m_enableV1) {
                 qcc::IPAddress ipv4LocalMulticast(IPV4_ALLJOYN_MULTICAST_GROUP);
                 if (localAddress == qcc::IPAddress("0.0.0.0") || localAddress == ipv4LocalMulticast) {
@@ -3684,6 +3685,12 @@ void IpNameServiceImpl::SendProtocolMessage(
                 qcc::IPAddress ipv6AllJoyn(IPV6_MDNS_MULTICAST_GROUP);
                 QCC_DbgHLPrintf(("IpNameServiceImpl::SendProtocolMessage():  Sending actively to \"%s\" over \"%s\"",
                                  ipv6AllJoyn.ToString().c_str(), m_liveInterfaces[interfaceIndex].m_interfaceName.c_str()));
+                /*
+                 * Ideally we would send the message from the port we are
+                 * expecting to receive (unicast) replies on.  But since we do
+                 * not receive v6 unicast packets, we will be sending from
+                 * whatever port sockFd is bound to.
+                 */
                 status = qcc::SendTo(sockFd, ipv6AllJoyn, MULTICAST_MDNS_PORT, buffer, size, sent);
             } else if (m_enableV1) {
                 qcc::IPAddress ipv6AllJoyn(IPV6_ALLJOYN_MULTICAST_GROUP);
@@ -4244,7 +4251,6 @@ void IpNameServiceImpl::SendOutboundMessageQuietly(Packet packet)
                 QCC_DbgPrintf(("IpNameServiceImpl::SendOutboundMessageQuietly(): Interface %d. is IPv4", i));
                 ipv4address = m_liveInterfaces[i].m_address;
                 unicastPortv4 = m_liveInterfaces[i].m_unicastPort;
-
             }
             bool interfaceIsIPv4 = haveIPv4address;
 
@@ -4321,12 +4327,15 @@ void IpNameServiceImpl::SendOutboundMessageQuietly(Packet packet)
                 unreliableTransportPort = m_unreliableIPv4PortMap[TRANSPORT_INDEX_UDP][m_liveInterfaces[i].m_interfaceAddr.ToString()];
             }
 
+            qcc::SocketFd sockFd = qcc::INVALID_SOCKET_FD; /* The socket the outbound message will be sent on. */
             if (msgVersion == 0) {
+                sockFd = m_liveInterfaces[i].m_multicastsockFd;
                 NSPacket nsPacket  = NSPacket::cast(packet);
                 if (nsPacket->GetNumberAnswers() && !reliableTransportPort) {
                     continue;
                 }
             } else if (msgVersion == 1) {
+                sockFd = m_liveInterfaces[i].m_multicastsockFd;
                 NSPacket nsPacket  = NSPacket::cast(packet);
                 if (nsPacket->GetNumberAnswers() && !reliableTransportPort && !unreliableTransportPort) {
                     continue;
@@ -4334,6 +4343,18 @@ void IpNameServiceImpl::SendOutboundMessageQuietly(Packet packet)
             } else {
                 MDNSPacket mdnsPacket = MDNSPacket::cast(packet);
                 if (mdnsPacket->GetHeader().GetQRType() == MDNSHeader::MDNS_RESPONSE) {
+                    /*
+                     * Unlike v0 and v1 messages, v2 messages may be sent from
+                     * either the multicast or unicast port.  To prevent
+                     * firewalls from dropping responses, we want to send from
+                     * the port we received on.
+                     */
+                    if (mdnsPacket->GetSource().port == MULTICAST_MDNS_PORT) {
+                        sockFd = m_liveInterfaces[i].m_multicastMDNSsockFd;
+                    } else {
+                        sockFd = m_ipv4UnicastSockFd;
+                    }
+
                     MDNSResourceRecord* ptrRecordTcp = NULL;
                     MDNSResourceRecord* ptrRecordUdp = NULL;
                     bool tcpAnswer = mdnsPacket->GetAnswer("_alljoyn._tcp.local.", MDNSResourceRecord::PTR, &ptrRecordTcp);
@@ -4489,6 +4510,12 @@ void IpNameServiceImpl::SendOutboundMessageQuietly(Packet packet)
                         }
                     }
                 } else {
+                    /*
+                     * Send the message from the port we are expecting to
+                     * receive (unicast) replies on.
+                     */
+                    sockFd = m_ipv4UnicastSockFd;
+
                     MDNSQuestion* questionUdp;
                     MDNSQuestion* questionTcp;
                     bool tcpQuestion = mdnsPacket->GetQuestion("_alljoyn._tcp.local.", &questionTcp);
@@ -4512,15 +4539,9 @@ void IpNameServiceImpl::SendOutboundMessageQuietly(Packet packet)
             //
             // Send the protocol message described by the header, containing rewritten is-at messages.
             //
-            if (msgVersion == 2) {
+            if (sockFd != qcc::INVALID_SOCKET_FD) {
                 QCC_DbgPrintf(("IpNameServiceImpl::SendOutboundMessageQuietly(): SendProtocolMessage()"));
-                SendProtocolMessage(m_liveInterfaces[i].m_multicastMDNSsockFd, ipv4address, interfaceAddressPrefixLen,
-                                    flags, interfaceIsIPv4, packet, i);
-                m_liveInterfaces[i].m_messageSent = true;
-            } else if (m_liveInterfaces[i].m_multicastsockFd != qcc::INVALID_SOCKET_FD) {
-                QCC_DbgPrintf(("IpNameServiceImpl::SendOutboundMessageQuietly(): SendProtocolMessage()"));
-                SendProtocolMessage(m_liveInterfaces[i].m_multicastsockFd, ipv4address, interfaceAddressPrefixLen,
-                                    flags, interfaceIsIPv4, packet, i);
+                SendProtocolMessage(sockFd, ipv4address, interfaceAddressPrefixLen, flags, interfaceIsIPv4, packet, i);
                 m_liveInterfaces[i].m_messageSent = true;
             }
         }
@@ -5207,7 +5228,7 @@ void IpNameServiceImpl::SendOutboundMessageActively(Packet packet, const qcc::IP
 void IpNameServiceImpl::SendOutboundMessages(void)
 {
     QCC_DbgPrintf(("IpNameServiceImpl::SendOutboundMessages()"));
-    int count =  m_outbound.size();
+    int count = m_outbound.size();
     //
     // Send any messages we have queued for transmission.  We expect to be
     // called with the mutex locked so we can wander around in the various
@@ -5469,8 +5490,8 @@ void* IpNameServiceImpl::Run(void* arg)
 
                 for (uint32_t index = 0; index < N_TRANSPORTS; ++index) {
                     vector<String> empty;
-                    Retransmit(index, true, false, qcc::IPEndpoint("0.0.0.0", 0), TRANSMIT_V0_V1, MaskFromIndex(index), empty);
-                    Retransmit(index, true, false, qcc::IPEndpoint("0.0.0.0", 0), TRANSMIT_V2, TRANSPORT_TCP | TRANSPORT_UDP, empty);
+                    Retransmit(index, true, false, qcc::IPEndpoint("0.0.0.0", 0), qcc::IPEndpoint("0.0.0.0", 0), TRANSMIT_V0_V1, MaskFromIndex(index), empty);
+                    Retransmit(index, true, false, qcc::IPEndpoint("0.0.0.0", 0), qcc::IPEndpoint("0.0.0.0", 0), TRANSMIT_V2, TRANSPORT_TCP | TRANSPORT_UDP, empty);
                 }
                 break;
             } else if (*i == &timerEvent) {
@@ -5547,7 +5568,7 @@ void* IpNameServiceImpl::Run(void* arg)
                     // the worst that can happen is that we introduce a short
                     // delay here in our handler whenever we detect an error.
                     //
-                    // On Windows ER_WOULBLOCK can be expected because it takes
+                    // On Windows ER_WOULDBLOCK can be expected because it takes
                     // an initial call to recv to determine if the socket is readable.
                     //
                     if (status == ER_OS_ERROR) {
@@ -5572,7 +5593,7 @@ void* IpNameServiceImpl::Run(void* arg)
                 QCC_DbgHLPrintf(("IpNameServiceImpl::Run(): Got IPNS message from \"%s\"", remoteAddress.ToString().c_str()));
 
                 // Find out the destination port and interface index for this message.
-                uint16_t recvPort = std::numeric_limits<uint16_t>::max();
+                uint16_t localPort = std::numeric_limits<uint16_t>::max();
                 int32_t ifIndex = -1;
                 bool destIsIPv4Local = false;
                 bool destIsIPv6Local = false;
@@ -5581,12 +5602,12 @@ void* IpNameServiceImpl::Run(void* arg)
                 for (uint32_t i = 0; i < m_liveInterfaces.size(); ++i) {
 
                     if (m_liveInterfaces[i].m_multicastMDNSsockFd == sockFd) {
-                        recvPort = m_liveInterfaces[i].m_multicastMDNSPort;
+                        localPort = m_liveInterfaces[i].m_multicastMDNSPort;
                         ifIndex = m_liveInterfaces[i].m_index;
                         ifName = m_liveInterfaces[i].m_interfaceName;
                     }
                     if (m_liveInterfaces[i].m_multicastsockFd == sockFd) {
-                        recvPort = m_liveInterfaces[i].m_multicastPort;
+                        localPort = m_liveInterfaces[i].m_multicastPort;
                         ifIndex = m_liveInterfaces[i].m_index;
                         ifName = m_liveInterfaces[i].m_interfaceName;
                     }
@@ -5594,21 +5615,21 @@ void* IpNameServiceImpl::Run(void* arg)
                     if (!destIsIPv4Local && m_liveInterfaces[i].m_address.IsIPv4()
                         && localAddress == m_liveInterfaces[i].m_address) {
                         destIsIPv4Local = true;
-                        recvPort = m_liveInterfaces[i].m_unicastPort;
+                        localPort = m_liveInterfaces[i].m_unicastPort;
                         ifIndex =  m_liveInterfaces[i].m_index;
                     }
 
                     if (!destIsIPv6Local && m_liveInterfaces[i].m_address.IsIPv6()
                         && localAddress == m_liveInterfaces[i].m_address) {
                         destIsIPv6Local = true;
-                        recvPort = m_liveInterfaces[i].m_unicastPort;
+                        localPort = m_liveInterfaces[i].m_unicastPort;
                         ifIndex =  m_liveInterfaces[i].m_index;
                     }
                 }
 
-                if (recvPort != std::numeric_limits<uint16_t>::max() && ifIndex != -1) {
+                if (localPort != std::numeric_limits<uint16_t>::max() && ifIndex != -1) {
                     QCC_DbgHLPrintf(("Processing packet on interface index %d that was received on index %d from %s:%u to %s:%u",
-                                     ifIndex, localInterfaceIndex, remoteAddress.ToString().c_str(), remotePort, localAddress.ToString().c_str(), recvPort));
+                                     ifIndex, localInterfaceIndex, remoteAddress.ToString().c_str(), remotePort, localAddress.ToString().c_str(), localPort));
                 }
                 if (ifIndex != -1 && !destIsIPv4Local && ifIndex != localInterfaceIndex) {
                     QCC_DbgHLPrintf(("Ignoring non-unicast or unexpected packet that was received on a different interface"));
@@ -5617,9 +5638,10 @@ void* IpNameServiceImpl::Run(void* arg)
                 //
                 // We got a message over the multicast channel.  Deal with it.
                 //
-                if (recvPort != std::numeric_limits<uint16_t>::max() && ifIndex != -1) {
-                    qcc::IPEndpoint endpoint(remoteAddress, remotePort);
-                    HandleProtocolMessage(buffer, nbytes, endpoint, recvPort, ifIndex, localAddress);
+                if (localPort != std::numeric_limits<uint16_t>::max() && ifIndex != -1) {
+                    qcc::IPEndpoint remote(remoteAddress, remotePort);
+                    qcc::IPEndpoint local(localAddress, localPort);
+                    HandleProtocolMessage(buffer, nbytes, remote, local, ifIndex);
                 }
             }
         }
@@ -6178,7 +6200,7 @@ void IpNameServiceImpl::GetQueryPackets(std::list<Packet>& packets, const uint8_
     m_mutex.Unlock();
 }
 
-void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool quietly, const qcc::IPEndpoint& destination, uint8_t type, TransportMask completeTransportMask, vector<qcc::String>& wkns, const int32_t interfaceIndex, const qcc::AddressFamily family, const qcc::IPAddress& localAddress)
+void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool quietly, const qcc::IPEndpoint& destination, const qcc::IPEndpoint& source, uint8_t type, TransportMask completeTransportMask, vector<qcc::String>& wkns, const int32_t interfaceIndex, const qcc::AddressFamily family)
 {
     //
     // Type can be one of the following 3 values:
@@ -6260,6 +6282,8 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
         // set the timer to zero, which means that the name is no longer valid.
         //
         NSPacket nspacket;
+
+        nspacket->SetSource(source);
 
         //
         // We understand all messages from version zero to version one, and we
@@ -6376,8 +6400,8 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
                     } else {
                         nspacket->ClearAddressFamily();
                     }
-                    if (localAddress != IPAddress("0.0.0.0")) {
-                        SendOutboundMessageActively(Packet::cast(nspacket), localAddress);
+                    if (source.addr != IPAddress("0.0.0.0")) {
+                        SendOutboundMessageActively(Packet::cast(nspacket), source.addr);
                     } else {
                         SendOutboundMessageActively(Packet::cast(nspacket));
                     }
@@ -6427,8 +6451,8 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
         } else {
             nspacket->ClearAddressFamily();
         }
-        if (localAddress != IPAddress("0.0.0.0")) {
-            SendOutboundMessageActively(Packet::cast(nspacket), localAddress);
+        if (source.addr != IPAddress("0.0.0.0")) {
+            SendOutboundMessageActively(Packet::cast(nspacket), source.addr);
         } else {
             SendOutboundMessageActively(Packet::cast(nspacket));
         }
@@ -6452,6 +6476,8 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
         // set the timer to zero, which means that the name is no longer valid.
         //
         NSPacket nspacket;
+
+        nspacket->SetSource(source);
 
         //
         // We understand all messages from version zero to version one, and we
@@ -6587,8 +6613,8 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
                     } else {
                         nspacket->ClearAddressFamily();
                     }
-                    if (localAddress != IPAddress("0.0.0.0")) {
-                        SendOutboundMessageActively(Packet::cast(nspacket), localAddress);
+                    if (source.addr != IPAddress("0.0.0.0")) {
+                        SendOutboundMessageActively(Packet::cast(nspacket), source.addr);
                     } else {
                         SendOutboundMessageActively(Packet::cast(nspacket));
                     }
@@ -6689,8 +6715,8 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
             } else {
                 nspacket->ClearAddressFamily();
             }
-            if (localAddress != IPAddress("0.0.0.0")) {
-                SendOutboundMessageActively(Packet::cast(nspacket), localAddress);
+            if (source.addr != IPAddress("0.0.0.0")) {
+                SendOutboundMessageActively(Packet::cast(nspacket), source.addr);
             } else {
                 SendOutboundMessageActively(Packet::cast(nspacket));
             }
@@ -6724,6 +6750,8 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
 
         MDNSPacket mdnsPacket;
         mdnsPacket->SetHeader(mdnsHeader);
+
+        mdnsPacket->SetSource(source);
 
         QCC_DbgPrintf(("IpNameServiceImpl::::Retransmit(): Current priority is %d", GetCurrentPriority()));
         if ((completeTransportMask & TRANSPORT_TCP) && (!m_reliableIPv4PortMap[TRANSPORT_INDEX_TCP].empty() || m_reliableIPv6Port[TRANSPORT_INDEX_TCP])) {
@@ -7009,7 +7037,7 @@ void IpNameServiceImpl::DoPeriodicMaintenance(void)
             QCC_DbgPrintf(("IpNameServiceImpl::DoPeriodicMaintenance(): Retransmit()"));
             for (uint32_t index = 0; index < N_TRANSPORTS; ++index) {
                 vector<String> empty;
-                Retransmit(index, false, false, qcc::IPEndpoint("0.0.0.0", 0), TRANSMIT_V0_V1, MaskFromIndex(index), empty);
+                Retransmit(index, false, false, qcc::IPEndpoint("0.0.0.0", 0), qcc::IPEndpoint("0.0.0.0", 0), TRANSMIT_V0_V1, MaskFromIndex(index), empty);
             }
             m_timer = m_tDuration;
         }
@@ -7018,9 +7046,9 @@ void IpNameServiceImpl::DoPeriodicMaintenance(void)
     m_mutex.Unlock();
 }
 
-void IpNameServiceImpl::HandleProtocolQuestion(WhoHas whoHas, const qcc::IPEndpoint& endpoint, int32_t interfaceIndex, const qcc::IPAddress& localAddress)
+void IpNameServiceImpl::HandleProtocolQuestion(WhoHas whoHas, const qcc::IPEndpoint& remote, int32_t interfaceIndex, const qcc::IPEndpoint& local)
 {
-    QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolQuestion(%s)", endpoint.ToString().c_str()));
+    QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolQuestion(%s)", remote.ToString().c_str()));
 
     //
     // There are at least two threads wandering through the advertised list.
@@ -7151,18 +7179,18 @@ void IpNameServiceImpl::HandleProtocolQuestion(WhoHas whoHas, const qcc::IPEndpo
         if (respond) {
             m_mutex.Unlock();
             qcc::AddressFamily family = qcc::QCC_AF_UNSPEC;
-            if (endpoint.GetAddress().IsIPv4()) {
+            if (remote.GetAddress().IsIPv4()) {
                 family = QCC_AF_INET;
             }
-            if (endpoint.GetAddress().IsIPv6()) {
+            if (remote.GetAddress().IsIPv6()) {
                 family = QCC_AF_INET6;
             }
             if (nsVersion == 0 && msgVersion == 0) {
                 vector<String> empty;
-                Retransmit(index, false, respondQuietly, endpoint, TRANSMIT_V0, MaskFromIndex(index), empty, interfaceIndex, family, localAddress);
+                Retransmit(index, false, respondQuietly, remote, local, TRANSMIT_V0, MaskFromIndex(index), empty, interfaceIndex, family);
             }
             if (nsVersion == 1 && msgVersion == 1) {
-                Retransmit(index, false, respondQuietly, endpoint, TRANSMIT_V1, MaskFromIndex(index), wkns, interfaceIndex, family, localAddress);
+                Retransmit(index, false, respondQuietly, remote, local, TRANSMIT_V1, MaskFromIndex(index), wkns, interfaceIndex, family);
             }
             m_mutex.Lock();
         }
@@ -7171,9 +7199,9 @@ void IpNameServiceImpl::HandleProtocolQuestion(WhoHas whoHas, const qcc::IPEndpo
     m_mutex.Unlock();
 }
 
-void IpNameServiceImpl::HandleProtocolAnswer(IsAt isAt, uint32_t timer, const qcc::IPEndpoint& endpoint, int32_t interfaceIndex)
+void IpNameServiceImpl::HandleProtocolAnswer(IsAt isAt, uint32_t timer, const qcc::IPEndpoint& remote, int32_t interfaceIndex)
 {
-    QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolAnswer(%s)", endpoint.ToString().c_str()));
+    QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolAnswer(%s)", remote.ToString().c_str()));
 
     // Get IPv4 address of interface for this message (message may have been
     // received on the IPv6 address).  This will be used as a sanity check later
@@ -7340,7 +7368,7 @@ void IpNameServiceImpl::HandleProtocolAnswer(IsAt isAt, uint32_t timer, const qc
         //
         qcc::String ipv4address, ipv6address;
 
-        QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolAnswer(): Got IP %s from recvfrom", endpoint.addr.ToString().c_str()));
+        QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolAnswer(): Got IP %s from recvfrom", remote.addr.ToString().c_str()));
 
         if (isAt.GetIPv4Flag()) {
             ipv4address = isAt.GetIPv4();
@@ -7378,8 +7406,8 @@ void IpNameServiceImpl::HandleProtocolAnswer(IsAt isAt, uint32_t timer, const qc
         // got broken out of the TCP transport.  We expect the transport to do
         // that now.
         //
-        if ((endpoint.addr.IsIPv4() && !ipv4address.size())) {
-            ipv4address = endpoint.addr.ToString();
+        if ((remote.addr.IsIPv4() && !ipv4address.size())) {
+            ipv4address = remote.addr.ToString();
         }
 
         //
@@ -7406,9 +7434,9 @@ void IpNameServiceImpl::HandleProtocolAnswer(IsAt isAt, uint32_t timer, const qc
                 // if a v4 addr is sent via a v4 address then someone is misbehaving, so log
                 // a warning.
                 //
-                if (endpoint.addr.IsIPv4()) {
+                if (remote.addr.IsIPv4()) {
                     QCC_LogError(ER_WARNING, ("Ignoring advertisement from %s for %s received on %s",
-                                              endpoint.addr.ToString().c_str(),
+                                              remote.addr.ToString().c_str(),
                                               ipv4address.c_str(),
                                               ifName.c_str()));
                 }
@@ -7526,9 +7554,9 @@ void IpNameServiceImpl::HandleProtocolAnswer(IsAt isAt, uint32_t timer, const qc
             // if a v4 addr is sent via a v4 address then someone is misbehaving, so log
             // a warning.
             //
-            if (isAt.GetReliableIPv4Flag() && endpoint.addr.IsIPv4()) {
+            if (isAt.GetReliableIPv4Flag() && remote.addr.IsIPv4()) {
                 QCC_LogError(ER_WARNING, ("Ignoring advertisement from %s for %s received on %s",
-                                          endpoint.addr.ToString().c_str(),
+                                          remote.addr.ToString().c_str(),
                                           isAt.GetReliableIPv4Address().c_str(),
                                           ifName.c_str()));
             }
@@ -7538,10 +7566,9 @@ void IpNameServiceImpl::HandleProtocolAnswer(IsAt isAt, uint32_t timer, const qc
     m_mutex.Unlock();
 }
 
-
-void IpNameServiceImpl::HandleProtocolMessage(uint8_t const* buffer, uint32_t nbytes, const qcc::IPEndpoint& endpoint, const uint16_t recvPort, int32_t interfaceIndex, const qcc::IPAddress& localAddress)
+void IpNameServiceImpl::HandleProtocolMessage(uint8_t const* buffer, uint32_t nbytes, const qcc::IPEndpoint& remote, const qcc::IPEndpoint& local, int32_t interfaceIndex)
 {
-    QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolMessage(0x%x, %d, %s)", buffer, nbytes, endpoint.ToString().c_str()));
+    QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolMessage(0x%x, %d, %s)", buffer, nbytes, remote.ToString().c_str()));
 
 #if HAPPY_WANDERER
     if (Wander() == false) {
@@ -7553,7 +7580,7 @@ void IpNameServiceImpl::HandleProtocolMessage(uint8_t const* buffer, uint32_t nb
 #endif
 
     // Any messages received on port 9956 are version zero or version one messages.
-    if (recvPort == 9956) {
+    if (local.port == 9956) {
 
         NSPacket nsPacket;
         size_t bytesRead = nsPacket->Deserialize(buffer, nbytes);
@@ -7581,7 +7608,7 @@ void IpNameServiceImpl::HandleProtocolMessage(uint8_t const* buffer, uint32_t nb
         // to pass on this information to other interested bystanders.
         //
         for (uint8_t i = 0; i < nsPacket->GetNumberQuestions(); ++i) {
-            HandleProtocolQuestion(nsPacket->GetQuestion(i), endpoint, interfaceIndex, localAddress);
+            HandleProtocolQuestion(nsPacket->GetQuestion(i), remote, interfaceIndex, local);
         }
 
         //
@@ -7608,7 +7635,7 @@ void IpNameServiceImpl::HandleProtocolMessage(uint8_t const* buffer, uint32_t nb
             nsPacket->GetVersion(nsVersion, msgVersion);
             isAt.SetVersion(nsVersion, msgVersion);
             if (m_loopback || (isAt.GetGuid() != m_guid)) {
-                HandleProtocolAnswer(isAt, nsPacket->GetTimer(), endpoint, interfaceIndex);
+                HandleProtocolAnswer(isAt, nsPacket->GetTimer(), remote, interfaceIndex);
             }
         }
     } else {
@@ -7621,9 +7648,9 @@ void IpNameServiceImpl::HandleProtocolMessage(uint8_t const* buffer, uint32_t nb
         }
 
         if (mdnsPacket->GetHeader().GetQRType() == MDNSHeader::MDNS_QUERY) {
-            HandleProtocolQuery(mdnsPacket, endpoint, recvPort);
+            HandleProtocolQuery(mdnsPacket, remote, local);
         } else {
-            HandleProtocolResponse(mdnsPacket, endpoint, recvPort, interfaceIndex);
+            HandleProtocolResponse(mdnsPacket, remote, local, interfaceIndex);
         }
     }
 }
@@ -7729,7 +7756,7 @@ bool IpNameServiceImpl::IsMDNSPacketTrackerEmpty()
     return isEmpty;
 }
 
-bool IpNameServiceImpl::UpdateMDNSPacketTracker(qcc::String guid, IPEndpoint endpoint, uint16_t burstId)
+bool IpNameServiceImpl::UpdateMDNSPacketTracker(qcc::String guid, const qcc::IPEndpoint& endpoint, uint16_t burstId)
 {
     //QCC_DbgPrintf(("IpNameServiceImpl::UpdateMDNSPacketTracker(%s, %s,%d)", guid.c_str(), endpoint.ToString().c_str(), burstId));
 
@@ -7765,8 +7792,7 @@ bool IpNameServiceImpl::UpdateMDNSPacketTracker(qcc::String guid, IPEndpoint end
     return true;
 }
 
-
-void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, IPEndpoint endpoint, uint16_t recvPort, int32_t interfaceIndex)
+void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, const qcc::IPEndpoint& remote, const qcc::IPEndpoint& local, int32_t interfaceIndex)
 {
     // Get IPv4 address of interface for this message (message may have been
     // received on the IPv6 address).  This will be used as a sanity check later
@@ -7932,7 +7958,7 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, IPEndpoint
     //     If No, we process this packet
     // If No, This is a unicast response in which case we need not keep track of Burst IDs
     //
-    if (recvPort == MULTICAST_MDNS_PORT) {
+    if (local.port == MULTICAST_MDNS_PORT) {
         // We need to check if this packet is from a burst which we have seen before in which case we will ignore it
         if (!UpdateMDNSPacketTracker(guid, ns4, refRData->GetSearchID())) {
             QCC_DbgPrintf(("Ignoring response with duplicate burst ID"));
@@ -7949,9 +7975,9 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, IPEndpoint
         // if a v4 addr is sent via a v4 address then someone is misbehaving, so log
         // a warning.
         //
-        if (endpoint.addr.IsIPv4()) {
+        if (remote.addr.IsIPv4()) {
             QCC_DbgPrintf(("Ignoring advertisement from %s for %s received on %s",
-                           endpoint.addr.ToString().c_str(),
+                           remote.addr.ToString().c_str(),
                            r4.addr.ToString().c_str(),
                            ifName.c_str()));
         }
@@ -7964,13 +7990,13 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, IPEndpoint
     // handlers triggers an action that requires the name to be in the name
     // table (e.g. JoinSession).
     //
-    HandleAdvertiseResponse(mdnsPacket, recvPort, guid, ns4, r4, r6, u4, u6);
+    HandleAdvertiseResponse(mdnsPacket, guid, ns4, r4, r6, u4, u6);
 
     m_protectListeners = true;
     m_mutex.Unlock();
     bool handled = false;
     for (list<IpNameServiceListener*>::iterator it = m_listeners.begin(); !handled && it != m_listeners.end(); ++it) {
-        handled = (*it)->ResponseHandler(transportMask, mdnsPacket, recvPort);
+        handled = (*it)->ResponseHandler(transportMask, mdnsPacket, local.port);
     }
     m_mutex.Lock();
     m_protectListeners = false;
@@ -7978,12 +8004,10 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, IPEndpoint
     m_mutex.Unlock();
 }
 
-bool IpNameServiceImpl::HandleAdvertiseResponse(MDNSPacket mdnsPacket, uint16_t recvPort,
+bool IpNameServiceImpl::HandleAdvertiseResponse(MDNSPacket mdnsPacket,
                                                 const qcc::String& guid, const qcc::IPEndpoint& ns4,
                                                 const qcc::IPEndpoint& r4, const qcc::IPEndpoint& r6, const qcc::IPEndpoint& u4, const qcc::IPEndpoint& u6)
 {
-    QCC_UNUSED(recvPort);
-
     uint32_t numMatches = mdnsPacket->GetNumMatches("advertise.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS);
     for (uint32_t match = 0; match < numMatches; match++) {
         MDNSResourceRecord* advRecord;
@@ -8112,9 +8136,9 @@ bool IpNameServiceImpl::HandleAdvertiseResponse(MDNSPacket mdnsPacket, uint16_t 
     return true;
 }
 
-void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, IPEndpoint endpoint, uint16_t recvPort)
+void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, const qcc::IPEndpoint& remote, const qcc::IPEndpoint& local)
 {
-    QCC_UNUSED(endpoint);
+    QCC_UNUSED(remote);
 
     bool isAllJoynQuery = true;
     // Check if someone is asking about an alljoyn service.
@@ -8143,7 +8167,7 @@ void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, IPEndpoint en
         QCC_DbgPrintf(("Ignoring query with invalid sender info"));
         return;
     }
-    IPEndpoint ns4(refRData->GetIPV4ResponseAddr(), refRData->GetIPV4ResponsePort());
+    IPEndpoint dst(refRData->GetIPV4ResponseAddr(), refRData->GetIPV4ResponsePort());
 
     String guid = refRecord->GetDomainName().substr(sizeof("sender-info.") - 1, 32);
     if (guid == m_guid) {
@@ -8160,9 +8184,9 @@ void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, IPEndpoint en
     //     If No, we process this packet
     // If No, This is a unicast response in which case we need not keep track of Burst IDs
     //
-    if (recvPort == MULTICAST_MDNS_PORT) {
+    if (local.port == MULTICAST_MDNS_PORT) {
         // We need to check if this packet is from a burst which we have seen before in which case we will ignore it
-        if (!UpdateMDNSPacketTracker(guid, ns4, refRData->GetSearchID())) {
+        if (!UpdateMDNSPacketTracker(guid, dst, refRData->GetSearchID())) {
             QCC_DbgPrintf(("Ignoring query with duplicate burst ID"));
             m_mutex.Unlock();
             return;
@@ -8172,7 +8196,7 @@ void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, IPEndpoint en
     m_mutex.Unlock();
     bool handled = false;
     for (list<IpNameServiceListener*>::iterator it = m_listeners.begin(); !handled && it != m_listeners.end(); ++it) {
-        handled = (*it)->QueryHandler(completeTransportMask, mdnsPacket, recvPort, ns4);
+        handled = (*it)->QueryHandler(completeTransportMask, mdnsPacket, local, dst);
     }
     m_mutex.Lock();
     m_protectListeners = false;
@@ -8180,16 +8204,15 @@ void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, IPEndpoint en
         m_mutex.Unlock();
         return;
     }
-    HandleSearchQuery(completeTransportMask, mdnsPacket, recvPort, guid, ns4);
+    HandleSearchQuery(completeTransportMask, mdnsPacket, local, guid, dst);
 
     m_mutex.Unlock();
 }
 
-bool IpNameServiceImpl::HandleSearchQuery(TransportMask completeTransportMask, MDNSPacket mdnsPacket, uint16_t recvPort,
-                                          const qcc::String& guid, const qcc::IPEndpoint& ns4)
+bool IpNameServiceImpl::HandleSearchQuery(TransportMask completeTransportMask, MDNSPacket mdnsPacket, const qcc::IPEndpoint& src,
+                                          const qcc::String& guid, const qcc::IPEndpoint& dst)
 {
     QCC_UNUSED(guid);
-    QCC_UNUSED(recvPort);
 
     QCC_DbgPrintf(("IpNameServiceImpl::HandleSearchQuery"));
     MDNSResourceRecord* searchRecord;
@@ -8297,8 +8320,8 @@ bool IpNameServiceImpl::HandleSearchQuery(TransportMask completeTransportMask, M
         //
         if (respond) {
             m_mutex.Unlock();
-            if (ns4.GetAddress().IsIPv4()) {
-                Retransmit(index, false, respondQuietly, ns4, TRANSMIT_V2, completeTransportMask, wkns);
+            if (dst.GetAddress().IsIPv4()) {
+                Retransmit(index, false, respondQuietly, dst, src, TRANSMIT_V2, completeTransportMask, wkns);
             }
             m_mutex.Lock();
         }

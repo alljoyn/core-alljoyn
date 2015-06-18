@@ -271,13 +271,21 @@ QStatus SecurityApplicationObj::Get(const char* ifcName, const char* propName, M
                 status = ER_BUS_NO_SUCH_PROPERTY;
             }
             if (ER_OK == status) {
+                size_t coordSize = keyInfo.GetPublicKey()->GetCoordinateSize();
+                uint8_t* xData = new uint8_t[coordSize];
+                uint8_t* yData = new uint8_t[coordSize];
+                KeyInfoHelper::ExportCoordinates(*keyInfo.GetPublicKey(), xData, coordSize, yData, coordSize);
+
                 status = val.Set("(ayay(yyayay))",
                                  serial.size(), serial.data(),
                                  keyInfo.GetKeyIdLen(), keyInfo.GetKeyId(),
-                                 keyInfo.GetAlgorithm(), keyInfo.GetCurve(), ECC_COORDINATE_SZ, keyInfo.GetXCoord(), ECC_COORDINATE_SZ, keyInfo.GetYCoord());
+                                 keyInfo.GetAlgorithm(), keyInfo.GetCurve(),
+                                 coordSize, xData, coordSize, yData);
                 if (ER_OK == status) {
                     val.Stabilize();
                 }
+                delete [] xData;
+                delete [] yData;
             }
         } else if (0 == strcmp("PolicyVersion", propName)) {
             status = val.Set("u", policyVersion);;

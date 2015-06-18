@@ -100,7 +100,7 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      * @param epName   The name of the endpoint that this rule applies to.
      * @param rule     Rule for endpoint
      */
-    void AddRule(const qcc::String& epName, Rule& rule);
+    virtual void AddRule(const qcc::String& epName, Rule& rule);
 
     /**
      * Remove a rule for an endpoint.
@@ -108,14 +108,14 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      * @param epName      The name of the endpoint that rule applies to.
      * @param rule        Rule to remove.
      */
-    void RemoveRule(const qcc::String& epName, Rule& rule);
+    virtual void RemoveRule(const qcc::String& epName, Rule& rule);
 
     /**
      * Push a sessionless signal.
      *
      * @param msg    Message to be pushed.
      */
-    QStatus PushMessage(Message& msg);
+    virtual QStatus PushMessage(Message& msg);
 
     /**
      * Route an incoming sessionless signal if possible.
@@ -123,7 +123,7 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      * @param sid   Session ID associated with sessionless message.
      * @param msg   Sesionless message to be routed.
      */
-    void RouteSessionlessMessage(uint32_t sid, Message& msg);
+    virtual void RouteSessionlessMessage(uint32_t sid, Message& msg);
 
     /**
      * Remove a sessionless signal with a given serial number from the store/forward cache.
@@ -623,9 +623,8 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      */
     QStatus ScheduleWork(RemoteCache& cache, bool addAlarm = true, bool doInitialBackoff = true);
 
-    bool QueryHandler(TransportMask transport, MDNSPacket query, uint16_t recvPort,
-                      const qcc::IPEndpoint& ns4);
-    bool SendResponseIfMatch(TransportMask transport, const qcc::IPEndpoint& ns4, const qcc::String& ruleStr);
+    bool QueryHandler(TransportMask transport, MDNSPacket query, const qcc::IPEndpoint& src, const qcc::IPEndpoint& dst);
+    bool SendResponseIfMatch(TransportMask transport, const qcc::IPEndpoint& src, const qcc::IPEndpoint& dst, const qcc::String& ruleStr);
     bool ResponseHandler(TransportMask transport, MDNSPacket response, uint16_t recvPort);
 
     void FoundAdvertisedNameHandler(const char* name, TransportMask transport, const char* prefix, bool doInitialBackoff = true);
@@ -654,8 +653,9 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
       public:
         TransportMask transport;
         qcc::String name;
-        qcc::IPEndpoint ns4;
-        SendResponseWork(SessionlessObj& slObj, TransportMask transport, const qcc::String& name, const qcc::IPEndpoint& ns4);
+        qcc::IPEndpoint src;
+        qcc::IPEndpoint dst;
+        SendResponseWork(SessionlessObj& slObj, TransportMask transport, const qcc::String& name, const qcc::IPEndpoint& src, const qcc::IPEndpoint& dst);
         virtual void Run();
     };
 

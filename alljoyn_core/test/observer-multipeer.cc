@@ -55,7 +55,7 @@ static qcc::String getConnectArg(const char* envvar = "BUS_ADDRESS") {
     #if (_WIN32_WINNT > 0x0603)
     return env->Find(envvar, "npipe:");
     #else
-    return env->Find(envvar, "tcp:addr=127.0.0.1,port=9956");
+    return env->Find(envvar, "tcp:addr=127.0.0.1,port=9955");
     #endif
 #else
     return env->Find(envvar, "unix:abstract=alljoyn");
@@ -84,6 +84,7 @@ class MultiPeerTestObject : public BusObject {
     virtual ~MultiPeerTestObject() { }
 
     void HandleIdentify(const InterfaceDescription::Member* member, Message& message) {
+        QCC_UNUSED(member);
         MsgArg args[2] = { MsgArg("s", busname.c_str()), MsgArg("s", path.c_str()) };
         QStatus status = MethodReply(message, args, 2);
         assert(ER_OK == status);
@@ -91,6 +92,7 @@ class MultiPeerTestObject : public BusObject {
     }
 
     void UpdateObservedSoFarBy(const InterfaceDescription::Member* member, Message& message) {
+        QCC_UNUSED(member);
         observedSoFarByLock.Lock(MUTEX_CONTEXT);
         const MsgArg* op = message->GetArg(0);
         const MsgArg* observerPID = message->GetArg(1);
@@ -224,6 +226,9 @@ class Participant : public SessionPortListener, public SessionListener {
     }
 
     virtual bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) {
+        QCC_UNUSED(sessionPort);
+        QCC_UNUSED(joiner);
+        QCC_UNUSED(opts);
         return true;
     }
 

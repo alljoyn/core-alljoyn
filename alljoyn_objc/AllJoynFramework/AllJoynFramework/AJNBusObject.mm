@@ -122,6 +122,11 @@ using namespace ajn;
     [self busObject]->SetDescriptionTranslator((ajn::Translator*)self.translator);
 }
 
+- (QStatus)setAnnounceFlagForInterface:(AJNInterfaceDescription *)iface value:(AJNAnnounceFlag)flag
+{
+    return self.busObject->SetAnnounceFlag((ajn::InterfaceDescription *)iface.handle, (BusObject::AnnounceFlag)flag);
+}
+
 -(void)dealloc
 {
     if(self.translator)

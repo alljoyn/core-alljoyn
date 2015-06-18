@@ -1064,8 +1064,8 @@ QStatus TCPTransport::Stop(void)
      */
     m_listenRequestsLock.Lock(MUTEX_CONTEXT);
     QCC_DbgTrace(("TCPTransport::Stop(): Gratuitously clean out advertisements."));
-    for (list<qcc::String>::iterator i = m_advertising.begin(); i != m_advertising.end(); ++i) {
-        IpNameService::Instance().CancelAdvertiseName(TRANSPORT_TCP, *i, TRANSPORT_TCP);
+    for (list<AdvEntry>::iterator i = m_advertising.begin(); i != m_advertising.end(); ++i) {
+        IpNameService::Instance().CancelAdvertiseName(TRANSPORT_TCP, (*i).name, (*i).quietly, TRANSPORT_TCP);
     }
     m_advertising.clear();
     m_routerNameAdvertised = false;
@@ -2237,8 +2237,8 @@ void TCPTransport::StopListenInstance(ListenRequest& listenRequest)
      */
     if (empty && m_isAdvertising) {
         QCC_LogError(ER_FAIL, ("TCPTransport::StopListenInstance(): No listeners with outstanding advertisements."));
-        for (list<qcc::String>::iterator i = m_advertising.begin(); i != m_advertising.end(); ++i) {
-            IpNameService::Instance().CancelAdvertiseName(TRANSPORT_TCP, *i, TRANSPORT_TCP);
+        for (list<AdvEntry>::iterator i = m_advertising.begin(); i != m_advertising.end(); ++i) {
+            IpNameService::Instance().CancelAdvertiseName(TRANSPORT_TCP, (*i).name, (*i).quietly, TRANSPORT_TCP);
         }
     }
 
@@ -2260,8 +2260,7 @@ void TCPTransport::EnableAdvertisementInstance(ListenRequest& listenRequest)
      * order of business is to save the well-known name away for
      * use later.
      */
-    bool isFirst;
-    NewAdvertiseOp(ENABLE_ADVERTISEMENT, listenRequest.m_requestParam, isFirst);
+    bool isFirst = NewAdvertiseOp(listenRequest.m_requestParam, listenRequest.m_requestParamOpt);
 
     /*
      * If it turned out that is the first advertisement on our list, we
@@ -2339,14 +2338,15 @@ void TCPTransport::DisableAdvertisementInstance(ListenRequest& listenRequest)
      * We have a new disable advertisement request to deal with.  The first
      * order of business is to remove the well-known name from our saved list.
      */
-    bool isFirst;
-    bool isEmpty = NewAdvertiseOp(DISABLE_ADVERTISEMENT, listenRequest.m_requestParam, isFirst);
+    bool quietly;
+    bool isEmpty = CancelAdvertiseOp(listenRequest.m_requestParam, quietly);
 
     /*
      * We always cancel any advertisement to allow the name service to
      * send out its lost advertisement message.
      */
-    QStatus status = IpNameService::Instance().CancelAdvertiseName(TRANSPORT_TCP, listenRequest.m_requestParam, listenRequest.m_requestTransportMask);
+    QStatus status = IpNameService::Instance().CancelAdvertiseName(TRANSPORT_TCP, listenRequest.m_requestParam,
+                                                                   quietly, listenRequest.m_requestTransportMask);
     if (status != ER_OK) {
         QCC_LogError(status, ("TCPTransport::DisableAdvertisementInstance(): Failed to Cancel \"%s\"", listenRequest.m_requestParam.c_str()));
     }
@@ -3760,29 +3760,46 @@ bool TCPTransport::NewDiscoveryOp(DiscoveryOp op, qcc::String namePrefix, bool& 
     return m_discovering.empty();
 }
 
-bool TCPTransport::NewAdvertiseOp(AdvertiseOp op, qcc::String name, bool& isFirst)
+bool TCPTransport::NewAdvertiseOp(qcc::String name, bool quietly)
 {
     QCC_DbgPrintf(("TCPTransport::NewAdvertiseOp()"));
 
     bool first = false;
 
-    if (op == ENABLE_ADVERTISEMENT) {
-        QCC_DbgPrintf(("TCPTransport::NewAdvertiseOp(): Registering advertisement of namePrefix \"%s\"", name.c_str()));
-        first = m_advertising.empty();
-        if (find(m_advertising.begin(), m_advertising.end(), name) == m_advertising.end()) {
-            m_advertising.push_back(name);
-        }
-    } else {
-        list<qcc::String>::iterator i = find(m_advertising.begin(), m_advertising.end(), name);
-        if (i == m_advertising.end()) {
-            QCC_DbgPrintf(("TCPTransport::NewAdvertiseOp(): Cancel of non-existent name \"%s\"", name.c_str()));
-        } else {
-            QCC_DbgPrintf(("TCPTransport::NewAdvertiseOp(): Unregistering advertisement of namePrefix \"%s\"", name.c_str()));
-            m_advertising.erase(i);
+
+    QCC_DbgPrintf(("TCPTransport::NewAdvertiseOp(): Registering advertisement of namePrefix \"%s\"", name.c_str()));
+    first = m_advertising.empty();
+    bool found = false;
+    for (list<AdvEntry>::iterator i = m_advertising.begin(); i != m_advertising.end(); ++i) {
+        if ((*i).name == name) {
+            found = true;
+            break;
         }
     }
+    if (!found) {
+        m_advertising.push_back(AdvEntry(name, quietly));
+    }
+    return first;
+}
 
-    isFirst = first;
+bool TCPTransport::CancelAdvertiseOp(qcc::String name, bool& quietly)
+{
+    list<AdvEntry>::iterator i = m_advertising.begin();
+    while (i != m_advertising.end()) {
+        if ((*i).name == name) {
+            break;
+        }
+        i++;
+    }
+
+    if (i == m_advertising.end()) {
+        QCC_DbgPrintf(("TCPTransport::CancelAdvertiseOp(): Cancel of non-existent name \"%s\"", name.c_str()));
+    } else {
+        quietly = (*i).quietly;
+        QCC_DbgPrintf(("TCPTransport::CancelAdvertiseOp(): Unregistering advertisement of namePrefix \"%s\"", name.c_str()));
+        m_advertising.erase(i);
+    }
+
     return m_advertising.empty();
 }
 
@@ -3797,9 +3814,9 @@ bool TCPTransport::NewListenOp(ListenOp op, qcc::String normSpec)
     } else {
         list<qcc::String>::iterator i = find(m_listening.begin(), m_listening.end(), normSpec);
         if (i == m_listening.end()) {
-            QCC_DbgPrintf(("TCPTransport::NewAdvertiseOp(): StopListen of non-existent spec \"%s\"", normSpec.c_str()));
+            QCC_DbgPrintf(("TCPTransport::NewListenOp(): StopListen of non-existent spec \"%s\"", normSpec.c_str()));
         } else {
-            QCC_DbgPrintf(("TCPTransport::NewAdvertiseOp(): StopListen of normSpec \"%s\"", normSpec.c_str()));
+            QCC_DbgPrintf(("TCPTransport::NewListenOp(): StopListen of normSpec \"%s\"", normSpec.c_str()));
             m_listening.erase(i);
         }
     }
@@ -4270,7 +4287,7 @@ void TCPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
         if (!listenAddr.Size() || !listenAddr.IsIPv4()) {
             continue;
         }
-        bool ephemeralPort = (listenPort == 0);
+
         /*
          * We have the name service work out of the way, so we can now create the
          * TCP listener sockets and set SO_REUSEADDR/SO_REUSEPORT so we don't have
@@ -4305,26 +4322,14 @@ void TCPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
          * Bind the socket to the listen address and start listening for incoming
          * connections on it.
          */
-        if (ephemeralPort) {
-            /*
-             * First try binding to the default port
-             */
-            listenPort = PORT_DEFAULT;
-            status = Bind(listenFd, listenAddr, listenPort);
-            if (status != ER_OK) {
-                listenPort = 0;
-                status = Bind(listenFd, listenAddr, listenPort);
-            }
-        } else {
-            status = Bind(listenFd, listenAddr, listenPort);
-        }
+        status = Bind(listenFd, listenAddr, listenPort);
 
         if (status == ER_OK) {
             /*
-             * If the port was not set (or set to zero) then we will have bound an ephemeral port. If
+             * If the port was set to zero then we will have bound an ephemeral port. If
              * so call GetLocalAddress() to update the connect spec with the port allocated by bind.
              */
-            if (ephemeralPort) {
+            if (listenPort == 0) {
                 qcc::GetLocalAddress(listenFd, listenAddr, listenPort);
             }
             if (wildcardIfaceRequested) {
@@ -4406,8 +4411,8 @@ void TCPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
         ConfigDB* config = ConfigDB::GetConfigDB();
         uint32_t maxConn = config->GetLimit("max_completed_connections", ALLJOYN_MAX_COMPLETED_CONNECTIONS_TCP_DEFAULT);
         if (EnableRouterAdvertisement()) {
-            bool isFirst;
-            NewAdvertiseOp(ENABLE_ADVERTISEMENT, routerName, isFirst);
+            bool quietly = true;
+            NewAdvertiseOp(routerName, quietly);
             uint32_t availConn = maxConn - (m_authList.size() + m_endpointList.size());
             uint32_t availRemoteClientsTcp = m_maxRemoteClientsTcp - m_numUntrustedClients;
             availRemoteClientsTcp = std::min(availRemoteClientsTcp, availConn);
@@ -4529,6 +4534,8 @@ void TCPTransport::CheckEndpointLocalMachine(TCPEndpoint endpoint)
             break;
         }
     }
+#else
+    QCC_UNUSED(endpoint);
 #endif
 }
 

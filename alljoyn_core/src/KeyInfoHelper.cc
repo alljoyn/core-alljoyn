@@ -36,28 +36,69 @@ bool KeyInfoHelper::InstanceOfKeyInfoNISTP256(const qcc::KeyInfoECC& keyInfo)
     return keyInfo.GetCurve() == Crypto_ECC::ECC_NIST_P256;
 }
 
+QStatus KeyInfoHelper::ExportCoordinates(const qcc::ECCPublicKey& publicKey, uint8_t* xData, const size_t xSize, uint8_t* yData, const size_t ySize)
+{
+    if (xData == NULL) {
+        return ER_BAD_ARG_2;
+    }
+    if (xSize != publicKey.GetCoordinateSize()) {
+        return ER_BAD_ARG_3;
+    }
+    if (yData == NULL) {
+        return ER_BAD_ARG_4;
+    }
+    if (ySize != publicKey.GetCoordinateSize()) {
+        return ER_BAD_ARG_5;
+    }
+    size_t bufSize = publicKey.GetSize();
+    uint8_t* buf = new uint8_t[bufSize];
+    QStatus status = publicKey.Export(buf, &bufSize);
+    if (ER_OK == status) {
+        if (bufSize != publicKey.GetSize()) {
+            status = ER_INVALID_DATA;
+        } else {
+            memcpy(xData, buf, xSize);
+            memcpy(yData, buf + xSize, ySize);
+        }
+    }
+    delete [] buf;
+    return status;
+}
+
 void KeyInfoHelper::KeyInfoNISTP256ToMsgArg(const KeyInfoNISTP256& keyInfo, MsgArg& variant)
 {
-    MsgArg coordArg("(ayay)", ECC_COORDINATE_SZ, keyInfo.GetXCoord(), ECC_COORDINATE_SZ, keyInfo.GetYCoord());
+    uint8_t* xData = new uint8_t[keyInfo.GetPublicKey()->GetCoordinateSize()];
+    uint8_t* yData = new uint8_t[keyInfo.GetPublicKey()->GetCoordinateSize()];
+    ExportCoordinates(*keyInfo.GetPublicKey(), xData, keyInfo.GetPublicKey()->GetCoordinateSize(), yData, keyInfo.GetPublicKey()->GetCoordinateSize());
+
+    MsgArg coordArg("(ayay)", keyInfo.GetPublicKey()->GetCoordinateSize(), xData, keyInfo.GetPublicKey()->GetCoordinateSize(), yData);
 
     variant.Set("(yv)", KeyInfo::FORMAT_ALLJOYN,
                 new MsgArg("(ayyyv)", keyInfo.GetKeyIdLen(), keyInfo.GetKeyId(), KeyInfo::USAGE_SIGNING, KeyInfoECC::KEY_TYPE,
                            new MsgArg("(yyv)", keyInfo.GetAlgorithm(), keyInfo.GetCurve(), new MsgArg(coordArg))));
     variant.SetOwnershipFlags(MsgArg::OwnsArgs, true);
+    delete [] xData;
+    delete [] yData;
 }
 
 void KeyInfoHelper::KeyInfoNISTP256PubKeyToMsgArg(const KeyInfoNISTP256& keyInfo, MsgArg& msgArg)
 {
+    uint8_t* xData = new uint8_t[keyInfo.GetPublicKey()->GetCoordinateSize()];
+    uint8_t* yData = new uint8_t[keyInfo.GetPublicKey()->GetCoordinateSize()];
+    ExportCoordinates(*keyInfo.GetPublicKey(), xData, keyInfo.GetPublicKey()->GetCoordinateSize(), yData, keyInfo.GetPublicKey()->GetCoordinateSize());
     MsgArg localArg;
     QStatus status = localArg.Set("(yyayay)", keyInfo.GetAlgorithm(),
-                                  keyInfo.GetCurve(), ECC_COORDINATE_SZ, keyInfo.GetXCoord(),
-                                  ECC_COORDINATE_SZ, keyInfo.GetYCoord());
+                                  keyInfo.GetCurve(),
+                                  keyInfo.GetPublicKey()->GetCoordinateSize(), xData,
+                                  keyInfo.GetPublicKey()->GetCoordinateSize(), yData);
     if (ER_OK != status) {
         QCC_LogError(status, ("KeyInfoHelper::KeyInfoNISTP256PubKeyToMsgArg failed"));
         assert(false);
     }
     /* copy the message arg for a deep copy of the array arguments */
     msgArg = localArg;
+    delete [] xData;
+    delete [] yData;
 }
 
 QStatus KeyInfoHelper::MsgArgToKeyInfoNISTP256PubKey(const MsgArg& msgArg, KeyInfoNISTP256& keyInfo)
@@ -82,8 +123,9 @@ QStatus KeyInfoHelper::MsgArgToKeyInfoNISTP256PubKey(const MsgArg& msgArg, KeyIn
     if ((xLen != ECC_COORDINATE_SZ) || (yLen != ECC_COORDINATE_SZ)) {
         return ER_INVALID_DATA;
     }
-    keyInfo.SetXCoord(xCoord);
-    keyInfo.SetYCoord(yCoord);
+    ECCPublicKey publicKey;
+    publicKey.Import(xCoord, xLen, yCoord, yLen);
+    keyInfo.SetPublicKey(&publicKey);
     return ER_OK;
 }
 
@@ -160,8 +202,9 @@ QStatus KeyInfoHelper::MsgArgToKeyInfoNISTP256(const MsgArg& variant, KeyInfoNIS
     if ((xLen != ECC_COORDINATE_SZ) || (yLen != ECC_COORDINATE_SZ)) {
         return ER_INVALID_DATA;
     }
-    keyInfo.SetXCoord(xCoord);
-    keyInfo.SetYCoord(yCoord);
+    ECCPublicKey publicKey;
+    publicKey.Import(xCoord, xLen, yCoord, yLen);
+    keyInfo.SetPublicKey(&publicKey);
     keyInfo.SetKeyId(kid, kidLen);
     return ER_OK;
 }

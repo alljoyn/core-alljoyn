@@ -5112,16 +5112,17 @@ QStatus UDPTransport::Stop(void)
      * It is legal to call Stop() more than once, so it must be possible to
      * call Stop() on a stopped transport.
      */
+    m_preListLock.Lock(MUTEX_CONTEXT);
     m_stopping = true;
-
+    m_preListLock.Unlock(MUTEX_CONTEXT);
     /*
      * Tell the name service to disregard all our prior advertisements and
      * discoveries. The internal state will shortly be discarded as well.
      */
     m_listenRequestsLock.Lock(MUTEX_CONTEXT);
     QCC_DbgPrintf(("UDPTransport::Stop(): Gratuitously clean out advertisements."));
-    for (list<qcc::String>::iterator i = m_advertising.begin(); i != m_advertising.end(); ++i) {
-        IpNameService::Instance().CancelAdvertiseName(TRANSPORT_UDP, *i, TRANSPORT_UDP);
+    for (list<AdvEntry>::iterator i = m_advertising.begin(); i != m_advertising.end(); ++i) {
+        IpNameService::Instance().CancelAdvertiseName(TRANSPORT_UDP, (*i).name, (*i).quietly, TRANSPORT_UDP);
     }
     m_advertising.clear();
     m_routerNameAdvertised = false;
@@ -5530,8 +5531,9 @@ QStatus UDPTransport::Join(void)
     m_endpointListLock.Unlock(MUTEX_CONTEXT);
 
     m_dynamicScoreUpdater.Join();
-
+    m_preListLock.Lock(MUTEX_CONTEXT);
     m_stopping = false;
+    m_preListLock.Unlock(MUTEX_CONTEXT);
     DecrementAndFetch(&m_refCount);
     return ER_OK;
 }
@@ -6992,7 +6994,17 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
     udpEp->GetFeatures().allowRemote = true;
     udpEp->GetFeatures().protocolVersion = protocolVersion;
     udpEp->GetFeatures().trusted = isBusToBus ? false : true;
-    udpEp->GetFeatures().nameTransfer = isBusToBus ? static_cast<SessionOpts::NameTransferType>(nameTransfer) : SessionOpts::ALL_NAMES;
+    if (isBusToBus) {
+        if (protocolVersion < 12 || (nameTransfer == SessionOpts::SLS_NAMES)) {
+            /* If protocol version is less than 12, set the name transfer requested.
+             * If protocol version is 12 or above, ignore this value unless the request is for SLS_NAMES.
+             * Version 12 and above routing nodes will send the name transfer as a part of AttachSessionWithNames.
+             */
+            udpEp->GetFeatures().nameTransfer = static_cast<SessionOpts::NameTransferType>(nameTransfer);
+        }
+    } else {
+        udpEp->GetFeatures().nameTransfer = SessionOpts::ALL_NAMES;
+    }
     udpEp->SetRemoteGUID(remoteGUID);
     udpEp->SetPassive();
     udpEp->SetIpAddr(ipAddr);
@@ -7152,9 +7164,25 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
     /*
      * Set the endpoint state to indicate that it is starting up becuase of a
      * passive (begun by a remote host) connection attempt.
+     * Check m_stopping to ensure that the transport has not been stopped.
      */
     udpEp->SetEpPassiveStarted();
-    m_preList.insert(udpEp);
+    if (!m_stopping) {
+        m_preList.insert(udpEp);
+    } else {
+        QCC_DbgPrintf(("UDPTransport::AcceptCb(): giving pre-auth list lock"));
+        m_preListLock.Unlock(MUTEX_CONTEXT);
+        udpEp->Stop();
+        QCC_LogError(status, ("UDPTransport::AcceptCb(): ARDP_Accept() failed"));
+
+        m_connLock.Lock(MUTEX_CONTEXT);
+        --m_currAuth;
+        --m_currConn;
+        m_connLock.Unlock(MUTEX_CONTEXT);
+
+        DecrementAndFetch(&m_refCount);
+        return false;
+    }
 
     QCC_DbgPrintf(("UDPTransport::AcceptCb(): giving pre-auth list lock"));
     m_preListLock.Unlock(MUTEX_CONTEXT);
@@ -7799,7 +7827,14 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
         udpEp->GetFeatures().allowRemote = true;
         udpEp->GetFeatures().protocolVersion = protocolVersion;
         udpEp->GetFeatures().trusted = false;
-        udpEp->GetFeatures().nameTransfer = static_cast<SessionOpts::NameTransferType>(nameTransfer);
+        if (protocolVersion < 12 || (nameTransfer == SessionOpts::SLS_NAMES)) {
+            /* If protocol version is less than 12, set the name transfer requested.
+             * If protocol version is 12 or above, ignore this value unless the request is for SLS_NAMES.
+             * Version 12 and above routing nodes will send the name transfer as a part of AttachSessionWithNames.
+             */
+            udpEp->GetFeatures().nameTransfer = static_cast<SessionOpts::NameTransferType>(nameTransfer);
+        }
+
         udpEp->SetRemoteGUID(remoteGUID);
         udpEp->SetActive();
         udpEp->SetIpAddr(ipAddr);
@@ -8916,8 +8951,8 @@ void UDPTransport::StopListenInstance(ListenRequest& listenRequest)
      */
     if (empty && m_isAdvertising) {
         QCC_LogError(ER_UDP_NO_LISTENER, ("UDPTransport::StopListenInstance(): No listeners with outstanding advertisements"));
-        for (list<qcc::String>::iterator i = m_advertising.begin(); i != m_advertising.end(); ++i) {
-            IpNameService::Instance().CancelAdvertiseName(TRANSPORT_UDP, *i, TRANSPORT_UDP);
+        for (list<AdvEntry>::iterator i = m_advertising.begin(); i != m_advertising.end(); ++i) {
+            IpNameService::Instance().CancelAdvertiseName(TRANSPORT_UDP, (*i).name, (*i).quietly,  TRANSPORT_UDP);
         }
     }
 
@@ -8939,8 +8974,7 @@ void UDPTransport::EnableAdvertisementInstance(ListenRequest& listenRequest)
      * order of business is to save the well-known name away for
      * use later.
      */
-    bool isFirst;
-    NewAdvertiseOp(ENABLE_ADVERTISEMENT, listenRequest.m_requestParam, isFirst);
+    bool isFirst = NewAdvertiseOp(listenRequest.m_requestParam, listenRequest.m_requestParamOpt);
 
     m_listenFdsLock.Lock(MUTEX_CONTEXT);
 
@@ -9014,14 +9048,15 @@ void UDPTransport::DisableAdvertisementInstance(ListenRequest& listenRequest)
      * We have a new disable advertisement request to deal with.  The first
      * order of business is to remove the well-known name from our saved list.
      */
-    bool isFirst;
-    bool isEmpty = NewAdvertiseOp(DISABLE_ADVERTISEMENT, listenRequest.m_requestParam, isFirst);
+    bool quietly;
+    bool isEmpty = CancelAdvertiseOp(listenRequest.m_requestParam, quietly);
 
     /*
      * We always cancel any advertisement to allow the name service to
      * send out its lost advertisement message.
      */
-    QStatus status = IpNameService::Instance().CancelAdvertiseName(TRANSPORT_UDP, listenRequest.m_requestParam, listenRequest.m_requestTransportMask);
+    QStatus status = IpNameService::Instance().CancelAdvertiseName(TRANSPORT_UDP, listenRequest.m_requestParam,
+                                                                   quietly, listenRequest.m_requestTransportMask);
     if (status != ER_OK) {
         QCC_LogError(status, ("UDPTransport::DisableAdvertisementInstance(): Failed to Cancel \"%s\"", listenRequest.m_requestParam.c_str()));
     }
@@ -10766,30 +10801,51 @@ bool UDPTransport::NewDiscoveryOp(DiscoveryOp op, qcc::String namePrefix, bool& 
     return rc;
 }
 
-bool UDPTransport::NewAdvertiseOp(AdvertiseOp op, qcc::String name, bool& isFirst)
+bool UDPTransport::NewAdvertiseOp(qcc::String name,  bool quietly)
 {
     IncrementAndFetch(&m_refCount);
     QCC_DbgTrace(("UDPTransport::NewAdvertiseOp()"));
 
     bool first = false;
 
-    if (op == ENABLE_ADVERTISEMENT) {
-        QCC_DbgPrintf(("UDPTransport::NewAdvertiseOp(): Registering advertisement of namePrefix \"%s\"", name.c_str()));
-        first = m_advertising.empty();
-        if (find(m_advertising.begin(), m_advertising.end(), name) == m_advertising.end()) {
-            m_advertising.push_back(name);
-        }
-    } else {
-        list<qcc::String>::iterator i = find(m_advertising.begin(), m_advertising.end(), name);
-        if (i == m_advertising.end()) {
-            QCC_DbgPrintf(("UDPTransport::NewAdvertiseOp(): Cancel of non-existent name \"%s\"", name.c_str()));
-        } else {
-            QCC_DbgPrintf(("UDPTransport::NewAdvertiseOp(): Unregistering advertisement of namePrefix \"%s\"", name.c_str()));
-            m_advertising.erase(i);
+    QCC_DbgPrintf(("UDPTransport::NewAdvertiseOp(): Registering advertisement of namePrefix \"%s\"", name.c_str()));
+    first = m_advertising.empty();
+    bool found = false;
+    for (list<AdvEntry>::iterator i = m_advertising.begin(); i != m_advertising.end(); ++i) {
+        if ((*i).name == name) {
+            found = true;
+            break;
         }
     }
+    if (!found) {
+        m_advertising.push_back(AdvEntry(name, quietly));
+    }
+    DecrementAndFetch(&m_refCount);
+    return first;
+}
 
-    isFirst = first;
+bool UDPTransport::CancelAdvertiseOp(qcc::String name,  bool& quietly)
+{
+    IncrementAndFetch(&m_refCount);
+    QCC_DbgTrace(("UDPTransport::CancelAdvertiseOp()"));
+
+    list<AdvEntry>::iterator i = m_advertising.begin();
+    while (i != m_advertising.end()) {
+        if ((*i).name == name) {
+            break;
+        }
+        i++;
+    }
+
+    if (i == m_advertising.end()) {
+        QCC_DbgPrintf(("UDPTransport::CancelAdvertiseOp(): Cancel of non-existent name \"%s\"", name.c_str()));
+    } else {
+        quietly = (*i).quietly;
+        QCC_DbgPrintf(("UDPTransport::CancelAdvertiseOp(): Unregistering advertisement of namePrefix \"%s\"", name.c_str()));
+        m_advertising.erase(i);
+    }
+
+
     bool rc = m_advertising.empty();
     DecrementAndFetch(&m_refCount);
     return rc;
@@ -10806,9 +10862,9 @@ bool UDPTransport::NewListenOp(ListenOp op, qcc::String normSpec)
     } else {
         list<qcc::String>::iterator i = find(m_listening.begin(), m_listening.end(), normSpec);
         if (i == m_listening.end()) {
-            QCC_DbgPrintf(("UDPTransport::NewAdvertiseOp(): StopListen of non-existent spec \"%s\"", normSpec.c_str()));
+            QCC_DbgPrintf(("UDPTransport::NewListenOp(): StopListen of non-existent spec \"%s\"", normSpec.c_str()));
         } else {
-            QCC_DbgPrintf(("UDPTransport::NewAdvertiseOp(): StopListen of normSpec \"%s\"", normSpec.c_str()));
+            QCC_DbgPrintf(("UDPTransport::NewListenOp(): StopListen of normSpec \"%s\"", normSpec.c_str()));
             m_listening.erase(i);
         }
     }
@@ -11294,7 +11350,7 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
         if (!listenAddr.Size() || !listenAddr.IsIPv4()) {
             continue;
         }
-        bool ephemeralPort = (listenPort == 0);
+
         /*
          * We have the name service work out of the way, so we can now create the
          * TCP listener sockets and set SO_REUSEADDR/SO_REUSEPORT so we don't have
@@ -11386,36 +11442,16 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
         QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): GetRcvBuf(listenFd=%d) <= %u. bytes)", listenFd, rcvSize));
 #endif
 
-        /*
-         * If ephemeralPort is set, it means that the listen spec did not provide a
-         * specific port and wants us to choose one.  In this case, we first try the
-         * default port; but it that port is already taken in the system, we let the
-         * system assign a new one from the ephemeral port range.
-         */
-        if (ephemeralPort) {
-            QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): ephemeralPort"));
-            listenPort = PORT_DEFAULT;
-            QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Bind(listenFd=%d., listenAddr=\"%s\", listenPort=%d.)",
-                           listenFd, listenAddr.ToString().c_str(), listenPort));
-            status = Bind(listenFd, listenAddr, listenPort);
-            if (status != ER_OK) {
-                listenPort = 0;
-                QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Bind() failed.  Bind(listenFd=%d., listenAddr=\"%s\", listenPort=%d.)",
-                               listenFd, listenAddr.ToString().c_str(), listenPort));
-                status = Bind(listenFd, listenAddr, listenPort);
-            }
-        } else {
-            QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Bind(listenFd=%d., listenAddr=\"%s\", listenPort=%d.)",
-                           listenFd, listenAddr.ToString().c_str(), listenPort));
-            status = Bind(listenFd, listenAddr, listenPort);
-        }
+        QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Bind(listenFd=%d., listenAddr=\"%s\", listenPort=%u.)",
+                       listenFd, listenAddr.ToString().c_str(), listenPort));
+        status = Bind(listenFd, listenAddr, listenPort);
 
         if (status == ER_OK) {
             /*
              * If the port was not set (or set to zero) then we will have bound an ephemeral port. If
              * so call GetLocalAddress() to update the connect spec with the port allocated by bind.
              */
-            if (ephemeralPort) {
+            if (listenPort == 0) {
                 qcc::GetLocalAddress(listenFd, listenAddr, listenPort);
             }
             if (wildcardIfaceRequested) {
@@ -11507,8 +11543,8 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
          */
         if (EnableRouterAdvertisement()) {
             QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Advertise m_routerName=\"%s\"", m_routerName.c_str()));
-            bool isFirst;
-            NewAdvertiseOp(ENABLE_ADVERTISEMENT, m_routerName, isFirst);
+            bool quietly = true;
+            NewAdvertiseOp(m_routerName, quietly);
             uint32_t availConn = m_maxConn -  m_currConn;
             uint32_t availRemoteClientsUdp = m_maxRemoteClientsUdp - m_numUntrustedClients;
             availRemoteClientsUdp = std::min(availRemoteClientsUdp, availConn);
@@ -11649,6 +11685,8 @@ void UDPTransport::CheckEndpointLocalMachine(UDPEndpoint endpoint)
             break;
         }
     }
+#else
+    QCC_UNUSED(endpoint);
 #endif
 }
 

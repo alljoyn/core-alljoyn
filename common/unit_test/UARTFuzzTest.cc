@@ -604,7 +604,7 @@ TEST(UARTFuzzTest, DISABLED_uart_fuzz_test_recoverable)
             printf("Failed Iteration %d\n", iter);
             for (size_t ii = 0; ii < sizeof(rxBuffer); ii++) {
                 if (txBuffer[ii] != rxBuffer[ii]) {
-                    printf("%zu %X %X\n", ii, txBuffer[ii], rxBuffer[ii]);
+                    printf("%" PRIuSIZET " %X %X\n", ii, txBuffer[ii], rxBuffer[ii]);
                 }
             }
             exit(-1);

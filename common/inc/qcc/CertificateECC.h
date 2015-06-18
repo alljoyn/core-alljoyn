@@ -127,7 +127,7 @@ class CertificateX509 {
     /**
      * Default Constructor
      */
-    CertificateX509() : type(UNKNOWN_CERTIFICATE), encodedLen(0), encoded(NULL), ca(0)
+    CertificateX509() : type(UNKNOWN_CERTIFICATE), encodedLen(0), encoded(NULL), serialLen(0), serial(NULL), ca(0)
     {
     }
 
@@ -135,7 +135,7 @@ class CertificateX509 {
      * Constructor
      * @param type the certificate type.
      */
-    CertificateX509(CertificateType type) : type(type), encodedLen(0), encoded(NULL), ca(0)
+    CertificateX509(CertificateType type) : type(type), encodedLen(0), encoded(NULL), serialLen(0), serial(NULL), ca(0)
     {
     }
 
@@ -177,39 +177,87 @@ class CertificateX509 {
 
     /**
      * Encode the private key in a PEM string.
+     *
+     * @deprecated May 2015 for 15.08 release
+     * @see CertificateX509::EncodePrivateKeyPEM(const ECCPrivateKey* privateKey, String& encoded)
+     *
      * @param privateKey the private key to encode
      * @param len the private key length
      * @param[out] encoded the output string holding the resulting PEM string
-     * @return ER_OK for sucess; otherwise, error code.
+     * @return ER_OK for success; otherwise, error code.
      */
-    static QStatus AJ_CALL EncodePrivateKeyPEM(const uint8_t* privateKey, size_t len, String& encoded);
+    QCC_DEPRECATED(static QStatus AJ_CALL EncodePrivateKeyPEM(const uint8_t * privateKey, size_t len, String & encoded));
 
     /**
-     * Decode the private from a PEM string.
+     * Encode the private key in a PEM string.
+     * @param privateKey the private key to encode
+     * @param[out] encoded the output string holding the resulting PEM string
+     * @return ER_OK for success; otherwise, error code.
+     */
+    static QStatus AJ_CALL EncodePrivateKeyPEM(const ECCPrivateKey* privateKey, String& encoded);
+
+    /**
+     * Decode the private key from a PEM string.
+     *
+     * @deprecated May 2015 for 15.08 release
+     * @see CertificateX509::DecodePrivateKeyPEM(const String& encode, ECCPrivateKey* privateKey)
+     *
      * @param encoded the input string holding the PEM string
      * @param[out] privateKey the output private key
      * @param len the private key length
-     * @return ER_OK for sucess; otherwise, error code.
+     * @return ER_OK for success; otherwise, error code.
      */
-    static QStatus AJ_CALL DecodePrivateKeyPEM(const String& encoded, uint8_t* privateKey, size_t len);
+    QCC_DEPRECATED(static QStatus AJ_CALL DecodePrivateKeyPEM(const String &encoded, uint8_t * privateKey, size_t len));
+
+    /**
+     * Decode the private key from a PEM string.
+     * @param encoded the input string holding the PEM string
+     * @param[out] privateKey the output private key
+     * @return ER_OK for success; otherwise, error code.
+     */
+    static QStatus AJ_CALL DecodePrivateKeyPEM(const String& encoded, ECCPrivateKey* privateKey);
+
+    /**
+     * Encode the public key in a PEM string.
+     *
+     * @deprecated May 2015 for 15.08 release
+     * @see CertificateX509::EncodePublicKeyPEM(const ECCPublicKey* publicKey, String& encoded)
+     *
+     * @param publicKey the public key to encode
+     * @param len the public key length
+     * @param[out] encoded the output string holding the resulting PEM string
+     * @return ER_OK for success; otherwise, error code.
+     */
+    QCC_DEPRECATED(static QStatus AJ_CALL EncodePublicKeyPEM(const uint8_t * publicKey, size_t len, String & encoded));
 
     /**
      * Encode the public key in a PEM string.
      * @param publicKey the public key to encode
-     * @param len the public key length
      * @param[out] encoded the output string holding the resulting PEM string
-     * @return ER_OK for sucess; otherwise, error code.
+     * @return ER_OK for success; otherwise, error code.
      */
-    static QStatus AJ_CALL EncodePublicKeyPEM(const uint8_t* publicKey, size_t len, String& encoded);
+    static QStatus AJ_CALL EncodePublicKeyPEM(const ECCPublicKey* publicKey, String& encoded);
 
     /**
-     * Decode the public from a PEM string.
+     * Decode the public key from a PEM string.
+     *
+     * @deprecated May 2015 for 15.08 release
+     * @see CertificateX509::DecodePublicKeyPEM(const String& encoded, ECCPublicKey* publicKey)
+     *
      * @param encoded the input string holding the PEM string
      * @param[out] publicKey the output public key
      * @param len the public key length
-     * @return ER_OK for sucess; otherwise, error code.
+     * @return ER_OK for success; otherwise, error code.
      */
-    static QStatus AJ_CALL DecodePublicKeyPEM(const String& encoded, uint8_t* publicKey, size_t len);
+    QCC_DEPRECATED(static QStatus AJ_CALL DecodePublicKeyPEM(const String &encoded, uint8_t * publicKey, size_t len));
+
+    /**
+     * Decode the public key from a PEM string.
+     * @param encoded the input string holding the PEM string
+     * @param[out] publicKey the output public key
+     * @return ER_OK for success; otherwise, error code.
+     */
+    static QStatus AJ_CALL DecodePublicKeyPEM(const String& encoded, ECCPublicKey* publicKey);
 
     /**
      * Sign the certificate.
@@ -248,7 +296,7 @@ class CertificateX509 {
     QStatus Verify(const KeyInfoNISTP256& trustAnchor) const;
 
     /**
-     * Verify the vadility period of the certificate.
+     * Verify the validity period of the certificate.
      * @return ER_OK for success; otherwise, error code.
      */
     QStatus VerifyValidity() const;
@@ -256,19 +304,32 @@ class CertificateX509 {
     /**
      * Set the serial number field
      * @param serial the serial number
+     * @param len length of the serial array
      */
-    void SetSerial(const qcc::String& serial)
+    void SetSerial(const uint8_t* serial, const size_t len)
     {
-        this->serial = serial;
+        serialLen = len;
+        delete[] this->serial;
+        this->serial = new uint8_t[serialLen];
+        memcpy(this->serial, serial, serialLen);
     }
 
     /**
      * Get the serial number
      * @return the serial number
      */
-    const qcc::String& GetSerial() const
+    const uint8_t* GetSerial() const
     {
         return serial;
+    }
+
+    /**
+     * Get the length of the serial number
+     * @return Length of the serial number
+     */
+    const size_t GetSerialLen() const
+    {
+        return serialLen;
     }
     /**
      * Set the issuer organization unit field
@@ -516,7 +577,7 @@ class CertificateX509 {
      * Load the encoded bytes for the certificate
      * @param encodedBytes the encoded bytes
      * @param len the length of the encoded bytes
-     * @return ER_OK for sucess; otherwise, error code.
+     * @return ER_OK for success; otherwise, error code.
      */
     QStatus LoadEncoded(const uint8_t* encodedBytes, size_t len);
 
@@ -528,8 +589,8 @@ class CertificateX509 {
 
     /**
      * Load the PEM encoded bytes for the certificate
-     * @param encoded the encoded bytes
-     * @return ER_OK for sucess; otherwise, error code.
+     * @param PEM the encoded bytes
+     * @return ER_OK for success; otherwise, error code.
      */
     QStatus LoadPEM(const String& PEM);
     /**
@@ -539,12 +600,46 @@ class CertificateX509 {
      */
     qcc::String ToString() const;
 
+
+    /**
+     * Determine if this certificate issued a given certificate by comparing the distinguished
+     * name and verifying the digital signature.
+     * @param issuedCertificate Certificate to check if it was issued by this certificate.
+     * @return true if so.
+     */
+    bool IsIssuerOf(const CertificateX509& issuedCertificate) const;
+
+    /**
+     * Is the subject DN of this certificate equal to a given DN?
+     * @param cn Common Name component of the DN to compare to.
+     * @param cnLength Length of the cn array. Zero if null.
+     * @param ou Organizational Unit component of the DN to compare to.
+     * @param ouLength Length of the ou array. Zero if null.
+     * @return true if so.
+     */
+    bool IsDNEqual(const uint8_t* cn, const size_t cnLength, const uint8_t* ou, const size_t ouLength) const;
+
+    /**
+     * Is the subject DN of this certificate equal to a given certificate's DN?
+     * @param other CertificateX509 to compare to.
+     * @return true if so.
+     */
+    bool IsDNEqual(const CertificateX509& other) const;
+
+    /**
+     * Is the subject public key of this certificate equal to a given key?
+     * @param publicKey Public key to compare to.
+     * @return true if so.
+     */
+    bool IsSubjectPublicKeyEqual(const ECCPublicKey* publicKey) const;
+
     /**
      * Destructor
      */
     virtual ~CertificateX509()
     {
         delete [] encoded;
+        delete [] serial;
     }
 
     const CertificateType GetType() const
@@ -557,7 +652,7 @@ class CertificateX509 {
      * @param encoded the input string holding the PEM string
      * @param[in,out] certChain the input string holding the array of certs.
      * @param[in] count the expected number of certs
-     * @return ER_OK for sucess; otherwise, error code.
+     * @return ER_OK for success; otherwise, error code.
      */
     static QStatus AJ_CALL DecodeCertChainPEM(const String& encoded, CertificateX509* certChain, size_t count);
 
@@ -679,7 +774,8 @@ class CertificateX509 {
     size_t encodedLen;
     uint8_t* encoded;
 
-    qcc::String serial;
+    size_t serialLen;
+    uint8_t* serial;
     DistinguishedName issuer;
     DistinguishedName subject;
     ValidPeriod validity;

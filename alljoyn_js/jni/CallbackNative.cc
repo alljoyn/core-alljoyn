@@ -197,6 +197,28 @@ void CallbackNative::onCallback(QStatus status, MessageHost& message, const ajn:
     NPN_ReleaseVariantValue(&result);
 }
 
+void CallbackNative::onCallback(QStatus status, AboutObjHost& aboutObj)
+{
+    QCC_DbgTrace(("%s(status=%s)", __FUNCTION__, QCC_StatusText(status)));
+
+    NPVariant npargs[2];
+    if (ER_OK == status) {
+        VOID_TO_NPVARIANT(npargs[0]);
+    } else {
+        BusErrorHost busError(plugin, status);
+        ToHostObject<BusErrorHost>(plugin, busError, npargs[0]);
+    }
+    ToHostObject<AboutObjHost>(plugin, aboutObj, npargs[1]);
+
+    NPVariant result = NPVARIANT_VOID;
+    if (!NPN_InvokeDefault(plugin->npp, objectValue, npargs, 2, &result)) {
+        QCC_LogError(ER_FAIL, ("NPN_InvokeDefault failed"));
+    }
+
+    NPN_ReleaseVariantValue(&npargs[1]);
+    NPN_ReleaseVariantValue(&result);
+}
+
 void CallbackNative::onCallback(QStatus status, ProxyBusObjectHost& proxyBusObject)
 {
     QCC_DbgTrace(("%s(status=%s)", __FUNCTION__, QCC_StatusText(status)));
@@ -448,6 +470,27 @@ void CallbackNative::_BindSessionPortCallbackCB(PluginData::CallbackContext* ctx
 {
     BindSessionPortCallbackContext* context = static_cast<BindSessionPortCallbackContext*>(ctx);
     context->callbackNative->onCallback(context->status, context->port);
+}
+
+class GetAboutObjectCallbackContext : public CallbackContext {
+  public:
+    AboutObjHost aboutObj;
+    GetAboutObjectCallbackContext(CallbackNative* callbackNative, QStatus status, AboutObjHost& aboutObj) :
+        CallbackContext(callbackNative, status),
+        aboutObj(aboutObj) { }
+};
+
+void CallbackNative::DispatchCallback(Plugin& plugin, CallbackNative* callbackNative, QStatus status, AboutObjHost& aboutObj)
+{
+    PluginData::Callback callback(plugin, _GetAboutObjectCallbackCB);
+    callback->context = new GetAboutObjectCallbackContext(callbackNative, status, aboutObj);
+    PluginData::DispatchCallback(callback);
+}
+
+void CallbackNative::_GetAboutObjectCallbackCB(PluginData::CallbackContext* ctx)
+{
+    GetAboutObjectCallbackContext* context = static_cast<GetAboutObjectCallbackContext*>(ctx);
+    context->callbackNative->onCallback(context->status, context->aboutObj);
 }
 
 class GetProxyBusObjectCallbackContext : public CallbackContext {

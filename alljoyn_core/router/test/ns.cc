@@ -447,7 +447,7 @@ int CDECL_CALL main(int argc, char** argv)
             nameIndex = rand() % g_numberNames;
             wkn = g_names[nameIndex];
 
-            status = ns.CancelAdvertiseName(TRANSPORT_TCP, wkn, TRANSPORT_TCP);
+            status = ns.CancelAdvertiseName(TRANSPORT_TCP, wkn, false, TRANSPORT_TCP);
             printf("Cancelled %s\n", wkn);
             if (status != ER_OK) {
                 QCC_LogError(status, ("Cancel failed"));

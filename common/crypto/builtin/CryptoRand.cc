@@ -177,7 +177,7 @@ QStatus qcc::Crypto_GetRandomBytes(uint8_t* data, size_t len)
              * Choosing to continue and use the whole contents of seed,
              * may include garbage on the stack - which won't hurt.
              */
-            QCC_DbgHLPrintf(("Low entropy: %zu (requested %zu)\n", size, sizeof (seed)));
+            QCC_DbgHLPrintf(("Low entropy: %" PRIuSIZET " (requested %" PRIuSIZET ")\n", size, sizeof (seed)));
         }
         status = drbgctx->Seed(seed, sizeof (seed));
         if (ER_OK != status) {

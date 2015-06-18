@@ -29,6 +29,12 @@
 
 NPError NPP_New(NPMIMEType pluginType, NPP npp, uint16_t mode, int16_t argc, char* argn[], char* argv[], NPSavedData* saved)
 {
+    QCC_UNUSED(pluginType); //only used in debug build
+    QCC_UNUSED(mode); //only used in debug build
+    QCC_UNUSED(argc); //only used in debug build
+    QCC_UNUSED(argn); //only used in debug build
+    QCC_UNUSED(argv); //only used in debug build
+    QCC_UNUSED(saved); //only used in debug build
     QCC_DbgTrace(("%s(pluginType=%s,npp=%p,mode=%u,argc=%d,argn=%p,argv=%p,saved=%p)", __FUNCTION__,
                   pluginType, npp, mode, argc, argn, argv, saved));
 #if !defined(NDEBUG)
@@ -62,6 +68,7 @@ NPError NPP_New(NPMIMEType pluginType, NPP npp, uint16_t mode, int16_t argc, cha
 
 NPError NPP_Destroy(NPP npp, NPSavedData** save)
 {
+    QCC_UNUSED(save); //only used in debug build
     QCC_DbgTrace(("%s(npp=%p,save=%p)", __FUNCTION__, npp, save));
     if (!npp) {
         return NPERR_INVALID_INSTANCE_ERROR;
@@ -75,6 +82,7 @@ NPError NPP_Destroy(NPP npp, NPSavedData** save)
 
 NPError NPP_SetWindow(NPP npp, NPWindow* window)
 {
+    QCC_UNUSED(window);
     QCC_DbgTrace(("%s", __FUNCTION__));
     if (!npp) {
         return NPERR_INVALID_INSTANCE_ERROR;
@@ -84,6 +92,9 @@ NPError NPP_SetWindow(NPP npp, NPWindow* window)
 
 NPError NPP_NewStream(NPP npp, NPMIMEType type, NPStream* stream, NPBool seekable, uint16_t* stype)
 {
+    QCC_UNUSED(type); //only used in debug build
+    QCC_UNUSED(stream); //only used in debug build
+    QCC_UNUSED(seekable); //only used in debug build
     QCC_DbgTrace(("%s(npp=%p,type=%s,stream={url=%s,end=%u,lastmodified=%u,notifyData=%p,headers=%s},seekable=%d,stype=%p)", __FUNCTION__, npp, type,
                   stream->url, stream->end, stream->lastmodified, stream->notifyData, stream->headers, seekable, stype));
     if (!npp) {
@@ -96,6 +107,7 @@ NPError NPP_NewStream(NPP npp, NPMIMEType type, NPStream* stream, NPBool seekabl
 
 NPError NPP_DestroyStream(NPP npp, NPStream* stream, NPReason reason)
 {
+    QCC_UNUSED(reason); //only used in debug build
     QCC_DbgTrace(("%s(npp=%p,stream={url=%s,notifyData=%p},reason=%d)", __FUNCTION__, npp, stream->url, stream->notifyData, reason));
     if (!npp) {
         return NPERR_INVALID_INSTANCE_ERROR;
@@ -138,6 +150,7 @@ int32_t NPP_WriteReady(NPP npp, NPStream* stream)
 
 int32_t NPP_Write(NPP npp, NPStream* stream, int32_t offset, int32_t len, void* buffer)
 {
+    QCC_UNUSED(offset); //only used in debug build
     QCC_DbgTrace(("%s(npp=%p,stream={url=%s,notifyData=%p},offset=%d,len=%d,buffer=%p)", __FUNCTION__, npp, stream->url, stream->notifyData, offset, len, buffer));
     if (!npp) {
         return NPERR_INVALID_INSTANCE_ERROR;
@@ -169,6 +182,8 @@ int32_t NPP_Write(NPP npp, NPStream* stream, int32_t offset, int32_t len, void* 
 
 void NPP_StreamAsFile(NPP npp, NPStream* stream, const char* fname)
 {
+    QCC_UNUSED(stream); //only used in debug build
+    QCC_UNUSED(fname); //only used in debug build
     QCC_DbgTrace(("%s(npp=%p,stream=%p,fname=%s)", __FUNCTION__, npp, stream, fname));
     if (!npp) {
         return;
@@ -177,6 +192,7 @@ void NPP_StreamAsFile(NPP npp, NPStream* stream, const char* fname)
 
 void NPP_Print(NPP npp, NPPrint* platformPrint)
 {
+    QCC_UNUSED(platformPrint);
     QCC_DbgTrace(("%s", __FUNCTION__));
     if (!npp) {
         return;
@@ -185,6 +201,7 @@ void NPP_Print(NPP npp, NPPrint* platformPrint)
 
 int16_t NPP_HandleEvent(NPP npp, void* evt)
 {
+    QCC_UNUSED(evt);
     QCC_DbgTrace(("%s", __FUNCTION__));
     if (!npp) {
         return 0;
@@ -194,6 +211,9 @@ int16_t NPP_HandleEvent(NPP npp, void* evt)
 
 void NPP_URLNotify(NPP npp, const char* url, NPReason reason, void* notifyData)
 {
+    QCC_UNUSED(url); //only used in debug build
+    QCC_UNUSED(reason); //only used in debug build
+    QCC_UNUSED(notifyData); //only used in debug build
     QCC_DbgTrace(("%s(npp=%p,url=%s,reason=%d,notifyData=%p)", __FUNCTION__, npp, url, reason, notifyData));
     if (!npp) {
         return;
@@ -319,6 +339,8 @@ NPError NPP_GetValue(NPP npp, NPPVariable var, void* value)
 
 NPError NPP_SetValue(NPP npp, NPNVariable variable, void* value)
 {
+    QCC_UNUSED(variable);
+    QCC_UNUSED(value);
     QCC_DbgTrace(("%s", __FUNCTION__));
     if (!npp) {
         return NPERR_INVALID_INSTANCE_ERROR;

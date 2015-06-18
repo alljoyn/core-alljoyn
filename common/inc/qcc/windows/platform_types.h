@@ -63,4 +63,15 @@ typedef UINT_PTR qcc_UARTFd;   /**< UART file descriptor type. */
 #define PRIu64 "I64u"
 #endif
 
+#ifndef PRIuSIZET
+/**
+ * Platform pointer-sized unsigned integer (i.e., size_t)
+ */
+#define PRIuSIZET "Iu"
+/**
+ * Platform pointer-sized signed integer (i.e., ssize_t)
+ */
+#define PRIiSIZET "Id"
+#endif
+
 #endif

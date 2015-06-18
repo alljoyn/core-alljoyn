@@ -143,6 +143,7 @@ static void _OnRequest(PluginData::CallbackContext* ctx)
 
 qcc::ThreadReturn STDCALL _HttpServer::RequestThread::Run(void* arg)
 {
+    QCC_UNUSED(arg);
     QCC_DbgTrace(("%s", __FUNCTION__));
 
     qcc::String line;
@@ -224,6 +225,7 @@ _HttpServer::ResponseThread::ResponseThread(_HttpServer* httpServer, qcc::Socket
 
 qcc::ThreadReturn STDCALL _HttpServer::ResponseThread::Run(void* arg)
 {
+    QCC_UNUSED(arg);
     QCC_DbgTrace(("%s", __FUNCTION__));
 
     qcc::String response;

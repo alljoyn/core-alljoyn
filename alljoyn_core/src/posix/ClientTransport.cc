@@ -188,6 +188,7 @@ static QStatus SendSocketCreds(SocketFd sockFd, uid_t uid, gid_t gid, pid_t pid)
 
 QStatus ClientTransport::Connect(const char* connectArgs, const SessionOpts& opts, BusEndpoint& newep)
 {
+    QCC_UNUSED(opts);
     if (!m_running) {
         return ER_BUS_TRANSPORT_NOT_STARTED;
     }

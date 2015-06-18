@@ -89,8 +89,8 @@ static alljoyn_sessionportlistener create_my_alljoyn_sessionportlistener()
 static void echo_cb(alljoyn_busobject object,
                     const alljoyn_interfacedescription_member* member,
                     alljoyn_message msg) {
-    QCC_UNUSED(member);
     alljoyn_msgarg arg = alljoyn_message_getarg(msg, 0);
+    QCC_UNUSED(member);
     printf("Echo method called %s\n", ((ajn::MsgArg*)arg)->v_string.str);
 
     QStatus status = alljoyn_busobject_methodreply_args(object, msg, arg, 1);
@@ -127,10 +127,8 @@ static alljoyn_busobject create_my_alljoyn_busobject(alljoyn_busattachment bus,
     return result;
 }
 
-int CDECL_CALL main(int argc, char** argv)
+int CDECL_CALL main(void)
 {
-    QCC_UNUSED(argc);
-    QCC_UNUSED(argv);
     /* Install SIGINT handler so Ctrl + C deallocates memory properly */
     signal(SIGINT, sig_int_handler);
 

@@ -64,6 +64,9 @@ class TestObject : public BusObject {
         for (it = interfaces.begin(); it != interfaces.end(); ++it) {
             const InterfaceDescription* intf = bus.GetInterface(it->c_str());
             EXPECT_TRUE(intf != NULL);
+            if (intf == NULL) {
+                return;
+            }
             AddInterface(*intf, ANNOUNCED);
 
             QStatus status = AddMethodHandler(intf->GetMember(METHOD),
@@ -255,9 +258,10 @@ class Participant : public SessionPortListener, public SessionListener {
             hsmLock.Unlock(MUTEX_CONTEXT);
             ASSERT_TRUE(foundOngoingSession) << "Could not find ongoing session.";
         }
-        bus.LeaveHostedSession(iter->second);
+        SessionId sessionId = iter->second;
         hostedSessionMap.erase(iter);
         hsmLock.Unlock(MUTEX_CONTEXT);
+        bus.LeaveHostedSession(sessionId);
     }
 
   private:

@@ -222,18 +222,18 @@ static const uint8_t ICON_BYTE = 0x11;
 
 - (void)testShouldHaveValidHandleAfterIntialization
 {
-    STAssertTrue(self.bus.handle != NULL, @"The bus attachment should always have a valid handle after initialization.");
+    XCTAssertTrue(self.bus.handle != NULL, @"The bus attachment should always have a valid handle after initialization.");
 }
 
 - (void)testShouldCreateInterface
 {
     AJNInterfaceDescription *iface = [self.bus createInterfaceWithName:kBusAttachmentTestsInterfaceName enableSecurity:NO];
-    STAssertNotNil(iface, @"Bus failed to create interface.");
+    XCTAssertNotNil(iface, @"Bus failed to create interface.");
     
     [iface activate];
     
     iface = [self.bus interfaceWithName:kBusAttachmentTestsInterfaceName];
-    STAssertNotNil(iface, @"Bus failed to retrieve interface that had already been created.");
+    XCTAssertNotNil(iface, @"Bus failed to retrieve interface that had already been created.");
     
     NSArray *interfaces = self.bus.interfaces;
     BOOL didFindInterface = NO;
@@ -243,105 +243,105 @@ static const uint8_t ICON_BYTE = 0x11;
             break;
         }
     }
-    STAssertTrue(didFindInterface,@"Bus did not return interface that was activated.");
+    XCTAssertTrue(didFindInterface,@"Bus did not return interface that was activated.");
 }
 
 - (void)testShouldCreateInterfaceFromXml
 {
     QStatus status = [self.bus createInterfacesFromXml:kBusAttachmentTestsInterfaceXML];
-    STAssertTrue(status == ER_OK, @"Bus failed to create interface from XML.");    
+    XCTAssertTrue(status == ER_OK, @"Bus failed to create interface from XML.");    
 
     AJNInterfaceDescription *iface = [self.bus interfaceWithName:kBusAttachmentTestsInterfaceName];
-    STAssertNotNil(iface, @"Bus failed to retrieve interface that had already been created from XML.");
+    XCTAssertNotNil(iface, @"Bus failed to retrieve interface that had already been created from XML.");
 }
 
 - (void)testShouldDeleteInterface
 {
     AJNInterfaceDescription *iface = [self.bus createInterfaceWithName:kBusAttachmentTestsInterfaceName enableSecurity:NO];
-    STAssertNotNil(iface, @"Bus failed to create interface.");
+    XCTAssertNotNil(iface, @"Bus failed to create interface.");
     QStatus status = [iface addMethodWithName:kBusAttachmentTestsInterfaceMethod inputSignature:@"s" outputSignature:@"s" argumentNames:[NSArray arrayWithObject:@"behavior"]];
-    STAssertTrue(status == ER_OK, @"Interface description failed to add method to interface.");
+    XCTAssertTrue(status == ER_OK, @"Interface description failed to add method to interface.");
 
     status = [self.bus deleteInterface:iface];
-    STAssertTrue(status == ER_OK, @"Bus failed to delete interface.");
+    XCTAssertTrue(status == ER_OK, @"Bus failed to delete interface.");
     
     iface = [self.bus interfaceWithName:kBusAttachmentTestsInterfaceName];
-    STAssertNil(iface, @"Bus retrieved interface that had already been deleted.");
+    XCTAssertNil(iface, @"Bus retrieved interface that had already been deleted.");
 }
 
 - (void)testShouldNotDeleteInterface
 {
     AJNInterfaceDescription *iface = [self.bus createInterfaceWithName:kBusAttachmentTestsInterfaceName enableSecurity:NO];
-    STAssertNotNil(iface, @"Bus failed to create interface.");
+    XCTAssertNotNil(iface, @"Bus failed to create interface.");
     QStatus status = [iface addMethodWithName:kBusAttachmentTestsInterfaceMethod inputSignature:@"s" outputSignature:@"s" argumentNames:[NSArray arrayWithObject:@"behavior"]];
-    STAssertTrue(status == ER_OK, @"Interface description failed to add method to interface.");
+    XCTAssertTrue(status == ER_OK, @"Interface description failed to add method to interface.");
     [iface activate];
     
     status = [self.bus deleteInterface:iface];
-    STAssertTrue(status != ER_OK, @"Bus deleted interface after it was activated.");
+    XCTAssertTrue(status != ER_OK, @"Bus deleted interface after it was activated.");
     
     iface = [self.bus interfaceWithName:kBusAttachmentTestsInterfaceName];
-    STAssertNotNil(iface, @"Bus failed to retrieve interface that had been unsuccessfully deleted.");
+    XCTAssertNotNil(iface, @"Bus failed to retrieve interface that had been unsuccessfully deleted.");
 }
 
 - (void)testShouldReportConnectionStatusCorrectly
 {
-    STAssertFalse(self.bus.isStarted, @"Bus attachment indicates that it is started before successful call to start.");        
-    STAssertFalse(self.bus.isStopping, @"Bus attachment indicates that it is stopping before successful call to stop.");            
-    STAssertFalse(self.bus.isConnected, @"Bus attachment indicates that it is connected before successful call to connect.");                
+    XCTAssertFalse(self.bus.isStarted, @"Bus attachment indicates that it is started before successful call to start.");        
+    XCTAssertFalse(self.bus.isStopping, @"Bus attachment indicates that it is stopping before successful call to stop.");            
+    XCTAssertFalse(self.bus.isConnected, @"Bus attachment indicates that it is connected before successful call to connect.");                
     
     QStatus status = [self.bus start];
-    STAssertTrue(status == ER_OK, @"Bus failed to start.");    
-    STAssertTrue(self.bus.isStarted, @"Bus attachment indicates that it is not started after successful call to start.");    
-    STAssertFalse(self.bus.isStopping, @"Bus attachment indicates that it is stopping before successful call to stop.");            
-    STAssertFalse(self.bus.isConnected, @"Bus attachment indicates that it is connected before successful call to connect.");                
+    XCTAssertTrue(status == ER_OK, @"Bus failed to start.");    
+    XCTAssertTrue(self.bus.isStarted, @"Bus attachment indicates that it is not started after successful call to start.");    
+    XCTAssertFalse(self.bus.isStopping, @"Bus attachment indicates that it is stopping before successful call to stop.");            
+    XCTAssertFalse(self.bus.isConnected, @"Bus attachment indicates that it is connected before successful call to connect.");                
     
     status = [self.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
-    STAssertTrue(self.bus.isConnected, @"Bus attachment indicates that it is not connected after successful call to connect.");                
-    STAssertTrue(self.bus.isStarted, @"Bus attachment indicates that it is not started after successful call to start.");        
-    STAssertFalse(self.bus.isStopping, @"Bus attachment indicates that it is stopping before successful call to stop.");            
+    XCTAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
+    XCTAssertTrue(self.bus.isConnected, @"Bus attachment indicates that it is not connected after successful call to connect.");                
+    XCTAssertTrue(self.bus.isStarted, @"Bus attachment indicates that it is not started after successful call to start.");        
+    XCTAssertFalse(self.bus.isStopping, @"Bus attachment indicates that it is stopping before successful call to stop.");            
     
     status = [self.bus disconnectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
-    STAssertFalse(self.bus.isConnected, @"Bus attachment indicates that it is connected after successful call to disconnect.");                    
+    XCTAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
+    XCTAssertFalse(self.bus.isConnected, @"Bus attachment indicates that it is connected after successful call to disconnect.");                    
     
     status = [self.bus stop];
-    STAssertTrue(status == ER_OK, @"Bus failed to stop.");
-    STAssertTrue(self.bus.isStopping, @"Bus attachment indicates that it is not stopping after successful call to stop.");            
-    STAssertFalse(self.bus.isConnected, @"Bus attachment indicates that it is connected after successful call to disconnect.");                    
+    XCTAssertTrue(status == ER_OK, @"Bus failed to stop.");
+    XCTAssertTrue(self.bus.isStopping, @"Bus attachment indicates that it is not stopping after successful call to stop.");            
+    XCTAssertFalse(self.bus.isConnected, @"Bus attachment indicates that it is connected after successful call to disconnect.");                    
 }
 
 - (void)testShouldHaveUniqueNameAndIdentifier
 {
     QStatus status = [self.bus start];
-    STAssertTrue(status == ER_OK, @"Bus failed to start.");    
+    XCTAssertTrue(status == ER_OK, @"Bus failed to start.");    
     
     status = [self.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
     
-    STAssertTrue(self.bus.uniqueName != nil && self.bus.uniqueName.length > 0, @"Bus should be assigned a unique name after starting and connecting.");
+    XCTAssertTrue(self.bus.uniqueName != nil && self.bus.uniqueName.length > 0, @"Bus should be assigned a unique name after starting and connecting.");
     
-    STAssertTrue(self.bus.uniqueIdentifier != nil && self.bus.uniqueIdentifier.length > 0, @"Bus should be assigned a unique identifier after starting and connecting.");    
+    XCTAssertTrue(self.bus.uniqueIdentifier != nil && self.bus.uniqueIdentifier.length > 0, @"Bus should be assigned a unique identifier after starting and connecting.");    
 
     status = [self.bus disconnectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
-    STAssertFalse(self.bus.isConnected, @"Bus attachment indicates that it is connected after successful call to disconnect.");                    
+    XCTAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
+    XCTAssertFalse(self.bus.isConnected, @"Bus attachment indicates that it is connected after successful call to disconnect.");                    
     
     status = [self.bus stop];
-    STAssertTrue(status == ER_OK, @"Bus failed to stop.");
-    STAssertTrue(self.bus.isStopping, @"Bus attachment indicates that it is not stopping after successful call to stop.");            
-    STAssertFalse(self.bus.isConnected, @"Bus attachment indicates that it is connected after successful call to disconnect.");                    
+    XCTAssertTrue(status == ER_OK, @"Bus failed to stop.");
+    XCTAssertTrue(self.bus.isStopping, @"Bus attachment indicates that it is not stopping after successful call to stop.");            
+    XCTAssertFalse(self.bus.isConnected, @"Bus attachment indicates that it is connected after successful call to disconnect.");                    
     
 }
 
 - (void)testShouldRegisterBusListener
 {
     [self.bus registerBusListener:self];
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_listenerDidRegisterWithBusCompleted], @"The bus listener should have been notified that a listener was registered.");
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_listenerDidRegisterWithBusCompleted], @"The bus listener should have been notified that a listener was registered.");
     
     [self.bus unregisterBusListener:self];
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_listenerDidUnregisterWithBusCompleted], @"The bus listener should have been notified that a listener was unregistered.");    
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_listenerDidUnregisterWithBusCompleted], @"The bus listener should have been notified that a listener was unregistered.");    
 }
 
 - (void)testShouldNotifyBusListenerWhenStopping
@@ -349,22 +349,22 @@ static const uint8_t ICON_BYTE = 0x11;
     [self.bus registerBusListener:self];
 
     QStatus status = [self.bus start];
-    STAssertTrue(status == ER_OK, @"Bus failed to start.");    
+    XCTAssertTrue(status == ER_OK, @"Bus failed to start.");    
 
     status = [self.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
 
     status = [self.bus disconnectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
     
     status = [self.bus stop];
-    STAssertTrue(status == ER_OK, @"Bus failed to stop.");
+    XCTAssertTrue(status == ER_OK, @"Bus failed to stop.");
     
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_busWillStopCompleted], @"The bus listener should have been notified that the bus is stopping.");    
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_busDidDisconnectCompleted], @"The bus listener should have been notified that the bus was disconnected.");    
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_busWillStopCompleted], @"The bus listener should have been notified that the bus is stopping.");    
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_busDidDisconnectCompleted], @"The bus listener should have been notified that the bus was disconnected.");    
     
     [self.bus unregisterBusListener:self];
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_listenerDidUnregisterWithBusCompleted], @"The bus listener should have been notified that a listener was unregistered.");    
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_listenerDidUnregisterWithBusCompleted], @"The bus listener should have been notified that a listener was unregistered.");    
 }
 
 - (void)testShouldNotifyBusListenerWhenDisconnecting
@@ -372,22 +372,22 @@ static const uint8_t ICON_BYTE = 0x11;
     [self.bus registerBusListener:self];
     
     QStatus status = [self.bus start];
-    STAssertTrue(status == ER_OK, @"Bus failed to start.");    
+    XCTAssertTrue(status == ER_OK, @"Bus failed to start.");    
     
     status = [self.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
     
     status = [self.bus disconnectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
     
     status = [self.bus stop];
-    STAssertTrue(status == ER_OK, @"Bus failed to stop.");
+    XCTAssertTrue(status == ER_OK, @"Bus failed to stop.");
     
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_busWillStopCompleted], @"The bus listener should have been notified that the bus is stopping.");    
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_busDidDisconnectCompleted], @"The bus listener should have been notified that the bus was disconnected.");    
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_busWillStopCompleted], @"The bus listener should have been notified that the bus is stopping.");    
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_busDidDisconnectCompleted], @"The bus listener should have been notified that the bus was disconnected.");    
     
     [self.bus unregisterBusListener:self];
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_listenerDidUnregisterWithBusCompleted], @"The bus listener should have been notified that a listener was unregistered.");    
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_listenerDidUnregisterWithBusCompleted], @"The bus listener should have been notified that a listener was unregistered.");    
 }
 
 - (void)testShouldNotifyBusListenerWhenAdvertisedNameFound
@@ -395,32 +395,32 @@ static const uint8_t ICON_BYTE = 0x11;
     [self.bus registerBusListener:self];
     
     QStatus status = [self.bus start];
-    STAssertTrue(status == ER_OK, @"Bus failed to start.");    
+    XCTAssertTrue(status == ER_OK, @"Bus failed to start.");    
     
     status = [self.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
     
     status = [self.bus requestWellKnownName:kBusAttachmentTestsAdvertisedName withFlags:kAJNBusNameFlagDoNotQueue|kAJNBusNameFlagReplaceExisting];
-    STAssertTrue(status == ER_OK, @"Request for well known name failed.");
+    XCTAssertTrue(status == ER_OK, @"Request for well known name failed.");
     
     status = [self.bus advertiseName:kBusAttachmentTestsAdvertisedName withTransportMask:kAJNTransportMaskAny];
-    STAssertTrue(status == ER_OK, @"Advertise name failed.");   
+    XCTAssertTrue(status == ER_OK, @"Advertise name failed.");   
     
     status = [self.bus findAdvertisedName:kBusAttachmentTestsAdvertisedName];
-    STAssertTrue(status == ER_OK, @"Find advertised name failed.");       
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_didFindAdvertisedNameCompleted], @"The bus listener should have been notified that the advertised name was found.");    
+    XCTAssertTrue(status == ER_OK, @"Find advertised name failed.");       
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_didFindAdvertisedNameCompleted], @"The bus listener should have been notified that the advertised name was found.");    
     
     status = [self.bus disconnectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
     
     status = [self.bus stop];
-    STAssertTrue(status == ER_OK, @"Bus failed to stop.");
+    XCTAssertTrue(status == ER_OK, @"Bus failed to stop.");
     
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_busWillStopCompleted], @"The bus listener should have been notified that the bus is stopping.");    
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_busDidDisconnectCompleted], @"The bus listener should have been notified that the bus was disconnected.");    
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_busWillStopCompleted], @"The bus listener should have been notified that the bus is stopping.");    
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_busDidDisconnectCompleted], @"The bus listener should have been notified that the bus was disconnected.");    
     
     [self.bus unregisterBusListener:self];
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_listenerDidUnregisterWithBusCompleted], @"The bus listener should have been notified that a listener was unregistered.");    
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_listenerDidUnregisterWithBusCompleted], @"The bus listener should have been notified that a listener was unregistered.");    
 }
 
 - (void)testShouldNotifyBusListenerWhenAdvertisedNameLost
@@ -428,36 +428,36 @@ static const uint8_t ICON_BYTE = 0x11;
     [self.bus registerBusListener:self];
     
     QStatus status = [self.bus start];
-    STAssertTrue(status == ER_OK, @"Bus failed to start.");    
+    XCTAssertTrue(status == ER_OK, @"Bus failed to start.");    
     
     status = [self.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
     
     status = [self.bus requestWellKnownName:kBusAttachmentTestsAdvertisedName withFlags:kAJNBusNameFlagDoNotQueue|kAJNBusNameFlagReplaceExisting];
-    STAssertTrue(status == ER_OK, @"Request for well known name failed.");
+    XCTAssertTrue(status == ER_OK, @"Request for well known name failed.");
     
     status = [self.bus advertiseName:kBusAttachmentTestsAdvertisedName withTransportMask:kAJNTransportMaskAny];
-    STAssertTrue(status == ER_OK, @"Advertise name failed.");   
+    XCTAssertTrue(status == ER_OK, @"Advertise name failed.");   
     
     status = [self.bus findAdvertisedName:kBusAttachmentTestsAdvertisedName];
-    STAssertTrue(status == ER_OK, @"Find advertised name failed.");       
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_didFindAdvertisedNameCompleted], @"The bus listener should have been notified that the advertised name was found.");    
+    XCTAssertTrue(status == ER_OK, @"Find advertised name failed.");       
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_didFindAdvertisedNameCompleted], @"The bus listener should have been notified that the advertised name was found.");    
 
     status = [self.bus cancelAdvertisedName:kBusAttachmentTestsAdvertisedName withTransportMask:kAJNTransportMaskAny];
-    STAssertTrue(status == ER_OK, @"Advertise name failed.");   
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_didLoseAdvertisedNameCompleted], @"The bus listener should have been notified that the advertised name was lost.");    
+    XCTAssertTrue(status == ER_OK, @"Advertise name failed.");   
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_didLoseAdvertisedNameCompleted], @"The bus listener should have been notified that the advertised name was lost.");    
     
     status = [self.bus disconnectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
     
     status = [self.bus stop];
-    STAssertTrue(status == ER_OK, @"Bus failed to stop.");
+    XCTAssertTrue(status == ER_OK, @"Bus failed to stop.");
     
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_busWillStopCompleted], @"The bus listener should have been notified that the bus is stopping.");    
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_busDidDisconnectCompleted], @"The bus listener should have been notified that the bus was disconnected.");    
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_busWillStopCompleted], @"The bus listener should have been notified that the bus is stopping.");    
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_busDidDisconnectCompleted], @"The bus listener should have been notified that the bus was disconnected.");    
     
     [self.bus unregisterBusListener:self];
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_listenerDidUnregisterWithBusCompleted], @"The bus listener should have been notified that a listener was unregistered.");    
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_listenerDidUnregisterWithBusCompleted], @"The bus listener should have been notified that a listener was unregistered.");    
 }
 
 - (void)testShouldNotifyBusListenerWhenNameOwnerChanges
@@ -465,26 +465,26 @@ static const uint8_t ICON_BYTE = 0x11;
     [self.bus registerBusListener:self];
     
     QStatus status = [self.bus start];
-    STAssertTrue(status == ER_OK, @"Bus failed to start.");    
+    XCTAssertTrue(status == ER_OK, @"Bus failed to start.");    
     
     status = [self.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
     
     status = [self.bus requestWellKnownName:kBusAttachmentTestsAdvertisedName withFlags:kAJNBusNameFlagDoNotQueue|kAJNBusNameFlagReplaceExisting];
-    STAssertTrue(status == ER_OK, @"Request for well known name failed.");
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_nameOwnerChangedCompleted], @"The bus listener should have been notified that the name we requested has a new owner now (us).");
+    XCTAssertTrue(status == ER_OK, @"Request for well known name failed.");
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_nameOwnerChangedCompleted], @"The bus listener should have been notified that the name we requested has a new owner now (us).");
     
     status = [self.bus disconnectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
     
     status = [self.bus stop];
-    STAssertTrue(status == ER_OK, @"Bus failed to stop.");
+    XCTAssertTrue(status == ER_OK, @"Bus failed to stop.");
     
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_busWillStopCompleted], @"The bus listener should have been notified that the bus is stopping.");
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_busDidDisconnectCompleted], @"The bus listener should have been notified that the bus was disconnected.");
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_busWillStopCompleted], @"The bus listener should have been notified that the bus is stopping.");
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_busDidDisconnectCompleted], @"The bus listener should have been notified that the bus was disconnected.");
     
     [self.bus unregisterBusListener:self];
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_listenerDidUnregisterWithBusCompleted], @"The bus listener should have been notified that a listener was unregistered.");
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_listenerDidUnregisterWithBusCompleted], @"The bus listener should have been notified that a listener was unregistered.");
 }
 
 - (void)testShouldIndicateThatNameHasOwner
@@ -492,29 +492,29 @@ static const uint8_t ICON_BYTE = 0x11;
     [self.bus registerBusListener:self];
     
     QStatus status = [self.bus start];
-    STAssertTrue(status == ER_OK, @"Bus failed to start.");    
+    XCTAssertTrue(status == ER_OK, @"Bus failed to start.");    
     
     status = [self.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
     
     status = [self.bus requestWellKnownName:kBusAttachmentTestsAdvertisedName withFlags:kAJNBusNameFlagDoNotQueue|kAJNBusNameFlagReplaceExisting];
-    STAssertTrue(status == ER_OK, @"Request for well known name failed.");
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_nameOwnerChangedCompleted], @"The bus listener should have been notified that the name we requested has a new owner now (us).");
+    XCTAssertTrue(status == ER_OK, @"Request for well known name failed.");
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_nameOwnerChangedCompleted], @"The bus listener should have been notified that the name we requested has a new owner now (us).");
     
     BOOL hasOwner = [self.bus doesWellKnownNameHaveOwner:kBusAttachmentTestsAdvertisedName];
-    STAssertTrue(hasOwner, @"The doesWellKnownNameHaveOwner message should have returned true after we took ownership of the name.");
+    XCTAssertTrue(hasOwner, @"The doesWellKnownNameHaveOwner message should have returned true after we took ownership of the name.");
     
     status = [self.bus disconnectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
     
     status = [self.bus stop];
-    STAssertTrue(status == ER_OK, @"Bus failed to stop.");
+    XCTAssertTrue(status == ER_OK, @"Bus failed to stop.");
     
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_busWillStopCompleted], @"The bus listener should have been notified that the bus is stopping.");
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_busDidDisconnectCompleted], @"The bus listener should have been notified that the bus was disconnected.");
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_busWillStopCompleted], @"The bus listener should have been notified that the bus is stopping.");
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_busDidDisconnectCompleted], @"The bus listener should have been notified that the bus was disconnected.");
     
     [self.bus unregisterBusListener:self];
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_listenerDidUnregisterWithBusCompleted], @"The bus listener should have been notified that a listener was unregistered.");
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_listenerDidUnregisterWithBusCompleted], @"The bus listener should have been notified that a listener was unregistered.");
 }
 
 - (void)testShouldAllowSessionToBeJoinedByAClient
@@ -528,51 +528,51 @@ static const uint8_t ICON_BYTE = 0x11;
     [client.bus registerBusListener:client];
     
     QStatus status = [self.bus start];
-    STAssertTrue(status == ER_OK, @"Bus failed to start.");    
+    XCTAssertTrue(status == ER_OK, @"Bus failed to start.");    
     status = [client.bus start];
-    STAssertTrue(status == ER_OK, @"Bus for client failed to start.");        
+    XCTAssertTrue(status == ER_OK, @"Bus for client failed to start.");        
     
     status = [self.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
     status = [client.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
     
     status = [self.bus requestWellKnownName:kBusAttachmentTestsAdvertisedName withFlags:kAJNBusNameFlagDoNotQueue|kAJNBusNameFlagReplaceExisting];
-    STAssertTrue(status == ER_OK, @"Request for well known name failed.");
+    XCTAssertTrue(status == ER_OK, @"Request for well known name failed.");
     
     AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
     
     status = [self.bus bindSessionOnPort:kBusAttachmentTestsServicePort withOptions:sessionOptions withDelegate:self];
-    STAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
+    XCTAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
     
     status = [self.bus advertiseName:kBusAttachmentTestsAdvertisedName withTransportMask:kAJNTransportMaskAny];
-    STAssertTrue(status == ER_OK, @"Advertise name failed.");
+    XCTAssertTrue(status == ER_OK, @"Advertise name failed.");
     
     status = [client.bus findAdvertisedName:kBusAttachmentTestsAdvertisedName];
-    STAssertTrue(status == ER_OK, @"Client attempt to find advertised name %@ failed.", kBusAttachmentTestsAdvertisedName);
+    XCTAssertTrue(status == ER_OK, @"Client attempt to find advertised name %@ failed.", kBusAttachmentTestsAdvertisedName);
 
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_shouldAcceptSessionJoinerNamed], @"The service did not report that it was queried for acceptance of the client joiner.");
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_didJoinInSession], @"The service did not receive a notification that the client joined the session.");
-    STAssertTrue(client.clientConnectionCompleted, @"The client did not report that it connected.");
-    STAssertTrue(client.testSessionId == self.testSessionId, @"The client session id does not match the service session id.");
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_shouldAcceptSessionJoinerNamed], @"The service did not report that it was queried for acceptance of the client joiner.");
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_didJoinInSession], @"The service did not receive a notification that the client joined the session.");
+    XCTAssertTrue(client.clientConnectionCompleted, @"The client did not report that it connected.");
+    XCTAssertTrue(client.testSessionId == self.testSessionId, @"The client session id does not match the service session id.");
 
     status = [client.bus disconnectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Client disconnect from bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Client disconnect from bus via null transport failed.");
     status = [self.bus disconnectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
     
     status = [client.bus stop];
-    STAssertTrue(status == ER_OK, @"Client bus failed to stop.");
+    XCTAssertTrue(status == ER_OK, @"Client bus failed to stop.");
     status = [self.bus stop];
-    STAssertTrue(status == ER_OK, @"Bus failed to stop.");
+    XCTAssertTrue(status == ER_OK, @"Bus failed to stop.");
     
-    STAssertTrue([self waitForBusToStop:kBusAttachmentTestsWaitTimeBeforeFailure], @"The bus listener should have been notified that the bus is stopping.");    
-    STAssertTrue([client waitForBusToStop:kBusAttachmentTestsWaitTimeBeforeFailure], @"The client bus listener should have been notified that the bus is stopping.");    
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_busDidDisconnectCompleted], @"The bus listener should have been notified that the bus was disconnected.");    
+    XCTAssertTrue([self waitForBusToStop:kBusAttachmentTestsWaitTimeBeforeFailure], @"The bus listener should have been notified that the bus is stopping.");    
+    XCTAssertTrue([client waitForBusToStop:kBusAttachmentTestsWaitTimeBeforeFailure], @"The client bus listener should have been notified that the bus is stopping.");    
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_busDidDisconnectCompleted], @"The bus listener should have been notified that the bus was disconnected.");    
 
     [client.bus unregisterBusListener:client];
     [self.bus unregisterBusListener:self];
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_listenerDidUnregisterWithBusCompleted], @"The bus listener should have been notified that a listener was unregistered.");
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_listenerDidUnregisterWithBusCompleted], @"The bus listener should have been notified that a listener was unregistered.");
 
     [client tearDown];
 }
@@ -588,58 +588,58 @@ static const uint8_t ICON_BYTE = 0x11;
     [client.bus registerBusListener:client];
     
     QStatus status = [self.bus start];
-    STAssertTrue(status == ER_OK, @"Bus failed to start.");    
+    XCTAssertTrue(status == ER_OK, @"Bus failed to start.");    
     status = [client.bus start];
-    STAssertTrue(status == ER_OK, @"Bus for client failed to start.");        
+    XCTAssertTrue(status == ER_OK, @"Bus for client failed to start.");        
     
     status = [self.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
     status = [client.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
     
     status = [self.bus requestWellKnownName:kBusAttachmentTestsAdvertisedName withFlags:kAJNBusNameFlagDoNotQueue|kAJNBusNameFlagReplaceExisting];
-    STAssertTrue(status == ER_OK, @"Request for well known name failed.");
+    XCTAssertTrue(status == ER_OK, @"Request for well known name failed.");
     
     AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
     
     status = [self.bus bindSessionOnPort:kBusAttachmentTestsServicePort withOptions:sessionOptions withDelegate:self];
-    STAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
+    XCTAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
     
     status = [self.bus advertiseName:kBusAttachmentTestsAdvertisedName withTransportMask:kAJNTransportMaskAny];
-    STAssertTrue(status == ER_OK, @"Advertise name failed.");
+    XCTAssertTrue(status == ER_OK, @"Advertise name failed.");
     
     status = [client.bus findAdvertisedName:kBusAttachmentTestsAdvertisedName];
-    STAssertTrue(status == ER_OK, @"Client attempt to find advertised name %@ failed.", kBusAttachmentTestsAdvertisedName);
+    XCTAssertTrue(status == ER_OK, @"Client attempt to find advertised name %@ failed.", kBusAttachmentTestsAdvertisedName);
     
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_shouldAcceptSessionJoinerNamed], @"The service did not report that it was queried for acceptance of the client joiner.");
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_didJoinInSession], @"The service did not receive a notification that the client joined the session.");
-    STAssertTrue(client.clientConnectionCompleted, @"The client did not report that it connected.");
-    STAssertTrue(client.testSessionId == self.testSessionId, @"The client session id does not match the service session id.");
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_shouldAcceptSessionJoinerNamed], @"The service did not report that it was queried for acceptance of the client joiner.");
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_didJoinInSession], @"The service did not receive a notification that the client joined the session.");
+    XCTAssertTrue(client.clientConnectionCompleted, @"The client did not report that it connected.");
+    XCTAssertTrue(client.testSessionId == self.testSessionId, @"The client session id does not match the service session id.");
     
     uint32_t timeout = 40;
     status = [client.bus setLinkTimeout:&timeout forSession:client.testSessionId];
-    STAssertTrue(status == ER_OK, @"Failed to set the link timeout on the client's bus attachment. Error was %@", [AJNStatus descriptionForStatusCode:status]);
+    XCTAssertTrue(status == ER_OK, @"Failed to set the link timeout on the client's bus attachment. Error was %@", [AJNStatus descriptionForStatusCode:status]);
     timeout = 40;
     status = [self.bus setLinkTimeout:&timeout forSession:self.testSessionId];
-    STAssertTrue(status == ER_OK, @"Failed to set the link timeout on the service's bus attachment. Error was %@", [AJNStatus descriptionForStatusCode:status]);
+    XCTAssertTrue(status == ER_OK, @"Failed to set the link timeout on the service's bus attachment. Error was %@", [AJNStatus descriptionForStatusCode:status]);
     
     status = [client.bus disconnectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Client disconnect from bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Client disconnect from bus via null transport failed.");
     status = [self.bus disconnectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
     
     status = [client.bus stop];
-    STAssertTrue(status == ER_OK, @"Client bus failed to stop.");
+    XCTAssertTrue(status == ER_OK, @"Client bus failed to stop.");
     status = [self.bus stop];
-    STAssertTrue(status == ER_OK, @"Bus failed to stop.");
+    XCTAssertTrue(status == ER_OK, @"Bus failed to stop.");
     
-    STAssertTrue([self waitForBusToStop:kBusAttachmentTestsWaitTimeBeforeFailure], @"The bus listener should have been notified that the bus is stopping.");    
-    STAssertTrue([client waitForBusToStop:kBusAttachmentTestsWaitTimeBeforeFailure], @"The client bus listener should have been notified that the bus is stopping.");    
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_busDidDisconnectCompleted], @"The bus listener should have been notified that the bus was disconnected.");    
+    XCTAssertTrue([self waitForBusToStop:kBusAttachmentTestsWaitTimeBeforeFailure], @"The bus listener should have been notified that the bus is stopping.");    
+    XCTAssertTrue([client waitForBusToStop:kBusAttachmentTestsWaitTimeBeforeFailure], @"The client bus listener should have been notified that the bus is stopping.");    
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_busDidDisconnectCompleted], @"The bus listener should have been notified that the bus was disconnected.");    
     
     [client.bus unregisterBusListener:client];
     [self.bus unregisterBusListener:self];
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_listenerDidUnregisterWithBusCompleted], @"The bus listener should have been notified that a listener was unregistered.");
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_listenerDidUnregisterWithBusCompleted], @"The bus listener should have been notified that a listener was unregistered.");
     
     [client tearDown];
 }
@@ -655,51 +655,51 @@ static const uint8_t ICON_BYTE = 0x11;
     [client.bus registerBusListener:client];
     
     QStatus status = [self.bus start];
-    STAssertTrue(status == ER_OK, @"Bus failed to start.");    
+    XCTAssertTrue(status == ER_OK, @"Bus failed to start.");    
     status = [client.bus start];
-    STAssertTrue(status == ER_OK, @"Bus for client failed to start.");        
+    XCTAssertTrue(status == ER_OK, @"Bus for client failed to start.");        
     
     status = [self.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
     status = [client.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
     
     status = [self.bus requestWellKnownName:kBusAttachmentTestsAdvertisedName withFlags:kAJNBusNameFlagDoNotQueue|kAJNBusNameFlagReplaceExisting];
-    STAssertTrue(status == ER_OK, @"Request for well known name failed.");
+    XCTAssertTrue(status == ER_OK, @"Request for well known name failed.");
     
     AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
     
     status = [self.bus bindSessionOnPort:kBusAttachmentTestsServicePort withOptions:sessionOptions withDelegate:self];
-    STAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
+    XCTAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
     
     status = [self.bus advertiseName:kBusAttachmentTestsAdvertisedName withTransportMask:kAJNTransportMaskAny];
-    STAssertTrue(status == ER_OK, @"Advertise name failed.");
+    XCTAssertTrue(status == ER_OK, @"Advertise name failed.");
     
     status = [client.bus findAdvertisedName:kBusAttachmentTestsAdvertisedName];
-    STAssertTrue(status == ER_OK, @"Client attempt to find advertised name %@ failed.", kBusAttachmentTestsAdvertisedName);
+    XCTAssertTrue(status == ER_OK, @"Client attempt to find advertised name %@ failed.", kBusAttachmentTestsAdvertisedName);
     
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_shouldAcceptSessionJoinerNamed], @"The service did not report that it was queried for acceptance of the client joiner.");
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_didJoinInSession], @"The service did not receive a notification that the client joined the session.");
-    STAssertTrue(client.clientConnectionCompleted, @"The client did not report that it connected.");
-    STAssertTrue(client.testSessionId == self.testSessionId, @"The client session id does not match the service session id.");
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_shouldAcceptSessionJoinerNamed], @"The service did not report that it was queried for acceptance of the client joiner.");
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_didJoinInSession], @"The service did not receive a notification that the client joined the session.");
+    XCTAssertTrue(client.clientConnectionCompleted, @"The client did not report that it connected.");
+    XCTAssertTrue(client.testSessionId == self.testSessionId, @"The client session id does not match the service session id.");
     
     status = [client.bus disconnectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Client disconnect from bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Client disconnect from bus via null transport failed.");
     status = [self.bus disconnectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
     
     status = [client.bus stop];
-    STAssertTrue(status == ER_OK, @"Client bus failed to stop.");
+    XCTAssertTrue(status == ER_OK, @"Client bus failed to stop.");
     status = [self.bus stop];
-    STAssertTrue(status == ER_OK, @"Bus failed to stop.");
+    XCTAssertTrue(status == ER_OK, @"Bus failed to stop.");
     
-    STAssertTrue([self waitForBusToStop:kBusAttachmentTestsWaitTimeBeforeFailure], @"The bus listener should have been notified that the bus is stopping.");    
-    STAssertTrue([client waitForBusToStop:kBusAttachmentTestsWaitTimeBeforeFailure], @"The client bus listener should have been notified that the bus is stopping.");    
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_busDidDisconnectCompleted], @"The bus listener should have been notified that the bus was disconnected.");    
+    XCTAssertTrue([self waitForBusToStop:kBusAttachmentTestsWaitTimeBeforeFailure], @"The bus listener should have been notified that the bus is stopping.");    
+    XCTAssertTrue([client waitForBusToStop:kBusAttachmentTestsWaitTimeBeforeFailure], @"The client bus listener should have been notified that the bus is stopping.");    
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_busDidDisconnectCompleted], @"The bus listener should have been notified that the bus was disconnected.");    
     
     [client.bus unregisterBusListener:client];
     [self.bus unregisterBusListener:self];
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_listenerDidUnregisterWithBusCompleted], @"The bus listener should have been notified that a listener was unregistered.");
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_listenerDidUnregisterWithBusCompleted], @"The bus listener should have been notified that a listener was unregistered.");
     
     [client tearDown];
 }
@@ -715,50 +715,50 @@ static const uint8_t ICON_BYTE = 0x11;
     [client.bus registerBusListener:client];
     
     QStatus status = [self.bus start];
-    STAssertTrue(status == ER_OK, @"Bus failed to start.");    
+    XCTAssertTrue(status == ER_OK, @"Bus failed to start.");    
     status = [client.bus start];
-    STAssertTrue(status == ER_OK, @"Bus for client failed to start.");        
+    XCTAssertTrue(status == ER_OK, @"Bus for client failed to start.");        
     
     status = [self.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
     status = [client.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
     
     status = [self.bus requestWellKnownName:kBusAttachmentTestsAdvertisedName withFlags:kAJNBusNameFlagDoNotQueue|kAJNBusNameFlagReplaceExisting];
-    STAssertTrue(status == ER_OK, @"Request for well known name failed.");
+    XCTAssertTrue(status == ER_OK, @"Request for well known name failed.");
     
     AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
     
     status = [self.bus bindSessionOnPort:kBusAttachmentTestsServicePort withOptions:sessionOptions withDelegate:self];
-    STAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
+    XCTAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
     
     status = [self.bus advertiseName:kBusAttachmentTestsAdvertisedName withTransportMask:kAJNTransportMaskAny];
-    STAssertTrue(status == ER_OK, @"Advertise name failed.");
+    XCTAssertTrue(status == ER_OK, @"Advertise name failed.");
     
     status = [client.bus findAdvertisedName:kBusAttachmentTestsAdvertisedName];
-    STAssertTrue(status == ER_OK, @"Client attempt to find advertised name %@ failed.", kBusAttachmentTestsAdvertisedName);
+    XCTAssertTrue(status == ER_OK, @"Client attempt to find advertised name %@ failed.", kBusAttachmentTestsAdvertisedName);
     
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_shouldAcceptSessionJoinerNamed], @"The service did not report that it was queried for acceptance of the client joiner.");
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_didJoinInSession], @"The service did not receive a notification that the client joined the session.");
-    STAssertTrue(client.clientConnectionCompleted, @"The client did not report that it connected.");
-    STAssertTrue(client.testSessionId == self.testSessionId, @"The client session id does not match the service session id.");
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_shouldAcceptSessionJoinerNamed], @"The service did not report that it was queried for acceptance of the client joiner.");
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_didJoinInSession], @"The service did not receive a notification that the client joined the session.");
+    XCTAssertTrue(client.clientConnectionCompleted, @"The client did not report that it connected.");
+    XCTAssertTrue(client.testSessionId == self.testSessionId, @"The client session id does not match the service session id.");
     status = [client.bus disconnectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Client disconnect from bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Client disconnect from bus via null transport failed.");
     status = [self.bus disconnectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
     
     status = [client.bus stop];
-    STAssertTrue(status == ER_OK, @"Client bus failed to stop.");
+    XCTAssertTrue(status == ER_OK, @"Client bus failed to stop.");
     status = [self.bus stop];
-    STAssertTrue(status == ER_OK, @"Bus failed to stop.");
+    XCTAssertTrue(status == ER_OK, @"Bus failed to stop.");
     
-    STAssertTrue([self waitForBusToStop:kBusAttachmentTestsWaitTimeBeforeFailure], @"The bus listener should have been notified that the bus is stopping.");    
-    STAssertTrue([client waitForBusToStop:kBusAttachmentTestsWaitTimeBeforeFailure], @"The client bus listener should have been notified that the bus is stopping.");    
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_busDidDisconnectCompleted], @"The bus listener should have been notified that the bus was disconnected.");    
+    XCTAssertTrue([self waitForBusToStop:kBusAttachmentTestsWaitTimeBeforeFailure], @"The bus listener should have been notified that the bus is stopping.");    
+    XCTAssertTrue([client waitForBusToStop:kBusAttachmentTestsWaitTimeBeforeFailure], @"The client bus listener should have been notified that the bus is stopping.");    
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_busDidDisconnectCompleted], @"The bus listener should have been notified that the bus was disconnected.");    
     
     [client.bus unregisterBusListener:client];
     [self.bus unregisterBusListener:self];
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_listenerDidUnregisterWithBusCompleted], @"The bus listener should have been notified that a listener was unregistered.");
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_listenerDidUnregisterWithBusCompleted], @"The bus listener should have been notified that a listener was unregistered.");
     
     [client tearDown];
 }
@@ -775,54 +775,54 @@ static const uint8_t ICON_BYTE = 0x11;
     [client.bus registerBusListener:client];
     
     QStatus status = [self.bus start];
-    STAssertTrue(status == ER_OK, @"Bus failed to start.");
+    XCTAssertTrue(status == ER_OK, @"Bus failed to start.");
     status = [client.bus start];
-    STAssertTrue(status == ER_OK, @"Bus for client failed to start.");
+    XCTAssertTrue(status == ER_OK, @"Bus for client failed to start.");
     
     status = [self.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
     status = [client.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
     
     status = [self.bus requestWellKnownName:kBusAttachmentTestsAdvertisedName withFlags:kAJNBusNameFlagDoNotQueue|kAJNBusNameFlagReplaceExisting];
-    STAssertTrue(status == ER_OK, @"Request for well known name failed.");
+    XCTAssertTrue(status == ER_OK, @"Request for well known name failed.");
     
     AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
     
     status = [self.bus bindSessionOnPort:kBusAttachmentTestsServicePort withOptions:sessionOptions withDelegate:self];
-    STAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
+    XCTAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
     
     status = [self.bus advertiseName:kBusAttachmentTestsAdvertisedName withTransportMask:kAJNTransportMaskAny];
-    STAssertTrue(status == ER_OK, @"Advertise name failed.");
+    XCTAssertTrue(status == ER_OK, @"Advertise name failed.");
     
     status = [client.bus findAdvertisedName:kBusAttachmentTestsAdvertisedName];
-    STAssertTrue(status == ER_OK, @"Client attempt to find advertised name %@ failed.", kBusAttachmentTestsAdvertisedName);
+    XCTAssertTrue(status == ER_OK, @"Client attempt to find advertised name %@ failed.", kBusAttachmentTestsAdvertisedName);
     
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_shouldAcceptSessionJoinerNamed], @"The service did not report that it was queried for acceptance of the client joiner.");
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_didJoinInSession], @"The service did not receive a notification that the client joined the session.");
-    STAssertTrue(client.clientConnectionCompleted, @"The client did not report that it connected.");
-    STAssertTrue(client.testSessionId == self.testSessionId, @"The client session id does not match the service session id.");
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_shouldAcceptSessionJoinerNamed], @"The service did not report that it was queried for acceptance of the client joiner.");
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_didJoinInSession], @"The service did not receive a notification that the client joined the session.");
+    XCTAssertTrue(client.clientConnectionCompleted, @"The client did not report that it connected.");
+    XCTAssertTrue(client.testSessionId == self.testSessionId, @"The client session id does not match the service session id.");
     
-    STAssertTrue(ER_OK == [self.bus pingPeerAsync:kBusAttachmentTestsAdvertisedName withTimeout:5 completionDelegate:self context:nil], @"PingPeerAsync Failed");
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_isPingAsyncComplete], @"The service could not be pinged");
+    XCTAssertTrue(ER_OK == [self.bus pingPeerAsync:kBusAttachmentTestsAdvertisedName withTimeout:5 completionDelegate:self context:nil], @"PingPeerAsync Failed");
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_isPingAsyncComplete], @"The service could not be pinged");
     
     status = [client.bus disconnectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Client disconnect from bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Client disconnect from bus via null transport failed.");
     status = [self.bus disconnectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
     
     status = [client.bus stop];
-    STAssertTrue(status == ER_OK, @"Client bus failed to stop.");
+    XCTAssertTrue(status == ER_OK, @"Client bus failed to stop.");
     status = [self.bus stop];
-    STAssertTrue(status == ER_OK, @"Bus failed to stop.");
+    XCTAssertTrue(status == ER_OK, @"Bus failed to stop.");
     
-    STAssertTrue([self waitForBusToStop:kBusAttachmentTestsWaitTimeBeforeFailure], @"The bus listener should have been notified that the bus is stopping.");
-    STAssertTrue([client waitForBusToStop:kBusAttachmentTestsWaitTimeBeforeFailure], @"The client bus listener should have been notified that the bus is stopping.");
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_busDidDisconnectCompleted], @"The bus listener should have been notified that the bus was disconnected.");
+    XCTAssertTrue([self waitForBusToStop:kBusAttachmentTestsWaitTimeBeforeFailure], @"The bus listener should have been notified that the bus is stopping.");
+    XCTAssertTrue([client waitForBusToStop:kBusAttachmentTestsWaitTimeBeforeFailure], @"The client bus listener should have been notified that the bus is stopping.");
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_busDidDisconnectCompleted], @"The bus listener should have been notified that the bus was disconnected.");
     
     [client.bus unregisterBusListener:client];
     [self.bus unregisterBusListener:self];
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_listenerDidUnregisterWithBusCompleted], @"The bus listener should have been notified that a listener was unregistered.");
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_listenerDidUnregisterWithBusCompleted], @"The bus listener should have been notified that a listener was unregistered.");
     
     [client tearDown];
 }
@@ -838,59 +838,59 @@ static const uint8_t ICON_BYTE = 0x11;
     [client.bus registerBusListener:client];
     
     QStatus status = [self.bus start];
-    STAssertTrue(status == ER_OK, @"Bus failed to start.");
+    XCTAssertTrue(status == ER_OK, @"Bus failed to start.");
     status = [client.bus start];
-    STAssertTrue(status == ER_OK, @"Bus for client failed to start.");
+    XCTAssertTrue(status == ER_OK, @"Bus for client failed to start.");
     
     status = [self.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
     status = [client.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
     
     status = [self.bus requestWellKnownName:kBusAttachmentTestsAdvertisedName withFlags:kAJNBusNameFlagDoNotQueue|kAJNBusNameFlagReplaceExisting];
-    STAssertTrue(status == ER_OK, @"Request for well known name failed.");
+    XCTAssertTrue(status == ER_OK, @"Request for well known name failed.");
     
     AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
     
     status = [self.bus bindSessionOnPort:kBusAttachmentTestsServicePort withOptions:sessionOptions withDelegate:self];
-    STAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
+    XCTAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
     
     status = [self.bus advertiseName:kBusAttachmentTestsAdvertisedName withTransportMask:kAJNTransportMaskAny];
-    STAssertTrue(status == ER_OK, @"Advertise name failed.");
+    XCTAssertTrue(status == ER_OK, @"Advertise name failed.");
     
     status = [client.bus findAdvertisedName:kBusAttachmentTestsAdvertisedName];
-    STAssertTrue(status == ER_OK, @"Client attempt to find advertised name %@ failed.", kBusAttachmentTestsAdvertisedName);
+    XCTAssertTrue(status == ER_OK, @"Client attempt to find advertised name %@ failed.", kBusAttachmentTestsAdvertisedName);
     
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_shouldAcceptSessionJoinerNamed], @"The service did not report that it was queried for acceptance of the client joiner.");
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_didJoinInSession], @"The service did not receive a notification that the client joined the session.");
-    STAssertTrue(client.clientConnectionCompleted, @"The client did not report that it connected.");
-    STAssertTrue(client.testSessionId == self.testSessionId, @"The client session id does not match the service session id.");
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_shouldAcceptSessionJoinerNamed], @"The service did not report that it was queried for acceptance of the client joiner.");
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_didJoinInSession], @"The service did not receive a notification that the client joined the session.");
+    XCTAssertTrue(client.clientConnectionCompleted, @"The client did not report that it connected.");
+    XCTAssertTrue(client.testSessionId == self.testSessionId, @"The client session id does not match the service session id.");
     
-    STAssertTrue(ER_OK == [self.bus pingPeerAsync:kBusAttachmentTestsAdvertisedName withTimeout:5
+    XCTAssertTrue(ER_OK == [self.bus pingPeerAsync:kBusAttachmentTestsAdvertisedName withTimeout:5
                                   completionBlock:^(QStatus status, void *context) {
                                       NSLog(@"Ping Peer Async callback");
-                                      STAssertTrue(status == ER_OK, @"Ping Peer Async failed");
+                                      XCTAssertTrue(status == ER_OK, @"Ping Peer Async failed");
                                       self.isPingAsyncComplete = YES;
                                   }context:nil], @"PingPeerAsync Failed");
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_isPingAsyncComplete], @"The service could not be pinged");
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_isPingAsyncComplete], @"The service could not be pinged");
     
     status = [client.bus disconnectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Client disconnect from bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Client disconnect from bus via null transport failed.");
     status = [self.bus disconnectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
     
     status = [client.bus stop];
-    STAssertTrue(status == ER_OK, @"Client bus failed to stop.");
+    XCTAssertTrue(status == ER_OK, @"Client bus failed to stop.");
     status = [self.bus stop];
-    STAssertTrue(status == ER_OK, @"Bus failed to stop.");
+    XCTAssertTrue(status == ER_OK, @"Bus failed to stop.");
     
-    STAssertTrue([self waitForBusToStop:kBusAttachmentTestsWaitTimeBeforeFailure], @"The bus listener should have been notified that the bus is stopping.");
-    STAssertTrue([client waitForBusToStop:kBusAttachmentTestsWaitTimeBeforeFailure], @"The client bus listener should have been notified that the bus is stopping.");
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_busDidDisconnectCompleted], @"The bus listener should have been notified that the bus was disconnected.");
+    XCTAssertTrue([self waitForBusToStop:kBusAttachmentTestsWaitTimeBeforeFailure], @"The bus listener should have been notified that the bus is stopping.");
+    XCTAssertTrue([client waitForBusToStop:kBusAttachmentTestsWaitTimeBeforeFailure], @"The client bus listener should have been notified that the bus is stopping.");
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_busDidDisconnectCompleted], @"The bus listener should have been notified that the bus was disconnected.");
     
     [client.bus unregisterBusListener:client];
     [self.bus unregisterBusListener:self];
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_listenerDidUnregisterWithBusCompleted], @"The bus listener should have been notified that a listener was unregistered.");
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_listenerDidUnregisterWithBusCompleted], @"The bus listener should have been notified that a listener was unregistered.");
     
     [client tearDown];
 }
@@ -904,54 +904,54 @@ static const uint8_t ICON_BYTE = 0x11;
     [self.bus registerBusListener:self];
     
     QStatus status = [self.bus start];
-    STAssertTrue(status == ER_OK, @"Bus failed to start.");
+    XCTAssertTrue(status == ER_OK, @"Bus failed to start.");
     
     status = [self.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
     
     AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:NO proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
     
     status = [self.bus bindSessionOnPort:kBusAttachmentTestsServicePort withOptions:sessionOptions withDelegate:self];
-    STAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
+    XCTAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
     
     status = [self.bus requestWellKnownName:kBusAttachmentTestsAdvertisedName withFlags:kAJNBusNameFlagDoNotQueue|kAJNBusNameFlagReplaceExisting];
-    STAssertTrue(status == ER_OK, @"Request for well known name failed.");
+    XCTAssertTrue(status == ER_OK, @"Request for well known name failed.");
     
     status = [self.bus advertiseName:kBusAttachmentTestsAdvertisedName withTransportMask:kAJNTransportMaskAny];
-    STAssertTrue(status == ER_OK, @"Advertise name failed.");
+    XCTAssertTrue(status == ER_OK, @"Advertise name failed.");
     
     status = [client.bus findAdvertisedName:kBusAttachmentTestsAdvertisedName];
-    STAssertTrue(status == ER_OK, @"Client attempt to find advertised name %@ failed.", kBusAttachmentTestsAdvertisedName);
+    XCTAssertTrue(status == ER_OK, @"Client attempt to find advertised name %@ failed.", kBusAttachmentTestsAdvertisedName);
     
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_shouldAcceptSessionJoinerNamed], @"The service did not report that it was queried for acceptance of the client joiner.");
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_didJoinInSession], @"The service did not receive a notification that the client joined the session.");
-    STAssertTrue(client.clientConnectionCompleted, @"The client did not report that it connected.");
-    STAssertTrue(client.testSessionId == self.testSessionId, @"The client session id does not match the service session id.");
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_shouldAcceptSessionJoinerNamed], @"The service did not report that it was queried for acceptance of the client joiner.");
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_didJoinInSession], @"The service did not receive a notification that the client joined the session.");
+    XCTAssertTrue(client.clientConnectionCompleted, @"The client did not report that it connected.");
+    XCTAssertTrue(client.testSessionId == self.testSessionId, @"The client session id does not match the service session id.");
     
     status = [self.bus bindHostedSessionListener:self toSession:self.testSessionId];
-    STAssertTrue(status == ER_OK, @"Binding of a Service sessionlistener failed");
+    XCTAssertTrue(status == ER_OK, @"Binding of a Service sessionlistener failed");
     
     status = [client.bus bindJoinedSessionListener:client toSession:client.testSessionId];
-    STAssertTrue(status == ER_OK, @"Binding of a Client sessionlistener failed");
+    XCTAssertTrue(status == ER_OK, @"Binding of a Client sessionlistener failed");
     
     status = [self.bus bindHostedSessionListener:nil toSession:self.testSessionId];
-    STAssertTrue(status == ER_OK, @"Removal of the Service sessionlistener failed");
+    XCTAssertTrue(status == ER_OK, @"Removal of the Service sessionlistener failed");
     
     status = [client.bus bindJoinedSessionListener:nil toSession:client.testSessionId];
-    STAssertTrue(status == ER_OK, @"Removal of the Client sessionlistener failed");
+    XCTAssertTrue(status == ER_OK, @"Removal of the Client sessionlistener failed");
     
     status = [self.bus leaveHostedSession:self.testSessionId];
-    STAssertTrue(status == ER_OK, @"Service failed to leave self joined session");
+    XCTAssertTrue(status == ER_OK, @"Service failed to leave self joined session");
     
     status = [self.bus stop];
-    STAssertTrue(status == ER_OK, @"Bus failed to stop.");
+    XCTAssertTrue(status == ER_OK, @"Bus failed to stop.");
     
-    STAssertTrue([client waitForBusToStop:kBusAttachmentTestsWaitTimeBeforeFailure], @"The bus listener should have been notified that the bus is stopping.");
-    STAssertTrue([self waitForBusToStop:kBusAttachmentTestsWaitTimeBeforeFailure], @"The bus listener should have been notified that the bus is stopping.");
+    XCTAssertTrue([client waitForBusToStop:kBusAttachmentTestsWaitTimeBeforeFailure], @"The bus listener should have been notified that the bus is stopping.");
+    XCTAssertTrue([self waitForBusToStop:kBusAttachmentTestsWaitTimeBeforeFailure], @"The bus listener should have been notified that the bus is stopping.");
     
     [client.bus unregisterBusListener:client];
     [self.bus unregisterBusListener:self];
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_listenerDidUnregisterWithBusCompleted], @"The bus listener should have been notified that a listener was unregistered.");
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_listenerDidUnregisterWithBusCompleted], @"The bus listener should have been notified that a listener was unregistered.");
     
     [client tearDown];
 }
@@ -965,50 +965,50 @@ static const uint8_t ICON_BYTE = 0x11;
     [self.bus registerBusListener:self];
     
     QStatus status = [self.bus start];
-    STAssertTrue(status == ER_OK, @"Bus failed to start.");
+    XCTAssertTrue(status == ER_OK, @"Bus failed to start.");
     
     status = [self.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
     
     AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:NO proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
     
     status = [self.bus bindSessionOnPort:kBusAttachmentTestsServicePort withOptions:sessionOptions withDelegate:self];
-    STAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
+    XCTAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
     
     status = [self.bus requestWellKnownName:kBusAttachmentTestsAdvertisedName withFlags:kAJNBusNameFlagDoNotQueue|kAJNBusNameFlagReplaceExisting];
-    STAssertTrue(status == ER_OK, @"Request for well known name failed.");
+    XCTAssertTrue(status == ER_OK, @"Request for well known name failed.");
     
     status = [self.bus advertiseName:kBusAttachmentTestsAdvertisedName withTransportMask:kAJNTransportMaskAny];
-    STAssertTrue(status == ER_OK, @"Advertise name failed.");
+    XCTAssertTrue(status == ER_OK, @"Advertise name failed.");
     
     status = [client.bus findAdvertisedName:kBusAttachmentTestsAdvertisedName];
-    STAssertTrue(status == ER_OK, @"Client attempt to find advertised name %@ failed.", kBusAttachmentTestsAdvertisedName);
+    XCTAssertTrue(status == ER_OK, @"Client attempt to find advertised name %@ failed.", kBusAttachmentTestsAdvertisedName);
     
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_shouldAcceptSessionJoinerNamed], @"The service did not report that it was queried for acceptance of the client joiner.");
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_didJoinInSession], @"The service did not receive a notification that the client joined the session.");
-    STAssertTrue(client.clientConnectionCompleted, @"The client did not report that it connected.");
-    STAssertTrue(client.testSessionId == self.testSessionId, @"The client session id does not match the service session id.");
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_shouldAcceptSessionJoinerNamed], @"The service did not report that it was queried for acceptance of the client joiner.");
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_didJoinInSession], @"The service did not receive a notification that the client joined the session.");
+    XCTAssertTrue(client.clientConnectionCompleted, @"The client did not report that it connected.");
+    XCTAssertTrue(client.testSessionId == self.testSessionId, @"The client session id does not match the service session id.");
     
     status = [self.bus bindHostedSessionListener:self toSession:self.testSessionId];
-    STAssertTrue(status == ER_OK, @"Binding of a Service sessionlistener failed");
+    XCTAssertTrue(status == ER_OK, @"Binding of a Service sessionlistener failed");
     
     status = [client.bus bindJoinedSessionListener:client toSession:client.testSessionId];
-    STAssertTrue(status == ER_OK, @"Binding of a Client sessionlistener failed");
+    XCTAssertTrue(status == ER_OK, @"Binding of a Client sessionlistener failed");
     
     status = [client.bus leaveJoinedSession:client.testSessionId];
-    STAssertTrue(status == ER_OK, @"Client failed to leave self joined session");
+    XCTAssertTrue(status == ER_OK, @"Client failed to leave self joined session");
     
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_sessionWasLost], @"The Service was not informed that the session was lost.");
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_sessionWasLost], @"The Service was not informed that the session was lost.");
     
     status = [self.bus stop];
-    STAssertTrue(status == ER_OK, @"Bus failed to stop.");
+    XCTAssertTrue(status == ER_OK, @"Bus failed to stop.");
     
-    STAssertTrue([client waitForBusToStop:kBusAttachmentTestsWaitTimeBeforeFailure], @"The bus listener should have been notified that the bus is stopping.");
-    STAssertTrue([self waitForBusToStop:kBusAttachmentTestsWaitTimeBeforeFailure], @"The bus listener should have been notified that the bus is stopping.");
+    XCTAssertTrue([client waitForBusToStop:kBusAttachmentTestsWaitTimeBeforeFailure], @"The bus listener should have been notified that the bus is stopping.");
+    XCTAssertTrue([self waitForBusToStop:kBusAttachmentTestsWaitTimeBeforeFailure], @"The bus listener should have been notified that the bus is stopping.");
     
     [client.bus unregisterBusListener:client];
     [self.bus unregisterBusListener:self];
-    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_listenerDidUnregisterWithBusCompleted], @"The bus listener should have been notified that a listener was unregistered.");
+    XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_listenerDidUnregisterWithBusCompleted], @"The bus listener should have been notified that a listener was unregistered.");
     
     [client tearDown];
 }
@@ -1026,14 +1026,14 @@ static const uint8_t ICON_BYTE = 0x11;
     [self.bus registerBusObject:basicObject];
     
     QStatus status = [self.bus start];
-    STAssertTrue(status == ER_OK, @"Bus failed to start.");
+    XCTAssertTrue(status == ER_OK, @"Bus failed to start.");
     status = [self.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
     
     AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
     
     status = [self.bus bindSessionOnPort:kBusAttachmentTestsServicePort withOptions:sessionOptions withDelegate:self];
-    STAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
+    XCTAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
 
     AJNAboutObject *aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
     [aboutObj announceForSessionPort:kBusAttachmentTestsServicePort withAboutDataListener:self];
@@ -1041,13 +1041,13 @@ static const uint8_t ICON_BYTE = 0x11;
     // Client
     [client.bus registerAboutListener:client];
     status = [client.bus start];
-    STAssertTrue(status == ER_OK, @"Bus for client failed to start.");
+    XCTAssertTrue(status == ER_OK, @"Bus for client failed to start.");
     status = [client.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
     status = [client.bus whoImplementsInterface:@"org.alljoyn.bus.sample.strings"];
-    STAssertTrue(status == ER_OK, @"Client call to WhoImplements Failed");
+    XCTAssertTrue(status == ER_OK, @"Client call to WhoImplements Failed");
     
-    STAssertTrue([client waitForCompletion:20 onFlag:&receiveAnnounce], @"The about listener should have been notified that the announce signal is received.");
+    XCTAssertTrue([client waitForCompletion:20 onFlag:&receiveAnnounce], @"The about listener should have been notified that the announce signal is received.");
     
     [self.bus disconnectWithArguments:@"null:"];
     [self.bus stop];
@@ -1073,14 +1073,14 @@ static const uint8_t ICON_BYTE = 0x11;
     [self.bus registerBusObject:basicObject];
     
     QStatus status = [self.bus start];
-    STAssertTrue(status == ER_OK, @"Bus failed to start.");
+    XCTAssertTrue(status == ER_OK, @"Bus failed to start.");
     status = [self.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
     
     AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
     
     status = [self.bus bindSessionOnPort:kBusAttachmentTestsServicePort withOptions:sessionOptions withDelegate:self];
-    STAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
+    XCTAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
     
     AJNAboutObject *aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
     [aboutObj announceForSessionPort:kBusAttachmentTestsServicePort withAboutDataListener:self];
@@ -1088,18 +1088,18 @@ static const uint8_t ICON_BYTE = 0x11;
     // Client
     [client.bus registerAboutListener:client];
     status = [client.bus start];
-    STAssertTrue(status == ER_OK, @"Bus for client failed to start.");
+    XCTAssertTrue(status == ER_OK, @"Bus for client failed to start.");
     status = [client.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
     status = [client.bus whoImplementsInterface:@"org.alljoyn.bus.sample.strings"];
-    STAssertTrue(status == ER_OK, @"Client call to WhoImplements Failed");
+    XCTAssertTrue(status == ER_OK, @"Client call to WhoImplements Failed");
     
-    STAssertTrue([client waitForCompletion:20 onFlag:&receiveAnnounce], @"The about listener should have been notified that the announce signal is received.");
+    XCTAssertTrue([client waitForCompletion:20 onFlag:&receiveAnnounce], @"The about listener should have been notified that the announce signal is received.");
     
     // Service sets the About Icon
     AJNAboutIcon *aboutIcon = [[AJNAboutIcon alloc] init];
     status = [aboutIcon setUrlWithMimeType:@"image/png" url:@"http://www.example.com"];
-    STAssertTrue(status == ER_OK, @"Could not set Url for the About Icon");
+    XCTAssertTrue(status == ER_OK, @"Could not set Url for the About Icon");
     uint8_t aboutIconContent[] = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00,
         0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x0A,
         0x00, 0x00, 0x00, 0x0A, 0x08, 0x02, 0x00, 0x00, 0x00, 0x02,
@@ -1118,7 +1118,7 @@ static const uint8_t ICON_BYTE = 0x11;
     [aboutIcon setContentWithMimeType:@"image/png" data:aboutIconContent size:(sizeof(aboutIconContent) / sizeof(aboutIconContent[0])) ownsFlag:false];
     
     // Set AboutIconObject
-    STAssertTrue(status == ER_OK, @"Could not set Url for the About Icon");
+    XCTAssertTrue(status == ER_OK, @"Could not set Url for the About Icon");
     AJNAboutIconObject *aboutIconObject = [[AJNAboutIconObject alloc] initWithBusAttachment:self.bus aboutIcon:aboutIcon];
     
     //Client gets the About Icon
@@ -1127,16 +1127,16 @@ static const uint8_t ICON_BYTE = 0x11;
     [aboutIconProxy getIcon:clientAboutIcon];
 
     // Check Url
-    STAssertTrue([[clientAboutIcon getUrl] isEqualToString:[aboutIcon getUrl]], @"About Icon Url does not match");
+    XCTAssertTrue([[clientAboutIcon getUrl] isEqualToString:[aboutIcon getUrl]], @"About Icon Url does not match");
     
     // Check content size
-    STAssertTrue([clientAboutIcon getContentSize] == [aboutIcon getContentSize], @"About Icon content size does not match");
+    XCTAssertTrue([clientAboutIcon getContentSize] == [aboutIcon getContentSize], @"About Icon content size does not match");
     
     // Check About Icon content
     uint8_t *clientAboutIconContent = [clientAboutIcon getContent];
     
     for (size_t i=0 ;i < [clientAboutIcon getContentSize] ; i++) {
-        STAssertTrue((clientAboutIconContent[i] == aboutIconContent[i]), @"Mistmatch in About Icon content");
+        XCTAssertTrue((clientAboutIconContent[i] == aboutIconContent[i]), @"Mistmatch in About Icon content");
         if (clientAboutIconContent[i] != aboutIconContent[i]) {
             break;
         }
@@ -1166,14 +1166,14 @@ static const uint8_t ICON_BYTE = 0x11;
     [self.bus registerBusObject:basicObject];
     
     QStatus status = [self.bus start];
-    STAssertTrue(status == ER_OK, @"Bus failed to start.");
+    XCTAssertTrue(status == ER_OK, @"Bus failed to start.");
     status = [self.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
     
     AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
     
     status = [self.bus bindSessionOnPort:kBusAttachmentTestsServicePort withOptions:sessionOptions withDelegate:self];
-    STAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
+    XCTAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
     
     AJNAboutObject *aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
     [aboutObj announceForSessionPort:kBusAttachmentTestsServicePort withAboutDataListener:self];
@@ -1181,18 +1181,18 @@ static const uint8_t ICON_BYTE = 0x11;
     // Client
     [client.bus registerAboutListener:client];
     status = [client.bus start];
-    STAssertTrue(status == ER_OK, @"Bus for client failed to start.");
+    XCTAssertTrue(status == ER_OK, @"Bus for client failed to start.");
     status = [client.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
     status = [client.bus whoImplementsInterface:@"org.alljoyn.bus.sample.strings"];
-    STAssertTrue(status == ER_OK, @"Client call to WhoImplements Failed");
+    XCTAssertTrue(status == ER_OK, @"Client call to WhoImplements Failed");
     
-    STAssertTrue([client waitForCompletion:20 onFlag:&receiveAnnounce], @"The about listener should have been notified that the announce signal is received.");
+    XCTAssertTrue([client waitForCompletion:20 onFlag:&receiveAnnounce], @"The about listener should have been notified that the announce signal is received.");
     
     // Service sets the About Icon
     AJNAboutIcon *aboutIcon = [[AJNAboutIcon alloc] init];
     status = [aboutIcon setUrlWithMimeType:@"image/png" url:@"http://www.example.com"];
-    STAssertTrue(status == ER_OK, @"Could not set Url for the About Icon");
+    XCTAssertTrue(status == ER_OK, @"Could not set Url for the About Icon");
 
     uint8_t aboutIconContent[MAX_ICON_SIZE_IN_BYTES];
     if (aboutIconContent) {
@@ -1204,7 +1204,7 @@ static const uint8_t ICON_BYTE = 0x11;
     status = [aboutIcon setContentWithMimeType:@"image/png" data:aboutIconContent size:(sizeof(aboutIconContent) / sizeof(aboutIconContent[0])) ownsFlag:false];
     
     // Set AboutIconObject
-    STAssertTrue(status == ER_OK, @"Could not content for About Icon");
+    XCTAssertTrue(status == ER_OK, @"Could not content for About Icon");
     AJNAboutIconObject *aboutIconObject = [[AJNAboutIconObject alloc] initWithBusAttachment:self.bus aboutIcon:aboutIcon];
     
     //Client gets the About Icon
@@ -1213,16 +1213,16 @@ static const uint8_t ICON_BYTE = 0x11;
     [aboutIconProxy getIcon:clientAboutIcon];
     
     // Check Url
-    STAssertTrue([[clientAboutIcon getUrl] isEqualToString:[aboutIcon getUrl]], @"About Icon Url does not match");
+    XCTAssertTrue([[clientAboutIcon getUrl] isEqualToString:[aboutIcon getUrl]], @"About Icon Url does not match");
     
     // Check content size
-    STAssertTrue([clientAboutIcon getContentSize] == [aboutIcon getContentSize], @"About Icon content size does not match");
+    XCTAssertTrue([clientAboutIcon getContentSize] == [aboutIcon getContentSize], @"About Icon content size does not match");
     
     // Check About Icon content
     uint8_t *clientAboutIconContent = [clientAboutIcon getContent];
     
     for (size_t i=0 ;i < [clientAboutIcon getContentSize] ; i++) {
-        STAssertTrue((clientAboutIconContent[i] == aboutIconContent[i]), @"Mistmatch in About Icon content");
+        XCTAssertTrue((clientAboutIconContent[i] == aboutIconContent[i]), @"Mistmatch in About Icon content");
         if (clientAboutIconContent[i] != aboutIconContent[i]) {
             break;
         }
@@ -1252,14 +1252,14 @@ static const uint8_t ICON_BYTE = 0x11;
     [self.bus registerBusObject:basicObject];
     
     QStatus status = [self.bus start];
-    STAssertTrue(status == ER_OK, @"Bus failed to start.");
+    XCTAssertTrue(status == ER_OK, @"Bus failed to start.");
     status = [self.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
     
     AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
     
     status = [self.bus bindSessionOnPort:kBusAttachmentTestsServicePort withOptions:sessionOptions withDelegate:self];
-    STAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
+    XCTAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
     
     AJNAboutObject *aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
     [aboutObj announceForSessionPort:kBusAttachmentTestsServicePort withAboutDataListener:self];
@@ -1267,18 +1267,18 @@ static const uint8_t ICON_BYTE = 0x11;
     // Client
     [client.bus registerAboutListener:client];
     status = [client.bus start];
-    STAssertTrue(status == ER_OK, @"Bus for client failed to start.");
+    XCTAssertTrue(status == ER_OK, @"Bus for client failed to start.");
     status = [client.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
     status = [client.bus whoImplementsInterface:@"org.alljoyn.bus.sample.strings"];
-    STAssertTrue(status == ER_OK, @"Client call to WhoImplements Failed");
+    XCTAssertTrue(status == ER_OK, @"Client call to WhoImplements Failed");
     
-    STAssertTrue([client waitForCompletion:20 onFlag:&receiveAnnounce], @"The about listener should have been notified that the announce signal is received.");
+    XCTAssertTrue([client waitForCompletion:20 onFlag:&receiveAnnounce], @"The about listener should have been notified that the announce signal is received.");
     
     // Service sets the About Icon
     AJNAboutIcon *aboutIcon = [[AJNAboutIcon alloc] init];
     status = [aboutIcon setUrlWithMimeType:@"image/png" url:@"http://www.example.com"];
-    STAssertTrue(status == ER_OK, @"Could not set Url for the About Icon");
+    XCTAssertTrue(status == ER_OK, @"Could not set Url for the About Icon");
     
     uint8_t aboutIconContent[MAX_ICON_SIZE_IN_BYTES + 2];
     if (aboutIconContent) {
@@ -1290,7 +1290,7 @@ static const uint8_t ICON_BYTE = 0x11;
     status = [aboutIcon setContentWithMimeType:@"image/png" data:aboutIconContent size:(sizeof(aboutIconContent) / sizeof(aboutIconContent[0])) ownsFlag:false];
     
     // Set AboutIconObject
-    STAssertTrue(status == ER_BUS_BAD_VALUE, @"Could not content for About Icon");
+    XCTAssertTrue(status == ER_BUS_BAD_VALUE, @"Could not content for About Icon");
     AJNAboutIconObject *aboutIconObject = [[AJNAboutIconObject alloc] initWithBusAttachment:self.bus aboutIcon:aboutIcon];
     
     //Client gets the About Icon
@@ -1299,16 +1299,16 @@ static const uint8_t ICON_BYTE = 0x11;
     [aboutIconProxy getIcon:clientAboutIcon];
     
     // Check Url
-    STAssertTrue([[clientAboutIcon getUrl] isEqualToString:[aboutIcon getUrl]], @"About Icon Url does not match");
+    XCTAssertTrue([[clientAboutIcon getUrl] isEqualToString:[aboutIcon getUrl]], @"About Icon Url does not match");
     
     // Check content size
-    STAssertTrue([clientAboutIcon getContentSize] == [aboutIcon getContentSize], @"About Icon content size does not match");
+    XCTAssertTrue([clientAboutIcon getContentSize] == [aboutIcon getContentSize], @"About Icon content size does not match");
     
     // Check About Icon content
     uint8_t *clientAboutIconContent = [clientAboutIcon getContent];
     
     for (size_t i=0 ;i < [clientAboutIcon getContentSize] ; i++) {
-        STAssertTrue((clientAboutIconContent[i] == aboutIconContent[i]), @"Mistmatch in About Icon content");
+        XCTAssertTrue((clientAboutIconContent[i] == aboutIconContent[i]), @"Mistmatch in About Icon content");
         if (clientAboutIconContent[i] != aboutIconContent[i]) {
             break;
         }
@@ -1335,18 +1335,18 @@ static const uint8_t ICON_BYTE = 0x11;
     [self.bus registerBusObject:basicObject];
 
     QStatus status = [self.bus start];
-    STAssertTrue(status == ER_OK, @"Bus failed to start.");
+    XCTAssertTrue(status == ER_OK, @"Bus failed to start.");
     status = [self.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
 
     AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
 
     status = [self.bus bindSessionOnPort:kBusAttachmentTestsServicePort withOptions:sessionOptions withDelegate:self];
-    STAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
+    XCTAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
 
     AJNAboutObject *aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
     status = [aboutObj announceForSessionPort:kBusAttachmentTestsServicePort withAboutDataListener:self];
-    STAssertTrue(status == ER_ABOUT_INVALID_ABOUTDATA_LISTENER, @"Inconsistent about announce and about data should be reported as error");
+    XCTAssertTrue(status == ER_ABOUT_INVALID_ABOUTDATA_LISTENER, @"Inconsistent about announce and about data should be reported as error");
 
     [self.bus disconnectWithArguments:@"null:"];
     [self.bus stop];
@@ -1361,18 +1361,18 @@ static const uint8_t ICON_BYTE = 0x11;
     [self.bus registerBusObject:basicObject];
     
     QStatus status = [self.bus start];
-    STAssertTrue(status == ER_OK, @"Bus failed to start.");
+    XCTAssertTrue(status == ER_OK, @"Bus failed to start.");
     status = [self.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
     
     AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
     
     status = [self.bus bindSessionOnPort:kBusAttachmentTestsServicePort withOptions:sessionOptions withDelegate:self];
-    STAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
+    XCTAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
     
     AJNAboutObject *aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
     status = [aboutObj announceForSessionPort:kBusAttachmentTestsServicePort withAboutDataListener:self];
-    STAssertTrue(status == ER_ABOUT_INVALID_ABOUTDATA_LISTENER, @"Missing about data field should be reported as error");
+    XCTAssertTrue(status == ER_ABOUT_INVALID_ABOUTDATA_LISTENER, @"Missing about data field should be reported as error");
     
     [self.bus disconnectWithArguments:@"null:"];
     [self.bus stop];
@@ -1387,18 +1387,18 @@ static const uint8_t ICON_BYTE = 0x11;
     [self.bus registerBusObject:basicObject];
     
     QStatus status = [self.bus start];
-    STAssertTrue(status == ER_OK, @"Bus failed to start.");
+    XCTAssertTrue(status == ER_OK, @"Bus failed to start.");
     status = [self.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
     
     AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
     
     status = [self.bus bindSessionOnPort:kBusAttachmentTestsServicePort withOptions:sessionOptions withDelegate:self];
-    STAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
+    XCTAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
     
     AJNAboutObject *aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
     status = [aboutObj announceForSessionPort:kBusAttachmentTestsServicePort withAboutDataListener:self];
-    STAssertTrue(status == ER_ABOUT_INVALID_ABOUTDATA_LISTENER, @"Missing about data field should be reported as error");
+    XCTAssertTrue(status == ER_ABOUT_INVALID_ABOUTDATA_LISTENER, @"Missing about data field should be reported as error");
     
     [self.bus disconnectWithArguments:@"null:"];
     [self.bus stop];
@@ -1418,14 +1418,14 @@ static const uint8_t ICON_BYTE = 0x11;
     [self.bus registerBusObject:basicObject];
     
     QStatus status = [self.bus start];
-    STAssertTrue(status == ER_OK, @"Bus failed to start.");
+    XCTAssertTrue(status == ER_OK, @"Bus failed to start.");
     status = [self.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
     
     AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
     
     status = [self.bus bindSessionOnPort:kBusAttachmentTestsServicePort withOptions:sessionOptions withDelegate:self];
-    STAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
+    XCTAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
     
     AJNAboutObject *aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
     [aboutObj announceForSessionPort:kBusAttachmentTestsServicePort withAboutDataListener:self];
@@ -1433,13 +1433,13 @@ static const uint8_t ICON_BYTE = 0x11;
     // Client
     [client.bus registerAboutListener:client];
     status = [client.bus start];
-    STAssertTrue(status == ER_OK, @"Bus for client failed to start.");
+    XCTAssertTrue(status == ER_OK, @"Bus for client failed to start.");
     status = [client.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
     status = [client.bus whoImplementsInterface:@"org.alljoyn.bus.sample.strings"];
-    STAssertTrue(status == ER_OK, @"Client call to WhoImplements Failed");
+    XCTAssertTrue(status == ER_OK, @"Client call to WhoImplements Failed");
     
-    STAssertTrue([client waitForCompletion:20 onFlag:&receiveAnnounce], @"The about listener should have been notified that the announce signal is received.");
+    XCTAssertTrue([client waitForCompletion:20 onFlag:&receiveAnnounce], @"The about listener should have been notified that the announce signal is received.");
     
     [self.bus disconnectWithArguments:@"null:"];
     [self.bus stop];
@@ -1466,14 +1466,14 @@ static const uint8_t ICON_BYTE = 0x11;
     [self.bus registerBusObject:basicObject];
     
     QStatus status = [self.bus start];
-    STAssertTrue(status == ER_OK, @"Bus failed to start.");
+    XCTAssertTrue(status == ER_OK, @"Bus failed to start.");
     status = [self.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
     
     AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
     
     status = [self.bus bindSessionOnPort:kBusAttachmentTestsServicePort withOptions:sessionOptions withDelegate:self];
-    STAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
+    XCTAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
     
     AJNAboutObject *aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
     [aboutObj announceForSessionPort:kBusAttachmentTestsServicePort withAboutDataListener:self];
@@ -1481,20 +1481,20 @@ static const uint8_t ICON_BYTE = 0x11;
     // Client
     [client.bus registerAboutListener:client];
     status = [client.bus start];
-    STAssertTrue(status == ER_OK, @"Bus for client failed to start.");
+    XCTAssertTrue(status == ER_OK, @"Bus for client failed to start.");
     status = [client.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
     status = [client.bus whoImplementsInterface:@"org.alljoyn.bus.sample.strings"];
-    STAssertTrue(status == ER_OK, @"Client call to WhoImplements Failed");
+    XCTAssertTrue(status == ER_OK, @"Client call to WhoImplements Failed");
     
-    STAssertTrue([client waitForCompletion:20 onFlag:&receiveAnnounce], @"The about listener should have been notified that the announce signal is received.");
+    XCTAssertTrue([client waitForCompletion:20 onFlag:&receiveAnnounce], @"The about listener should have been notified that the announce signal is received.");
     
     // Create AboutProxy
     AJNAboutProxy *aboutProxy = [[AJNAboutProxy alloc] initWithBusAttachment:client.bus busName:client.busNameToConnect sessionId:client.testSessionId];
     
     NSMutableDictionary *aboutData;
     status = [aboutProxy getAboutDataForLanguage:@"foo" usingDictionary:&aboutData];
-    STAssertTrue(status == ER_OK, @"Non default language should not throw error");
+    XCTAssertTrue(status == ER_OK, @"Non default language should not throw error");
 
     [self.bus disconnectWithArguments:@"null:"];
     [self.bus stop];
@@ -1521,14 +1521,14 @@ static const uint8_t ICON_BYTE = 0x11;
     [self.bus registerBusObject:basicObject];
     
     QStatus status = [self.bus start];
-    STAssertTrue(status == ER_OK, @"Bus failed to start.");
+    XCTAssertTrue(status == ER_OK, @"Bus failed to start.");
     status = [self.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
     
     AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
     
     status = [self.bus bindSessionOnPort:kBusAttachmentTestsServicePort withOptions:sessionOptions withDelegate:self];
-    STAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
+    XCTAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
     
     AJNAboutObject *aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
     [aboutObj announceForSessionPort:kBusAttachmentTestsServicePort withAboutDataListener:self];
@@ -1536,20 +1536,20 @@ static const uint8_t ICON_BYTE = 0x11;
     // Client
     [client.bus registerAboutListener:client];
     status = [client.bus start];
-    STAssertTrue(status == ER_OK, @"Bus for client failed to start.");
+    XCTAssertTrue(status == ER_OK, @"Bus for client failed to start.");
     status = [client.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
     status = [client.bus whoImplementsInterface:@"org.alljoyn.bus.sample.strings"];
-    STAssertTrue(status == ER_OK, @"Client call to WhoImplements Failed");
+    XCTAssertTrue(status == ER_OK, @"Client call to WhoImplements Failed");
     
-    STAssertTrue([client waitForCompletion:20 onFlag:&receiveAnnounce], @"The about listener should have been notified that the announce signal is received.");
+    XCTAssertTrue([client waitForCompletion:20 onFlag:&receiveAnnounce], @"The about listener should have been notified that the announce signal is received.");
     
     // Create AboutProxy
     AJNAboutProxy *aboutProxy = [[AJNAboutProxy alloc] initWithBusAttachment:client.bus busName:client.busNameToConnect sessionId:client.testSessionId];
     
     NSMutableDictionary *aboutData;
     status = [aboutProxy getAboutDataForLanguage:@"foo" usingDictionary:&aboutData];
-    STAssertTrue(status == ER_OK, @"Non default language should not throw error");
+    XCTAssertTrue(status == ER_OK, @"Non default language should not throw error");
     
     [self.bus disconnectWithArguments:@"null:"];
     [self.bus stop];
@@ -1574,14 +1574,14 @@ static const uint8_t ICON_BYTE = 0x11;
     [self.bus registerBusObject:basicObject];
     
     QStatus status = [self.bus start];
-    STAssertTrue(status == ER_OK, @"Bus failed to start.");
+    XCTAssertTrue(status == ER_OK, @"Bus failed to start.");
     status = [self.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
     
     AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
     
     status = [self.bus bindSessionOnPort:kBusAttachmentTestsServicePort withOptions:sessionOptions withDelegate:self];
-    STAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
+    XCTAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
     
     AJNAboutObject *aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
     [aboutObj announceForSessionPort:kBusAttachmentTestsServicePort withAboutDataListener:self];
@@ -1589,13 +1589,13 @@ static const uint8_t ICON_BYTE = 0x11;
     // Client
     [client.bus registerAboutListener:client];
     status = [client.bus start];
-    STAssertTrue(status == ER_OK, @"Bus for client failed to start.");
+    XCTAssertTrue(status == ER_OK, @"Bus for client failed to start.");
     status = [client.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
     status = [client.bus whoImplementsInterface:@"org.alljoyn.bus.sample.strings"];
-    STAssertTrue(status == ER_OK, @"Client call to WhoImplements Failed");
+    XCTAssertTrue(status == ER_OK, @"Client call to WhoImplements Failed");
     
-    STAssertTrue([client waitForCompletion:20 onFlag:&receiveAnnounce], @"The about listener should have been notified that the announce signal is received.");
+    XCTAssertTrue([client waitForCompletion:20 onFlag:&receiveAnnounce], @"The about listener should have been notified that the announce signal is received.");
 
     [self.bus disconnectWithArguments:@"null:"];
     [self.bus stop];
@@ -1621,14 +1621,14 @@ static const uint8_t ICON_BYTE = 0x11;
     [self.bus registerBusObject:basicObject];
     
     QStatus status = [self.bus start];
-    STAssertTrue(status == ER_OK, @"Bus failed to start.");
+    XCTAssertTrue(status == ER_OK, @"Bus failed to start.");
     status = [self.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
     
     AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
     
     status = [self.bus bindSessionOnPort:kBusAttachmentTestsServicePort withOptions:sessionOptions withDelegate:self];
-    STAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
+    XCTAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
     
     AJNAboutObject *aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
     [aboutObj announceForSessionPort:kBusAttachmentTestsServicePort withAboutDataListener:self];
@@ -1636,13 +1636,13 @@ static const uint8_t ICON_BYTE = 0x11;
     // Client
     [client.bus registerAboutListener:client];
     status = [client.bus start];
-    STAssertTrue(status == ER_OK, @"Bus for client failed to start.");
+    XCTAssertTrue(status == ER_OK, @"Bus for client failed to start.");
     status = [client.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
     status = [client.bus whoImplementsInterface:@"*"];
-    STAssertTrue(status == ER_OK, @"Client call to WhoImplements Failed");
+    XCTAssertTrue(status == ER_OK, @"Client call to WhoImplements Failed");
     
-    STAssertTrue([client waitForCompletion:20 onFlag:&receiveAnnounce], @"The about listener should have been notified that the announce signal is received.");
+    XCTAssertTrue([client waitForCompletion:20 onFlag:&receiveAnnounce], @"The about listener should have been notified that the announce signal is received.");
     
     [self.bus disconnectWithArguments:@"null:"];
     [self.bus stop];
@@ -1668,14 +1668,14 @@ static const uint8_t ICON_BYTE = 0x11;
     [self.bus registerBusObject:basicObject];
     
     QStatus status = [self.bus start];
-    STAssertTrue(status == ER_OK, @"Bus failed to start.");
+    XCTAssertTrue(status == ER_OK, @"Bus failed to start.");
     status = [self.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
     
     AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
     
     status = [self.bus bindSessionOnPort:kBusAttachmentTestsServicePort withOptions:sessionOptions withDelegate:self];
-    STAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
+    XCTAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
     
     AJNAboutObject *aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
     [aboutObj announceForSessionPort:kBusAttachmentTestsServicePort withAboutDataListener:self];
@@ -1683,13 +1683,13 @@ static const uint8_t ICON_BYTE = 0x11;
     // Client
     [client.bus registerAboutListener:client];
     status = [client.bus start];
-    STAssertTrue(status == ER_OK, @"Bus for client failed to start.");
+    XCTAssertTrue(status == ER_OK, @"Bus for client failed to start.");
     status = [client.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
     status = [client.bus whoImplementsInterface:nil];
-    STAssertTrue(status == ER_OK, @"Client call to WhoImplements Failed");
+    XCTAssertTrue(status == ER_OK, @"Client call to WhoImplements Failed");
     
-    STAssertTrue([client waitForCompletion:20 onFlag:&receiveAnnounce], @"The about listener should have been notified that the announce signal is received.");
+    XCTAssertTrue([client waitForCompletion:20 onFlag:&receiveAnnounce], @"The about listener should have been notified that the announce signal is received.");
     
     [self.bus disconnectWithArguments:@"null:"];
     [self.bus stop];
@@ -1710,13 +1710,13 @@ static const uint8_t ICON_BYTE = 0x11;
     // Client
     [client.bus registerAboutListener:client];
     QStatus status = [client.bus start];
-    STAssertTrue(status == ER_OK, @"Bus for client failed to start.");
+    XCTAssertTrue(status == ER_OK, @"Bus for client failed to start.");
     status = [client.bus connectWithArguments:@"null:"];
-    STAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
+    XCTAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
     status = [client.bus whoImplementsInterface:@"org.alljoyn.bus.sample.strings"];
-    STAssertTrue(status == ER_OK, @"Client call to WhoImplements Failed");
+    XCTAssertTrue(status == ER_OK, @"Client call to WhoImplements Failed");
     status = [client.bus cancelWhoImplements:@"org.alljoyn.bus.sample.strings.mismatch"];
-    STAssertTrue(status == ER_BUS_MATCH_RULE_NOT_FOUND, @"Test for mismatched CancelWhoImplements Failed");
+    XCTAssertTrue(status == ER_BUS_MATCH_RULE_NOT_FOUND, @"Test for mismatched CancelWhoImplements Failed");
     
     [client.bus disconnectWithArguments:@"null:"];
     [client.bus stop];
@@ -1751,50 +1751,50 @@ static const uint8_t ICON_BYTE = 0x11;
         QStatus status;
         NSMutableDictionary *aboutData;
         [aboutProxy getVersion:&version];
-        STAssertTrue(version == 1, @"Version value is incorrect");
+        XCTAssertTrue(version == 1, @"Version value is incorrect");
         if (self.testUnsupportedLanguage == YES) {
             status = [aboutProxy getAboutDataForLanguage:@"bar" usingDictionary:&aboutData];
-            STAssertTrue(status != ER_OK, @"Unsupported language not should throw error");
+            XCTAssertTrue(status != ER_OK, @"Unsupported language not should throw error");
         } else {
             status = [aboutProxy getAboutDataForLanguage:@"en" usingDictionary:&aboutData];
-            STAssertTrue(status == ER_OK, @"Default language not should throw error");
+            XCTAssertTrue(status == ER_OK, @"Default language not should throw error");
         }
         NSLog(@"Version %d Size %lu", version, [aboutData count]);
         // Verify data by comparing the data that you set with the data that you received
-        STAssertTrue([gDefaultAboutData isEqualToDictionary:aboutData], @"The announce data is correct");
+        XCTAssertTrue([gDefaultAboutData isEqualToDictionary:aboutData], @"The announce data is correct");
 
         if (self.testAboutObjectDescription == YES) {
 
             AJNAboutObjectDescription *testInitWithMsgArg = [[AJNAboutObjectDescription alloc] initWithMsgArg:objectDescriptionArg];
-            STAssertNotNil(testInitWithMsgArg, @"Fail");
+            XCTAssertNotNil(testInitWithMsgArg, @"Fail");
 
             AJNAboutObjectDescription *aboutObjectDescription = [[AJNAboutObjectDescription alloc] init];
             [aboutObjectDescription createFromMsgArg:objectDescriptionArg];
-            STAssertNotNil(aboutObjectDescription, @"Fail");
+            XCTAssertNotNil(aboutObjectDescription, @"Fail");
 
             BOOL test = [aboutObjectDescription hasPath:"/basic_object"];
-            STAssertTrue(test == YES, @"hasPath test failed");
+            XCTAssertTrue(test == YES, @"hasPath test failed");
 
             test = [aboutObjectDescription hasPath:"/basic_"];
-            STAssertFalse(test, @"Negative hasPath test failed");
+            XCTAssertFalse(test, @"Negative hasPath test failed");
 
             test = [aboutObjectDescription hasInterface:"org.alljoyn.bus.sample.strings" withPath:"/basic_object"];
-            STAssertTrue(test == YES, @"hasInterface:withPath test failed");
+            XCTAssertTrue(test == YES, @"hasInterface:withPath test failed");
 
             test = [aboutObjectDescription hasInterface:"org.alljoyn.bus.sample.strings" withPath:"/basic_"];
-            STAssertFalse(test, @"hasInterface:withPath test failed");
+            XCTAssertFalse(test, @"hasInterface:withPath test failed");
 
             size_t numPaths = [aboutObjectDescription getPaths:nil withSize:0];
             NSMutableArray *paths = [[NSMutableArray alloc] initWithCapacity:numPaths];
-            STAssertTrue([aboutObjectDescription getPaths:&paths withSize:numPaths] == 2, @"getPaths:withSize test failed");
+            XCTAssertTrue([aboutObjectDescription getPaths:&paths withSize:numPaths] == 2, @"getPaths:withSize test failed");
 
             numPaths = [aboutObjectDescription getInterfacePathsForInterface:@"org.alljoyn.bus.sample.strings" paths:nil numOfPaths:0];
             NSMutableArray *interfacePaths = [[NSMutableArray alloc] initWithCapacity:numPaths];
-            STAssertTrue([aboutObjectDescription getInterfacePathsForInterface:@"org.alljoyn.bus.sample.strings" paths:&interfacePaths numOfPaths:1] == 1, @"getPaths:withSize test failed");
+            XCTAssertTrue([aboutObjectDescription getInterfacePathsForInterface:@"org.alljoyn.bus.sample.strings" paths:&interfacePaths numOfPaths:1] == 1, @"getPaths:withSize test failed");
 
             size_t numInterfaces = [aboutObjectDescription getInterfacesForPath:@"/basic_object" interfaces:nil numOfInterfaces:0];
             NSMutableArray *interfaces = [[NSMutableArray alloc] initWithCapacity:numInterfaces];
-            STAssertTrue([aboutObjectDescription getInterfacesForPath:@"/basic_object" interfaces:&interfaces numOfInterfaces:2] == 2, @"getInterfacesForPath failed");
+            XCTAssertTrue([aboutObjectDescription getInterfacesForPath:@"/basic_object" interfaces:&interfaces numOfInterfaces:2] == 2, @"getInterfacesForPath failed");
 
         }
         receiveAnnounce = YES;
@@ -2065,7 +2065,7 @@ static const uint8_t ICON_BYTE = 0x11;
             AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:NO proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
             
             self.testSessionId = [self.bus joinSessionWithName:name onPort:kBusAttachmentTestsServicePort withDelegate:self options:sessionOptions];
-            STAssertTrue(self.testSessionId != -1, @"Test client failed to connect to the service %@ on port %u", name, kBusAttachmentTestsServicePort);
+            XCTAssertTrue(self.testSessionId != -1, @"Test client failed to connect to the service %@ on port %u", name, kBusAttachmentTestsServicePort);
             
             self.clientConnectionCompleted = YES;
         }
@@ -2077,7 +2077,7 @@ static const uint8_t ICON_BYTE = 0x11;
             
             [self.bus joinSessionAsyncWithName:name onPort:kBusAttachmentTestsServicePort withDelegate:self options:sessionOptions joinCompletedBlock:^(QStatus status, AJNSessionId sessionId, AJNSessionOptions *opts, void *context) {
                 self.testSessionId = sessionId;
-                STAssertTrue(self.testSessionId != -1, @"Test client failed to connect asynchronously using block to the service on port %u", kBusAttachmentTestsServicePort);
+                XCTAssertTrue(self.testSessionId != -1, @"Test client failed to connect asynchronously using block to the service on port %u", kBusAttachmentTestsServicePort);
                 
                 self.clientConnectionCompleted = YES;            
 
@@ -2097,7 +2097,7 @@ static const uint8_t ICON_BYTE = 0x11;
 - (void) pingPeerHasStatus:(QStatus)status context:(void *)context
 {
     NSLog(@"Ping Peer Async callback");
-    STAssertTrue(status == ER_OK, @"Ping Peer Async failed");
+    XCTAssertTrue(status == ER_OK, @"Ping Peer Async failed");
     self.isPingAsyncComplete = YES;
 }
 
@@ -2180,7 +2180,7 @@ static const uint8_t ICON_BYTE = 0x11;
 - (void)didJoinSession:(AJNSessionId)sessionId status:(QStatus)status sessionOptions:(AJNSessionOptions *)sessionOptions context:(AJNHandle)context
 {
     self.testSessionId = sessionId;
-    STAssertTrue(self.testSessionId != -1, @"Test client failed to connect asynchronously using delegate to the service on port %u", kBusAttachmentTestsServicePort);
+    XCTAssertTrue(self.testSessionId != -1, @"Test client failed to connect asynchronously using delegate to the service on port %u", kBusAttachmentTestsServicePort);
     
     self.clientConnectionCompleted = YES;            
     
