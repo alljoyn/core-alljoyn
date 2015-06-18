@@ -76,12 +76,27 @@ public @interface BusSignal {
     /** Deprecated annotate flag. */
     int ANNOTATE_DEPRECATED = 2;
 
+    /** Sessioncast annotate flag. */
+    int ANNOTATE_SESSIONCAST = 4;
+
+    /** Sessionless annotate flag. */
+    int ANNOTATE_SESSIONLESS = 8;
+
+    /** Unicast annotate flag. */
+    int ANNOTATE_UNICAST = 16;
+
+    /** Global broadcast annotate flag. */
+    int ANNOTATE_GLOBAL_BROADCAST = 32;
+
     /**
      * Annotate introspection data for method.
-     * The annotation may be the flag ANNOTATE_DEPRECATED.  See
-     * org.freedesktop.DBus.Deprecated in the D-Bus Specification.
+     * The annotation may be the flag ANNOTATE_DEPRECATED (see
+     * org.freedesktop.DBus.Deprecated in the D-Bus Specification),
+     * and/or any of the flags ANNOTATE_SESSIONCAST, ANNOTATE_SESSIONLESS,
+     * ANNOTATE_UNICAST, or ANNOTATE_GLOBAL_BROADCAST.
      *
-     * @return annotation specifying if this signal is deprecated according to the BusSignal annotation
+     * @return annotation specifying the signal behavior, and also whether
+     * this signal is deprecated according to the BusSignal annotation
      */
     int annotation() default 0;
 }
