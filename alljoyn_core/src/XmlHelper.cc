@@ -137,7 +137,10 @@ QStatus XmlHelper::ParseInterface(const XmlElement* elem, ProxyBusObject* obj)
                 qcc::String argNames;
                 bool isArgNamesEmpty = true;
                 std::map<String, String> annotations;
+                bool isSessioncastSignal = false;
                 bool isSessionlessSignal = false;
+                bool isUnicastSignal = false;
+                bool isGlobalBroadcastSignal = false;
 
                 /* Iterate over member children */
                 const vector<XmlElement*>& argChildren = ifChildElem->GetChildren();
@@ -185,24 +188,44 @@ QStatus XmlHelper::ParseInterface(const XmlElement* elem, ProxyBusObject* obj)
 
                 }
                 if (isSignal) {
+                    const qcc::String& sessioncastStr = ifChildElem->GetAttribute("sessioncast");
+                    isSessioncastSignal = (sessioncastStr == "true");
                     const qcc::String& sessionlessStr = ifChildElem->GetAttribute("sessionless");
                     isSessionlessSignal = (sessionlessStr == "true");
+                    const qcc::String& unicastStr = ifChildElem->GetAttribute("unicast");
+                    isUnicastSignal = (unicastStr == "true");
+                    const qcc::String& globalBroadcastStr = ifChildElem->GetAttribute("globalbroadcast");
+                    isGlobalBroadcastSignal = (globalBroadcastStr == "true");
                 }
 
                 /* Add the member */
                 if ((ER_OK == status) && (isMethod || isSignal)) {
+                    uint8_t annotation = 0;
+                    if (isSessioncastSignal) {
+                        annotation |= MEMBER_ANNOTATE_SESSIONCAST;
+                    }
+                    if (isSessionlessSignal) {
+                        annotation |= MEMBER_ANNOTATE_SESSIONLESS;
+                    }
+                    if (isUnicastSignal) {
+                        annotation |= MEMBER_ANNOTATE_UNICAST;
+                    }
+                    if (isGlobalBroadcastSignal) {
+                        annotation |= MEMBER_ANNOTATE_GLOBAL_BROADCAST;
+                    }
                     status = intf.AddMember(isMethod ? MESSAGE_METHOD_CALL : MESSAGE_SIGNAL,
                                             memberName.c_str(),
                                             inSig.c_str(),
                                             outSig.c_str(),
-                                            isArgNamesEmpty ? NULL : argNames.c_str());
+                                            isArgNamesEmpty ? NULL : argNames.c_str(),
+                                            annotation);
 
                     for (std::map<String, String>::const_iterator it = annotations.begin(); it != annotations.end(); ++it) {
                         intf.AddMemberAnnotation(memberName.c_str(), it->first, it->second);
                     }
 
                     if (!memberDescription.empty()) {
-                        intf.SetMemberDescription(memberName.c_str(), memberDescription.c_str(), isSessionlessSignal);
+                        intf.SetMemberDescription(memberName.c_str(), memberDescription.c_str());
                     }
 
                     for (std::map<String, String>::const_iterator it = argDescriptions.begin(); it != argDescriptions.end(); it++) {
