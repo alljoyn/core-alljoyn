@@ -32,12 +32,12 @@ namespace qcc {
 
 #define QCC_MODULE "CRYPTO"
 
-const size_t KeyInfo::GetExportSize()
+const size_t KeyInfo::GetExportSize() const
 {
     return sizeof(FormatType) + sizeof(uint32_t) + keyIdLen * sizeof(uint8_t);
 }
 
-QStatus KeyInfo::Export(uint8_t* buf)
+QStatus KeyInfo::Export(uint8_t* buf) const
 {
     memcpy(buf, &format, sizeof(FormatType));
     buf += sizeof(FormatType);
@@ -68,12 +68,12 @@ QStatus KeyInfo::Import(const uint8_t* buf, size_t count)
     return ER_OK;
 }
 
-const size_t KeyInfoECC::GetExportSize()
+const size_t KeyInfoECC::GetExportSize() const
 {
     return KeyInfo::GetExportSize() + sizeof(uint8_t);
 }
 
-QStatus KeyInfoECC::Export(uint8_t* buf)
+QStatus KeyInfoECC::Export(uint8_t* buf) const
 {
     KeyInfo::Export(buf);
     buf += KeyInfo::GetExportSize();
@@ -121,12 +121,12 @@ qcc::String KeyInfoNISTP256::ToString() const
     return str;
 }
 
-const size_t KeyInfoNISTP256::GetExportSize()
+const size_t KeyInfoNISTP256::GetExportSize() const
 {
     return KeyInfoECC::GetExportSize() + sizeof(pubkey);
 }
 
-QStatus KeyInfoNISTP256::Export(uint8_t* buf)
+QStatus KeyInfoNISTP256::Export(uint8_t* buf) const
 {
     KeyInfoECC::Export(buf);
     buf += KeyInfoECC::GetExportSize();
