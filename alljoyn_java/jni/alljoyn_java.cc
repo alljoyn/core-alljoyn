@@ -10770,7 +10770,14 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_setMemberDes
         return NULL;
     }
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
     QStatus status = intf->SetMemberDescription(member.c_str(), desc.c_str(), isSessionless);
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
     return JStatus(status);
 }
 
