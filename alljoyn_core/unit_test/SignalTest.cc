@@ -89,15 +89,16 @@ class Participant : public SessionPortListener, public SessionListener {
     SessionMap hostedSessionMap;
     SessionMap joinedSessionMap;
 
-    Participant(qcc::String connectArg = "") : port(42), mpport(84), bus("Participant"), name(genUniqueName(bus)),
+    Participant(qcc::String connectArg = "", uint8_t annotation = 0, InterfaceDescription** intf = NULL) : port(42), mpport(84), bus("Participant"), name(genUniqueName(bus)),
         opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY),
         mpopts(SessionOpts::TRAFFIC_MESSAGES, true, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY),
         inited(false)
     {
-        Init(connectArg);
+        Init(connectArg, annotation, intf);
     }
 
-    void Init(qcc::String connectArg) {
+    void Init(qcc::String connectArg, uint8_t annotation, InterfaceDescription** intf)
+    {
         QStatus status;
 
         if (connectArg == "") {
@@ -124,11 +125,18 @@ class Participant : public SessionPortListener, public SessionListener {
         status = bus.CreateInterface("org.test", servicetestIntf);
         EXPECT_EQ(ER_OK, status);
         ASSERT_TRUE(servicetestIntf != NULL);
-        status = servicetestIntf->AddSignal("my_signal", "s", NULL, 0);
+        status = servicetestIntf->AddSignal("my_signal", "s", NULL, annotation);
         EXPECT_EQ(ER_OK, status);
-        servicetestIntf->Activate();
+        if (intf == nullptr) {
+            servicetestIntf->Activate();
+            CreateBusObject();
+        } else {
+            *intf = servicetestIntf;
+        }
+    }
 
-        /* create bus object */
+    void CreateBusObject()
+    {
         busobj = new TestObject(bus);
         bus.RegisterBusObject(*busobj);
         inited = true;
@@ -232,6 +240,26 @@ class Participant : public SessionPortListener, public SessionListener {
                 break;
             }
         }
+    }
+
+    QStatus SendSessioncastSignal()
+    {
+        return busobj->SendSignal(NULL, SESSION_ID_ALL_HOSTED, 0);
+    }
+
+    QStatus SendSessionlessSignal()
+    {
+        return busobj->SendSignal(NULL, 0, ALLJOYN_FLAG_SESSIONLESS);
+    }
+
+    QStatus SendUnicastSignal()
+    {
+        return busobj->SendSignal(name.c_str(), 0, 0);
+    }
+
+    QStatus SendGlobalBroadcastSignal()
+    {
+        return busobj->SendSignal(NULL, 0, ALLJOYN_FLAG_GLOBAL_BROADCAST);
     }
 
     SessionId GetJoinedSessionId(Participant& part, bool multipoint) {
@@ -750,4 +778,115 @@ TEST_F(SignalTest, BackPressure) {
         wait_for_signal();
         recvBy.verify_recv(BACKPRESSURE_TEST_NUM_SIGNALS);
     }
+}
+
+QStatus SetMemberDescription(InterfaceDescription* intf)
+{
+    return intf->SetMemberDescription("my_signal", "my_signal description");
+}
+
+// Test the deprecated API to set a member description and mark a signal
+// a sessionless at the same time.
+QStatus SetSessionlessMemberDescription(InterfaceDescription* intf)
+{
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+    return intf->SetMemberDescription("my_signal", "my_signal description", true);
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
+}
+
+TEST_F(SignalTest, SignalTypeEnforcement)
+{
+    InterfaceDescription* legacyNonSessionlessIntf;
+    InterfaceDescription* legacySessionlessIntf;
+    InterfaceDescription* sessioncastIntf;
+    InterfaceDescription* sessionlessIntf;
+    InterfaceDescription* unicastIntf;
+    InterfaceDescription* globalBroadcastIntf;
+
+    // Create a participant to test each signal type.
+    Participant legacyParticipant;
+    Participant legacyNonSessionlessParticipant("", 0, &legacyNonSessionlessIntf);
+    Participant legacySessionlessParticipant("", 0, &legacySessionlessIntf);
+    Participant sessioncastParticipant("", MEMBER_ANNOTATE_SESSIONCAST, &sessioncastIntf);
+    Participant sessionlessParticipant("", MEMBER_ANNOTATE_SESSIONLESS, &sessionlessIntf);
+    Participant unicastParticipant("", MEMBER_ANNOTATE_UNICAST, &unicastIntf);
+    Participant globalBroadcastParticipant("", MEMBER_ANNOTATE_GLOBAL_BROADCAST, &globalBroadcastIntf);
+
+    // Try to add a simple signal description to all interfaces
+    // except legacyIntf and legacySessionlessIntf.
+    ASSERT_EQ(ER_OK, SetMemberDescription(legacyNonSessionlessIntf));
+    ASSERT_EQ(ER_OK, SetMemberDescription(sessioncastIntf));
+    ASSERT_EQ(ER_OK, SetMemberDescription(sessionlessIntf));
+    ASSERT_EQ(ER_OK, SetMemberDescription(unicastIntf));
+    ASSERT_EQ(ER_OK, SetMemberDescription(globalBroadcastIntf));
+
+    // Try to add an obsolete sessionless signal description to all interfaces
+    // except legacyIntf and legacyNonSessionlessIntf.
+    ASSERT_EQ(ER_OK, SetSessionlessMemberDescription(legacySessionlessIntf));
+    ASSERT_EQ(ER_INVALID_SIGNAL_EMISSION_TYPE, SetSessionlessMemberDescription(sessioncastIntf));
+    ASSERT_EQ(ER_OK, SetSessionlessMemberDescription(sessionlessIntf));
+    ASSERT_EQ(ER_INVALID_SIGNAL_EMISSION_TYPE, SetSessionlessMemberDescription(unicastIntf));
+    ASSERT_EQ(ER_INVALID_SIGNAL_EMISSION_TYPE, SetSessionlessMemberDescription(globalBroadcastIntf));
+
+    // Activate interfaces.
+    legacyNonSessionlessIntf->Activate();
+    legacySessionlessIntf->Activate();
+    sessioncastIntf->Activate();
+    sessionlessIntf->Activate();
+    unicastIntf->Activate();
+    globalBroadcastIntf->Activate();
+
+    // Finish initializing the participant objects.
+    legacyNonSessionlessParticipant.CreateBusObject();
+    legacySessionlessParticipant.CreateBusObject();
+    sessioncastParticipant.CreateBusObject();
+    sessionlessParticipant.CreateBusObject();
+    unicastParticipant.CreateBusObject();
+    globalBroadcastParticipant.CreateBusObject();
+
+    // Verify that legacy code is unaffected.
+    ASSERT_EQ(ER_OK, legacyParticipant.SendSessioncastSignal());
+    ASSERT_EQ(ER_OK, legacyParticipant.SendSessionlessSignal());
+    ASSERT_EQ(ER_OK, legacyParticipant.SendUnicastSignal());
+    ASSERT_EQ(ER_OK, legacyParticipant.SendGlobalBroadcastSignal());
+
+    ASSERT_EQ(ER_OK, legacyNonSessionlessParticipant.SendSessioncastSignal());
+    ASSERT_EQ(ER_OK, legacyNonSessionlessParticipant.SendSessionlessSignal());
+    ASSERT_EQ(ER_OK, legacyNonSessionlessParticipant.SendUnicastSignal());
+    ASSERT_EQ(ER_OK, legacyNonSessionlessParticipant.SendGlobalBroadcastSignal());
+
+    // Verify that any legacy caller that explicitly set SetMemberDescription
+    // with isSessionless=true will fail if it tries to send a signal of
+    // another type.
+    ASSERT_EQ(ER_INVALID_SIGNAL_EMISSION_TYPE, legacySessionlessParticipant.SendSessioncastSignal());
+    ASSERT_EQ(ER_OK, legacySessionlessParticipant.SendSessionlessSignal());
+    ASSERT_EQ(ER_INVALID_SIGNAL_EMISSION_TYPE, legacySessionlessParticipant.SendUnicastSignal());
+    ASSERT_EQ(ER_INVALID_SIGNAL_EMISSION_TYPE, legacySessionlessParticipant.SendGlobalBroadcastSignal());
+
+    // Verify that each member explicitly marked with one signal type cannot
+    // send signals of other types.
+    ASSERT_EQ(ER_OK, sessioncastParticipant.SendSessioncastSignal());
+    ASSERT_EQ(ER_INVALID_SIGNAL_EMISSION_TYPE, sessioncastParticipant.SendSessionlessSignal());
+    ASSERT_EQ(ER_INVALID_SIGNAL_EMISSION_TYPE, sessioncastParticipant.SendUnicastSignal());
+    ASSERT_EQ(ER_INVALID_SIGNAL_EMISSION_TYPE, sessioncastParticipant.SendGlobalBroadcastSignal());
+
+    ASSERT_EQ(ER_INVALID_SIGNAL_EMISSION_TYPE, sessionlessParticipant.SendSessioncastSignal());
+    ASSERT_EQ(ER_OK, sessionlessParticipant.SendSessionlessSignal());
+    ASSERT_EQ(ER_INVALID_SIGNAL_EMISSION_TYPE, sessionlessParticipant.SendUnicastSignal());
+    ASSERT_EQ(ER_INVALID_SIGNAL_EMISSION_TYPE, sessionlessParticipant.SendGlobalBroadcastSignal());
+
+    ASSERT_EQ(ER_INVALID_SIGNAL_EMISSION_TYPE, unicastParticipant.SendSessioncastSignal());
+    ASSERT_EQ(ER_INVALID_SIGNAL_EMISSION_TYPE, unicastParticipant.SendSessionlessSignal());
+    ASSERT_EQ(ER_OK, unicastParticipant.SendUnicastSignal());
+    ASSERT_EQ(ER_INVALID_SIGNAL_EMISSION_TYPE, unicastParticipant.SendGlobalBroadcastSignal());
+
+    ASSERT_EQ(ER_INVALID_SIGNAL_EMISSION_TYPE, globalBroadcastParticipant.SendSessioncastSignal());
+    ASSERT_EQ(ER_INVALID_SIGNAL_EMISSION_TYPE, globalBroadcastParticipant.SendSessionlessSignal());
+    ASSERT_EQ(ER_INVALID_SIGNAL_EMISSION_TYPE, globalBroadcastParticipant.SendUnicastSignal());
+    ASSERT_EQ(ER_OK, globalBroadcastParticipant.SendGlobalBroadcastSignal());
 }
