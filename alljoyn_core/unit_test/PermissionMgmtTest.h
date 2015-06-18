@@ -220,10 +220,10 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
     void GetAllProps(const InterfaceDescription::Member* member, Message& msg);
     const qcc::String& GetAuthMechanisms() const;
 
-    ECDHEKeyXListener* serviceKeyListener;
-    ECDHEKeyXListener* adminKeyListener;
-    ECDHEKeyXListener* consumerKeyListener;
-    ECDHEKeyXListener* remoteControlKeyListener;
+    AuthListener* serviceKeyListener;
+    AuthListener* adminKeyListener;
+    AuthListener* consumerKeyListener;
+    AuthListener* remoteControlKeyListener;
   private:
     void RegisterKeyStoreListeners();
     QStatus SetupBus(BusAttachment& bus);

@@ -360,7 +360,60 @@ class AuthListener {
      */
     virtual void AuthenticationComplete(const char* authMechanism, const char* peerName, bool success) = 0;
 
+};
 
+class DefaultECDHEAuthListener : public AuthListener {
+
+  public:
+    /**
+     * Create an instance of AuthListener that provides the default operations
+     * for ECDHE authentication mechanisms.
+     * For ECDHE_NULL authentication mechanism, the RequestCredentials callback
+     *     returns true.
+     * For ECDHE_PSK authentication mechanism, the RequestCredentials callback
+     *     returns false.
+     * For ECDHE_ECDSA authentication mechanism, the RequestCredentials callback
+     *     returns true without providing any credential.
+     * This AuthListener is suitable to be used in Claimed application since
+     * the framework will provide the Identity certificate chain to the peer.
+     */
+    DefaultECDHEAuthListener();
+
+    /**
+     * Create an instance of AuthListener that provides the default operations
+     * for ECDHE authentication mechanisms.
+     * For ECDHE_NULL authentication mechanism, the RequestCredentials callback
+     *     returns true.
+     * For ECDHE_PSK authentication mechanism, the RequestCredentials callback
+     *     returns true using the provided psk.
+     * For ECDHE_ECDSA authentication mechanism, the RequestCredentials callback
+     *     returns true without providing any credential.
+     * This AuthListener is suitable to be used in Claimed application since
+     * the framework will provide the Identity certificate chain to the peer.
+     * @param[in] psk the pre-shared secret
+     * @param[in] pskSize the size of the pre-shared secret.  It must be at
+     *                    least 128 bits.
+     */
+    DefaultECDHEAuthListener(const uint8_t* psk, size_t pskSize);
+
+    virtual ~DefaultECDHEAuthListener()
+    {
+        delete [] psk;
+    }
+
+    /**
+     * @see AuthListener::RequestCredentials
+     */
+    virtual bool RequestCredentials(const char* authMechanism, const char* peerName, uint16_t authCount, const char* userName, uint16_t credMask, Credentials& credentials);
+
+    /**
+     * @see AuthListener::AuthenticationComplete
+     */
+    virtual void AuthenticationComplete(const char* authMechanism, const char* peerName, bool success);
+
+  private:
+    uint8_t* psk;
+    size_t pskSize;
 };
 
 }
