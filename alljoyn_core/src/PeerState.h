@@ -40,10 +40,44 @@
 #include <qcc/Mutex.h>
 #include <qcc/Event.h>
 #include <qcc/time.h>
+#include <qcc/Crypto.h>
 
 #include <alljoyn/Status.h>
 
 namespace ajn {
+
+/* Conversation hash-related constants */
+
+/*
+ * We now define two versions of conversation hash: one that only hashes
+ * things inside KeyExchanger, used in authentication versions 3 and below, and
+ * the entire authentication version, used starting with version 4. These
+ * constants are used internally for calls to UpdateHash to indicate which
+ * version of the conversation hash a particular call pertains to.
+ *
+ * To stay consistent with the authentication version numbers, these are called
+ * V1 and V4.
+ */
+#define CONVERSATION_V1 ((uint32_t)0x0000)
+#define CONVERSATION_V4 ((uint32_t)0x0004)
+
+/*
+ * Message type headers
+ */
+typedef enum : uint8_t {
+    EXCHANGEGUIDSREQUEST,
+    EXCHANGEGUIDSREPLY,
+    GENSESSIONKEYREQUEST,
+    GENSESSIONKEYREPLY,
+    EXCHANGESUITESREQUEST,
+    EXCHANGESUITESREPLY,
+    KEYEXCHANGEREQUEST,
+    KEYEXCHANGEREPLY,
+    VERIFIER,
+    PSK,
+    ECDSA
+} HashHeader;
+
 
 /* Forward declaration */
 class _PeerState;
@@ -82,7 +116,8 @@ class _PeerState {
         lastDriftAdjustTime(0),
         expectedSerial(0),
         isSecure(false),
-        authEvent(NULL)
+        authEvent(NULL),
+        hashUtil(NULL)
     {
         ::memset(window, 0, sizeof(window));
         ::memset(authorizations, 0, sizeof(authorizations));
@@ -252,6 +287,108 @@ class _PeerState {
         }
     }
 
+
+    /**
+     * Update the conversation hash with a hash header
+     * InitializeConversationHash must first be called before calling this method.
+     * @param[in] conversationVersion The minimum auth version required for this to be included in the hash.
+     * @param[in] byte Byte with which to update the hash.
+     */
+    void UpdateHash(uint32_t conversationVersion, HashHeader hashHeader);
+
+    /**
+     * Update the conversation hash with a single byte
+     * InitializeConversationHash must first be called before calling this method.
+     * @param[in] conversationVersion The minimum auth version required for this to be included in the hash.
+     * @param[in] byte Byte with which to update the hash.
+     */
+    void UpdateHash(uint32_t conversationVersion, uint8_t byte);
+
+    /**
+     * Update the conversation hash with a byte array.
+     * InitializeConversationHash must first be called before calling this method.
+     * @param[in] conversationVersion The minimum auth version required for this to be included in the hash.
+     * @param[in] buf Data with which to update the hash.
+     * @param[in] bufSize Size of buf.
+     */
+    void UpdateHash(uint32_t conversationVersion, const uint8_t* buf, size_t bufSize);
+
+    /**
+     * Update the conversation hash with a string. String will be converted to its
+     * underlying byte array and used to update.
+     * InitializeConversationHash must first be called before calling this method.
+     * @param[in] conversationVersion The minimum auth version required for this to be included in the hash.
+     * @param[in] str String with data with which to update the hash.
+     */
+    void UpdateHash(uint32_t conversationVersion, const qcc::String& str);
+
+    /**
+     * Update the conversation hash with a MsgArg object. This will update
+     * the hash with the typeId field of the MsgArg first, and then the
+     * contents of the argument. In the case of a scalar array, the hash will
+     * first be updated with the number of elements and then each element
+     * in order.
+     *
+     * InitializeConversationHash must first be called before calling this method.
+     *
+     * The following MsgArg types are supported:
+     * ALLJOYN_UINT16 ALLJOYN_UINT32 ALLJOYN_UINT64 ALLJOYN_STRING ALLJOYN_UINT32_ARRAY
+     *
+     * @param[in] conversationVersion The minimum auth version required for this to be included in the hash.
+     * @param[in] msgArg A MsgArg object with which to update the hash.
+     */
+    void UpdateHash(uint32_t conversationVersion, const MsgArg& msgArg);
+
+    /**
+     * Update the conversation hash with an array of MsgArg objects. This calls
+     * UpdateHash on each element of the array in order; no additional data is used
+     * to update the hash.
+     * InitializeConversationHash must first be called before calling this method.
+     * @see QStatus UpdateHash(const MsgArg& msgArg)
+     * @param[in] conversationVersion The minimum auth version required for this to be included in the hash.
+     * @param[in] msgArgs An array of MsgArg objects with which to update the hash.
+     * @param[in] msgArgSize Number of elements of msgArgs array.
+     */
+    void UpdateHash(uint32_t conversationVersion, const MsgArg* msgArgs, size_t msgArgSize);
+
+    /**
+     * Update the conversation hash with a Message. This extracts the MsgArg array
+     * from the Message and updates the hash with that. No other content from the
+     * Message is used to update the hash.
+     * InitializeConversationHash must first be called before calling this method.
+     * @see QStatus UpdateHash(const MsgArg* msgArgs, size_t msgArgSize)
+     * @param[in] conversationVersion The minimum auth version required for this to be included in the hash.
+     * @param[in] msg A Message object whose arguments will be added to the hash.
+     */
+    void UpdateHash(uint32_t conversationVersion, Message& msg);
+
+    /**
+     * Initialize the conversation hash to start a new conversation. Any previous
+     * conversation hash is lost. This must be called before any calls to UpdateHash or GetDigest.
+     */
+    void InitializeConversationHash();
+
+    /**
+     * Free the conversation hash when it's no longer needed. After this, any new calls
+     * to UpdateHash or GetDigest must be preceded by a call to InitializeConversationHash.
+     * @see void InitializeConversationHash()
+     */
+    void FreeConversationHash();
+
+    /**
+     * Get the current conversation hash digest.
+     * InitializeConversationHash must first be called before calling this method.
+     * @param[out] digest A buffer of appropriate size to receive the digest. Currently
+     *                    only SHA-256 is used, and so 32 bytes will be returned.
+     * @param[in] keepAlive Whether or not to keep the hash alive for continuing hash.
+     */
+    void GetDigest(uint8_t* digest, bool keepAlive = false);
+
+    /*
+     * Destructor
+     */
+    ~_PeerState();
+
   private:
 
     /**
@@ -321,6 +458,10 @@ class _PeerState {
      */
     uint32_t window[128];
 
+    /**
+     * The conversation hash.
+     */
+    qcc::Crypto_Hash* hashUtil;
 };
 
 

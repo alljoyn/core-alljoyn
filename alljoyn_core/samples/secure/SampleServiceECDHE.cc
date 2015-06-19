@@ -51,7 +51,7 @@ static const char* SERVICE_PATH = "/SecureService";
 static const char* KEYX_ECDHE_NULL = "ALLJOYN_ECDHE_NULL";
 static const char* KEYX_ECDHE_PSK = "ALLJOYN_ECDHE_PSK";
 static const char* KEYX_ECDHE_ECDSA = "ALLJOYN_ECDHE_ECDSA";
-static const char* ECDHE_KEYX = "ALLJOYN_ECDHE_ECDSA";
+static const char* ECDHE_KEYX = "ALLJOYN_ECDHE_ECDSA ALLJOYN_ECDHE_PSK ALLJOYN_ECDHE_NULL";
 static const SessionPort SERVICE_PORT = 42;
 
 static volatile sig_atomic_t s_interrupt = false;
