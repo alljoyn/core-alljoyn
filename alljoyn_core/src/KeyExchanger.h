@@ -31,6 +31,7 @@
 #include <alljoyn/BusAttachment.h>
 
 #include "ProtectedAuthListener.h"
+#include "PeerState.h"
 
 using namespace qcc;
 
@@ -90,8 +91,7 @@ class KeyExchangerCB {
 class KeyExchanger {
   public:
 
-    KeyExchanger(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, uint16_t peerAuthVersion) : peerObj(peerObj), bus(bus), authCount(1), listener(listener), secretExpiration(3600), initiator(initiator), peerAuthVersion(peerAuthVersion) {
-        hashUtil.Init();
+    KeyExchanger(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, PeerState peerState) : peerObj(peerObj), bus(bus), authCount(1), listener(listener), secretExpiration(3600), peerState(peerState), initiator(initiator) {
         showDigestCounter = 0;
     }
 
@@ -158,7 +158,7 @@ class KeyExchanger {
 
     const uint16_t GetPeerAuthVersion()
     {
-        return peerAuthVersion;
+        return peerState->GetAuthVersion() >> 16;
     }
 
     /**
@@ -177,7 +177,8 @@ class KeyExchanger {
     uint16_t authCount;
     ProtectedAuthListener& listener;
     uint32_t secretExpiration;
-    Crypto_SHA256 hashUtil;
+
+    PeerState peerState;
 
   private:
     /**
@@ -192,7 +193,6 @@ class KeyExchanger {
 
     bool initiator;
     int showDigestCounter;
-    uint16_t peerAuthVersion;
 };
 
 class KeyExchangerECDHE : public KeyExchanger {
@@ -202,7 +202,7 @@ class KeyExchangerECDHE : public KeyExchanger {
      * Constructor
      *
      */
-    KeyExchangerECDHE(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, uint16_t peerAuthVersion) : KeyExchanger(initiator, peerObj, bus, listener, peerAuthVersion) {
+    KeyExchangerECDHE(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, PeerState peerState) : KeyExchanger(initiator, peerObj, bus, listener, peerState) {
     }
     /**
      * Desstructor
@@ -261,7 +261,7 @@ class KeyExchangerECDHE : public KeyExchanger {
 
 class KeyExchangerECDHE_NULL : public KeyExchangerECDHE {
   public:
-    KeyExchangerECDHE_NULL(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, uint16_t peerAuthVersion) : KeyExchangerECDHE(initiator, peerObj, bus, listener, peerAuthVersion) {
+    KeyExchangerECDHE_NULL(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, PeerState peerState) : KeyExchangerECDHE(initiator, peerObj, bus, listener, peerState) {
     }
 
     virtual ~KeyExchangerECDHE_NULL() {
@@ -292,7 +292,7 @@ class KeyExchangerECDHE_NULL : public KeyExchangerECDHE {
 
 class KeyExchangerECDHE_PSK : public KeyExchangerECDHE {
   public:
-    KeyExchangerECDHE_PSK(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, uint16_t peerAuthVersion) : KeyExchangerECDHE(initiator, peerObj, bus, listener, peerAuthVersion) {
+    KeyExchangerECDHE_PSK(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, PeerState peerState) : KeyExchangerECDHE(initiator, peerObj, bus, listener, peerState) {
         pskName = "<anonymous>";
         pskValue = " ";
     }
@@ -333,7 +333,7 @@ class KeyExchangerECDHE_PSK : public KeyExchangerECDHE {
 
 class KeyExchangerECDHE_ECDSA : public KeyExchangerECDHE {
   public:
-    KeyExchangerECDHE_ECDSA(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, uint16_t peerAuthVersion) : KeyExchangerECDHE(initiator, peerObj, bus, listener, peerAuthVersion), certChainLen(0), certChain(NULL) {
+    KeyExchangerECDHE_ECDSA(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, PeerState peerState) : KeyExchangerECDHE(initiator, peerObj, bus, listener, peerState), certChainLen(0), certChain(NULL) {
     }
 
     virtual ~KeyExchangerECDHE_ECDSA();
