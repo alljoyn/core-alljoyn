@@ -64,7 +64,7 @@ static const uint32_t MAX_KEYGEN_VERSION = 0x01;
  * The base authentication version number
  */
 static const uint32_t MIN_AUTH_VERSION = 0x0001;
-static const uint32_t MAX_AUTH_VERSION = 0x0003;
+static const uint32_t MAX_AUTH_VERSION = 0x0004;
 
 static const uint32_t PREFERRED_AUTH_VERSION = (MAX_AUTH_VERSION << 16) | MIN_KEYGEN_VERSION;
 
@@ -365,11 +365,19 @@ void AllJoynPeerObj::ExchangeGuids(const InterfaceDescription::Member* member, M
          */
         peerState->SetGuidAndAuthVersion(remotePeerGuid, authVersion);
         /*
+         * Now that we know the auth version, start and update the conversation hash.
+         */
+        peerState->InitializeConversationHash();
+        peerState->UpdateHash(CONVERSATION_V4, EXCHANGEGUIDSREQUEST);
+        peerState->UpdateHash(CONVERSATION_V4, msg);
+        /*
          * Associate the remote peer GUID with the sender peer state.
          */
         MsgArg replyArgs[2];
         replyArgs[0].Set("s", localGuidStr.c_str());
         replyArgs[1].Set("u", authVersion);
+        peerState->UpdateHash(CONVERSATION_V4, EXCHANGEGUIDSREPLY);
+        peerState->UpdateHash(CONVERSATION_V4, replyArgs, ArraySize(replyArgs));
         MethodReply(msg, replyArgs, ArraySize(replyArgs));
     } else {
         MethodReply(msg, ER_BUS_NO_PEER_GUID);
@@ -444,13 +452,18 @@ void AllJoynPeerObj::GenSessionKey(const InterfaceDescription::Member* member, M
 
     QStatus status;
     PeerState peerState = bus->GetInternal().GetPeerStateTable()->GetPeerState(msg->GetSender());
+
+    peerState->UpdateHash(CONVERSATION_V4, GENSESSIONKEYREQUEST);
+    peerState->UpdateHash(CONVERSATION_V4, msg);
+
     qcc::GUID128 remotePeerGuid(msg->GetArg(0)->v_string.str);
     qcc::GUID128 localPeerGuid(msg->GetArg(1)->v_string.str);
     /*
      * Check that target GUID is our GUID.
      */
     if (bus->GetInternal().GetKeyStore().GetGuid() != localPeerGuid.ToString()) {
-        MethodReply(msg, ER_BUS_NO_PEER_GUID);
+        status = ER_BUS_NO_PEER_GUID;
+        MethodReply(msg, status);
     } else {
         qcc::String nonce = RandHexString(NONCE_LEN);
         qcc::String verifier;
@@ -459,10 +472,16 @@ void AllJoynPeerObj::GenSessionKey(const InterfaceDescription::Member* member, M
             MsgArg replyArgs[2];
             replyArgs[0].Set("s", nonce.c_str());
             replyArgs[1].Set("s", verifier.c_str());
+            peerState->UpdateHash(CONVERSATION_V4, GENSESSIONKEYREPLY);
+            peerState->UpdateHash(CONVERSATION_V4, replyArgs, ArraySize(replyArgs));
             MethodReply(msg, replyArgs, ArraySize(replyArgs));
         } else {
             MethodReply(msg, status);
         }
+    }
+
+    if (status != ER_OK) {
+        peerState->FreeConversationHash();
     }
 }
 
@@ -588,7 +607,7 @@ void AllJoynPeerObj::DoKeyExchange(Message& msg)
         return;
     }
     PeerState peerState = peerStateTable->GetPeerState(sender);
-    KeyExchanger* keyExchanger = GetKeyExchangerInstance(peerState->GetAuthVersion() >> 16, false, authMaskList, 1);
+    KeyExchanger* keyExchanger = GetKeyExchangerInstance(peerState, false, authMaskList, 1);
     if (!keyExchanger) {
         lock.Unlock(MUTEX_CONTEXT);
         status = ER_AUTH_FAIL;
@@ -710,11 +729,16 @@ void AllJoynPeerObj::ExchangeSuites(const ajn::InterfaceDescription::Member* mem
     uint32_t*remoteSuites;
     size_t remoteSuitesLen;
 
+    PeerStateTable* peerStateTable = bus->GetInternal().GetPeerStateTable();
+    PeerState peerState = peerStateTable->GetPeerState(msg->GetSender());
+
     QStatus status = msg->GetArg(0)->Get("au", &remoteSuitesLen, &remoteSuites);
     if (status != ER_OK) {
         MethodReply(msg, status);
         return;
     }
+    peerState->UpdateHash(CONVERSATION_V4, EXCHANGESUITESREQUEST);
+    peerState->UpdateHash(CONVERSATION_V4, msg);
     size_t effectiveAuthSuitesCount = 0;
     if (supportedAuthSuitesCount == 0) {
         effectiveAuthSuitesCount = 1;
@@ -738,8 +762,6 @@ void AllJoynPeerObj::ExchangeSuites(const ajn::InterfaceDescription::Member* mem
                     if (supportedAuthSuites[cnt] == AUTH_SUITE_ECDHE_ECDSA) {
                         /* Does the peer auth version >= 3?  If not, the peer
                            can't handle ECDSA with X.509 certificate */
-                        PeerStateTable* peerStateTable = bus->GetInternal().GetPeerStateTable();
-                        PeerState peerState = peerStateTable->GetPeerState(msg->GetSender());
                         if ((peerState->GetAuthVersion() >> 16) <= NON_ECDSA_X509_VERSION) {
                             addIt = false;
                         }
@@ -757,6 +779,8 @@ void AllJoynPeerObj::ExchangeSuites(const ajn::InterfaceDescription::Member* mem
 
     MsgArg replyArg;
     replyArg.Set("au", effectiveAuthSuitesCount, effectiveAuthSuites);
+    peerState->UpdateHash(CONVERSATION_V4, EXCHANGESUITESREPLY);
+    peerState->UpdateHash(CONVERSATION_V4, replyArg);
     MethodReply(msg, &replyArg, 1);
     delete [] effectiveAuthSuites;
 }
@@ -926,6 +950,15 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
         return ER_OK;
     }
     /*
+     * Now that we know the authentication version, and that we're starting a new
+     * conversation, start a new hash and hash the ExchangeGuids messages.
+     */
+    peerState->InitializeConversationHash();
+    peerState->UpdateHash(CONVERSATION_V4, EXCHANGEGUIDSREQUEST);
+    peerState->UpdateHash(CONVERSATION_V4, args, ArraySize(args));
+    peerState->UpdateHash(CONVERSATION_V4, EXCHANGEGUIDSREPLY);
+    peerState->UpdateHash(CONVERSATION_V4, replyMsg);
+    /*
      * Check again if the peer is being authenticated on another thread. We need to do this because
      * the check above may have used a well-known-namme and now we know the unique name.
      */
@@ -962,6 +995,7 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
         SetRights(peerState, true, false);
         /* We are still holding the lock */
         lock.Unlock(MUTEX_CONTEXT);
+        peerState->FreeConversationHash();
         return ER_OK;
     }
     /*
@@ -1017,10 +1051,14 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
             args[0].Set("s", localGuidStr.c_str());
             args[1].Set("s", remoteGuidStr.c_str());
             args[2].Set("s", nonce.c_str());
+            peerState->UpdateHash(CONVERSATION_V4, GENSESSIONKEYREQUEST);
+            peerState->UpdateHash(CONVERSATION_V4, args, ArraySize(args));
             const InterfaceDescription::Member* genSessionKeyMember = ifc->GetMember("GenSessionKey");
             assert(genSessionKeyMember);
             status = remotePeerObj.MethodCall(*genSessionKeyMember, args, ArraySize(args), replyMsg, DEFAULT_TIMEOUT);
             if (status == ER_OK) {
+                peerState->UpdateHash(CONVERSATION_V4, GENSESSIONKEYREPLY);
+                peerState->UpdateHash(CONVERSATION_V4, replyMsg);
                 qcc::String verifier;
                 /*
                  * The response completes the seed string so we can generate the session key.
@@ -1037,7 +1075,7 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
         if (UseKeyExchanger(authVersion, supportedAuthSuites, supportedAuthSuitesCount)) {
             uint32_t* remoteAuthSuites = NULL;
             size_t remoteAuthSuitesCount = 0;
-            status = AskForAuthSuites(authVersion, remotePeerObj, ifc, &remoteAuthSuites, &remoteAuthSuitesCount);
+            status = AskForAuthSuites(authVersion, remotePeerObj, ifc, &remoteAuthSuites, &remoteAuthSuitesCount, peerState);
             if (status == ER_OK) {
                 status = AuthenticatePeerUsingKeyExchange(remoteAuthSuites, remoteAuthSuitesCount, busName, peerState, localGuidStr, remotePeerObj, ifc, remotePeerGuid, mech);
                 delete [] remoteAuthSuites;
@@ -1048,6 +1086,11 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
         authTried = true;
         firstPass = false;
     } while (status == ER_OK);
+    /*
+     * At this point, the authentication conversation is over and we no longer need
+     * to keep the conversation hash.
+     */
+    peerState->FreeConversationHash();
     /*
      * Exchange group keys with the remote peer. This method call is encrypted using the session key
      * that we just established.
@@ -1169,7 +1212,7 @@ QStatus AllJoynPeerObj::AuthenticatePeerUsingSASL(const qcc::String& busName, Pe
     return status;
 }
 
-QStatus AllJoynPeerObj::AskForAuthSuites(uint32_t peerAuthVersion, ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc, uint32_t** remoteAuthSuites, size_t* remoteAuthCount)
+QStatus AllJoynPeerObj::AskForAuthSuites(uint32_t peerAuthVersion, ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc, uint32_t** remoteAuthSuites, size_t* remoteAuthCount, PeerState peerState)
 {
     if (supportedAuthSuitesCount == 0) {
         return ER_AUTH_FAIL;
@@ -1201,6 +1244,8 @@ QStatus AllJoynPeerObj::AskForAuthSuites(uint32_t peerAuthVersion, ProxyBusObjec
     Message replyMsg(*bus);
     const InterfaceDescription::Member* exchangeSuites = ifc->GetMember("ExchangeSuites");
     assert(exchangeSuites);
+    peerState->UpdateHash(CONVERSATION_V4, EXCHANGESUITESREQUEST);
+    peerState->UpdateHash(CONVERSATION_V4, arg);
     QStatus status = remotePeerObj.MethodCall(*exchangeSuites, &arg, 1, replyMsg, DEFAULT_TIMEOUT);
     if (excludeECDHE_ECDSA) {
         delete [] authSuites;
@@ -1208,6 +1253,8 @@ QStatus AllJoynPeerObj::AskForAuthSuites(uint32_t peerAuthVersion, ProxyBusObjec
     if (status != ER_OK) {
         return status;
     }
+    peerState->UpdateHash(CONVERSATION_V4, EXCHANGESUITESREPLY);
+    peerState->UpdateHash(CONVERSATION_V4, replyMsg);
     uint32_t* remoteSuites;
     size_t remoteSuitesLen;
 
@@ -1229,7 +1276,7 @@ QStatus AllJoynPeerObj::AuthenticatePeerUsingKeyExchange(const uint32_t* request
     QStatus status;
 
     QCC_DbgHLPrintf(("AuthenticatePeerUsingKeyExchange"));
-    KeyExchanger* keyExchanger = GetKeyExchangerInstance(peerState->GetAuthVersion() >> 16, true, requestingAuthList, requestingAuthCount);  /* initiator */
+    KeyExchanger* keyExchanger = GetKeyExchangerInstance(peerState, true, requestingAuthList, requestingAuthCount);  /* initiator */
     if (!keyExchanger) {
         return ER_AUTH_FAIL;
     }
@@ -1532,18 +1579,18 @@ void AllJoynPeerObj::SessionJoined(const InterfaceDescription::Member* member, c
     bus->GetInternal().CallJoinedListeners(sessionPort, sessionId, joiner);
 }
 
-KeyExchanger* AllJoynPeerObj::GetKeyExchangerInstance(uint16_t peerAuthVersion, bool initiator, const uint32_t* requestingAuthList, size_t requestingAuthCount)
+KeyExchanger* AllJoynPeerObj::GetKeyExchangerInstance(PeerState peerState, bool initiator, const uint32_t* requestingAuthList, size_t requestingAuthCount)
 {
     for (size_t cnt = 0; cnt < requestingAuthCount; cnt++) {
         uint32_t suite = requestingAuthList[cnt];
         if ((suite & AUTH_SUITE_ECDHE_ECDSA) == AUTH_SUITE_ECDHE_ECDSA) {
-            return new KeyExchangerECDHE_ECDSA(initiator, this, *bus, peerAuthListener, peerAuthVersion);
+            return new KeyExchangerECDHE_ECDSA(initiator, this, *bus, peerAuthListener, peerState);
         }
         if ((suite & AUTH_SUITE_ECDHE_PSK) == AUTH_SUITE_ECDHE_PSK) {
-            return new KeyExchangerECDHE_PSK(initiator, this, *bus, peerAuthListener, peerAuthVersion);
+            return new KeyExchangerECDHE_PSK(initiator, this, *bus, peerAuthListener, peerState);
         }
         if ((suite & AUTH_SUITE_ECDHE_NULL) == AUTH_SUITE_ECDHE_NULL) {
-            return new KeyExchangerECDHE_NULL(initiator, this, *bus, peerAuthListener, peerAuthVersion);
+            return new KeyExchangerECDHE_NULL(initiator, this, *bus, peerAuthListener, peerState);
         }
     }
     return NULL;
@@ -1566,13 +1613,11 @@ QStatus KeyExchangerCB::SendKeyExchange(MsgArg* args, size_t numArgs, Message* r
     return remoteObj.MethodCall(*keyExchange, args, numArgs, *replyMsg, timeout);
 }
 
-QStatus KeyExchangerCB::SendKeyAuthentication(MsgArg* variant, Message* replyMsg)
+QStatus KeyExchangerCB::SendKeyAuthentication(MsgArg* msg, Message* replyMsg)
 {
-    MsgArg arg;
-    arg.Set("v", variant);
     const InterfaceDescription::Member* keyAuth = ifc->GetMember("KeyAuthentication");
     assert(keyAuth);
-    return remoteObj.MethodCall(*keyAuth, &arg, 1, *replyMsg, timeout);
+    return remoteObj.MethodCall(*keyAuth, msg, 1, *replyMsg, timeout);
 }
 
 /**
