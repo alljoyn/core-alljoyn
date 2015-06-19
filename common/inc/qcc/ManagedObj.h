@@ -130,7 +130,7 @@ class ManagedObj {
         }
     }
 
-    /** Allocate T() on the heap and set it's reference count to 1. */
+    /** Allocate T() on the heap and set its reference count to 1. */
     ManagedObj<T>()
     {
         const size_t offset = (sizeof(ManagedCtx) + 7) & ~0x07;
@@ -169,7 +169,7 @@ class ManagedObj {
     }
 
     /**
-     * Allocate T(arg1) on the heap and set it's reference count to 1.
+     * Allocate T(arg1) on the heap and set its reference count to 1.
      * @param arg1   First arg to T constructor.
      */
     template <typename A1> ManagedObj<T>(A1 & arg1)
@@ -184,7 +184,7 @@ class ManagedObj {
     }
 
     /**
-     * Allocate T(arg1, arg2) on the heap and set it's reference count to 1.
+     * Allocate T(arg1, arg2) on the heap and set its reference count to 1.
      * @param arg1   First arg to T constructor.
      * @param arg2   Second arg to T constructor.
      */
@@ -197,7 +197,7 @@ class ManagedObj {
     }
 
     /**
-     * Allocate T(arg1, arg2, arg3) on the heap and set it's reference count to 1.
+     * Allocate T(arg1, arg2, arg3) on the heap and set its reference count to 1.
      * @param arg1   First arg to T constructor.
      * @param arg2   Second arg to T constructor.
      * @param arg3   Third arg to T constructor.
@@ -214,7 +214,7 @@ class ManagedObj {
     }
 
     /**
-     * Allocate T(arg1, arg2, arg3, arg4) on the heap and set it's reference count to 1.
+     * Allocate T(arg1, arg2, arg3, arg4) on the heap and set its reference count to 1.
      * @param arg1   First arg to T constructor.
      * @param arg2   Second arg to T constructor.
      * @param arg3   Third arg to T constructor.
@@ -229,7 +229,7 @@ class ManagedObj {
     }
 
     /**
-     * Allocate T(arg1, arg2, arg3, arg4, arg5) on the heap and set it's reference count to 1.
+     * Allocate T(arg1, arg2, arg3, arg4, arg5) on the heap and set its reference count to 1.
      * @param arg1   First arg to T constructor.
      * @param arg2   Second arg to T constructor.
      * @param arg3   Third arg to T constructor.
@@ -248,7 +248,7 @@ class ManagedObj {
     }
 
     /**
-     * Allocate T(arg1, arg2, arg3, arg4, arg5, arg6) on the heap and set it's reference count to 1.
+     * Allocate T(arg1, arg2, arg3, arg4, arg5, arg6) on the heap and set its reference count to 1.
      * @param arg1   First arg to T constructor.
      * @param arg2   Second arg to T constructor.
      * @param arg3   Third arg to T constructor.
@@ -268,7 +268,7 @@ class ManagedObj {
     }
 
     /**
-     * Allocate T(arg1, arg2, arg3, arg4, arg5, arg6, arg7) on the heap and set it's reference count to 1.
+     * Allocate T(arg1, arg2, arg3, arg4, arg5, arg6, arg7) on the heap and set its reference count to 1.
      * @param arg1   First arg to T constructor.
      * @param arg2   Second arg to T constructor.
      * @param arg3   Third arg to T constructor.
@@ -289,7 +289,7 @@ class ManagedObj {
     }
 
     /**
-     * Allocate T(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) on the heap and set it's reference count to 1.
+     * Allocate T(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) on the heap and set its reference count to 1.
      * @param arg1   First arg to T constructor.
      * @param arg2   Second arg to T constructor.
      * @param arg3   Third arg to T constructor.
@@ -311,7 +311,7 @@ class ManagedObj {
     }
 
     /**
-     * Allocate T(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) on the heap and set it's reference count to 1.
+     * Allocate T(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) on the heap and set its reference count to 1.
      * @param arg1   First arg to T constructor.
      * @param arg2   Second arg to T constructor.
      * @param arg3   Third arg to T constructor.
@@ -334,7 +334,7 @@ class ManagedObj {
     }
 
     /**
-     * Allocate T(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10) on the heap and set it's reference count to 1.
+     * Allocate T(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10) on the heap and set its reference count to 1.
      * @param arg1   First arg to T constructor.
      * @param arg2   Second arg to T constructor.
      * @param arg3   Third arg to T constructor.

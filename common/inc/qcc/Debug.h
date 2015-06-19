@@ -246,7 +246,7 @@ typedef void (*QCC_DbgMsgCallback)(DbgMsgType type,
 
 
 /**
- * Allows the application to define it's own debug and error message handler.
+ * Allows the application to define its own debug and error message handler.
  * This is intended for more generic handling of debug messages than what
  * QCC_RegisterOutputFile() can provide.
  *

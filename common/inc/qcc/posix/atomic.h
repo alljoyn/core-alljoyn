@@ -39,7 +39,7 @@ namespace qcc {
 #if defined(QCC_OS_ANDROID)
 
 /**
- * Increment an int32_t and return it's new value atomically.
+ * Increment an int32_t and return its new value atomically.
  *
  * @param mem   Pointer to int32_t to be incremented.
  * @return  New value (after increment) of *mem
@@ -56,7 +56,7 @@ inline int32_t IncrementAndFetch(volatile int32_t* mem)
 }
 
 /**
- * Decrement an int32_t and return it's new value atomically.
+ * Decrement an int32_t and return its new value atomically.
  *
  * @param mem   Pointer to int32_t to be decremented.
  * @return  New value (after decrement) of *mem
@@ -75,7 +75,7 @@ inline int32_t DecrementAndFetch(volatile int32_t* mem)
 #elif defined(QCC_OS_LINUX)
 
 /**
- * Increment an int32_t and return it's new value atomically.
+ * Increment an int32_t and return its new value atomically.
  *
  * @param mem   Pointer to int32_t to be incremented.
  * @return  New value (after increment) of *mem
@@ -85,7 +85,7 @@ inline int32_t IncrementAndFetch(volatile int32_t* mem) {
 }
 
 /**
- * Decrement an int32_t and return it's new value atomically.
+ * Decrement an int32_t and return its new value atomically.
  *
  * @param mem   Pointer to int32_t to be decremented.
  * @return  New value (afer decrement) of *mem
@@ -97,7 +97,7 @@ inline int32_t DecrementAndFetch(volatile int32_t* mem) {
 #elif defined(QCC_OS_DARWIN)
 
 /**
- * Increment an int32_t and return it's new value atomically.
+ * Increment an int32_t and return its new value atomically.
  *
  * @param mem   Pointer to int32_t to be incremented.
  * @return  New value (after increment) of *mem
@@ -107,7 +107,7 @@ inline int32_t IncrementAndFetch(volatile int32_t* mem) {
 }
 
 /**
- * Decrement an int32_t and return it's new value atomically.
+ * Decrement an int32_t and return its new value atomically.
  *
  * @param mem   Pointer to int32_t to be decremented.
  * @return  New value (afer decrement) of *mem
@@ -119,7 +119,7 @@ inline int32_t DecrementAndFetch(volatile int32_t* mem) {
 #else
 
 /**
- * Increment an int32_t and return it's new value atomically.
+ * Increment an int32_t and return its new value atomically.
  *
  * @param mem   Pointer to int32_t to be incremented.
  * @return  New value (afer increment) of *mem
@@ -127,7 +127,7 @@ inline int32_t DecrementAndFetch(volatile int32_t* mem) {
 int32_t IncrementAndFetch(volatile int32_t* mem);
 
 /**
- * Decrement an int32_t and return it's new value atomically.
+ * Decrement an int32_t and return its new value atomically.
  *
  * @param mem   Pointer to int32_t to be decremented.
  * @return  New value (afer decrement) of *mem

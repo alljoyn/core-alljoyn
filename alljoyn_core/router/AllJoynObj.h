@@ -1178,7 +1178,7 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
     }
 
     /**
-     * Helper method used to shutdown a remote endpoint while preserving it's open file descriptor.
+     * Helper method used to shutdown a remote endpoint while preserving its open file descriptor.
      * This is used for converting a RemoteEndpoint into a raw streaming socket.
      *
      * @param b2bEp    Bus to bus endpoint being shutdown.

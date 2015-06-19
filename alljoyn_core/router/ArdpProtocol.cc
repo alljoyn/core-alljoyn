@@ -2293,7 +2293,7 @@ static QStatus ReleaseRcvBuffers(ArdpHandle* handle, ArdpConnRecord* conn, uint3
      * If we advanced the receive queue  based on expired messages in RCV window,
      * it's possible that RCV.CUR < RCV.LCS.
      * This can happen when a message has been only partially received
-     * and it's TTL has expired before we had a chance to assemble a complete message.
+     * and its TTL has expired before we had a chance to assemble a complete message.
      * We need to update left edge of ACK window to match LCS.
      */
     if (SEQ32_LT(conn->rcv.CUR, conn->rcv.LCS)) {
