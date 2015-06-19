@@ -693,7 +693,7 @@ void SessionlessObj::FoundAdvertisedNameHandler(const char* name, TransportMask 
             cit->second.changeId = changeId;
             cit->second.retries = 0; /* Reset the backoff schedule when new signals are available. */
         }
-        cit->second.transport = transport;
+        cit->second.transports |= transport;
     }
     ScheduleWork(doInitialBackoff);
     lock.Unlock();
@@ -971,7 +971,7 @@ void SessionlessObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
                 }
                 String name = cache.name;
                 SessionOpts opts = sessionOpts;
-                opts.transports = cache.transport;
+                opts.transports = cache.transports;
                 uint32_t retries = cache.retries;
 
                 /* Need to release locks around JoinSessionAsync to avoid deadlock, see ASACORE-1402 */
