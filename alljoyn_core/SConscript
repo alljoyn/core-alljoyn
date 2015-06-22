@@ -36,9 +36,7 @@ ajenv = env.Clone()
 
 # Bullseye code coverage for 'debug' builds.
 if ajenv['VARIANT'] == 'debug':
-    if(not(ajenv.has_key('BULLSEYE_BIN'))):
-        print('BULLSEYE_BIN not specified')
-    else:
+    if(ajenv.has_key('BULLSEYE_BIN')):
         ajenv.PrependENVPath('PATH', ajenv.get('BULLSEYE_BIN'))
         if (not(os.environ.has_key('COVFILE'))):
             print('Error: COVFILE environment variable must be set')
