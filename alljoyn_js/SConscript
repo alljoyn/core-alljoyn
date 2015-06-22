@@ -53,11 +53,6 @@ sys.path.append(str(jsenv.Dir('../build_core/tools/scons').srcnode()))
 from jsstatus import JavaScriptStatus
 from widl import Widl
 
-if not jsenv.has_key('BULLSEYE_BIN'):
-    print('BULLSEYE_BIN not specified')
-else:
-    jsenv.PrependENVPath('PATH', jsenv.get('BULLSEYE_BIN'))
-
 if jsenv.has_key('JSDOC_DIR'):
     jsenv.PrependENVPath('PATH', jsenv.get('JSDOC_DIR'))
 

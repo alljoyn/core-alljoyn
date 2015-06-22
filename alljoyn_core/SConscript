@@ -34,19 +34,6 @@ env['OBJDIR_ALLJOYN_CORE'] = env['OBJDIR'] + '/alljoyn_core'
 
 ajenv = env.Clone()
 
-# Bullseye code coverage for 'debug' builds.
-if ajenv['VARIANT'] == 'debug':
-    if(not(ajenv.has_key('BULLSEYE_BIN'))):
-        print('BULLSEYE_BIN not specified')
-    else:
-        ajenv.PrependENVPath('PATH', ajenv.get('BULLSEYE_BIN'))
-        if (not(os.environ.has_key('COVFILE'))):
-            print('Error: COVFILE environment variable must be set')
-            if not GetOption('help'):
-                Exit(1)
-        else:
-            ajenv.PrependENVPath('COVFILE', os.environ['COVFILE'])
-
 # manually add dependencies for xml to h, and for files included in the xml
 ajenv.Depends('$OBJDIR_ALLJOYN_CORE/Status.h', 'src/Status.xml')
 ajenv.Depends('$OBJDIR_ALLJOYN_CORE/Status.h', '../common/src/Status.xml')

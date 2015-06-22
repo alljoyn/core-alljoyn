@@ -17,19 +17,6 @@ import os
 Import('env')
 from os.path import basename
 
-# Bullseye code coverage for 'debug' builds.
-if env['VARIANT'] == 'debug':
-    if not env.has_key('BULLSEYE_BIN'):
-        print 'BULLSEYE_BIN not specified'
-    else:
-        env.PrependENVPath('PATH', env.get('BULLSEYE_BIN'))
-        if not os.environ.has_key('COVFILE'):
-            print 'Error: COVFILE environment variable must be set'
-            if not GetOption('help'):
-                Exit(1)
-        else:
-            env.PrependENVPath('COVFILE', os.environ['COVFILE'])
-
 # Make alljoyn C++ dist a sub-directory of the alljoyn dist.
 env['OBJDIR_COMMON'] = env['OBJDIR'] + '/common'
 
