@@ -11,7 +11,7 @@
 #    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 #    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-# 
+#
 
 import os
 Import('env')
@@ -36,9 +36,7 @@ ajenv = env.Clone()
 
 # Bullseye code coverage for 'debug' builds.
 if ajenv['VARIANT'] == 'debug':
-    if(not(ajenv.has_key('BULLSEYE_BIN'))):
-        print('BULLSEYE_BIN not specified')
-    else:
+    if(ajenv.has_key('BULLSEYE_BIN')):
         ajenv.PrependENVPath('PATH', ajenv.get('BULLSEYE_BIN'))
         if (not(os.environ.has_key('COVFILE'))):
             print('Error: COVFILE environment variable must be set')
@@ -100,7 +98,7 @@ about_env['OBJDIR_ABOUT'] = env['OBJDIR'] + '/about'
 about_env.VariantDir('$OBJDIR_ABOUT/cpp', '../services/about/cpp', duplicate = 0)
 about_env.SConscript('$OBJDIR_ABOUT/cpp/SConscript', exports = ['about_env'])
 
-# only include command line samples, unit test, test programs if we are not 
+# only include command line samples, unit test, test programs if we are not
 # building for iOS. No support on iOS for command line applications.
 if env['OS'] == 'darwin' and env['CPU'] in ['arm', 'armv7', 'armv7s', 'arm64',]:
     progs = []
