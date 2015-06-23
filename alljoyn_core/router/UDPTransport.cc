@@ -3046,6 +3046,13 @@ class _UDPEndpoint : public _RemoteEndpoint {
          */
         m_transport->m_endpointListLock.Lock(MUTEX_CONTEXT);
 
+        if (!GetFeatures().isBusToBus) {
+            m_transport->m_connLock.Lock(MUTEX_CONTEXT);
+            --m_transport->m_numUntrustedClients;
+            m_transport->m_connLock.Unlock(MUTEX_CONTEXT);
+        }
+
+
 #ifndef NDEBUG
         /*
          * The callback dispatcher looked to see if the endpoint was on the
@@ -5489,10 +5496,8 @@ QStatus UDPTransport::Join(void)
     m_preListLock.Unlock(MUTEX_CONTEXT);
 
     while ((i = m_authList.begin()) != m_authList.end()) {
-#ifndef NDEBUG
         UDPEndpoint ep = *i;
         QCC_DbgTrace(("UDPTransport::Join(): Erasing endpoint with conn ID == %d. from m_authList", ep->GetConnId()));
-#endif
         m_authList.erase(i);
         /*
          * If the endpoint is on the auth list, it occupies a slot on the
@@ -5502,6 +5507,7 @@ QStatus UDPTransport::Join(void)
         m_connLock.Lock(MUTEX_CONTEXT);
         --m_currAuth;
         --m_currConn;
+        m_numUntrustedClients -= (ep->GetFeatures().isBusToBus ? 0 : 1);
         m_connLock.Unlock(MUTEX_CONTEXT);
     }
 
@@ -6906,6 +6912,24 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
         return false;
     }
 
+    if (!isBusToBus) {
+        m_connLock.Lock(MUTEX_CONTEXT);
+        if (m_numUntrustedClients >= m_maxRemoteClientsUdp) {
+            status = ER_CONNECTION_LIMIT_EXCEEDED;
+            QCC_LogError(status, ("UDPTransport::AcceptCb(): %u + 1 > %u", m_numUntrustedClients, m_maxRemoteClientsUdp));
+
+            --m_currAuth;
+            --m_currConn;
+            m_connLock.Unlock(MUTEX_CONTEXT);
+            DecrementAndFetch(&m_refCount);
+            return false;
+        } else {
+            ++m_numUntrustedClients;
+            m_connLock.Unlock(MUTEX_CONTEXT);
+        }
+    }
+
+
     /*
      * The remote name of the endpoint on the passive side of the connection is
      * the sender of the BusHello Message, presumably the local bus attachment
@@ -6921,6 +6945,7 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
         m_connLock.Lock(MUTEX_CONTEXT);
         --m_currAuth;
         --m_currConn;
+        m_numUntrustedClients -= (isBusToBus ? 0 : 1);
         m_connLock.Unlock(MUTEX_CONTEXT);
 
         DecrementAndFetch(&m_refCount);
@@ -6943,6 +6968,7 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
         m_connLock.Lock(MUTEX_CONTEXT);
         --m_currAuth;
         --m_currConn;
+        m_numUntrustedClients -= (isBusToBus ? 0 : 1);
         m_connLock.Unlock(MUTEX_CONTEXT);
 
         DecrementAndFetch(&m_refCount);
@@ -6963,6 +6989,7 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
         m_connLock.Lock(MUTEX_CONTEXT);
         --m_currAuth;
         --m_currConn;
+        m_numUntrustedClients -= (isBusToBus ? 0 : 1);
         m_connLock.Unlock(MUTEX_CONTEXT);
 
         DecrementAndFetch(&m_refCount);
@@ -7063,6 +7090,7 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
         m_connLock.Lock(MUTEX_CONTEXT);
         --m_currAuth;
         --m_currConn;
+        m_numUntrustedClients -= (isBusToBus ? 0 : 1);
         m_connLock.Unlock(MUTEX_CONTEXT);
 
         DecrementAndFetch(&m_refCount);
@@ -7131,6 +7159,7 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
         m_connLock.Lock(MUTEX_CONTEXT);
         --m_currAuth;
         --m_currConn;
+        m_numUntrustedClients -= (isBusToBus ? 0 : 1);
         m_connLock.Unlock(MUTEX_CONTEXT);
 
         DecrementAndFetch(&m_refCount);
@@ -7172,6 +7201,7 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
         m_connLock.Lock(MUTEX_CONTEXT);
         --m_currAuth;
         --m_currConn;
+        m_numUntrustedClients -= (isBusToBus ? 0 : 1);
         m_connLock.Unlock(MUTEX_CONTEXT);
 
         DecrementAndFetch(&m_refCount);
@@ -7558,6 +7588,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
             m_connLock.Lock(MUTEX_CONTEXT);
             --m_currAuth;
             --m_currConn;
+            // DO NOT decrement m_numUntrustedClients, as this was an outgoing connection
             m_connLock.Unlock(MUTEX_CONTEXT);
 
             DecrementAndFetch(&m_refCount);
@@ -7610,6 +7641,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
             m_connLock.Lock(MUTEX_CONTEXT);
             --m_currAuth;
             --m_currConn;
+            // DO NOT decrement m_numUntrustedClients, as this was an outgoing connection
             m_connLock.Unlock(MUTEX_CONTEXT);
 
             DecrementAndFetch(&m_refCount);
@@ -7631,6 +7663,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
             m_connLock.Lock(MUTEX_CONTEXT);
             --m_currAuth;
             --m_currConn;
+            // DO NOT decrement m_numUntrustedClients, as this was an outgoing connection
             m_connLock.Unlock(MUTEX_CONTEXT);
 
             DecrementAndFetch(&m_refCount);
@@ -7652,6 +7685,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
             m_connLock.Lock(MUTEX_CONTEXT);
             --m_currAuth;
             --m_currConn;
+            // DO NOT decrement m_numUntrustedClients, as this was an outgoing connection
             m_connLock.Unlock(MUTEX_CONTEXT);
 
             DecrementAndFetch(&m_refCount);
@@ -7674,6 +7708,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
             m_connLock.Lock(MUTEX_CONTEXT);
             --m_currAuth;
             --m_currConn;
+            // DO NOT decrement m_numUntrustedClients, as this was an outgoing connection
             m_connLock.Unlock(MUTEX_CONTEXT);
 
             DecrementAndFetch(&m_refCount);
@@ -7701,6 +7736,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
             m_connLock.Lock(MUTEX_CONTEXT);
             --m_currAuth;
             --m_currConn;
+            // DO NOT decrement m_numUntrustedClients, as this was an outgoing connection
             m_connLock.Unlock(MUTEX_CONTEXT);
 
             DecrementAndFetch(&m_refCount);
@@ -7722,6 +7758,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
             m_connLock.Lock(MUTEX_CONTEXT);
             --m_currAuth;
             --m_currConn;
+            // DO NOT decrement m_numUntrustedClients, as this was an outgoing connection
             m_connLock.Unlock(MUTEX_CONTEXT);
 
             DecrementAndFetch(&m_refCount);
@@ -7748,6 +7785,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
             m_connLock.Lock(MUTEX_CONTEXT);
             --m_currAuth;
             --m_currConn;
+            // DO NOT decrement m_numUntrustedClients, as this was an outgoing connection
             m_connLock.Unlock(MUTEX_CONTEXT);
 
             DecrementAndFetch(&m_refCount);
@@ -7775,6 +7813,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
             m_connLock.Lock(MUTEX_CONTEXT);
             --m_currAuth;
             --m_currConn;
+            // DO NOT decrement m_numUntrustedClients, as this was an outgoing connection
             m_connLock.Unlock(MUTEX_CONTEXT);
 
             DecrementAndFetch(&m_refCount);
@@ -10029,6 +10068,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
         m_connLock.Lock(MUTEX_CONTEXT);
         --m_currAuth;
         --m_currConn;
+        // NO m_numUntrustedClients; outgoing!
         m_connLock.Unlock(MUTEX_CONTEXT);
 
         DecrementAndFetch(&m_connecting);
@@ -10112,6 +10152,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
         m_connLock.Lock(MUTEX_CONTEXT);
         --m_currAuth;
         --m_currConn;
+        // NO m_numUntrustedClients; outgoing!
         m_connLock.Unlock(MUTEX_CONTEXT);
 
         DecrementAndFetch(&m_connecting);
@@ -10587,45 +10628,6 @@ QStatus UDPTransport::DoStartListen(qcc::String& normSpec)
     return status;
 }
 
-
-void UDPTransport::UntrustedClientExit()
-{
-    QCC_DbgTrace((" UDPTransport::UntrustedClientExit()"));
-
-    /* An untrusted client has exited, update the counts and re-enable the advertisement if necessary. */
-    m_listenRequestsLock.Lock();
-    if (m_numUntrustedClients >= 0) {
-        m_numUntrustedClients--;
-        QCC_DbgPrintf((" UDPTransport::UntrustedClientExit() m_numUntrustedClients=%d m_maxRemoteClientsUdp=%d", m_numUntrustedClients, m_maxRemoteClientsUdp));
-    }
-    m_listenRequestsLock.Unlock();
-    m_dynamicScoreUpdater.Alert();
-}
-
-QStatus UDPTransport::UntrustedClientStart()
-{
-    QCC_DbgTrace((" UDPTransport::UntrustedClientStart()"));
-
-    QStatus status = ER_OK;
-
-    m_listenRequestsLock.Lock();
-    m_numUntrustedClients++;
-    QCC_DbgPrintf((" UDPTransport::UntrustedClientStart() m_numUntrustedClients=%d m_maxRemoteClientsUdp=%d", m_numUntrustedClients, m_maxRemoteClientsUdp));
-
-    if (m_numUntrustedClients > m_maxRemoteClientsUdp) {
-        /* This could happen in the following situation:
-         * The max untrusted clients is set to 1. Two untrusted clients try to
-         * connect to this daemon at the same time. When the 2nd one
-         * finishes the EndpointAuth::Establish, it will call into this method
-         * and hit this case and will be rejected.
-         */
-        status = ER_BUS_NOT_ALLOWED;
-        m_numUntrustedClients--;
-    }
-    m_listenRequestsLock.Unlock();
-    m_dynamicScoreUpdater.Alert();
-    return status;
-}
 
 /**
  * Stop listening for inbound connections over the ARDP Protocol using the
