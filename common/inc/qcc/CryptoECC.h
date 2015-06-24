@@ -22,6 +22,7 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
+#include <alljoyn/Status.h>
 #include <qcc/platform.h>
 
 #include <qcc/String.h>

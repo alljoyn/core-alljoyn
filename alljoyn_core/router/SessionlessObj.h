@@ -345,7 +345,7 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
     class RemoteCache {
       public:
         RemoteCache(const qcc::String& name, uint32_t version, const qcc::String& guid, const qcc::String& iface, uint32_t changeId, TransportMask transport) :
-            name(name), version(version), guid(guid), changeId(changeId), transport(transport), haveReceived(false),
+            name(name), version(version), guid(guid), changeId(changeId), transports(transport), haveReceived(false),
             receivedChangeId(std::numeric_limits<uint32_t>::max()), appliedRulesId(std::numeric_limits<uint32_t>::max()),
             state(IDLE), retries(0), sid(0) {
             ifaces.insert(iface);
@@ -358,7 +358,7 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
         qcc::String guid;
         std::set<qcc::String> ifaces;
         uint32_t changeId;
-        TransportMask transport;
+        TransportMask transports;
 
         /* State */
         bool haveReceived; /* true once we have received something from the remote cache */
