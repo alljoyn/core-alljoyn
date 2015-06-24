@@ -304,9 +304,9 @@ TEST(PermissionPolicyTest, acl_constructor)
 {
     PermissionPolicy::Acl acl;
     EXPECT_TRUE(NULL == acl.GetPeers());
-    EXPECT_EQ(0, acl.GetPeersSize());
+    EXPECT_EQ((size_t)0, acl.GetPeersSize());
     EXPECT_TRUE(NULL == acl.GetRules());
-    EXPECT_EQ(0, acl.GetRulesSize());
+    EXPECT_EQ((size_t)0, acl.GetRulesSize());
 }
 
 
@@ -324,7 +324,7 @@ TEST(PermissionPolicyTest, acl_set_get_Peers)
     PermissionPolicy::Acl acl;
     acl.SetPeers(3, peer);
 
-    ASSERT_EQ(3, acl.GetPeersSize());
+    ASSERT_EQ((size_t)3, acl.GetPeersSize());
     const PermissionPolicy::Peer* outPeers = acl.GetPeers();
     EXPECT_EQ(outPeers[0], peer[0]);
     EXPECT_EQ(outPeers[1], peer[1]);
@@ -348,10 +348,10 @@ TEST(PermissionPolicyTest, acl_set_get_Rules)
 
     PermissionPolicy::Acl acl;
     acl.SetRules(2, rule);
-    ASSERT_EQ(2, acl.GetRulesSize());
+    ASSERT_EQ((size_t)2, acl.GetRulesSize());
     const PermissionPolicy::Rule* outRules = acl.GetRules();
-    EXPECT_EQ(2, outRules[0].GetMembersSize());
-    EXPECT_EQ(2, outRules[1].GetMembersSize());
+    EXPECT_EQ((size_t)2, outRules[0].GetMembersSize());
+    EXPECT_EQ((size_t)2, outRules[1].GetMembersSize());
     EXPECT_EQ(outRules[0], rule[0]);
     EXPECT_EQ(outRules[1], rule[1]);
 }
@@ -424,7 +424,7 @@ TEST(PermissionPolicyTest, set_get_Acls)
     permissionPolicy.SetAcls(2, acls);
     const PermissionPolicy::Acl* aclsOut = permissionPolicy.GetAcls();
 
-    ASSERT_EQ(2, permissionPolicy.GetAclsSize());
+    ASSERT_EQ((size_t)2, permissionPolicy.GetAclsSize());
 
     EXPECT_EQ(acls[0], aclsOut[0]);
     EXPECT_EQ(acls[1], aclsOut[1]);

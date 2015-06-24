@@ -1065,38 +1065,38 @@ TEST_P(DaemonRouterTest, PushMessage)
                                                  << " from " << senderInfo
                                                  << " to " << destInfo
                                                  << " over session ID " << sessionId;
-    EXPECT_EQ(0, testMsg->NormalRxCount()) << (msgIsSessionless ? "Sessionless " : "Normal ")
-                                           << testMsg->GetOrigType()
-                                           << (replyIsExpected ? " (reply expected)" : "")
-                                           << " " << testMember
-                                           << " from " << senderInfo
-                                           << " to " << destInfo
-                                           << " over session ID " << sessionId
-                                           << " not delivered to all recipients directly: "
-                                           << testMsg->GetNormalRxSet();
-    EXPECT_EQ(0, testMsg->SlsRxRouteCount()) << (msgIsSessionless ? "Sessionless " : "Normal ")
-                                             << testMsg->GetOrigType()
-                                             << (replyIsExpected ? " (reply expected)" : "")
-                                             << " " << testMember
-                                             << " from " << senderInfo
-                                             << " to " << destInfo
-                                             << " over session ID " << sessionId
-                                             << " not delivered via SessionlessObj::RouteSessionlessMessage(): "
-                                             << testMsg->GetSlsRxRouteSet();
-    EXPECT_EQ(0, testMsg->SlsRxPushCount()) << (msgIsSessionless ? "Sessionless " : "Normal ")
-                                            << testMsg->GetOrigType()
-                                            << (replyIsExpected ? " (reply expected)" : "")
-                                            << " " << testMember
-                                            << " from " << senderInfo
-                                            << " to " << destInfo
-                                            << " over session ID " << sessionId
-                                            << " not delivered via SessionlessObj::PushMessage(): "
-                                            << testMsg->GetSlsRxPushSet();
-    EXPECT_EQ(0, testMsg->ErrorRxCount()) << "ERROR from " << destInfo
-                                          << " to " << senderInfo
-                                          << " over session ID " << sessionId
-                                          << " not delivered to all error recipients: "
-                                          << testMsg->GetErrorRxSet();
+    EXPECT_EQ((size_t)0, testMsg->NormalRxCount()) << (msgIsSessionless ? "Sessionless " : "Normal ")
+                                                   << testMsg->GetOrigType()
+                                                   << (replyIsExpected ? " (reply expected)" : "")
+                                                   << " " << testMember
+                                                   << " from " << senderInfo
+                                                   << " to " << destInfo
+                                                   << " over session ID " << sessionId
+                                                   << " not delivered to all recipients directly: "
+                                                   << testMsg->GetNormalRxSet();
+    EXPECT_EQ((size_t)0, testMsg->SlsRxRouteCount()) << (msgIsSessionless ? "Sessionless " : "Normal ")
+                                                     << testMsg->GetOrigType()
+                                                     << (replyIsExpected ? " (reply expected)" : "")
+                                                     << " " << testMember
+                                                     << " from " << senderInfo
+                                                     << " to " << destInfo
+                                                     << " over session ID " << sessionId
+                                                     << " not delivered via SessionlessObj::RouteSessionlessMessage(): "
+                                                     << testMsg->GetSlsRxRouteSet();
+    EXPECT_EQ((size_t)0, testMsg->SlsRxPushCount()) << (msgIsSessionless ? "Sessionless " : "Normal ")
+                                                    << testMsg->GetOrigType()
+                                                    << (replyIsExpected ? " (reply expected)" : "")
+                                                    << " " << testMember
+                                                    << " from " << senderInfo
+                                                    << " to " << destInfo
+                                                    << " over session ID " << sessionId
+                                                    << " not delivered via SessionlessObj::PushMessage(): "
+                                                    << testMsg->GetSlsRxPushSet();
+    EXPECT_EQ((size_t)0, testMsg->ErrorRxCount()) << "ERROR from " << destInfo
+                                                  << " to " << senderInfo
+                                                  << " over session ID " << sessionId
+                                                  << " not delivered to all error recipients: "
+                                                  << testMsg->GetErrorRxSet();
 }
 
 

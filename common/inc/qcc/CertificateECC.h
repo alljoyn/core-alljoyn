@@ -663,12 +663,16 @@ class CertificateX509 {
      */
     CertificateX509(const CertificateX509& other) :
         type(other.type), tbs(other.tbs), encodedLen(other.encodedLen),
-        serial(other.serial), issuer(other.issuer), subject(other.subject),
+        serialLen(other.serialLen), issuer(other.issuer), subject(other.subject),
         validity(other.validity), publickey(other.publickey),
         signature(other.signature), ca(other.ca), digest(other.digest),
         subjectAltName(other.subjectAltName), aki(other.aki) {
         encoded = new uint8_t[encodedLen];
         memcpy(encoded, other.encoded, encodedLen);
+        if (other.serial) {
+            serial = new uint8_t[serialLen];
+            memcpy(serial, other.serial, serialLen);
+        }
     }
 
     /**
@@ -684,8 +688,13 @@ class CertificateX509 {
             delete[] encoded;
             encoded = new uint8_t[encodedLen];
             memcpy(encoded, other.encoded, encodedLen);
-
-            serial = other.serial;
+            if (other.serial) {
+                SetSerial(other.serial, other.serialLen);
+            } else {
+              delete[] serial;
+              serial = NULL;
+              serialLen = 0;
+            }
             issuer = other.issuer;
             subject = other.subject;
             validity = other.validity;
