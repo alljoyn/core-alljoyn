@@ -181,7 +181,7 @@ class Thread {
 
     /**
      * This function allows one thread to wait for the completion of another
-     * thread.  Once a thread has terminated, it's exit value may be examined.
+     * thread.  Once a thread has terminated, its exit value may be examined.
      * A thread must not "join" itself.
      *
      * @return  Indication of whether the join operation succeeded or not.

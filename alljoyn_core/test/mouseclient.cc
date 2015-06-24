@@ -187,7 +187,7 @@ class LocalTestObject : public BusObject {
     }
 
     LocalTestObject(BusAttachment& bus, const char* path) :
-        BusObject(bus, path),
+        BusObject(path),
         sensitivity(0)
     {
         const InterfaceDescription* regTestIntf = bus.GetInterface(::org::alljoyn::alljoyn_test::InterfaceName);

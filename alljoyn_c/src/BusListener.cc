@@ -46,6 +46,11 @@ namespace ajn {
  * Abstract base class implemented by AllJoyn users and called by AllJoyn to inform
  * users of bus related events.
  */
+#if defined(QCC_OS_GROUP_WINDOWS)
+// Disable warning caused by calling the deprecated PropertyChanged callback.
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#endif
 class BusListenerCallbackC : BusListener {
   public:
     BusListenerCallbackC(const alljoyn_buslistener_callbacks* in_callbacks, const void* in_context)
@@ -174,6 +179,9 @@ class BusListenerCallbackC : BusListener {
     alljoyn_buslistener_callbacks callbacks;
     const void* context;
 };
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(pop)
+#endif
 
 }
 

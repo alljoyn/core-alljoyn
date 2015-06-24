@@ -23,6 +23,8 @@ if about_env['OS_CONF'] in ['linux', 'openwrt', 'windows']:
     # build the samples till the code is removed from the build tree.
     if local_env['OS_GROUP'] == 'posix':
         local_env.Append(CXXFLAGS = ['-Wno-deprecated-declarations'])
+    if local_env['OS_GROUP'] == 'windows':
+        local_env.Append(CXXFLAGS = ['/wd4996'])
 
     if local_env['BR'] == 'on' and local_env.has_key('ajrlib'):
         # Build apps with bundled daemon support
