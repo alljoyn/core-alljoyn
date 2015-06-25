@@ -1127,7 +1127,7 @@ TEST(ConditionTest, inverted_alloc)
     for (uint32_t i = 0; i <= WATCHDOG; i += TICK) {
         ASSERT_LT((uint32_t)i, WATCHDOG);
         tl.Lock();
-        uint32_t loops = allocateLoops;
+        loops = allocateLoops;
         tl.Unlock();
         if (allocator.GetState() == CALLING && loops == 1) {
             break;
@@ -1341,7 +1341,7 @@ TEST(ConditionTest, broadcast_alloc)
     for (uint32_t i = 0; i <= WATCHDOG; i += TICK) {
         ASSERT_LT((uint32_t)i, WATCHDOG);
         tl.Lock();
-        uint32_t loops = allocateLoops;
+        loops = allocateLoops;
         tl.Unlock();
         if (allocator100.GetState() == DONE && loops == 3) {
             break;
@@ -1382,7 +1382,7 @@ TEST(ConditionTest, broadcast_alloc)
     for (uint32_t i = 0; i <= WATCHDOG; i += TICK) {
         ASSERT_LT((uint32_t)i, WATCHDOG);
         tl.Lock();
-        uint32_t loops = allocateLoops;
+        loops = allocateLoops;
         tl.Unlock();
         if (allocator1000.GetState() == DONE && loops == 5) {
             break;
@@ -1417,7 +1417,7 @@ TEST(ConditionTest, broadcast_alloc)
     for (uint32_t i = 0; i <= WATCHDOG; i += TICK) {
         ASSERT_LT((uint32_t)i, WATCHDOG);
         tl.Lock();
-        uint32_t loops = allocateLoops;
+        loops = allocateLoops;
         tl.Unlock();
         if (allocator10.GetState() == DONE && loops == 6) {
             break;

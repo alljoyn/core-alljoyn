@@ -649,10 +649,10 @@ class MsgArg {
      * dynamically allocated. The #OwnsData flag is useful for freeing
      * dynamically allocated strings, byte arrays, etc,.
      *
-     * @param flags  A logical or of the applicable ownership flags (OwnsArgs and OwnsData).
-     * @param deep   If true recursively sets the ownership flags on all MsgArgs owned by this MsgArg.
+     * @param ownershipFlags  A logical or of the applicable ownership flags (OwnsArgs and OwnsData).
+     * @param deep            If true recursively sets the ownership flags on all MsgArgs owned by this MsgArg.
      */
-    void SetOwnershipFlags(uint8_t flags, bool deep = false) { this->flags |= (flags & (OwnsData | OwnsArgs)); if (deep) { SetOwnershipDeep(); } }
+    void SetOwnershipFlags(uint8_t ownershipFlags, bool deep = false) { this->flags |= (ownershipFlags & (OwnsData | OwnsArgs)); if (deep) { SetOwnershipDeep(); } }
 
     /**
      * Default constructor - arg instances start out invalid

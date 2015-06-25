@@ -199,10 +199,10 @@ bool Rule::IsMatch(const Message& msg) const
         }
         set<String> interfaces;
         for (size_t ob = 0; ob < numObjectDescriptions; ++ob) {
-            char* path;
+            char* objectPath;
             size_t numIntfs;
             MsgArg* intfs;
-            status = objectDescriptions[ob].Get("(oas)", &path, &numIntfs, &intfs);
+            status = objectDescriptions[ob].Get("(oas)", &objectPath, &numIntfs, &intfs);
             if (status != ER_OK) {
                 return false;
             }

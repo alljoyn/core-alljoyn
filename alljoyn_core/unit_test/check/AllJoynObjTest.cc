@@ -176,7 +176,7 @@ class TestAllJoynObj : public AllJoynObj {
     virtual QStatus SendAttachSession(SessionPort sessionPort, const char* src, const char* sessionHost, const char* dest,
                                       RemoteEndpoint& b2bEp, const char* remoteControllerName, SessionId outgoingSessionId,
                                       const char* busAddr, SessionOpts::NameTransferType nameTransfer,
-                                      CallerType type, const SessionOpts& optsIn, uint32_t& replyCode, SessionId& sessionId,
+                                      CallerType type, const SessionOpts& optsIn, uint32_t& sessionReplyCode, SessionId& sessionId,
                                       SessionOpts& optsOut, MsgArg& members) {
         QCC_UNUSED(sessionPort);
         QCC_UNUSED(src);
@@ -188,7 +188,7 @@ class TestAllJoynObj : public AllJoynObj {
         QCC_UNUSED(busAddr);
         QCC_UNUSED(nameTransfer);
         QCC_UNUSED(type);
-        QCC_UNUSED(replyCode);
+        QCC_UNUSED(sessionReplyCode);
         QCC_UNUSED(sessionId);
         QCC_UNUSED(members);
 
@@ -210,9 +210,9 @@ class TestAllJoynObj : public AllJoynObj {
       public:
         TestJoinSessionThread(TestAllJoynObj& ajObj, const Message& msg, bool isJoin)
             : JoinSessionThread(ajObj, msg, isJoin), ajObj(ajObj) { }
-        virtual QStatus Reply(uint32_t replyCode, SessionId id, SessionOpts optsOut) {
+        virtual QStatus Reply(uint32_t sessionReplyCode, SessionId id, SessionOpts optsOut) {
             QCC_UNUSED(id);
-            ajObj.replyCode = replyCode;
+            ajObj.replyCode = sessionReplyCode;
             ajObj.connectedTransport = optsOut.transports;
             for (vector<TestTransport*>::iterator it = ajObj.transportList.begin(); it != ajObj.transportList.end(); ++it) {
                 if ((*it)->tried) {
@@ -328,7 +328,7 @@ class TestAllJoynObjBadSessionOpts : public TestAllJoynObj {
     virtual QStatus SendAttachSession(SessionPort sessionPort, const char* src, const char* sessionHost, const char* dest,
                                       RemoteEndpoint& b2bEp, const char* remoteControllerName, SessionId outgoingSessionId,
                                       const char* busAddr, SessionOpts::NameTransferType nameTransfer,
-                                      CallerType type, const SessionOpts& optsIn, uint32_t& replyCode, SessionId& sessionId,
+                                      CallerType type, const SessionOpts& optsIn, uint32_t& sessionReplyCode, SessionId& sessionId,
                                       SessionOpts& optsOut, MsgArg& members) {
         QCC_UNUSED(sessionPort);
         QCC_UNUSED(src);
@@ -344,9 +344,9 @@ class TestAllJoynObjBadSessionOpts : public TestAllJoynObj {
         QCC_UNUSED(members);
 
         if (optsIn.transports == TRANSPORT_UDP) {
-            replyCode = ALLJOYN_JOINSESSION_REPLY_BAD_SESSION_OPTS;
+            sessionReplyCode = ALLJOYN_JOINSESSION_REPLY_BAD_SESSION_OPTS;
         } else if (optsIn.transports == TRANSPORT_TCP) {
-            replyCode = ALLJOYN_JOINSESSION_REPLY_SUCCESS;
+            sessionReplyCode = ALLJOYN_JOINSESSION_REPLY_SUCCESS;
         }
         optsOut.transports = optsIn.transports;
         return ER_OK;

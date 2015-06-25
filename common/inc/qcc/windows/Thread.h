@@ -45,6 +45,7 @@
 namespace qcc {
 
 typedef HANDLE ThreadHandle;            ///< Window process handle typedef.
+typedef unsigned int ThreadId;          ///< Windows uses uint process IDs.
 
 /**
  * Windows' thread function return type

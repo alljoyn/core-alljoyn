@@ -228,7 +228,7 @@ BigNum& BigNum::zero_ext(size_t size)
     return *this;
 }
 
-BigNum& BigNum::reset(size_t len, bool neg, bool clear)
+BigNum& BigNum::reset(size_t len, bool isNegative, bool clear)
 {
     // Reuse storage only if it is big enough and has only one reference
     if (storage && ((storage->size < len) || (storage->refCount > 1))) {
@@ -247,7 +247,7 @@ BigNum& BigNum::reset(size_t len, bool neg, bool clear)
     }
     digits = storage->buffer;
     length = len;
-    this->neg = neg;
+    this->neg = isNegative;
     return *this;
 }
 
@@ -437,16 +437,16 @@ BigNum BigNum::operator+(const BigNum& n) const
     uint64_t carry = 0;
     // Loop while we have both x and y digits
     while (rLen < yLen) {
-        uint64_t n = (uint64_t)*x++ + (uint64_t)*y++ + carry;
-        carry = n >> 32;
-        *r++ = (uint32_t)n;
+        uint64_t num = (uint64_t)*x++ + (uint64_t)*y++ + carry;
+        carry = num >> 32;
+        *r++ = (uint32_t)num;
         ++rLen;
     }
     // Continue propogating carry
     while (rLen < xLen) {
-        uint64_t n = (uint64_t)*x++ + carry;
-        carry = n >> 32;
-        *r++ = (uint32_t)n;
+        uint64_t num = (uint64_t)*x++ + carry;
+        carry = num >> 32;
+        *r++ = (uint32_t)num;
         ++rLen;
     }
     if (carry) {
@@ -500,7 +500,7 @@ BigNum BigNum::operator-(const BigNum& n) const
     }
     const uint32_t* x;
     const uint32_t* y;
-    bool neg;
+    bool isNegative;
     size_t xLen, yLen;
     // Subtract smaller value from larger value
     if (length > n.length) {
@@ -508,13 +508,13 @@ BigNum BigNum::operator-(const BigNum& n) const
         yLen = n.length;
         x = digits;
         y = n.digits;
-        neg = false;
+        isNegative = false;
     } else if (length < n.length) {
         xLen = n.length;
         yLen = length;
         x = n.digits;
         y = digits;
-        neg = true;
+        isNegative = true;
     } else {
         xLen = length;
         while (digits[xLen - 1] == n.digits[xLen - 1]) {
@@ -525,30 +525,30 @@ BigNum BigNum::operator-(const BigNum& n) const
         if (digits[xLen - 1] > n.digits[xLen - 1]) {
             x = digits;
             y = n.digits;
-            neg = false;
+            isNegative = false;
         } else {
             x = n.digits;
             y = digits;
-            neg = true;
+            isNegative = true;
         }
         yLen = xLen;
     }
-    BigNum result(xLen, neg);
+    BigNum result(xLen, isNegative);
     uint32_t* r = result.digits;
     size_t rLen = 0;
     uint64_t borrow = 0;
     // Loop while we have both x and y values
     while (rLen < yLen) {
-        uint64_t n = (uint64_t)*x++ - (uint64_t)*y++ - borrow;
-        borrow = n >> 63;
-        *r++ = (uint32_t)n;
+        uint64_t num = (uint64_t)*x++ - (uint64_t)*y++ - borrow;
+        borrow = num >> 63;
+        *r++ = (uint32_t)num;
         ++rLen;
     }
     // Continue propogating borrow
     while (rLen < xLen) {
-        uint64_t n = (uint64_t)*x++ - borrow;
-        borrow = n >> 63;
-        *r++ = (uint32_t)n;
+        uint64_t num = (uint64_t)*x++ - borrow;
+        borrow = num >> 63;
+        *r++ = (uint32_t)num;
         ++rLen;
     }
     result.length = rLen;
@@ -709,9 +709,9 @@ BigNum BigNum::div(const BigNum& divisor, BigNum& rem) const
         q.length = n + 1;
         do {
             uint64_t X = (uint64_t)x.digits[n] + (carry << 32);
-            uint64_t d = X / Y;
-            carry = X - d * Y;
-            q.digits[n] = (uint32_t)d;
+            uint64_t digit = X / Y;
+            carry = X - digit * Y;
+            q.digits[n] = (uint32_t)digit;
         } while (n--);
         rem = (uint32_t)carry;
         // Remainder is negative if dividend is negative
@@ -1042,16 +1042,16 @@ BigNum& BigNum::sub(const BigNum& n, size_t shift)
     const uint32_t* r = n.digits;
 
     while (len < n.length) {
-        uint64_t n = (uint64_t)*l - (uint64_t)*r++ - borrow;
-        borrow = n >> 63;
-        *l++ = (uint32_t)n;
+        uint64_t num = (uint64_t)*l - (uint64_t)*r++ - borrow;
+        borrow = num >> 63;
+        *l++ = (uint32_t)num;
         ++len;
     }
     // Continue propogating borrow
     while (borrow) {
-        uint64_t n = (uint64_t)*l - borrow;
-        borrow = n >> 63;
-        *l++ = (uint32_t)n;
+        uint64_t num = (uint64_t)*l - borrow;
+        borrow = num >> 63;
+        *l++ = (uint32_t)num;
     }
     strip_lz(*this);
     return *this;

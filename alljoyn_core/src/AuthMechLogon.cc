@@ -49,9 +49,9 @@ AuthMechLogon::AuthMechLogon(KeyStore& keyStore, ProtectedAuthListener& listener
 {
 }
 
-QStatus AuthMechLogon::Init(AuthRole authRole, const qcc::String& authPeer)
+QStatus AuthMechLogon::Init(AuthRole authenticationRole, const qcc::String& authenticationPeer)
 {
-    AuthMechanism::Init(authRole, authPeer);
+    AuthMechanism::Init(authenticationRole, authenticationPeer);
     step = 0;
     /*
      * Default for AuthMechLogon is to immediately expire the master key
@@ -88,7 +88,7 @@ void AuthMechLogon::ComputeMS()
  * Verifier is computed following approach in RFC 5246. from the master secret and
  * a hash of the entire authentication conversation.
  */
-qcc::String AuthMechLogon::ComputeVerifier(const char* label)
+qcc::String AuthMechLogon::ComputeVerifier(const char* labelStr)
 {
     uint8_t digest[Crypto_SHA1::DIGEST_SIZE];
     uint8_t verifier[12];
@@ -97,7 +97,7 @@ qcc::String AuthMechLogon::ComputeVerifier(const char* label)
      */
     msgHash.GetDigest(digest, true);
     qcc::String seed((const char*)digest, sizeof(digest));
-    Crypto_PseudorandomFunction(masterSecret, label, seed, verifier, sizeof(verifier));
+    Crypto_PseudorandomFunction(masterSecret, labelStr, seed, verifier, sizeof(verifier));
     QCC_DbgHLPrintf(("Verifier:  %s", BytesToHexString(verifier, sizeof(verifier)).c_str()));
     return BytesToHexString(verifier, sizeof(verifier));
 }
@@ -204,7 +204,7 @@ qcc::String AuthMechLogon::Response(const qcc::String& challenge,
  */
 static void UserNameToGuid(qcc::GUID128& guid, qcc::String userName)
 {
-    static const char label[] = "SRP Logon Verifier";
+    static const char labelStr[] = "SRP Logon Verifier";
     Crypto_SHA1 sha1;
     uint8_t digest[Crypto_SHA1::DIGEST_SIZE];
     assert(Crypto_SHA1::DIGEST_SIZE >= qcc::GUID128::SIZE);
@@ -212,7 +212,7 @@ static void UserNameToGuid(qcc::GUID128& guid, qcc::String userName)
      * The label makes the generated Guid unique for this authentication mechanism.
      */
     sha1.Init();
-    sha1.Update((const uint8_t*)label, sizeof(label));
+    sha1.Update((const uint8_t*)labelStr, sizeof(labelStr));
     sha1.Update(userName);
     sha1.GetDigest(digest);
     guid.SetBytes(digest);

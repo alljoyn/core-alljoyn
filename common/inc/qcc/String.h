@@ -520,7 +520,7 @@ class String {
 
     void IncRef();
 
-    void DecRef(ManagedCtx* context);
+    void DecRef(ManagedCtx* ctx);
 
     void NewContext(const char* str, size_t strLen, size_t sizeHint);
 };

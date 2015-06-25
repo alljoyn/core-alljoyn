@@ -85,11 +85,11 @@ class AboutService : public ajn::BusObject {
      * BusObject::SetAnnounceFlag function, and BusAttahcment::RegisterBusObject
      * function
      *
-     * @param[in]  path of the interface.
+     * @param[in]  interfacePath of the interface.
      * @param[in]  interfaceNames
      * @return ER_OK if successful.
      */
-    QCC_DEPRECATED(QStatus AddObjectDescription(qcc::String const & path, std::vector<qcc::String> const & interfaceNames));
+    QCC_DEPRECATED(QStatus AddObjectDescription(qcc::String const & interfacePath, std::vector<qcc::String> const & interfaceNames));
     /**
      * RemoveObjectDescription adds objects Description to the AboutService announcement.
      *
@@ -98,11 +98,11 @@ class AboutService : public ajn::BusObject {
      * BusObject::SetAnnounceFlag function, and BusAttahcment::UnregisterBusObject
      * function
      *
-     * @param[in]  path of the interface.
+     * @param[in]  interfacePath of the interface.
      * @param[in]  interfaceNames
      * @return ER_OK if successful.
      */
-    QCC_DEPRECATED(QStatus RemoveObjectDescription(qcc::String const & path, std::vector<qcc::String> const & interfaceNames));
+    QCC_DEPRECATED(QStatus RemoveObjectDescription(qcc::String const & interfacePath, std::vector<qcc::String> const & interfaceNames));
 
     /**
      * Send or replace the org.alljoyn.About.Announce sessionless signal.

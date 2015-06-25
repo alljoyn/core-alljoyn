@@ -140,11 +140,11 @@ class IPAddress {
     bool IsLoopback(void) const
     {
         if (addrSize == IPv4_SIZE) {
-            uint32_t addr =  GetIPv4AddressCPUOrder();
+            uint32_t ipv4Addr =  GetIPv4AddressCPUOrder();
             /*
              * A Loopback address in IPv4 is 127.X.Y.Z for all X, Y, Z
              */
-            if ((addr & 0x7f000000) != (127 << 24)) {
+            if ((ipv4Addr & 0x7f000000) != (127 << 24)) {
                 return false;
             }
         } else {

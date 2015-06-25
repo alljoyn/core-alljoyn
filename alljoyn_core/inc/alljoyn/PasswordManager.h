@@ -46,14 +46,14 @@ class PasswordManager {
     /**
      * @brief Set credentials used for the authentication of thin clients.
      *
-     * @param authMechanism  Mechanism to use for authentication.
-     * @param password       Password to use for authentication.
+     * @param newAuthMechanism  Mechanism to use for authentication.
+     * @param newPassword   Password to use for authentication.
      *
      * @return   Returns ER_OK if the credentials was successfully set.
      */
-    static QStatus AJ_CALL SetCredentials(qcc::String authMechanism, qcc::String password) {
-        *PasswordManager::authMechanism = authMechanism;
-        *PasswordManager::password = password;
+    static QStatus AJ_CALL SetCredentials(qcc::String newAuthMechanism, qcc::String newPassword) {
+        *PasswordManager::authMechanism = newAuthMechanism;
+        *PasswordManager::password = newPassword;
         return ER_OK;
     }
 

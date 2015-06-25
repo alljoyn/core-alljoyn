@@ -493,17 +493,17 @@ TEST_F(PerfTest, BusObject_ALLJOYN_328_BusObject_destruction)
     qcc::String clientArgs = testclient.getClientArgs();
 
     /* Create a Bus Attachment Object */
-    BusAttachment* serviceBus = new BusAttachment("ALLJOYN-328", true);
-    ASSERT_TRUE(serviceBus != NULL);
-    serviceBus->Start();
+    BusAttachment* testServiceBus = new BusAttachment("ALLJOYN-328", true);
+    ASSERT_TRUE(testServiceBus != NULL);
+    testServiceBus->Start();
 
     /* Dynamically create a BusObject and register it with the Bus */
     BusObject* obj1 = new  BusObject("/home/narasubr", true);
 
-    QStatus status = serviceBus->RegisterBusObject(*obj1);
+    QStatus status = testServiceBus->RegisterBusObject(*obj1);
     ASSERT_EQ(ER_OK, status);
 
-    status = serviceBus->Connect(clientArgs.c_str());
+    status = testServiceBus->Connect(clientArgs.c_str());
     ASSERT_EQ(ER_OK, status);
 
     /*Delete the bus object..Now as per fix for ALLJOYN-328 deregisterbusobject will be called */
@@ -511,14 +511,14 @@ TEST_F(PerfTest, BusObject_ALLJOYN_328_BusObject_destruction)
     obj1 = NULL;
     delete obj2;
     //TODO nothing is checked after Deleting the busObject what should this test be looking for?
-    //status = serviceBus->Stop();
+    //status = testServiceBus->Stop();
     //ASSERT_EQ(ER_OK, status);
     // why is this sleep here when nothing is pending
     //qcc::Sleep(2000);
     /* Clean up msg bus */
-    if (serviceBus) {
-        BusAttachment* deleteMe = serviceBus;
-        serviceBus = NULL;
+    if (testServiceBus) {
+        BusAttachment* deleteMe = testServiceBus;
+        testServiceBus = NULL;
         delete deleteMe;
     }
 

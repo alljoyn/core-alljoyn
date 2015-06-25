@@ -276,10 +276,10 @@ class KeyBlob {
      * Set a tag on the keyblob. A tag in an arbitrary string of 255 characters or less. The
      * role indicates if the creator of the key blob was an initiator or a responder.
      *
-     * @param tag   The tag value to set.
-     * @param role  The role of the key blob creator
+     * @param keyTag   The tag value to set.
+     * @param keyRole     The role of the key blob creator
      */
-    void SetTag(const qcc::String& tag, Role role = NO_ROLE) { this->tag = tag.substr(0, MAX_TAG_LEN); this->role = role; }
+    void SetTag(const qcc::String& keyTag, Role keyRole = NO_ROLE) { this->tag = keyTag.substr(0, MAX_TAG_LEN); this->role = keyRole; }
 
     /**
      * Gets the creator's role from a key blob

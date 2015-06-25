@@ -300,7 +300,7 @@ class _TestRemoteEndpoint : public _RemoteEndpoint, public _TestEndpointInfo {
     QStatus PushMessage(Message& msg) { return TestPushMessage(msg, BusEndpoint::wrap(this)); }
     const String& GetUniqueName() const { return name; }
     const String& GetRemoteName() const { return remoteName; }
-    void SetRemoteName(const String& name) { remoteName = name; }
+    void SetRemoteName(const String& newRemoteName) { remoteName = newRemoteName; }
     bool AllowRemoteMessages() { return allow; }
     uint32_t GetSessionId() const { return (uint32_t)id; }
 
@@ -324,11 +324,11 @@ class _TestVirtualEndpoint : public _VirtualEndpoint, public _TestEndpointInfo {
     { }
     virtual ~_TestVirtualEndpoint() { }
     QStatus PushMessage(Message& msg) { return TestPushMessage(msg, BusEndpoint::wrap(this)); }
-    QStatus PushMessage(Message& msg, SessionId id) { QCC_UNUSED(id); return TestPushMessage(msg, BusEndpoint::wrap(this)); }
+    QStatus PushMessage(Message& msg, SessionId sessionId) { QCC_UNUSED(sessionId); return TestPushMessage(msg, BusEndpoint::wrap(this)); }
     const String& GetUniqueName() const { return name; }
     bool AllowRemoteMessages() { return allow; }
-    QStatus AddSessionRef(SessionId sessionId, RemoteEndpoint& b2bEp) { QCC_UNUSED(sessionId); QCC_UNUSED(b2bEp); return ER_OK; }
-    QStatus AddSessionRef(SessionId sessionId, SessionOpts* opts, RemoteEndpoint& b2bEp) { QCC_UNUSED(sessionId); QCC_UNUSED(opts); QCC_UNUSED(b2bEp); return ER_OK; }
+    QStatus AddSessionRef(SessionId sessionId, RemoteEndpoint& sessionB2bEp) { QCC_UNUSED(sessionId); QCC_UNUSED(sessionB2bEp); return ER_OK; }
+    QStatus AddSessionRef(SessionId sessionId, SessionOpts* opts, RemoteEndpoint& seessionB2bEp) { QCC_UNUSED(sessionId); QCC_UNUSED(opts); QCC_UNUSED(seessionB2bEp); return ER_OK; }
     void RemoveSessionRef(SessionId sessionId) { QCC_UNUSED(sessionId); }
     TestRemoteEndpoint& GetTestRemoteEndpoint() { return b2bEp; }
   private:
@@ -898,8 +898,8 @@ TEST_P(DaemonRouterTest, PushMessage)
 {
     BusEndpoint destEp;
     uint8_t flags = (uint8_t)msgFlagParam;
-    String destName = destInfo->name;
-    TestMessage testMsg(*bus, testMember, errorName, msgType, senderInfo->name, destName, sessionId, flags);
+    String testDestName = destInfo->name;
+    TestMessage testMsg(*bus, testMember, errorName, msgType, senderInfo->name, testDestName, sessionId, flags);
 
     ASSERT_EQ(msgType, testMsg->GetType()) << "Test bug: Failure to create correct message type";
 
@@ -944,7 +944,7 @@ TEST_P(DaemonRouterTest, PushMessage)
     for (list<BusEndpoint>::iterator it = epList.begin(); it != epList.end(); ++it) {
         BusEndpoint& ep = *it;
         TestEndpointInfo epInfo = GetTestEndpointInfo(ep);
-        const bool epIsDest = msgIsUnicast && (ep->GetUniqueName() == destName);
+        const bool epIsDest = msgIsUnicast && (ep->GetUniqueName() == testDestName);
         const bool epIsB2b = (ep->GetEndpointType() == ENDPOINT_TYPE_BUS2BUS);
         const bool epIsVirtual = (ep->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL);
         const bool epAllowsRemote = ep->AllowRemoteMessages();

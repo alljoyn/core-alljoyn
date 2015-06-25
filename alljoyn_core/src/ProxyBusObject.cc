@@ -763,9 +763,9 @@ QStatus ProxyBusObject::RegisterPropertiesChangedListener(const char* iface,
     multimap<StringMapKey, PropertiesChangedCB>::iterator it = internal->propertiesChangedCBs.lower_bound(iface);
     multimap<StringMapKey, PropertiesChangedCB>::iterator end = internal->propertiesChangedCBs.upper_bound(iface);
     while (it != end) {
-        PropertiesChangedCB ctx = it->second;
-        if (&ctx->listener == &listener) {
-            ctx->isRegistered = false;
+        PropertiesChangedCB propChangedCb = it->second;
+        if (&propChangedCb->listener == &listener) {
+            propChangedCb->isRegistered = false;
             internal->propertiesChangedCBs.erase(it);
             replace = true;
             break;

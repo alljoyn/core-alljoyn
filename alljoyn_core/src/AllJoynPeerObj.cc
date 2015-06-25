@@ -245,9 +245,9 @@ AllJoynPeerObj::~AllJoynPeerObj()
     supportedAuthSuites = NULL;
 }
 
-QStatus AllJoynPeerObj::Init(BusAttachment& bus)
+QStatus AllJoynPeerObj::Init(BusAttachment& peerBus)
 {
-    QStatus status = bus.RegisterBusObject(*this);
+    QStatus status = peerBus.RegisterBusObject(*this);
     return status;
 }
 
@@ -1043,15 +1043,15 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
             /*
              * Send GenSessionKey message to remote peer.
              */
-            MsgArg args[3];
-            args[0].Set("s", localGuidStr.c_str());
-            args[1].Set("s", remoteGuidStr.c_str());
-            args[2].Set("s", nonce.c_str());
+            MsgArg msgArgs[3];
+            msgArgs[0].Set("s", localGuidStr.c_str());
+            msgArgs[1].Set("s", remoteGuidStr.c_str());
+            msgArgs[2].Set("s", nonce.c_str());
             peerState->UpdateHash(CONVERSATION_V4, GENSESSIONKEYREQUEST);
-            peerState->UpdateHash(CONVERSATION_V4, args, ArraySize(args));
+            peerState->UpdateHash(CONVERSATION_V4, msgArgs, ArraySize(msgArgs));
             const InterfaceDescription::Member* genSessionKeyMember = ifc->GetMember("GenSessionKey");
             assert(genSessionKeyMember);
-            status = remotePeerObj.MethodCall(*genSessionKeyMember, args, ArraySize(args), replyMsg, DEFAULT_TIMEOUT);
+            status = remotePeerObj.MethodCall(*genSessionKeyMember, msgArgs, ArraySize(msgArgs), replyMsg, DEFAULT_TIMEOUT);
             if (status == ER_OK) {
                 peerState->UpdateHash(CONVERSATION_V4, GENSESSIONKEYREPLY);
                 peerState->UpdateHash(CONVERSATION_V4, replyMsg);
@@ -1095,7 +1095,7 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
         uint8_t keyGenVersion = authVersion & 0xFF;
         uint16_t authV = authVersion >> 16;
         uint8_t sendKeyBlob = (authV <= 1) && (keyGenVersion == 0);
-        Message replyMsg(*bus);
+        Message keyExchangeReplyMsg(*bus);
         KeyBlob key;
         peerStateTable->GetGroupKey(key);
         StringSink snk;
@@ -1112,13 +1112,13 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
         }
         const InterfaceDescription::Member* exchangeGroupKeysMember = ifc->GetMember("ExchangeGroupKeys");
         assert(exchangeGroupKeysMember);
-        status = remotePeerObj.MethodCall(*exchangeGroupKeysMember, &arg, 1, replyMsg, DEFAULT_TIMEOUT, ALLJOYN_FLAG_ENCRYPTED);
+        status = remotePeerObj.MethodCall(*exchangeGroupKeysMember, &arg, 1, keyExchangeReplyMsg, DEFAULT_TIMEOUT, ALLJOYN_FLAG_ENCRYPTED);
         if (status == ER_OK) {
             if (sendKeyBlob) {
-                StringSource src(replyMsg->GetArg(0)->v_scalarArray.v_byte, replyMsg->GetArg(0)->v_scalarArray.numElements);
+                StringSource src(keyExchangeReplyMsg->GetArg(0)->v_scalarArray.v_byte, keyExchangeReplyMsg->GetArg(0)->v_scalarArray.numElements);
                 status = key.Load(src);
             } else {
-                status = key.Set(replyMsg->GetArg(0)->v_scalarArray.v_byte, replyMsg->GetArg(0)->v_scalarArray.numElements, KeyBlob::AES);
+                status = key.Set(keyExchangeReplyMsg->GetArg(0)->v_scalarArray.v_byte, keyExchangeReplyMsg->GetArg(0)->v_scalarArray.numElements, KeyBlob::AES);
             }
             if (status == ER_OK) {
                 /*
@@ -1126,7 +1126,7 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
                  * are inherently directional - only initiator encrypts with the group key. We set
                  * the role to NO_ROLE otherwise senders can't decrypt their own broadcast messages.
                  */
-                key.SetTag(replyMsg->GetAuthMechanism(), KeyBlob::NO_ROLE);
+                key.SetTag(keyExchangeReplyMsg->GetAuthMechanism(), KeyBlob::NO_ROLE);
                 peerState->SetKey(key, PEER_GROUP_KEY);
             }
         }

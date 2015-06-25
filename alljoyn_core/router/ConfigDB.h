@@ -312,157 +312,157 @@ class ConfigDB {
         /**
          * Parse the XML source stream.
          *
-         * @param fileName  Name of the configuration file.
+         * @param srcFileName  Name of the configuration file.
          *
          * @return  true if parsing was successful.
          */
-        bool ParseSource(const qcc::String& fileName, qcc::Source& src);
+        bool ParseSource(const qcc::String& srcFileName, qcc::Source& src);
 
         /**
          * Parse the specified XML file.
          *
-         * @param fileName  Name of the configuration file.
+         * @param srcFileName  Name of the configuration file.
          *
          * @return  true if parsing was successful.
          */
-        bool ParseFile(const qcc::String& fileName, bool ignore_missing = false);
+        bool ParseFile(const qcc::String& srcFileName, bool ignore_missing = false);
 
         /**
          * Parse the <auth/> tag.
          *
-         * @param fileName  Name of the configuration file.
+         * @param srcFileName  Name of the configuration file.
          *
          * @return  true if parsing was successful.
          */
-        bool ProcessAuth(const qcc::String& fileName, const qcc::XmlElement& auth);
+        bool ProcessAuth(const qcc::String& srcFileName, const qcc::XmlElement& auth);
 
         /**
          * Parse the <busconfig/>
          *
-         * @param fileName  Name of the configuration file.
+         * @param srcFileName  Name of the configuration file.
          *
          * @return  true if parsing was successful.
          */
-        bool ProcessBusconfig(const qcc::String& fileName, const qcc::XmlElement& busconfig);
+        bool ProcessBusconfig(const qcc::String& srcFileName, const qcc::XmlElement& busconfig);
 
         /**
          * Parse the <fork/> tag.
          *
-         * @param fileName  Name of the configuration file.
+         * @param srcFileName  Name of the configuration file.
          *
          * @return  true if parsing was successful.
          */
-        bool ProcessFork(const qcc::String& fileName, const qcc::XmlElement& fork);
+        bool ProcessFork(const qcc::String& srcFileName, const qcc::XmlElement& forkElement);
 
         /**
          * Parse the <include/> tag.
          *
-         * @param fileName  Name of the configuration file.
+         * @param srcFileName  Name of the configuration file.
          *
          * @return  true if parsing was successful.
          */
-        bool ProcessInclude(const qcc::String& fileName, const qcc::XmlElement& include);
+        bool ProcessInclude(const qcc::String& srcFileName, const qcc::XmlElement& include);
 
         /**
          * Parse the <includedir/> tag.
          *
-         * @param fileName  Name of the configuration file.
+         * @param srcFileName  Name of the configuration file.
          *
          * @return  true if parsing was successful.
          */
-        bool ProcessIncludedir(const qcc::String& fileName, const qcc::XmlElement& includedir);
+        bool ProcessIncludedir(const qcc::String& srcFileName, const qcc::XmlElement& includedir);
 
         /**
          * Parse the <keep_umask/> tag.
          *
-         * @param fileName  Name of the configuration file.
+         * @param srcFileName  Name of the configuration file.
          *
          * @return  true if parsing was successful.
          */
-        bool ProcessKeepUmask(const qcc::String& fileName, const qcc::XmlElement& keepUmask);
+        bool ProcessKeepUmask(const qcc::String& srcFileName, const qcc::XmlElement& keepUmaskElement);
 
         /**
          * Parse the <limit/> tag.
          *
-         * @param fileName  Name of the configuration file.
+         * @param srcFileName  Name of the configuration file.
          *
          * @return  true if parsing was successful.
          */
-        bool ProcessLimit(const qcc::String& fileName, const qcc::XmlElement& limit);
+        bool ProcessLimit(const qcc::String& srcFileName, const qcc::XmlElement& limit);
 
         /**
          * Parse the <flag/> tag.
          *
-         * @param fileName  Name of the configuration file.
+         * @param srcFileName  Name of the configuration file.
          *
          * @return  true if parsing was successful.
          */
-        bool ProcessFlag(const qcc::String& fileName, const qcc::XmlElement& limit);
+        bool ProcessFlag(const qcc::String& srcFileName, const qcc::XmlElement& limit);
 
         /**
          * Parse the <property/> tag.
          *
-         * @param fileName  Name of the configuration file.
+         * @param srcFileName  Name of the configuration file.
          *
          * @return  true if parsing was successful.
          */
-        bool ProcessProperty(const qcc::String& fileName, const qcc::XmlElement& limit);
+        bool ProcessProperty(const qcc::String& srcFileName, const qcc::XmlElement& limit);
 
         /**
          * Parse the <listen/> tag.
          *
-         * @param fileName  Name of the configuration file.
+         * @param srcFileName  Name of the configuration file.
          *
          * @return  true if parsing was successful.
          */
-        bool ProcessListen(const qcc::String& fileName, const qcc::XmlElement& listen);
+        bool ProcessListen(const qcc::String& srcFileName, const qcc::XmlElement& listen);
 
         /**
          * Parse the <pidfile/> tag.
          *
-         * @param fileName  Name of the configuration file.
+         * @param srcFileName  Name of the configuration file.
          *
          * @return  true if parsing was successful.
          */
-        bool ProcessPidfile(const qcc::String& fileName, const qcc::XmlElement& pidfile);
+        bool ProcessPidfile(const qcc::String& srcFileName, const qcc::XmlElement& pidfileElement);
 
 #ifdef ENABLE_POLICYDB
         /**
          * Parse the <policy/> tag.
          *
-         * @param fileName  Name of the configuration file.
+         * @param srcFileName  Name of the configuration file.
          *
          * @return  true if parsing was successful.
          */
-        bool ProcessPolicy(const qcc::String& fileName, const qcc::XmlElement& policy);
+        bool ProcessPolicy(const qcc::String& srcFileName, const qcc::XmlElement& policy);
 #endif
 
         /**
          * Parse the <syslog/> tag.
          *
-         * @param fileName  Name of the configuration file.
+         * @param srcFileName  Name of the configuration file.
          *
          * @return  true if parsing was successful.
          */
-        bool ProcessSyslog(const qcc::String& fileName, const qcc::XmlElement& syslog);
+        bool ProcessSyslog(const qcc::String& srcFileName, const qcc::XmlElement& syslogElement);
 
         /**
          * Parse the <type/> tag.
          *
-         * @param fileName  Name of the configuration file.
+         * @param srcFileName  Name of the configuration file.
          *
          * @return  true if parsing was successful.
          */
-        bool ProcessType(const qcc::String& fileName, const qcc::XmlElement& type);
+        bool ProcessType(const qcc::String& srcFileName, const qcc::XmlElement& typeElement);
 
         /**
          * Parse the <user/> tag.
          *
-         * @param fileName  Name of the configuration file.
+         * @param srcFileName  Name of the configuration file.
          *
          * @return  true if parsing was successful.
          */
-        bool ProcessUser(const qcc::String& fileName, const qcc::XmlElement& user);
+        bool ProcessUser(const qcc::String& srcFileName, const qcc::XmlElement& userElement);
     };
 
     /**

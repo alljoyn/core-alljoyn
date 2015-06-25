@@ -586,8 +586,8 @@ int CDECL_CALL main(int argc, char** argv)
             }
 
             // RULE-25: Explicitly call out the update nature of properties.
-            const qcc::String value = GetAnnotation(propertyElement, "org.freedesktop.DBus.Property.EmitsChangedSignal");
-            if (value.empty()) {
+            const qcc::String annotationValue = GetAnnotation(propertyElement, "org.freedesktop.DBus.Property.EmitsChangedSignal");
+            if (annotationValue.empty()) {
                 g_warnings++;
                 printf("WARNING-25: property '%s.%s' missing EmitsChangedSignal annotation\n",
                        interfaceName.c_str(), propertyName.c_str());

@@ -87,7 +87,6 @@ static const char rsrc[] = "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOP
 
 template <class StringType, class HashFunction>
 class RunTest {
-    HashFunction HashFn;
     const char* testData;
     const size_t size;
   public:

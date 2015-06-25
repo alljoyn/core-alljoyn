@@ -246,18 +246,18 @@ class TestParameters {
         return *this;
     }
 
-    TestParameters& AddListener(const Range& rangePropListen)
+    TestParameters& AddListener(const Range& listenerRangePropListen)
     {
-        this->rangePropListen.push_back(rangePropListen);
-        this->rangePropListenExp.push_back(rangePropListen); // same as listen
+        this->rangePropListen.push_back(listenerRangePropListen);
+        this->rangePropListenExp.push_back(listenerRangePropListen); // same as listen
         return *this;
     }
 
-    TestParameters& AddListener(const Range& rangePropListen,
-                                const Range& rangePropListenExp)
+    TestParameters& AddListener(const Range& listenerRangePropListen,
+                                const Range& listenerRangePropListenExp)
     {
-        this->rangePropListen.push_back(rangePropListen);
-        this->rangePropListenExp.push_back(rangePropListenExp);
+        this->rangePropListen.push_back(listenerRangePropListen);
+        this->rangePropListenExp.push_back(listenerRangePropListenExp);
         return *this;
     }
 };
@@ -605,7 +605,7 @@ class ClientBusAttachment :
         JoinSessionAsync(name, SERVICE_PORT, NULL, SESSION_OPTS, this, NULL);
     }
 
-    void JoinSessionCB(QStatus status,
+    void JoinSessionCB(QStatus joinStatus,
                        SessionId sessionId,
                        const SessionOpts& opts,
                        void* context)
@@ -613,7 +613,7 @@ class ClientBusAttachment :
         QCC_UNUSED(opts);
         QCC_UNUSED(context);
 
-        EXPECT_EQ(ER_OK, status);
+        EXPECT_EQ(ER_OK, joinStatus);
         id = sessionId;
         sessionSema.Post();
     }
@@ -727,14 +727,14 @@ class PropChangedTestProxyBusObject :
     /* By default we do not expect a time-out when waiting for the signals.  If
      * the \a expectTimeout argument is provided an different from 0 we will
      * wait for that amount of milliseconds and will NOT expect any signals. */
-    void WaitForSignals(const TestParameters& tp,
+    void WaitForSignals(const TestParameters& testParameters,
                         uint32_t expectTimeout = 0)
     {
         uint32_t timeout = expectTimeout ? expectTimeout : TIMEOUT;
         QStatus expStatus = expectTimeout ? ER_TIMEOUT : ER_OK;
 
         /* wait for signals for all interfaces on all listeners */
-        size_t num = tp.intfParams.size() * tp.rangePropListen.size();
+        size_t num = testParameters.intfParams.size() * testParameters.rangePropListen.size();
         for (size_t i = 0; i < num; i++) {
             //QCC_SyncPrintf("WaitForSignals %dms on listener %d\n", timeout, i);
             status = TimedWait(timeout); // wait for property changed signal
@@ -742,7 +742,7 @@ class PropChangedTestProxyBusObject :
         }
     }
 
-    void ValidateSignals(const TestParameters& tp,
+    void ValidateSignals(const TestParameters& testParameters,
                          const InterfaceParameters& ip)
     {
         int emitChanged = 0, emitInvalidated = 0;
@@ -750,32 +750,32 @@ class PropChangedTestProxyBusObject :
         int n, i;
 
         // ensure correct number of samples
-        ASSERT_EQ(tp.rangePropListenExp.size(), changedSamples[ip.name].size());
-        ASSERT_EQ(tp.rangePropListenExp.size(), invalidatedSamples[ip.name].size());
+        ASSERT_EQ(testParameters.rangePropListenExp.size(), changedSamples[ip.name].size());
+        ASSERT_EQ(testParameters.rangePropListenExp.size(), invalidatedSamples[ip.name].size());
 
         if (ip.emitsChanged == "true") {
-            emitChanged = tp.rangePropEmit.Size();
+            emitChanged = testParameters.rangePropEmit.Size();
         } else if (ip.emitsChanged == "invalidates") {
-            emitInvalidated = tp.rangePropEmit.Size();
+            emitInvalidated = testParameters.rangePropEmit.Size();
         }
-        //QCC_SyncPrintf("ValidateSignal expects %d samples with each %d changed, %d invalidated\n", tp.rangePropListenExp.size(), emitChanged, emitInvalidated);
+        //QCC_SyncPrintf("ValidateSignal expects %d samples with each %d changed, %d invalidated\n", testParameters.rangePropListenExp.size(), emitChanged, emitInvalidated);
 
         // loop over all samples
-        for (size_t sample = 0; sample < tp.rangePropListenExp.size(); sample++) {
+        for (size_t sample = 0; sample < testParameters.rangePropListenExp.size(); sample++) {
             MsgArg& changed = changedSamples[ip.name][sample];
             MsgArg& invalidated = invalidatedSamples[ip.name][sample];
 
             ASSERT_EQ(ALLJOYN_ARRAY, changed.typeId);
             n = changed.v_array.GetNumElements();
-            int numListen = tp.rangePropListenExp[sample].Size();
+            int numListen = testParameters.rangePropListenExp[sample].Size();
             if (0 == numListen) {
                 // listen to all
-                numListen = tp.rangePropEmit.Size();
+                numListen = testParameters.rangePropEmit.Size();
             }
             ASSERT_EQ(min(emitChanged, numListen), n);
             elems = changed.v_array.GetElements();
             for (i = 0; i < n; i++) {
-                int num = tp.rangePropListenExp[sample].first + i;
+                int num = testParameters.rangePropListenExp[sample].first + i;
 
                 ASSERT_EQ(ALLJOYN_DICT_ENTRY, elems[i].typeId);
                 // validate property name
@@ -793,7 +793,7 @@ class PropChangedTestProxyBusObject :
             ASSERT_EQ(emitInvalidated, n);
             elems = invalidated.v_array.GetElements();
             for (i = 0; i < n; i++) {
-                int num = tp.rangePropListenExp[sample].first + i;
+                int num = testParameters.rangePropListenExp[sample].first + i;
 
                 // validate property name
                 ASSERT_EQ(ALLJOYN_STRING, elems[i].typeId);
@@ -803,18 +803,18 @@ class PropChangedTestProxyBusObject :
         }
     }
 
-    void ValidateSignals(const TestParameters& tp)
+    void ValidateSignals(const TestParameters& testParameters)
     {
-        for (size_t i = 0; i < tp.intfParams.size(); i++) {
-            //QCC_SyncPrintf("ValidateSignal for %s\n", tp.intfParams[i].name.c_str());
-            ValidateSignals(tp, tp.intfParams[i]);
+        for (size_t i = 0; i < testParameters.intfParams.size(); i++) {
+            //QCC_SyncPrintf("ValidateSignal for %s\n", testParameters.intfParams[i].name.c_str());
+            ValidateSignals(testParameters, testParameters.intfParams[i]);
         }
     }
 
     void ValidateSignals(const InterfaceParameters& ip)
     {
-        TestParameters tp(true, ip);
-        ValidateSignals(tp);
+        TestParameters testParameters(true, ip);
+        ValidateSignals(testParameters);
     }
 };
 
@@ -916,9 +916,9 @@ class PropChangedTestTwoBusSetup :
     /**
      * Main test logic.
      */
-    void TestPropChanged(const TestParameters& tp)
+    void TestPropChanged(const TestParameters& testParameters)
     {
-        TestPropChanged(tp, tp);
+        TestPropChanged(testParameters, testParameters);
     }
 
     bool AcceptSessionJoiner(SessionPort sessionPort,
@@ -1222,19 +1222,19 @@ TEST_F(PropChangedTest, NegativeEmitPropChanged)
 
     clientBus.WaitForSession();
 
-    PropChangedTestBusObject obj(serviceBus, tp.intfParams);
+    PropChangedTestBusObject testBusObject(serviceBus, tp.intfParams);
     /* Invoke the newly added EmitPropChanged with NULL as the interface name.
      * ER_OK should not be returned. */
-    EXPECT_NE(ER_OK, obj.EmitPropChanged(NULL, okProps, 1, 0));
+    EXPECT_NE(ER_OK, testBusObject.EmitPropChanged(NULL, okProps, 1, 0));
     /* Invoke the newly added EmitPropChanged with an invalid interface name.
      * ER_OK should not be returned. */
-    EXPECT_NE(ER_OK, obj.EmitPropChanged("invalid.interface", okProps, 1, 0));
+    EXPECT_NE(ER_OK, testBusObject.EmitPropChanged("invalid.interface", okProps, 1, 0));
     /* Invoke the newly added EmitPropChanged with an invalid property name.
      * ER_OK should not be returned. */
-    EXPECT_NE(ER_OK, obj.EmitPropChanged(tp.intfParams[0].name.c_str(), nokProps, 2, 0));
+    EXPECT_NE(ER_OK, testBusObject.EmitPropChanged(tp.intfParams[0].name.c_str(), nokProps, 2, 0));
     /* Invoke the newly added EmitPropChanged with a mixture of valid and
      * invalid properties. ER_OK should not be returned */
-    EXPECT_NE(ER_OK, obj.EmitPropChanged(tp.intfParams[0].name.c_str(), mixProps, 2, 0));
+    EXPECT_NE(ER_OK, testBusObject.EmitPropChanged(tp.intfParams[0].name.c_str(), mixProps, 2, 0));
 }
 
 /*
@@ -1249,31 +1249,31 @@ TEST_F(PropChangedTest, NegativeRegisterPropertiesChangedListener)
     const char* mixProps[] = { "P1", "P2" };
 
     clientBus.WaitForSession();
-    PropChangedTestBusObject obj(serviceBus, tp.intfParams);
-    PropChangedTestProxyBusObject proxy(clientBus, serviceName, tp);
+    PropChangedTestBusObject testBusObject(serviceBus, tp.intfParams);
+    PropChangedTestProxyBusObject proxyBusObject(clientBus, serviceName, tp);
     // extra listener for testing
-    PropChangedTestListener listener(proxy);
+    PropChangedTestListener listener(proxyBusObject);
 
     /* Create a ProxyBusObject and invoke RegisterPropertiesChangedListener
      * with NULL as the interface parameter. The return code should be
      * ER_BUS_OBJECT_NO_SUCH_INTERFACE. */
-    status = proxy.RegisterPropertiesChangedListener(NULL, okProps, 1, listener, NULL);
+    status = proxyBusObject.RegisterPropertiesChangedListener(NULL, okProps, 1, listener, NULL);
     EXPECT_EQ(ER_BUS_OBJECT_NO_SUCH_INTERFACE, status);
     /* Create a ProxyBusObject and invoke RegisterPropertiesChangedListener
      * with an invalid string as an interface parameter.  The return code
      * should be ER_BUS_OBJECT_NO_SUCH_INTERFACE. */
-    status = proxy.RegisterPropertiesChangedListener("invalid.interface", okProps, 1, listener, NULL);
+    status = proxyBusObject.RegisterPropertiesChangedListener("invalid.interface", okProps, 1, listener, NULL);
     EXPECT_EQ(ER_BUS_OBJECT_NO_SUCH_INTERFACE, status);
     /* Create a ProxyBusObject and invoke RegisterPropertiesChangedListener
      * with a non-existent property. The return code should be
      * ER_BUS_NO_SUCH_PROPERTY. */
-    status = proxy.RegisterPropertiesChangedListener(tp.intfParams[0].name.c_str(), nokProps, 1, listener, NULL);
+    status = proxyBusObject.RegisterPropertiesChangedListener(tp.intfParams[0].name.c_str(), nokProps, 1, listener, NULL);
     EXPECT_EQ(ER_BUS_NO_SUCH_PROPERTY, status);
     /* Create a ProxyBusObject and invoke RegisterPropertiesChangedListener
      * with an array of properties that contains a mix of valid properties
      * and invalid / non-existent properties. The return code should be
      * ER_BUS_NO_SUCH_PROPERTY. */
-    status = proxy.RegisterPropertiesChangedListener(tp.intfParams[0].name.c_str(), mixProps, 2, listener, NULL);
+    status = proxyBusObject.RegisterPropertiesChangedListener(tp.intfParams[0].name.c_str(), mixProps, 2, listener, NULL);
     EXPECT_EQ(ER_BUS_NO_SUCH_PROPERTY, status);
 }
 
@@ -1286,19 +1286,19 @@ TEST_F(PropChangedTest, NegativeUnregisterPropertiesChangedListener)
     TestParameters tp(true, InterfaceParameters(P1));
 
     clientBus.WaitForSession();
-    PropChangedTestBusObject obj(serviceBus, tp.intfParams);
-    PropChangedTestProxyBusObject proxy(clientBus, serviceName, tp);
+    PropChangedTestBusObject testBusObject(serviceBus, tp.intfParams);
+    PropChangedTestProxyBusObject proxyBusObject(clientBus, serviceName, tp);
 
     /* Create a ProxyBusObject and register a listener. Invoke
      * UnregisterPropertiesChangedListener with NULL as interface parameter.
      * The return code should be ER_BUS_OBJECT_NO_SUCH_INTERFACE. */
-    status = proxy.UnregisterPropertiesChangedListener(NULL, *proxy.listeners[0]);
+    status = proxyBusObject.UnregisterPropertiesChangedListener(NULL, *proxyBusObject.listeners[0]);
     EXPECT_EQ(ER_BUS_OBJECT_NO_SUCH_INTERFACE, status);
     /* Create a ProxyBusObject and register a listener. Invoke
      * UnregisterPropertiesChangedListener with a non-existent random string
      * as interface parameter. The return code should be
      * ER_BUS_OBJECT_NO_SUCH_INTERFACE. */
-    status = proxy.UnregisterPropertiesChangedListener("invalid.interface", *proxy.listeners[0]);
+    status = proxyBusObject.UnregisterPropertiesChangedListener("invalid.interface", *proxyBusObject.listeners[0]);
     EXPECT_EQ(ER_BUS_OBJECT_NO_SUCH_INTERFACE, status);
 }
 
@@ -1311,12 +1311,12 @@ TEST_F(PropChangedTest, NegativeUnregisterInvalidPropertiesChangedListener)
     TestParameters tp(true, InterfaceParameters(P1));
 
     clientBus.WaitForSession();
-    PropChangedTestBusObject obj(serviceBus, tp.intfParams);
-    PropChangedTestProxyBusObject proxy(clientBus, serviceName, tp);
+    PropChangedTestBusObject testBusObject(serviceBus, tp.intfParams);
+    PropChangedTestProxyBusObject proxyBusObject(clientBus, serviceName, tp);
 
     SampleStore store;
     PropChangedTestListener invalid(store);
-    status = proxy.UnregisterPropertiesChangedListener(tp.intfParams[0].name.c_str(), invalid);
+    status = proxyBusObject.UnregisterPropertiesChangedListener(tp.intfParams[0].name.c_str(), invalid);
     EXPECT_EQ(ER_OK, status);
 }
 
@@ -2095,11 +2095,11 @@ class PropCacheUpdatedConcurrentCallbackTestListener :
 
         mutex.Lock();
         propChangedCallbackCount++;
-        bool first = this->first;
+        bool firstValue = this->first;
         this->first = false;
         mutex.Unlock();
 
-        if (first) {
+        if (firstValue) {
 
             ASSERT_TRUE(busObj != NULL);
             ASSERT_TRUE(events != NULL);

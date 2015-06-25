@@ -135,8 +135,8 @@ class MyBusListener : public BusListener, public SessionListener {
                        newOwner ? newOwner : "null");
     }
 
-    void SessionLost(SessionId sessionId, SessionLostReason reason) {
-        QCC_SyncPrintf("SessionLost(%08x) was called. Reason = %u.\n", sessionId, reason);
+    void SessionLost(SessionId lostSessionId, SessionLostReason reason) {
+        QCC_SyncPrintf("SessionLost(%08x) was called. Reason = %u.\n", lostSessionId, reason);
         g_interrupt = true;
     }
 
