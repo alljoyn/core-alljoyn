@@ -3727,7 +3727,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
         }
 
         m_transport->m_ardpLock.Lock();
-        ipAddrStr = ARDP_GetIpAddrFromConn(GetHandle(), GetConn()).ToString();
+        ipAddrStr = ARDP_GetLocalIpAddrFromConn(GetHandle(), GetConn()).ToString();
         m_transport->m_ardpLock.Unlock();
         return ER_OK;
     };

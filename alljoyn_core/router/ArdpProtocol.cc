@@ -1522,6 +1522,26 @@ qcc::IPAddress ARDP_GetIpAddrFromConn(ArdpHandle* handle, ArdpConnRecord* conn)
     return conn->ipAddr;
 }
 
+qcc::IPAddress ARDP_GetLocalIpAddrFromConn(ArdpHandle* handle, ArdpConnRecord* conn)
+{
+    QCC_DbgTrace(("ARDP_GetLocalIpAddrFromConn(handle=%p, conn=%p)", handle, conn));
+    if (!IsConnValid(handle, conn)) {
+        QCC_LogError(ER_ARDP_INVALID_CONNECTION, ("ARDP_GetLocalIpAddrFromConn(handle=%p), context = %p", handle, handle->context));
+        return qcc::IPAddress();
+    }
+
+    qcc::IPAddress ip;
+    uint16_t listenPort;
+
+    QStatus status = qcc::GetLocalAddress(conn->sock, ip, listenPort);
+    if (status != ER_OK) {
+        QCC_LogError(status, ("ARDP_GetLocalIpAddrFromConn(handle=%p), context = %p", handle, handle->context));
+        return qcc::IPAddress();
+    }
+
+    return ip;
+}
+
 uint16_t ARDP_GetIpPortFromConn(ArdpHandle* handle, ArdpConnRecord* conn)
 {
     QCC_DbgTrace(("ARDP_GetIpPortFromConn(handle=%p, conn=%p)", handle, conn));
@@ -1530,6 +1550,26 @@ uint16_t ARDP_GetIpPortFromConn(ArdpHandle* handle, ArdpConnRecord* conn)
         return 0;
     }
     return conn->ipPort;
+}
+
+uint16_t ARDP_GetLocalIpPortFromConn(ArdpHandle* handle, ArdpConnRecord* conn)
+{
+    QCC_DbgTrace(("ARDP_GetLocalIpPortFromConn(handle=%p, conn=%p)", handle, conn));
+    if (!IsConnValid(handle, conn)) {
+        QCC_LogError(ER_ARDP_INVALID_CONNECTION, ("ARDP_GetLocalIpPortFromConn(handle=%p), context = %p", handle, handle->context));
+        return 0;
+    }
+
+    qcc::IPAddress ip;
+    uint16_t listenPort;
+
+    QStatus status = qcc::GetLocalAddress(conn->sock, ip, listenPort);
+    if (status != ER_OK) {
+        QCC_LogError(status, ("ARDP_GetLocalIpPortFromConn(handle=%p), context = %p", handle, handle->context));
+        return 0;
+    }
+
+    return listenPort;
 }
 
 /*
