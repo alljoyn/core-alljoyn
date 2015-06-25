@@ -278,4 +278,5 @@ Copyright AllSeen Alliance. All rights reserved.
   <status name="ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE" value="0x912a" comment="General error indicating the value given for an About Data field is invalid."/>
   <status name="ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE" value="0x912b" comment="Error indicating the AppId field is not a 128-bit bite array."/>
   <status name="ER_BUS_TRANSPORT_ACCESS_DENIED" value="0x912c" comment="The transport denied the connection attempt because the application doesn't have the required permissions."/>
+  <status name="ER_INVALID_SIGNAL_EMISSION_TYPE" value="0x912d" comment="Attempt to send a signal with the wrong type."/>
 </status_block>
