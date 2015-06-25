@@ -203,8 +203,8 @@ class SessionTestObject : public BusObject {
     }
 
     /** Set ttl for all outgoing chat messages */
-    void SetTtl(uint32_t ttl) {
-        this->ttl = ttl;
+    void SetTtl(uint32_t newTtl) {
+        this->ttl = newTtl;
     }
 
   private:
@@ -733,20 +733,20 @@ struct AsyncTimeoutHandler : public BusAttachment::SetLinkTimeoutAsyncCB {
     AsyncTimeoutHandler(SessionId id, uint32_t timeout) : id(id), timeout(timeout)
     {   }
 
-    void SetLinkTimeoutCB(QStatus status, uint32_t timeout, void* context)
+    void SetLinkTimeoutCB(QStatus status, uint32_t timeoutSeconds, void* context)
     {
         QCC_UNUSED(context);
 
         if (status != ER_OK) {
-            printf("SetLinkTimeout(%u, %u) failed with %s\n", id, timeout, QCC_StatusText(status));
+            printf("SetLinkTimeout(%u, %u) failed with %s\n", id, timeoutSeconds, QCC_StatusText(status));
         } else {
-            printf("Link timeout for session %u is %d\n", id, timeout);
+            printf("Link timeout for session %u is %d\n", id, timeoutSeconds);
         }
 
         delete this;
     }
   private:
-    /* Private assigment operator - does nothing */
+    /* Private assignment operator - does nothing */
     AsyncTimeoutHandler operator=(const AsyncTimeoutHandler&);
 };
 

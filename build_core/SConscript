@@ -33,7 +33,7 @@ if platform.system() == 'Linux':
 
 elif platform.system() == 'Windows':
     default_target_os = 'win7'
-    allowed_target_oss = ('winxp', 'win7', 'android')
+    allowed_target_oss = ('winxp', 'win7', 'win10', 'android')
 
     if platform.machine() == 'x86_64':
         default_target_cpu = 'x86_64'
@@ -78,7 +78,7 @@ vars.Add('CXX', 'C++ compiler to use')
 
 
 if default_msvc_version:
-    vars.Add(EnumVariable('MSVC_VERSION', 'MSVC compiler version - Windows', default_msvc_version, allowed_values=('9.0', '10.0', '11.0', '11.0Exp', '12.0', '12.0Exp')))
+    vars.Add(EnumVariable('MSVC_VERSION', 'MSVC compiler version - Windows', default_msvc_version, allowed_values=('9.0', '10.0', '11.0', '11.0Exp', '12.0', '12.0Exp', '14.0', '14.0Exp')))
 
 
 # Standard variant directories
@@ -94,9 +94,9 @@ if target_os == 'android':
     default_crypto = 'builtin'
 vars.Add(EnumVariable('CRYPTO', 'Crypto implementation', default_crypto, allowed_values = allowed_crypto))
 
-if target_os in ['win7', 'winxp']:
-    # The Win7 MSI installation package takes a long time to build. Let it be optional.
-    if target_os == 'win7':
+if target_os in ['win10', 'win7', 'winxp']:
+    # The Win7/Win10 MSI installation package takes a long time to build. Let it be optional.
+    if target_os in ['win10', 'win7']:
         vars.Add(EnumVariable('WIN7_MSI', 'Build the .MSI installation package', 'false', allowed_values=('false', 'true')))
 
     path = []
@@ -154,7 +154,7 @@ if env['OS'] == 'linux':
     env['OS_GROUP'] = 'posix'
     env['OS_CONF'] = 'linux'
 
-elif env['OS'] in ['win7', 'winxp']:
+elif env['OS'] in ['win10', 'win7', 'winxp']:
     env['OS_GROUP'] = 'windows'
     env['OS_CONF'] = 'windows'
 

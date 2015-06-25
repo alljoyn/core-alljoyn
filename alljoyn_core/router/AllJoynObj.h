@@ -931,7 +931,7 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
      */
     void SessionMapErase(SessionMapEntry& sme);
 
-    const qcc::GUID128& guid;                                  /**< Global GUID of this daemon */
+    const qcc::GUID128& daemonGuid;                            /**< Global GUID of this daemon */
 
     const InterfaceDescription::Member* detachSessionSignal;   /**< org.alljoyn.Daemon.DetachSession signal member */
 

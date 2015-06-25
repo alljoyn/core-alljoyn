@@ -156,7 +156,7 @@ class MyBusListener : public BusListener, public SessionPortListener, public Ses
 
             g_msgBus->EnableConcurrentCallbacks();
 
-            QStatus status = g_msgBus->LeaveSession(sessionId);
+            status = g_msgBus->LeaveSession(sessionId);
 
             if (status == ER_OK) {
                 if (g_sleepBeforeRejoin) {
@@ -496,7 +496,7 @@ int CDECL_CALL main(int argc, char** argv)
                 aboutObj->Announce(SESSION_PORT, g_aboutData);
             } else {
                 /* Request a well-known name */
-                QStatus status = g_msgBus->RequestName(g_wellKnownName.c_str(), DBUS_NAME_FLAG_REPLACE_EXISTING | DBUS_NAME_FLAG_DO_NOT_QUEUE);
+                status = g_msgBus->RequestName(g_wellKnownName.c_str(), DBUS_NAME_FLAG_REPLACE_EXISTING | DBUS_NAME_FLAG_DO_NOT_QUEUE);
                 if (status != ER_OK) {
                     QCC_LogError(status, ("RequestName(%s) failed. ", g_wellKnownName.c_str()));
                     exit(-1);

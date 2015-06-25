@@ -171,21 +171,21 @@ TEST(KeyStoreTest, keystore_store_load_merge) {
         keyStore.AddKey(guid4, key);
 
         {
-            KeyStore keyStore("keystore_test");
-            keyStore.Init(NULL, true);
+            KeyStore keyStore2("keystore_test");
+            keyStore2.Init(NULL, true);
 
             /* Replace a key */
             key.Rand(620, KeyBlob::GENERIC);
-            keyStore.AddKey(guid1, key);
+            keyStore2.AddKey(guid1, key);
 
             /* Add a key */
             key.Rand(620, KeyBlob::GENERIC);
-            keyStore.AddKey(guid3, key);
+            keyStore2.AddKey(guid3, key);
 
             /* Delete a key */
-            keyStore.DelKey(guid2);
+            keyStore2.DelKey(guid2);
 
-            status = keyStore.Store();
+            status = keyStore2.Store();
             ASSERT_EQ(ER_OK, status) << " Failed to store keystore";
         }
 

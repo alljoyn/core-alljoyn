@@ -107,7 +107,7 @@ AllJoynObj::AllJoynObj(Bus& bus, BusController* busController, DaemonRouter& rou
     mpSessionChangedSignal(NULL),
     mpSessionChangedWithReason(NULL),
     mpSessionJoinedSignal(NULL),
-    guid(bus.GetInternal().GetGlobalGUID()),
+    daemonGuid(bus.GetInternal().GetGlobalGUID()),
     detachSessionSignal(NULL),
     timer("NameReaper"),
     isStopping(false),
@@ -1204,17 +1204,17 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
         ajObj.AcquireLocks();
         SessionMapEntry* smEntry = ajObj.SessionMapFind(sender, id);
         if (smEntry) {
-            String sessionHost = smEntry->sessionHost;
+            String sessionHostStr = smEntry->sessionHost;
 
             vector<String> memberVector = smEntry->memberNames;
             ajObj.ReleaseLocks();
             /* Already sent MPSessionChanged to session creator, so skip it here if sessionHost (aka session creator) is equal to the sender. */
             if (!isSelfJoin) {
-                ajObj.SendMPSessionChanged(id, sessionHost.c_str(), true, sender.c_str(), ALLJOYN_MPSESSIONCHANGED_LOCAL_MEMBER_ADDED);
+                ajObj.SendMPSessionChanged(id, sessionHostStr.c_str(), true, sender.c_str(), ALLJOYN_MPSESSIONCHANGED_LOCAL_MEMBER_ADDED);
             }
             vector<String>::const_iterator mit = memberVector.begin();
             while (mit != memberVector.end()) {
-                if (sender != *mit && sessionHost != *mit) {
+                if (sender != *mit && sessionHostStr != *mit) {
                     ajObj.SendMPSessionChanged(id, mit->c_str(), true, sender.c_str(), ALLJOYN_MPSESSIONCHANGED_LOCAL_MEMBER_ADDED);
                 }
                 mit++;
@@ -1619,7 +1619,7 @@ void AllJoynObj::RemoveSessionMember(const InterfaceDescription::Member* member,
             detachSessionArgs[0].Set("u", id);
             detachSessionArgs[1].Set("s", sessionMemberName);
 
-            QStatus status = Signal(NULL, 0, *detachSessionSignal, detachSessionArgs, ArraySize(detachSessionArgs), 0, ALLJOYN_FLAG_GLOBAL_BROADCAST);
+            status = Signal(NULL, 0, *detachSessionSignal, detachSessionArgs, ArraySize(detachSessionArgs), 0, ALLJOYN_FLAG_GLOBAL_BROADCAST);
             if (status != ER_OK) {
                 QCC_LogError(status, ("Error sending org.alljoyn.Daemon.DetachSession signal"));
             }
@@ -1737,7 +1737,7 @@ bool AllJoynObj::NamesHandler(Message msg, MsgArg arg)
 {
     assert(ALLJOYN_ARRAY == arg.typeId);
     const MsgArg* items = arg.v_array.GetElements();
-    const String& shortGuidStr = guid.ToShortString();
+    const String& shortGuidStr = daemonGuid.ToShortString();
 
     /* Create a virtual endpoint for each unique name in args */
     AcquireLocks();
@@ -1802,7 +1802,7 @@ bool AllJoynObj::NamesHandler(Message msg, MsgArg arg)
             assert(ALLJOYN_STRING == aliasItems[j].typeId);
             if (vep->IsValid()) {
                 ReleaseLocks();
-                bool madeChange = router.SetVirtualAlias(aliasItems[j].v_string.str, &vep, vep);
+                madeChange = router.SetVirtualAlias(aliasItems[j].v_string.str, &vep, vep);
                 AcquireLocks();
                 bit = b2bEndpoints.find(key);
                 if (bit == b2bEndpoints.end()) {
@@ -1852,7 +1852,7 @@ bool AllJoynObj::NamesHandler(Message msg, MsgArg arg)
             if ((it->second->GetFeatures().nameTransfer == SessionOpts::ALL_NAMES) && (senderGuid != it->second->GetRemoteGUID())) {
                 QCC_DbgPrintf(("Sending ExchangeName signal to %s", it->second->GetUniqueName().c_str()));
 
-                StringMapKey key = it->first;
+                key = it->first;
                 RemoteEndpoint ep = it->second;
                 ReleaseLocks();
                 QStatus status = ep->PushMessage(exchangeMsg);
@@ -2054,7 +2054,7 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
                 if ((optsIn.nameTransfer == SessionOpts::ALL_NAMES) && ((optsOut.nameTransfer == SessionOpts::P2P_NAMES) || (optsOut.nameTransfer == SessionOpts::MP_NAMES))) {
                     optsOut.nameTransfer = SessionOpts::ALL_NAMES;
                 }
-                BusEndpoint tempEp = ajObj.FindEndpoint(srcStr);
+                tempEp = ajObj.FindEndpoint(srcStr);
                 VirtualEndpoint srcEp = VirtualEndpoint::cast(tempEp);
                 tempEp = ajObj.FindEndpoint(srcB2BStr);
                 srcB2BEp = RemoteEndpoint::cast(tempEp);
@@ -2194,7 +2194,7 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
 
                     QCC_DbgPrintf(("AllJoynObj::RunAttach(): SendAttachSession() success"));
 
-                    BusEndpoint tempEp = ajObj.FindEndpoint(srcStr);
+                    tempEp = ajObj.FindEndpoint(srcStr);
                     VirtualEndpoint srcEp = VirtualEndpoint::cast(tempEp);
                     tempEp = ajObj.FindEndpoint(srcB2BStr);
                     srcB2BEp = RemoteEndpoint::cast(tempEp);
@@ -3060,7 +3060,7 @@ void AllJoynObj::DetachSessionSignalHandler(const InterfaceDescription::Member* 
     QCC_DbgTrace(("AllJoynObj::DetachSessionSignalHandler(src=%s, id=%u)", src, id));
 
     /* Do not process our own detach message signals */
-    if (::strncmp(guid.ToShortString().c_str(), msg->GetSender() + 1, qcc::GUID128::SIZE_SHORT) == 0) {
+    if (::strncmp(daemonGuid.ToShortString().c_str(), msg->GetSender() + 1, qcc::GUID128::SIZE_SHORT) == 0) {
         return;
     }
 
@@ -4102,11 +4102,11 @@ void AllJoynObj::RemoveBusToBusEndpoint(RemoteEndpoint& endpoint)
 
                 /* Remove virtual endpoint with no more b2b eps */
                 if (it != virtualEndpoints.end()) {
-                    String vepName = it->first;
+                    String vepNameToRemove = it->first;
                     ReleaseLocks();
-                    RemoveVirtualEndpoint(vepName);
+                    RemoveVirtualEndpoint(vepNameToRemove);
                     AcquireLocks();
-                    it = virtualEndpoints.upper_bound(vepName);
+                    it = virtualEndpoints.upper_bound(vepNameToRemove);
                 }
 
             } else {
@@ -4336,7 +4336,7 @@ void AllJoynObj::NameChangedSignalHandler(const InterfaceDescription::Member* me
     const qcc::String oldOwner = args[1].v_string.str;
     const qcc::String newOwner = args[2].v_string.str;
 
-    const String& shortGuidStr = guid.ToShortString();
+    const String& shortGuidStr = daemonGuid.ToShortString();
     bool madeChanges = false;
 
     QCC_DbgPrintf(("AllJoynObj::NameChangedSignalHandler: alias = \"%s\"   oldOwner = \"%s\"   newOwner = \"%s\"  sent from \"%s\"",
@@ -4365,7 +4365,7 @@ void AllJoynObj::NameChangedSignalHandler(const InterfaceDescription::Member* me
 
     if (alias[0] == ':') {
         AcquireLocks();
-        map<qcc::StringMapKey, RemoteEndpoint>::iterator bit = b2bEndpoints.find(msg->GetRcvEndpointName());
+        bit = b2bEndpoints.find(msg->GetRcvEndpointName());
         if (bit != b2bEndpoints.end()) {
             /* Change affects a remote unique name (i.e. a VirtualEndpoint) */
             if (newOwner.empty()) {
@@ -4428,7 +4428,7 @@ void AllJoynObj::NameChangedSignalHandler(const InterfaceDescription::Member* me
     if (madeChanges) {
         /* Forward message to directly connected controllers that are interested except the one that sent us this NameChanged */
         AcquireLocks();
-        map<qcc::StringMapKey, RemoteEndpoint>::const_iterator bit = b2bEndpoints.find(msg->GetRcvEndpointName());
+        map<qcc::StringMapKey, RemoteEndpoint>::const_iterator cBit = b2bEndpoints.find(msg->GetRcvEndpointName());
         map<qcc::StringMapKey, RemoteEndpoint>::iterator it = b2bEndpoints.begin();
         while (it != b2bEndpoints.end()) {
 
@@ -4439,7 +4439,7 @@ void AllJoynObj::NameChangedSignalHandler(const InterfaceDescription::Member* me
                              (it->second->GetSessionId() == sessionId));
 
 
-            if (sendInfo && ((bit == b2bEndpoints.end()) || (bit->second->GetRemoteGUID() != it->second->GetRemoteGUID()))) {
+            if (sendInfo && ((cBit == b2bEndpoints.end()) || (cBit->second->GetRemoteGUID() != it->second->GetRemoteGUID()))) {
                 String key = it->first.c_str();
                 RemoteEndpoint ep = it->second;
                 ReleaseLocks();
@@ -4448,7 +4448,7 @@ void AllJoynObj::NameChangedSignalHandler(const InterfaceDescription::Member* me
                     QCC_LogError(status, ("Failed to forward NameChanged to %s", ep->GetUniqueName().c_str()));
                 }
                 AcquireLocks();
-                bit = b2bEndpoints.find(msg->GetRcvEndpointName());
+                cBit = b2bEndpoints.find(msg->GetRcvEndpointName());
                 it = b2bEndpoints.upper_bound(key);
             } else {
                 ++it;
@@ -4549,7 +4549,7 @@ void AllJoynObj::NameOwnerChanged(const qcc::String& alias,
     QCC_UNUSED(newOwnerNameTransfer);
 
     QStatus status;
-    const String& shortGuidStr = guid.ToShortString();
+    const String& shortGuidStr = daemonGuid.ToShortString();
     /* When newOwner and oldOwner are the same, only the name transfer changed. */
     if (newOwner == oldOwner) {
         return;
@@ -4821,7 +4821,7 @@ void AllJoynObj::NameOwnerChanged(const qcc::String& alias,
                     TransportMask mask = ait->second.first;
                     ReleaseLocks();
 
-                    QStatus status = ProcCancelAdvertise(*oldOwner, name, mask);
+                    status = ProcCancelAdvertise(*oldOwner, name, mask);
                     AcquireLocks();
                     ait = advertiseMap.upper_bound(name);
                     if (ER_OK != status) {
@@ -4842,7 +4842,7 @@ void AllJoynObj::NameOwnerChanged(const qcc::String& alias,
                     QCC_DbgPrintf(("Calling ProcCancelFindAdvertisement from NameOwnerChanged [%s]", Thread::GetThread()->GetName()));
                     ReleaseLocks();
 
-                    QStatus status = ProcCancelFindAdvertisement(*oldOwner, last, mask);
+                    status = ProcCancelFindAdvertisement(*oldOwner, last, mask);
                     AcquireLocks();
                     dit = discoverMap.upper_bound(last);
                     if (ER_OK != status) {
@@ -4928,15 +4928,15 @@ void AllJoynObj::FoundNames(const qcc::String& busAddr,
                 if (isNew) {
                     QCC_DbgPrintf(("Adding new entry %d  %d", (1000LL * ttl), (1000LL * ttl * 80 / 100)));
                     /* Add new name to map */
-                    NameMapType::iterator it = nameMap.insert(NameMapType::value_type(*nit, NameMapEntry(busAddr,
-                                                                                                         guid,
-                                                                                                         transport,
-                                                                                                         (ttl == numeric_limits<uint32_t>::max()) ? numeric_limits<uint64_t>::max() : (1000LL * ttl),
-                                                                                                         this)));
-                    QCC_DbgPrintf(("TTL set to %ld", it->second.ttl));
+                    NameMapType::iterator nameMapIt = nameMap.insert(NameMapType::value_type(*nit, NameMapEntry(busAddr,
+                                                                                                                guid,
+                                                                                                                transport,
+                                                                                                                (ttl == numeric_limits<uint32_t>::max()) ? numeric_limits<uint64_t>::max() : (1000LL * ttl),
+                                                                                                                this)));
+                    QCC_DbgPrintf(("TTL set to %ld", nameMapIt->second.ttl));
                     /* Don't schedule an alarm which will never expire or multiple timers for the same set */
                     if (ttl != numeric_limits<uint32_t>::max()) {
-                        NameMapEntry& nme = it->second;
+                        NameMapEntry& nme = nameMapIt->second;
                         // We need the alarm to be triggered off at 80% time to enable cache refresh
                         const uint32_t timeout = ttl * 1000 * 80 / 100;
                         AllJoynObj* pObj = this;
@@ -5318,8 +5318,8 @@ void AllJoynObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
         set<pair<String, TransportMask> > lostNameSet;
         AcquireLocks();
         if ((bool)alarm->GetContext()) {
-            multimap<String, NameMapEntry>::iterator it = nameMap.begin();
-            uint64_t now = GetTimestamp64();
+            it = nameMap.begin();
+            now = GetTimestamp64();
             while (it != nameMap.end()) {
                 NameMapEntry& nme = it->second;
                 qcc::String guidToBeChecked = it->second.guid;
@@ -5659,8 +5659,8 @@ bool AllJoynObj::ResponseHandler(TransportMask transport, MDNSPacket response, u
     }
 
     ReleaseLocks();
-    for (list<Message>::iterator it = replyMsgs.begin(); it != replyMsgs.end(); it++) {
-        PingReplyMethodHandlerUsingCode(*it, replyCode);
+    for (list<Message>::iterator replyMsgsIt = replyMsgs.begin(); replyMsgsIt != replyMsgs.end(); replyMsgsIt++) {
+        PingReplyMethodHandlerUsingCode(*replyMsgsIt, replyCode);
     }
     return false;
 }
@@ -5753,7 +5753,7 @@ void AllJoynObj::PingResponse(TransportMask transport, const qcc::IPEndpoint& ds
 
     pingReplyRData->SetReplyCode(replyCodeText);
 
-    MDNSResourceRecord pingReplyRecord("ping-reply." + guid.ToString() + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, pingReplyRData);
+    MDNSResourceRecord pingReplyRecord("ping-reply." + daemonGuid.ToString() + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, pingReplyRData);
     response->AddAdditionalRecord(pingReplyRecord);
     delete pingReplyRData;
 

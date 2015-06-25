@@ -401,14 +401,14 @@ QStatus BusAttachment::Start()
     return status;
 }
 
-QStatus BusAttachment::Internal::TransportConnect(const char* connectSpec)
+QStatus BusAttachment::Internal::TransportConnect(const char* requestedConnectSpec)
 {
     QStatus status;
-    Transport* trans = transportList.GetTransport(connectSpec);
+    Transport* trans = transportList.GetTransport(requestedConnectSpec);
     if (trans) {
         SessionOpts emptyOpts;
         BusEndpoint tempEp;
-        status = trans->Connect(connectSpec, emptyOpts, tempEp);
+        status = trans->Connect(requestedConnectSpec, emptyOpts, tempEp);
 
         /* Make sure the remote side (daemon) is at least as new as the client */
         if ((status == ER_OK) && ((tempEp->GetEndpointType() == ENDPOINT_TYPE_REMOTE) ||
@@ -425,8 +425,8 @@ QStatus BusAttachment::Internal::TransportConnect(const char* connectSpec)
              */
             if ((rem->GetRemoteAllJoynVersion() != 0) && (rem->GetRemoteProtocolVersion() < ALLJOYN_PROTOCOL_VERSION)) {
                 QCC_DbgPrintf(("Rejecting daemon at %s because its protocol version (%d) is less than ours (%d)",
-                               connectSpec, rem->GetRemoteProtocolVersion(), ALLJOYN_PROTOCOL_VERSION));
-                TransportDisconnect(connectSpec);
+                               requestedConnectSpec, rem->GetRemoteProtocolVersion(), ALLJOYN_PROTOCOL_VERSION));
+                TransportDisconnect(requestedConnectSpec);
                 status = ER_BUS_INCOMPATIBLE_DAEMON;
             }
         }
@@ -481,7 +481,7 @@ QStatus BusAttachment::Connect()
     return Connect(connectArgs);
 }
 
-QStatus BusAttachment::Connect(const char* connectSpec)
+QStatus BusAttachment::Connect(const char* requestedConnectSpec)
 {
     QStatus status;
 
@@ -491,7 +491,7 @@ QStatus BusAttachment::Connect(const char* connectSpec)
         status = ER_BUS_STOPPING;
         QCC_LogError(status, ("BusAttachment::Connect cannot connect while bus is stopping"));
     } else {
-        status = busInternal->TransportConnect(connectSpec, this->connectSpec);
+        status = busInternal->TransportConnect(requestedConnectSpec, this->connectSpec);
         if (ER_OK == status) {
             status = RegisterSignalHandlers();
             if (ER_OK != status) {
@@ -517,10 +517,10 @@ QStatus BusAttachment::RegisterSignalHandlers()
         /* Register org.freedesktop.DBus signal handler */
         const InterfaceDescription* iface = GetInterface(org::freedesktop::DBus::InterfaceName);
         assert(iface);
-        QStatus status = RegisterSignalHandler(busInternal,
-                                               static_cast<MessageReceiver::SignalHandler>(&BusAttachment::Internal::AllJoynSignalHandler),
-                                               iface->GetMember("NameOwnerChanged"),
-                                               NULL);
+        status = RegisterSignalHandler(busInternal,
+                                       static_cast<MessageReceiver::SignalHandler>(&BusAttachment::Internal::AllJoynSignalHandler),
+                                       iface->GetMember("NameOwnerChanged"),
+                                       NULL);
         if (ER_OK == status) {
             Message reply(*this);
             MsgArg arg("s", "type='signal',interface='org.freedesktop.DBus'");
@@ -577,7 +577,7 @@ QStatus BusAttachment::RegisterSignalHandlers()
     return status;
 }
 
-QStatus BusAttachment::Internal::TransportDisconnect(const char* connectSpec)
+QStatus BusAttachment::Internal::TransportDisconnect(const char* disconnectConnectSpec)
 {
     QStatus status;
 
@@ -585,9 +585,9 @@ QStatus BusAttachment::Internal::TransportDisconnect(const char* connectSpec)
         status = ER_BUS_NOT_CONNECTED;
     } else {
         /* Terminate transport for connection */
-        Transport* trans = transportList.GetTransport(connectSpec);
+        Transport* trans = transportList.GetTransport(disconnectConnectSpec);
         if (trans) {
-            status = trans->Disconnect(connectSpec);
+            status = trans->Disconnect(disconnectConnectSpec);
         } else {
             status = ER_BUS_TRANSPORT_NOT_AVAILABLE;
         }
@@ -626,9 +626,9 @@ QStatus BusAttachment::Disconnect()
     return status;
 }
 
-QStatus BusAttachment::Disconnect(const char* connectSpec)
+QStatus BusAttachment::Disconnect(const char* disconnectConnectSpec)
 {
-    QCC_UNUSED(connectSpec);
+    QCC_UNUSED(disconnectConnectSpec);
     return Disconnect();
 }
 
@@ -2312,7 +2312,7 @@ void BusAttachment::Internal::AllJoynSignalHandler(const InterfaceDescription::M
         } else if (0 == strcmp("MPSessionChangedWithReason", msg->GetMemberName())) {
             SessionId id = static_cast<SessionId>(args[0].v_uint32);
             unsigned int reason = args[3].v_uint32;
-            const char* member = args[1].v_string.str;
+            const char* memberStr = args[1].v_string.str;
 
             for (size_t i = 0; i < sizeof(sessionListeners) / sizeof(sessionListeners[0]); ++i) {
                 sessionListenersLock[i].Lock(MUTEX_CONTEXT);
@@ -2326,17 +2326,17 @@ void BusAttachment::Internal::AllJoynSignalHandler(const InterfaceDescription::M
                             /* special logic here because
                              * - as a host in a multipoint session you don't want to see members you already saw before. This extra logic is needed
                              *   in case of self-join. The exception here is the other side of the self-join */
-                            if (i == SESSION_SIDE_JOINER || (i == SESSION_SIDE_HOST && (strcmp(member, bus.GetUniqueName().c_str()) == 0 || reason == ALLJOYN_MPSESSIONCHANGED_REMOTE_MEMBER_ADDED))) {
-                                (*pl)->SessionMemberAdded(id, member);
+                            if (i == SESSION_SIDE_JOINER || (i == SESSION_SIDE_HOST && (strcmp(memberStr, bus.GetUniqueName().c_str()) == 0 || reason == ALLJOYN_MPSESSIONCHANGED_REMOTE_MEMBER_ADDED))) {
+                                (*pl)->SessionMemberAdded(id, memberStr);
                             }
                         } else {
                             /* More special logic here because
                                - As a host, you are not interested if this leaf node as also removed in a self-join session
                                - As a joiner, you are not interested if you were removed. */
                             if ((i == SESSION_SIDE_HOST && reason == ALLJOYN_MPSESSIONCHANGED_REMOTE_MEMBER_REMOVED) ||
-                                (i == SESSION_SIDE_JOINER && !(reason == ALLJOYN_MPSESSIONCHANGED_LOCAL_MEMBER_REMOVED && strcmp(member, bus.GetUniqueName().c_str()) == 0))) {
+                                (i == SESSION_SIDE_JOINER && !(reason == ALLJOYN_MPSESSIONCHANGED_LOCAL_MEMBER_REMOVED && strcmp(memberStr, bus.GetUniqueName().c_str()) == 0))) {
 
-                                (*pl)->SessionMemberRemoved(id, member);
+                                (*pl)->SessionMemberRemoved(id, memberStr);
                             }
                         }
                     }
@@ -3051,9 +3051,9 @@ bool KeyStoreKeyEventListener::NotifyAutoDelete(KeyStore* holder, const qcc::GUI
     return true;
 }
 
-void BusAttachment::SetDescriptionTranslator(Translator* translator)
+void BusAttachment::SetDescriptionTranslator(Translator* newTranslator)
 {
-    this->translator = translator;
+    this->translator = newTranslator;
 }
 
 Translator* BusAttachment::GetDescriptionTranslator()

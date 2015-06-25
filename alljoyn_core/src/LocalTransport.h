@@ -238,9 +238,9 @@ class _LocalEndpoint : public _BusEndpoint, public qcc::AlarmListener, public Me
     /**
      * Set the endpoint's unique name.
      *
-     * @param uniqueName   Unique name for endpoint.
+     * @param newUniqueName   Unique name for endpoint.
      */
-    void SetUniqueName(const qcc::String& uniqueName) { this->uniqueName = uniqueName; }
+    void SetUniqueName(const qcc::String& newUniqueName) { this->uniqueName = newUniqueName; }
 
     /**
      * Register a BusObject.

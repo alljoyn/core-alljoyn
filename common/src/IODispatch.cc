@@ -484,7 +484,7 @@ ThreadReturn STDCALL IODispatch::Run(void* arg) {
                 continue;
             } else {
                 lock.Lock();
-                map<Stream*, IODispatchEntry>::iterator it = dispatchEntries.begin();
+                it = dispatchEntries.begin();
                 while (it != dispatchEntries.end()) {
 
                     Stream* stream = it->first;
@@ -550,8 +550,8 @@ ThreadReturn STDCALL IODispatch::Run(void* arg) {
 
                                 QStatus status = ER_TIMER_FULL;
 
-                                map<Stream*, IODispatchEntry>::iterator it = dispatchEntries.find(stream);
-                                while (isRunning && status == ER_TIMER_FULL &&  it != dispatchEntries.end() && it->second.stopping_state == IO_RUNNING) {
+                                map<Stream*, IODispatchEntry>::iterator streamIt = dispatchEntries.find(stream);
+                                while (isRunning && status == ER_TIMER_FULL &&  streamIt != dispatchEntries.end() && streamIt->second.stopping_state == IO_RUNNING) {
                                     /* Call the non-blocking version of AddAlarm, while holding the
                                      * locks to ensure that the state of the dispatchEntry is valid.
                                      */
@@ -563,11 +563,11 @@ ThreadReturn STDCALL IODispatch::Run(void* arg) {
                                         lock.Lock();
                                     }
 
-                                    it = dispatchEntries.find(stream);
+                                    streamIt = dispatchEntries.find(stream);
                                 }
-                                if (status == ER_OK && it != dispatchEntries.end()) {
+                                if (status == ER_OK && streamIt != dispatchEntries.end()) {
 
-                                    it->second.writeAlarm = writeAlarm;
+                                    streamIt->second.writeAlarm = writeAlarm;
                                 }
 
                                 break;
@@ -691,7 +691,7 @@ QStatus IODispatch::EnableTimeoutCallback(const Source* source, uint32_t timeout
         timer.RemoveAlarm(prevAlarm, false);
 
         QStatus status = ER_TIMER_FULL;
-        map<Stream*, IODispatchEntry>::iterator it = dispatchEntries.find(lookup);
+        it = dispatchEntries.find(lookup);
         while (isRunning && status == ER_TIMER_FULL &&  it != dispatchEntries.end() && !it->second.readInProgress && it->second.stopping_state == IO_RUNNING) {
             /* Call the non-blocking version of AddAlarm, while holding the
              * locks to ensure that the state of the dispatchEntry is valid.
@@ -818,8 +818,8 @@ QStatus IODispatch::EnableWriteCallback(Sink* sink, uint32_t timeout)
         Alarm writeAlarm = Alarm(when, listener, it->second.writeTimeoutCtxt);
         QStatus status = ER_TIMER_FULL;
 
-        map<Stream*, IODispatchEntry>::iterator it = dispatchEntries.find(lookup);
-        while (isRunning && status == ER_TIMER_FULL &&  it != dispatchEntries.end() && it->second.stopping_state == IO_RUNNING) {
+        map<Stream*, IODispatchEntry>::iterator dispatchEntriesIt = dispatchEntries.find(lookup);
+        while (isRunning && status == ER_TIMER_FULL &&  dispatchEntriesIt != dispatchEntries.end() && dispatchEntriesIt->second.stopping_state == IO_RUNNING) {
             /* Call the non-blocking version of AddAlarm, while holding the
              * locks to ensure that the state of the dispatchEntry is valid.
              */
@@ -831,12 +831,12 @@ QStatus IODispatch::EnableWriteCallback(Sink* sink, uint32_t timeout)
                 lock.Lock();
             }
 
-            it = dispatchEntries.find(lookup);
+            dispatchEntriesIt = dispatchEntries.find(lookup);
         }
-        if (status == ER_OK && it != dispatchEntries.end()) {
+        if (status == ER_OK && dispatchEntriesIt != dispatchEntries.end()) {
 
-            it->second.writeAlarm = writeAlarm;
-            it->second.writeInProgress = false;
+            dispatchEntriesIt->second.writeAlarm = writeAlarm;
+            dispatchEntriesIt->second.writeInProgress = false;
         }
     } else {
         it->second.writeInProgress = false;

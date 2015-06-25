@@ -128,11 +128,11 @@ PropTesterObject::~PropTesterObject()
 {
 }
 
-QStatus PropTesterObject::Set(int32_t int32Prop, uint32_t uint32Prop, const char* stringProp)
+QStatus PropTesterObject::Set(int32_t int32Property, uint32_t uint32Property, const char* stringProperty)
 {
-    this->int32Prop = int32Prop;
-    this->uint32Prop = uint32Prop;
-    this->stringProp = stringProp;
+    this->int32Prop = int32Property;
+    this->uint32Prop = uint32Property;
+    this->stringProp = stringProperty;
     QCC_SyncPrintf("Emits properties changed for: \"%s\"\n", this->GetPath());
     return EmitPropChanged(interfaceName, props, ArraySize(props), id, 0);
 }

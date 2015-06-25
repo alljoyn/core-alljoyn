@@ -2249,7 +2249,7 @@ size_t MDNSTextRData::Serialize(uint8_t* buffer, std::map<qcc::String, uint32_t>
         if (it == txtvers) {
             continue;
         }
-        String str = it->first;
+        str = it->first;
         if (!it->second.empty()) {
             str += "=" + it->second;
         }

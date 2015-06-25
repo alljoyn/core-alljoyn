@@ -631,8 +631,7 @@ void* DaemonSLAPTransport::Run(void* arg)
         QCC_DbgPrintf(("DaemonSLAPTransport::Run()"));
 
         UARTFd uartFd = (UARTFd) - 1;
-        set<DaemonSLAPEndpoint>::iterator i = m_authList.begin();
-        while (i != m_authList.end()) {
+        for (set<DaemonSLAPEndpoint>::iterator i = m_authList.begin(); i != m_authList.end();) {
             uartFd = (UARTFd) - 1;
             DaemonSLAPEndpoint ep = *i;
             _DaemonSLAPEndpoint::AuthState authState = ep->GetAuthState();
@@ -665,8 +664,7 @@ void* DaemonSLAPTransport::Run(void* arg)
                 i++;
             }
         }
-        i = m_endpointList.begin();
-        while (i != m_endpointList.end()) {
+        for (set<DaemonSLAPEndpoint>::iterator i = m_endpointList.begin(); i != m_endpointList.end();) {
             uartFd = (UARTFd) - 1;
             DaemonSLAPEndpoint ep = *i;
 
@@ -760,16 +758,16 @@ void* DaemonSLAPTransport::Run(void* arg)
             } else {
                 Event* e = *i;
                 QCC_DbgPrintf(("DaemonSLAPTransport::Run(): Accepting connection "));
-                for (list<ListenEntry>::iterator i = m_listenList.begin(); i != m_listenList.end(); i++) {
-                    if (i->listenFd == e->GetFD()) {
-                        i->endpointStarted = true;
+                for (list<ListenEntry>::iterator listenListIt = m_listenList.begin(); listenListIt != m_listenList.end(); listenListIt++) {
+                    if (listenListIt->listenFd == e->GetFD()) {
+                        listenListIt->endpointStarted = true;
                         static const bool truthiness = true;
                         DaemonSLAPTransport* ptr = this;
                         uint32_t packetSize = SLAP_DEFAULT_PACKET_SIZE;
-                        uint32_t baudrate = StringToU32(i->args["baud"]);
-                        QCC_DbgPrintf(("DaemonSLAPTransport::Run(): Creating endpoint for %s",  i->args["dev"].c_str()));
-                        DaemonSLAPEndpoint conn(ptr, m_bus, truthiness, "slap", i->listenFd, packetSize, baudrate);
-                        QCC_DbgPrintf(("DaemonSLAPTransport::Run(): Authenticating endpoint for %s",  i->args["dev"].c_str()));
+                        uint32_t baudrate = StringToU32(listenListIt->args["baud"]);
+                        QCC_DbgPrintf(("DaemonSLAPTransport::Run(): Creating endpoint for %s",  listenListIt->args["dev"].c_str()));
+                        DaemonSLAPEndpoint conn(ptr, m_bus, truthiness, "slap", listenListIt->listenFd, packetSize, baudrate);
+                        QCC_DbgPrintf(("DaemonSLAPTransport::Run(): Authenticating endpoint for %s",  listenListIt->args["dev"].c_str()));
 
                         status = conn->Authenticate();
                         if (status == ER_OK) {
@@ -780,8 +778,8 @@ void* DaemonSLAPTransport::Run(void* arg)
                 }
             }
         }
-        for (vector<qcc::Event*>::iterator i = checkEvents.begin(); i != checkEvents.end(); ++i) {
-            Event* evt = *i;
+        for (vector<qcc::Event*>::iterator checkEventsIt = checkEvents.begin(); checkEventsIt != checkEvents.end(); ++checkEventsIt) {
+            Event* evt = *checkEventsIt;
             if (evt != &stopEvent) {
                 delete evt;
             }

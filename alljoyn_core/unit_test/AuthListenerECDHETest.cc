@@ -458,10 +458,10 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
         }
     }
 
-    void CreateOnOffAppInterface(BusAttachment& bus, bool addService)
+    void CreateOnOffAppInterface(BusAttachment& busAttachment, bool addService)
     {
         InterfaceDescription* ifc = NULL;
-        QStatus status = bus.CreateInterface(ONOFF_IFC_NAME, ifc, AJ_IFC_SECURITY_REQUIRED);
+        QStatus status = busAttachment.CreateInterface(ONOFF_IFC_NAME, ifc, AJ_IFC_SECURITY_REQUIRED);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         EXPECT_TRUE(ifc != NULL);
         if (ifc != NULL) {
@@ -478,7 +478,7 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
             EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
             AddMethodHandler(ifc->GetMember("On"), static_cast<MessageReceiver::MethodHandler>(&AuthListenerECDHETest::OnOffOn));
             AddMethodHandler(ifc->GetMember("Off"), static_cast<MessageReceiver::MethodHandler>(&AuthListenerECDHETest::OnOffOff));
-            status = bus.RegisterBusObject(*this);
+            status = busAttachment.RegisterBusObject(*this);
             EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         }
     }

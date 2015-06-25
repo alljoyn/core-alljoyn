@@ -243,15 +243,15 @@ class CertificateX509 {
 
     /**
      * Set the serial number field
-     * @param serial the serial number
-     * @param len length of the serial array
+     * @param serialNumber The serial number
+     * @param len          Length of the serial array
      */
-    void SetSerial(const uint8_t* serial, const size_t len)
+    void SetSerial(const uint8_t* serialNumber, const size_t len)
     {
         serialLen = len;
         delete[] this->serial;
         this->serial = new uint8_t[serialLen];
-        memcpy(this->serial, serial, serialLen);
+        memcpy(this->serial, serialNumber, serialLen);
     }
 
     /**
@@ -537,19 +537,19 @@ class CertificateX509 {
         {
         }
 
-        void SetOU(const uint8_t* ou, size_t len)
+        void SetOU(const uint8_t* newOu, size_t len)
         {
             ouLen = len;
             delete [] this->ou;
             this->ou = new uint8_t[len];
-            memcpy(this->ou, ou, len);
+            memcpy(this->ou, newOu, len);
         }
-        void SetCN(const uint8_t* cn, size_t len)
+        void SetCN(const uint8_t* newCn, size_t len)
         {
             cnLen = len;
             delete [] this->cn;
             this->cn = new uint8_t[len];
-            memcpy(this->cn, cn, len);
+            memcpy(this->cn, newCn, len);
         }
         ~DistinguishedName()
         {

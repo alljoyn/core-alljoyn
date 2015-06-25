@@ -58,13 +58,13 @@ class AuthMechLogon : public AuthMechanism {
     /**
      * Initialize this authentication mechanism.
      *
-     * @param authRole  Indicates if the authentication method is initializing as a challenger or a responder.
-     * @param authPeer  The bus name of the remote peer that is being authenticated.
+     * @param authenticationRole  Indicates if the authentication method is initializing as a challenger or a responder.
+     * @param authenticationPeer  The bus name of the remote peer that is being authenticated.
      *
      * @return ER_OK if the authentication mechanism was succesfully initialized
      *         otherwise an error status.
      */
-    QStatus Init(AuthRole authRole, const qcc::String& authPeer);
+    QStatus Init(AuthRole authenticationRole, const qcc::String& authenticationPeer);
 
     /**
      * Function of type AuthMechanismManager::AuthMechFactory. The listener cannot be NULL for

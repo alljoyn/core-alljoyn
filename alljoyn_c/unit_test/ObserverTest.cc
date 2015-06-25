@@ -221,10 +221,10 @@ class Participant : public SessionPortListener, public SessionListener {
         ASSERT_EQ(ER_OK, aboutObj->Announce(port, aboutData));
     }
 
-    virtual bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) {
+    virtual bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& sessionOpts) {
         QCC_UNUSED(sessionPort);
         QCC_UNUSED(joiner);
-        QCC_UNUSED(opts);
+        QCC_UNUSED(sessionOpts);
         return acceptSessions;
     }
 

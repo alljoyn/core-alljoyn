@@ -143,15 +143,15 @@ class MyAboutListener : public AboutListener {
                 aboutProxy.GetObjectDescription(objArg);
                 printf("*********************************************************************************\n");
                 printf("AboutProxy.GetObjectDescription:\n");
-                AboutObjectDescription aod(objArg);
-                size_t pathCount = aod.GetPaths(NULL, 0);
-                const char** paths = new const char*[pathCount];
-                aod.GetPaths(paths, pathCount);
+                AboutObjectDescription aboutObjectDescrption(objArg);
+                pathCount = aboutObjectDescrption.GetPaths(NULL, 0);
+                paths = new const char*[pathCount];
+                aboutObjectDescrption.GetPaths(paths, pathCount);
                 for (size_t i = 0; i < pathCount; ++i) {
                     printf("\t%s\n", paths[i]);
-                    size_t interfaceCount = aod.GetInterfaces(paths[i], NULL, 0);
+                    size_t interfaceCount = aboutObjectDescrption.GetInterfaces(paths[i], NULL, 0);
                     const char** interfaces = new const char*[interfaceCount];
-                    aod.GetInterfaces(paths[i], interfaces, interfaceCount);
+                    aboutObjectDescrption.GetInterfaces(paths[i], interfaces, interfaceCount);
                     for (size_t j = 0; j < interfaceCount; ++j) {
                         printf("\t\t%s\n", interfaces[j]);
                     }
@@ -163,16 +163,16 @@ class MyAboutListener : public AboutListener {
                 aboutProxy.GetAboutData("en", aArg);
                 printf("*********************************************************************************\n");
                 printf("AboutProxy.GetAboutData: (Default Language)\n");
-                AboutData aboutData(aArg);
-                printAboutData(aboutData, NULL, 1);
+                AboutData aboutDataDefaultLanguage(aArg);
+                printAboutData(aboutDataDefaultLanguage, NULL, 1);
                 size_t languageCount;
-                languageCount = aboutData.GetSupportedLanguages();
+                languageCount = aboutDataDefaultLanguage.GetSupportedLanguages();
                 /* If the languageCount == 1 we only have a default language */
                 if (languageCount > 1) {
                     const char** langs = new const char*[languageCount];
-                    aboutData.GetSupportedLanguages(langs, languageCount);
+                    aboutDataDefaultLanguage.GetSupportedLanguages(langs, languageCount);
                     char* defaultLanguage;
-                    aboutData.GetDefaultLanguage(&defaultLanguage);
+                    aboutDataDefaultLanguage.GetDefaultLanguage(&defaultLanguage);
                     /*
                      * Print out the AboutData for every language but the
                      * default; it has already been printed.
@@ -181,9 +181,9 @@ class MyAboutListener : public AboutListener {
                         if (strcmp(defaultLanguage, langs[i]) != 0) {
                             status = aboutProxy.GetAboutData(langs[i], aArg);
                             if (ER_OK == status) {
-                                aboutData.CreatefromMsgArg(aArg, langs[i]);
+                                aboutDataDefaultLanguage.CreatefromMsgArg(aArg, langs[i]);
                                 printf("AboutProxy.GetAboutData: (%s)\n", langs[i]);
-                                printAboutData(aboutData, langs[i], 1);
+                                printAboutData(aboutDataDefaultLanguage, langs[i], 1);
                             }
                         }
                     }

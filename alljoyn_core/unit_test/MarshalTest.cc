@@ -546,8 +546,8 @@ static void Fuzz(TestPipe& stream)
     if (qcc::Rand8() > 2) {
         size_t len = qcc::Rand8();
         while (len--) {
-            uint8_t b = qcc::Rand8();
-            stream.PushBytes(&b, 1, size);
+            uint8_t randomByte = qcc::Rand8();
+            stream.PushBytes(&randomByte, 1, size);
         }
     }
 }
@@ -555,9 +555,9 @@ static void Fuzz(TestPipe& stream)
 static qcc::String StripWS(const qcc::String& str)
 {
     qcc::String out;
-    for (size_t i = 0; i < str.size(); i++) {
-        if (!isspace(str[i])) {
-            out.push_back(str[i]);
+    for (size_t j = 0; j < str.size(); j++) {
+        if (!isspace(str[j])) {
+            out.push_back(str[j]);
         }
     }
     return out;
@@ -782,9 +782,9 @@ QStatus MarshalTests()
         MsgArg arg(ALLJOYN_ARRAY);
         size_t numElements = 10;
         MsgArg* elements = new MsgArg[numElements];
-        for (size_t i = 0; i < numElements; i++) {
-            elements[i].typeId = ALLJOYN_INT32;
-            elements[i].v_int32 = i;
+        for (size_t j = 0; j < numElements; j++) {
+            elements[j].typeId = ALLJOYN_INT32;
+            elements[j].v_int32 = j;
         }
         status = arg.v_array.SetElements("i", numElements, elements);
         if (status == ER_OK) {
@@ -806,10 +806,10 @@ QStatus MarshalTests()
         MsgArg dict(ALLJOYN_ARRAY);
         size_t numEntries = ArraySize(keys);
         MsgArg* entries = new MsgArg[ArraySize(keys)];
-        for (size_t i = 0; i < numEntries; i++) {
-            entries[i].typeId = ALLJOYN_DICT_ENTRY;
-            entries[i].v_dictEntry.key = new MsgArg("s", keys[i]);
-            entries[i].v_dictEntry.val = new MsgArg("v", new MsgArg("u", values[i]));
+        for (size_t j = 0; j < numEntries; j++) {
+            entries[j].typeId = ALLJOYN_DICT_ENTRY;
+            entries[j].v_dictEntry.key = new MsgArg("s", keys[j]);
+            entries[j].v_dictEntry.val = new MsgArg("v", new MsgArg("u", values[j]));
         }
         status = dict.v_array.SetElements("{sv}", numEntries, entries);
         if (status == ER_OK) {
@@ -833,7 +833,7 @@ QStatus MarshalTests()
         size_t numDicts = 1;
         MsgArg* dicts = new MsgArg[numDicts];
 
-        for (size_t d = 0; d < numDicts; d++) {
+        for (size_t j = 0; j < numDicts; j++) {
             size_t numEntries = ArraySize(keys);
             MsgArg* entries = new MsgArg[numEntries];
             for (size_t e = 0; e < numEntries; e++) {
@@ -841,8 +841,8 @@ QStatus MarshalTests()
                 entries[e].v_dictEntry.key = new MsgArg("s", keys[e]);
                 entries[e].v_dictEntry.val = new MsgArg("v", new MsgArg("u", values[e]));
             }
-            dicts[d].typeId = ALLJOYN_ARRAY;
-            status = dicts[d].v_array.SetElements("{sv}", numEntries, entries);
+            dicts[j].typeId = ALLJOYN_ARRAY;
+            status = dicts[j].v_array.SetElements("{sv}", numEntries, entries);
             if (status != ER_OK) {
                 delete [] entries;
                 break;
@@ -1007,14 +1007,14 @@ QStatus MarshalTests()
 
         const char* l[] = { "foo", "bar", "gorn", "yowzer", "bingo" };
         MsgArg* outer = new MsgArg[ArraySize(l)];
-        for (size_t i = 0; i < ArraySize(l); i++) {
-            MsgArg* inner = new MsgArg[strlen(l[i])];
-            for (size_t j = 0; j < strlen(l[i]); j++) {
+        for (size_t cnt = 0; cnt < ArraySize(l); cnt++) {
+            MsgArg* inner = new MsgArg[strlen(l[cnt])];
+            for (size_t j = 0; j < strlen(l[cnt]); j++) {
                 inner[j].typeId = ALLJOYN_BYTE;
-                inner[j].v_byte = l[i][j];
+                inner[j].v_byte = l[cnt][j];
             }
-            outer[i].typeId = ALLJOYN_ARRAY;
-            outer[i].v_array.SetElements("y", strlen(l[i]), inner);
+            outer[cnt].typeId = ALLJOYN_ARRAY;
+            outer[cnt].v_array.SetElements("y", strlen(l[cnt]), inner);
         }
         MsgArg arg;
         status = arg.Set("aay", ArraySize(l), outer);
@@ -1031,8 +1031,8 @@ QStatus MarshalTests()
     if (fuzzing || (status == ER_OK)) {
         const char* l[] = { "aristole", "plato", "socrates" };
         MsgArg* ayay = new MsgArg[ArraySize(l)];
-        for (size_t i = 0; i < ArraySize(l); i++) {
-            ayay[i].Set("ay", strlen(l[i]), l[i]);
+        for (size_t j = 0; j < ArraySize(l); j++) {
+            ayay[j].Set("ay", strlen(l[j]), l[j]);
         }
         MsgArg arg;
         status = arg.Set("aay", ArraySize(l), ayay);
@@ -1270,8 +1270,8 @@ QStatus MarshalTests()
             bool even;
         } table[] = { { 1, "first", true }, { 2, "second", false }, { 3, "third", true } };
         MsgArg dict[ArraySize(table)];
-        for (size_t i = 0; i < ArraySize(table); i++) {
-            dict[i].Set("{s(ib)}", table[i].ord, table[i].num, table[i].even);
+        for (size_t j = 0; j < ArraySize(table); j++) {
+            dict[j].Set("{s(ib)}", table[j].ord, table[j].num, table[j].even);
         }
         MsgArg arg;
         status = arg.Set("a{s(ib)}", (size_t)3, dict);
@@ -1287,10 +1287,10 @@ QStatus MarshalTests()
     if (fuzzing || (status == ER_OK)) {
         const char* str[] = { "first", "second", "third" };
         MsgArg dict[ArraySize(str)];
-        for (size_t i = 0; i < ArraySize(dict); i++) {
-            MsgArg* var = new MsgArg("v", new MsgArg("u", i));
-            dict[i].Set("{sv}", str[i], var);
-            dict[i].SetOwnershipFlags(MsgArg::OwnsArgs, true);
+        for (size_t j = 0; j < ArraySize(dict); j++) {
+            MsgArg* var = new MsgArg("v", new MsgArg("u", j));
+            dict[j].Set("{sv}", str[j], var);
+            dict[j].SetOwnershipFlags(MsgArg::OwnsArgs, true);
         }
         MsgArg dicts[2];
         dicts[0].Set("a{sv}", (size_t)3, dict);
@@ -1361,8 +1361,8 @@ QStatus MarshalTests()
             const char* nom;
         } beasts[] = { { 1, "dog" }, { 2, "cat" }, { 3, "pig" }, { 4, "rat" }, { 5, "cow" } };
         MsgArg dict[ArraySize(beasts)];
-        for (size_t i = 0; i < ArraySize(beasts); i++) {
-            dict[i].Set("{is}", beasts[i].num, beasts[i].nom);
+        for (size_t j = 0; j < ArraySize(beasts); j++) {
+            dict[j].Set("{is}", beasts[j].num, beasts[j].nom);
         }
         MsgArg beastArray;
         beastArray.Set("a{is}", ArraySize(dict), dict);
@@ -1461,14 +1461,14 @@ QStatus MarshalTests()
     if (fuzzing || (status == ER_OK)) {
         qcc::SocketFd h[8];
         MsgArg handles[8];
-        for (size_t i = 0; i < ArraySize(handles); ++i) {
-            h[i] = MakeHandle();
-            handles[i].Set("h", h[i]);
+        for (size_t j = 0; j < ArraySize(handles); ++j) {
+            h[j] = MakeHandle();
+            handles[j].Set("h", h[j]);
         }
         MsgArg arg("ah", ArraySize(handles), handles);
         status = TestMarshal(&arg, 1, "*");
-        for (size_t i = 0; i < ArraySize(handles); ++i) {
-            qcc::Close(h[i]);
+        for (size_t j = 0; j < ArraySize(handles); ++j) {
+            qcc::Close(h[j]);
         }
     }
     if (!fuzzing) {

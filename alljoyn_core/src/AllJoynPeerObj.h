@@ -73,7 +73,7 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
      *      - ER_OK if successful.
      *      - An error status otherwise
      */
-    QStatus Init(BusAttachment& bus);
+    QStatus Init(BusAttachment& peerBus);
 
     /**
      * Called when object is successfully registered.

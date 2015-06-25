@@ -93,9 +93,9 @@ class SigInfo {
     /**
      * Set the signature algorithm
      */
-    void SetAlgorithm(uint8_t algorithm)
+    void SetAlgorithm(uint8_t newAlgorithm)
     {
-        this->algorithm = algorithm;
+        this->algorithm = newAlgorithm;
     }
 
 
@@ -201,9 +201,9 @@ class SigInfoECC : public SigInfo {
     /**
      * Set the signature.  The signature is copied into the internal buffer.
      */
-    void SetSignature(const ECCSignature* sig)
+    void SetSignature(const ECCSignature* signature)
     {
-        this->sig = *sig;
+        this->sig = *signature;
     }
 
     /**
@@ -1031,12 +1031,12 @@ QStatus KeyExchangerECDHE_ECDSA::ValidateRemoteVerifierVariant(const char* peerN
         peerState->UpdateHash(CONVERSATION_V1, encoded, encodedLen);
     }
     /* verify signature */
-    Crypto_ECC ecc;
-    ecc.SetDSAPublicKey(certs[0].GetSubjectPublicKey());
+    Crypto_ECC cryptoEcc;
+    cryptoEcc.SetDSAPublicKey(certs[0].GetSubjectPublicKey());
     SigInfoECC sigInfo;
     sigInfo.SetRCoord(rCoord);
     sigInfo.SetSCoord(sCoord);
-    status = ecc.DSAVerifyDigest(computedRemoteVerifier, sizeof(computedRemoteVerifier), sigInfo.GetSignature());
+    status = cryptoEcc.DSAVerifyDigest(computedRemoteVerifier, sizeof(computedRemoteVerifier), sigInfo.GetSignature());
     *authorized = (ER_OK == status);
 
     if (!*authorized) {
@@ -1080,11 +1080,11 @@ QStatus KeyExchangerECDHE_ECDSA::GenVerifierSigInfoArg(MsgArg& msgArg, bool upda
     uint8_t verifier[AUTH_VERIFIER_LEN];
     GenerateLocalVerifier(verifier, sizeof(verifier));
 
-    Crypto_ECC ecc;
-    ecc.SetDSAPrivateKey(&issuerPrivateKey);
+    Crypto_ECC cryptoEcc;
+    cryptoEcc.SetDSAPrivateKey(&issuerPrivateKey);
     ECCSignature sig;
     QCC_DbgHLPrintf(("Verifier: %s\n", BytesToHexString(verifier, sizeof(verifier)).c_str()));
-    QStatus status = ecc.DSASignDigest(verifier, sizeof(verifier), &sig);
+    QStatus status = cryptoEcc.DSASignDigest(verifier, sizeof(verifier), &sig);
     if (status != ER_OK) {
         QCC_LogError(status, ("KeyExchangerECDHE_ECDSA::GenVerifierSigInfoArg failed to generate local verifier sig info"));
         return status;
@@ -1098,8 +1098,8 @@ QStatus KeyExchangerECDHE_ECDSA::GenVerifierSigInfoArg(MsgArg& msgArg, bool upda
          * considerable cost to the authentication protocol and is not security critical,
          * it should not be done for release builds.
          */
-        ecc.SetDSAPublicKey(&issuerPublicKey);
-        status = ecc.DSAVerifyDigest(verifier, sizeof(verifier), &sig);
+        cryptoEcc.SetDSAPublicKey(&issuerPublicKey);
+        status = cryptoEcc.DSAVerifyDigest(verifier, sizeof(verifier), &sig);
         if (status != ER_OK) {
             QCC_DbgPrintf(("KeyExchangerECDHE_ECDSA::GenVerifierSigInfoArg failed to verify the signature just created, the key exchange protocol will fail."));
             assert(false);

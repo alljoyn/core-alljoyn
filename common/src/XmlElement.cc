@@ -407,19 +407,19 @@ qcc::String XmlElement::Generate(qcc::String* outStr) const
     return *outStr;
 }
 
-XmlElement& XmlElement::CreateChild(const qcc::String& name)
+XmlElement& XmlElement::CreateChild(const qcc::String& elementName)
 {
-    QCC_DbgTrace(("XmlElement::CreateChild(\"%s\")", name.c_str()));
-    new XmlElement(name, this, true);
+    QCC_DbgTrace(("XmlElement::CreateChild(\"%s\")", elementName.c_str()));
+    new XmlElement(elementName, this, true);
     return *children.back();
 }
 
-std::vector<const XmlElement*> XmlElement::GetChildren(const qcc::String& name) const
+std::vector<const XmlElement*> XmlElement::GetChildren(const qcc::String& elementName) const
 {
     std::vector<const XmlElement*> matches;
     vector<XmlElement*>::const_iterator it = children.begin();
     while (it != children.end()) {
-        if (0 == name.compare((*it)->GetName())) {
+        if (0 == elementName.compare((*it)->GetName())) {
             matches.push_back(*it);
         }
         it++;
@@ -427,11 +427,11 @@ std::vector<const XmlElement*> XmlElement::GetChildren(const qcc::String& name) 
     return matches;
 }
 
-const XmlElement* XmlElement::GetChild(const qcc::String& name) const
+const XmlElement* XmlElement::GetChild(const qcc::String& elementName) const
 {
     vector<XmlElement*>::const_iterator it = children.begin();
     while (it != children.end()) {
-        if (0 == name.compare((*it)->GetName())) {
+        if (0 == elementName.compare((*it)->GetName())) {
             return (*it);
         }
         it++;

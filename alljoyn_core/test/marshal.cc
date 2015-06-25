@@ -68,7 +68,7 @@ class TestPipe : public qcc::Pipe {
 
         QStatus status = ER_OK;
         numFds = std::min(numFds, fds.size());
-        for (size_t i = 0; i < numFds; ++i) {
+        for (size_t j = 0; j < numFds; ++j) {
             *fdList++ = fds.front();
             fds.pop();
         }
@@ -177,9 +177,9 @@ typedef qcc::ManagedObj<_MyMessage> MyMessage;
 static qcc::String StripWS(const qcc::String& str)
 {
     qcc::String out;
-    for (size_t i = 0; i < str.size(); i++) {
-        if (!isspace(str[i])) {
-            out.push_back(str[i]);
+    for (size_t j = 0; j < str.size(); j++) {
+        if (!isspace(str[j])) {
+            out.push_back(str[j]);
         }
     }
     return out;
@@ -489,9 +489,9 @@ QStatus MarshalTests()
         MsgArg arg(ALLJOYN_ARRAY);
         size_t numElements = 10;
         MsgArg* elements = new MsgArg[numElements];
-        for (size_t i = 0; i < numElements; i++) {
-            elements[i].typeId = ALLJOYN_INT32;
-            elements[i].v_int32 = i;
+        for (size_t j = 0; j < numElements; j++) {
+            elements[j].typeId = ALLJOYN_INT32;
+            elements[j].v_int32 = j;
         }
         status = arg.v_array.SetElements("i", numElements, elements);
         if (status == ER_OK) {
@@ -508,10 +508,10 @@ QStatus MarshalTests()
         MsgArg dict(ALLJOYN_ARRAY);
         size_t numEntries = ArraySize(keys);
         MsgArg* entries = new MsgArg[ArraySize(keys)];
-        for (size_t i = 0; i < numEntries; i++) {
-            entries[i].typeId = ALLJOYN_DICT_ENTRY;
-            entries[i].v_dictEntry.key = new MsgArg("s", keys[i]);
-            entries[i].v_dictEntry.val = new MsgArg("v", new MsgArg("u", values[i]));
+        for (size_t j = 0; j < numEntries; j++) {
+            entries[j].typeId = ALLJOYN_DICT_ENTRY;
+            entries[j].v_dictEntry.key = new MsgArg("s", keys[j]);
+            entries[j].v_dictEntry.val = new MsgArg("v", new MsgArg("u", values[j]));
         }
         status = dict.v_array.SetElements("{sv}", numEntries, entries);
         if (status == ER_OK) {
@@ -529,7 +529,7 @@ QStatus MarshalTests()
         size_t numDicts = 1;
         MsgArg* dicts = new MsgArg[numDicts];
 
-        for (size_t d = 0; d < numDicts; d++) {
+        for (size_t j = 0; j < numDicts; j++) {
             size_t numEntries = ArraySize(keys);
             MsgArg* entries = new MsgArg[numEntries];
             for (size_t e = 0; e < numEntries; e++) {
@@ -537,8 +537,8 @@ QStatus MarshalTests()
                 entries[e].v_dictEntry.key = new MsgArg("s", keys[e]);
                 entries[e].v_dictEntry.val = new MsgArg("v", new MsgArg("u", values[e]));
             }
-            dicts[d].typeId = ALLJOYN_ARRAY;
-            status = dicts[d].v_array.SetElements("{sv}", numEntries, entries);
+            dicts[j].typeId = ALLJOYN_ARRAY;
+            status = dicts[j].v_array.SetElements("{sv}", numEntries, entries);
             if (status != ER_OK) {
                 delete [] entries;
                 break;
@@ -621,8 +621,8 @@ QStatus MarshalTests()
      */
     if (fuzzing || (status == ER_OK)) {
         qcc::String strs[ArraySize(as)];
-        for (size_t i = 0; i < ArraySize(as); ++i) {
-            strs[i] = as[i];
+        for (size_t j = 0; j < ArraySize(as); ++j) {
+            strs[j] = as[j];
         }
         MsgArg arg;
         status = arg.Set("a$", ArraySize(as), strs);
@@ -674,13 +674,13 @@ QStatus MarshalTests()
 
         const char* l[] = { "foo", "bar", "gorn", "yowzer", "bingo" };
         MsgArg* outer = new MsgArg[ArraySize(l)];
-        for (size_t i = 0; i < ArraySize(l); i++) {
-            MsgArg* inner = new MsgArg[strlen(l[i])];
-            for (size_t j = 0; j < strlen(l[i]); j++) {
-                inner[j].typeId = ALLJOYN_BYTE;
-                inner[j].v_byte = l[i][j];
+        for (size_t j = 0; j < ArraySize(l); j++) {
+            MsgArg* inner = new MsgArg[strlen(l[j])];
+            for (size_t k = 0; k < strlen(l[j]); k++) {
+                inner[k].typeId = ALLJOYN_BYTE;
+                inner[k].v_byte = l[j][k];
             }
-            outer[i].Set("ay", strlen(l[i]), inner);
+            outer[j].Set("ay", strlen(l[j]), inner);
         }
         MsgArg arg;
         status = arg.Set("aay", ArraySize(l), outer);
@@ -691,8 +691,8 @@ QStatus MarshalTests()
     if (fuzzing || (status == ER_OK)) {
         const char* l[] = { "aristole", "plato", "socrates" };
         MsgArg* ayay = new MsgArg[ArraySize(l)];
-        for (size_t i = 0; i < ArraySize(l); i++) {
-            ayay[i].Set("ay", strlen(l[i]), l[i]);
+        for (size_t j = 0; j < ArraySize(l); j++) {
+            ayay[j].Set("ay", strlen(l[j]), l[j]);
         }
         MsgArg arg;
         status = arg.Set("aay", ArraySize(l), ayay);
@@ -839,8 +839,8 @@ QStatus MarshalTests()
             bool even;
         } table[] = { { 1, "first", true }, { 2, "second", false }, { 3, "third", true } };
         MsgArg dict[ArraySize(table)];
-        for (size_t i = 0; i < ArraySize(table); i++) {
-            dict[i].Set("{s(ib)}", table[i].ord, table[i].num, table[i].even);
+        for (size_t j = 0; j < ArraySize(table); j++) {
+            dict[j].Set("{s(ib)}", table[j].ord, table[j].num, table[j].even);
         }
         MsgArg arg;
         status = arg.Set("a{s(ib)}", (size_t)3, dict);
@@ -851,10 +851,10 @@ QStatus MarshalTests()
     if (fuzzing || (status == ER_OK)) {
         const char* str[] = { "first", "second", "third" };
         MsgArg dict[ArraySize(str)];
-        for (size_t i = 0; i < ArraySize(dict); i++) {
-            MsgArg* var = new MsgArg("v", new MsgArg("u", i));
-            dict[i].Set("{sv}", str[i], var);
-            dict[i].SetOwnershipFlags(MsgArg::OwnsArgs, true);
+        for (size_t j = 0; j < ArraySize(dict); j++) {
+            MsgArg* var = new MsgArg("v", new MsgArg("u", j));
+            dict[j].Set("{sv}", str[j], var);
+            dict[j].SetOwnershipFlags(MsgArg::OwnsArgs, true);
         }
         MsgArg dicts[2];
         dicts[0].Set("a{sv}", (size_t)3, dict);
@@ -905,8 +905,8 @@ QStatus MarshalTests()
             const char* nom;
         } beasts[] = { { 1, "dog" }, { 2, "cat" }, { 3, "pig" }, { 4, "rat" }, { 5, "cow" } };
         MsgArg dict[ArraySize(beasts)];
-        for (size_t i = 0; i < ArraySize(beasts); i++) {
-            dict[i].Set("{is}", beasts[i].num, beasts[i].nom);
+        for (size_t j = 0; j < ArraySize(beasts); j++) {
+            dict[j].Set("{is}", beasts[j].num, beasts[j].nom);
         }
         MsgArg beastArray;
         beastArray.Set("a{is}", ArraySize(dict), dict);
@@ -975,14 +975,14 @@ QStatus MarshalTests()
     if (fuzzing || (status == ER_OK)) {
         qcc::SocketFd h[8];
         MsgArg handles[8];
-        for (size_t i = 0; i < ArraySize(handles); ++i) {
-            h[i] = MakeHandle();
-            handles[i].Set("h", h[i]);
+        for (size_t j = 0; j < ArraySize(handles); ++j) {
+            h[j] = MakeHandle();
+            handles[j].Set("h", h[j]);
         }
         MsgArg arg("ah", ArraySize(handles), handles);
         status = TestMarshal(&arg, 1, "*");
-        for (size_t i = 0; i < ArraySize(handles); ++i) {
-            qcc::Close(h[i]);
+        for (size_t j = 0; j < ArraySize(handles); ++j) {
+            qcc::Close(h[j]);
         }
     }
     if (fuzzing || (status == ER_OK)) {
@@ -1022,12 +1022,12 @@ QStatus TestMsgUnpack()
     MyMessage msg;
     MsgArg args[4];
     size_t numArgs = ArraySize(args);
-    double d = 0.9;
+    double dbl = 0.9;
     TestPipe* pStream = &stream;
     RemoteEndpoint ep(*gBus, falsiness, String::Empty, pStream);
     ep->GetFeatures().handlePassing = true;
 
-    MsgArg::Set(args, numArgs, "usyd", 4, "hello", 8, d);
+    MsgArg::Set(args, numArgs, "usyd", 4, "hello", 8, dbl);
     status = msg->MethodCall("a.b.c", "/foo/bar", "foo.bar", "test", args, numArgs);
     if (status != ER_OK) {
         return status;
@@ -1049,14 +1049,14 @@ QStatus TestMsgUnpack()
     if (status != ER_OK) {
         return status;
     }
-    uint32_t i;
-    const char* s;
-    uint8_t y;
-    status = msg->GetArgs("usyd", &i, &s, &y, &d);
+    uint32_t j;
+    const char* str;
+    uint8_t byteArg;
+    status = msg->GetArgs("usyd", &j, &str, &byteArg, &dbl);
     if (status != ER_OK) {
         return status;
     }
-    if ((i != 4) || (strcmp(s, "hello") != 0) || (y != 8) || (d != 0.9)) {
+    if ((j != 4) || (strcmp(str, "hello") != 0) || (byteArg != 8) || (dbl != 0.9)) {
         status = ER_FAIL;
     }
     return status;
@@ -1091,12 +1091,12 @@ int CDECL_CALL main(int argc, char** argv)
     printf("AllJoyn Library build info: %s\n", ajn::GetBuildInfo());
 
     /* Parse command line args */
-    for (int i = 1; i < argc; ++i) {
-        if (0 == strcmp("-f", argv[i])) {
+    for (int j = 1; j < argc; ++j) {
+        if (0 == strcmp("-f", argv[j])) {
             fuzz = true;
-        } else if (0 == strcmp("-b", argv[i])) {
+        } else if (0 == strcmp("-b", argv[j])) {
             nobig = true;
-        } else if (0 == strcmp("-q", argv[i])) {
+        } else if (0 == strcmp("-q", argv[j])) {
             quiet = true;
         } else {
             usage();
@@ -1119,8 +1119,8 @@ int CDECL_CALL main(int argc, char** argv)
             "((ii)(xx)(ss)(y)(dhd)(nnn)(b)(h)(b)(b)a(o))",
             "a{ya{ba{na{qa{ia{ua{xa{ta{da{sa{oa{ga(ybnqiuxtsaogv)}}}}}}}}}}}}"
         };
-        for (size_t i = 0; i < ArraySize(good); i++) {
-            const char* sig = good[i];
+        for (size_t j = 0; j < ArraySize(good); j++) {
+            const char* sig = good[j];
             while (*sig) {
                 const char* start = sig;
                 status = SignatureUtils::ParseCompleteType(sig);
@@ -1161,17 +1161,17 @@ int CDECL_CALL main(int argc, char** argv)
             "aX",
             "(WW)",
         };
-        for (size_t i = 0; i < ArraySize(bad); i++) {
-            const char* sig = bad[i];
+        for (size_t j = 0; j < ArraySize(bad); j++) {
+            const char* sig = bad[j];
             if (SignatureUtils::ParseCompleteType(sig) == ER_OK) {
                 if (!quiet) {
-                    printf("Invalid complete type \"%s\"", bad[i]);
+                    printf("Invalid complete type \"%s\"", bad[j]);
                 }
                 status = ER_FAIL;
                 break;
             } else {
                 if (!quiet) {
-                    printf("Not a complete type \"%s\"\n", *sig ? sig : bad[i]);
+                    printf("Not a complete type \"%s\"\n", *sig ? sig : bad[j]);
                 }
             }
         }
@@ -1181,8 +1181,8 @@ int CDECL_CALL main(int argc, char** argv)
      */
     if (status == ER_OK) {
         char sig[257];
-        for (size_t i = 0; i < 257; ++i) {
-            sig[i] = 'i';
+        for (size_t j = 0; j < 257; ++j) {
+            sig[j] = 'j';
         }
         sig[256] = 0;
         if (SignatureUtils::IsValidSignature(sig)) {
@@ -1331,7 +1331,7 @@ int CDECL_CALL main(int argc, char** argv)
         int count = 0;
         fuzzing = true;
         nobig = true;
-        for (size_t i = 0; i < 10000; ++i) {
+        for (size_t j = 0; j < 10000; ++j) {
             MarshalTests();
             count++;
         }

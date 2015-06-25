@@ -137,10 +137,10 @@ void SimpleBusListener::NameOwnerChanged(const char* busName, const char* previo
     }
 }
 
-void SimpleBusListener::SetFilter(uint32_t enabled)
+void SimpleBusListener::SetFilter(uint32_t filterEnabled)
 {
     internal.lock.Lock(MUTEX_CONTEXT);
-    this->enabled = enabled;
+    this->enabled = filterEnabled;
     /*
      * Save all queued events that pass the filter.
      */
@@ -148,7 +148,7 @@ void SimpleBusListener::SetFilter(uint32_t enabled)
     while (internal.eventQueue.size() != pass) {
         BusEvent ev = internal.eventQueue.front();
         internal.eventQueue.pop();
-        if (ev.eventType & enabled) {
+        if (ev.eventType & filterEnabled) {
             internal.eventQueue.push(ev);
             ++pass;
         }

@@ -21,14 +21,14 @@ AboutIcon::AboutIcon() : content(NULL), contentSize(0), mimetype(""), url(""), m
     //empty constructor
 }
 
-QStatus AboutIcon::SetContent(const char* mimetype, uint8_t* data, size_t csize, bool ownsData)
+QStatus AboutIcon::SetContent(const char* iconMimeType, uint8_t* data, size_t csize, bool ownsData)
 {
     QStatus status = ER_OK;
     status = m_arg.Set("ay", csize, data);
     if (status != ER_OK) {
         return status;
     }
-    this->mimetype = mimetype;
+    this->mimetype = iconMimeType;
     this->content = data;
     this->contentSize = csize;
 
@@ -38,10 +38,10 @@ QStatus AboutIcon::SetContent(const char* mimetype, uint8_t* data, size_t csize,
     return status;
 }
 
-QStatus AboutIcon::SetUrl(const char* mimetype, const char* url)
+QStatus AboutIcon::SetUrl(const char* iconMimeType, const char* iconUrl)
 {
-    this->mimetype = mimetype;
-    this->url = url;
+    this->mimetype = iconMimeType;
+    this->url = iconUrl;
     return ER_OK;
 }
 

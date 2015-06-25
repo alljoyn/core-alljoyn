@@ -288,10 +288,10 @@ class BigNum {
     bool haslz() const { return length > 1 && digits[length - 1] == 0; }
 
     // Convenience function for temporary values that don't own storage
-    BigNum& Set(uint32_t* digits, size_t length, bool neg = false) {
-        this->digits = digits;
-        this->length = length;
-        this->neg = neg;
+    BigNum& Set(uint32_t* newDigits, size_t digitsLength, bool negative = false) {
+        this->digits = newDigits;
+        this->length = digitsLength;
+        this->neg = negative;
         this->storage = NULL;
         return *this;
     }

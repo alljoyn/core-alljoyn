@@ -123,10 +123,10 @@ class _BusEndpoint : public MessageSink {
     /*
      * Set the user id of the endpoint.
      *
-     * @param   userId     User ID number.
+     * @param   newUserId     User ID number.
      */
-    virtual void SetUserId(uint32_t userId) {
-        this->userId = userId;
+    virtual void SetUserId(uint32_t newUserId) {
+        this->userId = newUserId;
     }
 
     /**
@@ -141,10 +141,10 @@ class _BusEndpoint : public MessageSink {
     /*
      * Set the group id of the endpoint.
      *
-     * @param   groupId     Group ID number.
+     * @param   newGroupId     Group ID number.
      */
-    virtual void SetGroupId(uint32_t groupId) {
-        this->groupId = groupId;
+    virtual void SetGroupId(uint32_t newGroupId) {
+        this->groupId = newGroupId;
     }
 
     /**

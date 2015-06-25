@@ -173,11 +173,11 @@ class InterfaceDescription {
         /**
          * Get this member's annotation value
          *
-         * @param        name   name of the annotation to look for
-         * @param[out]   value  The value of the annotation, if found
-         * @return    true iff annotations[name] == value
+         * @param        annotationName   name of the annotation to look for
+         * @param[out]   value            The value of the annotation, if found
+         * @return                        true iff annotations[name] == value
          */
-        bool GetAnnotation(const qcc::String& name, qcc::String& value) const;
+        bool GetAnnotation(const qcc::String& annotationName, qcc::String& value) const;
 
         /**
          * Equality. Two members are defined to be equal if their members are
@@ -239,11 +239,11 @@ class InterfaceDescription {
 
         /**
          * Get this property's annotation value
-         * @param name   name of the annotation to look for
-         * @param[out]   value  The value of the annotation, if found
-         * @return    true iff annotations[name] == value
+         * @param annotationName   name of the annotation to look for
+         * @param[out]             value  The value of the annotation, if found
+         * @return                 true iff annotations[name] == value
          */
-        bool GetAnnotation(const qcc::String& name, qcc::String& value) const;
+        bool GetAnnotation(const qcc::String& annotationName, qcc::String& value) const;
 
         /** Equality */
         bool operator==(const Property& o) const;
@@ -306,7 +306,7 @@ class InterfaceDescription {
     /**
      * Add a method call member to the interface.
      *
-     * @param name        Name of method call member.
+     * @param methodName  Name of method call member.
      * @param inputSig    Signature of input parameters or NULL for none.
      * @param outSig      Signature of output parameters or NULL for none.
      * @param argNames    Comma separated list of input and then output arg names used in annotation XML.
@@ -317,9 +317,9 @@ class InterfaceDescription {
      *      - #ER_OK if successful
      *      - #ER_BUS_MEMBER_ALREADY_EXISTS if member already exists
      */
-    QStatus AddMethod(const char* name, const char* inputSig, const char* outSig, const char* argNames, uint8_t annotation = 0, const char* accessPerms = 0)
+    QStatus AddMethod(const char* methodName, const char* inputSig, const char* outSig, const char* argNames, uint8_t annotation = 0, const char* accessPerms = 0)
     {
-        return AddMember(MESSAGE_METHOD_CALL, name, inputSig, outSig, argNames, annotation, accessPerms);
+        return AddMember(MESSAGE_METHOD_CALL, methodName, inputSig, outSig, argNames, annotation, accessPerms);
     }
 
     /**
@@ -351,21 +351,21 @@ class InterfaceDescription {
     /**
      * Lookup a member method description by name
      *
-     * @param name  Name of the method to lookup
+     * @param methodName  Name of the method to lookup
      * @return
      *      - Pointer to member.
      *      - NULL if does not exist.
      */
-    const Member* GetMethod(const char* name) const
+    const Member* GetMethod(const char* methodName) const
     {
-        const Member* method = GetMember(name);
+        const Member* method = GetMember(methodName);
         return (method && method->memberType == MESSAGE_METHOD_CALL) ? method : NULL;
     }
 
     /**
      * Add a signal member to the interface.
      *
-     * @param name        Name of signal member.
+     * @param signalName  Name of signal member.
      * @param sig         Signature of parameters or NULL for none.
      * @param argNames    Comma separated list of arg names used in annotation XML.
      * @param annotation  Annotation flags.
@@ -375,9 +375,9 @@ class InterfaceDescription {
      *      - #ER_OK if successful
      *      - #ER_BUS_MEMBER_ALREADY_EXISTS if member already exists
      */
-    QStatus AddSignal(const char* name, const char* sig, const char* argNames, uint8_t annotation, const char* accessPerms = 0)
+    QStatus AddSignal(const char* signalName, const char* sig, const char* argNames, uint8_t annotation, const char* accessPerms = 0)
     {
-        return AddMember(MESSAGE_SIGNAL, name, sig, NULL, argNames, annotation, accessPerms);
+        return AddMember(MESSAGE_SIGNAL, signalName, sig, NULL, argNames, annotation, accessPerms);
     }
 
     /**
@@ -385,7 +385,7 @@ class InterfaceDescription {
      *
      * @deprecated Use annotation flags to specify signal type.
      *
-     * @param name        Name of signal member.
+     * @param signalName  Name of signal member.
      * @param sig         Signature of parameters or NULL for none.
      * @param argNames    Comma separated list of arg names used in annotation XML.
      *
@@ -393,22 +393,22 @@ class InterfaceDescription {
      *      - #ER_OK if successful
      *      - #ER_BUS_MEMBER_ALREADY_EXISTS if member already exists
      */
-    QCC_DEPRECATED(QStatus AddSignal(const char* name, const char* sig, const char* argNames))
+    QCC_DEPRECATED(QStatus AddSignal(const char* signalName, const char* sig, const char* argNames))
     {
-        return AddMember(MESSAGE_SIGNAL, name, sig, NULL, argNames, 0, 0);
+        return AddMember(MESSAGE_SIGNAL, signalName, sig, NULL, argNames, 0, 0);
     }
 
     /**
      * Lookup a member signal description by name
      *
-     * @param name  Name of the signal to lookup
+     * @param signalName  Name of the signal to lookup
      * @return
      *      - Pointer to member.
      *      - NULL if does not exist.
      */
-    const Member* GetSignal(const char* name) const
+    const Member* GetSignal(const char* signalName) const
     {
-        const Member* method = GetMember(name);
+        const Member* method = GetMember(signalName);
         return (method && method->memberType == MESSAGE_SIGNAL) ? method : NULL;
     }
 
@@ -470,10 +470,10 @@ class InterfaceDescription {
     /**
      * Check for existence of a property.
      *
-     * @param name       Name of the property to lookup
+     * @param propertyName       Name of the property to lookup
      * @return true if the property exists.
      */
-    bool HasProperty(const char* name) const { return GetProperty(name) != NULL; }
+    bool HasProperty(const char* propertyName) const { return GetProperty(propertyName) != NULL; }
 
     /**
      * Check for existence of any properties

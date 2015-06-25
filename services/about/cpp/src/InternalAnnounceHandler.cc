@@ -244,9 +244,9 @@ void InternalAnnounceHandler::AnnounceSignalHandler(const ajn::InterfaceDescript
             }
 
             std::vector<qcc::String> localVector;
-            for (size_t i = 0; i < interfaceNum; i++) {
+            for (size_t j = 0; j < interfaceNum; j++) {
                 char* interfaceName;
-                status = interfaceEntries[i].Get("s", &interfaceName);
+                status = interfaceEntries[j].Get("s", &interfaceName);
                 if (status != ER_OK) {
                     return;
                 }

@@ -269,9 +269,6 @@ static char cert_from_openssl_PEM[] = {
 };
 
 TEST_F(SecurityX509Test, Test1) {
-
-    QStatus status = ER_OK;
-
     const char*clientecdsaPrivateKeyPEM = privateKey_from_openssl_PEM;
     const char*clientecdsaCertChainX509PEM = cert_from_openssl_PEM;
 
@@ -358,8 +355,6 @@ TEST_F(SecurityX509Test, Test1) {
 
 TEST_F(SecurityX509Test, Test2) {
 
-    QStatus status = ER_OK;
-
     const char*clientecdsaPrivateKeyPEM = privateKey_from_openssl_PEM;
     const char*clientecdsaCertChainX509PEM = cert_from_openssl_PEM;
 
@@ -428,8 +423,6 @@ TEST_F(SecurityX509Test, Test2) {
  */
 
 TEST_F(SecurityX509Test, Test3) {
-
-    QStatus status = ER_OK;
 
     const char*serviceecdsaPrivateKeyPEM = privateKey_from_openssl_PEM;
     const char*serviceecdsaCertChainX509PEM = cert_from_openssl_PEM;
@@ -500,8 +493,6 @@ TEST_F(SecurityX509Test, Test3) {
  */
 
 TEST_F(SecurityX509Test, Test4) {
-
-    QStatus status = ER_OK;
 
     const char*clientecdsaPrivateKeyPEM = privateKey_from_openssl_PEM;
     const char*clientecdsaCertChainX509PEM = cert_from_openssl_PEM;
@@ -590,8 +581,6 @@ TEST_F(SecurityX509Test, Test4) {
 
 TEST_F(SecurityX509Test, Test5) {
 
-    QStatus status = ER_OK;
-
     const char*serviceecdsaPrivateKeyPEM = privateKey_from_openssl_PEM;
     const char*serviceecdsaCertChainX509PEM = cert_from_openssl_PEM;
 
@@ -676,8 +665,6 @@ TEST_F(SecurityX509Test, Test5) {
 
 TEST_F(SecurityX509Test, Test6) {
 
-    QStatus status = ER_OK;
-
     const char*clientecdsaPrivateKeyPEM = privateKey_from_openssl_PEM;
     const char*clientecdsaCertChainX509PEM = cert_from_openssl_PEM;
 
@@ -727,8 +714,6 @@ TEST_F(SecurityX509Test, Test6) {
 
 TEST_F(SecurityX509Test, Test7) {
 
-    QStatus status = ER_OK;
-
     const char*serviceecdsaPrivateKeyPEM = privateKey_from_openssl_PEM;
     const char*serviceecdsaCertChainX509PEM = cert_from_openssl_PEM;
 
@@ -776,8 +761,6 @@ TEST_F(SecurityX509Test, Test7) {
  */
 
 TEST_F(SecurityX509Test, Test8) {
-
-    QStatus status = ER_OK;
 
     const char*clientecdsaPrivateKeyPEM = privateKey_from_openssl_PEM;
     const char*clientecdsaCertChainX509PEM = cert_from_openssl_PEM;
@@ -837,8 +820,6 @@ TEST_F(SecurityX509Test, Test8) {
 
 TEST_F(SecurityX509Test, Test9) {
 
-    QStatus status = ER_OK;
-
     const char*serviceecdsaPrivateKeyPEM = privateKey_from_openssl_PEM;
     const char*serviceecdsaCertChainX509PEM = cert_from_openssl_PEM;
 
@@ -892,8 +873,6 @@ TEST_F(SecurityX509Test, Test9) {
    Auth.succeeds. The various fields in the certificate are validated on both sides.
  */
 TEST_F(SecurityX509Test, Test10) {
-
-    QStatus status = ER_OK;
 
     const char serviceecdsaPrivateKeyPEM[] = {
         "-----BEGIN EC PRIVATE KEY-----\n"
@@ -1127,8 +1106,6 @@ TEST_F(SecurityX509Test, Test10) {
  */
 
 TEST_F(SecurityX509Test, Test11) {
-
-    QStatus status = ER_OK;
 
     const char clientecdsaPrivateKeyPEM[] = {
         "-----BEGIN EC PRIVATE KEY-----\n"

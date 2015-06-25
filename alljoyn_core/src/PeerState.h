@@ -164,9 +164,9 @@ class _PeerState {
     /**
      * Sets the GUID for and authentication version this peer.
      */
-    void SetGuidAndAuthVersion(const qcc::GUID128& guid, uint32_t authVersion) {
-        this->guid = guid;
-        this->authVersion = authVersion;
+    void SetGuidAndAuthVersion(const qcc::GUID128& newGuid, uint32_t authenticationVersion) {
+        this->guid = newGuid;
+        this->authVersion = authenticationVersion;
     }
 
     /**

@@ -101,19 +101,22 @@ QStatus NamedPipeClientTransport::IsConnectSpecValid(const char* connectSpec)
 
 QStatus NamedPipeClientTransport::NormalizeTransportSpec(const char* inSpec, qcc::String& outSpec, map<qcc::String, qcc::String>& argMap) const
 {
+    QCC_UNUSED(argMap);
+
 #if (_WIN32_WINNT > 0x0603)
     outSpec = inSpec;
     return ER_OK;
 #else
     QCC_UNUSED(inSpec);
     QCC_UNUSED(outSpec);
-    QCC_UNUSED(argMap);
     return ER_FAIL;
 #endif
 }
 
 QStatus NamedPipeClientTransport::Connect(const char* connectSpec, const SessionOpts& opts, BusEndpoint& newep)
 {
+    QCC_UNUSED(opts);
+
 #if (_WIN32_WINNT > 0x0603)
     QCC_DbgHLPrintf(("NamedPipeClientTransport::Connect(): %s", connectSpec));
 
@@ -175,7 +178,6 @@ QStatus NamedPipeClientTransport::Connect(const char* connectSpec, const Session
      * irrespective of transport, start with a single zero byte.
      */
     uint8_t nul = 0;
-    size_t sent;
 
     success = AllJoynSendToBus(
         clientHandle,           // bus handle
@@ -237,7 +239,6 @@ QStatus NamedPipeClientTransport::Connect(const char* connectSpec, const Session
     return status;
 #else
     QCC_UNUSED(connectSpec);
-    QCC_UNUSED(opts);
     QCC_UNUSED(newep);
     return ER_FAIL;
 #endif

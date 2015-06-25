@@ -179,8 +179,8 @@ class PingThread : public qcc::Thread, BusObject {
 
             for (size_t i = 0; i < iterations; ++i) {
                 Message reply(*g_msgBus);
-                MsgArg arg("u", g_msgBus->GetTimestamp());
-                status = remoteObj.MethodCall(::org::alljoyn::jitter_test::Interface, "TimedPing", &arg, 1, reply);
+                MsgArg msgArg("u", g_msgBus->GetTimestamp());
+                status = remoteObj.MethodCall(::org::alljoyn::jitter_test::Interface, "TimedPing", &msgArg, 1, reply);
                 if (status != ER_OK) {
                     String errMsg;
                     const char* errName = reply->GetErrorName(&errMsg);
@@ -461,7 +461,7 @@ int CDECL_CALL main(int argc, char** argv)
         status = CreateSession(SESSION_PORT_MESSAGES_MP1, optsmp);
 
         /* Request a well-known name */
-        QStatus status = g_msgBus->RequestName(g_wellKnownName.c_str(), DBUS_NAME_FLAG_REPLACE_EXISTING | DBUS_NAME_FLAG_DO_NOT_QUEUE);
+        status = g_msgBus->RequestName(g_wellKnownName.c_str(), DBUS_NAME_FLAG_REPLACE_EXISTING | DBUS_NAME_FLAG_DO_NOT_QUEUE);
         if (status != ER_OK) {
             status = (status == ER_OK) ? ER_FAIL : status;
             QCC_LogError(status, ("RequestName(%s) failed. ", g_wellKnownName.c_str()));
