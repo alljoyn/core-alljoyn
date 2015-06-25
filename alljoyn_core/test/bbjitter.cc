@@ -73,6 +73,9 @@ static String g_wellKnownName;
 static String g_findPrefix("org.alljoyn.jitter");
 SessionPort SESSION_PORT_MESSAGES_MP1 = 26;
 
+/*Used to store the transportOpts*/
+uint32_t transportOpts = TRANSPORT_NONE;
+
 static volatile sig_atomic_t g_interrupt = false;
 
 static void CDECL_CALL SigIntHandler(int sig)
@@ -179,8 +182,8 @@ class PingThread : public qcc::Thread, BusObject {
 
             for (size_t i = 0; i < iterations; ++i) {
                 Message reply(*g_msgBus);
-                MsgArg arg("u", g_msgBus->GetTimestamp());
-                status = remoteObj.MethodCall(::org::alljoyn::jitter_test::Interface, "TimedPing", &arg, 1, reply);
+                MsgArg msgArg("u", g_msgBus->GetTimestamp());
+                status = remoteObj.MethodCall(::org::alljoyn::jitter_test::Interface, "TimedPing", &msgArg, 1, reply);
                 if (status != ER_OK) {
                     String errMsg;
                     const char* errName = reply->GetErrorName(&errMsg);
@@ -252,12 +255,13 @@ class MyBusListener : public BusListener, public SessionPortListener, public Ses
 
     void FoundAdvertisedName(const char* name, TransportMask transport, const char* namePrefix)
     {
-        QCC_SyncPrintf("FoundAdvertisedName(name=%s, transport=0x%x, prefix=%s)\n", name, transport, namePrefix);
+        QCC_UNUSED(transport);
+        QCC_SyncPrintf("FoundAdvertisedName(name=%s, transport=0x%x, prefix=%s)\n", name, transportOpts, namePrefix);
         if (strcmp(name, g_wellKnownName.c_str()) != 0) {
             SessionOpts::TrafficType traffic = SessionOpts::TRAFFIC_MESSAGES;
-            SessionOpts opts(traffic, true, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
+            SessionOpts opts(traffic, true, SessionOpts::PROXIMITY_ANY, transportOpts);
 
-            QStatus status = g_msgBus->JoinSessionAsync(name, 26, this, opts, this, ::strdup(name));
+            QStatus status = g_msgBus->JoinSessionAsync(name, SESSION_PORT_MESSAGES_MP1, this, opts, this, ::strdup(name));
             if (ER_OK != status) {
                 QCC_LogError(status, ("JoinSessionAsync(%s) failed \n", name));
             }
@@ -279,7 +283,8 @@ class MyBusListener : public BusListener, public SessionPortListener, public Ses
 
     void LostAdvertisedName(const char* name, TransportMask transport, const char* prefix)
     {
-        QCC_SyncPrintf("LostAdvertisedName(name=%s, transport=0x%x,  prefix=%s)\n", name, transport, prefix);
+        QCC_UNUSED(transport);
+        QCC_SyncPrintf("LostAdvertisedName(name=%s, transport=0x%x,  prefix=%s)\n", name, transportOpts, prefix);
     }
 
     void NameOwnerChanged(const char* name, const char* previousOwner, const char* newOwner)
@@ -328,7 +333,9 @@ static void usage(void)
     printf("   -c <calls>           = Number of roundtrip calls to make\n");
     printf("   -d <delay>           = Delay between each rountdtrip call in milliseconds\n");
     printf("   -f <prefix>          = FindAdvertisedName prefix\n");
-    printf("   -t                   = Advertise over TCP (enables selective advertising)\n");
+    printf("   -t                   = Advertise/Discover over TCP\n");
+    printf("   -l                   = Advertise/Discover locally \n");
+    printf("   -u                   = Advertise/Discover over UDP-based ARDP \n");
 }
 
 /** Main entry point */
@@ -345,7 +352,6 @@ int CDECL_CALL main(int argc, char** argv)
 #endif
 
     QStatus status = ER_OK;
-    uint32_t transportOpts = 0;
     uint32_t iterations = 500;
     uint32_t delay = 100;
 
@@ -394,6 +400,10 @@ int CDECL_CALL main(int argc, char** argv)
             g_findPrefix = argv[++i];
         } else if (0 == strcmp("-t", argv[i])) {
             transportOpts |= TRANSPORT_TCP;
+        } else if (0 == strcmp("-l", argv[i])) {
+            transportOpts |= TRANSPORT_LOCAL;
+        } else if (0 == strcmp("-u", argv[i])) {
+            transportOpts |= TRANSPORT_UDP;
         } else {
             status = ER_FAIL;
             printf("Unknown option %s\n", argv[i]);
@@ -402,8 +412,8 @@ int CDECL_CALL main(int argc, char** argv)
         }
     }
 
-    /* If no transport option was specifie, then make session options very open */
-    if (transportOpts == 0) {
+    /*If no transport option was specifie, then make session options very open */
+    if (transportOpts == TRANSPORT_NONE) {
         transportOpts = TRANSPORT_ANY;
     }
 
@@ -461,7 +471,7 @@ int CDECL_CALL main(int argc, char** argv)
         status = CreateSession(SESSION_PORT_MESSAGES_MP1, optsmp);
 
         /* Request a well-known name */
-        QStatus status = g_msgBus->RequestName(g_wellKnownName.c_str(), DBUS_NAME_FLAG_REPLACE_EXISTING | DBUS_NAME_FLAG_DO_NOT_QUEUE);
+        status = g_msgBus->RequestName(g_wellKnownName.c_str(), DBUS_NAME_FLAG_REPLACE_EXISTING | DBUS_NAME_FLAG_DO_NOT_QUEUE);
         if (status != ER_OK) {
             status = (status == ER_OK) ? ER_FAIL : status;
             QCC_LogError(status, ("RequestName(%s) failed. ", g_wellKnownName.c_str()));

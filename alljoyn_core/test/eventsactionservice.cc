@@ -43,7 +43,7 @@ static TestBusListener* s_busListener = NULL;
 static const char* INTERFACE_NAME = "org.alljoyn.example.eventsactionsservice";
 static const char* SERVICE_NAME = "org.alljoyn.example.eventsactionsservice";
 static const char* SERVICE_PATH = "/example/path";
-static SessionPort SERVICE_PORT = 25;
+static SessionPort SERVICE_PORT = 24;
 static const char* testAction = "Test Action";
 static volatile sig_atomic_t g_interrupt = false;
 
@@ -106,10 +106,40 @@ class TestBusObject : public BusObject {
     }
 };
 
+static void usage(void)
+{
+    printf("Options:\n");
+    printf("   -h                    = Print this help message\n");
+    printf("   -?                    = Print this help message\n");
+    printf("   -t                    = Advertise over TCP (enables selective advertising)\n");
+    printf("   -l                    = Advertise locally (enables selective advertising)\n");
+    printf("   -u                    = Advertise over UDP-based ARDP (enables selective advertising)\n");
+    printf("\n");
+}
+
 int CDECL_CALL main(int argc, char** argv)
 {
-    QCC_UNUSED(argc);
-    QCC_UNUSED(argv);
+    SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_NONE);
+
+    /*Adding Transport Flags*/
+    for (int i = 1; i < argc; ++i) {
+        if (0 == strcmp("-h", argv[i]) || 0 == strcmp("-?", argv[i])) {
+            usage();
+            exit(0);
+        } else if (0 == strcmp("-t", argv[i])) {
+            opts.transports |= TRANSPORT_TCP;
+        } else if (0 == strcmp("-l", argv[i])) {
+            opts.transports |= TRANSPORT_LOCAL;
+        } else if (0 == strcmp("-u", argv[i])) {
+            opts.transports |= TRANSPORT_UDP;
+        }
+    }
+
+    /* If no transport option was specifie, then make session options very open */
+    if (opts.transports == 0) {
+        opts.transports = TRANSPORT_ANY;
+    }
+
     QStatus status = AllJoynInit();
     if (ER_OK != status) {
         return 1;
@@ -165,7 +195,7 @@ int CDECL_CALL main(int argc, char** argv)
         return 1;
     }
 
-    SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
+
     status = s_msgBus->BindSessionPort(SERVICE_PORT, opts, *s_busListener);
     if (ER_OK != status) {
         QCC_LogError(status, ("BindSessionPort failed (%s).\n", QCC_StatusText(status)));
