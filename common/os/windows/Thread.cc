@@ -53,7 +53,7 @@ static const uint32_t MAX_SELECT_WAIT_MS = 10000;
 
 /** Thread list */
 Mutex* Thread::threadListLock = NULL;
-map<ThreadHandle, Thread*>* Thread::threadList = NULL;
+map<ThreadId, Thread*>* Thread::threadList = NULL;
 
 static DWORD cleanExternalThreadKey;
 static bool initialized = false;
@@ -66,7 +66,7 @@ void Thread::CleanExternalThread(void* t)
 
     Thread* thread = reinterpret_cast<Thread*>(t);
     threadListLock->Lock();
-    map<ThreadHandle, Thread*>::iterator it = threadList->find((ThreadHandle)thread->threadId);
+    map<ThreadId, Thread*>::iterator it = threadList->find(thread->threadId);
     if (it != threadList->end()) {
         if (it->second->isExternal) {
             delete it->second;
@@ -80,7 +80,7 @@ QStatus Thread::Init()
 {
     if (!initialized) {
         Thread::threadListLock = new Mutex();
-        Thread::threadList = new map<ThreadHandle, Thread*>();
+        Thread::threadList = new map<ThreadId, Thread*>();
         cleanExternalThreadKey = FlsAlloc(Thread::CleanExternalThread);
         if (cleanExternalThreadKey == FLS_OUT_OF_INDEXES) {
             QCC_LogError(ER_OS_ERROR, ("Creating TLS key: %d", GetLastError()));
@@ -114,11 +114,11 @@ QStatus Sleep(uint32_t ms) {
 Thread* Thread::GetThread()
 {
     Thread* ret = NULL;
-    unsigned int id = GetCurrentThreadId();
+    ThreadId id = GetCurrentThreadId();
 
     /* Find thread on threadList */
     threadListLock->Lock();
-    map<ThreadHandle, Thread*>::const_iterator iter = threadList->find((ThreadHandle)id);
+    map<ThreadId, Thread*>::const_iterator iter = threadList->find(id);
     if (iter != threadList->end()) {
         ret = iter->second;
     }
@@ -138,11 +138,11 @@ Thread* Thread::GetThread()
 const char* Thread::GetThreadName()
 {
     Thread* thread = NULL;
-    unsigned int id = GetCurrentThreadId();
+    ThreadId id = GetCurrentThreadId();
 
     /* Find thread on threadList */
     threadListLock->Lock();
-    map<ThreadHandle, Thread*>::const_iterator iter = threadList->find((ThreadHandle)id);
+    map<ThreadId, Thread*>::const_iterator iter = threadList->find(id);
     if (iter != threadList->end()) {
         thread = iter->second;
     }
@@ -160,7 +160,7 @@ const char* Thread::GetThreadName()
 void Thread::CleanExternalThreads()
 {
     threadListLock->Lock();
-    map<ThreadHandle, Thread*>::iterator it = threadList->begin();
+    map<ThreadId, Thread*>::iterator it = threadList->begin();
     while (it != threadList->end()) {
         if (it->second->isExternal) {
             delete it->second;
@@ -178,8 +178,8 @@ Thread::Thread(qcc::String name, Thread::ThreadFunction func, bool isExternal) :
     function(isExternal ? NULL : func),
     handle(isExternal ? GetCurrentThread() : 0),
     exitValue(NULL),
-    arg(NULL),
-    listener(NULL),
+    threadArg(NULL),
+    threadListener(NULL),
     isExternal(isExternal),
     platformContext(NULL),
     alertCode(0),
@@ -197,7 +197,7 @@ Thread::Thread(qcc::String name, Thread::ThreadFunction func, bool isExternal) :
      */
     if (isExternal) {
         threadListLock->Lock();
-        (*threadList)[(ThreadHandle)threadId] = this;
+        (*threadList)[threadId] = this;
         if (FlsGetValue(cleanExternalThreadKey) == NULL) {
             BOOL ret = FlsSetValue(cleanExternalThreadKey, this);
             if (ret == 0) {
@@ -226,9 +226,9 @@ Thread::~Thread(void)
 }
 
 
-ThreadInternalReturn STDCALL Thread::RunInternal(void* threadArg)
+ThreadInternalReturn STDCALL Thread::RunInternal(void* arg)
 {
-    Thread* thread(reinterpret_cast<Thread*>(threadArg));
+    Thread* thread(reinterpret_cast<Thread*>(arg));
 
     assert(thread != NULL);
     assert(thread->state == STARTED);
@@ -238,7 +238,7 @@ ThreadInternalReturn STDCALL Thread::RunInternal(void* threadArg)
 
     /* Add this Thread to list of running threads */
     threadListLock->Lock();
-    (*threadList)[(ThreadHandle)thread->threadId] = thread;
+    (*threadList)[thread->threadId] = thread;
     thread->state = RUNNING;
     threadListLock->Unlock();
 
@@ -246,12 +246,12 @@ ThreadInternalReturn STDCALL Thread::RunInternal(void* threadArg)
     if (!thread->isStopping) {
         QCC_DbgPrintf(("Starting thread: %s", thread->funcName));
         QCC_DEBUG_ONLY(IncrementAndFetch(&running));
-        thread->exitValue = thread->Run(thread->arg);
+        thread->exitValue = thread->Run(thread->threadArg);
         QCC_DEBUG_ONLY(DecrementAndFetch(&running));
         QCC_DbgPrintf(("Thread function exited: %s --> %p", thread->funcName, thread->exitValue));
     }
 
-    unsigned retVal = (unsigned)thread->exitValue;
+    unsigned retVal = PtrToUlong(thread->exitValue);
     uint32_t threadId = thread->threadId;
 
     thread->state = STOPPING;
@@ -279,15 +279,15 @@ ThreadInternalReturn STDCALL Thread::RunInternal(void* threadArg)
      * Call thread exit callback if specified. Note that ThreadExit may dellocate the thread so the
      * members of thread may not be accessed after this call
      */
-    if (thread->listener) {
-        thread->listener->ThreadExit(thread);
+    if (thread->threadListener) {
+        thread->threadListener->ThreadExit(thread);
     }
 
     /* This also means no QCC_DbgPrintf as they try to get context on the current thread */
 
     /* Remove this Thread from list of running threads */
     threadListLock->Lock();
-    threadList->erase((ThreadHandle)threadId);
+    threadList->erase(threadId);
     threadListLock->Unlock();
 
     _endthreadex(retVal);
@@ -317,8 +317,8 @@ QStatus Thread::Start(void* arg, ThreadListener* listener)
         /*  Reset the stop event so the thread doesn't start out alerted. */
         stopEvent.ResetEvent();
         /* Create OS thread */
-        this->arg = arg;
-        this->listener = listener;
+        this->threadArg = arg;
+        this->threadListener = listener;
 
         state = STARTED;
         handle = reinterpret_cast<HANDLE>(_beginthreadex(NULL, stacksize, RunInternal, this, CREATE_SUSPENDED, &threadId));
@@ -365,9 +365,9 @@ QStatus Thread::Alert()
     return stopEvent.SetEvent();
 }
 
-QStatus Thread::Alert(uint32_t alertCode)
+QStatus Thread::Alert(uint32_t threadAlertCode)
 {
-    this->alertCode = alertCode;
+    this->alertCode = threadAlertCode;
     if (state == DEAD) {
         return ER_DEAD_THREAD;
     }

@@ -83,11 +83,11 @@ class MySessionPortListener : public SessionPortListener {
         return true;
     }
 
-    void SessionJoined(SessionPort sessionPort, SessionId sessionId, const char* joiner)
+    void SessionJoined(SessionPort sessionPort, SessionId joinedSessionId, const char* joiner)
     {
         QCC_UNUSED(sessionPort);
-        printf("SessionJoined with %s (id=%u)\n", joiner, sessionId);
-        this->sessionId = sessionId;
+        printf("SessionJoined with %s (id=%u)\n", joiner, joinedSessionId);
+        this->sessionId = joinedSessionId;
     }
 
     SocketFd GetSessionId() { return sessionId; }
@@ -196,7 +196,7 @@ int CDECL_CALL main(int argc, char** argv)
 
     /* Request a well-known name */
     if (status == ER_OK) {
-        QStatus status = g_msgBus->RequestName(g_wellKnownName.c_str(), DBUS_NAME_FLAG_REPLACE_EXISTING | DBUS_NAME_FLAG_DO_NOT_QUEUE);
+        status = g_msgBus->RequestName(g_wellKnownName.c_str(), DBUS_NAME_FLAG_REPLACE_EXISTING | DBUS_NAME_FLAG_DO_NOT_QUEUE);
         if (status != ER_OK) {
             QCC_LogError(status, ("Failed to request name %s", g_wellKnownName.c_str()));
         }

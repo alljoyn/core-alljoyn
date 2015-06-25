@@ -105,8 +105,8 @@ int CDECL_CALL main(int argc, char** argv)
      */
     if (status == ER_OK) {
         MsgArg arg("i", 1);
-        uint32_t i;
-        status = arg.Get("i", &i);
+        uint32_t testInt;
+        status = arg.Get("i", &testInt);
     }
     if (status == ER_OK) {
         MsgArg arg("s", "hello");
@@ -146,10 +146,10 @@ int CDECL_CALL main(int argc, char** argv)
      * Variants
      */
     if (status == ER_OK) {
-        for (uint8_t n = 0; n < 3; ++n) {
+        for (uint8_t j = 0; j < 3; ++j) {
             MsgArg arg;
 
-            switch (n) {
+            switch (j) {
             case 0:
                 arg.Set("v", new MsgArg("i", i));
                 break;
@@ -163,14 +163,14 @@ int CDECL_CALL main(int argc, char** argv)
                 break;
             }
 
-            int32_t i;
-            double d;
+            int32_t testInt;
+            double testDouble;
             char* str;
-            status = arg.Get("i", &i);
+            status = arg.Get("i", &testInt);
             if (status == ER_BUS_SIGNATURE_MISMATCH) {
                 status = arg.Get("s", &str);
                 if (status == ER_BUS_SIGNATURE_MISMATCH) {
-                    status = arg.Get("d", &d);
+                    status = arg.Get("d", &testDouble);
                 }
             }
             if (status != ER_OK) {
@@ -226,13 +226,13 @@ int CDECL_CALL main(int argc, char** argv)
         size_t las;
         status = arg.Get("as", &las, &asArray);
         if (status == ER_OK) {
-            for (size_t i = 0; i < ArraySize(as); ++i) {
+            for (size_t j = 0; j < ArraySize(as); ++j) {
                 char* pas;
-                status = asArray[i].Get("s", &pas);
+                status = asArray[j].Get("s", &pas);
                 if (status != ER_OK) {
                     break;
                 }
-                if (strcmp(as[i], pas) != 0) {
+                if (strcmp(as[j], pas) != 0) {
                     status = ER_FAIL;
                     break;
                 }
@@ -246,13 +246,13 @@ int CDECL_CALL main(int argc, char** argv)
         size_t lag;
         status = arg.Get("ag", &lag, &agArray);
         if (status == ER_OK) {
-            for (size_t i = 0; i < ArraySize(ag); ++i) {
+            for (size_t j = 0; j < ArraySize(ag); ++j) {
                 char* pag;
-                status = agArray[i].Get("g", &pag);
+                status = agArray[j].Get("g", &pag);
                 if (status != ER_OK) {
                     break;
                 }
-                if (strcmp(ag[i], pag) != 0) {
+                if (strcmp(ag[j], pag) != 0) {
                     status = ER_FAIL;
                     break;
                 }
@@ -266,13 +266,13 @@ int CDECL_CALL main(int argc, char** argv)
         size_t lao;
         status = arg.Get("ao", &lao, &aoArray);
         if (status == ER_OK) {
-            for (size_t i = 0; i < lao; ++i) {
+            for (size_t j = 0; j < lao; ++j) {
                 char* pao;
-                status = aoArray[i].Get("o", &pao);
+                status = aoArray[j].Get("o", &pao);
                 if (status != ER_OK) {
                     break;
                 }
-                if (strcmp(ao[i], pao) != 0) {
+                if (strcmp(ao[j], pao) != 0) {
                     status = ER_FAIL;
                     break;
                 }
@@ -320,15 +320,15 @@ int CDECL_CALL main(int argc, char** argv)
             size_t num;
             status = dict.Get("a{iv}", &num, &entries);
             if (status == ER_OK) {
-                for (size_t i = 0; i < num; ++i) {
+                for (size_t j = 0; j < num; ++j) {
                     char* str1;
                     char* str2;
                     uint32_t key;
-                    status = entries[i].Get("{is}", &key, &str1);
+                    status = entries[j].Get("{is}", &key, &str1);
                     if (status == ER_BUS_SIGNATURE_MISMATCH) {
-                        status = entries[i].Get("{i(ss)}", &key, &str1, &str2);
+                        status = entries[j].Get("{i(ss)}", &key, &str1, &str2);
                     }
-                    if (key != i) {
+                    if (key != j) {
                         status = ER_FAIL;
                     }
                     if (status != ER_OK) {
@@ -343,11 +343,11 @@ int CDECL_CALL main(int argc, char** argv)
             size_t num;
             status = dict.Get("a{iv}", &num, &entries);
             if (status == ER_OK) {
-                for (size_t i = 0; i < num; ++i) {
+                for (size_t j = 0; j < num; ++j) {
                     MsgArg* val;
                     uint32_t key;
-                    status = entries[i].Get("{iv}", &key, &val);
-                    if (key != i) {
+                    status = entries[j].Get("{iv}", &key, &val);
+                    if (key != j) {
                         status = ER_FAIL;
                     }
                     if (status != ER_OK) {
@@ -366,14 +366,14 @@ int CDECL_CALL main(int argc, char** argv)
         int gen = 0;
         MsgArg arg;
         MsgArg outer[2];
-        size_t i, j;
-        for (i = 0; i < ArraySize(outer); ++i) {
+        size_t cnt, j;
+        for (cnt = 0; cnt < ArraySize(outer); ++cnt) {
             MsgArg inner[2];
             for (j = 0; j < ArraySize(inner); ++j) {
                 ++gen;
                 status = inner[j].Set("(i)", gen);
                 if (status != ER_OK) {
-                    QCC_SyncPrintf("\nFailed to set inner - gen = %d  i = %u  j = %u  status = %s\n", gen, i, j, QCC_StatusText(status));
+                    QCC_SyncPrintf("\nFailed to set inner - gen = %d  cnt = %u  j = %u  status = %s\n", gen, cnt, j, QCC_StatusText(status));
                     break;
                 }
             }
@@ -381,12 +381,12 @@ int CDECL_CALL main(int argc, char** argv)
                 break;
             }
             ++gen;
-            status = outer[i].Set("(ia(i))", gen, ArraySize(inner), inner);
+            status = outer[cnt].Set("(ia(i))", gen, ArraySize(inner), inner);
             if (status != ER_OK) {
-                QCC_SyncPrintf("\nFailed to set outer - gen = %d  i = %u  j = %u  status = %s\n", gen, i, j, QCC_StatusText(status));
+                QCC_SyncPrintf("\nFailed to set outer - gen = %d  cnt = %u  j = %u  status = %s\n", gen, cnt, j, QCC_StatusText(status));
                 break;
             }
-            outer[i].Stabilize();
+            outer[cnt].Stabilize();
         }
 
         if (status == ER_OK) {
@@ -402,11 +402,11 @@ int CDECL_CALL main(int argc, char** argv)
                 if (status != ER_OK) {
                     QCC_SyncPrintf("\nFailed to get arg - status = %s\n", QCC_StatusText(status));
                 } else {
-                    for (i = 0; i < outerRetSize; ++i) {
+                    for (cnt = 0; cnt < outerRetSize; ++cnt) {
                         int r1;
-                        status = outerRet[i].Get("(ia(i))", &r1, &innerRetSize, &innerRet);
+                        status = outerRet[cnt].Get("(ia(i))", &r1, &innerRetSize, &innerRet);
                         if (status != ER_OK) {
-                            QCC_SyncPrintf("\nFailed to get outer - i = %u status = %s\n", i, QCC_StatusText(status));
+                            QCC_SyncPrintf("\nFailed to get outer - cnt = %u status = %s\n", cnt, QCC_StatusText(status));
                             break;
                         }
                         for (j = 0; j < innerRetSize; ++j) {
@@ -414,7 +414,7 @@ int CDECL_CALL main(int argc, char** argv)
 
                             status = innerRet[j].Get("(i)", &r3);
                             if (status != ER_OK) {
-                                QCC_SyncPrintf("\nFailed to get inner - i = %u  j = %u  status = %s\n%s", i, j, QCC_StatusText(status), innerRet[j].ToString().c_str());
+                                QCC_SyncPrintf("\nFailed to get inner - cnt = %u  j = %u  status = %s\n%s", cnt, j, QCC_StatusText(status), innerRet[j].ToString().c_str());
                                 break;
                             }
                         }
@@ -434,18 +434,18 @@ int CDECL_CALL main(int argc, char** argv)
         int gen = 0;
         MsgArg arg;
         MsgArg outer[2];
-        size_t i, j;
-        for (i = 0; i < ArraySize(outer); ++i) {
+        size_t cnt, j;
+        for (cnt = 0; cnt < ArraySize(outer); ++cnt) {
             MsgArg inner[2];
             qcc::String str[ArraySize(inner)];
             for (j = 0; j < ArraySize(str); ++j) {
-                str[i] = qcc::U32ToString((uint32_t)j);
+                str[cnt] = qcc::U32ToString((uint32_t)j);
             }
             for (j = 0; j < ArraySize(inner); ++j) {
                 ++gen;
-                status = inner[j].Set("{is}", gen, str[i].c_str());
+                status = inner[j].Set("{is}", gen, str[cnt].c_str());
                 if (status != ER_OK) {
-                    QCC_SyncPrintf("\nFailed to set inner - gen = %d  i = %u  j = %u  status = %s\n", gen, i, j, QCC_StatusText(status));
+                    QCC_SyncPrintf("\nFailed to set inner - gen = %d  cnt = %u  j = %u  status = %s\n", gen, cnt, j, QCC_StatusText(status));
                     break;
                 }
             }
@@ -453,12 +453,12 @@ int CDECL_CALL main(int argc, char** argv)
                 break;
             }
             ++gen;
-            status = outer[i].Set("(ia{is})", gen, ArraySize(inner), inner);
+            status = outer[cnt].Set("(ia{is})", gen, ArraySize(inner), inner);
             if (status != ER_OK) {
-                QCC_SyncPrintf("\nFailed to set outer - gen = %d  i = %u  j = %u  status = %s\n", gen, i, j, QCC_StatusText(status));
+                QCC_SyncPrintf("\nFailed to set outer - gen = %d  cnt = %u  j = %u  status = %s\n", gen, cnt, j, QCC_StatusText(status));
                 break;
             }
-            outer[i].Stabilize();
+            outer[cnt].Stabilize();
         }
 
         if (status == ER_OK) {
@@ -474,11 +474,11 @@ int CDECL_CALL main(int argc, char** argv)
                 if (status != ER_OK) {
                     QCC_SyncPrintf("\nFailed to get arg - status = %s\n", QCC_StatusText(status));
                 } else {
-                    for (i = 0; i < outerRetSize; ++i) {
+                    for (cnt = 0; cnt < outerRetSize; ++cnt) {
                         int r1;
-                        status = outerRet[i].Get("(ia{is})", &r1, &innerRetSize, &innerRet);
+                        status = outerRet[cnt].Get("(ia{is})", &r1, &innerRetSize, &innerRet);
                         if (status != ER_OK) {
-                            QCC_SyncPrintf("\nFailed to get outer - i = %u status = %s\n", i, QCC_StatusText(status));
+                            QCC_SyncPrintf("\nFailed to get outer - cnt = %u status = %s\n", cnt, QCC_StatusText(status));
                             break;
                         }
                         for (j = 0; j < innerRetSize; ++j) {
@@ -487,7 +487,7 @@ int CDECL_CALL main(int argc, char** argv)
 
                             status = innerRet[j].Get("{is}", &r3, &s3);
                             if (status != ER_OK) {
-                                QCC_SyncPrintf("\nFailed to get inner - i = %u  j = %u  status = %s\n%s", i, j, QCC_StatusText(status), innerRet[j].ToString().c_str());
+                                QCC_SyncPrintf("\nFailed to get inner - cnt = %u  j = %u  status = %s\n%s", cnt, j, QCC_StatusText(status), innerRet[j].ToString().c_str());
                                 break;
                             }
                         }

@@ -93,10 +93,10 @@ class MethodTable {
             }
         }
 
-        void Set(Entry* entry)
+        void Set(Entry* newEntry)
         {
-            qcc::IncrementAndFetch(&(entry->refCount));
-            this->entry = entry;
+            qcc::IncrementAndFetch(&(newEntry->refCount));
+            this->entry = newEntry;
         }
 
         const Entry* entry;

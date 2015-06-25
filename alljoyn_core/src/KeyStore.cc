@@ -119,12 +119,12 @@ KeyStore::~KeyStore()
     delete keys;
 }
 
-QStatus KeyStore::SetListener(KeyStoreListener& listener)
+QStatus KeyStore::SetListener(KeyStoreListener& keyStoreListener)
 {
     if (this->listener != NULL) {
         return ER_BUS_LISTENER_ALREADY_SET;
     } else {
-        this->listener = new ProtectedKeyStoreListener(&listener);
+        this->listener = new ProtectedKeyStoreListener(&keyStoreListener);
         return ER_OK;
     }
 }
@@ -134,8 +134,8 @@ QStatus KeyStore::SetListener(KeyStoreListener& listener)
  *
  * @param listener  The listener that will listen to key event.
  */
-QStatus KeyStore::SetKeyEventListener(KeyStoreKeyEventListener* listener) {
-    keyEventListener = listener;
+QStatus KeyStore::SetKeyEventListener(KeyStoreKeyEventListener* eventListener) {
+    keyEventListener = eventListener;
     return ER_OK;
 }
 

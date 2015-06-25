@@ -57,12 +57,12 @@ using namespace std;
  * the given path does not start with "/", then the base path name extracted
  * from fileName to generate the absolute path name.
  *
- * @param path      Path name to be made into an absolute path
- * @param fileName  [optional] Absolute path to a file that will be used as the
- *                  basis for generating an absolute path when given a relative
- *                  path.
+ * @param path         Path name to be made into an absolute path
+ * @param srcFileName  [optional] Absolute path to a file that will be used as the
+ *                     basis for generating an absolute path when given a relative
+ *                     path.
  */
-static String ExpandPath(const String& path, const String& fileName = String::Empty)
+static String ExpandPath(const String& path, const String& srcFileName = String::Empty)
 {
 #if defined(QCC_OS_GROUP_WINDOWS)
 #define PATH_SEP "/\\"
@@ -101,12 +101,12 @@ static String ExpandPath(const String& path, const String& fileName = String::Em
         }
         return home + path.substr(position);
 #endif
-    } else if (fileName.empty()) {
+    } else if (srcFileName.empty()) {
         // Use path as is.
         return path;
     } else {
         // A path relative to the currently processed file
-        return fileName.substr(0, fileName.find_last_of(PATH_SEP) + 1) + path;
+        return srcFileName.substr(0, srcFileName.find_last_of(PATH_SEP) + 1) + path;
     }
 
 #undef PATH_SEP
@@ -130,8 +130,8 @@ void ConfigDB::NameOwnerChanged(const String& alias,
 }
 #endif
 
-ConfigDB::ConfigDB(const String defaultXml, const String fileName) :
-    defaultXml(defaultXml), fileName(fileName), db(new DB()), stopping(false)
+ConfigDB::ConfigDB(const String defaultXml, const String srcFileName) :
+    defaultXml(defaultXml), fileName(srcFileName), db(new DB()), stopping(false)
 {
     assert(!singleton);
     if (!singleton) {
@@ -185,7 +185,7 @@ bool ConfigDB::LoadConfig(Bus* bus)
 }
 
 
-bool ConfigDB::DB::ParseSource(const String& fileName, Source& src)
+bool ConfigDB::DB::ParseSource(const String& srcFileName, Source& src)
 {
     XmlParseContext xmlParseCtx(src);
     const XmlElement* root = xmlParseCtx.GetRoot();
@@ -194,29 +194,29 @@ bool ConfigDB::DB::ParseSource(const String& fileName, Source& src)
     success = XmlElement::Parse(xmlParseCtx) == ER_OK;
     if (success) {
         if (root->GetName() == "busconfig") {
-            success = ProcessBusconfig(fileName, *root);
+            success = ProcessBusconfig(srcFileName, *root);
         } else {
             Log(LOG_ERR, "Error processing \"%s\": Unknown tag found at top level: <%s>\n",
-                fileName.c_str(), root->GetName().c_str());
+                srcFileName.c_str(), root->GetName().c_str());
             success = false;
         }
     } else {
-        Log(LOG_ERR, "File \"%s\" contains invalid XML constructs.\n", fileName.c_str());
+        Log(LOG_ERR, "File \"%s\" contains invalid XML constructs.\n", srcFileName.c_str());
     }
 
     return success;
 }
 
 
-bool ConfigDB::DB::ParseFile(const String& fileName, bool ignoreMissing)
+bool ConfigDB::DB::ParseFile(const String& srcFileName, bool ignoreMissing)
 {
     bool success = true;
-    FileSource fs(fileName.c_str());
+    FileSource fs(srcFileName.c_str());
 
     if (fs.IsValid()) {
-        success = ParseSource(fileName, fs);
+        success = ParseSource(srcFileName, fs);
     } else if (!ignoreMissing) {
-        Log(LOG_ERR, "Failed to open \"%s\": %s\n", fileName.c_str(), strerror(errno));
+        Log(LOG_ERR, "Failed to open \"%s\": %s\n", srcFileName.c_str(), strerror(errno));
         success = false;
     }
 
@@ -224,9 +224,9 @@ bool ConfigDB::DB::ParseFile(const String& fileName, bool ignoreMissing)
 }
 
 
-bool ConfigDB::DB::ProcessAuth(const String& fileName, const XmlElement& auth)
+bool ConfigDB::DB::ProcessAuth(const String& srcFileName, const XmlElement& auth)
 {
-    QCC_UNUSED(fileName);
+    QCC_UNUSED(srcFileName);
 
     static const char wspace[] = " \t\v\r\n";
     bool success = true;
@@ -252,7 +252,7 @@ bool ConfigDB::DB::ProcessAuth(const String& fileName, const XmlElement& auth)
 }
 
 
-bool ConfigDB::DB::ProcessBusconfig(const String& fileName, const XmlElement& busconfig)
+bool ConfigDB::DB::ProcessBusconfig(const String& srcFileName, const XmlElement& busconfig)
 {
     bool success = true;
     const vector<XmlElement*>& elements = busconfig.GetChildren();
@@ -261,41 +261,41 @@ bool ConfigDB::DB::ProcessBusconfig(const String& fileName, const XmlElement& bu
     for (it = elements.begin(); success && (it != elements.end()); ++it) {
         const String& tag = (*it)->GetName();
         if (tag == "auth") {
-            success = ProcessAuth(fileName, *(*it));
+            success = ProcessAuth(srcFileName, *(*it));
         } else if (tag == "flag") {
-            success = ProcessFlag(fileName, *(*it));
+            success = ProcessFlag(srcFileName, *(*it));
         } else if (tag == "fork") {
-            success = ProcessFork(fileName, *(*it));
+            success = ProcessFork(srcFileName, *(*it));
         } else if (tag == "include") {
-            success = ProcessInclude(fileName, *(*it));
+            success = ProcessInclude(srcFileName, *(*it));
         } else if (tag == "includedir") {
-            success = ProcessIncludedir(fileName, *(*it));
+            success = ProcessIncludedir(srcFileName, *(*it));
         } else if (tag == "keep_umask") {
-            success = ProcessKeepUmask(fileName, *(*it));
+            success = ProcessKeepUmask(srcFileName, *(*it));
         } else if (tag == "limit") {
-            success = ProcessLimit(fileName, *(*it));
+            success = ProcessLimit(srcFileName, *(*it));
         } else if (tag == "listen") {
-            success = ProcessListen(fileName, *(*it));
+            success = ProcessListen(srcFileName, *(*it));
         } else if (tag == "pidfile") {
-            success = ProcessPidfile(fileName, *(*it));
+            success = ProcessPidfile(srcFileName, *(*it));
 #ifdef ENABLE_POLICYDB
         } else if (tag == "policy") {
-            success = ProcessPolicy(fileName, *(*it));
+            success = ProcessPolicy(srcFileName, *(*it));
 #else
         } else if (tag == "policy") {
             success = true;  // Ignore policies
 #endif
         } else if (tag == "property") {
-            success = ProcessProperty(fileName, *(*it));
+            success = ProcessProperty(srcFileName, *(*it));
         } else if (tag == "syslog") {
-            success = ProcessSyslog(fileName, *(*it));
+            success = ProcessSyslog(srcFileName, *(*it));
         } else if (tag == "type") {
-            success = ProcessType(fileName, *(*it));
+            success = ProcessType(srcFileName, *(*it));
         } else if (tag == "user") {
-            success = ProcessUser(fileName, *(*it));
+            success = ProcessUser(srcFileName, *(*it));
         } else {
             Log(LOG_NOTICE, "Error processing \"%s\": Unknown tag found in <busconfig>: %s - ignoring\n",
-                fileName.c_str(), tag.c_str());
+                srcFileName.c_str(), tag.c_str());
         }
     }
 
@@ -303,36 +303,36 @@ bool ConfigDB::DB::ProcessBusconfig(const String& fileName, const XmlElement& bu
 }
 
 
-bool ConfigDB::DB::ProcessFork(const String& fileName, const XmlElement& fork)
+bool ConfigDB::DB::ProcessFork(const String& srcFileName, const XmlElement& forkElement)
 {
-    QCC_UNUSED(fileName);
-    QCC_UNUSED(fork);
+    QCC_UNUSED(srcFileName);
 
     bool success = true;
-
     this->fork = true;
 
 #ifndef NDEBUG
-    if (!fork.GetAttributes().empty() || !fork.GetChildren().empty() || !fork.GetContent().empty()) {
-        Log(LOG_INFO, "Ignoring extraneous data with <%s> tag.\n", fork.GetName().c_str());
+    if (!forkElement.GetAttributes().empty() || !forkElement.GetChildren().empty() || !forkElement.GetContent().empty()) {
+        Log(LOG_INFO, "Ignoring extraneous data with <%s> tag.\n", forkElement.GetName().c_str());
     }
+#else
+    QCC_UNUSED(forkElement);
 #endif
 
     return success;
 }
 
 
-bool ConfigDB::DB::ProcessInclude(const String& fileName, const XmlElement& include)
+bool ConfigDB::DB::ProcessInclude(const String& srcFileName, const XmlElement& include)
 {
     bool success = true;
-    String includeFileName = ExpandPath(include.GetContent(), fileName);
+    String includeFileName = ExpandPath(include.GetContent(), srcFileName);
     const map<String, String>& attrs = include.GetAttributes();
     bool ignoreMissing = false;
 
     if (includeFileName.empty()) {
         success = false;
         Log(LOG_ERR, "Error processing \"%s\": <%s> block is empty.\n",
-            fileName.c_str(), include.GetName().c_str());
+            srcFileName.c_str(), include.GetName().c_str());
         goto exit;
     }
 
@@ -343,7 +343,7 @@ bool ConfigDB::DB::ProcessInclude(const String& fileName, const XmlElement& incl
                 ignoreMissing = (it->second == "yes");
             } else {
                 Log(LOG_NOTICE, "Error Processing \"%s\": Unknown attribute \"%s\" in tag <%s> - ignoring.\n",
-                    fileName.c_str(), it->first.c_str(), include.GetName().c_str());
+                    srcFileName.c_str(), it->first.c_str(), include.GetName().c_str());
             }
         }
     }
@@ -355,10 +355,10 @@ exit:
 }
 
 
-bool ConfigDB::DB::ProcessIncludedir(const String& fileName, const XmlElement& includedir)
+bool ConfigDB::DB::ProcessIncludedir(const String& srcFileName, const XmlElement& includedir)
 {
     bool success = true;
-    String includeDirectory = ExpandPath(includedir.GetContent(), fileName);
+    String includeDirectory = ExpandPath(includedir.GetContent(), srcFileName);
     const map<String, String>& attrs = includedir.GetAttributes();
     bool ignoreMissing = false;
     DirListing listing;
@@ -367,7 +367,7 @@ bool ConfigDB::DB::ProcessIncludedir(const String& fileName, const XmlElement& i
     if (includeDirectory.empty()) {
         success = false;
         Log(LOG_ERR, "Error processing \"%s\": <%s> block is empty.\n",
-            fileName.c_str(), includedir.GetName().c_str());
+            srcFileName.c_str(), includedir.GetName().c_str());
         goto exit;
     }
 
@@ -378,7 +378,7 @@ bool ConfigDB::DB::ProcessIncludedir(const String& fileName, const XmlElement& i
                 ignoreMissing = (it->second == "yes");
             } else {
                 Log(LOG_NOTICE, "Error Processing \"%s\": Unknown attribute \"%s\" in tag <%s> - ignoring.\n",
-                    fileName.c_str(), it->first.c_str(), includedir.GetName().c_str());
+                    srcFileName.c_str(), it->first.c_str(), includedir.GetName().c_str());
             }
         }
     }
@@ -387,7 +387,7 @@ bool ConfigDB::DB::ProcessIncludedir(const String& fileName, const XmlElement& i
     if (status != ER_OK) {
         if (!ignoreMissing) {
             Log(LOG_ERR, "Error processing \"%s\": Failed to access directory \"%s\": %s\n",
-                fileName.c_str(), includeDirectory.c_str(), strerror(errno));
+                srcFileName.c_str(), includeDirectory.c_str(), strerror(errno));
             success = false;
         }
         goto exit;
@@ -404,26 +404,26 @@ exit:
 }
 
 
-bool ConfigDB::DB::ProcessKeepUmask(const String& fileName, const XmlElement& keepUmask)
+bool ConfigDB::DB::ProcessKeepUmask(const String& srcFileName, const XmlElement& keepUmaskElement)
 {
-    QCC_UNUSED(fileName);
-    QCC_UNUSED(keepUmask);
+    QCC_UNUSED(srcFileName);
 
     bool success = true;
-
     this->keepUmask = true;
 
 #ifndef NDEBUG
-    if (!keepUmask.GetAttributes().empty() || !keepUmask.GetChildren().empty() || !keepUmask.GetContent().empty()) {
-        Log(LOG_INFO, "Ignoring extraneous data with <%s> tag.\n", keepUmask.GetName().c_str());
+    if (!keepUmaskElement.GetAttributes().empty() || !keepUmaskElement.GetChildren().empty() || !keepUmaskElement.GetContent().empty()) {
+        Log(LOG_INFO, "Ignoring extraneous data with <%s> tag.\n", keepUmaskElement.GetName().c_str());
     }
+#else
+    QCC_UNUSED(keepUmaskElement);
 #endif
 
     return success;
 }
 
 
-bool ConfigDB::DB::ProcessLimit(const String& fileName, const XmlElement& limit)
+bool ConfigDB::DB::ProcessLimit(const String& srcFileName, const XmlElement& limit)
 {
     bool success = true;
     String name = limit.GetAttribute("name");
@@ -432,14 +432,14 @@ bool ConfigDB::DB::ProcessLimit(const String& fileName, const XmlElement& limit)
 
     if (name.empty()) {
         Log(LOG_ERR, "Error processing \"%s\": 'name' attribute missing from <%s> tag.\n",
-            fileName.c_str(), limit.GetName().c_str());
+            srcFileName.c_str(), limit.GetName().c_str());
         success = false;
         goto exit;
     }
 
     if (valstr.empty()) {
         Log(LOG_ERR, "Error processing \"%s\": Value not specified for limit \"%s\".\n",
-            fileName.c_str(), name.c_str());
+            srcFileName.c_str(), name.c_str());
         success = false;
         goto exit;
     }
@@ -448,7 +448,7 @@ bool ConfigDB::DB::ProcessLimit(const String& fileName, const XmlElement& limit)
 
     if ((value == 0) && (valstr[0] != '0')) {
         Log(LOG_ERR, "Error processing \"%s\": Limit value for \"%s\" must be an unsigned 32 bit integer (not \"%s\").\n",
-            fileName.c_str(), name.c_str(), valstr.c_str());
+            srcFileName.c_str(), name.c_str(), valstr.c_str());
         success = false;
         goto exit;
     }
@@ -460,7 +460,7 @@ exit:
 }
 
 
-bool ConfigDB::DB::ProcessFlag(const String& fileName, const XmlElement& flag)
+bool ConfigDB::DB::ProcessFlag(const String& srcFileName, const XmlElement& flag)
 {
     bool success = true;
     String name = flag.GetAttribute("name");
@@ -468,7 +468,7 @@ bool ConfigDB::DB::ProcessFlag(const String& fileName, const XmlElement& flag)
 
     if (name.empty()) {
         Log(LOG_ERR, "Error processing \"%s\": 'name' attribute missing from <%s> tag.\n",
-            fileName.c_str(), flag.GetName().c_str());
+            srcFileName.c_str(), flag.GetName().c_str());
         success = false;
         goto exit;
     }
@@ -479,7 +479,7 @@ bool ConfigDB::DB::ProcessFlag(const String& fileName, const XmlElement& flag)
         limitMap[name] = 0;
     } else {
         Log(LOG_ERR, "Error processing \"%s\": Flag value for \"%s\" must be \"true\" or \"false\" (not \"%s\").\n",
-            fileName.c_str(), name.c_str(), valstr.c_str());
+            srcFileName.c_str(), name.c_str(), valstr.c_str());
         success = false;
     }
 
@@ -488,7 +488,7 @@ exit:
 }
 
 
-bool ConfigDB::DB::ProcessProperty(const String& fileName, const XmlElement& property)
+bool ConfigDB::DB::ProcessProperty(const String& srcFileName, const XmlElement& property)
 {
     bool success = true;
     String name = property.GetAttribute("name");
@@ -496,7 +496,7 @@ bool ConfigDB::DB::ProcessProperty(const String& fileName, const XmlElement& pro
 
     if (name.empty()) {
         Log(LOG_ERR, "Error processing \"%s\": 'name' attribute missing from <%s> tag.\n",
-            fileName.c_str(), property.GetName().c_str());
+            srcFileName.c_str(), property.GetName().c_str());
         success = false;
         goto exit;
     }
@@ -508,20 +508,20 @@ exit:
 }
 
 
-bool ConfigDB::DB::ProcessListen(const String& fileName, const XmlElement& listen)
+bool ConfigDB::DB::ProcessListen(const String& srcFileName, const XmlElement& listen)
 {
     bool success = true;
     String addr = listen.GetContent();
 
     if (addr.empty()) {
         Log(LOG_ERR, "Error processing \"%s\": <%s> block is empty.\n",
-            fileName.c_str(), listen.GetName().c_str());
+            srcFileName.c_str(), listen.GetName().c_str());
         success = false;
     } else {
         bool added = listenList->insert(addr).second;
         if (!added) {
             Log(LOG_WARNING, "Warning processing \"%s\": Duplicate listen spec found (ignoring): %s\n",
-                fileName.c_str(), addr.c_str());
+                srcFileName.c_str(), addr.c_str());
         }
     }
 
@@ -529,15 +529,15 @@ bool ConfigDB::DB::ProcessListen(const String& fileName, const XmlElement& liste
 }
 
 
-bool ConfigDB::DB::ProcessPidfile(const String& fileName, const XmlElement& pidfile)
+bool ConfigDB::DB::ProcessPidfile(const String& srcFileName, const XmlElement& pidfileElement)
 {
     bool success = true;
 
-    this->pidfile = ExpandPath(pidfile.GetContent(), fileName);
+    this->pidfile = ExpandPath(pidfileElement.GetContent(), srcFileName);
     if (this->pidfile.empty()) {
         success = false;
         Log(LOG_ERR, "Error processing \"%s\": <%s> block is empty.\n",
-            fileName.c_str(), pidfile.GetName().c_str());
+            srcFileName.c_str(), pidfileElement.GetName().c_str());
     }
 
     return success;
@@ -545,14 +545,14 @@ bool ConfigDB::DB::ProcessPidfile(const String& fileName, const XmlElement& pidf
 
 
 #ifdef ENABLE_POLICYDB
-bool ConfigDB::DB::ProcessPolicy(const String& fileName, const XmlElement& policy)
+bool ConfigDB::DB::ProcessPolicy(const String& srcFileName, const XmlElement& policy)
 {
     bool success = true;
     const vector<XmlElement*>& elements = policy.GetChildren();
     const map<String, String>& attrs = policy.GetAttributes();
 
     if (attrs.size() != 1) {
-        Log(LOG_ERR, "Error processing \"%s\": Exactly one policy category must be specified.\n", fileName.c_str());
+        Log(LOG_ERR, "Error processing \"%s\": Exactly one policy category must be specified.\n", srcFileName.c_str());
         return false;
     }
 
@@ -562,13 +562,13 @@ bool ConfigDB::DB::ProcessPolicy(const String& fileName, const XmlElement& polic
 
     for (vector<XmlElement*>::const_iterator it = elements.begin(); success && (it != elements.end()); ++it) {
         const String& permStr = (*it)->GetName();
-        QCC_DEBUG_ONLY(Log(LOG_DEBUG, "Processing tag <%s> in \"%s\"...\n", permStr.c_str(), fileName.c_str()));
+        QCC_DEBUG_ONLY(Log(LOG_DEBUG, "Processing tag <%s> in \"%s\"...\n", permStr.c_str(), srcFileName.c_str()));
 
         success = policyDB->AddRule(cat, catValue, permStr, (*it)->GetAttributes());
 
         if (!success) {
             Log(LOG_ERR, "Error processing \"%s\": Invalid policy: cat=\"%s\"  catValue=\"%s\" perm=\"%s\" \n",
-                fileName.c_str(), cat.c_str(), catValue.c_str(), permStr.c_str());
+                srcFileName.c_str(), cat.c_str(), catValue.c_str(), permStr.c_str());
         }
     }
 
@@ -576,49 +576,49 @@ bool ConfigDB::DB::ProcessPolicy(const String& fileName, const XmlElement& polic
 }
 #endif
 
-bool ConfigDB::DB::ProcessSyslog(const String& fileName, const XmlElement& syslog)
+bool ConfigDB::DB::ProcessSyslog(const String& srcFileName, const XmlElement& syslogElement)
 {
-    QCC_UNUSED(fileName);
-    QCC_UNUSED(syslog);
+    QCC_UNUSED(srcFileName);
 
     bool success = true;
-
     this->syslog = true;
 
 #ifndef NDEBUG
-    if (!syslog.GetAttributes().empty() || !syslog.GetChildren().empty() || !syslog.GetContent().empty()) {
-        Log(LOG_INFO, "Ignoring extraneous data with <syslog> tag.\n", syslog.GetName().c_str());
+    if (!syslogElement.GetAttributes().empty() || !syslogElement.GetChildren().empty() || !syslogElement.GetContent().empty()) {
+        Log(LOG_INFO, "Ignoring extraneous data with <syslog> tag.\n", syslogElement.GetName().c_str());
     }
+#else
+    QCC_UNUSED(syslogElement);
 #endif
 
     return success;
 }
 
 
-bool ConfigDB::DB::ProcessType(const String& fileName, const XmlElement& type)
+bool ConfigDB::DB::ProcessType(const String& srcFileName, const XmlElement& typeElement)
 {
     bool success = true;
 
-    this->type = type.GetContent();
+    this->type = typeElement.GetContent();
     if (this->type.empty()) {
         success = false;
         Log(LOG_ERR, "Error processing \"%s\": <%s> block is empty.\n",
-            fileName.c_str(), type.GetName().c_str());
+            srcFileName.c_str(), typeElement.GetName().c_str());
     }
 
     return success;
 }
 
 
-bool ConfigDB::DB::ProcessUser(const String& fileName, const XmlElement& user)
+bool ConfigDB::DB::ProcessUser(const String& srcFileName, const XmlElement& userElement)
 {
     bool success = true;
 
-    this->user = user.GetContent();
+    this->user = userElement.GetContent();
     if (this->user.empty()) {
         success = false;
         Log(LOG_ERR, "Error processing \"%s\": <%s> block is empty.\n",
-            fileName.c_str(), user.GetName().c_str());
+            srcFileName.c_str(), userElement.GetName().c_str());
     }
 
     return success;

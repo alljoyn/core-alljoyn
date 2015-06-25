@@ -305,8 +305,8 @@ class Thread {
     ThreadFunction function;        ///< Thread entry point or NULL is using Run() as entry point
     ThreadHandle handle;            ///< Thread handle.
     ThreadReturn exitValue;         ///< The returned 'value' from Run.
-    void* arg;                      ///< Run thread argument.
-    ThreadListener* listener;       ///< Listener notified of thread events (or NULL).
+    void* threadArg;                ///< Run thread argument.
+    ThreadListener* threadListener; ///< Listener notified of thread events (or NULL).
     bool isExternal;                ///< If true, Thread is external (i.e. lifecycle not managed by Thread obj)
     void* platformContext;          ///< Context data specific to platform implementation
     uint32_t alertCode;             ///< Context passed from alerter to alertee
@@ -321,14 +321,14 @@ class Thread {
     bool hasBeenJoined;
     qcc::Mutex hbjMutex;
 #elif defined(QCC_OS_GROUP_WINDOWS)
-    unsigned int threadId;          ///< Thread ID used by windows
+    ThreadId threadId;          ///< Thread ID used by windows
 #endif
 
     /** Lock that protects global list of Threads and their handles */
     static Mutex* threadListLock;
 
     /** Thread list */
-    static std::map<ThreadHandle, Thread*>* threadList;
+    static std::map<ThreadId, Thread*>* threadList;
 
     /** Called on thread exit to deallocate external Thread objects */
     static void STDCALL CleanExternalThread(void* thread);

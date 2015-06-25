@@ -133,7 +133,7 @@ qcc::String BusObject::GenerateIntrospection(bool deep, size_t indent) const
     return BusObject::GenerateIntrospection(NULL, deep, indent);
 }
 
-qcc::String BusObject::GenerateIntrospection(const char* languageTag, bool deep, size_t indent) const
+qcc::String BusObject::GenerateIntrospection(const char* requestedLanguageTag, bool deep, size_t indent) const
 {
     qcc::String in(indent, ' ');
     qcc::String xml;
@@ -146,8 +146,8 @@ qcc::String BusObject::GenerateIntrospection(const char* languageTag, bool deep,
         xml += in + "<node name=\"" + child->GetName() + "\"";
 
         const char* nodeDesc = NULL;
-        if (languageTag) {
-            nodeDesc = child->GetDescription(languageTag, buffer);
+        if (requestedLanguageTag) {
+            nodeDesc = child->GetDescription(requestedLanguageTag, buffer);
         }
 
         if (deep || nodeDesc) {
@@ -156,7 +156,7 @@ qcc::String BusObject::GenerateIntrospection(const char* languageTag, bool deep,
                 xml += in + "  <description>" + XmlElement::EscapeXml(nodeDesc) + "</description>";
             }
             if (deep) {
-                xml += child->GenerateIntrospection(languageTag, deep, indent + 2);
+                xml += child->GenerateIntrospection(requestedLanguageTag, deep, indent + 2);
             }
 
             xml += "\n" + in + "</node>\n";
@@ -179,7 +179,7 @@ qcc::String BusObject::GenerateIntrospection(const char* languageTag, bool deep,
                 (strcmp((itIf->first)->GetName(), org::freedesktop::DBus::Properties::InterfaceName) == 0)) {
                 ++itIf;
             } else {
-                xml += (itIf->first)->Introspect(indent, languageTag, bus ? bus->GetDescriptionTranslator() : NULL);
+                xml += (itIf->first)->Introspect(indent, requestedLanguageTag, bus ? bus->GetDescriptionTranslator() : NULL);
                 ++itIf;
             }
         }
@@ -675,7 +675,7 @@ QStatus BusObject::Signal(const char* destination,
                                 timeToLive);
         if (status == ER_OK) {
             BusEndpoint bep = BusEndpoint::cast(bus->GetInternal().GetLocalEndpoint());
-            QStatus status = bus->GetInternal().GetRouter().PushMessage(msg, bep);
+            status = bus->GetInternal().GetRouter().PushMessage(msg, bep);
             if ((status == ER_OK) && outMsg) {
                 *outMsg = msg;
             }
@@ -1062,9 +1062,9 @@ void BusObject::GetDescriptionLanguages(const InterfaceDescription::Member* memb
     }
 }
 
-void BusObject::SetDescriptionTranslator(Translator* translator)
+void BusObject::SetDescriptionTranslator(Translator* newTranslator)
 {
-    this->translator = translator;
+    this->translator = newTranslator;
 }
 
 size_t BusObject::GetAnnouncedInterfaceNames(const char** interfaces, size_t numInterfaces)

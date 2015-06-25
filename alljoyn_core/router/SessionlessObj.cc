@@ -669,14 +669,14 @@ void SessionlessObj::FoundAdvertisedNameHandler(const char* name, TransportMask 
     }
 
     String guid, iface;
-    uint32_t version, changeId;
-    QStatus status = ParseAdvertisedName(name, &version, &guid, &iface, &changeId);
+    uint32_t versionNumber, changeId;
+    QStatus status = ParseAdvertisedName(name, &versionNumber, &guid, &iface, &changeId);
     if (status != ER_OK) {
         QCC_LogError(status, ("Found invalid name \"%s\"", name));
         return;
     }
     QCC_DbgPrintf(("FoundAdvertisedName(name=%s,transport=0x%x,...) guid=%s,version=%u,iface=%s,changeId=%u",
-                   name, transport, guid.c_str(), version, iface.c_str(), changeId));
+                   name, transport, guid.c_str(), versionNumber, iface.c_str(), changeId));
 
     /* Add/replace sessionless adv name for remote daemon */
     busController->GetAllJoynObj().AddAdvNameAlias(guid, transport, name);
@@ -685,7 +685,7 @@ void SessionlessObj::FoundAdvertisedNameHandler(const char* name, TransportMask 
     lock.Lock();
     RemoteCaches::iterator cit = remoteCaches.find(guid);
     if (cit == remoteCaches.end()) {
-        remoteCaches.insert(pair<String, RemoteCache>(guid, RemoteCache(name, version, guid, iface, changeId, transport)));
+        remoteCaches.insert(pair<String, RemoteCache>(guid, RemoteCache(name, versionNumber, guid, iface, changeId, transport)));
     } else {
         cit->second.name = name;
         cit->second.ifaces.insert(iface);
@@ -1144,7 +1144,7 @@ void SessionlessObj::JoinSessionCB(QStatus status, SessionId sid, const SessionO
     delete ctx;
 }
 
-QStatus SessionlessObj::ParseAdvertisedName(const qcc::String& name, uint32_t* version, qcc::String* guid, qcc::String* iface, uint32_t* changeId)
+QStatus SessionlessObj::ParseAdvertisedName(const qcc::String& name, uint32_t* versionNumber, qcc::String* guid, qcc::String* iface, uint32_t* changeId)
 {
     size_t guidPos = String::npos;
     size_t changePos = name.find_last_of('.');
@@ -1160,8 +1160,8 @@ QStatus SessionlessObj::ParseAdvertisedName(const qcc::String& name, uint32_t* v
     if (guid) {
         *guid = name.substr(guidPos + 2, changePos - guidPos - 2);
     }
-    if (version) {
-        *version = name[guidPos + 1] - 'x';
+    if (versionNumber) {
+        *versionNumber = name[guidPos + 1] - 'x';
     }
     if (iface && (guidPos > 3)) {
         *iface = name.substr(0, guidPos - 3);
@@ -1428,7 +1428,7 @@ QStatus SessionlessObj::ScheduleWork(RemoteCache& cache, bool addAlarm, bool doI
 
     if (addAlarm) {
         SessionlessObj* slObj = this;
-        QStatus status = timer.AddAlarm(Alarm(cache.nextJoinTime, slObj));
+        status = timer.AddAlarm(Alarm(cache.nextJoinTime, slObj));
         if (status != ER_OK) {
             QCC_LogError(status, ("Timer::AddAlarm failed"));
         }

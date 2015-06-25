@@ -220,9 +220,9 @@ class SocketStream : public Stream {
     /**
      * Set send timeout.
      *
-     * @param sendTimeout    Send timeout in ms or WAIT_FOREVER for infinite
+     * @param sendTimeoutMs    Send timeout in ms or WAIT_FOREVER for infinite
      */
-    void SetSendTimeout(uint32_t sendTimeout) { this->sendTimeout = sendTimeout; }
+    void SetSendTimeout(uint32_t sendTimeoutMs) { this->sendTimeout = sendTimeoutMs; }
 
     /**
      * Set TCP based socket to use or not use Nagle algorithm (TCP_NODELAY)

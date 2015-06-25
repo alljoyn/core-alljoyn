@@ -67,7 +67,7 @@ Environ* AJ_CALL Environ::GetAppEnviron(void)
 
 qcc::String Environ::Find(const qcc::String& key, const char* defaultValue)
 {
-    qcc::String val;
+    qcc::String valStr;
 
     lock.Lock();
     if (vars.count(key) == 0) {
@@ -81,13 +81,13 @@ qcc::String Environ::Find(const qcc::String& key, const char* defaultValue)
             delete [] val;
         }
     }
-    val = vars[key];
-    if (val.empty() && defaultValue) {
-        val = defaultValue;
+    valStr = vars[key];
+    if (valStr.empty() && defaultValue) {
+        valStr = defaultValue;
     }
     lock.Unlock();
 
-    return val;
+    return valStr;
 }
 
 void Environ::Preload(const char* keyPrefix)

@@ -20,17 +20,18 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-/*
- * Compile this file only for Windows version 10 or greater.
- */
- #if (_WIN32_WINNT > 0x0603)
-
 #include <qcc/platform.h>
 #include <qcc/Debug.h>
 #include <qcc/String.h>
 #include <qcc/StringUtil.h>
 #include <qcc/Time.h>
 #include <windows.h>
+
+/*
+ * Compile this file only for Windows version 10 or greater.
+ */
+#if (_WIN32_WINNT > 0x0603)
+
 #include <msajtransport.h>
 
 #include <qcc/FileStream.h>
@@ -103,8 +104,8 @@ QStatus NamedPipeStream::PullBytes(void* buf, size_t reqBytes, size_t& actualByt
         return ER_INIT_FAILED;
     }
 
-    DWORD readBytes;
-    BOOL success;
+    DWORD readBytes = 0;
+    BOOL success = FALSE;
     QStatus status = ER_OK;
 
     while (true) {
@@ -143,6 +144,9 @@ QStatus NamedPipeStream::PullBytes(void* buf, size_t reqBytes, size_t& actualByt
  */
 QStatus NamedPipeStream::PullBytesAndFds(void* buf, size_t reqBytes, size_t& actualBytes, SocketFd* fdList, size_t& numFds, uint32_t timeout)
 {
+    QCC_UNUSED(fdList);
+    QCC_UNUSED(numFds);
+
     numFds = 0;
     return PullBytes(buf, reqBytes, actualBytes, timeout);
 }
@@ -159,7 +163,7 @@ QStatus NamedPipeStream::PushBytes(const void* buf, size_t numBytes, size_t& num
         return ER_INIT_FAILED;
     }
 
-    DWORD writeBytes;
+    DWORD writeBytes = 0;
     BOOL success = TRUE;
     QStatus status = ER_OK;
 
@@ -200,6 +204,9 @@ QStatus NamedPipeStream::PushBytes(const void* buf, size_t numBytes, size_t& num
  */
 QStatus NamedPipeStream::PushBytesAndFds(const void* buf, size_t numBytes, size_t& numSent, SocketFd* fdList, size_t numFds, uint32_t pid)
 {
+    QCC_UNUSED(fdList);
+    QCC_UNUSED(pid);
+
     if (numBytes == 0) {
         return ER_BAD_ARG_2;
     }

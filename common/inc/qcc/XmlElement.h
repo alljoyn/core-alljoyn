@@ -95,9 +95,9 @@ class XmlElement {
     /**
      * Set the element name.
      *
-     * @param name    Name of XML element.`
+     * @param elementName    Name of XML element.`
      */
-    void SetName(const qcc::String& name) { this->name = name; }
+    void SetName(const qcc::String& elementName) { this->name = elementName; }
 
     /**
      * Get the attributes for this element.
@@ -122,10 +122,10 @@ class XmlElement {
     /**
      * Add an Xml Attribute
      *
-     * @param name    Attribute name.
-     * @param value   Attribute value.
+     * @param attributeName    Attribute name.
+     * @param value            Attribute value.
      */
-    void AddAttribute(const qcc::String& name, const qcc::String& value) { attributes[name] = value; }
+    void AddAttribute(const qcc::String& attributeName, const qcc::String& value) { attributes[attributeName] = value; }
 
     /**
      * Get the element map.
@@ -166,18 +166,18 @@ class XmlElement {
     /**
      * Set the (unesacped) text content.
      *
-     * @param  content    Unescaped ("&" not "&amp;") text content for this node.
+     * @param  newContent    Unescaped ("&" not "&amp;") text content for this node.
      */
-    void SetContent(const qcc::String& content) { this->content = content; }
+    void SetContent(const qcc::String& newContent) { this->content = newContent; }
 
     /**
      * Add text content to this node.
      * An XmlElement can only have content or children. Not both. If content is added
      * to an XmlElement that has children, the text content will be silently ignored.
      *
-     * @param content   Text content to add to this node.
+     * @param newContent   Text content to add to this node.
      */
-    void AddContent(const qcc::String& content) { this->content.append(content); }
+    void AddContent(const qcc::String& newContent) { this->content.append(newContent); }
 
     /**
      * Get all elements that have the specified path relative to the current element. The path is a

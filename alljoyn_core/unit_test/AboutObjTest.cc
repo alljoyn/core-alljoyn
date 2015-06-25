@@ -153,15 +153,15 @@ class AboutObjTestAboutListener : public AboutListener {
   public:
     AboutObjTestAboutListener() : announceListenerFlag(false), busName(), port(0), version(0) { }
 
-    void Announced(const char* busName, uint16_t version, SessionPort port,
+    void Announced(const char* announcedBusName, uint16_t announcedVersion, SessionPort announcedPort,
                    const MsgArg& objectDescription, const MsgArg& aboutData) {
         QCC_UNUSED(objectDescription);
         QCC_UNUSED(aboutData);
 
         EXPECT_FALSE(announceListenerFlag) << "We don't expect the flag to already be true when an AnnouceSignal is received.";
-        this->busName = qcc::String(busName);
-        this->port = port;
-        this->version = version;
+        this->busName = qcc::String(announcedBusName);
+        this->port = announcedPort;
+        this->version = announcedVersion;
         announceListenerFlag = true;
     }
     bool announceListenerFlag;
@@ -375,45 +375,45 @@ TEST_F(AboutObjTest, ProxyAccessToAboutObj) {
     MsgArg aboutArg;
     status = aProxy.GetAboutData("en", aboutArg);
     EXPECT_EQ(ER_OK, status);
-    AboutData aboutData(aboutArg);
+    AboutData testAboutData(aboutArg);
 
     char* appName;
-    status = aboutData.GetAppName(&appName, "en");
+    status = testAboutData.GetAppName(&appName, "en");
     EXPECT_EQ(ER_OK, status);
     EXPECT_STREQ("Application", appName);
 
     char* manufacturer;
-    status = aboutData.GetManufacturer(&manufacturer, "en");
+    status = testAboutData.GetManufacturer(&manufacturer, "en");
     EXPECT_EQ(ER_OK, status);
     EXPECT_STREQ("Manufacturer", manufacturer);
 
     char* modelNum;
-    status = aboutData.GetModelNumber(&modelNum);
+    status = testAboutData.GetModelNumber(&modelNum);
     EXPECT_EQ(ER_OK, status);
     EXPECT_STREQ("123456", modelNum);
 
     char* desc;
-    status = aboutData.GetDescription(&desc);
+    status = testAboutData.GetDescription(&desc);
     EXPECT_EQ(ER_OK, status);
     EXPECT_STREQ("A poetic description of this application", desc);
 
     char* dom;
-    status = aboutData.GetDateOfManufacture(&dom);
+    status = testAboutData.GetDateOfManufacture(&dom);
     EXPECT_EQ(ER_OK, status);
     EXPECT_STREQ("2014-03-24", dom);
 
     char* softVer;
-    status = aboutData.GetSoftwareVersion(&softVer);
+    status = testAboutData.GetSoftwareVersion(&softVer);
     EXPECT_EQ(ER_OK, status);
     EXPECT_STREQ("0.1.2", softVer);
 
     char* hwVer;
-    status = aboutData.GetHardwareVersion(&hwVer);
+    status = testAboutData.GetHardwareVersion(&hwVer);
     EXPECT_EQ(ER_OK, status);
     EXPECT_STREQ("0.0.1", hwVer);
 
     char* support;
-    status = aboutData.GetSupportUrl(&support);
+    status = testAboutData.GetSupportUrl(&support);
     EXPECT_EQ(ER_OK, status);
     EXPECT_STREQ("http://www.example.com", support);
 
@@ -438,14 +438,14 @@ class AboutObjTestAboutListener2 : public AboutListener {
     AboutObjTestAboutListener2() : announceListenerFlag(false),
         aboutObjectPartOfAnnouncement(false), busName(), port(0) { }
 
-    void Announced(const char* busName, uint16_t version, SessionPort port,
+    void Announced(const char* announcedBusName, uint16_t version, SessionPort announcedPort,
                    const MsgArg& objectDescription, const MsgArg& aboutData) {
         QCC_UNUSED(version);
         QCC_UNUSED(aboutData);
 
         EXPECT_FALSE(announceListenerFlag) << "We don't expect the flag to already be true when an AnnouceSignal is received.";
-        this->busName = qcc::String(busName);
-        this->port = port;
+        this->busName = qcc::String(announcedBusName);
+        this->port = announcedPort;
         AboutObjectDescription aod;
         QStatus status = aod.CreateFromMsgArg(objectDescription);
         EXPECT_EQ(ER_OK, status);

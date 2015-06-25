@@ -161,10 +161,10 @@ class Participant : public SessionPortListener, public SessionListener {
         return std::make_pair(participant, multipoint);
     }
 
-    virtual bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) {
+    virtual bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& sessionOpts) {
         QCC_UNUSED(sessionPort);
         QCC_UNUSED(joiner);
-        QCC_UNUSED(opts);
+        QCC_UNUSED(sessionOpts);
         return true;
     }
     virtual void SessionJoined(SessionPort sessionPort, SessionId id, const char* joiner) {

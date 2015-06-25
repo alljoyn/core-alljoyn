@@ -42,7 +42,10 @@ env.Append(CPPDEFINES=['QCC_CPU_X86',
 env.Append(CPPDEFINES=['_CRT_SECURE_NO_WARNINGS'])
 
 # Set MS OS version number
-if env['OS'] == 'win7':
+if env['OS'] == 'win10':
+    # Windows 10
+    env.Append(CPPDEFINES=[('_WIN32_WINNT', '_WIN32_WINNT_WIN10')])
+elif env['OS'] == 'win7':
     # Windows 7
     env.Append(CPPDEFINES=[('_WIN32_WINNT', '_WIN32_WINNT_WIN7')])
 elif env['OS'] == 'winxp':

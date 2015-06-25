@@ -53,7 +53,7 @@ static volatile int32_t joined = 0;
 
 /** Global thread list */
 Mutex* Thread::threadListLock = NULL;
-map<ThreadHandle, Thread*>* Thread::threadList = NULL;
+map<ThreadId, Thread*>* Thread::threadList = NULL;
 
 static pthread_key_t cleanExternalThreadKey;
 static bool initialized = false;
@@ -67,7 +67,7 @@ void Thread::CleanExternalThread(void* t)
 
     Thread* thread = reinterpret_cast<Thread*>(t);
     threadListLock->Lock();
-    map<ThreadHandle, Thread*>::iterator it = threadList->find(thread->handle);
+    map<ThreadId, Thread*>::iterator it = threadList->find(thread->handle);
     if (it != threadList->end()) {
         if (it->second->isExternal) {
             delete it->second;
@@ -81,7 +81,7 @@ QStatus Thread::Init()
 {
     if (!initialized) {
         Thread::threadListLock = new Mutex();
-        Thread::threadList = new map<ThreadHandle, Thread*>();
+        Thread::threadList = new map<ThreadId, Thread*>();
         int ret = pthread_key_create(&cleanExternalThreadKey, Thread::CleanExternalThread);
         if (ret != 0) {
             QCC_LogError(ER_OS_ERROR, ("Creating TLS key: %s", strerror(ret)));
@@ -143,7 +143,7 @@ const char* Thread::GetThreadName()
 
     /* Find thread on Thread::threadList */
     threadListLock->Lock();
-    map<ThreadHandle, Thread*>::const_iterator iter = threadList->find(pthread_self());
+    map<ThreadId, Thread*>::const_iterator iter = threadList->find(pthread_self());
     if (iter != threadList->end()) {
         thread = iter->second;
     }
@@ -160,7 +160,7 @@ const char* Thread::GetThreadName()
 void Thread::CleanExternalThreads()
 {
     threadListLock->Lock();
-    map<ThreadHandle, Thread*>::iterator it = threadList->begin();
+    map<ThreadId, Thread*>::iterator it = threadList->begin();
     while (it != threadList->end()) {
         if (it->second->isExternal) {
             delete it->second;
@@ -179,8 +179,8 @@ Thread::Thread(qcc::String name, Thread::ThreadFunction func, bool isExternal) :
     function(isExternal ? NULL : func),
     handle(isExternal ? pthread_self() : 0),
     exitValue(NULL),
-    arg(NULL),
-    listener(NULL),
+    threadArg(NULL),
+    threadListener(NULL),
     isExternal(isExternal),
     platformContext(NULL),
     alertCode(0),
@@ -231,9 +231,9 @@ Thread::~Thread(void)
 }
 
 
-ThreadInternalReturn Thread::RunInternal(void* threadArg)
+ThreadInternalReturn Thread::RunInternal(void* arg)
 {
-    Thread* thread(reinterpret_cast<Thread*>(threadArg));
+    Thread* thread(reinterpret_cast<Thread*>(arg));
     sigset_t newmask;
 
     sigemptyset(&newmask);
@@ -263,7 +263,7 @@ ThreadInternalReturn Thread::RunInternal(void* threadArg)
     if (!thread->isStopping) {
         QCC_DbgPrintf(("Starting thread: %s", thread->funcName));
         QCC_DEBUG_ONLY(IncrementAndFetch(&running));
-        thread->exitValue = thread->Run(thread->arg);
+        thread->exitValue = thread->Run(thread->threadArg);
         QCC_DEBUG_ONLY(DecrementAndFetch(&running));
         QCC_DbgPrintf(("Thread function exited: %s --> %p", thread->funcName, thread->exitValue));
     }
@@ -289,8 +289,8 @@ ThreadInternalReturn Thread::RunInternal(void* threadArg)
     }
     thread->auxListenersLock.Unlock();
 
-    if (thread->listener) {
-        thread->listener->ThreadExit(thread);
+    if (thread->threadListener) {
+        thread->threadListener->ThreadExit(thread);
     }
 
     /* This also means no QCC_DbgPrintf as they try to get context on the current thread */
@@ -330,8 +330,8 @@ QStatus Thread::Start(void* arg, ThreadListener* listener)
         /*  Reset the stop event so the thread doesn't start out alerted. */
         stopEvent.ResetEvent();
         /* Create OS thread */
-        this->arg = arg;
-        this->listener = listener;
+        this->threadArg = arg;
+        this->threadListener = listener;
 
         state = STARTED;
         pthread_attr_t attr;

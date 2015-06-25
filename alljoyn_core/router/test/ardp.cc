@@ -227,15 +227,15 @@ void* Test::Run(void* arg)
     config.segbmax = UDP_SEGBMAX;
     config.segmax = UDP_SEGMAX;
 
-    ArdpHandle* handle = ARDP_AllocHandle(&config);
-    ARDP_SetAcceptCb(handle, AcceptCb);
-    ARDP_SetConnectCb(handle, ConnectCb);
-    ARDP_SetDisconnectCb(handle, DisconnectCb);
-    ARDP_SetRecvCb(handle, RecvCb);
-    ARDP_SetSendCb(handle, SendCb);
-    ARDP_SetSendWindowCb(handle, SendWindowCb);
+    ArdpHandle* ardpHandle = ARDP_AllocHandle(&config);
+    ARDP_SetAcceptCb(ardpHandle, AcceptCb);
+    ARDP_SetConnectCb(ardpHandle, ConnectCb);
+    ARDP_SetDisconnectCb(ardpHandle, DisconnectCb);
+    ARDP_SetRecvCb(ardpHandle, RecvCb);
+    ARDP_SetSendCb(ardpHandle, SendCb);
+    ARDP_SetSendWindowCb(ardpHandle, SendWindowCb);
 
-    ARDP_StartPassive(handle);
+    ARDP_StartPassive(ardpHandle);
 
     qcc::Event* sockEvent = new qcc::Event(sock, qcc::Event::IO_READ);
     qcc::Event timerEvent(1000, 1000);
@@ -248,7 +248,7 @@ void* Test::Run(void* arg)
         checkEvents.push_back(&timerEvent);
         checkEvents.push_back(sockEvent);
 
-        QStatus status = qcc::Event::Wait(checkEvents, signaledEvents);
+        status = qcc::Event::Wait(checkEvents, signaledEvents);
         if (status != ER_OK && status != ER_TIMEOUT) {
             QCC_LogError(status, ("Test::Run(): Event::Wait(): Failed"));
             break;
@@ -263,7 +263,7 @@ void* Test::Run(void* arg)
                     if (connectSent == false) {
                         connectSent = true;
                         ArdpConnRecord* conn;
-                        ARDP_Connect(handle, sock, qcc::IPAddress(g_address), atoi(g_foreignport), UDP_SEGMAX, UDP_SEGBMAX,
+                        ARDP_Connect(ardpHandle, sock, qcc::IPAddress(g_address), atoi(g_foreignport), UDP_SEGMAX, UDP_SEGBMAX,
                                      &conn, (uint8_t* )g_ajnConnString, strlen(g_ajnConnString) + 1, NULL);
                         continue;
                     }
@@ -271,11 +271,11 @@ void* Test::Run(void* arg)
             } else {
                 QCC_DbgPrintf(("Test::Run(): Socket event fired"));
                 uint32_t ms;
-                ARDP_Run(handle, sock, true, false, &ms);
+                ARDP_Run(ardpHandle, sock, true, false, &ms);
             }
         }
     }
-    ARDP_FreeHandle(handle);
+    ARDP_FreeHandle(ardpHandle);
     return 0;
 }
 

@@ -1729,7 +1729,7 @@ class MessagePump {
                 m_pastThreads.pop();
                 --m_spawnedThreads;
                 m_lock.Unlock();
-                QStatus status = pt->Join();
+                status = pt->Join();
                 if (status != ER_OK) {
                     QCC_LogError(status, ("MessagePump::DoJoin: PumpThread Join() error"));
                 }
@@ -1856,7 +1856,7 @@ class MessagePump {
         if (m_activeThread == NULL) {
             QCC_DbgPrintf(("MessagePump::RecvCb(): Spin up new PumpThread"));
             m_activeThread = new PumpThread(this);
-            QStatus status = m_activeThread->Start(NULL, NULL);
+            status = m_activeThread->Start(NULL, NULL);
 
             /*
              * The choice described in the above comment.
@@ -5705,9 +5705,9 @@ QStatus UDPTransport::GetListenAddresses(const SessionOpts& opts, std::vector<qc
              */
             uint32_t mask = qcc::IfConfigEntry::UP | qcc::IfConfigEntry::LOOPBACK;
 
-            uint32_t state = qcc::IfConfigEntry::UP;
+            uint32_t ifState = qcc::IfConfigEntry::UP;
 
-            if ((entries[i].m_flags & mask) == state) {
+            if ((entries[i].m_flags & mask) == ifState) {
                 QCC_DbgPrintf(("UDPTransport::GetListenAddresses(): %s has correct state", entries[i].m_name.c_str()));
                 if (haveWildcard ||
                     (entries[i].m_name == currentInterface) ||
@@ -5897,7 +5897,7 @@ void UDPTransport::EmitStallWarnings(UDPEndpoint& ep)
 
         if (disconnected == false) {
             QCC_LogError(ER_UDP_ENDPOINT_STALLED, ("UDPTransport::EmitStallWarnings(): stalled not disconnected"));
-            ArdpStream* stream = ep->GetStream();
+            stream = ep->GetStream();
             if (stream) {
 #ifndef NDEBUG
                 bool disc = stream->GetDisconnected();
@@ -6593,12 +6593,12 @@ void UDPTransport::ArdpRecvFromHook(ArdpHandle* handle, ArdpConnRecord* conn, Te
  * connection must be valid since ARDP wouldn't have called us with them set to
  * an invalid value.
  */
-bool UDPTransport::ArdpAcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t ipPort, ArdpConnRecord* conn, uint8_t* buf, uint16_t len, QStatus status)
+bool UDPTransport::ArdpAcceptCb(ArdpHandle* ardpHandle, qcc::IPAddress ipAddr, uint16_t ipPort, ArdpConnRecord* conn, uint8_t* buf, uint16_t len, QStatus status)
 {
     QCC_DbgTrace(("UDPTransport::ArdpAcceptCb(handle=%p, ipAddr=\"%s\", port=%d., conn=%p, buf =%p, len = %d)",
-                  handle, ipAddr.ToString().c_str(), ipPort, conn, buf, len));
-    UDPTransport* const transport = static_cast<UDPTransport* const>(ARDP_GetHandleContext(handle));
-    return transport->AcceptCb(handle, ipAddr, ipPort, conn, buf, len, status);
+                  ardpHandle, ipAddr.ToString().c_str(), ipPort, conn, buf, len));
+    UDPTransport* const transport = static_cast<UDPTransport* const>(ARDP_GetHandleContext(ardpHandle));
+    return transport->AcceptCb(ardpHandle, ipAddr, ipPort, conn, buf, len, status);
 }
 
 /**
@@ -6611,12 +6611,12 @@ bool UDPTransport::ArdpAcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint1
  * connection must be valid since ARDP wouldn't have called us with them set to
  * an invalid value.
  */
-void UDPTransport::ArdpConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool passive, uint8_t* buf, uint16_t len, QStatus status)
+void UDPTransport::ArdpConnectCb(ArdpHandle* ardpHandle, ArdpConnRecord* conn, bool passive, uint8_t* buf, uint16_t len, QStatus status)
 {
     QCC_DbgTrace(("UDPTransport::ArdpConnectCb(handle=%p, conn=%p, passive=%s, buf = %p, len = %d, status=%s)",
-                  handle, conn, passive ? "true" : "false", buf, len, QCC_StatusText(status)));
-    UDPTransport* const transport = static_cast<UDPTransport* const>(ARDP_GetHandleContext(handle));
-    transport->ConnectCb(handle, conn, passive, buf, len, status);
+                  ardpHandle, conn, passive ? "true" : "false", buf, len, QCC_StatusText(status)));
+    UDPTransport* const transport = static_cast<UDPTransport* const>(ARDP_GetHandleContext(ardpHandle));
+    transport->ConnectCb(ardpHandle, conn, passive, buf, len, status);
 }
 
 /**
@@ -6629,11 +6629,11 @@ void UDPTransport::ArdpConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool 
  * connection must be valid since ARDP wouldn't have called us with them set to
  * an invalid value.
  */
-void UDPTransport::ArdpDisconnectCb(ArdpHandle* handle, ArdpConnRecord* conn, QStatus status)
+void UDPTransport::ArdpDisconnectCb(ArdpHandle* ardpHandle, ArdpConnRecord* conn, QStatus status)
 {
-    QCC_DbgTrace(("UDPTransport::ArdpDisconnectCb(handle=%p, conn=%p, status=\"%s\")", handle, conn, QCC_StatusText(status)));
-    UDPTransport* const transport = static_cast<UDPTransport* const>(ARDP_GetHandleContext(handle));
-    transport->DisconnectCb(handle, conn, status);
+    QCC_DbgTrace(("UDPTransport::ArdpDisconnectCb(handle=%p, conn=%p, status=\"%s\")", ardpHandle, conn, QCC_StatusText(status)));
+    UDPTransport* const transport = static_cast<UDPTransport* const>(ARDP_GetHandleContext(ardpHandle));
+    transport->DisconnectCb(ardpHandle, conn, status);
 }
 
 /**
@@ -6646,12 +6646,12 @@ void UDPTransport::ArdpDisconnectCb(ArdpHandle* handle, ArdpConnRecord* conn, QS
  * connection must be valid since ARDP wouldn't have called us with them set to
  * an invalid value.
  */
-void UDPTransport::ArdpRecvCb(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf* rcv, QStatus status)
+void UDPTransport::ArdpRecvCb(ArdpHandle* ardpHandle, ArdpConnRecord* conn, ArdpRcvBuf* rcv, QStatus status)
 {
     QCC_DbgTrace(("UDPTransport::ArdpRecvCb(handle=%p, conn=%p, buf=%p, status=%s)",
-                  handle, conn, rcv, QCC_StatusText(status)));
-    UDPTransport* const transport = static_cast<UDPTransport* const>(ARDP_GetHandleContext(handle));
-    transport->RecvCb(handle, conn, rcv, status);
+                  ardpHandle, conn, rcv, QCC_StatusText(status)));
+    UDPTransport* const transport = static_cast<UDPTransport* const>(ARDP_GetHandleContext(ardpHandle));
+    transport->RecvCb(ardpHandle, conn, rcv, status);
 }
 
 /**
@@ -6664,11 +6664,11 @@ void UDPTransport::ArdpRecvCb(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvB
  * connection must be valid since ARDP wouldn't have called us with them set to
  * an invalid value.
  */
-void UDPTransport::ArdpSendCb(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint32_t len, QStatus status)
+void UDPTransport::ArdpSendCb(ArdpHandle* ardpHandle, ArdpConnRecord* conn, uint8_t* buf, uint32_t len, QStatus status)
 {
-    QCC_DbgTrace(("UDPTransport::ArdpSendCb(handle=%p, conn=%p, buf=%p, len=%d.)", handle, conn, buf, len));
-    UDPTransport* const transport = static_cast<UDPTransport* const>(ARDP_GetHandleContext(handle));
-    transport->SendCb(handle, conn, buf, len, status);
+    QCC_DbgTrace(("UDPTransport::ArdpSendCb(handle=%p, conn=%p, buf=%p, len=%d.)", ardpHandle, conn, buf, len));
+    UDPTransport* const transport = static_cast<UDPTransport* const>(ARDP_GetHandleContext(ardpHandle));
+    transport->SendCb(ardpHandle, conn, buf, len, status);
 }
 
 /**
@@ -6681,11 +6681,11 @@ void UDPTransport::ArdpSendCb(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t*
  * connection must be valid since ARDP wouldn't have called us with them set to
  * an invalid value.
  */
-void UDPTransport::ArdpSendWindowCb(ArdpHandle* handle, ArdpConnRecord* conn, uint16_t window, QStatus status)
+void UDPTransport::ArdpSendWindowCb(ArdpHandle* ardpHandle, ArdpConnRecord* conn, uint16_t window, QStatus status)
 {
-    QCC_DbgTrace(("UDPTransport::ArdpSendWindowCb(handle=%p, conn=%p, window=%d.)", handle, conn, window));
-    UDPTransport* const transport = static_cast<UDPTransport* const>(ARDP_GetHandleContext(handle));
-    transport->SendWindowCb(handle, conn, window, status);
+    QCC_DbgTrace(("UDPTransport::ArdpSendWindowCb(handle=%p, conn=%p, window=%d.)", ardpHandle, conn, window));
+    UDPTransport* const transport = static_cast<UDPTransport* const>(ARDP_GetHandleContext(ardpHandle));
+    transport->SendWindowCb(ardpHandle, conn, window, status);
 }
 
 /*
@@ -6716,10 +6716,10 @@ void UDPTransport::ArdpSendWindowCb(ArdpHandle* handle, ArdpConnRecord* conn, ui
  * back to the transport object.  This means that the current thread must have
  * already have taken the lock.
  */
-bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t ipPort, ArdpConnRecord* conn, uint8_t* buf, uint16_t len, QStatus status)
+bool UDPTransport::AcceptCb(ArdpHandle* ardpHandle, qcc::IPAddress ipAddr, uint16_t ipPort, ArdpConnRecord* conn, uint8_t* buf, uint16_t len, QStatus status)
 {
     IncrementAndFetch(&m_refCount);
-    QCC_DbgHLPrintf(("UDPTransport::AcceptCb(handle=%p, ipAddr=\"%s\", ipPort=%d., conn=%p)", handle, ipAddr.ToString().c_str(), ipPort, conn));
+    QCC_DbgHLPrintf(("UDPTransport::AcceptCb(handle=%p, ipAddr=\"%s\", ipPort=%d., conn=%p)", ardpHandle, ipAddr.ToString().c_str(), ipPort, conn));
 
     /*
      * We never want to accept connections if we are shutting down.
@@ -7003,8 +7003,8 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
     udpEp->SetPassive();
     udpEp->SetIpAddr(ipAddr);
     udpEp->SetIpPort(ipPort);
-    udpEp->CreateStream(handle, conn, m_ardpConfig.initialDataTimeout, m_ardpConfig.totalDataRetryTimeout / m_ardpConfig.initialDataTimeout);
-    udpEp->SetHandle(handle);
+    udpEp->CreateStream(ardpHandle, conn, m_ardpConfig.initialDataTimeout, m_ardpConfig.totalDataRetryTimeout / m_ardpConfig.initialDataTimeout);
+    udpEp->SetHandle(ardpHandle);
     udpEp->SetConn(conn);
 
     /*
@@ -7099,7 +7099,7 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
      * we get status back from ARDP_Accept.
      */
     QCC_DbgPrintf(("UDPTransport::AcceptCb(): ARDP_Accept()"));
-    status = ARDP_Accept(handle, conn, m_ardpConfig.segmax, m_ardpConfig.segbmax, helloReplyBuf, helloReplyBufLen);
+    status = ARDP_Accept(ardpHandle, conn, m_ardpConfig.segmax, m_ardpConfig.segbmax, helloReplyBuf, helloReplyBufLen);
 
     /*
      * No matter what, we need to free the buffer holding the Hello reply
@@ -7261,10 +7261,10 @@ void UDPTransport::DebugEndpointListCheck(UDPEndpoint uep)
  * into ARDP since we are executing in the context of a dispatcher thread and
  * not the callback directly.
  */
-void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t connId, bool passive, uint8_t* buf, uint16_t len, QStatus status)
+void UDPTransport::DoConnectCb(ArdpHandle* ardpHandle, ArdpConnRecord* conn, uint32_t connId, bool passive, uint8_t* buf, uint16_t len, QStatus status)
 {
     IncrementAndFetch(&m_refCount);
-    QCC_DbgHLPrintf(("UDPTransport::DoConnectCb(handle=%p, conn=%p)", handle, conn));
+    QCC_DbgHLPrintf(("UDPTransport::DoConnectCb(handle=%p, conn=%p)", ardpHandle, conn));
 
     /*
      * If the transport has been asked to stop, we don't want to take any more
@@ -7394,9 +7394,8 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
         QCC_DbgPrintf(("UDPTransport::DoConnectCb(): Taking endpoint list lock"));
         m_endpointListLock.Lock(MUTEX_CONTEXT);
         bool haveLock = true;
-        set<UDPEndpoint>::iterator i;
-        for (i = m_authList.begin(); i != m_authList.end(); ++i) {
-            UDPEndpoint ep = *i;
+        for (set<UDPEndpoint>::iterator authListIt = m_authList.begin(); authListIt != m_authList.end(); ++authListIt) {
+            UDPEndpoint ep = *authListIt;
 
             /*
              * If cidFromEp is ARDP_CONN_ID_INVALID there's nothing we can do fo
@@ -7423,7 +7422,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
                  * since it is an endpoint on a list.
                  */
                 m_connLock.Lock(MUTEX_CONTEXT);
-                m_authList.erase(i);
+                m_authList.erase(authListIt);
                 --m_currAuth;
 #ifndef NDEBUG
                 DebugEndpointListCheck(ep);
@@ -7484,7 +7483,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
                     haveLock = false;
 
                     m_ardpLock.Lock();
-                    ARDP_ReleaseConnection(handle, conn);
+                    ARDP_ReleaseConnection(ardpHandle, conn);
                     m_ardpLock.Unlock();
                     m_manage = UDPTransport::STATE_MANAGE;
                     Alert();
@@ -7552,7 +7551,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
         if (connValid == false) {
             QCC_LogError(status, ("UDPTransport::DoConnectCb(): Provided connection no longer valid"));
             m_ardpLock.Lock();
-            ARDP_ReleaseConnection(handle, conn);
+            ARDP_ReleaseConnection(ardpHandle, conn);
             m_ardpLock.Unlock();
 
             m_connLock.Lock(MUTEX_CONTEXT);
@@ -7604,7 +7603,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
             QCC_LogError(status, ("UDPTransport::DoConnectCb(): No thread waiting for Connect() to complete"));
             m_endpointListLock.Unlock(MUTEX_CONTEXT);
             m_ardpLock.Lock();
-            ARDP_ReleaseConnection(handle, conn);
+            ARDP_ReleaseConnection(ardpHandle, conn);
             m_ardpLock.Unlock();
 
             m_connLock.Lock(MUTEX_CONTEXT);
@@ -7625,7 +7624,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
             event->SetEvent();
             m_endpointListLock.Unlock(MUTEX_CONTEXT);
             m_ardpLock.Lock();
-            ARDP_ReleaseConnection(handle, conn);
+            ARDP_ReleaseConnection(ardpHandle, conn);
             m_ardpLock.Unlock();
 
             m_connLock.Lock(MUTEX_CONTEXT);
@@ -7646,7 +7645,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
             event->SetEvent();
             m_endpointListLock.Unlock(MUTEX_CONTEXT);
             m_ardpLock.Lock();
-            ARDP_ReleaseConnection(handle, conn);
+            ARDP_ReleaseConnection(ardpHandle, conn);
             m_ardpLock.Unlock();
 
             m_connLock.Lock(MUTEX_CONTEXT);
@@ -7668,7 +7667,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
             event->SetEvent();
             m_endpointListLock.Unlock(MUTEX_CONTEXT);
             m_ardpLock.Lock();
-            ARDP_ReleaseConnection(handle, conn);
+            ARDP_ReleaseConnection(ardpHandle, conn);
             m_ardpLock.Unlock();
 
             m_connLock.Lock(MUTEX_CONTEXT);
@@ -7695,7 +7694,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
             event->SetEvent();
             m_endpointListLock.Unlock(MUTEX_CONTEXT);
             m_ardpLock.Lock();
-            ARDP_ReleaseConnection(handle, conn);
+            ARDP_ReleaseConnection(ardpHandle, conn);
             m_ardpLock.Unlock();
 
             m_connLock.Lock(MUTEX_CONTEXT);
@@ -7716,7 +7715,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
             event->SetEvent();
             m_endpointListLock.Unlock(MUTEX_CONTEXT);
             m_ardpLock.Lock();
-            ARDP_ReleaseConnection(handle, conn);
+            ARDP_ReleaseConnection(ardpHandle, conn);
             m_ardpLock.Unlock();
 
             m_connLock.Lock(MUTEX_CONTEXT);
@@ -7742,7 +7741,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
             event->SetEvent();
             m_endpointListLock.Unlock(MUTEX_CONTEXT);
             m_ardpLock.Lock();
-            ARDP_ReleaseConnection(handle, conn);
+            ARDP_ReleaseConnection(ardpHandle, conn);
             m_ardpLock.Unlock();
 
             m_connLock.Lock(MUTEX_CONTEXT);
@@ -7769,7 +7768,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
             event->SetEvent();
             m_endpointListLock.Unlock(MUTEX_CONTEXT);
             m_ardpLock.Lock();
-            ARDP_ReleaseConnection(handle, conn);
+            ARDP_ReleaseConnection(ardpHandle, conn);
             m_ardpLock.Unlock();
 
             m_connLock.Lock(MUTEX_CONTEXT);
@@ -7794,8 +7793,8 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
          * our new endpoint.
          */
         m_ardpLock.Lock();
-        qcc::IPAddress ipAddr = ARDP_GetIpAddrFromConn(handle, conn);
-        uint16_t ipPort = ARDP_GetIpPortFromConn(handle, conn);
+        qcc::IPAddress ipAddr = ARDP_GetIpAddrFromConn(ardpHandle, conn);
+        uint16_t ipPort = ARDP_GetIpPortFromConn(ardpHandle, conn);
         m_ardpLock.Unlock();
 
         static const bool truthiness = true;
@@ -7833,8 +7832,8 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
         udpEp->SetActive();
         udpEp->SetIpAddr(ipAddr);
         udpEp->SetIpPort(ipPort);
-        udpEp->CreateStream(handle, conn, m_ardpConfig.initialDataTimeout, m_ardpConfig.totalDataRetryTimeout / m_ardpConfig.initialDataTimeout);
-        udpEp->SetHandle(handle);
+        udpEp->CreateStream(ardpHandle, conn, m_ardpConfig.initialDataTimeout, m_ardpConfig.totalDataRetryTimeout / m_ardpConfig.initialDataTimeout);
+        udpEp->SetHandle(ardpHandle);
         udpEp->SetConn(conn);
 
         /*
@@ -8059,11 +8058,11 @@ void UDPTransport::ExitEndpoint(uint32_t connId)
  * which must have been driven by a call to ARDP_Run which is required to be
  * protected by the re-entrancy lock.
  */
-void UDPTransport::ConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool passive, uint8_t* buf, uint16_t len, QStatus status)
+void UDPTransport::ConnectCb(ArdpHandle* ardpHandle, ArdpConnRecord* conn, bool passive, uint8_t* buf, uint16_t len, QStatus status)
 {
     IncrementAndFetch(&m_refCount);
     QCC_DbgHLPrintf(("UDPTransport::ConnectCb(handle=%p, conn=%p, passive=%d., buf=%p, len=%d., status=\"%s\")",
-                     handle, conn, passive, buf, len, QCC_StatusText(status)));
+                     ardpHandle, conn, passive, buf, len, QCC_StatusText(status)));
 
     /*
      * If m_dispatcher is NULL, it means we are shutting down and the message
@@ -8078,9 +8077,9 @@ void UDPTransport::ConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pass
 
     UDPTransport::WorkerCommandQueueEntry entry;
     entry.m_command = UDPTransport::WorkerCommandQueueEntry::CONNECT_CB;
-    entry.m_handle = handle;
+    entry.m_handle = ardpHandle;
     entry.m_conn = conn;
-    entry.m_connId = ARDP_GetConnId(handle, conn);
+    entry.m_connId = ARDP_GetConnId(ardpHandle, conn);
     entry.m_passive = passive;
 #ifndef NDEBUG
     entry.m_buf = new uint8_t[len + SEAL_SIZE];
@@ -8119,10 +8118,10 @@ void UDPTransport::ConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pass
  * which must have been driven by a call to ARDP_Run which is required to be
  * protected by the re-entrancy lock.
  */
-void UDPTransport::DisconnectCb(ArdpHandle* handle, ArdpConnRecord* conn, QStatus status)
+void UDPTransport::DisconnectCb(ArdpHandle* ardpHandle, ArdpConnRecord* conn, QStatus status)
 {
     IncrementAndFetch(&m_refCount);
-    QCC_DbgHLPrintf(("UDPTransport::DisconnectCb(handle=%p, conn=%p, status=\"%s\")", handle, conn, QCC_StatusText(status)));
+    QCC_DbgHLPrintf(("UDPTransport::DisconnectCb(handle=%p, conn=%p, status=\"%s\")", ardpHandle, conn, QCC_StatusText(status)));
 
     /*
      * If m_dispatcher is NULL, it means we are shutting down and the dispatcher
@@ -8137,9 +8136,9 @@ void UDPTransport::DisconnectCb(ArdpHandle* handle, ArdpConnRecord* conn, QStatu
 
     UDPTransport::WorkerCommandQueueEntry entry;
     entry.m_command = UDPTransport::WorkerCommandQueueEntry::DISCONNECT_CB;
-    entry.m_handle = handle;
+    entry.m_handle = ardpHandle;
     entry.m_conn = conn;
-    entry.m_connId = ARDP_GetConnId(handle, conn);
+    entry.m_connId = ARDP_GetConnId(ardpHandle, conn);
     entry.m_status = status;
 
     QCC_DbgPrintf(("UDPTransport::DisconnectCb(): sending DISCONNECT_CB request to dispatcher)"));
@@ -8170,11 +8169,11 @@ void UDPTransport::DisconnectCb(ArdpHandle* handle, ArdpConnRecord* conn, QStatu
  * which must have been driven by a call to ARDP_Run which is required to be
  * protected by the re-entrancy lock.
  */
-void UDPTransport::RecvCb(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf* rcv, QStatus status)
+void UDPTransport::RecvCb(ArdpHandle* ardpHandle, ArdpConnRecord* conn, ArdpRcvBuf* rcv, QStatus status)
 {
     IncrementAndFetch(&m_refCount);
     QCC_DbgHLPrintf(("UDPTransport::RecvCb(handle=%p, conn=%p, rcv=%p, status=%s)",
-                     handle, conn, rcv, QCC_StatusText(status)));
+                     ardpHandle, conn, rcv, QCC_StatusText(status)));
 
     /*
      * If m_dispatcher is NULL, it means we are shutting down and the dispatcher
@@ -8188,7 +8187,7 @@ void UDPTransport::RecvCb(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf* 
 
         QCC_DbgPrintf(("UDPTransport::RecvCb(): ARDP_RecvReady()"));
         m_ardpLock.Lock();
-        ARDP_RecvReady(handle, conn, rcv);
+        ARDP_RecvReady(ardpHandle, conn, rcv);
         m_ardpLock.Unlock();
 
 #else // not RETURN_ORPHAN_BUFS
@@ -8214,9 +8213,9 @@ void UDPTransport::RecvCb(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf* 
 
     UDPTransport::WorkerCommandQueueEntry entry;
     entry.m_command = UDPTransport::WorkerCommandQueueEntry::RECV_CB;
-    entry.m_handle = handle;
+    entry.m_handle = ardpHandle;
     entry.m_conn = conn;
-    entry.m_connId = ARDP_GetConnId(handle, conn);
+    entry.m_connId = ARDP_GetConnId(ardpHandle, conn);
     entry.m_rcv = rcv;
     entry.m_status = status;
 
@@ -8249,10 +8248,10 @@ void UDPTransport::RecvCb(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf* 
  * which must have been driven by a call to ARDP_Run which is required to be
  * protected by the re-entrancy lock.
  */
-void UDPTransport::SendCb(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint32_t len, QStatus status)
+void UDPTransport::SendCb(ArdpHandle* ardpHandle, ArdpConnRecord* conn, uint8_t* buf, uint32_t len, QStatus status)
 {
     IncrementAndFetch(&m_refCount);
-    QCC_DbgHLPrintf(("UDPTransport::SendCb(handle=%p, conn=%p, buf=%p, len=%d.)", handle, conn, buf, len));
+    QCC_DbgHLPrintf(("UDPTransport::SendCb(handle=%p, conn=%p, buf=%p, len=%d.)", ardpHandle, conn, buf, len));
 
     /*
      * If m_dispatcher is NULL, it means we are shutting down and the dispatcher
@@ -8267,9 +8266,9 @@ void UDPTransport::SendCb(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf
 
     UDPTransport::WorkerCommandQueueEntry entry;
     entry.m_command = UDPTransport::WorkerCommandQueueEntry::SEND_CB;
-    entry.m_handle = handle;
+    entry.m_handle = ardpHandle;
     entry.m_conn = conn;
-    entry.m_connId = ARDP_GetConnId(handle, conn);
+    entry.m_connId = ARDP_GetConnId(ardpHandle, conn);
     entry.m_buf = buf;
     entry.m_len = len;
     entry.m_status = status;
@@ -8299,16 +8298,16 @@ void UDPTransport::SendCb(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf
  * which must have been driven by a call to ARDP_Run which is required to be
  * protected by the re-entrancy lock.
  */
-void UDPTransport::SendWindowCb(ArdpHandle* handle, ArdpConnRecord* conn, uint16_t window, QStatus status)
+void UDPTransport::SendWindowCb(ArdpHandle* ardpHandle, ArdpConnRecord* conn, uint16_t window, QStatus status)
 {
-    QCC_UNUSED(handle);
+    QCC_UNUSED(ardpHandle);
     QCC_UNUSED(conn);
     QCC_UNUSED(window);
     QCC_UNUSED(status);
 
     IncrementAndFetch(&m_refCount);
-    QCC_DbgTrace(("UDPTransport::SendWindowCb(handle=%p, conn=%p, window=%d.)", handle, conn, window));
-    QCC_DbgPrintf(("UDPTransport::SendWindowCb(): callback from conn ID == %d", ARDP_GetConnId(handle, conn)));
+    QCC_DbgTrace(("UDPTransport::SendWindowCb(handle=%p, conn=%p, window=%d.)", ardpHandle, conn, window));
+    QCC_DbgPrintf(("UDPTransport::SendWindowCb(): callback from conn ID == %d", ARDP_GetConnId(ardpHandle, conn)));
     DecrementAndFetch(&m_refCount);
 }
 
@@ -9101,7 +9100,7 @@ void UDPTransport::DisableAdvertisementInstance(ListenRequest& listenRequest)
         for (list<qcc::String>::iterator i = m_listening.begin(); i != m_listening.end(); ++i) {
             map<qcc::String, qcc::String> argMap;
             qcc::String spec;
-            QStatus status = NormalizeListenSpec(i->c_str(), spec, argMap);
+            status = NormalizeListenSpec(i->c_str(), spec, argMap);
             assert(status == ER_OK && "UDPTransport::DisableAdvertisementInstance(): Invalid UDP listen spec");
             QCC_UNUSED(status);
             if (argMap.find("iface") != argMap.end()) {
@@ -11536,7 +11535,7 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
             availRemoteClientsUdp = std::min(availRemoteClientsUdp, availConn);
             IpNameService::Instance().UpdateDynamicScore(TRANSPORT_UDP, availConn, m_maxConn, availRemoteClientsUdp, m_maxRemoteClientsUdp);
             m_routerNameAdvertised = true;
-            QStatus status = IpNameService::Instance().AdvertiseName(TRANSPORT_UDP, m_routerName, true, TRANSPORT_UDP);
+            status = IpNameService::Instance().AdvertiseName(TRANSPORT_UDP, m_routerName, true, TRANSPORT_UDP);
             if (status != ER_OK) {
                 QCC_LogError(status, ("UDPTransport::HandleNetworkEventInstance(): Failed to AdvertiseNameQuietly \"%s\"", m_routerName.c_str()));
             }

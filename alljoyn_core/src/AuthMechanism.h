@@ -67,14 +67,14 @@ class AuthMechanism {
      * immediately after the authentication constructor is called. Classes that define this method
      * should call this base class method.
      *
-     * @param authRole   Indicates if the authentication method is initializing as a challenger or a responder.
-     * @param authPeer   The bus name of the remote peer that is being authenticated.
+     * @param authenticationRole   Indicates if the authentication method is initializing as a challenger or a responder.
+     * @param authenticationPeer   The bus name of the remote peer that is being authenticated.
      *
      * @return ER_OK if the authentication mechanism was succesfully initialized.
      */
-    virtual QStatus Init(AuthRole authRole, const qcc::String& authPeer) {
-        this->authPeer = authPeer;
-        this->authRole = authRole;
+    virtual QStatus Init(AuthRole authenticationRole, const qcc::String& authenticationPeer) {
+        this->authPeer = authenticationPeer;
+        this->authRole = authenticationRole;
         ++authCount;
         return ER_OK;
     }

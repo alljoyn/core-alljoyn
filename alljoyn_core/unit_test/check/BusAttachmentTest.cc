@@ -79,8 +79,8 @@ class TestBusAttachment : public BusAttachment {
             actualConnectSpec = requestedConnectSpec;
             return ER_OK;
         }
-        virtual QStatus TransportDisconnect(const char* connectSpec) {
-            QCC_UNUSED(connectSpec);
+        virtual QStatus TransportDisconnect(const char* disconnectConnectSpec) {
+            QCC_UNUSED(disconnectConnectSpec);
             return ER_OK;
         }
         virtual const ProxyBusObject& GetDBusProxyObj() const { return dbusObj; }

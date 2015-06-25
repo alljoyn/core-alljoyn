@@ -36,8 +36,8 @@
 namespace qcc {
 
 typedef pthread_t ThreadHandle;        ///< Linux uses pthreads under the hood.
+typedef ThreadHandle ThreadId;         ///< Linux thread IDs are the thread handles.
 typedef void* ThreadInternalReturn;    ///< Return type for pthreads.
-
 }
 
 #endif

@@ -53,12 +53,11 @@ alljoyn_busattachment g_bus;
 static void printAboutData(alljoyn_aboutdata aboutData, const char* language, int tabNum) {
     size_t count = alljoyn_aboutdata_getfields(aboutData, NULL, 0);
     size_t i = 0;
-    int j = 0;
     size_t k = 0;
     const char** fields = (const char**) malloc(sizeof(char*) * count);
     alljoyn_aboutdata_getfields(aboutData, fields, count);
     for (i = 0; i < count; ++i) {
-        for (j = 0; j < tabNum; ++j) {
+        for (int j = 0; j < tabNum; ++j) {
             printf("\t");
         }
         printf("Key: %s", fields[i]);

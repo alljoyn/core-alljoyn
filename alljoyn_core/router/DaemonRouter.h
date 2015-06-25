@@ -71,23 +71,23 @@ class DaemonRouter : public Router {
     /**
      * Set the AllJoynObj associated with this router.
      *
-     * @param alljoynObj   The bus controller.
+     * @param newAlljoynObj   The bus controller.
      */
-    void SetAllJoynObj(AllJoynObj* alljoynObj) { this->alljoynObj = alljoynObj; }
+    void SetAllJoynObj(AllJoynObj* newAlljoynObj) { this->alljoynObj = newAlljoynObj; }
 
     /**
      * Set the SessionlessObj associated with this router.
      *
-     * @param sessionlessObj   The bus controller.
+     * @param newSessionlessObj   The bus controller.
      */
-    void SetSessionlessObj(SessionlessObj* sessionlessObj) { this->sessionlessObj = sessionlessObj; }
+    void SetSessionlessObj(SessionlessObj* newSessionlessObj) { this->sessionlessObj = newSessionlessObj; }
 
     /**
      * Set the busController associated with this router.
      *
-     * @param busController   The bus controller.
+     * @param newBusController   The bus controller.
      */
-    void SetBusController(BusController* busController) { this->busController = busController; }
+    void SetBusController(BusController* newBusController) { this->busController = newBusController; }
 
     /**
      * Get the bus controller associated with this router
