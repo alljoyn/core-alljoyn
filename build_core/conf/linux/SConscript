@@ -62,6 +62,7 @@ if env['VARIANT'] == 'debug':
    env.Append(CFLAGS = '-g')
    env.Append(CXXFLAGS = '-g')
    env.Append(JAVACFLAGS = '-g')
+   env.Append(CPPDEFINES = ['_GLIBCXX_DEBUG', '_GLIBCXX_DEBUG_PEDANTIC'])
 else:
    env.Append(CFLAGS = '-Os')
    env.Append(CXXFLAGS = '-Os')

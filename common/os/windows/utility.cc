@@ -69,9 +69,17 @@ wchar_t* MultibyteToWideString(const char* str)
         return buffer;
     }
     size_t charLen = mbstowcs(NULL, str, 0);
+    if (charLen == (size_t)-1) {
+        return buffer;
+    }
     ++charLen;
     buffer = new wchar_t[charLen];
     if (NULL == buffer) {
+        return buffer;
+    }
+    if (mbstowcs(buffer, str, charLen) == (size_t)-1) {
+        delete[] buffer;
+        buffer = NULL;
         return buffer;
     }
     return buffer;

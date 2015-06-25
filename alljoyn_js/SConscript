@@ -11,7 +11,7 @@
 #    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 #    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-# 
+#
 
 import os
 import subprocess
@@ -53,9 +53,7 @@ sys.path.append(str(jsenv.Dir('../build_core/tools/scons').srcnode()))
 from jsstatus import JavaScriptStatus
 from widl import Widl
 
-if not jsenv.has_key('BULLSEYE_BIN'):
-    print('BULLSEYE_BIN not specified')
-else:
+if jsenv.has_key('BULLSEYE_BIN'):
     jsenv.PrependENVPath('PATH', jsenv.get('BULLSEYE_BIN'))
 
 if jsenv.has_key('JSDOC_DIR'):

@@ -11,7 +11,7 @@
 #    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 #    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-# 
+#
 
 import os
 Import('env')
@@ -19,9 +19,7 @@ from os.path import basename
 
 # Bullseye code coverage for 'debug' builds.
 if env['VARIANT'] == 'debug':
-    if not env.has_key('BULLSEYE_BIN'):
-        print 'BULLSEYE_BIN not specified'
-    else:
+    if env.has_key('BULLSEYE_BIN'):
         env.PrependENVPath('PATH', env.get('BULLSEYE_BIN'))
         if not os.environ.has_key('COVFILE'):
             print 'Error: COVFILE environment variable must be set'
