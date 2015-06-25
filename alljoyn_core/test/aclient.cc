@@ -30,6 +30,7 @@ using namespace ajn;
 using namespace qcc;
 
 static volatile sig_atomic_t s_interrupt = false;
+static TransportMask transportMask = TRANSPORT_ANY;
 
 static void CDECL_CALL SigIntHandler(int sig) {
     QCC_UNUSED(sig);
@@ -116,7 +117,7 @@ class AboutThread : public Thread, public ThreadListener {
 
         SessionListener sessionListener;
         SessionId sessionId;
-        SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
+        SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, transportMask);
 
         printf("Sender%s\n", sender);
 
@@ -248,10 +249,34 @@ class MyAboutListener : public AboutListener {
     }
 };
 
+static void usage(void)
+{
+    printf("Usage: aclient [-h <name>] \n\n");
+    printf("Options:\n");
+    printf("   -h                    = Print this help message\n");
+    printf("   -?                    = Print this help message\n");
+    printf("   -t                    = Discover over TCP (enables selective discovering)\n");
+    printf("   -l                    = Discover locally (enables selective discovering)\n");
+    printf("   -u                    = Discover over UDP-based ARDP (enables selective discovering)\n");
+    printf("\n");
+}
+
 int CDECL_CALL main(int argc, char** argv)
 {
-    QCC_UNUSED(argc);
-    QCC_UNUSED(argv);
+
+    /*Transport Flags*/
+    for (int i = 1; i < argc; ++i) {
+        if (0 == strcmp("-h", argv[i]) || 0 == strcmp("-?", argv[i])) {
+            usage();
+            exit(0);
+        }  else if (0 == strcmp("-t", argv[i])) {
+            transportMask = TRANSPORT_TCP;
+        } else if (0 == strcmp("-l", argv[i])) {
+            transportMask = TRANSPORT_LOCAL;
+        } else if (0 == strcmp("-u", argv[i])) {
+            transportMask = TRANSPORT_UDP;
+        }
+    }
 
     if (AllJoynInit() != ER_OK) {
         return 1;

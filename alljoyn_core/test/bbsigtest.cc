@@ -200,11 +200,14 @@ class LocalTestObject : public BusObject {
 
 static void usage(void)
 {
-    std::cout << "Usage: bbsigtest\n"
+    std::cout << "Usage: bbsigtest \n"
               << "\t-n <well-known name> \n"
               << "\t-c <signal count> (useful only in sender mode) \n"
               << "\t-s sender mode \n"
               << "\t-e echo back \n"
+              << "\t-t advertise over TCP \n"
+              << "\t-u advertise over UDP \n"
+              << "\t-l advertise locally \n"
               << "\t-h/-? display usage \n";
 }
 
@@ -257,6 +260,12 @@ int CDECL_CALL main(int argc, char** argv)
             signalSender = true;
         } else if (0 == strcmp("-e", argv[i])) {
             g_echoBack = true;
+        } else if (0 == strcmp("-t", argv[i])) {
+            opts.transports |= TRANSPORT_TCP;
+        } else if (0 == strcmp("-l", argv[i])) {
+            opts.transports |= TRANSPORT_LOCAL;
+        } else if (0 == strcmp("-u", argv[i])) {
+            opts.transports |= TRANSPORT_UDP;
         } else {
             status = ER_FAIL;
             std::cout << "Unknown option: " << argv[i] << std::endl;

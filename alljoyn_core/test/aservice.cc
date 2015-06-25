@@ -98,11 +98,43 @@ class AboutServiceSampleBusObject : public BusObject {
     }
 };
 
+static void usage(void)
+{
+    printf("Usage: aservice [-h <name>] \n\n");
+    printf("Options:\n");
+    printf("   -h                    = Print this help message\n");
+    printf("   -?                    = Print this help message\n");
+    printf("   -t                    = Advertise over TCP (enables selective advertising)\n");
+    printf("   -l                    = Advertise locally (enables selective advertising)\n");
+    printf("   -u                    = Advertise over UDP-based ARDP (enables selective advertising)\n");
+    printf("\n");
+}
+
 /** Main entry point */
 int CDECL_CALL main(int argc, char** argv)
 {
-    QCC_UNUSED(argc);
-    QCC_UNUSED(argv);
+    SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_NONE);
+
+    /*Parse command line arguments */
+    for (int i = 1; i < argc; ++i) {
+        if (0 == strcmp("-h", argv[i]) || 0 == strcmp("-?", argv[i])) {
+            usage();
+            exit(0);
+        }  else if (0 == strcmp("-t", argv[i])) {
+            opts.transports |= TRANSPORT_TCP;
+        } else if (0 == strcmp("-l", argv[i])) {
+            opts.transports |= TRANSPORT_LOCAL;
+        } else if (0 == strcmp("-u", argv[i])) {
+            opts.transports |= TRANSPORT_UDP;
+        }
+    }
+
+    /* If no transport option was specifie, then make session options very open */
+    if (opts.transports == 0) {
+        opts.transports = TRANSPORT_ANY;
+    }
+
+    printf("opts.transports = 0x%x\n", opts.transports);
 
     if (AllJoynInit() != ER_OK) {
         return 1;
@@ -157,7 +189,6 @@ int CDECL_CALL main(int argc, char** argv)
 
     bus->RegisterBusObject(*aboutServiceSampleBusObject);
 
-    SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
     SessionPort sp = ASSIGNED_SESSION_PORT;
     MySessionPortListener sessionPortListener;
     status = bus->BindSessionPort(sp, opts, sessionPortListener);

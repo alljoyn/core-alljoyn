@@ -242,14 +242,16 @@ static void usage(void)
     printf("   -a #                      = Max authentication attempts\n");
     printf("   -kx #                     = Authentication key expiration (seconds)\n");
     printf("   -r #                      = AllJoyn attachment restart count\n");
-    printf("   -l                        = launch bbservice if not already running\n");
+    printf("   -b                        = launch bbservice if not already running\n");
     printf("   -n <well-known name>      = Well-known bus name advertised by bbservice\n");
     printf("   -d                        = discover remote bus with test service\n");
     printf("   -ds                       = discover remote bus with test service and cancel discover when found\n");
-    printf("   -t                        = Call delayed_ping with <delay> and repeat at <interval> if -c given\n");
+    printf("   -dp                       = Call delayed_ping with <delay> and repeat at <interval> if -c given\n");
     printf("   -ta                       = Like -t except calls asynchronously\n");
     printf("   -rt [run time]            = Round trip timer (optional run time in ms)\n");
     printf("   -u                        = Set allowed transports to TRANSPORT_UDP\n");
+    printf("   -t                        = Set allowed transports to TRANSPORT_TCP\n");
+    printf("   -l                        = Set allowed transports to TRANSPORT_LOCAL\n");
     printf("   -w                        = Don't wait for service\n");
     printf("   -s                        = Wait for SIGINT (Control-C) at the end of the tests\n");
     printf("   -be                       = Send messages as big endian\n");
@@ -588,7 +590,7 @@ int CDECL_CALL main(int argc, char** argv)
         } else if (0 == strcmp("-h", argv[i])) {
             usage();
             exit(0);
-        } else if (0 == strcmp("-l", argv[i])) {
+        } else if (0 == strcmp("-b", argv[i])) {
             startService = true;
         } else if (0 == strcmp("-d", argv[i])) {
             discoverRemote = true;
@@ -597,9 +599,13 @@ int CDECL_CALL main(int argc, char** argv)
             stopDiscover = true;
         } else if (0 == strcmp("-u", argv[i])) {
             allowedTransports = TRANSPORT_UDP;
+        } else if (0 == strcmp("-t", argv[i])) {
+            allowedTransports = TRANSPORT_TCP;
+        } else if (0 == strcmp("-l", argv[i])) {
+            allowedTransports = TRANSPORT_LOCAL;
         } else if (0 == strcmp("-w", argv[i])) {
             waitForService = false;
-        } else if ((0 == strcmp("-t", argv[i])) || (0 == strcmp("-ta", argv[i]))) {
+        } else if ((0 == strcmp("-dp", argv[i])) || (0 == strcmp("-ta", argv[i]))) {
             if (argv[i][2] == 'a') {
                 asyncPing = true;
             }
