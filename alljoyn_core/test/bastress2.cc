@@ -601,16 +601,16 @@ inline qcc::ThreadReturn STDCALL ThreadClass::Run(void* arg) {
 static void usage(void)
 {
     cout << "Options:" << endl;
-    cout << "-h:			Print this help message again"<< endl;
+    cout << "-h:                        Print this help message again" << endl;
     cout << "-threads #:                Number of threads, default is 5" << endl;
     cout << "-run-time #:               Run time of the program, Default is 10 minutes" << endl;
     cout << "-s:                        Stop the threads before joining them" << endl;
     cout << "-oc:                       Client mode of operation" << endl;
     cout << "-os:                       Service mode of operation, this is default" << endl;
     cout << "-p:                        point-to-point sessions, default is multipoint" << endl;
-    cout << "-tcp:                      TCP transport for discovery and sessions" << endl;
-    cout << "-udp:                      UDP transport for discovery and sessions" << endl;
-    cout << "-local:			LOCAL transport for discovery and sessions, both instances of bastress2 needs to be connected to standalone routing node."<< endl;
+    cout << "-t:                        TCP transport for discovery and sessions" << endl;
+    cout << "-u:                        UDP transport for discovery and sessions" << endl;
+    cout << "-l:                        LOCAL transport for discovery and sessions, both instances of bastress2 needs to be connected to standalone routing node." << endl;
     cout << "-n <well-known name>:      Well-known name to be requested and advertised" << endl;
     cout << "-about <interface name>:   Use the about feature for discovery" << endl;
     cout << endl;
@@ -675,11 +675,11 @@ int CDECL_CALL main(int argc, char**argv)
             s_operationMode = Service;
         } else if (0 == strcmp("-p", argv[i])) {
             s_useMultipointSessions = false;
-        } else if (0 == strcmp("-tcp", argv[i])) {
+        } else if (0 == strcmp("-t", argv[i])) {
             s_transports = TRANSPORT_TCP;
-        } else if (0 == strcmp("-udp", argv[i])) {
+        } else if (0 == strcmp("-u", argv[i])) {
             s_transports = TRANSPORT_UDP;
-        } else if (0 == strcmp("-local", argv[i])) {
+        } else if (0 == strcmp("-l", argv[i])) {
             s_transports = TRANSPORT_LOCAL;
         } else if (0 == strcmp("-n", argv[i])) {
             ++i;

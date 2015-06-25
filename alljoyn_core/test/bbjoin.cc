@@ -334,7 +334,7 @@ int CDECL_CALL main(int argc, char** argv)
 #endif
     const uint64_t startTime = GetTimestamp64(); // timestamp in milliseconds
     QStatus status = ER_OK;
-    TransportMask transportOpts = TRANSPORT_TCP;
+    TransportMask transportOpts = TRANSPORT_ANY;
     AboutObj* aboutObj = NULL;
     // echo command line to provide distinguishing information within multipoint session
     for (int i = 0; i < argc; i++) {
