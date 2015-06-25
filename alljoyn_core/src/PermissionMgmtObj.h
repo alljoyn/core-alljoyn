@@ -191,13 +191,6 @@ class PermissionMgmtObj : public BusObject {
     virtual QStatus Init();
 
     /**
-     * check whether the peer public key is an admin
-     * @param publicKey the peer's public key
-     * return true if the peer public key is an admin; false, otherwise.
-     */
-    bool IsAdmin(const qcc::ECCPublicKey* publicKey);
-
-    /**
      * check whether the membership cert chain is for the admin security group
      * @param certChain the membership cert chain
      * return true if it is an admin security group; false, otherwise.
@@ -310,6 +303,21 @@ class PermissionMgmtObj : public BusObject {
      * @return ER_OK if successful; otherwise, an error code.
      */
     QStatus Reset();
+
+    /**
+     * Get the connected peer authentication metadata.
+     * @param guid the peer guid
+     * @param[out] authMechanism the authentication mechanism (ie the key exchange name)
+     * @param[out] publicKeyFound the flag indicating whether the peer has an ECC public key
+     * @param[out] publicKey the buffer to hold the ECC public key.  Pass NULL
+     *                       to skip.
+     * @param[out] manifestDigest the buffer to hold the manifest digest. Pass
+     *                            NULL to skip.
+     * @param[out] issuerPublicKeys the vector for the list of issuer public
+     *                               keys.
+     * @return ER_OK if successful; otherwise, error code.
+     */
+    QStatus GetConnectedPeerAuthMetadata(const qcc::GUID128& guid, qcc::String& authMechanism, bool& publicKeyFound, qcc::ECCPublicKey* publicKey, uint8_t* manifestDigest, std::vector<qcc::ECCPublicKey>& issuerPublicKeys);
 
     /**
      * Get the connected peer ECC public key if the connection uses the
@@ -553,15 +561,11 @@ class PermissionMgmtObj : public BusObject {
     QStatus GetACLKey(ACLEntryType aclEntryType, KeyStore::Key& guid);
     QStatus StoreTrustAnchors();
     QStatus LoadTrustAnchors();
-    QStatus RemoveTrustAnchor(TrustAnchor* trustAnchor);
-
-    QStatus GetPeerGUID(Message& msg, qcc::GUID128& guid);
 
     QStatus StateChanged();
 
     QStatus GetIdentityBlob(qcc::KeyBlob& kb);
     bool ValidateCertChain(const qcc::String& certChainPEM, bool& authorized);
-    QStatus LocateMembershipEntry(const qcc::String& serialNum, const qcc::String& issuerAki, KeyStore::Key& membershipKey, bool searchLeafCertOnly);
     QStatus LocateMembershipEntry(const qcc::String& serialNum, const qcc::String& issuerAki, KeyStore::Key& membershipKey);
     void ClearMembershipCertMap(MembershipCertMap& certMap);
     QStatus GetAllMembershipCerts(MembershipCertMap& certMap, bool loadCert);
@@ -572,7 +576,6 @@ class PermissionMgmtObj : public BusObject {
     QStatus GetConfiguration(Configuration& config);
     QStatus PerformReset(bool keepForClaim);
     QStatus SameSubjectPublicKey(qcc::CertificateX509& cert, bool& outcome);
-    bool IsTrustAnchor(TrustAnchorType taType, const qcc::ECCPublicKey* publicKey);
     bool IsTrustAnchor(const qcc::ECCPublicKey* publicKey);
     QStatus ManageMembershipTrustAnchors(PermissionPolicy* policy);
     QStatus GetDSAPrivateKey(qcc::ECCPrivateKey& privateKey);
