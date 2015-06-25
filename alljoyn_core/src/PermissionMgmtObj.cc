@@ -2165,7 +2165,15 @@ QStatus PermissionMgmtObj::PerformReset(bool keepForClaim)
 
 QStatus PermissionMgmtObj::Reset()
 {
-    /* do full reset */
+    /* First call out to the application to give it a chance to reset
+     * any of its own persisted state, to avoid it leaking out to others.
+     */
+    QStatus status = bus.GetInternal().CallFactoryResetListener();
+    if (ER_OK != status) {
+        return status;
+    }
+
+    /* Reset the security configuration. */
     return PerformReset(true);
 }
 

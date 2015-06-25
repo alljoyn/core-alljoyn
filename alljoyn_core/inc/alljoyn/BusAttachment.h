@@ -44,6 +44,7 @@
 #include <alljoyn/ApplicationStateListener.h>
 #include <alljoyn/PermissionPolicy.h>
 #include <alljoyn/PermissionConfigurator.h>
+#include <alljoyn/FactoryResetListener.h>
 
 namespace ajn {
 
@@ -756,9 +757,10 @@ class BusAttachment : public MessageReceiver {
      *      - #ER_BUS_BUS_NOT_STARTED BusAttachment::Start has not be called
      */
     QStatus EnablePeerSecurity(const char* authMechanisms,
-                               AuthListener* listener,
+                               AuthListener* authListener,
                                const char* keyStoreFileName = NULL,
-                               bool isShared = false);
+                               bool isShared = false,
+                               FactoryResetListener* factoryResetListener = NULL);
 
     /**
      * Check is peer security has been enabled for this bus attachment.
@@ -766,7 +768,6 @@ class BusAttachment : public MessageReceiver {
      * @return   Returns true if peer security has been enabled, false otherwise.
      */
     bool IsPeerSecurityEnabled();
-
 
     /**
      * Register an object that will receive bus event notifications.
@@ -1570,7 +1571,7 @@ class BusAttachment : public MessageReceiver {
     void RegisterAboutListener(AboutListener& aboutListener);
 
     /**
-     * Unregisters the AnnounceHandler from receiving the org.alljoyn.about Announce signal.
+     * Unregisters the handler from receiving the org.alljoyn.about Announce signal.
      *
      * @param[in] aboutListener reference to AboutListener to unregister
      */
