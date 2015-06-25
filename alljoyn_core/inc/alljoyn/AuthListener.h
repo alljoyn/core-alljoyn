@@ -326,7 +326,7 @@ class AuthListener {
     /**
      * Respond to a call to VerifyCredentialsAsync.
      *
-     * @param authContext    Context that was passed in the call out to RequestCredentialsAsync.
+     * @param authContext    Context that was passed in the call out to VerifyCredentialsAsync.
      * @param accept         Returns true to accept the credentials or false to reject it.
      *
      * @return   Returns ER_OK if the credential verification response was expected. Returns an error status if
@@ -359,7 +359,6 @@ class AuthListener {
      * @param success        true if the authentication was successful, otherwise false.
      */
     virtual void AuthenticationComplete(const char* authMechanism, const char* peerName, bool success) = 0;
-
 };
 
 class DefaultECDHEAuthListener : public AuthListener {
