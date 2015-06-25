@@ -156,7 +156,8 @@ BusAttachment::Internal::Internal(const char* appName,
     permissionConfigurator(bus),
     hostedSessions(),
     hostedSessionsLock(),
-    observerManager(NULL)
+    observerManager(NULL),
+    factoryResetListener(NULL)
 {
     /*
      * Bus needs a pointer to this internal object.
@@ -187,6 +188,10 @@ BusAttachment::Internal::~Internal()
         observerManager->Join();
         delete observerManager;
         observerManager = NULL;
+    }
+    if (factoryResetListener) {
+        delete factoryResetListener;
+        factoryResetListener = NULL;
     }
     /*
      * Make sure that all threads that might possibly access this object have been joined.
@@ -276,7 +281,7 @@ BusAttachment::~BusAttachment(void)
          * so We need to yield the CPU to them, too.  We need to get ourselves
          * off of the ready queue, so we need to really execute a sleep.  The
          * Sleep(1) will translate into a mimimum sleep of one scheduling quantum
-         * which is, for example, one Jiffy in Liux which is 1/250 second or
+         * which is, for example, one Jiffy in Linux which is 1/250 second or
          * 4 ms.  It's not as arbitrary as it might seem.
          */
         qcc::Sleep(1);
@@ -973,11 +978,14 @@ void BusAttachment::UnregisterBusObject(BusObject& object)
 }
 
 QStatus BusAttachment::EnablePeerSecurity(const char* authMechanisms,
-                                          AuthListener* listener,
+                                          AuthListener* authListener,
                                           const char* keyStoreFileName,
-                                          bool isShared)
+                                          bool isShared,
+                                          FactoryResetListener* factoryResetListener)
 {
     QStatus status = ER_OK;
+
+    busInternal->SetFactoryResetListener(factoryResetListener);
 
     /* If there are no auth mechanisms peer security is being disabled. */
     if (authMechanisms) {
@@ -1004,7 +1012,7 @@ QStatus BusAttachment::EnablePeerSecurity(const char* authMechanisms,
     if (status == ER_OK) {
         AllJoynPeerObj* peerObj = busInternal->localEndpoint->GetPeerObj();
         if (peerObj) {
-            peerObj->SetupPeerAuthentication(authMechanisms, authMechanisms ? listener : NULL, *this);
+            peerObj->SetupPeerAuthentication(authMechanisms, authMechanisms ? authListener : NULL, *this);
         } else {
             return ER_BUS_SECURITY_NOT_ENABLED;
         }
@@ -3175,6 +3183,30 @@ void BusAttachment::Internal::Shutdown()
 {
     delete clientTransportsContainer;
     clientTransportsContainer = NULL;
+}
+
+QStatus BusAttachment::Internal::CallFactoryResetListener()
+{
+    QStatus status = ER_OK;
+
+    factoryResetListenerLock.Lock(MUTEX_CONTEXT);
+    if (factoryResetListener) {
+        FactoryResetListener* listener = (**factoryResetListener);
+        if (listener) {
+            status = listener->FactoryReset();
+        }
+    }
+    factoryResetListenerLock.Unlock(MUTEX_CONTEXT);
+    return status;
+}
+
+QStatus BusAttachment::Internal::SetFactoryResetListener(FactoryResetListener* listener)
+{
+    factoryResetListenerLock.Lock(MUTEX_CONTEXT);
+    delete factoryResetListener;
+    factoryResetListener = new ProtectedFactoryResetListener(listener);
+    factoryResetListenerLock.Unlock(MUTEX_CONTEXT);
+    return ER_OK;
 }
 
 }

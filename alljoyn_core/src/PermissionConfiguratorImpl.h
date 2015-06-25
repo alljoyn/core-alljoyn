@@ -103,8 +103,9 @@ class PermissionConfiguratorImpl : public PermissionConfigurator {
     QStatus SignCertificate(qcc::CertificateX509& cert);
 
     /**
-     * Reset the Permission module by removing all the trust anchors, DSA keys,
-     * installed policy and certificates.
+     * Reset the application.  This will also reset the Permission module
+     * by removing all the trust anchors, DSA keys, installed policy and
+     * certificates.
      * @return ER_OK if successful; otherwise, an error code.
      */
     QStatus Reset();

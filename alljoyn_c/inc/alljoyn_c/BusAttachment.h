@@ -27,6 +27,7 @@
 #include <alljoyn_c/BusListener.h>
 #include <alljoyn_c/BusObject.h>
 #include <alljoyn_c/ProxyBusObject.h>
+#include <alljoyn_c/FactoryResetListener.h>
 #include <alljoyn_c/InterfaceDescription.h>
 #include <alljoyn_c/Session.h>
 #include <alljoyn_c/SessionListener.h>
@@ -656,7 +657,7 @@ extern AJ_API QStatus AJ_CALL alljoyn_busattachment_unbindsessionport(alljoyn_bu
 
 /**
  * Enable peer-to-peer security. This function must be called by applications that
- * want to use authentication and encryption . The bus must have been started by calling
+ * want to use authentication and encryption. The bus must have been started by calling
  * alljoyn_busattachment_start() before this function is called. If the application
  * is providing its own key store implementation it must have already called
  * alljoyn_busattachment_registerkeystorelistener() before calling this function.
@@ -691,6 +692,49 @@ extern AJ_API QStatus AJ_CALL alljoyn_busattachment_unbindsessionport(alljoyn_bu
 extern AJ_API QStatus AJ_CALL alljoyn_busattachment_enablepeersecurity(alljoyn_busattachment bus, const char* authMechanisms,
                                                                        alljoyn_authlistener listener, const char* keyStoreFileName,
                                                                        QCC_BOOL isShared);
+
+/**
+ * Enable peer-to-peer security. This function must be called by applications that
+ * want to use authentication and encryption. The bus must have been started by calling
+ * alljoyn_busattachment_start() before this function is called. If the application
+ * is providing its own key store implementation it must have already called
+ * alljoyn_busattachment_registerkeystorelistener() before calling this function.
+ *
+ * Once peer security has been enabled it is not possible to change the authMechanism set without
+ * clearing it first (setting authMechanism to NULL). This is true regardless of whether the BusAttachment
+ * has been disconnected or not.
+ *
+ * @param bus                   The bus on which to enable security.
+ *
+ * @param authMechanisms        The authentication mechanism(s) to use for peer-to-peer authentication.
+ *                              If this parameter is NULL peer-to-peer authentication is disabled.
+ *                              This is a space separated list of any of the following values: ALLJOYN_SRP_LOGON,
+ *                              ALLJOYN_SRP_KEYX, ALLJOYN_ECDHE_NULL, ALLJOYN_ECDHE_PSK, ALLJOYN_ECDHE_ECDSA, GSSAPI.
+ *
+ * @param authLlistener         Passes password and other authentication related requests to the application.
+ *
+ * @param keyStoreFileName      Optional parameter to specify the filename of the default key store. The
+ *                              default value is the applicationName parameter of alljoyn_busattachment_create().
+ *                              Note that this parameter is only meaningful when using the default
+ *                              key store implementation.
+ *
+ * @param isShared              Optional parameter that indicates if the key store is shared between multiple
+ *                              applications. It is generally harmless to set this to true even when the
+ *                              key store is not shared but it adds some unnecessary calls to the key store
+ *                              listener to load and store the key store in this case.
+ *
+ * @param factoryResetLlistener Passes factory reset requests to the application.
+ *
+ * @return
+ *      - #ER_OK if peer security was enabled.
+ *      - #ER_BUS_BUS_NOT_STARTED alljoyn_busattachment_start has not been called
+ */
+extern AJ_API QStatus AJ_CALL alljoyn_busattachment_enablepeersecuritywithfactoryresetlistener(alljoyn_busattachment bus,
+                                                                                               const char* authMechanisms,
+                                                                                               alljoyn_authlistener authListener,
+                                                                                               const char* keyStoreFileName,
+                                                                                               QCC_BOOL isShared,
+                                                                                               alljoyn_factoryresetlistener factoryResetListener);
 
 /**
  * Check is peer security has been enabled for this bus attachment.

@@ -1001,7 +1001,9 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         QStatus status = ER_OK;
         /* factory reset */
         PermissionConfigurator& pc = serviceBus.GetPermissionConfigurator();
+        SetFactoryResetReceived(false);
         status = pc.Reset();
+        EXPECT_EQ(true, GetFactoryResetReceived());
         EXPECT_EQ(ER_OK, status) << "  Reset failed.  Actual Status: " << QCC_StatusText(status);
         SessionId sessionId;
         SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
@@ -1063,7 +1065,9 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         QStatus status = ER_OK;
         /* factory reset */
         PermissionConfigurator& pc = consumerBus.GetPermissionConfigurator();
+        SetFactoryResetReceived(false);
         status = pc.Reset();
+        EXPECT_EQ(true, GetFactoryResetReceived());
         EXPECT_EQ(ER_OK, status) << "  Reset failed.  Actual Status: " << QCC_StatusText(status);
         SessionId sessionId;
         SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
@@ -1099,7 +1103,9 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         QStatus status = ER_OK;
         /* factory reset */
         PermissionConfigurator& pc = remoteControlBus.GetPermissionConfigurator();
+        SetFactoryResetReceived(false);
         status = pc.Reset();
+        EXPECT_EQ(true, GetFactoryResetReceived());
         EXPECT_EQ(ER_OK, status) << "  Reset failed.  Actual Status: " << QCC_StatusText(status);
         SessionId sessionId;
         SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);

@@ -31,6 +31,7 @@
 #include <qcc/StringUtil.h>
 #include <alljoyn/PermissionPolicy.h>
 #include <alljoyn/ApplicationStateListener.h>
+#include <alljoyn/FactoryResetListener.h>
 #include "ajTestCommon.h"
 #include "KeyInfoHelper.h"
 #include "CredentialAccessor.h"
@@ -56,6 +57,12 @@ void TestApplicationStateListener::State(const char* busName, const qcc::KeyInfo
     QCC_UNUSED(publicKeyInfo);
     QCC_UNUSED(state);
     signalApplicationStateReceived = true;
+}
+
+QStatus TestFactoryResetListener::FactoryReset()
+{
+    factoryResetReceived = true;
+    return ER_OK;
 }
 
 QStatus PermissionMgmtTestHelper::CreateIdentityCertChain(BusAttachment& caBus, BusAttachment& issuerBus, const qcc::String& serial, const qcc::String& subject, const ECCPublicKey* subjectPubKey, const qcc::String& alias, uint32_t expiredInSecs, qcc::IdentityCertificate* certChain, size_t chainCount, uint8_t* digest, size_t digestSize)
@@ -308,13 +315,13 @@ void BasePermissionMgmtTest::EnableSecurity(const char* keyExchange)
     adminProxyBus.EnablePeerSecurity(keyExchange, adminKeyListener, NULL, true);
     delete serviceKeyListener;
     serviceKeyListener = GenAuthListener(keyExchange);
-    serviceBus.EnablePeerSecurity(keyExchange, serviceKeyListener, NULL, false);
+    serviceBus.EnablePeerSecurity(keyExchange, serviceKeyListener, NULL, false, &testFRL);
     delete consumerKeyListener;
     consumerKeyListener = GenAuthListener(keyExchange);
-    consumerBus.EnablePeerSecurity(keyExchange, consumerKeyListener, NULL, false);
+    consumerBus.EnablePeerSecurity(keyExchange, consumerKeyListener, NULL, false, &testFRL);
     delete remoteControlKeyListener;
     remoteControlKeyListener = GenAuthListener(keyExchange);
-    remoteControlBus.EnablePeerSecurity(keyExchange, remoteControlKeyListener, NULL, false);
+    remoteControlBus.EnablePeerSecurity(keyExchange, remoteControlKeyListener, NULL, false, &testFRL);
     authMechanisms = keyExchange;
 }
 
@@ -419,6 +426,16 @@ void BasePermissionMgmtTest::SetApplicationStateSignalReceived(bool flag)
 const bool BasePermissionMgmtTest::GetApplicationStateSignalReceived()
 {
     return testASL.signalApplicationStateReceived;
+}
+
+void BasePermissionMgmtTest::SetFactoryResetReceived(bool flag)
+{
+    testFRL.factoryResetReceived = flag;
+}
+
+const bool BasePermissionMgmtTest::GetFactoryResetReceived()
+{
+    return testFRL.factoryResetReceived;
 }
 
 void BasePermissionMgmtTest::SetChannelChangedSignalReceived(bool flag)
