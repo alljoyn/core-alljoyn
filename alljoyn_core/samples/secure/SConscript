@@ -34,4 +34,4 @@ progs = [
 
 if env['OS'] != 'android':
      env.Install('$CPP_DISTDIR/bin/samples', progs )
-     env.Install(clientDistDir, env.Glob('*.cc'))
+     env.Install(clientDistDir, env.Glob('*.cc') + env.Glob('*.h'))

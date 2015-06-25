@@ -50,10 +50,6 @@
 #include "ScatterGatherList.h"
 #endif
 
-#ifndef ADVERTISE_ROUTER_OVER_UDP
-#define ADVERTISE_ROUTER_OVER_UDP 0
-#endif
-
 /*
  * How the transport fits into the system
  * ======================================
@@ -482,9 +478,7 @@ const char* UDPTransport::TransportName = "udp";
  * Default router advertisement prefix.  Currently Thin Library devices cannot
  * connect to routing nodes over UDP.
  */
-#if ADVERTISE_ROUTER_OVER_UDP
 const char* const UDPTransport::ALLJOYN_DEFAULT_ROUTER_ADVERTISEMENT_PREFIX = "org.alljoyn.BusNode.";
-#endif
 
 /**
  * Prefix to quietly advertise when working around ASACORE-1298.  Keeps an
@@ -8917,9 +8911,7 @@ void UDPTransport::StartListenInstance(ListenRequest& listenRequest)
     }
     m_maxRemoteClientsUdp = std::min(m_maxRemoteClientsUdp, (int32_t) m_maxConn);
 
-#if ADVERTISE_ROUTER_OVER_UDP
     m_routerName = config->GetProperty("router_advertisement_prefix", ALLJOYN_DEFAULT_ROUTER_ADVERTISEMENT_PREFIX);
-#endif
 
     if (m_isAdvertising || m_isDiscovering || (!m_routerName.empty() && (m_numUntrustedClients < m_maxRemoteClientsUdp))) {
         m_routerName.append(m_bus.GetInternal().GetGlobalGUID().ToShortString());
@@ -10600,7 +10592,6 @@ void UDPTransport::UntrustedClientExit()
 {
     QCC_DbgTrace((" UDPTransport::UntrustedClientExit()"));
 
-#if ADVERTISE_ROUTER_OVER_UDP
     /* An untrusted client has exited, update the counts and re-enable the advertisement if necessary. */
     m_listenRequestsLock.Lock();
     if (m_numUntrustedClients >= 0) {
@@ -10609,14 +10600,12 @@ void UDPTransport::UntrustedClientExit()
     }
     m_listenRequestsLock.Unlock();
     m_dynamicScoreUpdater.Alert();
-#endif
 }
 
 QStatus UDPTransport::UntrustedClientStart()
 {
     QCC_DbgTrace((" UDPTransport::UntrustedClientStart()"));
 
-#if ADVERTISE_ROUTER_OVER_UDP
     QStatus status = ER_OK;
 
     m_listenRequestsLock.Lock();
@@ -10636,9 +10625,6 @@ QStatus UDPTransport::UntrustedClientStart()
     m_listenRequestsLock.Unlock();
     m_dynamicScoreUpdater.Alert();
     return status;
-#else
-    return ER_UDP_NOT_IMPLEMENTED;
-#endif
 }
 
 /**

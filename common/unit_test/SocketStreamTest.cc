@@ -169,7 +169,9 @@ TEST_F(SocketStreamTestErrors, PushBytesAfterAbortiveRelease)
     SetLinger(clientFd, true, 0);
     Close(clientFd);
     SocketStream connected(acceptedFd); acceptedFd = INVALID_SOCKET_FD;
-    EXPECT_EQ(ER_OS_ERROR, connected.PushBytes(buf, 1, numBytes));
+    while ((status = connected.PushBytes(buf, ArraySize(buf), numBytes)) == ER_OK)
+        ;
+    EXPECT_EQ(ER_OS_ERROR, status);
 }
 
 class SocketStreamTestAndFdsErrors : public testing::Test {

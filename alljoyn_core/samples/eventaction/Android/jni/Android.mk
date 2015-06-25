@@ -34,7 +34,7 @@ LOCAL_LDLIBS := \
 	-L$(ALLJOYN_DIST)/about/lib \
     -L$(NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/libs/armeabi \
     -L$(NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/4.6/libs/armeabi \
-	-lajrouter -lalljoyn -llog -ldl -lssl -lcrypto -lm -lc -lstdc++ -lgcc -lgnustl_shared -lalljoyn_about
+	-lajrouter -lalljoyn -llog -ldl $(ALLJOYN_OPENSSL_LIBS) -lm -lc -lstdc++ -lgcc -lgnustl_shared -lalljoyn_about
 
 LOCAL_ARM_MODE := arm
 
