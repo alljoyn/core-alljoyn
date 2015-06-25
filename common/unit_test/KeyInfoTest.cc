@@ -52,7 +52,7 @@ TEST(KeyInfoTest, SetKeyId)
     uint8_t dummyKeyId[10] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 0 };
     keyInfo.SetKeyId(dummyKeyId, 10);
     size_t kLen = keyInfo.GetKeyIdLen();
-    EXPECT_EQ(10, kLen);
+    EXPECT_EQ((size_t)10, kLen);
     const uint8_t* kId = keyInfo.GetKeyId();
     for (size_t i = 0; i < kLen; ++i) {
         EXPECT_EQ(dummyKeyId[i], kId[i]);
