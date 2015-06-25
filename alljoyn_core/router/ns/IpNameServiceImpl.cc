@@ -8663,7 +8663,7 @@ ThreadReturn STDCALL IpNameServiceImpl::PacketScheduler::Run(void* arg) {
     while (!IsStopping()) {
         Timespec now;
         GetTimeNow(&now);
-        uint32_t timeToSleep = (uint32_t)Event::WAIT_FOREVER;
+        uint32_t timeToSleep = (uint32_t) Event::WAIT_FOREVER;
         //Step 1: Collect all packets
         std::list<Packet> subsequentBurstpackets;
         std::list<Packet> initialBurstPackets;

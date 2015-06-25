@@ -49,7 +49,7 @@ static volatile sig_atomic_t quit;
 
 static const SessionPort PORT = 123;
 
-static const SessionOpts SESSION_OPTS(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
+static SessionOpts SESSION_OPTS(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
 
 
 
@@ -967,9 +967,11 @@ void Usage()
            "    -c            Run as client (runs as service by default).\n"
            "    -n <NAME>     Use <NAME> for well known bus name.\n"
            "    -m            Use EmitPropertiesChanged only for multiple properties at once.\n"
-           "    -s            Use EmitPropertiesChanged only for single property at once.\n");
+           "    -s            Use EmitPropertiesChanged only for single property at once.\n"
+           "    -t            Advertise/Discover over TCP (enables selective advertising)\n"
+           "    -l            Advertise/Discover locally (enables selective advertising)\n"
+           "    -u            Advertise/Discover over UDP-based ARDP (enables selective advertising)\n");
 }
-
 
 int CDECL_CALL main(int argc, char** argv)
 {
@@ -1005,12 +1007,17 @@ int CDECL_CALL main(int argc, char** argv)
             singleProp = false;
         } else if (strcmp(argv[i], "-s") == 0) {
             multiProp = false;
+        } else if (0 == strcmp("-t", argv[i])) {
+            SESSION_OPTS.transports = TRANSPORT_TCP;
+        } else if (0 == strcmp("-l", argv[i])) {
+            SESSION_OPTS.transports = TRANSPORT_LOCAL;
+        } else if (0 == strcmp("-u", argv[i])) {
+            SESSION_OPTS.transports = TRANSPORT_UDP;
         } else {
             Usage();
             exit(1);
         }
     }
-
 
     signal(SIGINT, SignalHandler);
     signal(SIGTERM, SignalHandler);
@@ -1063,7 +1070,7 @@ int CDECL_CALL main(int argc, char** argv)
             ret = 2;
             goto exit;
         }
-        status = bus->AdvertiseName(serviceName.c_str(), TRANSPORT_ANY);
+        status = bus->AdvertiseName(serviceName.c_str(), SESSION_OPTS.transports);
         if (status != ER_OK) {
             printf("Failed to request name to \"%s\": %s\n", serviceName.c_str(), QCC_StatusText(status));
             ret = 2;

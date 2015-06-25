@@ -482,15 +482,16 @@ static void usage(void)
     printf("   -a <name>                   = Well-known name to advertise\n");
     printf("   -n <name>                   = Well-known name to find\n");
     printf("   -s                          = Enable stress mode (connect/disconnect w/ server between runs non-stop)\n");
-    printf("   -l                          = Register signal handler for loopback\n");
+    printf("   -rs                         = Register signal handler for loopback\n");
     printf("   -r #                        = Signal rate (delay in ms between signals sent; default = 0)\n");
     printf("   -y #                        = Delay (in ms) between sending last signal and disconnecting (stress mode only)\n");
     printf("   -i #                        = Signal report interval (number of signals tx/rx per update; default = 1000)\n");
     printf("   -c #                        = Max number of signals to send, default = 1000000)\n");
-    printf("   -t #                        = TTL for the signals\n");
-    printf("   --tcp                       = Advertise and discover using the TCP transport\n");
-    printf("   --udp                       = Advertise and discover using the UDP transport\n");
-    printf("   -e[k] [SRP|LOGON]       = Encrypt the test interface using specified auth mechanism, -ek means clear keys\n");
+    printf("   -ttl #                      = TTL for the signals\n");
+    printf("   -t                          = Advertise/Discover over TCP transport\n");
+    printf("   -u                          = Advertise/Discover over UDP transport\n");
+    printf("   -l                          = Advertise/Discover over Local transport\n");
+    printf("   -e[k] [SRP|LOGON]           = Encrypt the test interface using specified auth mechanism, -ek means clear keys\n");
     printf("   -d                          = discover remote bus with test service\n");
     printf("   -b                          = Signal is broadcast rather than multicast\n");
     printf("   --ls                        = Call LeaveSession before tearing down the Bus Attachment\n");
@@ -542,11 +543,14 @@ int CDECL_CALL main(int argc, char** argv)
             exit(0);
         } else if (0 == strcmp("-s", argv[i])) {
             doStress = true;
-        } else if (0 == strcmp("--tcp", argv[i])) {
+        } else if (0 == strcmp("-t", argv[i])) {
             g_preferredTransport = TRANSPORT_TCP;
             transportSpecific = true;
-        } else if (0 == strcmp("--udp", argv[i])) {
+        } else if (0 == strcmp("-u", argv[i])) {
             g_preferredTransport = TRANSPORT_UDP;
+            transportSpecific = true;
+        } else if (0 == strcmp("-l", argv[i])) {
+            g_preferredTransport = TRANSPORT_LOCAL;
             transportSpecific = true;
         } else if (0 == strcmp("-n", argv[i])) {
             ++i;
@@ -568,7 +572,7 @@ int CDECL_CALL main(int argc, char** argv)
                 g_advertiseName = argv[i];
             }
 
-        } else if (0 == strcmp("-l", argv[i])) {
+        } else if (0 == strcmp("-rs", argv[i])) {
             useSignalHandler = true;
         } else if (0 == strcmp("-d", argv[i])) {
             discoverRemote = true;
@@ -610,7 +614,7 @@ int CDECL_CALL main(int argc, char** argv)
             } else {
                 maxSignals = strtoul(argv[i], NULL, 10);
             }
-        } else if (0 == strcmp("-t", argv[i])) {
+        } else if (0 == strcmp("-ttl", argv[i])) {
             ++i;
             if (i == argc) {
                 printf("option %s requires a parameter\n", argv[i - 1]);

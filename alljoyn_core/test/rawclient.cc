@@ -125,7 +125,9 @@ static void usage(void)
     printf("Options:\n");
     printf("   -h                    = Print this help message\n");
     printf("   -n <well-known name>  = Well-known bus name advertised by bbservice\n");
-    printf("   -t <transport_mask>   = Set the transports that will attempt a joinSession\n");
+    printf("   -t                    = Discover over TCP (enables selective discovering)\n");
+    printf("   -l                    = Discover locally (enables selective discovering)\n");
+    printf("   -u                    = Discover over UDP-based ARDP (enables selective discovering)\n");
     printf("\n");
 }
 
@@ -163,21 +165,11 @@ int CDECL_CALL main(int argc, char** argv)
                 g_wellKnownName = argv[i];
             }
         } else if (0 == strcmp("-t", argv[i])) {
-            ++i;
-            if (i == argc) {
-                printf("option %s requires a paramter\n", argv[i - 1]);
-                usage();
-                exit(1);
-            } else {
-                TransportMask transportMask = (TransportMask) StringToU32(argv[i], 16, 0);
-                if (transportMask == 0) {
-                    printf("Invalid transport mask 0x%x\n", transportMask);
-                    usage();
-                    exit(1);
-                } else {
-                    g_busListener.SetTransportMask(transportMask);
-                }
-            }
+            g_busListener.SetTransportMask(TRANSPORT_TCP);
+        } else if (0 == strcmp("-u", argv[i])) {
+            g_busListener.SetTransportMask(TRANSPORT_UDP);
+        } else if (0 == strcmp("-l", argv[i])) {
+            g_busListener.SetTransportMask(TRANSPORT_LOCAL);
         } else if (0 == strcmp("-h", argv[i])) {
             usage();
             exit(0);
