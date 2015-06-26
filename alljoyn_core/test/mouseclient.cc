@@ -362,9 +362,9 @@ int CDECL_CALL main(int argc, char** argv)
     InterfaceDescription* testIntf = NULL;
     status = g_msgBus->CreateInterface(::org::alljoyn::alljoyn_test::InterfaceName, testIntf, false);
     if ((ER_OK == status) && testIntf) {
-        testIntf->AddSignal("ADC_Update", "i", "value");
-        testIntf->AddSignal("Gyro_Update", "ii", "x,y");
-        testIntf->AddSignal("Button_Down", "i", "dummy");
+        testIntf->AddSignal("ADC_Update", "i", "value", 0);
+        testIntf->AddSignal("Gyro_Update", "ii", "x,y", 0);
+        testIntf->AddSignal("Button_Down", "i", "dummy", 0);
         testIntf->Activate();
     } else {
         if (ER_OK == status) {

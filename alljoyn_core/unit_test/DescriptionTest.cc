@@ -521,6 +521,10 @@ TEST_F(DescriptionTest, SignalTypes)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#endif
     ASSERT_EQ(ER_OK, intf->AddSignal("legacySignal", "s", NULL));
 
     intf->SetDescriptionLanguage("en");
@@ -529,6 +533,9 @@ TEST_F(DescriptionTest, SignalTypes)
 
     ASSERT_EQ(ER_OK, intf->AddSignal("legacySessionlessSignal", "s", NULL));
     ASSERT_EQ(ER_OK, intf->SetMemberDescription("legacySessionlessSignal", "legacy sessionless signal", true));
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(pop)
+#endif
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
 #endif
