@@ -1,0 +1,294 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+
+<!--  Copyright AllSeen Alliance. All rights reserved.
+
+      Permission to use, copy, modify, and/or distribute this software for any
+      purpose with or without fee is hereby granted, provided that the above
+      copyright notice and this permission notice appear in all copies.
+
+      THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+      WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+      MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+      ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+      WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+      ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+      OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+  -->
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+    <!--
+         *******************************************************
+         *                                                     *
+         *               Attribute Definitions                 *
+         *                                                     *
+         *******************************************************
+    -->
+
+    <xs:attribute name="ignore_missing" default="no">
+        <xs:simpleType>
+            <xs:restriction base="xs:string">
+                <xs:pattern value="yes|no"/>
+            </xs:restriction>
+        </xs:simpleType>
+    </xs:attribute>
+
+    <xs:attribute name="context">
+        <xs:simpleType>
+            <xs:restriction base="xs:string">
+                <xs:pattern value="default|mandatory"/>
+            </xs:restriction>
+        </xs:simpleType>
+    </xs:attribute>
+
+    <xs:attribute name="receive_type">
+        <xs:simpleType>
+            <xs:restriction base="xs:string">
+                <xs:pattern value="method_call|method_return|signal|error"/>
+            </xs:restriction>
+        </xs:simpleType>
+    </xs:attribute>
+
+    <xs:attribute name="send_type">
+        <xs:simpleType>
+            <xs:restriction base="xs:string">
+                <xs:pattern value="method_call|method_return|signal|error"/>
+            </xs:restriction>
+        </xs:simpleType>
+    </xs:attribute>
+
+    <xs:attributeGroup name="allow_deny_attrs">
+        <xs:attribute name="user" type="xs:string"/>
+        <xs:attribute name="group" type="xs:string"/>
+        <xs:attribute name="own" type="xs:string"/>
+        <xs:attribute name="own_prefix" type="xs:string"/>
+        <xs:attribute name="receive_error" type="xs:string"/>
+        <xs:attribute name="receive_interface" type="xs:string"/>
+        <xs:attribute name="receive_member" type="xs:string"/>
+        <xs:attribute name="receive_path" type="xs:string"/>
+        <xs:attribute name="receive_path_prefix" type="xs:string"/>
+        <xs:attribute name="receive_group" type="xs:string"/>
+        <xs:attribute name="receive_user" type="xs:string"/>
+        <xs:attribute name="receive_same_user" type="xs:string"/>
+        <xs:attribute name="receive_sender" type="xs:string"/>
+        <xs:attribute ref="receive_type"/>
+        <xs:attribute name="send_error" type="xs:string"/>
+        <xs:attribute name="send_interface" type="xs:string"/>
+        <xs:attribute name="send_member" type="xs:string"/>
+        <xs:attribute name="send_path" type="xs:string"/>
+        <xs:attribute name="send_path_prefix" type="xs:string"/>
+        <xs:attribute name="send_group" type="xs:string"/>
+        <xs:attribute name="send_user" type="xs:string"/>
+        <xs:attribute name="send_same_user" type="xs:string"/>
+        <xs:attribute name="send_destination" type="xs:string"/>
+        <xs:attribute ref="send_type"/>
+    </xs:attributeGroup>
+
+    <!--
+         *******************************************************
+         *                                                     *
+         *               Type Definitions                      *
+         *                                                     *
+         *******************************************************
+    -->
+
+    <xs:simpleType name="true_false_base">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="true|false"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+     <!-- restrictions on name attribute for Limit -->
+    <xs:simpleType name="limit_type">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="slap_min_idle_timeout"/>
+            <xs:enumeration value="slap_max_idle_timeout"/>
+            <xs:enumeration value="slap_default_idle_timeout"/>
+            <xs:enumeration value="slap_max_probe_timeout"/>
+            <xs:enumeration value="slap_default_probe_timeout"/>
+            <xs:enumeration value="auth_timeout"/>
+            <xs:enumeration value="session_setup_timeout"/>
+            <xs:enumeration value="max_incomplete_connections"/>
+            <xs:enumeration value="max_completed_connections"/>
+            <xs:enumeration value="max_untrusted_clients"/>
+            <xs:enumeration value="udp_connect_timeout"/>
+            <xs:enumeration value="udp_connect_retries"/>
+            <xs:enumeration value="udp_initial_data_timeout"/>
+            <xs:enumeration value="udp_total_data_retry_timeout"/>
+            <xs:enumeration value="udp_min_data_retries"/>
+            <xs:enumeration value="udp_persist_interval"/>
+            <xs:enumeration value="udp_total_app_timeout"/>
+            <xs:enumeration value="udp_link_timeout"/>
+            <xs:enumeration value="udp_keepalive_retries"/>
+            <xs:enumeration value="udp_fast_retransmit_ack_counter"/>
+            <xs:enumeration value="udp_delayed_ack_timeout"/>
+            <xs:enumeration value="udp_timewait"/>
+            <xs:enumeration value="udp_segbmax"/>
+            <xs:enumeration value="udp_segmax"/>
+            <xs:enumeration value="max_remote_clients_udp"/>
+            <xs:enumeration value="sls_backoff"/>
+            <xs:enumeration value="sls_backoff_linear"/>
+            <xs:enumeration value="sls_backoff_exponential"/>
+            <xs:enumeration value="sls_backoff_max"/>
+            <xs:enumeration value="sls_preferred_transports"/>
+            <xs:enumeration value="max_remote_clients_tcp"/>
+            <xs:enumeration value="tcp_min_idle_timeout"/>
+            <xs:enumeration value="tcp_max_idle_timeout"/>
+            <xs:enumeration value="tcp_default_idle_timeout"/>
+            <xs:enumeration value="tcp_max_probe_timeout"/>
+            <xs:enumeration value="tcp_default_probe_timeout"/>
+            <xs:enumeration value="dt_min_idle_timeout"/>
+            <xs:enumeration value="dt_max_idle_timeout"/>
+            <xs:enumeration value="dt_default_idle_timeout"/>
+            <xs:enumeration value="dt_max_probe_timeout"/>
+            <xs:enumeration value="dt_default_probe_timeout"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!-- restrictions on name attribute for Flag -->
+    <xs:simpleType name="flag_type">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="ns_enable_v1"/>
+            <xs:enumeration value="ns_disable_ipv4"/>
+            <xs:enumeration value="ns_disable_ipv6"/>
+            <xs:enumeration value="ns_disable_directed_broadcast"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!-- restrictions on name attribute for Property -->
+    <xs:simpleType name="property_type">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="router_node_connection"/>
+            <xs:enumeration value="router_availability"/>
+            <xs:enumeration value="router_mobility"/>
+            <xs:enumeration value="router_power_source"/>
+            <xs:enumeration value="ns_interfaces"/>
+            <xs:enumeration value="router_advertisement_prefix"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="listen_type">
+        <xs:restriction base="xs:anyURI">
+            <xs:pattern value="(tcp|udp|launchd|unix|slap):.*"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="config_file">
+        <xs:restriction base="xs:anyURI">
+            <xs:pattern value=".*\.conf"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!--
+         *******************************************************
+         *                                                     *
+         *               Element Definitions                   *
+         *                                                     *
+         *******************************************************
+    -->
+
+    <xs:element name="include">
+        <xs:complexType>
+            <xs:simpleContent>
+                <xs:extension base="config_file">
+                    <xs:attribute ref="ignore_missing"/>
+                </xs:extension>
+            </xs:simpleContent>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="includedir">
+        <xs:complexType>
+            <xs:simpleContent>
+                <xs:extension base="xs:anyURI">
+                    <xs:attribute ref="ignore_missing"/>
+                </xs:extension>
+            </xs:simpleContent>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="allow">
+        <xs:complexType>
+            <xs:attributeGroup ref="allow_deny_attrs"/>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="deny">
+        <xs:complexType>
+            <xs:attributeGroup ref="allow_deny_attrs"/>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="policy">
+        <xs:complexType>
+            <xs:choice maxOccurs="unbounded">
+                <xs:element ref="allow"/>
+                <xs:element ref="deny"/>
+            </xs:choice>
+            <xs:attribute ref="context"/>
+            <xs:attribute name="user" type="xs:string"/>
+            <xs:attribute name="group" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="limit">
+        <xs:complexType>
+            <xs:simpleContent>
+                <xs:extension base="xs:unsignedInt">
+                    <xs:attribute name="name" type="limit_type" use="required"/>
+                </xs:extension>
+            </xs:simpleContent>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="flag">
+        <xs:complexType>
+            <xs:simpleContent>
+                <xs:extension base="true_false_base">
+                    <xs:attribute name="name" type="flag_type" use="required"/>
+                </xs:extension>
+            </xs:simpleContent>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="property">
+        <xs:complexType>
+            <xs:simpleContent>
+                <xs:extension base="xs:string">
+                    <xs:attribute name="name" type="property_type" use="required"/>
+                </xs:extension>
+            </xs:simpleContent>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- Note:  syslog has no content or attributes -->
+    <xs:element name="syslog">
+        <xs:complexType/>
+    </xs:element>
+
+    <!-- Note:  fork has no content or attributes -->
+    <xs:element name="fork">
+        <xs:complexType/>
+    </xs:element>
+
+    <xs:element name="busconfig">
+        <xs:complexType>
+            <xs:choice maxOccurs="unbounded">
+                <xs:element name="user" type="xs:string"/>
+                <xs:element name="type" type="xs:string"/>
+                <xs:element name="pidfile" type="xs:string"/>
+                <xs:element name="auth" type="xs:string"/>
+                <xs:element name="listen" type="listen_type"/>
+                <xs:element ref="include"/>
+                <xs:element ref="includedir"/>
+                <xs:element ref="policy"/>
+                <xs:element ref="limit"/>
+                <xs:element ref="flag"/>
+                <xs:element ref="property"/>
+                <xs:element ref="syslog"/>
+                <xs:element ref="fork"/>
+            </xs:choice>
+        </xs:complexType>
+    </xs:element>
+
+</xs:schema>
