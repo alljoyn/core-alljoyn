@@ -444,6 +444,25 @@ class KeyInfoNISTP256 : public KeyInfoECC {
         return *this;
     }
 
+    /**
+     * The less than operator for the KeyInfoNISTP256
+     *
+     * @param[in] other the KeyInfoNISTP256 to compare
+     *
+     * @return True if the left KeyInfoNISTP256 is less than the right KeyInfoNISTP256
+     * false otherwise.
+     */
+    bool operator<(const KeyInfoNISTP256& other) const
+    {
+        if (pubkey.key < other.pubkey.key) {
+            return true;
+        }
+        if (pubkey.form < other.pubkey.form) {
+            return true;
+        }
+        return KeyInfoECC::operator<(other);
+    }
+
   private:
 
     struct {

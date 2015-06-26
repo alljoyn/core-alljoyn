@@ -190,6 +190,30 @@ class KeyInfo {
     }
 
     /**
+     * Comparison operator less than
+     * @param[in] other right hand side KeyInfo
+     * @return true if key is less than the other
+     */
+    bool operator<(const KeyInfo& other) const
+    {
+        if (format < other.format) {
+            return true;
+        }
+
+        if (keyIdLen < other.keyIdLen) {
+            return true;
+        }
+
+        if (keyId != NULL && other.keyId != NULL && keyIdLen == other.keyIdLen) {
+            if (0 > memcmp(keyId, other.keyId, keyIdLen)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Copy constructor for KeyInfo
      */
     KeyInfo(const KeyInfo& other) {
