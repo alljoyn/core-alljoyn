@@ -1331,9 +1331,9 @@ QStatus KeyExchangerECDHE_ECDSA::ValidateRemoteVerifierVariant(const char* peerN
             return status;
         }
         if (certChainEncoding == CertificateX509::ENCODING_X509_DER) {
-            status = certs[cnt].LoadEncoded(encoded, encodedLen);
+            status = certs[cnt].DecodeCertificateDER(String((const char*) encoded, encodedLen));
         } else if (certChainEncoding == CertificateX509::ENCODING_X509_DER_PEM) {
-            status = certs[cnt].LoadPEM(String((const char*) encoded, encodedLen));
+            status = certs[cnt].DecodeCertificatePEM(String((const char*) encoded, encodedLen));
         } else {
             delete [] certs;
             QCC_LogError(status, ("Peer's certificate chain data are not in DER or PEM format"));
@@ -1450,9 +1450,16 @@ QStatus KeyExchangerECDHE_ECDSA::GenVerifierSigInfoArg(MsgArg& msgArg, bool upda
         certArgs = new MsgArg[certChainLen];
         /* add the local cert chain to the list of certs to send */
         for (size_t cnt = 0; cnt < certChainLen; cnt++) {
-            certArgs[cnt].Set("(ay)", certChain[cnt].GetEncodedLen(), certChain[cnt].GetEncoded());
+            String der;
+            status = certChain[cnt].EncodeCertificateDER(der);
+            if (status != ER_OK) {
+                QCC_LogError(status, ("KeyExchangerECDHE_ECDSA::GenVerifierSigInfoArg failed to generate DER encoding for certificate"));
+                return status;
+            }
+            certArgs[cnt].Set("(ay)", der.size(), (const uint8_t*) der.data());
+            certArgs[cnt].Stabilize();
             if (updateHash) {
-                hashUtil.Update(certChain[cnt].GetEncoded(), certChain[cnt].GetEncodedLen());
+                hashUtil.Update((const uint8_t*) der.data(), der.size());
             }
         }
     }

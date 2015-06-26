@@ -228,7 +228,7 @@ _PeerState::GuildMetadata* _PeerState::GetGuildMetadata(const qcc::String& seria
     /* the <serial,issuer> pair may be of a cert in the chain */
     for (GuildMap::iterator it = guildMap.begin(); it != guildMap.end(); it++) {
         GuildMetadata* meta = it->second;
-        for (std::vector<MembershipCertificate*>::iterator ccit = meta->certChain.begin(); ccit != meta->certChain.end(); ccit++) {
+        for (std::vector<CertificateX509*>::iterator ccit = meta->certChain.begin(); ccit != meta->certChain.end(); ccit++) {
             if (((*ccit)->GetSerialLen() == serial.size()) &&
                 (memcmp((*ccit)->GetSerial(), serial.data(), serial.size()) == 0) &&
                 ((*ccit)->GetAuthorityKeyId() == issuerAki)) {

@@ -274,19 +274,23 @@ bool PermissionMgmtObj::IsTrustAnchor(const ECCPublicKey* publicKey)
     return false;
 }
 
-bool PermissionMgmtObj::IsAdminGroup(const std::vector<MembershipCertificate*> certChain)
+bool PermissionMgmtObj::IsAdminGroup(const std::vector<CertificateX509*> certChain)
 {
-    for (std::vector<MembershipCertificate*>::const_iterator certIt = certChain.begin(); certIt != certChain.end(); certIt++) {
+    for (std::vector<CertificateX509*>::const_iterator certIt = certChain.begin(); certIt != certChain.end(); certIt++) {
+        if ((*certIt)->GetType() != CertificateX509::MEMBERSHIP_CERTIFICATE) {
+            continue;
+        }
+        MembershipCertificate* membershipCert = (MembershipCertificate*) *certIt;
         for (TrustAnchorList::iterator it = trustAnchors.begin(); it != trustAnchors.end(); it++) {
             if (((*it)->use == TRUST_ANCHOR_ADMIN_GROUP) &&
-                ((*it)->securityGroupId == (*certIt)->GetGuild())) {
+                ((*it)->securityGroupId == membershipCert->GetGuild())) {
                 /* match security group ID */
-                if ((*certIt)->GetAuthorityKeyId().size() > 0) {
+                if (membershipCert->GetAuthorityKeyId().size() > 0) {
                     /* cert has aki */
-                    if (((*it)->keyInfo.GetKeyIdLen() == (*certIt)->GetAuthorityKeyId().size()) &&
-                        (memcmp((*it)->keyInfo.GetKeyId(), (*certIt)->GetAuthorityKeyId().data(), (*it)->keyInfo.GetKeyIdLen()) == 0)) {
+                    if (((*it)->keyInfo.GetKeyIdLen() == membershipCert->GetAuthorityKeyId().size()) &&
+                        (memcmp((*it)->keyInfo.GetKeyId(), membershipCert->GetAuthorityKeyId().data(), (*it)->keyInfo.GetKeyIdLen()) == 0)) {
                         /* same aki.  Verify the cert using trust anchor */
-                        if (ER_OK == (*certIt)->Verify((*it)->keyInfo.GetPublicKey())) {
+                        if (ER_OK == membershipCert->Verify((*it)->keyInfo.GetPublicKey())) {
                             return true;
                         }
                     }
@@ -861,54 +865,67 @@ QStatus PermissionMgmtObj::StateChanged()
     return State(keyInfo, applicationState);
 }
 
-static QStatus ValidateMembershipCertificate(MembershipCertificate& cert, PermissionMgmtObj::TrustAnchorList* taList)
+static QStatus ValidateCertificateWithTrustAnchors(const CertificateX509& cert, PermissionMgmtObj::TrustAnchorList* taList)
 {
-    /* check validity period */
-    if (ER_OK != cert.VerifyValidity()) {
-        return ER_INVALID_CERTIFICATE;
-    }
     for (PermissionMgmtObj::TrustAnchorList::iterator it = taList->begin(); it != taList->end(); it++) {
         PermissionMgmtObj::TrustAnchor* ta = *it;
-        if (((ta->use == PermissionMgmtObj::TRUST_ANCHOR_SG_AUTHORITY) ||
-             (ta->use == PermissionMgmtObj::TRUST_ANCHOR_ADMIN_GROUP)) &&
-            (ta->securityGroupId == cert.GetGuild())) {
-            if (cert.Verify(ta->keyInfo.GetPublicKey()) == ER_OK) {
-                return ER_OK;  /* cert is verified */
+        bool qualified = false;
+        if (cert.GetType() == CertificateX509::MEMBERSHIP_CERTIFICATE) {
+            if (((ta->use == PermissionMgmtObj::TRUST_ANCHOR_SG_AUTHORITY) ||
+                 (ta->use == PermissionMgmtObj::TRUST_ANCHOR_ADMIN_GROUP)) &&
+                (ta->securityGroupId == ((MembershipCertificate*) &cert)->GetGuild())) {
+                qualified = true;
             }
+        } else {
+            qualified = true;
+        }
+        if (qualified && (cert.Verify(ta->keyInfo.GetPublicKey()) == ER_OK)) {
+            return ER_OK;  /* cert is verified */
         }
     }
     return ER_UNKNOWN_CERTIFICATE;
 }
 
-static QStatus ValidateMembershipCertificateChain(std::vector<MembershipCertificate*>& certs, PermissionMgmtObj::TrustAnchorList* taList)
+static QStatus ValidateMembershipCertificateChain(const CertificateX509* certChain, size_t count, PermissionMgmtObj::TrustAnchorList* taList)
 {
-    size_t idx = 0;
-    bool validated = false;
-    for (std::vector<MembershipCertificate*>::iterator it = certs.begin(); it != certs.end(); it++) {
-        idx++;
-        if (ER_OK == ValidateMembershipCertificate(*(*it), taList)) {
-            validated = true;
-            break;
-        }
-    }
-    if (!validated) {
-        return ER_UNKNOWN_CERTIFICATE;
+    if (count == 0) {
+        return ER_INVALID_CERTIFICATE;
     }
 
-    if (idx == 1) {
-        return ER_OK;  /* the leaf cert is trusted.  No need to validate the whole chain */
+    if (!KeyExchangerECDHE_ECDSA::IsCertChainStructureValid(certChain, count)) {
+        return ER_INVALID_CERTIFICATE;
     }
-    /* There are at least two nodes in the cert chain.
-     * Now make sure the chain is a valid chain.
-     */
-    for (int cnt = (idx - 2); cnt >= 0; cnt--) {
-        KeyInfoNISTP256 keyInfo;
-        keyInfo.SetPublicKey(certs[cnt + 1]->GetSubjectPublicKey());
-        if (certs[cnt]->Verify(keyInfo) != ER_OK) {
-            return ER_INVALID_CERT_CHAIN;
+    if (!CertificateX509::ValidateCertificateTypeInCertChain(certChain, count)) {
+        return ER_INVALID_CERTIFICATE;
+    }
+    if (!taList) {
+        return ER_OK;
+    }
+    for (size_t cnt = 0; cnt < count; cnt++) {
+        if (ER_OK == ValidateCertificateWithTrustAnchors(certChain[cnt], taList)) {
+            return ER_OK;
         }
     }
-    return ER_OK;
+    return ER_INVALID_CERTIFICATE;
+}
+
+static QStatus ValidateMembershipCertificateChain(std::vector<CertificateX509*>& certs, PermissionMgmtObj::TrustAnchorList* taList)
+{
+    if (certs.size() == 0) {
+        return ER_INVALID_CERTIFICATE;
+    }
+
+    /* build an array of base CertificateX509 instances for validation */
+    CertificateX509* certChain = new CertificateX509[certs.size()];
+    if (certChain == NULL) {
+        return ER_OUT_OF_MEMORY;
+    }
+    for (size_t cnt = 0; cnt < certs.size(); cnt++) {
+        certChain[cnt] = *(certs[cnt]);
+    }
+    QStatus status = ValidateMembershipCertificateChain(certChain, certs.size(), taList);
+    delete [] certChain;
+    return status;
 }
 
 static QStatus LoadCertificate(CertificateX509::EncodingType encoding, const uint8_t* encoded, size_t encodedLen, CertificateX509& cert)
@@ -921,7 +938,7 @@ static QStatus LoadCertificate(CertificateX509::EncodingType encoding, const uin
     return ER_NOT_IMPLEMENTED;
 }
 
-QStatus PermissionMgmtObj::SameSubjectPublicKey(CertificateX509& cert, bool& outcome)
+QStatus PermissionMgmtObj::SameSubjectPublicKey(const CertificateX509& cert, bool& outcome)
 {
     ECCPublicKey pubKey;
     QStatus status = ca->GetDSAPublicKey(pubKey);
@@ -1428,31 +1445,43 @@ void PermissionMgmtObj::InstallMembership(const InterfaceDescription::Member* me
     MethodReply(msg, status);
 }
 
-QStatus PermissionMgmtObj::StoreMembership(const MsgArg& msgArg)
+QStatus PermissionMgmtObj::StoreMembership(const qcc::CertificateX509* certChain, size_t count)
 {
-    size_t certChainCount;
-    MsgArg* certChain;
-    QStatus status = msgArg.Get("a(yay)", &certChainCount, &certChain);
+    if (count == 0) {
+        return ER_OK;
+    }
+    /* make sure the leaf cert subject public key is the same as the one in
+     * the keystore.
+     */
+    bool sameKey = false;
+    QStatus status = SameSubjectPublicKey(certChain[0], sameKey);
     if (ER_OK != status) {
-        QCC_DbgPrintf(("PermissionMgmtObj::InstallMembership failed to retrieve certificate chain status 0x%x", status));
+        QCC_DbgPrintf(("PermissionMgmtObj::StoreMembership failed to validate certificate subject public key status 0x%x", status));
         return status;
     }
-
+    if (!sameKey) {
+        QCC_DbgPrintf(("PermissionMgmtObj::StoreMembership failed since certificate subject public key is not the same as target public key"));
+        return ER_UNKNOWN_CERTIFICATE;
+    }
+    status = ValidateMembershipCertificateChain(certChain, count, NULL);
+    if (ER_OK != status) {
+        QCC_DbgPrintf(("PermissionMgmtObj::StoreMembership failed to validate certificate chain 0x%x", status));
+        return status;
+    }
     GUID128 membershipGuid;
     KeyStore::Key membershipKey(KeyStore::Key::LOCAL, membershipGuid);
-    for (size_t cnt = 0; cnt < certChainCount; cnt++) {
-        MembershipCertificate cert;
-        QStatus status = LoadX509CertFromMsgArg(certChain[cnt], cert);
+    for (size_t cnt = 0; cnt < count; cnt++) {
+        String der;
+        status = certChain[cnt].EncodeCertificateDER(der);
         if (ER_OK != status) {
-            QCC_DbgPrintf(("PermissionMgmtObj::InstallMembership failed to retrieve certificate [%d] status 0x%x", (int) cnt, status));
             return status;
         }
-        KeyBlob kb(cert.GetEncoded(), cert.GetEncodedLen(), KeyBlob::GENERIC);
+        KeyBlob kb((const uint8_t*) der.data(), der.size(), KeyBlob::GENERIC);
         if (cnt == 0) {
             /* handle the leaf cert */
             String serialTag;
-            if (cert.GetSerialLen() > 0) {
-                serialTag.assign(reinterpret_cast<const char*>(cert.GetSerial()), cert.GetSerialLen());
+            if (certChain[cnt].GetSerialLen() > 0) {
+                serialTag.assign(reinterpret_cast<const char*>(certChain[cnt].GetSerial()), certChain[cnt].GetSerialLen());
             }
             kb.SetTag(serialTag);
 
@@ -1468,18 +1497,20 @@ QStatus PermissionMgmtObj::StoreMembership(const MsgArg& msgArg)
                 uint8_t numEntries = 1;
                 headerBlob.Set(&numEntries, 1, KeyBlob::GENERIC);
                 status = ca->StoreKey(membershipHead, headerBlob);
+                if (ER_OK != status) {
+                    return status;
+                }
                 checkDup = false;
             }
             /* check for duplicate */
             if (checkDup) {
                 KeyStore::Key tmpKey;
-                status = GetMembershipKey(ca, membershipHead, serialTag, cert.GetAuthorityKeyId(), tmpKey);
+                status = GetMembershipKey(ca, membershipHead, serialTag, certChain[cnt].GetAuthorityKeyId(), tmpKey);
                 if (ER_OK == status) {
                     /* found a duplicate */
                     return ER_DUPLICATE_CERTIFICATE;
                 }
             }
-
             /* add the membership cert as an associate entry to the membership list header node */
             status = ca->AddAssociatedKey(membershipHead, membershipKey, kb);
         } else {
@@ -1489,6 +1520,33 @@ QStatus PermissionMgmtObj::StoreMembership(const MsgArg& msgArg)
             status = ca->AddAssociatedKey(membershipKey, key, kb);
         }
     }
+    return status;
+}
+
+QStatus PermissionMgmtObj::StoreMembership(const MsgArg& msgArg)
+{
+    size_t certChainCount;
+    MsgArg* certChain;
+    QStatus status = msgArg.Get("a(yay)", &certChainCount, &certChain);
+    if (ER_OK != status) {
+        QCC_DbgPrintf(("PermissionMgmtObj::InstallMembership failed to retrieve certificate chain status 0x%x", status));
+        return status;
+    }
+
+    CertificateX509* certs = new CertificateX509[certChainCount];
+    if (certs == NULL) {
+        return ER_OUT_OF_MEMORY;
+    }
+    for (size_t cnt = 0; cnt < certChainCount; cnt++) {
+        QStatus status = LoadX509CertFromMsgArg(certChain[cnt], certs[cnt]);
+        if (ER_OK != status) {
+            QCC_DbgPrintf(("PermissionMgmtObj::InstallMembership failed to retrieve certificate [%d] status 0x%x", (int) cnt, status));
+            goto Exit;
+        }
+    }
+    status = StoreMembership(certs, certChainCount);
+Exit:
+    delete [] certs;
     return status;
 }
 
@@ -1924,7 +1982,7 @@ QStatus PermissionMgmtObj::ParseSendMemberships(Message& msg, bool& done)
     PeerState peerState =  bus.GetInternal().GetPeerStateTable()->GetPeerState(msg->GetSender());
     _PeerState::GuildMetadata* meta = NULL;
     for (size_t idx = 0; idx < count; idx++) {
-        MembershipCertificate* cert = new MembershipCertificate();
+        CertificateX509* cert = new CertificateX509();
         if (idx == 0) {
             /* leaf cert */
             meta = new _PeerState::GuildMetadata();
@@ -2339,6 +2397,10 @@ bool PermissionMgmtObj::ValidateCertChain(bool verifyIssuerChain, const qcc::Cer
                 break;
             }
         }
+    }
+    if (valid) {
+        /* check the certificate type in the chain */
+        valid = CertificateX509::ValidateCertificateTypeInCertChain(certChain, count);
     }
     return valid;
 }
