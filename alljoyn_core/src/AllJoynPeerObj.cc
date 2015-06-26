@@ -1001,11 +1001,12 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
         return ER_OK;
     }
     /*
-     * Only method calls trigger authentications so if the remote peer is not authenticated or in the
-     * process or being authenticated we return an error status which will cause a security
+     * Only method calls or error message trigger authentications so if the
+     * remote peer is not authenticated or in the process or being
+     * authenticated we return an error status which will cause a security
      * violation notification back to the application.
      */
-    if (msgType != MESSAGE_METHOD_CALL) {
+    if ((msgType != MESSAGE_METHOD_CALL) && (msgType != MESSAGE_ERROR)) {
         /* We are still holding the lock */
         lock.Unlock(MUTEX_CONTEXT);
         return ER_BUS_DESTINATION_NOT_AUTHENTICATED;
@@ -1877,9 +1878,15 @@ QStatus AllJoynPeerObj::SendMembershipData(ProxyBusObject& remotePeerObj, const 
 
     bool gotAllFromPeer = false;
     uint8_t cnt = 0;
-    for (std::vector<std::vector<MsgArg*> >::iterator it = args.begin(); it != args.end(); it++) {
+    while (true) {
         MsgArg inputs[2];
-        status = SetUpSendMembershipInput(*it, cnt, argCount, inputs, 2);
+        if (cnt == argCount) {
+            std::vector<MsgArg*> emptyArgs;
+            status = SetUpSendMembershipInput(emptyArgs, cnt, argCount, inputs, 2);
+        } else {
+            status = SetUpSendMembershipInput(args[cnt], cnt, argCount, inputs, 2);
+        }
+        /* cnt is updated by SetUpSendMembershipInput */
         if (ER_OK != status) {
             goto Exit;
         }

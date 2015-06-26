@@ -401,6 +401,16 @@ static bool IsAuthorized(const MessageHolder& msgHolder, const PermissionPolicy*
             }
         }
         authorized = IsPeerAuthorized(msgHolder, policy, peerState, trustedPeer, trustedPeerPublicKey, issuerPublicKeys, right.authByPolicy, denied);
+#ifndef NDEBUG
+        for (_PeerState::GuildMap::iterator it = peerState->guildMap.begin(); it != peerState->guildMap.end(); it++) {
+            _PeerState::GuildMetadata* metadata = it->second;
+            if (metadata->certChain.size() == 0) {
+                QCC_DbgPrintf(("Peer has no membership"));
+            } else {
+                QCC_DbgPrintf(("Peer membership guid %s", metadata->certChain[0]->GetGuild().ToString().c_str()));
+            }
+        }
+#endif
         QCC_DbgPrintf(("Peer's public key: %s Authorized: %d Denied: %d", trustedPeerPublicKey ? trustedPeerPublicKey->ToString().c_str() : "N/A", authorized, denied));
         if (denied || !authorized) {
             return false;
@@ -633,7 +643,9 @@ QStatus PermissionManager::AuthorizeMessage(bool outgoing, Message& msg, PeerSta
         return ER_OK;
     }
 
-    QCC_DbgPrintf(("PermissionManager::AuthorizeMessage with outgoing: %d msg %s\nLocal policy %s", outgoing, msg->ToString().c_str(), GetPolicy() ? GetPolicy()->ToString().c_str() : "NULL"));
+    QCC_DbgPrintf(("PermissionManager::AuthorizeMessage with outgoing: %d msg %s", outgoing, msg->ToString().c_str()));
+    QCC_DbgPrintf(("PermissionManager::AuthorizeMessage: local policy %s", GetPolicy() ? GetPolicy()->ToString().c_str() : "NULL"));
+
     authorized = IsAuthorized(holder, GetPolicy(), peerState, permissionMgmtObj);
     if (!authorized) {
         QCC_DbgPrintf(("PermissionManager::AuthorizeMessage IsAuthorized returns ER_PERMISSION_DENIED\n"));

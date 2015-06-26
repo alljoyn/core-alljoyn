@@ -408,7 +408,14 @@ class KeyExchangerECDHE_ECDSA : public KeyExchangerECDHE {
     void KeyExchangeGenKey(MsgArg& variant);
     QStatus KeyExchangeReadKey(MsgArg& variant);
     virtual QStatus StoreMasterSecret(const qcc::GUID128& guid, const uint8_t accessRights[4]);
-
+    /**
+     * Helper function to validate whether the certificate chain structure is
+     * valid.
+     * @param certChain the certificate chain to validate
+     * @param count the number of certificates in the chain
+     * @return true if the structure is valid; false, otherwise.
+     */
+    static bool IsCertChainStructureValid(const qcc::CertificateX509* certChain, size_t count);
 
   private:
     /**
