@@ -199,10 +199,10 @@ bool DaemonRouter::IsSessionDeliverable(SessionId id, BusEndpoint& src, BusEndpo
     sessionMapLock.Lock(MUTEX_CONTEXT);
     SessionMap::const_iterator it = sessionMap.find(id);
     const bool validSession = (it != sessionMap.end());
-    const SessionEps& epSet = it->second;
     bool srcInSession = false;
     bool destInSession = false;
     if (validSession) {
+        const SessionEps& epSet = it->second;
         SessionEps::const_iterator sit = epSet.find(src);
         SessionEps::const_iterator dit = epSet.find(dest);
         srcInSession = (sit != epSet.end());
