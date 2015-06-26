@@ -43,7 +43,9 @@ typedef struct _alljoyn_message_handle*                     alljoyn_message;
  * managing an AllJoyn message bus
  */
 typedef struct _alljoyn_busattachment_handle*               alljoyn_busattachment;
+/// @cond ALLJOYN_DEV
 #endif
+/// @endcond
 
 /** @name Endianness indicators */
 // @{
