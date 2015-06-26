@@ -54,6 +54,16 @@ class PolicyRules_ApplicationStateListener : public ApplicationStateListener {
     map<String, PermissionConfigurator::ApplicationState> stateMap;
 };
 
+class PolicyRulesTestSessionPortListener : public SessionPortListener {
+  public:
+    virtual bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) {
+        QCC_UNUSED(sessionPort);
+        QCC_UNUSED(joiner);
+        QCC_UNUSED(opts);
+        return true;
+    }
+};
+
 class PolicyRulesTestBusObject : public BusObject {
   public:
     PolicyRulesTestBusObject(BusAttachment& bus, const char* path, const char* interfaceName, bool announce = true)
@@ -128,6 +138,9 @@ class SecurityPolicyRulesTest : public testing::Test {
         managerBus("SecurityPolicyRulesManager"),
         peer1Bus("SecurityPolicyRulesPeer1"),
         peer2Bus("SecurityPolicyRulesPeer2"),
+        managerSessionPort(42),
+        peer1SessionPort(42),
+        peer2SessionPort(42),
         interfaceName("org.allseen.test.SecurityApplication.rules"),
         managerAuthListener(NULL),
         peer1AuthListener(NULL),
@@ -175,17 +188,30 @@ class SecurityPolicyRulesTest : public testing::Test {
         EXPECT_EQ(ER_OK, peer1Bus.CreateInterfacesFromXml(interface.c_str()));
         EXPECT_EQ(ER_OK, peer2Bus.CreateInterfacesFromXml(interface.c_str()));
 
-        SecurityApplicationProxy sapWithManager(managerBus, managerBus.GetUniqueName().c_str());
+        SessionOpts opts1;
+        EXPECT_EQ(ER_OK, managerBus.BindSessionPort(managerSessionPort, opts1, managerSessionPortListener));
+
+        SessionOpts opts2;
+        EXPECT_EQ(ER_OK, peer1Bus.BindSessionPort(peer1SessionPort, opts2, peer1SessionPortListener));
+
+        SessionOpts opts3;
+        EXPECT_EQ(ER_OK, peer2Bus.BindSessionPort(peer2SessionPort, opts3, peer2SessionPortListener));
+
+        EXPECT_EQ(ER_OK, managerBus.JoinSession(managerBus.GetUniqueName().c_str(), managerSessionPort, NULL, managerToManagerSessionId, opts1));
+        EXPECT_EQ(ER_OK, managerBus.JoinSession(peer1Bus.GetUniqueName().c_str(), peer1SessionPort, NULL, managerToPeer1SessionId, opts2));
+        EXPECT_EQ(ER_OK, managerBus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, managerToPeer2SessionId, opts3));
+
+        SecurityApplicationProxy sapWithManager(managerBus, managerBus.GetUniqueName().c_str(), managerToManagerSessionId);
         PermissionConfigurator::ApplicationState applicationStateManager;
         EXPECT_EQ(ER_OK, sapWithManager.GetApplicationState(applicationStateManager));
         EXPECT_EQ(PermissionConfigurator::CLAIMABLE, applicationStateManager);
 
-        SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str());
+        SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
         PermissionConfigurator::ApplicationState applicationStatePeer1;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetApplicationState(applicationStatePeer1));
         EXPECT_EQ(PermissionConfigurator::CLAIMABLE, applicationStatePeer1);
 
-        SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str());
+        SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
         PermissionConfigurator::ApplicationState applicationStatePeer2;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetApplicationState(applicationStatePeer2));
         EXPECT_EQ(PermissionConfigurator::CLAIMABLE, applicationStatePeer2);
@@ -393,6 +419,18 @@ class SecurityPolicyRulesTest : public testing::Test {
     BusAttachment peer1Bus;
     BusAttachment peer2Bus;
 
+    SessionPort managerSessionPort;
+    SessionPort peer1SessionPort;
+    SessionPort peer2SessionPort;
+
+    PolicyRulesTestSessionPortListener managerSessionPortListener;
+    PolicyRulesTestSessionPortListener peer1SessionPortListener;
+    PolicyRulesTestSessionPortListener peer2SessionPortListener;
+
+    SessionId managerToManagerSessionId;
+    SessionId managerToPeer1SessionId;
+    SessionId managerToPeer2SessionId;
+
     InMemoryKeyStoreListener managerKeyStoreListener;
     InMemoryKeyStoreListener peer1KeyStoreListener;
     InMemoryKeyStoreListener peer2KeyStoreListener;
@@ -489,6 +527,7 @@ class SecurityPolicyRulesMethodCalls : public SecurityPolicyRulesTest,
 
 TEST_P(SecurityPolicyRulesMethodCalls, PolicyRules)
 {
+
     PolicyRulesTestBusObject peer2BusObject(peer2Bus, "/test", interfaceName);
     EXPECT_EQ(ER_OK, peer2Bus.RegisterBusObject(peer2BusObject));
 
@@ -542,8 +581,8 @@ TEST_P(SecurityPolicyRulesMethodCalls, PolicyRules)
         peer2Policy.SetAcls(1, acls);
     }
 
-    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str());
-    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str());
+    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
 
     {
         PermissionPolicy peer1DefaultPolicy;
@@ -559,13 +598,16 @@ TEST_P(SecurityPolicyRulesMethodCalls, PolicyRules)
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
 
+    SessionOpts opts;
+    SessionId peer1ToPeer2SessionId;
+    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, peer1ToPeer2SessionId, opts));
     qcc::String p1policyStr = "\n----Peer1 Policy-----\n" + peer1Policy.ToString();
     SCOPED_TRACE(p1policyStr.c_str());
     qcc::String p2policyStr = "\n----Peer2 Policy-----\n" + peer2Policy.ToString();
     SCOPED_TRACE(p2policyStr.c_str());
 
     /* Create the ProxyBusObject and call the Echo method on the interface */
-    ProxyBusObject proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), "/test", 0, false);
+    ProxyBusObject proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), "/test", peer1ToPeer2SessionId, true);
     EXPECT_EQ(ER_OK, proxy.ParseXml(interface.c_str()));
     EXPECT_TRUE(proxy.ImplementsInterface(interfaceName)) << interface.c_str() << "\n" << interfaceName;
     MsgArg arg("s", "String that should be Echoed back.");
@@ -740,13 +782,17 @@ TEST_P(SecurityPolicyRulesGetProperty, PolicyRules)
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
 
+    SessionOpts opts;
+    SessionId peer1ToPeer2SessionId;
+    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, peer1ToPeer2SessionId, opts));
+
     qcc::String p1policyStr = "\n----Peer1 Policy-----\n" + peer1Policy.ToString();
     SCOPED_TRACE(p1policyStr.c_str());
     qcc::String p2policyStr = "\n----Peer2 Policy-----\n" + peer2Policy.ToString();
     SCOPED_TRACE(p2policyStr.c_str());
 
     /* Create the ProxyBusObject and call the Echo method on the interface */
-    ProxyBusObject proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), "/test", 0, false);
+    ProxyBusObject proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), "/test", peer1ToPeer2SessionId, true);
     EXPECT_EQ(ER_OK, proxy.ParseXml(interface.c_str()));
     EXPECT_TRUE(proxy.ImplementsInterface(interfaceName)) << interface.c_str() << "\n" << interfaceName;
     MsgArg prop1Arg;
@@ -918,13 +964,17 @@ TEST_P(SecurityPolicyRulesSetProperty, PolicyRules)
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
 
+    SessionOpts opts;
+    SessionId peer1ToPeer2SessionId;
+    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, peer1ToPeer2SessionId, opts));
+
     qcc::String p1policyStr = "\n----Peer1 Policy-----\n" + peer1Policy.ToString();
     SCOPED_TRACE(p1policyStr.c_str());
     qcc::String p2policyStr = "\n----Peer2 Policy-----\n" + peer2Policy.ToString();
     SCOPED_TRACE(p2policyStr.c_str());
 
     /* Create the ProxyBusObject and call the Echo method on the interface */
-    ProxyBusObject proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), "/test", 0, false);
+    ProxyBusObject proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), "/test", peer1ToPeer2SessionId, true);
     EXPECT_EQ(ER_OK, proxy.ParseXml(interface.c_str()));
     EXPECT_TRUE(proxy.ImplementsInterface(interfaceName)) << interface.c_str() << "\n" << interfaceName;
     MsgArg prop1Arg;
@@ -986,4 +1036,214 @@ INSTANTIATE_TEST_CASE_P(SetProperty, SecurityPolicyRulesSetProperty,
                                                       PermissionPolicy::Rule::Member::ACTION_OBSERVE,
                                                       false,
                                                       false)
+                            ));
+
+class ChirpSignalReceiver : public MessageReceiver {
+  public:
+    ChirpSignalReceiver() : signalReceivedFlag(false) { }
+    void ChirpSignalHandler(const InterfaceDescription::Member* member,
+                            const char* sourcePath, Message& msg) {
+        QCC_UNUSED(member);
+        QCC_UNUSED(sourcePath);
+        QCC_UNUSED(msg);
+        signalReceivedFlag = true;
+    }
+    bool signalReceivedFlag;
+};
+
+class SignalRulesTestValue {
+  public:
+    SignalRulesTestValue(uint8_t mask1, uint8_t mask2, bool canSendSignal, bool canReceiveSignal) :
+        peer1ActionMask(mask1),
+        peer2ActionMask(mask2),
+        busObjAllowedToSendSignal(canSendSignal),
+        allowedToReceiveSignal(canReceiveSignal) { }
+    friend::std::ostream& operator<<(::std::ostream& os, const SignalRulesTestValue& val);
+    uint8_t peer1ActionMask;
+    uint8_t peer2ActionMask;
+    bool busObjAllowedToSendSignal;
+    bool allowedToReceiveSignal;
+};
+
+::std::ostream& operator<<(::std::ostream& os, const SignalRulesTestValue& val) {
+    os << "peer1Mask = " << (unsigned int)val.peer1ActionMask << "\n";
+    os << "peer2Mask = " << (unsigned int)val.peer2ActionMask << "\n";
+    if (val.busObjAllowedToSendSignal) {
+        os << "BusObject should be able to emit signals\n";
+    } else {
+        os << "BusObject should NOT be able to emit signals\n";
+    }
+    if (val.allowedToReceiveSignal) {
+        os << "We are expected to be able to receive signals\n";
+    } else {
+        os << "We are NOT expected to be able to receive signals\n";
+    }
+    return os;
+}
+
+class SecurityPolicyRulesSignal : public SecurityPolicyRulesTest,
+    public testing::WithParamInterface<SignalRulesTestValue> {
+};
+
+TEST_P(SecurityPolicyRulesSignal, PolicyRules)
+{
+    PolicyRulesTestBusObject peer1BusObject(peer1Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer1Bus.RegisterBusObject(peer1BusObject));
+
+    /* install permissions make method calls */
+    //Permission policy that will be installed on peer1
+    PermissionPolicy peer1Policy;
+    peer1Policy.SetVersion(1);
+    {
+        PermissionPolicy::Acl acls[1];
+        {
+            PermissionPolicy::Peer peers[1];
+            peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
+            acls[0].SetPeers(1, peers);
+        }
+        {
+            PermissionPolicy::Rule rules[1];
+            rules[0].SetObjPath("/test");
+            rules[0].SetInterfaceName(interfaceName);
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("Chirp",
+                               PermissionPolicy::Rule::Member::SIGNAL,
+                               GetParam().peer1ActionMask);
+                rules[0].SetMembers(1, members);
+            }
+            acls[0].SetRules(1, rules);
+        }
+        peer1Policy.SetAcls(1, acls);
+    }
+
+    // Permission policy that will be installed on peer2
+    PermissionPolicy peer2Policy;
+    peer2Policy.SetVersion(1);
+    {
+        PermissionPolicy::Acl acls[1];
+        {
+            PermissionPolicy::Peer peers[1];
+            peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
+            acls[0].SetPeers(1, peers);
+        }
+        {
+            PermissionPolicy::Rule rules[1];
+            rules[0].SetInterfaceName(interfaceName);
+            {
+                PermissionPolicy::Rule::Member peer2Prms[1];
+                peer2Prms[0].Set("Chirp",
+                                 PermissionPolicy::Rule::Member::SIGNAL,
+                                 GetParam().peer2ActionMask);
+                rules[0].SetMembers(1, peer2Prms);
+            }
+            acls[0].SetRules(1, rules);
+        }
+        peer2Policy.SetAcls(1, acls);
+    }
+
+    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str());
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str());
+
+    {
+        PermissionPolicy peer1DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+    }
+    {
+        PermissionPolicy peer2DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+    }
+
+    EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+
+    SessionOpts opts;
+    SessionId peer1ToPeer2SessionId;
+    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, peer1ToPeer2SessionId, opts));
+
+    qcc::String p1policyStr = "\n----Peer1 Policy-----\n" + peer1Policy.ToString();
+    SCOPED_TRACE(p1policyStr.c_str());
+    qcc::String p2policyStr = "\n----Peer2 Policy-----\n" + peer2Policy.ToString();
+    SCOPED_TRACE(p2policyStr.c_str());
+
+    /*
+     * Create the ProxyBusObject and call the SecureConnection this will make
+     * sure any permission keys are exchanged between peers
+     */
+    ProxyBusObject proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), "/test", peer1ToPeer2SessionId, true);
+    EXPECT_EQ(ER_OK, proxy.ParseXml(interface.c_str()));
+    EXPECT_TRUE(proxy.ImplementsInterface(interfaceName)) << interface.c_str() << "\n" << interfaceName;
+    EXPECT_EQ(ER_OK, proxy.SecureConnection(true));
+
+    ChirpSignalReceiver chirpSignalReceiver;
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterSignalHandler(&chirpSignalReceiver, static_cast<MessageReceiver::SignalHandler>(&ChirpSignalReceiver::ChirpSignalHandler), peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), NULL));
+
+    MsgArg arg("s", "Chipr this String out in the signal.");
+    // Signals are send and forget.  They will always return ER_OK.
+    QStatus status = peer1BusObject.Signal(peer2Bus.GetUniqueName().c_str(), peer1ToPeer2SessionId, *peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), &arg, 1);
+
+    if (GetParam().busObjAllowedToSendSignal) {
+        EXPECT_EQ(ER_OK, status);
+        //Wait for a maximum of 2 sec for the Chirp Signal.
+        for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+            if (chirpSignalReceiver.signalReceivedFlag) {
+                break;
+            }
+            qcc::Sleep(WAIT_MSECS);
+        }
+        if (GetParam().allowedToReceiveSignal) {
+            EXPECT_TRUE(chirpSignalReceiver.signalReceivedFlag);
+        } else {
+            EXPECT_FALSE(chirpSignalReceiver.signalReceivedFlag) << "According to the policy rules we should NOT be able to send a signal";
+        }
+
+    } else {
+        EXPECT_EQ(ER_PERMISSION_DENIED, status);
+        EXPECT_FALSE(chirpSignalReceiver.signalReceivedFlag) << "According to the policy rules we should NOT be able to send a signal";
+    }
+
+    /* clean up */
+    peer1Bus.UnregisterBusObject(peer1BusObject);
+}
+
+INSTANTIATE_TEST_CASE_P(Signal, SecurityPolicyRulesSignal,
+                        ::testing::Values(
+                            SignalRulesTestValue(PermissionPolicy::Rule::Member::ACTION_PROVIDE, //0
+                                                 PermissionPolicy::Rule::Member::ACTION_PROVIDE,
+                                                 false,      //can send signal
+                                                 true),      //can receive signal
+                            SignalRulesTestValue(PermissionPolicy::Rule::Member::ACTION_PROVIDE, //1
+                                                 PermissionPolicy::Rule::Member::ACTION_MODIFY,
+                                                 false,
+                                                 false),
+                            SignalRulesTestValue(PermissionPolicy::Rule::Member::ACTION_PROVIDE, //2
+                                                 PermissionPolicy::Rule::Member::ACTION_OBSERVE,
+                                                 false,
+                                                 false),
+                            SignalRulesTestValue(PermissionPolicy::Rule::Member::ACTION_MODIFY, //3
+                                                 PermissionPolicy::Rule::Member::ACTION_PROVIDE,
+                                                 false,
+                                                 true),
+                            SignalRulesTestValue(PermissionPolicy::Rule::Member::ACTION_MODIFY, //4
+                                                 PermissionPolicy::Rule::Member::ACTION_MODIFY,
+                                                 false,
+                                                 false),
+                            SignalRulesTestValue(PermissionPolicy::Rule::Member::ACTION_MODIFY, //5
+                                                 PermissionPolicy::Rule::Member::ACTION_OBSERVE,
+                                                 false,
+                                                 false),
+                            SignalRulesTestValue(PermissionPolicy::Rule::Member::ACTION_OBSERVE, //6
+                                                 PermissionPolicy::Rule::Member::ACTION_PROVIDE,
+                                                 true,
+                                                 true),
+                            SignalRulesTestValue(PermissionPolicy::Rule::Member::ACTION_OBSERVE, //7
+                                                 PermissionPolicy::Rule::Member::ACTION_MODIFY,
+                                                 true,
+                                                 false),
+                            SignalRulesTestValue(PermissionPolicy::Rule::Member::ACTION_OBSERVE, //8
+                                                 PermissionPolicy::Rule::Member::ACTION_OBSERVE,
+                                                 true,
+                                                 false)
                             ));
