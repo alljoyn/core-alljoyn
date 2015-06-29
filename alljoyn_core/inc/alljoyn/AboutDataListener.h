@@ -45,7 +45,7 @@ class AboutDataListener {
     virtual ~AboutDataListener() { };
 
     /**
-     * Creating the MsgArg that is returned when a user calls
+     * Create the MsgArg that is returned when a user calls
      * org.alljoyn.About.GetAboutData. The returned MsgArg must contain the
      * AboutData dictionary for the Language specified.
      *
@@ -194,21 +194,26 @@ class AboutDataListener {
      * an empty string or NULL the GetAboutData is expected to return the
      * default language.
      *
-     * If the language tag given is not supported return the QStatus
-     * #ER_LANGUAGE_NOT_SUPPORTED. If the user has not provided ALL of the
-     * required fields return the QStatus
+     * If the language tag given is not supported, return the best matching
+     * language according to RFC 4647 section 3.4. This algorithm requires
+     * that the "supported" languages be the least specific they can (e.g.,
+     * "en" in order to match both "en" and "en-US" if requested), and the
+     * "requested" language be the most specific it can (e.g., "en-US" in
+     * order to match either "en-US" or "en" if supported).
+     *
+     * If the user has not
+     * provided ALL of the required fields return the QStatus
      * #ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD
      *
-     * @param[out] msgArg a the dictionary containing all of the AboutData fields for
-     *                    the specified language.  If language is not specified the default
+     * @param[out] msgArg a dictionary containing all of the AboutData fields for
+     *                    the requested language.  If language is not specified, the default
      *                    language will be returned
-     * @param[in] language IETF language tags specified by RFC 5646 if the string
-     *                     is NULL or an empty string the MsgArg for the default
-     *                     language will be returned
+     * @param[in] language IETF language tag specified by RFC 5646. If the string
+     *                     is NULL or an empty string, the MsgArg for the default
+     *                     language will be returned.
      *
      * @return
      *  - #ER_OK on successful
-     *  - #ER_LANGUAGE_NOT_SUPPORTED if language is not supported
      *  - #ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD if a required field is missing
      *  - other error indicating failure
      */

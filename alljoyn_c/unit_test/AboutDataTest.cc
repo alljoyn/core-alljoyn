@@ -852,7 +852,22 @@ TEST(AboutDataTest, GetMsgArg_es_language) {
     alljoyn_aboutdata_destroy(aboutData);
 }
 
-TEST(AboutDataTest, GetMsgArg_language_not_supported) {
+void VerifyAppName(alljoyn_aboutdata aboutData, const char* language, const char* expectedAppName)
+{
+    alljoyn_msgarg aboutArg = alljoyn_msgarg_create();
+    QStatus status = alljoyn_aboutdata_getaboutdata(aboutData, aboutArg, language);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    alljoyn_msgarg args;
+    alljoyn_msgarg_getdictelement(aboutArg, "{sv}", AboutData::APP_NAME, &args);
+    char* appName;
+    alljoyn_msgarg_get(args, "s", &appName);
+    EXPECT_STREQ(expectedAppName, appName);
+
+    alljoyn_msgarg_destroy(aboutArg);
+}
+
+TEST(AboutDataTest, GetMsgArg_best_language) {
     QStatus status = ER_FAIL;
     alljoyn_aboutdata aboutData = alljoyn_aboutdata_create("en");
 
@@ -861,38 +876,45 @@ TEST(AboutDataTest, GetMsgArg_language_not_supported) {
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = alljoyn_aboutdata_setdeviceid(aboutData, "fakeID");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = alljoyn_aboutdata_setappname(aboutData, "Application", "en");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = alljoyn_aboutdata_setmanufacturer(aboutData, "Manufacturer", "en");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = alljoyn_aboutdata_setmodelnumber(aboutData, "123456");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = alljoyn_aboutdata_setdescription(aboutData,
-                                              "A poetic description of this application",
-                                              "en");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = alljoyn_aboutdata_setsoftwareversion(aboutData, "0.1.2");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = alljoyn_aboutdata_setappname(aboutData, "en appName", "en");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = alljoyn_aboutdata_setmanufacturer(aboutData, "en manufacturer", "en");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = alljoyn_aboutdata_setdescription(aboutData, "en description", "en");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_TRUE(alljoyn_aboutdata_isvalid(aboutData, "en"));
 
-    status = alljoyn_aboutdata_setsupportedlanguage(aboutData, "es");
+    status = alljoyn_aboutdata_setsupportedlanguage(aboutData, "de-CH");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = alljoyn_aboutdata_setappname(aboutData, "aplicacion", "es");
+    status = alljoyn_aboutdata_setappname(aboutData, "de-CH appName", "de-CH");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = alljoyn_aboutdata_setmanufacturer(aboutData, "manufactura", "es");
+    status = alljoyn_aboutdata_setmanufacturer(aboutData, "de-CH manufacturer", "de-CH");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = alljoyn_aboutdata_setdescription(aboutData,
-                                              "Una descripcion poetica de esta aplicacion",
-                                              "es");
+    status = alljoyn_aboutdata_setdescription(aboutData, "de-CH description", "de-CH");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    EXPECT_TRUE(alljoyn_aboutdata_isvalid(aboutData, "es"));
+    EXPECT_TRUE(alljoyn_aboutdata_isvalid(aboutData, "de-CH"));
 
-    alljoyn_msgarg aboutArg = alljoyn_msgarg_create();
-    status = alljoyn_aboutdata_getaboutdata(aboutData, aboutArg, "fr");
-    EXPECT_EQ(ER_LANGUAGE_NOT_SUPPORTED, status) << "  Actual Status: "
-                                                 << QCC_StatusText(status);
+    // Test requesting languages that resolve to the language that happens
+    // to be the default language.
+    VerifyAppName(aboutData, "EN", "en appName");
+    VerifyAppName(aboutData, "EN-US", "en appName");
+    VerifyAppName(aboutData, "en-a-bbb-x-a-ccc", "en appName");
 
-    alljoyn_msgarg_destroy(aboutArg);
+    // Test requesting languages that resolve to a language other than
+    // the default language.
+    VerifyAppName(aboutData, "DE-CH", "de-CH appName");
+    VerifyAppName(aboutData, "de-ch-1901", "de-CH appName");
+
+    // Test requesting languages that resolve to nothing and so use the
+    // default language.
+    VerifyAppName(aboutData, "de", "en appName");
+    VerifyAppName(aboutData, "fr", "en appName");
+
     alljoyn_aboutdata_destroy(aboutData);
 }
 
