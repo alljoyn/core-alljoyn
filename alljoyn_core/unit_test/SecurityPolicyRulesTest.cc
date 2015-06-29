@@ -34,6 +34,31 @@ using namespace std;
  */
 #define WAIT_MSECS 5
 
+static String PrintActionMask(uint8_t actionMask) {
+    String result;
+    bool addPipeChar = false;
+    if (actionMask & PermissionPolicy::Rule::Member::ACTION_PROVIDE) {
+        result += "PROVIDE";
+        addPipeChar = true;
+    }
+    if (actionMask & PermissionPolicy::Rule::Member::ACTION_MODIFY) {
+        if (addPipeChar) {
+            result += " | MODIFY";
+        } else {
+            result += "MODIFY";
+        }
+        addPipeChar = true;
+    }
+    if (actionMask & PermissionPolicy::Rule::Member::ACTION_OBSERVE) {
+        if (addPipeChar) {
+            result += " | OBSERVE";
+        } else {
+            result += "OBSERVE";
+        }
+    }
+    return result;
+}
+
 class PolicyRules_ApplicationStateListener : public ApplicationStateListener {
   public:
     PolicyRules_ApplicationStateListener() : stateMap() { }
@@ -242,9 +267,6 @@ class SecurityPolicyRulesTest : public testing::Test {
         PermissionConfigurator& pcPeer2 = peer2Bus.GetPermissionConfigurator();
         EXPECT_EQ(ER_OK, pcPeer2.GetSigningPublicKey(peer2Key));
 
-        //Random GUID used for the SecurityManager
-        GUID128 managerGuid;
-
         uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
         EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(managerBus,
                                                                    manifest, manifestSize,
@@ -410,10 +432,10 @@ class SecurityPolicyRulesTest : public testing::Test {
     }
 
     QStatus UpdatePolicyWithValuesFromDefaultPolicy(const PermissionPolicy& defaultPolicy,
-            PermissionPolicy& policy,
-            bool keepCAentry = true,
-            bool keepInstallMembershipEntry = false,
-            bool keepAdminGroupEntry = false);
+                                                    PermissionPolicy& policy,
+                                                    bool keepCAentry = true,
+                                                    bool keepAdminGroupEntry = false,
+                                                    bool keepInstallMembershipEntry = false);
 
     BusAttachment managerBus;
     BusAttachment peer1Bus;
@@ -442,22 +464,25 @@ class SecurityPolicyRulesTest : public testing::Test {
     DefaultECDHEAuthListener* peer2AuthListener;
 
     PolicyRules_ApplicationStateListener appStateListener;
+
+    //Random GUID used for the SecurityManager
+    GUID128 managerGuid;
 };
 
 QStatus SecurityPolicyRulesTest::UpdatePolicyWithValuesFromDefaultPolicy(const PermissionPolicy& defaultPolicy,
-        PermissionPolicy& policy,
-        bool keepCAentry,
-        bool keepInstallMembershipEntry,
-        bool keepAdminGroupEntry) {
+                                                                         PermissionPolicy& policy,
+                                                                         bool keepCAentry,
+                                                                         bool keepAdminGroupEntry,
+                                                                         bool keepInstallMembershipEntry) {
 
     size_t count = policy.GetAclsSize();
     if (keepCAentry) {
         ++count;
     }
-    if (keepInstallMembershipEntry) {
+    if (keepAdminGroupEntry) {
         ++count;
     }
-    if (keepAdminGroupEntry) {
+    if (keepInstallMembershipEntry) {
         ++count;
     }
 
@@ -481,7 +506,7 @@ QStatus SecurityPolicyRulesTest::UpdatePolicyWithValuesFromDefaultPolicy(const P
         }
 
     }
-    for(size_t cnt = 0; cnt < policy.GetAclsSize(); ++cnt) {
+    for (size_t cnt = 0; cnt < policy.GetAclsSize(); ++cnt) {
         assert(idx <= count);
         acls[idx++] = policy.GetAcls()[cnt];
     }
@@ -506,8 +531,8 @@ class MethodRulesTestValue {
 };
 
 ::std::ostream& operator<<(::std::ostream& os, const MethodRulesTestValue& val) {
-    os << "peer1Mask = " << (unsigned int)val.peer1ActionMask << "\n";
-    os << "peer2Mask = " << (unsigned int)val.peer2ActionMask << "\n";
+    os << "peer1Mask = " << PrintActionMask(val.peer1ActionMask).c_str() << "\n";
+    os << "peer2Mask = " << PrintActionMask(val.peer2ActionMask).c_str() << "\n";
     if (val.proxyObjAllowedToCallMethod) {
         os << "ProxyBusObject is expected to call Method\n";
     } else {
@@ -572,8 +597,8 @@ TEST_P(SecurityPolicyRulesMethodCalls, PolicyRules)
             {
                 PermissionPolicy::Rule::Member members[1];
                 members[0].Set("Echo",
-                        PermissionPolicy::Rule::Member::METHOD_CALL,
-                        GetParam().peer2ActionMask);
+                               PermissionPolicy::Rule::Member::METHOD_CALL,
+                               GetParam().peer2ActionMask);
                 rules[0].SetMembers(1, members);
             }
             acls[0].SetRules(1, rules);
@@ -585,14 +610,14 @@ TEST_P(SecurityPolicyRulesMethodCalls, PolicyRules)
     SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
 
     {
-    PermissionPolicy peer1DefaultPolicy;
-    EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-    UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+        PermissionPolicy peer1DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
     }
     {
-    PermissionPolicy peer2DefaultPolicy;
-    EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-    UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+        PermissionPolicy peer2DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
@@ -689,8 +714,8 @@ class GetPropertyRulesTestValue {
 };
 
 ::std::ostream& operator<<(::std::ostream& os, const GetPropertyRulesTestValue& val) {
-    os << "peer1Mask = " << (unsigned int)val.peer1ActionMask << "\n";
-    os << "peer2Mask = " << (unsigned int)val.peer2ActionMask << "\n";
+    os << "peer1Mask = " << PrintActionMask(val.peer1ActionMask).c_str() << "\n";
+    os << "peer2Mask = " << PrintActionMask(val.peer2ActionMask).c_str() << "\n";
     if (val.proxyObjAllowedToCallGetProperty) {
         os << "ProxyBusObject is expected to call GetProperty\n";
     } else {
@@ -731,8 +756,8 @@ TEST_P(SecurityPolicyRulesGetProperty, PolicyRules)
             {
                 PermissionPolicy::Rule::Member members[1];
                 members[0].Set("Prop1",
-                        PermissionPolicy::Rule::Member::PROPERTY,
-                        GetParam().peer1ActionMask);
+                               PermissionPolicy::Rule::Member::PROPERTY,
+                               GetParam().peer1ActionMask);
                 rules[0].SetMembers(1, members);
             }
             acls[0].SetRules(1, rules);
@@ -756,8 +781,8 @@ TEST_P(SecurityPolicyRulesGetProperty, PolicyRules)
             {
                 PermissionPolicy::Rule::Member members[1];
                 members[0].Set("Prop1",
-                        PermissionPolicy::Rule::Member::PROPERTY,
-                        GetParam().peer2ActionMask);
+                               PermissionPolicy::Rule::Member::PROPERTY,
+                               GetParam().peer2ActionMask);
                 rules[0].SetMembers(1, members);
             }
             acls[0].SetRules(1, rules);
@@ -871,8 +896,8 @@ class SetPropertyRulesTestValue {
 };
 
 ::std::ostream& operator<<(::std::ostream& os, const SetPropertyRulesTestValue& val) {
-    os << "peer1Mask = " << (unsigned int)val.peer1ActionMask << "\n";
-    os << "peer2Mask = " << (unsigned int)val.peer2ActionMask << "\n";
+    os << "peer1Mask = " << PrintActionMask(val.peer1ActionMask).c_str() << "\n";
+    os << "peer2Mask = " << PrintActionMask(val.peer2ActionMask).c_str() << "\n";
     if (val.proxyObjAllowedToCallSetProperty) {
         os << "ProxyBusObject is expected to call SetProperty\n";
     } else {
@@ -913,8 +938,8 @@ TEST_P(SecurityPolicyRulesSetProperty, PolicyRules)
             {
                 PermissionPolicy::Rule::Member members[1];
                 members[0].Set("Prop1",
-                        PermissionPolicy::Rule::Member::PROPERTY,
-                        GetParam().peer1ActionMask);
+                               PermissionPolicy::Rule::Member::PROPERTY,
+                               GetParam().peer1ActionMask);
                 rules[0].SetMembers(1, members);
             }
             acls[0].SetRules(1, rules);
@@ -938,8 +963,8 @@ TEST_P(SecurityPolicyRulesSetProperty, PolicyRules)
             {
                 PermissionPolicy::Rule::Member members[1];
                 members[0].Set("Prop1",
-                        PermissionPolicy::Rule::Member::PROPERTY,
-                        GetParam().peer2ActionMask);
+                               PermissionPolicy::Rule::Member::PROPERTY,
+                               GetParam().peer2ActionMask);
                 rules[0].SetMembers(1, members);
             }
             acls[0].SetRules(1, rules);
@@ -1066,8 +1091,8 @@ class SignalRulesTestValue {
 };
 
 ::std::ostream& operator<<(::std::ostream& os, const SignalRulesTestValue& val) {
-    os << "peer1Mask = " << (unsigned int)val.peer1ActionMask << "\n";
-    os << "peer2Mask = " << (unsigned int)val.peer2ActionMask << "\n";
+    os << "peer1Mask = " << PrintActionMask(val.peer1ActionMask).c_str() << "\n";
+    os << "peer2Mask = " << PrintActionMask(val.peer2ActionMask).c_str() << "\n";
     if (val.busObjAllowedToSendSignal) {
         os << "BusObject should be able to emit signals\n";
     } else {
@@ -1108,8 +1133,8 @@ TEST_P(SecurityPolicyRulesSignal, PolicyRules)
             {
                 PermissionPolicy::Rule::Member members[1];
                 members[0].Set("Chirp",
-                        PermissionPolicy::Rule::Member::SIGNAL,
-                        GetParam().peer1ActionMask);
+                               PermissionPolicy::Rule::Member::SIGNAL,
+                               GetParam().peer1ActionMask);
                 rules[0].SetMembers(1, members);
             }
             acls[0].SetRules(1, rules);
@@ -1133,8 +1158,8 @@ TEST_P(SecurityPolicyRulesSignal, PolicyRules)
             {
                 PermissionPolicy::Rule::Member peer2Prms[1];
                 peer2Prms[0].Set("Chirp",
-                        PermissionPolicy::Rule::Member::SIGNAL,
-                        GetParam().peer2ActionMask);
+                                 PermissionPolicy::Rule::Member::SIGNAL,
+                                 GetParam().peer2ActionMask);
                 rules[0].SetMembers(1, peer2Prms);
             }
             acls[0].SetRules(1, rules);
@@ -1193,7 +1218,7 @@ TEST_P(SecurityPolicyRulesSignal, PolicyRules)
             }
             qcc::Sleep(WAIT_MSECS);
         }
-        if(GetParam().allowedToReceiveSignal) {
+        if (GetParam().allowedToReceiveSignal) {
             EXPECT_TRUE(chirpSignalReceiver.signalReceivedFlag);
         } else {
             EXPECT_FALSE(chirpSignalReceiver.signalReceivedFlag) << "According to the policy rules we should NOT be able to send a signal";
@@ -1241,6 +1266,247 @@ INSTANTIATE_TEST_CASE_P(Signal, SecurityPolicyRulesSignal,
                             SignalRulesTestValue(PermissionPolicy::Rule::Member::ACTION_OBSERVE, //7
                                                  PermissionPolicy::Rule::Member::ACTION_MODIFY,
                                                  true,
+                                                 false),
+                            SignalRulesTestValue(PermissionPolicy::Rule::Member::ACTION_OBSERVE, //8
+                                                 PermissionPolicy::Rule::Member::ACTION_OBSERVE,
+                                                 true,
+                                                 false)
+                            ));
+
+class SecurityPolicyRulesSignalManifest : public SecurityPolicyRulesTest,
+    public testing::WithParamInterface<SignalRulesTestValue> {
+};
+
+TEST_P(SecurityPolicyRulesSignalManifest, PolicyRules)
+{
+    PolicyRulesTestBusObject peer1BusObject(peer1Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer1Bus.RegisterBusObject(peer1BusObject));
+
+    /* install permissions make method calls */
+    //Permission policy that will be installed on peer1
+    PermissionPolicy peer1Policy;
+    peer1Policy.SetVersion(1);
+    {
+        PermissionPolicy::Acl acls[1];
+        {
+            PermissionPolicy::Peer peers[1];
+            peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
+            acls[0].SetPeers(1, peers);
+        }
+        {
+            PermissionPolicy::Rule rules[1];
+            rules[0].SetObjPath("/test");
+            rules[0].SetInterfaceName(interfaceName);
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("Chirp",
+                               PermissionPolicy::Rule::Member::SIGNAL,
+                               PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+                rules[0].SetMembers(1, members);
+            }
+            acls[0].SetRules(1, rules);
+        }
+        peer1Policy.SetAcls(1, acls);
+    }
+
+    // Permission policy that will be installed on peer2
+    PermissionPolicy peer2Policy;
+    peer2Policy.SetVersion(1);
+    {
+        PermissionPolicy::Acl acls[1];
+        {
+            PermissionPolicy::Peer peers[1];
+            peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
+            acls[0].SetPeers(1, peers);
+        }
+        {
+            PermissionPolicy::Rule rules[1];
+            rules[0].SetObjPath("/test");
+            rules[0].SetInterfaceName(interfaceName);
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("Chirp",
+                               PermissionPolicy::Rule::Member::SIGNAL,
+                               PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+                rules[0].SetMembers(1, members);
+            }
+            acls[0].SetRules(1, rules);
+        }
+        peer2Policy.SetAcls(1, acls);
+    }
+
+    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str());
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str());
+
+    {
+        PermissionPolicy peer1DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy, true, true);
+    }
+    {
+        PermissionPolicy peer2DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy, true, true);
+    }
+
+    EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    /* After having a new policy installed, the target bus
+       clears out all of its peer's secret and session keys, so the
+       next call will get security violation.  So just make the call and ignore
+       the outcome.
+     */
+    PermissionPolicy retPolicy;
+    sapWithPeer1.GetPolicy(retPolicy);
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+    sapWithPeer2.GetPolicy(retPolicy);
+
+    const size_t manifestSize = 1;
+    const size_t certChainSize = 1;
+    /*************Update Peer1 Manifest *************/
+    //peer1 key
+    KeyInfoNISTP256 peer1Key;
+    PermissionConfigurator& pcPeer1 = peer1Bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, pcPeer1.GetSigningPublicKey(peer1Key));
+
+    // Peer1 manifest
+    PermissionPolicy::Rule peer1Manifest[manifestSize];
+    {
+        PermissionPolicy::Rule::Member member[1];
+        member[0].Set("*", PermissionPolicy::Rule::Member::SIGNAL, GetParam().peer1ActionMask);
+        peer1Manifest[0].SetInterfaceName(interfaceName);
+        peer1Manifest[0].SetMembers(1, member);
+    }
+
+    uint8_t peer1Digest[Crypto_SHA256::DIGEST_SIZE];
+    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(managerBus,
+                                                               peer1Manifest, manifestSize,
+                                                               peer1Digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+
+    //Create peer1 identityCert
+    IdentityCertificate identityCertChainPeer1[certChainSize];
+
+
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
+                                                                  "1",
+                                                                  managerGuid.ToString(),
+                                                                  peer1Key.GetPublicKey(),
+                                                                  "Peer1Alias",
+                                                                  3600,
+                                                                  identityCertChainPeer1[0],
+                                                                  peer1Digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+
+    EXPECT_EQ(ER_OK, sapWithPeer1.UpdateIdentity(identityCertChainPeer1, certChainSize, peer1Manifest, manifestSize));
+
+    /*************Update peer2 Manifest *************/
+    //peer2 key
+    KeyInfoNISTP256 peer2Key;
+    PermissionConfigurator& pcPeer2 = peer2Bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, pcPeer2.GetSigningPublicKey(peer2Key));
+
+    // Peer1 manifest
+    PermissionPolicy::Rule peer2Manifest[manifestSize];
+    {
+        PermissionPolicy::Rule::Member member[1];
+        member[0].Set("*", PermissionPolicy::Rule::Member::SIGNAL, GetParam().peer2ActionMask);
+        peer2Manifest[0].SetInterfaceName(interfaceName);
+        peer2Manifest[0].SetMembers(1, member);
+    }
+
+    uint8_t peer2Digest[Crypto_SHA256::DIGEST_SIZE];
+    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(managerBus,
+                                                               peer2Manifest, manifestSize,
+                                                               peer2Digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+
+    //Create peer2 identityCert
+    IdentityCertificate identityCertChainPeer2[certChainSize];
+
+
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
+                                                                  "1",
+                                                                  managerGuid.ToString(),
+                                                                  peer2Key.GetPublicKey(),
+                                                                  "Peer2Alias",
+                                                                  3600,
+                                                                  identityCertChainPeer2[0],
+                                                                  peer2Digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdateIdentity(identityCertChainPeer2, certChainSize, peer2Manifest, manifestSize));
+
+    SessionOpts opts;
+    SessionId peer1ToPeer2SessionId;
+    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, peer1ToPeer2SessionId, opts));
+
+    /*
+     * Create the ProxyBusObject and call the SecureConnection this will make
+     * sure any permission keys are exchanged between peers
+     */
+    ProxyBusObject proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), "/test", peer1ToPeer2SessionId, true);
+    EXPECT_EQ(ER_OK, proxy.ParseXml(interface.c_str()));
+    EXPECT_TRUE(proxy.ImplementsInterface(interfaceName)) << interface.c_str() << "\n" << interfaceName;
+    EXPECT_EQ(ER_OK, proxy.SecureConnection(true));
+
+    ChirpSignalReceiver chirpSignalReceiver;
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterSignalHandler(&chirpSignalReceiver, static_cast<MessageReceiver::SignalHandler>(&ChirpSignalReceiver::ChirpSignalHandler), peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), NULL));
+
+    MsgArg arg("s", "Chipr this String out in the signal.");
+    QStatus status = peer1BusObject.Signal(peer2Bus.GetUniqueName().c_str(), peer1ToPeer2SessionId, *peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), &arg, 1);
+
+    if (GetParam().busObjAllowedToSendSignal) {
+        EXPECT_EQ(ER_OK, status);
+        //Wait for a maximum of 2 sec for the Chirp Signal.
+        for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+            if (chirpSignalReceiver.signalReceivedFlag) {
+                break;
+            }
+            qcc::Sleep(WAIT_MSECS);
+        }
+        if (GetParam().allowedToReceiveSignal) {
+            EXPECT_TRUE(chirpSignalReceiver.signalReceivedFlag);
+        } else {
+            EXPECT_FALSE(chirpSignalReceiver.signalReceivedFlag) << "According to the policy rules we should NOT be able to send a signal";
+        }
+    } else {
+        EXPECT_EQ(ER_PERMISSION_DENIED, status);
+        EXPECT_FALSE(chirpSignalReceiver.signalReceivedFlag) << "According to the policy rules we should NOT be able to send a signal";
+    }
+
+    /* clean up */
+    peer1Bus.UnregisterBusObject(peer1BusObject);
+}
+
+INSTANTIATE_TEST_CASE_P(Signal, SecurityPolicyRulesSignalManifest,
+                        ::testing::Values(
+                            SignalRulesTestValue(PermissionPolicy::Rule::Member::ACTION_PROVIDE, //0
+                                                 PermissionPolicy::Rule::Member::ACTION_PROVIDE,
+                                                 false,         //can send signal
+                                                 true),         //can receive signal
+                            SignalRulesTestValue(PermissionPolicy::Rule::Member::ACTION_PROVIDE, //1
+                                                 PermissionPolicy::Rule::Member::ACTION_MODIFY,
+                                                 false,
+                                                 true),
+                            SignalRulesTestValue(PermissionPolicy::Rule::Member::ACTION_PROVIDE, //2
+                                                 PermissionPolicy::Rule::Member::ACTION_OBSERVE,
+                                                 true,
+                                                 true),
+                            SignalRulesTestValue(PermissionPolicy::Rule::Member::ACTION_MODIFY, //3
+                                                 PermissionPolicy::Rule::Member::ACTION_PROVIDE,
+                                                 false,
+                                                 false),
+                            SignalRulesTestValue(PermissionPolicy::Rule::Member::ACTION_MODIFY, //4
+                                                 PermissionPolicy::Rule::Member::ACTION_MODIFY,
+                                                 false,
+                                                 false),
+                            SignalRulesTestValue(PermissionPolicy::Rule::Member::ACTION_MODIFY, //5
+                                                 PermissionPolicy::Rule::Member::ACTION_OBSERVE,
+                                                 true,
+                                                 false),
+                            SignalRulesTestValue(PermissionPolicy::Rule::Member::ACTION_OBSERVE, //6
+                                                 PermissionPolicy::Rule::Member::ACTION_PROVIDE,
+                                                 false,
+                                                 false),
+                            SignalRulesTestValue(PermissionPolicy::Rule::Member::ACTION_OBSERVE, //7
+                                                 PermissionPolicy::Rule::Member::ACTION_MODIFY,
+                                                 false,
                                                  false),
                             SignalRulesTestValue(PermissionPolicy::Rule::Member::ACTION_OBSERVE, //8
                                                  PermissionPolicy::Rule::Member::ACTION_OBSERVE,
