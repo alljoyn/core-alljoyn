@@ -49,6 +49,31 @@ class PermissionConfigurator {
         NEED_UPDATE = 3    ///< The application is claimed, but requires a configuration update (after a software upgrade).
     } ApplicationState;
 
+    /*\brief returns the string representation of the application state.
+     *
+     * @param[in] as    application state.
+     *
+     * @return string   representation of the application state.
+     */
+    static const char* ToString(const PermissionConfigurator::ApplicationState as) {
+        switch (as) {
+        case PermissionConfigurator::NOT_CLAIMABLE:
+            return "NOT CLAIMABLE";
+
+        case PermissionConfigurator::CLAIMABLE:
+            return "CLAIMABLE";
+
+        case PermissionConfigurator::CLAIMED:
+            return "CLAIMED";
+
+        case PermissionConfigurator::NEED_UPDATE:
+            return "NEED UPDATE";
+        }
+
+        return "UNKNOWN";
+    }
+
+
     /**@name ClaimCapabilities */
     // {@
     typedef uint16_t ClaimCapabilities;
