@@ -77,12 +77,12 @@
 #define FP_NAN (_FPCLASS_SNAN | _FPCLASS_QNAN)
 #define FP_ZERO (_FPCLASS_NZ | _FPCLASS_PZ)
 #define FP_INFINITE (_FPCLASS_NINF | _FPCLASS_PINF)
-/// @endcond
 #else
 #ifdef __cplusplus
 #include <algorithm>
 #endif
 #endif
+/// @endcond
 
 /**
  * @defgroup windows_groupid_names The GroupID names
