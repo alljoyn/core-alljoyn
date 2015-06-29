@@ -36,7 +36,7 @@ namespace ajn {
 class AboutData : public AboutDataListener, public AboutKeys {
   public:
     /**
-     * Create an AboutData class. The default language will will not be set.
+     * Create an AboutData class. The default language will not be set.
      * Use the constructor that takes a default language tag; or set the
      * language using the SetDefaultLanguage member function, CreateFromMsgArg
      * member function or the CreateFromXml member function.
@@ -298,7 +298,17 @@ class AboutData : public AboutDataListener, public AboutKeys {
      *
      * @return ER_OK on success
      */
-    QStatus GetDefaultLanguage(char** defaultLanguage);
+    QStatus GetDefaultLanguage(char** defaultLanguage) const;
+
+    /**
+     * Get the best matching language according to RFC 4647 section 3.4.
+     *
+     * @param[in] requested The requested IETF language range.
+     *
+     * @return A pointer to the best language tag, or NULL if none exists.
+     */
+    const char* GetBestLanguage(const char* requested) const;
+
     /**
      * Set the DeviceName to the AboutData
      *
@@ -677,7 +687,7 @@ class AboutData : public AboutDataListener, public AboutKeys {
      *
      * @return ER_OK on success
      */
-    QStatus GetField(const char* name, MsgArg*& value, const char* language = NULL);
+    QStatus GetField(const char* name, MsgArg*& value, const char* language = NULL) const;
 
     /**
      * Get a list of the fields contained in this AboutData class.  This may be
@@ -766,7 +776,7 @@ class AboutData : public AboutDataListener, public AboutKeys {
      *  - true if the field is a localizable value
      *  - false otherwise.  If the fieldName is unknown false will be returned.
      */
-    bool IsFieldLocalized(const char* fieldName);
+    bool IsFieldLocalized(const char* fieldName) const;
 
     /**
      * Get the signature for the given field.
