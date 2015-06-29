@@ -506,6 +506,34 @@ qcc::String PermissionPolicy::ToString() const
     return str;
 }
 
+bool PermissionPolicy::operator==(const PermissionPolicy& other) const
+{
+    if (specificationVersion != other.specificationVersion) {
+        return false;
+    }
+
+    if (version != other.version) {
+        return false;
+    }
+
+    if (aclsSize != other.aclsSize) {
+        return false;
+    }
+
+    for (size_t i = 0; i < aclsSize; i++) {
+        if (!(acls[i] == other.acls[i])) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool PermissionPolicy::operator!=(const PermissionPolicy& other) const
+{
+    return !(*this == other);
+}
+
 static QStatus GeneratePeerArgs(MsgArg** retArgs, PermissionPolicy::Peer* peers, size_t count)
 {
     if (count == 0) {

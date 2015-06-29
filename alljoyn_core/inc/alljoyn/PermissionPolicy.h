@@ -603,6 +603,20 @@ class PermissionPolicy {
     qcc::String ToString() const;
 
     /**
+     * Comparison operator equality
+     * @param[in] other right hand side PermissionPolicy
+     * @return true if PermissionPolicies are equal
+     */
+    bool operator==(const PermissionPolicy& other) const;
+
+    /**
+     * Comparison operator non-equality
+     * @param[in] other right hand side PermissionPolicy
+     * @return true if PermissionPolicies are not equal
+     */
+    bool operator!=(const PermissionPolicy& other) const;
+
+    /**
      * Serialize the permission policy to a byte array.
      * @param marshaller the marshaller
      * @param[out] buf the newly allocated byte array holding the serialized data. The caller must delete[] this buffer after use.
