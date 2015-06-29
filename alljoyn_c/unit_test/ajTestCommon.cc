@@ -29,7 +29,11 @@ qcc::String ajn::getConnectArg() {
      * Note that test execution can still override the preferred transport by setting BUS_ADDRESS.
      * For example, you can issue a "set BUS_ADDRESS=tcp:addr=127.0.0.1,port=9955" before running the test.
      */
+#if (_WIN32_WINNT > _WIN32_WINNT_WINBLUE)
     return env->Find("BUS_ADDRESS", "npipe:");
+#else
+    return env->Find("BUS_ADDRESS", "null:");
+#endif
 #else
     return env->Find("BUS_ADDRESS", "unix:abstract=alljoyn");
 #endif
