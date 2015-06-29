@@ -880,41 +880,67 @@ TEST(AboutDataTest, GetMsgArg_es_language)
     EXPECT_STREQ("123456", modelNumber);
 }
 
-TEST(AboutDataTest, GetMsgArg_language_not_supported)
+void VerifyAppName(AboutData& aboutData, const char* language, const char* expectedAppName)
+{
+    MsgArg aboutArg;
+    QStatus status = aboutData.GetAboutData(&aboutArg, language);
+    EXPECT_EQ(ER_OK, status);
+    MsgArg* args;
+    aboutArg.GetElement("{sv}", AboutData::APP_NAME, &args);
+    char* appName;
+    args->Get("s", &appName);
+    EXPECT_STREQ(expectedAppName, appName);
+}
+
+TEST(AboutDataTest, GetMsgArg_best_language)
 {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
 
+    EXPECT_FALSE(aboutData.IsValid());
     uint8_t appId[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
     status = aboutData.SetAppId(appId, 16);
     EXPECT_EQ(ER_OK, status);
     status = aboutData.SetDeviceId("fakeID");
     EXPECT_EQ(ER_OK, status);
-    status = aboutData.SetAppName("Application");
-    EXPECT_EQ(ER_OK, status);
-    status = aboutData.SetManufacturer("Manufacture");
-    EXPECT_EQ(ER_OK, status);
     status = aboutData.SetModelNumber("123456");
-    EXPECT_EQ(ER_OK, status);
-    status = aboutData.SetDescription("A poetic description of this application");
     EXPECT_EQ(ER_OK, status);
     status = aboutData.SetSoftwareVersion("0.1.2");
     EXPECT_EQ(ER_OK, status);
+
+    status = aboutData.SetAppName("en appName");
+    EXPECT_EQ(ER_OK, status);
+    status = aboutData.SetManufacturer("en manufacturer");
+    EXPECT_EQ(ER_OK, status);
+    status = aboutData.SetDescription("en description");
+    EXPECT_EQ(ER_OK, status);
     EXPECT_TRUE(aboutData.IsValid());
 
-    status = aboutData.SetSupportedLanguage("es");
+    status = aboutData.SetSupportedLanguage("de-CH");
     EXPECT_EQ(ER_OK, status);
-    status = aboutData.SetAppName("aplicacion", "es");
+    status = aboutData.SetAppName("de-CH appName", "de-CH");
     EXPECT_EQ(ER_OK, status);
-    status = aboutData.SetManufacturer("manufactura", "es");
+    status = aboutData.SetManufacturer("de-CH manufacturer", "de-CH");
     EXPECT_EQ(ER_OK, status);
-    status = aboutData.SetDescription("Una descripcion poetica de esta aplicacion", "es");
+    status = aboutData.SetDescription("de-CH description", "de-CH");
     EXPECT_EQ(ER_OK, status);
-    EXPECT_TRUE(aboutData.IsValid("es"));
+    EXPECT_TRUE(aboutData.IsValid("de-CH"));
 
-    MsgArg aboutArg;
-    status = aboutData.GetAboutData(&aboutArg, "fr");
-    EXPECT_EQ(ER_LANGUAGE_NOT_SUPPORTED, status);
+    // Test requesting languages that resolve to the language that happens
+    // to be the default language.
+    VerifyAppName(aboutData, "EN", "en appName");
+    VerifyAppName(aboutData, "EN-US", "en appName");
+    VerifyAppName(aboutData, "en-a-bbb-x-a-ccc", "en appName");
+
+    // Test requesting languages that resolve to a language other than
+    // the default language.
+    VerifyAppName(aboutData, "DE-CH", "de-CH appName");
+    VerifyAppName(aboutData, "de-ch-1901", "de-CH appName");
+
+    // Test requesting languages that resolve to nothing and so use the
+    // default language.
+    VerifyAppName(aboutData, "de", "en appName");
+    VerifyAppName(aboutData, "fr", "en appName");
 }
 
 TEST(AboutDataTest, GetAnnouncedAboutData)
