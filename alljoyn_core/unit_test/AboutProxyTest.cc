@@ -352,7 +352,7 @@ TEST_F(AboutProxyTest, GetObjectDescription) {
     EXPECT_EQ(ER_OK, status);
 }
 
-TEST_F(AboutProxyTest, GetAboutdata_English) {
+TEST_F(AboutProxyTest, GetAboutData_English) {
     QStatus status = ER_FAIL;
     qcc::GUID128 interface_rand_string;
     qcc::String ifaceName = "test.about.b" + interface_rand_string.ToString();
@@ -466,7 +466,7 @@ TEST_F(AboutProxyTest, GetAboutdata_English) {
     EXPECT_EQ(ER_OK, status);
 }
 
-TEST_F(AboutProxyTest, GetAboutdata_Spanish) {
+TEST_F(AboutProxyTest, GetAboutData_Spanish) {
     QStatus status = ER_FAIL;
     qcc::GUID128 interface_rand_string;
     qcc::String ifaceName = "test.about.c" + interface_rand_string.ToString();
@@ -566,7 +566,7 @@ TEST_F(AboutProxyTest, GetAboutdata_Spanish) {
 }
 
 //ASACORE-958
-TEST_F(AboutProxyTest, GetAboutdata_UnsupportedLanguage) {
+TEST_F(AboutProxyTest, GetAboutData_UnsupportedLanguage) {
     QStatus status = ER_FAIL;
     qcc::GUID128 interface_rand_string;
     qcc::String ifaceName = "test.about.d" + interface_rand_string.ToString();
@@ -622,10 +622,12 @@ TEST_F(AboutProxyTest, GetAboutdata_UnsupportedLanguage) {
 
     EXPECT_EQ(aboutListener.version, aboutVersion) << "Version mismatch!";
 
-    // AboutData for unsupported language- French
+    // AboutData for unsupported language- French.
+    // This should succeed and just use the default language.
+    // See RFC 4647 for further discussion.
     MsgArg dataArg;
     status = proxy.GetAboutData(FRENCH_TAG, dataArg);
-    EXPECT_EQ(ER_LANGUAGE_NOT_SUPPORTED, status) << "  GetAboutData";
+    EXPECT_EQ(ER_OK, status) << "  GetAboutData";
 
     status = clientBus.CancelWhoImplements(ifaceName.c_str());
     EXPECT_EQ(ER_OK, status);
