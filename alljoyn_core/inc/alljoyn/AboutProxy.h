@@ -72,7 +72,6 @@ class AboutProxy : public ProxyBusObject {
      *
      * @return
      *    - ER_OK if successful.
-     *    - ER_LANGUAGE_NOT_SUPPORTED if the language specified is not supported
      *    - ER_BUS_REPLY_IS_ERROR_MESSAGE on unknown failure
      */
     QStatus GetAboutData(const char* languageTag, MsgArg& data);

@@ -194,9 +194,9 @@ class AboutDataListener {
      * an empty string or NULL the GetAboutData is expected to return the
      * default language.
      *
-     * If the language tag given is not supported return the QStatus
-     * #ER_LANGUAGE_NOT_SUPPORTED. If the user has not provided ALL of the
-     * required fields return the QStatus
+     * If the language tag given is not supported return the best matching
+     * language according to RFC 4647 section 3.4.  If the user has not
+     * provided ALL of the required fields return the QStatus
      * #ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD
      *
      * @param[out] msgArg a the dictionary containing all of the AboutData fields for
@@ -208,7 +208,6 @@ class AboutDataListener {
      *
      * @return
      *  - #ER_OK on successful
-     *  - #ER_LANGUAGE_NOT_SUPPORTED if language is not supported
      *  - #ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD if a required field is missing
      *  - other error indicating failure
      */
