@@ -466,11 +466,11 @@ QStatus BusAttachment::Internal::TransportConnect(const char* requestedConnectSp
 
 QStatus BusAttachment::Connect()
 {
-#ifdef _WIN32
+#if defined(QCC_OS_GROUP_WINDOWS)
     /**
      * Named pipe transport is available on Windows 10 and newer Windows versions.
      */
-#if (_WIN32_WINNT > 0x0603)
+#if (_WIN32_WINNT > _WIN32_WINNT_WINBLUE)
     const char* connectArgs = "npipe:";
 #else
     const char* connectArgs = "tcp:addr=127.0.0.1,port=9955";
