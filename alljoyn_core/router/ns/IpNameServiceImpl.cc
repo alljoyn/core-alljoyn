@@ -1807,11 +1807,20 @@ uint32_t IpNameServiceImpl::ComputeStaticScore(uint32_t powerSource, uint32_t mo
 
 }
 
-uint32_t IpNameServiceImpl::ComputeDynamicScore(uint32_t availableTcpConnections, uint32_t maximumTcpConnections, uint32_t availableUdpConnections, uint32_t maximumUdpConnections, uint32_t availableTcpRemoteClients, uint32_t maximumTcpRemoteClients)
+uint32_t IpNameServiceImpl::ComputeDynamicScore(
+        uint32_t availableTcpConnections,
+        uint32_t maximumTcpConnections,
+        uint32_t availableUdpConnections,
+        uint32_t maximumUdpConnections,
+        uint32_t availableTcpRemoteClients,
+        uint32_t maximumTcpRemoteClients,
+        uint32_t availableUdpRemoteClients,
+        uint32_t maximumUdpRemoteClients)
 {
     assert(availableTcpConnections <= maximumTcpConnections);
     assert(availableUdpConnections <= maximumUdpConnections);
     assert(availableTcpRemoteClients <= maximumTcpRemoteClients);
+    assert(availableUdpRemoteClients <= maximumUdpRemoteClients);
     uint32_t tcpScore = 0;
     uint32_t udpScore = 0;
     uint32_t tclScore = 0;
@@ -1822,8 +1831,11 @@ uint32_t IpNameServiceImpl::ComputeDynamicScore(uint32_t availableTcpConnections
      * The tcpScore and the udpScore are only relevant to the computation of the dynamic score if
      * the tclScore is non-zero.
      */
-    if (maximumTcpRemoteClients) {
-        tclScore = ((DYNAMIC_RANK_RANGE * availableTcpRemoteClients) / (TCL_NORMALIZED_CONNECTIONS)) + ((DYNAMIC_RANK_RANGE * availableTcpRemoteClients) / (maximumTcpRemoteClients));
+    uint32_t maximumRemoteClients = maximumTcpRemoteClients + maximumUdpRemoteClients;
+    uint32_t availableRemoteClients = availableTcpRemoteClients + availableUdpRemoteClients;
+
+    if (maximumRemoteClients) {
+        tclScore = ((DYNAMIC_RANK_RANGE * availableRemoteClients) / (TCL_NORMALIZED_CONNECTIONS)) + ((DYNAMIC_RANK_RANGE * availableRemoteClients) / (maximumRemoteClients));
         if (tclScore) {
             transports++;
             if (maximumTcpConnections) {
@@ -1859,7 +1871,16 @@ QStatus IpNameServiceImpl::UpdateDynamicScore(TransportMask transportMask, uint3
     m_dynamicParams[i].availableTransportRemoteClients = availableTransportRemoteClients;
     m_dynamicParams[i].maximumTransportRemoteClients = maximumTransportRemoteClients;
 
-    m_dynamicScore = ComputeDynamicScore(m_dynamicParams[TRANSPORT_INDEX_TCP].availableTransportConnections, m_dynamicParams[TRANSPORT_INDEX_TCP].maximumTransportConnections, m_dynamicParams[TRANSPORT_INDEX_UDP].availableTransportConnections, m_dynamicParams[TRANSPORT_INDEX_UDP].maximumTransportConnections, m_dynamicParams[TRANSPORT_INDEX_TCP].availableTransportRemoteClients, m_dynamicParams[TRANSPORT_INDEX_TCP].maximumTransportRemoteClients);
+    m_dynamicScore = ComputeDynamicScore(
+        m_dynamicParams[TRANSPORT_INDEX_TCP].availableTransportConnections,
+        m_dynamicParams[TRANSPORT_INDEX_TCP].maximumTransportConnections,
+        m_dynamicParams[TRANSPORT_INDEX_UDP].availableTransportConnections,
+        m_dynamicParams[TRANSPORT_INDEX_UDP].maximumTransportConnections,
+        m_dynamicParams[TRANSPORT_INDEX_TCP].availableTransportRemoteClients,
+        m_dynamicParams[TRANSPORT_INDEX_TCP].maximumTransportRemoteClients,
+        m_dynamicParams[TRANSPORT_INDEX_UDP].availableTransportRemoteClients,
+        m_dynamicParams[TRANSPORT_INDEX_UDP].maximumTransportRemoteClients);
+
     m_priority = ComputePriority(m_staticScore, m_dynamicScore);
     return ER_OK;
 }

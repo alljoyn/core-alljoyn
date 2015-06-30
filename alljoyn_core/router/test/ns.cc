@@ -405,7 +405,7 @@ int CDECL_CALL main(int argc, char** argv)
     uint32_t udpMax = 16;
     uint32_t tclAvail = 10;
     uint32_t tclMax = 50;
-    uint16_t dynamicScore = IpNameServiceImpl::ComputeDynamicScore(tcpAvail, tcpMax, udpAvail, udpMax, tclAvail, tclMax);
+    uint16_t dynamicScore = IpNameServiceImpl::ComputeDynamicScore(tcpAvail, tcpMax, udpAvail, udpMax, tclAvail, tclMax, 0, 0);
     printf("Dynamic score computed from tcpAvail=%d tcpMax=%d udpAvail=%d udpMax=%d tclAvail=%d tclMax=%d is %d\n", tcpAvail, tcpMax, udpAvail, udpMax, tclAvail, tclMax, dynamicScore);
 
     // ComputePriority using staticRank and dynamicRank values
