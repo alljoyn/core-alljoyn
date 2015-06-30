@@ -166,6 +166,9 @@ class SecurityPolicyRulesTest : public testing::Test {
         managerSessionPort(42),
         peer1SessionPort(42),
         peer2SessionPort(42),
+        managerToManagerSessionId(0),
+        managerToPeer1SessionId(0),
+        managerToPeer2SessionId(0),
         interfaceName("org.allseen.test.SecurityApplication.rules"),
         managerAuthListener(NULL),
         peer1AuthListener(NULL),
@@ -697,6 +700,239 @@ INSTANTIATE_TEST_CASE_P(Method, SecurityPolicyRulesMethodCalls,
                                                  false)
                             ));
 
+class SecurityPolicyRulesMethodCallsManifest : public SecurityPolicyRulesTest,
+    public testing::WithParamInterface<MethodRulesTestValue> {
+};
+
+TEST_P(SecurityPolicyRulesMethodCallsManifest, PolicyRules)
+{
+
+    PolicyRulesTestBusObject peer2BusObject(peer2Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterBusObject(peer2BusObject));
+
+    /* install permissions make method calls */
+    //Permission policy that will be installed on peer1
+    PermissionPolicy peer1Policy;
+    peer1Policy.SetVersion(1);
+    {
+        PermissionPolicy::Acl acls[1];
+        {
+            PermissionPolicy::Peer peers[1];
+            peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
+            acls[0].SetPeers(1, peers);
+        }
+        {
+            PermissionPolicy::Rule rules[1];
+
+            rules[0].SetObjPath("/test");
+            rules[0].SetInterfaceName(interfaceName);
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("Echo",
+                               PermissionPolicy::Rule::Member::METHOD_CALL,
+                               PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+                rules[0].SetMembers(1, members);
+            }
+            acls[0].SetRules(1, rules);
+        }
+        peer1Policy.SetAcls(1, acls);
+    }
+
+    // Permission policy that will be installed on peer2
+    PermissionPolicy peer2Policy;
+    peer2Policy.SetVersion(1);
+    {
+        PermissionPolicy::Acl acls[1];
+        {
+            PermissionPolicy::Peer peers[1];
+            peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
+            acls[0].SetPeers(1, peers);
+        }
+        {
+            PermissionPolicy::Rule rules[1];
+
+            rules[0].SetInterfaceName(interfaceName);
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("Echo",
+                               PermissionPolicy::Rule::Member::METHOD_CALL,
+                               PermissionPolicy::Rule::Member::ACTION_MODIFY);
+                rules[0].SetMembers(1, members);
+            }
+            acls[0].SetRules(1, rules);
+        }
+        peer2Policy.SetAcls(1, acls);
+    }
+
+    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
+
+
+    {
+        PermissionPolicy peer1DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy, true, true);
+    }
+    {
+        PermissionPolicy peer2DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy, true, true);
+    }
+
+    qcc::String p1policyStr = "\n----Peer1 Policy-----\n" + peer1Policy.ToString();
+    SCOPED_TRACE(p1policyStr.c_str());
+    qcc::String p2policyStr = "\n----Peer2 Policy-----\n" + peer2Policy.ToString();
+    SCOPED_TRACE(p2policyStr.c_str());
+
+    EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    /*
+     * After having a new policy installed, the target bus clears out all of
+     * its peer's secret and session keys, so the next call will get security
+     * violation.  So just make the call and ignore the outcome.
+     */
+    PermissionPolicy retPolicy;
+    sapWithPeer1.GetPolicy(retPolicy);
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+    sapWithPeer2.GetPolicy(retPolicy);
+
+    const size_t manifestSize = 1;
+    const size_t certChainSize = 1;
+    /*************Update Peer1 Manifest *************/
+    //peer1 key
+    KeyInfoNISTP256 peer1Key;
+    PermissionConfigurator& pcPeer1 = peer1Bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, pcPeer1.GetSigningPublicKey(peer1Key));
+
+    // Peer1 manifest
+    PermissionPolicy::Rule peer1Manifest[manifestSize];
+    {
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("Echo", PermissionPolicy::Rule::Member::METHOD_CALL, GetParam().peer1ActionMask);
+        peer1Manifest[0].SetInterfaceName(interfaceName);
+        peer1Manifest[0].SetMembers(1, members);
+    }
+
+    uint8_t peer1Digest[Crypto_SHA256::DIGEST_SIZE];
+    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(managerBus,
+                                                               peer1Manifest, manifestSize,
+                                                               peer1Digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+
+    //Create peer1 identityCert
+    IdentityCertificate identityCertChainPeer1[certChainSize];
+
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
+                                                                  "1",
+                                                                  managerGuid.ToString(),
+                                                                  peer1Key.GetPublicKey(),
+                                                                  "Peer1Alias",
+                                                                  3600,
+                                                                  identityCertChainPeer1[0],
+                                                                  peer1Digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+
+    EXPECT_EQ(ER_OK, sapWithPeer1.UpdateIdentity(identityCertChainPeer1, certChainSize, peer1Manifest, manifestSize));
+
+    /*************Update peer2 Manifest *************/
+    //peer2 key
+    KeyInfoNISTP256 peer2Key;
+    PermissionConfigurator& pcPeer2 = peer2Bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, pcPeer2.GetSigningPublicKey(peer2Key));
+
+    // Peer1 manifest
+    PermissionPolicy::Rule peer2Manifest[manifestSize];
+    {
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("Echo", PermissionPolicy::Rule::Member::METHOD_CALL, GetParam().peer2ActionMask);
+        peer2Manifest[0].SetInterfaceName(interfaceName);
+        peer2Manifest[0].SetMembers(1, members);
+    }
+
+    uint8_t peer2Digest[Crypto_SHA256::DIGEST_SIZE];
+    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(managerBus,
+                                                               peer2Manifest, manifestSize,
+                                                               peer2Digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+
+    //Create peer2 identityCert
+    IdentityCertificate identityCertChainPeer2[certChainSize];
+
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
+                                                                  "1",
+                                                                  managerGuid.ToString(),
+                                                                  peer2Key.GetPublicKey(),
+                                                                  "Peer2Alias",
+                                                                  3600,
+                                                                  identityCertChainPeer2[0],
+                                                                  peer2Digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdateIdentity(identityCertChainPeer2, certChainSize, peer2Manifest, manifestSize));
+
+    SessionOpts opts;
+    SessionId peer1ToPeer2SessionId;
+    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, peer1ToPeer2SessionId, opts));
+    /* Create the ProxyBusObject and call the Echo method on the interface */
+    ProxyBusObject proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), "/test", peer1ToPeer2SessionId, true);
+    EXPECT_EQ(ER_OK, proxy.ParseXml(interface.c_str()));
+    EXPECT_TRUE(proxy.ImplementsInterface(interfaceName)) << interface.c_str() << "\n" << interfaceName;
+    MsgArg arg("s", "String that should be Echoed back.");
+    Message replyMsg(peer1Bus);
+    QStatus methodCallStatus = proxy.MethodCall(interfaceName, "Echo", &arg, static_cast<size_t>(1), replyMsg);
+
+    if (GetParam().proxyObjAllowedToCallMethod && GetParam().busObjAllowedToRespondToMethodCall) {
+        EXPECT_EQ(ER_OK, methodCallStatus);
+        char* echoReply;
+        replyMsg->GetArg(0)->Get("s", &echoReply);
+        EXPECT_STREQ("String that should be Echoed back.", echoReply);
+    } else if (GetParam().proxyObjAllowedToCallMethod && !GetParam().busObjAllowedToRespondToMethodCall) {
+        EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, methodCallStatus);
+        EXPECT_STREQ("org.alljoyn.Bus.Security.Error.PermissionDenied", replyMsg->GetErrorName());
+    } else { //!GetParam().proxyObjAllowedToCallMethod
+        EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, methodCallStatus);
+        ASSERT_STREQ("org.alljoyn.Bus.ErStatus", replyMsg->GetErrorName());
+        EXPECT_EQ(ER_PERMISSION_DENIED, (QStatus)replyMsg->GetArg(1)->v_uint16) << "\n" << replyMsg->GetArg(0)->ToString().c_str() << "\n" << replyMsg->GetArg(1)->ToString().c_str();
+    }
+
+    /* clean up */
+    peer2Bus.UnregisterBusObject(peer2BusObject);
+}
+
+INSTANTIATE_TEST_CASE_P(Method, SecurityPolicyRulesMethodCallsManifest,
+                        ::testing::Values(
+                            MethodRulesTestValue(PermissionPolicy::Rule::Member::ACTION_PROVIDE, //0
+                                                 PermissionPolicy::Rule::Member::ACTION_PROVIDE,
+                                                 true, //ProxyBusObject can make method call
+                                                 false), //BusObject can respond to method call
+                            MethodRulesTestValue(PermissionPolicy::Rule::Member::ACTION_PROVIDE, //1
+                                                 PermissionPolicy::Rule::Member::ACTION_MODIFY,
+                                                 false,
+                                                 false),
+                            MethodRulesTestValue(PermissionPolicy::Rule::Member::ACTION_PROVIDE, //2
+                                                 PermissionPolicy::Rule::Member::ACTION_OBSERVE,
+                                                 false,
+                                                 false),
+                            MethodRulesTestValue(PermissionPolicy::Rule::Member::ACTION_MODIFY, //3
+                                                 PermissionPolicy::Rule::Member::ACTION_PROVIDE,
+                                                 true,
+                                                 true),
+                            MethodRulesTestValue(PermissionPolicy::Rule::Member::ACTION_MODIFY, //4
+                                                 PermissionPolicy::Rule::Member::ACTION_MODIFY,
+                                                 false,
+                                                 true),
+                            MethodRulesTestValue(PermissionPolicy::Rule::Member::ACTION_MODIFY, //5
+                                                 PermissionPolicy::Rule::Member::ACTION_OBSERVE,
+                                                 false,
+                                                 true),
+                            MethodRulesTestValue(PermissionPolicy::Rule::Member::ACTION_OBSERVE, //6
+                                                 PermissionPolicy::Rule::Member::ACTION_PROVIDE,
+                                                 true,
+                                                 false),
+                            MethodRulesTestValue(PermissionPolicy::Rule::Member::ACTION_OBSERVE, //7
+                                                 PermissionPolicy::Rule::Member::ACTION_MODIFY,
+                                                 false,
+                                                 false),
+                            MethodRulesTestValue(PermissionPolicy::Rule::Member::ACTION_OBSERVE, //8
+                                                 PermissionPolicy::Rule::Member::ACTION_OBSERVE,
+                                                 false,
+                                                 false)
+                            ));
 
 class GetPropertyRulesTestValue {
   public:
@@ -826,9 +1062,9 @@ TEST_P(SecurityPolicyRulesGetProperty, PolicyRules)
     if (GetParam().proxyObjAllowedToCallGetProperty && GetParam().busObjAllowedToRespondToGetPropertyCall) {
         EXPECT_EQ(ER_OK, getPropertyStatus);
         //Verify we got Prop1 prop1Arg should be changed from 513 to 42 (note prop1 defaults to 42 by the constructor)
-        uint32_t prop1;
+        int32_t prop1;
         prop1Arg.Get("i", &prop1);
-        EXPECT_EQ((uint32_t)42, prop1);
+        EXPECT_EQ(42, prop1);
     } else if (GetParam().proxyObjAllowedToCallGetProperty && !GetParam().busObjAllowedToRespondToGetPropertyCall) {
         EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, getPropertyStatus);
         //Currently no way to find out that the error string is org.alljoyn.Bus.Security.Error.PermissionDenied
@@ -875,6 +1111,231 @@ INSTANTIATE_TEST_CASE_P(GetProperty, SecurityPolicyRulesGetProperty,
                                                       PermissionPolicy::Rule::Member::ACTION_MODIFY,
                                                       false,
                                                       false),
+                            GetPropertyRulesTestValue(PermissionPolicy::Rule::Member::ACTION_OBSERVE, //8
+                                                      PermissionPolicy::Rule::Member::ACTION_OBSERVE,
+                                                      false,
+                                                      true)
+                            ));
+
+class SecurityPolicyRulesGetPropertyManifest : public SecurityPolicyRulesTest,
+    public testing::WithParamInterface<GetPropertyRulesTestValue> {
+};
+
+TEST_P(SecurityPolicyRulesGetPropertyManifest, PolicyRules)
+{
+    PolicyRulesTestBusObject peer2BusObject(peer2Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterBusObject(peer2BusObject));
+
+    /* install permissions make method calls */
+    //Permission policy that will be installed on peer1
+    PermissionPolicy peer1Policy;
+    peer1Policy.SetVersion(1);
+    {
+        PermissionPolicy::Acl acls[1];
+        {
+            PermissionPolicy::Peer peers[1];
+            peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
+            acls[0].SetPeers(1, peers);
+        }
+        {
+            PermissionPolicy::Rule rules[1];
+            rules[0].SetObjPath("/test");
+            rules[0].SetInterfaceName(interfaceName);
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("Prop1",
+                               PermissionPolicy::Rule::Member::PROPERTY,
+                               PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+                rules[0].SetMembers(1, members);
+            }
+            acls[0].SetRules(1, rules);
+        }
+        peer1Policy.SetAcls(1, acls);
+    }
+
+    // Permission policy that will be installed on peer2
+    PermissionPolicy peer2Policy;
+    peer2Policy.SetVersion(1);
+    {
+        PermissionPolicy::Acl acls[1];
+        {
+            PermissionPolicy::Peer peers[1];
+            peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
+            acls[0].SetPeers(1, peers);
+        }
+        {
+            PermissionPolicy::Rule rules[1];
+            rules[0].SetInterfaceName(interfaceName);
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("Prop1",
+                               PermissionPolicy::Rule::Member::PROPERTY,
+                               PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+                rules[0].SetMembers(1, members);
+            }
+            acls[0].SetRules(1, rules);
+        }
+        peer2Policy.SetAcls(1, acls);
+    }
+
+    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str());
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str());
+
+    {
+        PermissionPolicy peer1DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy, true, true);
+    }
+    {
+        PermissionPolicy peer2DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy, true, true);
+    }
+
+    EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    /*
+     * After having a new policy installed, the target bus clears out all of
+     * its peer's secret and session keys, so the next call will get security
+     * violation.  So just make the call and ignore the outcome.
+     */
+    PermissionPolicy retPolicy;
+    sapWithPeer1.GetPolicy(retPolicy);
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+    sapWithPeer2.GetPolicy(retPolicy);
+
+    const size_t manifestSize = 1;
+    const size_t certChainSize = 1;
+    /*************Update Peer1 Manifest *************/
+    //peer1 key
+    KeyInfoNISTP256 peer1Key;
+    PermissionConfigurator& pcPeer1 = peer1Bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, pcPeer1.GetSigningPublicKey(peer1Key));
+
+    // Peer1 manifest
+    PermissionPolicy::Rule peer1Manifest[manifestSize];
+    {
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("Prop1", PermissionPolicy::Rule::Member::PROPERTY, GetParam().peer1ActionMask);
+        peer1Manifest[0].SetInterfaceName(interfaceName);
+        peer1Manifest[0].SetMembers(1, members);
+    }
+
+    uint8_t peer1Digest[Crypto_SHA256::DIGEST_SIZE];
+    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(managerBus,
+                                                               peer1Manifest, manifestSize,
+                                                               peer1Digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+
+    //Create peer1 identityCert
+    IdentityCertificate identityCertChainPeer1[certChainSize];
+
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
+                                                                  "1",
+                                                                  managerGuid.ToString(),
+                                                                  peer1Key.GetPublicKey(),
+                                                                  "Peer1Alias",
+                                                                  3600,
+                                                                  identityCertChainPeer1[0],
+                                                                  peer1Digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+
+    EXPECT_EQ(ER_OK, sapWithPeer1.UpdateIdentity(identityCertChainPeer1, certChainSize, peer1Manifest, manifestSize));
+
+    /*************Update peer2 Manifest *************/
+    //peer2 key
+    KeyInfoNISTP256 peer2Key;
+    PermissionConfigurator& pcPeer2 = peer2Bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, pcPeer2.GetSigningPublicKey(peer2Key));
+
+    // Peer1 manifest
+    PermissionPolicy::Rule peer2Manifest[manifestSize];
+    {
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("Prop1", PermissionPolicy::Rule::Member::PROPERTY, GetParam().peer2ActionMask);
+        peer2Manifest[0].SetInterfaceName(interfaceName);
+        peer2Manifest[0].SetMembers(1, members);
+    }
+
+    uint8_t peer2Digest[Crypto_SHA256::DIGEST_SIZE];
+    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(managerBus,
+                                                               peer2Manifest, manifestSize,
+                                                               peer2Digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+
+    //Create peer2 identityCert
+    IdentityCertificate identityCertChainPeer2[certChainSize];
+
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
+                                                                  "1",
+                                                                  managerGuid.ToString(),
+                                                                  peer2Key.GetPublicKey(),
+                                                                  "Peer2Alias",
+                                                                  3600,
+                                                                  identityCertChainPeer2[0],
+                                                                  peer2Digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdateIdentity(identityCertChainPeer2, certChainSize, peer2Manifest, manifestSize));
+
+    SessionOpts opts;
+    SessionId peer1ToPeer2SessionId;
+    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, peer1ToPeer2SessionId, opts));
+
+    /* Create the ProxyBusObject and call the Echo method on the interface */
+    ProxyBusObject proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), "/test", peer1ToPeer2SessionId, true);
+    EXPECT_EQ(ER_OK, proxy.ParseXml(interface.c_str()));
+    EXPECT_TRUE(proxy.ImplementsInterface(interfaceName)) << interface.c_str() << "\n" << interfaceName;
+    MsgArg prop1Arg;
+    EXPECT_EQ(ER_OK, prop1Arg.Set("i", 513));
+    QStatus getPropertyStatus = proxy.GetProperty(interfaceName, "Prop1", prop1Arg);
+    if (GetParam().proxyObjAllowedToCallGetProperty && GetParam().busObjAllowedToRespondToGetPropertyCall) {
+        EXPECT_EQ(ER_OK, getPropertyStatus);
+        //Verify we got Prop1 prop1Arg should be changed from 513 to 42 (note prop1 defaults to 42 by the constructor)
+        int32_t prop1;
+        prop1Arg.Get("i", &prop1);
+        EXPECT_EQ(42, prop1);
+    } else if (GetParam().proxyObjAllowedToCallGetProperty && !GetParam().busObjAllowedToRespondToGetPropertyCall) {
+        EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, getPropertyStatus);
+        //Currently no way to find out that the error string is org.alljoyn.Bus.Security.Error.PermissionDenied
+    } else { //!GetParam().proxyObjAllowedToCallSetProperty
+        // Maybe this should be ER_PERMISSION_DENIED like it is for the SetProperty call
+        EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, getPropertyStatus);
+    }
+
+    /* clean up */
+    peer2Bus.UnregisterBusObject(peer2BusObject);
+}
+
+INSTANTIATE_TEST_CASE_P(GetProperty, SecurityPolicyRulesGetPropertyManifest,
+                        ::testing::Values(
+                            GetPropertyRulesTestValue(PermissionPolicy::Rule::Member::ACTION_PROVIDE, //0
+                                                      PermissionPolicy::Rule::Member::ACTION_PROVIDE,
+                                                      true, //ProxyBusObj Allowed To Call GetProperty;
+                                                      false), //BusObj Allowed To Respond To GetProperty Call
+                            GetPropertyRulesTestValue(PermissionPolicy::Rule::Member::ACTION_PROVIDE, //1
+                                                      PermissionPolicy::Rule::Member::ACTION_MODIFY,
+                                                      false,
+                                                      false),
+                            GetPropertyRulesTestValue(PermissionPolicy::Rule::Member::ACTION_PROVIDE, //2
+                                                      PermissionPolicy::Rule::Member::ACTION_OBSERVE,
+                                                      false,
+                                                      false),
+                            GetPropertyRulesTestValue(PermissionPolicy::Rule::Member::ACTION_MODIFY, //3
+                                                      PermissionPolicy::Rule::Member::ACTION_PROVIDE,
+                                                      true,
+                                                      false),
+                            GetPropertyRulesTestValue(PermissionPolicy::Rule::Member::ACTION_MODIFY, //4
+                                                      PermissionPolicy::Rule::Member::ACTION_MODIFY,
+                                                      false,
+                                                      false),
+                            GetPropertyRulesTestValue(PermissionPolicy::Rule::Member::ACTION_MODIFY, //5
+                                                      PermissionPolicy::Rule::Member::ACTION_OBSERVE,
+                                                      false,
+                                                      false),
+                            GetPropertyRulesTestValue(PermissionPolicy::Rule::Member::ACTION_OBSERVE, //6
+                                                      PermissionPolicy::Rule::Member::ACTION_PROVIDE,
+                                                      true,
+                                                      true),
+                            GetPropertyRulesTestValue(PermissionPolicy::Rule::Member::ACTION_OBSERVE, //7
+                                                      PermissionPolicy::Rule::Member::ACTION_MODIFY,
+                                                      false,
+                                                      true),
                             GetPropertyRulesTestValue(PermissionPolicy::Rule::Member::ACTION_OBSERVE, //8
                                                       PermissionPolicy::Rule::Member::ACTION_OBSERVE,
                                                       false,
@@ -1058,6 +1519,236 @@ INSTANTIATE_TEST_CASE_P(SetProperty, SecurityPolicyRulesSetProperty,
                                                       false,
                                                       true),
                             SetPropertyRulesTestValue(PermissionPolicy::Rule::Member::ACTION_OBSERVE, //8
+                                                      PermissionPolicy::Rule::Member::ACTION_OBSERVE,
+                                                      false,
+                                                      false)
+                            ));
+
+class SecurityPolicyRulesSetPropertyManifest : public SecurityPolicyRulesTest,
+    public testing::WithParamInterface<SetPropertyRulesTestValue> {
+};
+
+TEST_P(SecurityPolicyRulesSetPropertyManifest, PolicyRules)
+{
+    PolicyRulesTestBusObject peer2BusObject(peer2Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterBusObject(peer2BusObject));
+
+    /* install permissions make method calls */
+    //Permission policy that will be installed on peer1
+    PermissionPolicy peer1Policy;
+    peer1Policy.SetVersion(1);
+    {
+        PermissionPolicy::Acl acls[1];
+        {
+            PermissionPolicy::Peer peers[1];
+            peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
+            acls[0].SetPeers(1, peers);
+        }
+        {
+            PermissionPolicy::Rule rules[1];
+            rules[0].SetObjPath("/test");
+            rules[0].SetInterfaceName(interfaceName);
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("Prop1",
+                               PermissionPolicy::Rule::Member::PROPERTY,
+                               PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+                rules[0].SetMembers(1, members);
+            }
+            acls[0].SetRules(1, rules);
+        }
+        peer1Policy.SetAcls(1, acls);
+    }
+
+    // Permission policy that will be installed on peer2
+    PermissionPolicy peer2Policy;
+    peer2Policy.SetVersion(1);
+    {
+        PermissionPolicy::Acl acls[1];
+        {
+            PermissionPolicy::Peer peers[1];
+            peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
+            acls[0].SetPeers(1, peers);
+        }
+        {
+            PermissionPolicy::Rule rules[2];
+            rules[0].SetInterfaceName(interfaceName);
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("Prop1",
+                               PermissionPolicy::Rule::Member::PROPERTY,
+                               PermissionPolicy::Rule::Member::ACTION_MODIFY);
+                rules[0].SetMembers(1, members);
+            }
+            //make sure peer2 can call UpdateIdentity to update the manifest
+            rules[1].SetObjPath(org::alljoyn::Bus::Security::ObjectPath);
+            rules[1].SetInterfaceName(org::alljoyn::Bus::Security::ManagedApplication::InterfaceName);
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::METHOD_CALL,
+                               PermissionPolicy::Rule::Member::ACTION_MODIFY);
+                rules[1].SetMembers(1, members);
+            }
+            acls[0].SetRules(2, rules);
+        }
+        peer2Policy.SetAcls(1, acls);
+    }
+
+    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str());
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str());
+
+    {
+        PermissionPolicy peer1DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy, true, true);
+    }
+    {
+        PermissionPolicy peer2DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy, true, true);
+    }
+
+    EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    /*
+     * After having a new policy installed, the target bus clears out all of
+     * its peer's secret and session keys, so the next call will get security
+     * violation.  So just make the call and ignore the outcome.
+     */
+    PermissionPolicy retPolicy;
+    sapWithPeer1.GetPolicy(retPolicy);
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+    sapWithPeer2.GetPolicy(retPolicy);
+
+    const size_t manifestSize = 1;
+    const size_t certChainSize = 1;
+    /*************Update Peer1 Manifest *************/
+    //peer1 key
+    KeyInfoNISTP256 peer1Key;
+    PermissionConfigurator& pcPeer1 = peer1Bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, pcPeer1.GetSigningPublicKey(peer1Key));
+
+    // Peer1 manifest
+    PermissionPolicy::Rule peer1Manifest[manifestSize];
+    {
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("Prop1", PermissionPolicy::Rule::Member::PROPERTY, GetParam().peer1ActionMask);
+        peer1Manifest[0].SetInterfaceName(interfaceName);
+        peer1Manifest[0].SetMembers(1, members);
+    }
+
+    uint8_t peer1Digest[Crypto_SHA256::DIGEST_SIZE];
+    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(managerBus,
+                                                               peer1Manifest, manifestSize,
+                                                               peer1Digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+
+    //Create peer1 identityCert
+    IdentityCertificate identityCertChainPeer1[certChainSize];
+
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
+                                                                  "1",
+                                                                  managerGuid.ToString(),
+                                                                  peer1Key.GetPublicKey(),
+                                                                  "Peer1Alias",
+                                                                  3600,
+                                                                  identityCertChainPeer1[0],
+                                                                  peer1Digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+
+    EXPECT_EQ(ER_OK, sapWithPeer1.UpdateIdentity(identityCertChainPeer1, certChainSize, peer1Manifest, manifestSize));
+
+    /*************Update peer2 Manifest *************/
+    //peer2 key
+    KeyInfoNISTP256 peer2Key;
+    PermissionConfigurator& pcPeer2 = peer2Bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, pcPeer2.GetSigningPublicKey(peer2Key));
+
+    // Peer1 manifest
+    PermissionPolicy::Rule peer2Manifest[manifestSize];
+    {
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("Prop1", PermissionPolicy::Rule::Member::PROPERTY, GetParam().peer2ActionMask);
+        peer2Manifest[0].SetInterfaceName(interfaceName);
+        peer2Manifest[0].SetMembers(1, members);
+    }
+
+    uint8_t peer2Digest[Crypto_SHA256::DIGEST_SIZE];
+    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(managerBus,
+                                                               peer2Manifest, manifestSize,
+                                                               peer2Digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+
+    //Create peer2 identityCert
+    IdentityCertificate identityCertChainPeer2[certChainSize];
+
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
+                                                                  "1",
+                                                                  managerGuid.ToString(),
+                                                                  peer2Key.GetPublicKey(),
+                                                                  "Peer2Alias",
+                                                                  3600,
+                                                                  identityCertChainPeer2[0],
+                                                                  peer2Digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdateIdentity(identityCertChainPeer2, certChainSize, peer2Manifest, manifestSize));
+
+    SessionOpts opts;
+    SessionId peer1ToPeer2SessionId;
+    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, peer1ToPeer2SessionId, opts));
+
+    /* Create the ProxyBusObject and call the Echo method on the interface */
+    ProxyBusObject proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), "/test", peer1ToPeer2SessionId, true);
+    EXPECT_EQ(ER_OK, proxy.ParseXml(interface.c_str()));
+    EXPECT_TRUE(proxy.ImplementsInterface(interfaceName)) << interface.c_str() << "\n" << interfaceName;
+    MsgArg prop1Arg;
+    EXPECT_EQ(ER_OK, prop1Arg.Set("i", 513));
+    QStatus setPropertyStatus = proxy.SetProperty(interfaceName, "Prop1", prop1Arg);
+    if (GetParam().proxyObjAllowedToCallSetProperty && GetParam().busObjAllowedToRespondToSetPropertyCall) {
+        EXPECT_EQ(ER_OK, setPropertyStatus);
+        //Verify Prop1 is changed.
+        EXPECT_EQ(513, peer2BusObject.ReadProp1());
+    } else { //!GetParam().proxyObjAllowedToCallSetProperty
+        EXPECT_TRUE(ER_PERMISSION_DENIED == setPropertyStatus || ER_BUS_REPLY_IS_ERROR_MESSAGE == setPropertyStatus);
+        EXPECT_EQ(42, peer2BusObject.ReadProp1());
+    }
+
+    /* clean up */
+    peer2Bus.UnregisterBusObject(peer2BusObject);
+}
+
+INSTANTIATE_TEST_CASE_P(SetProperty, SecurityPolicyRulesSetPropertyManifest,
+                        ::testing::Values(
+                            SetPropertyRulesTestValue(PermissionPolicy::Rule::Member::ACTION_PROVIDE,
+                                                      PermissionPolicy::Rule::Member::ACTION_PROVIDE,
+                                                      true,
+                                                      false),
+                            SetPropertyRulesTestValue(PermissionPolicy::Rule::Member::ACTION_PROVIDE,
+                                                      PermissionPolicy::Rule::Member::ACTION_MODIFY,
+                                                      false,
+                                                      false),
+                            SetPropertyRulesTestValue(PermissionPolicy::Rule::Member::ACTION_PROVIDE,
+                                                      PermissionPolicy::Rule::Member::ACTION_OBSERVE,
+                                                      false,
+                                                      false),
+                            SetPropertyRulesTestValue(PermissionPolicy::Rule::Member::ACTION_MODIFY,
+                                                      PermissionPolicy::Rule::Member::ACTION_PROVIDE,
+                                                      true,
+                                                      true),
+                            SetPropertyRulesTestValue(PermissionPolicy::Rule::Member::ACTION_MODIFY,
+                                                      PermissionPolicy::Rule::Member::ACTION_MODIFY,
+                                                      false,
+                                                      true),
+                            SetPropertyRulesTestValue(PermissionPolicy::Rule::Member::ACTION_MODIFY,
+                                                      PermissionPolicy::Rule::Member::ACTION_OBSERVE,
+                                                      false,
+                                                      true),
+                            SetPropertyRulesTestValue(PermissionPolicy::Rule::Member::ACTION_OBSERVE,
+                                                      PermissionPolicy::Rule::Member::ACTION_PROVIDE,
+                                                      true,
+                                                      false),
+                            SetPropertyRulesTestValue(PermissionPolicy::Rule::Member::ACTION_OBSERVE,
+                                                      PermissionPolicy::Rule::Member::ACTION_MODIFY,
+                                                      false,
+                                                      false),
+                            SetPropertyRulesTestValue(PermissionPolicy::Rule::Member::ACTION_OBSERVE,
                                                       PermissionPolicy::Rule::Member::ACTION_OBSERVE,
                                                       false,
                                                       false)
@@ -1282,7 +1973,7 @@ TEST_P(SecurityPolicyRulesSignalManifest, PolicyRules)
     PolicyRulesTestBusObject peer1BusObject(peer1Bus, "/test", interfaceName);
     EXPECT_EQ(ER_OK, peer1Bus.RegisterBusObject(peer1BusObject));
 
-    /* install permissions make method calls */
+    /* install permissions to send signals */
     //Permission policy that will be installed on peer1
     PermissionPolicy peer1Policy;
     peer1Policy.SetVersion(1);
@@ -1372,7 +2063,7 @@ TEST_P(SecurityPolicyRulesSignalManifest, PolicyRules)
     PermissionPolicy::Rule peer1Manifest[manifestSize];
     {
         PermissionPolicy::Rule::Member member[1];
-        member[0].Set("*", PermissionPolicy::Rule::Member::SIGNAL, GetParam().peer1ActionMask);
+        member[0].Set("Chirp", PermissionPolicy::Rule::Member::SIGNAL, GetParam().peer1ActionMask);
         peer1Manifest[0].SetInterfaceName(interfaceName);
         peer1Manifest[0].SetMembers(1, member);
     }
@@ -1407,7 +2098,7 @@ TEST_P(SecurityPolicyRulesSignalManifest, PolicyRules)
     PermissionPolicy::Rule peer2Manifest[manifestSize];
     {
         PermissionPolicy::Rule::Member member[1];
-        member[0].Set("*", PermissionPolicy::Rule::Member::SIGNAL, GetParam().peer2ActionMask);
+        member[0].Set("Chirp", PermissionPolicy::Rule::Member::SIGNAL, GetParam().peer2ActionMask);
         peer2Manifest[0].SetInterfaceName(interfaceName);
         peer2Manifest[0].SetMembers(1, member);
     }
