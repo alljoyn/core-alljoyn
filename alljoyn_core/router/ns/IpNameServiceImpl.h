@@ -537,7 +537,11 @@ class IpNameServiceImpl : public qcc::Thread {
 
     static uint32_t ComputeStaticScore(uint32_t powerSource, uint32_t mobility, uint32_t availability, uint32_t nodeConnection);
 
-    static uint32_t ComputeDynamicScore(uint32_t availableTcpConnections, uint32_t maximumTcpConnections, uint32_t availableUdpConnections, uint32_t maximumUdpConnections, uint32_t availableTcpRemoteClients, uint32_t maximumTcpRemoteClients);
+    static uint32_t ComputeDynamicScore(
+        uint32_t availableTcpConnections, uint32_t maximumTcpConnections,
+        uint32_t availableUdpConnections, uint32_t maximumUdpConnections,
+        uint32_t availableTcpRemoteClients, uint32_t maximumTcpRemoteClients,
+        uint32_t availableUdpRemoteClients, uint32_t maximumUdpRemoteClients);
 
     static qcc::String ToLowerCase(const qcc::String& str);
 
