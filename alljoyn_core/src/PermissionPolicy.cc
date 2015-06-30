@@ -324,7 +324,8 @@ bool PermissionPolicy::Peer::operator==(const Peer& other) const
         return keyInfo == other.keyInfo;
     }
 
-    if (!(*keyInfo == *other.keyInfo)) {
+    // as defined in HLD, only PublicKey should be compared for Peers
+    if (!(*(keyInfo->GetPublicKey()) == *(other.keyInfo->GetPublicKey()))) {
         return false;
     }
 
