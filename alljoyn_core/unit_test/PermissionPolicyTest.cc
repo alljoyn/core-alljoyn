@@ -102,8 +102,8 @@ TEST(PermissionPolicyTest, peer_equality)
 
     PermissionPolicy::Peer peer3;
     peer3.SetKeyInfo(&keyInfoECC2);
-    EXPECT_TRUE(peer1 != peer3);
-    EXPECT_FALSE(peer1 != peer2);
+    EXPECT_TRUE(peer1 == peer3);
+    EXPECT_TRUE(peer2 == peer3);
 }
 
 TEST(PermissionPolicyTest, peer_owns_key)
