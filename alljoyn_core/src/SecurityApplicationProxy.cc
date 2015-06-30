@@ -242,7 +242,7 @@ QStatus SecurityApplicationProxy::Claim(const qcc::KeyInfoNISTP256& certificateA
     QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
     QStatus status = ER_OK;
 
-    Message reply(*bus);
+    Message reply(GetBusAttachment());
 
     if ((identityCertChain == NULL) || (manifest == NULL)) {
         return ER_INVALID_DATA;
@@ -332,7 +332,7 @@ QStatus SecurityApplicationProxy::Reset()
 {
     QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
     QStatus status = ER_OK;
-    Message reply(*bus);
+    Message reply(GetBusAttachment());
 
     status = MethodCall(org::alljoyn::Bus::Security::ManagedApplication::InterfaceName, "Reset", NULL, 0, reply);
     if (ER_OK != status) {
@@ -357,7 +357,7 @@ QStatus SecurityApplicationProxy::UpdateIdentity(const qcc::IdentityCertificate*
         return ER_INVALID_DATA;
     }
     QStatus status = ER_OK;
-    Message reply(*bus);
+    Message reply(GetBusAttachment());
     MsgArg inputs[2];
     MsgArg* certArgs = new MsgArg[identityCertificateChainSize];
     for (size_t cnt = 0; cnt < identityCertificateChainSize; cnt++) {
@@ -397,7 +397,7 @@ QStatus SecurityApplicationProxy::UpdatePolicy(const PermissionPolicy& policy)
 {
     QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
     QStatus status = ER_OK;
-    Message reply(*bus);
+    Message reply(GetBusAttachment());
     MsgArg inputs[1];
 
     status = policy.Export(inputs[0]);
@@ -418,7 +418,7 @@ QStatus SecurityApplicationProxy::ResetPolicy()
 {
     QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
     QStatus status = ER_OK;
-    Message reply(*bus);
+    Message reply(GetBusAttachment());
 
     status = MethodCall(org::alljoyn::Bus::Security::ManagedApplication::InterfaceName, "ResetPolicy", NULL, 0, reply);
     if (ER_OK != status) {
@@ -433,7 +433,7 @@ QStatus SecurityApplicationProxy::InstallMembership(const qcc::MembershipCertifi
 {
     QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
     QStatus status = ER_OK;
-    Message reply(*bus);
+    Message reply(GetBusAttachment());
 
     MsgArg inputs[1];
     MsgArg* certArgs = new MsgArg[certificateChainSize];
@@ -470,7 +470,7 @@ QStatus SecurityApplicationProxy::RemoveMembership(const qcc::String& serial, co
 {
     QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
     QStatus status = ER_OK;
-    Message reply(*bus);
+    Message reply(GetBusAttachment());
 
     MsgArg inputs[1];
 
