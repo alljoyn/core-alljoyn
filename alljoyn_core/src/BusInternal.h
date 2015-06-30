@@ -204,6 +204,21 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
     const qcc::String& GetListenAddresses() const { return listenAddresses; }
 
     /**
+     * Inform FactoryResetListener of incoming request to reset application state.
+     *
+     * @return  ER_OK if successful.
+     */
+    QStatus CallFactoryResetListener();
+
+    /**
+     * Set the FactoryResetListener.
+     *
+     * @param listener   FactoryResetListener to use.
+     * @return  ER_OK if successful.
+     */
+    QStatus SetFactoryResetListener(FactoryResetListener* listener);
+
+    /**
      * Inform BusListeners of incoming JoinSession attempt.
      *
      * @param sessionPort    SessionPort specified in join request.
@@ -481,7 +496,7 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
     typedef qcc::ManagedObj<SessionPortListener*> ProtectedSessionPortListener;
     typedef std::map<SessionPort, ProtectedSessionPortListener> SessionPortListenerMap;
     SessionPortListenerMap sessionPortListeners;  /* Lookup SessionPortListener by session port */
-    qcc::Mutex sessionPortListenersLock;       /* Lock protecting sessionPortListeners maps */
+    qcc::Mutex sessionPortListenersLock;       /* Lock protecting sessionPortListeners map */
 
     typedef qcc::ManagedObj<SessionListener*> ProtectedSessionListener;
     typedef std::map<SessionId, ProtectedSessionListener> SessionListenerMap;
@@ -490,7 +505,7 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
 
     typedef qcc::ManagedObj<AboutListener*> ProtectedAboutListener;
     typedef std::set<ProtectedAboutListener> AboutListenerSet;
-    AboutListenerSet aboutListeners; /* About Signals are recieved out of Sessions so a set is all that is needed */
+    AboutListenerSet aboutListeners; /* About Signals are received out of Sessions so a set is all that is needed */
 
     qcc::Mutex aboutListenersLock;   /* Lock protecting the aboutListeners set */
 
@@ -515,10 +530,14 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
 
     typedef qcc::ManagedObj<ApplicationStateListener*> ProtectedApplicationStateListener;
     typedef std::set<ProtectedApplicationStateListener> ApplicationStateListenerSet;
-    ApplicationStateListenerSet applicationStateListeners; /* State Signals are recieved out side Sessions so a set container is all that is needed */
+    ApplicationStateListenerSet applicationStateListeners; /* State Signals are received outside Sessions so a set container is all that is needed */
 
-    qcc::Mutex applicationStateListenersLock;   /* Lock protecting the aboutListeners set */
+    qcc::Mutex applicationStateListenersLock;   /* Lock protecting the applicationStateListeners set */
     ObserverManager* observerManager;      /* The observer manager for the bus attachment */
+
+    typedef qcc::ManagedObj<FactoryResetListener*> ProtectedFactoryResetListener;
+    ProtectedFactoryResetListener* factoryResetListener;
+    qcc::Mutex factoryResetListenerLock;   /* Lock protecting factoryResetListener */
 };
 
 }
