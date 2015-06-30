@@ -44,7 +44,7 @@ elif platform.system() == 'Windows':
     default_msvc_version = '12.0'
 
     default_crypto = 'cng'
-    allowed_crypto = ('cng', 'openssl')
+    allowed_crypto = ('cng', 'openssl', 'builtin')
 
 elif platform.system() == 'Darwin':
     default_target_os = 'darwin'

@@ -51,11 +51,14 @@ if env['OS_GROUP'] == 'windows':
             env.AppendUnique(LIBS = ['bcrypt', 'ncrypt', 'crypt32'])
             env.Append(CPPDEFINES=['CRYPTO_CNG'])
             print 'Using CNG crypto libraries'
-    else:
+    elif env['CRYPTO'] == 'openssl':
         env.Append(CPPPATH = ['$OPENSSL_BASE/include'])
         env.Append(LIBPATH = ['$OPENSSL_BASE/lib'])
         env.AppendUnique(LIBS = ['libeay32'])
         print 'Using OpenSSL crypto libraries'
+    else:
+        print 'Only CRYPTO=cng or CRYPTO=openssl are supported for Windows.'
+        Exit(1)
 
 elif env['OS'] in ['linux', 'openwrt']:
     env.AppendUnique(LIBS =['rt', 'stdc++', 'pthread', 'm'])
@@ -91,8 +94,11 @@ elif env['OS'] == 'android':
     if env['CRYPTO'] == 'openssl':
         env.AppendUnique(LIBS =['crypto'])
         print 'Using OpenSSL crypto'
-    else:
+    elif env['CRYPTO'] == 'builtin':
         print 'Using builtin crypto'
+    else:
+        print 'Only CRYPTO=builtin or CRYPTO=openssl are supported for Android.'
+        Exit(1)
 
 commonenv = env.Clone()
 
