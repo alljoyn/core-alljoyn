@@ -9,6 +9,20 @@ LOCAL_PATH := $(call my-dir)
 #ALLJOYN_DIST := ../../../../../build/android/arm/$(APP_OPTIM)/dist
 ALLJOYN_DIST := ../../..
 
+# Declare the prebuilt libajrouter.a static library.
+#
+include $(CLEAR_VARS)
+LOCAL_MODULE := ajrouter
+LOCAL_SRC_FILES := $(ALLJOYN_DIST)/../lib/libajrouter.a
+include $(PREBUILT_STATIC_LIBRARY)
+
+# Declare the prebuilt liballjoyn.a static library.
+#
+include $(CLEAR_VARS)
+LOCAL_MODULE := alljoyn
+LOCAL_SRC_FILES := $(ALLJOYN_DIST)/../lib/liballjoyn.a
+include $(PREBUILT_STATIC_LIBRARY)
+
 # The CLEAR_VARS variable is provided by the build system and points to a
 # special GNU Makefile that will clear many LOCAL_XXX variables for you
 # (e.g. LOCAL_MODULE, LOCAL_SRC_FILES, LOCAL_STATIC_LIBRARIES, etc...),
@@ -26,7 +40,6 @@ include $(CLEAR_VARS)
 #
 LOCAL_MODULE := SimpleService
 
-
 # The TARGET_PLATFORM defines the targetted Android Platform API level
 TARGET_PLATFORM := android-16
 
@@ -35,22 +48,9 @@ TARGET_PLATFORM := android-16
 # all sources (C, C++ and Assembly). These are placed before any
 # corresponding inclusion flag in LOCAL_CFLAGS / LOCAL_CPPFLAGS.
 #
-# The path for NDK r8 and below is:
-#	$(NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/include \
-#	$(NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/libs/armeabi/include \
-# The path for NDK r8b is:
-#	$(NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/4.6/include \
-#	$(NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/4.6/libs/armeabi/include
-#
-
 LOCAL_C_INCLUDES := \
 	$(MYDROID_PATH)/external/openssl/include \
-	$(ALLJOYN_DIST)/inc \
-	$(NDK_PLATFORMS_ROOT)/$(TARGET_PLATFORM)/arch-arm/usr/include \
-	$(NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/include \
-	$(NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/libs/armeabi/include \
-	$(NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/4.6/include \
-	$(NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/4.6/libs/armeabi/include
+	$(ALLJOYN_DIST)/inc
 
 # An optional set of compiler flags that will be passed when building
 # C ***AND*** C++ source files.
@@ -61,12 +61,6 @@ LOCAL_C_INCLUDES := \
 #
 LOCAL_CFLAGS := -Wno-psabi -Wno-write-strings -DANDROID_NDK -DTARGET_ANDROID -DLINUX -DQCC_OS_GROUP_POSIX -DQCC_OS_ANDROID -DQCC_CPU_ARM -DANDROID
 
-# The following line is just for reference here (thus commented out)
-# as it is unnecessary because the default extension for C++ source
-# files is '.cpp'.
-#
-LOCAL_DEFAULT_CPP_EXTENSION := cc
-
 # The LOCAL_SRC_FILES variables must contain a list of C and/or C++ source
 # files that will be built and assembled into a module. Note that you should
 # not list header and included files here, because the build system will
@@ -76,27 +70,20 @@ LOCAL_DEFAULT_CPP_EXTENSION := cc
 LOCAL_SRC_FILES := \
 	Service_jni.cpp
 
+# The LOCAL_STATIC_LIBRARIES variables must contain a list of static 
+# libraries that will be linked into a module.
+#
+LOCAL_STATIC_LIBRARIES := \
+	ajrouter \
+	alljoyn
+
 # The list of additional linker flags to be used when building your
 # module. This is useful to pass the name of specific system libraries
 # with the "-l" prefix and library paths with the "-L" prefix.
 #
-# NOTE: linking with libgcc.a is necessary due to some strangely missing
-# symbols such as "__aeabi_f2uiz" present in libgcc.a. It has to be linked
-# as the very last library.
-#
-# The path for NDK r8 and below is:
-#        -L$(NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/libs/armeabi \
-# The path for NDK r8b is:
-#        -L$(NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/4.6/libs/armeabi \
-#
-
 LOCAL_LDLIBS := \
-	-L$(NDK_PLATFORMS_ROOT)/$(TARGET_PLATFORM)/arch-arm/usr/lib \
-	-L$(ALLJOYN_DIST)/lib \
-        -L$(NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/libs/armeabi \
-        -L$(NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/4.6/libs/armeabi \
-	-L./libs \
-	-lajrouter -lalljoyn -llog -lz -ldl $(ALLJOYN_OPENSSL_LIBS) -lm -lc -lstdc++  -lgcc -lgnustl_static
+	-llog \
+	$(ALLJOYN_OPENSSL_LIBS)
 
 # By default, ARM target binaries will be generated in 'thumb' mode, where
 # each instruction are 16-bit wide. You can define this variable to 'arm'

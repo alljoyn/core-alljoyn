@@ -1,7 +1,22 @@
 LOCAL_PATH := $(call my-dir)
 
 # AllJoyn specifics
-ALLJOYN_DIST := ../../../../
+ALLJOYN_DIST := ../../../..
+
+include $(CLEAR_VARS)
+LOCAL_MODULE := ajrouter
+LOCAL_SRC_FILES := $(ALLJOYN_DIST)/lib/libajrouter.a
+include $(PREBUILT_STATIC_LIBRARY)
+
+include $(CLEAR_VARS)
+LOCAL_MODULE := alljoyn
+LOCAL_SRC_FILES := $(ALLJOYN_DIST)/lib/liballjoyn.a
+include $(PREBUILT_STATIC_LIBRARY)
+
+include $(CLEAR_VARS)
+LOCAL_MODULE := alljoyn_about
+LOCAL_SRC_FILES := $(ALLJOYN_DIST)/lib/liballjoyn_about.a
+include $(PREBUILT_STATIC_LIBRARY)
 
 include $(CLEAR_VARS)
 
@@ -12,12 +27,7 @@ TARGET_PLATFORM := android-16
 LOCAL_C_INCLUDES := \
 	$(ALLJOYN_DIST)/cpp/inc \
 	$(ALLJOYN_DIST)/cpp/inc/alljoyn \
-	$(ALLJOYN_DIST)/about/inc \
-	$(NDK_PLATFORMS_ROOT)/$(TARGET_PLATFORM)/arch-arm/usr/include \
-	$(NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/include \
-	$(NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/libs/armeabi/include \
-	$(NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/4.6/include \
-	$(NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/4.6/libs/armeabi/include
+	$(ALLJOYN_DIST)/about/inc
 
 LOCAL_CFLAGS := -Wno-psabi -Wno-write-strings -DANDROID_NDK -DTARGET_ANDROID -DLINUX -DQCC_OS_GROUP_POSIX -DQCC_OS_ANDROID -DQCC_CPU_ARM -DANDROID
 
@@ -27,13 +37,14 @@ LOCAL_SRC_FILES := \
 	AndroidJNIBridge.cc \
 	MyAllJoynCode.cc
 
+LOCAL_STATIC_LIBRARIES := \
+	ajrouter \
+	alljoyn \
+	alljoyn_about
+
 LOCAL_LDLIBS := \
-	-L$(NDK_PLATFORMS_ROOT)/$(TARGET_PLATFORM)/arch-arm/usr/lib \
-	-L$(ALLJOYN_DIST)/cpp/lib \
-	-L$(ALLJOYN_DIST)/about/lib \
-    -L$(NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/libs/armeabi \
-    -L$(NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/4.6/libs/armeabi \
-	-lajrouter -lalljoyn -llog -ldl $(ALLJOYN_OPENSSL_LIBS) -lm -lc -lstdc++ -lgcc -lgnustl_shared -lalljoyn_about
+	-llog \
+	 $(ALLJOYN_OPENSSL_LIBS)
 
 LOCAL_ARM_MODE := arm
 
