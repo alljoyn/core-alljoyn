@@ -607,7 +607,7 @@ int CDECL_CALL main(int argc, char** argv)
 
     if (client) {
         app = new Client(*bus, nbrOfObjects);
-        status = bus->FindAdvertisedName(serviceName.c_str());
+        status = bus->FindAdvertisedNameByTransport(serviceName.c_str(), SESSION_OPTS.transports);
         if (status != ER_OK) {
             printf("Failed to find name to \"%s\": %s\n", serviceName.c_str(), QCC_StatusText(status));
             ret = 2;
@@ -635,7 +635,7 @@ int CDECL_CALL main(int argc, char** argv)
 
 exit:
     if (client) {
-        bus->CancelFindAdvertisedName(serviceName.c_str());
+        bus->CancelFindAdvertisedNameByTransport(serviceName.c_str(), SESSION_OPTS.transports);
         bus->Disconnect();
     } else {
         bus->CancelAdvertiseName(serviceName.c_str(), TRANSPORT_ANY);

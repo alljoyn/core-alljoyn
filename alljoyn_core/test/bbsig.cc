@@ -741,15 +741,9 @@ int CDECL_CALL main(int argc, char** argv)
 
             /* Begin discovery on the well-known name of the service to be called */
             Message reply(*g_msgBus);
-            const ProxyBusObject& alljoynObj = g_msgBus->GetAllJoynProxyObj();
+            
+            status = g_msgBus->FindAdvertisedNameByTransport(g_wellKnownName.c_str(), g_preferredTransport);
 
-            MsgArg serviceName("s", g_wellKnownName.c_str());
-            status = alljoynObj.MethodCall(::ajn::org::alljoyn::Bus::InterfaceName,
-                                           "FindAdvertisedName",
-                                           &serviceName,
-                                           1,
-                                           reply,
-                                           5000);
             if (ER_OK != status) {
                 QCC_LogError(status, ("%s.FindAdvertisedName failed", ::ajn::org::alljoyn::Bus::InterfaceName));
             }
