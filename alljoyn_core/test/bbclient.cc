@@ -98,7 +98,7 @@ class MyBusListener : public BusListener, public SessionListener {
         QCC_SyncPrintf("FoundAdvertisedName(name=%s, transport=0x%x, prefix=%s)\n", name, transport, namePrefix);
 
         if (0 == (transport & allowedTransports)) {
-            QCC_SyncPrintf("Ignoring FoundAdvertised name from transport 0x%x\n", transport);
+            QCC_SyncPrintf("Ignoring FoundAdvertised name from transport 0x%x\n", allowedTransports);
             return;
         }
 
@@ -107,11 +107,11 @@ class MyBusListener : public BusListener, public SessionListener {
 
         if (0 == ::strcmp(name, g_remoteBusName.c_str())) {
             /* We found a remote bus that is advertising bbservice's well-known name so connect to it */
-            SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, transport);
+            SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, allowedTransports);
             QStatus status;
 
             if (stopDiscover) {
-                status = g_msgBus->CancelFindAdvertisedName(g_remoteBusName.c_str());
+                status = g_msgBus->CancelFindAdvertisedNameByTransport(g_remoteBusName.c_str(), allowedTransports);
                 if (ER_OK != status) {
                     QCC_LogError(status, ("CancelFindAdvertisedName(%s) failed", name));
                 }
@@ -776,7 +776,7 @@ int CDECL_CALL main(int argc, char** argv)
                  * name-not-found state before trying to find the well-known name.
                  */
                 g_discoverEvent->ResetEvent();
-                status = g_msgBus->FindAdvertisedName(g_remoteBusName.c_str());
+                status = g_msgBus->FindAdvertisedNameByTransport(g_remoteBusName.c_str(), allowedTransports);
                 if (status != ER_OK) {
                     QCC_LogError(status, ("FindAdvertisedName failed"));
                 }
