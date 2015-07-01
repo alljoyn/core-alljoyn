@@ -146,7 +146,7 @@ int CDECL_CALL main(int argc, char** argv)
 
     QStatus status = ER_OK;
     Environ* env;
-
+    TransportMask allowedTransport =  TRANSPORT_ANY;
     printf("AllJoyn Library version: %s\n", ajn::GetVersion());
     printf("AllJoyn Library build info: %s\n", ajn::GetBuildInfo());
 
@@ -165,10 +165,13 @@ int CDECL_CALL main(int argc, char** argv)
                 g_wellKnownName = argv[i];
             }
         } else if (0 == strcmp("-t", argv[i])) {
+            allowedTransport = TRANSPORT_TCP;
             g_busListener.SetTransportMask(TRANSPORT_TCP);
         } else if (0 == strcmp("-u", argv[i])) {
+            allowedTransport = TRANSPORT_UDP;
             g_busListener.SetTransportMask(TRANSPORT_UDP);
         } else if (0 == strcmp("-l", argv[i])) {
+            allowedTransport = TRANSPORT_LOCAL;
             g_busListener.SetTransportMask(TRANSPORT_LOCAL);
         } else if (0 == strcmp("-h", argv[i])) {
             usage();
@@ -212,7 +215,7 @@ int CDECL_CALL main(int argc, char** argv)
 
     /* Begin discovery for the well-known name of the service */
     if (ER_OK == status) {
-        status = g_msgBus->FindAdvertisedName(g_wellKnownName.c_str());
+        status = g_msgBus->FindAdvertisedNameByTransport(g_wellKnownName.c_str(), allowedTransport);
         if (status != ER_OK) {
             QCC_LogError(status, ("org.alljoyn.raw_test.FindAdvertisedName failed"));
         }

@@ -500,19 +500,19 @@ static void DoWait(String name)
     printf("\n");
 }
 
-static void DoFind(String name)
+static void DoFind(String name, TransportMask transport)
 {
     s_name = name;
     s_found = false;
-    QStatus status = s_bus->FindAdvertisedName(name.c_str());
+    QStatus status = s_bus->FindAdvertisedNameByTransport(name.c_str(), transport);
     if (status != ER_OK) {
         printf("BusAttachment::FindAdvertisedName(%s) failed with %s\n", name.c_str(), QCC_StatusText(status));
     }
 }
 
-static void DoCancelFind(String name)
+static void DoCancelFind(String name, TransportMask transport)
 {
-    QStatus status = s_bus->CancelFindAdvertisedName(name.c_str());
+    QStatus status = s_bus->CancelFindAdvertisedNameByTransport(name.c_str(), transport);
     if (status != ER_OK) {
         printf("BusAttachment::CancelFindAdvertisedName(%s) failed with %s\n", name.c_str(), QCC_StatusText(status));
     }
@@ -1050,17 +1050,49 @@ int CDECL_CALL main(int argc, char** argv)
         } else if (cmd == "find") {
             String namePrefix = NextTok(line);
             if (namePrefix.empty()) {
-                printf("Usage: find <name_prefix>\n");
+                printf("Usage: find <name_prefix> <transport_mask_enum>\n");
+                printf("Example: find com.yadda TRANSPORT_UDP\n");
                 continue;
             }
-            DoFind(namePrefix);
+
+            TransportMask transports;
+            String tok = NextTok(line);
+            if (tok == "TRANSPORT_TCP") {
+                transports = TRANSPORT_TCP;
+            } else if (tok == "TRANSPORT_UDP") {
+                transports = TRANSPORT_UDP;
+            } else if (tok == "TRANSPORT_LOCAL") {
+                transports = TRANSPORT_LOCAL;
+            } else if (tok == "TRANSPORT_ANY") {
+                transports = TRANSPORT_ANY;
+            } else {
+                transports = static_cast<TransportMask>(StringToU32(tok, 0, TRANSPORT_ANY));
+            }
+
+            DoFind(namePrefix, transports);
         } else if (cmd == "cancelfind") {
             String namePrefix = NextTok(line);
             if (namePrefix.empty()) {
-                printf("Usage: cancelfind <name_prefix>\n");
+                printf("Usage: cancelfind <name_prefix> <transport_mask_enum>\n");
+                printf("Example: cancelfind com.yadda TRANSPORT_UDP\n");
                 continue;
             }
-            DoCancelFind(namePrefix);
+
+            TransportMask transports;
+            String tok = NextTok(line);
+            if (tok == "TRANSPORT_TCP") {
+                transports = TRANSPORT_TCP;
+            } else if (tok == "TRANSPORT_UDP") {
+                transports = TRANSPORT_UDP;
+            } else if (tok == "TRANSPORT_LOCAL") {
+                transports = TRANSPORT_LOCAL;
+            } else if (tok == "TRANSPORT_ANY") {
+                transports = TRANSPORT_ANY;
+            } else {
+                transports = static_cast<TransportMask>(StringToU32(tok, 0, TRANSPORT_ANY));
+            }
+
+            DoCancelFind(namePrefix, transports);
         } else if (cmd == "list") {
             DoList();
         } else if (cmd == "join") {
@@ -1280,8 +1312,8 @@ int CDECL_CALL main(int argc, char** argv)
             printf("unbind <port>                                                 - Unbind a session port\n");
             printf("advertise <name> [transports]                                 - Advertise a name\n");
             printf("canceladvertise <name> [transports]                           - Cancel an advertisement\n");
-            printf("find <name_prefix>                                            - Discover names that begin with prefix\n");
-            printf("cancelfind <name_prefix>                                      - Cancel discovering names that begins with prefix\n");
+            printf("find <name_prefix> <transport_mask_enum>                      - Discover names that begin with prefix on an specific transport\n");
+            printf("cancelfind <name_prefix> <transport_mask_enum>                - Cancel discovering names that begins with prefix on an specific transport\n");
             printf("list                                                          - List port bindings, discovered names and active sessions\n");
             printf("join <name> <port> [isMultipoint] [traffic] [proximity] [transports] [nameTransfer] - Join a session\n");
             printf("asyncjoin <name> <port> [isMultipoint] [traffic] [proximity] [transports] [nameTransfer] - Join a session asynchronously\n");

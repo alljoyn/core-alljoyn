@@ -111,7 +111,7 @@ class MyBusListener : public BusListener, public SessionListener {
             QStatus status;
 
             if (stopDiscover) {
-                status = g_msgBus->CancelFindAdvertisedName(g_remoteBusName.c_str());
+                status = g_msgBus->CancelFindAdvertisedNameByTransport(g_remoteBusName.c_str(), transport);
                 if (ER_OK != status) {
                     QCC_LogError(status, ("CancelFindAdvertisedName(%s) failed", name));
                 }
@@ -776,7 +776,7 @@ int CDECL_CALL main(int argc, char** argv)
                  * name-not-found state before trying to find the well-known name.
                  */
                 g_discoverEvent->ResetEvent();
-                status = g_msgBus->FindAdvertisedName(g_remoteBusName.c_str());
+                status = g_msgBus->FindAdvertisedNameByTransport(g_remoteBusName.c_str(), allowedTransports);
                 if (status != ER_OK) {
                     QCC_LogError(status, ("FindAdvertisedName failed"));
                 }
