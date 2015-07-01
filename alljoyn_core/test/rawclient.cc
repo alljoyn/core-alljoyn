@@ -64,9 +64,9 @@ class MyBusListener : public BusListener {
 
     MyBusListener() : BusListener(), sessionId(0), transportMask(TRANSPORT_ANY) { }
 
-    void SetTransportMask(TransportMask newTransportMask)
+    void SetTransportMask(TransportMask transportMask)
     {
-        this->transportMask = newTransportMask;
+        this->transportMask = transportMask;
     }
 
     void FoundAdvertisedName(const char* name, TransportMask transport, const char* namePrefix)
@@ -125,7 +125,9 @@ static void usage(void)
     printf("Options:\n");
     printf("   -h                    = Print this help message\n");
     printf("   -n <well-known name>  = Well-known bus name advertised by bbservice\n");
-    printf("   -t <transport_mask>   = Set the transports that will attempt a joinSession\n");
+    printf("   -t                    = Discover over TCP (enables selective discovering)\n");
+    printf("   -l                    = Discover locally (enables selective discovering)\n");
+    printf("   -u                    = Discover over UDP-based ARDP (enables selective discovering)\n");
     printf("\n");
 }
 
@@ -144,7 +146,7 @@ int CDECL_CALL main(int argc, char** argv)
 
     QStatus status = ER_OK;
     Environ* env;
-
+    TransportMask allowedTransport =  TRANSPORT_ANY;
     printf("AllJoyn Library version: %s\n", ajn::GetVersion());
     printf("AllJoyn Library build info: %s\n", ajn::GetBuildInfo());
 
@@ -163,21 +165,14 @@ int CDECL_CALL main(int argc, char** argv)
                 g_wellKnownName = argv[i];
             }
         } else if (0 == strcmp("-t", argv[i])) {
-            ++i;
-            if (i == argc) {
-                printf("option %s requires a paramter\n", argv[i - 1]);
-                usage();
-                exit(1);
-            } else {
-                TransportMask transportMask = (TransportMask) StringToU32(argv[i], 16, 0);
-                if (transportMask == 0) {
-                    printf("Invalid transport mask 0x%x\n", transportMask);
-                    usage();
-                    exit(1);
-                } else {
-                    g_busListener.SetTransportMask(transportMask);
-                }
-            }
+            allowedTransport = TRANSPORT_TCP;
+            g_busListener.SetTransportMask(TRANSPORT_TCP);
+        } else if (0 == strcmp("-u", argv[i])) {
+            allowedTransport = TRANSPORT_UDP;
+            g_busListener.SetTransportMask(TRANSPORT_UDP);
+        } else if (0 == strcmp("-l", argv[i])) {
+            allowedTransport = TRANSPORT_LOCAL;
+            g_busListener.SetTransportMask(TRANSPORT_LOCAL);
         } else if (0 == strcmp("-h", argv[i])) {
             usage();
             exit(0);
@@ -220,7 +215,7 @@ int CDECL_CALL main(int argc, char** argv)
 
     /* Begin discovery for the well-known name of the service */
     if (ER_OK == status) {
-        status = g_msgBus->FindAdvertisedName(g_wellKnownName.c_str());
+        status = g_msgBus->FindAdvertisedNameByTransport(g_wellKnownName.c_str(), allowedTransport);
         if (status != ER_OK) {
             QCC_LogError(status, ("org.alljoyn.raw_test.FindAdvertisedName failed"));
         }
@@ -274,7 +269,7 @@ int CDECL_CALL main(int argc, char** argv)
     } else {
         /* Get the descriptor */
         SocketFd sockFd;
-        status = g_msgBus->GetSessionFd(ssId, sockFd);
+        QStatus status = g_msgBus->GetSessionFd(ssId, sockFd);
         if (status == ER_OK) {
             /* Attempt to read test string from fd */
             char buf[256];
