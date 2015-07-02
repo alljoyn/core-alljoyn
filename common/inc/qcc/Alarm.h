@@ -87,8 +87,9 @@ class _Alarm {
      * @param listener        Object to call when alarm is triggered.
      * @param context         Opaque context passed to listener callback.
      * @param periodMs        Periodicity of alarm in ms or 0 for no repeat.
+     * @param limited         Whether this alarm should be counted towards the Timer's max alarm limit
      */
-    _Alarm(Timespec absoluteTime, AlarmListener* listener, void* context = NULL, uint32_t periodMs = 0);
+    _Alarm(Timespec absoluteTime, AlarmListener* listener, void* context = NULL, uint32_t periodMs = 0, bool limited = true);
 
     /**
      * Create an alarm that can be added to a Timer.
@@ -97,16 +98,23 @@ class _Alarm {
      * @param listener        Object to call when alarm is triggered.
      * @param context         Opaque context passed to listener callback.
      * @param periodMs        Periodicity of alarm in ms or 0 for no repeat.
+     * @param limited         Whether this alarm should be counted towards the Timer's max alarm limit
      */
-    _Alarm(uint32_t relativeTime, AlarmListener* listener, void* context = NULL, uint32_t periodMs = 0);
+    _Alarm(uint32_t relativeTime, AlarmListener* listener, void* context = NULL, uint32_t periodMs = 0, bool limited = true);
 
     /**
      * Create an alarm that immediately calls a listener.
      *
      * @param listener        Object to call
      * @param context         Opaque context passed to listener callback.
+     * @param limited         Whether this alarm should be counted towards the Timer's max alarm limit
      */
-    _Alarm(AlarmListener* listener, void* context = NULL);
+    _Alarm(AlarmListener* listener, void* context = NULL, bool limited = true);
+
+    /**
+     * Set this alarm to not count towards the max alarms limit for the timer.
+     */
+    void SetUnlimited() { limited = false; };
 
     /**
      * Get context associated with alarm.
@@ -117,7 +125,6 @@ class _Alarm {
 
     /**
      * Set context associated with alarm.
-     *
      */
     void SetContext(void* c) const;
 
@@ -144,6 +151,7 @@ class _Alarm {
     uint32_t periodMs;
     mutable void* context;
     int32_t id;
+    bool limited;               /*< Whether this alarm needs to be counted towards the Timer's max alarm limit */
 };
 
 }

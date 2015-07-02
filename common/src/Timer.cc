@@ -270,6 +270,7 @@ class TimerImpl : public ThreadListener {
     Mutex reentrancyLock;
     qcc::String nameStr;
     const uint32_t maxAlarms;
+    uint32_t numAlarms;                        /**< Number of alarms in the alarm queue that count towards the limit */
     std::deque<qcc::Thread*> addWaitQueue;     /**< Threads waiting for alarms set to become not-full */
 
 };
@@ -284,7 +285,8 @@ TimerImpl::TimerImpl(String name, bool expireOnExit, uint32_t concurrency, bool 
     controllerIdx(0),
     preventReentrancy(preventReentrancy),
     nameStr(name),
-    maxAlarms(maxAlarms)
+    maxAlarms(maxAlarms),
+    numAlarms(0)
 {
     /* TimerImpl thread objects will be created when required */
 }
@@ -377,7 +379,7 @@ QStatus TimerImpl::AddAlarm(const Alarm& alarm)
     lock.Lock();
     if (isRunning) {
         /* Don't allow an infinite number of alarms to exist on this timer */
-        while (maxAlarms && (alarms.size() >= maxAlarms) && isRunning) {
+        while (maxAlarms && alarm->limited && (numAlarms >= maxAlarms) && isRunning) {
             Thread* thread = Thread::GetThread();
             assert(thread);
             addWaitQueue.push_front(thread);
@@ -405,7 +407,9 @@ QStatus TimerImpl::AddAlarm(const Alarm& alarm)
             /* Insert the alarm and alert the TimerImpl thread if necessary */
             bool alertThread = alarms.empty() || (alarm < *alarms.begin());
             alarms.insert(alarm);
-
+            if (alarm->limited) {
+                numAlarms++;
+            }
             if (alertThread && (controllerIdx >= 0)) {
                 TimerThread* tt = timerThreads[controllerIdx];
                 if (tt->state == TimerThread::IDLE) {
@@ -430,7 +434,7 @@ QStatus TimerImpl::AddAlarmNonBlocking(const Alarm& alarm)
     lock.Lock();
     if (isRunning) {
         /* Don't allow an infinite number of alarms to exist on this timer */
-        if (maxAlarms && (alarms.size() >= maxAlarms)) {
+        if (maxAlarms && (alarm->limited && numAlarms >= maxAlarms)) {
             lock.Unlock();
             return ER_TIMER_FULL;
         }
@@ -438,7 +442,9 @@ QStatus TimerImpl::AddAlarmNonBlocking(const Alarm& alarm)
         /* Insert the alarm and alert the TimerImpl thread if necessary */
         bool alertThread = alarms.empty() || (alarm < *alarms.begin());
         alarms.insert(alarm);
-
+        if (alarm->limited) {
+            numAlarms++;
+        }
         if (alertThread && (controllerIdx >= 0)) {
             TimerThread* tt = timerThreads[controllerIdx];
             if (tt->state == TimerThread::IDLE) {
@@ -463,6 +469,9 @@ bool TimerImpl::RemoveAlarm(const Alarm& alarm, bool blockIfTriggered)
             while (it != alarms.end()) {
                 if ((*it)->id == alarm->id) {
                     foundAlarm = true;
+                    if ((*it)->limited) {
+                        numAlarms--;
+                    }
                     alarms.erase(it);
                     break;
                 }
@@ -472,6 +481,9 @@ bool TimerImpl::RemoveAlarm(const Alarm& alarm, bool blockIfTriggered)
             set<Alarm>::iterator it = alarms.find(alarm);
             if (it != alarms.end()) {
                 foundAlarm = true;
+                if ((*it)->limited) {
+                    numAlarms--;
+                }
                 alarms.erase(it);
             }
         }
@@ -511,6 +523,9 @@ bool TimerImpl::ForceRemoveAlarm(const Alarm& alarm, bool blockIfTriggered)
             while (it != alarms.end()) {
                 if ((*it)->id == alarm->id) {
                     foundAlarm = true;
+                    if ((*it)->limited) {
+                        numAlarms--;
+                    }
                     alarms.erase(it);
                     break;
                 }
@@ -520,6 +535,9 @@ bool TimerImpl::ForceRemoveAlarm(const Alarm& alarm, bool blockIfTriggered)
             set<Alarm>::iterator it = alarms.find(alarm);
             if (it != alarms.end()) {
                 foundAlarm = true;
+                if ((*it)->limited) {
+                    numAlarms--;
+                }
                 alarms.erase(it);
             }
         }
@@ -557,6 +575,9 @@ QStatus TimerImpl::ReplaceAlarm(const Alarm& origAlarm, const Alarm& newAlarm, b
     if (isRunning) {
         set<Alarm>::iterator it = alarms.find(origAlarm);
         if (it != alarms.end()) {
+            if ((*it)->limited) {
+                numAlarms--;
+            }
             alarms.erase(it);
             status = AddAlarm(newAlarm);
         } else if (blockIfTriggered) {
@@ -593,6 +614,9 @@ bool TimerImpl::RemoveAlarm(const AlarmListener& listener, Alarm& alarm)
         for (set<Alarm>::iterator it = alarms.begin(); it != alarms.end(); ++it) {
             if ((*it)->listener == &listener) {
                 alarm = *it;
+                if ((*it)->limited) {
+                    numAlarms--;
+                }
                 alarms.erase(it);
                 removedOne = true;
                 break;
@@ -924,6 +948,9 @@ ThreadReturn STDCALL TimerThread::Run(void* arg)
                 set<Alarm>::iterator it = timer->alarms.find(topAlarm);
                 if (it != timer->alarms.end()) {
                     Alarm top = *it;
+                    if (top->limited) {
+                        timer->numAlarms--;
+                    }
                     timer->alarms.erase(it);
                     currentAlarm = &top;
                     if (0 < timer->addWaitQueue.size()) {
@@ -1067,6 +1094,9 @@ void TimerImpl::ThreadExit(Thread* thread)
              */
             set<Alarm>::iterator it = alarms.begin();
             Alarm alarm = *it;
+            if (alarm->limited) {
+                numAlarms--;
+            }
             alarms.erase(it);
             tt->SetCurrentAlarm(&alarm);
             lock.Unlock();

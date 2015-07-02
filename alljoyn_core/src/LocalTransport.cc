@@ -69,6 +69,7 @@ class _LocalEndpoint::Dispatcher : public qcc::Timer, public qcc::AlarmListener 
         pendingWork = Alarm(zero, listener);
     }
 
+    void SetPendingWorkUnlimited() { pendingWork->SetUnlimited(); }
     QStatus DispatchMessage(Message& msg);
 
     void TriggerDeferredCallbacks();
@@ -280,6 +281,11 @@ QStatus _LocalEndpoint::Start()
     /* Set the local endpoint's unique name */
     SetUniqueName(bus->GetInternal().GetRouter().GenerateUniqueName());
 
+    String name = GetUniqueName();
+    size_t guidLen = name.find_first_of('.');
+    if (name.substr(guidLen) == ".1") {
+        dispatcher->SetPendingWorkUnlimited();
+    }
     if (!dbusObj) {
         /* Register well known org.freedesktop.DBus remote object */
         const InterfaceDescription* intf = bus->GetInterface(org::freedesktop::DBus::InterfaceName);
@@ -427,7 +433,9 @@ QStatus _LocalEndpoint::Dispatcher::DispatchMessage(Message& msg)
     uint32_t zero = 0;
     void* context = new Message(msg);
     qcc::AlarmListener* localEndpointListener = this;
-    Alarm alarm(zero, localEndpointListener, context, zero);
+    bool limited = (endpoint->GetUniqueName() != msg->GetSender());
+    Alarm alarm(zero, localEndpointListener, context, zero, limited);
+
     QStatus status = AddAlarm(alarm);
     if (status != ER_OK) {
         Message* temp = static_cast<Message*>(context);
