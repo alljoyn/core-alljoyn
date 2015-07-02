@@ -723,7 +723,7 @@ QStatus BusObject::CancelSessionlessMessage(uint32_t serialNum)
     return status;
 }
 
-QStatus BusObject::MethodReply(const Message& msg, const MsgArg* args, size_t numArgs)
+QStatus BusObject::MethodReply(const Message& msg, const MsgArg* args, size_t numArgs, Message* replyMsg)
 {
     QStatus status;
 
@@ -745,6 +745,9 @@ QStatus BusObject::MethodReply(const Message& msg, const MsgArg* args, size_t nu
         if (status == ER_OK) {
             BusEndpoint bep = BusEndpoint::cast(bus->GetInternal().GetLocalEndpoint());
             status = bus->GetInternal().GetRouter().PushMessage(reply, bep);
+        }
+        if (NULL != replyMsg) {
+            *replyMsg = reply;
         }
     }
     return status;

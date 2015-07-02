@@ -1428,13 +1428,13 @@ QStatus ProxyBusObject::MethodCallAsync(const char* ifaceName,
     return MethodCallAsync(*member, receiver, replyHandler, args, numArgs, context, timeout, flags);
 }
 
-
 QStatus ProxyBusObject::MethodCall(const InterfaceDescription::Member& method,
                                    const MsgArg* args,
                                    size_t numArgs,
                                    Message& replyMsg,
                                    uint32_t timeout,
-                                   uint8_t flags) const
+                                   uint8_t flags,
+                                   Message* callMsg) const
 {
     QStatus status;
     Message msg(*internal->bus);
@@ -1472,6 +1472,12 @@ QStatus ProxyBusObject::MethodCall(const InterfaceDescription::Member& method,
     status = msg->CallMsg(method.signature, internal->serviceName, internal->sessionId, internal->path, method.iface->GetName(), method.name, args, numArgs, flags);
     if (status != ER_OK) {
         goto MethodCallExit;
+    }
+    /*
+     * If caller asked for a copy of the sent message, copy it now that we've successfully created it.
+     */
+    if (NULL != callMsg) {
+        *callMsg = msg;
     }
     if (flags & ALLJOYN_FLAG_NO_REPLY_EXPECTED) {
         /*

@@ -295,7 +295,6 @@ QStatus KeyExchangerECDHE::RespondToKeyExchange(Message& msg, MsgArg* variant, u
     /* hash the handshake data */
     peerState->UpdateHash(CONVERSATION_V1, HexStringToByteString(U32ToString(remoteAuthMask, 16, 2 * sizeof(remoteAuthMask), '0')));
 
-    peerState->UpdateHash(CONVERSATION_V4, KEYEXCHANGEREQUEST);
     peerState->UpdateHash(CONVERSATION_V4, msg);
 
     QStatus status;
@@ -323,8 +322,6 @@ QStatus KeyExchangerECDHE::RespondToKeyExchange(Message& msg, MsgArg* variant, u
     /* hash the handshake data */
     peerState->UpdateHash(CONVERSATION_V1, HexStringToByteString(U32ToString(authMask, 16, 2 * sizeof(authMask), '0')));
 
-
-
     MsgArg outVariant;
     if (IsLegacyPeer()) {
         KeyExchangeGenLegacyKey(outVariant);
@@ -335,10 +332,14 @@ QStatus KeyExchangerECDHE::RespondToKeyExchange(Message& msg, MsgArg* variant, u
     args[0].Set("u", authMask);
     args[1].Set("v", &outVariant);
 
-    peerState->UpdateHash(CONVERSATION_V4, KEYEXCHANGEREPLY);
-    peerState->UpdateHash(CONVERSATION_V4, args, ArraySize(args));
+    Message sentMsg(bus);
+    status = peerObj->HandleMethodReply(msg, sentMsg, args, ArraySize(args));
 
-    return peerObj->HandleMethodReply(msg, args, ArraySize(args));
+    if (ER_OK == status) {
+        peerState->UpdateHash(CONVERSATION_V4, sentMsg);
+    }
+
+    return status;
 }
 
 void KeyExchangerECDHE::KeyExchangeGenLegacyKey(MsgArg& variant)
@@ -447,6 +448,7 @@ QStatus KeyExchangerECDHE::ExecKeyExchange(uint32_t authMask, KeyExchangerCB& ca
     } else {
         KeyExchangeGenKey(variant);
     }
+    Message sentMsg(bus);
     Message replyMsg(bus);
     MsgArg args[2];
     args[0].Set("u", authMask);
@@ -456,11 +458,7 @@ QStatus KeyExchangerECDHE::ExecKeyExchange(uint32_t authMask, KeyExchangerCB& ca
         return status;
     }
 
-    /* Hash the handshake data for version 4. */
-    peerState->UpdateHash(CONVERSATION_V4, KEYEXCHANGEREQUEST);
-    peerState->UpdateHash(CONVERSATION_V4, args, ArraySize(args));
-
-    status = callback.SendKeyExchange(args, ArraySize(args), &replyMsg);
+    status = callback.SendKeyExchange(args, ArraySize(args), &sentMsg, &replyMsg);
     if (status != ER_OK) {
         QCC_DbgHLPrintf(("KeyExchangerECDHE::ExecKeyExchange send KeyExchange fails status 0x%x\n", status));
         return status;
@@ -476,7 +474,7 @@ QStatus KeyExchangerECDHE::ExecKeyExchange(uint32_t authMask, KeyExchangerCB& ca
     /* hash the handshake data */
     peerState->UpdateHash(CONVERSATION_V1, HexStringToByteString(U32ToString(*remoteAuthMask, 16, 2 * sizeof(*remoteAuthMask), '0')));
 
-    peerState->UpdateHash(CONVERSATION_V4, KEYEXCHANGEREPLY);
+    peerState->UpdateHash(CONVERSATION_V4, sentMsg);
     peerState->UpdateHash(CONVERSATION_V4, replyMsg);
 
     if (IsLegacyPeer()) {
@@ -571,7 +569,6 @@ QStatus KeyExchangerECDHE::StoreMasterSecret(const qcc::GUID128& guid, const uin
 
 QStatus KeyExchanger::ReplyWithVerifier(Message& msg)
 {
-    peerState->UpdateHash(CONVERSATION_V4, VERIFIER);
     peerState->UpdateHash(CONVERSATION_V4, msg);
     /* compute the local verifier to send back */
     uint8_t verifier[AUTH_VERIFIER_LEN];
@@ -615,19 +612,19 @@ QStatus KeyExchangerECDHE_NULL::KeyAuthentication(KeyExchangerCB& callback, cons
     }
     uint8_t verifier[AUTH_VERIFIER_LEN];
     GenerateLocalVerifier(verifier, sizeof(verifier));
+    Message sentMsg(bus);
     Message replyMsg(bus);
     MsgArg verifierArg("ay", sizeof(verifier), verifier);
     MsgArg verifierMsg("v", &verifierArg);
 
     peerState->UpdateHash(CONVERSATION_V1, verifier, sizeof(verifier));
 
-    peerState->UpdateHash(CONVERSATION_V4, VERIFIER);
-    peerState->UpdateHash(CONVERSATION_V4, verifierMsg);
-
-    status = callback.SendKeyAuthentication(&verifierMsg, &replyMsg);
+    status = callback.SendKeyAuthentication(&verifierMsg, &sentMsg, &replyMsg);
     if (status != ER_OK) {
         return status;
     }
+    peerState->UpdateHash(CONVERSATION_V4, sentMsg);
+
     MsgArg* variant;
     status = replyMsg->GetArg(0)->Get("v", &variant);
     if (status != ER_OK) {
@@ -638,7 +635,6 @@ QStatus KeyExchangerECDHE_NULL::KeyAuthentication(KeyExchangerCB& callback, cons
 
 QStatus KeyExchangerECDHE_PSK::ReplyWithVerifier(Message& msg)
 {
-    peerState->UpdateHash(CONVERSATION_V4, VERIFIER);
     peerState->UpdateHash(CONVERSATION_V4, msg);
     /* compute the local verifier to send back */
     uint8_t verifier[AUTH_VERIFIER_LEN];
@@ -726,7 +722,6 @@ QStatus KeyExchangerECDHE_PSK::ValidateRemoteVerifierVariant(const char* peerNam
         peerState->UpdateHash(CONVERSATION_V1, peerPskName, peerPskNameLen);
         peerState->UpdateHash(CONVERSATION_V1, (const uint8_t*) pskValue.data(), pskValue.length());
 
-        peerState->UpdateHash(CONVERSATION_V4, PSK);
         peerState->UpdateHash(CONVERSATION_V4, peerPskName, peerPskNameLen);
         peerState->UpdateHash(CONVERSATION_V4, (const uint8_t*)pskValue.data(), pskValue.length());
 
@@ -763,12 +758,12 @@ QStatus KeyExchangerECDHE_PSK::KeyAuthentication(KeyExchangerCB& callback, const
     peerState->UpdateHash(CONVERSATION_V1, (const uint8_t*)pskName.data(), pskName.length());
     peerState->UpdateHash(CONVERSATION_V1, (const uint8_t*)pskValue.data(), pskValue.length());
 
-    peerState->UpdateHash(CONVERSATION_V4, PSK);
     peerState->UpdateHash(CONVERSATION_V4, (const uint8_t*)pskName.data(), pskName.length());
     peerState->UpdateHash(CONVERSATION_V4, (const uint8_t*)pskValue.data(), pskValue.length());
 
     uint8_t verifier[AUTH_VERIFIER_LEN];
     GenerateLocalVerifier(verifier, sizeof(verifier));
+    Message sentMsg(bus);
     Message replyMsg(bus);
     MsgArg verifierArg;
     status = verifierArg.Set("(ayay)", pskName.length(), pskName.data(), sizeof(verifier), verifier);
@@ -779,13 +774,11 @@ QStatus KeyExchangerECDHE_PSK::KeyAuthentication(KeyExchangerCB& callback, const
 
     peerState->UpdateHash(CONVERSATION_V1, verifier, sizeof(verifier));
 
-    peerState->UpdateHash(CONVERSATION_V4, VERIFIER);
-    peerState->UpdateHash(CONVERSATION_V4, verifierMsg);
-
-    status = callback.SendKeyAuthentication(&verifierMsg, &replyMsg);
+    status = callback.SendKeyAuthentication(&verifierMsg, &sentMsg, &replyMsg);
     if (status != ER_OK) {
         return status;
     }
+    peerState->UpdateHash(CONVERSATION_V4, sentMsg);
     MsgArg* variant;
     status = replyMsg->GetArg(0)->Get("v", &variant);
     if (status != ER_OK) {
@@ -1068,7 +1061,6 @@ QStatus KeyExchangerECDHE_ECDSA::ReplyWithVerifier(Message& msg)
 {
     QStatus status;
     MsgArg variant;
-    peerState->UpdateHash(CONVERSATION_V4, ECDSA);
     peerState->UpdateHash(CONVERSATION_V4, msg);
     status = GenVerifierSigInfoArg(variant, false);
     if (ER_OK != status) {
@@ -1175,11 +1167,11 @@ QStatus KeyExchangerECDHE_ECDSA::KeyAuthentication(KeyExchangerCB& callback, con
 
     MsgArg verifierMsg("v", &variant);
 
-    peerState->UpdateHash(CONVERSATION_V4, ECDSA);
-    peerState->UpdateHash(CONVERSATION_V4, verifierMsg);
-
+    Message sentMsg(bus);
     Message replyMsg(bus);
-    status = callback.SendKeyAuthentication(&verifierMsg, &replyMsg);
+    status = callback.SendKeyAuthentication(&verifierMsg, &sentMsg, &replyMsg);
+    peerState->UpdateHash(CONVERSATION_V4, sentMsg);
+
     if (status != ER_OK) {
         return status;
     }

@@ -199,6 +199,7 @@ class _Message {
     friend class DeferredMsg;
     friend class AllJoynPeerObj;
     friend class Crypto;
+    friend class _PeerState;
     friend struct Rule;
 
   public:

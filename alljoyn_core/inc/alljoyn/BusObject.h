@@ -292,12 +292,13 @@ class BusObject : public MessageReceiver {
      * @param msg      The method call message
      * @param args     The reply arguments (can be NULL)
      * @param numArgs  The number of arguments
+     * @param replyMsg Pointer to a Message object to receive a copy of the sent reply message (can be NULL if not needed)
      * @return
      *      - #ER_OK if successful
      *      - #ER_BUS_OBJECT_NOT_REGISTERED if bus object has not yet been registered
      *      - An error status otherwise
      */
-    QStatus MethodReply(const Message& msg, const MsgArg* args = NULL, size_t numArgs = 0);
+    QStatus MethodReply(const Message& msg, const MsgArg* args = NULL, size_t numArgs = 0, Message* replyMsg = NULL);
 
     /**
      * Reply to a method call with an error message.
@@ -323,7 +324,6 @@ class BusObject : public MessageReceiver {
      *      - An error status otherwise
      */
     QStatus MethodReply(const Message& msg, QStatus status);
-
 
     /**
      * Add an interface to this object. If the interface has properties this will also add the
