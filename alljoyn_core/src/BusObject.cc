@@ -725,29 +725,7 @@ QStatus BusObject::CancelSessionlessMessage(uint32_t serialNum)
 
 QStatus BusObject::MethodReply(const Message& msg, const MsgArg* args, size_t numArgs)
 {
-    QStatus status;
-
-    /* Protect against calling before object is registered */
-    if (!bus) {
-        return ER_BUS_OBJECT_NOT_REGISTERED;
-    }
-
-    if (msg->GetFlags() & ALLJOYN_FLAG_NO_REPLY_EXPECTED) {
-        /* no reply expected, so we don't send any either */
-        return ER_OK;
-    }
-
-    if (msg->GetType() != MESSAGE_METHOD_CALL) {
-        status = ER_BUS_NO_CALL_FOR_REPLY;
-    } else {
-        Message reply(*bus);
-        status = reply->ReplyMsg(msg, args, numArgs);
-        if (status == ER_OK) {
-            BusEndpoint bep = BusEndpoint::cast(bus->GetInternal().GetLocalEndpoint());
-            status = bus->GetInternal().GetRouter().PushMessage(reply, bep);
-        }
-    }
-    return status;
+    return MethodReplyInternal(msg, NULL, args, numArgs);
 }
 
 QStatus BusObject::MethodReply(const Message& msg, const char* errorName, const char* errorMessage)
@@ -804,6 +782,36 @@ QStatus BusObject::MethodReply(const Message& msg, QStatus status)
             return bus->GetInternal().GetRouter().PushMessage(error, bep);
         }
     }
+}
+
+QStatus BusObject::MethodReplyInternal(const Message& msg, Message* sentMsg, const MsgArg* args, size_t numArgs)
+{
+    QStatus status;
+
+    /* Protect against calling before object is registered */
+    if (!bus) {
+        return ER_BUS_OBJECT_NOT_REGISTERED;
+    }
+
+    if (msg->GetFlags() & ALLJOYN_FLAG_NO_REPLY_EXPECTED) {
+        /* no reply expected, so we don't send any either */
+        return ER_OK;
+    }
+
+    if (msg->GetType() != MESSAGE_METHOD_CALL) {
+        status = ER_BUS_NO_CALL_FOR_REPLY;
+    } else {
+        Message reply(*bus);
+        status = reply->ReplyMsg(msg, args, numArgs);
+        if (status == ER_OK) {
+            BusEndpoint bep = BusEndpoint::cast(bus->GetInternal().GetLocalEndpoint());
+            status = bus->GetInternal().GetRouter().PushMessage(reply, bep);
+        }
+        if (NULL != sentMsg) {
+            *sentMsg = reply;
+        }
+    }
+    return status;
 }
 
 void BusObject::AddChild(BusObject& child)

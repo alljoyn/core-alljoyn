@@ -1428,13 +1428,45 @@ QStatus ProxyBusObject::MethodCallAsync(const char* ifaceName,
     return MethodCallAsync(*member, receiver, replyHandler, args, numArgs, context, timeout, flags);
 }
 
-
 QStatus ProxyBusObject::MethodCall(const InterfaceDescription::Member& method,
                                    const MsgArg* args,
                                    size_t numArgs,
                                    Message& replyMsg,
                                    uint32_t timeout,
                                    uint8_t flags) const
+{
+    return MethodCallInternal(method, args, numArgs, NULL, replyMsg, timeout, flags);
+}
+
+QStatus ProxyBusObject::MethodCall(const char* ifaceName,
+                                   const char* methodName,
+                                   const MsgArg* args,
+                                   size_t numArgs,
+                                   Message& replyMsg,
+                                   uint32_t timeout,
+                                   uint8_t flags) const
+{
+    internal->lock.Lock(MUTEX_CONTEXT);
+    map<StringMapKey, const InterfaceDescription*>::const_iterator it = internal->ifaces.find(StringMapKey(ifaceName));
+    if (it == internal->ifaces.end()) {
+        internal->lock.Unlock(MUTEX_CONTEXT);
+        return ER_BUS_NO_SUCH_INTERFACE;
+    }
+    const InterfaceDescription::Member* member = it->second->GetMember(methodName);
+    internal->lock.Unlock(MUTEX_CONTEXT);
+    if (NULL == member) {
+        return ER_BUS_INTERFACE_NO_SUCH_MEMBER;
+    }
+    return MethodCall(*member, args, numArgs, replyMsg, timeout, flags);
+}
+
+QStatus ProxyBusObject::MethodCallInternal(const InterfaceDescription::Member& method,
+                                           const MsgArg* args,
+                                           size_t numArgs,
+                                           Message* sentMsg,
+                                           Message& replyMsg,
+                                           uint32_t timeout,
+                                           uint8_t flags) const
 {
     QStatus status;
     Message msg(*internal->bus);
@@ -1472,6 +1504,12 @@ QStatus ProxyBusObject::MethodCall(const InterfaceDescription::Member& method,
     status = msg->CallMsg(method.signature, internal->serviceName, internal->sessionId, internal->path, method.iface->GetName(), method.name, args, numArgs, flags);
     if (status != ER_OK) {
         goto MethodCallExit;
+    }
+    /*
+     * If caller asked for a copy of the sent message, copy it now that we've successfully created it.
+     */
+    if (NULL != sentMsg) {
+        *sentMsg = msg;
     }
     if (flags & ALLJOYN_FLAG_NO_REPLY_EXPECTED) {
         /*
@@ -1580,28 +1618,6 @@ MethodCallExit:
         internal->uniqueName = replyMsg->GetSender();
     }
     return status;
-}
-
-QStatus ProxyBusObject::MethodCall(const char* ifaceName,
-                                   const char* methodName,
-                                   const MsgArg* args,
-                                   size_t numArgs,
-                                   Message& replyMsg,
-                                   uint32_t timeout,
-                                   uint8_t flags) const
-{
-    internal->lock.Lock(MUTEX_CONTEXT);
-    map<StringMapKey, const InterfaceDescription*>::const_iterator it = internal->ifaces.find(StringMapKey(ifaceName));
-    if (it == internal->ifaces.end()) {
-        internal->lock.Unlock(MUTEX_CONTEXT);
-        return ER_BUS_NO_SUCH_INTERFACE;
-    }
-    const InterfaceDescription::Member* member = it->second->GetMember(methodName);
-    internal->lock.Unlock(MUTEX_CONTEXT);
-    if (NULL == member) {
-        return ER_BUS_INTERFACE_NO_SUCH_MEMBER;
-    }
-    return MethodCall(*member, args, numArgs, replyMsg, timeout, flags);
 }
 
 void ProxyBusObject::SetSecure(bool isSecure) {

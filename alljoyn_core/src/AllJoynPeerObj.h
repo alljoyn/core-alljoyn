@@ -210,11 +210,30 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
     /**
      * Allow a KeyExchanger to send a reply message.
      * @param msg the reference message
+     * @param sentMsg copy of the message sent as a result
+     * @param status the status code
+     * @return status ER_OK for success; error otherwise.
+     */
+    QStatus HandleMethodReply(Message& msg, Message& sentMsg, QStatus status);
+
+    /**
+     * Allow a KeyExchanger to send a reply message.
+     * @param msg the reference message
      * @param args the message arguments
      * @param len the number of message arguments
      * @return status ER_OK for success; error otherwise.
      */
     QStatus HandleMethodReply(Message& msg, const MsgArg* args = NULL, size_t numArgs = 0);
+
+    /**
+     * Allow a KeyExchanger to send a reply message.
+     * @param msg the reference message
+     * @param sentMsg copy of the message sent as a result
+     * @param args the message arguments
+     * @param len the number of message arguments
+     * @return status ER_OK for success; error otherwise.
+     */
+    QStatus HandleMethodReply(Message& msg, Message& sentMsg, const MsgArg* args = NULL, size_t numArgs = 0);
 
     /**
      * Destructor
