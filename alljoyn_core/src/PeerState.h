@@ -61,24 +61,6 @@ namespace ajn {
 #define CONVERSATION_V1 ((uint32_t)0x0000)
 #define CONVERSATION_V4 ((uint32_t)0x0004)
 
-/*
- * Message type headers
- */
-typedef enum : uint8_t {
-    EXCHANGEGUIDSREQUEST,
-    EXCHANGEGUIDSREPLY,
-    GENSESSIONKEYREQUEST,
-    GENSESSIONKEYREPLY,
-    EXCHANGESUITESREQUEST,
-    EXCHANGESUITESREPLY,
-    KEYEXCHANGEREQUEST,
-    KEYEXCHANGEREPLY,
-    VERIFIER,
-    PSK,
-    ECDSA
-} HashHeader;
-
-
 /* Forward declaration */
 class _PeerState;
 
@@ -287,15 +269,6 @@ class _PeerState {
         }
     }
 
-
-    /**
-     * Update the conversation hash with a hash header
-     * InitializeConversationHash must first be called before calling this method.
-     * @param[in] conversationVersion The minimum auth version required for this to be included in the hash.
-     * @param[in] byte Byte with which to update the hash.
-     */
-    void UpdateHash(uint32_t conversationVersion, HashHeader hashHeader);
-
     /**
      * Update the conversation hash with a single byte
      * InitializeConversationHash must first be called before calling this method.
@@ -323,44 +296,13 @@ class _PeerState {
     void UpdateHash(uint32_t conversationVersion, const qcc::String& str);
 
     /**
-     * Update the conversation hash with a MsgArg object. This will update
-     * the hash with the typeId field of the MsgArg first, and then the
-     * contents of the argument. In the case of a scalar array, the hash will
-     * first be updated with the number of elements and then each element
-     * in order.
-     *
+     * Update the conversation hash with a Message. This extracts the raw message buffer
+     * from the Message and updates the hash with that.
      * InitializeConversationHash must first be called before calling this method.
-     *
-     * The following MsgArg types are supported:
-     * ALLJOYN_UINT16 ALLJOYN_UINT32 ALLJOYN_UINT64 ALLJOYN_STRING ALLJOYN_UINT32_ARRAY
-     *
-     * @param[in] conversationVersion The minimum auth version required for this to be included in the hash.
-     * @param[in] msgArg A MsgArg object with which to update the hash.
-     */
-    void UpdateHash(uint32_t conversationVersion, const MsgArg& msgArg);
-
-    /**
-     * Update the conversation hash with an array of MsgArg objects. This calls
-     * UpdateHash on each element of the array in order; no additional data is used
-     * to update the hash.
-     * InitializeConversationHash must first be called before calling this method.
-     * @see QStatus UpdateHash(const MsgArg& msgArg)
-     * @param[in] conversationVersion The minimum auth version required for this to be included in the hash.
-     * @param[in] msgArgs An array of MsgArg objects with which to update the hash.
-     * @param[in] msgArgSize Number of elements of msgArgs array.
-     */
-    void UpdateHash(uint32_t conversationVersion, const MsgArg* msgArgs, size_t msgArgSize);
-
-    /**
-     * Update the conversation hash with a Message. This extracts the MsgArg array
-     * from the Message and updates the hash with that. No other content from the
-     * Message is used to update the hash.
-     * InitializeConversationHash must first be called before calling this method.
-     * @see QStatus UpdateHash(const MsgArg* msgArgs, size_t msgArgSize)
      * @param[in] conversationVersion The minimum auth version required for this to be included in the hash.
      * @param[in] msg A Message object whose arguments will be added to the hash.
      */
-    void UpdateHash(uint32_t conversationVersion, Message& msg);
+    void UpdateHash(uint32_t conversationVersion, const Message& msg);
 
     /**
      * Initialize the conversation hash to start a new conversation. Any previous

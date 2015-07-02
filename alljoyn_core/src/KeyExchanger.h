@@ -75,8 +75,8 @@ class AllJoynPeerObj;
 class KeyExchangerCB {
   public:
     KeyExchangerCB(ProxyBusObject& remoteObj, const InterfaceDescription* ifc, uint32_t timeout) : remoteObj(remoteObj), ifc(ifc), timeout(timeout) { }
-    QStatus SendKeyExchange(MsgArg* args, size_t numArgs, Message* replyMsg);
-    QStatus SendKeyAuthentication(MsgArg* msg, Message* replyMsg);
+    QStatus SendKeyExchange(MsgArg* args, size_t numArgs, Message* sentMsg, Message* replyMsg);
+    QStatus SendKeyAuthentication(MsgArg* msg, Message* sentMsg, Message* replyMsg);
 
     ~KeyExchangerCB() { }
   private:
