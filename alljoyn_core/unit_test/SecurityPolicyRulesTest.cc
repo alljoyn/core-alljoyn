@@ -2668,3 +2668,2780 @@ INSTANTIATE_TEST_CASE_P(Signal, SecurityPolicyRulesSignalManifest,
                                                  true,
                                                  false)
                             ));
+
+/*
+ * Purpose
+ * Verify that DENY rules that are specific or wild card do not take effect if
+ * the ACL has a peer type of ALL.
+ *
+ * Setup
+ * Sender and Receiver bus implement the following :
+ * Object Path:  /test
+ * Interface Name: "org.allseen.test.SecurityApplication.rules"
+ * Member name: Echo (method call)
+ * Member name: Prop1  (property, read write)
+ * Member name: Chirp (signal)
+ * Peer1 and Peer2 set up an ECDHE_NULL based session.
+ * Peer1 makes a method call to Peer2.
+ * Peer1 sends a signal to Peer2.
+ * Peer1 makes a get property call on Peer2
+ * Peer1 makes a set property call on Peer2
+ *
+ * Peer1 rules:
+ * ACL: Peer type: ALL
+ * Rule 0: Object Path= *, Interface=*, Member name=*, Member Type = NS, Action mask = DENY
+ * Rule 1: Object Path=/test, Interface = org.allseen.test.SecurityApplication.rules, Member name = *, Member type = NS, Action Mask = DENY
+ * Rule 2: Object Path= *, Interface=*, Member Name=*, Member Type= NS, Action Mask = PROVIDE|MODIFY|OBSERVE
+ *
+ * Peer2 rules:
+ * ACL: Peer type: ALL
+ * Rule 0: Object Path= *, Interface=*, Member Name=*, Member Type= NS, Action Mask = PROVIDE|MODIFY|OBSERVE
+ *
+ * verification:
+ * Verify that method call, get/set property calls are successful.
+ * Verify that signal is received by B.
+ */
+TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_1)
+{
+    PolicyRulesTestBusObject peer1BusObject(peer1Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer1Bus.RegisterBusObject(peer1BusObject));
+    PolicyRulesTestBusObject peer2BusObject(peer2Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterBusObject(peer2BusObject));
+
+    /* install permissions make method calls */
+    //Permission policy that will be installed on peer1
+    PermissionPolicy peer1Policy;
+    peer1Policy.SetVersion(1);
+    {
+        PermissionPolicy::Acl acls[1];
+        {
+            PermissionPolicy::Peer peers[1];
+            peers[0].SetType(PermissionPolicy::Peer::PEER_ALL);
+            acls[0].SetPeers(1, peers);
+        }
+        {
+            PermissionPolicy::Rule rules[3];
+            //rule 0
+            rules[0].SetObjPath("*");
+            rules[0].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               0 /*DENY*/);
+                rules[0].SetMembers(1, members);
+            }
+            //rule 1
+            rules[1].SetObjPath("/test");
+            rules[1].SetInterfaceName(interfaceName);
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               0 /*DENY*/);
+                rules[1].SetMembers(1, members);
+            }
+            //rule 2
+            rules[2].SetObjPath("*");
+            rules[2].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                               PermissionPolicy::Rule::Member::ACTION_MODIFY |
+                               PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+                rules[2].SetMembers(1, members);
+            }
+            acls[0].SetRules(3, rules);
+        }
+        peer1Policy.SetAcls(1, acls);
+    }
+
+    // Permission policy that will be installed on peer2
+    PermissionPolicy peer2Policy;
+    peer2Policy.SetVersion(1);
+    {
+        PermissionPolicy::Acl acls[1];
+        {
+            PermissionPolicy::Peer peers[1];
+            peers[0].SetType(PermissionPolicy::Peer::PEER_ALL);
+            acls[0].SetPeers(1, peers);
+        }
+        {
+            PermissionPolicy::Rule rules[1];
+            //rule 0
+            rules[0].SetObjPath("*");
+            rules[0].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                               PermissionPolicy::Rule::Member::ACTION_MODIFY |
+                               PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+                rules[0].SetMembers(1, members);
+            }
+            acls[0].SetRules(1, rules);
+        }
+        peer2Policy.SetAcls(1, acls);
+    }
+
+    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
+
+    {
+        PermissionPolicy peer1DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+    }
+    {
+        PermissionPolicy peer2DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+    }
+
+    EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+
+    /* We should be using a ECDHE_NULL based session */
+    EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", managerAuthListener, NULL, false));
+    EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", managerAuthListener, NULL, false));
+
+    SessionOpts opts;
+    SessionId peer1ToPeer2SessionId;
+    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, peer1ToPeer2SessionId, opts));
+    /* Create the ProxyBusObject and call the Echo method on the interface */
+    ProxyBusObject proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), "/test", peer1ToPeer2SessionId, true);
+    EXPECT_EQ(ER_OK, proxy.ParseXml(interface.c_str()));
+    EXPECT_TRUE(proxy.ImplementsInterface(interfaceName)) << interface.c_str() << "\n" << interfaceName;
+
+    // Verify Method call
+    MsgArg arg("s", "String that should be Echoed back.");
+    Message replyMsg(peer1Bus);
+    EXPECT_EQ(ER_OK, proxy.MethodCall(interfaceName, "Echo", &arg, static_cast<size_t>(1), replyMsg));
+    char* echoReply;
+    replyMsg->GetArg(0)->Get("s", &echoReply);
+    EXPECT_STREQ("String that should be Echoed back.", echoReply);
+
+    // Verify Set/Get Property
+    MsgArg prop1Arg;
+    EXPECT_EQ(ER_OK, prop1Arg.Set("i", 513));
+    EXPECT_EQ(ER_OK, proxy.SetProperty(interfaceName, "Prop1", prop1Arg));
+    EXPECT_EQ(513, peer2BusObject.ReadProp1());
+
+    MsgArg prop1ArgOut;
+    EXPECT_EQ(ER_OK, proxy.GetProperty(interfaceName, "Prop1", prop1Arg));
+    uint32_t prop1;
+    prop1Arg.Get("i", &prop1);
+    EXPECT_EQ((uint32_t)513, prop1);
+
+    // Send/Receive Signal
+    ChirpSignalReceiver chirpSignalReceiver;
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterSignalHandler(&chirpSignalReceiver, static_cast<MessageReceiver::SignalHandler>(&ChirpSignalReceiver::ChirpSignalHandler), peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), NULL));
+
+    arg.Set("s", "Chirp this String out in the signal.");
+    // Signals are send and forget.  They will always return ER_OK.
+    EXPECT_EQ(ER_OK, peer1BusObject.Signal(peer2Bus.GetUniqueName().c_str(), peer1ToPeer2SessionId, *peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), &arg, 1, 0, 0));
+
+    //Wait for a maximum of 2 sec for the Chirp Signal.
+    for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+        if (chirpSignalReceiver.signalReceivedFlag) {
+            break;
+        }
+        qcc::Sleep(WAIT_MSECS);
+    }
+    EXPECT_TRUE(chirpSignalReceiver.signalReceivedFlag);
+
+    /* clean up */
+    peer2Bus.UnregisterBusObject(peer2BusObject);
+}
+
+/*
+ * Purpose
+ * Verify that DENY rules that are specific or wild card do not take effect if
+ * the ACL has a peer type of ALL.
+ *
+ * Setup
+ * Sender and Receiver bus implement the following :
+ * Object Path:  /test
+ * Interface Name: "org.allseen.test.SecurityApplication.rules"
+ * Member name: Echo (method call)
+ * Member name: Prop1  (property, read write)
+ * Member name: Chirp (signal)
+ * Peer1 and Peer2 set up an ECDHE_NULL based session.
+ * Peer1 makes a method call to Peer2.
+ * Peer1 makes a get property call on Peer2
+ * Peer1 makes a set property call on Peer2
+ * Peer1 sends a signal to Peer2.
+ *
+ * Peer1 rules:
+ * ACL: Peer type: ALL
+ * Rule 0: Object Path= *, Interface=*, Member Name=*, Member Type= NS, Action Mask = PROVIDE|MODIFY|OBSERVE
+ *
+ * Peer1 rules:
+ * ACL: Peer type: ALL
+ * Rule 0: Object Path= *, Interface=*, Member name=*, Member Type = NS, Action mask = DENY
+ * Rule 1: Object Path=/test, Interface = org.allseen.test.SecurityApplication.rules, Member name = *, Member type = NS, Action Mask = DENY
+ * Rule 2: Object Path= *, Interface=*, Member Name=*, Member Type= NS, Action Mask = PROVIDE|MODIFY|OBSERVE
+ *
+ *
+ *
+ * verification:
+ * Verify that method call, get/set property calls are successful.
+ * Verify that signal is received by B.
+ */
+TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_2)
+{
+    PolicyRulesTestBusObject peer1BusObject(peer1Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer1Bus.RegisterBusObject(peer1BusObject));
+    PolicyRulesTestBusObject peer2BusObject(peer2Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterBusObject(peer2BusObject));
+
+    /* install permissions make method calls */
+    // Permission policy that will be installed on peer1
+    PermissionPolicy peer1Policy;
+    peer1Policy.SetVersion(1);
+    {
+        PermissionPolicy::Acl acls[1];
+        {
+            PermissionPolicy::Peer peers[1];
+            peers[0].SetType(PermissionPolicy::Peer::PEER_ALL);
+            acls[0].SetPeers(1, peers);
+        }
+        {
+            PermissionPolicy::Rule rules[1];
+            //rule 0
+            rules[0].SetObjPath("*");
+            rules[0].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                               PermissionPolicy::Rule::Member::ACTION_MODIFY |
+                               PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+                rules[0].SetMembers(1, members);
+            }
+            acls[0].SetRules(1, rules);
+        }
+        peer1Policy.SetAcls(1, acls);
+    }
+
+    //Permission policy that will be installed on peer2
+    PermissionPolicy peer2Policy;
+    peer2Policy.SetVersion(1);
+    {
+        PermissionPolicy::Acl acls[1];
+        {
+            PermissionPolicy::Peer peers[1];
+            peers[0].SetType(PermissionPolicy::Peer::PEER_ALL);
+            acls[0].SetPeers(1, peers);
+        }
+        {
+            PermissionPolicy::Rule rules[3];
+            //rule 0
+            rules[0].SetObjPath("*");
+            rules[0].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               0 /*DENY*/);
+                rules[0].SetMembers(1, members);
+            }
+            //rule 1
+            rules[1].SetObjPath("/test");
+            rules[1].SetInterfaceName(interfaceName);
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               0 /*DENY*/);
+                rules[1].SetMembers(1, members);
+            }
+            //rule 2
+            rules[2].SetObjPath("*");
+            rules[2].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                               PermissionPolicy::Rule::Member::ACTION_MODIFY |
+                               PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+                rules[2].SetMembers(1, members);
+            }
+            acls[0].SetRules(3, rules);
+        }
+        peer2Policy.SetAcls(1, acls);
+    }
+
+    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
+
+    {
+        PermissionPolicy peer1DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+    }
+    {
+        PermissionPolicy peer2DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+    }
+
+    EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+
+    /* We should be using a ECDHE_NULL based session */
+    EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", managerAuthListener, NULL, false));
+    EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", managerAuthListener, NULL, false));
+
+    SessionOpts opts;
+    SessionId peer1ToPeer2SessionId;
+    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, peer1ToPeer2SessionId, opts));
+    /* Create the ProxyBusObject and call the Echo method on the interface */
+    ProxyBusObject proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), "/test", peer1ToPeer2SessionId, true);
+    EXPECT_EQ(ER_OK, proxy.ParseXml(interface.c_str()));
+    EXPECT_TRUE(proxy.ImplementsInterface(interfaceName)) << interface.c_str() << "\n" << interfaceName;
+
+    // Verify Method call
+    MsgArg arg("s", "String that should be Echoed back.");
+    Message replyMsg(peer1Bus);
+    EXPECT_EQ(ER_OK, proxy.MethodCall(interfaceName, "Echo", &arg, static_cast<size_t>(1), replyMsg));
+    char* echoReply;
+    replyMsg->GetArg(0)->Get("s", &echoReply);
+    EXPECT_STREQ("String that should be Echoed back.", echoReply);
+
+    // Verify Set/Get Property
+    MsgArg prop1Arg;
+    EXPECT_EQ(ER_OK, prop1Arg.Set("i", 513));
+    EXPECT_EQ(ER_OK, proxy.SetProperty(interfaceName, "Prop1", prop1Arg));
+    EXPECT_EQ(513, peer2BusObject.ReadProp1());
+
+    MsgArg prop1ArgOut;
+    EXPECT_EQ(ER_OK, proxy.GetProperty(interfaceName, "Prop1", prop1Arg));
+    uint32_t prop1;
+    prop1Arg.Get("i", &prop1);
+    EXPECT_EQ((uint32_t)513, prop1);
+
+    // Send/Receive Signal
+    ChirpSignalReceiver chirpSignalReceiver;
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterSignalHandler(&chirpSignalReceiver, static_cast<MessageReceiver::SignalHandler>(&ChirpSignalReceiver::ChirpSignalHandler), peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), NULL));
+
+    arg.Set("s", "Chirp this String out in the signal.");
+    // Signals are send and forget.  They will always return ER_OK.
+    EXPECT_EQ(ER_OK, peer1BusObject.Signal(peer2Bus.GetUniqueName().c_str(), peer1ToPeer2SessionId, *peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), &arg, 1, 0, 0));
+
+    //Wait for a maximum of 2 sec for the Chirp Signal.
+    for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+        if (chirpSignalReceiver.signalReceivedFlag) {
+            break;
+        }
+        qcc::Sleep(WAIT_MSECS);
+    }
+    EXPECT_TRUE(chirpSignalReceiver.signalReceivedFlag);
+
+    /* clean up */
+    peer2Bus.UnregisterBusObject(peer2BusObject);
+}
+
+
+/*
+ * Purpose
+ * Verify that DENY rules that are specific or wild card do not take effect if
+ * the ACL has a peer type of ANY_TRUSTED.
+ *
+ * Setup
+ * Sender and Receiver bus implement the following :
+ * Object Path:  /test
+ * Interface Name: "org.allseen.test.SecurityApplication.rules"
+ * Member name: Echo (method call)
+ * Member name: Prop1  (property, read write)
+ * Member name: Chirp (signal)
+ * Peer1 and Peer2 set up an ECDHE_ECDSA based session.
+ * Peer1 makes a method call to Peer2.
+ * Peer1 sends a signal to Peer2.
+ * Peer1 makes a get property call on Peer2
+ * Peer1 makes a set property call on Peer2
+ *
+ * Peer1 rules:
+ * ACL: Peer type: ANY_TRUSTED
+ * Rule 0: Object Path= *, Interface=*, Member name=*, Member Type = NS, Action mask = DENY
+ * Rule 1: Object Path=/test, Interface = org.allseen.test.SecurityApplication.rules, Member name = *, Member type = NS, Action Mask = DENY
+ * Rule 2: Object Path= *, Interface=*, Member Name=*, Member Type= NS, Action Mask = PROVIDE|MODIFY|OBSERVE
+ *
+ * Peer2 rules:
+ * ACL: Peer type: ANY_TRUSTED
+ * Rule 0: Object Path= *, Interface=*, Member Name=*, Member Type= NS, Action Mask = PROVIDE|MODIFY|OBSERVE
+ *
+ * verification:
+ * Verify that method call, get/set property calls are successful.
+ * Verify that signal is received by Peer2.
+ */
+TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_3)
+{
+    PolicyRulesTestBusObject peer1BusObject(peer1Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer1Bus.RegisterBusObject(peer1BusObject));
+    PolicyRulesTestBusObject peer2BusObject(peer2Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterBusObject(peer2BusObject));
+
+    /* install permissions make method calls */
+    //Permission policy that will be installed on peer1
+    PermissionPolicy peer1Policy;
+    peer1Policy.SetVersion(1);
+    {
+        PermissionPolicy::Acl acls[1];
+        {
+            PermissionPolicy::Peer peers[1];
+            peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
+            acls[0].SetPeers(1, peers);
+        }
+        {
+            PermissionPolicy::Rule rules[3];
+            //rule 0
+            rules[0].SetObjPath("*");
+            rules[0].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               0 /*DENY*/);
+                rules[0].SetMembers(1, members);
+            }
+            //rule 1
+            rules[1].SetObjPath("/test");
+            rules[1].SetInterfaceName(interfaceName);
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               0 /*DENY*/);
+                rules[1].SetMembers(1, members);
+            }
+            //rule 2
+            rules[2].SetObjPath("*");
+            rules[2].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                               PermissionPolicy::Rule::Member::ACTION_MODIFY |
+                               PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+                rules[2].SetMembers(1, members);
+            }
+            acls[0].SetRules(3, rules);
+        }
+        peer1Policy.SetAcls(1, acls);
+    }
+    // Permission policy that will be installed on peer2
+    PermissionPolicy peer2Policy;
+    peer2Policy.SetVersion(1);
+    {
+        PermissionPolicy::Acl acls[1];
+        {
+            PermissionPolicy::Peer peers[1];
+            peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
+            acls[0].SetPeers(1, peers);
+        }
+        {
+            PermissionPolicy::Rule rules[1];
+            //rule 0
+            rules[0].SetObjPath("*");
+            rules[0].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                               PermissionPolicy::Rule::Member::ACTION_MODIFY |
+                               PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+                rules[0].SetMembers(1, members);
+            }
+            acls[0].SetRules(1, rules);
+        }
+        peer2Policy.SetAcls(1, acls);
+    }
+
+    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
+
+    {
+        PermissionPolicy peer1DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+    }
+    {
+        PermissionPolicy peer2DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+    }
+
+    EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+
+    SessionOpts opts;
+    SessionId peer1ToPeer2SessionId;
+    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, peer1ToPeer2SessionId, opts));
+    /* Create the ProxyBusObject and call the Echo method on the interface */
+    ProxyBusObject proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), "/test", peer1ToPeer2SessionId, true);
+    EXPECT_EQ(ER_OK, proxy.ParseXml(interface.c_str()));
+    EXPECT_TRUE(proxy.ImplementsInterface(interfaceName)) << interface.c_str() << "\n" << interfaceName;
+
+    // Verify Method call
+    MsgArg arg("s", "String that should be Echoed back.");
+    Message replyMsg(peer1Bus);
+    EXPECT_EQ(ER_OK, proxy.MethodCall(interfaceName, "Echo", &arg, static_cast<size_t>(1), replyMsg));
+    char* echoReply;
+    replyMsg->GetArg(0)->Get("s", &echoReply);
+    EXPECT_STREQ("String that should be Echoed back.", echoReply);
+
+    // Verify Set/Get Property
+    MsgArg prop1Arg;
+    EXPECT_EQ(ER_OK, prop1Arg.Set("i", 513));
+    EXPECT_EQ(ER_OK, proxy.SetProperty(interfaceName, "Prop1", prop1Arg));
+    EXPECT_EQ(513, peer2BusObject.ReadProp1());
+
+    MsgArg prop1ArgOut;
+    EXPECT_EQ(ER_OK, proxy.GetProperty(interfaceName, "Prop1", prop1Arg));
+    uint32_t prop1;
+    prop1Arg.Get("i", &prop1);
+    EXPECT_EQ((uint32_t)513, prop1);
+
+    // Send/Receive Signal
+    ChirpSignalReceiver chirpSignalReceiver;
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterSignalHandler(&chirpSignalReceiver, static_cast<MessageReceiver::SignalHandler>(&ChirpSignalReceiver::ChirpSignalHandler), peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), NULL));
+
+    arg.Set("s", "Chirp this String out in the signal.");
+    // Signals are send and forget.  They will always return ER_OK.
+    EXPECT_EQ(ER_OK, peer1BusObject.Signal(peer2Bus.GetUniqueName().c_str(), peer1ToPeer2SessionId, *peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), &arg, 1, 0, 0));
+
+    //Wait for a maximum of 2 sec for the Chirp Signal.
+    for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+        if (chirpSignalReceiver.signalReceivedFlag) {
+            break;
+        }
+        qcc::Sleep(WAIT_MSECS);
+    }
+    EXPECT_TRUE(chirpSignalReceiver.signalReceivedFlag);
+
+    /* clean up */
+    peer1Bus.UnregisterBusObject(peer1BusObject);
+    peer2Bus.UnregisterBusObject(peer2BusObject);
+}
+
+/*
+ * Purpose
+ * Verify that DENY rules that are specific or wild card do not take effect if
+ * the ACL has a peer type of ANY_TRUSTED.
+ *
+ * Setup
+ * Sender and Receiver bus implement the following :
+ * Object Path:  /test
+ * Interface Name: "org.allseen.test.SecurityApplication.rules"
+ * Member name: Echo (method call)
+ * Member name: Prop1  (property, read write)
+ * Member name: Chirp (signal)
+ * Peer1 and Peer2 set up an ECDHE_ECDSA based session.
+ * Peer1 makes a method call to Peer2.
+ * Peer1 sends a signal to Peer2.
+ * Peer1 makes a get property call on Peer2
+ * Peer1 makes a set property call on Peer2
+ *
+ * Peer1 rules:
+ * ACL: Peer type: ANY_TRUSTED
+ * Rule 0: Object Path= *, Interface=*, Member Name=*, Member Type= NS, Action Mask = PROVIDE|MODIFY|OBSERVE
+ *
+ * Peer2 rules:
+ * ACL: Peer type: ANY_TRUSTED
+ * Rule 0: Object Path= *, Interface=*, Member name=*, Member Type = NS, Action mask = DENY
+ * Rule 1: Object Path=/test, Interface = org.allseen.test.SecurityApplication.rules, Member name = *, Member type = NS, Action Mask = DENY
+ * Rule 2: Object Path= *, Interface=*, Member Name=*, Member Type= NS, Action Mask = PROVIDE|MODIFY|OBSERVE
+ *
+ *
+ *
+ * verification:
+ * Verify that method call, get/set property calls are successful.
+ * Verify that signal is received by Peer2.
+ */
+TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_4)
+{
+    PolicyRulesTestBusObject peer1BusObject(peer1Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer1Bus.RegisterBusObject(peer1BusObject));
+    PolicyRulesTestBusObject peer2BusObject(peer2Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterBusObject(peer2BusObject));
+
+    /* install permissions make method calls */
+    // Permission policy that will be installed on peer1
+    PermissionPolicy peer1Policy;
+    peer1Policy.SetVersion(1);
+    {
+        PermissionPolicy::Acl acls[1];
+        {
+            PermissionPolicy::Peer peers[1];
+            peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
+            acls[0].SetPeers(1, peers);
+        }
+        {
+            PermissionPolicy::Rule rules[1];
+            //rule 0
+            rules[0].SetObjPath("*");
+            rules[0].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                               PermissionPolicy::Rule::Member::ACTION_MODIFY |
+                               PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+                rules[0].SetMembers(1, members);
+            }
+            acls[0].SetRules(1, rules);
+        }
+        peer1Policy.SetAcls(1, acls);
+    }
+
+    //Permission policy that will be installed on peer2
+    PermissionPolicy peer2Policy;
+    peer2Policy.SetVersion(1);
+    {
+        PermissionPolicy::Acl acls[1];
+        {
+            PermissionPolicy::Peer peers[1];
+            peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
+            acls[0].SetPeers(1, peers);
+        }
+        {
+            PermissionPolicy::Rule rules[3];
+            //rule 0
+            rules[0].SetObjPath("*");
+            rules[0].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               0 /*DENY*/);
+                rules[0].SetMembers(1, members);
+            }
+            //rule 1
+            rules[1].SetObjPath("/test");
+            rules[1].SetInterfaceName(interfaceName);
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               0 /*DENY*/);
+                rules[1].SetMembers(1, members);
+            }
+            //rule 2
+            rules[2].SetObjPath("*");
+            rules[2].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                               PermissionPolicy::Rule::Member::ACTION_MODIFY |
+                               PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+                rules[2].SetMembers(1, members);
+            }
+            acls[0].SetRules(3, rules);
+        }
+        peer2Policy.SetAcls(1, acls);
+    }
+
+    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
+
+    {
+        PermissionPolicy peer1DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+    }
+    {
+        PermissionPolicy peer2DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+    }
+
+    EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+
+    SessionOpts opts;
+    SessionId peer1ToPeer2SessionId;
+    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, peer1ToPeer2SessionId, opts));
+    /* Create the ProxyBusObject and call the Echo method on the interface */
+    ProxyBusObject proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), "/test", peer1ToPeer2SessionId, true);
+    EXPECT_EQ(ER_OK, proxy.ParseXml(interface.c_str()));
+    EXPECT_TRUE(proxy.ImplementsInterface(interfaceName)) << interface.c_str() << "\n" << interfaceName;
+
+    // Verify Method call
+    MsgArg arg("s", "String that should be Echoed back.");
+    Message replyMsg(peer1Bus);
+    EXPECT_EQ(ER_OK, proxy.MethodCall(interfaceName, "Echo", &arg, static_cast<size_t>(1), replyMsg));
+    char* echoReply;
+    replyMsg->GetArg(0)->Get("s", &echoReply);
+    EXPECT_STREQ("String that should be Echoed back.", echoReply);
+
+    // Verify Set/Get Property
+    MsgArg prop1Arg;
+    EXPECT_EQ(ER_OK, prop1Arg.Set("i", 513));
+    EXPECT_EQ(ER_OK, proxy.SetProperty(interfaceName, "Prop1", prop1Arg));
+    EXPECT_EQ(513, peer2BusObject.ReadProp1());
+
+    MsgArg prop1ArgOut;
+    EXPECT_EQ(ER_OK, proxy.GetProperty(interfaceName, "Prop1", prop1Arg));
+    uint32_t prop1;
+    prop1Arg.Get("i", &prop1);
+    EXPECT_EQ((uint32_t)513, prop1);
+
+    // Send/Receive Signal
+    ChirpSignalReceiver chirpSignalReceiver;
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterSignalHandler(&chirpSignalReceiver, static_cast<MessageReceiver::SignalHandler>(&ChirpSignalReceiver::ChirpSignalHandler), peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), NULL));
+
+    arg.Set("s", "Chirp this String out in the signal.");
+    // Signals are send and forget.  They will always return ER_OK.
+    EXPECT_EQ(ER_OK, peer1BusObject.Signal(peer2Bus.GetUniqueName().c_str(), peer1ToPeer2SessionId, *peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), &arg, 1, 0, 0));
+
+    //Wait for a maximum of 2 sec for the Chirp Signal.
+    for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+        if (chirpSignalReceiver.signalReceivedFlag) {
+            break;
+        }
+        qcc::Sleep(WAIT_MSECS);
+    }
+    EXPECT_TRUE(chirpSignalReceiver.signalReceivedFlag);
+
+    /* clean up */
+    peer1Bus.UnregisterBusObject(peer1BusObject);
+    peer2Bus.UnregisterBusObject(peer2BusObject);
+}
+
+/*
+ * Purpose
+ * Verify that DENY rules that are specific or wild card do not take effect if
+ * the ACL has a peer type of WITH_MEMBERSHIP.
+ *
+ * Setup
+ * Sender and Receiver bus implement the following :
+ * Object Path:  /test
+ * Interface Name: "org.allseen.test.SecurityApplication.rules"
+ * Member name: Echo (method call)
+ * Member name: Prop1  (property, read write)
+ * Member name: Chirp (signal)
+ * Peer2 has membership certificate installed.
+ * Peer1 and Peer2 set up an ECDHE_ECDSA based session.
+ * Peer1 makes a method call to Peer2.
+ * Peer1 sends a signal to Peer2.
+ * Peer1 makes a get property call on Peer2
+ * Peer1 makes a set property call on Peer2
+ *
+ * Peer1 rules:
+ * ACL: Peer type: WITH_MEMBERSHIP, SGID: Living Room, Security Group Authority public key
+ * Rule 1: Object Path= *, Interface=*, Member name=*, Member Type = NS, Action mask = DENY
+ * Rule 2: Object Path=/test, Interface = org.allseen.test.SecurityApplication.rules, Member name = *, Member type = NS, Action Mask = DENY
+ * Rule 3: Object Path= *, Interface=*, Member Name=*, Member Type= NS, Action Mask = PROVIDE|MODIFY|OBSERVE
+ *
+ * Peer2 rules:
+ * ACL: Peer type: ANY_TRUSTED
+ * Rule 0: Object Path= *, Interface=*, Member Name=*, Member Type= NS, Action Mask = PROVIDE|MODIFY|OBSERVE
+ *
+ * verification:
+ * Verify that method call, get/set property calls are successful.
+ * Verify that signal is received by Peer2.
+ */
+TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_7)
+{
+    PolicyRulesTestBusObject peer1BusObject(peer1Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer1Bus.RegisterBusObject(peer1BusObject));
+    PolicyRulesTestBusObject peer2BusObject(peer2Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterBusObject(peer2BusObject));
+
+    /* install permissions make method calls */
+    //Permission policy that will be installed on peer1
+    PermissionPolicy peer1Policy;
+    peer1Policy.SetVersion(1);
+    {
+        PermissionPolicy::Acl acls[1];
+        {
+            PermissionPolicy::Peer peers[1];
+            peers[0].SetType(PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP);
+            peers[0].SetSecurityGroupId(managerGuid);
+            //Get manager key
+            KeyInfoNISTP256 managerKey;
+            PermissionConfigurator& pcManager = managerBus.GetPermissionConfigurator();
+            EXPECT_EQ(ER_OK, pcManager.GetSigningPublicKey(managerKey));
+            peers[0].SetKeyInfo(&managerKey);
+            acls[0].SetPeers(1, peers);
+        }
+        {
+            PermissionPolicy::Rule rules[3];
+            //rule 0
+            rules[0].SetObjPath("*");
+            rules[0].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               0 /*DENY*/);
+                rules[0].SetMembers(1, members);
+            }
+            //rule 1
+            rules[1].SetObjPath("/test");
+            rules[1].SetInterfaceName(interfaceName);
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               0 /*DENY*/);
+                rules[1].SetMembers(1, members);
+            }
+            //rule 2
+            rules[2].SetObjPath("*");
+            rules[2].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                               PermissionPolicy::Rule::Member::ACTION_MODIFY |
+                               PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+                rules[2].SetMembers(1, members);
+            }
+            acls[0].SetRules(3, rules);
+        }
+        peer1Policy.SetAcls(1, acls);
+    }
+    // Permission policy that will be installed on peer2
+    PermissionPolicy peer2Policy;
+    peer2Policy.SetVersion(1);
+    {
+        PermissionPolicy::Acl acls[1];
+        {
+            PermissionPolicy::Peer peers[1];
+            peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
+            acls[0].SetPeers(1, peers);
+        }
+        {
+            PermissionPolicy::Rule rules[1];
+            //rule 0
+            rules[0].SetObjPath("*");
+            rules[0].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                               PermissionPolicy::Rule::Member::ACTION_MODIFY |
+                               PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+                rules[0].SetMembers(1, members);
+            }
+            acls[0].SetRules(1, rules);
+        }
+        peer2Policy.SetAcls(1, acls);
+    }
+
+    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
+
+    {
+        PermissionPolicy peer1DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+    }
+    {
+        PermissionPolicy peer2DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+    }
+
+    EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+
+    SessionOpts opts;
+    SessionId peer1ToPeer2SessionId;
+    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, peer1ToPeer2SessionId, opts));
+    /* Create the ProxyBusObject and call the Echo method on the interface */
+    ProxyBusObject proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), "/test", peer1ToPeer2SessionId, true);
+    EXPECT_EQ(ER_OK, proxy.ParseXml(interface.c_str()));
+    EXPECT_TRUE(proxy.ImplementsInterface(interfaceName)) << interface.c_str() << "\n" << interfaceName;
+
+    // Verify Method call
+    MsgArg arg("s", "String that should be Echoed back.");
+    Message replyMsg(peer1Bus);
+    EXPECT_EQ(ER_OK, proxy.MethodCall(interfaceName, "Echo", &arg, static_cast<size_t>(1), replyMsg));
+    char* echoReply;
+    replyMsg->GetArg(0)->Get("s", &echoReply);
+    EXPECT_STREQ("String that should be Echoed back.", echoReply);
+
+    // Verify Set/Get Property
+    MsgArg prop1Arg;
+    EXPECT_EQ(ER_OK, prop1Arg.Set("i", 513));
+    EXPECT_EQ(ER_OK, proxy.SetProperty(interfaceName, "Prop1", prop1Arg));
+    EXPECT_EQ(513, peer2BusObject.ReadProp1());
+
+    MsgArg prop1ArgOut;
+    EXPECT_EQ(ER_OK, proxy.GetProperty(interfaceName, "Prop1", prop1Arg));
+    uint32_t prop1;
+    prop1Arg.Get("i", &prop1);
+    EXPECT_EQ((uint32_t)513, prop1);
+
+    // Send/Receive Signal
+    ChirpSignalReceiver chirpSignalReceiver;
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterSignalHandler(&chirpSignalReceiver, static_cast<MessageReceiver::SignalHandler>(&ChirpSignalReceiver::ChirpSignalHandler), peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), NULL));
+
+    arg.Set("s", "Chirp this String out in the signal.");
+    // Signals are send and forget.  They will always return ER_OK.
+    EXPECT_EQ(ER_OK, peer1BusObject.Signal(peer2Bus.GetUniqueName().c_str(), peer1ToPeer2SessionId, *peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), &arg, 1, 0, 0));
+
+    //Wait for a maximum of 2 sec for the Chirp Signal.
+    for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+        if (chirpSignalReceiver.signalReceivedFlag) {
+            break;
+        }
+        qcc::Sleep(WAIT_MSECS);
+    }
+    EXPECT_TRUE(chirpSignalReceiver.signalReceivedFlag);
+
+    /* clean up */
+    peer1Bus.UnregisterBusObject(peer1BusObject);
+    peer2Bus.UnregisterBusObject(peer2BusObject);
+}
+
+/*
+ * Purpose
+ * Verify that DENY rules that are specific or wild card do not take effect if
+ * the ACL has a peer type of WITH_MEMBERSHIP.
+ *
+ * Setup
+ * Sender and Receiver bus implement the following :
+ * Object Path:  /test
+ * Interface Name: "org.allseen.test.SecurityApplication.rules"
+ * Member name: Echo (method call)
+ * Member name: Prop1  (property, read write)
+ * Member name: Chirp (signal)
+ * Peer2 has membership certificate installed.
+ * Peer1 and Peer2 set up an ECDHE_ECDSA based session.
+ * Peer1 makes a method call to Peer2.
+ * Peer1 sends a signal to Peer2.
+ * Peer1 makes a get property call on Peer2
+ * Peer1 makes a set property call on Peer2
+ *
+ * Peer1 rules:
+ * ACL: Peer type: ANY_TRUSTED
+ * Rule 0: Object Path= *, Interface=*, Member Name=*, Member Type= NS, Action Mask = PROVIDE|MODIFY|OBSERVE
+ *
+ * Peer2 rules:
+ * ACL: Peer type: WITH_MEMBERSHIP, SGID: Living Room, Security Group Authority public key
+ * Rule 1: Object Path= *, Interface=*, Member name=*, Member Type = NS, Action mask = DENY
+ * Rule 2: Object Path=/test, Interface = org.allseen.test.SecurityApplication.rules, Member name = *, Member type = NS, Action Mask = DENY
+ * Rule 3: Object Path= *, Interface=*, Member Name=*, Member Type= NS, Action Mask = PROVIDE|MODIFY|OBSERVE
+ *
+ * verification:
+ * Verify that method call, get/set property calls are successful.
+ * Verify that signal is received by Peer2.
+ */
+TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_8)
+{
+    PolicyRulesTestBusObject peer1BusObject(peer1Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer1Bus.RegisterBusObject(peer1BusObject));
+    PolicyRulesTestBusObject peer2BusObject(peer2Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterBusObject(peer2BusObject));
+
+    /* install permissions make method calls */
+    // Permission policy that will be installed on peer1
+    PermissionPolicy peer1Policy;
+    peer1Policy.SetVersion(1);
+    {
+        PermissionPolicy::Acl acls[1];
+        {
+            PermissionPolicy::Peer peers[1];
+            peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
+            acls[0].SetPeers(1, peers);
+        }
+        {
+            PermissionPolicy::Rule rules[1];
+            //rule 0
+            rules[0].SetObjPath("*");
+            rules[0].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                               PermissionPolicy::Rule::Member::ACTION_MODIFY |
+                               PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+                rules[0].SetMembers(1, members);
+            }
+            acls[0].SetRules(1, rules);
+        }
+        peer1Policy.SetAcls(1, acls);
+    }
+
+    //Permission policy that will be installed on peer2
+    PermissionPolicy peer2Policy;
+    peer2Policy.SetVersion(1);
+    {
+        PermissionPolicy::Acl acls[1];
+        {
+            PermissionPolicy::Peer peers[1];
+            peers[0].SetType(PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP);
+            peers[0].SetSecurityGroupId(managerGuid);
+            //Get manager key
+            KeyInfoNISTP256 managerKey;
+            PermissionConfigurator& pcManager = managerBus.GetPermissionConfigurator();
+            EXPECT_EQ(ER_OK, pcManager.GetSigningPublicKey(managerKey));
+            peers[0].SetKeyInfo(&managerKey);
+            acls[0].SetPeers(1, peers);
+        }
+        {
+            PermissionPolicy::Rule rules[3];
+            //rule 0
+            rules[0].SetObjPath("*");
+            rules[0].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               0 /*DENY*/);
+                rules[0].SetMembers(1, members);
+            }
+            //rule 1
+            rules[1].SetObjPath("/test");
+            rules[1].SetInterfaceName(interfaceName);
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               0 /*DENY*/);
+                rules[1].SetMembers(1, members);
+            }
+            //rule 2
+            rules[2].SetObjPath("*");
+            rules[2].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                               PermissionPolicy::Rule::Member::ACTION_MODIFY |
+                               PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+                rules[2].SetMembers(1, members);
+            }
+            acls[0].SetRules(3, rules);
+        }
+        peer2Policy.SetAcls(1, acls);
+    }
+
+    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
+
+    {
+        PermissionPolicy peer1DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+    }
+    {
+        PermissionPolicy peer2DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+    }
+
+    EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+
+    SessionOpts opts;
+    SessionId peer1ToPeer2SessionId;
+    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, peer1ToPeer2SessionId, opts));
+    /* Create the ProxyBusObject and call the Echo method on the interface */
+    ProxyBusObject proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), "/test", peer1ToPeer2SessionId, true);
+    EXPECT_EQ(ER_OK, proxy.ParseXml(interface.c_str()));
+    EXPECT_TRUE(proxy.ImplementsInterface(interfaceName)) << interface.c_str() << "\n" << interfaceName;
+
+    // Verify Method call
+    MsgArg arg("s", "String that should be Echoed back.");
+    Message replyMsg(peer1Bus);
+    EXPECT_EQ(ER_OK, proxy.MethodCall(interfaceName, "Echo", &arg, static_cast<size_t>(1), replyMsg));
+    char* echoReply;
+    replyMsg->GetArg(0)->Get("s", &echoReply);
+    EXPECT_STREQ("String that should be Echoed back.", echoReply);
+
+    // Verify Set/Get Property
+    MsgArg prop1Arg;
+    EXPECT_EQ(ER_OK, prop1Arg.Set("i", 513));
+    EXPECT_EQ(ER_OK, proxy.SetProperty(interfaceName, "Prop1", prop1Arg));
+    EXPECT_EQ(513, peer2BusObject.ReadProp1());
+
+    MsgArg prop1ArgOut;
+    EXPECT_EQ(ER_OK, proxy.GetProperty(interfaceName, "Prop1", prop1Arg));
+    uint32_t prop1;
+    prop1Arg.Get("i", &prop1);
+    EXPECT_EQ((uint32_t)513, prop1);
+
+    // Send/Receive Signal
+    ChirpSignalReceiver chirpSignalReceiver;
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterSignalHandler(&chirpSignalReceiver, static_cast<MessageReceiver::SignalHandler>(&ChirpSignalReceiver::ChirpSignalHandler), peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), NULL));
+
+    arg.Set("s", "Chirp this String out in the signal.");
+    // Signals are send and forget.  They will always return ER_OK.
+    EXPECT_EQ(ER_OK, peer1BusObject.Signal(peer2Bus.GetUniqueName().c_str(), peer1ToPeer2SessionId, *peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), &arg, 1, 0, 0));
+
+    //Wait for a maximum of 2 sec for the Chirp Signal.
+    for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+        if (chirpSignalReceiver.signalReceivedFlag) {
+            break;
+        }
+        qcc::Sleep(WAIT_MSECS);
+    }
+    EXPECT_TRUE(chirpSignalReceiver.signalReceivedFlag);
+
+    /* clean up */
+    peer1Bus.UnregisterBusObject(peer1BusObject);
+    peer2Bus.UnregisterBusObject(peer2BusObject);
+}
+
+/*
+ * Purpose
+ * Verify that DENY rules takes effect and precedence over other rules only if
+ * it is a wild card under the peer type: WITH_PUBLICKEY DUT is sender.
+ *
+ * Setup
+ * Sender and Receiver bus implement the following :
+ * Object Path:  /test
+ * Interface Name: "org.allseen.test.SecurityApplication.rules"
+ * Member name: Echo (method call)
+ * Member name: Prop1  (property, read write)
+ * Member name: Chirp (signal)
+ * Peer1 and Peer2 set up an ECDHE_ECDSA based session.
+ * Peer1 makes a method call to Peer2.
+ * Peer1 sends a signal to Peer2.
+ * Peer1 makes a get property call on Peer2
+ * Peer1 makes a set property call on Peer2
+ *
+ * Peer1 rules:
+ * ACL: Peer type: WITH_PUBLICKEY, Public Key of Peer2
+ * Rule 1: Object Path= *, Interface=*, Member name=*, Member Type = NS, Action mask = DENY
+ * Rule 2: Object Path=/test, Interface = org.allseen.test.SecurityApplication.rules, Member name = *, Member type = NS, Action Mask = DENY
+ * Rule 3: Object Path= *, Interface=*, Member Name=*, Member Type= NS, Action Mask = PROVIDE|MODIFY|OBSERVE
+ *
+ * Peer2 rules:
+ * ACL: Peer type: ANY_TRUSTED
+ * Rule 0: Object Path= *, Interface=*, Member Name=*, Member Type= NS, Action Mask = PROVIDE|MODIFY|OBSERVE
+ *
+ * verification:
+ * Verify that method call, get/set property calls, signal cannot be sent by
+ * sender.
+ */
+TEST_F(SecurityPolicyRulesTest, DISABLED_PolicyRules_DENY_9)
+{
+    PolicyRulesTestBusObject peer1BusObject(peer1Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer1Bus.RegisterBusObject(peer1BusObject));
+    PolicyRulesTestBusObject peer2BusObject(peer2Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterBusObject(peer2BusObject));
+
+    /* install permissions make method calls */
+    //Permission policy that will be installed on peer1
+    PermissionPolicy peer1Policy;
+    peer1Policy.SetVersion(1);
+    {
+        PermissionPolicy::Acl acls[1];
+        {
+            // Peer type: WITH_PUBLICKEY, Public Key of Peer2
+            PermissionPolicy::Peer peers[1];
+            peers[0].SetType(PermissionPolicy::Peer::PEER_WITH_PUBLIC_KEY);
+            //Get manager key
+            KeyInfoNISTP256 peer2Key;
+            PermissionConfigurator& pcPeer2 = peer2Bus.GetPermissionConfigurator();
+            EXPECT_EQ(ER_OK, pcPeer2.GetSigningPublicKey(peer2Key));
+            peers[0].SetKeyInfo(&peer2Key);
+            acls[0].SetPeers(1, peers);
+        }
+        {
+            PermissionPolicy::Rule rules[3];
+            //rule 0 Object Path= *, Interface=*, Member name=*, Member Type = NS, Action mask = DENY
+            rules[0].SetObjPath("*");
+            rules[0].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               0 /*DENY*/);
+                rules[0].SetMembers(1, members);
+            }
+            //rule 1 Object Path=/test, Interface = org.allseen.test.SecurityApplication.rules, Member name = *, Member type = NS, Action Mask = DENY
+            rules[1].SetObjPath("/test");
+            rules[1].SetInterfaceName(interfaceName);
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               0 /*DENY*/);
+                rules[1].SetMembers(1, members);
+            }
+            //rule 2 Object Path= *, Interface=*, Member Name=*, Member Type= NS, Action Mask = PROVIDE|MODIFY|OBSERVE
+            rules[2].SetObjPath("*");
+            rules[2].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                               PermissionPolicy::Rule::Member::ACTION_MODIFY |
+                               PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+                rules[2].SetMembers(1, members);
+            }
+            acls[0].SetRules(3, rules);
+        }
+        peer1Policy.SetAcls(1, acls);
+    }
+
+    // Permission policy that will be installed on peer2
+    PermissionPolicy peer2Policy;
+    peer2Policy.SetVersion(1);
+    {
+        PermissionPolicy::Acl acls[1];
+        {
+            // Peer type: ANY_TRUSTED
+            PermissionPolicy::Peer peers[1];
+            peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
+            acls[0].SetPeers(1, peers);
+        }
+        {
+            PermissionPolicy::Rule rules[1];
+            //rule 0 Object Path= *, Interface=*, Member Name=*, Member Type= NS, Action Mask = PROVIDE|MODIFY|OBSERVE
+            rules[0].SetObjPath("*");
+            rules[0].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                               PermissionPolicy::Rule::Member::ACTION_MODIFY |
+                               PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+                rules[0].SetMembers(1, members);
+            }
+            acls[0].SetRules(1, rules);
+        }
+        peer2Policy.SetAcls(1, acls);
+    }
+
+    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
+
+    {
+        PermissionPolicy peer1DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+    }
+    {
+        PermissionPolicy peer2DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+    }
+
+    EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+
+    SessionOpts opts;
+    SessionId peer1ToPeer2SessionId;
+    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, peer1ToPeer2SessionId, opts));
+    /* Create the ProxyBusObject and call the Echo method on the interface */
+    ProxyBusObject proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), "/test", peer1ToPeer2SessionId, true);
+    EXPECT_EQ(ER_OK, proxy.ParseXml(interface.c_str()));
+    EXPECT_TRUE(proxy.ImplementsInterface(interfaceName)) << interface.c_str() << "\n" << interfaceName;
+
+    // Verify Method call
+    MsgArg arg("s", "String that should be Echoed back.");
+    Message replyMsg(peer1Bus);
+    EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, proxy.MethodCall(interfaceName, "Echo", &arg, static_cast<size_t>(1), replyMsg));
+    ASSERT_STREQ("org.alljoyn.Bus.ErStatus", replyMsg->GetErrorName());
+    EXPECT_EQ(ER_PERMISSION_DENIED, (QStatus)replyMsg->GetArg(1)->v_uint16)
+        << "\n" << replyMsg->GetArg(0)->ToString().c_str() << "\n" << replyMsg->GetArg(1)->ToString().c_str();
+
+    // Verify Set/Get Property
+    MsgArg prop1Arg;
+    EXPECT_EQ(ER_OK, prop1Arg.Set("i", 513));
+    EXPECT_EQ(ER_PERMISSION_DENIED, proxy.SetProperty(interfaceName, "Prop1", prop1Arg));
+
+    MsgArg prop1ArgOut;
+    EXPECT_EQ(ER_PERMISSION_DENIED, proxy.GetProperty(interfaceName, "Prop1", prop1Arg));
+
+    // Send/Receive Signal
+    ChirpSignalReceiver chirpSignalReceiver;
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterSignalHandler(&chirpSignalReceiver, static_cast<MessageReceiver::SignalHandler>(&ChirpSignalReceiver::ChirpSignalHandler), peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), NULL));
+
+    arg.Set("s", "Chirp this String out in the signal.");
+    // Signals are send and forget.  They will always return ER_OK.
+    EXPECT_EQ(ER_PERMISSION_DENIED, peer1BusObject.Signal(peer2Bus.GetUniqueName().c_str(), peer1ToPeer2SessionId, *peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), &arg, 1, 0, 0));
+
+    /* clean up */
+    peer1Bus.UnregisterBusObject(peer1BusObject);
+    peer2Bus.UnregisterBusObject(peer2BusObject);
+}
+
+/*
+ * Purpose
+ * Verify that DENY rules takes effect and precedence over other rules only if
+ * it is a wild card under the peer type: WITH_PUBLICKEY DUT is receiver.
+ *
+ * Setup
+ * Sender and Receiver bus implement the following :
+ * Object Path:  /test
+ * Interface Name: "org.allseen.test.SecurityApplication.rules"
+ * Member name: Echo (method call)
+ * Member name: Prop1  (property, read write)
+ * Member name: Chirp (signal)
+ * Peer1 and Peer2 set up an ECDHE_ECDSA based session.
+ * Peer1 makes a method call to Peer2.
+ * Peer1 sends a signal to Peer2.
+ * Peer1 makes a get property call on Peer2
+ * Peer1 makes a set property call on Peer2
+ *
+ * Peer1 rules:
+ * ACL: Peer type: ANY_TRUSTED
+ * Rule 0: Object Path= *, Interface=*, Member Name=*, Member Type= NS, Action Mask = PROVIDE|MODIFY|OBSERVE
+ *
+ * Peer2 rules:
+ * ACL: Peer type: WITH_PUBLICKEY, Public Key of Peer1
+ * Rule 1: Object Path= *, Interface=*, Member name=*, Member Type = NS, Action mask = DENY
+ * Rule 2: Object Path=/test, Interface = org.allseen.test.SecurityApplication.rules, Member name = *, Member type = NS, Action Mask = DENY
+ * Rule 3: Object Path= *, Interface=*, Member Name=*, Member Type= NS, Action Mask = PROVIDE|MODIFY|OBSERVE
+ *
+ * verification:
+ * Verify that method call, get/set property calls, signal can be sent, but are
+ * not received by Peer2.
+ */
+TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_10)
+{
+    PolicyRulesTestBusObject peer1BusObject(peer1Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer1Bus.RegisterBusObject(peer1BusObject));
+    PolicyRulesTestBusObject peer2BusObject(peer2Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterBusObject(peer2BusObject));
+
+    /* install permissions make method calls */
+    // Permission policy that will be installed on peer1
+    PermissionPolicy peer1Policy;
+    peer1Policy.SetVersion(1);
+    {
+        PermissionPolicy::Acl acls[1];
+        {
+            PermissionPolicy::Peer peers[1];
+            peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
+            acls[0].SetPeers(1, peers);
+        }
+        {
+            PermissionPolicy::Rule rules[1];
+            //rule 0
+            rules[0].SetObjPath("*");
+            rules[0].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                               PermissionPolicy::Rule::Member::ACTION_MODIFY |
+                               PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+                rules[0].SetMembers(1, members);
+            }
+            acls[0].SetRules(1, rules);
+        }
+        peer1Policy.SetAcls(1, acls);
+    }
+
+    //Permission policy that will be installed on peer2
+    PermissionPolicy peer2Policy;
+    peer2Policy.SetVersion(1);
+    {
+        PermissionPolicy::Acl acls[1];
+        {
+            PermissionPolicy::Peer peers[1];
+            peers[0].SetType(PermissionPolicy::Peer::PEER_WITH_PUBLIC_KEY);
+            //Get manager key
+            KeyInfoNISTP256 peer1Key;
+            PermissionConfigurator& pcPeer1 = peer1Bus.GetPermissionConfigurator();
+            EXPECT_EQ(ER_OK, pcPeer1.GetSigningPublicKey(peer1Key));
+            peers[0].SetKeyInfo(&peer1Key);
+            acls[0].SetPeers(1, peers);
+        }
+        {
+            PermissionPolicy::Rule rules[3];
+            //rule 0
+            rules[0].SetObjPath("*");
+            rules[0].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               0 /*DENY*/);
+                rules[0].SetMembers(1, members);
+            }
+            //rule 1
+            rules[1].SetObjPath("/test");
+            rules[1].SetInterfaceName(interfaceName);
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               0 /*DENY*/);
+                rules[1].SetMembers(1, members);
+            }
+            //rule 2
+            rules[2].SetObjPath("*");
+            rules[2].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                               PermissionPolicy::Rule::Member::ACTION_MODIFY |
+                               PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+                rules[2].SetMembers(1, members);
+            }
+            acls[0].SetRules(3, rules);
+        }
+        peer2Policy.SetAcls(1, acls);
+    }
+
+    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
+
+    {
+        PermissionPolicy peer1DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+    }
+    {
+        PermissionPolicy peer2DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+    }
+
+    EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+
+    SessionOpts opts;
+    SessionId peer1ToPeer2SessionId;
+    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, peer1ToPeer2SessionId, opts));
+    /* Create the ProxyBusObject and call the Echo method on the interface */
+    ProxyBusObject proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), "/test", peer1ToPeer2SessionId, true);
+    EXPECT_EQ(ER_OK, proxy.ParseXml(interface.c_str()));
+    EXPECT_TRUE(proxy.ImplementsInterface(interfaceName)) << interface.c_str() << "\n" << interfaceName;
+
+    // Verify Method call
+    MsgArg arg("s", "String that should be Echoed back.");
+    Message replyMsg(peer1Bus);
+    EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, proxy.MethodCall(interfaceName, "Echo", &arg, static_cast<size_t>(1), replyMsg));
+    EXPECT_STREQ("org.alljoyn.Bus.Security.Error.PermissionDenied", replyMsg->GetErrorName());
+
+    // Verify Set/Get Property
+    MsgArg prop1Arg;
+    EXPECT_EQ(ER_OK, prop1Arg.Set("i", 513));
+    EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, proxy.SetProperty(interfaceName, "Prop1", prop1Arg));
+
+    MsgArg prop1ArgOut;
+    EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, proxy.GetProperty(interfaceName, "Prop1", prop1Arg));
+
+    // Send/Receive Signal
+    ChirpSignalReceiver chirpSignalReceiver;
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterSignalHandler(&chirpSignalReceiver, static_cast<MessageReceiver::SignalHandler>(&ChirpSignalReceiver::ChirpSignalHandler), peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), NULL));
+
+    arg.Set("s", "Chirp this String out in the signal.");
+    // Signals are send and forget.  They will always return ER_OK.
+    EXPECT_EQ(ER_OK, peer1BusObject.Signal(peer2Bus.GetUniqueName().c_str(), peer1ToPeer2SessionId, *peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), &arg, 1, 0, 0));
+
+    //Wait for a maximum of 2 sec for the Chirp Signal.
+    for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+        if (chirpSignalReceiver.signalReceivedFlag) {
+            break;
+        }
+        qcc::Sleep(WAIT_MSECS);
+    }
+    EXPECT_FALSE(chirpSignalReceiver.signalReceivedFlag);
+
+    /* clean up */
+    peer1Bus.UnregisterBusObject(peer1BusObject);
+    peer2Bus.UnregisterBusObject(peer2BusObject);
+}
+
+/*
+ * Purpose
+ * Verify that DENY rule does not take effect if it is a specific rule under the
+ * peer type: WITH_PUBLICKEY
+ *
+ * Setup
+ * Sender and Receiver bus implement the following :
+ * Object Path:  /test
+ * Interface Name: "org.allseen.test.SecurityApplication.rules"
+ * Member name: Echo (method call)
+ * Member name: Prop1  (property, read write)
+ * Member name: Chirp (signal)
+ * Peer1 and Peer2 set up an ECDHE_ECDSA based session.
+ * Peer1 makes a method call to Peer2.
+ * Peer1 sends a signal to Peer2.
+ * Peer1 makes a get property call on Peer2
+ * Peer1 makes a set property call on Peer2
+ *
+ * Peer1 rules:
+ * ACL: Peer type: WITH_PUBLICKEY, Public Key of peer2
+ * Rule1: Object Path: *; Interface: org.allseen.test.SecurityApplication.rules; Member Name: *, Action: DENY
+ * Rule2: Object Path: /test ; Interface: *; Member Name: *, Action: DENY
+ * Rule3: Object Path: * ; Interface: *; Member Name: Echo , Action: DENY
+ * Rule4: Object Path: * ; Interface: *; Member Name: Prop1 , Action: DENY
+ * Rule5: Object Path: * ; Interface: *; Member Name: Chirp , Action: DENY
+ * Rule6: Object Path: /test ; Interface: org.allseen.test.SecurityApplication.rules; Member Name: *, Action: DENY
+ * Rule7: Object Path: /t*  ; Interface: org.allseen.test.SecurityApplication.rules; Member Name: *, Action: DENY
+ * Rule8: Object Path: *  ; Interface: org.allseen.test.*; Member Name: *; Action: DENY
+ * Rule9: Object Path: /test  ; Interface: org.allseen.test.SecurityApplication.rules; Member Name: Chirp, Action: DENY
+ * Rule 10: Object Path: *, Interface: *, Member Name: NS; Action: PROVIDE|OBSERVE|MODIFY
+ *
+ * Peer2 rules:
+ * ACL: Peer type: ANY_TRUSTED
+ * Rule 1: Object Path= *, Interface=*, Member Name=*, Member Type= NS, Action Mask = PROVIDE|MODIFY|OBSERVE
+ *
+ *
+ *
+ * verification:
+ * Verify that method call, get/set property calls are successful.
+ * Verify that signal is received by Peer2.
+ */
+TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_11)
+{
+    PolicyRulesTestBusObject peer1BusObject(peer1Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer1Bus.RegisterBusObject(peer1BusObject));
+    PolicyRulesTestBusObject peer2BusObject(peer2Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterBusObject(peer2BusObject));
+
+    /* install permissions make method calls */
+    //Permission policy that will be installed on peer1
+    PermissionPolicy peer1Policy;
+    peer1Policy.SetVersion(1);
+    {
+        PermissionPolicy::Acl acls[1];
+        {
+            PermissionPolicy::Peer peers[1];
+            peers[0].SetType(PermissionPolicy::Peer::PEER_WITH_PUBLIC_KEY);
+            //Get manager key
+            KeyInfoNISTP256 peer2Key;
+            PermissionConfigurator& pcPeer2 = peer2Bus.GetPermissionConfigurator();
+            EXPECT_EQ(ER_OK, pcPeer2.GetSigningPublicKey(peer2Key));
+            peers[0].SetKeyInfo(&peer2Key);
+            acls[0].SetPeers(1, peers);
+        }
+        {
+            PermissionPolicy::Rule rules[10];
+            //rule 1
+            rules[0].SetObjPath("*");
+            rules[0].SetInterfaceName(interfaceName);
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               0 /*DENY*/);
+                rules[0].SetMembers(1, members);
+            }
+            //rule 2
+            rules[1].SetObjPath("/test");
+            rules[1].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               0 /*DENY*/);
+                rules[1].SetMembers(1, members);
+            }
+            //rule 3
+            rules[2].SetObjPath("*");
+            rules[2].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("Echo",
+                               PermissionPolicy::Rule::Member::METHOD_CALL,
+                               0 /*DENY*/);
+                rules[2].SetMembers(1, members);
+            }
+            //rule 4
+            rules[3].SetObjPath("*");
+            rules[3].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("Prop1",
+                               PermissionPolicy::Rule::Member::PROPERTY,
+                               0 /*DENY*/);
+                rules[3].SetMembers(1, members);
+            }
+            //rule 5
+            rules[4].SetObjPath("/test");
+            rules[4].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("Chirp",
+                               PermissionPolicy::Rule::Member::SIGNAL,
+                               0 /*DENY*/);
+                rules[4].SetMembers(1, members);
+            }
+            //rule 6
+            rules[5].SetObjPath("/test");
+            rules[5].SetInterfaceName(interfaceName);
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               0 /*DENY*/);
+                rules[5].SetMembers(1, members);
+            }
+            //rule 7
+            rules[6].SetObjPath("/t*");
+            rules[6].SetInterfaceName(interfaceName);
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               0 /*DENY*/);
+                rules[6].SetMembers(1, members);
+            }
+            //rule 8
+            rules[7].SetObjPath("*");
+            rules[7].SetInterfaceName("org.allseen.test.*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               0 /*DENY*/);
+                rules[7].SetMembers(1, members);
+            }
+            //rule 9
+            rules[8].SetObjPath("/test");
+            rules[8].SetInterfaceName(interfaceName);
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("Chirp",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               0 /*DENY*/);
+                rules[8].SetMembers(1, members);
+            }
+            //rule 10
+            rules[9].SetObjPath("*");
+            rules[9].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                                         PermissionPolicy::Rule::Member::ACTION_MODIFY |
+                                         PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+                rules[9].SetMembers(1, members);
+            }
+            acls[0].SetRules(10, rules);
+        }
+        peer1Policy.SetAcls(1, acls);
+    }
+
+    // Permission policy that will be installed on peer2
+    PermissionPolicy peer2Policy;
+    peer2Policy.SetVersion(1);
+    {
+        PermissionPolicy::Acl acls[1];
+        {
+            PermissionPolicy::Peer peers[1];
+            peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
+            acls[0].SetPeers(1, peers);
+        }
+        {
+            PermissionPolicy::Rule rules[1];
+            //rule 0
+            rules[0].SetObjPath("*");
+            rules[0].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                               PermissionPolicy::Rule::Member::ACTION_MODIFY |
+                               PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+                rules[0].SetMembers(1, members);
+            }
+            acls[0].SetRules(1, rules);
+        }
+        peer2Policy.SetAcls(1, acls);
+    }
+
+    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
+
+    {
+        PermissionPolicy peer1DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+    }
+    {
+        PermissionPolicy peer2DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+    }
+
+    EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+
+    SessionOpts opts;
+    SessionId peer1ToPeer2SessionId;
+    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, peer1ToPeer2SessionId, opts));
+    /* Create the ProxyBusObject and call the Echo method on the interface */
+    ProxyBusObject proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), "/test", peer1ToPeer2SessionId, true);
+    EXPECT_EQ(ER_OK, proxy.ParseXml(interface.c_str()));
+    EXPECT_TRUE(proxy.ImplementsInterface(interfaceName)) << interface.c_str() << "\n" << interfaceName;
+
+    // Verify Method call
+    MsgArg arg("s", "String that should be Echoed back.");
+    Message replyMsg(peer1Bus);
+    EXPECT_EQ(ER_OK, proxy.MethodCall(interfaceName, "Echo", &arg, static_cast<size_t>(1), replyMsg));
+    char* echoReply;
+    replyMsg->GetArg(0)->Get("s", &echoReply);
+    EXPECT_STREQ("String that should be Echoed back.", echoReply);
+
+    // Verify Set/Get Property
+    MsgArg prop1Arg;
+    EXPECT_EQ(ER_OK, prop1Arg.Set("i", 513));
+    EXPECT_EQ(ER_OK, proxy.SetProperty(interfaceName, "Prop1", prop1Arg));
+    EXPECT_EQ(513, peer2BusObject.ReadProp1());
+
+    MsgArg prop1ArgOut;
+    EXPECT_EQ(ER_OK, proxy.GetProperty(interfaceName, "Prop1", prop1Arg));
+    uint32_t prop1;
+    prop1Arg.Get("i", &prop1);
+    EXPECT_EQ((uint32_t)513, prop1);
+
+    // Send/Receive Signal
+    ChirpSignalReceiver chirpSignalReceiver;
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterSignalHandler(&chirpSignalReceiver, static_cast<MessageReceiver::SignalHandler>(&ChirpSignalReceiver::ChirpSignalHandler), peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), NULL));
+
+    arg.Set("s", "Chirp this String out in the signal.");
+    // Signals are send and forget.  They will always return ER_OK.
+    EXPECT_EQ(ER_OK, peer1BusObject.Signal(peer2Bus.GetUniqueName().c_str(), peer1ToPeer2SessionId, *peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), &arg, 1, 0, 0));
+
+    //Wait for a maximum of 2 sec for the Chirp Signal.
+    for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+        if (chirpSignalReceiver.signalReceivedFlag) {
+            break;
+        }
+        qcc::Sleep(WAIT_MSECS);
+    }
+    EXPECT_TRUE(chirpSignalReceiver.signalReceivedFlag);
+
+    /* clean up */
+    peer1Bus.UnregisterBusObject(peer1BusObject);
+    peer2Bus.UnregisterBusObject(peer2BusObject);
+}
+
+/*
+ * Purpose
+ * Verify that DENY rule does not take effect if it is a specific rule under the
+ * peer type: WITH_PUBLICKEY
+ *
+ * Setup
+ * Sender and Receiver bus implement the following :
+ * Object Path:  /test
+ * Interface Name: "org.allseen.test.SecurityApplication.rules"
+ * Member name: Echo (method call)
+ * Member name: Prop1  (property, read write)
+ * Member name: Chirp (signal)
+ * Peer1 and Peer2 set up an ECDHE_ECDSA based session.
+ * Peer1 makes a method call to Peer2.
+ * Peer1 sends a signal to Peer2.
+ * Peer1 makes a get property call on Peer2
+ * Peer1 makes a set property call on Peer2
+ *
+ * Peer1 rules:
+ * ACL: Peer type: ANY_TRUSTED
+ * Rule 1: Object Path= *, Interface=*, Member Name=*, Member Type= NS, Action Mask = PROVIDE|MODIFY|OBSERVE
+ *
+ * Peer2 rules:
+ * ACL: Peer type: WITH_PUBLICKEY, Public Key of peer1
+ * Rule1: Object Path: *; Interface: org.allseen.test.SecurityApplication.rules; Member Name: *, Action: DENY
+ * Rule2: Object Path: /test ; Interface: *; Member Name: *, Action: DENY
+ * Rule3: Object Path: * ; Interface: *; Member Name: Echo , Action: DENY
+ * Rule4: Object Path: * ; Interface: *; Member Name: Prop1 , Action: DENY
+ * Rule5: Object Path: * ; Interface: *; Member Name: Chirp , Action: DENY
+ * Rule6: Object Path: /test ; Interface: org.allseen.test.SecurityApplication.rules; Member Name: *, Action: DENY
+ * Rule7: Object Path: /t*  ; Interface: org.allseen.test.SecurityApplication.rules; Member Name: *, Action: DENY
+ * Rule8: Object Path: *  ; Interface: org.allseen.test.*; Member Name: *; Action: DENY
+ * Rule9: Object Path: /test  ; Interface: org.allseen.test.SecurityApplication.rules; Member Name: Chirp, Action: DENY
+ * Rule 10: Object Path: *, Interface: *, Member Name: NS; Action: PROVIDE|OBSERVE|MODIFY
+ *
+ * verification:
+ * Verify that method call, get/set property calls are successful.
+ * Verify that signal is received by Peer2.
+ */
+TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_12)
+{
+    PolicyRulesTestBusObject peer1BusObject(peer1Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer1Bus.RegisterBusObject(peer1BusObject));
+    PolicyRulesTestBusObject peer2BusObject(peer2Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterBusObject(peer2BusObject));
+
+    /* install permissions make method calls */
+    // Permission policy that will be installed on peer1
+    PermissionPolicy peer1Policy;
+    peer1Policy.SetVersion(1);
+    {
+        PermissionPolicy::Acl acls[1];
+        {
+            PermissionPolicy::Peer peers[1];
+            peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
+            acls[0].SetPeers(1, peers);
+        }
+        {
+            PermissionPolicy::Rule rules[1];
+            //rule 1
+            rules[0].SetObjPath("*");
+            rules[0].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                               PermissionPolicy::Rule::Member::ACTION_MODIFY |
+                               PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+                rules[0].SetMembers(1, members);
+            }
+            acls[0].SetRules(1, rules);
+        }
+        peer1Policy.SetAcls(1, acls);
+    }
+
+    //Permission policy that will be installed on peer2
+    PermissionPolicy peer2Policy;
+    peer2Policy.SetVersion(1);
+    {
+        PermissionPolicy::Acl acls[1];
+        {
+            /* ACL: Peer type: WITH_PUBLICKEY, Public Key of peer1 */
+            PermissionPolicy::Peer peers[1];
+            peers[0].SetType(PermissionPolicy::Peer::PEER_WITH_PUBLIC_KEY);
+            //Get manager key
+            KeyInfoNISTP256 peer1Key;
+            PermissionConfigurator& pcPeer1 = peer1Bus.GetPermissionConfigurator();
+            EXPECT_EQ(ER_OK, pcPeer1.GetSigningPublicKey(peer1Key));
+            peers[0].SetKeyInfo(&peer1Key);
+            acls[0].SetPeers(1, peers);
+        }
+        {
+            PermissionPolicy::Rule rules[10];
+            //rule 1  Object Path: *; Interface: org.allseen.test.SecurityApplication.rules; Member Name: *, Action: DENY
+
+            rules[0].SetObjPath("*");
+            rules[0].SetInterfaceName(interfaceName);
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               0 /*DENY*/);
+                rules[0].SetMembers(1, members);
+            }
+            //rule 2 Object Path: /test ; Interface: *; Member Name: *, Action: DENY
+            rules[1].SetObjPath("/test");
+            rules[1].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               0 /*DENY*/);
+                rules[1].SetMembers(1, members);
+            }
+            //rule 3 Object Path: * ; Interface: *; Member Name: Echo , Action: DENY
+            rules[2].SetObjPath("*");
+            rules[2].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("Echo",
+                               PermissionPolicy::Rule::Member::METHOD_CALL,
+                               0 /*DENY*/);
+                rules[2].SetMembers(1, members);
+            }
+            //rule 4 Object Path: * ; Interface: *; Member Name: Prop1 , Action: DENY
+            rules[3].SetObjPath("*");
+            rules[3].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("Prop1",
+                               PermissionPolicy::Rule::Member::PROPERTY,
+                               0 /*DENY*/);
+                rules[3].SetMembers(1, members);
+            }
+            //rule 5 Object Path: * ; Interface: *; Member Name: Chirp , Action: DENY
+            rules[4].SetObjPath("/test");
+            rules[4].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("Chirp",
+                               PermissionPolicy::Rule::Member::SIGNAL,
+                               0 /*DENY*/);
+                rules[4].SetMembers(1, members);
+            }
+            //rule 6 Object Path: /test ; Interface: org.allseen.test.SecurityApplication.rules; Member Name: *, Action: DENY
+            rules[5].SetObjPath("/test");
+            rules[5].SetInterfaceName(interfaceName);
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               0 /*DENY*/);
+                rules[5].SetMembers(1, members);
+            }
+            //rule 7 Object Path: /a*  ; Interface: org.allseen.test.SecurityApplication.rules; Member Name: *, Action: DENY
+            rules[6].SetObjPath("/t*");
+            rules[6].SetInterfaceName(interfaceName);
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               0 /*DENY*/);
+                rules[6].SetMembers(1, members);
+            }
+            //rule 8 Object Path: *  ; Interface: test.*; Member Name: *; Action: DENY
+            rules[7].SetObjPath("*");
+            rules[7].SetInterfaceName("org.allseen.test.*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               0 /*DENY*/);
+                rules[7].SetMembers(1, members);
+            }
+            //rule 9 Object Path: /test  ; Interface: org.allseen.test.SecurityApplication.rules; Member Name: Chirp, Action: DENY
+            rules[8].SetObjPath("/test");
+            rules[8].SetInterfaceName(interfaceName);
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("Chirp",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               0 /*DENY*/);
+                rules[8].SetMembers(1, members);
+            }
+            //rule 10 Object Path: *, Interface: *, Member Name: NS; Action: PROVIDE|OBSERVE|MODIFY
+            rules[9].SetObjPath("*");
+            rules[9].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                                         PermissionPolicy::Rule::Member::ACTION_MODIFY |
+                                         PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+                rules[9].SetMembers(1, members);
+            }
+            acls[0].SetRules(10, rules);
+        }
+        peer2Policy.SetAcls(1, acls);
+    }
+
+    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
+
+    {
+        PermissionPolicy peer1DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+    }
+    {
+        PermissionPolicy peer2DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+    }
+
+    EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+
+    SessionOpts opts;
+    SessionId peer1ToPeer2SessionId;
+    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, peer1ToPeer2SessionId, opts));
+    /* Create the ProxyBusObject and call the Echo method on the interface */
+    ProxyBusObject proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), "/test", peer1ToPeer2SessionId, true);
+    EXPECT_EQ(ER_OK, proxy.ParseXml(interface.c_str()));
+    EXPECT_TRUE(proxy.ImplementsInterface(interfaceName)) << interface.c_str() << "\n" << interfaceName;
+
+    // Verify Method call
+    MsgArg arg("s", "String that should be Echoed back.");
+    Message replyMsg(peer1Bus);
+    EXPECT_EQ(ER_OK, proxy.MethodCall(interfaceName, "Echo", &arg, static_cast<size_t>(1), replyMsg));
+    char* echoReply;
+    replyMsg->GetArg(0)->Get("s", &echoReply);
+    EXPECT_STREQ("String that should be Echoed back.", echoReply);
+
+    // Verify Set/Get Property
+    MsgArg prop1Arg;
+    EXPECT_EQ(ER_OK, prop1Arg.Set("i", 513));
+    EXPECT_EQ(ER_OK, proxy.SetProperty(interfaceName, "Prop1", prop1Arg));
+    EXPECT_EQ(513, peer2BusObject.ReadProp1());
+
+    MsgArg prop1ArgOut;
+    EXPECT_EQ(ER_OK, proxy.GetProperty(interfaceName, "Prop1", prop1Arg));
+    uint32_t prop1;
+    prop1Arg.Get("i", &prop1);
+    EXPECT_EQ((uint32_t)513, prop1);
+
+    // Send/Receive Signal
+    ChirpSignalReceiver chirpSignalReceiver;
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterSignalHandler(&chirpSignalReceiver, static_cast<MessageReceiver::SignalHandler>(&ChirpSignalReceiver::ChirpSignalHandler), peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), NULL));
+
+    arg.Set("s", "Chirp this String out in the signal.");
+    // Signals are send and forget.  They will always return ER_OK.
+    EXPECT_EQ(ER_OK, peer1BusObject.Signal(peer2Bus.GetUniqueName().c_str(), peer1ToPeer2SessionId, *peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), &arg, 1, 0, 0));
+
+    //Wait for a maximum of 2 sec for the Chirp Signal.
+    for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+        if (chirpSignalReceiver.signalReceivedFlag) {
+            break;
+        }
+        qcc::Sleep(WAIT_MSECS);
+    }
+    EXPECT_TRUE(chirpSignalReceiver.signalReceivedFlag);
+
+    /* clean up */
+    peer1Bus.UnregisterBusObject(peer1BusObject);
+    peer2Bus.UnregisterBusObject(peer2BusObject);
+}
+
+/*
+ * Purpose
+ * Verify that specific rules with DENY action mask are ignored in the manifest.
+ *
+ * Setup
+ * Sender and Receiver bus implement the following :
+ * Object Path:  /test
+ * Interface Name: "org.allseen.test.SecurityApplication.rules"
+ * Member name: Echo (method call)
+ * Member name: Prop1  (property, read write)
+ * Member name: Chirp (signal)
+ *
+ * Policy rules allow everything
+ * Peer1 and Peer2 set up an ECDHE_ECDSA based session.
+ * Peer1 makes a method call to Peer2.
+ * Peer1 sends a signal to Peer2.
+ * Peer1 makes a get property call on Peer2
+ * Peer1 makes a set property call on Peer2
+ *
+ * Peer1 Policy:
+ * ACL 1: Peer type: ANY_TRUSTED, Rule: Allow everything
+ *
+ * Peer1 manifest:
+ * Rule1: Object Path: *; Interface: org.allseen.test.SecurityApplication.rules; Member Name: *, Action: DENY
+ * Rule2: Object Path: /test ; Interface: *; Member Name: *, Action: DENY
+ * Rule3: Object Path: * ; Interface: *; Member Name: Echo , Action: DENY
+ * Rule4: Object Path: * ; Interface: *; Member Name: Prop1 , Action: DENY
+ * Rule5: Object Path: * ; Interface: *; Member Name: Chirp , Action: DENY
+ * Rule6: Object Path: /test ; Interface: org.allseen.test.SecurityApplication.rules; Member Name: *, Action: DENY
+ * Rule7: Object Path: /t*  ; Interface: org.allseen.test.SecurityApplication.rules; Member Name: *, Action: DENY
+ * Rule8: Object Path: *  ; Interface: org.allseen.test.*; Member Name: *; Action: DENY
+ * Rule9: Object Path: /test  ; Interface: org.allseen.test.SecurityApplication.rules; Member Name: Chirp, Action: DENY
+ * Rule 10: Object Path: *, Interface: *, Member Name: NS; Action: PROVIDE|OBSERVE|MODIFY
+
+ * Peer2 Policy:
+ * ACL 1: Peer type: ANY_TRUSTED: Allow everything
+ *
+ * Peer2 manifest:
+ * Rule 1: Allow everything
+ *
+ * verification:
+ * Verify that method call, get/set property calls are successful.
+ * Verify that signal is received by Peer2.
+ */
+TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_13)
+{
+    PolicyRulesTestBusObject peer1BusObject(peer1Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer1Bus.RegisterBusObject(peer1BusObject));
+    PolicyRulesTestBusObject peer2BusObject(peer2Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterBusObject(peer2BusObject));
+
+    const size_t manifestSize = 10;
+    const size_t certChainSize = 1;
+    /*************Update Peer1 Manifest *************/
+    //peer1 key
+    KeyInfoNISTP256 peer1Key;
+    PermissionConfigurator& pcPeer1 = peer1Bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, pcPeer1.GetSigningPublicKey(peer1Key));
+
+    // Peer1 manifest
+    PermissionPolicy::Rule peer1Manifest[manifestSize];
+    { //Rule1: Object Path: *; Interface: org.allseen.test.SecurityApplication.rules; Member Name: *, Action: DENY
+        peer1Manifest[0].SetObjPath("*");
+        peer1Manifest[0].SetInterfaceName(interfaceName);
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("*",
+                       PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                       0 /*DENY*/);
+        peer1Manifest[0].SetMembers(1, members);
+    }
+    { //Rule2: Object Path: /test ; Interface: *; Member Name: *, Action: DENY
+        peer1Manifest[1].SetObjPath("/test");
+        peer1Manifest[1].SetInterfaceName("*");
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("*",
+                       PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                       0 /*DENY*/);
+        peer1Manifest[1].SetMembers(1, members);
+    }
+    { //Rule3: Object Path: * ; Interface: *; Member Name: Echo , Action: DENY
+        peer1Manifest[2].SetObjPath("*");
+        peer1Manifest[2].SetInterfaceName("*");
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("Echo",
+                       PermissionPolicy::Rule::Member::METHOD_CALL,
+                       0 /*DENY*/);
+        peer1Manifest[2].SetMembers(1, members);
+    }
+    { //Rule4: Object Path: * ; Interface: *; Member Name: Prop1 , Action: DENY
+        peer1Manifest[3].SetObjPath("*");
+        peer1Manifest[3].SetInterfaceName("*");
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("Prop1",
+                       PermissionPolicy::Rule::Member::PROPERTY,
+                       0 /*DENY*/);
+        peer1Manifest[3].SetMembers(1, members);
+    }
+    { //Rule5: Object Path: * ; Interface: *; Member Name: Chirp , Action: DENY
+        peer1Manifest[4].SetObjPath("*");
+        peer1Manifest[4].SetInterfaceName("*");
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("Chirp",
+                       PermissionPolicy::Rule::Member::SIGNAL,
+                       0 /*DENY*/);
+        peer1Manifest[4].SetMembers(1, members);
+    }
+    { //Rule6: Object Path: /test ; Interface: org.allseen.test.SecurityApplication.rules; Member Name: *, Action: DENY
+        peer1Manifest[5].SetObjPath("/test");
+        peer1Manifest[5].SetInterfaceName(interfaceName);
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("*",
+                       PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                       0 /*DENY*/);
+        peer1Manifest[5].SetMembers(1, members);
+    }
+    { //Rule7: Object Path: /t*  ; Interface: org.allseen.test.SecurityApplication.rules; Member Name: *, Action: DENY
+        peer1Manifest[6].SetObjPath("/t*");
+        peer1Manifest[6].SetInterfaceName(interfaceName);
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("*",
+                       PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                       0 /*DENY*/);
+        peer1Manifest[6].SetMembers(1, members);
+    }
+    { //Rule8: Object Path: *  ; Interface: org.allseen.test.*; Member Name: *; Action: DENY
+        peer1Manifest[7].SetObjPath("*");
+        peer1Manifest[7].SetInterfaceName("org.allseen.test.*");
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("*",
+                       PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                       0 /*DENY*/);
+        peer1Manifest[7].SetMembers(1, members);
+    }
+    { //Rule9: Object Path: /test  ; Interface: org.allseen.test.SecurityApplication.rules; Member Name: Chirp, Action: DENY
+        peer1Manifest[8].SetObjPath("/test");
+        peer1Manifest[8].SetInterfaceName(interfaceName);
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("Chirp",
+                       PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                       0 /*DENY*/);
+        peer1Manifest[8].SetMembers(1, members);
+    }
+    { //Rule 10: Object Path: *, Interface: *, Member Name: NS; Action: PROVIDE|OBSERVE|MODIFY
+        peer1Manifest[9].SetObjPath("*");
+        peer1Manifest[9].SetInterfaceName("*");
+        PermissionPolicy::Rule::Member members[1];
+        members[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                                 PermissionPolicy::Rule::Member::ACTION_MODIFY |
+                                 PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        peer1Manifest[9].SetMembers(1, members);
+    }
+
+    uint8_t peer1Digest[Crypto_SHA256::DIGEST_SIZE];
+    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(managerBus,
+                                                               peer1Manifest, manifestSize,
+                                                               peer1Digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+
+    //Create peer1 identityCert
+    IdentityCertificate identityCertChainPeer1[certChainSize];
+
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
+                                                                  "1",
+                                                                  managerGuid.ToString(),
+                                                                  peer1Key.GetPublicKey(),
+                                                                  "Peer1Alias",
+                                                                  3600,
+                                                                  identityCertChainPeer1[0],
+                                                                  peer1Digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+
+    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
+    EXPECT_EQ(ER_OK, sapWithPeer1.UpdateIdentity(identityCertChainPeer1, certChainSize, peer1Manifest, manifestSize))
+        << "Failed to update Identity cert or manifest ";
+
+    //Peer2 already has a manifest installed that allows everything from the SetUp
+
+    SessionOpts opts;
+    SessionId peer1ToPeer2SessionId;
+    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, peer1ToPeer2SessionId, opts));
+    /* Create the ProxyBusObject and call the Echo method on the interface */
+    ProxyBusObject proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), "/test", peer1ToPeer2SessionId, true);
+    EXPECT_EQ(ER_OK, proxy.ParseXml(interface.c_str()));
+    EXPECT_TRUE(proxy.ImplementsInterface(interfaceName)) << interface.c_str() << "\n" << interfaceName;
+
+    // Verify Method call
+    MsgArg arg("s", "String that should be Echoed back.");
+    Message replyMsg(peer1Bus);
+    EXPECT_EQ(ER_OK, proxy.MethodCall(interfaceName, "Echo", &arg, static_cast<size_t>(1), replyMsg));
+    char* echoReply;
+    replyMsg->GetArg(0)->Get("s", &echoReply);
+    EXPECT_STREQ("String that should be Echoed back.", echoReply);
+
+    // Verify Set/Get Property
+    MsgArg prop1Arg;
+    EXPECT_EQ(ER_OK, prop1Arg.Set("i", 513));
+    EXPECT_EQ(ER_OK, proxy.SetProperty(interfaceName, "Prop1", prop1Arg));
+    EXPECT_EQ(513, peer2BusObject.ReadProp1());
+
+    MsgArg prop1ArgOut;
+    EXPECT_EQ(ER_OK, proxy.GetProperty(interfaceName, "Prop1", prop1Arg));
+    uint32_t prop1;
+    prop1Arg.Get("i", &prop1);
+    EXPECT_EQ((uint32_t)513, prop1);
+
+    // Send/Receive Signal
+    ChirpSignalReceiver chirpSignalReceiver;
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterSignalHandler(&chirpSignalReceiver, static_cast<MessageReceiver::SignalHandler>(&ChirpSignalReceiver::ChirpSignalHandler), peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), NULL));
+
+    arg.Set("s", "Chirp this String out in the signal.");
+    // Signals are send and forget.  They will always return ER_OK.
+    EXPECT_EQ(ER_OK, peer1BusObject.Signal(peer2Bus.GetUniqueName().c_str(), peer1ToPeer2SessionId, *peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), &arg, 1, 0, 0));
+
+    //Wait for a maximum of 2 sec for the Chirp Signal.
+    for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+        if (chirpSignalReceiver.signalReceivedFlag) {
+            break;
+        }
+        qcc::Sleep(WAIT_MSECS);
+    }
+    EXPECT_TRUE(chirpSignalReceiver.signalReceivedFlag);
+
+    /* clean up */
+    peer1Bus.UnregisterBusObject(peer1BusObject);
+    peer2Bus.UnregisterBusObject(peer2BusObject);
+}
+
+
+/*
+ * Purpose
+ * Verify that specific rules with DENY action mask are ignored in the manifest.
+ *
+ * Setup
+ * Sender and Receiver bus implement the following :
+ * Object Path:  /test
+ * Interface Name: "org.allseen.test.SecurityApplication.rules"
+ * Member name: Echo (method call)
+ * Member name: Prop1  (property, read write)
+ * Member name: Chirp (signal)
+ *
+ * Policy rules allow everything
+ * Peer1 and Peer2 set up an ECDHE_ECDSA based session.
+ * Peer1 makes a method call to Peer2.
+ * Peer1 sends a signal to Peer2.
+ * Peer1 makes a get property call on Peer2
+ * Peer1 makes a set property call on Peer2
+ *
+ * Peer1 Policy:
+ * ACL 1: Peer type: ANY_TRUSTED: Allow everything
+ *
+ * Peer1 manifest:
+ * Rule 1: Allow everything
+ *
+ * Peer2 Policy:
+ * ACL 1: Peer type: ANY_TRUSTED, Rule: Allow everything
+ *
+ * Peer2 manifest:
+ * Rule1: Object Path: *; Interface: org.allseen.test.SecurityApplication.rules; Member Name: *, Action: DENY
+ * Rule2: Object Path: /test ; Interface: *; Member Name: *, Action: DENY
+ * Rule3: Object Path: * ; Interface: *; Member Name: Echo , Action: DENY
+ * Rule4: Object Path: * ; Interface: *; Member Name: Prop1 , Action: DENY
+ * Rule5: Object Path: * ; Interface: *; Member Name: Chirp , Action: DENY
+ * Rule6: Object Path: /test ; Interface: org.allseen.test.SecurityApplication.rules; Member Name: *, Action: DENY
+ * Rule7: Object Path: /t*  ; Interface: org.allseen.test.SecurityApplication.rules; Member Name: *, Action: DENY
+ * Rule8: Object Path: *  ; Interface: org.allseen.test.*; Member Name: *; Action: DENY
+ * Rule9: Object Path: /test  ; Interface: org.allseen.test.SecurityApplication.rules; Member Name: Chirp, Action: DENY
+ * Rule 10: Object Path: *, Interface: *, Member Name: NS; Action: PROVIDE|OBSERVE|MODIFY
+ *
+ * verification:
+ * Verify that method call, get/set property calls are successful.
+ * Verify that signal is received by Peer2.
+ */
+TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_14)
+{
+    PolicyRulesTestBusObject peer1BusObject(peer1Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer1Bus.RegisterBusObject(peer1BusObject));
+    PolicyRulesTestBusObject peer2BusObject(peer2Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterBusObject(peer2BusObject));
+
+    //Peer2 already has a manifest installed that allows everything from the SetUp
+
+    const size_t manifestSize = 10;
+    const size_t certChainSize = 1;
+    /*************Update Peer1 Manifest *************/
+    //peer1 key
+    KeyInfoNISTP256 peer2Key;
+    PermissionConfigurator& pcPeer1 = peer2Bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, pcPeer1.GetSigningPublicKey(peer2Key));
+
+    // Peer1 manifest
+    PermissionPolicy::Rule peer2Manifest[manifestSize];
+    { //Rule1: Object Path: *; Interface: org.allseen.test.SecurityApplication.rules; Member Name: *, Action: DENY
+        peer2Manifest[0].SetObjPath("*");
+        peer2Manifest[0].SetInterfaceName(interfaceName);
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("*",
+                       PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                       0 /*DENY*/);
+        peer2Manifest[0].SetMembers(1, members);
+    }
+    { //Rule2: Object Path: /test ; Interface: *; Member Name: *, Action: DENY
+        peer2Manifest[1].SetObjPath("/test");
+        peer2Manifest[1].SetInterfaceName("*");
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("*",
+                       PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                       0 /*DENY*/);
+        peer2Manifest[1].SetMembers(1, members);
+    }
+    { //Rule3: Object Path: * ; Interface: *; Member Name: Echo , Action: DENY
+        peer2Manifest[2].SetObjPath("*");
+        peer2Manifest[2].SetInterfaceName("*");
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("Echo",
+                       PermissionPolicy::Rule::Member::METHOD_CALL,
+                       0 /*DENY*/);
+        peer2Manifest[2].SetMembers(1, members);
+    }
+    { //Rule4: Object Path: * ; Interface: *; Member Name: Prop1 , Action: DENY
+        peer2Manifest[3].SetObjPath("*");
+        peer2Manifest[3].SetInterfaceName("*");
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("Prop1",
+                       PermissionPolicy::Rule::Member::PROPERTY,
+                       0 /*DENY*/);
+        peer2Manifest[3].SetMembers(1, members);
+    }
+    { //Rule5: Object Path: * ; Interface: *; Member Name: Chirp , Action: DENY
+        peer2Manifest[4].SetObjPath("*");
+        peer2Manifest[4].SetInterfaceName("*");
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("Chirp",
+                       PermissionPolicy::Rule::Member::SIGNAL,
+                       0 /*DENY*/);
+        peer2Manifest[4].SetMembers(1, members);
+    }
+    { //Rule6: Object Path: /test ; Interface: org.allseen.test.SecurityApplication.rules; Member Name: *, Action: DENY
+        peer2Manifest[5].SetObjPath("/test");
+        peer2Manifest[5].SetInterfaceName(interfaceName);
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("*",
+                       PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                       0 /*DENY*/);
+        peer2Manifest[5].SetMembers(1, members);
+    }
+    { //Rule7: Object Path: /t*  ; Interface: org.allseen.test.SecurityApplication.rules; Member Name: *, Action: DENY
+        peer2Manifest[6].SetObjPath("/t*");
+        peer2Manifest[6].SetInterfaceName(interfaceName);
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("*",
+                       PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                       0 /*DENY*/);
+        peer2Manifest[6].SetMembers(1, members);
+    }
+    { //Rule8: Object Path: *  ; Interface: org.allseen.test.*; Member Name: *; Action: DENY
+        peer2Manifest[7].SetObjPath("*");
+        peer2Manifest[7].SetInterfaceName("org.allseen.test.*");
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("*",
+                       PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                       0 /*DENY*/);
+        peer2Manifest[7].SetMembers(1, members);
+    }
+    { //Rule9: Object Path: /test  ; Interface: org.allseen.test.SecurityApplication.rules; Member Name: Chirp, Action: DENY
+        peer2Manifest[8].SetObjPath("/test");
+        peer2Manifest[8].SetInterfaceName(interfaceName);
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("Chirp",
+                       PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                       0 /*DENY*/);
+        peer2Manifest[8].SetMembers(1, members);
+    }
+    { //Rule 10: Object Path: *, Interface: *, Member Name: NS; Action: PROVIDE|OBSERVE|MODIFY
+        peer2Manifest[9].SetObjPath("*");
+        peer2Manifest[9].SetInterfaceName("*");
+        PermissionPolicy::Rule::Member members[1];
+        members[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                                 PermissionPolicy::Rule::Member::ACTION_MODIFY |
+                                 PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        peer2Manifest[9].SetMembers(1, members);
+    }
+
+    uint8_t peer2Digest[Crypto_SHA256::DIGEST_SIZE];
+    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(managerBus,
+                                                               peer2Manifest, manifestSize,
+                                                               peer2Digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+
+    //Create peer2 identityCert
+    IdentityCertificate identityCertChainPeer2[certChainSize];
+
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
+                                                                  "1",
+                                                                  managerGuid.ToString(),
+                                                                  peer2Key.GetPublicKey(),
+                                                                  "Peer1Alias",
+                                                                  3600,
+                                                                  identityCertChainPeer2[0],
+                                                                  peer2Digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdateIdentity(identityCertChainPeer2, certChainSize, peer2Manifest, manifestSize))
+        << "Failed to update Identity cert or manifest ";
+
+    SessionOpts opts;
+    SessionId peer1ToPeer2SessionId;
+    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, peer1ToPeer2SessionId, opts));
+    /* Create the ProxyBusObject and call the Echo method on the interface */
+    ProxyBusObject proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), "/test", peer1ToPeer2SessionId, true);
+    EXPECT_EQ(ER_OK, proxy.ParseXml(interface.c_str()));
+    EXPECT_TRUE(proxy.ImplementsInterface(interfaceName)) << interface.c_str() << "\n" << interfaceName;
+
+    // Verify Method call
+    MsgArg arg("s", "String that should be Echoed back.");
+    Message replyMsg(peer1Bus);
+    EXPECT_EQ(ER_OK, proxy.MethodCall(interfaceName, "Echo", &arg, static_cast<size_t>(1), replyMsg));
+    char* echoReply;
+    replyMsg->GetArg(0)->Get("s", &echoReply);
+    EXPECT_STREQ("String that should be Echoed back.", echoReply);
+
+    // Verify Set/Get Property
+    MsgArg prop1Arg;
+    EXPECT_EQ(ER_OK, prop1Arg.Set("i", 513));
+    EXPECT_EQ(ER_OK, proxy.SetProperty(interfaceName, "Prop1", prop1Arg));
+    EXPECT_EQ(513, peer2BusObject.ReadProp1());
+
+    MsgArg prop1ArgOut;
+    EXPECT_EQ(ER_OK, proxy.GetProperty(interfaceName, "Prop1", prop1Arg));
+    uint32_t prop1;
+    prop1Arg.Get("i", &prop1);
+    EXPECT_EQ((uint32_t)513, prop1);
+
+    // Send/Receive Signal
+    ChirpSignalReceiver chirpSignalReceiver;
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterSignalHandler(&chirpSignalReceiver, static_cast<MessageReceiver::SignalHandler>(&ChirpSignalReceiver::ChirpSignalHandler), peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), NULL));
+
+    arg.Set("s", "Chirp this String out in the signal.");
+    // Signals are send and forget.  They will always return ER_OK.
+    EXPECT_EQ(ER_OK, peer1BusObject.Signal(peer2Bus.GetUniqueName().c_str(), peer1ToPeer2SessionId, *peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), &arg, 1, 0, 0));
+
+    //Wait for a maximum of 2 sec for the Chirp Signal.
+    for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+        if (chirpSignalReceiver.signalReceivedFlag) {
+            break;
+        }
+        qcc::Sleep(WAIT_MSECS);
+    }
+    EXPECT_TRUE(chirpSignalReceiver.signalReceivedFlag);
+
+    /* clean up */
+    peer1Bus.UnregisterBusObject(peer1BusObject);
+    peer2Bus.UnregisterBusObject(peer2BusObject);
+}
+
+/*
+ * Purpose
+ * Verify that wild card DENY rule does not take effect in the manifest file.
+ *
+ * Setup
+ * Peer2 and Peer2 bus implement the following :
+ * Object Path:  /test
+ * Interface Name: "org.allseen.test.SecurityApplication.rules"
+ * Member name: Echo (method call)
+ * Member name: Prop1  (property, read write)
+ * Member name: Chirp (signal)
+ *
+ * Policy rules allow everything
+ * Peer1 and Peer2 set up an ECDHE_ECDSA based session.
+ * Peer1 makes a method call to Peer2.
+ * Peer1 sends a signal to Peer2.
+ * Peer1 makes a get property call on Peer2
+ * Peer1 makes a set property call on Peer2
+ *
+ * Peer1 Policy:
+ * ACL 1: Peer type: ANY_TRUSTED, Rule: Allow everything
+ *
+ * Peer1 manifest:
+ * Sender Manifest:
+ * Rule 1: Object Path: *, Interface: *, Member Name: *: Action: DENY
+ * Rule 2: Object Path: *, Interface: *, Member Name: NS; Action: PROVIDE|OBSERVE|MODIFY
+
+ * Peer2 Policy:
+ * ACL 1: Peer type: ANY_TRUSTED: Allow everything
+ *
+ * Peer2 manifest:
+ * Rule 1: Allow everything
+ *
+ * verification:
+ * Verify that method call, get/set property calls are successful.
+ * Verify that signal is received by Peer2.
+ */
+TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_15)
+{
+    PolicyRulesTestBusObject peer1BusObject(peer1Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer1Bus.RegisterBusObject(peer1BusObject));
+    PolicyRulesTestBusObject peer2BusObject(peer2Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterBusObject(peer2BusObject));
+
+    const size_t manifestSize = 2;
+    const size_t certChainSize = 1;
+    /*************Update Peer1 Manifest *************/
+    //peer1 key
+    KeyInfoNISTP256 peer1Key;
+    PermissionConfigurator& pcPeer1 = peer1Bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, pcPeer1.GetSigningPublicKey(peer1Key));
+
+    // Peer1 manifest
+    PermissionPolicy::Rule peer1Manifest[manifestSize];
+    { //Rule 1: Object Path: *, Interface: *, Member Name: *: Action: DENY
+        peer1Manifest[0].SetObjPath("*");
+        peer1Manifest[0].SetInterfaceName("*");
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("*",
+                       PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                       0 /*DENY*/);
+        peer1Manifest[0].SetMembers(1, members);
+    }
+    { //Rule 2: Object Path: *, Interface: *, Member Name: NS; Action: PROVIDE|OBSERVE|MODIFY
+        peer1Manifest[1].SetObjPath("*");
+        peer1Manifest[1].SetInterfaceName("*");
+        PermissionPolicy::Rule::Member members[1];
+        members[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                                 PermissionPolicy::Rule::Member::ACTION_MODIFY |
+                                 PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        peer1Manifest[1].SetMembers(1, members);
+    }
+
+    uint8_t peer1Digest[Crypto_SHA256::DIGEST_SIZE];
+    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(managerBus,
+                                                               peer1Manifest, manifestSize,
+                                                               peer1Digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+
+    //Create peer1 identityCert
+    IdentityCertificate identityCertChainPeer1[certChainSize];
+
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
+                                                                  "1",
+                                                                  managerGuid.ToString(),
+                                                                  peer1Key.GetPublicKey(),
+                                                                  "Peer1Alias",
+                                                                  3600,
+                                                                  identityCertChainPeer1[0],
+                                                                  peer1Digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+
+    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
+    EXPECT_EQ(ER_OK, sapWithPeer1.UpdateIdentity(identityCertChainPeer1, certChainSize, peer1Manifest, manifestSize))
+        << "Failed to update Identity cert or manifest ";
+
+    //Peer2 already has a manifest installed that allows everything from the SetUp
+
+    SessionOpts opts;
+    SessionId peer1ToPeer2SessionId;
+    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, peer1ToPeer2SessionId, opts));
+    /* Create the ProxyBusObject and call the Echo method on the interface */
+    ProxyBusObject proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), "/test", peer1ToPeer2SessionId, true);
+    EXPECT_EQ(ER_OK, proxy.ParseXml(interface.c_str()));
+    EXPECT_TRUE(proxy.ImplementsInterface(interfaceName)) << interface.c_str() << "\n" << interfaceName;
+
+    // Verify Method call
+    MsgArg arg("s", "String that should be Echoed back.");
+    Message replyMsg(peer1Bus);
+    EXPECT_EQ(ER_OK, proxy.MethodCall(interfaceName, "Echo", &arg, static_cast<size_t>(1), replyMsg));
+    char* echoReply;
+    replyMsg->GetArg(0)->Get("s", &echoReply);
+    EXPECT_STREQ("String that should be Echoed back.", echoReply);
+
+    // Verify Set/Get Property
+    MsgArg prop1Arg;
+    EXPECT_EQ(ER_OK, prop1Arg.Set("i", 513));
+    EXPECT_EQ(ER_OK, proxy.SetProperty(interfaceName, "Prop1", prop1Arg));
+    EXPECT_EQ(513, peer2BusObject.ReadProp1());
+
+    MsgArg prop1ArgOut;
+    EXPECT_EQ(ER_OK, proxy.GetProperty(interfaceName, "Prop1", prop1Arg));
+    uint32_t prop1;
+    prop1Arg.Get("i", &prop1);
+    EXPECT_EQ((uint32_t)513, prop1);
+
+    // Send/Receive Signal
+    ChirpSignalReceiver chirpSignalReceiver;
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterSignalHandler(&chirpSignalReceiver, static_cast<MessageReceiver::SignalHandler>(&ChirpSignalReceiver::ChirpSignalHandler), peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), NULL));
+
+    arg.Set("s", "Chirp this String out in the signal.");
+    // Signals are send and forget.  They will always return ER_OK.
+    EXPECT_EQ(ER_OK, peer1BusObject.Signal(peer2Bus.GetUniqueName().c_str(), peer1ToPeer2SessionId, *peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), &arg, 1, 0, 0));
+
+    //Wait for a maximum of 2 sec for the Chirp Signal.
+    for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+        if (chirpSignalReceiver.signalReceivedFlag) {
+            break;
+        }
+        qcc::Sleep(WAIT_MSECS);
+    }
+    EXPECT_TRUE(chirpSignalReceiver.signalReceivedFlag);
+
+    /* clean up */
+    peer1Bus.UnregisterBusObject(peer1BusObject);
+    peer2Bus.UnregisterBusObject(peer2BusObject);
+}
+
+
+/*
+ * Purpose
+ * Verify that wild card DENY rule does not take effect in the manifest file.
+ *
+ * Setup
+ * Peer1 and Peer2 bus implement the following :
+ * Object Path:  /test
+ * Interface Name: "org.allseen.test.SecurityApplication.rules"
+ * Member name: Echo (method call)
+ * Member name: Prop1  (property, read write)
+ * Member name: Chirp (signal)
+ *
+ * Policy rules allow everything
+ * Peer1 and Peer2 set up an ECDHE_ECDSA based session.
+ * Peer1 makes a method call to Peer2.
+ * Peer1 sends a signal to Peer2.
+ * Peer1 makes a get property call on Peer2
+ * Peer1 makes a set property call on Peer2
+ *
+ * Peer1 Policy:
+ * ACL 1: Peer type: ANY_TRUSTED: Allow everything
+ *
+ * Peer1 manifest:
+ * Rule 1: Allow everything
+ *
+ * Peer2 Policy:
+ * ACL 1: Peer type: ANY_TRUSTED, Rule: Allow everything
+ *
+ * Peer2 manifest:
+ * Sender Manifest:
+ * Rule 1: Object Path: *, Interface: *, Member Name: *: Action: DENY
+ * Rule 2: Object Path: *, Interface: *, Member Name: NS; Action: PROVIDE|OBSERVE|MODIFY
+ *
+ * verification:
+ * Verify that method call, get/set property calls are successful.
+ * Verify that signal is received by Peer2.
+ */
+TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_16)
+{
+    PolicyRulesTestBusObject peer1BusObject(peer1Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer1Bus.RegisterBusObject(peer1BusObject));
+    PolicyRulesTestBusObject peer2BusObject(peer2Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterBusObject(peer2BusObject));
+
+    //Peer2 already has a manifest installed that allows everything from the SetUp
+
+    const size_t manifestSize = 2;
+    const size_t certChainSize = 1;
+    /*************Update Peer1 Manifest *************/
+    //peer1 key
+    KeyInfoNISTP256 peer2Key;
+    PermissionConfigurator& pcPeer1 = peer2Bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, pcPeer1.GetSigningPublicKey(peer2Key));
+
+    // Peer1 manifest
+    PermissionPolicy::Rule peer2Manifest[manifestSize];
+    { //Rule 1: Object Path: *, Interface: *, Member Name: *: Action: DENY
+        peer2Manifest[0].SetObjPath("*");
+        peer2Manifest[0].SetInterfaceName("*");
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("*",
+                       PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                       0 /*DENY*/);
+        peer2Manifest[0].SetMembers(1, members);
+    }
+    { //Rule 2: Object Path: *, Interface: *, Member Name: NS; Action: PROVIDE|OBSERVE|MODIFY
+        peer2Manifest[1].SetObjPath("*");
+        peer2Manifest[1].SetInterfaceName("*");
+        PermissionPolicy::Rule::Member members[1];
+        members[0].SetMemberType(PermissionPolicy::Rule::Member::NOT_SPECIFIED);
+        members[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                                 PermissionPolicy::Rule::Member::ACTION_MODIFY |
+                                 PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        peer2Manifest[1].SetMembers(1, members);
+    }
+
+
+    uint8_t peer2Digest[Crypto_SHA256::DIGEST_SIZE];
+    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(managerBus,
+                                                               peer2Manifest, manifestSize,
+                                                               peer2Digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+
+    //Create peer2 identityCert
+    IdentityCertificate identityCertChainPeer2[certChainSize];
+
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
+                                                                  "1",
+                                                                  managerGuid.ToString(),
+                                                                  peer2Key.GetPublicKey(),
+                                                                  "Peer1Alias",
+                                                                  3600,
+                                                                  identityCertChainPeer2[0],
+                                                                  peer2Digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdateIdentity(identityCertChainPeer2, certChainSize, peer2Manifest, manifestSize))
+        << "Failed to update Identity cert or manifest ";
+
+    SessionOpts opts;
+    SessionId peer1ToPeer2SessionId;
+    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, peer1ToPeer2SessionId, opts));
+    /* Create the ProxyBusObject and call the Echo method on the interface */
+    ProxyBusObject proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), "/test", peer1ToPeer2SessionId, true);
+    EXPECT_EQ(ER_OK, proxy.ParseXml(interface.c_str()));
+    EXPECT_TRUE(proxy.ImplementsInterface(interfaceName)) << interface.c_str() << "\n" << interfaceName;
+
+    // Verify Method call
+    MsgArg arg("s", "String that should be Echoed back.");
+    Message replyMsg(peer1Bus);
+    EXPECT_EQ(ER_OK, proxy.MethodCall(interfaceName, "Echo", &arg, static_cast<size_t>(1), replyMsg));
+    char* echoReply;
+    replyMsg->GetArg(0)->Get("s", &echoReply);
+    EXPECT_STREQ("String that should be Echoed back.", echoReply);
+
+    // Verify Set/Get Property
+    MsgArg prop1Arg;
+    EXPECT_EQ(ER_OK, prop1Arg.Set("i", 513));
+    EXPECT_EQ(ER_OK, proxy.SetProperty(interfaceName, "Prop1", prop1Arg));
+    EXPECT_EQ(513, peer2BusObject.ReadProp1());
+
+    MsgArg prop1ArgOut;
+    EXPECT_EQ(ER_OK, proxy.GetProperty(interfaceName, "Prop1", prop1Arg));
+    uint32_t prop1;
+    prop1Arg.Get("i", &prop1);
+    EXPECT_EQ((uint32_t)513, prop1);
+
+    // Send/Receive Signal
+    ChirpSignalReceiver chirpSignalReceiver;
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterSignalHandler(&chirpSignalReceiver, static_cast<MessageReceiver::SignalHandler>(&ChirpSignalReceiver::ChirpSignalHandler), peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), NULL));
+
+    arg.Set("s", "Chirp this String out in the signal.");
+    // Signals are send and forget.  They will always return ER_OK.
+    EXPECT_EQ(ER_OK, peer1BusObject.Signal(peer2Bus.GetUniqueName().c_str(), peer1ToPeer2SessionId, *peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), &arg, 1, 0, 0));
+
+    //Wait for a maximum of 2 sec for the Chirp Signal.
+    for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+        if (chirpSignalReceiver.signalReceivedFlag) {
+            break;
+        }
+        qcc::Sleep(WAIT_MSECS);
+    }
+    EXPECT_TRUE(chirpSignalReceiver.signalReceivedFlag);
+
+    /* clean up */
+    peer1Bus.UnregisterBusObject(peer1BusObject);
+    peer2Bus.UnregisterBusObject(peer2BusObject);
+}
+
