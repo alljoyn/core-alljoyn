@@ -76,7 +76,18 @@ void printAboutData(AboutData& aboutData, const char* language, int tabNum)
             uint8_t* pay;
             tmp->Get("ay", &lay, &pay);
             for (size_t j = 0; j < lay; ++j) {
-                printf("%02x ", pay[j]);
+                if (0 == strcmp(fields[i], ajn::AboutKeys::APP_ID) && 16 == lay) {
+                    // If the AboutData item being printed is AppId and it is
+                    // 128 bits = 16 octets in length, display it in UUID format
+                    printf("%02x", pay[j]);
+                    if (0 == (j + 1) % 2 && (4 <= (j + 1) && (j + 1) <= 10)) {
+                        // Hyphens are displayed after 4, 6, 8 and 10 octets
+                        // when printing UUID.
+                        printf("-");
+                    }
+                } else {
+                    printf("%02x ", pay[j]);
+                }
             }
         } else {
             printf("User Defined Value\tSignature: %s", tmp->Signature().c_str());
