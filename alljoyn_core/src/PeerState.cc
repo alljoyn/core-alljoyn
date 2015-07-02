@@ -153,12 +153,6 @@ static inline bool ConversationVersionDoesNotApply(uint32_t conversationVersion,
     }
 }
 
-void _PeerState::UpdateHash(uint32_t conversationVersion, HashHeader hashHeader)
-{
-    assert(sizeof(hashHeader) == sizeof(uint8_t));
-    UpdateHash(conversationVersion, (const uint8_t)hashHeader);
-}
-
 void _PeerState::UpdateHash(uint32_t conversationVersion, uint8_t byte)
 {
     /* In debug builds, a NULL hashUtil is probably a caller bug, so assert.
@@ -198,134 +192,13 @@ void _PeerState::UpdateHash(uint32_t conversationVersion, const qcc::String& str
     UpdateHash(conversationVersion, (const uint8_t*)str.data(), str.size());
 }
 
-void _PeerState::UpdateHash(uint32_t conversationVersion, const MsgArg& msgArg)
-{
-    if (ConversationVersionDoesNotApply(conversationVersion, authVersion)) {
-        return;
-    }
-    /* This overload of this method automatically figures out the right way to
-     * serialize the argument as a byte array based on its type.
-     *
-     * Integers are always converted into little-endian byte order before hashing.
-     */
-    union {
-        uint16_t v_uint16LE;
-        uint32_t v_uint32LE;
-        uint64_t v_uint64LE;
-    };
-
-    /* Type field is always hashed in the following order:
-     * First byte: 0 if not an array, 'a' if an array
-     * Second byte: underlying element's type indicator character ('t', 'u', 'q', and so on)
-     */
-    if ((msgArg.typeId & 0xFF) == ALLJOYN_ARRAY) {
-        UpdateHash(conversationVersion, ALLJOYN_ARRAY);
-        /* In the case of an array type, the base type is left-shifted 8 bits and OR'd with
-         * ALLJOYN_ARRAY, which we need to undo to get just that type to hash.
-         * See the definitions of ALLJOYN_*_ARRAY in MsgArg.h.
-         */
-        UpdateHash(conversationVersion, (uint8_t)(msgArg.typeId >> 8));
-    } else {
-        assert(msgArg.typeId == (msgArg.typeId & 0xFF));
-        UpdateHash(conversationVersion, 0);
-        UpdateHash(conversationVersion, (uint8_t)msgArg.typeId);
-    }
-
-    switch (msgArg.typeId) {
-    case ALLJOYN_BYTE:
-        UpdateHash(conversationVersion, msgArg.v_byte);
-        break;
-
-    case ALLJOYN_UINT16:
-        v_uint16LE = htole16(msgArg.v_uint16);
-        UpdateHash(conversationVersion, (const uint8_t*)&v_uint16LE, sizeof(v_uint16LE));
-        break;
-
-    case ALLJOYN_UINT32:
-        v_uint32LE = htole32(msgArg.v_uint32);
-        UpdateHash(conversationVersion, (const uint8_t*)&v_uint32LE, sizeof(v_uint32LE));
-        break;
-
-    case ALLJOYN_UINT64:
-        v_uint64LE = htole64(msgArg.v_uint64);
-        UpdateHash(conversationVersion, (const uint8_t*)&v_uint64LE, sizeof(v_uint64LE));
-        break;
-
-    case ALLJOYN_STRING:
-        UpdateHash(conversationVersion, (const uint8_t*)msgArg.v_string.str, msgArg.v_string.len);
-        break;
-
-    case ALLJOYN_ARRAY:
-        UpdateHash(conversationVersion, msgArg.v_array.GetElements(), msgArg.v_array.GetNumElements());
-        break;
-
-    case ALLJOYN_BYTE_ARRAY:
-        UpdateHash(conversationVersion, msgArg.v_scalarArray.v_byte, msgArg.v_scalarArray.numElements);
-        break;
-
-    case ALLJOYN_UINT32_ARRAY:
-#if (QCC_TARGET_ENDIAN == QCC_LITTLE_ENDIAN)
-        v_uint32LE = msgArg.v_scalarArray.numElements;
-        UpdateHash(conversationVersion, (const uint8_t*)&v_uint32LE, sizeof(v_uint32LE));
-        /* Always use conversation version 0 so there are no length prefixes on each element */
-        UpdateHash(0, (const uint8_t*)&msgArg.v_scalarArray.v_uint32, msgArg.v_scalarArray.numElements * sizeof(*msgArg.v_scalarArray.v_uint32));
-#else
-        v_uint32LE = htole32(msgArg.v_scalarArray.numElements);
-        UpdateHash(conversationVersion, (const uint8_t*)&v_uint32LE, sizeof(v_uint32LE));
-        for (size_t i = 0; i < msgArg.v_scalarArray.numElements; i++) {
-            v_uint32LE = htole32(msgArg.v_scalarArray.v_uint32[i]);
-            UpdateHash(0, (const uint8_t*)&v_uint32LE, sizeof(v_uint32LE));
-        }
-#endif
-        break;
-
-    case ALLJOYN_VARIANT:
-        UpdateHash(conversationVersion, *msgArg.v_variant.val);
-        break;
-
-    case ALLJOYN_STRUCT:
-        v_uint32LE = htole32(msgArg.v_struct.numMembers);
-        UpdateHash(conversationVersion, (const uint8_t*)&v_uint32LE, sizeof(v_uint32LE));
-        for (size_t i = 0; i < msgArg.v_struct.numMembers; i++) {
-            UpdateHash(conversationVersion, msgArg.v_struct.members[i]);
-        }
-        break;
-
-    default:
-        /* Most types aren't used in authentication and key exchange, so we
-         * don't support them here. If we get here, assert.
-         */
-        QCC_LogError(ER_BAD_ARG_1, ("UpdateHash got unsupported typeId %X", msgArg.typeId));
-        assert(false);
-        break;
-    }
-}
-
-void _PeerState::UpdateHash(uint32_t conversationVersion, const MsgArg* msgArgs, size_t msgArgsSize)
-{
-    if (ConversationVersionDoesNotApply(conversationVersion, authVersion)) {
-        return;
-    }
-    for (size_t i = 0; i < msgArgsSize; i++) {
-        UpdateHash(conversationVersion, msgArgs[i]);
-    }
-}
-
-/* _Message::GetArgs is not object-const, so msg here cannot be const.
- * This method doesn't change it, though.
- */
-void _PeerState::UpdateHash(uint32_t conversationVersion, Message& msg)
+void _PeerState::UpdateHash(uint32_t conversationVersion, const Message& msg)
 {
     if (ConversationVersionDoesNotApply(conversationVersion, authVersion)) {
         return;
     }
 
-    const MsgArg* args;
-    size_t numArgs;
-
-    msg->GetArgs(numArgs, args);
-
-    UpdateHash(conversationVersion, args, numArgs);
+    UpdateHash(conversationVersion, msg->GetBuffer(), msg->GetBufferSize());
 }
 
 void _PeerState::GetDigest(uint8_t* digest, bool keepAlive)
