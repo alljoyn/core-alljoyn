@@ -22,7 +22,7 @@ import re
 # JellyBean is API level 16
 min_api_level = 16
 # Minimal required NDK version
-min_ndk_version = "r9b"
+min_ndk_version = "r10e"
 # NDK should be equal to or lower as min_api_level
 ndk_level = min_api_level
 
