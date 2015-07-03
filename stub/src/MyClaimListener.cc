@@ -23,7 +23,7 @@ MyClaimListener::~MyClaimListener()
 
 /* This can be used, if for example the app has a nice gui
  * and asks the user if he wants to be claimed by this ROT */
-bool MyClaimListener::OnClaimRequest(const qcc::ECCPublicKey* pubKeyRot, void* ctx)
+bool MyClaimListener::OnClaimRequest(const ECCPublicKey* pubKeyRot, void* ctx)
 {
     QCC_UNUSED(pubKeyRot);
     QCC_UNUSED(ctx);

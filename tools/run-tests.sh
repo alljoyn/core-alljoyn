@@ -40,7 +40,7 @@ fi
 PLATFORM_ROOT="${AJN_SM_PATH}/build/linux/${PLATFORM}/${VARIANT}"
 TEST_ROOT="${PLATFORM_ROOT}/test/"
 
-if ! nm "${TEST_ROOT}/core/unit_test/secmgrctest" | grep BundledRouter &> /dev/null; then
+if ! nm "${TEST_ROOT}/agent/unit_test/secmgrctest" | grep BundledRouter &> /dev/null; then
     if [ "$(pidof ${AJN_DAEMON_PNAME})" ]; then
          echo "alljoyn-daemon is active...running tests..."
     else
@@ -64,7 +64,7 @@ echo "[[ Cleaning old Gtest results if any ]]"
 rm -rf "${TEST_ROOT}"/gtestresults/
 echo "[[ Running unit tests ]]"
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-for target in "core"
+for target in "agent"
 do
     STORAGE_PATH=/tmp/secmgr.db "${TEST_ROOT}"/$target/unit_test/secmgrctest --gtest_output=xml:"${TEST_ROOT}"/gtestresults/ 
 done
@@ -81,7 +81,7 @@ if [ ! -z "$(which lcov)" ]; then
         EXTRA_ARGS="--no-external"
     fi
         COVDIR="${AJN_SM_PATH}"/build/coverage
-        for target in "core"
+        for target in "agent"
 	    do
             mkdir -p "${COVDIR}"/"$target"src > /dev/null 2>&1
             mkdir -p "${COVDIR}"/"$target"inc > /dev/null 2>&1

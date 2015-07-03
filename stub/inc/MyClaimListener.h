@@ -18,7 +18,7 @@
 #define MYCLAIMLISTENER_H_
 
 #include <alljoyn/BusAttachment.h>
-#include <qcc/String.h>
+
 #include "PermissionMgmt.h"
 
 /**
@@ -38,7 +38,7 @@ class MyClaimListener :
      * with a notification that the application is being claimed
      * or even give the user the ability to deny the claiming
      */
-    bool OnClaimRequest(const qcc::ECCPublicKey* pubKeyRot,
+    bool OnClaimRequest(const ECCPublicKey* pubKeyRot,
                         void* ctx);
 
     /* This function is called when the claiming process has completed successfully */

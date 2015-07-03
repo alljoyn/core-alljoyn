@@ -14,140 +14,166 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#ifndef SQLSTORAGE_H_
-#define SQLSTORAGE_H_
+#ifndef ALLJOYN_SECMGR_STORAGE_SQLSTORAGE_H_
+#define ALLJOYN_SECMGR_STORAGE_SQLSTORAGE_H_
 
-#include "sqlite3.h"
+#include <sqlite3.h>
 
-#include <alljoyn/securitymgr/Storage.h>
-#include <alljoyn/securitymgr/ManagedApplicationInfo.h>
-#include <alljoyn/securitymgr/GuildInfo.h>
-#include <alljoyn/securitymgr/IdentityInfo.h>
+#include <iostream>
+#include <string>
 
-#include <alljoyn/Status.h>
-#include <qcc/String.h>
 #include <qcc/CertificateECC.h>
 #include <qcc/CryptoECC.h>
 #include <qcc/Mutex.h>
 
-#include <iostream>
+#include <alljoyn/Status.h>
+
+#include <alljoyn/securitymgr/Application.h>
+#include <alljoyn/securitymgr/GroupInfo.h>
+#include <alljoyn/securitymgr/IdentityInfo.h>
+#include <alljoyn/securitymgr/Manifest.h>
+#include <alljoyn/securitymgr/storage/ApplicationMetaData.h>
+
 #include "SQLStorageConfig.h"
 
 /**
- * \class SQLStorage
- * \brief A class that is meant to implement the Storage abstract class in order to provide a persistent storage
+ * @brief A class that is meant to implement the Storage abstract class in order to provide a persistent storage
  *        on a native Linux device.
  **/
 #define INITIAL_SERIAL_NUMBER 1
 
 using namespace qcc;
+using namespace std;
+
 namespace ajn {
 namespace securitymgr {
-struct Keys {
-    const qcc::ECCPublicKey* appECCPublicKey;
-    qcc::String* guildID;
-};
+/**
+ * A vector of MembershipCertificates to emulate a chain of MembershipCertificates.
+ * */
+typedef vector<MembershipCertificate> MembershipCertificateChain;
 
 enum InfoType {
-    INFO_GUILD,
+    INFO_GROUP,
     INFO_IDENTITY
 };
 
-class SQLStorage :
-    public Storage {
+class SQLStorage {
   private:
 
+    QStatus status;
     sqlite3* nativeStorageDB;
     SQLStorageConfig storageConfig;
-    mutable qcc::Mutex storageMutex;
+    mutable Mutex storageMutex;
 
     QStatus Init();
 
+    static QStatus ExportKeyInfo(const KeyInfoNISTP256& keyInfo,
+                                 uint8_t** byteArray,
+                                 size_t& byteArraySize);
+
     QStatus StoreInfo(InfoType type,
-                      const qcc::ECCPublicKey& authority,
+                      const KeyInfoNISTP256& authority,
                       const GUID128& guid,
-                      const qcc::String& name,
-                      const qcc::String& desc,
+                      const string& name,
+                      const string& desc,
                       bool update);
 
     QStatus GetInfo(InfoType type,
-                    const qcc::ECCPublicKey& auth,
+                    const KeyInfoNISTP256& auth,
                     const GUID128& guid,
-                    qcc::String& name,
-                    qcc::String& desc) const;
+                    string& name,
+                    string& desc) const;
 
     QStatus RemoveInfo(InfoType type,
-                       const qcc::ECCPublicKey& authority,
+                       const KeyInfoNISTP256& authority,
                        const GUID128& guid);
 
-    QStatus BindCertForStorage(const qcc::CertificateX509& certificate,
+    QStatus BindCertForStorage(const Application& app,
+                               CertificateX509& certificate,
                                const char* sqlStmtText,
-                               sqlite3_stmt** statement);                                                                       //Could be generalized in the future for all cert types
+                               sqlite3_stmt** statement);
 
     QStatus StepAndFinalizeSqlStmt(sqlite3_stmt* statement) const;
 
-    int GetBlobSize(const char* table,
-                    const char* columnName,
-                    const Keys* keys) const; //It calculates the size of any blob in a given table.
-
     QStatus InitSerialNumber();
 
-    qcc::String GetStoragePath() const;
+    string GetStoragePath() const;
 
-    QStatus PrepareCertificateQuery(const qcc::MembershipCertificate& cert,
-                                    sqlite3_stmt** statement) const;
+    QStatus PrepareMembershipCertificateQuery(const Application& app,
+                                              const MembershipCertificate& certificate,
+                                              sqlite3_stmt** statement) const;
 
-    QStatus GetCertificateFromRow(sqlite3_stmt** statement,
-                                  qcc::MembershipCertificate& cert) const;
+    QStatus GetPolicyOrManifest(const Application& app,
+                                const char* type,
+                                uint8_t** byteArray,
+                                size_t* size) const;
 
-    QStatus GetCertificateFromRow(sqlite3_stmt** statement,
-                                  qcc::CertificateX509& cert,
-                                  const qcc::String tableName,
-                                  Keys keys) const;
+    QStatus StorePolicyOrManifest(const Application& app,
+                                  const uint8_t* byteArray,
+                                  const size_t size,
+                                  const char* type);
 
   public:
 
     SQLStorage(const SQLStorageConfig& _storageConfig) :
-        storageConfig(_storageConfig)
+        status(ER_OK), storageConfig(_storageConfig)
     {
         status = Init();
     }
 
-    QStatus StoreApplication(const ManagedApplicationInfo& managedApplicationInfo,
+    QStatus GetStatus() const
+    {
+        return status;
+    }
+
+    QStatus StoreApplication(const Application& app,
                              const bool update = false);
 
-    QStatus RemoveApplication(const ManagedApplicationInfo& managedApplicationInfo);
+    QStatus SetAppMetaData(const Application& app,
+                           const ApplicationMetaData& appMetaData);
 
-    QStatus GetManagedApplications(std::vector<ManagedApplicationInfo>& managedApplications) const;
+    QStatus GetAppMetaData(const Application& app,
+                           ApplicationMetaData& appMetaData) const;
 
-    QStatus GetManagedApplication(ManagedApplicationInfo& managedApplicationInfo) const;
+    QStatus RemoveApplication(const Application& app);
 
-    QStatus StoreCertificate(const qcc::CertificateX509& certificate,
+    QStatus GetManagedApplications(vector<Application>& apps) const;
+
+    QStatus GetManagedApplication(Application& app) const;
+
+    QStatus GetManifest(const Application& app,
+                        Manifest& manifest) const;
+
+    QStatus GetPolicy(const Application& app,
+                      PermissionPolicy& policy) const;
+
+    QStatus StoreManifest(const Application& app,
+                          const Manifest& manifest);
+
+    QStatus StorePolicy(const Application& app,
+                        const PermissionPolicy& policy);
+
+    QStatus StoreCertificate(const Application& app,
+                             CertificateX509& certificate,
                              bool update = false);
 
-    QStatus StoreAssociatedData(const qcc::CertificateX509& certificate,
-                                const qcc::String& data,
-                                bool update = false);
+    QStatus RemoveCertificate(const Application& app,
+                              CertificateX509& certificate);
 
-    QStatus RemoveCertificate(qcc::CertificateX509& certificate);
+    QStatus GetCertificate(const Application& app,
+                           CertificateX509& certificate);
 
-    QStatus RemoveAssociatedData(const qcc::CertificateX509& certificate);
+    QStatus GetMembershipCertificates(const Application& app,
+                                      const MembershipCertificate& certificate,
+                                      MembershipCertificateChain& certificates) const;
 
-    QStatus GetCertificate(qcc::CertificateX509& certificate);
+    QStatus StoreGroup(const GroupInfo& groupInfo);
 
-    QStatus GetCertificates(const qcc::MembershipCertificate& certificate,
-                            std::vector<qcc::MembershipCertificate>& certificates) const;
+    QStatus RemoveGroup(const GroupInfo& groupInfo);
 
-    QStatus GetAssociatedData(const qcc::CertificateX509& certificate,
-                              qcc::String& data) const;
+    QStatus GetGroup(GroupInfo& groupInfo) const;
 
-    QStatus StoreGuild(const GuildInfo& guildInfo);
-
-    QStatus RemoveGuild(const GuildInfo& guildInfo);
-
-    QStatus GetGuild(GuildInfo& guildInfo) const;
-
-    QStatus GetGuilds(std::vector<GuildInfo>& guildsInfo) const;
+    QStatus GetGroups(vector<GroupInfo>& groupsInfo) const;
 
     QStatus StoreIdentity(const IdentityInfo& idInfo);
 
@@ -155,9 +181,9 @@ class SQLStorage :
 
     QStatus GetIdentity(IdentityInfo& idInfo) const;
 
-    QStatus GetIdentities(std::vector<IdentityInfo>& idInfos) const;
+    QStatus GetIdentities(vector<IdentityInfo>& idInfos) const;
 
-    QStatus GetNewSerialNumber(qcc::String& serialNumber) const;
+    QStatus GetNewSerialNumber(string& serialNumber) const;
 
     void Reset();
 
@@ -165,4 +191,4 @@ class SQLStorage :
 };
 }
 }
-#endif /* SQLSTORAGE_H_ */
+#endif /* ALLJOYN_SECMGR_STORAGE_SQLSTORAGE_H_ */

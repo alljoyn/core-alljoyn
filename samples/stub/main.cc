@@ -31,18 +31,19 @@
 #include "MyClaimListener.h"
 
 using namespace ajn;
+using namespace std;
 
 void printHelp()
 {
-    std::cout << "Welcome to the permission mgmt stub" << std::endl
-              << "Menu" << std::endl
-              << ">o : Opens the claim window" << std::endl
-              << ">c : Closes the claim window" << std::endl
-              << ">i : Lists identity certificates" << std::endl
-              << ">m : Lists membership certificates" << std::endl
-              << ">r : Lists RoT's" << std::endl
-              << ">s : Send Signal" << std::endl
-              << ">q : Quit" << std::endl;
+    cout << "Welcome to the permission mgmt stub" << endl
+         << "Menu" << endl
+         << ">o : Opens the claim window" << endl
+         << ">c : Closes the claim window" << endl
+         << ">i : Lists identity certificates" << endl
+         << ">m : Lists membership certificates" << endl
+         << ">r : Lists RoT's" << endl
+         << ">s : Send Signal" << endl
+         << ">q : Quit" << endl;
 }
 
 int main(int arg, char** argv)
@@ -61,9 +62,9 @@ int main(int arg, char** argv)
 #endif
 
 #if defined(QCC_OS_GROUP_WINDOWS)
-    srand(time(NULL) + (int)_getpid());
+    srand(time(nullptr) + (int)_getpid());
 #else
-    srand(time(NULL) + (int)getpid());
+    srand(time(nullptr) + (int)getpid());
 #endif
 
     MyClaimListener mycl;
@@ -72,7 +73,7 @@ int main(int arg, char** argv)
     char c;
     QStatus status = ER_OK;
 
-    while ((c = std::cin.get()) != 'q') {
+    while ((c = cin.get()) != 'q') {
         switch (c) {
         case 'h':
             {
@@ -84,7 +85,7 @@ int main(int arg, char** argv)
             {
                 status = stub.OpenClaimWindow();
                 if (status != ER_OK) {
-                    std::cerr << "Could not open claim window " << QCC_StatusText(status) << std::endl;
+                    cerr << "Could not open claim window " << QCC_StatusText(status) << endl;
                     break;
                 }
 
@@ -95,7 +96,7 @@ int main(int arg, char** argv)
             {
                 QStatus status = stub.CloseClaimWindow();
                 if (status != ER_OK) {
-                    std::cerr << "Could not close claim window " << QCC_StatusText(status) << std::endl;
+                    cerr << "Could not close claim window " << QCC_StatusText(status) << endl;
                     break;
                 }
 
@@ -104,8 +105,8 @@ int main(int arg, char** argv)
 
         case 'i':
             {
-                qcc::String identityCert = stub.GetInstalledIdentityCertificate();
-                if (qcc::String("") == identityCert) {
+                string identityCert = stub.GetInstalledIdentityCertificate();
+                if (identityCert.empty()) {
                     printf("There are currently no Identity certificates installed \n");
                 } else {
                     printf("Installed Identity Certificate: %s \n", identityCert.c_str());
@@ -115,13 +116,13 @@ int main(int arg, char** argv)
 
         case 'm':
             {
-                std::map<GUID128, qcc::String> memberships = stub.GetMembershipCertificates();
+                map<GUID128, string> memberships = stub.GetMembershipCertificates();
                 if (0 != memberships.size()) {
                     // Printout valid RoT pub key
-                    for (std::map<GUID128, qcc::String>::const_iterator it = memberships.begin();
+                    for (map<GUID128, string>::const_iterator it = memberships.begin();
                          it != memberships.end();
                          ++it) {
-                        printf("Guild ID = '%s'; Certificate\n %s", it->first.ToString().c_str(), it->second.c_str());
+                        printf("Group ID = '%s'; Certificate\n %s", it->first.ToString().c_str(), it->second.c_str());
                     }
                 } else {
                     printf("There are currently no Membership certificates installed \n");
@@ -131,22 +132,22 @@ int main(int arg, char** argv)
 
         case 'r':
             {
-                std::vector<qcc::ECCPublicKey*> publicRoTKeys = stub.GetRoTKeys();
+                vector<ECCPublicKey*> publicRoTKeys = stub.GetRoTKeys();
                 if (0 != publicRoTKeys.size()) {
                     // Printout valid RoT pub key
-                    for (std::vector<qcc::ECCPublicKey*>::const_iterator it = publicRoTKeys.begin();
+                    for (vector<ECCPublicKey*>::const_iterator it = publicRoTKeys.begin();
                          it != publicRoTKeys.end();
                          ++it) {
-                        std::string printableRoTKey = "";
+                        string printableRoTKey = "";
 
-                        for (int i = 0; i < (int)qcc::ECC_COORDINATE_SZ; ++i) {
+                        for (int i = 0; i < (int)ECC_COORDINATE_SZ; ++i) {
                             char buff[4];
-                            sprintf(buff, "%02x", (unsigned char)((*it)->x[i]));
+                            sprintf(buff, "%02x", (unsigned char)((*it)->GetX()[i]));
                             printableRoTKey = printableRoTKey + buff;
                         }
-                        for (int i = 0; i < (int)qcc::ECC_COORDINATE_SZ; ++i) {
+                        for (int i = 0; i < (int)ECC_COORDINATE_SZ; ++i) {
                             char buff[4];
-                            sprintf(buff, "%02x", (unsigned char)((*it)->y[i]));
+                            sprintf(buff, "%02x", (unsigned char)((*it)->GetY()[i]));
                             printableRoTKey = printableRoTKey + buff;
                         }
 
@@ -162,7 +163,7 @@ int main(int arg, char** argv)
             {
                 QStatus status = stub.SendClaimDataSignal();
                 if (status != ER_OK) {
-                    std::cerr << "Could not send secInfo " << QCC_StatusText(status) << std::endl;
+                    cerr << "Could not send secInfo " << QCC_StatusText(status) << endl;
                 }
                 break;
             }
@@ -173,7 +174,7 @@ int main(int arg, char** argv)
             break;
 
         default:
-            std::cerr << "Unknown option" << std::endl;
+            cerr << "Unknown option" << endl;
         }
     }
 

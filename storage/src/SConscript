@@ -25,7 +25,8 @@ libs = []
 # Header files
 lib_env.Append(CPPPATH = ['.'])
 lib_env.Append(CPPPATH = ['../../../../../../../storage/inc'])
-lib_env.Append(CPPPATH = ['../../../../../../../core/inc/'])
+lib_env.Append(CPPPATH = ['../../../../../../../agent/inc/'])
+lib_env.Append(CPPPATH = ['../../../../../../../../alljoyn/alljoyn_core/src'])
 
 # Static library
 objs = lib_env.Object(srcs)

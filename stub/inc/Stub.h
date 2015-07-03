@@ -17,7 +17,7 @@
 #ifndef STUB_H_
 #define STUB_H_
 
-#define APPLICATION_PORT 3333
+#include <memory>
 
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/BusObject.h>
@@ -26,7 +26,8 @@
 #include <alljoyn/Init.h>
 
 #include "PermissionMgmt.h"
-#include <memory>
+
+#define APPLICATION_PORT 3333
 
 using namespace ajn;
 
@@ -65,7 +66,7 @@ class Stub {
         return ba;
     }
 
-    qcc::String GetInstalledIdentityCertificate() const
+    string GetInstalledIdentityCertificate() const
     {
         return pm->GetInstalledIdentityCertificate();
     }
@@ -83,7 +84,7 @@ class Stub {
         pm->SetUsedManifest(manifestRules, manifestRulesCount);
     }
 
-    std::vector<qcc::ECCPublicKey*> GetRoTKeys() const
+    vector<ECCPublicKey*> GetRoTKeys() const
     {
         return pm->GetRoTKeys();
     }
@@ -96,7 +97,7 @@ class Stub {
         return pm->SendClaimDataSignal();
     }
 
-    std::map<GUID128, qcc::String> GetMembershipCertificates() const;
+    map<GUID128, string> GetMembershipCertificates() const;
 
     QStatus Reset();
 

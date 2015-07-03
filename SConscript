@@ -83,16 +83,12 @@ buildroot = secenv.subst('build/${OS}/${CPU}/${VARIANT}')
 secenv.Install('$SEC_DISTDIR/security/inc', secenv.Glob('security/inc/*.h'))
 
 secenv.Append(CPPPATH = ['$SEC_DISTDIR/security/inc'])
-secenv.Append(CPPPATH = ['../../../../../../core/inc/'])
+secenv.Append(CPPPATH = ['../../../../../../agent/inc/'])
 secenv.Append(CPPPATH = ['../../../../../../storage/inc'])
 
 secenv.Install('$SEC_DISTDIR/lib', secenv.SConscript('storage/src/SConscript', exports = ['secenv'], variant_dir=buildroot+'/lib/storage/native', duplicate=0))
-secenv.Install('$SEC_DISTDIR/lib', secenv.SConscript('core/src/SConscript', exports = ['secenv'], variant_dir=buildroot+'/lib/core', duplicate=0))
+secenv.Install('$SEC_DISTDIR/lib', secenv.SConscript('agent/src/SConscript', exports = ['secenv'], variant_dir=buildroot+'/lib/agent', duplicate=0))
 secenv.Install('$SEC_DISTDIR/lib', secenv.SConscript('stub/src/SConscript', exports = ['secenv'], variant_dir=buildroot+'/lib/stub', duplicate=0))
-if ('java' in env['bindings']):
-    jar, classes = secenv.SConscript('java/src/SConscript', exports = ['secenv'], variant_dir=buildroot+'/lib/java', duplicate=0)
-    secenv.Install('$SEC_DISTDIR/lib', [jar, classes])
-    secenv.Install('$SEC_DISTDIR/lib', secenv.SConscript('java/jni/SConscript', exports = ['secenv', 'classes'], variant_dir=buildroot+'/lib/jni', duplicate=0))
 
 # Security Manager App building
 secenv.Install('$SEC_DISTDIR/bin/samples', secenv.SConscript('samples/cli/SConscript', exports=['secenv'], variant_dir=buildroot+'/samples/cli', duplicate=0))
@@ -101,12 +97,13 @@ secenv.Install('$SEC_DISTDIR/bin/stub', secenv.SConscript('samples/stub/SConscri
 
 # Security core tests building (are not installed)
 if secenv['OS_CONF'] != 'android':
-     secenv.SConscript('core/unit_test/SConscript', variant_dir=buildroot+'/test/core/unit_test', duplicate=0, exports = {'env':secenv})
+     secenv.SConscript('agent/unit_test/SConscript', variant_dir=buildroot+'/test/agent/unit_test', duplicate=0, exports = {'env':secenv})
 
-if secenv['OS_CONF'] == 'linux':
-   for test in Glob('core/test/*', strings=True):
-          testdir = buildroot+'/test/'+'sec'+test
-          secenv.SConscript(test + '/SConscript', exports=['secenv'], variant_dir=testdir, duplicate=0)
+# Multipeer test
+#if secenv['OS_CONF'] == 'linux':
+#   for test in Glob('core/test/*', strings=True):
+#          testdir = buildroot+'/test/'+'sec'+test
+#          secenv.SConscript(test + '/SConscript', exports=['secenv'], variant_dir=testdir, duplicate=0)
 
 # Security storage tests building (are not installed)
 #secenv.SConscript('storage/unit_test/SConscript', exports=['secenv'], variant_dir=buildroot+'/test/storage/unit_test', duplicate=0)

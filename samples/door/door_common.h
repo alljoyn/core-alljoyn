@@ -14,12 +14,13 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#ifndef SAMPLE_DOOR_COMMON_H_
-#define SAMPLE_DOOR_COMMON_H_
+#ifndef ALLJOYN_SECMGR_SAMPLE_DOOR_COMMON_H_
+#define ALLJOYN_SECMGR_SAMPLE_DOOR_COMMON_H_
 
 #define DOOR_INTF_SECURE 1
 
 #include <qcc/GUID.h>
+
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/BusObject.h>
 #include <alljoyn/AuthListener.h>
@@ -71,9 +72,9 @@ class DoorAuthListener :
 };
 
 class Door :
-    public ajn::BusObject {
+    public BusObject {
   public:
-    Door(BusAttachment& ba);
+    Door(BusAttachment* ba);
 
     ~Door() { }
 
@@ -86,14 +87,14 @@ class Door :
     bool open; //open = true, close = false
     const InterfaceDescription::Member* stateSignal;
 
-    void Open(const ajn::InterfaceDescription::Member* member,
-              ajn::Message& msg);
+    void Open(const InterfaceDescription::Member* member,
+              Message& msg);
 
-    void Close(const ajn::InterfaceDescription::Member* member,
-               ajn::Message& msg);
+    void Close(const InterfaceDescription::Member* member,
+               Message& msg);
 
-    void GetState(const ajn::InterfaceDescription::Member* member,
-                  ajn::Message& msg);
+    void GetState(const InterfaceDescription::Member* member,
+                  Message& msg);
 
     void SendDoorEvent(bool newState);
 
@@ -104,26 +105,28 @@ class Door :
 class DoorCommon {
   public:
     DoorCommon(const char* appName) :
-        ba(appName, true), appName(appName), aboutData("en"), aboutObj(ba)
+        ba(new BusAttachment(appName, true)), appName(appName), aboutData("en"), aboutObj(new AboutObj(*ba))
     {
     }
 
     ~DoorCommon();
 
-    QStatus init(const char* keyStoreName,
+    QStatus Init(const char* keyStoreName,
                  bool provider);
+
+    QStatus Fini();
 
     const InterfaceDescription::Member* GetDoorSignal()
     {
-        return ba.GetInterface(DOOR_INTERFACE)->GetMember(DOOR_STATE_CHANGED);
+        return ba->GetInterface(DOOR_INTERFACE)->GetMember(DOOR_STATE_CHANGED);
     }
 
-    BusAttachment& GetBusAttachment()
+    BusAttachment* GetBusAttachment()
     {
         return ba;
     }
 
-    void AnnounceAbout();
+    QStatus AnnounceAbout();
 
   private:
     QStatus CreateInterface();
@@ -132,13 +135,13 @@ class DoorCommon {
 
     QStatus SetAboutData();
 
-    BusAttachment ba;
+    BusAttachment* ba;
     const char* appName;
     AboutData aboutData;
-    AboutObj aboutObj;
+    AboutObj* aboutObj;
 };
 }
 }
 }
 
-#endif /* SAMPLE_DOOR_COMMON_H_ */
+#endif /* ALLJOYN_SECMGR_SAMPLE_DOOR_COMMON_H_ */

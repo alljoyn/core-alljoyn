@@ -14,20 +14,22 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#ifndef SQLSTORAGECONFIG_H_
-#define SQLSTORAGECONFIG_H_
+#ifndef ALLJOYN_SECMGR_STORAGE_SQLSTORAGECONFIG_H_
+#define ALLJOYN_SECMGR_STORAGE_SQLSTORAGECONFIG_H_
 
-#include <qcc/String.h>
 #include <map>
+#include <string>
 
 #define DEFAULT_STORAGE_FILENAME "secmgrstorage.db"
 #define STORAGE_FILEPATH_KEY "STORAGE_PATH"
 
+using namespace std;
+
 namespace ajn {
 namespace securitymgr {
 struct SQLStorageConfig {
-    std::map<qcc::String, qcc::String> settings;
+    map<string, string> settings;
 };
 }
 }
-#endif /* SQLSTORAGECONFIG_H_ */
+#endif /* ALLJOYN_SECMGR_STORAGE_SQLSTORAGECONFIG_H_ */

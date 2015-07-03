@@ -23,6 +23,8 @@
 #endif
 
 using namespace ajn;
+using namespace qcc;
+using namespace std;
 
 namespace sample {
 namespace securitymgr {
@@ -66,12 +68,12 @@ void DoorAuthListener::AuthenticationComplete(const char* authMechanism, const c
     printf("AuthenticationComplete %s\n", authMechanism);
 }
 
-Door::Door(BusAttachment& ba) :
-    ajn::BusObject(DOOR_OBJECT_PATH), open(false)
+Door::Door(BusAttachment* ba) :
+    BusObject(DOOR_OBJECT_PATH), open(false)
 {
-    const InterfaceDescription* secPermIntf = ba.GetInterface(DOOR_INTERFACE);
+    const InterfaceDescription* secPermIntf = ba->GetInterface(DOOR_INTERFACE);
     assert(secPermIntf);
-    AddInterface(*secPermIntf);
+    AddInterface(*secPermIntf, ANNOUNCED);
 
     /* Register the method handlers with the object */
     const MethodEntry methodEntries[] = {
@@ -93,7 +95,7 @@ void Door::SendDoorEvent(bool newState)
 /*
     MsgArg outArg;
     outArg.Set("b", &newState);
-    Signal(NULL, SESSION_ID_ALL_HOSTED, *stateSignal, &outArg, 1, 0, 0,  NULL);
+    Signal(nullptr, SESSION_ID_ALL_HOSTED, *stateSignal, &outArg, 1, 0, 0,  nullptr);
  */
 }
 
@@ -119,8 +121,8 @@ void Door::Open(const InterfaceDescription::Member* member, Message& msg)
     ReplyWithBoolean(true, msg);
 }
 
-void Door::Close(const ajn::InterfaceDescription::Member* member,
-                 ajn::Message& msg)
+void Door::Close(const InterfaceDescription::Member* member,
+                 Message& msg)
 {
     QCC_UNUSED(member);
 
@@ -143,8 +145,8 @@ QStatus Door::Get(const char* ifcName, const char* propName, MsgArg& val)
     return ER_BUS_NO_SUCH_PROPERTY;
 }
 
-void Door::GetState(const ajn::InterfaceDescription::Member* member,
-                    ajn::Message& msg)
+void Door::GetState(const InterfaceDescription::Member* member,
+                    Message& msg)
 {
     QCC_UNUSED(member);
 
@@ -154,13 +156,13 @@ void Door::GetState(const ajn::InterfaceDescription::Member* member,
 
 QStatus DoorCommon::CreateInterface()
 {
-    InterfaceDescription* doorIntf = NULL;
-    QStatus status = ba.CreateInterface(DOOR_INTERFACE, doorIntf, DOOR_INTF_SECURE ? AJ_IFC_SECURITY_REQUIRED : 0);
+    InterfaceDescription* doorIntf = nullptr;
+    QStatus status = ba->CreateInterface(DOOR_INTERFACE, doorIntf, DOOR_INTF_SECURE ? AJ_IFC_SECURITY_REQUIRED : 0);
     if (ER_OK == status) {
         printf("Interface created.\n");
-        doorIntf->AddMethod(DOOR_OPEN, NULL, "b", "success");
-        doorIntf->AddMethod(DOOR_CLOSE, NULL, "b", "success");
-        doorIntf->AddMethod(DOOR_GET_STATE, NULL, "b", "state");
+        doorIntf->AddMethod(DOOR_OPEN, nullptr, "b", "success");
+        doorIntf->AddMethod(DOOR_CLOSE, nullptr, "b", "success");
+        doorIntf->AddMethod(DOOR_GET_STATE, nullptr, "b", "state");
         doorIntf->AddSignal(DOOR_STATE_CHANGED, "b", "state");
         doorIntf->AddProperty(DOOR_STATE, "b", PROP_ACCESS_RW);
         doorIntf->Activate();
@@ -173,14 +175,14 @@ QStatus DoorCommon::CreateInterface()
 
 QStatus DoorCommon::SetAboutData()
 {
-    qcc::GUID128 appId;
+    GUID128 appId;
     aboutData.SetAppId(appId.ToString().c_str());
 
     char buf[64];
     gethostname(buf, sizeof(buf));
     aboutData.SetDeviceName(buf);
 
-    qcc::GUID128 deviceId;
+    GUID128 deviceId;
     aboutData.SetDeviceId(deviceId.ToString().c_str());
 
     aboutData.SetAppName(appName);
@@ -193,18 +195,27 @@ QStatus DoorCommon::SetAboutData()
     aboutData.SetSupportUrl("http://www.alljoyn.org");
 
     if (!aboutData.IsValid()) {
-        std::cerr << "Invalid about data." << std::endl;
+        cerr << "Invalid about data." << endl;
         return ER_FAIL;
     }
     return ER_OK;
 }
 
-void DoorCommon::AnnounceAbout()
+QStatus DoorCommon::AnnounceAbout()
 {
-    aboutObj.Announce(DOOR_APPLICATION_PORT, aboutData);
+    QStatus status = SetAboutData();
+    if (ER_OK != status) {
+        cerr << "Failed to set about data = " << QCC_StatusText(status) << endl;
+    }
+
+    status = aboutObj->Announce(DOOR_APPLICATION_PORT, aboutData);
+    if (ER_OK != status) {
+        cerr << "Announcing about failed with status = " << QCC_StatusText(status) << endl;
+    }
+    return status;
 }
 
-QStatus DoorCommon::init(const char* keyStoreName, bool provider)
+QStatus DoorCommon::Init(const char* keyStoreName, bool provider)
 {
     QStatus status = CreateInterface();
 
@@ -212,22 +223,22 @@ QStatus DoorCommon::init(const char* keyStoreName, bool provider)
         return status;
     }
 
-    status = ba.Start();
+    status = ba->Start();
     if (status != ER_OK) {
         return status;
     }
 
-    status = ba.Connect();
+    status = ba->Connect();
     if (status != ER_OK) {
         return status;
     }
 
-    status = ba.EnablePeerSecurity(KEYX_ECDHE_DSA " " KEYX_ECDHE_NULL, new DoorAuthListener(), keyStoreName);
+    status = ba->EnablePeerSecurity(KEYX_ECDHE_DSA " " KEYX_ECDHE_NULL, new DoorAuthListener(), keyStoreName);
     if (status != ER_OK) {
         return status;
     }
 
-    PermissionPolicy::Rule::Member* member = new  ajn::PermissionPolicy::Rule::Member[1];
+    PermissionPolicy::Rule::Member* member = new  PermissionPolicy::Rule::Member[1];
     member->SetMemberName("*");
     uint8_t mask = (provider ? PermissionPolicy::Rule::Member::ACTION_PROVIDE | 0 // | 0 was added to avoid an undefined reference at link time
                     : PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
@@ -237,17 +248,31 @@ QStatus DoorCommon::init(const char* keyStoreName, bool provider)
     PermissionPolicy::Rule* manifestRule = new PermissionPolicy::Rule[1];
     manifestRule->SetInterfaceName(DOOR_INTERFACE);
     manifestRule->SetMembers(1, member);
-    status = ba.GetPermissionConfigurator().SetPermissionManifest(manifestRule, 1);
+    status = ba->GetPermissionConfigurator().SetPermissionManifest(manifestRule, 1);
     if (status != ER_OK) {
         return status;
     }
 
-    status = SetAboutData();
+    return status;
+}
+
+QStatus DoorCommon::Fini()
+{
+    // empty string as authMechanism to avoid resetting keyStore
+    QStatus status = ba->EnablePeerSecurity("", nullptr, nullptr, true);
     if (status != ER_OK) {
-        return status;
+        cerr << "Failed to disable peer security at destruction..." << endl;
     }
 
-    AnnounceAbout();
+    delete aboutObj;
+    aboutObj = nullptr;
+
+    ba->Disconnect();
+    ba->Stop();
+    ba->Join();
+
+    delete ba;
+    ba = nullptr;
 
     return status;
 }

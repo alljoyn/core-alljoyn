@@ -15,13 +15,16 @@
  ******************************************************************************/
 
 #include "door_common.h"
-#include <qcc/Crypto.h>
-#include <qcc/String.h>
-#include <alljoyn/Init.h>
+
 #include <vector>
+
+#include <qcc/Crypto.h>
+
+#include <alljoyn/Init.h>
 
 using namespace sample::securitymgr::door;
 using namespace ajn;
+using namespace std;
 
 class SPListener :
     public SessionPortListener {
@@ -52,36 +55,47 @@ int main(int arg, char** argv)
 
     //Do the common set-up
     DoorCommon common("DoorProvider");     //TODO make name commandline param
-    QStatus status = common.init("/tmp/provdb.ks", true); //TODO allow keystore to be defined from cmdline
+    QStatus status = common.Init("/tmp/provdb.ks", true); //TODO allow keystore to be defined from cmdline
     SessionOpts opts;
     SessionPort port = DOOR_APPLICATION_PORT;
     SPListener spl;
+    BusAttachment* ba = common.GetBusAttachment();;
 
     do {
         if (status != ER_OK) {
             break;
         }
-
-        BusAttachment& ba = common.GetBusAttachment();
         //Create bus object
         Door door(ba);
 
-        status = ba.RegisterBusObject(door, DOOR_INTF_SECURE ? true : false);
-        if (status != ER_OK) {
+        status = ba->RegisterBusObject(door, DOOR_INTF_SECURE ? true : false);
+        if (ER_OK != status) {
+            printf("Failed to RegisterBusObject\n");
             break;
         }
 
-        common.AnnounceAbout();
-
         //Host session
-        ba.BindSessionPort(port, opts, spl);
+        status = ba->BindSessionPort(port, opts, spl);
+        if (ER_OK != status) {
+            printf("Failed to BindSesssionPort\n");
+            break;
+        }
+
+        // Announce about
+        status = common.AnnounceAbout();
+        if (ER_OK != status) {
+            printf("Failed to announce about\n");
+            break;
+        }
 
         printf("Door provider initialized; Waiting for consumers ...");
         printf("Type 'q' to quit\n");
 
-        while ((std::cin.get()) != 'q') {
+        while ((cin.get()) != 'q') {
         }
     } while (0);
+
+    common.Fini();
 
 #ifdef ROUTER
     AllJoynRouterShutdown();

@@ -1,5 +1,0 @@
-
-rootProject.name = "alljoyn-securitymgr-samples"
-
-include "SecurityMgrSampleApp"
-

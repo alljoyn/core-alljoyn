@@ -49,30 +49,30 @@ QStatus Stub::GenerateManifest(PermissionPolicy::Rule** retRules, size_t* count)
 
 Stub::Stub(ClaimListener* cl,
            bool dsa) :
-    ba("mystub", true), pm(NULL), aboutData("en"), aboutObj(ba), opts(SessionOpts::TRAFFIC_MESSAGES,
-                                                                      false,
-                                                                      SessionOpts::PROXIMITY_ANY,
-                                                                      TRANSPORT_ANY), port(APPLICATION_PORT)
+    ba("mystub", true), pm(nullptr), aboutData("en"), aboutObj(ba), opts(SessionOpts::TRAFFIC_MESSAGES,
+                                                                         false,
+                                                                         SessionOpts::PROXIMITY_ANY,
+                                                                         TRANSPORT_ANY), port(APPLICATION_PORT)
 {
     do {
         /* Call static function to create the PermissionMgmt interface */
         if (PermissionMgmt::CreateInterface(ba) != ER_OK) {
-            std::cerr << "Could not create interface" << std::endl;
+            cerr << "Could not create interface" << endl;
             break;
         }
 
         if (ba.Start() != ER_OK) {
-            std::cerr << "Could not start" << std::endl;
+            cerr << "Could not start" << endl;
             break;
         }
 
         if (ba.Connect() != ER_OK) {
-            std::cerr << "Could not connect" << std::endl;
+            cerr << "Could not connect" << endl;
             break;
         }
 
         if (ba.BindSessionPort(port, opts, spl) != ER_OK) {
-            std::cout << "Could not bind session port" << std::endl;
+            cout << "Could not bind session port" << endl;
             break;
         }
 
@@ -80,7 +80,7 @@ Stub::Stub(ClaimListener* cl,
         snprintf(guid, sizeof(guid), "A0%X%026X", rand(), rand());         /* yes, I know this is not a real guid - good enough for a stub */
 
         if (AdvertiseApplication(guid) != ER_OK) {
-            std::cerr << "Could not advertise" << std::endl;
+            cerr << "Could not advertise" << endl;
             break;
         }
 
@@ -89,7 +89,7 @@ Stub::Stub(ClaimListener* cl,
         if (ER_OK !=
             ba.EnablePeerSecurity(dsa ? ECDHE_KEYX : ECDHE_KEYX " " KEYX_ECDHE_NULL, new ECDHEKeyXListener(),
                                   STUB_KEYSTORE, false)) {
-            std::cerr << "BusAttachment::EnablePeerSecurity failed." << std::endl;
+            cerr << "BusAttachment::EnablePeerSecurity failed." << endl;
             break;
         }
 
@@ -114,12 +114,12 @@ Stub::~Stub()
 QStatus Stub::OpenClaimWindow()
 {
     QStatus status = ER_FAIL;
-    if (ajn::PermissionConfigurator::STATE_CLAIMED == pm->GetClaimableState()) {
-        std::cerr << "Application is already claimed by a RoT" << std::endl;
+    if (PermissionConfigurator::CLAIMED == pm->GetClaimableState()) {
+        cerr << "Application is already claimed by a RoT" << endl;
         return status;
     }
-    if (ajn::PermissionConfigurator::STATE_CLAIMABLE == pm->GetClaimableState()) {
-        std::cerr << "Claim window already open" << std::endl;
+    if (PermissionConfigurator::CLAIMABLE == pm->GetClaimableState()) {
+        cerr << "Claim window already open" << endl;
         return status;
     }
 
@@ -132,8 +132,8 @@ QStatus Stub::OpenClaimWindow()
 QStatus Stub::CloseClaimWindow()
 {
     QStatus status = ER_FAIL;
-    if ((0 != pm->GetRoTKeys().size()) || (ajn::PermissionConfigurator::STATE_CLAIMED == pm->GetClaimableState())) {
-        std::cerr << "Claim window already closed" << std::endl;
+    if ((0 != pm->GetRoTKeys().size()) || (PermissionConfigurator::CLAIMED == pm->GetClaimableState())) {
+        cerr << "Claim window already closed" << endl;
         return status;
     }
 
@@ -151,7 +151,7 @@ QStatus Stub::SetAboutData(AboutData& aboutData, const char* guid)
     gethostname(buf, sizeof(buf));
     aboutData.SetDeviceName(buf);
 
-    qcc::GUID128 deviceId;
+    GUID128 deviceId;
     aboutData.SetDeviceId(deviceId.ToString().c_str());
 
     aboutData.SetAppName("Security Stub");
@@ -164,7 +164,7 @@ QStatus Stub::SetAboutData(AboutData& aboutData, const char* guid)
     aboutData.SetSupportUrl("http://www.alljoyn.org");
 
     if (!aboutData.IsValid()) {
-        std::cerr << "Invalid about data." << std::endl;
+        cerr << "Invalid about data." << endl;
         return ER_FAIL;
     }
     return ER_OK;
@@ -174,18 +174,18 @@ QStatus Stub::AdvertiseApplication(const char* guid)
 {
     QStatus status = SetAboutData(aboutData, guid);
     if (status != ER_OK) {
-        std::cerr << "Could not set AboutData" << std::endl;
+        cerr << "Could not set AboutData" << endl;
         return status;
     }
 
     status = aboutObj.Announce(APPLICATION_PORT, aboutData);
     if (status != ER_OK) {
-        std::cerr << "Announcing stub failed with status = " << QCC_StatusText(status) << std::endl;
+        cerr << "Announcing stub failed with status = " << QCC_StatusText(status) << endl;
     }
     return status;
 }
 
-std::map<GUID128, qcc::String> Stub::GetMembershipCertificates() const
+map<GUID128, string> Stub::GetMembershipCertificates() const
 {
     return pm->GetMembershipCertificates();
 }
@@ -195,9 +195,10 @@ QStatus Stub::Reset()
     // The following implementation does not seem to work.
     ba.ClearKeyStore();
     // This work-around seems to do the trick :)
-    qcc::String fname = GetHomeDir();
+    string fname = GetHomeDir().c_str();
     fname.append("/");
     fname.append(STUB_KEYSTORE);
+    cerr << "Resetting stub fname : " << fname.c_str() << "\n";
     if (0 == (remove(fname.c_str()))) {
         return ER_OK;
     } else {

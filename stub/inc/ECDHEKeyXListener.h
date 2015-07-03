@@ -18,6 +18,7 @@
 #define ECDHEKEYXLISTENER_H_
 
 #include <qcc/CryptoECC.h>
+
 #include <alljoyn/AuthListener.h>
 
 using namespace ajn;
