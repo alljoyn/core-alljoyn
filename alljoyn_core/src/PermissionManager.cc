@@ -314,7 +314,11 @@ static bool IsPeerQualifiedForAcl(const PermissionPolicy::Acl& acl, PeerState& p
             for (_PeerState::GuildMap::iterator it = peerState->guildMap.begin(); it != peerState->guildMap.end(); it++) {
                 _PeerState::GuildMetadata* metadata = it->second;
                 if (metadata->certChain.size() > 0) {
-                    if (peers[idx].GetSecurityGroupId() == metadata->certChain[0]->GetGuild()) {
+                    if (metadata->certChain[0]->GetType() != CertificateX509::MEMBERSHIP_CERTIFICATE) {
+                        continue;
+                    }
+                    MembershipCertificate* membershipCert = (MembershipCertificate*) metadata->certChain[0];
+                    if (peers[idx].GetSecurityGroupId() == membershipCert->GetGuild()) {
                         return true;
                     }
                 }
@@ -406,8 +410,9 @@ static bool IsAuthorized(const MessageHolder& msgHolder, const PermissionPolicy*
             _PeerState::GuildMetadata* metadata = it->second;
             if (metadata->certChain.size() == 0) {
                 QCC_DbgPrintf(("Peer has no membership"));
-            } else {
-                QCC_DbgPrintf(("Peer membership guid %s", metadata->certChain[0]->GetGuild().ToString().c_str()));
+            } else if (metadata->certChain[0]->GetType() == CertificateX509::MEMBERSHIP_CERTIFICATE) {
+                MembershipCertificate* membershipCert = (MembershipCertificate*) metadata->certChain[0];
+                QCC_DbgPrintf(("Peer membership guid %s", membershipCert->GetGuild().ToString().c_str()));
             }
         }
 #endif

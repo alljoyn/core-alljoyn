@@ -1528,9 +1528,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(adminBus, &claimedPubKey);
         EXPECT_EQ(ER_OK, status) << "  InstallOthersMembershipToConsumer RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
         qcc::String subjectCN(consumerGUID.ToString());
-        status = PermissionMgmtTestHelper::InstallMembership(membershipSerial1, adminBus, serviceBus.GetUniqueName(), adminBus, subjectCN, &claimedPubKey, membershipGUID1);
-
-        EXPECT_EQ(ER_OK, status) << "  InstallOthersMembershipToConsumer InstallMembership failed.  Actual Status: " << QCC_StatusText(status);
+        EXPECT_NE(ER_OK, PermissionMgmtTestHelper::InstallMembership(membershipSerial1, adminBus, serviceBus.GetUniqueName(), adminBus, subjectCN, &claimedPubKey, membershipGUID1)) << "  InstallOthersMembershipToConsumer InstallMembership is supposed to failed.";
     }
 
     /**
@@ -2228,7 +2226,7 @@ TEST_F(PermissionMgmtUseCaseTest, InstallIdentityCertWithBadManifestDigest)
 }
 
 /*
- *  Case: claiming, install policy, install wrong membership, and fail access
+ *  Case: claiming, install policy, install wrong membership
  */
 TEST_F(PermissionMgmtUseCaseTest, SendingOthersMembershipCert)
 {
@@ -2240,11 +2238,6 @@ TEST_F(PermissionMgmtUseCaseTest, SendingOthersMembershipCert)
     delete policy;
 
     InstallOthersMembershipToConsumer();
-    /* setup the application interfaces for access tests */
-    CreateAppInterfaces(serviceBus, true);
-    CreateAppInterfaces(consumerBus, false);
-
-    ConsumerCannotTurnTVUp();
 }
 
 TEST_F(PermissionMgmtUseCaseTest, AccessNotAuthorizedBecauseOfWrongActionMask)

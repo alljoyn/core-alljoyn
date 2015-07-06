@@ -78,7 +78,7 @@ class _PeerState {
     size_t manifestSize;
 
     struct GuildMetadata {
-        std::vector<qcc::MembershipCertificate*> certChain;
+        std::vector<qcc::CertificateX509*> certChain;
 
         GuildMetadata()
         {
@@ -86,7 +86,7 @@ class _PeerState {
 
         ~GuildMetadata()
         {
-            for (std::vector<qcc::MembershipCertificate*>::iterator it = certChain.begin(); it != certChain.end(); it++) {
+            for (std::vector<qcc::CertificateX509*>::iterator it = certChain.begin(); it != certChain.end(); it++) {
                 delete *it;
             }
             certChain.clear();

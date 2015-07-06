@@ -119,15 +119,15 @@ class CertificateX509 {
     } EncodingType;
 
     typedef enum {
-        UNKNOWN_CERTIFICATE,
-        IDENTITY_CERTIFICATE,
-        MEMBERSHIP_CERTIFICATE
+        UNRESTRICTED_CERTIFICATE,  ///< Unrestricted certificate
+        IDENTITY_CERTIFICATE,      ///< identity certificate
+        MEMBERSHIP_CERTIFICATE     ///< membership certificate
     } CertificateType;
 
     /**
      * Default Constructor
      */
-    CertificateX509() : type(UNKNOWN_CERTIFICATE), encodedLen(0), encoded(NULL), serialLen(0), serial(NULL), ca(0)
+    CertificateX509() : type(UNRESTRICTED_CERTIFICATE), serialLen(0), serial(NULL), ca(0)
     {
     }
 
@@ -135,7 +135,7 @@ class CertificateX509 {
      * Constructor
      * @param type the certificate type.
      */
-    CertificateX509(CertificateType type) : type(type), encodedLen(0), encoded(NULL), serialLen(0), serial(NULL), ca(0)
+    CertificateX509(CertificateType type) : type(type), serialLen(0), serial(NULL), ca(0)
     {
     }
 
@@ -310,8 +310,12 @@ class CertificateX509 {
     {
         serialLen = len;
         delete[] this->serial;
-        this->serial = new uint8_t[serialLen];
-        memcpy(this->serial, serial, serialLen);
+        if ((serialLen > 0) && serial) {
+            this->serial = new uint8_t[serialLen];
+            memcpy(this->serial, serial, serialLen);
+        } else {
+            this->serial = NULL;
+        }
     }
 
     /**
@@ -562,26 +566,6 @@ class CertificateX509 {
     }
 
     /**
-     * Get the encoded bytes for the certificate
-     * @return the encoded bytes
-     */
-    const uint8_t* GetEncoded();
-
-    /**
-     * Get the length of the encoded bytes for the certificate
-     * @return the length of the encoded bytes
-     */
-    size_t GetEncodedLen();
-
-    /**
-     * Load the encoded bytes for the certificate
-     * @param encodedBytes the encoded bytes
-     * @param len the length of the encoded bytes
-     * @return ER_OK for success; otherwise, error code.
-     */
-    QStatus LoadEncoded(const uint8_t* encodedBytes, size_t len);
-
-    /**
      * Get the PEM encoded bytes for the certificate
      * @return the PEM encoded bytes
      */
@@ -638,7 +622,6 @@ class CertificateX509 {
      */
     virtual ~CertificateX509()
     {
-        delete [] encoded;
         delete [] serial;
     }
 
@@ -662,19 +645,12 @@ class CertificateX509 {
      * @param[in] other    CertificateX509 to copy
      */
     CertificateX509(const CertificateX509& other) :
-        type(other.type), tbs(other.tbs), encodedLen(other.encodedLen),
-        serialLen(other.serialLen), issuer(other.issuer), subject(other.subject),
+        type(other.type), tbs(other.tbs),
+        issuer(other.issuer), subject(other.subject),
         validity(other.validity), publickey(other.publickey),
         signature(other.signature), ca(other.ca), digest(other.digest),
         subjectAltName(other.subjectAltName), aki(other.aki) {
-        encoded = new uint8_t[encodedLen];
-        memcpy(encoded, other.encoded, encodedLen);
-        if (other.serial) {
-            serial = new uint8_t[serialLen];
-            memcpy(serial, other.serial, serialLen);
-        } else {
-            serial = NULL;
-        }
+        SetSerial(other.serial, other.serialLen);
     }
 
     /**
@@ -686,17 +662,8 @@ class CertificateX509 {
         if (&other != this) {
             type = other.type;
             tbs = other.tbs;
-            encodedLen = other.encodedLen;
-            delete[] encoded;
-            encoded = new uint8_t[encodedLen];
-            memcpy(encoded, other.encoded, encodedLen);
-            if (other.serial) {
-                SetSerial(other.serial, other.serialLen);
-            } else {
-                delete[] serial;
-                serial = NULL;
-                serialLen = 0;
-            }
+
+            SetSerial(other.serial, other.serialLen);
             issuer = other.issuer;
             subject = other.subject;
             validity = other.validity;
@@ -710,6 +677,17 @@ class CertificateX509 {
         }
         return *this;
     }
+
+    /**
+     * Validate the certificate type of each cert in the certificate chain.
+     * The end-entity cert must have a type.
+     * Any signing cert in the chain must have the same type or unrestricted
+     * type in order to sign the next cert in the chain.
+     * @param[in] certChain the array of certs.
+     * @param[in] count the number of certs
+     * @return true if valid; false, otherwise;
+     */
+    static bool AJ_CALL ValidateCertificateTypeInCertChain(const CertificateX509* certChain, size_t count);
 
   private:
 
@@ -778,12 +756,9 @@ class CertificateX509 {
     QStatus EncodeCertificateExt(qcc::String& ext) const;
     QStatus DecodeCertificateSig(const qcc::String& sig);
     QStatus EncodeCertificateSig(qcc::String& sig) const;
-    QStatus GenEncoded();
 
     CertificateType type;
     qcc::String tbs;
-    size_t encodedLen;
-    uint8_t* encoded;
 
     size_t serialLen;
     uint8_t* serial;
@@ -804,7 +779,7 @@ class CertificateX509 {
 class MembershipCertificate : public CertificateX509 {
 
   public:
-    MembershipCertificate() : CertificateX509(MEMBERSHIP_CERTIFICATE), guildGUID(0), guildSet(false)
+    MembershipCertificate() : CertificateX509(MEMBERSHIP_CERTIFICATE)
     {
     }
     /**
@@ -821,7 +796,7 @@ class MembershipCertificate : public CertificateX509 {
      */
     bool IsGuildSet() const
     {
-        return guildSet;
+        return GetSubjectAltName().size() > 0;
     }
 
     /**
@@ -830,31 +805,28 @@ class MembershipCertificate : public CertificateX509 {
      */
     void SetGuild(const qcc::GUID128& guid)
     {
-        guildGUID = guid;
         qcc::String sgId((const char*) guid.GetBytes(), guid.SIZE);
         SetSubjectAltName(sgId);
-        guildSet = true;
     }
 
     /**
      * Get the guild GUID
      * @return the guild GUID
      */
-    const qcc::GUID128& GetGuild()
+    GUID128 GetGuild() const
     {
-        if (!guildSet) {
-            qcc::String sgId = GetSubjectAltName();
-            if (sgId.size() > 0) {
-                guildGUID.SetBytes((const uint8_t*) sgId.data());
-                guildSet = true;
-            }
+        GUID128 guid(0);
+        qcc::String sgId = GetSubjectAltName();
+        if (sgId.size() == GUID128::SIZE) {
+            guid.SetBytes((const uint8_t*) sgId.data());
+        } else if (sgId.size() > 0) {
+            uint8_t bytes[GUID128::SIZE];
+            memset(bytes, 0, GUID128::SIZE);
+            memcpy(bytes, sgId.data(), sgId.size() > GUID128::SIZE ? GUID128::SIZE : sgId.size());
+            guid.SetBytes(bytes);
         }
-        return guildGUID;
+        return guid;
     }
-
-  private:
-    qcc::GUID128 guildGUID;
-    bool guildSet;
 };
 
 class IdentityCertificate : public CertificateX509 {

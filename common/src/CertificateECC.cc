@@ -685,15 +685,17 @@ QStatus CertificateX509::EncodeCertificateExt(qcc::String& ext) const
         QCC_LogError(status, ("Error decoding certificate basic constraint"));
         return status;
     }
-    tmp.clear();
-    status = Crypto_ASN1::Encode(tmp, "(i)", (uint32_t) type);
-    if (ER_OK != status) {
-        return status;
-    }
-    oid = OID_CUSTOM_CERT_TYPE;
-    status = Crypto_ASN1::Encode(raw, "(ox)", &oid, &tmp);
-    if (ER_OK != status) {
-        return status;
+    if (type != UNRESTRICTED_CERTIFICATE) {
+        tmp.clear();
+        status = Crypto_ASN1::Encode(tmp, "(i)", (uint32_t) type);
+        if (ER_OK != status) {
+            return status;
+        }
+        oid = OID_CUSTOM_CERT_TYPE;
+        status = Crypto_ASN1::Encode(raw, "(ox)", &oid, &tmp);
+        if (ER_OK != status) {
+            return status;
+        }
     }
     if (subjectAltName.size()) {
         qcc::String octet;
@@ -1147,47 +1149,6 @@ String CertificateX509::ToString() const
     return str;
 }
 
-QStatus CertificateX509::GenEncoded()
-{
-    delete [] encoded;
-    encoded = NULL;
-    encodedLen = 0;
-    String der;
-    QStatus status = EncodeCertificateDER(der);
-    if (ER_OK != status) {
-        return status;
-    }
-    encodedLen = der.length();
-    encoded = new uint8_t[encodedLen];
-    if (!encoded) {
-        return ER_OUT_OF_MEMORY;
-    }
-    memcpy(encoded, der.data(), encodedLen);
-    return ER_OK;
-}
-
-const uint8_t* CertificateX509::GetEncoded()
-{
-    if (encodedLen == 0) {
-        GenEncoded();
-    }
-    return encoded;
-}
-
-size_t CertificateX509::GetEncodedLen()
-{
-    if (encodedLen == 0) {
-        GenEncoded();
-    }
-    return encodedLen;
-}
-
-QStatus CertificateX509::LoadEncoded(const uint8_t* encodedBytes, size_t len)
-{
-    String der((const char*) encodedBytes, len);
-    return DecodeCertificateDER(der);
-}
-
 String CertificateX509::GetPEM()
 {
     String pem;
@@ -1272,5 +1233,30 @@ bool CertificateX509::IsSubjectPublicKeyEqual(const ECCPublicKey* publicKey) con
     return ((*(this->GetSubjectPublicKey())) == (*publicKey));
 }
 
+bool CertificateX509::ValidateCertificateTypeInCertChain(const CertificateX509* certChain, size_t count)
+{
+    if ((count == 0) || !certChain) {
+        return false;
+    }
+    /* leaf cert must have a type */
+    if (certChain[0].GetType() == CertificateX509::UNRESTRICTED_CERTIFICATE) {
+        return false;
+    }
+    if (count == 1) {
+        return true;
+    }
+
+    /**
+     * Any signing cert in the chain must have the same type or unrestricted
+     * type in order to sign the next cert in the chain.
+     */
+    for (size_t cnt = 1; cnt < count; cnt++) {
+        if ((certChain[cnt].GetType() != CertificateX509::UNRESTRICTED_CERTIFICATE) &&
+            (certChain[cnt].GetType() != certChain[cnt - 1].GetType())) {
+            return false;
+        }
+    }
+    return true;
+}
 
 }

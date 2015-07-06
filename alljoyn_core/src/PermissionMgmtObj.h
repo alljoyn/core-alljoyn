@@ -195,7 +195,7 @@ class PermissionMgmtObj : public BusObject {
      * @param certChain the membership cert chain
      * return true if it is an admin security group; false, otherwise.
      */
-    bool IsAdminGroup(const std::vector<qcc::MembershipCertificate*> certChain);
+    bool IsAdminGroup(const std::vector<qcc::CertificateX509*> certChain);
 
     /**
      * Called by the message bus when the object has been successfully registered. The object can
@@ -491,6 +491,17 @@ class PermissionMgmtObj : public BusObject {
      */
     QStatus GetClaimCapabilityAdditionalInfo(PermissionConfigurator::ClaimCapabilityAdditionalInfo& additionalInfo);
 
+    /**
+     * Store a membership certificate chain.
+     * @param certChain the array of CertificateX509 objects in the chain.
+     * @param count the size of the certificate chain.
+     *
+     * @return
+     *  - #ER_OK if successful
+     *  - an error status indicating failure
+     */
+    QStatus StoreMembership(const qcc::CertificateX509* certChain, size_t count);
+
   protected:
     void Claim(const InterfaceDescription::Member* member, Message& msg);
     BusAttachment& bus;
@@ -576,7 +587,7 @@ class PermissionMgmtObj : public BusObject {
     QStatus StoreConfiguration(const Configuration& config);
     QStatus GetConfiguration(Configuration& config);
     QStatus PerformReset(bool keepForClaim);
-    QStatus SameSubjectPublicKey(qcc::CertificateX509& cert, bool& outcome);
+    QStatus SameSubjectPublicKey(const qcc::CertificateX509& cert, bool& outcome);
     bool IsTrustAnchor(const qcc::ECCPublicKey* publicKey);
     QStatus ManageMembershipTrustAnchors(PermissionPolicy* policy);
     QStatus GetDSAPrivateKey(qcc::ECCPrivateKey& privateKey);

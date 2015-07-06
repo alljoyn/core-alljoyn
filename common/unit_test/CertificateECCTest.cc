@@ -803,6 +803,8 @@ TEST_F(CertificateECCTest, SubjectAltNameInExternalGeneratedCert)
     CertificateX509 cert3;
     EXPECT_EQ(ER_OK, cert3.LoadPEM(pem3)) << " load external cert PEM failed.";
     EXPECT_TRUE(cert3.GetSubjectAltName().empty()) << " cert subject alt name is supposed to be empty.";
+    EXPECT_EQ(CertificateX509::UNRESTRICTED_CERTIFICATE, cert3.GetType()) << " cert type is supposed to be unrestricted";
+
 }
 
 TEST_F(CertificateECCTest, SubjectAltNameInIdentityCert)
@@ -867,4 +869,575 @@ TEST_F(CertificateECCTest, TestIsIssuerOf)
     EXPECT_TRUE(cert2.IsIssuerOf(cert2));
     EXPECT_FALSE(cert1.IsIssuerOf(cert2));
     EXPECT_FALSE(cert2.IsIssuerOf(cert1));
+}
+
+/**
+ * Test the certificate types in the chain of certs: identity, identity
+ */
+TEST_F(CertificateECCTest, TestValidTypeInCertChain_II)
+{
+    CertificateX509::ValidPeriod validity;
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + 24 * 3600;
+
+    qcc::GUID128 subject1;
+    Crypto_ECC ecc1;
+    ecc1.GenerateDSAKeyPair();
+    IdentityCertificate cert1;
+
+    /* self signed cert */
+    ASSERT_EQ(ER_OK, CreateCert("1010101", subject1, "organization", ecc1.GetDSAPrivateKey(), ecc1.GetDSAPublicKey(), subject1, ecc1.GetDSAPublicKey(), validity, cert1)) << " GenKeyAndCreateCert failed.";
+
+    qcc::GUID128 subject0;
+    Crypto_ECC ecc0;
+    ecc0.GenerateDSAKeyPair();
+    IdentityCertificate cert0;
+
+    /* leaf cert signed by cert1 */
+    ASSERT_EQ(ER_OK, CreateCert("2020202", subject1, "organization", ecc1.GetDSAPrivateKey(), ecc1.GetDSAPublicKey(), subject0, ecc0.GetDSAPublicKey(), validity, cert0)) << " GenKeyAndCreateCert failed.";
+
+    CertificateX509 certs[2];
+    certs[0] = cert0;
+    certs[1] = cert1;
+
+    EXPECT_TRUE(CertificateX509::ValidateCertificateTypeInCertChain(certs, 2)) << " The certificate type constraint is not valid.";
+}
+
+/**
+ * Test the certificate types in the chain of certs: membership, membership
+ */
+TEST_F(CertificateECCTest, TestValidTypeInCertChain_MM)
+{
+    CertificateX509::ValidPeriod validity;
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + 24 * 3600;
+
+    qcc::GUID128 subject1;
+    Crypto_ECC ecc1;
+    ecc1.GenerateDSAKeyPair();
+    MembershipCertificate cert1;
+
+    /* self signed cert */
+    ASSERT_EQ(ER_OK, CreateCert("1010101", subject1, "organization", ecc1.GetDSAPrivateKey(), ecc1.GetDSAPublicKey(), subject1, ecc1.GetDSAPublicKey(), validity, cert1)) << " GenKeyAndCreateCert failed.";
+
+    qcc::GUID128 subject0;
+    Crypto_ECC ecc0;
+    ecc0.GenerateDSAKeyPair();
+    MembershipCertificate cert0;
+
+    /* leaf cert signed by cert1 */
+    ASSERT_EQ(ER_OK, CreateCert("2020202", subject1, "organization", ecc1.GetDSAPrivateKey(), ecc1.GetDSAPublicKey(), subject0, ecc0.GetDSAPublicKey(), validity, cert0)) << " GenKeyAndCreateCert failed.";
+
+    CertificateX509 certs[2];
+    certs[0] = cert0;
+    certs[1] = cert1;
+
+    EXPECT_TRUE(CertificateX509::ValidateCertificateTypeInCertChain(certs, 2)) << " The certificate type constraint is not valid.";
+}
+
+/**
+ * Test the certificate types in the chain of certs: membership, identity
+ */
+TEST_F(CertificateECCTest, TestValidTypeInCertChain_MI)
+{
+    CertificateX509::ValidPeriod validity;
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + 24 * 3600;
+
+    qcc::GUID128 subject1;
+    Crypto_ECC ecc1;
+    ecc1.GenerateDSAKeyPair();
+    MembershipCertificate cert1;
+
+    /* self signed cert */
+    ASSERT_EQ(ER_OK, CreateCert("1010101", subject1, "organization", ecc1.GetDSAPrivateKey(), ecc1.GetDSAPublicKey(), subject1, ecc1.GetDSAPublicKey(), validity, cert1)) << " GenKeyAndCreateCert failed.";
+
+    qcc::GUID128 subject0;
+    Crypto_ECC ecc0;
+    ecc0.GenerateDSAKeyPair();
+    IdentityCertificate cert0;
+
+    /* leaf cert signed by cert1 */
+    ASSERT_EQ(ER_OK, CreateCert("2020202", subject1, "organization", ecc1.GetDSAPrivateKey(), ecc1.GetDSAPublicKey(), subject0, ecc0.GetDSAPublicKey(), validity, cert0)) << " GenKeyAndCreateCert failed.";
+
+    CertificateX509 certs[2];
+    certs[0] = cert0;
+    certs[1] = cert1;
+
+    EXPECT_FALSE(CertificateX509::ValidateCertificateTypeInCertChain(certs, 2)) << " The certificate type constraint is not supposed to be valid.";
+}
+
+/**
+ * Test the certificate types in the chain of certs: identity, membership
+ */
+TEST_F(CertificateECCTest, TestValidTypeInCertChain_IM)
+{
+    CertificateX509::ValidPeriod validity;
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + 24 * 3600;
+
+    qcc::GUID128 subject1;
+    Crypto_ECC ecc1;
+    ecc1.GenerateDSAKeyPair();
+    IdentityCertificate cert1;
+
+    /* self signed cert */
+    ASSERT_EQ(ER_OK, CreateCert("1010101", subject1, "organization", ecc1.GetDSAPrivateKey(), ecc1.GetDSAPublicKey(), subject1, ecc1.GetDSAPublicKey(), validity, cert1)) << " GenKeyAndCreateCert failed.";
+
+    qcc::GUID128 subject0;
+    Crypto_ECC ecc0;
+    ecc0.GenerateDSAKeyPair();
+    MembershipCertificate cert0;
+
+    /* leaf cert signed by cert1 */
+    ASSERT_EQ(ER_OK, CreateCert("2020202", subject1, "organization", ecc1.GetDSAPrivateKey(), ecc1.GetDSAPublicKey(), subject0, ecc0.GetDSAPublicKey(), validity, cert0)) << " GenKeyAndCreateCert failed.";
+
+    CertificateX509 certs[2];
+    certs[0] = cert0;
+    certs[1] = cert1;
+
+    EXPECT_FALSE(CertificateX509::ValidateCertificateTypeInCertChain(certs, 2)) << " The certificate type constraint is not supposed to be valid.";
+}
+
+/**
+ * Test the certificate types in the chain of certs: unrestricted, membership
+ */
+TEST_F(CertificateECCTest, TestValidTypeInCertChain_UM)
+{
+    CertificateX509::ValidPeriod validity;
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + 24 * 3600;
+
+    qcc::GUID128 subject1;
+    Crypto_ECC ecc1;
+    ecc1.GenerateDSAKeyPair();
+    CertificateX509 cert1;
+
+    /* self signed cert */
+    ASSERT_EQ(ER_OK, CreateCert("1010101", subject1, "organization", ecc1.GetDSAPrivateKey(), ecc1.GetDSAPublicKey(), subject1, ecc1.GetDSAPublicKey(), validity, cert1)) << " GenKeyAndCreateCert failed.";
+
+    qcc::GUID128 subject0;
+    Crypto_ECC ecc0;
+    ecc0.GenerateDSAKeyPair();
+    MembershipCertificate cert0;
+
+    /* leaf cert signed by cert1 */
+    ASSERT_EQ(ER_OK, CreateCert("2020202", subject1, "organization", ecc1.GetDSAPrivateKey(), ecc1.GetDSAPublicKey(), subject0, ecc0.GetDSAPublicKey(), validity, cert0)) << " GenKeyAndCreateCert failed.";
+
+    CertificateX509 certs[2];
+    certs[0] = cert0;
+    certs[1] = cert1;
+
+    EXPECT_TRUE(CertificateX509::ValidateCertificateTypeInCertChain(certs, 2)) << " The certificate type constraint is not valid.";
+}
+
+/**
+ * Test the certificate types in the chain of certs: unrestricted, identity
+ */
+TEST_F(CertificateECCTest, TestValidTypeInCertChain_UI)
+{
+    CertificateX509::ValidPeriod validity;
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + 24 * 3600;
+
+    qcc::GUID128 subject1;
+    Crypto_ECC ecc1;
+    ecc1.GenerateDSAKeyPair();
+    CertificateX509 cert1;
+
+    /* self signed cert */
+    ASSERT_EQ(ER_OK, CreateCert("1010101", subject1, "organization", ecc1.GetDSAPrivateKey(), ecc1.GetDSAPublicKey(), subject1, ecc1.GetDSAPublicKey(), validity, cert1)) << " GenKeyAndCreateCert failed.";
+
+    qcc::GUID128 subject0;
+    Crypto_ECC ecc0;
+    ecc0.GenerateDSAKeyPair();
+    IdentityCertificate cert0;
+
+    /* leaf cert signed by cert1 */
+    ASSERT_EQ(ER_OK, CreateCert("2020202", subject1, "organization", ecc1.GetDSAPrivateKey(), ecc1.GetDSAPublicKey(), subject0, ecc0.GetDSAPublicKey(), validity, cert0)) << " GenKeyAndCreateCert failed.";
+
+    CertificateX509 certs[2];
+    certs[0] = cert0;
+    certs[1] = cert1;
+
+    EXPECT_TRUE(CertificateX509::ValidateCertificateTypeInCertChain(certs, 2)) << " The certificate type constraint is not valid.";
+}
+
+/**
+ * Test the certificate types in the chain of certs: identity, unrestricted
+ */
+TEST_F(CertificateECCTest, TestValidTypeInCertChain_IU)
+{
+    CertificateX509::ValidPeriod validity;
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + 24 * 3600;
+
+    qcc::GUID128 subject1;
+    Crypto_ECC ecc1;
+    ecc1.GenerateDSAKeyPair();
+    IdentityCertificate cert1;
+
+    /* self signed cert */
+    ASSERT_EQ(ER_OK, CreateCert("1010101", subject1, "organization", ecc1.GetDSAPrivateKey(), ecc1.GetDSAPublicKey(), subject1, ecc1.GetDSAPublicKey(), validity, cert1)) << " GenKeyAndCreateCert failed.";
+
+    qcc::GUID128 subject0;
+    Crypto_ECC ecc0;
+    ecc0.GenerateDSAKeyPair();
+    CertificateX509 cert0;
+
+    /* leaf cert signed by cert1 */
+    ASSERT_EQ(ER_OK, CreateCert("2020202", subject1, "organization", ecc1.GetDSAPrivateKey(), ecc1.GetDSAPublicKey(), subject0, ecc0.GetDSAPublicKey(), validity, cert0)) << " GenKeyAndCreateCert failed.";
+
+    CertificateX509 certs[2];
+    certs[0] = cert0;
+    certs[1] = cert1;
+
+    EXPECT_FALSE(CertificateX509::ValidateCertificateTypeInCertChain(certs, 2)) << " The certificate type constraint is not supposed to be valid.";
+}
+
+/**
+ * Test the certificate types in the chain of certs: membership, unrestricted
+ */
+TEST_F(CertificateECCTest, TestValidTypeInCertChain_MU)
+{
+    CertificateX509::ValidPeriod validity;
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + 24 * 3600;
+
+    qcc::GUID128 subject1;
+    Crypto_ECC ecc1;
+    ecc1.GenerateDSAKeyPair();
+    MembershipCertificate cert1;
+
+    /* self signed cert */
+    ASSERT_EQ(ER_OK, CreateCert("1010101", subject1, "organization", ecc1.GetDSAPrivateKey(), ecc1.GetDSAPublicKey(), subject1, ecc1.GetDSAPublicKey(), validity, cert1)) << " GenKeyAndCreateCert failed.";
+
+    qcc::GUID128 subject0;
+    Crypto_ECC ecc0;
+    ecc0.GenerateDSAKeyPair();
+    CertificateX509 cert0;
+
+    /* leaf cert signed by cert1 */
+    ASSERT_EQ(ER_OK, CreateCert("2020202", subject1, "organization", ecc1.GetDSAPrivateKey(), ecc1.GetDSAPublicKey(), subject0, ecc0.GetDSAPublicKey(), validity, cert0)) << " GenKeyAndCreateCert failed.";
+
+    CertificateX509 certs[2];
+    certs[0] = cert0;
+    certs[1] = cert1;
+
+    EXPECT_FALSE(CertificateX509::ValidateCertificateTypeInCertChain(certs, 2)) << " The certificate type constraint is not supposed to be valid.";
+}
+
+/**
+ * Test the certificate types in the chain of certs: unrestricted, membership, membership
+ */
+TEST_F(CertificateECCTest, TestValidTypeInCertChain_UMM)
+{
+    CertificateX509::ValidPeriod validity;
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + 24 * 3600;
+
+    qcc::GUID128 subject2;
+    Crypto_ECC ecc2;
+    ecc2.GenerateDSAKeyPair();
+    CertificateX509 cert2;
+
+    /* self signed cert */
+    ASSERT_EQ(ER_OK, CreateCert("serial2", subject2, "organization", ecc2.GetDSAPrivateKey(), ecc2.GetDSAPublicKey(), subject2, ecc2.GetDSAPublicKey(), validity, cert2)) << " GenKeyAndCreateCert failed.";
+
+    qcc::GUID128 subject1;
+    Crypto_ECC ecc1;
+    ecc1.GenerateDSAKeyPair();
+    MembershipCertificate cert1;
+
+    /* intermediate cert signed by cert2 */
+    ASSERT_EQ(ER_OK, CreateCert("serial1", subject2, "organization", ecc2.GetDSAPrivateKey(), ecc2.GetDSAPublicKey(), subject1, ecc1.GetDSAPublicKey(), validity, cert1)) << " GenKeyAndCreateCert failed.";
+
+    qcc::GUID128 subject0;
+    Crypto_ECC ecc0;
+    ecc0.GenerateDSAKeyPair();
+    MembershipCertificate cert0;
+
+    /* leaf cert signed by cert1 */
+    ASSERT_EQ(ER_OK, CreateCert("serial0", subject1, "organization", ecc1.GetDSAPrivateKey(), ecc1.GetDSAPublicKey(), subject0, ecc0.GetDSAPublicKey(), validity, cert0)) << " GenKeyAndCreateCert failed.";
+
+    CertificateX509 certs[3];
+    certs[0] = cert0;
+    certs[1] = cert1;
+    certs[2] = cert2;
+
+    EXPECT_TRUE(CertificateX509::ValidateCertificateTypeInCertChain(certs, 3)) << " The certificate type constraint is not valid.";
+}
+
+/**
+ * Test the certificate types in the chain of certs: unrestricted, identity, identity
+ */
+TEST_F(CertificateECCTest, TestValidTypeInCertChain_UII)
+{
+    CertificateX509::ValidPeriod validity;
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + 24 * 3600;
+
+    qcc::GUID128 subject2;
+    Crypto_ECC ecc2;
+    ecc2.GenerateDSAKeyPair();
+    CertificateX509 cert2;
+
+    /* self signed cert */
+    ASSERT_EQ(ER_OK, CreateCert("serial2", subject2, "organization", ecc2.GetDSAPrivateKey(), ecc2.GetDSAPublicKey(), subject2, ecc2.GetDSAPublicKey(), validity, cert2)) << " GenKeyAndCreateCert failed.";
+
+    qcc::GUID128 subject1;
+    Crypto_ECC ecc1;
+    ecc1.GenerateDSAKeyPair();
+    IdentityCertificate cert1;
+
+    /* intermediate cert signed by cert2 */
+    ASSERT_EQ(ER_OK, CreateCert("serial1", subject2, "organization", ecc2.GetDSAPrivateKey(), ecc2.GetDSAPublicKey(), subject1, ecc1.GetDSAPublicKey(), validity, cert1)) << " GenKeyAndCreateCert failed.";
+
+    qcc::GUID128 subject0;
+    Crypto_ECC ecc0;
+    ecc0.GenerateDSAKeyPair();
+    IdentityCertificate cert0;
+
+    /* leaf cert signed by cert1 */
+    ASSERT_EQ(ER_OK, CreateCert("serial0", subject1, "organization", ecc1.GetDSAPrivateKey(), ecc1.GetDSAPublicKey(), subject0, ecc0.GetDSAPublicKey(), validity, cert0)) << " GenKeyAndCreateCert failed.";
+
+    CertificateX509 certs[3];
+    certs[0] = cert0;
+    certs[1] = cert1;
+    certs[2] = cert2;
+
+    EXPECT_TRUE(CertificateX509::ValidateCertificateTypeInCertChain(certs, 3)) << " The certificate type constraint is not valid.";
+}
+
+/**
+ * Test the certificate types in the chain of certs: identity, unrestricted, identity
+ */
+TEST_F(CertificateECCTest, TestValidTypeInCertChain_IUI)
+{
+    CertificateX509::ValidPeriod validity;
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + 24 * 3600;
+
+    qcc::GUID128 subject2;
+    Crypto_ECC ecc2;
+    ecc2.GenerateDSAKeyPair();
+    IdentityCertificate cert2;
+
+    /* self signed cert */
+    ASSERT_EQ(ER_OK, CreateCert("serial2", subject2, "organization", ecc2.GetDSAPrivateKey(), ecc2.GetDSAPublicKey(), subject2, ecc2.GetDSAPublicKey(), validity, cert2)) << " GenKeyAndCreateCert failed.";
+
+    qcc::GUID128 subject1;
+    Crypto_ECC ecc1;
+    ecc1.GenerateDSAKeyPair();
+    CertificateX509 cert1;
+
+    /* intermediate cert signed by cert2 */
+    ASSERT_EQ(ER_OK, CreateCert("serial1", subject2, "organization", ecc2.GetDSAPrivateKey(), ecc2.GetDSAPublicKey(), subject1, ecc1.GetDSAPublicKey(), validity, cert1)) << " GenKeyAndCreateCert failed.";
+
+    qcc::GUID128 subject0;
+    Crypto_ECC ecc0;
+    ecc0.GenerateDSAKeyPair();
+    IdentityCertificate cert0;
+
+    /* leaf cert signed by cert1 */
+    ASSERT_EQ(ER_OK, CreateCert("serial0", subject1, "organization", ecc1.GetDSAPrivateKey(), ecc1.GetDSAPublicKey(), subject0, ecc0.GetDSAPublicKey(), validity, cert0)) << " GenKeyAndCreateCert failed.";
+
+    CertificateX509 certs[3];
+    certs[0] = cert0;
+    certs[1] = cert1;
+    certs[2] = cert2;
+
+    EXPECT_FALSE(CertificateX509::ValidateCertificateTypeInCertChain(certs, 3)) << " The certificate type constraint is not supposed to be valid.";
+}
+
+/**
+ * Test the certificate types in the chain of certs: membership, unrestricted, membership
+ */
+TEST_F(CertificateECCTest, TestValidTypeInCertChain_MUM)
+{
+    CertificateX509::ValidPeriod validity;
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + 24 * 3600;
+
+    qcc::GUID128 subject2;
+    Crypto_ECC ecc2;
+    ecc2.GenerateDSAKeyPair();
+    MembershipCertificate cert2;
+
+    /* self signed cert */
+    ASSERT_EQ(ER_OK, CreateCert("serial2", subject2, "organization", ecc2.GetDSAPrivateKey(), ecc2.GetDSAPublicKey(), subject2, ecc2.GetDSAPublicKey(), validity, cert2)) << " GenKeyAndCreateCert failed.";
+
+    qcc::GUID128 subject1;
+    Crypto_ECC ecc1;
+    ecc1.GenerateDSAKeyPair();
+    CertificateX509 cert1;
+
+    /* intermediate cert signed by cert2 */
+    ASSERT_EQ(ER_OK, CreateCert("serial1", subject2, "organization", ecc2.GetDSAPrivateKey(), ecc2.GetDSAPublicKey(), subject1, ecc1.GetDSAPublicKey(), validity, cert1)) << " GenKeyAndCreateCert failed.";
+
+    qcc::GUID128 subject0;
+    Crypto_ECC ecc0;
+    ecc0.GenerateDSAKeyPair();
+    MembershipCertificate cert0;
+
+    /* leaf cert signed by cert1 */
+    ASSERT_EQ(ER_OK, CreateCert("serial0", subject1, "organization", ecc1.GetDSAPrivateKey(), ecc1.GetDSAPublicKey(), subject0, ecc0.GetDSAPublicKey(), validity, cert0)) << " GenKeyAndCreateCert failed.";
+
+    CertificateX509 certs[3];
+    certs[0] = cert0;
+    certs[1] = cert1;
+    certs[2] = cert2;
+
+    EXPECT_FALSE(CertificateX509::ValidateCertificateTypeInCertChain(certs, 3)) << " The certificate type constraint is not supposed to be valid.";
+}
+
+/**
+ * Test the certificate types in the chain of certs: membership, unrestricted, identity
+ */
+TEST_F(CertificateECCTest, TestValidTypeInCertChain_MUI)
+{
+    CertificateX509::ValidPeriod validity;
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + 24 * 3600;
+
+    qcc::GUID128 subject2;
+    Crypto_ECC ecc2;
+    ecc2.GenerateDSAKeyPair();
+    MembershipCertificate cert2;
+
+    /* self signed cert */
+    ASSERT_EQ(ER_OK, CreateCert("serial2", subject2, "organization", ecc2.GetDSAPrivateKey(), ecc2.GetDSAPublicKey(), subject2, ecc2.GetDSAPublicKey(), validity, cert2)) << " GenKeyAndCreateCert failed.";
+
+    qcc::GUID128 subject1;
+    Crypto_ECC ecc1;
+    ecc1.GenerateDSAKeyPair();
+    CertificateX509 cert1;
+
+    /* intermediate cert signed by cert2 */
+    ASSERT_EQ(ER_OK, CreateCert("serial1", subject2, "organization", ecc2.GetDSAPrivateKey(), ecc2.GetDSAPublicKey(), subject1, ecc1.GetDSAPublicKey(), validity, cert1)) << " GenKeyAndCreateCert failed.";
+
+    qcc::GUID128 subject0;
+    Crypto_ECC ecc0;
+    ecc0.GenerateDSAKeyPair();
+    IdentityCertificate cert0;
+
+    /* leaf cert signed by cert1 */
+    ASSERT_EQ(ER_OK, CreateCert("serial0", subject1, "organization", ecc1.GetDSAPrivateKey(), ecc1.GetDSAPublicKey(), subject0, ecc0.GetDSAPublicKey(), validity, cert0)) << " GenKeyAndCreateCert failed.";
+
+    CertificateX509 certs[3];
+    certs[0] = cert0;
+    certs[1] = cert1;
+    certs[2] = cert2;
+
+    EXPECT_FALSE(CertificateX509::ValidateCertificateTypeInCertChain(certs, 3)) << " The certificate type constraint is not supposed to be valid.";
+}
+
+/**
+ * Test the certificate types in the chain of certs: identity, unrestricted, membership
+ */
+TEST_F(CertificateECCTest, TestValidTypeInCertChain_IUM)
+{
+    CertificateX509::ValidPeriod validity;
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + 24 * 3600;
+
+    qcc::GUID128 subject2;
+    Crypto_ECC ecc2;
+    ecc2.GenerateDSAKeyPair();
+    IdentityCertificate cert2;
+
+    /* self signed cert */
+    ASSERT_EQ(ER_OK, CreateCert("serial2", subject2, "organization", ecc2.GetDSAPrivateKey(), ecc2.GetDSAPublicKey(), subject2, ecc2.GetDSAPublicKey(), validity, cert2)) << " GenKeyAndCreateCert failed.";
+
+    qcc::GUID128 subject1;
+    Crypto_ECC ecc1;
+    ecc1.GenerateDSAKeyPair();
+    CertificateX509 cert1;
+
+    /* intermediate cert signed by cert2 */
+    ASSERT_EQ(ER_OK, CreateCert("serial1", subject2, "organization", ecc2.GetDSAPrivateKey(), ecc2.GetDSAPublicKey(), subject1, ecc1.GetDSAPublicKey(), validity, cert1)) << " GenKeyAndCreateCert failed.";
+
+    qcc::GUID128 subject0;
+    Crypto_ECC ecc0;
+    ecc0.GenerateDSAKeyPair();
+    MembershipCertificate cert0;
+
+    /* leaf cert signed by cert1 */
+    ASSERT_EQ(ER_OK, CreateCert("serial0", subject1, "organization", ecc1.GetDSAPrivateKey(), ecc1.GetDSAPublicKey(), subject0, ecc0.GetDSAPublicKey(), validity, cert0)) << " GenKeyAndCreateCert failed.";
+
+    CertificateX509 certs[3];
+    certs[0] = cert0;
+    certs[1] = cert1;
+    certs[2] = cert2;
+
+    EXPECT_FALSE(CertificateX509::ValidateCertificateTypeInCertChain(certs, 3)) << " The certificate type constraint is not supposed to be valid.";
+}
+
+/**
+ * Test the certificate types in the chain of certs: identity
+ */
+TEST_F(CertificateECCTest, TestValidTypeInCertChain_I)
+{
+    CertificateX509::ValidPeriod validity;
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + 24 * 3600;
+
+    qcc::GUID128 subject0;
+    Crypto_ECC ecc0;
+    ecc0.GenerateDSAKeyPair();
+    IdentityCertificate cert0;
+
+    /* self signed cert */
+    ASSERT_EQ(ER_OK, CreateCert("serial0", subject0, "organization", ecc0.GetDSAPrivateKey(), ecc0.GetDSAPublicKey(), subject0, ecc0.GetDSAPublicKey(), validity, cert0)) << " GenKeyAndCreateCert failed.";
+
+    CertificateX509 certs[1];
+    certs[0] = cert0;
+
+    EXPECT_TRUE(CertificateX509::ValidateCertificateTypeInCertChain(certs, 1)) << " The certificate type constraint is not valid.";
+}
+
+/**
+ * Test the certificate types in the chain of certs: membership
+ */
+TEST_F(CertificateECCTest, TestValidTypeInCertChain_M)
+{
+    CertificateX509::ValidPeriod validity;
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + 24 * 3600;
+
+    qcc::GUID128 subject0;
+    Crypto_ECC ecc0;
+    ecc0.GenerateDSAKeyPair();
+    MembershipCertificate cert0;
+
+    /* self signed cert */
+    ASSERT_EQ(ER_OK, CreateCert("serial0", subject0, "organization", ecc0.GetDSAPrivateKey(), ecc0.GetDSAPublicKey(), subject0, ecc0.GetDSAPublicKey(), validity, cert0)) << " GenKeyAndCreateCert failed.";
+
+    CertificateX509 certs[1];
+    certs[0] = cert0;
+
+    EXPECT_TRUE(CertificateX509::ValidateCertificateTypeInCertChain(certs, 1)) << " The certificate type constraint is not valid.";
+}
+
+/**
+ * Test the certificate types in the chain of certs: unrestricted
+ */
+TEST_F(CertificateECCTest, TestValidTypeInCertChain_U)
+{
+    CertificateX509::ValidPeriod validity;
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + 24 * 3600;
+
+    qcc::GUID128 subject0;
+    Crypto_ECC ecc0;
+    ecc0.GenerateDSAKeyPair();
+    CertificateX509 cert0;
+
+    /* self signed cert */
+    ASSERT_EQ(ER_OK, CreateCert("serial0", subject0, "organization", ecc0.GetDSAPrivateKey(), ecc0.GetDSAPublicKey(), subject0, ecc0.GetDSAPublicKey(), validity, cert0)) << " GenKeyAndCreateCert failed.";
+
+    CertificateX509 certs[1];
+    certs[0] = cert0;
+
+    EXPECT_FALSE(CertificateX509::ValidateCertificateTypeInCertChain(certs, 1)) << " The certificate type constraint is not supposed to be valid.";
 }
