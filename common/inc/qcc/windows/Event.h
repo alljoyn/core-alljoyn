@@ -281,6 +281,17 @@ class Event {
     static void ReleaseIOMask(Event& evt);
 
     /**
+     * Helper method used to check if a single event is set.
+     * @param evt   The event to check.
+     * @return
+     * - #ER_OK The event is set.
+     * - #ER_TIMEOUT The event is not set.
+     * - #ER_OS_ERROR The check failed.
+     * - #ER_BAD_ARG_1 The event does not have a valid handle to wait on.
+     */
+    static QStatus IsSet(Event& evt);
+
+    /**
      * Increment the count of threads blocked on this event
      */
     void IncrementNumThreads() { IncrementAndFetch(&numThreads); }

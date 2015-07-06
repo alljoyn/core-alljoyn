@@ -587,13 +587,58 @@ VOID CALLBACK NamedPipeIoEventCallback(PVOID arg, BOOLEAN TimerOrWaitFired)
 }
 #endif
 
+QStatus Event::IsSet(Event& evt)
+{
+    /*
+     * The IO event is necessarily an auto-reset event. Calling wait with a zero timeout to check
+     * the I/O status before blocking ensures that Event::Wait is idempotent.
+     */
+    if ((evt.eventType == IO_READ) || (evt.eventType == IO_WRITE)) {
+        if (evt.IsNetworkEventSet()) {
+            ::SetEvent(evt.ioHandle);
+        }
+    }
+
+    HANDLE handle;
+    if (nullptr != evt.ioHandle) {
+        handle = evt.ioHandle;
+    } else if (nullptr != evt.handle) {
+        handle = evt.handle;
+    } else if (nullptr != evt.timerHandle) {
+        assert(TIMED == evt.eventType);
+        handle = evt.timerHandle;
+    } else {
+        return ER_BAD_ARG_1;
+    }
+
+    evt.IncrementNumThreads();
+    DWORD ret = WaitForSingleObjectEx(handle, 0, FALSE);
+    evt.DecrementNumThreads();
+
+    QStatus status = ER_OK;
+    if (WAIT_OBJECT_0 == ret) {
+        status = ER_OK;
+    } else if (WAIT_TIMEOUT == ret) {
+        QCC_DbgPrintf(("WaitForSingalObjectEx timeout"));
+        status = ER_TIMEOUT;
+    } else {
+        status = ER_OS_ERROR;
+        QCC_LogError(status, ("WaitForSingalObjectEx returned 0x%x.", ret));
+        if (WAIT_FAILED == ret) {
+            QCC_LogError(status, ("GetLastError=%u", GetLastError()));
+            QCC_LogError(status, ("  0x%p", handle));
+        }
+    }
+    return status;
+}
+
 QStatus AJ_CALL Event::Wait(Event& evt, uint32_t maxWaitMs)
 {
     HANDLE handles[2];
     uint32_t numHandles = 0;
 
     /*
-     * The IO event is necessarily an auto-reset event. Calling select with a zero timeout to check
+     * The IO event is necessarily an auto-reset event. Calling wait with a zero timeout to check
      * the I/O status before blocking ensures that Event::Wait is idempotent.
      */
     if ((evt.eventType == IO_READ) || (evt.eventType == IO_WRITE)) {
@@ -758,7 +803,7 @@ QStatus AJ_CALL Event::Wait(const vector<Event*>& checkEvents, vector<Event*>& s
                     if ((evt->timerHandle != nullptr) && (evt->timerHandle == signaledHandle)) {
                         signaledEvents.push_back(evt);
                     }
-                } else if (evt->IsSet()) {
+                } else if (ER_OK == IsSet(*evt)) {
                     signaledEvents.push_back(evt);
                 }
             }
