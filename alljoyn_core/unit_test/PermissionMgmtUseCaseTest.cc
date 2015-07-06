@@ -1019,6 +1019,10 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         status = PermissionMgmtTestHelper::JoinPeerSession(adminProxyBus, adminBus, sessionId);
         EXPECT_EQ(ER_OK, status) << "  JoinSession failed.  Actual Status: " << QCC_StatusText(status);
 
+        SecurityApplicationProxy saProxy(adminBus, adminBus.GetUniqueName().c_str());
+        /* The ManagedApplication::Reset method should not be allowed before Claim */
+        EXPECT_EQ(ER_PERMISSION_DENIED, saProxy.Reset()) << "Reset did not fail.";
+
         EXPECT_EQ(ER_OK, InvokeClaim(true, adminProxyBus, adminBus, "1010101", "Admin User", false)) << " InvokeClaim failed.";
 
         /* reload the shared key store because of change on one bus */

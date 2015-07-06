@@ -610,13 +610,18 @@ QStatus PermissionManager::AuthorizeMessage(bool outgoing, Message& msg, PeerSta
     if (!permissionMgmtObj) {
         return ER_PERMISSION_DENIED;
     }
-    if (IsPermissionMgmtInterface(request.iName)) {
+    bool isPermissionMgmt = IsPermissionMgmtInterface(request.iName);
+    if (isPermissionMgmt) {
         if (AuthorizePermissionMgmt(outgoing, peerState, request.iName, request.mbrName)) {
             return ER_OK;
         }
     }
-    /* is the app claimed? If not claimed, no enforcement */
+    /* Is the app claimed? If not claimed, no enforcement unless it's one of
+       the permission management interfaces */
     if (!permissionMgmtObj->HasTrustAnchors()) {
+        if (isPermissionMgmt) {
+            return ER_PERMISSION_DENIED;
+        }
         return ER_OK;
     }
 
