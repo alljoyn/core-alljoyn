@@ -347,7 +347,7 @@ void KeyExchangerECDHE::KeyExchangeGenLegacyKey(MsgArg& variant)
     buf[0] = ecc.GetCurveType();
     ECCPublicKeyOldEncoding oldenc;
     Crypto_ECC_OldEncoding::ReEncode(GetECDHEPublicKey(), &oldenc);
-    memcpy(&buf[1], &oldenc, sizeof(ECCPublicKeyOldEncoding));
+    memcpy(&buf[1], oldenc.data, sizeof(oldenc.data));
     MsgArg localArg("ay", sizeof(buf), buf);
     variant = localArg;
     peerState->UpdateHash(CONVERSATION_V1, buf, sizeof(buf));
@@ -373,7 +373,7 @@ QStatus KeyExchangerECDHE::KeyExchangeReadLegacyKey(MsgArg& variant)
         return ER_INVALID_DATA;
     }
     ECCPublicKeyOldEncoding oldenc;
-    memcpy(&oldenc, &replyPubKey[1], sizeof(ECCPublicKeyOldEncoding));
+    memcpy(oldenc.data, &replyPubKey[1], sizeof(oldenc.data));
     Crypto_ECC_OldEncoding::ReEncode(&oldenc, &peerPubKey);
     /* hash the handshake data */
     peerState->UpdateHash(CONVERSATION_V1, replyPubKey, replyPubKeyLen);
@@ -388,11 +388,17 @@ QStatus KeyExchangerECDHE::KeyExchangeReadLegacyKey(MsgArg& variant)
 void KeyExchangerECDHE::KeyExchangeGenKey(MsgArg& variant)
 {
     uint8_t curveType = ecc.GetCurveType();
-    variant.Set("(yay)", curveType, sizeof(ECCPublicKey), (const uint8_t*) GetECDHEPublicKey());
+    const ECCPublicKey* publicKey = GetECDHEPublicKey();
+    size_t exportedPublicKeySize = publicKey->GetSize();
+    uint8_t* exportedPublicKey = new uint8_t[exportedPublicKeySize];
+    QCC_VERIFY(ER_OK == publicKey->Export(exportedPublicKey, &exportedPublicKeySize));
 
-    variant.SetOwnershipFlags(MsgArg::OwnsArgs, true);
-    peerState->UpdateHash(CONVERSATION_V1, (uint8_t*) &curveType, sizeof(uint8_t));
-    peerState->UpdateHash(CONVERSATION_V1, (uint8_t*) GetECDHEPublicKey(), sizeof(ECCPublicKey));
+    variant.Set("(yay)", curveType, exportedPublicKeySize, exportedPublicKey);
+
+    /* The MsgArg takes ownership of exportedPublicKey and will delete it on destruction. */
+    variant.SetOwnershipFlags(MsgArg::OwnsArgs | MsgArg::OwnsData, true);
+    peerState->UpdateHash(CONVERSATION_V1, &curveType, sizeof(curveType));
+    peerState->UpdateHash(CONVERSATION_V1, exportedPublicKey, exportedPublicKeySize);
 
     /* In CONVERSATION_V4, this content is hashed one level up in ExecKeyExchange or
      * RespondToKeyExchange. So no hashing is done here for that version.
@@ -411,9 +417,9 @@ QStatus KeyExchangerECDHE::KeyExchangeReadKey(MsgArg& variant)
     if (eccCurveID != ecc.GetCurveType()) {
         return ER_INVALID_DATA;
     }
-    peerPubKey.Import(replyPubKey, sizeof(ECCPublicKey));
+    QCC_VERIFY(ER_OK == peerPubKey.Import(replyPubKey, sizeof(ECCPublicKey)));
     /* hash the handshake data */
-    peerState->UpdateHash(CONVERSATION_V1, &eccCurveID, sizeof(uint8_t));
+    peerState->UpdateHash(CONVERSATION_V1, &eccCurveID, sizeof(eccCurveID));
     peerState->UpdateHash(CONVERSATION_V1, replyPubKey, replyPubKeyLen);
 
     /* In CONVERSATION_V4, this content is hashed one level up in ExecKeyExchange or
