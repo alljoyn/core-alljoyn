@@ -73,14 +73,25 @@ class PermissionManager {
     /**
      * Authorize a message.  Make sure there is a proper permission is setup for this type of message.
      * @param outgoing indicating whether is a outgoing or incoming
-     * @param peerGuid the peer's GUID
      * @param msg the target message
      * @param peerState the peer's PeerState object
      * @return
      *  - ER_OK: authorized
-     *  - ER_PERM_DENIED: permission denied
+     *  - ER_PERMISSION_DENIED: permission denied
      */
     QStatus AuthorizeMessage(bool outgoing, Message& msg, PeerState& peerState);
+
+    /**
+     * Authorize a Get Property message.  Make sure there is a proper permission is setup for this type of message.
+     * @param objPath the object path
+     * @param ifcName the interface name
+     * @param propName the property name
+     * @param peerState the peer's PeerState object
+     * @return
+     *  - ER_OK: authorized
+     *  - ER_PERMISSION_DENIED: permission denied
+     */
+    QStatus AuthorizeGetProperty(const char* objPath, const char* ifcName, const char* propName, PeerState& peerState);
 
     void SetPermissionMgmtObj(PermissionMgmtObj* permissionMgmtObj)
     {

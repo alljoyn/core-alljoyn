@@ -401,18 +401,36 @@ void BusObject::GetAllProps(const InterfaceDescription::Member* member, Message&
             size_t numProps = ifc->GetProperties();
             props = new const InterfaceDescription::Property*[numProps];
             ifc->GetProperties(props, numProps);
+            bool* allowed = new bool[numProps];
+            for (size_t i = 0; i < numProps; i++) {
+                allowed[i] = true;
+            }
             size_t readable = 0;
             /* Count readable properties */
-            for (size_t i = 0; i < numProps; i++) {
-                if (props[i]->access & PROP_ACCESS_READ) {
-                    readable++;
+            if (msg->IsEncrypted()) {
+                PeerState peerState = bus->GetInternal().GetPeerStateTable()->GetPeerState(msg->GetSender());
+                for (size_t i = 0; i < numProps; i++) {
+                    if (props[i]->access & PROP_ACCESS_READ) {
+                        if (ER_OK == bus->GetInternal().GetPermissionManager().AuthorizeGetProperty(msg->GetObjectPath(), ifc->GetName(), props[i]->name.c_str(), peerState)) {
+                            readable++;
+                        } else {
+                            /* mark the property as not allowed because of permission denied */
+                            allowed[i] = false;
+                        }
+                    }
+                }
+            } else {
+                for (size_t i = 0; i < numProps; i++) {
+                    if (props[i]->access & PROP_ACCESS_READ) {
+                        readable++;
+                    }
                 }
             }
             MsgArg* dict = new MsgArg[readable];
             MsgArg* entry = dict;
             /* Get readable properties */
             for (size_t i = 0; i < numProps; i++) {
-                if (props[i]->access & PROP_ACCESS_READ) {
+                if ((props[i]->access & PROP_ACCESS_READ) && allowed[i]) {
                     MsgArg* val = new MsgArg();
                     status = Get(iface->v_string.str, props[i]->name.c_str(), *val);
                     if (status != ER_OK) {
@@ -426,6 +444,7 @@ void BusObject::GetAllProps(const InterfaceDescription::Member* member, Message&
             }
             vals.Set("a{sv}", readable, dict);
             vals.SetOwnershipFlags(MsgArg::OwnsArgs, false);
+            delete [] allowed;
         }
     } else {
         status = ER_BUS_UNKNOWN_INTERFACE;

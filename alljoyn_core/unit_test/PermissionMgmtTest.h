@@ -227,7 +227,6 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
     void TVInputSource(const InterfaceDescription::Member* member, Message& msg);
     QStatus Get(const char* ifcName, const char* propName, MsgArg& val);
     QStatus Set(const char* ifcName, const char* propName, MsgArg& val);
-    void GetAllProps(const InterfaceDescription::Member* member, Message& msg);
     const qcc::String& GetAuthMechanisms() const;
 
     AuthListener* serviceKeyListener;
