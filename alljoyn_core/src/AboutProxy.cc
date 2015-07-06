@@ -45,7 +45,7 @@ QStatus AboutProxy::GetObjectDescription(MsgArg& objectDesc)
     QCC_DbgTrace(("AboutProxy::%s", __FUNCTION__));
     QStatus status = ER_OK;
 
-    Message replyMsg(*bus);
+    Message replyMsg(GetBusAttachment());
     status = MethodCall(org::alljoyn::About::InterfaceName, "GetObjectDescription", NULL, 0, replyMsg);
     if (ER_OK != status) {
         if (replyMsg->GetErrorName() != NULL) {
@@ -78,7 +78,7 @@ QStatus AboutProxy::GetAboutData(const char* languageTag, MsgArg& data)
 {
     QCC_DbgTrace(("AboutClient::%s", __FUNCTION__));
     QStatus status = ER_OK;
-    Message replyMsg(*bus);
+    Message replyMsg(GetBusAttachment());
     MsgArg args[1];
     status = args[0].Set("s", languageTag);
     if (ER_OK != status) {

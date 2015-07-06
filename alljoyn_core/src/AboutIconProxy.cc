@@ -35,7 +35,7 @@ QStatus AboutIconProxy::GetIcon(AboutIcon& icon) {
     QCC_DbgTrace(("AboutIcontClient::%s", __FUNCTION__));
     QStatus status = ER_OK;
 
-    Message replyMsg(*bus);
+    Message replyMsg(GetBusAttachment());
     status = MethodCall(org::alljoyn::Icon::InterfaceName, "GetContent", NULL, 0, replyMsg);
     if (status == ER_OK) {
         const ajn::MsgArg* returnArgs;

@@ -2703,3 +2703,37 @@ TEST_F(PermissionMgmtUseCaseTest, PSKAccess)
     AppCanCallOn(consumerBus, serviceBus);
     AppCanCallTVOff(consumerBus, serviceBus);
 }
+
+TEST_F(PermissionMgmtUseCaseTest, ClaimFailsWithoutSecurityEnabled)
+{
+    qcc::GUID128 guid;
+    IdentityCertificate certs[1];
+    Crypto_ECC ecc;
+    ecc.GenerateDSAKeyPair();
+    KeyInfoNISTP256 keyInfo;
+    keyInfo.SetPublicKey(ecc.GetDSAPublicKey());
+    KeyInfoHelper::GenerateKeyId(keyInfo);
+
+    certs[0].SetSerial((const uint8_t*) "a", 1);
+    certs[0].SetIssuerCN((const uint8_t*) "b", 1);
+    certs[0].SetSubjectCN((const uint8_t*) "c", 1);
+    certs[0].SetIssuerOU((const uint8_t*) "d", 1);
+    certs[0].SetSubjectOU((const uint8_t*) "e", 1);
+    certs[0].SetSubjectPublicKey(keyInfo.GetPublicKey());
+    certs[0].SetCA(false);
+    CertificateX509::ValidPeriod validity;
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + 24 * 3600;
+    certs[0].SetValidity(&validity);
+    EXPECT_EQ(ER_OK, certs[0].SignAndGenerateAuthorityKeyId(ecc.GetDSAPrivateKey(), keyInfo.GetPublicKey())) << " sign cert failed.";
+    PermissionPolicy::Rule* manifest = NULL;
+    size_t manifestSize = 0;
+    GenerateAllowAllManifest(&manifest, &manifestSize);
+    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(adminBus, manifest, manifestSize, digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+
+    SecurityApplicationProxy saProxy(adminBus, consumerBus.GetUniqueName().c_str());
+    EXPECT_NE(ER_OK, saProxy.Claim(keyInfo, guid, keyInfo, certs, 1, manifest, manifestSize)) << " saProxy.Claim failed";
+    delete [] manifest;
+}
+
