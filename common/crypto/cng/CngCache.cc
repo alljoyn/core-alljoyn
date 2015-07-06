@@ -93,12 +93,13 @@ static bool initialized = false;
 
 CngCache& cngCache = (CngCache&)_cngCache;
 
-void Crypto::Init()
+QStatus Crypto::Init()
 {
     if (!initialized) {
         new (&cngCache)CngCache();
         initialized = true;
     }
+    return ER_OK;
 }
 
 void Crypto::Shutdown()

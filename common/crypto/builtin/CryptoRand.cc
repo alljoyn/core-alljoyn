@@ -88,7 +88,7 @@ QStatus Crypto_DRBG::Seed(uint8_t* seed, size_t size)
     if (SEEDLEN != size) {
         return ER_CRYPTO_ERROR;
     }
-    Update(seed, SEEDLEN);
+    Update(seed);
     ctx->c = 1;
     return ER_OK;
 }
@@ -99,14 +99,17 @@ QStatus Crypto_DRBG::Generate(uint8_t* rand, size_t size)
     size_t copy;
     Crypto_AES::Block block;
 
-    /*
-     * If it hasn't been instantiated,
-     * or if counter has wrapped (2^32 calls),
-     * require seeding.
-     */
-    if (0 == ctx->c) {
-        return ER_CRYPTO_ERROR;
+    if (0x80000000 & ctx->c) {
+        /*
+         * If counter is at least (2^31 calls),
+         * attempt seeding. Pass on error, try next call.
+         */
+        copy = PlatformEntropy(data, sizeof (data));
+        if (sizeof (data) == copy) {
+            Seed(data, sizeof (data));
+        }
     }
+
     KeyBlob key(ctx->k, KEYLEN, KeyBlob::AES);
     Crypto_AES aes(key, Crypto_AES::ECB_ENCRYPT);
     while (size) {
@@ -118,21 +121,19 @@ QStatus Crypto_DRBG::Generate(uint8_t* rand, size_t size)
         size -= copy;
     }
     memset(data, 0, SEEDLEN);
-    Update(data, SEEDLEN);
+    Update(data);
     ctx->c++;
 
     return ER_OK;
 }
 
-void Crypto_DRBG::Update(uint8_t* data, size_t size)
+void Crypto_DRBG::Update(uint8_t* data)
 {
     QStatus status;
     size_t i = 0;
     uint8_t tmp[SEEDLEN];
     uint8_t* t = tmp;
     Crypto_AES::Block block;
-
-    QCC_UNUSED(size);
 
     KeyBlob key(ctx->k, KEYLEN, KeyBlob::AES);
     Crypto_AES aes(key, Crypto_AES::ECB_ENCRYPT);
@@ -158,41 +159,32 @@ void Crypto_DRBG::Update(uint8_t* data, size_t size)
 QStatus qcc::Crypto_GetRandomBytes(uint8_t* data, size_t len)
 {
     QStatus status = ER_CRYPTO_ERROR;
-    uint8_t seed[Crypto_DRBG::SEEDLEN];
-    size_t size;
 
     if (NULL != data) {
-        status = drbgctx->Generate(data, len);
-        if (ER_OK == status) {
-            return status;
-        }
-        /*
-         * Reseed required.
-         */
-        size = PlatformEntropy(seed, sizeof (seed));
-        if (sizeof (seed) != size) {
-            /**
-             * Lower than expected entropy gathered.
-             * We could block here or continue.
-             * Choosing to continue and use the whole contents of seed,
-             * may include garbage on the stack - which won't hurt.
-             */
-            QCC_DbgHLPrintf(("Low entropy: %" PRIuSIZET " (requested %" PRIuSIZET ")\n", size, sizeof (seed)));
-        }
-        status = drbgctx->Seed(seed, sizeof (seed));
-        if (ER_OK != status) {
-            return status;
-        }
         status = drbgctx->Generate(data, len);
     }
 
     return status;
 }
 
-void Crypto::Init() {
-    if (!drbgctx) {
+QStatus Crypto::Init()
+{
+    uint8_t seed[Crypto_DRBG::SEEDLEN];
+    size_t size;
+
+    if (NULL == drbgctx) {
         drbgctx = new Crypto_DRBG;
     }
+    /* Initial seeding, fail on error */
+    size = PlatformEntropy(seed, sizeof (seed));
+    if (sizeof (seed) == size) {
+        drbgctx->Seed(seed, sizeof (seed));
+    } else {
+        QCC_DbgHLPrintf(("Low entropy: %" PRIuSIZET " (requested %" PRIuSIZET ")\n", size, sizeof (seed)));
+        return ER_CRYPTO_ERROR;
+    }
+
+    return ER_OK;
 }
 
 void Crypto::Shutdown() {
