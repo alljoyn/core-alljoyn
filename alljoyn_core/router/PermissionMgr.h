@@ -43,12 +43,6 @@ class TransportPermission {
 
 class PermissionMgr {
   public:
-    typedef enum {
-        STDBUSCALL_ALLOW_ACCESS_SERVICE_ANY = 0,         /**< A standard daemon bus call is allowed to interact with any local or remote service */
-        STDBUSCALL_ALLOW_ACCESS_SERVICE_LOCAL = 1,       /**< A standard daemon bus call is allowed, but it can only interact with local service */
-        STDBUSCALL_SHOULD_REJECT = 2                     /**< A standard daemon bus call should always be rejected */
-    } DaemonBusCallPolicy;
-
     /**
      * Add an alias ID to a UnixEndpoint User ID
      * @param srcEp     The source endpoint
@@ -61,13 +55,6 @@ class PermissionMgr {
      * Cleanup the permission information cache of an enpoint before it exits.
      */
     static QStatus CleanPermissionCache(BusEndpoint& endpoint);
-
-    /**
-     * Get the policy for a bus endpoint's permission of invoking the standard DBus and AllJoyn inteface.
-     * @param   endpoint   The bus endpoint.
-     * @return  the policy associated with the bus endpoint for invoking the standard DBus and AllJoyn inteface.
-     */
-    static DaemonBusCallPolicy GetDaemonBusCallPolicy(BusEndpoint sender);
 
 };
 
