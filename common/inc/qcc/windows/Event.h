@@ -142,11 +142,19 @@ class Event {
      * Wait on a single event.
      * The call to Wait will return when the event is signaled.
      *
-     * @param event   Event to wait on.
-     * @param maxMs   Max number of milliseconds to wait or WAIT_FOREVER to wait forever.
-     * @return ER_OK if successful.
+     * @param event            Event to wait on.
+     * @param maxMs            Max number of milliseconds to wait or WAIT_FOREVER to wait forever.
+     * @param includeStopEvent Return if either the event or the caller's stop event is set.
+     * @return
+     * - #ER_OK if successful.
+     * - #ER_STOPPING_THREAD if includeStopEvent and the caller's thread is stopping (@see
+     *                       qcc::Thread::IsStopping()).
+     * - #ER_ALERTED_THREAD if the caller's thread is not stopping and the the caller's stopEvent
+     *                      is set (@see qcc::Thread::Alert()).
+     * - #ER_TIMEOUT if the event is not set.
+     * - #ER_OS_ERROR if the wait failed.
      */
-    static QStatus AJ_CALL Wait(Event& event, uint32_t maxMs = WAIT_FOREVER);
+    static QStatus AJ_CALL Wait(Event& event, uint32_t maxMs = WAIT_FOREVER, bool includeStopEvent = true);
 
     /**
      * Release a lock and then wait on a single event.
@@ -155,13 +163,21 @@ class Event {
      * @param event   Event to wait on.
      * @param lock    The lock to release after incrementing numThreads
      * @param maxMs   Max number of milliseconds to wait or WAIT_FOREVER to wait forever.
-     * @return ER_OK if successful.
+     * @param includeStopEvent Return if either the event or the caller's stop event is set.
+     * @return
+     * - #ER_OK if successful.
+     * - #ER_STOPPING_THREAD if includeStopEvent and the caller's thread is stopping (@see
+     *                       qcc::Thread::IsStopping()).
+     * - #ER_ALERTED_THREAD if the caller's thread is not stopping and the the caller's stopEvent
+     *                      is set (@see qcc::Thread::Alert()).
+     * - #ER_TIMEOUT if the event is not set.
+     * - #ER_OS_ERROR if the wait failed.
      */
-    static QStatus AJ_CALL Wait(Event& event, qcc::Mutex& lock, uint32_t maxMs = WAIT_FOREVER)
+    static QStatus AJ_CALL Wait(Event& event, qcc::Mutex& lock, uint32_t maxMs = WAIT_FOREVER, bool includeStopEvent = true)
     {
         event.IncrementNumThreads();
         lock.Unlock();
-        QStatus status = Wait(event, maxMs);
+        QStatus status = Wait(event, maxMs, includeStopEvent);
         event.DecrementNumThreads();
         return status;
     }
