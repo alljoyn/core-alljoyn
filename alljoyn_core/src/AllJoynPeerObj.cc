@@ -479,10 +479,6 @@ void AllJoynPeerObj::GenSessionKey(const InterfaceDescription::Member* member, M
             MethodReply(msg, status);
         }
     }
-
-    if (status != ER_OK) {
-        peerState->FreeConversationHash();
-    }
 }
 
 void AllJoynPeerObj::AuthAdvance(Message& msg)
