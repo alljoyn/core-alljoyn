@@ -147,7 +147,9 @@ SessionlessObj::SessionlessObj(Bus& bus, BusController* busController, DaemonRou
     backoff(ConfigDB::GetConfigDB()->GetLimit("sls_backoff", 1500),
             ConfigDB::GetConfigDB()->GetLimit("sls_backoff_linear", 4),
             ConfigDB::GetConfigDB()->GetLimit("sls_backoff_exponential", 32),
-            ConfigDB::GetConfigDB()->GetLimit("sls_backoff_max", 15 * 60))
+            ConfigDB::GetConfigDB()->GetLimit("sls_backoff_max", 15 * 60)),
+    requestTimeoutMsecs(ConfigDB::GetConfigDB()->GetLimit("sls_request_timeout", 1500)),
+    requestTimeoutListener(*this)
 {
     sessionOpts.transports = ConfigDB::GetConfigDB()->GetLimit("sls_preferred_transports", TRANSPORT_ANY);
 }
@@ -718,7 +720,18 @@ void SessionlessObj::SessionJoined(SessionPort port,
     QCC_UNUSED(port);
     QCC_UNUSED(sid);
     QCC_UNUSED(joiner);
+
     QCC_DbgPrintf(("SessionJoined(port=%d,sid=%u,joiner=%s)", port, sid, joiner));
+
+    lock.Lock();
+    QCC_VERIFY(requests.insert(sid).second);
+    AlarmListener* listener = &requestTimeoutListener;
+    void* context = reinterpret_cast<void*>(sid);
+    QStatus status = timer.AddAlarm(Alarm(requestTimeoutMsecs, listener, context));
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Failed to add timeout for in-progress requestor"));
+    }
+    lock.Unlock();
 }
 
 void SessionlessObj::SessionLostSignalHandler(const InterfaceDescription::Member* member,
@@ -845,9 +858,21 @@ void SessionlessObj::HandleRangeRequest(const char* sender, SessionId sid,
     bool messageErased = false;
     QCC_DbgTrace(("SessionlessObj::HandleControlSignal(%d, %d)", fromChangeId, toChangeId));
 
-    /* Advance the curChangeId */
     router.LockNameTable();
     lock.Lock();
+
+    /* Remove this requestor since it has sent the required range request */
+    if (sid != 0) {
+        if (requests.find(sid) == requests.end()) {
+            /* Requestor must have timed out and already been disconnected - nothing to do here then */
+            lock.Unlock();
+            router.UnlockNameTable();
+            return;
+        }
+        requests.erase(sid);
+    }
+
+    /* Advance the curChangeId */
     if (advanceChangeId) {
         ++curChangeId;
         advanceChangeId = false;
@@ -1865,6 +1890,28 @@ void SessionlessObj::ScheduleWork(Work* work)
             QCC_LogError(status, ("Timer::AddAlarm failed"));
         }
         delete work;
+    }
+}
+
+void SessionlessObj::RequestTimeoutListener::AlarmTriggered(const qcc::Alarm& alarm, QStatus reason)
+{
+    QCC_UNUSED(reason);
+
+    SessionId sid = reinterpret_cast<uintptr_t>(alarm->GetContext());
+    slObj.lock.Lock();
+    if (slObj.requests.find(sid) == slObj.requests.end()) {
+        slObj.lock.Unlock();
+    }  else {
+        QCC_DbgPrintf(("Requestor sid=%u timed out before receiving range request", sid));
+        slObj.requests.erase(sid);
+        slObj.lock.Unlock();
+
+        QStatus status = slObj.bus.LeaveSession(sid);
+        if (status == ER_OK) {
+            QCC_DbgPrintf(("LeaveSession(sid=%u)", sid));
+        } else {
+            QCC_LogError(status, ("LeaveSession sid=%u failed", sid));
+        }
     }
 }
 

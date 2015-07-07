@@ -705,6 +705,19 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      */
     void ScheduleWork(Work* work);
 
+    class RequestTimeoutListener : public qcc::AlarmListener {
+      public:
+        RequestTimeoutListener(SessionlessObj& slObj) : slObj(slObj) { }
+        void AlarmTriggered(const qcc::Alarm& alarm, QStatus reason);
+      private:
+        SessionlessObj& slObj;
+        RequestTimeoutListener& operator=(const RequestTimeoutListener&);
+    };
+    const uint32_t requestTimeoutMsecs;
+    RequestTimeoutListener requestTimeoutListener;
+    typedef std::set<SessionId> Requests;
+    /** The in-progress requestor sessions */
+    Requests requests;
 };
 
 }
