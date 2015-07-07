@@ -222,7 +222,7 @@ QStatus ARDP_Acknowledge(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf,
 void ARDP_SetAcceptCb(ArdpHandle* handle, ARDP_ACCEPT_CB AcceptCb);
 QStatus ARDP_Connect(ArdpHandle* handle, qcc::SocketFd sock, qcc::IPAddress ipAddr, uint16_t ipPort, uint16_t segmax, uint16_t segbmax, ArdpConnRecord** conn, uint8_t* buf, uint16_t len, void* context);
 void ARDP_SetConnectCb(ArdpHandle* handle, ARDP_CONNECT_CB ConnectCb);
-QStatus ARDP_Disconnect(ArdpHandle* handle, ArdpConnRecord* conn);
+QStatus ARDP_Disconnect(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t connId);
 void ARDP_SetDisconnectCb(ArdpHandle* handle, ARDP_DISCONNECT_CB DisconnectCb);
 void ARDP_ReleaseConnection(ArdpHandle* handle, ArdpConnRecord* conn);
 QStatus ARDP_RecvReady(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf* rcvbuf);
