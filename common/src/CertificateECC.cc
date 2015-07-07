@@ -837,6 +837,7 @@ QStatus CertificateX509::EncodeCertificateTBS()
         return status;
     }
     serialStr.assign((const char*)serial, serialLen);
+    tbs.clear(tbs.size()); //empty the tbs string.
     status = Crypto_ASN1::Encode(tbs, "(c(i)l(o)(R)(R)(R)(R)R)",
                                  0, x509Version, &serialStr, &oid, &iss, &time, &sub, &pub, &ext);
 
@@ -900,6 +901,7 @@ QStatus CertificateX509::DecodeCertificateDER(const qcc::String& der)
         return status;
     }
     // Put the sequence back on the TBS
+    tbs.clear(tbs.size());
     status = Crypto_ASN1::Encode(tbs, "(R)", &tmp);
     if (ER_OK != status) {
         return status;
