@@ -430,6 +430,24 @@ static bool IsConnValid(ArdpHandle* handle, ArdpConnRecord* conn)
     return false;
 }
 
+static bool IsConnValid(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t connId)
+{
+    if (conn == NULL) {
+        return false;
+    }
+
+    if (IsEmpty(&handle->conns)) {
+        return false;
+    }
+
+    for (ListNode* ln = &handle->conns; (ln = ln->fwd) != &handle->conns;) {
+        if (conn == (ArdpConnRecord*)ln && (conn->id == connId)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 static void moveAhead(ArdpHandle* handle, ArdpConnRecord* conn)
 {
     ListNode* head = &handle->conns;
@@ -855,7 +873,7 @@ static void DisconnectTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, voi
 
     /* Tricking the compiler */
     QStatus reason = static_cast<QStatus>(reinterpret_cast<uintptr_t>(context));
-    QCC_DbgPrintf(("DisconnectTimerHandler: handle=%p conn=%p reason=%p", handle, conn, QCC_StatusText(reason)));
+    QCC_DbgPrintf(("DisconnectTimerHandler: handle=%p conn=%p reason=%s", handle, conn, QCC_StatusText(reason)));
     SetState(conn, CLOSED);
 
     /*
@@ -3149,10 +3167,10 @@ QStatus ARDP_Accept(ArdpHandle* handle, ArdpConnRecord* conn, uint16_t segmax, u
     return status;
 }
 
-QStatus ARDP_Disconnect(ArdpHandle* handle, ArdpConnRecord* conn)
+QStatus ARDP_Disconnect(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t connId)
 {
-    QCC_DbgTrace(("ARDP_Disconnect(handle=%p, conn=%p)", handle, conn));
-    if (!IsConnValid(handle, conn)) {
+    QCC_DbgTrace(("ARDP_Disconnect(handle=%p, conn=%p)", handle, conn, connId));
+    if (!IsConnValid(handle, conn, connId)) {
         return ER_ARDP_INVALID_CONNECTION;
     }
     return Disconnect(handle, conn, ER_OK);

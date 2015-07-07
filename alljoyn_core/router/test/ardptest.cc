@@ -457,7 +457,7 @@ int CDECL_CALL main(int argc, char** argv)
             } else {
                 uint32_t t_connno = StringToU32(connno, 0, 0);
                 if (FindConn(t_connno)) {
-                    status =  ARDP_Disconnect(handle, connList[t_connno]);
+                    status =  ARDP_Disconnect(handle, connList[t_connno], ARDP_GetConnId(handle, connList[t_connno]));
                     if (status != ER_OK) {
                         printf("Error while ARDP_Disconnect.. %s \n", QCC_StatusText(status));
                     }
