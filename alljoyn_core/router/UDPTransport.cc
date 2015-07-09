@@ -8527,12 +8527,7 @@ void* UDPTransport::Run(void* arg)
              * Once we have create an event to look for inbound action on some
              * socket, we can note that that we are m_listening or not.
              */
-            if (listening) {
-                m_isListening = true;
-            } else {
-                m_isListening = false;
-            }
-
+            m_isListening = listening;
             m_reload = STATE_RELOADED;
         }
 
@@ -9026,6 +9021,13 @@ void UDPTransport::EnableAdvertisementInstance(ListenRequest& listenRequest)
                 }
             }
         }
+
+        if (m_isListening) {
+            if (!m_isNsEnabled) {
+                IpNameService::Instance().Enable(TRANSPORT_UDP, std::map<qcc::String, uint16_t>(), 0, m_listenPortMap, 0, false, false, true, false);
+                m_isNsEnabled = true;
+            }
+        }
     }
 
     /*
@@ -9155,7 +9157,6 @@ void UDPTransport::DisableAdvertisementInstance(ListenRequest& listenRequest)
         }
 
         m_isListening = false;
-        m_listenPortMap.clear();
         m_pendingDiscoveries.clear();
         m_pendingAdvertisements.clear();
         m_wildcardIfaceProcessed = false;
