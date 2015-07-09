@@ -83,7 +83,6 @@ class _RemoteEndpoint::Internal {
         getNextMsg(true),
         currentWriteMsg(bus),
         stopping(false),
-        sessionId(0),
         pingCallSerial(0),
         sendTimeout(0),
         maxControlMessages(30),
@@ -132,7 +131,7 @@ class _RemoteEndpoint::Internal {
     bool getNextMsg;                         /**< If true, read the next message from the txQueue */
     Message currentWriteMsg;                 /**< The message currently being read for this endpoint */
     bool stopping;                           /**< Is this EP stopping? */
-    uint32_t sessionId;                      /**< SessionId for BusToBus endpoint. (not used for non-B2B endpoints) */
+    set<SessionId> sessionIdSet;                    /**< Set of session Ids that this endpoint is a part of */
     uint32_t pingCallSerial;                 /**< Serial number of last Heartbeat DBus ping sent */
     uint32_t sendTimeout;                    /**< Send timeout for this endpoint i.e. time after which the Routing node must
                                                   disconnect the remote node if it has not read a message from the link
@@ -718,7 +717,7 @@ QStatus _RemoteEndpoint::ReadCallback(qcc::Source& source, bool isTimedOut)
                         /* This is a response to the DBus ping sent from RN to LN. Consume the reply quietly. */
                         internal->pingCallSerial = 0;
                     } else if (IsProbeMsg(msg, isAck)) {
-                        QCC_DbgPrintf(("%s: Received %s\n", GetUniqueName().c_str(), isAck ? "ProbeAck" : "ProbeReq"));
+                        QCC_DbgPrintf(("%s: Received %s", GetUniqueName().c_str(), isAck ? "ProbeAck" : "ProbeReq"));
                         if (!isAck) {
                             /* Respond to probe request */
                             Message probeMsg(internal->bus);
@@ -726,7 +725,7 @@ QStatus _RemoteEndpoint::ReadCallback(qcc::Source& source, bool isTimedOut)
                             if (status == ER_OK) {
                                 status = PushMessage(probeMsg);
                             }
-                            QCC_DbgPrintf(("%s: Sent ProbeAck (%s)\n", GetUniqueName().c_str(), QCC_StatusText(status)));
+                            QCC_DbgPrintf(("%s: Sent ProbeAck (%s)", GetUniqueName().c_str(), QCC_StatusText(status)));
                         }
                     } else {
                         BusEndpoint bep  = BusEndpoint::cast(rep);
@@ -846,7 +845,7 @@ QStatus _RemoteEndpoint::ReadCallback(qcc::Source& source, bool isTimedOut)
                 if (status == ER_OK) {
                     PushMessage(probeMsg);
                 }
-                QCC_DbgPrintf(("%s: Sent ProbeReq (%s)\n", GetUniqueName().c_str(), QCC_StatusText(status)));
+                QCC_DbgPrintf(("%s: Sent ProbeReq (%s)", GetUniqueName().c_str(), QCC_StatusText(status)));
 
             } else {
                 Message msg(internal->bus);
@@ -863,7 +862,7 @@ QStatus _RemoteEndpoint::ReadCallback(qcc::Source& source, bool isTimedOut)
                 if (status == ER_OK) {
                     PushMessage(msg);
                 }
-                QCC_DbgPrintf(("%s: Sent DBus ping (%s)\n", GetUniqueName().c_str(), QCC_StatusText(status)));
+                QCC_DbgPrintf(("%s: Sent DBus ping (%s)", GetUniqueName().c_str(), QCC_StatusText(status)));
 
             }
             internal->lock.Lock(MUTEX_CONTEXT);
@@ -1279,14 +1278,14 @@ QStatus _RemoteEndpoint::PushMessage(Message& msg)
 void _RemoteEndpoint::IncrementRef()
 {
     int32_t refs = IncrementAndFetch(&internal->refCount);
-    QCC_DbgPrintf(("_RemoteEndpoint::IncrementRef(%s) refs=%d\n", GetUniqueName().c_str(), refs));
+    QCC_DbgPrintf(("_RemoteEndpoint::IncrementRef(%s) refs=%d", GetUniqueName().c_str(), refs));
     QCC_UNUSED(refs); /* avoid unused variable warning in release build */
 }
 
 void _RemoteEndpoint::DecrementRef()
 {
     int32_t refs = DecrementAndFetch(&internal->refCount);
-    QCC_DbgPrintf(("_RemoteEndpoint::DecrementRef(%s) refs=%d\n", GetUniqueName().c_str(), refs));
+    QCC_DbgPrintf(("_RemoteEndpoint::DecrementRef(%s) refs=%d", GetUniqueName().c_str(), refs));
     if (refs <= 0) {
         if (minimalEndpoint && refs == 0) {
             Stop();
@@ -1322,24 +1321,47 @@ QStatus _RemoteEndpoint::GenProbeMsg(bool isAck, Message msg)
     return msg->SignalMsg("", NULL, 0, "/", org::alljoyn::Daemon::InterfaceName, isAck ? "ProbeAck" : "ProbeReq", NULL, 0, 0, 0);
 }
 
-void _RemoteEndpoint::SetSessionId(uint32_t sessionId) {
+void _RemoteEndpoint::RegisterSessionId(uint32_t sessionId)
+{
     if (internal) {
-        internal->sessionId = sessionId;
+        QCC_DbgPrintf(("_RemoteEndpoint::RegisterSessionId (%s,%u)", GetUniqueName().c_str(), sessionId));
+        internal->sessionIdSet.insert(sessionId);
+        assert(!internal->features.isBusToBus || (internal->sessionIdSet.size() == 1));
     }
 }
 
-uint32_t _RemoteEndpoint::GetSessionId() const {
+void _RemoteEndpoint::UnregisterSessionId(uint32_t sessionId)
+{
     if (internal) {
-        return internal->sessionId;
-    } else {
-        return 0;
+        QCC_DbgPrintf(("_RemoteEndpoint::UnregisterSessionId (%s,%u)", GetUniqueName().c_str(), sessionId));
+        internal->sessionIdSet.erase(sessionId);
     }
+}
+
+bool _RemoteEndpoint::IsInSession(SessionId sessionId)
+{
+    if (internal) {
+        return internal->sessionIdSet.find(sessionId) != internal->sessionIdSet.end();
+    }
+    return false;
+}
+
+uint32_t _RemoteEndpoint::GetSessionId() const
+{
+    if (internal) {
+        assert(internal->sessionIdSet.size() < 2);
+        if (internal->sessionIdSet.size() == 1) {
+            return *internal->sessionIdSet.begin();
+        }
+    }
+    return 0;
+
 }
 
 bool _RemoteEndpoint::IsSessionRouteSetUp()
 {
     if (internal) {
-        return (internal->sessionId != 0);
+        return (internal->sessionIdSet.size() != 0);
     } else {
         return false;
     }

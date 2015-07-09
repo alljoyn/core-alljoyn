@@ -98,6 +98,18 @@ class _BusEndpoint : public MessageSink {
     }
 
     /**
+     * Register SessionId for endpoint.
+     * @param[in] session Id to register.
+     */
+    virtual void RegisterSessionId(SessionId sessionId) { QCC_UNUSED(sessionId); return; };
+
+    /**
+     * Unregister SessionId from endpoint.
+     * @param[in] session Id to unregister.
+     */
+    virtual void UnregisterSessionId(SessionId sessionId) { QCC_UNUSED(sessionId); return; };
+
+    /**
      * Get the endpoint's unique name.
      *
      * @return  Unique name for endpoint.
@@ -232,6 +244,17 @@ class _BusEndpoint : public MessageSink {
     bool operator <(const _BusEndpoint& other) const
     {
         return reinterpret_cast<ptrdiff_t>(this) < reinterpret_cast<ptrdiff_t>(&other);
+    }
+
+    /**
+     * Called to find out if the endpoint is a part of a particular session.
+     * @param[in] session Id to check.
+     * @return  true if this endpoint is a part of the session, otherwise false.
+     */
+    virtual bool IsInSession(SessionId sessionId)
+    {
+        QCC_UNUSED(sessionId);
+        return false;
     }
 
   protected:

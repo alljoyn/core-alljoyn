@@ -524,6 +524,22 @@ void NameTable::UpdateVirtualAliases(const qcc::String& epName)
     QCC_DbgTrace(("NameTable::UpdateVirtualAliases(%s)", ep->IsValid() ? ep->GetUniqueName().c_str() : "<none>"));
 
     if (ep->IsValid()) {
+        UniqueNameMap::iterator it = uniqueNames.find(epName);
+        if (it != uniqueNames.end() && it->second.endpoint == ep) {
+            bool madeChange = false;
+            SessionOpts::NameTransferType oldNameTransfer = it->second.nameTransfer;
+            SessionOpts::NameTransferType newNameTransfer = GetNameTransfer(it->second.endpoint);
+
+            madeChange = (oldNameTransfer != newNameTransfer);
+            it->second.nameTransfer = newNameTransfer;
+            if (madeChange) {
+                lock.Unlock(MUTEX_CONTEXT);
+                CallListeners(epName,
+                              &epName, oldNameTransfer,
+                              &epName, newNameTransfer);
+                lock.Lock(MUTEX_CONTEXT);
+            }
+        }
         map<qcc::StringMapKey, VirtualAliasEntry>::iterator vit = virtualAliasNames.begin();
         while (vit != virtualAliasNames.end()) {
             SessionOpts::NameTransferType oldNameTransfer = SessionOpts::ALL_NAMES;
