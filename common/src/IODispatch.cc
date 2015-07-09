@@ -504,10 +504,12 @@ ThreadReturn STDCALL IODispatch::Run(void* arg) {
                                 /* Remove the read timeout alarm if any first */
                                 timer.RemoveAlarm(prevAlarm, true);
                                 lock.Lock();
-                                it->second.mainAddingRead = false;
 
                                 QStatus status = ER_TIMER_FULL;
                                 it = dispatchEntries.find(stream);
+                                if (it != dispatchEntries.end()) {
+                                    it->second.mainAddingRead = false;
+                                }
 
                                 while (isRunning && status == ER_TIMER_FULL && it != dispatchEntries.end() && it->second.stopping_state == IO_RUNNING) {
                                     /* Call the non-blocking version of AddAlarm, while holding the
@@ -546,11 +548,14 @@ ThreadReturn STDCALL IODispatch::Run(void* arg) {
                                 /* Remove the write timeout alarm if any first */
                                 timer.RemoveAlarm(prevAlarm, true);
                                 lock.Lock();
-                                it->second.mainAddingWrite = false;
 
                                 QStatus status = ER_TIMER_FULL;
 
-                                map<Stream*, IODispatchEntry>::iterator it = dispatchEntries.find(stream);
+                                it = dispatchEntries.find(stream);
+                                if (it != dispatchEntries.end()) {
+                                    it->second.mainAddingWrite = false;
+                                }
+
                                 while (isRunning && status == ER_TIMER_FULL &&  it != dispatchEntries.end() && it->second.stopping_state == IO_RUNNING) {
                                     /* Call the non-blocking version of AddAlarm, while holding the
                                      * locks to ensure that the state of the dispatchEntry is valid.
@@ -574,7 +579,7 @@ ThreadReturn STDCALL IODispatch::Run(void* arg) {
                             }
                         }
                     }
-                    it++;
+                    ++it;
                 }
                 lock.Unlock();
             }
