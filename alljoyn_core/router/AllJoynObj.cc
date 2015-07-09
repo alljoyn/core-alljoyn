@@ -364,15 +364,6 @@ void AllJoynObj::BindSessionPort(const InterfaceDescription::Member* member, Mes
         BusEndpoint srcEp = FindEndpoint(sender);
         if (srcEp->IsValid()) {
             status = TransportPermission::FilterTransports(srcEp, sender, opts.transports, "BindSessionPort");
-            if (status == ER_OK) {
-                if (PermissionMgr::GetDaemonBusCallPolicy(srcEp) == PermissionMgr::STDBUSCALL_SHOULD_REJECT) {
-                    QCC_DbgPrintf(("The sender endpoint is not allowed to call BindSessionPort()"));
-                    status = ER_BUS_NOT_ALLOWED;
-                } else if (PermissionMgr::GetDaemonBusCallPolicy(srcEp) == PermissionMgr::STDBUSCALL_ALLOW_ACCESS_SERVICE_LOCAL) {
-                    opts.transports &= TRANSPORT_LOCAL;
-                    QCC_DbgPrintf(("The sender endpoint is only allowed to use local transport"));
-                }
-            }
         } else {
             status = ER_BUS_NO_ENDPOINT;
         }
@@ -599,25 +590,6 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
         QCC_DbgPrintf(("JoinSessionThread::RunJoin(): srcEp=\"%s\"", srcEp->GetUniqueName().c_str()));
         if (srcEp->IsValid()) {
             status = TransportPermission::FilterTransports(srcEp, sender, optsIn.transports, "JoinSessionThread.Run");
-        }
-    }
-
-    if (status == ER_OK) {
-        PermissionMgr::DaemonBusCallPolicy policy = PermissionMgr::GetDaemonBusCallPolicy(joinerEp);
-        bool rejectCall = false;
-        if (policy == PermissionMgr::STDBUSCALL_SHOULD_REJECT) {
-            rejectCall = true;
-        } else if (policy == PermissionMgr::STDBUSCALL_ALLOW_ACCESS_SERVICE_LOCAL) {
-            optsIn.transports &= TRANSPORT_LOCAL;
-            QCC_DbgPrintf(("JoinSessionThread::RunJoin(): The sender endpoint is only allowed to use local transport."));
-        }
-
-        if (rejectCall) {
-            QCC_DbgPrintf(("JoinSessionThread::RunJoin(): The sender endpoint is not allowed to call JoinSession()"));
-            replyCode = ALLJOYN_JOINSESSION_REPLY_REJECTED;
-            /* Reply to request */
-            status = Reply(replyCode, id, optsOut);
-            return 0;
         }
     }
 
@@ -3389,16 +3361,6 @@ void AllJoynObj::AdvertiseName(const InterfaceDescription::Member* member, Messa
     BusEndpoint srcEp = FindEndpoint(sender);
 
     if (ALLJOYN_ADVERTISENAME_REPLY_SUCCESS == replyCode) {
-        if (PermissionMgr::GetDaemonBusCallPolicy(srcEp) == PermissionMgr::STDBUSCALL_SHOULD_REJECT) {
-            QCC_DbgPrintf(("The sender endpoint is not allowed to call AdvertiseName()"));
-            replyCode = ALLJOYN_ADVERTISENAME_REPLY_FAILED;
-        } else if (PermissionMgr::GetDaemonBusCallPolicy(srcEp) == PermissionMgr::STDBUSCALL_ALLOW_ACCESS_SERVICE_LOCAL) {
-            transports &= TRANSPORT_LOCAL;
-            QCC_DbgPrintf(("The sender endpoint is only allowed to use local transport"));
-        }
-    }
-
-    if (ALLJOYN_ADVERTISENAME_REPLY_SUCCESS == replyCode) {
         status = TransportPermission::FilterTransports(srcEp, sender, transports, "AdvertiseName");
         if (ER_OK != status) {
             QCC_LogError(status, ("Filter transports failed"));
@@ -3713,16 +3675,6 @@ void AllJoynObj::ProcFindAdvertisement(QStatus status, Message& msg, const qcc::
 
     AcquireLocks();
     BusEndpoint srcEp = FindEndpoint(sender);
-
-    if (ALLJOYN_FINDADVERTISEDNAME_REPLY_SUCCESS == replyCode) {
-        if (PermissionMgr::GetDaemonBusCallPolicy(srcEp) == PermissionMgr::STDBUSCALL_SHOULD_REJECT) {
-            QCC_DbgPrintf(("The sender endpoint is not allowed to call FindAdvertisedName()"));
-            replyCode = ER_ALLJOYN_FINDADVERTISEDNAME_REPLY_FAILED;
-        } else if (PermissionMgr::GetDaemonBusCallPolicy(srcEp) == PermissionMgr::STDBUSCALL_ALLOW_ACCESS_SERVICE_LOCAL) {
-            QCC_DbgPrintf(("The sender endpoint is only allowed to use local transport."));
-            transports &= TRANSPORT_LOCAL;
-        }
-    }
 
     if (ALLJOYN_FINDADVERTISEDNAME_REPLY_SUCCESS == replyCode) {
         status = TransportPermission::FilterTransports(srcEp, sender, transports, "AllJoynObj::FindAdvertisedName");
@@ -5421,26 +5373,6 @@ void AllJoynObj::Ping(const InterfaceDescription::Member* member, Message& msg)
 
     if (status == ER_OK && senderEp->IsValid()) {
         status = TransportPermission::FilterTransports(senderEp, sender, transports, "AllJoynObj::Ping");
-    }
-    if (status == ER_OK) {
-        PermissionMgr::DaemonBusCallPolicy policy = PermissionMgr::GetDaemonBusCallPolicy(senderEp);
-        bool rejectCall = false;
-        if (policy == PermissionMgr::STDBUSCALL_SHOULD_REJECT) {
-            rejectCall = true;
-        } else if (policy == PermissionMgr::STDBUSCALL_ALLOW_ACCESS_SERVICE_LOCAL) {
-            transports &= TRANSPORT_LOCAL;
-            QCC_DbgPrintf(("The sender endpoint is only allowed to use local transport."));
-        }
-
-        if (rejectCall) {
-            QCC_DbgPrintf(("The sender endpoint is not allowed to call Ping()"));
-            replyCode = ALLJOYN_PING_REPLY_FAILED;
-            /* Reply to request */
-            MsgArg replyArg("u", replyCode);
-            status = MethodReply(msg, &replyArg, 1);
-            QCC_DbgPrintf(("AllJoynObj::Ping(%s) returned %d (status=%s)", name, replyCode, QCC_StatusText(status)));
-            return;
-        }
     }
 
     if (status != ER_OK) {

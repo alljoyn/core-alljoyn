@@ -65,7 +65,6 @@ static const char bundledConfig[] =
     "  <property name=\"router_mobility\">Intermediate mobility</property>"
     "  <property name=\"router_availability\">3-6 hr</property>"
     "  <property name=\"router_node_connection\">Wireless</property>"
-    "  <flag name=\"restrict_untrusted_clients\">false</flag>"
     "</busconfig>";
 
 /*
