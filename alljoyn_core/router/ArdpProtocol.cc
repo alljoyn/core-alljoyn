@@ -553,7 +553,12 @@ static bool IsValidRetransmit(ArdpConnRecord* conn, ArdpSndBuf* sBuf)
 
     seq = ntohl(((ArdpHeader*)sBuf->hdr)->seq);
 
+    /* Check if this an actual retransmit of previously sent data */
     if ((conn->snd.thinWindow == 0) && SEQ32_LET(conn->snd.thinNXT, seq)) {
+        return false;
+    } else if ((seq - conn->snd.UNA) >= conn->snd.thinWindow) {
+        /* Check if this the ARDP accounting stays in sync with the remote (bound window [SEQ : ACKNXT]).
+         * If not, we'll need to wait for the remote to catch up. */
         return false;
     } else {
         return true;
@@ -1805,12 +1810,6 @@ static QStatus SendData(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, 
             conn->snd.pending++;
             assert(((conn->snd.pending) <= conn->snd.SEGMAX) && "Number of pending segments in send queue exceeds MAX!");
             conn->snd.NXT++;
-            if (conn->modeSimple && (conn->snd.thinWindow != 0)) {
-                QCC_DbgPrintf(("SendData(): thinWindow %u, thinNXT %u", conn->snd.thinWindow, conn->snd.thinNXT));
-                conn->snd.thinWindow--;
-                conn->snd.thinNXT++;
-                QCC_DbgPrintf(("SendData(): Update thinWindow %u, thinNXT %u", conn->snd.thinWindow, conn->snd.thinNXT));
-            }
         } else {
             /* Something irrevocably bad happened on the socket. Disconnect. */
             Disconnect(handle, conn, status);
@@ -1913,14 +1912,15 @@ static QStatus SendRst(ArdpHandle* handle, qcc::SocketFd sock, qcc::IPAddress ip
 
     ArdpHeader h;
     uint32_t buf32[ARDP_FIXED_HEADER_LEN >> 2];
+    uint8_t* txbuf = reinterpret_cast<uint8_t*>(buf32);
 
-    memset(&h, 0, sizeof(ArdpHeader));
-    h.flags = ARDP_FLAG_RST | ARDP_FLAG_VER;
-    h.hlen = ARDP_FIXED_HEADER_LEN >> 1;
-    h.src = htons(local);
-    h.dst = htons(foreign);
+    memset(buf32, 0, ARDP_FIXED_HEADER_LEN);
 
-    MarshalHeader(buf32, &h);
+    *(txbuf + FLAGS_OFFSET) = ARDP_FLAG_RST | ARDP_FLAG_VER;
+    *(txbuf + HLEN_OFFSET) = ARDP_FIXED_HEADER_LEN >> 1;
+    *reinterpret_cast<uint16_t*>(txbuf + SRC_OFFSET) = htons(local);
+    *reinterpret_cast<uint16_t*>(txbuf + DST_OFFSET) = htons(foreign);
+
     QCC_DbgPrintf(("SendRst(): SendTo(sock=%d., ipAddr=\"%s\", port=%d., buf=%p, len=%d", sock, ipAddr.ToString().c_str(), ipPort, &h, ARDP_FIXED_HEADER_LEN));
 
 #if ARDP_TESTHOOKS
@@ -3246,9 +3246,12 @@ static QStatus Receive(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* rxbuf,
         seg.WINDOW = conn->snd.SEGMAX - (conn->snd.NXT - (seg.LCS + 1));   /* The receiver's window */
 
         if (conn->modeSimple) {
-            QCC_DbgPrintf(("Receive(): thinWindow %u, thinNXT %u", conn->snd.thinWindow, conn->snd.thinNXT));
-            conn->snd.thinWindow = conn->snd.thinSEGMAX - (conn->snd.thinNXT - (seg.LCS + 1));   /* The receiver's window in simple mode */
-            QCC_DbgPrintf(("Receive(): Update thinWindow %u, thinNXT %u", conn->snd.thinWindow, conn->snd.thinNXT));
+            QCC_DbgPrintf(("Receive(): thinWindow %u, thinNXT %u, seg.ACK %u, seg.LCS %u", conn->snd.thinWindow, conn->snd.thinNXT, seg.ACK, seg.LCS));
+            /* The receiver's window in simple mode */
+
+            conn->snd.thinWindow = ((conn->snd.thinNXT - (seg.LCS + 1)) < conn->snd.thinSEGMAX) ? conn->snd.thinSEGMAX - (conn->snd.thinNXT - (seg.LCS + 1)) : 0;
+            assert((conn->snd.thinWindow <= conn->snd.thinSEGMAX) && "Incorrect send window update in Simple Connection Mode");
+            QCC_DbgPrintf(("Receive(): Update thinWindow %u", conn->snd.thinWindow));
         }
 
         seg.ACKNXT = ntohl(*reinterpret_cast<uint32_t*>(rxbuf + ACKNXT_OFFSET)); /* The first valid segment sender wants to be acknowledged */
