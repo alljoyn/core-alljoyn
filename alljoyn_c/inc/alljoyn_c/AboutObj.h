@@ -1,8 +1,6 @@
 /**
  * @file
  * alljoyn_aboutobj represents a bus object that implements the org.alljoyn.About interface.
- * This code is experimental, and as such has not been fully tested.
- * Please help make it more robust by contributing fixes if you find problems.
  */
 /******************************************************************************
  * Copyright AllSeen Alliance. All rights reserved.
