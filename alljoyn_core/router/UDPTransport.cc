@@ -3727,9 +3727,15 @@ class _UDPEndpoint : public _RemoteEndpoint {
         }
 
         m_transport->m_ardpLock.Lock();
-        ipAddrStr = ARDP_GetIpAddrFromConn(GetHandle(), GetConn()).ToString();
+
+        IPEndpoint endpoint;
+        QStatus status = ARDP_GetLocalIPEndpointFromConn(GetHandle(), GetConn(), endpoint);
+        if (status == ER_OK) {
+            ipAddrStr = endpoint.addr.ToString();
+        }
+
         m_transport->m_ardpLock.Unlock();
-        return ER_OK;
+        return status;
     };
 
     /**
@@ -7794,13 +7800,13 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
          * our new endpoint.
          */
         m_ardpLock.Lock();
-        qcc::IPAddress ipAddr = ARDP_GetIpAddrFromConn(handle, conn);
-        uint16_t ipPort = ARDP_GetIpPortFromConn(handle, conn);
+        qcc::IPEndpoint endpoint;
+        ARDP_GetRemoteIPEndpointFromConn(handle, conn, endpoint);
         m_ardpLock.Unlock();
 
         static const bool truthiness = true;
         UDPTransport* ptr = this;
-        String normSpec = "udp:guid=" + remoteGUID + ",addr=" + ipAddr.ToString() + ",port=" + U32ToString(ipPort);
+        String normSpec = "udp:guid=" + remoteGUID + ",addr=" + endpoint.addr.ToString() + ",port=" + U32ToString(endpoint.port);
         UDPEndpoint udpEp(ptr, m_bus, truthiness, normSpec);
 
         /*
@@ -7831,8 +7837,8 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
 
         udpEp->SetRemoteGUID(remoteGUID);
         udpEp->SetActive();
-        udpEp->SetIpAddr(ipAddr);
-        udpEp->SetIpPort(ipPort);
+        udpEp->SetIpAddr(endpoint.addr);
+        udpEp->SetIpPort(endpoint.port);
         udpEp->CreateStream(handle, conn, m_ardpConfig.initialDataTimeout, m_ardpConfig.totalDataRetryTimeout / m_ardpConfig.initialDataTimeout);
         udpEp->SetHandle(handle);
         udpEp->SetConn(conn);
