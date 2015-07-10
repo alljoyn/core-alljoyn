@@ -239,15 +239,15 @@ class AboutProxyTestAboutListener : public AboutListener {
   public:
     AboutProxyTestAboutListener() : announceListenerFlag(false), busName(), port(0) { }
 
-    void Announced(const char* busName, uint16_t version, SessionPort port,
+    void Announced(const char* announcedBusName, uint16_t announcedVersion, SessionPort announcedPort,
                    const MsgArg& objectDescription, const MsgArg& aboutData) {
         QCC_UNUSED(objectDescription);
         QCC_UNUSED(aboutData);
 
         EXPECT_FALSE(announceListenerFlag) << "We don't expect the flag to already be true when an AnnouceSignal is received.";
-        this->busName = qcc::String(busName);
-        this->version = version;
-        this->port = port;
+        this->busName = qcc::String(announcedBusName);
+        this->version = announcedVersion;
+        this->port = announcedPort;
         announceListenerFlag = true;
     }
     bool announceListenerFlag;

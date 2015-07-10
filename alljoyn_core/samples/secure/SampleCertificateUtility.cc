@@ -42,6 +42,7 @@
 #define write _write
 #define fstat _fstat
 #define stat _stat
+#define unlink _unlink
 #define O_RDONLY _O_RDONLY
 #define O_WRONLY _O_WRONLY
 #define O_CREAT _O_CREAT

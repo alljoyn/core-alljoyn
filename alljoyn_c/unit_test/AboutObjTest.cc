@@ -394,8 +394,8 @@ TEST_F(AboutObjTest, CancelAnnouncement) {
     status = alljoyn_busattachment_connect(clientBus, NULL);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    about_obj_test_about_listener_2* listener = create_about_obj_test_about_listener_2();
-    alljoyn_busattachment_registeraboutlistener(clientBus, listener->listener);
+    about_obj_test_about_listener_2* testAboutListener2 = create_about_obj_test_about_listener_2();
+    alljoyn_busattachment_registeraboutlistener(clientBus, testAboutListener2->listener);
     status =  alljoyn_busattachment_whoimplements_interface(clientBus, "org.alljoyn.About");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     alljoyn_aboutobj aboutObj = alljoyn_aboutobj_create(serviceBus, ANNOUNCED);
@@ -403,18 +403,18 @@ TEST_F(AboutObjTest, CancelAnnouncement) {
     status = alljoyn_aboutobj_announce(aboutObj, port, aboutData);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     for (uint32_t msec = 0; msec < 5000; msec += WAIT_TIME) {
-        if (listener->announceListenerFlag == QCC_TRUE) {
+        if (testAboutListener2->announceListenerFlag == QCC_TRUE) {
             break;
         }
         qcc::Sleep(WAIT_TIME);
     }
-    EXPECT_TRUE(listener->announceListenerFlag)
+    EXPECT_TRUE(testAboutListener2->announceListenerFlag)
         << "The announceListenerFlag must be true to continue this test.";
-    EXPECT_TRUE(listener->aboutObjectPartOfAnnouncement)
+    EXPECT_TRUE(testAboutListener2->aboutObjectPartOfAnnouncement)
         << "The org.alljoyn.About interface was not part of the announced object description.";
     const char* serviceBusUniqueName = alljoyn_busattachment_getuniquename(serviceBus);
-    EXPECT_STREQ(serviceBusUniqueName, listener->busName);
-    EXPECT_EQ(port, listener->port);
+    EXPECT_STREQ(serviceBusUniqueName, testAboutListener2->busName);
+    EXPECT_EQ(port, testAboutListener2->port);
 
     status = alljoyn_aboutobj_unannounce(aboutObj);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -424,7 +424,7 @@ TEST_F(AboutObjTest, CancelAnnouncement) {
 
     alljoyn_aboutobj_destroy(aboutObj);
     alljoyn_busattachment_destroy(clientBus);
-    destroy_about_obj_test_about_listener_2(listener);
+    destroy_about_obj_test_about_listener_2(testAboutListener2);
 }
 
 TEST_F(AboutObjTest, AnnounceTheAboutObj) {
@@ -438,8 +438,8 @@ TEST_F(AboutObjTest, AnnounceTheAboutObj) {
     status = alljoyn_busattachment_connect(clientBus, NULL);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    about_obj_test_about_listener_2* listener = create_about_obj_test_about_listener_2();
-    alljoyn_busattachment_registeraboutlistener(clientBus, listener->listener);
+    about_obj_test_about_listener_2* testAboutListener2 = create_about_obj_test_about_listener_2();
+    alljoyn_busattachment_registeraboutlistener(clientBus, testAboutListener2->listener);
     status =  alljoyn_busattachment_whoimplements_interface(clientBus, "org.alljoyn.About");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     alljoyn_aboutobj aboutObj = alljoyn_aboutobj_create(serviceBus, ANNOUNCED);
@@ -447,23 +447,23 @@ TEST_F(AboutObjTest, AnnounceTheAboutObj) {
     status = alljoyn_aboutobj_announce(aboutObj, port, aboutData);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     for (uint32_t msec = 0; msec < 5000; msec += WAIT_TIME) {
-        if (listener->announceListenerFlag == QCC_TRUE) {
+        if (testAboutListener2->announceListenerFlag == QCC_TRUE) {
             break;
         }
         qcc::Sleep(WAIT_TIME);
     }
-    EXPECT_TRUE(listener->announceListenerFlag) << "The announceListenerFlag must be true to continue this test.";
-    EXPECT_TRUE(listener->aboutObjectPartOfAnnouncement) << "The org.alljoyn.About interface was not part of the announced object description.";
+    EXPECT_TRUE(testAboutListener2->announceListenerFlag) << "The announceListenerFlag must be true to continue this test.";
+    EXPECT_TRUE(testAboutListener2->aboutObjectPartOfAnnouncement) << "The org.alljoyn.About interface was not part of the announced object description.";
     const char* serviceBusUniqueName = alljoyn_busattachment_getuniquename(serviceBus);
-    EXPECT_STREQ(serviceBusUniqueName, listener->busName);
-    EXPECT_EQ(port, listener->port);
+    EXPECT_STREQ(serviceBusUniqueName, testAboutListener2->busName);
+    EXPECT_EQ(port, testAboutListener2->port);
 
     alljoyn_busattachment_stop(clientBus);
     alljoyn_busattachment_join(clientBus);
 
     alljoyn_aboutobj_destroy(aboutObj);
     alljoyn_busattachment_destroy(clientBus);
-    destroy_about_obj_test_about_listener_2(listener);
+    destroy_about_obj_test_about_listener_2(testAboutListener2);
 }
 
 TEST_F(AboutObjTest, Announce) {
@@ -644,45 +644,45 @@ TEST_F(AboutObjTest, ProxyAccessToAboutObj) {
     alljoyn_msgarg aboutArg = alljoyn_msgarg_create();
     status = alljoyn_aboutproxy_getaboutdata(aProxy, "en", aboutArg);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    alljoyn_aboutdata aboutData = alljoyn_aboutdata_create_full(aboutArg, "en");
+    alljoyn_aboutdata testAboutData = alljoyn_aboutdata_create_full(aboutArg, "en");
 
     char* appName;
-    status = alljoyn_aboutdata_getappname(aboutData, &appName, "en");
+    status = alljoyn_aboutdata_getappname(testAboutData, &appName, "en");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("Application", appName);
 
     char* manufacturer;
-    status = alljoyn_aboutdata_getmanufacturer(aboutData, &manufacturer, "en");
+    status = alljoyn_aboutdata_getmanufacturer(testAboutData, &manufacturer, "en");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("Manufacturer", manufacturer);
 
     char* modelNum;
-    status = alljoyn_aboutdata_getmodelnumber(aboutData, &modelNum);
+    status = alljoyn_aboutdata_getmodelnumber(testAboutData, &modelNum);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("123456", modelNum);
 
     char* desc;
-    status = alljoyn_aboutdata_getdescription(aboutData, &desc, "en");
+    status = alljoyn_aboutdata_getdescription(testAboutData, &desc, "en");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("A poetic description of this application", desc);
 
     char* dom;
-    status = alljoyn_aboutdata_getdateofmanufacture(aboutData, &dom);
+    status = alljoyn_aboutdata_getdateofmanufacture(testAboutData, &dom);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("2014-03-24", dom);
 
     char* softVer;
-    status = alljoyn_aboutdata_getsoftwareversion(aboutData, &softVer);
+    status = alljoyn_aboutdata_getsoftwareversion(testAboutData, &softVer);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("0.1.2", softVer);
 
     char* hwVer;
-    status = alljoyn_aboutdata_gethardwareversion(aboutData, &hwVer);
+    status = alljoyn_aboutdata_gethardwareversion(testAboutData, &hwVer);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("0.0.1", hwVer);
 
     char* support;
-    status = alljoyn_aboutdata_getsupporturl(aboutData, &support);
+    status = alljoyn_aboutdata_getsupporturl(testAboutData, &support);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("http://www.example.com", support);
 
@@ -713,7 +713,7 @@ TEST_F(AboutObjTest, ProxyAccessToAboutObj) {
     alljoyn_msgarg_destroy(objDesc);
     alljoyn_msgarg_destroy(aboutArg);
     alljoyn_msgarg_destroy(aboutArg_fr);
-    alljoyn_aboutdata_destroy(aboutData);
+    alljoyn_aboutdata_destroy(testAboutData);
     destroy_about_obj_test_about_listener_2(aboutListener);
     destroy_about_obj_test_bus_object(busObject);
     alljoyn_aboutproxy_destroy(aProxy);

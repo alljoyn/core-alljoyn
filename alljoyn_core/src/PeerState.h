@@ -41,11 +41,27 @@
 #include <qcc/Event.h>
 #include <qcc/time.h>
 #include <qcc/CertificateECC.h>
+#include <qcc/Crypto.h>
 
 #include <alljoyn/Status.h>
 #include <alljoyn/PermissionPolicy.h>
 
 namespace ajn {
+
+/* Conversation hash-related constants */
+
+/*
+ * We now define two versions of conversation hash: one that only hashes
+ * things inside KeyExchanger, used in authentication versions 3 and below, and
+ * the entire authentication version, used starting with version 4. These
+ * constants are used internally for calls to UpdateHash to indicate which
+ * version of the conversation hash a particular call pertains to.
+ *
+ * To stay consistent with the authentication version numbers, these are called
+ * V1 and V4.
+ */
+#define CONVERSATION_V1 ((uint32_t)0x0000)
+#define CONVERSATION_V4 ((uint32_t)0x0004)
 
 /* Forward declaration */
 class _PeerState;
@@ -109,17 +125,11 @@ class _PeerState {
         lastDriftAdjustTime(0),
         expectedSerial(0),
         isSecure(false),
-        authEvent(NULL)
+        authEvent(NULL),
+        hashUtil(NULL)
     {
         ::memset(window, 0, sizeof(window));
         ::memset(authorizations, 0, sizeof(authorizations));
-    }
-
-    ~_PeerState()
-    {
-        ClearGuildMap(guildMap);
-        ClearGuildArgs(guildArgs);
-        delete [] manifest;
     }
 
     /**
@@ -163,9 +173,9 @@ class _PeerState {
     /**
      * Sets the GUID for and authentication version this peer.
      */
-    void SetGuidAndAuthVersion(const qcc::GUID128& guid, uint32_t authVersion) {
-        this->guid = guid;
-        this->authVersion = authVersion;
+    void SetGuidAndAuthVersion(const qcc::GUID128& newGuid, uint32_t authenticationVersion) {
+        this->guid = newGuid;
+        this->authVersion = authenticationVersion;
     }
 
     /**
@@ -343,6 +353,68 @@ class _PeerState {
      */
     uint8_t guildArgsSentCount;
 
+    /**
+     * Update the conversation hash with a single byte
+     * InitializeConversationHash must first be called before calling this method.
+     * @param[in] conversationVersion The minimum auth version required for this to be included in the hash.
+     * @param[in] byte Byte with which to update the hash.
+     */
+    void UpdateHash(uint32_t conversationVersion, uint8_t byte);
+
+    /**
+     * Update the conversation hash with a byte array.
+     * InitializeConversationHash must first be called before calling this method.
+     * @param[in] conversationVersion The minimum auth version required for this to be included in the hash.
+     * @param[in] buf Data with which to update the hash.
+     * @param[in] bufSize Size of buf.
+     */
+    void UpdateHash(uint32_t conversationVersion, const uint8_t* buf, size_t bufSize);
+
+    /**
+     * Update the conversation hash with a string. String will be converted to its
+     * underlying byte array and used to update.
+     * InitializeConversationHash must first be called before calling this method.
+     * @param[in] conversationVersion The minimum auth version required for this to be included in the hash.
+     * @param[in] str String with data with which to update the hash.
+     */
+    void UpdateHash(uint32_t conversationVersion, const qcc::String& str);
+
+    /**
+     * Update the conversation hash with a Message. This extracts the raw message buffer
+     * from the Message and updates the hash with that.
+     * InitializeConversationHash must first be called before calling this method.
+     * @param[in] conversationVersion The minimum auth version required for this to be included in the hash.
+     * @param[in] msg A Message object whose arguments will be added to the hash.
+     */
+    void UpdateHash(uint32_t conversationVersion, const Message& msg);
+
+    /**
+     * Initialize the conversation hash to start a new conversation. Any previous
+     * conversation hash is lost. This must be called before any calls to UpdateHash or GetDigest.
+     */
+    void InitializeConversationHash();
+
+    /**
+     * Free the conversation hash when it's no longer needed. After this, any new calls
+     * to UpdateHash or GetDigest must be preceded by a call to InitializeConversationHash.
+     * @see void InitializeConversationHash()
+     */
+    void FreeConversationHash();
+
+    /**
+     * Get the current conversation hash digest.
+     * InitializeConversationHash must first be called before calling this method.
+     * @param[out] digest A buffer of appropriate size to receive the digest. Currently
+     *                    only SHA-256 is used, and so 32 bytes will be returned.
+     * @param[in] keepAlive Whether or not to keep the hash alive for continuing hash.
+     */
+    void GetDigest(uint8_t* digest, bool keepAlive = false);
+
+    /*
+     * Destructor
+     */
+    ~_PeerState();
+
   private:
     /**
      * private assignment operator to prevent double freeing of memory
@@ -416,6 +488,10 @@ class _PeerState {
      */
     uint32_t window[128];
 
+    /**
+     * The conversation hash.
+     */
+    qcc::Crypto_Hash* hashUtil;
 };
 
 

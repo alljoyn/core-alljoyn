@@ -201,7 +201,6 @@ QStatus AboutData::CreateFromXml(const qcc::String& aboutDataXml)
      * is that we can only accept OEM defined tags that contain a string.
      */
     std::vector<qcc::XmlElement*> elements = root->GetChildren();
-    std::vector<qcc::XmlElement*>::iterator it;
     for (std::vector<qcc::XmlElement*>::iterator it = elements.begin(); it != elements.end(); ++it) {
         if (IsFieldLocalized((*it)->GetName().c_str()) ||
             (aboutDataInternal->aboutFields.find((*it)->GetName()) == aboutDataInternal->aboutFields.end())) {
@@ -327,9 +326,9 @@ QStatus AboutData::CreatefromMsgArg(const MsgArg& arg, const char* language)
                 size_t language_count;
                 MsgArg* languagesArg;
                 fieldValue->Get(this->GetFieldSignature(SUPPORTED_LANGUAGES), &language_count, &languagesArg);
-                for (size_t i = 0; i < language_count; ++i) {
+                for (size_t j = 0; j < language_count; ++j) {
                     char* lang;
-                    languagesArg[i].Get("s", &lang);
+                    languagesArg[j].Get("s", &lang);
                     aboutDataInternal->supportedLanguages.insert(lang);
                 }
             }

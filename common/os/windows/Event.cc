@@ -543,6 +543,8 @@ VOID CALLBACK IoEventCallback(PVOID arg, BOOLEAN TimerOrWaitFired)
 #if (_WIN32_WINNT > 0x0603)
 VOID CALLBACK NamedPipeIoEventCallback(PVOID arg, BOOLEAN TimerOrWaitFired)
 {
+    QCC_UNUSED(TimerOrWaitFired);
+
     HANDLE pipe = (HANDLE)arg;
     BOOL ret;
     DWORD eventMask;
@@ -984,9 +986,9 @@ bool Event::IsSet()
     return (ER_TIMEOUT != status) ? true : false;
 }
 
-void Event::ResetTime(uint32_t delay, uint32_t period)
+void Event::ResetTime(uint32_t delay, uint32_t periodMs)
 {
-    this->period = period;
+    this->period = periodMs;
 
     if (delay == WAIT_FOREVER) {
         ::CancelWaitableTimer(timerHandle);
@@ -1014,6 +1016,7 @@ bool Event::IsNetworkEventSet()
         DWORD eventMask;
         HANDLE pipe = LongToHandle((ULONG) this->ioFd);
         BOOL success = AllJoynEnumEvents(pipe, NULL, &eventMask);
+        QCC_UNUSED(success);
         assert(success);
         if ((eventMask & NP_WRITE_SET) && (this->eventType == Event::IO_WRITE)) {
             ret = true;

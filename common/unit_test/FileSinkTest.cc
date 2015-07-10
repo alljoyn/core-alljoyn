@@ -79,7 +79,7 @@ TEST(FileSinkTest, invalidFileSink) {
         NULL
     };
     for (const char** pathname = xfail; *pathname; ++pathname) {
-        FileSink f = FileSink(*pathname, FileSink::PRIVATE);
+        f = FileSink(*pathname, FileSink::PRIVATE);
         EXPECT_FALSE(f.IsValid());
     }
     //Cleanup files after test

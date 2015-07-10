@@ -26,6 +26,7 @@
 #include <qcc/Debug.h>
 #include <qcc/Crypto.h>
 #include <qcc/StringUtil.h>
+#include <qcc/Util.h>
 
 #include <Status.h>
 
@@ -239,7 +240,7 @@ QStatus Crypto_ASN1::EncodeV(const char*& syntax, qcc::String& asn, va_list* arg
                     //Calculate the unused bits. bitLen 3 results in 5 unused bits
                     size_t unusedBits = (8 - bitLen) & 7;
                     //assure we have enough space to store the bits, if bitLen is not a multitude of 8.
-                    size_t len = (bitLen + 7) / 8;
+                    len = BitlenToBytelen(bitLen);
                     asn.push_back((char)ASN_BITS);
                     //we write 1 extra byte to indicate how many unused bits there are in the string
                     EncodeLen(asn, len + 1);

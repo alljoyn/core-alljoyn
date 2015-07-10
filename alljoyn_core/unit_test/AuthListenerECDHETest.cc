@@ -43,6 +43,7 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
         ECDHEKeyXListener(bool server) :
             sendKeys(true),
             sendExpiry(true),
+            expirationSeconds(100u), /* set the master secret expiry time to 100 seconds */
             sendPrivateKey(true),
             sendCertChain(true),
             sendEmptyCertChain(false),
@@ -75,7 +76,7 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
                     return false;
                 }
                 if (sendExpiry) {
-                    creds.SetExpiration(100);  /* set the master secret expiry time to 100 seconds */
+                    creds.SetExpiration(expirationSeconds);
                 }
                 return true;
             } else if (strcmp(authMechanism, "ALLJOYN_ECDHE_PSK") == 0) {
@@ -98,7 +99,7 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
                 }
                 creds.SetPassword(psk);
                 if (sendExpiry) {
-                    creds.SetExpiration(100);  /* set the master secret expiry time to 100 seconds */
+                    creds.SetExpiration(expirationSeconds);
                 }
                 return true;
             } else if (strcmp(authMechanism, "ALLJOYN_ECDHE_ECDSA") == 0) {
@@ -360,7 +361,7 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
                     }
                 }
                 if (sendExpiry) {
-                    creds.SetExpiration(100);  /* set the master secret expiry time to 100 seconds */
+                    creds.SetExpiration(expirationSeconds);
                 }
                 return true;
 
@@ -399,6 +400,7 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
 
         bool sendKeys;
         bool sendExpiry;
+        uint32_t expirationSeconds;
         bool sendPrivateKey;
         bool sendCertChain;
         bool sendEmptyCertChain;
@@ -417,6 +419,7 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
 
     AuthListenerECDHETest() : BusObject("/AuthListenerECDHETest"),
         clientBus("AuthListenerECDHETestClient", false),
+        secondClientBus("AuthListenerECDHETestClient", false),
         serverBus("AuthListenerECDHETestServer", false),
         clientAuthListener(false),
         serverAuthListener(true)
@@ -429,6 +432,12 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
         EXPECT_EQ(ER_OK, clientBus.Connect());
         EXPECT_EQ(ER_OK, clientBus.RegisterKeyStoreListener(clientKeyStoreListener));
         CreateOnOffAppInterface(clientBus, false);
+        /* Although secondClientBus is currently used in only one test, it's simpler to handle
+         * setup and teardown of it here rather than duplicate code in the test itself. */
+        EXPECT_EQ(ER_OK, secondClientBus.Start());
+        EXPECT_EQ(ER_OK, secondClientBus.Connect());
+        EXPECT_EQ(ER_OK, secondClientBus.RegisterKeyStoreListener(clientKeyStoreListener));
+        CreateOnOffAppInterface(secondClientBus, false);
         EXPECT_EQ(ER_OK, serverBus.Start());
         EXPECT_EQ(ER_OK, serverBus.Connect());
         EXPECT_EQ(ER_OK, serverBus.RegisterKeyStoreListener(serverKeyStoreListener));
@@ -442,6 +451,11 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
         EXPECT_EQ(ER_OK, clientBus.Disconnect());
         EXPECT_EQ(ER_OK, clientBus.Stop());
         EXPECT_EQ(ER_OK, clientBus.Join());
+        secondClientBus.UnregisterKeyStoreListener();
+        secondClientBus.UnregisterBusObject(*this);
+        EXPECT_EQ(ER_OK, secondClientBus.Disconnect());
+        EXPECT_EQ(ER_OK, secondClientBus.Stop());
+        EXPECT_EQ(ER_OK, secondClientBus.Join());
         serverBus.UnregisterKeyStoreListener();
         serverBus.UnregisterBusObject(*this);
         EXPECT_EQ(ER_OK, serverBus.Disconnect());
@@ -458,10 +472,10 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
         }
     }
 
-    void CreateOnOffAppInterface(BusAttachment& bus, bool addService)
+    void CreateOnOffAppInterface(BusAttachment& busAttachment, bool addService)
     {
         InterfaceDescription* ifc = NULL;
-        QStatus status = bus.CreateInterface(ONOFF_IFC_NAME, ifc, AJ_IFC_SECURITY_REQUIRED);
+        QStatus status = busAttachment.CreateInterface(ONOFF_IFC_NAME, ifc, AJ_IFC_SECURITY_REQUIRED);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         EXPECT_TRUE(ifc != NULL);
         if (ifc != NULL) {
@@ -478,12 +492,13 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
             EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
             AddMethodHandler(ifc->GetMember("On"), static_cast<MessageReceiver::MethodHandler>(&AuthListenerECDHETest::OnOffOn));
             AddMethodHandler(ifc->GetMember("Off"), static_cast<MessageReceiver::MethodHandler>(&AuthListenerECDHETest::OnOffOff));
-            status = bus.RegisterBusObject(*this);
+            status = busAttachment.RegisterBusObject(*this);
             EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         }
     }
 
     BusAttachment clientBus;
+    BusAttachment secondClientBus;
     BusAttachment serverBus;
     ECDHEKeyXListener clientAuthListener;
     ECDHEKeyXListener serverAuthListener;
@@ -499,17 +514,20 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
         MethodReply(msg, ER_OK);
     }
 
-    QStatus ExerciseOn()
+    QStatus ExerciseOn(bool useSecondBus = false)
     {
-        ProxyBusObject proxyObj(clientBus, serverBus.GetUniqueName().c_str(), GetPath(), 0, false);
-        const InterfaceDescription* itf = clientBus.GetInterface(ONOFF_IFC_NAME);
+        BusAttachment& selectedClientBus = useSecondBus ? secondClientBus : clientBus;
+
+        ProxyBusObject proxyObj(selectedClientBus, serverBus.GetUniqueName().c_str(), GetPath(), 0, false);
+        const InterfaceDescription* itf = selectedClientBus.GetInterface(ONOFF_IFC_NAME);
         proxyObj.AddInterface(*itf);
-        Message reply(clientBus);
+        Message reply(selectedClientBus);
 
         return proxyObj.MethodCall(ONOFF_IFC_NAME, "On", NULL, 0, reply, 5000);
     }
 
   private:
+
     InMemoryKeyStoreListener clientKeyStoreListener;
     InMemoryKeyStoreListener serverKeyStoreListener;
 };
@@ -1014,3 +1032,30 @@ TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_Downgrade_To_ECDHE_PSK)
     EXPECT_STREQ(serverAuthListener.chosenMechanism.c_str(), "ALLJOYN_ECDHE_PSK");
 }
 
+TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_TestExpiredSessionKey)
+{
+    EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_ECDSA"));
+    EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_ECDSA"));
+    clientAuthListener.sendExpiry = true;
+    clientAuthListener.expirationSeconds = 10000u;
+    serverAuthListener.sendExpiry = true;
+    serverAuthListener.expirationSeconds = 1u;
+    EXPECT_EQ(ER_OK, ExerciseOn());
+    EXPECT_TRUE(clientAuthListener.authComplete);
+    EXPECT_TRUE(serverAuthListener.authComplete);
+
+    /* Despite saying the credential expires in 1 second, it seems to be the case that the minimum expiration
+     * is 30 seconds. Sleep for 35 just to be sure.
+     */
+    printf("*** Sleep 35 secs since the minimum key expiration time is 30 seconds\n");
+    qcc::Sleep(35000); /* Parameter for Sleep is ms. */
+
+    /* Use a different bus attachment but use the same client key store. We need a different bus attachment
+     * because the default one considers the server peer already secure.
+     */
+    EXPECT_EQ(ER_OK, secondClientBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &clientAuthListener, NULL, false));
+
+    EXPECT_EQ(ER_OK, ExerciseOn(true)); /* `true' parameter will use secondClientBus. */
+    EXPECT_TRUE(clientAuthListener.authComplete);
+    EXPECT_TRUE(serverAuthListener.authComplete);
+}

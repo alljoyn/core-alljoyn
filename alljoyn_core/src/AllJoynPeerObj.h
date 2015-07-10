@@ -74,7 +74,7 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
      *      - ER_OK if successful.
      *      - An error status otherwise
      */
-    QStatus Init(BusAttachment& bus);
+    QStatus Init(BusAttachment& peerBus);
 
     /**
      * Called when object is successfully registered.
@@ -192,14 +192,14 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
 
     /**
      * Factory method to insantiate a KeyExchanger class.
-     * @param peerAuthVersion the peer's auth protocol version
+     * @param peerState The peer's state
      * @param initiator initiator or responder
      * @param requestingAuthList the list of requesting auth masks
      * @param requestingAuthCount the length of the auth mask list
      * @return an instance of the KeyExchanger; NULL if none of the masks in the list is satisfied.
      */
 
-    KeyExchanger* GetKeyExchangerInstance(uint16_t peerAuthVersion, bool initiator, const uint32_t* requestingAuthList, size_t requestingAuthCount);
+    KeyExchanger* GetKeyExchangerInstance(PeerState peerState, bool initiator, const uint32_t* requestingAuthList, size_t requestingAuthCount);
 
     /**
      * Allow a KeyExchanger to send a reply message.
@@ -212,11 +212,30 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
     /**
      * Allow a KeyExchanger to send a reply message.
      * @param msg the reference message
+     * @param replyMsg copy of the sent reply message
+     * @param status the status code
+     * @return status ER_OK for success; error otherwise.
+     */
+    QStatus HandleMethodReply(Message& msg, Message& replyMsg, QStatus status);
+
+    /**
+     * Allow a KeyExchanger to send a reply message.
+     * @param msg the reference message
      * @param args the message arguments
      * @param len the number of message arguments
      * @return status ER_OK for success; error otherwise.
      */
     QStatus HandleMethodReply(Message& msg, const MsgArg* args = NULL, size_t numArgs = 0);
+
+    /**
+     * Allow a KeyExchanger to send a reply message.
+     * @param msg the reference message
+     * @param sentMsg copy of the message sent as a result
+     * @param args the message arguments
+     * @param len the number of message arguments
+     * @return status ER_OK for success; error otherwise.
+     */
+    QStatus HandleMethodReply(Message& msg, Message& sentMsg, const MsgArg* args = NULL, size_t numArgs = 0);
 
     /**
      * Destructor
@@ -395,13 +414,15 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
 
     /**
      * Ask for remote authentication suites.
+     * @param peerAuthVersion the authentication version used for this session
      * @param remotePeerObj the remote peer object
      * @param ifc the interface object
-     * @param localAuthMask the local auth mask
-     * @param remoteAuthMask the buffer to store the remote auth mask
+     * @param remoteAuthSuites the buffer to store the remote auth suites
+     * @param remoteAuthCount the buffer to receive the number of suites stored in remoteAuthSuites
+     * @param peerState the remote peer's PeerState object
      */
 
-    QStatus AskForAuthSuites(uint32_t peerAuthVersion, ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc, uint32_t**remoteAuthSuites, size_t*remoteAuthCount);
+    QStatus AskForAuthSuites(uint32_t peerAuthVersion, ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc, uint32_t** remoteAuthSuites, size_t* remoteAuthCount, PeerState peerState);
 
     /**
      * Authenticate Peer using SASL protocol
@@ -420,7 +441,6 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
      * @param msg     The method call message
      */
     void HandleSendManifest(const InterfaceDescription::Member* member, Message& msg);
-
     /**
      * Send the manifest to the peer
      * @param remotePeerObj  The remote peer

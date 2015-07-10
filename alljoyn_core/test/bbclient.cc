@@ -147,8 +147,8 @@ class MyBusListener : public BusListener, public SessionListener {
                        newOwner ? newOwner : "null");
     }
 
-    void SessionLost(SessionId sessionId, SessionLostReason reason) {
-        QCC_SyncPrintf("SessionLost(%08x) was called. Reason=%u.\n", sessionId, reason);
+    void SessionLost(SessionId lostSessionId, SessionLostReason reason) {
+        QCC_SyncPrintf("SessionLost(%08x) was called. Reason=%u.\n", lostSessionId, reason);
         g_interrupt = true;
     }
 
@@ -820,8 +820,8 @@ int CDECL_CALL main(int argc, char** argv)
                 /*
                  * If it was the discover event that popped, we're done.
                  */
-                for (vector<qcc::Event*>::iterator i = signaledEvents.begin(); i != signaledEvents.end(); ++i) {
-                    if (*i == g_discoverEvent) {
+                for (vector<qcc::Event*>::iterator j = signaledEvents.begin(); j != signaledEvents.end(); ++j) {
+                    if (*j == g_discoverEvent) {
                         discovered = true;
                         break;
                     }

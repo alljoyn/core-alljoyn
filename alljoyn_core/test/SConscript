@@ -25,6 +25,7 @@ if test_env['BR'] == 'on':
 # Test Programs
 progs = [
     test_env.Program('aclient',       ['aclient.cc']),
+    test_env.Program('ajxmlcop',      ['ajxmlcop.cc']),
     test_env.Program('aservice',      ['aservice.cc']),
     test_env.Program('bastress',      ['bastress.cc']),
     test_env.Program('bastress2',     ['bastress2.cc']),
@@ -58,7 +59,7 @@ if test_env['OS'] == 'linux' or test_env['OS'] == 'android':
     progs.extend(test_env.Program('mc-rcv',     ['mc-rcv.cc']))
     progs.extend(test_env.Program('mc-snd',     ['mc-snd.cc']))
 
-if test_env['OS'] == 'win7':
+if test_env['OS'] in ['win7', 'win10']:
     progs.extend(test_env.Program('mouseclient', ['mouseclient.cc']))
     progs.extend(test_env.Program('litegen',     ['litegen.cc']))
 

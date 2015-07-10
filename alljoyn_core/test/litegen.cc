@@ -156,9 +156,9 @@ int CDECL_CALL main(int argc, char** argv)
             const ChildVector args = signal->GetChildren("arg");
             for (ChildVectorIter ait = args.begin(); ait != args.end(); ++ait) {
                 const XmlElement* arg = *ait;
-                const qcc::String name = arg->GetAttribute("name");
+                const qcc::String argName = arg->GetAttribute("name");
                 const qcc::String type = arg->GetAttribute("type");
-                printf("%s>%s ", name.c_str(), type.c_str());
+                printf("%s>%s ", argName.c_str(), type.c_str());
             }
 
             printf("\",\n");
@@ -170,7 +170,7 @@ int CDECL_CALL main(int argc, char** argv)
         const ChildVector properties = iface->GetChildren("property");
         for (ChildVectorIter cit = properties.begin(); cit != properties.end(); ++cit, ++member) {
             const XmlElement* property = *cit;
-            const qcc::String name = property->GetAttribute("name");
+            const qcc::String propertyName = property->GetAttribute("name");
             const qcc::String type = property->GetAttribute("type");
             const qcc::String readwrite = property->GetAttribute("access");
 
@@ -181,9 +181,9 @@ int CDECL_CALL main(int argc, char** argv)
                 access = '>';
             }
 
-            printf("\t\"@%s%c%s\",\n", name.c_str(), access, type.c_str());
+            printf("\t\"@%s%c%s\",\n", propertyName.c_str(), access, type.c_str());
 
-            Property prop = { ToUpper(name), 0, i, member };
+            Property prop = { ToUpper(propertyName), 0, i, member };
             props.push_back(prop);
         }
 

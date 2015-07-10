@@ -342,9 +342,6 @@ class ECCPublicKey {
 
         return sizeof(this->x);
     }
-
-
-
 };
 
 /**

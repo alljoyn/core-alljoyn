@@ -19,6 +19,8 @@ import os
 # the code till the code is ready for removal.
 if about_env['OS_GROUP'] == 'posix':
     about_env.Append(CXXFLAGS = ['-Wno-deprecated-declarations'])
+if about_env['OS_GROUP'] == 'windows':
+    about_env.Append(CXXFLAGS = ['/wd4996'])
 
 # Sources
 srcs = about_env.Glob('*.cc')

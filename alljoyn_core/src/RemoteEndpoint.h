@@ -447,15 +447,36 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
 
     /**
      * Get SessionId for endpoint.
-     * This is used for BusToBus endpoints only.
+     * Bus-to-bus endpoints can be part of only 1 session, whereas RemoteEndpoints
+     * representing a locally connected leaf node can be a part of multiple sessions.
+     * Hence this function is recommended to be used for Bus-to-bus endpoints only.
+     * Use IsInSession() for non bus-to-bus endpoints.
+     * @return  the session id that this endpoint is a part of.
      */
     virtual uint32_t GetSessionId() const;
 
+
     /**
-     * Set SessionId for endpoint.
-     * This is used for BusToBus endpoints only.
+     * Called to find out if a RemoteEndpoint is a part of a particular session.
+     * @param[in] session Id to check.
+     * @return  true if this endpoint is a part of the session, otherwise false.
      */
-    void SetSessionId(uint32_t sessionId);
+    virtual bool IsInSession(SessionId sessionId);
+
+    /**
+     * Register SessionId for endpoint.
+     * This is used to track which sessions this endpoint is a part of.
+     * Note that this will fail if multiple session ids are added to a bus-to-bus endpoint.
+     * Bus-to-bus endpoints can be a part of only a single session.
+     * @param[in] session Id to register.
+     */
+    virtual void RegisterSessionId(SessionId sessionId);
+
+    /**
+     * Unregister SessionId from endpoint.
+     * @param[in] session Id to unregister.
+     */
+    void UnregisterSessionId(SessionId sessionId);
 
     /**
      * Return true iff a session route has been set up for this b2b ep.

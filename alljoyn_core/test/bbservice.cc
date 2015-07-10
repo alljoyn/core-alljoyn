@@ -242,7 +242,7 @@ class MyBusListener : public SessionPortListener, public SessionListener {
   public:
     MyBusListener(BusAttachment& bus, const SessionOpts& opts) : bus(bus), opts(opts) { }
 
-    bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts)
+    bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& sessionOpts)
     {
         /* Reject join attetmpt to unknwown session port */
         if (sessionPort != ::org::alljoyn::alljoyn_test::SessionPort) {
@@ -250,7 +250,7 @@ class MyBusListener : public SessionPortListener, public SessionListener {
             return false;
         }
 
-        if (this->opts.IsCompatible(opts)) {
+        if (this->opts.IsCompatible(sessionOpts)) {
             /* Allow the join attempt */
             QCC_SyncPrintf("Accepting JoinSession request from %s\n", joiner);
             return true;
@@ -350,11 +350,11 @@ class LocalTestObject : public BusObject {
 
         }
 
-        void ThreadExit(Thread* thread)
+        void ThreadExit(Thread* exitingThread)
         {
             delayedResponseThreadLock.Lock(MUTEX_CONTEXT);
             this->thread = NULL;
-            delete thread;
+            delete exitingThread;
             delayedResponseThreadLock.Unlock(MUTEX_CONTEXT);
         }
 

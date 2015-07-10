@@ -344,12 +344,12 @@ KeyBlob& KeyBlob::operator=(const KeyBlob& other)
     return *this;
 }
 
-size_t KeyBlob::Xor(const uint8_t* data, size_t len)
+size_t KeyBlob::Xor(const uint8_t* dataBlob, size_t len)
 {
-    if ((blobType != EMPTY) && data && len) {
+    if ((blobType != EMPTY) && dataBlob && len) {
         size_t sz = min(static_cast<size_t>(size), len);
         for (size_t i = 0; i < sz; ++i) {
-            this->data[i] ^= data[i];
+            this->data[i] ^= dataBlob[i];
         }
         return sz;
     } else {

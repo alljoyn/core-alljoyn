@@ -1512,25 +1512,36 @@ uint32_t ARDP_GetConnPending(ArdpHandle* handle, ArdpConnRecord* conn)
     return conn->snd.pending;
 }
 
-qcc::IPAddress ARDP_GetIpAddrFromConn(ArdpHandle* handle, ArdpConnRecord* conn)
+QStatus ARDP_GetRemoteIPEndpointFromConn(ArdpHandle* handle, ArdpConnRecord* conn, qcc::IPEndpoint& endpoint)
 {
-    QCC_DbgTrace(("ARDP_GetIpAddrFromConn(handle=%p, conn=%p)", handle, conn));
+    QCC_DbgTrace(("ARDP_GetRemoteIpAddrPortFromConn(handle=%p, conn=%p)", handle, conn));
     if (!IsConnValid(handle, conn)) {
-        QCC_LogError(ER_ARDP_INVALID_CONNECTION, ("ARDP_GetIpAddrFromConn(handle=%p), context = %p", handle, handle->context));
-        return qcc::IPAddress();
+        QCC_LogError(ER_ARDP_INVALID_CONNECTION, ("ARDP_GetRemoteIpAddrPortFromConn(handle=%p), context = %p", handle, handle->context));
+        return ER_ARDP_INVALID_CONNECTION;
     }
-    return conn->ipAddr;
+
+    endpoint.addr = conn->ipAddr;
+    endpoint.port = conn->ipPort;
+    return ER_OK;
 }
 
-uint16_t ARDP_GetIpPortFromConn(ArdpHandle* handle, ArdpConnRecord* conn)
+QStatus ARDP_GetLocalIPEndpointFromConn(ArdpHandle* handle, ArdpConnRecord* conn, qcc::IPEndpoint& endpoint)
 {
-    QCC_DbgTrace(("ARDP_GetIpPortFromConn(handle=%p, conn=%p)", handle, conn));
+    QCC_DbgTrace(("ARDP_GetLocalIpAddrPortFromConn(handle=%p, conn=%p)", handle, conn));
     if (!IsConnValid(handle, conn)) {
-        QCC_LogError(ER_ARDP_INVALID_CONNECTION, ("ARDP_GetIpPortFromConn(handle=%p), context = %p", handle, handle->context));
-        return 0;
+        QCC_LogError(ER_ARDP_INVALID_CONNECTION, ("ARDP_GetLocalIpAddrPortFromConn(handle=%p), context = %p", handle, handle->context));
+        return ER_ARDP_INVALID_CONNECTION;
     }
-    return conn->ipPort;
+
+    QStatus status = qcc::GetLocalAddress(conn->sock, endpoint.addr, endpoint.port);
+    if (status != ER_OK) {
+        QCC_LogError(status, ("ARDP_GetLocalIpAddrFromConn(handle=%p), context = %p", handle, handle->context));
+        return status;
+    }
+
+    return ER_OK;
 }
+
 
 /*
  * Dynamic data timeout based on connection statistics.
@@ -2218,7 +2229,7 @@ static QStatus ReleaseRcvBuffers(ArdpHandle* handle, ArdpConnRecord* conn, uint3
      * If we advanced the receive queue  based on expired messages in RCV window,
      * it's possible that RCV.CUR < RCV.LCS.
      * This can happen when a message has been only partially received
-     * and it's TTL has expired before we had a chance to assemble a complete message.
+     * and its TTL has expired before we had a chance to assemble a complete message.
      * We need to update left edge of ACK window to match LCS.
      */
     if (SEQ32_LT(conn->rcv.CUR, conn->rcv.LCS)) {

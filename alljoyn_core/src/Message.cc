@@ -319,9 +319,9 @@ _Message::_Message(BusAttachment& bus, const HeaderFields& hdrFields)
     this->hdrFields = hdrFields;
 }
 
-void _Message::Init(BusAttachment& bus)
+void _Message::Init(BusAttachment& busAttachment)
 {
-    this->bus = &bus;
+    this->bus = &busAttachment;
     endianSwap = false;
     _msgBuf = NULL;
     msgBuf = NULL;

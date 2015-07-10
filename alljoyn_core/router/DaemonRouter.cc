@@ -131,21 +131,13 @@ bool DaemonRouter::AddCompatibilityOverride(bool add,
              *                should be honored regardless of whether it is in a
              *                session or not.
              */
-            sessionMapLock.Lock(MUTEX_CONTEXT);
-            SessionMap::const_iterator it = sessionMap.find(sessionId);
-            const bool validSession = (it != sessionMap.end());
-            if (validSession) {
-                const SessionEps& epSet = it->second;
-                SessionEps::const_iterator sit = epSet.find(src);
-                SessionEps::const_iterator dit = epSet.find(dest);
-                const bool srcInSession = (sit != epSet.end());
-                const bool destInSession = (dit != epSet.end());
-                const bool selfJoin = srcInSession && ((sit->second & SESSION_SELF_JOIN) != 0);
-
-                /* Add the endpoint back in. */
-                add = add || (srcInSession && destInSession && ((src != dest) || selfJoin));
-            }
-            sessionMapLock.Unlock(MUTEX_CONTEXT);
+            const bool srcInSession = src->IsInSession(sessionId);
+            const bool destInSession = dest->IsInSession(sessionId);
+            const bool destIsVirtual = (dest->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL);
+            m_Lock.Lock(MUTEX_CONTEXT);
+            const bool selfJoin = selfJoinEps.find(pair<String, SessionId>(src->GetUniqueName(), sessionId)) != selfJoinEps.end();
+            m_Lock.Unlock(MUTEX_CONTEXT);
+            add = add || (srcInSession && destInSession && !destIsVirtual && ((src != dest) || selfJoin));
         }
     }
 
@@ -191,49 +183,22 @@ QStatus DaemonRouter::StatusCompatibilityOverride(QStatus status,
 
 #endif
 
-bool DaemonRouter::IsSessionDeliverable(SessionId id, BusEndpoint& src, BusEndpoint& dest)
+bool DaemonRouter::IsSessionDeliverable(SessionId sessionId, BusEndpoint& src, BusEndpoint& dest)
 {
     bool add = true;
-    const bool srcIsB2b = (src->GetEndpointType() == ENDPOINT_TYPE_BUS2BUS);
+    const bool srcInSession = src->IsInSession(sessionId);
+    const bool destInSession = dest->IsInSession(sessionId);
+    const bool destIsVirtual = (dest->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL);
+    m_Lock.Lock(MUTEX_CONTEXT);
+    const bool selfJoin = selfJoinEps.find(pair<String, SessionId>(src->GetUniqueName(), sessionId)) != selfJoinEps.end();
+    m_Lock.Unlock(MUTEX_CONTEXT);
+    /*
+     * Ideally, the client library should handle the self join case locally, but
+     * we need to handle it here in case clients connect to us that don't handle
+     * self join in the client library.
+     */
+    add = add && srcInSession && destInSession && !destIsVirtual && ((src != dest) || selfJoin);
 
-    sessionMapLock.Lock(MUTEX_CONTEXT);
-    SessionMap::const_iterator it = sessionMap.find(id);
-    const bool validSession = (it != sessionMap.end());
-    const SessionEps& epSet = it->second;
-    bool srcInSession = false;
-    bool destInSession = false;
-    if (validSession) {
-        SessionEps::const_iterator sit = epSet.find(src);
-        SessionEps::const_iterator dit = epSet.find(dest);
-        srcInSession = (sit != epSet.end());
-        destInSession = (dit != epSet.end());
-        /*
-         * Ideally, the client library should handle the self join case
-         * locally, but we need to handle it here in case clients
-         * connect to us that don't handle self join in the client
-         * library.
-         */
-        const bool selfJoin = srcInSession && ((sit->second & SESSION_SELF_JOIN) != 0);
-        add = add && srcInSession && destInSession && ((src != dest) || selfJoin);
-
-        /*
-         * If the sender did not self-join, and the sender is a Bus2Bus
-         * endpoint and the destination is a virtual endpoint, then we
-         * need to check if the destination is equivalent to the sender
-         * since virtual endpoints are an odd sort of alias for Bus2Bus
-         * endpoints.
-         *
-         * ASACORE-1623: This should be removed once the endpoint scheme
-         *               is simplified and the whole virtual endpoint /
-         *               bus2bus endpoint concept is eliminated.
-         */
-        if (add && !selfJoin && srcIsB2b && dest->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL) {
-            VirtualEndpoint vDest = VirtualEndpoint::cast(dest);
-            RemoteEndpoint rSrc = RemoteEndpoint::cast(src);
-            add = add && !vDest->CanUseRoute(rSrc);
-        }
-    }
-    sessionMapLock.Unlock(MUTEX_CONTEXT);
     return add;
 }
 
@@ -243,13 +208,21 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& src)
                   msg->IsSessionless() ? "sessionless " : "",
                   msg->Description().c_str(), msg->GetCallSerial(), src->GetUniqueName().c_str()));
 
+    assert(src->GetEndpointType() != ENDPOINT_TYPE_VIRTUAL);
+    /*
+     * Since asserts are compiled out in release code, we return an error here.
+     */
+    if (src->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL) {
+        return ER_BUS_NO_ROUTE;
+    }
+
     /*
      * Make a local reference to localEndpoint since it could be altered under
      * us by another thread.
      */
-    localEndpointLock.Lock();
+    m_Lock.Lock();
     LocalEndpoint lep = localEndpoint;
-    localEndpointLock.Unlock();
+    m_Lock.Unlock();
 
     if (!lep->IsValid()) {
         // ASACORE-1620 - look into removing this block.
@@ -347,8 +320,7 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& src)
     const bool msgIsGlobalBroadcast = msg->IsGlobalBroadcast();
 
     const bool srcIsB2b =             (src->GetEndpointType() == ENDPOINT_TYPE_BUS2BUS);
-    const bool srcIsVirtual =         (src->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL);
-    const bool srcIsOurEp =           (!srcIsB2b && !srcIsVirtual);  // EP is directly connected to this router
+    const bool srcIsOurEp =           (!srcIsB2b);  // EP is directly connected to this router
     const bool srcAllowsRemote =      src->AllowRemoteMessages();
 
     vector<BusEndpoint> allEps;
@@ -398,13 +370,13 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& src)
          * resolved.)
          */
         allEps.reserve(allEps.size() + m_b2bEndpoints.size());
-        m_b2bEndpointsLock.Lock();
+        m_Lock.Lock();
         for (set<RemoteEndpoint>::iterator it = m_b2bEndpoints.begin(); it != m_b2bEndpoints.end(); ++it) {
             RemoteEndpoint rep = *it;
             BusEndpoint ep = BusEndpoint::cast(rep);
             allEps.push_back(ep);
         }
-        m_b2bEndpointsLock.Unlock();
+        m_Lock.Unlock();
     }
 
     /*
@@ -573,7 +545,6 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& src)
          * over the session being detached.
          */
         sessionId = (detachId != 0) ? detachId : sessionId;
-
         for (deque<BusEndpoint>::iterator it = destEps.begin(); it != destEps.end(); ++it) {
             BusEndpoint& ep = *it;
             QStatus tStatus = SendThroughEndpoint(msg, ep, sessionId);
@@ -598,7 +569,7 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& src)
     assert(status != ER_NONE);
 
     // ASACORE-1632: Why are autogenerated error replies not sent when the sender is a B2B endpoint?
-    if ((status != ER_OK) && replyIsExpected && !srcIsB2b && (!srcIsVirtual || srcAllowsRemote)) {
+    if ((status != ER_OK) && replyIsExpected && !srcIsB2b) {
         // Method call with reply expected so send an error.
         BusEndpoint busEndpoint = BusEndpoint::cast(lep);
         String blockedDesc = "Remote method call blocked -- ";
@@ -633,7 +604,7 @@ BusEndpoint DaemonRouter::FindEndpoint(const qcc::String& busName)
 {
     BusEndpoint ep = nameTable.FindEndpoint(busName);
     if (!ep->IsValid()) {
-        m_b2bEndpointsLock.Lock(MUTEX_CONTEXT);
+        m_Lock.Lock(MUTEX_CONTEXT);
         for (set<RemoteEndpoint>::const_iterator it = m_b2bEndpoints.begin(); it != m_b2bEndpoints.end(); ++it) {
             if ((*it)->GetUniqueName() == busName) {
                 RemoteEndpoint rep = *it;
@@ -641,7 +612,7 @@ BusEndpoint DaemonRouter::FindEndpoint(const qcc::String& busName)
                 break;
             }
         }
-        m_b2bEndpointsLock.Unlock(MUTEX_CONTEXT);
+        m_Lock.Unlock(MUTEX_CONTEXT);
     }
     return ep;
 }
@@ -675,9 +646,9 @@ QStatus DaemonRouter::RegisterEndpoint(BusEndpoint& endpoint)
 
     /* Keep track of local endpoint */
     if (endpoint->GetEndpointType() == ENDPOINT_TYPE_LOCAL) {
-        localEndpointLock.Lock();
+        m_Lock.Lock();
         localEndpoint = LocalEndpoint::cast(endpoint);
-        localEndpointLock.Unlock();
+        m_Lock.Unlock();
     }
 
     if (endpoint->GetEndpointType() == ENDPOINT_TYPE_BUS2BUS) {
@@ -686,9 +657,9 @@ QStatus DaemonRouter::RegisterEndpoint(BusEndpoint& endpoint)
         status = alljoynObj->AddBusToBusEndpoint(busToBusEndpoint);
 
         /* Add to list of bus-to-bus endpoints */
-        m_b2bEndpointsLock.Lock(MUTEX_CONTEXT);
+        m_Lock.Lock(MUTEX_CONTEXT);
         m_b2bEndpoints.insert(busToBusEndpoint);
-        m_b2bEndpointsLock.Unlock(MUTEX_CONTEXT);
+        m_Lock.Unlock(MUTEX_CONTEXT);
     } else {
         /* Bus-to-client endpoints appear directly on the bus */
         nameTable.AddUniqueName(endpoint);
@@ -717,9 +688,6 @@ void DaemonRouter::UnregisterEndpoint(const qcc::String& epName, EndpointType ep
     BusEndpoint endpoint = FindEndpoint(epName);
     nameTable.Unlock();
 
-    /* Remove the endpoint from every session set it belongs to. */
-    RemoveSessionRoutesForEndpoint(endpoint);
-
     if (ENDPOINT_TYPE_BUS2BUS == endpoint->GetEndpointType()) {
         /* Inform bus controller of bus-to-bus endpoint removal */
         RemoteEndpoint busToBusEndpoint = RemoteEndpoint::cast(endpoint);
@@ -727,7 +695,7 @@ void DaemonRouter::UnregisterEndpoint(const qcc::String& epName, EndpointType ep
         alljoynObj->RemoveBusToBusEndpoint(busToBusEndpoint);
 
         /* Remove the bus2bus endpoint from the list */
-        m_b2bEndpointsLock.Lock(MUTEX_CONTEXT);
+        m_Lock.Lock(MUTEX_CONTEXT);
         set<RemoteEndpoint>::iterator it = m_b2bEndpoints.begin();
         while (it != m_b2bEndpoints.end()) {
             RemoteEndpoint rep = *it;
@@ -737,7 +705,7 @@ void DaemonRouter::UnregisterEndpoint(const qcc::String& epName, EndpointType ep
             }
             ++it;
         }
-        m_b2bEndpointsLock.Unlock(MUTEX_CONTEXT);
+        m_Lock.Unlock(MUTEX_CONTEXT);
 
     } else {
         /* Remove endpoint from names and rules */
@@ -748,331 +716,13 @@ void DaemonRouter::UnregisterEndpoint(const qcc::String& epName, EndpointType ep
     /*
      * If the local endpoint is being deregistered this indicates the router is being shut down.
      */
-    localEndpointLock.Lock();
+    m_Lock.Lock();
     if (endpoint == localEndpoint) {
         localEndpoint->Invalidate();
         localEndpoint = LocalEndpoint();
     }
-    localEndpointLock.Unlock();
-}
-QStatus DaemonRouter::AddSessionRef(String vepName, SessionId id, RemoteEndpoint b2bEp)
-{
-    if (!b2bEp->IsValid()) {
-        return ER_BUS_NO_ENDPOINT;
-    }
-    QStatus status = ER_BUS_NO_ENDPOINT;
-    VirtualEndpoint hostRNEp;
-    if (FindEndpoint(vepName, hostRNEp) && (hostRNEp->IsValid())) {
-        hostRNEp->AddSessionRef(id, b2bEp);
-        status = ER_OK;
-    }
-    return status;
+    m_Lock.Unlock();
 }
 
-void DaemonRouter::RemoveSessionRef(String vepName, SessionId id)
-{
-    VirtualEndpoint hostRNEp;
-    if (FindEndpoint(vepName, hostRNEp) && (hostRNEp->IsValid())) {
-        hostRNEp->RemoveSessionRef(id);
-    }
-}
-
-
-QStatus DaemonRouter::AddSessionRoute(SessionId id,
-                                      BusEndpoint& srcEp, RemoteEndpoint* srcB2bEp,
-                                      BusEndpoint& destEp, RemoteEndpoint& destB2bEp)
-{
-    QCC_DbgTrace(("DaemonRouter::AddSessionRoute(%u, %s, %s, %s, %s)", id,
-                  srcEp->GetUniqueName().c_str(), srcB2bEp ? (*srcB2bEp)->GetUniqueName().c_str() : "<none>",
-                  destEp->GetUniqueName().c_str(), destB2bEp->GetUniqueName().c_str()));
-    QStatus status = ER_OK;
-    if (id == 0) {
-        return ER_BUS_NO_SESSION;
-    }
-
-    if (destEp->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL) {
-        VirtualEndpoint vDestEp = VirtualEndpoint::cast(destEp);
-        /* If the destination leaf node is virtual, add a session ref */
-        QCC_DbgPrintf(("DaemonRouter::AddSessionRoute(): destEp is ENDPOINT_TYPE_VIRTUAL)"));
-        if (destB2bEp->IsValid()) {
-            QCC_DbgPrintf(("DaemonRouter::AddSessionRoute(): AddSessionRef(id=%u, destEp=\"%s\", destB2bEp=\"%s\")", id, destEp->GetUniqueName().c_str(), destB2bEp->GetUniqueName().c_str()));
-            status = vDestEp->AddSessionRef(id, destB2bEp);
-            if (status == ER_OK) {
-                /* AddSessionRef for the directly connected routing node. */
-                QCC_DbgPrintf(("DaemonRouter::AddSessionRoute(): AddSessionRef routing node(id=%d., RN=%s, destB2bEp=\"%s\")", id, destB2bEp->GetRemoteName().c_str(), destB2bEp->GetUniqueName().c_str()));
-                status = AddSessionRef(destB2bEp->GetRemoteName(), id, destB2bEp);
-                if (status != ER_OK) {
-                    QCC_LogError(status, ("DaemonRouter::AddSessionRoute(): AddSessionRef routing node failed(id=%d., RN=%s, destB2bEp=\"%s\")", id, destB2bEp->GetRemoteName().c_str(), destB2bEp->GetUniqueName().c_str()));
-                    vDestEp->RemoveSessionRef(id);
-                    /* Need to hit NameTable here since name ownership of a destEp alias may have changed */
-                    nameTable.UpdateVirtualAliases(destEp->GetUniqueName());
-                }
-            }
-            if (status == ER_OK) {
-                String vepGuid = vDestEp->GetRemoteGUIDShortString();
-                if (vepGuid != destB2bEp->GetRemoteGUID().ToShortString()) {
-                    String memberRoutingNode = ":" + vepGuid + ".1";
-                    QCC_DbgPrintf(("DaemonRouter::AddSessionRoute(): AddSessionRef indirectly connected routing node(id=%d., memberRoutingNode=%s, destB2bEp=\"%s\")", id, memberRoutingNode.c_str(), destB2bEp->GetUniqueName().c_str()));
-
-                    /* If the directly connected routing node is not the destination's routing node.
-                     * i.e. multipoint session case where members are indirectly connected via the
-                     * host routing node, increment a ref for the destination's routing node.
-                     */
-                    status = AddSessionRef(memberRoutingNode, id, destB2bEp);
-                    if (status != ER_OK) {
-                        QCC_LogError(status, ("DaemonRouter::AddSessionRoute(): AddSessionRef indirectly connected routing node failed(id=%d., RN=%s, destB2bEp=\"%s\")", id, memberRoutingNode.c_str(), destB2bEp->GetUniqueName().c_str()));
-                        vDestEp->RemoveSessionRef(id);
-                        RemoveSessionRef(destB2bEp->GetRemoteName(), id);
-                        /* Need to hit NameTable here since name ownership of a destEp and destB2bEp->GetRemoteName() alias may have changed */
-                        nameTable.UpdateVirtualAliases(destEp->GetUniqueName());
-                        nameTable.UpdateVirtualAliases(destB2bEp->GetRemoteName());
-                    }
-                }
-            }
-        } else {
-            status = ER_BUS_NO_SESSION;
-        }
-        if (status != ER_OK) {
-            QCC_LogError(status, ("AddSessionRef(this=%s, %u, %s%s) failed", destEp->GetUniqueName().c_str(),
-                                  id, destB2bEp->IsValid() ? "" : "opts, ", destB2bEp->GetUniqueName().c_str()));
-        }
-    }
-
-    /*
-     * srcB2bEp is only NULL when srcEP is non-virtual
-     */
-    if ((status == ER_OK) && srcB2bEp) {
-        assert(srcEp->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL);
-        QCC_DbgPrintf(("DaemonRouter::AddSessionRoute(): AddSessionRef(id=%u, srcEp=%s, srcB2bEp=\"%s\")", id, srcEp->GetUniqueName().c_str(), (*srcB2bEp)->GetUniqueName().c_str()));
-        status = VirtualEndpoint::cast(srcEp)->AddSessionRef(id, *srcB2bEp);
-        if (status == ER_OK) {
-            /* AddSessionRef for the directly connected routing node. */
-            QCC_DbgPrintf(("DaemonRouter::AddSessionRoute(): AddSessionRef routing node(id=%d.,RN=%s, srcB2bEp=\"%s\")", id, (*srcB2bEp)->GetRemoteName().c_str(), (*srcB2bEp)->GetUniqueName().c_str()));
-
-            status = AddSessionRef((*srcB2bEp)->GetRemoteName(), id, *srcB2bEp);
-            if (status != ER_OK) {
-                QCC_LogError(status, ("DaemonRouter::AddSessionRoute(): AddSessionRef routing node(id=%d.,RN=%s, srcB2bEp=\"%s\") failed", id, (*srcB2bEp)->GetRemoteName().c_str(), (*srcB2bEp)->GetUniqueName().c_str()));
-
-                VirtualEndpoint::cast(srcEp)->RemoveSessionRef(id);
-                /* Need to hit NameTable here since name ownership of a srcEp alias may have changed */
-                nameTable.UpdateVirtualAliases(srcEp->GetUniqueName());
-            }
-        }
-        if (status != ER_OK) {
-            assert(destEp->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL);
-            QCC_LogError(status, ("AddSessionRef(this=%s, %u, %s) failed", srcEp->GetUniqueName().c_str(), id, (*srcB2bEp)->GetUniqueName().c_str()));
-            VirtualEndpoint vDestEp = VirtualEndpoint::cast(destEp);
-            vDestEp->RemoveSessionRef(id);
-            RemoveSessionRef(destB2bEp->GetRemoteName(), id);
-            String vepGuid = vDestEp->GetRemoteGUIDShortString();
-
-            /* Need to hit NameTable here since name ownership of a destEp, destB2bEp->GetRemoteName()
-             * and memberRoutingNode alias may have changed
-             */
-            nameTable.UpdateVirtualAliases(destEp->GetUniqueName());
-            nameTable.UpdateVirtualAliases(destB2bEp->GetRemoteName());
-            if (vepGuid != destB2bEp->GetRemoteGUID().ToShortString()) {
-                String memberRoutingNode = ":" + vepGuid + ".1";
-                RemoveSessionRef(memberRoutingNode, id);
-                nameTable.UpdateVirtualAliases(destB2bEp->GetRemoteName());
-            }
-
-
-        }
-    }
-
-    /* Set sessionId on B2B endpoints */
-    if (status == ER_OK) {
-        if (srcB2bEp) {
-            QCC_DbgPrintf(("DaemonRouter::AddSessionRoute(): SetSessionId(%u) on srcB2bEp \"%s\")", id, (*srcB2bEp)->GetUniqueName().c_str()));
-            (*srcB2bEp)->SetSessionId(id);
-        }
-        QCC_DbgPrintf(("DaemonRouter::AddSessionRoute(): SetSessionId(%u) on destB2bEp \"%s\")", id, destB2bEp->GetUniqueName().c_str()));
-        destB2bEp->SetSessionId(id);
-    }
-
-    /* Add sessionCast entries */
-    if (status == ER_OK) {
-        sessionMapLock.Lock(MUTEX_CONTEXT);
-        SessionEps& epSet = sessionMap[id];  // automagically creates empty set on first access
-        SessionEps::iterator it = epSet.find(srcEp);
-        if (it == epSet.end()) {
-            epSet[srcEp] = ((srcEp == destEp) ? SESSION_SELF_JOIN : 0);
-        } else if (((it->second & SESSION_SELF_JOIN) == 0) && (srcEp == destEp)) {
-            it->second |= SESSION_SELF_JOIN;
-        }
-
-        if (srcEp != destEp) {
-            if (epSet.find(destEp) == epSet.end()) {
-                epSet[destEp] = 0;
-            }
-
-            if (destEp->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL) {
-                BusEndpoint ep = BusEndpoint::cast(destB2bEp);
-                if (epSet.find(ep) == epSet.end()) {
-                    epSet[ep] = 0;
-                }
-            }
-        }
-        sessionMapLock.Unlock(MUTEX_CONTEXT);
-    }
-    return status;
-}
-
-void DaemonRouter::RemoveSelfJoinSessionRoute(const char* src, SessionId id)
-{
-    QCC_DbgTrace(("DaemonRouter::RemoveSelfJoinSessionRoute(\"%s\", %d.)", src, id));
-    String srcStr = src;
-    BusEndpoint ep = FindEndpoint(srcStr);
-
-    sessionMapLock.Lock(MUTEX_CONTEXT);
-    SessionMap::iterator sit = sessionMap.find(id);
-    if (sit != sessionMap.end()) {
-        SessionEps& epSet = sit->second;
-        SessionEps::iterator epit = epSet.find(ep);
-        if (epit != epSet.end()) {
-            epit->second &= ~SESSION_SELF_JOIN;
-        }
-    }
-    sessionMapLock.Unlock(MUTEX_CONTEXT);
-}
-
-void DaemonRouter::RemoveSessionRoutes(SessionId id)
-{
-    deque<VirtualEndpoint> foundVirtEps;
-
-    sessionMapLock.Lock(MUTEX_CONTEXT);
-    SessionMap::iterator sit = sessionMap.find(id);
-    if (sit != sessionMap.end()) {
-        SessionEps& epSet = sit->second;
-        for (SessionEps::const_iterator epit = epSet.begin(); epit != epSet.end(); ++epit) {
-            if (epit->first->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL) {
-                BusEndpoint bep = epit->first;
-                VirtualEndpoint vep = VirtualEndpoint::cast(bep);
-                foundVirtEps.push_back(vep);
-            }
-        }
-        sessionMap.erase(sit);
-    }
-    sessionMapLock.Unlock(MUTEX_CONTEXT);
-
-    while (!foundVirtEps.empty()) {
-        VirtualEndpoint vep = foundVirtEps.front();
-        String vepGuid = vep->GetRemoteGUIDShortString();
-        RemoteEndpoint b2bEp = vep->GetBusToBusEndpoint(id);
-
-        vep->RemoveSessionRef(id);
-
-        if (b2bEp->IsValid()) {
-            /* RemoveSessionRef for the directly connected routing node. */
-            RemoveSessionRef(b2bEp->GetRemoteName(), id);
-
-            if (vepGuid != b2bEp->GetRemoteGUID().ToShortString()) {
-                /* If the directly connected routing node is not the destination's routing node.
-                 * i.e. multipoint session case where members are indirectly connected via the
-                 * host routing node, decrement a ref for the destination's routing node.
-                 */
-                String memberRoutingNode = ":" + vepGuid + ".1";
-                RemoveSessionRef(memberRoutingNode, id);
-            }
-        }
-
-        /* Need to hit NameTable here since name ownership of a ep alias may have changed */
-        nameTable.UpdateVirtualAliases(vep->GetUniqueName());
-        foundVirtEps.pop_front();
-    }
-}
-
-
-void DaemonRouter::RemoveSessionRoutes(const char* src, SessionId id)
-{
-    QCC_DbgTrace(("DaemonRouter::RemoveSessionRoutes(\"%s\", %d.)", src, id));
-    String srcStr = src;
-    BusEndpoint ep = FindEndpoint(srcStr);
-    bool foundIt = false;
-
-    sessionMapLock.Lock(MUTEX_CONTEXT);
-    SessionMap::iterator sit = sessionMap.find(id);
-    if (sit != sessionMap.end()) {
-        SessionEps& epSet = sit->second;
-        SessionEps::const_iterator epit = epSet.find(ep);
-        if (epit != epSet.end()) {
-            if (ep->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL) {
-                VirtualEndpoint vep = VirtualEndpoint::cast(ep);
-                RemoteEndpoint b2bEp = vep->GetBusToBusEndpoint(id);
-                BusEndpoint bep = BusEndpoint::cast(b2bEp);
-                epSet.erase(bep);
-            }
-            foundIt = true;
-            epSet.erase(epit);
-        }
-        if (epSet.empty()) {
-            sessionMap.erase(sit);
-        }
-    }
-    sessionMapLock.Unlock(MUTEX_CONTEXT);
-
-    if (foundIt && (ep->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL)) {
-        VirtualEndpoint vDestEp = VirtualEndpoint::cast(ep);
-        String vepGuid = vDestEp->GetRemoteGUIDShortString();
-        RemoteEndpoint b2bEp = vDestEp->GetBusToBusEndpoint(id);
-
-        vDestEp->RemoveSessionRef(id);
-
-        if (b2bEp->IsValid()) {
-            /* RemoveSessionRef for the directly connected routing node. */
-            RemoveSessionRef(b2bEp->GetRemoteName(), id);
-
-            if (vepGuid != b2bEp->GetRemoteGUID().ToShortString()) {
-                /* If the directly connected routing node is not the destination's routing node.
-                 * i.e. multipoint session case where members are indirectly connected via the
-                 * host routing node, decrement a ref for the destination's routing node.
-                 */
-                String memberRoutingNode = ":" + vepGuid + ".1";
-                RemoveSessionRef(memberRoutingNode, id);
-            }
-        }
-        /* Need to hit NameTable here since name ownership of a ep alias may have changed */
-        nameTable.UpdateVirtualAliases(ep->GetUniqueName());
-    }
-}
-
-void DaemonRouter::RemoveSessionRoutesForEndpoint(BusEndpoint& ep)
-{
-    QCC_DbgTrace(("DaemonRouter::RemoveSessionRoutesForEndpoint(\"%s\")", ep->GetUniqueName().c_str()));
-    /*
-     * ASACORE-1633: BusEndpoint should keep track of the set of sessions it is
-     *               a member of so that this can be made more efficient.
-     */
-
-    deque<SessionId> foundIds;
-    bool isVirtual = ep->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL;
-
-    sessionMapLock.Lock(MUTEX_CONTEXT);
-    SessionMap::iterator sit = sessionMap.begin();
-    while (sit != sessionMap.end()) {
-        SessionEps& epSet = sit->second;
-        SessionEps::const_iterator epit = epSet.find(ep);
-        if (epit != epSet.end()) {
-            if (isVirtual) {
-                foundIds.push_back(sit->first);
-            }
-            epSet.erase(epit);
-        }
-        if (epSet.empty()) {
-            sessionMap.erase(sit++);
-        } else {
-            ++sit;
-        }
-    }
-    sessionMapLock.Unlock(MUTEX_CONTEXT);
-
-    while (!foundIds.empty()) {
-        VirtualEndpoint::cast(ep)->RemoveSessionRef(foundIds.front());
-        /* Need to hit NameTable here since name ownership of a ep alias may have changed */
-        nameTable.UpdateVirtualAliases(ep->GetUniqueName());
-        foundIds.pop_front();
-    }
-}
 }
 
