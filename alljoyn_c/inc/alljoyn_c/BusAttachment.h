@@ -1282,9 +1282,6 @@ extern AJ_API QStatus AJ_CALL alljoyn_busattachment_ping(alljoyn_busattachment b
  * The handler is only called if a call to alljoyn_busattachment_whoimplements_*
  * has been has been called.
  *
- * This function is experimental, and as such has not been fully tested.
- * Please help make it more robust by contributing fixes if you find problems.
- *
  * Important: the alljoyn_aboutlistener should be registered before calling
  * alljoyn_busattachment_whoimplments_*
  *
@@ -1297,9 +1294,6 @@ extern AJ_API void AJ_CALL alljoyn_busattachment_registeraboutlistener(alljoyn_b
 /**
  * Unregisters the AnnounceHandler from receiving the org.alljoyn.about Announce signal.
  *
- * This function is experimental, and as such has not been fully tested.
- * Please help make it more robust by contributing fixes if you find problems.
- *
  * @param[in] bus           alljoyn_busattachment this call is made for
  * @param[in] aboutListener alljoyn_aboutlistener to be unregistered
  */
@@ -1308,9 +1302,6 @@ extern AJ_API void AJ_CALL alljoyn_busattachment_unregisteraboutlistener(alljoyn
 
 /**
  * Unregisters all AboutListeners from receiving any org.alljoyn.about Announce signal
- *
- * This function is experimental, and as such has not been fully tested.
- * Please help make it more robust by contributing fixes if you find problems.
  *
  * @param[in] bus alljoyn_busattachment this call is made for
  */
@@ -1332,9 +1323,6 @@ extern AJ_API void AJ_CALL alljoyn_busattachment_unregisterallaboutlisteners(all
  * Note: specifying NULL for the implementsInterfaces parameter could have
  * significant impact on network performance and should be avoided unless
  * all announcements are needed.
- *
- * This function is experimental, and as such has not been fully tested.
- * Please help make it more robust by contributing fixes if you find problems.
  *
  * @param[in] bus                  alljoyn_busattachment this call is made for
  * @param[in] implementsInterfaces a list of interfaces that the Announce signal
@@ -1360,9 +1348,6 @@ extern AJ_API QStatus AJ_CALL alljoyn_busattachment_whoimplements_interfaces(all
  * impact on network performance and should be avoided unless all
  * announcements are needed.
  *
- * This function is experimental, and as such has not been fully tested.
- * Please help make it more robust by contributing fixes if you find problems.
- *
  * @see alljoyn_busattachment_whoimplements_interfaces(const char**, size_t)
  * @param[in] bus                 alljoyn_busattachment this call is made for
  * @param[in] implementsInterface interface that must be implemented in order
@@ -1380,9 +1365,6 @@ extern AJ_API QStatus AJ_CALL alljoyn_busattachment_whoimplements_interface(allj
  *
  * Note if alljoyn_busattachment_whoimplements_interfaces has been called multiple
  * times the announce signal will still be received for any interfaces that still remain.
- *
- * This function is experimental, and as such has not been fully tested.
- * Please help make it more robust by contributing fixes if you find problems.
  *
  * @param[in] bus                  alljoyn_busattachment this call is made for
  * @param[in] implementsInterfaces a list of interfaces. The list must match the
@@ -1406,9 +1388,6 @@ extern AJ_API QStatus AJ_CALL alljoyn_busattachment_cancelwhoimplements_interfac
  *
  * This is identical to alljoyn_busattachment_cancelwhoimplements_interfaces
  * except this is specialized for a single interface not several interfaces.
- *
- * This function is experimental, and as such has not been fully tested.
- * Please help make it more robust by contributing fixes if you find problems.
  *
  * @see alljoyn_busattachment_cancelwhoimplements(const char**, size_t)
  * @param[in] bus                 alljoyn_busattachment this call is made for

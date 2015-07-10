@@ -2,8 +2,6 @@
  * @file
  * alljoyn_aboutproxy gives proxy access to the org.alljoyn.About interface
  * exposing the following methods: GetObjectDescriptions, GetAboutData and GetVersion.
- * This code is experimental, and as such has not been fully tested.
- * Please help make it more robust by contributing fixes if you find problems.
  */
 /******************************************************************************
  * Copyright AllSeen Alliance. All rights reserved.
