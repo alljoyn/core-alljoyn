@@ -560,7 +560,7 @@ static QStatus GeneratePeerArgs(MsgArg** retArgs, PermissionPolicy::Peer* peers,
             KeyInfoNISTP256* keyInfoNISTP256 = (qcc::KeyInfoNISTP256*) keyInfo;
             keyInfoCount = 1;
             keyInfoArg = new MsgArg[keyInfoCount];
-            KeyInfoHelper::KeyInfoNISTP256PubKeyToMsgArg(*keyInfoNISTP256, keyInfoArg[0]);
+            KeyInfoHelper::KeyInfoNISTP256PubKeyToMsgArg(*keyInfoNISTP256, keyInfoArg[0], true);  /* send the key id in addition to public key */
         }
         const uint8_t* securityGroupId = NULL;
         size_t securityGroupLen = 0;
@@ -568,14 +568,16 @@ static QStatus GeneratePeerArgs(MsgArg** retArgs, PermissionPolicy::Peer* peers,
             securityGroupId = peers[cnt].GetSecurityGroupId().GetBytes();
             securityGroupLen = GUID128::SIZE;
         }
-        status = (*retArgs)[cnt].Set("(ya(yyayay)ay)",
+        status = (*retArgs)[cnt].Set("(ya(yyayayay)ay)",
                                      peers[cnt].GetType(), keyInfoCount, keyInfoArg,
                                      securityGroupLen, securityGroupId);
+        if (ER_OK == status) {
+            (*retArgs)[cnt].Stabilize();
+        }
+        delete [] keyInfoArg;
         if (ER_OK != status) {
-            delete [] keyInfoArg;
             break;
         }
-        (*retArgs)[cnt].SetOwnershipFlags(MsgArg::OwnsArgs, true);
     }
     if (ER_OK != status) {
         delete [] *retArgs;
@@ -598,7 +600,7 @@ static QStatus BuildPeersFromArg(MsgArg* arg, PermissionPolicy::Peer** peers, si
         size_t pubKeysCnt;
         size_t sgIdLen;
         uint8_t* sgId;
-        status = arg[cnt].Get("(ya(yyayay)ay)", &peerType, &pubKeysCnt, &pubKeys, &sgIdLen, &sgId);
+        status = arg[cnt].Get("(ya(yyayayay)ay)", &peerType, &pubKeysCnt, &pubKeys, &sgIdLen, &sgId);
         if (ER_OK != status) {
             break;
         }
@@ -622,7 +624,7 @@ static QStatus BuildPeersFromArg(MsgArg* arg, PermissionPolicy::Peer** peers, si
             break;
         }
         KeyInfoNISTP256 keyInfo;
-        status = KeyInfoHelper::MsgArgToKeyInfoNISTP256PubKey(pubKeys[0], keyInfo);
+        status = KeyInfoHelper::MsgArgToKeyInfoNISTP256PubKey(pubKeys[0], keyInfo, true);
         if (ER_OK != status) {
             break;
         }
@@ -797,7 +799,7 @@ static QStatus BuildAclsFromArg(MsgArg* arg, PermissionPolicy::Acl** acls, size_
         size_t peersArgsCount = 0;
         MsgArg* rulesArgs;
         size_t rulesArgsCount = 0;
-        status = arg[cnt].Get("(a(ya(yyayay)ay)a(ssa(syy)))", &peersArgsCount, &peersArgs, &rulesArgsCount, &rulesArgs);
+        status = arg[cnt].Get("(a(ya(yyayayay)ay)a(ssa(syy)))", &peersArgsCount, &peersArgs, &rulesArgsCount, &rulesArgs);
         if (ER_OK != status) {
             QCC_DbgPrintf(("BuildAclsFromArg [%d] got status 0x%x\n", cnt, status));
             break;
@@ -856,7 +858,7 @@ QStatus PermissionPolicy::Export(MsgArg& msgArg) const
                     break;
                 }
             }
-            status = aclsArgs[cnt].Set("(a(ya(yyayay)ay)a(ssa(syy)))",
+            status = aclsArgs[cnt].Set("(a(ya(yyayayay)ay)a(ssa(syy)))",
                                        acls[cnt].GetPeersSize(), peersArgs, acls[cnt].GetRulesSize(), rulesArgs);
             if (ER_OK != status) {
                 delete [] peersArgs;
@@ -867,7 +869,7 @@ QStatus PermissionPolicy::Export(MsgArg& msgArg) const
     }
 
     if (ER_OK == status) {
-        status = msgArg.Set("(qua(a(ya(yyayay)ay)a(ssa(syy))))",
+        status = msgArg.Set("(qua(a(ya(yyayayay)ay)a(ssa(syy))))",
                             GetSpecificationVersion(), GetVersion(), GetAclsSize(), aclsArgs);
         if (ER_OK == status) {
             msgArg.SetOwnershipFlags(MsgArg::OwnsArgs, true);
@@ -886,7 +888,7 @@ QStatus PermissionPolicy::Import(uint16_t expectedVersion, const MsgArg& msgArg)
     MsgArg* aclsArgs;
     size_t aclsArgsCount = 0;
     uint32_t policyVersion;
-    QStatus status = msgArg.Get("(qua(a(ya(yyayay)ay)a(ssa(syy))))",
+    QStatus status = msgArg.Get("(qua(a(ya(yyayayay)ay)a(ssa(syy))))",
                                 &specVersion, &policyVersion, &aclsArgsCount, &aclsArgs);
     if (ER_OK != status) {
         QCC_DbgPrintf(("PermissionPolicy::Import got status 0x%x\n", status));

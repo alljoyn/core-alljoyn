@@ -324,10 +324,10 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         ifc->AddPropertyAnnotation("IdentityCertificateId", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
         ifc->AddProperty("PolicyVersion", "u", PROP_ACCESS_READ);
         ifc->AddPropertyAnnotation("PolicyVersion", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
-        ifc->AddMethod("UpdatePolicy", "(qua(a(ya(yyayay)ay)a(ssa(syy))))", "", "policy");
-        ifc->AddProperty("Policy", "(qua(a(ya(yyayay)ay)a(ssa(syy))))", PROP_ACCESS_READ);
+        ifc->AddMethod("UpdatePolicy", "(qua(a(ya(yyayayay)ay)a(ssa(syy))))", "", "policy");
+        ifc->AddProperty("Policy", "(qua(a(ya(yyayayay)ay)a(ssa(syy))))", PROP_ACCESS_READ);
         ifc->AddPropertyAnnotation("Policy", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
-        ifc->AddProperty("DefaultPolicy", "(qua(a(ya(yyayay)ay)a(ssa(syy))))", PROP_ACCESS_READ);
+        ifc->AddProperty("DefaultPolicy", "(qua(a(ya(yyayayay)ay)a(ssa(syy))))", PROP_ACCESS_READ);
         ifc->AddPropertyAnnotation("DefaultPolicy", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
         ifc->AddMethod("ResetPolicy", "", "", "");
         ifc->AddMethod("InstallMembership", "a(yay)", "", "certificateChain,");

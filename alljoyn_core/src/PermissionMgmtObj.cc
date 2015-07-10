@@ -85,7 +85,7 @@ void PermissionMgmtObj::Load()
         claimCapabilities = config.claimCapabilities;
         claimCapabilityAdditionalInfo = config.claimCapabilityAdditionalInfo;
     } else {
-        if (ER_OK == LoadTrustAnchors()) {
+        if (HasDefaultPolicy()) {
             applicationState = PermissionConfigurator::CLAIMED;
         } else {
             applicationState = PermissionConfigurator::CLAIMABLE;
@@ -125,7 +125,7 @@ void PermissionMgmtObj::PolicyChanged(PermissionPolicy* policy)
     qcc::GUID128 localGUID;
     ca->GetGuid(localGUID);
     bus.GetInternal().GetPermissionManager().SetPolicy(policy);
-    ManageMembershipTrustAnchors(policy);
+    ManageTrustAnchors(policy);
     StateChanged();
 }
 
@@ -169,8 +169,8 @@ QStatus PermissionMgmtObj::GetACLKey(ACLEntryType aclEntryType, KeyStore::Key& k
 {
     key.SetType(KeyStore::Key::LOCAL);
     /* each local key will be indexed by an hardcode randomly generated GUID. */
-    if (aclEntryType == ENTRY_TRUST_ANCHOR) {
-        key.SetGUID(GUID128(qcc::String("E866F6C2CB5C005256F2944A042C0758")));
+    if (aclEntryType == ENTRY_DEFAULT_POLICY) {
+        key.SetGUID(GUID128(qcc::String("D946354436F2F3C79EAF0636D947E8AC")));
         return ER_OK;
     }
     if (aclEntryType == ENTRY_POLICY) {
@@ -224,30 +224,12 @@ static bool CanBeCAForIdentity(PermissionMgmtObj::TrustAnchorType taType)
     if (taType == PermissionMgmtObj::TRUST_ANCHOR_CA) {
         return true;
     }
-    if (taType == PermissionMgmtObj::TRUST_ANCHOR_ADMIN_GROUP) {
-        return true;
-    }
     if (taType == PermissionMgmtObj::TRUST_ANCHOR_SG_AUTHORITY) {
-        return true;
-    }
-    if (taType == PermissionMgmtObj::TRUST_ANCHOR_RESTRICTED_CA) {
         return true;
     }
     return false;
 }
 
-/* Get the admin group authority information from the list of trust anchors. */
-static QStatus GetAdminGroupAuthority(const PermissionMgmtObj::TrustAnchorList& trustAnchors, GUID128& adminGroupGUID, KeyInfoNISTP256& adminGroupAuthority)
-{
-    for (PermissionMgmtObj::TrustAnchorList::const_iterator it = trustAnchors.begin(); it != trustAnchors.end(); it++) {
-        if ((*it)->use == PermissionMgmtObj::TRUST_ANCHOR_ADMIN_GROUP) {
-            adminGroupGUID = (*it)->securityGroupId;
-            adminGroupAuthority = (*it)->keyInfo;
-            return ER_OK;
-        }
-    }
-    return ER_FAIL;
-}
 static PermissionMgmtObj::TrustAnchorList LocateTrustAnchor(PermissionMgmtObj::TrustAnchorList& trustAnchors, const qcc::String& aki)
 {
     PermissionMgmtObj::TrustAnchorList retList;
@@ -274,56 +256,12 @@ bool PermissionMgmtObj::IsTrustAnchor(const ECCPublicKey* publicKey)
     return false;
 }
 
-bool PermissionMgmtObj::IsAdminGroup(const std::vector<CertificateX509*> certChain)
-{
-    for (std::vector<CertificateX509*>::const_iterator certIt = certChain.begin(); certIt != certChain.end(); certIt++) {
-        if ((*certIt)->GetType() != CertificateX509::MEMBERSHIP_CERTIFICATE) {
-            continue;
-        }
-        MembershipCertificate* membershipCert = (MembershipCertificate*) *certIt;
-        for (TrustAnchorList::iterator it = trustAnchors.begin(); it != trustAnchors.end(); it++) {
-            if (((*it)->use == TRUST_ANCHOR_ADMIN_GROUP) &&
-                ((*it)->securityGroupId == membershipCert->GetGuild())) {
-                /* match security group ID */
-                if (membershipCert->GetAuthorityKeyId().size() > 0) {
-                    /* cert has aki */
-                    if (((*it)->keyInfo.GetKeyIdLen() == membershipCert->GetAuthorityKeyId().size()) &&
-                        (memcmp((*it)->keyInfo.GetKeyId(), membershipCert->GetAuthorityKeyId().data(), (*it)->keyInfo.GetKeyIdLen()) == 0)) {
-                        /* same aki.  Verify the cert using trust anchor */
-                        if (ER_OK == membershipCert->Verify((*it)->keyInfo.GetPublicKey())) {
-                            return true;
-                        }
-                    }
-                }
-            }
-        }
-    }
-    return false;
-}
-
-
 void PermissionMgmtObj::ClearTrustAnchorList(TrustAnchorList& list)
 {
     for (TrustAnchorList::iterator it = list.begin(); it != list.end(); it++) {
         delete *it;
     }
     list.clear();
-}
-
-/**
- * remove all occurences of trust anchor with given use type
- */
-static void ClearTrustAnchorListByUse(PermissionMgmtObj::TrustAnchorType use, PermissionMgmtObj::TrustAnchorList& list)
-{
-    PermissionMgmtObj::TrustAnchorList::iterator it = list.begin();
-    while (it != list.end()) {
-        if ((*it)->use == use) {
-            delete *it;
-            it = list.erase(it);
-        } else {
-            it++;
-        }
-    }
 }
 
 static bool HasDuplicateTrustAnchor(const PermissionMgmtObj::TrustAnchor& ta, const PermissionMgmtObj::TrustAnchorList& trustAnchors)
@@ -344,7 +282,7 @@ static bool HasDuplicateTrustAnchor(const PermissionMgmtObj::TrustAnchor& ta, co
     return false;
 }
 
-static void LoadSGAuthoritiesAndRestrictedCAs(const PermissionPolicy& policy, PermissionMgmtObj::TrustAnchorList& taList)
+static void LoadSGAuthoritiesAndCAs(const PermissionPolicy& policy, PermissionMgmtObj::TrustAnchorList& taList)
 {
     const PermissionPolicy::Acl* acls = policy.GetAcls();
     for (size_t cnt = 0; cnt < policy.GetAclsSize(); cnt++) {
@@ -353,7 +291,7 @@ static void LoadSGAuthoritiesAndRestrictedCAs(const PermissionPolicy& policy, Pe
             if (((peers[idx].GetType() == PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP) ||
                  (peers[idx].GetType() == PermissionPolicy::Peer::PEER_FROM_CERTIFICATE_AUTHORITY)) && peers[idx].GetKeyInfo()) {
                 if (KeyInfoHelper::InstanceOfKeyInfoNISTP256(*peers[idx].GetKeyInfo())) {
-                    PermissionMgmtObj::TrustAnchor* ta = new PermissionMgmtObj::TrustAnchor((peers[idx].GetType() == PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP ? PermissionMgmtObj::TRUST_ANCHOR_SG_AUTHORITY : PermissionMgmtObj::TRUST_ANCHOR_RESTRICTED_CA), *(KeyInfoNISTP256*) peers[idx].GetKeyInfo());
+                    PermissionMgmtObj::TrustAnchor* ta = new PermissionMgmtObj::TrustAnchor((peers[idx].GetType() == PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP ? PermissionMgmtObj::TRUST_ANCHOR_SG_AUTHORITY : PermissionMgmtObj::TRUST_ANCHOR_CA), *(KeyInfoNISTP256*) peers[idx].GetKeyInfo());
                     if (ta->keyInfo.GetKeyIdLen() == 0) {
                         KeyInfoHelper::GenerateKeyId(ta->keyInfo);
                     }
@@ -374,120 +312,7 @@ void PermissionMgmtObj::ClearTrustAnchors()
     ClearTrustAnchorList(trustAnchors);
 }
 
-QStatus PermissionMgmtObj::InstallTrustAnchor(TrustAnchor* trustAnchor)
-{
-    LoadTrustAnchors();
-    /* check for duplicate trust anchor */
-    if (HasDuplicateTrustAnchor(*trustAnchor, trustAnchors)) {
-        return ER_DUPLICATE_KEY;
-    }
-    /* set the authority key identifier if it not already set */
-    if (trustAnchor->keyInfo.GetKeyIdLen() == 0) {
-        KeyInfoHelper::GenerateKeyId(trustAnchor->keyInfo);
-    }
-    TrustAnchor* anchor = new TrustAnchor(*trustAnchor);
-    trustAnchors.push_back(anchor);
-    return StoreTrustAnchors();
-}
 
-QStatus PermissionMgmtObj::StoreTrustAnchors()
-{
-    QCC_DbgPrintf(("PermissionMgmtObj::StoreTrustAnchors to keystore (guid %s)\n",
-                   bus.GetInternal().GetKeyStore().GetGuid().c_str()));
-    /* the format of the persistent buffer:
-     * count
-     * size:trust anchor
-     * size:trust anchor
-     * ...
-     */
-    /* calculate the buffer size */
-    size_t bufferSize = sizeof(uint8_t);  /* the number of trust anchors */
-    for (TrustAnchorList::iterator it = trustAnchors.begin(); it != trustAnchors.end(); it++) {
-        bufferSize += sizeof(uint32_t);  /* account for the item size */
-        bufferSize += sizeof(uint8_t);  /* account for the use field */
-        bufferSize += (*it)->keyInfo.GetExportSize();
-    }
-    uint8_t* buffer = new uint8_t[bufferSize];
-    uint8_t* pBuf = buffer;
-    /* the count field */
-    *pBuf = (uint8_t) trustAnchors.size();
-    pBuf += sizeof(uint8_t);
-    for (TrustAnchorList::iterator it = trustAnchors.begin(); it != trustAnchors.end(); it++) {
-        uint32_t* itemSize = (uint32_t*) pBuf;
-        *itemSize = (uint32_t) (sizeof(uint8_t) + (*it)->keyInfo.GetExportSize());
-        pBuf += sizeof(uint32_t);
-        *pBuf = (uint8_t) (*it)->use;
-        pBuf++;
-        (*it)->keyInfo.Export(pBuf);
-        pBuf += (*itemSize - 1);
-    }
-    KeyStore::Key trustAnchorKey;
-    GetACLKey(ENTRY_TRUST_ANCHOR, trustAnchorKey);
-    KeyBlob kb(buffer, bufferSize, KeyBlob::GENERIC);
-    kb.SetExpiration(0xFFFFFFFF);  /* never expired */
-
-    QStatus status = ca->StoreKey(trustAnchorKey, kb);
-    delete [] buffer;
-    return status;
-}
-
-QStatus PermissionMgmtObj::LoadTrustAnchors()
-{
-    QCC_DbgPrintf(("PermissionMgmtObj::LoadTrustAnchors from keystore (guid %s)\n",
-                   bus.GetInternal().GetKeyStore().GetGuid().c_str()));
-    KeyStore::Key trustAnchorKey;
-    GetACLKey(ENTRY_TRUST_ANCHOR, trustAnchorKey);
-    KeyBlob kb;
-    QStatus status = ca->GetKey(trustAnchorKey, kb);
-    if (ER_OK != status) {
-        if (ER_BUS_KEY_UNAVAILABLE == status) {
-            return ER_NO_TRUST_ANCHOR;
-        }
-        return status;
-    }
-    /* the format of the persistent buffer:
-     * count
-     * size:trust anchor
-     * size:trust anchor
-     * ...
-     */
-
-    ClearTrustAnchors();
-
-    if (kb.GetSize() == 0) {
-        return ER_NO_TRUST_ANCHOR; /* no trust anchor */
-    }
-    uint8_t* pBuf = (uint8_t*) kb.GetData();
-    uint8_t count = *pBuf;
-    size_t bytesRead = sizeof(uint8_t);
-    if (bytesRead > kb.GetSize()) {
-        ClearTrustAnchors();
-        return ER_NO_TRUST_ANCHOR; /* no trust anchor */
-    }
-    pBuf += sizeof(uint8_t);
-    for (size_t cnt = 0; cnt < count; cnt++) {
-        uint32_t itemSize = *(uint32_t*) pBuf;
-        bytesRead += sizeof(uint32_t);
-        if (bytesRead > kb.GetSize()) {
-            ClearTrustAnchors();
-            return ER_NO_TRUST_ANCHOR; /* no trust anchor */
-        }
-        pBuf += sizeof(uint32_t);
-        bytesRead += itemSize;
-        if (bytesRead > kb.GetSize()) {
-            ClearTrustAnchors();
-            return ER_NO_TRUST_ANCHOR; /* no trust anchor */
-        }
-        TrustAnchor* ta = new TrustAnchor();
-        ta->use = (TrustAnchorType) * pBuf;
-        pBuf++;
-        itemSize--;
-        ta->keyInfo.Import(pBuf, itemSize);
-        trustAnchors.push_back(ta);
-        pBuf += itemSize;
-    }
-    return ER_OK;
-}
 
 QStatus PermissionMgmtObj::StoreDSAKeys(CredentialAccessor* ca, const ECCPrivateKey* privateKey, const ECCPublicKey* publicKey)
 {
@@ -522,28 +347,33 @@ QStatus PermissionMgmtObj::GetPublicKey(KeyInfoNISTP256& publicKeyInfo)
  * 2. Outgoing messages are authorized
  * 3. Incoming messages are denied
  * 4. Allow for self-installation of membership certificates
+ * @param certificateAuthority the certificate authority
  * @param adminGroupGUID the admin group GUID
  * @param adminGroupAuthority the admin group authority
  * @param localPublicKey the local public key
  * @param[out] policy the permission policy
  */
 
-static void GenerateDefaultPolicy(const GUID128& adminGroupGUID, const KeyInfoNISTP256& adminGroupAuthority, const ECCPublicKey* localPublicKey, PermissionPolicy& policy)
+static void GenerateDefaultPolicy(const KeyInfoNISTP256& certificateAuthority, const GUID128& adminGroupGUID, const KeyInfoNISTP256& adminGroupAuthority, const ECCPublicKey* localPublicKey, PermissionPolicy& policy)
 {
     policy.SetVersion(0);
 
     /* add the acls section */
-    PermissionPolicy::Acl acls[3];
-    /* acls record 0  ADMIN GROUP */
+    PermissionPolicy::Acl acls[4];
+    /* acls record 0  Certificate authority */
+    {
+        PermissionPolicy::Peer peers[1];
+        peers[0].SetType(PermissionPolicy::Peer::PEER_FROM_CERTIFICATE_AUTHORITY);
+        peers[0].SetKeyInfo(&certificateAuthority);
+        acls[0].SetPeers(1, peers);
+    }
+    /* acls record 1  ADMIN GROUP */
     {
         PermissionPolicy::Peer peers[1];
         peers[0].SetType(PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP);
         peers[0].SetSecurityGroupId(adminGroupGUID);
-        KeyInfoNISTP256 keyInfo;
-        keyInfo.SetKeyId(adminGroupAuthority.GetKeyId(), adminGroupAuthority.GetKeyIdLen());
-        keyInfo.SetPublicKey(adminGroupAuthority.GetPublicKey());
-        peers[0].SetKeyInfo(&keyInfo);
-        acls[0].SetPeers(1, peers);
+        peers[0].SetKeyInfo(&adminGroupAuthority);
+        acls[1].SetPeers(1, peers);
 
         PermissionPolicy::Rule rules[1];
         rules[0].SetInterfaceName("*");
@@ -555,9 +385,9 @@ static void GenerateDefaultPolicy(const GUID128& adminGroupGUID, const KeyInfoNI
             PermissionPolicy::Rule::Member::ACTION_MODIFY
             );
         rules[0].SetMembers(1, prms);
-        acls[0].SetRules(1, rules);
+        acls[1].SetRules(1, rules);
     }
-    /* acls record 1  LOCAL PUBLIC KEY */
+    /* acls record 2  LOCAL PUBLIC KEY */
     {
         PermissionPolicy::Peer peers[1];
         peers[0].SetType(PermissionPolicy::Peer::PEER_WITH_PUBLIC_KEY);
@@ -565,7 +395,7 @@ static void GenerateDefaultPolicy(const GUID128& adminGroupGUID, const KeyInfoNI
         keyInfo.SetPublicKey(localPublicKey);
         KeyInfoHelper::GenerateKeyId(keyInfo);
         peers[0].SetKeyInfo(&keyInfo);
-        acls[1].SetPeers(1, peers);
+        acls[2].SetPeers(1, peers);
 
         PermissionPolicy::Rule rules[1];
         rules[0].SetInterfaceName("org.alljoyn.Bus.Security.ManagedApplication");
@@ -573,25 +403,30 @@ static void GenerateDefaultPolicy(const GUID128& adminGroupGUID, const KeyInfoNI
         prms[0].SetMemberName("InstallMembership");
         prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
         rules[0].SetMembers(1, prms);
-        acls[1].SetRules(1, rules);
+        acls[2].SetRules(1, rules);
     }
-    /* acls record 2  any trusted user */
+    /* acls record 3  any trusted user */
     {
         PermissionPolicy::Peer peers[1];
         peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
-        acls[2].SetPeers(1, peers);
+        acls[3].SetPeers(1, peers);
 
         PermissionPolicy::Rule rules[1];
         rules[0].SetInterfaceName("*");
-        PermissionPolicy::Rule::Member prms[2];
+        PermissionPolicy::Rule::Member prms[3];
         prms[0].SetMemberName("*");
+        prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
         prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+        prms[1].SetMemberName("*");
         prms[1].SetMemberType(PermissionPolicy::Rule::Member::SIGNAL);
         prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-        rules[0].SetMembers(2, prms);
-        acls[2].SetRules(1, rules);
+        prms[2].SetMemberName("*");
+        prms[2].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
+        prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+        rules[0].SetMembers(3, prms);
+        acls[3].SetRules(1, rules);
     }
-    policy.SetAcls(3, acls);
+    policy.SetAcls(4, acls);
 }
 
 void PermissionMgmtObj::Claim(const InterfaceDescription::Member* member, Message& msg)
@@ -615,6 +450,8 @@ void PermissionMgmtObj::Claim(const InterfaceDescription::Member* member, Messag
         return;
     }
 
+    PermissionPolicy* defaultPolicy = NULL;
+    ECCPublicKey pubKey;
     TrustAnchor* adminGroupAuthority = NULL;
     TrustAnchor* certificateAuthority = new TrustAnchor(TRUST_ANCHOR_CA);
     QStatus status = KeyInfoHelper::MsgArgToKeyInfoNISTP256PubKey(args[0], certificateAuthority->keyInfo);
@@ -626,7 +463,7 @@ void PermissionMgmtObj::Claim(const InterfaceDescription::Member* member, Messag
         goto DoneValidation;
     }
 
-    adminGroupAuthority = new TrustAnchor(TRUST_ANCHOR_ADMIN_GROUP);
+    adminGroupAuthority = new TrustAnchor(TRUST_ANCHOR_SG_AUTHORITY);
     /* get the admin security group id */
     uint8_t* buf;
     size_t len;
@@ -653,18 +490,14 @@ void PermissionMgmtObj::Claim(const InterfaceDescription::Member* member, Messag
     /* clear most of the key entries with the exception of the DSA keys and manifest */
     PerformReset(true);
 
-    /* install certificate authority */
-    status = InstallTrustAnchor(certificateAuthority);
+    /* generate the default policy */
+    defaultPolicy = new PermissionPolicy();
+    ca->GetDSAPublicKey(pubKey);
+    GenerateDefaultPolicy(certificateAuthority->keyInfo, adminGroupAuthority->securityGroupId, adminGroupAuthority->keyInfo, &pubKey, *defaultPolicy);
+    /* load the trust anchors from the default policy for validation of the
+        identity cert chain */
+    status = ManageTrustAnchors(defaultPolicy);
     if (ER_OK != status) {
-        QCC_DbgPrintf(("PermissionMgmtObj::Claim failed to store certificate authority"));
-        status = ER_PERMISSION_DENIED;
-        goto DoneValidation;
-    }
-    /* install admin group authority */
-    status = InstallTrustAnchor(adminGroupAuthority);
-    if (ER_OK != status) {
-        QCC_DbgPrintf(("PermissionMgmtObj::Claim failed to store admin group authority"));
-        status = ER_PERMISSION_DENIED;
         goto DoneValidation;
     }
 
@@ -682,27 +515,26 @@ void PermissionMgmtObj::Claim(const InterfaceDescription::Member* member, Messag
     }
 
 DoneValidation:
+    delete adminGroupAuthority;
     delete certificateAuthority;
     if (ER_OK != status) {
-        delete adminGroupAuthority;
+        delete defaultPolicy;
         MethodReply(msg, status);
         return;
     }
-
-    /* generate the default policy */
-    PermissionPolicy* defaultPolicy = new PermissionPolicy();
-    ECCPublicKey pubKey;
-    ca->GetDSAPublicKey(pubKey);
-    GenerateDefaultPolicy(adminGroupAuthority->securityGroupId, adminGroupAuthority->keyInfo, &pubKey, *defaultPolicy);
-    delete adminGroupAuthority;
-    status = StorePolicy(*defaultPolicy);
+    /* store the default policy for support of the property ManagedApplication::DefaultPolicy */
+    status = StorePolicy(*defaultPolicy, true);
     if (ER_OK == status) {
-        policyVersion = defaultPolicy->GetVersion();
-        PolicyChanged(defaultPolicy);
-    } else {
+        /* store the default policy as the initial local policy */
+        status = StorePolicy(*defaultPolicy);
+        if (ER_OK == status) {
+            policyVersion = defaultPolicy->GetVersion();
+            PolicyChanged(defaultPolicy);
+        }
+    }
+    if (ER_OK != status) {
         delete defaultPolicy;
     }
-
     MethodReply(msg, status);
 
     if (ER_OK == status) {
@@ -795,19 +627,15 @@ QStatus PermissionMgmtObj::GetPolicy(MsgArg& msgArg)
     return policy.Export(msgArg);
 }
 
+bool PermissionMgmtObj::HasDefaultPolicy()
+{
+    PermissionPolicy policy;
+    return (ER_OK == RetrievePolicy(policy, true));
+}
+
 QStatus PermissionMgmtObj::RebuildDefaultPolicy(PermissionPolicy& defaultPolicy)
 {
-    /* generate the default policy */
-    ECCPublicKey pubKey;
-    ca->GetDSAPublicKey(pubKey);
-    GUID128 adminGroupGUID;
-    KeyInfoNISTP256 adminGroupAuthority;
-    QStatus status = GetAdminGroupAuthority(trustAnchors, adminGroupGUID, adminGroupAuthority);
-    if (ER_OK != status) {
-        return status;
-    }
-    GenerateDefaultPolicy(adminGroupGUID, adminGroupAuthority, &pubKey, defaultPolicy);
-    return ER_OK;
+    return RetrievePolicy(defaultPolicy, true);
 }
 
 QStatus PermissionMgmtObj::GetDefaultPolicy(MsgArg& msgArg)
@@ -821,7 +649,7 @@ QStatus PermissionMgmtObj::GetDefaultPolicy(MsgArg& msgArg)
     return defaultPolicy.Export(msgArg);
 }
 
-QStatus PermissionMgmtObj::StorePolicy(PermissionPolicy& policy)
+QStatus PermissionMgmtObj::StorePolicy(PermissionPolicy& policy, bool defaultPolicy)
 {
     uint8_t* buf = NULL;
     size_t size;
@@ -833,18 +661,26 @@ QStatus PermissionMgmtObj::StorePolicy(PermissionPolicy& policy)
     }
     /* store the message into the key store */
     KeyStore::Key policyKey;
-    GetACLKey(ENTRY_POLICY, policyKey);
+    if (defaultPolicy) {
+        GetACLKey(ENTRY_DEFAULT_POLICY, policyKey);
+    } else {
+        GetACLKey(ENTRY_POLICY, policyKey);
+    }
     KeyBlob kb((uint8_t*) buf, size, KeyBlob::GENERIC);
     delete [] buf;
 
     return ca->StoreKey(policyKey, kb);
 }
 
-QStatus PermissionMgmtObj::RetrievePolicy(PermissionPolicy& policy)
+QStatus PermissionMgmtObj::RetrievePolicy(PermissionPolicy& policy, bool defaultPolicy)
 {
     /* retrieve data from keystore */
     KeyStore::Key policyKey;
-    GetACLKey(ENTRY_POLICY, policyKey);
+    if (defaultPolicy) {
+        GetACLKey(ENTRY_DEFAULT_POLICY, policyKey);
+    } else {
+        GetACLKey(ENTRY_POLICY, policyKey);
+    }
     KeyBlob kb;
     QStatus status = ca->GetKey(policyKey, kb);
     if (ER_OK != status) {
@@ -877,8 +713,7 @@ static QStatus ValidateCertificateWithTrustAnchors(const CertificateX509& cert, 
         PermissionMgmtObj::TrustAnchor* ta = *it;
         bool qualified = false;
         if (cert.GetType() == CertificateX509::MEMBERSHIP_CERTIFICATE) {
-            if (((ta->use == PermissionMgmtObj::TRUST_ANCHOR_SG_AUTHORITY) ||
-                 (ta->use == PermissionMgmtObj::TRUST_ANCHOR_ADMIN_GROUP)) &&
+            if ((ta->use == PermissionMgmtObj::TRUST_ANCHOR_SG_AUTHORITY) &&
                 (ta->securityGroupId == ((MembershipCertificate*) &cert)->GetGuild())) {
                 qualified = true;
             }
@@ -2130,11 +1965,7 @@ QStatus PermissionMgmtObj::PerformReset(bool keepForClaim)
 {
     bus.GetInternal().GetKeyStore().Reload();
     KeyStore::Key key;
-    GetACLKey(ENTRY_TRUST_ANCHOR, key);
-    QStatus status = ca->DeleteKey(key);
-    if (ER_OK != status) {
-        return status;
-    }
+    QStatus status;
     ClearTrustAnchors();
     if (!keepForClaim) {
         ca->GetLocalKey(KeyBlob::DSA_PRIVATE, key);
@@ -2523,22 +2354,13 @@ QStatus PermissionMgmtObj::BindPort()
     return status;
 }
 
-QStatus PermissionMgmtObj::ManageMembershipTrustAnchors(PermissionPolicy* policy)
+QStatus PermissionMgmtObj::ManageTrustAnchors(PermissionPolicy* policy)
 {
     if (policy == NULL) {
         return ER_OK;
     }
-    TrustAnchorList addOns;
-    LoadSGAuthoritiesAndRestrictedCAs(*policy, addOns);
-    if (addOns.size() > 0) {
-        /* remove all the membership trust anchors and re-add the new ones */
-        ClearTrustAnchorListByUse(TRUST_ANCHOR_SG_AUTHORITY, trustAnchors);
-        ClearTrustAnchorListByUse(TRUST_ANCHOR_RESTRICTED_CA, trustAnchors);
-        trustAnchors.reserve(trustAnchors.size() + addOns.size());
-        trustAnchors.insert(trustAnchors.end(), addOns.begin(), addOns.end());
-        addOns.clear();
-        return StoreTrustAnchors();
-    }
+    ClearTrustAnchors();
+    LoadSGAuthoritiesAndCAs(*policy, trustAnchors);
     return ER_OK;
 }
 

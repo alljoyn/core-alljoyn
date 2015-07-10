@@ -529,32 +529,23 @@ static QStatus ParsePropertiesMessage(Request& request, Message& msg)
     return ER_OK;
 }
 
-bool PermissionManager::PeerHasAdminPriv(PeerState& peerState)
+bool PermissionManager::AuthorizePermissionMgmt(bool outgoing, const char* iName, const char* mbrName, bool& authorized)
 {
-    /* now check the admin security group membership */
-    for (_PeerState::GuildMap::iterator it = peerState->guildMap.begin(); it != peerState->guildMap.end(); it++) {
-        _PeerState::GuildMetadata* metadata = it->second;
-        if (permissionMgmtObj->IsAdminGroup(metadata->certChain)) {
-            return true;
-        }
-    }
-    return false;
-}
-
-bool PermissionManager::AuthorizePermissionMgmt(bool outgoing, PeerState& peerState, const char* iName, const char* mbrName)
-{
+    authorized = false;
     if (outgoing) {
-        return true;  /* always allow send action */
+        authorized = true; /* always allow send action */
+        return true;  /* handled */
     }
-    bool authorized = false;
     if (strncmp(mbrName, "Version", 7) == 0) {
-        return true;
+        authorized = true;
+        return true;  /* handled */
     }
 
     if (strcmp(iName, org::alljoyn::Bus::Security::ClaimableApplication::InterfaceName) == 0) {
         if (strncmp(mbrName, "Claim", 5) == 0) {
             /* only allowed when there is no trust anchor */
-            return (!permissionMgmtObj->HasTrustAnchors());
+            authorized = (!permissionMgmtObj->HasTrustAnchors());
+            return true;  /* handled */
         }
     } else if (strcmp(iName, org::alljoyn::Bus::Security::ManagedApplication::InterfaceName) == 0) {
         if (
@@ -563,16 +554,8 @@ bool PermissionManager::AuthorizePermissionMgmt(bool outgoing, PeerState& peerSt
             (strncmp(mbrName, "IdentityCertificateId", 8) == 0) ||
             (strncmp(mbrName, "DefaultPolicy", 13) == 0)
             ) {
-            return true;
-        } else if (
-            (strncmp(mbrName, "ReplaceIdentity", 15) == 0) ||
-            (strncmp(mbrName, "Reset", 5) == 0) ||
-            (strncmp(mbrName, "PolicyVersion", 13) == 0) ||
-            (strncmp(mbrName, "Policy", 6) == 0) ||
-            (strncmp(mbrName, "MembershipSummaries", 19) == 0)
-            ) {
-            /* these actions require admin privilege */
-            return PeerHasAdminPriv(peerState);
+            authorized = true;
+            return true;  /* handled */
         }
     } else if (strcmp(iName, org::alljoyn::Bus::Security::Application::InterfaceName) == 0) {
         if (
@@ -584,10 +567,11 @@ bool PermissionManager::AuthorizePermissionMgmt(bool outgoing, PeerState& peerSt
             (strncmp(mbrName, "ClaimCapabilities", 17) == 0) ||
             (strncmp(mbrName, "ClaimCapabilityAdditionalInfo", 29) == 0)
             ) {
-            return true;
+            authorized = true;
+            return true;  /* handled */
         }
     }
-    return authorized;
+    return false;  /* not handled */
 }
 
 QStatus PermissionManager::AuthorizeMessage(bool outgoing, Message& msg, PeerState& peerState)
@@ -620,8 +604,13 @@ QStatus PermissionManager::AuthorizeMessage(bool outgoing, Message& msg, PeerSta
     }
     bool isPermissionMgmt = IsPermissionMgmtInterface(request.iName);
     if (isPermissionMgmt) {
-        if (AuthorizePermissionMgmt(outgoing, peerState, request.iName, request.mbrName)) {
-            return ER_OK;
+        bool allowed = false;
+        if (AuthorizePermissionMgmt(outgoing, request.iName, request.mbrName, allowed)) {
+            if (allowed) {
+                return ER_OK;
+            } else {
+                return ER_PERMISSION_DENIED;
+            }
         }
     }
     /* Is the app claimed? If not claimed, no enforcement unless it's one of

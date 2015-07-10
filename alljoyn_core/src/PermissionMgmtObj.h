@@ -137,9 +137,7 @@ class PermissionMgmtObj : public BusObject {
 
     typedef enum {
         TRUST_ANCHOR_CA = 0,            ///< certificate authority
-        TRUST_ANCHOR_ADMIN_GROUP = 1,   ///< admin group authority
-        TRUST_ANCHOR_SG_AUTHORITY = 2,  ///< security group authority
-        TRUST_ANCHOR_RESTRICTED_CA = 3  ///< restricted certificate authority
+        TRUST_ANCHOR_SG_AUTHORITY = 1,  ///< security group authority
     } TrustAnchorType;
 
     struct TrustAnchor {
@@ -189,13 +187,6 @@ class PermissionMgmtObj : public BusObject {
      *  - An error status otherwise
      */
     virtual QStatus Init();
-
-    /**
-     * check whether the membership cert chain is for the admin security group
-     * @param certChain the membership cert chain
-     * return true if it is an admin security group; false, otherwise.
-     */
-    bool IsAdminGroup(const std::vector<qcc::CertificateX509*> certChain);
 
     /**
      * Called by the message bus when the object has been successfully registered. The object can
@@ -357,7 +348,7 @@ class PermissionMgmtObj : public BusObject {
 
     QStatus InstallTrustAnchor(TrustAnchor* trustAnchor);
     QStatus StoreIdentityCertChain(MsgArg& certArg);
-    QStatus StorePolicy(PermissionPolicy& policy);
+    QStatus StorePolicy(PermissionPolicy& policy, bool defaultPolicy = false);
     QStatus StoreMembership(const MsgArg& certArg);
     QStatus StoreManifest(MsgArg& manifestArg);
     /**
@@ -517,7 +508,7 @@ class PermissionMgmtObj : public BusObject {
     void Reset(const InterfaceDescription::Member* member, Message& msg);
     void InstallIdentity(const InterfaceDescription::Member* member, Message& msg);
     void InstallPolicy(const InterfaceDescription::Member* member, Message& msg);
-    QStatus RetrievePolicy(PermissionPolicy& policy);
+    QStatus RetrievePolicy(PermissionPolicy& policy, bool defaultPolicy = false);
     QStatus GetPolicy(MsgArg& msgArg);
     QStatus RebuildDefaultPolicy(PermissionPolicy& defaultPolicy);
     QStatus GetDefaultPolicy(MsgArg& msgArg);
@@ -535,7 +526,7 @@ class PermissionMgmtObj : public BusObject {
   private:
 
     typedef enum {
-        ENTRY_TRUST_ANCHOR,        ///< Trust anchor.
+        ENTRY_DEFAULT_POLICY,      ///< Default policy data
         ENTRY_POLICY,              ///< Local policy data
         ENTRY_MEMBERSHIPS,         ///< the list of membership certificates and associated policies
         ENTRY_IDENTITY,            ///< the identity cert
@@ -594,13 +585,14 @@ class PermissionMgmtObj : public BusObject {
     QStatus PerformReset(bool keepForClaim);
     QStatus SameSubjectPublicKey(const qcc::CertificateX509& cert, bool& outcome);
     bool IsTrustAnchor(const qcc::ECCPublicKey* publicKey);
-    QStatus ManageMembershipTrustAnchors(PermissionPolicy* policy);
+    QStatus ManageTrustAnchors(PermissionPolicy* policy);
     QStatus GetDSAPrivateKey(qcc::ECCPrivateKey& privateKey);
     QStatus RetrieveIdentityCertChain(MsgArg** certArgs, size_t* count);
     QStatus RetrieveIdentityCertChainPEM(qcc::String& pem);
     QStatus StoreApplicationState();
     QStatus LoadManifestTemplate(PermissionPolicy& policy);
     void ClearPeerECDSASecrets();
+    bool HasDefaultPolicy();
 
     /**
      * Bind to an exclusive port for PermissionMgmt object.

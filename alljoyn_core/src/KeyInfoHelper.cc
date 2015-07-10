@@ -81,36 +81,57 @@ void KeyInfoHelper::KeyInfoNISTP256ToMsgArg(const KeyInfoNISTP256& keyInfo, MsgA
     delete [] yData;
 }
 
-void KeyInfoHelper::KeyInfoNISTP256PubKeyToMsgArg(const KeyInfoNISTP256& keyInfo, MsgArg& msgArg)
+void KeyInfoHelper::KeyInfoNISTP256PubKeyToMsgArg(const KeyInfoNISTP256& keyInfo, MsgArg& msgArg, bool setKeyId)
 {
     uint8_t* xData = new uint8_t[keyInfo.GetPublicKey()->GetCoordinateSize()];
     uint8_t* yData = new uint8_t[keyInfo.GetPublicKey()->GetCoordinateSize()];
+    uint8_t* keyId = NULL;
     ExportCoordinates(*keyInfo.GetPublicKey(), xData, keyInfo.GetPublicKey()->GetCoordinateSize(), yData, keyInfo.GetPublicKey()->GetCoordinateSize());
     MsgArg localArg;
-    QStatus status = localArg.Set("(yyayay)", keyInfo.GetAlgorithm(),
-                                  keyInfo.GetCurve(),
-                                  keyInfo.GetPublicKey()->GetCoordinateSize(), xData,
-                                  keyInfo.GetPublicKey()->GetCoordinateSize(), yData);
+    QStatus status = ER_OK;
+    if (setKeyId) {
+        if (keyInfo.GetKeyIdLen() > 0) {
+            keyId = new uint8_t[keyInfo.GetKeyIdLen()];
+            memcpy(keyId, keyInfo.GetKeyId(), keyInfo.GetKeyIdLen());
+        }
+        status = localArg.Set("(yyayayay)", keyInfo.GetAlgorithm(),
+                              keyInfo.GetCurve(),
+                              keyInfo.GetKeyIdLen(), keyId,
+                              keyInfo.GetPublicKey()->GetCoordinateSize(), xData,
+                              keyInfo.GetPublicKey()->GetCoordinateSize(), yData);
+    } else {
+        status = localArg.Set("(yyayay)", keyInfo.GetAlgorithm(),
+                              keyInfo.GetCurve(),
+                              keyInfo.GetPublicKey()->GetCoordinateSize(), xData,
+                              keyInfo.GetPublicKey()->GetCoordinateSize(), yData);
+    }
     if (ER_OK != status) {
         QCC_LogError(status, ("KeyInfoHelper::KeyInfoNISTP256PubKeyToMsgArg failed"));
         assert(false);
     }
     /* copy the message arg for a deep copy of the array arguments */
     msgArg = localArg;
+    delete [] keyId;
     delete [] xData;
     delete [] yData;
 }
 
-QStatus KeyInfoHelper::MsgArgToKeyInfoNISTP256PubKey(const MsgArg& msgArg, KeyInfoNISTP256& keyInfo)
+QStatus KeyInfoHelper::MsgArgToKeyInfoNISTP256PubKey(const MsgArg& msgArg, KeyInfoNISTP256& keyInfo, bool retrieveKeyId)
 {
     QStatus status;
     uint8_t algorithm;
     uint8_t curve;
+    uint8_t* id = NULL;
+    size_t idLen = 0;
     uint8_t* xCoord;
     size_t xLen;
     uint8_t* yCoord;
     size_t yLen;
-    status = msgArg.Get("(yyayay)", &algorithm, &curve, &xLen, &xCoord, &yLen, &yCoord);
+    if (retrieveKeyId) {
+        status = msgArg.Get("(yyayayay)", &algorithm, &curve, &idLen, &id, &xLen, &xCoord, &yLen, &yCoord);
+    } else {
+        status = msgArg.Get("(yyayay)", &algorithm, &curve, &xLen, &xCoord, &yLen, &yCoord);
+    }
     if (ER_OK != status) {
         return ER_INVALID_DATA;
     }
@@ -126,6 +147,9 @@ QStatus KeyInfoHelper::MsgArgToKeyInfoNISTP256PubKey(const MsgArg& msgArg, KeyIn
     ECCPublicKey publicKey;
     publicKey.Import(xCoord, xLen, yCoord, yLen);
     keyInfo.SetPublicKey(&publicKey);
+    if (retrieveKeyId) {
+        keyInfo.SetKeyId(id, idLen);
+    }
     return ER_OK;
 }
 
