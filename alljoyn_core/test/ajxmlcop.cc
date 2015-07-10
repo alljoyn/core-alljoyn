@@ -149,27 +149,28 @@ int CDECL_CALL main(int argc, char** argv)
 {
     if (argc != 2) {
         printf("usage: ajxmlcop <xmlfilename>\n");
-        return -1;
+        return 1;
     }
 
     QStatus status = qcc::Init();
     if (status != ER_OK) {
-        fprintf(stderr, "qcc::Init failed (%s)\n", QCC_StatusText(status));
-        return -1;
+        printf("qcc::Init failed (%s)\n", QCC_StatusText(status));
+        return 1;
     }
 
     String xml;
     if (!ParseFile(argv[1], xml)) {
-        fprintf(stderr, "ParseFile failed\n");
+        printf("Couldn't open file '%s'\n", argv[1]);
         (void) qcc::Shutdown();
-        return -1;
+        return 1;
     }
     StringSource source(xml);
     XmlParseContext parserContext(source);
 
+    // RULE-54: Must be valid XML.
     status = XmlElement::Parse(parserContext);
     if (status != ER_OK) {
-        printf("Parser Error: %s\n", QCC_StatusText(status));
+        printf("ERROR-54: invalid XML (%s)\n", QCC_StatusText(status));
         (void) qcc::Shutdown();
         return -1;
     }
