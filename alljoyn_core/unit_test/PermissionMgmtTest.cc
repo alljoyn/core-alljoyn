@@ -761,7 +761,12 @@ QStatus PermissionMgmtTestHelper::GetTVCaption(BusAttachment& bus, ProxyBusObjec
 
     /* test the GetAllProperites */
     MsgArg mapVal;
-    return remoteObj.GetAllProperties(BasePermissionMgmtTest::TV_IFC_NAME, mapVal);
+    QStatus status = remoteObj.GetAllProperties(BasePermissionMgmtTest::TV_IFC_NAME, mapVal);
+    if (ER_OK != status) {
+        return status;
+    }
+    MsgArg* propArg;
+    return mapVal.GetElement("{sv}", "Caption", &propArg);
 }
 
 QStatus PermissionMgmtTestHelper::SetTVVolume(BusAttachment& bus, ProxyBusObject& remoteObj, uint32_t volume)
@@ -871,16 +876,12 @@ QStatus BasePermissionMgmtTest::Get(const char* ifcName, const char* propName, M
         val.typeId = ALLJOYN_UINT32;
         val.v_uint32 = volume;
         return ER_OK;
+    } else if (0 == strcmp("Caption", propName)) {
+        val.typeId = ALLJOYN_BYTE;
+        val.v_byte = 45;
+        return ER_OK;
     }
     return ER_BUS_NO_SUCH_PROPERTY;
-}
-
-void BasePermissionMgmtTest::GetAllProps(const InterfaceDescription::Member* member, Message& msg)
-{
-    QCC_UNUSED(member);
-    MsgArg vals;
-    vals.Set("a{sv}", 0, NULL);
-    MethodReply(msg, &vals, 1);
 }
 
 QStatus BasePermissionMgmtTest::Set(const char* ifcName, const char* propName, MsgArg& val)

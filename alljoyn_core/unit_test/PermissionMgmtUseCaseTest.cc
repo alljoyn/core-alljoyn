@@ -214,13 +214,13 @@ static PermissionPolicy* GeneratePolicy(const GUID128& groupGUID, const KeyInfoN
             prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
             prms[2].SetMemberName("Volume");
             prms[2].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
-            prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+            prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE | PermissionPolicy::Rule::Member::ACTION_MODIFY);
             prms[3].SetMemberName("InputSource");
             prms[3].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
             prms[3].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
             prms[4].SetMemberName("Caption");
             prms[4].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
-            prms[4].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+            prms[4].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE | PermissionPolicy::Rule::Member::ACTION_MODIFY);
             rules[0].SetMembers(5, prms);
         }
         {
@@ -709,10 +709,10 @@ static PermissionPolicy* GeneratePolicyPeerPublicKey(const GUID128& groupGUID, c
         prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
         prms[2].SetMemberName("Volume");
         prms[2].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
-        prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE | PermissionPolicy::Rule::Member::ACTION_MODIFY);
         prms[3].SetMemberName("Caption");
         prms[3].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
-        prms[3].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        prms[3].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE | PermissionPolicy::Rule::Member::ACTION_MODIFY);
         rules[0].SetMembers(4, prms);
     }
     {
@@ -808,7 +808,7 @@ static QStatus GenerateManifestNoInputSource(PermissionPolicy::Rule** retRules, 
         prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE);
         prms[3].SetMemberName("Volume");
         prms[3].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
-        prms[3].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        prms[3].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE | PermissionPolicy::Rule::Member::ACTION_MODIFY);
         rules[0].SetMembers(4, prms);
     }
     {
@@ -845,13 +845,13 @@ static QStatus GenerateManifestDenied(bool denyTVUp, bool denyCaption, Permissio
         prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE);
         prms[3].SetMemberName("Volume");
         prms[3].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
-        prms[3].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        prms[3].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE | PermissionPolicy::Rule::Member::ACTION_MODIFY);
         prms[4].SetMemberName("Caption");
         prms[4].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
         if (denyCaption) {
             prms[4].SetActionMask(0);
         } else {
-            prms[4].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+            prms[4].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE | PermissionPolicy::Rule::Member::ACTION_MODIFY);
         }
         rules[0].SetMembers(5, prms);
     }
@@ -1018,6 +1018,10 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
         status = PermissionMgmtTestHelper::JoinPeerSession(adminProxyBus, adminBus, sessionId);
         EXPECT_EQ(ER_OK, status) << "  JoinSession failed.  Actual Status: " << QCC_StatusText(status);
+
+        SecurityApplicationProxy saProxy(adminBus, adminBus.GetUniqueName().c_str());
+        /* The ManagedApplication::Reset method should not be allowed before Claim */
+        EXPECT_EQ(ER_PERMISSION_DENIED, saProxy.Reset()) << "Reset did not fail.";
 
         EXPECT_EQ(ER_OK, InvokeClaim(true, adminProxyBus, adminBus, "1010101", "Admin User", false)) << " InvokeClaim failed.";
 
