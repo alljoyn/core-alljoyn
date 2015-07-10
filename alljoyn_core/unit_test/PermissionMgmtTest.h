@@ -160,7 +160,6 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
 
     BasePermissionMgmtTest(const char* path) : BusObject(path),
         adminBus("PermissionMgmtTestAdmin", false),
-        adminProxyBus("PermissionMgmtTestAdminProxy", false),
         serviceBus("PermissionMgmtTestService", false),
         consumerBus("PermissionMgmtTestConsumer", false),
         remoteControlBus("PermissionMgmtTestRemoteControl", false),
@@ -195,7 +194,6 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
     void GenerateCAKeys();
 
     BusAttachment adminBus;
-    BusAttachment adminProxyBus;
     BusAttachment serviceBus;
     BusAttachment consumerBus;
     BusAttachment remoteControlBus;

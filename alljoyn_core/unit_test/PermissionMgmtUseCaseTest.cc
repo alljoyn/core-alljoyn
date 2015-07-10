@@ -1014,26 +1014,14 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         EXPECT_EQ(ER_OK, status) << "  GenerateSigningKeyPair failed.  Actual Status: " << QCC_StatusText(status);
         GenerateCAKeys();
 
-        SessionId sessionId;
-        SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
-        status = PermissionMgmtTestHelper::JoinPeerSession(adminProxyBus, adminBus, sessionId);
-        EXPECT_EQ(ER_OK, status) << "  JoinSession failed.  Actual Status: " << QCC_StatusText(status);
-
         SecurityApplicationProxy saProxy(adminBus, adminBus.GetUniqueName().c_str());
         /* The ManagedApplication::Reset method should not be allowed before Claim */
         EXPECT_EQ(ER_PERMISSION_DENIED, saProxy.Reset()) << "Reset did not fail.";
 
-        EXPECT_EQ(ER_OK, InvokeClaim(true, adminProxyBus, adminBus, "1010101", "Admin User", false)) << " InvokeClaim failed.";
+        EXPECT_EQ(ER_OK, InvokeClaim(true, adminBus, adminBus, "1010101", "Admin User", false)) << " InvokeClaim failed.";
 
-        /* reload the shared key store because of change on one bus */
-        adminProxyBus.ReloadKeyStore();
-        adminBus.ReloadKeyStore();
-        qcc::String currentAuthMechanisms = GetAuthMechanisms();
-        EnableSecurity("ALLJOYN_ECDHE_ECDSA");
         InstallMembershipToAdmin(adminMembershipSerial1, adminAdminGroupGUID, adminBus);
         InstallMembershipToAdmin(adminMembershipSerial2, consumerAdminGroupGUID, consumerBus);
-        /* restore the current security mode */
-        EnableSecurity(currentAuthMechanisms.c_str());
     }
 
     /**
@@ -1170,20 +1158,15 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     void Claims(bool usePSK, bool claimRemoteControl)
     {
         if (usePSK) {
-            EnableSecurity("ALLJOYN_ECDHE_PSK");
+            EnableSecurity("ALLJOYN_ECDHE_PSK ALLJOYN_ECDHE_ECDSA");
         } else {
-            EnableSecurity("ALLJOYN_ECDHE_NULL");
+            EnableSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA");
         }
         ClaimAdmin();
         ClaimService();
         ClaimConsumer();
         if (claimRemoteControl) {
             ConsumerClaimsRemoteControl();
-        }
-        if (usePSK) {
-            EnableSecurity("ALLJOYN_ECDHE_PSK ALLJOYN_ECDHE_ECDSA");
-        } else {
-            EnableSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA");
         }
     }
 
@@ -1207,7 +1190,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
      */
     void InstallPolicyToAdmin(PermissionPolicy& policy)
     {
-        SecurityApplicationProxy saProxy(adminProxyBus, adminBus.GetUniqueName().c_str());
+        SecurityApplicationProxy saProxy(adminBus, adminBus.GetUniqueName().c_str());
         EXPECT_EQ(ER_OK, saProxy.UpdatePolicy(policy)) << "  UpdatePolicy failed.";
 
         /* After having a new policy installed, the target bus
@@ -1524,7 +1507,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     }
 
     /**
-     *  Install Membership to a consumer
+     *  Install other's membership certificate to a consumer
      */
     void InstallOthersMembershipToConsumer()
     {
@@ -1544,7 +1527,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(adminBus, &claimedPubKey);
         EXPECT_EQ(ER_OK, status) << "  InstallMembershipToAdmin RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
         qcc::String subjectCN(consumerGUID.ToString());
-        status = PermissionMgmtTestHelper::InstallMembership(serial, adminProxyBus, adminBus.GetUniqueName(), authorityBus, subjectCN, &claimedPubKey, membershipGUID);
+        status = PermissionMgmtTestHelper::InstallMembership(serial, adminBus, adminBus.GetUniqueName(), authorityBus, subjectCN, &claimedPubKey, membershipGUID);
 
         EXPECT_EQ(ER_OK, status) << "  InstallMembershipToAdmin cert1 failed.  Actual Status: " << QCC_StatusText(status);
     }
@@ -1929,7 +1912,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         QStatus status = PermissionMgmtTestHelper::GetPeerGUID(bus, peerName, peerGUID);
         EXPECT_EQ(ER_OK, status) << "  PermissionMgmtTestHelper::GetPeerGuid failed.  Actual Status: " << QCC_StatusText(status);
         status = bus.ClearKeys(peerGUID.ToString());
-        EXPECT_EQ(ER_OK, status) << "  BusAttachment::ClearKeys failed.  Actual Status: " << QCC_StatusText(status);
+        EXPECT_TRUE((ER_OK == status) || (ER_BUS_KEY_UNAVAILABLE == status)) << "  BusAttachment::ClearKeys failed.  Actual Status: " << QCC_StatusText(status);
     }
 
     void RetrievePropertyApplicationState(BusAttachment& bus, BusAttachment& targetBus, PermissionConfigurator::ApplicationState expectedValue)
@@ -2556,6 +2539,7 @@ TEST_F(PermissionMgmtUseCaseTest, AccessGrantedForPeerFromSpecificCA)
     InstallPolicyToService(*servicePolicy);
 
     PermissionPolicy* policy = GenerateFullAccessOutgoingPolicy(consumerAdminGroupGUID, consumerAdminGroupAuthority);
+    EnableSecurity("ALLJOYN_ECDHE_ECDSA");
     InstallPolicyToClientBus(consumerBus, remoteControlBus, *policy);
     delete policy;
 
@@ -2570,7 +2554,6 @@ TEST_F(PermissionMgmtUseCaseTest, AccessGrantedForPeerFromSpecificCA)
      */
     ClearPeerKeys(remoteControlBus, serviceBus);
     ClearPeerKeys(serviceBus, remoteControlBus);
-    EnableSecurity("ALLJOYN_ECDHE_ECDSA");
     KeyInfoNISTP256 consumerCA;
     consumerBus.GetPermissionConfigurator().GetSigningPublicKey(consumerCA);
     AddSpecificCertAuthorityToPolicy(*servicePolicy, consumerCA);

@@ -247,8 +247,6 @@ void BasePermissionMgmtTest::RegisterKeyStoreListeners()
 {
     status = adminBus.RegisterKeyStoreListener(adminKeyStoreListener);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = adminProxyBus.RegisterKeyStoreListener(adminKeyStoreListener);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = serviceBus.RegisterKeyStoreListener(serviceKeyStoreListener);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = consumerBus.RegisterKeyStoreListener(consumerKeyStoreListener);
@@ -267,8 +265,6 @@ void BasePermissionMgmtTest::SetUp()
 {
     status = SetupBus(adminBus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = SetupBus(adminProxyBus);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = SetupBus(serviceBus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = SetupBus(consumerBus);
@@ -285,8 +281,6 @@ void BasePermissionMgmtTest::SetUp()
 void BasePermissionMgmtTest::TearDown()
 {
     status = TeardownBus(adminBus);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = TeardownBus(adminProxyBus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = TeardownBus(serviceBus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -307,13 +301,10 @@ void BasePermissionMgmtTest::TearDown()
 void BasePermissionMgmtTest::GenerateCAKeys()
 {
     KeyInfoNISTP256 keyInfo;
-    adminProxyBus.GetPermissionConfigurator().GetSigningPublicKey(keyInfo);
     adminBus.GetPermissionConfigurator().GetSigningPublicKey(keyInfo);
     consumerBus.GetPermissionConfigurator().GetSigningPublicKey(keyInfo);
     serviceBus.GetPermissionConfigurator().GetSigningPublicKey(keyInfo);
     remoteControlBus.GetPermissionConfigurator().GetSigningPublicKey(keyInfo);
-    adminProxyBus.ReloadKeyStore();
-    adminBus.ReloadKeyStore();
     GenerateSecurityGroupKey(adminBus, adminAdminGroupAuthority);
     GenerateSecurityGroupKey(consumerBus, consumerAdminGroupAuthority);
 }
@@ -333,7 +324,6 @@ void BasePermissionMgmtTest::EnableSecurity(const char* keyExchange)
     delete adminKeyListener;
     adminKeyListener = GenAuthListener(keyExchange);
     adminBus.EnablePeerSecurity(keyExchange, adminKeyListener, NULL, true);
-    adminProxyBus.EnablePeerSecurity(keyExchange, adminKeyListener, NULL, true);
     delete serviceKeyListener;
     serviceKeyListener = GenAuthListener(keyExchange);
     serviceBus.EnablePeerSecurity(keyExchange, serviceKeyListener, NULL, false, &testFRL);

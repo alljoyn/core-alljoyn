@@ -501,11 +501,16 @@ class PermissionMgmtObj : public BusObject {
      *  - an error status indicating failure
      */
     QStatus StoreMembership(const qcc::CertificateX509* certChain, size_t count);
+    /**
+     * Get the ECC public key from the keystore.
+     * @param[out] publicKeyInfo the public key
+     * @return ER_OK if successful; otherwise, error code.
+     */
+    QStatus GetPublicKey(qcc::KeyInfoNISTP256& publicKeyInfo);
 
   protected:
     void Claim(const InterfaceDescription::Member* member, Message& msg);
     BusAttachment& bus;
-    QStatus GetPublicKey(qcc::KeyInfoNISTP256& publicKeyInfo);
     QStatus GetIdentity(MsgArg& arg);
     QStatus GetIdentityLeafCert(qcc::IdentityCertificate& cert);
     QStatus RetrieveIdentityCertificateId(qcc::String& serial, qcc::KeyInfoNISTP256& issuerKeyInfo);
