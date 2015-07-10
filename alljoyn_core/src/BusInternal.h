@@ -400,7 +400,7 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
     /**
      * Disconnect a remote bus address connection.
      *
-     * @param[in] connectSpec The transport connection spec used to connect.
+     * @param[in] disconnectConnectSpec The transport connection spec used to connect.
      *
      * @return
      *     - #ER_OK if successful
@@ -408,7 +408,7 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
      *     - #ER_BUS_NOT_CONNECTED if the %BusAttachment is not connected to the bus
      *     - Other error status codes indicating a failure
      */
-    virtual QStatus TransportDisconnect(const char* connectSpec);
+    virtual QStatus TransportDisconnect(const char* disconnectConnectSpec);
 
     /** @copydoc _LocalEndpoint::RegisterSignalHandler() */
     virtual QStatus RegisterSignalHandler(MessageReceiver* receiver,
@@ -461,13 +461,13 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
      * @internal
      * Connect to an AllJoyn router at a specific connectSpec destination.
      *
-     * @param[in] connectSpec The transport connection spec to try.
+     * @param[in] requestedConnectSpec The transport connection spec to try.
      *
      * @return
      *     - #ER_OK if successful.
      *     - An error status otherwise
      */
-    QStatus TransportConnect(const char* connectSpec);
+    QStatus TransportConnect(const char* requestedConnectSpec);
 
     qcc::String application;              /* Name of the that owns the BusAttachment application */
     BusAttachment& bus;                   /* Reference back to the bus attachment that owns this state */

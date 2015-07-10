@@ -704,7 +704,7 @@ QStatus _LocalEndpoint::RegisterBusObject(BusObject& object, bool isSecure)
             BusObject* parent = FindLocalObject(parentPath.c_str());
             if (!parent) {
                 parent = new BusObject(parentPath.c_str(), true);
-                QStatus status = DoRegisterBusObject(*parent, lastParent, true);
+                status = DoRegisterBusObject(*parent, lastParent, true);
                 if (ER_OK != status) {
                     delete parent;
                     QCC_LogError(status, ("Failed to register default object for path %s", parentPath.c_str()));

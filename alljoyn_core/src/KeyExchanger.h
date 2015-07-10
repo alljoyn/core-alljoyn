@@ -33,6 +33,7 @@
 
 #include "ProtectedAuthListener.h"
 #include "PermissionMgmtObj.h"
+#include "PeerState.h"
 
 using namespace qcc;
 
@@ -76,8 +77,8 @@ class AllJoynPeerObj;
 class KeyExchangerCB {
   public:
     KeyExchangerCB(ProxyBusObject& remoteObj, const InterfaceDescription* ifc, uint32_t timeout) : remoteObj(remoteObj), ifc(ifc), timeout(timeout) { }
-    QStatus SendKeyExchange(MsgArg* args, size_t numArgs, Message* replyMsg);
-    QStatus SendKeyAuthentication(MsgArg* variant, Message* replyMsg);
+    QStatus SendKeyExchange(MsgArg* args, size_t numArgs, Message* sentMsg, Message* replyMsg);
+    QStatus SendKeyAuthentication(MsgArg* msg, Message* sentMsg, Message* replyMsg);
 
     ~KeyExchangerCB() { }
   private:
@@ -92,8 +93,7 @@ class KeyExchangerCB {
 class KeyExchanger {
   public:
 
-    KeyExchanger(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, uint16_t peerAuthVersion) : peerObj(peerObj), bus(bus), authCount(1), listener(listener), secretExpiration(3600), initiator(initiator), peerAuthVersion(peerAuthVersion) {
-        hashUtil.Init();
+    KeyExchanger(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, PeerState peerState) : peerObj(peerObj), bus(bus), authCount(1), listener(listener), secretExpiration(3600), peerState(peerState), initiator(initiator) {
         showDigestCounter = 0;
     }
 
@@ -160,7 +160,7 @@ class KeyExchanger {
 
     const uint16_t GetPeerAuthVersion()
     {
-        return peerAuthVersion;
+        return peerState->GetAuthVersion() >> 16;
     }
 
     /**
@@ -207,7 +207,8 @@ class KeyExchanger {
     uint16_t authCount;
     ProtectedAuthListener& listener;
     uint32_t secretExpiration;
-    Crypto_SHA256 hashUtil;
+
+    PeerState peerState;
 
   private:
     /**
@@ -222,7 +223,6 @@ class KeyExchanger {
 
     bool initiator;
     int showDigestCounter;
-    uint16_t peerAuthVersion;
 };
 
 class KeyExchangerECDHE : public KeyExchanger {
@@ -232,7 +232,7 @@ class KeyExchangerECDHE : public KeyExchanger {
      * Constructor
      *
      */
-    KeyExchangerECDHE(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, uint16_t peerAuthVersion) : KeyExchanger(initiator, peerObj, bus, listener, peerAuthVersion) {
+    KeyExchangerECDHE(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, PeerState peerState) : KeyExchanger(initiator, peerObj, bus, listener, peerState) {
     }
     /**
      * Desstructor
@@ -301,7 +301,7 @@ class KeyExchangerECDHE_NULL : public KeyExchangerECDHE {
      */
     static const char* AuthName() { return "ALLJOYN_ECDHE_NULL"; }
 
-    KeyExchangerECDHE_NULL(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, uint16_t peerAuthVersion) : KeyExchangerECDHE(initiator, peerObj, bus, listener, peerAuthVersion) {
+    KeyExchangerECDHE_NULL(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, PeerState peerState) : KeyExchangerECDHE(initiator, peerObj, bus, listener, peerState) {
     }
 
     virtual ~KeyExchangerECDHE_NULL() {
@@ -338,7 +338,7 @@ class KeyExchangerECDHE_PSK : public KeyExchangerECDHE {
      */
     static const char* AuthName() { return "ALLJOYN_ECDHE_PSK"; }
 
-    KeyExchangerECDHE_PSK(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, uint16_t peerAuthVersion) : KeyExchangerECDHE(initiator, peerObj, bus, listener, peerAuthVersion) {
+    KeyExchangerECDHE_PSK(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, PeerState peerState) : KeyExchangerECDHE(initiator, peerObj, bus, listener, peerState) {
         pskName = "<anonymous>";
         pskValue = " ";
     }
@@ -355,7 +355,7 @@ class KeyExchangerECDHE_PSK : public KeyExchangerECDHE {
     }
     QStatus ReplyWithVerifier(Message& msg);
     QStatus GenerateLocalVerifier(uint8_t* verifier, size_t verifierLen);
-    QStatus GenerateRemoteVerifier(uint8_t* verifier, size_t verifierLen);
+    QStatus GenerateRemoteVerifier(uint8_t* peerPskName, size_t peerPskNameLen, uint8_t* verifier, size_t verifierLen);
     QStatus ValidateRemoteVerifierVariant(const char* peerName, MsgArg* variant, uint8_t* authorized);
 
     QStatus KeyAuthentication(KeyExchangerCB& callback, const char* peerName, uint8_t* authorized);
@@ -385,7 +385,7 @@ class KeyExchangerECDHE_ECDSA : public KeyExchangerECDHE {
      */
     static const char* AuthName() { return "ALLJOYN_ECDHE_ECDSA"; }
 
-    KeyExchangerECDHE_ECDSA(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, uint16_t peerAuthVersion, PermissionMgmtObj::TrustAnchorList* trustAnchorList) : KeyExchangerECDHE(initiator, peerObj, bus, listener, peerAuthVersion), certChainLen(0), certChain(NULL), trustAnchorList(trustAnchorList), hasCommonTrustAnchors(false), peerDSAPubKey(NULL)
+    KeyExchangerECDHE_ECDSA(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, PeerState peerState, PermissionMgmtObj::TrustAnchorList* trustAnchorList) : KeyExchangerECDHE(initiator, peerObj, bus, listener, peerState), certChainLen(0), certChain(NULL), trustAnchorList(trustAnchorList), hasCommonTrustAnchors(false), peerDSAPubKey(NULL)
     {
         memset(peerManifestDigest, 0, sizeof(peerManifestDigest));
     }

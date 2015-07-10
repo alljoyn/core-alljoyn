@@ -31,30 +31,30 @@ AboutClient::AboutClient(ajn::BusAttachment& bus) :
 {
     QCC_DbgTrace(("AboutClient::%s", __FUNCTION__));
     QStatus status = ER_OK;
-    const InterfaceDescription* p_InterfaceDescription = NULL;
-    p_InterfaceDescription = m_BusAttachment->GetInterface(ABOUT_INTERFACE_NAME);
-    if (!p_InterfaceDescription) {
-        InterfaceDescription* p_InterfaceDescription = NULL;
-        status = m_BusAttachment->CreateInterface(ABOUT_INTERFACE_NAME, p_InterfaceDescription, false);
-        if (p_InterfaceDescription && status == ER_OK) {
+    const InterfaceDescription* p_ExistingInterfaceDescription = NULL;
+    p_ExistingInterfaceDescription = m_BusAttachment->GetInterface(ABOUT_INTERFACE_NAME);
+    if (!p_ExistingInterfaceDescription) {
+        InterfaceDescription* p_NewInterfaceDescription = NULL;
+        status = m_BusAttachment->CreateInterface(ABOUT_INTERFACE_NAME, p_NewInterfaceDescription, false);
+        if (p_NewInterfaceDescription && status == ER_OK) {
             for (;;) {
-                status = p_InterfaceDescription->AddMethod("GetAboutData", "s", "a{sv}", "languageTag,aboutData");
+                status = p_NewInterfaceDescription->AddMethod("GetAboutData", "s", "a{sv}", "languageTag,aboutData");
                 if (status != ER_OK) {
                     break;
                 }
-                status = p_InterfaceDescription->AddMethod("GetObjectDescription", NULL, "a(oas)", "Control");
+                status = p_NewInterfaceDescription->AddMethod("GetObjectDescription", NULL, "a(oas)", "Control");
                 if (status != ER_OK) {
                     break;
                 }
-                status = p_InterfaceDescription->AddProperty("Version", "q", PROP_ACCESS_READ);
+                status = p_NewInterfaceDescription->AddProperty("Version", "q", PROP_ACCESS_READ);
                 if (status != ER_OK) {
                     break;
                 }
-                status = p_InterfaceDescription->AddSignal("Announce", "qqa(oas)a{sv}", "version,port,objectDescription,servMetadata", 0);
+                status = p_NewInterfaceDescription->AddSignal("Announce", "qqa(oas)a{sv}", "version,port,objectDescription,servMetadata", 0);
                 if (status != ER_OK) {
                     break;
                 }
-                p_InterfaceDescription->Activate();
+                p_NewInterfaceDescription->Activate();
                 return;
             }
         }
@@ -115,9 +115,9 @@ QStatus AboutClient::GetObjectDescriptions(const char* busName, AboutClient::Obj
                 }
 
                 std::vector<qcc::String> localVector;
-                for (size_t i = 0; i < interfaceNum; i++) {
+                for (size_t j = 0; j < interfaceNum; j++) {
                     char* interfaceName;
-                    status = interfaceEntries[i].Get("s", &interfaceName);
+                    status = interfaceEntries[j].Get("s", &interfaceName);
                     if (status != ER_OK) {
                         break;
                     }

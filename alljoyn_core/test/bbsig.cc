@@ -132,8 +132,8 @@ class MyBusListener : public BusListener, public SessionListener {
                        newOwner ? newOwner : "null");
     }
 
-    void SessionLost(SessionId sessionId, SessionLostReason reason) {
-        QCC_SyncPrintf("SessionLost(%u) was called. Reason = %u.\n", sessionId, reason);
+    void SessionLost(SessionId lostSessionId, SessionLostReason reason) {
+        QCC_SyncPrintf("SessionLost(%u) was called. Reason = %u.\n", lostSessionId, reason);
     }
 
     SessionId GetSessionId() const { return sessionId; }
@@ -339,15 +339,15 @@ class LocalTestObject : public BusObject {
         if (args[0].v_uint32 == DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER) {
             /* Begin Advertising the well known name to remote busses */
             const ProxyBusObject& alljoynObj = bus->GetAllJoynProxyObj();
-            MsgArg args[2];
-            size_t numArgs = ArraySize(args);
-            MsgArg::Set(args, numArgs, "sq", g_advertiseName.c_str(), g_preferredTransport);
+            MsgArg newArgs[2];
+            size_t newNumArgs = ArraySize(newArgs);
+            MsgArg::Set(newArgs, newNumArgs, "sq", g_advertiseName.c_str(), g_preferredTransport);
             QStatus status = alljoynObj.MethodCallAsync(ajn::org::alljoyn::Bus::InterfaceName,
                                                         "AdvertiseName",
                                                         this,
                                                         static_cast<MessageReceiver::ReplyHandler>(&LocalTestObject::AdvertiseRequestCB),
-                                                        args,
-                                                        numArgs);
+                                                        newArgs,
+                                                        newNumArgs);
             if (ER_OK != status) {
                 QCC_LogError(status, ("Sending org.alljoyn.Bus.Advertise failed"));
             }
@@ -724,7 +724,7 @@ int CDECL_CALL main(int argc, char** argv)
         if (g_selfjoin) {
             SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, true, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
             SessionPort sessionPort = ::org::alljoyn::alljoyn_test::SessionPort;
-            QStatus status = g_msgBus->BindSessionPort(sessionPort, opts, g_portListener);
+            status = g_msgBus->BindSessionPort(sessionPort, opts, g_portListener);
             if (ER_OK != status) {
                 QCC_LogError(status, ("Could not bind to session"));
                 break;
@@ -815,7 +815,7 @@ int CDECL_CALL main(int argc, char** argv)
                 if (((i + 1) % testObj->reportInterval) == 0) {
                     QCC_SyncPrintf("SendSignal: %u\n", i + 1);
                 }
-                QStatus status = testObj->SendSignal();
+                status = testObj->SendSignal();
                 if (status != ER_OK) {
                     QCC_LogError(status, ("Failed to send signal"));
                     break;

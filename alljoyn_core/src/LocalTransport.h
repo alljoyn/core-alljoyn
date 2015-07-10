@@ -130,7 +130,7 @@ class _LocalEndpoint : public _BusEndpoint, public qcc::AlarmListener, public Me
      * @param replyHandler   The reply callback function
      * @param method         Interface/member of method call awaiting this reply.
      * @param methodCallMsg  The method call message
-     * @param context        Opaque context pointer passed from method call to it's reply handler.
+     * @param context        Opaque context pointer passed from method call to its reply handler.
      * @param timeout        Timeout specified in milliseconds to wait for a reply to a method call.
      *                       The value 0 means use the implementation dependent default timeout.
      * @return
@@ -238,9 +238,9 @@ class _LocalEndpoint : public _BusEndpoint, public qcc::AlarmListener, public Me
     /**
      * Set the endpoint's unique name.
      *
-     * @param uniqueName   Unique name for endpoint.
+     * @param newUniqueName   Unique name for endpoint.
      */
-    void SetUniqueName(const qcc::String& uniqueName) { this->uniqueName = uniqueName; }
+    void SetUniqueName(const qcc::String& newUniqueName) { this->uniqueName = newUniqueName; }
 
     /**
      * Register a BusObject.

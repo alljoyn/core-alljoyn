@@ -99,6 +99,19 @@ class _NullEndpoint : public _BusEndpoint {
 
     bool AllowRemoteMessages() { return true; }
 
+    void RegisterSessionId(SessionId sessionId) {
+        QCC_DbgPrintf(("NullEndpoint::RegisterSessionId (%s,%u)", GetUniqueName().c_str(), sessionId));
+        sessionIdSet.insert(sessionId);
+    }
+    void UnregisterSessionId(SessionId sessionId) {
+        QCC_DbgPrintf(("NullEndpoint::UnregisterSessionId (%s,%u)", GetUniqueName().c_str(), sessionId));
+        sessionIdSet.erase(sessionId);
+    }
+
+    bool IsInSession(SessionId sessionId) {
+        return sessionIdSet.find(sessionId) != sessionIdSet.end();
+
+    }
     volatile int32_t clientReady;
     BusAttachment& clientBus;
     BusAttachment& routerBus;
@@ -125,6 +138,7 @@ class _NullEndpoint : public _BusEndpoint {
   private:
     /* Private assigment operator - does nothing */
     _NullEndpoint operator=(const _NullEndpoint&);
+    set<SessionId> sessionIdSet;
 };
 
 _NullEndpoint::_NullEndpoint(BusAttachment& clientBus, BusAttachment& routerBus) :

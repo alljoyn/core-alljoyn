@@ -292,12 +292,13 @@ class BusObject : public MessageReceiver {
      * @param msg      The method call message
      * @param args     The reply arguments (can be NULL)
      * @param numArgs  The number of arguments
+     * @param replyMsg Pointer to a Message object to receive a copy of the sent reply message (can be NULL if not needed)
      * @return
      *      - #ER_OK if successful
      *      - #ER_BUS_OBJECT_NOT_REGISTERED if bus object has not yet been registered
      *      - An error status otherwise
      */
-    QStatus MethodReply(const Message& msg, const MsgArg* args = NULL, size_t numArgs = 0);
+    QStatus MethodReply(const Message& msg, const MsgArg* args = NULL, size_t numArgs = 0, Message* replyMsg = NULL);
 
     /**
      * Reply to a method call with an error message.
@@ -323,7 +324,6 @@ class BusObject : public MessageReceiver {
      *      - An error status otherwise
      */
     QStatus MethodReply(const Message& msg, QStatus status);
-
 
     /**
      * Add an interface to this object. If the interface has properties this will also add the
@@ -433,12 +433,12 @@ class BusObject : public MessageReceiver {
      * introspection XML presented to remote nodes. Note that to DTD description and
      * the root element are not generated.
      *
-     * @param languageTag   language reguested for <description>'s. NULL for no descriptions.
-     * @param deep     Include XML for all descendants rather than stopping at direct children.
-     * @param indent   Number of characters to indent the XML
-     * @return Description of the object in AllJoyn introspection XML format
+     * @param requestedLanguageTag      Language reguested for <description>'s. NULL for no descriptions.
+     * @param deep                      Include XML for all descendants rather than stopping at direct children.
+     * @param indent                    Number of characters to indent the XML
+     * @return                          Description of the object in AllJoyn introspection XML format
      */
-    virtual qcc::String GenerateIntrospection(const char* languageTag, bool deep = false, size_t indent = 0) const;
+    virtual qcc::String GenerateIntrospection(const char* requestedLanguageTag, bool deep = false, size_t indent = 0) const;
 
     /**
      * Called by the message bus when the object has been successfully registered. The object can
@@ -565,7 +565,7 @@ class BusObject : public MessageReceiver {
      *      - #ER_OK if all the methods were added
      *      - #ER_BUS_NO_SUCH_INTERFACE is method can not be added because interface does not exist.
      */
-    QStatus DoRegistration(BusAttachment& bus);
+    QStatus DoRegistration(BusAttachment& busAttachment);
 
     /**
      * Returns true if this object implements the given interface.

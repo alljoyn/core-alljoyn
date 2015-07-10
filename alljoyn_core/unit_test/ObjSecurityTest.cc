@@ -156,12 +156,11 @@ class ObjectSecurityTest : public testing::Test, public AuthListener {
     ObjectSecurityTest() :
         clientbus("ObjectSecurityTestClient", false),
         servicebus("ObjectSecurityTestService", false),
-        status(ER_OK),
         authComplete(false)
     { };
 
     virtual void SetUp() {
-        status = clientbus.Start();
+        QStatus status = clientbus.Start();
         EXPECT_EQ(ER_OK, status);
         status = clientbus.Connect(ajn::getConnectArg().c_str());
         ASSERT_EQ(ER_OK, status);
@@ -180,7 +179,7 @@ class ObjectSecurityTest : public testing::Test, public AuthListener {
 
         clientbus.ClearKeyStore();
         servicebus.ClearKeyStore();
-        status = clientbus.Disconnect();
+        QStatus status = clientbus.Disconnect();
         EXPECT_EQ(ER_OK, status);
         status = servicebus.Disconnect();
         EXPECT_EQ(ER_OK, status);
@@ -196,7 +195,6 @@ class ObjectSecurityTest : public testing::Test, public AuthListener {
 
     BusAttachment clientbus;
     BusAttachment servicebus;
-    QStatus status;
     bool authComplete;
 
   private:

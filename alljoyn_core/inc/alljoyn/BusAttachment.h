@@ -496,7 +496,7 @@ class BusAttachment : public MessageReceiver {
      * will be ignored and the bundled router connectSpec will be used.  Use
      * Disconnect() instead which will use correct connectSpec.
      *
-     * @param connectSpec  The transport connection spec used to connect.
+     * @param disconnectConnectSpec  The transport connection spec used to connect.
      *
      * @return
      *          - #ER_OK if successful
@@ -504,7 +504,7 @@ class BusAttachment : public MessageReceiver {
      *          - #ER_BUS_NOT_CONNECTED if the %BusAttachment is not connected to the bus
      *          - Other error status codes indicating a failure
      */
-    QCC_DEPRECATED(QStatus Disconnect(const char* connectSpec));
+    QCC_DEPRECATED(QStatus Disconnect(const char* disconnectConnectSpec));
 
     /**
      * %Disconnect the %BusAttachment from the remote bus.

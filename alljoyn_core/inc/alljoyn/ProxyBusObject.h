@@ -54,6 +54,8 @@ class BusAttachment;
 class ProxyBusObject : public MessageReceiver {
     friend class XmlHelper;
     friend class AllJoynObj;
+    friend class AllJoynPeerObj;
+    friend class KeyExchangerCB;
     friend class MatchRuleTracker;
 
   public:
@@ -656,6 +658,7 @@ class ProxyBusObject : public MessageReceiver {
      * @param flags        Logical OR of the message flags for this method call. The following flags apply to method calls:
      *                     - If #ALLJOYN_FLAG_ENCRYPTED is set the message is authenticated and the payload if any is encrypted.
      *                     - If #ALLJOYN_FLAG_AUTO_START is set the bus will attempt to start a service if it is not running.
+     * @param callMsg      Pointer to a Message object to receive a copy of the sent call message (can be NULL if not needed)
      *
      *
      * @return
@@ -667,7 +670,8 @@ class ProxyBusObject : public MessageReceiver {
                        size_t numArgs,
                        Message& replyMsg,
                        uint32_t timeout = DefaultCallTimeout,
-                       uint8_t flags = 0) const;
+                       uint8_t flags = 0,
+                       Message* callMsg = NULL) const;
 
     /**
      * Make a synchronous method call from this object

@@ -160,7 +160,7 @@ class AsyncTracker {
 volatile int32_t AsyncTracker::refs = 0;
 AsyncTracker* AsyncTracker::self = NULL;
 
-void ProtectedAuthListener::Set(AuthListener* listener)
+void ProtectedAuthListener::Set(AuthListener* authListener)
 {
     lock.Lock(MUTEX_CONTEXT);
     /*
@@ -185,7 +185,7 @@ void ProtectedAuthListener::Set(AuthListener* listener)
     /*
      * Now set the new listener
      */
-    this->listener = listener;
+    this->listener = authListener;
     lock.Unlock(MUTEX_CONTEXT);
 }
 
@@ -193,18 +193,18 @@ bool ProtectedAuthListener::RequestCredentials(const char* authMechanism, const 
 {
     bool ok = false;
     lock.Lock(MUTEX_CONTEXT);
-    AuthListener* listener = this->listener;
+    AuthListener* authListener = this->listener;
     ++refCount;
     lock.Unlock(MUTEX_CONTEXT);
-    if (listener) {
-        AuthContext* context = AsyncTracker::Allocate(listener, &credentials);
+    if (authListener) {
+        AuthContext* context = AsyncTracker::Allocate(authListener, &credentials);
         /*
          * First try the asynch implementation
          */
-        QStatus status = listener->RequestCredentialsAsync(authMechanism, peerName, authCount, userName, credMask, (void*)context);
+        QStatus status = authListener->RequestCredentialsAsync(authMechanism, peerName, authCount, userName, credMask, (void*)context);
         if (status != ER_OK) {
             if (status == ER_NOT_IMPLEMENTED) {
-                ok = listener->RequestCredentials(authMechanism, peerName, authCount, userName, credMask, credentials);
+                ok = authListener->RequestCredentials(authMechanism, peerName, authCount, userName, credMask, credentials);
             }
         } else {
             ok = (Event::Wait(context->event, ASYNC_AUTH_TIMEOUT) == ER_OK) && context->accept;
@@ -221,18 +221,18 @@ bool ProtectedAuthListener::VerifyCredentials(const char* authMechanism, const c
 {
     bool ok = false;
     lock.Lock(MUTEX_CONTEXT);
-    AuthListener* listener = this->listener;
+    AuthListener* authListener = this->listener;
     ++refCount;
     lock.Unlock(MUTEX_CONTEXT);
-    if (listener) {
-        AuthContext* context = AsyncTracker::Allocate(listener, NULL);
+    if (authListener) {
+        AuthContext* context = AsyncTracker::Allocate(authListener, NULL);
         /*
          * First try the asynch implementation
          */
-        QStatus status = listener->VerifyCredentialsAsync(authMechanism, peerName, credentials, (void*)context);
+        QStatus status = authListener->VerifyCredentialsAsync(authMechanism, peerName, credentials, (void*)context);
         if (status != ER_OK) {
             if (status == ER_NOT_IMPLEMENTED) {
-                ok = listener->VerifyCredentials(authMechanism, peerName, credentials);
+                ok = authListener->VerifyCredentials(authMechanism, peerName, credentials);
             }
         } else {
             ok = (Event::Wait(context->event, ASYNC_AUTH_TIMEOUT) == ER_OK) && context->accept;
@@ -248,11 +248,11 @@ bool ProtectedAuthListener::VerifyCredentials(const char* authMechanism, const c
 void ProtectedAuthListener::SecurityViolation(QStatus status, const Message& msg)
 {
     lock.Lock(MUTEX_CONTEXT);
-    AuthListener* listener = this->listener;
+    AuthListener* authListener = this->listener;
     ++refCount;
     lock.Unlock(MUTEX_CONTEXT);
-    if (listener) {
-        listener->SecurityViolation(status, msg);
+    if (authListener) {
+        authListener->SecurityViolation(status, msg);
     }
     lock.Lock(MUTEX_CONTEXT);
     --refCount;
@@ -262,11 +262,11 @@ void ProtectedAuthListener::SecurityViolation(QStatus status, const Message& msg
 void ProtectedAuthListener::AuthenticationComplete(const char* authMechanism, const char* peerName, bool success)
 {
     lock.Lock(MUTEX_CONTEXT);
-    AuthListener* listener = this->listener;
+    AuthListener* authListener = this->listener;
     ++refCount;
     lock.Unlock(MUTEX_CONTEXT);
-    if (listener) {
-        listener->AuthenticationComplete(authMechanism, peerName, success);
+    if (authListener) {
+        authListener->AuthenticationComplete(authMechanism, peerName, success);
     }
     lock.Lock(MUTEX_CONTEXT);
     --refCount;

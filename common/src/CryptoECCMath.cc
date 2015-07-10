@@ -791,7 +791,7 @@ static void big_sub(bigval_t* tgt, bigval_t const* a, bigval_t const* b)
     v = 1; /* increment */
     for (i = 0; i < BIGLEN; ++i) {
         v += a->data[i];
-        v += ~b->data[i]; /* 1's complement */
+        v += (uint64_t)((uint32_t)(~b->data[i])); /* 1's complement */
         tgt->data[i] = (uint32_t)v;
         v >>= 32;
     }

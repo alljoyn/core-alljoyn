@@ -218,10 +218,10 @@ class Participant : public SessionPortListener, public SessionListener {
         ASSERT_EQ(ER_OK, aboutObj.Announce(port, aboutData));
     }
 
-    virtual bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) {
+    virtual bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& sessionOpts) {
         QCC_UNUSED(sessionPort);
         QCC_UNUSED(joiner);
-        QCC_UNUSED(opts);
+        QCC_UNUSED(sessionOpts);
         return acceptSessions;
     }
 
@@ -281,10 +281,10 @@ class PendingParticipant1 : public Participant {
     }
 
     // Participant removes the object that was originally interesting for the consuming observer
-    virtual bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) {
+    virtual bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& sessionOpts) {
         QCC_UNUSED(sessionPort);
         QCC_UNUSED(joiner);
-        QCC_UNUSED(opts);
+        QCC_UNUSED(sessionOpts);
 
         UnregisterObject(objectToDrop);
         qcc::Sleep(sleepAfter);
@@ -305,10 +305,10 @@ class PendingParticipant2 : public Participant {
     PendingParticipant2() : once(true) {
     }
     //Participant announces another object that is interesting for the calling consuming observer
-    virtual bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) {
+    virtual bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& sessionOpts) {
         QCC_UNUSED(sessionPort);
         QCC_UNUSED(joiner);
-        QCC_UNUSED(opts);
+        QCC_UNUSED(sessionOpts);
 
         if (once) {
             CreateObject(newObjectToAnnounce, objInterfaces);

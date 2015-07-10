@@ -161,7 +161,6 @@ class ResolverThread : public qcc::Thread, public qcc::ThreadListener {
     qcc::String hostname;
     uint8_t*addr;
     size_t* addrLen;
-    QStatus status;
     qcc::Mutex lock;
     qcc::Event complete;
     bool threadHasExited;
@@ -170,7 +169,7 @@ class ResolverThread : public qcc::Thread, public qcc::ThreadListener {
 ResolverThread::ResolverThread(qcc::String& hostname, uint8_t* addr, size_t* addrLen)
     : hostname(hostname), addr(addr), addrLen(addrLen), threadHasExited(false)
 {
-    status = Start(NULL, this);
+    QStatus status = Start(NULL, this);
     if (ER_OK != status) {
         addr = NULL;
         addrLen = NULL;
@@ -179,6 +178,8 @@ ResolverThread::ResolverThread(qcc::String& hostname, uint8_t* addr, size_t* add
 
 QStatus ResolverThread::Get(uint32_t timeoutMs)
 {
+    QStatus status = ER_OK;
+
     if (addr && addrLen) {
         status = qcc::Event::Wait(complete, timeoutMs);
         if (ER_OK == status) {

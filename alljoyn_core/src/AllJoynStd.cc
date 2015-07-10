@@ -256,7 +256,7 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
             return status;
         }
         ifc->AddMethod("AcceptSession", "qus" SESSIONOPTS_SIG, "b", "port,id,src,opts,accepted");
-        ifc->AddSignal("SessionJoined", "qus", "port,id,src");
+        ifc->AddSignal("SessionJoined", "qus", "port,id,src", MEMBER_ANNOTATE_UNICAST);
         ifc->Activate();
     }
     {

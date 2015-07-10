@@ -108,7 +108,6 @@ class ProxyBusObjectTestAuthListenerTwo : public AuthListener {
 class ProxyBusObjectTest : public testing::Test {
   public:
     ProxyBusObjectTest() :
-        status(ER_FAIL),
         bus("ProxyBusObjectTest", false),
         servicebus("ProxyBusObjectTestservice", false),
         proxyBusObjectTestAuthListenerOne(NULL),
@@ -116,7 +115,7 @@ class ProxyBusObjectTest : public testing::Test {
     { }
 
     virtual void SetUp() {
-        status = bus.Start();
+        QStatus status = bus.Start();
         EXPECT_EQ(ER_OK, status);
         status = bus.Connect(ajn::getConnectArg().c_str());
         EXPECT_EQ(ER_OK, status);
@@ -133,7 +132,7 @@ class ProxyBusObjectTest : public testing::Test {
     {
         buslistener.name_owner_changed_flag = false;
         /* create/start/connect alljoyn_busattachment */
-        status = servicebus.Start();
+        QStatus status = servicebus.Start();
         EXPECT_EQ(ER_OK, status);
         status = servicebus.Connect(ajn::getConnectArg().c_str());
         EXPECT_EQ(ER_OK, status);
@@ -207,8 +206,7 @@ class ProxyBusObjectTest : public testing::Test {
 
         void SetUp(const InterfaceDescription& intf)
         {
-            QStatus status = ER_OK;
-            status = AddInterface(intf);
+            QStatus status = AddInterface(intf);
             EXPECT_EQ(ER_OK, status);
 
             /* register method handlers */
@@ -240,7 +238,6 @@ class ProxyBusObjectTest : public testing::Test {
         }
     };
 
-    QStatus status;
     BusAttachment bus;
 
     BusAttachment servicebus;
@@ -268,10 +265,9 @@ TEST_F(ProxyBusObjectTest, ParseXml) {
         "    </method>\n"
         "  </interface>\n"
         "</node>\n";
-    QStatus status;
 
     ProxyBusObject proxyObj(bus, NULL, NULL, 0);
-    status = proxyObj.ParseXml(busObjectXML, NULL);
+    QStatus status = proxyObj.ParseXml(busObjectXML, NULL);
     EXPECT_EQ(ER_OK, status);
 
     EXPECT_TRUE(proxyObj.ImplementsInterface("org.alljoyn.test.ProxyBusObjectTest"));
@@ -300,7 +296,7 @@ TEST_F(ProxyBusObjectTest, SecureConnection) {
     auth_complete_listener2_flag = false;
     /* create/activate alljoyn_interface */
     InterfaceDescription* testIntf = NULL;
-    status = servicebus.CreateInterface(INTERFACE_NAME, testIntf, false);
+    QStatus status = servicebus.CreateInterface(INTERFACE_NAME, testIntf, false);
     EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(testIntf != NULL);
     status = testIntf->AddMember(MESSAGE_METHOD_CALL, "ping", "s", "s", "in,out", 0);
@@ -343,7 +339,7 @@ TEST_F(ProxyBusObjectTest, SecureConnectionAsync) {
 
     /* create/activate alljoyn_interface */
     InterfaceDescription* testIntf = NULL;
-    status = servicebus.CreateInterface(INTERFACE_NAME, testIntf, false);
+    QStatus status = servicebus.CreateInterface(INTERFACE_NAME, testIntf, false);
     EXPECT_EQ(ER_OK, status);
     ASSERT_TRUE(testIntf != NULL);
     status = testIntf->AddMember(MESSAGE_METHOD_CALL, "ping", "s", "s", "in,out", 0);
@@ -389,12 +385,10 @@ TEST_F(ProxyBusObjectTest, SecureConnectionAsync) {
 }
 
 TEST_F(ProxyBusObjectTest, GetChildren) {
-    QStatus status = ER_FAIL;
-
     InterfaceDescription* testIntf = NULL;
     bus.CreateInterface("org.alljoyn.test.ProxyBusObjectTest", testIntf, false);
     ASSERT_TRUE(testIntf != NULL);
-    status = testIntf->AddMember(MESSAGE_METHOD_CALL, "ping", "s", "s", "in,out", 0);
+    QStatus status = testIntf->AddMember(MESSAGE_METHOD_CALL, "ping", "s", "s", "in,out", 0);
     EXPECT_EQ(ER_OK, status);
 
     ProxyBusObject proxyObjChildOne(bus, "org.alljoyn.test.ProxyBusObjectTest", "/org/alljoyn/test/ProxyObjectTest/ChildOne", 0);
@@ -455,12 +449,10 @@ TEST_F(ProxyBusObjectTest, GetChildren) {
 
 // ALLJOYN-1908
 TEST_F(ProxyBusObjectTest, AddChild_regressionTest) {
-    QStatus status = ER_FAIL;
-
     InterfaceDescription* testIntf = NULL;
     bus.CreateInterface("org.alljoyn.test.ProxyBusObjectTest", testIntf, false);
     ASSERT_TRUE(testIntf != NULL);
-    status = testIntf->AddMember(MESSAGE_METHOD_CALL, "ping", "s", "s", "in,out", 0);
+    QStatus status = testIntf->AddMember(MESSAGE_METHOD_CALL, "ping", "s", "s", "in,out", 0);
     EXPECT_EQ(ER_OK, status);
 
     ProxyBusObject proxyObjChildOne(bus, "org.alljoyn.test.ProxyBusObjectTest", "/aa/a", 0);
@@ -493,7 +485,7 @@ TEST_F(ProxyBusObjectTest, AddPropertyInterfaceError) {
     InterfaceDescription* testIntf = NULL;
     bus.CreateInterface("org.alljoyn.test.ProxyBusObjectTest", testIntf, false);
     ASSERT_TRUE(testIntf != NULL);
-    status = testIntf->AddMember(MESSAGE_METHOD_CALL, "ping", "s", "s", "in,out", 0);
+    QStatus status = testIntf->AddMember(MESSAGE_METHOD_CALL, "ping", "s", "s", "in,out", 0);
     EXPECT_EQ(ER_OK, status);
     status = testIntf->AddProperty("stringProp", "s", PROP_ACCESS_RW);
     EXPECT_EQ(ER_OK, status);
@@ -529,13 +521,13 @@ class ChangeListener : public ProxyBusObject::PropertiesChangedListener {
         testCond(testCond)
     { }
 
-    void SetRemoveListener(ProxyBusObject& remObj,
-                           const char* remIfaceName,
-                           ChangeListener& remListener)
+    void SetRemoveListener(ProxyBusObject& removeObj,
+                           const char* removeIfaceName,
+                           ChangeListener& removeListener)
     {
-        this->remObj = &remObj;
-        this->remIfaceName = remIfaceName;
-        this->remListener = &remListener;
+        this->remObj = &removeObj;
+        this->remIfaceName = removeIfaceName;
+        this->remListener = &removeListener;
     }
 
     void RemoveListener()
@@ -673,7 +665,7 @@ TEST_F(ProxyBusObjectTest, UnregisterPropertiesChangedListenerRaceTest1) {
     bus.CreateInterface(INTERFACE_NAME, testIntf1, false);
     ASSERT_TRUE(testIntf1 != NULL);
 
-    status = testIntf1->AddProperty("stringProp1", "s", PROP_ACCESS_RW);
+    QStatus status = testIntf1->AddProperty("stringProp1", "s", PROP_ACCESS_RW);
     EXPECT_EQ(ER_OK, status);
     testIntf1->AddPropertyAnnotation("stringProp1", org::freedesktop::DBus::AnnotateEmitsChanged, "true");
     testIntf1->Activate();
@@ -763,7 +755,7 @@ TEST_F(ProxyBusObjectTest, UnregisterPropertiesChangedListenerRaceTest2) {
     bus.CreateInterface(INTERFACE_NAME, testIntf1, false);
     ASSERT_TRUE(testIntf1 != NULL);
 
-    status = testIntf1->AddProperty("stringProp1", "s", PROP_ACCESS_RW);
+    QStatus status = testIntf1->AddProperty("stringProp1", "s", PROP_ACCESS_RW);
     EXPECT_EQ(ER_OK, status);
     testIntf1->AddPropertyAnnotation("stringProp1", org::freedesktop::DBus::AnnotateEmitsChanged, "true");
     testIntf1->Activate();
@@ -845,7 +837,7 @@ TEST_F(ProxyBusObjectTest, UnregisterPropertiesChangedListenerRaceTest3) {
     bus.CreateInterface(INTERFACE_NAME, testIntf1, false);
     ASSERT_TRUE(testIntf1 != NULL);
 
-    status = testIntf1->AddProperty("stringProp1", "s", PROP_ACCESS_RW);
+    QStatus status = testIntf1->AddProperty("stringProp1", "s", PROP_ACCESS_RW);
     EXPECT_EQ(ER_OK, status);
     testIntf1->AddPropertyAnnotation("stringProp1", org::freedesktop::DBus::AnnotateEmitsChanged, "true");
     testIntf1->Activate();
@@ -901,7 +893,7 @@ TEST_F(ProxyBusObjectTest, UnregisterPropertiesChangedListenerRaceTest4) {
     bus.CreateInterface(INTERFACE_NAME, testIntf1, false);
     ASSERT_TRUE(testIntf1 != NULL);
 
-    status = testIntf1->AddProperty("stringProp1", "s", PROP_ACCESS_RW);
+    QStatus status = testIntf1->AddProperty("stringProp1", "s", PROP_ACCESS_RW);
     EXPECT_EQ(ER_OK, status);
     testIntf1->AddPropertyAnnotation("stringProp1", org::freedesktop::DBus::AnnotateEmitsChanged, "true");
     testIntf1->Activate();

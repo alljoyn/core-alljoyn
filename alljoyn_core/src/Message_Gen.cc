@@ -401,11 +401,11 @@ QStatus _Message::MarshalArgs(const MsgArg* arg, size_t numArgs)
             {
                 /* First byte is reserved for the length */
                 char sig[257];
-                size_t len = 0;
-                status = SignatureUtils::MakeSignature(arg->v_variant.val, 1, sig + 1, len);
+                size_t length = 0;
+                status = SignatureUtils::MakeSignature(arg->v_variant.val, 1, sig + 1, length);
                 if (status == ER_OK) {
-                    sig[0] = (char)len;
-                    MarshalBytes(sig, len + 2);
+                    sig[0] = (char)length;
+                    MarshalBytes(sig, length + 2);
                     status = MarshalArgs(arg->v_variant.val, 1);
                 }
             }

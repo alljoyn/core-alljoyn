@@ -25,6 +25,8 @@
 #include <windows.h>
 #include <float.h>
 /// @cond ALLJOYN_DEV
+
+#if _MSC_VER <= 1800   /* MSVC 2013 or older */
 /**
  * Map snprintf to _snprintf
  *
@@ -33,6 +35,7 @@
  * Windows.
  */
 #define snprintf _snprintf
+#endif
 
 /**
  * Map stroll to _strtoi64
@@ -65,7 +68,7 @@
  */
 #define strdup _strdup
 
-#if _MSC_VER < 1800   /* MSVC 2013 or higher */
+#if _MSC_VER < 1800   /* Versions prior to MSVC 2013 */
 /**
  * Map fpclassify to _fpclass
  *
@@ -77,12 +80,12 @@
 #define FP_NAN (_FPCLASS_SNAN | _FPCLASS_QNAN)
 #define FP_ZERO (_FPCLASS_NZ | _FPCLASS_PZ)
 #define FP_INFINITE (_FPCLASS_NINF | _FPCLASS_PINF)
-/// @endcond
 #else
 #ifdef __cplusplus
 #include <algorithm>
 #endif
 #endif
+/// @endcond
 
 /**
  * @defgroup windows_groupid_names The GroupID names

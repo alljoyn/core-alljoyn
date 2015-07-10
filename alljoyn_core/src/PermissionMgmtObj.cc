@@ -491,16 +491,22 @@ QStatus PermissionMgmtObj::LoadTrustAnchors()
 
 QStatus PermissionMgmtObj::StoreDSAKeys(CredentialAccessor* ca, const ECCPrivateKey* privateKey, const ECCPublicKey* publicKey)
 {
-
-    KeyBlob dsaPrivKb((const uint8_t*) privateKey, sizeof(ECCPrivateKey), KeyBlob::DSA_PRIVATE);
+    size_t exportedPrivateKeySize = privateKey->GetSize();
+    size_t exportedPublicKeySize = publicKey->GetSize();
+    uint8_t* exportedKey = new uint8_t[max(exportedPrivateKeySize, exportedPublicKeySize)];
+    QCC_VERIFY(ER_OK == privateKey->Export(exportedKey, &exportedPrivateKeySize));
+    KeyBlob dsaPrivKb(exportedKey, exportedPrivateKeySize, KeyBlob::DSA_PRIVATE);
     KeyStore::Key key;
     ca->GetLocalKey(KeyBlob::DSA_PRIVATE, key);
     QStatus status = ca->StoreKey(key, dsaPrivKb);
     if (status != ER_OK) {
+        delete[] exportedKey;
         return status;
     }
 
-    KeyBlob dsaPubKb((const uint8_t*) publicKey, sizeof(ECCPublicKey), KeyBlob::DSA_PUBLIC);
+    QCC_VERIFY(ER_OK == publicKey->Export(exportedKey, &exportedPublicKeySize));
+    KeyBlob dsaPubKb(exportedKey, exportedPublicKeySize, KeyBlob::DSA_PUBLIC);
+    delete[] exportedKey;
     ca->GetLocalKey(KeyBlob::DSA_PUBLIC, key);
     return ca->StoreKey(key, dsaPubKb);
 }

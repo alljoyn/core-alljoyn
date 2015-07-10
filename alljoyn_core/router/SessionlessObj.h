@@ -344,8 +344,8 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
 
     class RemoteCache {
       public:
-        RemoteCache(const qcc::String& name, uint32_t version, const qcc::String& guid, const qcc::String& iface, uint32_t changeId, TransportMask transport) :
-            name(name), version(version), guid(guid), changeId(changeId), transports(transport), haveReceived(false),
+        RemoteCache(const qcc::String& name, uint32_t versionNumber, const qcc::String& guid, const qcc::String& iface, uint32_t changeId, TransportMask transport) :
+            name(name), version(versionNumber), guid(guid), changeId(changeId), transports(transport), haveReceived(false),
             receivedChangeId(std::numeric_limits<uint32_t>::max()), appliedRulesId(std::numeric_limits<uint32_t>::max()),
             state(IDLE), retries(0), sid(0) {
             ifaces.insert(iface);
@@ -409,14 +409,14 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      * version 0 implementations.
      *
      * @param[in] name
-     * @param[out] version
+     * @param[out] versionNumber
      * @param[out] guid
      * @param[out] iface
      * @param[out] changeId
      *
      * @return ER_OK if parsed succesfully
      */
-    QStatus ParseAdvertisedName(const qcc::String& name, uint32_t* version, qcc::String* guid, qcc::String* iface, uint32_t* changeId);
+    QStatus ParseAdvertisedName(const qcc::String& name, uint32_t* versionNumber, qcc::String* guid, qcc::String* iface, uint32_t* changeId);
 
     /**
      * Internal helper for sending the RequestSignals signal.

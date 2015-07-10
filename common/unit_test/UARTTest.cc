@@ -26,6 +26,11 @@
 #define RANDOM_BYTES_MAX        5000
 using namespace qcc;
 
+#if defined(QCC_OS_GROUP_WINDOWS)
+/* Map POSIX APIs to their ISO C++ equivalents. */
+#define close _close
+#endif /* !QCC_OS_GROUP_WINDOWS */
+
 TEST(UARTTest, DISABLED_uart_large_buffer_test)
 {
     Timer timer0("SLAPtimer0", true, 1, false, 10);

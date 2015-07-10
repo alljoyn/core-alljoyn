@@ -205,12 +205,25 @@ TEST(BusAttachmentTest, connect_null)
 
     const char* connectspec = alljoyn_busattachment_getconnectspec(bus);
 
-    /*
-     * The BusAttachment has joined either a separate daemon or it is using
-     * the in process name service.  If the internal name service is used
-     * the connect spec will be 'null:' otherwise it will match the ConnectArg.
+    /**
+     * Note: the default connect spec here must match the one in alljoyn_core BusAttachment.
      */
-    EXPECT_TRUE(strcmp(ajn::getConnectArg().c_str(), connectspec) == 0 ||
+#if defined(QCC_OS_GROUP_WINDOWS)
+#if (_WIN32_WINNT > _WIN32_WINNT_WINBLUE)
+    const char* preferredConnectSpec = "npipe:";
+#else
+    const char* preferredConnectSpec = "tcp:addr=127.0.0.1,port=9955";
+#endif
+#else
+    const char* preferredConnectSpec = "unix:abstract=alljoyn";
+#endif
+
+    /*
+     * The BusAttachment has joined either a separate daemon (preferredConnectSpec) or
+     * it is using the null transport (in bundled router).  If the null transport is used, the
+     * connect spec will be 'null:' otherwise it will match the preferred default connect spec.
+     */
+    EXPECT_TRUE(strcmp(preferredConnectSpec, connectspec) == 0 ||
                 strcmp("null:", connectspec) == 0);
 
     status = alljoyn_busattachment_stop(bus);

@@ -29,7 +29,7 @@ struct Managed {
         //printf("Destroyed Managed\n");
     }
 
-    void SetValue(int val) { this->val = val; }
+    void SetValue(int value) { this->val = value; }
 
     int GetValue(void) const { return val; }
 

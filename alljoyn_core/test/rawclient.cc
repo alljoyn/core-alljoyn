@@ -64,9 +64,9 @@ class MyBusListener : public BusListener {
 
     MyBusListener() : BusListener(), sessionId(0), transportMask(TRANSPORT_ANY) { }
 
-    void SetTransportMask(TransportMask transportMask)
+    void SetTransportMask(TransportMask newTransportMask)
     {
-        this->transportMask = transportMask;
+        this->transportMask = newTransportMask;
     }
 
     void FoundAdvertisedName(const char* name, TransportMask transport, const char* namePrefix)
@@ -274,7 +274,7 @@ int CDECL_CALL main(int argc, char** argv)
     } else {
         /* Get the descriptor */
         SocketFd sockFd;
-        QStatus status = g_msgBus->GetSessionFd(ssId, sockFd);
+        status = g_msgBus->GetSessionFd(ssId, sockFd);
         if (status == ER_OK) {
             /* Attempt to read test string from fd */
             char buf[256];

@@ -263,12 +263,12 @@ void DBusObj::StartServiceByName(const InterfaceDescription::Member* member, Mes
 {
     QCC_UNUSED(member);
 
-    qcc::String description("Unable to start service: ");
-    description += msg->GetDestination();
-    description += "(";
-    description += QCC_StatusText(ER_NOT_IMPLEMENTED);
-    description += ")";
-    MethodReply(msg, "org.freedesktop.DBus.Error.Spawn.Failed", description.c_str());
+    qcc::String errorDescription("Unable to start service: ");
+    errorDescription += msg->GetDestination();
+    errorDescription += "(";
+    errorDescription += QCC_StatusText(ER_NOT_IMPLEMENTED);
+    errorDescription += ")";
+    MethodReply(msg, "org.freedesktop.DBus.Error.Spawn.Failed", errorDescription.c_str());
 }
 
 void DBusObj::GetNameOwner(const InterfaceDescription::Member* member, Message& msg)

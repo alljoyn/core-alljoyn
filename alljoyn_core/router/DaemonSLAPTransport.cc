@@ -631,93 +631,100 @@ void* DaemonSLAPTransport::Run(void* arg)
         QCC_DbgPrintf(("DaemonSLAPTransport::Run()"));
 
         UARTFd uartFd = (UARTFd) - 1;
-        set<DaemonSLAPEndpoint>::iterator i = m_authList.begin();
-        while (i != m_authList.end()) {
-            uartFd = (UARTFd) - 1;
-            DaemonSLAPEndpoint ep = *i;
-            _DaemonSLAPEndpoint::AuthState authState = ep->GetAuthState();
 
-            if (authState == _DaemonSLAPEndpoint::AUTH_FAILED) {
-                /*
-                 * The endpoint has failed authentication and the auth thread is
-                 * gone or is going away.  Since it has failed there is no way this
-                 * endpoint is going to be started so we can get rid of it as soon
-                 * as we Join() the (failed) authentication thread.
-                 */
-                QCC_DbgPrintf(("DaemonSLAPTransport::Run(): Scavenging failed authenticator"));
-                m_authList.erase(i);
-                uartFd = ep->GetFd();
-                m_lock.Unlock(MUTEX_CONTEXT);
-                ep->AuthStop();
-                ep->AuthJoin();
-                m_lock.Lock(MUTEX_CONTEXT);
-                i = m_authList.upper_bound(ep);
-                for (list<ListenEntry>::iterator it = m_listenList.begin(); it != m_listenList.end(); it++) {
+        {
+            set<DaemonSLAPEndpoint>::iterator i = m_authList.begin();
+            while (i != m_authList.end()) {
+                uartFd = (UARTFd) - 1;
+                DaemonSLAPEndpoint ep = *i;
+                _DaemonSLAPEndpoint::AuthState authState = ep->GetAuthState();
 
-                    if (it->listenFd == uartFd) {
-                        QCC_DbgPrintf(("DaemonSLAPTransport::Run(): Reenabling %s in the listenEvents", it->args["port"].c_str()));
-                        it->listenFd = (UARTFd) - 1;
-                        it->endpointStarted = false;
-                        Thread::Alert();
+                if (authState == _DaemonSLAPEndpoint::AUTH_FAILED) {
+                    /*
+                     * The endpoint has failed authentication and the auth thread is
+                     * gone or is going away.  Since it has failed there is no way this
+                     * endpoint is going to be started so we can get rid of it as soon
+                     * as we Join() the (failed) authentication thread.
+                     */
+                    QCC_DbgPrintf(("DaemonSLAPTransport::Run(): Scavenging failed authenticator"));
+                    m_authList.erase(i);
+                    uartFd = ep->GetFd();
+                    m_lock.Unlock(MUTEX_CONTEXT);
+                    ep->AuthStop();
+                    ep->AuthJoin();
+                    m_lock.Lock(MUTEX_CONTEXT);
+                    i = m_authList.upper_bound(ep);
+                    for (list<ListenEntry>::iterator it = m_listenList.begin(); it != m_listenList.end(); it++) {
+
+                        if (it->listenFd == uartFd) {
+                            QCC_DbgPrintf(("DaemonSLAPTransport::Run(): Reenabling %s in the listenEvents", it->args["port"].c_str()));
+                            it->listenFd = (UARTFd) - 1;
+                            it->endpointStarted = false;
+                            Thread::Alert();
+                        }
                     }
-                }
-            } else {
-                i++;
-            }
-        }
-        i = m_endpointList.begin();
-        while (i != m_endpointList.end()) {
-            uartFd = (UARTFd) - 1;
-            DaemonSLAPEndpoint ep = *i;
-
-            _DaemonSLAPEndpoint::EndpointState endpointState = ep->GetEpState();
-            /*
-             * There are two possibilities for the disposition of the RX and
-             * TX threads.  First, they were never successfully started.  In
-             * this case, the epState will be EP_FAILED.  If we find this, we
-             * can just remove the useless endpoint from the list and delete
-             * it.  Since the threads were never started, they must not be
-             * joined.
-             */
-            if (endpointState == _DaemonSLAPEndpoint::EP_FAILED) {
-                m_endpointList.erase(i);
-                uartFd = ep->GetFd();
-                i = m_endpointList.upper_bound(ep);
-            } else if (endpointState == _DaemonSLAPEndpoint::EP_STOPPING) {
-                /*
-                 * The second possibility for the disposition of the RX and
-                 * TX threads is that they were successfully started but
-                 * have been stopped for some reason, either because of a
-                 * Disconnect() or a network error.  In this case, the
-                 * epState will be EP_STOPPING, which was set in the
-                 * EndpointExit function.  If we find this, we need to Join
-                 * the endpoint threads, remove the endpoint from the
-                 * endpoint list and delete it.  Note that we are calling
-                 * the endpoint Join() to join the TX and RX threads and not
-                 * the endpoint AuthJoin() to join the auth thread.
-                 */
-                m_endpointList.erase(i);
-                uartFd = ep->GetFd();
-                m_lock.Unlock(MUTEX_CONTEXT);
-                ep->Stop();
-                ep->Join();
-                m_lock.Lock(MUTEX_CONTEXT);
-                i = m_endpointList.upper_bound(ep);
-            } else {
-                i++;
-            }
-            if (uartFd != -1) {
-                for (list<ListenEntry>::iterator it = m_listenList.begin(); it != m_listenList.end(); it++) {
-
-                    if (it->listenFd == uartFd) {
-                        QCC_DbgPrintf(("DaemonSLAPTransport::Run(): Reenabling back %s in the listenEvents", it->args["port"].c_str()));
-                        it->listenFd = (UARTFd) - 1;
-                        it->endpointStarted = false;
-                        break;
-                    }
+                } else {
+                    i++;
                 }
             }
         }
+
+        {
+            set<DaemonSLAPEndpoint>::iterator i = m_endpointList.begin();
+            while (i != m_endpointList.end()) {
+                uartFd = (UARTFd) - 1;
+                DaemonSLAPEndpoint ep = *i;
+
+                _DaemonSLAPEndpoint::EndpointState endpointState = ep->GetEpState();
+                /*
+                 * There are two possibilities for the disposition of the RX and
+                 * TX threads.  First, they were never successfully started.  In
+                 * this case, the epState will be EP_FAILED.  If we find this, we
+                 * can just remove the useless endpoint from the list and delete
+                 * it.  Since the threads were never started, they must not be
+                 * joined.
+                 */
+                if (endpointState == _DaemonSLAPEndpoint::EP_FAILED) {
+                    m_endpointList.erase(i);
+                    uartFd = ep->GetFd();
+                    i = m_endpointList.upper_bound(ep);
+                } else if (endpointState == _DaemonSLAPEndpoint::EP_STOPPING) {
+                    /*
+                     * The second possibility for the disposition of the RX and
+                     * TX threads is that they were successfully started but
+                     * have been stopped for some reason, either because of a
+                     * Disconnect() or a network error.  In this case, the
+                     * epState will be EP_STOPPING, which was set in the
+                     * EndpointExit function.  If we find this, we need to Join
+                     * the endpoint threads, remove the endpoint from the
+                     * endpoint list and delete it.  Note that we are calling
+                     * the endpoint Join() to join the TX and RX threads and not
+                     * the endpoint AuthJoin() to join the auth thread.
+                     */
+                    m_endpointList.erase(i);
+                    uartFd = ep->GetFd();
+                    m_lock.Unlock(MUTEX_CONTEXT);
+                    ep->Stop();
+                    ep->Join();
+                    m_lock.Lock(MUTEX_CONTEXT);
+                    i = m_endpointList.upper_bound(ep);
+                } else {
+                    i++;
+                }
+                if (uartFd != -1) {
+                    for (list<ListenEntry>::iterator it = m_listenList.begin(); it != m_listenList.end(); it++) {
+
+                        if (it->listenFd == uartFd) {
+                            QCC_DbgPrintf(("DaemonSLAPTransport::Run(): Reenabling back %s in the listenEvents", it->args["port"].c_str()));
+                            it->listenFd = (UARTFd) - 1;
+                            it->endpointStarted = false;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
         vector<Event*> checkEvents, signaledEvents;
         checkEvents.clear();
         checkEvents.push_back(&stopEvent);
@@ -760,16 +767,16 @@ void* DaemonSLAPTransport::Run(void* arg)
             } else {
                 Event* e = *i;
                 QCC_DbgPrintf(("DaemonSLAPTransport::Run(): Accepting connection "));
-                for (list<ListenEntry>::iterator i = m_listenList.begin(); i != m_listenList.end(); i++) {
-                    if (i->listenFd == e->GetFD()) {
-                        i->endpointStarted = true;
+                for (list<ListenEntry>::iterator listenListIt = m_listenList.begin(); listenListIt != m_listenList.end(); listenListIt++) {
+                    if (listenListIt->listenFd == e->GetFD()) {
+                        listenListIt->endpointStarted = true;
                         static const bool truthiness = true;
                         DaemonSLAPTransport* ptr = this;
                         uint32_t packetSize = SLAP_DEFAULT_PACKET_SIZE;
-                        uint32_t baudrate = StringToU32(i->args["baud"]);
-                        QCC_DbgPrintf(("DaemonSLAPTransport::Run(): Creating endpoint for %s",  i->args["dev"].c_str()));
-                        DaemonSLAPEndpoint conn(ptr, m_bus, truthiness, "slap", i->listenFd, packetSize, baudrate);
-                        QCC_DbgPrintf(("DaemonSLAPTransport::Run(): Authenticating endpoint for %s",  i->args["dev"].c_str()));
+                        uint32_t baudrate = StringToU32(listenListIt->args["baud"]);
+                        QCC_DbgPrintf(("DaemonSLAPTransport::Run(): Creating endpoint for %s",  listenListIt->args["dev"].c_str()));
+                        DaemonSLAPEndpoint conn(ptr, m_bus, truthiness, "slap", listenListIt->listenFd, packetSize, baudrate);
+                        QCC_DbgPrintf(("DaemonSLAPTransport::Run(): Authenticating endpoint for %s",  listenListIt->args["dev"].c_str()));
 
                         status = conn->Authenticate();
                         if (status == ER_OK) {
@@ -780,8 +787,8 @@ void* DaemonSLAPTransport::Run(void* arg)
                 }
             }
         }
-        for (vector<qcc::Event*>::iterator i = checkEvents.begin(); i != checkEvents.end(); ++i) {
-            Event* evt = *i;
+        for (vector<qcc::Event*>::iterator checkEventsIt = checkEvents.begin(); checkEventsIt != checkEvents.end(); ++checkEventsIt) {
+            Event* evt = *checkEventsIt;
             if (evt != &stopEvent) {
                 delete evt;
             }

@@ -78,25 +78,25 @@ void AboutService::Unregister() {
     QCC_DbgTrace(("AboutService::%s", __FUNCTION__));
 }
 
-QStatus AboutService::AddObjectDescription(qcc::String const& path, std::vector<qcc::String> const& interfaceNames) {
+QStatus AboutService::AddObjectDescription(qcc::String const& interfacePath, std::vector<qcc::String> const& interfaceNames) {
     QCC_DbgTrace(("AboutService::%s", __FUNCTION__));
     QStatus status = ER_OK;
     m_announceObjectsLock.Lock(MUTEX_CONTEXT);
-    std::map<qcc::String, std::vector<qcc::String> >::iterator it = m_AnnounceObjectsMap.find(path);
+    std::map<qcc::String, std::vector<qcc::String> >::iterator it = m_AnnounceObjectsMap.find(interfacePath);
     if (it != m_AnnounceObjectsMap.end()) {
         it->second.insert(it->second.end(), interfaceNames.begin(), interfaceNames.end());
     } else {
-        m_AnnounceObjectsMap.insert(std::pair<qcc::String, std::vector<qcc::String> >(path, interfaceNames));
+        m_AnnounceObjectsMap.insert(std::pair<qcc::String, std::vector<qcc::String> >(interfacePath, interfaceNames));
     }
     m_announceObjectsLock.Unlock(MUTEX_CONTEXT);
     return status;
 }
 
-QStatus AboutService::RemoveObjectDescription(qcc::String const& path, std::vector<qcc::String> const& interfaceNames) {
+QStatus AboutService::RemoveObjectDescription(qcc::String const& interfacePath, std::vector<qcc::String> const& interfaceNames) {
     QCC_DbgTrace(("AboutService::%s", __FUNCTION__));
     QStatus status = ER_OK;
     m_announceObjectsLock.Lock(MUTEX_CONTEXT);
-    std::map<qcc::String, std::vector<qcc::String> >::iterator it = m_AnnounceObjectsMap.find(path);
+    std::map<qcc::String, std::vector<qcc::String> >::iterator it = m_AnnounceObjectsMap.find(interfacePath);
     if (it != m_AnnounceObjectsMap.end()) {
         for (std::vector<qcc::String>::const_iterator itv = interfaceNames.begin(); itv != interfaceNames.end(); ++itv) {
             std::vector<qcc::String>::iterator findIterator = std::find(it->second.begin(), it->second.end(), itv->c_str());

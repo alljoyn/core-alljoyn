@@ -133,7 +133,7 @@ qcc::String BusObject::GenerateIntrospection(bool deep, size_t indent) const
     return BusObject::GenerateIntrospection(NULL, deep, indent);
 }
 
-qcc::String BusObject::GenerateIntrospection(const char* languageTag, bool deep, size_t indent) const
+qcc::String BusObject::GenerateIntrospection(const char* requestedLanguageTag, bool deep, size_t indent) const
 {
     qcc::String in(indent, ' ');
     qcc::String xml;
@@ -146,8 +146,8 @@ qcc::String BusObject::GenerateIntrospection(const char* languageTag, bool deep,
         xml += in + "<node name=\"" + child->GetName() + "\"";
 
         const char* nodeDesc = NULL;
-        if (languageTag) {
-            nodeDesc = child->GetDescription(languageTag, buffer);
+        if (requestedLanguageTag) {
+            nodeDesc = child->GetDescription(requestedLanguageTag, buffer);
         }
 
         if (deep || nodeDesc) {
@@ -156,7 +156,7 @@ qcc::String BusObject::GenerateIntrospection(const char* languageTag, bool deep,
                 xml += in + "  <description>" + XmlElement::EscapeXml(nodeDesc) + "</description>";
             }
             if (deep) {
-                xml += child->GenerateIntrospection(languageTag, deep, indent + 2);
+                xml += child->GenerateIntrospection(requestedLanguageTag, deep, indent + 2);
             }
 
             xml += "\n" + in + "</node>\n";
@@ -179,7 +179,7 @@ qcc::String BusObject::GenerateIntrospection(const char* languageTag, bool deep,
                 (strcmp((itIf->first)->GetName(), org::freedesktop::DBus::Properties::InterfaceName) == 0)) {
                 ++itIf;
             } else {
-                xml += (itIf->first)->Introspect(indent, languageTag, bus ? bus->GetDescriptionTranslator() : NULL);
+                xml += (itIf->first)->Introspect(indent, requestedLanguageTag, bus ? bus->GetDescriptionTranslator() : NULL);
                 ++itIf;
             }
         }
@@ -629,6 +629,29 @@ QStatus BusObject::Signal(const char* destination,
         return ER_BUS_SECURITY_NOT_ENABLED;
     }
 
+    if (signalMember.isSessioncastSignal ||
+        signalMember.isSessionlessSignal ||
+        signalMember.isUnicastSignal ||
+        signalMember.isGlobalBroadcastSignal) {
+        // Enforce signal type, since signal type was explicitly set.
+        if ((destination == NULL) && (sessionId != 0) && !signalMember.isSessioncastSignal) {
+            QCC_LogError(ER_INVALID_SIGNAL_EMISSION_TYPE, ("Attempt to send a sessioncast signal when %s is not sessioncast", signalMember.name.c_str()));
+            return ER_INVALID_SIGNAL_EMISSION_TYPE;
+        }
+        if ((flags & ALLJOYN_FLAG_SESSIONLESS) && !signalMember.isSessionlessSignal) {
+            QCC_LogError(ER_INVALID_SIGNAL_EMISSION_TYPE, ("Attempt to send a sessionless signal when %s is not sessionless", signalMember.name.c_str()));
+            return ER_INVALID_SIGNAL_EMISSION_TYPE;
+        }
+        if ((destination != NULL) && !signalMember.isUnicastSignal) {
+            QCC_LogError(ER_INVALID_SIGNAL_EMISSION_TYPE, ("Attempt to send a unicast signal when %s is not unicast", signalMember.name.c_str()));
+            return ER_INVALID_SIGNAL_EMISSION_TYPE;
+        }
+        if ((flags & ALLJOYN_FLAG_GLOBAL_BROADCAST) && !signalMember.isGlobalBroadcastSignal) {
+            QCC_LogError(ER_INVALID_SIGNAL_EMISSION_TYPE, ("Attempt to send a global broadcast signal when %s is not global broadcast", signalMember.name.c_str()));
+            return ER_INVALID_SIGNAL_EMISSION_TYPE;
+        }
+    }
+
     std::set<SessionId> ids;
     if (sessionId != SESSION_ID_ALL_HOSTED) {
         ids.insert(sessionId);
@@ -652,7 +675,7 @@ QStatus BusObject::Signal(const char* destination,
                                 timeToLive);
         if (status == ER_OK) {
             BusEndpoint bep = BusEndpoint::cast(bus->GetInternal().GetLocalEndpoint());
-            QStatus status = bus->GetInternal().GetRouter().PushMessage(msg, bep);
+            status = bus->GetInternal().GetRouter().PushMessage(msg, bep);
             if ((status == ER_OK) && outMsg) {
                 *outMsg = msg;
             }
@@ -700,7 +723,7 @@ QStatus BusObject::CancelSessionlessMessage(uint32_t serialNum)
     return status;
 }
 
-QStatus BusObject::MethodReply(const Message& msg, const MsgArg* args, size_t numArgs)
+QStatus BusObject::MethodReply(const Message& msg, const MsgArg* args, size_t numArgs, Message* replyMsg)
 {
     QStatus status;
 
@@ -722,6 +745,9 @@ QStatus BusObject::MethodReply(const Message& msg, const MsgArg* args, size_t nu
         if (status == ER_OK) {
             BusEndpoint bep = BusEndpoint::cast(bus->GetInternal().GetLocalEndpoint());
             status = bus->GetInternal().GetRouter().PushMessage(reply, bep);
+        }
+        if (NULL != replyMsg) {
+            *replyMsg = reply;
         }
     }
     return status;
@@ -1039,9 +1065,9 @@ void BusObject::GetDescriptionLanguages(const InterfaceDescription::Member* memb
     }
 }
 
-void BusObject::SetDescriptionTranslator(Translator* translator)
+void BusObject::SetDescriptionTranslator(Translator* newTranslator)
 {
-    this->translator = translator;
+    this->translator = newTranslator;
 }
 
 size_t BusObject::GetAnnouncedInterfaceNames(const char** interfaces, size_t numInterfaces)

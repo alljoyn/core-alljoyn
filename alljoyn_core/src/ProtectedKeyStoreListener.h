@@ -72,11 +72,11 @@ class ProtectedKeyStoreListener : public KeyStoreListener {
     {
         QStatus status = ER_FAIL;
         lock.Lock(MUTEX_CONTEXT);
-        KeyStoreListener* listener = this->listener;
+        KeyStoreListener* keyStoreListener = this->listener;
         ++refCount;
         lock.Unlock(MUTEX_CONTEXT);
-        if (listener) {
-            status = listener->LoadRequest(keyStore);
+        if (keyStoreListener) {
+            status = keyStoreListener->LoadRequest(keyStore);
         }
         lock.Lock(MUTEX_CONTEXT);
         --refCount;
@@ -91,11 +91,11 @@ class ProtectedKeyStoreListener : public KeyStoreListener {
     {
         QStatus status = ER_FAIL;
         lock.Lock(MUTEX_CONTEXT);
-        KeyStoreListener* listener = this->listener;
+        KeyStoreListener* keyStoreListener = this->listener;
         ++refCount;
         lock.Unlock(MUTEX_CONTEXT);
-        if (listener) {
-            status = listener->StoreRequest(keyStore);
+        if (keyStoreListener) {
+            status = keyStoreListener->StoreRequest(keyStore);
         }
         lock.Lock(MUTEX_CONTEXT);
         --refCount;

@@ -163,11 +163,11 @@ void DebugControl::WriteDebugMessage(DbgMsgType type, const char* module, const 
     mutex.Unlock();
 }
 
-void DebugControl::Register(QCC_DbgMsgCallback cb, void* context)
+void DebugControl::Register(QCC_DbgMsgCallback callback, void* cbContext)
 {
     assert(cb != NULL);
-    this->context = context;
-    this->cb = cb;
+    this->context = cbContext;
+    this->cb = callback;
 }
 
 bool DebugControl::PrintThread() const

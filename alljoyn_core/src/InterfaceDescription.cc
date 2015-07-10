@@ -69,7 +69,7 @@ qcc::String InterfaceDescription::NextArg(const char*& signature, qcc::String& a
                                           size_t indent, Member const& member, bool withDescriptions,
                                           const char* langTag, Translator* translator) const
 {
-    qcc::String name;
+    qcc::String argName;
     qcc::String in(indent, ' ');
     qcc::String arg = in + "<arg";
     qcc::String argType;
@@ -80,8 +80,8 @@ qcc::String InterfaceDescription::NextArg(const char*& signature, qcc::String& a
 
     if (!argNames.empty()) {
         size_t pos = argNames.find_first_of(',');
-        name = argNames.substr(0, pos);
-        arg += " name=\"" + name + "\"";
+        argName = argNames.substr(0, pos);
+        arg += " name=\"" + argName + "\"";
         if (pos == qcc::String::npos) {
             argNames.clear();
         } else {
@@ -93,7 +93,7 @@ qcc::String InterfaceDescription::NextArg(const char*& signature, qcc::String& a
 
     const char* myDesc = NULL;
     if (withDescriptions) {
-        ArgumentDescriptions::const_iterator search = member.argumentDescriptions->find(name);
+        ArgumentDescriptions::const_iterator search = member.argumentDescriptions->find(argName);
         if (member.argumentDescriptions->end() != search) {
             myDesc = search->second.c_str();
         }
@@ -137,15 +137,33 @@ InterfaceDescription::Member::Member(const InterfaceDescription* iface,
     accessPerms(accessPerms ? accessPerms : ""),
     description(),
     argumentDescriptions(new ArgumentDescriptions()),
-    isSessionlessSignal(false)
+    isSessioncastSignal(false),
+    isSessionlessSignal(false),
+    isUnicastSignal(false),
+    isGlobalBroadcastSignal(false)
 {
-
     if (annotation & MEMBER_ANNOTATE_DEPRECATED) {
         (*annotations)[org::freedesktop::DBus::AnnotateDeprecated] = "true";
     }
 
     if (annotation & MEMBER_ANNOTATE_NO_REPLY) {
         (*annotations)[org::freedesktop::DBus::AnnotateNoReply] = "true";
+    }
+
+    if (annotation & MEMBER_ANNOTATE_SESSIONCAST) {
+        isSessioncastSignal = true;
+    }
+
+    if (annotation & MEMBER_ANNOTATE_SESSIONLESS) {
+        isSessionlessSignal = true;
+    }
+
+    if (annotation & MEMBER_ANNOTATE_UNICAST) {
+        isUnicastSignal = true;
+    }
+
+    if (annotation & MEMBER_ANNOTATE_GLOBAL_BROADCAST) {
+        isGlobalBroadcastSignal = true;
     }
 }
 
@@ -160,7 +178,10 @@ InterfaceDescription::Member::Member(const Member& other)
     accessPerms(other.accessPerms),
     description(other.description),
     argumentDescriptions(new ArgumentDescriptions(*(other.argumentDescriptions))),
-    isSessionlessSignal(other.isSessionlessSignal)
+    isSessioncastSignal(other.isSessioncastSignal),
+    isSessionlessSignal(other.isSessionlessSignal),
+    isUnicastSignal(other.isUnicastSignal),
+    isGlobalBroadcastSignal(other.isGlobalBroadcastSignal)
 {
 }
 
@@ -178,7 +199,10 @@ InterfaceDescription::Member& InterfaceDescription::Member::operator=(const Memb
         accessPerms = other.accessPerms;
         description = other.description;
         *argumentDescriptions = *(other.argumentDescriptions);
+        isSessioncastSignal = other.isSessioncastSignal;
         isSessionlessSignal = other.isSessionlessSignal;
+        isUnicastSignal = other.isUnicastSignal;
+        isGlobalBroadcastSignal = other.isGlobalBroadcastSignal;
     }
     return *this;
 }
@@ -198,7 +222,10 @@ bool InterfaceDescription::Member::operator==(const Member& o) const {
     return ((memberType == o.memberType) && (name == o.name) && (signature == o.signature)
             && (returnSignature == o.returnSignature) && (*annotations == *(o.annotations))
             && (description == o.description) && (*argumentDescriptions == *(o.argumentDescriptions))
-            && (isSessionlessSignal == o.isSessionlessSignal));
+            && (isSessioncastSignal == o.isSessioncastSignal)
+            && (isSessionlessSignal == o.isSessionlessSignal)
+            && (isUnicastSignal == o.isUnicastSignal)
+            && (isGlobalBroadcastSignal == o.isGlobalBroadcastSignal));
 }
 
 
@@ -296,15 +323,15 @@ struct InterfaceDescription::Definitions {
     { }
 };
 
-bool InterfaceDescription::Member::GetAnnotation(const qcc::String& name, qcc::String& value) const
+bool InterfaceDescription::Member::GetAnnotation(const qcc::String& annotationName, qcc::String& value) const
 {
-    AnnotationsMap::const_iterator it = annotations->find(name);
+    AnnotationsMap::const_iterator it = annotations->find(annotationName);
     return (it != annotations->end() ? value = it->second, true : false);
 }
 
-bool InterfaceDescription::Property::GetAnnotation(const qcc::String& name, qcc::String& value) const
+bool InterfaceDescription::Property::GetAnnotation(const qcc::String& annotationName, qcc::String& value) const
 {
-    AnnotationsMap::const_iterator it = annotations->find(name);
+    AnnotationsMap::const_iterator it = annotations->find(annotationName);
     return (it != annotations->end() ? value = it->second, true : false);
 }
 
@@ -395,7 +422,20 @@ qcc::String InterfaceDescription::Introspect(size_t indent, const char* language
         qcc::String mtype = isMethod ? "method" : "signal";
         xml += in + "  <" + mtype + " name=\"" + member.name;
         if (withDescriptions && !isMethod) {
+            if (member.isSessioncastSignal) {
+                xml += "\" sessioncast=\"" + qcc::String("true");
+            }
+
+            // For backwards compatibility reasons, always output a sessionless
+            // attribute.
             xml += "\" sessionless=\"" + (member.isSessionlessSignal ? qcc::String("true") : qcc::String("false"));
+
+            if (member.isUnicastSignal) {
+                xml += "\" unicast=\"" + qcc::String("true");
+            }
+            if (member.isGlobalBroadcastSignal) {
+                xml += "\" globalbroadcast=\"" + qcc::String("true");
+            }
         }
         xml     += close;
 
@@ -480,7 +520,7 @@ qcc::String InterfaceDescription::Introspect(size_t indent, const char* language
 }
 
 QStatus InterfaceDescription::AddMember(AllJoynMessageType type,
-                                        const char* name,
+                                        const char* memberName,
                                         const char* inSig,
                                         const char* outSig,
                                         const char* argNames,
@@ -491,14 +531,14 @@ QStatus InterfaceDescription::AddMember(AllJoynMessageType type,
         return ER_BUS_INTERFACE_ACTIVATED;
     }
 
-    StringMapKey key = qcc::String(name);
-    Member member(this, type, name, inSig, outSig, argNames, annotation, accessPerms);
+    StringMapKey key = qcc::String(memberName);
+    Member member(this, type, memberName, inSig, outSig, argNames, annotation, accessPerms);
     pair<StringMapKey, Member> item(key, member);
     pair<Definitions::MemberMap::iterator, bool> ret = defs->members.insert(item);
     return ret.second ? ER_OK : ER_BUS_MEMBER_ALREADY_EXISTS;
 }
 
-QStatus InterfaceDescription::AddMemberAnnotation(const char* member, const qcc::String& name, const qcc::String& value)
+QStatus InterfaceDescription::AddMemberAnnotation(const char* member, const qcc::String& annotationName, const qcc::String& value)
 {
     if (isActivated) {
         return ER_BUS_INTERFACE_ACTIVATED;
@@ -510,11 +550,11 @@ QStatus InterfaceDescription::AddMemberAnnotation(const char* member, const qcc:
     }
 
     Member& m = it->second;
-    std::pair<AnnotationsMap::iterator, bool> ret = m.annotations->insert(AnnotationsMap::value_type(name, value));
-    return (ret.second || (ret.first->first == name && ret.first->second == value)) ? ER_OK : ER_BUS_ANNOTATION_ALREADY_EXISTS;
+    std::pair<AnnotationsMap::iterator, bool> ret = m.annotations->insert(AnnotationsMap::value_type(annotationName, value));
+    return (ret.second || (ret.first->first == annotationName && ret.first->second == value)) ? ER_OK : ER_BUS_ANNOTATION_ALREADY_EXISTS;
 }
 
-bool InterfaceDescription::GetMemberAnnotation(const char* member, const qcc::String& name, qcc::String& value) const
+bool InterfaceDescription::GetMemberAnnotation(const char* member, const qcc::String& annotationName, qcc::String& value) const
 {
     Definitions::MemberMap::const_iterator mit = defs->members.find(StringMapKey(member));
     if (mit == defs->members.end()) {
@@ -522,25 +562,25 @@ bool InterfaceDescription::GetMemberAnnotation(const char* member, const qcc::St
     }
 
     const Member& m = mit->second;
-    AnnotationsMap::const_iterator ait = m.annotations->find(name);
+    AnnotationsMap::const_iterator ait = m.annotations->find(annotationName);
     return (ait != m.annotations->end() ? value = ait->second, true : false);
 }
 
 
-QStatus InterfaceDescription::AddProperty(const char* name, const char* signature, uint8_t access)
+QStatus InterfaceDescription::AddProperty(const char* propertyName, const char* signature, uint8_t access)
 {
     if (isActivated) {
         return ER_BUS_INTERFACE_ACTIVATED;
     }
 
-    StringMapKey key = qcc::String(name);
-    Property prop(name, signature, access);
+    StringMapKey key = qcc::String(propertyName);
+    Property prop(propertyName, signature, access);
     pair<StringMapKey, Property> item(key, prop);
     pair<Definitions::PropertyMap::iterator, bool> ret = defs->properties.insert(item);
     return ret.second ? ER_OK : ER_BUS_PROPERTY_ALREADY_EXISTS;
 }
 
-QStatus InterfaceDescription::AddPropertyAnnotation(const qcc::String& p_name, const qcc::String& name, const qcc::String& value)
+QStatus InterfaceDescription::AddPropertyAnnotation(const qcc::String& p_name, const qcc::String& annotationName, const qcc::String& value)
 {
     if (isActivated) {
         return ER_BUS_INTERFACE_ACTIVATED;
@@ -552,15 +592,15 @@ QStatus InterfaceDescription::AddPropertyAnnotation(const qcc::String& p_name, c
     }
 
     Property& property = pit->second;
-    std::pair<AnnotationsMap::iterator, bool> ret = property.annotations->insert(AnnotationsMap::value_type(name, value));
-    QStatus status = (ret.second || (ret.first->first == name && ret.first->second == value)) ? ER_OK : ER_BUS_ANNOTATION_ALREADY_EXISTS;
-    if (status == ER_OK && name == org::freedesktop::DBus::AnnotateEmitsChanged && value != "false") {
+    std::pair<AnnotationsMap::iterator, bool> ret = property.annotations->insert(AnnotationsMap::value_type(annotationName, value));
+    QStatus status = (ret.second || (ret.first->first == annotationName && ret.first->second == value)) ? ER_OK : ER_BUS_ANNOTATION_ALREADY_EXISTS;
+    if (status == ER_OK && annotationName == org::freedesktop::DBus::AnnotateEmitsChanged && value != "false") {
         property.cacheable = true;
     }
     return status;
 }
 
-bool InterfaceDescription::GetPropertyAnnotation(const qcc::String& p_name, const qcc::String& name, qcc::String& value) const
+bool InterfaceDescription::GetPropertyAnnotation(const qcc::String& p_name, const qcc::String& annotationName, qcc::String& value) const
 {
     Definitions::PropertyMap::const_iterator pit = defs->properties.find(StringMapKey(p_name));
     if (pit == defs->properties.end()) {
@@ -568,23 +608,23 @@ bool InterfaceDescription::GetPropertyAnnotation(const qcc::String& p_name, cons
     }
 
     const Property& property = pit->second;
-    AnnotationsMap::const_iterator ait = property.annotations->find(name);
+    AnnotationsMap::const_iterator ait = property.annotations->find(annotationName);
     return (ait != property.annotations->end() ? value = ait->second, true : false);
 }
 
-QStatus InterfaceDescription::AddAnnotation(const qcc::String& name, const qcc::String& value)
+QStatus InterfaceDescription::AddAnnotation(const qcc::String& annotationName, const qcc::String& value)
 {
     if (isActivated) {
         return ER_BUS_INTERFACE_ACTIVATED;
     }
 
-    std::pair<AnnotationsMap::iterator, bool> ret = defs->annotations.insert(std::make_pair(name, value));
-    return (ret.second || (ret.first->first == name && ret.first->second == value)) ? ER_OK : ER_BUS_ANNOTATION_ALREADY_EXISTS;
+    std::pair<AnnotationsMap::iterator, bool> ret = defs->annotations.insert(std::make_pair(annotationName, value));
+    return (ret.second || (ret.first->first == annotationName && ret.first->second == value)) ? ER_OK : ER_BUS_ANNOTATION_ALREADY_EXISTS;
 }
 
-bool InterfaceDescription::GetAnnotation(const qcc::String& name, qcc::String& value) const
+bool InterfaceDescription::GetAnnotation(const qcc::String& annotationName, qcc::String& value) const
 {
-    AnnotationsMap::const_iterator it = defs->annotations.find(name);
+    AnnotationsMap::const_iterator it = defs->annotations.find(annotationName);
     return (it != defs->annotations.end() ? value = it->second, true : false);
 }
 
@@ -632,9 +672,9 @@ size_t InterfaceDescription::GetProperties(const Property** props, size_t numPro
     return count;
 }
 
-const InterfaceDescription::Property* InterfaceDescription::GetProperty(const char* name) const
+const InterfaceDescription::Property* InterfaceDescription::GetProperty(const char* propertyName) const
 {
-    Definitions::PropertyMap::const_iterator pit = defs->properties.find(qcc::StringMapKey(name));
+    Definitions::PropertyMap::const_iterator pit = defs->properties.find(qcc::StringMapKey(propertyName));
     return (pit == defs->properties.end()) ? NULL : &(pit->second);
 }
 
@@ -651,15 +691,15 @@ size_t InterfaceDescription::GetMembers(const Member** members, size_t numMember
     return count;
 }
 
-const InterfaceDescription::Member* InterfaceDescription::GetMember(const char* name) const
+const InterfaceDescription::Member* InterfaceDescription::GetMember(const char* memberName) const
 {
-    Definitions::MemberMap::const_iterator mit = defs->members.find(qcc::StringMapKey(name));
+    Definitions::MemberMap::const_iterator mit = defs->members.find(qcc::StringMapKey(memberName));
     return (mit == defs->members.end()) ? NULL : &(mit->second);
 }
 
-bool InterfaceDescription::HasMember(const char* name, const char* inSig, const char* outSig)
+bool InterfaceDescription::HasMember(const char* memberName, const char* inSig, const char* outSig)
 {
-    const Member* member = GetMember(name);
+    const Member* member = GetMember(memberName);
     if (member == NULL) {
         return false;
     } else if ((inSig == NULL) && (outSig == NULL)) {
@@ -692,7 +732,7 @@ void InterfaceDescription::SetDescription(const char* desc)
     defs->hasDescription = true;
 }
 
-QStatus InterfaceDescription::SetMemberDescription(const char* member, const char* desc, bool isSessionlessSignal)
+QStatus InterfaceDescription::SetMemberDescription(const char* member, const char* desc)
 {
     if (isActivated) {
         return ER_BUS_INTERFACE_ACTIVATED;
@@ -705,7 +745,38 @@ QStatus InterfaceDescription::SetMemberDescription(const char* member, const cha
 
     Member& m = it->second;
     m.description.assign(desc);
-    m.isSessionlessSignal = isSessionlessSignal;
+
+    defs->hasDescription = true;
+
+    return ER_OK;
+}
+
+QStatus InterfaceDescription::SetMemberDescription(const char* member, const char* desc, bool isSessionlessSignal)
+{
+    if (isActivated) {
+        return ER_BUS_INTERFACE_ACTIVATED;
+    }
+
+    Definitions::MemberMap::iterator it = defs->members.find(StringMapKey(member));
+    if (it == defs->members.end()) {
+        return ER_BUS_INTERFACE_NO_SUCH_MEMBER;
+    }
+
+    Member& m = it->second;
+
+    if (isSessionlessSignal && !m.isSessionlessSignal) {
+        if (m.isSessioncastSignal || m.isUnicastSignal || m.isGlobalBroadcastSignal) {
+            // The member was already set explicitly to not be sessionless,
+            // so the caller must have a bug.
+            QCC_LogError(ER_INVALID_SIGNAL_EMISSION_TYPE, ("Unexpected: SetMemberDescription tried to set isSessionlessSignal on a non-sessionless signal"));
+            return ER_INVALID_SIGNAL_EMISSION_TYPE;
+        } else {
+            // Nothing was set before so set the signal type to sessionless.
+            m.isSessionlessSignal = true;
+        }
+    }
+
+    m.description.assign(desc);
     defs->hasDescription = true;
 
     return ER_OK;

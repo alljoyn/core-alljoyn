@@ -717,7 +717,7 @@ QStatus SLAPStream::ScheduleLinkControlPacket() {
         Alarm ctrlAlarm;
         status = ER_TIMER_FULL;
         while (!m_timer.HasAlarm(m_ctrlAlarm)  && status == ER_TIMER_FULL) {
-            AlarmListener* listener = this;
+            listener = this;
 
 
             ctrlAlarm = Alarm(when, listener, m_resendControlCtxt);
@@ -801,8 +801,8 @@ QStatus SLAPStream::PushBytes(const void* buf, size_t numBytes, size_t& numSent)
             m_sinkEvent.ResetEvent();
         }
         Alarm sendAlarm;
-        QStatus status = ER_TIMER_FULL;
-        while (queued && (m_txState == TX_IDLE)  && !m_timer.HasAlarm(m_sendAlarm) && status == ER_TIMER_FULL) {
+        QStatus alarmStatus = ER_TIMER_FULL;
+        while (queued && (m_txState == TX_IDLE)  && !m_timer.HasAlarm(m_sendAlarm) && alarmStatus == ER_TIMER_FULL) {
             AlarmListener* listener = this;
             uint32_t when = 0;
 
@@ -810,14 +810,14 @@ QStatus SLAPStream::PushBytes(const void* buf, size_t numBytes, size_t& numSent)
             /* Call the non-blocking version of AddAlarm, while holding the
              * locks to ensure that the state of the dispatchEntry is valid.
              */
-            status = m_timer.AddAlarmNonBlocking(sendAlarm);
+            alarmStatus = m_timer.AddAlarmNonBlocking(sendAlarm);
 
-            if (status == ER_TIMER_FULL) {
+            if (alarmStatus == ER_TIMER_FULL) {
                 m_streamLock.Unlock();
                 qcc::Sleep(2);
                 m_streamLock.Lock();
             }
-            if (status == ER_OK) {
+            if (alarmStatus == ER_OK) {
                 m_sendAlarm = sendAlarm;
             }
         }
