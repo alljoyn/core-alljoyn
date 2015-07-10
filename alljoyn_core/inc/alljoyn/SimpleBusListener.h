@@ -49,8 +49,9 @@ static const uint32_t BUS_EVENT_NONE                  = 0x0000;
 // @}
 /**
  * Helper class that provides a blocking API that allows application threads to wait for bus events.
+ * @deprecated
  */
-class SimpleBusListener : public BusListener {
+class QCC_DEPRECATED(SimpleBusListener) : public BusListener {
   public:
 
     /**
