@@ -284,6 +284,15 @@ QStatus UIStorageImpl::GetPolicy(const Application& app, PermissionPolicy& polic
     return storage->GetPolicy(app, policy);
 }
 
+QStatus UIStorageImpl::RemovePolicy(Application& app)
+{
+    QStatus status = storage->RemovePolicy(app);
+    if (ER_OK != status) {
+        return status;
+    }
+    return ApplicationUpdated(app);
+}
+
 QStatus UIStorageImpl::UpdateIdentity(Application& app, const IdentityInfo identityInfo)
 {
     QStatus status = storage->GetManagedApplication(app);

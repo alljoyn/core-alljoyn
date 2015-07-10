@@ -583,6 +583,29 @@ static void get_policy(const shared_ptr<UIStorage>& uiStorage,
     cout << policyLocal.ToString() << endl;
 }
 
+static void reset_policy(const shared_ptr<UIStorage>& uiStorage,
+                         const string& arg)
+{
+    vector<string> args = split(arg, ' ');
+    if (args.size() < 1) {
+        cerr << "Please provide an application id." << endl;
+        return;
+    }
+
+    OnlineApplication app;
+    if (!getKey(args[0], app.keyInfo)) {
+        cerr << "Could not find application." << endl;
+        return;
+    }
+
+    if (ER_OK != uiStorage->RemovePolicy(app)) {
+        cerr << "Failed to reset policy." << endl;
+        return;
+    }
+
+    cout << "Successfully reset policy for " << args[0] << endl;
+}
+
 static void help()
 {
     cout << endl;
@@ -600,6 +623,7 @@ static void help()
     cout << "    d   Delete a membership certificate (appId groupid)" << endl;
     cout << "    o   Install a policy (appId groupid1 groupid2 ...)" << endl;
     cout << "    e   Get policy (appId)" << endl;
+    cout << "    s   Reset policy (appId)" << endl;
     cout << "    u   Unclaim an application (appId)" << endl;
     cout << "    n   Set a user defined name for an application (appId appname)." << endl <<
         "        This operation will also persist relevant About meta data if they exist." << endl;
@@ -679,6 +703,10 @@ static bool parse(shared_ptr<SecurityAgent>& secAgent,
 
     case 'n':
         set_app_meta_data_and_name(uiStorage, secAgent, arg);
+        break;
+
+    case 's':
+        reset_policy(uiStorage, arg);
         break;
 
     case 'h':

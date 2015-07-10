@@ -94,6 +94,8 @@ class UIStorageImpl :
     virtual QStatus GetPolicy(const Application& app,
                               PermissionPolicy& policy);
 
+    virtual QStatus RemovePolicy(Application& app);
+
     virtual QStatus UpdateIdentity(Application& app,
                                    const IdentityInfo identityInfo);
 

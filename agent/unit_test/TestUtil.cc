@@ -30,7 +30,9 @@ using namespace std;
 #define STORAGE_DEFAULT_PATH "/tmp/secmgr.db"
 #define STORAGE_DEFAULT_PATH_KEY "STORAGE_PATH"
 
-namespace secmgrcoretest_unit_testutil {
+/** @file TestUtil.cc */
+
+namespace secmgr_tests {
 TestApplicationListener::TestApplicationListener(Condition& _sem,
                                                  Mutex& _lock) :
     sem(_sem), lock(_lock)
@@ -50,7 +52,7 @@ void TestApplicationListener::OnApplicationStateChange(const OnlineApplication* 
 }
 
 BasicTest::BasicTest() :
-    tal(nullptr), stub(nullptr),
+    tal(nullptr),
     secMgr(nullptr), ba(nullptr), storage(nullptr), ca(nullptr), pg(nullptr),
     proxyObjectManager(nullptr)
 {
@@ -64,10 +66,6 @@ void BasicTest::SetUp()
     Environ::GetAppEnviron()->Add(STORAGE_DEFAULT_PATH_KEY, STORAGE_DEFAULT_PATH);
 
     remove(storage_path.c_str());
-    // clean up any lingering stub keystore
-    string fname = GetHomeDir().c_str();
-    fname.append("/.alljoyn_keystore/stub.ks");
-    remove(fname.c_str());
 
     SecurityAgentFactory& secFac = SecurityAgentFactory::GetInstance();
     StorageFactory& storageFac = StorageFactory::GetInstance();
@@ -157,28 +155,13 @@ bool BasicTest::WaitForState(PermissionConfigurator::ApplicationState newState,
 bool BasicTest::CheckRemotePolicy(PermissionPolicy& expected)
 {
     bool result = true;
+    QStatus status = ER_OK;
 
     printf("Checking remote policy ... ");
     PermissionPolicy remote;
-    QStatus status = proxyObjectManager->GetPolicy(lastAppInfo, remote);
+    status = proxyObjectManager->GetPolicy(lastAppInfo, remote);
     if (ER_OK != status) {
         printf("failed to GetPolicy\n");
-        return false;
-    }
-
-    uint32_t expectedVersion = expected.GetVersion();
-    uint32_t remoteVersion = remote.GetVersion();
-    if (expectedVersion != remoteVersion) {
-        printf("mismatching version: expected %i, got %i\n", expectedVersion, remoteVersion);
-        return false;
-    }
-
-    size_t expectedAclsSize = expected.GetAclsSize();
-    size_t remoteAclsSize = remote.GetAclsSize();
-    if (expectedAclsSize != remoteAclsSize) {
-        printf("mismatching aclsSize: expected %lu, got %lu\n",
-               (unsigned long)expectedAclsSize,
-               (unsigned long)remoteAclsSize);
         return false;
     }
 
@@ -189,8 +172,23 @@ bool BasicTest::CheckRemotePolicy(PermissionPolicy& expected)
         return false;
     }
 
+    printf("ok\n");
+    return result;
+}
+
+bool BasicTest::CheckStoredPolicy(PermissionPolicy& expected)
+{
+    bool result = true;
+    QStatus status = ER_OK;
+
+    printf("Checking stored policy ... ");
     PermissionPolicy stored;
-    ca->GetPolicy(lastAppInfo, stored);
+    status = ca->GetPolicy(lastAppInfo, stored);
+    if (ER_OK != status) {
+        printf("failed to GetPolicy\n");
+        return false;
+    }
+
     if (expected != stored) {
         printf("mismatching stored policy: expected %s, got %s\n",
                expected.ToString().c_str(),
@@ -198,15 +196,48 @@ bool BasicTest::CheckRemotePolicy(PermissionPolicy& expected)
         return false;
     }
 
-    if (result) {
-        printf("ok\n");
+    printf("ok\n");
+    return result;
+}
+
+bool BasicTest::CheckPolicy(PermissionPolicy& expected)
+{
+    return CheckRemotePolicy(expected) && CheckStoredPolicy(expected);
+}
+
+bool BasicTest::CheckDefaultPolicy()
+{
+    bool result = true;
+    QStatus status = ER_OK;
+
+    printf("Retrieving default policy ... ");
+    PermissionPolicy defaultPolicy;
+    status = proxyObjectManager->GetDefaultPolicy(lastAppInfo, defaultPolicy);
+    if (ER_OK != status) {
+        printf("failed to GetDefaultPolicy\n");
+        return false;
     }
+    printf("ok\n");
+
+    if (!CheckRemotePolicy(defaultPolicy)) {
+        return false;
+    }
+
+    printf("Retrieving stored policy ... ");
+    PermissionPolicy stored;
+    status = ca->GetPolicy(lastAppInfo, stored);
+    QStatus expectedStatus = ER_END_OF_DATA;
+    if (expectedStatus != status) {
+        printf("mismatching status: expected %i, got %i\n", expectedStatus, status);
+        return false;
+    }
+    printf("ok\n");
 
     return result;
 }
 
-bool BasicTest::CheckRemoteIdentity(IdentityInfo& expected,
-                                    Manifest& expectedManifest)
+bool BasicTest::CheckIdentity(IdentityInfo& expected,
+                              Manifest& expectedManifest)
 {
     printf("Checking remote identity ... ");
     QStatus status = ER_OK;
@@ -277,7 +308,7 @@ bool BasicTest::CheckRemoteIdentity(IdentityInfo& expected,
     return true;
 }
 
-bool BasicTest::CheckRemoteMemberships(vector<GroupInfo> expected)
+bool BasicTest::CheckMemberships(vector<GroupInfo> expected)
 {
     printf("Checking remote memberships ... ");
     vector<MembershipSummary> remote;
@@ -415,8 +446,12 @@ void BasicTest::TearDown()
 
     delete ba;
     ba = nullptr;
-    delete stub;
-    stub = nullptr;
+
     storage->Reset();
+
+    // reset agent keystore
+    string fname = GetHomeDir().c_str();
+    fname.append("/.alljoyn_keystore/c_ecdhe.ks");
+    remove(fname.c_str());
 }
 }

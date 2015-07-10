@@ -77,17 +77,6 @@ class ProxyObjectManager :
                               const MembershipCertificate* certificateChain,
                               size_t certificateChainSize);
 
-    QStatus UpdatePolicy(const OnlineApplication& app,
-                         const PermissionPolicy& policy);
-
-    QStatus GetManifestTemplate(const OnlineApplication& app,
-                                Manifest& mf);
-
-    QStatus Reset(const OnlineApplication& app);
-
-    QStatus GetPolicy(const OnlineApplication& app,
-                      PermissionPolicy& policy);
-
     QStatus RemoveMembership(const OnlineApplication& app,
                              const string& serial,
                              const KeyInfoNISTP256& issuerKeyInfo);
@@ -95,8 +84,27 @@ class ProxyObjectManager :
     QStatus GetMembershipSummaries(const OnlineApplication& app,
                                    vector<MembershipSummary>& summaries);
 
+    QStatus GetPolicy(const OnlineApplication& app,
+                      PermissionPolicy& policy);
+
+    QStatus GetPolicyVersion(const OnlineApplication& app,
+                             uint32_t& policyVersion);
+
+    QStatus GetDefaultPolicy(const OnlineApplication& app,
+                             PermissionPolicy& policy);
+
+    QStatus UpdatePolicy(const OnlineApplication& app,
+                         const PermissionPolicy& policy);
+
+    QStatus ResetPolicy(const OnlineApplication& app);
+
+    QStatus GetManifestTemplate(const OnlineApplication& app,
+                                Manifest& mf);
+
     QStatus GetManifest(const OnlineApplication& app,
                         Manifest& manifest);
+
+    QStatus Reset(const OnlineApplication& app);
 
     static AuthListener* listener;
 

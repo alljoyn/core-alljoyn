@@ -203,21 +203,96 @@ QStatus ProxyObjectManager::InstallMembership(const OnlineApplication& app,
     return status;
 }
 
+QStatus ProxyObjectManager::GetPolicy(const OnlineApplication& app,
+                                      PermissionPolicy& policy)
+{
+    SecurityApplicationProxy* remoteObj;
+    QStatus status = GetProxyObject(app, ECDHE_DSA, &remoteObj);
+    if (ER_OK != status) {
+        // errors logged in GetProxyObject
+        return status;
+    }
+
+    status = remoteObj->GetPolicy(policy);
+    ReleaseProxyObject(remoteObj);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Failed to GetPolicy"));
+    }
+
+    return status;
+}
+
+QStatus ProxyObjectManager::GetPolicyVersion(const OnlineApplication& app,
+                                             uint32_t&  policyVersion)
+{
+    SecurityApplicationProxy* remoteObj;
+    QStatus status = GetProxyObject(app, ECDHE_DSA, &remoteObj);
+    if (ER_OK != status) {
+        // errors logged in GetProxyObject
+        return status;
+    }
+
+    status = remoteObj->GetPolicyVersion(policyVersion);
+    ReleaseProxyObject(remoteObj);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Failed to GetPolicyVersion"));
+    }
+
+    return status;
+}
+
+QStatus ProxyObjectManager::GetDefaultPolicy(const OnlineApplication& app,
+                                             PermissionPolicy& policy)
+{
+    SecurityApplicationProxy* remoteObj;
+    QStatus status = GetProxyObject(app, ECDHE_DSA, &remoteObj);
+    if (ER_OK != status) {
+        // errors logged in GetProxyObject
+        return status;
+    }
+
+    status = remoteObj->GetDefaultPolicy(policy);
+    ReleaseProxyObject(remoteObj);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Failed to GetDefaultPolicy"));
+    }
+
+    return status;
+}
+
 QStatus ProxyObjectManager::UpdatePolicy(const OnlineApplication& app,
                                          const PermissionPolicy& policy)
 {
-    QStatus status;
-
     SecurityApplicationProxy* remoteObj;
-    status = GetProxyObject(app, ECDHE_DSA, &remoteObj);
+    QStatus status = GetProxyObject(app, ECDHE_DSA, &remoteObj);
     if (ER_OK != status) {
-        // Errors logged in GetProxyObject.
+        // errors logged in GetProxyObject
         return status;
     }
 
     status = remoteObj->UpdatePolicy(policy);
-
     ReleaseProxyObject(remoteObj);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Failed to UpdatePolicy"));
+    }
+
+    return status;
+}
+
+QStatus ProxyObjectManager::ResetPolicy(const OnlineApplication& app)
+{
+    SecurityApplicationProxy* remoteObj;
+    QStatus status = GetProxyObject(app, ECDHE_DSA, &remoteObj);
+    if (ER_OK != status) {
+        // errors logged in GetProxyObject
+        return status;
+    }
+
+    status = remoteObj->ResetPolicy();
+    ReleaseProxyObject(remoteObj);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Failed to ResetPolicy"));
+    }
 
     return status;
 }
@@ -280,29 +355,6 @@ QStatus ProxyObjectManager::Reset(const OnlineApplication& app)
 
     if (ER_OK != status) {
         QCC_LogError(status, ("Failed to Reset"));
-    }
-
-    return status;
-}
-
-QStatus ProxyObjectManager::GetPolicy(const OnlineApplication& app,
-                                      PermissionPolicy& policy)
-{
-    QStatus status;
-
-    SecurityApplicationProxy* remoteObj;
-    status = GetProxyObject(app, ECDHE_DSA, &remoteObj);
-    if (ER_OK != status) {
-        // Errors logged in GetProxyObject.
-        return status;
-    }
-
-    status = remoteObj->GetPolicy(policy);
-
-    ReleaseProxyObject(remoteObj);
-
-    if (ER_OK != status) {
-        QCC_LogError(status, ("Failed to GetPolicy"));
     }
 
     return status;

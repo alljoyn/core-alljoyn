@@ -88,12 +88,10 @@ secenv.Append(CPPPATH = ['../../../../../../storage/inc'])
 
 secenv.Install('$SEC_DISTDIR/lib', secenv.SConscript('storage/src/SConscript', exports = ['secenv'], variant_dir=buildroot+'/lib/storage/native', duplicate=0))
 secenv.Install('$SEC_DISTDIR/lib', secenv.SConscript('agent/src/SConscript', exports = ['secenv'], variant_dir=buildroot+'/lib/agent', duplicate=0))
-secenv.Install('$SEC_DISTDIR/lib', secenv.SConscript('stub/src/SConscript', exports = ['secenv'], variant_dir=buildroot+'/lib/stub', duplicate=0))
 
 # Security Manager App building
 secenv.Install('$SEC_DISTDIR/bin/samples', secenv.SConscript('samples/cli/SConscript', exports=['secenv'], variant_dir=buildroot+'/samples/cli', duplicate=0))
 secenv.Install('$SEC_DISTDIR/bin/samples', secenv.SConscript('samples/door/SConscript', exports=['secenv'], variant_dir=buildroot+'/samples/door', duplicate=0))
-secenv.Install('$SEC_DISTDIR/bin/stub', secenv.SConscript('samples/stub/SConscript', exports = ['secenv'], variant_dir=buildroot+'/samples/stub', duplicate=0))
 
 # Security core tests building (are not installed)
 if secenv['OS_CONF'] != 'android':

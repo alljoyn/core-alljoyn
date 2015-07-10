@@ -26,6 +26,9 @@ using namespace ajn;
 using namespace qcc;
 using namespace securitymgr;
 
+/** @file AJNCaStorageTests.cc */
+
+namespace secmgr_tests {
 class AJNCaStorageTest :
     public::testing::Test {
   public:
@@ -48,9 +51,14 @@ class AJNCaStorageTest :
     shared_ptr<AJNCaStorage> ca;
     shared_ptr<SQLStorage> sql;
 };
+
 /**
- * A Basic test for AJNCaStorage class.
- */
+ * @test Basic tests for the sample implementation of a CAStorage based on
+ *       AllJoyn.
+ *       -# Initialize an AJNCAStorage.
+ *       -# Retrieve the public key of the CA.
+ *       -# Generate a membership certificate.
+ **/
 TEST_F(AJNCaStorageTest, BasicTest) {
     const char* storeName = "AJNCaStorageTestCA";
     SQLStorageConfig storageConfig;
@@ -114,4 +122,20 @@ TEST_F(AJNCaStorageTest, BasicTest) {
     ASSERT_EQ(ER_OK, cert5.EncodeCertificateDER(der5));
     // ASSERT_EQ(ER_OK, cert6.DecodeCertificateDER(der5));
     // ASSERT_EQ(ER_OK, cert6.Verify(key));
+}
+
+/**
+ * @test Verify that corrupt output from CAStorage is handled
+ *       well by the security agent.Note: Use a wrapper on storage.
+ *       -# Start and claim an application successfully.
+ *       -# Make sure the wrapper has the membership getter adapted
+ *          to return an intentionally manipulated output; (e.g., certificate
+ *          signed by a different authority).
+ *       -# Store a valid membership certificate which should trigger an update.
+ *       -# Make sure the security agent is able to detect the inconsistency
+ *          after trying to update form the wrapped storage.
+ *       -# Verify that the application has no membership certificate.
+ **/
+TEST_F(AJNCaStorageTest, DISABLED_CorruptCAStorageMembershipOutput) {
+}
 }

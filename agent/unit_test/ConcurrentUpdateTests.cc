@@ -26,8 +26,9 @@
 
 #include <alljoyn/securitymgr/PolicyGenerator.h>
 
-using namespace secmgrcoretest_unit_testutil;
+/** @file ConcurrentUpdateTests.cc */
 
+namespace secmgr_tests {
 enum Action {
     NOTHING,
     RESET,
@@ -159,9 +160,13 @@ class ConcurrentUpdateTests :
 };
 
 /**
- * \test Reset an application during a policy update and check its claimable state.
- *       -# Reset the application using the security agent while update the policy
- *       -# Check whether the remote application is CLAIMABLE.
+ * @test Reset an application while updating its policy and check whether it is
+ *       CLAIMABLE.
+ *       -# Claim an application.
+ *       -# Update the policy of the application.
+ *       -# While updating the policy, reset the application using the security
+ *          agent.
+ *       -# Check whether the application is CLAIMABLE.
  **/
 
 TEST_F(ConcurrentUpdateTests, ResetAfterPolicy) {
@@ -181,9 +186,15 @@ TEST_F(ConcurrentUpdateTests, ResetAfterPolicy) {
 }
 
 /**
- * \test Install a membership certificate for an application during an update policy
- *       -# Install a membership certificate using the security agent.
- *       -# check the result
+ * @test Install a membership certificate on an application while updating its
+ *       policy and check whether both are installed correctly.
+ *       -# Claim an application.
+ *       -# Update the policy of the application.
+ *       -# While updating the policy, store a membership certificate for the
+ *          policy.
+ *       -# Wait for the updates to complete.
+ *       -# Check whether the policy was updated correctly.
+ *       -# Check whether the membership was installed correctly.
  **/
 TEST_F(ConcurrentUpdateTests, InstallMembershipAfterPolicy) {
     ASSERT_EQ(ER_OK, storage->StoreGroup(groupInfo));
@@ -198,14 +209,18 @@ TEST_F(ConcurrentUpdateTests, InstallMembershipAfterPolicy) {
     ASSERT_TRUE(CheckUpdatesPending(false));
     vector<GroupInfo> memberships;
     memberships.push_back(groupInfo);
-    ASSERT_TRUE(CheckRemotePolicy(policy));
-    ASSERT_TRUE(CheckRemoteMemberships(memberships));
+    ASSERT_TRUE(CheckPolicy(policy));
+    ASSERT_TRUE(CheckMemberships(memberships));
 }
 
 /**
- * \test Install a membership certificate for an application during an update policy
- *       -# Install a membership certificate using the security agent.
- *       -# check the result
+ * @test Update the policy of an application while updating its policy and check
+ *       whether the last policy is installed successfully.
+ *       -# Claim an application.
+ *       -# Update the policy of the application.
+ *       -# While updating the policy, store another policy for the application.
+ *       -# Wait for the updates to complete.
+ *       -# Check whether the last policy is installed correctly.
  **/
 TEST_F(ConcurrentUpdateTests, UpdatePolicyAfterPolicy) {
     ASSERT_EQ(ER_OK, storage->StoreGroup(groupInfo));
@@ -223,12 +238,20 @@ TEST_F(ConcurrentUpdateTests, UpdatePolicyAfterPolicy) {
 
     ASSERT_TRUE(CheckUpdatesPending(false));
     policy.SetVersion(2);
-    ASSERT_TRUE(CheckRemotePolicy(policy));
+    ASSERT_TRUE(CheckPolicy(policy));
 }
+
 /**
- * \test Do multiple updates in a row
- *       -# Install a membership certificate using the security agent.
- *       -# check the result
+ * @test Install a membership certificate on an application and update its
+ *       policy while updating its policy, and check whether the last policy
+ *       and the membership certificate have been installed successfully.
+ *       -# Claim an application.
+ *       -# Update the policy of the application.
+ *       -# While updating the policy, install a membership certificate.
+ *       -# While installing the membership certificate, update its policy.
+ *       -# Wait for the updates to complete.
+ *       -# Check whether the last policy is installed correctly.
+ *       -# Check whether the membership certificate was installed correctly.
  **/
 TEST_F(ConcurrentUpdateTests, UpdateMultiple) {
     ASSERT_EQ(ER_OK, storage->StoreGroup(groupInfo));
@@ -250,9 +273,10 @@ TEST_F(ConcurrentUpdateTests, UpdateMultiple) {
     ASSERT_TRUE(CheckUpdatesPending(false));
 
     policy.SetVersion(2);
-    ASSERT_TRUE(CheckRemotePolicy(policy));
+    ASSERT_TRUE(CheckPolicy(policy));
 
     vector<GroupInfo> memberships;
     memberships.push_back(groupInfo);
-    ASSERT_TRUE(CheckRemoteMemberships(memberships));
+    ASSERT_TRUE(CheckMemberships(memberships));
+}
 }

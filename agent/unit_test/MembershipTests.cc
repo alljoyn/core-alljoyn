@@ -18,19 +18,19 @@
 
 #include "TestUtil.h"
 
-namespace secmgrcoretest_unit_nominaltests {
-using namespace secmgrcoretest_unit_testutil;
-
 using namespace ajn::securitymgr;
 
-class MembershipCoreTests :
+/** @file MembershipTests.cc */
+
+namespace secmgr_tests {
+class MembershipTests :
     public BasicTest {
   private:
 
   protected:
 
   public:
-    MembershipCoreTests()
+    MembershipTests()
     {
         idInfo.guid = GUID128();
         idInfo.name = "TestIdentity";
@@ -49,16 +49,35 @@ class MembershipCoreTests :
     GroupInfo groupInfo2;
 };
 
-TEST_F(MembershipCoreTests, SuccessfulInstallMembership) {
-    bool claimAnswer = true;
-    TestClaimListener tcl(claimAnswer);
-
+/**
+ * @test Verify the ability to install several memberships based on different
+ *       GroupInfo instances.
+ *       -# Store a couple of different GroupInfo instances; groupInfo1 and
+ *          groupInfo2 in persistency.
+ *       -# Start an application and make sure it's online and CLAIMABLE.
+ *       -# Try to install and remove a membership using the lately announced
+ *          application and make sure this fails.
+ *       -# Successfully store an IdentityInfo instance.
+ *       -# Successfully claim the application using the IdentityInfo instance.
+ *       -# Make sure the application is online and in the CLAIMED state
+ *          with no updates pending.
+ *       -# Make sure the remote identity and manifest of the application
+ *          match the stored ones.
+ *       -# Verify that installing of membership using groupInfo1 is successful.
+ *       -# Make sure updates have been completed.
+ *       -# Repeat the previous 2 steps for groupInfo2.
+ *       -# Verify that removal of membership using groupInfo1 is successful.
+ *       -# Make sure updates have been completed.
+ *       -# Repeat the previous 2 steps for groupInfo2.
+ **/
+TEST_F(MembershipTests, SuccessfulInstallMembership) {
     /* Create groups */
     ASSERT_EQ(ER_OK, storage->StoreGroup(groupInfo1));
     ASSERT_EQ(ER_OK, storage->StoreGroup(groupInfo2));
 
-    /* Start the stub */
-    stub = new Stub(&tcl);
+    /* Start the test application */
+    TestApplication testApp;
+    ASSERT_EQ(ER_OK, testApp.Start());
 
     /* Wait for signals */
     ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
@@ -74,39 +93,36 @@ TEST_F(MembershipCoreTests, SuccessfulInstallMembership) {
     /* Claim application */
     ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
 
-    stub->SetDSASecurity(true);
-
     /* Check security signal */
     ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true, false));
-    ASSERT_TRUE(CheckRemoteIdentity(idInfo, aa.lastManifest));
+    ASSERT_TRUE(CheckIdentity(idInfo, aa.lastManifest));
 
     ASSERT_EQ(ER_OK, storage->InstallMembership(app, groupInfo1));
     ASSERT_TRUE(WaitForUpdatesCompleted());
     vector<GroupInfo> memberships;
     memberships.push_back(groupInfo1);
-    ASSERT_TRUE(CheckRemoteMemberships(memberships));
+    ASSERT_TRUE(CheckMemberships(memberships));
 
     ASSERT_EQ(ER_OK, storage->InstallMembership(app, groupInfo2));
     ASSERT_TRUE(WaitForUpdatesCompleted());
     memberships.push_back(groupInfo2);
-    ASSERT_TRUE(CheckRemoteMemberships(memberships));
+    ASSERT_TRUE(CheckMemberships(memberships));
 
     ASSERT_EQ(ER_OK, storage->RemoveMembership(app, groupInfo1));
     ASSERT_TRUE(WaitForUpdatesCompleted());
     memberships.erase(memberships.begin());
-    ASSERT_TRUE(CheckRemoteMemberships(memberships));
+    ASSERT_TRUE(CheckMemberships(memberships));
 
     ASSERT_EQ(ER_OK, storage->RemoveMembership(app, groupInfo2));
     ASSERT_TRUE(WaitForUpdatesCompleted());
     memberships.erase(memberships.begin());
-    ASSERT_TRUE(CheckRemoteMemberships(memberships));
+    ASSERT_TRUE(CheckMemberships(memberships));
+}
 
-    /* Clear the keystore of the stub */
-    stub->Reset();
-
-    /* Stop the stub */
-    delete stub;
-    stub = nullptr;
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, false));
+/**
+ * @test Update the membership certificate chain.
+ *       -# Pending AS-1573 (and implementation in core?)
+ **/
+TEST_F(MembershipTests, DISABLED_SuccessfulInstallMembershipChain) {
 }
 } // namespace

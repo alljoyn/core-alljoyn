@@ -99,15 +99,15 @@ else:
         unittest_env.Append(CPPDEFINES = ['_VARIADIC_MAX=10'])
     #gtest library file is placed on folder above the the object files.
     unittest_env.Append(LIBPATH = ['./'])
-    unittest_env.Prepend(LIBS = ['gtest', 'ajsecmgr', 'ajsecstorage', 'stub'])
+    unittest_env.Prepend(LIBS = ['gtest', 'ajsecmgr', 'ajsecstorage'])
 
     objs = [ unittest_env.Object(test_src) ]
 
     unittest_env.Append(CPPPATH = ['#/../../core/securitymgr/agent/inc'])
+    unittest_env.Append(CPPPATH = ['#/../../core/securitymgr/external/sqlite3'])
     unittest_env.Append(CPPPATH = ['#/../../core/securitymgr/agent/src'])
     unittest_env.Append(CPPPATH = ['#/../../core/securitymgr/storage/inc'])
     unittest_env.Append(CPPPATH = ['#/../../core/securitymgr/storage/src'])
-    unittest_env.Append(CPPPATH = ['#/../../core/securitymgr/stub/inc'])
     unittest_env.Append(CPPPATH = ['#/../../core/alljoyn/alljoyn_core/src'])
 
     unittest_prog = unittest_env.Program('secmgrctest', objs)

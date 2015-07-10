@@ -153,6 +153,8 @@ class SQLStorage {
     QStatus StorePolicy(const Application& app,
                         const PermissionPolicy& policy);
 
+    QStatus RemovePolicy(const Application& app);
+
     QStatus StoreCertificate(const Application& app,
                              CertificateX509& certificate,
                              bool update = false);

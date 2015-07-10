@@ -25,44 +25,61 @@
 
 #include "TestUtil.h"
 
-namespace secmgrcoretest_unit_nominaltests {
 using namespace std;
 using namespace ajn;
 using namespace qcc;
 using namespace securitymgr;
-using namespace secmgrcoretest_unit_testutil;
 
+/** @file PolicyGeneratorTest.cc */
+
+namespace secmgr_tests {
 class PolicyGeneratorTest :
     public BasicTest {
 };
 
+/**
+ * @test Basic test for the sample policy generator.
+ *       -# Create a security group and store it.
+ *       -# Generate a policy for this group.
+ *       -# Make sure this policy has two ACLs (including one for the admin
+ *          group).
+ *       -# Create another security group and store it.
+ *       -# Generate another policy for both groups.
+ *       -# Make sure this policy has three ACLs (including one for the admin
+ *          group).
+ **/
 TEST_F(PolicyGeneratorTest, BasicTest) {
-    ECCPublicKey publicKey;
     PermissionPolicy pol;
-    GUID128 groupID;
-    string groupIDString = BytesToHexString(groupID.GetBytes(), GUID128::SIZE).c_str();
-
     GroupInfo group1;
-    group1.guid = groupID;
+
     ASSERT_EQ(ER_OK, storage->StoreGroup(group1));
     vector<GroupInfo> groups;
     groups.push_back(group1);
 
     ASSERT_EQ(ER_OK, pg->DefaultPolicy(groups, pol));
-    string policyString = pol.ToString().c_str();
     ASSERT_EQ((size_t)2, pol.GetAclsSize());
 
-    GUID128 groupID2;
-    string groupID2String = BytesToHexString(groupID2.GetBytes(), GUID128::SIZE).c_str();
-
     GroupInfo group2;
-    group2.guid = groupID2;
     ASSERT_EQ(ER_OK, storage->StoreGroup(group2));
     groups.push_back(group2);
 
     ASSERT_EQ(ER_OK, pg->DefaultPolicy(groups, pol));
-    policyString = pol.ToString().c_str();
 
     ASSERT_EQ((size_t)3, pol.GetAclsSize());
+}
+
+/**
+ * @test Basic test for illegal argument in policy generator.
+ *       -# Create an empty vector of GroupInfo; groupInfoEmptyVec
+ *       -# Use the existing PolicyGenerator instance (pg)
+ *          to get a DefaultPolicy using the groupInfoEmptyVec
+ *          and make sure this does not fail but return a
+ *          default policy with one admin rule.
+ **/
+TEST_F(PolicyGeneratorTest, BasicIllegalArgTest) {
+    vector<GroupInfo> groups; // Intentionally empty
+    PermissionPolicy pol;
+    ASSERT_EQ(ER_OK, pg->DefaultPolicy(groups, pol));
+    ASSERT_EQ((size_t)1, pol.GetAclsSize()) << "Policy is: " << pol.ToString().c_str();
 }
 }

@@ -26,7 +26,6 @@
 #include <qcc/Condition.h>
 
 #include <ProxyObjectManager.h>
-#include <PermissionMgmt.h>
 
 #include <alljoyn/securitymgr/Application.h>
 #include <alljoyn/securitymgr/SecurityAgentFactory.h>
@@ -34,13 +33,15 @@
 #include <alljoyn/securitymgr/storage/StorageFactory.h>
 #include <alljoyn/securitymgr/PolicyGenerator.h>
 
-#include <Stub.h>
+#include "TestApplication.h"
 
 using namespace ajn;
 using namespace ajn::securitymgr;
 using namespace std;
 
-namespace secmgrcoretest_unit_testutil {
+/** @file TestUtil.h */
+
+namespace secmgr_tests {
 class TestSessionListener :
     public SessionListener {
     void SessionLost(SessionId sessionId, SessionLostReason reason)
@@ -115,7 +116,6 @@ class BasicTest :
     Mutex lock;
     TestApplicationListener* tal;
     TestAboutListener testAboutListener;
-    Stub* stub;
     virtual void SetUp();
 
     virtual void TearDown();
@@ -143,10 +143,16 @@ class BasicTest :
 
     bool CheckRemotePolicy(PermissionPolicy& expectedPolicy);
 
-    bool CheckRemoteIdentity(IdentityInfo& expectedIdentity,
-                             Manifest& expectedManifest);
+    bool CheckStoredPolicy(PermissionPolicy& expectedPolicy);
 
-    bool CheckRemoteMemberships(vector<GroupInfo> expectedGroups);
+    bool CheckPolicy(PermissionPolicy& expectedPolicy);
+
+    bool CheckDefaultPolicy();
+
+    bool CheckIdentity(IdentityInfo& expectedIdentity,
+                       Manifest& expectedManifest);
+
+    bool CheckMemberships(vector<GroupInfo> expectedGroups);
 
     bool CheckUpdatesPending(bool expected);
 
@@ -158,83 +164,26 @@ class BasicTest :
     }
 };
 
-class TestClaimListener :
-    public ClaimListener {
-  public:
-    TestClaimListener(bool& _claimAnswer) :
-        claimAnswer(_claimAnswer)
-    {
-    }
-
-  private:
-    bool& claimAnswer;
-
-    bool OnClaimRequest(const ECCPublicKey* pubKeyRot, void* ctx)
-    {
-        QCC_UNUSED(pubKeyRot);
-        QCC_UNUSED(ctx);
-
-        return claimAnswer;
-    }
-
-    /* This function is called when the claiming process has completed successfully */
-    void OnClaimed(void* ctx)
-    {
-        QCC_UNUSED(ctx);
-    }
-
-    /* To avoid compilation warning that the assignment operator can not be generated */
-    TestClaimListener& operator=(const TestClaimListener&);
-};
-
 class ClaimedTest :
     public BasicTest {
   public:
 
-    Stub* stub;
     IdentityInfo idInfo;
-    TestClaimListener* tcl;
+    TestApplication testApp;
 
     void SetUp()
     {
         BasicTest::SetUp();
 
-        bool claimAnswer = true;
-        tcl = new TestClaimListener(claimAnswer);
-        stub = new Stub(tcl);
-        /* Open claim window */
-        stub->OpenClaimWindow();
-        ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
-        /* Claim ! */
         idInfo.guid = GUID128(0xEF);
         idInfo.name = "MyTest ID Name";
         storage->StoreIdentity(idInfo);
+
+        ASSERT_EQ(ER_OK, testApp.Start());
+        ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
         secMgr->Claim(lastAppInfo, idInfo);
         ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true));
-        stub->SetDSASecurity(true);
         ASSERT_EQ(ER_OK, secMgr->GetApplication(lastAppInfo));
-    }
-
-    virtual void TearDown()
-    {
-        BasicTest::TearDown();
-
-        if (stub) {
-            destroy();
-        }
-        delete tcl;
-        tcl = nullptr;
-    }
-
-    void destroy()
-    {
-        delete stub;
-        stub = nullptr;
-    }
-
-    ClaimedTest() :
-        stub(nullptr), tcl(nullptr)
-    {
     }
 };
 

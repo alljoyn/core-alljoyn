@@ -18,28 +18,25 @@
 
 #include "TestUtil.h"
 
-using namespace secmgrcoretest_unit_testutil;
 using namespace ajn::securitymgr;
 using namespace std;
 
-/**
- * Several identity manipulation (i.e., create, delete, retrieve, list identity(s), etc.) nominal tests.
- */
-namespace secmgrcoretest_unit_nominaltests {
-class IdentityManipulationNominalTests :
+/** @file IdentityManagementTests.cc */
+
+namespace secmgr_tests {
+class IdentityManagementTests :
     public BasicTest {
 };
 
 /**
- * \test The test should verify that the security agent is able to add, delete and retrieve
- *               an identity.
- *       -# Define valid identityinfo fields
- *       -# Add an Identity using those details and verify that it was a successful operation
- *       -# Reset the name and desc fields, try to get the identity and verify that the retrieved info matches the original details
- *       -# Ask the security agent to remove the identity
- *       -# Try to retrieve the identity and verify that it does not exist anymore
- * */
-TEST_F(IdentityManipulationNominalTests, IdentityManipBasic) {
+ * @test Store, retrieve and delete an identity from storage.
+ *       -# Define a valid IdentityInfo and store it.
+ *       -# Retrieve the identity from storage and check whether it matches the
+ *          stored identity.
+ *       -# Remove the identity from storage.
+ *       -# Retrieving the identity should fail.
+ **/
+TEST_F(IdentityManagementTests, IdentityManipBasic) {
     IdentityInfo identityInfo;
 
     GUID128 guid("B509480EE7B5A000B82A7E37E");
@@ -62,17 +59,18 @@ TEST_F(IdentityManipulationNominalTests, IdentityManipBasic) {
 }
 
 /**
- * \test The test should verify that the security agent is able to add a number of identities and retrieve them afterwards.
- *       -# Define valid identityinfo fields that could be adjusted later on
- *       -# Add many Identities using those iteratively amended details and verify that it was a successful operation each time
- *       -# Ask the Security Manager for all managed identities and verify the number as well as the content match those that were added
- *       -# Remove all identities
- *       -# Ask the agent for all identities and verify that the returned vector is empty
- * */
-TEST_F(IdentityManipulationNominalTests, IdentityManipManyIdentities) {
+ * @test Store, retrieve and delete many identities from storage.
+ *       -# Define a series of identities and store them one by one.
+ *       -# Retrieve all identities from storage and count whether all have
+ *          been stored correctly.
+ *       -# Remove all identities one by one from storage.
+ *       -# Retrieve all identities from storage and make sure none are
+ *          returned.
+ **/
+TEST_F(IdentityManagementTests, IdentityManipManyIdentities) {
     IdentityInfo identityInfo;
     IdentityInfo compareToIdentity;
-    int times = 200;
+    int times = 10;
     vector<IdentityInfo> identities;
 
     string name = "Hello Identity";
@@ -112,6 +110,58 @@ TEST_F(IdentityManipulationNominalTests, IdentityManipManyIdentities) {
 
     ASSERT_EQ(storage->GetIdentities(identities), ER_OK);
     ASSERT_TRUE(identities.empty());
+}
+
+/**
+ * @test Retrieval and deletion of unknown identities should fail.
+ *       -# Try to get an unknown identity and make sure this fails.
+ *       -# Try to remove an unknown identity and make sure this fails.
+ *       -# Try to get all identities and make sure there are none.
+ **/
+TEST_F(IdentityManagementTests, FailedBasicIdentityOperations) {
+    vector<IdentityInfo> empty;
+
+    IdentityInfo identityInfo;
+
+    identityInfo.name = "Wrong Identity";
+
+    ASSERT_EQ(storage->GetIdentity(identityInfo), ER_END_OF_DATA);
+    ASSERT_NE(storage->RemoveIdentity(identityInfo), ER_OK);
+    ASSERT_EQ(storage->GetIdentities(empty), ER_OK);
+    ASSERT_TRUE(empty.empty());
+}
+
+/**
+ * @test Update an existing identity and make sure it can be retrieved correctly.
+ *       -# Create a valid identity.
+ *       -# Store the identity and make sure this is successful.
+ *       -# Retrieve the identity from storage and make sure this is successful.
+ *       -# Change the name and description of the identity.
+ *       -# Store the identity and make sure this is successful.
+ *       -# Retrieve the identity and make sure it matches the updated identity.
+ **/
+TEST_F(IdentityManagementTests, IdentityUpdate) {
+    vector<IdentityInfo> empty;
+
+    IdentityInfo identityInfo;
+
+    string name = "Hello Identity";
+    string desc = "This is a hello world test identity";
+
+    identityInfo.name = name;
+
+    ASSERT_EQ(storage->StoreIdentity(identityInfo), ER_OK);
+    ASSERT_EQ(storage->GetIdentity(identityInfo), ER_OK);
+
+    name += " - updated";
+    desc += " - updated";
+
+    identityInfo.name = name;
+
+    ASSERT_EQ(storage->StoreIdentity(identityInfo), ER_OK);
+    ASSERT_EQ(storage->GetIdentity(identityInfo), ER_OK);
+
+    ASSERT_EQ(identityInfo.name, name);
 }
 }
 //namespace

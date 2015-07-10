@@ -24,9 +24,21 @@ using namespace std;
 using namespace ajn;
 using namespace qcc;
 using namespace securitymgr;
+
+/** @file AJNCaTests.cc */
+
+namespace secmgr_tests {
 /**
- * A Basic test for AJNCa class.
- */
+ * @test Basic tests for the sample implementation of a CA based on AllJoyn.
+ *       -# Initialize an AJNCA instance.
+ *       -# Retrieve its public and private key.
+ *       -# Create another instance with the same storeName.
+ *       -# Check whether its private and public key are the same as the
+ *          original AJNCA store.
+ *       -# Creating an AJNCA with an empty storeName should fail.
+ *       -# Reset the AJNCA store.
+ *       -# Resetting an AJNCA twice should fail.
+ **/
 TEST(AJNCaTest, BasicTest) {
     ECCPublicKey epk;
     ECCPrivateKey eprk;
@@ -60,4 +72,5 @@ TEST(AJNCaTest, BasicTest) {
     ASSERT_FALSE(eprk == eprk3);
     ASSERT_EQ(ER_OK, ca.Reset());
     ASSERT_EQ(ER_FAIL, ca.Reset());
+}
 }

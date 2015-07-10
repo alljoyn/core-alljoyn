@@ -18,26 +18,38 @@
 
 using namespace ajn;
 using namespace ajn::securitymgr;
-using namespace secmgrcoretest_unit_testutil;
 
-namespace secmgrcoretest_unit_nominaltests {
-class ResetCoreTests :
+/** @file ResetTests.cc */
+
+namespace secmgr_tests {
+class ResetTests :
     public BasicTest {
   private:
 
   protected:
 
   public:
-    ResetCoreTests()
+    ResetTests()
     {
     }
 };
 
-TEST_F(ResetCoreTests, SuccessfulReset) {
-    bool claimAnswer = true;
-    TestClaimListener tcl(claimAnswer);
-
-    stub = new Stub(&tcl);
+/**
+ * @test Reset an application and make sure it becomes CLAIMABLE again.
+ *       -# Start the application.
+ *       -# Make sure the application is in a CLAIMABLE state.
+ *       -# Create and store an IdentityInfo.
+ *       -# Claim the application using the IdentityInfo.
+ *       -# Accept the manifest of the application.
+ *       -# Check whether the application becomes CLAIMED.
+ *       -# Remove the application from storage.
+ *       -# Check whether it becomes CLAIMABLE again.
+ *       -# Claim the application again.
+ *       -# Check whether it becomes CLAIMED again.
+ **/
+TEST_F(ResetTests, SuccessfulReset) {
+    TestApplication testApp;
+    ASSERT_EQ(ER_OK, testApp.Start());
     ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
 
     IdentityInfo idInfo;
@@ -47,9 +59,7 @@ TEST_F(ResetCoreTests, SuccessfulReset) {
 
     ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
     ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true));
-    ASSERT_TRUE(CheckRemoteIdentity(idInfo, aa.lastManifest));
-
-    stub->SetDSASecurity(true);
+    ASSERT_TRUE(CheckIdentity(idInfo, aa.lastManifest));
 
     ASSERT_EQ(ER_OK, storage->RemoveApplication(lastAppInfo));
     ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true, false));
@@ -59,13 +69,18 @@ TEST_F(ResetCoreTests, SuccessfulReset) {
     ASSERT_EQ(ER_OK, secMgr->GetApplication(checkUpdatesPendingInfo));
     ASSERT_FALSE(checkUpdatesPendingInfo.updatesPending);
 
-    stub->SetDSASecurity(false);
-
     ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
     ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true));
+}
 
-    delete stub;
-    stub = nullptr;
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, false));
+/**
+ * @test Verify that resetting an application with no keystore after claiming
+ *       will fail.
+ *       -# Start the application.
+ *       -# Claim the application successfully.
+ *       -# Remove only the keystore of the application.
+ *       -# Try to remove the application and make sure this fails.
+ **/
+TEST_F(ResetTests, DISABLED_FailedReset) {
 }
 } // namespace

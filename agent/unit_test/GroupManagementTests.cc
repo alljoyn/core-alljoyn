@@ -18,28 +18,25 @@
 
 #include "TestUtil.h"
 
-using namespace secmgrcoretest_unit_testutil;
 using namespace ajn::securitymgr;
 using namespace std;
 
-/**
- * Several group manipulation (i.e., create, delete, retrieve, list group(s), etc.) nominal tests.
- */
-namespace secmgrcoretest_unit_nominaltests {
-class GroupManipulationNominalTests :
+/** @file GroupManagementTests.cc */
+
+namespace secmgr_tests {
+class GroupManagementTests :
     public BasicTest {
 };
 
 /**
- * \test The test should verify that the security agent is able to add, delete and retrieve
- *               a group.
- *       -# Define valid groupinfo fields
- *       -# Add a Group using those details and verify that it was a successful operation
- *       -# Reset the name and desc fields, try to get the group and verify that the retrieved info matches the original details
- *       -# Ask the security agent to remove the group
- *       -# Try to retrieve the group and verify that it does not exist anymore
- * */
-TEST_F(GroupManipulationNominalTests, GroupManipBasic) {
+ * @test Store, retrieve and delete a group from storage.
+ *       -# Define a valid security group and store it.
+ *       -# Retrieve the group from storage and check whether it matches the
+ *          stored group.
+ *       -# Remove the security group.
+ *       -# Retrieving the security group should fail.
+ **/
+TEST_F(GroupManagementTests, GroupManipBasic) {
     GroupInfo groupInfo;
 
     GUID128 guid("B509480EE7B5A000B82A7E37E");
@@ -66,17 +63,17 @@ TEST_F(GroupManipulationNominalTests, GroupManipBasic) {
 }
 
 /**
- * \test The test should verify that the security agent is able to add a number of groups and retrieve them afterwards.
- *       -# Define valid groupinfo fields that could be adjusted later on
- *       -# Add many Groups using those iteratively amended details and verify that it was a successful operation each time
- *       -# Ask the Security Manager for all managed groups and verify the number as well as the content match those that were added
- *       -# Remove all groups
- *       -# Ask the agent for all groups and verify that the returned vector is empty
- * */
-TEST_F(GroupManipulationNominalTests, GroupManipManyGroups) {
+ * @test Store, retrieve and delete many security groups from storage.
+ *       -# Define a series of security groups and store them one by one.
+ *       -# Retrieve all groups from storage and count whether all have
+ *          been stored correctly.
+ *       -# Remove all groups one by one from storage.
+ *       -# Retrieve all groups from storage and make sure none are returned.
+ **/
+TEST_F(GroupManagementTests, GroupManipManyGroups) {
     GroupInfo groupInfo;
     GroupInfo compareToGroup;
-    int times = 200;
+    int times = 10;
     vector<GroupInfo> groups;
 
     string name = "Hello Group";
@@ -123,16 +120,16 @@ TEST_F(GroupManipulationNominalTests, GroupManipManyGroups) {
 }
 
 /**
- * \test Check whether the default group authority is added on all Group
+ * @test Check whether the default group authority is added on all Group
  *       methods.
- *       -# Create a GroupInfo object
- *       -# Store the GroupInfo object and verify the authority is set
- *       -# Create another GroupInfo object and fill in only the guid
- *       -# Check if the original GroupInfo object can be retrieved
- *       -# Create another GroupInfo object and fill in only the guid
- *       -# Check if the original GroupInfo object can be removed
+ *       -# Create a GroupInfo object.
+ *       -# Store the GroupInfo object and verify the authority is set.
+ *       -# Create another GroupInfo object and fill in only the guid.
+ *       -# Check if the original GroupInfo object can be retrieved.
+ *       -# Create another GroupInfo object and fill in only the guid.
+ *       -# Check if the original GroupInfo object can be removed.
  **/
-TEST_F(GroupManipulationNominalTests, DefaultAuthority) {
+TEST_F(GroupManagementTests, DefaultAuthority) {
     GroupInfo group;
     group.name = "Test";
     group.desc = "This is a test group";
@@ -159,20 +156,19 @@ TEST_F(GroupManipulationNominalTests, DefaultAuthority) {
 }
 
 /**
- * \test Check whether more than one group authority can be supported.
- *       -# Create a GroupInfo object
- *       -# Store the GroupInfo object and verify the authority is set
+ * @test Check whether more than one group authority can be supported.
+ *       -# Create a GroupInfo object.
+ *       -# Store the GroupInfo object and verify the authority is set.
  *       -# Create another GroupInfo object with the same guid, but a different
- *          authority
- *       -# Store the second GroupInfo object
+ *          authority.
+ *       -# Store the second GroupInfo object.
  *       -# Create another GroupInfo object and fill in the required fields to
- *          retrieve the second GroupInfo object
+ *          retrieve the second GroupInfo object.
  *       -# Check whether the second GroupInfo object can be retrieved.
- *       -# Create another GroupInfo object and fill in the required fields to
- *          retrieve the first GroupInfo object
+ *       -# Create another GroupInfo object and fill in only the guid.
  *       -# Check whether the first GroupInfo object can be retrieved.
  **/
-TEST_F(GroupManipulationNominalTests, MultipleAuthorities) {
+TEST_F(GroupManagementTests, MultipleAuthorities) {
     GroupInfo group;
     group.name = "Test";
     group.desc = "This is a test group";
@@ -204,6 +200,60 @@ TEST_F(GroupManipulationNominalTests, MultipleAuthorities) {
     ASSERT_TRUE(group == group2);
     ASSERT_TRUE(group.name == group2.name);
     ASSERT_TRUE(group.desc == group2.desc);
+}
+
+/**
+ * @test Retrieval and deletion of unknown groups should fail.
+ *       -# Try to get an unknown group and make sure this fails.
+ *       -# Try to remove an unknown group and make sure this fails.
+ *       -# Try to get all managed groups and make sure the vector is empty.
+ **/
+TEST_F(GroupManagementTests, FailedBasicGroupOperations) {
+    vector<GroupInfo> empty;
+
+    GroupInfo groupInfo;
+
+    groupInfo.name = "Wrong Group";
+    groupInfo.desc = "This is should never be there";
+
+    ASSERT_EQ(storage->GetGroup(groupInfo), ER_END_OF_DATA);
+    ASSERT_NE(storage->RemoveGroup(groupInfo), ER_OK);
+    ASSERT_EQ(storage->GetGroups(empty), ER_OK);
+    ASSERT_TRUE(empty.empty());
+}
+
+/**
+ * @test Update an existing group and make sure it can be retrieved correctly.
+ *       -# Create a valid security group.
+ *       -# Store the group and make sure this is successful.
+ *       -# Retrieve the group from storage and make sure this is successful.
+ *       -# Change the name and description of the group.
+ *       -# Store the group and make sure this is successful.
+ *       -# Retrieve the group and make sure it matches the updated info.
+ **/
+TEST_F(GroupManagementTests, GroupUpdate) {
+    GroupInfo groupInfo;
+
+    string name = "Hello Group";
+    string desc = "This is a hello world test group";
+
+    groupInfo.name = name;
+    groupInfo.desc = desc;
+
+    ASSERT_EQ(storage->StoreGroup(groupInfo), ER_OK);
+    ASSERT_EQ(storage->GetGroup(groupInfo), ER_OK);
+
+    name += " - updated";
+    desc += " - updated";
+
+    groupInfo.name = name;
+    groupInfo.desc = desc;
+
+    ASSERT_EQ(storage->StoreGroup(groupInfo), ER_OK);
+    ASSERT_EQ(storage->GetGroup(groupInfo), ER_OK);
+
+    ASSERT_EQ(groupInfo.name, name);
+    ASSERT_EQ(groupInfo.desc, desc);
 }
 }
 //namespace

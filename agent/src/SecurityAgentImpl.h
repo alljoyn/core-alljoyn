@@ -85,8 +85,6 @@ class SecurityAgentImpl :
 
     QStatus Init();
 
-    void SetManifestListener(ManifestListener* listener);
-
     QStatus Claim(const OnlineApplication& app,
                   const IdentityInfo& identityInfo);
 
@@ -96,14 +94,10 @@ class SecurityAgentImpl :
 
     QStatus GetApplication(OnlineApplication& _application) const;
 
-    void RegisterApplicationListener(ApplicationListener* al);
-
-    void UnregisterApplicationListener(ApplicationListener* al);
-
-    void UpdateApplications(const vector<OnlineApplication>* apps = nullptr);
-
     QStatus SetUpdatesPending(const OnlineApplication& app,
                               bool updatesPending);
+
+    void UpdateApplications(const vector<OnlineApplication>* apps = nullptr);
 
     QStatus GetApplicationSecInfo(SecurityInfo& secInfo) const;
 
@@ -111,10 +105,16 @@ class SecurityAgentImpl :
 
     void NotifyApplicationListeners(const SyncError* syncError);
 
-    void HandleTask(AppListenerEvent* event);
+    void SetManifestListener(ManifestListener* listener);
+
+    void RegisterApplicationListener(ApplicationListener* al);
+
+    void UnregisterApplicationListener(ApplicationListener* al);
 
     virtual void OnSecurityStateChange(const SecurityInfo* oldSecInfo,
                                        const SecurityInfo* newSecInfo);
+
+    void HandleTask(AppListenerEvent* event);
 
   private:
 

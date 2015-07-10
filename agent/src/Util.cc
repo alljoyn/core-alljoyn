@@ -66,6 +66,7 @@ DefaultPolicyMarshaller* Util::GetDefaultMarshaller(Message* msg)
 
 QStatus Util::GetPolicyByteArray(const PermissionPolicy& policy, uint8_t** byteArray, size_t* size)
 {
+    mutex.Lock(__FILE__, __LINE__);
     Message* msg = nullptr;
     DefaultPolicyMarshaller* marshaller = Util::GetDefaultMarshaller(msg);
     QStatus status = ER_FAIL;
@@ -80,12 +81,13 @@ QStatus Util::GetPolicyByteArray(const PermissionPolicy& policy, uint8_t** byteA
         delete msg;
         delete marshaller;
     }
-
+    mutex.Unlock(__FILE__, __LINE__);
     return status;
 }
 
 QStatus Util::GetPolicy(const uint8_t* byteArray, const size_t size, PermissionPolicy& policy)
 {
+    mutex.Lock(__FILE__, __LINE__);
     Message* msg = nullptr;
     DefaultPolicyMarshaller* marshaller = Util::GetDefaultMarshaller(msg);
     QStatus status = ER_FAIL;
@@ -99,27 +101,8 @@ QStatus Util::GetPolicy(const uint8_t* byteArray, const size_t size, PermissionP
         delete msg;
         delete marshaller;
     }
-
+    mutex.Unlock(__FILE__, __LINE__);
     return status;
-}
-
-const char* ToString(const PermissionConfigurator::ApplicationState as)
-{
-    switch (as) {
-    case PermissionConfigurator::NOT_CLAIMABLE:
-        return "NOT CLAIMABLE";
-
-    case PermissionConfigurator::CLAIMABLE:
-        return "CLAIMABLE";
-
-    case PermissionConfigurator::CLAIMED:
-        return "CLAIMED";
-
-    case PermissionConfigurator::NEED_UPDATE:
-        return "NEED UPDATE";
-    }
-
-    return "UNKNOWN";
 }
 }
 }

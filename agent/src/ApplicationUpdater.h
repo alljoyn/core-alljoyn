@@ -84,12 +84,17 @@ class ApplicationUpdater :
     void HandleTask(SecurityEvent* event);
 
   private:
-    QStatus UpdateApplication(const OnlineApplication& app,
-                              const SecurityInfo& secInfo);
 
     QStatus ResetApplication(const OnlineApplication& app);
 
+    QStatus UpdateApplication(const OnlineApplication& app,
+                              const SecurityInfo& secInfo);
+
     QStatus UpdatePolicy(const OnlineApplication& app);
+
+    QStatus UpdateMemberships(const OnlineApplication& app);
+
+    QStatus UpdateIdentity(const OnlineApplication& app);
 
     QStatus InstallMissingMemberships(const OnlineApplication& app,
                                       const vector<MembershipCertificate>& local,
@@ -98,10 +103,6 @@ class ApplicationUpdater :
     QStatus RemoveRedundantMemberships(const OnlineApplication& app,
                                        const vector<MembershipCertificate>& local,
                                        const vector<MembershipSummary>& remote);
-
-    QStatus UpdateMemberships(const OnlineApplication& app);
-
-    QStatus UpdateIdentity(const OnlineApplication& app);
 
     virtual void OnSecurityStateChange(const SecurityInfo* oldSecInfo,
                                        const SecurityInfo* newSecInfo);

@@ -14,28 +14,53 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#include "MyClaimListener.h"
-#include "Stub.h"
+#include <string>
+#include <alljoyn/BusAttachment.h>
 
-MyClaimListener::~MyClaimListener()
-{
-}
+using namespace std;
+using namespace ajn;
 
-/* This can be used, if for example the app has a nice gui
- * and asks the user if he wants to be claimed by this ROT */
-bool MyClaimListener::OnClaimRequest(const ECCPublicKey* pubKeyRot, void* ctx)
-{
-    QCC_UNUSED(pubKeyRot);
-    QCC_UNUSED(ctx);
+namespace secmgr_tests {
+class TestApplication {
+  public:
+    /**
+     * Creates a new TestApplication.
+     */
+    TestApplication();
 
-    printf("Auto-accepting claim request\r\n");
-    return true;
-}
+    /**
+     * Starts this TestApplication.
+     */
+    QStatus Start();
 
-void MyClaimListener::OnClaimed(void* ctx)
-{
-    Stub* stub = static_cast<Stub*>(ctx);
+    /**
+     * Retrieves the default manifest of this TestApplication
+     */
+    void GetManifest(PermissionPolicy::Rule** rules,
+                     size_t& count);
 
-    stub->GetBusAttachment().EnableConcurrentCallbacks();     /* nasty: TODO get rid of this */
-    stub->CloseClaimWindow();
-}
+    /**
+     * Sets the default manifest of this TestApplication.
+     */
+    QStatus SetManifest();
+
+    /**
+     * Resets the keystore of this TestApplication.
+     */
+    void Reset();
+
+    /*
+     * Stops this TestApplication.
+     */
+    QStatus Stop();
+
+    /*
+     * Destructor for TestApplication.
+     */
+    ~TestApplication();
+
+  private:
+    BusAttachment* busAttachment;
+    DefaultECDHEAuthListener authListener;
+};
+} // namespace

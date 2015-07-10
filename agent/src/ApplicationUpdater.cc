@@ -50,36 +50,58 @@ QStatus ApplicationUpdater::UpdatePolicy(const OnlineApplication& app)
     QCC_DbgPrintf(("Updating policy"));
     QStatus status = ER_FAIL;
 
-    PermissionPolicy remotePolicy;
-    status = proxyObjectManager->GetPolicy(app, remotePolicy);
+    uint32_t remoteVersion;
+    status = proxyObjectManager->GetPolicyVersion(app, remoteVersion);
     if (ER_OK != status) {
-        // errors logged in ProxyObjectManager.
+        QCC_DbgPrintf(("Failed to get remote policy version"));
+        SyncError* error = new SyncError(app, status, SYNC_ER_REMOTE);
+        securityAgentImpl->NotifyApplicationListeners(error);
         return status;
     }
-    uint32_t remoteVersion = remotePolicy.GetVersion();
-    QCC_DbgPrintf(("Remote policy version %i", remoteVersion));
+    QCC_DbgPrintf(("Remote policy version is %i", remoteVersion));
 
-    PermissionPolicy localPolicy;
-    status = storage->GetPolicy(app, localPolicy);
+    PermissionPolicy persistedPolicy;
+    status = storage->GetPolicy(app, persistedPolicy);
     if (ER_OK != status && ER_END_OF_DATA != status) {
         QCC_LogError(status, ("Failed to retrieve local policy"));
         SyncError* error = new SyncError(app, status, SYNC_ER_STORAGE);
         securityAgentImpl->NotifyApplicationListeners(error);
         return status;
     }
-    uint32_t localVersion = localPolicy.GetVersion();
-    QCC_DbgPrintf(("Local policy version %i", localVersion));
+    QCC_DbgPrintf(("GetPolicy from storage returned %i", status));
 
+    if (ER_END_OF_DATA == status) {
+        status = ER_OK;
+        QCC_DbgPrintf(("No policy in local storage"));
+
+        // hard coded to 0 as GetDefaultPolicy might fail (see ASACORE-2200)
+        if (remoteVersion != 0) {
+            status = proxyObjectManager->ResetPolicy(app);
+            if (ER_OK != status) {
+                QCC_DbgPrintf(("Failed to reset policy"));
+                SyncError* error = new SyncError(app, status, SYNC_ER_REMOTE);
+                securityAgentImpl->NotifyApplicationListeners(error);
+                return status;
+            }
+            QCC_DbgPrintf(("Policy reset successfully"));
+        } else {
+            QCC_DbgPrintf(("Policy already on default"));
+        }
+
+        return status;
+    }
+
+    uint32_t localVersion = persistedPolicy.GetVersion();
+    QCC_DbgPrintf(("Local policy version %i", localVersion));
     if (localVersion == remoteVersion) {
         QCC_DbgPrintf(("Policy already up to date"));
         return ER_OK;
     }
 
-    status = proxyObjectManager->UpdatePolicy(app, localPolicy);
+    status = proxyObjectManager->UpdatePolicy(app, persistedPolicy);
     QCC_DbgPrintf(("Installing new policy returned %i", status));
-
     if (ER_OK != status) {
-        SyncError* error = new SyncError(app, status, localPolicy);
+        SyncError* error = new SyncError(app, status, persistedPolicy);
         securityAgentImpl->NotifyApplicationListeners(error);
     }
 

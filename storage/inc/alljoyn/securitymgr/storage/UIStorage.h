@@ -95,6 +95,16 @@ class UIStorage {
                               PermissionPolicy& policy) = 0;
 
     /**
+     * @brief Remove the policy of an application from persistency.
+     *
+     * @param[in] app             The application, ONLY the keyInfo is mandatory here.
+     *
+     * @return ER_OK  On success.
+     * @return others On failure.
+     */
+    virtual QStatus RemovePolicy(Application& app) = 0;
+
+    /**
      * @brief Update the application's identity in persistency.
      *
      * @param[in] app             The application, ONLY the keyInfo is mandatory here.

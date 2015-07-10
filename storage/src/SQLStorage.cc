@@ -269,9 +269,12 @@ QStatus SQLStorage::GetAppMetaData(const Application& app, ApplicationMetaData& 
         }
         sqlRetCode = sqlite3_step(statement);
         if (SQLITE_ROW == sqlRetCode) {
-            appMetaData.appName.assign((const char*)sqlite3_column_text(statement, 0));
-            appMetaData.deviceName.assign((const char*)sqlite3_column_text(statement, 1));
-            appMetaData.userDefinedName.assign((const char*)sqlite3_column_text(statement, 2));
+            const char* appName = (const char*)sqlite3_column_text(statement, 0);
+            appMetaData.appName.assign(appName == nullptr ? "" : appName);
+            const char* deviceName = (const char*)sqlite3_column_text(statement, 1);
+            appMetaData.deviceName.assign(deviceName == nullptr ? "" : deviceName);
+            const char* userDefinedName = (const char*)sqlite3_column_text(statement, 2);
+            appMetaData.userDefinedName.assign(userDefinedName == nullptr ? "" : userDefinedName);
         } else if (SQLITE_DONE == sqlRetCode) {
             QCC_DbgHLPrintf(("No meta data was found !"));
             funcStatus = ER_END_OF_DATA;
@@ -539,6 +542,70 @@ QStatus SQLStorage::StoreManifest(const Application& app, const Manifest& manife
 
     storageMutex.Unlock(__FILE__, __LINE__);
 
+    return funcStatus;
+}
+
+QStatus SQLStorage::RemovePolicy(const Application& app)
+{
+    QStatus funcStatus = ER_FAIL;
+    storageMutex.Lock(__FILE__, __LINE__);
+
+    Application tmp = app;
+    funcStatus = GetManagedApplication(tmp);
+    if (ER_OK != funcStatus) {
+        QCC_LogError(funcStatus, ("Unknown application !"));
+        storageMutex.Unlock(__FILE__, __LINE__);
+        return funcStatus;
+    }
+
+    if (app.keyInfo.empty()) {
+        funcStatus = ER_FAIL;
+        QCC_LogError(funcStatus, ("Empty key info!"));
+        storageMutex.Unlock(__FILE__, __LINE__);
+        return funcStatus;
+    }
+
+    size_t keyInfoExportSize;
+    uint8_t* publicKeyInfo = nullptr;
+    funcStatus = ExportKeyInfo(app.keyInfo, &publicKeyInfo, keyInfoExportSize);
+    if (ER_OK != funcStatus) {
+        QCC_LogError(funcStatus, ("Failed to export public keyInfo"));
+        storageMutex.Unlock(__FILE__, __LINE__);
+        return funcStatus;
+    }
+
+    sqlite3_stmt* statement = nullptr;
+    string sqlStmtText = "UPDATE ";
+    sqlStmtText.append(CLAIMED_APPS_TABLE_NAME);
+    sqlStmtText.append(" SET POLICY = NULL WHERE APPLICATION_PUBKEY = ?");
+
+    do {
+        int sqlRetCode = SQLITE_OK;
+        int keyPosition = 1;
+
+        sqlRetCode = sqlite3_prepare_v2(nativeStorageDB, sqlStmtText.c_str(),
+                                        -1, &statement, nullptr);
+        if (SQLITE_OK != sqlRetCode) {
+            funcStatus = ER_FAIL;
+            LOGSQLERROR(funcStatus);
+            break;
+        }
+
+        sqlRetCode = sqlite3_bind_blob(statement, keyPosition,
+                                       publicKeyInfo, keyInfoExportSize,
+                                       SQLITE_TRANSIENT);
+
+        if (SQLITE_OK != sqlRetCode) {
+            funcStatus = ER_FAIL;
+            LOGSQLERROR(funcStatus);
+            break;
+        }
+    } while (0);
+
+    funcStatus = StepAndFinalizeSqlStmt(statement);
+    delete[]publicKeyInfo;
+
+    storageMutex.Unlock(__FILE__, __LINE__);
     return funcStatus;
 }
 

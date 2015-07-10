@@ -95,17 +95,6 @@ class AgentCAStorage {
     virtual ~AgentCAStorage() { }
 
     /**
-     * @brief Retrieve a managed application.
-     *
-     * @param[in,out] app  The managed application.
-     *                     The keyInfo must be set.
-     *
-     * @return ER_OK  On success
-     * @return others On failure
-     */
-    virtual QStatus GetManagedApplication(Application& app) const = 0;
-
-    /**
      * @brief Register a Security Agent with storage.
      *
      * @param[in] agentKey                   A KeyInfoNISTP256 unique to this agent.
@@ -159,17 +148,15 @@ class AgentCAStorage {
                                               bool status) = 0;
 
     /**
-     * @brief Inform storage that the agent has finished updating a certain application.
+     * @brief Retrieve a managed application.
      *
-     * @param[in,out] app                 The application with a valid keyInfo set.
-     *                                    It will be aligned with storage.
-     * @param[in,out] updateID            In, is the updateID currently ongoing and
-     *                                    out, is the new id if more updates are needed.
-     * @return ER_OK  On success.
-     * @return others On failure.
+     * @param[in,out] app  The managed application.
+     *                     The keyInfo must be set.
+     *
+     * @return ER_OK  On success
+     * @return others On failure
      */
-    virtual QStatus UpdatesCompleted(Application& app,
-                                     uint64_t& updateID) = 0;
+    virtual QStatus GetManagedApplication(Application& app) const = 0;
 
     /**
      * @brief Inform storage that the agent will start updating a certain application.
@@ -182,6 +169,19 @@ class AgentCAStorage {
      */
     virtual QStatus StartUpdates(Application& app,
                                  uint64_t& updateID) = 0;
+
+    /**
+     * @brief Inform storage that the agent has finished updating a certain application.
+     *
+     * @param[in,out] app                 The application with a valid keyInfo set.
+     *                                    It will be aligned with storage.
+     * @param[in,out] updateID            In, is the updateID currently ongoing and
+     *                                    out, is the new id if more updates are needed.
+     * @return ER_OK  On success.
+     * @return others On failure.
+     */
+    virtual QStatus UpdatesCompleted(Application& app,
+                                     uint64_t& updateID) = 0;
 
     /**
      * @brief Retrieve the public key info from storage.
