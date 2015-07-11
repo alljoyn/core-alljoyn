@@ -254,12 +254,27 @@ int CDECL_CALL main(int argc, char** argv)
             }
         }
 
-        // RULE-24: All interfaces ought to be secured.
-        const qcc::String value = GetAnnotation(interfaceElement, "org.alljoyn.Bus.Secure");
-        if (value != "true") {
+        const qcc::String secureValue = GetAnnotation(interfaceElement, "org.alljoyn.Bus.Secure");
+        if (!secureValue.empty() && (secureValue != "true") && (secureValue != "false")) {
+            // RULE-59: Secure annotation must be true or false, if present.
+            g_errors++;
+            printf("ERROR-59: interface '%s' org.alljoyn.Bus.Secure annotation has illegal value '%s'\n",
+                   interfaceName.c_str(), secureValue.c_str());
+        } else if (secureValue != "true") {
+            // RULE-24: All interfaces ought to be secured.
             g_warnings++;
             printf("WARNING-24: interface '%s' is missing annotation org.alljoyn.Bus.Secure=\"true\"\n",
                    interfaceName.c_str());
+        }
+
+        // RULE-60: Deprecated annotation must be true or false, if present.
+        const qcc::String deprecatedInterfaceValue = GetAnnotation(interfaceElement, "org.freedesktop.Bus.Deprecated");
+        if (!deprecatedInterfaceValue.empty() &&
+            (deprecatedInterfaceValue != "true") &&
+            (deprecatedInterfaceValue != "false")) {
+            g_errors++;
+            printf("ERROR-60: interface '%s' org.freedesktop.Bus.Deprecated has illegal value '%s'\n",
+                   interfaceName.c_str(), deprecatedInterfaceValue.c_str());
         }
 
         // RULE-29: Interfaces should have descriptions.
@@ -298,6 +313,15 @@ int CDECL_CALL main(int argc, char** argv)
                 g_info++;
                 printf("INFO-36: struct '%s.%s' missing description element\n",
                        interfaceName.c_str(), structName.c_str());
+            }
+
+            // RULE-61: Deprecated annotation must be true or false, if present.
+            const qcc::String deprecatedValue = GetAnnotation(structElement, "org.freedesktop.Bus.Deprecated");
+            if (!deprecatedValue.empty() && (deprecatedValue != "true") && (deprecatedValue != "false")) {
+                g_errors++;
+                printf("ERROR-61: struct '%s.%s' org.freedesktop.Bus.Deprecated has illegal value '%s'\n",
+                       interfaceName.c_str(), structName.c_str(),
+                       deprecatedValue.c_str());
             }
 
             g_structNames.push_back(structName);
@@ -378,6 +402,23 @@ int CDECL_CALL main(int argc, char** argv)
 
             const qcc::String noReply = GetAnnotation(methodElement, "org.freedesktop.DBus.Method.NoReply");
 
+            // RULE-58: NoReply annotation must be true or false if present.
+            if (!noReply.empty() && (noReply != "true") && (noReply != "false")) {
+                g_errors++;
+                printf("ERROR-58: method '%s.%s' NoReply annotation has illegal value '%s'\n",
+                       interfaceName.c_str(), methodName.c_str(),
+                       noReply.c_str());
+            }
+
+            // RULE-62: Deprecated annotation must be true or false, if present.
+            const qcc::String deprecatedValue = GetAnnotation(methodElement, "org.freedesktop.Bus.Deprecated");
+            if (!deprecatedValue.empty() && (deprecatedValue != "true") && (deprecatedValue != "false")) {
+                g_errors++;
+                printf("ERROR-62: method '%s.%s' org.freedesktop.Bus.Deprecated has illegal value '%s'\n",
+                       interfaceName.c_str(), methodName.c_str(),
+                       deprecatedValue.c_str());
+            }
+
             // Parse arguments.
             const ChildVector argElements = methodElement->GetChildren("arg");
             for (ChildVectorIter ait = argElements.begin(); ait != argElements.end(); ++ait) {
@@ -419,8 +460,14 @@ int CDECL_CALL main(int argc, char** argv)
                 const qcc::String direction = argElement->GetAttribute("direction");
                 if (direction.empty()) {
                     g_errors++;
-                    printf("ERROR-46: method '%s.%s' argument %s missing direction attribute\n",
+                    printf("ERROR-46: method '%s.%s' argument '%s' missing direction attribute\n",
                            interfaceName.c_str(), methodName.c_str(), argName.c_str());
+                } else if ((direction != "in") && (direction != "out")) {
+                    // RULE-56: Direction must be "in" or "out".
+                    g_errors++;
+                    printf("ERROR-56: method '%s.%s' argument '%s' has illegal direction value '%s'\n",
+                           interfaceName.c_str(), methodName.c_str(),
+                           argName.c_str(), direction.c_str());
                 }
 
                 // RULE-41: Methods defined with the NoReply annotation must not return anything.
@@ -498,6 +545,15 @@ int CDECL_CALL main(int argc, char** argv)
                 g_info++;
                 printf("INFO-33: consider changing signal '%s.%s' to a counter property that EmitsChangedSignal\n",
                        interfaceName.c_str(), signalName.c_str());
+            }
+
+            // RULE-63: Deprecated annotation must be true or false, if present.
+            const qcc::String deprecatedValue = GetAnnotation(signalElement, "org.freedesktop.Bus.Deprecated");
+            if (!deprecatedValue.empty() && (deprecatedValue != "true") && (deprecatedValue != "false")) {
+                g_errors++;
+                printf("ERROR-63: signal '%s.%s' org.freedesktop.Bus.Deprecated has illegal value '%s'\n",
+                       interfaceName.c_str(), signalName.c_str(),
+                       deprecatedValue.c_str());
             }
 
             const ChildVector argElements = signalElement->GetChildren("arg");
@@ -592,6 +648,16 @@ int CDECL_CALL main(int argc, char** argv)
                 g_warnings++;
                 printf("WARNING-25: property '%s.%s' missing EmitsChangedSignal annotation\n",
                        interfaceName.c_str(), propertyName.c_str());
+            } else if ((annotationValue != "true") &&
+                       (annotationValue != "invalidates") &&
+                       (annotationValue != "const") &&
+                       (annotationValue != "false")) {
+                // RULE-57: EmitsChangedSignal must be true, invalidates, const,
+                //          or false.
+                g_errors++;
+                printf("ERROR-57: property '%s.%s' EmitsChangedSignal annotation has illegal value '%s'\n",
+                       interfaceName.c_str(), propertyName.c_str(),
+                       annotationValue.c_str());
             }
 
             // RULE-45: Property must have an access attribute.
@@ -600,20 +666,24 @@ int CDECL_CALL main(int argc, char** argv)
                 g_errors++;
                 printf("ERROR-45: property '%s.%s' missing access attribute\n",
                        interfaceName.c_str(), propertyName.c_str());
-            }
 
-            // RULE-26: Never create write-only properties.
-            if (access == "write") {
+            } else if (access == "write") {
+                // RULE-26: Never create write-only properties.
                 g_warnings++;
                 printf("WARNING-26: property '%s.%s' is write-only and should be a method instead\n",
                        interfaceName.c_str(), propertyName.c_str());
-            }
 
-            // RULE-27: Strive to use read-only properties.
-            if (access == "readwrite") {
+            } else if (access == "readwrite") {
+                // RULE-27: Strive to use read-only properties.
                 g_info++;
                 printf("INFO-27: property '%s.%s' is readwrite, only appropriate if independent of all other properties\n",
                        interfaceName.c_str(), propertyName.c_str());
+
+            } else if (access != "read") {
+                // RULE-55: Access must be "readwrite", "read", or "write".
+                g_errors++;
+                printf("ERROR-55: property '%s.%s' has illegal access value '%s'\n",
+                       interfaceName.c_str(), propertyName.c_str(), access.c_str());
             }
 
             // RULE-32: Properties should have descriptions.
@@ -622,6 +692,15 @@ int CDECL_CALL main(int argc, char** argv)
                 g_warnings++;
                 printf("WARNING-32: property '%s.%s' missing description element\n",
                        interfaceName.c_str(), propertyName.c_str());
+            }
+
+            // RULE-64: Deprecated annotation must be true or false, if present.
+            const qcc::String deprecatedValue = GetAnnotation(propertyElement, "org.freedesktop.Bus.Deprecated");
+            if (!deprecatedValue.empty() && (deprecatedValue != "true") && (deprecatedValue != "false")) {
+                g_errors++;
+                printf("ERROR-64: property '%s.%s' org.freedesktop.Bus.Deprecated has illegal value '%s'\n",
+                       interfaceName.c_str(), propertyName.c_str(),
+                       deprecatedValue.c_str());
             }
         }
 
