@@ -360,7 +360,7 @@ public abstract class ClientBaseImpl implements ClientBase
     }
 
     /**
-     * The method is called by the {@link SessionListener#sessionLost(int)}
+     * The method is called by the {@link SessionListener#sessionLost(int,int)}
      * @deprecated
      */
     @Deprecated
