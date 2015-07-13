@@ -417,10 +417,11 @@ TEST_F(AboutObjTest, ProxyAccessToAboutObj) {
     EXPECT_EQ(ER_OK, status);
     EXPECT_STREQ("http://www.example.com", support);
 
-    // French is an specified language. expect an error
+    // French is specified language. Expect success as the default
+    // language will be used instead.  See RFC 4647 for more discussion.
     MsgArg aboutArg_fr;
     status = aProxy.GetAboutData("fr", aboutArg_fr);
-    EXPECT_EQ(ER_LANGUAGE_NOT_SUPPORTED, status);
+    EXPECT_EQ(ER_OK, status);
 
     MsgArg objDesc;
     status = aProxy.GetObjectDescription(objDesc);

@@ -489,7 +489,7 @@ TEST_F(AboutProxyTest, GetObjectDescription) {
     alljoyn_busattachment_destroy(clientBus);
 }
 
-TEST_F(AboutProxyTest, GetAboutdata_English) {
+TEST_F(AboutProxyTest, GetAboutData_English) {
     QStatus status = ER_FAIL;
     qcc::GUID128 interface_rand_string;
     qcc::String ifaceNameQcc = "test.about.b" + interface_rand_string.ToString();
@@ -617,7 +617,7 @@ TEST_F(AboutProxyTest, GetAboutdata_English) {
     alljoyn_busattachment_destroy(clientBus);
 }
 
-TEST_F(AboutProxyTest, GetAboutdata_Spanish) {
+TEST_F(AboutProxyTest, GetAboutData_Spanish) {
     QStatus status = ER_FAIL;
     qcc::GUID128 interface_rand_string;
     qcc::String ifaceNameQcc = "test.about.c" + interface_rand_string.ToString();
@@ -730,7 +730,7 @@ TEST_F(AboutProxyTest, GetAboutdata_Spanish) {
     alljoyn_busattachment_destroy(clientBus);
 }
 
-TEST_F(AboutProxyTest, GetAboutdata_Unsupported) {
+TEST_F(AboutProxyTest, GetAboutData_Unsupported) {
     QStatus status = ER_FAIL;
     qcc::GUID128 interface_rand_string;
     qcc::String ifaceNameQcc = "test.about.d" + interface_rand_string.ToString();
@@ -796,10 +796,13 @@ TEST_F(AboutProxyTest, GetAboutdata_Unsupported) {
     EXPECT_EQ(ER_OK, status) << "  GetVersion Status: " << QCC_StatusText(status);
     EXPECT_EQ(aboutListener->version, aboutVersion) << "Version mismatch!";
 
-    /* AboutData for English */
+    /* AboutData for unsupported language- French.
+     * This should succeed and just use the default language.
+     * See RFC 4647 for further discussion.
+     */
     alljoyn_msgarg dataArg = alljoyn_msgarg_create();
     status = alljoyn_aboutproxy_getaboutdata(proxy, FRENCH_TAG, dataArg);
-    EXPECT_EQ(ER_LANGUAGE_NOT_SUPPORTED, status)
+    EXPECT_EQ(ER_OK, status)
         << "  GetAboutData Status: " << QCC_StatusText(status);
     status = alljoyn_busattachment_cancelwhoimplements_interface(clientBus, ifaceName);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
