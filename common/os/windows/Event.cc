@@ -589,7 +589,7 @@ VOID CALLBACK NamedPipeIoEventCallback(PVOID arg, BOOLEAN TimerOrWaitFired)
 }
 #endif
 
-QStatus AJ_CALL Event::Wait(Event& evt, uint32_t maxWaitMs)
+QStatus AJ_CALL Event::Wait(Event& evt, uint32_t maxWaitMs, bool includeStopEvent)
 {
     HANDLE handles[2];
     uint32_t numHandles = 0;
@@ -619,12 +619,16 @@ QStatus AJ_CALL Event::Wait(Event& evt, uint32_t maxWaitMs)
         handles[numHandles++] = evt.timerHandle;
     }
 
-    Thread* thread = Thread::GetThread();
-    Event* stopEvent = &thread->GetStopEvent();
-    handles[numHandles++] = stopEvent->handle;
-    QStatus status = ER_OK;
+    Thread* thread = NULL;
+    Event* stopEvent = NULL;
+    if (includeStopEvent) {
+        thread = Thread::GetThread();
+        stopEvent = &thread->GetStopEvent();
+        handles[numHandles++] = stopEvent->handle;
+    }
     assert(numHandles <= ARRAYSIZE(handles));
 
+    QStatus status = ER_OK;
     evt.IncrementNumThreads();
     DWORD ret = WaitForMultipleObjectsEx(numHandles, handles, FALSE, maxWaitMs, FALSE);
     evt.DecrementNumThreads();
@@ -634,7 +638,7 @@ QStatus AJ_CALL Event::Wait(Event& evt, uint32_t maxWaitMs)
             /* If there's a stop during the wait, prioritize the return value and ignore what was signaled */
             status = ER_STOPPING_THREAD;
         } else {
-            if (handles[ret - WAIT_OBJECT_0] == stopEvent->handle) {
+            if (stopEvent && (handles[ret - WAIT_OBJECT_0] == stopEvent->handle)) {
                 /* The wait returned due to stopEvent */
                 status = ER_ALERTED_THREAD;
             } else {
@@ -754,13 +758,14 @@ QStatus AJ_CALL Event::Wait(const vector<Event*>& checkEvents, vector<Event*>& s
             if (somethingSet) {
                 if (evt->eventType == TIMED) {
                     /*
-                     * Avoid calling IsSet() because that will call Wait with zero timeout. The Wait above already
-                     * switched this timer to non-signaled state, so IsSet() would incorrectly return false.
+                     * Avoid calling Wait() here: the Wait above already
+                     * switched this timer to non-signaled state, so calling it
+                     * again here would incorrectly return non-signaled.
                      */
                     if ((evt->timerHandle != nullptr) && (evt->timerHandle == signaledHandle)) {
                         signaledEvents.push_back(evt);
                     }
-                } else if (evt->IsSet()) {
+                } else if (ER_OK == Wait(*evt, 0, false)) {
                     signaledEvents.push_back(evt);
                 }
             }
