@@ -772,8 +772,6 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
 
     void EnableDiscoveryListen();
 
-    void UntrustedClientExit();
-    QStatus UntrustedClientStart();
     bool m_isAdvertising;
     bool m_isDiscovering;
     bool m_isListening;
