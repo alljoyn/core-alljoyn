@@ -49,9 +49,9 @@ AuthMechSRP::AuthMechSRP(KeyStore& keyStore, ProtectedAuthListener& listener) : 
 {
 }
 
-QStatus AuthMechSRP::Init(AuthRole authRole, const qcc::String& authPeer)
+QStatus AuthMechSRP::Init(AuthRole authenticationRole, const qcc::String& authenticationPeer)
 {
-    AuthMechanism::Init(authRole, authPeer);
+    AuthMechanism::Init(authenticationRole, authenticationPeer);
     step = 0;
     /*
      * Default for AuthMechSRP is to never expire the master key
@@ -89,7 +89,7 @@ void AuthMechSRP::ComputeMS()
  * Verifier is computed following approach in RFC 5246. from the master secret and
  * a hash of the entire authentication conversation.
  */
-qcc::String AuthMechSRP::ComputeVerifier(const char* label)
+qcc::String AuthMechSRP::ComputeVerifier(const char* labelStr)
 {
     uint8_t digest[Crypto_SHA1::DIGEST_SIZE];
     uint8_t verifier[12];
@@ -98,8 +98,8 @@ qcc::String AuthMechSRP::ComputeVerifier(const char* label)
      */
     msgHash.GetDigest(digest, true);
     qcc::String seed((const char*)digest, sizeof(digest));
-    Crypto_PseudorandomFunction(masterSecret, label, seed, verifier, sizeof(verifier));
-    QCC_DbgHLPrintf(("Verifier(%s):  %s", label, BytesToHexString(verifier, sizeof(verifier)).c_str()));
+    Crypto_PseudorandomFunction(masterSecret, labelStr, seed, verifier, sizeof(verifier));
+    QCC_DbgHLPrintf(("Verifier(%s):  %s", labelStr, BytesToHexString(verifier, sizeof(verifier)).c_str()));
     return BytesToHexString(verifier, sizeof(verifier));
 }
 

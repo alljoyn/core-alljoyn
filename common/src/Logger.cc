@@ -127,25 +127,25 @@ void LoggerSetting::SetSyslog(bool enable)
 }
 
 
-void LoggerSetting::SetFile(FILE* file)
+void LoggerSetting::SetFile(FILE* logFile)
 {
     lock.Lock();
     if (UseStdio()) {
         fflush(this->file);
     }
-    this->file = file;
+    this->file = logFile;
     lock.Unlock();
 }
 
 
-void LoggerSetting::SetLevel(int level)
+void LoggerSetting::SetLevel(int logLevel)
 {
     lock.Lock();
-    this->level = level;
+    this->level = logLevel;
 
 #if !defined(QCC_OS_GROUP_WINDOWS) && !defined(QCC_OS_ANDROID)
     if (UseSyslog()) {
-        setlogmask(LOG_UPTO(level));
+        setlogmask(LOG_UPTO(logLevel));
     }
 
 #endif
@@ -154,19 +154,19 @@ void LoggerSetting::SetLevel(int level)
 }
 
 
-void LoggerSetting::SetName(const char* name)
+void LoggerSetting::SetName(const char* logName)
 {
     lock.Lock();
-    this->name = name;
+    this->name = logName;
     lock.Unlock();
 }
 
 
-LoggerSetting::LoggerSetting(const char* name, int level, bool useSyslog, FILE* file) :
-    name(name), level(level), useSyslog(useSyslog), file(file)
+LoggerSetting::LoggerSetting(const char* logName, int logLevel, bool useSystemLog, FILE* logFile) :
+    name(logName), level(logLevel), useSyslog(useSystemLog), file(logFile)
 {
 #if !defined(QCC_OS_GROUP_WINDOWS) && !defined(QCC_OS_ANDROID)
-    if (useSyslog) {
+    if (useSystemLog) {
         openlog(name, 0, LOG_DAEMON);
     }
 #endif

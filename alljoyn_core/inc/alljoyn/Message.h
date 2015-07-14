@@ -200,6 +200,7 @@ class _Message {
     friend class AllJoynPeerObj;
     friend class DefaultPolicyMarshaller;
     friend class Crypto;
+    friend class _PeerState;
     friend struct Rule;
 
   public:

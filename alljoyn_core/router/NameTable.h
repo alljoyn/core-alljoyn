@@ -101,7 +101,7 @@ class NameTable {
     qcc::String GenerateUniqueName(void);
 
     /**
-     * Add an endpoint and it's unique name to the name table.
+     * Add an endpoint and its unique name to the name table.
      *
      * @param endpoint      Endpoint whose unique name will be added to the name table.
      */

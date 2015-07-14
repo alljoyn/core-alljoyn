@@ -79,7 +79,7 @@ Copyright AllSeen Alliance. All rights reserved.
   <status name="ER_BUS_IFACE_ALREADY_EXISTS" value="0x903c" comment="Attempt to add an interface to an object that already exists"/>
   <status name="ER_BUS_ERROR_RESPONSE" value="0x903d" comment="Received an error response to a method call"/>
   <status name="ER_BUS_BAD_XML" value="0x903e" comment="XML data is improperly formatted"/>
-  <status name="ER_BUS_BAD_CHILD_PATH" value="0x903f" comment="The path of a child object is incorrect given it's parent's path"/>
+  <status name="ER_BUS_BAD_CHILD_PATH" value="0x903f" comment="The path of a child object is incorrect given its parent's path"/>
   <status name="ER_BUS_OBJ_ALREADY_EXISTS" value="0x9040" comment="Attempt to add a RemoteObject child that already exists"/>
   <status name="ER_BUS_OBJ_NOT_FOUND" value="0x9041" comment="Object with given path does not exist"/>
   <status name="ER_BUS_CANNOT_EXPAND_MESSAGE" value="0x9042" comment="Expansion information for a compressed message is not available"/>
@@ -296,4 +296,5 @@ Copyright AllSeen Alliance. All rights reserved.
   <status name="ER_POLICY_NOT_NEWER" value="0x913c" comment="Installing permission policy not newer than existing policy"/>
   <status name="ER_MANIFEST_REJECTED" value="0x913d" comment="The manifest of the application was rejected."/>
   <status name="ER_INVALID_CERTIFICATE_USAGE" value="0x913e" comment="The certificate extended key usage is not Alljoyn specific."/>
+  <status name="ER_INVALID_SIGNAL_EMISSION_TYPE" value="0x913f" comment="Attempt to send a signal with the wrong type."/>  
 </status_block>

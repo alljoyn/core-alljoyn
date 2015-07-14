@@ -300,7 +300,7 @@ TEST_F(BusObjectTest, object_registered_unregistered)
         &busobject_registered,
         &busobject_unregistered
     };
-    alljoyn_busobject testObj = alljoyn_busobject_create(OBJECT_PATH, QCC_FALSE, &busObjCbs, NULL);
+    testObj = alljoyn_busobject_create(OBJECT_PATH, QCC_FALSE, &busObjCbs, NULL);
     status = alljoyn_busattachment_registerbusobject(bus, testObj);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     for (size_t i = 0; i < 200; ++i) {
@@ -595,7 +595,7 @@ TEST_F(BusObjectTest, addmethodhandler)
         NULL,
         NULL
     };
-    alljoyn_busobject testObj = alljoyn_busobject_create(OBJECT_PATH, QCC_FALSE, &busObjCbs, NULL);
+    testObj = alljoyn_busobject_create(OBJECT_PATH, QCC_FALSE, &busObjCbs, NULL);
     const alljoyn_interfacedescription exampleIntf = alljoyn_busattachment_getinterface(servicebus, INTERFACE_NAME);
     ASSERT_TRUE(exampleIntf);
 
@@ -712,7 +712,7 @@ TEST_F(BusObjectTest, addmethodhandlers)
         NULL,
         NULL
     };
-    alljoyn_busobject testObj = alljoyn_busobject_create(OBJECT_PATH, QCC_FALSE, &busObjCbs, NULL);
+    testObj = alljoyn_busobject_create(OBJECT_PATH, QCC_FALSE, &busObjCbs, NULL);
     const alljoyn_interfacedescription exampleIntf = alljoyn_busattachment_getinterface(servicebus, INTERFACE_NAME);
     ASSERT_TRUE(exampleIntf);
 
@@ -831,7 +831,7 @@ TEST_F(BusObjectTest, addmethodhandler_addmethodhandlers_mix)
         NULL,
         NULL
     };
-    alljoyn_busobject testObj = alljoyn_busobject_create(OBJECT_PATH, QCC_FALSE, &busObjCbs, NULL);
+    testObj = alljoyn_busobject_create(OBJECT_PATH, QCC_FALSE, &busObjCbs, NULL);
     const alljoyn_interfacedescription exampleIntf = alljoyn_busattachment_getinterface(servicebus, INTERFACE_NAME);
     ASSERT_TRUE(exampleIntf);
 

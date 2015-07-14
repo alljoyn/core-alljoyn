@@ -523,22 +523,22 @@ class SessionJoinTestSessionListener : public SessionListener {
 
     }
 
-    virtual void SessionMemberAdded(SessionId sessionId, const char* uniqueName) {
+    virtual void SessionMemberAdded(SessionId sessionId, const char* memberUniqueName) {
 
         EXPECT_EQ(0U, sessionLostCalled);
         sessionMemberAddedSessionId = sessionId;
-        sessionMemberAddedUniqueName = uniqueName;
-        sessionMembers.insert(uniqueName);
+        sessionMemberAddedUniqueName = memberUniqueName;
+        sessionMembers.insert(memberUniqueName);
         ++sessionMemberAddedCalled;
 
     }
 
-    virtual void SessionMemberRemoved(SessionId sessionId, const char* uniqueName) {
+    virtual void SessionMemberRemoved(SessionId sessionId, const char* memberUniqueName) {
 
         EXPECT_EQ(0U, sessionLostCalled);
         sessionMemberRemovedSessionId = sessionId;
-        sessionMemberRemovedUniqueName = uniqueName;
-        sessionMembers.erase(uniqueName);
+        sessionMemberRemovedUniqueName = memberUniqueName;
+        sessionMembers.erase(memberUniqueName);
         ++sessionMemberRemovedCalled;
     }
 

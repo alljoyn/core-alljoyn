@@ -35,35 +35,35 @@ AboutIconClient::AboutIconClient(ajn::BusAttachment& bus)
     : m_BusAttachment(&bus)
 {
     QCC_DbgTrace(("AboutIcontClient::%s", __FUNCTION__));
-    const InterfaceDescription* p_InterfaceDescription = NULL;
+    const InterfaceDescription* p_ExistingInterfaceDescription = NULL;
     QStatus status = ER_OK;
-    p_InterfaceDescription = m_BusAttachment->GetInterface(ABOUT_ICON_INTERFACE_NAME);
-    if (!p_InterfaceDescription) {
-        InterfaceDescription* p_InterfaceDescription = NULL;
-        status = m_BusAttachment->CreateInterface(ABOUT_ICON_INTERFACE_NAME, p_InterfaceDescription, false);
-        if (p_InterfaceDescription && status == ER_OK) {
+    p_ExistingInterfaceDescription = m_BusAttachment->GetInterface(ABOUT_ICON_INTERFACE_NAME);
+    if (!p_ExistingInterfaceDescription) {
+        InterfaceDescription* p_NewInterfaceDescription = NULL;
+        status = m_BusAttachment->CreateInterface(ABOUT_ICON_INTERFACE_NAME, p_NewInterfaceDescription, false);
+        if (p_NewInterfaceDescription && status == ER_OK) {
             for (;;) {
-                status  = p_InterfaceDescription->AddMethod("GetUrl", NULL, "s", "url");
+                status  = p_NewInterfaceDescription->AddMethod("GetUrl", NULL, "s", "url");
                 if (status != ER_OK) {
                     break;
                 }
-                status = p_InterfaceDescription->AddMethod("GetContent", NULL, "ay", "content");
+                status = p_NewInterfaceDescription->AddMethod("GetContent", NULL, "ay", "content");
                 if (status != ER_OK) {
                     break;
                 }
-                status = p_InterfaceDescription->AddProperty("Version", "q", (uint8_t) PROP_ACCESS_READ);
+                status = p_NewInterfaceDescription->AddProperty("Version", "q", (uint8_t) PROP_ACCESS_READ);
                 if (status != ER_OK) {
                     break;
                 }
-                status = p_InterfaceDescription->AddProperty("MimeType", "s", (uint8_t) PROP_ACCESS_READ);
+                status = p_NewInterfaceDescription->AddProperty("MimeType", "s", (uint8_t) PROP_ACCESS_READ);
                 if (status != ER_OK) {
                     break;
                 }
-                status = p_InterfaceDescription->AddProperty("Size", "u", (uint8_t) PROP_ACCESS_READ);
+                status = p_NewInterfaceDescription->AddProperty("Size", "u", (uint8_t) PROP_ACCESS_READ);
                 if (status != ER_OK) {
                     break;
                 }
-                p_InterfaceDescription->Activate();
+                p_NewInterfaceDescription->Activate();
                 return;
             }
         }

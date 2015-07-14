@@ -655,7 +655,6 @@ TEST_F(ProxyBusObjectTest, parsexml) {
         "    </method>\n"
         "  </interface>\n"
         "</node>\n";
-    QStatus status;
 
     alljoyn_proxybusobject proxyObj = alljoyn_proxybusobject_create(bus, NULL, NULL, 0);
     EXPECT_TRUE(proxyObj);
@@ -691,7 +690,6 @@ TEST_F(ProxyBusObjectTest, parsexml) {
 }
 
 TEST_F(ProxyBusObjectTest, Add_Get_Remove_Child) {
-    QStatus status;
     alljoyn_interfacedescription testIntf = NULL;
     status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.ProxyBusObjectTest", &testIntf);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -767,7 +765,6 @@ TEST_F(ProxyBusObjectTest, Add_Get_Remove_Child) {
 }
 
 TEST_F(ProxyBusObjectTest, getchildren) {
-    QStatus status;
     alljoyn_interfacedescription testIntf = NULL;
     status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.ProxyBusObjectTest", &testIntf);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);

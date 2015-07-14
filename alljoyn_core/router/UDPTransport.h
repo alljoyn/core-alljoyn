@@ -973,9 +973,9 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     void ConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool passive, uint8_t* buf, uint16_t len, QStatus status);
     void DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t connId, bool passive, uint8_t* buf, uint16_t len, QStatus status);
     void DisconnectCb(ArdpHandle* handle, ArdpConnRecord* conn, QStatus status);
-    void RecvCb(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf* rcv, QStatus status);
-    void SendCb(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint32_t len, QStatus status);
-    void SendWindowCb(ArdpHandle* handle, ArdpConnRecord* conn, uint16_t window, QStatus status);
+    void RecvCb(ArdpHandle* ardpHandle, ArdpConnRecord* conn, ArdpRcvBuf* rcv, QStatus status);
+    void SendCb(ArdpHandle* ardpHandle, ArdpConnRecord* conn, uint8_t* buf, uint32_t len, QStatus status);
+    void SendWindowCb(ArdpHandle* ardpHandle, ArdpConnRecord* conn, uint16_t window, QStatus status);
     void ExitEndpoint(uint32_t connId);
 };
 

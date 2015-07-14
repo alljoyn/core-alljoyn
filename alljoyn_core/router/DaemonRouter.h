@@ -71,23 +71,23 @@ class DaemonRouter : public Router {
     /**
      * Set the AllJoynObj associated with this router.
      *
-     * @param alljoynObj   The bus controller.
+     * @param newAlljoynObj   The bus controller.
      */
-    void SetAllJoynObj(AllJoynObj* alljoynObj) { this->alljoynObj = alljoynObj; }
+    void SetAllJoynObj(AllJoynObj* newAlljoynObj) { this->alljoynObj = newAlljoynObj; }
 
     /**
      * Set the SessionlessObj associated with this router.
      *
-     * @param sessionlessObj   The bus controller.
+     * @param newSessionlessObj   The bus controller.
      */
-    void SetSessionlessObj(SessionlessObj* sessionlessObj) { this->sessionlessObj = sessionlessObj; }
+    void SetSessionlessObj(SessionlessObj* newSessionlessObj) { this->sessionlessObj = newSessionlessObj; }
 
     /**
      * Set the busController associated with this router.
      *
-     * @param busController   The bus controller.
+     * @param newBusController   The bus controller.
      */
-    void SetBusController(BusController* busController) { this->busController = busController; }
+    void SetBusController(BusController* newBusController) { this->busController = newBusController; }
 
     /**
      * Get the bus controller associated with this router
@@ -280,9 +280,9 @@ class DaemonRouter : public Router {
      */
     bool IsBusRunning(void) const
     {
-        localEndpointLock.Lock();
+        m_Lock.Lock();
         bool valid = localEndpoint->IsValid();
-        localEndpointLock.Unlock();
+        m_Lock.Unlock();
         return valid;
     }
 
@@ -361,62 +361,29 @@ class DaemonRouter : public Router {
     }
 
     /**
-     * Add a session route.
-     *
-     * @param  id          Session Id.
-     * @param  srcEp       Route source endpoint.
-     * @param  srcB2bEp    Source B2B endpoint. (NULL if srcEp is not virtual).
-     * @param  destEp      BusEndpoint of route destination.
-     * @param  destB2bEp   [IN/OUT] If passed in as invalid endpoint type, attempt to use optsHint to choose destB2bEp and return selected ep.
-     * @return  ER_OK if successful.
-     */
-    QStatus AddSessionRoute(SessionId id, BusEndpoint& srcEp, RemoteEndpoint* srcB2bEp, BusEndpoint& destEp,
-                            RemoteEndpoint& destB2bEp);
-
-    /**
-     * Remove existing session routes.  This method removes routes
-     * that involve uniqueName as a source or as a destination for a
-     * particular session id.
-     *
-     * @param  uniqueName  Unique name.
-     * @param  id          Session id.
-     */
-    void RemoveSessionRoutes(const char* uniqueName, SessionId id);
-
-    /**
-     * Remove existing session routes.  This method removes routes for
-     * all endpoints associated with a particular session id.
-     *
-     * @param  id          Session id.
-     */
-    void RemoveSessionRoutes(SessionId id);
-
-    /**
-     * Remove existing session routes.
-     * This method removes routes that involve endpoint as a source or as a destination for all session ids.
-     *
-     * @param  endpoint    Endpoint to be removed.
-     */
-    void RemoveSessionRoutesForEndpoint(BusEndpoint& ep);
-
-    /**
-     * Remove self-join related session-route.
-     *
-     * @param  uniqueName  Unique name.
-     * @param  id          Session id or 0 to indicate "all sessions".
-     *
-     */
-    void RemoveSelfJoinSessionRoute(const char* src, SessionId id);
-    /**
      * Return the routing rule table.
      *
      * @return the routing rule table.
      */
     RuleTable& GetRuleTable() { return ruleTable; }
 
+
+    void RegisterSelfJoin(qcc::String epName, SessionId id) {
+        m_Lock.Lock(MUTEX_CONTEXT);
+        selfJoinEps.insert(std::pair<qcc::String, SessionId>(epName, id));
+        m_Lock.Unlock(MUTEX_CONTEXT);
+
+    }
+    void UnregisterSelfJoin(qcc::String epName, SessionId id) {
+        m_Lock.Lock(MUTEX_CONTEXT);
+        selfJoinEps.erase(std::pair<qcc::String, SessionId>(epName, id));
+        m_Lock.Unlock(MUTEX_CONTEXT);
+
+    }
+
+
   private:
     LocalEndpoint localEndpoint;          /**< The local endpoint */
-    mutable qcc::Mutex localEndpointLock; /**< Mutex to protect localEndpoint modification. */
     RuleTable ruleTable;                  /**< Routing rule table */
     NameTable nameTable;                  /**< BusName to transport lookupl table */
     BusController* busController;         /**< The bus controller used with this router */
@@ -424,25 +391,9 @@ class DaemonRouter : public Router {
     SessionlessObj* sessionlessObj;       /**< Sessionless bus object used with this router */
 
     std::set<RemoteEndpoint> m_b2bEndpoints; /**< Collection of Bus-to-bus endpoints */
-    qcc::Mutex m_b2bEndpointsLock;           /**< Lock that protects m_b2bEndpoints */
 
-    typedef std::map<BusEndpoint, uint8_t> SessionEps;    /**< Set of endpoints in a session (with a flag bit field) */
-    typedef std::map<SessionId, SessionEps> SessionMap;   /**< Map of session IDs to sets endpoints */
-    SessionMap sessionMap;      /**< Provide a lookup table of which endpoints are members of which session.*/
-    qcc::Mutex sessionMapLock;  /**< Lock that protects the session map. */
-
-    /* Add a session ref to the virtualendpoint with the specified name
-     * @param  vepName: Name of virtual endpoint to which a ref needs to be added.
-     * @param  id: Id of the session
-     * @param  b2bEp: B2b endpoint of the session
-     */
-    QStatus AddSessionRef(qcc::String vepName, SessionId id, RemoteEndpoint b2bEp);
-
-    /* Remove a session ref to the virtualendpoint with the specified name
-     * @param  vepName: Name of virtual endpoint to which a ref needs to be decremented.
-     * @param  id: Id of the session
-     */
-    void RemoveSessionRef(qcc::String vepName, SessionId id);
+    std::set<std::pair<qcc::String, SessionId> > selfJoinEps;  /**< set of EPs that "self joined" */
+    mutable qcc::Mutex m_Lock;           /**< Lock that protects internals of the DaemonRouter */
 
     /**
      * Helper function to determine if a message can be delivered over a given
@@ -509,6 +460,7 @@ class DaemonRouter : public Router {
                                         const bool isSessionless,
                                         const bool policyRejected);
 #endif
+
 };
 
 }

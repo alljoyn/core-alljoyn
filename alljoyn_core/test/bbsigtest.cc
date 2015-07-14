@@ -186,7 +186,7 @@ class LocalTestObject : public BusObject {
         }
 
         if (g_echoBack) {
-            QStatus status = this->SendSignal(g_sessionId);
+            status = this->SendSignal(g_sessionId);
             if (status != ER_OK) {
                 QCC_LogError(status, ("Error sending echo signal. "));
             }

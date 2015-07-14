@@ -318,7 +318,7 @@ QStatus AdvTunnel::RelayAdv()
          * on the name service
          */
         std::map<qcc::String, qcc::String> argMap;
-        QStatus status = Transport::ParseArguments("tcp", busAddr.c_str(), argMap);
+        status = Transport::ParseArguments("tcp", busAddr.c_str(), argMap);
         if (status == ER_OK) {
             uint16_t port = static_cast<uint16_t>(qcc::StringToU32(argMap["r4port"]));
             std::map<qcc::String, uint16_t> portMap;

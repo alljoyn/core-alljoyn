@@ -1398,9 +1398,9 @@ QStatus TCPTransport::GetListenAddresses(const SessionOpts& opts, std::vector<qc
              */
             uint32_t mask = qcc::IfConfigEntry::UP | qcc::IfConfigEntry::LOOPBACK;
 
-            uint32_t state = qcc::IfConfigEntry::UP;
+            uint32_t ifState = qcc::IfConfigEntry::UP;
 
-            if ((entries[i].m_flags & mask) == state) {
+            if ((entries[i].m_flags & mask) == ifState) {
                 QCC_DbgPrintf(("TCPTransport::GetListenAddresses(): %s has correct state", entries[i].m_name.c_str()));
                 if (haveWildcard ||
                     (entries[i].m_name == currentInterface) ||
@@ -2396,7 +2396,7 @@ void TCPTransport::DisableAdvertisementInstance(ListenRequest& listenRequest)
         for (list<qcc::String>::iterator i = m_listening.begin(); i != m_listening.end(); ++i) {
             map<qcc::String, qcc::String> argMap;
             qcc::String spec;
-            QStatus status = NormalizeListenSpec(i->c_str(), spec, argMap);
+            status = NormalizeListenSpec(i->c_str(), spec, argMap);
             assert(status == ER_OK && "TCPTransport::DisableAdvertisementInstance(): Invalid TCP listen spec");
             QCC_UNUSED(status);
             if (argMap.find("iface") != argMap.end()) {
@@ -3073,7 +3073,7 @@ QStatus TCPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
     if (anyEncountered) {
         QCC_DbgHLPrintf(("TCPTransport::Connect(): Checking for implicit connection to self"));
         std::vector<qcc::IfConfigEntry> entries;
-        QStatus status = qcc::IfConfig(entries);
+        status = qcc::IfConfig(entries);
 
         /*
          * Only do the check for self-ness if we can get interfaces to check.
@@ -3185,13 +3185,14 @@ QStatus TCPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
         m_authList.insert(tcpEp);
         status = ER_OK;
     } else {
+        status = ER_CONNECTION_LIMIT_EXCEEDED;
         QCC_LogError(status, ("TCPTransport::Connect(): No slot for new connection"));
         /* Remove this thread from the m_activeEndpointsThreadList */
         set<Thread*>::iterator i = find(m_activeEndpointsThreadList.begin(), m_activeEndpointsThreadList.end(), thread);
         assert(i != m_activeEndpointsThreadList.end() && "TCPTransport::Connect(): Thread* not on m_activeEndpointsThreadList");
         m_activeEndpointsThreadList.erase(i);
         m_endpointListLock.Unlock(MUTEX_CONTEXT);
-        return ER_CONNECTION_LIMIT_EXCEEDED;
+        return status;
     }
     m_endpointListLock.Unlock();
     status = tcpEp->m_stream.SetNagle(false);
@@ -4417,7 +4418,7 @@ void TCPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
             uint32_t availRemoteClientsTcp = m_maxRemoteClientsTcp - m_numUntrustedClients;
             availRemoteClientsTcp = std::min(availRemoteClientsTcp, availConn);
             IpNameService::Instance().UpdateDynamicScore(TRANSPORT_TCP, availConn, maxConn, availRemoteClientsTcp, m_maxRemoteClientsTcp);
-            QStatus status = IpNameService::Instance().AdvertiseName(TRANSPORT_TCP, routerName, true, TRANSPORT_TCP);
+            status = IpNameService::Instance().AdvertiseName(TRANSPORT_TCP, routerName, true, TRANSPORT_TCP);
             m_routerNameAdvertised = true;
             if (status != ER_OK) {
                 QCC_LogError(status, ("TCPTransport::HandleNetworkEventInstance(): Failed to AdvertiseNameQuietly \"%s\"", routerName.c_str()));

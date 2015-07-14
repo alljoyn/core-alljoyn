@@ -257,6 +257,9 @@ class _TestEndpoint : public _BusEndpoint, public _TestEndpointInfo {
     QStatus PushMessage(Message& msg) { return TestPushMessage(msg, BusEndpoint::wrap(this)); }
     const String& GetUniqueName() const { return name; }
     bool AllowRemoteMessages() { return allow; }
+    bool IsInSession(SessionId sid) { return (sid == id); }
+    virtual void RegisterSessionId(SessionId sid) { id = sid; }
+
 };
 typedef ManagedObj<_TestEndpoint> TestEndpoint;
 
@@ -297,9 +300,12 @@ class _TestRemoteEndpoint : public _RemoteEndpoint, public _TestEndpointInfo {
     QStatus PushMessage(Message& msg) { return TestPushMessage(msg, BusEndpoint::wrap(this)); }
     const String& GetUniqueName() const { return name; }
     const String& GetRemoteName() const { return remoteName; }
-    void SetRemoteName(const String& name) { remoteName = name; }
+    void SetRemoteName(const String& newRemoteName) { remoteName = newRemoteName; }
     bool AllowRemoteMessages() { return allow; }
     uint32_t GetSessionId() const { return (uint32_t)id; }
+
+    bool IsInSession(SessionId sid) { return (sid == id); }
+    virtual void RegisterSessionId(SessionId sid) { id = sid; }
   private:
     String remoteName;
 };
@@ -318,11 +324,11 @@ class _TestVirtualEndpoint : public _VirtualEndpoint, public _TestEndpointInfo {
     { }
     virtual ~_TestVirtualEndpoint() { }
     QStatus PushMessage(Message& msg) { return TestPushMessage(msg, BusEndpoint::wrap(this)); }
-    QStatus PushMessage(Message& msg, SessionId id) { QCC_UNUSED(id); return TestPushMessage(msg, BusEndpoint::wrap(this)); }
+    QStatus PushMessage(Message& msg, SessionId sessionId) { QCC_UNUSED(sessionId); return TestPushMessage(msg, BusEndpoint::wrap(this)); }
     const String& GetUniqueName() const { return name; }
     bool AllowRemoteMessages() { return allow; }
-    QStatus AddSessionRef(SessionId sessionId, RemoteEndpoint& b2bEp) { QCC_UNUSED(sessionId); QCC_UNUSED(b2bEp); return ER_OK; }
-    QStatus AddSessionRef(SessionId sessionId, SessionOpts* opts, RemoteEndpoint& b2bEp) { QCC_UNUSED(sessionId); QCC_UNUSED(opts); QCC_UNUSED(b2bEp); return ER_OK; }
+    QStatus AddSessionRef(SessionId sessionId, RemoteEndpoint& sessionB2bEp) { QCC_UNUSED(sessionId); QCC_UNUSED(sessionB2bEp); return ER_OK; }
+    QStatus AddSessionRef(SessionId sessionId, SessionOpts* opts, RemoteEndpoint& seessionB2bEp) { QCC_UNUSED(sessionId); QCC_UNUSED(opts); QCC_UNUSED(seessionB2bEp); return ER_OK; }
     void RemoveSessionRef(SessionId sessionId) { QCC_UNUSED(sessionId); }
     TestRemoteEndpoint& GetTestRemoteEndpoint() { return b2bEp; }
   private:
@@ -560,17 +566,25 @@ class DaemonRouterTest : public TestParamTuple {
                         ((sep != dep) || (signalFlag == SF_SELF_JOIN))) {
                         RemoteEndpoint srcB2b;
                         RemoteEndpoint destB2b;
-                        bool useSrcB2b = false;
                         if (sep->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL) {
                             srcB2b = RemoteEndpoint::cast(TestVirtualEndpoint::cast(sep)->GetTestRemoteEndpoint());
-                            useSrcB2b = true;
+                            srcB2b->RegisterSessionId(id);
+                        } else {
+                            sep->RegisterSessionId(id);
                         }
+
                         if (dep->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL) {
                             destB2b = RemoteEndpoint::cast(TestVirtualEndpoint::cast(dep)->GetTestRemoteEndpoint());
                             BusEndpoint bep = BusEndpoint::cast(destB2b);
                             router->RegisterEndpoint(bep);
+                            destB2b->RegisterSessionId(id);
+                        } else {
+                            dep->RegisterSessionId(id);
                         }
-                        ASSERT_EQ(ER_OK, router->AddSessionRoute(id, sep, useSrcB2b ? &srcB2b : NULL, dep, destB2b));
+                        if ((sep == dep) && ((sep->GetEndpointType() == ENDPOINT_TYPE_REMOTE) || (sep->GetEndpointType() == ENDPOINT_TYPE_NULL))) {
+                            router->RegisterSelfJoin(sep->GetUniqueName(), id);
+                        }
+
                     }
                 }
             }
@@ -687,9 +701,15 @@ class DaemonRouterTest : public TestParamTuple {
     {
         String name = GenUniqueName(type, id, allow, slsMatchRule);
         TestEndpointInfo epInfo(name, type, id, allow, slsMatchRule);
+        if (type != ENDPOINT_TYPE_VIRTUAL) {
+            srcEpInfoList.push_back(epInfo);
+        }
         epInfoList.push_back(epInfo);
         if (!slsMatchRule) {
-            directEpInfoList.push_back(epInfo);
+            if (type != ENDPOINT_TYPE_VIRTUAL) {
+                srcDirectEpInfoList.push_back(epInfo);
+            }
+            dstDirectEpInfoList.push_back(epInfo);
         }
         if (slsMatchRule) {
             slsEpInfoList.push_back(epInfo);
@@ -725,12 +745,28 @@ class DaemonRouterTest : public TestParamTuple {
         return epInfoList;
     }
 
-    static list<TestEndpointInfo>& GetDirectEpInfoList()
+    static list<TestEndpointInfo>& GetSrcEpInfoList()
     {
         if (epInfoList.empty()) {
             GenEndpointInfoList();
         }
-        return directEpInfoList;
+        return srcEpInfoList;
+    }
+
+    static list<TestEndpointInfo>& GetSrcDirectEpInfoList()
+    {
+        if (epInfoList.empty()) {
+            GenEndpointInfoList();
+        }
+        return srcDirectEpInfoList;
+    }
+
+    static list<TestEndpointInfo>& GetDstDirectEpInfoList()
+    {
+        if (epInfoList.empty()) {
+            GenEndpointInfoList();
+        }
+        return dstDirectEpInfoList;
     }
 
     // Test params
@@ -759,7 +795,9 @@ class DaemonRouterTest : public TestParamTuple {
     static TestSessionlessObj* sessionlessObj;
     static LocalEndpoint localEp;
     static list<TestEndpointInfo> epInfoList;
-    static list<TestEndpointInfo> directEpInfoList;
+    static list<TestEndpointInfo> srcEpInfoList;
+    static list<TestEndpointInfo> srcDirectEpInfoList;
+    static list<TestEndpointInfo> dstDirectEpInfoList;
     static list<TestEndpointInfo> slsEpInfoList;
     static TestEndpointInfo emptyDestInfo;
 };
@@ -770,7 +808,9 @@ TestAllJoynObj* DaemonRouterTest::alljoynObj = NULL;
 TestSessionlessObj* DaemonRouterTest::sessionlessObj = NULL;
 LocalEndpoint DaemonRouterTest::localEp;
 list<TestEndpointInfo> DaemonRouterTest::epInfoList;
-list<TestEndpointInfo> DaemonRouterTest::directEpInfoList;
+list<TestEndpointInfo> DaemonRouterTest::srcEpInfoList;
+list<TestEndpointInfo> DaemonRouterTest::srcDirectEpInfoList;
+list<TestEndpointInfo> DaemonRouterTest::dstDirectEpInfoList;
 list<TestEndpointInfo> DaemonRouterTest::slsEpInfoList;
 
 TestEndpointInfo DaemonRouterTest::emptyDestInfo;
@@ -858,13 +898,16 @@ TEST_P(DaemonRouterTest, PushMessage)
 {
     BusEndpoint destEp;
     uint8_t flags = (uint8_t)msgFlagParam;
-    String destName = destInfo->name;
-    TestMessage testMsg(*bus, testMember, errorName, msgType, senderInfo->name, destName, sessionId, flags);
+    String testDestName = destInfo->name;
+    TestMessage testMsg(*bus, testMember, errorName, msgType, senderInfo->name, testDestName, sessionId, flags);
 
     ASSERT_EQ(msgType, testMsg->GetType()) << "Test bug: Failure to create correct message type";
 
     ASSERT_TRUE(senderEp->IsValid()) << "Should never happen.  Please fix bug in test code for invalid sender: "
                                      << senderInfo;
+
+    ASSERT_FALSE(senderInfo->type == ENDPOINT_TYPE_VIRTUAL) << "Should never happen.  Please fix bug in test code for virtual sender: "
+                                                            << senderInfo;
 
     // Decompose conditionals into simply named variables for easy (re)use.
     const bool onlySls = (signalFlag == SF_SLS_ONLY);
@@ -901,7 +944,7 @@ TEST_P(DaemonRouterTest, PushMessage)
     for (list<BusEndpoint>::iterator it = epList.begin(); it != epList.end(); ++it) {
         BusEndpoint& ep = *it;
         TestEndpointInfo epInfo = GetTestEndpointInfo(ep);
-        const bool epIsDest = msgIsUnicast && (ep->GetUniqueName() == destName);
+        const bool epIsDest = msgIsUnicast && (ep->GetUniqueName() == testDestName);
         const bool epIsB2b = (ep->GetEndpointType() == ENDPOINT_TYPE_BUS2BUS);
         const bool epIsVirtual = (ep->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL);
         const bool epAllowsRemote = ep->AllowRemoteMessages();
@@ -982,7 +1025,7 @@ TEST_P(DaemonRouterTest, PushMessage)
                      */
                     willRxNorm = willRxNorm || (epIsB2b && msgIsGlobalBroadcast && (senderEp != ep) && epAllowsRemote);
 
-                } else if (msgIsSessioncastable && epIsInSession) {
+                } else if (msgIsSessioncastable && epIsInSession && !epIsVirtual) {
                     /*
                      * Normal expectation is that sessioncast msgs will be
                      * delivered when both sender and dest are directly
@@ -1013,7 +1056,8 @@ TEST_P(DaemonRouterTest, PushMessage)
                      * dest or the sender self-joined.  ASACORE-1609 will
                      * address this.
                      */
-                    willRxNorm = willRxNorm || ((senderEp != ep) || selfJoin);
+                    willRxNorm = willRxNorm || ((senderEp != ep) || (((ep->GetEndpointType() == ENDPOINT_TYPE_REMOTE) || (ep->GetEndpointType() == ENDPOINT_TYPE_NULL)) && selfJoin));
+
                 }
             }
         }
@@ -1123,8 +1167,8 @@ TEST_P(DaemonRouterTest, PushMessage)
  */
 INSTANTIATE_TEST_CASE_P(SendSignalsDirect,
                         DaemonRouterTest,
-                        Combine(ValuesIn(DaemonRouterTest::GetDirectEpInfoList()),
-                                ValuesIn(DaemonRouterTest::GetDirectEpInfoList()),
+                        Combine(ValuesIn(DaemonRouterTest::GetSrcDirectEpInfoList()),
+                                ValuesIn(DaemonRouterTest::GetDstDirectEpInfoList()),
                                 Values(MESSAGE_SIGNAL),
                                 Values(0, TEST_SESSION_ID),
                                 Values(MF_NONE, MF_SESSIONLESS, MF_GLOBAL_BROADCAST),
@@ -1147,7 +1191,7 @@ INSTANTIATE_TEST_CASE_P(SendSignalsDirect,
  */
 INSTANTIATE_TEST_CASE_P(SendSignalsCast,
                         DaemonRouterTest,
-                        Combine(ValuesIn(DaemonRouterTest::GetEpInfoList()),
+                        Combine(ValuesIn(DaemonRouterTest::GetSrcEpInfoList()),
                                 Values(DaemonRouterTest::emptyDestInfo),
                                 Values(MESSAGE_SIGNAL),
                                 Values(0, TEST_SESSION_ID),
@@ -1171,8 +1215,8 @@ INSTANTIATE_TEST_CASE_P(SendSignalsCast,
  */
 INSTANTIATE_TEST_CASE_P(SendMethodCalls,
                         DaemonRouterTest,
-                        Combine(ValuesIn(DaemonRouterTest::GetDirectEpInfoList()),
-                                ValuesIn(DaemonRouterTest::GetDirectEpInfoList()),
+                        Combine(ValuesIn(DaemonRouterTest::GetSrcDirectEpInfoList()),
+                                ValuesIn(DaemonRouterTest::GetDstDirectEpInfoList()),
                                 Values(MESSAGE_METHOD_CALL),
                                 Values(0, TEST_SESSION_ID),
                                 Values(MF_NONE, MF_NO_REPLY_EXPECTED),
@@ -1197,8 +1241,8 @@ INSTANTIATE_TEST_CASE_P(SendMethodCalls,
  */
 INSTANTIATE_TEST_CASE_P(SendMethodReplies,
                         DaemonRouterTest,
-                        Combine(ValuesIn(DaemonRouterTest::GetDirectEpInfoList()),
-                                ValuesIn(DaemonRouterTest::GetDirectEpInfoList()),
+                        Combine(ValuesIn(DaemonRouterTest::GetSrcDirectEpInfoList()),
+                                ValuesIn(DaemonRouterTest::GetDstDirectEpInfoList()),
                                 Values(MESSAGE_METHOD_RET),
                                 Values(0, TEST_SESSION_ID),
                                 Values(MF_NONE),
@@ -1220,8 +1264,8 @@ INSTANTIATE_TEST_CASE_P(SendMethodReplies,
  */
 INSTANTIATE_TEST_CASE_P(SendErrors,
                         DaemonRouterTest,
-                        Combine(ValuesIn(DaemonRouterTest::GetDirectEpInfoList()),
-                                ValuesIn(DaemonRouterTest::GetDirectEpInfoList()),
+                        Combine(ValuesIn(DaemonRouterTest::GetSrcDirectEpInfoList()),
+                                ValuesIn(DaemonRouterTest::GetDstDirectEpInfoList()),
                                 Values(MESSAGE_ERROR),
                                 Values(0, TEST_SESSION_ID),
                                 Values(MF_NONE),

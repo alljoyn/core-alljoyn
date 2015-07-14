@@ -246,39 +246,39 @@ qcc::String MsgArg::ToString(size_t indent) const
     return str;
 }
 
-QStatus AllJoynArray::SetElements(const char* elemSig, size_t numElements, MsgArg* elements)
+QStatus AllJoynArray::SetElements(const char* signature, size_t number, MsgArg* arrayElements)
 {
     QStatus status = ER_OK;
-    if ((numElements != 0) && (elements == NULL)) {
+    if ((number != 0) && (arrayElements == NULL)) {
         status = ER_BAD_ARG_2;
     } else {
         /*
          * Check signature is valid for an array element type.
          */
-        if (SignatureUtils::CountCompleteTypes(elemSig) != 1) {
+        if (SignatureUtils::CountCompleteTypes(signature) != 1) {
             status = ER_BUS_BAD_SIGNATURE;
-        } else if (numElements) {
+        } else if (number) {
             /*
              * Check elements all have the same type. Note that a more rigorous check that the
              * signatures all match is performed when the array is marshaled.
              */
-            AllJoynTypeId typeId = elements[0].typeId;
-            for (size_t i = 1; i < numElements; i++) {
-                if (elements[i].typeId != typeId) {
+            AllJoynTypeId typeId = arrayElements[0].typeId;
+            for (size_t i = 1; i < number; i++) {
+                if (arrayElements[i].typeId != typeId) {
                     status = ER_BUS_BAD_VALUE;
-                    QCC_LogError(status, ("Array element[%d] does not have expected type", i, elemSig));
+                    QCC_LogError(status, ("Array element[%d] does not have expected type", i, signature));
                     break;
                 }
             }
         }
     }
     if (status == ER_OK) {
-        size_t len = strlen(elemSig);
+        size_t len = strlen(signature);
         this->elemSig = new char[len + 1];
-        memcpy(this->elemSig, elemSig, len);
+        memcpy(this->elemSig, signature, len);
         this->elemSig[len] = 0;
-        this->numElements = numElements;
-        this->elements = elements;
+        this->numElements = number;
+        this->elements = arrayElements;
     } else {
         this->elemSig = NULL;
         this->numElements = 0;

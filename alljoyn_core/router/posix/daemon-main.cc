@@ -102,7 +102,6 @@ static const char defaultConfig[] =
     "  <limit name=\"max_completed_connections\">32</limit>"
     "  <limit name=\"max_remote_clients_tcp\">0</limit>"
     "  <limit name=\"max_remote_clients_udp\">0</limit>"
-    "  <flag name=\"restrict_untrusted_clients\">true</flag>"
     "</busconfig>";
 #else
 static const char defaultConfig[] =
@@ -116,7 +115,6 @@ static const char defaultConfig[] =
     "  <property name=\"router_mobility\">Intermediate mobility</property>"
     "  <property name=\"router_availability\">3-6 hr</property>"
     "  <property name=\"router_node_connection\">Wireless</property>"
-    "  <flag name=\"restrict_untrusted_clients\">false</flag>"
     "</busconfig>";
 #endif
 

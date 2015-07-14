@@ -108,14 +108,14 @@ class BusObjectC : public BusObject {
         return AddInterface(*(const InterfaceDescription*)iface, (BusObject::AnnounceFlag)isAnnounced);
     }
 
-    QStatus AddMethodHandlerC(const alljoyn_interfacedescription_member member, alljoyn_messagereceiver_methodhandler_ptr handler, void* context)
+    QStatus AddMethodHandlerC(const alljoyn_interfacedescription_member member, alljoyn_messagereceiver_methodhandler_ptr handler, void* methodContext)
     {
         QCC_DbgTrace(("%s", __FUNCTION__));
         callbackMap.insert(pair<const ajn::InterfaceDescription::Member*, alljoyn_messagereceiver_methodhandler_ptr>(
                                (const ajn::InterfaceDescription::Member*)member.internal_member, handler));
         QStatus ret = AddMethodHandler((const ajn::InterfaceDescription::Member*)member.internal_member,
                                        static_cast<MessageReceiver::MethodHandler>(&BusObjectC::MethodHandlerRemap),
-                                       context);
+                                       methodContext);
         return ret;
     }
 

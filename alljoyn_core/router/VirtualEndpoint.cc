@@ -178,7 +178,7 @@ void _VirtualEndpoint::GetSessionIdsForB2B(RemoteEndpoint& endpoint, set<Session
     m_b2bEndpointsLock.Unlock(MUTEX_CONTEXT);
 }
 
-bool _VirtualEndpoint::HasSession(SessionId sessionId)
+bool _VirtualEndpoint::IsInSession(SessionId sessionId)
 {
     m_b2bEndpointsLock.Lock(MUTEX_CONTEXT);
     bool found = false;

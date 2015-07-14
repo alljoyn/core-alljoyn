@@ -76,7 +76,7 @@ static QStatus BuildInterface(BusAttachment& bus)
     status = intf->AddMethod("KnockAndRun", "", "", "", MEMBER_ANNOTATE_NO_REPLY);
     assert(ER_OK == status);
 
-    status = intf->AddSignal("PersonPassedThrough", "s", "name");
+    status = intf->AddSignal("PersonPassedThrough", "s", "name", MEMBER_ANNOTATE_SESSIONCAST);
     assert(ER_OK == status);
 
     intf->Activate();

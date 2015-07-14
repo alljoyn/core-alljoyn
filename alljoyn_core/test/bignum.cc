@@ -474,10 +474,10 @@ int CDECL_CALL main()
             a.gen_rand(1);
             // Brute force modular exponentiation for checking
             BigNum check = 1;
-            size_t i = e.bit_len();
-            while (i) {
+            size_t k = e.bit_len();
+            while (k) {
                 check = (check * check) % m;
-                if (e.test_bit(--i)) {
+                if (e.test_bit(--k)) {
                     check = (check * a) % m;
                 }
             }

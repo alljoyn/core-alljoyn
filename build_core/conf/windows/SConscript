@@ -42,7 +42,10 @@ env.Append(CPPDEFINES=['QCC_CPU_X86',
 env.Append(CPPDEFINES=['_CRT_SECURE_NO_WARNINGS'])
 
 # Set MS OS version number
-if env['OS'] == 'win7':
+if env['OS'] == 'win10':
+    # Windows 10
+    env.Append(CPPDEFINES=[('_WIN32_WINNT', '_WIN32_WINNT_WIN10')])
+elif env['OS'] == 'win7':
     # Windows 7
     env.Append(CPPDEFINES=[('_WIN32_WINNT', '_WIN32_WINNT_WIN7')])
 elif env['OS'] == 'winxp':
@@ -72,8 +75,6 @@ elif env['OS'] == 'winxp':
 #       by checking if( ptr) This also is a common problem in the language bindings
 #       with things like QCC_BOOL and jboolean being defined as integers. For this
 #       reason we are choosing to suppress this particular warning.
-# C4996 'strdup': The POSIX name for this item is deprecated. Instead, use the ISO
-#       C++ conformant name: _strdup. See online help for details.
 # C4351 "new behavior: elements of array 'array' will be default initialized"
 #       This warning is triggered when we initialize the guid array in the GUID128()
 #       constructor. We intentionally want to initialize this array, so this behavior
@@ -82,7 +83,7 @@ elif env['OS'] == 'winxp':
 #       The warning is triggered by the monty_rho() function in BigNum.cc when it
 #       negates an unsigned value before truncating it to uint32_t. This is an
 #       intentional part of the algorithm so the warning can be suppressed.
-env.Append(CXXFLAGS=['/wd4244', '/wd4267','/wd4345', '/wd4355', '/wd4800', '/wd4996', '/wd4351', '/wd4146'])
+env.Append(CXXFLAGS=['/wd4244', '/wd4267','/wd4345', '/wd4355', '/wd4800', '/wd4351', '/wd4146'])
 
 env.Append(CFLAGS=['/nologo'])
 env.Append(CXXFLAGS=['/nologo'])

@@ -223,6 +223,54 @@ static const char* IntrospectWithDescriptionString3[] = {
     "</node>\n"
 };
 
+static const char* IntrospectWithDescriptionString4 =
+    "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.0//EN\"\n"
+    "\"http://www.allseen.org/alljoyn/introspect-1.0.dtd\">\n"
+    "<node>\n"
+    "  <description>This is the object</description>\n"
+    "  <node name=\"org\"/>\n"
+    "  <interface name=\"org.alljoyn.Bus.DescriptionInterface\">\n"
+    "    <signal name=\"globalBroadcastSignal\" sessionless=\"false\" globalbroadcast=\"true\">\n"
+    "      <arg type=\"s\" direction=\"out\"/>\n"
+    "    </signal>\n"
+    "    <signal name=\"legacyNonSessionlessSignal\" sessionless=\"false\">\n"
+    "      <description>legacy non-sessionless signal</description>\n"
+    "      <arg type=\"s\" direction=\"out\"/>\n"
+    "    </signal>\n"
+    "    <signal name=\"legacySessionlessSignal\" sessionless=\"true\">\n"
+    "      <description>legacy sessionless signal</description>\n"
+    "      <arg type=\"s\" direction=\"out\"/>\n"
+    "    </signal>\n"
+    "    <signal name=\"legacySignal\" sessionless=\"false\">\n"
+    "      <arg type=\"s\" direction=\"out\"/>\n"
+    "    </signal>\n"
+    "    <signal name=\"sessioncastSignal\" sessioncast=\"true\" sessionless=\"false\">\n"
+    "      <arg type=\"s\" direction=\"out\"/>\n"
+    "    </signal>\n"
+    "    <signal name=\"sessionlessSignal\" sessionless=\"true\">\n"
+    "      <arg type=\"s\" direction=\"out\"/>\n"
+    "    </signal>\n"
+    "    <signal name=\"unicastSignal\" sessionless=\"false\" unicast=\"true\">\n"
+    "      <arg type=\"s\" direction=\"out\"/>\n"
+    "    </signal>\n"
+    "  </interface>\n"
+    "  <interface name=\"org.freedesktop.DBus.Introspectable\">\n"
+    "    <method name=\"Introspect\">\n"
+    "      <arg name=\"data\" type=\"s\" direction=\"out\"/>\n"
+    "    </method>\n"
+    "  </interface>\n"
+    "  <interface name=\"org.allseen.Introspectable\">\n"
+    "    <method name=\"GetDescriptionLanguages\">\n"
+    "      <arg name=\"languageTags\" type=\"as\" direction=\"out\"/>\n"
+    "    </method>\n"
+    "    <method name=\"IntrospectWithDescription\">\n"
+    "      <arg name=\"languageTag\" type=\"s\" direction=\"in\"/>\n"
+    "      <arg name=\"data\" type=\"s\" direction=\"out\"/>\n"
+    "    </method>\n"
+    "    <annotation name=\"org.alljoyn.Bus.Secure\" value=\"off\"/>\n"
+    "  </interface>\n"
+    "</node>\n";
+
 class MyTranslator : public Translator {
   public:
 
@@ -461,4 +509,53 @@ TEST_F(DescriptionTest, IntrospectableDescriptionObjectNoIntfTranslate) {
 
     IntrospectWithDescription(m_remoteObj, "en", IntrospectWithDescriptionString3[0]);
     IntrospectWithDescription(m_remoteObj, "de", IntrospectWithDescriptionString3[1]);
+}
+
+TEST_F(DescriptionTest, SignalTypes)
+{
+    InterfaceDescription* intf = NULL;
+    EXPECT_EQ(ER_OK, s_msgBusServer->CreateInterface(INTERFACE_NAME, intf));
+    ASSERT_TRUE(intf != NULL);
+
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#endif
+    ASSERT_EQ(ER_OK, intf->AddSignal("legacySignal", "s", NULL));
+
+    intf->SetDescriptionLanguage("en");
+    ASSERT_EQ(ER_OK, intf->AddSignal("legacyNonSessionlessSignal", "s", NULL));
+    ASSERT_EQ(ER_OK, intf->SetMemberDescription("legacyNonSessionlessSignal", "legacy non-sessionless signal", false));
+
+    ASSERT_EQ(ER_OK, intf->AddSignal("legacySessionlessSignal", "s", NULL));
+    ASSERT_EQ(ER_OK, intf->SetMemberDescription("legacySessionlessSignal", "legacy sessionless signal", true));
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(pop)
+#endif
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
+
+    ASSERT_EQ(ER_OK, intf->AddSignal("sessioncastSignal", "s", NULL, MEMBER_ANNOTATE_SESSIONCAST));
+    ASSERT_EQ(ER_OK, intf->AddSignal("sessionlessSignal", "s", NULL, MEMBER_ANNOTATE_SESSIONLESS));
+    ASSERT_EQ(ER_OK, intf->AddSignal("unicastSignal", "s", NULL, MEMBER_ANNOTATE_UNICAST));
+    ASSERT_EQ(ER_OK, intf->AddSignal("globalBroadcastSignal", "s", NULL, MEMBER_ANNOTATE_GLOBAL_BROADCAST));
+
+    MyTranslator translator;
+    intf->SetDescriptionTranslator(&translator);
+    intf->Activate();
+
+    ASSERT_TRUE((m_testObj = new DescriptionObject(*intf, SERVICE_PATH)) != NULL);
+    m_testObj->SetDescriptionTranslator(&translator);
+    ASSERT_EQ(ER_OK, s_msgBusServer->RegisterBusObject(*m_testObj));
+    ASSERT_EQ(ER_OK, s_msgBusServer->Connect());
+
+    ASSERT_TRUE((m_remoteObj = new ProxyBusObject(*s_msgBusClient, s_msgBusServer->GetUniqueName().c_str(), SERVICE_PATH, 0)) != NULL);
+    EXPECT_EQ(ER_OK, m_remoteObj->IntrospectRemoteObject());
+
+    IntrospectWithDescription(m_remoteObj, "en", IntrospectWithDescriptionString4);
 }

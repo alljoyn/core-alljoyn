@@ -135,8 +135,8 @@ class MyBusListener : public BusListener, public SessionListener {
                        newOwner ? newOwner : "null");
     }
 
-    void SessionLost(SessionId sessionId, SessionLostReason reason) {
-        QCC_SyncPrintf("SessionLost(%08x) was called. Reason = %u.\n", sessionId, reason);
+    void SessionLost(SessionId lostSessionId, SessionLostReason reason) {
+        QCC_SyncPrintf("SessionLost(%08x) was called. Reason = %u.\n", lostSessionId, reason);
         g_interrupt = true;
     }
 
@@ -187,7 +187,7 @@ class LocalTestObject : public BusObject {
     }
 
     LocalTestObject(BusAttachment& bus, const char* path) :
-        BusObject(bus, path),
+        BusObject(path),
         sensitivity(0)
     {
         const InterfaceDescription* regTestIntf = bus.GetInterface(::org::alljoyn::alljoyn_test::InterfaceName);
@@ -362,9 +362,9 @@ int CDECL_CALL main(int argc, char** argv)
     InterfaceDescription* testIntf = NULL;
     status = g_msgBus->CreateInterface(::org::alljoyn::alljoyn_test::InterfaceName, testIntf, false);
     if ((ER_OK == status) && testIntf) {
-        testIntf->AddSignal("ADC_Update", "i", "value");
-        testIntf->AddSignal("Gyro_Update", "ii", "x,y");
-        testIntf->AddSignal("Button_Down", "i", "dummy");
+        testIntf->AddSignal("ADC_Update", "i", "value", 0);
+        testIntf->AddSignal("Gyro_Update", "ii", "x,y", 0);
+        testIntf->AddSignal("Button_Down", "i", "dummy", 0);
         testIntf->Activate();
     } else {
         if (ER_OK == status) {

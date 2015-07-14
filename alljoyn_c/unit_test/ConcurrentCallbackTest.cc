@@ -30,9 +30,9 @@ static const char* OBJECT_NAME = "org.alljoyn.test.BusAttachmentTest";
 static QCC_BOOL name_owner_changed_flag = QCC_FALSE;
 static QCC_BOOL listener_registered_flag = QCC_FALSE;
 
-static void AJ_CALL listener_registered(const void* context, alljoyn_busattachment s_bus) {
+static void AJ_CALL listener_registered(const void* context, alljoyn_busattachment busAttachment) {
     QCC_UNUSED(context);
-    QCC_UNUSED(s_bus);
+    QCC_UNUSED(busAttachment);
     listener_registered_flag = QCC_TRUE;
 }
 

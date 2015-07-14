@@ -4461,12 +4461,12 @@ void IpNameServiceImpl::SendOutboundMessageQuietly(Packet packet)
                                 uint32_t numUdp = advRData->GetNumNames(TRANSPORT_UDP);
                                 uint32_t numTcpUdp = advRData->GetNumNames(TRANSPORT_TCP | TRANSPORT_UDP);
                                 for (uint32_t j = 0; j < numUdp; j++) {
-                                    String name = advRData->GetNameAt(TRANSPORT_UDP, j);
-                                    udpNames.push_back(name);
+                                    String advRDataName = advRData->GetNameAt(TRANSPORT_UDP, j);
+                                    udpNames.push_back(advRDataName);
                                 }
                                 for (uint32_t j = 0; j < numTcpUdp; j++) {
-                                    String name = advRData->GetNameAt(TRANSPORT_TCP | TRANSPORT_UDP, j);
-                                    udpNames.push_back(name);
+                                    String advRDataName = advRData->GetNameAt(TRANSPORT_TCP | TRANSPORT_UDP, j);
+                                    udpNames.push_back(advRDataName);
                                 }
                                 advRData->Reset();
                                 advRData->SetTransport(TRANSPORT_UDP);
@@ -4494,12 +4494,12 @@ void IpNameServiceImpl::SendOutboundMessageQuietly(Packet packet)
                                 uint32_t numTcp = advRData->GetNumNames(TRANSPORT_TCP);
                                 uint32_t numTcpUdp = advRData->GetNumNames(TRANSPORT_TCP | TRANSPORT_UDP);
                                 for (uint32_t j = 0; j < numTcp; j++) {
-                                    String name = advRData->GetNameAt(TRANSPORT_TCP, j);
-                                    tcpNames.push_back(name);
+                                    String advRDataName = advRData->GetNameAt(TRANSPORT_TCP, j);
+                                    tcpNames.push_back(advRDataName);
                                 }
                                 for (uint32_t j = 0; j < numTcpUdp; j++) {
-                                    String name = advRData->GetNameAt(TRANSPORT_TCP | TRANSPORT_UDP, j);
-                                    tcpNames.push_back(name);
+                                    String advRDataName = advRData->GetNameAt(TRANSPORT_TCP | TRANSPORT_UDP, j);
+                                    tcpNames.push_back(advRDataName);
                                 }
                                 advRData->Reset();
                                 advRData->SetTransport(TRANSPORT_TCP);
@@ -4944,7 +4944,7 @@ void IpNameServiceImpl::SendOutboundMessageActively(Packet packet, const qcc::IP
                     if (!reliableTransportPort && !unreliableTransportPort && !ttlZero) {
                         continue;
                     } else if (!reliableTransportPort) {
-                        uint32_t numMatches = mdnsPacket->GetNumMatches("advertise.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS);
+                        numMatches = mdnsPacket->GetNumMatches("advertise.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS);
                         for (uint32_t match = 0; match < numMatches; match++) {
                             MDNSResourceRecord* advRecord;
                             if (!mdnsPacket->GetAdditionalRecordAt("advertise.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, match, &advRecord)) {
@@ -5014,7 +5014,7 @@ void IpNameServiceImpl::SendOutboundMessageActively(Packet packet, const qcc::IP
                         }
                     } else if (!unreliableTransportPort) {
                         MDNSResourceRecord* advRecord;
-                        uint32_t numMatches = mdnsPacket->GetNumMatches("advertise.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS);
+                        numMatches = mdnsPacket->GetNumMatches("advertise.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS);
                         for (uint32_t match = 0; match < numMatches; match++) {
                             if (!mdnsPacket->GetAdditionalRecordAt("advertise.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, match, &advRecord)) {
                                 continue;
@@ -5550,8 +5550,8 @@ void* IpNameServiceImpl::Run(void* arg)
                 size_t nbytes;
                 int32_t localInterfaceIndex;
 
-                QStatus status = qcc::RecvWithAncillaryData(sockFd, remoteAddress, remotePort, localAddress,
-                                                            buffer, bufsize, nbytes, localInterfaceIndex);
+                status = qcc::RecvWithAncillaryData(sockFd, remoteAddress, remotePort, localAddress,
+                                                    buffer, bufsize, nbytes, localInterfaceIndex);
 
                 if (status != ER_OK) {
                     //
@@ -5599,31 +5599,31 @@ void* IpNameServiceImpl::Run(void* arg)
                 bool destIsIPv6Local = false;
                 String ifName;
 
-                for (uint32_t i = 0; i < m_liveInterfaces.size(); ++i) {
+                for (uint32_t j = 0; j < m_liveInterfaces.size(); ++j) {
 
-                    if (m_liveInterfaces[i].m_multicastMDNSsockFd == sockFd) {
-                        localPort = m_liveInterfaces[i].m_multicastMDNSPort;
-                        ifIndex = m_liveInterfaces[i].m_index;
-                        ifName = m_liveInterfaces[i].m_interfaceName;
+                    if (m_liveInterfaces[j].m_multicastMDNSsockFd == sockFd) {
+                        localPort = m_liveInterfaces[j].m_multicastMDNSPort;
+                        ifIndex = m_liveInterfaces[j].m_index;
+                        ifName = m_liveInterfaces[j].m_interfaceName;
                     }
-                    if (m_liveInterfaces[i].m_multicastsockFd == sockFd) {
-                        localPort = m_liveInterfaces[i].m_multicastPort;
-                        ifIndex = m_liveInterfaces[i].m_index;
-                        ifName = m_liveInterfaces[i].m_interfaceName;
+                    if (m_liveInterfaces[j].m_multicastsockFd == sockFd) {
+                        localPort = m_liveInterfaces[j].m_multicastPort;
+                        ifIndex = m_liveInterfaces[j].m_index;
+                        ifName = m_liveInterfaces[j].m_interfaceName;
                     }
 
-                    if (!destIsIPv4Local && m_liveInterfaces[i].m_address.IsIPv4()
-                        && localAddress == m_liveInterfaces[i].m_address) {
+                    if (!destIsIPv4Local && m_liveInterfaces[j].m_address.IsIPv4()
+                        && localAddress == m_liveInterfaces[j].m_address) {
                         destIsIPv4Local = true;
-                        localPort = m_liveInterfaces[i].m_unicastPort;
-                        ifIndex =  m_liveInterfaces[i].m_index;
+                        localPort = m_liveInterfaces[j].m_unicastPort;
+                        ifIndex =  m_liveInterfaces[j].m_index;
                     }
 
-                    if (!destIsIPv6Local && m_liveInterfaces[i].m_address.IsIPv6()
-                        && localAddress == m_liveInterfaces[i].m_address) {
+                    if (!destIsIPv6Local && m_liveInterfaces[j].m_address.IsIPv6()
+                        && localAddress == m_liveInterfaces[j].m_address) {
                         destIsIPv6Local = true;
-                        localPort = m_liveInterfaces[i].m_unicastPort;
-                        ifIndex =  m_liveInterfaces[i].m_index;
+                        localPort = m_liveInterfaces[j].m_unicastPort;
+                        ifIndex =  m_liveInterfaces[j].m_index;
                     }
                 }
 
@@ -5772,8 +5772,8 @@ void IpNameServiceImpl::GetResponsePackets(std::list<Packet>& packets, bool quie
 
                 set<String> advertising = GetAdvertising(tm);
                 int count = 0;
-                for (set<qcc::String>::iterator i = advertising.begin(); i != advertising.end(); ++i) {
-                    QCC_DbgPrintf(("IpNameServiceImpl::GetResponsePackets(): Accumulating \"%s\"", (*i).c_str()));
+                for (set<qcc::String>::iterator it = advertising.begin(); it != advertising.end(); ++it) {
+                    QCC_DbgPrintf(("IpNameServiceImpl::GetResponsePackets(): Accumulating \"%s\"", (*it).c_str()));
 
                     //
                     // It is possible that we have accumulated more advertisements than will
@@ -5804,7 +5804,7 @@ void IpNameServiceImpl::GetResponsePackets(std::list<Packet>& packets, bool quie
                     if (!count) {
                         currentAdvert.SetTransport(tm);
                     }
-                    currentAdvert.SetValue("name", *i);
+                    currentAdvert.SetValue("name", *it);
                     uint32_t currentAdvertSize = currentAdvert.GetSerializedSize() - 2;
                     //
                     // We cheat a little in order to avoid a string copy and use our
@@ -5822,17 +5822,17 @@ void IpNameServiceImpl::GetResponsePackets(std::list<Packet>& packets, bool quie
                         additionalPacket->SetHeader(mdnsHeader);
 
                         if ((tm & TRANSPORT_TCP) && (!m_reliableIPv4PortMap[TRANSPORT_INDEX_TCP].empty() || m_reliableIPv6Port[TRANSPORT_INDEX_TCP])) {
-                            MDNSResourceRecord txtRecordTcp(m_guid + "._alljoyn._tcp.local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, &txtRDataTcp);
+                            MDNSResourceRecord newTxtRecordTcp(m_guid + "._alljoyn._tcp.local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, &txtRDataTcp);
                             additionalPacket->AddAnswer(ptrRecordTcp);
                             additionalPacket->AddAnswer(srvRecordTcp);
-                            additionalPacket->AddAnswer(txtRecordTcp);
+                            additionalPacket->AddAnswer(newTxtRecordTcp);
                         }
 
                         if (tm & TRANSPORT_UDP && (!m_unreliableIPv4PortMap[TRANSPORT_INDEX_UDP].empty() || m_unreliableIPv6Port[TRANSPORT_INDEX_UDP])) {
-                            MDNSResourceRecord txtRecordUdp(m_guid + "._alljoyn._udp.local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, &txtRDataUdp);
+                            MDNSResourceRecord newTxtRecordUdp(m_guid + "._alljoyn._udp.local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, &txtRDataUdp);
                             additionalPacket->AddAnswer(ptrRecordUdp);
                             additionalPacket->AddAnswer(srvRecordUdp);
-                            additionalPacket->AddAnswer(txtRecordUdp);
+                            additionalPacket->AddAnswer(newTxtRecordUdp);
                         }
 
                         additionalPacket->AddAdditionalRecord(advertiseRecord);
@@ -5846,7 +5846,7 @@ void IpNameServiceImpl::GetResponsePackets(std::list<Packet>& packets, bool quie
                         refRData = static_cast<MDNSSenderRData*>(refRecord1->GetRData());
                         advRData->Reset();
                         advRData->SetTransport(tm);
-                        advRData->SetValue("name", *i);
+                        advRData->SetValue("name", *it);
                         refRData->SetSearchID(id);
                         if (quietly) {
                             additionalPacket->SetDestination(destination);
@@ -5862,7 +5862,7 @@ void IpNameServiceImpl::GetResponsePackets(std::list<Packet>& packets, bool quie
                         packets.push_back(Packet::cast(additionalPacket));
                         count = 1;
                     } else {
-                        QCC_DbgPrintf(("IpNameServiceImpl::GetResponsePackets(): Message has room.  Adding \"%s\"", (*i).c_str()));
+                        QCC_DbgPrintf(("IpNameServiceImpl::GetResponsePackets(): Message has room.  Adding \"%s\"", (*it).c_str()));
                         MDNSResourceRecord* answer;
                         bool tcpAnswer = MDNSPacket::cast(packets.back())->GetAnswer("_alljoyn._tcp.local.", MDNSResourceRecord::PTR, &answer);
                         bool udpAnswer = MDNSPacket::cast(packets.back())->GetAnswer("_alljoyn._udp.local.", MDNSResourceRecord::PTR, &answer);
@@ -5879,15 +5879,15 @@ void IpNameServiceImpl::GetResponsePackets(std::list<Packet>& packets, bool quie
                         if (!count) {
                             advRData->SetTransport(tm);
                         }
-                        advRData->SetValue("name", *i);
+                        advRData->SetValue("name", *it);
                         count++;
                     }
                 }
                 if (quietly) {
                     set<String> advertising_quietly = GetAdvertisingQuietly(tm);
 
-                    for (set<qcc::String>::iterator i = advertising_quietly.begin(); i != advertising_quietly.end(); ++i) {
-                        QCC_DbgPrintf(("IpNameServiceImpl::GetResponsePackets(): Accumulating (quiet) \"%s\"", (*i).c_str()));
+                    for (set<qcc::String>::iterator it = advertising_quietly.begin(); it != advertising_quietly.end(); ++it) {
+                        QCC_DbgPrintf(("IpNameServiceImpl::GetResponsePackets(): Accumulating (quiet) \"%s\"", (*it).c_str()));
 
                         size_t currentSize = packets.back()->GetSerializedSize();
                         currentSize += aaaaRecordSize;
@@ -5897,7 +5897,7 @@ void IpNameServiceImpl::GetResponsePackets(std::list<Packet>& packets, bool quie
                         if (!count) {
                             currentAdvert.SetTransport(tm);
                         }
-                        advRData->SetValue("name", *i);
+                        advRData->SetValue("name", *it);
                         uint32_t currentAdvertSize = currentAdvert.GetSerializedSize() - 2;
                         if (currentSize + currentAdvertSize  > NS_MESSAGE_MAX) {
                             QCC_DbgPrintf(("IpNameServiceImpl::GetResponsePackets(): Message is full"));
@@ -5912,20 +5912,20 @@ void IpNameServiceImpl::GetResponsePackets(std::list<Packet>& packets, bool quie
                                 if (m_reliableIPv6Port[TRANSPORT_INDEX_TCP]) {
                                     txtRDataTcp.SetValue("r6port", U32ToString(m_reliableIPv6Port[TRANSPORT_INDEX_TCP]));
                                 }
-                                MDNSResourceRecord txtRecordTcp(m_guid + "._alljoyn._tcp.local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, &txtRDataTcp);
+                                MDNSResourceRecord newTxtRecordTcp(m_guid + "._alljoyn._tcp.local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, &txtRDataTcp);
                                 additionalPacket->AddAnswer(ptrRecordTcp);
                                 additionalPacket->AddAnswer(srvRecordTcp);
-                                additionalPacket->AddAnswer(txtRecordTcp);
+                                additionalPacket->AddAnswer(newTxtRecordTcp);
                             }
 
                             if (tm & TRANSPORT_UDP && (!m_unreliableIPv4PortMap[TRANSPORT_INDEX_UDP].empty() || m_unreliableIPv6Port[TRANSPORT_INDEX_UDP])) {
                                 if (m_unreliableIPv6Port[TRANSPORT_INDEX_UDP]) {
                                     txtRDataUdp.SetValue("u6port", U32ToString(m_unreliableIPv6Port[TRANSPORT_INDEX_UDP]));
                                 }
-                                MDNSResourceRecord txtRecordUdp(m_guid + "._alljoyn._udp.local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, &txtRDataUdp);
+                                MDNSResourceRecord newTxtRecordUdp(m_guid + "._alljoyn._udp.local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, &txtRDataUdp);
                                 additionalPacket->AddAnswer(ptrRecordUdp);
                                 additionalPacket->AddAnswer(srvRecordUdp);
-                                additionalPacket->AddAnswer(txtRecordUdp);
+                                additionalPacket->AddAnswer(newTxtRecordUdp);
                             }
 
                             additionalPacket->AddAdditionalRecord(advertiseRecord);
@@ -5939,7 +5939,7 @@ void IpNameServiceImpl::GetResponsePackets(std::list<Packet>& packets, bool quie
                             refRData = static_cast<MDNSSenderRData*>(refRecord1->GetRData());
                             advRData->Reset();
                             advRData->SetTransport(tm);
-                            advRData->SetValue("name", *i);
+                            advRData->SetValue("name", *it);
                             refRData->SetSearchID(id);
                             additionalPacket->SetDestination(destination);
                             packets.push_back(Packet::cast(additionalPacket));
@@ -5961,8 +5961,8 @@ void IpNameServiceImpl::GetResponsePackets(std::list<Packet>& packets, bool quie
                             if (!count) {
                                 advRData->SetTransport(tm);
                             }
-                            QCC_DbgPrintf(("IpNameServiceImpl::GetResponsePackets(): Message has room.  Adding (quiet) \"%s\"", (*i).c_str()));
-                            advRData->SetValue("name", *i);
+                            QCC_DbgPrintf(("IpNameServiceImpl::GetResponsePackets(): Message has room.  Adding (quiet) \"%s\"", (*it).c_str()));
+                            advRData->SetValue("name", *it);
                             count++;
                         }
                     }
@@ -6544,15 +6544,15 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
 
             //Do not send non-matching names if replying quietly
             if (quietly) {
-                bool ignore = true;
+                bool ignoreName = true;
                 for (vector<String>::iterator itWkn = wkns.begin(); itWkn != wkns.end(); itWkn++) {
                     //Do not send non-matching names if replying quietly
                     if (!(WildcardMatch((*i), (*itWkn)))) {
-                        ignore = false;
+                        ignoreName = false;
                         break;
                     }
                 }
-                if (ignore) {
+                if (ignoreName) {
                     continue;
                 }
             }
@@ -6641,15 +6641,15 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
         if (quietly) {
             for (set<qcc::String>::iterator i = m_advertised_quietly[transportIndex].begin(); i != m_advertised_quietly[transportIndex].end(); ++i) {
                 if (quietly) {
-                    bool ignore = true;
+                    bool ignoreName = true;
                     for (vector<String>::iterator itWkn = wkns.begin(); itWkn != wkns.end(); itWkn++) {
                         //Do not send non-matching names if replying quietly
                         if (!(WildcardMatch((*i), (*itWkn)))) {
-                            ignore = false;
+                            ignoreName = false;
                             break;
                         }
                     }
-                    if (ignore) {
+                    if (ignoreName) {
                         continue;
                     }
                 }
@@ -6830,15 +6830,15 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
 
                 //Do not send non-matching names if requestor has set send_matching_only i.e. wkns.size() > 0
                 if (wkns.size() > 0) {
-                    bool ignore = true;
+                    bool ignoreName = true;
                     for (vector<String>::iterator itWkn = wkns.begin(); itWkn != wkns.end(); itWkn++) {
                         //Do not send non-matching names if requestor has set send_matching_only i.e. wkns.size() > 0
                         if (!(WildcardMatch((*it), (*itWkn)))) {
-                            ignore = false;
+                            ignoreName = false;
                             break;
                         }
                     }
-                    if (ignore) {
+                    if (ignoreName) {
                         continue;
                     }
                 }
@@ -6929,15 +6929,15 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
                 for (set<qcc::String>::iterator it = advertising_quietly.begin(); it != advertising_quietly.end(); ++it) {
                     //Do not send non-matching names if requestor has set send_matching_only i.e. wkns.size() > 0
                     if (wkns.size() > 0) {
-                        bool ignore = true;
+                        bool ignoreName = true;
                         for (vector<String>::iterator itWkn = wkns.begin(); itWkn != wkns.end(); itWkn++) {
                             //Do not send non-matching names if requestor has set send_matching_only i.e. wkns.size() > 0
                             if (!(WildcardMatch((*it), (*itWkn)))) {
-                                ignore = false;
+                                ignoreName = false;
                                 break;
                             }
                         }
-                        if (ignore) {
+                        if (ignoreName) {
                             continue;
                         }
                     }
@@ -7631,7 +7631,6 @@ void IpNameServiceImpl::HandleProtocolMessage(uint8_t const* buffer, uint32_t nb
             // would be redundant, so we have to set it from the nsPacket version
             // before passing it off.
             //
-            uint32_t nsVersion, msgVersion;
             nsPacket->GetVersion(nsVersion, msgVersion);
             isAt.SetVersion(nsVersion, msgVersion);
             if (m_loopback || (isAt.GetGuid() != m_guid)) {

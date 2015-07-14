@@ -500,10 +500,10 @@ TEST(BigNumTest, ModularExponentiationStress) {
             a.gen_rand(1);
             // Brute force modular exponentiation for checking
             BigNum check = 1;
-            size_t i = e.bit_len();
-            while (i) {
+            size_t testInt = e.bit_len();
+            while (testInt) {
                 check = (check * check) % m;
-                if (e.test_bit(--i)) {
+                if (e.test_bit(--testInt)) {
                     check = (check * a) % m;
                 }
             }

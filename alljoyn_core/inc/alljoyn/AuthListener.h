@@ -100,31 +100,31 @@ class AuthListener {
         /**
          * Sets a requested password, pincode, or passphrase.
          *
-         * @param pwd  The password to set.
+         * @param password  The password to set.
          */
-        void SetPassword(const qcc::String& pwd) { this->pwd = pwd; mask |= CRED_PASSWORD; }
+        void SetPassword(const qcc::String& password) { this->pwd = password; mask |= CRED_PASSWORD; }
 
         /**
          * Sets a requested user name.
          *
-         * @param userName  The user name to set.
+         * @param newUserName  The user name to set.
          */
-        void SetUserName(const qcc::String& userName) { this->userName = userName; mask |= CRED_USER_NAME; }
+        void SetUserName(const qcc::String& newUserName) { this->userName = newUserName; mask |= CRED_USER_NAME; }
 
         /**
          * Sets a requested public key certificate chain. The certificates must be PEM encoded.
          *
-         * @param certChain  The certificate chain to set.
+         * @param certificateChain  The certificate chain to set.
          */
-        void SetCertChain(const qcc::String& certChain) { this->certChain = certChain; mask |= CRED_CERT_CHAIN; }
+        void SetCertChain(const qcc::String& certificateChain) { this->certChain = certificateChain; mask |= CRED_CERT_CHAIN; }
 
         /**
          * Sets a requested private key. The private key must be PEM encoded and may be encrypted. If
          * the private key is encrypted the passphrase required to decrypt it must also be supplied.
          *
-         * @param pk  The private key to set.
+         * @param privateKey  The private key to set.
          */
-        void SetPrivateKey(const qcc::String& pk) { this->pk = pk; mask |= CRED_PRIVATE_KEY; }
+        void SetPrivateKey(const qcc::String& privateKey) { this->pk = privateKey; mask |= CRED_PRIVATE_KEY; }
 
         /**
          * Sets a logon entry. For example for the Secure Remote Password protocol in RFC 5054, a
@@ -132,9 +132,9 @@ class AuthListener {
          * N:g:s:v where N,g,s, and v are ASCII encoded hexadecimal strings and are separated by
          * colons.
          *
-         * @param logonEntry  The logon entry to set.
+         * @param newLogonEntry  The logon entry to set.
          */
-        void SetLogonEntry(const qcc::String& logonEntry) { this->logonEntry = logonEntry; mask |= CRED_LOGON_ENTRY; }
+        void SetLogonEntry(const qcc::String& newLogonEntry) { this->logonEntry = newLogonEntry; mask |= CRED_LOGON_ENTRY; }
 
         /**
          * Sets an expiration time in seconds relative to the current time for the credentials. This value is optional and
@@ -142,9 +142,9 @@ class AuthListener {
          * keys based on the provided credentials are invalidated and a new authentication exchange will be required. If an
          * expiration is not set the default expiration time for the requested authentication mechanism is used.
          *
-         * @param expiration  The expiration time in seconds.
+         * @param expirationSeconds  The expiration time in seconds.
          */
-        void SetExpiration(uint32_t expiration) { this->expiration = expiration; mask |= CRED_EXPIRATION; }
+        void SetExpiration(uint32_t expirationSeconds) { this->expiration = expirationSeconds; mask |= CRED_EXPIRATION; }
 
         /**
          * Gets the password, pincode, or passphrase from this credentials instance.

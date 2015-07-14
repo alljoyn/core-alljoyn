@@ -330,7 +330,6 @@ QStatus Shutdown(SocketFd sockfd)
          * The winsock documentation recommends flushing data from the IP transport
          * by receiving until the recv returns 0 or fails.
          */
-        int ret;
         do {
             char buf[64];
             ret = recv(static_cast<SOCKET>(sockfd), buf, sizeof(buf), 0);
@@ -512,7 +511,7 @@ QStatus RecvWithAncillaryData(SocketFd sockfd, IPAddress& remoteAddr, uint16_t& 
     interfaceIndex = -1;
     uint16_t localPort;
 
-    WSABUF iov[] = { { len, reinterpret_cast<char*>(buf) } };
+    WSABUF iov[] = { { (u_long)len, reinterpret_cast<char*>(buf) } };
 
     char cbuf[1024];
 
@@ -688,7 +687,7 @@ QStatus RecvWithFds(SocketFd sockfd, void* buf, size_t len, size_t& received, So
          */
         for (size_t i = 0; (i < recvdFds) && (status == ER_OK); ++i) {
             WSAPROTOCOL_INFO protocolInfo;
-            uint8_t* buf = reinterpret_cast<uint8_t*>(&protocolInfo);
+            uint8_t* buffer = reinterpret_cast<uint8_t*>(&protocolInfo);
             size_t sz = sizeof(protocolInfo);
             uint32_t maxSleeps = 100;
             /*
@@ -697,7 +696,7 @@ QStatus RecvWithFds(SocketFd sockfd, void* buf, size_t len, size_t& received, So
              */
             while (sz && (status == ER_OK)) {
                 size_t recvd;
-                status = Recv(sockfd, buf, sz, recvd);
+                status = Recv(sockfd, buffer, sz, recvd);
                 if (status == ER_WOULDBLOCK) {
                     if (--maxSleeps) {
                         qcc::Sleep(1);
@@ -706,7 +705,7 @@ QStatus RecvWithFds(SocketFd sockfd, void* buf, size_t len, size_t& received, So
                     }
                     status = ER_TIMEOUT;
                 }
-                buf += recvd;
+                buffer += recvd;
                 sz -= recvd;
             }
             if (status == ER_OK) {
@@ -768,7 +767,7 @@ QStatus SendWithFds(SocketFd sockfd, const void* buf, size_t len, size_t& sent, 
             status = ER_OS_ERROR;
             QCC_LogError(status, ("SendFd WSADuplicateSocket: %s", GetLastErrorString().c_str()));
         } else {
-            uint8_t* buf = reinterpret_cast<uint8_t*>(&protocolInfo);
+            uint8_t* buffer = reinterpret_cast<uint8_t*>(&protocolInfo);
             size_t sz = sizeof(protocolInfo);
             uint32_t maxSleeps = 100;
             /*
@@ -776,7 +775,7 @@ QStatus SendWithFds(SocketFd sockfd, const void* buf, size_t len, size_t& sent, 
              * rare so this is highly unlikely to have any impact on performance.
              */
             while (sz && (status == ER_OK)) {
-                status = Send(sockfd, buf, sz, sent);
+                status = Send(sockfd, buffer, sz, sent);
                 if (status == ER_WOULDBLOCK) {
                     if (--maxSleeps) {
                         qcc::Sleep(1);
@@ -785,7 +784,7 @@ QStatus SendWithFds(SocketFd sockfd, const void* buf, size_t len, size_t& sent, 
                     }
                     status = ER_TIMEOUT;
                 }
-                buf += sent;
+                buffer += sent;
                 sz -= sent;
             }
         }

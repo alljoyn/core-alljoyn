@@ -410,7 +410,7 @@ int CDECL_CALL main(int argc, char** argv)
             }
         }
     } else {
-        QStatus status = bus.CreateInterfacesFromXml(ifcXML);
+        status = bus.CreateInterfacesFromXml(ifcXML);
         if (status != ER_OK) {
             QCC_LogError(status, ("Failed to parse XML"));
             goto Exit;
