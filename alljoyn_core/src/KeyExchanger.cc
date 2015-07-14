@@ -537,6 +537,7 @@ QStatus KeyExchangerECDHE::KeyExchangeReadKeyInfo(MsgArg& variant)
     uint8_t* exportedPublicKey = new uint8_t [exportedPublicKeySize];
     QCC_VERIFY(ER_OK == peerPubKey.Export(exportedPublicKey, &exportedPublicKeySize));
     peerState->UpdateHash(CONVERSATION_V1, exportedPublicKey, exportedPublicKeySize);
+    delete[] exportedPublicKey;
     return ER_OK;
 }
 
@@ -1082,7 +1083,9 @@ QStatus KeyExchangerECDHE_PSK::GenerateLocalVerifier(uint8_t* verifier, size_t v
         qcc::String seed((const char*)digest, sizeof(digest));
         seed += pskName;
         seed += pskValue;
-        return Crypto_PseudorandomFunction(masterSecret, label.c_str(), seed, verifier, verifierLen);
+        QStatus status = Crypto_PseudorandomFunction(masterSecret, label.c_str(), seed, verifier, verifierLen);
+        seed.secure_clear();
+        return status;
     } else {
         return GenerateVerifier(label.c_str(), digest, sizeof(digest), masterSecret, verifier, verifierLen);
     }
@@ -1108,7 +1111,9 @@ QStatus KeyExchangerECDHE_PSK::GenerateRemoteVerifier(uint8_t* peerPskName, size
         qcc::String seed((const char*)digest, sizeof(digest));
         seed.append((const char*)peerPskName, peerPskNameLength);
         seed += pskValue;
-        return Crypto_PseudorandomFunction(masterSecret, label.c_str(), seed, verifier, verifierLen);
+        QStatus status = Crypto_PseudorandomFunction(masterSecret, label.c_str(), seed, verifier, verifierLen);
+        seed.secure_clear();
+        return status;
     } else {
         return GenerateVerifier(label.c_str(), digest, sizeof(digest), masterSecret, verifier, verifierLen);
     }

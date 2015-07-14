@@ -496,6 +496,7 @@ QStatus PermissionMgmtObj::StoreDSAKeys(CredentialAccessor* ca, const ECCPrivate
     uint8_t* exportedKey = new uint8_t[max(exportedPrivateKeySize, exportedPublicKeySize)];
     QCC_VERIFY(ER_OK == privateKey->Export(exportedKey, &exportedPrivateKeySize));
     KeyBlob dsaPrivKb(exportedKey, exportedPrivateKeySize, KeyBlob::DSA_PRIVATE);
+    qcc::ClearMemory(exportedKey, exportedPrivateKeySize);
     KeyStore::Key key;
     ca->GetLocalKey(KeyBlob::DSA_PRIVATE, key);
     QStatus status = ca->StoreKey(key, dsaPrivKb);
