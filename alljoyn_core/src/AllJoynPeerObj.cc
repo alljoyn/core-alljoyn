@@ -1515,9 +1515,22 @@ void AllJoynPeerObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
 void AllJoynPeerObj::HandleSecurityViolation(Message& msg, QStatus status)
 {
     assert(bus);
-    PeerStateTable* peerStateTable = bus->GetInternal().GetPeerStateTable();
-
     QCC_DbgTrace(("HandleSecurityViolation %s %s", QCC_StatusText(status), msg->Description().c_str()));
+
+    if (status == ER_PERMISSION_DENIED) {
+        if (!bus->GetInternal().GetRouter().IsDaemon()) {
+            /* The message was not delivered because of permission denied.
+               So notify the sender */
+            if (msg->GetType() == MESSAGE_METHOD_CALL) {
+                Message reply(*bus);
+                reply->ErrorMsg(status, msg->GetCallSerial());
+                bus->GetInternal().GetLocalEndpoint()->PushMessage(reply);
+            }
+        }
+        return;
+    }
+
+    PeerStateTable* peerStateTable = bus->GetInternal().GetPeerStateTable();
 
     if (status == ER_BUS_MESSAGE_DECRYPTION_FAILED) {
         PeerState peerState = peerStateTable->GetPeerState(msg->GetSender());

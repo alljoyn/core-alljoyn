@@ -938,20 +938,14 @@ QStatus _RemoteEndpoint::WriteCallback(qcc::Sink& sink, bool isTimedOut)
         RemoteEndpoint rep = RemoteEndpoint::wrap(this);
         status = internal->currentWriteMsg->DeliverNonBlocking(rep);
         /* Report authorization failure as a security violation */
-        if (status == ER_BUS_NOT_AUTHORIZED) {
+        if ((status == ER_BUS_NOT_AUTHORIZED) || (status == ER_PERMISSION_DENIED)) {
             internal->bus.GetInternal().GetLocalEndpoint()->GetPeerObj()->HandleSecurityViolation(internal->currentWriteMsg, status);
             /*
              * Clear the error after reporting the security violation otherwise we will exit
              * this thread which will shut down the endpoint.
-             */
-            status = ER_OK;
-        }
-        if (status == ER_PERMISSION_DENIED) {
-            /*
-             * Clear the error otherwise we will exit
-             * this thread which will shut down the endpoint.
-             * We can't deliver this message to the peer since the peer is not
-             * authorized to receive it.
+             * In the case of ER_PERMISSION_DENIED, we can't deliver this
+             * message to the peer since the peer is not authorized to receive
+             * it.
              */
             status = ER_OK;
         }
