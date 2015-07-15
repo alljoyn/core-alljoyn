@@ -191,10 +191,10 @@ class KeyExchanger {
      */
     static QStatus ParsePeerSecretRecord(const KeyBlob& rec, KeyBlob& masterSecret);
     /**
-     * Can peer provide a list of trust anchors
-     * @return true if the peer can provide the list of trust anchors; false, otherwise.
+     * Can peer support the KeyInfo structure.
+     * @return true if the peer supports KeyInfo; false, otherwise.
      */
-    bool PeerSupportsTrustAnchors();
+    bool PeerSupportsKeyInfo();
 
   protected:
     AllJoynPeerObj* peerObj;
@@ -385,7 +385,7 @@ class KeyExchangerECDHE_ECDSA : public KeyExchangerECDHE {
      */
     static const char* AuthName() { return "ALLJOYN_ECDHE_ECDSA"; }
 
-    KeyExchangerECDHE_ECDSA(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, PeerState peerState, PermissionMgmtObj::TrustAnchorList* trustAnchorList) : KeyExchangerECDHE(initiator, peerObj, bus, listener, peerState), certChainLen(0), certChain(NULL), trustAnchorList(trustAnchorList), hasCommonTrustAnchors(false), peerDSAPubKey(NULL)
+    KeyExchangerECDHE_ECDSA(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, PeerState peerState, PermissionMgmtObj::TrustAnchorList* trustAnchorList) : KeyExchangerECDHE(initiator, peerObj, bus, listener, peerState), certChainLen(0), certChain(NULL), trustAnchorList(trustAnchorList), peerDSAPubKey(NULL)
     {
         memset(peerManifestDigest, 0, sizeof(peerManifestDigest));
     }
@@ -405,8 +405,6 @@ class KeyExchangerECDHE_ECDSA : public KeyExchangerECDHE {
 
     QStatus RequestCredentialsCB(const char* peerName);
     QStatus ValidateRemoteVerifierVariant(const char* peerName, MsgArg* variant, uint8_t* authorized);
-    void KeyExchangeGenKey(MsgArg& variant);
-    QStatus KeyExchangeReadKey(MsgArg& variant);
     virtual QStatus StoreMasterSecret(const qcc::GUID128& guid, const uint8_t accessRights[4]);
     /**
      * Helper function to validate whether the certificate chain structure is
@@ -432,8 +430,6 @@ class KeyExchangerECDHE_ECDSA : public KeyExchangerECDHE {
     QStatus ParseCertChainPEM(String& encodedCertChain);
     QStatus GenVerifierCertArg(MsgArg& msgArg, bool updateHash);
     QStatus GenVerifierSigInfoArg(MsgArg& msgArg, bool updateHash);
-    void KeyExchangeGenTrustAnchorKeyInfos(MsgArg& variant);
-    QStatus KeyExchangeReadTrustAnchorKeyInfo(MsgArg& variant);
     bool IsTrustAnchor(const qcc::ECCPublicKey* publicKey);
 
     ECCPrivateKey issuerPrivateKey;
@@ -441,8 +437,6 @@ class KeyExchangerECDHE_ECDSA : public KeyExchangerECDHE {
     size_t certChainLen;
     CertificateX509* certChain;
     PermissionMgmtObj::TrustAnchorList* trustAnchorList;
-    PermissionMgmtObj::TrustAnchorList peerTrustAnchorList;
-    bool hasCommonTrustAnchors;
     ECCPublicKey* peerDSAPubKey;
     uint8_t peerManifestDigest[Crypto_SHA256::DIGEST_SIZE];
     std::vector<ECCPublicKey> peerIssuerPubKeys;
