@@ -835,7 +835,7 @@ QStatus PermissionMgmtObj::StoreIdentityCertChain(MsgArg& certArg)
             QCC_DbgPrintf(("PermissionMgmtObj::StoreIdentityCertChain failed to validate certificate status 0x%x", status));
         }
     }
-    if (!ValidateCertChain(true, certs, certChainCount)) {
+    if (!ValidateCertChain(true, false, certs, certChainCount)) {
         status = ER_INVALID_CERTIFICATE;
         goto ExitStoreIdentity;
     }
@@ -2206,7 +2206,7 @@ QStatus PermissionMgmtObj::GetManifestTemplateDigest(MsgArg& arg)
     return status;
 }
 
-bool PermissionMgmtObj::ValidateCertChain(bool verifyIssuerChain, const qcc::CertificateX509* certChain, size_t count)
+bool PermissionMgmtObj::ValidateCertChain(bool verifyIssuerChain, bool validateTrust, const qcc::CertificateX509* certChain, size_t count)
 {
     if (verifyIssuerChain) {
         if (!KeyExchangerECDHE_ECDSA::IsCertChainStructureValid(certChain, count)) {
@@ -2214,35 +2214,40 @@ bool PermissionMgmtObj::ValidateCertChain(bool verifyIssuerChain, const qcc::Cer
         }
     }
     bool valid = false;
-    /* go through the cert chain to see whether any of the issuer is the trust anchor */
-    if (count == 1) {
-        /* single cert is exchanged */
-        /* locate the issuer */
-        if (certChain[0].GetAuthorityKeyId().empty()) {
-            if (IsTrustAnchor(certChain[0].GetSubjectPublicKey())) {
-                valid = (ER_OK == certChain[0].Verify(certChain[0].GetSubjectPublicKey()));
+    if (validateTrust) {
+        /* go through the cert chain to see whether any of the issuer is the trust anchor */
+        if (count == 1) {
+            /* single cert is exchanged */
+            /* locate the issuer */
+            if (certChain[0].GetAuthorityKeyId().empty()) {
+                if (IsTrustAnchor(certChain[0].GetSubjectPublicKey())) {
+                    valid = (ER_OK == certChain[0].Verify(certChain[0].GetSubjectPublicKey()));
+                }
+            } else {
+                TrustAnchorList anchors = LocateTrustAnchor(trustAnchors, certChain[0].GetAuthorityKeyId());
+                if (!anchors.empty()) {
+                    for (TrustAnchorList::const_iterator it = anchors.begin(); it != anchors.end(); it++) {
+                        valid = (ER_OK == certChain[0].Verify((*it)->keyInfo.GetPublicKey()));
+                        if (valid) {
+                            break;
+                        }
+                    }
+                    anchors.clear();
+                } /* there is a trust anchor with given authority key id */
             }
         } else {
-            TrustAnchorList anchors = LocateTrustAnchor(trustAnchors, certChain[0].GetAuthorityKeyId());
-            if (!anchors.empty()) {
-                for (TrustAnchorList::const_iterator it = anchors.begin(); it != anchors.end(); it++) {
-                    valid = (ER_OK == certChain[0].Verify((*it)->keyInfo.GetPublicKey()));
-                    if (valid) {
-                        break;
-                    }
+            /* the cert chain signature validation is already done by the KeyExchanger code.  Now just need to check issuers */
+            for (size_t cnt = 1; cnt < count; cnt++) {
+                if (IsTrustAnchor(certChain[cnt].GetSubjectPublicKey())) {
+                    valid = true;
+                    break;
                 }
-                anchors.clear();
-            } /* there is a trust anchor with given authority key id */
-        }
-    } else {
-        /* the cert chain signature validation is already done by the KeyExchanger code.  Now just need to check issuers */
-        for (size_t cnt = 1; cnt < count; cnt++) {
-            if (IsTrustAnchor(certChain[cnt].GetSubjectPublicKey())) {
-                valid = true;
-                break;
             }
         }
+    } else {
+        valid = true;
     }
+
     if (valid) {
         /* check the certificate type in the chain */
         valid = CertificateX509::ValidateCertificateTypeInCertChain(certChain, count);
@@ -2279,7 +2284,7 @@ bool PermissionMgmtObj::ValidateCertChainPEM(const qcc::String& certChainPEM, bo
         delete [] certChain;
         return handled;
     }
-    authorized = ValidateCertChain(false, certChain, count);
+    authorized = ValidateCertChain(false, true, certChain, count);
     delete [] certChain;
     return handled;
 }

@@ -16,6 +16,7 @@
 
 #include "PermissionMgmtTest.h"
 #include "KeyInfoHelper.h"
+#include "KeyExchanger.h"
 #include <qcc/Crypto.h>
 #include <qcc/Util.h>
 #include <string>
@@ -2687,6 +2688,107 @@ TEST_F(PermissionMgmtUseCaseTest, ClaimFailsWithoutSecurityEnabled)
 
     SecurityApplicationProxy saProxy(adminBus, consumerBus.GetUniqueName().c_str());
     EXPECT_NE(ER_OK, saProxy.Claim(keyInfo, guid, keyInfo, certs, 1, manifest, manifestSize)) << " saProxy.Claim failed";
+    delete [] manifest;
+}
+
+static QStatus CreateCert(const qcc::String& serial, const qcc::GUID128& issuer, const qcc::String& organization, const ECCPrivateKey* issuerPrivateKey, const ECCPublicKey* issuerPublicKey, const qcc::GUID128& subject, const ECCPublicKey* subjectPubKey, CertificateX509::ValidPeriod& validity, bool isCA, CertificateX509& cert)
+{
+    QStatus status = ER_CRYPTO_ERROR;
+
+    cert.SetSerial((const uint8_t*)serial.data(), serial.size());
+    qcc::String issuerName = issuer.ToString();
+    cert.SetIssuerCN((const uint8_t*) issuerName.c_str(), issuerName.length());
+    qcc::String subjectName = subject.ToString();
+    cert.SetSubjectCN((const uint8_t*) subjectName.c_str(), subjectName.length());
+    if (!organization.empty()) {
+        cert.SetIssuerOU((const uint8_t*) organization.c_str(), organization.length());
+        cert.SetSubjectOU((const uint8_t*) organization.c_str(), organization.length());
+    }
+    cert.SetSubjectPublicKey(subjectPubKey);
+    cert.SetCA(isCA);
+    cert.SetValidity(&validity);
+    status = cert.SignAndGenerateAuthorityKeyId(issuerPrivateKey, issuerPublicKey);
+    return status;
+}
+
+TEST_F(PermissionMgmtUseCaseTest, ValidCertChainStructure)
+{
+
+    CertificateX509::ValidPeriod validity;
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + 24 * 3600;
+
+    qcc::GUID128 subject1;
+    Crypto_ECC ecc1;
+    ecc1.GenerateDSAKeyPair();
+    CertificateX509 certs[2];
+
+    /* self signed cert */
+    ASSERT_EQ(ER_OK, CreateCert("1010101", subject1, "organization", ecc1.GetDSAPrivateKey(), ecc1.GetDSAPublicKey(), subject1, ecc1.GetDSAPublicKey(), validity, true, certs[1])) << " CreateCert failed.";
+
+    qcc::GUID128 subject0;
+    Crypto_ECC ecc0;
+    ecc0.GenerateDSAKeyPair();
+
+    /* leaf cert signed by cert1 */
+    ASSERT_EQ(ER_OK, CreateCert("2020202", subject1, "organization", ecc1.GetDSAPrivateKey(), ecc1.GetDSAPublicKey(), subject0, ecc0.GetDSAPublicKey(), validity, false, certs[0])) << " CreateCert failed.";
+
+    EXPECT_TRUE(KeyExchangerECDHE_ECDSA::IsCertChainStructureValid(certs, 2)) << " cert chain structure is not valid";
+
+}
+
+TEST_F(PermissionMgmtUseCaseTest, InvalidCertChainStructure)
+{
+
+    CertificateX509::ValidPeriod validity;
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + 24 * 3600;
+
+    qcc::GUID128 subject1;
+    Crypto_ECC ecc1;
+    ecc1.GenerateDSAKeyPair();
+    CertificateX509 certs[2];
+
+    /* self signed cert */
+    ASSERT_EQ(ER_OK, CreateCert("1010101", subject1, "organization", ecc1.GetDSAPrivateKey(), ecc1.GetDSAPublicKey(), subject1, ecc1.GetDSAPublicKey(), validity, false, certs[1])) << " CreateCert failed.";
+
+    qcc::GUID128 subject0;
+    Crypto_ECC ecc0;
+    ecc0.GenerateDSAKeyPair();
+
+    /* leaf cert signed by cert1 */
+    ASSERT_EQ(ER_OK, CreateCert("2020202", subject1, "organization", ecc1.GetDSAPrivateKey(), ecc1.GetDSAPublicKey(), subject0, ecc0.GetDSAPublicKey(), validity, false, certs[0])) << " CreateCert failed.";
+
+    EXPECT_FALSE(KeyExchangerECDHE_ECDSA::IsCertChainStructureValid(certs, 2)) << " cert chain structure is not valid";
+
+}
+
+
+TEST_F(PermissionMgmtUseCaseTest, ClaimWithIdentityCertSignedByUnknownCA)
+{
+    EnableSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA");
+    ClaimAdmin();
+    SecurityApplicationProxy saProxy(adminBus, consumerBus.GetUniqueName().c_str());
+    /* retrieve public key from to-be-claimed app to create identity cert */
+    ECCPublicKey claimedPubKey;
+    EXPECT_EQ(ER_OK, saProxy.GetEccPublicKey(claimedPubKey)) << " Fail to retrieve to-be-claimed public key.";
+    qcc::GUID128 guid;
+    PermissionMgmtTestHelper::GetGUID(consumerBus, guid);
+    IdentityCertificate identityCertChain[3];
+    size_t certChainCount = 3;
+    PermissionPolicy::Rule* manifest = NULL;
+    size_t manifestSize = 0;
+    GenerateAllowAllManifest(&manifest, &manifestSize);
+    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(adminBus, manifest, manifestSize, digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCertChain(remoteControlBus, adminBus, "303030", guid.ToString(), &claimedPubKey, "alias", 3600, identityCertChain, certChainCount, digest, Crypto_SHA256::DIGEST_SIZE)) << "  CreateIdentityCert failed";
+
+    Crypto_ECC ecc;
+    ecc.GenerateDSAKeyPair();
+    KeyInfoNISTP256 keyInfo;
+    keyInfo.SetPublicKey(ecc.GetDSAPublicKey());
+    KeyInfoHelper::GenerateKeyId(keyInfo);
+    EXPECT_EQ(ER_OK, saProxy.Claim(keyInfo, consumerAdminGroupGUID, consumerAdminGroupAuthority, identityCertChain, certChainCount, manifest, manifestSize)) << " saProxy.Claim failed";
     delete [] manifest;
 }
 

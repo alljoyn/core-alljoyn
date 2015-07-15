@@ -572,7 +572,7 @@ class PermissionMgmtObj : public BusObject {
     QStatus StateChanged();
 
     QStatus GetIdentityBlob(qcc::KeyBlob& kb);
-    bool ValidateCertChain(bool verifyIssuerChain, const qcc::CertificateX509* certChain, size_t count);
+    bool ValidateCertChain(bool verifyIssuerChain, bool validateTrust, const qcc::CertificateX509* certChain, size_t count);
     bool ValidateCertChainPEM(const qcc::String& certChainPEM, bool& authorized);
     QStatus LocateMembershipEntry(const qcc::String& serialNum, const qcc::String& issuerAki, KeyStore::Key& membershipKey);
     void ClearMembershipCertMap(MembershipCertMap& certMap);
