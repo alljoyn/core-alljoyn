@@ -32,11 +32,16 @@
 
 #include <alljoyn/BusListener.h>
 #include <alljoyn/BusAttachment.h>
+
+#ifdef __GNUC__
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(disable: 4996)
+#endif
 #include <alljoyn/SimpleBusListener.h>
 
-
 #define QCC_MODULE "ALLJOYN"
-
 
 using namespace qcc;
 using namespace std;
