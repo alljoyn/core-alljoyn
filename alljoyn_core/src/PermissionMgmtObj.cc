@@ -535,10 +535,6 @@ DoneValidation:
     if (ER_OK == status) {
         /* store the default policy as the initial local policy */
         status = StorePolicy(*defaultPolicy);
-        if (ER_OK == status) {
-            policyVersion = defaultPolicy->GetVersion();
-            PolicyChanged(defaultPolicy);
-        }
     }
     if (ER_OK != status) {
         delete defaultPolicy;
@@ -548,7 +544,8 @@ DoneValidation:
     if (ER_OK == status) {
         applicationState = PermissionConfigurator::CLAIMED;
         StoreApplicationState();
-        StateChanged();
+        policyVersion = defaultPolicy->GetVersion();
+        PolicyChanged(defaultPolicy);
     }
 }
 
@@ -2020,7 +2017,6 @@ QStatus PermissionMgmtObj::PerformReset(bool keepForClaim)
 
     applicationState = PermissionConfigurator::CLAIMABLE;
     policyVersion = 0;
-    PolicyChanged(NULL);
     return status;
 }
 
@@ -2035,7 +2031,11 @@ QStatus PermissionMgmtObj::Reset()
     }
 
     /* Reset the security configuration. */
-    return PerformReset(true);
+    status = PerformReset(true);
+    if (ER_OK == status) {
+        PolicyChanged(NULL);
+    }
+    return status;
 }
 
 void PermissionMgmtObj::Reset(const InterfaceDescription::Member* member, Message& msg)
