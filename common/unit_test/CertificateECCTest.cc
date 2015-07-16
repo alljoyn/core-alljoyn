@@ -1441,3 +1441,26 @@ TEST_F(CertificateECCTest, TestValidTypeInCertChain_U)
 
     EXPECT_FALSE(CertificateX509::ValidateCertificateTypeInCertChain(certs, 1)) << " The certificate type constraint is not supposed to be valid.";
 }
+
+/**
+ * Test encoding and decoding of AKI
+ */
+TEST_F(CertificateECCTest, TestAKIEncodingDecoding)
+{
+    CertificateX509::ValidPeriod validity;
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + 24 * 3600;
+
+    qcc::GUID128 subject0;
+    Crypto_ECC ecc0;
+    ecc0.GenerateDSAKeyPair();
+    CertificateX509 cert0;
+    CertificateX509 cert1;
+    qcc::String der;
+
+    /* self signed cert */
+    ASSERT_EQ(ER_OK, CreateCert("serial0", subject0, "organization", ecc0.GetDSAPrivateKey(), ecc0.GetDSAPublicKey(), subject0, ecc0.GetDSAPublicKey(), validity, cert0)) << " GenKeyAndCreateCert failed.";
+    ASSERT_EQ(ER_OK, cert0.EncodeCertificateDER(der)) << " Encode certificate failed.";
+    ASSERT_EQ(ER_OK, cert1.DecodeCertificateDER(der)) << " Decode certificate failed.";
+    ASSERT_EQ(cert0.GetAuthorityKeyId(), cert1.GetAuthorityKeyId()) << " AKI mismatch.";
+}
