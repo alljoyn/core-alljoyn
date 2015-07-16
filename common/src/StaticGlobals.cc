@@ -60,7 +60,11 @@ class StaticGlobals {
             Shutdown();
             return status;
         }
-        Crypto::Init();
+        status = Crypto::Init();
+        if (status != ER_OK) {
+            Shutdown();
+            return status;
+        }
         return ER_OK;
     }
 

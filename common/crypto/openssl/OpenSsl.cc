@@ -51,12 +51,13 @@ static void LockingCb(int mode, int type, const char* file, int line)
     }
 }
 
-void Crypto::Init()
+QStatus Crypto::Init()
 {
     if (!locks) {
         locks = new Mutex[CRYPTO_num_locks()];
         CRYPTO_set_locking_callback(LockingCb);
     }
+    return ER_OK;
 }
 
 void Crypto::Shutdown()
