@@ -772,7 +772,7 @@ QStatus BusObject::MethodReply(const Message& msg, const MsgArg* args, size_t nu
     return status;
 }
 
-QStatus BusObject::MethodReply(const Message& msg, const char* errorName, const char* errorMessage)
+QStatus BusObject::MethodReply(const Message& msg, const char* errorName, const char* errorMessage, Message* replyMsg)
 {
     QStatus status;
 
@@ -796,11 +796,14 @@ QStatus BusObject::MethodReply(const Message& msg, const char* errorName, const 
             BusEndpoint bep = BusEndpoint::cast(bus->GetInternal().GetLocalEndpoint());
             status = bus->GetInternal().GetRouter().PushMessage(error, bep);
         }
+        if (NULL != replyMsg) {
+            *replyMsg = error;
+        }
     }
     return status;
 }
 
-QStatus BusObject::MethodReply(const Message& msg, QStatus status)
+QStatus BusObject::MethodReply(const Message& msg, QStatus status, Message* replyMsg)
 {
     /* Protect against calling before object is registered */
     if (!bus) {
@@ -813,7 +816,8 @@ QStatus BusObject::MethodReply(const Message& msg, QStatus status)
     }
 
     if (status == ER_OK) {
-        return MethodReply(msg);
+        /* Casts needed to unambiguously call the correct overload of MethodReply. */
+        return MethodReply(msg, (const MsgArg*)NULL, (size_t)0, replyMsg);
     } else {
         if (msg->GetType() != MESSAGE_METHOD_CALL) {
             return ER_BUS_NO_CALL_FOR_REPLY;
@@ -822,6 +826,9 @@ QStatus BusObject::MethodReply(const Message& msg, QStatus status)
             QStatus result = error->ErrorMsg(msg, status);
             assert(ER_OK == result);
             QCC_UNUSED(result);
+            if (NULL != replyMsg) {
+                *replyMsg = error;
+            }
             BusEndpoint bep = BusEndpoint::cast(bus->GetInternal().GetLocalEndpoint());
             return bus->GetInternal().GetRouter().PushMessage(error, bep);
         }

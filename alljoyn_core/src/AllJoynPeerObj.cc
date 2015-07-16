@@ -485,6 +485,9 @@ void AllJoynPeerObj::GenSessionKey(const InterfaceDescription::Member* member, M
 
     QStatus status;
     PeerState peerState = bus->GetInternal().GetPeerStateTable()->GetPeerState(msg->GetSender());
+    Message replyMsg(*bus);
+
+    peerState->UpdateHash(CONVERSATION_V4, msg);
 
     qcc::GUID128 remotePeerGuid(msg->GetArg(0)->v_string.str);
     qcc::GUID128 localPeerGuid(msg->GetArg(1)->v_string.str);
@@ -493,7 +496,7 @@ void AllJoynPeerObj::GenSessionKey(const InterfaceDescription::Member* member, M
      */
     if (bus->GetInternal().GetKeyStore().GetGuid() != localPeerGuid.ToString()) {
         status = ER_BUS_NO_PEER_GUID;
-        MethodReply(msg, status);
+        MethodReply(msg, status, &replyMsg);
     } else {
         qcc::String nonce = RandHexString(NONCE_LEN);
         qcc::String verifier;
@@ -504,14 +507,13 @@ void AllJoynPeerObj::GenSessionKey(const InterfaceDescription::Member* member, M
             replyArgs[0].Set("s", nonce.c_str());
             replyArgs[1].Set("s", verifier.c_str());
 
-            Message replyMsg(*bus);
             MethodReply(msg, replyArgs, ArraySize(replyArgs), &replyMsg);
-            peerState->UpdateHash(CONVERSATION_V4, msg);
-            peerState->UpdateHash(CONVERSATION_V4, replyMsg);
         } else {
-            MethodReply(msg, status);
+            MethodReply(msg, status, &replyMsg);
         }
     }
+
+    peerState->UpdateHash(CONVERSATION_V4, replyMsg);
 }
 
 void AllJoynPeerObj::AuthAdvance(Message& msg)
@@ -639,9 +641,11 @@ void AllJoynPeerObj::DoKeyExchange(Message& msg)
     PeerState peerState = peerStateTable->GetPeerState(sender);
     KeyExchanger* keyExchanger = GetKeyExchangerInstance(peerState, false, authMaskList, 1);
     if (!keyExchanger) {
+        Message replyMsg(*bus);
         lock.Unlock(MUTEX_CONTEXT);
         status = ER_AUTH_FAIL;
-        MethodReply(msg, status);
+        MethodReply(msg, status, &replyMsg);
+        peerState->UpdateHash(CONVERSATION_V4, replyMsg);
         return;
     }
 
@@ -732,7 +736,9 @@ void AllJoynPeerObj::DoKeyAuthentication(Message& msg)
     /*
      * Let remote peer know the authentication failed.
      */
-    MethodReply(msg, status);
+    Message replyMsg(*bus);
+    MethodReply(msg, status, &replyMsg);
+    peerState->UpdateHash(CONVERSATION_V4, replyMsg);
 }
 
 void AllJoynPeerObj::AuthChallenge(const ajn::InterfaceDescription::Member* member, ajn::Message& msg)
@@ -757,6 +763,8 @@ void AllJoynPeerObj::AuthChallenge(const ajn::InterfaceDescription::Member* memb
 
 void AllJoynPeerObj::ExchangeSuites(const ajn::InterfaceDescription::Member* member, ajn::Message& msg)
 {
+    Message replyMsg(*bus);
+
     QCC_UNUSED(member);
 
     uint32_t*remoteSuites;
@@ -767,7 +775,8 @@ void AllJoynPeerObj::ExchangeSuites(const ajn::InterfaceDescription::Member* mem
 
     QStatus status = msg->GetArg(0)->Get("au", &remoteSuitesLen, &remoteSuites);
     if (status != ER_OK) {
-        MethodReply(msg, status);
+        MethodReply(msg, status, &replyMsg);
+        peerState->UpdateHash(CONVERSATION_V4, replyMsg);
         return;
     }
     peerState->UpdateHash(CONVERSATION_V4, msg);
@@ -811,7 +820,6 @@ void AllJoynPeerObj::ExchangeSuites(const ajn::InterfaceDescription::Member* mem
 
     MsgArg replyArg;
     replyArg.Set("au", effectiveAuthSuitesCount, effectiveAuthSuites);
-    Message replyMsg(*bus);
     MethodReply(msg, &replyArg, 1, &replyMsg);
     peerState->UpdateHash(CONVERSATION_V4, replyMsg);
     delete [] effectiveAuthSuites;
@@ -1090,9 +1098,9 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
             const InterfaceDescription::Member* genSessionKeyMember = ifc->GetMember("GenSessionKey");
             assert(genSessionKeyMember);
             status = remotePeerObj.MethodCall(*genSessionKeyMember, msgArgs, ArraySize(msgArgs), replyMsg, DEFAULT_TIMEOUT, 0, &callMsg);
+            peerState->UpdateHash(CONVERSATION_V4, callMsg);
+            peerState->UpdateHash(CONVERSATION_V4, replyMsg);
             if (status == ER_OK) {
-                peerState->UpdateHash(CONVERSATION_V4, callMsg);
-                peerState->UpdateHash(CONVERSATION_V4, replyMsg);
                 qcc::String verifier;
                 /*
                  * The response completes the seed string so we can generate the session key.
@@ -1677,6 +1685,11 @@ KeyExchanger* AllJoynPeerObj::GetKeyExchangerInstance(PeerState peerState, bool 
 QStatus AllJoynPeerObj::HandleMethodReply(Message& msg, QStatus status)
 {
     return MethodReply(msg, status);
+}
+
+QStatus AllJoynPeerObj::HandleMethodReply(Message& msg, Message& replyMsg, QStatus status)
+{
+    return MethodReply(msg, status, &replyMsg);
 }
 
 QStatus AllJoynPeerObj::HandleMethodReply(Message& msg, const MsgArg* args, size_t numArgs)
