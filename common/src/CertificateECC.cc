@@ -652,7 +652,7 @@ QStatus CertificateX509::DecodeCertificateExt(const qcc::String& ext)
             }
             digest = dig;
         } else if (OID_AUTHORITY_KEY_IDENTIFIER == oid) {
-            status = Crypto_ASN1::Decode(str, "(c(x))", 0, &aki);
+            status = Crypto_ASN1::Decode(str, "(c(.))", 0, &aki);
             if (ER_OK != status) {
                 return status;
             }
@@ -682,7 +682,7 @@ QStatus CertificateX509::EncodeCertificateExt(qcc::String& ext) const
     oid = OID_BASIC_CONSTRAINTS;
     status = Crypto_ASN1::Encode(raw, "(ox)", &oid, &tmp);
     if (ER_OK != status) {
-        QCC_LogError(status, ("Error decoding certificate basic constraint"));
+        QCC_LogError(status, ("Error encoding certificate basic constraint"));
         return status;
     }
     if (type != UNRESTRICTED_CERTIFICATE) {
@@ -720,8 +720,13 @@ QStatus CertificateX509::EncodeCertificateExt(qcc::String& ext) const
         }
     }
     if (aki.size()) {
+        String tmp;
+        status = Crypto_ASN1::Encode(tmp, "c(R)", 0, &aki);
+        if (ER_OK != status) {
+            return status;
+        }
         String akiOctet;
-        status = Crypto_ASN1::Encode(akiOctet, "(c(x))", 0, &aki);
+        status = Crypto_ASN1::Encode(akiOctet, "(R)", &tmp);
         if (ER_OK != status) {
             return status;
         }
