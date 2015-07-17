@@ -60,18 +60,20 @@ class KeyInfoHelper {
     /**
      * Helper function to generate a MsgArg for KeyInfoNISTP256 public key.
      * @param keyInfo the KeyInfoNISTP256 object
-     * @param[out] arg the output message arg.
+     * @param[out] msgArg the output message arg.
+     * @param setKeyId set the keyId value
      */
-    static void KeyInfoNISTP256PubKeyToMsgArg(const qcc::KeyInfoNISTP256& keyInfo, MsgArg& msgArg);
+    static void KeyInfoNISTP256PubKeyToMsgArg(const qcc::KeyInfoNISTP256& keyInfo, MsgArg& msgArg, bool setKeyId = false);
 
     /**
      * Helper function to load a KeyInfoNISTP256 public key using data from the
      * message arg.
      * @param msgArg the input message arg.
      * @param[out] keyInfo the output KeyInfoNISTP256 object
+     * @param retrieveKeyId retrieve the keyId value
      * @return ER_OK if successful; otherwise, error code.
      */
-    static QStatus MsgArgToKeyInfoNISTP256PubKey(const MsgArg& msgArg, qcc::KeyInfoNISTP256& keyInfo);
+    static QStatus MsgArgToKeyInfoNISTP256PubKey(const MsgArg& msgArg, qcc::KeyInfoNISTP256& keyInfo, bool retrieveKeyId = false);
 
     /**
      * Helper function to load an authority key id using data from the

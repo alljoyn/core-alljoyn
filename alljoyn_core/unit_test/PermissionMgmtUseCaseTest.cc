@@ -16,7 +16,9 @@
 
 #include "PermissionMgmtTest.h"
 #include "KeyInfoHelper.h"
+#include "KeyExchanger.h"
 #include <qcc/Crypto.h>
+#include <qcc/Util.h>
 #include <string>
 
 using namespace ajn;
@@ -34,49 +36,40 @@ static const char* membershipSerial4 = "40004";
 
 static const char* adminMembershipSerial1 = "900001";
 static const char* adminMembershipSerial2 = "900002";
-static const char sampleCertificatePEM[] = {
-    "-----BEGIN CERTIFICATE-----\n"
-    "AAAAAf8thIwHzhCU8qsedyuEldP/TouX6w7rZI/cJYST/kexAAAAAMvbuy8JDCJI\n"
-    "Ms8vwkglUrf/infSYMNRYP/gsFvl5FutAAAAAAAAAAD/LYSMB84QlPKrHncrhJXT\n"
-    "/06Ll+sO62SP3CWEk/5HsQAAAADL27svCQwiSDLPL8JIJVK3/4p30mDDUWD/4LBb\n"
-    "5eRbrQAAAAAAAAAAAAAAAAASgF0AAAAAABKBiQABMa7uTLSqjDggO0t6TAgsxKNt\n"
-    "+Zhu/jc3s242BE0drFU12USXXIYQdqps/HrMtqw6q9hrZtaGJS+e9y7mJegAAAAA\n"
-    "APpeLT1cHNm3/OupnEcUCmg+jqi4SUEi4WTWSR4OzvCSAAAAAA==\n"
-    "-----END CERTIFICATE-----"
-};
 
-static void GenerateAdminGroupACL(const GUID128& groupGUID, const KeyInfoNISTP256& groupAuthority, PermissionPolicy::Acl& acl)
+static QStatus AddAcls(PermissionPolicy& policy, PermissionPolicy::Acl* acls, size_t count)
 {
-    PermissionPolicy::Peer peers[1];
-    peers[0].SetType(PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP);
-    peers[0].SetSecurityGroupId(groupGUID);
-    KeyInfoNISTP256 keyInfo;
-    keyInfo.SetKeyId(groupAuthority.GetKeyId(), groupAuthority.GetKeyIdLen());
-    keyInfo.SetPublicKey(groupAuthority.GetPublicKey());
-    peers[0].SetKeyInfo(&keyInfo);
-    acl.SetPeers(1, peers);
-
-    PermissionPolicy::Rule rules[1];
-    rules[0].SetInterfaceName("*");
-    PermissionPolicy::Rule::Member prms[1];
-    prms[0].SetMemberName("*");
-    prms[0].SetActionMask(
-        PermissionPolicy::Rule::Member::ACTION_PROVIDE |
-        PermissionPolicy::Rule::Member::ACTION_OBSERVE |
-        PermissionPolicy::Rule::Member::ACTION_MODIFY
-        );
-    rules[0].SetMembers(1, prms);
-    acl.SetRules(1, rules);
+    if (count == 0) {
+        return ER_OK;
+    }
+    if (policy.GetAclsSize() == 0) {
+        policy.SetAcls(count, acls);
+        return ER_OK;
+    }
+    PermissionPolicy::Acl* newAcls = new PermissionPolicy::Acl[policy.GetAclsSize() + count];
+    if (newAcls == NULL) {
+        return ER_OUT_OF_MEMORY;
+    }
+    for (size_t cnt = 0; cnt < policy.GetAclsSize(); cnt++) {
+        newAcls[cnt] = policy.GetAcls()[cnt];
+    }
+    for (size_t cnt = 0; cnt < count; cnt++) {
+        newAcls[cnt + policy.GetAclsSize()] = acls[cnt];
+    }
+    policy.SetAcls(count + policy.GetAclsSize(), newAcls);
+    delete [] newAcls;
+    return ER_OK;
 }
 
-static PermissionPolicy* GenerateWildCardPolicy(const GUID128& groupGUID, const KeyInfoNISTP256& groupAuthority)
+static QStatus GenerateWildCardPolicy(BusAttachment& bus, BusAttachment& targetBus, PermissionPolicy& policy)
 {
-    PermissionPolicy* policy = new PermissionPolicy();
-
-    policy->SetVersion(52516);
+    SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
+    /* retrieve the default policy */
+    EXPECT_EQ(ER_OK, saProxy.GetDefaultPolicy(policy)) << "GetDefaultPolicy failed.";
+    policy.SetVersion(20);
 
     /* add the acls section */
-    PermissionPolicy::Acl acls[2];
+    PermissionPolicy::Acl acls[1];
     /* acls record 0  ANY-USER */
     PermissionPolicy::Peer peers[1];
     peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
@@ -95,20 +88,18 @@ static PermissionPolicy* GenerateWildCardPolicy(const GUID128& groupGUID, const 
     rules[0].SetMembers(3, prms);
     acls[0].SetRules(1, rules);
 
-    GenerateAdminGroupACL(groupGUID, groupAuthority, acls[1]);
-    policy->SetAcls(2, acls);
-
-    return policy;
+    return AddAcls(policy, acls, ArraySize(acls));
 }
 
-static PermissionPolicy* GenerateAllowAllPeersPolicy(const GUID128& groupGUID, const KeyInfoNISTP256& groupAuthority)
+static QStatus GenerateAllowAllPeersPolicy(BusAttachment& bus, BusAttachment& targetBus, PermissionPolicy& policy)
 {
-    PermissionPolicy* policy = new PermissionPolicy();
-
-    policy->SetVersion(7642);
+    SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
+    /* retrieve the default policy */
+    EXPECT_EQ(ER_OK, saProxy.GetDefaultPolicy(policy)) << "GetDefaultPolicy failed.";
+    policy.SetVersion(21);
 
     /* add the acls section */
-    PermissionPolicy::Acl acls[3];
+    PermissionPolicy::Acl acls[2];
     /* acls record 0  ALL users including anonymous */
     {
         PermissionPolicy::Peer peers[1];
@@ -138,13 +129,18 @@ static PermissionPolicy* GenerateAllowAllPeersPolicy(const GUID128& groupGUID, c
         acls[1].SetRules(1, rules);
     }
 
-    GenerateAdminGroupACL(groupGUID, groupAuthority, acls[2]);
-    policy->SetAcls(3, acls);
-
-    return policy;
+    return AddAcls(policy, acls, ArraySize(acls));
 }
 
-static PermissionPolicy* GeneratePolicy(const GUID128& groupGUID, const KeyInfoNISTP256& groupAuthority, BusAttachment& guildAuthorityBus)
+
+/**
+ * Add ACLs to existing default policy of the target bus.
+ * @param bus the admin bus
+ * @param targetBus the target bus
+ * @param[in,out] policy the policy
+ * @param guildAuthorityBus the bus to retrieve the key info for a membership entry
+ */
+static QStatus GeneratePolicy(BusAttachment& bus, BusAttachment& targetBus, PermissionPolicy& policy, BusAttachment& guildAuthorityBus)
 {
     qcc::GUID128 guildAuthorityGUID;
     PermissionMgmtTestHelper::GetGUID(guildAuthorityBus, guildAuthorityGUID);
@@ -152,12 +148,13 @@ static PermissionPolicy* GeneratePolicy(const GUID128& groupGUID, const KeyInfoN
     QStatus status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(guildAuthorityBus, &guildAuthorityPubKey);
     EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
 
-    PermissionPolicy* policy = new PermissionPolicy();
-
-    policy->SetVersion(74892317);
+    SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
+    /* retrieve the default policy */
+    EXPECT_EQ(ER_OK, saProxy.GetDefaultPolicy(policy)) << "GetDefaultPolicy failed.";
+    policy.SetVersion(2);
 
     /* add the acls section */
-    PermissionPolicy::Acl acls[5];
+    PermissionPolicy::Acl acls[4];
     /* acls record 0  ANY-USER */
     {
         PermissionPolicy::Peer peers[1];
@@ -286,10 +283,7 @@ static PermissionPolicy* GeneratePolicy(const GUID128& groupGUID, const KeyInfoN
         rules[0].SetMembers(1, prms);
         acls[3].SetRules(1, rules);
     }
-    GenerateAdminGroupACL(groupGUID, groupAuthority, acls[4]);
-    policy->SetAcls(5, acls);
-
-    return policy;
+    return AddAcls(policy, acls, ArraySize(acls));
 }
 
 static void AddSpecificCertAuthorityToPolicy(PermissionPolicy& policy, const KeyInfoNISTP256& restrictedCA)
@@ -343,15 +337,15 @@ static void AddSpecificCertAuthorityToPolicy(PermissionPolicy& policy, const Key
     delete [] acls;
 }
 
-static PermissionPolicy* GenerateSmallAnyUserPolicy(const GUID128& groupGUID, const KeyInfoNISTP256& groupAuthority)
+static QStatus GenerateSmallAnyUserPolicy(BusAttachment& bus, BusAttachment& targetBus, PermissionPolicy& policy)
 {
-    PermissionPolicy* policy = new PermissionPolicy();
+    SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
+    /* retrieve the default policy */
+    EXPECT_EQ(ER_OK, saProxy.GetDefaultPolicy(policy)) << "GetDefaultPolicy failed.";
+    policy.SetVersion(3);
 
-    policy->SetVersion(55);
-
-    /* add the acls ection */
-
-    PermissionPolicy::Acl acls[2];
+    /* add more acls */
+    PermissionPolicy::Acl acls[1];
 
     /* acls record 0  ANY-USER */
     {
@@ -379,28 +373,48 @@ static PermissionPolicy* GenerateSmallAnyUserPolicy(const GUID128& groupGUID, co
             rules[1].SetMembers(1, prms);
         }
         acls[0].SetRules(2, rules);
-
-        GenerateAdminGroupACL(groupGUID, groupAuthority, acls[1]);
     }
-    policy->SetAcls(2, acls);
-
-    return policy;
+    return AddAcls(policy, acls, ArraySize(acls));
 }
 
-static PermissionPolicy* GenerateFullAccessAnyUserPolicy(const GUID128& groupGUID, const KeyInfoNISTP256& groupAuthority, bool allowSignal)
+static QStatus ReplaceAnyTrustAcl(PermissionPolicy& policy, PermissionPolicy::Acl& anyTrustedAcl)
 {
-    PermissionPolicy* policy = new PermissionPolicy();
+    /* copy all acl entries from the default policy except the ANY_TRUSTED entry*/
+    PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[policy.GetAclsSize()];
+    int anyTrustedIdx = -1;
+    for (size_t cnt = 0; cnt < policy.GetAclsSize(); cnt++) {
+        if (policy.GetAcls()[cnt].GetPeersSize() > 0) {
+            if (policy.GetAcls()[cnt].GetPeers()[0].GetType() == PermissionPolicy::Peer::PEER_ANY_TRUSTED) {
+                anyTrustedIdx = cnt;
+            }
+        }
+        if (anyTrustedIdx == -1) {
+            acls[cnt] = policy.GetAcls()[cnt];
+        }
+    }
+    if (anyTrustedIdx == -1) {
+        return ER_FAIL;
+    }
 
-    policy->SetVersion(552317);
+    /* replacing the ANY_TRUSTED acl */
+    acls[anyTrustedIdx] = anyTrustedAcl;
+    policy.SetAcls(policy.GetAclsSize(), acls);
+    delete [] acls;
+    return ER_OK;
+}
 
-    /* add the acls ection */
+static QStatus GenerateFullAccessAnyUserPolicy(BusAttachment& bus, BusAttachment& targetBus, PermissionPolicy& policy, bool allowSignal)
+{
+    SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
+    /* retrieve the default policy */
+    EXPECT_EQ(ER_OK, saProxy.GetDefaultPolicy(policy)) << "GetDefaultPolicy failed.";
+    policy.SetVersion(4);
+    PermissionPolicy::Acl acl;
 
-    PermissionPolicy::Acl acls[2];
-
-    /* acls record 0  ANY-USER */
+    /* replacing the ANY_TRUSTED acl */
     PermissionPolicy::Peer peers[1];
     peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
-    acls[0].SetPeers(1, peers);
+    acl.SetPeers(1, peers);
     PermissionPolicy::Rule rules[2];
     {
         rules[0].SetInterfaceName(BasePermissionMgmtTest::ONOFF_IFC_NAME);
@@ -432,27 +446,23 @@ static PermissionPolicy* GenerateFullAccessAnyUserPolicy(const GUID128& groupGUI
         rules[1].SetMembers(count + 1, prms);
         delete [] prms;
     }
-    acls[0].SetRules(2, rules);
-
-    GenerateAdminGroupACL(groupGUID, groupAuthority, acls[1]);
-    policy->SetAcls(2, acls);
-    return policy;
+    acl.SetRules(2, rules);
+    return ReplaceAnyTrustAcl(policy, acl);
 }
 
-static PermissionPolicy* GenerateAnyUserDeniedPrefixPolicy(const GUID128& groupGUID, const KeyInfoNISTP256& groupAuthority)
+static QStatus GenerateAnyUserDeniedPrefixPolicy(BusAttachment& bus, BusAttachment& targetBus, PermissionPolicy& policy)
 {
-    PermissionPolicy* policy = new PermissionPolicy();
+    SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
+    /* retrieve the default policy */
+    EXPECT_EQ(ER_OK, saProxy.GetDefaultPolicy(policy)) << "GetDefaultPolicy failed.";
+    policy.SetVersion(5);
 
-    policy->SetVersion(552317);
-
-    /* add the incoming section */
-
-    PermissionPolicy::Acl acls[2];
+    PermissionPolicy::Acl acl;
 
     /* acls record 0  ANY-USER */
     PermissionPolicy::Peer peers[1];
     peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
-    acls[0].SetPeers(1, peers);
+    acl.SetPeers(1, peers);
     PermissionPolicy::Rule rules[2];
     {
         rules[0].SetInterfaceName(BasePermissionMgmtTest::ONOFF_IFC_NAME);
@@ -472,26 +482,22 @@ static PermissionPolicy* GenerateAnyUserDeniedPrefixPolicy(const GUID128& groupG
         prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE);
         rules[1].SetMembers(1, prms);
     }
-    acls[0].SetRules(2, rules);
-
-
-    GenerateAdminGroupACL(groupGUID, groupAuthority, acls[1]);
-    policy->SetAcls(2, acls);
-    return policy;
+    acl.SetRules(2, rules);
+    return ReplaceAnyTrustAcl(policy, acl);
 }
 
-static PermissionPolicy* GenerateFullAccessOutgoingPolicy(const GUID128& groupGUID, const KeyInfoNISTP256& groupAuthority, bool allowIncomingSignal)
+static QStatus GenerateFullAccessOutgoingPolicy(BusAttachment& bus, BusAttachment& targetBus, PermissionPolicy& policy, bool allowIncomingSignal)
 {
-    PermissionPolicy* policy = new PermissionPolicy();
-
-    policy->SetVersion(38276);
-
-    PermissionPolicy::Acl acls[2];
+    SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
+    /* retrieve the default policy */
+    EXPECT_EQ(ER_OK, saProxy.GetDefaultPolicy(policy)) << "GetDefaultPolicy failed.";
+    policy.SetVersion(6);
+    PermissionPolicy::Acl acl;
 
     /* acls record 0  ANY TRUSTED */
     PermissionPolicy::Peer peers[1];
     peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
-    acls[0].SetPeers(1, peers);
+    acl.SetPeers(1, peers);
     PermissionPolicy::Rule rules[1];
     rules[0].SetInterfaceName("*");
     PermissionPolicy::Rule::Member* prms = NULL;
@@ -514,21 +520,18 @@ static PermissionPolicy* GenerateFullAccessOutgoingPolicy(const GUID128& groupGU
     prms[count].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
     count++;
     rules[0].SetMembers(count, prms);
-    acls[0].SetRules(1, rules);
+    acl.SetRules(1, rules);
     delete [] prms;
-
-    GenerateAdminGroupACL(groupGUID, groupAuthority, acls[1]);
-    policy->SetAcls(2, acls);
-    return policy;
+    return ReplaceAnyTrustAcl(policy, acl);
 }
 
-static PermissionPolicy* GenerateFullAnonymousAccessOutgoingPolicy(const GUID128& groupGUID, const KeyInfoNISTP256& groupAuthority)
+static QStatus GenerateFullAnonymousAccessOutgoingPolicy(BusAttachment& bus, BusAttachment& targetBus, PermissionPolicy& policy)
 {
-    PermissionPolicy* policy = new PermissionPolicy();
-
-    policy->SetVersion(38277);
-
-    PermissionPolicy::Acl acls[2];
+    SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
+    /* retrieve the default policy */
+    EXPECT_EQ(ER_OK, saProxy.GetDefaultPolicy(policy)) << "GetDefaultPolicy failed.";
+    policy.SetVersion(7);
+    PermissionPolicy::Acl acls[1];
 
     /* acls record 0  ALL */
     PermissionPolicy::Peer peers[1];
@@ -542,24 +545,22 @@ static PermissionPolicy* GenerateFullAnonymousAccessOutgoingPolicy(const GUID128
     rules[0].SetMembers(1, prms);
     acls[0].SetRules(1, rules);
 
-    /* acls record 1  Admin group */
-    GenerateAdminGroupACL(groupGUID, groupAuthority, acls[1]);
-    policy->SetAcls(2, acls);
-    return policy;
+    return AddAcls(policy, acls, ArraySize(acls));
 }
 
-static PermissionPolicy* GenerateFullAccessOutgoingPolicy(const GUID128& groupGUID, const KeyInfoNISTP256& groupAuthority)
+static QStatus GenerateFullAccessOutgoingPolicy(BusAttachment& bus, BusAttachment& targetBus, PermissionPolicy& policy)
 {
-    return GenerateFullAccessOutgoingPolicy(groupGUID, groupAuthority, true);
+    return GenerateFullAccessOutgoingPolicy(bus, targetBus, policy, true);
 }
 
-static PermissionPolicy* GenerateFullAccessOutgoingPolicyWithGuestServices(const GUID128& groupGUID, const KeyInfoNISTP256& groupAuthority, bool allowIncomingSignal, const KeyInfoNISTP256& guestCA)
+static QStatus GenerateFullAccessOutgoingPolicyWithGuestServices(BusAttachment& bus, BusAttachment& targetBus, PermissionPolicy& policy, bool allowIncomingSignal, const KeyInfoNISTP256& guestCA)
 {
-    PermissionPolicy* policy = new PermissionPolicy();
+    SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
+    /* retrieve the default policy */
+    EXPECT_EQ(ER_OK, saProxy.GetDefaultPolicy(policy)) << "GetDefaultPolicy failed.";
+    policy.SetVersion(8);
 
-    policy->SetVersion(2737834);
-
-    PermissionPolicy::Acl acls[3];
+    PermissionPolicy::Acl acls[2];
 
     /* acls record 0  ANY-USER */
     {
@@ -606,12 +607,10 @@ static PermissionPolicy* GenerateFullAccessOutgoingPolicyWithGuestServices(const
         rules[0].SetMembers(1, prms);
         acls[1].SetRules(1, rules);
     }
-    GenerateAdminGroupACL(groupGUID, groupAuthority, acls[2]);
-    policy->SetAcls(3, acls);
-    return policy;
+    return AddAcls(policy, acls, ArraySize(acls));
 }
 
-static PermissionPolicy* GenerateGuildSpecificAccessOutgoingPolicy(const GUID128& groupGUID, const KeyInfoNISTP256& groupAuthority, const GUID128& guildGUID, BusAttachment& guildAuthorityBus)
+static QStatus GenerateGuildSpecificAccessOutgoingPolicy(BusAttachment& bus, BusAttachment& targetBus, PermissionPolicy& policy, const GUID128& guildGUID, BusAttachment& guildAuthorityBus)
 {
     qcc::GUID128 guildAuthorityGUID;
     PermissionMgmtTestHelper::GetGUID(guildAuthorityBus, guildAuthorityGUID);
@@ -619,11 +618,12 @@ static PermissionPolicy* GenerateGuildSpecificAccessOutgoingPolicy(const GUID128
     QStatus status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(guildAuthorityBus, &guildAuthorityPubKey);
     EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
 
-    PermissionPolicy* policy = new PermissionPolicy();
+    SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
+    /* retrieve the default policy */
+    EXPECT_EQ(ER_OK, saProxy.GetDefaultPolicy(policy)) << "GetDefaultPolicy failed.";
+    policy.SetVersion(9);
 
-    policy->SetVersion(827425);
-
-    PermissionPolicy::Acl acls[3];
+    PermissionPolicy::Acl acls[2];
 
     /* acls record 0  ANY-USER */
     {
@@ -674,20 +674,19 @@ static PermissionPolicy* GenerateGuildSpecificAccessOutgoingPolicy(const GUID128
         acls[1].SetRules(1, rules);
     }
 
-    GenerateAdminGroupACL(groupGUID, groupAuthority, acls[2]);
-    policy->SetAcls(3, acls);
-    return policy;
+    return AddAcls(policy, acls, ArraySize(acls));
 }
 
-static PermissionPolicy* GeneratePolicyPeerPublicKey(const GUID128& groupGUID, const KeyInfoNISTP256& groupAuthority, qcc::ECCPublicKey& peerPublicKey)
+static QStatus GeneratePolicyPeerPublicKey(BusAttachment& bus, BusAttachment& targetBus, PermissionPolicy& policy, qcc::ECCPublicKey& peerPublicKey)
 {
-    PermissionPolicy* policy = new PermissionPolicy();
+    SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
+    /* retrieve the default policy */
+    EXPECT_EQ(ER_OK, saProxy.GetDefaultPolicy(policy)) << "GetDefaultPolicy failed.";
+    policy.SetVersion(10);
 
-    policy->SetVersion(8742198);
+    /* add more acls */
 
-    /* add the provider section */
-
-    PermissionPolicy::Acl acls[2];
+    PermissionPolicy::Acl acls[1];
 
     /* acls record 0 peer */
     PermissionPolicy::Peer peers[1];
@@ -723,19 +722,17 @@ static PermissionPolicy* GeneratePolicyPeerPublicKey(const GUID128& groupGUID, c
         rules[1].SetMembers(1, prms);
     }
     acls[0].SetRules(2, rules);
-    GenerateAdminGroupACL(groupGUID, groupAuthority, acls[1]);
-    policy->SetAcls(2, acls);
-
-    return policy;
+    return AddAcls(policy, acls, ArraySize(acls));
 }
 
-static PermissionPolicy* GeneratePolicyDenyPeerPublicKey(const GUID128& groupGUID, const KeyInfoNISTP256& groupAuthority, qcc::ECCPublicKey& peerPublicKey)
+static QStatus GeneratePolicyDenyPeerPublicKey(BusAttachment& bus, BusAttachment& targetBus, PermissionPolicy& policy, qcc::ECCPublicKey& peerPublicKey)
 {
-    PermissionPolicy* policy = new PermissionPolicy();
+    SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
+    /* retrieve the default policy */
+    EXPECT_EQ(ER_OK, saProxy.GetDefaultPolicy(policy)) << "GetDefaultPolicy failed.";
+    policy.SetVersion(11);
 
-    policy->SetVersion(32445);
-
-    PermissionPolicy::Acl acls[2];
+    PermissionPolicy::Acl acls[1];
 
     /* acls record 0 peer */
     PermissionPolicy::Peer peers[1];
@@ -771,10 +768,7 @@ static PermissionPolicy* GeneratePolicyDenyPeerPublicKey(const GUID128& groupGUI
         rules[1].SetMembers(1, prms);
     }
     acls[0].SetRules(2, rules);
-    GenerateAdminGroupACL(groupGUID, groupAuthority, acls[1]);
-    policy->SetAcls(2, acls);
-
-    return policy;
+    return AddAcls(policy, acls, ArraySize(acls));
 }
 
 static QStatus GenerateAllowAllManifest(PermissionPolicy::Rule** retRules, size_t* count)
@@ -1215,7 +1209,6 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     {
         SecurityApplicationProxy saProxy(installerBus, bus.GetUniqueName().c_str());
 
-        PermissionPolicy aPolicy;
         SetApplicationStateSignalReceived(false);
         EXPECT_EQ(ER_OK, saProxy.UpdatePolicy(policy)) << "UpdatePolicy failed.";
 
@@ -1978,10 +1971,9 @@ TEST_F(PermissionMgmtUseCaseTest, TestAllCalls)
 
     RetrieveDefaultPolicy(adminBus, serviceBus);
     /* generate a policy */
-    PermissionPolicy* policy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, adminBus);
-    ASSERT_TRUE(policy) << "GeneratePolicy failed.";
-    InstallPolicyToService(*policy);
-    delete policy;
+    PermissionPolicy policy;
+    ASSERT_EQ(ER_OK, GeneratePolicy(adminBus, serviceBus, policy, adminBus)) << "GeneratePolicy failed.";
+    InstallPolicyToService(policy);
 
     AppHasAllowAllManifest(adminBus, serviceBus);
 
@@ -1991,9 +1983,9 @@ TEST_F(PermissionMgmtUseCaseTest, TestAllCalls)
     ReplaceIdentityCert(adminBus, serviceBus);
     InstallMembershipToServiceProvider();
 
-    policy = GenerateFullAccessOutgoingPolicy(adminAdminGroupGUID, adminAdminGroupAuthority);
-    InstallPolicyToConsumer(*policy);
-    delete policy;
+    PermissionPolicy consumerPolicy;
+    ASSERT_EQ(ER_OK, GenerateFullAccessOutgoingPolicy(adminBus, consumerBus, consumerPolicy)) << "GeneratePolicy failed.";
+    InstallPolicyToConsumer(consumerPolicy);
 
     InstallMembershipToConsumer();
 
@@ -2031,14 +2023,13 @@ TEST_F(PermissionMgmtUseCaseTest, ClaimPolicyMembershipAccess)
 {
     Claims(true);
     /* generate a policy */
-    PermissionPolicy* policy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, adminBus);
-    ASSERT_TRUE(policy) << "GeneratePolicy failed.";
-    InstallPolicyToService(*policy);
-    delete policy;
+    PermissionPolicy policy;
+    ASSERT_EQ(ER_OK, GeneratePolicy(adminBus, serviceBus, policy, adminBus)) << "GeneratePolicy failed.";
+    InstallPolicyToService(policy);
 
-    policy = GenerateFullAccessOutgoingPolicy(adminAdminGroupGUID, adminAdminGroupAuthority);
-    InstallPolicyToConsumer(*policy);
-    delete policy;
+    PermissionPolicy consumerPolicy;
+    ASSERT_EQ(ER_OK, GenerateFullAccessOutgoingPolicy(adminBus, consumerBus, consumerPolicy)) << "GeneratePolicy failed.";
+    InstallPolicyToConsumer(consumerPolicy);
 
     InstallMembershipToConsumer();
     /* setup the application interfaces for access tests */
@@ -2058,15 +2049,14 @@ TEST_F(PathBasePermissionMgmtUseCaseTest, OutboundAllowedByMembership)
 {
     Claims(true);
     /* generate a policy */
-    PermissionPolicy* policy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, adminBus);
-    ASSERT_TRUE(policy) << "GeneratePolicy failed.";
-    InstallPolicyToService(*policy);
-    delete policy;
+    PermissionPolicy policy;
+    ASSERT_EQ(ER_OK, GeneratePolicy(adminBus, serviceBus, policy, adminBus)) << "GeneratePolicy failed.";
+    InstallPolicyToService(policy);
     InstallMembershipToServiceProvider("1234", membershipGUID1);
 
-    policy = GenerateGuildSpecificAccessOutgoingPolicy(adminAdminGroupGUID, adminAdminGroupAuthority, membershipGUID1, adminBus);
-    InstallPolicyToConsumer(*policy);
-    delete policy;
+    PermissionPolicy consumerPolicy;
+    ASSERT_EQ(ER_OK, GenerateGuildSpecificAccessOutgoingPolicy(adminBus, consumerBus, consumerPolicy, membershipGUID1, adminBus)) << "GeneratePolicy failed.";
+    InstallPolicyToConsumer(consumerPolicy);
 
     InstallMembershipToConsumer();
     /* setup the application interfaces for access tests */
@@ -2085,14 +2075,13 @@ TEST_F(PermissionMgmtUseCaseTest, OutboundNotAllowedByMissingPeerMembership)
 {
     Claims(true);
     /* generate a policy */
-    PermissionPolicy* policy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, consumerBus);
-    ASSERT_TRUE(policy) << "GeneratePolicy failed.";
-    InstallPolicyToService(*policy);
-    delete policy;
+    PermissionPolicy policy;
+    ASSERT_EQ(ER_OK, GeneratePolicy(adminBus, serviceBus, policy, consumerBus)) << "GeneratePolicy failed.";
+    InstallPolicyToService(policy);
 
-    policy = GenerateGuildSpecificAccessOutgoingPolicy(adminAdminGroupGUID, adminAdminGroupAuthority, membershipGUID1, consumerBus);
-    InstallPolicyToConsumer(*policy);
-    delete policy;
+    PermissionPolicy consumerPolicy;
+    ASSERT_EQ(ER_OK, GenerateGuildSpecificAccessOutgoingPolicy(adminBus, consumerBus, consumerPolicy, membershipGUID1, consumerBus)) << "GeneratePolicy failed.";
+    InstallPolicyToConsumer(consumerPolicy);
 
     InstallMembershipToConsumer();
     /* setup the application interfaces for access tests */
@@ -2125,14 +2114,13 @@ TEST_F(PermissionMgmtUseCaseTest, AccessByPublicKey)
     ECCPublicKey consumerPublicKey;
     status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(consumerBus, &consumerPublicKey);
     EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
-    PermissionPolicy* policy = GeneratePolicyPeerPublicKey(adminAdminGroupGUID, adminAdminGroupAuthority, consumerPublicKey);
-    ASSERT_TRUE(policy) << "GeneratePolicy failed.";
-    InstallPolicyToService(*policy);
-    delete policy;
+    PermissionPolicy policy;
+    ASSERT_EQ(ER_OK, GeneratePolicyPeerPublicKey(adminBus, serviceBus, policy, consumerPublicKey)) << "GeneratePolicy failed.";
+    InstallPolicyToService(policy);
 
-    policy = GenerateFullAccessOutgoingPolicy(adminAdminGroupGUID, adminAdminGroupAuthority);
-    InstallPolicyToConsumer(*policy);
-    delete policy;
+    PermissionPolicy consumerPolicy;
+    ASSERT_EQ(ER_OK, GenerateFullAccessOutgoingPolicy(adminBus, consumerBus, consumerPolicy)) << "GeneratePolicy failed.";
+    InstallPolicyToConsumer(consumerPolicy);
 
     InstallMembershipToConsumer();
     /* setup the application interfaces for access tests */
@@ -2151,14 +2139,13 @@ TEST_F(PermissionMgmtUseCaseTest, AccessDeniedForPeerPublicKey)
     ECCPublicKey consumerPublicKey;
     status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(consumerBus, &consumerPublicKey);
     EXPECT_EQ(ER_OK, status) << "  RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
-    PermissionPolicy* policy = GeneratePolicyDenyPeerPublicKey(adminAdminGroupGUID, adminAdminGroupAuthority, consumerPublicKey);
-    ASSERT_TRUE(policy) << "GeneratePolicy failed.";
-    InstallPolicyToService(*policy);
-    delete policy;
+    PermissionPolicy policy;
+    ASSERT_EQ(ER_OK, GeneratePolicyDenyPeerPublicKey(adminBus, serviceBus, policy, consumerPublicKey)) << "GeneratePolicy failed.";
+    InstallPolicyToService(policy);
 
-    policy = GenerateFullAccessOutgoingPolicy(adminAdminGroupGUID, adminAdminGroupAuthority);
-    InstallPolicyToConsumer(*policy);
-    delete policy;
+    PermissionPolicy consumerPolicy;
+    ASSERT_EQ(ER_OK, GenerateFullAccessOutgoingPolicy(adminBus, consumerBus, consumerPolicy)) << "GeneratePolicy failed.";
+    InstallPolicyToConsumer(consumerPolicy);
 
     InstallMembershipToConsumer();
     /* setup the application interfaces for access tests */
@@ -2219,10 +2206,9 @@ TEST_F(PermissionMgmtUseCaseTest, SendingOthersMembershipCert)
 {
     Claims(true);
     /* generate a policy */
-    PermissionPolicy* policy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, consumerBus);
-    ASSERT_TRUE(policy) << "GeneratePolicy failed.";
-    InstallPolicyToService(*policy);
-    delete policy;
+    PermissionPolicy policy;
+    ASSERT_EQ(ER_OK, GeneratePolicy(adminBus, serviceBus, policy, consumerBus)) << "GeneratePolicy failed.";
+    InstallPolicyToService(policy);
 
     InstallOthersMembershipToConsumer();
 }
@@ -2231,14 +2217,13 @@ TEST_F(PermissionMgmtUseCaseTest, AccessNotAuthorizedBecauseOfWrongActionMask)
 {
     Claims(true);
     /* generate a limited policy */
-    PermissionPolicy* policy = GenerateSmallAnyUserPolicy(adminAdminGroupGUID, adminAdminGroupAuthority);
-    ASSERT_TRUE(policy) << "GeneratePolicy failed.";
-    InstallPolicyToService(*policy);
-    delete policy;
+    PermissionPolicy policy;
+    ASSERT_EQ(ER_OK, GenerateSmallAnyUserPolicy(adminBus, serviceBus, policy)) << "GeneratePolicy failed.";
+    InstallPolicyToService(policy);
 
-    policy = GenerateFullAccessOutgoingPolicy(adminAdminGroupGUID, adminAdminGroupAuthority);
-    InstallPolicyToConsumer(*policy);
-    delete policy;
+    PermissionPolicy consumerPolicy;
+    ASSERT_EQ(ER_OK, GenerateFullAccessOutgoingPolicy(adminBus, consumerBus, consumerPolicy)) << "GeneratePolicy failed.";
+    InstallPolicyToConsumer(consumerPolicy);
 
     InstallMembershipToConsumer();
     /* setup the application interfaces for access tests */
@@ -2252,14 +2237,13 @@ TEST_F(PermissionMgmtUseCaseTest, AccessNotAuthorizedBecauseOfDeniedOnPrefix)
 {
     Claims(true);
     /* generate a limited policy */
-    PermissionPolicy* policy = GenerateAnyUserDeniedPrefixPolicy(adminAdminGroupGUID, adminAdminGroupAuthority);
-    ASSERT_TRUE(policy) << "GeneratePolicy failed.";
-    InstallPolicyToService(*policy);
-    delete policy;
+    PermissionPolicy policy;
+    ASSERT_EQ(ER_OK, GenerateAnyUserDeniedPrefixPolicy(adminBus, serviceBus, policy)) << "GeneratePolicy failed.";
+    InstallPolicyToService(policy);
 
-    policy = GenerateFullAccessOutgoingPolicy(adminAdminGroupGUID, adminAdminGroupAuthority);
-    InstallPolicyToConsumer(*policy);
-    delete policy;
+    PermissionPolicy consumerPolicy;
+    ASSERT_EQ(ER_OK, GenerateFullAccessOutgoingPolicy(adminBus, consumerBus, consumerPolicy)) << "GeneratePolicy failed.";
+    InstallPolicyToConsumer(consumerPolicy);
 
     InstallMembershipToConsumer();
     /* setup the application interfaces for access tests */
@@ -2273,15 +2257,14 @@ TEST_F(PathBasePermissionMgmtUseCaseTest, ProviderHasNoMatchingGuildForConsumer)
 {
     Claims(false);
     /* generate a policy */
-    PermissionPolicy* policy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, consumerBus);
-    ASSERT_TRUE(policy) << "GeneratePolicy failed.";
-    InstallPolicyToService(*policy);
-    delete policy;
+    PermissionPolicy policy;
+    ASSERT_EQ(ER_OK, GeneratePolicy(adminBus, serviceBus, policy, consumerBus)) << "GeneratePolicy failed.";
+    InstallPolicyToService(policy);
     InstallMembershipToServiceProvider();
 
-    policy = GenerateFullAccessOutgoingPolicy(adminAdminGroupGUID, adminAdminGroupAuthority);
-    InstallPolicyToConsumer(*policy);
-    delete policy;
+    PermissionPolicy consumerPolicy;
+    ASSERT_EQ(ER_OK, GenerateFullAccessOutgoingPolicy(adminBus, consumerBus, consumerPolicy)) << "GeneratePolicy failed.";
+    InstallPolicyToConsumer(consumerPolicy);
 
     InstallMembershipToConsumer(membershipSerial4, membershipGUID4, adminBus);
     /* setup the application interfaces for access tests */
@@ -2296,15 +2279,14 @@ TEST_F(PermissionMgmtUseCaseTest, ProviderHasMoreMembershipCertsThanConsumer)
 {
     Claims(false);
     /* generate a policy */
-    PermissionPolicy* policy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, adminBus);
-    ASSERT_TRUE(policy) << "GeneratePolicy failed.";
-    InstallPolicyToService(*policy);
-    delete policy;
+    PermissionPolicy policy;
+    ASSERT_EQ(ER_OK, GeneratePolicy(adminBus, serviceBus, policy, adminBus)) << "GeneratePolicy failed.";
+    InstallPolicyToService(policy);
     InstallMembershipToServiceProvider();
 
-    policy = GenerateFullAccessOutgoingPolicy(adminAdminGroupGUID, adminAdminGroupAuthority);
-    InstallPolicyToConsumer(*policy);
-    delete policy;
+    PermissionPolicy consumerPolicy;
+    ASSERT_EQ(ER_OK, GenerateFullAccessOutgoingPolicy(adminBus, consumerBus, consumerPolicy)) << "GeneratePolicy failed.";
+    InstallPolicyToConsumer(consumerPolicy);
 
     InstallMembershipToConsumer();
     /* setup the application interfaces for access tests */
@@ -2320,15 +2302,14 @@ TEST_F(PermissionMgmtUseCaseTest, ConsumerHasMoreMembershipCertsThanService)
 {
     Claims(false);
     /* generate a policy */
-    PermissionPolicy* policy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, adminBus);
-    ASSERT_TRUE(policy) << "GeneratePolicy failed.";
-    InstallPolicyToService(*policy);
-    delete policy;
+    PermissionPolicy policy;
+    ASSERT_EQ(ER_OK, GeneratePolicy(adminBus, serviceBus, policy, adminBus)) << "GeneratePolicy failed.";
+    InstallPolicyToService(policy);
     InstallMembershipToServiceProvider();
 
-    policy = GenerateFullAccessOutgoingPolicy(adminAdminGroupGUID, adminAdminGroupAuthority);
-    InstallPolicyToConsumer(*policy);
-    delete policy;
+    PermissionPolicy consumerPolicy;
+    ASSERT_EQ(ER_OK, GenerateFullAccessOutgoingPolicy(adminBus, consumerBus, consumerPolicy)) << "GeneratePolicy failed.";
+    InstallPolicyToConsumer(consumerPolicy);
 
     InstallMembershipToConsumer();
     InstallMembershipToConsumer(membershipSerial2, membershipGUID2, adminBus);
@@ -2344,15 +2325,14 @@ TEST_F(PermissionMgmtUseCaseTest, ConsumerHasGoodMembershipCertChain)
 {
     Claims(false);
     /* generate a policy */
-    PermissionPolicy* policy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, adminBus);
-    ASSERT_TRUE(policy) << "GeneratePolicy failed.";
-    InstallPolicyToService(*policy);
-    delete policy;
+    PermissionPolicy policy;
+    ASSERT_EQ(ER_OK, GeneratePolicy(adminBus, serviceBus, policy, adminBus)) << "GeneratePolicy failed.";
+    InstallPolicyToService(policy);
     InstallMembershipToServiceProvider();
 
-    policy = GenerateFullAccessOutgoingPolicy(adminAdminGroupGUID, adminAdminGroupAuthority);
-    InstallPolicyToConsumer(*policy);
-    delete policy;
+    PermissionPolicy consumerPolicy;
+    ASSERT_EQ(ER_OK, GenerateFullAccessOutgoingPolicy(adminBus, consumerBus, consumerPolicy)) << "GeneratePolicy failed.";
+    InstallPolicyToConsumer(consumerPolicy);
 
     InstallMembershipChainToTarget(adminBus, adminBus, consumerBus, membershipSerial0, membershipSerial1, membershipGUID1);
 
@@ -2367,15 +2347,14 @@ TEST_F(PermissionMgmtUseCaseTest, ConsumerHasMoreRestrictiveManifest)
 {
     Claims(false);
     /* generate a policy */
-    PermissionPolicy* policy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, adminBus);
-    ASSERT_TRUE(policy) << "GeneratePolicy failed.";
-    InstallPolicyToService(*policy);
-    delete policy;
+    PermissionPolicy policy;
+    ASSERT_EQ(ER_OK, GeneratePolicy(adminBus, serviceBus, policy, adminBus)) << "GeneratePolicy failed.";
+    InstallPolicyToService(policy);
     InstallMembershipToServiceProvider();
 
-    policy = GenerateFullAccessOutgoingPolicy(adminAdminGroupGUID, adminAdminGroupAuthority);
-    InstallPolicyToConsumer(*policy);
-    delete policy;
+    PermissionPolicy consumerPolicy;
+    ASSERT_EQ(ER_OK, GenerateFullAccessOutgoingPolicy(adminBus, consumerBus, consumerPolicy)) << "GeneratePolicy failed.";
+    InstallPolicyToConsumer(consumerPolicy);
 
     InstallMembershipChainToTarget(adminBus, adminBus, consumerBus, membershipSerial0, membershipSerial1, membershipGUID1);
 
@@ -2397,15 +2376,14 @@ TEST_F(PathBasePermissionMgmtUseCaseTest, ConsumerHasLessAccessInManifestUsingDe
 {
     Claims(false);
     /* generate a policy */
-    PermissionPolicy* policy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, consumerBus);
-    ASSERT_TRUE(policy) << "GeneratePolicy failed.";
-    InstallPolicyToService(*policy);
-    delete policy;
+    PermissionPolicy policy;
+    ASSERT_EQ(ER_OK, GeneratePolicy(adminBus, serviceBus, policy, consumerBus)) << "GeneratePolicy failed.";
+    InstallPolicyToService(policy);
     InstallMembershipToServiceProvider();
 
-    policy = GenerateFullAccessOutgoingPolicy(adminAdminGroupGUID, adminAdminGroupAuthority);
-    InstallPolicyToConsumer(*policy);
-    delete policy;
+    PermissionPolicy consumerPolicy;
+    ASSERT_EQ(ER_OK, GenerateFullAccessOutgoingPolicy(adminBus, consumerBus, consumerPolicy)) << "GeneratePolicy failed.";
+    InstallPolicyToConsumer(consumerPolicy);
 
     InstallMembershipToConsumer();
 
@@ -2427,14 +2405,13 @@ TEST_F(PermissionMgmtUseCaseTest, AllowEverything)
 {
     Claims(true);
     /* generate a limited policy */
-    PermissionPolicy* policy = GenerateWildCardPolicy(adminAdminGroupGUID, adminAdminGroupAuthority);
-    ASSERT_TRUE(policy) << "GeneratePolicy failed.";
-    InstallPolicyToService(*policy);
-    delete policy;
+    PermissionPolicy policy;
+    ASSERT_EQ(ER_OK, GenerateWildCardPolicy(adminBus, serviceBus, policy)) << "GeneratePolicy failed.";
+    InstallPolicyToService(policy);
 
-    policy = GenerateFullAccessOutgoingPolicy(adminAdminGroupGUID, adminAdminGroupAuthority);
-    InstallPolicyToConsumer(*policy);
-    delete policy;
+    PermissionPolicy consumerPolicy;
+    ASSERT_EQ(ER_OK, GenerateFullAccessOutgoingPolicy(adminBus, consumerBus, consumerPolicy)) << "GeneratePolicy failed.";
+    InstallPolicyToConsumer(consumerPolicy);
 
     InstallMembershipToConsumer();
     /* setup the application interfaces for access tests */
@@ -2448,14 +2425,13 @@ TEST_F(PermissionMgmtUseCaseTest, SignalAllowedFromAnyUser)
 {
     Claims(false);
     /* generate a policy to permit sending a signal */
-    PermissionPolicy* policy = GenerateFullAccessAnyUserPolicy(adminAdminGroupGUID, adminAdminGroupAuthority, true);
-    ASSERT_TRUE(policy) << "GeneratePolicy failed.";
-    InstallPolicyToService(*policy);
-    delete policy;
+    PermissionPolicy policy;
+    ASSERT_EQ(ER_OK, GenerateFullAccessAnyUserPolicy(adminBus, serviceBus, policy, true)) << "GeneratePolicy failed.";
+    InstallPolicyToService(policy);
 
-    policy = GenerateFullAccessOutgoingPolicy(adminAdminGroupGUID, adminAdminGroupAuthority);
-    InstallPolicyToConsumer(*policy);
-    delete policy;
+    PermissionPolicy consumerPolicy;
+    ASSERT_EQ(ER_OK, GenerateFullAccessOutgoingPolicy(adminBus, consumerBus, consumerPolicy)) << "GeneratePolicy failed.";
+    InstallPolicyToConsumer(consumerPolicy);
     /* setup the application interfaces for access tests */
     CreateAppInterfaces(serviceBus, true);
     CreateAppInterfaces(consumerBus, false);
@@ -2476,14 +2452,13 @@ TEST_F(PermissionMgmtUseCaseTest, SignalNotAllowedToEmit)
 {
     Claims(false);
     /* generate a policy not permit sending a signal */
-    PermissionPolicy* policy = GenerateFullAccessAnyUserPolicy(adminAdminGroupGUID, adminAdminGroupAuthority, false);
-    ASSERT_TRUE(policy) << "GeneratePolicy failed.";
-    InstallPolicyToService(*policy);
-    delete policy;
+    PermissionPolicy policy;
+    ASSERT_EQ(ER_OK, GenerateFullAccessAnyUserPolicy(adminBus, serviceBus, policy, false)) << "GeneratePolicy failed.";
+    InstallPolicyToService(policy);
 
-    policy = GenerateFullAccessOutgoingPolicy(adminAdminGroupGUID, adminAdminGroupAuthority);
-    InstallPolicyToConsumer(*policy);
-    delete policy;
+    PermissionPolicy consumerPolicy;
+    ASSERT_EQ(ER_OK, GenerateFullAccessOutgoingPolicy(adminBus, consumerBus, consumerPolicy)) << "GeneratePolicy failed.";
+    InstallPolicyToConsumer(consumerPolicy);
     /* setup the application interfaces for access tests */
     CreateAppInterfaces(serviceBus, true);
     CreateAppInterfaces(consumerBus, false);
@@ -2504,15 +2479,14 @@ TEST_F(PermissionMgmtUseCaseTest, SignalNotAllowedToReceive)
 {
     Claims(false);
     /* generate a policy to permit sending a signal */
-    PermissionPolicy* policy = GenerateFullAccessAnyUserPolicy(adminAdminGroupGUID, adminAdminGroupAuthority, true);
-    ASSERT_TRUE(policy) << "GeneratePolicy failed.";
-    InstallPolicyToService(*policy);
-    delete policy;
+    PermissionPolicy policy;
+    ASSERT_EQ(ER_OK, GenerateFullAccessAnyUserPolicy(adminBus, serviceBus, policy, true)) << "GeneratePolicy failed.";
+    InstallPolicyToService(policy);
 
     /* full access outgoing but do not accept incoming signal */
-    policy = GenerateFullAccessOutgoingPolicy(adminAdminGroupGUID, adminAdminGroupAuthority, false);
-    InstallPolicyToConsumer(*policy);
-    delete policy;
+    PermissionPolicy consumerPolicy;
+    ASSERT_EQ(ER_OK, GenerateFullAccessOutgoingPolicy(adminBus, consumerBus, consumerPolicy, false)) << "GeneratePolicy failed.";
+    InstallPolicyToConsumer(consumerPolicy);
     /* setup the application interfaces for access tests */
     CreateAppInterfaces(serviceBus, true);
     CreateAppInterfaces(consumerBus, false);
@@ -2534,14 +2508,14 @@ TEST_F(PermissionMgmtUseCaseTest, AccessGrantedForPeerFromSpecificCA)
     Claims(false);
 
     /* Setup so remote control is not trusted by service provider */
-    PermissionPolicy* servicePolicy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, adminBus);
-    ASSERT_TRUE(servicePolicy) << "GeneratePolicy failed.";
-    InstallPolicyToService(*servicePolicy);
+    PermissionPolicy servicePolicy;
+    ASSERT_EQ(ER_OK, GeneratePolicy(adminBus, serviceBus, servicePolicy, adminBus)) << "GeneratePolicy failed.";
+    InstallPolicyToService(servicePolicy);
 
-    PermissionPolicy* policy = GenerateFullAccessOutgoingPolicy(consumerAdminGroupGUID, consumerAdminGroupAuthority);
+    PermissionPolicy remoteControlPolicy;
+    ASSERT_EQ(ER_OK, GenerateFullAccessOutgoingPolicy(consumerBus, remoteControlBus, remoteControlPolicy)) << "GeneratePolicy failed.";
     EnableSecurity("ALLJOYN_ECDHE_ECDSA");
-    InstallPolicyToClientBus(consumerBus, remoteControlBus, *policy);
-    delete policy;
+    InstallPolicyToClientBus(consumerBus, remoteControlBus, remoteControlPolicy);
 
     CreateAppInterfaces(serviceBus, true);
     CreateAppInterfaces(remoteControlBus, false);
@@ -2556,16 +2530,15 @@ TEST_F(PermissionMgmtUseCaseTest, AccessGrantedForPeerFromSpecificCA)
     ClearPeerKeys(serviceBus, remoteControlBus);
     KeyInfoNISTP256 consumerCA;
     consumerBus.GetPermissionConfigurator().GetSigningPublicKey(consumerCA);
-    AddSpecificCertAuthorityToPolicy(*servicePolicy, consumerCA);
-    InstallPolicyToService(*servicePolicy);
-    delete servicePolicy;
+    AddSpecificCertAuthorityToPolicy(servicePolicy, consumerCA);
+    InstallPolicyToService(servicePolicy);
     InstallMembershipToServiceProvider();
 
     KeyInfoNISTP256 adminCA;
     adminBus.GetPermissionConfigurator().GetSigningPublicKey(adminCA);
-    policy = GenerateFullAccessOutgoingPolicyWithGuestServices(consumerAdminGroupGUID, consumerAdminGroupAuthority, false, adminCA);
-    InstallPolicyToClientBus(consumerBus, remoteControlBus, *policy);
-    delete policy;
+    PermissionPolicy rcPolicy;
+    ASSERT_EQ(ER_OK, GenerateFullAccessOutgoingPolicyWithGuestServices(consumerBus, remoteControlBus, rcPolicy, false, adminCA)) << "GeneratePolicy failed.";
+    InstallPolicyToClientBus(consumerBus, remoteControlBus, rcPolicy);
 
     InstallMembershipChainToTarget(adminBus, consumerBus, remoteControlBus, membershipSerial0, membershipSerial1, membershipGUID1);
     /* remote control can access the service provider */
@@ -2579,10 +2552,9 @@ TEST_F(PermissionMgmtUseCaseTest, TestResetPolicy)
     Claims(false);
 
     /* generate a policy */
-    PermissionPolicy* policy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, consumerBus);
-    ASSERT_TRUE(policy) << "GeneratePolicy failed.";
-    InstallPolicyToService(*policy);
-    delete policy;
+    PermissionPolicy policy;
+    ASSERT_EQ(ER_OK, GeneratePolicy(adminBus, serviceBus, policy, consumerBus)) << "GeneratePolicy failed.";
+    InstallPolicyToService(policy);
     ResetPolicyFromApp(adminBus, serviceBus);
 }
 
@@ -2591,16 +2563,15 @@ TEST_F(PermissionMgmtUseCaseTest, RetrievePropertyApplicationState)
 {
     Claims(false);
     /* generate a policy */
-    PermissionPolicy* policy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, consumerBus);
-    ASSERT_TRUE(policy) << "GeneratePolicy failed.";
-    InstallPolicyToService(*policy);
-    delete policy;
+    PermissionPolicy policy;
+    ASSERT_EQ(ER_OK, GeneratePolicy(adminBus, serviceBus, policy, consumerBus)) << "GeneratePolicy failed.";
+    InstallPolicyToService(policy);
 
     AppHasAllowAllManifest(adminBus, serviceBus);
 
-    policy = GenerateFullAccessOutgoingPolicy(adminAdminGroupGUID, adminAdminGroupAuthority);
-    InstallPolicyToConsumer(*policy);
-    delete policy;
+    PermissionPolicy consumerPolicy;
+    ASSERT_EQ(ER_OK, GenerateFullAccessOutgoingPolicy(adminBus, consumerBus, consumerPolicy)) << "GeneratePolicy failed.";
+    InstallPolicyToConsumer(consumerPolicy);
 
     RetrievePropertyApplicationState(adminBus, serviceBus, PermissionConfigurator::CLAIMED);
 }
@@ -2609,16 +2580,15 @@ TEST_F(PermissionMgmtUseCaseTest, RetrievePropertyClaimCapabilities)
 {
     Claims(false);
     /* generate a policy */
-    PermissionPolicy* policy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, consumerBus);
-    ASSERT_TRUE(policy) << "GeneratePolicy failed.";
-    InstallPolicyToService(*policy);
-    delete policy;
+    PermissionPolicy policy;
+    ASSERT_EQ(ER_OK, GeneratePolicy(adminBus, serviceBus, policy, consumerBus)) << "GeneratePolicy failed.";
+    InstallPolicyToService(policy);
 
     AppHasAllowAllManifest(adminBus, serviceBus);
 
-    policy = GenerateFullAccessOutgoingPolicy(adminAdminGroupGUID, adminAdminGroupAuthority);
-    InstallPolicyToConsumer(*policy);
-    delete policy;
+    PermissionPolicy consumerPolicy;
+    ASSERT_EQ(ER_OK, GenerateFullAccessOutgoingPolicy(adminBus, consumerBus, consumerPolicy)) << "GeneratePolicy failed.";
+    InstallPolicyToConsumer(consumerPolicy);
 
     RetrievePropertyClaimCapabilities(adminBus, serviceBus, PermissionConfigurator::CAPABLE_ECDHE_NULL);
 
@@ -2631,16 +2601,15 @@ TEST_F(PermissionMgmtUseCaseTest, RetrievePropertyClaimCapabilityAdditionalInfo)
 {
     Claims(false);
     /* generate a policy */
-    PermissionPolicy* policy = GeneratePolicy(adminAdminGroupGUID, adminAdminGroupAuthority, consumerBus);
-    ASSERT_TRUE(policy) << "GeneratePolicy failed.";
-    InstallPolicyToService(*policy);
-    delete policy;
+    PermissionPolicy policy;
+    ASSERT_EQ(ER_OK, GeneratePolicy(adminBus, serviceBus, policy, consumerBus)) << "GeneratePolicy failed.";
+    InstallPolicyToService(policy);
 
     AppHasAllowAllManifest(adminBus, serviceBus);
 
-    policy = GenerateFullAccessOutgoingPolicy(adminAdminGroupGUID, adminAdminGroupAuthority);
-    InstallPolicyToConsumer(*policy);
-    delete policy;
+    PermissionPolicy consumerPolicy;
+    ASSERT_EQ(ER_OK, GenerateFullAccessOutgoingPolicy(adminBus, consumerBus, consumerPolicy)) << "GeneratePolicy failed.";
+    InstallPolicyToConsumer(consumerPolicy);
 
     SetPropertyClaimCapabilityAdditionalInfo(serviceBus, PermissionConfigurator::PSK_GENERATED_BY_APPLICATION);
     RetrievePropertyClaimCapabilityAdditionalInfo(adminBus, serviceBus, PermissionConfigurator::PSK_GENERATED_BY_APPLICATION);
@@ -2651,14 +2620,13 @@ TEST_F(PermissionMgmtUseCaseTest, AnonymousAccess)
 {
     Claims(false);
     /* generate policy that allows PEER_ALL */
-    PermissionPolicy* policy = GenerateAllowAllPeersPolicy(adminAdminGroupGUID, adminAdminGroupAuthority);
-    ASSERT_TRUE(policy) << "GeneratePolicy failed.";
-    InstallPolicyToService(*policy);
-    delete policy;
+    PermissionPolicy policy;
+    ASSERT_EQ(ER_OK, GenerateAllowAllPeersPolicy(adminBus, serviceBus, policy)) << "GeneratePolicy failed.";
+    InstallPolicyToService(policy);
 
-    policy = GenerateFullAnonymousAccessOutgoingPolicy(adminAdminGroupGUID, adminAdminGroupAuthority);
-    InstallPolicyToConsumer(*policy);
-    delete policy;
+    PermissionPolicy consumerPolicy;
+    ASSERT_EQ(ER_OK, GenerateFullAnonymousAccessOutgoingPolicy(adminBus, consumerBus, consumerPolicy)) << "GeneratePolicy failed.";
+    InstallPolicyToConsumer(consumerPolicy);
 
     InstallMembershipToConsumer();
     /* setup the application interfaces for access tests */
@@ -2672,14 +2640,13 @@ TEST_F(PermissionMgmtUseCaseTest, AnonymousAccess)
 TEST_F(PermissionMgmtUseCaseTest, PSKAccess)
 {
     Claims(true);  /* use PSK */
-    PermissionPolicy* policy = GenerateAllowAllPeersPolicy(adminAdminGroupGUID, adminAdminGroupAuthority);
-    ASSERT_TRUE(policy) << "GeneratePolicy failed.";
-    InstallPolicyToService(*policy);
-    delete policy;
+    PermissionPolicy policy;
+    ASSERT_EQ(ER_OK, GenerateAllowAllPeersPolicy(adminBus, serviceBus, policy)) << "GeneratePolicy failed.";
+    InstallPolicyToService(policy);
 
-    policy = GenerateFullAnonymousAccessOutgoingPolicy(adminAdminGroupGUID, adminAdminGroupAuthority);
-    InstallPolicyToConsumer(*policy);
-    delete policy;
+    PermissionPolicy consumerPolicy;
+    ASSERT_EQ(ER_OK, GenerateFullAnonymousAccessOutgoingPolicy(adminBus, consumerBus, consumerPolicy)) << "GeneratePolicy failed.";
+    InstallPolicyToConsumer(consumerPolicy);
 
     InstallMembershipToConsumer();
     /* setup the application interfaces for access tests */
@@ -2721,6 +2688,107 @@ TEST_F(PermissionMgmtUseCaseTest, ClaimFailsWithoutSecurityEnabled)
 
     SecurityApplicationProxy saProxy(adminBus, consumerBus.GetUniqueName().c_str());
     EXPECT_NE(ER_OK, saProxy.Claim(keyInfo, guid, keyInfo, certs, 1, manifest, manifestSize)) << " saProxy.Claim failed";
+    delete [] manifest;
+}
+
+static QStatus CreateCert(const qcc::String& serial, const qcc::GUID128& issuer, const qcc::String& organization, const ECCPrivateKey* issuerPrivateKey, const ECCPublicKey* issuerPublicKey, const qcc::GUID128& subject, const ECCPublicKey* subjectPubKey, CertificateX509::ValidPeriod& validity, bool isCA, CertificateX509& cert)
+{
+    QStatus status = ER_CRYPTO_ERROR;
+
+    cert.SetSerial((const uint8_t*)serial.data(), serial.size());
+    qcc::String issuerName = issuer.ToString();
+    cert.SetIssuerCN((const uint8_t*) issuerName.c_str(), issuerName.length());
+    qcc::String subjectName = subject.ToString();
+    cert.SetSubjectCN((const uint8_t*) subjectName.c_str(), subjectName.length());
+    if (!organization.empty()) {
+        cert.SetIssuerOU((const uint8_t*) organization.c_str(), organization.length());
+        cert.SetSubjectOU((const uint8_t*) organization.c_str(), organization.length());
+    }
+    cert.SetSubjectPublicKey(subjectPubKey);
+    cert.SetCA(isCA);
+    cert.SetValidity(&validity);
+    status = cert.SignAndGenerateAuthorityKeyId(issuerPrivateKey, issuerPublicKey);
+    return status;
+}
+
+TEST_F(PermissionMgmtUseCaseTest, ValidCertChainStructure)
+{
+
+    CertificateX509::ValidPeriod validity;
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + 24 * 3600;
+
+    qcc::GUID128 subject1;
+    Crypto_ECC ecc1;
+    ecc1.GenerateDSAKeyPair();
+    CertificateX509 certs[2];
+
+    /* self signed cert */
+    ASSERT_EQ(ER_OK, CreateCert("1010101", subject1, "organization", ecc1.GetDSAPrivateKey(), ecc1.GetDSAPublicKey(), subject1, ecc1.GetDSAPublicKey(), validity, true, certs[1])) << " CreateCert failed.";
+
+    qcc::GUID128 subject0;
+    Crypto_ECC ecc0;
+    ecc0.GenerateDSAKeyPair();
+
+    /* leaf cert signed by cert1 */
+    ASSERT_EQ(ER_OK, CreateCert("2020202", subject1, "organization", ecc1.GetDSAPrivateKey(), ecc1.GetDSAPublicKey(), subject0, ecc0.GetDSAPublicKey(), validity, false, certs[0])) << " CreateCert failed.";
+
+    EXPECT_TRUE(KeyExchangerECDHE_ECDSA::IsCertChainStructureValid(certs, 2)) << " cert chain structure is not valid";
+
+}
+
+TEST_F(PermissionMgmtUseCaseTest, InvalidCertChainStructure)
+{
+
+    CertificateX509::ValidPeriod validity;
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + 24 * 3600;
+
+    qcc::GUID128 subject1;
+    Crypto_ECC ecc1;
+    ecc1.GenerateDSAKeyPair();
+    CertificateX509 certs[2];
+
+    /* self signed cert */
+    ASSERT_EQ(ER_OK, CreateCert("1010101", subject1, "organization", ecc1.GetDSAPrivateKey(), ecc1.GetDSAPublicKey(), subject1, ecc1.GetDSAPublicKey(), validity, false, certs[1])) << " CreateCert failed.";
+
+    qcc::GUID128 subject0;
+    Crypto_ECC ecc0;
+    ecc0.GenerateDSAKeyPair();
+
+    /* leaf cert signed by cert1 */
+    ASSERT_EQ(ER_OK, CreateCert("2020202", subject1, "organization", ecc1.GetDSAPrivateKey(), ecc1.GetDSAPublicKey(), subject0, ecc0.GetDSAPublicKey(), validity, false, certs[0])) << " CreateCert failed.";
+
+    EXPECT_FALSE(KeyExchangerECDHE_ECDSA::IsCertChainStructureValid(certs, 2)) << " cert chain structure is not valid";
+
+}
+
+
+TEST_F(PermissionMgmtUseCaseTest, ClaimWithIdentityCertSignedByUnknownCA)
+{
+    EnableSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA");
+    ClaimAdmin();
+    SecurityApplicationProxy saProxy(adminBus, consumerBus.GetUniqueName().c_str());
+    /* retrieve public key from to-be-claimed app to create identity cert */
+    ECCPublicKey claimedPubKey;
+    EXPECT_EQ(ER_OK, saProxy.GetEccPublicKey(claimedPubKey)) << " Fail to retrieve to-be-claimed public key.";
+    qcc::GUID128 guid;
+    PermissionMgmtTestHelper::GetGUID(consumerBus, guid);
+    IdentityCertificate identityCertChain[3];
+    size_t certChainCount = 3;
+    PermissionPolicy::Rule* manifest = NULL;
+    size_t manifestSize = 0;
+    GenerateAllowAllManifest(&manifest, &manifestSize);
+    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(adminBus, manifest, manifestSize, digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCertChain(remoteControlBus, adminBus, "303030", guid.ToString(), &claimedPubKey, "alias", 3600, identityCertChain, certChainCount, digest, Crypto_SHA256::DIGEST_SIZE)) << "  CreateIdentityCert failed";
+
+    Crypto_ECC ecc;
+    ecc.GenerateDSAKeyPair();
+    KeyInfoNISTP256 keyInfo;
+    keyInfo.SetPublicKey(ecc.GetDSAPublicKey());
+    KeyInfoHelper::GenerateKeyId(keyInfo);
+    EXPECT_EQ(ER_OK, saProxy.Claim(keyInfo, consumerAdminGroupGUID, consumerAdminGroupAuthority, identityCertChain, certChainCount, manifest, manifestSize)) << " saProxy.Claim failed";
     delete [] manifest;
 }
 
