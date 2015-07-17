@@ -63,6 +63,24 @@
 #endif
 
 /**
+ * Macro for printing a log message. This will print its message even when
+ * NDEBUG is defined (depending on the log level setting).
+ * This macro is only intended for use in test applications where the
+ * timing of events needs to be record within an optimized build
+ * (release mode)
+ *
+ * @param _msg      "printf" parameters in parentheses.
+ *                  Example: ("value: %d", variable)
+ */
+#define QCC_LogMsg(_msg)                                                \
+    do {                                                                \
+        if (_QCC_DbgPrintCheck((DBG_HIGH_LEVEL), QCC_MODULE)) {         \
+            void* _ctx = _QCC_DbgPrintContext _msg;                     \
+            _QCC_DbgPrintProcess(_ctx, DBG_HIGH_LEVEL, QCC_MODULE, __FILE__, __LINE__); \
+        } \
+    } while (0)
+
+/**
  * Macro for high level debug prints.  This is intended for high level summary
  * debug information.  Use QCC_DbgPrintf for more detailed debug information.
  *
